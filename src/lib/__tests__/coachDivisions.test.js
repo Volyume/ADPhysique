@@ -60,6 +60,17 @@ describe('Coach division contract', () => {
     expect(generatePlan(cfg('mens_physique')).splitType).toBe('ppl');
   });
 
+  test('weak-point specialisation is additive, not destructive (stage 4)', () => {
+    const base = vol(generatePlan(cfg('mens_physique', { experience: 'advanced' })));
+    const wp = vol(generatePlan(cfg('mens_physique', { experience: 'advanced', phase: 'weak_point', weakPoints: ['Glutes'] })));
+    // The weak point is brought up hard...
+    expect(wp.glutes).toBeGreaterThan(base.glutes + 8);
+    // ...while the division character is retained, not wiped to maintenance:
+    // shoulders stay the dominant muscle for Men's Physique.
+    expect(wp.shoulders).toBeGreaterThanOrEqual(12);
+    expect(wp.shoulders).toBeGreaterThan(wp.quads);
+  });
+
   test('every division generates a non-empty plan with a recoverable session count', () => {
     for (const g of ['mens_physique', 'classic_physique', 'bodybuilding', 'bikini',
       'wellness', 'figure', 'womens_physique', 'womens_bodybuilding']) {

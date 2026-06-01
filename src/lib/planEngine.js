@@ -127,47 +127,71 @@ function computeLandmarks(experience, recoveryRating, nutritionPhase, age) {
 function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase) {
   const t = { ...weeklyTargets };
 
-  // weak_point used to live under `goal` (weak_point_spec). It now lives
-  // under `phase` (weak_point) since it's a current-block emphasis, not a
-  // body shape. When it's active, ignore the physique-category overlay
-  // priority muscles get MAV-ish volume; everything else drops to MV.
-  if (phase === 'weak_point') {
-    for (const m of Object.keys(t)) {
-      if (weakPointKeys.includes(m)) {
-        t[m] = Math.max(landmarks[m].MEV, landmarks[m].MRV - 2);
-      } else {
-        t[m] = landmarks[m].MV;
-      }
+  const overlay = GOAL_OVERLAYS[goal] ?? {};
+
+  // 1. Physique-category overlay (mens_physique, bikini, etc.). Bias volume
+  //    toward the muscles that drive that category's judging. Priority muscles
+  //    (multiplier > 1.0) are placed INSIDE their working (MAV-MRV) band,
+  //    scaled by how strong the priority is, rather than multiplied up from
+  //    MEV. Anchoring at MEV was why lower-body emphasis never reached the
+  //    plate (coach-plan audit 2026-06-01): the science-individualised MRV is
+  //    the ceiling, the overlay only distributes volume within it. This runs
+  //    for every goal, INCLUDING during a weak-point block, so the division
+  //    character is kept rather than wiped.
+  const PRIORITY_NORM = 0.6; // multiplier delta that maps to the top of MAV-MRV
+  for (const [m, mult] of Object.entries(overlay)) {
+    if (t[m] == null) continue;
+    const lm = landmarks[m];
+    if (mult > 1.0) {
+      const frac = Math.min(1, (mult - 1) / PRIORITY_NORM);
+      t[m] = Math.round(lm.MAVlow + frac * (lm.MRV - lm.MAVlow));
+    } else {
+      // De-emphasised: scale down from the MEV floor (unchanged behaviour).
+      t[m] = Math.round(t[m] * mult);
     }
-  } else {
-    // 1. Physique-category overlay (mens_physique, bikini, etc.). Bias volume
-    //    toward the muscles that drive that category's judging. Priority
-    //    muscles (multiplier > 1.0) are placed INSIDE their working (MAV-MRV)
-    //    band, scaled by how strong the priority is, rather than multiplied up
-    //    from MEV. Anchoring at MEV was why lower-body emphasis never reached
-    //    the plate (coach-plan audit 2026-06-01): the science-individualised
-    //    MRV is the ceiling, the overlay only distributes volume within it.
-    const overlay = GOAL_OVERLAYS[goal] ?? {};
-    const PRIORITY_NORM = 0.6; // multiplier delta that maps to the top of MAV-MRV
-    for (const [m, mult] of Object.entries(overlay)) {
+  }
+
+  // 2. Phase overlay (strength_size's isolation reduction), applied on top so a
+  //    competitor on a strength-size block keeps the category bias with less
+  //    isolation work. The weak_point phase overlay is empty: its emphasis is
+  //    additive (step 3), not a multiplier.
+  const phaseOverlay = PHASE_OVERLAYS[phase] ?? {};
+  for (const [m, mult] of Object.entries(phaseOverlay)) {
+    if (t[m] != null) {
+      t[m] = Math.round(t[m] * mult);
+    }
+  }
+
+  // 3. Weak-point specialisation: ADDITIVE on top of the division targets, not
+  //    a replacement (coach-plan audit 2026-06-01, stage 4). The old behaviour
+  //    dropped every non-weak-point muscle to maintenance and discarded the
+  //    division emphasis. Now each weak-point muscle gets a capped bonus
+  //    (closes ~40% of the gap to its MRV), and the added volume is offset by
+  //    trimming the lowest-priority, non-weak-point muscles toward MV so total
+  //    systemic stress is held. Division priorities and the recovery envelope
+  //    (MRV clamp + systemic cap below) are preserved.
+  if (phase === 'weak_point' && weakPointKeys.length) {
+    let added = 0;
+    for (const m of weakPointKeys) {
       if (t[m] == null) continue;
       const lm = landmarks[m];
-      if (mult > 1.0) {
-        const frac = Math.min(1, (mult - 1) / PRIORITY_NORM);
-        t[m] = Math.round(lm.MAVlow + frac * (lm.MRV - lm.MAVlow));
-      } else {
-        // De-emphasised: scale down from the MEV floor (unchanged behaviour).
-        t[m] = Math.round(t[m] * mult);
-      }
+      const bonus = Math.max(2, Math.round((lm.MRV - t[m]) * 0.4));
+      const next = Math.min(lm.MRV, t[m] + bonus);
+      added += next - t[m];
+      t[m] = next;
     }
-    // 2. Phase overlay (strength_size's isolation reduction), applied on top so
-    //    a competitor on a strength-size block keeps the category bias with
-    //    less isolation work.
-    const phaseOverlay = PHASE_OVERLAYS[phase] ?? {};
-    for (const [m, mult] of Object.entries(phaseOverlay)) {
-      if (t[m] != null) {
-        t[m] = Math.round(t[m] * mult);
-      }
+    // Offset against the lowest-priority, non-weak-point muscles first.
+    const trimable = Object.keys(t)
+      .filter(m => !weakPointKeys.includes(m)
+        && (overlay[m] == null || overlay[m] < 1.15)
+        && t[m] > landmarks[m].MV)
+      .sort((a, b) => (overlay[a] ?? 1) - (overlay[b] ?? 1));
+    let remaining = added;
+    for (const m of trimable) {
+      if (remaining <= 0) break;
+      const trim = Math.min(t[m] - landmarks[m].MV, remaining);
+      t[m] -= trim;
+      remaining -= trim;
     }
   }
 
