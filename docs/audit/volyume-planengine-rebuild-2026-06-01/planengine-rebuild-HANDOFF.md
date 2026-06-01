@@ -18,7 +18,14 @@ section 8 before touching code.
   directive `claude/github-origin-main-DV8YC` was surfaced and NOT followed, by
   founder governance. Confirm again on resume.)
 - HEAD: `a876354`, in sync with `origin/main` (ahead/behind 0/0), tree clean.
-- Test suite: 149 suites, 2535 pass, 3 skipped, 0 fail.
+- Test suite: 149 suites, 2534 pass, 3 skipped, 0 fail.
+- VERIFICATION-REVIEW PASS (commit e29a801): founder reviewed doc 08 and flagged
+  library-hygiene + priority issues. Fixed: plyometric/power/conditioning lifts
+  excluded from hypertrophy counting (isHypertrophyExercise in poolGenerator);
+  Bikini back = lat-width allow-list (no deadlifts/rows); WBB quad/ham weights up;
+  Bikini/Wellness arm MV floor at 5-6 days; Wellness 4-day side-delt dip fixed;
+  per-delt-head reporting in the summary; weak-point-at-ceiling warning. Tier 4
+  confirmed indirect fraction is reporting-only (does not under-program direct).
 - FULL VERIFICATION (doc 08, planengineFullVerification.test.js): 405 plans
   across every division x day x experience x weak-point checked on the live
   library path, 0 hard failures. It found and drove fixes for 3 real bug classes
