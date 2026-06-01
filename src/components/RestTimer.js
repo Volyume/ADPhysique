@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useShallow } from 'zustand/react/shallow';
@@ -22,27 +22,18 @@ export default function RestTimer() {
   // `useAppStore()` without a selector re-renders this on every store
   // mutation (PR celebrations, set saves, profile updates, etc.) which
   // ran through every second of every workout.
-  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const {
-    restTimerActive, restTimerRemaining, restTimerDuration,
+    restTimerActive, restTimerRemaining,
     stopRestTimer, tickRestTimer, addRestTime,
-    workoutExercises, currentExerciseIndex,
   } = useAppStore(useShallow(s => ({
     restTimerActive: s.restTimerActive,
     restTimerRemaining: s.restTimerRemaining,
-    restTimerDuration: s.restTimerDuration,
     stopRestTimer: s.stopRestTimer,
     tickRestTimer: s.tickRestTimer,
     addRestTime: s.addRestTime,
-    workoutExercises: s.workoutExercises,
-    currentExerciseIndex: s.currentExerciseIndex,
   })));
 
-  // Derive the current exercise name so the lock-screen notification is specific
-  const currentExerciseName =
-    workoutExercises[currentExerciseIndex]?.exercise?.name || '';
   const intervalRef = useRef(null);
-  const progressAnim = useRef(new Animated.Value(1)).current;
   const [showDone, setShowDone] = useState(false);
   // Track all queued timeouts so we can cancel them on unmount (was
   // leaking three uncancelled setTimeouts per cycle, haptics + done-flag).
@@ -51,21 +42,6 @@ export default function RestTimer() {
   useEffect(() => {
     if (restTimerActive) {
       setShowDone(false);
-      progressAnim.stopAnimation();
-      // Use restTimerRemaining so bar stays in sync if user adjusts time or resumes mid-timer
-      const remaining = restTimerRemaining > 0 ? restTimerRemaining : restTimerDuration;
-      const startValue = restTimerDuration > 0 ? remaining / restTimerDuration : 1;
-      progressAnim.setValue(startValue);
-      // Reduce-motion bypasses the continuous progress animation; the bar
-      // just jumps each second as the numeric timer ticks. Less visual
-      // movement for vestibular-sensitive users.
-      if (!reduceMotion) {
-        Animated.timing(progressAnim, {
-          toValue: 0,
-          duration: remaining * 1000,
-          useNativeDriver: false,
-        }).start();
-      }
       intervalRef.current = setInterval(() => { tickRestTimer(); }, 1000);
       // Lock-screen / Live Activity notification disabled. The
       // notification path reported the wrong "Set N of M" label
@@ -75,34 +51,9 @@ export default function RestTimer() {
       // card with Skip / +15 / +30 / -15 / -30 stays.
     } else {
       clearInterval(intervalRef.current);
-      progressAnim.stopAnimation();
-      progressAnim.setValue(1);
     }
     return () => clearInterval(intervalRef.current);
-  }, [restTimerActive]);
-
-  // Reanimate the progress bar when the user adjusts the timer with ±15s /
-  // ±30s. Previously the bar finished early or hit 0 with the numeric timer
-  // still counting because this branch never re-ran the Animated.timing.
-  useEffect(() => {
-    if (!restTimerActive || restTimerDuration <= 0 || restTimerRemaining <= 0) return;
-    progressAnim.stopAnimation();
-    progressAnim.setValue(restTimerRemaining / restTimerDuration);
-    if (!reduceMotion) {
-      Animated.timing(progressAnim, {
-        toValue: 0,
-        duration: restTimerRemaining * 1000,
-        useNativeDriver: false,
-      }).start();
-    }
-    // We rebind on every restTimerRemaining change which is once per
-    // second; the stopAnimation + setValue + start is cheap. The previous
-    // useEffect on [restTimerActive] only fired once when the timer
-    // started, leaving the animation disconnected from the live remaining.
-    // reduceMotion is in the dep array so toggling Reduce Motion mid-rest
-    // takes effect on the next tick rather than waiting for the next rest.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [restTimerRemaining, restTimerDuration, reduceMotion]);
+  }, [restTimerActive, tickRestTimer]);
 
   // Preload beeps once when the timer first becomes active in this mount
   // pays the WAV synth + disk-write cost up front so the first countdown
@@ -139,6 +90,12 @@ export default function RestTimer() {
       const t3 = setTimeout(() => setShowDone(false), 3000);
       timeoutsRef.current.push(t1, t2, t3);
     }
+    // Intentionally keyed on restTimerRemaining only: this fires once per
+    // tick and is guarded by the restTimerActive check above, so adding
+    // restTimerActive to the deps would only re-run the guarded no-op when
+    // the timer stops. Documented rather than widened to avoid re-firing a
+    // beep on a state change (A2-050).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restTimerRemaining]);
 
   // Component-wide cleanup, drains any pending timeouts so they don't fire
@@ -166,11 +123,6 @@ export default function RestTimer() {
   const mins = Math.floor(restTimerRemaining / 60);
   const secs = restTimerRemaining % 60;
   const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
-
-  const barWidth = progressAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
-  });
 
   if (showDone && !restTimerActive) {
     return (
