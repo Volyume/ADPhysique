@@ -95,9 +95,9 @@ Replace it with a flexible, numbered meal model:
   "Intra", "Before bed"), but the default is the number, not a human-meal label.
   This serves both the athlete who thinks in Meal 1 to N and the user who still
   likes "Breakfast", without defaulting to the wellness frame.
-- Pre-workout and Post-workout remain special, training-anchored meals (see
-  below), inserted in sequence around the session rather than living as fixed
-  rows at the bottom.
+- Pre-workout and Post-workout remain as named meals the user can place around
+  their training whenever they train. They are always available to log into,
+  never gated, hidden, or scheduled (see the corrected note below).
 - Order is by sequence / time through the day. Sections are collapsible and
   remember state.
 - This matches how training-focused apps and athletes actually structure a day
@@ -142,19 +142,23 @@ macro-driven ranking the engine already does (rank by remaining macros and
 meals-left, `mealSuggest.js:165`). This keeps every curated entry useful under
 the new model without a re-tagging pass.
 
-### Pre-workout and Post-workout, tied to the session
+### Pre-workout and Post-workout as always-available training meals
 
-The screen already knows whether today is a training day (`isTrainingDay`,
-`DiaryScreen.js:87`) but the workout slots ignore it. Make them training-aware:
+Corrected (founder direction 2026-06-01): an earlier draft proposed tying these
+sections to the day's logged workout and collapsing them on a "rest day". That
+is the wrong model. Training days are not static and the app must not assume a
+schedule or force a day type: people train when they want, sometimes without
+logging the session in the app at all. So there is NO workout lookup, no
+training-day detection, and no rest-day collapse for these sections.
 
-- On a training day, the Pre-workout and Post-workout cards show the day's
-  session in their header ("Pre-workout · Push day") and offer a tap-through to
-  that workout. This is the thing a general wellness app cannot do and a
-  physique app should (Phase 3 section 4).
-- On a rest day, the two workout slots collapse into a single muted "add
-  pre/post-workout food" line so they are available but not clutter
-  (addresses the rest-day clutter in Phase 1 finding 14.7). Data model already
-  supports the slots; this is presentation only.
+Instead, Pre-workout and Post-workout are simply two named meals in the flexible
+model (section above), always available to log into, that the user places
+around their training whenever that is. Their value over a generic wellness app
+is that the peri-workout meals are first-class and named, not that the app
+decides when the user trained. Any reference to a logged session would be
+optional and reactive only (shown if a workout happens to be logged that day),
+and must never gate, hide, or schedule the sections. The simplest correct
+design carries no workout linkage at all.
 
 ## 3. Quick actions and logging
 
@@ -204,8 +208,9 @@ One designed state, not six dashed boxes plus a trailing sentence
   zero, and a single plain line that states the day's job, e.g. "2,800 kcal and
   200g protein to hit today." No cheerleading (CLAUDE.md: report facts, the
   user's response is their own).
-- If today is a training day, one contextual line: "Push day today." Tied to
-  the session, not a motivational slogan.
+- No training-day assertion here (corrected 2026-06-01). If the user runs a
+  macro cycle, the summary card's existing day-type chip already reflects it;
+  the empty state does not detect or claim a training day.
 - The meal list shows as slim add-lines (per point 2), so the body is calm, not
   a wall of placeholders.
 - One clear primary affordance: "Add food", with Scan and Copy yesterday as

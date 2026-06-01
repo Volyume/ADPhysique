@@ -17,8 +17,9 @@ device look before final sign-off):
 
 REMAINING (next tranche):
 - Quick-log strip of Frequents + Saved meals (integration: reads + log action).
-- Pre/Post-workout tied to the session (needs the workout name + nav route).
 - Collapsible meal sections.
+- Pre/Post-workout as always-available named meals (folds into the meal-model
+  item; no workout lookup, no training-day detection, corrected 2026-06-01).
 - Stage 3 polish: count-up, ring sweep, entry-insert animation, haptics, swipe
   between days, week strip.
 - The numbered-meal model: the migration-backed, food-domain-wide unit with the
@@ -54,7 +55,7 @@ is no existing water target setting.
 | Macro sub-rings -> three slim bars, protein first and primary | High | Med | `MacroRings.js` (Diary-only); update its test. Keep the calorie ring and adherence-neutral amber |
 | Quick-log strip of Frequents + Saved meals on the diary (one-tap re-log) | High | Med | Reuses `lib/food/frequents.js` + saved meals. The biggest logging-speed win (retention hinge) |
 | Flexible numbered-meal model ("Meal 1..N", renameable, user meal count) replacing fixed Breakfast/Lunch/Dinner/Snacks; Pre/Post-workout kept as anchors | High | High | The largest item, and the only one needing a data change. See dependencies |
-| Pre/Post-workout tied to the session: show the day's workout in the header on training days, collapse to one muted line on rest days | High | Med | Needs the workout name + route; `hasWorkoutOnDate` exists (`DiaryScreen.js:87`), extend to return the session |
+| Pre/Post-workout as first-class always-available named meals in the flexible model (no training-day detection, no scheduling, no rest-day collapse) | Med | Low | Part of the meal-model item; presentation only, no workout lookup |
 | Water as a progress bar with a target, in the card language | Med | Med | New `waterTarget` preference (small settings + storage add). `WaterRow` is inline in `DiaryScreen.js:629` |
 | Copy-yesterday out of the empty-only FAB: into the empty state + a day-pager overflow, available any day; consolidate to one FAB cluster | Med | Low-Med | `DiaryScreen.js:511-538` |
 | Collapsible meal sections that remember state | Med | Med | `MealSection.js` + a small persisted UI state |
@@ -74,9 +75,9 @@ is no existing water target setting.
 - No cross-tab component risk: `MacroRings`, `EntryRow`, `MealSection` are
   Diary-only. Tests for `MacroRings` and the food components will need updating
   alongside.
-- New data/settings, small: a `waterTarget` preference (none exists today); the
-  workout lookup needs to return the session name/route for the peri-workout
-  link (the date check already exists).
+- New data/settings, small: a `waterTarget` preference (none exists today). No
+  workout lookup is needed: Pre/Post-workout are just named meals, not tied to
+  a detected session (corrected 2026-06-01).
 - Reused, no new model: Frequents (`lib/food/frequents.js`), Saved meals
   (`createSavedMeal`), `isTrainingDay`, rollup, water storage all already
   exist. The quick-log strip and the training link are presentation over data
@@ -108,9 +109,10 @@ is no existing water target setting.
 1. Tier 1 in one pass: it removes the "unfinished" read (cards, no dashed boxes,
    designed empty state, per-meal protein) at low cost and is independently
    shippable.
-2. Tier 2 next: macro bars, the quick-log strip, the peri-workout link, water
-   with a target. This is where the tab becomes genuinely best-in-class for a
-   training user.
+2. Tier 2 next: macro bars, the quick-log strip, water with a target, and the
+   flexible numbered-meal model (with Pre/Post-workout as always-available named
+   meals). This is where the tab becomes genuinely best-in-class for a training
+   user.
 3. Tier 3 last: the motion and gesture polish, once the structure is settled,
    so animations are tuned against the final layout.
 

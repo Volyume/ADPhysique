@@ -35,9 +35,10 @@ piece of work.
    removes most of the "unfinished" read.
 
 2. A designed empty state. Replace the six dashed boxes and the trailing
-   sentence with slim per-meal add-lines, the targets stated in context
-   ("2,800 kcal and 200g protein to hit today"), a training-day cue when
-   relevant, and one clear "Add food" with Scan and Copy yesterday beneath.
+   sentence with one calm card: the targets stated in context ("2,800 kcal and
+   200g protein to hit today") and clear actions (Add food, Copy yesterday).
+   (The user-configured day-type label already shows in the summary rings; the
+   empty state does not assert a training day.)
 
 3. Per-meal macros, visible in place. Show kcal AND protein on every meal
    header, and turn the three equal macro sub-rings into slim bars with protein
@@ -46,12 +47,12 @@ piece of work.
 
 4. Fix the meal model for a physique athlete. Drop the fixed Breakfast / Lunch
    / Dinner / Snacks frame (a wellness convention) for flexible numbered meals
-   ("Meal 1..N", renameable, the user sets how many), and keep Pre-workout and
-   Post-workout as special meals tied to the day's session, on a rest day they
-   collapse to one muted line. The athlete eats 4-8 structured meals, not three
-   and a snack, which is why the workout slots were added in the first place.
-   This is the one change that needs a `meal_slot` data change, plan it
-   separately.
+   ("Meal 1..N", renameable, the user sets how many), with Pre-workout and
+   Post-workout as always-available named meals the user places around training
+   whenever they train. No training-day detection, no scheduling, no rest-day
+   collapse: people train when they want. The athlete eats 4-8 structured
+   meals, not three and a snack, which is why the workout meals exist. This is
+   the one change that needs a `meal_slot` data change, plan it separately.
 
 5. Protect logging speed. A one-tap quick-log strip of the user's Frequents and
    Saved meals (both already in the app), and copy-yesterday available any day
