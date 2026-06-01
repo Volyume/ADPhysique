@@ -50,9 +50,17 @@ export function mealsLeftToday(mealsPerDay, loggedSlots) {
  * the slots it suits (e.g. ['breakfast'] or ['lunch','dinner']). 'any' or
  * no tags means it fits any slot (so oats won't be offered at dinner, but
  * a chicken/rice bowl can be lunch or dinner). No slot requested = all pass.
+ *
+ * Numbered meals (the flexible meal model, 'meal_N') carry no breakfast/lunch/
+ * dinner character, so a name match cannot apply: they pass everything and the
+ * ranking falls back to the macro fit (remaining macros / meals-left), rather
+ * than filtering out every curated meal because none is tagged 'meal_3'. The
+ * curated tags are kept and still apply to the legacy named slots. (A richer
+ * time-of-day context inference for numbered meals is a later refinement.)
  */
 export function slotMatches(candidateSlots, slot) {
   if (!slot) return true;
+  if (/^meal_\d+$/.test(slot)) return true;
   if (!Array.isArray(candidateSlots) || candidateSlots.length === 0) return true;
   return candidateSlots.includes(slot) || candidateSlots.includes('any');
 }

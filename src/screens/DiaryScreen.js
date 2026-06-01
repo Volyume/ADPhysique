@@ -15,6 +15,7 @@ import {
   Alert, Modal, Pressable, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type } from '../styles/theme';
@@ -37,15 +38,7 @@ import { friendlyFoodName } from '../components/food/EntryRow';
 import ScreenHeader from '../components/ScreenHeader';
 import { useToast } from '../components/Toast';
 import { deleteEntries, moveEntriesToSlot, copyEntriesToDate } from '../lib/food/bulkEntryOps';
-
-const MEAL_SLOTS = [
-  { key: 'breakfast',   label: 'Breakfast' },
-  { key: 'lunch',       label: 'Lunch' },
-  { key: 'dinner',      label: 'Dinner' },
-  { key: 'preworkout',  label: 'Pre-workout' },
-  { key: 'postworkout', label: 'Post-workout' },
-  { key: 'snack',       label: 'Snacks' },
-];
+import { buildMealSlots, highestLoggedMeal, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
 
 function isoDate(d) {
   return d.toISOString().slice(0, 10);
@@ -164,14 +157,38 @@ export default function DiaryScreen({ navigation }) {
     setRefreshing(false);
   }, [load]);
 
+  // Bucket every entry by its slot, whatever the slot key (numbered, legacy or
+  // peri-workout), so nothing logged is ever dropped.
   const entriesBySlot = useMemo(() => {
     const out = {};
-    for (const s of MEAL_SLOTS) out[s.key] = [];
     for (const e of entries) {
-      if (out[e.meal_slot]) out[e.meal_slot].push(e);
+      (out[e.meal_slot] ??= []).push(e);
     }
     return out;
   }, [entries]);
+
+  // The flexible numbered-meal model: a ladder of "Meal 1..N" plus the two
+  // peri-workout meals, never fewer than the highest numbered meal already
+  // logged, extended by the "Add meal" affordance. buildMealSlots also folds in
+  // any legacy slot that has entries so existing diaries keep showing.
+  // The numbered ladder honours the user's meals-per-day preference (set in
+  // Nutrition targets, the same `@volyume_meals_per_day` key the suggestion
+  // engine reads), defaulting to DEFAULT_MEALS_PER_DAY. "Add meal" extends it
+  // for the session; the ladder is never shorter than the highest numbered
+  // meal already logged that day.
+  const [prefMeals, setPrefMeals] = useState(DEFAULT_MEALS_PER_DAY);
+  const [addedMeals, setAddedMeals] = useState(0);
+  useEffect(() => { setAddedMeals(0); }, [selectedDate]);
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    AsyncStorage.getItem('@volyume_meals_per_day').then((v) => {
+      const n = parseInt(v, 10);
+      if (active && Number.isFinite(n) && n >= 1) setPrefMeals(n);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []));
+  const mealsPerDay = Math.max(prefMeals + addedMeals, highestLoggedMeal(entries));
+  const mealSlots = useMemo(() => buildMealSlots(entries, mealsPerDay), [entries, mealsPerDay]);
 
   function gotoYesterday() { setSelectedDate(shiftDate(selectedDate, -1)); }
   function gotoTomorrow()  { setSelectedDate(shiftDate(selectedDate, 1)); }
@@ -469,25 +486,38 @@ export default function DiaryScreen({ navigation }) {
 
         {entries.length === 0 ? (
           <EmptyDiary
-            onAdd={() => addFood('breakfast')}
+            onAdd={() => addFood('meal_1')}
             onCopyYesterday={copyYesterday}
           />
         ) : (
-          MEAL_SLOTS.map((slot, i) => (
-            <AnimatedEntrance key={slot.key} index={i}>
-              <MealSection
-                slot={slot}
-                entries={entriesBySlot[slot.key]}
-                onAdd={() => addFood(slot.key)}
-                onEdit={openEditSheet}
-                onDelete={requestDelete}
-                selectionMode={selectionMode}
-                selectedIds={selectedIds}
-                onLongPressEntry={enterSelection}
-                onToggleSelect={toggleSelect}
-              />
-            </AnimatedEntrance>
-          ))
+          <>
+            {mealSlots.map((slot, i) => (
+              <AnimatedEntrance key={slot.key} index={i}>
+                <MealSection
+                  slot={slot}
+                  entries={entriesBySlot[slot.key] ?? []}
+                  onAdd={() => addFood(slot.key)}
+                  onEdit={openEditSheet}
+                  onDelete={requestDelete}
+                  selectionMode={selectionMode}
+                  selectedIds={selectedIds}
+                  onLongPressEntry={enterSelection}
+                  onToggleSelect={toggleSelect}
+                />
+              </AnimatedEntrance>
+            ))}
+            {!selectionMode ? (
+              <TouchableOpacity
+                style={styles.addMealRow}
+                onPress={() => setAddedMeals((n) => n + 1)}
+                accessibilityRole="button"
+                accessibilityLabel="Add another meal"
+              >
+                <Ionicons name="add" size={18} color={colors.textSecondary} />
+                <Text style={styles.addMealLabel}>Add meal</Text>
+              </TouchableOpacity>
+            ) : null}
+          </>
         )}
 
         <WaterRow ml={waterMl} onAdd={() => logWaterDelta(250)} onSub={() => logWaterDelta(-250)} />
@@ -562,7 +592,7 @@ export default function DiaryScreen({ navigation }) {
         <Pressable style={styles.moveBackdrop} onPress={() => setMovePickerVisible(false)}>
           <View style={styles.moveCard}>
             <Text style={styles.moveTitle}>Move to</Text>
-            {MEAL_SLOTS.map((s) => (
+            {mealSlots.map((s) => (
               <TouchableOpacity
                 key={s.key}
                 style={styles.moveOption}
@@ -731,6 +761,12 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   macroRingsWrap: { marginBottom: spacing.lg },
+  addMealRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.xs, minHeight: 44,
+    marginTop: -spacing.sm, marginBottom: spacing.lg,
+  },
+  addMealLabel: { ...type.label, color: colors.textSecondary },
   waterRow: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.border,

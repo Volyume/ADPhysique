@@ -6,13 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
 import BottomSheet from '../BottomSheet';
 import { useToast } from '../Toast';
-
-const MEAL_SLOTS = [
-  { key: 'breakfast', label: 'Breakfast' },
-  { key: 'lunch',     label: 'Lunch' },
-  { key: 'dinner',    label: 'Dinner' },
-  { key: 'snack',     label: 'Snacks' },
-];
+import { pickerMealSlots } from '../../lib/food/mealSlots';
 
 function macrosFor(food, qtyG) {
   if (!food || !qtyG || !isFinite(qtyG) || qtyG <= 0) {
@@ -145,7 +139,7 @@ export default function FoodDetailSheet({
 
           <Text style={styles.fieldLabel}>Meal</Text>
           <View style={styles.mealRow}>
-            {MEAL_SLOTS.map(s => (
+            {pickerMealSlots(mealSlot).map(s => (
               <Pressable
                 key={s.key}
                 onPress={() => setMealSlot(s.key)}

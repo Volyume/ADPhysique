@@ -2,19 +2,14 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
 import BottomSheet from '../BottomSheet';
-
-const MEAL_SLOTS = [
-  { key: 'breakfast', label: 'Breakfast' },
-  { key: 'lunch',     label: 'Lunch' },
-  { key: 'dinner',    label: 'Dinner' },
-  { key: 'snack',     label: 'Snacks' },
-];
+import { mealSlotLabel, slotOrder } from '../../lib/food/mealSlots';
 
 /**
  * Sum each meal slot's macros from the day's enriched food_entries.
- * Returns one row per slot that has at least one entry, in meal order,
- * plus a day total. Empty slots are dropped so the sheet shows what was
- * eaten, not a grid of zeros.
+ * Returns one row per slot that has at least one entry, in canonical meal
+ * order, plus a day total. Empty slots are dropped so the sheet shows what was
+ * eaten, not a grid of zeros. Works for any slot key (numbered, legacy or
+ * peri-workout), so nothing logged is left out of the breakdown.
  */
 export function mealBreakdown(entries = []) {
   const bySlot = {};
@@ -34,9 +29,9 @@ export function mealBreakdown(entries = []) {
     total.fat += e.fat_g ?? 0;
     total.count += 1;
   }
-  const rows = MEAL_SLOTS
-    .filter((m) => bySlot[m.key])
-    .map((m) => ({ key: m.key, label: m.label, ...round(bySlot[m.key]) }));
+  const rows = Object.keys(bySlot)
+    .sort((a, b) => slotOrder(a) - slotOrder(b))
+    .map((key) => ({ key, label: mealSlotLabel(key), ...round(bySlot[key]) }));
   return { rows, total: round(total) };
 }
 

@@ -5,15 +5,7 @@ import {
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
 import BottomSheet from '../BottomSheet';
 import { useToast } from '../Toast';
-
-const MEAL_SLOTS = [
-  { key: 'breakfast',   label: 'Breakfast' },
-  { key: 'lunch',       label: 'Lunch' },
-  { key: 'dinner',      label: 'Dinner' },
-  { key: 'preworkout',  label: 'Pre-workout' },
-  { key: 'postworkout', label: 'Post-workout' },
-  { key: 'snack',       label: 'Snacks' },
-];
+import { pickerMealSlots } from '../../lib/food/mealSlots';
 
 /**
  * Quick add: log a bare calorie figure (and optional protein, carbs, fat)
@@ -109,7 +101,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
 
           <Text style={styles.fieldLabel}>Meal</Text>
           <View style={styles.mealRow}>
-            {MEAL_SLOTS.map(s => (
+            {pickerMealSlots(mealSlot).map(s => (
               <Pressable
                 key={s.key}
                 onPress={() => setMealSlot(s.key)}

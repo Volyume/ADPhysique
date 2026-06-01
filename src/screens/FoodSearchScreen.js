@@ -46,13 +46,7 @@ import { useToast } from '../components/Toast';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import QuickAddSheet from '../components/food/QuickAddSheet';
 import FoodRow from '../components/food/FoodRow';
-
-const MEAL_LABELS = {
-  breakfast: 'Breakfast',
-  lunch: 'Lunch',
-  dinner: 'Dinner',
-  snack: 'Snacks',
-};
+import { mealSlotLabel } from '../lib/food/mealSlots';
 
 const EMPTY_COPY = {
   recents: 'Nothing logged yet.',
@@ -534,7 +528,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
           <Ionicons name="close" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add to {MEAL_LABELS[mealSlot] ?? 'Snacks'}</Text>
+        <Text style={styles.headerTitle}>Add to {mealSlotLabel(mealSlot)}</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity
             onPress={() => setShowQuickAdd(true)}
@@ -627,7 +621,7 @@ export default function FoodSearchScreen({ navigation, route }) {
             style={styles.plateLogBtn}
             onPress={logPlate}
             accessibilityRole="button"
-            accessibilityLabel={`Log ${plate.length} foods to ${MEAL_LABELS[mealSlot] ?? 'Snacks'}`}
+            accessibilityLabel={`Log ${plate.length} foods to ${mealSlotLabel(mealSlot)}`}
           >
             <Text style={styles.plateLogText}>Log {plate.length}</Text>
           </TouchableOpacity>
@@ -661,7 +655,7 @@ export default function FoodSearchScreen({ navigation, route }) {
                 <Text style={styles.plateClearText}>Clear</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.plateLogBtnWide} onPress={logPlate}>
-                <Text style={styles.plateLogText}>Log {plate.length} to {MEAL_LABELS[mealSlot] ?? 'Snacks'}</Text>
+                <Text style={styles.plateLogText}>Log {plate.length} to {mealSlotLabel(mealSlot)}</Text>
               </TouchableOpacity>
             </View>
           </View>
