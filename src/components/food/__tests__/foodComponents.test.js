@@ -191,22 +191,27 @@ describe('MealSection', () => {
     { id: 'b', _name: 'Banana', kcal: 105, protein_g: 1, carbs_g: 27, fat_g: 0, quantity_g: 120, food_ref: 'off:2' },
   ];
 
-  test('renders uppercase label + summed kcal', () => {
+  test('renders the meal name + a kcal and protein subtotal', () => {
     const tree = create(
       <MealSection slot={slot} entries={entries} onAdd={() => {}} onEdit={() => {}} onDelete={() => {}} />
     ).toJSON();
     const txt = JSON.stringify(tree);
-    expect(txt).toContain('BREAKFAST');
-    expect(txt).toContain('"305"');
+    // Title case, not the old shouty uppercase (diary-tab redesign).
+    expect(txt).toContain('Breakfast');
+    expect(txt).not.toContain('BREAKFAST');
+    expect(txt).toContain('305'); // summed kcal
+    expect(txt).toContain('kcal');
+    expect(txt).toContain('g P'); // protein readout present (7 + 1 = 8)
   });
 
-  test('handles empty entries', () => {
+  test('an empty section shows the name and Add food, no zero subtotal', () => {
     const tree = create(
       <MealSection slot={slot} entries={[]} onAdd={() => {}} onEdit={() => {}} onDelete={() => {}} />
     ).toJSON();
     const txt = JSON.stringify(tree);
-    expect(txt).toContain('"0"');
+    expect(txt).toContain('Breakfast');
     expect(txt).toContain('Add food');
+    expect(txt).not.toContain('kcal'); // no "0 kcal" noise on an empty section
   });
 
   test('Add food button carries the slot label in its a11y label', () => {

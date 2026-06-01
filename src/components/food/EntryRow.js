@@ -93,17 +93,19 @@ export function SwipeableEntryRow({
 export default EntryRow;
 
 const styles = StyleSheet.create({
+  // In-card row (diary-tab redesign 2026-06-01): the parent MealSection card
+  // owns the border and rounded corners, so a row is a flush list row, not a
+  // bordered card of its own. It keeps an opaque surface background so the
+  // swipe-to-delete action is occluded as the row slides, and a hairline top
+  // divider separates rows and the header.
   entryRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     backgroundColor: colors.surface,
     paddingVertical: spacing.md, paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
-    marginBottom: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
     minHeight: 48,
   },
   entryRowSelected: {
-    borderColor: colors.primary,
     backgroundColor: colors.surface2,
   },
   checkbox: {
