@@ -14,7 +14,7 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
-### 0.00000000000001. 2026-06-01 (master-audit remediation continued, Claude): Tier 2 fully closed. Resume from Tier 3 / Tier 5.
+### 0.00000000000001. 2026-06-01 (master-audit remediation continued, Claude): Tier 2 closed, Tier 5 gates + Tier 4 batch done. Resume from the remaining Tier 4 trivia / A2-046.
 
 Resumed from A2-005 per the prior session's pointer, after a full Rule 1
 repo validation and a cross-check (commit history + doc 11 + this section)
@@ -62,21 +62,44 @@ re-litigated):**
 - A2-021 done at the "fuller" scope (cross-device reconcile + signup seed),
   not the minimal seed-only.
 
-**Still open (doc 11 drives it):** Tier 3 (perf, most of it needs on-device
-Sentry-traces profiling first, only A2-048's dead RestTimer animation is a
-no-profile win), then Tier 4 (dead-code cleanup). Tier 5 gates #1 + #2 are
-done this session (see below); #3 (TS/JSDoc) and #5 (npm audit) are
-explicitly long-term / next-SDK-bump, #4 (--detectOpenHandles) is a low
-diagnostic pass. **Resume from A2-048 or the Tier 4 dead-code batch.**
-
 **Tier 5 gates landed (`0eaa5e7`):** eslint-plugin-react's
 `react/jsx-uses-vars` (lint warnings 1670 → 777, so real dead code is now
 visible) and a voice-rule copy gate (no em dashes, no machine-tell words in
 displayed copy in screens/components, as `no-restricted-syntax` errors
 alongside the hex gate). Both enforced by the existing CI eslint job.
 
-Repo at session end: `main` at this doc commit on top of `0eaa5e7`, 0/0 with
-origin, suite green (2358 passing), 0 lint errors. Migrations unchanged this
+**Tier 4 batch landed this session:**
+- `04f8647` A2-048: removed RestTimer's dead progress-bar animation (a
+  JS-thread Animated.timing that re-bound every tick to drive a barWidth no
+  View consumed), plus the cascading dead reads it was the only consumer of
+  (A2-049 currentExerciseName, reduceMotion, restTimerDuration,
+  workoutExercises/currentExerciseIndex). A2-050 deps documented.
+- `d214e4a` A2-067 / N3-002 / A2-066: deleted the dead generic
+  OnboardingScreen (registered in WelcomeStack but no inbound navigation;
+  live free path is FirstRunScreen). 366 lines, plus its non-canonical goal
+  taxonomy.
+- `77bd4b5` A2-036: consolidated the four Math.random row-id generators into
+  one `src/lib/uuid.js` (the store's copy was dead apart from a test; the
+  syncQueue 'q' prefix is preserved via an optional arg). **A2-020 (CSPRNG)
+  is deferred**: it needs a native random source (no expo-crypto /
+  react-native-get-random-values installed, Hermes has no getRandomValues),
+  same class as the deferred native Apple Sign-In. Now a one-line change in
+  lib/uuid.js when a source lands.
+- `0c8738b` A2-042 + A2-065: removed two read-confirmed dead locals
+  (targetSFR, worstVolume in algorithms.js) and a duplicate 'Landmine Row'
+  key in formTips.
+
+**Still open in the audit:** Tier 3 (perf, needs on-device Sentry-traces
+profiling first), the smaller Tier 4 trivia (A2-052 ExerciseCard sfr, A2-058
+dead ternary, A2-062 stale comment, A2-025 LOCAL_USER_KEY, A2-053/054 doc
+mismatches), A2-046 (planEngine dead progression output, runtime-adjacent,
+wants a consumer check + tests), A2-029/A2-061 (document the dual sync
+architectures), A2-020 (CSPRNG, needs the native dep), and Tier 5 #3/#4/#5
+(long-term). **Resume from the remaining Tier 4 trivia or A2-046.**
+
+Repo at session end: `main` at this doc commit on top of `0c8738b`, 0/0 with
+origin, suite green (2352 passing; the count moved as dead screen-mount cases
+were removed and uuid tests added), 0 lint errors. Migrations unchanged this
 session (048, 050-055, 058 still pending founder apply; 049 held).
 
 ### 0.0000000000001. 2026-05-31 (master-audit remediation, Claude): Tier 1 closed, Tier 2 in progress. Paused for a fresh restart tomorrow.

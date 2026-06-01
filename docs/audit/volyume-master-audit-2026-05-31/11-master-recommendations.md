@@ -32,9 +32,16 @@ Landed on `main`, full suite green (2358 passing), eslint clean:
   Tier 5 #3 (TS/JSDoc) and #5 (npm audit) stay long-term / next-SDK-bump;
   #4 (--detectOpenHandles) is a low diagnostic pass.
 
-Next: Tier 3 + Tier 4. Most of Tier 3 needs on-device Sentry-traces
-profiling first (only A2-048's dead RestTimer animation is a no-profile
-win). Resume from A2-048 or the Tier 4 dead-code batch. Session detail is in
+- Tier 4 batch done 2026-06-01: A2-048 (dead RestTimer animation, +A2-049
+  /A2-050), A2-067/N3-002/A2-066 (deleted the dead OnboardingScreen), A2-036
+  (one row-id helper in lib/uuid.js; A2-020 CSPRNG deferred, needs a native
+  random source), A2-042 + A2-065 (dead locals + a duplicate form-tip key).
+
+Still open: Tier 3 (needs on-device profiling first), the smaller Tier 4
+trivia (A2-052, A2-058, A2-062, A2-025, A2-053/054), A2-046 (planEngine dead
+progression output, runtime-adjacent), A2-029/A2-061 (document the dual sync
+architectures), A2-020 (CSPRNG, native dep), Tier 5 #3/#4/#5 (long-term).
+Resume from the remaining Tier 4 trivia or A2-046. Session detail is in
 `docs/CURRENT_STATUS.md` § 0.
 
 ---
