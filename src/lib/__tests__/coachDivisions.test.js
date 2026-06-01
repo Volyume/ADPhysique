@@ -48,6 +48,18 @@ describe('Coach division contract', () => {
     expect(wellness.quads).toBeGreaterThan(bikini.quads);
   });
 
+  test('leg-judged divisions deliver real leg volume at 5 days (stage 2b)', () => {
+    // Was quads ~6 / calves ~4 / figure glutes 2 on the 5-day PPL (one leg day).
+    expect(vol(generatePlan(cfg('classic_physique'))).calves).toBeGreaterThanOrEqual(8);
+    expect(vol(generatePlan(cfg('figure'))).glutes).toBeGreaterThanOrEqual(10);
+    expect(vol(generatePlan(cfg('bodybuilding'))).quads).toBeGreaterThanOrEqual(8);
+  });
+
+  test('general and Men\'s Physique keep the PPL split (default and upper-dominant unchanged)', () => {
+    expect(generatePlan(cfg('general')).splitType).toBe('ppl');
+    expect(generatePlan(cfg('mens_physique')).splitType).toBe('ppl');
+  });
+
   test('every division generates a non-empty plan with a recoverable session count', () => {
     for (const g of ['mens_physique', 'classic_physique', 'bodybuilding', 'bikini',
       'wellness', 'figure', 'womens_physique', 'womens_bodybuilding']) {

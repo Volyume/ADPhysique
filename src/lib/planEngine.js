@@ -21,6 +21,7 @@ export const SPLIT_LABELS = {
   ppl_ab:          'PPL A/B (6-day)',
   upper_lower_wp:  'Upper / Lower + Weak-Point Day',
   lower_focus:     'Lower-Body Focus',
+  balanced_ul:     'Upper / Lower (5-day)',
 };
 
 // ---------------------------------------------------------------------------
@@ -733,6 +734,11 @@ function selectSplit(experience, effectiveDays, goal) {
   // upper/lower at 4 already runs 2 lower days; 5-6 days route to the
   // lower-focus split (3 lower days).
   const lowerFocus = (goal === 'bikini' || goal === 'wellness');
+  // Divisions whose legs are fully judged need two leg days at 5 days (the PPL
+  // 5-day gives one). Men's Physique stays upper-weighted; general keeps PPL so
+  // the default non-competitor experience is unchanged.
+  const legJudgedBalanced = (goal === 'bodybuilding' || goal === 'classic_physique'
+    || goal === 'figure' || goal === 'womens_physique' || goal === 'womens_bodybuilding');
   if (effectiveDays === 3) {
     if (lowerFocus) return 'full_body';
     return (experience === 'advanced' || experience === 'competitive') ? 'ppl' : 'full_body';
@@ -740,7 +746,9 @@ function selectSplit(experience, effectiveDays, goal) {
   if (effectiveDays === 4) return 'upper_lower';
   if (effectiveDays === 5) {
     if (goal === 'weak_point_spec') return 'upper_lower_wp';
-    return lowerFocus ? 'lower_focus' : 'ppl';
+    if (lowerFocus) return 'lower_focus';
+    if (legJudgedBalanced) return 'balanced_ul';
+    return 'ppl';
   }
   if (effectiveDays === 6) return lowerFocus ? 'lower_focus' : 'ppl_ab';
   // Days outside the supported 3-6 range fall through here, log so we
@@ -836,15 +844,15 @@ function buildUpperLowerWorkouts(weeklyTargets, landmarks, equipment, goal, expe
   return [upperA, lowerA, upperB, lowerB];
 }
 
-// Lower-body-dominant divisions (Bikini, Wellness) need more LEG SESSIONS, not
-// just more leg sets: buildSession caps a muscle at min(8, target/sessions), so
-// one leg day cannot deliver a 16-22 set glute target however high the overlay
-// sets it (coach-plan audit 2026-06-01, stage 2). This split runs 3 lower days
-// to 2 upper at 5 days (3 to 3 at 6), interleaved L/U/L/U/L.
-function buildLowerFocusWorkouts(weeklyTargets, landmarks, equipment, goal, experience, nutritionPhase, effectiveDays) {
-  const upperMuscles = ['chest', 'back', 'side_delts', 'rear_delts', 'front_delts', 'biceps', 'triceps'];
+// Leg-judged divisions need more LEG SESSIONS, not just more leg sets:
+// buildSession caps a muscle at min(8, target/sessions), so one leg day cannot
+// deliver a 12-22 set leg target however high the overlay sets it (coach-plan
+// audit 2026-06-01, stages 2/2b). This builder runs `lowerDays` lower sessions
+// against the rest as upper, interleaved L/U/L/U... Lower-dominant divisions
+// (Bikini, Wellness) pass lowerDays=3; balanced leg-judged divisions pass half.
+function buildWeightedUpperLower(weeklyTargets, landmarks, equipment, goal, experience, nutritionPhase, effectiveDays, lowerDays) {
+  const upperMuscles = ['chest', 'back', 'traps', 'side_delts', 'rear_delts', 'front_delts', 'biceps', 'triceps'];
   const lowerMuscles = ['glutes', 'hamstrings', 'quads', 'adductors', 'calves', 'abs'];
-  const lowerDays = 3;
   const upperDays = Math.max(1, effectiveDays - lowerDays);
 
   const sessionsPerMuscle = {};
@@ -1397,7 +1405,10 @@ function _generatePlanInner(inputs) {
       rawWorkouts = buildUpperLowerWPWorkouts(adjustedTargets, landmarks, equipment, internalGoal, weakPointKeys, experience, nutritionPhase);
       break;
     case 'lower_focus':
-      rawWorkouts = buildLowerFocusWorkouts(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays);
+      rawWorkouts = buildWeightedUpperLower(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays, 3);
+      break;
+    case 'balanced_ul':
+      rawWorkouts = buildWeightedUpperLower(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays, Math.floor(effectiveDays / 2));
       break;
     case 'ppl':
     case 'ppl_ab':
@@ -1471,6 +1482,7 @@ function _generatePlanInner(inputs) {
     ppl_ab:         'PPL A/B',
     upper_lower_wp: 'UL + WP',
     lower_focus:    'Lower Focus',
+    balanced_ul:    'Upper-Lower',
   }[splitType] ?? splitType;
 
   // Include the nutrition phase in the plan name so a user who re-rolls
