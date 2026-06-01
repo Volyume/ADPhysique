@@ -62,6 +62,15 @@ is no existing water target setting.
   values; an unknown new key synced down falls outside its fixed buckets rather
   than crashing). This is a food-domain change, not Diary-only, and is the
   largest piece of work in the redesign. Everything else is Diary-local.
+- Suggested-meal re-keying (part of the meal-model item): the "+" picker is
+  fed by curated meals/foods tagged to the fixed slot names (`curatedMeals.js`
+  `slots`, `mealSuggest.js:slotMatches`). Numbered meals break that name-based
+  filter. Recommended: keep the tags, infer a suggestion context (early / main
+  / small / peri-workout) from the meal's time/size/position and map it to the
+  existing tags, falling back to the macro-driven ranking that already exists.
+  Add peri-workout curated meals at the same time (none exist today,
+  `curatedMeals.js:15`). This avoids a hand re-tagging pass but must ship with
+  the meal-model change, not after it.
 - Locked constraints unchanged: adherence-neutral colour, `#0D0D0D` background,
   no gradients, amber-only accent, plain no-cheerleading copy. None of the
   above touches those.

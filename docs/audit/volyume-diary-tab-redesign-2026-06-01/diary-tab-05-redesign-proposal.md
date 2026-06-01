@@ -122,6 +122,26 @@ fixed buckets rather than crashing. Legacy entries map to display labels for
 back-compat. This is the largest single item in the redesign and is flagged as
 such in Phase 6.
 
+Suggested-meal dependency (the "+" picker). The curated meals and curated foods
+that power the meal suggestions are tagged with the fixed slot names: every
+entry in `curatedMeals.js` carries `slots` such as `['breakfast']` or
+`['lunch','dinner']` or `['snack']`, and `mealSuggest.js:slotMatches` filters
+the picker to the slot being logged ("breakfast meals at breakfast",
+`mealSuggest.js:155-156`). Numbered meals have no breakfast/lunch/dinner name,
+so a name-based filter would stop surfacing slot-appropriate suggestions. Do
+NOT re-tag all the curated data by hand. Keep the tags (they encode useful
+meal-character: an early meal, a main meal, a small meal) and change the INPUT
+to the filter instead: a numbered meal infers a suggestion context (early /
+main / small / peri-workout) from its time of day, its macro size, or its
+position in the day, and that context maps to the existing tags. Pre-workout
+and Post-workout map directly to a peri-workout context, and this is also the
+moment to add peri-workout-suitable curated meals, since `curatedMeals.js:15`
+notes there is no pre/post-workout detection today, so those slots currently
+get no curated suggestions at all. Where no context resolves, fall back to the
+macro-driven ranking the engine already does (rank by remaining macros and
+meals-left, `mealSuggest.js:165`). This keeps every curated entry useful under
+the new model without a re-tagging pass.
+
 ### Pre-workout and Post-workout, tied to the session
 
 The screen already knows whether today is a training day (`isTrainingDay`,
