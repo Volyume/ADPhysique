@@ -907,22 +907,27 @@ function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, 
   }
 
   // Distribute sessionTarget sets across chosen exercises.
-  // Every entry gets a minimum of 3 sets (rebuild spec phase 1: no 2-set
-  // fragments anywhere). The reservation ensures the later exercise is never
-  // starved below that floor.
+  // Every entry gets 3-6 working sets (rebuild spec phase 1: no 2-set
+  // fragments; a single exercise holds at most 6 sets). The session target is
+  // spread as evenly as the chosen exercises allow, so a muscle's DELIVERED
+  // volume tracks its target instead of being capped at numEx*4 and dropping
+  // the remainder (the delivered-vs-target gap: a 5-set session with one
+  // isolation used to deliver 3). The reservation keeps later entries above the
+  // minimum.
   const MIN_SETS_PER_ENTRY = 3;
+  const MAX_SETS_PER_ENTRY = 6;
   const n = chosen.length;
   const result = [];
   let remaining = sessionTarget;
   for (let i = 0; i < n; i++) {
     const entry = chosen[i];
-    const isCompound = entry.p === 'heavy_compound' || entry.p === 'mod_compound';
-    const minSets = MIN_SETS_PER_ENTRY;
-    const slotsAfter = n - i - 1;
-    const laterMin = slotsAfter > 0 ? MIN_SETS_PER_ENTRY : 0;
-    const maxForThis = remaining - laterMin * slotsAfter;
-    let s = Math.min(maxForThis, isCompound ? 4 : 3);
-    s = Math.max(minSets, s);
+    const slotsLeft = n - i;
+    const slotsAfter = slotsLeft - 1;
+    const reserveAfter = slotsAfter * MIN_SETS_PER_ENTRY;
+    const maxForThis = Math.min(MAX_SETS_PER_ENTRY, remaining - reserveAfter);
+    let s = Math.ceil(remaining / slotsLeft);
+    s = Math.min(s, maxForThis);
+    s = Math.max(MIN_SETS_PER_ENTRY, s);
     remaining -= s;
     const exObj = makeEx(entry.n, entry.p, s, experience, nutritionPhase, goal, null);
     // Internal-only tags consumed by trimToTimeBudget, stripped before output.
