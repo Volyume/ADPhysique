@@ -8,6 +8,7 @@
 
 const babelParser = require('@babel/eslint-parser');
 const reactHooks = require('eslint-plugin-react-hooks');
+const reactPlugin = require('eslint-plugin-react');
 const importPlugin = require('eslint-plugin-import');
 
 // React Native / Hermes runtime globals, so `no-undef` does not fire on them.
@@ -108,11 +109,17 @@ module.exports = [
       },
       globals: rnGlobals,
     },
-    plugins: { 'react-hooks': reactHooks, import: importPlugin },
+    plugins: { 'react-hooks': reactHooks, react: reactPlugin, import: importPlugin },
+    settings: { react: { version: '18.2' } },
     rules: {
       // Errors: the gate. These catch the bug class that already shipped.
       'no-undef': 'error',
       'react-hooks/rules-of-hooks': 'error',
+      // Mark identifiers referenced only in JSX (<Foo/>) as used, so
+      // no-unused-vars stops reporting every imported component as dead
+      // (Tier 5 §A.1). Collapses ~1,600 false positives so genuine dead
+      // code is visible.
+      'react/jsx-uses-vars': 'error',
       // Registered so the existing disable-directives resolve to a known rule.
       // Resolution itself is a follow-up (RN resolver + assets).
       'import/no-unresolved': 'off',
@@ -162,6 +169,55 @@ module.exports = [
         {
           selector: "Property[key.name='fontWeight'] > Literal",
           message: 'No raw fontWeight literal. Use a type role or fontWeight.* token.',
+        },
+        // Voice-rule copy gate (CLAUDE.md "Voice and copy" + "No AI
+        // fingerprint"). Guards displayed copy the way the rules above guard
+        // colour: no em dashes, no machine-tell marketing words. Strings +
+        // JSX text only, so code comments are out of scope. If a flagged word
+        // is ever genuinely needed in copy, add a scoped eslint-disable with a
+        // reason (same escape hatch as the hero numerals).
+        {
+          selector: "Literal[value=/\\u2014/]",
+          message: 'No em dash (—) in user-facing copy. Use a full stop, comma, or colon (CLAUDE.md voice rule).',
+        },
+        {
+          selector: "JSXText[value=/\\u2014/]",
+          message: 'No em dash (—) in user-facing copy. Use a full stop, comma, or colon (CLAUDE.md voice rule).',
+        },
+        {
+          selector: "Literal[value=/\\b(?:delve|leverage|utili[sz]e|facilitate|seamless(?:ly)?|streamlin(?:e|es|ed|ing)|robust|comprehensive)\\b/i]",
+          message: 'Machine-tell word in copy (CLAUDE.md "No AI fingerprint"). Rewrite in plain spoken voice.',
+        },
+        {
+          selector: "JSXText[value=/\\b(?:delve|leverage|utili[sz]e|facilitate|seamless(?:ly)?|streamlin(?:e|es|ed|ing)|robust|comprehensive)\\b/i]",
+          message: 'Machine-tell word in copy (CLAUDE.md "No AI fingerprint"). Rewrite in plain spoken voice.',
+        },
+      ],
+    },
+  },
+  {
+    // The copy half of the gate above also applies to ShareCardScreen, which
+    // is exempt from the block above only for its legitimately-literal offline
+    // HTML palette. Scoped to that one file so it does not collide with the
+    // block above (different files, so no-restricted-syntax does not override).
+    files: ['src/screens/ShareCardScreen.js'],
+    rules: {
+      'no-restricted-syntax': ['error',
+        {
+          selector: "Literal[value=/\\u2014/]",
+          message: 'No em dash (—) in user-facing copy. Use a full stop, comma, or colon (CLAUDE.md voice rule).',
+        },
+        {
+          selector: "JSXText[value=/\\u2014/]",
+          message: 'No em dash (—) in user-facing copy. Use a full stop, comma, or colon (CLAUDE.md voice rule).',
+        },
+        {
+          selector: "Literal[value=/\\b(?:delve|leverage|utili[sz]e|facilitate|seamless(?:ly)?|streamlin(?:e|es|ed|ing)|robust|comprehensive)\\b/i]",
+          message: 'Machine-tell word in copy (CLAUDE.md "No AI fingerprint"). Rewrite in plain spoken voice.',
+        },
+        {
+          selector: "JSXText[value=/\\b(?:delve|leverage|utili[sz]e|facilitate|seamless(?:ly)?|streamlin(?:e|es|ed|ing)|robust|comprehensive)\\b/i]",
+          message: 'Machine-tell word in copy (CLAUDE.md "No AI fingerprint"). Rewrite in plain spoken voice.',
         },
       ],
     },
