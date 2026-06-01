@@ -60,6 +60,8 @@ const SESSION_LENGTH_OPTIONS = [
   { label: '90 min', value: 90 },
 ];
 
+const DAYS_PER_WEEK_OPTIONS = [3, 4, 5, 6];
+
 const EQUIPMENT_OPTIONS = [
   { value: 'full_gym',        label: 'Full Gym',          sub: 'Barbells, cables, machines, dumbbells' },
   { value: 'machines_cables', label: 'Machines & Cables', sub: 'No free barbells' },
@@ -168,6 +170,7 @@ export default function ProOnboardingScreen({ navigation }) {
   // Step 2, training setup (all dropdowns / segments)
   const [experience, setExperience] = useState(null);
   const [sessionLengthMinutes, setSessionLengthMinutes] = useState(60);
+  const [daysPerWeek, setDaysPerWeek] = useState(DEFAULT_DAYS_PER_WEEK);
   const [equipment, setEquipment] = useState(null);
   // Defaults to 'general' (not competing). Users tap into the optional
   // "Competing in a category?" dropdown to pick a physique category.
@@ -444,13 +447,13 @@ export default function ProOnboardingScreen({ navigation }) {
         ageYears: safeAge,
         heightCm: safeHeightCm,
         weightKg: safeWeightKg,
-        activityLevel: daysToActivityLevel(DEFAULT_DAYS_PER_WEEK),
+        activityLevel: daysToActivityLevel(daysPerWeek),
         goal: phaseToNutritionKey(trainingPhase),
         trainingGoal,
       });
 
       const goalPhase = phaseToCoachingKey(trainingPhase);
-      const trainingFreqBucket = daysToFreqBucket(DEFAULT_DAYS_PER_WEEK);
+      const trainingFreqBucket = daysToFreqBucket(daysPerWeek);
 
       // weeklyCoach.js reads `goalStartDate` to time diet-break suggestions
       // when the user is in a cut. Set it here if onboarding lands them in
@@ -475,11 +478,12 @@ export default function ProOnboardingScreen({ navigation }) {
         stepsEnabled: stepsTargetOn,
         trainingFreq: trainingFreqBucket,
         trainingFreqBucket,
-        daysPerWeek: DEFAULT_DAYS_PER_WEEK,
+        daysPerWeek,
         experience,
         sessionLengthMinutes,
         equipment,
         recoveryRating,
+        planWeakPoints,
       };
 
       if (user?.id) await saveLocalProfile(user.id, merged);
@@ -533,7 +537,7 @@ export default function ProOnboardingScreen({ navigation }) {
       if (user?.id) {
         const planProfile = {
           experience,
-          daysPerWeek: DEFAULT_DAYS_PER_WEEK,
+          daysPerWeek,
           sessionLengthMinutes,
           equipment,
           trainingGoal,
@@ -968,6 +972,22 @@ export default function ProOnboardingScreen({ navigation }) {
                     <Text style={[styles.segmentText, sessionLengthMinutes === opt.value && styles.segmentTextActive]}>
                       {opt.label}
                     </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.fieldLabel}>Training days per week</Text>
+              <Text style={styles.fieldHint}>How many days can you train? Your plan is built to fit this many sessions.</Text>
+              <View style={styles.segmentRow}>
+                {DAYS_PER_WEEK_OPTIONS.map(d => (
+                  <TouchableOpacity
+                    key={d}
+                    style={[styles.segment, daysPerWeek === d && styles.segmentActive]}
+                    onPress={() => setDaysPerWeek(d)}
+                  >
+                    <Text style={[styles.segmentText, daysPerWeek === d && styles.segmentTextActive]}>{d}</Text>
                   </TouchableOpacity>
                 ))}
               </View>

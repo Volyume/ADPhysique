@@ -364,7 +364,11 @@ export default function PlansScreen({ navigation }) {
   //   * Pro with active plan → switch framings (update goals / library / manual)
   //   * Pro without a plan (rare, just after first sign-up) → default order
   //   * Free → default order (library first, manual second)
-  const actionCards = isProWithPlan ? ACTION_CARDS_PRO_SWITCH : ACTION_CARDS_DEFAULT;
+  // Every Pro user gets the coached-builder card set, not only those who
+  // already have an active plan. A new Pro user with no plan previously fell
+  // through to the Free default set and had no way to reach the coach builder
+  // from the Plans tab (onboarding audit, C8).
+  const actionCards = tier === 'pro' ? ACTION_CARDS_PRO_SWITCH : ACTION_CARDS_DEFAULT;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

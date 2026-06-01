@@ -173,6 +173,9 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   </View>
                 ) : null}
               </View>
+              <Text style={styles.targetsNote}>
+                Hit these most days. Logging food in your diary sharpens your coaching, but it's optional. Your weight trend does the heavy lifting.
+              </Text>
               {/* First-time nutrition primer pointer. Most users seeing
                   these numbers for the first time have never tracked
                   macros, so this gives them a 5-min ramp before they need
@@ -371,6 +374,7 @@ const styles = StyleSheet.create({
   goalChipText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
   eduLearnRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
   eduLearnText: { color: colors.primary, ...type.label, flex: 1 },
+  targetsNote: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17, marginTop: spacing.sm },
 
   splitList: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm },
   splitWhy: { fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 19, marginBottom: spacing.sm },
