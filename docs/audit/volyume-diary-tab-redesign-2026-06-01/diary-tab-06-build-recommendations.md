@@ -15,16 +15,22 @@ device look before final sign-off):
 - Stage 2 water (`4a6cb85`): water tracker becomes a progress bar in the card
   language (default 3 L target, flagged for a per-user setting).
 
-REMAINING (next tranche):
-- Quick-log strip of Frequents + Saved meals (integration: reads + log action).
-- Collapsible meal sections.
-- Pre/Post-workout as always-available named meals (folds into the meal-model
-  item; no workout lookup, no training-day detection, corrected 2026-06-01).
-- Stage 3 polish: count-up, ring sweep, entry-insert animation, haptics, swipe
-  between days, week strip.
-- The numbered-meal model: the migration-backed, food-domain-wide unit with the
-  suggestion re-keying. Per Rule 6 the migration is drafted and tracked, the
-  founder applies it. Best done as its own focused, tested pass.
+SHIPPED, the structural meal-model unit:
+- Flexible numbered-meal model (`9247b59`): "Meal 1..N" + Pre/Post-workout as
+  always-available named meals (no training-day detection), one shared
+  `mealSlots.js` source of truth, follows the existing `@volyume_meals_per_day`
+  preference, "Add meal" affordance, back-compat tested (legacy diaries keep
+  showing), suggestion re-keying done. Ships with migration 059 (`99a5eea`,
+  drafted + tracked, founder applies).
+
+REMAINING (optional / polish, best tuned on device):
+- Quick-log strip on the diary: largely covered already by the add flow, which
+  surfaces Recents / Suggested / Favourites / Frequents tabs (`FoodSearchScreen`
+  `SEARCH_TABS`). A diary-level strip would save one tap; optional enhancement.
+- Collapsible meal sections (minor UI state).
+- Stage 3 polish: count-up on the calorie number, ring sweep, entry-insert
+  animation, haptics on add, swipe between days, week strip. Animation work is
+  best tuned against the real layout on a device.
 
 ---
 
