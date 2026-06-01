@@ -606,7 +606,6 @@ const SCREENS_TO_SWEEP = [
   'NotificationSettingsScreen',
   'NutritionEducationScreen',
   'NutritionTargetsScreen',
-  'OnboardingScreen',
   'PRWallScreen',
   'PlanLibraryScreen',
   'PlansScreen',
