@@ -21,15 +21,14 @@
 
 import { db } from './database';
 import { logWarn, logError, logInfo } from './errorLog';
+import { generateUUID } from './uuid';
 
 const MAX_RETRIES = 6;
 const BACKOFFS_MS = [0, 60_000, 5 * 60_000, 30 * 60_000, 2 * 60 * 60_000, 8 * 60 * 60_000];
 
+// Queue rows keep the 'q' prefix the inline generator used (A2-036).
 function uid() {
-  return 'qxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = (Math.random() * 16) | 0;
-    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-  });
+  return generateUUID('q');
 }
 
 /**

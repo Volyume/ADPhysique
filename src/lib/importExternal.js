@@ -480,9 +480,9 @@ async function createCustomExerciseRow(d, name) {
   return id;
 }
 
+// Delegates to the single id generator (A2-036). Lazy require keeps the
+// pure CSV parsers importable without pulling anything else in.
 function uuid() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = (Math.random() * 16) | 0;
-    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-  });
+  // eslint-disable-next-line global-require
+  return require('./uuid').generateUUID();
 }

@@ -82,12 +82,10 @@ function pushPrefSoon(supabaseUid, key, value) {
   }, 0);
 }
 
-export function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = (Math.random() * 16) | 0;
-    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-  });
-}
+// Re-exported from lib/uuid so the store keeps its generateUUID surface
+// (the identity anti-patterns test calls it via the store) while the one
+// implementation lives in lib/uuid (A2-036).
+export { generateUUID } from '../lib/uuid';
 
 const useAppStore = create((set, get) => ({
   // Auth

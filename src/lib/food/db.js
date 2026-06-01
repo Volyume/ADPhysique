@@ -12,13 +12,8 @@
 import { db, runInTransaction } from '../database';
 import { CURATED_MEALS, mealItems } from './curatedMeals';
 import { resolveFoodRef } from './sources/localCache';
-
-function uid() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = (Math.random() * 16) | 0;
-    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-  });
-}
+// Single id generator (A2-036); aliased to keep the local uid() call sites.
+import { generateUUID as uid } from '../uuid';
 
 // ─── food_entries (the diary) ────────────────────────────────────────────
 
