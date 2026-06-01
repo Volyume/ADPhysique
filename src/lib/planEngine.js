@@ -692,6 +692,40 @@ function estimateSessionMinutes(exercises, equipment) {
   return sessionSec / 60;
 }
 
+// Hard delivered-volume ceiling. Sums each muscle's delivered sets (by the slot
+// it was selected for, _m) across all sessions and trims the largest entries so
+// no muscle exceeds its division-aware MRV, and the side+rear+front delt complex
+// stays within its combined cap. Keeps a 3-set minimum and never removes a
+// muscle's last entry. Runs before time-trim and the volume summary.
+function clampDeliveredToMRV(workouts, goal, landmarks) {
+  const byMuscle = {};
+  for (const w of workouts) for (const ex of w.exercises) {
+    if (ex._m) (byMuscle[ex._m] ??= []).push(ex);
+  }
+  const trimGroup = (exs, cap) => {
+    let total = exs.reduce((s, e) => s + e.sets, 0);
+    if (total <= cap) return;
+    for (const ex of [...exs].sort((a, b) => b.sets - a.sets)) {
+      while (total > cap && ex.sets > 3) { ex.sets--; total--; }
+    }
+    if (total > cap) {
+      for (const ex of exs) {
+        if (total <= cap) break;
+        if (exs.filter(e => e.sets > 0).length <= 1) break;
+        if (ex.sets <= 3) { total -= ex.sets; ex.sets = 0; }
+      }
+    }
+  };
+  for (const [m, exs] of Object.entries(byMuscle)) {
+    if (m === 'side_delts' || m === 'rear_delts' || m === 'front_delts') continue;
+    const lm = SPEC_LANDMARKS[m];
+    if (lm) trimGroup(exs, divisionMRV(m, goal, lm));
+  }
+  const delts = [...(byMuscle.side_delts ?? []), ...(byMuscle.rear_delts ?? []), ...(byMuscle.front_delts ?? [])];
+  if (delts.length) trimGroup(delts, SIDE_REAR_DELT_CAP);
+  for (const w of workouts) w.exercises = w.exercises.filter(e => e.sets > 0);
+}
+
 function trimToTimeBudget(exercises, sessionLengthMinutes, equipment) {
   if (!sessionLengthMinutes || sessionLengthMinutes <= 0) return exercises;
   const budget = sessionLengthMinutes - 2;
@@ -1066,21 +1100,43 @@ function buildSession(name, muscles, sessionsPerMuscle, weeklyTargets, equipment
 
 function buildFullBodyWorkouts(weeklyTargets, landmarks, equipment, goal, experience, nutritionPhase, effectiveDays) {
   const muscles = ['quads', 'hamstrings', 'glutes', 'chest', 'back', 'side_delts', 'rear_delts', 'biceps', 'triceps', 'abs', 'calves'];
-  const sessionsPerMuscle = {};
-  for (const m of muscles) sessionsPerMuscle[m] = effectiveDays;
+  const labels = ['Full Body A', 'Full Body B', 'Full Body C', 'Full Body D', 'Full Body E', 'Full Body F'];
 
-  const labels = ['Full Body A', 'Full Body B', 'Full Body C'];
+  // Rotating emphasis (spec): a muscle appears in only as many days as it needs
+  // to deliver its target at >= ~4 sets/session, not in every session. This
+  // keeps low-volume muscles above the per-session minimum (so they are never
+  // dropped to zero, the general-3-day glutes-0 failure) and keeps each session
+  // short enough to fit the time budget (a full body of all 11 muscles every
+  // day blew past it). Frequency is at least 1 (so nothing is omitted) and at
+  // most effectiveDays.
+  const sessionsPerMuscle = {};
+  for (const m of muscles) {
+    const t = weeklyTargets[m] ?? 0;
+    sessionsPerMuscle[m] = t <= 0 ? 0 : Math.max(1, Math.min(effectiveDays, Math.round(t / 5)));
+  }
+
+  // Assign each muscle to its frequency of days, biggest/most-frequent first,
+  // always into the least-loaded days so session sizes stay balanced.
+  const dayMuscles = Array.from({ length: effectiveDays }, () => []);
+  const order = [...muscles].sort((a, b) =>
+    (sessionsPerMuscle[b] - sessionsPerMuscle[a]) || ((weeklyTargets[b] ?? 0) - (weeklyTargets[a] ?? 0)));
+  for (const m of order) {
+    const picks = dayMuscles
+      .map((d, i) => [i, d.length])
+      .sort((a, b) => a[1] - b[1])
+      .slice(0, sessionsPerMuscle[m])
+      .map(x => x[0]);
+    for (const i of picks) dayMuscles[i].push(m);
+  }
+
   const usedByMuscle = {};
   for (const m of muscles) usedByMuscle[m] = new Set();
 
-  return Array.from({ length: effectiveDays }, (_, i) => {
-    const session = buildSession(
-      labels[i % 3], muscles, sessionsPerMuscle,
-      weeklyTargets, equipment, goal, i, usedByMuscle,
-      experience, nutritionPhase, landmarks
-    );
-    return session;
-  });
+  return dayMuscles.map((dm, i) => buildSession(
+    labels[i % labels.length], dm, sessionsPerMuscle,
+    weeklyTargets, equipment, goal, i, usedByMuscle,
+    experience, nutritionPhase, landmarks,
+  ));
 }
 
 function buildUpperLowerWorkouts(weeklyTargets, landmarks, equipment, goal, experience, nutritionPhase) {
@@ -1470,20 +1526,34 @@ function buildFromMatrix(sessionsIn, weeklyTargets, landmarks, equipment, goal, 
 
   // Weak-point session augmentation (spec section B, the "add a session" option
   // composed with the division split). A weak-point muscle's boosted weekly
-  // target needs enough sessions to deliver at <= ~9 sets each. Add the weak
-  // muscle to further sessions (it appears earlier = higher priority in those)
-  // until it has enough, so the boost lands without losing the division split.
+  // target needs enough sessions to deliver at <= ~9 sets each. Add it to more
+  // sessions until it has enough, but ONLY to sessions of the same region
+  // (upper muscle into an upper day, lower into a lower day) so a leg weak-point
+  // never lands in a pull day and bloats it. Capped at 3 sessions so multiple
+  // simultaneous weak points cannot stack a session past its time budget.
+  const augCount = sessions.map(() => 0);  // weak muscles added per session
   for (const m of _weakPointKeys) {
     const wTarget = weeklyTargets[m] ?? 0;
     if (wTarget <= 0) continue;
-    const desired = Math.min(sessions.length, Math.max(2, Math.ceil(wTarget / 9)));
+    const wantUpper = UPPER_MUSCLES.has(m);
+    const desired = Math.min(3, sessions.length, Math.max(2, Math.ceil(wTarget / 9)));
     let have = sessions.filter(s => s.muscles.includes(m)).length;
     if (have >= desired) continue;
-    for (const s of sessions) {
-      if (have >= desired) break;
-      if (s.muscles.includes(m)) continue;
-      s.muscles.unshift(m);  // lead the session: weak point gets first pick
-      have += 1;
+    // Pass 1 adds to same-region sessions; pass 2 falls back to any session so
+    // a division with few same-region days (e.g. MP glutes, one leg day) can
+    // still reach its target. Cap one augmented muscle per session so multiple
+    // simultaneous weak points never stack into one session and blow the time
+    // budget (the 3-leg-muscles-in-a-pull-day case).
+    for (const sameRegionOnly of [true, false]) {
+      for (let i = 0; i < sessions.length; i++) {
+        if (have >= desired) break;
+        const s = sessions[i];
+        if (s.muscles.includes(m) || augCount[i] >= 1) continue;
+        if (sameRegionOnly && !s.muscles.some(x => UPPER_MUSCLES.has(x) === wantUpper)) continue;
+        s.muscles.unshift(m);  // lead the session: weak point gets first pick
+        augCount[i] += 1;
+        have += 1;
+      }
     }
   }
 
@@ -1998,6 +2068,13 @@ function _generatePlanInner(inputs) {
       }
     }
   }
+
+  // Hard safety net: clamp DELIVERED weekly volume to MRV. Per-session rounding
+  // and the cap-flex can stack a muscle a set or two over its ceiling (e.g. the
+  // delt complex at 6 days, a hamstring/quad weak-point). Trim the largest
+  // entries (by selection slot _m) down, keeping 3 sets minimum and never the
+  // last entry, so no muscle is delivered above its recoverable maximum.
+  clampDeliveredToMRV(rawWorkouts, goal, landmarks);
 
   // Finalise: deduplicate, trim to time budget, assign supersets, stamp duration
   const workouts = rawWorkouts.map(w => {

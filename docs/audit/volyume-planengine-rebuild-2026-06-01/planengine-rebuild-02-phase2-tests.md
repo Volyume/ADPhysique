@@ -27,7 +27,7 @@ Structural gates that PASS in phase 2:
 
 | Division | Days | split | lead lift | session names |
 |---|---|---|---|---|
-| General | 3 | full_body | Barbell Back Squat | Full Body A / Full Body B / Full Body C |
+| General | 3 | full_body | Weighted Pull-Up | Full Body A / Full Body B / Full Body C |
 | General | 4 | upper_lower | Barbell Bench Press | Upper A / Lower A / Upper B / Lower B |
 | General | 5 | ppl | Barbell Bench Press | Push A / Pull A / Legs / Push B / Pull B |
 | General | 6 | ppl_ab | Barbell Bench Press | Push A / Pull A / Legs A / Push B / Pull B / Legs B |
@@ -39,7 +39,7 @@ Structural gates that PASS in phase 2:
 | Classic Physique | 4 | X-Frame | Weighted Pull-Up | Back + Rear Delt / Legs (Sweep) / Chest + Side Delt + Arms / Back + Hams |
 | Classic Physique | 5 | X-Frame | Weighted Pull-Up | Pull / Legs (Quad) / Push / Pull / Legs (Ham + Glute) |
 | Classic Physique | 6 | X-Frame | Weighted Pull-Up | Pull / Push / Legs / Pull / Push / Legs + Abs |
-| Bodybuilding | 3 | full_body | Barbell Back Squat | Full Body A / Full Body B / Full Body C |
+| Bodybuilding | 3 | full_body | Weighted Pull-Up | Full Body A / Full Body B / Full Body C |
 | Bodybuilding | 4 | upper_lower | Incline Barbell Bench Press | Upper A / Lower A / Upper B / Lower B |
 | Bodybuilding | 5 | balanced_ul | Barbell Hip Thrust | Lower A / Upper A / Lower B / Upper B / Upper C |
 | Bodybuilding | 6 | ppl_ab | Incline Barbell Bench Press | Push A / Pull A / Legs A / Push B / Pull B / Legs B |
@@ -59,7 +59,7 @@ Structural gates that PASS in phase 2:
 | Women's Physique | 4 | V-Taper | Weighted Pull-Up | Upper (Width) / Lower / Upper (Thickness) / Lower |
 | Women's Physique | 5 | V-Taper | Weighted Pull-Up | Pull / Push / Legs / Upper / Lower |
 | Women's Physique | 6 | V-Taper | Weighted Pull-Up | Pull / Push / Legs / Pull / Push / Legs |
-| Women's Bodybuilding | 3 | full_body | Barbell Back Squat | Full Body A / Full Body B / Full Body C |
+| Women's Bodybuilding | 3 | full_body | Weighted Pull-Up | Full Body A / Full Body B / Full Body C |
 | Women's Bodybuilding | 4 | upper_lower | Barbell Bench Press | Upper A / Lower A / Upper B / Lower B |
 | Women's Bodybuilding | 5 | balanced_ul | Barbell Hip Thrust | Lower A / Upper A / Lower B / Upper B / Upper C |
 | Women's Bodybuilding | 6 | ppl_ab | Barbell Bench Press | Push A / Pull A / Legs A / Push B / Pull B / Legs B |

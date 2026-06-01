@@ -13,7 +13,7 @@ aware MRV, delivered via extra weak-muscle sessions + a flexed per-session cap
 | Division | split kept | glutes base -> WP | MRV |
 |---|---|---|---|
 | mens_physique | V-Taper | 3 -> 14 | 16 |
-| classic_physique | X-Frame | 3 -> 13 | 16 |
+| classic_physique | X-Frame | 3 -> 14 | 16 |
 | bikini | Glute Focus | 23 -> 24 | 30 |
 | wellness | Lower Focus | 21 -> 24 | 30 |
 | figure | X-Frame | 11 -> 15 | 16 |
