@@ -230,13 +230,18 @@ REMAINING:
 - 3e increment 3 (hard coverage flag forcing isolation at near-zero indirect):
   largely redundant with the matrix (every division already gets direct side
   delts); low value, deferred.
-- 3a Full library primary-muscle audit (`src/lib/seedExercises.js`): the glute
-  and quad TYPE tags landed; a whole-library primary-muscle re-audit (every
-  hip-extension primary = glutes, fractional = hamstrings) is still open. The
-  POOL is correct; this is library hygiene, low risk, not on the gate path.
-- 3f Coverage warnings scoped to split type. NOTE: `buildWarnings` in the engine
-  only emits recovery/experience warnings. The per-session coverage cues live in
-  the app's session/coaching layer, OUTSIDE planEngine.js. Locate them first.
+- 3a Library primary-muscle hygiene: DONE (commit d0027dd). Measured audit fixed
+  the spec's exact defect: Cable Pull-Through and Hip Extension (Cable)
+  hamstrings -> glutes; Good Morning (Barbell) back -> hamstrings; three quad
+  compounds given the missing glutes secondary. PROPAGATION: these are field
+  changes to existing RAW rows; new installs + the benchmark get them, but an
+  existing seeded DB needs a re-seed/migration (the top-up only inserts new
+  rows). Non-destructive. For the founder migration playbook.
+- 3f Coverage cues scoped to split type: OUT OF ENGINE SCOPE. Searched the app:
+  there is no per-session coverage-cue system to gate (buildWarnings only emits
+  recovery/experience warnings). Building engine support for a non-existent
+  consumer would be speculative. The engine already exposes per-workout names
+  and per-exercise muscle tags a future cue system can read. No engine change.
 - Phase 4 weak-point composition: DONE (doc 06 = investigation, doc 07 = the
   fix; benchmark planengineRebuildPhase4.test.js, 21 tests). The weak_point phase
   now USES the DIVISION_MATRIX, so the six specialised divisions keep their split
@@ -295,7 +300,7 @@ Discipline (the rules that produced the failures we are fixing):
 ```
 npx jest src/lib/__tests__/planengineRebuildPhase1.test.js   # regenerates doc 01, 27 programs
 npx jest src/lib/__tests__/planengineRebuildPhase2.test.js   # regenerates doc 02, specialisation
-npx jest                                                     # full suite, expect 2476 pass / 4 skip
+npx jest                                                     # full suite, expect 2533 pass / 3 skip
 ```
 The two rebuild test files write their docs as a side effect, so the docs always
 reflect the live engine.
@@ -338,16 +343,30 @@ reflect the live engine.
 
 ---
 
-## 10. One-paragraph summary
+## 10. Status summary (engine rebuild COMPLETE)
 
-The engine's core architectural failure (division was cosmetic; every plan was
-the same day-count-driven split) is fixed and verified: Phase 1 guarantees no
-zeros, no over-MRV, no 2-set fragments across 27 programs; Phase 2 makes
-(division x day-count) drive the split, priority order and lead lift, so Men's
-Physique opens on a vertical pull and Bikini on a hip thrust at every day count.
-Phase 3 (exercise intelligence) has one increment done (within-session pattern
-diversity); the rest, division pools and the <30% overlap gate, sub-region tags,
-the library hip-hinge re-tag, indirect volume, and the app-layer coverage
-warnings, plus Phase 4 autoregulation, remain. The single most important next
-action is building a library-path benchmark so the library work (3a/3b) is
-verifiable, because the current benchmarks only exercise the internal POOL.
+All four spec phases are done and verified on the live library path:
+- Phase 1 (volume integrity): no zeros, no over-MRV, no 2-set fragments.
+- Phase 2 (specialisation): (division x day-count) drives split, priority order
+  and lead lift (MP vertical pull, Bikini hip thrust) at every day count.
+- Phase 3 (exercise intelligence): library-path benchmark; division pool
+  restrictions; glute Contreras split (activator/stretcher/pumper); quad
+  sweep/mass; the overlap gate (65% -> 48%, founder-set < 50%); indirect-volume
+  reporting; the synergist trim; the delivered-vs-target distribution fix; and
+  3a library primary-muscle hygiene.
+- Phase 4 (autoregulation): weak-point composes with the division split (keeps
+  V-Taper/Glute-Focus etc., boosts toward division-aware MRV).
+
+Known residuals, all documented, none blocking:
+- Non-matrix divisions (general/BB/WBB) weak-point uses the legacy upper_lower_wp
+  and can push a glute weak-point ~3 sets over the generic MRV via the WP-day +
+  cap-flex double-emphasis. Pre-existing, minor. Clean fix = put those divisions
+  in the matrix, which moves the general->ppl split contract (deferred).
+- 3f per-session coverage cues are app/session-layer; no consumer exists yet, so
+  no engine work (the engine exposes the tags a future cue system would read).
+- 3a primaryMuscle corrections need a re-seed/migration to reach existing DBs.
+- Runtime Phase 4 (double progression, deload triggers) is app-layer logging,
+  not plan generation.
+
+Docs 00-07 hold the measured evidence per phase. The benchmarks regenerate
+their docs on every run, so the docs always reflect the live engine.
