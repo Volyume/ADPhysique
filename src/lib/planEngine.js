@@ -814,20 +814,32 @@ function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, 
     }
   }
 
-  // Pass 2: fill remaining slots via slot rotation
-  for (const e of sorted) {
-    if (chosen.length >= numEx) break;
-    if (usedNames.has(e.n)) continue;
-    // RDL/SLDL guardrail, never both in the same session
-    if (muscle === 'hamstrings') {
-      const hasRdl  = chosen.some(x => x.n === 'Romanian Deadlift (Barbell)');
-      const hasSldl = chosen.some(x => x.n === 'Stiff-Leg Deadlift');
-      if (e.n === 'Stiff-Leg Deadlift' && hasRdl) continue;
-      if (e.n === 'Romanian Deadlift (Barbell)' && hasSldl) continue;
+  // Pass 2: fill remaining slots, preferring a different sub-region than the
+  // ones already chosen for this muscle this session (anti-redundancy 3d: no
+  // two exercises for one muscle in a session share a movement pattern, e.g.
+  // two hip thrusts or two lateral raises, UNLESS no alternative pattern
+  // exists). Diversity-first pass, then a fallback that allows a repeat sub so
+  // a high-volume muscle still fills its slots.
+  const chosenSubs = new Set(chosen.map(e => e.sub));
+  const tryFill = (allowSameSub) => {
+    for (const e of sorted) {
+      if (chosen.length >= numEx) break;
+      if (usedNames.has(e.n)) continue;
+      if (!allowSameSub && chosenSubs.has(e.sub)) continue;
+      // RDL/SLDL guardrail, never both in the same session
+      if (muscle === 'hamstrings') {
+        const hasRdl  = chosen.some(x => x.n === 'Romanian Deadlift (Barbell)');
+        const hasSldl = chosen.some(x => x.n === 'Stiff-Leg Deadlift');
+        if (e.n === 'Stiff-Leg Deadlift' && hasRdl) continue;
+        if (e.n === 'Romanian Deadlift (Barbell)' && hasSldl) continue;
+      }
+      chosen.push(e);
+      usedNames.add(e.n);
+      chosenSubs.add(e.sub);
     }
-    chosen.push(e);
-    usedNames.add(e.n);
-  }
+  };
+  tryFill(false);
+  tryFill(true);
 
   // Fallback: if still empty, allow an already-used pick (vary by slot)
   if (chosen.length === 0 && sorted.length > 0) {
