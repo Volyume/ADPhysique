@@ -121,11 +121,15 @@ export function loadSeedLibrary() {
   const re = /\[\s*'([^']+)',\s*'([a-z_]+)',\s*\[([^\]]*)\],\s*'([a-z_]+)',\s*'([a-z_]+)',\s*(true|false),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\s*\]/g;
   let m;
   while ((m = re.exec(body)) !== null) {
+    const secondaryMuscles = m[3]
+      ? [...m[3].matchAll(/'([a-z_]+)'/g)].map(s => s[1])
+      : [];
     const base = {
       name: m[1], primaryMuscle: m[2], equipment: m[4], movementPattern: m[5],
       compoundIsolation: m[6] === 'true' ? 'compound' : 'isolation',
       fatigueCost: parseInt(m[9], 10), stimulusToFatigueRatio: parseInt(m[10], 10),
       subregion: subMap[m[1]] ?? null,
+      secondaryMuscles,
     };
     rows.push({ id: m[1], ...base, ...deriveExerciseMetadata(base) });
   }

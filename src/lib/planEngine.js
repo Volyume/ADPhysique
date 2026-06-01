@@ -257,6 +257,11 @@ const SPEC_LANDMARKS = {
 // exposing per-head sets.
 const SIDE_REAR_DELT_CAP = 26;
 
+// Indirect (synergist) volume: a secondary muscle on a compound lift earns a
+// fractional working set (spec phase 3e, RP convention of half a set). Used to
+// report indirect volume and to flag muscles whose only coverage is indirect.
+const INDIRECT_SET_FRACTION = 0.5;
+
 // Structural movers that must never read zero in any generated program, even
 // when a division de-emphasises them (spec: "maintenance, not zero"). At 3
 // training days the maintenance floor compresses to 4.
@@ -1422,15 +1427,19 @@ function buildVolumeSummary(workouts, weeklyTargets, weakPointKeys) {
     calves: 'calves', abs: 'abs', traps: 'traps', forearms: null,
   };
 
+  // Direct sets (the working sets of an exercise count fully toward its primary
+  // muscle) and indirect sets (each synergist gets a fractional set, spec phase
+  // 3e / RP convention of 0.5 set per secondary muscle).
   const actualSets = {};
+  const indirect = {};
   for (const workout of workouts) {
     for (const ex of workout.exercises) {
-      // We attribute sets based on position in pool to avoid muscle parsing
-      // Instead count from raw exercises via their exerciseName membership
-      // Using the muscle→pool map
       for (const [muscle, pool] of Object.entries(_effectivePool)) {
-        if (pool.some(p => p.n === ex.exerciseName)) {
-          actualSets[muscle] = (actualSets[muscle] ?? 0) + ex.sets;
+        const entry = pool.find(p => p.n === ex.exerciseName);
+        if (!entry) continue;
+        actualSets[muscle] = (actualSets[muscle] ?? 0) + ex.sets;
+        for (const sec of entry.secondary ?? []) {
+          indirect[sec] = (indirect[sec] ?? 0) + ex.sets * INDIRECT_SET_FRACTION;
         }
       }
     }
@@ -1438,15 +1447,20 @@ function buildVolumeSummary(workouts, weeklyTargets, weakPointKeys) {
 
   const externalKeys = ['chest', 'back', 'shoulders', 'biceps', 'triceps', 'quads', 'hamstrings', 'glutes', 'calves', 'abs', 'traps'];
   const summary = {};
-  for (const key of externalKeys) summary[key] = { plannedSets: 0, isWeakPoint: false };
+  for (const key of externalKeys) summary[key] = { plannedSets: 0, indirectSets: 0, isWeakPoint: false };
 
   for (const [internal, ext] of Object.entries(internalToExternal)) {
     if (!ext) continue;
-    const sets = actualSets[internal] ?? 0;
-    summary[ext].plannedSets += sets;
+    summary[ext].plannedSets += actualSets[internal] ?? 0;
+    summary[ext].indirectSets += indirect[internal] ?? 0;
     if (weakPointKeys.includes(internal)) {
       summary[ext].isWeakPoint = true;
     }
+  }
+  // Round indirect to halves for reporting (plannedSets stays the exact direct
+  // count, so the existing contract is untouched).
+  for (const key of externalKeys) {
+    summary[key].indirectSets = Math.round(summary[key].indirectSets * 2) / 2;
   }
 
   return summary;

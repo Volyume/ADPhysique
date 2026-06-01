@@ -97,6 +97,9 @@ export function toPoolEntry(ex) {
     difficulty: ex.difficulty ?? null,
     sfr: ex.stimulusToFatigueRatio ?? null,
     equipmentCategory: ex.equipmentCategory ?? null,
+    // Secondary (synergist) muscles, primary-muscle vocab. Carried for indirect
+    // volume modelling (spec phase 3e): each secondary counts a fractional set.
+    secondary: Array.isArray(ex.secondaryMuscles) ? ex.secondaryMuscles : [],
   };
 }
 
