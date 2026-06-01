@@ -5,8 +5,6 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/them
 
 const KCAL_SIZE = 132;
 const KCAL_STROKE = 14;
-const MACRO_SIZE = 44;
-const MACRO_STROKE = 5;
 
 // Adherence-neutral ring colour (founder decision 2026-05-29, reversing the
 // earlier amber/green/amber three-band). The ring shows progress in the brand
@@ -61,25 +59,24 @@ function Ring({ size, stroke, progress, tint, track }) {
   );
 }
 
-function MacroChip({ label, value, target }) {
-  const progress = target && target > 0 ? value / target : 0;
-  const tint = bandColour();
+// A macro reads as a horizontal bar, not a small ring (diary-tab redesign
+// 2026-06-01). A training user tracks four numbers, and bars read all four
+// against target at a glance where competing small rings read slower. Protein
+// is the primary bar (the number this user defends): it carries the only
+// weight emphasis, never a different colour, since the fill stays the
+// adherence-neutral amber for every macro.
+function MacroBar({ label, value, target, primary }) {
+  const progress = target && target > 0 ? Math.max(0, Math.min(1, value / target)) : 0;
   return (
-    <View style={styles.macroChip}>
-      <View style={styles.macroRingWrap}>
-        <Ring
-          size={MACRO_SIZE}
-          stroke={MACRO_STROKE}
-          progress={progress}
-          tint={tint}
-          track={colors.surface2}
-        />
-      </View>
-      <View style={styles.macroChipText}>
-        <Text style={styles.macroChipLabel}>{label}</Text>
-        <Text style={styles.macroChipValue}>
-          {value}{target != null ? `/${target}` : ''}g
+    <View style={styles.macroBar}>
+      <View style={styles.macroBarTop}>
+        <Text style={[styles.macroBarLabel, primary && styles.macroBarLabelPrimary]}>{label}</Text>
+        <Text style={[styles.macroBarValue, primary && styles.macroBarValuePrimary]}>
+          {value}{target != null ? ` / ${target}` : ''}g
         </Text>
+      </View>
+      <View style={styles.macroTrack}>
+        <View style={[styles.macroFill, { width: `${Math.round(progress * 100)}%` }]} />
       </View>
     </View>
   );
@@ -158,9 +155,9 @@ export default function MacroRings({ rollup, targets, dayTypeLabel, onPress }) {
         ) : null}
       </View>
       <View style={styles.macroRow}>
-        <MacroChip label="Protein" value={p} target={pTarget} />
-        <MacroChip label="Carbs"   value={c} target={cTarget} />
-        <MacroChip label="Fat"     value={f} target={fTarget} />
+        <MacroBar label="Protein" value={p} target={pTarget} primary />
+        <MacroBar label="Carbs"   value={c} target={cTarget} />
+        <MacroBar label="Fat"     value={f} target={fTarget} />
       </View>
     </TouchableOpacity>
   );
@@ -226,25 +223,39 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   macroRow: {
-    flexDirection: 'row',
     gap: spacing.md,
   },
-  macroChip: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+  macroBar: { gap: spacing.xs2 },
+  macroBarTop: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
-  macroRingWrap: { width: MACRO_SIZE, height: MACRO_SIZE },
-  macroChipText: { flex: 1 },
-  macroChipLabel: {
+  macroBarLabel: {
     color: colors.textMuted,
     fontSize: fontSize.xs,
     fontWeight: fontWeight.medium,
   },
-  macroChipValue: {
-    color: colors.textPrimary,
-    fontSize: fontSize.sm,
+  macroBarLabelPrimary: {
+    color: colors.textSecondary,
     fontWeight: fontWeight.semibold,
+  },
+  macroBarValue: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontVariant: ['tabular-nums'],
+  },
+  macroBarValuePrimary: {
+    color: colors.textPrimary,
+    fontWeight: fontWeight.semibold,
+  },
+  macroTrack: {
+    height: 6,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface2,
+    overflow: 'hidden',
+  },
+  macroFill: {
+    height: '100%',
+    borderRadius: radius.full,
+    backgroundColor: colors.primary,
   },
 });
