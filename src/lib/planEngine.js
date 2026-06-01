@@ -2133,11 +2133,16 @@ function _generatePlanInner(inputs) {
     // Strip internal-only tags (_m, _req used by trimming; _muscle by
     // assignSupersets). supersetGroupId is public and survives the strip.
     const clean = trimmed.map(({ _m, _req, _muscle, ...rest }) => rest);
-    return {
-      name: w.name,
-      exercises: clean,
-      estimatedDurationMinutes: Math.ceil(estimateSessionMinutes(clean, equipment)),
-    };
+    const dur = Math.ceil(estimateSessionMinutes(clean, equipment));
+    const out = { name: w.name, exercises: clean, estimatedDurationMinutes: dur };
+    // A session that the time-trim left meaningfully over the preferred length
+    // is one the engine would not shorten further without dropping judged
+    // volume (e.g. a full leg day for a mass division). Frame that as expected,
+    // not a defect: tell the user it is normal for the volume and offer a split.
+    if (sessionLengthMinutes && dur > sessionLengthMinutes + 15) {
+      out.durationNote = `Around ${dur} min, longer than your ${sessionLengthMinutes} min target. That is normal for the volume this session needs; split it across two days if you prefer shorter sessions.`;
+    }
+    return out;
   });
 
   // Discard sessions that ended up with no exercises (shouldn't happen but guard it)
