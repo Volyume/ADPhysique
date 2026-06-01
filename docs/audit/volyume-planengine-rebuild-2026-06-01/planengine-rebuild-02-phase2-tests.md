@@ -3,8 +3,8 @@ Status: COMPLETE | Timestamp: 2026-06-01 | Phase 2: Division specialisation test
 # planEngine rebuild, phase 2 results
 
 Core benchmark: 4-day Bikini vs 4-day Men's Physique.
-- exercise overlap (library path, the gate): 48% (gate < 50%; spec literal target < 30%)
-- exercise overlap (internal POOL fallback): 58%
+- exercise overlap (library path, the gate): 46% (gate < 50%; spec literal target < 30%)
+- exercise overlap (internal POOL fallback): 54%
 - Bikini lead lift: Barbell Hip Thrust
 - Men's Physique lead lift: Weighted Pull-Up
 
@@ -48,9 +48,9 @@ Structural gates that PASS in phase 2:
 | Bikini | 5 | Glute Focus | Barbell Hip Thrust | Glutes (Max) / Delts + Back + Abs / Glutes (Medius + Ham) / Lower (Quad + Glute) / Delts + Arms |
 | Bikini | 6 | Glute Focus | Barbell Hip Thrust | Glutes / Upper (Delt + Back) / Glutes / Lower (Quad) / Upper (Delt + Arm) / Glutes Pump + Abs |
 | Wellness | 3 | Lower Focus | Barbell Hip Thrust | Lower A (Glute + Ham) / Lower B (Quad + Adductor) / Upper (Delts + Back + Abs) |
-| Wellness | 4 | Lower Focus | Barbell Hip Thrust | Glute + Ham / Quad Sweep + Adductor / Glute (Medius) + Upper / Lower Full |
-| Wellness | 5 | Lower Focus | Barbell Hip Thrust | Glutes / Quads (Sweep) / Glute + Ham / Upper (Delts + Back) / Lower Full |
-| Wellness | 6 | Lower Focus | Barbell Hip Thrust | Glutes / Quads / Ham + Glute / Upper / Lower (Sweep) / Glute Pump + Abs |
+| Wellness | 4 | Lower Focus | Barbell Hip Thrust | Glute + Ham + Delts / Quad Sweep + Adductor / Glute (Medius) + Upper / Lower Full |
+| Wellness | 5 | Lower Focus | Barbell Hip Thrust | Glutes / Quads (Sweep) / Glute + Ham / Upper (Delts + Back + Arms) / Lower Full |
+| Wellness | 6 | Lower Focus | Barbell Hip Thrust | Glutes / Quads / Ham + Glute / Upper (Delts + Back + Arms) / Lower (Sweep) / Glute Pump + Abs |
 | Figure | 3 | X-Frame | Cable Lateral Raise | Upper (Delt + Back Width) / Lower (Glute + Ham + Quad) / Upper (Delt + Arm + Abs) |
 | Figure | 4 | X-Frame | Weighted Pull-Up | Back + Rear Delt / Lower / Shoulders + Arms / Back Width + Abs |
 | Figure | 5 | X-Frame | Weighted Pull-Up | Pull / Legs / Delts + Arms / Pull / Lower (Glute-Ham) |

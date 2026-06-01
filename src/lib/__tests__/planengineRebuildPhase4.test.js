@@ -39,8 +39,21 @@ describe('Phase 4: weak-point composes with the division split', () => {
     expect(wp(goal).splitType).toBe(label);
   });
 
-  test.each(MATRIX_DIVISIONS.map(([g]) => g))('%s: a glute weak-point raises glutes vs base', (goal) => {
+  // Divisions where glutes are NOT already the top priority: weak-pointing must
+  // raise them. Bikini and Wellness already train glutes at their delivered
+  // ceiling (#1 priority), so weak-pointing correctly keeps them at max rather
+  // than raising further, and the engine warns the user (covered separately).
+  const GLUTE_NOT_MAXED = MATRIX_DIVISIONS.map(([g]) => g).filter(g => g !== 'bikini' && g !== 'wellness');
+  test.each(GLUTE_NOT_MAXED)('%s: a glute weak-point raises glutes vs base', (goal) => {
     expect(vol(wp(goal)).glutes.plannedSets).toBeGreaterThan(vol(base(goal)).glutes.plannedSets);
+  });
+
+  test('Bikini/Wellness: glutes stay at max under a glute weak-point, and the user is warned', () => {
+    for (const g of ['bikini', 'wellness']) {
+      expect(vol(wp(g)).glutes.plannedSets).toBeGreaterThanOrEqual(vol(base(g)).glutes.plannedSets);
+      const plan = genLib(g, { days: 5, experience: 'advanced', extra: { phase: 'weak_point', weakPoints: ['Glutes'] } });
+      expect(plan.warnings.some(w => /highest-priority muscles|already trained near/i.test(w))).toBe(true);
+    }
   });
 
   test.each(MATRIX_DIVISIONS.map(([g]) => g))('%s: weak-point glutes never exceed division MRV', (goal) => {

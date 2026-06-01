@@ -311,6 +311,15 @@ function enforceWeeklyFloorsAndCaps(weeklyTargets, goal, effectiveDays, weakPoin
     if (mult != null && mult >= 1.0) t[m] = Math.max(t[m] ?? 0, lm.MEV);
   }
 
+  // Bikini/Wellness arms: not a judged priority, but at 5-6 days the upper body
+  // should read "smaller, not absent" (Manion). Floor biceps/triceps to a token
+  // 4 sets so a long lower-focused week still shows some arm tone, rather than
+  // literal zero. Documented decision, not an accident.
+  if ((goal === 'bikini' || goal === 'wellness') && effectiveDays >= 5) {
+    t.biceps = Math.max(t.biceps ?? 0, 4);
+    t.triceps = Math.max(t.triceps ?? 0, 4);
+  }
+
   // Indirect-volume trim (spec phase 3e). A synergist that gets heavy indirect
   // work from its driver compound does not need full DIRECT volume: the
   // fractional sets from pulling (biceps) or pressing (triceps) already carry
@@ -796,7 +805,12 @@ function trimToTimeBudget(exercises, sessionLengthMinutes, equipment) {
 // machine-only user is never starved (same philosophy as difficulty gating).
 const DIVISION_POOL_RULES = {
   bikini: {
-    back:        { denySubs: ['horizontal_row'] },
+    // Lat-WIDTH only for the X-frame: vertical pulls and straight-arm/pullover
+    // (both tagged vertical_pull). No heavy rows and no deadlifts (deadlifts
+    // build erector/trap thickness that widens the waist and blunts the taper,
+    // working against the judged outcome). An allow-list, not a deny-list, so a
+    // mis-tagged hinge (e.g. a deadlift tagged lower_lat) cannot leak in.
+    back:        { allowSubs: ['vertical_pull'] },
     quads:       { denyParams: ['heavy_compound'] },
     chest:       { denyParams: ['heavy_compound'] },
     // Round delts via lateral raises, not pressing (spec L152). Drop overhead
@@ -818,6 +832,7 @@ function filterPool(muscle, equipment, goal) {
   if (!rule) return byEquip;
 
   const restricted = byEquip.filter(e => {
+    if (rule.allowSubs && !rule.allowSubs.includes(e.sub)) return false;
     if (rule.denySubs && rule.denySubs.includes(e.sub)) return false;
     if (rule.denyParams && rule.denyParams.includes(e.p)) return false;
     return true;
@@ -1423,23 +1438,23 @@ const DIVISION_MATRIX = {
       { name: 'Upper (Delts + Back + Abs)', muscles: ['side_delts', 'back', 'abs'] },
     ],
     4: [
-      { name: 'Glute + Ham', muscles: ['glutes', 'hamstrings'] },
+      { name: 'Glute + Ham + Delts', muscles: ['glutes', 'hamstrings', 'side_delts'] },
       { name: 'Quad Sweep + Adductor', muscles: ['quads', 'adductors', 'calves'] },
-      { name: 'Glute (Medius) + Upper', muscles: ['glutes', 'side_delts', 'back'] },
+      { name: 'Glute (Medius) + Upper', muscles: ['side_delts', 'glutes', 'back'] },
       { name: 'Lower Full', muscles: ['quads', 'hamstrings', 'glutes', 'calves'] },
     ],
     5: [
       { name: 'Glutes', muscles: ['glutes', 'hamstrings'] },
       { name: 'Quads (Sweep)', muscles: ['quads', 'adductors', 'calves'] },
       { name: 'Glute + Ham', muscles: ['glutes', 'hamstrings'] },
-      { name: 'Upper (Delts + Back)', muscles: ['side_delts', 'back', 'abs'] },
+      { name: 'Upper (Delts + Back + Arms)', muscles: ['side_delts', 'back', 'biceps', 'triceps', 'abs'] },
       { name: 'Lower Full', muscles: ['quads', 'glutes', 'calves'] },
     ],
     6: [
       { name: 'Glutes', muscles: ['glutes', 'hamstrings'] },
       { name: 'Quads', muscles: ['quads', 'adductors', 'calves'] },
       { name: 'Ham + Glute', muscles: ['hamstrings', 'glutes'] },
-      { name: 'Upper', muscles: ['side_delts', 'back', 'abs'] },
+      { name: 'Upper (Delts + Back + Arms)', muscles: ['side_delts', 'back', 'biceps', 'triceps', 'abs'] },
       { name: 'Lower (Sweep)', muscles: ['quads', 'glutes', 'calves'] },
       { name: 'Glute Pump + Abs', muscles: ['glutes', 'abs'] },
     ],
@@ -1632,6 +1647,16 @@ function buildVolumeSummary(workouts, weeklyTargets, weakPointKeys) {
   for (const key of externalKeys) {
     summary[key].indirectSets = Math.round(summary[key].indirectSets * 2) / 2;
   }
+
+  // Per-head delt breakdown, nested inside the shoulders bucket (additive, does
+  // not change the aggregate). Lets the UI report a side-delt or rear-delt
+  // weak-point on the head that actually moved, instead of the aggregate that
+  // can fall when one head rises and another is reallocated down.
+  summary.shoulders.heads = {
+    side_delts: actualSets.side_delts ?? 0,
+    rear_delts: actualSets.rear_delts ?? 0,
+    front_delts: actualSets.front_delts ?? 0,
+  };
 
   return summary;
 }
@@ -2097,6 +2122,23 @@ function _generatePlanInner(inputs) {
   const validWorkouts = workouts.filter(w => w.exercises.length > 0);
 
   const warnings              = buildWarnings({ ...inputs, weakPoints: safeWeakPointsUI }, effectiveDays, safeWeakPointsUI);
+  // Weak-point already at its division ceiling: a selected weak point that the
+  // division already trains near MRV can only move a set or two, so the
+  // "specialisation" plan is near-identical. Tell the user rather than imply a
+  // big change (e.g. Bikini glutes, already the #1 priority).
+  if (phase === 'weak_point') {
+    const maxTarget = Math.max(0, ...Object.values(adjustedTargets));
+    for (const m of weakPointKeys) {
+      const lm = landmarks[m];
+      if (!lm) continue;
+      const atMrv = (adjustedTargets[m] ?? 0) >= divisionMRV(m, goal, lm) - 1;
+      const isTopPriority = (adjustedTargets[m] ?? 0) >= maxTarget - 1;
+      if (atMrv || isTopPriority) {
+        const label = Object.keys(WEAK_POINT_MAP).find(k => WEAK_POINT_MAP[k] === m) ?? m;
+        warnings.push(`${label} is already one of this division's highest-priority muscles, so a specialisation block adds little. Consider picking a muscle that is currently lower priority.`);
+      }
+    }
+  }
   const weeklyVolumeSummary   = buildVolumeSummary(validWorkouts, adjustedTargets, weakPointKeys);
   const personalisationSummary = buildPersonalisationSummary(
     { ...inputs, weakPoints: safeWeakPointsUI }, effectiveDays, splitType, safeWeakPointsUI

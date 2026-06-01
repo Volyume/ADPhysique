@@ -103,6 +103,23 @@ export function toPoolEntry(ex) {
   };
 }
 
+// ── non-hypertrophy exclusion ─────────────────────────────────────────────
+// Plyometric, Olympic-power and conditioning movements are rate-of-force /
+// energy-system work, not a hypertrophy stimulus. They must never be counted as
+// hypertrophy volume (a box jump credited as calf growth, a power clean as trap
+// growth). Excluded from the generated pool so selection never picks them; the
+// library's real movements (calf raises, rack pull) fill that volume instead.
+const NON_HYPERTROPHY_PATTERNS = new Set(['plyometric', 'power']);
+const NON_HYPERTROPHY_NAMES = new Set([
+  'Cycling (Stationary)', 'Sled Push', 'Assault Bike', 'Jump Squat', 'Broad Jump',
+  'Stair Running', 'Battle Ropes', 'Clean Pull',
+]);
+export function isHypertrophyExercise(ex) {
+  if (NON_HYPERTROPHY_PATTERNS.has(ex.movementPattern)) return false;
+  if (NON_HYPERTROPHY_NAMES.has(ex.name)) return false;
+  return true;
+}
+
 // ── generate ────────────────────────────────────────────────────────────
 // Build the full { muscle: [entry] } pool from the library. Skips custom
 // exercises (no derived metadata) and anything with no equipment profile
@@ -114,6 +131,7 @@ export function generatePoolFromLibrary(exercises) {
     if (!ex || !ex.name || !ex.primaryMuscle) continue;
     if (ex.isCustom === 1 || ex.isCustom === true) continue;
     if (!ex.equipmentCategory || ex.equipmentCategory === 'other') continue;
+    if (!isHypertrophyExercise(ex)) continue;
     const entry = toPoolEntry(ex);
     if (entry.eq.length === 0) continue;
     if (!pool[ex.primaryMuscle]) pool[ex.primaryMuscle] = [];
