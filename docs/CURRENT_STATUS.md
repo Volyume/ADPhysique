@@ -14,7 +14,7 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
-### 0.00000000000001. 2026-06-01 (master-audit remediation continued, Claude): Tier 2 + Tier 4 + Tier 5 gates all done; migrations applied. Only on-device (Tier 3) and native-dep (A2-020) items remain.
+### 0.00000000000001. 2026-06-01 (master-audit remediation continued, Claude): Tier 2 + Tier 4 + Tier 5 gates done, migrations applied, plus A2-047 (withAlpha sweep + gate), A2-020 (CSPRNG), A2-030 (sync test). Only on-device verification and Tier 3 profiling remain.
 
 Resumed from A2-005 per the prior session's pointer, after a full Rule 1
 repo validation and a cross-check (commit history + doc 11 + this section)
@@ -104,25 +104,42 @@ alongside the hex gate). Both enforced by the existing CI eslint job.
   Athlete Hub comment.
 - Migration tracking (`632e856`): marked 048, 050-055, 058 applied (founder
   ran them 2026-06-01); 049 still held.
+- `ad5f75b` A2-047: finished the withAlpha migration. Converted all 127
+  hex-alpha concat sites (`colors.x + '50'` and the `${x}66` template form)
+  across 34 screen/component files to withAlpha(), and added a lint gate for
+  both patterns so they can't return. Mechanically equivalent (alpha = hex/255),
+  no intended visual change, but it has NOT been eyeballed on a device, so a
+  visual pass on the touched screens is worth doing before the next build.
+- `b441bdf` A2-020: row ids now come from a CSPRNG (expo-crypto ~13.0.2,
+  Crypto.getRandomValues) with a Math.random fallback for the Jest runner and
+  the frozen build that predates the dep. Same v4 shape + 'q' prefix, so every
+  caller and stored id is unaffected. On-device verification that the native
+  module resolves in the next build is the only remaining piece (additive,
+  falls back safely until then).
+- `266ba4b` A2-030: added coverage for scheduleSync's 2s debounce, coalescing
+  and cancelScheduledSync (the JEST guard had left them untested).
 
-**Still open in the audit (none are in-environment code work):**
-- A2-020 (CSPRNG): needs a native random source + on-device verification.
-  One-line change in lib/uuid.js once the dep lands.
+**Still open in the audit:**
+- A2-020 on-device check: confirm expo-crypto's native module resolves in the
+  next build (the code is in and falls back safely until then).
+- A2-047 visual pass: eyeball the 34 converted screens on a device before the
+  next build (no intended change, but it's a broad colour edit).
 - A2-003 (WhatsNewSheet `{false && …}`): intentional dormant feature; a
   product call to keep-for-later or remove, not a cleanup.
 - Tier 3 (perf): needs on-device Sentry-traces profiling first.
 - Tier 5 #3 (TS/JSDoc), #4 (--detectOpenHandles diagnostic), #5 (npm audit on
-  next SDK bump): long-term.
-- Test-surface notes (e.g. A2-030 scheduleSync has no coverage via the
-  debounced path): optional hardening, not dead code.
+  next SDK bump): long-term. (npm now reports 32 advisories across the dep
+  tree; that is the SDK-bump cleanup, not new.)
 
-**Resume from A2-020 (if the native dep is decided) or a Tier 3 profiling
-pass on device.** The Tier 1/2/4 audit work and the tooling gates are done.
+**Resume from the on-device checks (A2-020 native module, A2-047 visual pass)
+or a Tier 3 profiling pass.** Everything that can be done off-device from the
+audit is now done.
 
-Repo at session end: `main` at this doc commit on top of `1791e4b`, 0/0 with
-origin, suite green (2347 passing), 0 lint errors. Migrations 048, 050-055,
-058 were applied by the founder on 2026-06-01 (so 037-048, 050-058 are live);
-049 stays held until the next AAB ships.
+Repo at session end: `main` at this doc commit on top of `266ba4b`, 0/0 with
+origin, suite green (2358 passing across 140 suites), 0 lint errors. expo-crypto
+~13.0.2 added. Migrations 048, 050-055, 058 were applied by the founder on
+2026-06-01 (so 037-048, 050-058 are live); 049 stays held until the next AAB
+ships.
 
 ### 0.0000000000001. 2026-05-31 (master-audit remediation, Claude): Tier 1 closed, Tier 2 in progress. Paused for a fresh restart tomorrow.
 

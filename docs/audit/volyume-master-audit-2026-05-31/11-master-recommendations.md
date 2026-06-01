@@ -40,12 +40,15 @@ Landed on `main`, full suite green (2358 passing), eslint clean:
   LOCAL_USER_KEY residue), and A2-029/A2-061 documented in
   SYNC_ARCHITECTURE_LOCKED.md. Migrations 048, 050-055, 058 applied by the
   founder; 049 held.
+- Also cleared the same day: A2-047 (full withAlpha sweep, 127 sites/34 files,
+  plus a lint gate for both concat patterns), A2-020 (row ids via a CSPRNG,
+  expo-crypto + Math.random fallback), and A2-030 (scheduleSync debounce/cancel
+  tests).
 
-Still open, none of it in-environment code work: A2-020 (CSPRNG, needs a
-native random source + on-device check; one-line change in lib/uuid.js),
-A2-003 (WhatsNewSheet dormant feature, a product decision), Tier 3 (needs
-on-device profiling), Tier 5 #3/#4/#5 (long-term), and optional test-surface
-hardening (e.g. A2-030). Resume from A2-020 or a Tier 3 device profiling
+Still open: A2-020 on-device check (native module resolves in the next build),
+A2-047 visual pass on the 34 converted screens, A2-003 (WhatsNewSheet dormant
+feature, a product decision), Tier 3 (needs on-device profiling), Tier 5
+#3/#4/#5 (long-term). Resume from the on-device checks or a Tier 3 profiling
 pass. Session detail is in `docs/CURRENT_STATUS.md` § 0.
 
 ---
