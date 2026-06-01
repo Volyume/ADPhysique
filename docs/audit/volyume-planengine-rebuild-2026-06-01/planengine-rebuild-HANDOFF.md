@@ -211,11 +211,18 @@ planengineRebuildPhase3e.test.js. Measured: MP biceps 6d+8i, BB triceps 6d+10i,
 Bikini shoulders 18d+1.5i (no pressing, so delts are trained direct).
 
 REMAINING:
-- 3e increment 2 (target subtraction): trim synergist DIRECT targets when
-  indirect is high, floored at MEV. MEASURED value at 5 days (Classic biceps
-  12d + 8i = over-dosed vs MEV 8). PENDING FOUNDER DIRECTION on aggressiveness
-  (trim to MEV vs leave a buffer): under-dosing arms is the risk, so not done
-  unilaterally. The reporting layer it needs is in place.
+- 3e increment 2 (target subtraction): ATTEMPTED and REVERTED, not shipped.
+  Founder chose "trim synergist direct toward MEV+2 buffer". Implemented it
+  (trim biceps by 0.4*back, triceps by 0.5*chest, floored at MEV+2, weak-point
+  muscles skipped) and MEASURED: trimming Classic biceps TARGET 12->10 cratered
+  DELIVERED biceps to 6 (below MEV 8). Cause: the delivered-vs-target gap (the
+  same one that holds bodybuilding quads at 7) plus a session-builder
+  discretisation cliff at 5 sets/session (2 exercises -> 1). A small target cut
+  causes a large delivery drop, pushing a judged muscle under MEV. So target
+  subtraction is BLOCKED on the delivered-vs-target gap and must not ship until
+  that gap is fixed (the session builder must deliver close to the floored
+  target for small muscles). Reverted cleanly; reporting layer (increment 1) is
+  unaffected and stands.
 - 3e increment 3 (hard coverage flag forcing isolation at near-zero indirect):
   largely redundant with the matrix (every division already gets direct side
   delts); low value, deferred.
