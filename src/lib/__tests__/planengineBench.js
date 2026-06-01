@@ -10,6 +10,7 @@
  * which is where the structural behaviour lives and is reproducible in CI.
  */
 import { generatePlan } from '../planEngine';
+import { deriveExerciseMetadata } from '../exerciseMetadata';
 
 // Spec landmark table (Israetel/RP classic, intermediate), from the rebuild
 // specification. Side+rear delts share a combined MRV of 26. Front delts are
@@ -85,6 +86,73 @@ const NO_ZERO = ['chest', 'back', 'shoulders', 'quads', 'hamstrings', 'glutes'];
 function mrvFor(muscle, goal) {
   if (muscle === 'glutes' && (goal === 'bikini' || goal === 'wellness')) return 30;
   return SPEC_LANDMARKS[muscle]?.MRV;
+}
+
+// ---------------------------------------------------------------------------
+// Library-path measurement (spec phase 3). The benchmarks above measure the
+// deterministic internal POOL. The LIVE app feeds the DB exercise library
+// (getAllExercises -> generatePoolFromLibrary -> _effectivePool), so 3a/3b
+// (library tagging) are only verifiable on the library path. These helpers
+// load the real seed library exactly as the seed does and run generatePlan
+// against it, so the re-tag work has a measured before/after instead of being
+// done blind. Lazy: the parse only runs when loadSeedLibrary() is called, so
+// the POOL benchmarks above are not slowed.
+// ---------------------------------------------------------------------------
+
+let _seedLibraryCache = null;
+
+export function loadSeedLibrary() {
+  if (_seedLibraryCache) return _seedLibraryCache;
+  const fs = require('fs');
+  const path = require('path');
+  const seedSrc = fs.readFileSync(path.join(__dirname, '../seedExercises.js'), 'utf8');
+
+  const start = seedSrc.indexOf('const RAW = [');
+  const end = seedSrc.indexOf('\n];', start);
+  const body = seedSrc.slice(start, end);
+
+  const smStart = seedSrc.indexOf('const SUBREGION_MAP = {');
+  const smEnd = seedSrc.indexOf('\n};', smStart);
+  const smBody = seedSrc.slice(smStart, smEnd);
+  const subMap = {};
+  for (const m of smBody.matchAll(/'([^']+)':\s*'(\w+)'/g)) subMap[m[1]] = m[2];
+
+  const rows = [];
+  const re = /\[\s*'([^']+)',\s*'([a-z_]+)',\s*\[([^\]]*)\],\s*'([a-z_]+)',\s*'([a-z_]+)',\s*(true|false),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\s*\]/g;
+  let m;
+  while ((m = re.exec(body)) !== null) {
+    const base = {
+      name: m[1], primaryMuscle: m[2], equipment: m[4], movementPattern: m[5],
+      compoundIsolation: m[6] === 'true' ? 'compound' : 'isolation',
+      fatigueCost: parseInt(m[9], 10), stimulusToFatigueRatio: parseInt(m[10], 10),
+      subregion: subMap[m[1]] ?? null,
+    };
+    rows.push({ id: m[1], ...base, ...deriveExerciseMetadata(base) });
+  }
+  _seedLibraryCache = rows;
+  return rows;
+}
+
+// generatePlan on the library path (real seed library as effective pool).
+export function genLib(goal, opts = {}) {
+  const lib = opts.library ?? loadSeedLibrary();
+  return gen(goal, { ...opts, extra: { ...opts.extra, exerciseLibrary: lib } });
+}
+
+// The flat set of exercise names a plan selected.
+export function exerciseSet(plan) {
+  const s = new Set();
+  for (const w of plan.workouts || []) for (const ex of w.exercises || []) s.add(ex.exerciseName);
+  return s;
+}
+
+// Shared-exercise overlap as a fraction of the smaller program, matching the
+// spec's "< 30% shared exercises" Bikini-vs-MP gate.
+export function overlapPct(a, b) {
+  const A = exerciseSet(a); const B = exerciseSet(b);
+  let shared = 0;
+  for (const n of A) if (B.has(n)) shared++;
+  return shared / Math.max(1, Math.min(A.size, B.size));
 }
 
 export function measure(plan) {
