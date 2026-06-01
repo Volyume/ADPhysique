@@ -21,8 +21,11 @@ tie food to the session.
 The whole redesign stays inside the locked rules: adherence-neutral colour (no
 green-for-good, no red-for-over), the `#0D0D0D` background, no gradients, amber
 as the one accent, and plain copy with no cheerleading. `MacroRings`,
-`EntryRow` and `MealSection` are Diary-only, so none of this risks other tabs,
-and nothing needs a data-model migration.
+`EntryRow` and `MealSection` are Diary-only, so the visual work risks no other
+tabs. One change is bigger than the rest: moving off the fixed Breakfast /
+Lunch / Dinner / Snacks frame to a flexible numbered-meal model needs a
+`meal_slot` data change and touches the food domain. It is flagged as its own
+piece of work.
 
 ## The top 5 changes, functional to premium
 
@@ -41,10 +44,14 @@ and nothing needs a data-model migration.
    first and primary, so a training user reads all four numbers at a glance.
    Keep the hero calorie ring.
 
-4. Make the workout slots about the workout. On a training day, Pre-workout and
-   Post-workout show the day's session and link to it; on a rest day they
-   collapse to one muted line. The app already knows the training day; the slots
-   just need to use it.
+4. Fix the meal model for a physique athlete. Drop the fixed Breakfast / Lunch
+   / Dinner / Snacks frame (a wellness convention) for flexible numbered meals
+   ("Meal 1..N", renameable, the user sets how many), and keep Pre-workout and
+   Post-workout as special meals tied to the day's session, on a rest day they
+   collapse to one muted line. The athlete eats 4-8 structured meals, not three
+   and a snack, which is why the workout slots were added in the first place.
+   This is the one change that needs a `meal_slot` data change, plan it
+   separately.
 
 5. Protect logging speed. A one-tap quick-log strip of the user's Frequents and
    Saved meals (both already in the app), and copy-yesterday available any day

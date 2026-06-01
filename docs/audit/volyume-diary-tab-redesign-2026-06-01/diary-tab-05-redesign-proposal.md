@@ -75,10 +75,52 @@ language as the summary, replacing the current containerless section
   ("Breakfast  ·  add") rather than a full card with a dashed box. This is what
   removes the "six identical dashed boxes" problem at the root: an empty day is
   a short list of slim add-lines, not six placeholder boxes.
-- Number and order: six slots stay (Breakfast, Lunch, Dinner, Pre-workout,
-  Post-workout, Snacks, `DiaryScreen.js:40-47`); a training user genuinely uses
-  peri-workout slots. But sections are collapsible and remember state, and the
-  two workout slots are handled specially (next point). Snacks stays last.
+### Meal structure: numbered meals, not human-meal names
+
+The fixed Breakfast / Lunch / Dinner / Snacks set (`DiaryScreen.js:40-47`) is a
+wellness-app convention and the wrong model for this user. A physique athlete
+does not eat three meals and a snack; they run four to eight structured meals a
+day. That is exactly why Pre-workout and Post-workout were added, but bolting
+two training slots onto a three-meals-and-snacks frame still forces the rest of
+the day into names that do not fit.
+
+Replace it with a flexible, numbered meal model:
+
+- Default to numbered meals: "Meal 1", "Meal 2", "Meal 3"... The user sets how
+  many meals they eat (a meals-per-day preference, default around four to five
+  for a training user), and can add a meal inline with a quiet "+ Add meal" at
+  the foot of the list or remove one. No forced Breakfast / Lunch / Dinner /
+  Snacks.
+- Renameable: a meal can be given a name if the user wants one ("Breakfast",
+  "Intra", "Before bed"), but the default is the number, not a human-meal label.
+  This serves both the athlete who thinks in Meal 1 to N and the user who still
+  likes "Breakfast", without defaulting to the wellness frame.
+- Pre-workout and Post-workout remain special, training-anchored meals (see
+  below), inserted in sequence around the session rather than living as fixed
+  rows at the bottom.
+- Order is by sequence / time through the day. Sections are collapsible and
+  remember state.
+- This matches how training-focused apps and athletes actually structure a day
+  (Phase 3 section 4: training users want a diary built for their eating
+  pattern, not a general-wellness frame), and how flexible-meal competitors
+  (MacroFactor's time-based meals, MyMacros+ renameable meals) already work
+  (Phase 2).
+
+Data-model note (honest correction): this is the ONE part of the redesign that
+is not presentation-only. `food_entries.meal_slot` is `TEXT` locally
+(`database.js:822`) but the cloud carries a CHECK constraint locked to
+`breakfast / lunch / dinner / snack` plus `preworkout / postworkout`
+(`supabase/migrate_057_meal_slots_periworkout.sql`), and `meal_slot` is read
+across roughly 18 files (search, scan, recipes, saved meals, breakdown, CSV
+export, curated meals, sync). Numbered meals need the slot key to become
+flexible: either widen / drop that CHECK to accept `meal_1..meal_n` (plus the
+peri-workout keys), or add a `meal_index` integer with an optional label and
+treat peri-workout as a flag. Widening the CHECK is additive and
+frozen-build-safe: the old build only ever writes the existing six values
+(still valid), and an unknown new key synced down simply falls outside its
+fixed buckets rather than crashing. Legacy entries map to display labels for
+back-compat. This is the largest single item in the redesign and is flagged as
+such in Phase 6.
 
 ### Pre-workout and Post-workout, tied to the session
 

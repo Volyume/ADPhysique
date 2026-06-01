@@ -26,6 +26,7 @@ no-cheerleading copy. The redesign elevates within those rules.
 | Water tracker | Text + 2 stepper buttons, no target, off to one side (`DiaryScreen.js:629-648`) | Should match the screen's visual language and show progress to a goal | A different idiom from everything else; no goal, no progress; fixed 250 ml | Medium |
 | Day navigation | Chevrons only, Today pill, unbounded future (`DiaryScreen.js:432-458`) | Swipe between days, optional week strip; clear past/today/future states (Phase 2 cross-domain: Gentler Streak / Apple week strip) | No swipe, no week view; past/future days look identical to today | Low-Medium |
 | Training context | Pre/Post-workout are inert slots though `isTrainingDay` is known (`DiaryScreen.js:87`,`:469-483`) | Training-focused users want food tied to the session, not generic wellness slots (Phase 3 section 4) | The one thing a general app cannot do, and Volyume does not do it either | High |
+| Meal structure | Fixed Breakfast / Lunch / Dinner / Snacks + Pre/Post-workout (`DiaryScreen.js:40-47`), a wellness frame | A physique athlete runs 4-8 numbered meals, not three-meals-and-a-snack; flexible/numbered meals fit the training pattern (Phase 3 section 4) | The fixed human-meal taxonomy fights how the user eats; the two workout slots were added on top of the wrong frame | High |
 
 ## The through-line
 

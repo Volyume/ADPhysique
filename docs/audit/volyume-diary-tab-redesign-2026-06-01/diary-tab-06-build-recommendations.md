@@ -25,6 +25,7 @@ is no existing water target setting.
 |---|---|---|---|
 | Macro sub-rings -> three slim bars, protein first and primary | High | Med | `MacroRings.js` (Diary-only); update its test. Keep the calorie ring and adherence-neutral amber |
 | Quick-log strip of Frequents + Saved meals on the diary (one-tap re-log) | High | Med | Reuses `lib/food/frequents.js` + saved meals. The biggest logging-speed win (retention hinge) |
+| Flexible numbered-meal model ("Meal 1..N", renameable, user meal count) replacing fixed Breakfast/Lunch/Dinner/Snacks; Pre/Post-workout kept as anchors | High | High | The largest item, and the only one needing a data change. See dependencies |
 | Pre/Post-workout tied to the session: show the day's workout in the header on training days, collapse to one muted line on rest days | High | Med | Needs the workout name + route; `hasWorkoutOnDate` exists (`DiaryScreen.js:87`), extend to return the session |
 | Water as a progress bar with a target, in the card language | Med | Med | New `waterTarget` preference (small settings + storage add). `WaterRow` is inline in `DiaryScreen.js:629` |
 | Copy-yesterday out of the empty-only FAB: into the empty state + a day-pager overflow, available any day; consolidate to one FAB cluster | Med | Low-Med | `DiaryScreen.js:511-538` |
@@ -52,6 +53,15 @@ is no existing water target setting.
   (`createSavedMeal`), `isTrainingDay`, rollup, water storage all already
   exist. The quick-log strip and the training link are presentation over data
   that is already there.
+- Data change, flagged (the one exception): the flexible numbered-meal model
+  needs `food_entries.meal_slot` to become a flexible key. The cloud CHECK is
+  locked to six values (`migrate_057...`), so it needs widening or dropping (a
+  migration), and `meal_slot` is read across ~18 files (search, scan, recipes,
+  saved meals, breakdown, CSV export, curated meals, sync). Widening the CHECK
+  is additive and frozen-build-safe (the old build keeps writing its six valid
+  values; an unknown new key synced down falls outside its fixed buckets rather
+  than crashing). This is a food-domain change, not Diary-only, and is the
+  largest piece of work in the redesign. Everything else is Diary-local.
 - Locked constraints unchanged: adherence-neutral colour, `#0D0D0D` background,
   no gradients, amber-only accent, plain no-cheerleading copy. None of the
   above touches those.
@@ -67,6 +77,9 @@ is no existing water target setting.
 3. Tier 3 last: the motion and gesture polish, once the structure is settled,
    so animations are tuned against the final layout.
 
-Each unit is independently shippable and testable; none requires a data-model
-migration. Recommend a re-screenshot of the empty, partial and fully-logged
-states after Tier 1 and again after Tier 2 to confirm the premium bar is met.
+Every unit except the flexible numbered-meal model is Diary-local and needs no
+data change; the meal model is the one item that needs a `meal_slot` migration
+and food-domain-wide touches, so it should be planned as its own piece rather
+than folded into the visual passes. Recommend a re-screenshot of the empty,
+partial and fully-logged states after Tier 1 and again after Tier 2 to confirm
+the premium bar is met.
