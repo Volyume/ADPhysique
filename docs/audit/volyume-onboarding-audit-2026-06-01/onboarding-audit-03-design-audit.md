@@ -1,115 +1,123 @@
-Status: REFRESHED (post-rebuild) | Original 2026-06-01 (commit e7c3f01) | Verified 2026-06-01 (engine at 6cf8642)
+# Onboarding Audit 03 — Design and Presentation
 
-REFRESH NOTE. Onboarding screen design is unchanged since the original audit (the
-rebuild was engine-only), so these findings stand. The weak-point selector design
-proposal lives in doc 06; nothing here is invalidated by the rebuild.
+Status: COMPLETE (Phase 3 of 7)
+Date: 2026-06-01
+Method: every screen in both flows read for layout, hierarchy, selection
+components, progress, transitions, empty/loading states, touch targets, and
+visual residue, assessed against the locked design language (background
+`#0D0D0D`, amber affordance, tiered radii, no gradients, no template smells)
+in CLAUDE.md and `docs/DESIGN_SYSTEM.md`. Replaces the earlier version.
 
-# Design and presentation audit
+---
 
-Assessed against the locked design rules: `#0D0D0D` background, no gradients,
-amber as the single accent, tiered radii, no AI-template patterns (no three-
-card filler, no decorative icon on every row, no centred carousels). Both
-flows respect the locked constraints. The problem is that they do not look like
-the same flow.
+## Summary verdict
 
-## The core finding: two visual languages for one job
+The onboarding flow is visually well made and on-brand: dark surface, amber
+primary, tiered radii, real animation taste (the splash sequence, the reveal
+check spring, the hero-zoom into ActiveWorkout). The problems are consistency
+across the three plan-creation surfaces, which look like three different
+products, and a few stale or template-ish patterns.
 
-Onboarding and the builder collect almost the same answers with completely
-different controls.
+---
 
-- Onboarding (`ProOnboardingScreen.js`): inline expanding dropdowns
-  (`Dropdown`, `:87-130`) for experience, equipment, phase and division;
-  segment rows for sex, session length, units. Progress bar with "Step N of 4"
-  (`:545-575`). Header with brand mark and a PRO badge.
-- Builder (`ProGoalSetupScreen.js`): full-width selectable cards
-  (`phaseCard`, `:657-675`) for phase, experience, equipment, recovery and
-  protein; a two-column card grid for division (`goalGrid`, `:607-623`); pill
-  chips for weak points (`weakPointChip`, `:635-655`) and for days and session
-  length (`scheduleChip`, `:707-725`); horizontal filter tabs for division
-  groups.
+## Within-flow strengths
 
-A user who onboards through dropdowns and later opens the builder meets a
-different-looking screen for the same decisions. Neither is wrong on its own.
-The inconsistency is the defect.
+- **Consistent theme tokens.** Every flow screen pulls `colors`, `spacing`,
+  `radius`, `type` from the theme. No raw hex in the flow screens audited. The
+  splash background is the locked `colors.background` (RootNavigator:1057),
+  fixing the old black seam.
+- **Selection components are consistent inside the wizard.** The inline
+  `Dropdown` (ProOnboarding:89-132), segmented rows, and chip grids share one
+  visual language. Active state is always amber border + `primaryBg` fill.
+- **Progress is clear in the wizard.** 4-segment bar + "Step n of 4"
+  (ProOnboarding:567-597). Good.
+- **Premium reveal.** The check-circle spring, staged fade/slide, collapsible
+  split card and founder card give the reveal real polish
+  (ProSetupComplete:37-54, :275-287).
+- **Motion respects accessibility.** Reduce Motion is honoured throughout
+  (splash, Welcome, reveal all branch on `reduceMotion`).
 
-Recommendation: pick one selection language for the shared questions and use it
-in both flows. The builder's card/chip language is the stronger of the two: it
-shows the option subtitles inline, has larger touch targets, and reads as more
-considered. Onboarding's dropdowns hide the subtitles behind a tap and make
-the division choice (the app's differentiator) easy to skip. Move onboarding's
-phase, experience, equipment and recovery questions to the same card pattern
-the builder uses, and use the same chip row for days and session length.
+---
 
-## Within onboarding
+## Issues, by severity
 
-- Hierarchy is clear and the progress bar is honest about length. Good.
-- Step 3 puts the optional division question last and behind a dropdown, which
-  de-emphasises the one choice that makes the plan feel specialist. For a
-- competitive user this is the moment the app proves itself; it should not be
-  the least prominent control on the screen.
-- Step 4 mixes a plan input (recovery) with notification and steps setup in one
-  screen. It works, but recovery belongs with the training questions, not with
-  reminders. Consider grouping recovery into the training step.
+### High (cross-flow inconsistency, the core Phase 3 finding)
 
-## Within the builder
+D1. **The three plan-creation surfaces do not look like one product.**
+- Wizard step 3 uses inline dropdowns + segments (ProOnboarding:949-1007).
+- `ProGoalSetup` uses full-width tappable cards with icons and a 2-up goal grid
+  (ProGoalSetupScreen:323-560).
+- `ManualBuilder` uses pill rows and a modal exercise picker
+  (ManualBuilderScreen:569-598).
+Same conceptual task (choose goal, equipment, etc), three different selection
+metaphors. A returning user moving from the wizard memory to the builder meets
+an unfamiliar layout.
 
-- The single long scroll is dense: nine sections in one screen. For a returning
-  user who only wants to change one thing it is a lot to scroll past. It is
-  defensible (one screen, everything visible) but a light grouping with section
-  rules would help.
-- Weak-point chips are a flat 16-item wrap with no grouping (`weakPointGrid`,
-  `:629-634`). Sixteen muscles in one undifferentiated block is hard to scan.
-  When this becomes division-specific (Phase 6) the list per division is
-  shorter and can be grouped (for example upper, lower) which fixes the scan
-  problem at the same time.
-- The division grid uses generic Ionicons per goal (`body-outline`,
-  `barbell-outline`, etc., `coachingGoals.js`). Per the design rules,
-  decorative icons on every row dilute the amber affordance. Here they carry a
-  little meaning (they differentiate the cards) so they are borderline; the
-  selected state already uses amber, so the icons could go monochrome to keep
-  amber as the selection signal.
+D2. **Selection of the same option type is visually different per surface.**
+Experience is a dropdown in onboarding (:949) and a card list in `ProGoalSetup`
+(:410). Days is absent in onboarding and a pill row in `ProGoalSetup` (:436).
+Equipment is a dropdown vs cards. This is the "shared selection types must be
+visually identical across both flows" requirement, currently failed.
 
-## Weak-point selector, proposed shared design
+### Medium
 
-One component used by both flows, so they are visually identical and only the
-intro copy differs.
+D3. **Two account UIs.** The Login screen and wizard step 1 are near-identical
+but separately styled implementations of the same form
+(LoginScreen:301-410, ProOnboarding:602-727). Maintenance and drift risk, and
+the user can see the form twice (Welcome, then wizard).
 
-- A titled section "Weak points" with the optional tag inline (as the builder
-  has it today, `:348-350`).
-- The option set is division-specific (Phase 6). Render it as chips grouped by
-  region with a small group label, so a 6 to 9 item division list scans
-  cleanly rather than a flat 16.
-- A clear "Not sure" affordance that deselects all and is itself a valid state
-  (research, Phase 5, on the "I don't know my weak points" path). Selecting
-  nothing must be a first-class outcome, not an error.
-- Selected chips use the existing amber `weakPointChipSelected` treatment
-  (`:643-646`). Max 3 retained, with the existing toast on the fourth tap
-  (`:96-98`).
-- Reuse theme tokens only (surface2 chip, amber selected, radius.full). No new
-  colours, no gradient.
+D4. **`ManualBuilder` goal pills are decorative.** They look like a meaningful
+selector but change nothing (ManualBuilderScreen:569-584). A control that
+implies an effect it does not have is a design honesty problem.
 
-## Reveal screens
+D5. **`MesocycleBuilder` carries dead style residue.** `modalSheet`,
+`weekChip`, `saveBtn`, `cancelBtn` styles exist for a create-block modal that
+is never rendered (MesocycleBuilderScreen:495-529). Visual residue from an
+older version.
 
-- `ProSetupCompleteScreen` is well designed: four numbered routine cards, a
-  collapsible split, an adherence-neutral nutrition block, a founder note. The
-  "Why this plan, for you" list (`:239-249`) already has a `weakPoints` slot,
-  so once weak points are collected in onboarding the reveal will explain them
-  with no further work.
-- `GoalChangeSummaryScreen` (builder reveal) shows before/after. It should also
-  reflect weak-point changes so a returning user sees that part of their edit
-  landed. Confirm in Phase 4.
+D6. **Reveal stat layout vs the "no 2x2 grid" rule.** The macro row is a clean
+3-up (protein/carbs/fat) which is fine, but the goal/phase chips plus the kcal
+hero plus macros stack into a dense card (ProSetupComplete:130-192). It works,
+but watch the density against the "lay out by importance" rule.
 
-## Touch targets, motion, empty states
+D7. **`PaywallScreen` shows a two-column comparison strip** that is a 3-tier
+artifact (TierComparisonStrip). Visually it presents two balanced columns where
+only one tier exists. Stale composition, see doc 04.
 
-- Touch targets meet size on both flows (cards and 44px chips). Good.
-- Motion respects `reduceMotion` (`WelcomeScreen.js:28-39`,
-  `ProSetupCompleteScreen.js:33-54`). Keep this for any new screen.
-- No "coming soon" placeholders, no greyed future features, no carousels. Clean.
+### Low
 
-## Summary
+D8. **Goal/phase chip iconography on the reveal.** A "Not competing" value
+shown with a `trophy-outline` icon (ProSetupComplete:166) is a small semantic
+mismatch.
 
-The locked rules are honoured. The single real design problem is cross-flow
-inconsistency: two control languages for the same questions. Standardising on
-the builder's card/chip language, plus a shared division-specific weak-point
-component, resolves both the consistency problem and the weak-point scan
-problem in one move.
+D9. **Decorative background wordmark on Login** at 4% opacity
+(LoginScreen:227-228). Tasteful, not a fingerprint, keep.
+
+---
+
+## Touch targets, empty and loading states
+
+- Touch targets: primary buttons and toggles meet size; several icon-only taps
+  use `hitSlop` correctly (e.g. PlansScreen:498). The wizard `Dropdown` rows are
+  full-width, good.
+- Loading: `PlansScreen` and `PlanLibrary` show skeleton cards on first load
+  (PlansScreen:382-388, PlanLibrary:446-451). Premium. The wizard shows a
+  spinner in the primary button on finish (ProOnboarding:700, :1213).
+- Empty: `PlansScreen` "No active plan" row (:533-538) and `MesocycleBuilder`
+  empty state (:288-298) are plain and on-brand. No "coming soon" placeholders
+  found in the flow.
+
+---
+
+## Visual residue / template smells checked
+
+- No hero gradients, orbs, or soft-glow backgrounds in the flow. Pass.
+- No paginating carousel onboarding. Pass.
+- No checkmark-bullet overuse: the Welcome tier cards use checkmarks, which is
+  the sanctioned place (CLAUDE.md). Pass.
+- Decorative Ionicons: present but restrained (one icon per routine card, per
+  option row). Borderline on `ProGoalSetup` where every card has an icon
+  (:333, :392, :420, :484, :510), watch for decoration creep.
+- Stale residue: `ManualBuilder` cosmetic goal, `MesocycleBuilder` modal
+  styles, `TierComparisonStrip` Complete column. Three pieces of genuine
+  residue to remove.

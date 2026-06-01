@@ -1,76 +1,70 @@
-Status: REFRESHED (post-rebuild) | Original 2026-06-01 (commit e7c3f01) | Refreshed 2026-06-01 (engine at 6cf8642)
+# Onboarding Audit 07 — Prioritised Build Recommendations
 
-REFRESH NOTE. Engine line references updated. The division-specific system is now
-fully built (matrix, pools, division-aware MRV, weak-point composes with the
-split), so the "division judging note / division-specific sets" items connect to
-real infrastructure. The ONLY runtime-critical engine change still outstanding is
-the always-on bias; everything else is UI/data wiring on the unchanged flow code.
+Status: COMPLETE (Phase 7 of 7)
+Date: 2026-06-01
+Method: every proposed change broken into an implementable unit, scored by
+Impact (1-5) and Effort (1-5, lower is cheaper). Priority = Impact first, then
+low Effort. Nothing is built yet. Await confirmation.
 
-IMPLEMENTATION STATUS (current): only the weak-point selector in onboarding is
-built (commit 4928a04, the critical item below). Everything else, the copy pass,
-the format/style standardisation, days/protein parity, the always-on bias, is
-NOT built and awaits an approved screen-by-screen plan. Do not implement further
-without explicit go-ahead.
+---
 
-# Prioritised build recommendations
+## CRITICAL (copy referencing things that no longer work, or active misdirection)
 
-Scored Impact x Effort. Impact is plan correctness and parity first, premium
-feel second. Effort is relative engineering size. Runtime-critical items (the
-engine change) carry the Rule 5 and Rule 7 obligations: tests in the same
-commit, additive change, verified end to end.
+| ID | Change | Files | Impact | Effort |
+|---|---|---|---|---|
+| C1 | Replace the "Use MyFitnessPal or Cronometer" instruction with an introduction to the Eat / Diary logger. | `NutritionEducationScreen.js:103-109` | 5 | 1 |
+| C2 | Re-frame the paywall: Pro is the coach, not "adds food data / food layer". | `PaywallScreen.js:107-109` | 4 | 1 |
+| C3 | Remove the defunct `Complete` column from the comparison strip (2-tier model). | `TierComparisonStrip.js:23-74`, `PaywallScreen.js` | 4 | 2 |
+| C4 | Make trial length consistent and wired to `cascade.js`. Fix the "14 days" CTA and the day14/28 docstring. | `PaywallScreen.js:92-94`, `CascadeGateScreen.js:5-7` | 3 | 2 |
+| C5 | Fix the price to read from the catalogue (no hardcoded £2.99). | `PaywallScreen.js:91` | 3 | 1 |
+| C6 | Fix "Answer 3 questions" to match the 2-step quiz (or add a third step). | `PlanLibraryScreen.js:439` | 2 | 1 |
+| C7 | Replace the "MAV-level volume" jargon leak in user copy. | `coachingGoals.js:240` | 2 | 1 |
 
-## Critical (correctness and the brief's core requirement)
+C1 is the single highest-value fix: it is one paragraph, and it stops onboarding
+sending new users to a competitor.
 
-| Unit | Impact | Effort | Files / notes |
-|---|---|---|---|
-| Weak-point selection in onboarding | High | Med | Remove `planWeakPoints: []` (`ProOnboardingScreen.js:519`), mount the shared selector, pass the value into `planProfile` (`:512-521`). The handoff already exists in the engine |
-| Always-on weak-point bias in the engine | High | Med | `applyGoalOverlay` (`planEngine.js:127`, weak-point block `:173`): apply a smaller additive bonus off the `weak_point` phase, full bonus on it, inside the existing 110% MRV clamp (`:205`), systemic cap (`:226-232`) and the rebuild's delivered-volume clamp. Runtime-critical: tests alongside, covering both phase magnitudes, the trim-offset, and that the caps still hold |
-| Division-specific weak-point option sets | High | Low-Med | Add `WEAK_POINT_SETS` per goal in `coachingGoals.js`, reuse `WEAK_POINT_MAP`. Pure data, easy to test |
-| Weak-point copy that matches behaviour | High | Low | Rewrite `ProGoalSetupScreen.js:351-353` and the new onboarding intro for the always-on model. No promise that is false on any phase |
+## CRITICAL (parity / broken paths)
 
-## High (parity and structure)
+| ID | Change | Files | Impact | Effort |
+|---|---|---|---|---|
+| C8 | Add days-per-week to onboarding (currently hardcoded 4) so first plans are not always 4-day. | `ProOnboardingScreen.js:41,536`, step 3 UI | 5 | 3 |
+| C9 | Make the coached builder (`ProGoalSetup`) reachable from the Plans tab for every Pro user, not only Pro-with-active-plan. | `PlansScreen.js:33-49,362-367` | 4 | 2 |
+| C10 | Persist `planWeakPoints` into the saved profile so a later regenerate keeps them. | `ProOnboardingScreen.js:460-483` | 3 | 1 |
 
-| Unit | Impact | Effort | Files / notes |
-|---|---|---|---|
-| Shared `WeakPointSelector` component | High | Med | One component, both flows. Region grouping, max-3 with existing toast, "Not sure" state, re-scope and prune on division change |
-| Training days per week in onboarding | High | Low-Med | Add a chip row (3 to 6, default 4) to step 3; pass `daysPerWeek` instead of the hard-coded `DEFAULT_DAYS_PER_WEEK` (`ProOnboardingScreen.js:425,456,514`). Recompute nutrition activity level from it |
-| Protein approach in onboarding | Med-High | Low-Med | Mirror the builder's protein section (`ProGoalSetupScreen.js:521-560`), default to the suggested approach for the division |
-| Division judging note at selection time | Med-High | Low | Surface each goal's `coachingNote` (`coachingGoals.js`) on division change in both flows. Data exists, just unused |
-| Standardise shared controls on one language | Med-High | Med | Move onboarding's phase/experience/equipment/recovery to the builder's card pattern, days/session to the chip pattern. Resolves the cross-flow design inconsistency |
-| Shared option strings | Med | Low | One constant per concept (equipment, experience, recovery, phase, days) so both flows read identically |
+## HIGH (structural / new introductions / pre-population)
 
-## Polish
+| ID | Change | Files | Impact | Effort |
+|---|---|---|---|---|
+| H1 | Add the "How coaching works" line (weigh in, check in, food optional) to onboarding and the reveal. | `ProOnboardingScreen.js` step 4, `ProSetupCompleteScreen.js` | 5 | 2 |
+| H2 | Introduce the Eat logger in the flow (in context), replacing the deferred external explainer. | `ProSetupCompleteScreen.js`, new in-context cue | 4 | 3 |
+| H3 | Add protein approach to onboarding (collapsible, default optimised). | `ProOnboardingScreen.js` step 3 | 3 | 2 |
+| H4 | Remove the duplicate account step, share one account component between Login and the wizard. | `LoginScreen.js`, `ProOnboardingScreen.js:602-727` | 3 | 4 |
+| H5 | Unify selection components so onboarding and the builder look identical. | `ProOnboardingScreen.js`, `ProGoalSetupScreen.js` | 3 | 4 |
+| H6 | Surface read-only body weight in the builder (the nutrition recalc depends on it). | `ProGoalSetupScreen.js:183-209` | 2 | 2 |
+| H7 | Align weak-point scope between onboarding (scoped) and builder (full list). | `ProGoalSetupScreen.js:355`, `coachingGoals.weakPointSetForGoal` | 2 | 2 |
+| H8 | Consolidate the five goal/division vocabularies to one source. | `ManualBuilderScreen.js`, `PlanLibraryScreen.js`, `coachingGoals.js` | 3 | 4 |
 
-| Unit | Impact | Effort | Files / notes |
-|---|---|---|---|
-| Reflect weak-point change on `GoalChangeSummaryScreen` | Med | Low-Med | Add weak-point before/after to the summary so a returning user sees the edit landed |
-| One-line Diary/coaching feature note in onboarding | Med | Low | Step 4, one line that logged food and weight feed the check-in. No tutorial |
-| Move recovery into the training step | Low-Med | Low | Grouping only |
-| Single per-step time estimate | Low | Low | Settle the "two minutes" vs "30 seconds" mismatch or drop estimates |
-| Division card icons monochrome | Low | Low | Keep amber as the only selection signal |
+## POLISH (copy, residue, micro-interactions)
 
-## Suggested sequence
+| ID | Change | Files | Impact | Effort |
+|---|---|---|---|---|
+| P1 | Make or remove the cosmetic Manual Builder goal pills. | `ManualBuilderScreen.js:20-26,378-379` | 2 | 2 |
+| P2 | Remove dead create-block modal styles from MesocycleBuilder. | `MesocycleBuilderScreen.js:495-529` | 1 | 1 |
+| P3 | Gloss "Precision Coaching" at first use. | `WelcomeScreen.js` | 2 | 1 |
+| P4 | Fix the "Not competing" + trophy-icon mismatch on the reveal chip. | `ProSetupCompleteScreen.js:166-167` | 1 | 1 |
+| P5 | Move the developer crash banner out of the user-facing Login surface (beta only). | `LoginScreen.js:238-247` | 1 | 1 |
+| P6 | Add a one-line first-run cue on Home for new Pro users. | `HomeScreen.js` | 2 | 2 |
+| P7 | Confirm the canonical food-feature name (Eat vs Diary) and make the tab + copy consistent. | `RootNavigator.js:350`, `DiaryScreen.js:450` | 2 | 1 |
 
-1. Data and engine first: `WEAK_POINT_SETS`, then the always-on bias in
-   `applyGoalOverlay` with tests. These are independently shippable and unblock
-   both flows. Apply the Rule 5 and Rule 7 discipline here: this is the
-   runtime-critical core.
-2. Shared `WeakPointSelector`, then wire it into the builder (replacing the flat
-   grid) and into onboarding (closing the omission). Add the division judging
-   note in the same pass.
-3. Onboarding parity: training days, protein approach, control standardisation,
-   shared strings.
-4. Polish: summary screen, Diary note, grouping, estimates, icons.
+## Suggested sequencing
 
-## Risk notes
+1. **Ship C1-C7 first** (one short PR). All are copy/asset, mostly Effort 1,
+   and they stop the active misdirection and the defunct-tier display.
+2. **Then C8-C10 + H1-H3** (parity and the coaching-truth message). Medium
+   effort, high impact.
+3. **Then H4-H8** (structural unification). Higher effort, do once the copy and
+   parity are right.
+4. **Polish P1-P7** alongside or after.
 
-- The engine change is the only runtime-critical item. It is additive (a second
-  bias magnitude on an existing code path) and keeps both safety clamps, so it
-  is frozen-build-safe and recovery-safe by construction. It must not refactor
-  the surrounding overlay logic; add the smaller-magnitude branch and test both.
-- No migration is required: weak points already persist in the profile and sync
-  today; this work changes which muscles are offered and when the bias applies,
-  not the storage shape.
-- Division-specific sets must keep `WEAK_POINT_MAP` as the single resolver so a
-  muscle dropped from a division's UI set still maps correctly if it arrives in
-  older saved data.
+Impact x (6 - Effort) ranking puts C1, C5, C6, C10, H1 at the top: highest
+impact for least work.

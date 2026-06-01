@@ -1,122 +1,116 @@
-Status: REFRESHED + PROPOSAL CONFIRMED (post-rebuild) | Original 2026-06-01 (commit e7c3f01) | Refreshed 2026-06-01 (engine at 6cf8642)
+# Onboarding Audit 00 — Executive Summary
 
-REFRESH NOTE. The original audit was written before the planEngine rebuild. The
-onboarding/builder FLOW code is unchanged since, so the flow, copy and design
-findings stand. What changed: the planEngine was fully rebuilt and the
-division-specific system the reinstated weak-point screen connects to is now
-complete and verified (division matrix, division pools, division-aware MRV, and
-weak-point that composes with the division split). Line references throughout
-the phase docs are updated to the current engine. Founder has CONFIRMED the
-proposal as-is; this set is refreshed for accuracy, then build follows on a
-separate go-ahead.
+Status: COMPLETE. Full seven-phase audit. Written last.
+Date: 2026-06-01
+Scope: first launch to the workout screen (Flow A), and the Plans tab plan
+builder for returning users (Flow B). Every screen, question, selection, copy
+string and feature reference read from the live code. No prior audit material
+was used. Code is the only source of truth.
 
-# Onboarding and plan-builder audit, executive summary
+Companion documents:
+- 01 flow map, 02 copy and tone, 03 design, 04 integration accuracy,
+  05 research, 06 proposal, 07 build recommendations.
 
-A complete audit of the two flows that build a training plan: first-time
-onboarding (`ProOnboardingScreen.js`) and the Plans tab builder for returning
-users (`ProGoalSetupScreen.js`). Grounded in the code on `main`. Full detail in
-the seven phase documents alongside this one.
+---
 
-## The one finding that reframes the brief
+## The headline
 
-The brief treats weak-point selection as absent from both flows and asks us to
-confirm it absent from the builder. The code disagrees:
+Volyume's onboarding is well built and well written in most places. The wizard
+explains why it asks each thing, the reveal is genuinely premium, and the voice
+is human. The damage is concentrated in a small number of places where the copy
+has not kept up with how good the app has become:
 
-- Onboarding: weak-point selection is genuinely absent (`planWeakPoints: []`
-  hard-coded, `ProOnboardingScreen.js:519`).
-- Builder: weak-point selection is present and ships today (a 16-muscle grid,
-  `ProGoalSetupScreen.js:345-372`).
+1. **Onboarding tells new users to log food in a competitor's app.**
+   `NutritionEducationScreen`, linked straight from the reveal and described in
+   its own code as "the first thing a new Pro user reads", says "Use an app like
+   MyFitnessPal or Cronometer" (NutritionEducationScreen:103-109). Volyume ships
+   its own complete, coach-integrated food logger (the Eat / Diary tab:
+   `DiaryScreen` reads the coach's targets and tracks the day against them, with
+   barcode scan, label OCR, multi-source search, saved meals and recipes,
+   `food/db.js` + `food/sources` + `food/ocr`). The instruction is not just
+   stale, it points users away from the product. This is the single most
+   important fix and it is a one-paragraph change (doc 07, C1).
 
-So onboarding is the thinner flow, not the builder. The real weak-point
-problems are different and arguably more serious than a missing screen:
+2. **The food model is mis-sold and under-explained.** The coach adapts calories
+   from the morning-weight trend, not from food logs (weeklyCoach.js:373-379,
+   WeeklyCheckInScreen:97-105). Food logging in Eat is optional and sharpening.
+   Nothing in the flow says this, and the paywall inverts it by selling Pro as
+   "adds food data / the food layer" (PaywallScreen:107-109). Users are left
+   thinking they must log every meal, the opposite of the truth.
 
-1. The selector is a flat generic list, identical for every division
-   (`WEAK_POINT_MUSCLES`, `coachingGoals.js:126-132`). The brief's requirement
-   that Men's Physique shows MP options and Bikini shows Bikini options is met
-   in neither flow.
-2. Selected weak points are silently ignored unless the training phase is
-   "Bring up a weak point" (`planEngine.js:173`). On any other phase the copy
-   promises a volume bias that never happens.
+3. **The Pro and trial surfaces are a mix of three incompatible stories.** Trial
+   length is stated as 14 days (PaywallScreen), day 14/28 (CascadeGate
+   docstring) and day 21 (the actual `cascade.js` mechanic). Price shows £2.99
+   where the catalogue holds £0.99 / £1.99 / £3.99. The paywall's comparison
+   strip still pits Pro against a deleted "Complete" tier and frames Pro as the
+   downgrade (TierComparisonStrip:23-74). All of this is 3-tier residue in a
+   2-tier app.
 
-## Parity gaps (the corrected picture)
+4. **The richest builder is hidden, and Free users have no coached builder.**
+   The coached generator (`ProGoalSetup`, "Update your plan") only appears on
+   the Plans tab when the user is Pro and already has an active plan
+   (PlansScreen:362-367). New Pro users without a plan, and all Free users, see
+   only templates and a manual hand-builder. Free users get no coached plan in
+   onboarding or the Plans tab at all.
 
-Onboarding is missing three things the builder already has: training days per
-week (onboarding hard-codes 4), weak-point selection, and protein approach. The
-matching questions use two different control languages across the flows
-(dropdowns in onboarding, cards and chips in the builder), so the two do not
-feel like one product. Full table in Phase 1.
+5. **Onboarding hides two real options.** It never asks training days per week
+   (hardcoded to 4, ProOnboarding:41), so every first plan is a 4-day plan, and
+   it never asks protein approach (defaulted). The returning-user builder asks
+   both. Onboarding is the thinner flow, not the builder.
 
-## What we propose (approved direction: full audit, always-on bias)
+---
 
-- One shared option layer and one shared selector component, used by both
-  flows, so parity is guaranteed by construction rather than by hand.
-- Division-specific weak-point option sets (`WEAK_POINT_SETS` in
-  `coachingGoals.js`), derived from the existing division overlays.
-- Always-on division bias in the engine: a selected weak point biases the plan
-  on every phase (a small additive emphasis), with the larger effect kept for
-  the weak-point phase. This sits inside the existing per-muscle MRV clamp
-  (`planEngine.js:205`) and the recovery-scaled systemic cap (`:226-232`), plus
-  the rebuild's delivered-volume clamp, so it redistributes volume within the
-  individual's recovery envelope and cannot cause overtraining. Science first,
-  exactly as asked.
-- Close the onboarding gaps: training days, protein approach, and the
-  reinstated weak-point selector.
-- Standardise the shared controls on one visual language and surface each
-  division's judging note at selection time.
-- Experience gating from the research: for beginners, default to "Not sure" and
-  frame balanced training as the right call; specialisation is an
-  intermediate-plus tool.
+## Parity verdict
 
-End state: zero option gaps between the flows, a weak-point system that is
-division-aware and honest about its effect, and an onboarding that matches the
-builder's depth while staying appropriately first-timer in pacing.
+Against the brief's rule ("everything in onboarding must exist in the builder"),
+the coached options are present in `ProGoalSetup`, so there is no missing-option
+gap in that direction. The real problems are the reverse and the structure:
+- Onboarding omits days-per-week and protein that the builder has.
+- The coached builder is gated/hidden and visually unlike onboarding.
+- Manual Builder and Plan Library share none of the coached vocabulary, and the
+  app carries five different goal/division taxonomies with diverging keys.
 
-## Priority order
+Full table in doc 01.
 
-1. Critical: weak points in onboarding, always-on bias in the engine (with
-   tests), division-specific sets, honest weak-point copy.
-2. High: the shared selector, onboarding's days and protein, control
-   standardisation, division judging notes.
-3. Polish: summary-screen weak-point reflection, a one-line Diary note,
-   grouping, time estimates, icon treatment.
+---
 
-Full scoring in Phase 7.
+## What is genuinely good (keep it)
 
-## Documents
+- The per-question "why" hints. This is Volyume's research-backed strength.
+- The steps explanation, accurate and plain ("Your phone fills the number in
+  for you", the lever-order line about steps before food).
+- The reveal: routine cards, the "Why this plan, for you" engine rationale, the
+  founder note.
+- Division-specific training copy, which is truthful, the engine really does
+  bias volume per division.
+- Nutrition copy, the targets are real (Mifflin-St Jeor / Katch-McArdle +
+  adaptive TDEE) and described without jargon.
 
-- 00 this summary
-- 01 flow map and parity table
-- 02 copy and tone
-- 03 design and presentation
-- 04 integration accuracy (the two weak-point defects, in detail)
-- 05 research (live web, 2026)
-- 06 full proposal for both flows
-- 07 prioritised build recommendations
+---
 
-## Status (current)
+## Recommended order of work (from doc 07)
 
-Implementation has only partially begun, and is now PAUSED awaiting direction.
+1. One short copy/asset PR: delete the MyFitnessPal instruction and introduce
+   Eat, re-frame the paywall, remove the defunct Complete column, fix the trial
+   length and price, fix "3 questions", drop the "MAV" jargon. (C1-C7, mostly
+   Effort 1.)
+2. Parity and truth: add days-per-week to onboarding, make the coached builder
+   reachable for all Pro users, persist weak points, add the "how coaching
+   works" line, introduce Eat in context, add protein. (C8-C10, H1-H3.)
+3. Structural unification: one account component, one selection language across
+   both flows, one goal/division vocabulary. (H4-H8.)
+4. Polish. (P1-P7.)
 
-DONE and committed:
-- Weak-point selection reinstated in onboarding (the brief's critical omission).
-  Division-scoped selector in ProOnboarding step 3 reading WEAK_POINT_SETS
-  (per-division options), wired so the selection reaches plan generation
-  (the hard-coded `planWeakPoints: []` is removed). Commit 4928a04. The engine
-  applies it through the existing (rebuilt) weak-point path.
+---
 
-NOT done (awaiting explicit go-ahead, do not implement without it):
-- The broader onboarding alignment the brief asks for: the comprehensive
-  copy pass (accuracy to the current system, removing redundant communications,
-  rewriting instructions) and the format/style standardisation (onboarding's
-  dropdowns to the rest of the app's card/chip language, division made
-  prominent, recovery grouped with training, days/protein parity). This is the
-  bulk of the work and is specified screen-by-screen in doc 06 and doc 03. It
-  has NOT been built. A full screen-by-screen before/after must be presented
-  and approved before any of it is implemented.
-- Always-on weak-point bias (doc 06 engine item): NOT implemented and out of
-  scope for the onboarding alignment. The engine was deliberately left
-  untouched. A selected weak point therefore applies on the weak-point training
-  phase (where the engine biases) and not on other phases. Greenlight
-  separately if wanted.
+## Process note
 
-Engine: unchanged by this onboarding work.
+This audit was run after a direct correction from the founder: the app now has
+a complete food logger (Eat) that ties into the coach, food no longer needs
+separate logging, steps are automatic, and several old onboarding instructions
+are no longer valid. That correction was right, and it is reflected throughout
+docs 01, 04, 06 and 07. The lesson for the next pass: read the food subsystem
+and every linked explainer screen, not only the screens named in the navigator
+stacks.
+
+No code has been changed. Awaiting confirmation to proceed.

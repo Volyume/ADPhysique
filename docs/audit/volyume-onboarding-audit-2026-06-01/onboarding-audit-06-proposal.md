@@ -1,204 +1,180 @@
-Status: REFRESHED + CONFIRMED (post-rebuild) | Original 2026-06-01 (commit e7c3f01) | Refreshed 2026-06-01 (engine at 6cf8642)
+# Onboarding Audit 06 — Redesign Proposal
 
-REFRESH NOTE. Founder confirmed this proposal as-is. Line references are updated
-to the current engine. The division-specific system this proposal connects to is
-now fully built and verified (DIVISION_MATRIX, DIVISION_POOL_RULES, division-aware
-MRV, weak-point composes with the division split). The per-division WEAK_POINT_SETS
-below were re-checked against the current `GOAL_OVERLAYS` and still hold (the
-rebuild only tuned magnitudes, e.g. WBB quads, not which muscles a division
-emphasises). The one engine change still outstanding is the always-on bias.
+Status: COMPLETE (Phase 6 of 7)
+Date: 2026-06-01
+Method: a complete proposal for both flows, grounded in docs 01-05. Proposed
+copy is written to final standard (British English, no em dashes, no AI tells,
+plain voice). Nothing here is built yet. Await confirmation.
 
-IMPLEMENTATION STATUS (current): of this proposal, only the division-scoped
-weak-point selector in onboarding is built (commit 4928a04). The rest, the
-shared selector in the builder, the onboarding copy/format standardisation, the
-always-on bias, days/protein parity, division judging notes, is NOT built and
-awaits an approved screen-by-screen pass. The always-on bias engine change is
-explicitly deferred (onboarding work does not touch the engine).
+---
 
-# Redesign proposal, both flows
+## Guiding principles
 
-Built on the corrected reality (Phase 1) and the two founder decisions for this
-audit: full audit on the corrected basis, and always-on division bias for weak
-points. CONFIRMED by founder; build to this spec when the go-ahead is given.
+1. Collect only what shapes the plan or the targets, and justify each field
+   (keep Volyume's strength).
+2. Tell the truth about how coaching works: weigh in and check in, the coach
+   reads your weight, food logging in Eat sharpens it but is optional.
+3. Introduce the Eat logger as the food path. Never point at another app.
+4. One coached builder, reachable from both onboarding and the Plans tab,
+   visually identical, pre-populated for returning users.
+5. One Pro story, one trial length, one price source, no defunct tiers.
 
-## Design principle for this work
+---
 
-One shared option layer, two flows. Every selectable training variable should
-have a single definition in `coachingGoals.js` and a single selection component,
-used by both onboarding and the builder. The flows differ only in framing copy
-and in which questions appear, never in the option set or the control. That is
-what makes a returning user feel they are in the same product, and it is what
-guarantees parity by construction rather than by manual matching.
+## ONBOARDING FLOW PROPOSAL
 
-## 1. Shared division-specific weak-point system
+### Information architecture (first-time Pro)
 
-### Option sets per division
+Target sequence, 5 input steps plus consent and reveal:
 
-A weak point should only offer muscles that division is judged on or commonly
-wants to bring up. Derived from `GOAL_OVERLAYS` (`coachingGoals.js:339-473`)
-and each goal's `coachingNote`. Internal keys reuse `WEAK_POINT_MAP`
-(`planEngine.js:31-48`). Proposed sets (UI label list per division):
+1. Welcome / tier (unchanged structure, copy tightened).
+2. Account (single account UI, used by both Login and the wizard, see below).
+3. Health consent (unchanged, it is legally required, but smooth the
+   interruption so it reads as step 2.5, not a detour).
+4. About you (body profile).
+5. Your training (goal, phase, experience, days, session, equipment, weak
+   points).
+6. Recovery and habits (recovery, reminders, steps, plus the new one-line "how
+   coaching works").
+7. Reveal.
 
-- general (not competing): the full balanced list. Chest, Upper Chest,
-  Lats / Back Width, Back Thickness, Side Delts, Rear Delts, Biceps, Triceps,
-  Quads, Hamstrings, Glutes, Calves, Core / Abs. (The full set, since no
-  division bias applies.)
-- mens_physique: Side Delts, Rear Delts, Front Delts, Lats / Back Width, Back
-  Thickness, Upper Chest, Chest, Biceps, Triceps. (Upper-body and V-taper. Legs
-  are de-emphasised in this division, so they are not offered as bring-up
-  targets.)
-- classic_physique: Side Delts, Lats / Back Width, Back Thickness, Upper Chest,
-  Chest, Quads, Hamstrings, Calves, Biceps, Triceps, Rear Delts. (All groups
-  judged, calves specifically.)
-- bodybuilding: the full list. (Everything is judged.)
-- bikini: Glutes, Hamstrings, Adductors, Side Delts, Lats / Back Width, Rear
-  Delts. (Glute and hamstring led, capped shoulder line.)
-- wellness: Glutes, Quads, Hamstrings, Adductors, Calves, Side Delts. (Fuller
-  lower body than bikini.)
-- figure: Side Delts, Rear Delts, Lats / Back Width, Back Thickness, Glutes,
-  Hamstrings. (Capped shoulders, wide back, glutes.)
-- womens_physique: Side Delts, Lats / Back Width, Back Thickness, Quads,
-  Glutes, Hamstrings, Upper Chest, Biceps, Triceps, Calves.
-- womens_bodybuilding: the full list.
+Key structural changes:
+- **Remove the duplicate account step.** The wizard's step 1 duplicates Login
+  (ProOnboarding:602-727 vs LoginScreen). Use one shared account component so a
+  Pro user authenticates once.
+- **Add days-per-week to the training step** (currently hardcoded to 4). Default
+  to 4, let the user pick 3 to 6, matching `ProGoalSetup`.
+- **Add protein approach to the training step** (currently defaulted). Default
+  to optimised with the "Suggested" badge, collapsible so it does not bloat the
+  step.
+- **Defer food mechanics out of onboarding.** No pre-emptive nutrition
+  explainer that points elsewhere. Introduce Eat in context.
 
-Implementation: add `WEAK_POINT_SETS` keyed by goal value in
-`coachingGoals.js`, falling back to the full list for `general`. Keep
-`WEAK_POINT_MUSCLES` as the canonical superset so `WEAK_POINT_MAP` stays the
-single label-to-key resolver.
+### Screen-by-screen
 
-### Always-on bias (engine)
+**Welcome (tier).** Keep the two-card structure and the disqualifier. Tighten
+the Pro subtitle. Proposed:
+- Pro card subtitle: "The coach who writes back." (keep)
+- Pro bullets (replace the food-ambiguous one): keep the schedule, coaching,
+  and targets bullets; add "Log food in Eat when you want sharper calls. You
+  never have to."
+- CTA: "Go Pro" (keep). Free CTA and copy unchanged.
 
-Change `applyGoalOverlay` (`planEngine.js:127`, weak-point block at `:173`) so a
-selected weak point biases the plan on every phase, not only `weak_point`:
+**Account.** One shared component. Headline "Create your account." Sub: "Pro
+backs up your plan, weight history, and coaching across devices." OAuth first,
+email second. No second account step later.
 
-- weak_point phase: unchanged. Each weak-point muscle closes ~70% of the gap to
-  its (division-aware) MRV (`:182`), offset by trimming the lowest-priority
-  muscles toward MV. (Note: the rebuild raised this from 40% to 70%.)
-- any other phase: each weak-point muscle closes a smaller fraction of the gap
-  to MRV (propose ~15%, tuned so an average intermediate gains roughly 1 to 3
-  sets on a brought-up muscle, not a block's worth). Same trim-to-offset logic,
-  same order.
-- Both paths keep the existing guardrails untouched: the per-muscle clamp at
-  110% of MRV (`:205`), the recovery-scaled systemic cap (`:226-232`), and the
-  rebuild's delivered-volume clamp. This is the science guarantee the founder asked for: the
-  always-on bias redistributes volume within the individual's recovery
-  envelope, it never raises the ceiling, so it cannot create overtraining. A
-  poor-recovery or beginner user is held lower automatically because their MRVs
-  and the systemic cap are already lower.
+**Health consent.** Keep the locked copy. Add a one-line lead so it does not
+feel like an ambush after sign-up: "One legal step before we start. Volyume
+uses your health data to coach you."
 
-This makes the selector's promise true on every phase, which is the
-precondition for showing it on every phase.
+**About you.** Keep the fields and the why-hints (they are good). Order: name,
+sex, age, height, weight. Hint on weight stays: "Used with your height and age
+to set your calorie targets. Update it daily on Home."
 
-### Shared selector component
+**Your training.** Keep the primary "What are you focused on right now?" phase
+question and the optional "Competing in a category?" division question. Add:
+- Days per week: "How many days can you train?" 3 / 4 / 5 / 6, default 4. Hint:
+  "Your plan is built to fit this many sessions."
+- Protein (collapsible "Advanced"): standard / optimised / advanced, default
+  optimised. Hint: "Optimised suits most people. Open this only if you want to
+  change it."
+- Weak points: use the same division-scoped set as today, and use it in the
+  builder too (resolve the scope mismatch toward division-scoped, doc 02 M1).
 
-A new `WeakPointSelector` component (props: `goal`, `value`, `onChange`,
-`variant: 'onboarding' | 'builder'`). Renders the division's set as chips
-grouped by region (upper / lower / core) with a small group label, the max-3
-rule with the existing toast (`ProGoalSetupScreen.js:96-98`), the existing
-amber selected treatment, and a "Not sure" affordance that deselects all and is
-a valid end state. On a division change, drop any selected muscle not in the
-new division's set. Both flows mount this same component.
+**Recovery and habits.** Keep recovery, reminders, steps. Add one card "How
+coaching works" with final copy:
+> "Each morning, weigh in. Once a week, check in. Your coach reads the trend and
+> adjusts your calories and training for you. Logging food in Eat is optional,
+> it makes the calls sharper, but your weight does the heavy lifting."
 
-## 2. Onboarding flow proposal (first-time)
+### Feature introductions (exact copy)
 
-Keep the four-step shape; close the three gaps and standardise the controls.
+- **Steps** (keep, it is accurate): "Your phone counts your steps. Nothing to
+  set up. If you wear a watch, that takes over."
+- **Eat / food** (new, replaces the MyFitnessPal instruction): "Eat is your food
+  diary. Scan a barcode, snap a label, or pick a saved meal. It shows your
+  coach's targets and tracks the day against them. Optional, but it sharpens
+  your coaching."
+- **Division** (keep, accurate): "Pick your category and your plan biases volume
+  toward the muscles it is judged on."
+- **Nutrition targets** (keep): "Your targets come from your weight, height, age
+  and goal, and move with your weight trend."
 
-- Step 1, account. Unchanged.
-- Step 2, profile. Unchanged (name, sex, age, height, weight).
-- Step 3, training. Convert the dropdowns to the builder's card/chip language
-  (Phase 3). Order: experience, training days per week (new, chip row 3 to 6,
-  default 4), session length, equipment, "What are you focused on right now?"
-  (phase), recovery (moved here from step 4 where it belongs with training).
-  When a division is chosen, show that division's one-line judging note.
-- Step 3b, division and weak points. Promote division from a buried optional
-  dropdown to a clear card choice ("Competing in a category?"), defaulting to
-  "Not competing". Immediately below, the shared `WeakPointSelector` scoped to
-  the chosen division, intro copy written for a first-timer: one line on what a
-  weak point is and that picking one (or none) is fine. "Not sure" is
-  prominent.
-- Step 4, reminders. Morning weight, weekly check-in, steps. Add one short
-  feature note that logged food and weight feed the weekly check-in, so the
-  user knows why logging matters. No tutorial.
-- Reveal (`ProSetupCompleteScreen`). No change needed: the "Why this plan, for
-  you" list already has a `weakPoints` slot (`:20,239-249`) that will now be
-  populated because onboarding passes real weak points. Remove the hard-coded
-  `planWeakPoints: []` at `ProOnboardingScreen.js:519` and pass the collected
-  value, plus the new `daysPerWeek` and `proteinApproach`.
+### Pro and trial proposal
 
-Protein approach: add it to step 3 or step 4 as the builder has it
-(`ProGoalSetupScreen.js:521-560`), defaulting to the suggested approach for the
-chosen division (`ADVANCED_PROTEIN_GOALS`). Closes the third parity gap.
+- One value story everywhere: Pro is the coach (training plus nutrition
+  adjustments). Eat is part of it, not the headline.
+- During beta: "Free beta. No subscription required." (keep, it is true).
+- For the eventual paid state, one trial length wired to `cascade.js` (currently
+  21 days), one price from `catalogue.js`, and delete the `Complete` comparison.
+  Proposed paywall headline: "Pro is the coach. Free is the logbook." Proposed
+  trial CTA, pulling the real number: "Try Pro free for {N} days." Proposed
+  price line from catalogue: "{priceText} after that. Cancel anytime."
 
-## 3. Plan builder flow proposal (returning user)
+### First workout screen arrival
 
-The builder already has days, protein and a weak-point selector, strong
-pre-population, and returning-user copy. The changes are smaller:
+- Add a single first-run cue on Home for new Pro users: "Your plan is ready.
+  Start your first session." pointing at the Continue card. One line, dismissed
+  on first tap. No tour.
 
-- Swap the flat 16-muscle grid for the shared `WeakPointSelector` scoped to the
-  selected division, so the option set matches onboarding and is
-  division-specific.
-- Show the selected division's judging note inline when a division card is
-  chosen (the `coachingNote` is already in the data, just unused here).
-- Rewrite the weak-point copy for the always-on model: one line that holds true
-  on every phase ("Your plan puts extra work into these. More so on a bring-up
-  block."). No cheerleading.
-- Reflect weak-point changes on `GoalChangeSummaryScreen` so a returning user
-  sees that part of their edit landed (confirm the summary takes a weak-point
-  before/after; if not, add it).
-- Keep pre-population as-is. On division change, the shared component re-scopes
-  and prunes the selection (point 1).
+---
 
-## 4. Returning-user adaptation, explicit
+## PLAN BUILDER FLOW PROPOSAL
 
-- No app-intro copy is repeated; the builder header stays "Update your plan."
-- Every field stays pre-populated from the profile.
-- Context-specific explanations remain: the division judging note shows on
-  change, and the weak-point copy explains the effect on the new plan.
-- The builder stays a single screen; onboarding stays stepped. Same options,
-  different pacing, which is the correct returning-user adaptation.
+### Adapted architecture
 
-## 5. Final parity table (proposed end state)
+- **One coached builder.** Promote `ProGoalSetup` to the canonical coached
+  builder, reachable from the Plans tab for every Pro user (not only Pro with an
+  active plan), and from a "Build with the coach" entry for Free users that
+  upsells Pro at the point of intent.
+- **Make it look like onboarding.** Adopt the wizard's selection components (or
+  vice versa) so experience, equipment, days, etc, are visually identical across
+  both flows (resolves doc 03 D1/D2).
+- **Keep it lighter than onboarding.** No app introduction, no "how coaching
+  works" card, pre-populated everything. This is correct already.
 
-| Variable | Onboarding (proposed) | Builder (proposed) | Match |
+### Pre-population strategy
+
+- Pre-fill goal, phase, experience, days, session, equipment, recovery, protein,
+  weak points from `userProfile` (already done, ProGoalSetup:70-87).
+- Show the previous answer as the selected state and let the user change any of
+  it (already done).
+- Surface body weight read-only at the top ("Targets use your latest weight,
+  {x}. Log a new one on Home."), since the nutrition recalc depends on it but
+  the field is invisible today (doc 04 section 5).
+- Fix the latent bug: persist `planWeakPoints` into the saved profile so a later
+  regenerate does not lose them (doc 04, F9).
+
+### Screen-by-screen (builder)
+
+- Entry from Plans: "Update plan and rebuild" (keep copy, it is good,
+  PlansScreen:59).
+- The builder screen: keep the section order, adopt onboarding's visual
+  language, add the read-only weight line, keep "Rebuild my plan" CTA.
+- Manual Builder: remove the cosmetic goal pills (they drive nothing,
+  ManualBuilder:20-26), or make them real. Add a one-line "This is a hand-built
+  plan, your coach still reads your data" so it is clear it is not the coached
+  path.
+- Plan Library: fix "Answer 3 questions" to match the 2-step quiz (or add the
+  third step), and align the division keys/labels with `coachingGoals`.
+
+### Parity confirmation (proposed)
+
+| Option | Proposed onboarding | Proposed builder | Parity |
 |---|---|---|---|
-| Physique division | Card choice + judging note | Card choice + judging note | Yes |
-| Weak-point selection | Shared selector, division-specific | Shared selector, division-specific | Yes |
-| Training phase | Cards | Cards | Yes |
-| Training days per week | Chip row 3 to 6 (new) | Chip row 3 to 6 | Yes |
-| Session length | Chip row | Chip row | Yes |
-| Equipment | Cards | Cards | Yes |
-| Experience | Cards | Cards | Yes |
-| Recovery | Cards (moved to training step) | Cards | Yes |
-| Protein approach | Cards (new) | Cards | Yes |
-| Physical metrics | Collected | From profile | Expected difference |
-| Reminders / steps | Collected | From settings | Expected difference |
+| Goal / division | Yes | Yes | Match |
+| Phase | Yes | Yes | Match |
+| Experience | Yes | Yes | Match |
+| Days per week | Yes (new) | Yes | Match |
+| Session length | Yes | Yes | Match |
+| Equipment | Yes | Yes | Match |
+| Recovery | Yes | Yes | Match |
+| Weak points | Division-scoped | Division-scoped (aligned) | Match |
+| Protein approach | Yes (new, collapsible) | Yes | Match |
+| Body metrics | Yes (collected) | Read-only summary + link | Match (adapted) |
+| Reminders / steps | Yes | In Settings (lifecycle) | Adapted, acceptable |
 
-Zero option gaps. The only remaining differences are the ones that should
-differ between a first-timer and a returning user (physical metrics, reminders),
-and the pacing (stepped versus single screen).
-
-## 5b. Experience gating (from Phase 5 research)
-
-The research is clear that specialisation is an intermediate-plus tool, and
-that for a beginner "everything is a weak point", so a balanced plan serves
-them better than an early bias. Apply this in both flows:
-
-- For beginners, default the weak-point selector to "Not sure" and frame that
-  as the right call, not a fallback: one line that says training everything
-  hard now beats specialising early, and they can bring a muscle up later. The
-  selector is still shown (so the feature is discoverable) but the recommended
-  state is no selection.
-- For intermediate and above, present the selector normally.
-- This pairs cleanly with the always-on bias: a beginner who does pick a muscle
-  still only gets the small off-phase bonus, held by the same recovery caps, so
-  the downside is bounded either way.
-
-## 6. Science guardrails (carried from the coach-plan audit)
-
-- Volume only ever moves within `computeLandmarks` individualised MRVs
-  (`planEngine.js:100-121`). The always-on bias redistributes, it does not
-  raise ceilings.
-- Per-muscle clamp at 110% MRV and systemic cap at 40% of total MRV stay in
-  place for both bias magnitudes.
-- Adherence-neutral and ED-safe framing extends to all weak-point copy: state
-  what the plan does, never coach the user's feelings, no colour judgement.
+Zero coached-option gaps in the proposed state. The only deliberate asymmetry
+is reminders/steps, which belong to lifecycle settings for a returning user, not
+the plan build.

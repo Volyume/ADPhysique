@@ -1,137 +1,184 @@
-Status: REFRESHED (post-rebuild) | Original 2026-06-01 (pre-rebuild, commit e7c3f01) | Refreshed 2026-06-01 (engine at 6cf8642)
+# Onboarding Audit 04 — Integration Accuracy
 
-REFRESH NOTE. This doc was first written before the planEngine rebuild. Line
-references below are updated to the current engine, and the key change in
-posture is recorded here: the division-specific system the reinstated weak-point
-screen must connect to is NOW FULLY BUILT (DIVISION_MATRIX, DIVISION_POOL_RULES,
-division-aware MRV, and weak-point that composes with the division split and
-respects MRV). The two defects below still stand exactly as written. The
-onboarding flow code itself is unchanged since the original audit.
+Status: COMPLETE (Phase 4 of 7)
+Date: 2026-06-01
+Method: every feature reference in both flows checked against how the feature
+actually works in the current code. This is the phase the founder flagged
+directly ("users don't need to log their food separately now ... a lot of old
+instruction isn't valid anymore"). Replaces the earlier version.
 
-IMPLEMENTATION STATUS (current): Defect 1 (onboarding could not pass weak
-points) is FIXED, commit 4928a04 removes the hard-coded `planWeakPoints: []` and
-wires the division-scoped selector. Defect 2 (weak points ignored off the
-weak-point phase) is NOT fixed, the always-on bias was deliberately not built
-(onboarding work left the engine untouched). The remaining accuracy/redundancy
-copy items below are NOT done and await an approved copy pass.
+Verdict scale: ACCURATE / OUTDATED / MISSING / CONTRADICTORY.
 
-# Integration accuracy audit
+---
 
-Do the two flows describe the app as it actually works, and do their selections
-reach the engine intact? Two real defects, both in the weak-point path, plus a
-handful of accuracy notes.
+## 1. Steps and activity tracking — ACCURATE
 
-## Steps and activity tracking
+The app reads steps automatically from the platform health aggregator (phone
+pedometer, Apple Watch, Garmin, Fitbit, Whoop), with manual entry only as a
+fallback and no forced wearable or health account (`activitySteps.js:2-14`,
+:104-113; `health.js` wrapper).
 
-- Onboarding describes steps correctly: automatic, phone-filled, the coach's
-  first lever before food (`ProOnboardingScreen.js:1124,1133-1136`). Health
-  access is requested on opt-in (`:470-476`,
-  `activitySteps.connectHealthStepsAndWeight`). No claim of manual entry as
-  primary. Accurate.
-- The builder does not mention steps, which is fine: steps are a profile/
-  settings concern, not a per-plan input.
+- Onboarding copy: "Your phone fills the number in for you." (ProOnboarding:1190)
+  and "Steps are the first thing the coach leans on when progress slows, before
+  it touches your food." (:1179). Both ACCURATE.
+- No copy in either flow presents manual step entry as the primary method.
+- The weekly check-in keeps a manual steps fallback field
+  (WeeklyCheckInScreen:253), which is correct given the aggregator can be
+  unavailable. Not a contradiction.
 
-## Food logging and Diary
+Action: none required. Keep this copy, it is a model for the rest.
 
-- Onboarding does not introduce the Diary at all. The first mention is the
-  setup-complete "Hit your daily targets" card
-  (`ProSetupCompleteScreen.js:130-192`) and the nutrition primer link
-  (`:180-190`). The brief asks that Diary food logging be introduced and its
-  contribution to coaching be explained. Today neither flow explains that
-  logged food feeds the weekly check-in and coaching adjustments. Gap, not an
-  inaccuracy. Proposed in Phase 6 as a one-line feature note, not a tutorial.
+## 2. Food logging, the Eat / Diary logger — OUTDATED FRAMING, MISDIRECTION, MISSING INTRODUCTION
 
-## Division-specific training
+This is the core finding, and the most serious in the whole audit.
 
-- The data is genuinely division-specific, and the rebuild deepened this. As
-  before, `GOAL_OVERLAYS` (`coachingGoals.js:339-473`) sets per-muscle
-  multipliers and `applyGoalOverlay` (`planEngine.js:127`) places priority
-  muscles inside their MAV-to-MRV band. NEW since the original audit: the six
-  specialised divisions now select their whole split, session order and lead
-  lift from `DIVISION_MATRIX` (`planEngine.js:1367`), with hard pool rules
-  (`DIVISION_POOL_RULES`, `:825`, e.g. Bikini back = lat-width only) and
-  division-aware MRV (`divisionMRV`, `:289`). So "selecting a division shapes the
-  plan" is now true structurally, not just by set-count, the reinstated screen
-  connects to a complete system.
-- Both flows let the user pick a division, but neither explains, at selection
-  time, what that division does to the plan. The `coachingNote` per goal exists
-  and is unused on both the onboarding dropdown and the builder card. Accuracy
-  is fine; the explanation is missing.
+### 2a. The app HAS a complete, coach-integrated food logger
 
-## Weak-point specialisation, the two real defects
+The "Eat" feature (the tab is currently labelled "Diary",
+`DiaryScreen:450`, `ScreenHeader title="Diary"`) is a full food logger:
+- It loads the coach's calorie and macro targets (`getNutritionTargets`,
+  DiaryScreen:93) and shows the day's intake against them via macro rings
+  (:487), with carb-cycle and refeed-day target swaps (:124-144). It directly
+  consumes the targets the coach sets.
+- Backend `food/db.js`: `logFoodEntry`, `recomputeRollup` into
+  `daily_intake_rollups`, range rollups, custom foods, frequents, and food
+  like/dislike preferences that feed the coach's meal suggestions
+  (food/db.js:38-411).
+- Inputs: barcode scan (`ScanBarcodeScreen`, described in code as better
+  detection than MFP/Cronometer), label OCR (`ScanLabelScreen`), multi-source
+  search across OpenFoodFacts / USDA / CoFID (`food/sources`, `waterfall`),
+  saved meals (`MyMeals`), recipes (`MyRecipes`, `RecipeBuilder`), and meal
+  suggestions (`mealSuggest`).
+The food the user logs flows back to the coach: the weekly check-in reads the
+rollups for adherence (`WeeklyCheckInScreen:97-105`, `getRollupsForRange`).
 
-### Defect 1: onboarding cannot pass weak points
+### 2b. CRITICAL: onboarding sends users to a competitor app
 
-`ProOnboardingScreen.js:519` hard-codes `planWeakPoints: []` into the plan
-profile. The engine accepts `weakPoints` (resolved via `resolveWeakPointKeys`,
-`planEngine.js:50`, label map `WEAK_POINT_MAP` at `:31-48`; threaded in from
-`planAutoGen.js:97`), so the handoff exists; onboarding just never fills it. A
-user who selects the "Bring up a weak point" phase in onboarding gets the engine
-default weak-point day (side delts and biceps, `planEngine.js:1287`) rather than
-their own muscles. This is the brief's confirmed omission, and it is real.
-Confirmed still present after the rebuild.
+`NutritionEducationScreen` section 4 "How to actually track", option A
+(:103-109): **"Use an app like MyFitnessPal or Cronometer. Scan barcodes or
+pick from saved meals."** This screen's header comment calls it "the first
+thing a new Pro user reads" (:8-9) and it is linked from the reveal
+(ProSetupComplete:180-190) and from `NutritionTargetsScreen`. It instructs the
+new user to log food in a competitor's app, and the very actions it describes
+(scan barcodes, pick saved meals) are native Eat features. This is a critical
+error: invalid instruction that points users away from the product.
 
-### Defect 2: selected weak points are ignored off the weak-point phase
+### 2c. The coaching model: food is optional, weight drives it
 
-The builder collects weak points on every goal and phase
-(`ProGoalSetupScreen.js:345-372`), and the copy promises a volume bias. But the
-engine still only applies the weak-point bonus when `phase === 'weak_point'`
-(`planEngine.js:173`, unchanged by the rebuild). On any other phase the selected
-muscles change nothing. The data is saved to the profile
-(`ProGoalSetupScreen.js:156`) and passed to the engine
-(`planAutoGen.js:97`), then dropped on the floor by the phase gate. Still true.
+The coach adapts calories from the **morning-weight EWMA trend**, not from food
+logs:
+- `weeklyCoach` computes the calorie decision from weight trend and check-in
+  signals (`weeklyCoach.js:6`, :52-64, :373-379).
+- Food adherence is derived **only if** food data exists on at least 5 of 7
+  days, otherwise it is null and coaching proceeds on weight alone
+  (`WeeklyCheckInScreen:97-105`).
+- Conclusion: **food logging is optional and enhancing. It is not required for
+  the coach to work.** The founder's statement is correct and the code proves
+  it.
 
-Founder decision for this audit: always-on division bias. A selected weak point
-should always bias the plan (a small additive emphasis on any phase), with the
-larger effect reserved for the weak-point phase. The integration point is the
-single block at `planEngine.js:173`; the change is to apply a smaller additive
-bonus when the phase is not `weak_point`, protected by the existing per-muscle
-MRV clamp (`:205`) and the recovery-scaled systemic cap (`:226-232`) so the
-always-on bias cannot push total volume past the user's recovery envelope. Note
-the rebuild added `divisionMRV` (`:289`, glutes 30 for Bikini/Wellness) and a
-delivered-volume clamp, so the bias is now doubly bounded. Full spec and the
-science guardrails are in Phase 6.
+Where the flow gets this wrong or silent:
+- MISSING: neither flow tells the user food is optional. The reveal says only
+  "Hit your daily targets" (ProSetupComplete:137), which reads as "you must log
+  food to hit them".
+- MISSING: the Diary tab is never introduced by name in onboarding, nor is its
+  contribution explained ("logging food sharpens the coach, but your weight
+  drives it").
+- CONTRADICTORY: `PaywallScreen` sells Pro as "Pro adds food data ... turns on
+  the food layer" (PaywallScreen:107-109). This frames the optional food layer
+  as the central Pro benefit, contradicting both the engine and the
+  Welcome/ProUpgrade coaching framing.
 
-### The reinstated selector must be division-specific in both flows
+Action: add one plain line in onboarding and the reveal stating weight drives
+the coach and food logging is optional but sharpens it. Re-frame the paywall
+away from "food layer" as the headline.
 
-Today the selector list is one flat array for everyone
-(`WEAK_POINT_MUSCLES`, `coachingGoals.js:126-132`). The brief requires
-division-specific options: Men's Physique shows MP-relevant options, Bikini
-shows Bikini-relevant options. The mapping to internal keys already exists
-(`WEAK_POINT_MAP`, `planEngine.js:31-48`), so a per-division option set can be
-defined in `coachingGoals.js` and consumed by one shared selector component in
-both flows. Spec in Phase 6.
+## 3. Division-specific training — ACCURATE
 
-## Pre-population in the builder
+Division selection genuinely shapes the plan. The engine applies per-division
+volume overlays, division-aware MRV caps, pool restrictions and a structured/
+matrix split distinction (`planEngine.js:127-360`, :846; `coachingGoals`
+`GOAL_OVERLAYS`, `WEAK_POINT_SETS`, `DIVISION_*`).
 
-- The builder pre-populates every field from `userProfile`
-  (`ProGoalSetupScreen.js:70-87`) and uses the latest morning-weight EWMA for
-  nutrition (`:183-209`). This is correct and should be the model for any new
-  field added (days, weak points, protein already pre-fill).
-- Interaction with a division change: on changing to a goal that does not
-  support weak points the selection is cleared (`:145-147`). Since all goals
-  support weak points today this branch is dead, but it becomes meaningful once
-  the list is division-specific: changing division should re-scope the selector
-  to that division's muscles and drop any previously selected muscle that is
-  not in the new division's set. This needs handling in the shared component
-  (Phase 6).
+- Onboarding copy "Biases volume toward the muscles that category is judged on."
+  (ProOnboarding:1002) and `ProGoalSetup` "Biases plan volume toward the muscles
+  that category is judged on." (:303). Both ACCURATE.
+- Caveat: onboarding hardcodes days = 4 (ProOnboarding:41), so the engine's
+  day-sensitive distribution and 3-day compression
+  (`planEngine.js:230`, :331) never fire from a first-time plan. Not inaccurate
+  copy, but the feature is under-exercised from onboarding.
 
-## Nutrition targets, Pro, trial
+## 4. Nutrition targets — ACCURATE (plain-language description holds)
 
-- Nutrition: both flows compute targets through `calculateNutritionTargets`
-  (`nutritionEngine.js`). The builder recalculates on save with the latest
-  weight; onboarding computes once from the entered weight. Accurate.
-- Pro and the 28-day cascade trial: started at Article 9 consent, gated by
-  `CascadeGateScreen`. Descriptions are accurate. The builder is Pro-only by
-  entry (it is reached from the Pro action cards), which is consistent.
+`nutritionEngine` uses Mifflin-St Jeor BMR, a Katch-McArdle lean-mass variant
+when body fat is known, an activity multiplier from training frequency, and an
+adaptive TDEE correction from the weight trend (`nutritionEngine.js:334-352`,
+:544-545, :214-264). The user-facing label is "Standard calorie formula" /
+"Lean mass-adjusted formula" (:633), no internal jargon leaks. ACCURATE.
 
-## Summary of integration work
+- Onboarding hints ("Used with your height and age to calculate your calorie
+  targets", ProOnboarding:872-873) are ACCURATE.
+- The reveal shows the real computed kcal/protein/carbs/fat
+  (ProSetupComplete:130-163). ACCURATE.
 
-1. Let onboarding collect and pass weak points (remove the hard-coded empty
-   array, wire the shared selector).
-2. Make the weak-point bonus always-on with a phase-scaled magnitude
-   (`planEngine.js:173`), inside the existing clamps.
-3. Define division-specific weak-point option sets and a shared selector.
-4. Re-scope the selector on division change in both flows.
-5. Surface each division's judging note at selection time (copy + wiring).
-6. Add a one-line Diary/coaching feature note to onboarding.
+## 5. Pre-population in the plan builder — PARTIALLY PRESENT
+
+- `ProGoalSetup` pre-populates every field from `userProfile`
+  (ProGoalSetupScreen:70-87) and rescopes/clears weak points on goal change
+  (:145-147). Good.
+- It does NOT re-confirm body weight, yet it recalculates nutrition from weight
+  (:183-194). It pulls the latest morning-weight EWMA instead (:184-191), which
+  is the right call, but means the field the calc depends on is invisible on the
+  screen.
+- `ManualBuilder` pre-populates nothing and is identical first-build or fifth.
+- One latent bug: onboarding's saved profile omits `planWeakPoints`
+  (ProOnboarding:460-483) while `buildPlanInputs` reads `migrated.planWeakPoints`
+  (planAutoGen.js:97). A regenerate-from-profile after onboarding therefore
+  drops the weak points the user picked. The initial onboarding generation is
+  fine because it passes `planWeakPoints` directly (ProOnboarding:541).
+
+## 6. Pro and the 28-day trial — CONTRADICTORY / OUTDATED
+
+| Claim | Source | Reality |
+|---|---|---|
+| Pro is free, no subscription | WelcomeScreen:82, LoginScreen:409 | True during beta |
+| "Try Pro free for 14 days" | PaywallScreen:92-94 | Trial is day-21 in code |
+| "Day 14 / Day 28" gates | CascadeGateScreen:5-7 (docstring) | Single day-21 gate (:39-59) |
+| "28-day cascade" | brief | Not in code |
+| Pro = "adds food data" | PaywallScreen:107-109 | Pro = coaching, food optional |
+| £2.99/month | PaywallScreen:91 | SKUs are £0.99/£1.99/£3.99 (catalogue.js) |
+| Pro vs "Complete" comparison | TierComparisonStrip:23-74 | 2-tier model, Complete deleted |
+
+The trial mechanic, price, tier model, and Pro value proposition are each
+stated inconsistently across the paywall surfaces, and several reference the
+removed 3-tier model. The trial actually starts at Article 9 consent
+(`Article9ConsentScreen:90` to `cascade.startCascade`) with day-19/21 reminders
+and day-21 expiry (`cascade.js:108`, :165).
+
+## 7. Other current features not introduced when they should be — MISSING
+
+- Adaptive coaching reads weight trend, never explained at the point the user
+  is asked to weigh daily (the "why" is implied but not stated).
+- Barcode and label scanning exist (`ScanBarcode`, `ScanLabel` in DiaryStack)
+  but are never surfaced in onboarding, fine to defer, but worth one mention if
+  food gets introduced.
+
+---
+
+## Flag list (every inaccuracy, for doc 07 triage)
+
+Critical (references behaviour that no longer exists / is wrong):
+- F0 NutritionEducationScreen tells users to "Use an app like MyFitnessPal or
+  Cronometer" (NutritionEducationScreen:103-109), linked from the reveal, while
+  the app ships its own complete food logger. Highest-priority fix.
+- F1 PaywallScreen "adds food data / food layer" headline (PaywallScreen:107-109).
+- F2 TierComparisonStrip "Complete" column (TierComparisonStrip:23-74).
+- F3 Trial length: 14 days (PaywallScreen) vs day-21 (cascade) vs docstring
+  day14/28 (CascadeGateScreen:5-7).
+- F4 Price £2.99 not in catalogue (PaywallScreen:91).
+- F5 "Answer 3 questions", quiz has 2 (PlanLibrary:439).
+- F6 ManualBuilder cosmetic goal implies plan shaping it does not do.
+
+High (missing truth):
+- F7 No "food logging is optional, weight drives the coach" message anywhere.
+- F8 Diary tab never introduced.
+- F9 planWeakPoints dropped from saved profile (regenerate loses weak points).

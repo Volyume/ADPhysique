@@ -1,106 +1,147 @@
-Status: REFRESHED (post-rebuild) | Original 2026-06-01 (commit e7c3f01) | Verified 2026-06-01 (engine at 6cf8642)
+# Onboarding Audit 02 — Copy and Tone
 
-REFRESH NOTE. Onboarding copy is unchanged since the original audit (flow code
-untouched by the rebuild), so these findings stand. The only currency caveat: any
-copy that describes how the plan is built should now reflect the rebuilt engine
-(division-specific splits, weak-point that composes with the division). The
-proposed weak-point intro copy in doc 06 is the place that matters.
+Status: COMPLETE (Phase 2 of 7)
+Date: 2026-06-01
+Method: every user-facing string in both flows read from source and assessed
+for accuracy, clarity, tone, length, trust signalling, jargon and
+cross-surface consistency. Replaces the earlier refreshed version.
 
-# Copy and tone audit
+---
 
-Assessed against the house voice: plain spoken, short sentences, British
-English, no em dashes, no AI tells, no cheerleading, sits alongside coaches
-not above them. Most of the existing copy is already strong and on-voice. The
-problems are concentrated, not pervasive.
+## Summary verdict
 
-## What is already good
+The onboarding copy is, for the most part, strong: plain, confident, British,
+human, and free of AI tells. `WelcomeScreen`, the wizard hints, and the reveal
+read like one person wrote them with care. The failures are concentrated in
+two places: the **Pro/trial surfaces**, which carry a different and partly
+defunct value proposition, and a handful of **accuracy gaps** where copy is
+silent about how coaching actually works (weight-trend-first, food optional).
 
-- Welcome qualifier block (`WelcomeScreen.js:60-67`). "If you want a
-  tap-to-log workout app or a calorie counter on its own, there are faster
-  ones out there." Honest, confident, no hype. Keep it.
-- Founder note on setup-complete (`ProSetupCompleteScreen.js:276-286`). Plain,
-  personal, credible. Keep it.
-- Step hints in onboarding ("Be honest. It adjusts to protect you.",
-  `ProOnboardingScreen.js:1022`). Good: explains why a question is asked
-  without a tutorial voice.
-- Steps rationale ("the first thing the coach leans on when progress slows,
-  before it touches your food", `:1124`). Clear, specific, no jargon.
+---
 
-## Onboarding copy, issues
+## What is working
 
-1. Stale internal framing leaks toward the user. Step 3's "What are you
-   focused on right now?" is commented as driving "weak-point spec"
-   (`:963-965`), and the phase list still offers "Bring up a weak point"
-   (`coachingGoals.js:201-208`) whose detail reads "Priority muscles get
-   MAV-level volume; everything else drops to maintenance." In onboarding there
-   is no muscle picker, so this promise is only half-true: a user who picks it
-   gets a generic side-delts-and-biceps weak-point day, not the muscles they
-   care about. The copy writes a cheque the onboarding flow does not cash.
+- **Voice is consistent and human across onboarding.** "The coach who writes
+  back." (WelcomeScreen:85), "Less thinking. More lifting." (:57), the founder
+  note (ProSetupCompleteScreen:275-287). No "let me", no "seamless", no em
+  dashes, no three-bullet auto-summary feel.
+- **Hints explain why, not just what.** "Used to calculate your calorie and
+  nutrition targets accurately." (ProOnboarding:760), "This affects how much
+  volume your plan includes. Be honest. It adjusts to protect you."
+  (:1077). This is the single biggest conversion lever per the research
+  (doc 05) and Volyume already does it well.
+- **The steps explanation is excellent and accurate.** "Steps are the first
+  thing the coach leans on when progress slows, before it touches your food."
+  (:1179). Plain, true to the engine's lever order (weeklyCoach `steps_bump`
+  before calorie cuts).
+- **The disqualifier is brave and on-brand.** "If you want a tap-to-log workout
+  app or a calorie counter on its own, there are faster ones out there."
+  (WelcomeScreen:65-67). Confident, not arrogant, and it filters for fit.
 
-2. "This shapes your entire plan." (`:924`) overstates, given days per week is
-   silently fixed at 4 and weak points are not collected. The plan is shaped by
-   fewer answers than the user is told.
+---
 
-3. Two different time estimates. Step 2 says "about two minutes" (`:716`),
-   Step 3 says "about 30 seconds" (`:924`). Minor, but they read as
-   copy-by-committee. Pick one honest per-step estimate or drop them.
+## Issues, by severity
 
-4. The optional division question hint is good but buried. "Only if you're
-   chasing a competitive physique." (`:980`) is the clearest single line about
-   what division does, yet it sits under a dropdown most users will skip. The
-   division choice is where the app earns its "different calibre" claim; the
-   copy hides it.
+### Critical (accuracy, references behaviour that does not match the app)
 
-## Plan builder copy, issues
+C1. **Pro value proposition is told three different ways.**
+- Welcome / ProUpgrade: Pro = coaching that adapts training and nutrition
+  (WelcomeScreen:22, ProUpgradeScreen:222).
+- Paywall: "Pro adds food data ... turns on the food layer" (PaywallScreen:107-109).
+- The engine: Pro coaching adapts primarily from morning-weight trend
+  (weeklyCoach.js:373-379), food is optional.
+The paywall framing is the outlier and is misleading: it sells the optional
+food layer as the core of Pro.
 
-5. The builder header is "Update your plan." (`:288`) and the CTA is "Rebuild
-   my plan." (`:575`). Both are correct and appropriately returning-user. Good.
+C2. **The trial length is stated three ways and none agree.** Paywall says "14
+days" (PaywallScreen:92-94), CascadeGate's own docstring says "Day 14 / Day 28"
+(CascadeGateScreen:5-7), the implementation is a single day-21 gate (:39-59),
+the brief refers to 28 days. Whatever the real number, the copy must match it.
 
-6. Weak-point copy promises a bias that often does not happen. "Muscles you
-   want to bring up. Your plan biases extra volume towards them."
-   (`:351-353`). True only when the phase is "Bring up a weak point"
-   (`planEngine.js:173`). A user on Bulk or Cut who picks three muscles is told
-   their plan will bias toward them, and it will not. This is the single most
-   important copy-versus-behaviour mismatch in either flow. The "always-on
-   division bias" decision fixes the behaviour; the copy should then read
-   honestly for both cases (small always, larger on the weak-point phase).
+C3. **`TierComparisonStrip` compares Pro against a deleted tier.** It renders
+"Pro vs Complete" columns and frames Pro as the lesser ("90 days", "Current
+block only", "CSV export") against "Complete" (TierComparisonStrip:23-74). The
+app is 2-tier, Complete is gone (cascade.js, catalogue.js). This is live on the
+paywall and actively sells against Pro.
 
-7. The division/`coachingNote` is never shown in the builder. Each goal has a
-   one-line judging note (for example bikini, "Judged on glute shape, hamstring
-   development, conditioning and overall flow.", `coachingGoals.js:74`) that
-   would tell a returning user exactly what changing division does. It is
-   defined and unused on this screen.
+C4. **Price copy does not match the catalogue.** Paywall fallback is
+"£2.99/month" (PaywallScreen:91), actual SKUs are £0.99 / £1.99 / £3.99
+(catalogue.js:22-44). £2.99 exists nowhere.
 
-## Cross-flow consistency
+C5. **"Answer 3 questions" but the quiz has 2.** PlanLibraryScreen:439 vs
+`QUIZ_STEPS` (:84-104).
 
-8. Same concept, different words. Onboarding labels the schedule question
-   nothing (it is not asked); the builder calls it "Training days per week"
-   (`:432`). Onboarding calls equipment "Equipment" with hint "What do you have
-   access to?" (`:955-956`); the builder uses "Equipment" with "What you have
-   access to. Exercise selection adapts to the kit available." (`:471-472`).
-   These should be one shared string per concept so the two flows read as one
-   product.
+### High (clarity / missing the truth)
 
-9. The phase question is worded identically in both ("What are you focused on
-   right now?"), which is good and should be the template for the rest.
+H1. **Nothing tells the user food logging is optional.** The reveal says "Hit
+your daily targets" (ProSetupCompleteScreen:137) with no line explaining the
+coach reads weight, not meals. New users reasonably infer they must log every
+meal. This is the biggest single clarity gap and it is the point the founder
+raised directly.
 
-## ED-safety and tone (locked constraints)
+H2. **The Diary tab is never introduced by name** in either flow. Food appears
+only as a number on the reveal. A returning Free user is pointed to "Plans" but
+never to "Diary".
 
-- No cheerleading anywhere in either flow. Confirmed. The setup-complete
-  screen reports facts, it does not congratulate. Keep this through any new
-  weak-point copy: "Your plan puts more work here" not "Great choice, let's
-  bring up those delts."
-- Adherence-neutral framing must extend to weak points. Describe what the plan
-  does, not what the user should feel about it.
+H3. **Goal vs phase naming is subtle and unlabelled.** "Competing in a
+category? (optional)" (ProOnboarding:1001) and "What are you focused on right
+now?" (:989) are good questions, but a first-timer does not know the first
+biases muscle distribution and the second drives calories. The reveal then
+shows a chip "Not competing" next to a trophy icon (ProSetupComplete:166-167),
+which reads oddly for the 90% who are not competing.
 
-## Recommended copy fixes (summary, full strings in Phase 6)
+H4. **`ManualBuilder` goal pills are meaningless copy.** "Build Muscle",
+"Aesthetic Focus", "Strength-Biased" etc (ManualBuilderScreen:20-26) imply the
+plan will be shaped by the choice. It is not, the value is a description label
+only (:378-379). Copy promises personalisation the screen does not deliver.
 
-- Rewrite the weak-point selector copy for the always-on model so it is true
-  on every phase.
-- Surface each division's judging note when a division is selected, in both
-  flows, one short line.
-- Make the schedule, equipment, experience, recovery and phase strings shared
-  constants so both flows match word for word.
-- Settle a single per-step time estimate, or remove estimates.
-- Soften "This shapes your entire plan." to a claim onboarding can keep once
-  days and weak points are added to it.
+### Medium (tone / length / consistency)
+
+M1. **Equipment, experience and recovery option copy is duplicated verbatim**
+across `ProOnboarding` and `ProGoalSetup` (e.g. EXPERIENCE_OPTIONS identical at
+ProOnboarding:49-54 and ProGoalSetup:32-37). Fine for consistency, but it means
+two sources of truth that can drift. Extract to one module.
+
+M2. **"Precision Coaching" is a product term used before it is defined.** It
+appears on Welcome (:22), the reveal (:263), PlansScreen (:515), CascadeGate
+(:51) and weeklyCoach output. It is good branding but a first-timer meets it
+cold. One plain gloss at first use would help.
+
+M3. **Login crash banner is developer copy in a user surface.** "Previous crash
+detected. Screenshot this:" + a raw stack trace (LoginScreen:240-242). Useful
+in beta, but it is not shippable voice.
+
+M4. **Two "founder note" voices.** The reveal note is warm and first person
+(ProSetupComplete:277-286). Good. Welcome's "Built by a lifter, for lifters"
+(:151) is fine. Keep them, but they are the only personal-voice moments, so
+protect them from dilution.
+
+---
+
+## Plan-builder copy specifically
+
+- `ProGoalSetup` copy is correctly adapted for a returning user: "Update your
+  plan", "Rebuild my plan", and section subs that assume familiarity ("Changing
+  the split affects exercise spread. Plan rebuilds around the new frequency.",
+  :433-434). Good.
+- `ManualBuilder` copy is generic and not returning-user-aware ("Set up the
+  basics, then we will walk you through adding workouts day by day.", :551). It
+  is the same whether it is your first or fifth plan.
+- `PlanLibrary` copy is browse-oriented and fine, aside from the "3 questions"
+  error and the fourth division vocabulary.
+
+---
+
+## Jargon inventory (flow-facing)
+
+| Term | Where | Verdict |
+|---|---|---|
+| Precision Coaching | Welcome, reveal, Plans, CascadeGate | Brand term, gloss at first use |
+| Recomp | TRAINING_PHASES (:255) | Explained inline ("improving your shape without a big change in weight"). OK |
+| MAV / MAV-level | phase detail (:240) | Jargon leak in user-facing phase detail. Replace |
+| Mesocycle / block | MesocycleBuilder, PlanSwitch | "Training block" used in UI, "mesocycle" only in code. OK |
+| Lean gain / bulk / cut | phases | Standard, explained. OK |
+| Differential, cascade | code/telemetry only | Not user-facing. OK |
+
+"MAV-level volume" (TRAINING_PHASES `weak_point.detail`, coachingGoals:240) is
+the one hard jargon leak into user copy. Rephrase to plain language.
