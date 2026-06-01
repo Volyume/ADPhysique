@@ -23,7 +23,7 @@ Seed library parsed: 475 exercises.
 | Classic Physique | X-Frame | Lat Pulldown (Wide Grip) | 75 | none | none | none |
 | Bodybuilding | upper_lower | Incline Barbell Bench Press | 89 | none | none | none |
 | Bikini | Glute Focus | Barbell Hip Thrust | 78 | none | none | none |
-| Wellness | Lower Focus | Barbell Hip Thrust | 63 | none | none | none |
+| Wellness | Lower Focus | Barbell Hip Thrust | 66 | none | none | none |
 | Figure | X-Frame | Lat Pulldown (Wide Grip) | 74 | none | none | none |
 | Women's Physique | V-Taper | Lat Pulldown (Wide Grip) | 76 | none | none | none |
 | Women's Bodybuilding | upper_lower | Barbell Bench Press | 80 | none | none | none |
@@ -37,7 +37,7 @@ Seed library parsed: 475 exercises.
 | Classic Physique | 72 | 75 | Weighted Pull-Up | Lat Pulldown (Wide Grip) |
 | Bodybuilding | 90 | 89 | Incline Barbell Bench Press | Incline Barbell Bench Press |
 | Bikini | 81 | 78 | Barbell Hip Thrust | Barbell Hip Thrust |
-| Wellness | 63 | 63 | Barbell Hip Thrust | Barbell Hip Thrust |
+| Wellness | 62 | 66 | Barbell Hip Thrust | Barbell Hip Thrust |
 | Figure | 75 | 74 | Weighted Pull-Up | Lat Pulldown (Wide Grip) |
 | Women's Physique | 73 | 76 | Weighted Pull-Up | Lat Pulldown (Wide Grip) |
 | Women's Bodybuilding | 84 | 80 | Barbell Bench Press | Barbell Bench Press |

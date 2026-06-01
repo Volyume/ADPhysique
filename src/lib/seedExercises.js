@@ -350,6 +350,21 @@ const SUBREGION_MAP = {
   'Lateral Band Walk':               'pumper',
   'Monster Walk':                    'pumper',
   'Lying Hip Abduction (Band)':      'pumper',
+  // Quads, sweep vs mass (rebuild spec phase 3). Sweep = knee-forward,
+  // narrow/low-foot, front-loaded, hack/sissy (rectus + outer sweep, the
+  // Classic/Wellness judging trait). Untagged squat patterns default to the
+  // mass tag (vasti). Lets the sweep-judged divisions bias their quad pool.
+  'Hack Squat Machine':              'sweep',
+  'Barbell Front Squat':             'sweep',
+  'Front Squat (Dumbbell)':          'sweep',
+  'Sissy Squat':                     'sweep',
+  'Cyclist Squat':                   'sweep',
+  'Spanish Squat':                   'sweep',
+  'Heel-Elevated Squat':             'sweep',
+  'Leg Extension':                   'sweep',
+  'Terminal Knee Extension':         'sweep',
+  'Pendulum Squat':                  'sweep',
+  'Leg Press (Narrow Stance)':       'sweep',
 };
 
 // [name, primaryMuscle, secondaryMuscles, equipment, movementPattern, isCompound, minReps, maxReps, fatigueCost, sfr]

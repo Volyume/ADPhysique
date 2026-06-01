@@ -417,14 +417,14 @@ const POOL = {
     { n: 'Leg Press',               sub: 'vasti',   p: 'machine',        eq: ['full_gym', 'machines_cables'] },
     { n: 'Hack Squat Machine',      sub: 'vasti',   p: 'machine',        eq: ['full_gym', 'machines_cables'] },
     { n: 'Pendulum Squat',          sub: 'vasti',   p: 'machine',        eq: ['full_gym', 'machines_cables'] },
-    { n: 'Barbell Front Squat',     sub: 'rectus',  p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'] },
+    { n: 'Barbell Front Squat',     sub: 'sweep',  p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'] },
     { n: 'Bulgarian Split Squat',   sub: 'vasti',   p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym', 'barbell_plates'] },
     { n: 'Smith Machine Squat',     sub: 'vasti',   p: 'machine',        eq: ['full_gym', 'machines_cables'] },
     { n: 'Goblet Squat',            sub: 'vasti',   p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
     { n: 'Dumbbell Lunge',          sub: 'vasti',   p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
     { n: 'Walking Lunge',           sub: 'vasti',   p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
-    { n: 'Leg Extension',           sub: 'rectus',  p: 'isolation',      eq: ['full_gym', 'machines_cables'] },
-    { n: 'Sissy Squat',             sub: 'rectus',  p: 'isolation',      eq: ['full_gym', 'bodyweight', 'home_gym'] },
+    { n: 'Leg Extension',           sub: 'sweep',  p: 'isolation',      eq: ['full_gym', 'machines_cables'] },
+    { n: 'Sissy Squat',             sub: 'sweep',  p: 'isolation',      eq: ['full_gym', 'bodyweight', 'home_gym'] },
   ],
   hamstrings: [
     { n: 'Romanian Deadlift (Barbell)',    sub: 'hip_extension', p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'] },
@@ -524,6 +524,10 @@ const SUBREGION_REQUIREMENTS = {
   // a bonus, not required, because the program's hip-hinge already loads the
   // glute in the lengthened position.
   glutes:     { minSets: 16, required: ['activator', 'pumper'] },
+  // Quads: once volume is quad-emphasis (>= 14 weekly, Classic/Wellness/BB),
+  // spread across a sweep-biased lift (knee-forward) and a general mass squat
+  // so the two weekly sessions use different patterns (spec phase 3 benchmark).
+  quads:      { minSets: 14, required: ['sweep', 'vasti'] },
   chest:      { minSets: 10, required: ['incline', 'flat'] },  // flat covers flat+lower
   rear_delts: { minSets: 6,  required: ['face_pull', 'horiz_abduction'] },
   triceps:    { minSets: 8,  required: ['overhead'] },
@@ -745,10 +749,10 @@ function filterPool(muscle, equipment, goal) {
 const DIVISION_SUBREGION_BIAS = {
   mens_physique:    { chest: 'incline', back: 'vertical_pull' },
   figure:           { chest: 'incline', back: 'vertical_pull' },
-  classic_physique: { back: 'vertical_pull' },
+  classic_physique: { back: 'vertical_pull', quads: 'sweep' },
   womens_physique:  { back: 'vertical_pull' },
   bikini:           { glutes: 'activator' },
-  wellness:         { glutes: 'activator' },
+  wellness:         { glutes: 'activator', quads: 'sweep' },
 };
 
 // Deterministic index-based pick (no randomness)
