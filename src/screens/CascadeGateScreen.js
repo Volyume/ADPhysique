@@ -2,8 +2,7 @@
  * CascadeGateScreen
  *
  * Modal surface a user sees at the cascade decision points:
- *   * Day 14: complete trial winding down ("Stay on Complete" vs Pro vs Free)
- *   * Day 28: pro trial winding down ("Stay on Pro" vs Free)
+ *   * Day 21: pro trial winding down ("Stay on Pro" vs Free)
  *   * Payment failure: 3-day grace banner overlay (Stay vs Drop)
  *
  * Layout locked in UI_FLOWS_LOCKED.md lines 229-246 +

@@ -237,7 +237,7 @@ export const TRAINING_PHASES = [
     label: 'Bring up a weak point',
     icon: 'git-branch-outline',
     subtitle: 'Target specific muscles you want to bring up while maintaining everything else.',
-    detail: 'Priority muscles get MAV-level volume; everything else drops to maintenance. Pair with a small surplus.',
+    detail: 'Your priority muscles get the most work your body can recover from; everything else holds at a maintenance level. Pair with a small surplus.',
   },
   {
     value: 'cut',

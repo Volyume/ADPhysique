@@ -1,10 +1,10 @@
 /**
  * TierComparisonStrip
  *
- * Pricing-comparison strip used by the cascade gate, paywall, and
- * Subscription management surfaces. Two columns side-by-side: Pro on
- * the left, Complete on the right. Below each price, the three locked
- * differences from OPEN_QUESTIONS_RESOLVED.md lines 148-159.
+ * Pricing-comparison strip used by the paywall and Subscription
+ * management surfaces. Two columns side-by-side in the 2-tier model:
+ * Free on the left, Pro on the right (Pro highlighted). Below each
+ * price, the three differences that matter.
  *
  * Three differences only, adding a fourth row was rejected at
  * design lock ("list length kills conversion").
@@ -17,23 +17,37 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
 import { skuFor } from '../lib/payments/catalogue';
 
-// Locked three-row content. Left column = Pro, right = Complete (matches the
-// render order below and the header comment).
-// Wording is per OPEN_QUESTIONS_RESOLVED.md Q3 verbatim.
+// Three-row content for the 2-tier model. Free on the left (the lesser
+// tier), Pro on the right (the fuller, paid tier).
 const COMPARISON_ROWS = [
-  { complete: 'Unlimited history',           pro: '90 days' },
-  { complete: 'Peak Week and block planning', pro: 'Current block only' },
-  { complete: 'Photos and coach handover',   pro: 'CSV export' },
+  { free: '90 days of history',  pro: 'Unlimited history' },
+  { free: 'Current block only',  pro: 'Peak Week and block planning' },
+  { free: 'CSV export',          pro: 'Photos and coach handover' },
 ];
 
 export default function TierComparisonStrip({
   pricingWindow = 'open_beta',
-  highlighted = 'complete',   // 'complete' | 'pro', which column gets the amber outline
-  onPickPro,                  // optional: makes the Pro column tappable
-  onPickComplete,             // optional: makes the Complete column tappable
+  highlighted = 'pro',   // 'free' | 'pro', which column gets the amber outline
+  onPickPro,             // optional: makes the Pro column tappable
 }) {
   const proSku = skuFor('pro', pricingWindow);
-  const completeSku = skuFor('complete', pricingWindow);
+
+  const FreeColumn = (
+    <View
+      style={[
+        styles.col,
+        highlighted === 'free' && styles.colHighlighted,
+      ]}
+    >
+      <Text style={styles.colHeader}>Free</Text>
+      <Text style={styles.colPrice}>£0</Text>
+      {COMPARISON_ROWS.map((row, i) => (
+        <Text key={`free-${i}`} style={styles.rowText} numberOfLines={2}>
+          {row.free}
+        </Text>
+      ))}
+    </View>
+  );
 
   const ProColumn = (
     <Pressable
@@ -54,29 +68,10 @@ export default function TierComparisonStrip({
     </Pressable>
   );
 
-  const CompleteColumn = (
-    <Pressable
-      onPress={onPickComplete}
-      disabled={!onPickComplete}
-      style={[
-        styles.col,
-        highlighted === 'complete' && styles.colHighlighted,
-      ]}
-    >
-      <Text style={styles.colHeader}>Complete</Text>
-      <Text style={styles.colPrice}>{completeSku?.priceText ?? '-'}</Text>
-      {COMPARISON_ROWS.map((row, i) => (
-        <Text key={`complete-${i}`} style={styles.rowText} numberOfLines={2}>
-          {row.complete}
-        </Text>
-      ))}
-    </Pressable>
-  );
-
   return (
     <View style={styles.wrap}>
+      {FreeColumn}
       {ProColumn}
-      {CompleteColumn}
     </View>
   );
 }

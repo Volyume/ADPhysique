@@ -88,9 +88,9 @@ export default function PaywallScreen({ navigation, route }) {
     }
   }, [pricingWindow, userId, surface, navigation]);
 
-  const priceText = priceTextFor('pro', pricingWindow) ?? '£2.99/month';
+  const priceText = priceTextFor('pro', pricingWindow) ?? priceTextFor('pro', 'open_beta') ?? '£0.99/month';
   const ctaLabel = ctaMode === 'try_pro_14d'
-    ? 'Try Pro free for 14 days'
+    ? 'Try Pro free for 21 days'
     : `Get Pro for ${priceText}`;
 
   return (
@@ -104,9 +104,9 @@ export default function PaywallScreen({ navigation, route }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Pro adds food data</Text>
+        <Text style={styles.title}>Pro is the coach</Text>
         <Text style={styles.subtitle}>
-          The engine already runs your training. Pro turns on the food layer so it can tell you what's training and what's fuel.
+          Pro reads your training, weight, and food together and adjusts your plan and targets every week, with a written reason for every change.
         </Text>
 
         <View style={styles.stripWrap}>

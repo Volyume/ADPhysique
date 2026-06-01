@@ -436,7 +436,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.quizBannerTitle}>Not sure where to start?</Text>
-                <Text style={styles.quizBannerBody}>Answer 3 questions and we'll point you to the right plan.</Text>
+                <Text style={styles.quizBannerBody}>Answer 2 quick questions and we'll point you to the right plan.</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </TouchableOpacity>

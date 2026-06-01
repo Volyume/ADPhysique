@@ -102,9 +102,9 @@ export default function NutritionEducationScreen({ navigation }) {
           </Body>
           <BulletRow num="A">
             <Body>
-              <Strong>Use an app like MyFitnessPal or Cronometer.</Strong> Scan
-              barcodes or pick from saved meals. The first week is the slowest;
-              after that most meals are repeats.
+              <Strong>Log it in the app.</Strong> Open your food diary, scan a
+              barcode, snap a label, or pick a saved meal. The first week is the
+              slowest; after that most meals are repeats.
             </Body>
           </BulletRow>
           <BulletRow num="B">
