@@ -35,16 +35,9 @@ function buildPhaseReason(prevPhase, nextPhase) {
 
 function buildGoalReason(prevGoal, nextGoal) {
   if (!prevGoal || prevGoal === nextGoal) return null;
-  if (nextGoal === 'weak_point_spec') {
-    return `Your plan will direct extra weekly volume toward the muscles you want to bring up, holding everything else at maintenance.`;
-  }
-  if (nextGoal === 'strength_hypertrophy') {
-    return `Compounds get more sets in lower rep ranges. You'll see strength markers move alongside the size.`;
-  }
-  if (nextGoal === 'general_hypertrophy') {
-    return `Balanced volume across all muscle groups for steady, all-round growth.`;
-  }
-  // Physique categories
+  // The legacy general_hypertrophy / strength_hypertrophy / weak_point_spec
+  // values are migrated away (coachingGoals.migrateProfileGoals) before they
+  // reach this screen, so only physique categories land here.
   return `Your plan re-weights weekly volume toward the muscles judged in this category.`;
 }
 

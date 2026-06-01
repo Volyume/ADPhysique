@@ -9,7 +9,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '
 import { VolyumeIcon } from '../components/BrandMark';
 import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
-import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
+import { GOAL_LABELS, PHASE_LABELS, isCompetitionGoal } from '../lib/coachingGoals';
 import { getSplitRationale } from '../lib/whyThisTemplates';
 import { getActivePlan, getRoutinesForPlan } from '../lib/database';
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
@@ -163,7 +163,11 @@ export default function ProSetupCompleteScreen({ navigation }) {
               </View>
               <View style={styles.goalRow}>
                 <View style={styles.goalChip}>
-                  <Ionicons name="trophy-outline" size={11} color={colors.primary} />
+                  <Ionicons
+                    name={isCompetitionGoal(userProfile?.trainingGoal) ? 'trophy-outline' : 'body-outline'}
+                    size={11}
+                    color={colors.primary}
+                  />
                   <Text style={styles.goalChipText}>{goalLabel}</Text>
                 </View>
                 {phaseLabel ? (
