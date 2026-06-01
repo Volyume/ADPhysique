@@ -19,7 +19,7 @@ export default function DifferentialBadge({
   differential,        // { shown, trigger, with_food_data_message, paywall_cta }
   pricingWindow,       // 'open_beta' | 'founders' | 'standard'
   pricingPriceText,    // e.g. "£2.99/month", pre-resolved by caller for the buy_pro CTA
-  onTapCta,            // (action: 'pay' | 'dismiss') => void
+  onTapCta,            // (action: 'pay' | 'dismiss' | 'shown') => void ('shown' is the impression ping)
 }) {
   // Fire the locked paywall_shown telemetry once per mount with a
   // visible badge. Caller wires the event sender via onTapCta when

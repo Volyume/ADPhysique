@@ -126,13 +126,9 @@ export async function scheduleTrainingReminders() {
     // 6. Cancel existing training reminders before rescheduling
     await cancelTrainingReminders();
 
-    // 7. Determine notification body using plan id for a personalised message
-    // We keep it generic because we don't load the full plan name here to
-    // avoid a database dependency in this utility module.
-    const planId = schedule?.activePlanId ?? null;
-    const body = planId
-      ? 'Your training session is scheduled for today.'
-      : 'Your training session is scheduled for today.';
+    // 7. Notification body. Kept generic on purpose: we don't load the full
+    // plan name here, to avoid a database dependency in this utility module.
+    const body = 'Your training session is scheduled for today.';
 
     // 8. Schedule one weekly notification per training day
     await Promise.all(

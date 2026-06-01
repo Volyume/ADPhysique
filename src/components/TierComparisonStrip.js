@@ -17,7 +17,8 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
 import { skuFor } from '../lib/payments/catalogue';
 
-// Locked three-row content. Left column = Complete, right = Pro.
+// Locked three-row content. Left column = Pro, right = Complete (matches the
+// render order below and the header comment).
 // Wording is per OPEN_QUESTIONS_RESOLVED.md Q3 verbatim.
 const COMPARISON_ROWS = [
   { complete: 'Unlimited history',           pro: '90 days' },

@@ -1,10 +1,11 @@
 // Local backup safety valve.
 //
-// There is no cloud sync, so this is the only way a user can move their data
-// to a new device or recover from a critical bug. exportBackup() writes the
-// entire local database plus all Volyume preferences into one JSON file and
-// hands it to the native share sheet (Files app, email, AirDrop, etc.).
-// importBackup() reads such a file back and fully restores the app state.
+// Cloud sync covers the per-table push/pull, but a full local export is still
+// the cleanest way for a user to move everything at once or recover from a
+// critical bug. exportBackup() writes the entire local database plus all
+// Volyume preferences into one JSON file and hands it to the native share
+// sheet (Files app, email, AirDrop, etc.). importBackup() reads such a file
+// back and fully restores the app state.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';

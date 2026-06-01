@@ -10,7 +10,6 @@ export default function ExerciseCard({ exercise, onPress, onAdd, onLongPress, la
     || exercise.primaryMuscle || exercise.primary_muscle || '';
 
   const equipment = exercise.equipment || '';
-  const sfr = exercise.stimulusToFatigueRatio || exercise.stimulus_to_fatigue_ratio || 3;
 
   return (
     <PressableCard style={styles.card} onPress={onPress} onLongPress={onLongPress} accessibilityLabel={exercise.name}>
