@@ -128,6 +128,19 @@ async function bootstrapAccessibility() {
   if (prefs) applyAccessibility(prefs);
 }
 
+// Shown when an auth email link fails to establish a session (expired or
+// already-used code, network drop mid-exchange). Without it the user taps
+// the link, the app opens, and nothing happens with no reason given
+// (A2-004). Kept terse per the voice rules.
+function notifyAuthLinkFailed() {
+  try {
+    Alert.alert(
+      "Couldn't sign you in",
+      'That link may have expired. Request a new one from the sign-in screen.',
+    );
+  } catch (_) { /* Alert unavailable (e.g. headless) — nothing else to do */ }
+}
+
 // Handles volyume:// and https://volyume.app deep links from Supabase auth emails.
 // Supports both PKCE (code=xxx) and implicit (access_token in fragment) flows.
 async function handleAuthDeepLink(url) {
@@ -136,14 +149,18 @@ async function handleAuthDeepLink(url) {
   const supabase = getSupabaseClient();
   if (!supabase) return;
 
-  // PKCE flow — Supabase v2 default: volyume://?code=xxx
+  // PKCE flow (Supabase v2 default): volyume://?code=xxx
   const codeMatch = url.match(/[?&]code=([^&#]+)/);
   if (codeMatch) {
-    try { await supabase.auth.exchangeCodeForSession(decodeURIComponent(codeMatch[1])); } catch (_) {}
+    try {
+      await supabase.auth.exchangeCodeForSession(decodeURIComponent(codeMatch[1]));
+    } catch (_) {
+      notifyAuthLinkFailed();
+    }
     return;
   }
 
-  // Implicit flow fallback — tokens in URL fragment: volyume://#access_token=xxx&refresh_token=xxx
+  // Implicit flow fallback: tokens in URL fragment, volyume://#access_token=xxx&refresh_token=xxx
   const fragment = url.split('#')[1] || '';
   if (fragment.includes('access_token')) {
     const params = Object.fromEntries(
@@ -158,7 +175,9 @@ async function handleAuthDeepLink(url) {
           access_token: params.access_token,
           refresh_token: params.refresh_token,
         });
-      } catch (_) {}
+      } catch (_) {
+        notifyAuthLinkFailed();
+      }
     }
   }
 }
