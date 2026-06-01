@@ -70,7 +70,7 @@ additive volume.**
 | 3 Exercise intelligence | STARTED, increment 1 only | within-session diversity; rest pending |
 | 4 Autoregulation | NOT STARTED | - |
 
-### Phase 1 (commit 19f9794) — what it does
+### Phase 1 (commit 19f9794), what it does
 Added, in `src/lib/planEngine.js`:
 - `SPEC_LANDMARKS` (line ~234): per-muscle MV/MEV/MRV (Israetel/RP), internal
   muscle keys.
@@ -92,7 +92,7 @@ Added, in `src/lib/planEngine.js`:
 Benchmark (doc 01): 9 divisions x {beginner, intermediate, advanced} at 4 days
 = 27 programs, all pass: no structural/judged zero, no over-MRV, no sub-3-set.
 
-### Phase 2 (commit 8041e92) — what it does
+### Phase 2 (commit 8041e92), what it does
 - `DIVISION_MATRIX` (line ~1133): for the six specialised divisions
   (mens_physique, classic_physique, bikini, wellness, figure, womens_physique),
   a `[goal][days]` table of `{ name, muscles: [ordered] }` session specs, plus a
@@ -112,7 +112,7 @@ Result (measured, doc 02): different leads (Bikini = Barbell Hip Thrust, MP =
 Weighted Pull-Up, never bench), Bikini/Wellness glute-led at 3 AND 4 days, MP
 width-vs-thickness split with back >= chest, Bikini glutes highest-volume.
 
-### Phase 3 increment 1 (commit c460d4f) — what it does
+### Phase 3 increment 1 (commit c460d4f), what it does
 - Anti-redundancy (3d, partial) in `selectExercisesForMuscle` pass 2:
   diversity-first fill (`tryFill(false)` prefers a different sub-region tag for
   a muscle's second exercise in a session, then `tryFill(true)` allows a repeat
@@ -161,17 +161,17 @@ width-vs-thickness split with back >= chest, Bikini glutes highest-volume.
 
 ## 4. Files changed in the rebuild
 
-- `src/lib/planEngine.js` — all engine logic (SPEC_LANDMARKS, floors/caps,
+- `src/lib/planEngine.js`, all engine logic (SPEC_LANDMARKS, floors/caps,
   DIVISION_MATRIX, buildFromMatrix, min-3, anti-redundancy, wiring). 1568+ lines.
-- `src/lib/__tests__/planengineBench.js` — reusable measurement harness
+- `src/lib/__tests__/planengineBench.js`, reusable measurement harness
   (SPEC_LANDMARKS mirror, DIVISIONS, EXPERIENCE_LEVELS, gen(), measure(),
   weeklySets(), leadLift(), fragments(), division-aware mrvFor()). NOT a test
   file (no `.test.js`), imported by the benchmarks.
-- `src/lib/__tests__/planengineRebuildPhase1.test.js` — 27-program benchmark +
+- `src/lib/__tests__/planengineRebuildPhase1.test.js`, 27-program benchmark +
   writes doc 01.
-- `src/lib/__tests__/planengineRebuildPhase2.test.js` — specialisation benchmark
+- `src/lib/__tests__/planengineRebuildPhase2.test.js`, specialisation benchmark
   + writes doc 02. Contains the skipped <30% overlap gate.
-- `src/lib/__tests__/coachDivisions.test.js` — two assertions updated (above).
+- `src/lib/__tests__/coachDivisions.test.js`, two assertions updated (above).
 
 Docs written:
 - `docs/audit/volyume-planengine-rebuild-2026-06-01/planengine-rebuild-00-baseline.md`
@@ -258,16 +258,15 @@ reflect the live engine.
    specifications, and the anti-pattern tables. If it is not re-attached, its
    content is reflected in `DIVISION_MATRIX` and `SPEC_LANDMARKS` in code and in
    the per-division priority map needs re-attaching for 3b/3c detail.
-2. `planengine-rebuild-00-baseline.md` — the measured broken state.
-3. `planengine-rebuild-01-phase1-tests.md` — Phase 1 results + assumptions.
-4. `planengine-rebuild-02-phase2-tests.md` — Phase 2 results + the flagged
+2. `planengine-rebuild-00-baseline.md`, the measured broken state.
+3. `planengine-rebuild-01-phase1-tests.md`, Phase 1 results + assumptions.
+4. `planengine-rebuild-02-phase2-tests.md`, Phase 2 results + the flagged
    overlap conflict + the full per-division split/lead table.
-5. `docs/audit/volyume-onboarding-audit-2026-06-01/` — the onboarding + plan
+5. `docs/audit/volyume-onboarding-audit-2026-06-01/`, the onboarding + plan
    builder audit (weak-point reinstatement, always-on bias decision,
    division-specific weak-point option sets). Relevant to Phase 4 and to the
    onboarding/plan-builder UI work that consumes this engine.
-6. `docs/audit/volyume-onboarding-audit-2026-06-01/generated-plans-dump.md` —
-   the all-division x 3-6 day dump that first exposed the failures.
+6. `docs/audit/volyume-onboarding-audit-2026-06-01/generated-plans-dump.md`,    the all-division x 3-6 day dump that first exposed the failures.
 
 ---
 
