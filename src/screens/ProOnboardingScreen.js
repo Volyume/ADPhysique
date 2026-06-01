@@ -282,6 +282,10 @@ export default function ProOnboardingScreen({ navigation }) {
         return;
       }
       if (authMode === 'signup' && data.user && !data.session) {
+        // Seed the per-uid first-run flag so the eventual sign-in routes to
+        // the wizard, not MainTabs, no matter how long email confirmation
+        // takes (A2-021).
+        useAppStore.getState().noteSignupPendingOnboarding(data.user.id);
         Alert.alert(
           'Check your email',
           'We sent a confirmation link. Confirm it, sign in here, then continue.',

@@ -106,6 +106,10 @@ export default function LoginScreen({ navigation, route }) {
           toast.show(error.message || 'Could not sign in', { variant: 'error' });
         }
       } else if (mode === 'signup' && data.user && !data.session) {
+        // Seed the per-uid first-run flag so the eventual sign-in routes to
+        // the wizard, not MainTabs, no matter how long email confirmation
+        // takes (A2-021).
+        useAppStore.getState().noteSignupPendingOnboarding(data.user.id);
         Alert.alert(
           'Check your email',
           'We\'ve sent a confirmation link to ' + email.trim() + '.\n\nOnce you\'ve confirmed, come back here and sign in with your email and password.',

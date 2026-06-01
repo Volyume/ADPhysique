@@ -462,6 +462,13 @@ const useAppStore = create((set, get) => ({
     // Cue A: per-uid cache (best, exact answer from prior session)
     // Cue B: created_at age heuristic (good, used when cache is missing)
     let routedOptimistically = false;
+    // True only when the optimistic "returning, route to MainTabs" decision
+    // came from the created_at heuristic (Cue B), not a per-uid cache hit
+    // (Cue A). A heuristic guess is the only thing the cloud read is allowed
+    // to flip back to the wizard (A2-021). A cache hit means this device has
+    // genuinely seen the user finish onboarding, so flipping it would be the
+    // wizard-flash bug.
+    let optimisticReturningFromHeuristic = false;
     let cachedComplete = null;
     try {
       cachedComplete = await AsyncStorage.getItem(FIRST_RUN_KEY_PFX + supabaseUserId);
@@ -477,10 +484,15 @@ const useAppStore = create((set, get) => ({
       const ageMs = Date.now() - new Date(sessionUser.created_at).getTime();
       if (Number.isFinite(ageMs) && ageMs >= 60_000) {
         // Old auth row, returning user. Optimistically route to MainTabs.
+        // This is a guess: a new user who confirmed their email slowly (or
+        // who signs in first on a second device) also has an old auth row
+        // and no per-uid cache, so the cloud read below may need to flip
+        // this back to the wizard (A2-021).
         set({ firstRunComplete: true, firstRunChecked: true });
         try { await AsyncStorage.setItem(FIRST_RUN_KEY, 'true'); } catch (_) {}
         log.logInfo('restoreSessionFromCloud.optimisticReturning', `ageMs=${ageMs}`);
         routedOptimistically = true;
+        optimisticReturningFromHeuristic = true;
       } else {
         // Fresh auth row, new signup. Route to wizard.
         set({ firstRunComplete: false, firstRunChecked: true });
@@ -528,7 +540,19 @@ const useAppStore = create((set, get) => ({
     }
 
     if (!cloudData) {
-      log.logInfo('restoreSessionFromCloud.noProfile', 'cloud profile missing, optimistic decision stands');
+      // Read succeeded (a throw/timeout returned at the catch above) but no
+      // profile row exists, so this user has never finished onboarding. If we
+      // optimistically routed them to MainTabs purely on the created_at
+      // heuristic, correct that to the wizard now (A2-021 cross-device case).
+      // A cache-hit decision is never touched here.
+      if (optimisticReturningFromHeuristic && get().firstRunComplete) {
+        set({ firstRunComplete: false, firstRunChecked: true });
+        try { await AsyncStorage.setItem(FIRST_RUN_KEY, 'false'); } catch (_) {}
+        try { await AsyncStorage.setItem(FIRST_RUN_KEY_PFX + supabaseUserId, 'false'); } catch (_) {}
+        log.logInfo('restoreSessionFromCloud.heuristicCorrectedToWizard', 'no cloud profile');
+      } else {
+        log.logInfo('restoreSessionFromCloud.noProfile', 'cloud profile missing, optimistic decision stands');
+      }
       return;
     }
 
@@ -571,6 +595,15 @@ const useAppStore = create((set, get) => ({
       try { await AsyncStorage.setItem(FIRST_RUN_KEY, 'true'); } catch (_) {}
       set({ firstRunComplete: true, firstRunChecked: true });
       log.logInfo('restoreSessionFromCloud.firstRunRestored', 'true (from cloud)');
+    } else if (!cloudData.first_run_complete && optimisticReturningFromHeuristic && get().firstRunComplete) {
+      // The cloud profile exists and explicitly says onboarding is NOT done,
+      // but we optimistically routed to MainTabs on the created_at heuristic.
+      // Correct to the wizard (A2-021). The per-uid cache was already written
+      // 'false' above, so this only needs the in-memory + global flag. Guarded
+      // on the heuristic source so a cache-hit decision is never flipped.
+      try { await AsyncStorage.setItem(FIRST_RUN_KEY, 'false'); } catch (_) {}
+      set({ firstRunComplete: false, firstRunChecked: true });
+      log.logInfo('restoreSessionFromCloud.heuristicCorrectedToWizard', 'cloud first_run_complete=false');
     }
   },
 
@@ -653,6 +686,18 @@ const useAppStore = create((set, get) => ({
     set({ firstRunComplete: false, firstRunChecked: true });
     require('../lib/errorLog').logInfo('useAppStore.resetFirstRun', 'firstRunComplete → false');
     return { ok: true };
+  },
+
+  // A2-021: when a new account is created but the session isn't live yet
+  // (email confirmation pending), seed the per-uid first-run flag to 'false'
+  // now, using the uid from the signUp response. On the eventual sign-in,
+  // Cue A in restoreSessionFromCloud reads this and routes straight to the
+  // onboarding wizard, so a slow email confirmation can't let the created_at
+  // heuristic mistake a brand-new user for a returning one (and there's no
+  // MainTabs→wizard flash while the cloud read catches up).
+  noteSignupPendingOnboarding: async (uid) => {
+    if (!uid) return;
+    try { await AsyncStorage.setItem(FIRST_RUN_KEY_PFX + uid, 'false'); } catch (_) {}
   },
 
   completeFirstRun: async () => {
