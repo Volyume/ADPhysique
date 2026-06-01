@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import useAppStore from '../store/useAppStore';
 import { getBlockReflectionData } from '../lib/database';
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.primary + '30',
+    borderColor: withAlpha(colors.primary, 0.188),
     padding: spacing.lg,
   },
   bestSessionInfo: { flex: 1, gap: spacing.xxs },

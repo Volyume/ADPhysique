@@ -18,7 +18,7 @@ import { View } from 'react-native';
 import Svg, {
   Path, Line, Circle, Text as SvgText, Defs, LinearGradient, Stop,
 } from 'react-native-svg';
-import { colors as theme } from '../styles/theme';
+import { colors as theme, withAlpha } from '../styles/theme';
 import {
   plotPoints, linePath, smoothPath, areaPath, ticks, paddedDomain,
 } from '../lib/chartGeometry';
@@ -36,7 +36,7 @@ export default function SvgLineChart({
   width = 300,
   height = 120,
   color = theme.primary,
-  color2 = `${theme.textMuted}66`,
+  color2 = withAlpha(theme.textMuted, 0.4),
   thickness = 2,
   thickness2 = 1,
   area = false,
@@ -94,8 +94,8 @@ export default function SvgLineChart({
   const points2 = values2.length >= 2 ? plotPoints(values2, box, min, max) : null;
   const mainPath = curved ? smoothPath(points) : linePath(points);
   const fillPath = area ? areaPath(points, baselineY, curved) : '';
-  const topFill = areaTopColor || `${color}30`;
-  const botFill = areaBottomColor || `${color}05`;
+  const topFill = areaTopColor || withAlpha(color, 0.188);
+  const botFill = areaBottomColor || withAlpha(color, 0.02);
   const tickVals = ticks(min, max, sections);
 
   return (

@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, withAlpha } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
 import { useFeedback } from '../components/FeedbackSheet';
 import { shouldPrompt } from '../lib/feedback';
@@ -607,7 +607,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             accent = colors.primary;
           }
           return (
-            <View style={[styles.compareCard, { borderColor: accent + '40' }]}>
+            <View style={[styles.compareCard, { borderColor: withAlpha(accent, 0.251) }]}>
               <View style={styles.compareIconWrap}>
                 <Ionicons
                   name={verdict === 'best' ? 'trophy-outline' : verdict === 'up' ? 'trending-up-outline' : verdict === 'down' ? 'trending-down-outline' : 'analytics-outline'}
@@ -697,7 +697,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 <View key={muscle} style={styles.volumeRow}>
                   <View style={styles.volumeRowMain}>
                     <Text style={styles.muscleName}>{MUSCLE_DISPLAY_NAMES[muscle] || muscle}</Text>
-                    <View style={[styles.statusBadge, { backgroundColor: color + '22' }]}>
+                    <View style={[styles.statusBadge, { backgroundColor: withAlpha(color, 0.133) }]}>
                       <Text style={[styles.statusText, { color }]}>{label}</Text>
                     </View>
                   </View>
@@ -1038,7 +1038,7 @@ const styles = StyleSheet.create({
   prRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     backgroundColor: colors.warningBg, borderRadius: radius.md, padding: spacing.md,
-    borderWidth: 1, borderColor: colors.warning + '40',
+    borderWidth: 1, borderColor: withAlpha(colors.warning, 0.251),
   },
   prRowText: { ...type.label, flex: 1, color: colors.warning },
   divider: { height: 1, backgroundColor: colors.border },
@@ -1083,12 +1083,12 @@ const styles = StyleSheet.create({
     flexDirection: 'column', gap: spacing.xs,
     backgroundColor: colors.warningBg ?? colors.surface,
     borderRadius: radius.md, padding: spacing.md,
-    borderWidth: 1, borderColor: colors.warning + '55',
+    borderWidth: 1, borderColor: withAlpha(colors.warning, 0.333),
     marginTop: spacing.sm,
   },
   mesoAdviceCardUrgent: {
     backgroundColor: colors.errorBg ?? colors.surface,
-    borderColor: colors.error + '55',
+    borderColor: withAlpha(colors.error, 0.333),
   },
   mesoAdviceHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   mesoAdviceTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.warning, letterSpacing: 0.5 },

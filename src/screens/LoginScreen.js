@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import Button from '../components/Button';
 import { signInWithEmail, signUpWithEmail, resetPassword, signInWithGoogle, signInWithApple } from '../lib/supabase';
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   fieldWrapFocused: {
-    borderColor: colors.primary + '80',
+    borderColor: withAlpha(colors.primary, 0.502),
     backgroundColor: colors.surface,
   },
   fieldInput: {
@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
   backupPrompt: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    padding: spacing.md, borderWidth: 1, borderColor: colors.primary + '40',
+    padding: spacing.md, borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
     marginBottom: spacing.sm,
   },
   backupPromptText: {

@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useFocusEffect } from '@react-navigation/native';
 import SvgLineChart from '../components/SvgLineChart';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
 import { calculate1RM } from '../lib/algorithms';
@@ -267,7 +267,7 @@ export default function PRWallScreen({ navigation }) {
                         : `${Math.round(lvl.ratio * 100)}% of your bodyweight`}
                     </Text>
                   </View>
-                  <View style={[styles.levelBadge, { backgroundColor: getLevelColor(lvl.label) + '22' }]}>
+                  <View style={[styles.levelBadge, { backgroundColor: withAlpha(getLevelColor(lvl.label), 0.133) }]}>
                     <Text style={[styles.levelBadgeText, { color: getLevelColor(lvl.label) }]}>{lvl.label}</Text>
                   </View>
                 </View>
@@ -368,12 +368,12 @@ export default function PRWallScreen({ navigation }) {
                     thickness={2}
                     curved
                     area
-                    areaTopColor={`${colors.primary}2E`}
-                    areaBottomColor={`${colors.primary}00`}
+                    areaTopColor={withAlpha(colors.primary, 0.18)}
+                    areaBottomColor={withAlpha(colors.primary, 0)}
                     showDots={history.length <= 10}
                     dotRadius={3}
                     sections={3}
-                    rulesColor={`${colors.border}80`}
+                    rulesColor={withAlpha(colors.border, 0.502)}
                   />
                   <View style={styles.chartFooterRow}>
                     <Text style={styles.chartFooterText}>
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.primary + '44',
+    borderColor: withAlpha(colors.primary, 0.267),
     marginBottom: spacing.md,
   },
   bwPromptTitle: { ...type.bodyStrong, color: colors.textPrimary },

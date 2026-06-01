@@ -32,7 +32,7 @@ import {
 import { summariseWeekSteps } from '../lib/stepsSummary';
 import { getRollupsForRange } from '../lib/food/db';
 import { getCycleTracking, shouldShowCycleQuestion } from '../lib/cyclePrefs';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder, scheduleWeeklyCoachReady } from '../lib/notifications';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
@@ -1114,7 +1114,7 @@ const styles = StyleSheet.create({
     width: 20, height: 4, borderRadius: 2,
     backgroundColor: colors.surface3,
   },
-  stepDotDone: { backgroundColor: colors.primary + '60' },
+  stepDotDone: { backgroundColor: withAlpha(colors.primary, 0.376) },
   stepDotActive: { backgroundColor: colors.primary },
 
   scroll: { flex: 1 },
@@ -1197,7 +1197,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm, color: colors.primary,
     paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
     backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.primary + '40',
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
   },
   autoDerivedNote: {
     ...type.caption, color: colors.textSecondary,

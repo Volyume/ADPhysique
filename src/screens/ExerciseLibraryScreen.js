@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import ExerciseCard from '../components/ExerciseCard';
 import SearchBar from '../components/SearchBar';
 import PeekMenu from '../components/PeekMenu';
@@ -708,6 +708,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.primary + '50',
+    borderColor: withAlpha(colors.primary, 0.314),
   },
 });

@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format } from 'date-fns';
 
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
 import { useToast } from '../components/Toast';
 import { calculateNutritionTargets, PROTEIN_APPROACHES } from '../lib/nutritionEngine';
@@ -114,7 +114,7 @@ function WhySection({ icon, color, title, body }) {
   return (
     <View style={styles.whySection}>
       <View style={styles.whySectionHeader}>
-        <View style={[styles.whySectionIcon, { backgroundColor: color + '20' }]}>
+        <View style={[styles.whySectionIcon, { backgroundColor: withAlpha(color, 0.125) }]}>
           <Ionicons name={icon} size={14} color={color} />
         </View>
         <Text style={styles.whySectionTitle}>{title}</Text>
@@ -923,7 +923,7 @@ export default function NutritionTargetsScreen({ navigation }) {
 
               {/* Confidence card, only shown when confidence is available */}
               {results.confidence ? (
-                <View style={[styles.confidenceCard, { borderColor: (CONFIDENCE_COLORS[results.confidence] ?? colors.border) + '40' }]}>
+                <View style={[styles.confidenceCard, { borderColor: withAlpha(CONFIDENCE_COLORS[results.confidence] ?? colors.border, 0.251) }]}>
                   <Ionicons
                     name={CONFIDENCE_ICONS[results.confidence] ?? 'information-circle'}
                     size={20}
@@ -1250,7 +1250,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.xl,
     borderWidth: 1,
-    borderColor: colors.primary + '40',
+    borderColor: withAlpha(colors.primary, 0.251),
     alignItems: 'center',
     gap: spacing.sm,
   },
@@ -1411,7 +1411,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.warning + '40',
+    borderColor: withAlpha(colors.warning, 0.251),
   },
   perMealHintText: {
     flex: 1,
@@ -1462,7 +1462,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.warning + '40',
+    borderColor: withAlpha(colors.warning, 0.251),
   },
   warningText: {
     flex: 1,
@@ -1525,7 +1525,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.primary + '50',
+    borderColor: withAlpha(colors.primary, 0.314),
   },
   recalcBtnText: {
     ...type.label,
@@ -1561,7 +1561,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: colors.primary + '50',
+    borderColor: withAlpha(colors.primary, 0.314),
   },
   reconfigureBtnText: {
     fontSize: fontSize.xs,
@@ -1619,7 +1619,7 @@ const styles = StyleSheet.create({
   },
   approachCardDescActive: { color: colors.primaryDim },
   recommendedBadge: {
-    backgroundColor: colors.primary + '20',
+    backgroundColor: withAlpha(colors.primary, 0.125),
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,

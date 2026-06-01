@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { startOfWeek, endOfWeek, format, isWithinInterval } from 'date-fns';
-import { colors, spacing, fontSize, fontWeight, radius, type } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, radius, type, withAlpha } from '../styles/theme';
 import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentCheckins } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles } from '../lib/algorithms';
 import { SkeletonCard } from '../components/Skeleton';
@@ -193,7 +193,7 @@ function VolumeRow({ muscle, data }) {
       <View style={[styles.volumeDot, { backgroundColor: dot }]} />
       <Text style={styles.volumeMuscleName}>{displayName}</Text>
       <Text style={styles.volumeSetCount}>{sets} {sets === 1 ? 'set' : 'sets'}</Text>
-      <View style={[styles.volumeBadge, { backgroundColor: dot + '22' }]}>
+      <View style={[styles.volumeBadge, { backgroundColor: withAlpha(dot, 0.133) }]}>
         <Text style={[styles.volumeBadgeText, { color: dot }]}>{label}</Text>
       </View>
     </View>
@@ -770,7 +770,7 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     backgroundColor: colors.primaryBg,
     borderWidth: 1,
-    borderColor: colors.primary + '55',
+    borderColor: withAlpha(colors.primary, 0.333),
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,

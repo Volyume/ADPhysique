@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import { SkeletonCard } from '../components/Skeleton';
 import PressableCard from '../components/PressableCard';
@@ -791,13 +791,13 @@ const styles = StyleSheet.create({
 
   activePlanCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.primary + '40', gap: spacing.md,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251), gap: spacing.md,
   },
   activePlanHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   activeBadge: {
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: 3,
-    borderWidth: 1, borderColor: colors.primary + '60',
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.376),
   },
   activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.black, letterSpacing: 1 },
   activePlanName: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
@@ -873,17 +873,17 @@ const styles = StyleSheet.create({
   actionCardBadge: {
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderWidth: 1, borderColor: colors.primary + '40',
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
   },
   actionCardBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.primary, letterSpacing: 0.5 },
   actionCardDesc: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
   actionCardFeatured: {
-    borderColor: colors.primary + '40',
+    borderColor: withAlpha(colors.primary, 0.251),
     backgroundColor: colors.primaryBg,
   },
   actionCardIconFeatured: {
     backgroundColor: colors.surface,
-    borderColor: colors.primary + '40',
+    borderColor: withAlpha(colors.primary, 0.251),
   },
   // Pro-locked variant, matches the shared lockedCard pattern so gating
   // reads the same across the app.
@@ -906,19 +906,19 @@ const styles = StyleSheet.create({
   },
   blockCardHeadsUp: {
     backgroundColor: colors.surface,
-    borderColor: colors.warning + '50',
+    borderColor: withAlpha(colors.warning, 0.314),
   },
   blockCardWarning: {
     backgroundColor: colors.surface,
-    borderColor: colors.warning + '70',
+    borderColor: withAlpha(colors.warning, 0.439),
   },
   blockCardRecovery: {
     backgroundColor: colors.surface,
-    borderColor: colors.primary + '50',
+    borderColor: withAlpha(colors.primary, 0.314),
   },
   blockCardComplete: {
     backgroundColor: colors.surface,
-    borderColor: colors.success + '50',
+    borderColor: withAlpha(colors.success, 0.314),
   },
   blockCardHeader: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
@@ -942,11 +942,11 @@ const styles = StyleSheet.create({
   signalChip: {
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
     backgroundColor: colors.surface2, borderRadius: radius.full,
-    borderWidth: 1, borderColor: colors.warning + '50',
+    borderWidth: 1, borderColor: withAlpha(colors.warning, 0.314),
   },
   signalChipHigh: {
-    borderColor: colors.error + '60',
-    backgroundColor: colors.error + '10',
+    borderColor: withAlpha(colors.error, 0.376),
+    backgroundColor: withAlpha(colors.error, 0.063),
   },
   signalChipText: {
     fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium,

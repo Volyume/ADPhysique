@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { PRO_BETA_ACTIVE } from '../lib/proGate';
 
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     backgroundColor: colors.primaryBg, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    borderWidth: 1, borderColor: colors.primary + '40',
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
   },
   betaBannerText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
 

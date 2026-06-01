@@ -14,7 +14,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
 import AnimatedEntrance from './AnimatedEntrance';
 import InfoTooltip from './InfoTooltip';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
@@ -43,7 +43,7 @@ function freshnessMeta(lastTrainedAt, now) {
   const hoursAgo = (now - lastTrainedAt) / (1000 * 60 * 60);
   if (hoursAgo < 24)  return { label: 'Just trained', color: colors.warning, dot: colors.warning };
   if (hoursAgo < 48)  return { label: 'Recovering',   color: colors.warning, dot: colors.warning };
-  if (hoursAgo < 72)  return { label: 'Nearly ready',  color: colors.success, dot: colors.success + '99' };
+  if (hoursAgo < 72)  return { label: 'Nearly ready',  color: colors.success, dot: withAlpha(colors.success, 0.6) };
   return { label: 'Ready', color: colors.success, dot: colors.success };
 }
 
@@ -193,7 +193,7 @@ export default function ReadinessCards({ userId, tier }) {
               </View>
               <View style={styles.mfChipGrid}>
                 {freshnessEntries.map(({ key, displayName, label, color, dot }) => (
-                  <View key={key} style={[styles.mfChip, { borderColor: color + '44', backgroundColor: color + '12' }]}>
+                  <View key={key} style={[styles.mfChip, { borderColor: withAlpha(color, 0.267), backgroundColor: withAlpha(color, 0.071) }]}>
                     <View style={[styles.mfDot, { backgroundColor: dot }]} />
                     <Text style={[styles.mfChipName, { color: colors.textPrimary }]}>{displayName}</Text>
                     <Text style={[styles.mfChipLabel, { color }]}>{label}</Text>
@@ -285,8 +285,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     borderRadius: radius.lg, borderWidth: 1, padding: spacing.md,
   },
-  trendInsightGood: { backgroundColor: colors.successBg ?? colors.primaryBg, borderColor: colors.success + '40' },
-  trendInsightWarn: { backgroundColor: colors.warningBg, borderColor: colors.warning + '40' },
+  trendInsightGood: { backgroundColor: colors.successBg ?? colors.primaryBg, borderColor: withAlpha(colors.success, 0.251) },
+  trendInsightWarn: { backgroundColor: colors.warningBg, borderColor: withAlpha(colors.warning, 0.251) },
   trendInsightText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
 
   mfCard: {

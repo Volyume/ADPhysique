@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import SvgLineChart from '../components/SvgLineChart';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import { SkeletonCard } from '../components/Skeleton';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
@@ -701,7 +701,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.gold + '15',
+    backgroundColor: withAlpha(colors.gold, 0.082),
     borderRadius: radius.sm,
     padding: spacing.sm,
   },
@@ -823,7 +823,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.primary + '40',
+    borderColor: withAlpha(colors.primary, 0.251),
     gap: spacing.sm,
   },
   prHighlightHeader: {
@@ -880,7 +880,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.primary + '50',
+    borderColor: withAlpha(colors.primary, 0.314),
   },
   cueText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, lineHeight: 20 },
   plateauBanner: {
@@ -985,7 +985,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.primary + '40',
+    borderColor: withAlpha(colors.primary, 0.251),
   },
   congratsText: {
     ...type.label,

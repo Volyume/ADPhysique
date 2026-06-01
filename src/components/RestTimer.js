@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useShallow } from 'zustand/react/shallow';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 // Rest-timer notifications removed, see comment in the timer
 // useEffect below. Keep the file in tree because the timer
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs + 2,
     borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: colors.primary + '50',
+    borderColor: withAlpha(colors.primary, 0.314),
     backgroundColor: colors.primaryBg,
   },
   adjBtnNeg: {

@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock } from '../lib/database';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
@@ -633,7 +633,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.full, backgroundColor: colors.surface,
     borderWidth: 1, borderColor: colors.border,
   },
-  chipActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary + '80' },
+  chipActive: { backgroundColor: colors.primaryBg, borderColor: withAlpha(colors.primary, 0.502) },
   chipText: { ...type.label, color: colors.textSecondary },
   chipTextActive: { color: colors.primary, fontWeight: fontWeight.bold },
 
@@ -702,7 +702,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6, paddingVertical: spacing.xxs,
     borderWidth: 1, borderColor: colors.border,
   },
-  badgeAmber: { backgroundColor: colors.primaryBg, borderColor: colors.primary + '60' },
+  badgeAmber: { backgroundColor: colors.primaryBg, borderColor: withAlpha(colors.primary, 0.376) },
   badgeText: { fontSize: fontSize.micro, color: colors.textMuted, fontWeight: fontWeight.semibold },
   badgeTextAmber: { color: colors.primary },
   workoutCount: { ...type.caption, color: colors.textMuted, marginLeft: spacing.sm },

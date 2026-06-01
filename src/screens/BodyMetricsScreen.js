@@ -24,7 +24,7 @@ function safeFormatDate(value, fmt) {
 import { useFocusEffect } from '@react-navigation/native';
 import SvgLineChart from '../components/SvgLineChart';
 import { useToast } from '../components/Toast';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logBodyMetric, getBodyMetricLog } from '../lib/database';
 import { getRecentIntakeSummary } from '../lib/food/db';
@@ -219,7 +219,7 @@ function BodyFatTrendChart({ entries }) {
         width={chartWidth}
         height={100}
         color={colors.primary}
-        color2={`${colors.textMuted}66`}
+        color2={withAlpha(colors.textMuted, 0.4)}
         thickness={2}
         thickness2={1}
         area

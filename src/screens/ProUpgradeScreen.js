@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.md,
     borderWidth: 1.5, borderColor: colors.border,
   },
-  fieldWrapFocused: { borderColor: colors.primary + '80' },
+  fieldWrapFocused: { borderColor: withAlpha(colors.primary, 0.502) },
   fieldInput: {
     flex: 1, paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md + 2, fontSize: fontSize.md,

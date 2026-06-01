@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import Button from '../components/Button';
 import {
   getRoutineById, getRoutineExercisesWithDetails, getAllExercises,
@@ -632,7 +632,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  orderBadgeUnresolved: { backgroundColor: colors.warning + '40' },
+  orderBadgeUnresolved: { backgroundColor: withAlpha(colors.warning, 0.251) },
   orderNum: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary },
   exerciseInfo: { flex: 1, gap: spacing.xxs },
   exerciseTitleRow: {
@@ -652,7 +652,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     backgroundColor: colors.warningBg,
     borderWidth: 1,
-    borderColor: colors.warning + '60',
+    borderColor: withAlpha(colors.warning, 0.376),
   },
   relinkChipText: {
     fontSize: fontSize.xs,
@@ -829,10 +829,10 @@ const tagStyles = StyleSheet.create({
     backgroundColor: colors.surface2,
   },
   chipMid: {
-    backgroundColor: colors.success + '30',
+    backgroundColor: withAlpha(colors.success, 0.188),
   },
   chipHigh: {
-    backgroundColor: colors.primary + '30',
+    backgroundColor: withAlpha(colors.primary, 0.188),
   },
   chipText: {
     fontSize: fontSize.xs,

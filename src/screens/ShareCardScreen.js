@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
 import { useToast } from '../components/Toast';
 
 let WebView;
@@ -219,10 +219,10 @@ function drawIntensityBadge(ctx, W, y, tier) {
   var tw = ctx.measureText(label).width;
   var bw = tw + 60, bh = 44;
   var bx = (W - bw) / 2;
-  ctx.fillStyle = badgeColor + '20';
+  ctx.fillStyle = withAlpha(badgeColor, 0.125);
   rrect(ctx, bx, y, bw, bh, 22);
   ctx.fill();
-  ctx.strokeStyle = badgeColor + '60';
+  ctx.strokeStyle = withAlpha(badgeColor, 0.376);
   ctx.lineWidth = 1.5;
   rrect(ctx, bx, y, bw, bh, 22);
   ctx.stroke();
@@ -503,7 +503,7 @@ function drawPR(ctx, W, H, p) {
   ctx.fillStyle = B.goldDim;
   rrect(ctx, bx, badgeY, bw, bh, bh / 2);
   ctx.fill();
-  ctx.strokeStyle = B.gold + '70';
+  ctx.strokeStyle = withAlpha(B.gold, 0.439);
   ctx.lineWidth = 2;
   rrect(ctx, bx, badgeY, bw, bh, bh / 2);
   ctx.stroke();
@@ -1093,7 +1093,7 @@ function IntensityBadgePreview({ tier, isSquare }) {
   else if (tier === 'tough') { label = 'TOUGH SESSION'; color = colors.primary; }
   else { label = 'SOLID SESSION'; color = colors.textSecondary; }
   return (
-    <View style={[pvStyles.intensityBadge, { borderColor: color + '60', backgroundColor: color + '20' }]}>
+    <View style={[pvStyles.intensityBadge, { borderColor: withAlpha(color, 0.376), backgroundColor: withAlpha(color, 0.125) }]}>
       <Text style={[pvStyles.intensityText, { color, fontSize: isSquare ? 7 : 8 }]}>{label}</Text>
     </View>
   );
@@ -1307,7 +1307,7 @@ function ToggleRow({ label, value, onChange, last }) {
       <Switch
         value={value}
         onValueChange={onChange}
-        trackColor={{ false: colors.surface2, true: colors.primary + '66' }}
+        trackColor={{ false: colors.surface2, true: withAlpha(colors.primary, 0.4) }}
         thumbColor={value ? colors.primary : colors.textMuted}
       />
     </View>
@@ -1414,7 +1414,7 @@ const pvStyles = StyleSheet.create({
   prBadge: {
     backgroundColor: colors.warningBg, borderRadius: 30,
     paddingHorizontal: spacing.md, paddingVertical: 3,
-    borderWidth: 1, borderColor: colors.gold + '60',
+    borderWidth: 1, borderColor: withAlpha(colors.gold, 0.376),
   },
   prBadgeText: { fontSize: 7.5, fontWeight: fontWeight.bold, color: colors.gold, letterSpacing: 0.5 },
   prExercise: { fontWeight: fontWeight.black, color: colors.textPrimary, textAlign: 'center', lineHeight: 20 },

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import Card from '../components/Card';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { PROTEIN_APPROACHES } from '../lib/nutritionEngine';
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   heroCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.success + '40',
+    borderWidth: 1, borderColor: withAlpha(colors.success, 0.251),
   },
   heroTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.xs },
   heroBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },

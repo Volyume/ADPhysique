@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as hapticsVocab from '../lib/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
 import useAppStore from '../store/useAppStore';
@@ -2329,7 +2329,7 @@ const styles = StyleSheet.create({
   extraSetBtn: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingVertical: spacing.md },
   extraSetBtnText: { fontSize: fontSize.md, color: colors.textSecondary, fontWeight: fontWeight.medium },
   clusterBanner: {
-    borderWidth: 1, borderColor: colors.primary + '80', borderRadius: radius.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.502), borderRadius: radius.lg,
     backgroundColor: colors.primaryBg, padding: spacing.md, gap: spacing.sm, marginBottom: spacing.sm,
   },
   clusterTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, letterSpacing: 0.6 },
@@ -2342,7 +2342,7 @@ const styles = StyleSheet.create({
   },
   clusterAddBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    borderWidth: 1, borderColor: colors.primary + '80', borderRadius: radius.md,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.502), borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
   clusterAddBtnText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
@@ -2351,15 +2351,15 @@ const styles = StyleSheet.create({
   addWarmupBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, paddingVertical: spacing.sm + 2,
-    borderRadius: radius.md, borderWidth: 1, borderColor: colors.warning + '60',
+    borderRadius: radius.md, borderWidth: 1, borderColor: withAlpha(colors.warning, 0.376),
     backgroundColor: colors.warningBg || colors.surface, marginTop: spacing.sm,
   },
   addWarmupBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.warning },
   secondaryActions: { flexDirection: 'row', gap: spacing.sm },
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.md, borderWidth: 1, borderColor: colors.border },
-  actionBtnDanger: { borderColor: colors.error + '40' },
-  actionBtnGuide: { borderColor: colors.primary + '60', backgroundColor: colors.primaryBg },
-  actionBtnPaired: { borderColor: colors.primary + '60', backgroundColor: colors.primaryBg },
+  actionBtnDanger: { borderColor: withAlpha(colors.error, 0.251) },
+  actionBtnGuide: { borderColor: withAlpha(colors.primary, 0.376), backgroundColor: colors.primaryBg },
+  actionBtnPaired: { borderColor: withAlpha(colors.primary, 0.376), backgroundColor: colors.primaryBg },
   actionBtnText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
   actionBtnGuideText: { color: colors.primary },
   supersetChip: {
@@ -2375,9 +2375,9 @@ const styles = StyleSheet.create({
   finishWorkoutLargeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1.5, borderColor: colors.success, borderRadius: radius.lg, paddingVertical: spacing.lg },
   finishWorkoutLargeBtnText: { fontSize: fontSize.md, color: colors.success, fontWeight: fontWeight.bold },
   timeCrunchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  timeCrunchBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.warning + '55', backgroundColor: colors.warningBg ?? colors.surface },
+  timeCrunchBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: withAlpha(colors.warning, 0.333), backgroundColor: colors.warningBg ?? colors.surface },
   timeCrunchBtnText: { fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium },
-  timeCrunchActiveBar: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, padding: spacing.sm, backgroundColor: colors.warningBg ?? colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.warning + '44' },
+  timeCrunchActiveBar: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, padding: spacing.sm, backgroundColor: colors.warningBg ?? colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: withAlpha(colors.warning, 0.267) },
   timeCrunchActiveContent: { flex: 1, gap: spacing.sm },
   timeCrunchActiveText: { fontSize: fontSize.xs, color: colors.warning, lineHeight: 18 },
   timeCrunchRevertBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, alignSelf: 'flex-start', paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border },
@@ -2385,7 +2385,7 @@ const styles = StyleSheet.create({
   loggedSection: { gap: spacing.sm },
   loggedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2 },
   loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border },
-  loggedSetRowWarmup: { borderColor: colors.warning + '60', backgroundColor: colors.warningBg || colors.surface },
+  loggedSetRowWarmup: { borderColor: withAlpha(colors.warning, 0.376), backgroundColor: colors.warningBg || colors.surface },
   loggedSetTextWarmup: { color: colors.warning },
   setNumBadge: { width: 28, height: 28, borderRadius: radius.lg, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
   setNumText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
@@ -2500,7 +2500,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2, borderRadius: radius.sm,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
     alignSelf: 'flex-start', marginBottom: spacing.xs,
-    borderWidth: 1, borderColor: colors.primary + '30',
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.188),
   },
   coachReasonText: { fontSize: fontSize.xs, color: colors.textSecondary, flexShrink: 1 },
   beatChip: {
@@ -2524,7 +2524,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6, paddingHorizontal: spacing.sm,
     borderRadius: radius.sm,
     backgroundColor: colors.warningBg,
-    borderWidth: 1, borderColor: colors.warning + '40',
+    borderWidth: 1, borderColor: withAlpha(colors.warning, 0.251),
   },
   stalledChipText: { fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium, flex: 1, lineHeight: 16 },
   nextTimeBanner: {
@@ -2533,7 +2533,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.primary + '40',
+    borderColor: withAlpha(colors.primary, 0.251),
   },
   nextTimeBannerText: {
     flex: 1,

@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const NUM_PARTICLES = 40;
@@ -206,13 +206,13 @@ const styles = StyleSheet.create({
     padding: spacing.xxl,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.gold + '60',
+    borderColor: withAlpha(colors.gold, 0.376),
   },
   iconContainer: {
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: colors.gold + '20',
+    backgroundColor: withAlpha(colors.gold, 0.125),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,

@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import Button from '../components/Button';
 import { getAllExercises, createWorkout } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
   // Travel mode chip + modal
   travelChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    borderWidth: 1, borderColor: colors.primary + '50',
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
     borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     backgroundColor: colors.surface, alignSelf: 'flex-start',
   },

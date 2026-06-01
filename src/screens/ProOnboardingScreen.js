@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import { VolyumeIcon } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -1194,7 +1194,7 @@ const styles = StyleSheet.create({
   progressRow: { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm },
   progressSegment: { flex: 1, height: 3, borderRadius: 2 },
   progressDone: { backgroundColor: colors.primary },
-  progressActive: { backgroundColor: colors.primary + 'CC' },
+  progressActive: { backgroundColor: withAlpha(colors.primary, 0.8) },
   progressPending: { backgroundColor: colors.border },
 
   stepCount: { ...type.num('caption'), color: colors.textMuted, marginBottom: spacing.xs },
@@ -1229,7 +1229,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.md,
     borderWidth: 1.5, borderColor: colors.border,
   },
-  fieldWrapFocused: { borderColor: colors.primary + '80' },
+  fieldWrapFocused: { borderColor: withAlpha(colors.primary, 0.502) },
   fieldInput: {
     flex: 1, paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md + 2,
@@ -1276,7 +1276,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: colors.border,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md + 2,
   },
-  dropdownTriggerFilled: { borderColor: colors.primary + '60' },
+  dropdownTriggerFilled: { borderColor: withAlpha(colors.primary, 0.376) },
   dropdownTriggerOpen: { borderColor: colors.primary, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
   dropdownValue: { fontSize: fontSize.md, color: colors.textPrimary, flex: 1, marginRight: spacing.sm },
   dropdownPlaceholder: { color: colors.textDisabled },

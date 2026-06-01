@@ -163,6 +163,18 @@ module.exports = [
           message: 'No hardcoded rgba()/rgb() in screens/components. Use a theme token or withAlpha(colors.*, a).',
         },
         {
+          // A2-047: the `colors.primary + '50'` hex-alpha concat. Slips past the
+          // literal guards (the '50' is not a colour literal) but breaks the
+          // moment a token becomes rgba(). Use withAlpha(token, alpha) instead.
+          selector: "BinaryExpression[operator='+'] > Literal.right[value=/^[0-9a-fA-F]{2}$/]",
+          message: "No hex-alpha concat (token + '50'). Use withAlpha(token, alpha) so it survives rgba() tokens.",
+        },
+        {
+          // A2-047: the `${token}50` template form of the same hex-alpha concat.
+          selector: "TemplateElement[tail=true][value.cooked=/^[0-9a-fA-F]{2}$/]",
+          message: 'No hex-alpha template (`${token}50`). Use withAlpha(token, alpha).',
+        },
+        {
           selector: "Property[key.name='fontSize'] > Literal[raw=/^[0-9]/]",
           message: 'No raw fontSize literal. Use a type role (type.body, type.h2…) or fontSize.* token. (Intentional hero/display sizes: add a scoped eslint-disable with a reason.)',
         },

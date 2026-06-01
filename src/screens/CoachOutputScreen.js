@@ -34,7 +34,7 @@ import { SkeletonCard } from '../components/Skeleton';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
 import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, computeDietBreakTargets, computeMacroCycle, computeRefeedDay, markApplied, isApplied } from '../lib/coachApply';
 import { logError } from '../lib/errorLog';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
 import {
   ED_PATTERN_LOCKOUT_COPY,
   ED_PATTERN_CLEARED_COPY,
@@ -1606,7 +1606,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warningBg,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.warning + '50',
+    borderColor: withAlpha(colors.warning, 0.314),
     padding: spacing.lg,
   },
   adherenceText: {
@@ -1647,7 +1647,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.successBg,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.success + '40',
+    borderColor: withAlpha(colors.success, 0.251),
     padding: spacing.lg,
     gap: spacing.sm,
   },
@@ -1655,7 +1655,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warningBg ?? colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.warning + '40',
+    borderColor: withAlpha(colors.warning, 0.251),
     padding: spacing.lg,
     gap: spacing.sm,
   },
@@ -1663,7 +1663,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.primary + '40',
+    borderColor: withAlpha(colors.primary, 0.251),
     padding: spacing.lg,
     gap: spacing.xs,
   },
@@ -1728,7 +1728,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.successBg ?? colors.surface2,
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderWidth: 1, borderColor: (colors.success ?? colors.primary) + '50',
+    borderWidth: 1, borderColor: withAlpha(colors.success ?? colors.primary, 0.314),
   },
   appliedChipText: {
     fontSize: fontSize.micro, fontWeight: fontWeight.bold,
@@ -1816,7 +1816,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warningBg,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.warning + '50',
+    borderColor: withAlpha(colors.warning, 0.314),
     padding: spacing.lg,
     gap: spacing.sm,
   },
@@ -1890,7 +1890,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.errorBg ?? colors.warningBg,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.error + '50',
+    borderColor: withAlpha(colors.error, 0.314),
     padding: spacing.lg,
     gap: spacing.sm,
   },

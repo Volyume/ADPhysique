@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import * as SecureStore from 'expo-secure-store';
 import { getSupabaseClient, signOut } from '../lib/supabase';
 import useAppStore from '../store/useAppStore';
@@ -924,7 +924,7 @@ export default function SettingsScreen({ navigation }) {
               <Switch
                 value={calmEnabled}
                 onValueChange={toggleCalmMode}
-                trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
                 thumbColor={calmEnabled ? colors.primary : colors.textMuted}
               />
             }
@@ -942,7 +942,7 @@ export default function SettingsScreen({ navigation }) {
                   <Switch
                     value={stepsEnabled}
                     onValueChange={toggleStepTarget}
-                    trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                    trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
                     thumbColor={stepsEnabled ? colors.primary : colors.textMuted}
                   />
                 }
@@ -975,7 +975,7 @@ export default function SettingsScreen({ navigation }) {
                 <Switch
                   value={cycleEnabled}
                   onValueChange={toggleCycleTracking}
-                  trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                  trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
                   thumbColor={cycleEnabled ? colors.primary : colors.textMuted}
                 />
               }
@@ -1020,7 +1020,7 @@ export default function SettingsScreen({ navigation }) {
                   await setAccessibilityPref('largerText', v);
                   promptRestartForA11y('Larger text');
                 }}
-                trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
                 thumbColor={accessibility.largerText ? colors.primary : colors.textMuted}
               />
             }
@@ -1037,7 +1037,7 @@ export default function SettingsScreen({ navigation }) {
                   await setAccessibilityPref('higherContrast', v);
                   promptRestartForA11y('Higher contrast');
                 }}
-                trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
                 thumbColor={accessibility.higherContrast ? colors.primary : colors.textMuted}
               />
             }
@@ -1054,7 +1054,7 @@ export default function SettingsScreen({ navigation }) {
                   await setAccessibilityPref('colorBlindSafe', v);
                   promptRestartForA11y('Colour-blind safe palette');
                 }}
-                trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
                 thumbColor={accessibility.colorBlindSafe ? colors.primary : colors.textMuted}
               />
             }
@@ -1068,7 +1068,7 @@ export default function SettingsScreen({ navigation }) {
               <Switch
                 value={!!accessibility.reduceMotion}
                 onValueChange={v => setAccessibilityPref('reduceMotion', v)}
-                trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
                 thumbColor={accessibility.reduceMotion ? colors.primary : colors.textMuted}
               />
             }
@@ -1097,7 +1097,7 @@ export default function SettingsScreen({ navigation }) {
                     value={healthWeightStatus === 'granted'}
                     onValueChange={handleToggleWeight}
                     disabled={healthSyncing}
-                    trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                    trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
                     thumbColor={healthWeightStatus === 'granted' ? colors.primary : colors.textMuted}
                   />
                 }
@@ -1116,7 +1116,7 @@ export default function SettingsScreen({ navigation }) {
                     value={healthStepsStatus === 'granted'}
                     onValueChange={handleToggleSteps}
                     disabled={healthSyncing}
-                    trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                    trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
                     thumbColor={healthStepsStatus === 'granted' ? colors.primary : colors.textMuted}
                   />
                 }
@@ -1135,7 +1135,7 @@ export default function SettingsScreen({ navigation }) {
                     value={healthWorkoutStatus === 'granted'}
                     onValueChange={handleToggleWorkout}
                     disabled={healthSyncing}
-                    trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                    trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
                     thumbColor={healthWorkoutStatus === 'granted' ? colors.primary : colors.textMuted}
                   />
                 }
@@ -1230,7 +1230,7 @@ export default function SettingsScreen({ navigation }) {
               <Switch
                 value={offConsent}
                 onValueChange={toggleOffConsent}
-                trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
                 thumbColor={offConsent ? colors.primary : colors.textMuted}
               />
             }

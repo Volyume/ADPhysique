@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
   getProgrammeById, getRoutinesForPlan, getAllRoutineExerciseCounts,
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
   libraryBadgeText: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: fontWeight.semibold },
   activeBadge: {
     alignSelf: 'flex-start', backgroundColor: colors.primaryBg, borderRadius: radius.full,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderWidth: 1, borderColor: colors.primary + '60',
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderWidth: 1, borderColor: withAlpha(colors.primary, 0.376),
   },
   activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
   featuredBadge: {

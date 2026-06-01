@@ -1014,7 +1014,7 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.continueTitle}>Session in Progress</Text>
                 <Text style={styles.continueSub}>Tap to return to your workout</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.background + 'CC'} />
+              <Ionicons name="chevron-forward" size={18} color={withAlpha(colors.background, 0.8)} />
             </View>
           </PressableCard>
         ) : activePlan && nextWorkout ? (
@@ -1589,9 +1589,9 @@ function QuickLink({ icon, label, onPress }) {
 
 const BRIEF_ICON = { go: 'fitness-outline', caution: 'warning-outline', recover: 'leaf-outline' };
 const BRIEF_BORDER = {
-  go:      colors.primary  + '30',
-  caution: colors.warning  + '30',
-  recover: colors.success  + '30',
+  go:      withAlpha(colors.primary, 0.188),
+  caution: withAlpha(colors.warning, 0.188),
+  recover: withAlpha(colors.success, 0.188),
 };
 const BRIEF_ICON_COLOR = {
   go:      colors.primary,
@@ -1801,7 +1801,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   continueTitle: { ...type.bodyStrong, color: colors.background },
-  continueSub: { ...type.caption, color: colors.background + 'CC', marginTop: spacing.xxs },
+  continueSub: { ...type.caption, color: withAlpha(colors.background, 0.8), marginTop: spacing.xxs },
 
   // Hero plan card. Restrained: flat surface, one primary CTA, two
   // discreet text links underneath. Stat goes in the eyebrow line so
@@ -1917,7 +1917,7 @@ const styles = StyleSheet.create({
   },
   noPlanIconWrap: {
     width: 56, height: 56, borderRadius: 28,
-    backgroundColor: colors.primaryBg, borderWidth: 1.5, borderColor: colors.primary + '50',
+    backgroundColor: colors.primaryBg, borderWidth: 1.5, borderColor: withAlpha(colors.primary, 0.314),
     alignItems: 'center', justifyContent: 'center',
     marginBottom: spacing.xs,
   },
@@ -2002,7 +2002,7 @@ const styles = StyleSheet.create({
   builderBadge: {
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderWidth: 1, borderColor: colors.primary + '40',
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
   },
   builderBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.bold, color: colors.primary },
   builderDesc: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
@@ -2035,7 +2035,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderWidth: 1,
-    borderColor: colors.primary + '40',
+    borderColor: withAlpha(colors.primary, 0.251),
   },
   repeatBtnText: {
     fontSize: fontSize.xs,
@@ -2101,7 +2101,7 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: radius.xl, backgroundColor: colors.surface2,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
   },
-  dayBadgeActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary + '60' },
+  dayBadgeActive: { backgroundColor: colors.primaryBg, borderColor: withAlpha(colors.primary, 0.376) },
   dayNum: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary },
   dayNumActive: { color: colors.primary },
   pickerName: { ...type.bodyStrong, color: colors.textPrimary },
@@ -2109,7 +2109,7 @@ const styles = StyleSheet.create({
   nextBadge: {
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderWidth: 1, borderColor: colors.primary + '40',
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
   },
   nextBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
   sheetCancel: { marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.md },
@@ -2125,7 +2125,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.primary + '40',
+    borderColor: withAlpha(colors.primary, 0.251),
   },
   coachingNudgeLeft: {
     width: 36, height: 36, borderRadius: radius.sm,
@@ -2223,7 +2223,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.primary + '40',
+    borderColor: withAlpha(colors.primary, 0.251),
     padding: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
@@ -2252,7 +2252,7 @@ const styles = StyleSheet.create({
   coachBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.primaryBg, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.primary + '50',
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
     padding: 14, marginBottom: spacing.md, gap: spacing.md,
   },
   coachBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
@@ -2275,7 +2275,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.primary + '40',
+    borderColor: withAlpha(colors.primary, 0.251),
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },

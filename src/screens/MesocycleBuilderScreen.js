@@ -8,7 +8,7 @@ import { format, differenceInWeeks } from 'date-fns';
 import SvgBarSparkline from '../components/SvgBarSparkline';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
 import { SkeletonCard } from '../components/Skeleton';
 import {
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
 
   planCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.primary + '40',
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
     padding: spacing.lg, gap: spacing.xs, marginBottom: spacing.lg,
   },
   planCardHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, justifyContent: 'space-between' },
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
   weekBar:    { flexDirection: 'row', gap: spacing.sm },
   weekDot:    { flex: 1, height: 8, borderRadius: 4, backgroundColor: colors.surface2 },
   weekDotActive: { backgroundColor: colors.primary },
-  weekDotDeload: { backgroundColor: colors.warning + '80' },
+  weekDotDeload: { backgroundColor: withAlpha(colors.warning, 0.502) },
   deloadLabel: { ...type.num('caption'), color: colors.warning },
 
   // Empty
@@ -532,7 +532,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     alignSelf: 'flex-start', marginTop: spacing.sm,
     paddingVertical: spacing.xs, paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm, borderWidth: 1, borderColor: colors.primary + '50',
+    borderRadius: radius.sm, borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
     backgroundColor: colors.primaryBg,
   },
   summaryBtnText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
@@ -544,5 +544,5 @@ const styles = StyleSheet.create({
   planWeekBar:       { flexDirection: 'row', gap: spacing.xs },
   planWeekDot:       { flex: 1, height: 6, borderRadius: 3, backgroundColor: colors.surface2 },
   planWeekDotActive: { backgroundColor: colors.primary },
-  planWeekDotDeload: { backgroundColor: colors.warning + '80' },
+  planWeekDotDeload: { backgroundColor: withAlpha(colors.warning, 0.502) },
 });

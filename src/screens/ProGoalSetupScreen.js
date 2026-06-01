@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import Chip from '../components/Chip';
 import { useToast } from '../components/Toast';
 import {
@@ -685,7 +685,7 @@ const styles = StyleSheet.create({
   },
   approachRangeActive: { color: colors.primaryDim },
   suggestedBadge: {
-    backgroundColor: colors.primary + '20', borderRadius: radius.full,
+    backgroundColor: withAlpha(colors.primary, 0.125), borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: 1,
   },
   suggestedBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.bold, color: colors.primary },

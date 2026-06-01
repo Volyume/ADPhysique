@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 
-import { colors, fontSize, fontWeight, spacing, radius, volumeColors, motion, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, volumeColors, motion, type, withAlpha } from '../styles/theme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import ScreenHeader from '../components/ScreenHeader';
 import { EmptyChartIllustration } from '../components/Illustrations';
@@ -1296,7 +1296,7 @@ const styles = StyleSheet.create({
   deloadBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
     backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.warning + '60',
+    borderWidth: 1, borderColor: withAlpha(colors.warning, 0.376),
     padding: spacing.lg,
   },
   deloadTitle: {
@@ -1341,7 +1341,7 @@ const styles = StyleSheet.create({
   freqRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: spacing.xs,
-    borderBottomWidth: 1, borderBottomColor: colors.border + '60',
+    borderBottomWidth: 1, borderBottomColor: withAlpha(colors.border, 0.376),
   },
   freqMuscle: {
     ...type.label, color: colors.textPrimary,

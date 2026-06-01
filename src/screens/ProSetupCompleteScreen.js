@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import { VolyumeIcon } from '../components/BrandMark';
 import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     padding: spacing.lg, marginBottom: spacing.md,
   },
-  routineCardOpen: { borderColor: colors.primary + '50' },
+  routineCardOpen: { borderColor: withAlpha(colors.primary, 0.314) },
   routineHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   routineIconWrap: {
     width: 36, height: 36, borderRadius: radius.md, backgroundColor: colors.primaryBg,
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderWidth: 1, borderColor: colors.primary + '30',
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.188),
   },
   goalChipText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
   eduLearnRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
