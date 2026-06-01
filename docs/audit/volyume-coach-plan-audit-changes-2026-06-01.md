@@ -1,4 +1,5 @@
-Status: IN PROGRESS (stages 1-2 of 5 shipped) | Timestamp: 2026-06-01
+Status: COMPLETE (generator: stages 1, 2, 2b, 3, 4 shipped; stage 5 verified not needed) | Timestamp: 2026-06-01
+Remaining: volume-audit the 8 division library plans against the Phase 7 ranges.
 
 # Coach plan audit: implementation change log
 
@@ -32,31 +33,52 @@ within it.
 - Result (simulation): Bikini and Wellness deliver ~20 glute sets (was 4) and
   are now distinct (Wellness carries more quad volume). Tests added.
 
-## Remaining stages (not yet implemented)
+## Stage 2b (shipped, commit 9793dd8): balanced two-leg-day split
 
-Each to be implemented, tested and re-simulated per division before commit,
-exactly as stages 1-2 were.
+- Generalised the lower-focus builder to `buildWeightedUpperLower(lowerDays)`,
+  added a `balanced_ul` split (half the days lower) and routed Classic, Open,
+  Figure, Women's Physique and Women's Bodybuilding to it at 5 days so their
+  fully judged legs get two sessions. General and Men's Physique keep PPL.
+  Added traps to the weighted upper list.
+- Result: Classic calves 4 -> 10 and quads 6 -> 11; Figure glutes 2 -> 12;
+  bodybuilding calves 12.
 
-- Stage 2b, broader leg-day balancing. Classic, Open, Figure, Women's Physique
-  and Women's Bodybuilding still get one leg day on the 5-day PPL, so their
-  legs (quads ~6 delivered vs 12-18 in spec) under-deliver. Give the
-  leg-judged divisions two leg exposures at 5-6 days while keeping Men's
-  Physique upper-weighted.
-- Stage 3, division-aware exercise priority. Re-rank `selectExercisesForMuscle`
-  by division: lateral-raise and upper-chest-incline bias for Men's Physique /
-  Figure; hip-thrust, abduction and lengthened-position hamstring work for
-  Bikini / Wellness; standing + seated calf priority for Classic. Also lets the
-  adductor target actually land (the builders include adductors but the pool
-  selection needs to place them).
-- Stage 4, additive weak-point overlay. Replace the destructive weak-point
-  branch: keep the division emphasis, add a capped specialisation bonus to the
-  weak-point muscles, and offset by trimming non-priority muscles toward MV,
-  all inside the individual MRV and systemic cap. (Proposals section 4.)
-- Stage 5, peak-week MRV guard. Clamp the mesocycle PEAK week (week-1 x peak
-  multiplier) to the individual per-muscle MRV and systemic ceiling, not just
-  week 1, so the hardest week cannot overtrain. Touches `generateMesocycleWeeks`
-  (`database.js`). The current simulation shows peak totals (and a 20-set glute
-  week-1 x1.25) can exceed MRV without this.
+## Stage 4 (shipped, commit ffa3451): additive weak-point specialisation
+
+- `applyGoalOverlay` now always runs the division overlay first (keeps the
+  division character), then ADDS a capped bonus to each weak-point muscle
+  (closes ~40% of the gap to MRV) and offsets the added volume by trimming the
+  lowest-priority, non-weak-point muscles toward MV. The MRV clamp and systemic
+  cap remain the ceiling.
+- Result: Men's Physique + weak-point glutes keeps shoulders dominant and the MP
+  targets intact while glutes go 3 -> 19 (offset from abs/traps), replacing the
+  old wipe-everything-to-maintenance. Note: a weak-point block still routes to
+  the upper_lower_wp split, which reduces (not wipes) upper-dominant divisions'
+  priority delivery during the block; refining that split is a possible
+  follow-up.
+
+## Stage 3 (shipped, commit c2ac80d): division-aware exercise priority
+
+- Added a division subregion bias to `selectExercisesForMuscle` scoring (a
+  half-tier nudge, not a hard filter): Men's Physique/Figure favour incline
+  (upper chest) and vertical pulls (lat width); Classic/Women's Physique favour
+  lat width; Bikini/Wellness favour the glute-max (hip-thrust) pattern.
+- Result: Men's Physique leads chest with incline pressing and back with
+  wide-grip/pull-up width work, where general leads with flat bench. Falls back
+  cleanly for thin-library / machine-only users.
+
+## Stage 5 (verified NOT needed): peak-week MRV guard
+
+Investigation found the `MESO_SCHEDULE` setsMultiplier (x1.00 -> x1.25) is used
+only for the week LABEL (`WorkoutSummaryScreen`), not applied to working sets:
+`generateMesocycleWeeks` stores only RIR ladder and deload flags, and weekly
+progression is RIR/load + feedback autoregulation. So there is no automatic set
+inflation to guard. The recovery envelope is already enforced by the base-plan
+MRV clamp, the new individualised systemic cap (stage 1), and the adaptive
+engine, which is MRV-aware (`algorithms.js:520` flags workingSets > mrv and
+recommends backing off). The earlier audit docs' "peak = week-1 x1.25 delivered"
+was a mis-read; the simulated week-1 numbers are the working volume. No code
+change required.
 
 ## Library
 
