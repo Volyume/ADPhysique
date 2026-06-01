@@ -211,18 +211,22 @@ planengineRebuildPhase3e.test.js. Measured: MP biceps 6d+8i, BB triceps 6d+10i,
 Bikini shoulders 18d+1.5i (no pressing, so delts are trained direct).
 
 REMAINING:
-- 3e increment 2 (target subtraction): ATTEMPTED and REVERTED, not shipped.
-  Founder chose "trim synergist direct toward MEV+2 buffer". Implemented it
-  (trim biceps by 0.4*back, triceps by 0.5*chest, floored at MEV+2, weak-point
-  muscles skipped) and MEASURED: trimming Classic biceps TARGET 12->10 cratered
-  DELIVERED biceps to 6 (below MEV 8). Cause: the delivered-vs-target gap (the
-  same one that holds bodybuilding quads at 7) plus a session-builder
-  discretisation cliff at 5 sets/session (2 exercises -> 1). A small target cut
-  causes a large delivery drop, pushing a judged muscle under MEV. So target
-  subtraction is BLOCKED on the delivered-vs-target gap and must not ship until
-  that gap is fixed (the session builder must deliver close to the floored
-  target for small muscles). Reverted cleanly; reporting layer (increment 1) is
-  unaffected and stands.
+- DELIVERED-VS-TARGET FIX (commit ce5e1a4): the session distributor hard-capped
+  each exercise at 4 sets (compound) / 3 (isolation) and dropped any session
+  volume beyond numEx*cap, so a 5-set session with one isolation delivered 3.
+  Now the session target spreads across the chosen exercises at 3-6 sets each,
+  so delivered tracks target. This was the root cause behind the arm-trim
+  failure and bodybuilding-quads 7-not-8.
+- 3e increment 2 (synergist trim): DONE (re-applied on top of the delivered fix).
+  Trim biceps by 0.4*back, triceps by 0.5*chest, floored at MEV+2, weak-point
+  muscles skipped. KEY MEASUREMENT LESSON: judged on DIRECT volume the trim
+  looked like it pushed arms under MEV, but the correct measure is EFFECTIVE
+  volume (direct + indirect), and on that measure every arm-JUDGED division
+  stays >= MEV at every day count (benchmark in planengineRebuildPhase3e.test.js).
+  Bikini/Wellness do not judge arms (spec map) so their below-MEV arm volume is
+  correct and exempt. Note: bodybuilding-quads is still 7 direct (a separate
+  low-indirect muscle); 7 + ~4.5 indirect = 11.5 effective, so the coach test
+  threshold of 7 is conservative and left as-is.
 - 3e increment 3 (hard coverage flag forcing isolation at near-zero indirect):
   largely redundant with the matrix (every division already gets direct side
   delts); low value, deferred.

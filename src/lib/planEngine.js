@@ -262,6 +262,10 @@ const SIDE_REAR_DELT_CAP = 26;
 // report indirect volume and to flag muscles whose only coverage is indirect.
 const INDIRECT_SET_FRACTION = 0.5;
 
+// Buffer kept above MEV when trimming a synergist for its indirect volume, so
+// the trimmed direct target never reaches the bare minimum (spec phase 3e).
+const INDIRECT_TRIM_BUFFER = 2;
+
 // Structural movers that must never read zero in any generated program, even
 // when a division de-emphasises them (spec: "maintenance, not zero"). At 3
 // training days the maintenance floor compresses to 4.
@@ -277,7 +281,7 @@ function maintenanceFloor(effectiveDays) {
 // to their MEV. Caps: every muscle to its MRV, and the three delt heads to a
 // combined 26. This is the phase-1 guarantee: no judged/structural zero, no
 // muscle over MRV.
-function enforceWeeklyFloorsAndCaps(weeklyTargets, goal, effectiveDays) {
+function enforceWeeklyFloorsAndCaps(weeklyTargets, goal, effectiveDays, weakPointKeys = []) {
   const t = { ...weeklyTargets };
   const overlay = GOAL_OVERLAYS[goal] ?? {};
   const maint = maintenanceFloor(effectiveDays);
@@ -290,6 +294,24 @@ function enforceWeeklyFloorsAndCaps(weeklyTargets, goal, effectiveDays) {
     const mult = overlay[m];
     if (mult != null && mult >= 1.0) t[m] = Math.max(t[m] ?? 0, lm.MEV);
   }
+
+  // Indirect-volume trim (spec phase 3e). A synergist that gets heavy indirect
+  // work from its driver compound does not need full DIRECT volume: the
+  // fractional sets from pulling (biceps) or pressing (triceps) already carry
+  // it. Trim the direct target by a credit proportional to the driver's volume,
+  // keeping a 2-set buffer above MEV. Effective volume (direct + indirect)
+  // stays well above MEV, which is the correct adequacy measure. Only ever
+  // trims (never raises), and skips a user-selected weak point (boosted on
+  // purpose). The phase-1 MEV-floor invariant is preserved (floor is MEV + 2).
+  const trimSynergist = (muscle, driverMuscle, rate) => {
+    const lm = SPEC_LANDMARKS[muscle];
+    if (!lm || t[muscle] == null || weakPointKeys.includes(muscle)) return;
+    const credit = Math.round((t[driverMuscle] ?? 0) * rate);
+    const floor = lm.MEV + INDIRECT_TRIM_BUFFER;
+    t[muscle] = Math.min(t[muscle], Math.max(floor, t[muscle] - credit));
+  };
+  trimSynergist('biceps', 'back', 0.4);
+  trimSynergist('triceps', 'chest', 0.5);
 
   // Per-muscle MRV cap. Glutes get a higher ceiling for the lower-body
   // divisions, where the spec allows ~30 weekly sets split across glute
@@ -1854,7 +1876,7 @@ function _generatePlanInner(inputs) {
   // structural/judged muscles never zero, no muscle over MRV, delts capped at
   // a combined 26.
   const overlaidTargets = applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase);
-  const adjustedTargets = enforceWeeklyFloorsAndCaps(overlaidTargets, goal, effectiveDays);
+  const adjustedTargets = enforceWeeklyFloorsAndCaps(overlaidTargets, goal, effectiveDays, weakPointKeys);
 
   // Build workouts
   let rawWorkouts;

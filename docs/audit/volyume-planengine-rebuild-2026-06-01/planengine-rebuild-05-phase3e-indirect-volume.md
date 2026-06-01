@@ -13,15 +13,15 @@ column); the hand-written internal POOL carries none, so the POOL path reports
 
 | Division | muscle: direct (+indirect) |
 |---|---|
-| General | chest 6 (+3), back 8 (+4.5), shoulders 12 (+9.5), biceps 6 (+4), triceps 6 (+6), quads 8 (+5.5), hamstrings 6 (+5), glutes 6 (+7.5), calves 8, abs 6, traps 0 (+1.5) |
-| Men's Physique | chest 8 (+1.5), back 16 (+6), shoulders 18 (+10.5), biceps 6 (+8), triceps 6 (+7), quads 3 (+4.5), hamstrings 6 (+1.5), glutes 3 (+6), calves 3, abs 3, traps 3 (+1.5) |
-| Classic Physique | chest 7, back 16 (+3), shoulders 18 (+8.5), biceps 6 (+8), triceps 3 (+6.5), quads 7 (+3), hamstrings 6 (+3), glutes 3 (+5), calves 6, abs 3, traps 0 (+1.5) |
-| Bodybuilding | chest 8, back 12 (+4.5), shoulders 18 (+11.5), biceps 6 (+6), triceps 6 (+10), quads 8 (+4.5), hamstrings 6 (+5.5), glutes 7 (+7), calves 12, abs 6, traps 0 (+1.5) |
-| Bikini | chest 3, back 10 (+6.5), shoulders 18 (+1.5), biceps 0 (+3.5), triceps 0 (+1.5), quads 7 (+3.5), hamstrings 13 (+7.5), glutes 21 (+8.5), calves 0, abs 6, traps 0 (+1.5) |
-| Wellness | chest 3, back 6 (+3.5), shoulders 3 (+4.5), biceps 0 (+3), triceps 0 (+3), quads 15 (+8.5), hamstrings 13 (+7.5), glutes 20 (+14), calves 6, abs 0, traps 0 |
-| Figure | chest 3 (+2), back 15 (+7.5), shoulders 21 (+8), biceps 6 (+7.5), triceps 7 (+4.5), quads 3 (+3.5), hamstrings 6 (+3.5), glutes 4 (+4.5), calves 6, abs 3, traps 0 (+3) |
-| Women's Physique | chest 6, back 14 (+3), shoulders 15 (+7.5), biceps 3 (+7), triceps 3 (+6), quads 12 (+3.5), hamstrings 6 (+5.5), glutes 8 (+6), calves 6, abs 3, traps 0 (+1.5) |
-| Women's Bodybuilding | chest 8, back 12 (+4.5), shoulders 12 (+8.5), biceps 6 (+6), triceps 6 (+7), quads 6 (+7.5), hamstrings 6 (+4.5), glutes 6 (+9), calves 12, abs 6, traps 0 (+1.5) |
+| General | chest 6 (+3), back 10 (+4.5), shoulders 12 (+10), biceps 6 (+5), triceps 6 (+6), quads 8 (+5.5), hamstrings 6 (+5), glutes 6 (+7.5), calves 8, abs 6, traps 0 (+1.5) |
+| Men's Physique | chest 8 (+1.5), back 16 (+7), shoulders 21 (+11), biceps 6 (+8), triceps 6 (+7.5), quads 3 (+4.5), hamstrings 6 (+1.5), glutes 3 (+6), calves 3, abs 3, traps 3 (+2.5) |
+| Classic Physique | chest 7, back 16 (+4), shoulders 20 (+8.5), biceps 6 (+8), triceps 3 (+6.5), quads 7 (+3), hamstrings 8 (+3), glutes 3 (+5), calves 6, abs 3, traps 0 (+2) |
+| Bodybuilding | chest 10, back 12 (+4.5), shoulders 18 (+12.5), biceps 6 (+6), triceps 6 (+11), quads 10 (+4.5), hamstrings 7 (+5.5), glutes 6 (+8), calves 12, abs 6, traps 0 (+1.5) |
+| Bikini | chest 3, back 10 (+6.5), shoulders 20 (+1.5), biceps 0 (+3.5), triceps 0 (+1.5), quads 7 (+3.5), hamstrings 14 (+7.5), glutes 21 (+8.5), calves 0, abs 6, traps 0 (+1.5) |
+| Wellness | chest 3, back 6 (+3.5), shoulders 3 (+4.5), biceps 0 (+3), triceps 0 (+3), quads 15 (+8.5), hamstrings 14 (+7.5), glutes 20 (+14), calves 6, abs 0, traps 0 |
+| Figure | chest 3 (+1.5), back 15 (+7.5), shoulders 25 (+8.5), biceps 6 (+7.5), triceps 7 (+5.5), quads 3 (+3.5), hamstrings 6 (+3.5), glutes 4 (+4.5), calves 6, abs 3, traps 0 (+3) |
+| Women's Physique | chest 6, back 14 (+3), shoulders 15 (+7.5), biceps 3 (+7), triceps 3 (+6), quads 12 (+3), hamstrings 10 (+5.5), glutes 8 (+6), calves 6, abs 3, traps 0 (+1.5) |
+| Women's Bodybuilding | chest 10, back 12 (+4.5), shoulders 12 (+9.5), biceps 6 (+6), triceps 6 (+8), quads 6 (+7.5), hamstrings 6 (+4.5), glutes 6 (+9), calves 12, abs 6, traps 0 (+1.5) |
 
 ## What the numbers show
 
@@ -34,11 +34,22 @@ column); the hand-written internal POOL carries none, so the POOL path reports
   directly with lateral raises. This is the spec "side delts in pressing
   programs" coverage signal, seen from the no-pressing side.
 
-## Not done in 3e (next increments)
+## Synergist trim (target subtraction) DONE
 
-- Subtracting indirect from direct TARGETS (so a muscle with high indirect
-  coverage needs fewer direct sets). Deferred because targets are set before
-  selection and indirect is only known after; needs a two-pass with the MEV
-  floor (phase 1) protected so nothing is under-dosed.
-- A hard coverage flag forcing isolation when indirect is near zero. The
-  reporting above is the measurement layer that flag will read.
+A synergist with heavy indirect coverage has its DIRECT target trimmed by a
+credit proportional to its driver compound (biceps from back at 0.4, triceps
+from chest at 0.5), floored at MEV + 2. Effective volume (direct + indirect),
+the correct adequacy measure, stays at or above MEV for every arm-judged
+division and day count. Example: Classic biceps target 12 trims to 10, and
+with the delivered-vs-target fix it delivers ~10, plus ~8 indirect.
+
+This was only safe AFTER the delivered-vs-target gap fix: before it, a trimmed
+target cratered DELIVERED volume (a discretisation cliff dropped a 5-set
+session from 2 exercises to 1). Arms are not judged in Bikini or Wellness, so
+their below-MEV arm volume is correct and is not asserted.
+
+## Not done in 3e
+
+- A hard coverage flag forcing isolation when indirect is near zero: largely
+  redundant with the matrix (every division already gets direct side delts),
+  low value, deferred.
