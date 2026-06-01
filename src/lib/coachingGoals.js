@@ -96,9 +96,18 @@ export const PHYSIQUE_GOALS = [
     label: "Women's Physique",
     group: 'Female',
     icon: 'ribbon-outline',
-    subtitle: 'Balanced muscle development with feminine lines. Most muscular of the female categories.',
+    subtitle: 'Balanced muscle development with feminine lines. More muscular than figure.',
     weakPointsEnabled: true,
     coachingNote: "Judged on muscle balance, conditioning and overall presentation. Full body development with all groups on show.",
+  },
+  {
+    value: 'womens_bodybuilding',
+    label: "Women's Bodybuilding",
+    group: 'Female',
+    icon: 'barbell-outline',
+    subtitle: 'Maximum muscular development and conditioning. The most muscular female category.',
+    weakPointsEnabled: true,
+    coachingNote: "Everything is judged. Volume is pushed across all muscle groups for full development and conditioning, the female analogue of open bodybuilding.",
   },
 ];
 
@@ -135,6 +144,7 @@ const _GOAL_LOCK_COMPETITION_VALUES = new Set([
   'bikini',
   'figure',
   'wellness',
+  'womens_bodybuilding',
 ]);
 
 export function shouldShowGoalLockOnboarding({ trainingGoal, trainingPhase, experience }) {
@@ -384,6 +394,7 @@ export const GOAL_OVERLAYS = {
   bikini: {
     glutes:      1.55,  // primary judging criterion
     hamstrings:  1.35,  // glute-ham tie-in
+    adductors:   1.10,  // inner-thigh / lower-body line
     side_delts:  1.15,  // capped shoulder look
     back:        1.10,
     rear_delts:  1.05,
@@ -400,6 +411,7 @@ export const GOAL_OVERLAYS = {
     glutes:      1.60,  // even more than bikini
     quads:       1.35,  // key differentiator from bikini
     hamstrings:  1.40,
+    adductors:   1.40,  // judged lower-body sweep, a Wellness driver
     side_delts:  1.10,
     back:        1.10,
     rear_delts:  1.05,
@@ -416,6 +428,7 @@ export const GOAL_OVERLAYS = {
     back:        1.25,
     rear_delts:  1.20,
     glutes:      1.25,
+    adductors:   1.10,
     hamstrings:  1.15,
     quads:       1.10,
     chest:       1.05,
@@ -439,6 +452,23 @@ export const GOAL_OVERLAYS = {
     rear_delts:  1.15,
     abs:         0.85,
     traps:       1.00,
+    adductors:   1.10,
+  },
+
+  womens_bodybuilding: {
+    back:        1.30,
+    side_delts:  1.25,
+    rear_delts:  1.20,
+    quads:       1.25,
+    hamstrings:  1.20,
+    glutes:      1.20,
+    chest:       1.15,
+    biceps:      1.20,
+    triceps:     1.20,
+    calves:      1.25,
+    abs:         1.10,
+    traps:       1.10,
+    adductors:   1.10,
   },
 };
 

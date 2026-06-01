@@ -138,17 +138,28 @@ function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase) 
       }
     }
   } else {
-    // 1. Physique-category overlay (mens_physique, bikini, etc.), bias
-    //    volume toward the muscles that drive that category's judging.
+    // 1. Physique-category overlay (mens_physique, bikini, etc.). Bias volume
+    //    toward the muscles that drive that category's judging. Priority
+    //    muscles (multiplier > 1.0) are placed INSIDE their working (MAV-MRV)
+    //    band, scaled by how strong the priority is, rather than multiplied up
+    //    from MEV. Anchoring at MEV was why lower-body emphasis never reached
+    //    the plate (coach-plan audit 2026-06-01): the science-individualised
+    //    MRV is the ceiling, the overlay only distributes volume within it.
     const overlay = GOAL_OVERLAYS[goal] ?? {};
+    const PRIORITY_NORM = 0.6; // multiplier delta that maps to the top of MAV-MRV
     for (const [m, mult] of Object.entries(overlay)) {
-      if (t[m] != null) {
+      if (t[m] == null) continue;
+      const lm = landmarks[m];
+      if (mult > 1.0) {
+        const frac = Math.min(1, (mult - 1) / PRIORITY_NORM);
+        t[m] = Math.round(lm.MAVlow + frac * (lm.MRV - lm.MAVlow));
+      } else {
+        // De-emphasised: scale down from the MEV floor (unchanged behaviour).
         t[m] = Math.round(t[m] * mult);
       }
     }
-    // 2. Phase overlay (strength_size's isolation reduction). Applied on
-    //    top of the goal overlay so a Men's Physique competitor on a
-    //    strength-size block still keeps the upper-body bias but with
+    // 2. Phase overlay (strength_size's isolation reduction), applied on top so
+    //    a competitor on a strength-size block keeps the category bias with
     //    less isolation work.
     const phaseOverlay = PHASE_OVERLAYS[phase] ?? {};
     for (const [m, mult] of Object.entries(phaseOverlay)) {
@@ -164,10 +175,18 @@ function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase) 
     t[m] = Math.min(t[m], cap);
   }
 
-  // Systemic ceiling: total sets ≤ 130
+  // Systemic ceiling: individualised to the user's recovery capacity rather
+  // than a flat 130 for everyone (coach-plan audit 2026-06-01). The per-muscle
+  // MRVs are already individualised by experience, recovery, age and nutrition
+  // in computeLandmarks, so a fraction of their sum is a recovery-scaled total
+  // cap: a beginner or poor-recovery user is held lower, an advanced
+  // good-recovery competitor higher. The 0.40 factor keeps an average
+  // intermediate near the previous 130.
+  const totalMRV = Object.values(landmarks).reduce((s, lm) => s + lm.MRV, 0);
+  const systemicCap = Math.round(totalMRV * 0.40);
   const total = Object.values(t).reduce((s, v) => s + v, 0);
-  if (total > 130) {
-    const scale = 130 / total;
+  if (total > systemicCap) {
+    const scale = systemicCap / total;
     for (const m of Object.keys(t)) {
       t[m] = Math.max(0, Math.round(t[m] * scale));
     }
@@ -1060,6 +1079,7 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
     wellness:              `Like bikini but with heavier lower-body emphasis overall. Quads as well as glutes and hamstrings are prioritised. Upper body is maintained with moderate volume to stay proportional.`,
     figure:                `Balanced upper and lower development with particular attention to shoulder width and back detail. A full, muscular look with symmetry across the entire physique.`,
     womens_physique:       `Greater overall muscle development than figure, with conditioning a key criterion. Sets are pushed higher across the board, with attention to the detail muscles that show best on stage.`,
+    womens_bodybuilding:   `Maximum female muscular development and conditioning, the most muscular division. Sets are pushed toward the upper range of what your body can recover from, with full development across every group and particular attention to back, shoulders and legs.`,
   };
   result.goal = goalMap[internalGoal] ?? goalMap[goal] ?? `Goal: ${GOAL_LABELS[goal] ?? goal}.`;
 
@@ -1396,6 +1416,7 @@ function _generatePlanInner(inputs) {
     wellness:             'Wellness',
     figure:               'Figure',
     womens_physique:      "Women's Physique",
+    womens_bodybuilding:  "Women's Bodybuilding",
   }[internalGoal] ?? 'Training';
 
   const splitShort = {
