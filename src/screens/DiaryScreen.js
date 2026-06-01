@@ -615,22 +615,33 @@ export default function DiaryScreen({ navigation }) {
   );
 }
 
+// Default daily hydration target until a per-user water target setting lands
+// (diary-tab redesign 2026-06-01: flagged as a small follow-up preference).
+const WATER_TARGET_ML = 3000;
+
 function WaterRow({ ml, onAdd, onSub }) {
-  const glasses = Math.round(ml / 250);
+  const litres = (ml / 1000).toFixed(1);
+  const targetL = (WATER_TARGET_ML / 1000).toFixed(1);
+  const progress = Math.max(0, Math.min(1, ml / WATER_TARGET_ML));
   return (
     <View style={styles.waterRow}>
-      <View style={styles.waterLeft}>
-        <Ionicons name="water-outline" size={18} color={colors.primary} />
-        <Text style={styles.waterLabel}>Water</Text>
-        <Text style={styles.waterValue}>{ml} ml · {glasses} glasses</Text>
+      <View style={styles.waterHeader}>
+        <View style={styles.waterLeft}>
+          <Ionicons name="water-outline" size={18} color={colors.primary} />
+          <Text style={styles.waterLabel}>Water</Text>
+        </View>
+        <View style={styles.waterButtons}>
+          <Text style={styles.waterValue}>{litres} / {targetL} L</Text>
+          <TouchableOpacity style={styles.waterBtn} onPress={onSub} hitSlop={8}>
+            <Ionicons name="remove" size={16} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.waterBtn} onPress={onAdd} hitSlop={8}>
+            <Ionicons name="add" size={16} color={colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
       </View>
-      <View style={styles.waterButtons}>
-        <TouchableOpacity style={styles.waterBtn} onPress={onSub} hitSlop={8}>
-          <Ionicons name="remove" size={16} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.waterBtn} onPress={onAdd} hitSlop={8}>
-          <Ionicons name="add" size={16} color={colors.textPrimary} />
-        </TouchableOpacity>
+      <View style={styles.waterTrack}>
+        <View style={[styles.waterFill, { width: `${Math.round(progress * 100)}%` }]} />
       </View>
     </View>
   );
@@ -721,18 +732,25 @@ const styles = StyleSheet.create({
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   macroRingsWrap: { marginBottom: spacing.lg },
   waterRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.surface, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.border,
     padding: spacing.md, marginBottom: spacing.lg,
+    gap: spacing.sm,
   },
-  waterLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
+  waterHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
+  waterLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   waterLabel: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
-  waterValue: { color: colors.textMuted, fontSize: fontSize.sm, marginLeft: spacing.sm },
-  waterButtons: { flexDirection: 'row', gap: spacing.sm },
+  waterValue: { color: colors.textMuted, fontSize: fontSize.sm, fontVariant: ['tabular-nums'], marginRight: spacing.xs },
+  waterButtons: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   waterBtn: {
     width: 36, height: 36, borderRadius: radius.md,
     backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
   },
-
+  waterTrack: {
+    height: 6, borderRadius: radius.full,
+    backgroundColor: colors.surface2, overflow: 'hidden',
+  },
+  waterFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
 });
