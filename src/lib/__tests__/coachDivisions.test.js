@@ -71,6 +71,12 @@ describe('Coach division contract', () => {
     expect(wp.shoulders).toBeGreaterThan(wp.quads);
   });
 
+  test('Men\'s Physique prioritises upper-chest incline work (stage 3 exercise bias)', () => {
+    const names = generatePlan(cfg('mens_physique')).workouts
+      .flatMap(w => w.exercises.map(e => e.exerciseName));
+    expect(names.some(n => /incline/i.test(n))).toBe(true);
+  });
+
   test('every division generates a non-empty plan with a recoverable session count', () => {
     for (const g of ['mens_physique', 'classic_physique', 'bodybuilding', 'bikini',
       'wellness', 'figure', 'womens_physique', 'womens_bodybuilding']) {

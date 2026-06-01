@@ -599,6 +599,21 @@ function filterPool(muscle, equipment, goal) {
   return pool.filter(e => e.eq.includes(equipment));
 }
 
+// Division-aware exercise priority (coach-plan audit 2026-06-01, stage 3).
+// A scoring nudge (not a hard filter) that favours the subregion the division
+// is judged on, within the muscle's existing volume. Width-judged divisions
+// favour incline (upper chest) and vertical pulls (lat width); the glute-led
+// divisions favour the glute-max (hip-thrust/hinge) pattern. Side-delt and
+// hamstring pools are already movement-specific, so they need no nudge.
+const DIVISION_SUBREGION_BIAS = {
+  mens_physique:    { chest: 'incline', back: 'vertical_pull' },
+  figure:           { chest: 'incline', back: 'vertical_pull' },
+  classic_physique: { back: 'vertical_pull' },
+  womens_physique:  { back: 'vertical_pull' },
+  bikini:           { glutes: 'glute_max' },
+  wellness:         { glutes: 'glute_max' },
+};
+
 // Deterministic index-based pick (no randomness)
 function pickAt(arr, index) {
   if (!arr || arr.length === 0) return null;
@@ -645,10 +660,16 @@ function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, 
   // Sort: required subregion first → compound before isolation → goal bias
   // → SFR tiebreak → pool index. Each term is an order of magnitude below
   // the previous so the established priority order is preserved.
+  const divBias = DIVISION_SUBREGION_BIAS[goal];
+  const preferredSub = divBias ? divBias[muscle] : null;
   function sortScore(e, idx) {
     const reqBonus   = requiredSubs.includes(e.sub) ? 0 : 100;
     const paramOrder = { heavy_compound: 0, mod_compound: 1, machine: 2, isolation: 3 };
     const paramBonus = (paramOrder[e.p] ?? 3) * 10;
+    // Division subregion nudge: half a param tier, enough to favour the judged
+    // subregion (e.g. incline chest for Men's Physique) without overriding the
+    // required-coverage or compound-first ordering.
+    const divBonus = (preferredSub && e.sub === preferredSub) ? -5 : 0;
     let goalBonus = 0;
     if (isStrengthGoal) {
       // Strength: nudge barbell/landmine compounds up a little.
@@ -660,7 +681,7 @@ function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, 
       // small enough to act only as a tiebreak within the same param tier.
       goalBonus = -(e.sfr / 10);
     }
-    return reqBonus + paramBonus + goalBonus + idx;
+    return reqBonus + paramBonus + divBonus + goalBonus + idx;
   }
 
   const sorted = available
