@@ -607,7 +607,6 @@ export function getExerciseSubstitutes(targetExercise, allExercises, userEquipme
     targetExercise.primary_muscle ||
     ''
   ).toLowerCase();
-  const targetSFR = targetExercise.stimulusToFatigueRatio || targetExercise.stimulus_to_fatigue_ratio || 3;
   const targetFatigue = targetExercise.fatigueCost || targetExercise.fatigue_cost || 3;
   const targetStretch = targetExercise.tension_at_stretch || targetExercise.tensionAtStretch || 'medium';
   const targetId = targetExercise.id;
@@ -915,7 +914,6 @@ export function computeAdaptiveLandmarks(history = [], baseDefaults = VOLUME_LAN
     })).sort((a, b) => b.quality - a.quality);
 
     const bestVolume = scoredEntries[0]?.volume || base.mav;
-    const worstVolume = scoredEntries[scoredEntries.length - 1]?.volume || base.mrv;
 
     adapted[muscle] = {
       mev: Math.max(0, base.mev + adjustment),
