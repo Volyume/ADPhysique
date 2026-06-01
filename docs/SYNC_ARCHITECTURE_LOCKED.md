@@ -18,6 +18,34 @@ src/lib/sync/
 └── telemetry.js          -- emit sync events to Sentry + engine_telemetry_daily
 ```
 
+## Two paths run in one cycle (migration state)
+
+The registry/transport modules above are one of **two** sync paths that
+both run inside a single `syncAll`. The split is by domain, not a race:
+each table is owned by exactly one path.
+
+- **Registry path (this doc).** `src/lib/sync/` drives the 16 tables in
+  `MIGRATED_TABLES` (`transport.js`): the food domain, `weekly_checkins_v2`,
+  `body_composition_log`, `weight_log`, `nutrition_targets`, `profiles`,
+  `ed_pattern_flags`, `tier_history`, `daily_steps`,
+  `notification_preferences`, `recipe_ingredients`. Per-table handlers,
+  the `sync_queue` offline queue, and per-column conflict resolution.
+- **Legacy path.** `src/lib/sync.js` (`bulkUploadLocalData` + `pullFromCloud`)
+  still owns the **training** tables that are not in the registry:
+  workouts, workout_sets, routines, mesocycles, exercises and friends. Its
+  offline queue is a separate SQLite table, `pending_sync_ops`, driven by
+  `src/lib/syncQueue.js` with its own backoff schedule (A2-061).
+
+So there are two offline-queue implementations (`sync_queue` and
+`pending_sync_ops`) and two push/pull implementations alive at once. This is
+the deliberate mid-migration state, not a bug: `runner.js` calls the registry
+handlers for `MIGRATED_TABLES` and the legacy helpers for the rest in the
+same cycle. To find which path owns a table, check `MIGRATED_TABLES` in
+`transport.js`. The migration finishes by moving the training tables into the
+registry and deleting `sync.js`'s `bulkUploadLocalData`/`pullFromCloud` and
+the `pending_sync_ops` queue. Until then, a change to sync behaviour for a
+given table must be made in that table's path only (audit A2-029 / A2-061).
+
 ## The table registry
 
 A single file lists every syncable table with its sync metadata.

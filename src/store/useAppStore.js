@@ -747,7 +747,7 @@ const useAppStore = create((set, get) => ({
     }));
   },
 
-  // Subscribers (Athlete Hub volume chart, etc.) read this to know
+  // Subscribers (the inline volume charts, etc.) read this to know
   // when to re-fetch their aggregates. Bump it on every set logged so
   // visible charts can refresh live during a workout instead of waiting
   // for the next screen focus.
