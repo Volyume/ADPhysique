@@ -99,8 +99,9 @@ architectures), A2-020 (CSPRNG, needs the native dep), and Tier 5 #3/#4/#5
 
 Repo at session end: `main` at this doc commit on top of `0c8738b`, 0/0 with
 origin, suite green (2352 passing; the count moved as dead screen-mount cases
-were removed and uuid tests added), 0 lint errors. Migrations unchanged this
-session (048, 050-055, 058 still pending founder apply; 049 held).
+were removed and uuid tests added), 0 lint errors. Migrations 048, 050-055,
+058 were applied by the founder on 2026-06-01 (so 037-048, 050-058 are live);
+049 stays held until the next AAB ships.
 
 ### 0.0000000000001. 2026-05-31 (master-audit remediation, Claude): Tier 1 closed, Tier 2 in progress. Paused for a fresh restart tomorrow.
 
@@ -788,17 +789,17 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 | 045 | users_profile.column_updates_at jsonb + safe-merge trigger | Applied 2026-05-26 |
 | 046 | recipe_ingredients.updated_at + deleted_at + trigger | Applied 2026-05-26 |
 | 047 | body_metrics + weekly_checkins_v2 updated_at/deleted_at + triggers + partial live index | Applied 2026-05-27 |
-| 048 | food_favourites.kind column + CHECK constraint (powers the fav/dislike toggle) | **Pending founder apply.** Verification query in `supabase/README.md`. Old AAB compatible (DEFAULT 'fav'). |
+| 048 | food_favourites.kind column + CHECK constraint (powers the fav/dislike toggle) | **Applied 2026-06-01.** Verification query in `supabase/README.md`. Old AAB compatible (DEFAULT 'fav'). |
 | 049 | Drop peak_week_plans | **Drafted, held.** Do not apply until the next AAB ships (frozen build still references the table). |
-| 050 | weekly_checkins_v2.cardio_adherence (additive, nullable) | **Pending founder apply.** Backs GAP row 4 cardio adherence. Old AAB compatible. Verification in `supabase/README.md`. |
-| 051 | food_frequents table + RLS + nightly pg_cron worker + food_frequents_pull RPC (Frequents tab, GAP row 28) | **Pending founder apply.** Fully additive; outside the food sync cycle. Until applied the Frequents tab shows its empty state. Verification in `supabase/README.md` § Verify food_frequents. |
-| 052 | daily_water reconcile (adds back the drifted `entry_date` column) | **Pending founder apply, HIGH PRIORITY.** Fixes the live "Sync error" badge + Sentry `foodDomain.push` spam: the live `daily_water` lost `entry_date`, so `food_sync_push` 42703s and fails every sync run. Guarded drop+recreate, no-op if already healthy, no data loss (never synced). Verification in `supabase/README.md` § Verify daily_water reconcile. |
-| 053 | device_push_tokens table (composite PK + RLS + touch trigger) for the Expo remote-push pipeline (GAP rows 9-11) | **Pending founder apply.** Fully additive; the frozen AAB has no writer. Also needs `extra.eas.projectId` in app.json before any token can be obtained. Verification in `supabase/README.md` § Verify device_push_tokens. |
-| 054 | workout_sets.left_reps + right_reps (nullable) for per-side unilateral logging (GAP row 20) | **Pending founder apply.** Additive; `actual_reps` unchanged so volume/PR/progression are unaffected. Apply before the next AAB ships. Verification in `supabase/README.md` § Verify workout_sets unilateral. |
-| 055 | users_profile.diet_preference text DEFAULT 'omnivore' (curated meal-suggestion diet filter) | **Pending founder apply.** Additive + defaulted; joins the migration-045 per-column merge set. Must precede the next AAB (the new profile pull selects the column). Verification in `supabase/README.md` § Verify users_profile.diet_preference. |
+| 050 | weekly_checkins_v2.cardio_adherence (additive, nullable) | **Applied 2026-06-01.** Backs GAP row 4 cardio adherence. Old AAB compatible. Verification in `supabase/README.md`. |
+| 051 | food_frequents table + RLS + nightly pg_cron worker + food_frequents_pull RPC (Frequents tab, GAP row 28) | **Applied 2026-06-01.** Fully additive; outside the food sync cycle. Frequents cache seeded via `refresh_food_frequents()`. Verification in `supabase/README.md` § Verify food_frequents. |
+| 052 | daily_water reconcile (adds back the drifted `entry_date` column) | **Applied 2026-06-01.** Cleared the live "Sync error" badge + Sentry `foodDomain.push` spam: the live `daily_water` had lost `entry_date`, so `food_sync_push` 42703'd and failed every sync run. Guarded drop+recreate, no-op if already healthy, no data loss (never synced). Verification in `supabase/README.md` § Verify daily_water reconcile. |
+| 053 | device_push_tokens table (composite PK + RLS + touch trigger) for the Expo remote-push pipeline (GAP rows 9-11) | **Applied 2026-06-01.** Fully additive; the frozen AAB has no writer. Also needs `extra.eas.projectId` in app.json before any token can be obtained. Verification in `supabase/README.md` § Verify device_push_tokens. |
+| 054 | workout_sets.left_reps + right_reps (nullable) for per-side unilateral logging (GAP row 20) | **Applied 2026-06-01.** Additive; `actual_reps` unchanged so volume/PR/progression are unaffected. Apply before the next AAB ships. Verification in `supabase/README.md` § Verify workout_sets unilateral. |
+| 055 | users_profile.diet_preference text DEFAULT 'omnivore' (curated meal-suggestion diet filter) | **Applied 2026-06-01.** Additive + defaulted; joins the migration-045 per-column merge set. Must precede the next AAB (the new profile pull selects the column). Verification in `supabase/README.md` § Verify users_profile.diet_preference. |
 | 056 | daily_steps table (composite PK + RLS + LWW touch trigger) for the cardio/steps activity store | **Applied 2026-05-30.** Fully additive. Bidirectional sync via `src/lib/sync/tables/dailySteps.js`. Verification in `supabase/README.md` § Verify daily_steps. |
 | 057 | food_entries.meal_slot CHECK relaxed to allow 'preworkout' + 'postworkout' (peri-workout diary sections) | **Applied 2026-05-30.** Purely additive; the four original slots still pass, so the frozen AAB keeps syncing. Verification in `supabase/README.md` § Verify peri-workout meal slots. |
-| 058 | weekly_checkins_v2.steps_avg (nullable integer): the week's average steps the coach reads as a secondary signal (auto when 4+ days registered, else the manual check-in figure) | **Pending founder apply.** Additive + nullable, frozen-AAB safe (mirrors 050). The per-table weekly-checkins push ships `steps_avg`; without the column the push is rejected. Verification in `supabase/README.md` § Verify weekly_checkins_v2.steps_avg. |
+| 058 | weekly_checkins_v2.steps_avg (nullable integer): the week's average steps the coach reads as a secondary signal (auto when 4+ days registered, else the manual check-in figure) | **Applied 2026-06-01.** Additive + nullable, frozen-AAB safe (mirrors 050). The per-table weekly-checkins push ships `steps_avg`; without the column the push is rejected. Verification in `supabase/README.md` § Verify weekly_checkins_v2.steps_avg. |
 
 ---
 

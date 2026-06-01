@@ -18,9 +18,9 @@ unless the file header says otherwise.
 > § 3. This table is the apply-order and verification playbook for every
 > migration from 037 onward; a row appearing here does not by itself mean
 > the migration is still unapplied. Per CURRENT_STATUS § 3, migrations
-> 037-047 and 056-057 are applied; 048, 050-055 and 058 are pending founder
-> apply (049 is held). Apply the pending ones in numeric order in the SQL
-> Editor.
+> 037-048, 050-058 are applied (the 048, 050-055, 058 set was applied by the
+> founder on 2026-06-01); 049 remains held until the next AAB ships. Apply
+> any future migration in numeric order in the SQL Editor.
 
 | # | File | What it adds | Verification query |
 |---|---|---|---|
@@ -52,14 +52,14 @@ unless the file header says otherwise.
 
 ## How to apply
 
+Migrations 037-048 and 050-058 are applied (founder applied the 048,
+050-055, 058 set on 2026-06-01). 049 is held until the next AAB ships. This
+playbook stands for any future migration; apply in numeric order in the SQL
+Editor. After applying 051, `SELECT refresh_food_frequents();` was run once
+to seed the cache.
+
 1. Open the Supabase Dashboard → SQL Editor → New query.
-2. Open one migration file at a time from this folder (numeric
-   order: 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048,
-   050, 051, 052, 053, 054, 055, 056; 049 held). 051 and 052 are independent
-   and can go any time. 052 fixes the live Sync error and should go ASAP.
-   After 051, run `SELECT refresh_food_frequents();` once to seed the
-   cache. 055 must precede the next AAB (the new profile pull selects
-   `diet_preference`).
+2. Open one migration file at a time from this folder in numeric order.
 3. Paste the full contents into the SQL Editor.
 4. Click **Run**. The migrations are wrapped in `CREATE OR REPLACE
    FUNCTION` / `CREATE TABLE IF NOT EXISTS`, so re-running an
