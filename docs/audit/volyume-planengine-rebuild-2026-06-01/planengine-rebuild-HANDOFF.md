@@ -18,7 +18,7 @@ section 8 before touching code.
   directive `claude/github-origin-main-DV8YC` was surfaced and NOT followed, by
   founder governance. Confirm again on resume.)
 - HEAD: `a876354`, in sync with `origin/main` (ahead/behind 0/0), tree clean.
-- Test suite: 146 suites, 2495 pass, 3 skipped, 0 fail.
+- Test suite: 148 suites, 2533 pass, 3 skipped, 0 fail.
 - Run the suite: `npx jest`. Run one file: `npx jest <path>`.
 
 ### Commits that make up this work (newest first)
@@ -237,16 +237,21 @@ REMAINING:
 - 3f Coverage warnings scoped to split type. NOTE: `buildWarnings` in the engine
   only emits recovery/experience warnings. The per-session coverage cues live in
   the app's session/coaching layer, OUTSIDE planEngine.js. Locate them first.
-- Phase 4 weak-point cap-flexing: INVESTIGATED (doc 06). The per-session cap-flex
-  and the overlay division-aware MRV cap were both built, MEASURED inert, and
-  reverted (the engine already gives the weak muscle a 3rd session, so the cap
-  never binds). THE REAL LEVER: the `weak_point` phase bypasses the
-  DIVISION_MATRIX (`matrixCell` only when `phase !== 'weak_point'`), so a
-  weak-point plan loses its division split and delivers LESS for an already-
-  emphasised muscle (Bikini glutes base 23 -> WP 19). Next session: route
-  weak_point through the matrix so the two systems compose, then re-apply the
-  overlay division-aware MRV fix (a real latent bug: Bikini WP glute should
-  reach ~30, not clamp to 16). See doc 06.
+- Phase 4 weak-point composition: DONE (doc 06 = investigation, doc 07 = the
+  fix; benchmark planengineRebuildPhase4.test.js, 21 tests). The weak_point phase
+  now USES the DIVISION_MATRIX, so the six specialised divisions keep their split
+  (V-Taper / X-Frame / Glute Focus / Lower Focus) under weak-point. Mechanism:
+  (a) buildFromMatrix gives a weak-point muscle extra sessions; (b) buildSession
+  flexes its per-session cap 8 -> 12; (c) the overlay uses the division-aware MRV
+  and never reduces a muscle; (d) boost raised to ~70% of the gap to MRV. Result:
+  Bikini glutes 23 -> 24 (was REDUCING to 19), MP glutes 3 -> 14 keeping shoulder
+  dominance, all respect MRV. The earlier "cap-flex inert" finding was true only
+  in isolation: with the matrix split delivering a high target, the cap-flex and
+  augmentation now bind. RESIDUAL (pre-existing, not worsened): non-matrix
+  divisions (general/BB/WBB) still use legacy upper_lower_wp; the dedicated WP day
+  is now clamped to MRV but the base UL can push a glute weak-point to ~19 vs the
+  generic MRV 16. Clean fix = put those divisions in the matrix too (moves the
+  planEngine general->ppl split test). Deferred, see doc 07.
 - Phase 4 other (double progression, mesocycle accessory rotation, deload
   triggers): RUNTIME / app-layer (workout logging, multi-week state), NOT
   single-plan generation. Outside planEngine.js.

@@ -175,8 +175,15 @@ function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase) 
     for (const m of weakPointKeys) {
       if (t[m] == null) continue;
       const lm = landmarks[m];
-      const bonus = Math.max(2, Math.round((lm.MRV - t[m]) * 0.4));
-      const next = Math.min(lm.MRV, t[m] + bonus);
+      // Use the division-aware ceiling so weak-pointing a muscle the division
+      // already trains hard (e.g. Bikini glutes near 30) raises it rather than
+      // clamping to the generic MRV. Never reduces the muscle.
+      const mrvCap = divisionMRV(m, goal, lm);
+      // Specialisation pushes the lagging muscle hard toward its MRV (Helms):
+      // close ~70% of the gap, not a token bump. Bounded by MRV and by the
+      // systemic-offset trim below so the recovery envelope is held.
+      const bonus = Math.max(2, Math.round((mrvCap - t[m]) * 0.7));
+      const next = Math.max(t[m], Math.min(mrvCap, t[m] + bonus));
       added += next - t[m];
       t[m] = next;
     }
@@ -262,6 +269,15 @@ const SIDE_REAR_DELT_CAP = 26;
 // report indirect volume and to flag muscles whose only coverage is indirect.
 const INDIRECT_SET_FRACTION = 0.5;
 
+// Division-aware weekly MRV ceiling. Glutes get the higher Bikini/Wellness cap
+// (spec: ~30 weekly split across Contreras exercise types) versus RP's general
+// MRV of 16. Shared by the floor/cap pass and the weak-point overlay so a
+// weak-pointed glute is not clamped to 16 in a division that allows 30.
+function divisionMRV(muscle, goal, lm) {
+  if (muscle === 'glutes' && (goal === 'bikini' || goal === 'wellness')) return 30;
+  return lm.MRV;
+}
+
 // Buffer kept above MEV when trimming a synergist for its indirect volume, so
 // the trimmed direct target never reaches the bare minimum (spec phase 3e).
 const INDIRECT_TRIM_BUFFER = 2;
@@ -316,12 +332,10 @@ function enforceWeeklyFloorsAndCaps(weeklyTargets, goal, effectiveDays, weakPoin
   // Per-muscle MRV cap. Glutes get a higher ceiling for the lower-body
   // divisions, where the spec allows ~30 weekly sets split across glute
   // exercise types (Contreras), versus RP's general MRV of 16 elsewhere.
-  const lowerGluteDivision = goal === 'bikini' || goal === 'wellness';
   for (const m of Object.keys(t)) {
     const lm = SPEC_LANDMARKS[m];
     if (!lm) continue;
-    const cap = (m === 'glutes' && lowerGluteDivision) ? 30 : lm.MRV;
-    t[m] = Math.min(t[m], cap);
+    t[m] = Math.min(t[m], divisionMRV(m, goal, lm));
   }
 
   // Combined delt-complex cap (side + rear + front folded into 26).
@@ -518,6 +532,13 @@ const POOL = {
 // supplied. The founder's choice was generate + per-muscle fallback: a
 // muscle the library covers thinly keeps POOL's entries for that muscle.
 let _effectivePool = POOL;
+
+// Weak-point muscles for the current run (internal keys). Set in generatePlan,
+// restored after, like _effectivePool. buildSession flexes the per-session cap
+// for these, and buildFromMatrix gives them extra sessions, so a weak-point
+// muscle can actually deliver its boosted volume while the division split is
+// preserved.
+let _weakPointKeys = [];
 
 // Minimum library entries per muscle before we trust the generated pool for
 // that muscle; below this we fall back to POOL's hand-written entries.
@@ -1012,7 +1033,12 @@ function buildSession(name, muscles, sessionsPerMuscle, weeklyTargets, equipment
   for (const muscle of muscles) {
     const wTarget = weeklyTargets[muscle] ?? 0;
     const sessions = sessionsPerMuscle[muscle] ?? 1;
-    const sessionTarget = Math.min(8, Math.round(wTarget / sessions));
+    // Per-session cap (spec section B). 8 sets/muscle/session is the productive
+    // ceiling (Brigatto/Nippard); a weak-point muscle flexes to 12 so its
+    // boosted weekly volume can be expressed instead of being clipped at 8. The
+    // weekly MRV cap still bounds the total.
+    const sessionCap = _weakPointKeys.includes(muscle) ? 12 : 8;
+    const sessionTarget = Math.min(sessionCap, Math.round(wTarget / sessions));
     if (sessionTarget < 2) continue;
 
     const usedNames = usedNamesByMuscle[muscle] ?? new Set();
@@ -1197,7 +1223,35 @@ function buildWeakPointDay(weakPointKeys, weeklyTargets, landmarks, equipment, g
 function buildUpperLowerWPWorkouts(weeklyTargets, landmarks, equipment, goal, weakPointKeys, experience, nutritionPhase) {
   const base = buildUpperLowerWorkouts(weeklyTargets, landmarks, equipment, goal, experience, nutritionPhase);
   const wpDay = buildWeakPointDay(weakPointKeys, weeklyTargets, landmarks, equipment, goal, experience, nutritionPhase);
-  return [...base, wpDay];
+  const all = [...base, wpDay];
+
+  // The base upper/lower already delivers the weak muscle's boosted weekly
+  // target; the dedicated weak-point day adds more on top. Clamp the total to
+  // MRV so a specialisation never exceeds the recoverable ceiling (the WP day
+  // is trimmed first, keeping a 3-set minimum, then dropped if still over).
+  for (const m of weakPointKeys) {
+    const lm = landmarks[m];
+    if (!lm) continue;
+    const cap = divisionMRV(m, goal, lm);
+    let total = 0;
+    for (const w of all) for (const ex of w.exercises) if (ex._muscle === m) total += ex.sets;
+    let excess = total - cap;
+    if (excess <= 0) continue;
+    const wpExs = wpDay.exercises.filter(ex => ex._muscle === m);
+    for (const ex of wpExs) {
+      if (excess <= 0) break;
+      const cut = Math.min(ex.sets - 3, excess);
+      if (cut > 0) { ex.sets -= cut; excess -= cut; }
+    }
+    if (excess > 0) {
+      // Still over: drop the smallest WP-day entries for this muscle.
+      wpDay.exercises = wpDay.exercises.filter(ex => {
+        if (ex._muscle === m && excess > 0) { excess -= ex.sets; return false; }
+        return true;
+      });
+    }
+  }
+  return all;
 }
 
 // ---------------------------------------------------------------------------
@@ -1412,6 +1466,25 @@ function buildFromMatrix(sessionsIn, weeklyTargets, landmarks, equipment, goal, 
     const wantUpper = UPPER_MUSCLES.has(m);
     const target = sessions.find(s => s.muscles.some(x => UPPER_MUSCLES.has(x) === wantUpper)) ?? sessions[0];
     target.muscles.push(m);
+  }
+
+  // Weak-point session augmentation (spec section B, the "add a session" option
+  // composed with the division split). A weak-point muscle's boosted weekly
+  // target needs enough sessions to deliver at <= ~9 sets each. Add the weak
+  // muscle to further sessions (it appears earlier = higher priority in those)
+  // until it has enough, so the boost lands without losing the division split.
+  for (const m of _weakPointKeys) {
+    const wTarget = weeklyTargets[m] ?? 0;
+    if (wTarget <= 0) continue;
+    const desired = Math.min(sessions.length, Math.max(2, Math.ceil(wTarget / 9)));
+    let have = sessions.filter(s => s.muscles.includes(m)).length;
+    if (have >= desired) continue;
+    for (const s of sessions) {
+      if (have >= desired) break;
+      if (s.muscles.includes(m)) continue;
+      s.muscles.unshift(m);  // lead the session: weak point gets first pick
+      have += 1;
+    }
   }
 
   const sessionsPerMuscle = {};
@@ -1810,11 +1883,13 @@ export function generatePlan(inputs) {
   // the module stays stateless between runs (try/finally guards a throw).
   // No library (every existing unit test) means _effectivePool stays POOL.
   const prevPool = _effectivePool;
+  const prevWeakPoints = _weakPointKeys;
   _effectivePool = buildEffectivePool(inputs?.exerciseLibrary);
   try {
     return _generatePlanInner(inputs);
   } finally {
     _effectivePool = prevPool;
+    _weakPointKeys = prevWeakPoints;
   }
 }
 
@@ -1837,6 +1912,7 @@ function _generatePlanInner(inputs) {
   // Cap weak points at 3 for determinism
   const safeWeakPointsUI = weakPoints.slice(0, 3);
   const weakPointKeys    = resolveWeakPointKeys(safeWeakPointsUI);
+  _weakPointKeys = weakPointKeys;  // visible to buildSession / buildFromMatrix
 
   // Beginners capped at 4 days
   const effectiveDays = (experience === 'beginner' && daysPerWeek > 4) ? 4 : daysPerWeek;
@@ -1854,9 +1930,11 @@ function _generatePlanInner(inputs) {
 
   // Phase 2: the six specialised divisions select their split + session
   // composition from the division x day-count matrix (division-first). General,
-  // Bodybuilding, Women's Bodybuilding and the weak_point phase keep the legacy
-  // day-count split selector.
-  const matrixCell = (phase !== 'weak_point' && DIVISION_MATRIX[goal])
+  // Bodybuilding and Women's Bodybuilding keep the legacy day-count selector.
+  // The weak_point phase ALSO uses the matrix (phase 4): it keeps the division
+  // split and layers the weak-point boost + extra weak-muscle sessions on top,
+  // instead of dropping to a generic upper/lower that loses division character.
+  const matrixCell = DIVISION_MATRIX[goal]
     ? DIVISION_MATRIX[goal][effectiveDays]
     : null;
   const splitType = matrixCell
