@@ -64,9 +64,9 @@ Delt complex (side+rear+front) capped at a combined 26.
 | Bodybuilding | 10 | 12 | 18 | 6 | 6 | 10 | 8 | 6 | 12 | 6 | 0 |
 | Bikini | 3 | 13 | 17 | 0 | 0 | 7 | 14 | 21 | 0 | 6 | 0 |
 | Wellness | 3 | 7 | 9 | 0 | 0 | 15 | 12 | 17 | 7 | 0 | 0 |
-| Figure | 3 | 15 | 25 | 6 | 7 | 3 | 6 | 4 | 6 | 3 | 0 |
+| Figure | 3 | 15 | 25 | 6 | 7 | 6 | 6 | 4 | 6 | 3 | 0 |
 | Women's Physique | 6 | 14 | 12 | 3 | 3 | 12 | 10 | 9 | 6 | 3 | 0 |
-| Women's Bodybuilding | 10 | 12 | 12 | 6 | 6 | 6 | 12 | 6 | 12 | 6 | 0 |
+| Women's Bodybuilding | 10 | 12 | 12 | 6 | 6 | 12 | 12 | 6 | 12 | 6 | 0 |
 
 ## Assumptions and known gaps (flagged, spec rule)
 

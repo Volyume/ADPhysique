@@ -235,12 +235,14 @@ describe('Full verification export', () => {
   out.push('  these in the matrix) changes their non-weak-point split label and is deferred.');
   out.push('- The six specialised divisions (MP, Classic, Bikini, Wellness, Figure, W.');
   out.push('  Physique) route weak-point through the matrix and respect MRV exactly.');
-  out.push('- TIME OVERAGE: Women\'s Bodybuilding (the highest-volume division) at 3 days');
-  out.push('  runs ~97-min sessions for a 75-min preference. Its weekly volume (~28');
-  out.push('  sets/session over 3 days) does not compress further without dropping a');
-  out.push('  muscle, which the engine refuses to do. The fix is more days or a longer');
-  out.push('  session preference, not a builder change. All sets, MRV and coverage are');
-  out.push('  correct; only the time estimate runs over.');
+  out.push('- TIME OVERAGE (Women\'s Bodybuilding only): the highest-volume division runs');
+  out.push('  ~96-97-min sessions for a 75-min preference, its leg days at 5-6 days (12');
+  out.push('  quad + 12 ham + glute + calf sets, the full leg development the division is');
+  out.push('  judged on) and its 3-day full body. 3-day non-matrix plans are now budget-');
+  out.push('  compressed (accessories toward MEV), which brought general/BB under; WBB\'s');
+  out.push('  leg volume is deliberate and does not compress without dropping judged');
+  out.push('  muscle, so the honest fix is more days or a longer session preference. All');
+  out.push('  sets, MRV and coverage are correct; only the time estimate runs over.');
   out.push('');
 
   it('writes the export', () => {

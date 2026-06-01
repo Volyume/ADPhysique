@@ -41,7 +41,7 @@ Structural gates that PASS in phase 2:
 | Classic Physique | 6 | X-Frame | Weighted Pull-Up | Pull / Push / Legs / Pull / Push / Legs + Abs |
 | Bodybuilding | 3 | full_body | Weighted Pull-Up | Full Body A / Full Body B / Full Body C |
 | Bodybuilding | 4 | upper_lower | Incline Barbell Bench Press | Upper A / Lower A / Upper B / Lower B |
-| Bodybuilding | 5 | balanced_ul | Barbell Hip Thrust | Lower A / Upper A / Lower B / Upper B / Upper C |
+| Bodybuilding | 5 | balanced_ul | Barbell Front Squat | Lower A / Upper A / Lower B / Upper B / Upper C |
 | Bodybuilding | 6 | ppl_ab | Incline Barbell Bench Press | Push A / Pull A / Legs A / Push B / Pull B / Legs B |
 | Bikini | 3 | Glute Focus | Barbell Hip Thrust | Glute Focus A / Upper (Delts + Width) / Glute Focus B |
 | Bikini | 4 | Glute Focus | Barbell Hip Thrust | Lower (Glute + Ham) / Upper (Delts + Back) / Lower (Glute + Quad) / Glutes (Pump) + Delts |
@@ -49,8 +49,8 @@ Structural gates that PASS in phase 2:
 | Bikini | 6 | Glute Focus | Barbell Hip Thrust | Glutes / Upper (Delt + Back) / Glutes / Lower (Quad) / Upper (Delt + Arm) / Glutes Pump + Abs |
 | Wellness | 3 | Lower Focus | Barbell Hip Thrust | Lower A (Glute + Ham) / Lower B (Quad + Adductor) / Upper (Delts + Back + Abs) |
 | Wellness | 4 | Lower Focus | Barbell Hip Thrust | Glute + Ham + Delts / Quad Sweep + Adductor / Glute (Medius) + Upper / Lower Full |
-| Wellness | 5 | Lower Focus | Barbell Hip Thrust | Glutes / Quads (Sweep) / Glute + Ham / Upper (Delts + Back + Arms) / Lower Full |
-| Wellness | 6 | Lower Focus | Barbell Hip Thrust | Glutes / Quads / Ham + Glute / Upper (Delts + Back + Arms) / Lower (Sweep) / Glute Pump + Abs |
+| Wellness | 5 | Lower Focus | Barbell Hip Thrust | Glutes / Quads (Sweep) / Glute + Ham / Upper (Delts + Back) / Lower Full + Arms |
+| Wellness | 6 | Lower Focus | Barbell Hip Thrust | Glutes / Quads / Ham + Glute / Upper (Delts + Back) / Lower (Sweep) / Glute Pump + Arms + Abs |
 | Figure | 3 | X-Frame | Cable Lateral Raise | Upper (Delt + Back Width) / Lower (Glute + Ham + Quad) / Upper (Delt + Arm + Abs) |
 | Figure | 4 | X-Frame | Weighted Pull-Up | Back + Rear Delt / Lower / Shoulders + Arms / Back Width + Abs |
 | Figure | 5 | X-Frame | Weighted Pull-Up | Pull / Legs / Delts + Arms / Pull / Lower (Glute-Ham) |
@@ -61,5 +61,5 @@ Structural gates that PASS in phase 2:
 | Women's Physique | 6 | V-Taper | Weighted Pull-Up | Pull / Push / Legs / Pull / Push / Legs |
 | Women's Bodybuilding | 3 | full_body | Weighted Pull-Up | Full Body A / Full Body B / Full Body C |
 | Women's Bodybuilding | 4 | upper_lower | Barbell Bench Press | Upper A / Lower A / Upper B / Lower B |
-| Women's Bodybuilding | 5 | balanced_ul | Barbell Hip Thrust | Lower A / Upper A / Lower B / Upper B / Upper C |
+| Women's Bodybuilding | 5 | balanced_ul | Barbell Front Squat | Lower A / Upper A / Lower B / Upper B / Upper C |
 | Women's Bodybuilding | 6 | ppl_ab | Barbell Bench Press | Push A / Pull A / Legs A / Push B / Pull B / Legs B |

@@ -124,7 +124,7 @@ function computeLandmarks(experience, recoveryRating, nutritionPhase, age) {
 // Goal overlays
 // ---------------------------------------------------------------------------
 
-function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase) {
+function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase, effectiveDays = 4) {
   const t = { ...weeklyTargets };
 
   const overlay = GOAL_OVERLAYS[goal] ?? {};
@@ -216,7 +216,20 @@ function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase) 
   // good-recovery competitor higher. The 0.40 factor keeps an average
   // intermediate near the previous 130.
   const totalMRV = Object.values(landmarks).reduce((s, lm) => s + lm.MRV, 0);
-  const systemicCap = Math.round(totalMRV * 0.40);
+  // A 3-day week cannot recover the same weekly volume as 4-6 days at the same
+  // per-session density (the productive ceiling per session is ~6-8 sets/muscle;
+  // a 3-day plan stacks too many sets per session otherwise). Tighten the
+  // systemic budget at <= 3 days so accessories sit nearer MEV than MAV and the
+  // dense full-body sessions of high-volume divisions fit the recoverable and
+  // time ceilings, instead of holding everything at MAV at a frequency that
+  // cannot support it.
+  // Only the non-matrix divisions (General, Bodybuilding, Women's Bodybuilding)
+  // run a 3-day full body that crams every muscle into each session; the matrix
+  // divisions are structured and do not. Tighten the budget at 3 days only for
+  // those, leaving the structured divisions (and their arm floors) untouched.
+  const compress3Day = effectiveDays <= 3 && !DIVISION_MATRIX[goal];
+  const systemicFactor = compress3Day ? 0.34 : 0.40;
+  const systemicCap = Math.round(totalMRV * systemicFactor);
   const total = Object.values(t).reduce((s, v) => s + v, 0);
   if (total > systemicCap) {
     const scale = systemicCap / total;
@@ -584,7 +597,13 @@ const SUBREGION_REQUIREMENTS = {
   // Quads: once volume is quad-emphasis (>= 14 weekly, Classic/Wellness/BB),
   // spread across a sweep-biased lift (knee-forward) and a general mass squat
   // so the two weekly sessions use different patterns (spec phase 3 benchmark).
-  quads:      { minSets: 14, required: ['sweep', 'vasti'] },
+  // Quads: spread across a sweep-biased lift and a general mass squat once the
+  // muscle is trained at MEV+ (8). This was minSets 14, which the systemic-cap-
+  // scaled quad target rarely reached, so quads got one exercise/session and
+  // under-delivered next to hamstrings (whose hip-extension+knee-flexion
+  // requirement triggers at 6). Lowered to 8 so quads and hams spread
+  // symmetrically and a mass division's quads reach parity with its hams.
+  quads:      { minSets: 8,  required: ['sweep', 'vasti'] },
   chest:      { minSets: 10, required: ['incline', 'flat'] },  // flat covers flat+lower
   rear_delts: { minSets: 6,  required: ['face_pull', 'horiz_abduction'] },
   triceps:    { minSets: 8,  required: ['overhead'] },
@@ -1186,7 +1205,10 @@ function buildUpperLowerWorkouts(weeklyTargets, landmarks, equipment, goal, expe
 // (Bikini, Wellness) pass lowerDays=3; balanced leg-judged divisions pass half.
 function buildWeightedUpperLower(weeklyTargets, landmarks, equipment, goal, experience, nutritionPhase, effectiveDays, lowerDays) {
   const upperMuscles = ['chest', 'back', 'traps', 'side_delts', 'rear_delts', 'front_delts', 'biceps', 'triceps'];
-  const lowerMuscles = ['glutes', 'hamstrings', 'quads', 'adductors', 'calves', 'abs'];
+  // Quads lead the lower day (squat), not glutes: this split serves the balanced
+  // mass divisions (Bodybuilding, Women's Bodybuilding), where the week should
+  // open on a major compound, not a hip thrust.
+  const lowerMuscles = ['quads', 'hamstrings', 'glutes', 'adductors', 'calves', 'abs'];
   const upperDays = Math.max(1, effectiveDays - lowerDays);
 
   const sessionsPerMuscle = {};
@@ -1447,16 +1469,16 @@ const DIVISION_MATRIX = {
       { name: 'Glutes', muscles: ['glutes', 'hamstrings'] },
       { name: 'Quads (Sweep)', muscles: ['quads', 'adductors', 'calves'] },
       { name: 'Glute + Ham', muscles: ['glutes', 'hamstrings'] },
-      { name: 'Upper (Delts + Back + Arms)', muscles: ['side_delts', 'back', 'biceps', 'triceps', 'abs'] },
-      { name: 'Lower Full', muscles: ['quads', 'glutes', 'calves'] },
+      { name: 'Upper (Delts + Back)', muscles: ['side_delts', 'back', 'abs'] },
+      { name: 'Lower Full + Arms', muscles: ['quads', 'glutes', 'calves', 'biceps', 'triceps'] },
     ],
     6: [
       { name: 'Glutes', muscles: ['glutes', 'hamstrings'] },
       { name: 'Quads', muscles: ['quads', 'adductors', 'calves'] },
       { name: 'Ham + Glute', muscles: ['hamstrings', 'glutes'] },
-      { name: 'Upper (Delts + Back + Arms)', muscles: ['side_delts', 'back', 'biceps', 'triceps', 'abs'] },
+      { name: 'Upper (Delts + Back)', muscles: ['side_delts', 'back', 'abs'] },
       { name: 'Lower (Sweep)', muscles: ['quads', 'glutes', 'calves'] },
-      { name: 'Glute Pump + Abs', muscles: ['glutes', 'abs'] },
+      { name: 'Glute Pump + Arms + Abs', muscles: ['glutes', 'biceps', 'triceps', 'abs'] },
     ],
   },
   figure: {
@@ -2048,7 +2070,7 @@ function _generatePlanInner(inputs) {
   // Apply goal overlay, then the spec's hard floors and caps (phase 1):
   // structural/judged muscles never zero, no muscle over MRV, delts capped at
   // a combined 26.
-  const overlaidTargets = applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase);
+  const overlaidTargets = applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase, effectiveDays);
   const adjustedTargets = enforceWeeklyFloorsAndCaps(overlaidTargets, goal, effectiveDays, weakPointKeys);
 
   // Build workouts

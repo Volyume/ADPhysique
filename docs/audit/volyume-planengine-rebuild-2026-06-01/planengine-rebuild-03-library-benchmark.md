@@ -24,9 +24,9 @@ Seed library parsed: 475 exercises.
 | Bodybuilding | upper_lower | Incline Barbell Bench Press | 94 | none | none | none |
 | Bikini | Glute Focus | Barbell Hip Thrust | 81 | none | none | none |
 | Wellness | Lower Focus | Barbell Hip Thrust | 72 | none | none | none |
-| Figure | X-Frame | Lat Pulldown (Wide Grip) | 78 | none | none | none |
+| Figure | X-Frame | Lat Pulldown (Wide Grip) | 81 | none | none | none |
 | Women's Physique | V-Taper | Lat Pulldown (Wide Grip) | 81 | none | none | none |
-| Women's Bodybuilding | upper_lower | Barbell Bench Press | 88 | none | none | none |
+| Women's Bodybuilding | upper_lower | Barbell Bench Press | 94 | none | none | none |
 
 ## POOL vs library path: same structural guarantees?
 
@@ -38,9 +38,9 @@ Seed library parsed: 475 exercises.
 | Bodybuilding | 94 | 94 | Incline Barbell Bench Press | Incline Barbell Bench Press |
 | Bikini | 81 | 81 | Barbell Hip Thrust | Barbell Hip Thrust |
 | Wellness | 70 | 72 | Barbell Hip Thrust | Barbell Hip Thrust |
-| Figure | 78 | 78 | Weighted Pull-Up | Lat Pulldown (Wide Grip) |
+| Figure | 81 | 81 | Weighted Pull-Up | Lat Pulldown (Wide Grip) |
 | Women's Physique | 78 | 81 | Weighted Pull-Up | Lat Pulldown (Wide Grip) |
-| Women's Bodybuilding | 88 | 88 | Barbell Bench Press | Barbell Bench Press |
+| Women's Bodybuilding | 94 | 94 | Barbell Bench Press | Barbell Bench Press |
 
 ## Bikini-vs-MP exercise overlap (the 3c gate target is < 30%)
 

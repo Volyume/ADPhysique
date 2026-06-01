@@ -15,15 +15,41 @@ exercise; arm-judged divisions keep biceps/triceps effective volume >= MEV.
 
 - programs generated and checked: **405**
 - HARD-check failures: **0**
-- programs with documented warnings: 4
+- programs with documented warnings: 30
 
 No hard-check failures across the full sweep.
 
 ### Documented warnings (not failures, see section 4)
-- womens_bodybuilding 3d intermediate: Full Body A 98min (volume-vs-time overage); Full Body B 100min (volume-vs-time overage)
+- womens_bodybuilding 3d advanced: Legs 98min (volume-vs-time overage)
+- womens_bodybuilding 4d advanced: Lower A 98min (volume-vs-time overage); Lower B 97min (volume-vs-time overage)
+- womens_bodybuilding 5d advanced: Lower A 98min (volume-vs-time overage); Lower B 97min (volume-vs-time overage)
+- womens_bodybuilding 6d advanced: Legs A 98min (volume-vs-time overage); Legs B 97min (volume-vs-time overage)
+- wellness 5d wp=Back Thickness: Lower Full + Arms 101min (volume-vs-time overage)
+- wellness 5d wp=Upper Chest: Lower Full + Arms 103min (volume-vs-time overage)
+- womens_bodybuilding 4d wp=Side Delts: Lower A 98min (volume-vs-time overage); Lower B 97min (volume-vs-time overage)
+- womens_bodybuilding 5d wp=Side Delts: Lower A 98min (volume-vs-time overage); Lower B 97min (volume-vs-time overage)
+- womens_bodybuilding 6d wp=Side Delts: Legs A 98min (volume-vs-time overage); Legs B 97min (volume-vs-time overage)
+- womens_bodybuilding 4d wp=Biceps: Lower A 98min (volume-vs-time overage); Lower B 97min (volume-vs-time overage)
+- womens_bodybuilding 5d wp=Biceps: Lower A 98min (volume-vs-time overage); Lower B 97min (volume-vs-time overage)
+- womens_bodybuilding 6d wp=Biceps: Legs A 98min (volume-vs-time overage); Legs B 97min (volume-vs-time overage)
+- womens_bodybuilding 4d wp=Triceps: Lower A 98min (volume-vs-time overage); Lower B 97min (volume-vs-time overage)
+- womens_bodybuilding 5d wp=Triceps: Lower A 98min (volume-vs-time overage); Lower B 97min (volume-vs-time overage)
+- womens_bodybuilding 6d wp=Triceps: Legs A 98min (volume-vs-time overage); Legs B 97min (volume-vs-time overage)
+- womens_bodybuilding 4d wp=Hamstrings: Lower A 98min (volume-vs-time overage); Lower B 97min (volume-vs-time overage)
+- womens_bodybuilding 5d wp=Hamstrings: Lower A 98min (volume-vs-time overage); Lower B 97min (volume-vs-time overage)
+- womens_bodybuilding 6d wp=Hamstrings: Legs A 98min (volume-vs-time overage); Legs B 97min (volume-vs-time overage)
 - womens_bodybuilding 4d wp=Quads: Lower A 98min (volume-vs-time overage); Lower B 97min (volume-vs-time overage)
 - womens_bodybuilding 5d wp=Quads: Lower B 97min (volume-vs-time overage)
 - womens_bodybuilding 6d wp=Quads: Legs A 98min (volume-vs-time overage); Legs B 97min (volume-vs-time overage)
+- womens_bodybuilding 4d wp=Calves: Lower A 98min (volume-vs-time overage); Lower B 97min (volume-vs-time overage)
+- womens_bodybuilding 5d wp=Calves: Lower A 98min (volume-vs-time overage); Lower B 97min (volume-vs-time overage)
+- womens_bodybuilding 6d wp=Calves: Legs A 98min (volume-vs-time overage); Legs B 97min (volume-vs-time overage)
+- womens_bodybuilding 4d wp=Rear Delts: Lower A 98min (volume-vs-time overage); Lower B 97min (volume-vs-time overage)
+- womens_bodybuilding 5d wp=Rear Delts: Lower A 98min (volume-vs-time overage); Lower B 97min (volume-vs-time overage)
+- womens_bodybuilding 6d wp=Rear Delts: Legs A 98min (volume-vs-time overage); Legs B 97min (volume-vs-time overage)
+- womens_bodybuilding 4d wp=Back Thickness: Lower A 98min (volume-vs-time overage); Lower B 97min (volume-vs-time overage)
+- womens_bodybuilding 5d wp=Back Thickness: Lower A 98min (volume-vs-time overage); Lower B 97min (volume-vs-time overage)
+- womens_bodybuilding 6d wp=Back Thickness: Legs A 98min (volume-vs-time overage); Legs B 97min (volume-vs-time overage)
 
 ## 2. Every base plan in full (intermediate)
 
@@ -33,7 +59,7 @@ No hard-check failures across the full sweep.
 - split: **full_body**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 60
   - **Full Body A** (66 min)
     - Lat Pulldown (Wide Grip): 5 x 8-12 [back]
-    - Barbell Back Squat: 3 x 5-9 [quads]
+    - Barbell Front Squat: 3 x 5-9 [quads]
     - Standing Calf Raise (Machine): 3 x 10-20 [calves]
     - Barbell Bench Press: 3 x 5-9 [chest]
     - Close-Grip Bench Press: 3 x 5-9 [triceps]
@@ -45,14 +71,14 @@ No hard-check failures across the full sweep.
     - Dumbbell Rear Delt Fly: 3 x 10-20 [rear_delts]
     - Barbell Hip Thrust: 3 x 5-9 [glutes]
   - **Full Body C** (72 min)
-    - Barbell Front Squat: 4 x 5-9 [quads]
+    - Cyclist Squat: 4 x 5-9 [quads]
     - Viking Press: 3 x 8-15 [side_delts]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Nordic Curl: 3 x 10-20 [hamstrings]
     - Barbell Curl: 3 x 10-20 [biceps]
     - EZ Bar Curl: 3 x 10-20 [biceps]
     - Cable Crunch: 3 x 10-20 [abs]
-  - weekly volume (direct, +indirect): chest 3 (+1.5), back 10 (+4.5), shoulders 13 (+9), biceps 6 (+5), triceps 3 (+5), quads 7 (+1.5), hamstrings 6 (+3), glutes 3 (+5), calves 6, abs 3, traps 0 (+1.5)
+  - weekly volume (direct, +indirect): chest 3 (+1.5), back 10 (+4.5), shoulders 13 (+9), biceps 6 (+5), triceps 3 (+5), quads 7 (+1.5), hamstrings 6 (+1.5), glutes 3 (+5), calves 6, abs 3, traps 0 (+1.5)
 
 #### General, 4 days
 - split: **upper_lower**  | lead: **Barbell Bench Press**  | total direct sets: 74
@@ -64,7 +90,7 @@ No hard-check failures across the full sweep.
     - Barbell Curl: 3 x 10-20 [biceps]
     - Close-Grip Bench Press: 3 x 5-9 [triceps]
   - **Lower A** (62 min)
-    - Barbell Back Squat: 4 x 5-9 [quads]
+    - Barbell Front Squat: 4 x 5-9 [quads]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Barbell Hip Thrust: 3 x 5-9 [glutes]
     - Standing Calf Raise (Machine): 4 x 10-20 [calves]
@@ -77,7 +103,7 @@ No hard-check failures across the full sweep.
     - EZ Bar Curl: 3 x 10-20 [biceps]
     - JM Press: 3 x 5-9 [triceps]
   - **Lower B** (57 min)
-    - Barbell Front Squat: 4 x 5-9 [quads]
+    - Barbell Back Squat: 4 x 5-9 [quads]
     - Nordic Curl: 3 x 10-20 [hamstrings]
     - Cable Pull-Through: 3 x 8-12 [glutes]
     - Standing Calf Raise (Barbell): 4 x 10-20 [calves]
@@ -85,7 +111,7 @@ No hard-check failures across the full sweep.
   - weekly volume (direct, +indirect): chest 6 (+3), back 10 (+4.5), shoulders 12 (+10), biceps 6 (+5), triceps 6 (+6), quads 8 (+1.5), hamstrings 6 (+5), glutes 6 (+5.5), calves 8, abs 6, traps 0 (+1.5)
 
 #### General, 5 days
-- split: **ppl**  | lead: **Barbell Bench Press**  | total direct sets: 67
+- split: **ppl**  | lead: **Barbell Bench Press**  | total direct sets: 70
   - **Push A** (41 min)
     - Barbell Bench Press: 3 x 5-9 [chest]
     - Machine Shoulder Press: 4 x 8-15 [side_delts]
@@ -95,8 +121,9 @@ No hard-check failures across the full sweep.
     - Face Pull: 3 x 10-20 [rear_delts]
     - Barbell Curl: 3 x 10-20 [biceps]
     - Rack Pull (Traps): 3 x 5-9 [traps]
-  - **Legs** (67 min)
-    - Barbell Back Squat: 4 x 5-9 [quads]
+  - **Legs** (79 min)
+    - Barbell Front Squat: 4 x 5-9 [quads]
+    - Barbell Back Squat: 3 x 5-9 [quads]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Nordic Curl: 3 x 10-20 [hamstrings]
     - Barbell Hip Thrust: 3 x 5-9 [glutes]
@@ -111,7 +138,7 @@ No hard-check failures across the full sweep.
     - Dumbbell Rear Delt Fly: 3 x 10-20 [rear_delts]
     - EZ Bar Curl: 3 x 10-20 [biceps]
     - Keg Carry: 3 x 8-12 [traps]
-  - weekly volume (direct, +indirect): chest 6 (+3), back 10 (+6), shoulders 14 (+11), biceps 6 (+5), triceps 6 (+7), quads 4 (+1.5), hamstrings 6 (+3.5), glutes 3 (+3.5), calves 3, abs 3 (+1.5), traps 6 (+1.5)
+  - weekly volume (direct, +indirect): chest 6 (+3), back 10 (+6), shoulders 14 (+11), biceps 6 (+5), triceps 6 (+7), quads 7 (+1.5), hamstrings 6 (+3), glutes 3 (+5), calves 3, abs 3 (+1.5), traps 6 (+1.5)
 
 #### General, 6 days
 - split: **ppl_ab**  | lead: **Barbell Bench Press**  | total direct sets: 82
@@ -125,7 +152,7 @@ No hard-check failures across the full sweep.
     - Barbell Curl: 3 x 10-20 [biceps]
     - Rack Pull (Traps): 3 x 5-9 [traps]
   - **Legs A** (62 min)
-    - Barbell Back Squat: 4 x 5-9 [quads]
+    - Barbell Front Squat: 4 x 5-9 [quads]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Barbell Hip Thrust: 3 x 5-9 [glutes]
     - Standing Calf Raise (Machine): 4 x 10-20 [calves]
@@ -140,7 +167,7 @@ No hard-check failures across the full sweep.
     - EZ Bar Curl: 3 x 10-20 [biceps]
     - Keg Carry: 3 x 8-12 [traps]
   - **Legs B** (57 min)
-    - Barbell Front Squat: 4 x 5-9 [quads]
+    - Barbell Back Squat: 4 x 5-9 [quads]
     - Nordic Curl: 3 x 10-20 [hamstrings]
     - Cable Pull-Through: 3 x 8-12 [glutes]
     - Standing Calf Raise (Barbell): 4 x 10-20 [calves]
@@ -284,7 +311,7 @@ No hard-check failures across the full sweep.
 ### Classic Physique
 
 #### Classic Physique, 3 days
-- split: **X-Frame**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 65
+- split: **X-Frame**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 68
   - **Upper (Back + Delt)** (72 min)
     - Lat Pulldown (Wide Grip): 4 x 8-12 [back]
     - Barbell Row (Bent Over): 3 x 5-9 [back]
@@ -292,8 +319,9 @@ No hard-check failures across the full sweep.
     - Incline Barbell Bench Press: 3 x 5-9 [chest]
     - Barbell Bench Press: 3 x 5-9 [chest]
     - EZ Bar Skull Crusher: 3 x 10-20 [triceps]
-  - **Lower (Sweep + Ham)** (75 min)
+  - **Lower (Sweep + Ham)** (87 min)
     - Barbell Front Squat: 4 x 5-9 [quads]
+    - Barbell Back Squat: 3 x 5-9 [quads]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Nordic Curl: 3 x 10-20 [hamstrings]
     - Barbell Hip Thrust: 3 x 5-9 [glutes]
@@ -309,7 +337,7 @@ No hard-check failures across the full sweep.
     - Dumbbell Skull Crusher: 3 x 10-20 [triceps]
     - Face Pull: 3 x 10-20 [rear_delts]
     - Dumbbell Rear Delt Fly: 3 x 10-20 [rear_delts]
-  - weekly volume (direct, +indirect): chest 12, back 13 (+4.5), shoulders 9 (+9), biceps 3 (+6.5), triceps 6 (+7.5), quads 4 (+1.5), hamstrings 6 (+1.5), glutes 3 (+3.5), calves 6, abs 3, traps 0 (+1.5)
+  - weekly volume (direct, +indirect): chest 12, back 13 (+4.5), shoulders 9 (+9), biceps 3 (+6.5), triceps 6 (+7.5), quads 7 (+1.5), hamstrings 6 (+3), glutes 3 (+5), calves 6, abs 3, traps 0 (+1.5)
 
 #### Classic Physique, 4 days
 - split: **X-Frame**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 79
@@ -343,7 +371,7 @@ No hard-check failures across the full sweep.
   - weekly volume (direct, +indirect): chest 7, back 16 (+4), shoulders 20 (+8.5), biceps 6 (+8), triceps 3 (+6.5), quads 7 (+1.5), hamstrings 8 (+3), glutes 3 (+3.5), calves 6, abs 3, traps 0 (+2)
 
 #### Classic Physique, 5 days
-- split: **X-Frame**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 98
+- split: **X-Frame**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 101
   - **Pull** (67 min)
     - Lat Pulldown (Wide Grip): 4 x 8-12 [back]
     - Barbell Row (Bent Over): 4 x 5-9 [back]
@@ -369,14 +397,15 @@ No hard-check failures across the full sweep.
     - Viking Press: 4 x 8-15 [side_delts]
     - Cable Lateral Raise: 4 x 10-20 [side_delts]
     - EZ Bar Curl: 5 x 10-20 [biceps]
-  - **Legs (Ham + Glute)** (67 min)
+  - **Legs (Ham + Glute)** (79 min)
     - Good Morning (Barbell): 4 x 5-9 [hamstrings]
     - Nordic Curl: 3 x 10-20 [hamstrings]
     - Barbell Hip Thrust: 3 x 5-9 [glutes]
     - Cyclist Squat: 3 x 5-9 [quads]
+    - Barbell Lunge: 3 x 5-9 [quads]
     - Standing Calf Raise (Barbell): 3 x 10-20 [calves]
     - Seated Machine Calf Raise: 3 x 10-20 [calves]
-  - weekly volume (direct, +indirect): chest 8 (+1.5), back 16 (+6), shoulders 22 (+11), biceps 10 (+8), triceps 6 (+7.5), quads 9 (+1.5), hamstrings 7 (+3), glutes 3 (+6.5), calves 14, abs 3, traps 0 (+2)
+  - weekly volume (direct, +indirect): chest 8 (+1.5), back 16 (+6), shoulders 22 (+11), biceps 10 (+8), triceps 6 (+7.5), quads 12 (+1.5), hamstrings 7 (+3), glutes 3 (+8), calves 14, abs 3, traps 0 (+2)
 
 #### Classic Physique, 6 days
 - split: **X-Frame**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 110
@@ -421,35 +450,33 @@ No hard-check failures across the full sweep.
 ### Bodybuilding
 
 #### Bodybuilding, 3 days
-- split: **full_body**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 75
-  - **Full Body A** (90 min)
-    - Lat Pulldown (Wide Grip): 4 x 8-12 [back]
+- split: **full_body**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 71
+  - **Full Body A** (92 min)
+    - Lat Pulldown (Wide Grip): 3 x 8-12 [back]
+    - Barbell Row (Bent Over): 3 x 5-9 [back]
     - Machine Shoulder Press: 3 x 8-15 [side_delts]
-    - Standing Calf Raise (Machine): 3 x 10-20 [calves]
-    - Seated Calf Raise: 3 x 10-20 [calves]
-    - Incline Barbell Bench Press: 3 x 5-9 [chest]
-    - Barbell Curl: 3 x 10-20 [biceps]
+    - Barbell Front Squat: 3 x 5-9 [quads]
+    - Barbell Bench Press: 3 x 5-9 [chest]
+    - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Face Pull: 3 x 10-20 [rear_delts]
     - Barbell Hip Thrust: 3 x 5-9 [glutes]
-    - Cable Crunch: 3 x 10-20 [abs]
-  - **Full Body B** (76 min)
-    - Barbell Row (Bent Over): 4 x 5-9 [back]
-    - Viking Press: 3 x 8-15 [side_delts]
+  - **Full Body B** (77 min)
+    - Lat Pulldown (Close Grip): 3 x 8-12 [back]
+    - Barbell Row (Supinated): 3 x 5-9 [back]
+    - Seated Calf Raise: 3 x 10-20 [calves]
     - Barbell Back Squat: 3 x 5-9 [quads]
-    - Barbell Bench Press: 3 x 5-9 [chest]
+    - Barbell Curl: 3 x 10-20 [biceps]
     - Nordic Curl: 3 x 10-20 [hamstrings]
-    - Dumbbell Rear Delt Fly: 3 x 10-20 [rear_delts]
     - EZ Bar Skull Crusher: 3 x 10-20 [triceps]
-  - **Full Body C** (84 min)
-    - Lat Pulldown (Close Grip): 4 x 8-12 [back]
-    - Standing Calf Raise (Barbell): 3 x 10-20 [calves]
-    - Seated Machine Calf Raise: 3 x 10-20 [calves]
-    - Barbell Front Squat: 3 x 5-9 [quads]
+    - Cable Crunch: 3 x 10-20 [abs]
+  - **Full Body C** (70 min)
+    - Viking Press: 5 x 8-15 [side_delts]
+    - Standing Calf Raise (Machine): 5 x 10-20 [calves]
+    - Incline Barbell Bench Press: 4 x 5-9 [chest]
     - EZ Bar Curl: 3 x 10-20 [biceps]
-    - Good Morning (Barbell): 3 x 5-9 [hamstrings]
-    - Cable Pull-Through: 3 x 8-12 [glutes]
+    - Cable Face Pull: 3 x 10-20 [rear_delts]
     - Dumbbell Skull Crusher: 3 x 10-20 [triceps]
-  - weekly volume (direct, +indirect): chest 6, back 12 (+4.5), shoulders 12 (+8), biceps 6 (+6), triceps 6 (+6), quads 6 (+1.5), hamstrings 6 (+4.5), glutes 6 (+4.5), calves 12, abs 3, traps 0 (+1.5)
+  - weekly volume (direct, +indirect): chest 7, back 12 (+4.5), shoulders 14 (+9), biceps 6 (+6), triceps 6 (+7.5), quads 6 (+1.5), hamstrings 6 (+3), glutes 3 (+4.5), calves 8, abs 3, traps 0 (+3)
 
 #### Bodybuilding, 4 days
 - split: **upper_lower**  | lead: **Incline Barbell Bench Press**  | total direct sets: 94
@@ -463,7 +490,7 @@ No hard-check failures across the full sweep.
     - Barbell Curl: 3 x 10-20 [biceps]
     - EZ Bar Skull Crusher: 3 x 10-20 [triceps]
   - **Lower A** (71 min)
-    - Barbell Back Squat: 5 x 5-9 [quads]
+    - Barbell Front Squat: 5 x 5-9 [quads]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Barbell Hip Thrust: 3 x 5-9 [glutes]
     - Standing Calf Raise (Machine): 3 x 10-20 [calves]
@@ -479,7 +506,7 @@ No hard-check failures across the full sweep.
     - EZ Bar Curl: 3 x 10-20 [biceps]
     - Dumbbell Skull Crusher: 3 x 10-20 [triceps]
   - **Lower B** (70 min)
-    - Barbell Front Squat: 5 x 5-9 [quads]
+    - Barbell Back Squat: 5 x 5-9 [quads]
     - Nordic Curl: 5 x 10-20 [hamstrings]
     - Cable Pull-Through: 3 x 8-12 [glutes]
     - Standing Calf Raise (Barbell): 3 x 10-20 [calves]
@@ -488,11 +515,11 @@ No hard-check failures across the full sweep.
   - weekly volume (direct, +indirect): chest 10, back 12 (+4.5), shoulders 18 (+12.5), biceps 6 (+6), triceps 6 (+11), quads 10 (+1.5), hamstrings 8 (+5.5), glutes 6 (+6.5), calves 12, abs 6, traps 0 (+1.5)
 
 #### Bodybuilding, 5 days
-- split: **balanced_ul**  | lead: **Barbell Hip Thrust**  | total direct sets: 107
+- split: **balanced_ul**  | lead: **Barbell Front Squat**  | total direct sets: 107
   - **Lower A** (71 min)
-    - Barbell Hip Thrust: 4 x 5-9 [glutes]
-    - Good Morning (Barbell): 4 x 5-9 [hamstrings]
-    - Barbell Back Squat: 3 x 5-9 [quads]
+    - Barbell Front Squat: 5 x 5-9 [quads]
+    - Good Morning (Barbell): 3 x 5-9 [hamstrings]
+    - Barbell Hip Thrust: 3 x 5-9 [glutes]
     - Standing Calf Raise (Machine): 3 x 10-20 [calves]
     - Seated Calf Raise: 3 x 10-20 [calves]
     - Cable Crunch: 3 x 10-20 [abs]
@@ -505,9 +532,9 @@ No hard-check failures across the full sweep.
     - Barbell Curl: 3 x 10-20 [biceps]
     - EZ Bar Skull Crusher: 3 x 10-20 [triceps]
   - **Lower B** (70 min)
-    - Cable Pull-Through: 4 x 8-12 [glutes]
+    - Barbell Back Squat: 5 x 5-9 [quads]
     - Nordic Curl: 5 x 10-20 [hamstrings]
-    - Barbell Front Squat: 4 x 5-9 [quads]
+    - Cable Pull-Through: 3 x 8-12 [glutes]
     - Standing Calf Raise (Barbell): 3 x 10-20 [calves]
     - Seated Machine Calf Raise: 3 x 10-20 [calves]
     - Hanging Leg Raise: 3 x 10-20 [abs]
@@ -527,7 +554,7 @@ No hard-check failures across the full sweep.
     - Cable Face Pull: 3 x 10-20 [rear_delts]
     - Dumbbell Curl: 3 x 10-20 [biceps]
     - Decline Skull Crusher: 3 x 10-20 [triceps]
-  - weekly volume (direct, +indirect): chest 9, back 10 (+8), shoulders 19 (+9), biceps 9 (+5), triceps 9 (+7.5), quads 7 (+2), hamstrings 9 (+5.5), glutes 8 (+5.5), calves 12, abs 6 (+1.5), traps 9 (+3)
+  - weekly volume (direct, +indirect): chest 9, back 10 (+7.5), shoulders 19 (+9), biceps 9 (+5), triceps 9 (+7.5), quads 10 (+1.5), hamstrings 8 (+5.5), glutes 6 (+6.5), calves 12, abs 6 (+1.5), traps 9 (+3)
 
 #### Bodybuilding, 6 days
 - split: **ppl_ab**  | lead: **Incline Barbell Bench Press**  | total direct sets: 118
@@ -544,7 +571,7 @@ No hard-check failures across the full sweep.
     - Barbell Curl: 5 x 10-20 [biceps]
     - Rack Pull (Traps): 4 x 5-9 [traps]
   - **Legs A** (71 min)
-    - Barbell Back Squat: 5 x 5-9 [quads]
+    - Barbell Front Squat: 5 x 5-9 [quads]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Barbell Hip Thrust: 3 x 5-9 [glutes]
     - Standing Calf Raise (Machine): 3 x 10-20 [calves]
@@ -563,7 +590,7 @@ No hard-check failures across the full sweep.
     - EZ Bar Curl: 5 x 10-20 [biceps]
     - Keg Carry: 4 x 8-12 [traps]
   - **Legs B** (70 min)
-    - Barbell Front Squat: 5 x 5-9 [quads]
+    - Barbell Back Squat: 5 x 5-9 [quads]
     - Nordic Curl: 5 x 10-20 [hamstrings]
     - Cable Pull-Through: 3 x 8-12 [glutes]
     - Standing Calf Raise (Barbell): 3 x 10-20 [calves]
@@ -775,24 +802,25 @@ No hard-check failures across the full sweep.
     - Donkey Kick: 3 x 10-20 [glutes]
     - Romanian Deadlift: 4 x 5-9 [hamstrings]
     - Nordic Hamstring Curl: 4 x 10-20 [hamstrings]
-  - **Upper (Delts + Back + Arms)** (79 min)
+  - **Upper (Delts + Back)** (67 min)
     - Machine Shoulder Press: 4 x 8-15 [side_delts]
+    - Dumbbell Lateral Raise: 3 x 10-20 [side_delts]
     - Lat Pulldown (Wide Grip): 3 x 8-12 [back]
     - Barbell Row (Bent Over): 3 x 5-9 [back]
-    - Barbell Curl: 3 x 10-20 [biceps]
-    - Close-Grip Bench Press: 3 x 5-9 [triceps]
     - Cable Crunch: 3 x 10-20 [abs]
     - Barbell Bench Press: 3 x 5-9 [chest]
-  - **Lower Full** (69 min)
+  - **Lower Full + Arms** (78 min)
     - Cyclist Squat: 4 x 5-9 [quads]
-    - Barbell Lunge: 4 x 5-9 [quads]
-    - Dumbbell Hip Thrust: 4 x 8-12 [glutes]
+    - Barbell Lunge: 3 x 5-9 [quads]
+    - Dumbbell Hip Thrust: 3 x 8-12 [glutes]
     - Abduction Machine: 3 x 10-20 [glutes]
-    - Standing Calf Raise (Barbell): 4 x 10-20 [calves]
-  - weekly volume (direct, +indirect): chest 3 (+1.5), back 6 (+4), shoulders 4 (+6.5), biceps 3 (+3), triceps 3 (+3.5), quads 16 (+6), hamstrings 16 (+8), glutes 21 (+16), calves 7, abs 3
+    - Standing Calf Raise (Barbell): 3 x 10-20 [calves]
+    - Barbell Curl: 3 x 10-20 [biceps]
+    - Close-Grip Bench Press: 3 x 5-9 [triceps]
+  - weekly volume (direct, +indirect): chest 3 (+1.5), back 6 (+4), shoulders 7 (+6.5), biceps 3 (+3), triceps 3 (+3.5), quads 15 (+6), hamstrings 16 (+7.5), glutes 20 (+15.5), calves 6, abs 3
 
 #### Wellness, 6 days
-- split: **Lower Focus**  | lead: **Barbell Hip Thrust**  | total direct sets: 84
+- split: **Lower Focus**  | lead: **Barbell Hip Thrust**  | total direct sets: 91
   - **Glutes** (51 min)
     - Barbell Hip Thrust: 5 x 5-9 [glutes]
     - Good Morning (Barbell): 4 x 5-9 [hamstrings]
@@ -807,12 +835,11 @@ No hard-check failures across the full sweep.
     - Romanian Deadlift: 4 x 5-9 [hamstrings]
     - Nordic Hamstring Curl: 4 x 10-20 [hamstrings]
     - Cable Pull-Through: 5 x 8-12 [glutes]
-  - **Upper (Delts + Back + Arms)** (79 min)
+  - **Upper (Delts + Back)** (67 min)
     - Machine Shoulder Press: 4 x 8-15 [side_delts]
+    - Dumbbell Lateral Raise: 3 x 10-20 [side_delts]
     - Lat Pulldown (Wide Grip): 3 x 8-12 [back]
     - Barbell Row (Bent Over): 3 x 5-9 [back]
-    - Barbell Curl: 3 x 10-20 [biceps]
-    - Close-Grip Bench Press: 3 x 5-9 [triceps]
     - Cable Crunch: 3 x 10-20 [abs]
     - Barbell Bench Press: 3 x 5-9 [chest]
   - **Lower (Sweep)** (65 min)
@@ -820,15 +847,17 @@ No hard-check failures across the full sweep.
     - Barbell Lunge: 4 x 5-9 [quads]
     - Dumbbell Hip Thrust: 5 x 8-12 [glutes]
     - Standing Calf Raise (Barbell): 4 x 10-20 [calves]
-  - **Glute Pump + Abs** (25 min)
+  - **Glute Pump + Arms + Abs** (56 min)
     - Cable Kickback: 5 x 10-20 [glutes]
+    - Barbell Curl: 5 x 10-20 [biceps]
+    - Close-Grip Bench Press: 5 x 5-9 [triceps]
     - Hanging Leg Raise: 3 x 10-20 [abs]
-  - weekly volume (direct, +indirect): chest 3 (+1.5), back 6 (+4), shoulders 4 (+6.5), biceps 3 (+3), triceps 3 (+3.5), quads 16 (+6.5), hamstrings 16 (+9.5), glutes 20 (+16), calves 7, abs 6
+  - weekly volume (direct, +indirect): chest 3 (+2.5), back 6 (+4), shoulders 7 (+7.5), biceps 5 (+3), triceps 5 (+3.5), quads 16 (+6.5), hamstrings 16 (+9.5), glutes 20 (+16), calves 7, abs 6
 
 ### Figure
 
 #### Figure, 3 days
-- split: **X-Frame**  | lead: **Machine Shoulder Press**  | total direct sets: 63
+- split: **X-Frame**  | lead: **Machine Shoulder Press**  | total direct sets: 66
   - **Upper (Delt + Back Width)** (74 min)
     - Machine Shoulder Press: 4 x 8-15 [side_delts]
     - Lat Pulldown (Wide Grip): 3 x 8-12 [back]
@@ -837,10 +866,11 @@ No hard-check failures across the full sweep.
     - Dumbbell Rear Delt Fly: 3 x 10-20 [rear_delts]
     - EZ Bar Skull Crusher: 3 x 10-20 [triceps]
     - Incline Barbell Bench Press: 3 x 5-9 [chest]
-  - **Lower (Glute + Ham + Quad)** (67 min)
+  - **Lower (Glute + Ham + Quad)** (79 min)
     - Barbell Hip Thrust: 4 x 5-9 [glutes]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Nordic Curl: 3 x 10-20 [hamstrings]
+    - Barbell Front Squat: 3 x 5-9 [quads]
     - Barbell Back Squat: 3 x 5-9 [quads]
     - Standing Calf Raise (Machine): 3 x 10-20 [calves]
     - Seated Calf Raise: 3 x 10-20 [calves]
@@ -851,10 +881,10 @@ No hard-check failures across the full sweep.
     - Barbell Row (Supinated): 4 x 5-9 [back]
     - Dumbbell Skull Crusher: 3 x 10-20 [triceps]
     - Cable Crunch: 3 x 10-20 [abs]
-  - weekly volume (direct, +indirect): chest 3, back 14 (+4.5), shoulders 18 (+7), biceps 0 (+7), triceps 6 (+5.5), quads 3 (+2), hamstrings 6 (+3.5), glutes 4 (+3), calves 6, abs 3, traps 0 (+1.5)
+  - weekly volume (direct, +indirect): chest 3, back 14 (+4.5), shoulders 18 (+7), biceps 0 (+7), triceps 6 (+5.5), quads 6 (+2), hamstrings 6 (+3.5), glutes 4 (+4.5), calves 6, abs 3, traps 0 (+1.5)
 
 #### Figure, 4 days
-- split: **X-Frame**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 78
+- split: **X-Frame**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 81
   - **Back + Rear Delt** (67 min)
     - Lat Pulldown (Wide Grip): 4 x 8-12 [back]
     - Barbell Row (Bent Over): 3 x 5-9 [back]
@@ -862,10 +892,11 @@ No hard-check failures across the full sweep.
     - Dumbbell Rear Delt Fly: 3 x 10-20 [rear_delts]
     - Machine Shoulder Press: 3 x 8-15 [side_delts]
     - Incline Barbell Bench Press: 3 x 5-9 [chest]
-  - **Lower** (67 min)
+  - **Lower** (79 min)
     - Barbell Hip Thrust: 4 x 5-9 [glutes]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Nordic Curl: 3 x 10-20 [hamstrings]
+    - Barbell Front Squat: 3 x 5-9 [quads]
     - Barbell Back Squat: 3 x 5-9 [quads]
     - Standing Calf Raise (Machine): 3 x 10-20 [calves]
     - Seated Calf Raise: 3 x 10-20 [calves]
@@ -882,7 +913,7 @@ No hard-check failures across the full sweep.
     - Barbell Row (Supinated): 4 x 5-9 [back]
     - Dumbbell Lateral Raise: 5 x 10-20 [side_delts]
     - Cable Crunch: 3 x 10-20 [abs]
-  - weekly volume (direct, +indirect): chest 3 (+1.5), back 15 (+7.5), shoulders 25 (+8.5), biceps 6 (+7.5), triceps 7 (+5.5), quads 3 (+2), hamstrings 6 (+3.5), glutes 4 (+3), calves 6, abs 3, traps 0 (+3)
+  - weekly volume (direct, +indirect): chest 3 (+1.5), back 15 (+7.5), shoulders 25 (+8.5), biceps 6 (+7.5), triceps 7 (+5.5), quads 6 (+2), hamstrings 6 (+3.5), glutes 4 (+4.5), calves 6, abs 3, traps 0 (+3)
 
 #### Figure, 5 days
 - split: **X-Frame**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 96
@@ -897,8 +928,8 @@ No hard-check failures across the full sweep.
     - Barbell Hip Thrust: 3 x 5-9 [glutes]
     - Sumo Deadlift (Glute Focus): 3 x 5-9 [glutes]
     - Nordic Curl: 5 x 10-20 [hamstrings]
-    - Barbell Back Squat: 3 x 5-9 [quads]
     - Barbell Front Squat: 3 x 5-9 [quads]
+    - Barbell Back Squat: 3 x 5-9 [quads]
     - Seated Calf Raise: 3 x 10-20 [calves]
   - **Delts + Arms** (62 min)
     - Machine Shoulder Press: 3 x 8-15 [side_delts]
@@ -937,8 +968,8 @@ No hard-check failures across the full sweep.
     - Barbell Hip Thrust: 3 x 5-9 [glutes]
     - Sumo Deadlift (Glute Focus): 3 x 5-9 [glutes]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
-    - Barbell Back Squat: 3 x 5-9 [quads]
     - Barbell Front Squat: 3 x 5-9 [quads]
+    - Barbell Back Squat: 3 x 5-9 [quads]
     - Standing Calf Raise (Machine): 3 x 10-20 [calves]
   - **Pull** (62 min)
     - Lat Pulldown (Close Grip): 4 x 8-12 [back]
@@ -961,7 +992,7 @@ No hard-check failures across the full sweep.
 ### Women's Physique
 
 #### Women's Physique, 3 days
-- split: **V-Taper**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 59
+- split: **V-Taper**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 62
   - **Upper (Back + Delt)** (71 min)
     - Lat Pulldown (Wide Grip): 4 x 8-12 [back]
     - Barbell Row (Bent Over): 4 x 5-9 [back]
@@ -969,8 +1000,9 @@ No hard-check failures across the full sweep.
     - Dumbbell Lateral Raise: 3 x 10-20 [side_delts]
     - Barbell Bench Press: 3 x 5-9 [chest]
     - EZ Bar Skull Crusher: 3 x 10-20 [triceps]
-  - **Lower (Quad + Ham + Glute)** (67 min)
-    - Barbell Back Squat: 4 x 5-9 [quads]
+  - **Lower (Quad + Ham + Glute)** (79 min)
+    - Barbell Front Squat: 4 x 5-9 [quads]
+    - Barbell Back Squat: 3 x 5-9 [quads]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Nordic Curl: 3 x 10-20 [hamstrings]
     - Barbell Hip Thrust: 3 x 5-9 [glutes]
@@ -983,7 +1015,7 @@ No hard-check failures across the full sweep.
     - Barbell Curl: 3 x 10-20 [biceps]
     - Dumbbell Skull Crusher: 3 x 10-20 [triceps]
     - Cable Crunch: 3 x 10-20 [abs]
-  - weekly volume (direct, +indirect): chest 8, back 14 (+1.5), shoulders 6 (+7.5), biceps 3 (+7), triceps 6 (+5.5), quads 4 (+1.5), hamstrings 6 (+3.5), glutes 3 (+3.5), calves 6, abs 3
+  - weekly volume (direct, +indirect): chest 8, back 14 (+1.5), shoulders 6 (+7.5), biceps 3 (+7), triceps 6 (+5.5), quads 7 (+1.5), hamstrings 6 (+3), glutes 3 (+5), calves 6, abs 3
 
 #### Women's Physique, 4 days
 - split: **V-Taper**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 81
@@ -996,8 +1028,8 @@ No hard-check failures across the full sweep.
     - Dumbbell Rear Delt Fly: 3 x 10-20 [rear_delts]
     - EZ Bar Skull Crusher: 3 x 10-20 [triceps]
   - **Lower** (72 min)
-    - Barbell Back Squat: 3 x 5-9 [quads]
     - Barbell Front Squat: 3 x 5-9 [quads]
+    - Barbell Back Squat: 3 x 5-9 [quads]
     - Nordic Curl: 5 x 10-20 [hamstrings]
     - Barbell Hip Thrust: 4 x 5-9 [glutes]
     - Standing Calf Raise (Machine): 3 x 10-20 [calves]
@@ -1010,8 +1042,8 @@ No hard-check failures across the full sweep.
     - Viking Press: 3 x 8-15 [side_delts]
     - Barbell Curl: 3 x 10-20 [biceps]
   - **Lower** (66 min)
-    - Barbell Lunge: 3 x 5-9 [quads]
     - Cyclist Squat: 3 x 5-9 [quads]
+    - Barbell Lunge: 3 x 5-9 [quads]
     - Nordic Hamstring Curl: 5 x 10-20 [hamstrings]
     - Cable Pull-Through: 5 x 8-12 [glutes]
     - Cable Crunch: 3 x 10-20 [abs]
@@ -1033,8 +1065,8 @@ No hard-check failures across the full sweep.
     - EZ Bar Skull Crusher: 3 x 10-20 [triceps]
     - Close-Grip Bench Press: 3 x 5-9 [triceps]
   - **Legs** (72 min)
-    - Barbell Back Squat: 3 x 5-9 [quads]
     - Barbell Front Squat: 3 x 5-9 [quads]
+    - Barbell Back Squat: 3 x 5-9 [quads]
     - Good Morning (Barbell): 4 x 5-9 [hamstrings]
     - Barbell Hip Thrust: 3 x 5-9 [glutes]
     - Standing Calf Raise (Machine): 3 x 10-20 [calves]
@@ -1048,8 +1080,8 @@ No hard-check failures across the full sweep.
   - **Lower** (71 min)
     - Romanian Deadlift: 5 x 5-9 [hamstrings]
     - Cable Pull-Through: 4 x 8-12 [glutes]
-    - Barbell Lunge: 3 x 5-9 [quads]
     - Cyclist Squat: 3 x 5-9 [quads]
+    - Barbell Lunge: 3 x 5-9 [quads]
     - Cable Crunch: 3 x 10-20 [abs]
   - weekly volume (direct, +indirect): chest 8 (+1.5), back 16 (+8.5), shoulders 22 (+11), biceps 10 (+8), triceps 6 (+7.5), quads 12 (+1.5), hamstrings 9 (+5), glutes 7 (+10.5), calves 6, abs 3, traps 0 (+2)
 
@@ -1066,8 +1098,8 @@ No hard-check failures across the full sweep.
     - Barbell Bench Press: 5 x 5-9 [chest]
     - EZ Bar Skull Crusher: 4 x 10-20 [triceps]
   - **Legs** (72 min)
-    - Barbell Back Squat: 3 x 5-9 [quads]
     - Barbell Front Squat: 3 x 5-9 [quads]
+    - Barbell Back Squat: 3 x 5-9 [quads]
     - Good Morning (Barbell): 4 x 5-9 [hamstrings]
     - Barbell Hip Thrust: 3 x 5-9 [glutes]
     - Standing Calf Raise (Machine): 3 x 10-20 [calves]
@@ -1082,8 +1114,8 @@ No hard-check failures across the full sweep.
     - Dumbbell Lateral Raise: 5 x 10-20 [side_delts]
     - Dumbbell Skull Crusher: 4 x 10-20 [triceps]
   - **Legs** (66 min)
-    - Barbell Lunge: 3 x 5-9 [quads]
     - Cyclist Squat: 3 x 5-9 [quads]
+    - Barbell Lunge: 3 x 5-9 [quads]
     - Nordic Curl: 5 x 10-20 [hamstrings]
     - Cable Pull-Through: 5 x 8-12 [glutes]
     - Cable Crunch: 3 x 10-20 [abs]
@@ -1092,41 +1124,35 @@ No hard-check failures across the full sweep.
 ### Women's Bodybuilding
 
 #### Women's Bodybuilding, 3 days
-- split: **full_body**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 87
-  - **Full Body A** (98 min)
-    - Lat Pulldown (Wide Grip): 5 x 8-12 [back]
-    - Machine Shoulder Press: 3 x 8-15 [side_delts]
+- split: **full_body**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 66
+  - **Full Body A** (87 min)
+    - Lat Pulldown (Wide Grip): 4 x 8-12 [back]
+    - Barbell Front Squat: 3 x 5-9 [quads]
     - Barbell Back Squat: 3 x 5-9 [quads]
-    - Good Morning (Barbell): 3 x 5-9 [hamstrings]
-    - Nordic Curl: 3 x 10-20 [hamstrings]
+    - Machine Shoulder Press: 3 x 8-15 [side_delts]
     - Face Pull: 3 x 10-20 [rear_delts]
     - Barbell Curl: 3 x 10-20 [biceps]
-    - Barbell Bench Press: 3 x 5-9 [chest]
-    - EZ Bar Skull Crusher: 3 x 10-20 [triceps]
-  - **Full Body B** (100 min)
-    - Barbell Row (Bent Over): 5 x 5-9 [back]
-    - Viking Press: 3 x 8-15 [side_delts]
-    - Barbell Lunge: 3 x 5-9 [quads]
-    - Standing Calf Raise (Machine): 3 x 10-20 [calves]
-    - Seated Calf Raise: 3 x 10-20 [calves]
-    - Dumbbell Rear Delt Fly: 3 x 10-20 [rear_delts]
     - Barbell Hip Thrust: 3 x 5-9 [glutes]
-    - Incline Barbell Bench Press: 3 x 5-9 [chest]
     - Cable Crunch: 3 x 10-20 [abs]
-  - **Full Body C** (91 min)
-    - Lat Pulldown (Close Grip): 5 x 8-12 [back]
-    - Dumbbell Lateral Raise: 3 x 10-20 [side_delts]
-    - Romanian Deadlift: 3 x 5-9 [hamstrings]
-    - Nordic Hamstring Curl: 3 x 10-20 [hamstrings]
-    - Standing Calf Raise (Barbell): 3 x 10-20 [calves]
-    - Seated Machine Calf Raise: 3 x 10-20 [calves]
+  - **Full Body B** (79 min)
+    - Barbell Row (Bent Over): 4 x 5-9 [back]
+    - Cyclist Squat: 3 x 5-9 [quads]
+    - Barbell Lunge: 3 x 5-9 [quads]
+    - Nordic Curl: 3 x 10-20 [hamstrings]
+    - Dumbbell Rear Delt Fly: 3 x 10-20 [rear_delts]
+    - Standing Calf Raise (Machine): 3 x 10-20 [calves]
+    - Barbell Bench Press: 3 x 5-9 [chest]
+  - **Full Body C** (67 min)
+    - Lat Pulldown (Close Grip): 4 x 8-12 [back]
+    - Viking Press: 3 x 8-15 [side_delts]
+    - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - EZ Bar Curl: 3 x 10-20 [biceps]
-    - Cable Pull-Through: 3 x 8-12 [glutes]
-    - Dumbbell Skull Crusher: 3 x 10-20 [triceps]
-  - weekly volume (direct, +indirect): chest 6, back 15 (+6), shoulders 15 (+8.5), biceps 6 (+7.5), triceps 6 (+6), quads 6 (+1.5), hamstrings 12 (+4.5), glutes 6 (+6), calves 12, abs 3, traps 0 (+1.5)
+    - Standing Calf Raise (Barbell): 3 x 10-20 [calves]
+    - Close-Grip Bench Press: 3 x 5-9 [triceps]
+  - weekly volume (direct, +indirect): chest 3 (+1.5), back 12 (+4.5), shoulders 12 (+8), biceps 6 (+6), triceps 3 (+4.5), quads 12 (+1.5), hamstrings 6 (+3), glutes 3 (+7.5), calves 6, abs 3, traps 0 (+1.5)
 
 #### Women's Bodybuilding, 4 days
-- split: **upper_lower**  | lead: **Barbell Bench Press**  | total direct sets: 88
+- split: **upper_lower**  | lead: **Barbell Bench Press**  | total direct sets: 94
   - **Upper A** (79 min)
     - Barbell Bench Press: 5 x 5-9 [chest]
     - Lat Pulldown (Wide Grip): 3 x 8-12 [back]
@@ -1135,7 +1161,8 @@ No hard-check failures across the full sweep.
     - Face Pull: 3 x 10-20 [rear_delts]
     - Barbell Curl: 3 x 10-20 [biceps]
     - EZ Bar Skull Crusher: 3 x 10-20 [triceps]
-  - **Lower A** (82 min)
+  - **Lower A** (94 min)
+    - Barbell Front Squat: 3 x 5-9 [quads]
     - Barbell Back Squat: 3 x 5-9 [quads]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Nordic Curl: 3 x 10-20 [hamstrings]
@@ -1152,7 +1179,8 @@ No hard-check failures across the full sweep.
     - Dumbbell Rear Delt Fly: 3 x 10-20 [rear_delts]
     - EZ Bar Curl: 3 x 10-20 [biceps]
     - Dumbbell Skull Crusher: 3 x 10-20 [triceps]
-  - **Lower B** (81 min)
+  - **Lower B** (93 min)
+    - Cyclist Squat: 3 x 5-9 [quads]
     - Barbell Lunge: 3 x 5-9 [quads]
     - Romanian Deadlift: 3 x 5-9 [hamstrings]
     - Nordic Hamstring Curl: 3 x 10-20 [hamstrings]
@@ -1161,15 +1189,16 @@ No hard-check failures across the full sweep.
     - Standing Calf Raise (Barbell): 3 x 10-20 [calves]
     - Seated Machine Calf Raise: 3 x 10-20 [calves]
     - Hanging Leg Raise: 3 x 10-20 [abs]
-  - weekly volume (direct, +indirect): chest 10, back 12 (+6), shoulders 12 (+9.5), biceps 6 (+6), triceps 6 (+8), quads 6 (+4.5), hamstrings 12 (+4.5), glutes 6 (+9), calves 12, abs 6, traps 0 (+1.5)
+  - weekly volume (direct, +indirect): chest 10, back 12 (+6), shoulders 12 (+9.5), biceps 6 (+6), triceps 6 (+8), quads 12 (+4.5), hamstrings 12 (+4.5), glutes 6 (+12), calves 12, abs 6, traps 0 (+1.5)
 
 #### Women's Bodybuilding, 5 days
-- split: **balanced_ul**  | lead: **Barbell Hip Thrust**  | total direct sets: 111
-  - **Lower A** (90 min)
-    - Barbell Hip Thrust: 5 x 5-9 [glutes]
+- split: **balanced_ul**  | lead: **Barbell Front Squat**  | total direct sets: 113
+  - **Lower A** (94 min)
+    - Barbell Front Squat: 3 x 5-9 [quads]
+    - Barbell Back Squat: 3 x 5-9 [quads]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Nordic Curl: 3 x 10-20 [hamstrings]
-    - Barbell Back Squat: 3 x 5-9 [quads]
+    - Barbell Hip Thrust: 3 x 5-9 [glutes]
     - Cossack Squat: 3 x 8-12 [adductors]
     - Standing Calf Raise (Machine): 3 x 10-20 [calves]
     - Seated Calf Raise: 3 x 10-20 [calves]
@@ -1182,11 +1211,12 @@ No hard-check failures across the full sweep.
     - Face Pull: 3 x 10-20 [rear_delts]
     - Barbell Curl: 3 x 10-20 [biceps]
     - EZ Bar Skull Crusher: 3 x 10-20 [triceps]
-  - **Lower B** (88 min)
-    - Cable Pull-Through: 5 x 8-12 [glutes]
+  - **Lower B** (93 min)
+    - Cyclist Squat: 3 x 5-9 [quads]
+    - Barbell Lunge: 3 x 5-9 [quads]
     - Romanian Deadlift: 3 x 5-9 [hamstrings]
     - Nordic Hamstring Curl: 3 x 10-20 [hamstrings]
-    - Barbell Lunge: 3 x 5-9 [quads]
+    - Cable Pull-Through: 3 x 8-12 [glutes]
     - Sumo Squat (Adductor Focus): 3 x 8-12 [adductors]
     - Standing Calf Raise (Barbell): 3 x 10-20 [calves]
     - Seated Machine Calf Raise: 3 x 10-20 [calves]
@@ -1207,10 +1237,10 @@ No hard-check failures across the full sweep.
     - Cable Face Pull: 3 x 10-20 [rear_delts]
     - Dumbbell Curl: 3 x 10-20 [biceps]
     - Decline Skull Crusher: 3 x 10-20 [triceps]
-  - weekly volume (direct, +indirect): chest 9, back 11 (+9), shoulders 18 (+7.5), biceps 9 (+5.5), triceps 9 (+7.5), quads 6 (+5.5), hamstrings 12 (+6.5), glutes 10 (+9), calves 12, abs 6 (+1.5), traps 9 (+3)
+  - weekly volume (direct, +indirect): chest 9, back 11 (+9), shoulders 18 (+7.5), biceps 9 (+5.5), triceps 9 (+7.5), quads 12 (+4.5), hamstrings 12 (+4.5), glutes 6 (+12), calves 12, abs 6 (+1.5), traps 9 (+3)
 
 #### Women's Bodybuilding, 6 days
-- split: **ppl_ab**  | lead: **Barbell Bench Press**  | total direct sets: 116
+- split: **ppl_ab**  | lead: **Barbell Bench Press**  | total direct sets: 122
   - **Push A** (54 min)
     - Barbell Bench Press: 5 x 5-9 [chest]
     - Machine Shoulder Press: 4 x 8-15 [side_delts]
@@ -1222,7 +1252,8 @@ No hard-check failures across the full sweep.
     - Face Pull: 5 x 10-20 [rear_delts]
     - Barbell Curl: 5 x 10-20 [biceps]
     - Rack Pull (Traps): 3 x 5-9 [traps]
-  - **Legs A** (82 min)
+  - **Legs A** (94 min)
+    - Barbell Front Squat: 3 x 5-9 [quads]
     - Barbell Back Squat: 3 x 5-9 [quads]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Nordic Curl: 3 x 10-20 [hamstrings]
@@ -1242,7 +1273,8 @@ No hard-check failures across the full sweep.
     - Dumbbell Rear Delt Fly: 5 x 10-20 [rear_delts]
     - EZ Bar Curl: 5 x 10-20 [biceps]
     - Keg Carry: 3 x 8-12 [traps]
-  - **Legs B** (81 min)
+  - **Legs B** (93 min)
+    - Cyclist Squat: 3 x 5-9 [quads]
     - Barbell Lunge: 3 x 5-9 [quads]
     - Romanian Deadlift: 3 x 5-9 [hamstrings]
     - Nordic Hamstring Curl: 3 x 10-20 [hamstrings]
@@ -1251,7 +1283,7 @@ No hard-check failures across the full sweep.
     - Standing Calf Raise (Barbell): 3 x 10-20 [calves]
     - Seated Machine Calf Raise: 3 x 10-20 [calves]
     - Hanging Leg Raise: 3 x 10-20 [abs]
-  - weekly volume (direct, +indirect): chest 10, back 16 (+9.5), shoulders 24 (+11), biceps 10 (+8), triceps 8 (+9), quads 6 (+4.5), hamstrings 12 (+4.5), glutes 6 (+9), calves 12, abs 6 (+1.5), traps 6 (+2.5)
+  - weekly volume (direct, +indirect): chest 10, back 16 (+9.5), shoulders 24 (+11), biceps 10 (+8), triceps 8 (+9), quads 12 (+4.5), hamstrings 12 (+4.5), glutes 6 (+12), calves 12, abs 6 (+1.5), traps 6 (+2.5)
 
 ## 3. Weak-point plans (5-day advanced)
 
@@ -1269,7 +1301,7 @@ second weak point.
     - Barbell Curl: 4 x 10-20 [biceps]
     - Close-Grip Bench Press: 3 x 5-9 [triceps]
   - **Lower A** (68 min)
-    - Barbell Back Squat: 5 x 5-9 [quads]
+    - Barbell Front Squat: 5 x 5-9 [quads]
     - Good Morning (Barbell): 4 x 5-9 [hamstrings]
     - Cable Kickback: 3 x 10-20 [glutes]
     - Standing Calf Raise (Machine): 5 x 10-20 [calves]
@@ -1282,7 +1314,7 @@ second weak point.
     - EZ Bar Curl: 4 x 10-20 [biceps]
     - JM Press: 3 x 5-9 [triceps]
   - **Lower B** (73 min)
-    - Barbell Front Squat: 5 x 5-9 [quads]
+    - Barbell Back Squat: 5 x 5-9 [quads]
     - Nordic Curl: 4 x 10-20 [hamstrings]
     - Cable Pull-Through: 3 x 8-12 [glutes]
     - Donkey Kick: 3 x 10-20 [glutes]
@@ -1304,7 +1336,7 @@ second weak point.
     - EZ Bar Curl: 3 x 10-20 [biceps]
     - Close-Grip Bench Press: 3 x 5-9 [triceps]
   - **Lower A** (72 min)
-    - Barbell Back Squat: 5 x 5-9 [quads]
+    - Barbell Front Squat: 5 x 5-9 [quads]
     - Good Morning (Barbell): 4 x 5-9 [hamstrings]
     - Barbell Hip Thrust: 3 x 5-9 [glutes]
     - Standing Calf Raise (Machine): 5 x 10-20 [calves]
@@ -1318,7 +1350,7 @@ second weak point.
     - Hammer Curl: 3 x 10-20 [biceps]
     - JM Press: 3 x 5-9 [triceps]
   - **Lower B** (65 min)
-    - Barbell Front Squat: 5 x 5-9 [quads]
+    - Barbell Back Squat: 5 x 5-9 [quads]
     - Nordic Curl: 4 x 10-20 [hamstrings]
     - Cable Pull-Through: 3 x 8-12 [glutes]
     - Standing Calf Raise (Barbell): 5 x 10-20 [calves]
@@ -1397,7 +1429,7 @@ second weak point.
   - weekly volume (direct, +indirect): chest 7, back 16 (+8), shoulders 26 (+11), biceps 9 (+8), triceps 7 (+9), quads 3 (+1.5), hamstrings 6 (+3), glutes 3 (+3), calves 3, abs 3, traps 4 (+4.5)
 
 #### Classic Physique, weak point: Glutes  (glutes 3 -> 14)
-- split: **X-Frame**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 104
+- split: **X-Frame**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 107
   - **Pull** (67 min)
     - Lat Pulldown (Wide Grip): 4 x 8-12 [back]
     - Barbell Row (Bent Over): 4 x 5-9 [back]
@@ -1407,8 +1439,8 @@ second weak point.
   - **Legs (Quad)** (70 min)
     - Barbell Hip Thrust: 4 x 5-9 [glutes]
     - Cable Kickback: 4 x 10-20 [glutes]
-    - Barbell Back Squat: 3 x 5-9 [quads]
     - Barbell Front Squat: 3 x 5-9 [quads]
+    - Barbell Back Squat: 3 x 5-9 [quads]
     - Standing Calf Raise (Machine): 3 x 10-20 [calves]
     - Seated Calf Raise: 3 x 10-20 [calves]
   - **Push** (73 min)
@@ -1424,17 +1456,18 @@ second weak point.
     - Viking Press: 4 x 8-15 [side_delts]
     - Cable Lateral Raise: 4 x 10-20 [side_delts]
     - EZ Bar Curl: 5 x 10-20 [biceps]
-  - **Legs (Ham + Glute)** (74 min)
+  - **Legs (Ham + Glute)** (86 min)
     - Good Morning (Barbell): 4 x 5-9 [hamstrings]
     - Nordic Curl: 3 x 10-20 [hamstrings]
     - Cable Pull-Through: 3 x 8-12 [glutes]
     - Donkey Kick: 3 x 10-20 [glutes]
+    - Cyclist Squat: 3 x 5-9 [quads]
     - Barbell Lunge: 3 x 5-9 [quads]
     - Standing Calf Raise (Barbell): 3 x 10-20 [calves]
     - Seated Machine Calf Raise: 3 x 10-20 [calves]
-  - weekly volume (direct, +indirect): chest 8 (+1.5), back 16 (+6), shoulders 22 (+11), biceps 10 (+8), triceps 6 (+7.5), quads 9 (+2), hamstrings 7 (+5), glutes 14 (+6.5), calves 12, traps 0 (+2)
+  - weekly volume (direct, +indirect): chest 8 (+1.5), back 16 (+6), shoulders 22 (+11), biceps 10 (+8), triceps 6 (+7.5), quads 12 (+2), hamstrings 7 (+5), glutes 14 (+8), calves 12, traps 0 (+2)
 
-#### Classic Physique, weak point: Quads  (quads 10 -> 15)
+#### Classic Physique, weak point: Quads  (quads 13 -> 15)
 - split: **X-Frame**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 101
   - **Pull** (67 min)
     - Lat Pulldown (Wide Grip): 4 x 8-12 [back]
@@ -1470,8 +1503,8 @@ second weak point.
     - Seated Machine Calf Raise: 3 x 10-20 [calves]
   - weekly volume (direct, +indirect): chest 8 (+1.5), back 16 (+6), shoulders 22 (+11), biceps 10 (+8), triceps 6 (+7.5), quads 15 (+1.5), hamstrings 7 (+3.5), glutes 3 (+9.5), calves 14, traps 0 (+2)
 
-#### Bodybuilding, weak point: Glutes  (glutes 10 -> 15)
-- split: **upper_lower_wp**  | lead: **Incline Barbell Bench Press**  | total direct sets: 96
+#### Bodybuilding, weak point: Glutes  (glutes 6 -> 15)
+- split: **upper_lower_wp**  | lead: **Incline Barbell Bench Press**  | total direct sets: 99
   - **Upper A** (83 min)
     - Incline Barbell Bench Press: 3 x 5-9 [chest]
     - Barbell Bench Press: 3 x 5-9 [chest]
@@ -1482,8 +1515,8 @@ second weak point.
     - Barbell Curl: 3 x 10-20 [biceps]
     - EZ Bar Skull Crusher: 3 x 10-20 [triceps]
   - **Lower A** (71 min)
-    - Barbell Back Squat: 3 x 5-9 [quads]
     - Barbell Front Squat: 3 x 5-9 [quads]
+    - Barbell Back Squat: 3 x 5-9 [quads]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Cable Kickback: 3 x 10-20 [glutes]
     - Standing Calf Raise (Machine): 3 x 10-20 [calves]
@@ -1498,7 +1531,8 @@ second weak point.
     - Dumbbell Rear Delt Fly: 3 x 10-20 [rear_delts]
     - EZ Bar Curl: 3 x 10-20 [biceps]
     - Dumbbell Skull Crusher: 3 x 10-20 [triceps]
-  - **Lower B** (65 min)
+  - **Lower B** (77 min)
+    - Cyclist Squat: 3 x 5-9 [quads]
     - Barbell Lunge: 3 x 5-9 [quads]
     - Nordic Curl: 3 x 10-20 [hamstrings]
     - Cable Pull-Through: 3 x 8-12 [glutes]
@@ -1509,10 +1543,10 @@ second weak point.
   - **Weak Point Specialisation** (24 min)
     - Barbell Hip Thrust: 3 x 5-9 [glutes]
     - Cable Kickback: 3 x 10-20 [glutes]
-  - weekly volume (direct, +indirect): chest 12, back 12 (+4.5), shoulders 12 (+10.5), biceps 6 (+6), triceps 6 (+9), quads 9 (+1.5), hamstrings 6 (+4.5), glutes 15 (+6), calves 12, abs 6, traps 0 (+1.5)
+  - weekly volume (direct, +indirect): chest 12, back 12 (+4.5), shoulders 12 (+10.5), biceps 6 (+6), triceps 6 (+9), quads 12 (+1.5), hamstrings 6 (+4.5), glutes 15 (+7.5), calves 12, abs 6, traps 0 (+1.5)
 
-#### Bodybuilding, weak point: Hamstrings  (hamstrings 6 -> 18)
-- split: **upper_lower_wp**  | lead: **Incline Barbell Bench Press**  | total direct sets: 96
+#### Bodybuilding, weak point: Hamstrings  (hamstrings 7 -> 18)
+- split: **upper_lower_wp**  | lead: **Incline Barbell Bench Press**  | total direct sets: 102
   - **Upper A** (83 min)
     - Incline Barbell Bench Press: 3 x 5-9 [chest]
     - Barbell Bench Press: 3 x 5-9 [chest]
@@ -1522,7 +1556,8 @@ second weak point.
     - Face Pull: 3 x 10-20 [rear_delts]
     - Barbell Curl: 3 x 10-20 [biceps]
     - EZ Bar Skull Crusher: 3 x 10-20 [triceps]
-  - **Lower A** (71 min)
+  - **Lower A** (83 min)
+    - Barbell Front Squat: 3 x 5-9 [quads]
     - Barbell Back Squat: 3 x 5-9 [quads]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Nordic Curl: 3 x 10-20 [hamstrings]
@@ -1539,7 +1574,8 @@ second weak point.
     - Dumbbell Rear Delt Fly: 3 x 10-20 [rear_delts]
     - EZ Bar Curl: 3 x 10-20 [biceps]
     - Dumbbell Skull Crusher: 3 x 10-20 [triceps]
-  - **Lower B** (70 min)
+  - **Lower B** (82 min)
+    - Cyclist Squat: 3 x 5-9 [quads]
     - Barbell Lunge: 3 x 5-9 [quads]
     - Romanian Deadlift: 3 x 5-9 [hamstrings]
     - Nordic Hamstring Curl: 3 x 10-20 [hamstrings]
@@ -1550,7 +1586,7 @@ second weak point.
   - **Weak Point Specialisation** (24 min)
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Nordic Curl: 3 x 10-20 [hamstrings]
-  - weekly volume (direct, +indirect): chest 12, back 12 (+7.5), shoulders 12 (+10.5), biceps 6 (+6), triceps 6 (+9), quads 6 (+1.5), hamstrings 18 (+4.5), glutes 6 (+7.5), calves 12, abs 6, traps 0 (+1.5)
+  - weekly volume (direct, +indirect): chest 12, back 12 (+7.5), shoulders 12 (+10.5), biceps 6 (+6), triceps 6 (+9), quads 12 (+1.5), hamstrings 18 (+4.5), glutes 6 (+10.5), calves 12, abs 6, traps 0 (+1.5)
 
 #### Bikini, weak point: Glutes  (glutes 24 -> 24)
 - split: **Glute Focus**  | lead: **Barbell Hip Thrust**  | total direct sets: 98
@@ -1572,8 +1608,8 @@ second weak point.
     - Romanian Deadlift: 4 x 5-9 [hamstrings]
     - Nordic Hamstring Curl: 4 x 10-20 [hamstrings]
   - **Lower (Quad + Glute)** (70 min)
-    - Barbell Back Squat: 4 x 5-9 [quads]
     - Barbell Front Squat: 4 x 5-9 [quads]
+    - Barbell Back Squat: 4 x 5-9 [quads]
     - Dumbbell Hip Thrust: 3 x 8-12 [glutes]
     - Abduction Machine: 3 x 10-20 [glutes]
     - Standing Calf Raise (Machine): 3 x 10-20 [calves]
@@ -1608,8 +1644,8 @@ second weak point.
     - Romanian Deadlift: 4 x 5-9 [hamstrings]
     - Nordic Hamstring Curl: 4 x 10-20 [hamstrings]
   - **Lower (Quad + Glute)** (70 min)
-    - Barbell Back Squat: 4 x 5-9 [quads]
     - Barbell Front Squat: 4 x 5-9 [quads]
+    - Barbell Back Squat: 4 x 5-9 [quads]
     - Dumbbell Hip Thrust: 3 x 8-12 [glutes]
     - Abduction Machine: 3 x 10-20 [glutes]
     - Standing Calf Raise (Machine): 3 x 10-20 [calves]
@@ -1624,8 +1660,8 @@ second weak point.
     - EZ Bar Skull Crusher: 3 x 10-20 [triceps]
   - weekly volume (direct, +indirect): chest 3 (+1.5), back 6 (+7), shoulders 21 (+8.5), biceps 6 (+3), triceps 6 (+5.5), quads 8 (+2), hamstrings 16 (+7.5), glutes 22 (+8), calves 6, traps 0 (+1.5)
 
-#### Wellness, weak point: Glutes  (glutes 21 -> 24)
-- split: **Lower Focus**  | lead: **Barbell Hip Thrust**  | total direct sets: 82
+#### Wellness, weak point: Glutes  (glutes 20 -> 22)
+- split: **Lower Focus**  | lead: **Barbell Hip Thrust**  | total direct sets: 84
   - **Glutes** (56 min)
     - Barbell Hip Thrust: 4 x 5-9 [glutes]
     - Cable Kickback: 4 x 10-20 [glutes]
@@ -1642,23 +1678,25 @@ second weak point.
     - Donkey Kick: 4 x 10-20 [glutes]
     - Romanian Deadlift: 4 x 5-9 [hamstrings]
     - Nordic Hamstring Curl: 4 x 10-20 [hamstrings]
-  - **Upper (Delts + Back + Arms)** (71 min)
+  - **Upper (Delts + Back)** (71 min)
     - Machine Shoulder Press: 4 x 8-15 [side_delts]
+    - Dumbbell Lateral Raise: 3 x 10-20 [side_delts]
     - Lat Pulldown (Wide Grip): 3 x 8-12 [back]
     - Barbell Row (Bent Over): 3 x 5-9 [back]
+    - Barbell Bench Press: 3 x 5-9 [chest]
+    - Incline Barbell Bench Press: 3 x 5-9 [chest]
+  - **Lower Full + Arms** (78 min)
+    - Cyclist Squat: 4 x 5-9 [quads]
+    - Barbell Lunge: 3 x 5-9 [quads]
+    - Dumbbell Hip Thrust: 3 x 8-12 [glutes]
+    - Abduction Machine: 3 x 10-20 [glutes]
+    - Standing Calf Raise (Barbell): 3 x 10-20 [calves]
     - Barbell Curl: 3 x 10-20 [biceps]
     - Close-Grip Bench Press: 3 x 5-9 [triceps]
-    - Barbell Bench Press: 3 x 5-9 [chest]
-  - **Lower Full** (71 min)
-    - Cyclist Squat: 4 x 5-9 [quads]
-    - Barbell Lunge: 4 x 5-9 [quads]
-    - Dumbbell Hip Thrust: 4 x 8-12 [glutes]
-    - Abduction Machine: 4 x 10-20 [glutes]
-    - Standing Calf Raise (Barbell): 4 x 10-20 [calves]
-  - weekly volume (direct, +indirect): chest 3 (+1.5), back 6 (+4), shoulders 4 (+6.5), biceps 3 (+3), triceps 3 (+3.5), quads 16 (+6), hamstrings 16 (+8), glutes 24 (+16), calves 7
+  - weekly volume (direct, +indirect): chest 6 (+1.5), back 6 (+4), shoulders 7 (+8), biceps 3 (+3), triceps 3 (+5), quads 15 (+6), hamstrings 16 (+7.5), glutes 22 (+15.5), calves 6
 
 #### Wellness, weak point: Hamstrings  (hamstrings 16 -> 20)
-- split: **Lower Focus**  | lead: **Barbell Hip Thrust**  | total direct sets: 81
+- split: **Lower Focus**  | lead: **Barbell Hip Thrust**  | total direct sets: 84
   - **Glutes** (48 min)
     - Barbell Hip Thrust: 4 x 5-9 [glutes]
     - Cable Kickback: 3 x 10-20 [glutes]
@@ -1676,23 +1714,25 @@ second weak point.
     - Donkey Kick: 3 x 10-20 [glutes]
     - Romanian Deadlift (Barbell): 4 x 5-9 [hamstrings]
     - Lying Leg Curl: 3 x 10-20 [hamstrings]
-  - **Upper (Delts + Back + Arms)** (71 min)
+  - **Upper (Delts + Back)** (71 min)
     - Machine Shoulder Press: 4 x 8-15 [side_delts]
+    - Dumbbell Lateral Raise: 3 x 10-20 [side_delts]
     - Lat Pulldown (Wide Grip): 3 x 8-12 [back]
     - Barbell Row (Bent Over): 3 x 5-9 [back]
+    - Barbell Bench Press: 3 x 5-9 [chest]
+    - Incline Barbell Bench Press: 3 x 5-9 [chest]
+  - **Lower Full + Arms** (78 min)
+    - Cyclist Squat: 4 x 5-9 [quads]
+    - Barbell Lunge: 3 x 5-9 [quads]
+    - Dumbbell Hip Thrust: 3 x 8-12 [glutes]
+    - Abduction Machine: 3 x 10-20 [glutes]
+    - Standing Calf Raise (Barbell): 3 x 10-20 [calves]
     - Barbell Curl: 3 x 10-20 [biceps]
     - Close-Grip Bench Press: 3 x 5-9 [triceps]
-    - Barbell Bench Press: 3 x 5-9 [chest]
-  - **Lower Full** (69 min)
-    - Cyclist Squat: 4 x 5-9 [quads]
-    - Barbell Lunge: 4 x 5-9 [quads]
-    - Dumbbell Hip Thrust: 4 x 8-12 [glutes]
-    - Abduction Machine: 3 x 10-20 [glutes]
-    - Standing Calf Raise (Barbell): 4 x 10-20 [calves]
-  - weekly volume (direct, +indirect): chest 3 (+1.5), back 6 (+5.5), shoulders 4 (+6.5), biceps 3 (+3), triceps 3 (+3.5), quads 14 (+3.5), hamstrings 20 (+7.5), glutes 21 (+14), calves 7
+  - weekly volume (direct, +indirect): chest 6 (+1.5), back 6 (+5.5), shoulders 7 (+8), biceps 3 (+3), triceps 3 (+5), quads 13 (+3.5), hamstrings 20 (+7), glutes 20 (+13.5), calves 6
 
 #### Figure, weak point: Glutes  (glutes 11 -> 15)
-- split: **X-Frame**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 102
+- split: **X-Frame**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 105
   - **Pull** (66 min)
     - Lat Pulldown (Wide Grip): 4 x 8-12 [back]
     - Barbell Row (Bent Over): 3 x 5-9 [back]
@@ -1700,11 +1740,12 @@ second weak point.
     - Dumbbell Rear Delt Fly: 3 x 10-20 [rear_delts]
     - Barbell Curl: 3 x 10-20 [biceps]
     - Barbell Bench Press: 3 x 5-9 [chest]
-  - **Legs** (75 min)
+  - **Legs** (87 min)
     - Barbell Hip Thrust: 4 x 5-9 [glutes]
     - Cable Kickback: 3 x 10-20 [glutes]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Nordic Curl: 3 x 10-20 [hamstrings]
+    - Barbell Front Squat: 3 x 5-9 [quads]
     - Barbell Back Squat: 3 x 5-9 [quads]
     - Standing Calf Raise (Machine): 3 x 10-20 [calves]
     - Seated Calf Raise: 3 x 10-20 [calves]
@@ -1728,10 +1769,10 @@ second weak point.
     - Nordic Hamstring Curl: 3 x 10-20 [hamstrings]
     - Standing Calf Raise (Barbell): 3 x 10-20 [calves]
     - Seated Machine Calf Raise: 3 x 10-20 [calves]
-  - weekly volume (direct, +indirect): chest 3 (+2), back 15 (+9), shoulders 26 (+8.5), biceps 8 (+7.5), triceps 8 (+5), quads 3 (+2), hamstrings 12 (+5.5), glutes 15 (+4.5), calves 12, traps 0 (+3)
+  - weekly volume (direct, +indirect): chest 3 (+2), back 15 (+9), shoulders 26 (+8.5), biceps 8 (+7.5), triceps 8 (+5), quads 6 (+2), hamstrings 12 (+5.5), glutes 15 (+6), calves 12, traps 0 (+3)
 
 #### Figure, weak point: Side Delts  (shoulders 26 -> 24)
-- split: **X-Frame**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 99
+- split: **X-Frame**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 102
   - **Pull** (70 min)
     - Lat Pulldown (Wide Grip): 4 x 8-12 [back]
     - Barbell Row (Bent Over): 3 x 5-9 [back]
@@ -1739,10 +1780,11 @@ second weak point.
     - Barbell Curl: 3 x 10-20 [biceps]
     - Barbell Bench Press: 3 x 5-9 [chest]
     - Incline Barbell Bench Press: 3 x 5-9 [chest]
-  - **Legs** (67 min)
+  - **Legs** (79 min)
     - Barbell Hip Thrust: 4 x 5-9 [glutes]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Nordic Curl: 3 x 10-20 [hamstrings]
+    - Barbell Front Squat: 3 x 5-9 [quads]
     - Barbell Back Squat: 3 x 5-9 [quads]
     - Standing Calf Raise (Machine): 3 x 10-20 [calves]
     - Seated Calf Raise: 3 x 10-20 [calves]
@@ -1765,10 +1807,10 @@ second weak point.
     - Nordic Hamstring Curl: 3 x 10-20 [hamstrings]
     - Standing Calf Raise (Barbell): 3 x 10-20 [calves]
     - Seated Machine Calf Raise: 3 x 10-20 [calves]
-  - weekly volume (direct, +indirect): chest 6 (+2), back 15 (+7), shoulders 24 (+10.5), biceps 8 (+7.5), triceps 8 (+7), quads 3 (+3.5), hamstrings 12 (+7), glutes 11 (+4.5), calves 12, traps 0 (+4)
+  - weekly volume (direct, +indirect): chest 6 (+2), back 15 (+7), shoulders 24 (+10.5), biceps 8 (+7.5), triceps 8 (+7), quads 6 (+3.5), hamstrings 12 (+7), glutes 11 (+6), calves 12, traps 0 (+4)
 
-#### Women's Physique, weak point: Glutes  (glutes 9 -> 14)
-- split: **V-Taper**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 100
+#### Women's Physique, weak point: Glutes  (glutes 6 -> 14)
+- split: **V-Taper**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 103
   - **Pull** (67 min)
     - Lat Pulldown (Wide Grip): 4 x 8-12 [back]
     - Barbell Row (Bent Over): 4 x 5-9 [back]
@@ -1782,8 +1824,9 @@ second weak point.
     - Dumbbell Lateral Raise: 3 x 10-20 [side_delts]
     - EZ Bar Skull Crusher: 3 x 10-20 [triceps]
     - Close-Grip Bench Press: 3 x 5-9 [triceps]
-  - **Legs** (67 min)
-    - Barbell Back Squat: 4 x 5-9 [quads]
+  - **Legs** (79 min)
+    - Barbell Front Squat: 4 x 5-9 [quads]
+    - Barbell Back Squat: 3 x 5-9 [quads]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Barbell Hip Thrust: 3 x 5-9 [glutes]
     - Cable Kickback: 3 x 10-20 [glutes]
@@ -1799,9 +1842,9 @@ second weak point.
     - Romanian Deadlift: 5 x 5-9 [hamstrings]
     - Cable Pull-Through: 4 x 8-12 [glutes]
     - Donkey Kick: 4 x 10-20 [glutes]
-    - Barbell Lunge: 3 x 5-9 [quads]
     - Cyclist Squat: 3 x 5-9 [quads]
-  - weekly volume (direct, +indirect): chest 8 (+1.5), back 16 (+8), shoulders 22 (+11), biceps 10 (+8), triceps 6 (+7.5), quads 10 (+1.5), hamstrings 8 (+5.5), glutes 14 (+9), calves 6, traps 0 (+2)
+    - Barbell Lunge: 3 x 5-9 [quads]
+  - weekly volume (direct, +indirect): chest 8 (+1.5), back 16 (+8), shoulders 22 (+11), biceps 10 (+8), triceps 6 (+7.5), quads 13 (+1.5), hamstrings 8 (+5), glutes 14 (+10.5), calves 6, traps 0 (+2)
 
 #### Women's Physique, weak point: Back Thickness  (back 16 -> 23)
 - split: **V-Taper**  | lead: **Lat Pulldown (Wide Grip)**  | total direct sets: 97
@@ -1819,8 +1862,8 @@ second weak point.
     - Machine Shoulder Press: 3 x 8-15 [side_delts]
     - EZ Bar Skull Crusher: 3 x 10-20 [triceps]
   - **Legs** (72 min)
-    - Barbell Back Squat: 4 x 5-9 [quads]
-    - Barbell Front Squat: 3 x 5-9 [quads]
+    - Barbell Front Squat: 4 x 5-9 [quads]
+    - Barbell Back Squat: 3 x 5-9 [quads]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Barbell Hip Thrust: 3 x 5-9 [glutes]
     - Standing Calf Raise (Machine): 3 x 10-20 [calves]
@@ -1835,12 +1878,12 @@ second weak point.
     - Romanian Deadlift: 5 x 5-9 [hamstrings]
     - Cable Pull-Through: 3 x 8-12 [glutes]
     - Sumo Deadlift (Wide Stance): 3 x 5-9 [glutes]
-    - Barbell Lunge: 3 x 5-9 [quads]
     - Cyclist Squat: 3 x 5-9 [quads]
-  - weekly volume (direct, +indirect): chest 6, back 23 (+8), shoulders 19 (+8.5), biceps 10 (+11.5), triceps 3 (+6.5), quads 13 (+3), hamstrings 8 (+6.5), glutes 9 (+10.5), calves 6, traps 0 (+2)
+    - Barbell Lunge: 3 x 5-9 [quads]
+  - weekly volume (direct, +indirect): chest 6, back 23 (+8), shoulders 19 (+8.5), biceps 10 (+11.5), triceps 3 (+6.5), quads 13 (+3), hamstrings 8 (+6), glutes 9 (+10.5), calves 6, traps 0 (+2)
 
-#### Women's Bodybuilding, weak point: Glutes  (glutes 10 -> 15)
-- split: **upper_lower_wp**  | lead: **Incline Barbell Bench Press**  | total direct sets: 105
+#### Women's Bodybuilding, weak point: Glutes  (glutes 6 -> 15)
+- split: **upper_lower_wp**  | lead: **Incline Barbell Bench Press**  | total direct sets: 111
   - **Upper A** (87 min)
     - Incline Barbell Bench Press: 5 x 5-9 [chest]
     - Lat Pulldown (Wide Grip): 3 x 8-12 [back]
@@ -1850,8 +1893,9 @@ second weak point.
     - Dumbbell Rear Delt Fly: 3 x 10-20 [rear_delts]
     - Barbell Curl: 3 x 10-20 [biceps]
     - EZ Bar Skull Crusher: 3 x 10-20 [triceps]
-  - **Lower A** (70 min)
-    - Barbell Back Squat: 4 x 5-9 [quads]
+  - **Lower A** (82 min)
+    - Barbell Front Squat: 4 x 5-9 [quads]
+    - Barbell Back Squat: 3 x 5-9 [quads]
     - Good Morning (Barbell): 3 x 5-9 [hamstrings]
     - Nordic Curl: 3 x 10-20 [hamstrings]
     - Cable Kickback: 3 x 10-20 [glutes]
@@ -1867,8 +1911,9 @@ second weak point.
     - Cable Rear Delt Fly: 3 x 10-20 [rear_delts]
     - EZ Bar Curl: 3 x 10-20 [biceps]
     - Dumbbell Skull Crusher: 3 x 10-20 [triceps]
-  - **Lower B** (81 min)
-    - Barbell Lunge: 4 x 5-9 [quads]
+  - **Lower B** (93 min)
+    - Cyclist Squat: 4 x 5-9 [quads]
+    - Barbell Lunge: 3 x 5-9 [quads]
     - Romanian Deadlift: 3 x 5-9 [hamstrings]
     - Nordic Hamstring Curl: 3 x 10-20 [hamstrings]
     - Cable Pull-Through: 3 x 8-12 [glutes]
@@ -1879,9 +1924,9 @@ second weak point.
   - **Weak Point Specialisation** (24 min)
     - Barbell Hip Thrust: 3 x 5-9 [glutes]
     - Cable Kickback: 3 x 10-20 [glutes]
-  - weekly volume (direct, +indirect): chest 10, back 12 (+9), shoulders 18 (+9.5), biceps 6 (+6), triceps 6 (+8), quads 8 (+1.5), hamstrings 12 (+5), glutes 15 (+7), calves 12, abs 6, traps 0 (+3)
+  - weekly volume (direct, +indirect): chest 10, back 12 (+9), shoulders 18 (+9.5), biceps 6 (+6), triceps 6 (+8), quads 14 (+1.5), hamstrings 12 (+4.5), glutes 15 (+10), calves 12, abs 6, traps 0 (+3)
 
-#### Women's Bodybuilding, weak point: Quads  (quads 6 -> 19)
+#### Women's Bodybuilding, weak point: Quads  (quads 14 -> 19)
 - split: **upper_lower_wp**  | lead: **Incline Barbell Bench Press**  | total direct sets: 107
   - **Upper A** (87 min)
     - Incline Barbell Bench Press: 5 x 5-9 [chest]
@@ -1938,9 +1983,11 @@ second weak point.
   these in the matrix) changes their non-weak-point split label and is deferred.
 - The six specialised divisions (MP, Classic, Bikini, Wellness, Figure, W.
   Physique) route weak-point through the matrix and respect MRV exactly.
-- TIME OVERAGE: Women's Bodybuilding (the highest-volume division) at 3 days
-  runs ~97-min sessions for a 75-min preference. Its weekly volume (~28
-  sets/session over 3 days) does not compress further without dropping a
-  muscle, which the engine refuses to do. The fix is more days or a longer
-  session preference, not a builder change. All sets, MRV and coverage are
-  correct; only the time estimate runs over.
+- TIME OVERAGE (Women's Bodybuilding only): the highest-volume division runs
+  ~96-97-min sessions for a 75-min preference, its leg days at 5-6 days (12
+  quad + 12 ham + glute + calf sets, the full leg development the division is
+  judged on) and its 3-day full body. 3-day non-matrix plans are now budget-
+  compressed (accessories toward MEV), which brought general/BB under; WBB's
+  leg volume is deliberate and does not compress without dropping judged
+  muscle, so the honest fix is more days or a longer session preference. All
+  sets, MRV and coverage are correct; only the time estimate runs over.

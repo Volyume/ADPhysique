@@ -15,9 +15,9 @@ aware MRV, delivered via extra weak-muscle sessions + a flexed per-session cap
 | mens_physique | V-Taper | 3 -> 14 | 16 |
 | classic_physique | X-Frame | 3 -> 14 | 16 |
 | bikini | Glute Focus | 24 -> 24 | 30 |
-| wellness | Lower Focus | 21 -> 24 | 30 |
+| wellness | Lower Focus | 20 -> 22 | 30 |
 | figure | X-Frame | 11 -> 15 | 16 |
-| womens_physique | V-Taper | 9 -> 14 | 16 |
+| womens_physique | V-Taper | 6 -> 14 | 16 |
 
 ## What changed
 
