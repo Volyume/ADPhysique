@@ -23,14 +23,23 @@ SHIPPED, the structural meal-model unit:
   showing), suggestion re-keying done. Ships with migration 059 (`99a5eea`,
   drafted + tracked, founder applies).
 
-REMAINING (optional / polish, best tuned on device):
+SHIPPED, polish:
+- Calorie count-up + ring sweep on change, reduce-motion aware; light haptics on
+  water-add and Add meal (`d634d77`).
+
+REMAINING (optional, with reasons to defer):
 - Quick-log strip on the diary: largely covered already by the add flow, which
   surfaces Recents / Suggested / Favourites / Frequents tabs (`FoodSearchScreen`
   `SEARCH_TABS`). A diary-level strip would save one tap; optional enhancement.
 - Collapsible meal sections (minor UI state).
-- Stage 3 polish: count-up on the calorie number, ring sweep, entry-insert
-  animation, haptics on add, swipe between days, week strip. Animation work is
-  best tuned against the real layout on a device.
+- Swipe between days: NOT advisable. The entry rows already use a horizontal
+  swipe for delete (`SwipeableEntryRow`), so a body-level horizontal swipe to
+  change days conflicts with it and would make row-delete unreliable. Keep the
+  chevron + Today navigation.
+- Week strip (7-day logged/partial/empty fill): needs a new per-day range read
+  and is pure visual; an optional additive enhancement, best tuned on a device.
+- Entry-insert animation: the cards already stagger in via AnimatedEntrance;
+  a per-row insert animation is marginal over that.
 
 ---
 
