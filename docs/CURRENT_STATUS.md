@@ -14,7 +14,7 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
-### 0.00000000000001. 2026-06-01 (master-audit remediation continued, Claude): Tier 2 closed, Tier 5 gates + Tier 4 batch done. Resume from the remaining Tier 4 trivia / A2-046.
+### 0.00000000000001. 2026-06-01 (master-audit remediation continued, Claude): Tier 2 + Tier 4 + Tier 5 gates all done; migrations applied. Only on-device (Tier 3) and native-dep (A2-020) items remain.
 
 Resumed from A2-005 per the prior session's pointer, after a full Rule 1
 repo validation and a cross-check (commit history + doc 11 + this section)
@@ -88,18 +88,39 @@ alongside the hex gate). Both enforced by the existing CI eslint job.
 - `0c8738b` A2-042 + A2-065: removed two read-confirmed dead locals
   (targetSFR, worstVolume in algorithms.js) and a duplicate 'Landmine Row'
   key in formTips.
+- `26c83fb` Tier 4 trivia: A2-052 (ExerciseCard dead sfr), A2-058
+  (trainingReminders dead ternary + planId), A2-062 (dataBackup stale
+  "no cloud sync" comment), A2-053 (TierComparisonStrip column comment was
+  backwards), A2-054 (DifferentialBadge onTapCta JSDoc).
+- `36f4313` A2-046: removed the dead duplicate progression subsystem in
+  planEngine (mesocycleSchedule + weeklyPlan + four helpers, computed and
+  discarded; the live model is mesocycle.js MESO_SCHEDULE). 142 lines, tests
+  pruned alongside.
+- `01a3742` A2-025: removed LOCAL_USER_KEY + clearLocalUser, the last residue
+  of the locked "remove anonymous mode" decision (uncalled; nothing read it).
+- `1791e4b` A2-029/A2-061 + A2-024: documented the two-path sync migration
+  state in SYNC_ARCHITECTURE_LOCKED.md (registry path vs legacy sync.js path,
+  the two offline queues, which path owns which tables) and fixed a stale
+  Athlete Hub comment.
+- Migration tracking (`632e856`): marked 048, 050-055, 058 applied (founder
+  ran them 2026-06-01); 049 still held.
 
-**Still open in the audit:** Tier 3 (perf, needs on-device Sentry-traces
-profiling first), the smaller Tier 4 trivia (A2-052 ExerciseCard sfr, A2-058
-dead ternary, A2-062 stale comment, A2-025 LOCAL_USER_KEY, A2-053/054 doc
-mismatches), A2-046 (planEngine dead progression output, runtime-adjacent,
-wants a consumer check + tests), A2-029/A2-061 (document the dual sync
-architectures), A2-020 (CSPRNG, needs the native dep), and Tier 5 #3/#4/#5
-(long-term). **Resume from the remaining Tier 4 trivia or A2-046.**
+**Still open in the audit (none are in-environment code work):**
+- A2-020 (CSPRNG): needs a native random source + on-device verification.
+  One-line change in lib/uuid.js once the dep lands.
+- A2-003 (WhatsNewSheet `{false && …}`): intentional dormant feature; a
+  product call to keep-for-later or remove, not a cleanup.
+- Tier 3 (perf): needs on-device Sentry-traces profiling first.
+- Tier 5 #3 (TS/JSDoc), #4 (--detectOpenHandles diagnostic), #5 (npm audit on
+  next SDK bump): long-term.
+- Test-surface notes (e.g. A2-030 scheduleSync has no coverage via the
+  debounced path): optional hardening, not dead code.
 
-Repo at session end: `main` at this doc commit on top of `0c8738b`, 0/0 with
-origin, suite green (2352 passing; the count moved as dead screen-mount cases
-were removed and uuid tests added), 0 lint errors. Migrations 048, 050-055,
+**Resume from A2-020 (if the native dep is decided) or a Tier 3 profiling
+pass on device.** The Tier 1/2/4 audit work and the tooling gates are done.
+
+Repo at session end: `main` at this doc commit on top of `1791e4b`, 0/0 with
+origin, suite green (2347 passing), 0 lint errors. Migrations 048, 050-055,
 058 were applied by the founder on 2026-06-01 (so 037-048, 050-058 are live);
 049 stays held until the next AAB ships.
 

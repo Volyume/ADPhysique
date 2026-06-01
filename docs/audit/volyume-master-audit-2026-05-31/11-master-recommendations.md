@@ -32,17 +32,21 @@ Landed on `main`, full suite green (2358 passing), eslint clean:
   Tier 5 #3 (TS/JSDoc) and #5 (npm audit) stay long-term / next-SDK-bump;
   #4 (--detectOpenHandles) is a low diagnostic pass.
 
-- Tier 4 batch done 2026-06-01: A2-048 (dead RestTimer animation, +A2-049
-  /A2-050), A2-067/N3-002/A2-066 (deleted the dead OnboardingScreen), A2-036
-  (one row-id helper in lib/uuid.js; A2-020 CSPRNG deferred, needs a native
-  random source), A2-042 + A2-065 (dead locals + a duplicate form-tip key).
+- Tier 4 fully cleared 2026-06-01: A2-048 (dead RestTimer animation,
+  +A2-049/A2-050), A2-067/N3-002/A2-066 (deleted the dead OnboardingScreen),
+  A2-036 (one row-id helper in lib/uuid.js), A2-042 + A2-065, the trivia
+  batch (A2-052, A2-058, A2-062, A2-053/054, A2-024), A2-046 (removed the
+  dead duplicate planEngine progression subsystem), A2-025 (removed the last
+  LOCAL_USER_KEY residue), and A2-029/A2-061 documented in
+  SYNC_ARCHITECTURE_LOCKED.md. Migrations 048, 050-055, 058 applied by the
+  founder; 049 held.
 
-Still open: Tier 3 (needs on-device profiling first), the smaller Tier 4
-trivia (A2-052, A2-058, A2-062, A2-025, A2-053/054), A2-046 (planEngine dead
-progression output, runtime-adjacent), A2-029/A2-061 (document the dual sync
-architectures), A2-020 (CSPRNG, native dep), Tier 5 #3/#4/#5 (long-term).
-Resume from the remaining Tier 4 trivia or A2-046. Session detail is in
-`docs/CURRENT_STATUS.md` § 0.
+Still open, none of it in-environment code work: A2-020 (CSPRNG, needs a
+native random source + on-device check; one-line change in lib/uuid.js),
+A2-003 (WhatsNewSheet dormant feature, a product decision), Tier 3 (needs
+on-device profiling), Tier 5 #3/#4/#5 (long-term), and optional test-surface
+hardening (e.g. A2-030). Resume from A2-020 or a Tier 3 device profiling
+pass. Session detail is in `docs/CURRENT_STATUS.md` § 0.
 
 ---
 
