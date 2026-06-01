@@ -18,9 +18,9 @@ column); the hand-written internal POOL carries none, so the POOL path reports
 | Classic Physique | chest 7, back 16 (+4), shoulders 20 (+8.5), biceps 6 (+8), triceps 3 (+6.5), quads 7 (+3), hamstrings 8 (+3), glutes 3 (+5), calves 6, abs 3, traps 0 (+2) |
 | Bodybuilding | chest 10, back 12 (+4.5), shoulders 18 (+12.5), biceps 6 (+6), triceps 6 (+11), quads 10 (+4.5), hamstrings 7 (+5.5), glutes 6 (+8), calves 12, abs 6, traps 0 (+1.5) |
 | Bikini | chest 3, back 10 (+6.5), shoulders 20 (+1.5), biceps 0 (+3.5), triceps 0 (+1.5), quads 7 (+3.5), hamstrings 14 (+7.5), glutes 21 (+8.5), calves 0, abs 6, traps 0 (+1.5) |
-| Wellness | chest 3, back 6 (+3.5), shoulders 3 (+4.5), biceps 0 (+3), triceps 0 (+3), quads 15 (+8.5), hamstrings 14 (+7.5), glutes 20 (+14), calves 6, abs 0, traps 0 |
+| Wellness | chest 3, back 6 (+3.5), shoulders 3 (+4.5), biceps 0 (+3), triceps 0 (+3), quads 15 (+8.5), hamstrings 14 (+7.5), glutes 20 (+16), calves 6, abs 0, traps 0 |
 | Figure | chest 3 (+1.5), back 15 (+7.5), shoulders 25 (+8.5), biceps 6 (+7.5), triceps 7 (+5.5), quads 3 (+3.5), hamstrings 6 (+3.5), glutes 4 (+4.5), calves 6, abs 3, traps 0 (+3) |
-| Women's Physique | chest 6, back 14 (+3), shoulders 15 (+7.5), biceps 3 (+7), triceps 3 (+6), quads 12 (+3), hamstrings 10 (+5.5), glutes 8 (+6), calves 6, abs 3, traps 0 (+1.5) |
+| Women's Physique | chest 6, back 14 (+3), shoulders 15 (+7.5), biceps 3 (+7), triceps 3 (+6), quads 12 (+3), hamstrings 10 (+5.5), glutes 8 (+7.5), calves 6, abs 3, traps 0 (+1.5) |
 | Women's Bodybuilding | chest 10, back 12 (+4.5), shoulders 12 (+9.5), biceps 6 (+6), triceps 6 (+8), quads 6 (+7.5), hamstrings 6 (+4.5), glutes 6 (+9), calves 12, abs 6, traps 0 (+1.5) |
 
 ## What the numbers show
