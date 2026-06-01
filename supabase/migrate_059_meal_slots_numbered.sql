@@ -1,0 +1,73 @@
+-- Migration 059: numbered, flexible meal slots
+--
+-- Migrations 015 and 057 locked food_entries.meal_slot to a fixed set:
+--   CHECK (meal_slot IN
+--     ('breakfast','lunch','dinner','snack','preworkout','postworkout'))
+-- That is still the generic three-meals-and-a-snack frame plus the two
+-- peri-workout meals. A physique athlete does not eat on that frame: they run
+-- four to eight structured meals a day. The diary is moving to a flexible,
+-- numbered meal model ("Meal 1", "Meal 2", ... up to the user's meals-per-day),
+-- with Pre-workout and Post-workout kept as named meals the user places around
+-- training whenever they train (no training-day detection, founder direction
+-- 2026-06-01). New entries therefore carry slot keys like 'meal_1', 'meal_2',
+-- which the current CHECK rejects on sync.
+--
+-- This migration replaces the fixed-list CHECK with a pattern CHECK that keeps
+-- validation (no free-for-all text) while allowing the numbered keys:
+--   meal_[0-9]+  plus the legacy values for back-compat.
+--
+-- Old AAB compatibility (release policy 2026-05-24): safe and additive. The
+-- frozen closed-test build only ever writes the six legacy values, which all
+-- still match the new pattern, so it keeps syncing unchanged. A 'meal_3' row
+-- synced down to that old build simply falls outside its fixed meal buckets and
+-- is not displayed there; it does not crash. There is no direction in which the
+-- old build breaks.
+--
+-- Ordering dependency: apply this BEFORE a client that can write 'meal_N' slots
+-- reaches production sync, otherwise those entries fail the old CHECK on push
+-- (caught per-table, so the row stays local and the wider sync run still
+-- succeeds, but it never reaches the cloud until this is applied).
+--
+-- Tracking (CLAUDE.md Rule 6):
+--   - Migration number:        059
+--   - Purpose:                 allow numbered meal slots ('meal_N') in
+--                              food_entries.meal_slot for the flexible meal
+--                              model, keeping the legacy values valid.
+--   - Applied locally:         no (no local dev Supabase project)
+--   - Applied remotely:        pending founder apply
+--   - Safe to re-run:          yes (DROP CONSTRAINT IF EXISTS then ADD;
+--                              each run rebuilds the same constraint).
+--   - Rollback:                only if no 'meal_N' rows exist yet, or they are
+--                              deleted/remapped to a legacy slot first, since
+--                              the old CHECK would reject them:
+--                                ALTER TABLE food_entries
+--                                  DROP CONSTRAINT IF EXISTS
+--                                  food_entries_meal_slot_check;
+--                                ALTER TABLE food_entries
+--                                  ADD CONSTRAINT
+--                                  food_entries_meal_slot_check
+--                                  CHECK (meal_slot IN ('breakfast','lunch',
+--                                  'dinner','snack','preworkout',
+--                                  'postworkout'));
+--   - App-code dependencies:   DiaryScreen MEAL_SLOTS generation (numbered
+--                              meals + a meals-per-day preference), the move
+--                              picker and MacroBreakdownSheet (slot
+--                              enumeration), and mealSuggest.js slot-context
+--                              inference (curated meals stay tagged by their
+--                              existing slot character and a numbered meal
+--                              infers its context). Must ship together. The
+--                              local SQLite meal_slot has no CHECK, so local
+--                              logging works before this is applied; only
+--                              cloud sync needs it.
+--   - Dependencies:            migrations 015 and 057 (create food_entries and
+--                              the CHECK this replaces).
+--
+-- Apply via Supabase Dashboard -> SQL Editor -> Run. See verification in
+-- supabase/README.md § Verify numbered meal slots.
+
+ALTER TABLE food_entries
+  DROP CONSTRAINT IF EXISTS food_entries_meal_slot_check;
+
+ALTER TABLE food_entries
+  ADD CONSTRAINT food_entries_meal_slot_check
+  CHECK (meal_slot ~ '^(breakfast|lunch|dinner|snack|preworkout|postworkout|meal_[0-9]+)$');

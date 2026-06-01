@@ -19,7 +19,9 @@ unless the file header says otherwise.
 > migration from 037 onward; a row appearing here does not by itself mean
 > the migration is still unapplied. Per CURRENT_STATUS § 3, migrations
 > 037-048, 050-058 are applied (the 048, 050-055, 058 set was applied by the
-> founder on 2026-06-01); 049 remains held until the next AAB ships. Apply
+> founder on 2026-06-01); 049 remains held until the next AAB ships; 059
+> (numbered meal slots) is DRAFTED and pending founder apply, to ship with the
+> diary flexible-meal change. Apply
 > any future migration in numeric order in the SQL Editor.
 
 | # | File | What it adds | Verification query |
@@ -567,6 +569,22 @@ If the column is absent, the per-table weekly-checkins push rejects any
 row carrying a steps average ("column steps_avg does not exist"). Re-run
 the migration (IF NOT EXISTS makes it safe) and re-check. Additive +
 nullable, so the frozen AAB is unaffected (its pushes omit the column).
+
+### Verify numbered meal slots (migration 059)
+
+```sql
+SELECT pg_get_constraintdef(oid)
+FROM pg_constraint
+WHERE conrelid = 'public.food_entries'::regclass
+  AND conname = 'food_entries_meal_slot_check';
+-- Expected: CHECK ((meal_slot ~ '^(breakfast|lunch|dinner|snack|preworkout|postworkout|meal_[0-9]+)$'::text))
+```
+
+Until this is applied, any 'meal_N' entry from a build using the flexible
+meal model fails the old fixed-list CHECK on push (caught per-table; the row
+stays local, the wider sync run still succeeds). The six legacy values still
+match the new pattern, so the frozen AAB is unaffected. DRAFTED, pending
+founder apply; ship the app-side flexible-meal change with it, not before.
 
 ## Cloud schema drift audit
 

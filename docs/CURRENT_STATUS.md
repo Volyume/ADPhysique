@@ -857,6 +857,7 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 | 056 | daily_steps table (composite PK + RLS + LWW touch trigger) for the cardio/steps activity store | **Applied 2026-05-30.** Fully additive. Bidirectional sync via `src/lib/sync/tables/dailySteps.js`. Verification in `supabase/README.md` § Verify daily_steps. |
 | 057 | food_entries.meal_slot CHECK relaxed to allow 'preworkout' + 'postworkout' (peri-workout diary sections) | **Applied 2026-05-30.** Purely additive; the four original slots still pass, so the frozen AAB keeps syncing. Verification in `supabase/README.md` § Verify peri-workout meal slots. |
 | 058 | weekly_checkins_v2.steps_avg (nullable integer): the week's average steps the coach reads as a secondary signal (auto when 4+ days registered, else the manual check-in figure) | **Applied 2026-06-01.** Additive + nullable, frozen-AAB safe (mirrors 050). The per-table weekly-checkins push ships `steps_avg`; without the column the push is rejected. Verification in `supabase/README.md` § Verify weekly_checkins_v2.steps_avg. |
+| 059 | food_entries.meal_slot CHECK widened to a pattern allowing numbered meals ('meal_N') for the diary flexible-meal model, legacy values kept | **Drafted 2026-06-01, pending founder apply.** Frozen-AAB safe (the six legacy values still match the pattern; a 'meal_N' row synced to the old build falls outside its fixed buckets, no crash). Ship WITH the app-side flexible-meal change, not before. Verification in `supabase/README.md` § Verify numbered meal slots. |
 
 ---
 
