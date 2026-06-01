@@ -1102,6 +1102,234 @@ function buildUpperLowerWPWorkouts(weeklyTargets, landmarks, equipment, goal, we
 }
 
 // ---------------------------------------------------------------------------
+// Division x day-count decision matrix (rebuild spec phase 2)
+// ---------------------------------------------------------------------------
+//
+// The structural core of specialisation: (division x day-count) jointly select
+// the split skeleton and the muscle-priority ORDER within each session. The first
+// muscle of session 1 is the division's lead muscle, so the week opens with
+// that muscle's top compound (back -> vertical pull for Men's Physique, glutes
+// -> hip thrust for Bikini, never bench). Muscle order within a session is the
+// division's priority order, so priority muscles are trained first and most
+// frequently. Volume per muscle is still the floored/capped weekly target from
+// phase 1; this matrix decides STRUCTURE and FREQUENCY.
+//
+// Only the six specialised divisions are routed here. General, Bodybuilding and
+// Women's Bodybuilding stay balanced on the legacy selectSplit path (their spec
+// rows match it: Full Body / Upper-Lower / PPL), and the weak_point phase keeps
+// its dedicated UL+WP builder.
+const DIVISION_MATRIX = {
+  mens_physique: {
+    label: 'V-Taper',
+    3: [
+      { name: 'Upper A (Width)', muscles: ['back', 'side_delts', 'chest', 'triceps'] },
+      { name: 'Lower + Abs', muscles: ['quads', 'hamstrings', 'glutes', 'calves', 'abs'] },
+      { name: 'Upper B (Detail)', muscles: ['back', 'rear_delts', 'side_delts', 'biceps', 'chest'] },
+    ],
+    4: [
+      { name: 'Back + Delts (Width)', muscles: ['back', 'side_delts', 'rear_delts'] },
+      { name: 'Chest + Arms', muscles: ['chest', 'triceps', 'biceps'] },
+      { name: 'Lower + Abs', muscles: ['quads', 'hamstrings', 'glutes', 'calves', 'abs'] },
+      { name: 'Back + Delts (Thickness)', muscles: ['back', 'rear_delts', 'side_delts', 'traps'] },
+    ],
+    5: [
+      { name: 'Pull (Width)', muscles: ['back', 'rear_delts', 'biceps'] },
+      { name: 'Push (Delts + Chest)', muscles: ['side_delts', 'chest', 'front_delts', 'triceps'] },
+      { name: 'Legs + Abs', muscles: ['quads', 'hamstrings', 'glutes', 'calves', 'abs'] },
+      { name: 'Pull (Thickness)', muscles: ['back', 'traps', 'biceps'] },
+      { name: 'Delts + Arms', muscles: ['side_delts', 'rear_delts', 'triceps', 'biceps'] },
+    ],
+    6: [
+      { name: 'Pull (Width)', muscles: ['back', 'rear_delts', 'biceps'] },
+      { name: 'Push (Chest)', muscles: ['chest', 'front_delts', 'side_delts', 'triceps'] },
+      { name: 'Legs', muscles: ['quads', 'hamstrings', 'glutes', 'calves'] },
+      { name: 'Pull (Thickness)', muscles: ['back', 'side_delts', 'biceps'] },
+      { name: 'Push (Delts)', muscles: ['side_delts', 'chest', 'triceps'] },
+      { name: 'Delts + Arms + Abs', muscles: ['side_delts', 'rear_delts', 'biceps', 'triceps', 'abs'] },
+    ],
+  },
+  classic_physique: {
+    label: 'X-Frame',
+    3: [
+      { name: 'Upper (Back + Delt)', muscles: ['back', 'side_delts', 'chest', 'triceps'] },
+      { name: 'Lower (Sweep + Ham)', muscles: ['quads', 'hamstrings', 'glutes', 'calves', 'abs'] },
+      { name: 'Upper (Chest + Arm)', muscles: ['chest', 'back', 'biceps', 'triceps', 'rear_delts'] },
+    ],
+    4: [
+      { name: 'Back + Rear Delt', muscles: ['back', 'rear_delts', 'side_delts'] },
+      { name: 'Legs (Sweep)', muscles: ['quads', 'hamstrings', 'glutes', 'calves'] },
+      { name: 'Chest + Side Delt + Arms', muscles: ['chest', 'side_delts', 'biceps', 'triceps'] },
+      { name: 'Back + Hams', muscles: ['back', 'hamstrings', 'abs'] },
+    ],
+    5: [
+      { name: 'Pull', muscles: ['back', 'rear_delts', 'biceps'] },
+      { name: 'Legs (Quad)', muscles: ['quads', 'calves', 'abs'] },
+      { name: 'Push', muscles: ['chest', 'side_delts', 'triceps'] },
+      { name: 'Pull', muscles: ['back', 'side_delts', 'biceps'] },
+      { name: 'Legs (Ham + Glute)', muscles: ['hamstrings', 'glutes', 'quads', 'calves'] },
+    ],
+    6: [
+      { name: 'Pull', muscles: ['back', 'rear_delts', 'biceps'] },
+      { name: 'Push', muscles: ['chest', 'front_delts', 'triceps'] },
+      { name: 'Legs', muscles: ['quads', 'hamstrings', 'glutes', 'calves'] },
+      { name: 'Pull', muscles: ['back', 'side_delts', 'biceps'] },
+      { name: 'Push', muscles: ['chest', 'side_delts', 'triceps'] },
+      { name: 'Legs + Abs', muscles: ['quads', 'hamstrings', 'calves', 'abs'] },
+    ],
+  },
+  bikini: {
+    label: 'Glute Focus',
+    3: [
+      { name: 'Glute Focus A', muscles: ['glutes', 'hamstrings', 'side_delts'] },
+      { name: 'Upper (Delts + Width)', muscles: ['side_delts', 'back', 'rear_delts', 'abs'] },
+      { name: 'Glute Focus B', muscles: ['glutes', 'hamstrings', 'quads', 'abs'] },
+    ],
+    4: [
+      { name: 'Lower (Glute + Ham)', muscles: ['glutes', 'hamstrings', 'abs'] },
+      { name: 'Upper (Delts + Back)', muscles: ['side_delts', 'back', 'rear_delts', 'abs'] },
+      { name: 'Lower (Glute + Quad)', muscles: ['glutes', 'quads', 'hamstrings'] },
+      { name: 'Glutes (Pump) + Delts', muscles: ['glutes', 'side_delts', 'back'] },
+    ],
+    5: [
+      { name: 'Glutes (Max)', muscles: ['glutes', 'hamstrings'] },
+      { name: 'Delts + Back + Abs', muscles: ['side_delts', 'back', 'rear_delts', 'abs'] },
+      { name: 'Glutes (Medius + Ham)', muscles: ['glutes', 'hamstrings'] },
+      { name: 'Lower (Quad + Glute)', muscles: ['quads', 'glutes', 'calves'] },
+      { name: 'Delts + Arms', muscles: ['side_delts', 'rear_delts', 'biceps', 'triceps'] },
+    ],
+    6: [
+      { name: 'Glutes', muscles: ['glutes', 'hamstrings'] },
+      { name: 'Upper (Delt + Back)', muscles: ['side_delts', 'back', 'rear_delts'] },
+      { name: 'Glutes', muscles: ['glutes', 'hamstrings'] },
+      { name: 'Lower (Quad)', muscles: ['quads', 'glutes', 'calves'] },
+      { name: 'Upper (Delt + Arm)', muscles: ['side_delts', 'biceps', 'triceps'] },
+      { name: 'Glutes Pump + Abs', muscles: ['glutes', 'abs'] },
+    ],
+  },
+  wellness: {
+    label: 'Lower Focus',
+    3: [
+      { name: 'Lower A (Glute + Ham)', muscles: ['glutes', 'hamstrings'] },
+      { name: 'Lower B (Quad + Adductor)', muscles: ['quads', 'adductors', 'glutes', 'calves'] },
+      { name: 'Upper (Delts + Back + Abs)', muscles: ['side_delts', 'back', 'abs'] },
+    ],
+    4: [
+      { name: 'Glute + Ham', muscles: ['glutes', 'hamstrings'] },
+      { name: 'Quad Sweep + Adductor', muscles: ['quads', 'adductors', 'calves'] },
+      { name: 'Glute (Medius) + Upper', muscles: ['glutes', 'side_delts', 'back'] },
+      { name: 'Lower Full', muscles: ['quads', 'hamstrings', 'glutes', 'calves'] },
+    ],
+    5: [
+      { name: 'Glutes', muscles: ['glutes', 'hamstrings'] },
+      { name: 'Quads (Sweep)', muscles: ['quads', 'adductors', 'calves'] },
+      { name: 'Glute + Ham', muscles: ['glutes', 'hamstrings'] },
+      { name: 'Upper (Delts + Back)', muscles: ['side_delts', 'back', 'abs'] },
+      { name: 'Lower Full', muscles: ['quads', 'glutes', 'calves'] },
+    ],
+    6: [
+      { name: 'Glutes', muscles: ['glutes', 'hamstrings'] },
+      { name: 'Quads', muscles: ['quads', 'adductors', 'calves'] },
+      { name: 'Ham + Glute', muscles: ['hamstrings', 'glutes'] },
+      { name: 'Upper', muscles: ['side_delts', 'back', 'abs'] },
+      { name: 'Lower (Sweep)', muscles: ['quads', 'glutes', 'calves'] },
+      { name: 'Glute Pump + Abs', muscles: ['glutes', 'abs'] },
+    ],
+  },
+  figure: {
+    label: 'X-Frame',
+    3: [
+      { name: 'Upper (Delt + Back Width)', muscles: ['side_delts', 'back', 'rear_delts', 'triceps'] },
+      { name: 'Lower (Glute + Ham + Quad)', muscles: ['glutes', 'hamstrings', 'quads', 'calves'] },
+      { name: 'Upper (Delt + Arm + Abs)', muscles: ['side_delts', 'back', 'triceps', 'abs'] },
+    ],
+    4: [
+      { name: 'Back + Rear Delt', muscles: ['back', 'rear_delts', 'side_delts'] },
+      { name: 'Lower', muscles: ['glutes', 'hamstrings', 'quads', 'calves'] },
+      { name: 'Shoulders + Arms', muscles: ['side_delts', 'rear_delts', 'triceps', 'biceps'] },
+      { name: 'Back Width + Abs', muscles: ['back', 'side_delts', 'abs'] },
+    ],
+    5: [
+      { name: 'Pull', muscles: ['back', 'rear_delts', 'biceps'] },
+      { name: 'Legs', muscles: ['glutes', 'hamstrings', 'quads', 'calves'] },
+      { name: 'Delts + Arms', muscles: ['side_delts', 'rear_delts', 'triceps'] },
+      { name: 'Pull', muscles: ['back', 'side_delts', 'biceps'] },
+      { name: 'Lower (Glute-Ham)', muscles: ['glutes', 'hamstrings', 'calves'] },
+    ],
+    6: [
+      { name: 'Pull', muscles: ['back', 'rear_delts', 'biceps'] },
+      { name: 'Push (Delt)', muscles: ['side_delts', 'chest', 'triceps'] },
+      { name: 'Legs', muscles: ['glutes', 'hamstrings', 'quads', 'calves'] },
+      { name: 'Pull', muscles: ['back', 'side_delts', 'biceps'] },
+      { name: 'Delts + Arms', muscles: ['side_delts', 'rear_delts', 'triceps'] },
+      { name: 'Lower', muscles: ['glutes', 'hamstrings', 'calves', 'abs'] },
+    ],
+  },
+  womens_physique: {
+    label: 'V-Taper',
+    3: [
+      { name: 'Upper (Back + Delt)', muscles: ['back', 'side_delts', 'chest', 'triceps'] },
+      { name: 'Lower (Quad + Ham + Glute)', muscles: ['quads', 'hamstrings', 'glutes', 'calves'] },
+      { name: 'Upper (Chest + Arm + Abs)', muscles: ['chest', 'back', 'biceps', 'triceps', 'abs'] },
+    ],
+    4: [
+      { name: 'Upper (Width)', muscles: ['back', 'side_delts', 'rear_delts', 'triceps'] },
+      { name: 'Lower', muscles: ['quads', 'hamstrings', 'glutes', 'calves'] },
+      { name: 'Upper (Thickness)', muscles: ['back', 'chest', 'side_delts', 'biceps'] },
+      { name: 'Lower', muscles: ['quads', 'hamstrings', 'glutes', 'abs'] },
+    ],
+    5: [
+      { name: 'Pull', muscles: ['back', 'rear_delts', 'biceps'] },
+      { name: 'Push', muscles: ['chest', 'side_delts', 'triceps'] },
+      { name: 'Legs', muscles: ['quads', 'hamstrings', 'glutes', 'calves'] },
+      { name: 'Upper', muscles: ['back', 'side_delts', 'biceps'] },
+      { name: 'Lower', muscles: ['hamstrings', 'glutes', 'quads', 'abs'] },
+    ],
+    6: [
+      { name: 'Pull', muscles: ['back', 'rear_delts', 'biceps'] },
+      { name: 'Push', muscles: ['side_delts', 'chest', 'triceps'] },
+      { name: 'Legs', muscles: ['quads', 'hamstrings', 'glutes', 'calves'] },
+      { name: 'Pull', muscles: ['back', 'side_delts', 'biceps'] },
+      { name: 'Push', muscles: ['chest', 'side_delts', 'triceps'] },
+      { name: 'Legs', muscles: ['quads', 'hamstrings', 'glutes', 'abs'] },
+    ],
+  },
+};
+
+// Build a division's sessions from a matrix cell. Frequency per muscle is how
+// many sessions list it; muscle order within a session is the division's
+// priority order (set in the matrix), so session 1's first muscle is the lead.
+const UPPER_MUSCLES = new Set(['chest', 'back', 'side_delts', 'rear_delts', 'front_delts', 'biceps', 'triceps', 'traps']);
+
+function buildFromMatrix(sessionsIn, weeklyTargets, landmarks, equipment, goal, experience, nutritionPhase) {
+  // Clone so the structural-coverage net never mutates the shared matrix.
+  const sessions = sessionsIn.map(s => ({ name: s.name, muscles: [...s.muscles] }));
+
+  // Structural coverage: a division's matrix may legitimately omit a structural
+  // mover (e.g. Bikini does no dedicated chest), but the spec forbids any
+  // structural muscle reading zero. Append any missing structural muscle, at
+  // the END (lowest priority = maintenance), to a session of the same region.
+  for (const m of STRUCTURAL_MUSCLES) {
+    if (sessions.some(s => s.muscles.includes(m))) continue;
+    const wantUpper = UPPER_MUSCLES.has(m);
+    const target = sessions.find(s => s.muscles.some(x => UPPER_MUSCLES.has(x) === wantUpper)) ?? sessions[0];
+    target.muscles.push(m);
+  }
+
+  const sessionsPerMuscle = {};
+  for (const s of sessions) {
+    for (const m of s.muscles) sessionsPerMuscle[m] = (sessionsPerMuscle[m] ?? 0) + 1;
+  }
+  const usedByMuscle = {};
+  for (const s of sessions) {
+    for (const m of s.muscles) if (!usedByMuscle[m]) usedByMuscle[m] = new Set();
+  }
+  return sessions.map((s, i) => buildSession(
+    s.name, s.muscles, sessionsPerMuscle, weeklyTargets, equipment, goal, i,
+    usedByMuscle, experience, nutritionPhase, landmarks,
+  ));
+}
+
+// ---------------------------------------------------------------------------
 // Deduplication
 // ---------------------------------------------------------------------------
 
@@ -1516,7 +1744,16 @@ function _generatePlanInner(inputs) {
                      : phase === 'strength_size' ? 'strength_hypertrophy'
                      : goal;
 
-  const splitType = selectSplit(experience, effectiveDays, internalGoal);
+  // Phase 2: the six specialised divisions select their split + session
+  // composition from the division x day-count matrix (division-first). General,
+  // Bodybuilding, Women's Bodybuilding and the weak_point phase keep the legacy
+  // day-count split selector.
+  const matrixCell = (phase !== 'weak_point' && DIVISION_MATRIX[goal])
+    ? DIVISION_MATRIX[goal][effectiveDays]
+    : null;
+  const splitType = matrixCell
+    ? DIVISION_MATRIX[goal].label
+    : selectSplit(experience, effectiveDays, internalGoal);
 
   // Compute adjusted landmarks
   const landmarks = computeLandmarks(experience, recoveryRating, nutritionPhase, age);
@@ -1535,6 +1772,11 @@ function _generatePlanInner(inputs) {
 
   // Build workouts
   let rawWorkouts;
+  if (matrixCell) {
+    rawWorkouts = buildFromMatrix(
+      matrixCell, adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase,
+    );
+  } else {
   switch (splitType) {
     case 'full_body':
       rawWorkouts = buildFullBodyWorkouts(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays);
@@ -1557,6 +1799,7 @@ function _generatePlanInner(inputs) {
       break;
     default:
       rawWorkouts = buildFullBodyWorkouts(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays);
+  }
   }
 
   // Strength notes (strength_size phase OR legacy goal)

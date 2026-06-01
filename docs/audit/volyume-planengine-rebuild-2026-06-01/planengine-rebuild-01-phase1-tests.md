@@ -29,27 +29,27 @@ Delt complex (side+rear+front) capped at a combined 26.
 | General | beginner | upper_lower | Barbell Bench Press | - | - | 0 |
 | General | intermediate | upper_lower | Barbell Bench Press | - | - | 0 |
 | General | advanced | upper_lower | Barbell Bench Press | - | - | 0 |
-| Men's Physique | beginner | upper_lower | Incline Barbell Bench Press | - | - | 0 |
-| Men's Physique | intermediate | upper_lower | Incline Barbell Bench Press | - | - | 0 |
-| Men's Physique | advanced | upper_lower | Incline Barbell Bench Press | - | - | 0 |
-| Classic Physique | beginner | upper_lower | Barbell Bench Press | - | - | 0 |
-| Classic Physique | intermediate | upper_lower | Incline Barbell Bench Press | - | - | 0 |
-| Classic Physique | advanced | upper_lower | Incline Barbell Bench Press | - | - | 0 |
+| Men's Physique | beginner | V-Taper | Weighted Pull-Up | - | - | 0 |
+| Men's Physique | intermediate | V-Taper | Weighted Pull-Up | - | - | 0 |
+| Men's Physique | advanced | V-Taper | Weighted Pull-Up | - | - | 0 |
+| Classic Physique | beginner | X-Frame | Weighted Pull-Up | - | - | 0 |
+| Classic Physique | intermediate | X-Frame | Weighted Pull-Up | - | - | 0 |
+| Classic Physique | advanced | X-Frame | Weighted Pull-Up | - | - | 0 |
 | Bodybuilding | beginner | upper_lower | Barbell Bench Press | - | - | 0 |
 | Bodybuilding | intermediate | upper_lower | Incline Barbell Bench Press | - | - | 0 |
 | Bodybuilding | advanced | upper_lower | Incline Barbell Bench Press | - | - | 0 |
-| Bikini | beginner | upper_lower | Barbell Bench Press | - | - | 0 |
-| Bikini | intermediate | upper_lower | Barbell Bench Press | - | - | 0 |
-| Bikini | advanced | upper_lower | Barbell Bench Press | - | - | 0 |
-| Wellness | beginner | upper_lower | Barbell Bench Press | - | - | 0 |
-| Wellness | intermediate | upper_lower | Barbell Bench Press | - | - | 0 |
-| Wellness | advanced | upper_lower | Barbell Bench Press | - | - | 0 |
-| Figure | beginner | upper_lower | Incline Barbell Bench Press | - | - | 0 |
-| Figure | intermediate | upper_lower | Incline Barbell Bench Press | - | - | 0 |
-| Figure | advanced | upper_lower | Incline Barbell Bench Press | - | - | 0 |
-| Women's Physique | beginner | upper_lower | Barbell Bench Press | - | - | 0 |
-| Women's Physique | intermediate | upper_lower | Barbell Bench Press | - | - | 0 |
-| Women's Physique | advanced | upper_lower | Incline Barbell Bench Press | - | - | 0 |
+| Bikini | beginner | Glute Focus | Barbell Hip Thrust | - | - | 0 |
+| Bikini | intermediate | Glute Focus | Barbell Hip Thrust | - | - | 0 |
+| Bikini | advanced | Glute Focus | Barbell Hip Thrust | - | - | 0 |
+| Wellness | beginner | Lower Focus | Barbell Hip Thrust | - | - | 0 |
+| Wellness | intermediate | Lower Focus | Barbell Hip Thrust | - | - | 0 |
+| Wellness | advanced | Lower Focus | Barbell Hip Thrust | - | - | 0 |
+| Figure | beginner | X-Frame | Weighted Pull-Up | - | - | 0 |
+| Figure | intermediate | X-Frame | Weighted Pull-Up | - | - | 0 |
+| Figure | advanced | X-Frame | Weighted Pull-Up | - | - | 0 |
+| Women's Physique | beginner | V-Taper | Weighted Pull-Up | - | - | 0 |
+| Women's Physique | intermediate | V-Taper | Weighted Pull-Up | - | - | 0 |
+| Women's Physique | advanced | V-Taper | Weighted Pull-Up | - | - | 0 |
 | Women's Bodybuilding | beginner | upper_lower | Barbell Bench Press | - | - | 0 |
 | Women's Bodybuilding | intermediate | upper_lower | Barbell Bench Press | - | - | 0 |
 | Women's Bodybuilding | advanced | upper_lower | Incline Barbell Bench Press | - | - | 0 |
@@ -59,13 +59,13 @@ Delt complex (side+rear+front) capped at a combined 26.
 | Division | chest | back | shoulders | biceps | triceps | quads | hamstrings | glutes | calves | abs | traps |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | General | 6 | 8 | 12 | 6 | 6 | 8 | 6 | 6 | 6 | 6 | 0 |
-| Men's Physique | 14 | 12 | 18 | 6 | 6 | 6 | 6 | 6 | 6 | 0 | 0 |
-| Classic Physique | 12 | 12 | 18 | 6 | 6 | 9 | 6 | 7 | 12 | 6 | 0 |
+| Men's Physique | 8 | 16 | 18 | 6 | 6 | 3 | 6 | 3 | 3 | 3 | 3 |
+| Classic Physique | 7 | 16 | 15 | 3 | 6 | 7 | 6 | 3 | 6 | 3 | 0 |
 | Bodybuilding | 8 | 12 | 18 | 6 | 6 | 8 | 7 | 7 | 12 | 6 | 0 |
-| Bikini | 6 | 12 | 12 | 6 | 6 | 8 | 12 | 6 | 6 | 6 | 0 |
-| Wellness | 6 | 12 | 12 | 6 | 6 | 8 | 12 | 6 | 6 | 6 | 0 |
-| Figure | 8 | 12 | 18 | 6 | 6 | 12 | 6 | 9 | 6 | 6 | 0 |
-| Women's Physique | 8 | 12 | 12 | 6 | 6 | 9 | 6 | 7 | 12 | 6 | 0 |
+| Bikini | 3 | 13 | 15 | 0 | 0 | 3 | 13 | 20 | 0 | 6 | 0 |
+| Wellness | 3 | 6 | 3 | 0 | 0 | 15 | 13 | 14 | 6 | 0 | 0 |
+| Figure | 3 | 15 | 21 | 6 | 7 | 3 | 6 | 4 | 6 | 3 | 0 |
+| Women's Physique | 6 | 14 | 12 | 3 | 6 | 12 | 6 | 8 | 6 | 3 | 0 |
 | Women's Bodybuilding | 8 | 12 | 12 | 6 | 6 | 9 | 6 | 7 | 12 | 6 | 0 |
 
 ## Assumptions and known gaps (flagged, spec rule)

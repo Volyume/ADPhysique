@@ -61,9 +61,12 @@ describe('Coach division contract', () => {
     expect(vol(generatePlan(cfg('bodybuilding'))).quads).toBeGreaterThanOrEqual(7);
   });
 
-  test('general and Men\'s Physique keep the PPL split (default and upper-dominant unchanged)', () => {
+  test('general keeps PPL; Men\'s Physique now uses its division-specific split (phase 2)', () => {
+    // Phase 2 routes the six specialised divisions through the decision matrix.
+    // General stays on the legacy day-count selector (PPL at 5 days). Men's
+    // Physique is no longer generic PPL: it gets its V-Taper split skeleton.
     expect(generatePlan(cfg('general')).splitType).toBe('ppl');
-    expect(generatePlan(cfg('mens_physique')).splitType).toBe('ppl');
+    expect(generatePlan(cfg('mens_physique')).splitType).toBe('V-Taper');
   });
 
   test('weak-point specialisation is additive, not destructive (stage 4)', () => {

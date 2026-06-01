@@ -80,12 +80,20 @@ export function fragments(plan) {
 // Structural/judged muscles that the spec says must never be zero in any plan.
 const NO_ZERO = ['chest', 'back', 'shoulders', 'quads', 'hamstrings', 'glutes'];
 
+// Division-aware MRV ceiling. Glutes get the higher Bikini/Wellness cap (30,
+// Contreras split-by-type) matching the engine; everything else uses the table.
+function mrvFor(muscle, goal) {
+  if (muscle === 'glutes' && (goal === 'bikini' || goal === 'wellness')) return 30;
+  return SPEC_LANDMARKS[muscle]?.MRV;
+}
+
 export function measure(plan) {
   const sets = weeklySets(plan);
+  const goal = plan.goal;
   const zeros = NO_ZERO.filter(m => (sets[m] ?? 0) === 0);
   const overMRV = Object.entries(sets)
-    .filter(([m, n]) => SPEC_LANDMARKS[m] && n > SPEC_LANDMARKS[m].MRV)
-    .map(([m, n]) => `${m} ${n} > MRV ${SPEC_LANDMARKS[m].MRV}`);
+    .filter(([m, n]) => mrvFor(m, goal) != null && n > mrvFor(m, goal))
+    .map(([m, n]) => `${m} ${n} > MRV ${mrvFor(m, goal)}`);
   return {
     name: plan.name,
     split: plan.splitType,
