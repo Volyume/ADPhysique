@@ -518,11 +518,17 @@ const useAppStore = create((set, get) => ({
         .select('first_name, training_focus, training_age, primary_equipment, units, bar_weight, tier, first_run_complete')
         .eq('id', supabaseUserId)
         .maybeSingle();
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('cloud-read-timeout')), READ_TIMEOUT_MS)
-      );
-      const { data } = await Promise.race([readPromise, timeoutPromise]);
-      cloudData = data;
+      let readTimeoutId;
+      const timeoutPromise = new Promise((_, reject) => {
+        readTimeoutId = setTimeout(() => reject(new Error('cloud-read-timeout')), READ_TIMEOUT_MS);
+      });
+      try {
+        const { data } = await Promise.race([readPromise, timeoutPromise]);
+        cloudData = data;
+      } finally {
+        // Clear the loser timer so a fast read doesn't leave a 10s timer armed.
+        clearTimeout(readTimeoutId);
+      }
     } catch (e) {
       if (e?.message === 'cloud-read-timeout') {
         log.logWarn('restoreSessionFromCloud.timeout', 'cloud read exceeded 10s', { uid: supabaseUserId });
@@ -613,10 +619,17 @@ const useAppStore = create((set, get) => ({
         .select('tier')
         .eq('id', supabaseUserId)
         .maybeSingle();
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('refreshTierFromCloud timeout')), 5000)
-      );
-      const { data } = await Promise.race([queryPromise, timeoutPromise]);
+      let tierTimeoutId;
+      const timeoutPromise = new Promise((_, reject) => {
+        tierTimeoutId = setTimeout(() => reject(new Error('refreshTierFromCloud timeout')), 5000);
+      });
+      let data;
+      try {
+        ({ data } = await Promise.race([queryPromise, timeoutPromise]));
+      } finally {
+        // Clear the loser timer so a fast read doesn't leave a 5s timer armed.
+        clearTimeout(tierTimeoutId);
+      }
       if (data?.tier) {
         // Same beta tier policy as restoreSessionFromCloud, see comment
         // there. Any cloud-signed-in user is Pro during beta because the
