@@ -17,12 +17,17 @@ section 8 before touching code.
 - Branch: `main` (Rule 9: main is the only working branch; the harness branch
   directive `claude/github-origin-main-DV8YC` was surfaced and NOT followed, by
   founder governance. Confirm again on resume.)
-- HEAD: `c460d4f`, in sync with `origin/main` (ahead/behind 0/0), tree clean.
-- Test suite: 145 suites, 2476 pass, 4 skipped, 0 fail.
+- HEAD: `a876354`, in sync with `origin/main` (ahead/behind 0/0), tree clean.
+- Test suite: 146 suites, 2495 pass, 3 skipped, 0 fail.
 - Run the suite: `npx jest`. Run one file: `npx jest <path>`.
 
 ### Commits that make up this work (newest first)
 ```
+a876354 planengine-rebuild: Bikini delt rule + press tagging fix, overlap gate <50% (phase 3c)
+c6eba50 planengine-rebuild: quad sweep vs mass split + Classic/Wellness mandate (phase 3b)
+d25d971 planengine-rebuild: glute Contreras split-by-type (phase 3b)
+2621ebd planengine-rebuild: division-specific pool restrictions (phase 3c increment 1)
+638cffc planengine-rebuild: add Phase 3 library-path benchmark
 c460d4f planengine-rebuild: phase 3 increment 1 (anti-redundancy: within-session pattern diversity)
 8041e92 planengine-rebuild: phase 2 division specialisation (decision matrix + priority order + lead lift)
 19f9794 planengine-rebuild: phase 1 volume integrity (landmarks, floors, MRV caps, min-3 sets)
@@ -181,21 +186,28 @@ Docs written:
 
 ---
 
-## 5. What is NOT done in Phase 3 (the remaining work, in spec order)
+## 5. Phase 3 status (DONE and remaining, in spec order)
 
-- 3a Corrected muscle tagging in the DB library (`src/lib/seedExercises.js`,
-  ~87KB): hip-extension movements primary = glutes, fractional = hamstrings;
-  audit the whole library; hamstring coverage requires knee-flexion OR
-  loaded-lengthened hinge. NOTE: the POOL is already correct; this is a LIBRARY
-  data fix and is not measured by the POOL benchmarks.
-- 3b Sub-region tags on every exercise (glute activator/stretcher/pumper, quad
-  sweep vs mass, lat-width vs thickness, triceps overhead vs pushdown, biceps
-  supinated vs neutral, etc.). The 3d anti-redundancy can only fully de-duplicate
-  glutes and delts once these tags exist.
-- 3c Division-specific exercise pools + mandated lead category + restrictions
-  (Bikini no heavy trap/row + adduction 0-2; Wellness adduction + quad sweep;
-  MP reduced legs + lateral priority; Classic quad-sweep mandatory, no heavy
-  obliques). THIS is what drives the re-homed <30% overlap gate.
+DONE (commits 638cffc, 2621ebd, d25d971, c6eba50, a876354; see doc 04):
+- Library-path benchmark built first (doc 03), so 3b/3c are measured on the
+  live app path (475-exercise seed library), not the internal POOL.
+- 3b sub-region tags: glutes activator/stretcher/pumper (Contreras), quads
+  sweep vs mass. Wired through SUBREGION_MAP, poolGenerator translation, POOL,
+  SUBREGION_REQUIREMENTS, DIVISION_SUBREGION_BIAS. Also fixed delt presses that
+  were mis-tagged as lateral raises (overhead_press now translates to 'press').
+- 3c division pools: DIVISION_POOL_RULES (HARD rules, distinct from the soft
+  bias) with a starve-guard. Bikini back width-only/no bench/no back-squat/
+  round-delt laterals; MP legs maintenance; Classic/Wellness quad-sweep.
+  Drives the overlap gate: Bikini-vs-MP 65% -> 48% on the library path.
+- Overlap gate un-skipped in planengineRebuildPhase2.test.js, evaluated on the
+  LIBRARY path, threshold < 50% (FOUNDER DECISION, not the literal < 30%; the
+  residual is genuinely shared programming, see doc 04 floor analysis).
+
+REMAINING:
+- 3a Full library primary-muscle audit (`src/lib/seedExercises.js`): the glute
+  and quad TYPE tags landed; a whole-library primary-muscle re-audit (every
+  hip-extension primary = glutes, fractional = hamstrings) is still open. The
+  POOL is correct; this is library hygiene, low risk, not on the gate path.
 - 3e Indirect volume modelling (fractional secondary contributions subtracted
   from direct targets; flag near-zero indirect coverage to force isolation;
   side delts in pressing programs trigger the flag).
@@ -211,22 +223,25 @@ Docs written:
 
 ## 6. EXACT next steps for the resuming session
 
+Phase 0-3 (3b/3c) are DONE. The library-path benchmark exists
+(`planengineRebuildPhase3.test.js`, harness in `planengineBench.js`:
+`loadSeedLibrary`, `genLib`, `overlapPct`). Remaining, in order:
+
 1. Re-validate repo (Rule 1): fetch, confirm branch main, HEAD, clean tree.
-2. Re-read: this handoff, the spec (section 8), doc 00/01/02.
-3. BUILD A LIBRARY-PATH BENCHMARK FIRST. The POOL benchmarks cannot verify
-   3a/3b. There is an existing `src/lib/__tests__/planEngineLibraryPool.test.js`
-   to use as the pattern: feed `getAllExercises()` output (or a committed
-   fixture of it) into `generatePlan({ ..., exerciseLibrary })` and measure the
-   same fields the POOL harness measures, plus exercise overlap. Without this,
-   3a/3b would be re-tagging 87KB of data blind, which must not be claimed as
-   verified.
-4. Then 3b (sub-region tags) -> 3c (division pools) against that harness, with
-   the <30% Bikini-vs-MP overlap as the gate (un-skip the test in
-   planengineRebuildPhase2.test.js). Commit per increment, suite green, conflicts
-   flagged.
-5. 3a re-tag (library), 3e indirect volume, then locate and scope 3f in the app
-   layer.
-6. Phase 4 last.
+2. Re-read: this handoff, the spec (section 8), doc 03 (library benchmark) and
+   doc 04 (phase 3 pools + overlap floor decision).
+3. 3e INDIRECT VOLUME modelling, the highest-value remaining engine work:
+   fractional secondary contributions subtracted from direct targets; flag
+   near-zero indirect coverage to force isolation. This is also the clean fix
+   for MP still taking a direct hip thrust at glute maintenance (model it as
+   fractional from the leg work instead). Measure on the library benchmark.
+4. 3a library primary-muscle audit (hygiene, low risk, not on the gate path).
+5. 3f coverage warnings, scoped to split type, in the app's session/coaching
+   layer (OUTSIDE planEngine.js, `buildWarnings` only does recovery/experience).
+   Locate the per-session coverage cues first.
+6. Phase 4 autoregulation last.
+7. After Phase 3e/4, re-check bodybuilding-quads-at-5-days and restore the
+   coachDivisions threshold 7 -> 8 if delivered volume now meets MEV.
 7. After Phase 3/4, re-run the bodybuilding-quads check and restore the 8
    threshold if delivered volume now meets MEV.
 
