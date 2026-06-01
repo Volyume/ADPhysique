@@ -59,10 +59,10 @@ Delt complex (side+rear+front) capped at a combined 26.
 | Division | chest | back | shoulders | biceps | triceps | quads | hamstrings | glutes | calves | abs | traps |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | General | 6 | 8 | 12 | 6 | 6 | 8 | 6 | 6 | 6 | 6 | 0 |
-| Men's Physique | 7 | 16 | 18 | 6 | 6 | 3 | 6 | 3 | 3 | 3 | 3 |
+| Men's Physique | 7 | 16 | 18 | 6 | 6 | 6 | 6 | 3 | 3 | 3 | 3 |
 | Classic Physique | 7 | 16 | 18 | 3 | 3 | 7 | 6 | 3 | 6 | 3 | 0 |
 | Bodybuilding | 8 | 12 | 18 | 6 | 6 | 8 | 7 | 7 | 12 | 6 | 0 |
-| Bikini | 3 | 13 | 15 | 0 | 0 | 6 | 13 | 21 | 0 | 6 | 0 |
+| Bikini | 3 | 13 | 18 | 0 | 0 | 7 | 13 | 21 | 0 | 6 | 0 |
 | Wellness | 3 | 6 | 3 | 0 | 0 | 15 | 13 | 17 | 6 | 0 | 0 |
 | Figure | 3 | 15 | 21 | 6 | 8 | 3 | 6 | 4 | 6 | 3 | 0 |
 | Women's Physique | 6 | 14 | 12 | 3 | 3 | 12 | 6 | 8 | 6 | 3 | 0 |

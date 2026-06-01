@@ -687,9 +687,47 @@ function trimToTimeBudget(exercises, sessionLengthMinutes, equipment) {
 // Exercise selection helpers
 // ---------------------------------------------------------------------------
 
+// Division-specific pool restrictions (rebuild spec phase 3, division pools).
+// Unlike DIVISION_SUBREGION_BIAS (a soft scoring nudge), these are the spec's
+// HARD pool rules: a division must not select certain lifts for a muscle.
+//  - denySubs: sub-regions the division's judging criteria exclude.
+//  - denyParams: movement classes the division excludes (e.g. shape-only legs
+//    drop heavy_compound).
+// Each rule is attributed to an explicit spec line, not a judgement call:
+//  - Bikini back "width, NOT heavy traps/rows" (spec L152, anti-pattern L238):
+//    drop horizontal_row.
+//  - Bikini quads "shape only, no heavy" (spec L152, L157): drop heavy_compound.
+//  - Bikini "never bench" (spec L152): chest is MV via machine/incline only.
+//  - Men's Physique "legs maintenance: leg press, RDL, leg curl, calf"
+//    (spec L116): quads drop heavy_compound (no back/front squat).
+// SAFETY: applied only when enough lifts survive, so a thin library or a
+// machine-only user is never starved (same philosophy as difficulty gating).
+const DIVISION_POOL_RULES = {
+  bikini: {
+    back:  { denySubs: ['horizontal_row'] },
+    quads: { denyParams: ['heavy_compound'] },
+    chest: { denyParams: ['heavy_compound'] },
+  },
+  mens_physique: {
+    quads: { denyParams: ['heavy_compound'] },
+  },
+};
+
 function filterPool(muscle, equipment, goal) {
   const pool = _effectivePool[muscle] ?? [];
-  return pool.filter(e => e.eq.includes(equipment));
+  const byEquip = pool.filter(e => e.eq.includes(equipment));
+
+  const rule = DIVISION_POOL_RULES[goal]?.[muscle];
+  if (!rule) return byEquip;
+
+  const restricted = byEquip.filter(e => {
+    if (rule.denySubs && rule.denySubs.includes(e.sub)) return false;
+    if (rule.denyParams && rule.denyParams.includes(e.p)) return false;
+    return true;
+  });
+  // Never starve: if the division rule leaves too few lifts to fill the
+  // muscle's slots, fall back to the equipment-filtered pool. Coverage wins.
+  return restricted.length >= 2 ? restricted : byEquip;
 }
 
 // Division-aware exercise priority (coach-plan audit 2026-06-01, stage 3).

@@ -22,7 +22,7 @@ Seed library parsed: 475 exercises.
 | Men's Physique | V-Taper | Lat Pulldown (Wide Grip) | 75 | none | none | none |
 | Classic Physique | X-Frame | Lat Pulldown (Wide Grip) | 75 | none | none | none |
 | Bodybuilding | upper_lower | Incline Barbell Bench Press | 89 | none | none | none |
-| Bikini | Glute Focus | Barbell Hip Thrust | 74 | none | none | none |
+| Bikini | Glute Focus | Barbell Hip Thrust | 77 | none | none | none |
 | Wellness | Lower Focus | Barbell Hip Thrust | 57 | none | none | none |
 | Figure | X-Frame | Lat Pulldown (Wide Grip) | 74 | none | none | none |
 | Women's Physique | V-Taper | Lat Pulldown (Wide Grip) | 76 | none | none | none |
@@ -33,10 +33,10 @@ Seed library parsed: 475 exercises.
 | Division | POOL total | library total | POOL lead | library lead |
 |---|---|---|---|---|
 | General | 70 | 72 | Barbell Bench Press | Barbell Bench Press |
-| Men's Physique | 74 | 75 | Weighted Pull-Up | Lat Pulldown (Wide Grip) |
+| Men's Physique | 77 | 75 | Weighted Pull-Up | Lat Pulldown (Wide Grip) |
 | Classic Physique | 72 | 75 | Weighted Pull-Up | Lat Pulldown (Wide Grip) |
 | Bodybuilding | 90 | 89 | Incline Barbell Bench Press | Incline Barbell Bench Press |
-| Bikini | 77 | 74 | Barbell Hip Thrust | Barbell Hip Thrust |
+| Bikini | 81 | 77 | Barbell Hip Thrust | Barbell Hip Thrust |
 | Wellness | 63 | 57 | Barbell Hip Thrust | Barbell Hip Thrust |
 | Figure | 75 | 74 | Weighted Pull-Up | Lat Pulldown (Wide Grip) |
 | Women's Physique | 73 | 76 | Weighted Pull-Up | Lat Pulldown (Wide Grip) |
@@ -44,8 +44,8 @@ Seed library parsed: 475 exercises.
 
 ## Bikini-vs-MP exercise overlap (the 3c gate target is < 30%)
 
-- library path: 65%
-- POOL path: 65%
+- library path: 57%
+- POOL path: 58%
 
 This is the gap 3c (division-specific pools + mandated lead category +
 restrictions) must close. The assertion lives, skipped, in the phase 2
