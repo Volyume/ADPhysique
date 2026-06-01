@@ -9,7 +9,8 @@ was used. Code is the only source of truth.
 
 Companion documents:
 - 01 flow map, 02 copy and tone, 03 design, 04 integration accuracy,
-  05 research, 06 proposal, 07 build recommendations.
+  05 research, 06 proposal, 07 build recommendations, 08 look/feel and
+  communication vs the field.
 
 ---
 
