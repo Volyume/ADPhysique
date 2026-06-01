@@ -1,4 +1,11 @@
-Status: COMPLETE | Timestamp: 2026-06-01 | Phase 1: Flow map and parity
+Status: REFRESHED (post-rebuild) | Original 2026-06-01 (commit e7c3f01) | Verified 2026-06-01 (engine at 6cf8642)
+
+REFRESH NOTE. The onboarding/builder flow code is UNCHANGED since the original
+audit (the rebuild touched only planEngine/coachingGoals/poolGenerator). Re-mapped
+and confirmed accurate this pass: Pro = 4 steps (account; profile; training incl.
+division + phase; recovery/reminders) then ProSetupComplete then Home/ActiveWorkout;
+Free = FirstRun (name + units) then Home. No weak-point step in onboarding,
+confirmed (`ProOnboardingScreen.js:519` still hardcodes `planWeakPoints: []`).
 
 # Onboarding and plan-builder flow map
 

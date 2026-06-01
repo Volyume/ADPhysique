@@ -1,4 +1,9 @@
-Status: COMPLETE | Timestamp: 2026-06-01 | Phase 5: Research
+Status: CURRENT (post-rebuild, unchanged) | 2026-06-01
+
+REFRESH NOTE. This is external onboarding research (best-in-class flows,
+specialisation UX, progressive disclosure). It is independent of the engine
+rebuild and remains current; no update needed. It underpins the beginner
+"Not sure" default and the experience gating in doc 06.
 
 # Onboarding and plan-builder research
 

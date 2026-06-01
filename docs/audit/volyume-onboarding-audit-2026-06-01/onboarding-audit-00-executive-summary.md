@@ -1,4 +1,14 @@
-Status: COMPLETE | Timestamp: 2026-06-01 | Phase 0: Executive summary (written last)
+Status: REFRESHED + PROPOSAL CONFIRMED (post-rebuild) | Original 2026-06-01 (commit e7c3f01) | Refreshed 2026-06-01 (engine at 6cf8642)
+
+REFRESH NOTE. The original audit was written before the planEngine rebuild. The
+onboarding/builder FLOW code is unchanged since, so the flow, copy and design
+findings stand. What changed: the planEngine was fully rebuilt and the
+division-specific system the reinstated weak-point screen connects to is now
+complete and verified (division matrix, division pools, division-aware MRV, and
+weak-point that composes with the division split). Line references throughout
+the phase docs are updated to the current engine. Founder has CONFIRMED the
+proposal as-is; this set is refreshed for accuracy, then build follows on a
+separate go-ahead.
 
 # Onboarding and plan-builder audit, executive summary
 
@@ -44,10 +54,11 @@ feel like one product. Full table in Phase 1.
   `coachingGoals.js`), derived from the existing division overlays.
 - Always-on division bias in the engine: a selected weak point biases the plan
   on every phase (a small additive emphasis), with the larger effect kept for
-  the weak-point phase. This sits inside the existing per-muscle MRV clamp and
-  the recovery-scaled systemic cap (`planEngine.js:199-218`), so it
-  redistributes volume within the individual's recovery envelope and cannot
-  cause overtraining. Science first, exactly as asked.
+  the weak-point phase. This sits inside the existing per-muscle MRV clamp
+  (`planEngine.js:205`) and the recovery-scaled systemic cap (`:226-232`), plus
+  the rebuild's delivered-volume clamp, so it redistributes volume within the
+  individual's recovery envelope and cannot cause overtraining. Science first,
+  exactly as asked.
 - Close the onboarding gaps: training days, protein approach, and the
   reinstated weak-point selector.
 - Standardise the shared controls on one visual language and surface each

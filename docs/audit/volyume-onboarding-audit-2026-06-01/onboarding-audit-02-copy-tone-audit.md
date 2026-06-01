@@ -1,4 +1,10 @@
-Status: COMPLETE | Timestamp: 2026-06-01 | Phase 2: Copy and tone
+Status: REFRESHED (post-rebuild) | Original 2026-06-01 (commit e7c3f01) | Verified 2026-06-01 (engine at 6cf8642)
+
+REFRESH NOTE. Onboarding copy is unchanged since the original audit (flow code
+untouched by the rebuild), so these findings stand. The only currency caveat: any
+copy that describes how the plan is built should now reflect the rebuilt engine
+(division-specific splits, weak-point that composes with the division). The
+proposed weak-point intro copy in doc 06 is the place that matters.
 
 # Copy and tone audit
 

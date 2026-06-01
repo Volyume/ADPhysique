@@ -1,4 +1,10 @@
-Status: COMPLETE | Timestamp: 2026-06-01 | Phase 7: Build recommendations
+Status: REFRESHED (post-rebuild) | Original 2026-06-01 (commit e7c3f01) | Refreshed 2026-06-01 (engine at 6cf8642)
+
+REFRESH NOTE. Engine line references updated. The division-specific system is now
+fully built (matrix, pools, division-aware MRV, weak-point composes with the
+split), so the "division judging note / division-specific sets" items connect to
+real infrastructure. The ONLY runtime-critical engine change still outstanding is
+the always-on bias; everything else is UI/data wiring on the unchanged flow code.
 
 # Prioritised build recommendations
 
@@ -12,7 +18,7 @@ commit, additive change, verified end to end.
 | Unit | Impact | Effort | Files / notes |
 |---|---|---|---|
 | Weak-point selection in onboarding | High | Med | Remove `planWeakPoints: []` (`ProOnboardingScreen.js:519`), mount the shared selector, pass the value into `planProfile` (`:512-521`). The handoff already exists in the engine |
-| Always-on weak-point bias in the engine | High | Med | `applyGoalOverlay` (`planEngine.js:165-196`): apply a smaller additive bonus off the `weak_point` phase, full bonus on it, inside the existing 110% MRV clamp and 40% systemic cap. Runtime-critical: tests alongside, covering both phase magnitudes, the trim-offset, and that the systemic cap still holds |
+| Always-on weak-point bias in the engine | High | Med | `applyGoalOverlay` (`planEngine.js:127`, weak-point block `:173`): apply a smaller additive bonus off the `weak_point` phase, full bonus on it, inside the existing 110% MRV clamp (`:205`), systemic cap (`:226-232`) and the rebuild's delivered-volume clamp. Runtime-critical: tests alongside, covering both phase magnitudes, the trim-offset, and that the caps still hold |
 | Division-specific weak-point option sets | High | Low-Med | Add `WEAK_POINT_SETS` per goal in `coachingGoals.js`, reuse `WEAK_POINT_MAP`. Pure data, easy to test |
 | Weak-point copy that matches behaviour | High | Low | Rewrite `ProGoalSetupScreen.js:351-353` and the new onboarding intro for the always-on model. No promise that is false on any phase |
 

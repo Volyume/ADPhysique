@@ -1,10 +1,18 @@
-Status: COMPLETE | Timestamp: 2026-06-01 | Phase 6: Redesign proposal
+Status: REFRESHED + CONFIRMED (post-rebuild) | Original 2026-06-01 (commit e7c3f01) | Refreshed 2026-06-01 (engine at 6cf8642)
+
+REFRESH NOTE. Founder confirmed this proposal as-is. Line references are updated
+to the current engine. The division-specific system this proposal connects to is
+now fully built and verified (DIVISION_MATRIX, DIVISION_POOL_RULES, division-aware
+MRV, weak-point composes with the division split). The per-division WEAK_POINT_SETS
+below were re-checked against the current `GOAL_OVERLAYS` and still hold (the
+rebuild only tuned magnitudes, e.g. WBB quads, not which muscles a division
+emphasises). The one engine change still outstanding is the always-on bias.
 
 # Redesign proposal, both flows
 
 Built on the corrected reality (Phase 1) and the two founder decisions for this
 audit: full audit on the corrected basis, and always-on division bias for weak
-points. Nothing here is built yet. This is the spec to approve before code.
+points. CONFIRMED by founder; build to this spec when the go-ahead is given.
 
 ## Design principle for this work
 
@@ -53,18 +61,19 @@ single label-to-key resolver.
 
 ### Always-on bias (engine)
 
-Change `applyGoalOverlay` (`planEngine.js:165-196`) so a selected weak point
-biases the plan on every phase, not only `weak_point`:
+Change `applyGoalOverlay` (`planEngine.js:127`, weak-point block at `:173`) so a
+selected weak point biases the plan on every phase, not only `weak_point`:
 
-- weak_point phase: unchanged. Each weak-point muscle closes ~40% of the gap to
-  its MRV (`:178`), offset by trimming the lowest-priority muscles toward MV.
+- weak_point phase: unchanged. Each weak-point muscle closes ~70% of the gap to
+  its (division-aware) MRV (`:182`), offset by trimming the lowest-priority
+  muscles toward MV. (Note: the rebuild raised this from 40% to 70%.)
 - any other phase: each weak-point muscle closes a smaller fraction of the gap
   to MRV (propose ~15%, tuned so an average intermediate gains roughly 1 to 3
   sets on a brought-up muscle, not a block's worth). Same trim-to-offset logic,
   same order.
 - Both paths keep the existing guardrails untouched: the per-muscle clamp at
-  110% of MRV (`:199-202`) and the recovery-scaled systemic cap at 40% of total
-  MRV (`:211-218`). This is the science guarantee the founder asked for: the
+  110% of MRV (`:205`), the recovery-scaled systemic cap (`:226-232`), and the
+  rebuild's delivered-volume clamp. This is the science guarantee the founder asked for: the
   always-on bias redistributes volume within the individual's recovery
   envelope, it never raises the ceiling, so it cannot create overtraining. A
   poor-recovery or beginner user is held lower automatically because their MRVs

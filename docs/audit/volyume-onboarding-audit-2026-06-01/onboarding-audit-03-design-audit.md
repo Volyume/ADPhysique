@@ -1,4 +1,8 @@
-Status: COMPLETE | Timestamp: 2026-06-01 | Phase 3: Design and presentation
+Status: REFRESHED (post-rebuild) | Original 2026-06-01 (commit e7c3f01) | Verified 2026-06-01 (engine at 6cf8642)
+
+REFRESH NOTE. Onboarding screen design is unchanged since the original audit (the
+rebuild was engine-only), so these findings stand. The weak-point selector design
+proposal lives in doc 06; nothing here is invalidated by the rebuild.
 
 # Design and presentation audit
 

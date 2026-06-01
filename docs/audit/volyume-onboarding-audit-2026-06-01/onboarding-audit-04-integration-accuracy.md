@@ -1,4 +1,12 @@
-Status: COMPLETE | Timestamp: 2026-06-01 | Phase 4: Integration accuracy
+Status: REFRESHED (post-rebuild) | Original 2026-06-01 (pre-rebuild, commit e7c3f01) | Refreshed 2026-06-01 (engine at 6cf8642)
+
+REFRESH NOTE. This doc was first written before the planEngine rebuild. Line
+references below are updated to the current engine, and the key change in
+posture is recorded here: the division-specific system the reinstated weak-point
+screen must connect to is NOW FULLY BUILT (DIVISION_MATRIX, DIVISION_POOL_RULES,
+division-aware MRV, and weak-point that composes with the division split and
+respects MRV). The two defects below still stand exactly as written. The
+onboarding flow code itself is unchanged since the original audit.
 
 # Integration accuracy audit
 
@@ -28,12 +36,16 @@ handful of accuracy notes.
 
 ## Division-specific training
 
-- The data is genuinely division-specific. `GOAL_OVERLAYS`
-  (`coachingGoals.js:339-473`) sets per-muscle multipliers per division, and
-  `applyGoalOverlay` (`planEngine.js:127-152`) places priority muscles inside
-  their MAV to MRV band rather than scaling from MEV, so the emphasis reaches
-  the plate. `DIVISION_SUBREGION_BIAS` (`planEngine.js`, around `:608`) biases
-  exercise sub-region (for example incline chest, vertical pull) per division.
+- The data is genuinely division-specific, and the rebuild deepened this. As
+  before, `GOAL_OVERLAYS` (`coachingGoals.js:339-473`) sets per-muscle
+  multipliers and `applyGoalOverlay` (`planEngine.js:127`) places priority
+  muscles inside their MAV-to-MRV band. NEW since the original audit: the six
+  specialised divisions now select their whole split, session order and lead
+  lift from `DIVISION_MATRIX` (`planEngine.js:1367`), with hard pool rules
+  (`DIVISION_POOL_RULES`, `:825`, e.g. Bikini back = lat-width only) and
+  division-aware MRV (`divisionMRV`, `:289`). So "selecting a division shapes the
+  plan" is now true structurally, not just by set-count, the reinstated screen
+  connects to a complete system.
 - Both flows let the user pick a division, but neither explains, at selection
   time, what that division does to the plan. The `coachingNote` per goal exists
   and is unused on both the onboarding dropdown and the builder card. Accuracy
@@ -44,30 +56,34 @@ handful of accuracy notes.
 ### Defect 1: onboarding cannot pass weak points
 
 `ProOnboardingScreen.js:519` hard-codes `planWeakPoints: []` into the plan
-profile. The engine accepts `weakPoints` (`planEngine.js:1400`, resolved at
-`:1410`), so the handoff exists; onboarding just never fills it. A user who
-selects the "Bring up a weak point" phase in onboarding gets the default
-weak-point day (side delts and biceps, `planEngine.js:976`) rather than their
-own muscles. This is the brief's confirmed omission, and it is real.
+profile. The engine accepts `weakPoints` (resolved via `resolveWeakPointKeys`,
+`planEngine.js:50`, label map `WEAK_POINT_MAP` at `:31-48`; threaded in from
+`planAutoGen.js:97`), so the handoff exists; onboarding just never fills it. A
+user who selects the "Bring up a weak point" phase in onboarding gets the engine
+default weak-point day (side delts and biceps, `planEngine.js:1287`) rather than
+their own muscles. This is the brief's confirmed omission, and it is real.
+Confirmed still present after the rebuild.
 
 ### Defect 2: selected weak points are ignored off the weak-point phase
 
 The builder collects weak points on every goal and phase
-(`ProGoalSetupScreen.js:345-372`), and the copy promises a volume bias
-(`:351-353`). But the engine only applies the weak-point bonus when
-`phase === 'weak_point'` (`planEngine.js:173`). On any other phase the selected
+(`ProGoalSetupScreen.js:345-372`), and the copy promises a volume bias. But the
+engine still only applies the weak-point bonus when `phase === 'weak_point'`
+(`planEngine.js:173`, unchanged by the rebuild). On any other phase the selected
 muscles change nothing. The data is saved to the profile
 (`ProGoalSetupScreen.js:156`) and passed to the engine
-(`planAutoGen.js:97`), then dropped on the floor by the phase gate.
+(`planAutoGen.js:97`), then dropped on the floor by the phase gate. Still true.
 
 Founder decision for this audit: always-on division bias. A selected weak point
 should always bias the plan (a small additive emphasis on any phase), with the
 larger effect reserved for the weak-point phase. The integration point is the
-single line at `planEngine.js:173`; the change is to apply a smaller additive
+single block at `planEngine.js:173`; the change is to apply a smaller additive
 bonus when the phase is not `weak_point`, protected by the existing per-muscle
-MRV clamp (`:199-202`) and the recovery-scaled systemic cap (`:211-218`) so the
-always-on bias cannot push total volume past the user's recovery envelope. Full
-spec and the science guardrails are in Phase 6.
+MRV clamp (`:205`) and the recovery-scaled systemic cap (`:226-232`) so the
+always-on bias cannot push total volume past the user's recovery envelope. Note
+the rebuild added `divisionMRV` (`:289`, glutes 30 for Bikini/Wellness) and a
+delivered-volume clamp, so the bias is now doubly bounded. Full spec and the
+science guardrails are in Phase 6.
 
 ### The reinstated selector must be division-specific in both flows
 
