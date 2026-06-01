@@ -808,26 +808,46 @@ const useAppStore = create((set, get) => ({
     });
   },
 
-  // Rest timer
+  // Rest timer. Anchored to a wall-clock end timestamp (restTimerEndsAt) so it
+  // stays correct when the app is backgrounded: JS timers are suspended in the
+  // background, so a plain decrementing counter froze and resumed where it left
+  // off. Every tick (and the AppState 'active' re-sync in RestTimer) recomputes
+  // the remaining seconds from the clock, so on return the timer catches up to
+  // real elapsed time instead of standing still.
   restTimerActive: false,
   restTimerDuration: 90,
   restTimerRemaining: 90,
+  restTimerEndsAt: null,
 
   startRestTimer: (duration = 90) => set({
     restTimerActive: true,
     restTimerDuration: duration,
     restTimerRemaining: duration,
+    restTimerEndsAt: Date.now() + duration * 1000,
   }),
-  stopRestTimer: () => set({ restTimerActive: false, restTimerRemaining: 0 }),
+  stopRestTimer: () => set({ restTimerActive: false, restTimerRemaining: 0, restTimerEndsAt: null }),
   addRestTime: (seconds = 30) => {
-    set((state) => state.restTimerActive
-      ? { restTimerRemaining: Math.max(0, state.restTimerRemaining + seconds) }
-      : {});
+    set((state) => {
+      if (!state.restTimerActive) return {};
+      const endsAt = (state.restTimerEndsAt ?? Date.now()) + seconds * 1000;
+      return {
+        restTimerEndsAt: endsAt,
+        restTimerRemaining: Math.max(0, Math.round((endsAt - Date.now()) / 1000)),
+      };
+    });
   },
   tickRestTimer: () => {
-    set((state) => state.restTimerRemaining <= 1
-      ? { restTimerActive: false, restTimerRemaining: 0 }
-      : { restTimerRemaining: state.restTimerRemaining - 1 });
+    set((state) => {
+      if (!state.restTimerActive) return {};
+      // Wall-clock derived: recompute from the end timestamp rather than
+      // decrementing, so a backgrounded (suspended) timer catches up on resume.
+      const remaining = state.restTimerEndsAt != null
+        ? Math.max(0, Math.round((state.restTimerEndsAt - Date.now()) / 1000))
+        : Math.max(0, state.restTimerRemaining - 1);
+      return remaining <= 0
+        ? { restTimerActive: false, restTimerRemaining: 0, restTimerEndsAt: null }
+        : { restTimerRemaining: remaining };
+    });
   },
 
   // PR celebration queue. The user might hit two PRs on the same set

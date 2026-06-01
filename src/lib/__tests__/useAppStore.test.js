@@ -69,15 +69,31 @@ describe('rest timer', () => {
     expect(useAppStore.getState().restTimerRemaining).toBe(before);
   });
 
-  test('tickRestTimer transitions to inactive at remaining <= 1', () => {
+  test('tickRestTimer transitions to inactive once the wall-clock end passes', () => {
     // eslint-disable-next-line global-require
     const useAppStore = require('../../store/useAppStore').default;
     useAppStore.getState().startRestTimer(2);
-    useAppStore.getState().tickRestTimer(); // 2 → 1
-    useAppStore.getState().tickRestTimer(); // 1 → done
+    // Simulate the end timestamp having passed (e.g. time elapsed in the
+    // background) rather than relying on per-call decrements.
+    useAppStore.setState({ restTimerEndsAt: Date.now() - 1000 });
+    useAppStore.getState().tickRestTimer();
     const { restTimerActive, restTimerRemaining } = useAppStore.getState();
     expect(restTimerActive).toBe(false);
     expect(restTimerRemaining).toBe(0);
+  });
+
+  test('tickRestTimer derives remaining from the wall clock, so it catches up after the app was suspended', () => {
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../../store/useAppStore').default;
+    useAppStore.getState().startRestTimer(60);
+    // App was backgrounded with ~10s left; the interval was suspended so
+    // restTimerRemaining is stale at 60. A single tick must recompute from the
+    // end timestamp and jump to ~10, not sit at 59 (the old frozen behaviour).
+    useAppStore.setState({ restTimerEndsAt: Date.now() + 10_000 });
+    useAppStore.getState().tickRestTimer();
+    const remaining = useAppStore.getState().restTimerRemaining;
+    expect(remaining).toBeGreaterThanOrEqual(9);
+    expect(remaining).toBeLessThanOrEqual(10);
   });
 });
 

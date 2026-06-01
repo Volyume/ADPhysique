@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, AppState } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useShallow } from 'zustand/react/shallow';
@@ -53,6 +53,18 @@ export default function RestTimer() {
       clearInterval(intervalRef.current);
     }
     return () => clearInterval(intervalRef.current);
+  }, [restTimerActive, tickRestTimer]);
+
+  // Foreground re-sync: JS timers are suspended while the app is backgrounded,
+  // so the interval above stops ticking. tickRestTimer now recomputes the
+  // remaining time from the wall clock, so calling it the moment the app
+  // returns to the foreground catches the timer up to real elapsed time
+  // (it may have already finished while away) instead of resuming frozen.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', nextState => {
+      if (nextState === 'active' && restTimerActive) tickRestTimer();
+    });
+    return () => { try { sub?.remove(); } catch (_) {} };
   }, [restTimerActive, tickRestTimer]);
 
   // Preload beeps once when the timer first becomes active in this mount
