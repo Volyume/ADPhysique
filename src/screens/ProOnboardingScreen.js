@@ -1092,6 +1092,18 @@ export default function ProOnboardingScreen({ navigation }) {
             sub="Recovery affects your plan volume. Reminders keep coaching consistent."
           />
 
+          <View style={styles.coachCard}>
+            <View style={styles.coachCardHead}>
+              <View style={styles.notifIconWrap}>
+                <Ionicons name="sync-outline" size={18} color={colors.primary} />
+              </View>
+              <Text style={styles.coachCardTitle}>How your coaching works</Text>
+            </View>
+            <Text style={styles.coachCardBody}>
+              Each morning you weigh in. Once a week you check in. Your coach reads the trend and adjusts your calories and training. Logging food sharpens the calls, but it's optional.
+            </Text>
+          </View>
+
           <Dropdown
             label="How's your recovery?"
             hint="This affects how much volume your plan includes. Be honest. It adjusts to protect you."
@@ -1402,6 +1414,15 @@ const styles = StyleSheet.create({
   },
   notifTitle: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.xxs },
   notifSub: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17 },
+
+  coachCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1.5, borderColor: colors.border,
+    padding: spacing.md, marginBottom: spacing.xl,
+  },
+  coachCardHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm },
+  coachCardTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  coachCardBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
 
   toggle: {
     width: 44, height: 26, borderRadius: 13,

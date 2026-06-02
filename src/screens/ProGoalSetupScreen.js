@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
 } from 'react-native';
@@ -18,6 +18,7 @@ import {
 import { calculateNutritionTargets, PROTEIN_APPROACHES, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
 import { saveNutritionTargets, getMorningWeightsLast14Days } from '../lib/database';
 import { computeEWMA } from '../lib/weeklyCoach';
+import { formatBodyWeightShort } from '../lib/units';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 
 const APPROACH_SHORT = {
@@ -85,6 +86,25 @@ export default function ProGoalSetupScreen({ navigation }) {
   const [sessionLengthMinutes, setSessionLengthMinutes] = useState(userProfile?.sessionLengthMinutes ?? 60);
   const [equipment, setEquipment] = useState(userProfile?.equipment ?? 'full_gym');
   const [recoveryRating, setRecoveryRating] = useState(userProfile?.recoveryRating ?? 'average');
+
+  // The weight the targets are actually built from: the smoothed morning-weight
+  // trend if there's history, otherwise the profile value. Read-only here, the
+  // user changes it by logging a morning weight on Home, not in the builder.
+  const [displayWeightKg, setDisplayWeightKg] = useState(userProfile?.weightKg ?? null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user?.id) return;
+      try {
+        const weights = await getMorningWeightsLast14Days(user.id);
+        if (cancelled || !weights?.length) return;
+        const ewma = computeEWMA(weights);
+        const latest = ewma[ewma.length - 1]?.ewmaKg ?? weights[weights.length - 1]?.weightKg;
+        if (typeof latest === 'number' && latest > 0) setDisplayWeightKg(latest);
+      } catch (_) {}
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   const suggestedApproach = ADVANCED_PROTEIN_GOALS.includes(selectedGoal) ? 'advanced' : 'optimised';
   const weakPointsApplicable = GOALS_WITH_WEAK_POINTS.includes(selectedGoal);
@@ -558,6 +578,15 @@ export default function ProGoalSetupScreen({ navigation }) {
             </TouchableOpacity>
           );
         })}
+
+        {displayWeightKg ? (
+          <View style={styles.footerNote}>
+            <Ionicons name="scale-outline" size={15} color={colors.textMuted} />
+            <Text style={styles.footerNoteText}>
+              Targets use your latest weight, {formatBodyWeightShort(displayWeightKg, userProfile?.bodyWeightUnits ?? 'st')}. Log a new one on Home.
+            </Text>
+          </View>
+        ) : null}
 
         <View style={styles.footerNote}>
           <Ionicons name="information-circle-outline" size={15} color={colors.textMuted} />
