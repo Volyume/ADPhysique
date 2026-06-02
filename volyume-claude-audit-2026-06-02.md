@@ -1936,3 +1936,74 @@ secured** — the static pass was wrong because policies are created three ways:
   `auth.uid()` and cannot be invoked to read another user's rows.
 - Edge Functions (`delete-account`, `play-billing-rtdn`, `send-push`) use the
   service role; their auth/JWT verification was NOT audited here.
+
+---
+
+## PART 4 (cont.) — food_sync RPCs + Edge Functions (VERIFIED)
+
+### food_sync_push / food_sync_pull (migrate_016, migrate_021) — SECURE
+VERIFIED by reading the function bodies. Both are `SECURITY DEFINER` (bypass
+RLS), `SET search_path = public`, `GRANT EXECUTE … TO authenticated` (not anon),
+and correctly self-scope:
+- `v_uid uuid := auth.uid()` with an explicit `IF v_uid IS NULL THEN RAISE
+  EXCEPTION 'not authenticated'` guard in BOTH (pull 54-56; push 196-198).
+- `food_sync_pull`: every SELECT filters `WHERE t.user_id = v_uid` (verified
+  across custom_foods, food_entries, daily_intake_rollups, saved_meals,
+  recipes, …). A caller cannot pull another user's rows despite DEFINER.
+- `food_sync_push`: INSERTs hardcode `user_id = v_uid` (lines 209, 244, …),
+  IGNORING any `user_id` in the payload, so a caller cannot write rows owned by
+  another user. All UPDATEs and all 4 DELETEs filter `WHERE id = … AND user_id
+  = v_uid` (7 such scoping clauses verified). ON CONFLICT uses `(user_id, id)`.
+No finding.
+
+### Edge Functions — SECURE
+VERIFIED by reading each `index.ts`:
+- `delete-account/index.ts` (161 lines): requires `Authorization` (401 if
+  missing, 63-66); verifies the caller with an anon client carrying their JWT +
+  `auth.getUser()` (401 if not authenticated, 69-77); runs `delete_user_data`
+  under the USER's JWT so RLS scopes deletion to their own rows; uses the
+  service-role admin client only for `auth.admin.deleteUser` on that same
+  verified uid. A caller can only delete their own account. Correct.
+- `play-billing-rtdn/index.ts` (353 lines): a Google Play RTDN webhook. Does
+  NOT trust the Pub/Sub payload — re-verifies every purchase via the Play
+  Developer API (`verifyWithPlayApi`, 307) and **fails closed**: if verification
+  is unavailable/fails it ACKs (to stop redelivery) but performs no tier change
+  (308-312). The upgraded `userId` is taken from the VERIFIED
+  `subscription.obfuscatedExternalAccountId` (313), not the raw payload, so a
+  forged webhook cannot route a tier change to an arbitrary user.
+  `upgrade_tier_for_user` is service-role-granted only. Correct.
+- `send-push/index.ts` (200 lines): rejects any caller whose `Authorization`
+  Bearer token is not the service-role key (401, 100-104). Client app cannot
+  call it. Correct. (See ISSUE-003 for a minor note.)
+
+### Findings
+
+---
+ID: ISSUE-003
+FILE: supabase/functions/send-push/index.ts
+LINE: ~99-104
+SEVERITY: Low
+TYPE: Security
+FLOW AFFECTED: Server-to-server push send (RTDN → send-push)
+DESCRIPTION: The service-role authorisation check compares the caller's bearer
+token to the service-role key with a plain string comparison (a code comment
+acknowledges "a direct compare is fine"). A plain `===` is not constant-time, so
+it is theoretically vulnerable to a timing side-channel for secret recovery.
+IMPACT: Negligible in practice — the secret is a long high-entropy service-role
+key, the endpoint is server-to-server, and network jitter dwarfs the timing
+delta. Recorded for completeness, not a real-world exposure.
+FIX: If hardening: replace the `===` with a constant-time comparison (e.g. hash
+both sides with `crypto.subtle.digest` and compare the digests, or a
+length-checked XOR compare). Optional.
+---
+
+### PART 4 CONCLUSION
+Security posture is strong and VERIFIED across: secret handling (none
+hardcoded; env-sourced), token storage (encrypted SecureStore), logging (no
+sensitive data in 42 console calls), RLS (all user-scoped tables owner-scoped,
+incl. dynamic-policy tables), the food RPCs (DEFINER but auth.uid()-scoped, null
+rejected), and all three Edge Functions (JWT-verified / service-role-gated /
+Play-API-verified + fail-closed). Findings: ISSUE-001 (Low, xlsx dev-dep),
+ISSUE-003 (Low, non-constant-time compare). NOT audited: deep-link handlers
+(Part 4 item still outstanding); per-input validation trace to every DB/RPC
+call (the RPC and RLS layers provide defence-in-depth regardless).
