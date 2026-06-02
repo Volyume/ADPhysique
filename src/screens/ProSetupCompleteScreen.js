@@ -91,6 +91,18 @@ export default function ProSetupCompleteScreen({ navigation }) {
   const phaseLabel = PHASE_LABELS[userProfile?.trainingPhase] ?? null;
   const hasPlan = planRoutines.length > 0;
 
+  // Macro bars for the targets card. The bar length is each macro's share of
+  // the day's calories (protein and carbs 4 kcal/g, fat 9), so the three bars
+  // read as the real composition of the plan rather than three identical
+  // blocks. The number on each bar stays the gram target. Protein keeps the
+  // single weight emphasis, matching the Diary tab.
+  const macroTargets = nutritionSummary ? [
+    { label: 'Protein', g: nutritionSummary.proteinG, kcal: (nutritionSummary.proteinG || 0) * 4, primary: true },
+    { label: 'Carbs', g: nutritionSummary.carbsG, kcal: (nutritionSummary.carbsG || 0) * 4 },
+    { label: 'Fat', g: nutritionSummary.fatG, kcal: (nutritionSummary.fatG || 0) * 9 },
+  ].filter(m => m.g) : [];
+  const maxMacroKcal = Math.max(1, ...macroTargets.map(m => m.kcal));
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -137,29 +149,27 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   <Text style={styles.routineTitle}>2 · Hit your daily targets</Text>
                 </View>
               </View>
-              <View style={styles.calorieRow}>
-                <Text style={styles.calorieNum}>{nutritionSummary.targetKcal}</Text>
-                <Text style={styles.calorieUnit}>kcal · daily target</Text>
+              {/* The kcal ring is the Diary tab's signature, so the reveal
+                  shows the same shape the first time these numbers appear.
+                  Target framing, not progress: the ring is drawn full, since
+                  the whole ring is the day's allowance and nothing is logged
+                  yet. No "remaining" readout, that belongs in the diary. */}
+              <View style={styles.ringWrap}>
+                <View style={styles.ring}>
+                  <Text style={styles.ringValue}>{nutritionSummary.targetKcal}</Text>
+                  <Text style={styles.ringSub}>kcal per day</Text>
+                </View>
               </View>
-              {/* Macros as the same horizontal bars the Diary tab uses, so the
-                  first sight of these numbers matches where the user tracks them
-                  every day. Target framing: the value is the target and the bar
-                  shows the full allocation, no progress / "remaining" (nothing's
-                  been logged yet, this is the reveal). Protein carries the only
-                  weight emphasis, matching MacroRings. */}
+              {/* Same horizontal macro bars the Diary tab uses. */}
               <View style={styles.macroBars}>
-                {[
-                  ['Protein', nutritionSummary.proteinG, true],
-                  ['Carbs', nutritionSummary.carbsG, false],
-                  ['Fat', nutritionSummary.fatG, false],
-                ].filter(([, v]) => v).map(([label, value, primary]) => (
-                  <View key={label} style={styles.macroBar}>
+                {macroTargets.map(m => (
+                  <View key={m.label} style={styles.macroBar}>
                     <View style={styles.macroBarTop}>
-                      <Text style={[styles.macroBarLabel, primary && styles.macroBarLabelPrimary]}>{label}</Text>
-                      <Text style={[styles.macroBarValue, primary && styles.macroBarValuePrimary]}>{value}g</Text>
+                      <Text style={[styles.macroBarLabel, m.primary && styles.macroBarLabelPrimary]}>{m.label}</Text>
+                      <Text style={[styles.macroBarValue, m.primary && styles.macroBarValuePrimary]}>{m.g}g</Text>
                     </View>
                     <View style={styles.macroTrack}>
-                      <View style={styles.macroFill} />
+                      <View style={[styles.macroFill, { width: `${Math.round((m.kcal / maxMacroKcal) * 100)}%` }]} />
                     </View>
                   </View>
                 ))}
@@ -356,13 +366,20 @@ const styles = StyleSheet.create({
   routineTitle: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.xs },
   routineBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
 
-  calorieRow: {
-    flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm,
-    marginTop: spacing.md, marginBottom: spacing.md,
+  // Full amber ring drawn as a thick-bordered circle. At full progress a Skia
+  // arc and a bordered circle are visually identical, and this keeps the native
+  // canvas (and its test setup) out of the onboarding flow. The surface2 inner
+  // fill matches the Diary ring's track colour.
+  ringWrap: { alignItems: 'center', marginTop: spacing.lg, marginBottom: spacing.md },
+  ring: {
+    width: 128, height: 128, borderRadius: 64,
+    borderWidth: 13, borderColor: colors.primary,
+    backgroundColor: colors.surface2,
+    alignItems: 'center', justifyContent: 'center',
   },
   // eslint-disable-next-line no-restricted-syntax -- setup-complete hero numeral
-  calorieNum: { fontSize: 38, fontWeight: fontWeight.black, color: colors.textPrimary, lineHeight: 42 },
-  calorieUnit: { fontSize: fontSize.sm, color: colors.textMuted },
+  ringValue: { fontSize: 34, fontWeight: fontWeight.bold, color: colors.textPrimary, lineHeight: 38, fontVariant: ['tabular-nums'] },
+  ringSub: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
   // Macro bars, matched to the Diary tab's MacroRings so the reveal and the
   // place the user tracks every day read as one component.
   macroBars: {
@@ -376,7 +393,7 @@ const styles = StyleSheet.create({
   macroBarValue: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
   macroBarValuePrimary: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
   macroTrack: { height: 6, borderRadius: radius.full, backgroundColor: colors.surface2, overflow: 'hidden' },
-  macroFill: { height: '100%', width: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
+  macroFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
   goalRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   goalChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
