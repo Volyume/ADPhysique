@@ -2224,3 +2224,49 @@ RoutineDetailScreen / ManualBuilderScreen).
 > requires reading those screens individually and belongs with Part 2. The
 > structural guarantee here is: no flow can navigate to a non-existent screen,
 > and only ExerciseLibrary is orphaned.
+
+---
+
+## CONSOLIDATED TALLY (as of completed audit parts)
+
+Parts complete/verified: 1 (automated), 3 (flows, structural), 4 (security,
+full), 5 (raw output), 6 (improvements). Part 2 (per-file) STARTED — runtime-
+critical store + sync verified clean. The bulk per-file crawl (~230 files) and
+Part 3 interaction-level tracing remain; they could surface more, but the
+runtime-critical + security + navigation-graph + automated layers are done.
+
+### By severity
+- **Critical: 0**
+- **High: 0**
+- **Medium: 3** — ISSUE-004 (no typecheck), ISSUE-005 (49 exhaustive-deps),
+  ISSUE-007 (Progress reloads all sets on focus)
+- **Low: 6** — ISSUE-001 (xlsx dev-dep), ISSUE-002 (sync throttle reset),
+  ISSUE-003 (non-constant-time compare), ISSUE-006 (dead code: 728 unused-vars +
+  88 dead exports), ISSUE-008 (dep upgrade plan), ISSUE-009 (unreachable
+  ExerciseLibrary)
+
+### By type
+- Improvement: 4 (004, 006, 008, + 001 overlap) | Performance: 1 (007)
+- Bug: 1 (002) | Security: 2 (001, 003) | Navigation: 1 (009)
+- Code Quality / Type: covered under 004/005/006
+
+### Top priorities (verified, actionable)
+1. ISSUE-007 (Medium, Perf): cache/incremental the Progress data layer — the one
+   change with clear user-facing benefit as history grows. MEASURE first.
+2. ISSUE-005 (Medium): triage the 49 exhaustive-deps, starting ActiveWorkoutScreen.
+3. ISSUE-004 (Medium): add a JS typecheck path (`allowJs`+`tsc --noEmit`).
+4. ISSUE-009 (Low): wire up or delete the orphaned ExerciseLibrary screen.
+5. ISSUE-006 (Low): sweep dead code (start: the unused database.js CRUD cluster).
+
+### Headline
+No Critical/High defects. Security verified strong end-to-end. The runtime-
+critical code read in full was clean. This reads as a well-built codebase; the
+findings are hygiene + one perf scaling concern, not correctness emergencies.
+
+## SESSION PROGRESS LOG (update 3)
+- DONE: Parts 1, 3 (structural), 4 (full), 5, 6. Part 2 started (useAppStore
+  1-660, sync.js entry points — clean; ISSUE-002). Findings ISSUE-001..009.
+- REMAINING: Part 2 bulk per-file (~230 files, low expected yield); Part 3
+  interaction-level per-flow tracing; per-policy RLS clause read; per-input
+  validation trace. Next ISSUE id: ISSUE-010. Resume order: highest-value is
+  acting on the findings above; further auditing has diminishing returns.
