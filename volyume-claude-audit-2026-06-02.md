@@ -2163,3 +2163,64 @@ in the seed script (ISSUE-001) since that is independent of the app upgrade.
 > SECTION 6 STATUS: COMPLETE for the verified surface. Additional architecture/
 > perf improvements may surface when Part 2 (bulk per-file) and Part 3 (flows)
 > run; those are not yet done.
+
+---
+
+## SECTION 4 / PART 3 — FLOW SIMULATION (structural, verified)
+
+Method: extracted all 64 registered routes from RootNavigator.js (5 tab stacks +
+WelcomeStack/FirstRunStack/Article9ConsentStack/ProOnboardingStack), then
+cross-referenced EVERY `navigate('X')` / `{screen:'X'}` target across all
+non-test source. VERIFIED structurally; per-flow interaction-level tracing (every
+button, modal open/close animation) would require the per-screen reads of Part 2
+and is noted where not done.
+
+### Verified-positive (no finding)
+- **No broken navigation.** Every `navigate()`/`screen:` target resolves to a
+  registered route or tab name. Zero navigations to a non-existent screen.
+  (An initial pass flagged 13 "unknown targets" — all false positives from
+  `array.push('…')` / `string.replace('…')`; the navigate-only re-run found
+  NONE.)
+- **Auth/onboarding/consent gating is sound.** Welcome, Login, FirstRunBranch,
+  Article9Consent, ProOnboarding live in root stacks (RootNavigator 357-392)
+  rendered conditionally by `renderNavigator` on `firstRunComplete` /
+  `healthConsent` / `tier` (417-420+), not via `navigate()`. Reachable.
+- **CascadeGate / Paywall / ProUpgrade** (modal presentation) are reachable
+  (e.g. CascadeGate from SubscriptionScreen.js:118).
+
+### Findings
+
+---
+ID: ISSUE-009
+FILE: src/navigation/RootNavigator.js (registrations 243 + 269), src/screens/ExerciseLibraryScreen.js
+LINE: RootNavigator.js:243 (PlansStack), 269 (ProgressStack)
+SEVERITY: Low
+TYPE: Navigation
+FLOW AFFECTED: Plans (exercise picking) / Progress
+DESCRIPTION: `ExerciseLibrary` is registered as a screen in BOTH PlansStack
+(243) and ProgressStack (269) but is UNREACHABLE — VERIFIED: a codebase-wide
+search for `navigate('ExerciseLibrary')` / `{screen:'ExerciseLibrary'}` /
+any 'ExerciseLibrary' string reference (excluding its own file + the two
+registrations + the import) returns NOTHING. No navigation path opens it.
+REPRODUCTION: There is no in-app action that routes to ExerciseLibrary; it can
+only be reached by an explicit `navigation.navigate('ExerciseLibrary')` that no
+code performs.
+IMPACT: Dead route + dead screen (ExerciseLibraryScreen.js). Either an intended
+entry point is missing (a regression — e.g. an "Exercise Library" button that
+was removed) or the screen is obsolete (exercise selection happens elsewhere,
+e.g. ManualBuilder/RoutineDetail).
+FIX: Decide intent. If the library is wanted, add the entry point (likely a
+button in PlansScreen or RoutineDetail/ManualBuilder's add-exercise flow → 
+`navigation.navigate('ExerciseLibrary')`). If obsolete, remove both Stack.Screen
+registrations (243, 269) and `src/screens/ExerciseLibraryScreen.js`. Confirm
+which by checking how exercises are actually added to a routine (read
+RoutineDetailScreen / ManualBuilderScreen).
+
+> NOT DONE (Part 3 interaction-level): the brief's 10 named flows
+> (cold-start, OAuth signup, onboarding screen-by-screen, plan builder, training
+> session log, food logging, etc.) were verified at the NAVIGATION-GRAPH level
+> (all targets resolve, no traps in the route table). Step-by-step interaction
+> tracing (each CTA, each modal open/close, empty/error states per screen)
+> requires reading those screens individually and belongs with Part 2. The
+> structural guarantee here is: no flow can navigate to a non-existent screen,
+> and only ExerciseLibrary is orphaned.
