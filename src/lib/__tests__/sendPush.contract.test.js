@@ -24,10 +24,12 @@ const SRC = fs.readFileSync(
 
 describe('send-push Edge Function contract', () => {
   test('rejects callers that do not present the service-role key', () => {
-    // The handler compares the bearer token to SUPABASE_SERVICE_ROLE_KEY
-    // and returns 401 on mismatch.
+    // The handler compares the bearer token to SUPABASE_SERVICE_ROLE_KEY in
+    // constant time (timingSafeEqualStr, audit ISSUE-003) and returns 401 on
+    // mismatch. The guard tracks the constant-time compare so a future edit
+    // can't drop it back to a timing-leaky `!==`.
     expect(SRC).toMatch(/SUPABASE_SERVICE_ROLE_KEY/);
-    expect(SRC).toMatch(/token\s*!==\s*serviceRoleKey/);
+    expect(SRC).toMatch(/timingSafeEqualStr\(\s*token,\s*serviceRoleKey\s*\)/);
     expect(SRC).toMatch(/Unauthorised/);
   });
 
