@@ -340,7 +340,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             <View style={styles.prHighlightCard}>
               <View style={styles.prHighlightHeader}>
                 <Ionicons name="trophy" size={18} color={colors.primary} />
-                <Text style={styles.prHighlightTitle}>Personal records</Text>
+                <Text style={styles.prHighlightTitle}>Personal bests</Text>
               </View>
               <View style={styles.prHighlightRow}>
                 {displayPR && (
@@ -349,7 +349,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                       {parseFloat(displayPR.value).toFixed(1)}{units}
                     </Text>
                     <Text style={styles.prHighlightStatLabel}>
-                      {displayPR.record_type === '1rm_estimate' ? 'Est. 1RM' : 'Heaviest set'}
+                      {displayPR.record_type === '1rm_estimate' ? 'Est. max' : 'Heaviest set'}
                     </Text>
                   </View>
                 )}
@@ -408,7 +408,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             <View style={styles.goalWeightRow}>
               <View style={styles.goalWeightItem}>
                 <Text style={styles.goalWeightValue}>{best1RM > 0 ? best1RM.toFixed(1) : '-'}{best1RM > 0 ? units : ''}</Text>
-                <Text style={styles.goalWeightLabel}>Current est. 1RM</Text>
+                <Text style={styles.goalWeightLabel}>Current est. max</Text>
               </View>
               <Ionicons name="arrow-forward" size={14} color={colors.textMuted} />
               <View style={styles.goalWeightItem}>
@@ -464,7 +464,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 onPress={() => setChartMode('e1rm')}
               >
                 <Text style={[styles.chartToggleBtnText, chartMode === 'e1rm' && styles.chartToggleBtnTextActive]}>
-                  Est. 1RM
+                  Est. max
                 </Text>
               </TouchableOpacity>
             </View>
@@ -627,7 +627,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>{goal ? 'Edit target' : 'Set a target weight'}</Text>
             <Text style={styles.modalSubtitle}>
-              Based on your estimated 1RM. Progress will be shown each time you open this exercise.
+              Based on your estimated max. Progress will be shown each time you open this exercise.
             </Text>
 
             <Text style={styles.inputLabel}>Target weight ({units})</Text>
