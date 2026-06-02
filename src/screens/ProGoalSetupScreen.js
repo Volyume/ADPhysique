@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import Chip from '../components/Chip';
+import BackHeader from '../components/BackHeader';
 import { useToast } from '../components/Toast';
 import {
   PHYSIQUE_GOALS, PHYSIQUE_GOAL_GROUPS,
@@ -298,16 +299,7 @@ export default function ProGoalSetupScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Update your plan</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <BackHeader title="Update your plan" />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -610,15 +602,6 @@ export default function ProGoalSetupScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
-  },
-  headerTitle: {
-    flex: 1, textAlign: 'center',
-    color: colors.textPrimary, ...type.title,
-  },
   scroll: { paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.xxxl },
 
   sectionLabel: {
