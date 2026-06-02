@@ -70,6 +70,42 @@ describe('difficulty gating for beginners', () => {
   });
 });
 
+describe('assistance/regression gating for non-beginners (athlete suitability)', () => {
+  // The library's assisted crutch lifts. A Men's Physique or any intermediate+
+  // athlete should never be programmed these.
+  const ASSISTED = LIBRARY.filter(e => /\bassisted\b/i.test(e.name)).map(e => e.name);
+
+  test('the library actually contains assisted lifts (guards the test itself)', () => {
+    // If this ever empties, the gating tests below would pass vacuously.
+    expect(ASSISTED).toEqual(expect.arrayContaining(['Assisted Pull-Up']));
+  });
+
+  test('a Men\'s Physique intermediate plan contains no assisted lifts', () => {
+    // Invariant guard. With the full library the selector already prefers loaded
+    // lifts over the assist, so this also held before the gate; the gate makes
+    // it a guarantee under thinner libraries or higher back frequency where the
+    // real vertical pulls could otherwise be exhausted across the week.
+    const plan = generatePlan({ ...BASE, experience: 'intermediate', goal: 'mens_physique' });
+    const found = names(plan).filter(n => ASSISTED.includes(n));
+    expect(found).toEqual([]);
+  });
+
+  test('an advanced plan contains no assisted lifts, across divisions', () => {
+    for (const goal of ['general', 'mens_physique', 'classic_physique', 'bodybuilding', 'bikini']) {
+      const plan = generatePlan({ ...BASE, experience: 'advanced', goal });
+      const found = names(plan).filter(n => ASSISTED.includes(n));
+      expect(found).toEqual([]);
+    }
+  });
+
+  test('a beginner is not gated from assisted lifts and still gets a full plan', () => {
+    // The gate is non-beginner only: a true novice who needs the assist keeps
+    // it. We assert the beginner path still generates fully (no over-gating).
+    const plan = generatePlan({ ...BASE, experience: 'beginner' });
+    for (const w of plan.workouts) expect(w.exercises.length).toBeGreaterThan(0);
+  });
+});
+
 describe('adductors as a weak point', () => {
   test('selecting Adductors as a weak point programs adductor exercises', () => {
     const adductorNames = new Set(

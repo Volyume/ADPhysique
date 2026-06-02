@@ -68,6 +68,26 @@ describe('rankSwaps', () => {
     expect(typeof first.reason).toBe('string');
     expect(first.reason.length).toBeGreaterThan(0);
   });
+
+  describe('excludeAssisted (athlete suitability)', () => {
+    // Pull-Up being swapped: Assisted Pull-Up scores high (same muscle, pattern)
+    // and would otherwise top the list for an athlete who can't use a crutch.
+    const original = ex({ id: 'pu', name: 'Pull-Up', primaryMuscle: 'back', movementPattern: 'pull', subregion: 'vertical_pull', compoundIsolation: 'compound', fatigueCost: 3, stimulusToFatigueRatio: 4 });
+    const assisted = ex({ id: 'apu', name: 'Assisted Pull-Up', primaryMuscle: 'back', movementPattern: 'pull', subregion: 'vertical_pull', compoundIsolation: 'compound', fatigueCost: 3, stimulusToFatigueRatio: 4 });
+    const loaded = ex({ id: 'lpd', name: 'Lat Pulldown', primaryMuscle: 'back', movementPattern: 'pull', subregion: 'vertical_pull', compoundIsolation: 'compound', fatigueCost: 3, stimulusToFatigueRatio: 4 });
+
+    test('default keeps assisted lifts (beginners still see them)', () => {
+      const out = rankSwaps(original, [assisted, loaded]);
+      expect(out.map(r => r.exercise.id)).toContain('apu');
+    });
+
+    test('excludeAssisted drops assisted lifts from the suggestions', () => {
+      const out = rankSwaps(original, [assisted, loaded], { excludeAssisted: true });
+      const ids = out.map(r => r.exercise.id);
+      expect(ids).not.toContain('apu');
+      expect(ids).toContain('lpd');
+    });
+  });
 });
 
 describe('buildSwapReason', () => {

@@ -24,6 +24,12 @@ const SCORE_SIMILAR_FATIGUE_COST = 10;
 const SCORE_SIMILAR_SFR = 10;
 const SIMILAR_WITHIN = 1; // ±1 threshold for fatigueCost and SFR
 
+// Assisted machine regressions (Assisted Pull-Up, Assisted Dip Machine). For an
+// intermediate or stronger lifter these are not sensible swap targets for a
+// loaded movement, so rankSwaps can drop them with the excludeAssisted option.
+// Word boundary so it only catches genuinely assisted lifts.
+const ASSISTED_RE = /\bassisted\b/i;
+
 // ---------------------------------------------------------------------------
 // Internal: score a single candidate against the original
 // ---------------------------------------------------------------------------
@@ -176,6 +182,10 @@ export function buildSwapReason(original, candidate) {
  * @param {string|null} options.equipment   - filter to this equipment type (null = no filter)
  * @param {number}      options.numResults  - max results (default 5)
  * @param {string[]}    options.excludeIds  - additional exercise IDs to exclude
+ * @param {boolean}     options.excludeAssisted - drop assisted machine regressions
+ *                       (Assisted Pull-Up etc). Set for intermediate+ lifters so
+ *                       a beginner crutch is never offered as a swap. Off by
+ *                       default; a true beginner still sees them.
  * @returns {{ exercise: object, score: number, reason: string }[]}
  */
 export function rankSwaps(originalExercise, allExercises, options = {}) {
@@ -183,6 +193,7 @@ export function rankSwaps(originalExercise, allExercises, options = {}) {
     equipment = null,
     numResults = 5,
     excludeIds = [],
+    excludeAssisted = false,
   } = options;
 
   const excludeSet = new Set([originalExercise.id, ...excludeIds]);
@@ -190,6 +201,10 @@ export function rankSwaps(originalExercise, allExercises, options = {}) {
   const scored = allExercises
     // Mandatory exclusions
     .filter((ex) => !excludeSet.has(ex.id))
+    // Assisted-regression filter (intermediate+). Never applied to the original
+    // itself: if the user is on an assisted lift and wants alternatives, they
+    // still get loaded ones.
+    .filter((ex) => !excludeAssisted || !ASSISTED_RE.test(ex.name ?? ''))
     // Optional equipment filter, accepts a string or array of strings
     .filter((ex) => {
       if (equipment === null) return true;

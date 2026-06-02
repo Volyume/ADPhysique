@@ -155,6 +155,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     lastActivityAt, updateLastActivity,
   } = store;
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  // Drop assisted machine regressions from swap suggestions for anyone past
+  // their first block. A true beginner keeps them. Unknown experience is treated
+  // as non-beginner so an athlete is never offered a crutch.
+  const isBeginner = useAppStore(s => s.userProfile?.experience) === 'beginner';
 
   const [currentSet, setCurrentSet] = useState({ ...DEFAULT_SET });
   const [prevSets, setPrevSets] = useState([]);
@@ -168,6 +172,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [detectedPRs, setDetectedPRs] = useState([]);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
+  // 'add' opens the picker to append an exercise; 'swap' opens it to replace the
+  // current one. Lets the Swap sheet fall through to the full library and the
+  // custom-exercise form when the ranked suggestions aren't what the user wants.
+  const [pickerMode, setPickerMode] = useState('add');
   const [noteText, setNoteText] = useState('');
   const [showNoteInput, setShowNoteInput] = useState(false);
   // Superset notification, tracks which group IDs the user has already
@@ -291,7 +299,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   async function handleOpenSwap() {
     const allExercises = await getAllExercises();
     const alreadyInWorkout = workoutExercises.map(e => e.exercise?.id).filter(Boolean);
-    const ranked = rankSwaps(exercise, allExercises, { excludeIds: alreadyInWorkout, numResults: 8 });
+    const ranked = rankSwaps(exercise, allExercises, { excludeIds: alreadyInWorkout, numResults: 8, excludeAssisted: !isBeginner });
     setSwapCandidates(ranked);
     setShowSwapModal(true);
   }
@@ -312,6 +320,26 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setLoggedSets([]);
     sessionSetsRef.current = [];
     setProgression(null);
+  }
+
+  // Single entry point for the exercise picker, whether it was opened to add or
+  // to swap. Swap replaces the current exercise (incl. a freshly created custom
+  // one); add appends and jumps to it.
+  function handlePickerSelect(ex) {
+    if (pickerMode === 'swap') {
+      handleConfirmSwap(ex);
+    } else {
+      const newIndex = workoutExercises.length;
+      addExerciseToWorkout(ex);
+      setCurrentExerciseIndex(newIndex);
+    }
+    setShowExercisePicker(false);
+    setPickerMode('add');
+  }
+
+  function closeExercisePicker() {
+    setShowExercisePicker(false);
+    setPickerMode('add');
   }
 
   function handleCancelWorkout() {
@@ -1149,12 +1177,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         />
         <ExercisePickerModal
           visible={showExercisePicker}
-          onClose={() => setShowExercisePicker(false)}
-          onSelect={ex => {
-            addExerciseToWorkout(ex);
-            setCurrentExerciseIndex(workoutExercises.length);
-            setShowExercisePicker(false);
-          }}
+          onClose={closeExercisePicker}
+          onSelect={handlePickerSelect}
+          actionLabel={pickerMode === 'swap' ? 'Swap In' : 'Add to Workout'}
         />
       </SafeAreaView>
     );
@@ -1738,16 +1763,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           <View style={{ height: Math.max(spacing.xxl, insets.bottom + spacing.lg) }} />
         </ScrollView>
 
-        {/* Exercise Picker Modal */}
+        {/* Exercise Picker Modal, shared by Add and Swap (see pickerMode) */}
         <ExercisePickerModal
           visible={showExercisePicker}
-          onClose={() => setShowExercisePicker(false)}
-          onSelect={ex => {
-            const newIndex = workoutExercises.length;
-            addExerciseToWorkout(ex);
-            setCurrentExerciseIndex(newIndex);
-            setShowExercisePicker(false);
-          }}
+          onClose={closeExercisePicker}
+          onSelect={handlePickerSelect}
+          actionLabel={pickerMode === 'swap' ? 'Swap In' : 'Add to Workout'}
         />
 
         {/* Superset heads-up modal, appears once per pair when the user
@@ -1994,6 +2015,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   No similar exercises found.
                 </Text>
               }
+              ListFooterComponent={
+                // Escape hatch from the ranked suggestions: search the whole
+                // library or add your own. Always present, so it works whether
+                // or not there were candidates.
+                <TouchableOpacity
+                  style={styles.swapBrowseBtn}
+                  onPress={() => {
+                    setShowSwapModal(false);
+                    setPickerMode('swap');
+                    setShowExercisePicker(true);
+                  }}
+                >
+                  <Ionicons name="search" size={18} color={colors.primary} />
+                  <Text style={styles.swapBrowseText}>Search all exercises or add your own</Text>
+                </TouchableOpacity>
+              }
             />
           </SafeAreaView>
         </Modal>
@@ -2074,7 +2111,7 @@ function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, workoutExercise
 const PICKER_MUSCLES = Object.keys(MUSCLE_DISPLAY_NAMES);
 const PICKER_EQUIPMENT = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight', 'Smith Machine', 'Bands'];
 
-function ExercisePickerModal({ visible, onClose, onSelect }) {
+function ExercisePickerModal({ visible, onClose, onSelect, actionLabel = 'Add to Workout' }) {
   const [query, setQuery] = useState('');
   const [exercises, setExercises] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
@@ -2186,7 +2223,7 @@ function ExercisePickerModal({ visible, onClose, onSelect }) {
                 disabled={creating}
               >
                 <Ionicons name="add-circle" size={20} color={colors.background} />
-                <Text style={styles.createSaveBtnText}>Add to Workout</Text>
+                <Text style={styles.createSaveBtnText}>{actionLabel}</Text>
               </TouchableOpacity>
             </ScrollView>
           </KeyboardAvoidingView>
@@ -2226,17 +2263,17 @@ function ExercisePickerModal({ visible, onClose, onSelect }) {
               )}
               ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: colors.border }} />}
               ListFooterComponent={
-                // Always offer "create custom" while there's a query, even
-                // when the search has matches. A near-name match (e.g. typing
-                // "chest") should never hide the option to add your own.
-                query.trim().length > 0 ? (
-                  <TouchableOpacity style={styles.createNewBtn} onPress={openCreate}>
-                    <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-                    <Text style={styles.createNewBtnText}>
-                      Create "{query.trim()}" as custom exercise
-                    </Text>
-                  </TouchableOpacity>
-                ) : null
+                // Always offer "create custom", with or without a query, so the
+                // option to add your own is never hidden (the earlier version
+                // only showed it once you'd typed something).
+                <TouchableOpacity style={styles.createNewBtn} onPress={openCreate}>
+                  <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+                  <Text style={styles.createNewBtnText}>
+                    {query.trim().length > 0
+                      ? `Create "${query.trim()}" as custom exercise`
+                      : 'Create a custom exercise'}
+                  </Text>
+                </TouchableOpacity>
               }
               ListEmptyComponent={
                 query.trim().length > 0 ? null : (
@@ -2290,6 +2327,8 @@ const styles = StyleSheet.create({
   swapItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
   swapItemName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.xxs },
   swapItemReason: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
+  swapBrowseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
+  swapBrowseText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   exerciseMuscle: { fontSize: fontSize.sm, color: colors.textSecondary },
   prevCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border, gap: spacing.xs },
   prevTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2 },

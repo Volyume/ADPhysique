@@ -891,6 +891,14 @@ function numExHint(sessionTarget) {
   return sessionTarget <= 5 ? 1 : 2;
 }
 
+// Assistance / regression lifts: the machine-assisted versions of bodyweight
+// compounds (Assisted Pull-Up, Assisted Dip Machine). These are beginner
+// crutches, an intermediate or stronger lifter trains the loaded version
+// instead. Gated away from non-beginners below (athlete-suitability fix). The
+// word boundary keeps it to genuinely assisted lifts, not, say, a future
+// "Resisted" anything.
+const ASSISTED_RE = /\bassisted\b/i;
+
 function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, usedNames, weeklyTotalSets, landmarks, experience, nutritionPhase) {
   if (sessionTarget < 2) return [];
 
@@ -905,6 +913,19 @@ function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, 
   // entries don't, so they're treated as ungated (null) and never dropped.
   if (experience === 'beginner') {
     const gated = available.filter(e => e.difficulty == null || e.difficulty < 3);
+    if (gated.length >= Math.max(2, numExHint(sessionTarget))) {
+      available = gated;
+    }
+  }
+
+  // The mirror image of the above for everyone past their first block: drop the
+  // assisted crutch lifts so a Men's Physique or any intermediate+ athlete gets
+  // the real movement, not the assisted machine. Same never-starve guard: only
+  // drop them when enough loaded options remain to cover the muscle. This also
+  // undoes a quirk where a division's vertical-pull bias could rank Assisted
+  // Pull-Up above real pulls for that athlete.
+  if (experience !== 'beginner') {
+    const gated = available.filter(e => !ASSISTED_RE.test(e.n));
     if (gated.length >= Math.max(2, numExHint(sessionTarget))) {
       available = gated;
     }
