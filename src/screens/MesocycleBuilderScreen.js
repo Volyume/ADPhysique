@@ -492,42 +492,6 @@ const styles = StyleSheet.create({
   emptyTitle: { ...type.h3, color: colors.textSecondary },
   emptyText:  { fontSize: fontSize.md, color: colors.textMuted, textAlign: 'center', lineHeight: 22 },
 
-  // Modal
-  modalOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
-  modalSheet: {
-    backgroundColor: colors.surface, borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl, padding: spacing.xl, paddingBottom: spacing.xxxl, gap: spacing.lg,
-  },
-  modalTitle: { ...type.h3, color: colors.textPrimary },
-  input: {
-    ...type.body,
-    backgroundColor: colors.surface2, borderRadius: radius.md,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    color: colors.textPrimary, borderWidth: 1, borderColor: colors.border,
-  },
-  row:        { flexDirection: 'row', gap: spacing.md, alignItems: 'center', flexWrap: 'wrap' },
-  inputGroup: { flex: 1, gap: spacing.xs },
-  inputLabel: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: fontWeight.medium },
-  weekChip: {
-    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
-    borderRadius: radius.full, borderWidth: 1, borderColor: colors.border,
-    backgroundColor: colors.surface2,
-  },
-  weekChipActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
-  weekChipText: { ...type.num('caption'), color: colors.textSecondary },
-  weekChipTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
-  modalActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm },
-  cancelBtn: {
-    flex: 1, alignItems: 'center', paddingVertical: spacing.md,
-    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
-  },
-  cancelText: { ...type.bodyStrong, color: colors.textSecondary },
-  saveBtn: {
-    flex: 2, alignItems: 'center', paddingVertical: spacing.md,
-    borderRadius: radius.lg, backgroundColor: colors.primary,
-  },
-  saveText: { ...type.bodyStrong, color: colors.background },
-
   summaryBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     alignSelf: 'flex-start', marginTop: spacing.sm,
