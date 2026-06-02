@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
@@ -16,6 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import Button from '../components/Button';
+import OAuthButtons from '../components/auth/OAuthButtons';
+import EmailPasswordFields from '../components/auth/EmailPasswordFields';
 import { signInWithEmail, signUpWithEmail, resetPassword, signInWithGoogle, signInWithApple } from '../lib/supabase';
 import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 import { wipeAllUserData } from '../lib/database';
@@ -50,8 +51,6 @@ export default function LoginScreen({ navigation, route }) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [emailFocused, setEmailFocused] = useState(false);
-  const [passwordFocused, setPasswordFocused] = useState(false);
   const [crashLog, setCrashLog] = useState(null);
 
   React.useEffect(() => {
@@ -259,43 +258,15 @@ export default function LoginScreen({ navigation, route }) {
           {/* Thin divider below brand */}
           <View style={styles.brandDivider} />
 
-          {/* ── OAuth quick-sign-in ── */}
-          {/* Platform-aware: Apple on iOS (App Store requires Sign in with
-              Apple when any other social provider is offered), Google on
-              both. Surfaced ABOVE the email form because most users prefer
-              continuing with an existing account over creating yet another
-              email/password. Falls back gracefully if the user's Supabase
-              project doesn't have the provider configured, the Supabase
-              error is surfaced via Alert. */}
-          <View style={styles.oauthBlock}>
-            {Platform.OS === 'ios' && (
-              <TouchableOpacity
-                style={[styles.oauthBtnApple, loading && styles.btnDisabled]}
-                onPress={() => handleOAuth('apple')}
-                disabled={loading}
-                accessibilityRole="button"
-                accessibilityLabel="Continue with Apple"
-              >
-                <Ionicons name="logo-apple" size={18} color={colors.appleBtnText} />
-                <Text style={styles.oauthBtnAppleText}>Continue with Apple</Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={[styles.oauthBtn, loading && styles.btnDisabled]}
-              onPress={() => handleOAuth('google')}
-              disabled={loading}
-              accessibilityRole="button"
-              accessibilityLabel="Continue with Google"
-            >
-              <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
-              <Text style={styles.oauthBtnText}>Continue with Google</Text>
-            </TouchableOpacity>
-            <View style={styles.oauthDivider}>
-              <View style={styles.oauthDividerLine} />
-              <Text style={styles.oauthDividerText}>or with email</Text>
-              <View style={styles.oauthDividerLine} />
-            </View>
-          </View>
+          {/* ── OAuth quick-sign-in ──
+              Surfaced above the email form because most users prefer
+              continuing with an existing account. Shared with the Pro
+              onboarding account step (see OAuthButtons). */}
+          <OAuthButtons
+            onApple={() => handleOAuth('apple')}
+            onGoogle={() => handleOAuth('google')}
+            disabled={loading}
+          />
 
           {/* ── Form block ── */}
           <View style={styles.formBlock}>
@@ -311,60 +282,15 @@ export default function LoginScreen({ navigation, route }) {
               </View>
             )}
 
-            {/* Email */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Email</Text>
-              <View style={[styles.fieldWrap, emailFocused && styles.fieldWrapFocused]}>
-                <TextInput
-                  testID="email"
-                  accessibilityLabel="Email"
-                  style={styles.fieldInput}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="you@example.com"
-                  placeholderTextColor={colors.textDisabled}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="email"
-                  onFocus={() => setEmailFocused(true)}
-                  onBlur={() => setEmailFocused(false)}
-                />
-              </View>
-            </View>
-
-            {/* Password */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Password</Text>
-              <View style={[styles.fieldWrap, passwordFocused && styles.fieldWrapFocused]}>
-                <TextInput
-                  testID="password"
-                  accessibilityLabel="Password"
-                  style={[styles.fieldInput, styles.fieldInputPassword]}
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder={isSignIn ? 'Your password' : 'Min 8 characters'}
-                  placeholderTextColor={colors.textDisabled}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete={isSignIn ? 'password' : 'new-password'}
-                  onFocus={() => setPasswordFocused(true)}
-                  onBlur={() => setPasswordFocused(false)}
-                />
-                <TouchableOpacity
-                  style={styles.eyeBtn}
-                  onPress={() => setShowPassword(v => !v)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons
-                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                    size={19}
-                    color={colors.textMuted}
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
+            <EmailPasswordFields
+              mode={isSignIn ? 'signin' : 'signup'}
+              email={email}
+              onEmailChange={setEmail}
+              password={password}
+              onPasswordChange={setPassword}
+              showPassword={showPassword}
+              onToggleShowPassword={() => setShowPassword(v => !v)}
+            />
 
             {/* Forgot password */}
             {isSignIn && (
@@ -469,53 +395,10 @@ const styles = StyleSheet.create({
 
   // Form
   formBlock: { gap: spacing.lg, marginBottom: spacing.xl },
-  oauthBlock: { gap: spacing.sm, marginBottom: spacing.lg },
-  oauthBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
-  oauthBtnText: { ...type.bodyStrong, color: colors.textPrimary },
-  // Apple branding requires black background + white text (HIG)
-  oauthBtnApple: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md, backgroundColor: colors.appleBtnBg },
-  oauthBtnAppleText: { ...type.bodyStrong, color: colors.appleBtnText },
-  oauthDivider: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  oauthDividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
-  oauthDividerText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
   formTitle: {
     ...type.title,
     color: colors.textPrimary,
     marginBottom: spacing.xs,
-  },
-  fieldGroup: { gap: spacing.xs },
-  fieldLabel: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.textMuted,
-    letterSpacing: 0.3,
-  },
-  fieldWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-  },
-  fieldWrapFocused: {
-    borderColor: withAlpha(colors.primary, 0.502),
-    backgroundColor: colors.surface,
-  },
-  fieldInput: {
-    ...type.body,
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md + 2,
-    color: colors.textPrimary,
-  },
-  fieldInputPassword: { paddingRight: spacing.xxxl },
-  eyeBtn: {
-    position: 'absolute',
-    right: spacing.md,
-    top: 0, bottom: 0,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xs,
   },
   forgotBtn: {
     alignSelf: 'flex-end',
@@ -528,7 +411,6 @@ const styles = StyleSheet.create({
 
   // Primary button
   submitBtn: { marginBottom: spacing.lg },
-  btnDisabled: { opacity: 0.55 },
 
   // Mode switch
   modeSwitch: {

@@ -10,6 +10,8 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '
 import { VolyumeIcon } from '../components/BrandMark';
 import OptionCard from '../components/OptionCard';
 import SegmentedControl from '../components/SegmentedControl';
+import OAuthButtons from '../components/auth/OAuthButtons';
+import EmailPasswordFields from '../components/auth/EmailPasswordFields';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -233,8 +235,6 @@ export default function ProOnboardingScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [emailFocused, setEmailFocused] = useState(false);
-  const [passwordFocused, setPasswordFocused] = useState(false);
   const [accountCreated, setAccountCreated] = useState(false);
 
   const [busy, setBusy] = useState(false);
@@ -647,86 +647,25 @@ export default function ProOnboardingScreen({ navigation }) {
               sub="Pro needs an account so your plan, weight history, and coaching adjustments are backed up and sync across devices."
             />
 
-            {/* Quick sign-in with Google (Apple too on iOS). Surfaced above
-                the email form because most users prefer continuing with an
-                existing account over creating yet another email/password.
-                Disabled when the email/password flow is loading so the user
-                can't fire both in parallel. */}
-            <View style={styles.oauthBlock}>
-              {Platform.OS === 'ios' && (
-                <TouchableOpacity
-                  style={[styles.oauthBtnApple, busy && styles.btnDisabled]}
-                  onPress={() => handleOAuthOnboarding('apple')}
-                  disabled={busy}
-                  accessibilityRole="button"
-                  accessibilityLabel="Continue with Apple"
-                >
-                  <Ionicons name="logo-apple" size={18} color={colors.appleBtnText} />
-                  <Text style={styles.oauthBtnAppleText}>Continue with Apple</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                style={[styles.oauthBtn, busy && styles.btnDisabled]}
-                onPress={() => handleOAuthOnboarding('google')}
-                disabled={busy}
-                accessibilityRole="button"
-                accessibilityLabel="Continue with Google"
-              >
-                <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
-                <Text style={styles.oauthBtnText}>Continue with Google</Text>
-              </TouchableOpacity>
-              <View style={styles.oauthDivider}>
-                <View style={styles.oauthDividerLine} />
-                <Text style={styles.oauthDividerText}>or with email</Text>
-                <View style={styles.oauthDividerLine} />
-              </View>
-            </View>
+            {/* Account fields, shared with the LoginScreen so the two auth
+                surfaces stay identical. The post-auth logic (advanceFrom1,
+                handleOAuthOnboarding) is onboarding-specific and stays here. */}
+            <OAuthButtons
+              onApple={() => handleOAuthOnboarding('apple')}
+              onGoogle={() => handleOAuthOnboarding('google')}
+              disabled={busy}
+            />
 
             <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Email</Text>
-              <View style={[styles.fieldWrap, emailFocused && styles.fieldWrapFocused]}>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="you@example.com"
-                  placeholderTextColor={colors.textDisabled}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="email"
-                  textContentType="emailAddress"
-                  onFocus={() => setEmailFocused(true)}
-                  onBlur={() => setEmailFocused(false)}
-                />
-              </View>
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Password</Text>
-              <View style={[styles.fieldWrap, passwordFocused && styles.fieldWrapFocused]}>
-                <TextInput
-                  style={[styles.fieldInput, { paddingRight: spacing.xxxl }]}
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder={authMode === 'signup' ? 'At least 8 characters' : 'Your password'}
-                  placeholderTextColor={colors.textDisabled}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete={authMode === 'signup' ? 'new-password' : 'password'}
-                  textContentType={authMode === 'signup' ? 'newPassword' : 'password'}
-                  onFocus={() => setPasswordFocused(true)}
-                  onBlur={() => setPasswordFocused(false)}
-                />
-                <TouchableOpacity
-                  style={styles.eyeBtn}
-                  onPress={() => setShowPassword(v => !v)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={19} color={colors.textMuted} />
-                </TouchableOpacity>
-              </View>
+              <EmailPasswordFields
+                mode={authMode}
+                email={email}
+                onEmailChange={setEmail}
+                password={password}
+                onPasswordChange={setPassword}
+                showPassword={showPassword}
+                onToggleShowPassword={() => setShowPassword(v => !v)}
+              />
             </View>
 
             <TouchableOpacity
@@ -1576,15 +1515,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm, backgroundColor: colors.primary,
     borderRadius: radius.lg, paddingVertical: spacing.lg + 2, marginBottom: spacing.md,
   },
-  btnDisabled: { opacity: 0.55 },
-  oauthBlock: { gap: spacing.sm, marginBottom: spacing.lg },
-  oauthBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
-  oauthBtnText: { color: colors.textPrimary, ...type.bodyStrong },
-  oauthBtnApple: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md, backgroundColor: colors.appleBtnBg },
-  oauthBtnAppleText: { color: colors.appleBtnText, ...type.bodyStrong },
-  oauthDivider: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  oauthDividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
-  oauthDividerText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
   primaryBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
   primaryBtnDisabled: { opacity: 0.4 },
   switchAuthBtn: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.sm },
