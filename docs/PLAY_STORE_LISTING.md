@@ -107,7 +107,6 @@ Progress
 Body
 - Body weight log with trend chart
 - Body measurements tracking (waist, chest, arms, etc.)
-- Progress photo storage (local only)
 
 Nutrition (Pro)
 - Daily calorie and macro targets
@@ -200,7 +199,6 @@ Complete the Data Safety form with these answers:
 | Name | Yes (first name only) | No | No | Yes | Yes |
 | Fitness info (workouts, sets, weights) | Yes | No | Yes | Yes | Yes |
 | Health info (body weight, measurements) | Yes | No | No (optional) | Yes | Yes |
-| Photos / videos (progress photos) | Yes | No | No (optional) | Yes | Yes |
 
 **Data not collected:** Financial info, messages, location, contacts, app activity beyond the app itself.
 

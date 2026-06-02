@@ -44,7 +44,7 @@ export default function PrivacyPolicyScreen({ navigation }) {
 
         <Section title="Body metrics and sensitive data">
           <Body>
-            Body weight, measurements, and progress photos are treated as sensitive personal data. They are
+            Body weight and measurements are treated as sensitive personal data. They are
             stored only on your device and your private account. They are never shared, indexed, or visible
             to other users.
           </Body>

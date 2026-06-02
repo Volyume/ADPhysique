@@ -116,7 +116,6 @@ Progress
 Body
 • Body weight log with trend chart
 • Body measurements tracking (waist, chest, arms, and more)
-• Progress photo storage (stored locally on your device)
 
 Nutrition (Pro)
 • Daily calorie and macro targets
@@ -317,7 +316,6 @@ These data types are collected and linked to the user's account (only if the use
 | Contact Info | Name (first name only) | Personalisation within the app | Yes |
 | Health & Fitness | Fitness Information (workouts, sets, weights, reps) | Core app functionality | No — required for the app to work |
 | Health & Fitness | Health Information (body weight, measurements) | App functionality, coaching calculations | Yes |
-| Photos | Photos (progress photos) | App functionality — stored locally, backed up to private account only | Yes |
 
 ---
 
@@ -354,7 +352,6 @@ Volyume does not collect:
 - All workout data is stored locally on-device by default.
 - Cloud sync is optional and requires account creation.
 - Cloud-synced data is private to the user — not shared with any third party.
-- Progress photos never leave the device unless the user explicitly exports them.
 - Users can delete their account and all associated data from within the app.
 - Data is encrypted in transit and at rest.
 

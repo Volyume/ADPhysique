@@ -65,7 +65,7 @@ RootNavigator
         ├── AthleteHubScreen       — Pro coaching hub (update goals, coaching output, check-in, body metrics, nutrition)
         ├── CoachOutputScreen      — weekly coaching plan output (sets, exercises, adjustments)
         ├── WeeklyCheckInScreen    — weekly feedback form (performance, soreness, energy, motivation)
-        ├── BodyMetricsScreen      — body weight log, measurements log, progress photos, trend charts
+        ├── BodyMetricsScreen      — body weight log, measurements log, trend charts
         ├── NutritionTargetsScreen — daily macro targets with explanation, protein approach selector
         ├── ProGoalSetupScreen     — change goal/phase/protein approach (quick update)
         ├── MesocycleBuilderScreen — create/view training blocks (currently informational)
@@ -154,8 +154,6 @@ RootNavigator
 - Body weight log with trend chart + slope calculation (gaining/losing/maintaining)
 - Measurement log (waist, chest, arms, legs, etc.) with per-measurement trend charts
 - Tab selector for measurement charts
-- Progress photo section (opt-in, local only)
-- Physique progress opt-in (GDPR consent before storing photos)
 
 ### NutritionTargetsScreen
 - Displays: calories (target, min, max), protein (g, g/kg), carbs, fat
@@ -420,7 +418,6 @@ All 15 tables mirror SQLite for relevant tables, plus:
 users_profile        — id, firstName, sex, age, heightCm, weightKg, bodyFatPct, trainingGoal, trainingPhase, proteinApproach, daysPerWeek, experience, equipment[], tier, isFirstRunComplete, gdprConsented
 personal_records     — id, userId, exerciseId, recordType, weight, reps, estimated1RM, achievedDate
 weekly_volumes       — id, userId, weekEndingDate, volumeByMuscle{} (JSONB)
-progress_photos      — id, userId, photoUrl, photoDate, pose, notes
 achievements         — id, userId, achievementType, achievedDate, metadata
 autoregulation_suggestions — id, userId, workoutId, type, muscle, text, reason
 ```
