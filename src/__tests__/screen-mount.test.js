@@ -595,7 +595,6 @@ const SCREENS_TO_SWEEP = [
   'CoachingRemindersScreen',
   'ConsistencyScreen',
   'DebugLogScreen',
-  'ExerciseLibraryScreen',
   'FirstRunScreen',
   'GoalChangeSummaryScreen',
   'HomeScreen',
@@ -1367,33 +1366,6 @@ describe('Scale stress: large data does not break render or interaction', () => 
     }
   });
 
-  test('ExerciseLibrary with all canonical exercises mounted', async () => {
-    const database = require('../lib/database');
-    const orig = database.getAllExercises;
-    database.getAllExercises = () => Promise.resolve(
-      Array.from({ length: 500 }, (_, i) => ({
-        id: `e${i}`,
-        name: `Exercise ${i}`,
-        primaryMuscle: ['chest', 'back', 'quads', 'shoulders', 'hamstrings', 'biceps', 'triceps', 'glutes'][i % 8],
-        equipment: ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight'][i % 5],
-        movementPattern: ['push', 'pull', 'squat', 'hinge'][i % 4],
-        compoundIsolation: i % 2 ? 'compound' : 'isolation',
-      })),
-    );
-    try {
-      useAppStore.setState(STATE_VARIANTS[0].state);
-      const Screen = require('../screens/ExerciseLibraryScreen').default;
-      let tree = null;
-      try {
-        const { tree: t, errors } = await mountScreen(Screen);
-        tree = t;
-        expect(tree).not.toBeNull();
-        expect(errors).toEqual([]);
-      } finally { unmountTree(tree); }
-    } finally {
-      database.getAllExercises = orig;
-    }
-  });
 });
 
 // ─── Tap-then-re-render: catches crashes that surface on re-mount ────────

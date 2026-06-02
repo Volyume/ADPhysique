@@ -36,7 +36,6 @@ import ActiveWorkoutScreen from '../screens/ActiveWorkoutScreen';
 import BuildWorkoutScreen from '../screens/BuildWorkoutScreen';
 import WorkoutHistoryScreen from '../screens/WorkoutHistoryScreen';
 import WorkoutSummaryScreen from '../screens/WorkoutSummaryScreen';
-import ExerciseLibraryScreen from '../screens/ExerciseLibraryScreen';
 import ExerciseDetailScreen from '../screens/ExerciseDetailScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
 import VolumeHeatmapScreen from '../screens/VolumeHeatmapScreen';
@@ -240,7 +239,6 @@ function PlansStack({ navigation }) {
       <Stack.Screen name="Plans" component={PlansScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ title: 'Plan' }} />
       <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ title: 'Edit Workout' }} />
-      <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} options={{ title: 'Exercise Library' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
       <Stack.Screen name="ManualBuilder" component={ManualBuilderScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ title: 'Plan Library' }} />
@@ -266,7 +264,6 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ title: 'Body Metrics' }} />
       <Stack.Screen name="LiftProgress" component={LiftProgressScreen} options={{ title: 'Lifts' }} />
       <Stack.Screen name="Consistency" component={ConsistencyScreen} options={{ title: 'Consistency' }} />
-      <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} options={{ title: 'Exercise Library' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
       <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ title: 'Share Card' }} />
