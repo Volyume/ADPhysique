@@ -84,17 +84,6 @@ function computePRsPerWeek(allSets, exerciseMap, windowDays, now = Date.now()) {
   return weeks;
 }
 
-// Returns volume status color for a muscle's current working-set count
-function volumeDotColor(muscleKey, workingSets) {
-  const lm = VOLUME_LANDMARKS[muscleKey];
-  if (!lm) return colors.textMuted;
-  if (workingSets === 0) return colors.border;
-  if (workingSets < lm.mev) return volumeColors.below;
-  if (workingSets <= lm.mav) return volumeColors.optimal;
-  if (workingSets <= lm.mrv) return volumeColors.overMav;
-  return volumeColors.overMrv;
-}
-
 export default function AnalyticsScreen({ navigation }) {
   const { user, units, tier, userProfile } = useAppStore(useShallow(s => ({ user: s.user, units: s.units, tier: s.tier, userProfile: s.userProfile })));
 
@@ -596,25 +585,20 @@ export default function AnalyticsScreen({ navigation }) {
           </View>
         )}
 
-        {/* ── 3 · Volume Snapshot ───────────────────────────── */}
+        {/* ── 3 · Volume summary, drills into the heatmap (the one volume home) ── */}
         {hasData && (
         <View style={styles.section}>
-          <View style={styles.rowBetween}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <Text style={styles.sectionLabel}>This week's volume</Text>
-              <InfoTooltip text={
-                'Sets per muscle group this week.\n\n' +
-                'Low: add a set or two next week.\n' +
-                'Good range: keep it here.\n' +
-                'High: dial it back next week.\n\n' +
-                'Targets adjust over time as Volyume learns how you recover.'
-              } />
-            </View>
-            <TouchableOpacity onPress={() => navigation.navigate('VolumeHeatmap')}>
-              <Text style={styles.seeAll}>Full view</Text>
-            </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+            <Text style={styles.sectionLabel}>This week's volume</Text>
+            <InfoTooltip text={
+              'Working sets per muscle this week, measured against your targets.\n\n' +
+              'Tap to see every muscle on the heatmap.'
+            } />
           </View>
-          <VolumeSnapshotGrid volume={weeklyVolume} />
+          <VolumeSummaryStrip
+            volume={weeklyVolume}
+            onPress={() => navigation.navigate('VolumeHeatmap')}
+          />
         </View>
         )}
 
@@ -819,45 +803,50 @@ function InsightRow({ insight, onDismiss }) {
 
 const MUSCLES = Object.keys(VOLUME_LANDMARKS);
 
-function VolumeSnapshotGrid({ volume }) {
-  // Only the muscles trained this week, not all 17 with a wall of zeros.
-  // "Full view" in the section header still opens the complete heatmap.
+// Compact landing read for weekly volume. The full per-muscle picture lives on
+// the heatmap (the one volume home); this is a glanceable summary that drills
+// in: how many muscles were trained, and how many sit outside their target.
+function VolumeSummaryStrip({ volume, onPress }) {
   const trained = MUSCLES.filter(m => (volume[m]?.workingSets ?? 0) > 0);
   if (trained.length === 0) {
     return (
-      <View style={styles.volEmpty}>
+      <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
         <Text style={styles.volEmptyText}>Nothing logged this week yet.</Text>
-      </View>
+      </TouchableOpacity>
     );
   }
+  let below = 0;
+  let over = 0;
+  for (const m of trained) {
+    const ws = volume[m]?.workingSets ?? 0;
+    const lm = VOLUME_LANDMARKS[m];
+    if (!lm) continue;
+    if (ws < lm.mev) below += 1;
+    else if (ws > lm.mrv) over += 1;
+  }
+  const flags = [];
+  if (below > 0) flags.push({ key: 'below', n: below, label: 'below target', color: volumeColors.below });
+  if (over > 0) flags.push({ key: 'over', n: over, label: 'over max', color: volumeColors.overMrv });
   return (
-    <View style={styles.volGrid}>
-      {trained.map(m => {
-        const ws = volume[m]?.workingSets ?? 0;
-        const dot = volumeDotColor(m, ws);
-        return (
-          <View key={m} style={styles.volCell}>
-            <View style={[styles.volDot, { backgroundColor: dot }]} />
-            <Text style={styles.volMuscle}>{MUSCLE_DISPLAY_NAMES[m]}</Text>
-            <Text style={styles.volSets}>{ws} sets</Text>
-          </View>
-        );
-      })}
-      <View style={styles.volLegend}>
-        <View style={styles.volLegendItem}>
-          <View style={[styles.volLegendDot, { backgroundColor: colors.warning }]} />
-          <Text style={styles.volLegendText}>Below target</Text>
-        </View>
-        <View style={styles.volLegendItem}>
-          <View style={[styles.volLegendDot, { backgroundColor: colors.success }]} />
-          <Text style={styles.volLegendText}>Good</Text>
-        </View>
-        <View style={styles.volLegendItem}>
-          <View style={[styles.volLegendDot, { backgroundColor: colors.error }]} />
-          <Text style={styles.volLegendText}>Over max</Text>
-        </View>
+    <TouchableOpacity style={[styles.card, styles.volSummary]} onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.volSummaryMain}>
+        <Text style={styles.volSummaryCount}>{trained.length}</Text>
+        <Text style={styles.volSummaryLabel}>
+          {trained.length === 1 ? 'muscle trained' : 'muscles trained'}
+        </Text>
       </View>
-    </View>
+      <View style={styles.volSummaryFlags}>
+        {flags.length === 0 ? (
+          <Text style={styles.volSummaryClear}>All in range</Text>
+        ) : flags.map(f => (
+          <View key={f.key} style={styles.volLegendItem}>
+            <View style={[styles.volLegendDot, { backgroundColor: f.color }]} />
+            <Text style={styles.volSummaryFlagText}>{f.n} {f.label}</Text>
+          </View>
+        ))}
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+    </TouchableOpacity>
   );
 }
 
@@ -1208,21 +1197,16 @@ const styles = StyleSheet.create({
   insightDismiss: { padding: spacing.xxs },
 
   // ── Volume snapshot ──
-  volGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.md,
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.md, borderWidth: 1, borderColor: colors.border,
-  },
-  volCell:   { width: '33.333%', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.xs },
-  volDot:    { width: 10, height: 10, borderRadius: 5 },
-  volEmpty: { paddingVertical: spacing.md, alignItems: 'center' },
   volEmptyText: { fontSize: fontSize.sm, color: colors.textMuted },
-  volMuscle: { fontSize: fontSize.micro, color: colors.textSecondary, textAlign: 'center' },
-  volSets:   { fontSize: fontSize.micro, fontWeight: fontWeight.semibold, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
-  volLegend: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.md, width: '100%' },
+  volSummary:      { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  volSummaryMain:  { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs },
+  volSummaryCount: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
+  volSummaryLabel: { fontSize: fontSize.sm, color: colors.textSecondary },
+  volSummaryFlags: { flex: 1, alignItems: 'flex-end', gap: spacing.xxs },
+  volSummaryFlagText: { fontSize: fontSize.micro, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
+  volSummaryClear: { fontSize: fontSize.micro, color: colors.textMuted },
   volLegendItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   volLegendDot: { width: 8, height: 8, borderRadius: 4 },
-  volLegendText: { fontSize: fontSize.micro, color: colors.textMuted },
 
   // ── PR Sparkline ──
   windowToggle: {
