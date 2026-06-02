@@ -2007,3 +2007,53 @@ Play-API-verified + fail-closed). Findings: ISSUE-001 (Low, xlsx dev-dep),
 ISSUE-003 (Low, non-constant-time compare). NOT audited: deep-link handlers
 (Part 4 item still outstanding); per-input validation trace to every DB/RPC
 call (the RPC and RLS layers provide defence-in-depth regardless).
+
+---
+
+## PART 4 (cont.) — Deep links (VERIFIED) — Part 4 now COMPLETE
+
+VERIFIED by reading `app.json` + `App.js`.
+- Registered: scheme `volyume://`, Android App Links + iOS associatedDomains for
+  `volyume.app` (autoVerify).
+- The ONLY inbound deep-link handler is `handleAuthDeepLink` (App.js:146,
+  wired at 392-393 via `Linking.getInitialURL` + `addEventListener('url')`). It:
+  (1) early-returns unless the URL starts with `volyume://` or
+  `https://volyume.app` (rejects arbitrary links); (2) extracts the PKCE `code`
+  and calls `supabase.auth.exchangeCodeForSession(...)` — the standard secure
+  flow (an attacker-supplied code can't complete without the client-held PKCE
+  verifier); (3) on failure calls `notifyAuthLinkFailed`. The top prefix guard
+  protects every branch.
+- There is **no React-Navigation `linking`/`prefixes` config** (verified: no
+  `linking=` on the NavigationContainer at RootNavigator.js:927), so deep links
+  CANNOT auto-route to arbitrary screens with params.
+- All other `Linking.*` usages are OUTBOUND `openURL`/`openSettings` to known
+  app/config URLs (support, Play store, privacy policy, health apps). Not an
+  inbound attack surface.
+No deep-link finding.
+
+> **PART 4 STATUS: COMPLETE.** Verified-strong security posture. Findings:
+> ISSUE-001 (Low, xlsx dev-dep, no shipped exposure), ISSUE-003 (Low,
+> non-constant-time service-role compare). Everything else (secrets, token
+> storage, logging, RLS incl. dynamic policies, food RPCs, 3 Edge Functions,
+> deep links) verified secure. Only un-traced item: exhaustive per-input
+> validation to every DB/RPC call — mitigated by the RLS + DEFINER-scoping +
+> server-side RPC validation layers verified above.
+
+---
+
+## SESSION PROGRESS LOG (update 2)
+
+- 2026-06-02 session 1 (continued):
+  - DONE since last update: PART 4 COMPLETE — RLS review (all tables
+    owner-scoped, dynamic-policy false positives cleared), food_sync_push/pull
+    RPCs (auth.uid()-scoped, null-rejected), 3 Edge Functions (delete-account,
+    play-billing-rtdn, send-push — all verified), deep links (PKCE, prefix-
+    guarded, no nav linking config). Findings ISSUE-001, ISSUE-003 (both Low).
+  - Part 2 status: STARTED (useAppStore 1-660 clean; sync.js entry points
+    clean; ISSUE-002). Remaining ~230 files NOT read. Next ISSUE id: ISSUE-004.
+  - NOT STARTED: Part 3 (flow simulation), Part 6 (improvements). Part 5 raw
+    output captured (5.1-5.3).
+  - Highest-value remaining units, in order: (1) Part 3 flow simulation from
+    RootNavigator; (2) Part 6 improvements writeup (typecheck path, 777 lint
+    warnings, 88 dead exports, dep-upgrade plan); (3) Part 2 bulk per-file
+    (low expected yield given code quality so far).
