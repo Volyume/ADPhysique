@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import BackHeader from '../components/BackHeader';
 
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import {
@@ -540,13 +541,13 @@ export default function ManualBuilderScreen({ navigation }) {
 
   if (page === 1) {
     return (
-      <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <BackHeader title="Build a Plan" />
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView
             contentContainerStyle={styles.page1Content}
             keyboardShouldPersistTaps="handled"
           >
-            <Text style={styles.bigTitle}>Build a Plan</Text>
             <Text style={styles.subtitle}>
               Set up the basics, then we will walk you through adding workouts day by day.
             </Text>
@@ -600,7 +601,8 @@ export default function ManualBuilderScreen({ navigation }) {
   // ── Page 2 render ─────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <BackHeader title="Build a Plan" />
       <ExercisePickerModal
         visible={showPicker}
         onClose={() => setShowPicker(false)}
@@ -744,17 +746,11 @@ const styles = StyleSheet.create({
     gap: spacing.xl,
     paddingBottom: spacing.xxxl,
   },
-  bigTitle: {
-    fontSize: fontSize.xxxl,
-    fontWeight: fontWeight.black,
-    color: colors.textPrimary,
-    marginTop: spacing.md,
-  },
   subtitle: {
     fontSize: fontSize.sm,
     color: colors.textMuted,
     lineHeight: 20,
-    marginTop: -spacing.md,
+    marginTop: 0,
   },
   section: {
     gap: spacing.md,
