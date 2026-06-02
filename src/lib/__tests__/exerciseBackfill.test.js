@@ -21,7 +21,7 @@ jest.mock('../database', () => ({
   insertExercise: jest.fn(() => Promise.resolve()),
 }));
 
-const { backfillExerciseMetadataIfNeeded, topUpNewExercisesIfNeeded } = require('../seedExercises');
+const { backfillExerciseMetadataIfNeeded, topUpNewExercisesIfNeeded, rederiveExerciseMetadataIfNeeded } = require('../seedExercises');
 const getAllExercises = mockGetAllExercises;
 const updateExerciseMetadata = mockUpdateExerciseMetadata;
 const insertExerciseWithId = mockInsertExerciseWithId;
@@ -85,6 +85,45 @@ test('is idempotent: the guard flag short-circuits a second run', async () => {
 test('a thrown DB error does not reject (boot must not crash)', async () => {
   getAllExercises.mockRejectedValue(new Error('db down'));
   await expect(backfillExerciseMetadataIfNeeded()).resolves.toBeUndefined();
+});
+
+describe('rederiveExerciseMetadataIfNeeded', () => {
+  test('re-derives EVERY canonical row, even ones already populated', async () => {
+    getAllExercises.mockResolvedValue([
+      { id: 'custom', name: 'My Lift', equipment: 'barbell', movementPattern: 'push', isCustom: 1, equipmentCategory: 'barbell' },
+      // A row the v1 backfill already filled with the old (broad) profiles.
+      { id: 'pullup', name: 'Pull-Up', primaryMuscle: 'back', equipment: 'bodyweight', movementPattern: 'pull', compoundIsolation: 'compound', isCustom: 0, equipmentCategory: 'bodyweight' },
+      { id: 'crunch', name: 'Hanging Leg Raise', primaryMuscle: 'abs', equipment: 'bodyweight', movementPattern: 'isolation', compoundIsolation: 'isolation', isCustom: 0, equipmentCategory: 'bodyweight' },
+    ]);
+
+    await rederiveExerciseMetadataIfNeeded();
+
+    // Custom skipped; both canonical rows re-derived despite being populated.
+    expect(updateExerciseMetadata).toHaveBeenCalledTimes(2);
+    const [, pullupMeta] = updateExerciseMetadata.mock.calls.find(c => c[0] === 'pullup');
+    expect(pullupMeta.equipmentProfiles).toEqual(['bodyweight']);
+    const [, crunchMeta] = updateExerciseMetadata.mock.calls.find(c => c[0] === 'crunch');
+    expect(crunchMeta.equipmentProfiles).toContain('full_gym');
+  });
+
+  test('is idempotent: the guard flag short-circuits a second run', async () => {
+    getAllExercises.mockResolvedValue([
+      { id: 'pullup', name: 'Pull-Up', primaryMuscle: 'back', equipment: 'bodyweight', movementPattern: 'pull', compoundIsolation: 'compound', isCustom: 0, equipmentCategory: 'bodyweight' },
+    ]);
+    await rederiveExerciseMetadataIfNeeded();
+    expect(updateExerciseMetadata).toHaveBeenCalledTimes(1);
+
+    getAllExercises.mockClear();
+    updateExerciseMetadata.mockClear();
+    await rederiveExerciseMetadataIfNeeded();
+    expect(getAllExercises).not.toHaveBeenCalled();
+    expect(updateExerciseMetadata).not.toHaveBeenCalled();
+  });
+
+  test('a thrown DB error does not reject (boot must not crash)', async () => {
+    getAllExercises.mockRejectedValue(new Error('db down'));
+    await expect(rederiveExerciseMetadataIfNeeded()).resolves.toBeUndefined();
+  });
 });
 
 describe('topUpNewExercisesIfNeeded', () => {

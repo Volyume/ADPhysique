@@ -29,12 +29,12 @@ Delt complex (side+rear+front) capped at a combined 26.
 | General | beginner | upper_lower | Barbell Bench Press | - | - | 0 |
 | General | intermediate | upper_lower | Barbell Bench Press | - | - | 0 |
 | General | advanced | upper_lower | Barbell Bench Press | - | - | 0 |
-| Men's Physique | beginner | V-Taper | Weighted Pull-Up | - | - | 0 |
-| Men's Physique | intermediate | V-Taper | Weighted Pull-Up | - | - | 0 |
-| Men's Physique | advanced | V-Taper | Weighted Pull-Up | - | - | 0 |
-| Classic Physique | beginner | X-Frame | Weighted Pull-Up | - | - | 0 |
-| Classic Physique | intermediate | X-Frame | Weighted Pull-Up | - | - | 0 |
-| Classic Physique | advanced | X-Frame | Weighted Pull-Up | - | - | 0 |
+| Men's Physique | beginner | V-Taper | Lat Pulldown (Wide Grip) | - | - | 0 |
+| Men's Physique | intermediate | V-Taper | Lat Pulldown (Wide Grip) | - | - | 0 |
+| Men's Physique | advanced | V-Taper | Lat Pulldown (Wide Grip) | - | - | 0 |
+| Classic Physique | beginner | X-Frame | Lat Pulldown (Wide Grip) | - | - | 0 |
+| Classic Physique | intermediate | X-Frame | Lat Pulldown (Wide Grip) | - | - | 0 |
+| Classic Physique | advanced | X-Frame | Lat Pulldown (Wide Grip) | - | - | 0 |
 | Bodybuilding | beginner | upper_lower | Barbell Bench Press | - | - | 0 |
 | Bodybuilding | intermediate | upper_lower | Incline Barbell Bench Press | - | - | 0 |
 | Bodybuilding | advanced | upper_lower | Incline Barbell Bench Press | - | - | 0 |
@@ -44,12 +44,12 @@ Delt complex (side+rear+front) capped at a combined 26.
 | Wellness | beginner | Lower Focus | Barbell Hip Thrust | - | - | 0 |
 | Wellness | intermediate | Lower Focus | Barbell Hip Thrust | - | - | 0 |
 | Wellness | advanced | Lower Focus | Barbell Hip Thrust | - | - | 0 |
-| Figure | beginner | X-Frame | Weighted Pull-Up | - | - | 0 |
-| Figure | intermediate | X-Frame | Weighted Pull-Up | - | - | 0 |
-| Figure | advanced | X-Frame | Weighted Pull-Up | - | - | 0 |
-| Women's Physique | beginner | V-Taper | Weighted Pull-Up | - | - | 0 |
-| Women's Physique | intermediate | V-Taper | Weighted Pull-Up | - | - | 0 |
-| Women's Physique | advanced | V-Taper | Weighted Pull-Up | - | - | 0 |
+| Figure | beginner | X-Frame | Lat Pulldown (Wide Grip) | - | - | 0 |
+| Figure | intermediate | X-Frame | Lat Pulldown (Wide Grip) | - | - | 0 |
+| Figure | advanced | X-Frame | Lat Pulldown (Wide Grip) | - | - | 0 |
+| Women's Physique | beginner | V-Taper | Lat Pulldown (Wide Grip) | - | - | 0 |
+| Women's Physique | intermediate | V-Taper | Lat Pulldown (Wide Grip) | - | - | 0 |
+| Women's Physique | advanced | V-Taper | Lat Pulldown (Wide Grip) | - | - | 0 |
 | Women's Bodybuilding | beginner | upper_lower | Barbell Bench Press | - | - | 0 |
 | Women's Bodybuilding | intermediate | upper_lower | Barbell Bench Press | - | - | 0 |
 | Women's Bodybuilding | advanced | upper_lower | Incline Barbell Bench Press | - | - | 0 |
@@ -60,12 +60,12 @@ Delt complex (side+rear+front) capped at a combined 26.
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | General | 6 | 10 | 14 | 6 | 6 | 8 | 6 | 6 | 8 | 6 | 0 |
 | Men's Physique | 7 | 16 | 24 | 6 | 6 | 6 | 6 | 3 | 3 | 3 | 3 |
-| Classic Physique | 7 | 16 | 20 | 3 | 3 | 7 | 8 | 3 | 6 | 3 | 0 |
+| Classic Physique | 7 | 16 | 21 | 3 | 3 | 7 | 8 | 3 | 6 | 3 | 0 |
 | Bodybuilding | 10 | 12 | 18 | 6 | 6 | 10 | 8 | 6 | 12 | 6 | 0 |
 | Bikini | 3 | 13 | 17 | 0 | 0 | 7 | 14 | 21 | 0 | 6 | 0 |
-| Wellness | 3 | 7 | 9 | 0 | 0 | 15 | 12 | 17 | 7 | 0 | 0 |
+| Wellness | 3 | 8 | 9 | 0 | 0 | 15 | 12 | 17 | 7 | 0 | 0 |
 | Figure | 3 | 15 | 25 | 6 | 7 | 6 | 6 | 4 | 6 | 3 | 0 |
-| Women's Physique | 6 | 14 | 12 | 3 | 3 | 12 | 10 | 9 | 6 | 3 | 0 |
+| Women's Physique | 6 | 14 | 15 | 3 | 3 | 12 | 10 | 9 | 6 | 3 | 0 |
 | Women's Bodybuilding | 10 | 12 | 12 | 6 | 6 | 12 | 12 | 6 | 12 | 6 | 0 |
 
 ## Assumptions and known gaps (flagged, spec rule)

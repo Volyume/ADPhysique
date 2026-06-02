@@ -100,22 +100,23 @@ describe('generatePlan with a library pool', () => {
     expect(allExerciseNames(empty)).toEqual(allExerciseNames(none));
   });
 
-  // Loaded plans use measurable load only: no plain calisthenics, no bands.
-  // Weighted calisthenics (a belt-and-plates pull-up or dip) are loaded lifts
-  // and may appear. The no-equipment 'bodyweight' profile is the one place
-  // plain bodyweight survives, so it is excluded here.
-  test('loaded plans never select a plain-bodyweight or band lift', () => {
-    const calisthenicOrBand = new Set(
+  // Loaded plans use accessible, measurable staples. Out: bands (no tracking),
+  // bodyweight COMPOUNDS (pull-up, dip, push-up: assume bodyweight strength)
+  // and weighted calisthenics (assume the unloaded version first). Allowed:
+  // bodyweight ISOLATION (crunch, hanging leg raise, plank), the staples
+  // anyone can do, plus the no-equipment 'bodyweight' profile keeps everything.
+  test('loaded plans drop bodyweight compounds, weighted calisthenics and bands', () => {
+    const blocked = new Set(
       LIBRARY
         .filter(e =>
           e.equipmentCategory === 'band' ||
-          (e.equipmentCategory === 'bodyweight' && !/\bweighted\b/i.test(e.name)),
+          (e.equipmentCategory === 'bodyweight' && e.compoundIsolation === 'compound'),
         )
         .map(e => e.name),
     );
     for (const equipment of ['full_gym', 'machines_cables', 'dumbbells_only', 'barbell_plates', 'home_gym']) {
       const plan = generatePlan({ ...BASE_INPUTS, equipment, exerciseLibrary: LIBRARY });
-      const offenders = allExerciseNames(plan).filter(n => calisthenicOrBand.has(n));
+      const offenders = allExerciseNames(plan).filter(n => blocked.has(n));
       expect({ equipment, offenders }).toEqual({ equipment, offenders: [] });
     }
   });

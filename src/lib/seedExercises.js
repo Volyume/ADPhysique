@@ -5,6 +5,11 @@ import { deriveExerciseMetadata } from './exerciseMetadata';
 const SEEDED_KEY = '@volyume_exercises_seeded_v7';
 // Bumped when the derived metadata changes so the backfill re-runs once.
 const METADATA_BACKFILL_KEY = '@volyume_exercise_metadata_backfilled_v1';
+// Bumped when the metadata RULES change (not just new columns) so every
+// canonical row is re-derived once, even ones the v1 backfill already filled.
+// v2: equipment profiles now keep bodyweight compounds and bands out of
+// loaded plans (founder direction, plans use measurable staples only).
+const METADATA_REDERIVE_KEY = '@volyume_exercise_metadata_rederived_v2';
 // Bumped when exercises are added to RAW so the top-up scans for the new
 // canonical IDs once on installs that already seeded an earlier list.
 const LIBRARY_VERSION_KEY = '@volyume_exercise_library_topped_up_v2';
@@ -1006,5 +1011,32 @@ export async function backfillExerciseMetadataIfNeeded() {
     if (updated > 0) console.log(`[Seed] Backfilled metadata on ${updated} exercises`);
   } catch (err) {
     console.error('[Seed] backfillExerciseMetadataIfNeeded failed:', err);
+  }
+}
+
+// One-shot full re-derive for installs that ran the v1 backfill before the
+// equipment-profile rules changed. Unlike the backfill above (which only
+// fills null rows), this recomputes the derived columns on EVERY canonical
+// row, so existing libraries pick up the new rule that keeps bodyweight
+// compounds and bands out of loaded plans. Idempotent and version-guarded;
+// custom exercises keep their own metadata. Canonical exercises are local,
+// so this touches nothing that syncs.
+export async function rederiveExerciseMetadataIfNeeded() {
+  try {
+    const done = await AsyncStorage.getItem(METADATA_REDERIVE_KEY);
+    if (done === 'true') return;
+
+    const all = await getAllExercises();
+    let updated = 0;
+    for (const ex of all) {
+      if (ex.isCustom === 1 || ex.isCustom === true) continue;
+      await updateExerciseMetadata(ex.id, deriveExerciseMetadata(ex));
+      updated++;
+    }
+
+    await AsyncStorage.setItem(METADATA_REDERIVE_KEY, 'true');
+    if (updated > 0) console.log(`[Seed] Re-derived metadata on ${updated} exercises`);
+  } catch (err) {
+    console.error('[Seed] rederiveExerciseMetadataIfNeeded failed:', err);
   }
 }

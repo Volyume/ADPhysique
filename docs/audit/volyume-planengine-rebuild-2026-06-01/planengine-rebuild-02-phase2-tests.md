@@ -3,10 +3,10 @@ Status: COMPLETE | Timestamp: 2026-06-01 | Phase 2: Division specialisation test
 # planEngine rebuild, phase 2 results
 
 Core benchmark: 4-day Bikini vs 4-day Men's Physique.
-- exercise overlap (library path, the gate): 43% (gate < 50%; spec literal target < 30%)
+- exercise overlap (library path, the gate): 46% (gate < 50%; spec literal target < 30%)
 - exercise overlap (internal POOL fallback): 54%
 - Bikini lead lift: Barbell Hip Thrust
-- Men's Physique lead lift: Weighted Pull-Up
+- Men's Physique lead lift: Lat Pulldown (Wide Grip)
 
 Re-homed to phase 3: overlap is driven by exercise SELECTION, which the
 phase 3 division pools control. Phase 3 implemented the spec hard pool rules
@@ -18,7 +18,7 @@ pulldowns, lateral raises, rear-delt and hamstring work) that both divisions
 correctly want. See docs 03/04 for the floor analysis.
 
 Structural gates that PASS in phase 2:
-- different lead lifts: Barbell Hip Thrust vs Weighted Pull-Up
+- different lead lifts: Barbell Hip Thrust vs Lat Pulldown (Wide Grip)
 - Bikini/Wellness lead with glutes at 3 and 4 days
 - MP leads a vertical pull (never bench), width-vs-thickness split
 - Bikini glutes are the highest-volume muscle; MP back >= chest
@@ -27,19 +27,19 @@ Structural gates that PASS in phase 2:
 
 | Division | Days | split | lead lift | session names |
 |---|---|---|---|---|
-| General | 3 | full_body | Weighted Pull-Up | Full Body A / Full Body B / Full Body C |
+| General | 3 | full_body | Lat Pulldown (Wide Grip) | Full Body A / Full Body B / Full Body C |
 | General | 4 | upper_lower | Barbell Bench Press | Upper A / Lower A / Upper B / Lower B |
 | General | 5 | ppl | Barbell Bench Press | Push A / Pull A / Legs / Push B / Pull B |
 | General | 6 | ppl_ab | Barbell Bench Press | Push A / Pull A / Legs A / Push B / Pull B / Legs B |
-| Men's Physique | 3 | V-Taper | Weighted Pull-Up | Upper A (Width) / Lower + Abs / Upper B (Detail) |
-| Men's Physique | 4 | V-Taper | Weighted Pull-Up | Back + Delts (Width) / Chest + Arms / Lower + Abs / Back + Delts (Thickness) |
-| Men's Physique | 5 | V-Taper | Weighted Pull-Up | Pull (Width) / Push (Delts + Chest) / Legs + Abs / Pull (Thickness) / Delts + Arms |
-| Men's Physique | 6 | V-Taper | Weighted Pull-Up | Pull (Width) / Push (Chest) / Legs / Pull (Thickness) / Push (Delts) / Delts + Arms + Abs |
-| Classic Physique | 3 | X-Frame | Weighted Pull-Up | Upper (Back + Delt) / Lower (Sweep + Ham) / Upper (Chest + Arm) |
-| Classic Physique | 4 | X-Frame | Weighted Pull-Up | Back + Rear Delt / Legs (Sweep) / Chest + Side Delt + Arms / Back + Hams |
-| Classic Physique | 5 | X-Frame | Weighted Pull-Up | Pull / Legs (Quad) / Push / Pull / Legs (Ham + Glute) |
-| Classic Physique | 6 | X-Frame | Weighted Pull-Up | Pull / Push / Legs / Pull / Push / Legs + Abs |
-| Bodybuilding | 3 | full_body | Weighted Pull-Up | Full Body A / Full Body B / Full Body C |
+| Men's Physique | 3 | V-Taper | Lat Pulldown (Wide Grip) | Upper A (Width) / Lower + Abs / Upper B (Detail) |
+| Men's Physique | 4 | V-Taper | Lat Pulldown (Wide Grip) | Back + Delts (Width) / Chest + Arms / Lower + Abs / Back + Delts (Thickness) |
+| Men's Physique | 5 | V-Taper | Lat Pulldown (Wide Grip) | Pull (Width) / Push (Delts + Chest) / Legs + Abs / Pull (Thickness) / Delts + Arms |
+| Men's Physique | 6 | V-Taper | Lat Pulldown (Wide Grip) | Pull (Width) / Push (Chest) / Legs / Pull (Thickness) / Push (Delts) / Delts + Arms + Abs |
+| Classic Physique | 3 | X-Frame | Lat Pulldown (Wide Grip) | Upper (Back + Delt) / Lower (Sweep + Ham) / Upper (Chest + Arm) |
+| Classic Physique | 4 | X-Frame | Lat Pulldown (Wide Grip) | Back + Rear Delt / Legs (Sweep) / Chest + Side Delt + Arms / Back + Hams |
+| Classic Physique | 5 | X-Frame | Lat Pulldown (Wide Grip) | Pull / Legs (Quad) / Push / Pull / Legs (Ham + Glute) |
+| Classic Physique | 6 | X-Frame | Lat Pulldown (Wide Grip) | Pull / Push / Legs / Pull / Push / Legs + Abs |
+| Bodybuilding | 3 | full_body | Lat Pulldown (Wide Grip) | Full Body A / Full Body B / Full Body C |
 | Bodybuilding | 4 | upper_lower | Incline Barbell Bench Press | Upper A / Lower A / Upper B / Lower B |
 | Bodybuilding | 5 | balanced_ul | Barbell Front Squat | Lower A / Upper A / Lower B / Upper B / Upper C |
 | Bodybuilding | 6 | ppl_ab | Incline Barbell Bench Press | Push A / Pull A / Legs A / Push B / Pull B / Legs B |
@@ -52,14 +52,14 @@ Structural gates that PASS in phase 2:
 | Wellness | 5 | Lower Focus | Barbell Hip Thrust | Glutes / Quads (Sweep) / Glute + Ham / Upper (Delts + Back) / Lower Full + Arms |
 | Wellness | 6 | Lower Focus | Barbell Hip Thrust | Glutes / Quads / Ham + Glute / Upper (Delts + Back) / Lower (Sweep) / Glute Pump + Arms + Abs |
 | Figure | 3 | X-Frame | Cable Lateral Raise | Upper (Delt + Back Width) / Lower (Glute + Ham + Quad) / Upper (Delt + Arm + Abs) |
-| Figure | 4 | X-Frame | Weighted Pull-Up | Back + Rear Delt / Lower / Shoulders + Arms / Back Width + Abs |
-| Figure | 5 | X-Frame | Weighted Pull-Up | Pull / Legs / Delts + Arms / Pull / Lower (Glute-Ham) |
-| Figure | 6 | X-Frame | Weighted Pull-Up | Pull / Push (Delt) / Legs / Pull / Delts + Arms / Lower |
-| Women's Physique | 3 | V-Taper | Weighted Pull-Up | Upper (Back + Delt) / Lower (Quad + Ham + Glute) / Upper (Chest + Arm + Abs) |
-| Women's Physique | 4 | V-Taper | Weighted Pull-Up | Upper (Width) / Lower / Upper (Thickness) / Lower |
-| Women's Physique | 5 | V-Taper | Weighted Pull-Up | Pull / Push / Legs / Upper / Lower |
-| Women's Physique | 6 | V-Taper | Weighted Pull-Up | Pull / Push / Legs / Pull / Push / Legs |
-| Women's Bodybuilding | 3 | full_body | Weighted Pull-Up | Full Body A / Full Body B / Full Body C |
+| Figure | 4 | X-Frame | Lat Pulldown (Wide Grip) | Back + Rear Delt / Lower / Shoulders + Arms / Back Width + Abs |
+| Figure | 5 | X-Frame | Lat Pulldown (Wide Grip) | Pull / Legs / Delts + Arms / Pull / Lower (Glute-Ham) |
+| Figure | 6 | X-Frame | Lat Pulldown (Wide Grip) | Pull / Push (Delt) / Legs / Pull / Delts + Arms / Lower |
+| Women's Physique | 3 | V-Taper | Lat Pulldown (Wide Grip) | Upper (Back + Delt) / Lower (Quad + Ham + Glute) / Upper (Chest + Arm + Abs) |
+| Women's Physique | 4 | V-Taper | Lat Pulldown (Wide Grip) | Upper (Width) / Lower / Upper (Thickness) / Lower |
+| Women's Physique | 5 | V-Taper | Lat Pulldown (Wide Grip) | Pull / Push / Legs / Upper / Lower |
+| Women's Physique | 6 | V-Taper | Lat Pulldown (Wide Grip) | Pull / Push / Legs / Pull / Push / Legs |
+| Women's Bodybuilding | 3 | full_body | Lat Pulldown (Wide Grip) | Full Body A / Full Body B / Full Body C |
 | Women's Bodybuilding | 4 | upper_lower | Barbell Bench Press | Upper A / Lower A / Upper B / Lower B |
 | Women's Bodybuilding | 5 | balanced_ul | Barbell Front Squat | Lower A / Upper A / Lower B / Upper B / Upper C |
 | Women's Bodybuilding | 6 | ppl_ab | Barbell Bench Press | Push A / Pull A / Legs A / Push B / Pull B / Legs B |

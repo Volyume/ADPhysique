@@ -17,7 +17,7 @@ import { colors, fontSize, fontWeight, spacing } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { getSupabaseClient } from '../lib/supabase';
 import { initDatabase, cleanupOrphanRoutineExercises } from '../lib/database';
-import { seedExercisesIfNeeded, topUpNewExercisesIfNeeded, backfillExerciseMetadataIfNeeded } from '../lib/seedExercises';
+import { seedExercisesIfNeeded, topUpNewExercisesIfNeeded, backfillExerciseMetadataIfNeeded, rederiveExerciseMetadataIfNeeded } from '../lib/seedExercises';
 import {
   configureNotificationHandler,
   installNotificationListeners,
@@ -480,6 +480,7 @@ export default function RootNavigator() {
           seedExercisesIfNeeded()
             .then(() => topUpNewExercisesIfNeeded())
             .then(() => backfillExerciseMetadataIfNeeded())
+            .then(() => rederiveExerciseMetadataIfNeeded())
             .catch(console.warn);
           cleanupOrphanRoutineExercises().catch(console.warn);
           // OpenFoodFacts UK snapshot import. Idempotent + safe;

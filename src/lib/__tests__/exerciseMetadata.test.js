@@ -55,21 +55,27 @@ describe('deriveEquipmentProfiles', () => {
     expect(deriveEquipmentProfiles('machine_selectorised')).toContain('machines_cables');
     expect(deriveEquipmentProfiles('machine_plate_loaded')).toContain('machines_cables');
   });
-  test('plain bodyweight stays out of loaded plans', () => {
-    // Calisthenics carry no measurable load, so they belong only to the
-    // no-equipment profile, never to a full-gym or barbell plan.
-    expect(deriveEquipmentProfiles('bodyweight', 'Push-Up')).toEqual(['bodyweight']);
-    expect(deriveEquipmentProfiles('bodyweight', 'Plank')).toEqual(['bodyweight']);
+  test('bodyweight compounds stay out of loaded plans', () => {
+    // A pull-up, dip or push-up asks a lifter to move their bodyweight, which
+    // not everyone can, so it belongs only to the no-equipment profile.
+    expect(deriveEquipmentProfiles('bodyweight', 'Pull-Up', 'compound')).toEqual(['bodyweight']);
+    expect(deriveEquipmentProfiles('bodyweight', 'Push-Up', 'compound')).toEqual(['bodyweight']);
   });
-  test('weighted calisthenics count as loaded lifts', () => {
-    // A weighted pull-up or dip is belt + plates: measurable, so it stays in
-    // loaded plans (and gives a barbell-only lifter a vertical pull).
-    const wpu = deriveEquipmentProfiles('bodyweight', 'Weighted Pull-Up');
-    expect(wpu).toContain('barbell_plates');
-    expect(wpu).not.toContain('bodyweight');
+  test('bodyweight isolation staples belong in every plan', () => {
+    // Crunches, hanging leg raises and planks are gym staples anyone can do,
+    // so they stay available in loaded plans, not just the bodyweight one.
+    const hlr = deriveEquipmentProfiles('bodyweight', 'Hanging Leg Raise', 'isolation');
+    expect(hlr).toContain('full_gym');
+    expect(hlr).toContain('machines_cables');
+  });
+  test('weighted calisthenics earn no generated-plan slot', () => {
+    // A weighted pull-up or dip assumes the unloaded version first, so it is
+    // kept out of every generated plan (still hand-pickable in the library).
+    expect(deriveEquipmentProfiles('bodyweight', 'Weighted Pull-Up', 'compound')).toEqual([]);
+    expect(deriveEquipmentProfiles('bodyweight', 'Weighted Dips (Chest)', 'compound')).toEqual([]);
   });
   test('bands never reach a loaded plan', () => {
-    expect(deriveEquipmentProfiles('band', 'Band Curl')).toEqual(['bodyweight']);
+    expect(deriveEquipmentProfiles('band', 'Band Curl', 'isolation')).toEqual(['bodyweight']);
   });
   test('returns a fresh array each call (no shared mutation)', () => {
     const a = deriveEquipmentProfiles('barbell');
@@ -249,7 +255,12 @@ describe('coverage over the whole seed library', () => {
       if (![1, 2, 3].includes(meta.difficulty)) {
         problems.push(`${ex.name}: bad difficulty ${meta.difficulty}`);
       }
-      if (!meta.equipmentProfiles.length || meta.equipmentProfiles.some(p => !VALID_PROFILES.has(p))) {
+      // Weighted calisthenics are deliberately profile-less: kept in the
+      // library but never auto-selected into a plan. Every other exercise must
+      // belong to at least one valid profile.
+      const mayBeEmpty = meta.equipmentCategory === 'bodyweight' && /\bweighted\b/i.test(ex.name);
+      if (meta.equipmentProfiles.some(p => !VALID_PROFILES.has(p))
+          || (!meta.equipmentProfiles.length && !mayBeEmpty)) {
         problems.push(`${ex.name}: bad profiles ${meta.equipmentProfiles.join(',')}`);
       }
     }

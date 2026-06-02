@@ -77,15 +77,22 @@ const PROFILES_BY_CATEGORY = {
   other:                ['full_gym'],
 };
 
-// Loadable calisthenics (a weighted pull-up or dip is belt + plates) are
-// measurable lifts, not floor work, so they stay in loaded plans. Without
-// this a barbell-and-plates lifter would lose every vertical pull and dip,
-// the lat pulldown needs a cable they don't have.
+// What load can a bodyweight exercise carry in a plan?
+//  - Isolation / core (crunch, hanging leg raise, leg raise, plank) are gym
+//    staples anyone trains at any level, so they belong in every plan.
+//  - Compounds (pull-up, dip, push-up, inverted row) ask a lifter to move
+//    their whole bodyweight, which not everyone can, so they are confined to
+//    the no-equipment profile. A "weighted" variant (belt + plates) assumes
+//    the unloaded version first, so it earns no generated-plan slot at all,
+//    it stays in the library for anyone who wants to hand-pick it.
+const BW_LOADED_PROFILES = ['full_gym', 'machines_cables', 'dumbbells_only', 'barbell_plates', 'home_gym', 'bodyweight'];
 const WEIGHTED_BW_RE = /\bweighted\b/i;
 
-export function deriveEquipmentProfiles(equipmentCategory, name) {
-  if (equipmentCategory === 'bodyweight' && WEIGHTED_BW_RE.test(String(name || ''))) {
-    return ['full_gym', 'barbell_plates', 'home_gym'];
+export function deriveEquipmentProfiles(equipmentCategory, name, compoundIsolation) {
+  if (equipmentCategory === 'bodyweight') {
+    if (compoundIsolation === 'isolation') return [...BW_LOADED_PROFILES];
+    if (WEIGHTED_BW_RE.test(String(name || ''))) return [];
+    return ['bodyweight'];
   }
   return [...(PROFILES_BY_CATEGORY[equipmentCategory] ?? ['full_gym'])];
 }
@@ -237,7 +244,7 @@ export function deriveExerciseMetadata(ex) {
   const name = ex?.name;
   const equipment = ex?.equipment;
   const equipmentCategory = deriveEquipmentCategory(name, equipment);
-  const equipmentProfiles = deriveEquipmentProfiles(equipmentCategory, name);
+  const equipmentProfiles = deriveEquipmentProfiles(equipmentCategory, name, ex?.compoundIsolation);
   return {
     equipmentCategory,
     machineType: deriveMachineType(name, equipmentCategory),
