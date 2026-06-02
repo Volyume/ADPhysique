@@ -1376,8 +1376,8 @@ export default function HomeScreen({ navigation }) {
           />
           <QuickLink
             icon="trophy-outline"
-            label="Records"
-            onPress={() => navigation.navigate('ProgressTab', { screen: 'PRWall', initial: false })}
+            label="Lifts"
+            onPress={() => navigation.navigate('ProgressTab', { screen: 'LiftProgress', initial: false })}
           />
           <QuickLink
             icon="grid-outline"

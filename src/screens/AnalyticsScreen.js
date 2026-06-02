@@ -668,8 +668,7 @@ export default function AnalyticsScreen({ navigation }) {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Explore</Text>
           <View style={styles.navGrid}>
-            <NavTile icon="trophy" color={colors.gold} label="Personal Records" onPress={() => navigation.navigate('PRWall')} />
-            <NavTile icon="barbell" color={colors.primary} label="Lift Progress" onPress={() => navigation.navigate('LiftProgress')} />
+            <NavTile icon="barbell" color={colors.primary} label="Lifts" onPress={() => navigation.navigate('LiftProgress')} />
             <NavTile icon="time" color={colors.textSecondary} label="Full History" onPress={() => navigation.navigate('WorkoutHistory')} />
             {(() => {
               // Year of Lifts unlocks once the user has 365 days of

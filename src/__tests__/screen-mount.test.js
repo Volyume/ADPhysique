@@ -606,7 +606,6 @@ const SCREENS_TO_SWEEP = [
   'NotificationSettingsScreen',
   'NutritionEducationScreen',
   'NutritionTargetsScreen',
-  'PRWallScreen',
   'PlanLibraryScreen',
   'PlansScreen',
   'PrivacyPolicyScreen',
@@ -1097,19 +1096,21 @@ describe('Form-driven screens: interleaved input + tap × 3 cycles', () => {
 // ─── Edge: empty arrays where rendering might assume non-empty ─────────
 
 describe('Edge: empty arrays in expected-populated state', () => {
-  test('PRWallScreen with one exercise but empty history array', async () => {
+  test('LiftProgressScreen (Lifts) with exercises but no completed sets', async () => {
     const database = require('../lib/database');
     const orig = {
-      getAllCompletedSetsForExercise: database.getAllCompletedSetsForExercise,
+      getCompletedWorkoutSets: database.getCompletedWorkoutSets,
       getAllExercises: database.getAllExercises,
+      getLatestBodyWeight: database.getLatestBodyWeight,
     };
     database.getAllExercises = () => Promise.resolve([
       { id: 'e1', name: 'Bench Press', primaryMuscle: 'chest', equipment: 'Barbell' },
     ]);
-    database.getAllCompletedSetsForExercise = () => Promise.resolve([]);
+    database.getCompletedWorkoutSets = () => Promise.resolve([]);
+    database.getLatestBodyWeight = () => Promise.resolve(null);
     try {
       useAppStore.setState(STATE_VARIANTS[0].state);
-      const Screen = require('../screens/PRWallScreen').default;
+      const Screen = require('../screens/LiftProgressScreen').default;
       let tree = null;
       try {
         const { tree: t, errors } = await mountScreen(Screen);

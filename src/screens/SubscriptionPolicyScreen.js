@@ -42,7 +42,7 @@ export default function SubscriptionPolicyScreen({ navigation }) {
           <Bullet>31 ready-made plans you can pick from.</Bullet>
           <Bullet>Build your own routines from scratch.</Bullet>
           <Bullet>Workout history kept on your phone.</Bullet>
-          <Bullet>Personal records and the PR Wall.</Bullet>
+          <Bullet>Personal records and strength standing.</Bullet>
           <Bullet>Weekly muscle-group volume targets.</Bullet>
           <Bullet>Year of Lifts: your training year in one card.</Bullet>
           <Bullet>Plate calculator.</Bullet>
