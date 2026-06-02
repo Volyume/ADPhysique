@@ -39,7 +39,7 @@ needed (reason given).
 | H3 | Add protein approach to onboarding (collapsible) | ProOnboardingScreen step 3 | 3 | 2 | DONE `0920b70`. Default is a passthrough = engine auto-pick, so no target shift. Invariant tests added |
 | H4 | Persist planWeakPoints into the saved profile | ProOnboardingScreen:460-483 | 3 | 1 | DONE `096167e` |
 | H5 | Put the app's shared header chrome on the flow screens | flow screens | 4 | 3 | PARTIAL: coached builder now uses BackHeader `aed6c78`. ManualBuilder, wizard and reveal still bespoke. Decide per screen in the running app (the wizard's progress bar and the reveal's celebratory frame are intentional, not every screen wants the tab/back header) |
-| H6 | Render the reveal's calories/macros/plan via MacroRings + plan card | ProSetupCompleteScreen | 4 | 3 | OPEN, NEEDS A CALL. MacroRings is a progress tracker (eaten vs target, "X remaining"). On the reveal nothing is logged yet, so it would draw an empty ring and "{target} remaining" instead of the current target-as-hero. Either accept that (it equals day-one Diary) or keep target framing and only borrow the macro-bar look. Eyeball the current reveal in the APK and decide |
+| H6 | Render the reveal's calories/macros via the Diary macro-bar look | ProSetupCompleteScreen | 4 | 3 | DONE `803019b`. Founder picked "match Diary look, target framing": kcal hero + Diary-style horizontal macro bars showing the targets, no empty ring / "remaining". Literal MacroRings was rejected because it is a progress tracker and would show zeros on the reveal |
 | H7 | Remove the duplicate account step (one shared component) | LoginScreen, ProOnboardingScreen:602-727 | 3 | 4 | OPEN. Auth-critical, verify OAuth + email paths |
 | H8 | Unify the three plan-creation selection components | ProOnboarding, ProGoalSetup, ManualBuilder | 3 | 4 | OPEN |
 | H9 | Surface read-only body weight in the builder | ProGoalSetupScreen | 2 | 2 | DONE `3a2a2eb` |
@@ -57,12 +57,14 @@ needed (reason given).
 | P8 | Fix "Not competing" + trophy-icon mismatch on the reveal chip | ProSetupCompleteScreen:166 | 1 | 1 | DONE `708fccd` |
 
 ## Next-session plan
-1. The reveal (H6): eyeball it in the APK and pick a direction (literal
-   MacroRings vs target-forward with a borrowed bar look). Then H5 on the
-   wizard and reveal once the reveal direction is set, then H8.
-2. H7 account-step dedup, with explicit auth-path verification (email + Google +
+1. H5 on the wizard and reveal: now the reveal's body matches Diary, decide
+   whether the wizard's brand-row/progress header and the reveal's celebratory
+   header should adopt more shared chrome, or stay bespoke by design.
+2. H8 unify the three plan-creation selection components.
+3. H7 account-step dedup, with explicit auth-path verification (email + Google +
    Apple, and the consent interruption).
-3. P6 first-run Home cue, then P7 pending a founder call.
+4. P6 first-run Home cue, then P7 pending a founder call.
 
-All Critical (C1-C8) and all High except H5 (partial), H6, H7, H8 are done.
-Polish: P1 and P5 closed as N/A (corrections above), P2/P3/P4/P8 done, P6/P7 open.
+Done: all Critical (C1-C8); High H1, H2, H3, H4, H6, H9, plus H5 partial (the
+coached builder). Remaining High: H5 (wizard/reveal headers), H7, H8. Polish:
+P2/P3/P4/P8 done, P1/P5 closed as N/A (corrections recorded above), P6/P7 open.
