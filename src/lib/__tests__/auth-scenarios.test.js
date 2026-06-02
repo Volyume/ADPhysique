@@ -30,10 +30,12 @@ jest.mock('../supabase', () => ({
 jest.mock('../sync', () => ({
   syncProfile: jest.fn().mockResolvedValue({}),
   // Per IDENTITY_AND_OWNERSHIP_LOCKED.md the sign-out flow push-firsts
-  // local data to cloud before wiping. In tests we don't run real
-  // Supabase, so mock the push to succeed unconditionally; otherwise
-  // clearAuthStateForSignOut aborts with { ok: false, reason: 'unsynced' }
-  // and the state-clear assertions all fail.
+  // local data to cloud before wiping. It routes through syncAll (so the
+  // food domain is pushed too, not just the legacy tables). In tests we
+  // don't run real Supabase, so mock syncAll to report a clean cycle;
+  // otherwise clearAuthStateForSignOut aborts with
+  // { ok: false, reason: 'unsynced' } and the state-clear assertions fail.
+  syncAll: jest.fn().mockResolvedValue({ status: 'synced' }),
   bulkUploadLocalData: jest.fn().mockResolvedValue(undefined),
   cancelScheduledSync: jest.fn(),
 }));
@@ -123,6 +125,50 @@ describe('Scenario: Pro signs out + signs back in (cloud profile intact)', () =>
     expect(useAppStore.getState().tier).toBe('pro');
     expect(useAppStore.getState().firstRunComplete).toBe(true);
     expect(useAppStore.getState().userProfile?.firstName).toBe('Allan');
+  });
+});
+
+// ─── Scenario 3b: Sign-out push-first gate (food-loss guard) ─────────────────
+
+describe('Scenario: sign-out aborts when the cloud push does not complete', () => {
+  // The push-first runs syncAll so the food domain is pushed before the
+  // local wipe. If that cycle comes back 'error' (a table failed to push)
+  // or 'skipped' (another sync held the lock), the wipe must not run or we
+  // would lose unsynced meals. The user stays signed in and retries.
+  const sync = require('../sync');
+
+  test.each(['error', 'skipped'])(
+    'status %s keeps the user signed in and skips the wipe',
+    async (status) => {
+      sync.syncAll.mockResolvedValueOnce({ status });
+      useAppStore.setState({
+        user: { id: 'u1' }, session: { user: { id: 'u1' } },
+        tier: 'pro', firstRunComplete: true,
+      });
+
+      const result = await useAppStore.getState().clearAuthStateForSignOut();
+
+      expect(result).toEqual({ ok: false, reason: 'unsynced' });
+      // State is untouched: sign-out was aborted before the wipe.
+      expect(useAppStore.getState().user).toEqual({ id: 'u1' });
+      expect(useAppStore.getState().tier).toBe('pro');
+    },
+  );
+
+  test('a clean status proceeds to wipe + clears state', async () => {
+    sync.syncAll.mockResolvedValueOnce({ status: 'synced' });
+    useAppStore.setState({
+      user: { id: 'u1' }, session: { user: { id: 'u1' } },
+      tier: 'pro', firstRunComplete: true,
+    });
+
+    await useAppStore.getState().clearAuthStateForSignOut();
+
+    expect(sync.syncAll).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'u1', localUserId: 'u1', triggeredBy: 'sign_out' }),
+    );
+    expect(useAppStore.getState().tier).toBeNull();
+    expect(useAppStore.getState().user).toBeNull();
   });
 });
 

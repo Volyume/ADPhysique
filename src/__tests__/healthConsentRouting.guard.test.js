@@ -23,9 +23,10 @@ const NAV = fs.readFileSync(
 );
 
 // Scope to the consent block: from the "Article 9 health-data consent check"
-// comment to the bulkUploadLocalData push that follows it.
+// comment to the sign-out-edits push comment that follows it (the push now
+// rides syncAll, so the boundary anchor is that comment's opening phrase).
 const blockStart = NAV.indexOf('Article 9 health-data consent check');
-const blockEnd = NAV.indexOf('Push any local-only edits', blockStart);
+const blockEnd = NAV.indexOf('Local-only edits made while signed out', blockStart);
 const consentBlock = NAV.slice(blockStart, blockEnd);
 
 describe('A2-014 sign-in consent check resolves transient failures to null', () => {

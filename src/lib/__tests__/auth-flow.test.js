@@ -16,6 +16,9 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 // the push call succeed unconditionally so the sign-out flow proceeds
 // to the wipe step instead of aborting with { ok: false }.
 jest.mock('../sync', () => ({
+  // Sign-out push-firsts through syncAll (food domain included). Report a
+  // clean cycle so the flow proceeds to the wipe instead of aborting.
+  syncAll: jest.fn().mockResolvedValue({ status: 'synced' }),
   bulkUploadLocalData: jest.fn().mockResolvedValue(undefined),
   cancelScheduledSync: jest.fn(),
 }));

@@ -810,15 +810,13 @@ export default function RootNavigator() {
                   useAppStore.getState().setHealthConsent(null, true);
                 }
 
-                // Push any local-only edits made while signed out
-                // eslint-disable-next-line global-require
-                const { bulkUploadLocalData } = require('../lib/sync');
-                try {
-                  await bulkUploadLocalData(session.user.id, session.user.id);
-                  log.logInfo('SignIn.bulkUpload.ok', `uid=${session.user.id}`);
-                } catch (e) {
-                  log.logError('SignIn.bulkUpload.fail', e, { uid: session.user.id });
-                }
+                // Local-only edits made while signed out are pushed by
+                // the syncAll() restore kicked off below. syncAll runs
+                // the push track (food + legacy) before the pull, so a
+                // separate bulkUploadLocalData here would double the push
+                // (the race App.js's run-lock was added to avoid). Left
+                // to syncAll so food rides the same cycle as everything
+                // else and the push happens before the pull.
                 // Drain any unpushed engine telemetry from the local
                 // queue (Move #3). Events written while offline or
                 // pre-sign-in land in SQLite via the track() helper;
@@ -831,16 +829,21 @@ export default function RootNavigator() {
               } catch (_) {}
             })();
 
-            // Pull workouts / plans / routines / check-ins from cloud
-            // into local SQLite. Returning users on a new device see
-            // their data populate empty states as inserts complete.
-            // Status is surfaced via the store so screens can show a
-            // "Restoring your data" banner and re-fetch when it lands.
+            // Restore from cloud into local SQLite. Routed through
+            // syncAll (push track then pull track), not the legacy
+            // pullFromCloud, because the food domain and the other
+            // migrated tables only move on the registry/transport path:
+            // a plain pullFromCloud never restores the user's meals,
+            // water or nutrition targets on sign-in (the food round-trip
+            // bug). syncAll pushes any local-only edits first, then pulls
+            // everything. Returning users on a new device see their data
+            // populate empty states as inserts complete; status drives
+            // the "Restoring your data" banner.
             // eslint-disable-next-line global-require
-            const { pullFromCloud } = require('../lib/sync');
+            const { syncAll } = require('../lib/sync');
             const store = useAppStore.getState();
             store.markCloudSyncing();
-            pullFromCloud(session.user.id)
+            syncAll({ userId: session.user.id, localUserId: session.user.id, triggeredBy: 'sign_in' })
               .then(() => useAppStore.getState().markCloudSyncComplete())
               .catch((err) => useAppStore.getState().markCloudSyncError(err?.message));
 

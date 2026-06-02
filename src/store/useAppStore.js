@@ -221,11 +221,30 @@ const useAppStore = create((set, get) => ({
     // a "couldn't sign out, try again on a stronger connection" toast.
     if (prevUid && !get().user?.isLocal) {
       try {
+        // Push EVERYTHING before wiping, food included. The legacy
+        // bulkUploadLocalData skips the food domain and the other
+        // migrated tables (they ride the registry/transport path), so
+        // routing the push-first safety through syncAll is what stops a
+        // sign-out from wiping unsynced meals. syncAll runs the push
+        // track (food_* + legacy) then a pull; the pull is redundant
+        // right before a wipe but harmless.
         // eslint-disable-next-line global-require
-        const { bulkUploadLocalData } = require('../lib/sync');
+        const { syncAll } = require('../lib/sync');
         // eslint-disable-next-line global-require
         const { flushPendingTelemetry } = require('../lib/engineTelemetry');
-        await bulkUploadLocalData(prevUid, prevUid);
+        const res = await syncAll({ userId: prevUid, localUserId: prevUid, triggeredBy: 'sign_out' });
+        // Abort the wipe unless the cycle came back clean. 'error' means
+        // a table (e.g. food) failed to push; 'skipped' means another
+        // sync held the lock and ours didn't run. In either case we
+        // can't prove local data reached cloud, so keep the user signed
+        // in rather than risk losing it. Caller shows a "couldn't sign
+        // out, try again on a stronger connection" toast.
+        if (res?.status === 'error' || res?.status === 'skipped') {
+          log.logWarn('clearAuthStateForSignOut.pushFirstFailed',
+            'sign-out aborted: push did not complete cleanly, keeping user signed in',
+            { prevUid, status: res?.status });
+          return { ok: false, reason: 'unsynced' };
+        }
         try { await flushPendingTelemetry(); } catch (_) {}
       } catch (e) {
         log.logWarn('clearAuthStateForSignOut.pushFirstFailed',

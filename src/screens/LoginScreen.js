@@ -18,7 +18,7 @@ import Button from '../components/Button';
 import OAuthButtons from '../components/auth/OAuthButtons';
 import EmailPasswordFields from '../components/auth/EmailPasswordFields';
 import { signInWithEmail, signUpWithEmail, resetPassword, signInWithGoogle, signInWithApple } from '../lib/supabase';
-import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
+import { syncProfile, bulkUploadLocalData, syncAll } from '../lib/sync';
 import { wipeAllUserData } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
@@ -156,14 +156,18 @@ export default function LoginScreen({ navigation, route }) {
           // signal RootNavigator watches.
           if (!tier) await setTier('pro', 'LoginScreen.newAccountSetup');
         } else {
-          // Existing account, push any local-only edits made while signed
-          // out, then pull cloud data down (new device scenario).
+          // Existing account: push any local-only edits, then pull cloud
+          // data down. Routed through syncAll (not the legacy
+          // bulkUploadLocalData + pullFromCloud) because the food domain
+          // and the other migrated tables only sync through the
+          // registry/transport path, so a plain pullFromCloud would never
+          // restore the user's meals or water on a fresh sign-in.
+          // RootNavigator's onAuthStateChange SIGNED_IN handler also runs
+          // syncAll; the runner's lock dedupes whichever fires second.
           // firstRunComplete + tier + userProfile are restored centrally
-          // by RootNavigator's onAuthStateChange SIGNED_IN handler.
-          bulkUploadLocalData(supabaseUserId, supabaseUserId)
-            .catch(e => logError('LoginScreen.bulkUploadLocalData.signin', e, { supabaseUserId }));
-          pullFromCloud(supabaseUserId)
-            .catch(e => logError('LoginScreen.pullFromCloud', e, { supabaseUserId }));
+          // by that handler.
+          syncAll({ userId: supabaseUserId, localUserId: supabaseUserId, triggeredBy: 'sign_in' })
+            .catch(e => logError('LoginScreen.syncAll.signin', e, { supabaseUserId }));
         }
       }
     } finally {
