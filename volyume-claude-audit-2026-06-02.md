@@ -1771,3 +1771,82 @@ runtime `dependencies`.
   - Output-structure note: sections were appended in execution order, not final
     brief order. A later pass can reorder into Sections 1-6 if needed; content
     is the source of truth.
+
+---
+
+## PART 2 — CODE AUDIT (in progress, runtime-critical files first)
+
+> This part is large (~236 source files). Files are audited in full and
+> recorded here as completed. Findings use ISSUE-002+ sequentially. Absence of
+> findings for a fully-read file is recorded explicitly (not skipped).
+
+### Files audited this session
+
+**`src/store/useAppStore.js`** (lines 1-660 read in full; file continues past
+660, remainder NOT yet read — see log). VERIFIED-CLEAN through 660. No defects
+found. Positive observations (why it is clean):
+- Both `Promise.race` timeout patterns (`restoreSessionFromCloud` line 540-550;
+  `refreshTierFromCloud` 641-651) clear the loser timer in a `finally`, so a
+  fast cloud read never leaves a 5s/10s timer armed. No timer leak.
+- Every `AsyncStorage` write is wrapped in try/catch (offline-tolerant); tier
+  and first-run persistence happen BEFORE in-memory `set` so a crash between
+  the two reconciles on next load (documented intent, lines 427-436).
+- Optimistic sign-in routing (457-624) reconciles against cloud truth and only
+  flips a heuristic guess back to the wizard, never a cache-hit decision
+  (guards on `optimisticReturningFromHeuristic`), avoiding the wizard-flash bug.
+- Fire-and-forget cloud pushes (`pushPrefSoon` 73-82, `saveLocalProfile`
+  170-177) lazy-require `../lib/sync` to break the circular import and swallow
+  errors deliberately (queue catches up). Intentional, not a swallowed bug.
+
+### Findings
+
+---
+ID: ISSUE-002
+FILE: App.js
+LINE: 465-470, 493 (and AppState handler ~599-620)
+SEVERITY: Low
+TYPE: Bug
+FLOW AFFECTED: Sign out then sign back in within the same app process (no restart)
+DESCRIPTION: `maybeSync()` is throttled by module-scoped `let lastSyncAt`
+(App.js:465) with `if (now - lastSyncAt < MIN_SYNC_INTERVAL_MS) return;`
+(line 470, 60s window). `lastSyncAt` and `coldStartFired` (466) are NEVER reset
+on an auth transition (no SIGNED_OUT/SIGNED_IN reset). So after a sign-out +
+sign-in inside one process, a background `maybeSync` fired within 60s of the
+pre-logout sync is skipped, and `coldStartFired` stays true so the cold-start
+telemetry/sync path also won't re-fire. VERIFIED by reading App.js:465-660 (no
+reset of either variable on auth events).
+REPRODUCTION: Use the app (triggers a sync, sets lastSyncAt), sign out, sign
+back in within 60s, background/foreground the app: the AppState-driven
+`maybeSync` no-ops.
+IMPACT: Low post-mitigation. The user-visible food-restore symptom this
+contributed to is now covered by the explicit `syncAll` on the sign-in restore
+(RootNavigator.onAuthStateChange + LoginScreen, added in the food-sync fix), so
+data still restores. Residual: the background catch-up cadence can be skipped
+for up to 60s after a same-session re-login; harmless but not intended.
+FIX: In App.js, reset the throttle on auth change. Either (a) in the existing
+`onAuthStateChange` wiring, on `SIGNED_OUT` set `lastSyncAt = 0` and
+`coldStartFired = false`; or (b) on `SIGNED_IN` set `lastSyncAt = 0` so the
+first post-login `maybeSync` always runs. Keep the 60s throttle for the
+steady-state foreground/background cadence.
+---
+
+> PART 2 REMAINING (not started): `src/store/useAppStore.js` lines 660-end;
+> `src/lib/sync.js` (~1730 lines); `src/lib/sync/*` (runner/transport/registry
+> reviewed in prior work, NOT line-audited here); `src/lib/database.js`
+> (~5k lines); all 59 `src/screens/*`; all 41 `src/components/*`; `src/lib/*`
+> (food, notifications, payments, telemetry). Use the 88 dead-export list
+> (1.5) and 49 exhaustive-deps warnings (5.3) as entry points.
+
+---
+
+## SESSION PROGRESS LOG (update)
+
+- 2026-06-02 session 1 continued (Part 2 started):
+  - DONE: `src/store/useAppStore.js` audited lines 1-660 (verified-clean, no
+    findings, rationale recorded above). App.js sync-throttle reviewed →
+    ISSUE-002 (Low) recorded.
+  - RESUME HERE for Part 2: finish `useAppStore.js` (660-end), then
+    `src/lib/sync.js`, `src/lib/database.js`, then screens/components. Next
+    ISSUE id to assign: **ISSUE-003**.
+  - Parts 3 (flows) and 6 (improvements) still NOT STARTED. Part 4 still PARTIAL
+    (RLS/deep-links/per-call-auth remaining). Part 1 + Section 5 complete.
