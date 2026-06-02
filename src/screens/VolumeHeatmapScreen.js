@@ -11,6 +11,7 @@ import BodyDiagramHeatmap from '../components/BodyDiagramHeatmap';
 import { useToast } from '../components/Toast';
 import { getCompletedWorkoutSets, getAllExercises, getWeeklyVolumeByMuscle, getLastTrainedByMuscle } from '../lib/database';
 import { logError } from '../lib/errorLog';
+import { syncUserPref } from '../lib/sync';
 import {
   calculateWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES, getVolumeStatus,
 } from '../lib/algorithms';
@@ -65,7 +66,12 @@ export default function VolumeHeatmapScreen() {
       const lastTrained = await getLastTrainedByMuscle(user.id).catch(() => ({}));
       setLastTrainedMap(lastTrained);
 
-      // Load locally stored custom landmarks (Stage 1, no Supabase yet)
+      // Custom volume targets. Stored in AsyncStorage under an @volyume_
+      // key, which the generic user_prefs sync round-trips to cloud (push
+      // in bulkUploadLocalData, restore in pullFromCloud), so the setting
+      // survives a reinstall or a sign-out/in on the same account. Saving
+      // and resetting below also push immediately via syncUserPref so the
+      // change is not stranded until the next bulk sync.
       const stored = await AsyncStorage.getItem(`@volyume_landmarks_${user.id}`).catch(() => null);
       let parsed = null;
       if (stored) {
@@ -96,7 +102,13 @@ export default function VolumeHeatmapScreen() {
         mrv: parseInt(vals.mrv) || 0,
       };
     }
-    await AsyncStorage.setItem(`@volyume_landmarks_${user.id}`, JSON.stringify(map));
+    const key = `@volyume_landmarks_${user.id}`;
+    const json = JSON.stringify(map);
+    await AsyncStorage.setItem(key, json);
+    // Push straight to cloud so the targets survive a reinstall even if no
+    // bulk sync runs before then. Best-effort: a failure just defers the
+    // push to the next bulk sync, which still covers this key.
+    syncUserPref(user.id, key, json).catch(() => {});
     setCustomLandmarks(map);
     setEditing(false);
     toast.show('Volume targets saved', { variant: 'success' });
@@ -108,7 +120,14 @@ export default function VolumeHeatmapScreen() {
       {
         text: 'Reset',
         onPress: async () => {
-          await AsyncStorage.removeItem(`@volyume_landmarks_${user.id}`);
+          const key = `@volyume_landmarks_${user.id}`;
+          await AsyncStorage.removeItem(key);
+          // Clear the cloud copy too. Without this the old custom targets
+          // would ride pullFromCloud back onto the device on the next
+          // reinstall and silently undo the reset. There is no pref-delete
+          // RPC, so an empty value is the "no custom targets" sentinel:
+          // loadData treats a falsy stored value as defaults.
+          syncUserPref(user.id, key, '').catch(() => {});
           setCustomLandmarks(null);
           const defaults = {};
           for (const [m, v] of Object.entries(VOLUME_LANDMARKS)) defaults[m] = { ...v };

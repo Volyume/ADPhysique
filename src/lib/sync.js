@@ -1096,7 +1096,7 @@ const PREF_EXCLUDE_PATTERNS = [
   /^@volyume_expo_push_token/,
 ];
 
-function shouldSyncPref(key) {
+export function shouldSyncPref(key) {
   if (!key.startsWith(PREF_PREFIX)) return false;
   return !PREF_EXCLUDE_PATTERNS.some(re => re.test(key));
 }
