@@ -99,4 +99,24 @@ describe('generatePlan with a library pool', () => {
     const none = generatePlan(BASE_INPUTS);
     expect(allExerciseNames(empty)).toEqual(allExerciseNames(none));
   });
+
+  // Loaded plans use measurable load only: no plain calisthenics, no bands.
+  // Weighted calisthenics (a belt-and-plates pull-up or dip) are loaded lifts
+  // and may appear. The no-equipment 'bodyweight' profile is the one place
+  // plain bodyweight survives, so it is excluded here.
+  test('loaded plans never select a plain-bodyweight or band lift', () => {
+    const calisthenicOrBand = new Set(
+      LIBRARY
+        .filter(e =>
+          e.equipmentCategory === 'band' ||
+          (e.equipmentCategory === 'bodyweight' && !/\bweighted\b/i.test(e.name)),
+        )
+        .map(e => e.name),
+    );
+    for (const equipment of ['full_gym', 'machines_cables', 'dumbbells_only', 'barbell_plates', 'home_gym']) {
+      const plan = generatePlan({ ...BASE_INPUTS, equipment, exerciseLibrary: LIBRARY });
+      const offenders = allExerciseNames(plan).filter(n => calisthenicOrBand.has(n));
+      expect({ equipment, offenders }).toEqual({ equipment, offenders: [] });
+    }
+  });
 });

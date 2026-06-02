@@ -3,7 +3,7 @@ Status: COMPLETE | Timestamp: 2026-06-01 | Phase 2: Division specialisation test
 # planEngine rebuild, phase 2 results
 
 Core benchmark: 4-day Bikini vs 4-day Men's Physique.
-- exercise overlap (library path, the gate): 46% (gate < 50%; spec literal target < 30%)
+- exercise overlap (library path, the gate): 43% (gate < 50%; spec literal target < 30%)
 - exercise overlap (internal POOL fallback): 54%
 - Bikini lead lift: Barbell Hip Thrust
 - Men's Physique lead lift: Weighted Pull-Up

@@ -55,9 +55,21 @@ describe('deriveEquipmentProfiles', () => {
     expect(deriveEquipmentProfiles('machine_selectorised')).toContain('machines_cables');
     expect(deriveEquipmentProfiles('machine_plate_loaded')).toContain('machines_cables');
   });
-  test('bodyweight is broadly valid', () => {
-    expect(deriveEquipmentProfiles('bodyweight')).toContain('bodyweight');
-    expect(deriveEquipmentProfiles('bodyweight')).toContain('home_gym');
+  test('plain bodyweight stays out of loaded plans', () => {
+    // Calisthenics carry no measurable load, so they belong only to the
+    // no-equipment profile, never to a full-gym or barbell plan.
+    expect(deriveEquipmentProfiles('bodyweight', 'Push-Up')).toEqual(['bodyweight']);
+    expect(deriveEquipmentProfiles('bodyweight', 'Plank')).toEqual(['bodyweight']);
+  });
+  test('weighted calisthenics count as loaded lifts', () => {
+    // A weighted pull-up or dip is belt + plates: measurable, so it stays in
+    // loaded plans (and gives a barbell-only lifter a vertical pull).
+    const wpu = deriveEquipmentProfiles('bodyweight', 'Weighted Pull-Up');
+    expect(wpu).toContain('barbell_plates');
+    expect(wpu).not.toContain('bodyweight');
+  });
+  test('bands never reach a loaded plan', () => {
+    expect(deriveEquipmentProfiles('band', 'Band Curl')).toEqual(['bodyweight']);
   });
   test('returns a fresh array each call (no shared mutation)', () => {
     const a = deriveEquipmentProfiles('barbell');

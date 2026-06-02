@@ -72,12 +72,21 @@ const PROFILES_BY_CATEGORY = {
   smith:                ['full_gym', 'machines_cables'],
   kettlebell:           ['full_gym', 'dumbbells_only', 'home_gym'],
   landmine:             ['full_gym', 'barbell_plates'],
-  band:                 ['full_gym', 'home_gym', 'bodyweight'],
-  bodyweight:           ['full_gym', 'dumbbells_only', 'home_gym', 'bodyweight', 'barbell_plates'],
+  band:                 ['bodyweight'],
+  bodyweight:           ['bodyweight'],
   other:                ['full_gym'],
 };
 
-export function deriveEquipmentProfiles(equipmentCategory) {
+// Loadable calisthenics (a weighted pull-up or dip is belt + plates) are
+// measurable lifts, not floor work, so they stay in loaded plans. Without
+// this a barbell-and-plates lifter would lose every vertical pull and dip,
+// the lat pulldown needs a cable they don't have.
+const WEIGHTED_BW_RE = /\bweighted\b/i;
+
+export function deriveEquipmentProfiles(equipmentCategory, name) {
+  if (equipmentCategory === 'bodyweight' && WEIGHTED_BW_RE.test(String(name || ''))) {
+    return ['full_gym', 'barbell_plates', 'home_gym'];
+  }
   return [...(PROFILES_BY_CATEGORY[equipmentCategory] ?? ['full_gym'])];
 }
 
@@ -228,7 +237,7 @@ export function deriveExerciseMetadata(ex) {
   const name = ex?.name;
   const equipment = ex?.equipment;
   const equipmentCategory = deriveEquipmentCategory(name, equipment);
-  const equipmentProfiles = deriveEquipmentProfiles(equipmentCategory);
+  const equipmentProfiles = deriveEquipmentProfiles(equipmentCategory, name);
   return {
     equipmentCategory,
     machineType: deriveMachineType(name, equipmentCategory),

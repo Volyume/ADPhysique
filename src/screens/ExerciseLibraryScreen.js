@@ -17,7 +17,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
 const MUSCLES = Object.keys(MUSCLE_DISPLAY_NAMES);
-const EQUIPMENT = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Plate-loaded', 'Bodyweight', 'Smith Machine', 'Bands', 'Landmine'];
+const EQUIPMENT = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Plate-loaded', 'Bodyweight', 'Smith Machine', 'Landmine'];
 
 const DIFFICULTY_OPTIONS = [
   { label: 'Beginner', value: 'beginner' },
@@ -25,7 +25,7 @@ const DIFFICULTY_OPTIONS = [
   { label: 'Advanced', value: 'advanced' },
 ];
 
-const EQUIPMENT_CREATE = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight', 'Kettlebell', 'Band', 'Other'];
+const EQUIPMENT_CREATE = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight', 'Kettlebell', 'Other'];
 
 export default function ExerciseLibraryScreen({ navigation, route }) {
   const { user, units } = useAppStore(useShallow(s => ({ user: s.user, units: s.units })));
