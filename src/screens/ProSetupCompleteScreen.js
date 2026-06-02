@@ -139,27 +139,30 @@ export default function ProSetupCompleteScreen({ navigation }) {
               </View>
               <View style={styles.calorieRow}>
                 <Text style={styles.calorieNum}>{nutritionSummary.targetKcal}</Text>
-                <Text style={styles.calorieUnit}>kcal / day</Text>
+                <Text style={styles.calorieUnit}>kcal · daily target</Text>
               </View>
-              <View style={styles.macroRow}>
-                {nutritionSummary.proteinG ? (
-                  <View style={styles.macroItem}>
-                    <Text style={styles.macroValue}>{nutritionSummary.proteinG}g</Text>
-                    <Text style={styles.macroLabel}>Protein</Text>
+              {/* Macros as the same horizontal bars the Diary tab uses, so the
+                  first sight of these numbers matches where the user tracks them
+                  every day. Target framing: the value is the target and the bar
+                  shows the full allocation, no progress / "remaining" (nothing's
+                  been logged yet, this is the reveal). Protein carries the only
+                  weight emphasis, matching MacroRings. */}
+              <View style={styles.macroBars}>
+                {[
+                  ['Protein', nutritionSummary.proteinG, true],
+                  ['Carbs', nutritionSummary.carbsG, false],
+                  ['Fat', nutritionSummary.fatG, false],
+                ].filter(([, v]) => v).map(([label, value, primary]) => (
+                  <View key={label} style={styles.macroBar}>
+                    <View style={styles.macroBarTop}>
+                      <Text style={[styles.macroBarLabel, primary && styles.macroBarLabelPrimary]}>{label}</Text>
+                      <Text style={[styles.macroBarValue, primary && styles.macroBarValuePrimary]}>{value}g</Text>
+                    </View>
+                    <View style={styles.macroTrack}>
+                      <View style={styles.macroFill} />
+                    </View>
                   </View>
-                ) : null}
-                {nutritionSummary.carbsG ? (
-                  <View style={[styles.macroItem, styles.macroItemBorder]}>
-                    <Text style={styles.macroValue}>{nutritionSummary.carbsG}g</Text>
-                    <Text style={styles.macroLabel}>Carbs</Text>
-                  </View>
-                ) : null}
-                {nutritionSummary.fatG ? (
-                  <View style={[styles.macroItem, styles.macroItemBorder]}>
-                    <Text style={styles.macroValue}>{nutritionSummary.fatG}g</Text>
-                    <Text style={styles.macroLabel}>Fat</Text>
-                  </View>
-                ) : null}
+                ))}
               </View>
               <View style={styles.goalRow}>
                 <View style={styles.goalChip}>
@@ -360,14 +363,20 @@ const styles = StyleSheet.create({
   // eslint-disable-next-line no-restricted-syntax -- setup-complete hero numeral
   calorieNum: { fontSize: 38, fontWeight: fontWeight.black, color: colors.textPrimary, lineHeight: 42 },
   calorieUnit: { fontSize: fontSize.sm, color: colors.textMuted },
-  macroRow: {
-    flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border,
+  // Macro bars, matched to the Diary tab's MacroRings so the reveal and the
+  // place the user tracks every day read as one component.
+  macroBars: {
+    gap: spacing.md, borderTopWidth: 1, borderTopColor: colors.border,
     paddingTop: spacing.md, marginBottom: spacing.md,
   },
-  macroItem: { flex: 1, alignItems: 'center', gap: spacing.xxs },
-  macroItemBorder: { borderLeftWidth: 1, borderLeftColor: colors.border },
-  macroValue: { fontSize: fontSize.lg, fontWeight: fontWeight.black, color: colors.textPrimary },
-  macroLabel: { ...type.caption, color: colors.textMuted },
+  macroBar: { gap: spacing.xs2 },
+  macroBarTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  macroBarLabel: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
+  macroBarLabelPrimary: { color: colors.textSecondary, fontWeight: fontWeight.semibold },
+  macroBarValue: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
+  macroBarValuePrimary: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  macroTrack: { height: 6, borderRadius: radius.full, backgroundColor: colors.surface2, overflow: 'hidden' },
+  macroFill: { height: '100%', width: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
   goalRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   goalChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
