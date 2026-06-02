@@ -1850,3 +1850,31 @@ steady-state foreground/background cadence.
     ISSUE id to assign: **ISSUE-003**.
   - Parts 3 (flows) and 6 (improvements) still NOT STARTED. Part 4 still PARTIAL
     (RLS/deep-links/per-call-auth remaining). Part 1 + Section 5 complete.
+
+### Files audited this session (cont.)
+
+**`src/lib/sync.js`** (helpers lines 1-115; `scheduleSync`/`cancelScheduledSync`
+388-425; `syncMorningWeight` 427-448; `syncWeeklyCheckin` 450-484;
+`syncBodyMetric` 486-490 start). VERIFIED-CLEAN for these ranges. Remaining
+~1240 lines of sync.js NOT yet read. Verified observations:
+- `fetchAllRows` (98-110) paginates with `.range()` and terminates on a short
+  page; no infinite-loop risk. `fetchByIdsChunked` chunks IN-lists at 200.
+- `scheduleSync` (388-413) is a debounce: clears the prior timer before arming a
+  new one (no timer pile-up), no-ops under Jest (`JEST_WORKER_ID`) to avoid open
+  handles, and `cancelScheduledSync` clears it on sign-out. Correct.
+- The three immediate per-entity syncs all follow the same correct shape:
+  composite-PK upsert (`onConflict: 'user_id,id'`), `logPgErr` + `throw` on
+  PostgREST error, and a `catch` that enqueues a retry op via
+  `syncQueue.enqueueSyncOp`. Consistent with IDENTITY_AND_OWNERSHIP_LOCKED.md.
+- One contract to verify later (NOT a finding yet): `syncWeeklyCheckin` enqueues
+  op type `'check_in'` but writes `weekly_checkins_v2`; the queue drain handler
+  for `'check_in'` must target the same table. Needs the syncQueue drain code
+  read to confirm; flagged for the Part 2 continuation.
+
+> NOTE ON AUDIT COMPLETENESS: Part 2 as specified (read all ~236 source files in
+> full, cite every instance) is a multi-session effort. Sessions so far have
+> completed Part 1 (automated, exhaustive + verified), Part 4 basics, and begun
+> Part 2 with the runtime-critical store + sync entry points (verified-clean +
+> ISSUE-002). The remaining per-file reading of sync.js (rest), database.js
+> (~5k lines), 59 screens and 41 components is intentionally NOT fabricated;
+> resume points are in the progress log. Next ISSUE id: ISSUE-003.
