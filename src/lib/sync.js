@@ -28,7 +28,6 @@ import {
   getAllCoachOutputsForUser,
   getAllExerciseUserNotesForUser,
   getAllCustomExercisesSince,
-  insertOrUpdateCustomExerciseFromCloud,
   // Newly-syncing tables (migration 012)
   getUserBodyProfile,
   getAllUserInsightsForUser,
@@ -1448,9 +1447,21 @@ async function _pullCustomExercises(sb, supabaseUserId) {
       .select('*').eq('user_id', supabaseUserId);
     if (error) { logPgErr('sync._pullCustomExercises', error); return 0; }
     if (!data?.length) return 0;
+    // Restore custom exercises into the LOCAL `exercises` table (is_custom=1),
+    // NOT the local `custom_exercises` mirror. The whole app resolves an
+    // exercise by id against `exercises` only (getAllExercises, routine/workout
+    // joins, getExerciseById), and creation writes there too. Cloud keeps its
+    // composite-PK `custom_exercises` table (migration 020/021); this only
+    // fixes where the local restore lands. Before this, pulled customs went to
+    // the orphaned local `custom_exercises` table and were invisible/unresolvable
+    // after a reinstall or device swap. Soft-deleted customs are skipped so a
+    // deleted exercise doesn't reappear.
+    // eslint-disable-next-line global-require
+    const { insertOrUpdateExerciseFromCloud } = require('./database');
     let n = 0;
     for (const row of data) {
-      try { await insertOrUpdateCustomExerciseFromCloud(supabaseUserId, row); n++; }
+      if (row?.deleted_at) continue;
+      try { await insertOrUpdateExerciseFromCloud({ ...row, is_custom: 1 }); n++; }
       catch (e) { logWarn('sync._pullCustomExercises', 'insert failed', { id: row?.id, error: e?.message }); }
     }
     return n;
