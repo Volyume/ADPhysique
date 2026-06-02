@@ -107,6 +107,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
   const [editStartWeight, setEditStartWeight] = useState('');
   const [swapState, setSwapState] = useState(null);
   const [swapCandidates, setSwapCandidates] = useState([]);
+  const [showSwapPicker, setShowSwapPicker] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
 
   useEffect(() => {
@@ -554,6 +555,15 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 No similar exercises found.
               </Text>
             }
+            ListFooterComponent={
+              <TouchableOpacity
+                style={styles.swapSearchAll}
+                onPress={() => setShowSwapPicker(true)}
+              >
+                <Ionicons name="search" size={18} color={colors.primary} />
+                <Text style={styles.swapSearchAllText}>Search all exercises or create your own</Text>
+              </TouchableOpacity>
+            }
           />
         </SafeAreaView>
       </Modal>
@@ -563,6 +573,16 @@ export default function RoutineDetailScreen({ navigation, route }) {
         onClose={() => setShowAddExercise(false)}
         onSelect={addExercise}
         saveLabel="Add to plan"
+      />
+
+      {/* Swap via the full library / a custom exercise, when none of the
+          ranked substitutes fit. Routes the choice through handleConfirmSwap
+          so it confirms + applies the same way as a ranked pick. */}
+      <ExercisePickerModal
+        visible={showSwapPicker}
+        onClose={() => setShowSwapPicker(false)}
+        onSelect={(ex) => { setShowSwapPicker(false); handleConfirmSwap(ex); }}
+        saveLabel="Swap in"
       />
     </SafeAreaView>
   );
@@ -762,6 +782,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxs,
   },
   swapItemReason: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
+  swapSearchAll: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    paddingVertical: spacing.lg, marginTop: spacing.sm,
+  },
+  swapSearchAllText: { ...type.label, color: colors.primary },
 });
 
 const tagStyles = StyleSheet.create({
