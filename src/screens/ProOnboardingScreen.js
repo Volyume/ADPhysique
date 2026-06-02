@@ -31,9 +31,18 @@ import {
   phaseToCoachingKey,
   daysToActivityLevel,
 } from '../lib/coachingGoals';
-import { calculateNutritionTargets } from '../lib/nutritionEngine';
+import { calculateNutritionTargets, PROTEIN_APPROACHES, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
+
+// Plain-language one-liners for the protein tiers, kept short for the
+// onboarding collapsible. The engine's own descriptions read more technical;
+// these mirror the wording the plan builder uses so the two surfaces match.
+const PROTEIN_SHORT = {
+  standard:  'Enough for consistent training. Easy to sustain day to day.',
+  optimised: 'The proven target for serious training. Best for most people.',
+  advanced:  'Upper end for competitive athletes and harder cuts.',
+};
 
 const TOTAL_STEPS = 4;
 
@@ -180,6 +189,16 @@ export default function ProOnboardingScreen({ navigation }) {
   // the options shown depend on trainingGoal. Passed into plan generation, which
   // biases volume toward these muscles within the recovery envelope.
   const [planWeakPoints, setPlanWeakPoints] = useState([]);
+
+  // Protein target. Left null, the engine picks the right approach for the
+  // goal (advanced for physique competitors, optimised for everyone else),
+  // which is exactly what we want by default. The user only overrides it by
+  // opening the collapsible and choosing, so the default path never shifts
+  // anyone's targets away from the engine's recommendation.
+  const [proteinOverride, setProteinOverride] = useState(null);
+  const [proteinOpen, setProteinOpen] = useState(false);
+  const suggestedApproach = ADVANCED_PROTEIN_GOALS.includes(trainingGoal) ? 'advanced' : 'optimised';
+  const proteinApproach = proteinOverride ?? suggestedApproach;
 
   // Changing division re-scopes the weak-point options, so drop any selected
   // muscle that the new division does not offer.
@@ -450,6 +469,7 @@ export default function ProOnboardingScreen({ navigation }) {
         activityLevel: daysToActivityLevel(daysPerWeek),
         goal: phaseToNutritionKey(trainingPhase),
         trainingGoal,
+        proteinApproach,
       });
 
       const goalPhase = phaseToCoachingKey(trainingPhase);
@@ -484,6 +504,7 @@ export default function ProOnboardingScreen({ navigation }) {
         equipment,
         recoveryRating,
         planWeakPoints,
+        proteinApproach,
       };
 
       if (user?.id) await saveLocalProfile(user.id, merged);
@@ -1059,6 +1080,54 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
             )}
 
+            <View style={styles.section}>
+              <TouchableOpacity
+                style={styles.proteinHead}
+                onPress={() => setProteinOpen(v => !v)}
+                activeOpacity={0.8}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.fieldLabel}>Protein target</Text>
+                  <Text style={styles.fieldHint}>
+                    {PROTEIN_APPROACHES[proteinApproach]?.label} · {PROTEIN_APPROACHES[proteinApproach]?.range}. Set for you, tap to change.
+                  </Text>
+                </View>
+                <Ionicons name={proteinOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+
+              {proteinOpen && (
+                <View style={styles.proteinOptions}>
+                  {['standard', 'optimised', 'advanced'].map(key => {
+                    const opt = PROTEIN_APPROACHES[key];
+                    const active = proteinApproach === key;
+                    const recommended = key === suggestedApproach;
+                    return (
+                      <TouchableOpacity
+                        key={key}
+                        style={[styles.proteinOpt, active && styles.proteinOptActive]}
+                        onPress={() => setProteinOverride(key)}
+                        activeOpacity={0.85}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <View style={styles.proteinOptTop}>
+                            <Text style={styles.proteinOptLabel}>{opt.label}</Text>
+                            <Text style={styles.proteinOptRange}>{opt.range}</Text>
+                            {recommended ? (
+                              <View style={styles.recBadge}>
+                                <Text style={styles.recBadgeText}>Recommended</Text>
+                              </View>
+                            ) : null}
+                          </View>
+                          <Text style={styles.proteinOptDesc}>{PROTEIN_SHORT[key]}</Text>
+                        </View>
+                        {active ? <Ionicons name="checkmark-circle" size={20} color={colors.primary} /> : null}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+
             <TouchableOpacity
               style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
               onPress={canContinue ? advanceFrom3 : undefined}
@@ -1305,6 +1374,27 @@ const styles = StyleSheet.create({
     color: colors.textMuted, letterSpacing: 0.3, marginBottom: spacing.sm,
   },
   fieldHint: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginBottom: spacing.sm },
+  // Protein target collapsible (step 3). Collapsed by default, the header
+  // shows the chosen tier; expanding reveals the three tiers to pick from.
+  proteinHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  proteinOptions: { marginTop: spacing.sm, gap: spacing.sm },
+  proteinOpt: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    borderWidth: 1.5, borderColor: colors.border, padding: spacing.md,
+  },
+  proteinOptActive: { borderColor: colors.primary },
+  proteinOptTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxs, flexWrap: 'wrap' },
+  proteinOptLabel: { ...type.bodyStrong, color: colors.textPrimary },
+  proteinOptRange: { fontSize: fontSize.xs, color: colors.textMuted },
+  proteinOptDesc: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 17 },
+  recBadge: {
+    backgroundColor: colors.primaryBg, borderRadius: radius.full,
+    paddingHorizontal: spacing.sm, paddingVertical: 1,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.188),
+  },
+  recBadgeText: { fontSize: fontSize.micro, color: colors.primary, fontWeight: fontWeight.semibold },
+
   // Weak-point selector (step 3). Chip grid, division-scoped options.
   wpSection: { marginTop: spacing.lg, marginBottom: spacing.sm },
   wpLabel: {

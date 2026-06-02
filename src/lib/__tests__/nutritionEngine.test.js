@@ -5,8 +5,10 @@ import {
   computeAdaptiveTDEEAdjustment,
   shouldSuggestDietBreak,
   getPlanNutritionContext,
+  calculateNutritionTargets,
   PROTEIN_MAX_GKGBW,
   DIET_BREAK_THRESHOLD_WEEKS,
+  ADVANCED_PROTEIN_GOALS,
 } from '../nutritionEngine';
 
 // ─── ewmaValues (generic series, used by the BF% trend chart) ───────────────────
@@ -499,5 +501,55 @@ describe('getPlanNutritionContext', () => {
     const result = getPlanNutritionContext(baseTargets);
     expect(result.adaptiveTDEEAdjustment).toBeDefined();
     expect(result.adaptiveTDEEAdjustment.confidence).toBe('insufficient_data');
+  });
+});
+
+// ─── Onboarding default protein invariant (H3) ──────────────────────────────────
+//
+// Onboarding now exposes a protein selector, but its default is "let the engine
+// decide": the screen derives the suggested approach exactly as the engine does
+// (advanced for physique-competitor goals, optimised for everyone else) and only
+// sends an explicit approach when the user overrides. These tests pin that the
+// suggested default produces IDENTICAL targets to passing no approach at all, so
+// adding the selector never silently shifts anyone's numbers.
+describe('onboarding default protein approach matches the engine auto-pick', () => {
+  const suggestedFor = (trainingGoal) =>
+    ADVANCED_PROTEIN_GOALS.includes(trainingGoal) ? 'advanced' : 'optimised';
+
+  const baseInputs = (trainingGoal) => ({
+    sex: 'male',
+    ageYears: 30,
+    heightCm: 178,
+    weightKg: 82,
+    activityLevel: 'moderately_active',
+    goal: 'build',
+    trainingGoal,
+  });
+
+  const goals = ['general', 'powerlifting', 'mens_physique', 'bikini', 'bodybuilding'];
+
+  test.each(goals)('goal "%s": suggested default == engine auto (null approach)', (goal) => {
+    const auto = calculateNutritionTargets(baseInputs(goal));
+    const withSuggested = calculateNutritionTargets({
+      ...baseInputs(goal),
+      proteinApproach: suggestedFor(goal),
+    });
+    expect(withSuggested.proteinG).toBe(auto.proteinG);
+    expect(withSuggested.targetKcal).toBe(auto.targetKcal);
+    expect(withSuggested.carbsG).toBe(auto.carbsG);
+    expect(withSuggested.fatG).toBe(auto.fatG);
+    expect(withSuggested.proteinApproach).toBe(auto.proteinApproach);
+  });
+
+  test('physique-competitor goal auto-selects advanced (the suggested default)', () => {
+    expect(suggestedFor('bodybuilding')).toBe('advanced');
+    const auto = calculateNutritionTargets(baseInputs('bodybuilding'));
+    expect(auto.proteinApproach).toBe('advanced');
+  });
+
+  test('non-competitor goal auto-selects optimised (the suggested default)', () => {
+    expect(suggestedFor('general')).toBe('optimised');
+    const auto = calculateNutritionTargets(baseInputs('general'));
+    expect(auto.proteinApproach).toBe('optimised');
   });
 });
