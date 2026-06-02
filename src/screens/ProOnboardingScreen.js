@@ -605,10 +605,21 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  function Header({ title, sub }) {
+  function Header({ title, sub, onBack }) {
     return (
       <View style={styles.headerBlock}>
         <View style={styles.brandRow}>
+          {onBack ? (
+            <TouchableOpacity
+              onPress={onBack}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={styles.brandBack}
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+            >
+              <Ionicons name="chevron-back" size={22} color={colors.textSecondary} />
+            </TouchableOpacity>
+          ) : null}
           <VolyumeIcon size={22} />
           <View style={styles.proBadge}>
             <Text style={styles.proBadgeText}>PRO</Text>
@@ -961,14 +972,10 @@ export default function ProOnboardingScreen({ navigation }) {
       <SafeAreaView key="step-3" style={styles.safe}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-            <TouchableOpacity style={styles.backBtn} onPress={goBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
-              <Text style={styles.backBtnText}>Back</Text>
-            </TouchableOpacity>
-
             <Header
               title="Your training profile."
               sub="Takes about 30 seconds. This shapes your entire plan."
+              onBack={goBack}
             />
 
             <Dropdown
@@ -1151,14 +1158,10 @@ export default function ProOnboardingScreen({ navigation }) {
     return (
       <SafeAreaView key="step-4" style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll}>
-          <TouchableOpacity style={styles.backBtn} onPress={goBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
-            <Text style={styles.backBtnText}>Back</Text>
-          </TouchableOpacity>
-
           <Header
             title="Recovery & reminders."
             sub="Recovery affects your plan volume. Reminders keep coaching consistent."
+            onBack={goBack}
           />
 
           <View style={styles.coachCard}>
@@ -1360,12 +1363,10 @@ const styles = StyleSheet.create({
   },
   stepSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
 
-  // Back button
-  backBtn: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: spacing.xs, marginBottom: spacing.lg, alignSelf: 'flex-start',
-  },
-  backBtnText: { fontSize: fontSize.sm, color: colors.textSecondary },
+  // Back affordance, inline at the left of the brand row so it reads as part of
+  // the header chrome instead of floating above the logo. Negative left margin
+  // pulls the chevron to the content edge so it lines up with the page padding.
+  brandBack: { marginLeft: -spacing.xs, marginRight: spacing.xxs },
 
   // Sections / inputs
   section: { marginBottom: spacing.xl },
