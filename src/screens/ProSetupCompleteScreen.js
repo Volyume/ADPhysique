@@ -30,26 +30,20 @@ export default function ProSetupCompleteScreen({ navigation }) {
   const [planOpen, setPlanOpen] = useState(false);
   const [whyThis, setWhyThis] = useState(null);
 
-  const opacity    = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
-  const slideY     = useRef(new Animated.Value(reduceMotion ? 0 : 20)).current;
-  const checkScale = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const opacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const slideY  = useRef(new Animated.Value(reduceMotion ? 0 : 20)).current;
 
   useEffect(() => {
     if (reduceMotion) return;
-    Animated.sequence([
-      Animated.spring(checkScale, {
-        toValue: 1, tension: 60, friction: 6, useNativeDriver: true,
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1, duration: 420,
+        easing: Easing.out(Easing.cubic), useNativeDriver: true,
       }),
-      Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 1, duration: 380,
-          easing: Easing.out(Easing.cubic), useNativeDriver: true,
-        }),
-        Animated.timing(slideY, {
-          toValue: 0, duration: 380,
-          easing: Easing.out(Easing.cubic), useNativeDriver: true,
-        }),
-      ]),
+      Animated.timing(slideY, {
+        toValue: 0, duration: 420,
+        easing: Easing.out(Easing.cubic), useNativeDriver: true,
+      }),
     ]).start();
   }, []);
 
@@ -106,18 +100,27 @@ export default function ProSetupCompleteScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Animated.View style={[styles.checkWrap, { transform: [{ scale: checkScale }] }]}>
-          <View style={styles.checkCircle}>
-            <Ionicons name="checkmark" size={40} color={colors.background} />
-          </View>
-        </Animated.View>
-
         <Animated.View style={[styles.mainBlock, { opacity, transform: [{ translateY: slideY }] }]}>
+          {/* Same header furniture as the four wizard steps, so this reads as
+              the last beat of that flow rather than a different screen: brand
+              row, the step bar (now all four done), then the title and sub. The
+              completion signal is the full amber bar and the eyebrow, not a
+              glowing orb. */}
           <View style={styles.brandRow}>
-            <VolyumeIcon size={20} />
+            <VolyumeIcon size={22} />
             <View style={styles.proBadge}>
               <Text style={styles.proBadgeText}>PRO</Text>
             </View>
+          </View>
+
+          <View style={styles.progressRow}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <View key={i} style={[styles.progressSegment, styles.progressDone]} />
+            ))}
+          </View>
+          <View style={styles.doneRow}>
+            <Ionicons name="checkmark-circle" size={14} color={colors.primary} />
+            <Text style={styles.doneEyebrow}>Setup complete</Text>
           </View>
 
           <Text style={styles.headline}>You're all set, {firstName}.</Text>
@@ -325,17 +328,10 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { flexGrow: 1, padding: spacing.xl, paddingBottom: spacing.xxxl },
 
-  checkWrap: { alignSelf: 'center', marginTop: spacing.xl, marginBottom: spacing.xl },
-  checkCircle: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: colors.primary,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: colors.primary, shadowOpacity: 0.4,
-    shadowRadius: 20, shadowOffset: { width: 0, height: 6 }, elevation: 12,
-  },
+  mainBlock: { flex: 1, marginTop: spacing.sm },
 
-  mainBlock: { flex: 1 },
-
+  // Header furniture, matched to ProOnboardingScreen so the wizard and this
+  // completion screen share one visual system.
   brandRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg,
   },
@@ -344,17 +340,23 @@ const styles = StyleSheet.create({
   },
   proBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.8 },
 
+  progressRow: { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm },
+  progressSegment: { flex: 1, height: 3, borderRadius: 2 },
+  progressDone: { backgroundColor: colors.primary },
+  doneRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
+  doneEyebrow: { ...type.num('caption'), color: colors.primary, fontWeight: fontWeight.semibold },
+
   headline: {
-    ...type.h1,
+    ...type.h2,
     color: colors.textPrimary, marginBottom: spacing.sm,
   },
   sub: {
-    fontSize: fontSize.md, color: colors.textSecondary, lineHeight: 23, marginBottom: spacing.xl,
+    fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.xl,
   },
 
   routineCard: {
-    backgroundColor: colors.surface, borderRadius: radius.xl,
-    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1.5, borderColor: colors.border,
     padding: spacing.lg, marginBottom: spacing.md,
   },
   routineCardOpen: { borderColor: withAlpha(colors.primary, 0.314) },
