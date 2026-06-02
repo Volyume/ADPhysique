@@ -53,18 +53,17 @@ needed (reason given).
 | P4 | Replace "MAV-level volume" jargon | coachingGoals.js:240 | 2 | 1 | DONE `fc30e30` |
 | P5 | Gloss "Precision Coaching" at first use | WelcomeScreen | 2 | 1 | N/A. Already glossed inline at first use (WelcomeScreen:22, "Precision Coaching that adjusts your training and nutrition as your body responds"). Adding more would be footnote-creep |
 | P6 | First-run cue on Home for new Pro users | HomeScreen | 2 | 2 | DONE `4127306`. One line above the workout card, "Your plan is ready. Start your first session.", starts the session on tap and dismisses. Gated on totalSessions === 0 plus a per-user saved flag. No tour |
-| P7 | Move the developer crash banner out of Login | LoginScreen:238-247 | 1 | 1 | OPEN. Deliberate beta tool, confirm with founder before removing |
+| P7 | Move the developer crash banner out of Login | LoginScreen:238-247 | 1 | 1 | DONE `42cf298`. Removed the raw stack-trace banner from the sign-in screen. The crash log already lives in Settings, long-press version, Debug Logs (richer: timestamp, full stack, share) and ships to Sentry. Capture (`installGlobalHandlers` / `getCrashLog`) untouched |
 | P8 | Fix "Not competing" + trophy-icon mismatch on the reveal chip | ProSetupCompleteScreen:166 | 1 | 1 | DONE `708fccd` |
 
 ## Next-session plan
-1. P7 crash banner, pending a founder call (deliberate beta tool).
-2. H5 leftover: decide whether ManualBuilder adopts BackHeader.
-3. On-device pass: the H7 shared form, the H8 unified selectors, and the reveal
+1. H5 leftover: decide whether ManualBuilder adopts BackHeader.
+2. On-device pass: the H7 shared form, the H8 unified selectors, and the reveal
    page all need a real-device eyeball (no runtime render available here).
 
-Done: all Critical (C1-C8); all High (H1-H9; H5 as much as is wanted by design,
-H7 UI-only by founder call). Polish: P2/P3/P4/P6/P8 done, P1/P5 closed as N/A
-(corrections recorded above), P7 open (founder call).
+Backlog clear. Done: all Critical (C1-C8); all High (H1-H9; H5 as much as is
+wanted by design, H7 UI-only by founder call); all Polish (P2/P3/P4/P6/P7/P8),
+with P1/P5 closed as N/A (corrections recorded above).
 
 Also fixed from device testing (not original audit items): training-load
 suitability (assisted regressions kept out of plans and swaps for
