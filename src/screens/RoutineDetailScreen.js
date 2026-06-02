@@ -18,6 +18,7 @@ import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
+import ExercisePickerModal from '../components/ExercisePickerModal';
 
 // Compute muscle coverage: { [muscleKey]: count } sorted by count descending
 function computeMuscleCoverage(exercises) {
@@ -98,7 +99,6 @@ export default function RoutineDetailScreen({ navigation, route }) {
   const [exercises, setExercises] = useState([]);
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [allExercises, setAllExercises] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [editingExercise, setEditingExercise] = useState(null);
   const [editSets, setEditSets] = useState('');
   const [editRepsMin, setEditRepsMin] = useState('');
@@ -276,10 +276,6 @@ export default function RoutineDetailScreen({ navigation, route }) {
       toast.show("Couldn't start workout, try again", { variant: 'error' });
     }
   }
-
-  const filtered = searchQuery.trim()
-    ? allExercises.filter(e => e.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    : allExercises.slice(0, 40);
 
   if (!routine) return null;
 
@@ -562,41 +558,12 @@ export default function RoutineDetailScreen({ navigation, route }) {
         </SafeAreaView>
       </Modal>
 
-      <Modal visible={showAddExercise} animationType="slide" onRequestClose={() => setShowAddExercise(false)}>
-        <SafeAreaView style={styles.pickerSafe}>
-          <View style={styles.pickerHeader}>
-            <TextInput
-              style={styles.pickerSearch}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Search exercises..."
-              placeholderTextColor={colors.textMuted}
-              autoFocus
-            />
-            <TouchableOpacity onPress={() => setShowAddExercise(false)} style={styles.pickerClose}>
-              <Ionicons name="close" size={22} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          <FlatList
-            data={filtered}
-            keyExtractor={e => e.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity style={styles.pickerItem} onPress={() => addExercise(item)}>
-                <View>
-                  <Text style={styles.pickerItemName}>{item.name}</Text>
-                  <Text style={styles.pickerItemMuscle}>
-                    {(item.primaryMuscle || '').charAt(0).toUpperCase() +
-                      (item.primaryMuscle || '').slice(1)}
-                    {item.equipment ? ` · ${item.equipment}` : ''}
-                  </Text>
-                </View>
-                <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
-              </TouchableOpacity>
-            )}
-            ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: colors.border }} />}
-          />
-        </SafeAreaView>
-      </Modal>
+      <ExercisePickerModal
+        visible={showAddExercise}
+        onClose={() => setShowAddExercise(false)}
+        onSelect={addExercise}
+        saveLabel="Add to plan"
+      />
     </SafeAreaView>
   );
 }
