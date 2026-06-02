@@ -38,7 +38,7 @@ needed (reason given).
 | H2 | Introduce the in-app food process in context | ProSetupCompleteScreen, NutritionEducationScreen | 4 | 2 | DONE `fc30e30`/`096167e` |
 | H3 | Add protein approach to onboarding (collapsible) | ProOnboardingScreen step 3 | 3 | 2 | DONE `0920b70`. Default is a passthrough = engine auto-pick, so no target shift. Invariant tests added |
 | H4 | Persist planWeakPoints into the saved profile | ProOnboardingScreen:460-483 | 3 | 1 | DONE `096167e` |
-| H5 | Put the app's shared header chrome on the flow screens | flow screens | 4 | 3 | PARTIAL: coached builder now uses BackHeader `aed6c78`. Reveal now shares the wizard's header system (brand row, full step bar, eyebrow, h2 title, matched card chrome) `89e0a9f`, so it reads as the last beat of the wizard rather than a different screen; the glowing-orb completion frame is gone. ManualBuilder and the wizard's own header still bespoke by design (the wizard progress bar is intentional). Remaining: decide if ManualBuilder wants BackHeader |
+| H5 | Put the app's shared header chrome on the flow screens | flow screens | 4 | 3 | PARTIAL: coached builder now uses BackHeader `aed6c78`. Reveal now shares the wizard's header system (brand row, full step bar, eyebrow, h2 title, matched card chrome) `89e0a9f`, so it reads as the last beat of the wizard rather than a different screen; the glowing-orb completion frame is gone. ManualBuilder and the wizard's own header still bespoke by design (the wizard progress bar is intentional). The wizard's back control is now folded into the shared Header (chevron inline on the brand row) instead of floating above the logo `384a3d3`. Remaining: decide if ManualBuilder wants BackHeader |
 | H6 | Render the reveal's calories/macros via the Diary macro-bar look | ProSetupCompleteScreen | 4 | 3 | DONE `803019b`. Founder picked "match Diary look, target framing": kcal hero + Diary-style horizontal macro bars showing the targets, no empty ring / "remaining". Literal MacroRings was rejected because it is a progress tracker and would show zeros on the reveal |
 | H7 | Remove the duplicate account step (one shared component) | LoginScreen, ProOnboardingScreen:602-727 | 3 | 4 | OPEN. Auth-critical, verify OAuth + email paths |
 | H8 | Unify the three plan-creation selection components | ProOnboarding, ProGoalSetup, ManualBuilder | 3 | 4 | OPEN |
@@ -52,19 +52,23 @@ needed (reason given).
 | P3 | Remove dead legacy-goal branches | GoalChangeSummaryScreen:38-44 | 1 | 1 | DONE `708fccd` |
 | P4 | Replace "MAV-level volume" jargon | coachingGoals.js:240 | 2 | 1 | DONE `fc30e30` |
 | P5 | Gloss "Precision Coaching" at first use | WelcomeScreen | 2 | 1 | N/A. Already glossed inline at first use (WelcomeScreen:22, "Precision Coaching that adjusts your training and nutrition as your body responds"). Adding more would be footnote-creep |
-| P6 | First-run cue on Home for new Pro users | HomeScreen | 2 | 2 | OPEN |
+| P6 | First-run cue on Home for new Pro users | HomeScreen | 2 | 2 | DONE `4127306`. One line above the workout card, "Your plan is ready. Start your first session.", starts the session on tap and dismisses. Gated on totalSessions === 0 plus a per-user saved flag. No tour |
 | P7 | Move the developer crash banner out of Login | LoginScreen:238-247 | 1 | 1 | OPEN. Deliberate beta tool, confirm with founder before removing |
 | P8 | Fix "Not competing" + trophy-icon mismatch on the reveal chip | ProSetupCompleteScreen:166 | 1 | 1 | DONE `708fccd` |
 
 ## Next-session plan
-1. H5 on the wizard and reveal: now the reveal's body matches Diary, decide
-   whether the wizard's brand-row/progress header and the reveal's celebratory
-   header should adopt more shared chrome, or stay bespoke by design.
-2. H8 unify the three plan-creation selection components.
-3. H7 account-step dedup, with explicit auth-path verification (email + Google +
-   Apple, and the consent interruption).
-4. P6 first-run Home cue, then P7 pending a founder call.
+1. H8 unify the three plan-creation selection components.
+2. H7 account-step dedup, with explicit auth-path verification (email + Google +
+   Apple, and the consent interruption). Auth-critical, needs a founder call.
+3. P7 crash banner, pending a founder call (deliberate beta tool).
+4. H5 leftover: decide whether ManualBuilder adopts BackHeader.
 
-Done: all Critical (C1-C8); High H1, H2, H3, H4, H6, H9, plus H5 partial (the
-coached builder). Remaining High: H5 (wizard/reveal headers), H7, H8. Polish:
-P2/P3/P4/P8 done, P1/P5 closed as N/A (corrections recorded above), P6/P7 open.
+Done: all Critical (C1-C8); High H1, H2, H3, H4, H6, H9, plus H5 mostly (coached
+builder BackHeader, reveal shares the wizard header system, wizard back control
+folded into the shared Header). Remaining High: H7, H8. Polish: P2/P3/P4/P6/P8
+done, P1/P5 closed as N/A (corrections recorded above), P7 open (founder call).
+
+Also fixed from device testing (not original audit items): training-load
+suitability (assisted regressions kept out of plans and swaps for
+non-beginners) and a custom-exercise path from the in-workout Swap sheet
+`fe9b225`.
