@@ -38,7 +38,7 @@ needed (reason given).
 | H2 | Introduce the in-app food process in context | ProSetupCompleteScreen, NutritionEducationScreen | 4 | 2 | DONE `fc30e30`/`096167e` |
 | H3 | Add protein approach to onboarding (collapsible) | ProOnboardingScreen step 3 | 3 | 2 | DONE `0920b70`. Default is a passthrough = engine auto-pick, so no target shift. Invariant tests added |
 | H4 | Persist planWeakPoints into the saved profile | ProOnboardingScreen:460-483 | 3 | 1 | DONE `096167e` |
-| H5 | Put the app's shared header chrome on the flow screens | flow screens | 4 | 3 | PARTIAL: coached builder now uses BackHeader `aed6c78`. Reveal now shares the wizard's header system (brand row, full step bar, eyebrow, h2 title, matched card chrome) `89e0a9f`, so it reads as the last beat of the wizard rather than a different screen; the glowing-orb completion frame is gone. ManualBuilder and the wizard's own header still bespoke by design (the wizard progress bar is intentional). The wizard's back control is now folded into the shared Header (chevron inline on the brand row) instead of floating above the logo `384a3d3`. Remaining: decide if ManualBuilder wants BackHeader |
+| H5 | Put the app's shared header chrome on the flow screens | flow screens | 4 | 3 | PARTIAL: coached builder now uses BackHeader `aed6c78`. Reveal now shares the wizard's header system (brand row, full step bar, eyebrow, h2 title, matched card chrome) `89e0a9f`, so it reads as the last beat of the wizard rather than a different screen; the glowing-orb completion frame is gone. ManualBuilder and the wizard's own header still bespoke by design (the wizard progress bar is intentional). The wizard's back control is now folded into the shared Header (chevron inline on the brand row) instead of floating above the logo `384a3d3`. ManualBuilder now uses BackHeader too `81d84c1` (founder call), so both plan-creation entry points match. DONE |
 | H6 | Render the reveal's calories/macros via the Diary macro-bar look | ProSetupCompleteScreen | 4 | 3 | DONE `803019b`. Founder picked "match Diary look, target framing": kcal hero + Diary-style horizontal macro bars showing the targets, no empty ring / "remaining". Literal MacroRings was rejected because it is a progress tracker and would show zeros on the reveal |
 | H7 | Remove the duplicate account step (one shared component) | LoginScreen, ProOnboardingScreen:602-727 | 3 | 4 | DONE `6b1aee8`, UI only (founder call). The two steps share the form UI but have deliberately different identity-locked auth logic, so only the presentational layer was unified: shared `OAuthButtons` and `EmailPasswordFields` used by both screens. The post-auth handlers (cross-user wipe + last-user tracking on Login; pro-tier + pending-onboarding + wizard advance on onboarding) were left untouched per `IDENTITY_AND_OWNERSHIP_LOCKED.md`. Smoke tests added |
 | H8 | Unify the three plan-creation selection components | ProOnboarding, ProGoalSetup, ManualBuilder | 3 | 4 | DONE `182c11c` (wizard + coached builder). Founder picked the hybrid: shared `SegmentedControl` for days/session, shared `OptionCard` (icon + label + one-line detail + checkmark) for experience/equipment/focus/recovery, used on both screens. Division and protein pickers left as distinct control types. ManualBuilder is a different surface (exercise picking, not profile selection), not part of this unification |
@@ -57,13 +57,15 @@ needed (reason given).
 | P8 | Fix "Not competing" + trophy-icon mismatch on the reveal chip | ProSetupCompleteScreen:166 | 1 | 1 | DONE `708fccd` |
 
 ## Next-session plan
-1. H5 leftover: decide whether ManualBuilder adopts BackHeader.
-2. On-device pass: the H7 shared form, the H8 unified selectors, and the reveal
-   page all need a real-device eyeball (no runtime render available here).
+1. On-device pass: the H5 ManualBuilder header, the H7 shared form, the H8
+   unified selectors, and the reveal page all need a real-device eyeball (no
+   runtime render available here). One thing to eyeball on ManualBuilder: from
+   page 2 (the day editor) the back chevron leaves the screen entirely, same as
+   before. If that should instead step back to page 1, that's a small follow-up.
 
-Backlog clear. Done: all Critical (C1-C8); all High (H1-H9; H5 as much as is
-wanted by design, H7 UI-only by founder call); all Polish (P2/P3/P4/P6/P7/P8),
-with P1/P5 closed as N/A (corrections recorded above).
+Backlog clear. Done: all Critical (C1-C8); all High (H1-H9; H5 fully, H7 UI-only
+by founder call); all Polish (P2/P3/P4/P6/P7/P8), with P1/P5 closed as N/A
+(corrections recorded above).
 
 Also fixed from device testing (not original audit items): training-load
 suitability (assisted regressions kept out of plans and swaps for
