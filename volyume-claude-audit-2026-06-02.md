@@ -2057,3 +2057,109 @@ No deep-link finding.
     RootNavigator; (2) Part 6 improvements writeup (typecheck path, 777 lint
     warnings, 88 dead exports, dep-upgrade plan); (3) Part 2 bulk per-file
     (low expected yield given code quality so far).
+
+---
+
+## SECTION 6 / PART 6 — IMPROVEMENT OPPORTUNITIES
+
+All grounded in this audit's verified data. Standard finding format.
+
+---
+ID: ISSUE-004
+FILE: tsconfig.json, package.json
+LINE: tsconfig.json:1-4
+SEVERITY: Medium
+TYPE: Improvement
+DESCRIPTION: The ~236-file JS codebase has NO type checking (Part 1.1: no
+`typescript` dep, no `typecheck` script, `tsc --noEmit --strict` dies on a
+config deprecation, 0 `.ts` in `src/`). A JS app this size syncing to a typed
+Postgres schema is exactly where type drift causes the silent payload bugs the
+repo's own history references (e.g. the camelCase/snake_case food-mapper
+regression noted in foodDomain.js:109-118).
+IMPACT: A whole class of contract bugs (wrong field names, null shapes, RPC
+payload mismatches) can only be caught at runtime / by tests.
+FIX: Add `typescript` as a devDependency; set `tsconfig.json` compilerOptions to
+`{ "allowJs": true, "checkJs": false, "noEmit": true, "ignoreDeprecations":
+"6.0" }`; add a `"typecheck": "tsc --noEmit"` script. Then incrementally opt-in
+files with `// @ts-check` + JSDoc, starting with the sync/database contract
+layer (src/lib/sync/*, src/lib/database.js). Do NOT flip `checkJs:true`
+globally first — it would surface thousands of errors at once.
+---
+ID: ISSUE-005
+FILE: (49 sites; see list) — worst: src/screens/ActiveWorkoutScreen.js
+LINE: ActiveWorkoutScreen 6 warnings; WorkoutSummaryScreen 4; DiaryScreen 3;
+CascadeGateScreen 3; BodyMetricsScreen 3; VolumeHeatmapScreen/SubscriptionScreen/
+RoutineDetailScreen/PlanLibraryScreen/RootNavigator/PeekMenu 2 each; +18 files 1 each
+SEVERITY: Medium
+TYPE: Improvement
+DESCRIPTION: 49 `react-hooks/exhaustive-deps` warnings (Part 1.2). Unlike the
+unused-vars noise, these are genuinely bug-prone: a missing dep can capture a
+stale value/closure (stale state in an effect, a callback that never updates).
+The concentration in `ActiveWorkoutScreen` (the live logging screen, 6
+warnings) is the highest risk because stale state there means wrong set data.
+IMPACT: Latent stale-closure bugs; hard to reproduce, easy to ship.
+FIX: Triage these 49 individually (NOT a blanket auto-fix — adding deps can
+cause re-run loops). Start with ActiveWorkoutScreen's 6 and WorkoutSummaryScreen's
+4. For each: either add the missing dep, wrap the dep in `useCallback`/`useRef`,
+or add a justified `// eslint-disable-next-line` with a comment. The full list
+with line numbers is in Section 5.3.
+---
+ID: ISSUE-006
+FILE: codebase-wide; worst: src/store/useAppStore.js (38), src/lib/database.js (28)
+LINE: see Section 5.3 (unused-vars) + Part 1.5 (dead exports)
+SEVERITY: Low
+TYPE: Improvement
+DESCRIPTION: 728 `no-unused-vars` warnings + 88 cross-module-unused exports
+(Part 1.5). Top unused-vars files: useAppStore.js (38), database.js (28),
+NotificationSettingsScreen.js (27), HomeScreen.js (22), RootNavigator.js (20),
+health.js (19). The 88 dead exports include a large unused `database.js` surface
+(custom-exercise CRUD, mesocycle/routine mgmt) — possibly a feature wired through
+a different path or genuinely dead.
+IMPACT: Maintenance drag; dead exports imply either an unfinished feature or
+removable code; obscures real signal in lint output.
+FIX: (1) Run `eslint . --fix` is NOT safe for unused-vars (won't remove them);
+instead sweep file-by-file removing unused imports/locals. (2) For the 88 dead
+exports, confirm no intra-module use (Part 1.5 caveat) then remove or drop the
+`export` keyword. (3) Investigate the unused custom-exercise CRUD cluster in
+database.js — decide feature-in-progress vs delete.
+---
+ID: ISSUE-007
+FILE: src/hooks/useProgressData.js (+ src/components/ReadinessCards.js, src/screens/VolumeHeatmapScreen.js, src/screens/ConsistencyScreen.js)
+LINE: useProgressData.js:92-99 (useFocusEffect → load → getAllWorkouts + getCompletedWorkoutSets + getAllExercises + more)
+SEVERITY: Medium
+TYPE: Performance
+FLOW AFFECTED: Progress tab (landing + Consistency), every focus
+DESCRIPTION: VERIFIED: `useProgressData.load()` runs on every `useFocusEffect`
+(line 92) and re-reads ALL workouts, ALL completed sets, and ALL exercises from
+SQLite (94-99), then recomputes ~12 derived sections. `ReadinessCards`,
+`VolumeHeatmapScreen` and `ConsistencyScreen` each have their own
+`useFocusEffect` loaders that also read all sets. For a long-term user with
+thousands of sets, every tab focus reloads and recomputes the full history.
+IMPACT: Growing focus latency and redundant SQLite reads as history grows
+(this is the Stage D3 concern in the redesign plan, now code-verified).
+FIX: (1) Memoise/caching: keep the last load in the store keyed by a cheap
+"sets count / max(createdAt)" signature; skip reload when unchanged. (2) Or push
+the heavy aggregation into SQL (sum/group-by) instead of pulling every row into
+JS. (3) Or page the set read. MEASURE first (add a timing log around `load()`)
+to confirm the regression before optimising.
+---
+ID: ISSUE-008
+FILE: package.json
+LINE: dependencies/devDependencies
+SEVERITY: Low
+TYPE: Improvement
+DESCRIPTION: 32 npm-audit vulnerabilities (Part 1.3), all dev/build-time, fixable
+only via breaking `expo@56` / `react-native@0.85` upgrades. Deferred by the
+locked release policy (no new closed-test build until build-out). The `xlsx`
+dev-dep (ISSUE-001) has no fix at all.
+IMPACT: None shipped today; but the gap widens and the eventual upgrade grows
+riskier the longer it is deferred.
+FIX: Schedule the Expo/RN upgrade as a single planned effort AFTER the feature
+build-out (when a new build ships anyway), not piecemeal. Track it in
+`supabase/README.md`-style notes or a CHANGELOG. Separately, replace/pin `xlsx`
+in the seed script (ISSUE-001) since that is independent of the app upgrade.
+---
+
+> SECTION 6 STATUS: COMPLETE for the verified surface. Additional architecture/
+> perf improvements may surface when Part 2 (bulk per-file) and Part 3 (flows)
+> run; those are not yet done.
