@@ -106,6 +106,11 @@ export default function HomeScreen({ navigation }) {
   const [phaseMismatch, setPhaseMismatch] = useState(null); // { currentPhase, targetPhase } | null
   const [phaseBannerDismissed, setPhaseBannerDismissed] = useState(false);
 
+  // First-run cue: a single line pointing a brand-new Pro user at their first
+  // session. Defaults to hidden so it never flashes before we've read the saved
+  // flag; the loader below reveals it only when it hasn't been dismissed.
+  const [firstRunCueDismissed, setFirstRunCueDismissed] = useState(true);
+
   // Training schedule context
   const [scheduleContext, setScheduleContext] = useState(null); // null | { daysUntil, dayName }
 
@@ -178,7 +183,7 @@ export default function HomeScreen({ navigation }) {
       loadScheduleContext(),
       loadBriefDismissal(),
       loadDailyNarrative(),
-      ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput()] : []),
+      ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadFirstRunCue()] : []),
     ]);
     setInitialLoading(false);
   }
@@ -224,6 +229,23 @@ export default function HomeScreen({ navigation }) {
       const todayStr = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
       await AsyncStorage.setItem('@volyume_brief_dismissed_date', todayStr);
     } catch (_) {}
+  }
+
+  const firstRunCueKey = user?.id ? `@volyume_home_firstrun_cue_${user.id}` : null;
+
+  async function loadFirstRunCue() {
+    if (!firstRunCueKey) return;
+    try {
+      const v = await AsyncStorage.getItem(firstRunCueKey);
+      setFirstRunCueDismissed(v === 'true');
+    } catch (_) {
+      setFirstRunCueDismissed(true);
+    }
+  }
+
+  function dismissFirstRunCue() {
+    setFirstRunCueDismissed(true);
+    if (firstRunCueKey) AsyncStorage.setItem(firstRunCueKey, 'true').catch(() => {});
   }
 
   async function loadScheduleContext() {
@@ -996,6 +1018,33 @@ export default function HomeScreen({ navigation }) {
               </View>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
+
+        {/* ── First-run cue ──
+            One line for a brand-new Pro user with a plan and no sessions yet,
+            pointing at the Start button right below. Tapping it begins the first
+            session; the close dismisses it. Gated on totalSessions === 0 so it
+            never returns once they've trained, and on a saved flag so a dismiss
+            sticks if they leave before starting. */}
+        {tier === 'pro' && !initialLoading && !hasActiveWorkout && activePlan && nextWorkout
+          && totalSessions === 0 && !firstRunCueDismissed && (
+          <TouchableOpacity
+            style={styles.firstRunCue}
+            activeOpacity={0.85}
+            onPress={() => { dismissFirstRunCue(); handleStartNextWorkout(); }}
+            accessibilityRole="button"
+            accessibilityLabel="Your plan is ready. Start your first session."
+          >
+            <Ionicons name="sparkles" size={18} color={colors.primary} />
+            <Text style={styles.firstRunCueText}>Your plan is ready. Start your first session.</Text>
+            <TouchableOpacity
+              onPress={dismissFirstRunCue}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel="Dismiss"
+            >
+              <Ionicons name="close" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
           </TouchableOpacity>
         )}
 
@@ -2287,6 +2336,27 @@ const styles = StyleSheet.create({
   },
   phaseBannerArrow: {
     paddingLeft: spacing.xs,
+  },
+
+  // First-run cue, a touch more prominent than the info banners since it's the
+  // one action a new user should take.
+  firstRunCue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, 0.314),
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.md,
+  },
+  firstRunCueText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
   },
 
   // Pre-workout coaching brief card
