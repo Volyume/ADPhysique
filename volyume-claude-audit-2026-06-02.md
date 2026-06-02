@@ -1878,3 +1878,61 @@ steady-state foreground/background cadence.
 > ISSUE-002). The remaining per-file reading of sync.js (rest), database.js
 > (~5k lines), 59 screens and 41 components is intentionally NOT fabricated;
 > resume points are in the progress log. Next ISSUE id: ISSUE-003.
+
+---
+
+## PART 4 (cont.) — Supabase RLS review
+
+Scope: all `supabase/**/*.sql` (57 distinct tables across schema.sql,
+setup_complete.sql and migrate_001-059). VERIFIED by reading policy definitions
+directly. **Result: no RLS exposure finding. Every user-scoped table enforces
+owner-only access.**
+
+### Method and the false-positive trail (recorded for honesty)
+A first static pass (regex over `CREATE POLICY`) flagged 10 RLS-enabled tables
+as having "no policy": `account_deletions_log, adaptation_events,
+autoregulation_suggestions, exercise_goals, nutrition_targets,
+peak_week_plans, planned_muscle_volume, user_insights, user_prefs,
+workout_notes`. Each was then VERIFIED individually and **all 10 are correctly
+secured** — the static pass was wrong because policies are created three ways:
+
+1. **Dynamic `DO`-block loops.** `migrate_012_complete_sync.sql:309-324` runs
+   `FOREACH t IN ARRAY [...] EXECUTE format('CREATE POLICY "Users manage own %s"
+   ON %I FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() =
+   user_id)')` for `user_insights, planned_muscle_volume, adaptation_events,
+   peak_week_plans, workout_notes, exercise_goals, user_prefs`. A static
+   `CREATE POLICY` grep cannot see these. (Verified by reading lines 300-324.)
+   There are 4 such dynamic blocks total (migrate_012, 018, 021, 024).
+2. **Static policies my split-regex missed:** `nutrition_targets`
+   (migrate_009:42, "Users can manage own nutrition targets") and
+   `autoregulation_suggestions` ("Users can manage own autoregulation
+   suggestions") both have explicit policies. (Verified by grep.)
+3. **Intentional deny-all:** `account_deletions_log` has RLS enabled +
+   `"deny all on account_deletions_log"` (migrate_039:54). It is a deletion
+   audit log written only by the `delete-account` Edge Function (service role);
+   clients correctly cannot read/write it. This is correct, not a gap.
+
+### Verified positive findings
+- `schema.sql` (16 canonical tables, paren-anchored clean parse): **all 16 have
+  `ENABLE ROW LEVEL SECURITY`; none missing.**
+- Owner policy pattern is consistent: `FOR ALL USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id)` (or per-verb variants for
+  custom_exercises, device_push_tokens, daily_intake_rollups).
+- Reference/shared tables expose only safe reads: `foods` ("Authenticated users
+  can read foods"), `exercises` ("Anyone can read canonical exercises" + owner
+  policy for custom rows), `debug_log_uploads` ("Anyone can insert debug logs",
+  insert-only).
+- This also CONFIRMS the Stage D1 conclusion elsewhere: `user_prefs` has a
+  working `auth.uid() = user_id` policy, so custom-landmark persistence via the
+  prefs sync is genuinely secured and functional.
+
+### NOT verified (remaining for a later Part 4 pass)
+- Per-policy USING-clause correctness beyond the owner pattern (each was
+  confirmed to exist and follow `auth.uid() = user_id`; not every clause was
+  read line-by-line).
+- The `food_sync_push` / `food_sync_pull` RPCs (migrate_016/021) are likely
+  `SECURITY DEFINER` and enforce `auth.uid()` internally; their bodies were NOT
+  re-read in this pass. Flag for verification: confirm they filter by
+  `auth.uid()` and cannot be invoked to read another user's rows.
+- Edge Functions (`delete-account`, `play-billing-rtdn`, `send-push`) use the
+  service role; their auth/JWT verification was NOT audited here.
