@@ -41,7 +41,7 @@ needed (reason given).
 | H5 | Put the app's shared header chrome on the flow screens | flow screens | 4 | 3 | PARTIAL: coached builder now uses BackHeader `aed6c78`. Reveal now shares the wizard's header system (brand row, full step bar, eyebrow, h2 title, matched card chrome) `89e0a9f`, so it reads as the last beat of the wizard rather than a different screen; the glowing-orb completion frame is gone. ManualBuilder and the wizard's own header still bespoke by design (the wizard progress bar is intentional). The wizard's back control is now folded into the shared Header (chevron inline on the brand row) instead of floating above the logo `384a3d3`. Remaining: decide if ManualBuilder wants BackHeader |
 | H6 | Render the reveal's calories/macros via the Diary macro-bar look | ProSetupCompleteScreen | 4 | 3 | DONE `803019b`. Founder picked "match Diary look, target framing": kcal hero + Diary-style horizontal macro bars showing the targets, no empty ring / "remaining". Literal MacroRings was rejected because it is a progress tracker and would show zeros on the reveal |
 | H7 | Remove the duplicate account step (one shared component) | LoginScreen, ProOnboardingScreen:602-727 | 3 | 4 | OPEN. Auth-critical, verify OAuth + email paths |
-| H8 | Unify the three plan-creation selection components | ProOnboarding, ProGoalSetup, ManualBuilder | 3 | 4 | OPEN |
+| H8 | Unify the three plan-creation selection components | ProOnboarding, ProGoalSetup, ManualBuilder | 3 | 4 | DONE `182c11c` (wizard + coached builder). Founder picked the hybrid: shared `SegmentedControl` for days/session, shared `OptionCard` (icon + label + one-line detail + checkmark) for experience/equipment/focus/recovery, used on both screens. Division and protein pickers left as distinct control types. ManualBuilder is a different surface (exercise picking, not profile selection), not part of this unification |
 | H9 | Surface read-only body weight in the builder | ProGoalSetupScreen | 2 | 2 | DONE `3a2a2eb` |
 
 ## Polish
@@ -57,16 +57,16 @@ needed (reason given).
 | P8 | Fix "Not competing" + trophy-icon mismatch on the reveal chip | ProSetupCompleteScreen:166 | 1 | 1 | DONE `708fccd` |
 
 ## Next-session plan
-1. H8 unify the three plan-creation selection components.
-2. H7 account-step dedup, with explicit auth-path verification (email + Google +
+1. H7 account-step dedup, with explicit auth-path verification (email + Google +
    Apple, and the consent interruption). Auth-critical, needs a founder call.
-3. P7 crash banner, pending a founder call (deliberate beta tool).
-4. H5 leftover: decide whether ManualBuilder adopts BackHeader.
+2. P7 crash banner, pending a founder call (deliberate beta tool).
+3. H5 leftover: decide whether ManualBuilder adopts BackHeader.
 
-Done: all Critical (C1-C8); High H1, H2, H3, H4, H6, H9, plus H5 mostly (coached
-builder BackHeader, reveal shares the wizard header system, wizard back control
-folded into the shared Header). Remaining High: H7, H8. Polish: P2/P3/P4/P6/P8
-done, P1/P5 closed as N/A (corrections recorded above), P7 open (founder call).
+Done: all Critical (C1-C8); High H1, H2, H3, H4, H6, H8, H9, plus H5 mostly
+(coached builder BackHeader, reveal shares the wizard header system, wizard back
+control folded into the shared Header, wizard + builder selectors unified).
+Remaining High: H7. Polish: P2/P3/P4/P6/P8 done, P1/P5 closed as N/A
+(corrections recorded above), P7 open (founder call).
 
 Also fixed from device testing (not original audit items): training-load
 suitability (assisted regressions kept out of plans and swaps for
