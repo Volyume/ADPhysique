@@ -27,8 +27,6 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 
-const CRASH_LOG_KEY = '@volyume_crash_log';
-
 export default function LoginScreen({ navigation, route }) {
   // No anonymous-mode action: per IDENTITY_AND_OWNERSHIP_LOCKED.md
   // rule 1 ("No anonymous mode") + rule 5 (no migrateLocalUserId) +
@@ -51,13 +49,6 @@ export default function LoginScreen({ navigation, route }) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [crashLog, setCrashLog] = useState(null);
-
-  React.useEffect(() => {
-    AsyncStorage.getItem(CRASH_LOG_KEY).then(raw => {
-      if (raw) { try { setCrashLog(JSON.parse(raw)); } catch (_) {} }
-    }).catch(() => {});
-  }, []);
 
   async function handleEmailAuth() {
     if (!email.trim() || !password.trim()) {
@@ -233,18 +224,6 @@ export default function LoginScreen({ navigation, route }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Crash log, shown only when a previous fatal error was stored */}
-          {crashLog && (
-            <View style={styles.crashBanner}>
-              <Text style={styles.crashTitle}>Previous crash detected. Screenshot this:</Text>
-              <Text style={styles.crashMsg}>{crashLog.message}</Text>
-              <Text style={styles.crashStack}>{crashLog.stack?.slice(0, 400)}</Text>
-              <TouchableOpacity onPress={() => { AsyncStorage.removeItem(CRASH_LOG_KEY); setCrashLog(null); }}>
-                <Text style={styles.crashDismiss}>Dismiss</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
           {/* ── Brand block ── */}
           {/* The wordmark asset already contains the "Volyume" lettering,
               so we render the mark and skip the duplicate text underneath.
@@ -355,15 +334,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xxxl,
     paddingBottom: spacing.xxl,
   },
-
-  crashBanner: {
-    backgroundColor: colors.errorBg, borderWidth: 1, borderColor: colors.error,
-    borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.lg,
-  },
-  crashTitle: { color: colors.error, fontWeight: fontWeight.bold, marginBottom: spacing.xs, fontSize: fontSize.sm },
-  crashMsg: { ...type.caption, color: colors.error },
-  crashStack: { color: colors.textMuted, fontSize: fontSize.micro, marginTop: spacing.xs },
-  crashDismiss: { ...type.caption, color: colors.error, marginTop: spacing.sm },
 
   // Brand block
   brand: {

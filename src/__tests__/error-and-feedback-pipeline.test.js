@@ -124,7 +124,7 @@ describe('Error logging pipeline', () => {
     expect(() => sentry.setSentryUser({ id: 'u1' })).not.toThrow();
   });
 
-  test('crash log survives across sessions (LoginScreen banner)', async () => {
+  test('crash log survives across sessions (Settings → Debug Logs)', async () => {
     const { getCrashLog, clearCrashLog } = require('../lib/errorLog');
     const AS = require('@react-native-async-storage/async-storage').default;
     await clearCrashLog();
