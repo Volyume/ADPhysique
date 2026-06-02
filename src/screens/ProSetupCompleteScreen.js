@@ -194,7 +194,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 ) : null}
               </View>
               <Text style={styles.targetsNote}>
-                Hit these most days. Logging food in your diary sharpens your coaching, but it's optional. Your weight trend does the heavy lifting.
+                Hit these most days. Logging your food in your food diary sharpens your coaching, and your weight trend carries the rest.
               </Text>
               {/* First-time nutrition primer pointer. Most users seeing
                   these numbers for the first time have never tracked

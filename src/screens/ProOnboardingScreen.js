@@ -1172,7 +1172,7 @@ export default function ProOnboardingScreen({ navigation }) {
               <Text style={styles.coachCardTitle}>How your coaching works</Text>
             </View>
             <Text style={styles.coachCardBody}>
-              Each morning you weigh in. Once a week you check in. Your coach reads the trend and adjusts your calories and training. Logging food sharpens the calls, but it's optional.
+              Each morning you weigh in. Once a week you check in. Your coach reads the trend and adjusts your calories and training. Logging your food in your food diary sharpens every call, and your weight trend carries the rest.
             </Text>
           </View>
 
