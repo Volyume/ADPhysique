@@ -49,23 +49,35 @@ function freshnessMeta(lastTrainedAt, now) {
 
 // Checkins arrive newest-first. Surfaces a single plain-English read on
 // recovery capacity over the recent run of check-ins, or null when there
-// is not enough signal to say anything useful.
-function computeRecoveryTrendInsight(checkins) {
+// is not enough signal to say anything useful. Reads energy, soreness and
+// sleep quality; sleep is collected on the weekly check-in but, before
+// this, was never read back to the user.
+export function computeRecoveryTrendInsight(checkins) {
   const energies = checkins.map(c => c.energyScore ?? null).filter(v => v !== null);
   const soreness = checkins.map(c => c.sorenessScore ?? null).filter(v => v !== null);
-  if (energies.length < 3 && soreness.length < 3) return null;
+  const sleep = checkins.map(c => c.sleepQuality ?? null).filter(v => v !== null);
+  if (energies.length < 3 && soreness.length < 3 && sleep.length < 3) return null;
 
   const recentEnergy = energies.slice(0, 4);
   const lowEnergyWeeks = recentEnergy.filter(e => e <= 2).length;
   const highEnergyWeeks = recentEnergy.filter(e => e >= 4).length;
   const recentSoreness = soreness.slice(0, 4);
   const highSorenessWeeks = recentSoreness.filter(s => s >= 4).length;
+  // Sleep quality is 1 (Poor) to 5 (Excellent); 2 or below is a short night.
+  const recentSleep = sleep.slice(0, 4);
+  const lowSleepWeeks = recentSleep.filter(s => s <= 2).length;
 
   if (lowEnergyWeeks >= 3) {
     return { type: 'warning', text: `Energy has been low for ${lowEnergyWeeks} check-ins in a row. That's worth paying attention to.` };
   }
   if (highSorenessWeeks >= 3) {
     return { type: 'warning', text: `High soreness has been reported ${highSorenessWeeks} weeks running. Recovery may need more attention.` };
+  }
+  // A run of poor nights is the clearest recovery signal there is. Surface
+  // it in the same insight slot rather than on a card of its own, so the
+  // leaned Consistency surface doesn't grow another chart.
+  if (lowSleepWeeks >= 3) {
+    return { type: 'warning', text: `Sleep has been rated low for ${lowSleepWeeks} check-ins in a row. Worth paying attention to.` };
   }
   if (highEnergyWeeks >= 3) {
     return { type: 'good', text: `Energy has been consistently high across the last ${highEnergyWeeks} check-ins. Good sign.` };
