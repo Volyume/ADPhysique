@@ -63,6 +63,23 @@ function jsonResponse(body: unknown, status: number): Response {
   })
 }
 
+// Constant-time secret comparison. Hashing both sides to fixed-length
+// SHA-256 digests first means the XOR loop runs over a constant 32 bytes
+// regardless of input length, so neither the length nor the contents of the
+// presented token leak through timing. Used for the service-role check below.
+async function timingSafeEqualStr(a: string, b: string): Promise<boolean> {
+  const enc = new TextEncoder()
+  const [ha, hb] = await Promise.all([
+    crypto.subtle.digest('SHA-256', enc.encode(a)),
+    crypto.subtle.digest('SHA-256', enc.encode(b)),
+  ])
+  const va = new Uint8Array(ha)
+  const vb = new Uint8Array(hb)
+  let diff = 0
+  for (let i = 0; i < va.length; i++) diff |= va[i] ^ vb[i]
+  return diff === 0
+}
+
 interface SendPushBody {
   user_id?: string
   title?: string
@@ -95,11 +112,11 @@ serve(async (req: Request) => {
   // Service-to-service auth: the caller must present the service-role
   // key. This endpoint writes to no user-scoped state on the caller's
   // behalf, but it CAN push to any user, so it must not be callable by
-  // an ordinary client. Constant-time-ish compare is overkill for a
-  // shared secret of this length; a direct compare is fine.
+  // an ordinary client. Compared in constant time (timingSafeEqualStr)
+  // so the secret can't be recovered through a timing side-channel.
   const authHeader = req.headers.get('Authorization') ?? ''
   const token = authHeader.replace(/^Bearer\s+/i, '')
-  if (token !== serviceRoleKey) {
+  if (!(await timingSafeEqualStr(token, serviceRoleKey))) {
     console.error('[send-push] unauthorised: caller is not service-role')
     return jsonResponse({ ok: false, error: 'Unauthorised' }, 401)
   }
