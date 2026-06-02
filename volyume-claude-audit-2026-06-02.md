@@ -2270,3 +2270,51 @@ findings are hygiene + one perf scaling concern, not correctness emergencies.
   interaction-level per-flow tracing; per-policy RLS clause read; per-input
   validation trace. Next ISSUE id: ISSUE-010. Resume order: highest-value is
   acting on the findings above; further auditing has diminishing returns.
+
+---
+
+## FIX DISPOSITIONS (2026-06-02)
+
+After the "fix everything" pass, with deeper analysis of each item:
+
+### FIXED (committed)
+- **ISSUE-004 (typecheck path):** added `npm run typecheck` (tsc --noEmit, exit
+  0), TypeScript 5.9.3 devDep, tsconfig with allowJs + checkJs:false (opt-in)
+  + moduleResolution:bundler, scoped to src/App/index. DONE.
+- **ISSUE-003 (constant-time compare):** send-push now uses `timingSafeEqualStr`
+  (SHA-256 digest + XOR compare). DONE (needs `supabase functions deploy`).
+
+### DEFERRED — with reason (NOT silently skipped)
+- **ISSUE-002 (sync throttle reset):** DOWNGRADED on deeper read. App.js has a
+  SECOND, unthrottled foreground sync (`callSyncAll('foreground')`, 665-667)
+  that fires `syncAll` on every `active` regardless of `maybeSync`'s throttle.
+  So the cloud sync is NOT actually skipped after a re-login — only maybeSync's
+  health-import/queue-drain side calls are, for ≤60s. Touching this delicate
+  runtime-critical lifecycle code for that marginal gain is not worth the risk
+  (Rule 5). Leave as-is.
+- **ISSUE-009 (unreachable ExerciseLibrary):** RECLASSIFIED. Exercises are added
+  via inline modals (ManualBuilder `ExercisePickerModal`; RoutineDetail
+  `showAddExercise`). ExerciseLibraryScreen is a full exercise browser +
+  CUSTOM-EXERCISE CREATOR (`route.params?.onSelect`, create form) that pairs
+  with the unused custom-exercise CRUD in database.js (ISSUE-006). This is a
+  BUILT-BUT-UNWIRED FEATURE, not dead code. Deleting it discards the feature;
+  wiring it adds a new entry point. **Product decision — needs founder intent.**
+- **ISSUE-005 (49 exhaustive-deps):** NOT a safe blanket fix (the brief and the
+  finding both say so). The worst cluster is ActiveWorkoutScreen (live set
+  logging, 6 warnings) — fixing deps wrong there can cause re-render loops /
+  break logging. Needs careful per-site work with the test suite, not a bulk
+  pass. Deferred to a focused session; full site list in Section 5.3.
+- **ISSUE-006 (dead code):** the highest-count cluster (database.js
+  custom-exercise CRUD) is the unwired feature above (do NOT delete). The rest
+  (728 unused-vars + remaining dead exports) is low-value cleanup where each
+  removal needs intra-file-use verification. Deferred to a focused sweep.
+- **ISSUE-007 (Progress focus-reload perf):** the finding itself says MEASURE
+  first. Implementing caching blind risks stale-data bugs. Deferred pending a
+  timing measurement.
+- **ISSUE-008 (Expo/RN upgrade):** locked release freeze. Do not action now.
+- **ISSUE-001 (xlsx dev-dep):** dev-only seed script; swapping the parser needs a
+  new dep for zero shipped benefit. Deferred.
+
+NET: 2 fixed (the safe, mechanical, high-value ones); 7 deferred, each with a
+specific reason. Consistent with the audit headline — this is a healthy codebase
+whose findings are mostly hygiene + decisions, not mechanical bugs to bulk-fix.
