@@ -8,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import { VolyumeIcon } from '../components/BrandMark';
+import OptionCard from '../components/OptionCard';
+import SegmentedControl from '../components/SegmentedControl';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -965,7 +967,6 @@ export default function ProOnboardingScreen({ navigation }) {
 
   if (step === 3) {
     const goalOptions = PHYSIQUE_GOALS.map(g => ({ value: g.value, label: g.label, sub: g.subtitle }));
-    const phaseOptions = TRAINING_PHASES.map(p => ({ value: p.value, label: p.label, sub: p.subtitle }));
     const canContinue = !!experience && !!sessionLengthMinutes && !!equipment && !!trainingGoal && !!trainingPhase;
 
     return (
@@ -978,69 +979,75 @@ export default function ProOnboardingScreen({ navigation }) {
               onBack={goBack}
             />
 
-            <Dropdown
-              label="Training experience"
-              hint="Shapes volume and exercise complexity."
-              value={experience}
-              options={EXPERIENCE_OPTIONS}
-              onChange={setExperience}
-              placeholder="How long have you been training?"
-            />
+            <View style={styles.section}>
+              <Text style={styles.fieldLabel}>Training experience</Text>
+              <Text style={styles.fieldHint}>Shapes volume and exercise complexity.</Text>
+              {EXPERIENCE_OPTIONS.map(opt => (
+                <OptionCard
+                  key={opt.value}
+                  icon="trophy-outline"
+                  label={opt.label}
+                  detail={opt.sub}
+                  active={experience === opt.value}
+                  onPress={() => setExperience(opt.value)}
+                />
+              ))}
+            </View>
 
             <View style={styles.section}>
               <Text style={styles.fieldLabel}>Session length</Text>
               <Text style={styles.fieldHint}>How long is your typical training session?</Text>
-              <View style={styles.segmentRow}>
-                {SESSION_LENGTH_OPTIONS.map(opt => (
-                  <TouchableOpacity
-                    key={opt.value}
-                    style={[styles.segment, sessionLengthMinutes === opt.value && styles.segmentActive]}
-                    onPress={() => setSessionLengthMinutes(opt.value)}
-                  >
-                    <Text style={[styles.segmentText, sessionLengthMinutes === opt.value && styles.segmentTextActive]}>
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <SegmentedControl
+                options={SESSION_LENGTH_OPTIONS}
+                value={sessionLengthMinutes}
+                onChange={setSessionLengthMinutes}
+                accessibilityLabel="Session length"
+              />
             </View>
 
             <View style={styles.section}>
               <Text style={styles.fieldLabel}>Training days per week</Text>
               <Text style={styles.fieldHint}>How many days can you train? Your plan is built to fit this many sessions.</Text>
-              <View style={styles.segmentRow}>
-                {DAYS_PER_WEEK_OPTIONS.map(d => (
-                  <TouchableOpacity
-                    key={d}
-                    style={[styles.segment, daysPerWeek === d && styles.segmentActive]}
-                    onPress={() => setDaysPerWeek(d)}
-                  >
-                    <Text style={[styles.segmentText, daysPerWeek === d && styles.segmentTextActive]}>{d}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <SegmentedControl
+                options={DAYS_PER_WEEK_OPTIONS.map(d => ({ label: String(d), value: d }))}
+                value={daysPerWeek}
+                onChange={setDaysPerWeek}
+                accessibilityLabel="Training days per week"
+              />
             </View>
 
-            <Dropdown
-              label="Equipment"
-              hint="What do you have access to?"
-              value={equipment}
-              options={EQUIPMENT_OPTIONS}
-              onChange={setEquipment}
-              placeholder="Select your equipment"
-            />
+            <View style={styles.section}>
+              <Text style={styles.fieldLabel}>Equipment</Text>
+              <Text style={styles.fieldHint}>What do you have access to?</Text>
+              {EQUIPMENT_OPTIONS.map(opt => (
+                <OptionCard
+                  key={opt.value}
+                  icon="barbell-outline"
+                  label={opt.label}
+                  detail={opt.sub}
+                  active={equipment === opt.value}
+                  onPress={() => setEquipment(opt.value)}
+                />
+              ))}
+            </View>
 
             {/* Primary question, single source of truth for what the
                 current block is doing. Drives calories, plan structure,
                 weak-point spec, and strength-size emphasis. */}
-            <Dropdown
-              label="What are you focused on right now?"
-              hint="Drives your calorie target and how your plan is built. Pick what your current block is doing."
-              value={trainingPhase}
-              options={phaseOptions}
-              onChange={setTrainingPhase}
-              placeholder="Pick your current focus"
-            />
+            <View style={styles.section}>
+              <Text style={styles.fieldLabel}>What are you focused on right now?</Text>
+              <Text style={styles.fieldHint}>Drives your calorie target and how your plan is built. Pick what your current block is doing.</Text>
+              {TRAINING_PHASES.map(phase => (
+                <OptionCard
+                  key={phase.value}
+                  icon={phase.icon}
+                  label={phase.label}
+                  detail={phase.detail}
+                  active={trainingPhase === phase.value}
+                  onPress={() => setTrainingPhase(phase.value)}
+                />
+              ))}
+            </View>
 
             {/* Secondary, optional, only matters for competitive lifters
                 chasing a specific physique category. Defaults to 'general'
@@ -1176,14 +1183,20 @@ export default function ProOnboardingScreen({ navigation }) {
             </Text>
           </View>
 
-          <Dropdown
-            label="How's your recovery?"
-            hint="This affects how much volume your plan includes. Be honest. It adjusts to protect you."
-            value={recoveryRating}
-            options={RECOVERY_OPTIONS}
-            onChange={setRecoveryRating}
-            placeholder="Select your recovery level"
-          />
+          <View style={styles.section}>
+            <Text style={styles.fieldLabel}>How's your recovery?</Text>
+            <Text style={styles.fieldHint}>This affects how much volume your plan includes. Be honest. It adjusts to protect you.</Text>
+            {RECOVERY_OPTIONS.map(opt => (
+              <OptionCard
+                key={opt.value}
+                icon="bed-outline"
+                label={opt.label}
+                detail={opt.sub}
+                active={recoveryRating === opt.value}
+                onPress={() => setRecoveryRating(opt.value)}
+              />
+            ))}
+          </View>
 
           <View style={styles.section}>
             <Text style={styles.fieldLabel}>Coaching reminders</Text>

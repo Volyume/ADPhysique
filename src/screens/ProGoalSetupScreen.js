@@ -8,6 +8,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import Chip from '../components/Chip';
+import OptionCard from '../components/OptionCard';
+import SegmentedControl from '../components/SegmentedControl';
 import BackHeader from '../components/BackHeader';
 import { useToast } from '../components/Toast';
 import {
@@ -391,144 +393,84 @@ export default function ProGoalSetupScreen({ navigation }) {
           Drives your calorie target and how the plan is built. Pick what your current block is doing.
         </Text>
 
-        {TRAINING_PHASES.map(phase => {
-          const active = selectedPhase === phase.value;
-          return (
-            <TouchableOpacity
-              key={phase.value}
-              style={[styles.phaseCard, active && styles.phaseCardActive]}
-              onPress={() => setSelectedPhase(phase.value)}
-              activeOpacity={0.75}
-            >
-              <View style={styles.phaseIconWrap}>
-                <Ionicons name={phase.icon} size={20} color={active ? colors.primary : colors.textSecondary} />
-              </View>
-              <View style={styles.phaseBody}>
-                <Text style={[styles.phaseLabel, active && styles.phaseLabelActive]}>{phase.label}</Text>
-                <Text style={styles.phaseDetail}>{phase.detail}</Text>
-              </View>
-              {active && (
-                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-              )}
-            </TouchableOpacity>
-          );
-        })}
+        {TRAINING_PHASES.map(phase => (
+          <OptionCard
+            key={phase.value}
+            icon={phase.icon}
+            label={phase.label}
+            detail={phase.detail}
+            active={selectedPhase === phase.value}
+            onPress={() => setSelectedPhase(phase.value)}
+          />
+        ))}
 
         {/* ── Training experience ── */}
         <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Experience</Text>
         <Text style={styles.sectionSub}>
           Sets starting volume and exercise selection. You can change this when your training maturity moves.
         </Text>
-        {EXPERIENCE_OPTIONS.map(opt => {
-          const active = experience === opt.value;
-          return (
-            <TouchableOpacity
-              key={opt.value}
-              style={[styles.phaseCard, active && styles.phaseCardActive]}
-              onPress={() => setExperience(opt.value)}
-              activeOpacity={0.75}
-            >
-              <View style={styles.phaseIconWrap}>
-                <Ionicons name="trophy-outline" size={18} color={active ? colors.primary : colors.textSecondary} />
-              </View>
-              <View style={styles.phaseBody}>
-                <Text style={[styles.phaseLabel, active && styles.phaseLabelActive]}>{opt.label}</Text>
-                <Text style={styles.phaseDetail}>{opt.sub}</Text>
-              </View>
-              {active && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
-            </TouchableOpacity>
-          );
-        })}
+        {EXPERIENCE_OPTIONS.map(opt => (
+          <OptionCard
+            key={opt.value}
+            icon="trophy-outline"
+            label={opt.label}
+            detail={opt.sub}
+            active={experience === opt.value}
+            onPress={() => setExperience(opt.value)}
+          />
+        ))}
 
         {/* ── Training schedule ── */}
         <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Training days per week</Text>
         <Text style={styles.sectionSub}>
           Changing the split affects exercise spread. Plan rebuilds around the new frequency.
         </Text>
-        <View style={styles.chipRow}>
-          {DAYS_OPTIONS.map(d => {
-            const active = daysPerWeek === d;
-            return (
-              <TouchableOpacity
-                key={d}
-                style={[styles.scheduleChip, active && styles.scheduleChipActive]}
-                onPress={() => setDaysPerWeek(d)}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.scheduleChipText, active && styles.scheduleChipTextActive]}>{d}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        <SegmentedControl
+          options={DAYS_OPTIONS.map(d => ({ label: String(d), value: d }))}
+          value={daysPerWeek}
+          onChange={setDaysPerWeek}
+          accessibilityLabel="Training days per week"
+        />
 
         <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Session length</Text>
-        <View style={styles.chipRow}>
-          {SESSION_LENGTH_OPTIONS.map(opt => {
-            const active = sessionLengthMinutes === opt.value;
-            return (
-              <TouchableOpacity
-                key={opt.value}
-                style={[styles.scheduleChip, active && styles.scheduleChipActive]}
-                onPress={() => setSessionLengthMinutes(opt.value)}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.scheduleChipText, active && styles.scheduleChipTextActive]}>{opt.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        <SegmentedControl
+          options={SESSION_LENGTH_OPTIONS}
+          value={sessionLengthMinutes}
+          onChange={setSessionLengthMinutes}
+          accessibilityLabel="Session length"
+        />
 
         {/* ── Equipment ── */}
         <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Equipment</Text>
         <Text style={styles.sectionSub}>
           What you have access to. Exercise selection adapts to the kit available.
         </Text>
-        {EQUIPMENT_OPTIONS.map(opt => {
-          const active = equipment === opt.value;
-          return (
-            <TouchableOpacity
-              key={opt.value}
-              style={[styles.phaseCard, active && styles.phaseCardActive]}
-              onPress={() => setEquipment(opt.value)}
-              activeOpacity={0.75}
-            >
-              <View style={styles.phaseIconWrap}>
-                <Ionicons name="barbell-outline" size={18} color={active ? colors.primary : colors.textSecondary} />
-              </View>
-              <View style={styles.phaseBody}>
-                <Text style={[styles.phaseLabel, active && styles.phaseLabelActive]}>{opt.label}</Text>
-                <Text style={styles.phaseDetail}>{opt.sub}</Text>
-              </View>
-              {active && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
-            </TouchableOpacity>
-          );
-        })}
+        {EQUIPMENT_OPTIONS.map(opt => (
+          <OptionCard
+            key={opt.value}
+            icon="barbell-outline"
+            label={opt.label}
+            detail={opt.sub}
+            active={equipment === opt.value}
+            onPress={() => setEquipment(opt.value)}
+          />
+        ))}
 
         {/* ── Recovery ── */}
         <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Recovery</Text>
         <Text style={styles.sectionSub}>
           How well you're recovering between sessions. Influences how aggressively the coach progresses you.
         </Text>
-        {RECOVERY_OPTIONS.map(opt => {
-          const active = recoveryRating === opt.value;
-          return (
-            <TouchableOpacity
-              key={opt.value}
-              style={[styles.phaseCard, active && styles.phaseCardActive]}
-              onPress={() => setRecoveryRating(opt.value)}
-              activeOpacity={0.75}
-            >
-              <View style={styles.phaseIconWrap}>
-                <Ionicons name="bed-outline" size={18} color={active ? colors.primary : colors.textSecondary} />
-              </View>
-              <View style={styles.phaseBody}>
-                <Text style={[styles.phaseLabel, active && styles.phaseLabelActive]}>{opt.label}</Text>
-                <Text style={styles.phaseDetail}>{opt.sub}</Text>
-              </View>
-              {active && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
-            </TouchableOpacity>
-          );
-        })}
+        {RECOVERY_OPTIONS.map(opt => (
+          <OptionCard
+            key={opt.value}
+            icon="bed-outline"
+            label={opt.label}
+            detail={opt.sub}
+            active={recoveryRating === opt.value}
+            onPress={() => setRecoveryRating(opt.value)}
+          />
+        ))}
 
         {/* ── Protein target ── */}
         <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Protein target</Text>
@@ -710,29 +652,4 @@ const styles = StyleSheet.create({
   saveBtnText: { color: colors.background, ...type.bodyStrong },
   saveBtnTextDisabled: { color: colors.textMuted },
 
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  scheduleChip: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
-    minWidth: 64,
-    alignItems: 'center',
-  },
-  scheduleChipActive: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary,
-  },
-  scheduleChipText: {
-    ...type.num('label'),
-    color: colors.textSecondary,
-  },
-  scheduleChipTextActive: { color: colors.primary },
 });
