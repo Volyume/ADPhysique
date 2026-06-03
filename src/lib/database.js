@@ -4277,15 +4277,27 @@ export async function insertRoutineExerciseFromCloud(re) {
 }
 
 export async function insertMorningWeightFromCloud(userId, w) {
+  if (!userId || !w?.id) return;
   const d = await db();
+  const toMs = (t) => (typeof t === 'string' ? new Date(t).getTime() : (t ?? null));
+  // Last-write-wins (SYNC-6). The legacy INSERT OR IGNORE never updated an
+  // existing local row, so a morning weight edited on another device never
+  // reconciled here. Skip only when both sides have a timestamp and local is
+  // at least as new (matches insertWorkoutFromCloud + the migrated-table gate).
+  const cloudMs = toMs(w.updated_at);
+  const existing = await d.getFirstAsync('SELECT updated_at FROM morning_weights WHERE id = ?', [w.id]);
+  const localMs = existing?.updated_at ?? null;
+  if (localMs && cloudMs && localMs >= cloudMs) return;
+  const createdAt = toMs(w.created_at) ?? Date.now();
   await d.runAsync(
-    `INSERT OR IGNORE INTO morning_weights (id, user_id, weight_kg, logged_at, notes, created_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT OR REPLACE INTO morning_weights (id, user_id, weight_kg, logged_at, notes, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
       w.id, userId, w.weight_kg,
-      typeof w.logged_at === 'string' ? new Date(w.logged_at).getTime() : w.logged_at,
+      toMs(w.logged_at) ?? Date.now(),
       w.notes ?? null,
-      typeof w.created_at === 'string' ? new Date(w.created_at).getTime() : (w.created_at ?? Date.now()),
+      createdAt,
+      cloudMs ?? createdAt,
     ],
   );
 }

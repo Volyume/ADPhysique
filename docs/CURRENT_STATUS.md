@@ -158,7 +158,11 @@ Repo at session end: `main` at this doc commit on top of `6f4e9c3`, 0/0 with
 origin, suite green (2362 passing across 141 suites), 0 lint errors. expo-crypto
 ~13.0.2 added; What's New sheet mounted live. Migrations 048, 050-055, 058 were
 applied by the founder on 2026-06-01 (so 037-048, 050-058 are live); 049 stays
-held until the next AAB ships.
+held until the next AAB ships. **Migration 060 (morning_weights updated_at +
+touch trigger, SYNC-6) is DRAFTED and pending founder apply** (see
+`supabase/README.md` row 060); the shipped client commit
+(`insertMorningWeightFromCloud` LWW) is safe before it lands (the table simply
+keeps its current re-pull-all behaviour until the column exists).
 
 ### 0.0000000000001. 2026-05-31 (master-audit remediation, Claude): Tier 1 closed, Tier 2 in progress. Paused for a fresh restart tomorrow.
 

@@ -14,7 +14,7 @@
 
 jest.mock('expo-sqlite');
 
-const { db, insertWorkoutFromCloud, insertWorkoutSetFromCloud } = require('../database');
+const { db, insertWorkoutFromCloud, insertWorkoutSetFromCloud, insertMorningWeightFromCloud } = require('../database');
 
 const iso = (ms) => new Date(ms).toISOString();
 let conn;
@@ -89,6 +89,48 @@ describe('insertWorkoutSetFromCloud LWW gate', () => {
     conn.getFirstAsync.mockResolvedValue(null);
 
     await insertWorkoutSetFromCloud('u1', setRow(2000));
+
+    expect(conn.runAsync).toHaveBeenCalledTimes(1);
+  });
+});
+
+// SYNC-6: morning_weights cloud-restore used INSERT OR IGNORE, so an existing
+// local row was never updated and a weight edited on another device never
+// reconciled. It now applies the same last-write-wins gate.
+describe('insertMorningWeightFromCloud LWW gate', () => {
+  const row = (updatedMs) => ({ id: 'mw1', weight_kg: 80, logged_at: iso(500), updated_at: iso(updatedMs) });
+
+  test('skips the write when the local weight is newer than the cloud row', async () => {
+    conn.getFirstAsync.mockImplementation(async (sql) =>
+      sql.includes('FROM morning_weights') ? { updated_at: 2000 } : null);
+
+    await insertMorningWeightFromCloud('u1', row(1000));
+
+    expect(conn.runAsync).not.toHaveBeenCalled();
+  });
+
+  test('writes when the cloud row is newer than the local weight (cross-device edit)', async () => {
+    conn.getFirstAsync.mockImplementation(async (sql) =>
+      sql.includes('FROM morning_weights') ? { updated_at: 1000 } : null);
+
+    await insertMorningWeightFromCloud('u1', row(2000));
+
+    expect(conn.runAsync).toHaveBeenCalledTimes(1);
+  });
+
+  test('writes when there is no local weight', async () => {
+    conn.getFirstAsync.mockResolvedValue(null);
+
+    await insertMorningWeightFromCloud('u1', row(2000));
+
+    expect(conn.runAsync).toHaveBeenCalledTimes(1);
+  });
+
+  test('writes when the cloud row has no updated_at (cannot compare, fall back to restore)', async () => {
+    conn.getFirstAsync.mockImplementation(async (sql) =>
+      sql.includes('FROM morning_weights') ? { updated_at: 5000 } : null);
+
+    await insertMorningWeightFromCloud('u1', { id: 'mw1', weight_kg: 80, logged_at: iso(500) });
 
     expect(conn.runAsync).toHaveBeenCalledTimes(1);
   });
