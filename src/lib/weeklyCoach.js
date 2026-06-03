@@ -9,6 +9,7 @@
  */
 
 import { getTrainingNote, isCompetitionGoal } from './coachingGoals';
+import { cutCardioTarget } from './cardio/cardioEngine';
 import {
   shouldSuggestDietBreak,
   computeFFMFloor,
@@ -741,19 +742,18 @@ export function runWeeklyCoach(inputs) {
       note: 'Cardio paused this week. Recovery takes priority.',
     };
   } else if (cardioConditionsMet) {
-    if (consecutiveOffTargetWeeks >= 4 && goalPhase === 'agg_cut') {
-      cardioAdjustment = {
-        prescribed: true,
-        type: 'Cardio boost',
-        note: 'Add one short high-intensity interval session (10 to 15 min) on top of your steady-paced cardio.',
-      };
-    } else {
-      cardioAdjustment = {
-        prescribed: true,
-        type: 'Steady cardio',
-        note: 'Add 3 sessions of 20 to 30 min at an easy pace. You should be able to hold a conversation throughout.',
-      };
-    }
+    // Structured target from the cardio engine (tested). The deficit lever:
+    // 3 easy sessions, plus an interval session on a long aggressive-cut
+    // stall. type/note stay for the CoachOutput card; target carries the
+    // structured dose the cardio surfaces and check-in compliance read. The
+    // user still picks the activity (note says "your choice").
+    const target = cutCardioTarget(consecutiveOffTargetWeeks, goalPhase);
+    cardioAdjustment = {
+      prescribed: true,
+      type: target.includesInterval ? 'Cardio boost' : 'Steady cardio',
+      note: target.note,
+      target,
+    };
   }
 
   // ── RAPID WEIGHT LOSS SAFETY FLAG ────────────────────────────────────────

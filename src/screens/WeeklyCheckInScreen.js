@@ -27,10 +27,12 @@ import {
   getNutritionTargets,
   getUserBodyProfile,
   getDailyStepsRange,
+  getCardioLogRange,
   activityDayKey,
 } from '../lib/database';
 import { localDayKey, todayLocalKey } from '../lib/dayKey';
 import { summariseWeekSteps } from '../lib/stepsSummary';
+import { summariseWeekCardio, cardioComplianceFromLog } from '../lib/cardio/cardioEngine';
 import { getRollupsForRange } from '../lib/food/db';
 import { getCycleTracking, shouldShowCycleQuestion } from '../lib/cyclePrefs';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
@@ -225,6 +227,18 @@ export default function WeeklyCheckInScreen({ navigation }) {
     getDailyStepsRange(user.id, fromDate, toDate)
       .then(rows => setStepsSummary(summariseWeekSteps(rows)))
       .catch(() => setStepsSummary(null));
+    // Cardio compliance: prefill the adherence verdict from the actual log
+    // (sessions done vs the coach target) so the user usually just confirms.
+    // The engine returns the same hit/mostly/missed values the question uses.
+    const cardioTarget = userProfile?.cardioTarget;
+    if (userProfile?.cardioPrescription || cardioTarget) {
+      getCardioLogRange(user.id, fromDate, toDate)
+        .then(rows => {
+          const s = summariseWeekCardio(rows);
+          setCardioAdherence(cardioComplianceFromLog(s.sessions, cardioTarget || { sessionsPerWeek: 3 }));
+        })
+        .catch(() => {});
+    }
   }, [user?.id]);
 
   const weekStart = getCurrentWeekStart();

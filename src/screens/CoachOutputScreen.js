@@ -819,7 +819,14 @@ export default function CoachOutputScreen({ navigation, route }) {
     setApplyingKey('cardio');
     try {
       const prescription = cardio.type ?? cardio.note ?? 'prescribed';
-      await saveLocalProfile(user.id, { ...(userProfile || {}), cardioPrescription: prescription });
+      // Keep the string for back-compat (gates the check-in question) and
+      // store the structured target so check-in compliance can read the
+      // session goal. cardio.target is present from the cardio engine.
+      await saveLocalProfile(user.id, {
+        ...(userProfile || {}),
+        cardioPrescription: prescription,
+        ...(cardio.target ? { cardioTarget: cardio.target } : {}),
+      });
       const updated = markApplied(output, 'cardio', {});
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
