@@ -26,7 +26,7 @@ import RestTimer from '../components/RestTimer';
 import ExercisePickerModal from '../components/ExercisePickerModal';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise, getLastNWorkoutSets, saveExerciseUserNote, getExerciseUserNote, getNextTimeNotes, markNoteShown, updateWorkoutSetPostRating } from '../lib/database';
+import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise, getLastNWorkoutSets, saveExerciseUserNote, getExerciseUserNote, getNextTimeNotes, markNoteShown, updateWorkoutSetPostRating, getWorkoutSetsForWorkout } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import {
@@ -34,7 +34,7 @@ import {
   getProgressionSuggestion,
   computeSetTargets,
   calculate1RM,
-  calculateTonnage,
+  summariseWorkoutSets,
   MUSCLE_DISPLAY_NAMES,
   generateDeloadPrescription,
 } from '../lib/algorithms';
@@ -1074,8 +1074,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             const snapshotElapsed = elapsedSeconds;
 
             async function doFinish() {
-              const allSets = snapshotExercises.flatMap(e => e.sets);
-              const workingSetCount = allSets.filter(s => s.setType !== 'warmup').length;
+              // WK-2: count from the DB, not the in-memory exercise list, so
+              // sets logged on an exercise later swapped out or removed still
+              // count toward the workout total. Those rows stay in the DB and
+              // in history/volume aggregates; snapshotExercises drops them,
+              // which under-reported the finished workout. Fall back to memory
+              // if the read fails.
+              let allSets;
+              try {
+                const dbRows = await getWorkoutSetsForWorkout(activeWorkout.id);
+                allSets = (dbRows && dbRows.length) ? dbRows : snapshotExercises.flatMap(e => e.sets);
+              } catch (_) {
+                allSets = snapshotExercises.flatMap(e => e.sets);
+              }
+              const { totalSets, workingSetCount, tonnage } = summariseWorkoutSets(allSets);
               const sessionName = snapshotExercises.length > 0
                 ? snapshotExercises.slice(0, 2).map(e => e.exercise?.name?.split(' ')[0]).filter(Boolean).join(' & ')
                 : null;
@@ -1085,7 +1097,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 isCompleted: true,
                 name: sessionName,
                 setCount: workingSetCount,
-                totalVolume: calculateTonnage(allSets),
+                totalVolume: tonnage,
               });
               // Push to cloud IMMEDIATELY on finish. Previously the
               // syncWorkout call only fired when the user tapped Close
@@ -1111,9 +1123,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 routineId: activeWorkout.routineId || null,
                 durationMinutes: Math.round(snapshotElapsed / 60),
                 exerciseCount: snapshotExercises.length,
-                setCount: allSets.length,
+                setCount: totalSets,
                 workingSetCount,
-                tonnage: calculateTonnage(allSets),
+                tonnage,
                 exerciseNames: snapshotExercises.map(e => e.exercise?.name).filter(Boolean),
                 detectedPRs,
                 exerciseData: snapshotExercises.map(e => ({

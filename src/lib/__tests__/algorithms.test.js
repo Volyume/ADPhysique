@@ -428,3 +428,49 @@ describe('calculate1RM, high-rep guard (A2-040)', () => {
     }
   });
 });
+
+// WK-2: the finish flow summarises the workout's actual DB sets so that sets
+// logged on an exercise later swapped out or removed still count. This helper
+// is the pure core of that calc.
+describe('summariseWorkoutSets', () => {
+  const { summariseWorkoutSets } = require('../algorithms');
+
+  test('counts every set as totalSets but excludes warm-ups from workingSetCount', () => {
+    const sets = [
+      { setType: 'warmup', weight: 40, actualReps: 10 },
+      { setType: 'straight', weight: 100, actualReps: 8 },
+      { setType: 'straight', weight: 100, actualReps: 8 },
+    ];
+    const { totalSets, workingSetCount } = summariseWorkoutSets(sets);
+    expect(totalSets).toBe(3);
+    expect(workingSetCount).toBe(2);
+  });
+
+  test('tonnage excludes warm-ups; dropsets count (matches calculateTonnage/isHardSet)', () => {
+    const sets = [
+      { setType: 'warmup', weight: 40, actualReps: 10 },   // excluded from tonnage + workingSetCount
+      { setType: 'straight', weight: 100, actualReps: 8 },  // 800
+      { setType: 'dropset', weight: 50, actualReps: 12 },   // 600 (isHardSet only excludes warm-ups)
+    ];
+    const { totalSets, workingSetCount, tonnage } = summariseWorkoutSets(sets);
+    expect(totalSets).toBe(3);
+    expect(workingSetCount).toBe(2); // straight + dropset (only warm-up excluded)
+    expect(tonnage).toBe(1400);
+  });
+
+  test('reads snake_case set_type from raw DB rows', () => {
+    const dbRows = [
+      { set_type: 'warmup', weight: 40, actual_reps: 10 },
+      { set_type: 'straight', weight: 100, actual_reps: 8 },
+    ];
+    const { totalSets, workingSetCount, tonnage } = summariseWorkoutSets(dbRows);
+    expect(totalSets).toBe(2);
+    expect(workingSetCount).toBe(1);
+    expect(tonnage).toBe(800);
+  });
+
+  test('empty or non-array input yields zeros', () => {
+    expect(summariseWorkoutSets([])).toEqual({ totalSets: 0, workingSetCount: 0, tonnage: 0 });
+    expect(summariseWorkoutSets(null)).toEqual({ totalSets: 0, workingSetCount: 0, tonnage: 0 });
+  });
+});
