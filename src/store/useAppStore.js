@@ -14,6 +14,12 @@ const FIRST_RUN_KEY_PFX = '@volyume_first_run_complete_'; // per-uid: + supabase
 const PROFILE_KEY_PFX  = '@volyume_user_profile_';
 const PROFILE_TIMESTAMPS_KEY_PFX = '@volyume_user_profile_ts_';
 const TIER_KEY         = '@volyume_tier';
+// Crash/kill recovery for an in-progress workout. The store holds the
+// session (activeWorkout + workoutExercises, which carries the logged sets)
+// in memory only; on app kill it was lost and the workouts row stayed
+// is_completed=0 forever, invisible to every history query. We snapshot the
+// slice here on each mutation and rehydrate it on launch (WK-1).
+const ACTIVE_WORKOUT_KEY = '@volyume_active_workout';
 
 // users_profile columns that are user-editable + tracked for the
 // per-column merge conflict strategy (migration 045 +
@@ -42,6 +48,31 @@ async function _persistProfileTimestamps(userId, map) {
       PROFILE_TIMESTAMPS_KEY_PFX + userId,
       JSON.stringify(map),
     );
+  } catch (_) {
+    /* offline-friendly: tolerate */
+  }
+}
+
+// Snapshot (or clear) the in-progress workout for crash/kill recovery (WK-1).
+// Fire-and-forget: called synchronously after each workout mutation. When
+// there's no active workout it clears the key so a finished/cancelled session
+// can't be resurrected. Tagged with the user id so restore only rehydrates
+// for the same account.
+function _persistActiveWorkout(state) {
+  try {
+    if (!state?.activeWorkout) {
+      AsyncStorage.removeItem(ACTIVE_WORKOUT_KEY).catch(() => {});
+      return;
+    }
+    const snapshot = {
+      userId: state.user?.id ?? null,
+      workout: state.activeWorkout,
+      workoutExercises: state.workoutExercises,
+      currentExerciseIndex: state.currentExerciseIndex,
+      workoutStartTime: state.workoutStartTime,
+      savedAt: Date.now(),
+    };
+    AsyncStorage.setItem(ACTIVE_WORKOUT_KEY, JSON.stringify(snapshot)).catch(() => {});
   } catch (_) {
     /* offline-friendly: tolerate */
   }
@@ -765,11 +796,17 @@ const useAppStore = create((set, get) => ({
   lastActivityAt: null,
 
   setActiveWorkout: (workout) => set({ activeWorkout: workout }),
-  setWorkoutExercises: (next) => set((state) => ({
-    workoutExercises:
-      typeof next === 'function' ? next(state.workoutExercises) : next,
-  })),
-  setCurrentExerciseIndex: (i) => set({ currentExerciseIndex: i }),
+  setWorkoutExercises: (next) => {
+    set((state) => ({
+      workoutExercises:
+        typeof next === 'function' ? next(state.workoutExercises) : next,
+    }));
+    _persistActiveWorkout(get());
+  },
+  setCurrentExerciseIndex: (i) => {
+    set({ currentExerciseIndex: i });
+    _persistActiveWorkout(get());
+  },
   updateLastActivity: () => set({ lastActivityAt: Date.now() }),
 
   // Use the functional set() form so two near-simultaneous calls (rapid
@@ -782,6 +819,7 @@ const useAppStore = create((set, get) => ({
         { exercise, routineExercise, sets: [] },
       ],
     }));
+    _persistActiveWorkout(get());
   },
 
   // Subscribers (the inline volume charts, etc.) read this to know
@@ -801,6 +839,7 @@ const useAppStore = create((set, get) => ({
       };
       return { workoutExercises: updated, lastSetLoggedAt: Date.now() };
     });
+    _persistActiveWorkout(get());
   },
 
   startWorkout: (workout, initialExercises = []) => {
@@ -813,6 +852,48 @@ const useAppStore = create((set, get) => ({
       workoutStartTime: Date.now(),
       lastActivityAt: Date.now(),
     });
+    _persistActiveWorkout(get());
+  },
+
+  // Rehydrate an in-progress workout after an app kill/crash (WK-1). Only
+  // restores when the snapshot belongs to the current user AND the workout
+  // row is still incomplete in the DB (otherwise it was finished/cancelled
+  // and the snapshot is stale). Never clobbers a live in-memory session.
+  // Called on Home mount; surfacing the restored activeWorkout makes the
+  // existing "Session in Progress" card appear.
+  restoreActiveWorkout: async (userId) => {
+    try {
+      if (!userId || get().activeWorkout) return false;
+      const raw = await AsyncStorage.getItem(ACTIVE_WORKOUT_KEY);
+      if (!raw) return false;
+      let snap = null;
+      try { snap = JSON.parse(raw); } catch (_) { snap = null; }
+      if (!snap?.workout?.id || snap.userId !== userId) {
+        await AsyncStorage.removeItem(ACTIVE_WORKOUT_KEY).catch(() => {});
+        return false;
+      }
+      // Validate against the DB: the row must still exist and be incomplete.
+      let row = null;
+      try {
+        // eslint-disable-next-line global-require
+        const { getWorkoutById } = require('../lib/database');
+        row = await getWorkoutById(snap.workout.id);
+      } catch (_) { row = null; }
+      if (!row || row.isCompleted || row.is_completed) {
+        await AsyncStorage.removeItem(ACTIVE_WORKOUT_KEY).catch(() => {});
+        return false;
+      }
+      set({
+        activeWorkout: snap.workout,
+        workoutExercises: Array.isArray(snap.workoutExercises) ? snap.workoutExercises : [],
+        currentExerciseIndex: snap.currentExerciseIndex ?? 0,
+        workoutStartTime: snap.workoutStartTime ?? Date.now(),
+        lastActivityAt: Date.now(),
+      });
+      return true;
+    } catch (_) {
+      return false;
+    }
   },
 
   endWorkout: () => {
@@ -830,6 +911,9 @@ const useAppStore = create((set, get) => ({
       restTimerActive: false,
       lastActivityAt: null,
     });
+    // Clear the crash-recovery snapshot so a finished/cancelled session
+    // can't be resurrected on next launch (activeWorkout is now null).
+    _persistActiveWorkout(get());
   },
 
   // Rest timer. Anchored to a wall-clock end timestamp (restTimerEndsAt) so it

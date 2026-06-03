@@ -51,9 +51,23 @@ function getGreeting(firstName) {
 
 export default function HomeScreen({ navigation }) {
   const toast = useToast();
-  const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits } = useAppStore(
-    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits }))
+  const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits, restoreActiveWorkout } = useAppStore(
+    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout }))
   );
+
+  // WK-1: recover an in-progress workout after an app kill/crash. The store
+  // holds the session in memory only, so a kill stranded the logged sets
+  // under an is_completed=0 row. Rehydrating here makes the "Session in
+  // Progress" card reappear so the user can resume and finish it. No-ops when
+  // a session is already live or no snapshot matches this user.
+  useEffect(() => {
+    if (user?.id && !activeWorkout) {
+      restoreActiveWorkout(user.id);
+    }
+    // Only on user change: re-running on every activeWorkout change is
+    // unnecessary (the guard already prevents clobbering a live session).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
   // Cloud-sync version bumps when pullFromCloud finishes; HomeScreen
   // re-runs loadData so the empty state swaps for real data without
   // the user navigating away and back.
