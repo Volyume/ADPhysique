@@ -112,6 +112,17 @@ export const SYNC_REGISTRY = [
     direction: 'bidirectional',
   },
   {
+    // Cardio session log (cardio-integration audit). Many rows per day, so
+    // pk (user_id, id) not (user_id, entry_date). Soft delete + LWW, same
+    // contract as recipe_ingredients. Cloud migration 064.
+    table: 'cardio_log',
+    pk: ['user_id', 'id'],
+    conflictStrategy: 'last_write_wins',
+    serverAuthoritative: false,
+    softDelete: true,
+    direction: 'bidirectional',
+  },
+  {
     table: 'ed_pattern_flags',
     pk: 'id',
     conflictStrategy: 'server_wins',

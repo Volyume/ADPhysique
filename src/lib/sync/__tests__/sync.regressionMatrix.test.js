@@ -198,6 +198,9 @@ describe('Matrix coverage', () => {
       // daily_steps (activity store): push/pull covered in the dedicated
       // sync.dailySteps.test.js.
       'daily_steps',
+      // cardio_log (cardio session store): push/pull covered in the
+      // dedicated sync.cardioLog.test.js.
+      'cardio_log',
       // Pull-only handlers:
       'ed_pattern_flags', 'tier_history', 'daily_intake_rollups',
       // Aliased no-op handler:

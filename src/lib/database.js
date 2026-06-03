@@ -3837,6 +3837,70 @@ export async function getRecentCardioLog(userId, limit = 50) {
   return rows.map(rowToCamel);
 }
 
+// Rows for the sync push window (anything inserted/edited/deleted in the last
+// N days, by updated_at). Includes soft-deleted rows so a delete propagates.
+// Used by the cardio_log per-table push handler.
+export async function getCardioLogForPush(userId, days = 400) {
+  if (!userId) return [];
+  const d = await db();
+  const cutoff = Date.now() - days * 86400000;
+  const rows = await d.getAllAsync(
+    'SELECT * FROM cardio_log WHERE user_id = ? AND updated_at >= ? ORDER BY updated_at ASC',
+    [userId, cutoff],
+  );
+  return rows.map(rowToCamel);
+}
+
+// Local updated_at (ms) for one row id, or null. The pull handler's LWW gate.
+export async function getCardioLogUpdatedAt(userId, id) {
+  if (!userId || !id) return null;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT updated_at FROM cardio_log WHERE user_id = ? AND id = ?',
+    [userId, id],
+  );
+  return row?.updated_at ?? null;
+}
+
+// Apply a cloud row (snake_case) into the local mirror, including soft-delete
+// state. Upsert on (user_id, id); the caller has already won the LWW check.
+export async function insertCardioLogFromCloud(userId, row) {
+  if (!userId || !row?.id) return null;
+  const d = await db();
+  const toMs = (t) => (t == null ? null : (typeof t === 'number' ? t : Date.parse(t) || null));
+  await d.runAsync(
+    `INSERT INTO cardio_log (user_id, id, entry_date, activity_id, activity_name,
+       category, duration_min, intensity, met, est_kcal, recovery_impact,
+       impact_type, distance, avg_hr, source, notes, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(user_id, id) DO UPDATE SET
+       entry_date = excluded.entry_date,
+       activity_id = excluded.activity_id,
+       activity_name = excluded.activity_name,
+       category = excluded.category,
+       duration_min = excluded.duration_min,
+       intensity = excluded.intensity,
+       met = excluded.met,
+       est_kcal = excluded.est_kcal,
+       recovery_impact = excluded.recovery_impact,
+       impact_type = excluded.impact_type,
+       distance = excluded.distance,
+       avg_hr = excluded.avg_hr,
+       source = excluded.source,
+       notes = excluded.notes,
+       updated_at = excluded.updated_at,
+       deleted_at = excluded.deleted_at`,
+    [userId, row.id, row.entry_date, row.activity_id ?? null, row.activity_name ?? 'Cardio',
+      row.category ?? null, Math.round(Number(row.duration_min) || 0), row.intensity ?? 'moderate',
+      row.met != null ? Number(row.met) : null, row.est_kcal != null ? Math.round(Number(row.est_kcal)) : null,
+      row.recovery_impact ?? null, row.impact_type ?? null,
+      row.distance != null ? Number(row.distance) : null, row.avg_hr != null ? Math.round(Number(row.avg_hr)) : null,
+      row.source ?? 'manual', row.notes ?? null,
+      toMs(row.created_at) ?? Date.now(), toMs(row.updated_at) ?? Date.now(), toMs(row.deleted_at)],
+  );
+  return true;
+}
+
 // Rows for the sync push window (most recent N days). Step history is one
 // small row per day, so a generous window is cheap. Used by the
 // daily_steps per-table push handler.

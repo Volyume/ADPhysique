@@ -24,6 +24,7 @@ const EXPECTED_TABLES = [
   'daily_water',
   'daily_intake_rollups',
   'daily_steps',
+  'cardio_log',
   'ed_pattern_flags',
   'tier_history',
   'body_composition_log',
