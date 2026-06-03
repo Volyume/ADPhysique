@@ -19,7 +19,9 @@ import {
   getWorkoutTemplates, getPlanWorkoutCounts, getAllRoutineExerciseCounts,
   activatePlanWithBlock, getRoutinesForPlan, createWorkout, getRoutineExercisesWithDetails,
   archivePlan, unarchivePlan, duplicatePlan, softDeleteRoutine, getActiveBlock,
+  getCardioLogRange, activityDayKey,
 } from '../lib/database';
+import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
 import { getBlockAdvice } from '../lib/blockAdvisor';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import useAppStore from '../store/useAppStore';
@@ -81,6 +83,44 @@ const BLOCK_ICON = {
   in_recovery: 'moon-outline',
   post_recovery: 'checkmark-circle-outline',
 };
+
+// Weekly cardio card on Plans. Shows the coach target (if one is applied) and
+// this week's progress, or just the week's count when cardio is available but
+// not allocated. Tap to log. Reads cardio_log for the trailing seven days.
+function CardioPlanCard({ userId, target, onPress }) {
+  const [summary, setSummary] = useState(null);
+  useFocusEffect(useCallback(() => {
+    let live = true;
+    const to = activityDayKey();
+    const from = activityDayKey(Date.now() - 6 * 24 * 60 * 60 * 1000);
+    getCardioLogRange(userId, from, to)
+      .then((rows) => { if (live) setSummary(summariseWeekCardio(rows)); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [userId]));
+
+  const done = summary?.sessions ?? 0;
+  const goal = target?.sessionsPerWeek ?? 0;
+  const sub = goal > 0
+    ? `${done} of ${goal} sessions this week. Your choice of activity.`
+    : (done > 0
+      ? `${done} session${done === 1 ? '' : 's'} this week, ${summary.totalMinutes} min.`
+      : 'Log any cardio you do. The coach sets a target only if a cut stalls.');
+
+  return (
+    <View style={styles.cardioCard}>
+      <View style={styles.cardioHeader}>
+        <Ionicons name="heart-outline" size={18} color={colors.primary} />
+        <Text style={styles.cardioTitle}>Cardio this week</Text>
+      </View>
+      <Text style={styles.cardioSub}>{sub}</Text>
+      <TouchableOpacity style={styles.cardioBtn} onPress={onPress} accessibilityRole="button" accessibilityLabel="Log cardio">
+        <Ionicons name="add" size={16} color={colors.primary} />
+        <Text style={styles.cardioBtnText}>Log cardio</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 export default function PlansScreen({ navigation }) {
   const toast = useToast();
@@ -745,6 +785,14 @@ export default function PlansScreen({ navigation }) {
         </View>
           </>
         ) : null}
+
+        {tier === 'pro' && user?.id && userProfile?.cardioEnabled !== false ? (
+          <CardioPlanCard
+            userId={user.id}
+            target={userProfile?.cardioTarget}
+            onPress={() => navigation.navigate('LogCardio')}
+          />
+        ) : null}
       </ScrollView>
       <PeekMenu ref={peekRef} />
     </SafeAreaView>
@@ -754,6 +802,19 @@ export default function PlansScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
+  cardioCard: {
+    backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1,
+    borderColor: colors.border, padding: spacing.md, gap: spacing.sm,
+  },
+  cardioHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  cardioTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  cardioSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
+  cardioBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs, alignSelf: 'flex-start',
+    paddingVertical: spacing.xs, paddingHorizontal: spacing.md,
+    backgroundColor: colors.primaryBg, borderRadius: radius.sm,
+  },
+  cardioBtnText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
   skeletonWrap: { gap: spacing.lg },
   screenHeader: {
     flexDirection: 'row',
