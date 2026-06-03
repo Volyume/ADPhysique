@@ -48,9 +48,15 @@ export function whenSyncIdle({ timeoutMs = 5000 } = {}) {
   if (!_runLock) return Promise.resolve(true);
   return new Promise((resolve) => {
     let settled = false;
-    const finish = (v) => { if (!settled) { settled = true; resolve(v); } };
+    let timer = null;
+    const finish = (v) => {
+      if (settled) return;
+      settled = true;
+      if (timer) { clearTimeout(timer); timer = null; }
+      resolve(v);
+    };
     _idleWaiters.push(() => finish(true));
-    if (timeoutMs > 0) setTimeout(() => finish(false), timeoutMs);
+    if (timeoutMs > 0) timer = setTimeout(() => finish(false), timeoutMs);
   });
 }
 

@@ -120,3 +120,17 @@ test('counts a helper that THROWS while reading local data (not just PostgREST {
 
   expect(result.errors).toBeGreaterThan(0);
 });
+
+test('counts a THROWN failure in the workouts push loop (sets read fails)', async () => {
+  // Clean cloud client, one completed workout, but reading its sets throws.
+  // The workouts loop catch must count it (it's a throw, not a PostgREST
+  // {error}) so the sign-out push-first safety sees the failure (SYNC-1
+  // re-audit: this loop was previously logWarn, uncounted).
+  getSupabaseClient.mockReturnValue(clientWithUpsertError(null));
+  db.getAllWorkouts.mockResolvedValue([{ id: 'w1', isCompleted: true }]);
+  db.getWorkoutSetsForWorkout.mockRejectedValue(new Error('sqlite read failed'));
+
+  const result = await bulkUploadLocalData('cloud-uid', 'local-uid');
+
+  expect(result.errors).toBeGreaterThan(0);
+});

@@ -592,7 +592,13 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
             // Per-workout failure doesn't abort the batch but it is logged
             // so the user can spot patterns in the Debug logs surface
             // (e.g. "every workout from 2024-12 fails, schema mismatch").
-            logWarn('sync.bulkUploadLocalData', 'workout upload failed', {
+            // logBulkWarn (not logWarn) so a THROWN failure here — a local
+            // sets-read error, or an upsert that threw rather than returning
+            // {error} — is counted for the sign-out push-first safety, same as
+            // the _pushX helpers. An {error} was already counted via logPgErr
+            // inside _upsertWorkout/_upsertSets; the resulting double-count is
+            // harmless (errors > 0 is the only thing that matters). (SYNC-1)
+            logBulkWarn('sync.bulkUploadLocalData', 'workout upload failed', {
               workoutId: w?.id, supabaseUserId, error: e?.message,
             });
           }
