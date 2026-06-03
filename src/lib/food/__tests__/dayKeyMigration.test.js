@@ -70,6 +70,19 @@ test('skips entries with no logged_at (cannot recompute)', async () => {
   expect(updateEntryDateCalls()).toHaveLength(0);
 });
 
+test('a rollup-rebuild failure propagates (atomic; caller leaves the flag unset to retry)', async () => {
+  // Row needs re-keying, but the rollup recompute read fails. The re-key +
+  // recompute share one transaction, so the failure must propagate (in a real
+  // DB it rolls back), rather than leaving the entry re-keyed with a stale
+  // rollup and the migration silently marked done.
+  conn.getAllAsync.mockResolvedValueOnce([
+    { id: 'fe1', entry_date: '2026-06-04', logged_at: Date.UTC(2026, 5, 3, 12, 0, 0) },
+  ]);
+  conn.getFirstAsync.mockRejectedValue(new Error('rollup read failed'));
+
+  await expect(rekeyFoodEntriesToLocalDay('u1')).rejects.toThrow();
+});
+
 test('returns 0 and does nothing without a userId', async () => {
   const changed = await rekeyFoodEntriesToLocalDay(null);
   expect(changed).toBe(0);

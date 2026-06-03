@@ -290,6 +290,12 @@ export async function rekeyFoodEntriesToLocalDay(userId) {
   }
   if (updates.length === 0) return 0;
   const now = Date.now();
+  // Re-key AND rebuild the affected days' rollups in ONE transaction so they
+  // commit atomically. If the recompute throws, the entry_date updates roll
+  // back too, the guard flag stays unset, and the next launch redoes the whole
+  // thing cleanly. (Previously the recompute ran after the txn: a failure there
+  // left the entries re-keyed but the rollups stale, and the re-run early-
+  // returned before recomputing because nothing was left to update.)
   await runInTransaction(d, async () => {
     for (const [id, newKey] of updates) {
       await d.runAsync(
@@ -297,11 +303,11 @@ export async function rekeyFoodEntriesToLocalDay(userId) {
         [newKey, now, id],
       );
     }
+    // Rebuild every day that lost or gained entries (old key and new key).
+    for (const day of affectedDays) {
+      await recomputeRollup(userId, day);
+    }
   });
-  // Rebuild every day that lost or gained entries (old key and new key).
-  for (const day of affectedDays) {
-    await recomputeRollup(userId, day);
-  }
   return updates.length;
 }
 
