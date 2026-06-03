@@ -450,11 +450,15 @@ export default function HomeScreen({ navigation }) {
       }
       const trainedWeeks = new Set(completedTs.map(localWeekStartMs));
       let streak = 0;
-      const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
       let cursor = localWeekStartMs(Date.now());
       while (trainedWeeks.has(cursor)) {
         streak += 1;
-        cursor -= WEEK_MS;
+        // TZ-3: step back one calendar week (DST-safe) and re-anchor to the
+        // local Monday midnight. Subtracting a fixed 7*24h drifts by ±1h across
+        // a DST change, so the previous week's key no longer matched and the
+        // streak truncated at the DST week.
+        const c = new Date(cursor);
+        cursor = new Date(c.getFullYear(), c.getMonth(), c.getDate() - 7).getTime();
       }
       setWeekStreak(streak);
 

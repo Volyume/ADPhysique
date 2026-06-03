@@ -3442,8 +3442,15 @@ export async function logMorningWeight(userId, { weightKg, loggedAt = Date.now()
     const d2 = new Date(ms);
     return new Date(d2.getFullYear(), d2.getMonth(), d2.getDate()).getTime();
   };
+  // TZ-2: end the window at the NEXT local midnight, not dayStart + 86400000.
+  // On a DST day the local day is 23 or 25h long, so a fixed 24h window either
+  // overlaps the adjacent day or misses the last hour (duplicate day rows).
+  const nextLocalDay = (ms) => {
+    const d2 = new Date(ms);
+    return new Date(d2.getFullYear(), d2.getMonth(), d2.getDate() + 1).getTime();
+  };
   const dayStart = startLocalDay(loggedAt);
-  const dayEnd = dayStart + 86400000;
+  const dayEnd = nextLocalDay(loggedAt);
   const existing = await d.getFirstAsync(
     'SELECT id FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND logged_at < ?',
     [userId, dayStart, dayEnd],
@@ -3497,9 +3504,11 @@ export async function getMorningWeightToday(userId) {
   // Local-time midnight. See note in logMorningWeight above.
   const now = new Date();
   const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  // TZ-2: next local midnight, not +86400000 (DST-safe; see logMorningWeight).
+  const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
   const row = await d.getFirstAsync(
     'SELECT * FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND logged_at < ?',
-    [userId, dayStart, dayStart + 86400000],
+    [userId, dayStart, dayEnd],
   );
   return rowToCamel(row);
 }
@@ -3731,13 +3740,16 @@ export async function getWeeklySessionStats(userId, weekStart) {
 // carb-cycle target (GAP row 6): the day flips to the training-day
 // target as soon as a session is started, so the higher carb allowance
 // is available while training rather than only after the workout is
-// finished. dateIso is a 'YYYY-MM-DD' string; bounds are UTC to match
-// the diary's isoDate (which uses toISOString).
+// finished. dateIso is a 'YYYY-MM-DD' string. TZ-1/TZ-2: parse it as a LOCAL
+// day (the diary now keys by local day) and bound at the next local midnight,
+// so a late-evening workout is matched to the right calendar day and DST days
+// don't drift the window.
 export async function hasWorkoutOnDate(userId, dateIso) {
   if (!userId || !dateIso) return false;
-  const start = Date.parse(`${dateIso}T00:00:00.000Z`);
-  if (Number.isNaN(start)) return false;
-  const end = start + 86400000;
+  const [y, m, dd] = String(dateIso).split('-').map(Number);
+  if (!y || !m || !dd) return false;
+  const start = new Date(y, m - 1, dd).getTime();
+  const end = new Date(y, m - 1, dd + 1).getTime();
   const d = await db();
   const row = await d.getFirstAsync(
     'SELECT 1 AS hit FROM workouts WHERE user_id = ? AND started_at >= ? AND started_at < ? LIMIT 1',
