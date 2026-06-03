@@ -22,81 +22,41 @@ import {
 
 describe('whyThisTemplates: locked output snapshots', () => {
   test('getVolumeStatusMessage all statuses', () => {
-    expect(getVolumeStatusMessage('below_minimum', 'Chest', 6)).toMatchInlineSnapshot(
-      `"Chest: 6 sets this week. Precision Coaching can add a session or two if you want this muscle growing faster."`
-    );
+    expect(getVolumeStatusMessage('below_minimum', 'Chest', 6)).toMatchInlineSnapshot(`"Chest: 6 sets this week. You can add a session or two if you want this muscle growing faster."`);
     expect(getVolumeStatusMessage('optimal', 'Back', 14)).toMatchInlineSnapshot(
       `"Back: 14 sets this week, right in the range where muscle adapts best."`
     );
-    expect(getVolumeStatusMessage('approaching_limit', 'Shoulders', 18)).toMatchInlineSnapshot(
-      `"Shoulders: 18 sets this week, near the upper end. Good, but watch recovery. Precision Coaching will pull volume back if soreness builds."`
-    );
-    expect(getVolumeStatusMessage('over_limit', 'Quads', 24)).toMatchInlineSnapshot(
-      `"Quads: 24 sets this week, more than your body can likely recover from. Precision Coaching has cut 2-3 sets from next week's plan."`
-    );
+    expect(getVolumeStatusMessage('approaching_limit', 'Shoulders', 18)).toMatchInlineSnapshot(`"Shoulders: 18 sets this week, near the upper end. Good, but watch recovery. Volume pulls back if you get sore."`);
+    expect(getVolumeStatusMessage('over_limit', 'Quads', 24)).toMatchInlineSnapshot(`"Quads: 24 sets this week, more than your body can likely recover from. Next week's plan drops 2-3 sets."`);
   });
 
   test('getProgressionMessage all actions', () => {
-    expect(getProgressionMessage('add_weight', 80, 82.5, 'kg')).toMatchInlineSnapshot(
-      `"Precision Coaching has moved your next session to 82.5kg. You completed every working set at the current weight."`
-    );
-    expect(getProgressionMessage('add_weight', 80, null, 'kg')).toMatchInlineSnapshot(
-      `"Precision Coaching has lifted the target weight for next session. Your current load is no longer challenging enough."`
-    );
-    expect(getProgressionMessage('add_rep')).toMatchInlineSnapshot(
-      `"Precision Coaching is holding the weight and asking for one more rep next time."`
-    );
-    expect(getProgressionMessage('hold')).toMatchInlineSnapshot(
-      `"Precision Coaching is holding the weight and reps steady. Match this performance before going heavier."`
-    );
-    expect(getProgressionMessage('reduce')).toMatchInlineSnapshot(
-      `"Precision Coaching has dropped the weight slightly to rebuild. Quality sets beat grinding reps."`
-    );
+    expect(getProgressionMessage('add_weight', 80, 82.5, 'kg')).toMatchInlineSnapshot(`"Your next session moves to 82.5kg. You completed every working set at the current weight."`);
+    expect(getProgressionMessage('add_weight', 80, null, 'kg')).toMatchInlineSnapshot(`"Target weight goes up next session. Your current load is no longer challenging enough."`);
+    expect(getProgressionMessage('add_rep')).toMatchInlineSnapshot(`"Weight stays the same, aim for one more rep next time."`);
+    expect(getProgressionMessage('hold')).toMatchInlineSnapshot(`"Weight and reps stay steady. Match this performance before going heavier."`);
+    expect(getProgressionMessage('reduce')).toMatchInlineSnapshot(`"Weight drops slightly to rebuild. Quality sets beat grinding reps."`);
   });
 
   test('getAutoRegMessage all actions', () => {
-    expect(getAutoRegMessage('continue')).toMatchInlineSnapshot(
-      `"Recovery scores are holding. Precision Coaching is keeping the plan as written. This is what good progress feels like."`
-    );
-    expect(getAutoRegMessage('hold_volume')).toMatchInlineSnapshot(
-      `"Training is showing strain. Precision Coaching is holding your session content the same this week. Focus on sleep and protein."`
-    );
-    expect(getAutoRegMessage('reduce_volume')).toMatchInlineSnapshot(
-      `"Recovery scores have dropped. Precision Coaching has cut 1-2 sets per exercise this week. Come back stronger next week."`
-    );
-    expect(getAutoRegMessage('deload_now', 5)).toMatchInlineSnapshot(
-      `"Good timing: you've been building for 5 weeks. Precision Coaching has scheduled a lighter week: shorter sessions, same exercises, half the sets."`
-    );
-    expect(getAutoRegMessage('deload_now', 2)).toMatchInlineSnapshot(
-      `"Recovery scores are flagging. Precision Coaching has scheduled a lighter week: shorter sessions, same exercises, half the sets."`
-    );
+    expect(getAutoRegMessage('continue')).toMatchInlineSnapshot(`"Your recovery's holding. The plan stays as written. This is what good progress feels like."`);
+    expect(getAutoRegMessage('hold_volume')).toMatchInlineSnapshot(`"You're showing fatigue this week. Your session content stays the same. Focus on sleep and protein."`);
+    expect(getAutoRegMessage('reduce_volume')).toMatchInlineSnapshot(`"Your recovery's dropped. Next week loses 1-2 sets per exercise. Come back stronger."`);
+    expect(getAutoRegMessage('deload_now', 5)).toMatchInlineSnapshot(`"Good timing: you've been building for 5 weeks. Next week is lighter: shorter sessions, same exercises, half the sets."`);
+    expect(getAutoRegMessage('deload_now', 2)).toMatchInlineSnapshot(`"Your recovery is dropping. Next week is lighter: shorter sessions, same exercises, half the sets."`);
   });
 
   test('getDeloadPredictionMessage all paths', () => {
-    expect(getDeloadPredictionMessage(0, 'Volume has been high for four weeks.')).toMatchInlineSnapshot(
-      `"Precision Coaching has scheduled a lighter week. Volume has been high for four weeks."`
-    );
-    expect(getDeloadPredictionMessage(1, 'Fatigue scores are climbing.')).toMatchInlineSnapshot(
-      `"Precision Coaching expects a lighter week next week. Fatigue scores are climbing."`
-    );
-    expect(getDeloadPredictionMessage(3, 'Block is on track.')).toMatchInlineSnapshot(
-      `"Precision Coaching expects your next lighter week in 3 weeks. Block is on track."`
-    );
-    expect(getDeloadPredictionMessage(null, null)).toMatchInlineSnapshot(
-      `"Continue building. Precision Coaching will schedule a lighter week when recovery scores call for it."`
-    );
+    expect(getDeloadPredictionMessage(0, 'Volume has been high for four weeks.')).toMatchInlineSnapshot(`"A lighter week is scheduled. Volume has been high for four weeks."`);
+    expect(getDeloadPredictionMessage(1, 'Fatigue scores are climbing.')).toMatchInlineSnapshot(`"A lighter week is coming up next. Fatigue scores are climbing."`);
+    expect(getDeloadPredictionMessage(3, 'Block is on track.')).toMatchInlineSnapshot(`"Your next lighter week is about 3 weeks away. Block is on track."`);
+    expect(getDeloadPredictionMessage(null, null)).toMatchInlineSnapshot(`"Keep building. A lighter week gets scheduled when your recovery calls for it."`);
   });
 
   test('getTimeCrunchMessage cuts and trims', () => {
-    expect(getTimeCrunchMessage(['Bench press'], 0.3, 45)).toMatchInlineSnapshot(
-      `"Precision Coaching has cut rest by 30%. Bench press removed to fit your time. Estimated session: 45 minutes."`
-    );
-    expect(getTimeCrunchMessage(['Lateral raise', 'Face pull'], 0.2, 40)).toMatchInlineSnapshot(
-      `"Precision Coaching has cut rest by 20%. Lateral raise and Face pull removed to fit your time. Estimated session: 40 minutes."`
-    );
-    expect(getTimeCrunchMessage([], 0.25, 50)).toMatchInlineSnapshot(
-      `"Precision Coaching has cut rest by 25%. Estimated session: 50 minutes."`
-    );
+    expect(getTimeCrunchMessage(['Bench press'], 0.3, 45)).toMatchInlineSnapshot(`"Rest cut by 30%. Bench press removed to fit your time. Estimated session: 45 minutes."`);
+    expect(getTimeCrunchMessage(['Lateral raise', 'Face pull'], 0.2, 40)).toMatchInlineSnapshot(`"Rest cut by 20%. Lateral raise and Face pull removed to fit your time. Estimated session: 40 minutes."`);
+    expect(getTimeCrunchMessage([], 0.25, 50)).toMatchInlineSnapshot(`"Rest cut by 25%. Estimated session: 50 minutes."`);
   });
 
   test('getWeekPhaseDescription unchanged (descriptive, no decision attributed)', () => {
@@ -149,8 +109,11 @@ describe('whyThisTemplates: locked output snapshots', () => {
 });
 
 describe('whyThisTemplates: voice rules compliance', () => {
-  test('every Precision Coaching decision-output names Precision Coaching', () => {
-    // Decision-naming outputs (volume, progression, autoreg, deload, time crunch)
+  test('decision-outputs state the call plainly, without naming the product', () => {
+    // Founder decision 2026-06-03: drop "Precision Coaching has..." as the
+    // in-message narrator. Engine actions state the decision plainly (impersonal
+    // or "we"), so a real coach voice comes through rather than the app naming
+    // its own algorithm every sentence.
     const decisionOutputs = [
       getVolumeStatusMessage('over_limit', 'Chest', 22),
       getProgressionMessage('add_weight', 80, 82.5),
@@ -164,7 +127,8 @@ describe('whyThisTemplates: voice rules compliance', () => {
       getTimeCrunchMessage(['X'], 0.2, 40),
     ];
     for (const out of decisionOutputs) {
-      expect(out).toMatch(/Precision Coaching/);
+      expect(out).not.toMatch(/Precision Coaching/);
+      expect(out.length).toBeGreaterThan(20);
     }
   });
 

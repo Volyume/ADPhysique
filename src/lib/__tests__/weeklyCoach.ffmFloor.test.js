@@ -155,7 +155,7 @@ describe('runWeeklyCoach: FFM-floor safety integration', () => {
     expect(types).not.toContain('calories');
   });
 
-  test('whyThisWeek references Precision Coaching when floor fires', () => {
+  test('whyThisWeek explains the FFM-floor hold when it fires', () => {
     const out = runWeeklyCoach(baseInputs({
       checkin: checkin({ calsAdherence: 'hit' }),
       bodyFatPercent: 15,
@@ -164,7 +164,7 @@ describe('runWeeklyCoach: FFM-floor safety integration', () => {
       recentIntakeAvgKcal: 1800,
       recentIntakeDaysLogged: 7,
     }));
-    expect(out.whyThisWeek).toMatch(/Precision Coaching has held your calorie target/);
+    expect(out.whyThisWeek).toMatch(/calorie target holds/);
     expect(out.whyThisWeek).toMatch(/fat-free mass/);
   });
 

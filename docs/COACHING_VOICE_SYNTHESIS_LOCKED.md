@@ -14,6 +14,17 @@ fully verified. One principle held provisionally (no fake-autonomy
 on locked decisions, Pattern 15) pending a single user-study; see
 Section 8.
 
+## Founder override 2026-06-03 (supersedes the naming guidance below)
+
+The founder ruled that user-facing engine-action messages must NOT name
+"Precision Coaching" in the body of the line. Naming the product every
+sentence read as the app narrating its own algorithm rather than a coach
+talking. The screen header keeps the branding; the message states the call
+plainly (impersonal, or "we"). This applies to `whyThisTemplates.js` decision
+messages and the `weeklyCoach.js` WHY_LIBRARY / diet-break notes. Section 1's
+"name Precision Coaching as the actor" guidance is retained only for the
+header and the one-time feature explainer, not the per-week message bodies.
+
 ## 1. The non-negotiable foundation: honesty about decision authority
 
 Triangulated across all three passes. Load-bearing pillar.

@@ -282,7 +282,7 @@ export function getProgressionSuggestion(currentSets, prevWorkoutSets, targetRep
     if (!rirLogged) {
       return {
         action: 'maintain',
-        message: 'You hit the top of the range. Log your RIR (reps left in the tank) and the app will tell you whether to add weight.',
+        message: 'You hit the top of the range. Note how many reps you had left in the tank and we\'ll tell you whether to add weight.',
         suggestedWeight: prevAvgWeight,
       };
     }
@@ -477,10 +477,10 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
     const pct = Math.round((1 - layoffMultiplier) * 100);
     reason = `Loads reduced by ${pct}% for your first session back after a break. Rebuild over the next 1 to 2 weeks.`;
   } else if (repsHitTopNoRIR) {
-    reason = `You hit the top of the range - good work. Log your RIR next session and the app will suggest whether to add weight.`;
+    reason = `You hit the top of the range. Next time, note how many reps you had left and we'll tell you whether to add weight.`;
   } else if (anyAnchored) {
     const n = targets.filter(t => t.anchored).length;
-    reason = `${n === targets.length ? 'All' : n} set target${n > 1 ? 's' : ''} raised to match your session best (${bestPrevW}${units}). That is your overall high-water mark, not just that set's history.`;
+    reason = `${n === targets.length ? 'All' : n} set target${n > 1 ? 's' : ''} raised to match your best set so far (${bestPrevW}${units}), not just this set's own history.`;
   } else if (allIncrease) {
     const inc = (targets[0].weight - targets[0].prevWeight).toFixed(2).replace(/\.?0+$/, '');
     reason = `All sets hit the top of the range. Add ${inc}${units} next session.`;
