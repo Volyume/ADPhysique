@@ -276,18 +276,27 @@ const useAppStore = create((set, get) => ({
         // eslint-disable-next-line global-require
         const { flushPendingTelemetry } = require('../lib/engineTelemetry');
         const res = await syncAll({ userId: prevUid, localUserId: prevUid, triggeredBy: 'sign_out' });
-        // Abort the wipe unless the cycle came back provably clean. Only a
-        // 'synced' status with zero errors proves every local row reached
-        // cloud. Everything else means we can't prove it, so keep the user
-        // signed in rather than risk losing data:
-        //   'error'   - a table failed to push
-        //   'skipped' - another sync held the lock and ours didn't run
-        //   'pending' - rows are still queued in pending_sync_ops
-        //   errored_count > 0 - errors occurred even if the queue drained
-        //     to empty (status 'partial' maps to 'synced', so check the count)
-        // Caller shows a "couldn't sign out, try again on a stronger
-        // connection" toast.
-        if (res?.status !== 'synced' || (res?.errored_count ?? 0) > 0) {
+        // Abort the wipe only when we can't prove the push reached cloud:
+        //   'error'           - a migrated table push threw/failed
+        //   'skipped'         - another sync held the lock, OURS didn't run
+        //   errored_count > 0 - any push failure surfaced by the runner,
+        //                       including the legacy bulk push (SYNC-1). This
+        //                       is the real "local data didn't reach cloud"
+        //                       signal: the sign-out syncAll re-pushes every
+        //                       table from SQLite, so a genuine failure shows
+        //                       here.
+        // We deliberately do NOT block on 'pending'. getQueueDepth (the source
+        // of 'pending') counts the `sync_queue` table, whose only writer is the
+        // notification-preferences enqueue and which has no drainer, so it is
+        // permanently > 0 for anyone who toggled a notification setting. Those
+        // rows are vestigial bookkeeping: the preferences themselves already
+        // push via the registry pushTable in this same cycle. Blocking on it
+        // locked such users out of sign-out entirely (re-audit finding). The
+        // real single-entity retry queue (pending_sync_ops) is a different
+        // table, drained separately with a retry cap, and is covered by the
+        // full push + errored_count above. Caller shows a "couldn't sign out,
+        // try again on a stronger connection" toast.
+        if (res?.status === 'error' || res?.status === 'skipped' || (res?.errored_count ?? 0) > 0) {
           log.logWarn('clearAuthStateForSignOut.pushFirstFailed',
             'sign-out aborted: push did not complete cleanly, keeping user signed in',
             { prevUid, status: res?.status, erroredCount: res?.errored_count ?? null });

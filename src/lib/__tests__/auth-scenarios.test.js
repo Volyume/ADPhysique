@@ -133,15 +133,16 @@ describe('Scenario: Pro signs out + signs back in (cloud profile intact)', () =>
 // ─── Scenario 3b: Sign-out push-first gate (food-loss guard) ─────────────────
 
 describe('Scenario: sign-out aborts when the cloud push does not complete', () => {
-  // The push-first runs syncAll so the food domain is pushed before the
-  // local wipe. Only a 'synced' cycle with zero errors proves every local
-  // row reached cloud. 'error' (a table failed), 'skipped' (another sync
-  // held the lock), and 'pending' (rows still queued) all mean we can't
-  // prove it, so the wipe must not run or we'd lose unsynced data. The user
-  // stays signed in and retries.
+  // The push-first runs syncAll so everything is pushed before the local wipe.
+  // We abort only when we can't prove the push reached cloud: 'error', 'skipped'
+  // (our push didn't run), or errored_count > 0. We do NOT abort on 'pending':
+  // getQueueDepth (the source of 'pending') counts the vestigial, never-drained
+  // sync_queue (notification-prefs bookkeeping), so blocking on it locked out
+  // anyone who toggled a notification setting. The data itself is covered by the
+  // full push + errored_count.
   const sync = require('../sync');
 
-  test.each(['error', 'skipped', 'pending'])(
+  test.each(['error', 'skipped'])(
     'status %s keeps the user signed in and skips the wipe',
     async (status) => {
       sync.syncAll.mockResolvedValueOnce({ status });
@@ -158,6 +159,37 @@ describe('Scenario: sign-out aborts when the cloud push does not complete', () =
       expect(useAppStore.getState().tier).toBe('pro');
     },
   );
+
+  // Re-audit fix: 'pending' (vestigial sync_queue depth) must NOT block sign-out
+  // when the push itself was clean (errored_count 0). Otherwise a user who
+  // toggled a notification setting can never sign out.
+  test('pending status with zero errors proceeds to wipe + clears state', async () => {
+    sync.syncAll.mockResolvedValueOnce({ status: 'pending', errored_count: 0 });
+    useAppStore.setState({
+      user: { id: 'u1' }, session: { user: { id: 'u1' } },
+      tier: 'pro', firstRunComplete: true,
+    });
+
+    await useAppStore.getState().clearAuthStateForSignOut();
+
+    expect(useAppStore.getState().user).toBeNull();
+    expect(useAppStore.getState().tier).toBeNull();
+  });
+
+  // ...but a real push failure (errors > 0) still aborts even if the status
+  // would otherwise read 'pending' / 'synced'.
+  test('pending status with errored_count > 0 still aborts the wipe', async () => {
+    sync.syncAll.mockResolvedValueOnce({ status: 'pending', errored_count: 2 });
+    useAppStore.setState({
+      user: { id: 'u1' }, session: { user: { id: 'u1' } },
+      tier: 'pro', firstRunComplete: true,
+    });
+
+    const result = await useAppStore.getState().clearAuthStateForSignOut();
+
+    expect(result).toEqual({ ok: false, reason: 'unsynced' });
+    expect(useAppStore.getState().user).toEqual({ id: 'u1' });
+  });
 
   // SYNC-2 gap: errors can occur in a cycle whose queue drained to empty, so
   // the status maps to 'synced' even though something failed. The guard must
