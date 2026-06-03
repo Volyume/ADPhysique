@@ -23,6 +23,7 @@
  * Voice rules from CLAUDE.md: short sentences, no AI tells, no
  * encouragement.
  */
+import { todayLocalKey } from '../lib/dayKey';
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
@@ -53,7 +54,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
   const userId = user?.id;
 
   const mealSlot = route?.params?.mealSlot ?? 'snack';
-  const entryDate = route?.params?.entryDate ?? new Date().toISOString().slice(0, 10);
+  const entryDate = route?.params?.entryDate ?? todayLocalKey();
 
   const [permission, setPermission] = useState(Camera.getCameraPermissionStatus());
   const [resolving, setResolving] = useState(false);

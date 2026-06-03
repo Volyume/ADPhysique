@@ -29,6 +29,7 @@ import {
   getDailyStepsRange,
   activityDayKey,
 } from '../lib/database';
+import { localDayKey, todayLocalKey } from '../lib/dayKey';
 import { summariseWeekSteps } from '../lib/stepsSummary';
 import { getRollupsForRange } from '../lib/food/db';
 import { getCycleTracking, shouldShowCycleQuestion } from '../lib/cyclePrefs';
@@ -62,10 +63,10 @@ function formatWeekRange(weekStart) {
 
 function hasLoggedToday(weights) {
   if (!weights || weights.length === 0) return false;
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = todayLocalKey(); // TZ-1: local "today", matches weight buckets
   return weights.some((w) => {
     const ts = w.loggedAt ?? w.logged_at ?? w.createdAt ?? w.created_at;
-    return ts && new Date(ts).toISOString().slice(0, 10) === todayStr;
+    return ts && localDayKey(new Date(ts).getTime()) === todayStr;
   });
 }
 
@@ -329,8 +330,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
         ]);
         let rollups = [];
         if (targets?.targetKcal) {
-          const startIso = new Date(weekStart).toISOString().slice(0, 10);
-          const endIso = new Date(weekStart + 6 * 86400000).toISOString().slice(0, 10);
+          const startIso = localDayKey(weekStart); // TZ-1: local-day bounds match the rollup keys
+          const endIso = localDayKey(weekStart + 6 * 86400000);
           rollups = await getRollupsForRange(user.id, startIso, endIso).catch(() => []);
         }
         const trainingPerf = deriveTrainingPerformance({

@@ -26,12 +26,13 @@ import { useToast } from '../components/Toast';
 import {
   getRollupsForRange, getFoodEntriesForRange,
 } from '../lib/food/db';
+import { localDayKey, parseLocalDay } from '../lib/dayKey';
 import { getNutritionTargets } from '../lib/database';
 import { exportDiaryCsv } from '../lib/food/csvExport';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
-function isoDate(d) { return d.toISOString().slice(0, 10); }
+function isoDate(d) { return localDayKey(d.getTime()); } // TZ-1: local calendar day
 function shift(d, days) {
   const out = new Date(d);
   out.setDate(out.getDate() + days);
@@ -46,7 +47,7 @@ function last7DayIsoList() {
 }
 
 function dayLabel(iso) {
-  const d = new Date(iso);
+  const d = parseLocalDay(iso); // TZ-1: parse the key as local, not UTC
   return d.toLocaleDateString('en-GB', { weekday: 'short' });
 }
 

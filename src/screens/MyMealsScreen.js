@@ -15,6 +15,7 @@
  *
  * Voice rules from CLAUDE.md: no em dashes, plain spoken, British English.
  */
+import { todayLocalKey } from '../lib/dayKey';
 import React, { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Alert,
@@ -42,7 +43,7 @@ export default function MyMealsScreen({ navigation, route }) {
   const toast = useToast();
 
   const mealSlot = route?.params?.mealSlot ?? 'snack';
-  const entryDate = route?.params?.entryDate ?? new Date().toISOString().slice(0, 10);
+  const entryDate = route?.params?.entryDate ?? todayLocalKey();
 
   const [meals, setMeals] = useState([]);
   const [loading, setLoading] = useState(true);

@@ -16,6 +16,7 @@
  *
  * Voice rules from COACHING_VOICE_SYNTHESIS_LOCKED.md.
  */
+import { todayLocalKey } from '../lib/dayKey';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList,
@@ -60,7 +61,7 @@ export default function FoodSearchScreen({ navigation, route }) {
   const toast = useToast();
 
   const mealSlot = route?.params?.mealSlot ?? 'snack';
-  const entryDate = route?.params?.entryDate ?? new Date().toISOString().slice(0, 10);
+  const entryDate = route?.params?.entryDate ?? todayLocalKey();
 
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState('recents');

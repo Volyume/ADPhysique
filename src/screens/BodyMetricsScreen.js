@@ -27,6 +27,7 @@ import { useToast } from '../components/Toast';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logBodyMetric, getBodyMetricLog } from '../lib/database';
+import { localDayKey } from '../lib/dayKey';
 import { getRecentIntakeSummary } from '../lib/food/db';
 import { EmptyBodyIllustration } from '../components/Illustrations';
 import { syncBodyMetric } from '../lib/sync';
@@ -58,8 +59,8 @@ const FIELD_MAP = {
 function rowToEntry(row) {
   return {
     id: row.id,
-    metric_date: new Date(row.loggedAt ?? row.createdAt ?? Date.now())
-      .toISOString().slice(0, 10),
+    // TZ-1: local calendar day, matching morning-weight buckets.
+    metric_date: localDayKey(new Date(row.loggedAt ?? row.createdAt ?? Date.now()).getTime()),
     body_weight: row.weightKg ?? null,
     body_fat:    row.bodyFatPercent ?? null,
     chest:       row.chestCm ?? null,

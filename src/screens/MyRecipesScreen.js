@@ -13,6 +13,7 @@
  * Voice rules from CLAUDE.md and COACHING_VOICE_SYNTHESIS_LOCKED.
  * No em dashes; plain spoken voice; British English.
  */
+import { todayLocalKey } from '../lib/dayKey';
 import React, { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator,
@@ -36,7 +37,7 @@ export default function MyRecipesScreen({ navigation, route }) {
   // Returned-from-builder hint: pass mealSlot + entryDate forward
   // so the Diary "Add" CTA can hand off seamlessly later.
   const mealSlot = route?.params?.mealSlot ?? 'snack';
-  const entryDate = route?.params?.entryDate ?? new Date().toISOString().slice(0, 10);
+  const entryDate = route?.params?.entryDate ?? todayLocalKey();
 
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);

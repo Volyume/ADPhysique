@@ -21,6 +21,7 @@
  *
  * Voice rules: short, no encouragement, no AI tells.
  */
+import { todayLocalKey } from '../lib/dayKey';
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
@@ -43,7 +44,7 @@ export default function ScanLabelScreen({ navigation, route }) {
   const userId = user?.id;
 
   const mealSlot = route?.params?.mealSlot ?? 'snack';
-  const entryDate = route?.params?.entryDate ?? new Date().toISOString().slice(0, 10);
+  const entryDate = route?.params?.entryDate ?? todayLocalKey();
   const prefillBarcode = route?.params?.prefillBarcode ?? null;
 
   const [permission, setPermission] = useState(Camera.getCameraPermissionStatus());

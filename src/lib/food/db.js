@@ -12,6 +12,7 @@
 import { db, runInTransaction } from '../database';
 import { CURATED_MEALS, mealItems } from './curatedMeals';
 import { resolveFoodRef } from './sources/localCache';
+import { todayLocalKey } from '../dayKey';
 // Single id generator (A2-036); aliased to keep the local uid() call sites.
 import { generateUUID as uid } from '../uuid';
 
@@ -288,7 +289,7 @@ export async function getRollupsForRange(userId, startDate, endDate) {
  */
 export async function getRecentIntakeSummary(userId, asOfDate = null) {
   const d = await db();
-  const asOf = asOfDate ?? new Date().toISOString().slice(0, 10);
+  const asOf = asOfDate ?? todayLocalKey();
   const startDate = new Date(asOf);
   startDate.setDate(startDate.getDate() - 6);
   const startStr = startDate.toISOString().slice(0, 10);

@@ -7,6 +7,7 @@
  *
  * Voice rules from COACHING_VOICE_SYNTHESIS_LOCKED.md.
  */
+import { todayLocalKey } from '../lib/dayKey';
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert,
@@ -35,7 +36,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
   const toast = useToast();
 
   const mealSlot = route?.params?.mealSlot ?? 'snack';
-  const entryDate = route?.params?.entryDate ?? new Date().toISOString().slice(0, 10);
+  const entryDate = route?.params?.entryDate ?? todayLocalKey();
   // Set when arriving from a barcode-scan miss. Displayed as a hint
   // so the user knows what was scanned. Persisting the barcode to
   // custom_foods is a phase 3 follow-up (needs a schema column +

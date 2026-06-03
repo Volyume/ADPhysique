@@ -25,6 +25,7 @@ import {
   getFoodEntriesForDay, deleteFoodEntry, updateFoodEntry, getRollupForDay,
   recomputeRollup, setWater, getWater, createSavedMeal,
 } from '../lib/food/db';
+import { localDayKey, parseLocalDay } from '../lib/dayKey';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
 import { getNutritionTargets, hasWorkoutOnDate, getFirstWorkoutDateOnOrAfter } from '../lib/database';
 import { audit } from '../lib/observability';
@@ -41,12 +42,16 @@ import { useToast } from '../components/Toast';
 import { deleteEntries, moveEntriesToSlot, copyEntriesToDate } from '../lib/food/bulkEntryOps';
 import { buildMealSlots, highestLoggedMeal, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
 
+// TZ-1: all diary day-keys are the LOCAL calendar day, matching the local-day
+// food/water writes and the weight/workout buckets, so "today" is the user's
+// today (not UTC's). isoDate keys a Date; parseLocalDay reverses a key back to
+// LOCAL midnight so navigation + labels stay on the user's calendar.
 function isoDate(d) {
-  return d.toISOString().slice(0, 10);
+  return localDayKey(d.getTime());
 }
 
 function shiftDate(isoStr, days) {
-  const d = new Date(isoStr);
+  const d = parseLocalDay(isoStr);
   d.setDate(d.getDate() + days);
   return isoDate(d);
 }
@@ -58,7 +63,7 @@ function friendlyDate(isoStr) {
   if (isoStr === today) return 'Today';
   if (isoStr === yesterday) return 'Yesterday';
   if (isoStr === tomorrow) return 'Tomorrow';
-  const d = new Date(isoStr);
+  const d = parseLocalDay(isoStr);
   return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 

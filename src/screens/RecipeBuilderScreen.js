@@ -18,6 +18,7 @@
  * Voice rules from CLAUDE.md: no em dashes; plain spoken voice;
  * British English; no marketing absolutes.
  */
+import { todayLocalKey } from '../lib/dayKey';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView,
@@ -41,7 +42,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
 
   const recipeId = route?.params?.recipeId ?? null;
   const mealSlot = route?.params?.mealSlot ?? 'snack';
-  const entryDate = route?.params?.entryDate ?? new Date().toISOString().slice(0, 10);
+  const entryDate = route?.params?.entryDate ?? todayLocalKey();
 
   const [name, setName] = useState('');
   const [totalServings, setTotalServings] = useState('4');

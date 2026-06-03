@@ -2,6 +2,7 @@ import * as SQLite from 'expo-sqlite';
 import { generateInsights } from './insightsEngine';
 import { calculate1RM } from './algorithms';
 import { logError } from './errorLog';
+import { localDayKey } from './dayKey';
 
 let _db = null;
 let _initPromise = null;
@@ -3512,13 +3513,12 @@ export async function getMorningWeightToday(userId) {
 // step total, and the source of the figure. It backs the manual step log
 // (no wearable needed) and the baseline-and-compliance reads the coach uses.
 
-// The day key for an activity row. Matches the Diary's isoDate
-// (toISOString slice) on purpose so a day's steps and that day's food line
-// up on the same calendar day in the Diary. This is the UTC-day convention
-// the food domain already uses, not the local-midnight bucket the morning
-// weight uses; steps render beside food, so they follow food's boundary.
+// The day key for an activity row. Matches the Diary's day key so a day's
+// steps and that day's food line up on the same calendar day. TZ-1: this is
+// now the LOCAL calendar day (localDayKey), the same bucket weight + workouts
+// use, so everything agrees about "today" for users not at UTC+0.
 export function activityDayKey(ms = Date.now()) {
-  return new Date(ms).toISOString().slice(0, 10);
+  return localDayKey(ms);
 }
 
 // Write (or overwrite) the step total for a day. steps is clamped to a
