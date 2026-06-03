@@ -302,6 +302,17 @@ const useAppStore = create((set, get) => ({
             { prevUid, status: res?.status, erroredCount: res?.errored_count ?? null });
           return { ok: false, reason: 'unsynced' };
         }
+        // SYNC-3: the guard passed, so we're committed to wiping. Raise the
+        // wipe guard NOW, before the flushPendingTelemetry await below, so a
+        // lifecycle sync trigger (foreground/network/periodic) can't acquire
+        // the freed run-lock during that await and pull cloud rows back into
+        // the DB we're about to wipe. Set after the push-first syncAll so the
+        // safety push itself was never blocked. Cleared on the next sign-in
+        // (setUser) and reset by the post-sign-out app reload.
+        try {
+          // eslint-disable-next-line global-require
+          require('../lib/sync/signOutGuard').setSignOutWiping(true);
+        } catch (_) { /* tolerate */ }
         try { await flushPendingTelemetry(); } catch (_) {}
       } catch (e) {
         log.logWarn('clearAuthStateForSignOut.pushFirstFailed',
@@ -311,16 +322,8 @@ const useAppStore = create((set, get) => ({
       }
     }
 
-    // SYNC-3: from here on we're committed to wiping. Block the lifecycle
-    // sync triggers (foreground / background / network / periodic) so none of
-    // them can pull cloud rows back into the DB mid-wipe. Set AFTER the
-    // push-first syncAll above so the safety push itself was never blocked.
-    // Cleared on the next sign-in (setUser) and reset by the post-sign-out
-    // app reload.
-    try {
-      // eslint-disable-next-line global-require
-      require('../lib/sync/signOutGuard').setSignOutWiping(true);
-    } catch (_) { /* tolerate */ }
+    // (SYNC-3 wipe guard was raised above, right after the push-first guard
+    // passed, so it already covers the flushPendingTelemetry await.)
 
     // Remove THIS device's push-token row so the server stops pushing
     // to it after sign-out. Runs before AsyncStorage.clear() because it
