@@ -191,12 +191,25 @@ const STEPS_BANDS = {
   mod_bulk:  { lower: 7000,  upper: 9000  },
 };
 
+// Map the coaching-phase vocabulary used upstream (coachingGoals
+// TRAINING_PHASES.coachingPhaseKey) onto the keys this module configures.
+// 'bulk' ("Build muscle (bulk)" / "Strength + size", a moderate surplus) had
+// no PHASE_CONFIG/STEPS_BANDS entry, so it silently fell through to
+// maintenance: a bulking user was coached at a 0% goal rate and never
+// recognised as on-target for their surplus. Map it to mod_bulk.
+const PHASE_ALIASES = { bulk: 'mod_bulk' };
+
+function normalisePhaseKey(goalPhase) {
+  return PHASE_ALIASES[goalPhase] ?? goalPhase;
+}
+
 function phaseConfig(goalPhase) {
-  return PHASE_CONFIG[goalPhase] ?? PHASE_CONFIG.maint;
+  const key = normalisePhaseKey(goalPhase);
+  return PHASE_CONFIG[key] ?? PHASE_CONFIG.maint;
 }
 
 function stepsBand(goalPhase, bodyweightKg = null) {
-  const band = STEPS_BANDS[goalPhase] ?? STEPS_BANDS.maint;
+  const band = STEPS_BANDS[normalisePhaseKey(goalPhase)] ?? STEPS_BANDS.maint;
   // Reduce upper band for very large athletes
   if (bodyweightKg && bodyweightKg > 100) {
     return { lower: band.lower, upper: band.upper - 1000 };

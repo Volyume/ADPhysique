@@ -160,7 +160,7 @@ export function calculateWeeklyVolume(sets, exerciseMap = {}) {
       let muscle = (sec.muscle || sec).toLowerCase();
       // Legacy normalisation for secondary muscles
       if (muscle === 'shoulders') muscle = 'front_delts';
-      const contribution = sec.contribution || 0.5;
+      const contribution = sec.contribution ?? 0.5;
       if (!volumeByMuscle[muscle]) {
         volumeByMuscle[muscle] = { workingSets: 0, reps: 0, tonnage: 0 };
       }
@@ -325,9 +325,13 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
       const hadHeadroom = prevRIR !== null && prevRIR >= 1;
       if (hadHeadroom) {
         const increment = getIncrement(prevWeight);
-        // 5% session-over-session cap
+        // 5% session-over-session cap. Always apply it: the previous form
+        // (maxJump > 0.5 ? maxJump : increment) disabled the cap entirely
+        // for loads <= 10 units, so a 5 kg dumbbell could jump the full
+        // default increment (a ~25% jump). The +0.25 floor below guarantees
+        // progress when 5% rounds to zero.
         const maxJump = prevWeight * 0.05;
-        const capped = Math.min(increment, maxJump > 0.5 ? maxJump : increment);
+        const capped = Math.min(increment, maxJump);
         // Round to nearest 0.25
         const rounded = Math.round(capped * 4) / 4;
         targetWeight = prevWeight + Math.max(0.25, rounded);
@@ -1039,7 +1043,11 @@ export function detectPlateau(exerciseSessions = [], repMin = 6, repMax = 12) {
     return { plateau: false, consecutiveStalls: 0, resolution: null };
   }
 
-  const recent = exerciseSessions.slice(0, 3);
+  // Look at up to the 4 most recent sessions (3 adjacent comparisons), so a
+  // run of 3 consecutive stalls can actually be detected. The previous
+  // slice(0, 3) only ever yielded 2 comparisons, capping consecutiveStalls
+  // at 2, which made the "3+ stalls -> swap_exercise" resolution dead code.
+  const recent = exerciseSessions.slice(0, 4);
   let consecutiveStalls = 0;
 
   for (let i = 0; i < recent.length - 1; i++) {

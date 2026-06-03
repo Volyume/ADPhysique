@@ -125,6 +125,11 @@ const FFM_FALLBACK_FRACTION = {
 // body fat % is unknown (lean mass-based calculation already handles the known-BF% case).
 export const PROTEIN_MAX_GKGBW = 2.2;
 
+// Hard ceiling for a coach/user-entered custom protein rate. Generous enough
+// for lean contest prep on a bodyweight basis, but catches mis-entries (a
+// "10" meaning 10 g/kg BW). Above this there is no added benefit.
+export const PROTEIN_CUSTOM_MAX_GKGBW = 3.5;
+
 // Fat targets in g/kg BW by phase.
 // Carbs fill whatever remains after protein + fat are satisfied.
 // Surplus phases: fat is kept lean so carbs remain high for performance.
@@ -192,10 +197,39 @@ export function ewmaValues(values, alpha = EWMA_ALPHA) {
 // older (index -8) spans a full 7 days. With only 7 points the gap is 6
 // days and the rate would read ~17% optimistic.
 export function computeWeeklyWeightChange(ewmaData) {
-  if (!ewmaData || ewmaData.length < 8) return null;
-  const recent = ewmaData[ewmaData.length - 1].ewma;
-  const older = ewmaData[ewmaData.length - 8].ewma;
-  return parseFloat((recent - older).toFixed(3));
+  if (!ewmaData || ewmaData.length < 2) return null;
+  const last = ewmaData[ewmaData.length - 1];
+  const lastMs = last && last.date != null ? Date.parse(last.date) : NaN;
+
+  // Date-aware path: normalise to a true 7-day rate from timestamps, so a
+  // user who logs several times a day (or skips days) gets a correct
+  // kg/week rather than "index -8 == 7 days ago". Requires ~a week of span
+  // so the rate isn't extrapolated from a day or two of noise.
+  if (Number.isFinite(lastMs)) {
+    const MIN_SPAN_DAYS = 6;
+    let older = null;
+    let olderMs = NaN;
+    for (let i = ewmaData.length - 2; i >= 0; i--) {
+      const ms = ewmaData[i].date != null ? Date.parse(ewmaData[i].date) : NaN;
+      if (!Number.isFinite(ms)) continue;
+      if (lastMs - ms >= MIN_SPAN_DAYS * 86400000) {
+        older = ewmaData[i];
+        olderMs = ms;
+        break; // newest entry that is at least ~a week back
+      }
+    }
+    if (!older) return null;
+    const spanDays = (lastMs - olderMs) / 86400000;
+    if (spanDays <= 0) return null;
+    const ratePerWeek = ((last.ewma - older.ewma) / spanDays) * 7;
+    return parseFloat(ratePerWeek.toFixed(3));
+  }
+
+  // Back-compat fallback when entries carry no usable date: the original
+  // index-based window (assumes ~daily logging).
+  if (ewmaData.length < 8) return null;
+  const olderByIndex = ewmaData[ewmaData.length - 8].ewma;
+  return parseFloat((last.ewma - olderByIndex).toFixed(3));
 }
 
 const KCAL_PER_KG = 7700; // energy in 1 kg of body tissue (mixed lean + fat)
@@ -427,8 +461,11 @@ function calcProtein(goal, weightKg, lbm, bodyFatSource, proteinApproach = 'opti
 
   // Custom override, apply rate directly to bodyweight (coaches typically specify g/kg BW).
   if (proteinApproach === 'custom' && customGPerKg != null && customGPerKg > 0) {
-    const proteinG = Math.max(customGPerKg * weightKg, floorG);
-    return { proteinG, basis: 'bodyweight', proteinRateUsed: customGPerKg };
+    // Clamp to a sane ceiling: above ~3.5 g/kg BW there is no added benefit
+    // and the value is almost certainly a mis-entry (e.g. a fat-fingered 10).
+    const rate = Math.min(customGPerKg, PROTEIN_CUSTOM_MAX_GKGBW);
+    const proteinG = Math.max(rate * weightKg, floorG);
+    return { proteinG, basis: 'bodyweight', proteinRateUsed: rate };
   }
 
   const hasCredibleLbm =
@@ -673,8 +710,14 @@ export function calculateNutritionTargets(inputs) {
 // deficitStartDate, Date (or date-parseable value) when the deficit began
 // currentDate     , defaults to now; override in tests
 export function shouldSuggestDietBreak(deficitStartDate, currentDate = new Date()) {
+  // Guard a null/invalid start date. new Date(null) is epoch 0, which would
+  // read as ~2900 weeks of deficit and fire a spurious diet-break suggestion.
+  const startMs = deficitStartDate == null ? NaN : new Date(deficitStartDate).getTime();
+  if (!Number.isFinite(startMs)) {
+    return { suggest: false, weeksInDeficit: 0 };
+  }
   const weeksInDeficit = Math.floor(
-    (currentDate - new Date(deficitStartDate)) / (7 * 24 * 60 * 60 * 1000),
+    (currentDate - startMs) / (7 * 24 * 60 * 60 * 1000),
   );
 
   if (weeksInDeficit >= DIET_BREAK_THRESHOLD_WEEKS) {

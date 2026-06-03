@@ -94,6 +94,17 @@ function baseInputs(overrides = {}) {
 
 // ── Shape and copy guardrails ──────────────────────────────────────────────
 
+describe("goalPhase 'bulk' is coached as a bulk, not maintenance (#24)", () => {
+  test("the 'bulk' coaching-phase key maps to a real bulk config", () => {
+    // coachingGoals emits coachingPhaseKey 'bulk' for "Build muscle (bulk)"
+    // and "Strength + size"; PHASE_CONFIG had no 'bulk' entry, so it used to
+    // fall through to maintenance (label 'Maintenance', goal rate 0%).
+    const out = runWeeklyCoach(baseInputs({ goalPhase: 'bulk' }));
+    expect(out.weekLabel).toContain('Lean bulk');
+    expect(out.weekLabel).not.toContain('Maintenance');
+  });
+});
+
 describe('runWeeklyCoach output shape', () => {
   test('always returns the keys CoachOutputScreen reads', () => {
     const out = runWeeklyCoach(baseInputs());
