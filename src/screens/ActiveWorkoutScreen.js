@@ -245,11 +245,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
     // WK-5: skip over exercises Time Crunch dropped (_timeCrunchSkipped). They
     // stay in the list so the action can be reverted, but advancing onto one
-    // would let the user log against a slot they were told was dropped.
+    // would let the user log against a slot they were told was dropped. Stop at
+    // the first non-skipped exercise; if none remain, don't advance past the end
+    // (setting an out-of-bounds index would render an empty exercise slot).
     let next = currentExerciseIndex + 1;
     while (next < workoutExercises.length && workoutExercises[next]?._timeCrunchSkipped) {
       next += 1;
     }
+    if (next >= workoutExercises.length) return; // no non-skipped exercise ahead
     audit('workout.exercise.next', { fromIndex: currentExerciseIndex, toIndex: next });
     setCurrentExerciseIndex(next);
     setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 50);

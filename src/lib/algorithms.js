@@ -60,13 +60,16 @@ export const MUSCLE_DISPLAY_NAMES = {
 
 // Algorithm 4: 1RM Ensemble Calculator
 export function calculate1RM(weight, reps) {
-  // Number.isFinite guards a non-numeric reps (e.g. a string from a malformed
-  // synced row): "abc" is truthy and "abc" < 1 is false, so the old guard let
-  // it through and the formula returned NaN, breaking PR detection. (CALC-2)
-  if (!Number.isFinite(weight) || weight <= 0 || !Number.isFinite(reps) || reps < 1) {
-    return Number.isFinite(weight) && weight > 0 ? weight : 0;
+  // CALC-2: coerce first so a NUMERIC string ("5") still computes, while a
+  // non-numeric one ("abc") becomes NaN and is guarded. The old guard let a
+  // non-numeric reps through and returned NaN (breaking PR detection); a naive
+  // Number.isFinite guard would have wrongly rejected the numeric-string case.
+  const w = Number(weight);
+  const reps0 = Number(reps);
+  if (!Number.isFinite(w) || w <= 0 || !Number.isFinite(reps0) || reps0 < 1) {
+    return Number.isFinite(w) && w > 0 ? w : 0;
   }
-  if (reps === 1) return weight;
+  if (reps0 === 1) return w;
 
   // 1RM estimators lose validity past ~12-15 reps, and Brzycki's denominator
   // runs toward its pole as reps climb, so a 25-30 rep set used to return a
@@ -74,9 +77,9 @@ export function calculate1RM(weight, reps) {
   // 1RM PRs. Clamp the rep count the formula sees at 20: above that we plateau
   // at the 20-rep estimate rather than extrapolate into nonsense. Behaviour for
   // 1-20 reps is unchanged. (A2-040.)
-  const r = Math.min(reps, 20);
-  const epley = weight * (1 + r / 30);
-  const brzycki = weight / (1.0278 - 0.0278 * r);
+  const r = Math.min(reps0, 20);
+  const epley = w * (1 + r / 30);
+  const brzycki = w / (1.0278 - 0.0278 * r);
 
   if (r <= 10) return epley * 0.6 + brzycki * 0.4;
   return (epley + brzycki) / 2;

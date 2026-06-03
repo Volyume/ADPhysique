@@ -483,9 +483,13 @@ describe('numeric edge cases (CALC-2/4/5/6/7)', () => {
   } = require('../algorithms');
 
   test('CALC-2: calculate1RM is finite for non-numeric reps and weight', () => {
-    expect(calculate1RM(100, 'abc')).toBe(100); // valid weight, bad reps -> weight
+    expect(calculate1RM(100, 'abc')).toBe(100); // valid weight, non-numeric reps -> weight
     expect(calculate1RM(NaN, 5)).toBe(0);
-    expect(Number.isFinite(calculate1RM(100, '5'))).toBe(true);
+    // A NUMERIC string still computes (must equal the numeric form), it isn't
+    // wrongly collapsed to the weight.
+    expect(calculate1RM(100, '5')).toBeCloseTo(calculate1RM(100, 5), 5);
+    expect(calculate1RM(100, '5')).toBeGreaterThan(100);
+    expect(calculate1RM('100', 5)).toBeCloseTo(calculate1RM(100, 5), 5);
   });
 
   test('CALC-4: getVolumeStatus(NaN) is not "over_mrv"', () => {

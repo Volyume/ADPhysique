@@ -637,6 +637,13 @@ export default function RootNavigator() {
           // cloud. This was the cross-device data loss bug the user
           // flagged five times.
           const localUserIdBeforeSignIn = useAppStore.getState().user?.id ?? null;
+          // AUTH-4: clear the enter-dedup on sign-out so a genuine re-sign-in
+          // (even of the SAME account within the 3s window) still runs the enter
+          // pipeline. Without this, a sign-out -> sign-in-same-account without a
+          // bundle reload (dev / Expo Go) would skip the restore + tier + sync.
+          if (event === 'SIGNED_OUT') {
+            _lastAuthEnter = { uid: null, at: 0 };
+          }
           // eslint-disable-next-line global-require
           try { require('../lib/errorLog').logInfo('auth.event', event, { uid: session?.user?.id ?? null, prevLocal: localUserIdBeforeSignIn }); } catch (_) {}
           // Bind / unbind the Sentry user so errors are searchable by
