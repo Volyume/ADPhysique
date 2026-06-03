@@ -96,10 +96,13 @@ export function calculateTonnage(sets) {
 }
 
 // Summarise a finished workout's logged sets. totalSets counts every set
-// (incl. warm-ups); workingSetCount excludes only warm-ups (dropsets still
-// count as a set, matching the prior in-line calc); tonnage is over hard sets
-// only (isHardSet excludes warm-ups and dropsets). The finish flow feeds this
-// the actual workout_sets from the DB, so sets logged on an exercise later
+// (incl. warm-ups); workingSetCount excludes only warm-ups; tonnage is also
+// over non-warm-up sets. NOTE: isHardSet excludes warm-ups ONLY, so a dropset
+// counts as a full working set and its tonnage is included. (Whether a
+// dropset should count as a whole set is a separate product decision; this
+// documents the current behaviour rather than the earlier comment which
+// wrongly claimed dropsets were excluded.) The finish flow feeds this the
+// actual workout_sets from the DB, so sets logged on an exercise later
 // swapped out or removed still count toward the total (WK-2), instead of the
 // in-memory exercise list which drops them. Tolerant of camelCase (in-memory)
 // and snake_case (DB row) set_type.
