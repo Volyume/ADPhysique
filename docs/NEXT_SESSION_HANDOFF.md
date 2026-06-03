@@ -1,5 +1,18 @@
 # Next-session handoff — ready-to-execute tasks
 
+> STATUS 2026-06-03: both tasks below are DONE. Kept here as the record of
+> what changed and why (the locked-doc reconciliation in particular).
+>
+> - TASK 1 landed in commit `cc9b6c0` "refactor(exercises): retire dead local
+>   custom_exercises mirror". Reconciliation recorded in
+>   `docs/IDENTITY_AND_OWNERSHIP_LOCKED.md` § Reconciliations (2026-06-03).
+> - TASK 2 landed in `e6d715d` (shared component + ManualBuilder) and `7ade3f8`
+>   (ActiveWorkout). All three screens now use
+>   `src/components/ExercisePickerModal`. ~563 net lines removed.
+>
+> Full suite (155 suites, 2577 tests), lint (0 errors), and typecheck were
+> green after each step.
+
 Written 2026-06-02 at the end of a long session, to be picked up cold. Both
 tasks below are fully scoped with file:line anchors, steps, constraints, and
 verification. Re-grep the anchors first (line numbers drift).
