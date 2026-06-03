@@ -50,7 +50,7 @@ import {
   // src/lib/sync/tables/<table>.js per MIGRATED_TABLES.
 } from './database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getPullWatermark, setPullWatermark, nextWatermark, isoFromMs } from './sync/watermark';
+import { getPullWatermark, setPullWatermark, nextWatermark, isoFromMs, getPushWatermark, setPushWatermark } from './sync/watermark';
 import { logError, logWarn, logInfo } from './errorLog';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -575,7 +575,22 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
     await syncExercises(supabaseUserId);
 
     const allWorkouts = await getAllWorkouts(localUserId);
-    const completed = allWorkouts.filter(w => w.isCompleted);
+    const completedAll = allWorkouts.filter(w => w.isCompleted);
+
+    // LB-5: skip re-pushing completed workouts we've already uploaded.
+    // A completed workout is immutable (no edit path re-opens it; its
+    // updated_at is stamped at completion and is >= every set's
+    // updated_at), so once a workout+sets has pushed cleanly it never
+    // needs pushing again. The watermark is the highest completion time
+    // already on cloud; we re-include the boundary (>=) so an upsert at
+    // the exact cursor is idempotently repeated rather than dropped.
+    // First sign-in (or post-sign-out, cleared AsyncStorage) has no
+    // watermark and pushes everything.
+    const workoutsWm = await getPushWatermark(supabaseUserId, 'workouts');
+    const completed = workoutsWm > 0
+      ? completedAll.filter(w => timeToMs(w.updatedAt) >= workoutsWm)
+      : completedAll;
+    let maxPushedMs = workoutsWm;
 
     // Upload in batches of 10 to avoid hammering the API
     let failures = 0;
@@ -587,6 +602,8 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
             await _upsertWorkout(sb, supabaseUserId, w);
             const sets = await getWorkoutSetsForWorkout(w.id);
             await _upsertSets(sb, supabaseUserId, sets);
+            const wMs = timeToMs(w.updatedAt);
+            if (wMs > maxPushedMs) maxPushedMs = wMs;
           } catch (e) {
             failures++;
             // Per-workout failure doesn't abort the batch but it is logged
@@ -609,6 +626,11 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
     }
     if (failures > 0) {
       logWarn('sync.bulkUploadLocalData', `${failures} of ${completed.length} workouts failed to upload`, { supabaseUserId });
+    } else if (maxPushedMs > workoutsWm) {
+      // Advance only on a clean workout push: a failure leaves the
+      // watermark where it was so the failed rows retry next cycle and
+      // the sign-out push-first safety still sees them as un-pushed.
+      await setPushWatermark(supabaseUserId, 'workouts', maxPushedMs);
     }
 
     // body_composition_log (cloud table body_metrics) moved to

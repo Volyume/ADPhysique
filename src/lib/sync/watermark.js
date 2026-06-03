@@ -26,9 +26,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const PULL_WM_PREFIX = '@volyume_pull_wm_';
+export const PUSH_WM_PREFIX = '@volyume_push_wm_';
 
 function key(userId, table) {
   return `${PULL_WM_PREFIX}${userId}_${table}`;
+}
+
+function pushKey(userId, table) {
+  return `${PUSH_WM_PREFIX}${userId}_${table}`;
 }
 
 /** Parse an ISO/ms timestamp to ms, or 0 when unusable. */
@@ -81,5 +86,35 @@ export async function setPullWatermark(userId, table, ms) {
   if (!userId || !table || !Number.isFinite(ms) || ms <= 0) return;
   try {
     await AsyncStorage.setItem(key(userId, table), String(ms));
+  } catch { /* tolerate */ }
+}
+
+/**
+ * Push watermarks mirror the pull ones but track the highest updated_at
+ * we have already pushed to cloud for a table, so a repeat syncAll
+ * (foreground, reconnect, 15-min timer) doesn't re-upsert the entire
+ * history every cycle. Only ever advanced after a CLEAN push (zero
+ * failures), so a row that failed to upload is retried next cycle rather
+ * than skipped. Same self-healing property as the pull side: sign-out
+ * clears AsyncStorage, so the next sign-in has no cursor and pushes
+ * everything. Safe only for tables whose rows are immutable once
+ * pushed (e.g. completed workouts + their sets); do not key it on a
+ * table whose rows can change without their updated_at advancing.
+ */
+export async function getPushWatermark(userId, table) {
+  if (!userId || !table) return 0;
+  try {
+    const raw = await AsyncStorage.getItem(pushKey(userId, table));
+    return toMs(raw ? Number(raw) : 0);
+  } catch {
+    return 0;
+  }
+}
+
+/** Persist the push watermark (ms) for a table. Never throws. */
+export async function setPushWatermark(userId, table, ms) {
+  if (!userId || !table || !Number.isFinite(ms) || ms <= 0) return;
+  try {
+    await AsyncStorage.setItem(pushKey(userId, table), String(ms));
   } catch { /* tolerate */ }
 }

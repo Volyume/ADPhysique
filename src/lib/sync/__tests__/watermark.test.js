@@ -16,6 +16,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 const {
   toMs, isoFromMs, maxUpdatedAtMs, nextWatermark,
   getPullWatermark, setPullWatermark, PULL_WM_PREFIX,
+  getPushWatermark, setPushWatermark, PUSH_WM_PREFIX,
 } = require('../watermark');
 
 beforeEach(() => {
@@ -81,6 +82,33 @@ describe('getPullWatermark / setPullWatermark', () => {
   test('no userId/table: no-op', async () => {
     expect(await getPullWatermark(null, 'workouts')).toBe(0);
     await setPullWatermark(null, 'workouts', 5);
+    expect(Object.keys(mockStore)).toHaveLength(0);
+  });
+});
+
+describe('getPushWatermark / setPushWatermark', () => {
+  test('absent watermark reads as 0 so the first push is full', async () => {
+    expect(await getPushWatermark('u1', 'workouts')).toBe(0);
+  });
+  test('round-trips per (user, table) under its own prefix', async () => {
+    await setPushWatermark('u1', 'workouts', 67890);
+    expect(mockStore[`${PUSH_WM_PREFIX}u1_workouts`]).toBe('67890');
+    expect(await getPushWatermark('u1', 'workouts')).toBe(67890);
+  });
+  test('push and pull watermarks for the same table are independent', async () => {
+    await setPullWatermark('u1', 'workouts', 100);
+    await setPushWatermark('u1', 'workouts', 200);
+    expect(await getPullWatermark('u1', 'workouts')).toBe(100);
+    expect(await getPushWatermark('u1', 'workouts')).toBe(200);
+  });
+  test('refuses to persist a non-positive / non-finite ms', async () => {
+    await setPushWatermark('u1', 'workouts', 0);
+    await setPushWatermark('u1', 'workouts', NaN);
+    expect(mockStore[`${PUSH_WM_PREFIX}u1_workouts`]).toBeUndefined();
+  });
+  test('no userId/table: no-op', async () => {
+    expect(await getPushWatermark(null, 'workouts')).toBe(0);
+    await setPushWatermark(null, 'workouts', 5);
     expect(Object.keys(mockStore)).toHaveLength(0);
   });
 });
