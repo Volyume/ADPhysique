@@ -915,6 +915,10 @@ const useAppStore = create((set, get) => ({
         await AsyncStorage.removeItem(ACTIVE_WORKOUT_KEY).catch(() => {});
         return false;
       }
+      // Re-check after the awaits: the user may have started a fresh workout
+      // during the AsyncStorage + DB reads above. Don't clobber a live session
+      // with the restored one (the top-of-function check is now stale).
+      if (get().activeWorkout) return false;
       set({
         activeWorkout: snap.workout,
         workoutExercises: Array.isArray(snap.workoutExercises) ? snap.workoutExercises : [],

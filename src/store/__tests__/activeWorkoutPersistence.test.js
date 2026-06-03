@@ -138,6 +138,22 @@ describe('restoreActiveWorkout', () => {
     expect(db.getWorkoutById).not.toHaveBeenCalled();
   });
 
+  test('does not clobber a session started DURING the async reads (race)', async () => {
+    await seedSnapshot(validSnap);
+    // Simulate the user tapping "Start workout" while restore is awaiting the
+    // DB read: getWorkoutById resolves a valid incomplete row, but by then a
+    // live session exists. The post-await re-check must bail without clobbering.
+    db.getWorkoutById.mockImplementation(async () => {
+      useAppStore.setState({ activeWorkout: { id: 'live' } });
+      return { id: 'w1', isCompleted: false };
+    });
+
+    const ok = await useAppStore.getState().restoreActiveWorkout('u1');
+
+    expect(ok).toBe(false);
+    expect(useAppStore.getState().activeWorkout).toEqual({ id: 'live' });
+  });
+
   test('returns false when there is no snapshot', async () => {
     const ok = await useAppStore.getState().restoreActiveWorkout('u1');
     expect(ok).toBe(false);
