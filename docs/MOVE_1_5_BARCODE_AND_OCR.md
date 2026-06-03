@@ -15,6 +15,12 @@ OCR write-back loop to OFF. Locked 2026-05-23.
 >   `ScanLabelScreen.js`), OFF write-back queue
 >   (`writeback.js`), barcode persistence on `custom_foods` via
 >   migration 023.
+> - Phase 4 (2026-06-03): two-step label capture, Cronometer-style.
+>   `ScanLabelScreen` now reads the product NAME off the front of pack
+>   first (new `labelName.js` `pickProductName`, font-size + position
+>   aware via `recogniseBlocks` in `ocr.js`), then the nutrition panel
+>   for macros as before. The name step is skippable and the name flows
+>   to AddCustomFood as `prefillName`. No schema or allow-list change.
 >
 > Server-side allow-list extension shipped in migration 022.
 >

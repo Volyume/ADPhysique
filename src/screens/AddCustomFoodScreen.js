@@ -46,9 +46,12 @@ export default function AddCustomFoodScreen({ navigation, route }) {
   // parser couldn't extract that field; the input fields render an
   // empty string for null so the user can fill in manually.
   const prefillMacros = route?.params?.prefillMacros ?? null;
+  // Read off the front-of-pack photo by ScanLabel. Empty when the name step
+  // was skipped or the read found nothing; the user types it in then.
+  const prefillName = route?.params?.prefillName ?? '';
   const _num = (v) => (v == null || !Number.isFinite(v) ? '' : String(v));
 
-  const [name, setName] = useState('');
+  const [name, setName] = useState(prefillName);
   const [brand, setBrand] = useState('');
   const [servingG, setServingG] = useState(_num(prefillMacros?.servingG) || '100');
   const [kcal, setKcal] = useState(_num(prefillMacros?.kcal100g));

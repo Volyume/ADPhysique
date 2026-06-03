@@ -59,3 +59,25 @@ export async function recogniseText(imageUri) {
     return null;
   }
 }
+
+/**
+ * Recognise text and keep the block structure (text + bounding-box frame)
+ * so callers can reason about layout, e.g. picking the largest, topmost
+ * block as a front-of-pack product name. Returns { text, blocks } or null.
+ * Each block is { text, frame } where frame may be null if MLKit omitted it.
+ *
+ * @param {string} imageUri  Local file URI from the camera.
+ */
+export async function recogniseBlocks(imageUri) {
+  if (!_TextRecognition || !imageUri) return null;
+  try {
+    const result = await _TextRecognition.recognize(imageUri);
+    if (!result) return null;
+    const blocks = Array.isArray(result.blocks)
+      ? result.blocks.map((b) => ({ text: b?.text || '', frame: b?.frame || b?.boundingBox || null }))
+      : [];
+    return { text: result.text || '', blocks };
+  } catch {
+    return null;
+  }
+}

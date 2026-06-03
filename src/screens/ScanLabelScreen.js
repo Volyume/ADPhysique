@@ -1,11 +1,15 @@
 /**
  * ScanLabelScreen (Move #1.5 phase 3, vision-camera build).
  *
- * Nutrition-label capture. Takes a photo via react-native-vision-camera,
- * runs the on-device MLKit text recogniser
- * (@react-native-ml-kit/text-recognition), parses macros, navigates
- * to AddCustomFood with the macros prefilled and the original image
- * queued for OFF write-back (if the user has opted in).
+ * Two-step food capture, the way Cronometer does it: first the front of
+ * pack (to read the product name), then the nutrition panel (to read the
+ * macros). Takes each photo via react-native-vision-camera, runs the
+ * on-device MLKit text recogniser (@react-native-ml-kit/text-recognition),
+ * picks the name from the front-of-pack blocks and parses macros from the
+ * panel, then navigates to AddCustomFood with the name + macros prefilled
+ * and the original image queued for OFF write-back (if the user opted in).
+ * The name step can be skipped, and the whole thing degrades to manual
+ * entry when OCR isn't in the binary.
  *
  * Two entry contexts:
  *   - With prefillBarcode (from a ScanBarcode miss): top banner
@@ -33,8 +37,9 @@ import { Camera, useCameraDevice } from 'react-native-vision-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
-import { isOcrConfigured, recogniseText } from '../lib/food/ocr';
+import { isOcrConfigured, recogniseText, recogniseBlocks } from '../lib/food/ocr';
 import { parseNutritionLabel } from '../lib/food/ocrParser';
+import { pickProductName } from '../lib/food/labelName';
 import { queueContribution, getConsent } from '../lib/food/writeback';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -49,6 +54,10 @@ export default function ScanLabelScreen({ navigation, route }) {
 
   const [permission, setPermission] = useState(Camera.getCameraPermissionStatus());
   const [busy, setBusy] = useState(false);
+  // Two-step capture: 'front' reads the product name, 'nutrition' reads the
+  // panel. productName carries the read name across to the nutrition step.
+  const [step, setStep] = useState('front');
+  const [productName, setProductName] = useState('');
   const [torch, setTorch] = useState(false);
   const [appActive, setAppActive] = useState(AppState.currentState === 'active');
   const [focused, setFocused] = useState(true);
@@ -88,12 +97,29 @@ export default function ScanLabelScreen({ navigation, route }) {
         flash: torch ? 'on' : 'off',
         enableShutterSound: false,
       });
-      // vision-camera returns path without scheme; recogniseText
+      // vision-camera returns path without scheme; the recogniser
       // needs a file:// URI so MLKit's image loader can read it.
       const uri = photo?.path?.startsWith('file://') ? photo.path : `file://${photo?.path ?? ''}`;
+
+      // Step 1: front of pack. Read the name, then move to the panel.
+      // A failed or empty read just advances with no name, never blocks.
+      if (step === 'front') {
+        if (uri) {
+          const ocr = await recogniseBlocks(uri);
+          const nm = ocr ? pickProductName(ocr) : null;
+          if (nm) setProductName(nm);
+        }
+        setStep('nutrition');
+        setBusy(false);
+        return;
+      }
+
+      // Step 2: nutrition panel. Parse macros and hand off to AddCustomFood
+      // with the name (if read) and macros prefilled.
+      const nameParam = productName || undefined;
       if (!uri) {
         navigation.replace('AddCustomFood', {
-          mealSlot, entryDate, prefillBarcode,
+          mealSlot, entryDate, prefillBarcode, prefillName: nameParam,
         });
         return;
       }
@@ -116,18 +142,29 @@ export default function ScanLabelScreen({ navigation, route }) {
       }
 
       navigation.replace('AddCustomFood', {
-        mealSlot, entryDate, prefillBarcode, prefillMacros: macros,
+        mealSlot, entryDate, prefillBarcode, prefillMacros: macros, prefillName: nameParam,
       });
     } catch {
+      if (step === 'front') {
+        setStep('nutrition');
+        setBusy(false);
+        return;
+      }
       navigation.replace('AddCustomFood', {
-        mealSlot, entryDate, prefillBarcode,
+        mealSlot, entryDate, prefillBarcode, prefillName: productName || undefined,
       });
     }
-  }, [busy, navigation, mealSlot, entryDate, prefillBarcode, userId, torch]);
+  }, [busy, navigation, mealSlot, entryDate, prefillBarcode, userId, torch, step, productName]);
+
+  // Skip the name step and go straight to the nutrition panel.
+  const skipName = () => {
+    if (busy) return;
+    setStep('nutrition');
+  };
 
   const gotoManual = () => {
     navigation.replace('AddCustomFood', {
-      mealSlot, entryDate, prefillBarcode,
+      mealSlot, entryDate, prefillBarcode, prefillName: productName || undefined,
     });
   };
 
@@ -186,6 +223,10 @@ export default function ScanLabelScreen({ navigation, route }) {
   }
 
   const isActive = focused && appActive;
+  const onFront = step === 'front';
+  const hintText = busy
+    ? 'Reading'
+    : onFront ? 'Front of pack (1 of 2)' : 'Nutrition panel (2 of 2)';
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -217,29 +258,39 @@ export default function ScanLabelScreen({ navigation, route }) {
           <View style={styles.missBanner} pointerEvents="none">
             <Text style={styles.missTitle}>Barcode {prefillBarcode} not in our database</Text>
             <Text style={styles.missBody}>
-              {ocrAvailable
-                ? 'Frame the nutrition panel and tap the shutter, or type it in.'
-                : 'Type the macros in, we’ll keep the barcode on the saved food so the next scan hits.'}
+              {!ocrAvailable
+                ? 'Type the macros in, we’ll keep the barcode on the saved food so the next scan hits.'
+                : onFront
+                  ? 'Snap the front for the name, then the nutrition panel.'
+                  : 'Frame the nutrition panel and tap the shutter.'}
             </Text>
           </View>
-        ) : (
+        ) : null}
+        {ocrAvailable ? (
           <View style={styles.overlay} pointerEvents="none">
             <View style={styles.frame} />
-            <Text style={styles.hint}>
-              {busy ? 'Reading' : 'Frame the nutrition panel'}
-            </Text>
+            <Text style={styles.hint}>{hintText}</Text>
           </View>
-        )}
+        ) : null}
         <View style={styles.captureRow}>
           {ocrAvailable ? (
-            <TouchableOpacity
-              style={[styles.captureBtn, busy && styles.captureBtnDisabled]}
-              onPress={onCapture}
-              disabled={busy}
-            >
-              {/* eslint-disable-next-line no-restricted-syntax -- spinner sits on the white camera capture button */}
-              {busy ? <ActivityIndicator color="#000" /> : <View style={styles.captureInner} />}
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={[styles.captureBtn, busy && styles.captureBtnDisabled]}
+                onPress={onCapture}
+                disabled={busy}
+                accessibilityRole="button"
+                accessibilityLabel={onFront ? 'Capture front of pack' : 'Capture nutrition panel'}
+              >
+                {/* eslint-disable-next-line no-restricted-syntax -- spinner sits on the white camera capture button */}
+                {busy ? <ActivityIndicator color="#000" /> : <View style={styles.captureInner} />}
+              </TouchableOpacity>
+              {onFront && !busy ? (
+                <TouchableOpacity onPress={skipName} hitSlop={12} style={styles.skipBtn}>
+                  <Text style={styles.skipText}>Skip name</Text>
+                </TouchableOpacity>
+              ) : null}
+            </>
           ) : (
             <Button title="Type it in" variant="tertiary" onPress={gotoManual} />
           )}
@@ -294,6 +345,8 @@ const styles = StyleSheet.create({
     borderWidth: 4, borderColor: 'rgba(255,255,255,0.9)',
   },
   captureBtnDisabled: { opacity: 0.6 },
+  skipBtn: { marginTop: spacing.md, paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
+  skipText: { ...type.body, color: colors.textPrimary, backgroundColor: colors.scrim, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.sm },
   // eslint-disable-next-line no-restricted-syntax -- camera capture-button inner dot, black-on-white is the shutter convention
   captureInner: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#000' },
   fallbackWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl },
