@@ -217,7 +217,11 @@ function _waterToCloud(row, userId) {
 // food_* tables where updated_at is an integer ms epoch; tolerate an ISO
 // string just in case. Returns null when it can't be read.
 function _rowUpdatedMs(r) {
-  const v = r?.updated_at ?? r?.updatedAt;
+  // food_favourites has no updated_at; its change-time column is last_used_at,
+  // which is also what getAllFavouritesSince filters on. Without this fallback
+  // a favourites-only push left latestTsMs null, so the shared watermark never
+  // advanced and those rows re-pushed every cycle (re-audit finding).
+  const v = r?.updated_at ?? r?.updatedAt ?? r?.last_used_at ?? r?.lastUsedAt;
   if (typeof v === 'number') return Number.isFinite(v) ? v : null;
   if (typeof v === 'string') {
     const ms = Date.parse(v);

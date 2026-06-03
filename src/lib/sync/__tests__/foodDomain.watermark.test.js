@@ -78,3 +78,18 @@ test('does not advance the watermark when nothing changed', async () => {
   expect(sb.rpc).not.toHaveBeenCalled();
   expect(await AsyncStorage.getItem(KEY)).toBeNull();
 });
+
+test('a favourites-only push advances the watermark (no per-cycle re-push)', async () => {
+  // food_favourites has no updated_at; its change time is last_used_at. If the
+  // watermark does not advance on a favourites-only cycle, the same rows
+  // re-push every sync. The fav coordinator pushes 'food_favourites' as its key.
+  food.getAllFavouritesSince.mockResolvedValue([
+    { user_id: 'u1', food_ref: 'off:1', last_used_at: 1700 },
+    { user_id: 'u1', food_ref: 'off:2', last_used_at: 1900 },
+  ]);
+  const sb = { rpc: jest.fn(async () => ({ data: { timestamp: new Date('3000-01-01').toISOString() }, error: null })) };
+
+  await foodPushFor('food_favourites')(sb, { userId: 'u1', localUserId: 'u1' });
+
+  expect(await AsyncStorage.getItem(KEY)).toBe('1900'); // newest last_used_at, not server clock
+});
