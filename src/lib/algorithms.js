@@ -652,6 +652,14 @@ export function getAutoRegSuggestion(workoutFeedback, weeklyVolumeByMuscle, cust
 // performance decline and joint/motivation signals precede physiological overreaching
 // (Kreher & Schwartz 2012; Meeusen et al. 2013). Autoregulated deloads preferred over
 // pre-planned (Bell Delphi 2023; Bell survey 2024): trigger fires when evidence warrants it.
+//
+// INPUT SCALES (do not "normalise" these away): each weekly bucket's
+// avgSoreness and avgJointDiscomfort come from the per-session sliders, which
+// are 1-3 (1=fresh/none .. 3=sore/significant), NOT the 1-5 weekly check-in
+// soreness. The thresholds below (soreness >= 2.5, joint >= 1.5) are
+// calibrated for that 1-3 scale. The adaptive engine maps the sliders to 1-5
+// at its own boundary (SORENESS_MAP in database.js / WorkoutSummaryScreen);
+// this function deliberately works in the raw slider scale instead.
 export function shouldDeload(last4WeeksData) {
   if (!last4WeeksData || last4WeeksData.length < 2) return { deload: false, reasons: [] };
 
