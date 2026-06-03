@@ -474,3 +474,42 @@ describe('summariseWorkoutSets', () => {
     expect(summariseWorkoutSets(null)).toEqual({ totalSets: 0, workingSetCount: 0, tonnage: 0 });
   });
 });
+
+// CALC-2/4/5/6/7: numeric edge-case hardening.
+describe('numeric edge cases (CALC-2/4/5/6/7)', () => {
+  const {
+    calculate1RM, getVolumeStatus, getProgressionSuggestion,
+    generateDeloadPrescription, calculatePlates,
+  } = require('../algorithms');
+
+  test('CALC-2: calculate1RM is finite for non-numeric reps and weight', () => {
+    expect(calculate1RM(100, 'abc')).toBe(100); // valid weight, bad reps -> weight
+    expect(calculate1RM(NaN, 5)).toBe(0);
+    expect(Number.isFinite(calculate1RM(100, '5'))).toBe(true);
+  });
+
+  test('CALC-4: getVolumeStatus(NaN) is not "over_mrv"', () => {
+    const s = getVolumeStatus(NaN, 'chest');
+    expect(s.status).not.toBe('over_mrv');
+  });
+
+  test('CALC-5: bodyweight (all-zero) history does not suggest a weight increase', () => {
+    const prev = [
+      { weight: 0, actualReps: 15, rir: 3 },
+      { weight: 0, actualReps: 15, rir: 3 },
+    ];
+    const s = getProgressionSuggestion(prev, prev, 8, 12, 'kg');
+    expect(s.action).not.toBe('increase_weight');
+    expect(s.message).not.toMatch(/kg/);
+  });
+
+  test('CALC-6: generateDeloadPrescription never prescribes a negative load', () => {
+    const out = generateDeloadPrescription([{ weight: -50, actualReps: 5, setType: 'straight' }], false);
+    expect(out[0].weight).toBeGreaterThanOrEqual(0);
+  });
+
+  test('CALC-7: calculatePlates terminates when availablePlates contains 0', () => {
+    const res = calculatePlates(100, 20, [25, 0, 5]);
+    expect(Array.isArray(res.plates)).toBe(true); // returned, did not hang
+  });
+});

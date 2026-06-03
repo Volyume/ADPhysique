@@ -71,6 +71,7 @@ export default function FoodSearchScreen({ navigation, route }) {
   // log the whole plate in one pass. Disabled in recipe pick mode (which
   // returns a single ingredient). Mirrors MacroFactor's fastest workflow.
   const [plate, setPlate] = useState([]);
+  const loggingPlateRef = useRef(false); // CALC-3: prevents double-tap double-log
   const [showPlate, setShowPlate] = useState(false);
   const isRecipePick = route?.params?.pickMode === 'recipe';
   const [results, setResults] = useState([]);
@@ -255,6 +256,11 @@ export default function FoodSearchScreen({ navigation, route }) {
   // Log every plate item to the meal, then return to the diary.
   async function logPlate() {
     if (!plate.length) return;
+    // CALC-3: in-flight guard so a double-tap can't log the whole plate twice
+    // (each logFoodEntry mints a fresh id, so duplicates can't be deduped).
+    if (loggingPlateRef.current) return;
+    loggingPlateRef.current = true;
+    try {
     for (const it of plate) {
       // eslint-disable-next-line no-await-in-loop
       await logFoodEntry(userId, {
@@ -272,6 +278,9 @@ export default function FoodSearchScreen({ navigation, route }) {
     setPlate([]);
     setShowPlate(false);
     navigation.goBack();
+    } finally {
+      loggingPlateRef.current = false;
+    }
   }
 
   // Quick add: log calories (and optional macros) with no food lookup.

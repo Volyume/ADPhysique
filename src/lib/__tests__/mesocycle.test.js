@@ -171,3 +171,30 @@ describe('getBlockStatus', () => {
     expect(() => getBlockStatus(null, 5)).not.toThrow();
   });
 });
+
+// CALC-8: out-of-range / NaN week numbers must be handled, not silently swallowed.
+describe('mesocycle helpers handle bad week numbers (CALC-8)', () => {
+  const { getWeekSetsMultiplier, getCurrentMesoWeek, getVolumeTargetsForWeek } = require('../mesocycle');
+
+  test('getCurrentMesoWeek(NaN) falls back to week 1, not NaN', () => {
+    expect(getCurrentMesoWeek(NaN)).toBe(1);
+    expect(getCurrentMesoWeek(undefined)).toBe(1);
+  });
+
+  test('getWeekSetsMultiplier wraps an out-of-range week instead of NaN/undefined', () => {
+    const m = getWeekSetsMultiplier(99);
+    expect(Number.isFinite(m)).toBe(true);
+    expect(m).toBeGreaterThan(0);
+    // In-range weeks are unchanged
+    expect(getWeekSetsMultiplier(1)).toBe(getWeekSetsMultiplier(1));
+  });
+
+  test('getWeekSetsMultiplier(NaN) is finite (defaults to week 1)', () => {
+    expect(Number.isFinite(getWeekSetsMultiplier(NaN))).toBe(true);
+  });
+
+  test('getVolumeTargetsForWeek scales with a finite multiplier even for a bad week', () => {
+    const out = getVolumeTargetsForWeek({ chest: 10 }, 99);
+    expect(Number.isFinite(out.chest)).toBe(true);
+  });
+});

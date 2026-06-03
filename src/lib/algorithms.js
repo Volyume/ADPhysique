@@ -60,7 +60,12 @@ export const MUSCLE_DISPLAY_NAMES = {
 
 // Algorithm 4: 1RM Ensemble Calculator
 export function calculate1RM(weight, reps) {
-  if (!weight || weight <= 0 || !reps || reps < 1) return weight || 0;
+  // Number.isFinite guards a non-numeric reps (e.g. a string from a malformed
+  // synced row): "abc" is truthy and "abc" < 1 is false, so the old guard let
+  // it through and the formula returned NaN, breaking PR detection. (CALC-2)
+  if (!Number.isFinite(weight) || weight <= 0 || !Number.isFinite(reps) || reps < 1) {
+    return Number.isFinite(weight) && weight > 0 ? weight : 0;
+  }
   if (reps === 1) return weight;
 
   // 1RM estimators lose validity past ~12-15 reps, and Brzycki's denominator
@@ -178,7 +183,9 @@ export function getVolumeStatus(workingSets, muscle, customLandmarks = null) {
   // muscles with mev=0 (front_delts, get plenty of indirect work from
   // pressing) read as 'optimal' green on the body heatmap before the user
   // has logged a single set, which makes the diagram look wrong.
-  if (workingSets <= 0) {
+  // CALC-4: a non-finite set count (NaN from corrupt/missing data) used to fall
+  // through every comparison to 'over_mrv' ("Too much"). Treat it as no work.
+  if (!Number.isFinite(workingSets) || workingSets <= 0) {
     return { status: 'below', label: 'Below target', landmarks };
   }
   if (workingSets < mev) {
@@ -232,6 +239,15 @@ export function getProgressionSuggestion(currentSets, prevWorkoutSets, targetRep
   const targetMax = targetRepsMax || prevAvgReps + 1;
 
   if (prevAvgReps >= targetMax && prevAvgRIR >= 1) {
+    // CALC-5: a bodyweight / unloaded exercise (prevAvgWeight <= 0) has no load
+    // to add — suggest more reps instead of a nonsensical "+1.3kg".
+    if (prevAvgWeight <= 0) {
+      return {
+        action: 'increase_reps',
+        message: 'Strong sets. Add a rep or two next session.',
+        suggestedWeight: 0,
+      };
+    }
     const increment = defaultIncrement(prevAvgWeight, units);
     return {
       action: 'increase_weight',
@@ -740,6 +756,9 @@ export function calculatePlates(targetWeight, barWeight = 20, availablePlates = 
   let remaining = sideWeight;
 
   for (const plate of availablePlates) {
+    // CALC-7: a non-positive plate denomination makes `remaining >= plate-0.001`
+    // permanently true -> infinite loop. Skip them.
+    if (!(plate > 0)) continue;
     while (remaining >= plate - 0.001) {
       plates.push(plate);
       remaining -= plate;
@@ -1075,7 +1094,9 @@ export function generateDeloadPrescription(prevSets, isFirstHalf = true) {
   if (!working.length) return [];
 
   return working.map(set => {
-    const baseWeight = set.weight || 0;
+    // CALC-6: clamp to >= 0 so a stray negative logged weight can't produce a
+    // negative prescribed load (|| 0 only caught 0/null, not negatives).
+    const baseWeight = Math.max(0, set.weight || 0);
     const baseReps = set.actualReps || set.actual_reps || set.reps || 8;
     const deloadWeight = isFirstHalf ? baseWeight : Math.round(baseWeight * 0.5 * 4) / 4;
     const deloadReps = Math.max(1, Math.round(baseReps * 0.5));

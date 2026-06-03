@@ -48,6 +48,9 @@ const MESO_SCHEDULE = {
 export function getCurrentMesoWeek(startDateMs, experience = 'intermediate', nowMs = Date.now()) {
   const schedule = getMesoSchedule(experience);
   const start = typeof startDateMs === 'string' ? new Date(startDateMs).getTime() : startDateMs;
+  // CALC-8: an invalid start (NaN / undefined) used to propagate NaN out as the
+  // week number. Fall back to week 1 instead.
+  if (!Number.isFinite(start)) return 1;
   // Compare local calendar days rather than raw ms deltas so a DST
   // jump during the block (spring-forward / fall-back) doesn't shift
   // the user's week counter by a day. We anchor at local midnight on
@@ -81,7 +84,12 @@ export function getMesoSchedule(experience) {
  */
 export function getWeekSetsMultiplier(mesoWeek, experience = 'intermediate') {
   const schedule = getMesoSchedule(experience);
-  const entry = schedule.find(s => s.week === mesoWeek) ?? schedule[0];
+  // CALC-8: wrap an out-of-range or non-finite week into the schedule (same
+  // wrap getCurrentMesoWeek uses) instead of silently returning week 1. In-range
+  // weeks map to themselves, so valid callers are unchanged.
+  const wk = Number.isFinite(mesoWeek) ? Math.max(1, Math.round(mesoWeek)) : 1;
+  const normalized = ((wk - 1) % schedule.length) + 1;
+  const entry = schedule.find(s => s.week === normalized) ?? schedule[0];
   return entry.setsMultiplier;
 }
 
