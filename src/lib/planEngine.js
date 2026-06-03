@@ -245,29 +245,50 @@ function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase, 
 // Volume integrity (rebuild spec phase 1)
 // ---------------------------------------------------------------------------
 //
-// Per-muscle weekly volume landmarks (Israetel / Renaissance Periodization
-// classic figures, intermediate, weekly hard sets), keyed by the engine's
-// internal muscle names. MRV is the hard ceiling. The three delt heads share a
-// combined cap of 26 (Israetel) enforced separately below, which is what stops
-// the "shoulders to 30" failure. Forearms and adductors are not in the spec
-// table; their values are an assumption flagged in the rebuild docs.
-const SPEC_LANDMARKS = {
-  chest:       { MV: 4, MEV: 6,  MRV: 22 },
-  back:        { MV: 8, MEV: 10, MRV: 25 },
-  side_delts:  { MV: 6, MEV: 8,  MRV: 20 },
-  rear_delts:  { MV: 0, MEV: 0,  MRV: 14 },
-  front_delts: { MV: 0, MEV: 0,  MRV: 12 },
-  biceps:      { MV: 5, MEV: 8,  MRV: 20 },
-  triceps:     { MV: 4, MEV: 6,  MRV: 18 },
-  quads:       { MV: 6, MEV: 8,  MRV: 20 },
-  hamstrings:  { MV: 4, MEV: 6,  MRV: 20 },
-  glutes:      { MV: 4, MEV: 6,  MRV: 16 },
-  calves:      { MV: 6, MEV: 8,  MRV: 20 },
-  abs:         { MV: 0, MEV: 6,  MRV: 25 },
-  traps:       { MV: 0, MEV: 0,  MRV: 26 },
-  forearms:    { MV: 0, MEV: 0,  MRV: 16 }, // assumption: not in spec table
-  adductors:   { MV: 0, MEV: 0,  MRV: 12 }, // assumption: not in spec table
+// Per-muscle weekly volume landmarks the floor/cap pass uses (Israetel /
+// Renaissance Periodization classic figures, intermediate, weekly hard sets),
+// keyed by the engine's internal muscle names. MRV is the hard ceiling. The
+// three delt heads share a combined cap of 26 (Israetel) enforced separately
+// below, which is what stops the "shoulders to 30" failure.
+//
+// SINGLE SOURCE OF TRUTH: these are derived from the tracker's VOLUME_LANDMARKS
+// (algorithms.js) so a landmark change there flows through here automatically,
+// EXCEPT where the generator deliberately differs. The generator's job (decide
+// what to PROGRAM) is not the tracker's job (judge adequacy), so a few muscles
+// diverge BY DESIGN per the plan-engine rebuild spec
+// (docs/audit/volyume-planengine-rebuild-2026-06-01/planengine-rebuild-01-phase1-tests.md).
+// Those deltas are listed explicitly below with their reason, instead of
+// living in a second literal table that could silently drift from the tracker.
+// Tracker-only muscles (neck, tibialis) are not programmed by the generator,
+// so they are intentionally absent from this table.
+const GENERATOR_LANDMARK_MUSCLES = [
+  'chest', 'back', 'side_delts', 'rear_delts', 'front_delts', 'biceps',
+  'triceps', 'quads', 'hamstrings', 'glutes', 'calves', 'abs', 'traps',
+  'forearms', 'adductors',
+];
+const GENERATOR_LANDMARK_OVERRIDES = {
+  // Programmed to be fed indirectly (rows/pulls, deads/shrugs), so the
+  // generator does NOT floor them and keeps the spec's direct ceilings.
+  rear_delts: { MEV: 0, MRV: 14 },
+  traps:      { MEV: 0, MRV: 26 },
+  // RP general glute MRV is 16 here; Bikini/Wellness get 30 via divisionMRV().
+  // (The tracker's mrv 22 was raised for physique TRACKING, not programming.)
+  glutes:     { MV: 4, MEV: 6, MRV: 16 },
+  // Spec phase-1 table values that differ from the tracker.
+  side_delts: { MV: 6, MRV: 20 }, // direct side-delt ceiling; combined delt cap 26 binds in practice
+  biceps:     { MEV: 8, MRV: 20 },
+  abs:        { MEV: 6 },
+  // Forearms/adductors are an assumption flagged in the rebuild docs (not in
+  // the original spec table); kept here so the generator caps them.
+  forearms:   { MV: 0, MEV: 0, MRV: 16 },
+  adductors:  { MRV: 12 },
 };
+export const SPEC_LANDMARKS = Object.fromEntries(
+  GENERATOR_LANDMARK_MUSCLES.map((m) => {
+    const v = VOLUME_LANDMARKS[m];
+    return [m, { MV: v.mv, MEV: v.mev, MRV: v.mrv, ...(GENERATOR_LANDMARK_OVERRIDES[m] ?? {}) }];
+  }),
+);
 
 // Combined delt-complex weekly ceiling (Israetel side+rear = 26). The spec caps
 // side+rear at 26 and front separately; we fold all three heads into the 26 so
