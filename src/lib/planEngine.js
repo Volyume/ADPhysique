@@ -251,23 +251,21 @@ function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase, 
 // combined cap of 26 (Israetel) enforced separately below, which is what stops
 // the "shoulders to 30" failure. Forearms and adductors are not in the spec
 // table; their values are an assumption flagged in the rebuild docs.
-const SPEC_LANDMARKS = {
-  chest:       { MV: 4, MEV: 6,  MRV: 22 },
-  back:        { MV: 8, MEV: 10, MRV: 25 },
-  side_delts:  { MV: 6, MEV: 8,  MRV: 20 },
-  rear_delts:  { MV: 0, MEV: 0,  MRV: 14 },
-  front_delts: { MV: 0, MEV: 0,  MRV: 12 },
-  biceps:      { MV: 5, MEV: 8,  MRV: 20 },
-  triceps:     { MV: 4, MEV: 6,  MRV: 18 },
-  quads:       { MV: 6, MEV: 8,  MRV: 20 },
-  hamstrings:  { MV: 4, MEV: 6,  MRV: 20 },
-  glutes:      { MV: 4, MEV: 6,  MRV: 16 },
-  calves:      { MV: 6, MEV: 8,  MRV: 20 },
-  abs:         { MV: 0, MEV: 6,  MRV: 25 },
-  traps:       { MV: 0, MEV: 0,  MRV: 26 },
-  forearms:    { MV: 0, MEV: 0,  MRV: 16 }, // assumption: not in spec table
-  adductors:   { MV: 0, MEV: 0,  MRV: 12 }, // assumption: not in spec table
-};
+// Single source of truth for population landmarks: the floor/cap pass uses the
+// SAME table as the volume tracker (VOLUME_LANDMARKS in algorithms.js), mapped
+// to the uppercase MV/MEV/MRV shape this module's helpers expect.
+//
+// Previously this was a separate literal that had drifted from VOLUME_LANDMARKS
+// (side_delts, rear_delts, biceps, glutes, abs, traps and forearms all
+// disagreed), so the generator floored/capped against different numbers than
+// the tracker judged "lagging" / "over MRV" against. A user could be shown a
+// muscle as below MEV on a plan the generator had deliberately set to 0 (e.g.
+// traps), or a weak-pointed glute could ship above the tracker's MRV. Deriving
+// the table here keeps the two in lockstep. The floor/cap pass does not use
+// MAV, so only MV/MEV/MRV are carried.
+const SPEC_LANDMARKS = Object.fromEntries(
+  Object.entries(VOLUME_LANDMARKS).map(([m, v]) => [m, { MV: v.mv, MEV: v.mev, MRV: v.mrv }]),
+);
 
 // Combined delt-complex weekly ceiling (Israetel side+rear = 26). The spec caps
 // side+rear at 26 and front separately; we fold all three heads into the 26 so

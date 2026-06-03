@@ -24,7 +24,11 @@ const MATRIX_DIVISIONS = [
   ['womens_physique', 'V-Taper'],
 ];
 
-const gluteMRV = (g) => (g === 'bikini' || g === 'wellness') ? 30 : 16;
+// Non-bikini/wellness glute MRV is now 22 (VOLUME_LANDMARKS, the single
+// source of truth shared with the tracker). It was 16 in the old standalone
+// SPEC_LANDMARKS table, which is what pushed weak-pointed glutes a few sets
+// "over MRV": with the tables merged, 22 is the correct ceiling.
+const gluteMRV = (g) => (g === 'bikini' || g === 'wellness') ? 30 : 22;
 
 function vol(plan) { return plan.weeklyVolumeSummary; }
 function wp(goal) {
