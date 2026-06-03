@@ -11,17 +11,18 @@
  */
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
 import SegmentedControl from '../components/SegmentedControl';
+import SearchBar from '../components/SearchBar';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
-  CARDIO_ACTIVITIES, CARDIO_CATEGORIES, getCardioActivity, getCardioActivityByName,
+  CARDIO_ACTIVITIES, CARDIO_CATEGORIES, getCardioActivity,
 } from '../lib/cardio/cardioActivities';
 import { estimateActivityKcal, metFor } from '../lib/cardio/cardioMath';
 import { insertCardioLog, getRecentCardioLog } from '../lib/database';
@@ -161,15 +162,7 @@ export default function LogCardioScreen({ navigation, route }) {
       {!activity ? (
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.searchWrap}>
-            <Ionicons name="search" size={16} color={colors.textMuted} />
-            <TextInput
-              style={styles.searchInput}
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Search cardio"
-              placeholderTextColor={colors.textMuted}
-              returnKeyType="search"
-            />
+            <SearchBar value={query} onChangeText={setQuery} placeholder="Search cardio" />
           </View>
 
           {filtered ? (
@@ -275,13 +268,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { ...type.title, color: colors.textPrimary },
   content: { padding: spacing.lg, paddingBottom: spacing.xxxl, gap: spacing.sm },
-  searchWrap: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.surface2, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    borderWidth: 1, borderColor: colors.border, marginBottom: spacing.sm,
-  },
-  searchInput: { flex: 1, color: colors.textPrimary, ...type.body, paddingVertical: 2 },
+  searchWrap: { marginBottom: spacing.sm },
   section: { marginTop: spacing.md },
   sectionLabel: {
     color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold,

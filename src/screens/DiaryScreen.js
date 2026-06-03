@@ -695,7 +695,7 @@ function CardioRow({ userId, date, onPress }) {
         <View style={styles.waterButtons}>
           <Text style={styles.waterValue}>
             {did
-              ? `${summary.totalMinutes} min${summary.totalKcal > 0 ? `, ~${summary.totalKcal} kcal` : ''}`
+              ? `${summary.totalMinutes} min${summary.sessions > 1 ? `, ${summary.sessions} sessions` : ''}`
               : 'Add'}
           </Text>
           <Ionicons name="add" size={16} color={colors.primary} />
