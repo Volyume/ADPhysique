@@ -1375,6 +1375,18 @@ export async function getWorkoutById(id) {
   return rowToCamel(row);
 }
 
+// LB-8: fire-and-forget engagement telemetry. Lazy-requires the transport
+// (like food/db.js) so test environments that mock the DB don't pull in the
+// supabase client, and so the opt-out gate in transport applies uniformly.
+function _trackEvent(userId, event, payload) {
+  if (!userId) return;
+  try {
+    // eslint-disable-next-line global-require
+    const { track } = require('./engineTelemetry');
+    track(userId, event, payload ?? null).catch(() => {});
+  } catch (_) { /* tolerate test env without telemetry */ }
+}
+
 export async function createWorkout(userId, routineId = null, { intent = null } = {}) {
   const d = await db();
   // Auto-link to the active mesocycle so tonnage + recovery data flows into the block dashboard
@@ -1399,6 +1411,9 @@ export async function createWorkout(userId, routineId = null, { intent = null } 
      VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
     [id, userId, routineId, mesocycleId, mesocycleWeekId, now, intent, now, now],
   );
+  // LB-8: a session was started. from_routine distinguishes plan-driven
+  // starts from free/empty sessions; no training content in the payload.
+  _trackEvent(userId, 'workout_started', { from_routine: !!routineId });
   return { id, userId, routineId, mesocycleId, mesocycleWeekId, startedAt: now, isCompleted: 0, preWorkoutIntent: intent, createdAt: now, updatedAt: now };
 }
 
@@ -2235,6 +2250,9 @@ export async function setActivePlan(userId, planId) {
       'UPDATE programmes SET is_active = 1, updated_at = ? WHERE id = ?',
       [now, planId],
     );
+    // LB-8: a plan was activated (onboarding success / re-engagement). Only
+    // on a real activation, not the planId=null deactivate-all path.
+    _trackEvent(userId, 'plan_activated', null);
   }
   _scheduleSync();
 }

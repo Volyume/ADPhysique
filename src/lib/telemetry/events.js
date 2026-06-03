@@ -81,6 +81,13 @@ export const TELEMETRY_EVENTS = Object.freeze([
   { name: 'app_foregrounded',                deferred: false, panel: 1 },
   { name: 'app_backgrounded',                deferred: false, panel: 1 },
 
+  // Panel 1: core engagement (LB-8). The activation + retention loop:
+  // started a session, finished one, activated a plan. Payloads carry
+  // counts/flags only, never training content.
+  { name: 'workout_started',                 deferred: false, panel: 1 },
+  { name: 'workout_completed',               deferred: false, panel: 1 },
+  { name: 'plan_activated',                  deferred: false, panel: 1 },
+
   // Held-decision umbrella per spec but unused: the per-type events
   // (ed_pattern_flag_fired, ffm_floor_hold_fired,
   // rapid_loss_compression_triggered) already populate Panel 2

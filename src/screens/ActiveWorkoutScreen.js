@@ -1113,6 +1113,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 setCount: workingSetCount,
                 totalVolume: tonnage,
               });
+              // LB-8: the core value event. Counts + duration only, no
+              // exercise names or loads.
+              try {
+                const uid = useAppStore.getState().user?.id;
+                if (uid) {
+                  // eslint-disable-next-line global-require
+                  const { track } = require('../lib/engineTelemetry');
+                  track(uid, 'workout_completed', {
+                    set_count: workingSetCount,
+                    duration_min: Math.round(snapshotElapsed / 60),
+                    exercise_count: snapshotExercises.length,
+                  }).catch(() => {});
+                }
+              } catch (_) { /* tolerate */ }
               // Push to cloud IMMEDIATELY on finish. Previously the
               // syncWorkout call only fired when the user tapped Close
               // on the Workout Summary screen, if they swiped away to
