@@ -12,6 +12,7 @@ import { colors, fontSize, fontWeight, spacing, radius, volumeColors, type } fro
 import ScreenHeader from '../components/ScreenHeader';
 import { EmptyChartIllustration } from '../components/Illustrations';
 import InfoTooltip from '../components/InfoTooltip';
+import CardioPlanCard from '../components/CardioPlanCard';
 import useAppStore from '../store/useAppStore';
 import useProgressData from '../hooks/useProgressData';
 import { VOLUME_LANDMARKS } from '../lib/algorithms';
@@ -25,6 +26,9 @@ const SEVERITY_STYLE = {
 
 export default function AnalyticsScreen({ navigation }) {
   const units = useAppStore(s => s.units);
+  const user = useAppStore(s => s.user);
+  const userProfile = useAppStore(s => s.userProfile);
+  const tier = useAppStore(s => s.tier);
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -111,6 +115,19 @@ export default function AnalyticsScreen({ navigation }) {
             onPress={() => navigation.navigate('VolumeHeatmap')}
           />
         </View>
+        )}
+
+        {/* ── Cardio this week (Pro, available not allocated). Moved here from
+            Plans: it is a tracking surface. ── */}
+        {tier === 'pro' && user?.id && userProfile?.cardioEnabled !== false && (
+          <View style={styles.section}>
+            <CardioPlanCard
+              userId={user.id}
+              target={userProfile?.cardioTarget}
+              onPress={() => navigation.navigate('LogCardio')}
+              onHistory={() => navigation.navigate('CardioHistory')}
+            />
+          </View>
         )}
 
         {/* ── 4 · PR Rate Sparkline ─────────────────────────── */}

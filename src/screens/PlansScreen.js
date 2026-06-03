@@ -19,9 +19,7 @@ import {
   getWorkoutTemplates, getPlanWorkoutCounts, getAllRoutineExerciseCounts,
   activatePlanWithBlock, getRoutinesForPlan, createWorkout, getRoutineExercisesWithDetails,
   archivePlan, unarchivePlan, duplicatePlan, softDeleteRoutine, getActiveBlock,
-  getCardioLogRange, activityDayKey,
 } from '../lib/database';
-import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
 import { getBlockAdvice } from '../lib/blockAdvisor';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import useAppStore from '../store/useAppStore';
@@ -87,46 +85,6 @@ const BLOCK_ICON = {
 // Weekly cardio card on Plans. Shows the coach target (if one is applied) and
 // this week's progress, or just the week's count when cardio is available but
 // not allocated. Tap to log. Reads cardio_log for the trailing seven days.
-function CardioPlanCard({ userId, target, onPress, onHistory }) {
-  const [summary, setSummary] = useState(null);
-  useFocusEffect(useCallback(() => {
-    let live = true;
-    const to = activityDayKey();
-    const from = activityDayKey(Date.now() - 6 * 24 * 60 * 60 * 1000);
-    getCardioLogRange(userId, from, to)
-      .then((rows) => { if (live) setSummary(summariseWeekCardio(rows)); })
-      .catch(() => {});
-    return () => { live = false; };
-  }, [userId]));
-
-  const done = summary?.sessions ?? 0;
-  const goal = target?.sessionsPerWeek ?? 0;
-  const sub = goal > 0
-    ? `${done} of ${goal} sessions this week. Your choice of activity.`
-    : (done > 0
-      ? `${done} session${done === 1 ? '' : 's'} this week, ${summary.totalMinutes} min.`
-      : 'Log any cardio you do. The coach sets a target only if a cut stalls.');
-
-  return (
-    <View style={styles.cardioCard}>
-      <View style={styles.cardioHeader}>
-        <Ionicons name="heart-outline" size={18} color={colors.primary} />
-        <Text style={styles.cardioTitle}>Cardio this week</Text>
-        {done > 0 ? (
-          <TouchableOpacity onPress={onHistory} hitSlop={8} accessibilityLabel="Cardio history">
-            <Text style={styles.cardioHistoryLink}>History</Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
-      <Text style={styles.cardioSub}>{sub}</Text>
-      <TouchableOpacity style={styles.cardioBtn} onPress={onPress} accessibilityRole="button" accessibilityLabel="Log cardio">
-        <Ionicons name="add" size={16} color={colors.primary} />
-        <Text style={styles.cardioBtnText}>Log cardio</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
 export default function PlansScreen({ navigation }) {
   const toast = useToast();
   // Selector-scoped subscription: only re-render when these specific
@@ -791,14 +749,8 @@ export default function PlansScreen({ navigation }) {
           </>
         ) : null}
 
-        {tier === 'pro' && user?.id && userProfile?.cardioEnabled !== false ? (
-          <CardioPlanCard
-            userId={user.id}
-            target={userProfile?.cardioTarget}
-            onPress={() => navigation.navigate('LogCardio')}
-            onHistory={() => navigation.navigate('CardioHistory')}
-          />
-        ) : null}
+        {/* "Cardio this week" moved to the Progress tab (founder 2026-06-03):
+            it is a tracking surface, not a plan. */}
       </ScrollView>
       <PeekMenu ref={peekRef} />
     </SafeAreaView>
