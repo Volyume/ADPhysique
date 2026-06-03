@@ -1118,6 +1118,42 @@ const SCHEMA_MIGRATIONS = [
       PRIMARY KEY (user_id, entry_date)
     )`,
   ],
+  // cardio_log: one row per logged cardio session (audit
+  // docs/audit/volyume-cardio-integration-2026-06-03). Unlike daily_steps
+  // (one row per day) a day can hold several cardio sessions, so the PK is
+  // (user_id, id) per the identity rule, with entry_date a regular indexed
+  // column. activity_id references the in-code cardio library; activity_name
+  // + met are snapshotted so the row is self-describing if the library later
+  // changes. est_kcal is session FEEDBACK only and is never added to the
+  // calorie target. updated_at drives last-write-wins; deleted_at gives a
+  // soft delete so a delete syncs. Fully additive; the frozen build has no
+  // writer or reader.
+  [
+    `CREATE TABLE IF NOT EXISTS cardio_log (
+      user_id TEXT NOT NULL,
+      id TEXT NOT NULL,
+      entry_date TEXT NOT NULL,
+      activity_id TEXT,
+      activity_name TEXT NOT NULL,
+      category TEXT,
+      duration_min INTEGER NOT NULL DEFAULT 0,
+      intensity TEXT NOT NULL DEFAULT 'moderate',
+      met REAL,
+      est_kcal INTEGER,
+      recovery_impact TEXT,
+      impact_type TEXT,
+      distance REAL,
+      avg_hr INTEGER,
+      source TEXT NOT NULL DEFAULT 'manual',
+      notes TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER,
+      PRIMARY KEY (user_id, id)
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_cardio_log_user_date ON cardio_log(user_id, entry_date)`,
+    `CREATE INDEX IF NOT EXISTS idx_cardio_log_user_updated ON cardio_log(user_id, updated_at)`,
+  ],
   // Exercise-library schema expansion (docs/audit/volyume-exercise-audit-
   // 2026-05-30). The richer metadata that lets plan construction reason
   // about anatomical subregion, granular equipment, machine type, goal
@@ -3658,6 +3694,145 @@ export async function getDailyStepsRange(userId, fromDate, toDate) {
      WHERE user_id = ? AND entry_date >= ? AND entry_date <= ?
      ORDER BY entry_date ASC`,
     [userId, fromDate, toDate],
+  );
+  return rows.map(rowToCamel);
+}
+
+// ─── Cardio log (audit volyume-cardio-integration-2026-06-03) ──────────────
+// One row per logged cardio session. est_kcal is session feedback only; it is
+// never added to the calorie target (the energy-balance model absorbs cardio
+// via the weight trend). Soft delete via deleted_at so a delete syncs; LWW on
+// updated_at.
+
+// Write a new cardio session. Returns the stored row (camelCase). The caller
+// has already resolved the activity + computed met/est_kcal (cardioMath), so
+// this layer just persists what it is given, clamped.
+export async function insertCardioLog(userId, session = {}) {
+  if (!userId) return null;
+  const d = await db();
+  const id = session.id || uid();
+  const now = Date.now();
+  const day = session.entryDate || activityDayKey();
+  const durationMin = Math.max(0, Math.min(1440, Math.round(Number(session.durationMin) || 0)));
+  const row = {
+    user_id: userId,
+    id,
+    entry_date: day,
+    activity_id: session.activityId ?? null,
+    activity_name: String(session.activityName || 'Cardio'),
+    category: session.category ?? null,
+    duration_min: durationMin,
+    intensity: session.intensity || 'moderate',
+    met: session.met != null ? Number(session.met) : null,
+    est_kcal: session.estKcal != null ? Math.max(0, Math.round(Number(session.estKcal))) : null,
+    recovery_impact: session.recoveryImpact ?? null,
+    impact_type: session.impactType ?? null,
+    distance: session.distance != null ? Number(session.distance) : null,
+    avg_hr: session.avgHr != null ? Math.round(Number(session.avgHr)) : null,
+    source: session.source || 'manual',
+    notes: session.notes ?? null,
+    created_at: now,
+    updated_at: now,
+    deleted_at: null,
+  };
+  await d.runAsync(
+    `INSERT INTO cardio_log (user_id, id, entry_date, activity_id, activity_name,
+       category, duration_min, intensity, met, est_kcal, recovery_impact,
+       impact_type, distance, avg_hr, source, notes, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [row.user_id, row.id, row.entry_date, row.activity_id, row.activity_name,
+      row.category, row.duration_min, row.intensity, row.met, row.est_kcal,
+      row.recovery_impact, row.impact_type, row.distance, row.avg_hr, row.source,
+      row.notes, row.created_at, row.updated_at, row.deleted_at],
+  );
+  _scheduleSync();
+  return rowToCamel(row);
+}
+
+// Patch an existing session (duration/intensity/notes etc.). Recompute of
+// est_kcal is the caller's job (pass the new value). Bumps updated_at.
+export async function updateCardioLog(userId, id, fields = {}) {
+  if (!userId || !id) return null;
+  const d = await db();
+  const now = Date.now();
+  const allowed = {
+    entry_date: fields.entryDate, activity_id: fields.activityId,
+    activity_name: fields.activityName, category: fields.category,
+    duration_min: fields.durationMin != null ? Math.max(0, Math.round(Number(fields.durationMin))) : undefined,
+    intensity: fields.intensity, met: fields.met,
+    est_kcal: fields.estKcal != null ? Math.max(0, Math.round(Number(fields.estKcal))) : undefined,
+    recovery_impact: fields.recoveryImpact, impact_type: fields.impactType,
+    distance: fields.distance, avg_hr: fields.avgHr, source: fields.source, notes: fields.notes,
+  };
+  const sets = [];
+  const args = [];
+  for (const [col, val] of Object.entries(allowed)) {
+    if (val !== undefined) { sets.push(`${col} = ?`); args.push(val); }
+  }
+  if (!sets.length) return null;
+  sets.push('updated_at = ?'); args.push(now);
+  args.push(userId, id);
+  await d.runAsync(`UPDATE cardio_log SET ${sets.join(', ')} WHERE user_id = ? AND id = ?`, args);
+  _scheduleSync();
+  return getCardioLogById(userId, id);
+}
+
+// Soft delete: mark deleted_at + bump updated_at so the deletion syncs.
+export async function deleteCardioLog(userId, id) {
+  if (!userId || !id) return false;
+  const d = await db();
+  const now = Date.now();
+  await d.runAsync(
+    'UPDATE cardio_log SET deleted_at = ?, updated_at = ? WHERE user_id = ? AND id = ?',
+    [now, now, userId, id],
+  );
+  _scheduleSync();
+  return true;
+}
+
+export async function getCardioLogById(userId, id) {
+  if (!userId || !id) return null;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT * FROM cardio_log WHERE user_id = ? AND id = ?',
+    [userId, id],
+  );
+  return row ? rowToCamel(row) : null;
+}
+
+// Live sessions for a day (deleted rows excluded), newest first.
+export async function getCardioLogForDate(userId, entryDate) {
+  if (!userId) return [];
+  const d = await db();
+  const day = entryDate || activityDayKey();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM cardio_log WHERE user_id = ? AND entry_date = ? AND deleted_at IS NULL ORDER BY created_at DESC',
+    [userId, day],
+  );
+  return rows.map(rowToCamel);
+}
+
+// Inclusive date-range read (deleted excluded), newest first. Backs the Plans
+// weekly card, the check-in compliance prefill, and the coach week summary.
+export async function getCardioLogRange(userId, fromDate, toDate) {
+  if (!userId) return [];
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT * FROM cardio_log
+     WHERE user_id = ? AND entry_date >= ? AND entry_date <= ? AND deleted_at IS NULL
+     ORDER BY entry_date DESC, created_at DESC`,
+    [userId, fromDate, toDate],
+  );
+  return rows.map(rowToCamel);
+}
+
+// Recent history for the Progress surface (deleted excluded), newest first.
+export async function getRecentCardioLog(userId, limit = 50) {
+  if (!userId) return [];
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM cardio_log WHERE user_id = ? AND deleted_at IS NULL ORDER BY entry_date DESC, created_at DESC LIMIT ?',
+    [userId, Math.max(1, Math.min(500, limit | 0))],
   );
   return rows.map(rowToCamel);
 }
