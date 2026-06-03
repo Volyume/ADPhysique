@@ -87,7 +87,7 @@ const BLOCK_ICON = {
 // Weekly cardio card on Plans. Shows the coach target (if one is applied) and
 // this week's progress, or just the week's count when cardio is available but
 // not allocated. Tap to log. Reads cardio_log for the trailing seven days.
-function CardioPlanCard({ userId, target, onPress }) {
+function CardioPlanCard({ userId, target, onPress, onHistory }) {
   const [summary, setSummary] = useState(null);
   useFocusEffect(useCallback(() => {
     let live = true;
@@ -112,6 +112,11 @@ function CardioPlanCard({ userId, target, onPress }) {
       <View style={styles.cardioHeader}>
         <Ionicons name="heart-outline" size={18} color={colors.primary} />
         <Text style={styles.cardioTitle}>Cardio this week</Text>
+        {done > 0 ? (
+          <TouchableOpacity onPress={onHistory} hitSlop={8} accessibilityLabel="Cardio history">
+            <Text style={styles.cardioHistoryLink}>History</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
       <Text style={styles.cardioSub}>{sub}</Text>
       <TouchableOpacity style={styles.cardioBtn} onPress={onPress} accessibilityRole="button" accessibilityLabel="Log cardio">
@@ -791,6 +796,7 @@ export default function PlansScreen({ navigation }) {
             userId={user.id}
             target={userProfile?.cardioTarget}
             onPress={() => navigation.navigate('LogCardio')}
+            onHistory={() => navigation.navigate('CardioHistory')}
           />
         ) : null}
       </ScrollView>
@@ -807,7 +813,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border, padding: spacing.md, gap: spacing.sm,
   },
   cardioHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  cardioTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  cardioTitle: { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
+  cardioHistoryLink: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
   cardioSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
   cardioBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs, alignSelf: 'flex-start',
