@@ -4463,6 +4463,14 @@ export async function getCoachOutputHistory(userId, limit = 52) {
 export async function insertWorkoutFromCloud(userId, w) {
   const d = await db();
   const toMs = iso => iso ? new Date(iso).getTime() : null;
+  // Last-write-wins: don't let a stale cloud copy clobber a newer local
+  // edit. The legacy REPLACE had no guard, so a pull after a failed push
+  // (SYNC-1) reverted local workout edits. Only skip when both sides have a
+  // timestamp and local is at least as new (matches the migrated-table gate).
+  const cloudMs = toMs(w.updated_at);
+  const existing = await d.getFirstAsync('SELECT updated_at FROM workouts WHERE id = ?', [w.id]);
+  const localMs = existing?.updated_at ?? null;
+  if (localMs && cloudMs && localMs >= cloudMs) return;
   // Must stay column-symmetric with _upsertWorkout in sync.js.
   // Missing columns here silently drop user-entered fields on
   // cross-device restore.
@@ -4482,7 +4490,7 @@ export async function insertWorkoutFromCloud(userId, w) {
       w.session_difficulty ?? null, w.overall_pump ?? null,
       w.soreness_24h_before ?? null, w.fatigue_level ?? null, w.joint_discomfort ?? null,
       w.set_count ?? null, w.total_volume ?? null,
-      toMs(w.started_at) ?? Date.now(), Date.now(),
+      toMs(w.started_at) ?? Date.now(), cloudMs ?? Date.now(),
     ],
   );
 }
@@ -4592,6 +4600,12 @@ export async function insertWorkoutSetFromCloud(userId, s) {
       if (byName?.id) exerciseId = byName.id;
     }
   }
+  // Last-write-wins, same as insertWorkoutFromCloud: a stale cloud set must
+  // not clobber a newer local edit (RIR, notes, post-set ratings).
+  const cloudMs = _tsToMs(s.updated_at);
+  const existing = await d.getFirstAsync('SELECT updated_at FROM workout_sets WHERE id = ?', [s.id]);
+  const localMs = existing?.updated_at ?? null;
+  if (localMs && cloudMs && localMs >= cloudMs) return;
   await d.runAsync(
     `INSERT OR REPLACE INTO workout_sets
       (id, user_id, workout_id, exercise_id, exercise_name, set_number, set_type,
@@ -4610,7 +4624,7 @@ export async function insertWorkoutSetFromCloud(userId, s) {
       s.is_amrap ? 1 : 0, s.amrap_reps ?? null,
       s.missed_reps ?? null,
       s.left_reps ?? null, s.right_reps ?? null,
-      Date.now(), Date.now(),
+      Date.now(), cloudMs ?? Date.now(),
       s.deleted_at ? new Date(s.deleted_at).getTime() : null,
     ],
   );

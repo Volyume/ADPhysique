@@ -1,0 +1,95 @@
+/**
+ * SYNC-4: legacy cloud-restore must not clobber a newer local edit.
+ *
+ * insertWorkoutFromCloud / insertWorkoutSetFromCloud used an unconditional
+ * INSERT OR REPLACE, so a pull (especially after a failed push) reverted
+ * local workout/set edits to the stale cloud copy. They now apply a
+ * last-write-wins gate: skip the write when the local row exists and its
+ * updated_at is at least as new as the cloud row's.
+ *
+ * The expo-sqlite mock is a shape stub, so we drive the gate directly:
+ * control getFirstAsync (the local-row lookup) and assert whether runAsync
+ * (the write) fires.
+ */
+
+jest.mock('expo-sqlite');
+
+const { db, insertWorkoutFromCloud, insertWorkoutSetFromCloud } = require('../database');
+
+const iso = (ms) => new Date(ms).toISOString();
+let conn;
+
+beforeEach(async () => {
+  conn = await db();
+  conn.runAsync.mockClear();
+  conn.getFirstAsync.mockReset();
+});
+
+describe('insertWorkoutFromCloud LWW gate', () => {
+  test('skips the write when the local workout is newer than the cloud row', async () => {
+    conn.getFirstAsync.mockImplementation(async (sql) =>
+      sql.includes('FROM workouts') ? { updated_at: 2000 } : null);
+
+    await insertWorkoutFromCloud('u1', { id: 'w1', started_at: iso(500), updated_at: iso(1000) });
+
+    expect(conn.runAsync).not.toHaveBeenCalled();
+  });
+
+  test('writes when the cloud row is newer than the local workout', async () => {
+    conn.getFirstAsync.mockImplementation(async (sql) =>
+      sql.includes('FROM workouts') ? { updated_at: 1000 } : null);
+
+    await insertWorkoutFromCloud('u1', { id: 'w1', started_at: iso(500), updated_at: iso(2000) });
+
+    expect(conn.runAsync).toHaveBeenCalledTimes(1);
+  });
+
+  test('writes when there is no local workout', async () => {
+    conn.getFirstAsync.mockResolvedValue(null);
+
+    await insertWorkoutFromCloud('u1', { id: 'w1', started_at: iso(500), updated_at: iso(2000) });
+
+    expect(conn.runAsync).toHaveBeenCalledTimes(1);
+  });
+
+  test('writes when the cloud row has no updated_at (cannot compare, fall back to restore)', async () => {
+    conn.getFirstAsync.mockImplementation(async (sql) =>
+      sql.includes('FROM workouts') ? { updated_at: 5000 } : null);
+
+    await insertWorkoutFromCloud('u1', { id: 'w1', started_at: iso(500) });
+
+    expect(conn.runAsync).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('insertWorkoutSetFromCloud LWW gate', () => {
+  // No exercise_id so the FK-resolution lookups are skipped and the only
+  // getFirstAsync call is the gate's workout_sets lookup.
+  const setRow = (updatedMs) => ({ id: 's1', workout_id: 'w1', updated_at: iso(updatedMs) });
+
+  test('skips the write when the local set is newer', async () => {
+    conn.getFirstAsync.mockImplementation(async (sql) =>
+      sql.includes('FROM workout_sets') ? { updated_at: 2000 } : null);
+
+    await insertWorkoutSetFromCloud('u1', setRow(1000));
+
+    expect(conn.runAsync).not.toHaveBeenCalled();
+  });
+
+  test('writes when the cloud set is newer', async () => {
+    conn.getFirstAsync.mockImplementation(async (sql) =>
+      sql.includes('FROM workout_sets') ? { updated_at: 1000 } : null);
+
+    await insertWorkoutSetFromCloud('u1', setRow(2000));
+
+    expect(conn.runAsync).toHaveBeenCalledTimes(1);
+  });
+
+  test('writes when there is no local set', async () => {
+    conn.getFirstAsync.mockResolvedValue(null);
+
+    await insertWorkoutSetFromCloud('u1', setRow(2000));
+
+    expect(conn.runAsync).toHaveBeenCalledTimes(1);
+  });
+});
