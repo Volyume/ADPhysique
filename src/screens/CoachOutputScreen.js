@@ -27,7 +27,10 @@ import {
   getPlannedMuscleVolume,
   upsertPlannedMuscleVolume,
   setMesocycleWeekDeload,
+  getCardioLogRange,
+  activityDayKey,
 } from '../lib/database';
+import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
 import { track as trackEngineEvent } from '../lib/engineTelemetry';
 import DifferentialBadge from '../components/DifferentialBadge';
 import { SkeletonCard } from '../components/Skeleton';
@@ -1024,6 +1027,18 @@ export default function CoachOutputScreen({ navigation, route }) {
       const openFlag = await getOpenEdPatternFlag(user.id).catch(() => null);
       const edPatternOpen = !!openFlag;
 
+      // Cardio (QA P2/P3/D1): the week's logged sessions vs the applied target,
+      // so the coach can escalate/hold from real compliance, flag high load,
+      // and acknowledge cardio outside a cut.
+      let cardioWeekSummary = null;
+      let cardioSessionsLogged = 0;
+      try {
+        const cardioTo = activityDayKey();
+        const cardioFrom = activityDayKey(Date.now() - 6 * 86400000);
+        cardioWeekSummary = summariseWeekCardio(await getCardioLogRange(user.id, cardioFrom, cardioTo));
+        cardioSessionsLogged = cardioWeekSummary.sessions;
+      } catch (_) { /* cardio optional; coach runs without it */ }
+
       const result = runWeeklyCoach({
         checkin,
         morningWeights: weights,
@@ -1060,6 +1075,10 @@ export default function CoachOutputScreen({ navigation, route }) {
         // days" rather than the buy-now variant.
         userTier: require('../lib/proGate').isPaidTier(userProfile),
         hasUsedTrial: !require('../lib/payments/cascade').canStillTrial(userProfile),
+        currentCardioTarget: userProfile?.cardioTarget ?? null,
+        cardioSessionsLogged,
+        cardioWeekSummary,
+        cardioEnabled: userProfile?.cardioEnabled !== false,
       });
 
       // Persist ED-pattern state machine transition + telemetry.
@@ -1234,6 +1253,8 @@ export default function CoachOutputScreen({ navigation, route }) {
     trend,
     whatWorking,
     adjustments,
+    cardioFlag,
+    cardioAcknowledgement,
     whyThisWeek,
     deloadSuggested,
     deloadNote,
@@ -1383,6 +1404,21 @@ export default function CoachOutputScreen({ navigation, route }) {
           applyingKey={applyingKey}
         />
 
+        {/* P3: cardio recovery caution (one line, advisory, no Apply). */}
+        {cardioFlag ? (
+          <View style={styles.cardioNoteRow}>
+            <Ionicons name="heart-outline" size={14} color={colors.warning} />
+            <Text style={styles.cardioNoteText}>{cardioFlag}</Text>
+          </View>
+        ) : null}
+        {/* D1: light acknowledgement of cardio logged outside a cut. */}
+        {cardioAcknowledgement ? (
+          <View style={styles.cardioNoteRow}>
+            <Ionicons name="heart-outline" size={14} color={colors.primary} />
+            <Text style={styles.cardioNoteText}>{cardioAcknowledgement}</Text>
+          </View>
+        ) : null}
+
         {/* High-day / low-day carb cycle, advanced cuts + competitors only */}
         {macroCycle && (
           <MacroCycleCard
@@ -1479,6 +1515,11 @@ export default function CoachOutputScreen({ navigation, route }) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  cardioNoteRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+  },
+  cardioNoteText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
   safe: {
     flex: 1,
     backgroundColor: colors.background,

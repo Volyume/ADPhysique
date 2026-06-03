@@ -9,7 +9,7 @@
  */
 
 import { getTrainingNote, isCompetitionGoal } from './coachingGoals';
-import { cutCardioTarget } from './cardio/cardioEngine';
+import { cutCardioTarget, nextCardioTarget, cardioRecoveryFlag } from './cardio/cardioEngine';
 import {
   shouldSuggestDietBreak,
   computeFFMFloor,
@@ -378,6 +378,14 @@ export function runWeeklyCoach(inputs) {
     weeksLiftStalled = null,
     missingTdeeSignal = false,
     blockEnded = false,
+    // Cardio integration (QA P2/P3/D1). Optional; defaults make every prior
+    // caller a no-op. currentCardioTarget is the applied target from last week;
+    // cardioSessionsLogged + cardioWeekSummary come from the week's cardio_log;
+    // cardioEnabled gates the non-cut acknowledgement.
+    currentCardioTarget = null,
+    cardioSessionsLogged = 0,
+    cardioWeekSummary = null,
+    cardioEnabled = true,
   } = inputs;
 
   // ── DATA CONFIDENCE ───────────────────────────────────────────────────────
@@ -742,19 +750,42 @@ export function runWeeklyCoach(inputs) {
       note: 'Cardio paused this week. Recovery takes priority.',
     };
   } else if (cardioConditionsMet) {
-    // Structured target from the cardio engine (tested). The deficit lever:
-    // 3 easy sessions, plus an interval session on a long aggressive-cut
-    // stall. type/note stay for the CoachOutput card; target carries the
-    // structured dose the cardio surfaces and check-in compliance read. The
-    // user still picks the activity (note says "your choice").
-    const target = cutCardioTarget(consecutiveOffTargetWeeks, goalPhase);
+    // Structured target from the cardio engine (tested). P2: when a target was
+    // already applied, the next dose reflects actual logged compliance
+    // (escalate on hit + still off-trend, hold + explain on miss, capped, never
+    // spiral). First time, derive the base cut target. poorRecovery is handled
+    // by the branch above, so it is false here. The user still picks the
+    // activity (note says "your choice").
+    const target = currentCardioTarget
+      ? nextCardioTarget({
+        currentTarget: currentCardioTarget,
+        sessionsLogged: cardioSessionsLogged,
+        stillOffTrendInCut: true,
+        poorRecovery: false,
+      })
+      : cutCardioTarget(consecutiveOffTargetWeeks, goalPhase);
     cardioAdjustment = {
-      prescribed: true,
+      prescribed: !target.paused,
       type: target.includesInterval ? 'Cardio boost' : 'Steady cardio',
       note: target.note,
       target,
     };
   }
+
+  // D1 (founder: light acknowledgement): outside a cut the coach sets no cardio
+  // target (available, not allocated) but acknowledges cardio the user logged.
+  // Factual, non-escalating, no Apply. Null when there is nothing to say.
+  let cardioAcknowledgement = null;
+  if (!phase.isCut && cardioEnabled && cardioSessionsLogged > 0) {
+    const n = cardioSessionsLogged;
+    cardioAcknowledgement = `${n} cardio session${n === 1 ? '' : 's'} logged this week. No cardio target in this phase, it stays your call.`;
+  }
+
+  // P3: a one-line recovery caution when hard cardio is stacking up, using the
+  // week's high-impact count + the recovery signal the coach already has.
+  const cardioFlag = cardioWeekSummary
+    ? cardioRecoveryFlag({ weekSummary: cardioWeekSummary, recoveryTrendDown: poorRecovery })
+    : null;
 
   // ── RAPID WEIGHT LOSS SAFETY FLAG ────────────────────────────────────────
   const rapidWeightLossFlag = !!(
@@ -1065,6 +1096,10 @@ export function runWeeklyCoach(inputs) {
       steps: stepsAdjustment,
       cardio: cardioAdjustment,
     },
+    // P3 cardio recovery caution (one line or null); D1 non-cut acknowledgement
+    // (one line or null). Both plain notes, no Apply.
+    cardioFlag,
+    cardioAcknowledgement,
     whyThisWeek,
     deloadSuggested,
     deloadNote,

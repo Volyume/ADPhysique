@@ -376,6 +376,59 @@ describe('cardio prescription', () => {
       expect(out.adjustments.cardio.note).toBeDefined();
     }
   });
+
+  // QA P2: the coach escalates/holds the cardio dose from logged compliance.
+  const cutCardioConditions = (over = {}) => baseInputs({
+    morningWeights: trend(85, 0),
+    consecutiveOffTargetWeeks: 2,
+    currentStepsTarget: 15000,
+    consecutivePoorRecoveryWeeks: 0,
+    checkin: checkin({ energyScore: 4, sorenessScore: 2 }),
+    ...over,
+  });
+  const priorTarget = { mode: 'deficit', sessionsPerWeek: 3, minMinutes: 20, maxMinutes: 30, intensity: 'low', includesInterval: false, paused: false };
+
+  test('P2: hit the target + still off-trend → next cardio adds a session', () => {
+    const out = runWeeklyCoach(cutCardioConditions({
+      currentCardioTarget: priorTarget,
+      cardioSessionsLogged: 3,
+    }));
+    expect(out.adjustments.cardio).not.toBeNull();
+    expect(out.adjustments.cardio.target.sessionsPerWeek).toBe(4);
+    expect(out.adjustments.cardio.note).toMatch(/add one more/i);
+  });
+
+  test('P2: missed the target → holds and says hit it first', () => {
+    const out = runWeeklyCoach(cutCardioConditions({
+      currentCardioTarget: priorTarget,
+      cardioSessionsLogged: 1,
+    }));
+    expect(out.adjustments.cardio.target.sessionsPerWeek).toBe(3);
+    expect(out.adjustments.cardio.note).toMatch(/before adding more/i);
+  });
+
+  test('P3: lots of hard cardio → coach surfaces a recovery flag', () => {
+    const out = runWeeklyCoach(cutCardioConditions({
+      cardioWeekSummary: { sessions: 5, totalMinutes: 150, totalKcal: 1500, highImpactSessions: 4 },
+    }));
+    expect(out.cardioFlag).toMatch(/hard cardio|low-impact/i);
+  });
+
+  test('D1: outside a cut, cardio logged → light acknowledgement, no target', () => {
+    const out = runWeeklyCoach(baseInputs({
+      goalPhase: 'bulk',
+      morningWeights: trend(85, 0.3),
+      cardioEnabled: true,
+      cardioSessionsLogged: 2,
+    }));
+    expect(out.adjustments.cardio).toBeNull();
+    expect(out.cardioAcknowledgement).toMatch(/2 cardio sessions logged/i);
+  });
+
+  test('D1: no acknowledgement when no cardio logged outside a cut', () => {
+    const out = runWeeklyCoach(baseInputs({ goalPhase: 'bulk', morningWeights: trend(85, 0.3), cardioEnabled: true, cardioSessionsLogged: 0 }));
+    expect(out.cardioAcknowledgement).toBeNull();
+  });
 });
 
 // ── Step opt-out (stepsEnabled) ────────────────────────────────────────────
