@@ -62,9 +62,10 @@ export async function logFoodEntry(userId, entry) {
     // eslint-disable-next-line global-require
     const { track } = require('../engineTelemetry');
     track(userId, 'food_logged', {
+      // HP-2: source + slot only. The amount eaten (quantity_g) is the
+      // user's dietary content and does not belong in product telemetry.
       food_ref_source: entry.foodRef?.startsWith('custom:') ? 'custom' : 'global',
       meal_slot: entry.mealSlot,
-      quantity_g: entry.quantityG,
     }).catch(() => {});
   } catch (_) { /* tolerate test env without telemetry */ }
   _scheduleSync();

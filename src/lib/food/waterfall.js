@@ -142,26 +142,29 @@ export async function resolveBarcode(ean, userId = null) {
   if (!ean) return null;
   const t0 = Date.now();
 
+  // HP-2: the telemetry below carries the lookup source + latency only.
+  // The barcode (ean) identifies the exact product the user scanned, which
+  // is their dietary content, so it is not sent.
   const local = await findLocalByBarcode(ean, userId);
   if (local) {
-    if (userId) trackEvent(userId, 'food_lookup_barcode', { source: 'local', ms: Date.now() - t0, ean });
+    if (userId) trackEvent(userId, 'food_lookup_barcode', { source: 'local', ms: Date.now() - t0 });
     return local;
   }
 
   const off = await lookupBarcodeOff(ean);
   if (off) {
     const promoted = await _promoteToLocal(off);
-    if (userId) trackEvent(userId, 'food_lookup_barcode', { source: 'off_live', ms: Date.now() - t0, ean });
+    if (userId) trackEvent(userId, 'food_lookup_barcode', { source: 'off_live', ms: Date.now() - t0 });
     return promoted;
   }
 
   const usda = await lookupBarcodeUsda(ean);
   if (usda) {
     const promoted = await _promoteToLocal(usda);
-    if (userId) trackEvent(userId, 'food_lookup_barcode', { source: 'usda', ms: Date.now() - t0, ean });
+    if (userId) trackEvent(userId, 'food_lookup_barcode', { source: 'usda', ms: Date.now() - t0 });
     return promoted;
   }
 
-  if (userId) trackEvent(userId, 'food_lookup_barcode', { source: 'miss', ms: Date.now() - t0, ean });
+  if (userId) trackEvent(userId, 'food_lookup_barcode', { source: 'miss', ms: Date.now() - t0 });
   return null;
 }

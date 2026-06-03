@@ -107,7 +107,7 @@ function SectionHeader({ title }) {
 export default function SettingsScreen({ navigation }) {
   const toast = useToast();
   const feedback = useFeedback();
-  const { user, setUser, setSession, clearAuthStateForSignOut, userProfile, saveLocalProfile, setDietPreference, tier, setTier, accessibility, setAccessibilityPref, loadAccessibility, accessibilityLoaded, healthConsent, setHealthConsent } =
+  const { user, setUser, setSession, clearAuthStateForSignOut, userProfile, saveLocalProfile, setDietPreference, tier, setTier, accessibility, setAccessibilityPref, loadAccessibility, accessibilityLoaded, healthConsent, setHealthConsent, privacy, setAnalyticsOptOut } =
     useAppStore(useShallow(s => ({
       user: s.user, setUser: s.setUser, setSession: s.setSession,
       clearAuthStateForSignOut: s.clearAuthStateForSignOut,
@@ -120,6 +120,8 @@ export default function SettingsScreen({ navigation }) {
       accessibilityLoaded: s.accessibilityLoaded,
       healthConsent: s.healthConsent,
       setHealthConsent: s.setHealthConsent,
+      privacy: s.privacy,
+      setAnalyticsOptOut: s.setAnalyticsOptOut,
     })));
 
   // Hydrate accessibility prefs once on mount so the toggles reflect the
@@ -1254,6 +1256,20 @@ export default function SettingsScreen({ navigation }) {
                 onValueChange={toggleOffConsent}
                 trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
                 thumbColor={offConsent ? colors.primary : colors.textMuted}
+              />
+            }
+          />
+          <SettingRow
+            icon="bar-chart-outline"
+            label="Share usage data"
+            sub="Helps us see which features get used and where the app is slow. Never your training, food, or body data. Turn it off any time."
+            showArrow={false}
+            rightElement={
+              <Switch
+                value={!privacy?.analyticsOptOut}
+                onValueChange={v => setAnalyticsOptOut(!v)}
+                trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
+                thumbColor={!privacy?.analyticsOptOut ? colors.primary : colors.textMuted}
               />
             }
           />

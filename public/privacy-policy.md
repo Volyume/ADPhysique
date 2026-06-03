@@ -59,6 +59,18 @@ does not offer a web version.
   are redacted before transmission. We do not use Sentry for product
   analytics or behavioural tracking.
 
+### Product usage telemetry
+
+- First-party usage events, kept so we can see which features get used
+  and where the app is slow: which screens open, when a sync runs,
+  whether a purchase flow completes, and similar. Each event is tied to
+  a pseudonymous account id, not your name, and never includes your
+  training, food, or body data. It is stored in our own database
+  (Supabase, a listed sub-processor); we do not use any third-party
+  analytics or tracking SDK and do not build advertising profiles. You
+  can switch this off in Settings > Privacy & legal > Share usage data;
+  once off, nothing further is collected or sent.
+
 ### Camera and photo library
 
 We access the camera or photo library only when you explicitly take
@@ -95,11 +107,15 @@ is opt-in and revocable from the OS Settings app at any time.
 | Run the app + sync between your devices | account, profile, training data | Performance of contract (Art. 6(1)(b)) |
 | Personalised coaching adjustments | training data, check-ins, body weight | Performance of contract |
 | Crash diagnostics | redacted error events | Legitimate interest (Art. 6(1)(f)), keeping the app working |
+| Product usage telemetry | pseudonymous feature + performance events (no training, food, or body data) | Legitimate interest (Art. 6(1)(f)); opt-out in Settings |
 | Optional Health-app integration | weight read / workout write | Explicit consent (Art. 6(1)(a)), revocable in OS Settings |
 | Storing your data while signed-in | all of the above | Performance of contract |
 
 We do not use your data for advertising, profiling, or sale to third
-parties. We do not run behavioural analytics.
+parties, and we do not use any third-party analytics or tracking SDK.
+We keep first-party, pseudonymous product telemetry to run and improve
+the app (see "Product usage telemetry" above); you can switch it off in
+Settings.
 
 ## 4. Third parties we share data with
 

@@ -28,6 +28,21 @@ import { ALLOWED_EVENTS } from './events';
 const FLUSH_DEBOUNCE_MS = 5000;
 let _flushTimer = null;
 
+// LB-9: product telemetry runs under legitimate interest with a user
+// opt-out. Default enabled (opt-out, not opt-in); the store flips this
+// from the saved privacy pref at boot and whenever the toggle changes.
+// When disabled, nothing is persisted and nothing is pushed, so an
+// opted-out user generates no analytics at all.
+let _enabled = true;
+
+export function setTelemetryEnabled(value) {
+  _enabled = value !== false;
+}
+
+export function isTelemetryEnabled() {
+  return _enabled;
+}
+
 function _scheduleFlush() {
   if (_flushTimer) return;
   _flushTimer = setTimeout(() => {
@@ -46,6 +61,8 @@ function _scheduleFlush() {
  */
 export async function postEvent(userId, event, payload = null) {
   if (!userId || !event) return null;
+  // LB-9: user opted out of product analytics. Drop before persisting.
+  if (!_enabled) return null;
   if (!ALLOWED_EVENTS.has(event)) {
     // Hard fail in dev so a typo doesn't sit dark in production.
     // eslint-disable-next-line no-undef
@@ -70,6 +87,9 @@ export async function postEvent(userId, event, payload = null) {
  * drain immediately.
  */
 export async function flushPending() {
+  // LB-9: don't ship anything while opted out, including rows that were
+  // queued before the opt-out. They stay local and never leave the device.
+  if (!_enabled) return { pushed: 0, skipped: 'opted_out' };
   const sb = getSupabaseClient();
   if (!sb) return { pushed: 0, skipped: 'no_client' };
   const rows = await getUnpushedEngineTelemetry(200);

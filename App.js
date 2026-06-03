@@ -304,6 +304,8 @@ export default function App() {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const accessibilityLoaded = useAppStore(s => s.accessibilityLoaded);
   const loadAccessibility = useAppStore(s => s.loadAccessibility);
+  const privacyLoaded = useAppStore(s => s.privacyLoaded);
+  const loadPrivacyPrefs = useAppStore(s => s.loadPrivacyPrefs);
   const [calm, setCalm] = useState(false);
   const [themeReady, setThemeReady] = useState(false);
 
@@ -366,6 +368,12 @@ export default function App() {
   useEffect(() => {
     if (!accessibilityLoaded) loadAccessibility();
   }, [accessibilityLoaded, loadAccessibility]);
+
+  // Hydrate the analytics opt-out before telemetry starts flowing, so an
+  // opted-out user's first foreground doesn't ship events (LB-9).
+  useEffect(() => {
+    if (!privacyLoaded) loadPrivacyPrefs();
+  }, [privacyLoaded, loadPrivacyPrefs]);
 
   useEffect(() => {
     if (prCelebration) getWellbeingMode().then(m => setCalm(isCalm(m)));

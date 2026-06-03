@@ -24,7 +24,7 @@ jest.mock('../../errorLog', () => ({
 const db = require('../../database');
 const sb = require('../../supabase');
 const errorLog = require('../../errorLog');
-const { postEvent, flushPending } = require('../transport');
+const { postEvent, flushPending, setTelemetryEnabled, isTelemetryEnabled } = require('../transport');
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -38,6 +38,38 @@ beforeEach(() => {
 afterEach(() => {
   jest.clearAllTimers();
   jest.useRealTimers();
+  // The enable flag is module-level; reset it so the opt-out tests can't
+  // leak a disabled state into the rest of the suite.
+  setTelemetryEnabled(true);
+});
+
+describe('telemetry/transport opt-out gate (LB-9)', () => {
+  test('defaults to enabled', () => {
+    expect(isTelemetryEnabled()).toBe(true);
+  });
+
+  test('when opted out, postEvent drops the event without persisting', async () => {
+    setTelemetryEnabled(false);
+    const id = await postEvent('user-1', 'sign_in', { tier: 'pro' });
+    expect(id).toBeNull();
+    expect(db.recordEngineTelemetry).not.toHaveBeenCalled();
+  });
+
+  test('when opted out, flushPending sends nothing and reports opted_out', async () => {
+    setTelemetryEnabled(false);
+    const result = await flushPending();
+    expect(result).toEqual({ pushed: 0, skipped: 'opted_out' });
+    expect(sb.getSupabaseClient).not.toHaveBeenCalled();
+    expect(db.getUnpushedEngineTelemetry).not.toHaveBeenCalled();
+  });
+
+  test('re-enabling restores normal persistence', async () => {
+    setTelemetryEnabled(false);
+    setTelemetryEnabled(true);
+    const id = await postEvent('user-1', 'sign_in', null);
+    expect(id).toBe('local-row-id-1');
+    expect(db.recordEngineTelemetry).toHaveBeenCalled();
+  });
 });
 
 describe('telemetry/transport.postEvent', () => {

@@ -50,6 +50,23 @@ export default function PrivacyPolicyScreen({ navigation }) {
           </Body>
         </Section>
 
+        <Section title="Usage data">
+          <Body>
+            Volyume keeps first-party usage telemetry to see which features get
+            used and where the app is slow: things like which screens open, when
+            a sync runs, and whether a purchase flow completes. It is tied to a
+            pseudonymous account id, not your name, and it never includes your
+            training, food, or body data.
+          </Body>
+          <Body>
+            We do not use third-party analytics or tracking tools, and we do not
+            build advertising profiles. The lawful basis is legitimate interest
+            (keeping the app working and worth using). You can switch it off in
+            Settings &gt; Privacy &amp; legal &gt; Share usage data, and once off,
+            nothing further is collected or sent.
+          </Body>
+        </Section>
+
         <Section title="Your rights">
           <Body>
             You have the right to export all your data at any time (Settings &gt; Export workout log or Back

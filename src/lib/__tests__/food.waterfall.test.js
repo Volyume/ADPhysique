@@ -147,7 +147,11 @@ describe('resolveBarcode (barcode lookup waterfall)', () => {
     expect(liveOff.lookupBarcodeOff).not.toHaveBeenCalled();
     expect(usda.lookupBarcodeUsda).not.toHaveBeenCalled();
     expect(mockTrack).toHaveBeenCalledWith(USER_ID, 'food_lookup_barcode',
-      expect.objectContaining({ source: 'local', ean: '5001234567890' }));
+      expect.objectContaining({ source: 'local' }));
+    // HP-2: the scanned barcode is dietary content and must not be in
+    // telemetry. Guard against a silent re-introduction.
+    const payload = mockTrack.mock.calls.find(c => c[1] === 'food_lookup_barcode')?.[2] ?? {};
+    expect(payload).not.toHaveProperty('ean');
   });
 
   test('local miss + OFF hit promotes to local and emits off_live telemetry', async () => {
@@ -165,7 +169,7 @@ describe('resolveBarcode (barcode lookup waterfall)', () => {
     expect(r.food_ref).toBe('global:generated-uuid');
     expect(usda.lookupBarcodeUsda).not.toHaveBeenCalled();
     expect(mockTrack).toHaveBeenCalledWith(USER_ID, 'food_lookup_barcode',
-      expect.objectContaining({ source: 'off_live', ean: '5009999999999' }));
+      expect.objectContaining({ source: 'off_live' }));
     const insertWrite = mockDbWrites.find(w => /INSERT INTO foods/i.test(w.sql));
     expect(insertWrite).toBeTruthy();
   });
@@ -185,7 +189,7 @@ describe('resolveBarcode (barcode lookup waterfall)', () => {
     const r = await resolveBarcode('0123456789012', USER_ID);
     expect(r.food_ref).toBe('global:generated-uuid');
     expect(mockTrack).toHaveBeenCalledWith(USER_ID, 'food_lookup_barcode',
-      expect.objectContaining({ source: 'usda', ean: '0123456789012' }));
+      expect.objectContaining({ source: 'usda' }));
   });
 
   test('all sources miss returns null and emits miss telemetry', async () => {
@@ -195,7 +199,7 @@ describe('resolveBarcode (barcode lookup waterfall)', () => {
     const r = await resolveBarcode('9999999999999', USER_ID);
     expect(r).toBeNull();
     expect(mockTrack).toHaveBeenCalledWith(USER_ID, 'food_lookup_barcode',
-      expect.objectContaining({ source: 'miss', ean: '9999999999999' }));
+      expect.objectContaining({ source: 'miss' }));
   });
 
   test('lookup without userId still resolves but emits no telemetry', async () => {

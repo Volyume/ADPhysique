@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { A11Y_PREFS_KEY, loadA11yPrefs } from '../lib/accessibilityPrefs';
+import { PRIVACY_PREFS_KEY, loadPrivacyPrefs } from '../lib/privacyPrefs';
 
 // Auto-instrumentation lives in observability.js. Wrapping the store
 // once at module evaluation means every action call gets a
@@ -1160,7 +1161,35 @@ const useAppStore = create((set, get) => ({
     const { user } = get();
     if (user?.id) pushPrefSoon(user.id, A11Y_PREFS_KEY, serialised);
   },
+
+  // LB-9: product-analytics opt-out. Device-local (a privacy opt-out is
+  // never itself synced). Drives the telemetry transport's enable flag.
+  privacy: { analyticsOptOut: false },
+  privacyLoaded: false,
+  loadPrivacyPrefs: async () => {
+    const parsed = await loadPrivacyPrefs();
+    if (parsed) set({ privacy: { ...get().privacy, ...parsed } });
+    set({ privacyLoaded: true });
+    applyTelemetryEnabled(!get().privacy.analyticsOptOut);
+  },
+  setAnalyticsOptOut: async (value) => {
+    const next = { ...get().privacy, analyticsOptOut: !!value };
+    set({ privacy: next });
+    try { await AsyncStorage.setItem(PRIVACY_PREFS_KEY, JSON.stringify(next)); } catch (_) {}
+    applyTelemetryEnabled(!next.analyticsOptOut);
+  },
 }));
+
+// Push the opt-out state into the telemetry transport. Lazy-required so
+// the store doesn't drag the transport (and its DB + supabase imports)
+// into evaluation; a missing module (test env) is a no-op.
+function applyTelemetryEnabled(enabled) {
+  try {
+    // eslint-disable-next-line global-require
+    const { setTelemetryEnabled } = require('../lib/telemetry/transport');
+    setTelemetryEnabled(enabled);
+  } catch (_) { /* tolerate */ }
+}
 
 // Wrap every action with auto-breadcrumb + duration tracking. The
 // instrumented actions still work exactly like the originals, the
