@@ -213,6 +213,19 @@ function _waterToCloud(row, userId) {
   };
 }
 
+// Local updated_at of a source row in ms. Rows come straight from the
+// food_* tables where updated_at is an integer ms epoch; tolerate an ISO
+// string just in case. Returns null when it can't be read.
+function _rowUpdatedMs(r) {
+  const v = r?.updated_at ?? r?.updatedAt;
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  if (typeof v === 'string') {
+    const ms = Date.parse(v);
+    return Number.isFinite(ms) ? ms : null;
+  }
+  return null;
+}
+
 async function _doPushAll(sb, { userId, localUserId }) {
   // eslint-disable-next-line global-require
   const food = require('../../food/db');
@@ -238,13 +251,15 @@ async function _doPushAll(sb, { userId, localUserId }) {
   // One payload slice per table. Each is pushed in its own
   // food_sync_push call so a failure in one table can't roll back the
   // rest (see the resilience note in the file header).
+  // Third tuple element is the SOURCE rows (not just a count) so the
+  // watermark can advance to their newest local updated_at (see SYNC-5 below).
   const slices = [
-    ['food_entries',    bucket(entries, _foodEntryToCloud),  entries.length],
-    ['custom_foods',    bucket(customs, _customFoodToCloud),  customs.length],
-    ['saved_meals',     bucket(meals, _savedMealToCloud),     meals.length],
-    ['recipes',         bucket(recipesRows, _recipeToCloud),  recipesRows.length],
-    ['food_favourites', { created: [], updated: favs.map((f) => _favouriteToCloud(f, userId)), deleted: [] }, favs.length],
-    ['daily_water',     { created: [], updated: water.map((w) => _waterToCloud(w, userId)), deleted: [] }, water.length],
+    ['food_entries',    bucket(entries, _foodEntryToCloud),  entries],
+    ['custom_foods',    bucket(customs, _customFoodToCloud),  customs],
+    ['saved_meals',     bucket(meals, _savedMealToCloud),     meals],
+    ['recipes',         bucket(recipesRows, _recipeToCloud),  recipesRows],
+    ['food_favourites', { created: [], updated: favs.map((f) => _favouriteToCloud(f, userId)), deleted: [] }, favs],
+    ['daily_water',     { created: [], updated: water.map((w) => _waterToCloud(w, userId)), deleted: [] }, water],
   ];
 
   const counts = { ...EMPTY_COUNTS };
@@ -253,19 +268,29 @@ async function _doPushAll(sb, { userId, localUserId }) {
   let pushedAny = false;
   let latestTsMs = null;
 
-  for (const [table, slice, rowCount] of slices) {
-    if (rowCount === 0) continue; // nothing changed: skip the round-trip
-    const { data, error } = await sb.rpc('food_sync_push', { changes: { [table]: slice } });
+  for (const [table, slice, rows] of slices) {
+    if (rows.length === 0) continue; // nothing changed: skip the round-trip
+    const { error } = await sb.rpc('food_sync_push', { changes: { [table]: slice } });
     if (error) {
       logSyncError(`sync.tables.foodDomain.push.${table}`, error);
       errorsByTable[table] = 1;
       anyError = true;
       continue;
     }
-    counts[table] = rowCount;
+    counts[table] = rows.length;
     pushedAny = true;
-    const ts = data?.timestamp ? Date.parse(data.timestamp) : Date.now();
-    if (Number.isFinite(ts) && (latestTsMs === null || ts > latestTsMs)) latestTsMs = ts;
+    // SYNC-5: advance the watermark to the newest LOCAL updated_at among the
+    // rows we actually pushed, NOT the server timestamp. The change query
+    // filters on local updated_at (WHERE updated_at > sinceMs); comparing
+    // that against a server clock could skip a row whose local updated_at
+    // fell at/below the recorded server time (a row written during the RPC
+    // round-trip, or under clock skew) and never push it. Keeping both sides
+    // on one clock means anything written after this batch is strictly newer
+    // than the watermark and gets picked up next cycle.
+    for (const r of rows) {
+      const ms = _rowUpdatedMs(r);
+      if (ms !== null && (latestTsMs === null || ms > latestTsMs)) latestTsMs = ms;
+    }
   }
 
   // Advance the shared watermark only when every non-empty table
