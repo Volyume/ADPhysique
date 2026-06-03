@@ -104,7 +104,7 @@ const dbModule = require('../../database');
 const telemetry = require('../telemetry');
 const queue = require('../queue');
 const legacy = require('../../sync.js');
-const { syncAll, _resetRunnerForTests } = require('../runner');
+const { syncAll, whenSyncIdle, _resetRunnerForTests } = require('../runner');
 const { MIGRATED_TABLES } = require('../transport');
 
 /**
@@ -319,6 +319,27 @@ describe('syncAll integration', () => {
     // One of the two returns skipped due to the run lock.
     const statuses = [a, b].map((r) => r.status).sort();
     expect(statuses).toContain('skipped');
+  });
+
+  // SYNC-3 airtight: sign-out awaits whenSyncIdle so an in-flight run finishes
+  // before the wipe.
+  test('whenSyncIdle resolves immediately when no run is in flight', async () => {
+    await expect(whenSyncIdle()).resolves.toBe(true);
+  });
+
+  test('whenSyncIdle stays pending during a run and resolves when it finishes', async () => {
+    getSupabaseClient.mockReturnValue(makeSupabaseMock());
+
+    const run = syncAll({ userId: 'u1', localUserId: 'u1', triggeredBy: 'manual' }); // not awaited
+    // _runLock is set synchronously at the start of syncAll, so the cycle is now
+    // in flight.
+    let idle = false;
+    const idlePromise = whenSyncIdle({ timeoutMs: 2000 }).then((v) => { idle = v; });
+    expect(idle).toBe(false); // still running
+
+    await run;          // finishing the run notifies idle waiters
+    await idlePromise;
+    expect(idle).toBe(true);
   });
 
   // SYNC-1: legacy bulk push reports its swallowed PostgREST errors via

@@ -313,6 +313,14 @@ const useAppStore = create((set, get) => ({
           // eslint-disable-next-line global-require
           require('../lib/sync/signOutGuard').setSignOutWiping(true);
         } catch (_) { /* tolerate */ }
+        // SYNC-3 airtight: the flag stops NEW runs; now drain any run that was
+        // already in flight so its DB writes finish BEFORE the wipe, never
+        // after it. Bounded so a stuck run can't hang sign-out (the flag still
+        // blocks new runs regardless).
+        try {
+          // eslint-disable-next-line global-require
+          await require('../lib/sync/runner').whenSyncIdle({ timeoutMs: 5000 });
+        } catch (_) { /* tolerate */ }
         try { await flushPendingTelemetry(); } catch (_) {}
       } catch (e) {
         log.logWarn('clearAuthStateForSignOut.pushFirstFailed',

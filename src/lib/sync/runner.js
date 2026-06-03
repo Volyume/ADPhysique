@@ -24,6 +24,35 @@ let _runLock = false;
 let _lastStatus = 'unknown'; // 'synced' | 'pending' | 'offline' | 'error' | 'unknown'
 let _lastRunAt = 0;
 let _lastError = null;
+// Resolvers waiting for the in-flight run to finish (whenSyncIdle). Notified in
+// the syncAll finally when the run-lock is released.
+let _idleWaiters = [];
+
+function _notifyIdle() {
+  if (!_idleWaiters.length) return;
+  const waiters = _idleWaiters;
+  _idleWaiters = [];
+  for (const resolve of waiters) {
+    try { resolve(true); } catch (_) { /* ignore */ }
+  }
+}
+
+/**
+ * Resolve once no syncAll is in flight. Combined with the sign-out wipe guard
+ * (which stops NEW runs starting), the sign-out flow awaits this before wiping
+ * so an already-running cycle finishes its DB writes BEFORE the wipe, never
+ * after it (SYNC-3 airtight). Bounded by timeoutMs so sign-out can't hang on a
+ * stuck run; resolves true if it went idle, false on timeout.
+ */
+export function whenSyncIdle({ timeoutMs = 5000 } = {}) {
+  if (!_runLock) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (v) => { if (!settled) { settled = true; resolve(v); } };
+    _idleWaiters.push(() => finish(true));
+    if (timeoutMs > 0) setTimeout(() => finish(false), timeoutMs);
+  });
+}
 
 /**
  * Run a full sync cycle. Returns the structured result the
@@ -190,6 +219,7 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
       : queueAfter > 0 ? 'pending'
       : 'synced';
     _runLock = false;
+    _notifyIdle();
 
     trackSyncRun(userId, {
       status,
@@ -262,4 +292,5 @@ export function _resetRunnerForTests() {
   _lastStatus = 'unknown';
   _lastRunAt = 0;
   _lastError = null;
+  _idleWaiters = [];
 }
