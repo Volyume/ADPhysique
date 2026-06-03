@@ -46,6 +46,7 @@ export {
   cancelCheckinNotification,
   cancelAllNotifications,
   restoreNotifications,
+  rescheduleForTimezoneIfChanged,
   checkYearOfLiftsUnlock,
 } from './scheduler';
 

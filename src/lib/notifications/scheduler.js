@@ -49,24 +49,32 @@ function pickMorningCopy(dayOfWeek) {
 export async function scheduleMorningWeightNotification(hour = 7, minute = 0) {
   if (Platform.OS === 'web') return;
   try {
-    await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_MORNING).catch(() => {});
+    await cancelMorningNotification();
     const quiet = await getQuietHours();
     const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hour, minute, quiet);
-    const copy = pickMorningCopy(new Date().getDay());
-    await Notifications.scheduleNotificationAsync({
-      identifier: NOTIF_ID_MORNING,
-      content: {
-        title: copy.title,
-        body: copy.body,
-        data: { type: 'morning_weight' },
-        sound: false,
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DAILY,
-        hour: h,
-        minute: m,
-      },
-    });
+    // NOTIF-4: schedule one WEEKLY trigger per weekday so the morning copy
+    // actually rotates. The old single DAILY trigger froze whatever copy was
+    // picked at schedule time, so the per-weekday rotation never happened until
+    // the next re-lay. expo weekday is 1=Sunday..7=Saturday -> JS getDay (w-1).
+    for (let expoWeekday = 1; expoWeekday <= 7; expoWeekday += 1) {
+      const copy = pickMorningCopy(expoWeekday - 1);
+      // eslint-disable-next-line no-await-in-loop
+      await Notifications.scheduleNotificationAsync({
+        identifier: `${NOTIF_ID_MORNING}_${expoWeekday}`,
+        content: {
+          title: copy.title,
+          body: copy.body,
+          data: { type: 'morning_weight' },
+          sound: false,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+          weekday: expoWeekday,
+          hour: h,
+          minute: m,
+        },
+      });
+    }
   } catch (e) {
     trackNotificationFailed({
       category: CATEGORY.MORNING_WEIGHT,
@@ -346,7 +354,11 @@ export async function cancelWeeklyCoachReady() {
 // ─── Cancel helpers ───────────────────────────────────────────────────────────
 
 export async function cancelMorningNotification() {
+  // Legacy single id (pre-NOTIF-4) plus the 7 per-weekday ids.
   try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_MORNING); } catch {}
+  for (let w = 1; w <= 7; w += 1) {
+    try { await Notifications.cancelScheduledNotificationAsync(`${NOTIF_ID_MORNING}_${w}`); } catch {}
+  }
 }
 
 export async function cancelCheckinNotification() {
@@ -367,6 +379,29 @@ export async function cancelAllNotifications() {
  *                           checkinEnabled, checkinDay, checkinHour, checkinMinute }
  * @param {string|null} userId
  */
+// NOTIF-1: the morning/check-in/coach triggers bake the quiet-hours-shifted
+// hour in at schedule time, computed against the device's timezone THEN. After
+// the user changes timezone (travel), that baked-in hour is wrong until the
+// next cold start re-lays it. Call this on foreground: if the timezone offset
+// changed since we last scheduled, re-lay the notifications so quiet-hours is
+// recomputed for the new zone. Gated on the offset so a normal foreground does
+// no work.
+const TZ_OFFSET_KEY = '@volyume_notif_tz_offset';
+
+export async function rescheduleForTimezoneIfChanged(userId = null) {
+  if (Platform.OS === 'web') return;
+  try {
+    const current = new Date().getTimezoneOffset();
+    const storedRaw = await AsyncStorage.getItem(TZ_OFFSET_KEY);
+    const stored = storedRaw == null ? null : Number(storedRaw);
+    if (stored === current) return; // no change, nothing to do
+    await AsyncStorage.setItem(TZ_OFFSET_KEY, String(current));
+    if (stored === null) return; // first run: just record the baseline
+    const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
+    if (raw) await restoreNotifications(JSON.parse(raw), userId);
+  } catch (_) { /* tolerate */ }
+}
+
 export async function restoreNotifications(prefs, userId = null) {
   if (!prefs) return;
   // eslint-disable-next-line global-require

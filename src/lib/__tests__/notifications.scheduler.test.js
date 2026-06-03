@@ -70,17 +70,25 @@ beforeEach(async () => {
 // ─── scheduleMorningWeightNotification ─────────────────────────────
 
 describe('scheduleMorningWeightNotification', () => {
-  test('default 07:00 lands outside quiet hours, schedules DAILY at 7:00', async () => {
+  test('default 07:00 schedules a WEEKLY trigger per weekday at 7:00 (NOTIF-4 rotation)', async () => {
     await scheduler.scheduleMorningWeightNotification(); // defaults 7, 0
     expect(mockCancelAsync).toHaveBeenCalledWith('volyume_morning_weight');
-    expect(mockScheduleAsync).toHaveBeenCalledTimes(1);
-    const arg = mockScheduleAsync.mock.calls[0][0];
-    expect(arg.identifier).toBe('volyume_morning_weight');
-    expect(arg.content.data).toEqual({ type: 'morning_weight' });
-    expect(arg.trigger).toEqual({
-      type: SCHEDULE_INPUT_TYPES.DAILY,
-      hour: 7,
-      minute: 0,
+    // One WEEKLY trigger per weekday so the copy rotates instead of freezing.
+    expect(mockScheduleAsync).toHaveBeenCalledTimes(7);
+    const args = mockScheduleAsync.mock.calls.map((c) => c[0]);
+    expect(args.map((a) => a.identifier).sort()).toEqual([
+      'volyume_morning_weight_1', 'volyume_morning_weight_2', 'volyume_morning_weight_3',
+      'volyume_morning_weight_4', 'volyume_morning_weight_5', 'volyume_morning_weight_6',
+      'volyume_morning_weight_7',
+    ]);
+    args.forEach((a, i) => {
+      expect(a.content.data).toEqual({ type: 'morning_weight' });
+      expect(a.trigger).toEqual({
+        type: SCHEDULE_INPUT_TYPES.WEEKLY,
+        weekday: i + 1,
+        hour: 7,
+        minute: 0,
+      });
     });
   });
 
@@ -417,5 +425,34 @@ describe('scheduleWeeklyCoachReady', () => {
       'user-1', 'notification_failed',
       expect.objectContaining({ category: 'weekly_coach_ready', reason: 'schedule_threw' }),
     );
+  });
+});
+
+// ─── rescheduleForTimezoneIfChanged (NOTIF-1) ──────────────────────
+describe('rescheduleForTimezoneIfChanged', () => {
+  const TZ_KEY = '@volyume_notif_tz_offset';
+
+  test('first run records the baseline offset and does not re-lay', async () => {
+    const spy = jest.spyOn(Date.prototype, 'getTimezoneOffset').mockReturnValue(0);
+    await scheduler.rescheduleForTimezoneIfChanged('u1');
+    expect(await AsyncStorage.getItem(TZ_KEY)).toBe('0');
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  test('unchanged offset is a no-op', async () => {
+    const spy = jest.spyOn(Date.prototype, 'getTimezoneOffset').mockReturnValue(0);
+    await AsyncStorage.setItem(TZ_KEY, '0');
+    await scheduler.rescheduleForTimezoneIfChanged('u1');
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  test('a changed offset updates the stored baseline (and attempts a re-lay)', async () => {
+    const spy = jest.spyOn(Date.prototype, 'getTimezoneOffset').mockReturnValue(60);
+    await AsyncStorage.setItem(TZ_KEY, '0');
+    await scheduler.rescheduleForTimezoneIfChanged('u1');
+    expect(await AsyncStorage.getItem(TZ_KEY)).toBe('60');
+    spy.mockRestore();
   });
 });

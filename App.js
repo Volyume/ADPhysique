@@ -663,7 +663,17 @@ export default function App() {
 
     // 1. Foreground trigger.
     appStateSub = AppState.addEventListener('change', state => {
-      if (state === 'active') callSyncAll('foreground');
+      if (state === 'active') {
+        callSyncAll('foreground');
+        // NOTIF-1: re-lay reminders if the device timezone changed (travel) so
+        // their quiet-hours-shifted hour is recomputed. No-op when unchanged.
+        try {
+          // eslint-disable-next-line global-require
+          const { rescheduleForTimezoneIfChanged } = require('./src/lib/notifications');
+          const uid = useAppStore.getState().user?.id ?? null;
+          rescheduleForTimezoneIfChanged(uid).catch(() => {});
+        } catch (_) { /* tolerate */ }
+      }
     });
 
     // 2. Network reconnect trigger.

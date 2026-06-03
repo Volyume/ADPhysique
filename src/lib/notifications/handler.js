@@ -61,9 +61,13 @@ async function _alreadyCheckedInThisWeek() {
     const useAppStore = require('../../store/useAppStore').default;
     const uid = useAppStore.getState().user?.id;
     if (!uid) return false;
+    // NOTIF-3: anchor the week on the LOCAL Monday, matching _alreadyTrainedToday
+    // and the rest of the app. The old UTC anchor disagreed with the local
+    // day/week used everywhere else, so suppression fired for the wrong week
+    // for users not at UTC+0.
     const d = new Date();
-    const daysFromMon = (d.getUTCDay() + 6) % 7;
-    const monMs = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - daysFromMon * 86400000;
+    const daysFromMon = d.getDay() === 0 ? 6 : d.getDay() - 1;
+    const monMs = new Date(d.getFullYear(), d.getMonth(), d.getDate() - daysFromMon).getTime();
     const ci = await getLatestCheckin(uid, monMs);
     return !!ci;
   } catch (_) { return false; }
