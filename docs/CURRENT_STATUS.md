@@ -14,6 +14,53 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
+### 0.0000000000000001. 2026-06-03 (cardio integration built end to end, Claude): the full user-led cardio service shipped to `main`, foundation through recovery + history. Only founder-side item: apply migration 064.
+
+Built the cardio integration from the audit
+(`docs/audit/volyume-cardio-integration-2026-06-03/`) all the way through,
+in the prescribed order, each tier its own green commit. Cardio is
+**available by default, never allocated**: the user logs what they choose,
+the coach only doses it when a cut stalls. Full suite green (2770 passing),
+0 lint errors.
+
+**Shipped (oldest first):**
+- `8cfe4cb` F1: cardio library (`src/lib/cardio/cardioActivities.js`, ~36
+  activities as a code constant like the curated food library, MET x
+  intensity, recovery impact, deterministic ids) + MET maths
+  (`cardioMath.js`, kcal is feedback only, never added to the target) +
+  coach engine (`cardioEngine.js`: structured targets, compliance, week
+  summary, capped adjustment, recovery flag). Pure, 29 tests.
+- `0a28988` F2 local: `cardio_log` table (`PK(user_id,id)`, soft delete +
+  LWW) + CRUD.
+- `abd0909` C1/C2/C3: onboarding toggle (default ON, available-not-allocated),
+  `LogCardioScreen` (pick activity from favourites/recents/library/search,
+  duration, intensity, live kcal feedback + energy-balance footnote),
+  `CardioCard` on Train.
+- `ebca910` Settings toggle (turn cardio on/off any time).
+- `1a34484` F2 cloud: `cardio_log` sync wired into the same plumbing as
+  every table (`sync/tables/cardioLog.js`, registry, transport,
+  `migrate_064`, tracking, tests). Survives reinstall + cross-device.
+- `7a41ac5` C4/K1: coach emits the tested structured target; check-in
+  prefills adherence from the actual log.
+- `8dbe229` C6: Diary cardio line (beside water).
+- `a3a0e3e` C5: Plans "Cardio this week" card.
+- `1737d61` R1/R2: cardio recovery load (additive decayed sum, never
+  dilutes the 1-5 fatigue EMA) surfaced as a quiet line on the readiness
+  card at high load.
+- `3933431` E3: `CardioHistoryScreen` (sessions by day, soft delete),
+  linked from the Plans card.
+
+**Founder-side:** apply **`migrate_064_cardio_log.sql`** in Supabase
+(additive, RLS, touch trigger; frozen-AAB safe; verification in
+`supabase/README.md` row 064). Until then cardio is device-local, like the
+other pending migrations.
+
+**Deliberately not built (out of current scope):** E1/E2 wearable cardio
+import + HR-based calories (the audit scopes these to "when wearable scope
+opens", and `BACKLOG.md:19` keeps HR/HRV out). The pure helpers for a
+deeper coach-decision use of cardio recovery load exist and are tested if
+that integration is wanted later.
+
 ### 0.000000000000001. 2026-06-02 → 06-03 (audit-and-build run across onboarding, plans, Progress, a technical audit, an adversarial-QA data-safety pass, a release-readiness audit, a fitness-logic audit, and kg-only weights, Claude): a lot shipped to `main`. The only items left are founder-side (apply migrations 060-063, deploy the RTDN/push Edge Functions, set two env values).
 
 Several distinct arcs ran back to back. Each shipped as its own chain of
