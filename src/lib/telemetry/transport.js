@@ -92,7 +92,18 @@ export async function flushPending() {
   if (!_enabled) return { pushed: 0, skipped: 'opted_out' };
   const sb = getSupabaseClient();
   if (!sb) return { pushed: 0, skipped: 'no_client' };
-  const rows = await getUnpushedEngineTelemetry(200);
+  // Only flush rows that belong to the user whose session is signing the RPC.
+  // The server stamps each telemetry row with auth.uid(), so pushing another
+  // account's leftover rows would misattribute them to whoever is signed in
+  // now. Derive the uid from the live session (local read, no network) and
+  // scope the query to it; no session means nothing to ship.
+  let uid = null;
+  try {
+    const { data } = await sb.auth.getSession();
+    uid = data?.session?.user?.id ?? null;
+  } catch (_) { uid = null; }
+  if (!uid) return { pushed: 0, skipped: 'no_session' };
+  const rows = await getUnpushedEngineTelemetry(uid, 200);
   if (!rows.length) return { pushed: 0 };
 
   const pushedIds = [];

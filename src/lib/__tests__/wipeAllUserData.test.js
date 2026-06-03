@@ -34,6 +34,16 @@ describe('wipeAllUserData direct-table set (A4)', () => {
     for (const t of core) expect(WIPE_DIRECT_TABLES).toContain(t);
   });
 
+  test('includes every remaining user-scoped table (locked decision 2)', () => {
+    // These four each carry a user_id column but were missing from the set, so
+    // they survived sign-out, the cross-user safety net, and account-delete.
+    // ed_pattern_flags is eating-disorder pattern state; engine_telemetry
+    // leftovers could ship under the next account. Pin them so the omission
+    // cannot silently return.
+    const rest = ['cardio_log', 'ed_pattern_flags', 'tier_history', 'engine_telemetry'];
+    for (const t of rest) expect(WIPE_DIRECT_TABLES).toContain(t);
+  });
+
   test('has no duplicate entries', () => {
     expect(new Set(WIPE_DIRECT_TABLES).size).toBe(WIPE_DIRECT_TABLES.length);
   });

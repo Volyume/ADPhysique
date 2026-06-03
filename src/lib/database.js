@@ -3336,6 +3336,13 @@ export const WIPE_DIRECT_TABLES = [
   // Activity store (cardio/steps audit). Carries user_id locally; wipe so
   // the next account on a shared device never inherits a step history.
   'daily_steps',
+  // Locked decision 2 (IDENTITY_AND_OWNERSHIP_LOCKED.md): sign-out wipes
+  // EVERY user-scoped table. These four each carry a user_id column and were
+  // missing from the set, so they survived sign-out, the cross-user safety
+  // net, and account-delete. ed_pattern_flags is eating-disorder pattern
+  // state and engine_telemetry leftover rows could ship under the next
+  // account, so the omission was a real ownership leak, not cosmetic.
+  'cardio_log', 'ed_pattern_flags', 'tier_history', 'engine_telemetry',
 ];
 
 export async function wipeAllUserData(userId) {
@@ -5719,11 +5726,18 @@ export async function recordEngineTelemetry(userId, event, payload = null) {
   return id;
 }
 
-export async function getUnpushedEngineTelemetry(limit = 200) {
+// Scoped to a single user_id. Telemetry rows are stamped server-side with
+// the caller's auth.uid() on push, so a flush must only ever read rows that
+// belong to the currently signed-in user. Reading every unpushed row (the old
+// behaviour) let one account's leftover rows ship under the next account that
+// signs in on the same device. A falsy userId returns nothing rather than
+// every row, so a missing session can't reopen that hole.
+export async function getUnpushedEngineTelemetry(userId, limit = 200) {
+  if (!userId) return [];
   const d = await db();
   const rows = await d.getAllAsync(
-    `SELECT * FROM engine_telemetry WHERE pushed_at IS NULL ORDER BY occurred_at ASC LIMIT ?`,
-    [limit],
+    `SELECT * FROM engine_telemetry WHERE user_id = ? AND pushed_at IS NULL ORDER BY occurred_at ASC LIMIT ?`,
+    [userId, limit],
   );
   return rows;
 }

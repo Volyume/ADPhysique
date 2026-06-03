@@ -112,6 +112,17 @@ describe('telemetry/transport.postEvent', () => {
   });
 });
 
+// Build a mock Supabase client whose session resolves to `uid` (the signed-in
+// user). flushPending derives the uid from this to scope the telemetry read,
+// so every flush test needs a session unless it is specifically testing the
+// no-session path.
+function clientWith(rpc, uid = 'user-1') {
+  return {
+    rpc,
+    auth: { getSession: jest.fn().mockResolvedValue({ data: { session: uid ? { user: { id: uid } } : null } }) },
+  };
+}
+
 describe('telemetry/transport.flushPending', () => {
   test('no-ops when there is no Supabase client', async () => {
     sb.getSupabaseClient.mockReturnValueOnce(null);
@@ -120,8 +131,24 @@ describe('telemetry/transport.flushPending', () => {
     expect(db.getUnpushedEngineTelemetry).not.toHaveBeenCalled();
   });
 
+  test('skips the flush when there is no signed-in session', async () => {
+    // No session means no uid to scope to. Pushing here would let leftover
+    // rows ship under whoever signs in next, so the flush must do nothing.
+    sb.getSupabaseClient.mockReturnValueOnce(clientWith(jest.fn(), null));
+    const result = await flushPending();
+    expect(result).toEqual({ pushed: 0, skipped: 'no_session' });
+    expect(db.getUnpushedEngineTelemetry).not.toHaveBeenCalled();
+  });
+
+  test('scopes the unpushed-rows query to the session uid', async () => {
+    sb.getSupabaseClient.mockReturnValueOnce(clientWith(jest.fn().mockResolvedValue({ error: null }), 'user-42'));
+    db.getUnpushedEngineTelemetry.mockResolvedValueOnce([]);
+    await flushPending();
+    expect(db.getUnpushedEngineTelemetry).toHaveBeenCalledWith('user-42', 200);
+  });
+
   test('no-ops when there are no pending rows', async () => {
-    sb.getSupabaseClient.mockReturnValueOnce({ rpc: jest.fn() });
+    sb.getSupabaseClient.mockReturnValueOnce(clientWith(jest.fn()));
     db.getUnpushedEngineTelemetry.mockResolvedValueOnce([]);
     const result = await flushPending();
     expect(result).toEqual({ pushed: 0 });
@@ -129,7 +156,7 @@ describe('telemetry/transport.flushPending', () => {
 
   test('pushes pending rows and marks them shipped', async () => {
     const rpc = jest.fn().mockResolvedValue({ error: null });
-    sb.getSupabaseClient.mockReturnValueOnce({ rpc });
+    sb.getSupabaseClient.mockReturnValueOnce(clientWith(rpc));
     db.getUnpushedEngineTelemetry.mockResolvedValueOnce([
       { id: 'r1', event: 'sign_in', payload_json: '{"tier":"pro"}', occurred_at: 1234 },
       { id: 'r2', event: 'sign_out', payload_json: null, occurred_at: 5678 },
@@ -154,7 +181,7 @@ describe('telemetry/transport.flushPending', () => {
     const rpc = jest.fn()
       .mockResolvedValueOnce({ error: { message: 'bad payload' } })
       .mockResolvedValueOnce({ error: null });
-    sb.getSupabaseClient.mockReturnValueOnce({ rpc });
+    sb.getSupabaseClient.mockReturnValueOnce(clientWith(rpc));
     db.getUnpushedEngineTelemetry.mockResolvedValueOnce([
       { id: 'r1', event: 'sign_in', payload_json: null, occurred_at: 1 },
       { id: 'r2', event: 'sign_out', payload_json: null, occurred_at: 2 },
@@ -173,7 +200,7 @@ describe('telemetry/transport.flushPending', () => {
 
   test('does not mark anything when every row fails', async () => {
     const rpc = jest.fn().mockResolvedValue({ error: { message: 'all bad' } });
-    sb.getSupabaseClient.mockReturnValueOnce({ rpc });
+    sb.getSupabaseClient.mockReturnValueOnce(clientWith(rpc));
     db.getUnpushedEngineTelemetry.mockResolvedValueOnce([
       { id: 'r1', event: 'sign_in', payload_json: null, occurred_at: 1 },
     ]);
