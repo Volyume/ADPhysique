@@ -10,7 +10,7 @@
  */
 jest.mock('expo-sqlite');
 
-const { rekeyFoodEntriesToLocalDay } = require('../db');
+const { rekeyFoodEntriesToLocalDay, applyFoodEntryFromCloud } = require('../db');
 const { db } = require('../../database');
 const { localDayKey } = require('../../dayKey');
 
@@ -87,4 +87,23 @@ test('returns 0 and does nothing without a userId', async () => {
   const changed = await rekeyFoodEntriesToLocalDay(null);
   expect(changed).toBe(0);
   expect(conn.getAllAsync).not.toHaveBeenCalled();
+});
+
+test('applyFoodEntryFromCloud re-keys to the LOCAL day, ignoring the cloud entry_date', async () => {
+  // A pulled row carrying a UTC-day entry_date must land on the user's local
+  // day (derived from logged_at), so a fresh-device pull is correct regardless
+  // of whether the one-time migration has run (no race). Jest runs in UTC, so
+  // we assert against localDayKey(loggedAt) directly.
+  const loggedAt = Date.UTC(2026, 5, 3, 12, 0, 0);
+  const result = await applyFoodEntryFromCloud('u1', {
+    id: 'fe1', entry_date: '2026-06-04', // stale/UTC cloud key
+    meal_slot: 'breakfast', food_ref: 'off:1', quantity_g: 100,
+    kcal: 100, protein_g: 10, carbs_g: 10, fat_g: 5,
+    logged_at: new Date(loggedAt).toISOString(),
+  });
+
+  expect(result).toBe(localDayKey(loggedAt));
+  const insertCall = conn.runAsync.mock.calls.find((c) => /INSERT OR REPLACE INTO food_entries/.test(c[0]));
+  expect(insertCall[1][2]).toBe(localDayKey(loggedAt)); // entry_date param
+  expect(insertCall[1][2]).not.toBe('2026-06-04');
 });

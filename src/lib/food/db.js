@@ -1038,6 +1038,13 @@ export async function applyFoodEntryFromCloud(userId, row) {
   const createdAt = _isoToMs(row.created_at) ?? loggedAt;
   const updatedAt = _isoToMs(row.updated_at) ?? createdAt;
   const deletedAt = _isoToMs(row.deleted_at);
+  // TZ-1: derive entry_date from logged_at (LOCAL day) rather than trusting the
+  // cloud value, which may be a UTC-day key from old data or the frozen AAB.
+  // This makes every pulled row land on the user's calendar day on apply, so a
+  // fresh-device pull is correct regardless of whether/when the one-time
+  // food-day-key migration has run (it no longer races the pull). Returns the
+  // local key so the caller rebuilds the right day's rollup.
+  const entryDate = localDayKey(loggedAt);
   await d.runAsync(
     `INSERT OR REPLACE INTO food_entries (
       id, user_id, entry_date, meal_slot, food_ref, quantity_g,
@@ -1045,13 +1052,13 @@ export async function applyFoodEntryFromCloud(userId, row) {
       deleted_at, created_at, updated_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      row.id, userId, row.entry_date, row.meal_slot, row.food_ref,
+      row.id, userId, entryDate, row.meal_slot, row.food_ref,
       row.quantity_g, row.kcal, row.protein_g, row.carbs_g, row.fat_g,
       row.fibre_g ?? null, loggedAt,
       deletedAt, createdAt, updatedAt,
     ]
   );
-  return row.entry_date;
+  return entryDate;
 }
 
 export async function applyCustomFoodFromCloud(userId, row) {
