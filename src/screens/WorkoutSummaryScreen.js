@@ -15,6 +15,7 @@ import {
   createAdaptationEvent, getCurrentMesocycleWeek,
   getRecentAdaptationEvents,
   saveWeeklyCheckin, saveNextTimeNote, getRoutineWorkoutTonnages,
+  getRoutineById,
 } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, computeAdaptiveDecision, VOLUME_LANDMARKS, evaluateDeloadTriggers } from '../lib/algorithms';
 import { evaluateAutoReg, predictDeloadWeek, getMesoSchedule } from '../lib/mesocycle';
@@ -95,6 +96,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   });
   const [notes, setNotes] = useState('');
   const [nextTimeNote, setNextTimeNote] = useState('');
+  // The day's name (e.g. "Back + Delts (Width)") for the share card title.
+  // The summary is reached with routineId but not the name, so fetch it.
+  const [routineName, setRoutineName] = useState('');
   const [weeklyVolume, setWeeklyVolume] = useState({});
   const [autoRegSuggestions, setAutoRegSuggestions] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -141,6 +145,20 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   useEffect(() => {
     loadVolumeAndHistory();
   }, []);
+
+  // Load the routine/day name so the share card can title the session with the
+  // real workout name rather than a join of the first two exercise names.
+  useEffect(() => {
+    let cancelled = false;
+    if (!routineId) return undefined;
+    (async () => {
+      try {
+        const r = await getRoutineById(routineId);
+        if (!cancelled && r?.name) setRoutineName(r.name);
+      } catch (_e) { /* fall back to the exercise-name title */ }
+    })();
+    return () => { cancelled = true; };
+  }, [routineId]);
 
   // Contextual feedback prompt, fires ONCE after the user has
   // completed their first ~3 sessions. Suppressed thereafter via
@@ -489,10 +507,14 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     if (detectedPRs.length >= 2 || ton > 8000 || sets >= 25) intensityTier = 'epic';
     else if (detectedPRs.length >= 1 || ton > 4000 || sets >= 18) intensityTier = 'tough';
 
-    const sessionData = {
-      sessionName: exerciseNames.length > 0
+    // Title with the real day name (e.g. "Back + Delts (Width)") when we have
+    // it. Fall back to a join of the first exercises, then a generic label.
+    const sessionName = (routineName && routineName.trim())
+      || (exerciseNames.length > 0
         ? exerciseNames.slice(0, 2).join(' & ') + (exerciseNames.length > 2 ? ' +more' : '')
-        : 'Session Complete',
+        : 'Session Complete');
+    const sessionData = {
+      sessionName,
       duration: durationMinutes || 0,
       workingSets: sets,
       exerciseCount: exerciseCount || 0,

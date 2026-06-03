@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,11 +12,19 @@ let FileSystem;
 let Sharing;
 let LinearGradient;
 let Print;
+let Asset;
 try { WebView = require('react-native-webview').WebView; } catch (_) {}
 try { FileSystem = require('expo-file-system'); } catch (_) {}
 try { Sharing = require('expo-sharing'); } catch (_) {}
 try { LinearGradient = require('expo-linear-gradient').LinearGradient; } catch (_) {}
 try { Print = require('expo-print'); } catch (_) {}
+try { Asset = require('expo-asset').Asset; } catch (_) {}
+
+// The real wordmark, embedded into the off-screen canvas and shown in the
+// preview, so the card carries the actual Volyume logo rather than a V mark
+// drawn with strokes plus "olyume" set in Arial. 1032×277 RGBA.
+// eslint-disable-next-line global-require
+const WORDMARK = require('../../assets/volyume-wordmark.png');
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Canvas HTML, renders off-screen, exports a high-res PNG.
@@ -148,7 +156,18 @@ function drawTopAccentBar(ctx, W) {
 
 function drawTopBrand(ctx, W, pad, y) {
   // Small brand mark at the top, sets the tone without competing with
-  // the session content. Bottom footer carries the bigger logo.
+  // the session content. Bottom footer carries the bigger logo. Uses the
+  // real wordmark image when it loaded; falls back to the V mark + Arial.
+  var logo = window.__logoImg;
+  if (logo && logo.complete && logo.naturalWidth) {
+    var h = 30;
+    var w = h * (logo.naturalWidth / logo.naturalHeight);
+    ctx.save();
+    ctx.globalAlpha = 0.62;
+    ctx.drawImage(logo, pad, y - h, w, h);
+    ctx.restore();
+    return;
+  }
   var markSz = 32;
   drawVMark(ctx, pad, y - markSz * 0.86, markSz, B.textSecondary, B.accent);
   ctx.fillStyle = B.textSecondary;
@@ -168,25 +187,40 @@ function drawBrandFooter(ctx, W, H, pad, isSquare) {
   ctx.fillStyle = B.divider;
   ctx.fillRect(pad, fy, W - pad * 2, 1);
 
-  // Big V + Volyume mark (centred)
-  var markSz = isSquare ? 56 : 84;
-  var wordFont = isSquare ? 44 : 68;
-  ctx.font = '900 ' + wordFont + 'px Arial,sans-serif';
-  var wordW = ctx.measureText('olyume').width;
-  var blockW = markSz + 8 + wordW;
-  var blockX = (W - blockW) / 2;
-  var blockY = fy + (isSquare ? 36 : 56);
-
-  drawVMark(ctx, blockX, blockY - markSz * 0.86, markSz, B.text, B.accent);
-  ctx.fillStyle = B.text;
-  ctx.fillText('olyume', blockX + markSz + 8, blockY - 4);
+  // The real wordmark, centred. Falls back to the V mark + Arial "olyume"
+  // only if the image failed to load.
+  var logo = window.__logoImg;
+  var taglineY;
+  if (logo && logo.complete && logo.naturalWidth) {
+    var logoH = isSquare ? 64 : 96;
+    var logoW = logoH * (logo.naturalWidth / logo.naturalHeight);
+    // Cap the width so a wide wordmark never bleeds past the card edges.
+    var maxW = W - pad * 2;
+    if (logoW > maxW) { logoW = maxW; logoH = logoW * (logo.naturalHeight / logo.naturalWidth); }
+    var logoX = (W - logoW) / 2;
+    var logoY = fy + (isSquare ? 22 : 38);
+    ctx.drawImage(logo, logoX, logoY, logoW, logoH);
+    taglineY = logoY + logoH + (isSquare ? 24 : 34);
+  } else {
+    var markSz = isSquare ? 56 : 84;
+    var wordFont = isSquare ? 44 : 68;
+    ctx.font = '900 ' + wordFont + 'px Arial,sans-serif';
+    var wordW = ctx.measureText('olyume').width;
+    var blockW = markSz + 8 + wordW;
+    var blockX = (W - blockW) / 2;
+    var blockY = fy + (isSquare ? 36 : 56);
+    drawVMark(ctx, blockX, blockY - markSz * 0.86, markSz, B.text, B.accent);
+    ctx.fillStyle = B.text;
+    ctx.fillText('olyume', blockX + markSz + 8, blockY - 4);
+    taglineY = blockY + (isSquare ? 26 : 44);
+  }
 
   // Tagline
   var tagFont = isSquare ? 18 : 26;
   ctx.fillStyle = B.accent;
   ctx.font = '600 ' + tagFont + 'px Arial,sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('SMARTER  TRAINING', W / 2, blockY + (isSquare ? 26 : 44));
+  ctx.fillText('SMARTER  TRAINING', W / 2, taglineY);
 
   // URL, subtle bottom line
   if (!isSquare) {
@@ -656,7 +690,7 @@ function drawMilestone(ctx, W, H, p) {
   drawBrandFooter(ctx, W, H, pad, p.isSquare);
 }
 
-window.drawCard = function() {
+function paintCard() {
   var p = window.__cardParams;
   if (!p) return;
   var W = 1080, H = p.isSquare ? 1080 : 1920;
@@ -667,6 +701,22 @@ window.drawCard = function() {
   else if (p.cardType === 'milestone') { drawMilestone(ctx, W, H, p); }
   else { drawSession(ctx, W, H, p); }
   window.ReactNativeWebView.postMessage(JSON.stringify({ base64: c.toDataURL('image/png'), isSquare: p.isSquare }));
+}
+
+window.drawCard = function() {
+  var p = window.__cardParams;
+  if (!p) return;
+  // Preload the wordmark, then paint. toDataURL is synchronous, so the image
+  // must be decoded before we draw or the logo would be missing from the
+  // export. If it is already cached or no URI was passed, paint immediately.
+  if (p.logoDataUri && (!window.__logoImg || window.__logoImg.src !== p.logoDataUri)) {
+    var img = new Image();
+    img.onload = function() { window.__logoImg = img; paintCard(); };
+    img.onerror = function() { window.__logoImg = null; paintCard(); };
+    img.src = p.logoDataUri;
+    return;
+  }
+  paintCard();
 };
 <\/script>
 </body>
@@ -699,6 +749,26 @@ export default function ShareCardScreen({ navigation, route }) {
 
   const webViewRef = useRef(null);
   const pendingCapture = useRef(false);
+
+  // Read the bundled wordmark once and hold it as a base64 data URI so the
+  // off-screen canvas can draw the real logo. Best-effort: if it fails the
+  // canvas falls back to the drawn mark.
+  const [logoDataUri, setLogoDataUri] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        if (!Asset || !FileSystem) return;
+        const asset = Asset.fromModule(WORDMARK);
+        await asset.downloadAsync();
+        const uri = asset.localUri || asset.uri;
+        if (!uri) return;
+        const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+        if (!cancelled) setLogoDataUri(`data:image/png;base64,${b64}`);
+      } catch (_e) { /* fall back to the drawn mark */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const isSquare = format === 'square';
   const isSession = cardType === 'session';
@@ -767,7 +837,7 @@ export default function ShareCardScreen({ navigation, route }) {
     }
     setSharing(true);
     pendingCapture.current = true;
-    const params = buildParams();
+    const params = { ...buildParams(), logoDataUri };
     webViewRef.current.injectJavaScript(
       `window.__cardParams = ${JSON.stringify(params)}; window.drawCard(); true;`
     );
@@ -1049,26 +1119,20 @@ function GradientBg({ children, style }) {
   return <View style={[style, { backgroundColor: '#0D0D0D' }]}>{children}</View>;
 }
 
-function VMarkPreview({ size = 14, color, accentColor = '#F5A623' }) {
-  const finalColor = color || colors.textSecondary;
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-      <Text style={{ fontSize: size * 1.15, fontWeight: fontWeight.black, color: finalColor, lineHeight: size * 1.25, includeFontPadding: false }}>
-        V
-      </Text>
-    </View>
-  );
-}
+// Wordmark aspect ratio (1032×277). Drawn as the real logo image so the
+// preview matches the exported card.
+const WORDMARK_RATIO = 1032 / 277;
 
-function BrandRowPreview({ size = 11, color }) {
-  const finalColor = color || colors.textSecondary;
+function BrandRowPreview({ size = 11, opacity = 1 }) {
+  // `size` is the cap height; render the wordmark a little taller than the
+  // old text so it reads as the logo, not a label.
+  const h = size * 1.5;
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 1 }}>
-      <VMarkPreview size={size} color={finalColor} />
-      <Text style={{ fontSize: size, fontWeight: fontWeight.bold, color: finalColor, letterSpacing: 0.3, includeFontPadding: false }}>
-        olyume
-      </Text>
-    </View>
+    <Image
+      source={WORDMARK}
+      style={{ height: h, width: h * WORDMARK_RATIO, opacity }}
+      resizeMode="contain"
+    />
   );
 }
 
@@ -1077,7 +1141,7 @@ function BrandFooterPreview({ isSquare }) {
     <View style={[pvStyles.footer, isSquare ? pvStyles.footerSq : pvStyles.footerSt]}>
       <View style={pvStyles.footerDivider} />
       <View style={pvStyles.footerBrand}>
-        <BrandRowPreview size={isSquare ? 16 : 20} color="#FFFFFF" />
+        <BrandRowPreview size={isSquare ? 16 : 20} />
       </View>
       <Text style={[pvStyles.footerTagline, { fontSize: isSquare ? 7 : 9 }]}>SMARTER  TRAINING</Text>
       {!isSquare && <Text style={pvStyles.footerUrl}>volyume.app</Text>}
@@ -1134,7 +1198,7 @@ function SessionPreview({ sessionData: s, showVolume, showDate, showPlanName, sh
       <View style={pvStyles.topAccent} />
 
       <View style={pvStyles.headerRow}>
-        <BrandRowPreview size={isSquare ? 11 : 10} color={colors.textSecondary} />
+        <BrandRowPreview size={isSquare ? 11 : 10} opacity={0.6} />
         {showDate && (
           <Text style={[pvStyles.dateText, { fontSize: isSquare ? 8 : 7 }]}>{dateStr}</Text>
         )}
@@ -1209,7 +1273,7 @@ function PRPreview({ prData: p, showPRWeight, showPrevBest, showDate, isSquare, 
       <View style={pvStyles.topAccent} />
 
       <View style={pvStyles.headerRow}>
-        <BrandRowPreview size={isSquare ? 11 : 10} color={colors.textSecondary} />
+        <BrandRowPreview size={isSquare ? 11 : 10} opacity={0.6} />
         {showDate && (
           <Text style={[pvStyles.dateText, { fontSize: isSquare ? 8 : 7 }]}>{dateStr}</Text>
         )}
@@ -1249,7 +1313,7 @@ function MilestonePreview({ milestoneData: m, showDate, isSquare, formatLongDate
       <View style={pvStyles.topAccent} />
 
       <View style={pvStyles.headerRow}>
-        <BrandRowPreview size={isSquare ? 11 : 10} color={colors.textSecondary} />
+        <BrandRowPreview size={isSquare ? 11 : 10} opacity={0.6} />
         {showDate && !!dateStr && (
           <Text style={[pvStyles.dateText, { fontSize: isSquare ? 8 : 7 }]}>{dateStr}</Text>
         )}
