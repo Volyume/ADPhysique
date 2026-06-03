@@ -192,19 +192,26 @@ export default function HomeScreen({ navigation }) {
   }, [user?.id]);
 
   async function loadData() {
-    await Promise.all([
-      loadWeekStats(),
-      loadNextWorkout(),
-      loadExerciseCounts(),
-      loadBlockProgress(),
-      loadPhaseBanner(),
-      loadFatigueTrend(),
-      loadScheduleContext(),
-      loadBriefDismissal(),
-      loadDailyNarrative(),
-      ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadFirstRunCue()] : []),
-    ]);
-    setInitialLoading(false);
+    // HP-7: clear the loading spinner in a finally so a single rejected
+    // loader can't leave Home spinning forever. The loaders each guard
+    // their own errors, but Promise.all rejects on the first unhandled
+    // throw and would otherwise skip setInitialLoading(false).
+    try {
+      await Promise.all([
+        loadWeekStats(),
+        loadNextWorkout(),
+        loadExerciseCounts(),
+        loadBlockProgress(),
+        loadPhaseBanner(),
+        loadFatigueTrend(),
+        loadScheduleContext(),
+        loadBriefDismissal(),
+        loadDailyNarrative(),
+        ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadFirstRunCue()] : []),
+      ]);
+    } finally {
+      setInitialLoading(false);
+    }
   }
 
   async function loadDailyNarrative() {

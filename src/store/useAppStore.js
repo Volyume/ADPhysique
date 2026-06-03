@@ -1138,7 +1138,7 @@ const useAppStore = create((set, get) => ({
   // tokens statically (most existing screens today) will reflect the
   // changes after the app is restarted, that's noted in the Settings UI.
   accessibility: {
-    largerText: false,    // applies a 1.2× multiplier via the useAccessibleFontSize hook
+    largerText: false,    // applies a 1.2× multiplier to the fontSize tokens in applyAccessibility (theme.js)
     higherContrast: false, // brightens muted text + thickens borders via theme tokens
     colorBlindSafe: false, // swaps red/green success/error to blue/orange
     reduceMotion: false,   // skips PRCelebration particles, RestTimer pulse, big spring anims

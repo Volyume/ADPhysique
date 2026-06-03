@@ -499,7 +499,7 @@ export default function PlansScreen({ navigation }) {
                 <View style={styles.activeBadge}>
                   <Text style={styles.activeBadgeText}>ACTIVE</Text>
                 </View>
-                <TouchableOpacity onPress={() => handlePlanOptions(activePlan)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                <TouchableOpacity onPress={() => handlePlanOptions(activePlan)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Plan options">
                   <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
               </View>
@@ -565,6 +565,8 @@ export default function PlansScreen({ navigation }) {
                       style={styles.moreBtn}
                       onPress={() => handlePlanOptions(plan)}
                       hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                      accessibilityRole="button"
+                      accessibilityLabel="Plan options"
                     >
                       <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
                     </TouchableOpacity>
@@ -626,6 +628,8 @@ export default function PlansScreen({ navigation }) {
                       style={styles.moreBtn}
                       onPress={() => handleArchivedPlanOptions(plan)}
                       hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                      accessibilityRole="button"
+                      accessibilityLabel="Archived plan options"
                     >
                       <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
                     </TouchableOpacity>
@@ -673,6 +677,8 @@ export default function PlansScreen({ navigation }) {
                     style={styles.moreBtn}
                     onPress={() => handleTemplateOptions(routine)}
                     hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Routine options"
                   >
                     <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
                   </TouchableOpacity>
