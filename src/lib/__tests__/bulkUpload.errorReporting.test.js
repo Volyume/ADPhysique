@@ -23,6 +23,8 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn().mockResolvedValue(null),
   setItem: jest.fn().mockResolvedValue(undefined),
   removeItem: jest.fn().mockResolvedValue(undefined),
+  getAllKeys: jest.fn().mockResolvedValue([]),
+  multiGet: jest.fn().mockResolvedValue([]),
 }));
 // Auto-mock the whole database surface (every getAll* becomes a jest.fn
 // returning undefined → guarded helpers no-op). Override only the two
@@ -33,23 +35,48 @@ const { getSupabaseClient } = require('../supabase');
 const db = require('../database');
 const { bulkUploadLocalData } = require('../sync');
 
-// A supabase client whose .from(t).upsert() resolves to the given error.
+// A robust supabase mock: every builder method is both chainable (returns the
+// same object, so .upsert().select().eq()... never hits an undefined method)
+// AND thenable (await at any point resolves to `result`). upsert/insert/etc.
+// resolve to the given error; reads resolve to empty data. This avoids spurious
+// throws (which now count as errors) from a helper using any method shape.
+function makeChain(result) {
+  const chain = {
+    select: () => chain,
+    eq: () => chain,
+    in: () => chain,
+    order: () => chain,
+    limit: () => chain,
+    maybeSingle: async () => result,
+    then: (resolve) => resolve(result),
+  };
+  return chain;
+}
 function clientWithUpsertError(upsertError) {
+  const writeResult = { error: upsertError, data: [] };
+  const readResult = { data: [], error: null };
   return {
     from: jest.fn(() => ({
-      upsert: jest.fn(async () => ({ error: upsertError })),
-      select: jest.fn(() => ({
-        eq: jest.fn(async () => ({ data: [], error: null })),
-      })),
+      upsert: jest.fn(() => makeChain(writeResult)),
+      insert: jest.fn(() => makeChain(writeResult)),
+      update: jest.fn(() => makeChain(writeResult)),
+      delete: jest.fn(() => makeChain(writeResult)),
+      select: jest.fn(() => makeChain(readResult)),
     })),
+    rpc: jest.fn(async () => ({ data: null, error: upsertError })),
   };
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
-  // getAllWorkouts is iterated unconditionally (.filter); keep it an array.
-  db.getAllWorkouts.mockResolvedValue([]);
-  db.getWorkoutSetsForWorkout.mockResolvedValue([]);
+  // Default every mocked db getter to a benign empty array so no push helper
+  // throws on an undefined read (production getters return arrays; a throw now
+  // legitimately counts as an error, so we must not introduce spurious ones).
+  for (const k of Object.keys(db)) {
+    if (typeof db[k] === 'function' && typeof db[k].mockResolvedValue === 'function') {
+      db[k].mockResolvedValue([]);
+    }
+  }
   // One programme row so _pushProgrammes actually issues an upsert.
   db.getAllProgrammes.mockResolvedValue([{ id: 'p1', name: 'Push/Pull', isLibrary: false, isActive: true }]);
 });
@@ -80,4 +107,16 @@ test('returns { errors: 0 } and does not throw when there is no client', async (
   const result = await bulkUploadLocalData('cloud-uid', 'local-uid');
 
   expect(result).toEqual({ errors: 0 });
+});
+
+test('counts a helper that THROWS while reading local data (not just PostgREST {error})', async () => {
+  // Clean cloud client (no upsert errors), but a push helper's local read
+  // throws. Its own catch swallows the throw with logBulkWarn, which must still
+  // count so the sign-out push-first safety sees the failure (SYNC-1 re-audit).
+  getSupabaseClient.mockReturnValue(clientWithUpsertError(null));
+  db.getAllProgrammes.mockRejectedValue(new Error('sqlite read failed'));
+
+  const result = await bulkUploadLocalData('cloud-uid', 'local-uid');
+
+  expect(result.errors).toBeGreaterThan(0);
 });

@@ -104,6 +104,19 @@ function logPgErr(scope, err) {
   });
 }
 
+// Catch-path logger for the legacy bulk-push helpers. Same signature as
+// logWarn, but also counts the failure during the bulk-push window. PostgREST
+// {error} results go through logPgErr (counted); a helper that THROWS while
+// reading local data (e.g. a getAllX SQLite error) is swallowed by its own
+// catch with logWarn and would otherwise be invisible to the sign-out
+// push-first safety. Routing those catches through here surfaces them too
+// (SYNC-1 re-audit). Gated on _bulkPushTracking so it's a plain warn when a
+// helper runs outside bulkUploadLocalData.
+function logBulkWarn(scope, message, meta) {
+  if (_bulkPushTracking) _bulkPushErrorCount += 1;
+  logWarn(scope, message, meta);
+}
+
 // PostgREST caps each response at 1000 rows by default. Loop with
 // .range() until a short page comes back so users with large libraries
 // (long-running accounts, imported templates) get every row back.
@@ -664,7 +677,7 @@ async function _pushProgrammes(sb, supabaseUserId, localUserId) {
     }));
     const { error } = await sb.from('programmes').upsert(rows, { onConflict: 'user_id,id' });
     if (error) logPgErr('sync._pushProgrammes', error);
-  } catch (e) { logWarn('sync._pushProgrammes', e?.message, { error: e?.message }); }
+  } catch (e) { logBulkWarn('sync._pushProgrammes', e?.message, { error: e?.message }); }
 }
 
 async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
@@ -759,7 +772,7 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
         if (reErr) logPgErr('sync._pushRoutineExercises', reErr);
       }
     }
-  } catch (e) { logWarn('sync._pushRoutinesAndExercises', e?.message, { error: e?.message }); }
+  } catch (e) { logBulkWarn('sync._pushRoutinesAndExercises', e?.message, { error: e?.message }); }
 }
 
 async function _pushMesocycles(sb, supabaseUserId, localUserId) {
@@ -803,7 +816,7 @@ async function _pushMesocycles(sb, supabaseUserId, localUserId) {
         if (error) logPgErr('sync._pushMesocycleWeeks', error);
       }
     }
-  } catch (e) { logWarn('sync._pushMesocycles', e?.message, { error: e?.message }); }
+  } catch (e) { logBulkWarn('sync._pushMesocycles', e?.message, { error: e?.message }); }
 }
 
 async function _pushMorningWeights(sb, supabaseUserId, localUserId) {
@@ -822,7 +835,7 @@ async function _pushMorningWeights(sb, supabaseUserId, localUserId) {
       );
       if (error) logPgErr('sync._pushMorningWeights', error);
     }
-  } catch (e) { logWarn('sync._pushMorningWeights', e?.message, { error: e?.message }); }
+  } catch (e) { logBulkWarn('sync._pushMorningWeights', e?.message, { error: e?.message }); }
 }
 
 async function _pushCoachOutputs(sb, supabaseUserId, localUserId) {
@@ -841,7 +854,7 @@ async function _pushCoachOutputs(sb, supabaseUserId, localUserId) {
       );
       if (error) logPgErr('sync._pushCoachOutputs', error);
     }
-  } catch (e) { logWarn('sync._pushCoachOutputs', e?.message, { error: e?.message }); }
+  } catch (e) { logBulkWarn('sync._pushCoachOutputs', e?.message, { error: e?.message }); }
 }
 
 // ─── Push helpers for previously local-only tables ───────────────────────
@@ -866,7 +879,7 @@ async function _pushExerciseUserNotes(sb, supabaseUserId, localUserId) {
       );
       if (error) logPgErr('sync._pushExerciseUserNotes', error);
     }
-  } catch (e) { logWarn('sync._pushExerciseUserNotes', e?.message); }
+  } catch (e) { logBulkWarn('sync._pushExerciseUserNotes', e?.message); }
 }
 
 async function _pushUserBodyProfile(sb, supabaseUserId, localUserId) {
@@ -886,7 +899,7 @@ async function _pushUserBodyProfile(sb, supabaseUserId, localUserId) {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' });
     if (error) logPgErr('sync._pushUserBodyProfile', error);
-  } catch (e) { logWarn('sync._pushUserBodyProfile', e?.message); }
+  } catch (e) { logBulkWarn('sync._pushUserBodyProfile', e?.message); }
 }
 
 async function _pushUserInsights(sb, supabaseUserId, localUserId) {
@@ -908,7 +921,7 @@ async function _pushUserInsights(sb, supabaseUserId, localUserId) {
       );
       if (error) logPgErr('sync._pushUserInsights', error);
     }
-  } catch (e) { logWarn('sync._pushUserInsights', e?.message); }
+  } catch (e) { logBulkWarn('sync._pushUserInsights', e?.message); }
 }
 
 async function _pushWorkoutNotes(sb, supabaseUserId, localUserId) {
@@ -928,7 +941,7 @@ async function _pushWorkoutNotes(sb, supabaseUserId, localUserId) {
       );
       if (error) logPgErr('sync._pushWorkoutNotes', error);
     }
-  } catch (e) { logWarn('sync._pushWorkoutNotes', e?.message); }
+  } catch (e) { logBulkWarn('sync._pushWorkoutNotes', e?.message); }
 }
 
 async function _pushExerciseGoals(sb, supabaseUserId, localUserId) {
@@ -951,7 +964,7 @@ async function _pushExerciseGoals(sb, supabaseUserId, localUserId) {
       );
       if (error) logPgErr('sync._pushExerciseGoals', error);
     }
-  } catch (e) { logWarn('sync._pushExerciseGoals', e?.message); }
+  } catch (e) { logBulkWarn('sync._pushExerciseGoals', e?.message); }
 }
 
 async function _pushPeakWeekPlans(sb, supabaseUserId, localUserId) {
@@ -977,7 +990,7 @@ async function _pushPeakWeekPlans(sb, supabaseUserId, localUserId) {
       );
       if (error) logPgErr('sync._pushPeakWeekPlans', error);
     }
-  } catch (e) { logWarn('sync._pushPeakWeekPlans', e?.message); }
+  } catch (e) { logBulkWarn('sync._pushPeakWeekPlans', e?.message); }
 }
 
 async function _pushPlannedMuscleVolume(sb, supabaseUserId, localUserId) {
@@ -999,7 +1012,7 @@ async function _pushPlannedMuscleVolume(sb, supabaseUserId, localUserId) {
       );
       if (error) logPgErr('sync._pushPlannedMuscleVolume', error);
     }
-  } catch (e) { logWarn('sync._pushPlannedMuscleVolume', e?.message); }
+  } catch (e) { logBulkWarn('sync._pushPlannedMuscleVolume', e?.message); }
 }
 
 async function _pushAdaptationEvents(sb, supabaseUserId, localUserId) {
@@ -1034,7 +1047,7 @@ async function _pushAdaptationEvents(sb, supabaseUserId, localUserId) {
       );
       if (error) logPgErr('sync._pushAdaptationEvents', error);
     }
-  } catch (e) { logWarn('sync._pushAdaptationEvents', e?.message); }
+  } catch (e) { logBulkWarn('sync._pushAdaptationEvents', e?.message); }
 }
 
 
@@ -1103,7 +1116,7 @@ async function _pushAllUserPrefs(sb, supabaseUserId) {
       );
       if (error) logPgErr('sync._pushAllUserPrefs', error);
     }
-  } catch (e) { logWarn('sync._pushAllUserPrefs', e?.message); }
+  } catch (e) { logBulkWarn('sync._pushAllUserPrefs', e?.message); }
 }
 
 // ─── Pull (new device) ────────────────────────────────────────────────────────
