@@ -139,6 +139,9 @@ export default function SettingsScreen({ navigation }) {
   const [cycleEnabled, setCycleEnabled] = useState(false);
   // Daily movement. stepsEnabled undefined means never opted out, so on.
   const [stepsEnabled, setStepsEnabled] = useState(userProfile?.stepsEnabled !== false);
+  // Cardio available by default (undefined reads as on). Toggling off hides the
+  // cardio surfaces; logged history is kept, just not shown.
+  const [cardioEnabled, setCardioEnabled] = useState(userProfile?.cardioEnabled !== false);
   const [stepTargetInput, setStepTargetInput] = useState(String(userProfile?.stepsTarget ?? 8000));
   const [bioSex, setBioSex] = useState(null);
   // Health integration. Per-scope status: weight read separately from
@@ -987,6 +990,25 @@ export default function SettingsScreen({ navigation }) {
                   />
                 </View>
               )}
+              <SettingRow
+                icon="heart-outline"
+                label="Cardio"
+                sub={cardioEnabled
+                  ? 'On. Log any cardio you do, your choice of activity. The coach only suggests cardio if a cut stalls.'
+                  : 'Off. No cardio logging or library.'}
+                showArrow={false}
+                rightElement={
+                  <Switch
+                    value={cardioEnabled}
+                    onValueChange={async (next) => {
+                      setCardioEnabled(next);
+                      if (user?.id) await saveLocalProfile(user.id, { ...(userProfile || {}), cardioEnabled: next });
+                    }}
+                    trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
+                    thumbColor={cardioEnabled ? colors.primary : colors.textMuted}
+                  />
+                }
+              />
             </>
           )}
           {bioSex === 'female' && (
