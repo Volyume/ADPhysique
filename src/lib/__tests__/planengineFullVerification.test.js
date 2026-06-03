@@ -35,13 +35,10 @@ const WEAK_POINTS = ['Glutes', 'Side Delts', 'Biceps', 'Triceps', 'Hamstrings', 
 // MEV / MRV (external buckets). Shoulders = the three delt heads combined,
 // spec cap 26; we allow +2 for the known per-head rounding when summed.
 const MEV = { chest: 6, back: 10, shoulders: 8, biceps: 8, triceps: 6, quads: 8, hamstrings: 6, glutes: 0, calves: 8, abs: 0, traps: 0 };
-const MRV = { chest: 22, back: 25, shoulders: 26, biceps: 26, triceps: 18, quads: 20, hamstrings: 20, glutes: 22, calves: 20, abs: 25, traps: 26 };
+const MRV = { chest: 22, back: 25, shoulders: 26, biceps: 26, triceps: 18, quads: 20, hamstrings: 20, glutes: 16, calves: 20, abs: 25, traps: 26 };
 const NO_ZERO = ['chest', 'back', 'shoulders', 'quads', 'hamstrings', 'glutes'];
 const ARM_JUDGED = new Set(['mens_physique', 'classic_physique', 'bodybuilding', 'figure', 'womens_physique', 'womens_bodybuilding']);
-// Non-bikini/wellness glute MRV is 22 (VOLUME_LANDMARKS, now the single
-// source of truth shared with the tracker; was 16 in the old standalone
-// SPEC_LANDMARKS table).
-const gluteCap = (g) => (g === 'bikini' || g === 'wellness') ? 30 : 22;
+const gluteCap = (g) => (g === 'bikini' || g === 'wellness') ? 30 : 16;
 
 function gen(goal, days, exp, weak) {
   const extra = weak ? { phase: 'weak_point', weakPoints: Array.isArray(weak) ? weak : [weak] } : {};
@@ -236,9 +233,9 @@ describe('Full verification export', () => {
   out.push('  per-session rounding can add a set or two. The side+rear target is capped at');
   out.push('  26; this is a reporting artefact, not extra side-delt work.');
   out.push('- NON-MATRIX divisions (General, Bodybuilding, Women\'s Bodybuilding) weak-point');
-  out.push('  uses the legacy upper/lower + dedicated weak-point day. The glute MRV is now');
-  out.push('  22 (the single source of truth shared with the tracker, was 16), so the prior');
-  out.push('  "~3 sets over MRV 16" residual is resolved: weak-pointed glutes sit within 22.');
+  out.push('  uses the legacy upper/lower + dedicated weak-point day, which can push a glute');
+  out.push('  weak-point ~3 sets over the generic MRV 16. Pre-existing; the clean fix (put');
+  out.push('  these in the matrix) changes their non-weak-point split label and is deferred.');
   out.push('- The six specialised divisions (MP, Classic, Bikini, Wellness, Figure, W.');
   out.push('  Physique) route weak-point through the matrix and respect MRV exactly.');
   out.push('- LONG SESSIONS (expected, not a defect): Women\'s Bodybuilding leg days at 5-6');
