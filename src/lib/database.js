@@ -1218,6 +1218,32 @@ const SCHEMA_MIGRATIONS = [
     `CREATE INDEX IF NOT EXISTS idx_cardio_log_user_date ON cardio_log(user_id, entry_date)`,
     `CREATE INDEX IF NOT EXISTS idx_cardio_log_user_updated ON cardio_log(user_id, updated_at)`,
   ],
+  // Corrective re-apply of the exercise-library expansion. The SAME mid-array
+  // insertion that skipped cardio_log (the original cardio_log block above) also
+  // shifted the exercise-library expansion block (the 9 ALTER TABLE exercises
+  // ADD COLUMN ... above) down by one index. An install that already sat at the
+  // array's top version when the cardio build landed ran only the new final
+  // index (steps_avg, a benign duplicate) and never reached the shifted
+  // exercise-expansion block, so those 9 columns were never added. cardio_log
+  // got a trailing corrective; this one did not, so upsertExercise / the
+  // exercise backfill on those installs throws "table exercises has no column
+  // named equipment_category". Reordering shipped migrations is not allowed, so
+  // this fresh trailing migration re-applies the columns. Each ADD COLUMN is
+  // duplicate-column-tolerant via isBenignMigrationError, so installs that did
+  // run the original block re-run this as a no-op. See the migration-ordering
+  // audit, 2026-06-03. Local-only: exercises are seeded locally, no cloud
+  // counterpart.
+  [
+    `ALTER TABLE exercises ADD COLUMN equipment_category TEXT`,
+    `ALTER TABLE exercises ADD COLUMN machine_type TEXT`,
+    `ALTER TABLE exercises ADD COLUMN force TEXT`,
+    `ALTER TABLE exercises ADD COLUMN laterality TEXT`,
+    `ALTER TABLE exercises ADD COLUMN difficulty INTEGER`,
+    `ALTER TABLE exercises ADD COLUMN machine_ok INTEGER DEFAULT 0`,
+    `ALTER TABLE exercises ADD COLUMN home_ok INTEGER DEFAULT 0`,
+    `ALTER TABLE exercises ADD COLUMN cue TEXT`,
+    `ALTER TABLE exercises ADD COLUMN equipment_profiles TEXT`,
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on

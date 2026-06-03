@@ -44,6 +44,36 @@ function createdCardioLog(execList) {
   return execList.some((s) => /CREATE TABLE IF NOT EXISTS cardio_log/i.test(s));
 }
 
+function addedExerciseExpansionColumn(execList) {
+  // The exercise-library expansion block is identified by its first column.
+  return execList.some((s) => /ALTER TABLE exercises ADD COLUMN equipment_category/i.test(s));
+}
+
+// Find the migration index of the Nth op matching `pattern` by probing a
+// from-zero run and reading the PRAGMA user_version that the runner sets
+// immediately after that op's migration completes. The migration's own index
+// is (version - 1), so an install sitting at that index is the one that first
+// runs it. This stays correct as more migrations are appended, unlike a
+// hardcoded "top - 1" which drifts every time the array grows.
+async function migrationIndexOf(pattern, occurrence = 1) {
+  const d = makeFakeDb(0);
+  await runMigrations(d);
+  const exec = d._exec;
+  let seen = 0;
+  for (let i = 0; i < exec.length; i++) {
+    if (pattern.test(exec[i])) {
+      seen += 1;
+      if (seen === occurrence) {
+        for (let j = i + 1; j < exec.length; j++) {
+          const m = /PRAGMA user_version = (\d+)/.exec(exec[j]);
+          if (m) return Number(m[1]) - 1;
+        }
+      }
+    }
+  }
+  return -1;
+}
+
 describe('cardio_log migration ordering', () => {
   test('a fresh install (version 0) creates cardio_log', async () => {
     const d = makeFakeDb(0);
@@ -51,17 +81,15 @@ describe('cardio_log migration ordering', () => {
     expect(createdCardioLog(d._exec)).toBe(true);
   });
 
-  test('an install one step behind the top version still creates cardio_log', async () => {
-    // Discover the total number of migration versions by running from 0.
-    const probe = makeFakeDb(0);
-    await runMigrations(probe);
-    const total = probe._version;
-    expect(total).toBeGreaterThan(0);
+  test('an install sitting at the corrective cardio_log index still creates the table', async () => {
+    // Simulate the founder's device: it had already advanced to the version it
+    // sat at under the buggy build, the index the corrective cardio_log block
+    // (the 2nd CREATE in the array) occupies. Starting there must run it. Using
+    // the located index instead of "top - 1" keeps this true as the array grows.
+    const correctiveIndex = await migrationIndexOf(/CREATE TABLE IF NOT EXISTS cardio_log/i, 2);
+    expect(correctiveIndex).toBeGreaterThan(0);
 
-    // Simulate the founder's device: it had already advanced to the previous
-    // top version under the buggy build. The corrective trailing migration must
-    // run for it.
-    const d = makeFakeDb(total - 1);
+    const d = makeFakeDb(correctiveIndex);
     await runMigrations(d);
     expect(createdCardioLog(d._exec)).toBe(true);
   });
@@ -75,5 +103,29 @@ describe('cardio_log migration ordering', () => {
     await runMigrations(d);
     // Only the PRAGMA read happened; no migration ops were executed.
     expect(d._exec.length).toBe(0);
+  });
+});
+
+describe('exercise-library expansion migration ordering', () => {
+  // The same mid-array insertion that skipped cardio_log shifted the
+  // exercise-library expansion block down a slot, so an install at the old top
+  // version never ran it and was left missing 9 exercises columns. A trailing
+  // corrective re-applies them. These pin that it runs for the affected cohort.
+  test('a fresh install adds the expansion columns', async () => {
+    const d = makeFakeDb(0);
+    await runMigrations(d);
+    expect(addedExerciseExpansionColumn(d._exec)).toBe(true);
+  });
+
+  test('an install sitting at the corrective expansion index still gets the columns', async () => {
+    // The corrective expansion block is the 2nd ALTER...equipment_category in
+    // the array (the original block plus the trailing corrective). An install
+    // at that index must run it.
+    const correctiveIndex = await migrationIndexOf(/ALTER TABLE exercises ADD COLUMN equipment_category/i, 2);
+    expect(correctiveIndex).toBeGreaterThan(0);
+
+    const d = makeFakeDb(correctiveIndex);
+    await runMigrations(d);
+    expect(addedExerciseExpansionColumn(d._exec)).toBe(true);
   });
 });
