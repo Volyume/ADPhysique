@@ -2068,8 +2068,15 @@ function _generatePlanInner(inputs) {
   const weakPointKeys    = resolveWeakPointKeys(safeWeakPointsUI);
   _weakPointKeys = weakPointKeys;  // visible to buildSession / buildFromMatrix
 
+  // Clamp to the supported 3-6 split range. selectSplit and DIVISION_MATRIX
+  // only define splits for 3-6 days; an out-of-range value (1, 2 or 7, e.g.
+  // from imported data) previously fell through selectSplit to a 6-day
+  // ppl_ab, so a user who asked for 2 days got six sessions. The rebuild spec
+  // assumes the caller clamps; do it here so the engine is safe on any input.
+  const requestedDays = Number.isFinite(daysPerWeek) ? Math.round(daysPerWeek) : 4;
+  const clampedDays = Math.min(6, Math.max(3, requestedDays));
   // Beginners capped at 4 days
-  const effectiveDays = (experience === 'beginner' && daysPerWeek > 4) ? 4 : daysPerWeek;
+  const effectiveDays = (experience === 'beginner' && clampedDays > 4) ? 4 : clampedDays;
 
   // Shadow goal for legacy engine code paths. Post-merge, weak_point and
   // strength_size live under `phase`, not `goal`. applyGoalOverlay already
