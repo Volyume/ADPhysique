@@ -20,6 +20,68 @@ them show up at 100k.
 
 ---
 
+## Remediation log — 2026-06-03 (session 2)
+
+Scope confirmed with the founder: Play closed-testing only, no iOS yet, so
+the iOS-only items are deferred ("we'll do those parts when they come up").
+Work happened on `main`. Status of each finding:
+
+**Fixed and pushed**
+- **LB-1** — paywall now carries the auto-renew/price/billing disclosure,
+  a wired Restore Purchases, and links to the in-app subscription terms +
+  privacy policy. (`b676678`)
+- **LB-5** — push watermark for completed workouts; syncAll no longer
+  re-uploads the whole history every cycle. Scope: workouts+sets (the
+  unbounded cost); bounded/editable legacy tables noted as follow-up.
+  (`cd8e680`)
+- **LB-7** — Home, Workout History and the Insights engine no longer load
+  every set ever logged; they pull bounded windows / per-page sets.
+  (`168ca96`)
+- **HP-1** — migration 061 pins `search_path` on the last three unpinned
+  SECURITY DEFINER functions (pending founder apply). (`bf93600`)
+- **HP-3** — migration 062 closes the `delete_user_data` fallback erasure
+  gap for the five post-025 tables (pending founder apply). (`02e4672`)
+- **HP-4** — RTDN webhook now authenticates the Pub/Sub caller via Google
+  OIDC (configure-before-enforce; verify on deploy). (`c1ef01f`)
+- **HP-6** — Plans icon-only options buttons got accessibility labels;
+  **HP-7** — Home loading spinner can no longer hang on a rejected loader.
+  (`1726bdb`)
+- **HP-9** — exercise library cached in memory with write-invalidation.
+  (`a787484`)
+- **HP-10** — Sentry trace sampling lowered to 5% for the 100k target.
+  (`1d39622`)
+
+**Reassessed (no change, with reason)**
+- **LB-6** (two AppState listeners "both sync") — on inspection the
+  expensive double-work is already prevented: the runner's in-memory lock
+  dedupes the sync, and health reads are single-sourced in `maybeSync`.
+  Regression tests (A2-001/005/012) explicitly pin this two-effect split.
+  Residual cost is a second `getSession` (a local cache hit) and a second
+  subscription. A single-listener merge would fight those incident-guarding
+  tests for little gain, so it is not worth the risk now.
+- **HP-5** (Larger text "half-built") — false positive. The pref is fully
+  applied at theme-build time (`theme.js` `applyAccessibility`); only a
+  comment referencing a non-existent hook was stale. Corrected the comment.
+  (`1726bdb`)
+- **HP-11** (ACTIVITY_RECOGNITION "unused") — false positive. It is the
+  required companion permission for `FOREGROUND_SERVICE_TYPE_HEALTH` from
+  Android 14 (documented in `notifications/activeWorkout.js`) and supports
+  the steps feature. Removing it would reintroduce a native crash. Kept.
+
+**Blocked on a founder decision (not implemented)**
+- **LB-9 / LB-8 / HP-2** — these are coupled. The privacy policy promises
+  "we do not run behavioural analytics", and `PRIVACY_CONSENT_LOCKED.md`
+  states engine_telemetry is "already anonymised at write time". But the
+  implementation writes `engine_telemetry` with `user_id` and captures a
+  per-user conversion funnel (paywall_shown, cascade_advanced,
+  paid_converted) plus app_foregrounded/backgrounded. That is a contradiction
+  against a locked privacy commitment. LB-8 (adding workout/engagement
+  events) and HP-2 (dietary fields in telemetry) would deepen it. Resolving
+  it is a privacy-positioning decision and likely a schema/RPC migration, so
+  it is the founder's call rather than something to change silently.
+
+---
+
 ## A. Launch blockers
 
 These stop a submission being approved, or break a core promise at
