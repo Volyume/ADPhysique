@@ -519,7 +519,7 @@ export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
       previousValue: best1RM,            // for "+X% vs previous" copy
       reps,
       weight,
-      label: `New estimated 1RM: ${new1RM.toFixed(1)}${units}`,
+      label: `New estimated max: ${new1RM.toFixed(1)}${units}`,
     });
   }
 
@@ -633,7 +633,7 @@ export function getAutoRegSuggestion(workoutFeedback, weeklyVolumeByMuscle, cust
       suggestions.push({
         type: 'add_muscle_volume',
         muscle,
-        message: `${MUSCLE_DISPLAY_NAMES[muscle] || muscle}: strong stimulus. You have room to add a set or increase intensity next week.`,
+        message: `${MUSCLE_DISPLAY_NAMES[muscle] || muscle}: working hard. You have room to add a set or push harder next week.`,
       });
     }
   }
@@ -764,7 +764,7 @@ function buildSubstituteReason(sub, target, targetStretch = 'medium') {
   }
   if (subSFR > targetSFR) return 'Better match for this muscle with less overall fatigue.';
   if (subFatigue < targetFatigue) return 'Less demanding overall. Good for busy or high-volume weeks.';
-  return 'Same muscles, different movement. Useful for variation across mesocycles.';
+  return 'Same muscles, different movement. Good for mixing things up over a training block.';
 }
 
 // Standard plate denominations and bar weights per display unit. Gym weight is

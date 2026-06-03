@@ -238,7 +238,7 @@ export async function getBlockAdvice(userId, activeBlock, userProfile) {
     return {
       action: 'in_recovery',
       headline: 'Recovery week is active',
-      body: `Keep sessions lighter. Roughly half the sets, same exercises, easy effort. This isn't stepping back; it's letting the adaptations from the last few weeks land. You'll come back to full training next week.`,
+      body: `Keep sessions lighter. Roughly half the sets, same exercises, easy effort. This isn't stepping back; it's letting the last few weeks of work pay off. You'll come back to full training next week.`,
       signals,
       nextBlock,
       blockStatus,

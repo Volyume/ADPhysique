@@ -107,7 +107,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
         <View style={styles.fieldLabelWrap}>
           <Text style={styles.fieldLabel}>Reps</Text>
           {live1RM != null && live1RM > 0 && (
-            <Text style={styles.e1rmHint}>e1RM {Math.round(live1RM)}{units}</Text>
+            <Text style={styles.e1rmHint}>Est. max ≈{Math.round(live1RM)}{units}</Text>
           )}
         </View>
         <View style={styles.stepper}>

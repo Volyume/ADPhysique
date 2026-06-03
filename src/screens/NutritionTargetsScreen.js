@@ -734,7 +734,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                         size={12}
                         text={
                           'How to split your daily protein across the day.\n\n' +
-                          'Each meal should land in a window of roughly 0.4 to 0.55 g of protein per kilogram of bodyweight. Below the floor, muscle protein synthesis is not fully triggered. Above the ceiling, the extra protein gives diminishing returns at that meal.\n\n' +
+                          'Each meal should land in a window of roughly 0.4 to 0.55 g of protein per kilogram of bodyweight. Below that, the meal does not give you the full muscle-building benefit. Above it, the extra protein mostly goes to waste at that meal.\n\n' +
                           'Volyume picks the smallest meal count that keeps every meal at or below the ceiling, so your daily target is hit without overshooting per-meal. Your daily total stays exactly the same. This is purely how to split it.'
                         }
                       />

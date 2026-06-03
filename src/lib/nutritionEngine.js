@@ -74,7 +74,7 @@ export const PROTEIN_APPROACHES = {
   optimised: {
     label: 'Optimised',
     range: '2.2–3.0 g/kg',
-    description: 'The genuine target for serious hypertrophy training. Fully saturates muscle protein synthesis and gives clear headroom above the minimum.',
+    description: 'The real target if you are serious about building muscle. Comfortably above the minimum, with headroom to spare.',
     lbm: { lean_gain: 2.8, build: 2.8, maintain: 2.6, recomp: 2.9, mild_cut: 3.1, aggressive_cut: 3.2, contest_prep: 3.3 },
     bw:  { lean_gain: 2.5, build: 2.5, maintain: 2.2, recomp: 2.6, mild_cut: 2.8, aggressive_cut: 3.0, contest_prep: 3.2 },
     floor: 2.2,
@@ -826,21 +826,21 @@ export function getPlanNutritionContext(targets, { bodyMetricsData = [], adheren
   // One-sentence explanation
   const explanations = {
     lean_gain:
-      'A modest calorie surplus with controlled volume supports steady lean tissue accrual.',
+      'A small calorie surplus and steady training. You gain muscle slowly with little fat.',
     build:
-      'A larger surplus increases recovery capacity, allowing high training volume and progressive overload.',
+      'A bigger surplus gives you more to recover from, so you can train hard and add weight over time.',
     maintain:
-      'Maintenance calories sustain training performance; moderate volume keeps adaptations without excessive fatigue.',
+      'Eating at maintenance holds your performance. Steady training keeps your gains without piling on fatigue.',
     recomp:
-      'A slight deficit with high protein and moderate volume enables simultaneous fat loss and muscle retention.',
+      'A slight deficit with high protein. You lose a bit of fat while holding onto muscle.',
     mild_cut:
-      'A conservative deficit preserves strength; volume is moderated to match reduced recovery resources.',
+      'A gentle deficit keeps your strength up. Training eases off a little to match lower recovery.',
     aggressive_cut:
-      'A significant deficit impairs recovery; low volume and infrequent failure training limit muscle loss.',
+      'A big deficit makes recovery harder, so training drops back and you stop short of failure to keep muscle.',
     contest_prep:
-      'An extreme deficit demands minimal volume and very low failure exposure to protect lean mass.',
+      'A very hard deficit. Training stays light and well short of failure to protect your muscle.',
   };
-  const explanation = explanations[goal] ?? 'Nutrition context applied based on current phase.';
+  const explanation = explanations[goal] ?? 'Set up for your current phase.';
 
   // --- Refeed and diet break recommendations ---
   // Evidence: MATADOR study (2017, Int J Obesity), 2-week diet breaks produced 50% more fat
