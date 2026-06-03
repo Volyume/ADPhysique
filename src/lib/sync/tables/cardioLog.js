@@ -20,6 +20,7 @@
  */
 
 import { logSyncError } from '../telemetry';
+import { isMissingTableError } from './_missingTable';
 
 const PUSH_BATCH_SIZE = 200;
 const PUSH_WINDOW_DAYS = 400;
@@ -38,22 +39,11 @@ function _toMs(t) {
 }
 
 // cardio_log is a brand-new additive table (cloud migration 064). Until 064 is
-// applied to a given Supabase project, the cloud table is absent and PostgREST
-// answers with PGRST205 ("Could not find the table ... in the schema cache") or
-// the underlying 42P01 ("relation ... does not exist"). That is the expected
-// pre-migration state, not a sync failure: there is no cloud target yet, so
-// there is no unsynced data to lose. Treat it as a benign skip (errors:0) so it
-// cannot trip the push-first sign-out guard, which aborts sign-out on any
-// errored table. A genuinely missing COLUMN on an existing table is NOT matched
-// here, so real schema drift still surfaces as an error.
-function _isMissingTableError(error) {
-  if (!error) return false;
-  const code = String(error.code || '');
-  if (code === 'PGRST205' || code === '42P01') return true;
-  const msg = String(error.message || error).toLowerCase();
-  return (msg.includes('cardio_log') || msg.includes("'public.cardio_log'"))
-    && (msg.includes('does not exist') || msg.includes('schema cache'));
-}
+// applied, the cloud table is absent and a push/pull must be a benign skip
+// rather than a sign-out-blocking error. The detector is shared across additive
+// handlers (see ./_missingTable) so the cardio_log fix is the pattern, not a
+// one-off.
+const _isMissingTableError = (error) => isMissingTableError(error, 'cardio_log');
 
 export async function pushCardioLog(sb, { userId, localUserId } = {}) {
   if (!sb || !userId) return { count: 0, errors: 0 };

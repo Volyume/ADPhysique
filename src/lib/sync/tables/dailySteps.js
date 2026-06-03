@@ -24,6 +24,7 @@
  */
 
 import { logSyncError } from '../telemetry';
+import { isMissingTableError } from './_missingTable';
 
 const PUSH_BATCH_SIZE = 200;
 const PUSH_WINDOW_DAYS = 400;
@@ -68,6 +69,13 @@ export async function pushDailySteps(sb, { userId, localUserId } = {}) {
         .from('daily_steps')
         .upsert(batch, { onConflict: 'user_id,entry_date' });
       if (error) {
+        if (isMissingTableError(error, 'daily_steps')) {
+          // Cloud table not migrated yet (056 pending on this project). Benign
+          // skip so a missing table cannot wedge the push-first sign-out guard,
+          // exactly the cardio_log failure mode. Nothing to lose: no cloud
+          // target to push to.
+          return { count: 0, errors: 0, skipped: 'cloud_table_missing' };
+        }
         errors += 1;
         logSyncError('sync.tables.dailySteps.pushUpsert', error);
       } else {
@@ -89,6 +97,11 @@ export async function pullDailySteps(sb, { userId } = {}) {
       .select('*')
       .eq('user_id', userId);
     if (error) {
+      if (isMissingTableError(error, 'daily_steps')) {
+        // Cloud table not migrated yet (056 pending). Benign skip, keeps
+        // sign-out unblocked. See ./_missingTable.
+        return { count: 0, errors: 0, skipped: 'cloud_table_missing' };
+      }
       logSyncError('sync.tables.dailySteps.pull', error);
       return { count: 0, errors: 1 };
     }

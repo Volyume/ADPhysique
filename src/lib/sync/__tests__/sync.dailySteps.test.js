@@ -109,6 +109,20 @@ describe('daily_steps push', () => {
     expect(result.errors).toBe(1);
     expect(result.count).toBe(0);
   });
+
+  test('benign-skips (errors:0) when the cloud table is not migrated yet', async () => {
+    // A missing cloud table must not trip the push-first sign-out guard, the
+    // exact failure mode the cardio_log fix closed. daily_steps shares it now.
+    dbModule.getDailyStepsForPush.mockResolvedValue([
+      { entryDate: '2026-05-30', steps: 5000, source: 'manual', updatedAt: 1 },
+    ]);
+    const sb = makeSb({ upsertError: { code: 'PGRST205', message: "Could not find the table 'public.daily_steps' in the schema cache" } });
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pushTable('daily_steps', { userId: 'u1', localUserId: 'u1' });
+
+    expect(result).toMatchObject({ count: 0, errors: 0, skipped: 'cloud_table_missing' });
+  });
 });
 
 describe('daily_steps pull (LWW)', () => {
@@ -160,5 +174,15 @@ describe('daily_steps pull (LWW)', () => {
     const result = await pullTable('daily_steps', { userId: 'u1' });
 
     expect(result).toEqual({ count: 0, errors: 0 });
+  });
+
+  test('benign-skips (errors:0) when the cloud table is not migrated yet', async () => {
+    const sb = makePullSb({ data: null, error: { code: '42P01', message: 'relation "daily_steps" does not exist' } });
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pullTable('daily_steps', { userId: 'u1' });
+
+    expect(result).toMatchObject({ count: 0, errors: 0, skipped: 'cloud_table_missing' });
+    expect(dbModule.insertDailyStepsFromCloud).not.toHaveBeenCalled();
   });
 });
