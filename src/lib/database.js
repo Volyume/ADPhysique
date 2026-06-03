@@ -1224,10 +1224,25 @@ export async function runInTransaction(d, task) {
 
 // ─── Exercises ───────────────────────────────────────────────────────────────────────────────────
 
+// HP-9: the exercise library (~400 rows) is read on nearly every analysis
+// screen, and it barely ever changes within a session. Cache the camelCased
+// list in memory and serve it until an exercise write invalidates it. Every
+// function that writes the exercises table calls _invalidateExercisesCache,
+// so a created / edited / deleted / synced exercise shows up immediately;
+// the cache is never stale. Callers treat the result as read-only (every
+// current one only maps/filters it), so the shared reference is safe.
+let _allExercisesCache = null;
+
+export function _invalidateExercisesCache() {
+  _allExercisesCache = null;
+}
+
 export async function getAllExercises() {
+  if (_allExercisesCache) return _allExercisesCache;
   const d = await db();
   const rows = await d.getAllAsync('SELECT * FROM exercises ORDER BY name ASC');
-  return rows.map(rowToCamel);
+  _allExercisesCache = rows.map(rowToCamel);
+  return _allExercisesCache;
 }
 
 export async function getExerciseById(id) {
@@ -1297,12 +1312,14 @@ export async function insertExerciseWithId(id, data) {
       data.equipmentProfiles ? JSON.stringify(data.equipmentProfiles) : null,
     ],
   );
+  _invalidateExercisesCache();
   return { id, ...data, createdAt: now, updatedAt: now };
 }
 
 export async function deleteExercise(id) {
   const d = await db();
   await d.runAsync('DELETE FROM exercises WHERE id = ? AND is_custom = 1', [id]);
+  _invalidateExercisesCache();
   _scheduleSync();
 }
 
@@ -1334,6 +1351,7 @@ export async function updateExerciseMetadata(id, meta) {
       id,
     ],
   );
+  _invalidateExercisesCache();
 }
 
 // ─── Workouts ─────────────────────────────────────────────────────────────────────────────────────
@@ -3312,6 +3330,7 @@ export async function wipeAllUserData(userId) {
     } catch (e) {
       logError('database.wipeAllUserData.exercises', e, { userId });
     }
+    _invalidateExercisesCache();
   });
 }
 
@@ -4767,6 +4786,7 @@ export async function insertOrUpdateExerciseFromCloud(e) {
       e.exercise_category ?? 'compound', e.increment_kg ?? 2.5,
     ],
   );
+  _invalidateExercisesCache();
 }
 
 export async function insertOrUpdateUserBodyProfileFromCloud(userId, p) {
