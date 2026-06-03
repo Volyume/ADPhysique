@@ -81,8 +81,22 @@ function getClient() {
 // back empty or as a useless one-liner, which made every silently-
 // failed upsert look the same. Surface the full shape so the next
 // debug log dump tells us exactly which column / constraint blew up.
+// Bulk-push error tracking. bulkUploadLocalData pushes the legacy tables
+// through ~13 helpers that each swallow their own PostgREST {error} via
+// logPgErr so one table's failure can't abort the rest. That resilience
+// also hid failures from the sign-out push-first safety: a rejected push
+// (e.g. RLS 42501, column drift) left the sync status 'synced', so sign-out
+// wiped local data that never reached cloud. We count PostgREST errors
+// raised during the bulk-push window so bulkUploadLocalData can report them
+// to the runner, which folds them into the cycle's errored_count. The flag
+// scopes counting to the legacy push only: pull and single-entity on-save
+// pushes call logPgErr outside this window and are not counted.
+let _bulkPushTracking = false;
+let _bulkPushErrorCount = 0;
+
 function logPgErr(scope, err) {
   if (!err) return;
+  if (_bulkPushTracking) _bulkPushErrorCount += 1;
   logWarn(scope, err.message || String(err), {
     code: err.code ?? null,
     details: err.details ?? null,
@@ -534,8 +548,11 @@ export async function syncBodyMetric(supabaseUserId, metric) {
  */
 export async function bulkUploadLocalData(supabaseUserId, localUserId) {
   const sb = getClient();
-  if (!sb || !supabaseUserId || !localUserId) return;
+  if (!sb || !supabaseUserId || !localUserId) return { errors: 0 };
 
+  _bulkPushTracking = true;
+  _bulkPushErrorCount = 0;
+  let threw = false;
   try {
     // Every exercise, canonical + custom, pushed first so all the
     // downstream FK references (routine_exercises, workout_sets) land
@@ -622,8 +639,14 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
 
     console.log('[sync] bulk upload complete');
   } catch (e) {
+    threw = true;
     logError('sync.bulkUploadLocalData', e, { supabaseUserId, localUserId });
+  } finally {
+    _bulkPushTracking = false;
   }
+  // Report failures so the runner can fold them into errored_count and the
+  // sign-out push-first safety can refuse to wipe local data on a bad push.
+  return { errors: _bulkPushErrorCount + (threw ? 1 : 0) };
 }
 
 // ─── Per-table push helpers ───────────────────────────────────────────────

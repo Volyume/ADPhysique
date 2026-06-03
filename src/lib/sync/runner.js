@@ -119,8 +119,20 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
             });
             return { _err: e };
           });
-          if (upload && typeof upload === 'object' && upload.pushCountPerTable) {
-            pushCountPerTable = { ...pushCountPerTable, ...upload.pushCountPerTable };
+          if (upload && typeof upload === 'object') {
+            if (upload.pushCountPerTable) {
+              pushCountPerTable = { ...pushCountPerTable, ...upload.pushCountPerTable };
+            }
+            // Legacy bulk push swallows each table's PostgREST {error} so one
+            // failure can't abort the rest; it reports the total back here so a
+            // rejected push counts as an error (and the sign-out push-first
+            // safety won't wipe local data that never reached cloud).
+            if (upload.errors) {
+              erroredCount += upload.errors;
+              syncCrumb('sync.push.legacy', 'sync.push.legacy.errors', {
+                errors: upload.errors,
+              });
+            }
           }
         }
         // 3. Per-table pull for migrated tables.

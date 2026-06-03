@@ -318,4 +318,30 @@ describe('syncAll integration', () => {
     const statuses = [a, b].map((r) => r.status).sort();
     expect(statuses).toContain('skipped');
   });
+
+  // SYNC-1: legacy bulk push reports its swallowed PostgREST errors via
+  // { errors }. The runner must fold them into errored_count so a rejected
+  // push surfaces as a non-'synced' status (and the sign-out push-first
+  // safety can refuse to wipe). Without the fold a failed legacy push read
+  // 'synced' and sign-out destroyed unpushed local data.
+  test('folds legacy bulk-push errors into errored_count and status', async () => {
+    getSupabaseClient.mockReturnValue(makeSupabaseMock());
+    legacy.bulkUploadLocalData.mockResolvedValueOnce({ pushCountPerTable: {}, errors: 2 });
+
+    const result = await syncAll({ userId: 'u1', localUserId: 'u1', triggeredBy: 'manual' });
+
+    expect(result.status).toBe('error');
+    const payload = telemetry.trackSyncRun.mock.calls[0][1];
+    expect(payload.errored_count).toBeGreaterThanOrEqual(2);
+  });
+
+  // A clean legacy push (errors: 0) must not poison the status.
+  test('a clean legacy bulk push leaves the cycle synced', async () => {
+    getSupabaseClient.mockReturnValue(makeSupabaseMock());
+    legacy.bulkUploadLocalData.mockResolvedValueOnce({ pushCountPerTable: {}, errors: 0 });
+
+    const result = await syncAll({ userId: 'u1', localUserId: 'u1', triggeredBy: 'manual' });
+
+    expect(result.status).toBe('synced');
+  });
 });
