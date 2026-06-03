@@ -686,7 +686,7 @@ const useAppStore = create((set, get) => ({
         trainingFocus: cloudData.training_focus ?? 'bodybuilding',
         trainingAgeYears: cloudData.training_age ?? null,
         primaryEquipment: cloudData.primary_equipment ?? null,
-        units: cloudData.units ?? 'kg',
+        units: 'kg', // kg-only; ignore any legacy lbs value from the cloud
         barWeight: cloudData.bar_weight ?? 20,
       };
       try { await AsyncStorage.setItem(PROFILE_KEY_PFX + supabaseUserId, JSON.stringify(profile)); } catch (_) {}
@@ -1062,9 +1062,13 @@ const useAppStore = create((set, get) => ({
     return { prCelebration: next, prCelebrationQueue: rest };
   }),
 
-  // Gym weight units (barbells, dumbbells), 'kg' | 'lbs'
+  // Gym weight units (barbells, dumbbells). kg-only (UK): lbs was removed,
+  // so this is always 'kg'. setUnits coerces anything else to 'kg' and any
+  // legacy cloud/profile value is forced to 'kg' on load, so no historical
+  // lbs setting survives.
   units: 'kg',
-  setUnits: async (units) => {
+  setUnits: async (_units) => {
+    const units = 'kg';
     set({ units });
     const { user, userProfile, _stampProfileFields } = get();
     if (user?.id) {

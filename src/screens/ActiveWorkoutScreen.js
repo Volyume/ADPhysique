@@ -1464,7 +1464,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 Math.abs((s.actualReps ?? 0) - r0) <= 1,
               );
               if (!stalled || w0 === 0) return null;
-              const bumpKg = units === 'lbs' ? 5 : 2.5;
+              const bumpKg = 2.5; // gym weights are kg-only
               return (
                 <View style={styles.stalledChip}>
                   <Ionicons name="trending-up-outline" size={12} color={colors.warning} />

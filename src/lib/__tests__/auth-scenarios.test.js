@@ -424,7 +424,8 @@ describe('Scenario: User A signs out, User B signs in (different cloud account)'
     await useAppStore.getState().clearAuthStateForSignOut();
     expect(useAppStore.getState().userProfile).toBeNull();
 
-    // User B signs in with their cloud profile
+    // User B signs in with their cloud profile. A legacy units='lbs' value is
+    // coerced to kg on load (gym weights are kg-only now).
     mockCloudProfile = {
       first_name: 'Bob',
       training_focus: 'powerlifting',
@@ -438,7 +439,7 @@ describe('Scenario: User A signs out, User B signs in (different cloud account)'
 
     expect(useAppStore.getState().tier).toBe('pro');
     expect(useAppStore.getState().userProfile?.firstName).toBe('Bob');
-    expect(useAppStore.getState().userProfile?.units).toBe('lbs');
+    expect(useAppStore.getState().userProfile?.units).toBe('kg'); // legacy 'lbs' coerced
   });
 });
 

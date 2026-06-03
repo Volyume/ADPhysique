@@ -13,8 +13,9 @@ import useAppStore from '../store/useAppStore';
 // the minimum: name + units, then straight to logging. Plan choice happens
 // later via the Plans tab (Library or Manual Builder).
 export default function FirstRunScreen({ navigation: _navigation }) {
-  const { user, units, setUnits, userProfile, saveLocalProfile, completeFirstRun } = useAppStore();
-  const [localUnits, setLocalUnits] = useState(units || 'kg');
+  const { user, units: _units, setUnits, userProfile, saveLocalProfile, completeFirstRun } = useAppStore();
+  // Gym weights are kg-only (UK). No unit choice.
+  const localUnits = 'kg';
   const [firstName, setFirstName] = useState('');
   const [busy, setBusy] = useState(false);
   const nameRef = useRef(null);
@@ -44,7 +45,7 @@ export default function FirstRunScreen({ navigation: _navigation }) {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Almost there.</Text>
         <Text style={styles.subtitle}>
-          A couple of details and you're ready to start logging. Change these any time in Settings.
+          Just your name and you're ready to start logging.
         </Text>
 
         <Text style={styles.fieldLabel}>What should we call you?</Text>
@@ -59,21 +60,6 @@ export default function FirstRunScreen({ navigation: _navigation }) {
           autoCorrect={false}
           returnKeyType="next"
         />
-
-        <Text style={styles.fieldLabel}>Units</Text>
-        <View style={styles.unitRow}>
-          {['kg', 'lbs'].map(u => (
-            <TouchableOpacity
-              key={u}
-              style={[styles.unitBtn, localUnits === u && styles.unitBtnActive]}
-              onPress={() => setLocalUnits(u)}
-            >
-              <Text style={[styles.unitBtnText, localUnits === u && styles.unitBtnTextActive]}>
-                {u.toUpperCase()}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
 
         <Button
           title="Start logging"
