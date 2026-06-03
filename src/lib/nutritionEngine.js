@@ -55,10 +55,17 @@ const PHASE_LABELS = {
 //             contest-prep research (2.3–3.1 g/kg LBM range).
 //
 // Rates are g per kg of LEAN BODY MASS (preferred when body fat is measured):
+// `range` is shown to the user under a plain "g/kg" label, which a user reads
+// as grams per kg of BODYWEIGHT. So range states the bodyweight-basis span
+// actually delivered across the common goals (the no-BF% path most users are
+// on). It also brackets the lean-mass path: an LBM rate x lean fraction lands
+// in the same band, so the displayed range is honest for both. (Previously
+// range showed the higher lean-mass-only numbers, which over-stated the target
+// for the common bodyweight path, e.g. "2.5-3.0" shown but 2.2 delivered.)
 export const PROTEIN_APPROACHES = {
   standard: {
     label: 'Standard',
-    range: '2.2–2.6 g/kg',
+    range: '2.0–2.7 g/kg',
     description: 'A solid target for consistent gym training. Enough to support muscle growth and recovery without being excessive.',
     lbm: { lean_gain: 2.5, build: 2.5, maintain: 2.3, recomp: 2.6, mild_cut: 2.8, aggressive_cut: 3.0, contest_prep: 3.1 },
     bw:  { lean_gain: 2.2, build: 2.2, maintain: 2.0, recomp: 2.2, mild_cut: 2.5, aggressive_cut: 2.7, contest_prep: 2.9 },
@@ -66,7 +73,7 @@ export const PROTEIN_APPROACHES = {
   },
   optimised: {
     label: 'Optimised',
-    range: '2.5–3.0 g/kg',
+    range: '2.2–3.0 g/kg',
     description: 'The genuine target for serious hypertrophy training. Fully saturates muscle protein synthesis and gives clear headroom above the minimum.',
     lbm: { lean_gain: 2.8, build: 2.8, maintain: 2.6, recomp: 2.9, mild_cut: 3.1, aggressive_cut: 3.2, contest_prep: 3.3 },
     bw:  { lean_gain: 2.5, build: 2.5, maintain: 2.2, recomp: 2.6, mild_cut: 2.8, aggressive_cut: 3.0, contest_prep: 3.2 },
@@ -74,7 +81,7 @@ export const PROTEIN_APPROACHES = {
   },
   advanced: {
     label: 'Advanced',
-    range: '2.8–3.3 g/kg',
+    range: '2.5–3.2 g/kg',
     description: 'Upper-end protocol for competitive athletes and hard cuts. Pushes protein as high as practical to protect every gram of muscle.',
     lbm: { lean_gain: 3.0, build: 3.0, maintain: 2.8, recomp: 3.1, mild_cut: 3.2, aggressive_cut: 3.3, contest_prep: 3.3 },
     bw:  { lean_gain: 2.8, build: 2.8, maintain: 2.5, recomp: 2.8, mild_cut: 3.0, aggressive_cut: 3.2, contest_prep: 3.3 },

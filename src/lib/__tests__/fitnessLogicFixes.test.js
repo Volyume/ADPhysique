@@ -15,6 +15,7 @@ import {
   shouldSuggestDietBreak,
   calculateNutritionTargets,
   PROTEIN_CUSTOM_MAX_GKGBW,
+  PROTEIN_APPROACHES,
 } from '../nutritionEngine';
 
 // ── P4: the 5% session-over-session jump cap must apply on light loads ──
@@ -188,4 +189,24 @@ describe('custom protein ceiling (P18)', () => {
     });
     expect(t.proteinG).toBeCloseTo(2.0 * base.weightKg, 0);
   });
+});
+
+// ── P15: the displayed protein range must bracket what's delivered ──
+describe('protein range labels are honest (P15)', () => {
+  const base = {
+    sex: 'male', ageYears: 30, heightCm: 178, weightKg: 82,
+    activityLevel: 'moderately_active', goal: 'maintain', // common no-BF% goal
+  };
+  // "2.2–3.0 g/kg" -> [2.2, 3.0]
+  const parse = (s) => s.replace(/[^\d.–-]/g, '').split(/[–-]/).map(Number);
+
+  for (const key of ['standard', 'optimised', 'advanced']) {
+    test(`${key}: a no-BF% user's delivered g/kg sits within the shown range`, () => {
+      const [lo, hi] = parse(PROTEIN_APPROACHES[key].range);
+      const t = calculateNutritionTargets({ ...base, proteinApproach: key });
+      const delivered = t.proteinG / base.weightKg; // g/kg bodyweight
+      expect(delivered).toBeGreaterThanOrEqual(lo - 0.05);
+      expect(delivered).toBeLessThanOrEqual(hi + 0.05);
+    });
+  }
 });
