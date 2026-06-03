@@ -19,6 +19,7 @@ import Button from '../components/Button';
 import { useToast } from '../components/Toast';
 import { insertCustomFood, logFoodEntry } from '../lib/food/db';
 import { checkFoodSanity } from '../lib/food/sanityChecks';
+import { fieldNeedsCheck } from '../lib/food/ocrParser';
 import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -49,7 +50,16 @@ export default function AddCustomFoodScreen({ navigation, route }) {
   // Read off the front-of-pack photo by ScanLabel. Empty when the name step
   // was skipped or the read found nothing; the user types it in then.
   const prefillName = route?.params?.prefillName ?? '';
+  // Per-field 'high'|'low'|'missing' from the OCR parser. A 'low' value was
+  // read but couldn't be confirmed as per-100g, so we flag it amber until the
+  // user edits it. null when the food wasn't scanned.
+  const prefillConfidence = route?.params?.prefillConfidence ?? null;
   const _num = (v) => (v == null || !Number.isFinite(v) ? '' : String(v));
+  // A field is unsure while it still holds the low-confidence value the OCR
+  // prefilled. Editing it clears the flag (see fieldNeedsCheck), no extra
+  // state needed.
+  const _unsure = (key, current) =>
+    fieldNeedsCheck(prefillConfidence?.[key], prefillMacros?.[key], current);
 
   const [name, setName] = useState(prefillName);
   const [brand, setBrand] = useState('');
@@ -159,15 +169,20 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         <Field label="Brand (optional)" value={brand} onChange={setBrand} placeholder="Tesco" />
 
         <Text style={styles.sectionLabel}>PER 100G</Text>
+        {(_unsure('kcal100g', kcal) || _unsure('protein100g', protein)
+          || _unsure('carbs100g', carbs) || _unsure('fat100g', fat)
+          || _unsure('fibre100g', fibre)) ? (
+          <Text style={styles.unsureNote}>Amber figures aren’t certain, check them.</Text>
+        ) : null}
         <View style={styles.row}>
-          <NumField label="Calories" value={kcal} onChange={setKcal} suffix="kcal" />
-          <NumField label="Protein" value={protein} onChange={setProtein} suffix="g" />
+          <NumField label="Calories" value={kcal} onChange={setKcal} suffix="kcal" unsure={_unsure('kcal100g', kcal)} />
+          <NumField label="Protein" value={protein} onChange={setProtein} suffix="g" unsure={_unsure('protein100g', protein)} />
         </View>
         <View style={styles.row}>
-          <NumField label="Carbs" value={carbs} onChange={setCarbs} suffix="g" />
-          <NumField label="Fat" value={fat} onChange={setFat} suffix="g" />
+          <NumField label="Carbs" value={carbs} onChange={setCarbs} suffix="g" unsure={_unsure('carbs100g', carbs)} />
+          <NumField label="Fat" value={fat} onChange={setFat} suffix="g" unsure={_unsure('fat100g', fat)} />
         </View>
-        <NumField label="Fibre (optional)" value={fibre} onChange={setFibre} suffix="g" />
+        <NumField label="Fibre (optional)" value={fibre} onChange={setFibre} suffix="g" unsure={_unsure('fibre100g', fibre)} />
 
         <Text style={styles.sectionLabel}>QUANTITY EATEN</Text>
         <View style={styles.row}>
@@ -205,11 +220,11 @@ function Field({ label, value, onChange, placeholder, autoFocus }) {
   );
 }
 
-function NumField({ label, value, onChange, suffix }) {
+function NumField({ label, value, onChange, suffix, unsure }) {
   return (
     <View style={[styles.field, { flex: 1 }]}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={styles.numWrap}>
+      <View style={[styles.numWrap, unsure && styles.numWrapUnsure]}>
         <TextInput
           style={styles.numInput}
           value={value}
@@ -266,6 +281,8 @@ const styles = StyleSheet.create({
   },
   numInput: { flex: 1, color: colors.textPrimary, ...type.body, paddingVertical: spacing.md },
   numSuffix: { color: colors.textMuted, fontSize: fontSize.sm, marginLeft: spacing.xs },
+  numWrapUnsure: { borderColor: colors.primary },
+  unsureNote: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: -spacing.xs, marginBottom: spacing.sm },
 
   saveBtn: { marginTop: spacing.xl },
 });

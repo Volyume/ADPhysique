@@ -96,6 +96,24 @@ function _kcalFromKj(kj) {
  * (so the user has something to edit) but mark them low-confidence
  * so the UI can flag them.
  */
+/**
+ * Should a scanned macro field be flagged for the user to double-check?
+ * True only while the field still holds the low-confidence value the OCR
+ * prefilled, so the moment the user edits it (the input string stops matching
+ * the prefill) the flag clears. Pure; AddCustomFood uses it to mark a field
+ * amber.
+ *
+ * @param level         the field's confidence ('high'|'low'|'missing')
+ * @param prefillValue  the raw number the parser returned for the field
+ * @param current       the current string in the input
+ */
+export function fieldNeedsCheck(level, prefillValue, current) {
+  if (level !== 'low') return false;
+  if (current == null || current === '') return false;
+  const prefillStr = (prefillValue == null || !Number.isFinite(prefillValue)) ? '' : String(prefillValue);
+  return current === prefillStr;
+}
+
 export function parseNutritionLabel(rawText) {
   const text = _normalise(rawText);
   const hasAnchor = _hasPer100Anchor(text);

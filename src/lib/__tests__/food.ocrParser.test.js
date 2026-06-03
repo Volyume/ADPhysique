@@ -3,7 +3,28 @@
  * The parser is deterministic; tests pass raw OCR-style strings and
  * assert the extracted fields + confidence map.
  */
-import { parseNutritionLabel } from '../food/ocrParser';
+import { parseNutritionLabel, fieldNeedsCheck } from '../food/ocrParser';
+
+describe('fieldNeedsCheck', () => {
+  test('flags a low-confidence field that still holds the prefilled value', () => {
+    expect(fieldNeedsCheck('low', 350, '350')).toBe(true);
+  });
+
+  test('does not flag high-confidence or missing fields', () => {
+    expect(fieldNeedsCheck('high', 350, '350')).toBe(false);
+    expect(fieldNeedsCheck('missing', null, '')).toBe(false);
+  });
+
+  test('clears once the user edits the value away from the prefill', () => {
+    expect(fieldNeedsCheck('low', 350, '352')).toBe(false);
+    expect(fieldNeedsCheck('low', 350, '')).toBe(false);
+  });
+
+  test('handles a null / non-finite prefill safely', () => {
+    expect(fieldNeedsCheck('low', null, '10')).toBe(false);
+    expect(fieldNeedsCheck('low', NaN, '10')).toBe(false);
+  });
+});
 
 describe('parseNutritionLabel', () => {
   test('returns null fields for empty input', () => {

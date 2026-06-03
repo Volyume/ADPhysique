@@ -126,6 +126,7 @@ export default function ScanLabelScreen({ navigation, route }) {
       const text = await recogniseText(uri);
       const parsed = text ? parseNutritionLabel(text) : null;
       const macros = parsed?.fields || {};
+      const confidence = parsed?.confidence || null;
 
       // Queue OFF contribution if the user opted in AND we have a
       // barcode to attach. Fires now; the parsed macros are what
@@ -142,7 +143,8 @@ export default function ScanLabelScreen({ navigation, route }) {
       }
 
       navigation.replace('AddCustomFood', {
-        mealSlot, entryDate, prefillBarcode, prefillMacros: macros, prefillName: nameParam,
+        mealSlot, entryDate, prefillBarcode, prefillMacros: macros,
+        prefillConfidence: confidence, prefillName: nameParam,
       });
     } catch {
       if (step === 'front') {
