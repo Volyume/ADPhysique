@@ -126,12 +126,23 @@ describe('insertMorningWeightFromCloud LWW gate', () => {
     expect(conn.runAsync).toHaveBeenCalledTimes(1);
   });
 
-  test('writes when the cloud row has no updated_at (cannot compare, fall back to restore)', async () => {
+  test('restores when there is no local weight even if the cloud row has no updated_at', async () => {
+    conn.getFirstAsync.mockResolvedValue(null); // fresh device, no local row
+
+    await insertMorningWeightFromCloud('u1', { id: 'mw1', weight_kg: 80, logged_at: iso(500) });
+
+    expect(conn.runAsync).toHaveBeenCalledTimes(1);
+  });
+
+  // SYNC-6 re-audit: when a local row exists and the cloud row has no
+  // updated_at (e.g. before migration 060), we cannot prove the cloud copy is
+  // newer, so we must NOT clobber a possibly-newer un-pushed local edit.
+  test('does NOT clobber an existing local row when the cloud row has no updated_at', async () => {
     conn.getFirstAsync.mockImplementation(async (sql) =>
       sql.includes('FROM morning_weights') ? { updated_at: 5000 } : null);
 
     await insertMorningWeightFromCloud('u1', { id: 'mw1', weight_kg: 80, logged_at: iso(500) });
 
-    expect(conn.runAsync).toHaveBeenCalledTimes(1);
+    expect(conn.runAsync).not.toHaveBeenCalled();
   });
 });

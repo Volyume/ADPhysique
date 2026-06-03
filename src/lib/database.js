@@ -4282,12 +4282,17 @@ export async function insertMorningWeightFromCloud(userId, w) {
   const toMs = (t) => (typeof t === 'string' ? new Date(t).getTime() : (t ?? null));
   // Last-write-wins (SYNC-6). The legacy INSERT OR IGNORE never updated an
   // existing local row, so a morning weight edited on another device never
-  // reconciled here. Skip only when both sides have a timestamp and local is
-  // at least as new (matches insertWorkoutFromCloud + the migrated-table gate).
+  // reconciled here. Now: insert when there's no local row, otherwise only
+  // overwrite when the cloud copy is provably newer.
   const cloudMs = toMs(w.updated_at);
   const existing = await d.getFirstAsync('SELECT updated_at FROM morning_weights WHERE id = ?', [w.id]);
   const localMs = existing?.updated_at ?? null;
-  if (localMs && cloudMs && localMs >= cloudMs) return;
+  // When a local row exists, skip unless the cloud copy is provably newer.
+  // If the cloud row carries no updated_at (e.g. before migration 060 lands,
+  // when the cloud table has no such column), we cannot prove it's newer, so we
+  // keep the local row rather than clobber a possibly-newer un-pushed local edit
+  // (preserves the old non-destructive behaviour until 060 enables real LWW).
+  if (existing && (cloudMs == null || (localMs != null && localMs >= cloudMs))) return;
   const createdAt = toMs(w.created_at) ?? Date.now();
   await d.runAsync(
     `INSERT OR REPLACE INTO morning_weights (id, user_id, weight_kg, logged_at, notes, created_at, updated_at)
