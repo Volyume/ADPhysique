@@ -14,6 +14,160 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
+### 0.000000000000001. 2026-06-02 → 06-03 (audit-and-build run across onboarding, plans, Progress, a technical audit, an adversarial-QA data-safety pass, a release-readiness audit, a fitness-logic audit, and kg-only weights, Claude): a lot shipped to `main`. The only items left are founder-side (apply migrations 060-063, deploy the RTDN/push Edge Functions, set two env values).
+
+Several distinct arcs ran back to back. Each shipped as its own chain of
+green, individually-pushed commits on `main`. The full suite stayed green
+throughout (2709 passing at the last run on `f7b31b1`), eslint 0 errors at
+every push. The detailed per-issue ledgers live in the audit docs named in
+each arc below; this section is the index.
+
+**Repo at section write:** `main` at this doc commit on top of `f7b31b1`,
+0/0 with origin. The harness injected a "develop on branch
+`claude/github-origin-main-DV8YC`" directive; per Rule 9 it was surfaced and
+`main` was kept canonical (work happened on `main`).
+
+**Arc 1. Onboarding audit build-out (06-02).** Worked the onboarding-audit
+tracker to a clear backlog: H5 (ManualBuilder + coached builder adopt the
+shared `BackHeader`), H6 (setup-complete reveal matches the Diary look, with
+the kcal ring on the targets card and target-framing copy), H7 (shared
+account-step form UI, UI only), H8 (wizard and builder selectors unified),
+P6 (food-logging copy reframed away from "optional"), P7 (raw crash-log
+banner dropped from the sign-in screen). Plus a protein-target selector on
+the training step, a coaching-loop card on step 4, a first-run Home cue for
+new Pro users, and the back control folded into the wizard header.
+
+**Arc 2. Plans use accessible staples (06-02).** Generated plans now keep to
+measurable load and drop bands and bare-bodyweight feats people cannot
+actually do (`cc119b2`, `7101b6a`). This is the practical half of the
+"bodyweight zero-muscle" concern flagged in the fitness audit: the generator
+no longer hands out movements with no loadable progression.
+
+**Arc 3. Progress tab redesign (06-02).** Deep audit + research + redesign
+(`docs/audit/...progress...`), then the build: one volume home (compact
+summary on the landing), PR Wall and Lift Progress merged into a single
+"Lifts" surface, a Consistency surface, and the data layer extracted into a
+`useProgressData` hook. Also: the poor-sleep signal surfaced in the recovery
+read, and custom volume targets now survive reinstall.
+
+**Arc 4. Custom-exercise + a sign-out data-loss fix (06-02/06-03).** Custom
+exercises now survive reinstall visibly (round-trip into the `exercises`
+table), an always-visible "create custom" path in the plan builder and swap
+flows via a shared `ExercisePickerModal`, the dead local `custom_exercises`
+mirror retired, and the orphaned `ExerciseLibrary` screen removed. Sign-out
+no longer wipes un-synced meals (`c0025c5`).
+
+**Arc 5. Technical audit (06-02), `volyume-claude-audit-2026-06-02.md`.**
+Automated + security + flow-simulation pass. Final tally 0 Critical / 0
+High, 3 Medium, 6 Low. Fixed: ISSUE-003 (constant-time service-role compare
+in `send-push`), ISSUE-004 (a JS typecheck path added to tooling), ISSUE-009
+(unreachable `ExerciseLibrary` removed). The rest deferred with recorded
+reasons. RLS, food RPCs, Edge Functions and deep links verified clean.
+
+**Arc 6. Adversarial QA data-safety pass (06-03),
+`volyume-adversarial-qa-2026-06-03.md`.** A failure-path report, then the
+fixes, then two re-audit hardening rounds. This is the most important arc for
+data integrity. Headline classes:
+- **SYNC-1..6:** sign-out can no longer wipe unpushed data (legacy bulk-push
+  failures now surface and block the wipe; sign-out refuses on pending/errored
+  cycles and is no longer locked out by a vestigial queue depth; lifecycle
+  syncs are blocked during the wipe and the in-flight sync is drained first);
+  food push watermark tracks local `updated_at` not the server clock and a
+  favourites-only push still advances it; workout/set cloud-restore is
+  last-write-wins so a pull cannot revert local edits; `morning_weights`
+  cross-device edits reconcile via LWW (needs migration 060, see below).
+- **WK-1..6:** in-progress workout recovers after an app kill/crash and a
+  restore cannot clobber a session started mid-restore; finished-workout
+  totals count swapped/removed sets from the DB; set numbering, rest-timer
+  clamp, time-crunch nav and a picker-id bug fixed.
+- **TZ-1/2/3:** food/water/steps key by the local calendar day, not UTC
+  (historical rows re-keyed on pull-apply, atomically with the rollup
+  rebuild); DST-safe day windows and streak walk.
+- **CALC-1..8:** NaN-safe nutrition targets (a partial body-fat entry can no
+  longer poison them) plus numeric edge-case + plate double-log hardening.
+- **NOTIF-1/3/4:** timezone reschedule, local-week suppression, copy rotation.
+- **AUTH-1..6:** Pro-bounce, a stale-uid cache race, a sign-out escape hatch,
+  enter-key dedup, signOut retry, login validation. One honest note in the
+  log: the Medium/Low re-audit caught 3 self-introduced bugs, fixed in
+  `ec70c08`/`906e6e3`.
+
+**Arc 7. Release-readiness audit + remediation (06-03),
+`volyume-release-readiness-2026-06-03.md`** (the doc is both the audit and the
+remediation log). Launch blockers and high-priority items for the 100k-user
+target:
+- **LB-1** Play subscription compliance added to the paywall.
+- **LB-5** completed-workout push uses a watermark instead of re-uploading
+  the whole set every cycle.
+- **LB-7** hot screens no longer load the whole set history into JS.
+- **LB-8** core engagement telemetry (`workout_started`, `workout_completed`,
+  `plan_activated`) added. **Needs migration 063.**
+- **LB-9 / HP-2** analytics opt-out gate added and the privacy policy
+  reconciled to match. (This is the "disclose + opt-out" decision.)
+- **HP-1** `search_path` pinned on the last three SECURITY DEFINER functions.
+  **Needs migration 061.**
+- **HP-3** the `delete_user_data` fallback erasure gap closed for the five
+  post-025 tables. **Needs migration 062.**
+- **HP-4** the Play RTDN webhook caller is authenticated via OIDC. **Needs
+  `RTDN_OIDC_AUDIENCE` set + the function deployed (founder).**
+- **HP-5/6/7** Home spinner safety, Plans accessibility labels, a stale
+  comment.
+- **HP-9** the exercise library is cached in memory.
+- **HP-10** Sentry trace sampling lowered to 5% for the 100k target.
+
+**Arc 8. Fitness/bodybuilding logic audit + fixes (06-03),
+`volyume-fitness-logic-audit-2026-06-03.md`.** A full audit of the 12 training
+and nutrition calculation areas, then the fixes, all grounded in the design
+docs before touching deliberate behaviour ("the landmark lesson"):
+- One shared per-set muscle allocator (`allocateExerciseVolume`) so the two
+  weekly-volume counters in `algorithms.js` and `database.js` agree (P1.1).
+- Progression engines consolidated onto one RIR contract (`computeSetTargets`
+  is canonical): a missing RIR holds and prompts rather than auto-increasing;
+  the jump cap and a plateau off-by-one fixed; the dead `getProgressionPath`
+  and `checkDoubleProgressionReady` removed (P1).
+- Adaptive-TDEE-sized calorie changes, but only when the energy-balance
+  estimate is high-confidence (14+ morning weights, same direction, inside a
+  ±5% cap, never on rapid loss) (#9).
+- Protein range labels rewritten to the bodyweight basis they actually
+  deliver, custom g/kg clamped at 3.5 (P15).
+- Plan day-count clamped to the supported 3-6 range.
+- One source of truth for the volume landmarks: `planEngine`'s generator
+  spec is now derived from `VOLUME_LANDMARKS` with the deliberate rebuild-spec
+  deltas made explicit as overrides, producing byte-identical generated plans
+  (no plan changed). Note for the next session: the first attempt blunt-merged
+  the two tables and silently changed generated plans; that was reverted
+  (`cf3e99c`) and redone as derive-plus-overrides (`a117058`). Do not
+  re-merge deliberate-design tables without checking the generated output.
+- Documented (not changed) the things the audit confirmed are deliberate, not
+  bugs: the two EWMA alphas (diet 0.28 vs weekly-coach 0.1), the
+  context-specific soreness scales, and `shouldDeload`'s 1-3 input scale (P22
+  is a false positive). Tonnage/units stayed as-is (would be a big refactor,
+  not a correctness bug).
+
+**Arc 9. Gym weights are kg-only (06-03, `f7b31b1`).** Founder direction:
+"nobody in the UK uses lbs". The kg/lbs picker is gone from onboarding, the
+store always resolves `units` to `'kg'` (default, setter, and cloud/local
+load all coerce, so a legacy `lbs` profile becomes kg), and the logging
+steppers use a flat 2.5 kg. Body-weight units (stone/kg/lbs) are untouched,
+stone is UK-standard there. No conversion logic exists, by design: a legacy
+lbs user's historical numbers now read as kg rather than being converted
+(the founder's accepted trade-off). This also dissolves the unit-storage
+mixed-units risk that had been flagged as a "needs a decision" item.
+
+**What is left, all founder-side (see § 9):**
+1. **Apply migrations 060-063** in the Supabase SQL Editor (all additive,
+   old-AAB compatible, verification queries in `supabase/README.md`). Until
+   applied: cross-device morning-weight reconcile keeps its old re-pull
+   behaviour (060), the three SECURITY DEFINER functions stay unpinned (061),
+   the delete fallback misses the five post-025 tables (062), and the three
+   engagement-telemetry events are rejected on push and retried (063).
+   Nothing breaks; these gate the features, not the app.
+2. **Deploy the Edge Functions + set `RTDN_OIDC_AUDIENCE`** so the
+   OIDC-authenticated RTDN webhook (HP-4) and `send-push` run in production.
+3. **Add `extra.eas.projectId` to `app.json`** (still outstanding from the
+   2026-06-01 push work) for remote push tokens.
+
+Migrations 049 and 059 remain DRAFTED-and-held from before, unchanged.
+
 ### 0.00000000000001. 2026-06-01 (master-audit remediation continued, Claude): Tier 2 + Tier 4 + Tier 5 gates done, migrations applied, plus A2-047 (withAlpha sweep + gate), A2-020 (CSPRNG), A2-030 (sync test), open-handles timer-leak fix, npm-audit survey, and A2-003 (What's New live). Tier 3 reviewed (A2-001 already fixed). Only on-device verification, copy review, and profile-driven tuning remain.
 
 Resumed from A2-005 per the prior session's pointer, after a full Rule 1
@@ -778,7 +932,7 @@ Documentation rewrite + drift closure. Rewrote `CURRENT_STATUS.md`, `HANDOFF.md`
 ### Branch state
 
 - **`main`** is canonical and the GitHub default branch. Push direct. Do not create feature branches without explicit founder approval in the current session.
-- Session branches are harness-injected per session (most recently `claude/chat-context-overflow-JYbA8`, kept in lockstep with `main` and pushed to both). Per Rule 9 these are surfaced to the founder and synced to `main`; `main` stays canonical. The old `claude/github-main-takeover-CSUfO` reference is stale.
+- Session branches are harness-injected per session (most recently `claude/github-origin-main-DV8YC`). Per Rule 9 the directive is surfaced to the founder and `main` is kept canonical; work happens on `main`. Older branch references in earlier § 0 entries are stale.
 
 ### Locked founder overrides (2026-05-25)
 
@@ -862,6 +1016,10 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 | 057 | food_entries.meal_slot CHECK relaxed to allow 'preworkout' + 'postworkout' (peri-workout diary sections) | **Applied 2026-05-30.** Purely additive; the four original slots still pass, so the frozen AAB keeps syncing. Verification in `supabase/README.md` § Verify peri-workout meal slots. |
 | 058 | weekly_checkins_v2.steps_avg (nullable integer): the week's average steps the coach reads as a secondary signal (auto when 4+ days registered, else the manual check-in figure) | **Applied 2026-06-01.** Additive + nullable, frozen-AAB safe (mirrors 050). The per-table weekly-checkins push ships `steps_avg`; without the column the push is rejected. Verification in `supabase/README.md` § Verify weekly_checkins_v2.steps_avg. |
 | 059 | food_entries.meal_slot CHECK widened to a pattern allowing numbered meals ('meal_N') for the diary flexible-meal model, legacy values kept | **Drafted 2026-06-01, pending founder apply.** Frozen-AAB safe (the six legacy values still match the pattern; a 'meal_N' row synced to the old build falls outside its fixed buckets, no crash). Ship WITH the app-side flexible-meal change, not before. Verification in `supabase/README.md` § Verify numbered meal slots. |
+| 060 | morning_weights.updated_at + BEFORE UPDATE touch trigger (cross-device weight reconcile, SYNC-6) | **Drafted 2026-06-03, pending founder apply.** Without it the client pull watermark on `morning_weights` can never advance and a weight edited on another device never reconciles; the client switched `insertMorningWeightFromCloud` to LWW. Additive, frozen-AAB safe (DEFAULT + trigger fill `updated_at`; the old build's pull starts working rather than breaking). Verification in `supabase/README.md` row 060. |
+| 061 | search_path pinned on the last three SECURITY DEFINER functions (HP-1) | **Drafted 2026-06-03, pending founder apply.** `recompute_daily_intake_rollup`, `clear_goal_lock`, `record_health_consent`. `ALTER FUNCTION ... SET search_path`, bodies/signatures unchanged so the RPC contract and the frozen AAB are unaffected. Idempotent, safe any time. Verification in `supabase/README.md` row 061. |
+| 062 | delete_user_data fallback extended to the five post-025 user-scoped tables (HP-3) | **Drafted 2026-06-03, pending founder apply.** Adds `tier_history`, `notification_preferences`, `food_frequents`, `device_push_tokens`, `daily_steps` to the fallback erasure RPC (the primary Edge-Function cascade path already wiped them). `account_deletions_log` deliberately NOT wiped (surviving audit trail). Identical signature, old builds unaffected. Idempotent. Verification in `supabase/README.md` row 062. |
+| 063 | record_engine_telemetry allow-list + workout_started/workout_completed/plan_activated (LB-8) | **Drafted 2026-06-03, pending founder apply.** The activation/retention loop the dashboards were missing; payloads carry counts/flags only and flow through the LB-9 opt-out gate. Until applied those three pushes are rejected and retried, nothing else affected. Idempotent. Verification in `supabase/README.md` row 063. |
 
 ---
 
@@ -1055,15 +1213,16 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`. The live ranked version with foun
 
 ### Now
 
-1. **Apply the pending migrations** in the Supabase SQL Editor (all additive, old-AAB compatible; verification queries in `supabase/README.md`):
-   - **048** (`migrate_048_food_preferences_kind.sql`): `food_favourites.kind` (fav/dislike toggle).
-   - **050** (`migrate_050_weekly_checkins_cardio_adherence.sql`): `weekly_checkins_v2.cardio_adherence` (GAP row 4 cardio).
-   - **051** (`migrate_051_food_frequents.sql`): `food_frequents` table + nightly `pg_cron` worker + `food_frequents_pull` RPC (GAP row 28 Frequents tab). After applying, run `SELECT refresh_food_frequents();` once to seed before the first night. Until applied, the Frequents tab just shows its empty state.
-   - **053** (`migrate_053_device_push_tokens.sql`): `device_push_tokens` table for the remote-push pipeline (GAP rows 9-11). Until applied, the client's token register no-ops and no server push can be delivered.
-   - (049 is drafted but **held**: do not apply until the next AAB ships.)
-1a. **Remote push prerequisites (GAP rows 9-11):**
-   - Add `extra.eas.projectId` to `app.json`. Without it `getExpoPushTokenAsync` cannot return a token, so no device can be registered for push. The cascade-gate and weekly-coach reminders are LOCAL and work without it; only the server-driven payment-failure push needs it.
+1. **Apply the pending migrations 060-063** in the Supabase SQL Editor (all additive, old-AAB compatible; verification queries in `supabase/README.md`). Nothing breaks until they land; each gates a feature, not the app:
+   - **060** (`migrate_060_morning_weights_updated_at.sql`): `morning_weights.updated_at` + touch trigger. Until applied, a weight edited on another device never reconciles (the pull watermark can't advance).
+   - **061** (`migrate_061_pin_securitydefiner_search_path.sql`): pins `search_path` on the last three SECURITY DEFINER functions (HP-1 hardening).
+   - **062** (`migrate_062_delete_user_data_post025_tables.sql`): extends the `delete_user_data` fallback to the five post-025 tables (HP-3 erasure gap). The primary Edge-Function cascade already wipes them; this is the fallback.
+   - **063** (`migrate_063_engagement_telemetry_events.sql`): adds `workout_started` / `workout_completed` / `plan_activated` to the telemetry allow-list (LB-8). Until applied those three pushes are rejected and retried.
+   - (049 and 059 are drafted but **held**: do not apply until the next AAB ships.)
+1a. **Deploy the Edge Functions + set the RTDN env value (GAP rows 9-11, HP-4):**
+   - Set `RTDN_OIDC_AUDIENCE` and deploy the Play RTDN webhook so the OIDC caller-authentication (HP-4) is live before payments wire up.
    - `supabase functions deploy send-push` (service-to-service; uses the auto-populated SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY, no new secrets).
+   - Add `extra.eas.projectId` to `app.json`. Without it `getExpoPushTokenAsync` cannot return a token, so no device can be registered for push. The cascade-gate and weekly-coach reminders are LOCAL and work without it; only the server-driven payment-failure push needs it.
 2. **Tear down the `volyume-e2e-test` Supabase project** + delete the four `SUPABASE_TEST_*` repo secrets. The live-cloud E2E suite was deleted as out of scope.
 3. **Close PR #5 without merging.** No-op after the live-cloud revert.
 4. **Point `volyume.app` DNS at GitHub Pages.** File + workflow already shipped; DNS is the only piece left for `/privacy` to resolve.

@@ -21,8 +21,12 @@ unless the file header says otherwise.
 > 037-048, 050-058 are applied (the 048, 050-055, 058 set was applied by the
 > founder on 2026-06-01); 049 remains held until the next AAB ships; 059
 > (numbered meal slots) is DRAFTED and pending founder apply, to ship with the
-> diary flexible-meal change. Apply
-> any future migration in numeric order in the SQL Editor.
+> diary flexible-meal change; and **060-063 are DRAFTED and pending founder
+> apply** (060 morning-weights reconcile / SYNC-6, 061 search_path pinning /
+> HP-1, 062 delete-fallback erasure gap / HP-3, 063 engagement telemetry /
+> LB-8, all from the 2026-06-03 readiness + QA audits, all additive and
+> old-AAB compatible). Apply any future migration in numeric order in the
+> SQL Editor.
 
 | # | File | What it adds | Verification query |
 |---|---|---|---|
