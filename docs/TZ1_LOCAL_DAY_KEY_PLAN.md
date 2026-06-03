@@ -1,6 +1,19 @@
 # TZ-1 — Unify the day-key to local time (design + scoping)
 
-Status: **DESIGN, awaiting founder sign-off. No code written yet.**
+Status: **IMPLEMENTED 2026-06-03.** Founder chose Phase 1 + 2 together, water/steps
+"accept the seam", Phase 2 "all history". Shipped:
+- Phase 1 — `src/lib/dayKey.js` + every food/water/steps write + "today"/window
+  read switched to local (commit `fix(tz): ... phase 1`).
+- Phase 2 — one-shot `rekeyFoodEntriesToLocalDay` (guarded per user, runs on Home
+  mount via `migrateFoodDayKeysOnce`) re-keys all historical food_entries by
+  `logged_at` and rebuilds rollups; changes sync to cloud via the normal push.
+- Phase 3 — daily_water / daily_steps history left on UTC keys (no per-event data
+  to reassign); only new writes are local. Accepted seam.
+Deferred: the workout heatmap (ProgressSections/useProgressData) stays UTC-indexed
+(internally consistent; separate change).
+
+Original design below.
+
 Decision already taken: **local day wins, and migrate existing rows** (best-effort
 where the data allows). This doc scopes exactly what's migratable, what isn't,
 and how to phase it safely under the release freeze.

@@ -12,7 +12,7 @@
 import { db, runInTransaction } from '../database';
 import { CURATED_MEALS, mealItems } from './curatedMeals';
 import { resolveFoodRef } from './sources/localCache';
-import { todayLocalKey } from '../dayKey';
+import { todayLocalKey, localDayKey } from '../dayKey';
 // Single id generator (A2-036); aliased to keep the local uid() call sites.
 import { generateUUID as uid } from '../uuid';
 
@@ -259,6 +259,50 @@ export async function recomputeRollup(userId, entryDate) {
       row.fibre_g || null, row.entries_count, now,
     ]
   );
+}
+
+// TZ-1 phase 2: re-key historical food_entries to the LOCAL calendar day.
+// Phase 1 switched new writes to local; rows written earlier (or pulled from a
+// build that wrote UTC keys) still carry a UTC entry_date. Each row keeps its
+// logged_at timestamp, so we recompute entry_date from it and rebuild the
+// affected days' rollups. Idempotent: only rows whose key actually changes are
+// touched (updated_at bumped so the change syncs to cloud). Run once per user
+// behind the caller's guard. Best-effort: it uses the device's current
+// timezone applied to logged_at, so a user who logged in another timezone has
+// those rows classified by the current one.
+export async function rekeyFoodEntriesToLocalDay(userId) {
+  if (!userId) return 0;
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT id, entry_date, logged_at FROM food_entries WHERE user_id = ? AND deleted_at IS NULL',
+    [userId],
+  );
+  const affectedDays = new Set();
+  const updates = [];
+  for (const r of rows ?? []) {
+    if (r.logged_at == null) continue;
+    const newKey = localDayKey(r.logged_at);
+    if (newKey && newKey !== r.entry_date) {
+      affectedDays.add(r.entry_date);
+      affectedDays.add(newKey);
+      updates.push([r.id, newKey]);
+    }
+  }
+  if (updates.length === 0) return 0;
+  const now = Date.now();
+  await runInTransaction(d, async () => {
+    for (const [id, newKey] of updates) {
+      await d.runAsync(
+        'UPDATE food_entries SET entry_date = ?, updated_at = ? WHERE id = ?',
+        [newKey, now, id],
+      );
+    }
+  });
+  // Rebuild every day that lost or gained entries (old key and new key).
+  for (const day of affectedDays) {
+    await recomputeRollup(userId, day);
+  }
+  return updates.length;
 }
 
 export async function getRollupForDay(userId, entryDate) {

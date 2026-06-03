@@ -919,6 +919,24 @@ const useAppStore = create((set, get) => ({
     }
   },
 
+  // TZ-1 phase 2: one-shot re-key of historical food_entries to the local
+  // calendar day (Phase 1 only fixed new writes). Guarded per user so it runs
+  // once; if it throws the flag is not set, so it retries next launch.
+  migrateFoodDayKeysOnce: async (userId) => {
+    try {
+      if (!userId) return;
+      const key = `@volyume_tz1_food_rekey_${userId}`;
+      const done = await AsyncStorage.getItem(key);
+      if (done === 'true') return;
+      // eslint-disable-next-line global-require
+      const { rekeyFoodEntriesToLocalDay } = require('../lib/food/db');
+      await rekeyFoodEntriesToLocalDay(userId);
+      await AsyncStorage.setItem(key, 'true').catch(() => {});
+    } catch (_) {
+      /* tolerate; retried next launch since the flag stays unset */
+    }
+  },
+
   endWorkout: () => {
     // eslint-disable-next-line global-require
     try {

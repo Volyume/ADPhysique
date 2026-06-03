@@ -51,8 +51,8 @@ function getGreeting(firstName) {
 
 export default function HomeScreen({ navigation }) {
   const toast = useToast();
-  const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits, restoreActiveWorkout } = useAppStore(
-    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout }))
+  const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce } = useAppStore(
+    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce }))
   );
 
   // WK-1: recover an in-progress workout after an app kill/crash. The store
@@ -60,9 +60,14 @@ export default function HomeScreen({ navigation }) {
   // under an is_completed=0 row. Rehydrating here makes the "Session in
   // Progress" card reappear so the user can resume and finish it. No-ops when
   // a session is already live or no snapshot matches this user.
+  // TZ-1 phase 2: also runs the one-shot food-entry day-key re-key (guarded
+  // per user) so historical food lands on the local calendar day.
   useEffect(() => {
     if (user?.id && !activeWorkout) {
       restoreActiveWorkout(user.id);
+    }
+    if (user?.id) {
+      migrateFoodDayKeysOnce(user.id);
     }
     // Only on user change: re-running on every activeWorkout change is
     // unnecessary (the guard already prevents clobbering a live session).
