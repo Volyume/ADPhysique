@@ -93,6 +93,7 @@ jest.mock('../telemetry', () => ({
 jest.mock('../queue', () => ({
   ensureSyncQueueTable: jest.fn().mockResolvedValue(undefined),
   getQueueDepth: jest.fn().mockResolvedValue(0),
+  purgeQueuedTable: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Replace the legacy sync.js helpers the runner falls back to.

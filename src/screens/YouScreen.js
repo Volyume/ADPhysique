@@ -132,12 +132,6 @@ export default function YouScreen({ navigation }) {
               onPress={() => navigation.navigate('NutritionTargets')}
             />
             <NavRow
-              icon="body-outline"
-              label="Body metrics"
-              sub="Weight trend and measurements"
-              onPress={() => navigation.navigate('BodyMetrics')}
-            />
-            <NavRow
               icon="shield-checkmark-outline"
               label="Goal lock"
               sub="Tell Volyume whether you have prior experience with aggressive cuts. Affects how soon the safety check holds further deficit."

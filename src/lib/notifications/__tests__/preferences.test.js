@@ -203,32 +203,22 @@ describe('migrateFromLegacyBlob', () => {
   });
 });
 
-describe('setPreference enqueues into sync_queue', () => {
-  // Codex re-audit 2026-05-26 F4 follow-up: every per-row write
-  // must enqueue into sync_queue so the registry-driven push has a
-  // record per write, not only the bulk-upload pass.
-  test('enqueue is called with table=notification_preferences, op=update', async () => {
+describe('setPreference does not enqueue into sync_queue', () => {
+  // notification_preferences syncs through its own registry handler
+  // (pushNotificationPreferences reads the table directly) and bulk_upload
+  // ships the whole table on sign-in. sync_queue has no drainer, so the old
+  // per-row enqueue was never consumed and only inflated getQueueDepth(),
+  // sticking the Settings sync line on "N changes waiting to upload" after any
+  // toggle. setPreference must NOT enqueue.
+  test('no enqueue on a single write', async () => {
     await setPreference('u1', 'morning_weight', { enabled: true, time_pref: '08:00' });
-    expect(mockEnqueue).toHaveBeenCalledTimes(1);
-    const call = mockEnqueue.mock.calls[0][0];
-    expect(call).toMatchObject({
-      table: 'notification_preferences',
-      operation: 'update',
-      recordId: 'u1::morning_weight',
-    });
-    expect(call.payload).toMatchObject({
-      user_id: 'u1',
-      category: 'morning_weight',
-      enabled: true,
-      time_pref: '08:00',
-    });
-    expect(call.payload.updated_at).toBeGreaterThan(0);
+    expect(mockEnqueue).not.toHaveBeenCalled();
   });
 
-  test('every setPreference call enqueues independently', async () => {
+  test('no enqueue across multiple writes', async () => {
     await setPreference('u1', 'morning_weight', { enabled: true });
     await setPreference('u1', 'weekly_checkin_reminder', { enabled: true });
-    expect(mockEnqueue).toHaveBeenCalledTimes(2);
+    expect(mockEnqueue).not.toHaveBeenCalled();
   });
 });
 

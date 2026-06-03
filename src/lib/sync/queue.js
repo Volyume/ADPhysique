@@ -148,3 +148,15 @@ export async function clearQueue() {
   if (!d) return;
   await d.runAsync(`DELETE FROM sync_queue`);
 }
+
+// Drop every queued row for one table. Used to clear rows the old build
+// enqueued for notification_preferences: that table syncs through its own
+// registry handler and sync_queue has no drainer, so those rows were never
+// consumed and only inflated getQueueDepth() (the "N changes waiting to
+// upload" line). Safe to call on every run; once cleared it is a no-op.
+export async function purgeQueuedTable(tableName) {
+  if (!tableName) return;
+  const d = await getDb();
+  if (!d) return;
+  await d.runAsync(`DELETE FROM sync_queue WHERE table_name = ?`, [tableName]);
+}

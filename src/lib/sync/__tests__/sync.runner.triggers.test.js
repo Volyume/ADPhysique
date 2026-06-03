@@ -11,6 +11,7 @@
 jest.mock('../queue', () => ({
   ensureSyncQueueTable: jest.fn(async () => {}),
   getQueueDepth: jest.fn(async () => 0),
+  purgeQueuedTable: jest.fn(async () => {}),
 }));
 
 jest.mock('../telemetry', () => ({

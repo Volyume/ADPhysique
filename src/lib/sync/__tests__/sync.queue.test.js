@@ -27,6 +27,11 @@ jest.mock('../../database', () => ({
         ));
         return;
       }
+      if (/^DELETE FROM sync_queue WHERE table_name = \?$/i.test(trimmed)) {
+        const [table] = params;
+        mockState.rows = mockState.rows.filter(r => r.table_name !== table);
+        return;
+      }
       if (/^INSERT INTO sync_queue/i.test(trimmed)) {
         const [table_name, operation, record_id, payload_json, queued_at] = params;
         mockState.rows.push({
@@ -73,6 +78,7 @@ import {
   markSucceeded,
   markFailed,
   clearQueue,
+  purgeQueuedTable,
 } from '../queue';
 
 beforeEach(() => {
@@ -118,6 +124,16 @@ describe('sync_queue basic CRUD', () => {
     await enqueue({ table: 'custom_foods', operation: 'update', recordId: 'r2', payload: {} });
     await clearQueue();
     expect(await getQueueDepth()).toBe(0);
+  });
+
+  test('purgeQueuedTable drops only the named table, leaving others', async () => {
+    await enqueue({ table: 'notification_preferences', operation: 'update', recordId: 'u1::a', payload: {} });
+    await enqueue({ table: 'notification_preferences', operation: 'update', recordId: 'u1::b', payload: {} });
+    await enqueue({ table: 'food_entries', operation: 'insert', recordId: 'r1', payload: {} });
+    await purgeQueuedTable('notification_preferences');
+    const remaining = await listPending();
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0].table_name).toBe('food_entries');
   });
 });
 

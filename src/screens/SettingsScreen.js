@@ -1315,11 +1315,21 @@ export default function SettingsScreen({ navigation }) {
             icon="star-outline"
             label="Rate Volyume"
             sub="A rating helps other lifters find it"
-            onPress={() => {
+            onPress={async () => {
+              // Prefer the in-app review sheet. Fall back to the store page.
+              // Note: Google only shows the in-app sheet (and a public store
+              // page) once the app is on a public track, so in closed testing
+              // this may still land on a "not available" page.
+              try {
+                const StoreReview = await import('expo-store-review');
+                if (await StoreReview.isAvailableAsync()) {
+                  await StoreReview.requestReview();
+                  return;
+                }
+              } catch (_) { /* fall through to the store URL */ }
               const pkg = Constants.expoConfig?.android?.package || 'app.volyume';
-              const market = `market://details?id=${pkg}`;
               const web = `https://play.google.com/store/apps/details?id=${pkg}`;
-              Linking.openURL(market).catch(() => Linking.openURL(web).catch(() => {}));
+              Linking.openURL(`market://details?id=${pkg}`).catch(() => Linking.openURL(web).catch(() => {}));
             }}
           />
           <SettingRow

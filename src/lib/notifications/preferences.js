@@ -80,28 +80,13 @@ export async function setPreference(userId, category, { enabled, time_pref }) {
       updatedAt,
     ],
   );
-  // Enqueue into sync_queue so the registry-driven push path
-  // (src/lib/sync/queue + runner) has a per-row record. The
-  // bulk_upload helper also ships the whole table on sign-in.
-  // record_id is "user_id::category" because sync_queue uses a
-  // single string per row.
-  try {
-    // eslint-disable-next-line global-require
-    const { enqueue, ensureSyncQueueTable } = require('../sync/queue');
-    await ensureSyncQueueTable();
-    await enqueue({
-      table: 'notification_preferences',
-      operation: 'update',
-      recordId: `${userId}::${category}`,
-      payload: {
-        user_id: String(userId),
-        category: String(category),
-        enabled: !!enabled,
-        time_pref: time_pref == null ? null : String(time_pref),
-        updated_at: updatedAt,
-      },
-    });
-  } catch (_) { /* tolerate; setPreference already wrote SQLite */ }
+  // No sync_queue enqueue here. notification_preferences pushes through its
+  // own registry handler (src/lib/sync/tables, pushNotificationPreferences),
+  // which reads the table directly, and bulk_upload ships the whole table on
+  // sign-in. sync_queue has no drainer, so an enqueue here was never consumed:
+  // it only inflated getQueueDepth(), which left the Settings sync line stuck
+  // on "N changes waiting to upload" forever after any preference toggle. The
+  // runner purges any rows left by the old build (see purgeQueuedTable).
 }
 
 /**

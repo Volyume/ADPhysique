@@ -14,7 +14,7 @@
  *   from TESTING_STRATEGY_LOCKED.md lines 144-160.
  */
 
-import { ensureSyncQueueTable, getQueueDepth } from './queue';
+import { ensureSyncQueueTable, getQueueDepth, purgeQueuedTable } from './queue';
 import { trackSyncRun } from './telemetry';
 import { listSyncableTables } from './registry';
 import { MIGRATED_TABLES, pushTable, pullTable, beginFoodRun } from './transport';
@@ -91,6 +91,12 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
 
   try {
     await ensureSyncQueueTable();
+    // Clear the dead notification_preferences rows the old build enqueued.
+    // That table syncs via its own registry handler and sync_queue has no
+    // drainer, so the rows were never consumed and only inflated the depth,
+    // sticking the Settings line on "N changes waiting to upload". Best
+    // effort; a failure here must not abort the run.
+    await purgeQueuedTable('notification_preferences').catch(() => {});
     // Reset the food-domain coordinator cache so this cycle's
     // first food-table push/pull call drives a fresh bulk RPC.
     beginFoodRun();
