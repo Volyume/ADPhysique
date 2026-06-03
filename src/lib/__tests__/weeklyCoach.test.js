@@ -94,6 +94,53 @@ function baseInputs(overrides = {}) {
 
 // ── Shape and copy guardrails ──────────────────────────────────────────────
 
+describe('adaptive TDEE sizes the calorie change when confident (#9)', () => {
+  // Off-target mild cut, losing slower than the target rate, 35 days of data
+  // (>= 4 weeks -> high confidence). The change should now be sized by the
+  // actual-vs-expected energy balance, which depends on the maintenance (TDEE)
+  // estimate; the old fixed step ignored maintenance entirely.
+  const inputs = (maint) => baseInputs({
+    goalPhase: 'mild_cut',
+    morningWeights: trendSharp(85, -0.15),
+    consecutiveOffTargetWeeks: 2,
+    lastCalAdjustmentWeeksAgo: 2,
+    currentCalTarget: 2260,
+    currentMaintenanceKcal: maint,
+    bodyweightKg: 85,
+    checkin: checkin({ calsAdherence: 'hit' }),
+  });
+
+  test('the change is in the cut direction and respects the +/-5% cap', () => {
+    const out = runWeeklyCoach(inputs(2600));
+    expect(out.adjustments.calories).not.toBeNull();
+    expect(out.adjustments.calories.change).toBeLessThan(0);
+    expect(Math.abs(out.adjustments.calories.change)).toBeLessThanOrEqual(Math.round(2260 * 0.05));
+  });
+
+  test('the magnitude tracks the maintenance estimate (proof the adaptive path is driving it)', () => {
+    const lo = runWeeklyCoach(inputs(2600));
+    const hi = runWeeklyCoach(inputs(2800));
+    // A maintenance-independent fixed step would give the same number both
+    // times; the adaptive energy balance does not.
+    expect(lo.adjustments.calories.change).not.toBe(hi.adjustments.calories.change);
+  });
+
+  test('without a maintenance estimate it falls back to the fixed step', () => {
+    const out = runWeeklyCoach(baseInputs({
+      goalPhase: 'mild_cut',
+      morningWeights: trendSharp(85, -0.15),
+      consecutiveOffTargetWeeks: 2,
+      lastCalAdjustmentWeeksAgo: 2,
+      currentCalTarget: 2260,
+      currentMaintenanceKcal: null,
+      bodyweightKg: 85,
+      checkin: checkin({ calsAdherence: 'hit' }),
+    }));
+    // Fixed cut step (-150 for adherence 'hit'), capped to +/-5% (113).
+    expect(out.adjustments.calories.change).toBe(-113);
+  });
+});
+
 describe("goalPhase 'bulk' is coached as a bulk, not maintenance (#24)", () => {
   test("the 'bulk' coaching-phase key maps to a real bulk config", () => {
     // coachingGoals emits coachingPhaseKey 'bulk' for "Build muscle (bulk)"

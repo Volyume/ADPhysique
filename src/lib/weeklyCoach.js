@@ -9,7 +9,12 @@
  */
 
 import { getTrainingNote, isCompetitionGoal } from './coachingGoals';
-import { shouldSuggestDietBreak, computeFFMFloor } from './nutritionEngine';
+import {
+  shouldSuggestDietBreak,
+  computeFFMFloor,
+  computeAdaptiveTDEEAdjustment,
+  computeEWMA as nutritionComputeEWMA,
+} from './nutritionEngine';
 import { computeMacroCycle, computeRefeedDay } from './coachApply';
 import { detectEdPatternFlag, hasEdPatternCleared } from './edPatternDetector';
 import { detectDifferentialTrigger } from './differentialPaywall';
@@ -546,6 +551,42 @@ export function runWeeklyCoach(inputs) {
     )
   );
 
+  // Adaptive TDEE (decision: "adaptive when confident"). Once there are ~4
+  // weeks of weight data, size the calorie change from the actual-vs-expected
+  // energy balance instead of a blunt fixed step. computeAdaptiveTDEEAdjustment
+  // is already damped (50%) and FFM-floor-clamped; below we only let it RESIZE
+  // the change in the SAME direction the simple off-target logic chose (never
+  // reverse it), still inside the off-target gate, the 2-week cooldown and the
+  // +/-5% cap. Before ~4 weeks, or without a maintenance estimate, the fixed
+  // steps stand. The rapid-loss safety boost is never overridden.
+  let adaptiveCal = { adjustmentKcal: 0, confidence: 'insufficient_data' };
+  if (currentMaintenanceKcal && currentCalTarget && Array.isArray(morningWeights) && morningWeights.length >= 14) {
+    const adherenceFactor = calsAdherence === 'under' ? 0.9
+      : calsAdherence === 'over' ? 1.1
+      : 1.0; // 'hit'
+    const series = morningWeights
+      .filter(w => w && w.weightKg != null && w.loggedAt != null)
+      .slice()
+      .sort((a, b) => a.loggedAt - b.loggedAt)
+      .map(w => ({ weightKg: w.weightKg, date: new Date(w.loggedAt).toISOString() }));
+    const ewmaData = nutritionComputeEWMA(series);
+    const ffmFloorContext = (recentIntakeAvgKcal != null && recentIntakeDaysLogged >= 5)
+      ? {
+        weightKg: bodyweightKg ?? series[series.length - 1]?.weightKg ?? null,
+        recentIntakeAvgKcal, recentIntakeDaysLogged, bodyFatPercent, bodyFatSource, sex,
+      }
+      : null;
+    adaptiveCal = computeAdaptiveTDEEAdjustment({
+      ewmaData,
+      prescribedKcal: currentCalTarget,
+      currentTDEEEstimate: currentMaintenanceKcal,
+      adherenceFactor,
+      ffmFloorContext,
+      rapidLossOverride,
+    });
+  }
+  const useAdaptiveCal = adaptiveCal.confidence === 'high';
+
   if (canAdjustCals && (rapidLossOverride || !onTarget)) {
     let change = 0;
     let calNote = '';
@@ -576,6 +617,18 @@ export function runWeeklyCoach(inputs) {
       // Gaining too fast
       change = -125;
       calNote = "Weight is going on faster than the target rate. Pulling back keeps fat gain in check.";
+    }
+
+    // Adaptive resize (when confident): use the energy-balance-sized change
+    // instead of the fixed step, but only in the SAME direction the logic
+    // above chose, and never for the rapid-loss safety boost. This right-sizes
+    // the nudge (smaller when the discrepancy is small, avoiding
+    // overcorrection) without ever reversing the direction or bypassing a
+    // safety gate.
+    if (useAdaptiveCal && !rapidLossOverride && change !== 0
+        && adaptiveCal.adjustmentKcal !== 0
+        && Math.sign(adaptiveCal.adjustmentKcal) === Math.sign(change)) {
+      change = adaptiveCal.adjustmentKcal;
     }
 
     // Cap at ±5% of current target. The rapid-loss compression has
