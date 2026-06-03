@@ -13,9 +13,7 @@ import AnimatedEntrance from '../components/AnimatedEntrance';
 import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
 import { VolyumeIcon } from '../components/BrandMark';
 import ScreenHeader from '../components/ScreenHeader';
-import GradientCard from '../components/GradientCard';
 import PressableCard from '../components/PressableCard';
-import { buildDailyNarrative } from '../lib/dailyNarrative';
 import { SkeletonCard } from '../components/Skeleton';
 import Sparkline from '../components/Sparkline';
 import StepsCard from '../components/StepsCard';
@@ -107,10 +105,6 @@ export default function HomeScreen({ navigation }) {
   const [weightInputSt, setWeightInputSt] = useState('');     // stone field (st mode)
   const [weightInputStLbs, setWeightInputStLbs] = useState(''); // lbs field (st mode)
   const [savingWeight, setSavingWeight] = useState(false);
-  // Hero narrative line at the top of Home: one-sentence story drawn
-  // from the user's recent data ("Last session beat your 4-week
-  // average by 14%"). Null when we don't have enough signal.
-  const [dailyNarrative, setDailyNarrative] = useState(null);
   const [showCoachingNudge, setShowCoachingNudge] = useState(false);
   const [totalSessions, setTotalSessions] = useState(0);
   const [showIntentPrompt, setShowIntentPrompt] = useState(false);
@@ -206,20 +200,11 @@ export default function HomeScreen({ navigation }) {
         loadFatigueTrend(),
         loadScheduleContext(),
         loadBriefDismissal(),
-        loadDailyNarrative(),
         ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadFirstRunCue()] : []),
       ]);
     } finally {
       setInitialLoading(false);
     }
-  }
-
-  async function loadDailyNarrative() {
-    if (!user?.id) return;
-    try {
-      const narrative = await buildDailyNarrative(user.id);
-      setDailyNarrative(narrative);
-    } catch (_) { setDailyNarrative(null); }
   }
 
   async function loadLatestCoachOutput() {
@@ -772,37 +757,6 @@ export default function HomeScreen({ navigation }) {
                 ? 'Next session: tomorrow'
                 : `Next session: ${scheduleContext.dayName}`}
           </Text>
-        )}
-
-        {/* ── Daily narrative hero ─────────────────────────────────
-            One spoken-voice sentence drawn from this user's recent
-            data. The most important pixel on the screen when there's
-            a real signal to surface. */}
-        {dailyNarrative && (
-          <GradientCard
-            tone={dailyNarrative.tone || 'primary'}
-            style={styles.narrativeCard}
-            accessibilityLabel={dailyNarrative.headline}
-          >
-            <View style={styles.narrativeRow}>
-              <Ionicons
-                name={
-                  dailyNarrative.tone === 'gold' ? 'trophy-outline'
-                  : dailyNarrative.tone === 'warning' ? 'alert-circle-outline'
-                  : dailyNarrative.tone === 'success' ? 'trending-up-outline'
-                  : 'sparkles-outline'
-                }
-                size={16}
-                color={
-                  dailyNarrative.tone === 'gold' ? colors.gold
-                  : dailyNarrative.tone === 'warning' ? colors.warning
-                  : dailyNarrative.tone === 'success' ? colors.success
-                  : colors.primary
-                }
-              />
-              <Text style={styles.narrativeText}>{dailyNarrative.headline}</Text>
-            </View>
-          </GradientCard>
         )}
 
         {/* Cloud restore banner removed, the typical pull completes
@@ -1748,22 +1702,6 @@ const styles = StyleSheet.create({
   weightInputUnit: { fontSize: fontSize.sm, color: colors.textSecondary },
   weightCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
   weightCardEdit: { ...type.caption, color: colors.primary },
-  narrativeCard: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-  },
-  narrativeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  narrativeText: {
-    flex: 1,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
-    lineHeight: 20,
-  },
   weightLogBtn: {
     backgroundColor: colors.primary, borderRadius: radius.sm,
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
