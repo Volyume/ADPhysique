@@ -258,7 +258,11 @@ export default function NutritionTargetsScreen({ navigation }) {
 
     const ageNum    = parseInt(age, 10);
     const weightNum = parseFloat(weight);
-    const bfNum     = bodyFat.trim() ? parseFloat(bodyFat) : null;
+    // Number.isFinite so a partial entry like "." (parseFloat('.') === NaN)
+    // resolves to null rather than flowing a NaN body fat into the engine,
+    // which produced NaN calorie/macro targets that then persisted.
+    const bfParsed  = parseFloat(bodyFat);
+    const bfNum     = bodyFat.trim() && Number.isFinite(bfParsed) ? bfParsed : null;
     const ftNum     = parseInt(heightFt, 10) || 0;
     const inNum     = parseFloat(heightIn) || 0;
     const heightNum = ftNum * 30.48 + inNum * 2.54; // convert to cm

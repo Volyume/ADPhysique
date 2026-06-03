@@ -333,8 +333,7 @@ export function computeAdaptiveTDEEAdjustment({
 
 function calcBMR(sex, ageYears, heightCm, weightKg, bodyFatPercent, bodyFatSource) {
   const useKatchMcArdle =
-    bodyFatPercent !== null &&
-    bodyFatPercent !== undefined &&
+    Number.isFinite(bodyFatPercent) &&
     bodyFatSource !== null &&
     bodyFatSource !== undefined &&
     bodyFatSource !== 'visual';
@@ -516,9 +515,12 @@ export function calculateNutritionTargets(inputs) {
   } = inputs;
 
   // Clamp inputs to physiologically safe ranges, guards against typos and invalid onboarding data.
-  const safeAge    = Math.min(Math.max(Math.round(ageYears  ?? 28), 13), 100);
-  const safeHeight = Math.min(Math.max(heightCm ?? 170, 100), 250);
-  const safeWeight = Math.min(Math.max(weightKg ?? 75, 30), 350);
+  // Number.isFinite (not ??) so an explicit NaN (e.g. parseFloat('.')) falls
+  // back to the default instead of poisoning every downstream calorie/macro
+  // value with NaN. null/undefined still hit the default as before.
+  const safeAge    = Math.min(Math.max(Math.round(Number.isFinite(ageYears) ? ageYears : 28), 13), 100);
+  const safeHeight = Math.min(Math.max(Number.isFinite(heightCm) ? heightCm : 170, 100), 250);
+  const safeWeight = Math.min(Math.max(Number.isFinite(weightKg) ? weightKg : 75, 30), 350);
 
   const bodyFatPercent = _bfp ?? _bfpAlias;
 

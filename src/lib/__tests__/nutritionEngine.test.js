@@ -553,3 +553,60 @@ describe('onboarding default protein approach matches the engine auto-pick', () 
     expect(auto.proteinApproach).toBe('optimised');
   });
 });
+
+// CALC-1: an explicit NaN (e.g. a partial "." in the body-fat field) used to
+// survive the `?? default` guards and the Katch-McArdle path, producing NaN
+// calorie/macro targets that then persisted (NaN serialises to JSON null).
+describe('calculateNutritionTargets is NaN-safe', () => {
+  const valid = {
+    sex: 'male',
+    ageYears: 30,
+    heightCm: 178,
+    weightKg: 82,
+    activityLevel: 'moderately_active',
+    goal: 'build',
+  };
+
+  const isFiniteNum = (x) => typeof x === 'number' && Number.isFinite(x);
+
+  test('a NaN body fat with a source does not produce NaN targets', () => {
+    const t = calculateNutritionTargets({
+      ...valid,
+      bodyFatPercent: NaN,
+      bodyFatSource: 'dexa',
+    });
+    expect(isFiniteNum(t.targetKcal)).toBe(true);
+    expect(isFiniteNum(t.maintenanceKcal)).toBe(true);
+    expect(isFiniteNum(t.bmrKcal)).toBe(true);
+    expect(isFiniteNum(t.carbsG)).toBe(true);
+    expect(isFiniteNum(t.proteinG)).toBe(true);
+    expect(isFiniteNum(t.fatG)).toBe(true);
+  });
+
+  test('a NaN body fat falls back to the same result as no body fat', () => {
+    const withNaN = calculateNutritionTargets({ ...valid, bodyFatPercent: NaN, bodyFatSource: 'dexa' });
+    const without = calculateNutritionTargets({ ...valid, bodyFatPercent: null, bodyFatSource: null });
+    expect(withNaN.targetKcal).toBe(without.targetKcal);
+    expect(withNaN.bmrKcal).toBe(without.bmrKcal);
+  });
+
+  test('NaN age/height/weight fall back to defaults instead of poisoning targets', () => {
+    const t = calculateNutritionTargets({
+      ...valid,
+      ageYears: NaN,
+      heightCm: NaN,
+      weightKg: NaN,
+    });
+    expect(isFiniteNum(t.targetKcal)).toBe(true);
+    expect(isFiniteNum(t.bmrKcal)).toBe(true);
+    expect(isFiniteNum(t.proteinG)).toBe(true);
+  });
+
+  test('a valid body fat still drives the Katch-McArdle path (behaviour preserved)', () => {
+    const withBf = calculateNutritionTargets({ ...valid, bodyFatPercent: 12, bodyFatSource: 'dexa' });
+    const without = calculateNutritionTargets({ ...valid, bodyFatPercent: null, bodyFatSource: null });
+    expect(isFiniteNum(withBf.bmrKcal)).toBe(true);
+    // A real body-fat input changes the BMR formula, so the result should differ.
+    expect(withBf.bmrKcal).not.toBe(without.bmrKcal);
+  });
+});
