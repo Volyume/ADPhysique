@@ -20,8 +20,12 @@ import { useToast } from './Toast';
 const PICKER_MUSCLES = Object.keys(MUSCLE_DISPLAY_NAMES);
 const PICKER_EQUIPMENT = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight', 'Smith Machine', 'Bands'];
 
-export default function ExercisePickerModal({ visible, onClose, onSelect, saveLabel = 'Add exercise' }) {
+// saveLabel / actionLabel are aliases for the create-form's save button text
+// (RoutineDetail/ManualBuilder pass saveLabel, ActiveWorkout passes
+// actionLabel). Either works; saveLabel wins if both are given.
+export default function ExercisePickerModal({ visible, onClose, onSelect, saveLabel, actionLabel }) {
   const toast = useToast();
+  const buttonLabel = saveLabel || actionLabel || 'Add exercise';
   const [query, setQuery] = useState('');
   const [allExercises, setAll] = useState([]);
   const [filtered, setFiltered] = useState([]);
@@ -147,7 +151,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 disabled={creating}
               >
                 <Ionicons name="add-circle" size={20} color={colors.background} />
-                <Text style={styles.createSaveBtnText}>{saveLabel}</Text>
+                <Text style={styles.createSaveBtnText}>{buttonLabel}</Text>
               </TouchableOpacity>
             </ScrollView>
           </KeyboardAvoidingView>
@@ -193,24 +197,23 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 </TouchableOpacity>
               )}
               ItemSeparatorComponent={() => <View style={styles.separator} />}
-              ListHeaderComponent={
-                query.trim().length > 0 ? (
-                  <TouchableOpacity style={styles.createInlineBtn} onPress={openCreate}>
-                    <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-                    <Text style={styles.createInlineText}>Create "{query.trim()}" as custom exercise</Text>
-                  </TouchableOpacity>
-                ) : null
+              ListFooterComponent={
+                // Always offer "create custom", with or without a query, so the
+                // option to add your own exercise is never hidden behind an
+                // empty search result.
+                <TouchableOpacity style={[styles.createNewBtn, { marginTop: spacing.md }]} onPress={openCreate}>
+                  <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+                  <Text style={styles.createNewBtnText}>
+                    {query.trim().length > 0
+                      ? `Create "${query.trim()}" as custom exercise`
+                      : 'Create a custom exercise'}
+                  </Text>
+                </TouchableOpacity>
               }
               ListEmptyComponent={
                 <View style={styles.pickerEmpty}>
                   <Ionicons name="search-outline" size={32} color={colors.textMuted} style={{ marginBottom: spacing.md }} />
                   <Text style={styles.pickerEmptyText}>No exercises found</Text>
-                  {query.trim().length > 0 && (
-                    <TouchableOpacity style={styles.createNewBtn} onPress={openCreate}>
-                      <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-                      <Text style={styles.createNewBtnText}>Create "{query.trim()}" as custom exercise</Text>
-                    </TouchableOpacity>
-                  )}
                 </View>
               }
             />
@@ -242,13 +245,6 @@ const styles = StyleSheet.create({
   pickerEmpty: { alignItems: 'center', paddingTop: spacing.xxxl, gap: spacing.lg, paddingHorizontal: spacing.xl },
   pickerEmptyText: { ...type.body, color: colors.textMuted },
   separator: { height: 1, backgroundColor: colors.border },
-  // Inline "create" affordance shown above the list while searching, so the
-  // option is reachable even when there ARE near-matches but not the exact one.
-  createInlineBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingVertical: spacing.md, marginBottom: spacing.xs,
-  },
-  createInlineText: { ...type.label, color: colors.primary, flex: 1 },
   createNewBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     backgroundColor: colors.primaryBg, borderRadius: radius.lg,
