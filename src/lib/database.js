@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { generateInsights } from './insightsEngine';
-import { calculate1RM } from './algorithms';
+import { calculate1RM, allocateExerciseVolume } from './algorithms';
 import { logError } from './errorLog';
 import { localDayKey } from './dayKey';
 
@@ -1557,18 +1557,18 @@ export async function getWeeklyVolumeByMuscle(userId, weeksBack = 4) {
     [userId, windowStart],
   );
 
-  // Build exercise_id → primary_muscle map from the exercises table.
+  // Build exercise_id → exercise row map. Carry secondary_muscles too so this
+  // trend path uses the SAME allocation as the heatmap tiles
+  // (allocateExerciseVolume): primary 1.0 + each secondary 0.5. Previously
+  // this counted the primary only, so the trend and the tile disagreed for
+  // the same week (the headline volume-audit defect, P1.1).
   const exerciseRows = await d.getAllAsync(
-    'SELECT id, primary_muscle FROM exercises',
+    'SELECT id, primary_muscle, secondary_muscles FROM exercises',
   );
-  const muscleByExercise = {};
-  for (const ex of exerciseRows) {
-    let m = (ex.primary_muscle || '').toLowerCase();
-    if (m === 'shoulders') m = 'side_delts'; // legacy normalisation
-    if (m) muscleByExercise[ex.id] = m;
-  }
+  const exerciseById = {};
+  for (const ex of exerciseRows) exerciseById[ex.id] = ex;
 
-  // Bucket each set into the correct week and count by muscle.
+  // Bucket each set into the correct week and credit each trained muscle.
   const result = weekBoundaries.map(({ weekStart, weekEnd }, idx) => ({
     weekLabel: `W${idx + 1}`,
     weekStart,
@@ -1580,10 +1580,13 @@ export async function getWeeklyVolumeByMuscle(userId, weeksBack = 4) {
     const ts = row.created_at;
     const weekIdx = result.findIndex(w => ts >= w.weekStart && ts < w.weekEnd);
     if (weekIdx === -1) continue;
-    const muscle = muscleByExercise[row.exercise_id];
-    if (!muscle) continue;
+    const ex = exerciseById[row.exercise_id];
+    if (!ex) continue;
     const vbm = result[weekIdx].volumeByMuscle;
-    vbm[muscle] = (vbm[muscle] || 0) + 1;
+    for (const { muscle, sets } of allocateExerciseVolume(ex)) {
+      if (!muscle) continue;
+      vbm[muscle] = (vbm[muscle] || 0) + sets;
+    }
   }
 
   return result;

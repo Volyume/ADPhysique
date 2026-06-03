@@ -118,6 +118,45 @@ function isHardSet(set) {
   return setType !== 'warmup';
 }
 
+// Shared per-set muscle allocation. ONE place decides how a logged set's
+// exercise distributes working-set credit across muscles, so the heatmap
+// tiles (calculateWeeklyVolume) and the trend chart (getWeeklyVolumeByMuscle
+// in database.js) can never disagree on "weekly sets for muscle X". Returns
+// [{ muscle, sets, role }]: the primary muscle at 1.0, each secondary at its
+// contribution (default 0.5). Legacy 'shoulders' normalises to side_delts as
+// a primary and front_delts as a secondary (preserved behaviour).
+export function allocateExerciseVolume(exercise) {
+  const out = [];
+  if (!exercise) return out;
+
+  let primary = (exercise.primaryMuscle || exercise.primary_muscle || '').toLowerCase();
+  if (primary === 'shoulders') primary = 'side_delts';
+  if (primary) out.push({ muscle: primary, sets: 1, role: 'primary' });
+
+  let secondaryMuscles = Array.isArray(exercise.secondaryMuscles) ? exercise.secondaryMuscles : null;
+  if (!secondaryMuscles) {
+    if (typeof exercise.secondary_muscles === 'string') {
+      try { secondaryMuscles = JSON.parse(exercise.secondary_muscles); }
+      catch (_) { secondaryMuscles = []; }
+    } else if (Array.isArray(exercise.secondary_muscles)) {
+      secondaryMuscles = exercise.secondary_muscles;
+    } else {
+      secondaryMuscles = [];
+    }
+  }
+  if (!Array.isArray(secondaryMuscles)) secondaryMuscles = [];
+
+  for (const sec of secondaryMuscles) {
+    let muscle = sec && typeof sec === 'object' ? sec.muscle : sec;
+    if (typeof muscle !== 'string' || !muscle) continue;
+    muscle = muscle.toLowerCase();
+    if (muscle === 'shoulders') muscle = 'front_delts';
+    const contribution = (sec && typeof sec === 'object' ? sec.contribution : undefined) ?? 0.5;
+    out.push({ muscle, sets: contribution, role: 'secondary' });
+  }
+  return out;
+}
+
 // Algorithm 1: Weekly Volume Tracking Per Muscle
 export function calculateWeeklyVolume(sets, exerciseMap = {}) {
   const volumeByMuscle = {};
@@ -129,42 +168,21 @@ export function calculateWeeklyVolume(sets, exerciseMap = {}) {
     const exercise = exerciseMap[exerciseId];
     if (!exercise) continue;
 
-    let primaryMuscle = (exercise.primaryMuscle || exercise.primary_muscle || '').toLowerCase();
-    // Legacy normalisation: old 'shoulders' data maps to side_delts (largest delt head)
-    if (primaryMuscle === 'shoulders') primaryMuscle = 'side_delts';
+    const reps = set.actualReps || set.actual_reps || 0;
+    const tonnage = (set.weight || 0) * reps;
 
-    let secondaryMuscles = Array.isArray(exercise.secondaryMuscles) ? exercise.secondaryMuscles : null;
-    if (!secondaryMuscles) {
-      if (typeof exercise.secondary_muscles === 'string') {
-        try { secondaryMuscles = JSON.parse(exercise.secondary_muscles); }
-        catch (_) { secondaryMuscles = []; }
-      } else if (Array.isArray(exercise.secondary_muscles)) {
-        secondaryMuscles = exercise.secondary_muscles;
-      } else {
-        secondaryMuscles = [];
-      }
-    }
-    if (!Array.isArray(secondaryMuscles)) secondaryMuscles = [];
-
-    if (primaryMuscle) {
-      if (!volumeByMuscle[primaryMuscle]) {
-        volumeByMuscle[primaryMuscle] = { workingSets: 0, reps: 0, tonnage: 0 };
-      }
-      volumeByMuscle[primaryMuscle].workingSets += 1;
-      volumeByMuscle[primaryMuscle].reps += set.actualReps || set.actual_reps || 0;
-      volumeByMuscle[primaryMuscle].tonnage +=
-        (set.weight || 0) * (set.actualReps || set.actual_reps || 0);
-    }
-
-    for (const sec of secondaryMuscles) {
-      let muscle = (sec.muscle || sec).toLowerCase();
-      // Legacy normalisation for secondary muscles
-      if (muscle === 'shoulders') muscle = 'front_delts';
-      const contribution = sec.contribution ?? 0.5;
+    for (const { muscle, sets: contribution, role } of allocateExerciseVolume(exercise)) {
+      if (!muscle) continue;
       if (!volumeByMuscle[muscle]) {
         volumeByMuscle[muscle] = { workingSets: 0, reps: 0, tonnage: 0 };
       }
       volumeByMuscle[muscle].workingSets += contribution;
+      // Reps and tonnage are attributed to the muscle the load directly
+      // trains (the primary), not to synergists.
+      if (role === 'primary') {
+        volumeByMuscle[muscle].reps += reps;
+        volumeByMuscle[muscle].tonnage += tonnage;
+      }
     }
   }
 

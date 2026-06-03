@@ -8,6 +8,7 @@ import {
   computeSetTargets,
   detectPlateau,
   calculateWeeklyVolume,
+  allocateExerciseVolume,
 } from '../algorithms';
 import {
   computeWeeklyWeightChange,
@@ -81,6 +82,40 @@ describe('calculateWeeklyVolume secondary contribution (P3.1)', () => {
     const map = { e1: { primaryMuscle: 'chest', secondaryMuscles: ['triceps'] } };
     const v = calculateWeeklyVolume(sets, map);
     expect(v.triceps.workingSets).toBe(0.5);
+  });
+});
+
+// ── §1/P1.1: one shared allocator so tile and trend can't diverge ──
+describe('allocateExerciseVolume shared model (P1.1)', () => {
+  test('primary 1.0 + each secondary 0.5, with legacy shoulder split', () => {
+    const out = allocateExerciseVolume({
+      primaryMuscle: 'shoulders',
+      secondaryMuscles: ['triceps', 'shoulders'],
+    });
+    expect(out).toEqual([
+      { muscle: 'side_delts', sets: 1, role: 'primary' },
+      { muscle: 'triceps', sets: 0.5, role: 'secondary' },
+      { muscle: 'front_delts', sets: 0.5, role: 'secondary' },
+    ]);
+  });
+
+  test('parses a secondary_muscles JSON string and honours contribution 0', () => {
+    const out = allocateExerciseVolume({
+      primary_muscle: 'chest',
+      secondary_muscles: JSON.stringify([{ muscle: 'triceps', contribution: 0 }]),
+    });
+    expect(out).toEqual([
+      { muscle: 'chest', sets: 1, role: 'primary' },
+      { muscle: 'triceps', sets: 0, role: 'secondary' },
+    ]);
+  });
+
+  test('calculateWeeklyVolume credits reps/tonnage to the primary only', () => {
+    const sets = [{ exerciseId: 'e1', actualReps: 10, weight: 60, setType: 'straight' }];
+    const map = { e1: { primaryMuscle: 'chest', secondaryMuscles: ['triceps'] } };
+    const v = calculateWeeklyVolume(sets, map);
+    expect(v.chest).toEqual({ workingSets: 1, reps: 10, tonnage: 600 });
+    expect(v.triceps).toEqual({ workingSets: 0.5, reps: 0, tonnage: 0 });
   });
 });
 
