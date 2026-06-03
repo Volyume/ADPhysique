@@ -576,6 +576,8 @@ const useAppStore = create((set, get) => ({
     try {
       cachedComplete = await AsyncStorage.getItem(FIRST_RUN_KEY_PFX + supabaseUserId);
     } catch (_) {}
+    // AUTH-2: a different user could have signed in during the read above.
+    if (staleUid()) return;
 
     if (cachedComplete === 'true' || cachedComplete === 'false') {
       const isComplete = cachedComplete === 'true';

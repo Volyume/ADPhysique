@@ -23,4 +23,9 @@ describe('clampRestDelta', () => {
     expect(clampRestDelta(30, 2)).toBe(30);
     expect(clampRestDelta(15, 90)).toBe(15);
   });
+  test('non-finite inputs never produce NaN', () => {
+    expect(clampRestDelta(-30, NaN)).toBe(0);
+    expect(clampRestDelta(NaN, 90)).toBe(0);
+    expect(clampRestDelta(-30, undefined)).toBe(0);
+  });
 });
