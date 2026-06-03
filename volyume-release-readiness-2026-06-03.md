@@ -50,6 +50,16 @@ Work happened on `main`. Status of each finding:
   (`a787484`)
 - **HP-10** — Sentry trace sampling lowered to 5% for the 100k target.
   (`1d39622`)
+- **LB-9 / HP-2** — founder chose "disclose + opt-out". Added an analytics
+  opt-out gate at the telemetry chokepoint (postEvent drops, flushPending
+  sends nothing while off), a device-local pref hydrated at boot, a Settings
+  toggle, and reconciled the privacy policy (in-app + hosted) with an honest
+  product-telemetry section under legitimate interest. HP-2: stripped
+  quantity_g and the scanned barcode from telemetry payloads. (`a83e2c7`)
+- **LB-8** — added the core engagement loop (workout_started,
+  workout_completed, plan_activated) with emitters + server allow-list
+  migration 063; payloads are counts/flags only and respect the opt-out
+  gate. (`d2f820e`)
 
 **Reassessed (no change, with reason)**
 - **LB-6** (two AppState listeners "both sync") — on inspection the
@@ -68,17 +78,19 @@ Work happened on `main`. Status of each finding:
   Android 14 (documented in `notifications/activeWorkout.js`) and supports
   the steps feature. Removing it would reintroduce a native crash. Kept.
 
-**Blocked on a founder decision (not implemented)**
-- **LB-9 / LB-8 / HP-2** — these are coupled. The privacy policy promises
-  "we do not run behavioural analytics", and `PRIVACY_CONSENT_LOCKED.md`
-  states engine_telemetry is "already anonymised at write time". But the
-  implementation writes `engine_telemetry` with `user_id` and captures a
-  per-user conversion funnel (paywall_shown, cascade_advanced,
-  paid_converted) plus app_foregrounded/backgrounded. That is a contradiction
-  against a locked privacy commitment. LB-8 (adding workout/engagement
-  events) and HP-2 (dietary fields in telemetry) would deepen it. Resolving
-  it is a privacy-positioning decision and likely a schema/RPC migration, so
-  it is the founder's call rather than something to change silently.
+**Resolved after the founder decision**
+- **LB-9 / LB-8 / HP-2** — these were coupled to the privacy contradiction
+  (policy said "no behavioural analytics" while the app shipped per-user
+  telemetry). Founder chose disclose + opt-out, so all three are now done
+  (see the fixed list above): the opt-out gate and honest policy (LB-9),
+  the dietary-field stripping (HP-2), and the engagement events (LB-8).
+
+**Still deferred (iOS / founder action)**
+- **LB-2/3/4** — iOS PrivacyInfo, StoreKit, OTA projectId: no iOS build
+  yet, deferred by the founder.
+- Migrations 060–063 are authored and tracked in `supabase/README.md` but
+  need the founder to apply them; the RTDN OIDC env vars (HP-4) are set on
+  deploy.
 
 ---
 
