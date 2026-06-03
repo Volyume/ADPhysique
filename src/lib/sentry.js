@@ -67,11 +67,13 @@ export function initSentry({ release, environment } = {}) {
       dsn: trimmed,
       release: release ?? undefined,
       environment: environment ?? (__DEV__ ? 'development' : 'production'),
-      // 10% performance trace sampling in production, enough to
-      // surface slow paths (sync, screen mount, large DB scans)
-      // without burning quota at scale. In dev we sample 100% so
-      // local profiling is always visible.
-      tracesSampleRate: __DEV__ ? 1.0 : 0.1,
+      // 5% performance trace sampling in production. At the 100k-user
+      // target, every foreground / screen mount / sync is a candidate
+      // transaction, so even a few percent is plenty to surface slow
+      // paths without burning the Sentry quota. Raise it temporarily
+      // when chasing a specific perf regression. In dev we sample 100%
+      // so local profiling is always visible.
+      tracesSampleRate: __DEV__ ? 1.0 : 0.05,
       // Sentry's own session tracking, counts crash-free sessions
       // and users per release. Required for the release-health
       // dashboard view to populate.
