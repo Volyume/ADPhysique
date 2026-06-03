@@ -19,11 +19,12 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Alert,
+  ScrollView, Alert, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, fontWeight, hitSlop, type } from '../styles/theme';
+import { LINKS } from '../lib/links';
 import TierComparisonStrip from '../components/TierComparisonStrip';
 import Button from '../components/Button';
 import * as cascade from '../lib/payments/cascade';
@@ -88,10 +89,43 @@ export default function PaywallScreen({ navigation, route }) {
     }
   }, [pricingWindow, userId, surface, navigation]);
 
+  // Restore is a Play requirement: a user who already bought Pro (new
+  // phone, reinstall) must be able to get their entitlement back without
+  // paying twice. Re-reads the active purchase from Google and re-writes
+  // tier_history through the same cascade path a fresh purchase uses.
+  const handleRestore = useCallback(async () => {
+    if (busy) return;
+    audit('paywall.restore.tap', { surface });
+    setBusy(true);
+    try {
+      const info = await playBilling.restorePurchases();
+      const hasPro = Array.isArray(info?.activeEntitlements) && info.activeEntitlements.includes('pro');
+      if (hasPro) {
+        const ref = info.latestTransactionId ?? `restore_${Date.now()}`;
+        await cascade.payAt('pro', ref, 'restore_purchases');
+        logInfo('Paywall.restored', `surface=${surface}`);
+        Alert.alert('Pro restored', 'Your subscription is active again.');
+        if (navigation?.canGoBack?.()) navigation.goBack();
+      } else {
+        Alert.alert('Nothing to restore', 'We could not find an active subscription on this Google account.');
+      }
+    } catch (e) {
+      logError('Paywall.restoreFailed', e, { surface });
+      Alert.alert('Could not restore', 'Try again in a moment.');
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, surface, navigation]);
+
   const priceText = priceTextFor('pro', pricingWindow) ?? priceTextFor('pro', 'open_beta') ?? '£0.99/month';
   const ctaLabel = ctaMode === 'try_pro_14d'
     ? 'Try Pro free for 21 days'
     : `Get Pro for ${priceText}`;
+  // Play subscription disclosure. Auto-renew, price, billing period and
+  // how to cancel must be on the purchase surface itself.
+  const termsText = ctaMode === 'try_pro_14d'
+    ? `Free for 21 days, then ${priceText}. Renews monthly until you cancel. Manage or cancel anytime in Google Play.`
+    : `${priceText}, renewing monthly until you cancel. Manage or cancel anytime in Google Play.`;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -119,6 +153,38 @@ export default function PaywallScreen({ navigation, route }) {
         <View style={styles.ctaStack}>
           <Button title={ctaLabel} size="lg" loading={busy} onPress={handlePay} />
           <Button title="Not now" variant="tertiary" disabled={busy} onPress={dismiss} />
+        </View>
+
+        <Text style={styles.terms}>{termsText}</Text>
+
+        <View style={styles.legalRow}>
+          <TouchableOpacity
+            onPress={handleRestore}
+            disabled={busy}
+            hitSlop={hitSlop}
+            accessibilityRole="button"
+            accessibilityLabel="Restore purchases"
+          >
+            <Text style={styles.legalLink}>Restore purchases</Text>
+          </TouchableOpacity>
+          <Text style={styles.legalDot}>·</Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('SubscriptionPolicy')}
+            hitSlop={hitSlop}
+            accessibilityRole="button"
+            accessibilityLabel="Subscription terms"
+          >
+            <Text style={styles.legalLink}>Subscription terms</Text>
+          </TouchableOpacity>
+          <Text style={styles.legalDot}>·</Text>
+          <TouchableOpacity
+            onPress={() => Linking.openURL(LINKS.privacyPolicy).catch(() => {})}
+            hitSlop={hitSlop}
+            accessibilityRole="button"
+            accessibilityLabel="Privacy policy"
+          >
+            <Text style={styles.legalLink}>Privacy</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -152,4 +218,25 @@ const styles = StyleSheet.create({
   },
   stripWrap: { marginBottom: spacing.xl },
   ctaStack: { gap: spacing.md },
+  terms: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    lineHeight: 17,
+    textAlign: 'center',
+    marginTop: spacing.lg,
+  },
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginTop: spacing.md,
+  },
+  legalLink: {
+    color: colors.textSecondary,
+    fontSize: fontSize.xs,
+    textDecorationLine: 'underline',
+  },
+  legalDot: { color: colors.textMuted, fontSize: fontSize.xs },
 });
