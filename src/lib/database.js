@@ -1180,6 +1180,44 @@ const SCHEMA_MIGRATIONS = [
   [
     'ALTER TABLE weekly_checkins ADD COLUMN steps_avg INTEGER',
   ],
+  // Corrective re-create of cardio_log. The original cardio_log block (above,
+  // search "CREATE TABLE IF NOT EXISTS cardio_log") was added in the MIDDLE of
+  // this array instead of appended. Installs that already sat at the array's
+  // top version when the cardio build landed never reached the inserted index,
+  // so runMigrations skipped it and the table was never created on those
+  // devices: every cardio insert then failed with "no such table: cardio_log"
+  // and sign-out's push-first sync errored on the same missing table, which
+  // blocked sign-out. Reordering the original block is not allowed (shipped
+  // migrations are append-only), so this fresh trailing migration creates the
+  // table for any install already past the inserted index. Idempotent
+  // (IF NOT EXISTS), so installs that did run the original block re-run this as
+  // a no-op. See the cardio bug fix, 2026-06-03.
+  [
+    `CREATE TABLE IF NOT EXISTS cardio_log (
+      user_id TEXT NOT NULL,
+      id TEXT NOT NULL,
+      entry_date TEXT NOT NULL,
+      activity_id TEXT,
+      activity_name TEXT NOT NULL,
+      category TEXT,
+      duration_min INTEGER NOT NULL DEFAULT 0,
+      intensity TEXT NOT NULL DEFAULT 'moderate',
+      met REAL,
+      est_kcal INTEGER,
+      recovery_impact TEXT,
+      impact_type TEXT,
+      distance REAL,
+      avg_hr INTEGER,
+      source TEXT NOT NULL DEFAULT 'manual',
+      notes TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER,
+      PRIMARY KEY (user_id, id)
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_cardio_log_user_date ON cardio_log(user_id, entry_date)`,
+    `CREATE INDEX IF NOT EXISTS idx_cardio_log_user_updated ON cardio_log(user_id, updated_at)`,
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -1191,7 +1229,9 @@ function isBenignMigrationError(err) {
     || m.includes('duplicate column name');
 }
 
-async function runMigrations(d) {
+// Exported for the migration ordering regression test (cardio_log incident,
+// 2026-06-03). Takes a database handle so the test can drive it with a fake.
+export async function runMigrations(d) {
   let current = 0;
   try {
     const row = await d.getFirstAsync('PRAGMA user_version');

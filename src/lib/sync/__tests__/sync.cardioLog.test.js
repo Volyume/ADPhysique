@@ -102,6 +102,28 @@ describe('cardio_log push', () => {
     const result = await pushTable('cardio_log', { userId: 'u1', localUserId: 'u1' });
     expect(result).toEqual({ count: 0, errors: 0 });
   });
+
+  // Sign-out is push-first and aborts on any errored table. A not-yet-migrated
+  // cloud table (064 pending) must NOT count as an error, or it blocks sign-out.
+  test('benign skip (errors:0) when the cloud table is not migrated yet', async () => {
+    dbModule.getCardioLogForPush.mockResolvedValue([
+      { id: 'c1', entryDate: '2026-06-03', activityName: 'Run', durationMin: 30, intensity: 'moderate', updatedAt: 1700000000000 },
+    ]);
+    const sb = makeSb({ upsertError: { code: 'PGRST205', message: "Could not find the table 'public.cardio_log' in the schema cache" } });
+    getSupabaseClient.mockReturnValue(sb);
+    const result = await pushTable('cardio_log', { userId: 'u1', localUserId: 'u1' });
+    expect(result).toMatchObject({ count: 0, errors: 0, skipped: 'cloud_table_missing' });
+  });
+
+  test('still errors (errors:1) on a real upsert failure', async () => {
+    dbModule.getCardioLogForPush.mockResolvedValue([
+      { id: 'c1', entryDate: '2026-06-03', activityName: 'Run', durationMin: 30, intensity: 'moderate', updatedAt: 1700000000000 },
+    ]);
+    const sb = makeSb({ upsertError: { code: '23505', message: 'duplicate key value violates unique constraint' } });
+    getSupabaseClient.mockReturnValue(sb);
+    const result = await pushTable('cardio_log', { userId: 'u1', localUserId: 'u1' });
+    expect(result.errors).toBe(1);
+  });
 });
 
 describe('cardio_log pull (LWW)', () => {
@@ -138,6 +160,14 @@ describe('cardio_log pull (LWW)', () => {
     getSupabaseClient.mockReturnValue(sb);
     const result = await pullTable('cardio_log', { userId: 'u1' });
     expect(result).toEqual({ count: 0, errors: 1 });
+    expect(dbModule.insertCardioLogFromCloud).not.toHaveBeenCalled();
+  });
+
+  test('benign skip (errors:0) when the cloud table is not migrated yet', async () => {
+    const sb = makePullSb({ data: null, error: { code: '42P01', message: 'relation "cardio_log" does not exist' } });
+    getSupabaseClient.mockReturnValue(sb);
+    const result = await pullTable('cardio_log', { userId: 'u1' });
+    expect(result).toMatchObject({ count: 0, errors: 0, skipped: 'cloud_table_missing' });
     expect(dbModule.insertCardioLogFromCloud).not.toHaveBeenCalled();
   });
 

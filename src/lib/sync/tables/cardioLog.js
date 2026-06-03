@@ -37,6 +37,24 @@ function _toMs(t) {
   return 0;
 }
 
+// cardio_log is a brand-new additive table (cloud migration 064). Until 064 is
+// applied to a given Supabase project, the cloud table is absent and PostgREST
+// answers with PGRST205 ("Could not find the table ... in the schema cache") or
+// the underlying 42P01 ("relation ... does not exist"). That is the expected
+// pre-migration state, not a sync failure: there is no cloud target yet, so
+// there is no unsynced data to lose. Treat it as a benign skip (errors:0) so it
+// cannot trip the push-first sign-out guard, which aborts sign-out on any
+// errored table. A genuinely missing COLUMN on an existing table is NOT matched
+// here, so real schema drift still surfaces as an error.
+function _isMissingTableError(error) {
+  if (!error) return false;
+  const code = String(error.code || '');
+  if (code === 'PGRST205' || code === '42P01') return true;
+  const msg = String(error.message || error).toLowerCase();
+  return (msg.includes('cardio_log') || msg.includes("'public.cardio_log'"))
+    && (msg.includes('does not exist') || msg.includes('schema cache'));
+}
+
 export async function pushCardioLog(sb, { userId, localUserId } = {}) {
   if (!sb || !userId) return { count: 0, errors: 0 };
   try {
@@ -78,6 +96,12 @@ export async function pushCardioLog(sb, { userId, localUserId } = {}) {
         .from('cardio_log')
         .upsert(batch, { onConflict: 'user_id,id' });
       if (error) {
+        if (_isMissingTableError(error)) {
+          // Cloud table not migrated yet (064 pending). Skip without erroring
+          // so sign-out is not blocked. Nothing is lost: there is no cloud
+          // table to push to.
+          return { count: 0, errors: 0, skipped: 'cloud_table_missing' };
+        }
         errors += 1;
         logSyncError('sync.tables.cardioLog.pushUpsert', error);
       } else {
@@ -99,6 +123,11 @@ export async function pullCardioLog(sb, { userId } = {}) {
       .select('*')
       .eq('user_id', userId);
     if (error) {
+      if (_isMissingTableError(error)) {
+        // Cloud table not migrated yet (064 pending). Benign skip, see
+        // _isMissingTableError. Keeps sign-out unblocked.
+        return { count: 0, errors: 0, skipped: 'cloud_table_missing' };
+      }
       logSyncError('sync.tables.cardioLog.pull', error);
       return { count: 0, errors: 1 };
     }

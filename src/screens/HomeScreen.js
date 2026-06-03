@@ -36,7 +36,6 @@ import { useShallow } from 'zustand/react/shallow';
 import InfoTooltip from '../components/InfoTooltip';
 
 // Soft targets used only to size the weekly progress bars, not enforced
-const WEEK_TARGETS = { sessions: 5, sets: 80, volume: 15000 };
 
 function getGreeting(firstName) {
   const h = new Date().getHours();
@@ -79,7 +78,6 @@ export default function HomeScreen({ navigation }) {
   const bwu = bodyWeightUnits || 'st';
 
   const [weekStats, setWeekStats] = useState({ sessions: 0, sets: 0, volume: 0 });
-  const [weekStreak, setWeekStreak] = useState(0);
   const [activePlan, setActivePlanData] = useState(null);
   const [nextWorkout, setNextWorkout] = useState(null);
   const [exerciseCounts, setExerciseCounts] = useState({});
@@ -433,31 +431,6 @@ export default function HomeScreen({ navigation }) {
       const totalVol = weekSets.reduce((t, s) => t + (s.weight || 0) * (s.actualReps || 0), 0);
       setWeekStats({ sessions: thisWeek.length, sets: weekSets.length, volume: totalVol });
 
-      // Consecutive-week streak. Bucket every completed workout into
-      // the local Mon-start week it falls in, then count back from this
-      // week until we hit an empty week. Local-time-anchored so the
-      // streak doesn't break across DST.
-      const completedTs = allWorkouts.filter(w => w.isCompleted).map(w => w.startedAt);
-      function localWeekStartMs(ts) {
-        const d = new Date(ts);
-        const dow = d.getDay(); // 0=Sun ... 6=Sat
-        const daysBack = dow === 0 ? 6 : dow - 1; // Mon=0
-        const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - daysBack);
-        return monday.getTime();
-      }
-      const trainedWeeks = new Set(completedTs.map(localWeekStartMs));
-      let streak = 0;
-      let cursor = localWeekStartMs(Date.now());
-      while (trainedWeeks.has(cursor)) {
-        streak += 1;
-        // TZ-3: step back one calendar week (DST-safe) and re-anchor to the
-        // local Monday midnight. Subtracting a fixed 7*24h drifts by ±1h across
-        // a DST change, so the previous week's key no longer matched and the
-        // streak truncated at the DST week.
-        const c = new Date(cursor);
-        cursor = new Date(c.getFullYear(), c.getMonth(), c.getDate() - 7).getTime();
-      }
-      setWeekStreak(streak);
 
       const completed = allWorkouts.filter(w => w.isCompleted).sort((a, b) => b.startedAt - a.startedAt);
       setLastSession(completed[0] || null);
@@ -953,42 +926,11 @@ export default function HomeScreen({ navigation }) {
           <CardioCard userId={user.id} onPress={() => navigation.navigate('LogCardio')} />
         )}
 
-        {/* ── This week, progress bars ── */}
-        <AnimatedEntrance index={0}>
-        <View style={styles.weekCard}>
-          <View style={styles.weekCardHeader}>
-            <Text style={styles.weekLabel}>This week</Text>
-            {weekStreak > 1 && (
-              <View style={styles.streakChip}>
-                <Ionicons name="flame" size={11} color={colors.primary} />
-                <Text style={styles.streakChipText}>{weekStreak}-week streak</Text>
-              </View>
-            )}
-          </View>
-          <View style={styles.weekStats}>
-            <WeekBar
-              value={weekStats.sessions}
-              target={WEEK_TARGETS.sessions}
-              label="Sessions"
-              display={String(weekStats.sessions)}
-            />
-            <View style={styles.weekDivider} />
-            <WeekBar
-              value={weekStats.sets}
-              target={WEEK_TARGETS.sets}
-              label="Sets"
-              display={String(weekStats.sets)}
-            />
-            <View style={styles.weekDivider} />
-            <WeekBar
-              value={weekStats.volume}
-              target={WEEK_TARGETS.volume}
-              label="Volume"
-              display={`${Math.round(weekStats.volume).toLocaleString('en-GB')} kg`}
-            />
-          </View>
-        </View>
-        </AnimatedEntrance>
+        {/* "This week" (Sessions / Sets / Volume) removed from the Train screen
+            (founder 2026-06-03). The weekly volume home lives on the Progress
+            tab ("This week's volume"), with recent sessions alongside it, so
+            the glance bars here were a duplicate. weekStats is still computed
+            for the coach inputs and the no-plan "at a glance" card below. */}
 
         {/* Today's intake card removed from the Train screen (founder
             2026-05-29): food and macros live on the Diary tab; the Train
@@ -1590,19 +1532,6 @@ function getRelativeDay(ts) {
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-
-function WeekBar({ value, target, label, display }) {
-  const pct = Math.min(value / target, 1);
-  return (
-    <View style={styles.weekBarCell}>
-      <Text style={styles.weekBarValue}>{display}</Text>
-      <Text style={styles.weekBarLabel}>{label}</Text>
-      <View style={styles.weekBarTrack}>
-        <View style={[styles.weekBarFill, { width: `${Math.max(pct * 100, pct > 0 ? 8 : 0)}%` }]} />
-      </View>
-    </View>
-  );
-}
 
 function PlanBuilderCard({ icon, title, desc, badge, onPress }) {
   return (
