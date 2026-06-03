@@ -32,6 +32,15 @@ const CATEGORY_LABELS = {
   sport: 'Sport', other: 'Other',
 };
 
+// P8: a glyph per category so the list scans visually, the way the activity-first
+// apps do. Ionicons only.
+const CATEGORY_ICON = {
+  walking: 'walk-outline', running: 'walk-outline', cycling: 'bicycle-outline',
+  rowing: 'boat-outline', swimming: 'water-outline', machine: 'speedometer-outline',
+  hiit: 'flash-outline', conditioning: 'barbell-outline', sport: 'football-outline',
+  other: 'heart-outline',
+};
+
 const INTENSITY_OPTS = [
   { label: 'Easy', value: 'low' },
   { label: 'Moderate', value: 'moderate' },
@@ -43,11 +52,16 @@ export default function LogCardioScreen({ navigation, route }) {
     user: s.user, userProfile: s.userProfile, saveLocalProfile: s.saveLocalProfile,
   })));
   const userId = user?.id;
-  const bodyweightKg = Number(userProfile?.weightKg) > 0 ? Number(userProfile.weightKg) : 75;
+  // P10: only estimate kcal when we actually know the bodyweight; no silent 75.
+  const weightKnown = Number(userProfile?.weightKg) > 0;
+  const bodyweightKg = weightKnown ? Number(userProfile.weightKg) : null;
   const favouriteIds = useMemo(() => userProfile?.cardioFavourites || [], [userProfile]);
 
   const [query, setQuery] = useState('');
   const [recentIds, setRecentIds] = useState([]);
+  // P6: remember the user's last log per activity so picking it prefills the
+  // duration + intensity they last used, not a flat 30 min.
+  const [lastByActivity, setLastByActivity] = useState({});
   const [activity, setActivity] = useState(() => {
     const pre = route?.params?.activityId;
     return pre ? getCardioActivity(pre) : null;
@@ -64,11 +78,18 @@ export default function LogCardioScreen({ navigation, route }) {
         if (!live) return;
         const seen = new Set();
         const ids = [];
+        const lastMap = {};
         for (const r of rows) {
+          // rows are newest-first, so the first time we see an activity is its
+          // most recent log.
+          if (r.activityId && !lastMap[r.activityId]) {
+            lastMap[r.activityId] = { durationMin: r.durationMin, intensity: r.intensity };
+          }
           if (r.activityId && !seen.has(r.activityId)) { seen.add(r.activityId); ids.push(r.activityId); }
-          if (ids.length >= 5) break;
+          if (ids.length >= 5 && Object.keys(lastMap).length >= 20) break;
         }
-        setRecentIds(ids);
+        setRecentIds(ids.slice(0, 5));
+        setLastByActivity(lastMap);
       })
       .catch(() => {});
     return () => { live = false; };
@@ -76,10 +97,12 @@ export default function LogCardioScreen({ navigation, route }) {
 
   const pickActivity = useCallback((a) => {
     setActivity(a);
-    setIntensity(a.defaultIntensity || 'moderate');
-  }, []);
+    const last = lastByActivity[a.id];
+    setIntensity(last?.intensity || a.defaultIntensity || 'moderate');
+    if (last?.durationMin > 0) setDuration(last.durationMin);
+  }, [lastByActivity]);
 
-  const estKcal = activity
+  const estKcal = (activity && weightKnown)
     ? estimateActivityKcal(activity, intensity, duration, bodyweightKg)
     : null;
 
@@ -202,14 +225,16 @@ export default function LogCardioScreen({ navigation, route }) {
           <SegmentedControl options={INTENSITY_OPTS} value={intensity} onChange={setIntensity} accessibilityLabel="Intensity" />
 
           {estKcal != null && (
-            <View style={styles.kcalRow}>
-              <Ionicons name="flame-outline" size={16} color={colors.textMuted} />
-              <Text style={styles.kcalText}>Burned about {estKcal} kcal</Text>
-            </View>
+            <>
+              <View style={styles.kcalRow}>
+                <Ionicons name="flame-outline" size={16} color={colors.textMuted} />
+                <Text style={styles.kcalText}>Burned about {estKcal} kcal</Text>
+              </View>
+              <Text style={styles.footnote}>
+                An estimate. We don't add it to your food target, your weight trend already accounts for it.
+              </Text>
+            </>
           )}
-          <Text style={styles.footnote}>
-            An estimate. We don't add it to your food target, your weight trend already accounts for it.
-          </Text>
 
           <Button title="Save" size="lg" loading={saving} onPress={onSave} style={{ marginTop: spacing.lg }} />
         </ScrollView>
@@ -232,6 +257,7 @@ function ActivityList({ items, onPick }) {
     <View>
       {items.map((a) => (
         <TouchableOpacity key={a.id} style={styles.activityRow} onPress={() => onPick(a)} accessibilityLabel={`Log ${a.displayName}`}>
+          <Ionicons name={CATEGORY_ICON[a.category] || 'heart-outline'} size={18} color={colors.primary} style={styles.activityIcon} />
           <Text style={styles.activityName}>{a.displayName}</Text>
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </TouchableOpacity>
@@ -265,7 +291,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  activityName: { ...type.body, color: colors.textPrimary },
+  activityIcon: { marginRight: spacing.sm },
+  activityName: { ...type.body, color: colors.textPrimary, flex: 1 },
   chosenRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md,
