@@ -1454,6 +1454,45 @@ export async function getCompletedWorkoutSets(userId) {
   return rows.map(rowToCamel);
 }
 
+// LB-7: a bounded recent window of sets, so the recent-window callers
+// (Home block progress, the 28-day insights engine) pull a slice instead
+// of the whole history. completedOnly mirrors the two prior call sites
+// exactly: Home used getCompletedWorkoutSets (completed-workout sets),
+// the insights engine used getAllWorkoutSets (every set, incl. an
+// in-progress session) then filtered by created_at.
+export async function getWorkoutSetsSince(userId, sinceMs, { completedOnly = true } = {}) {
+  const d = await db();
+  if (completedOnly) {
+    const rows = await d.getAllAsync(
+      `SELECT ws.* FROM workout_sets ws
+       JOIN workouts w ON ws.workout_id = w.id
+       WHERE ws.user_id = ? AND w.is_completed = 1 AND ws.created_at >= ?
+       ORDER BY ws.created_at DESC`,
+      [userId, sinceMs],
+    );
+    return rows.map(rowToCamel);
+  }
+  const rows = await d.getAllAsync(
+    `SELECT * FROM workout_sets WHERE user_id = ? AND created_at >= ? ORDER BY created_at DESC`,
+    [userId, sinceMs],
+  );
+  return rows.map(rowToCamel);
+}
+
+// LB-7: sets for a specific set of workout ids. The history list needs
+// per-workout counts for only the page it shows (most recent 50), so it
+// fetches those workouts' sets rather than every set ever logged.
+export async function getWorkoutSetsForWorkoutIds(workoutIds) {
+  if (!Array.isArray(workoutIds) || workoutIds.length === 0) return [];
+  const d = await db();
+  const placeholders = workoutIds.map(() => '?').join(',');
+  const rows = await d.getAllAsync(
+    `SELECT * FROM workout_sets WHERE workout_id IN (${placeholders}) ORDER BY created_at DESC`,
+    workoutIds,
+  );
+  return rows.map(rowToCamel);
+}
+
 // Returns an array of `weeksBack` entries, ordered oldest → newest.
 // Each entry: { weekLabel: 'W1'|...'W4', weekStart: ms, weekEnd: ms, volumeByMuscle: { chest: 8, ... } }
 // Only working sets (set_type != 'warmup') are counted. Uses the exercise's primary_muscle field.
@@ -3055,14 +3094,17 @@ export async function dismissInsight(insightId) {
 export async function runInsightsEngine(userId) {
   if (!userId) return [];
   try {
-    const [workouts, sets, exercises] = await Promise.all([
+    // LB-7: pull only the 28-day window the engine uses, in SQL, instead
+    // of loading every set ever logged and filtering in JS. completedOnly
+    // false keeps the prior getAllWorkoutSets semantics (all sets, incl.
+    // an in-progress session) so the output is unchanged.
+    const cutoff = Date.now() - 28 * 24 * 60 * 60 * 1000;
+    const [workouts, recentSets, exercises] = await Promise.all([
       getAllWorkouts(userId),
-      getAllWorkoutSets(userId),
+      getWorkoutSetsSince(userId, cutoff, { completedOnly: false }),
       getAllExercises(),
     ]);
     const exerciseMap = Object.fromEntries(exercises.map(e => [e.id, e]));
-    const cutoff = Date.now() - 28 * 24 * 60 * 60 * 1000;
-    const recentSets = sets.filter(s => (s.createdAt ?? s.created_at ?? 0) >= cutoff);
     const insights = generateInsights({
       workouts, sets: recentSets, exerciseMap, now: Date.now(),
     });

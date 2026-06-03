@@ -13,7 +13,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/t
 import PressableCard from '../components/PressableCard';
 import Card from '../components/Card';
 import { EmptyWorkoutsIllustration } from '../components/Illustrations';
-import { getAllWorkouts, getAllWorkoutSets, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails } from '../lib/database';
+import { getAllWorkouts, getWorkoutSetsForWorkoutIds, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import { calculateTonnage } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
@@ -60,12 +60,22 @@ export default function WorkoutHistoryScreen({ navigation }) {
         .filter(w => w.isCompleted)
         .sort((a, b) => b.startedAt - a.startedAt);
 
-      const allSets = await getAllWorkoutSets(user.id);
-      const allExercises = await getAllExercises();
+      // LB-7: the list only renders the most recent 50, so fetch only
+      // those workouts' sets rather than every set ever logged.
+      const page = mine.slice(0, 50);
+      const [pageSets, allExercises] = await Promise.all([
+        getWorkoutSetsForWorkoutIds(page.map(w => w.id)),
+        getAllExercises(),
+      ]);
       const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
+      const setsByWorkout = new Map();
+      for (const s of pageSets) {
+        const arr = setsByWorkout.get(s.workoutId);
+        if (arr) arr.push(s); else setsByWorkout.set(s.workoutId, [s]);
+      }
 
-      const withSets = mine.slice(0, 50).map(w => {
-        const mySets = allSets.filter(s => s.workoutId === w.id);
+      const withSets = page.map(w => {
+        const mySets = setsByWorkout.get(w.id) || [];
         const workingSets = mySets.filter(s => s.setType !== 'warmup');
         const exerciseIds = [...new Set(mySets.map(s => s.exerciseId))];
         const exerciseNames = exerciseIds.slice(0, 4)

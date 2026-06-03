@@ -21,7 +21,7 @@ import Sparkline from '../components/Sparkline';
 import StepsCard from '../components/StepsCard';
 import { useToast } from '../components/Toast';
 import {
-  getAllWorkouts, getCompletedWorkoutSets, getActivePlan, getRoutinesForPlan,
+  getAllWorkouts, getWorkoutSetsSince, getActivePlan, getRoutinesForPlan,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
   getWorkoutSetsForWorkout, getExerciseById,
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getAllExercises,
@@ -426,13 +426,17 @@ export default function HomeScreen({ navigation }) {
   async function loadWeekStats() {
     try {
       const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      const [allWorkouts, allSets] = await Promise.all([
+      const fourWeeksAgo = Date.now() - 28 * 24 * 60 * 60 * 1000;
+      // LB-7: this card needs at most the last four weeks of sets (week
+      // stats + the deload window below), not every set ever logged. Load
+      // that bounded slice once; the workout list is rows, not sets.
+      const [allWorkouts, recentSets] = await Promise.all([
         getAllWorkouts(user.id),
-        getCompletedWorkoutSets(user.id),
+        getWorkoutSetsSince(user.id, fourWeeksAgo),
       ]);
       const thisWeek = allWorkouts.filter(w => w.startedAt >= weekAgo && w.isCompleted);
       const workoutIds = new Set(thisWeek.map(w => w.id));
-      const weekSets = allSets.filter(s => workoutIds.has(s.workoutId) && s.setType !== 'warmup');
+      const weekSets = recentSets.filter(s => workoutIds.has(s.workoutId) && s.setType !== 'warmup');
       const totalVol = weekSets.reduce((t, s) => t + (s.weight || 0) * (s.actualReps || 0), 0);
       setWeekStats({ sessions: thisWeek.length, sets: weekSets.length, volume: totalVol });
 
@@ -475,10 +479,15 @@ export default function HomeScreen({ navigation }) {
 
 
 
-      // Compute tonnage for last session
+      // Compute tonnage for last session. Usually inside the four-week
+      // window already loaded; if the last session is older than that
+      // (a returning user), fetch just that one workout's sets.
       if (completed[0]) {
         const lastId = completed[0].id;
-        const lastSets = allSets.filter(s => s.workoutId === lastId);
+        let lastSets = recentSets.filter(s => s.workoutId === lastId);
+        if (lastSets.length === 0) {
+          lastSets = await getWorkoutSetsForWorkout(lastId);
+        }
         const tonnage = calculateTonnage(lastSets);
         setLastSessionTonnage(tonnage > 0 ? tonnage : null);
       } else {
@@ -505,7 +514,7 @@ export default function HomeScreen({ navigation }) {
             w => w.isCompleted && w.startedAt >= weekStart && w.startedAt < weekEnd,
           );
           const wIds = new Set(weekWorkouts.map(w => w.id));
-          const wSets = allSets.filter(s => wIds.has(s.workoutId) && s.setType !== 'warmup');
+          const wSets = recentSets.filter(s => wIds.has(s.workoutId) && s.setType !== 'warmup');
           const totalReps = wSets.reduce((t, s) => t + (s.actualReps || 0), 0);
           const avgReps = wSets.length > 0 ? totalReps / wSets.length : 0;
           return {
@@ -538,14 +547,15 @@ export default function HomeScreen({ navigation }) {
       setCurrentMesoWeek(week);
       if (!week) return;
 
-      const [planned, allSets, allExercises] = await Promise.all([
+      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      // LB-7: fetch only the last week of sets rather than the whole
+      // history then discarding all but seven days of it in JS.
+      const [planned, recentSets, allExercises] = await Promise.all([
         getPlannedMuscleVolume(week.id),
-        getCompletedWorkoutSets(user.id),
+        getWorkoutSetsSince(user.id, weekAgo),
         getAllExercises(),
       ]);
 
-      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      const recentSets = allSets.filter(s => (s.createdAt || 0) >= weekAgo);
       const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
       const actual = calculateWeeklyVolume(recentSets, exerciseMap);
 
