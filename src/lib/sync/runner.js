@@ -18,6 +18,7 @@ import { ensureSyncQueueTable, getQueueDepth } from './queue';
 import { trackSyncRun } from './telemetry';
 import { listSyncableTables } from './registry';
 import { MIGRATED_TABLES, pushTable, pullTable, beginFoodRun } from './transport';
+import { isSignOutWiping } from './signOutGuard';
 
 let _runLock = false;
 let _lastStatus = 'unknown'; // 'synced' | 'pending' | 'offline' | 'error' | 'unknown'
@@ -34,6 +35,12 @@ let _lastError = null;
  * @param {'foreground'|'network'|'write'|'periodic'|'manual'} opts.triggeredBy
  */
 export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = {}) {
+  // SYNC-3: refuse to run while sign-out is wiping local data, so a live
+  // lifecycle trigger can't pull cloud rows back into the DB mid-wipe. The
+  // sign-out's own push-first syncAll runs before the flag is set.
+  if (isSignOutWiping()) {
+    return { status: 'skipped', reason: 'sign_out_wiping' };
+  }
   if (_runLock) {
     return { status: 'skipped', reason: 'already_running' };
   }

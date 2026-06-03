@@ -60,6 +60,8 @@ beforeEach(async () => {
   mockCloudProfile = null;
   mockSupabaseError = null;
   await AsyncStorage.clear();
+  // SYNC-3 guard is module-level; reset so a prior sign-out test can't leak it.
+  require('../sync/signOutGuard').setSignOutWiping(false);
   // Reset in-memory state to a clean post-boot state
   useAppStore.setState({
     user: null,
@@ -172,6 +174,42 @@ describe('Scenario: sign-out aborts when the cloud push does not complete', () =
     expect(result).toEqual({ ok: false, reason: 'unsynced' });
     expect(useAppStore.getState().user).toEqual({ id: 'u1' });
     expect(useAppStore.getState().tier).toBe('pro');
+  });
+
+  // SYNC-3: a committed sign-out raises the wipe guard (so lifecycle sync
+  // triggers can't pull cloud rows back into the DB mid-wipe), and a
+  // subsequent sign-in lifts it.
+  test('a clean sign-out raises the wipe guard; a sign-in lifts it', async () => {
+    const guard = require('../sync/signOutGuard');
+    guard.setSignOutWiping(false);
+    sync.syncAll.mockResolvedValueOnce({ status: 'synced' });
+    useAppStore.setState({
+      user: { id: 'u1' }, session: { user: { id: 'u1' } },
+      tier: 'pro', firstRunComplete: true,
+    });
+
+    await useAppStore.getState().clearAuthStateForSignOut();
+    expect(guard.isSignOutWiping()).toBe(true);
+
+    useAppStore.getState().setUser({ id: 'u2' });
+    expect(guard.isSignOutWiping()).toBe(false);
+  });
+
+  // An aborted sign-out (push not clean) must NOT raise the guard: the user
+  // stays signed in and lifecycle syncs must keep working.
+  test('an aborted sign-out leaves the wipe guard down', async () => {
+    const guard = require('../sync/signOutGuard');
+    guard.setSignOutWiping(false);
+    sync.syncAll.mockResolvedValueOnce({ status: 'error' });
+    useAppStore.setState({
+      user: { id: 'u1' }, session: { user: { id: 'u1' } },
+      tier: 'pro', firstRunComplete: true,
+    });
+
+    const result = await useAppStore.getState().clearAuthStateForSignOut();
+
+    expect(result).toEqual({ ok: false, reason: 'unsynced' });
+    expect(guard.isSignOutWiping()).toBe(false);
   });
 
   test('a clean status proceeds to wipe + clears state', async () => {

@@ -160,6 +160,8 @@ function makeSupabaseMock({ select = {}, upsertError = null } = {}) {
 beforeEach(() => {
   jest.clearAllMocks();
   _resetRunnerForTests();
+  // SYNC-3 guard is module-level; reset it so a prior test can't leak.
+  require('../signOutGuard').setSignOutWiping(false);
 });
 
 describe('syncAll integration', () => {
@@ -333,6 +335,23 @@ describe('syncAll integration', () => {
     expect(result.status).toBe('error');
     const payload = telemetry.trackSyncRun.mock.calls[0][1];
     expect(payload.errored_count).toBeGreaterThanOrEqual(2);
+  });
+
+  // SYNC-3: while a sign-out is wiping local data, syncAll must bail so a
+  // lifecycle trigger can't pull cloud rows back into the DB mid-wipe.
+  test('skips entirely while a sign-out wipe is in progress', async () => {
+    const guard = require('../signOutGuard');
+    getSupabaseClient.mockReturnValue(makeSupabaseMock());
+    guard.setSignOutWiping(true);
+
+    const result = await syncAll({ userId: 'u1', localUserId: 'u1', triggeredBy: 'foreground' });
+
+    expect(result.status).toBe('skipped');
+    expect(result.reason).toBe('sign_out_wiping');
+    expect(legacy.bulkUploadLocalData).not.toHaveBeenCalled();
+    expect(legacy.pullFromCloud).not.toHaveBeenCalled();
+
+    guard.setSignOutWiping(false);
   });
 
   // A clean legacy push (errors: 0) must not poison the status.

@@ -140,7 +140,19 @@ const useAppStore = create((set, get) => ({
   healthConsent: null,
   setHealthConsent: (value, checked = true) => set({ healthConsent: value, healthConsentChecked: checked }),
 
-  setUser: (user) => set({ user }),
+  setUser: (user) => {
+    // A real sign-in lifts the SYNC-3 sign-out wipe guard (covers the
+    // dev/Expo-Go path where sign-out doesn't reload the app). Sign-out
+    // clears user via set({user:null}) directly, not setUser, so the guard
+    // stays up through the wipe.
+    if (user) {
+      try {
+        // eslint-disable-next-line global-require
+        require('../lib/sync/signOutGuard').setSignOutWiping(false);
+      } catch (_) { /* tolerate */ }
+    }
+    set({ user });
+  },
   setSession: (session) => set({ session }),
   setUserProfile: (userProfile) => {
     // Stamp every editable field in the incoming profile with
@@ -289,6 +301,17 @@ const useAppStore = create((set, get) => ({
         return { ok: false, reason: 'unsynced' };
       }
     }
+
+    // SYNC-3: from here on we're committed to wiping. Block the lifecycle
+    // sync triggers (foreground / background / network / periodic) so none of
+    // them can pull cloud rows back into the DB mid-wipe. Set AFTER the
+    // push-first syncAll above so the safety push itself was never blocked.
+    // Cleared on the next sign-in (setUser) and reset by the post-sign-out
+    // app reload.
+    try {
+      // eslint-disable-next-line global-require
+      require('../lib/sync/signOutGuard').setSignOutWiping(true);
+    } catch (_) { /* tolerate */ }
 
     // Remove THIS device's push-token row so the server stops pushing
     // to it after sign-out. Runs before AsyncStorage.clear() because it
