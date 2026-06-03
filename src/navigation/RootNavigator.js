@@ -83,6 +83,7 @@ import AddCustomFoodScreen from '../screens/AddCustomFoodScreen';
 import FoodSearchScreen from '../screens/FoodSearchScreen';
 import ScanBarcodeScreen from '../screens/ScanBarcodeScreen';
 import ScanLabelScreen from '../screens/ScanLabelScreen';
+import LogCardioScreen from '../screens/LogCardioScreen';
 import FoodInsightsScreen from '../screens/FoodInsightsScreen';
 import MyRecipesScreen from '../screens/MyRecipesScreen';
 import MyMealsScreen from '../screens/MyMealsScreen';
@@ -188,6 +189,11 @@ function DiaryStack({ navigation }) {
       <Stack.Screen
         name="ScanLabel"
         component={ScanLabelScreen}
+        options={{ headerShown: false, presentation: 'modal' }}
+      />
+      <Stack.Screen
+        name="LogCardio"
+        component={LogCardioScreen}
         options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen

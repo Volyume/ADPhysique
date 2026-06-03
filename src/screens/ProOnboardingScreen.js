@@ -229,6 +229,11 @@ export default function ProOnboardingScreen({ navigation }) {
   // Daily step target. On by default: the coach uses steps as its first,
   // gentlest lever. The user can opt out here or later in Settings.
   const [stepsTargetOn, setStepsTargetOn] = useState(true);
+  // Cardio available by default. On means the cardio library + logging are
+  // available to the user; it does NOT allocate cardio. The coach only ever
+  // brings cardio in as a lever when it is genuinely needed (a stalling cut),
+  // never as a scheduled session. The user chooses what they do.
+  const [cardioOn, setCardioOn] = useState(true);
 
   // Step 1, account
   const [authMode, setAuthMode] = useState('signup'); // 'signup' | 'signin'
@@ -498,6 +503,7 @@ export default function ProOnboardingScreen({ navigation }) {
         goalStartDate: isDeficit ? new Date().toISOString() : null,
         stepsTarget: (userProfile || {}).stepsTarget ?? 8000,
         stepsEnabled: stepsTargetOn,
+        cardioEnabled: cardioOn,
         trainingFreq: trainingFreqBucket,
         trainingFreqBucket,
         daysPerWeek,
@@ -1255,6 +1261,29 @@ export default function ProOnboardingScreen({ navigation }) {
                   accessibilityLabel="Keep a daily step target"
                 >
                   <View style={[styles.toggleThumb, stepsTargetOn && styles.toggleThumbOn]} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={[styles.notifHeader, { marginTop: spacing.md }]}>
+                <View style={styles.notifIconWrap}>
+                  <Ionicons name="heart-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.notifTitle}>Cardio</Text>
+                  <Text style={styles.notifSub}>
+                    {cardioOn
+                      ? 'On. Log any cardio you do, your choice of activity. It is there when you want it, never forced. The coach only suggests cardio if a cut stalls.'
+                      : 'Off. No cardio logging or library. Turn it on any time in Settings.'}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.toggle, cardioOn && styles.toggleOn]}
+                  onPress={() => setCardioOn(v => !v)}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: cardioOn }}
+                  accessibilityLabel="Make cardio available"
+                >
+                  <View style={[styles.toggleThumb, cardioOn && styles.toggleThumbOn]} />
                 </TouchableOpacity>
               </View>
             </View>

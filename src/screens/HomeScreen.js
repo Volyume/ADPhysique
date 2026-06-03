@@ -17,6 +17,7 @@ import PressableCard from '../components/PressableCard';
 import { SkeletonCard } from '../components/Skeleton';
 import Sparkline from '../components/Sparkline';
 import StepsCard from '../components/StepsCard';
+import CardioCard from '../components/CardioCard';
 import { useToast } from '../components/Toast';
 import {
   getAllWorkouts, getWorkoutSetsSince, getActivePlan, getRoutinesForPlan,
@@ -944,6 +945,12 @@ export default function HomeScreen({ navigation }) {
             automatic from the health aggregator, self-hides when none) ── */}
         {tier === 'pro' && user?.id && userProfile?.stepsEnabled !== false && (
           <StepsCard userId={user.id} stepsTarget={userProfile?.stepsTarget} />
+        )}
+
+        {/* Cardio line (available, not allocated; default on, gate treats
+            undefined as on). Entry point for logging. */}
+        {tier === 'pro' && user?.id && userProfile?.cardioEnabled !== false && (
+          <CardioCard userId={user.id} onPress={() => navigation.navigate('LogCardio')} />
         )}
 
         {/* ── This week, progress bars ── */}
