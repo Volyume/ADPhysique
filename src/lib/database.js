@@ -4908,7 +4908,11 @@ export async function insertWorkoutFromCloud(userId, w) {
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)`,
     [
       w.id, userId, w.routine_id ?? null, w.mesocycle_id ?? null, w.mesocycle_week_id ?? null,
-      toMs(w.started_at), toMs(w.ended_at), w.duration_minutes ?? null,
+      // started_at falls back to now when the cloud row carries none, so a
+      // restored workout never lands with a NULL/epoch start that renders as a
+      // 1970 date in history and lift-progress. ended_at can legitimately be
+      // null (an unfinished session), so it keeps no fallback.
+      toMs(w.started_at) ?? Date.now(), toMs(w.ended_at), w.duration_minutes ?? null,
       w.notes ?? null, w.name ?? null, w.pre_workout_intent ?? null,
       w.session_difficulty ?? null, w.overall_pump ?? null,
       w.soreness_24h_before ?? null, w.fatigue_level ?? null, w.joint_discomfort ?? null,

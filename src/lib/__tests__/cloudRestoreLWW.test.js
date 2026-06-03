@@ -60,6 +60,20 @@ describe('insertWorkoutFromCloud LWW gate', () => {
 
     expect(conn.runAsync).toHaveBeenCalledTimes(1);
   });
+
+  test('fills started_at with a finite timestamp when the cloud row carries none', async () => {
+    // A cloud workout with a missing started_at used to land as NULL, which
+    // renders as a 1 Jan 1970 date in history and lift-progress. The restore
+    // must substitute a real timestamp instead.
+    conn.getFirstAsync.mockResolvedValue(null); // fresh restore, no local row
+    await insertWorkoutFromCloud('u1', { id: 'w1', updated_at: iso(2000) }); // no started_at
+
+    expect(conn.runAsync).toHaveBeenCalledTimes(1);
+    const params = conn.runAsync.mock.calls[0][1];
+    // started_at is the 6th column in the INSERT (index 5).
+    expect(typeof params[5]).toBe('number');
+    expect(Number.isFinite(params[5])).toBe(true);
+  });
 });
 
 describe('insertWorkoutSetFromCloud LWW gate', () => {
