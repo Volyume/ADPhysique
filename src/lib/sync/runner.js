@@ -201,6 +201,10 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
     status: _lastStatus,
     duration_ms: Date.now() - startMs,
     queue_depth: queueAfter,
+    // Surfaced so the sign-out push-first safety can refuse to wipe on any
+    // error, including the narrow case where the queue drained to empty in
+    // the same cycle (status 'partial' maps to 'synced' but errors occurred).
+    errored_count: erroredCount,
   };
 }
 

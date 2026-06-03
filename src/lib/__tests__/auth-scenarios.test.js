@@ -132,12 +132,14 @@ describe('Scenario: Pro signs out + signs back in (cloud profile intact)', () =>
 
 describe('Scenario: sign-out aborts when the cloud push does not complete', () => {
   // The push-first runs syncAll so the food domain is pushed before the
-  // local wipe. If that cycle comes back 'error' (a table failed to push)
-  // or 'skipped' (another sync held the lock), the wipe must not run or we
-  // would lose unsynced meals. The user stays signed in and retries.
+  // local wipe. Only a 'synced' cycle with zero errors proves every local
+  // row reached cloud. 'error' (a table failed), 'skipped' (another sync
+  // held the lock), and 'pending' (rows still queued) all mean we can't
+  // prove it, so the wipe must not run or we'd lose unsynced data. The user
+  // stays signed in and retries.
   const sync = require('../sync');
 
-  test.each(['error', 'skipped'])(
+  test.each(['error', 'skipped', 'pending'])(
     'status %s keeps the user signed in and skips the wipe',
     async (status) => {
       sync.syncAll.mockResolvedValueOnce({ status });
@@ -154,6 +156,23 @@ describe('Scenario: sign-out aborts when the cloud push does not complete', () =
       expect(useAppStore.getState().tier).toBe('pro');
     },
   );
+
+  // SYNC-2 gap: errors can occur in a cycle whose queue drained to empty, so
+  // the status maps to 'synced' even though something failed. The guard must
+  // also inspect errored_count, not just the status.
+  test('synced status with errored_count > 0 still aborts the wipe', async () => {
+    sync.syncAll.mockResolvedValueOnce({ status: 'synced', errored_count: 1 });
+    useAppStore.setState({
+      user: { id: 'u1' }, session: { user: { id: 'u1' } },
+      tier: 'pro', firstRunComplete: true,
+    });
+
+    const result = await useAppStore.getState().clearAuthStateForSignOut();
+
+    expect(result).toEqual({ ok: false, reason: 'unsynced' });
+    expect(useAppStore.getState().user).toEqual({ id: 'u1' });
+    expect(useAppStore.getState().tier).toBe('pro');
+  });
 
   test('a clean status proceeds to wipe + clears state', async () => {
     sync.syncAll.mockResolvedValueOnce({ status: 'synced' });

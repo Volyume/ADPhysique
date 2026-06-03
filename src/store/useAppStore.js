@@ -233,16 +233,21 @@ const useAppStore = create((set, get) => ({
         // eslint-disable-next-line global-require
         const { flushPendingTelemetry } = require('../lib/engineTelemetry');
         const res = await syncAll({ userId: prevUid, localUserId: prevUid, triggeredBy: 'sign_out' });
-        // Abort the wipe unless the cycle came back clean. 'error' means
-        // a table (e.g. food) failed to push; 'skipped' means another
-        // sync held the lock and ours didn't run. In either case we
-        // can't prove local data reached cloud, so keep the user signed
-        // in rather than risk losing it. Caller shows a "couldn't sign
-        // out, try again on a stronger connection" toast.
-        if (res?.status === 'error' || res?.status === 'skipped') {
+        // Abort the wipe unless the cycle came back provably clean. Only a
+        // 'synced' status with zero errors proves every local row reached
+        // cloud. Everything else means we can't prove it, so keep the user
+        // signed in rather than risk losing data:
+        //   'error'   - a table failed to push
+        //   'skipped' - another sync held the lock and ours didn't run
+        //   'pending' - rows are still queued in pending_sync_ops
+        //   errored_count > 0 - errors occurred even if the queue drained
+        //     to empty (status 'partial' maps to 'synced', so check the count)
+        // Caller shows a "couldn't sign out, try again on a stronger
+        // connection" toast.
+        if (res?.status !== 'synced' || (res?.errored_count ?? 0) > 0) {
           log.logWarn('clearAuthStateForSignOut.pushFirstFailed',
             'sign-out aborted: push did not complete cleanly, keeping user signed in',
-            { prevUid, status: res?.status });
+            { prevUid, status: res?.status, erroredCount: res?.errored_count ?? null });
           return { ok: false, reason: 'unsynced' };
         }
         try { await flushPendingTelemetry(); } catch (_) {}
