@@ -27,7 +27,6 @@ import {
   getAllMorningWeightsForUser,
   getAllCoachOutputsForUser,
   getAllExerciseUserNotesForUser,
-  getAllCustomExercisesSince,
   // Newly-syncing tables (migration 012)
   getUserBodyProfile,
   getAllUserInsightsForUser,
@@ -602,7 +601,6 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
     await _pushUserBodyProfile(sb, supabaseUserId, localUserId);
     await _pushUserInsights(sb, supabaseUserId, localUserId);
     await _pushExerciseUserNotes(sb, supabaseUserId, localUserId);
-    await _pushCustomExercises(sb, supabaseUserId, localUserId);
     await _pushWorkoutNotes(sb, supabaseUserId, localUserId);
     await _pushExerciseGoals(sb, supabaseUserId, localUserId);
     await _pushPeakWeekPlans(sb, supabaseUserId, localUserId);
@@ -846,60 +844,6 @@ async function _pushExerciseUserNotes(sb, supabaseUserId, localUserId) {
       if (error) logPgErr('sync._pushExerciseUserNotes', error);
     }
   } catch (e) { logWarn('sync._pushExerciseUserNotes', e?.message); }
-}
-
-// Custom exercises (locked split per IDENTITY_AND_OWNERSHIP_LOCKED.md).
-// Composite PK (user_id, id) means cross-user id collision is
-// impossible by schema, so we can use a simple delta push by
-// updated_at without any of the conflict-resolution gymnastics the
-// legacy exercises sync needed.
-async function _pushCustomExercises(sb, supabaseUserId, localUserId) {
-  try {
-    // Delta: push only rows touched since the last successful push.
-    // Stored per-account in AsyncStorage; first push ships everything.
-    const KEY = `@volyume_last_custom_exercises_pushed_${supabaseUserId}`;
-    const sinceRaw = await AsyncStorage.getItem(KEY).catch(() => null);
-    const since = sinceRaw ? parseInt(sinceRaw, 10) : 0;
-    const rows = await getAllCustomExercisesSince(localUserId, since);
-    if (!rows.length) return;
-    const payload = rows.map(r => ({
-      id: r.id, user_id: supabaseUserId, name: r.name ?? '',
-      primary_muscle: r.primaryMuscle ?? null,
-      secondary_muscles: r.secondaryMuscles ?? null,
-      equipment: r.equipment ?? null,
-      movement_pattern: r.movementPattern ?? null,
-      compound_isolation: r.compoundIsolation ?? null,
-      default_rep_min: r.defaultRepMin ?? null,
-      default_rep_max: r.defaultRepMax ?? null,
-      fatigue_cost: r.fatigueCost ?? null,
-      stimulus_to_fatigue_ratio: r.stimulusToFatigueRatio ?? null,
-      subregion: r.subregion ?? null,
-      exercise_category: r.exerciseCategory ?? null,
-      increment_kg: r.incrementKg ?? null,
-      notes: r.notes ?? null,
-      created_at: new Date(r.createdAt ?? Date.now()).toISOString(),
-      updated_at: new Date(r.updatedAt ?? Date.now()).toISOString(),
-      deleted_at: r.deletedAt ? new Date(r.deletedAt).toISOString() : null,
-    }));
-    let maxTs = since;
-    for (let i = 0; i < payload.length; i += 200) {
-      const slice = payload.slice(i, i + 200);
-      const { error } = await sb.from('custom_exercises').upsert(
-        slice, { onConflict: 'user_id,id' },
-      );
-      if (error) {
-        logPgErr('sync._pushCustomExercises', error);
-        continue;
-      }
-      for (const r of rows.slice(i, i + 200)) {
-        const ts = r.updatedAt ?? 0;
-        if (ts > maxTs) maxTs = ts;
-      }
-    }
-    if (maxTs > since) {
-      await AsyncStorage.setItem(KEY, String(maxTs)).catch(() => {});
-    }
-  } catch (e) { logWarn('sync._pushCustomExercises', e?.message); }
 }
 
 async function _pushUserBodyProfile(sb, supabaseUserId, localUserId) {

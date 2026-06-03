@@ -231,3 +231,42 @@ Step 7 is the answer to "the user's data goes back to cloud". The
 composite-PK schema turns what used to be a 42501 into a clean
 INSERT, because `(current_user, id)` is a brand-new primary key
 even when `id` already exists under another user.
+
+## Reconciliations
+
+### 2026-06-03 — local `custom_exercises` mirror retired
+
+Context: the app has always represented a user's custom exercises in
+the local `exercises` table with `is_custom=1` (created via
+`insertExercise`, listed via `getAllExercises`, resolved by id through
+the routine/workout joins and `getExerciseById`). The parallel local
+`custom_exercises` table and its JS accessors
+(`insertCustomExercise`, `updateCustomExercise`,
+`deleteCustomExercise`, `getCustomExercisesForUser`,
+`getCustomExerciseById`, `getAllExercisesForUser`,
+`getAllCustomExercisesSince`, `insertOrUpdateCustomExerciseFromCloud`)
+were an orphaned mirror that nothing read for display or id
+resolution. A reinstall restored customs into that orphaned mirror, so
+they vanished from the UI. The cloud restore was repointed at the
+`exercises` table (`is_custom=1`) earlier; this change removes the now
+fully-dead local mirror accessors and the redundant
+`_pushCustomExercises` delta-push in `sync.js`.
+
+Why this is compliant with the four locked decisions:
+
+- The composite-PK split (migrations 020/021) exists for **cloud**
+  correctness so two users' customs cannot collide server-side. That
+  is untouched. The **cloud** `custom_exercises` table and its
+  composite PK remain, and `syncExercises` still filters `e.isCustom`
+  from `getAllExercises` and upserts them to cloud `custom_exercises`
+  with `onConflict: 'user_id,id'`. Cloud push of customs is unchanged.
+- Only the **local** mirror's JS accessors are retired, in favour of
+  the local `exercises.isCustom` model the whole app already uses.
+  Local SQLite is single-user (sign-out wipes it), so there is no
+  local composite-PK concern.
+- No `UPDATE ... SET user_id` is introduced. Ownership is still set at
+  INSERT only.
+- The local `custom_exercises` table schema is left in place (dropping
+  it would need a tracked migration); it is now simply never written.
+  It stays on the `WIPE_DIRECT_TABLES` and `diagnoseSyncConflicts`
+  lists so a user-switch still clears it.
