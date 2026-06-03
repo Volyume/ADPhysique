@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import EmptyState from '../components/EmptyState';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { getRecentCardioLog, deleteCardioLog } from '../lib/database';
 import { parseLocalDay } from '../lib/dayKey';
 
@@ -31,7 +32,7 @@ function prettyDate(key) {
 }
 
 export default function CardioHistoryScreen({ navigation }) {
-  const { user } = useAppStore();
+  const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
   const userId = user?.id;
   const [sections, setSections] = useState([]);
 

@@ -19,6 +19,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/t
 import Button from '../components/Button';
 import SegmentedControl from '../components/SegmentedControl';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import {
   CARDIO_ACTIVITIES, CARDIO_CATEGORIES, getCardioActivity, getCardioActivityByName,
 } from '../lib/cardio/cardioActivities';
@@ -38,7 +39,9 @@ const INTENSITY_OPTS = [
 ];
 
 export default function LogCardioScreen({ navigation, route }) {
-  const { user, userProfile, saveLocalProfile } = useAppStore();
+  const { user, userProfile, saveLocalProfile } = useAppStore(useShallow((s) => ({
+    user: s.user, userProfile: s.userProfile, saveLocalProfile: s.saveLocalProfile,
+  })));
   const userId = user?.id;
   const bodyweightKg = Number(userProfile?.weightKg) > 0 ? Number(userProfile.weightKg) : 75;
   const favouriteIds = useMemo(() => userProfile?.cardioFavourites || [], [userProfile]);

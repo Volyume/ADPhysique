@@ -69,11 +69,12 @@ function friendlyDate(isoStr) {
 }
 
 export default function DiaryScreen({ navigation }) {
-  const { user, macroCycle, refeed, cardioEnabled } = useAppStore(useShallow((s) => ({
+  const { user, macroCycle, refeed, cardioEnabled, tier } = useAppStore(useShallow((s) => ({
     user: s.user,
     macroCycle: s.userProfile?.macroCycle ?? null,
     refeed: s.userProfile?.refeed ?? null,
     cardioEnabled: s.userProfile?.cardioEnabled !== false,
+    tier: s.tier,
   })));
   const userId = user?.id;
   const toast = useToast();
@@ -535,7 +536,7 @@ export default function DiaryScreen({ navigation }) {
 
         <WaterRow ml={waterMl} onAdd={() => logWaterDelta(250)} onSub={() => logWaterDelta(-250)} />
 
-        {cardioEnabled && userId ? (
+        {tier === 'pro' && cardioEnabled && userId ? (
           <CardioRow
             userId={userId}
             date={selectedDate}
