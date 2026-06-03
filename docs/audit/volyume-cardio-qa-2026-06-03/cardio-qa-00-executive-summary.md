@@ -1,4 +1,4 @@
-# Cardio QA — Executive summary
+# Cardio QA - Executive summary
 
 Status: COMPLETE (assessment). Timestamp: 2026-06-03. No code changed; awaiting
 confirmation before Phase 7. Full detail in `cardio-qa-01` … `-06`.
@@ -28,19 +28,19 @@ wiring (thread the week's `cardio_log` summary into `runWeeklyCoach`,
 `CoachOutputScreen.js:1027`).
 
 ## Top 5 UX / quality gaps
-1. **Coach blind to logged cardio** (CI-1) — behavioural bolt-on, the headline.
+1. **Coach blind to logged cardio** (CI-1) - behavioural bolt-on, the headline.
 2. **Recovery load shows the user a note but does not affect coach training
    advice** (CI-2); `cardioRecoveryFlag` never called.
 3. **Bare `useAppStore()`** in the two cardio screens vs the `useShallow`
-   convention (CQ-1) — re-render cost + bolt-on signal.
-4. **No per-activity last-used defaults** (UX-1) — every activity-first app
+   convention (CQ-1) - re-render cost + bolt-on signal.
+4. **No per-activity last-used defaults** (UX-1) - every activity-first app
    remembers duration/intensity; Volyume always defaults to 30 min.
 5. **Diary kcal has no "not added" clarifier** (UX-2) and the activity list is
    text-only with no glyphs (UX-3).
 
 ## Recommended implementation order (after confirmation)
 1. P1 tier-gate the Diary row (1 line). 2. P4/P5 `useShallow` + mount coverage.
-3. **P2 close the coaching loop** (compliance → `nextCardioTarget`, with tests) —
+3. **P2 close the coaching loop** (compliance → `nextCardioTarget`, with tests) -
    the highest-value change. 4. P3 coach recovery flag. 5. Polish: P6
    per-activity defaults → P8 glyphs → P7 Diary kcal → P10 hide kcal w/o weight.
 6. Founder decision D1: acknowledge cardio for non-cut users, or stay silent.

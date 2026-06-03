@@ -1,4 +1,4 @@
-# Cardio QA — 00: Implementation map
+# Cardio QA - 00: Implementation map
 
 Status: COMPLETE. Timestamp: 2026-06-03. Method: read the committed cardio
 code + ran tests + traced paths. No code changed in this phase. Every path
@@ -12,16 +12,16 @@ recorded in `docs/CURRENT_STATUS.md` § 0). This map is the as-built state.
 ## 1. Files and what each does
 
 **Pure logic (`src/lib/cardio/`)**
-- `cardioActivities.js` — the library as a frozen code constant (36 activities),
+- `cardioActivities.js` - the library as a frozen code constant (36 activities),
   `canonicalCardioId(name)` deterministic ids, `CARDIO_ACTIVITIES`,
   `getCardioActivity(id)`, `getCardioActivityByName`, `cardioActivitiesByCategory`,
   `OTHER_CARDIO_ID`. Categories: walking, running, cycling, rowing, swimming,
   machine, hiit, conditioning, sport, other.
-- `cardioMath.js` — `metFor`, `estimateCardioKcal` (`MET×kg×h`, feedback only),
+- `cardioMath.js` - `metFor`, `estimateCardioKcal` (`MET×kg×h`, feedback only),
   `estimateActivityKcal`, `deriveCardioMetadata` (lowImpact/legOverlap/homeOk),
   `cardioFatigueContribution`, `cardioRecoveryLoad` (decayed sum, 3-day
   half-life), `cardioLoadLevel`.
-- `cardioEngine.js` — `cutCardioTarget`, `healthCardioTarget`,
+- `cardioEngine.js` - `cutCardioTarget`, `healthCardioTarget`,
   `pausedCardioTarget`, `cardioComplianceFromLog`, `summariseWeekCardio`,
   `nextCardioTarget`, `cardioRecoveryFlag`, `MAX_CARDIO_SESSIONS`.
 - Tests: `__tests__/cardioLibrary.test.js` (34), `__tests__/cardioEngine.test.js`
@@ -38,30 +38,30 @@ recorded in `docs/CURRENT_STATUS.md` § 0). This map is the as-built state.
   `insertCardioLogFromCloud`.
 
 **Cloud sync**
-- `src/lib/sync/tables/cardioLog.js` — `pushCardioLog` + `pullCardioLog`
+- `src/lib/sync/tables/cardioLog.js` - `pushCardioLog` + `pullCardioLog`
   (soft-delete aware, LWW). Registry entry in `registry.js`, dispatch +
   `MIGRATED_TABLES` in `transport.js`. `supabase/migrate_064_cardio_log.sql`
   (pending founder apply). Test: `sync.cardioLog.test.js`.
 
 **Screens / components**
-- `src/screens/LogCardioScreen.js` — pick activity → duration → intensity →
+- `src/screens/LogCardioScreen.js` - pick activity → duration → intensity →
   save, MET feedback + footnote. Route `LogCardio` (modal).
-- `src/screens/CardioHistoryScreen.js` — sessions by day, soft delete. Route
+- `src/screens/CardioHistoryScreen.js` - sessions by day, soft delete. Route
   `CardioHistory`.
-- `src/components/CardioCard.js` — Train tab line + log entry point.
-- `src/screens/ProOnboardingScreen.js` — cardio toggle (default on), writes
+- `src/components/CardioCard.js` - Train tab line + log entry point.
+- `src/screens/ProOnboardingScreen.js` - cardio toggle (default on), writes
   `cardioEnabled` (state `cardioOn`, line ~233; save ~503).
-- `src/screens/SettingsScreen.js` — cardio toggle (line ~996).
-- `src/screens/DiaryScreen.js` — `CardioRow` (line ~538 + component def).
-- `src/screens/PlansScreen.js` — `CardioPlanCard` (def above `PlansScreen`,
+- `src/screens/SettingsScreen.js` - cardio toggle (line ~996).
+- `src/screens/DiaryScreen.js` - `CardioRow` (line ~538 + component def).
+- `src/screens/PlansScreen.js` - `CardioPlanCard` (def above `PlansScreen`,
   render ~794).
-- `src/components/ReadinessCards.js` — cardio recovery-load note (line ~196).
+- `src/components/ReadinessCards.js` - cardio recovery-load note (line ~196).
 
 **Coach / check-in**
-- `src/lib/weeklyCoach.js:750` — cut cardio lever now emits `cutCardioTarget(...)`.
-- `src/screens/CoachOutputScreen.js:~821` — `handleApplyCardio` persists
+- `src/lib/weeklyCoach.js:750` - cut cardio lever now emits `cutCardioTarget(...)`.
+- `src/screens/CoachOutputScreen.js:~821` - `handleApplyCardio` persists
   `cardioPrescription` + `cardioTarget`.
-- `src/screens/WeeklyCheckInScreen.js` — cardio adherence question (~684) +
+- `src/screens/WeeklyCheckInScreen.js` - cardio adherence question (~684) +
   log-based prefill (~228).
 
 ---

@@ -1,4 +1,4 @@
-# Cardio QA — 03: Coaching integration assessment
+# Cardio QA - 03: Coaching integration assessment
 
 Status: COMPLETE. Timestamp: 2026-06-03. Method: traced the full loop in code,
 grepped the coach for every cardio signal. No code changed.

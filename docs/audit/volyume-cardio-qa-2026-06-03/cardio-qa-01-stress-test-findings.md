@@ -1,4 +1,4 @@
-# Cardio QA — 01: Stress test findings
+# Cardio QA - 01: Stress test findings
 
 Status: COMPLETE. Timestamp: 2026-06-03. Method: traced each path in the
 committed code; ran the cardio/sync/coach suites (84 passing) and the
@@ -12,37 +12,37 @@ recorded as well as bugs. No code changed.
 | Area | Test | Result |
 |---|---|---|
 | Onboarding | opt in → `cardioEnabled` saved | PASS (`ProOnboardingScreen` save ~503) |
-| Onboarding | opt out → cardio hidden | PARTIAL — hidden on Train/Plans/Settings, **shown in Diary** (BUG-1) |
+| Onboarding | opt out → cardio hidden | PARTIAL - hidden on Train/Plans/Settings, **shown in Diary** (BUG-1) |
 | Onboarding | opt out then enable in Settings | PASS (`SettingsScreen` writes `cardioEnabled`; gates re-show) |
-| Onboarding | interrupted mid-setup | PASS — `cardioEnabled` only written at finish; undefined reads as on (default) |
-| Library | browse all | PASS — 36 activities, grouped by category in `LogCardioScreen` |
-| Library | search | PASS — case-insensitive name filter |
-| Library | favourites store/retrieve | PASS — `cardioFavourites` profile blob; star toggles |
-| Library | log every activity type | PASS — all 36 flow through `insertCardioLog` |
-| Library | minimum inputs | PASS — duration stepper floors at 5 min, intensity always defaulted |
-| Library | maximum inputs | PASS — duration capped 300 (stepper) / 1440 (insert clamp) |
-| MET/kcal | low/high bodyweight, 1 min, 3h, low/high intensity | PASS — `MET×kg×h`; returns null on non-positive, no crash |
-| MET/kcal | bodyweight not set | PARTIAL — defaults to 75 kg silently (BUG-6) |
-| Diary | calorie adjustment on log | BY DESIGN — kcal is feedback, never added to target |
-| Diary | delete reverses | PASS — `CardioRow` re-reads on focus; no target to reverse |
-| Diary | multiple sessions same day | PASS — `summariseWeekCardio` sums the day's rows |
-| Plan | opted-in plan view | PASS — `CardioPlanCard` at foot of Plans |
-| Plan | opted-out plan view | PASS — card gated on `tier==='pro' && cardioEnabled !== false` |
-| Plan | ad-hoc cardio | PASS — log with no target saves + shows |
-| Plan | 3/4/5/6-day plans | PASS — card is a weekly block, independent of day count |
-| Check-in | all sessions done → compliance | PARTIAL — prefill verdict correct, but coach does not escalate from it (BUG-2) |
-| Check-in | no cardio done | PARTIAL — prefill 'missed'; coach holds via trend, not compliance (BUG-2) |
-| Check-in | over-prescribed | PASS — `cardioComplianceFromLog` returns 'hit' for >= target |
-| Check-in | non-cardio user | PASS — question gated on `hasCardioPrescription` |
-| Recovery | high-intensity flag | PARTIAL — ReadinessCards note fires at high load; coach-side flag not wired (BUG-3) |
-| Recovery | low-impact avoids warning | PASS — `cardioFatigueContribution('low')`=0.3, load stays 'low' |
-| Recovery | no cardio = identical | PASS — `computeRecoveryEMAs` untouched; load 0 → no note |
-| Nav | every path / back / modal | PASS — `LogCardio` modal + `CardioHistory` push; back returns; no dead ends |
-| Nav | rapid taps on Save | PASS — `saving` guard |
-| Nav | rapid taps on "Log cardio" | LOW RISK — `navigation.navigate` dedupes same route (BUG-7, minor) |
-| Persistence | log, reopen | PASS — SQLite row persists |
-| Persistence | preferences persist | PASS — profile blob persists |
-| Persistence | offline log | PASS — local write succeeds; sync queued (pending migration 064) |
+| Onboarding | interrupted mid-setup | PASS - `cardioEnabled` only written at finish; undefined reads as on (default) |
+| Library | browse all | PASS - 36 activities, grouped by category in `LogCardioScreen` |
+| Library | search | PASS - case-insensitive name filter |
+| Library | favourites store/retrieve | PASS - `cardioFavourites` profile blob; star toggles |
+| Library | log every activity type | PASS - all 36 flow through `insertCardioLog` |
+| Library | minimum inputs | PASS - duration stepper floors at 5 min, intensity always defaulted |
+| Library | maximum inputs | PASS - duration capped 300 (stepper) / 1440 (insert clamp) |
+| MET/kcal | low/high bodyweight, 1 min, 3h, low/high intensity | PASS - `MET×kg×h`; returns null on non-positive, no crash |
+| MET/kcal | bodyweight not set | PARTIAL - defaults to 75 kg silently (BUG-6) |
+| Diary | calorie adjustment on log | BY DESIGN - kcal is feedback, never added to target |
+| Diary | delete reverses | PASS - `CardioRow` re-reads on focus; no target to reverse |
+| Diary | multiple sessions same day | PASS - `summariseWeekCardio` sums the day's rows |
+| Plan | opted-in plan view | PASS - `CardioPlanCard` at foot of Plans |
+| Plan | opted-out plan view | PASS - card gated on `tier==='pro' && cardioEnabled !== false` |
+| Plan | ad-hoc cardio | PASS - log with no target saves + shows |
+| Plan | 3/4/5/6-day plans | PASS - card is a weekly block, independent of day count |
+| Check-in | all sessions done → compliance | PARTIAL - prefill verdict correct, but coach does not escalate from it (BUG-2) |
+| Check-in | no cardio done | PARTIAL - prefill 'missed'; coach holds via trend, not compliance (BUG-2) |
+| Check-in | over-prescribed | PASS - `cardioComplianceFromLog` returns 'hit' for >= target |
+| Check-in | non-cardio user | PASS - question gated on `hasCardioPrescription` |
+| Recovery | high-intensity flag | PARTIAL - ReadinessCards note fires at high load; coach-side flag not wired (BUG-3) |
+| Recovery | low-impact avoids warning | PASS - `cardioFatigueContribution('low')`=0.3, load stays 'low' |
+| Recovery | no cardio = identical | PASS - `computeRecoveryEMAs` untouched; load 0 → no note |
+| Nav | every path / back / modal | PASS - `LogCardio` modal + `CardioHistory` push; back returns; no dead ends |
+| Nav | rapid taps on Save | PASS - `saving` guard |
+| Nav | rapid taps on "Log cardio" | LOW RISK - `navigation.navigate` dedupes same route (BUG-7, minor) |
+| Persistence | log, reopen | PASS - SQLite row persists |
+| Persistence | preferences persist | PASS - profile blob persists |
+| Persistence | offline log | PASS - local write succeeds; sync queued (pending migration 064) |
 
 ---
 

@@ -1,4 +1,4 @@
-# Cardio QA — 05: Gap analysis
+# Cardio QA - 05: Gap analysis
 
 Status: COMPLETE. Timestamp: 2026-06-03. Consolidates Phases 1-4. No code changed.
 
@@ -46,7 +46,7 @@ input range. The MET kcal is never double-counted into the target (verified).
 - **Pattern: mild bolt-on.** Bespoke picker vs the shared exercise picker (CQ-4).
 - **Copy:** consistent and on-voice (plain, no em dashes, no encouragement);
   no terminology drift found.
-- **Tier gating: inconsistent** (CARDIO-BUG-1) — the one place the gating
+- **Tier gating: inconsistent** (CARDIO-BUG-1) - the one place the gating
   convention is broken.
 
 ## 5. Missing features (evidence-backed, not a wish list)

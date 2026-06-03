@@ -1,4 +1,4 @@
-# Cardio QA — 04: Competitor research (design + sentiment)
+# Cardio QA - 04: Competitor research (design + sentiment)
 
 Status: COMPLETE. Timestamp: 2026-06-03. Sourcing note: the deep competitor
 + sentiment research was done in the integration audit and is cited in

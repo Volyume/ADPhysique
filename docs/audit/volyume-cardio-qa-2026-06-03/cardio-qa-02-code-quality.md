@@ -1,4 +1,4 @@
-# Cardio QA — 02: Code quality audit
+# Cardio QA - 02: Code quality audit
 
 Status: COMPLETE. Timestamp: 2026-06-03. Method: read every cardio file; grepped
 for the specific anti-patterns. Findings cite file:line. No code changed.
@@ -8,8 +8,8 @@ for the specific anti-patterns. Findings cite file:line. No code changed.
 ## 1. State management / store usage (Medium)
 
 **CQ-1. Bare `useAppStore()` without a selector.**
-- `src/screens/LogCardioScreen.js:41` — `const { user, userProfile, saveLocalProfile } = useAppStore();`
-- `src/screens/CardioHistoryScreen.js:34` — `const { user } = useAppStore();`
+- `src/screens/LogCardioScreen.js:41` - `const { user, userProfile, saveLocalProfile } = useAppStore();`
+- `src/screens/CardioHistoryScreen.js:34` - `const { user } = useAppStore();`
 
 Every comparable screen uses a `useShallow` selector (`DiaryScreen.js`,
 `PlansScreen.js`, `HomeScreen.js` all import and use it). A bare `useAppStore()`
@@ -22,11 +22,11 @@ FIX: select narrowly, e.g.
 
 ## 2. Hardcoded values (Low)
 
-**CQ-2. Default bodyweight `75`** — `LogCardioScreen.js:43`. A magic number for
+**CQ-2. Default bodyweight `75`** - `LogCardioScreen.js:43`. A magic number for
 the kcal estimate fallback. See CARDIO-BUG-6; prefer hiding the chip to
 defaulting. If kept, name it (`const DEFAULT_BODYWEIGHT_KG = 75`).
 
-**CQ-3. Recovery thresholds / fatigue weights** — `cardioMath.js`
+**CQ-3. Recovery thresholds / fatigue weights** - `cardioMath.js`
 (`FATIGUE_BY_IMPACT`, `cardioLoadLevel` bands 1.2/2.4) and `cardioEngine.js`
 (`MAX_CARDIO_SESSIONS`, session/duration defaults). These ARE named constants
 (good); listed only to confirm they are not scattered literals. Clean.
@@ -53,12 +53,12 @@ given), or add a thin `summariseDayCardio` alias for readability.
 
 - **No `console.log/warn/error`** in any cardio file (grep empty).
 - **No commented-out code** left in the cardio files.
-- **No `any`/unsafe casts** — the project is JS (not TS) so no type findings;
+- **No `any`/unsafe casts** - the project is JS (not TS) so no type findings;
   JSDoc on the pure modules is consistent with the codebase.
-- **No unhandled promises** — every async call in the cardio screens is inside a
+- **No unhandled promises** - every async call in the cardio screens is inside a
   `try/catch` or `.catch(() => {})`; `useFocusEffect` cleanups use a `live` flag
   (`LogCardioScreen`, `CardioHistoryScreen`, `CardioCard`, `CardioPlanCard`).
-- **No duplicated logic** — the engine functions are single-source; surfaces all
+- **No duplicated logic** - the engine functions are single-source; surfaces all
   read through the same `cardio_log` CRUD and `summariseWeekCardio`.
 - **Patterns followed:** `CardioCard` mirrors `StepsCard` (same card style);
   Diary `CardioRow` reuses `styles.waterRow`; sync handler mirrors
