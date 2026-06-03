@@ -108,6 +108,22 @@ describe('getCuratedCandidates', () => {
     dinner.forEach(meal => expect(meal.slots.includes('dinner') || meal.slots.includes('any')).toBe(true));
   });
 
+  test('numbered meals (meal_N) get the whole diet-filtered library, not an empty list', () => {
+    // The diary logs into 'meal_1', 'meal_2', ... which carry no time-of-day
+    // character, so every curated meal should be a candidate (the regression
+    // that left the Suggested tab empty after the slot model changed).
+    const all = getCuratedCandidates({ diet: 'omnivore' });
+    const meal1 = getCuratedCandidates({ diet: 'omnivore', slot: 'meal_1' });
+    const meal3 = getCuratedCandidates({ diet: 'omnivore', slot: 'meal_3' });
+    expect(meal1.length).toBe(all.length);
+    expect(meal3.length).toBe(all.length);
+    // A breakfast-tagged meal is available against a numbered slot.
+    expect(meal1.map(m => m.id)).toContain('curated_om_oats_whey_banana');
+    // Diet still applies on numbered slots.
+    const veganMeal2 = getCuratedCandidates({ diet: 'vegan', slot: 'meal_2' });
+    veganMeal2.forEach(meal => expect(meal.diet).toBe('vegan'));
+  });
+
   test('candidates are engine-ready (computed totals + items)', () => {
     const [c] = getCuratedCandidates({ diet: 'omnivore', slot: 'lunch' });
     expect(c.totals.protein).toBeGreaterThan(0);

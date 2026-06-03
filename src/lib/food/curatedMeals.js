@@ -214,12 +214,22 @@ export function mealTotals(items) {
  * logged, in the engine-candidate shape ({ id, name, slots, itemCount,
  * totals, diet, items }), macros computed from the food table. Pass these
  * as `savedMeals` to rankSuggestions.
+ *
+ * The diary now logs into numbered meals ('meal_1', 'meal_2', ...), which
+ * carry no breakfast/lunch/dinner character. A numbered slot therefore takes
+ * the WHOLE diet-filtered library and lets the macro ranking pick, the same
+ * rule slotMatches() applies. Without this, every curated meal (all tagged
+ * with the legacy named slots) was filtered out and the Suggested tab came up
+ * empty for numbered meals. The named slots (breakfast/lunch/dinner/snack and
+ * pre/post-workout) still filter to their tagged meals.
  */
+const NUMBERED_SLOT = /^meal_\d+$/;
 export function getCuratedCandidates({ diet = 'omnivore', slot = null } = {}) {
   const out = [];
+  const slotFilter = slot && !NUMBERED_SLOT.test(slot);
   for (const meal of CURATED_MEALS) {
     if (!dietAllows(diet, meal.diet)) continue;
-    if (slot && !(meal.slots.includes(slot) || meal.slots.includes('any'))) continue;
+    if (slotFilter && !(meal.slots.includes(slot) || meal.slots.includes('any'))) continue;
     const items = mealItems(meal);
     out.push({
       id: meal.id,
