@@ -38,23 +38,81 @@
 //      push subscription with endpoint
 //      https://<supabase-project>.supabase.co/functions/v1/play-billing-rtdn
 //      and OIDC auth using a service account that has invoker rights.
-//   4. Set environment variables on the Edge Function:
+//   4. Deploy with JWT verification OFF so Google's OIDC token (not a
+//      Supabase JWT) reaches the handler:
+//        supabase functions deploy play-billing-rtdn --no-verify-jwt
+//   5. Set environment variables on the Edge Function:
 //        SUPABASE_URL                  — your supabase project URL
 //        SUPABASE_SERVICE_ROLE_KEY     — service role key (for upgrade_tier RPC)
 //        GOOGLE_PLAY_SERVICE_ACCOUNT_JSON  — base64 of the Google Play API
 //                                            service-account JSON; granted
 //                                            Android Publisher API access.
 //        GOOGLE_PLAY_PACKAGE_NAME      — app.volyume
+//        RTDN_OIDC_AUDIENCE            — the audience set on the Pub/Sub push
+//                                        subscription's OIDC token (commonly
+//                                        the function URL). Once set, requests
+//                                        without a valid Google OIDC token for
+//                                        this audience are rejected 401.
+//        RTDN_SERVICE_ACCOUNT_EMAIL   — (optional) the pushing service
+//                                        account's email, to pin the caller
+//                                        identity as well as the audience.
 //
 // Until those values are set, the function will run but log errors
 // rather than apply transitions, so Google's RTDN doesn't pile up
-// pending messages.
+// pending messages. RTDN_OIDC_AUDIENCE follows the same configure-before-
+// enforce posture: until it is set the OIDC gate is skipped (logged) and
+// the Play Developer API lookup is the sole control.
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const PACKAGE_NAME = Deno.env.get("GOOGLE_PLAY_PACKAGE_NAME") ?? "app.volyume";
+
+// HP-4. A Pub/Sub push subscription signs each request with a Google OIDC
+// token in the Authorization header, with `aud` set to the configured
+// audience and `email` the pushing service account. The function must be
+// deployed with JWT verification off (the token is a Google token, not a
+// Supabase JWT), so this handler is the gate that authenticates the caller.
+// The Play Developer API lookup below is the substantive control against a
+// forged token (a fake purchaseToken resolves to nothing); this OIDC check
+// stops an unauthenticated caller invoking the endpoint at all.
+const RTDN_OIDC_AUDIENCE = Deno.env.get("RTDN_OIDC_AUDIENCE") ?? "";
+const RTDN_SERVICE_ACCOUNT_EMAIL = Deno.env.get("RTDN_SERVICE_ACCOUNT_EMAIL") ?? "";
+const GOOGLE_OIDC_JWKS = createRemoteJWKSet(
+  new URL("https://www.googleapis.com/oauth2/v3/certs"),
+);
+
+// Verify the Google-signed OIDC token Pub/Sub attaches to a push request.
+// Returns ok:true when the token is valid (or when the audience env var is
+// not set yet, so a not-yet-configured deployment still runs with the Play
+// API verify as its sole control, matching the rest of this function's
+// configure-before-enforce posture).
+async function verifyPubSubOidc(req: Request): Promise<{ ok: boolean; reason?: string }> {
+  if (!RTDN_OIDC_AUDIENCE) {
+    log("warn", "RTDN_OIDC_AUDIENCE not set; skipping Pub/Sub OIDC check (Play API verify still applies)");
+    return { ok: true, reason: "oidc_unconfigured" };
+  }
+  const auth = req.headers.get("authorization") ?? "";
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  if (!m) return { ok: false, reason: "missing_bearer" };
+  try {
+    const { payload } = await jwtVerify(m[1], GOOGLE_OIDC_JWKS, {
+      issuer: ["https://accounts.google.com", "accounts.google.com"],
+      audience: RTDN_OIDC_AUDIENCE,
+    });
+    // Pin the pushing identity when a service-account email is configured.
+    if (RTDN_SERVICE_ACCOUNT_EMAIL) {
+      if (payload.email !== RTDN_SERVICE_ACCOUNT_EMAIL || payload.email_verified !== true) {
+        return { ok: false, reason: "service_account_mismatch" };
+      }
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: `jwt_verify_failed: ${String((e as Error)?.message ?? e)}` };
+  }
+}
 
 // Map Google notificationType (integer) → action.
 const TYPE_TO_ACTION: Record<number, "purchase" | "renewal" | "cancel" | "expire" | "grace" | "refund" | "pause" | "restart" | "price_change" | "defer" | "ignore"> = {
@@ -270,6 +328,14 @@ async function callUpgradeTier(
 serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
+  }
+  // HP-4: authenticate the caller as Google's Pub/Sub push before doing
+  // any work. 401 (not 200) on failure so a forged caller is rejected
+  // rather than silently acked.
+  const oidc = await verifyPubSubOidc(req);
+  if (!oidc.ok) {
+    log("warn", `rejected unauthenticated RTDN: ${oidc.reason}`);
+    return new Response("Unauthorized", { status: 401 });
   }
   let body: PubSubPushBody;
   try {
