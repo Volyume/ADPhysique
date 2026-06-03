@@ -9,6 +9,7 @@ import useAppStore from '../store/useAppStore';
 // useEffect below. Keep the file in tree because the timer
 // component still uses imports from theme + store + haptics.
 import { playRestBeep, preloadRestBeeps } from '../lib/restSound';
+import { clampRestDelta } from '../lib/restTimerMath';
 
 const TIME_ADJUSTMENTS = [
   { delta: -30, label: '−30s' },
@@ -122,8 +123,7 @@ export default function RestTimer() {
 
   function handleAdjust(delta) {
     Haptics.selectionAsync();
-    // Clamp so we never drop below 5 seconds
-    const safeAmount = delta < 0 ? Math.max(delta, -(restTimerRemaining - 5)) : delta;
+    const safeAmount = clampRestDelta(delta, restTimerRemaining);
     if (safeAmount !== 0) addRestTime(safeAmount);
   }
 

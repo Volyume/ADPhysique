@@ -243,11 +243,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   function handleNextExercise() {
     if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
-    audit('workout.exercise.next', {
-      fromIndex: currentExerciseIndex,
-      toIndex: currentExerciseIndex + 1,
-    });
-    setCurrentExerciseIndex(currentExerciseIndex + 1);
+    // WK-5: skip over exercises Time Crunch dropped (_timeCrunchSkipped). They
+    // stay in the list so the action can be reverted, but advancing onto one
+    // would let the user log against a slot they were told was dropped.
+    let next = currentExerciseIndex + 1;
+    while (next < workoutExercises.length && workoutExercises[next]?._timeCrunchSkipped) {
+      next += 1;
+    }
+    audit('workout.exercise.next', { fromIndex: currentExerciseIndex, toIndex: next });
+    setCurrentExerciseIndex(next);
     setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 50);
   }
 
@@ -763,7 +767,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     hapticsVocab.setLogged();
 
     try {
-      const setNumber = loggedSets.length + 1;
+      // WK-3: number sets within their own kind so working sets read 1,2,3
+      // regardless of any warm-ups logged first (the old loggedSets.length+1
+      // counted warm-ups, so the first working set after a warm-up was "2").
+      // Warm-ups get their own 1,2 sequence; set_type distinguishes them.
+      const isWarmupSet = (currentSet.setType ?? 'straight') === 'warmup';
+      const setNumber = loggedSets.filter(s =>
+        ((s.setType ?? s.set_type ?? 'straight') === 'warmup') === isWarmupSet
+      ).length + 1;
 
       const savedSet = await createWorkoutSet({
         userId: user.id,

@@ -61,7 +61,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
     }
     setCreating(true);
     try {
-      await insertExercise({
+      const created = await insertExercise({
         name: createName.trim(),
         primaryMuscle: createMuscle || null,
         equipment: createEquipment || null,
@@ -69,8 +69,11 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
       });
       const all = await getAllExercises();
       setAll(all);
+      // WK-6: include the id from insertExercise in the fallback so onSelect
+      // never hands back an id-less exercise (which would log a set against a
+      // null exercise_id) if the name lookup misses.
       const newEx = all.find(e => e.name === createName.trim())
-        || { name: createName.trim(), primaryMuscle: createMuscle, equipment: createEquipment };
+        || { id: created?.id, name: createName.trim(), primaryMuscle: createMuscle, equipment: createEquipment };
       onSelect(newEx);
       onClose();
     } catch (_e) {
