@@ -1,6 +1,6 @@
 /**
  * Tests for mesocycle.js, the deload schedule, volume ramp, autoreg
- * decision matrix, time-crunch trimmer, and double-progression check.
+ * decision matrix, and time-crunch trimmer.
  */
 import {
   getCurrentMesoWeek,
@@ -12,7 +12,6 @@ import {
   evaluateAutoReg,
   predictDeloadWeek,
   applyTimeCrunch,
-  checkDoubleProgressionReady,
   getBlockStatus,
 } from '../mesocycle';
 
@@ -140,19 +139,6 @@ describe('applyTimeCrunch', () => {
 
   test('does not crash on empty input', () => {
     expect(() => applyTimeCrunch([], 30, () => 30)).not.toThrow();
-  });
-});
-
-describe('checkDoubleProgressionReady', () => {
-  test('empty history → not ready', () => {
-    expect(checkDoubleProgressionReady([]).ready).toBe(false);
-  });
-
-  test('a single successful session is not enough', () => {
-    const out = checkDoubleProgressionReady([
-      { weight: 100, topRangeReps: 12, achievedReps: 12 },
-    ]);
-    expect(out.ready).toBe(false);
   });
 });
 

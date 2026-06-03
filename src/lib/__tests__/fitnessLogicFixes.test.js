@@ -9,6 +9,7 @@ import {
   detectPlateau,
   calculateWeeklyVolume,
   allocateExerciseVolume,
+  getProgressionSuggestion,
 } from '../algorithms';
 import {
   computeWeeklyWeightChange,
@@ -117,6 +118,35 @@ describe('allocateExerciseVolume shared model (P1.1)', () => {
     const v = calculateWeeklyVolume(sets, map);
     expect(v.chest).toEqual({ workingSets: 1, reps: 10, tonnage: 600 });
     expect(v.triceps).toEqual({ workingSets: 0.5, reps: 0, tonnage: 0 });
+  });
+});
+
+// ── P1: getProgressionSuggestion shares computeSetTargets' RIR contract ──
+describe('getProgressionSuggestion / computeSetTargets agree on missing RIR (P1)', () => {
+  test('hit top of range but no RIR logged: both hold (no optimistic increase)', () => {
+    const prev = [{ weight: 80, actualReps: 12, set_type: 'straight' }]; // rir not logged
+    const suggestion = getProgressionSuggestion([], prev, 8, 12, 'kg');
+    expect(suggestion.action).toBe('maintain');
+    expect(suggestion.suggestedWeight).toBe(80);
+
+    const { targets } = computeSetTargets(prev, 8, 12, 'kg');
+    expect(targets[0].action).toBe('maintain');
+  });
+
+  test('hit top of range with RIR logged: increases', () => {
+    const prev = [{ weight: 80, actualReps: 12, rir: 2, set_type: 'straight' }];
+    expect(getProgressionSuggestion([], prev, 8, 12, 'kg').action).toBe('increase_weight');
+  });
+
+  test('no configured rep band still progresses on a logged RIR (default 6-12)', () => {
+    const prev = [{ weight: 80, actualReps: 12, rir: 2 }];
+    // Previously the missing-max fallback made an increase impossible.
+    expect(getProgressionSuggestion([], prev, null, null, 'kg').action).toBe('increase_weight');
+  });
+
+  test('grinding below the rep minimum with a low RIR suggests a decrease', () => {
+    const prev = [{ weight: 100, actualReps: 4, rir: 0 }];
+    expect(getProgressionSuggestion([], prev, 8, 12, 'kg').action).toBe('decrease_weight');
   });
 });
 

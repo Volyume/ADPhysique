@@ -377,58 +377,6 @@ export function applyTimeCrunch(exercises, targetMinutes, estimateFn) {
   return { exercises: result, restReduction: 0.30, dropped };
 }
 
-// ---------------------------------------------------------------------------
-// Double-progression gate
-// ---------------------------------------------------------------------------
-
-/**
- * Determines whether an athlete is ready to progress weight (double progression).
- * Rule: completed all target sets at the top of the rep range with RIR ≥ 1
- * for 2 consecutive sessions.
- *
- * @param {Object[]} sessionHistory - last 2–3 sessions for this exercise
- *   Each session: { sets: [{ weight, reps, rir, rpe }], targetRepsMax }
- * @returns {{ ready: boolean, message: string }}
- */
-export function checkDoubleProgressionReady(sessionHistory = []) {
-  if (sessionHistory.length < 2) {
-    return { ready: false, message: 'Log a couple more sessions and we\'ll start giving you weight progression guidance.' };
-  }
-
-  const lastTwo = sessionHistory.slice(-2);
-
-  const bothQualify = lastTwo.every(session => {
-    const { sets, targetRepsMax } = session;
-    if (!sets?.length || !targetRepsMax) return false;
-    // All working sets must have hit the top of the rep range
-    return sets.every(s => {
-      const hitsTopReps = (s.reps ?? 0) >= targetRepsMax;
-      const hasRIRRoom  = (s.rir ?? 9) >= 1; // RIR ≥ 1 means not grinding
-      return hitsTopReps && hasRIRRoom;
-    });
-  });
-
-  if (bothQualify) {
-    return {
-      ready: true,
-      message: 'You hit the top of the rep range with something left in the tank for 2 sessions. Add weight next time.',
-    };
-  }
-
-  const lastSession = lastTwo[lastTwo.length - 1];
-  const { sets, targetRepsMax } = lastSession;
-  if (sets?.every(s => (s.reps ?? 0) >= (targetRepsMax ?? 99))) {
-    return {
-      ready: false,
-      message: 'Good session. Repeat the same weight next time. Hit it again to confirm before adding more.',
-    };
-  }
-
-  return {
-    ready: false,
-    message: 'Keep working. Match your best set next time before adding weight.',
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Block completion detection

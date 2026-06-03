@@ -244,11 +244,24 @@ export function defaultIncrement(weight, units = 'kg', category = 'compound') {
   return weight >= 60 ? 2.5 : 1.25; // compound
 }
 
-// Algorithm 2: Double Progression Suggestion
+// Algorithm 2: Double Progression Suggestion.
+//
+// The live in-set hint. It shares the same progression CONTRACT as
+// computeSetTargets (the end-of-session per-set engine) so the two never give
+// opposite advice on the same data:
+//   - load only increases when RIR was actually LOGGED and showed headroom
+//     (>= 1). Unlogged RIR holds and prompts for it -- novices under-estimate
+//     RIR, so an optimistic increase on missing data drives premature overload.
+//   - rep band defaults are 6-12 (matching computeSetTargets), so an exercise
+//     with no configured min/max can still progress instead of maintaining
+//     forever, and the decrease branch can actually fire.
 export function getProgressionSuggestion(currentSets, prevWorkoutSets, targetRepsMin, targetRepsMax, units = 'kg') {
   if (!prevWorkoutSets || prevWorkoutSets.length === 0) {
     return { action: 'baseline', message: 'First time logging this exercise. Any weight is a great starting point.' };
   }
+
+  const min = targetRepsMin || 6;
+  const max = targetRepsMax || 12;
 
   const prevAvgReps =
     prevWorkoutSets.reduce((sum, s) => sum + (s.actualReps || s.actual_reps || 0), 0) /
@@ -257,30 +270,48 @@ export function getProgressionSuggestion(currentSets, prevWorkoutSets, targetRep
   const prevAvgWeight =
     prevWorkoutSets.reduce((sum, s) => sum + (s.weight || 0), 0) / prevWorkoutSets.length;
 
-  const prevAvgRIR =
-    prevWorkoutSets.reduce((sum, s) => sum + (s.rir ?? 2), 0) / prevWorkoutSets.length;
+  // Only sets that actually logged RIR count toward headroom. No logged RIR =>
+  // unknown headroom => hold (never optimistically add load).
+  const ratedSets = prevWorkoutSets.filter(s => s.rir != null);
+  const rirLogged = ratedSets.length > 0;
+  const prevAvgRIR = rirLogged
+    ? ratedSets.reduce((sum, s) => sum + s.rir, 0) / ratedSets.length
+    : null;
 
-  const targetMax = targetRepsMax || prevAvgReps + 1;
-
-  if (prevAvgReps >= targetMax && prevAvgRIR >= 1) {
-    // CALC-5: a bodyweight / unloaded exercise (prevAvgWeight <= 0) has no load
-    // to add — suggest more reps instead of a nonsensical "+1.3kg".
-    if (prevAvgWeight <= 0) {
+  if (prevAvgReps >= max) {
+    if (!rirLogged) {
       return {
-        action: 'increase_reps',
-        message: 'Strong sets. Add a rep or two next session.',
-        suggestedWeight: 0,
+        action: 'maintain',
+        message: 'You hit the top of the range. Log your RIR (reps left in the tank) and the app will tell you whether to add weight.',
+        suggestedWeight: prevAvgWeight,
       };
     }
-    const increment = defaultIncrement(prevAvgWeight, units);
+    if (prevAvgRIR >= 1) {
+      // CALC-5: a bodyweight / unloaded exercise (prevAvgWeight <= 0) has no load
+      // to add — suggest more reps instead of a nonsensical "+1.3kg".
+      if (prevAvgWeight <= 0) {
+        return {
+          action: 'increase_reps',
+          message: 'Strong sets. Add a rep or two next session.',
+          suggestedWeight: 0,
+        };
+      }
+      const increment = defaultIncrement(prevAvgWeight, units);
+      return {
+        action: 'increase_weight',
+        message: `Great work! Try ${(prevAvgWeight + increment).toFixed(1)}${units} next session.`,
+        suggestedWeight: prevAvgWeight + increment,
+      };
+    }
+    // Hit the top of the range but ground it out (RIR < 1): hold and recover.
     return {
-      action: 'increase_weight',
-      message: `Great work! Try ${(prevAvgWeight + increment).toFixed(1)}${units} next session.`,
-      suggestedWeight: prevAvgWeight + increment,
+      action: 'maintain',
+      message: `Keep ${prevAvgWeight.toFixed(1)}${units}. Recover the rep quality before adding weight.`,
+      suggestedWeight: prevAvgWeight,
     };
   }
 
-  if (prevAvgReps < (targetRepsMin || prevAvgReps) && prevAvgRIR <= 1) {
+  if (prevAvgReps < min && rirLogged && prevAvgRIR <= 1) {
     const decrement = defaultIncrement(prevAvgWeight, units);
     return {
       action: 'decrease_weight',
@@ -291,7 +322,7 @@ export function getProgressionSuggestion(currentSets, prevWorkoutSets, targetRep
 
   return {
     action: 'maintain',
-    message: `Keep ${prevAvgWeight.toFixed(1)}${units}. Aim for ${Math.ceil(targetMax)} reps next set.`,
+    message: `Keep ${prevAvgWeight.toFixed(1)}${units}. Aim for ${Math.ceil(max)} reps next set.`,
     suggestedWeight: prevAvgWeight,
   };
 }
@@ -726,44 +757,6 @@ function buildSubstituteReason(sub, target, targetStretch = 'medium') {
   if (subSFR > targetSFR) return 'Better match for this muscle with less overall fatigue.';
   if (subFatigue < targetFatigue) return 'Less demanding overall. Good for busy or high-volume weeks.';
   return 'Same muscles, different movement. Useful for variation across mesocycles.';
-}
-
-// Algorithm 10: Progression Path
-export function getProgressionPath(thisWeekSets, lastWeekSets, units = 'kg') {
-  if (!lastWeekSets || lastWeekSets.length === 0) {
-    return { action: 'establish_baseline', message: 'Keep logging. After a week or two you will start seeing comparisons here.' };
-  }
-
-  const thisAvg =
-    thisWeekSets.reduce((s, set) => s + (set.actualReps || set.actual_reps || 0), 0) /
-    Math.max(thisWeekSets.length, 1);
-  const lastAvg =
-    lastWeekSets.reduce((s, set) => s + (set.actualReps || set.actual_reps || 0), 0) /
-    Math.max(lastWeekSets.length, 1);
-
-  const lastWeight =
-    lastWeekSets.reduce((s, set) => s + (set.weight || 0), 0) / Math.max(lastWeekSets.length, 1);
-
-  if (thisAvg > lastAvg + 0.5) {
-    const increment = defaultIncrement(lastWeight, units);
-    return {
-      action: 'increase_weight',
-      message: `Rep count up. Increase weight by ${increment}${units} next session.`,
-      delta: increment,
-    };
-  }
-
-  if (Math.abs(thisAvg - lastAvg) <= 0.5) {
-    return {
-      action: 'push_reps',
-      message: 'Weight steady. Aim for +1 rep on each set, then bump weight.',
-    };
-  }
-
-  return {
-    action: 'maintain',
-    message: 'Maintain current weight. Focus on rep quality and full range of motion.',
-  };
 }
 
 // Standard plate denominations and bar weights per display unit. Gym weight is

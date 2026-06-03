@@ -7,7 +7,6 @@ import {
   defaultIncrement,
   getProgressionSuggestion,
   computeSetTargets,
-  getProgressionPath,
   calculatePlates,
   PLATE_SETS,
   DEFAULT_BAR_WEIGHT,
@@ -357,20 +356,6 @@ describe('computeSetTargets, unit-aware increments (A2-043)', () => {
   test('explicit incrementKg still overrides the unit default', () => {
     const { targets } = computeSetTargets(prev(185), 8, 12, 'lbs', { exerciseCategory: 'compound', incrementKg: 2 });
     expect(targets[0].weight).toBe(187);
-  });
-});
-
-describe('getProgressionPath, unit-aware increments (A2-043)', () => {
-  const wk = (reps, weight) => [{ actualReps: reps, weight }];
-
-  test('lbs heavy lift suggests +5lb', () => {
-    const r = getProgressionPath(wk(12, 185), wk(10, 185), 'lbs');
-    expect(r.delta).toBe(5);
-    expect(r.message).toContain('lbs');
-  });
-
-  test('kg heavy lift suggests +2.5kg', () => {
-    expect(getProgressionPath(wk(12, 80), wk(10, 80), 'kg').delta).toBe(2.5);
   });
 });
 
