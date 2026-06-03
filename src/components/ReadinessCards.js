@@ -22,7 +22,9 @@ import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import {
   getAllWorkouts, getCompletedWorkoutSets,
   getLastTrainedPerMuscle, getRecentCheckins,
+  getCardioLogRange, activityDayKey,
 } from '../lib/database';
+import { cardioRecoveryLoad, cardioLoadLevel } from '../lib/cardio/cardioMath';
 
 const MILESTONES = [
   { sessions: 1,    label: 'First session',  icon: 'star-outline' },
@@ -98,6 +100,9 @@ export default function ReadinessCards({ userId, tier }) {
   const [recovery, setRecovery] = useState({ soreness: null, fatigue: null, joint: null });
   const [muscleFreshness, setMuscleFreshness] = useState({});
   const [recoveryTrendInsight, setRecoveryTrendInsight] = useState(null);
+  // Cardio adds fatigue on top of the lifting baseline (additive load, not an
+  // average into the 1-5 EMA). 'low' | 'moderate' | 'high'.
+  const [cardioLoad, setCardioLoad] = useState('low');
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -122,6 +127,14 @@ export default function ReadinessCards({ userId, tier }) {
       setTotalWorkouts(completed.length);
       setRecovery(computeRecoveryEMAs(completed));
     } catch (_) {}
+
+    // Cardio recovery load over the last week (self-hides at 'low' / no cardio).
+    try {
+      const to = activityDayKey();
+      const from = activityDayKey(Date.now() - 6 * 24 * 60 * 60 * 1000);
+      const sessions = await getCardioLogRange(userId, from, to);
+      setCardioLoad(cardioLoadLevel(cardioRecoveryLoad(sessions)));
+    } catch (_) { setCardioLoad('low'); }
 
     if (tier === 'pro') {
       try {
@@ -190,6 +203,14 @@ export default function ReadinessCards({ userId, tier }) {
             <RecoveryGauge label="Joint comfort" value={recovery.joint} invertGood />
           </View>
           <Text style={styles.recoveryNote}>Scale 1-5 · Lower is better for soreness & fatigue</Text>
+          {cardioLoad === 'high' && (
+            <View style={styles.cardioLoadNote}>
+              <Ionicons name="heart-outline" size={13} color={colors.warning} />
+              <Text style={styles.cardioLoadText}>
+                Your cardio is adding to your fatigue this week. Keep it low-impact, or trim a session.
+              </Text>
+            </View>
+          )}
 
           {tier === 'pro' && freshnessEntries.length > 0 && (
             <>
@@ -292,6 +313,12 @@ const styles = StyleSheet.create({
   gaugeLabel: { fontSize: fontSize.micro, color: colors.textMuted, textAlign: 'center' },
   gaugeScale: { fontSize: fontSize.micro, color: colors.textMuted, textAlign: 'center' },
   recoveryNote: { fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'center' },
+  cardioLoadNote: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
+    marginTop: spacing.sm, paddingTop: spacing.sm,
+    borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  cardioLoadText: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 16 },
 
   trendInsightCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,

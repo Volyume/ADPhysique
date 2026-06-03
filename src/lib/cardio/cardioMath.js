@@ -86,3 +86,45 @@ const FATIGUE_BY_IMPACT = { low: 0.3, moderate: 0.7, high: 1.2 };
 export function cardioFatigueContribution(recoveryImpact) {
   return FATIGUE_BY_IMPACT[recoveryImpact] ?? FATIGUE_BY_IMPACT.moderate;
 }
+
+// Cardio fatigue dissipates faster than lifting soreness, so a shorter
+// half-life than the recovery EMA's 7 days.
+const CARDIO_LOAD_HALF_LIFE_DAYS = 3;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Accumulated cardio fatigue load: a time-decayed SUM (not an average) of each
+ * recent session's fatigue contribution. This is the right shape for the
+ * recovery model: cardio ADDS fatigue on top of the lifting baseline, so we sum
+ * decayed contributions rather than averaging them into the 1-5 fatigue EMA
+ * (which would wrongly dilute it). Returns a non-negative number; 0 when no
+ * sessions. Pure.
+ *
+ *   sessions: [{ recoveryImpact|recovery_impact, at|created_at|entry_date }]
+ */
+export function cardioRecoveryLoad(sessions, now = Date.now(), halfLifeDays = CARDIO_LOAD_HALF_LIFE_DAYS) {
+  const list = Array.isArray(sessions) ? sessions : [];
+  let load = 0;
+  for (const s of list) {
+    const impact = s?.recoveryImpact ?? s?.recovery_impact;
+    let at = s?.at ?? s?.createdAt ?? s?.created_at ?? null;
+    if (at == null && (s?.entryDate ?? s?.entry_date)) {
+      at = Date.parse(s.entryDate ?? s.entry_date) || null;
+    }
+    if (at == null) continue;
+    const ageDays = Math.max(0, (now - Number(at)) / DAY_MS);
+    const weight = Math.pow(0.5, ageDays / halfLifeDays);
+    load += weight * cardioFatigueContribution(impact);
+  }
+  return load;
+}
+
+// Banding for the load so the UI/coach can speak about it plainly. Thresholds
+// are in "decayed sessions" units (a single hard session contributes ~1.2,
+// an easy one ~0.3): roughly two-plus recent hard sessions reads as high.
+export function cardioLoadLevel(load) {
+  const l = Number(load) || 0;
+  if (l >= 2.4) return 'high';
+  if (l >= 1.2) return 'moderate';
+  return 'low';
+}

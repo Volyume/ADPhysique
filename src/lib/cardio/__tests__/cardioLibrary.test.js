@@ -8,7 +8,7 @@ import {
 } from '../cardioActivities';
 import {
   metFor, estimateCardioKcal, estimateActivityKcal, deriveCardioMetadata,
-  cardioFatigueContribution,
+  cardioFatigueContribution, cardioRecoveryLoad, cardioLoadLevel,
 } from '../cardioMath';
 
 describe('cardio library integrity', () => {
@@ -111,5 +111,44 @@ describe('derived metadata + recovery contribution', () => {
     expect(cardioFatigueContribution('low')).toBeLessThan(cardioFatigueContribution('moderate'));
     expect(cardioFatigueContribution('moderate')).toBeLessThan(cardioFatigueContribution('high'));
     expect(cardioFatigueContribution('bogus')).toBe(cardioFatigueContribution('moderate'));
+  });
+});
+
+describe('cardio recovery load (additive, not averaged)', () => {
+  const now = Date.UTC(2026, 5, 10);
+  const day = 24 * 60 * 60 * 1000;
+
+  test('empty / non-array is zero', () => {
+    expect(cardioRecoveryLoad(null, now)).toBe(0);
+    expect(cardioRecoveryLoad([], now)).toBe(0);
+  });
+
+  test('sums decayed contributions, so more hard sessions = more load', () => {
+    const one = cardioRecoveryLoad([{ recovery_impact: 'high', at: now }], now);
+    const three = cardioRecoveryLoad([
+      { recovery_impact: 'high', at: now },
+      { recovery_impact: 'high', at: now },
+      { recovery_impact: 'high', at: now },
+    ], now);
+    expect(three).toBeGreaterThan(one);
+    // A fresh hard session contributes its full ~1.2 (weight 1 at age 0).
+    expect(one).toBeCloseTo(1.2, 5);
+  });
+
+  test('older sessions decay (half-life ~3 days)', () => {
+    const fresh = cardioRecoveryLoad([{ recovery_impact: 'high', at: now }], now);
+    const old = cardioRecoveryLoad([{ recovery_impact: 'high', at: now - 3 * day }], now);
+    expect(old).toBeCloseTo(fresh / 2, 2);
+  });
+
+  test('reads entry_date when no timestamp is present', () => {
+    const load = cardioRecoveryLoad([{ recovery_impact: 'moderate', entry_date: '2026-06-10' }], now);
+    expect(load).toBeGreaterThan(0);
+  });
+
+  test('load level bands', () => {
+    expect(cardioLoadLevel(0.4)).toBe('low');
+    expect(cardioLoadLevel(1.5)).toBe('moderate');
+    expect(cardioLoadLevel(2.6)).toBe('high');
   });
 });
