@@ -55,6 +55,17 @@ export default function LoginScreen({ navigation, route }) {
       toast.show('Enter your email and password', { variant: 'warning' });
       return;
     }
+    // AUTH-6 (V1): validate before the network call so the user gets inline
+    // guidance instead of a raw Supabase error. The same 8-char minimum the
+    // Pro signup screen enforces, on the primary signup path too.
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) {
+      toast.show('Enter a valid email address', { variant: 'warning' });
+      return;
+    }
+    if (mode === 'signup' && password.length < 8) {
+      toast.show('Password must be at least 8 characters', { variant: 'warning' });
+      return;
+    }
     audit(mode === 'signup' ? 'auth.signup.attempt' : 'auth.signin.attempt', {
       method: 'email',
     });
@@ -70,12 +81,19 @@ export default function LoginScreen({ navigation, route }) {
         // unknown-email, we can't disambiguate, so the prompt is
         // permissive: the user knows which they meant.
         const msg = (error.message || '').toLowerCase();
-        const looksUnregistered = mode === 'signin' && (
-          msg.includes('invalid login') ||
-          msg.includes('invalid credentials') ||
-          msg.includes('user not found') ||
-          msg.includes('email not confirmed') === false && msg.includes('invalid')
-        );
+        // AUTH-6 (V3): explicit precedence. Treat as "unregistered" only on a
+        // sign-in whose error looks like an unknown account AND is NOT the
+        // distinct "email not confirmed" case (which needs confirmation, not a
+        // new account). The old form relied on === / && / || precedence and
+        // read ambiguously.
+        const looksUnregistered = mode === 'signin'
+          && !msg.includes('email not confirmed')
+          && (
+            msg.includes('invalid login')
+            || msg.includes('invalid credentials')
+            || msg.includes('user not found')
+            || msg.includes('invalid')
+          );
         if (looksUnregistered) {
           Alert.alert(
             'No account found',

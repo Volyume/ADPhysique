@@ -92,6 +92,13 @@ import { withProGuard } from '../components/ProGate';
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
+// AUTH-4 (I2): supabase fires SIGNED_IN and INITIAL_SESSION for the same
+// session on one launch (and rapid sign-out/sign-in produces repeats). The
+// run-lock already dedupes the syncAll, but the rest of the enter pipeline
+// (cloud restore, tier refresh, cross-user wipe) needn't run twice. Track the
+// last enter so a repeat for the same uid within a short window is skipped.
+let _lastAuthEnter = { uid: null, at: 0 };
+
 // Pro-only screens. The guard renders an upgrade prompt for free users,
 // enforcing Pro access no matter how the route is reached.
 const GatedWeeklyCheckIn    = withProGuard(WeeklyCheckInScreen, 'Weekly check-in');
@@ -693,6 +700,14 @@ export default function RootNavigator() {
             } catch (_) {}
           }
           if (isAuthEnter) {
+            // AUTH-4: skip a duplicate enter for the same uid fired moments ago
+            // (SIGNED_IN + INITIAL_SESSION on one launch). 3s window.
+            const _enterUid = session.user.id;
+            const _enterNow = Date.now();
+            if (_lastAuthEnter.uid === _enterUid && (_enterNow - _lastAuthEnter.at) < 3000) {
+              return;
+            }
+            _lastAuthEnter = { uid: _enterUid, at: _enterNow };
             // Optimistic sign-in: kick off the cloud restore but DON'T
             // await it. restoreSessionFromCloud makes its routing
             // decision synchronously at the top (per-uid cache OR

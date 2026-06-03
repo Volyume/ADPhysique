@@ -234,7 +234,7 @@ const useAppStore = create((set, get) => ({
   // Returns:
   //   { ok: true }                    sign-out succeeded, local wiped
   //   { ok: false, reason: 'unsynced' }   push failed, sign-out aborted
-  clearAuthStateForSignOut: async () => {
+  clearAuthStateForSignOut: async ({ force = false } = {}) => {
     // eslint-disable-next-line global-require
     const log = require('../lib/errorLog');
     const prevUid = get().user?.id ?? null;
@@ -296,42 +296,46 @@ const useAppStore = create((set, get) => ({
         // table, drained separately with a retry cap, and is covered by the
         // full push + errored_count above. Caller shows a "couldn't sign out,
         // try again on a stronger connection" toast.
-        if (res?.status === 'error' || res?.status === 'skipped' || (res?.errored_count ?? 0) > 0) {
+        // AUTH-5: unless the caller forced it (the "sign out anyway" escape
+        // hatch), abort when we can't prove the push reached cloud, so the user
+        // doesn't silently lose unsynced edits. force=true means the user was
+        // shown the risk and chose to proceed.
+        if (!force && (res?.status === 'error' || res?.status === 'skipped' || (res?.errored_count ?? 0) > 0)) {
           log.logWarn('clearAuthStateForSignOut.pushFirstFailed',
             'sign-out aborted: push did not complete cleanly, keeping user signed in',
             { prevUid, status: res?.status, erroredCount: res?.errored_count ?? null });
           return { ok: false, reason: 'unsynced' };
         }
-        // SYNC-3: the guard passed, so we're committed to wiping. Raise the
-        // wipe guard NOW, before the flushPendingTelemetry await below, so a
-        // lifecycle sync trigger (foreground/network/periodic) can't acquire
-        // the freed run-lock during that await and pull cloud rows back into
-        // the DB we're about to wipe. Set after the push-first syncAll so the
-        // safety push itself was never blocked. Cleared on the next sign-in
-        // (setUser) and reset by the post-sign-out app reload.
-        try {
-          // eslint-disable-next-line global-require
-          require('../lib/sync/signOutGuard').setSignOutWiping(true);
-        } catch (_) { /* tolerate */ }
-        // SYNC-3 airtight: the flag stops NEW runs; now drain any run that was
-        // already in flight so its DB writes finish BEFORE the wipe, never
-        // after it. Bounded so a stuck run can't hang sign-out (the flag still
-        // blocks new runs regardless).
-        try {
-          // eslint-disable-next-line global-require
-          await require('../lib/sync/runner').whenSyncIdle({ timeoutMs: 5000 });
-        } catch (_) { /* tolerate */ }
         try { await flushPendingTelemetry(); } catch (_) {}
       } catch (e) {
-        log.logWarn('clearAuthStateForSignOut.pushFirstFailed',
-          'sign-out aborted: cloud push failed, keeping user signed in',
-          { prevUid, error: e?.message });
-        return { ok: false, reason: 'unsynced' };
+        if (!force) {
+          log.logWarn('clearAuthStateForSignOut.pushFirstFailed',
+            'sign-out aborted: cloud push failed, keeping user signed in',
+            { prevUid, error: e?.message });
+          return { ok: false, reason: 'unsynced' };
+        }
+        log.logWarn('clearAuthStateForSignOut.forcedDespitePushError',
+          'forced sign-out proceeding despite push error', { prevUid, error: e?.message });
       }
     }
 
-    // (SYNC-3 wipe guard was raised above, right after the push-first guard
-    // passed, so it already covers the flushPendingTelemetry await.)
+    // SYNC-3: we're now committed to wiping (the push-first guard passed, or the
+    // user forced it). Raise the wipe guard so a lifecycle sync trigger can't
+    // acquire the run-lock and pull cloud rows back into the DB we're about to
+    // wipe, then drain any in-flight run so its writes land BEFORE the wipe.
+    // Bounded so a stuck run can't hang sign-out. Runs for both the normal and
+    // forced paths (and harmlessly for local users, who don't sync). Cleared on
+    // the next sign-in (setUser) / post-sign-out reload.
+    if (prevUid && !get().user?.isLocal) {
+      try {
+        // eslint-disable-next-line global-require
+        require('../lib/sync/signOutGuard').setSignOutWiping(true);
+      } catch (_) { /* tolerate */ }
+      try {
+        // eslint-disable-next-line global-require
+        await require('../lib/sync/runner').whenSyncIdle({ timeoutMs: 5000 });
+      } catch (_) { /* tolerate */ }
+    }
 
     // Remove THIS device's push-token row so the server stops pushing
     // to it after sign-out. Runs before AsyncStorage.clear() because it
@@ -539,6 +543,16 @@ const useAppStore = create((set, get) => ({
     const log = require('../lib/errorLog');
     log.logInfo('restoreSessionFromCloud.start', `uid=${supabaseUserId}`, { uid: supabaseUserId });
 
+    // AUTH-2 (I5): this runs async with cloud reads up to 10s. On a fast
+    // sign-out -> sign-in-as-B, a late-resolving restore for user A must NOT
+    // write A's firstRun/profile/tier over user B. Bail if a DIFFERENT user is
+    // now signed in (a null user.id means sign-in hasn't set it yet — proceed).
+    const staleUid = () => {
+      const cur = get().user?.id;
+      return !!cur && cur !== supabaseUserId;
+    };
+    if (staleUid()) return;
+
     // Beta tier policy, every cloud-authenticated user is Pro during beta.
     // eslint-disable-next-line global-require
     const { PRO_BETA_ACTIVE } = require('../lib/proGate');
@@ -634,6 +648,9 @@ const useAppStore = create((set, get) => ({
       return; // optimistic decision sticks
     }
 
+    // AUTH-2: a different user may have signed in during the cloud read above.
+    if (staleUid()) return;
+
     if (!cloudData) {
       // Read succeeded (a throw/timeout returned at the catch above) but no
       // profile row exists, so this user has never finished onboarding. If we
@@ -671,6 +688,9 @@ const useAppStore = create((set, get) => ({
       };
       try { await AsyncStorage.setItem(PROFILE_KEY_PFX + supabaseUserId, JSON.stringify(profile)); } catch (_) {}
       const hydratedTimestamps = await _hydrateProfileTimestamps(supabaseUserId);
+      // AUTH-2: don't write user A's profile if user B signed in during the
+      // awaits above.
+      if (staleUid()) return;
       set({
         userProfile: profile,
         units: profile.units,

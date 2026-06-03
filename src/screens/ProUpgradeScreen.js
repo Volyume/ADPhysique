@@ -22,7 +22,7 @@ const PRO_PERKS = [
 export default function ProUpgradeScreen({ navigation }) {
   const toast = useToast();
   const {
-    user, session, userProfile, tier, setTier, refreshTierFromCloud, resetFirstRun,
+    user, session, userProfile, tier, setTier, refreshTierFromCloud, resetFirstRun, firstRunComplete,
   } = useAppStore();
 
   const hasAccount = Boolean(session?.user?.id) && !user?.isLocal;
@@ -177,6 +177,11 @@ export default function ProUpgradeScreen({ navigation }) {
         }
       } catch (_) {}
     }
+    // AUTH-1: only a user who hasn't finished onboarding should be sent into
+    // the setup wizard. During beta every signed-in user resolves to Pro, so an
+    // already-onboarded user tapping a Pro lock would otherwise be bounced
+    // through resetFirstRun back into full onboarding. They just get "Done".
+    const needsSetup = !firstRunComplete;
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.successWrap}>
@@ -185,16 +190,24 @@ export default function ProUpgradeScreen({ navigation }) {
           </View>
           <Text style={styles.successTitle}>You're Pro.</Text>
           <Text style={styles.successBody}>
-            Everything's unlocked and your data is backed up. Now let's set up your training plan and nutrition targets so your coach can get to work.
+            {needsSetup
+              ? "Everything's unlocked and your data is backed up. Now let's set up your training plan and nutrition targets so your coach can get to work."
+              : "Everything's unlocked and your data is backed up."}
           </Text>
-          <Button title="Set up your training" icon="sparkles" size="lg" onPress={startSetup} />
-          <TouchableOpacity
-            style={styles.secondaryLink}
-            onPress={() => navigation.goBack()}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Text style={styles.secondaryLinkText}>Skip for now</Text>
-          </TouchableOpacity>
+          {needsSetup ? (
+            <>
+              <Button title="Set up your training" icon="sparkles" size="lg" onPress={startSetup} />
+              <TouchableOpacity
+                style={styles.secondaryLink}
+                onPress={() => navigation.goBack()}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.secondaryLinkText}>Skip for now</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <Button title="Done" size="lg" onPress={() => navigation.goBack()} />
+          )}
         </View>
       </SafeAreaView>
     );

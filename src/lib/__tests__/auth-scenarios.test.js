@@ -451,3 +451,46 @@ describe('Scenario: setTier with falsy value', () => {
     expect(useAppStore.getState().tier).toBeNull();
   });
 });
+
+// AUTH-2 (I5): a late-resolving restoreSessionFromCloud for user A must not
+// write over a user B who signed in meanwhile.
+describe('Scenario: restoreSessionFromCloud is uid-guarded', () => {
+  test('bails immediately when a different user is already signed in', async () => {
+    useAppStore.setState({ user: { id: 'userB' }, tier: null, userProfile: null, firstRunComplete: false });
+    await useAppStore.getState().restoreSessionFromCloud('userA');
+    // userA's restore made no writes; userB's state is intact.
+    expect(useAppStore.getState().user).toEqual({ id: 'userB' });
+  });
+});
+
+// AUTH-5 escape hatch: force=true signs out even when the push didn't complete,
+// so the user is never permanently stuck (e.g. offline, or a poison queue).
+describe('Scenario: forced sign-out (escape hatch)', () => {
+  const sync = require('../sync');
+  test('force=true wipes + clears state despite a push error', async () => {
+    sync.syncAll.mockResolvedValueOnce({ status: 'error' });
+    useAppStore.setState({
+      user: { id: 'u1' }, session: { user: { id: 'u1' } },
+      tier: 'pro', firstRunComplete: true,
+    });
+
+    const result = await useAppStore.getState().clearAuthStateForSignOut({ force: true });
+
+    expect(result?.ok).not.toBe(false); // not aborted
+    expect(useAppStore.getState().user).toBeNull();
+    expect(useAppStore.getState().tier).toBeNull();
+  });
+
+  test('without force, the same error aborts (control)', async () => {
+    sync.syncAll.mockResolvedValueOnce({ status: 'error' });
+    useAppStore.setState({
+      user: { id: 'u1' }, session: { user: { id: 'u1' } },
+      tier: 'pro', firstRunComplete: true,
+    });
+
+    const result = await useAppStore.getState().clearAuthStateForSignOut();
+
+    expect(result).toEqual({ ok: false, reason: 'unsynced' });
+    expect(useAppStore.getState().user).toEqual({ id: 'u1' });
+  });
+});

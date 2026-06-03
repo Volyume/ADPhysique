@@ -498,38 +498,60 @@ export default function SettingsScreen({ navigation }) {
           style: 'destructive',
           onPress: async () => {
             setSigningOut(true);
+            // The steps after the local wipe: cloud sign-out (after the wipe so
+            // a failed wipe doesn't strand a dead session) then reload the JS
+            // bundle (an install-on-top leaves the old bundle running until the
+            // process restarts). Best-effort; dev / Expo Go can't reload.
+            async function finishCloudSignOut() {
+              if (!user?.isLocal) {
+                // AUTH-3 (I4): retry once so a transient cloud signOut failure
+                // doesn't leave the supabase client holding a live in-memory
+                // session (which a later INITIAL_SESSION could re-enter on).
+                // The SecureStore tokens were already deleted in
+                // clearAuthStateForSignOut, so storage can't revive it either.
+                let signedOut = false;
+                for (let attempt = 0; attempt < 2 && !signedOut; attempt += 1) {
+                  try { await signOut(); signedOut = true; }
+                  catch (e) { logError('SettingsScreen.handleSignOut.cloudSignOut', e); }
+                }
+              }
+              try { await Updates.reloadAsync(); }
+              catch (_) { /* dev / Expo Go, no-op */ }
+            }
             try {
               // Push-first sign-out: wipes local SQLite only after a
               // successful cloud sync, so unsynced edits aren't lost.
               // If the push fails, sign-out is aborted and the user
-              // stays signed in.
+              // stays signed in (unless they choose "Sign out anyway").
               const result = await clearAuthStateForSignOut();
               if (result?.ok === false) {
+                // AUTH-5 escape hatch: rather than a dead-end "couldn't sign
+                // out", let the user decide. 'skipped'/'error' often means the
+                // device is offline or a background sync held the lock; the
+                // user may accept losing unsynced changes to sign out anyway.
                 Alert.alert(
-                  "Couldn't sign out",
-                  'Check your connection and try again.',
+                  'Sync incomplete',
+                  "We couldn't sync your latest changes (you might be offline). Sign out anyway? Any changes since your last successful sync may be lost.",
+                  [
+                    { text: 'Stay signed in', style: 'cancel' },
+                    {
+                      text: 'Sign out anyway',
+                      style: 'destructive',
+                      onPress: async () => {
+                        setSigningOut(true);
+                        try {
+                          await clearAuthStateForSignOut({ force: true });
+                          await finishCloudSignOut();
+                        } finally {
+                          setSigningOut(false);
+                        }
+                      },
+                    },
+                  ],
                 );
                 return;
               }
-              if (!user?.isLocal) {
-                // Cloud auth sign-out happens after the local wipe so
-                // a failed wipe doesn't strand the user with a dead
-                // session (the local state was kept above).
-                try { await signOut(); }
-                catch (e) {
-                  logError('SettingsScreen.handleSignOut.cloudSignOut', e);
-                }
-              }
-              // Reload the JS bundle. An install-on-top of a newer APK
-              // leaves the OLD bundle running in memory until the
-              // process restarts; without this, a sign-out -> sign-up
-              // cycle re-executes the old sync code against a fresh
-              // account and re-triggers whatever the fix was meant to
-              // silence. Best-effort: dev builds and Expo Go don't
-              // support reload and that's fine, the next manual launch
-              // picks up the new bundle.
-              try { await Updates.reloadAsync(); }
-              catch (_) { /* dev / Expo Go, no-op */ }
+              await finishCloudSignOut();
             } finally {
               setSigningOut(false);
             }
