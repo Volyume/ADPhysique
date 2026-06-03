@@ -1032,6 +1032,24 @@ function _isoToMs(iso) {
   return Number.isFinite(t) ? t : null;
 }
 
+// F1: last-write-wins gate for the core food appliers. Every other handler
+// (cardio_log, daily_steps, recipe_ingredients, body_composition, and the
+// daily_water / food_favourites food tables) already skips a cloud row when
+// the local copy is the same age or newer. The four core food tables applied
+// unconditionally with INSERT OR REPLACE, so a pull carrying an older server
+// version could clobber a newer local edit that had not pushed yet (offline,
+// failed push, or a cross-cycle interleave). This reads the local updated_at
+// so the apply can skip when local >= cloud. Ties keep the local row, matching
+// the >= convention used by the inline gates elsewhere. `table` is a fixed
+// literal at every call site, never user input.
+async function _localUpdatedMs(d, table, id, userId) {
+  const r = await d.getFirstAsync(
+    `SELECT updated_at FROM ${table} WHERE id = ? AND user_id = ?`,
+    [id, userId],
+  );
+  return r?.updated_at != null ? Number(r.updated_at) : null;
+}
+
 export async function applyFoodEntryFromCloud(userId, row) {
   if (!row?.id) return null;
   const d = await db();
@@ -1039,6 +1057,10 @@ export async function applyFoodEntryFromCloud(userId, row) {
   const createdAt = _isoToMs(row.created_at) ?? loggedAt;
   const updatedAt = _isoToMs(row.updated_at) ?? createdAt;
   const deletedAt = _isoToMs(row.deleted_at);
+  // F1: keep a newer/equal local edit rather than overwriting it with an
+  // older cloud row. Returns null so the caller does not recompute the rollup.
+  const localMs = await _localUpdatedMs(d, 'food_entries', row.id, userId);
+  if (localMs != null && localMs >= updatedAt) return null;
   // TZ-1: derive entry_date from logged_at (LOCAL day) rather than trusting the
   // cloud value, which may be a UTC-day key from old data or the frozen AAB.
   // This makes every pulled row land on the user's calendar day on apply, so a
@@ -1068,6 +1090,9 @@ export async function applyCustomFoodFromCloud(userId, row) {
   const createdAt = _isoToMs(row.created_at) ?? Date.now();
   const updatedAt = _isoToMs(row.updated_at) ?? createdAt;
   const deletedAt = _isoToMs(row.deleted_at);
+  // F1: keep a newer/equal local edit rather than overwriting it.
+  const localMs = await _localUpdatedMs(d, 'custom_foods', row.id, userId);
+  if (localMs != null && localMs >= updatedAt) return;
   await d.runAsync(
     `INSERT OR REPLACE INTO custom_foods (
       id, user_id, name, brand, serving_g, serving_label,
@@ -1096,6 +1121,9 @@ export async function applySavedMealFromCloud(userId, row) {
   const itemsJson = typeof row.items_json === 'string'
     ? row.items_json
     : JSON.stringify(row.items_json ?? []);
+  // F1: keep a newer/equal local edit rather than overwriting it.
+  const localMs = await _localUpdatedMs(d, 'saved_meals', row.id, userId);
+  if (localMs != null && localMs >= updatedAt) return;
   await d.runAsync(
     `INSERT OR REPLACE INTO saved_meals (
       id, user_id, name, items_json, deleted_at, created_at, updated_at
@@ -1110,6 +1138,9 @@ export async function applyRecipeFromCloud(userId, row) {
   const createdAt = _isoToMs(row.created_at) ?? Date.now();
   const updatedAt = _isoToMs(row.updated_at) ?? createdAt;
   const deletedAt = _isoToMs(row.deleted_at);
+  // F1: keep a newer/equal local edit rather than overwriting it.
+  const localMs = await _localUpdatedMs(d, 'recipes', row.id, userId);
+  if (localMs != null && localMs >= updatedAt) return;
   await d.runAsync(
     `INSERT OR REPLACE INTO recipes (
       id, user_id, name, total_servings, notes,

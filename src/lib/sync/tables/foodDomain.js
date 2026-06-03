@@ -326,21 +326,33 @@ async function _doPullAll(sb, { userId }) {
   const food = require('../../food/db');
 
   const counts = { ...EMPTY_COUNTS };
+  const errorsByTable = {};
   const datesToRecompute = new Set();
+  let anyFailed = false;
 
+  // F2: count per-row apply failures instead of swallowing them. A failed row
+  // must (a) be visible to the runner so the push-first sign-out guard refuses
+  // to wipe, and (b) keep the watermark where it is so the row re-pulls next
+  // cycle. The old code logged the error, returned errors:0, and advanced the
+  // watermark regardless, so a row that failed to apply was skipped past
+  // permanently and the failure was invisible.
   const applyGroup = async (table, applyFn, perRowSideEffect) => {
     const g = changes[table] ?? { created: [], updated: [], deleted: [] };
     const all = [...(g.created ?? []), ...(g.updated ?? []), ...(g.deleted ?? [])];
     let n = 0;
+    let failed = 0;
     for (const row of all) {
       try {
         const result = await applyFn(userId, row);
         if (perRowSideEffect) perRowSideEffect(row, result);
         n += 1;
       } catch (e) {
+        failed += 1;
         logSyncError(`sync.tables.foodDomain.pull.${table}`, e);
       }
     }
+    errorsByTable[table] = failed;
+    if (failed) anyFailed = true;
     return n;
   };
 
@@ -365,12 +377,19 @@ async function _doPullAll(sb, { userId }) {
   // dates we recomputed locally is the best proxy.
   counts.daily_intake_rollups = datesToRecompute.size;
 
-  const ts = data?.timestamp ?? new Date().toISOString();
-  const tsMs = Date.parse(ts);
-  if (Number.isFinite(tsMs)) {
-    try { await AsyncStorage.setItem(key, String(tsMs)); } catch (_) { /* tolerate */ }
+  // F2: advance the watermark only when every row applied, mirroring the push
+  // side (advance only when every non-empty table succeeded). On any failure
+  // we leave it so the failed rows re-pull next cycle; the applies are
+  // INSERT OR REPLACE under the F1 last-write-wins gate, so re-pulling already
+  // applied rows is idempotent.
+  if (!anyFailed) {
+    const ts = data?.timestamp ?? new Date().toISOString();
+    const tsMs = Date.parse(ts);
+    if (Number.isFinite(tsMs)) {
+      try { await AsyncStorage.setItem(key, String(tsMs)); } catch (_) { /* tolerate */ }
+    }
   }
-  return { counts, errors: 0 };
+  return { counts, errorsByTable, errors: anyFailed ? 1 : 0 };
 }
 
 /**
@@ -419,7 +438,10 @@ export function foodPullFor(tableName) {
       }
       return {
         count: _pullResult.counts[tableName] ?? 0,
-        errors: _pullResult.errors,
+        // This table's own apply failures, so one table's failure no longer
+        // reports as an error for every other food table (mirrors the push
+        // side's per-table errorsByTable).
+        errors: _pullResult.errorsByTable?.[tableName] ?? 0,
       };
     } catch (e) {
       logSyncError(`sync.tables.foodDomain.pull.${tableName}`, e);

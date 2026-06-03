@@ -95,6 +95,34 @@ describe('applyFoodEntryFromCloud', () => {
     expect(out).toBeNull();
     expect(writes).toHaveLength(0);
   });
+
+  test('F1: skips the write when the local row is the same age or newer (last-write-wins)', async () => {
+    const { applyFoodEntryFromCloud } = require('../food/db');
+    // Local copy was edited at 10:00 and has not pushed yet; the cloud delta
+    // carries an older 09:00 version. Applying it would clobber the local edit.
+    mockGetFirstAsync.mockResolvedValueOnce({ updated_at: Date.parse('2026-05-23T10:00:00Z') });
+    const out = await applyFoodEntryFromCloud(UID, {
+      id: 'fe-1', entry_date: '2026-05-23', meal_slot: 'breakfast', food_ref: 'global:abc',
+      quantity_g: 150, kcal: 220, protein_g: 8, carbs_g: 40, fat_g: 4, fibre_g: 3,
+      logged_at: '2026-05-23T08:00:00Z', created_at: '2026-05-23T08:00:00Z',
+      updated_at: '2026-05-23T09:00:00Z', deleted_at: null,
+    });
+    expect(out).toBeNull();
+    expect(writes).toHaveLength(0);
+  });
+
+  test('F1: applies when the cloud row is newer than the local copy', async () => {
+    const { applyFoodEntryFromCloud } = require('../food/db');
+    mockGetFirstAsync.mockResolvedValueOnce({ updated_at: Date.parse('2026-05-23T08:00:00Z') });
+    const out = await applyFoodEntryFromCloud(UID, {
+      id: 'fe-1', entry_date: '2026-05-23', meal_slot: 'breakfast', food_ref: 'global:abc',
+      quantity_g: 150, kcal: 220, protein_g: 8, carbs_g: 40, fat_g: 4, fibre_g: 3,
+      logged_at: '2026-05-23T08:00:00Z', created_at: '2026-05-23T08:00:00Z',
+      updated_at: '2026-05-23T09:00:00Z', deleted_at: null,
+    });
+    expect(out).toBe('2026-05-23');
+    expect(writes).toHaveLength(1);
+  });
 });
 
 describe('applyCustomFoodFromCloud', () => {
