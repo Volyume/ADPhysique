@@ -3,9 +3,9 @@
  *
  * Root of the You tab. Profile + account + the personal coaching and
  * preference shortcuts. The progress/recovery dashboard content now
- * lives inline on the Progress tab and the coaching Engine Log on the
- * Strategic journal; this screen is the place you manage yourself, your
- * plan and your settings.
+ * lives inline on the Progress tab and the coaching decision history
+ * now sits inside Precision Coaching; this screen is the place you
+ * manage yourself, your plan and your settings.
  *
  * Voice rules: CLAUDE.md + COACHING_VOICE_SYNTHESIS_LOCKED. No em dashes.
  */
@@ -116,7 +116,7 @@ export default function YouScreen({ navigation }) {
             <NavRow
               icon="sparkles-outline"
               label="Precision Coaching"
-              sub="Read what the coach changed, and why, after your check-in."
+              sub="Read what the coach changed, and why, after your check-in. Your full decision history sits here too."
               onPress={() => navigation.navigate('CoachOutput')}
             />
             <NavRow
@@ -136,12 +136,6 @@ export default function YouScreen({ navigation }) {
               label="Body metrics"
               sub="Weight trend and measurements"
               onPress={() => navigation.navigate('BodyMetrics')}
-            />
-            <NavRow
-              icon="pause-circle-outline"
-              label="Strategic journal"
-              sub="Every coaching decision, and why"
-              onPress={() => navigation.navigate('CoachHeldHistory')}
             />
             <NavRow
               icon="shield-checkmark-outline"

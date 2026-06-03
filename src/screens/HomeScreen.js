@@ -9,7 +9,6 @@ import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type } from '../styles/theme';
-import AnimatedEntrance from '../components/AnimatedEntrance';
 import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
 import { VolyumeIcon } from '../components/BrandMark';
 import ScreenHeader from '../components/ScreenHeader';
@@ -1309,26 +1308,8 @@ export default function HomeScreen({ navigation }) {
           </View>
         )}
 
-        {/* ── Quick nav ── */}
-        <AnimatedEntrance index={2}>
-        <View style={styles.quickRow}>
-          <QuickLink
-            icon="time-outline"
-            label="History"
-            onPress={() => navigation.navigate('WorkoutHistory')}
-          />
-          <QuickLink
-            icon="trophy-outline"
-            label="Lifts"
-            onPress={() => navigation.navigate('ProgressTab', { screen: 'LiftProgress', initial: false })}
-          />
-          <QuickLink
-            icon="grid-outline"
-            label="Volume"
-            onPress={() => navigation.navigate('VolumeHeatmap')}
-          />
-        </View>
-        </AnimatedEntrance>
+        {/* History / Lifts / Volume quick links removed from Train (founder
+            2026-06-03): they are Progress items and live on the Progress tab. */}
       </ScrollView>
 
       {/* Change Workout Sheet */}
@@ -1552,15 +1533,6 @@ function PlanBuilderCard({ icon, title, desc, badge, onPress }) {
       </View>
       <Ionicons name="chevron-forward" size={15} color={colors.textMuted} />
     </PressableCard>
-  );
-}
-
-function QuickLink({ icon, label, onPress }) {
-  return (
-    <TouchableOpacity style={styles.quickLink} onPress={onPress}>
-      <Ionicons name={icon} size={20} color={colors.primary} />
-      <Text style={styles.quickLinkLabel}>{label}</Text>
-    </TouchableOpacity>
   );
 }
 

@@ -102,7 +102,7 @@ export default function CoachHeldHistoryScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <BackHeader title="Strategic journal" />
+      <BackHeader title="Coaching history" />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.intro}>

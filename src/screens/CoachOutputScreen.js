@@ -524,7 +524,7 @@ function ConfidencePill({ confidence }) {
   );
 }
 
-function HeldDecisionsCard({ decisions, history }) {
+function HeldDecisionsCard({ decisions, history, onSeeAll }) {
   if (!decisions || decisions.length === 0) return null;
   const edLockout = decisions.find(d => d.type === 'ed_pattern_lockout');
   const edCleared = decisions.find(d => d.type === 'ed_pattern_cleared');
@@ -582,6 +582,17 @@ function HeldDecisionsCard({ decisions, history }) {
           </Text>
         </View>
       )}
+      {onSeeAll ? (
+        <TouchableOpacity
+          style={styles.heldSeeAll}
+          onPress={onSeeAll}
+          accessibilityRole="button"
+          accessibilityLabel="See all coaching decisions"
+        >
+          <Text style={styles.heldSeeAllText}>See all weeks</Text>
+          <Ionicons name="chevron-forward" size={15} color={colors.primary} />
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -1469,7 +1480,11 @@ export default function CoachOutputScreen({ navigation, route }) {
 
         {/* Recent decisions, quieter, at the bottom */}
         {heldDecisions && heldDecisions.length > 0 && (
-          <HeldDecisionsCard decisions={heldDecisions} history={coachHistory} />
+          <HeldDecisionsCard
+            decisions={heldDecisions}
+            history={coachHistory}
+            onSeeAll={() => navigation.navigate('CoachHeldHistory')}
+          />
         )}
 
         {/* Move #4 differential paywall, only renders for free-tier
@@ -2104,6 +2119,19 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontStyle: 'italic',
     lineHeight: 18,
+  },
+  heldSeeAll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xxs,
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  heldSeeAllText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
   },
 
   // Confidence pill (medium/low/data_hold only, hidden at high)
