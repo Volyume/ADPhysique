@@ -317,3 +317,13 @@ approval to proceed.
   fixes guarantee the problem returns.
 - Don't commit the model identifier in any artifact pushed to the
   repo (commit messages, PR titles, code comments).
+- **Locale and timezone are UK, always (locked 2026-06-04 by founder,
+  stated repeatedly).** The founder and the user base are in the United
+  Kingdom: UTC+0 in winter, UTC+1 (BST) from late March to late October.
+  Every date or time the user sees must bucket and display by their local
+  calendar day, never UTC. A date built at local midnight then read back
+  with `getUTCDay`/`getUTCDate`/`toISOString` shows the day before during
+  BST, which is the class of bug behind sessions landing on the wrong day.
+  Use the local helpers in `src/lib/dayKey.js` (`localDayKey`,
+  `parseLocalDay`) for day-keys, and local `getDay`/date-fns `format` for
+  display. British English everywhere (see Voice and copy).
