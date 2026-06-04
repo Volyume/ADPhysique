@@ -73,10 +73,9 @@ test mock.
 
 Now **batched** (founder direction, from item 47) to speed the pass: ~5 screens
 per consolidated proposal + one approval + per-screen commits + full mount sweep.
-Next is **Batch 2 = items 52–56**: ImportScreen, PrivacyPolicyScreen,
-SubscriptionPolicyScreen, SubscriptionScreen, CascadeGateScreen. Then Batch 3 =
-57–64 (PaywallScreen, ProUpgradeScreen ⤴, CreditsScreen, DebugLogScreen, and any
-remaining). Master list: `deep-audit-01-master-inventory.md`.
+Next is **Batch 3 = items 57–64**: PaywallScreen, ProUpgradeScreen ⤴,
+CreditsScreen, DebugLogScreen, and any remaining inventory screens. Master list:
+`deep-audit-01-master-inventory.md`.
 
 ### Carry-over flag (Body Metrics, item 38)
 - `BodyMetricsScreen` stores entry `loggedAt` via `new Date(metric_date)`
