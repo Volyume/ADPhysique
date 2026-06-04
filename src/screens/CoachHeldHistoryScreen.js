@@ -136,11 +136,16 @@ export default function CoachHeldHistoryScreen() {
           const rows = buildDecisionRows(week);
           return (
             <View key={week.weekStart ?? wi} style={styles.weekBlock}>
-              <Text style={styles.weekLabel}>
+              <Text style={styles.weekLabel} accessibilityRole="header">
                 Week of {formatWeekStart(week.weekStart)}
               </Text>
               {rows.map((row, ri) => (
-                <View key={ri} style={styles.decisionRow}>
+                <View
+                  key={ri}
+                  style={styles.decisionRow}
+                  accessible
+                  accessibilityLabel={row.label ? `${row.label}. ${row.detail}` : `Held. ${row.detail}`}
+                >
                   <Ionicons
                     name={row.icon}
                     size={15}
@@ -188,13 +193,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textMuted,
     lineHeight: 20,
-  },
-
-  emptyText: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-    textAlign: 'center',
-    paddingTop: spacing.xl,
   },
 
   emptyCard: {
