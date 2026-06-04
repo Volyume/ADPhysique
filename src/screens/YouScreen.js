@@ -142,7 +142,7 @@ export default function YouScreen({ navigation }) {
             <NavRow
               icon="shield-checkmark-outline"
               label="Goal lock"
-              sub="Tell Volyume whether you have prior experience with aggressive cuts. Affects how soon the safety check holds further deficit."
+              sub="Tell Volyume whether you've run aggressive cuts before. It changes how soon the safety check steps in."
               onPress={() => navigation.navigate('GoalLockConsent', { editMode: true })}
             />
           </View>
@@ -155,7 +155,7 @@ export default function YouScreen({ navigation }) {
             <NavRow
               icon="heart-outline"
               label="Wellbeing check"
-              sub="Update your health screening answers. Shapes how your Precision Coaching is applied."
+              sub="Update your health screening answers. This shapes how your coaching is applied."
               onPress={() => navigation.navigate('WellbeingCheck')}
             />
           )}

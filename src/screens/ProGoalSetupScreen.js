@@ -308,7 +308,7 @@ export default function ProGoalSetupScreen({ navigation }) {
             muscles their category is judged on. */}
         <Text style={styles.sectionLabel}>Competing in a category? (optional)</Text>
         <Text style={styles.sectionSub}>
-          Only matters if you're chasing a competitive physique. Biases plan volume toward the muscles that category is judged on.
+          Only matters if you're chasing a competitive physique. It biases your plan toward the muscles that category is judged on.
         </Text>
 
         <Dropdown
@@ -365,7 +365,7 @@ export default function ProGoalSetupScreen({ navigation }) {
         {/* ── Training experience ── */}
         <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Experience</Text>
         <Text style={styles.sectionSub}>
-          Sets starting volume and exercise selection. You can change this when your training maturity moves.
+          This sets your starting volume and exercise selection. Change it as you get more experience.
         </Text>
         <Dropdown
           value={experience}
@@ -409,7 +409,7 @@ export default function ProGoalSetupScreen({ navigation }) {
         {/* ── Recovery ── */}
         <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Recovery</Text>
         <Text style={styles.sectionSub}>
-          How well you're recovering between sessions. Influences how aggressively the coach progresses you.
+          How well you're recovering between sessions. This sets how hard the coach pushes your progress.
         </Text>
         <Dropdown
           value={recoveryRating}

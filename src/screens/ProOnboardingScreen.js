@@ -987,7 +987,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 (balanced volume) for everyone else. */}
             <Dropdown
               label="Competing in a category? (optional)"
-              hint="Only if you're chasing a competitive physique. Biases volume toward the muscles that category is judged on."
+              hint="Only if you're chasing a competitive physique. It biases your plan toward the muscles that category is judged on."
               value={trainingGoal}
               options={goalOptions}
               onChange={changeGoal}
