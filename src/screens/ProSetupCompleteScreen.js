@@ -294,25 +294,6 @@ export default function ProSetupCompleteScreen({ navigation }) {
             </View>
           </View>
 
-          {/* Founder note, appears once at the end of Pro setup. Per the
-              competitive-landscape research, visible founder attention is
-              one of the cheapest credibility signals in this category
-              (Gravitus, RepCount both get praised for it). Sits above the
-              Start button so it's the last thing the user reads before
-              entering the app. */}
-          <View style={styles.founderCard}>
-            <Text style={styles.founderLabel}>A NOTE FROM ALLAN</Text>
-            <Text style={styles.founderBody}>
-              I used a paper log book for years. It worked but it was slow, and it was hard to see real progress without flipping through pages.
-            </Text>
-            <Text style={styles.founderBody}>
-              I tried other apps too. None of them quite fit how I wanted to train. And a good coach can be brilliant, but it's not always an option for everyone. It can be expensive, hard to find, or just not the right fit at the time.
-            </Text>
-            <Text style={styles.founderBody}>
-              I wanted something simple that helps you know what to do, see your progress, and keep getting better. So I built it for me. I hope it works for you too.
-            </Text>
-            <Text style={styles.founderSig}>Allan</Text>
-          </View>
         </Animated.View>
 
         <Animated.View style={{ opacity }}>
@@ -432,30 +413,6 @@ const styles = StyleSheet.create({
   whyPlanItem: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   whyPlanBullet: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary, marginTop: 7 },
   whyPlanText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
-
-  // Founder note card, sits at the bottom of Pro setup. Distinct visual
-  // language from the routine cards above so it reads as personal rather
-  // than UI: no icon header, subdued background, accent-coloured signature.
-  founderCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.border,
-    marginTop: spacing.md,
-    gap: spacing.sm,
-  },
-  founderLabel: {
-    fontSize: fontSize.micro, fontWeight: fontWeight.black,
-    color: colors.textMuted, letterSpacing: 1.5,
-    marginBottom: spacing.xs,
-  },
-  founderBody: {
-    fontSize: fontSize.sm, color: colors.textSecondary,
-    lineHeight: 21,
-  },
-  founderSig: {
-    ...type.bodyStrong,
-    color: colors.primary, marginTop: spacing.xs,
-  },
 
   startBtn: { marginTop: spacing.md },
 });

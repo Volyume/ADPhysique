@@ -58,16 +58,6 @@ export default function WelcomeScreen({ navigation }) {
           <Text style={styles.tagline}>Less thinking. More lifting.</Text>
         </Animated.View>
 
-        <Animated.View style={[styles.disqualifier, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
-          <Text style={styles.disqualifierTitle}>Who Volyume is for</Text>
-          <Text style={styles.disqualifierBody}>
-            Lifters who want a coach reading their weight, food, energy, and training together, then adjusting each week. The Free tier is a clean logbook. Pro is the weekly read.
-          </Text>
-          <Text style={styles.disqualifierBody}>
-            Volyume is built for a few weeks of consistent data: that is when the weekly read earns its place. If you only want a quick tap-to-log or a standalone calorie counter, it is more than you need.
-          </Text>
-        </Animated.View>
-
         <Animated.View style={[styles.cards, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
 
           {/* Pro card, top, prominent */}
@@ -178,25 +168,6 @@ const styles = StyleSheet.create({
     letterSpacing: 5, marginTop: spacing.xs,
   },
   tagline: { fontSize: fontSize.sm, color: colors.textMuted, letterSpacing: 0.3 },
-
-  disqualifier: {
-    marginBottom: spacing.lg,
-    paddingHorizontal: spacing.xs,
-    gap: spacing.sm,
-  },
-  disqualifierTitle: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.textSecondary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: spacing.xs,
-  },
-  disqualifierBody: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    lineHeight: fontSize.sm * 1.5,
-  },
 
   cards: { gap: spacing.md },
 
