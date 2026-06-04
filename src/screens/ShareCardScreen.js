@@ -706,17 +706,23 @@ function paintCard() {
 window.drawCard = function() {
   var p = window.__cardParams;
   if (!p) return;
+  // Guard the paint so a failure in the async image path still reports back,
+  // instead of leaving the native side waiting on a frame that never comes.
+  function safePaint() {
+    try { paintCard(); }
+    catch (e) { window.ReactNativeWebView.postMessage(JSON.stringify({ error: String((e && e.message) || e) })); }
+  }
   // Preload the wordmark, then paint. toDataURL is synchronous, so the image
   // must be decoded before we draw or the logo would be missing from the
   // export. If it is already cached or no URI was passed, paint immediately.
   if (p.logoDataUri && (!window.__logoImg || window.__logoImg.src !== p.logoDataUri)) {
     var img = new Image();
-    img.onload = function() { window.__logoImg = img; paintCard(); };
-    img.onerror = function() { window.__logoImg = null; paintCard(); };
+    img.onload = function() { window.__logoImg = img; safePaint(); };
+    img.onerror = function() { window.__logoImg = null; safePaint(); };
     img.src = p.logoDataUri;
     return;
   }
-  paintCard();
+  safePaint();
 };
 <\/script>
 </body>
@@ -749,6 +755,10 @@ export default function ShareCardScreen({ route }) {
 
   const webViewRef = useRef(null);
   const pendingCapture = useRef(false);
+  // Failsafe timer: if the off-screen WebView never posts a frame back (a
+  // silent draw/encode failure), this clears the spinner instead of leaving
+  // it hanging forever.
+  const captureTimeout = useRef(null);
 
   // Read the bundled wordmark once and hold it as a base64 data URI so the
   // off-screen canvas can draw the real logo. Best-effort: if it fails the
@@ -768,6 +778,11 @@ export default function ShareCardScreen({ route }) {
       } catch (_e) { /* fall back to the drawn mark */ }
     })();
     return () => { cancelled = true; };
+  }, []);
+
+  // Clear the capture failsafe timer if the screen unmounts mid-share.
+  useEffect(() => () => {
+    if (captureTimeout.current) clearTimeout(captureTimeout.current);
   }, []);
 
   const isSquare = format === 'square';
@@ -838,16 +853,29 @@ export default function ShareCardScreen({ route }) {
     setSharing(true);
     pendingCapture.current = true;
     const params = { ...buildParams(), logoDataUri };
+    // If the draw or encode throws inside the WebView, surface it as a message
+    // so the capture handler can stop the spinner and show an error.
+    if (captureTimeout.current) clearTimeout(captureTimeout.current);
+    captureTimeout.current = setTimeout(() => {
+      if (!pendingCapture.current) return;
+      pendingCapture.current = false;
+      setSharing(false);
+      toast.show("Couldn't generate card, try again", { variant: 'error' });
+    }, 10000);
     webViewRef.current.injectJavaScript(
-      `window.__cardParams = ${JSON.stringify(params)}; window.drawCard(); true;`
+      `try { window.__cardParams = ${JSON.stringify(params)}; window.drawCard(); }`
+      + ` catch (e) { window.ReactNativeWebView.postMessage(JSON.stringify({ error: String((e && e.message) || e) })); } true;`
     );
   }
 
   async function handleWebViewMessage(event) {
     if (!pendingCapture.current) return;
     pendingCapture.current = false;
+    if (captureTimeout.current) { clearTimeout(captureTimeout.current); captureTimeout.current = null; }
     try {
-      const { base64, isSquare: sq } = JSON.parse(event.nativeEvent.data);
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.error) { toast.show("Couldn't generate card, try again", { variant: 'error' }); return; }
+      const { base64, isSquare: sq } = data;
       const pure = base64.replace(/^data:image\/png;base64,/, '');
       const filename = `volyume-${cardType}-card-${sq ? 'square' : 'story'}.png`;
       const uri = (FileSystem.cacheDirectory || '') + filename;
