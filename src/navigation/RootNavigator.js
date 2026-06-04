@@ -41,6 +41,15 @@ import AnalyticsScreen from '../screens/AnalyticsScreen';
 import VolumeHeatmapScreen from '../screens/VolumeHeatmapScreen';
 import BodyMetricsScreen from '../screens/BodyMetricsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import SettingsAccountScreen from '../screens/SettingsAccountScreen';
+import SettingsProfileScreen from '../screens/SettingsProfileScreen';
+import SettingsCoachingScreen from '../screens/SettingsCoachingScreen';
+import SettingsNotificationsScreen from '../screens/SettingsNotificationsScreen';
+import SettingsDisplayScreen from '../screens/SettingsDisplayScreen';
+import SettingsHealthScreen from '../screens/SettingsHealthScreen';
+import SettingsDataScreen from '../screens/SettingsDataScreen';
+import SettingsPrivacyScreen from '../screens/SettingsPrivacyScreen';
+import SettingsAboutScreen from '../screens/SettingsAboutScreen';
 import LiftProgressScreen from '../screens/LiftProgressScreen';
 import ConsistencyScreen from '../screens/ConsistencyScreen';
 import YouScreen from '../screens/YouScreen';
@@ -308,6 +317,15 @@ function ProfileStack({ navigation }) {
     <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="You" component={YouScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
+      <Stack.Screen name="SettingsAccount" component={SettingsAccountScreen} options={{ title: 'Account' }} />
+      <Stack.Screen name="SettingsProfile" component={SettingsProfileScreen} options={{ title: 'Profile' }} />
+      <Stack.Screen name="SettingsCoaching" component={SettingsCoachingScreen} options={{ title: 'Coaching' }} />
+      <Stack.Screen name="SettingsNotifications" component={SettingsNotificationsScreen} options={{ title: 'Notifications' }} />
+      <Stack.Screen name="SettingsDisplay" component={SettingsDisplayScreen} options={{ title: 'Display & accessibility' }} />
+      <Stack.Screen name="SettingsHealth" component={SettingsHealthScreen} options={{ title: 'Health' }} />
+      <Stack.Screen name="SettingsData" component={SettingsDataScreen} options={{ title: 'Your data' }} />
+      <Stack.Screen name="SettingsPrivacy" component={SettingsPrivacyScreen} options={{ title: 'Privacy & legal' }} />
+      <Stack.Screen name="SettingsAbout" component={SettingsAboutScreen} options={{ title: 'Help & about' }} />
       <Stack.Screen name="NutritionTargets" component={GatedNutritionTargets} options={{ title: 'Nutrition Targets' }} />
       <Stack.Screen name="NutritionEducation" component={NutritionEducationScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ title: 'Body Metrics' }} />

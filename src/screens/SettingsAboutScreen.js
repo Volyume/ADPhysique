@@ -1,0 +1,113 @@
+import { View, Text, StyleSheet, TouchableOpacity, Share, Platform, Linking } from 'react-native';
+import Constants from 'expo-constants';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { useFeedback } from '../components/FeedbackSheet';
+import { SettingsPage, SettingRow, settingsStyles } from '../components/SettingsPrimitives';
+
+// Help & about: feedback, store rating, credits, and the build footer.
+// Long-pressing the version opens the on-device debug log.
+export default function SettingsAboutScreen({ navigation }) {
+  const feedback = useFeedback();
+
+  return (
+    <SettingsPage>
+      <View style={settingsStyles.section}>
+        <SettingRow
+          icon="chatbubble-ellipses-outline"
+          label="Send feedback"
+          sub="Quick sentiment + optional note"
+          onPress={() => feedback?.open({ trigger: 'settings' })}
+        />
+        <SettingRow
+          icon="star-outline"
+          label="Rate Volyume"
+          sub="A rating helps other lifters find it"
+          onPress={async () => {
+            // Prefer the in-app review sheet. Fall back to the store page.
+            // Note: Google only shows the in-app sheet (and a public store
+            // page) once the app is on a public track, so in closed testing
+            // this may still land on a "not available" page.
+            try {
+              const StoreReview = await import('expo-store-review');
+              if (await StoreReview.isAvailableAsync()) {
+                await StoreReview.requestReview();
+                return;
+              }
+            } catch (_) { /* fall through to the store URL */ }
+            const pkg = Constants.expoConfig?.android?.package || 'app.volyume';
+            const web = `https://play.google.com/store/apps/details?id=${pkg}`;
+            Linking.openURL(`market://details?id=${pkg}`).catch(() => Linking.openURL(web).catch(() => {}));
+          }}
+        />
+        <SettingRow
+          icon="information-circle-outline"
+          label="Credits"
+          sub="OpenFoodFacts, CoFID, USDA attribution"
+          onPress={() => navigation.navigate('Credits')}
+        />
+      </View>
+
+      <View style={styles.about}>
+        <View style={styles.appNameRow}>
+          <Text style={styles.appName}>Volyume</Text>
+          <View style={styles.betaBadge}>
+            <Text style={styles.betaBadgeText}>BETA</Text>
+          </View>
+        </View>
+        <TouchableOpacity
+          onPress={() => {
+            // Tap to share the build identifier. Useful for beta
+            // testers when they file bugs: paste this into the
+            // report and we know exactly which build they're on.
+            const v = Constants.expoConfig?.version ?? '1.1.0';
+            const code = Platform.OS === 'ios'
+              ? Constants.expoConfig?.ios?.buildNumber
+              : Constants.expoConfig?.android?.versionCode;
+            const env = __DEV__ ? 'dev' : 'release';
+            const id = `Volyume v${v} (${Platform.OS} ${code ?? '?'}, ${env})`;
+            Share.share({ message: id }).catch(() => {});
+          }}
+          onLongPress={() => navigation.navigate('DebugLog')}
+          delayLongPress={600}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="App version. Tap to share, press and hold for debug logs."
+        >
+          <Text style={styles.appVersion}>
+            v{Constants.expoConfig?.version ?? '1.1.0'}
+            {' '}
+            ({Platform.OS === 'ios'
+              ? Constants.expoConfig?.ios?.buildNumber
+              : Constants.expoConfig?.android?.versionCode})
+          </Text>
+        </TouchableOpacity>
+        <Text style={styles.tagline}>Less thinking. More lifting.</Text>
+      </View>
+    </SettingsPage>
+  );
+}
+
+const styles = StyleSheet.create({
+  about: {
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.lg,
+  },
+  appName: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary, letterSpacing: 2 },
+  appNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  betaBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primary,
+  },
+  betaBadgeText: {
+    fontSize: fontSize.micro,
+    fontWeight: fontWeight.bold,
+    color: colors.background,
+    letterSpacing: 1,
+  },
+  appVersion: { fontSize: fontSize.sm, color: colors.textMuted },
+  tagline: { ...type.caption, color: colors.textMuted },
+});
