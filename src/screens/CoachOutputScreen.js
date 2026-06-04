@@ -78,15 +78,15 @@ function buildHeadline(output, _checkin) {
   const { trend, weekLabel, adjustments } = output;
   // Calories changed
   if (adjustments?.calories?.applied) {
-    return `${weekLabel}. Calories ${adjustments.calories.change > 0 ? 'raised' : 'lowered'} to ${adjustments.calories.newKcal}.`;
+    return `${weekLabel}. Your calorie target was ${adjustments.calories.change > 0 ? 'raised' : 'lowered'} to ${adjustments.calories.newKcal}.`;
   }
   // On target
   if (trend?.onTarget) {
-    return `${weekLabel}. On target.`;
+    return `${weekLabel}. Your weight trend is on target.`;
   }
   // Trend off target but holding
   if (trend?.delta != null && !trend.onTarget) {
-    return `${weekLabel}. Trend off target. Holding for another read.`;
+    return `${weekLabel}. Your weight trend is off target, so your targets hold for another week of data.`;
   }
   // Default
   return `${weekLabel}.`;
@@ -97,13 +97,13 @@ function buildOffItems(output, checkin) {
   if (!output) return items;
   const { sessionsCompleted, sessionsPlanned } = output;
   if (sessionsPlanned > 0 && sessionsCompleted < sessionsPlanned * 0.75) {
-    items.push(`Sessions ${sessionsCompleted}/${sessionsPlanned}.`);
+    items.push(`You hit ${sessionsCompleted} of ${sessionsPlanned} sessions.`);
   }
   if (checkin?.sleepHours != null && checkin.sleepHours < 6.5) {
-    items.push(`Sleep averaged ${checkin.sleepHours.toFixed(1)}h.`);
+    items.push(`Your sleep averaged ${checkin.sleepHours.toFixed(1)} hours.`);
   }
   if (checkin?.jointPain) {
-    items.push('Joint pain flagged.');
+    items.push('You flagged joint pain.');
   }
   if (checkin?.energyScore != null && checkin.energyScore <= 2) {
     items.push('Energy was low this week.');
@@ -112,9 +112,11 @@ function buildOffItems(output, checkin) {
     items.push('Soreness was high.');
   }
   if (checkin?.calsAdherence === 'untracked') {
-    items.push('Calories were not tracked.');
-  } else if (checkin?.calsAdherence === 'under' || checkin?.calsAdherence === 'over') {
-    items.push(`Calorie target ${checkin.calsAdherence}-shot.`);
+    items.push('You did not log your calories.');
+  } else if (checkin?.calsAdherence === 'under') {
+    items.push('You came in under your calorie target.');
+  } else if (checkin?.calsAdherence === 'over') {
+    items.push('You went over your calorie target.');
   }
   return items;
 }
@@ -128,7 +130,7 @@ function buildFocus(output, checkin) {
   }
   // Sleep is the biggest single lever
   if (checkin?.sleepHours != null && checkin.sleepHours < 6.5) {
-    return 'Sleep. Aim for 7h+ this week. Nothing else moves until this does.';
+    return 'Sleep is the priority this week. Aim for 7 hours or more. Nothing else moves until it does.';
   }
   // Sessions
   if (sessionsPlanned > 0 && sessionsCompleted < sessionsPlanned) {
@@ -140,7 +142,7 @@ function buildFocus(output, checkin) {
   }
   // Adherence
   if (checkin?.calsAdherence === 'untracked') {
-    return 'Track calories this week. Without it, no kcal adjustment is reliable.';
+    return 'Track your calories this week. Without that, the calorie target cannot be adjusted reliably.';
   }
   if (checkin?.calsAdherence === 'over') {
     return 'Stay inside the calorie target.';
