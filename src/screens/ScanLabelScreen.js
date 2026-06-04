@@ -182,7 +182,7 @@ export default function ScanLabelScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
             <Ionicons name="close" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Snap label</Text>
@@ -209,7 +209,7 @@ export default function ScanLabelScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
             <Ionicons name="close" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Snap label</Text>
@@ -237,7 +237,13 @@ export default function ScanLabelScreen({ navigation, route }) {
           <Ionicons name="close" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Snap label</Text>
-        <TouchableOpacity onPress={() => setTorch(v => !v)} hitSlop={12}>
+        <TouchableOpacity
+          onPress={() => setTorch(v => !v)}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityState={{ selected: torch }}
+          accessibilityLabel={torch ? 'Torch on' : 'Torch off'}
+        >
           <Ionicons
             name={torch ? 'flashlight' : 'flashlight-outline'}
             size={22}
@@ -261,7 +267,7 @@ export default function ScanLabelScreen({ navigation, route }) {
             <Text style={styles.missTitle}>Barcode {prefillBarcode} not in our database</Text>
             <Text style={styles.missBody}>
               {!ocrAvailable
-                ? 'Type the macros in, we’ll keep the barcode on the saved food so the next scan hits.'
+                ? "Type the macros in, we'll keep the barcode on the saved food so the next scan hits."
                 : onFront
                   ? 'Snap the front for the name, then the nutrition panel.'
                   : 'Frame the nutrition panel and tap the shutter.'}
@@ -288,7 +294,7 @@ export default function ScanLabelScreen({ navigation, route }) {
                 {busy ? <ActivityIndicator color="#000" /> : <View style={styles.captureInner} />}
               </TouchableOpacity>
               {onFront && !busy ? (
-                <TouchableOpacity onPress={skipName} hitSlop={12} style={styles.skipBtn}>
+                <TouchableOpacity onPress={skipName} hitSlop={12} style={styles.skipBtn} accessibilityRole="button" accessibilityLabel="Skip name">
                   <Text style={styles.skipText}>Skip name</Text>
                 </TouchableOpacity>
               ) : null}
