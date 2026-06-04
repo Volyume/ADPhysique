@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, cloneElement, isValidElement } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, TextInput, Share, Platform, Linking,
 } from 'react-native';
@@ -91,7 +91,11 @@ function SettingRow({ icon, label, sub, value, onPress, destructive, rightElemen
       </View>
       <View style={styles.settingRight}>
         {value ? <Text style={styles.settingValue}>{value}</Text> : null}
-        {rightElement}
+        {/* A Switch passed as rightElement otherwise announces only its
+            on/off state with no context; lend it the row's label. */}
+        {isValidElement(rightElement) && rightElement.props.accessibilityLabel == null
+          ? cloneElement(rightElement, { accessibilityLabel: label })
+          : rightElement}
         {showArrow && onPress && !rightElement ? (
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         ) : null}
@@ -345,7 +349,7 @@ export default function SettingsScreen({ navigation }) {
         const sb = getSupabaseClient();
         const { data: { session: s } = {} } = await sb.auth.getSession();
         supabaseUserId = s?.user?.id ?? null;
-      } catch (_) { /* offline / no session — push local, pull skips */ }
+      } catch (_) { /* offline / no session: push local, pull skips */ }
       await syncAll({ userId: supabaseUserId, localUserId: user?.id ?? null, triggeredBy: 'manual' });
       const snap = await getSyncStatus();
       setSyncSnapshot(snap);
@@ -1379,6 +1383,7 @@ export default function SettingsScreen({ navigation }) {
             onLongPress={() => navigation.navigate('DebugLog')}
             delayLongPress={600}
             activeOpacity={0.7}
+            accessibilityRole="button"
             accessibilityLabel="App version. Tap to share, press and hold for debug logs."
           >
             <Text style={styles.appVersion}>
@@ -1514,7 +1519,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: fontWeight.semibold,
   },
-  comingSoon: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
   about: {
     alignItems: 'center',
     gap: spacing.xs,
