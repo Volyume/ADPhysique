@@ -128,7 +128,7 @@ export default function WelcomeScreen({ navigation }) {
 
         <Animated.View style={{ opacity: fadeIn }}>
           <Text style={styles.tierNote}>
-            Both tiers are a free account. No card. About a minute to set up.
+            Both are free accounts. No card needed. Takes about a minute to set up.
           </Text>
         </Animated.View>
 
