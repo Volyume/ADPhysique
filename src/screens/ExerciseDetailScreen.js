@@ -388,7 +388,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
 
         {/* Goal section */}
         {!goal && (
-          <TouchableOpacity style={styles.goalSetLink} onPress={openGoalSheet} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.goalSetLink} onPress={openGoalSheet} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Set a target weight">
             <Ionicons name="flag-outline" size={14} color={colors.textMuted} />
             <Text style={styles.goalSetLinkText}>Set a target weight</Text>
           </TouchableOpacity>
@@ -401,7 +401,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 <Ionicons name="flag" size={14} color={colors.primary} />
                 <Text style={styles.goalCardTitle}>Target</Text>
               </View>
-              <TouchableOpacity onPress={openGoalSheet} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <TouchableOpacity onPress={openGoalSheet} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Edit target">
                 <Ionicons name="pencil-outline" size={14} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
@@ -455,6 +455,9 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               <TouchableOpacity
                 style={[styles.chartToggleBtn, chartMode === 'weight' && styles.chartToggleBtnActive]}
                 onPress={() => setChartMode('weight')}
+                accessibilityRole="button"
+                accessibilityLabel="Max weight"
+                accessibilityState={{ selected: chartMode === 'weight' }}
               >
                 <Text style={[styles.chartToggleBtnText, chartMode === 'weight' && styles.chartToggleBtnTextActive]}>
                   Max weight
@@ -463,6 +466,9 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               <TouchableOpacity
                 style={[styles.chartToggleBtn, chartMode === 'e1rm' && styles.chartToggleBtnActive]}
                 onPress={() => setChartMode('e1rm')}
+                accessibilityRole="button"
+                accessibilityLabel="Est. max"
+                accessibilityState={{ selected: chartMode === 'e1rm' }}
               >
                 <Text style={[styles.chartToggleBtnText, chartMode === 'e1rm' && styles.chartToggleBtnTextActive]}>
                   Est. max
@@ -572,6 +578,8 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                     style={styles.subCard}
                     onPress={() => navigation.push('ExerciseDetail', { exerciseId: sub.id, exerciseName: sub.name })}
                     activeOpacity={0.75}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View ${sub.name}`}
                   >
                     <Text style={styles.subCardName} numberOfLines={2}>{sub.name}</Text>
                     <View style={styles.subCardFooter}>
@@ -658,12 +666,15 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               onPress={handleSaveGoal}
               disabled={goalSaving || !goalWeightInput}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Save goal"
+              accessibilityState={{ disabled: goalSaving || !goalWeightInput }}
             >
               <Text style={styles.saveGoalBtnText}>Save goal</Text>
             </TouchableOpacity>
 
             {goal && (
-              <TouchableOpacity style={styles.removeGoalLink} onPress={handleRemoveGoal} activeOpacity={0.7}>
+              <TouchableOpacity style={styles.removeGoalLink} onPress={handleRemoveGoal} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Remove goal">
                 <Text style={styles.removeGoalLinkText}>Remove goal</Text>
               </TouchableOpacity>
             )}

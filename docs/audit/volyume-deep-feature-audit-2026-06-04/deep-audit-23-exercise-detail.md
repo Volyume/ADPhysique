@@ -3,7 +3,7 @@
 **Document:** deep-audit-23-exercise-detail.md
 **Item:** 22 of master inventory (screen #19 — `ExerciseDetailScreen`; Plans + Progress stacks)
 **File:** `src/screens/ExerciseDetailScreen.js` (1077 lines), components `SvgLineChart`, `InfoTooltip`, `SkeletonCard`, `AnimatedEntrance`, libs `algorithms`, `swapEngine`, `exerciseDisplay`, `formTips`
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04, "Approved"). Added roles/labels to the goal link, the icon-only goal-edit pencil ("Edit target"), the two chart-mode toggle buttons (role + selected state), the substitute cards (`View {name}`), and the goal-modal Save (+ disabled state) / Remove-goal. Attribute-only.
 **Timestamp:** 2026-06-04
 
 ---

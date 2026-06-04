@@ -225,3 +225,8 @@ Doc: `deep-audit-22-routine-detail.md`. Approved.
    card/header toggle/Add/edit-Save/swap-modal).
 Kept: coverage warnings, why-this, split rationale, reorder, ranked-swap +
 search-all, re-link recovery. Impact Low; Effort Low.
+
+## Item 22 — ExerciseDetailScreen — APPROVED 2026-06-04
+A11y-only: roles/labels on the goal link, the icon-only pencil ("Edit target"),
+the chart-mode toggle (role + selected state), the substitute cards (`View {name}`),
+and the goal-modal Save (+ disabled) / Remove. No behaviour, copy, or layout change.

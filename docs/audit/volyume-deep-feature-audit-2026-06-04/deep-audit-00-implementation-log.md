@@ -361,3 +361,17 @@ File: `src/screens/RoutineDetailScreen.js`.
   mode, ranked-swap + search-all, broken-FK re-link recovery. No copy change.
 Verification: eslint clean; 0 dead styles remaining; screen-mount green (455).
 Commit: see git log.
+
+## Item 22 — ExerciseDetailScreen (a11y polish)
+
+Approved 2026-06-04 ("Approved"). Attribute-only.
+
+- Goal "Set a target weight" link: `accessibilityRole="button"` + label.
+- Icon-only goal-edit pencil: role + "Edit target".
+- Chart-mode toggle (Max weight / Est. max): role + label + `accessibilityState={{ selected }}`.
+- Substitute cards: role + `View {name}`.
+- Goal-modal Save: role + "Save goal" + `accessibilityState={{ disabled }}`.
+- Remove-goal: role + "Remove goal".
+
+Verify: `npx eslint src/screens/ExerciseDetailScreen.js` clean; screen-mount 455/455.
+Doc: deep-audit-23-exercise-detail.md.
