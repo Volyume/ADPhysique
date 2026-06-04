@@ -186,7 +186,7 @@ function Section({ icon, tint, title, children }) {
         <View style={[styles.sectionIconWrap, { backgroundColor: withAlpha(tint, 0.125) }]}>
           <Ionicons name={icon} size={18} color={tint} />
         </View>
-        <Text style={styles.sectionTitle}>{title}</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
       </View>
       <View style={styles.sectionBody}>{children}</View>
     </View>
@@ -283,11 +283,6 @@ const styles = StyleSheet.create({
   bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.xs },
   bulletChip: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   bulletChipText: { color: colors.background, fontSize: fontSize.xs, fontWeight: fontWeight.bold },
-
-  teaser: { flexDirection: 'row', gap: spacing.md, backgroundColor: colors.surface2, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.borderLight, alignItems: 'flex-start' },
-  teaserIconWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
-  teaserTitle: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.bold, marginBottom: spacing.xxs },
-  teaserBody: { color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 20 },
 
   footer: { color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 17, textAlign: 'center', marginTop: spacing.sm, fontStyle: 'italic' },
 });
