@@ -157,7 +157,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
       <View style={styles.header}>
         <View style={{ width: 24 }} />
         <Text style={styles.headerTitle}>Here's what changed</Text>
-        <TouchableOpacity onPress={handleDone} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <TouchableOpacity onPress={handleDone} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Close">
           <Ionicons name="close" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
@@ -266,7 +266,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
           )}
         </View>
 
-        <TouchableOpacity style={styles.doneBtn} onPress={handleDone} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.doneBtn} onPress={handleDone} activeOpacity={0.85} accessibilityRole="button">
           <Text style={styles.doneBtnText}>Got it</Text>
         </TouchableOpacity>
       </ScrollView>

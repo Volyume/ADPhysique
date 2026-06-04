@@ -85,6 +85,9 @@ export default function WellbeingCheckScreen({ navigation }) {
                   style={[styles.btn, answers[i] === true && styles.btnSelected]}
                   onPress={() => toggle(i, true)}
                   activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: answers[i] === true }}
+                  accessibilityLabel="Yes"
                 >
                   <Text style={[styles.btnText, answers[i] === true && styles.btnTextSelected]}>Yes</Text>
                 </TouchableOpacity>
@@ -92,6 +95,9 @@ export default function WellbeingCheckScreen({ navigation }) {
                   style={[styles.btn, answers[i] === false && styles.btnSelected]}
                   onPress={() => toggle(i, false)}
                   activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: answers[i] === false }}
+                  accessibilityLabel="No"
                 >
                   <Text style={[styles.btnText, answers[i] === false && styles.btnTextSelected]}>No</Text>
                 </TouchableOpacity>

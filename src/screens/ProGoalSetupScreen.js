@@ -343,6 +343,9 @@ export default function ProGoalSetupScreen({ navigation }) {
                 style={[styles.goalCard, active && styles.goalCardActive]}
                 onPress={() => setSelectedGoal(g.value)}
                 activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={g.label}
               >
                 <View style={[styles.goalIconWrap, active && styles.goalIconWrapActive]}>
                   <Ionicons name={g.icon} size={20} color={active ? colors.primary : colors.textSecondary} />
@@ -488,6 +491,9 @@ export default function ProGoalSetupScreen({ navigation }) {
               style={[styles.phaseCard, active && styles.phaseCardActive]}
               onPress={() => setProteinApproach(key)}
               activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={ap.label}
             >
               <View style={styles.phaseIconWrap}>
                 <Ionicons
@@ -534,6 +540,9 @@ export default function ProGoalSetupScreen({ navigation }) {
           onPress={handleSave}
           disabled={!canSave}
           activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !canSave }}
+          accessibilityLabel="Rebuild my plan"
         >
           <Text style={[styles.saveBtnText, !canSave && styles.saveBtnTextDisabled]}>Rebuild my plan</Text>
         </TouchableOpacity>

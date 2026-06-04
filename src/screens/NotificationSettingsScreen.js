@@ -464,6 +464,8 @@ export default function NotificationSettingsScreen({ navigation }) {
             style={styles.crossLink}
             onPress={() => navigation.navigate('CoachingReminders')}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Coaching reminders"
           >
             <View style={styles.toggleIconWrap}>
               <Ionicons name="pulse-outline" size={18} color={colors.primary} />
@@ -546,31 +548,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
-    gap: spacing.md,
-  },
-  backButton: {
-    marginTop: spacing.xxs,
-    width: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerText: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  title: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
-    letterSpacing: -0.3,
-  },
   subtitleWrap: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
@@ -662,69 +639,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
     marginHorizontal: spacing.lg,
     marginBottom: spacing.lg,
-  },
-
-  // Picker label
-  pickerLabel: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.textMuted,
-    letterSpacing: 0.2,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-
-  // Chip container
-  chipContainer: {
-    marginBottom: spacing.md,
-  },
-  chipContainerDisabled: {
-    opacity: 0.4,
-  },
-  chipRow: {
-    paddingHorizontal: spacing.lg,
-    gap: spacing.sm,
-    flexDirection: 'row',
-  },
-  chip: {
-    height: 36,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'transparent',
-    minWidth: 40,
-  },
-  chipSelected: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary,
-  },
-  chipText: {
-    ...type.label,
-    color: colors.textSecondary,
-  },
-  chipTextSelected: {
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
-  },
-
-  // Schedule text
-  scheduleText: {
-    ...type.label,
-    color: colors.primary,
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.xs,
-    marginBottom: spacing.sm,
-  },
-  scheduleSubText: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.xs,
-    marginBottom: spacing.sm,
-    lineHeight: 17,
   },
 
   // Helper text
