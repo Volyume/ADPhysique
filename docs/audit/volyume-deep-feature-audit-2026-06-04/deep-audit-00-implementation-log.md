@@ -326,3 +326,13 @@ File: `src/screens/VolumeHeatmapScreen.js`.
   landmarks (+ reset sentinel), previous-window ghost, 4-week trend.
 Verification: eslint clean; screen-mount green (455). Attribute-only.
 Commit: see git log.
+
+## Item 19 — Coach Review screen — IMPLEMENTED 2026-06-04
+File: `src/screens/CoachReviewScreen.js`.
+- Removed the two dead style keys: `loadingWrap` (unused; loading renders
+  SkeletonCards) and `statusDot` (orphaned when the StatusDot component was
+  removed in the lint sweep; volumeDot is the live dot).
+- No a11y work: read-only screen, 0 interactive controls, colour dots paired
+  with text labels (WCAG-safe). No copy change (exemplary coaching copy).
+Verification: eslint clean; 0 dead styles remaining; screen-mount green (455).
+Commit: see git log.

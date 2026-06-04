@@ -590,11 +590,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  loadingWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.xl,
@@ -791,12 +786,5 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textMuted,
     lineHeight: 20,
-  },
-
-  // Status dot (unused directly but kept for reference)
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
   },
 });

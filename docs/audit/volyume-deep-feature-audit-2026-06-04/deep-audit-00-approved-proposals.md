@@ -205,3 +205,8 @@ Doc: `deep-audit-19-volume-heatmap.md`. Approved.
 Note: no dead styles (the 4 flagged were trendStyles false positives).
 Kept: MEV/MAV/MRV bars, body diagram, customisable cloud-synced landmarks,
 ghost comparison, 4-week trend. Impact Low; Effort Low. Attribute-only.
+
+## Item 19 — Coach Review screen — APPROVED 2026-06-04 ("Ok")
+Doc: `deep-audit-20-coach-review.md`. Approved.
+1. Remove the two dead style keys (loadingWrap, statusDot).
+Read-only, exemplary coaching copy; no a11y/copy change. Impact Low; Effort Low.
