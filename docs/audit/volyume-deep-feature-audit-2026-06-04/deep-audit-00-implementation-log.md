@@ -19,3 +19,19 @@ File: `src/screens/WelcomeScreen.js` (copy + one style; no logic change).
 Verification: `screen-mount` suite green (455 tests); eslint 0 errors. No new
 behaviour, so no new unit tests (copy-only on a presentational screen).
 Commit: see git log.
+
+## Item 2 — Login / sign-up screen — IMPLEMENTED 2026-06-04
+File: `src/screens/LoginScreen.js`.
+- promptSignup now matches any `*_signup` intent (regex `/_signup$/`), so a
+  free_signup arrival opens Create Account, not Sign In. Comment updated.
+- Backup reassurance prompt gate changed from `promptSignup && !isSignIn` to
+  `!isSignIn` (shows for every create-account view). Copy: "A free account
+  keeps your training and progress backed up and synced. Change or lose your
+  phone and everything restores instantly."
+- betaNote colour textDisabled -> textMuted.
+- modeSwitch: added minHeight 44 + justifyContent centre, paddingVertical
+  xs -> sm. Forgot-password TouchableOpacity: added hitSlop 10.
+Verification: LoginScreen/auth/screen-mount suites + identityGate.proOnboarding
+green (514 tests across the runs); eslint 0 errors. No new behaviour-class
+logic beyond the intent match; existing auth tests cover the form.
+Commit: see git log.

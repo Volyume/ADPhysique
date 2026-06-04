@@ -40,10 +40,12 @@ export default function LoginScreen({ navigation, route }) {
     setTier: s.setTier,
   })));
   const toast = useToast();
-  // Either explicit promptSignup OR Welcome's "Go Pro" intent lands us
-  // in signup tab. Returning users will switch to "Sign in" themselves.
+  // Either an explicit promptSignup param OR a tier-choice intent from Welcome
+  // (pro_signup or free_signup) lands us in the create-account tab. A new user
+  // who just chose a tier means to make an account, not sign in. Returning
+  // users switch to "Sign in" themselves.
   const promptSignup = route?.params?.promptSignup === true
-    || route?.params?.intent === 'pro_signup';
+    || /_signup$/.test(route?.params?.intent || '');
   const [mode, setMode] = useState(promptSignup ? 'signup' : 'signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -274,11 +276,11 @@ export default function LoginScreen({ navigation, route }) {
             <Text style={styles.formTitle}>
               {isSignIn ? 'Sign in to your account' : 'Create your account'}
             </Text>
-            {promptSignup && !isSignIn && (
+            {!isSignIn && (
               <View style={styles.backupPrompt}>
                 <Ionicons name="shield-checkmark-outline" size={16} color={colors.primary} />
                 <Text style={styles.backupPromptText}>
-                  Create a free account to keep your plan, workouts, and progress safe. If you lose or change your phone, everything restores instantly.
+                  A free account keeps your training and progress backed up and synced. Change or lose your phone and everything restores instantly.
                 </Text>
               </View>
             )}
@@ -295,7 +297,11 @@ export default function LoginScreen({ navigation, route }) {
 
             {/* Forgot password */}
             {isSignIn && (
-              <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotBtn}>
+              <TouchableOpacity
+                onPress={handleForgotPassword}
+                style={styles.forgotBtn}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
                 <Text style={styles.forgotText}>Forgot password?</Text>
               </TouchableOpacity>
             )}
@@ -407,7 +413,9 @@ const styles = StyleSheet.create({
   // Mode switch
   modeSwitch: {
     alignItems: 'center',
-    paddingVertical: spacing.xs,
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingVertical: spacing.sm,
     marginBottom: spacing.xl,
   },
   modeSwitchText: {
@@ -461,6 +469,6 @@ const styles = StyleSheet.create({
   betaNote: {
     ...type.caption,
     textAlign: 'center',
-    color: colors.textDisabled,
+    color: colors.textMuted,
   },
 });

@@ -3,7 +3,7 @@
 **Document:** deep-audit-03-login-screen.md
 **Item:** 2 of master inventory (Group 1, core flows — second screen of FL1)
 **Files:** `src/screens/LoginScreen.js`, `src/components/auth/EmailPasswordFields.js`, `src/components/auth/OAuthButtons.js`
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04, "Ok"; changes 1-4 applied, change 5 flagged only)
 **Timestamp:** 2026-06-04
 
 ---
