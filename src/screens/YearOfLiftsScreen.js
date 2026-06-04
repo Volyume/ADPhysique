@@ -286,6 +286,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
             style={styles.shareBtn}
             onPress={handleShareYear}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
             accessibilityLabel="Share your year"
           >
             <Ionicons name="share-outline" size={18} color={colors.textPrimary} />
@@ -295,6 +296,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
           style={styles.closeBtn}
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
           accessibilityLabel="Close"
         >
           <Ionicons name="close" size={20} color={colors.textPrimary} />
@@ -317,6 +319,8 @@ export default function YearOfLiftsScreen({ navigation, route }) {
           <TouchableOpacity
             style={styles.doneBtn}
             onPress={() => navigation.goBack()}
+            accessibilityRole="button"
+            accessibilityLabel="Done"
           >
             <Text style={styles.doneBtnText}>Done</Text>
           </TouchableOpacity>
@@ -351,8 +355,8 @@ export default function YearOfLiftsScreen({ navigation, route }) {
               tap-to-advance is still available via a narrow strip
               under the pips. */}
           <View style={styles.tapZones} pointerEvents="box-none">
-            <Pressable style={styles.tapLeft} onPress={rewind} />
-            <Pressable style={styles.tapRight} onPress={advance} />
+            <Pressable style={styles.tapLeft} onPress={rewind} accessibilityRole="button" accessibilityLabel="Previous card" />
+            <Pressable style={styles.tapRight} onPress={advance} accessibilityRole="button" accessibilityLabel="Next card" />
           </View>
         </>
       )}
