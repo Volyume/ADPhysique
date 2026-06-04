@@ -132,7 +132,7 @@ function Section({ icon, tint, title, children }) {
         <View style={[styles.sectionIconWrap, { backgroundColor: withAlpha(tint, 0.125) }]}>
           <Ionicons name={icon} size={18} color={tint} />
         </View>
-        <Text style={styles.sectionTitle}>{title}</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
       </View>
       <View style={styles.sectionBody}>{children}</View>
     </View>

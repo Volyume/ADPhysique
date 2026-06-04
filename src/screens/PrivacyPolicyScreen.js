@@ -107,7 +107,7 @@ export default function PrivacyPolicyScreen() {
 function Section({ title, children }) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
       {children}
     </View>
   );

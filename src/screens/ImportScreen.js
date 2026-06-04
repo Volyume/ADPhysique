@@ -151,7 +151,7 @@ export default function ImportScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.h1}>Bring your history</Text>
+        <Text style={styles.h1} accessibilityRole="header">Bring your history</Text>
         <Text style={styles.body}>
           Import a workout-history CSV from Hevy or Strong. Sessions, sets, weights and reps all
           come across; unmatched exercises are created in your library so nothing is lost.

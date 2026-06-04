@@ -180,7 +180,7 @@ export default function CascadeGateScreen({ navigation, route }) {
       <View style={styles.header}>
         <View style={{ width: 24 }} />
         <Text style={styles.headerTitle}>Subscription</Text>
-        <TouchableOpacity onPress={dismiss} hitSlop={hitSlop} accessibilityLabel="Close">
+        <TouchableOpacity onPress={dismiss} hitSlop={hitSlop} accessibilityRole="button" accessibilityLabel="Close">
           <Ionicons name="close" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
@@ -262,9 +262,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: fontSize.md,
     lineHeight: 22,
-    marginBottom: spacing.xl,
-  },
-  stripWrap: {
     marginBottom: spacing.xl,
   },
   ctaStack: {
