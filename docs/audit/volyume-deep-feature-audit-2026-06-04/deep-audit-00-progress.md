@@ -7,7 +7,7 @@ Single source of truth for where the audit stands. Update on each session end.
 Branch `main`, 0/0 with origin, working tree clean, repo eslint **0 problems**,
 full suite green (174 suites, 2820 passing).
 
-### Done (37 items + the lint sweep), each: audited → researched → proposed →
+### Done (38 items + the lint sweep), each: audited → researched → proposed →
 ### approved → implemented → pushed. Doc per item in this folder.
 
 | # | Item | Screen | Doc |
@@ -49,6 +49,7 @@ full suite green (174 suites, 2820 passing).
 | 35 | Recipe Builder | RecipeBuilderScreen | deep-audit-36 |
 | 36 | Lift Progress | LiftProgressScreen | deep-audit-37 |
 | 37 | Consistency | ConsistencyScreen (+ ProgressSections) | deep-audit-38 |
+| 38 | Body Metrics | BodyMetricsScreen | deep-audit-39 |
 
 Plus: the full lint sweep (779 → 0 warnings, 0 errors) across commits
 e518807 / 16cbad7 / e345a06 / d2f797f, and the `__mocks__/expo-application.js`
@@ -60,10 +61,16 @@ test mock.
 
 ## NEXT (resume here)
 
-Inventory order, next un-audited screen: **#37 `BodyMetricsScreen`** 🔒 ⤴ (body
-measurements/weight, also on Profile), then #38 YearOfLifts and the A6 You
-sub-stack incl. the coach-engine surfaces (CoachOutput, WeeklyCheckIn,
-ProGoalSetup, etc.). Master list: `deep-audit-01-master-inventory.md`.
+Inventory order, next un-audited screen: **#38 `YearOfLiftsScreen`**
+(year-in-review), then the A6 You sub-stack incl. the coach-engine surfaces
+(CoachOutput, WeeklyCheckIn, ProGoalSetup, etc.). Master list:
+`deep-audit-01-master-inventory.md`.
+
+### Carry-over flag (Body Metrics, item 38)
+- `BodyMetricsScreen` stores entry `loggedAt` via `new Date(metric_date)`
+  (UTC-midnight; UK-safe via `localDayKey` round-trip but inconsistent with
+  `parseLocalDay`), and the date is a free-text `YYYY-MM-DD` field. Consider
+  `parseLocalDay` + a date picker. Founder's call.
 
 ### Out-of-band fix shipped this session (not an audit item)
 - **Share-card spinner hang:** the share button spun forever when the off-screen
