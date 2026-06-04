@@ -83,6 +83,9 @@ function PillGroup({ options, selected, onSelect, keyExtractor, labelExtractor }
             key={key}
             style={[styles.pill, active && styles.pillActive]}
             onPress={() => onSelect(key)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={typeof label === 'string' ? label : undefined}
           >
             <Text style={[styles.pillText, active && styles.pillTextActive]}>{label}</Text>
           </TouchableOpacity>
@@ -382,6 +385,8 @@ export default function NutritionTargetsScreen({ navigation }) {
             style={styles.eduCard}
             onPress={() => navigation.navigate('NutritionEducation')}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="New to calories and macros? Open the 5-minute guide"
           >
             <View style={styles.eduIconWrap}>
               <Ionicons name="book-outline" size={18} color={colors.primary} />
@@ -421,6 +426,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               placeholderTextColor={colors.textMuted}
               keyboardType="number-pad"
               maxLength={3}
+              accessibilityLabel="Age"
             />
           </View>
 
@@ -437,6 +443,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                   placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"
                   maxLength={1}
+                  accessibilityLabel="Height, feet"
                 />
                 <Text style={styles.unitLabel}>ft</Text>
               </View>
@@ -449,6 +456,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                   placeholderTextColor={colors.textMuted}
                   keyboardType="decimal-pad"
                   maxLength={4}
+                  accessibilityLabel="Height, inches"
                 />
                 <Text style={styles.unitLabel}>in</Text>
               </View>
@@ -466,6 +474,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               placeholderTextColor={colors.textMuted}
               keyboardType="decimal-pad"
               maxLength={5}
+              accessibilityLabel="Current weight in kilograms"
             />
           </View>
 
@@ -480,6 +489,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               placeholderTextColor={colors.textMuted}
               keyboardType="decimal-pad"
               maxLength={4}
+              accessibilityLabel="Body fat percentage"
             />
           </View>
 
@@ -520,6 +530,9 @@ export default function NutritionTargetsScreen({ navigation }) {
                   key={g.key}
                   style={[styles.goalCard, active && styles.goalCardActive]}
                   onPress={() => setGoal(g.key)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={g.label}
                 >
                   {active && (
                     <Ionicons
@@ -564,6 +577,9 @@ export default function NutritionTargetsScreen({ navigation }) {
                 style={[styles.approachCard, active && styles.approachCardActive]}
                 onPress={() => setProteinApproach(key)}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={ap.label}
               >
                 <View style={styles.approachCardHeader}>
                   {active && <Ionicons name="checkmark-circle" size={14} color={colors.primary} style={{ marginRight: spacing.xs }} />}
@@ -593,6 +609,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                       placeholderTextColor={colors.textMuted}
                       keyboardType="decimal-pad"
                       maxLength={4}
+                      accessibilityLabel="Protein target, grams per kilogram"
                     />
                     <Text style={styles.customProteinUnit}>g / kg</Text>
                   </View>
@@ -613,6 +630,9 @@ export default function NutritionTargetsScreen({ navigation }) {
                 style={styles.consentRow}
                 onPress={() => setConsent(v => !v)}
                 activeOpacity={0.7}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: consent }}
+                accessibilityLabel="I consent to storing this data on my device"
               >
                 <View style={[styles.checkbox, consent && styles.checkboxChecked]}>
                   {consent && <Ionicons name="checkmark" size={13} color={colors.background} />}
@@ -636,7 +656,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                     : `${GOALS.find(g => g.key === goal)?.label ?? 'Targets set during coaching setup'}`}
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => setFormCollapsed(false)} style={styles.reconfigureBtn}>
+              <TouchableOpacity onPress={() => setFormCollapsed(false)} style={styles.reconfigureBtn} accessibilityRole="button" accessibilityLabel="Adjust">
                 <Ionicons name="settings-outline" size={13} color={colors.primary} />
                 <Text style={styles.reconfigureBtnText}>Adjust</Text>
               </TouchableOpacity>
@@ -650,6 +670,9 @@ export default function NutritionTargetsScreen({ navigation }) {
               style={[styles.calcBtn, (!formComplete || calculating) && styles.calcBtnDisabled]}
               onPress={handleCalculate}
               disabled={!formComplete || calculating}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !formComplete || calculating }}
+              accessibilityLabel="Calculate targets"
             >
               <Ionicons
                 name={calculating ? 'hourglass-outline' : 'calculator-outline'}
