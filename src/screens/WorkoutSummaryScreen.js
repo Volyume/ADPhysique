@@ -13,13 +13,10 @@ import {
   getCompletedWorkoutSets, getAllExercises, getAllWorkouts, updateWorkout,
   getActivePlan, getRoutinesForPlan, advancePlanNextWorkout,
   createAdaptationEvent, getCurrentMesocycleWeek,
-  getRecentAdaptationEvents,
   saveWeeklyCheckin, saveNextTimeNote, getRoutineWorkoutTonnages,
   getRoutineById,
 } from '../lib/database';
-import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, VOLUME_LANDMARKS, evaluateDeloadTriggers } from '../lib/algorithms';
-import { evaluateAutoReg, predictDeloadWeek, getMesoSchedule } from '../lib/mesocycle';
-import { getDeloadPredictionMessage, getAutoRegMessage } from '../lib/whyThisTemplates';
+import { calculateWeeklyVolume, getVolumeStatus, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, VOLUME_LANDMARKS } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
 import { syncWorkout } from '../lib/sync';
@@ -53,12 +50,15 @@ function RatingRow({ label, field, value, max, onChange }) {
         <Text style={styles.ratingLabel}>{label}</Text>
         {labels?.[value] ? <Text style={styles.ratingValueLabel}>{labels[value]}</Text> : null}
       </View>
-      <View style={styles.ratingBtns}>
+      <View style={styles.ratingBtns} accessibilityRole="radiogroup" accessibilityLabel={label}>
         {Array.from({ length: max + 1 }, (_, i) => (
           <TouchableOpacity
             key={i}
             style={[styles.ratingBtn, value === i && styles.ratingBtnActive]}
             onPress={() => onChange(i)}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: value === i }}
+            accessibilityLabel={labels?.[i] ? `${i}, ${labels[i]}` : String(i)}
           >
             <Text style={[styles.ratingBtnText, value === i && styles.ratingBtnTextActive]}>
               {i}
@@ -100,7 +100,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // The summary is reached with routineId but not the name, so fetch it.
   const [routineName, setRoutineName] = useState('');
   const [weeklyVolume, setWeeklyVolume] = useState({});
-  const [_autoRegSuggestions, setAutoRegSuggestions] = useState([]);
   const [saving, setSaving] = useState(false);
   const [completedWorkoutCount, setCompletedWorkoutCount] = useState(null);
   // Default-expanded so the energy + sleep prompts surface naturally
@@ -109,11 +108,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // check-in feel like it had disappeared.
   const [feedbackExpanded, setFeedbackExpanded] = useState(!readOnly);
   const [expandedVolumeWhy, setExpandedVolumeWhy] = useState(null);
-  const [_mesoAdvice, setMesoAdvice] = useState(null);
-  const [_deloadPrediction, setDeloadPrediction] = useState(null);
-  const [feedbackHistory, setFeedbackHistory] = useState([]);
   const [adaptiveDecisions, setAdaptiveDecisions] = useState({});
-  const [_deloadRecommendation, setDeloadRecommendation] = useState(null);
   const [readOnlyExerciseData, setReadOnlyExerciseData] = useState([]);
   const [templateModalVisible, setTemplateModalVisible] = useState(false);
   const [templateName, setTemplateName] = useState('');
@@ -228,33 +223,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   }, [readOnly, routineId, user?.id, workoutId, tonnage]);
 
   useEffect(() => {
-    const suggestions = getAutoRegSuggestion(feedback, weeklyVolume);
-    setAutoRegSuggestions(suggestions);
-
-    // Mesocycle autoregulation (Phase 4 engine)
-    const window = [...feedbackHistory, feedback];
-    const autoReg = evaluateAutoReg(window);
-    // The store keeps user and userProfile as separate top-level fields;
-    // `user.profile` doesn't exist, so reading it always fell back to
-    // hard-coded defaults and autoreg ran against generic intermediate week-1.
-    const experience = userProfile?.experience ?? 'intermediate';
-    const mesoWeek = userProfile?.currentMesoWeek ?? 1;
-    const schedule = getMesoSchedule(experience);
-    const currentEntry = schedule.find(s => s.week === mesoWeek) ?? schedule[0];
-
-    setMesoAdvice({
-      action: autoReg.action,
-      message: getAutoRegMessage(autoReg.action, mesoWeek),
-      setsAdjust: autoReg.setsAdjust,
-      weekLabel: currentEntry.label,
-    });
-
-    const deload = predictDeloadWeek(window, mesoWeek, experience);
-    setDeloadPrediction({
-      weeksUntilDeload: deload.weeksUntilDeload,
-      message: getDeloadPredictionMessage(deload.weeksUntilDeload, deload.reason),
-    });
-
     // Map feedback to adaptive engine scales per muscle, then run adaptive engine
     // soreness24hBefore: 1=fresh→2, 2=mild→3, 3=sore→4
     // sessionDifficulty: 1=veryEasy→1(exceeded), 2=easy→1, 3=moderate→2(met), 4=hard→3(struggled), 5=brutal→4(failed)
@@ -285,7 +253,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     const decisions = runAdaptiveEngine(muscleFeedback);
     setAdaptiveDecisions(decisions);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feedback, weeklyVolume, feedbackHistory]);
+  }, [feedback, weeklyVolume]);
 
   useEffect(() => {
     if (!workoutId || readOnly) return;
@@ -324,24 +292,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     const fourWeeksAgo = Date.now() - 28 * 24 * 60 * 60 * 1000;
     const completed = allWorkouts.filter(w => w.isCompleted && w.startedAt >= fourWeeksAgo);
     setCompletedWorkoutCount(completed.length);
-
-    // Build feedback history from last 4 completed workouts for meso autoReg
-    const sorted = completed
-      .filter(w => w.sessionDifficulty != null)
-      .sort((a, b) => b.createdAt - a.createdAt)
-      .slice(0, 4)
-      .reverse();
-    setFeedbackHistory(sorted.map(w => ({
-      sessionDifficulty: w.sessionDifficulty ?? 3,
-      overallPump:       w.overallPump ?? 2,
-      soreness24hBefore: w.soreness24hBefore ?? 1,
-      fatigueLevel:      w.fatigueLevel ?? 2,
-      jointDiscomfort:   w.jointDiscomfort ?? 0,
-    })));
-
-    const events = await getRecentAdaptationEvents(user?.id || '', 1);
-    const deloadEval = evaluateDeloadTriggers(events);
-    if (deloadEval.reason) setDeloadRecommendation(deloadEval);
 
     // For readOnly (history) view, load and group sets by exercise
     if (readOnly && workoutId) {
@@ -770,6 +720,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               style={styles.feedbackToggleBtn}
               onPress={() => setFeedbackExpanded(e => !e)}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: feedbackExpanded }}
+              accessibilityLabel={feedbackExpanded ? 'Hide session feedback' : 'Add session feedback'}
             >
               <Text style={styles.feedbackToggleBtnText}>
                 {feedbackExpanded ? 'Hide session feedback' : 'Add session feedback'}
@@ -806,7 +759,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {!readOnly && !routineId && exerciseData.length > 0 && (
           <RevealSection delay={1700}>
           <View style={styles.secondaryActions}>
-            <TouchableOpacity style={styles.templateBtn} onPress={handleSaveAsTemplate}>
+            <TouchableOpacity style={styles.templateBtn} onPress={handleSaveAsTemplate} accessibilityRole="button" accessibilityLabel="Save as workout template">
               <Ionicons name="bookmark-outline" size={18} color={colors.textSecondary} />
               <Text style={styles.templateBtnText}>Save as Workout Template</Text>
             </TouchableOpacity>
@@ -841,11 +794,14 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             style={[styles.doneBtn, saving && styles.btnDisabled]}
             onPress={handleDone}
             disabled={saving}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            accessibilityState={{ disabled: saving }}
           >
             <Text style={styles.doneBtnText}>Close</Text>
           </TouchableOpacity>
           {!readOnly && (
-            <TouchableOpacity style={styles.shareFooterBtn} onPress={handleShareCard}>
+            <TouchableOpacity style={styles.shareFooterBtn} onPress={handleShareCard} accessibilityRole="button" accessibilityLabel="Share session card">
               <Ionicons name="share-social-outline" size={20} color={colors.background} />
             </TouchableOpacity>
           )}
@@ -880,6 +836,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               <TouchableOpacity
                 style={styles.templateModalCancel}
                 onPress={() => setTemplateModalVisible(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel"
               >
                 <Text style={styles.templateModalCancelText}>Cancel</Text>
               </TouchableOpacity>
@@ -887,6 +845,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 style={[styles.templateModalSave, !templateName.trim() && { opacity: 0.4 }]}
                 onPress={confirmSaveTemplate}
                 disabled={!templateName.trim()}
+                accessibilityRole="button"
+                accessibilityLabel="Save template"
+                accessibilityState={{ disabled: !templateName.trim() }}
               >
                 <Text style={styles.templateModalSaveText}>Save</Text>
               </TouchableOpacity>
@@ -1046,9 +1007,7 @@ const styles = StyleSheet.create({
   completionHeader: { gap: spacing.xs, paddingVertical: spacing.md },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   completionTitle: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
-  completionGreeting: { fontSize: fontSize.md, color: colors.textSecondary, fontWeight: fontWeight.medium },
   completionDate: { fontSize: fontSize.sm, color: colors.textMuted },
-  completionSub: { fontSize: fontSize.sm, color: colors.textSecondary },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   statBox: {
     flex: 1, minWidth: '45%', backgroundColor: colors.surface, borderRadius: radius.md,
@@ -1076,7 +1035,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
   },
   muscleName: { flex: 1, fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textPrimary },
-  muscleSetCount: { fontSize: fontSize.sm, color: colors.textSecondary },
   volumeInsightText: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18 },
   volumeWhyToggle: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
@@ -1092,33 +1050,6 @@ const styles = StyleSheet.create({
   },
   statusBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.sm },
   statusText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
-  limitedCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
-  limitedText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
-  suggestionRow: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
-    backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  suggestionText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
-  mesoAdviceCard: {
-    flexDirection: 'column', gap: spacing.xs,
-    backgroundColor: colors.warningBg ?? colors.surface,
-    borderRadius: radius.md, padding: spacing.md,
-    borderWidth: 1, borderColor: withAlpha(colors.warning, 0.333),
-    marginTop: spacing.sm,
-  },
-  mesoAdviceCardUrgent: {
-    backgroundColor: colors.errorBg ?? colors.surface,
-    borderColor: withAlpha(colors.error, 0.333),
-  },
-  mesoAdviceHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  mesoAdviceTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.warning, letterSpacing: 0.5 },
-  mesoAdviceText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
-  deloadPredictionCard: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
-    marginTop: spacing.xs, paddingHorizontal: spacing.xs,
-  },
-  deloadPredictionText: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18, fontStyle: 'italic' },
   feedbackToggleBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg,
@@ -1188,45 +1119,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  adaptiveCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  adaptiveTitle: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    fontWeight: fontWeight.semibold,
-    letterSpacing: 0.5,
-  },
-  adaptiveRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-  },
-  adaptiveMuscle: {
-    ...type.label,
-    color: colors.textPrimary,
-  },
-  adaptiveSetCount: {
-    color: colors.primary,
-    fontWeight: fontWeight.bold,
-  },
-  adaptiveReason: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-    marginTop: spacing.xxs,
-    lineHeight: 16,
-  },
-  adaptiveHold: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    fontStyle: 'italic',
-  },
   exerciseList: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -1267,16 +1159,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     overflow: 'hidden',
   },
-  deloadCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.warning,
-    padding: spacing.lg, gap: spacing.sm, marginBottom: spacing.lg,
-  },
-  deloadCardWarning: { borderColor: colors.border },
-  deloadCardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  deloadCardTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.warning, letterSpacing: 0.5 },
-  deloadCardBody: { fontSize: fontSize.sm, color: colors.textPrimary, lineHeight: 20 },
-  deloadCardNote: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18 },
 
   templateModalBg: {
     flex: 1, backgroundColor: colors.scrim,

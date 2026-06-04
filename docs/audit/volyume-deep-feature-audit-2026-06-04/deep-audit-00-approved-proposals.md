@@ -176,3 +176,17 @@ Approved changes:
 Kept: full logging core, clusters, supersets, time-crunch, deload, unilateral,
 drift-free timer, crash recovery, cloud sync. Verified: FULL suite green (2820).
 Impact Low (1) / Medium (2) / Low (3). Runtime-critical change full-suite verified.
+
+## Item 16 — Workout Summary screen — APPROVED 2026-06-04 ("Approve")
+Doc: `deep-audit-17-workout-summary.md`. Approved all three; change 1 = REMOVE.
+Approved changes:
+1. Reclaim dead per-session coach compute/IO (4 dead values + cascaded
+   feedbackHistory + autoReg/meso/deload effect blocks + getRecentAdaptationEvents
+   loader block + 8 imports); keep the live runAdaptiveEngine -> adaptiveDecisions
+   -> createAdaptationEvent loop + weekly check-in save.
+2. Remove 27 dead style keys.
+3. A11y: rating chips as labelled radiogroups + roles on toggle/save/close/share/
+   template-modal buttons.
+Kept: stat grid, 4-week comparison, volume + why, the feedback->engine loop,
+weekly check-in, share card, save-as-template, health write. Verified: FULL
+suite green (2820). Impact Medium (1) / Low (2,3). Runtime-critical, verified.

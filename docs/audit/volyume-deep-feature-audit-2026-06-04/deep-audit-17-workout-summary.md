@@ -3,7 +3,7 @@
 **Document:** deep-audit-17-workout-summary.md
 **Item:** 16 of master inventory (screen #12 — `WorkoutSummaryScreen`; post-session recap + feedback, in the Train and Progress stacks)
 **File:** `src/screens/WorkoutSummaryScreen.js` (1327 lines), components `FeedbackSheet`, `InfoTooltip`, libs `algorithms`, `mesocycle`, `feedback`, `storeReview`, `health`
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04, "Approve" — change 1 = remove, all three). Removed the 4 dead per-session coach values (+ cascaded `feedbackHistory`), the dead autoReg/meso/deload compute in the feedback effect, the dead `getRecentAdaptationEvents`/deload-recommendation loader block, and 8 now-unused imports — keeping the live `runAdaptiveEngine`/`adaptiveDecisions` → `createAdaptationEvent` loop and the weekly check-in save verbatim. Removed 27 dead style keys. Added a11y: rating chips as labelled radiogroups with selected state, plus roles on the feedback toggle, save-template, Close, Share, and template-modal buttons. Verified: repo eslint 0 problems; FULL suite green (174 suites, 2820 passing).
 **Timestamp:** 2026-06-04
 
 > Runtime-critical: this screen writes session feedback, saves a weekly check-in,

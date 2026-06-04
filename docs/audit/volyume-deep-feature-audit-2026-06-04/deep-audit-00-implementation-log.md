@@ -275,3 +275,29 @@ already covers progression).
 Verification: repo eslint 0 problems; FULL suite green (174 suites, 2820
 passing) — confirms the deload path (shares currentWeek) stays intact.
 Commit: see git log.
+
+## Item 16 — Workout Summary screen — IMPLEMENTED 2026-06-04
+File: `src/screens/WorkoutSummaryScreen.js`.
+Approved all three; change 1 = REMOVE (the weekly coach owns next-week volume;
+these per-session predictions were deprecated per the in-file :419 note).
+- Reclaimed dead per-session coach compute/IO: removed `_autoRegSuggestions`,
+  `_mesoAdvice`, `_deloadPrediction`, `_deloadRecommendation` state and the
+  cascaded `feedbackHistory`; deleted the autoReg/meso/deload blocks from the
+  feedback effect (which ran on every rating change) and the
+  getRecentAdaptationEvents + deload-recommendation block from the loader; kept
+  the live muscleFeedback build + runAdaptiveEngine + setAdaptiveDecisions and
+  the createAdaptationEvent write + weekly check-in save verbatim. Removed 8
+  now-unused imports (getAutoRegSuggestion, evaluateDeloadTriggers, evaluateAutoReg,
+  predictDeloadWeek, getMesoSchedule, getDeloadPredictionMessage, getAutoRegMessage,
+  getRecentAdaptationEvents). Net: per-rating-change compute + one loader DB read
+  reclaimed.
+- Removed 27 dead style keys (the removed prediction/advice display surfaces).
+- A11y: rating-row chips are now labelled radiogroups with selected state; added
+  roles/labels to the feedback toggle, save-as-template, Close, Share, and the
+  template-modal Cancel/Save buttons.
+- Kept: stat grid, 4-week comparison, per-muscle volume + "why this status", the
+  feedback -> adaptive-engine -> adaptation-events loop, weekly check-in save,
+  share card, save-as-template, health write. No copy change.
+Verification: repo eslint 0 problems; FULL suite green (174 suites, 2820
+passing) — confirms the live coach loop + weekly check-in save stay intact.
+Commit: see git log.
