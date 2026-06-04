@@ -42,6 +42,7 @@ export default function FoodRow({ food, isFav, preference, onPress, onLongPress,
       style={styles.row}
       onPress={onPress}
       onLongPress={onLongPress}
+      accessibilityRole="button"
       accessibilityLabel={
         `${food.name}, ${kcalPerServing ?? '?'} kcal per serving. ${a11yPref}`
         + ' Long-press to cycle favourite, exclude, neutral.'
@@ -78,7 +79,7 @@ export default function FoodRow({ food, isFav, preference, onPress, onLongPress,
           <Ionicons name="add-circle" size={26} color={colors.primary} />
         </TouchableOpacity>
       ) : (
-        <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+        <Ionicons name="add-circle-outline" size={22} color={colors.primary} importantForAccessibility="no" accessibilityElementsHidden />
       )}
     </TouchableOpacity>
   );

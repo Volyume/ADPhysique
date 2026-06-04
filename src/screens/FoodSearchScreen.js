@@ -427,6 +427,8 @@ export default function FoodSearchScreen({ navigation, route }) {
             if (item.action === 'meals') return navigation.navigate('MyMeals', { mealSlot, entryDate });
             return navigation.navigate('MyRecipes', { mealSlot, entryDate });
           }}
+          accessibilityRole="button"
+          accessibilityLabel={item.label}
         >
           <Ionicons name={item.icon} size={20} color={colors.primary} />
           <Text style={styles.ctaText}>{item.label}</Text>
@@ -456,7 +458,12 @@ export default function FoodSearchScreen({ navigation, route }) {
       return (
         <View style={styles.noResults}>
           <Text style={styles.noResultsText}>No matches for "{query.trim()}".</Text>
-          <TouchableOpacity style={styles.noResultsBtn} onPress={gotoCustomReplace}>
+          <TouchableOpacity
+            style={styles.noResultsBtn}
+            onPress={gotoCustomReplace}
+            accessibilityRole="button"
+            accessibilityLabel="Create a custom food"
+          >
             <Text style={styles.noResultsBtnText}>Create a custom food</Text>
           </TouchableOpacity>
         </View>
@@ -535,7 +542,12 @@ export default function FoodSearchScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+        >
           <Ionicons name="close" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add to {mealSlotLabel(mealSlot)}</Text>
@@ -606,7 +618,12 @@ export default function FoodSearchScreen({ navigation, route }) {
         ListEmptyComponent={renderEmpty()}
         ListFooterComponent={
           query.trim().length >= 2 && results.length > 0 ? (
-            <TouchableOpacity style={styles.footerBtn} onPress={gotoCustomReplace}>
+            <TouchableOpacity
+              style={styles.footerBtn}
+              onPress={gotoCustomReplace}
+              accessibilityRole="button"
+              accessibilityLabel="Create a custom food"
+            >
               <Ionicons name="add" size={18} color={colors.primary} />
               <Text style={styles.footerBtnText}>Create a custom food</Text>
             </TouchableOpacity>
@@ -643,7 +660,7 @@ export default function FoodSearchScreen({ navigation, route }) {
           <View style={styles.plateModalSheet}>
             <View style={styles.plateModalHeader}>
               <Text style={styles.plateModalTitle}>Plate ({plate.length})</Text>
-              <TouchableOpacity onPress={() => setShowPlate(false)} hitSlop={12} accessibilityLabel="Close">
+              <TouchableOpacity onPress={() => setShowPlate(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
                 <Ionicons name="close" size={22} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
@@ -654,17 +671,27 @@ export default function FoodSearchScreen({ navigation, route }) {
                     <Text style={styles.plateItemName} numberOfLines={1}>{it.food.name}</Text>
                     <Text style={styles.plateItemMeta}>{Math.round(it.quantityG)}g · {it.kcal} kcal</Text>
                   </View>
-                  <TouchableOpacity onPress={() => removeFromPlate(it.key)} hitSlop={10} accessibilityLabel={`Remove ${it.food.name}`}>
+                  <TouchableOpacity onPress={() => removeFromPlate(it.key)} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${it.food.name}`}>
                     <Ionicons name="close-circle" size={22} color={colors.textMuted} />
                   </TouchableOpacity>
                 </View>
               ))}
             </ScrollView>
             <View style={styles.plateModalActions}>
-              <TouchableOpacity style={styles.plateClearBtn} onPress={() => { setPlate([]); setShowPlate(false); }}>
+              <TouchableOpacity
+                style={styles.plateClearBtn}
+                onPress={() => { setPlate([]); setShowPlate(false); }}
+                accessibilityRole="button"
+                accessibilityLabel="Clear the plate"
+              >
                 <Text style={styles.plateClearText}>Clear</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.plateLogBtnWide} onPress={logPlate}>
+              <TouchableOpacity
+                style={styles.plateLogBtnWide}
+                onPress={logPlate}
+                accessibilityRole="button"
+                accessibilityLabel={`Log ${plate.length} to ${mealSlotLabel(mealSlot)}`}
+              >
                 <Text style={styles.plateLogText}>Log {plate.length} to {mealSlotLabel(mealSlot)}</Text>
               </TouchableOpacity>
             </View>
