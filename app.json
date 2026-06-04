@@ -3,7 +3,7 @@
     "name": "Volyume",
     "slug": "volyume",
     "scheme": "volyume",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "runtimeVersion": {
       "policy": "appVersion"
     },
@@ -20,7 +20,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.volyume",
-      "buildNumber": "4",
+      "buildNumber": "5",
       "requireFullScreen": true,
       "associatedDomains": [
         "applinks:volyume.app"
@@ -46,7 +46,7 @@
         "backgroundColor": "#0D0D0D"
       },
       "package": "app.volyume",
-      "versionCode": 5,
+      "versionCode": 6,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
