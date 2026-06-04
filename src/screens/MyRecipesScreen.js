@@ -114,6 +114,7 @@ export default function MyRecipesScreen({ navigation, route }) {
         disabled={!!loggingId}
         accessibilityRole="button"
         accessibilityLabel={`Log ${item.name}`}
+        accessibilityHint="Long press to delete"
       >
         <View style={{ flex: 1 }}>
           <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
@@ -126,6 +127,7 @@ export default function MyRecipesScreen({ navigation, route }) {
           onPress={() => onEdit(item)}
           disabled={!!loggingId}
           hitSlop={12}
+          accessibilityRole="button"
           accessibilityLabel={`Edit ${item.name}`}
           style={styles.editBtn}
         >
@@ -143,7 +145,7 @@ export default function MyRecipesScreen({ navigation, route }) {
       <BackHeader
         title="My recipes"
         right={(
-          <TouchableOpacity onPress={onCreate} hitSlop={12} accessibilityLabel="New recipe">
+          <TouchableOpacity onPress={onCreate} hitSlop={12} accessibilityRole="button" accessibilityLabel="New recipe">
             <Ionicons name="add" size={26} color={colors.primary} />
           </TouchableOpacity>
         )}
@@ -161,7 +163,7 @@ export default function MyRecipesScreen({ navigation, route }) {
           <Text style={styles.emptyBody}>
             Build a recipe once. Log it as one line in your diary every time you eat it.
           </Text>
-          <TouchableOpacity style={styles.emptyCta} onPress={onCreate}>
+          <TouchableOpacity style={styles.emptyCta} onPress={onCreate} accessibilityRole="button" accessibilityLabel="Build a recipe">
             <Text style={styles.emptyCtaText}>Build a recipe</Text>
           </TouchableOpacity>
         </View>
