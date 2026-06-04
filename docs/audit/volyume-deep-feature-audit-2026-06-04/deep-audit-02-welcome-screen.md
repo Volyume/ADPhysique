@@ -3,7 +3,7 @@
 **Document:** deep-audit-02-welcome-screen.md
 **Item:** 1 of master inventory (Group 1, core flows — first screen of FL1)
 **Screen:** `src/screens/WelcomeScreen.js`
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04; all four copy changes applied)
 **Timestamp:** 2026-06-04
 
 ---

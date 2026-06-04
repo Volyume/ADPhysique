@@ -63,7 +63,7 @@ export default function WelcomeScreen({ navigation }) {
             Lifters who want a coach reading their weight, food, energy, and training together, then adjusting each week. The Free tier is a clean logbook. Pro is the weekly read.
           </Text>
           <Text style={styles.disqualifierBody}>
-            If you want a tap-to-log workout app or a calorie counter on its own, there are faster ones out there. Volyume rewards a few weeks of consistent data with adjustments most apps cannot make.
+            Volyume is built for a few weeks of consistent data: that is when the weekly read earns its place. If you only want a quick tap-to-log or a standalone calorie counter, it is more than you need.
           </Text>
         </Animated.View>
 
@@ -129,10 +129,16 @@ export default function WelcomeScreen({ navigation }) {
             <View style={styles.freeBackupNote}>
               <Ionicons name="shield-checkmark-outline" size={13} color={colors.textMuted} />
               <Text style={styles.freeBackupText}>
-                Your data stays on your device. Sign up anytime to sync and protect it.
+                Your free account keeps every session backed up and synced across devices. No card, no ads.
               </Text>
             </View>
           </TouchableOpacity>
+        </Animated.View>
+
+        <Animated.View style={{ opacity: fadeIn }}>
+          <Text style={styles.tierNote}>
+            Both tiers are a free account. No card. About a minute to set up.
+          </Text>
         </Animated.View>
 
         <Animated.View style={{ opacity: fadeIn }}>
@@ -261,6 +267,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: colors.border,
   },
   freeBackupText: { fontSize: fontSize.xs, color: colors.textMuted, flex: 1, lineHeight: 16 },
+
+  tierNote: {
+    fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'center',
+    letterSpacing: 0.2,
+  },
 
   signInLink: {
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
