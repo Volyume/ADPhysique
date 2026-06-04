@@ -214,6 +214,9 @@ export default function VolumeHeatmapScreen() {
                 ]}
                 onPress={() => setWindowWeeks(opt.weeks)}
                 activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={opt.label}
               >
                 <Text
                   style={[
@@ -350,6 +353,7 @@ export default function VolumeHeatmapScreen() {
                         }))}
                         keyboardType="number-pad"
                         selectTextOnFocus
+                        accessibilityLabel={`${MUSCLE_DISPLAY_NAMES[muscle]} ${label}`}
                       />
                     </View>
                   ))}
@@ -357,20 +361,20 @@ export default function VolumeHeatmapScreen() {
               </View>
             ))}
             <View style={styles.editActions}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditing(false)}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditing(false)} accessibilityRole="button" accessibilityLabel="Cancel">
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={saveLandmarks}>
+              <TouchableOpacity style={styles.saveBtn} onPress={saveLandmarks} accessibilityRole="button" accessibilityLabel="Save volume targets">
                 <Text style={styles.saveBtnText}>Save</Text>
               </TouchableOpacity>
             </View>
           </View>
         ) : (
           <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.editBtn} onPress={() => setEditing(true)}>
+            <TouchableOpacity style={styles.editBtn} onPress={() => setEditing(true)} accessibilityRole="button" accessibilityLabel="Edit volume targets">
               <Text style={styles.editBtnText}>Edit Volume Targets</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.resetBtn} onPress={resetToDefaults}>
+            <TouchableOpacity style={styles.resetBtn} onPress={resetToDefaults} accessibilityRole="button" accessibilityLabel="Reset volume targets to defaults">
               <Text style={styles.resetBtnText}>Reset to Defaults</Text>
             </TouchableOpacity>
           </View>

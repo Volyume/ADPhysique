@@ -197,3 +197,11 @@ Doc: `deep-audit-18-workout-history.md`. Approved.
    prev/next + day cells, and the View/Repeat/clear-day buttons.
 Kept: list/calendar toggle, filters, trained-day calendar, animated breakdowns,
 bounded reads, Repeat-as-is. Impact Low; Effort Low. Attribute-only.
+
+## Item 18 — Volume Heatmap screen — APPROVED 2026-06-04 ("Approve")
+Doc: `deep-audit-19-volume-heatmap.md`. Approved.
+1. A11y roles/labels/selected-state on the window selector, Edit/Reset/Cancel/
+   Save, and landmark inputs.
+Note: no dead styles (the 4 flagged were trendStyles false positives).
+Kept: MEV/MAV/MRV bars, body diagram, customisable cloud-synced landmarks,
+ghost comparison, 4-week trend. Impact Low; Effort Low. Attribute-only.

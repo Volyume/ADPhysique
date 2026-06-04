@@ -3,7 +3,7 @@
 **Document:** deep-audit-19-volume-heatmap.md
 **Item:** 18 of master inventory (screen #14 — `VolumeHeatmapScreen`; Progress + Train stacks)
 **File:** `src/screens/VolumeHeatmapScreen.js` (654 lines), component `BodyDiagramHeatmap`, libs `algorithms` (VOLUME_LANDMARKS), `sync`
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04, "Approve"). Added accessibilityRole/Label/selected-state to the window-selector buttons, Edit/Reset/Cancel/Save, and accessibilityLabel to the landmark inputs. The 4 heuristic-flagged styles were trendStyles members (false positive), left intact. Attribute-only.
 **Timestamp:** 2026-06-04
 
 ---

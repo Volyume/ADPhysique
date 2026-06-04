@@ -313,3 +313,16 @@ File: `src/screens/WorkoutHistoryScreen.js`.
   breakdowns, page-of-50 bounded reads, Repeat-as-is flow. No copy/behaviour change.
 Verification: eslint clean; screen-mount green (455).
 Commit: see git log.
+
+## Item 18 — Volume Heatmap screen — IMPLEMENTED 2026-06-04
+File: `src/screens/VolumeHeatmapScreen.js`.
+- A11y only: added accessibilityRole/Label/state to the 1/2/4-week window
+  selector (selected state), the Edit Volume Targets / Reset / Cancel / Save
+  buttons, and an accessibilityLabel on each landmark TextInput.
+- No dead styles removed: the heuristic flagged row/sparkContainer/sparkBar/
+  currentCount, but those belong to a second StyleSheet (trendStyles) and are
+  live; verified the earlier dead-style removals were on single-StyleSheet files.
+- Kept: MEV/MAV/MRV bar treatment, body diagram, customisable cloud-synced
+  landmarks (+ reset sentinel), previous-window ghost, 4-week trend.
+Verification: eslint clean; screen-mount green (455). Attribute-only.
+Commit: see git log.
