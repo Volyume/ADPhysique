@@ -144,7 +144,10 @@ export default function ProOnboardingScreen({ navigation }) {
   // Defaults to 'general' (not competing). Users tap into the optional
   // "Competing in a category?" dropdown to pick a physique category.
   const [trainingGoal, setTrainingGoal] = useState('general');
-  const [trainingPhase, setTrainingPhase] = useState(null);
+  // Default to lean gain (lean bulk) rather than an empty greyed picker, so
+  // the screen lands on the most common phase and the user changes it only if
+  // they want something else.
+  const [trainingPhase, setTrainingPhase] = useState('lean_gain');
   // Weak points the user wants to bring up (UI labels, max 3). Division-scoped:
   // the options shown depend on trainingGoal. Passed into plan generation, which
   // biases volume toward these muscles within the recovery envelope.
@@ -386,7 +389,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
   function advanceFrom4() {
     if (!trainingGoal || !trainingPhase) {
-      Alert.alert('Almost there', 'Pick what your current block is doing to continue.');
+      Alert.alert('Almost there', 'Choose what you are focused on to continue.');
       return;
     }
     // The "aggressive cuts" goal-lock interstitial was removed from
@@ -961,7 +964,7 @@ export default function ProOnboardingScreen({ navigation }) {
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <Header
               title="What you're training for."
-              sub="What your current block is doing. This drives your calorie target and how your plan is built."
+              sub="This drives your calorie target and how your plan is built."
               onBack={goBack}
             />
 
@@ -975,7 +978,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 value={trainingPhase}
                 options={TRAINING_PHASES.map(p => ({ value: p.value, label: p.label, sub: p.detail }))}
                 onChange={setTrainingPhase}
-                placeholder="Pick what your current block is doing"
+                placeholder="Choose your focus"
               />
             </View>
 

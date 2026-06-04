@@ -70,7 +70,7 @@ export default function ProGoalSetupScreen({ navigation }) {
   const { user, userProfile, saveLocalProfile } = useAppStore();
 
   const [selectedGoal, setSelectedGoal] = useState(userProfile?.trainingGoal ?? null);
-  const [selectedPhase, setSelectedPhase] = useState(userProfile?.trainingPhase ?? null);
+  const [selectedPhase, setSelectedPhase] = useState(userProfile?.trainingPhase ?? 'lean_gain');
   const [proteinApproach, setProteinApproach] = useState(
     userProfile?.proteinApproach
     ?? (ADVANCED_PROTEIN_GOALS.includes(userProfile?.trainingGoal) ? 'advanced' : 'optimised')
@@ -352,7 +352,7 @@ export default function ProGoalSetupScreen({ navigation }) {
             (weak_point spec, strength_size's isolation reduction). */}
         <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>What are you focused on right now?</Text>
         <Text style={styles.sectionSub}>
-          Drives your calorie target and how the plan is built. Pick what your current block is doing.
+          Drives your calorie target and how the plan is built.
         </Text>
 
         <Dropdown

@@ -164,7 +164,7 @@ export default function ReadinessCards({ userId, tier }) {
     });
 
   return (
-    <AnimatedEntrance index={1}>
+    <AnimatedEntrance index={1} style={{ gap: spacing.md }}>
       {/* Milestone progress */}
       {(lastUnlocked || next) && (
         <View style={styles.milestoneCard}>
