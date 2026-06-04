@@ -116,13 +116,6 @@ export default function WelcomeScreen({ navigation }) {
                 </View>
               ))}
             </View>
-
-            <View style={styles.freeBackupNote}>
-              <Ionicons name="shield-checkmark-outline" size={13} color={colors.textMuted} />
-              <Text style={styles.freeBackupText}>
-                Your free account keeps every session backed up and synced across your devices.
-              </Text>
-            </View>
           </TouchableOpacity>
         </Animated.View>
 
@@ -135,12 +128,6 @@ export default function WelcomeScreen({ navigation }) {
             <Text style={styles.signInText}>Already have an account?</Text>
             <Text style={styles.signInAction}> Sign in</Text>
           </TouchableOpacity>
-        </Animated.View>
-
-        <Animated.View style={{ opacity: fadeIn }}>
-          <Text style={styles.founderNote}>
-            Built by a lifter, for lifters. Not a generic fitness app.
-          </Text>
         </Animated.View>
       </ScrollView>
     </SafeAreaView>
@@ -227,12 +214,6 @@ const styles = StyleSheet.create({
   freeSubtitle: { ...type.caption, color: colors.textMuted, marginTop: 1 },
   freeBullets: { gap: spacing.xs, paddingLeft: spacing.xs },
   freeBulletText: { ...type.caption, color: colors.textMuted, flex: 1 },
-  freeBackupNote: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
-    marginTop: spacing.xs, paddingTop: spacing.sm,
-    borderTopWidth: 1, borderTopColor: colors.border,
-  },
-  freeBackupText: { fontSize: fontSize.xs, color: colors.textMuted, flex: 1, lineHeight: 16 },
 
   signInLink: {
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
@@ -242,8 +223,4 @@ const styles = StyleSheet.create({
   signInAction: { ...type.label, color: colors.primary },
 
 
-  founderNote: {
-    ...type.caption, color: colors.textMuted, textAlign: 'center',
-    paddingBottom: spacing.md, opacity: 0.6,
-  },
 });
