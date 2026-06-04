@@ -596,12 +596,12 @@ function EdPatternLockoutBlock({ decision }) {
         </View>
       ) : null}
       <View style={styles.edLockoutCtaRow}>
-        <TouchableOpacity onPress={openSupport} style={styles.edLockoutCtaPrimary}>
+        <TouchableOpacity onPress={openSupport} style={styles.edLockoutCtaPrimary} accessibilityRole="button">
           <Text style={styles.edLockoutCtaPrimaryText}>
             {ED_PATTERN_LOCKOUT_COPY.ctaSupport} · {supportLink.name}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setShowReadMore(v => !v)} style={styles.edLockoutCtaGhost}>
+        <TouchableOpacity onPress={() => setShowReadMore(v => !v)} style={styles.edLockoutCtaGhost} accessibilityRole="button">
           <Text style={styles.edLockoutCtaGhostText}>
             {showReadMore ? 'Hide' : ED_PATTERN_LOCKOUT_COPY.ctaReadMore}
           </Text>
@@ -668,7 +668,7 @@ function InsufficientDataView({ dataNote, onClose }) {
             'Precision Coaching reads your training and weight from day one. It holds calorie and volume changes until it has about two weeks of weigh-ins plus a check-in, so it moves on a real trend rather than one noisy week. Keep logging sessions, your morning weight, and your weekly check-in. The first adjustment lands once the trend is clear.'}
         </Text>
       </View>
-      <TouchableOpacity style={styles.doneBtn} onPress={onClose} activeOpacity={0.8}>
+      <TouchableOpacity style={styles.doneBtn} onPress={onClose} activeOpacity={0.8} accessibilityRole="button">
         <Text style={styles.doneBtnText}>Got it</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -1192,7 +1192,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   useEffect(() => {
     navigation.setOptions({
       headerLeft: () => (
-        <TouchableOpacity onPress={handleClose} hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }} style={{ paddingHorizontal: spacing.md }}>
+        <TouchableOpacity onPress={handleClose} hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }} style={{ paddingHorizontal: spacing.md }} accessibilityRole="button" accessibilityLabel="Back">
           <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
       ),
@@ -1476,7 +1476,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         )}
 
         {/* Done button */}
-        <TouchableOpacity style={styles.doneBtn} onPress={handleClose} activeOpacity={0.8}>
+        <TouchableOpacity style={styles.doneBtn} onPress={handleClose} activeOpacity={0.8} accessibilityRole="button">
           <Text style={styles.doneBtnText}>Done</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -1497,51 +1497,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  headerBack: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
-  },
-  headerSpacer: {
-    width: 36,
-  },
-
   // Scroll content
   content: {
     padding: spacing.lg,
     gap: spacing.lg,
     paddingBottom: spacing.xxxl,
-  },
-
-  // Loading / centred
-  centred: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.lg,
-    paddingHorizontal: spacing.xl,
-  },
-  loadingText: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-    textAlign: 'center',
   },
 
   // Insufficient data
@@ -1616,24 +1576,6 @@ const styles = StyleSheet.create({
   statChipLabel: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
-  },
-
-  // Adherence warning
-  adherenceCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    backgroundColor: colors.warningBg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.warning, 0.314),
-    padding: spacing.lg,
-  },
-  adherenceText: {
-    flex: 1,
-    fontSize: fontSize.sm,
-    color: colors.warning,
-    lineHeight: 20,
   },
 
   // Generic card
@@ -1831,36 +1773,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 
-  // Amber alert card (recovery week / maintenance break)
-  amberCard: {
-    backgroundColor: colors.warningBg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.warning, 0.314),
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  amberCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  amberCardTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
-    color: colors.warning,
-    letterSpacing: 0.3,
-  },
-  amberCardBody: {
-    fontSize: fontSize.sm,
-    color: colors.textPrimary,
-    lineHeight: 21,
-  },
-  amberCardFootnote: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    lineHeight: 18,
-  },
 
   // Diet break card
   dietBreakCard: {
@@ -2089,55 +2001,5 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
     color: colors.primary,
-  },
-
-  // Confidence pill (medium/low/data_hold only, hidden at high)
-  confidencePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    alignSelf: 'flex-start',
-    backgroundColor: colors.surface2 ?? colors.surface,
-    borderRadius: radius.full ?? 99,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  confidencePillText: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-  },
-
-  // Adaptive TDEE insight card
-  adaptiveTDEECard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  adaptiveTDEETitle: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.textMuted,
-    letterSpacing: 0.5,
-  },
-  adaptiveTDEEBody: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    lineHeight: 20,
-  },
-  adaptiveTDEEAdjust: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
-  },
-  adaptiveTDEENote: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    lineHeight: 18,
-    fontStyle: 'italic',
   },
 });
