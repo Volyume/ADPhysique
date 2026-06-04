@@ -7,7 +7,7 @@ Single source of truth for where the audit stands. Update on each session end.
 Branch `main`, 0/0 with origin, working tree clean, repo eslint **0 problems**,
 full suite green (174 suites, 2820 passing).
 
-### Done (28 items + the lint sweep), each: audited → researched → proposed →
+### Done (29 items + the lint sweep), each: audited → researched → proposed →
 ### approved → implemented → pushed. Doc per item in this folder.
 
 | # | Item | Screen | Doc |
@@ -40,6 +40,7 @@ full suite green (174 suites, 2820 passing).
 | 26 | Food Search | FoodSearchScreen (+ FoodRow) | deep-audit-27 |
 | 27 | Add Custom Food | AddCustomFoodScreen | deep-audit-28 |
 | 28 | Scan Barcode | ScanBarcodeScreen | deep-audit-29 |
+| 29 | Scan Label (OCR) | ScanLabelScreen | deep-audit-30 |
 
 Plus: the full lint sweep (779 → 0 warnings, 0 errors) across commits
 e518807 / 16cbad7 / e345a06 / d2f797f, and the `__mocks__/expo-application.js`
@@ -51,11 +52,10 @@ test mock.
 
 ## NEXT (resume here)
 
-Inventory order, next un-audited screen: **#27 `ScanLabelScreen`** (Diary
-sub-stack, nutrition-label OCR modal), then the cardio surfaces (#28 LogCardio
-🔒, #29 CardioHistory) and the A6 You sub-stack incl. the coach-engine surfaces
-(CoachOutput, WeeklyCheckIn, ProGoalSetup, etc.). Master list:
-`deep-audit-01-master-inventory.md`.
+Inventory order, next un-audited screen: **#28 `LogCardioScreen`** 🔒 (Diary
+sub-stack, log-a-cardio-session modal), then #29 CardioHistory and the A6 You
+sub-stack incl. the coach-engine surfaces (CoachOutput, WeeklyCheckIn,
+ProGoalSetup, etc.). Master list: `deep-audit-01-master-inventory.md`.
 
 ### Carry-over flags raised this session (Training Blocks, item 25)
 - No manual block create/edit exists; blocks only start via plan activation.
