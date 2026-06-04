@@ -425,7 +425,7 @@ function ProOnboardingStack() {
   );
 }
 
-const SPLASH_MIN_MS = 2500;
+const SPLASH_MIN_MS = 1600;
 
 export default function RootNavigator() {
   // Subscribe only to the fields whose change should reroute. Without a
@@ -1072,6 +1072,7 @@ function SplashScreen() {
           source={SPLASH_HERO}
           style={{ width: SPLASH_W, height: Math.round(SPLASH_W / HERO_ASPECT) }}
           resizeMode="contain"
+          accessibilityLabel="Volyume"
         />
       </Animated.View>
 
@@ -1107,7 +1108,7 @@ const splashStyles = StyleSheet.create({
     marginTop: spacing.md,
   },
   tagline: {
-    fontSize: 13,
+    fontSize: fontSize.sm,
     color: colors.textMuted,
     letterSpacing: 0.4,
     fontWeight: fontWeight.regular,

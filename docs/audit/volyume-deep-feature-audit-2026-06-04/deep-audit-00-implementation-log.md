@@ -212,3 +212,17 @@ File: `src/screens/YouScreen.js` (+ `__mocks__/expo-application.js`).
 Verification: YouScreen eslint clean; full suite green (174 suites, 2820
 passing) after adding the mock; repo eslint 0 problems. No behaviour change.
 Commit: see git log.
+
+## Item 12 — Splash screen (inline) — IMPLEMENTED 2026-06-04
+File: `src/navigation/RootNavigator.js`.
+- Lowered the forced splash minimum SPLASH_MIN_MS 2500 -> 1600 ms (founder's
+  brand-vs-speed call; 1600 covers the ~1.45 s animation + a brief hold, then
+  lets fast cold boots proceed). Slow boots are unaffected (still gated by the
+  tier/first-run checks).
+- Tagline style now uses the fontSize.sm token instead of a raw 13 literal.
+- Added accessibilityLabel="Volyume" to the wordmark hero image.
+- Kept: the reduce-motion-aware animation, single amber accent, brand background
+  (no hand-off seam), the tagline, and the splash gate logic (untouched).
+Verification: RootNavigator eslint clean; navigation + healthConsentRouting +
+screen-mount green (463). No routing/gate change.
+Commit: see git log.

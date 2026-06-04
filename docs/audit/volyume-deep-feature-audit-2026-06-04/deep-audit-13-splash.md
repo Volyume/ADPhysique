@@ -3,7 +3,7 @@
 **Document:** deep-audit-13-splash.md
 **Item:** 12 of master inventory (screen #3 — `SplashScreen`, inline in `RootNavigator.js`)
 **File:** `src/navigation/RootNavigator.js` (`SplashScreen` `:998-1085`, `splashStyles` `:1093-1117`, `SPLASH_MIN_MS` `:428`, gate `:923-924`)
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04, "Approved" — minimum set to the recommended 1600 ms). Lowered SPLASH_MIN_MS 2500 -> 1600; tagline now uses fontSize.sm; hero image labelled "Volyume". Routing/gate untouched.
 **Timestamp:** 2026-06-04
 
 > Note: this lives in `RootNavigator.js`, a runtime-critical bootstrap/auth file.

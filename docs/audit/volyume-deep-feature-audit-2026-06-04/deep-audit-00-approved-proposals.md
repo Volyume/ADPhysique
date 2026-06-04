@@ -133,3 +133,13 @@ Approved changes:
 Kept: identity-first profile card, grouped sections, surfaced coaching
 shortcuts, functional row icons, brand About line, tier gating.
 Impact Low; Effort Low. (Added __mocks__/expo-application.js for the test harness.)
+
+## Item 12 — Splash screen (inline) — APPROVED 2026-06-04 ("Approved")
+Doc: `deep-audit-13-splash.md`. Approved; minimum set to recommended 1600 ms.
+Approved changes:
+1. Lower SPLASH_MIN_MS 2500 -> 1600 (fast boots proceed sooner; slow boots
+   unaffected, gated by the checks).
+2. Tagline fontSize: 13 -> fontSize.sm token.
+3. accessibilityLabel="Volyume" on the hero image.
+Kept: reduce-motion animation, single amber accent, brand background, tagline,
+splash gate. Impact Medium (1) / trivial (2-3); Effort Low.
