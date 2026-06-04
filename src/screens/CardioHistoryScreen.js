@@ -4,7 +4,7 @@
  * The cardio log over time (audit E3). A plain reverse-chronological list of
  * sessions grouped by day, each showing activity, duration, intensity and the
  * estimated calories (feedback, not a target). Swipe-free: a small delete on
- * each row (soft delete, so it syncs). Reached from the Plans cardio card.
+ * each row (soft delete, so it syncs). Reached from the Progress cardio card.
  *
  * Voice rules: CLAUDE.md. No em dashes, no encouragement.
  */
@@ -67,7 +67,7 @@ export default function CardioHistoryScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityLabel="Back">
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Back">
           <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Cardio history</Text>
@@ -97,7 +97,7 @@ export default function CardioHistoryScreen({ navigation }) {
                   {item.estKcal != null ? ` · ~${item.estKcal} kcal` : ''}
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => confirmDelete(item)} hitSlop={10} accessibilityLabel="Remove session">
+              <TouchableOpacity onPress={() => confirmDelete(item)} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${item.activityName} session`}>
                 <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
