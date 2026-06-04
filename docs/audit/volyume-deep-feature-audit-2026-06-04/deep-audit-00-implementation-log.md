@@ -301,3 +301,15 @@ these per-session predictions were deprecated per the in-file :419 note).
 Verification: repo eslint 0 problems; FULL suite green (174 suites, 2820
 passing) — confirms the live coach loop + weekly check-in save stay intact.
 Commit: see git log.
+
+## Item 17 — Workout History screen — IMPLEMENTED 2026-06-04
+File: `src/screens/WorkoutHistoryScreen.js`.
+- A11y only: added accessibilityRole/Label/state to the list/calendar toggle,
+  the filter chips (selected state), the calendar prev/next + trained day cells
+  (selected + disabled-when-untrained), and the View Details / View full summary
+  / Repeat / show-all-this-month buttons. The expand header already had a label
+  via PressableCard.
+- Kept: list/calendar toggle, filters, trained-day calendar, animated expandable
+  breakdowns, page-of-50 bounded reads, Repeat-as-is flow. No copy/behaviour change.
+Verification: eslint clean; screen-mount green (455).
+Commit: see git log.

@@ -361,6 +361,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
                   readOnly: true,
                 })
               }
+              accessibilityRole="button"
+              accessibilityLabel="View full summary"
             >
               <Text style={styles.fullSummaryBtnText}>View full summary</Text>
               <Ionicons name="arrow-forward" size={14} color={colors.primary} />
@@ -385,6 +387,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
                   readOnly: true,
                 })
               }
+              accessibilityRole="button"
+              accessibilityLabel="View details"
             >
               <Text style={styles.viewBtnText}>View Details</Text>
             </TouchableOpacity>
@@ -392,6 +396,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
           <TouchableOpacity
             style={[styles.repeatBtn, isExpanded && styles.repeatBtnFull]}
             onPress={() => handleRepeatWorkout(workout)}
+            accessibilityRole="button"
+            accessibilityLabel="Repeat session"
           >
             <Ionicons name="refresh-outline" size={16} color={colors.primary} />
             <Text style={styles.repeatBtnText}>Repeat</Text>
@@ -414,6 +420,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
             setSelectedDay(null);
           }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="Previous month"
         >
           <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
@@ -424,6 +432,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
             setSelectedDay(null);
           }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="Next month"
         >
           <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
@@ -467,6 +477,9 @@ export default function WorkoutHistoryScreen({ navigation }) {
                 setSelectedDay(prev => (prev && isSameDay(prev, cellDate) ? null : cellDate));
               }}
               activeOpacity={trained ? 0.7 : 1}
+              accessibilityRole="button"
+              accessibilityLabel={`${format(cellDate, 'd MMMM')}${trained ? ', trained' : ''}`}
+              accessibilityState={{ selected: !!isSelected, disabled: !trained }}
             >
               <View style={[
                 styles.dayCircle,
@@ -503,6 +516,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
             setSelectedDay(null);
           }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel={viewMode === 'calendar' ? 'Switch to list view' : 'Switch to calendar view'}
         >
           <Ionicons
             name={viewMode === 'calendar' ? 'list-outline' : 'calendar-outline'}
@@ -524,6 +539,9 @@ export default function WorkoutHistoryScreen({ navigation }) {
                 setFilter(f.key);
                 setSelectedDay(null);
               }}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={`Filter: ${f.label}`}
             >
               <Text style={[styles.chipText, active && styles.chipTextActive]}>
                 {f.label}
@@ -547,7 +565,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
           </View>
           {renderCalendarGrid()}
           {selectedDay && (
-            <TouchableOpacity onPress={() => setSelectedDay(null)} style={styles.clearDayBtn}>
+            <TouchableOpacity onPress={() => setSelectedDay(null)} style={styles.clearDayBtn} accessibilityRole="button" accessibilityLabel="Show all this month">
               <Text style={styles.clearDayText}>Show all this month</Text>
             </TouchableOpacity>
           )}

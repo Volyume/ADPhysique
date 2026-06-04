@@ -3,7 +3,7 @@
 **Document:** deep-audit-18-workout-history.md
 **Item:** 17 of master inventory (screen #13 — `WorkoutHistoryScreen`; Progress + Train stacks)
 **File:** `src/screens/WorkoutHistoryScreen.js` (908 lines), components `Card`, `PressableCard`, `SkeletonRow`, `AnimatedEntrance`, `EmptyWorkoutsIllustration`
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04, "Approved"). Added accessibilityRole/Label/state to the list/calendar toggle, the filter chips (selected state), the calendar prev/next + trained day cells (selected + disabled-when-untrained), and the View Details / View full summary / Repeat / show-all-this-month buttons. Attribute-only, no behaviour/copy/layout change.
 **Timestamp:** 2026-06-04
 
 ---

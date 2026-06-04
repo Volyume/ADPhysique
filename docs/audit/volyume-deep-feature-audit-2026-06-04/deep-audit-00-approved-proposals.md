@@ -190,3 +190,10 @@ Approved changes:
 Kept: stat grid, 4-week comparison, volume + why, the feedback->engine loop,
 weekly check-in, share card, save-as-template, health write. Verified: FULL
 suite green (2820). Impact Medium (1) / Low (2,3). Runtime-critical, verified.
+
+## Item 17 — Workout History screen — APPROVED 2026-06-04 ("Approved")
+Doc: `deep-audit-18-workout-history.md`. Approved.
+1. A11y roles/labels/selected-state on the toggle, filter chips, calendar
+   prev/next + day cells, and the View/Repeat/clear-day buttons.
+Kept: list/calendar toggle, filters, trained-day calendar, animated breakdowns,
+bounded reads, Repeat-as-is. Impact Low; Effort Low. Attribute-only.
