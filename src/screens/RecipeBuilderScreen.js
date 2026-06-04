@@ -31,6 +31,7 @@ import {
   setRecipeIngredients, computeRecipeMacros,
 } from '../lib/food/db';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
+import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -127,7 +128,9 @@ export default function RecipeBuilderScreen({ navigation, route }) {
   }
 
   function onChangeQty(i, raw) {
-    const q = Number(raw);
+    // Filter to digits and a single decimal so a stray character can't turn the
+    // whole macro preview into NaN.
+    const q = Number(raw.replace(/[^0-9.]/g, '')) || 0;
     setIngredients((prev) => prev.map((ing, idx) => idx === i ? { ...ing, quantity_g: q } : ing));
   }
 
@@ -167,18 +170,24 @@ export default function RecipeBuilderScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
           <Ionicons name="close" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{recipeId ? 'Edit recipe' : 'New recipe'}</Text>
-        <TouchableOpacity onPress={onSave} disabled={!canSave} hitSlop={12}>
+        <TouchableOpacity onPress={onSave} disabled={!canSave} hitSlop={12} accessibilityRole="button" accessibilityState={{ disabled: !canSave }} accessibilityLabel="Save recipe">
           <Text style={[styles.saveText, !canSave && styles.saveTextDisabled]}>
             {saving ? 'Saving…' : 'Save'}
           </Text>
         </TouchableOpacity>
       </View>
 
-      {loading ? null : (
+      {loading ? (
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
+          <SkeletonRow />
+          <SkeletonRow />
+          <SkeletonRow />
+        </View>
+      ) : (
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: spacing.xxl }}>
         <View style={styles.section}>
           <Text style={styles.label}>Name</Text>
@@ -190,6 +199,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
             placeholderTextColor={colors.textMuted}
             maxLength={80}
             autoFocus={!recipeId}
+            accessibilityLabel="Name"
           />
         </View>
 
@@ -204,6 +214,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
               placeholderTextColor={colors.textMuted}
               keyboardType="decimal-pad"
               maxLength={5}
+              accessibilityLabel="Total servings"
             />
           </View>
         </View>
@@ -217,13 +228,14 @@ export default function RecipeBuilderScreen({ navigation, route }) {
             placeholder="Optional"
             placeholderTextColor={colors.textMuted}
             multiline
+            accessibilityLabel="Notes"
           />
         </View>
 
         <View style={styles.section}>
           <View style={styles.ingHeader}>
             <Text style={styles.label}>Ingredients</Text>
-            <TouchableOpacity onPress={onPickIngredient} hitSlop={8}>
+            <TouchableOpacity onPress={onPickIngredient} hitSlop={8} accessibilityRole="button" accessibilityLabel="Add ingredient">
               <Text style={styles.addLink}>+ Add ingredient</Text>
             </TouchableOpacity>
           </View>
@@ -246,9 +258,10 @@ export default function RecipeBuilderScreen({ navigation, route }) {
                 onChangeText={(v) => onChangeQty(i, v)}
                 keyboardType="decimal-pad"
                 maxLength={5}
+                accessibilityLabel={`${ing.food?.name ?? ing.food_ref} quantity in grams`}
               />
               <Text style={styles.qtyUnit}>g</Text>
-              <TouchableOpacity onPress={() => onRemove(i)} hitSlop={8} style={{ marginLeft: spacing.sm }}>
+              <TouchableOpacity onPress={() => onRemove(i)} hitSlop={8} style={{ marginLeft: spacing.sm }} accessibilityRole="button" accessibilityLabel={`Remove ${ing.food?.name ?? ing.food_ref}`}>
                 <Ionicons name="close-circle" size={22} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
