@@ -7,7 +7,7 @@ Single source of truth for where the audit stands. Update on each session end.
 Branch `main`, 0/0 with origin, working tree clean, repo eslint **0 problems**,
 full suite green (174 suites, 2820 passing).
 
-### Done (29 items + the lint sweep), each: audited → researched → proposed →
+### Done (30 items + the lint sweep), each: audited → researched → proposed →
 ### approved → implemented → pushed. Doc per item in this folder.
 
 | # | Item | Screen | Doc |
@@ -41,6 +41,7 @@ full suite green (174 suites, 2820 passing).
 | 27 | Add Custom Food | AddCustomFoodScreen | deep-audit-28 |
 | 28 | Scan Barcode | ScanBarcodeScreen | deep-audit-29 |
 | 29 | Scan Label (OCR) | ScanLabelScreen | deep-audit-30 |
+| 30 | Log Cardio | LogCardioScreen | deep-audit-31 |
 
 Plus: the full lint sweep (779 → 0 warnings, 0 errors) across commits
 e518807 / 16cbad7 / e345a06 / d2f797f, and the `__mocks__/expo-application.js`
@@ -52,10 +53,19 @@ test mock.
 
 ## NEXT (resume here)
 
-Inventory order, next un-audited screen: **#28 `LogCardioScreen`** 🔒 (Diary
-sub-stack, log-a-cardio-session modal), then #29 CardioHistory and the A6 You
-sub-stack incl. the coach-engine surfaces (CoachOutput, WeeklyCheckIn,
-ProGoalSetup, etc.). Master list: `deep-audit-01-master-inventory.md`.
+Inventory order, next un-audited screen: **#29 `CardioHistoryScreen`** (cardio
+sessions by day), then the A6 You sub-stack incl. the coach-engine surfaces
+(CoachOutput, WeeklyCheckIn, ProGoalSetup, etc.). Master list:
+`deep-audit-01-master-inventory.md`.
+
+### Out-of-band fixes shipped this session (not audit items)
+- **Cardio nav bug:** `LogCardio`/`CardioHistory` were registered only in the
+  Diary stack, so launching from Train/Progress dumped the user on the food Diary
+  on save. Registered `LogCardio` in the Home stack and both in the Progress
+  stack (the `ProUpgrade` multi-stack pattern). Commit `a32e6a2`.
+- **Check-in steps override:** the auto step average was read-only; now
+  tap-to-override (food + cardio adherence were already overridable). Commit
+  `6feeeb7`.
 
 ### Carry-over flags raised this session (Training Blocks, item 25)
 - No manual block create/edit exists; blocks only start via plan activation.
