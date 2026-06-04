@@ -7,7 +7,7 @@ Single source of truth for where the audit stands. Update on each session end.
 Branch `main`, 0/0 with origin, working tree clean, repo eslint **0 problems**,
 full suite green (174 suites, 2820 passing).
 
-### Done (25 items + the lint sweep), each: audited → researched → proposed →
+### Done (26 items + the lint sweep), each: audited → researched → proposed →
 ### approved → implemented → pushed. Doc per item in this folder.
 
 | # | Item | Screen | Doc |
@@ -37,6 +37,7 @@ full suite green (174 suites, 2820 passing).
 | 23 | Manual Builder | ManualBuilderScreen | deep-audit-24 |
 | 24 | Plan Library | PlanLibraryScreen | deep-audit-25 |
 | 25 | Training Blocks | MesocycleBuilderScreen | deep-audit-26 |
+| 26 | Food Search | FoodSearchScreen (+ FoodRow) | deep-audit-27 |
 
 Plus: the full lint sweep (779 → 0 warnings, 0 errors) across commits
 e518807 / 16cbad7 / e345a06 / d2f797f, and the `__mocks__/expo-application.js`
@@ -48,11 +49,11 @@ test mock.
 
 ## NEXT (resume here)
 
-Inventory order, next un-audited screen: **#24 `FoodSearchScreen`** (Diary
-sub-stack; #23 DiaryScreen was already covered as the Diary tab, item 9), then
-the rest of the A4 Diary sub-stack (AddCustomFood, ScanBarcode onward) and the
-A6 You sub-stack incl. the coach-engine surfaces (CoachOutput, WeeklyCheckIn,
-ProGoalSetup, etc.). Master list: `deep-audit-01-master-inventory.md`.
+Inventory order, next un-audited screen: **#25 `AddCustomFoodScreen`** (Diary
+sub-stack, create-a-custom-food modal), then #26 ScanBarcode and the rest of the
+A4 Diary sub-stack, and the A6 You sub-stack incl. the coach-engine surfaces
+(CoachOutput, WeeklyCheckIn, ProGoalSetup, etc.). Master list:
+`deep-audit-01-master-inventory.md`.
 
 ### Carry-over flags raised this session (Training Blocks, item 25)
 - No manual block create/edit exists; blocks only start via plan activation.
