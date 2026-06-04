@@ -24,7 +24,7 @@ describe('Division-specific weak-point sets', () => {
 
   test('every label in every division set is a canonical weak-point muscle', () => {
     // So WEAK_POINT_MAP (the single label->key resolver) always resolves them.
-    for (const [goal, labels] of Object.entries(WEAK_POINT_SETS)) {
+    for (const [, labels] of Object.entries(WEAK_POINT_SETS)) {
       for (const label of labels) {
         expect(fullSet.has(label)).toBe(true);
       }

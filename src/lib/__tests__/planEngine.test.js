@@ -28,7 +28,7 @@ describe('GOAL_LABELS', () => {
   });
 
   test('all values are non-empty strings', () => {
-    for (const [key, value] of Object.entries(GOAL_LABELS)) {
+    for (const [, value] of Object.entries(GOAL_LABELS)) {
       expect(typeof value).toBe('string');
       expect(value.length).toBeGreaterThan(0);
     }

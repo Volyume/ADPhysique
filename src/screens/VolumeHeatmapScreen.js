@@ -25,7 +25,7 @@ const WINDOW_OPTIONS = [
 ];
 
 export default function VolumeHeatmapScreen() {
-  const { user, units } = useAppStore();
+  const { user } = useAppStore();
   const toast = useToast();
   const [weeklyVolume, setWeeklyVolume] = useState({});
   const [previousVolume, setPreviousVolume] = useState({});

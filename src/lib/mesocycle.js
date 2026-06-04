@@ -187,7 +187,6 @@ export function evaluateAutoReg(feedbackWindow = []) {
   const avgFatigue       = weightedAvg('fatigueLevel');         // 1–5
   const avgSoreness      = weightedAvg('soreness24hBefore');    // 1–3
   const avgPump          = weightedAvg('overallPump');           // 1–3
-  const avgJoint         = weightedAvg('jointDiscomfort');       // 0–3
 
   // Joint discomfort is an emergency brake
   const latestFb = feedbackWindow[feedbackWindow.length - 1];

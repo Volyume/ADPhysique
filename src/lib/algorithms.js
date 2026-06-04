@@ -1060,7 +1060,7 @@ export function calculateEffectiveSets(sets, exerciseMap = {}) {
 // Plateau detection for a specific exercise across sessions.
 // exerciseSessions: array of sessions newest-first, each an array of sets for that exercise.
 // Returns { plateau, consecutiveStalls, resolution }
-export function detectPlateau(exerciseSessions = [], repMin = 6, repMax = 12) {
+export function detectPlateau(exerciseSessions = [], _repMin = 6, _repMax = 12) {
   if (!exerciseSessions || exerciseSessions.length < 3) {
     return { plateau: false, consecutiveStalls: 0, resolution: null };
   }

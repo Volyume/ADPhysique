@@ -111,7 +111,7 @@ export default function FoodInsightsScreen({ navigation }) {
       if (result.rowCount > 0) {
         toast.show(`${result.rowCount} ${result.rowCount === 1 ? 'entry' : 'entries'} exported to CSV.`, { variant: 'success' });
       }
-    } catch (e) {
+    } catch (_e) {
       toast.show('Export failed. Try again.', { variant: 'error' });
     } finally {
       setExporting(false);

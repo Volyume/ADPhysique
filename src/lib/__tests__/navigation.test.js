@@ -40,7 +40,6 @@ function collectNavigationTargets() {
     const stat = fs.statSync(dir);
     if (stat.isFile() && dir.endsWith('.js')) {
       const text = fs.readFileSync(dir, 'utf-8');
-      const lines = text.split('\n');
       for (const re of [navCallRe, navAttrRe, nestedScreenRe]) {
         re.lastIndex = 0;
         let m;

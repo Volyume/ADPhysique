@@ -707,7 +707,6 @@ function makeEx(name, paramKey, sets, experience, nutritionPhase, goal = null, n
 export function estimateWorkoutMinutes(exercises) {
   if (!exercises || exercises.length === 0) return 0;
   const T_SET_LOG = 60;
-  let totalSec = 7.5 * 60; // overhead base
 
   const numCompounds = exercises.filter(e => e.restSec >= 150).length;
   const overheadMin = 7.5 + Math.max(0, numCompounds - 1);
@@ -741,7 +740,7 @@ function estimateSessionMinutes(exercises, equipment) {
 // no muscle exceeds its division-aware MRV, and the side+rear+front delt complex
 // stays within its combined cap. Keeps a 3-set minimum and never removes a
 // muscle's last entry. Runs before time-trim and the volume summary.
-function clampDeliveredToMRV(workouts, goal, landmarks) {
+function clampDeliveredToMRV(workouts, goal, _landmarks) {
   const byMuscle = {};
   for (const w of workouts) for (const ex of w.exercises) {
     if (ex._m) (byMuscle[ex._m] ??= []).push(ex);
@@ -893,12 +892,6 @@ const DIVISION_SUBREGION_BIAS = {
   bikini:           { glutes: 'activator' },
   wellness:         { glutes: 'activator', quads: 'sweep' },
 };
-
-// Deterministic index-based pick (no randomness)
-function pickAt(arr, index) {
-  if (!arr || arr.length === 0) return null;
-  return arr[index % arr.length];
-}
 
 // How many exercises a session holds for a muscle, given its set target.
 // Extracted so difficulty gating can size its coverage threshold to the same
@@ -1782,20 +1775,13 @@ function buildPersonalisationSummary(inputs, effectiveDays, splitType, weakPoint
 // ---------------------------------------------------------------------------
 
 function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILabels) {
-  const { experience, goal, phase, recoveryRating, nutritionPhase, equipment, sessionLengthMinutes, daysPerWeek } = inputs;
+  const { experience, goal, phase, recoveryRating, nutritionPhase, equipment } = inputs;
   const eqLabel = EQUIPMENT_LABELS[equipment] ?? equipment;
   // Same shadow as generatePlan, map post-merge phase to legacy goal IDs
   // so the goalMap below still keys narrative text correctly.
   const internalGoal = phase === 'weak_point'   ? 'weak_point_spec'
                      : phase === 'strength_size' ? 'strength_hypertrophy'
                      : goal;
-
-  const avgSets = workouts.length
-    ? Math.round(workouts.reduce((s, w) => s + w.exercises.reduce((t, e) => t + e.sets, 0), 0) / workouts.length)
-    : 0;
-  const avgEx = workouts.length
-    ? Math.round(workouts.reduce((s, w) => s + w.exercises.length, 0) / workouts.length)
-    : 0;
 
   const result = {};
 
@@ -2050,7 +2036,7 @@ export function generatePlan(inputs) {
 function _generatePlanInner(inputs) {
   const {
     experience        = 'intermediate',
-    trainingAge       = null,
+    trainingAge: _trainingAge = null,
     daysPerWeek       = 4,
     sessionLengthMinutes = 60,
     equipment         = 'full_gym',

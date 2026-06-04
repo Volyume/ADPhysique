@@ -11,13 +11,6 @@
  */
 import { runWeeklyCoach } from '../weeklyCoach';
 
-const baseProfile = {
-  sex: 'male',
-  bodyFatPercent: 15,
-  bodyFatSource: 'dexa',
-  bodyweightKg: 80,
-};
-
 function checkin(over = {}) {
   return {
     energyScore: 4,

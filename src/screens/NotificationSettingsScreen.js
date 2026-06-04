@@ -33,48 +33,11 @@ import useAppStore from '../store/useAppStore';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
-const HOURS = [5, 6, 7, 8, 9, 10, 11, 12];
 const TRAINING_PRESET_TIMES = ['06:00', '07:00', '08:00', '09:00', '10:00', '17:00', '18:00', '19:00', '20:00'];
-const EVENING_HOURS = [14, 15, 16, 17, 18, 19, 20, 21];
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-function formatHour(hour) {
-  if (hour === 0) return '12 AM';
-  if (hour < 12) return `${hour} AM`;
-  if (hour === 12) return '12 PM';
-  return `${hour - 12} PM`;
-}
 
-function formatDayHour(dayIndex, hour) {
-  return `${DAYS[dayIndex]} at ${formatHour(hour)}`;
-}
 
-// Compute the actual next-fire Date for the check-in reminder honouring the
-// minimum-gap rule from the last check-in. Mirrors the runtime logic in
-// notifications.js so the preview text matches what the reminder will do.
-function computeNextCheckinFireDate(weekday, hour, minute, lastCheckinMs, minGapDays = 7) {
-  const after = new Date();
-  const target = new Date(after);
-  const currentDow = target.getDay();
-  let daysUntil = (weekday - currentDow + 7) % 7;
-  target.setHours(hour, minute, 0, 0);
-  if (daysUntil === 0 && target.getTime() <= after.getTime()) daysUntil = 7;
-  target.setDate(target.getDate() + daysUntil);
-  if (lastCheckinMs > 0 && minGapDays > 0) {
-    const earliest = lastCheckinMs + minGapDays * 24 * 60 * 60 * 1000;
-    while (target.getTime() < earliest) target.setDate(target.getDate() + 7);
-  }
-  return target;
-}
 
-// "Sunday 25 May at 12:00"
-function formatNextFire(date) {
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const h = date.getHours();
-  const m = date.getMinutes().toString().padStart(2, '0');
-  return `${dayNames[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]} at ${formatHour(h)}${m === '00' ? '' : ':' + m}`;
-}
 
 async function applyNotifications(prefs, permissionStatus) {
   // Cancel ONLY the two notifications this screen owns (morning weight +
@@ -142,63 +105,7 @@ async function applyNotifications(prefs, permissionStatus) {
   } catch (_) { /* tolerate; AsyncStorage write already succeeded */ }
 }
 
-function HourChips({ hours, selected, onSelect, disabled }) {
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.chipRow}
-      pointerEvents={disabled ? 'none' : 'auto'}
-    >
-      {hours.map((hour) => {
-        const isSelected = hour === selected;
-        return (
-          <TouchableOpacity
-            key={hour}
-            style={[styles.chip, isSelected && styles.chipSelected]}
-            onPress={() => onSelect(hour)}
-            accessibilityRole="radio"
-            accessibilityState={{ selected: isSelected }}
-            accessibilityLabel={formatHour(hour)}
-          >
-            <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-              {formatHour(hour)}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
-    </ScrollView>
-  );
-}
 
-function DayChips({ selected, onSelect, disabled }) {
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.chipRow}
-      pointerEvents={disabled ? 'none' : 'auto'}
-    >
-      {DAYS.map((day, index) => {
-        const isSelected = index === selected;
-        return (
-          <TouchableOpacity
-            key={day}
-            style={[styles.chip, isSelected && styles.chipSelected]}
-            onPress={() => onSelect(index)}
-            accessibilityRole="radio"
-            accessibilityState={{ selected: isSelected }}
-            accessibilityLabel={day}
-          >
-            <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-              {day}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
-    </ScrollView>
-  );
-}
 
 export default function NotificationSettingsScreen({ navigation }) {
   // Morning weight + weekly check-in reminders are Pro coaching inputs;
@@ -412,6 +319,11 @@ export default function NotificationSettingsScreen({ navigation }) {
     if (savedTimer.current) clearTimeout(savedTimer.current);
   }, []);
 
+  // Retained deliberately: this debounced save wrapper (and applyNotifications,
+  // which schedules the morning-weight + weekly-check-in reminders) is currently
+  // only reachable via handlers removed in a half-finished refactor of this
+  // screen. Not deleting notification-scheduling code on a guess. See audit note.
+  // eslint-disable-next-line no-unused-vars
   function scheduleApply(nextPrefs) {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(async () => {
@@ -468,45 +380,6 @@ export default function NotificationSettingsScreen({ navigation }) {
         });
       }
     } catch (_) {}
-  }
-
-  function handleMorningToggle(value) {
-    if (value && permissionStatus !== 'granted') {
-      Alert.alert(
-        'Notifications disabled',
-        'You\'ll need to enable notifications in your device settings first.',
-      );
-      return;
-    }
-    setMorningEnabled(value);
-    scheduleApply(getPrefs({ me: value }));
-  }
-
-  function handleMorningHour(hour) {
-    setMorningHour(hour);
-    scheduleApply(getPrefs({ mh: hour }));
-  }
-
-  function handleCheckinToggle(value) {
-    if (value && permissionStatus !== 'granted') {
-      Alert.alert(
-        'Notifications disabled',
-        'You\'ll need to enable notifications in your device settings first.',
-      );
-      return;
-    }
-    setCheckinEnabled(value);
-    scheduleApply(getPrefs({ ce: value }));
-  }
-
-  function handleCheckinDay(day) {
-    setCheckinDay(day);
-    scheduleApply(getPrefs({ cd: day }));
-  }
-
-  function handleCheckinHour(hour) {
-    setCheckinHour(hour);
-    scheduleApply(getPrefs({ ch: hour }));
   }
 
   async function handleTrainingToggle(value) {

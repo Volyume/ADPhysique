@@ -111,7 +111,6 @@ function buildCards(data, units) {
 
   // 6. Top exercise
   if (data.topExercises?.[0]) {
-    const top = data.topExercises[0];
     cards.push({
       type: 'list',
       icon: 'flame',

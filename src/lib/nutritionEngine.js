@@ -499,7 +499,7 @@ function calcProtein(goal, weightKg, lbm, bodyFatSource, proteinApproach = 'opti
   return { proteinG: Math.max(proteinG, floorG), basis, proteinRateUsed };
 }
 
-function estimateWeeklyRate(targetKcal, maintenanceKcal, weightKg) {
+function estimateWeeklyRate(targetKcal, maintenanceKcal, _weightKg) {
   const dailyDelta = targetKcal - maintenanceKcal;
   const weeklyDelta = dailyDelta * 7;
   // 1 kg body fat ≈ 7700 kcal deficit/surplus
@@ -554,7 +554,7 @@ export function calculateNutritionTargets(inputs) {
     trainingGoal = null,
     proteinApproach: _proteinApproachInput = null,
     customProteinGPerKg = null,
-    targetRateKgPerWeek = null,
+    targetRateKgPerWeek: _targetRateKgPerWeek = null,
     experienceLevel = 'intermediate', // 'beginner' | 'intermediate' | 'advanced' | 'competitive'
   } = inputs;
 

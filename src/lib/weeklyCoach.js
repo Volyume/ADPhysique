@@ -321,7 +321,7 @@ export function runWeeklyCoach(inputs) {
     goalStartDate = null,
     consecutiveOffTargetWeeks = 0,
     consecutivePoorRecoveryWeeks = 0,
-    lastCalAdjustmentDirection = null,
+    lastCalAdjustmentDirection: _lastCalAdjustmentDirection = null,
     lastCalAdjustmentWeeksAgo = 99,
     currentCalTarget = null,
     // Current daily macros, read from nutrition_targets by the caller.

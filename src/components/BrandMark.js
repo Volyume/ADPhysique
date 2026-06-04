@@ -29,7 +29,7 @@ const V_ICON_ASPECT = 685 / 741;
  * Uses expo-image when available (disk cache, faster decode), falls
  * back to RN Image otherwise so the app keeps working pre-install.
  */
-export function VolyumeMark({ size = 28, color, accent, style }) {
+export function VolyumeMark({ size = 28, style }) {
   const height = size;
   const width = Math.round(height * WORDMARK_ASPECT);
   return (
@@ -49,7 +49,7 @@ export function VolyumeMark({ size = 28, color, accent, style }) {
  * a screen title already names the section so the wordmark would be
  * redundant. size drives the height; width follows the asset aspect.
  */
-export function VolyumeIcon({ size = 28, color, accent, style }) {
+export function VolyumeIcon({ size = 28, style }) {
   const height = size;
   const width = Math.round(height * V_ICON_ASPECT);
   return (

@@ -30,7 +30,7 @@ import {
 import {
   isHealthAvailable, getHealthProviderLabel,
   getHealthPermissionStatus, requestHealthPermissions, importNewWeights,
-  openSystemHealthSettings, getHealthConnectSdkStatus, openHealthConnectInstall,
+  openSystemHealthSettings, openHealthConnectInstall,
 } from '../lib/health';
 import Constants from 'expo-constants';
 import * as Updates from 'expo-updates';
@@ -107,7 +107,7 @@ function SectionHeader({ title }) {
 export default function SettingsScreen({ navigation }) {
   const toast = useToast();
   const feedback = useFeedback();
-  const { user, setUser, setSession, clearAuthStateForSignOut, userProfile, saveLocalProfile, setDietPreference, tier, setTier, accessibility, setAccessibilityPref, loadAccessibility, accessibilityLoaded, healthConsent, setHealthConsent, privacy, setAnalyticsOptOut } =
+  const { user, clearAuthStateForSignOut, userProfile, saveLocalProfile, setDietPreference, tier, setTier, accessibility, setAccessibilityPref, loadAccessibility, accessibilityLoaded, healthConsent, setHealthConsent, privacy, setAnalyticsOptOut } =
     useAppStore(useShallow(s => ({
       user: s.user, setUser: s.setUser, setSession: s.setSession,
       clearAuthStateForSignOut: s.clearAuthStateForSignOut,
@@ -609,7 +609,6 @@ export default function SettingsScreen({ navigation }) {
     setDeletingAccount(true);
     const userId = user.id;
     let cloudOk = true;
-    let cloudErr = null;
     try {
       if (!user?.isLocal) {
         // Server-side wipe via the delete-account Edge Function. The
@@ -670,7 +669,6 @@ export default function SettingsScreen({ navigation }) {
             const { error: rpcErr } = await sb.rpc('delete_user_data');
             if (rpcErr) {
               cloudOk = false;
-              cloudErr = rpcErr.message ?? 'Unknown error';
               logError('SettingsScreen.deleteAccount.rpc', rpcErr, { userId });
             }
           }

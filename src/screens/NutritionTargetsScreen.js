@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
-  KeyboardAvoidingView, Platform, Keyboard,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -812,13 +812,10 @@ export default function NutritionTargetsScreen({ navigation }) {
                   : null;
                 const maintenanceKcal = results.maintenanceKcal ?? results.targetKcal ?? 0;
                 const surplusDelta = Math.round((results.targetKcal ?? 0) - maintenanceKcal);
-                const isUp = surplusDelta >= 0;
                 const absPct = maintenanceKcal > 0 ? Math.round(Math.abs(surplusDelta / maintenanceKcal) * 100) : 0;
                 const rateAbs = Math.abs(results.targetRateKgPerWeek);
                 const rateDir = results.targetRateKgPerWeek >= 0 ? 'gain' : 'lose';
                 const fatFloorG = weightKg ? Math.round(Math.max(0.5 * weightKg, 30)) : 30;
-                const fatKcal = results.fatG * 9;
-                const fatPct = Math.round(fatKcal / results.targetKcal * 100);
                 const carbKcal = results.carbsG * 4;
 
                 // Goal-aware text helpers. Maintain (0% deficit) and

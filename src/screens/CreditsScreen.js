@@ -16,7 +16,7 @@
  * 205-207.
  */
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking,
+  Text, StyleSheet, TouchableOpacity, ScrollView, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, type } from '../styles/theme';
@@ -27,7 +27,7 @@ function openUrl(url) {
   Linking.openURL(url).catch(() => {});
 }
 
-export default function CreditsScreen({ navigation }) {
+export default function CreditsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <BackHeader title="Credits" />

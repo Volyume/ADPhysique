@@ -134,7 +134,7 @@ export default function useProgressData() {
     }
   }
 
-  async function loadMesocycle(workouts, sets, exMap) {
+  async function loadMesocycle(workouts, sets, _exMap) {
     try {
       const mesoRows = await getAllMesocycles(user.id);
       let active = mesoRows.find(m => m.isActive === 1 || m.isActive === true) ?? null;

@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 
-export default function SubscriptionPolicyScreen({ navigation }) {
+export default function SubscriptionPolicyScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title="Free, Pro, and your data" />

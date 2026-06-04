@@ -722,7 +722,7 @@ window.drawCard = function() {
 </body>
 </html>`;
 
-export default function ShareCardScreen({ navigation, route }) {
+export default function ShareCardScreen({ route }) {
   const toast = useToast();
   const {
     sessionData = null,

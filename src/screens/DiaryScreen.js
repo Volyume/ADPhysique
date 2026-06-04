@@ -23,7 +23,7 @@ import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type } f
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
   getFoodEntriesForDay, deleteFoodEntry, updateFoodEntry, getRollupForDay,
-  recomputeRollup, setWater, getWater, createSavedMeal,
+  setWater, getWater, createSavedMeal,
 } from '../lib/food/db';
 import { localDayKey, parseLocalDay } from '../lib/dayKey';
 import { resolveFoodRef } from '../lib/food/sources/localCache';

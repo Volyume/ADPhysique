@@ -369,7 +369,7 @@ const _trackedTrees = new Set();
 async function mountScreen(Screen, props = {}) {
   const errors = [];
   const origErr = console.error;
-  console.error = (msg, ...rest) => {
+  console.error = (msg, ..._rest) => {
     const text = typeof msg === 'string' ? msg : String(msg);
     // Filter out React's act() advisory, it's noise during mount
     // tests, not a real failure signal. Likewise filter out the

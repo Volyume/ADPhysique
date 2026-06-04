@@ -148,10 +148,9 @@ function Dropdown({ label, hint, value, options, onChange, placeholder = 'Select
 
 export default function ProOnboardingScreen({ navigation }) {
   const {
-    user, units, setUnits, bodyWeightUnits, setBodyWeightUnits, userProfile, saveLocalProfile,
+    user, setUnits, bodyWeightUnits, setBodyWeightUnits, userProfile, saveLocalProfile,
   } = useAppStore(useShallow(s => ({
     user: s.user,
-    units: s.units,
     setUnits: s.setUnits,
     bodyWeightUnits: s.bodyWeightUnits,
     setBodyWeightUnits: s.setBodyWeightUnits,

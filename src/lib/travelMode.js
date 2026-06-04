@@ -231,7 +231,7 @@ function makeExEntry(poolEntry, sets) {
   };
 }
 
-function buildFullBodyTravel(pool, daysPerWeek, sessionLengthMins) {
+function buildFullBodyTravel(pool, daysPerWeek, _sessionLengthMins) {
   const muscles = ['chest', 'back', 'side_delts', 'biceps', 'triceps', 'quads', 'hamstrings', 'abs'];
   const sessions = [];
   for (let d = 0; d < daysPerWeek; d++) {
@@ -245,7 +245,7 @@ function buildFullBodyTravel(pool, daysPerWeek, sessionLengthMins) {
   return sessions;
 }
 
-function buildUpperLowerTravel(pool, daysPerWeek, sessionLengthMins) {
+function buildUpperLowerTravel(pool, daysPerWeek, _sessionLengthMins) {
   const upperMuscles = ['chest', 'back', 'side_delts', 'rear_delts', 'biceps', 'triceps'];
   const lowerMuscles = ['quads', 'hamstrings', 'glutes', 'calves', 'abs'];
   const sessions = [];
@@ -263,7 +263,7 @@ function buildUpperLowerTravel(pool, daysPerWeek, sessionLengthMins) {
   return sessions;
 }
 
-function buildPPLTravel(pool, daysPerWeek, sessionLengthMins) {
+function buildPPLTravel(pool, daysPerWeek, _sessionLengthMins) {
   const pushMuscles  = ['chest', 'side_delts', 'triceps'];
   const pullMuscles  = ['back', 'rear_delts', 'biceps'];
   const legsMuscles  = ['quads', 'hamstrings', 'glutes', 'calves', 'abs'];

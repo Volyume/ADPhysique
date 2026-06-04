@@ -702,8 +702,6 @@ export default function HomeScreen({ navigation }) {
       })
     : null;
 
-  const today = format(new Date(), 'EEE d MMM');
-
   // Banner priority: keep the primary "Start" action prominent by showing at
   // most one of the three attention banners at once. A fresh weekly coach
   // review outranks a suggested recovery week, which outranks the nutrition-
@@ -1453,7 +1451,7 @@ export default function HomeScreen({ navigation }) {
  * Derive a 1-3 sentence coaching brief from available training data.
  * Returns { headline, body, type } where type is 'go' | 'caution' | 'recover'.
  */
-function buildCoachBrief({ fatigueHistory, weeklyVolume, deloadSuggestion, lastWorkoutDaysAgo, blockProgress }) {
+function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutDaysAgo, blockProgress }) {
   // Rule 1, deload suggested
   if (deloadSuggestion) {
     return {

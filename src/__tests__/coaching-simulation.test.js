@@ -385,7 +385,7 @@ describe('12-week coaching simulation', () => {
     }
     const emas = computeRecoveryEMAs(workoutSessions);
     expect(emas).toBeDefined();
-    for (const [k, v] of Object.entries(emas)) {
+    for (const [, v] of Object.entries(emas)) {
       if (v != null && typeof v === 'number') {
         expect(Number.isFinite(v)).toBe(true);
       }

@@ -5,7 +5,6 @@
 import { generateInsights, rankAndCapInsights } from '../insightsEngine';
 
 const DAY = 86_400_000;
-const WEEK = 7 * DAY;
 const NOW = Date.UTC(2026, 4, 20);
 
 function mkWorkout(daysAgo, overrides = {}) {

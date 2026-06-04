@@ -565,7 +565,6 @@ const useAppStore = create((set, get) => ({
     // ── Step 1: instant routing decision based on local cues ─────────
     // Cue A: per-uid cache (best, exact answer from prior session)
     // Cue B: created_at age heuristic (good, used when cache is missing)
-    let routedOptimistically = false;
     // True only when the optimistic "returning, route to MainTabs" decision
     // came from the created_at heuristic (Cue B), not a per-uid cache hit
     // (Cue A). A heuristic guess is the only thing the cloud read is allowed
@@ -585,7 +584,6 @@ const useAppStore = create((set, get) => ({
       set({ firstRunComplete: isComplete, firstRunChecked: true });
       try { await AsyncStorage.setItem(FIRST_RUN_KEY, cachedComplete); } catch (_) {}
       log.logInfo('restoreSessionFromCloud.cacheHit', `firstRunComplete=${cachedComplete}`);
-      routedOptimistically = true;
     } else if (sessionUser?.created_at) {
       const ageMs = Date.now() - new Date(sessionUser.created_at).getTime();
       if (Number.isFinite(ageMs) && ageMs >= 60_000) {
@@ -597,14 +595,12 @@ const useAppStore = create((set, get) => ({
         set({ firstRunComplete: true, firstRunChecked: true });
         try { await AsyncStorage.setItem(FIRST_RUN_KEY, 'true'); } catch (_) {}
         log.logInfo('restoreSessionFromCloud.optimisticReturning', `ageMs=${ageMs}`);
-        routedOptimistically = true;
         optimisticReturningFromHeuristic = true;
       } else {
         // Fresh auth row, new signup. Route to wizard.
         set({ firstRunComplete: false, firstRunChecked: true });
         try { await AsyncStorage.setItem(FIRST_RUN_KEY, 'false'); } catch (_) {}
         log.logInfo('restoreSessionFromCloud.freshSignup', `ageMs=${ageMs}`);
-        routedOptimistically = true;
       }
     }
 

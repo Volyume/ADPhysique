@@ -14,7 +14,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -111,7 +111,7 @@ function ChipRow({ items, selected, onSelect, formatter = (v) => String(v), acce
   );
 }
 
-export default function CoachingRemindersScreen({ navigation }) {
+export default function CoachingRemindersScreen() {
   const toast = useToast();
   const [morningHour, setMorningHour] = useState(7);
   const [morningMinute, setMorningMinute] = useState(0);
@@ -181,7 +181,7 @@ export default function CoachingRemindersScreen({ navigation }) {
         if (savedTimer.current) clearTimeout(savedTimer.current);
         savedTimer.current = setTimeout(() => setSaved(false), 2000);
         toast.show('Reminder schedule saved', { variant: 'success' });
-      } catch (e) {
+      } catch (_e) {
         toast.show('Could not save reminder', { variant: 'error' });
       }
     }, 400);

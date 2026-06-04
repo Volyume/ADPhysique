@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 
-export default function NutritionEducationScreen({ navigation }) {
+export default function NutritionEducationScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title="Nutrition basics" />

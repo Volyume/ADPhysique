@@ -13,7 +13,7 @@ import useAppStore from '../store/useAppStore';
 // tester wants to see what just happened locally or copy a session
 // snippet to share. Cloud upload of the buffer is removed.
 
-export default function DebugLogScreen({ navigation }) {
+export default function DebugLogScreen() {
   const [entries, setEntries] = useState([]);
   const [crash, setCrash] = useState(null);
   const [filter, setFilter] = useState('all'); // 'all' | 'error' | 'warn' | 'info'

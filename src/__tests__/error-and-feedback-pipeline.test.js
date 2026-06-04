@@ -486,7 +486,7 @@ describe('Feedback submission pipeline', () => {
     let res;
     try {
       res = await submitFeedback({ trigger: 'shake', sentiment: 'meh', message: 'x' });
-    } catch (e) {
+    } catch (_e) {
       throw new Error('submitFeedback threw, it must always resolve');
     }
     expect(res.ok).toBe(false);

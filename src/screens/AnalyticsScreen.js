@@ -308,7 +308,7 @@ function PRSparkline({ bars, windowDays }) {
   );
 }
 
-function SessionCard({ workout, units }) {
+function SessionCard({ workout }) {
   const name = workout.name || 'Session';
   const at = workout.startedAt ?? workout.createdAt ?? workout.created_at ?? 0;
   const diff = workout.sessionDifficulty ?? null;

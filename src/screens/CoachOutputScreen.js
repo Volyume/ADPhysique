@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Linking,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -71,15 +71,9 @@ function weekRangeLabel(weekStartMs) {
   return `${startStr} to ${endStr}`;
 }
 
-const TRAINING_SIGNAL_LABEL = {
-  push: 'Push harder',
-  hold: 'Hold steady',
-  reduce: 'Back it off',
-};
-
 // ─── Headline / off-items / focus builders ────────────────────────────────────
 
-function buildHeadline(output, checkin) {
+function buildHeadline(output, _checkin) {
   if (!output) return '';
   const { trend, weekLabel, adjustments } = output;
   // Calories changed
@@ -171,15 +165,6 @@ function StatChip({ icon, iconColor, label, value, valueColor }) {
         {value}
       </Text>
       {label ? <Text style={styles.statChipLabel}>{label}</Text> : null}
-    </View>
-  );
-}
-
-function AdherenceNote({ note }) {
-  return (
-    <View style={styles.adherenceCard}>
-      <Ionicons name="alert-circle-outline" size={18} color={colors.warning} />
-      <Text style={styles.adherenceText}>{note}</Text>
     </View>
   );
 }
@@ -511,19 +496,6 @@ function RefeedCard({ refeed, applied, onApply, applying }) {
   );
 }
 
-function ConfidencePill({ confidence }) {
-  if (!confidence || confidence === 'high') return null;
-  const label = confidence === 'data_hold'
-    ? 'Not enough data yet, holding the plan'
-    : 'Limited data this week, holding the plan';
-  return (
-    <View style={styles.confidencePill}>
-      <Ionicons name="time-outline" size={13} color={colors.textMuted} />
-      <Text style={styles.confidencePillText}>{label}</Text>
-    </View>
-  );
-}
-
 function HeldDecisionsCard({ decisions, history, onSeeAll }) {
   if (!decisions || decisions.length === 0) return null;
   const edLockout = decisions.find(d => d.type === 'ed_pattern_lockout');
@@ -670,19 +642,6 @@ function RapidLossCorrectedBlock({ decision }) {
   );
 }
 
-function AmberAlertCard({ title, body, footnote }) {
-  return (
-    <View style={styles.amberCard}>
-      <View style={styles.amberCardHeader}>
-        <Ionicons name="alert-circle-outline" size={18} color={colors.warning} />
-        <Text style={styles.amberCardTitle}>{title}</Text>
-      </View>
-      <Text style={styles.amberCardBody}>{body}</Text>
-      {footnote ? <Text style={styles.amberCardFootnote}>{footnote}</Text> : null}
-    </View>
-  );
-}
-
 // ─── Screens ──────────────────────────────────────────────────────────────────
 
 function LoadingView() {
@@ -726,7 +685,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   const [checkin, setCheckin] = useState(null);
   const [loading, setLoading] = useState(true);
   const [coachHistory, setCoachHistory] = useState([]);
-  const [adaptiveTDEE, setAdaptiveTDEE] = useState(null);
+  const [_adaptiveTDEE, setAdaptiveTDEE] = useState(null);
   const [applyingKey, setApplyingKey] = useState(null);
   // Next mesocycle week that a training-volume apply would write to.
   // Loaded once on mount; null when there's no active block or the

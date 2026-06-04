@@ -186,12 +186,6 @@ export default function WorkoutHistoryScreen({ navigation }) {
     }
   }, [expandedId, expandedSets]);
 
-  async function handleStartNewWorkout() {
-    const newWorkout = await createWorkout(user.id, null);
-    startWorkout(newWorkout);
-    navigation.getParent()?.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
-  }
-
   // ─── Filtering logic ────────────────────────────────────────────────────────
   const filteredWorkouts = useMemo(() => {
     let result = workouts;

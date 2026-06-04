@@ -105,7 +105,7 @@ export default function PlanDetailScreen({ navigation, route }) {
                   },
                 ],
               );
-            } catch (e) {
+            } catch (_e) {
               toast.show('Could not copy plan. Try again.', { variant: 'error' });
             }
           },

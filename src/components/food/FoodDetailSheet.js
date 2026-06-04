@@ -75,7 +75,7 @@ export default function FoodDetailSheet({
     try {
       await onSave({ quantityG: qty, mealSlot, entryDate: initialEntryDate });
       onClose?.();
-    } catch (e) {
+    } catch (_e) {
       setSubmitting(false);
       toast.show('Couldn\'t save. Try again.', { variant: 'error' });
     }

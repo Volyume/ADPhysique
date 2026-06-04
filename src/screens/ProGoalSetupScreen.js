@@ -248,7 +248,7 @@ export default function ProGoalSetupScreen({ navigation }) {
       if (user?.id) {
         await saveNutritionTargets(user.id, nextTargets);
       }
-    } catch (e) {
+    } catch (_e) {
       // Don't block the goal save if the recalc fails. Surface to the user
       // so they know targets weren't updated this time.
       toast.show("Goal saved, but targets didn't recalculate. Open Nutrition Targets to refresh", { variant: 'warning', duration: 5000 });

@@ -49,15 +49,6 @@ import { getTimeCrunchMessage } from '../lib/whyThisTemplates';
 const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 2 };
 
 
-const SET_TYPE_DISPLAY = {
-  straight: 'Working',
-  warmup: 'Warm-up',
-  dropset: 'Drop set',
-  amrap: 'AMRAP',
-  myo_reps: 'Myo-reps',
-  rest_pause: 'Rest-pause',
-  superset: 'Superset',
-};
 
 const SET_TYPE_OPTIONS = [
   { value: 'straight', label: 'Working', description: 'Counts toward your weekly totals and progress tracking.' },
@@ -122,7 +113,7 @@ const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum 
   );
 });
 
-export default function ActiveWorkoutScreen({ navigation, route }) {
+export default function ActiveWorkoutScreen({ navigation }) {
   // Use a shallow selector so every store mutation (rest timer ticks,
   // PR celebration flag flips, accessibility toggles) doesn't re-render
   // the 2000-line tree. Without this the rest timer alone fires
@@ -192,7 +183,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [clusterReps, setClusterReps] = useState('');
   // Exercise IDs the user logs per-side (unilateral). Device-local pref.
   const [unilateralExercises, setUnilateralExercises] = useState(() => new Set());
-  const [progression, setProgression] = useState(null);
+  const [_progression, setProgression] = useState(null);
   const [setTargets, setSetTargets] = useState([]);
   const [targetReason, setTargetReason] = useState(null);
   const [showSetTypePicker, setShowSetTypePicker] = useState(false);
@@ -204,11 +195,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [timeCrunchActive, setTimeCrunchActive] = useState(false);
   const [timeCrunchMsg, setTimeCrunchMsg] = useState('');
   const [preCrunchSnapshot, setPreCrunchSnapshot] = useState(null);
-  const [weeklyPlan, setWeeklyPlan] = useState(null);  // { plannedSets, muscle } for this exercise
-  const [weeklyActual, setWeeklyActual] = useState(0); // sets this week for this muscle
+  const [_weeklyPlan, setWeeklyPlan] = useState(null);  // { plannedSets, muscle } for this exercise
+  const [_weeklyActual, setWeeklyActual] = useState(0); // sets this week for this muscle
   const [isDeloadWeek, setIsDeloadWeek] = useState(false);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
-  const [exerciseNote, setExerciseNote] = useState('');       // persisted per-user per-exercise note
+  const [_exerciseNote, setExerciseNote] = useState('');       // persisted per-user per-exercise note
   const [ghostSet, setGhostSet] = useState(null); // pre-fill from last session (same set index)
   const [nextTimeNotes, setNextTimeNotes] = useState([]);  // "next time" coaching notes for this routine
   // Cluster counter for myo-reps / rest-pause: 0 = activation set, 1+ = mini-set N+1
@@ -1036,7 +1027,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const msg = getTimeCrunchMessage(dropped, restReduction, newEstimate);
 
     // Apply reduced rest to current session's pending exercises
-    const trimmedNames = new Set(trimmed.map(e => e.exerciseName));
     const droppedNames = new Set(dropped);
 
     if (store.setWorkoutExercises) {

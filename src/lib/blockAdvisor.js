@@ -153,7 +153,6 @@ function detectSignals(checkins) {
  */
 function buildNextBlockRecommendation(checkins, userProfile, signals) {
   const highSignals = signals.filter(s => s.severity === 'high');
-  const experience  = userProfile?.experience ?? 'intermediate';
 
   // Count persistent performance/fatigue signals
   // Simplified: if this block had consistently poor readiness, suggest minor adjustment
@@ -229,8 +228,6 @@ export async function getBlockAdvice(userId, activeBlock, userProfile) {
   const signals = detectSignals(checkins);
   const highSignals   = signals.filter(s => s.severity === 'high');
   const mediumSignals = signals.filter(s => s.severity === 'medium');
-  const firstName     = userProfile?.firstName ? `, ${userProfile.firstName}` : '';
-  const experience    = userProfile?.experience ?? 'intermediate';
 
   // ── In recovery week ──────────────────────────────────────────────────────
   if (blockStatus?.status === 'recovery') {

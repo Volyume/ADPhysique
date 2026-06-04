@@ -189,7 +189,7 @@ const TOTAL_STEPS = 4;
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function WeeklyCheckInScreen({ navigation }) {
-  const { user, userProfile, units, bodyWeightUnits } = useAppStore();
+  const { user, userProfile, bodyWeightUnits } = useAppStore();
   const [nutritionTargets, setNutritionTargets] = useState(null);
   const [bioSex, setBioSex] = useState(null);          // 'male' | 'female' | null
   const [cycleEnabled, setCycleEnabled] = useState(false);
@@ -408,14 +408,6 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // Compute EMA trend weight from this week's weigh-ins
   const ewmaSeries = weekWeights.length > 0 ? computeEWMA(weekWeights) : [];
   const trendKg = ewmaSeries.length ? ewmaSeries[ewmaSeries.length - 1].ewmaKg : null;
-
-  // Per-step completion gates
-  const step1Complete = energyScore !== null && sorenessScore === null
-    ? true  // stress + sleep are optional
-    : energyScore !== null;
-  const step2Complete = true; // nutrition and steps are optional
-  const step3Complete = sorenessScore !== null;
-  const step4Complete = trainingPerformance !== null;
 
   function stepCanAdvance(s) {
     if (s === 0) return energyScore !== null;
@@ -841,8 +833,6 @@ export default function WeeklyCheckInScreen({ navigation }) {
     );
   }
 
-  const stepTitles = ['How are you?', 'This week', 'Recovery', 'Training'];
-
   // ─── Gate screens ──────────────────────────────────────────────────────────
   if (loading || gateState === 'loading') {
     return (
@@ -951,7 +941,6 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   // ─── Main check-in screen ──────────────────────────────────────────────────
 
-  const todayDayName = new Date().toLocaleDateString('en-GB', { weekday: 'long' });
   const checkinDayLabel = 'Precision Coaching · check-in';
 
   return (

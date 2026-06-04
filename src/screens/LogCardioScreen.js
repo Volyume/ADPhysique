@@ -135,7 +135,7 @@ export default function LogCardioScreen({ navigation, route }) {
         source: 'manual',
       });
       navigation.goBack();
-    } catch (e) {
+    } catch (_e) {
       Alert.alert('Couldn\'t log', 'Try again.');
       setSaving(false);
     }

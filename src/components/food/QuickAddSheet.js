@@ -55,7 +55,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
     try {
       await onSave({ kcal: Math.round(k), protein: num(protein), carbs: num(carbs), fat: num(fat), mealSlot });
       onClose?.();
-    } catch (e) {
+    } catch (_e) {
       setSubmitting(false);
       toast.show('Couldn\'t save. Try again.', { variant: 'error' });
     }

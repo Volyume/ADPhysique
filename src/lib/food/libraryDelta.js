@@ -175,7 +175,7 @@ async function _run({ force }) {
             ]
           );
           totalPulled++;
-        } catch (rowErr) {
+        } catch (_rowErr) {
           // One bad row -- skip. Don't log per row; surfaces in the
           // page-level totals so we don't spam Sentry on a malformed
           // entry that hits every pull cycle.

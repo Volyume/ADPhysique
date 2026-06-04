@@ -100,7 +100,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // The summary is reached with routineId but not the name, so fetch it.
   const [routineName, setRoutineName] = useState('');
   const [weeklyVolume, setWeeklyVolume] = useState({});
-  const [autoRegSuggestions, setAutoRegSuggestions] = useState([]);
+  const [_autoRegSuggestions, setAutoRegSuggestions] = useState([]);
   const [saving, setSaving] = useState(false);
   const [completedWorkoutCount, setCompletedWorkoutCount] = useState(null);
   // Default-expanded so the energy + sleep prompts surface naturally
@@ -109,11 +109,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // check-in feel like it had disappeared.
   const [feedbackExpanded, setFeedbackExpanded] = useState(!readOnly);
   const [expandedVolumeWhy, setExpandedVolumeWhy] = useState(null);
-  const [mesoAdvice, setMesoAdvice] = useState(null);
-  const [deloadPrediction, setDeloadPrediction] = useState(null);
+  const [_mesoAdvice, setMesoAdvice] = useState(null);
+  const [_deloadPrediction, setDeloadPrediction] = useState(null);
   const [feedbackHistory, setFeedbackHistory] = useState([]);
   const [adaptiveDecisions, setAdaptiveDecisions] = useState({});
-  const [deloadRecommendation, setDeloadRecommendation] = useState(null);
+  const [_deloadRecommendation, setDeloadRecommendation] = useState(null);
   const [readOnlyExerciseData, setReadOnlyExerciseData] = useState([]);
   const [templateModalVisible, setTemplateModalVisible] = useState(false);
   const [templateName, setTemplateName] = useState('');
@@ -556,15 +556,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     .slice(0, 6);
 
   const displayWorkingSets = workingSetCount ?? setCount ?? 0;
-  const dataLimited = completedWorkoutCount !== null && completedWorkoutCount < 4;
 
   const completionDate = new Date().toLocaleDateString('en-GB', {
     day: 'numeric', month: 'long', year: 'numeric',
   });
-
-  const sessionLabel = exerciseNames.length > 0
-    ? exerciseNames.slice(0, 3).join(' · ') + (exerciseNames.length > 3 ? ` +${exerciseNames.length - 3} more` : '')
-    : null;
 
   const prExerciseNames = detectedPRs
     .slice(0, 3)

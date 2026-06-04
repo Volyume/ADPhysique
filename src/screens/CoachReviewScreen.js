@@ -173,14 +173,6 @@ function Card({ children, style }) {
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-function StatusDot({ status }) {
-  return (
-    <View
-      style={[styles.statusDot, { backgroundColor: statusDotColor(status) }]}
-    />
-  );
-}
-
 function VolumeRow({ muscle, data }) {
   const { status } = getVolumeStatus(data.workingSets, muscle);
   const dot = statusDotColor(status);
@@ -520,7 +512,6 @@ export default function CoachReviewScreen() {
                     const { status } = getVolumeStatus(data.workingSets, muscle);
                     const isOver = status === 'over_mrv';
                     const isNear = status === 'near_mrv';
-                    const isUnder = status === 'below' || status === 'minimum';
                     const icon = isOver
                       ? 'arrow-up-circle-outline'
                       : isNear

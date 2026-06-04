@@ -75,7 +75,7 @@ function buildDecisionRows(week) {
   return rows;
 }
 
-export default function CoachHeldHistoryScreen({ navigation }) {
+export default function CoachHeldHistoryScreen() {
   const { user } = useAppStore();
   const [weeks, setWeeks] = useState([]);
   const [loading, setLoading] = useState(true);

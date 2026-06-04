@@ -142,7 +142,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         fibreG:    food.fibre100g != null ? Math.round(food.fibre100g * factor * 10) / 10 : null,
       });
       navigation.goBack();
-    } catch (err) {
+    } catch (_err) {
       toast.show('Couldn\'t save. Try again.', { variant: 'error' });
     } finally {
       setSaving(false);

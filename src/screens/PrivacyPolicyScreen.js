@@ -5,7 +5,7 @@ import BackHeader from '../components/BackHeader';
 
 const LAST_UPDATED = '22 May 2026';
 
-export default function PrivacyPolicyScreen({ navigation }) {
+export default function PrivacyPolicyScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <BackHeader title="Privacy Policy" />

@@ -26,7 +26,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 
-export default function LoginScreen({ navigation, route }) {
+export default function LoginScreen({ route }) {
   // No anonymous-mode action: per IDENTITY_AND_OWNERSHIP_LOCKED.md
   // rule 1 ("No anonymous mode") + rule 5 (no migrateLocalUserId) +
   // the anti-patterns list, the only path into the app is a real

@@ -10,7 +10,6 @@ import { PROTEIN_APPROACHES } from '../lib/nutritionEngine';
 
 function buildPhaseReason(prevPhase, nextPhase) {
   if (!prevPhase || prevPhase === nextPhase) return null;
-  const moves = `${PHASE_LABELS[prevPhase] ?? prevPhase} → ${PHASE_LABELS[nextPhase] ?? nextPhase}`;
   if (prevPhase === 'cut' && nextPhase !== 'cut') {
     return `You're stepping out of a deficit. Calories rise so your body has the fuel to rebuild and train hard again.`;
   }

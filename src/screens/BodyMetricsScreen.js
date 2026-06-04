@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimensions, FlatList,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -120,7 +120,7 @@ function detectPhase(entries) {
 
 // ─── Weight Trend Chart ───────────────────────────────────────────────────────
 
-function WeightTrendChart({ entries, units, bodyWeightUnits }) {
+function WeightTrendChart({ entries, bodyWeightUnits }) {
   const withWeight = useMemo(() => {
     const sorted = entries
       .filter(e => e.body_weight != null)
@@ -322,7 +322,7 @@ function PhysiqueOptIn({ onEnable }) {
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
-export default function BodyMetricsScreen({ navigation }) {
+export default function BodyMetricsScreen() {
   const { user, session, units, bodyWeightUnits, tier, userProfile } = useAppStore(useShallow(s => ({
     user: s.user,
     session: s.session,
@@ -586,7 +586,7 @@ export default function BodyMetricsScreen({ navigation }) {
         // optimistic entry was missing things like a properly formatted
         // loggedAt). Cheap, same SQLite query as before.
         await loadHistory();
-      } catch (e) {
+      } catch (_e) {
         setHistory(prev => prev.filter(h => h.id !== optimisticEntry.id));
         // Surface the failure, body weight is important; user needs to
         // know it didn't save so they can retry.

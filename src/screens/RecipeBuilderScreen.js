@@ -157,7 +157,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
         quantity_g: ing.quantity_g,
       })));
       navigation.goBack();
-    } catch (e) {
+    } catch (_e) {
       toast.show('Couldn\'t save. Try again.', { variant: 'error' });
     } finally {
       setSaving(false);

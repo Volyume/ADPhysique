@@ -27,9 +27,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { getSupabaseClient } from './supabase';
 import { getRecentErrors } from './errorLog';
-import {
-  getSessionId, setCurrentUserId, track,
-} from './observability';
+import { track } from './observability';
 
 const PROMPT_HISTORY_KEY = '@volyume_feedback_prompt_history_v1';
 const FOURTEEN_DAYS_MS = 14 * 86400000;

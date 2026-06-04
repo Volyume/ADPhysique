@@ -94,7 +94,7 @@ function check(plan, goal, weak) {
   return { hard, warn };
 }
 
-function fmtVol(plan, goal) {
+function fmtVol(plan, _goal) {
   const v = vol(plan);
   return Object.entries(v)
     .filter(([, vv]) => vv.d > 0 || vv.i > 0)
@@ -132,7 +132,6 @@ describe('Full verification export', () => {
   out.push('');
 
   // ---- Section 1: full validation sweep (the proof) ----
-  const sweep = [];
   for (const [goal] of DIVISIONS) {
     for (const days of DAYS) {
       for (const exp of EXP) {

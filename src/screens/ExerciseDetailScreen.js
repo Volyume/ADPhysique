@@ -532,7 +532,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {prs.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>All-time bests</Text>
-            {prs.slice(0, 5).map((pr, i) => (
+            {prs.slice(0, 5).map((pr) => (
               <View key={pr.id} style={styles.prRow}>
                 <Text style={styles.prIcon}>
                   {pr.record_type === '1rm_estimate' ? '🥇' :

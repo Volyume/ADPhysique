@@ -14,7 +14,6 @@ import {
 } from '../mesocycle';
 
 const DAY = 86_400_000;
-const WEEK = 7 * DAY;
 const NOW = Date.UTC(2026, 4, 20);
 
 describe('getCurrentMesoWeek', () => {

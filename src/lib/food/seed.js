@@ -198,7 +198,7 @@ async function _run({ scopeKey, flagKey, sourceLabel, loadModule }) {
               ]
             );
             imp++;
-          } catch (rowErr) {
+          } catch (_rowErr) {
             skp++;
           }
         }
