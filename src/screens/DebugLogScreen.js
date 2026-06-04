@@ -100,6 +100,9 @@ export default function DebugLogScreen() {
               key={level}
               style={[styles.chip, on && styles.chipOn]}
               onPress={() => setFilter(level)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={`${level}, ${count}`}
             >
               <Text style={[styles.chipLabel, on && styles.chipLabelOn]}>
                 {level} · {count}
@@ -110,15 +113,15 @@ export default function DebugLogScreen() {
       </View>
 
       <View style={styles.actionsRow}>
-        <TouchableOpacity style={styles.actionBtn} onPress={handleShare}>
+        <TouchableOpacity style={styles.actionBtn} onPress={handleShare} accessibilityRole="button" accessibilityLabel="Share logs">
           <Ionicons name="share-outline" size={16} color={colors.primary} />
           <Text style={[styles.actionLabel, { color: colors.primary }]}>Share</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={handleDiagnose}>
+        <TouchableOpacity style={styles.actionBtn} onPress={handleDiagnose} accessibilityRole="button" accessibilityLabel="Run sync diagnostics">
           <Ionicons name="medkit-outline" size={16} color={colors.primary} />
           <Text style={[styles.actionLabel, { color: colors.primary }]}>Sync diag</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionBtn, styles.actionBtnDanger]} onPress={handleClear}>
+        <TouchableOpacity style={[styles.actionBtn, styles.actionBtnDanger]} onPress={handleClear} accessibilityRole="button" accessibilityLabel="Clear logs">
           <Ionicons name="trash-outline" size={16} color={colors.error} />
           <Text style={[styles.actionLabel, { color: colors.error }]}>Clear</Text>
         </TouchableOpacity>

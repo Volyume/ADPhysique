@@ -201,6 +201,8 @@ export default function ProUpgradeScreen({ navigation }) {
                 style={styles.secondaryLink}
                 onPress={() => navigation.goBack()}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Skip for now"
               >
                 <Text style={styles.secondaryLinkText}>Skip for now</Text>
               </TouchableOpacity>
@@ -223,6 +225,8 @@ export default function ProUpgradeScreen({ navigation }) {
             style={styles.closeBtn}
             onPress={() => navigation.goBack()}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
           >
             <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -250,6 +254,8 @@ export default function ProUpgradeScreen({ navigation }) {
             style={styles.policyLink}
             onPress={() => navigation.navigate('SubscriptionPolicy')}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel="Subscription terms"
           >
             <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
             <Text style={styles.policyLinkText}>
@@ -326,6 +332,7 @@ export default function ProUpgradeScreen({ navigation }) {
                     autoComplete="email"
                     onFocus={() => setEmailFocused(true)}
                     onBlur={() => setEmailFocused(false)}
+                    accessibilityLabel="Email"
                   />
                 </View>
               </View>
@@ -345,11 +352,15 @@ export default function ProUpgradeScreen({ navigation }) {
                     autoComplete={mode === 'signup' ? 'new-password' : 'password'}
                     onFocus={() => setPasswordFocused(true)}
                     onBlur={() => setPasswordFocused(false)}
+                    accessibilityLabel="Password"
                   />
                   <TouchableOpacity
                     style={styles.eyeBtn}
                     onPress={() => setShowPassword(v => !v)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: showPassword }}
+                    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
                   >
                     <Ionicons
                       name={showPassword ? 'eye-off-outline' : 'eye-outline'}
@@ -371,6 +382,8 @@ export default function ProUpgradeScreen({ navigation }) {
               <TouchableOpacity
                 style={styles.switchBtn}
                 onPress={() => setMode(m => (m === 'signup' ? 'signin' : 'signup'))}
+                accessibilityRole="button"
+                accessibilityLabel={mode === 'signup' ? 'Already have an account? Sign in' : "Don't have an account? Create one"}
               >
                 <Text style={styles.switchText}>
                   {mode === 'signup'
@@ -384,7 +397,7 @@ export default function ProUpgradeScreen({ navigation }) {
             </>
           )}
 
-          <TouchableOpacity style={styles.laterBtn} onPress={() => navigation.goBack()}>
+          <TouchableOpacity style={styles.laterBtn} onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Maybe later">
             <Text style={styles.laterText}>Maybe later</Text>
           </TouchableOpacity>
         </ScrollView>

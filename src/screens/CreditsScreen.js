@@ -47,7 +47,7 @@ export default function CreditsScreen() {
           <Text style={styles.attribution}>
             Data licensed under the Open Database License (ODbL) 1.0. Derivative works are licensed under the same terms.
           </Text>
-          <TouchableOpacity onPress={() => openUrl('https://world.openfoodfacts.org/')}>
+          <TouchableOpacity onPress={() => openUrl('https://world.openfoodfacts.org/')} accessibilityRole="link" accessibilityLabel="Open Food Facts website">
             <Text style={styles.link}>world.openfoodfacts.org</Text>
           </TouchableOpacity>
         </Card>
@@ -61,7 +61,7 @@ export default function CreditsScreen() {
           <Text style={styles.attribution}>
             Contains public sector information licensed under the Open Government Licence v3.0.
           </Text>
-          <TouchableOpacity onPress={() => openUrl('https://www.gov.uk/government/publications/composition-of-foods-integrated-dataset-cofid')}>
+          <TouchableOpacity onPress={() => openUrl('https://www.gov.uk/government/publications/composition-of-foods-integrated-dataset-cofid')} accessibilityRole="link" accessibilityLabel="CoFID dataset on gov.uk">
             <Text style={styles.link}>gov.uk · CoFID</Text>
           </TouchableOpacity>
         </Card>
@@ -75,7 +75,7 @@ export default function CreditsScreen() {
           <Text style={styles.attribution}>
             Public domain data published by the U.S. Department of Agriculture, Agricultural Research Service.
           </Text>
-          <TouchableOpacity onPress={() => openUrl('https://fdc.nal.usda.gov/')}>
+          <TouchableOpacity onPress={() => openUrl('https://fdc.nal.usda.gov/')} accessibilityRole="link" accessibilityLabel="USDA FoodData Central website">
             <Text style={styles.link}>fdc.nal.usda.gov</Text>
           </TouchableOpacity>
         </Card>
