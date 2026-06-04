@@ -70,9 +70,12 @@ test mock.
 
 ## NEXT (resume here)
 
-Inventory order, next un-audited screen: **#47 `ProGoalSetupScreen`** 🔒 (coached
-goal/plan setup), then the rest of the coach-engine surfaces (CoachingReminders,
-etc.). Master list: `deep-audit-01-master-inventory.md`.
+Now **batched** (founder direction, from item 47) to speed the pass: ~5 screens
+per consolidated proposal + one approval + per-screen commits + full mount sweep.
+Next is **Batch 2 = items 52–56**: ImportScreen, PrivacyPolicyScreen,
+SubscriptionPolicyScreen, SubscriptionScreen, CascadeGateScreen. Then Batch 3 =
+57–64 (PaywallScreen, ProUpgradeScreen ⤴, CreditsScreen, DebugLogScreen, and any
+remaining). Master list: `deep-audit-01-master-inventory.md`.
 
 ### Carry-over flag (Body Metrics, item 38)
 - `BodyMetricsScreen` stores entry `loggedAt` via `new Date(metric_date)`
