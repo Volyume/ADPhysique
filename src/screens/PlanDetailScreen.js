@@ -294,6 +294,8 @@ export default function PlanDetailScreen({ navigation, route }) {
                       style={styles.editWorkoutBtn}
                       onPress={() => navigation.navigate('RoutineDetail', { routineId: routine.id })}
                       hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Edit ${routine.name}`}
                     >
                       <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
                     </TouchableOpacity>
@@ -301,6 +303,8 @@ export default function PlanDetailScreen({ navigation, route }) {
                       style={styles.startWorkoutBtn}
                       onPress={() => handleStartWorkout(routine)}
                       hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Start ${routine.name}`}
                     >
                       <Ionicons name="play" size={13} color={colors.background} />
                     </TouchableOpacity>
@@ -334,13 +338,13 @@ export default function PlanDetailScreen({ navigation, route }) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Manage</Text>
             <View style={styles.manageCard}>
-              <TouchableOpacity style={styles.manageRow} onPress={handleDuplicate}>
+              <TouchableOpacity style={styles.manageRow} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate plan">
                 <Ionicons name="copy-outline" size={18} color={colors.primary} />
                 <Text style={styles.manageRowText}>Duplicate Plan</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </TouchableOpacity>
               {!isActive && (
-                <TouchableOpacity style={[styles.manageRow, styles.manageRowLast]} onPress={handleArchive}>
+                <TouchableOpacity style={[styles.manageRow, styles.manageRowLast]} onPress={handleArchive} accessibilityRole="button" accessibilityLabel="Archive plan">
                   <Ionicons name="archive-outline" size={18} color={colors.error} />
                   <Text style={[styles.manageRowText, { color: colors.error }]}>Archive Plan</Text>
                   <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />

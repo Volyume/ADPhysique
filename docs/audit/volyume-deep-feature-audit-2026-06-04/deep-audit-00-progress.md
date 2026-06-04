@@ -31,6 +31,7 @@ full suite green (174 suites, 2820 passing).
 | 17 | Workout History | WorkoutHistoryScreen | deep-audit-18 |
 | 18 | Volume Heatmap | VolumeHeatmapScreen | deep-audit-19 |
 | 19 | Coach Review | CoachReviewScreen | deep-audit-20 |
+| 20 | Plan Detail | PlanDetailScreen | deep-audit-21 |
 
 Plus: the full lint sweep (779 → 0 warnings, 0 errors) across commits
 e518807 / 16cbad7 / e345a06 / d2f797f, and the `__mocks__/expo-application.js`

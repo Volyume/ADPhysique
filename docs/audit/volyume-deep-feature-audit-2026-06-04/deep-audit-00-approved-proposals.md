@@ -210,3 +210,10 @@ ghost comparison, 4-week trend. Impact Low; Effort Low. Attribute-only.
 Doc: `deep-audit-20-coach-review.md`. Approved.
 1. Remove the two dead style keys (loadingWrap, statusDot).
 Read-only, exemplary coaching copy; no a11y/copy change. Impact Low; Effort Low.
+
+## Item 20 — Plan Detail screen — APPROVED 2026-06-04 ("Approved")
+Doc: `deep-audit-21-plan-detail.md`. Approved.
+1. Label the icon-only Edit/Start workout buttons; add button roles to the
+   Duplicate/Archive Manage rows.
+Kept: context-aware primary action, mid-block switch guard, layout-matched
+skeleton, why-this-plan rationale, numbered workout cards. Impact Low; Effort Low.

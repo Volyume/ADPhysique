@@ -3,7 +3,7 @@
 **Document:** deep-audit-21-plan-detail.md
 **Item:** 20 of master inventory (screen #17 — `PlanDetailScreen`; Plans stack + onboarding stacks)
 **File:** `src/screens/PlanDetailScreen.js` (431 lines), shared `Button`, `Skeleton`, `AnimatedEntrance`, libs `planSwitch`, `planAutoGen`
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04, "Approved"). Labelled the icon-only per-workout Edit/Start buttons (role + "Edit/Start {name}") and added button roles + labels to the Duplicate/Archive Manage rows. Attribute-only.
 **Timestamp:** 2026-06-04
 
 ---

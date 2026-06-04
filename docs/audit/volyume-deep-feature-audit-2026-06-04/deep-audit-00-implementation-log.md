@@ -336,3 +336,13 @@ File: `src/screens/CoachReviewScreen.js`.
   with text labels (WCAG-safe). No copy change (exemplary coaching copy).
 Verification: eslint clean; 0 dead styles remaining; screen-mount green (455).
 Commit: see git log.
+
+## Item 20 — Plan Detail screen — IMPLEMENTED 2026-06-04
+File: `src/screens/PlanDetailScreen.js`.
+- A11y only: labelled the icon-only per-workout Edit (create-outline) and Start
+  (play) buttons with accessibilityRole="button" + "Edit/Start {routine.name}";
+  added role + label to the Duplicate and Archive Manage rows. (Primary action
+  uses the shared Button, already accessible.)
+- No dead styles; no copy change.
+Verification: eslint clean; screen-mount green (455). Attribute-only.
+Commit: see git log.
