@@ -262,10 +262,13 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const [stepsAdherence] = useState(null); // legacy field, no longer collected; steps_avg replaces it
   const [cardioAdherence, setCardioAdherence] = useState(null);
   // Steps: the week's auto summary (null until loaded). When 4+ days are
-  // registered the check-in shows a read-only average; otherwise the user
-  // types a single average as the fallback.
+  // registered the check-in shows the average and offers a tap-to-override,
+  // for users whose real count lives on a watch or another app; otherwise the
+  // user types a single average as the fallback. stepsOverride flips the auto
+  // display to the manual field, prefilled with the auto value to edit.
   const [stepsSummary, setStepsSummary] = useState(null);
   const [stepsManual, setStepsManual] = useState('');
+  const [stepsOverride, setStepsOverride] = useState(false);
 
   // Step 3, Recovery
   const [sorenessScore, setSorenessScore] = useState(null); // 1–5
@@ -435,9 +438,13 @@ export default function WeeklyCheckInScreen({ navigation }) {
         calsAdherence: calsAdherence ?? null,
         stepsAdherence: stepsAdherence ?? null,
         stepsAvg: hasStepsTarget
-          ? (stepsSummary?.registered
-            ? Math.round(stepsSummary.avgSteps)
-            : (stepsManual ? parseInt(stepsManual, 10) : null))
+          // A typed value always wins (manual fallback, or an override of the
+          // auto figure); otherwise use the registered average; otherwise null.
+          ? (stepsManual !== ''
+            ? parseInt(stepsManual, 10)
+            : stepsSummary?.registered
+              ? Math.round(stepsSummary.avgSteps)
+              : null)
           : null,
         cardioAdherence: cardioAdherence ?? null,
         cycleOverride: showCycle && cycle === 'yes',
@@ -654,19 +661,29 @@ export default function WeeklyCheckInScreen({ navigation }) {
             otherwise ask for a single average as the fallback. */}
         {hasStepsTarget && (
           <View style={styles.section}>
-            {stepsSummary?.registered ? (
+            {stepsSummary?.registered && !stepsOverride ? (
               <>
                 <SectionLabel>Steps this week</SectionLabel>
-                <View style={styles.stepsAutoRow}>
+                <TouchableOpacity
+                  style={styles.stepsAutoRow}
+                  onPress={() => {
+                    setStepsManual(String(Math.round(stepsSummary.avgSteps)));
+                    setStepsOverride(true);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Averaged ${Math.round(stepsSummary.avgSteps)} steps a day. Tap to override.`}
+                >
                   <Ionicons name="walk-outline" size={18} color={colors.primary} />
                   <Text style={styles.stepsAutoText}>
-                    Averaged {Math.round(stepsSummary.avgSteps).toLocaleString('en-GB')} a day.
+                    Averaged {Math.round(stepsSummary.avgSteps).toLocaleString('en-GB')} a day. Tap to override.
                   </Text>
-                </View>
+                </TouchableOpacity>
               </>
             ) : (
               <>
-                <SectionLabel hint="We could not read your steps automatically this week">
+                <SectionLabel hint={stepsSummary?.registered
+                  ? 'Enter the average from your tracker'
+                  : 'We could not read your steps automatically this week'}>
                   Average steps a day
                 </SectionLabel>
                 <TextInput
