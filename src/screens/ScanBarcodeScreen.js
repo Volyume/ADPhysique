@@ -16,7 +16,7 @@
  *   - Re-arms on focus (so back-swipe from a hit/miss landing
  *     resumes scanning without an app restart).
  *   - Pauses the camera while the app is backgrounded or the screen
- *     is unfocused -- saves battery and avoids holding the camera
+ *     is unfocused. Saves battery and avoids holding the camera
  *     resource captive when the user navigates away.
  *   - Torch toggle in the header.
  *
@@ -45,7 +45,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 // Supported barcode types: the common supermarket formats. Code-128
 // is included for some UK weighed-deli labels. QR / DataMatrix
-// excluded -- food products almost never use them and adding them
+// excluded: food products almost never use them and adding them
 // slows the detector.
 const CODE_TYPES = ['ean-13', 'ean-8', 'upc-a', 'upc-e', 'code-128'];
 
@@ -149,7 +149,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
             <Ionicons name="close" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Scan</Text>
@@ -162,11 +162,11 @@ export default function ScanBarcodeScreen({ navigation, route }) {
             Volyume uses the camera to scan barcodes. Turn it on in Settings.
           </Text>
           {permission === 'denied' ? (
-            <TouchableOpacity style={styles.permissionBtn} onPress={() => Linking.openSettings()}>
+            <TouchableOpacity style={styles.permissionBtn} onPress={() => Linking.openSettings()} accessibilityRole="button" accessibilityLabel="Open Settings">
               <Text style={styles.permissionBtnText}>Open Settings</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
+            <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission} accessibilityRole="button" accessibilityLabel="Allow camera">
               <Text style={styles.permissionBtnText}>Allow camera</Text>
             </TouchableOpacity>
           )}
@@ -179,7 +179,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
             <Ionicons name="close" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Scan</Text>
@@ -202,7 +202,13 @@ export default function ScanBarcodeScreen({ navigation, route }) {
           <Ionicons name="close" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Scan barcode</Text>
-        <TouchableOpacity onPress={() => setTorch(v => !v)} hitSlop={12}>
+        <TouchableOpacity
+          onPress={() => setTorch(v => !v)}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityState={{ selected: torch }}
+          accessibilityLabel={torch ? 'Torch on' : 'Torch off'}
+        >
           <Ionicons
             name={torch ? 'flashlight' : 'flashlight-outline'}
             size={22}
