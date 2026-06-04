@@ -152,3 +152,13 @@ Approved changes:
 3. Destructure useEffect, drop React default import.
 Untouched (sensitive): ED-pattern threshold logic, routing, telemetry, copy.
 Impact Low; Effort Low. Attribute-only + import tidy.
+
+## Item 14 — Build Workout screen — APPROVED 2026-06-04 ("Approved")
+Doc: `deep-audit-15-build-workout.md`. Approved.
+Approved changes:
+1. Roles/labels on remove-X, Travel chip, Add Exercise, Skip Setup, travel
+   Cancel/Build, picker rows/close.
+2. Travel equipment options -> radiogroup (radio roles + selected state).
+3. Label the rep min/max inputs.
+Kept: per-exercise steppers, Travel mode, dashed Add affordance, Skip Setup,
+lazy capped picker. Impact Low; Effort Low. Attribute-only.

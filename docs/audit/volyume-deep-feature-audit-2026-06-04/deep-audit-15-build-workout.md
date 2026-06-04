@@ -3,7 +3,7 @@
 **Document:** deep-audit-15-build-workout.md
 **Item:** 14 of master inventory (screen #10 — `BuildWorkoutScreen`; Train stack, pre-session build/blank-start)
 **File:** `src/screens/BuildWorkoutScreen.js` (614 lines), shared `Button`, lib `travelMode`
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04, "Approved"). Added roles/labels to the remove-X, Travel chip, Add Exercise, Skip Setup, travel Cancel/Build and picker rows/close; made the travel equipment options a radiogroup; labelled the rep min/max inputs. Attribute-only, no behaviour/copy/layout change.
 **Timestamp:** 2026-06-04
 
 ---

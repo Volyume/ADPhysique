@@ -238,3 +238,15 @@ File: `src/screens/GoalLockConsentScreen.js`.
   the telemetry, and all copy.
 Verification: eslint clean; screen-mount green (455). No logic or copy change.
 Commit: see git log.
+
+## Item 14 — Build Workout screen — IMPLEMENTED 2026-06-04
+File: `src/screens/BuildWorkoutScreen.js`.
+- A11y: added accessibilityRole="button" + labels to the remove-exercise X, the
+  Travel chip, "Add Exercise", "Skip Setup", the travel Cancel / Build buttons,
+  and the picker rows + picker close; made the three travel-equipment options a
+  radiogroup (radio roles + selected state); labelled the rep min/max inputs.
+- Kept: the per-exercise Sets/Rest steppers (already accessible), Travel mode,
+  the dashed Add affordance, Skip Setup, the lazy-loaded capped picker.
+Verification: eslint clean; screen-mount green (455). Attribute-only, no
+behaviour/copy/layout change.
+Commit: see git log.

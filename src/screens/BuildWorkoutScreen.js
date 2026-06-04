@@ -159,7 +159,7 @@ export default function BuildWorkoutScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <TouchableOpacity testID="volyume-btn-skip-setup" onPress={handleSkip} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity testID="volyume-btn-skip-setup" onPress={handleSkip} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Skip setup and start an empty session">
           <Text style={styles.skipText}>Skip Setup</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Build Workout</Text>
@@ -170,7 +170,7 @@ export default function BuildWorkoutScreen({ navigation }) {
         <Text style={styles.subtitle}>Add exercises and set your targets before you start.</Text>
 
         {/* Travel Mode quick-fill */}
-        <TouchableOpacity style={styles.travelChip} onPress={() => setShowTravelModal(true)}>
+        <TouchableOpacity style={styles.travelChip} onPress={() => setShowTravelModal(true)} accessibilityRole="button" accessibilityLabel="Travel or hotel gym mode">
           <Ionicons name="airplane-outline" size={15} color={colors.primary} />
           <Text style={styles.travelChipText}>Travel / Hotel Gym Mode</Text>
           <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
@@ -194,6 +194,8 @@ export default function BuildWorkoutScreen({ navigation }) {
               <TouchableOpacity
                 onPress={() => removeExercise(item.key)}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Remove ${item.exercise.name}`}
               >
                 <Ionicons name="close-circle-outline" size={22} color={colors.error} />
               </TouchableOpacity>
@@ -236,6 +238,7 @@ export default function BuildWorkoutScreen({ navigation }) {
                     onChangeText={v => updateField(item.key, 'repsMin', parseInt(v) || item.repsMin)}
                     keyboardType="number-pad"
                     maxLength={3}
+                    accessibilityLabel="Minimum reps"
                   />
                   <Text style={styles.repSep}>–</Text>
                   <TextInput
@@ -244,6 +247,7 @@ export default function BuildWorkoutScreen({ navigation }) {
                     onChangeText={v => updateField(item.key, 'repsMax', parseInt(v) || item.repsMax)}
                     keyboardType="number-pad"
                     maxLength={3}
+                    accessibilityLabel="Maximum reps"
                   />
                 </View>
               </View>
@@ -291,7 +295,7 @@ export default function BuildWorkoutScreen({ navigation }) {
           </View>
         ))}
 
-        <TouchableOpacity testID="volyume-btn-add-exercise" style={styles.addBtn} onPress={openPicker}>
+        <TouchableOpacity testID="volyume-btn-add-exercise" style={styles.addBtn} onPress={openPicker} accessibilityRole="button" accessibilityLabel="Add exercise">
           <Ionicons name="add" size={20} color={colors.primary} />
           <Text style={styles.addBtnText}>Add Exercise</Text>
         </TouchableOpacity>
@@ -317,7 +321,7 @@ export default function BuildWorkoutScreen({ navigation }) {
           <View style={styles.travelCard}>
             <Text style={styles.travelTitle}>Travel / Hotel Gym</Text>
             <Text style={styles.travelSub}>Choose available equipment. We'll build a full-body session that maintains your muscle while away from the gym.</Text>
-            <View style={styles.travelOptions}>
+            <View style={styles.travelOptions} accessibilityRole="radiogroup" accessibilityLabel="Available equipment">
               {[
                 { id: 'bodyweight', label: 'Bodyweight only', icon: 'body-outline' },
                 { id: 'dumbbells',  label: 'Dumbbells',       icon: 'barbell-outline' },
@@ -327,6 +331,9 @@ export default function BuildWorkoutScreen({ navigation }) {
                   key={opt.id}
                   style={[styles.travelOpt, travelEquipment === opt.id && styles.travelOptActive]}
                   onPress={() => setTravelEquipment(opt.id)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: travelEquipment === opt.id }}
+                  accessibilityLabel={opt.label}
                 >
                   <Ionicons name={opt.icon} size={20} color={travelEquipment === opt.id ? colors.primary : colors.textSecondary} />
                   <Text style={[styles.travelOptText, travelEquipment === opt.id && { color: colors.primary }]}>{opt.label}</Text>
@@ -335,10 +342,10 @@ export default function BuildWorkoutScreen({ navigation }) {
               ))}
             </View>
             <View style={styles.travelBtns}>
-              <TouchableOpacity style={styles.travelCancel} onPress={() => setShowTravelModal(false)}>
+              <TouchableOpacity style={styles.travelCancel} onPress={() => setShowTravelModal(false)} accessibilityRole="button" accessibilityLabel="Cancel">
                 <Text style={styles.travelCancelText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.travelConfirm} onPress={applyTravelMode}>
+              <TouchableOpacity style={styles.travelConfirm} onPress={applyTravelMode} accessibilityRole="button" accessibilityLabel="Build session">
                 <Text style={styles.travelConfirmText}>Build Session</Text>
               </TouchableOpacity>
             </View>
@@ -357,7 +364,7 @@ export default function BuildWorkoutScreen({ navigation }) {
               placeholderTextColor={colors.textMuted}
               autoFocus
             />
-            <TouchableOpacity onPress={() => setShowPicker(false)} style={styles.pickerClose}>
+            <TouchableOpacity onPress={() => setShowPicker(false)} style={styles.pickerClose} accessibilityRole="button" accessibilityLabel="Close exercise picker">
               <Ionicons name="close" size={22} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
@@ -365,7 +372,7 @@ export default function BuildWorkoutScreen({ navigation }) {
             data={filtered}
             keyExtractor={e => e.id}
             renderItem={({ item }) => (
-              <TouchableOpacity style={styles.pickerItem} onPress={() => addExercise(item)}>
+              <TouchableOpacity style={styles.pickerItem} onPress={() => addExercise(item)} accessibilityRole="button" accessibilityLabel={`Add ${item.name}`}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.pickerItemName}>{item.name}</Text>
                   <Text style={styles.pickerItemMuscle}>
