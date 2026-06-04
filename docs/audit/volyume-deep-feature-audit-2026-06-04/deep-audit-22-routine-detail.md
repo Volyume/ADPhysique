@@ -3,7 +3,7 @@
 **Document:** deep-audit-22-routine-detail.md
 **Item:** 21 of master inventory (screen #18 — `RoutineDetailScreen`; Plans stack, edit a routine/day)
 **File:** `src/screens/RoutineDetailScreen.js` (859 lines, two StyleSheets: `styles` + `tagStyles`), components `Button`, `ExercisePickerModal`, libs `swapEngine`, `whyThisTemplates`
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04, "Approved"). Removed the 7 dead picker styles; completed control a11y (labelled the icon-only Edit/Remove, added roles to reorder/swap/card/header toggle/Add/edit-Save/swap-modal). Attribute-only + style deletions.
 **Timestamp:** 2026-06-04
 
 ---

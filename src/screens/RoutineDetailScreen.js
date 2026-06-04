@@ -122,6 +122,8 @@ export default function RoutineDetailScreen({ navigation, route }) {
           onPress={() => setIsReordering(prev => !prev)}
           style={{ marginRight: spacing.lg }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel={isReordering ? 'Done reordering' : 'Reorder exercises'}
         >
           <Text style={{ fontSize: fontSize.md, color: isReordering ? colors.primary : colors.textSecondary, fontWeight: isReordering ? fontWeight.bold : fontWeight.regular }}>
             {isReordering ? 'Done' : 'Reorder'}
@@ -325,6 +327,8 @@ export default function RoutineDetailScreen({ navigation, route }) {
               openEdit(routineExercise, exercise);
             }}
             activeOpacity={isReordering ? 1 : 0.8}
+            accessibilityRole={isReordering ? undefined : 'button'}
+            accessibilityLabel={isReordering ? undefined : (exercise.unresolved ? `Re-link ${exercise.name}` : `Edit ${exercise.name}`)}
           >
             <View style={[styles.orderBadge, exercise.unresolved && styles.orderBadgeUnresolved]}>
               <Text style={styles.orderNum}>{index + 1}</Text>
@@ -368,6 +372,8 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   style={[styles.reorderBtn, index === 0 && styles.reorderBtnDisabled]}
                   disabled={index === 0}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: index === 0 }}
                   accessibilityLabel={`Move ${exercise.name} up`}
                 >
                   <Ionicons
@@ -381,6 +387,8 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   style={[styles.reorderBtn, index === exercises.length - 1 && styles.reorderBtnDisabled]}
                   disabled={index === exercises.length - 1}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: index === exercises.length - 1 }}
                   accessibilityLabel={`Move ${exercise.name} down`}
                 >
                   <Ionicons
@@ -395,12 +403,15 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 <TouchableOpacity
                   onPress={() => openEdit(routineExercise, exercise)}
                   hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Edit ${exercise.name}`}
                 >
                   <Ionicons name="create-outline" size={20} color={colors.textMuted} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => handleOpenSwap(routineExercise, exercise)}
                   hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                  accessibilityRole="button"
                   accessibilityLabel={`Swap ${exercise.name}`}
                 >
                   <Ionicons name="swap-horizontal" size={20} color={colors.textMuted} />
@@ -415,6 +426,8 @@ export default function RoutineDetailScreen({ navigation, route }) {
                     ],
                   )}
                   hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove ${exercise.name}`}
                 >
                   <Ionicons name="trash-outline" size={20} color={colors.error} />
                 </TouchableOpacity>
@@ -423,7 +436,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
           </TouchableOpacity>
         )}
         ListFooterComponent={
-          <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddExercise(true)}>
+          <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddExercise(true)} accessibilityRole="button" accessibilityLabel="Add exercise">
             <Ionicons name="add" size={20} color={colors.primary} />
             <Text style={styles.addBtnText}>Add Exercise</Text>
           </TouchableOpacity>
@@ -509,7 +522,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 />
               </View>
             </View>
-            <TouchableOpacity style={styles.editSaveBtn} onPress={saveEdit}>
+            <TouchableOpacity style={styles.editSaveBtn} onPress={saveEdit} accessibilityRole="button" accessibilityLabel="Save exercise targets">
               <Text style={styles.editSaveBtnText}>Save</Text>
             </TouchableOpacity>
           </TouchableOpacity>
@@ -525,7 +538,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
         <SafeAreaView style={styles.swapSafe} edges={['top', 'bottom']}>
           <View style={styles.swapHeader}>
             <Text style={styles.swapTitle}>Swap Exercise</Text>
-            <TouchableOpacity onPress={() => { setSwapState(null); setSwapCandidates([]); }}>
+            <TouchableOpacity onPress={() => { setSwapState(null); setSwapCandidates([]); }} accessibilityRole="button" accessibilityLabel="Close swap">
               <Ionicons name="close" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
@@ -544,6 +557,8 @@ export default function RoutineDetailScreen({ navigation, route }) {
               <TouchableOpacity
                 style={styles.swapItem}
                 onPress={() => handleConfirmSwap(item.exercise)}
+                accessibilityRole="button"
+                accessibilityLabel={`Swap in ${item.exercise.name}`}
               >
                 <View style={{ flex: 1 }}>
                   <Text style={styles.swapItemName}>{item.exercise.name}</Text>
@@ -561,6 +576,8 @@ export default function RoutineDetailScreen({ navigation, route }) {
               <TouchableOpacity
                 style={styles.swapSearchAll}
                 onPress={() => setShowSwapPicker(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Search all exercises or create your own"
               >
                 <Ionicons name="search" size={18} color={colors.primary} />
                 <Text style={styles.swapSearchAllText}>Search all exercises or create your own</Text>
@@ -713,39 +730,6 @@ const styles = StyleSheet.create({
   addBtnText: { fontSize: fontSize.md, color: colors.primary, fontWeight: fontWeight.medium },
   empty: { alignItems: 'center', paddingVertical: spacing.xl },
   emptyText: { ...type.body, color: colors.textMuted },
-  pickerSafe: { flex: 1, backgroundColor: colors.background },
-  pickerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  pickerSearch: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    fontSize: fontSize.md,
-    color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  pickerClose: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  pickerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.lg,
-  },
-  pickerItemName: {
-    ...type.bodyStrong,
-    color: colors.textPrimary,
-    marginBottom: spacing.xxs,
-  },
-  pickerItemMuscle: { fontSize: fontSize.sm, color: colors.textSecondary },
   swapSafe: { flex: 1, backgroundColor: colors.background },
   swapHeader: {
     flexDirection: 'row',

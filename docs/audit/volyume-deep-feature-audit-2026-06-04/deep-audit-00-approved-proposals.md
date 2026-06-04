@@ -217,3 +217,11 @@ Doc: `deep-audit-21-plan-detail.md`. Approved.
    Duplicate/Archive Manage rows.
 Kept: context-aware primary action, mid-block switch guard, layout-matched
 skeleton, why-this-plan rationale, numbered workout cards. Impact Low; Effort Low.
+
+## Item 21 — Routine Detail screen — APPROVED 2026-06-04 ("Approved")
+Doc: `deep-audit-22-routine-detail.md`. Approved.
+1. Remove the 7 dead picker styles.
+2. Complete control a11y (icon-only Edit/Remove labels; roles on reorder/swap/
+   card/header toggle/Add/edit-Save/swap-modal).
+Kept: coverage warnings, why-this, split rationale, reorder, ranked-swap +
+search-all, re-link recovery. Impact Low; Effort Low.

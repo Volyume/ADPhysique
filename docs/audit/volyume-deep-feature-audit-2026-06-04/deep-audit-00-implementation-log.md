@@ -346,3 +346,18 @@ File: `src/screens/PlanDetailScreen.js`.
 - No dead styles; no copy change.
 Verification: eslint clean; screen-mount green (455). Attribute-only.
 Commit: see git log.
+
+## Item 21 — Routine Detail screen — IMPLEMENTED 2026-06-04
+File: `src/screens/RoutineDetailScreen.js`.
+- Removed 7 dead picker styles (pickerSafe/pickerHeader/pickerSearch/pickerClose/
+  pickerItem/pickerItemName/pickerItemMuscle), orphaned from a removed inline
+  picker (the screen uses the shared ExercisePickerModal). Verified multi-sheet.
+- A11y: labelled the icon-only Edit + Remove buttons (role + "Edit/Remove {name}");
+  added accessibilityRole to reorder up/down + Swap (already labelled, + disabled
+  state on reorder); role + label on the tappable exercise card (Edit / Re-link
+  when unresolved), the header Reorder/Done toggle, Add Exercise, the edit-sheet
+  Save, and the swap-modal close / items ("Swap in {name}") / search-all.
+- Kept: muscle-coverage warnings, per-exercise why-this, split rationale, reorder
+  mode, ranked-swap + search-all, broken-FK re-link recovery. No copy change.
+Verification: eslint clean; 0 dead styles remaining; screen-mount green (455).
+Commit: see git log.
