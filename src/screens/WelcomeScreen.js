@@ -103,7 +103,7 @@ export default function WelcomeScreen({ navigation }) {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.freeTitle}>Free</Text>
-                <Text style={styles.freeSubtitle}>The logbook a coach would write in. Yours forever.</Text>
+                <Text style={styles.freeSubtitle}>The logbook a coach would write in.</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </View>
@@ -120,7 +120,7 @@ export default function WelcomeScreen({ navigation }) {
             <View style={styles.freeBackupNote}>
               <Ionicons name="shield-checkmark-outline" size={13} color={colors.textMuted} />
               <Text style={styles.freeBackupText}>
-                Your free account keeps every session backed up and synced across devices. No card, no ads.
+                Your free account keeps every session backed up and synced across your devices.
               </Text>
             </View>
           </TouchableOpacity>
@@ -128,7 +128,7 @@ export default function WelcomeScreen({ navigation }) {
 
         <Animated.View style={{ opacity: fadeIn }}>
           <Text style={styles.tierNote}>
-            Both are free accounts. No card needed. Takes about a minute to set up.
+            Both tiers are free accounts with no card and no ads. They take about a minute to set up.
           </Text>
         </Animated.View>
 
