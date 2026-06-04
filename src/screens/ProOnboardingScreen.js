@@ -680,8 +680,8 @@ export default function ProOnboardingScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <Header
-              title="Let's get you set up."
-              sub="This takes about two minutes. Everything you enter here shapes your coaching."
+              title="Set up your training"
+              sub="About two minutes. Your answers shape the plan the coach builds."
             />
 
             <View style={styles.section}>
@@ -1093,7 +1093,7 @@ export default function ProOnboardingScreen({ navigation }) {
               <Text style={styles.coachCardTitle}>How your coaching works</Text>
             </View>
             <Text style={styles.coachCardBody}>
-              Each morning you weigh in. Once a week you check in. Your coach reads the trend and adjusts your calories and training. Logging your food in your food diary sharpens every call, and your weight trend carries the rest.
+              Each morning you weigh in. Once a week you check in. Your coach reads the trend and adjusts your calories and training. Logging your food makes each call more accurate, and your weight trend carries the rest.
             </Text>
           </View>
 

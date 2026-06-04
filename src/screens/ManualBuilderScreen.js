@@ -348,7 +348,7 @@ export default function ManualBuilderScreen({ navigation }) {
             keyboardShouldPersistTaps="handled"
           >
             <Text style={styles.subtitle}>
-              Set up the basics, then we will walk you through adding workouts day by day.
+              Set up the basics, then add your workouts day by day.
             </Text>
 
             {/* Plan name */}

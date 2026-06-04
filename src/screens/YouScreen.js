@@ -170,7 +170,7 @@ export default function YouScreen({ navigation }) {
         {/* About */}
         <View style={styles.about}>
           <Text style={styles.aboutName}>Volyume</Text>
-          <Text style={styles.aboutVersion}>Less thinking. More lifting. · Private by design</Text>
+          <Text style={styles.aboutVersion}>Less thinking. More lifting.</Text>
           {appVersion ? <Text style={styles.aboutBuild}>{appVersion}</Text> : null}
         </View>
       </ScrollView>

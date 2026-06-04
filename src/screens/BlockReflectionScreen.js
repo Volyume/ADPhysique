@@ -49,11 +49,11 @@ function buildNarrative(data) {
 
   if (tonnageDelta !== null) {
     if (tonnageDelta > 5) {
-      lines.push(`Weekly volume climbed ${tonnageDelta}% from the first to the last week. Progression doing its job.`);
+      lines.push(`Weekly volume climbed ${tonnageDelta}% from the first to the last week.`);
     } else if (tonnageDelta < -5) {
-      lines.push(`Volume was lower in the final week than the first. If that was a planned lighter week, that's exactly right.`);
+      lines.push(`Volume was lower in the final week than the first, likely a deload.`);
     } else {
-      lines.push(`Volume was consistent across the block. Steady work adds up.`);
+      lines.push(`Volume was consistent across the block.`);
     }
   }
 
@@ -183,7 +183,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
             <View style={styles.nextSection}>
               <Text style={styles.nextTitle} accessibilityRole="header">What's next</Text>
               <Text style={styles.nextBody}>
-                Take a few days of lighter activity to recover, then start your next block. The gains from this block consolidate during that transition.
+                Take a few days of lighter activity to recover, then start your next block. The rest is when the gains settle in.
               </Text>
               <TouchableOpacity
                 style={styles.newBlockBtn}

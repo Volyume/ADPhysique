@@ -320,7 +320,7 @@ export default function BuildWorkoutScreen({ navigation }) {
         <View style={styles.travelOverlay}>
           <View style={styles.travelCard}>
             <Text style={styles.travelTitle}>Travel / Hotel Gym</Text>
-            <Text style={styles.travelSub}>Choose available equipment. We'll build a full-body session that maintains your muscle while away from the gym.</Text>
+            <Text style={styles.travelSub}>Choose what equipment you have. The session is full-body, to hold your muscle while you're away from the gym.</Text>
             <View style={styles.travelOptions} accessibilityRole="radiogroup" accessibilityLabel="Available equipment">
               {[
                 { id: 'bodyweight', label: 'Bodyweight only', icon: 'body-outline' },

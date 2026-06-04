@@ -107,7 +107,7 @@ export default function CoachHeldHistoryScreen() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.intro}>
-          Every week the coach makes decisions. Some things change, some things stay the same. You can see all of it here, and why.
+          Every call the coach has made, what changed, what didn't, and why.
         </Text>
 
         {/* Recent engine adaptations and rep-regression warnings, moved

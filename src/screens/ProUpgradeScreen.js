@@ -191,7 +191,7 @@ export default function ProUpgradeScreen({ navigation }) {
           <Text style={styles.successTitle}>You're Pro.</Text>
           <Text style={styles.successBody}>
             {needsSetup
-              ? "Everything's unlocked and your data is backed up. Now let's set up your training plan and nutrition targets so your coach can get to work."
+              ? "Everything's unlocked and your data is backed up. Set up your training plan and nutrition targets and the coach can start."
               : "Everything's unlocked and your data is backed up."}
           </Text>
           {needsSetup ? (
@@ -266,7 +266,7 @@ export default function ProUpgradeScreen({ navigation }) {
           {hasAccount ? (
             <>
               <Text style={styles.accountNote}>
-                Your account is ready. Activate Pro and everything unlocks instantly.
+                Your account is ready. Activate Pro to switch on the coaching features.
               </Text>
               <Button
                 title="Activate Pro"

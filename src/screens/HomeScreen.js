@@ -1149,7 +1149,7 @@ export default function HomeScreen({ navigation }) {
                 <>
                   <Text style={styles.noPlanTitle}>Welcome. Let's get you started.</Text>
                   <Text style={styles.noPlanSub}>
-                    We will learn your training over the first few weeks and build recommendations from there.
+                    Recommendations build up over your first few weeks of training.
                   </Text>
                 </>
               ) : (
