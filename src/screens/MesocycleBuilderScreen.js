@@ -155,8 +155,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                       'After the block ends:\n' +
                       '• The block is archived in Past blocks below\n' +
                       '• Your plan keeps going. The workouts are still there.\n' +
-                      '• Start a new block to begin the next training phase\n\n' +
-                      'Most people run 2 to 4 blocks per year, with each one starting slightly harder than the last one ended.'
+                      '• Start a new block to begin the next training phase'
                     }
                   />
                 </View>
@@ -239,6 +238,8 @@ export default function MesocycleBuilderScreen({ navigation }) {
                   style={styles.summaryBtn}
                   onPress={() => navigation.navigate('BlockReflection', { mesocycleId: meso.id })}
                   activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`View summary of ${meso.name}`}
                 >
                   <Ionicons name="document-text-outline" size={14} color={colors.primary} />
                   <Text style={styles.summaryBtnText}>View block summary</Text>
@@ -289,12 +290,12 @@ export default function MesocycleBuilderScreen({ navigation }) {
             <View style={styles.empty}>
               <Ionicons name="calendar-outline" size={48} color={colors.surface3} />
               <Text style={styles.emptyTitle}>
-                {activePlan ? 'Add a training block' : 'No training blocks yet'}
+                {activePlan ? 'No active block' : 'No training blocks yet'}
               </Text>
               <Text style={styles.emptyText}>
                 {activePlan
-                  ? 'Your plan above is active and ready to train. A training block is optional. Add one to track your week-by-week progress across a full training phase.'
-                  : 'Create a block to track your multi-week training progress.'}
+                  ? 'Your plan is active and ready to train. A training block adds week-by-week tracking on top, and one starts when you activate a plan.'
+                  : 'Training blocks start when you activate a plan. Activate one to track week-by-week progress across a training phase.'}
               </Text>
             </View>
           )
@@ -424,7 +425,6 @@ const styles = StyleSheet.create({
   progFill:   { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
   tonnageWrap: { gap: spacing.xs },
   tonnageLabel: { ...type.caption, color: colors.textMuted },
-  barAxisLabel: { fontSize: fontSize.micro, color: colors.textMuted },
   recovRow:   { flexDirection: 'row', gap: spacing.lg },
   recovItem:  { alignItems: 'center', gap: spacing.xxs },
   recovValue: { ...type.num('bodyStrong'), color: colors.textPrimary },
@@ -436,14 +436,6 @@ const styles = StyleSheet.create({
   },
   deloadBannerUrgent: { backgroundColor: colors.errorBg, borderColor: colors.error },
   deloadBannerText: { flex: 1, fontSize: fontSize.xs, color: colors.warning, lineHeight: 17 },
-
-  // Create button
-  createBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg,
-    marginBottom: spacing.xl,
-  },
-  createBtnText: { ...type.title, color: colors.background },
 
   // Meso list cards
   mesoCard: {
