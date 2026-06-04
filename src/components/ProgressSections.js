@@ -4,6 +4,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '
 import SvgBarSparkline from './SvgBarSparkline';
 import InfoTooltip from './InfoTooltip';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
+import { localDayKey } from '../lib/dayKey';
 
 // Shared section cards for the Progress tab. These render the consistency and
 // recovery views (training block, training load, session length, frequency,
@@ -89,7 +90,9 @@ export function TrainingCalendar({ values }) {
     Array.from({ length: 7 }, (_, di) => {
       const dayOffset = 83 - (wi * 7 + di);
       const d = new Date(today.getTime() - dayOffset * 86400000);
-      return trainedDates.has(d.toISOString().slice(0, 10));
+      // Match on the LOCAL day key (loadCalendar emits the same), so the
+      // squares line up with the user's UK calendar, not UTC.
+      return trainedDates.has(localDayKey(d.getTime()));
     }),
   );
   return (

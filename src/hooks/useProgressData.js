@@ -13,6 +13,7 @@ import {
   calculate1RM, calculateTonnage, shouldDeload,
 } from '../lib/algorithms';
 import { logError } from '../lib/errorLog';
+import { localDayKey } from '../lib/dayKey';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -273,19 +274,22 @@ export default function useProgressData() {
 
   async function loadCalendar(workouts) {
     const now = Date.now();
+    // Bucket by the user's LOCAL calendar day, not UTC. UK runs on BST
+    // (UTC+1) half the year, so a UTC bucket lands a session on the day
+    // before. localDayKey keeps each square on the day the user trained.
     const completedDays = new Set();
     for (const w of workouts) {
       if (!(w.isCompleted ?? w.is_completed ?? false)) continue;
       const at = w.startedAt ?? w.createdAt ?? w.created_at ?? 0;
       if (!at) continue;
-      completedDays.add(Math.floor(at / DAY_MS));
+      completedDays.add(localDayKey(at));
     }
     // Build {date, count} for the last 84 days (12 weeks)
     const vals = [];
     for (let i = 0; i < 84; i++) {
-      const day = Math.floor((now - i * DAY_MS) / DAY_MS);
-      if (completedDays.has(day)) {
-        vals.push({ date: new Date(day * DAY_MS).toISOString().slice(0, 10), count: 1 });
+      const key = localDayKey(now - i * DAY_MS);
+      if (completedDays.has(key)) {
+        vals.push({ date: key, count: 1 });
       }
     }
     setCalValues(vals);
