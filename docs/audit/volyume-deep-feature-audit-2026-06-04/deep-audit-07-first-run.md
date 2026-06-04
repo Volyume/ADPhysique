@@ -3,7 +3,7 @@
 **Document:** deep-audit-07-first-run.md
 **Item:** 6 of master inventory (Group 1 — the Free-tier counterpart to the Pro wizard; navigator routes Free signups to `FirstRunStack`, Pro to `ProOnboardingStack`)
 **File:** `src/screens/FirstRunScreen.js` (113 lines), shared `Button`
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04, "Approved" — incl. optional headline alignment). Dead unit-picker styles + the now-unused TouchableOpacity import removed; keyboard Return now submits (returnKeyType "go" + onSubmitEditing); headline aligned to type.h2. Single-field design kept.
 **Timestamp:** 2026-06-04
 
 > Live-status note: `PRO_BETA_ACTIVE = true` currently forces every signed-in

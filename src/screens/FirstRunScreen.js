@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert,
+  View, Text, StyleSheet, TextInput, ScrollView, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -58,7 +58,8 @@ export default function FirstRunScreen({ navigation: _navigation }) {
           placeholderTextColor={colors.textMuted}
           autoCapitalize="words"
           autoCorrect={false}
-          returnKeyType="next"
+          returnKeyType="go"
+          onSubmitEditing={finish}
         />
 
         <Button
@@ -85,7 +86,7 @@ export default function FirstRunScreen({ navigation: _navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.xl, gap: spacing.lg, flexGrow: 1 },
-  title: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary, marginTop: spacing.lg },
+  title: { ...type.h2, color: colors.textPrimary, marginTop: spacing.lg },
   subtitle: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
   fieldLabel: { ...type.label, color: colors.textSecondary, marginTop: spacing.md },
   input: {
@@ -94,14 +95,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border,
   },
   inputActive: { borderColor: colors.primary },
-  unitRow: { flexDirection: 'row', gap: spacing.sm },
-  unitBtn: {
-    flex: 1, alignItems: 'center', paddingVertical: spacing.md,
-    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
-  },
-  unitBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
-  unitBtnText: { ...type.bodyStrong, color: colors.textSecondary },
-  unitBtnTextActive: { color: colors.primary },
   hintCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     backgroundColor: colors.surface, borderRadius: radius.md,

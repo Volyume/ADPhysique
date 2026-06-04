@@ -66,3 +66,13 @@ Approved changes:
 4. Keep (with evidence): activation content (ring/macros/split/rationale),
    founder note, single CTA, reduce-motion animation, graceful fallbacks, copy.
 Impact Medium (1) / Low (2-3); Effort Low.
+
+## Item 6 — First-run screen (Free path) — APPROVED 2026-06-04 ("Approved")
+Doc: `deep-audit-07-first-run.md`. Approved incl. optional headline alignment.
+Approved changes:
+1. Remove the dead unit-picker styles (+ unused TouchableOpacity import).
+2. Make the keyboard Return submit (returnKeyType "go" + onSubmitEditing).
+3. Align the headline to type.h2 (optional, included).
+Kept: single-field design + deferred plan choice, kg-only, auto-focus,
+disabled-until-valid CTA, busy guard, single exit, Plans hint.
+Impact Low; Effort Low. (Off the live path while PRO_BETA_ACTIVE forces Pro.)

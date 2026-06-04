@@ -106,3 +106,21 @@ Verification: screen-mount suite green (455 tests); eslint 0 errors (3
 pre-existing warnings). No runtime-critical contract touched (completeFirstRun,
 plan/targets reads unchanged).
 Commit: see git log.
+
+## Item 6 — First-run screen (Free path) — IMPLEMENTED 2026-06-04
+File: `src/screens/FirstRunScreen.js`.
+Approved incl. the optional headline alignment.
+- Removed the dead unit-picker styles (unitRow/unitBtn/unitBtnActive/
+  unitBtnText/unitBtnTextActive) and the now-unused TouchableOpacity import,
+  both remnants of the removed unit choice.
+- Keyboard Return now submits: returnKeyType "next" -> "go" plus
+  onSubmitEditing={finish} on the single name field.
+- Headline aligned to type.h2 so Welcome/wizard/complete/first-run share one
+  headline treatment.
+- Kept the single-field design + deferred plan choice (the converting
+  pattern), kg-only, auto-focus, disabled-until-valid CTA, busy guard, single
+  completeFirstRun exit, the one Plans hint. No copy changed.
+Verification: screen-mount green (455 tests); eslint 0 errors (1 pre-existing
+React-unused warning). No logic or contract change. Note: screen is off the
+live path while PRO_BETA_ACTIVE forces Pro.
+Commit: see git log.
