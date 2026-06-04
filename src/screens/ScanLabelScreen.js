@@ -267,7 +267,7 @@ export default function ScanLabelScreen({ navigation, route }) {
             <Text style={styles.missTitle}>Barcode {prefillBarcode} not in our database</Text>
             <Text style={styles.missBody}>
               {!ocrAvailable
-                ? "Type the macros in, we'll keep the barcode on the saved food so the next scan hits."
+                ? 'Type the nutrition in. The barcode is saved with it, so next time it scans straight away.'
                 : onFront
                   ? 'Snap the front for the name, then the nutrition panel.'
                   : 'Frame the nutrition panel and tap the shutter.'}
