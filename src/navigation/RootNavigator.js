@@ -242,6 +242,9 @@ function HomeStack({ navigation }) {
       <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ title: 'Volume' }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ title: 'Share Card' }} />
       <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ title: 'Weekly Review' }} />
+      {/* Cardio is launched from the Train tab's CardioCard. Registering it here
+          keeps the modal in this stack so saving returns to Train, not the Diary. */}
+      <Stack.Screen name="LogCardio" component={LogCardioScreen} options={{ headerShown: false, presentation: 'modal' }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
     </Stack.Navigator>
   );
@@ -286,6 +289,10 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
       <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ title: 'Share Card' }} />
+      {/* Cardio is launched from the Progress tab (AnalyticsScreen). Registering
+          both here keeps them in this stack so save/back return to Progress. */}
+      <Stack.Screen name="LogCardio" component={LogCardioScreen} options={{ headerShown: false, presentation: 'modal' }} />
+      <Stack.Screen name="CardioHistory" component={CardioHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
     </Stack.Navigator>
   );
