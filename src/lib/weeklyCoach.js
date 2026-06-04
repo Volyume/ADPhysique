@@ -994,46 +994,46 @@ export function runWeeklyCoach(inputs) {
   const whatWorking = [];
 
   if (sessionAdherence >= 1.0) {
-    whatWorking.push(`Sessions ${sessionsCompleted}/${sessionsPlanned}.`);
+    whatWorking.push(`You hit all ${sessionsPlanned} of your sessions.`);
   } else if (sessionAdherence >= 0.75) {
-    whatWorking.push(`Sessions ${sessionsCompleted}/${sessionsPlanned}.`);
+    whatWorking.push(`You hit ${sessionsCompleted} of your ${sessionsPlanned} sessions.`);
   }
 
   if (prsThisWeek > 0) {
-    whatWorking.push(`${prsThisWeek} PR${prsThisWeek > 1 ? 's' : ''} this week.`);
+    whatWorking.push(`You set ${prsThisWeek} new PR${prsThisWeek > 1 ? 's' : ''} this week.`);
   }
 
   // Prefer the registered/entered average; fall back to the legacy subjective
   // chip for old check-ins that only carry stepsAdherence.
   if (stepsEnabled && stepsAvg != null && currentStepsTarget > 0) {
     if (stepsAvg >= currentStepsTarget) {
-      whatWorking.push(`Step target hit (averaged ${stepsAvg.toLocaleString('en-GB')}).`);
+      whatWorking.push(`You hit your step target, averaging ${stepsAvg.toLocaleString('en-GB')} a day.`);
     } else if (stepsAvg >= currentStepsTarget * 0.9) {
-      whatWorking.push(`Step target mostly hit (averaged ${stepsAvg.toLocaleString('en-GB')}).`);
+      whatWorking.push(`You came close to your step target, averaging ${stepsAvg.toLocaleString('en-GB')} a day.`);
     }
   } else if (stepsEnabled && stepsAdherence === 'hit') {
-    whatWorking.push('Step target hit.');
+    whatWorking.push('You hit your step target.');
   } else if (stepsEnabled && stepsAdherence === 'mostly') {
-    whatWorking.push('Step target mostly hit.');
+    whatWorking.push('You came close to your step target.');
   }
 
   if (calsAdherence === 'hit') {
-    whatWorking.push('Calorie target hit.');
+    whatWorking.push('You hit your calorie target.');
   }
 
   if (excellentRec) {
-    whatWorking.push('Energy and recovery strong.');
+    whatWorking.push('Your energy and recovery were strong.');
   } else if (!poorRecovery && energyScore != null) {
-    whatWorking.push('Recovery in range.');
+    whatWorking.push('Your recovery was in range.');
   }
 
   if (onTarget && weightDelta != null) {
-    whatWorking.push(`Weight trend on target (${rateLabel}).`);
+    whatWorking.push(`Your weight trend is on target (${rateLabel}).`);
   }
 
   // Fallback, only when literally nothing to say
   if (whatWorking.length === 0) {
-    whatWorking.push('Data logged.');
+    whatWorking.push('You logged your check-in.');
   }
 
   // ── "WHY THIS WEEK" ───────────────────────────────────────────────────────

@@ -338,7 +338,6 @@ export default function LoginScreen({ route }) {
               first row they create; that's what makes cross-device
               sync and the cross-user wipe rule provable. */}
 
-          <Text style={styles.betaNote}>No subscription required</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -464,10 +463,5 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     paddingHorizontal: spacing.sm,
     marginBottom: spacing.xl,
-  },
-  betaNote: {
-    ...type.caption,
-    textAlign: 'center',
-    color: colors.textMuted,
   },
 });
