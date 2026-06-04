@@ -60,7 +60,7 @@ export default function SettingsProfileScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={settingsStyles.settingLabel}>Diet preference</Text>
-              <Text style={settingsStyles.settingSub}>Filters the meals we suggest</Text>
+              <Text style={settingsStyles.settingSub}>This filters the meals we suggest</Text>
             </View>
           </View>
           <View style={styles.dietChips}>

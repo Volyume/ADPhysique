@@ -1147,7 +1147,7 @@ export default function HomeScreen({ navigation }) {
                 </>
               ) : lastSession == null ? (
                 <>
-                  <Text style={styles.noPlanTitle}>Welcome. Let's get you started.</Text>
+                  <Text style={styles.noPlanTitle}>Welcome.</Text>
                   <Text style={styles.noPlanSub}>
                     Recommendations build up over your first few weeks of training.
                   </Text>
@@ -1210,7 +1210,7 @@ export default function HomeScreen({ navigation }) {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.quickStartTitle}>Start your first session</Text>
-                <Text style={styles.quickStartSub}>Log sets as you go. No plan needed to begin. We will build your profile as you train.</Text>
+                <Text style={styles.quickStartSub}>Log sets as you go. No plan needed to start. Your profile builds as you train.</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
             </PressableCard>

@@ -197,7 +197,7 @@ export default function SettingsHealthScreen() {
           sub={
             healthStepsStatus === 'granted'
               ? 'Connected. Volyume reads your daily steps from your watch, phone or tracker in the background.'
-              : `Read your daily steps from ${getHealthProviderLabel()} (covers your watch, phone and trackers). Used for your step target and the coach.`
+              : `Read your daily steps from ${getHealthProviderLabel()} (covers your watch, phone and trackers). They feed your step target and the coach.`
           }
           showArrow={false}
           rightElement={

@@ -196,7 +196,7 @@ export default function CoachingRemindersScreen() {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.intro}>
-          These reminders feed your Precision Coaching. Pick a time and a day that fit your week. Both reminders run automatically.
+          The coach uses these reminders to keep your data current. Pick a time and a day that fit your week. Both reminders run automatically.
         </Text>
 
         {permissionStatus === 'denied' && (

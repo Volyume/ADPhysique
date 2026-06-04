@@ -55,7 +55,7 @@ export default function SettingsPrivacyScreen({ navigation }) {
         <SettingRow
           icon="share-social-outline"
           label="Share scanned labels with Open Food Facts"
-          sub="Sends the macros you confirm and the label photo. Helps the next user get a hit."
+          sub="This sends the macros you confirm and the label photo, so the next person who scans it gets a match."
           showArrow={false}
           rightElement={
             <Switch

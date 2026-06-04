@@ -55,7 +55,7 @@ const ACTION_CARDS_PRO_SWITCH = [
     id: 'goals',
     icon: 'flag-outline',
     title: 'Update plan and rebuild',
-    description: 'Change anything from your goal and training phase to your weekly schedule, equipment, and experience. We rebuild your plan and nutrition targets around the new answers. History and PRs are kept.',
+    description: 'Change anything from your goal and training phase to your weekly schedule, equipment, and experience. Your plan and nutrition targets rebuild around the new answers. History and PRs are kept.',
     screen: 'ProGoalSetup',
   },
   {
@@ -69,7 +69,7 @@ const ACTION_CARDS_PRO_SWITCH = [
     id: 'manual',
     icon: 'create-outline',
     title: 'Build your own',
-    description: 'Hand-pick every exercise and day. Coach output keeps reading your data the same way.',
+    description: 'Hand-pick every exercise and day. The coach keeps reading your data the same way.',
     screen: 'ManualBuilder',
   },
 ];

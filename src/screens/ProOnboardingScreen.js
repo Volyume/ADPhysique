@@ -896,7 +896,7 @@ export default function ProOnboardingScreen({ navigation }) {
             <View style={styles.section}>
               <Dropdown
                 label="Training experience"
-                hint="Shapes volume and exercise complexity."
+                hint="This sets your starting volume and how complex the exercises are."
                 value={experience}
                 options={EXPERIENCE_OPTIONS}
                 onChange={setExperience}
@@ -974,7 +974,7 @@ export default function ProOnboardingScreen({ navigation }) {
             <View style={styles.section}>
               <Dropdown
                 label="What are you focused on right now?"
-                hint="Drives your calorie target and how your plan is built."
+                hint="This drives your calorie target and how your plan is built."
                 value={trainingPhase}
                 options={TRAINING_PHASES.map(p => ({ value: p.value, label: p.label, sub: p.detail }))}
                 onChange={setTrainingPhase}
@@ -1119,7 +1119,7 @@ export default function ProOnboardingScreen({ navigation }) {
           <View style={styles.section}>
             <Dropdown
               label="How's your recovery?"
-              hint="This affects how much volume your plan includes. Be honest. It adjusts to protect you."
+              hint="Be honest here. This sets how much volume your plan includes, so it can protect your recovery."
               value={recoveryRating}
               options={RECOVERY_OPTIONS}
               onChange={setRecoveryRating}

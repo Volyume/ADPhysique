@@ -47,8 +47,8 @@ const GOALS = [
 ];
 
 const PHASE_DESCRIPTIONS = {
-  lean_gain:       'A modest calorie surplus supports steady muscle growth while keeping fat gain minimal.',
-  build:           'A larger calorie surplus helps you recover from hard training and supports consistent muscle growth over time.',
+  lean_gain:       'A modest calorie surplus to gain muscle slowly while keeping fat gain low.',
+  build:           'A larger calorie surplus to fuel hard training and build muscle faster.',
   maintain:        'Enough calories to fuel your training and hold your current body composition.',
   recomp:          'A slight calorie reduction with high protein allows for gradual fat loss while holding muscle.',
   mild_cut:        'A moderate calorie reduction that preserves strength and muscle while steadily losing fat.',
@@ -894,7 +894,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                         ? `When you are trying to hold muscle while losing fat, high protein provides the amino acids needed for muscle repair while telling your body to use fat as fuel instead.`
                         : isMaintain
                         ? `At maintenance, protein supplies the amino acids your muscles need to rebuild after each session. Hitting this target consistently is what lets you add muscle slowly on a stable bodyweight.`
-                        : `In a calorie deficit, muscle tissue can become a fuel source if protein is too low. This target keeps you well above that threshold, and the high satiety of protein makes it easier to stick to your calories.`;
+                        : `In a calorie deficit, muscle tissue can become a fuel source if protein is too low. This target keeps you well above that threshold, and protein keeps you fuller, which makes it easier to stick to your calories.`;
                       return bwLine + tipLine + purposeLine;
                     })();
 

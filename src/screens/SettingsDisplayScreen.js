@@ -112,7 +112,7 @@ export default function SettingsDisplayScreen() {
         <SettingRow
           icon="pause-circle-outline"
           label="Reduce motion"
-          sub="Disables PR celebration particles, rest timer animations, and other large transitions. Helps with vestibular sensitivity."
+          sub="Turns off PR celebration particles, rest timer animations, and other large transitions. Useful if on-screen motion makes you feel unwell."
           showArrow={false}
           rightElement={
             <Switch

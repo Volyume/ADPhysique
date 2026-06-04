@@ -325,7 +325,7 @@ export default function ProGoalSetupScreen({ navigation }) {
               Weak points <Text style={styles.optionalTag}>(optional, max 3)</Text>
             </Text>
             <Text style={styles.sectionSub}>
-              Muscles you want to bring up. Your plan biases extra volume towards them.
+              Muscles you want to bring up. Your plan puts extra work into them.
             </Text>
             <View style={styles.weakPointGrid}>
               {WEAK_POINT_MUSCLES.map(muscle => {
@@ -377,7 +377,7 @@ export default function ProGoalSetupScreen({ navigation }) {
         {/* ── Training schedule ── */}
         <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Training days per week</Text>
         <Text style={styles.sectionSub}>
-          Changing the split affects exercise spread. Plan rebuilds around the new frequency.
+          Changing how many days you train changes the exercise mix. Your plan rebuilds around it.
         </Text>
         <SegmentedControl
           options={DAYS_OPTIONS.map(d => ({ label: String(d), value: d }))}
@@ -397,7 +397,7 @@ export default function ProGoalSetupScreen({ navigation }) {
         {/* ── Equipment ── */}
         <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Equipment</Text>
         <Text style={styles.sectionSub}>
-          What you have access to. Exercise selection adapts to the kit available.
+          What you have access to. The exercises adapt to your equipment.
         </Text>
         <Dropdown
           value={equipment}

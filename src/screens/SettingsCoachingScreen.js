@@ -92,7 +92,7 @@ export default function SettingsCoachingScreen() {
         <SettingRow
           icon="heart-outline"
           label="Calmer experience"
-          sub="Removes aggressive calorie targets and quietens progress prompts"
+          sub="This drops the aggressive calorie targets and quietens the progress prompts"
           showArrow={false}
           rightElement={
             <Switch
