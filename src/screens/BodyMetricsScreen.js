@@ -297,7 +297,6 @@ const chartStyles = StyleSheet.create({
   wrap: { marginTop: spacing.sm, marginHorizontal: -spacing.xs },
   emptyHint: { paddingTop: spacing.md },
   emptyHintText: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
-  axisText: { color: colors.textMuted, fontSize: fontSize.micro },
   smoothedHint: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center' },
 });
 
@@ -312,7 +311,7 @@ function PhysiqueOptIn({ onEnable }) {
         Track your body weight and measurements over time. All data stays on your
         device. It is never shared or uploaded.
       </Text>
-      <TouchableOpacity style={styles.optInBtn} onPress={onEnable}>
+      <TouchableOpacity style={styles.optInBtn} onPress={onEnable} accessibilityRole="button" accessibilityLabel="Enable Physique Tracking">
         <Ionicons name="body-outline" size={18} color={colors.background} />
         <Text style={styles.optInBtnText}>Enable Physique Tracking</Text>
       </TouchableOpacity>
@@ -633,6 +632,8 @@ export default function BodyMetricsScreen() {
                 setSessionConfirmed(true);
               }}
               activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Continue"
             >
               <Text style={styles.confirmBtnText}>Continue</Text>
             </TouchableOpacity>
@@ -793,7 +794,13 @@ export default function BodyMetricsScreen() {
         )}
 
         {/* Log Button */}
-        <TouchableOpacity style={styles.logBtn} onPress={() => { setShowForm(!showForm); setShowMeasurements(false); }}>
+        <TouchableOpacity
+          style={styles.logBtn}
+          onPress={() => { setShowForm(!showForm); setShowMeasurements(false); }}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: showForm }}
+          accessibilityLabel={showForm ? 'Cancel' : 'Log Weight'}
+        >
           <Ionicons name={showForm ? 'chevron-up' : 'add-circle'} size={20} color={colors.background} />
           <Text style={styles.logBtnText}>{showForm ? 'Cancel' : 'Log Weight'}</Text>
         </TouchableOpacity>
@@ -810,6 +817,7 @@ export default function BodyMetricsScreen() {
                 onChangeText={v => setForm(f => ({ ...f, metric_date: v }))}
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor={colors.textMuted}
+                accessibilityLabel="Date, year month day"
               />
             </View>
             {bwu === 'st' ? (
@@ -824,6 +832,7 @@ export default function BodyMetricsScreen() {
                     placeholder="12 st"
                     placeholderTextColor={colors.textMuted}
                     maxLength={3}
+                    accessibilityLabel="Body weight, stone"
                   />
                   <TextInput
                     style={[styles.formInput, { flex: 1 }]}
@@ -833,6 +842,7 @@ export default function BodyMetricsScreen() {
                     placeholder="0 lbs"
                     placeholderTextColor={colors.textMuted}
                     maxLength={4}
+                    accessibilityLabel="Body weight, pounds"
                   />
                 </View>
               </View>
@@ -846,6 +856,7 @@ export default function BodyMetricsScreen() {
                   keyboardType="decimal-pad"
                   placeholder={bwu === 'lbs' ? '176' : '82.5'}
                   placeholderTextColor={colors.textMuted}
+                  accessibilityLabel={`Body weight in ${bwu}`}
                 />
               </View>
             )}
@@ -860,6 +871,7 @@ export default function BodyMetricsScreen() {
                 placeholder="optional"
                 placeholderTextColor={colors.textMuted}
                 maxLength={4}
+                accessibilityLabel="Body fat percentage"
               />
             </View>
 
@@ -867,6 +879,9 @@ export default function BodyMetricsScreen() {
             <TouchableOpacity
               style={styles.measureToggle}
               onPress={() => setShowMeasurements(v => !v)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: showMeasurements }}
+              accessibilityLabel={showMeasurements ? 'Hide measurements' : 'Add measurements'}
             >
               <Text style={styles.measureToggleText}>
                 {showMeasurements ? 'Hide measurements' : 'Add measurements (optional)'}
@@ -888,6 +903,7 @@ export default function BodyMetricsScreen() {
                   keyboardType="decimal-pad"
                   placeholder=""
                   placeholderTextColor={colors.textMuted}
+                  accessibilityLabel={`${m.label} in centimetres`}
                 />
               </View>
             ))}
@@ -899,11 +915,15 @@ export default function BodyMetricsScreen() {
               placeholder="Notes (optional)"
               placeholderTextColor={colors.textMuted}
               multiline
+              accessibilityLabel="Notes"
             />
             <TouchableOpacity
               style={[styles.saveBtn, saving && styles.btnDisabled]}
               onPress={saveMetrics}
               disabled={saving}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: saving }}
+              accessibilityLabel="Save entry"
             >
               <Text style={styles.saveBtnText}>Save Entry</Text>
             </TouchableOpacity>
@@ -921,6 +941,9 @@ export default function BodyMetricsScreen() {
                   style={[styles.measureCell, selectedMeasurement === m.key && styles.measureCellActive]}
                   onPress={() => setSelectedMeasurement(m.key === selectedMeasurement ? null : m.key)}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: selectedMeasurement === m.key }}
+                  accessibilityLabel={`${m.label} ${latest[m.key]} centimetres`}
                 >
                   <Text style={[styles.measureValue, selectedMeasurement === m.key && styles.measureValueActive]}>
                     {latest[m.key]} cm
@@ -948,6 +971,9 @@ export default function BodyMetricsScreen() {
                       key={m.key}
                       style={[styles.measureTab, selectedMeasurement === m.key && styles.measureTabActive]}
                       onPress={() => setSelectedMeasurement(m.key === selectedMeasurement ? null : m.key)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: selectedMeasurement === m.key }}
+                      accessibilityLabel={m.label}
                     >
                       <Text style={[styles.measureTabText, selectedMeasurement === m.key && styles.measureTabTextActive]}>
                         {m.label}
@@ -1044,19 +1070,6 @@ const styles = StyleSheet.create({
   confirmBtnText: { ...type.bodyStrong, color: colors.background },
   confirmHelpline: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginTop: spacing.sm },
 
-  nutritionCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.border, gap: spacing.md,
-  },
-  nutritionCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  nutritionCardLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  nutritionCardTitle: { ...type.bodyStrong, color: colors.textPrimary },
-  nutritionCardLink: { ...type.label, color: colors.primary },
-  nutritionGrid: { flexDirection: 'row', gap: spacing.md },
-  nutritionCell: { flex: 1, alignItems: 'center', gap: spacing.xxs },
-  nutritionValue: { ...type.num('h3'), color: colors.textPrimary },
-  nutritionLabel: { ...type.caption, color: colors.textMuted },
-  nutritionEmpty: { fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 18 },
 
   emptyCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xxl,
