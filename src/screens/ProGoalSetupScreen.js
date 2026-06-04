@@ -7,13 +7,12 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
-import Chip from '../components/Chip';
 import Dropdown from '../components/Dropdown';
 import SegmentedControl from '../components/SegmentedControl';
 import BackHeader from '../components/BackHeader';
 import { useToast } from '../components/Toast';
 import {
-  PHYSIQUE_GOALS, PHYSIQUE_GOAL_GROUPS,
+  PHYSIQUE_GOALS,
   TRAINING_PHASES,
   GOALS_WITH_WEAK_POINTS, WEAK_POINT_MUSCLES,
   phaseToCoachingKey, phaseToNutritionKey, daysToActivityLevel,
@@ -70,7 +69,6 @@ export default function ProGoalSetupScreen({ navigation }) {
   const toast = useToast();
   const { user, userProfile, saveLocalProfile } = useAppStore();
 
-  const [goalFilterGroup, setGoalFilterGroup] = useState('All');
   const [selectedGoal, setSelectedGoal] = useState(userProfile?.trainingGoal ?? null);
   const [selectedPhase, setSelectedPhase] = useState(userProfile?.trainingPhase ?? null);
   const [proteinApproach, setProteinApproach] = useState(
@@ -123,10 +121,6 @@ export default function ProGoalSetupScreen({ navigation }) {
       return [...prev, muscle];
     });
   }
-
-  const filteredGoals = goalFilterGroup === 'All'
-    ? PHYSIQUE_GOALS
-    : PHYSIQUE_GOALS.filter(g => g.group === goalFilterGroup);
 
   // Phases that represent a calorie deficit, used to track when the deficit began.
   const DEFICIT_PHASES = ['cut'];
@@ -317,47 +311,12 @@ export default function ProGoalSetupScreen({ navigation }) {
           Only matters if you're chasing a competitive physique. Biases plan volume toward the muscles that category is judged on.
         </Text>
 
-        {/* Filter tabs */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterRow}
-        >
-          {['All', ...PHYSIQUE_GOAL_GROUPS].map(group => (
-            <Chip
-              key={group}
-              label={group}
-              selected={goalFilterGroup === group}
-              accessibilityRole="radio"
-              onPress={() => setGoalFilterGroup(group)}
-            />
-          ))}
-        </ScrollView>
-
-        <View style={styles.goalGrid}>
-          {filteredGoals.map(g => {
-            const active = selectedGoal === g.value;
-            return (
-              <TouchableOpacity
-                key={g.value}
-                style={[styles.goalCard, active && styles.goalCardActive]}
-                onPress={() => setSelectedGoal(g.value)}
-                activeOpacity={0.75}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={g.label}
-              >
-                <View style={[styles.goalIconWrap, active && styles.goalIconWrapActive]}>
-                  <Ionicons name={g.icon} size={20} color={active ? colors.primary : colors.textSecondary} />
-                </View>
-                <Text style={[styles.goalLabel, active && styles.goalLabelActive]}>{g.label}</Text>
-                {active && (
-                  <Ionicons name="checkmark-circle" size={14} color={colors.primary} style={styles.goalCheck} />
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        <Dropdown
+          value={selectedGoal}
+          options={PHYSIQUE_GOALS.map(g => ({ value: g.value, label: g.label, sub: g.subtitle }))}
+          onChange={setSelectedGoal}
+          placeholder="Not competing, General"
+        />
 
         {/* ── Weak points (only for goals that support them) ── */}
         {weakPointsApplicable && (
@@ -548,26 +507,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17,
     marginBottom: spacing.md,
   },
-
-  filterRow: { gap: spacing.sm, paddingBottom: spacing.md },
-
-  goalGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md,
-  },
-  goalCard: {
-    width: '47%', backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.md, alignItems: 'flex-start', gap: spacing.xs,
-  },
-  goalCardActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
-  goalIconWrap: {
-    width: 36, height: 36, borderRadius: radius.md,
-    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
-  },
-  goalIconWrapActive: { backgroundColor: colors.surface },
-  goalLabel: { ...type.label, color: colors.textPrimary, flexShrink: 1 },
-  goalLabelActive: { color: colors.primary },
-  goalCheck: { marginTop: spacing.xxs },
 
   optionalTag: {
     ...type.caption,
