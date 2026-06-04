@@ -152,7 +152,12 @@ export default function AddCustomFoodScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+        >
           <Ionicons name="close" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>New food</Text>
@@ -172,7 +177,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         {(_unsure('kcal100g', kcal) || _unsure('protein100g', protein)
           || _unsure('carbs100g', carbs) || _unsure('fat100g', fat)
           || _unsure('fibre100g', fibre)) ? (
-          <Text style={styles.unsureNote}>Amber figures aren’t certain, check them.</Text>
+          <Text style={styles.unsureNote}>Amber figures aren't certain, check them.</Text>
         ) : null}
         <View style={styles.row}>
           <NumField label="Calories" value={kcal} onChange={setKcal} suffix="kcal" unsure={_unsure('kcal100g', kcal)} />
@@ -215,6 +220,7 @@ function Field({ label, value, onChange, placeholder, autoFocus }) {
         placeholder={placeholder}
         placeholderTextColor={colors.textMuted}
         autoFocus={autoFocus}
+        accessibilityLabel={label}
       />
     </View>
   );
@@ -232,6 +238,8 @@ function NumField({ label, value, onChange, suffix, unsure }) {
           placeholder="0"
           placeholderTextColor={colors.textMuted}
           keyboardType="decimal-pad"
+          accessibilityLabel={suffix === 'g' ? `${label}, grams` : label}
+          accessibilityHint={unsure ? 'Not certain, check this value' : undefined}
         />
         <Text style={styles.numSuffix}>{suffix}</Text>
       </View>
