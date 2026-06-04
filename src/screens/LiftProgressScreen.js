@@ -195,6 +195,8 @@ export default function LiftProgressScreen({ navigation }) {
           style={styles.bwPromptCard}
           onPress={() => navigation.navigate('BodyMetrics')}
           activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Add your body weight"
         >
           <Ionicons name="body-outline" size={20} color={colors.primary} />
           <View style={{ flex: 1 }}>
@@ -214,6 +216,9 @@ export default function LiftProgressScreen({ navigation }) {
               key={f}
               style={[styles.filterTab, filter === f && styles.filterTabActive]}
               onPress={() => setFilter(f)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: filter === f }}
+              accessibilityLabel={f === 'all' ? 'All lifts' : 'Recent bests'}
             >
               <Text style={[styles.filterTabText, filter === f && styles.filterTabTextActive]}>
                 {f === 'all' ? 'All lifts' : 'Recent bests'}
@@ -246,6 +251,15 @@ export default function LiftProgressScreen({ navigation }) {
               style={styles.card}
               onPress={() => navigation.navigate('ExerciseDetail', { exerciseId: item.exerciseId })}
               onLongPress={() => openLiftMenu(item)}
+              accessibilityLabel={[
+                item.name,
+                `${item.bestE1rm}${units} estimated max`,
+                (item.deltaPct != null && item.sessions > 1)
+                  ? `${item.deltaPct > 0 ? 'up' : item.deltaPct < 0 ? 'down' : 'no change'} ${Math.abs(item.deltaPct)} percent`
+                  : null,
+                best ? 'recent best' : null,
+              ].filter(Boolean).join(', ')}
+              accessibilityHint="Long press for options"
             >
               <View style={styles.cardMain}>
                 <View style={styles.nameRow}>

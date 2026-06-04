@@ -27,6 +27,7 @@ export default function PressableCard({
   children,
   accessibilityRole = 'button',
   accessibilityLabel,
+  accessibilityHint,
   accessibilityState,
   testID,
   hitSlop,
@@ -75,6 +76,7 @@ export default function PressableCard({
       testID={testID}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
       accessibilityState={accessibilityState}
     >
       <Animated.View style={[style, animatedStyle]}>
