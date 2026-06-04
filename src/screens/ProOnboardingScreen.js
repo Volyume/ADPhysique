@@ -48,7 +48,7 @@ const PROTEIN_SHORT = {
   advanced:  'Upper end for competitive athletes and harder cuts.',
 };
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 
 // Default days per week, used for nutrition calc without asking the user.
 const DEFAULT_DAYS_PER_WEEK = 4;
@@ -405,8 +405,19 @@ export default function ProOnboardingScreen({ navigation }) {
   }
 
   function advanceFrom3() {
-    if (!experience || !sessionLengthMinutes || !equipment || !trainingGoal || !trainingPhase) {
-      Alert.alert('Complete all fields', 'Please fill out your training profile to continue.');
+    // Step 3 is now logistics only (experience, session length, days, kit).
+    // The goal/phase questions moved to step 4 so neither step carries more
+    // than a handful of fields (the 3-5-per-step rule).
+    if (!experience || !sessionLengthMinutes || !equipment) {
+      Alert.alert('Complete all fields', 'Please fill out your training setup to continue.');
+      return;
+    }
+    setStep(4);
+  }
+
+  function advanceFrom4() {
+    if (!trainingGoal || !trainingPhase) {
+      Alert.alert('Almost there', 'Pick what your current block is doing to continue.');
       return;
     }
     // The "aggressive cuts" goal-lock interstitial was removed from
@@ -416,10 +427,10 @@ export default function ProOnboardingScreen({ navigation }) {
     // now keeps the standard ED-pattern threshold (the more protective
     // 2-signal setting); the advanced opt-in still lives on the Goal lock
     // screen under You for anyone who wants it.
-    setStep(4);
+    setStep(5);
   }
 
-  async function advanceFrom4() {
+  async function advanceFrom5() {
     if (!recoveryRating) {
       Alert.alert('Recovery rating', 'Please select your recovery level to continue.');
       return;
@@ -598,17 +609,16 @@ export default function ProOnboardingScreen({ navigation }) {
   // ── Progress bar ─────────────────────────────────────────────────────────────
 
   function ProgressBar() {
+    // Endowed Progress Effect: the bar opens with a small amount already
+    // filled rather than empty, so step 1 doesn't read as "0% done, long way
+    // to go". The account is behind them by the time they see this. It then
+    // fills to full on the last step.
+    const BASE = 0.12;
+    const advanced = TOTAL_STEPS > 1 ? (step - 1) / (TOTAL_STEPS - 1) : 1;
+    const filled = Math.round((BASE + (1 - BASE) * advanced) * 100);
     return (
-      <View style={styles.progressRow}>
-        {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-          <View
-            key={i}
-            style={[
-              styles.progressSegment,
-              i < step ? styles.progressDone : i === step - 1 ? styles.progressActive : styles.progressPending,
-            ]}
-          />
-        ))}
+      <View style={styles.progressTrack}>
+        <View style={[styles.progressFill, { width: `${filled}%` }]} />
       </View>
     );
   }
@@ -741,17 +751,12 @@ export default function ProOnboardingScreen({ navigation }) {
             <View style={styles.section}>
               <Text style={styles.fieldLabel}>Biological sex</Text>
               <Text style={styles.fieldHint}>Used to calculate your calorie and nutrition targets accurately.</Text>
-              <View style={styles.segmentRow}>
-                {[{ key: 'male', label: 'Male' }, { key: 'female', label: 'Female' }].map(s => (
-                  <TouchableOpacity
-                    key={s.key}
-                    style={[styles.segment, sex === s.key && styles.segmentActive]}
-                    onPress={() => setSex(s.key)}
-                  >
-                    <Text style={[styles.segmentText, sex === s.key && styles.segmentTextActive]}>{s.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <SegmentedControl
+                options={[{ label: 'Male', value: 'male' }, { label: 'Female', value: 'female' }]}
+                value={sex}
+                onChange={setSex}
+                accessibilityLabel="Biological sex"
+              />
             </View>
 
             <View style={styles.section}>
@@ -831,23 +836,16 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <View style={styles.section}>
               <Text style={styles.fieldLabel}>Body weight units</Text>
-              <View style={styles.segmentRow}>
-                {[
-                  { key: 'st', label: 'Stone+lbs' },
-                  { key: 'kg', label: 'kg' },
-                  { key: 'lbs', label: 'lbs' },
-                ].map(u => (
-                  <TouchableOpacity
-                    key={u.key}
-                    style={[styles.segment, localBWUnits === u.key && styles.segmentActive]}
-                    onPress={() => setLocalBWUnits(u.key)}
-                  >
-                    <Text style={[styles.segmentText, localBWUnits === u.key && styles.segmentTextActive]}>
-                      {u.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <SegmentedControl
+                options={[
+                  { label: 'Stone+lbs', value: 'st' },
+                  { label: 'kg', value: 'kg' },
+                  { label: 'lbs', value: 'lbs' },
+                ]}
+                value={localBWUnits}
+                onChange={setLocalBWUnits}
+                accessibilityLabel="Body weight units"
+              />
             </View>
 
             <View style={styles.section}>
@@ -908,19 +906,18 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 2, Training setup ──────────────────────────────────────────────────
+  // ── Step 3, Training setup (logistics) ──────────────────────────────────────
 
   if (step === 3) {
-    const goalOptions = PHYSIQUE_GOALS.map(g => ({ value: g.value, label: g.label, sub: g.subtitle }));
-    const canContinue = !!experience && !!sessionLengthMinutes && !!equipment && !!trainingGoal && !!trainingPhase;
+    const canContinue = !!experience && !!sessionLengthMinutes && !!equipment;
 
     return (
       <SafeAreaView key="step-3" style={styles.safe}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <Header
-              title="Your training profile."
-              sub="Takes about 30 seconds. This shapes your entire plan."
+              title="Your training setup."
+              sub="How your training week looks. About a minute."
               onBack={goBack}
             />
 
@@ -975,6 +972,37 @@ export default function ProOnboardingScreen({ navigation }) {
                 />
               ))}
             </View>
+
+            <TouchableOpacity
+              style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
+              onPress={canContinue ? advanceFrom3 : undefined}
+              disabled={!canContinue}
+              activeOpacity={canContinue ? 0.88 : 1}
+            >
+              <Text style={styles.primaryBtnText}>Continue</Text>
+              <Ionicons name="arrow-forward" size={18} color={colors.background} />
+            </TouchableOpacity>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Step 4, Goal ────────────────────────────────────────────────────────────
+
+  if (step === 4) {
+    const goalOptions = PHYSIQUE_GOALS.map(g => ({ value: g.value, label: g.label, sub: g.subtitle }));
+    const canContinue = !!trainingGoal && !!trainingPhase;
+
+    return (
+      <SafeAreaView key="step-4-goal" style={styles.safe}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+            <Header
+              title="What you're training for."
+              sub="What your current block is doing. This drives your calorie target and how your plan is built."
+              onBack={goBack}
+            />
 
             {/* Primary question, single source of truth for what the
                 current block is doing. Drives calories, plan structure,
@@ -1089,7 +1117,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <TouchableOpacity
               style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
-              onPress={canContinue ? advanceFrom3 : undefined}
+              onPress={canContinue ? advanceFrom4 : undefined}
               disabled={!canContinue}
               activeOpacity={canContinue ? 0.88 : 1}
             >
@@ -1102,13 +1130,13 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 3, Recovery & reminders ───────────────────────────────────────────
+  // ── Step 5, Recovery & reminders ───────────────────────────────────────────
 
-  if (step === 4) {
+  if (step === 5) {
     const canContinue = !!recoveryRating;
 
     return (
-      <SafeAreaView key="step-4" style={styles.safe}>
+      <SafeAreaView key="step-5" style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll}>
           <Header
             title="Recovery & reminders."
@@ -1161,6 +1189,9 @@ export default function ProOnboardingScreen({ navigation }) {
                 <TouchableOpacity
                   style={[styles.toggle, morningEnabled && styles.toggleOn]}
                   onPress={() => setMorningEnabled(v => !v)}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: morningEnabled }}
+                  accessibilityLabel="Morning weight reminder"
                 >
                   <View style={[styles.toggleThumb, morningEnabled && styles.toggleThumbOn]} />
                 </TouchableOpacity>
@@ -1205,6 +1236,9 @@ export default function ProOnboardingScreen({ navigation }) {
                 <TouchableOpacity
                   style={[styles.toggle, checkinEnabled && styles.toggleOn]}
                   onPress={() => setCheckinEnabled(v => !v)}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: checkinEnabled }}
+                  accessibilityLabel="Weekly check-in reminder"
                 >
                   <View style={[styles.toggleThumb, checkinEnabled && styles.toggleThumbOn]} />
                 </TouchableOpacity>
@@ -1291,7 +1325,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
           <TouchableOpacity
             style={[styles.primaryBtn, (!canContinue || busy) && styles.primaryBtnDisabled]}
-            onPress={canContinue && !busy ? advanceFrom4 : undefined}
+            onPress={canContinue && !busy ? advanceFrom5 : undefined}
             disabled={!canContinue || busy}
             activeOpacity={canContinue && !busy ? 0.88 : 1}
           >
@@ -1331,11 +1365,11 @@ const styles = StyleSheet.create({
     color: colors.background, letterSpacing: 0.8,
   },
 
-  progressRow: { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm },
-  progressSegment: { flex: 1, height: 3, borderRadius: 2 },
-  progressDone: { backgroundColor: colors.primary },
-  progressActive: { backgroundColor: withAlpha(colors.primary, 0.8) },
-  progressPending: { backgroundColor: colors.border },
+  progressTrack: {
+    height: 3, borderRadius: 2, backgroundColor: colors.border,
+    overflow: 'hidden', marginBottom: spacing.sm,
+  },
+  progressFill: { height: '100%', borderRadius: 2, backgroundColor: colors.primary },
 
   stepCount: { ...type.num('caption'), color: colors.textMuted, marginBottom: spacing.xs },
   stepTitle: {
@@ -1432,16 +1466,9 @@ const styles = StyleSheet.create({
   },
   segmentTextSmall: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted },
 
-  segmentRow: {
-    flexDirection: 'row', backgroundColor: colors.surface,
-    borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border, padding: 3,
-  },
-  segment: {
-    flex: 1, paddingVertical: spacing.sm + 2,
-    alignItems: 'center', borderRadius: radius.sm - 2,
-  },
+  // Shared by the compact height-units toggle (ft+in / cm). The full-width
+  // sex and body-weight-unit pickers now use the shared SegmentedControl.
   segmentActive: { backgroundColor: colors.primary },
-  segmentText: { ...type.label, color: colors.textMuted },
   segmentTextActive: { color: colors.background },
 
   // Dropdown

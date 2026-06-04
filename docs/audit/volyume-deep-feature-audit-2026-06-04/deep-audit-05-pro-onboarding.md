@@ -3,7 +3,7 @@
 **Document:** deep-audit-05-pro-onboarding.md
 **Item:** 4 of master inventory (Group 1 — the onboarding new signups reach: tier is set to Pro at signup, so this is the live first-run for everyone in beta)
 **File:** `src/screens/ProOnboardingScreen.js` (1558 lines), components `OptionCard`, `SegmentedControl`, `OAuthButtons`, `EmailPasswordFields`
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04, "Approved" — scope: Full split + polish). Step 3 split into Logistics (3) + Goal (4); recovery is now step 5; TOTAL_STEPS 5. Shared SegmentedControl for sex + body-weight units; morning/check-in toggle a11y fixed; continuous progress bar with Endowed Progress Effect baseline; "30 seconds" copy dropped. Step-1 account redundancy flagged only.
 **Timestamp:** 2026-06-04
 
 ---

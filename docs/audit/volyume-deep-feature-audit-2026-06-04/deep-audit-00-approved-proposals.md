@@ -43,3 +43,15 @@ Approved changes:
 5. "Freely given" hard-gate + withdrawal=deletion: flagged for legal, not
    changed.
 Impact High (1-2) / Medium (3) / Low (4); Effort Low.
+
+## Item 4 — Pro onboarding wizard — APPROVED 2026-06-04 ("Approved", scope: Full split + polish)
+Doc: `deep-audit-05-pro-onboarding.md`. Founder picked "Full split + polish"
+when asked to resolve the split-vs-polish fork.
+Approved changes:
+1. Split overloaded Step 3 into two (Logistics + Goal); TOTAL_STEPS 4 -> 5.
+2. Unify sex + body-weight-unit pickers onto the shared SegmentedControl.
+3. Fix morning/check-in toggle accessibility (switch role + state + label).
+4. Progress bar starts partially filled (Endowed Progress Effect).
+5. Correct the under-stated "30 seconds" copy.
+6. Step-1 account redundancy flagged only, not changed (routing decision).
+Impact High (1) / Medium (3) / Low (2,4,5); Effort Medium (split) / Low (rest).

@@ -51,3 +51,38 @@ Files: `src/screens/Article9ConsentScreen.js`, `src/navigation/RootNavigator.js`
 Verification: screen-mount + healthConsentRouting.guard suites green (459
 tests); eslint 0 errors.
 Commit: see git log.
+
+## Item 4 — Pro onboarding wizard — IMPLEMENTED 2026-06-04 (full split + polish)
+File: `src/screens/ProOnboardingScreen.js`.
+Founder chose "Full split + polish" when asked.
+- Split the overloaded training-profile step into two. TOTAL_STEPS 4 -> 5.
+  - Step 3 is now logistics only: experience, session length, days/week,
+    equipment. Title "Your training setup."; sub "How your training week
+    looks. About a minute." advanceFrom3 validates those three required
+    fields then -> step 4.
+  - New step 4 is the goal step: focus/phase, optional competing category,
+    weak points, protein. Title "What you're training for." advanceFrom4
+    validates trainingGoal + trainingPhase then -> step 5. The removed
+    "aggressive cuts" interstitial comment moved here with the phase pick.
+  - Old recovery & reminders step is now step 5 (key, comment, button ->
+    advanceFrom5). Old async advanceFrom4 (plan generation) renamed
+    advanceFrom5; no logic change to the generation path.
+- Unified the sex and body-weight-unit pickers onto the shared
+  SegmentedControl (was a hand-rolled segmentRow). Removed the now-orphaned
+  segmentRow/segment/segmentText styles; kept segmentActive/segmentTextActive
+  (still used by the compact height-units toggle).
+- Morning-weight and weekly-check-in toggles got accessibilityRole="switch"
+  + accessibilityState={{ checked }} + label, matching the steps/cardio
+  toggles that already had them.
+- Progress bar is now a single continuous track with an Endowed Progress
+  Effect baseline (opens ~12% filled, fills to 100% on the last step) instead
+  of empty segments.
+- Copy: dropped the under-stated "Takes about 30 seconds" line in the split.
+- Step-1 account redundancy was flagged in the audit, not changed (routing
+  decision, left for the founder).
+Verification: screen-mount + identityGate.proOnboarding suites green (463
+tests); eslint 0 errors (5 pre-existing warnings unrelated to this change).
+No runtime-critical contract changed (plan generation, notification
+scheduling, profile save all unchanged); the split only re-partitions which
+step collects which already-existing field.
+Commit: see git log.
