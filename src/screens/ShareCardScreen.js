@@ -187,33 +187,10 @@ function drawBrandFooter(ctx, W, H, pad, isSquare) {
   ctx.fillStyle = B.divider;
   ctx.fillRect(pad, fy, W - pad * 2, 1);
 
-  // The real wordmark, centred. Falls back to the V mark + Arial "olyume"
-  // only if the image failed to load.
-  var logo = window.__logoImg;
-  var taglineY;
-  if (logo && logo.complete && logo.naturalWidth) {
-    var logoH = isSquare ? 64 : 96;
-    var logoW = logoH * (logo.naturalWidth / logo.naturalHeight);
-    // Cap the width so a wide wordmark never bleeds past the card edges.
-    var maxW = W - pad * 2;
-    if (logoW > maxW) { logoW = maxW; logoH = logoW * (logo.naturalHeight / logo.naturalWidth); }
-    var logoX = (W - logoW) / 2;
-    var logoY = fy + (isSquare ? 22 : 38);
-    ctx.drawImage(logo, logoX, logoY, logoW, logoH);
-    taglineY = logoY + logoH + (isSquare ? 24 : 34);
-  } else {
-    var markSz = isSquare ? 56 : 84;
-    var wordFont = isSquare ? 44 : 68;
-    ctx.font = '900 ' + wordFont + 'px Arial,sans-serif';
-    var wordW = ctx.measureText('olyume').width;
-    var blockW = markSz + 8 + wordW;
-    var blockX = (W - blockW) / 2;
-    var blockY = fy + (isSquare ? 36 : 56);
-    drawVMark(ctx, blockX, blockY - markSz * 0.86, markSz, B.text, B.accent);
-    ctx.fillStyle = B.text;
-    ctx.fillText('olyume', blockX + markSz + 8, blockY - 4);
-    taglineY = blockY + (isSquare ? 26 : 44);
-  }
+  // The Volyume logo lives at the top of the card. The footer carries only the
+  // tagline and URL, not a second wordmark, so the brand mark is not duplicated
+  // (founder direction). Tagline sits centred in the footer band.
+  var taglineY = fy + (isSquare ? 74 : 124);
 
   // Tagline
   var tagFont = isSquare ? 18 : 26;
@@ -717,8 +694,22 @@ window.drawCard = function() {
   // export. If it is already cached or no URI was passed, paint immediately.
   if (p.logoDataUri && (!window.__logoImg || window.__logoImg.src !== p.logoDataUri)) {
     var img = new Image();
-    img.onload = function() { window.__logoImg = img; safePaint(); };
-    img.onerror = function() { window.__logoImg = null; safePaint(); };
+    // Paint at most once. The brand draw already falls back to a vector
+    // wordmark when the image is absent, so a logo that never decodes must
+    // never block the export: on some Android WebViews a malformed or large
+    // data-URI fires neither onload NOR onerror and just hangs, which left the
+    // capture waiting forever (surfaced to the user as "Couldn't generate").
+    // A 2s watchdog paints with the vector fallback so a frame always comes.
+    var painted = false;
+    function paintOnce(loaded) {
+      if (painted) return;
+      painted = true;
+      window.__logoImg = loaded || null;
+      safePaint();
+    }
+    img.onload = function() { paintOnce(img); };
+    img.onerror = function() { paintOnce(null); };
+    setTimeout(function () { paintOnce(window.__logoImg || null); }, 2000);
     img.src = p.logoDataUri;
     return;
   }
