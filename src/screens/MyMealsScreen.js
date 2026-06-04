@@ -26,6 +26,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
+import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import {
   listSavedMeals, applySavedMealToDiary, renameSavedMeal, deleteSavedMeal,
@@ -133,6 +134,9 @@ export default function MyMealsScreen({ navigation, route }) {
         style={styles.row}
         onPress={() => confirmLog(item)}
         onLongPress={() => openMenu(item)}
+        accessibilityRole="button"
+        accessibilityLabel={`Log ${item.name}`}
+        accessibilityHint="Long press to rename or delete"
       >
         <View style={{ flex: 1 }}>
           <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
@@ -149,7 +153,13 @@ export default function MyMealsScreen({ navigation, route }) {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <BackHeader title="My meals" />
 
-      {loading ? null : meals.length === 0 ? (
+      {loading ? (
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <SkeletonRow />
+          <SkeletonRow />
+          <SkeletonRow />
+        </View>
+      ) : meals.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>No saved meals yet.</Text>
           <Text style={styles.emptyBody}>
@@ -184,12 +194,13 @@ export default function MyMealsScreen({ navigation, route }) {
               maxLength={60}
               returnKeyType="done"
               onSubmitEditing={submitRename}
+              accessibilityLabel="Meal name"
             />
             <View style={styles.cardActions}>
-              <TouchableOpacity onPress={() => setRenaming(null)} style={styles.cardBtn}>
+              <TouchableOpacity onPress={() => setRenaming(null)} style={styles.cardBtn} accessibilityRole="button" accessibilityLabel="Cancel">
                 <Text style={styles.cardBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={submitRename} style={[styles.cardBtn, styles.cardBtnPrimary]}>
+              <TouchableOpacity onPress={submitRename} style={[styles.cardBtn, styles.cardBtnPrimary]} accessibilityRole="button" accessibilityLabel="Save">
                 <Text style={[styles.cardBtnText, { color: colors.background, fontWeight: fontWeight.bold }]}>Save</Text>
               </TouchableOpacity>
             </View>
