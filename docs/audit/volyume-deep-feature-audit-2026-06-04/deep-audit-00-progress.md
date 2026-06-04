@@ -7,7 +7,7 @@ Single source of truth for where the audit stands. Update on each session end.
 Branch `main`, 0/0 with origin, working tree clean, repo eslint **0 problems**,
 full suite green (174 suites, 2820 passing).
 
-### Done (45 items + the lint sweep), each: audited → researched → proposed →
+### Done (46 items + the lint sweep), each: audited → researched → proposed →
 ### approved → implemented → pushed. Doc per item in this folder.
 
 | # | Item | Screen | Doc |
@@ -57,6 +57,7 @@ full suite green (174 suites, 2820 passing).
 | 43 | Weekly Check-in | WeeklyCheckInScreen | deep-audit-44 |
 | 44 | Coach Output | CoachOutputScreen | deep-audit-45 |
 | 45 | Coaching History | CoachHeldHistoryScreen | deep-audit-46 |
+| 46 | Block Reflection | BlockReflectionScreen | deep-audit-47 |
 
 Plus: the full lint sweep (779 → 0 warnings, 0 errors) across commits
 e518807 / 16cbad7 / e345a06 / d2f797f, and the `__mocks__/expo-application.js`
@@ -68,9 +69,9 @@ test mock.
 
 ## NEXT (resume here)
 
-Inventory order, next un-audited screen: **#46 `BlockReflectionScreen`**
-(end-of-block reflection), then #47 ProGoalSetup and the rest of the coach-engine
-surfaces. Master list: `deep-audit-01-master-inventory.md`.
+Inventory order, next un-audited screen: **#47 `ProGoalSetupScreen`** 🔒 (coached
+goal/plan setup), then the rest of the coach-engine surfaces (CoachingReminders,
+etc.). Master list: `deep-audit-01-master-inventory.md`.
 
 ### Carry-over flag (Body Metrics, item 38)
 - `BodyMetricsScreen` stores entry `loggedAt` via `new Date(metric_date)`
