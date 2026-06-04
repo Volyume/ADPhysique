@@ -7,7 +7,7 @@ Single source of truth for where the audit stands. Update on each session end.
 Branch `main`, 0/0 with origin, working tree clean, repo eslint **0 problems**,
 full suite green (174 suites, 2820 passing).
 
-### Done (30 items + the lint sweep), each: audited → researched → proposed →
+### Done (31 items + the lint sweep), each: audited → researched → proposed →
 ### approved → implemented → pushed. Doc per item in this folder.
 
 | # | Item | Screen | Doc |
@@ -42,6 +42,7 @@ full suite green (174 suites, 2820 passing).
 | 28 | Scan Barcode | ScanBarcodeScreen | deep-audit-29 |
 | 29 | Scan Label (OCR) | ScanLabelScreen | deep-audit-30 |
 | 30 | Log Cardio | LogCardioScreen | deep-audit-31 |
+| 31 | Cardio History | CardioHistoryScreen | deep-audit-32 |
 
 Plus: the full lint sweep (779 → 0 warnings, 0 errors) across commits
 e518807 / 16cbad7 / e345a06 / d2f797f, and the `__mocks__/expo-application.js`
@@ -53,8 +54,9 @@ test mock.
 
 ## NEXT (resume here)
 
-Inventory order, next un-audited screen: **#29 `CardioHistoryScreen`** (cardio
-sessions by day), then the A6 You sub-stack incl. the coach-engine surfaces
+Inventory order, next un-audited screen: **#30 `FoodInsightsScreen`**
+(food/nutrition insights), then the food sub-stack (#31 MyRecipes, #32 MyMeals,
+#33 RecipeBuilder) and the A6 You sub-stack incl. the coach-engine surfaces
 (CoachOutput, WeeklyCheckIn, ProGoalSetup, etc.). Master list:
 `deep-audit-01-master-inventory.md`.
 
