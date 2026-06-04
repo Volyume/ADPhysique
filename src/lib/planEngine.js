@@ -403,7 +403,7 @@ function enforceWeeklyFloorsAndCaps(weeklyTargets, goal, effectiveDays, weakPoin
 // Entry: { n: name, sub: subregion, p: paramKey, eq: [equipment...] }
 // paramKey: 'heavy_compound' | 'mod_compound' | 'machine' | 'isolation'
 
-const POOL = {
+export const POOL = {
   chest: [
     { n: 'Barbell Bench Press',            sub: 'flat',    p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'] },
     { n: 'Incline Barbell Bench Press',    sub: 'incline', p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'] },
@@ -1394,7 +1394,7 @@ function buildUpperLowerWPWorkouts(weeklyTargets, landmarks, equipment, goal, we
 // Women's Bodybuilding stay balanced on the legacy selectSplit path (their spec
 // rows match it: Full Body / Upper-Lower / PPL), and the weak_point phase keeps
 // its dedicated UL+WP builder.
-const DIVISION_MATRIX = {
+export const DIVISION_MATRIX = {
   mens_physique: {
     label: 'V-Taper',
     3: [
@@ -1576,6 +1576,49 @@ const DIVISION_MATRIX = {
 // priority order (set in the matrix), so session 1's first muscle is the lead.
 const UPPER_MUSCLES = new Set(['chest', 'back', 'side_delts', 'rear_delts', 'front_delts', 'biceps', 'triceps', 'traps']);
 
+// Movement pattern per muscle. Augmentation (structural coverage + weak-point
+// boosts) must respect this, otherwise a chest (push) weak point lands on a
+// pull day and back (pull) on a push day, the "Pull (Width) full of bench
+// press" bug. side_delts is neutral: side raises belong on push OR pull/delt
+// days, so they fit any upper session.
+export const MUSCLE_PATTERN = {
+  chest: 'push', front_delts: 'push', triceps: 'push',
+  back: 'pull', rear_delts: 'pull', biceps: 'pull', traps: 'pull',
+  side_delts: 'delts',
+  quads: 'legs', hamstrings: 'legs', glutes: 'legs', calves: 'legs', adductors: 'legs',
+  abs: 'core',
+};
+function patternOf(m) { return MUSCLE_PATTERN[m] ?? 'other'; }
+
+// Anchor muscles define a day's movement pattern for augmentation. A weak-point
+// or structural muscle is only added to a day that already trains an anchor of
+// the same pattern, so a back boost never lands on a legs+arms day that merely
+// does biceps curls (which also blew the time budget), and chest never lands on
+// a pull day. Isolation muscles (biceps, triceps, rear/side delts, traps,
+// calves, abs) are not anchors: they ride on a day defined by its big movers.
+const PATTERN_ANCHORS = {
+  push: ['chest', 'front_delts'],
+  pull: ['back'],
+  legs: ['quads', 'hamstrings', 'glutes'],
+};
+
+// Can muscle m be added to a session that currently trains `sessionMuscles`?
+function patternFits(m, sessionMuscles) {
+  const p = patternOf(m);
+  // Side delts are neutral: a side raise fits any day that already trains an
+  // upper muscle (push, pull or another delt).
+  if (p === 'delts') {
+    return sessionMuscles.some((x) => ['push', 'pull', 'delts'].includes(patternOf(x)));
+  }
+  // Abs only ride onto a day that already trains abs.
+  if (p === 'core') {
+    return sessionMuscles.some((x) => patternOf(x) === 'core');
+  }
+  const anchors = PATTERN_ANCHORS[p];
+  if (!anchors) return false;
+  return sessionMuscles.some((x) => anchors.includes(x));
+}
+
 function buildFromMatrix(sessionsIn, weeklyTargets, landmarks, equipment, goal, experience, nutritionPhase) {
   // Clone so the structural-coverage net never mutates the shared matrix.
   const sessions = sessionsIn.map(s => ({ name: s.name, muscles: [...s.muscles] }));
@@ -1587,40 +1630,43 @@ function buildFromMatrix(sessionsIn, weeklyTargets, landmarks, equipment, goal, 
   for (const m of STRUCTURAL_MUSCLES) {
     if (sessions.some(s => s.muscles.includes(m))) continue;
     const wantUpper = UPPER_MUSCLES.has(m);
-    const target = sessions.find(s => s.muscles.some(x => UPPER_MUSCLES.has(x) === wantUpper)) ?? sessions[0];
+    // Prefer a session that trains the same movement pattern, so a missing
+    // structural mover never lands on the opposite-pattern day. Fall back to
+    // the same upper/lower region, then to the first session.
+    const target = sessions.find(s => patternFits(m, s.muscles))
+                ?? sessions.find(s => s.muscles.some(x => UPPER_MUSCLES.has(x) === wantUpper))
+                ?? sessions[0];
     target.muscles.push(m);
   }
 
   // Weak-point session augmentation (spec section B, the "add a session" option
   // composed with the division split). A weak-point muscle's boosted weekly
   // target needs enough sessions to deliver at <= ~9 sets each. Add it to more
-  // sessions until it has enough, but ONLY to sessions of the same region
-  // (upper muscle into an upper day, lower into a lower day) so a leg weak-point
-  // never lands in a pull day and bloats it. Capped at 3 sessions so multiple
-  // simultaneous weak points cannot stack a session past its time budget.
+  // sessions until it has enough, but ONLY to sessions that train the SAME
+  // movement pattern (chest into a push day, back into a pull day, a leg muscle
+  // into a leg day) so a weak point never contaminates an opposite-pattern day.
+  // Capped at 3 sessions so multiple simultaneous weak points cannot stack a
+  // session past its time budget.
   const augCount = sessions.map(() => 0);  // weak muscles added per session
   for (const m of _weakPointKeys) {
     const wTarget = weeklyTargets[m] ?? 0;
     if (wTarget <= 0) continue;
-    const wantUpper = UPPER_MUSCLES.has(m);
     const desired = Math.min(3, sessions.length, Math.max(2, Math.ceil(wTarget / 9)));
     let have = sessions.filter(s => s.muscles.includes(m)).length;
     if (have >= desired) continue;
-    // Pass 1 adds to same-region sessions; pass 2 falls back to any session so
-    // a division with few same-region days (e.g. MP glutes, one leg day) can
-    // still reach its target. Cap one augmented muscle per session so multiple
-    // simultaneous weak points never stack into one session and blow the time
-    // budget (the 3-leg-muscles-in-a-pull-day case).
-    for (const sameRegionOnly of [true, false]) {
-      for (let i = 0; i < sessions.length; i++) {
-        if (have >= desired) break;
-        const s = sessions[i];
-        if (s.muscles.includes(m) || augCount[i] >= 1) continue;
-        if (sameRegionOnly && !s.muscles.some(x => UPPER_MUSCLES.has(x) === wantUpper)) continue;
-        s.muscles.unshift(m);  // lead the session: weak point gets first pick
-        augCount[i] += 1;
-        have += 1;
-      }
+    // Same-pattern only. If there are not enough same-pattern days to reach the
+    // desired spread, the muscle simply trains in fewer sessions at higher
+    // per-session volume (capped at the 12-set session cap) rather than landing
+    // on an opposite-pattern day. One augmented muscle per session so multiple
+    // simultaneous weak points never stack and blow the time budget.
+    for (let i = 0; i < sessions.length; i++) {
+      if (have >= desired) break;
+      const s = sessions[i];
+      if (s.muscles.includes(m) || augCount[i] >= 1) continue;
+      if (!patternFits(m, s.muscles)) continue;
+      s.muscles.unshift(m);  // lead the session: weak point gets first pick
+      augCount[i] += 1;
+      have += 1;
     }
   }
 

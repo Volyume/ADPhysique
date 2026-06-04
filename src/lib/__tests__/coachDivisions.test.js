@@ -72,8 +72,14 @@ describe('Coach division contract', () => {
   test('weak-point specialisation is additive, not destructive (stage 4)', () => {
     const base = vol(generatePlan(cfg('mens_physique', { experience: 'advanced' })));
     const wp = vol(generatePlan(cfg('mens_physique', { experience: 'advanced', phase: 'weak_point', weakPoints: ['Glutes'] })));
-    // The weak point is brought up hard...
-    expect(wp.glutes).toBeGreaterThan(base.glutes + 8);
+    // The weak point is brought up. Men's Physique at 5 days has a single leg
+    // day, so a glute boost is delivered on that day (here it doubles, 3 -> 6),
+    // NOT by scattering squats onto pull and push days. The old engine hit a
+    // bigger number only because the weak point contaminated upper days, the
+    // "bench press on Pull (Width)" bug. Placement correctness is enforced
+    // exhaustively in planExercisePlacement.audit.test.js; here we just assert
+    // the boost is real and additive.
+    expect(wp.glutes).toBeGreaterThan(base.glutes);
     // ...while the division character is retained, not wiped to maintenance:
     // shoulders stay the dominant muscle for Men's Physique.
     expect(wp.shoulders).toBeGreaterThanOrEqual(12);
