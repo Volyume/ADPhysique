@@ -198,3 +198,17 @@ File: `src/screens/AnalyticsScreen.js`.
 Verification: AnalyticsScreen eslint clean (0 problems); screen-mount green
 (455). No behaviour, data, or navigation change.
 Commit: see git log.
+
+## Item 11 — You tab (YouScreen) — IMPLEMENTED 2026-06-04
+File: `src/screens/YouScreen.js` (+ `__mocks__/expo-application.js`).
+- Added a muted app-version line to the About footer ("Version x.y.z (build)"),
+  read from expo-application (an existing dependency); hidden when the native
+  value is unavailable.
+- Added a jest manual mock for expo-application: the screen-mount harness mounts
+  YouScreen and the ESM package is not transformed by jest, so the new import
+  needed a mock (mirrors the expo-constants mock; version 1.1.0, build 2).
+- Kept (flags, no code): the functional row icons (research-backed) and the two
+  longer nav subs.
+Verification: YouScreen eslint clean; full suite green (174 suites, 2820
+passing) after adding the mock; repo eslint 0 problems. No behaviour change.
+Commit: see git log.

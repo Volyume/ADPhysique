@@ -14,6 +14,7 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import * as Application from 'expo-application';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import PressableCard from '../components/PressableCard';
@@ -66,6 +67,13 @@ export default function YouScreen({ navigation }) {
     : null;
 
   const isPro = tier === 'pro';
+
+  // App version for the About footer. Helps a user quote their build when they
+  // report an issue. Reads expo-application (already a dependency); hidden if
+  // the native value is unavailable (e.g. in some test/preview contexts).
+  const appVersion = Application.nativeApplicationVersion
+    ? `Version ${Application.nativeApplicationVersion}${Application.nativeBuildVersion ? ` (${Application.nativeBuildVersion})` : ''}`
+    : null;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -163,6 +171,7 @@ export default function YouScreen({ navigation }) {
         <View style={styles.about}>
           <Text style={styles.aboutName}>Volyume</Text>
           <Text style={styles.aboutVersion}>Less thinking. More lifting. · Private by design</Text>
+          {appVersion ? <Text style={styles.aboutBuild}>{appVersion}</Text> : null}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -211,4 +220,5 @@ const styles = StyleSheet.create({
   about: { alignItems: 'center', paddingTop: spacing.md, gap: spacing.xs },
   aboutName: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textMuted },
   aboutVersion: { ...type.caption, color: colors.textMuted },
+  aboutBuild: { ...type.caption, color: colors.textDisabled, fontVariant: ['tabular-nums'] },
 });

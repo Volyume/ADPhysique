@@ -3,7 +3,7 @@
 **Document:** deep-audit-12-you-tab.md
 **Item:** 11 of master inventory (Group 2 — tab landings; `ProfileTab` / title "You")
 **File:** `src/screens/YouScreen.js` (214 lines), components `PressableCard`, `ProBadge`, `ScreenHeader`
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04, "Approved"). Added a muted app-version line to the About footer, read from expo-application (hidden when the native value is unavailable). Added a jest manual mock `__mocks__/expo-application.js` so the now-mounted import transforms in tests. Row icons and the longer subs kept (flags). No behaviour change.
 **Timestamp:** 2026-06-04
 
 ---

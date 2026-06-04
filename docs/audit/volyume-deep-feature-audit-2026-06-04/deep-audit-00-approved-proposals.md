@@ -123,3 +123,13 @@ Approved changes:
 Kept: recent-sessions-first, volume summary -> heatmap, PR sparkline + gold,
 dismissible insights, locked Year-of-Lifts tile, useProgressData split.
 Impact Low; Effort Low.
+
+## Item 11 — You tab (YouScreen) — APPROVED 2026-06-04 ("Approved")
+Doc: `deep-audit-12-you-tab.md`. Approved.
+Approved changes:
+1. Add a muted app-version line to the About footer (expo-application).
+2. Row icons — flagged keep (research-backed, functional).
+3. Longer nav subs — flagged keep.
+Kept: identity-first profile card, grouped sections, surfaced coaching
+shortcuts, functional row icons, brand About line, tier gating.
+Impact Low; Effort Low. (Added __mocks__/expo-application.js for the test harness.)
