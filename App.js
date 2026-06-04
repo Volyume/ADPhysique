@@ -726,37 +726,7 @@ export default function App() {
   // eslint-disable-next-line global-require
   const { ToastProvider } = require('./src/components/Toast');
   // eslint-disable-next-line global-require
-  const WhatsNewSheet = require('./src/components/WhatsNewSheet').default;
-  // eslint-disable-next-line global-require
   const { FeedbackProvider } = require('./src/components/FeedbackSheet');
-
-  // Items surfaced ONCE on this release. Each item is a small icon +
-  // headline + one-line body. Keep this list short so the sheet
-  // doesn't read as a marketing dump. Health Connect is intentionally
-  // NOT listed here — the native module isn't bundled in this build
-  // (pending an Android Gradle Plugin upgrade), so promising it would
-  // send the user to a Settings row that doesn't exist. The item
-  // returns the moment the module is back.
-  const whatsNewItems = [
-    {
-      icon: 'sparkles-outline',
-      tint: '#F59E0B',
-      headline: 'Coach explanations on every session',
-      body: 'Tap "Why this status?" on any muscle row in your session summary for a coach paragraph and next-week guidance.',
-    },
-    {
-      icon: 'trophy-outline',
-      tint: '#FFD700',
-      headline: 'Your Year of Lifts, restyled',
-      body: 'Tap into it from Progress to swipe through the highlights of your training year, one stat at a time.',
-    },
-    {
-      icon: 'notifications-outline',
-      tint: '#9C27B0',
-      headline: 'Smarter reminders',
-      body: 'Notifications check what you already did today and stay quiet when there\'s nothing to nudge.',
-    },
-  ];
 
   return (
     <ErrorBoundary>
@@ -774,27 +744,6 @@ export default function App() {
                   // accessibility "reduce motion" pref. Both should suppress
                   // particles + heavy spring animations.
                   subdued={calm || reduceMotion}
-                />
-              )}
-              {/* WhatsNewSheet stays in the codebase + the items
-                  array stays defined — useful surface for future
-                  releases. Suppressed for the initial launch because
-                  presenting "what's new" to a brand-new install reads
-                  as confusing rather than informative. Re-enable by
-                  rendering the component again when there are real
-                  release changes to announce. */}
-              {false && (
-                <WhatsNewSheet
-                  items={whatsNewItems}
-                  onOpenSettings={() => {
-                    try {
-                      // eslint-disable-next-line global-require
-                      const { navigationRef } = require('./src/navigation/RootNavigator');
-                      if (navigationRef?.isReady?.()) {
-                        navigationRef.navigate('ProfileTab', { screen: 'Settings' });
-                      }
-                    } catch (_) {}
-                  }}
                 />
               )}
               <CrashRecoveryToast priorCrash={priorCrash} />
