@@ -18,7 +18,7 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
 
   if (!meso) {
     return (
-      <TouchableOpacity style={[styles.card, styles.mesoEmpty]} onPress={onBuild} activeOpacity={0.8}>
+      <TouchableOpacity style={[styles.card, styles.mesoEmpty]} onPress={onBuild} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Browse plans">
         <Ionicons name="layers-outline" size={32} color={colors.primaryDim} />
         <Text style={styles.mesoEmptyTitle}>No active plan</Text>
         <Text style={styles.mesoEmptySub}>Browse the plan library or build your own. Your progress will appear right here once you start.</Text>
@@ -31,8 +31,19 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
 
   const isPlan = meso._isPlan;
 
+  const mesoWeekText = isPlan
+    ? (meso.splitType ? meso.splitType : 'Active plan')
+    : `Week ${currentWeek}${meso.durationWeeks ? ` of ${meso.durationWeeks}` : ''}${meso.focus ? `, ${meso.focus}` : ''}`;
+
   return (
-    <TouchableOpacity style={[styles.card, styles.mesoCard]} onPress={onPress} activeOpacity={0.85}>
+    <TouchableOpacity
+      style={[styles.card, styles.mesoCard]}
+      onPress={onPress}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={`${meso.name ?? 'Training Block'}, ${mesoWeekText}`}
+      accessibilityHint="Opens training block"
+    >
       <View style={styles.mesoTop}>
         <View style={{ flex: 1 }}>
           <Text style={styles.mesoName} numberOfLines={1}>{meso.name ?? 'Training Block'}</Text>
@@ -97,7 +108,11 @@ export function TrainingCalendar({ values }) {
   );
   return (
     <View style={styles.calWrap}>
-      <View style={styles.calGrid}>
+      <View
+        style={styles.calGrid}
+        accessible
+        accessibilityLabel={`Trained ${trainedCount} of the last 84 days`}
+      >
         {weeks.map((week, wi) => (
           <View key={wi} style={styles.calCol}>
             {week.map((trained, di) => (
@@ -196,6 +211,9 @@ export function MuscleFrequencyTable({ rows, showAll, onToggle }) {
           style={styles.freqToggle}
           onPress={onToggle}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: showAll }}
+          accessibilityLabel={showAll ? 'Show less' : `Show all ${rows.length}`}
         >
           <Text style={styles.freqToggleText}>
             {showAll ? 'Show less' : `Show all (${rows.length})`}
