@@ -792,7 +792,7 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.coachBannerLeft}>
               <Ionicons name="sparkles" size={18} color={colors.primary} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.coachBannerTitle}>Precision Coaching · this week's review</Text>
+                <Text style={styles.coachBannerTitle}>Precision Coaching™ · this week's review</Text>
                 <Text style={styles.coachBannerBody}>
                   {latestCoachOutput.adjustments?.calories?.applied
                     ? `Calories adjusted to ${latestCoachOutput.adjustments.calories.newKcal} kcal. Tap to see why.`

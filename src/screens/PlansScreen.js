@@ -62,7 +62,7 @@ const ACTION_CARDS_PRO_SWITCH = [
     id: 'library',
     icon: 'library-outline',
     title: 'Pick from the Plan Library',
-    description: "Ready-made plans by other coaches. Your Precision Coaching keeps adjusting whichever plan you're on.",
+    description: "Ready-made plans by other coaches. Precision Coaching keeps adjusting whichever plan you're on.",
     screen: 'PlanLibrary',
   },
   {
@@ -527,7 +527,7 @@ export default function PlansScreen({ navigation }) {
               )}
               {tier === 'pro' && (
                 <Text style={styles.proCoachNote}>
-                  Your Precision Coaching adjusts this plan as you progress and check in. Change your goals or switch to a different plan from the options below.
+                  Precision Coaching™ adjusts this plan as you progress and check in. Change your goals or switch to a different plan from the options below.
                 </Text>
               )}
               <View style={styles.activePlanActions}>

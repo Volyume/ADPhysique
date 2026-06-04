@@ -123,8 +123,8 @@ export default function YouScreen({ navigation }) {
             />
             <NavRow
               icon="sparkles-outline"
-              label="Precision Coaching"
-              sub="Read what the coach changed, and why, after your check-in. Your full decision history sits here too."
+              label="Precision Coaching™"
+              sub="Read what the coach changed, and why, after your check-in. Your full decision history sits here too. Built on published training science."
               onPress={() => navigation.navigate('CoachOutput')}
             />
             <NavRow

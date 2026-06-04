@@ -474,7 +474,7 @@ export default function ProGoalSetupScreen({ navigation }) {
         <View style={styles.footerNote}>
           <Ionicons name="information-circle-outline" size={15} color={colors.textMuted} />
           <Text style={styles.footerNoteText}>
-            Changing your goals updates your plan targets immediately. Your Precision Coaching adjusts at the next check-in.
+            Changing your goals updates your plan targets immediately. Precision Coaching adjusts at the next check-in.
           </Text>
         </View>
 

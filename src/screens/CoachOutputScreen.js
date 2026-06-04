@@ -1481,6 +1481,10 @@ export default function CoachOutputScreen({ navigation, route }) {
         <TouchableOpacity style={styles.doneBtn} onPress={handleClose} activeOpacity={0.8} accessibilityRole="button">
           <Text style={styles.doneBtnText}>Done</Text>
         </TouchableOpacity>
+
+        <Text style={styles.credentialNote}>
+          Precision Coaching™ is built on published training science: volume landmarks, autoregulation, and RED-S safety limits, configured to your data.
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -1817,6 +1821,14 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
+  },
+  credentialNote: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    lineHeight: 17,
+    textAlign: 'center',
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.sm,
   },
 
   // Rapid weight loss safety flag

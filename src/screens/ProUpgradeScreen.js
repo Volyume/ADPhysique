@@ -14,7 +14,7 @@ import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 
 const PRO_PERKS = [
   { icon: 'sparkles', text: 'A plan built around your schedule, goals, and experience level' },
-  { icon: 'calendar-outline', text: 'Precision Coaching that adjusts your training and nutrition as your body responds' },
+  { icon: 'calendar-outline', text: 'Precision Coaching™ that adjusts your training and nutrition as your body responds' },
   { icon: 'nutrition-outline', text: 'Personalised calorie and protein targets, updated as your goals change' },
   { icon: 'eye-outline', text: 'After every check-in, your coach explains every decision. What changed, what was left alone, and why.' },
 ];
@@ -250,6 +250,10 @@ export default function ProUpgradeScreen({ navigation }) {
             ))}
           </View>
 
+          <Text style={styles.credentialNote}>
+            Precision Coaching™ is built on published training science: volume landmarks, autoregulation, and RED-S safety limits, configured to your data.
+          </Text>
+
           <TouchableOpacity
             style={styles.policyLink}
             onPress={() => navigation.navigate('SubscriptionPolicy')}
@@ -438,6 +442,10 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   perkText: { fontSize: fontSize.sm, color: colors.textSecondary, flex: 1, lineHeight: 19 },
+  credentialNote: {
+    fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17,
+    marginTop: spacing.md, paddingHorizontal: spacing.xs,
+  },
 
   accountNote: {
     fontSize: fontSize.sm, color: colors.textMuted,

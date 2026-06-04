@@ -32,7 +32,7 @@ export default function SettingsAccountScreen({ navigation }) {
           <SettingRow
             icon="sparkles"
             label="Go Pro"
-            sub="Precision Coaching and weekly check-ins"
+            sub="Precision Coaching™ and weekly check-ins"
             onPress={() => navigation.navigate('ProUpgrade')}
           />
         )}
