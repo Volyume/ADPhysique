@@ -127,12 +127,6 @@ export default function WelcomeScreen({ navigation }) {
         </Animated.View>
 
         <Animated.View style={{ opacity: fadeIn }}>
-          <Text style={styles.tierNote}>
-            Both tiers are free accounts with no card and no ads. They take about a minute to set up.
-          </Text>
-        </Animated.View>
-
-        <Animated.View style={{ opacity: fadeIn }}>
           <TouchableOpacity
             style={styles.signInLink}
             onPress={() => navigation.navigate('Login')}
@@ -239,11 +233,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: colors.border,
   },
   freeBackupText: { fontSize: fontSize.xs, color: colors.textMuted, flex: 1, lineHeight: 16 },
-
-  tierNote: {
-    fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'center',
-    letterSpacing: 0.2,
-  },
 
   signInLink: {
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',

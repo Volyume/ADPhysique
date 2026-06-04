@@ -27,8 +27,6 @@ import {
 // Auth screens
 import LoginScreen from '../screens/LoginScreen';
 import WelcomeScreen from '../screens/WelcomeScreen';
-import WhatsNewSheet from '../components/WhatsNewSheet';
-import { WHATS_NEW_ITEMS } from '../config/whatsNew';
 
 // Main screens
 import HomeScreen from '../screens/HomeScreen';
@@ -1012,10 +1010,6 @@ export default function RootNavigator() {
       }}
     >
       {renderNavigator()}
-      {/* One-time "New in Volyume" sheet. Self-gates on a signed-in user with
-          a resolved tier, so it never shows over Welcome / Login / first-run,
-          and marks itself seen once per release key. */}
-      <WhatsNewSheet items={WHATS_NEW_ITEMS} />
     </NavigationContainer>
   );
 }
