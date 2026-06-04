@@ -27,8 +27,7 @@ import {
 } from '../lib/food/db';
 import { localDayKey, parseLocalDay } from '../lib/dayKey';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
-import { getNutritionTargets, hasWorkoutOnDate, getFirstWorkoutDateOnOrAfter, getCardioLogForDate } from '../lib/database';
-import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
+import { getNutritionTargets, hasWorkoutOnDate, getFirstWorkoutDateOnOrAfter } from '../lib/database';
 import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -69,12 +68,10 @@ function friendlyDate(isoStr) {
 }
 
 export default function DiaryScreen({ navigation }) {
-  const { user, macroCycle, refeed, cardioEnabled, tier } = useAppStore(useShallow((s) => ({
+  const { user, macroCycle, refeed } = useAppStore(useShallow((s) => ({
     user: s.user,
     macroCycle: s.userProfile?.macroCycle ?? null,
     refeed: s.userProfile?.refeed ?? null,
-    cardioEnabled: s.userProfile?.cardioEnabled !== false,
-    tier: s.tier,
   })));
   const userId = user?.id;
   const toast = useToast();
@@ -539,14 +536,6 @@ export default function DiaryScreen({ navigation }) {
         )}
 
         <WaterRow ml={waterMl} onAdd={() => logWaterDelta(250)} onSub={() => logWaterDelta(-250)} />
-
-        {tier === 'pro' && cardioEnabled && userId ? (
-          <CardioRow
-            userId={userId}
-            date={selectedDate}
-            onPress={() => navigation.navigate('LogCardio', { entryDate: selectedDate })}
-          />
-        ) : null}
       </ScrollView>
 
       <FoodDetailSheet
@@ -674,40 +663,6 @@ export default function DiaryScreen({ navigation }) {
 // Default daily hydration target until a per-user water target setting lands
 // (diary-tab redesign 2026-06-01: flagged as a small follow-up preference).
 const WATER_TARGET_ML = 3000;
-
-// Quiet cardio line on the Diary day, beside water. Reads the day's cardio
-// sessions and is the tap target to log. Shown only when cardio is enabled.
-// est_kcal is shown as feedback; it is not part of the day's calorie maths.
-function CardioRow({ userId, date, onPress }) {
-  const [summary, setSummary] = useState(null);
-  useFocusEffect(useCallback(() => {
-    let live = true;
-    getCardioLogForDate(userId, date)
-      .then((rows) => { if (live) setSummary(summariseWeekCardio(rows)); })
-      .catch(() => {});
-    return () => { live = false; };
-  }, [userId, date]));
-
-  const did = summary && summary.sessions > 0;
-  return (
-    <TouchableOpacity style={styles.waterRow} onPress={onPress} accessibilityRole="button" accessibilityLabel={did ? 'Cardio logged, tap to add more' : 'Log cardio'}>
-      <View style={styles.waterHeader}>
-        <View style={styles.waterLeft}>
-          <Ionicons name="heart-outline" size={18} color={colors.primary} />
-          <Text style={styles.waterLabel}>Cardio</Text>
-        </View>
-        <View style={styles.waterButtons}>
-          <Text style={styles.waterValue}>
-            {did
-              ? `${summary.totalMinutes} min${summary.sessions > 1 ? `, ${summary.sessions} sessions` : ''}`
-              : 'Add'}
-          </Text>
-          <Ionicons name="add" size={16} color={colors.primary} />
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-}
 
 function WaterRow({ ml, onAdd, onSub }) {
   const litres = (ml / 1000).toFixed(1);
