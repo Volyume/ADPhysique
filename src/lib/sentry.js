@@ -36,10 +36,17 @@ export function isSentryAvailable() {
  * against double-init. No-op if the package isn't installed or the
  * DSN env var is missing.
  *
- * Call once at app startup (App.js). Pass `release` so errors can be
- * grouped by app version and "regression after release" alerts work.
+ * Call once at app startup (App.js).
+ *
+ * Release/dist are deliberately NOT set here: the @sentry/react-native/expo
+ * plugin uploads source maps tagged with the SDK's auto-detected release
+ * (bundleId@version+build) and dist (the native build number). Setting a
+ * custom `release` here (and no `dist`) made events arrive under a name that
+ * did not match the uploaded artifacts, so Sentry could not symbolicate and
+ * every production stack trace came back minified. Leaving them unset lets the
+ * SDK auto-detect both, so events line up with the maps and traces resolve.
  */
-export function initSentry({ release, environment } = {}) {
+export function initSentry({ environment } = {}) {
   if (!SentryNative || initialised) return;
   const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
   if (!dsn) return;
@@ -65,8 +72,14 @@ export function initSentry({ release, environment } = {}) {
   try {
     SentryNative.init({
       dsn: trimmed,
-      release: release ?? undefined,
+      // release + dist auto-detected (see the note above) so events match the
+      // plugin-uploaded source maps and stack traces symbolicate.
       environment: environment ?? (__DEV__ ? 'development' : 'production'),
+      // The observability layer emits a breadcrumb per screen change, user
+      // action, store action and DB query, so a busy session generates plenty.
+      // The SDK default (100) can evict early crumbs before a late crash; 150
+      // keeps a longer trail at negligible cost.
+      maxBreadcrumbs: 150,
       // 5% performance trace sampling in production. At the 100k-user
       // target, every foreground / screen mount / sync is a candidate
       // transaction, so even a few percent is plenty to surface slow

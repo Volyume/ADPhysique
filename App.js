@@ -25,13 +25,10 @@ installGlobalHandlers();
 {
   // eslint-disable-next-line global-require
   const { initSentry } = require('./src/lib/sentry');
-  // eslint-disable-next-line global-require
-  const Constants = require('expo-constants').default;
-  initSentry({
-    release: Constants?.expoConfig?.version
-      ? `volyume@${Constants.expoConfig.version}`
-      : undefined,
-  });
+  // release + dist are auto-detected by the SDK to match the source maps the
+  // Expo Sentry plugin uploads at build. A manual release with no dist left
+  // prod stack traces minified; see the note in src/lib/sentry.js.
+  initSentry({});
 }
 
 // Google Play Billing wiring (Move #5 / 2-tier model). Lazy-loads
