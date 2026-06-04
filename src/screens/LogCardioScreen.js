@@ -152,7 +152,7 @@ export default function LogCardioScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityLabel="Close">
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
           <Ionicons name="close" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{activity ? 'Log cardio' : 'Pick activity'}</Text>
@@ -193,23 +193,23 @@ export default function LogCardioScreen({ navigation, route }) {
         </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <TouchableOpacity style={styles.chosenRow} onPress={() => setActivity(null)} accessibilityLabel="Change activity">
+          <TouchableOpacity style={styles.chosenRow} onPress={() => setActivity(null)} accessibilityRole="button" accessibilityLabel="Change activity">
             <View style={{ flex: 1 }}>
               <Text style={styles.chosenName}>{activity.displayName}</Text>
               <Text style={styles.chosenMeta}>{CATEGORY_LABELS[activity.category]} · tap to change</Text>
             </View>
-            <TouchableOpacity onPress={toggleFavourite} hitSlop={10} accessibilityLabel={isFavourite ? 'Remove from your cardio' : 'Add to your cardio'}>
+            <TouchableOpacity onPress={toggleFavourite} hitSlop={10} accessibilityRole="button" accessibilityState={{ selected: isFavourite }} accessibilityLabel={isFavourite ? 'Remove from your cardio' : 'Add to your cardio'}>
               <Ionicons name={isFavourite ? 'star' : 'star-outline'} size={22} color={colors.primary} />
             </TouchableOpacity>
           </TouchableOpacity>
 
           <Text style={styles.fieldLabel}>Duration</Text>
           <View style={styles.stepper}>
-            <TouchableOpacity style={styles.stepBtn} onPress={() => setDuration((d) => Math.max(5, d - 5))} accessibilityLabel="Less time">
+            <TouchableOpacity style={styles.stepBtn} onPress={() => setDuration((d) => Math.max(5, d - 5))} accessibilityRole="button" accessibilityLabel="Less time">
               <Text style={styles.stepBtnText}>-</Text>
             </TouchableOpacity>
             <Text style={styles.stepValue}>{duration} min</Text>
-            <TouchableOpacity style={styles.stepBtn} onPress={() => setDuration((d) => Math.min(300, d + 5))} accessibilityLabel="More time">
+            <TouchableOpacity style={styles.stepBtn} onPress={() => setDuration((d) => Math.min(300, d + 5))} accessibilityRole="button" accessibilityLabel="More time">
               <Text style={styles.stepBtnText}>+</Text>
             </TouchableOpacity>
           </View>
@@ -249,7 +249,7 @@ function ActivityList({ items, onPick }) {
   return (
     <View>
       {items.map((a) => (
-        <TouchableOpacity key={a.id} style={styles.activityRow} onPress={() => onPick(a)} accessibilityLabel={`Log ${a.displayName}`}>
+        <TouchableOpacity key={a.id} style={styles.activityRow} onPress={() => onPick(a)} accessibilityRole="button" accessibilityLabel={`Log ${a.displayName}`}>
           <Ionicons name={CATEGORY_ICON[a.category] || 'heart-outline'} size={18} color={colors.primary} style={styles.activityIcon} />
           <Text style={styles.activityName}>{a.displayName}</Text>
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
