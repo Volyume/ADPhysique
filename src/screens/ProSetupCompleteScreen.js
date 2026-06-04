@@ -101,11 +101,12 @@ export default function ProSetupCompleteScreen({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Animated.View style={[styles.mainBlock, { opacity, transform: [{ translateY: slideY }] }]}>
-          {/* Same header furniture as the four wizard steps, so this reads as
-              the last beat of that flow rather than a different screen: brand
-              row, the step bar (now all four done), then the title and sub. The
+          {/* Same header furniture as the wizard steps, so this reads as the
+              last beat of that flow rather than a different screen: brand row,
+              the progress bar drawn full, then the title and sub. The
               completion signal is the full amber bar and the eyebrow, not a
-              glowing orb. */}
+              glowing orb. The bar matches the wizard's continuous track so the
+              two screens share one system. */}
           <View style={styles.brandRow}>
             <VolyumeIcon size={22} />
             <View style={styles.proBadge}>
@@ -113,10 +114,8 @@ export default function ProSetupCompleteScreen({ navigation }) {
             </View>
           </View>
 
-          <View style={styles.progressRow}>
-            {Array.from({ length: 4 }).map((_, i) => (
-              <View key={i} style={[styles.progressSegment, styles.progressDone]} />
-            ))}
+          <View style={styles.progressTrack}>
+            <View style={styles.progressFill} />
           </View>
           <View style={styles.doneRow}>
             <Ionicons name="checkmark-circle" size={14} color={colors.primary} />
@@ -204,6 +203,8 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 style={styles.eduLearnRow}
                 onPress={() => navigation.navigate('NutritionEducation')}
                 activeOpacity={0.7}
+                accessibilityRole="link"
+                accessibilityLabel="New to calories and macros? Open the five-minute guide"
               >
                 <Ionicons name="book-outline" size={14} color={colors.primary} />
                 <Text style={styles.eduLearnText}>
@@ -219,6 +220,9 @@ export default function ProSetupCompleteScreen({ navigation }) {
             style={[styles.routineCard, planOpen && styles.routineCardOpen]}
             onPress={() => setPlanOpen(v => !v)}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: hasPlan ? planOpen : undefined }}
+            accessibilityLabel="Train your split"
           >
             <View style={styles.routineHeader}>
               <View style={styles.routineIconWrap}>
@@ -340,9 +344,12 @@ const styles = StyleSheet.create({
   },
   proBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.8 },
 
-  progressRow: { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm },
-  progressSegment: { flex: 1, height: 3, borderRadius: 2 },
-  progressDone: { backgroundColor: colors.primary },
+  // Matched to the wizard's continuous track, drawn full here (setup complete).
+  progressTrack: {
+    height: 3, borderRadius: 2, backgroundColor: colors.border,
+    overflow: 'hidden', marginBottom: spacing.sm,
+  },
+  progressFill: { width: '100%', height: '100%', borderRadius: 2, backgroundColor: colors.primary },
   doneRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
   doneEyebrow: { ...type.num('caption'), color: colors.primary, fontWeight: fontWeight.semibold },
 

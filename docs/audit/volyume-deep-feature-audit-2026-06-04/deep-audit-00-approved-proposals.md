@@ -55,3 +55,14 @@ Approved changes:
 5. Correct the under-stated "30 seconds" copy.
 6. Step-1 account redundancy flagged only, not changed (routing decision).
 Impact High (1) / Medium (3) / Low (2,4,5); Effort Medium (split) / Low (rest).
+
+## Item 5 — Pro setup complete screen — APPROVED 2026-06-04 ("Approved")
+Doc: `deep-audit-06-pro-setup-complete.md`. Approved.
+Approved changes:
+1. Match the progress bar to the new wizard (continuous track, drawn full) —
+   fixes the regression Item 4 introduced.
+2. Split card announces expanded/collapsed to screen readers.
+3. "New to macros?" pointer marked as a link.
+4. Keep (with evidence): activation content (ring/macros/split/rationale),
+   founder note, single CTA, reduce-motion animation, graceful fallbacks, copy.
+Impact Medium (1) / Low (2-3); Effort Low.

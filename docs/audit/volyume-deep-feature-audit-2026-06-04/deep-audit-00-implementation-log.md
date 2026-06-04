@@ -86,3 +86,23 @@ No runtime-critical contract changed (plan generation, notification
 scheduling, profile save all unchanged); the split only re-partitions which
 step collects which already-existing field.
 Commit: see git log.
+
+## Item 5 — Pro setup complete screen — IMPLEMENTED 2026-06-04
+File: `src/screens/ProSetupCompleteScreen.js`.
+- Progress bar: replaced the four discrete "all done" segments with the
+  wizard's continuous track drawn full (progressTrack + progressFill at 100%).
+  This fixes the visual-continuity regression Item 4 introduced (wizard went
+  continuous/5-step while this screen still showed 4 segments). Stale "now all
+  four done" comment updated. Removed the orphaned progressRow/progressSegment/
+  progressDone styles.
+- A11y: the collapsible split card now sets accessibilityRole="button" +
+  accessibilityState={{ expanded }} (only when hasPlan) + a label; the "new to
+  macros?" pointer now sets accessibilityRole="link" + a label.
+- Kept (with evidence): the kcal ring + macro bars + goal chips + split +
+  "why this plan" rationale (the activation/aha content), the founder note, the
+  single "Start training" CTA, the reduceMotion-aware animation, and the
+  no-plan / no-targets fallbacks. No copy changed (already on-voice).
+Verification: screen-mount suite green (455 tests); eslint 0 errors (3
+pre-existing warnings). No runtime-critical contract touched (completeFirstRun,
+plan/targets reads unchanged).
+Commit: see git log.
