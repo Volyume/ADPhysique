@@ -3,7 +3,7 @@
 **Document:** deep-audit-14-goal-lock-consent.md
 **Item:** 13 of master inventory (screen #8 — `GoalLockConsentScreen`; onboarding + You-tab edit surface)
 **File:** `src/screens/GoalLockConsentScreen.js` (203 lines)
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04, "Proceed" — incl. the optional import tidy). Added button role + disabled state + label to the CTA; wrapped the two radios in a radiogroup with a label; destructured useEffect and dropped the React default import. Threshold logic and copy untouched.
 **Timestamp:** 2026-06-04
 
 > Sensitive surface: this sets the eating-disorder-pattern detector threshold.

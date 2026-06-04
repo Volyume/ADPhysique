@@ -143,3 +143,12 @@ Approved changes:
 3. accessibilityLabel="Volyume" on the hero image.
 Kept: reduce-motion animation, single amber accent, brand background, tagline,
 splash gate. Impact Medium (1) / trivial (2-3); Effort Low.
+
+## Item 13 — Goal lock consent screen — APPROVED 2026-06-04 ("Proceed")
+Doc: `deep-audit-14-goal-lock-consent.md`. Approved incl. optional import tidy.
+Approved changes:
+1. CTA: accessibilityRole="button" + accessibilityState + label.
+2. Wrap the two radios in a radiogroup (+ label).
+3. Destructure useEffect, drop React default import.
+Untouched (sensitive): ED-pattern threshold logic, routing, telemetry, copy.
+Impact Low; Effort Low. Attribute-only + import tidy.

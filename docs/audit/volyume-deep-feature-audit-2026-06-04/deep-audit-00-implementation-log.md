@@ -226,3 +226,15 @@ File: `src/navigation/RootNavigator.js`.
 Verification: RootNavigator eslint clean; navigation + healthConsentRouting +
 screen-mount green (463). No routing/gate change.
 Commit: see git log.
+
+## Item 13 — Goal lock consent screen — IMPLEMENTED 2026-06-04
+File: `src/screens/GoalLockConsentScreen.js`.
+- A11y: added accessibilityRole="button" + accessibilityState={{ disabled }} +
+  label to the Save/Continue CTA; wrapped the two radio Pressables in a View with
+  accessibilityRole="radiogroup" + a label.
+- Tidy: destructured useEffect (was React.useEffect) and dropped the React
+  default import (automatic JSX runtime).
+- Untouched (sensitive): the ED-pattern threshold logic, the dual-mode routing,
+  the telemetry, and all copy.
+Verification: eslint clean; screen-mount green (455). No logic or copy change.
+Commit: see git log.

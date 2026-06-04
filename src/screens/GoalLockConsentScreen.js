@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Pressable,
 } from 'react-native';
@@ -37,7 +37,7 @@ export default function GoalLockConsentScreen({ navigation, route }) {
   const [busy, setBusy] = useState(false);
 
   // In edit mode we want to show the current value as the default.
-  React.useEffect(() => {
+  useEffect(() => {
     let cancelled = false;
     if (!editMode || !user?.id) return;
     (async () => {
@@ -80,6 +80,7 @@ export default function GoalLockConsentScreen({ navigation, route }) {
 
         <Text style={styles.fieldLabel}>Confirm one of these</Text>
 
+        <View accessibilityRole="radiogroup" accessibilityLabel="Confirm your experience with aggressive cuts">
         <Pressable
           onPress={() => setChoice('advanced')}
           style={[styles.optionCard, choice === 'advanced' && styles.optionCardActive]}
@@ -107,6 +108,7 @@ export default function GoalLockConsentScreen({ navigation, route }) {
             I'm new to this and want Volyume's standard safety checks to apply.
           </Text>
         </Pressable>
+        </View>
 
         <View style={styles.note}>
           <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
@@ -119,6 +121,9 @@ export default function GoalLockConsentScreen({ navigation, route }) {
           onPress={save}
           disabled={!choice || busy}
           style={[styles.cta, (!choice || busy) && styles.ctaDisabled]}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !choice || busy }}
+          accessibilityLabel={editMode ? 'Save' : 'Continue'}
         >
           <Text style={styles.ctaText}>{editMode ? 'Save' : 'Continue'}</Text>
         </TouchableOpacity>
