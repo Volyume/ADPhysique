@@ -7,7 +7,7 @@ Single source of truth for where the audit stands. Update on each session end.
 Branch `main`, 0/0 with origin, working tree clean, repo eslint **0 problems**,
 full suite green (174 suites, 2820 passing).
 
-### Done (34 items + the lint sweep), each: audited → researched → proposed →
+### Done (35 items + the lint sweep), each: audited → researched → proposed →
 ### approved → implemented → pushed. Doc per item in this folder.
 
 | # | Item | Screen | Doc |
@@ -46,6 +46,7 @@ full suite green (174 suites, 2820 passing).
 | 32 | Food Insights | FoodInsightsScreen | deep-audit-33 |
 | 33 | My Recipes | MyRecipesScreen | deep-audit-34 |
 | 34 | My Meals | MyMealsScreen | deep-audit-35 |
+| 35 | Recipe Builder | RecipeBuilderScreen | deep-audit-36 |
 
 Plus: the full lint sweep (779 → 0 warnings, 0 errors) across commits
 e518807 / 16cbad7 / e345a06 / d2f797f, and the `__mocks__/expo-application.js`
@@ -57,10 +58,17 @@ test mock.
 
 ## NEXT (resume here)
 
-Inventory order, next un-audited screen: **#33 `RecipeBuilderScreen`**
-(build/edit a recipe modal), then the A6 You sub-stack incl. the coach-engine
-surfaces (CoachOutput, WeeklyCheckIn, ProGoalSetup, etc.). Master list:
-`deep-audit-01-master-inventory.md`.
+Inventory order, next un-audited screen: **#35 `LiftProgressScreen`** (per-lift
+estimated-1RM progress; #34 AnalyticsScreen was already covered as the Progress
+tab, item 10), then #36 ConsistencyScreen, the A5 Progress sub-stack, and the A6
+You sub-stack incl. the coach-engine surfaces (CoachOutput, WeeklyCheckIn,
+ProGoalSetup, etc.). Master list: `deep-audit-01-master-inventory.md`.
+
+### Out-of-band fix shipped this session (not an audit item)
+- **Share-card spinner hang:** the share button spun forever when the off-screen
+  WebView never posted a captured frame back (silent draw/encode failure, no
+  timeout). Added a 10s failsafe + try/catch error reporting from the WebView.
+  Commit `597ef9c`.
 
 ### Out-of-band fixes shipped this session (not audit items)
 - **Cardio nav bug:** `LogCardio`/`CardioHistory` were registered only in the
