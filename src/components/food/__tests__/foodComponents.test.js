@@ -8,7 +8,6 @@
  * Also locks the EmptyDiary copy to the exact spec string
  * (UI_FLOWS_LOCKED.md line 275) so any future drift breaks here.
  */
-import React from 'react';
 import { create, act as actRender } from 'react-test-renderer';
 
 jest.mock('react-native-gesture-handler/Swipeable', () => {

@@ -8,7 +8,6 @@
  * training-day cue is carried by the summary card's day-type chip, so it is not
  * repeated here. Scan stays on the persistent FAB.
  */
-import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';

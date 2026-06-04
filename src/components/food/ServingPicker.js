@@ -9,7 +9,6 @@
  * and any future surface (saved meals, recipes) share the same
  * input pattern.
  */
-import React from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
 

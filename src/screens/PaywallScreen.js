@@ -16,7 +16,7 @@
  * then calls cascade.payAt to write tier_history. On dismiss we just
  * close. Either decision is logged via paywall_tapped_cta telemetry.
  */
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Alert, Linking,

@@ -17,7 +17,6 @@
  *            fixed-width spacer is rendered when absent so the title stays
  *            optically centred against the back chevron.
  */
-import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';

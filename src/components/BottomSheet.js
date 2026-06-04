@@ -13,7 +13,7 @@
  * the sheet body; the chrome supplies the panel, handle, and padding.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Modal, Animated, Easing, Pressable, View, StyleSheet, Platform, Keyboard,
   KeyboardAvoidingView,

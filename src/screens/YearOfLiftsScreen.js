@@ -16,7 +16,7 @@
  * proved that the swipe-story is the format people actually read.
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, Pressable, TouchableOpacity, Dimensions, StatusBar,
 } from 'react-native';

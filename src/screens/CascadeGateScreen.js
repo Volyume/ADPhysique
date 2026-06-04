@@ -19,7 +19,7 @@
  * via the X surfaces a "Decide later" no-op (user remains in their
  * current trial state; the next gate fires the same screen again).
  */
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView,

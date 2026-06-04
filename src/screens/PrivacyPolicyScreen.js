@@ -1,4 +1,3 @@
-import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fontSize, spacing, type } from '../styles/theme';

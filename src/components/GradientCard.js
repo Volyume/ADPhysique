@@ -11,7 +11,6 @@
  * custom accent; the old `intensity` prop was always ignored and still is.
  */
 
-import React from 'react';
 import Card from './Card';
 import { withAlpha } from '../styles/theme';
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';

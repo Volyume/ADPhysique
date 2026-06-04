@@ -13,7 +13,6 @@
  * non-gradient accent the old GradientCard provided.
  */
 
-import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import PressableCard from './PressableCard';
 import { colors, radius, spacing, withAlpha } from '../styles/theme';

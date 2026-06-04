@@ -4,7 +4,6 @@
  * user/tier -> nothing; unseen + signed in -> shows after the settle delay;
  * seen mark present -> nothing.
  */
-import React from 'react';
 import { create, act } from 'react-test-renderer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 

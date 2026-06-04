@@ -1,4 +1,3 @@
-import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { G, Ellipse, Rect, Path, Line } from 'react-native-svg';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';

@@ -24,7 +24,7 @@
  * the caller via the feedback.js helpers.
  */
 
-import React, {
+import {
   useImperativeHandle, useRef, useState, useEffect, forwardRef, createContext, useContext,
 } from 'react';
 import {

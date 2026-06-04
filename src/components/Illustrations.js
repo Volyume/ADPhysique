@@ -11,7 +11,6 @@
  * external image assets to ship.
  */
 
-import React from 'react';
 import { View } from 'react-native';
 import Svg, { Path, Circle, Rect, Line, G } from 'react-native-svg';
 import { colors } from '../styles/theme';

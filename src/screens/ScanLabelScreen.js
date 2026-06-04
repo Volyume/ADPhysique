@@ -26,7 +26,7 @@
  * Voice rules: short, no encouragement, no AI tells.
  */
 import { todayLocalKey } from '../lib/dayKey';
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
   Linking, AppState,

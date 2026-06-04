@@ -9,7 +9,6 @@
  *   - Optional "Why" link for the longer explanation
  *   - For ED-pattern only: "Get support" button linking to Beat
  */
-import React from 'react';
 import { View, Text, Pressable, StyleSheet, Linking, Alert } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
 

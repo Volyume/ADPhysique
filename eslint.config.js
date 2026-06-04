@@ -128,6 +128,10 @@ module.exports = [
       'no-unused-vars': ['warn', {
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_',
+        // Deliberately-ignored catch bindings follow the same `_` convention as
+        // args and vars (catch (_) / catch (_e)). Without this they were the
+        // single largest source of lint noise despite being intentional.
+        caughtErrorsIgnorePattern: '^_',
         ignoreRestSiblings: true,
       }],
     },

@@ -3,7 +3,6 @@
  * step (H7, shared form UI only). Presentational smoke tests: the controls fire
  * the callbacks the screens depend on. No auth logic lives in these components.
  */
-import React from 'react';
 import { create, act } from 'react-test-renderer';
 import { TextInput, TouchableOpacity } from 'react-native';
 import OAuthButtons from '../OAuthButtons';

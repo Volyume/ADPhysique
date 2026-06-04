@@ -6,7 +6,6 @@ jest.mock('@shopify/react-native-skia', () => ({
   Skia: { Path: { Make: () => ({ moveTo() {}, lineTo() {}, close() {} }) } },
 }));
 
-import React from 'react';
 import { create } from 'react-test-renderer';
 import MacroRings, { bandColour } from '../MacroRings';
 import { colors } from '../../../styles/theme';

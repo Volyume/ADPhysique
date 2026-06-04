@@ -9,7 +9,7 @@
  *
  * Voice rules: CLAUDE.md + COACHING_VOICE_SYNTHESIS_LOCKED. No em dashes.
  */
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';

@@ -24,7 +24,7 @@
  * encouragement.
  */
 import { todayLocalKey } from '../lib/dayKey';
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
   Linking, AppState,

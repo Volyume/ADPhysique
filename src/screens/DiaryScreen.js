@@ -9,7 +9,7 @@
  * barcode scan, swipe-delete, multi-select bulk tools, copy yesterday, and a
  * designed empty state (diary-tab redesign 2026-06-01).
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
   Alert, Modal, Pressable, TextInput,

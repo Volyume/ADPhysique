@@ -19,7 +19,7 @@
  * British English; no marketing absolutes.
  */
 import { todayLocalKey } from '../lib/dayKey';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView,
 } from 'react-native';

@@ -13,7 +13,7 @@
  *
  * Voice rules from COACHING_VOICE_SYNTHESIS_LOCKED.md.
  */
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
 } from 'react-native';

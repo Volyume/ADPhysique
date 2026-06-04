@@ -15,7 +15,7 @@
 // the same layout slot, so when real data arrives there's no jump.
 // The shimmer animation is paused under accessibility.reduceMotion.
 
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { View, Animated, Easing, StyleSheet } from 'react-native';
 import { colors, radius, spacing } from '../styles/theme';
 import useAppStore from '../store/useAppStore';

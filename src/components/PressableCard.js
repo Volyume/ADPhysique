@@ -15,7 +15,7 @@
  * defaults to 'button'.
  */
 
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import { Animated, Pressable, View } from 'react-native';
 import useAppStore from '../store/useAppStore';
 

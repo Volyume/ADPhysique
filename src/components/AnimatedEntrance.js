@@ -16,7 +16,6 @@
  *   <AnimatedEntrance index={i}>  // a list item; staggers by index
  */
 
-import React from 'react';
 import { View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import useAppStore from '../store/useAppStore';

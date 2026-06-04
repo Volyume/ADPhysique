@@ -1,7 +1,6 @@
 /**
  * Mount + behaviour tests for the shared Button and Card primitives.
  */
-import React from 'react';
 import { Text, ActivityIndicator } from 'react-native';
 import { create, act } from 'react-test-renderer';
 

@@ -14,7 +14,7 @@
  * No em dashes; plain spoken voice; British English.
  */
 import { todayLocalKey } from '../lib/dayKey';
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator,
 } from 'react-native';

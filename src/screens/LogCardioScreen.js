@@ -9,7 +9,7 @@
  *
  * Voice rules: CLAUDE.md. No em dashes, no encouragement.
  */
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert,
 } from 'react-native';

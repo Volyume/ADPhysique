@@ -12,7 +12,7 @@
 // always scheduled. Toggle removed. Lives in Settings → Coaching
 // reminders (Pro-only row).
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert,
 } from 'react-native';

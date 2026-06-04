@@ -24,7 +24,7 @@
 //   - Auto-dismiss default 2.5s; errors get 4s (more important to
 //     read).
 
-import React, { createContext, useContext, useRef, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useRef, useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, shadow } from '../styles/theme';

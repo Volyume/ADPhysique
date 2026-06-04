@@ -15,7 +15,6 @@
  * Reached from You → Credits. Locked in UI_FLOWS_LOCKED.md lines
  * 205-207.
  */
-import React from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking,
 } from 'react-native';

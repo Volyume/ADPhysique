@@ -16,7 +16,6 @@
  * disables the button. `icon` is a leading Ionicons name.
  */
 
-import React from 'react';
 import { Text, View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import PressableCard from './PressableCard';

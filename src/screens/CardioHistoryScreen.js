@@ -8,7 +8,7 @@
  *
  * Voice rules: CLAUDE.md. No em dashes, no encouragement.
  */
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SectionList, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';

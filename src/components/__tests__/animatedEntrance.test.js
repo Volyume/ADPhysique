@@ -2,7 +2,6 @@
  * AnimatedEntrance mounts in both motion modes and never throws. Reanimated
  * is mocked globally (__mocks__/react-native-reanimated.js).
  */
-import React from 'react';
 import { Text } from 'react-native';
 import { create, act } from 'react-test-renderer';
 

@@ -16,7 +16,7 @@
  * Voice rules from CLAUDE.md: no em dashes, plain spoken, British English.
  */
 import { todayLocalKey } from '../lib/dayKey';
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Alert,
   Modal, Pressable, TextInput,

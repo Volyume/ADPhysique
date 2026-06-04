@@ -2,7 +2,6 @@
  * BottomSheet chrome tests. Run with reduce-motion on (via the store mock)
  * so mount/unmount is synchronous and deterministic.
  */
-import React from 'react';
 import { Text } from 'react-native';
 import { create, act } from 'react-test-renderer';
 

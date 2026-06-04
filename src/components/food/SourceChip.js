@@ -9,7 +9,6 @@
  * DATABASE_SCHEMA_LOCKED.md ('off', 'usda', 'cofid', 'user_ocr')
  * plus 'custom' for user-created entries from custom_foods.
  */
-import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, spacing, radius } from '../../styles/theme';
 

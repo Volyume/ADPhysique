@@ -3,7 +3,6 @@
  * coached builder (H8 unification). Smoke tests: they render their options and
  * fire the right value on press.
  */
-import React from 'react';
 import { create, act } from 'react-test-renderer';
 import { TouchableOpacity } from 'react-native';
 import OptionCard from '../OptionCard';

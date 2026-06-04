@@ -10,7 +10,7 @@
  * pure presentation.
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert,
 } from 'react-native';

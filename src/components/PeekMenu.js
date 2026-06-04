@@ -29,7 +29,7 @@
  * The menu honours reduce-motion: snap-in instead of slide-up.
  */
 
-import React, {
+import {
   useImperativeHandle, useRef, useState, useEffect, forwardRef,
 } from 'react';
 import {

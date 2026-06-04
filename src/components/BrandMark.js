@@ -1,4 +1,3 @@
-import React from 'react';
 import { Image as RNImage } from 'react-native';
 
 // Try expo-image first for disk cache + faster decode. Falls back to

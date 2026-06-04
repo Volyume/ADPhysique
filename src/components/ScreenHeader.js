@@ -17,7 +17,6 @@
  *     the previous design used.
  */
 
-import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing } from '../styles/theme';
 import { VolyumeMark } from './BrandMark';

@@ -12,7 +12,6 @@
  * Pricing comes from src/lib/payments/catalogue.js so the displayed
  * numbers always match the SKU the buy CTA will purchase.
  */
-import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
 import { skuFor } from '../lib/payments/catalogue';

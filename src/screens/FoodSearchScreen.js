@@ -17,7 +17,7 @@
  * Voice rules from COACHING_VOICE_SYNTHESIS_LOCKED.md.
  */
 import { todayLocalKey } from '../lib/dayKey';
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList,
   ActivityIndicator, ScrollView, Modal,

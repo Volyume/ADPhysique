@@ -12,7 +12,7 @@
 // All values must be numeric. Nulls/undefined are filtered out so the
 // line doesn't break across a missing reading.
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { View } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors } from '../styles/theme';

@@ -10,7 +10,7 @@
  * variant, adapted for the paywall context). Amber affordance is the
  * brand cue; no marketing chrome.
  */
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';

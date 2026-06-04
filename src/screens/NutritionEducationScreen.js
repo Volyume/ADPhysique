@@ -8,7 +8,6 @@
  * Linked from NutritionTargetsScreen so it's the
  * first thing a new Pro user reads before fiddling with numbers.
  */
-import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';

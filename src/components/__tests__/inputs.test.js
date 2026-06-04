@@ -3,7 +3,6 @@
  * and Stepper. These are additive (not yet adopted by screens); the tests
  * lock their contract before rollout.
  */
-import React from 'react';
 import { Text } from 'react-native';
 import { create, act } from 'react-test-renderer';
 

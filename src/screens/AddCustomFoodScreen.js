@@ -8,7 +8,7 @@
  * Voice rules from COACHING_VOICE_SYNTHESIS_LOCKED.md.
  */
 import { todayLocalKey } from '../lib/dayKey';
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert,
 } from 'react-native';

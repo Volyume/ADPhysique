@@ -11,7 +11,7 @@
  * Reads the locally-synced users_profile mirror (trial_state,
  * locked_in_price_tier, complete_trial_ends_at, pro_trial_ends_at).
  */
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Alert,
   ScrollView, Platform, Linking,

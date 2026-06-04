@@ -1,4 +1,3 @@
-import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
 import BottomSheet from '../BottomSheet';
