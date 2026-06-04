@@ -88,3 +88,27 @@ Approved changes:
 Kept: load orchestration + safety timers, crash recovery, optimistic weight
 logging, skeletons, start/intent flows, mesocycle chip + coach brief.
 Impact Low (1) / Low (2) / Medium (3); Effort Low (1-2) / Medium (3).
+
+## Item 8 — Plans tab (PlansScreen) — APPROVED 2026-06-04 ("A")
+Doc: `deep-audit-09-plans-tab.md`. Approved.
+Approved changes:
+1. Remove 23 verified-dead style keys (cardio cluster, local header, goals
+   pointer, Pro-lock variant, training-days picker, sectionDeemphasised).
+2. Add a11y roles/labels to the inline action controls; expanded state on the
+   archived header.
+3. De-duplicate one audience comment.
+Kept: active-plan-first hierarchy, block advisor, archive + templates, decision
+hub, skeletons, PeekMenu, mid-block switch guard.
+Impact Low; Effort Low.
+
+## Item 9 — Diary tab (DiaryScreen) — APPROVED 2026-06-04 ("Approved")
+Doc: `deep-audit-10-diary-tab.md`. Approved.
+Approved changes:
+1. Add accessibilityRole="button" to the labelled secondary controls (day-pager
+   chevrons, Today pill, insights icon, selection-bar actions) + role/label on
+   the water +/- buttons.
+2. Per-user water target — flagged only, no code.
+3. Photo/voice quick-log — flagged only, no code.
+Kept: search-first add, copy-yesterday, save-as-meal, flexible meal ladder,
+multi-select tools, macro-cycle/refeed awareness, local-day correctness.
+Impact Low; Effort Low. Attribute-only.

@@ -166,3 +166,18 @@ File: `src/screens/PlansScreen.js`.
 Verification: PlansScreen eslint clean (0 problems); screen-mount green (455).
 No behaviour, data, or navigation change.
 Commit: see git log.
+
+## Item 9 — Diary tab (DiaryScreen) — IMPLEMENTED 2026-06-04
+File: `src/screens/DiaryScreen.js`.
+- A11y: added accessibilityRole="button" to the day-pager prev/next chevrons,
+  the Today pill, the insights/export icon, and the four selection-bar actions
+  (Cancel / Move / Copy-to-today / Save-meal / Delete) — all already carried a
+  label. Added role + an accessibilityLabel to the water minus/plus buttons.
+- Flagged only (no code): per-user water target (3 L hardcoded) and a
+  photo/voice quick-log path, both roadmap calls.
+- Kept: the anti-friction core (search-first, copy-yesterday, save-as-meal), the
+  flexible meal ladder, multi-select bulk tools, macro-cycle/refeed awareness,
+  local-day correctness, the scan FAB. No dead styles found. No copy changed.
+Verification: DiaryScreen eslint clean (0 problems); screen-mount green (455).
+Attribute-only, no behaviour/data/navigation change.
+Commit: see git log.

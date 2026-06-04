@@ -3,7 +3,7 @@
 **Document:** deep-audit-10-diary-tab.md
 **Item:** 9 of master inventory (Group 2 — tab landings; `DiaryTab` / title "Diary")
 **File:** `src/screens/DiaryScreen.js` (851 lines), components `MacroRings`, `MealSection`, `FoodDetailSheet`, `MacroBreakdownSheet`, `EmptyDiary`, `EntryRow`, libs `food/db`, `food/bulkEntryOps`, `food/mealSlots`, `cardio/cardioEngine`
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04, "Approved"). Added accessibilityRole="button" to the day-pager chevrons, Today pill, insights icon and the four selection-bar actions (all already labelled), and role + label to the water ± buttons. Water-target and photo/voice quick-log left as flagged roadmap items (no code). Attribute-only, no behaviour change.
 **Timestamp:** 2026-06-04
 
 ---

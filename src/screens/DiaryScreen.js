@@ -467,17 +467,17 @@ export default function DiaryScreen({ navigation }) {
         <View style={styles.dayPagerRow}>
           <View style={styles.dayPagerSide}>
             {selectedDate !== isoDate(new Date()) ? (
-              <TouchableOpacity onPress={gotoToday} hitSlop={12} style={styles.todayPill} accessibilityLabel="Jump to today">
+              <TouchableOpacity onPress={gotoToday} hitSlop={12} style={styles.todayPill} accessibilityRole="button" accessibilityLabel="Jump to today">
                 <Text style={styles.todayPillText}>Today</Text>
               </TouchableOpacity>
             ) : null}
           </View>
           <View style={styles.dateGroup}>
-            <TouchableOpacity onPress={gotoYesterday} hitSlop={12} accessibilityLabel="Previous day">
+            <TouchableOpacity onPress={gotoYesterday} hitSlop={12} accessibilityRole="button" accessibilityLabel="Previous day">
               <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
             </TouchableOpacity>
             <Text style={styles.dateLabel}>{friendlyDate(selectedDate)}</Text>
-            <TouchableOpacity onPress={gotoTomorrow} hitSlop={12} accessibilityLabel="Next day">
+            <TouchableOpacity onPress={gotoTomorrow} hitSlop={12} accessibilityRole="button" accessibilityLabel="Next day">
               <Ionicons name="chevron-forward" size={22} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
@@ -485,6 +485,7 @@ export default function DiaryScreen({ navigation }) {
             <TouchableOpacity
               onPress={() => navigation.navigate('FoodInsights')}
               hitSlop={12}
+              accessibilityRole="button"
               accessibilityLabel="View 7-day insights and export diary"
             >
               <Ionicons name="stats-chart-outline" size={22} color={colors.textPrimary} />
@@ -583,24 +584,24 @@ export default function DiaryScreen({ navigation }) {
 
       {selectionMode ? (
         <View style={styles.selectionBar}>
-          <TouchableOpacity onPress={exitSelection} hitSlop={10} style={styles.selCancel} accessibilityLabel="Cancel selection">
+          <TouchableOpacity onPress={exitSelection} hitSlop={10} style={styles.selCancel} accessibilityRole="button" accessibilityLabel="Cancel selection">
             <Ionicons name="close" size={22} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.selCount}>{selectedIds.size} selected</Text>
           <View style={styles.selActions}>
-            <TouchableOpacity onPress={() => setMovePickerVisible(true)} style={styles.selAction} accessibilityLabel="Move to a meal slot">
+            <TouchableOpacity onPress={() => setMovePickerVisible(true)} style={styles.selAction} accessibilityRole="button" accessibilityLabel="Move to a meal slot">
               <Ionicons name="swap-vertical" size={20} color={colors.textPrimary} />
               <Text style={styles.selActionLabel}>Move</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={doCopySelectedToToday} style={styles.selAction} accessibilityLabel="Copy to today">
+            <TouchableOpacity onPress={doCopySelectedToToday} style={styles.selAction} accessibilityRole="button" accessibilityLabel="Copy to today">
               <Ionicons name="copy-outline" size={20} color={colors.textPrimary} />
               <Text style={styles.selActionLabel}>To today</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={openSaveMeal} style={styles.selAction} accessibilityLabel="Save selected as a meal">
+            <TouchableOpacity onPress={openSaveMeal} style={styles.selAction} accessibilityRole="button" accessibilityLabel="Save selected as a meal">
               <Ionicons name="bookmark-outline" size={20} color={colors.textPrimary} />
               <Text style={styles.selActionLabel}>Save meal</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={doDeleteSelected} style={styles.selAction} accessibilityLabel="Delete selected">
+            <TouchableOpacity onPress={doDeleteSelected} style={styles.selAction} accessibilityRole="button" accessibilityLabel="Delete selected">
               <Ionicons name="trash-outline" size={20} color={colors.error} />
               <Text style={[styles.selActionLabel, { color: colors.error }]}>Delete</Text>
             </TouchableOpacity>
@@ -721,10 +722,10 @@ function WaterRow({ ml, onAdd, onSub }) {
         </View>
         <View style={styles.waterButtons}>
           <Text style={styles.waterValue}>{litres} / {targetL} L</Text>
-          <TouchableOpacity style={styles.waterBtn} onPress={onSub} hitSlop={8}>
+          <TouchableOpacity style={styles.waterBtn} onPress={onSub} hitSlop={8} accessibilityRole="button" accessibilityLabel="Remove 250 millilitres of water">
             <Ionicons name="remove" size={16} color={colors.textPrimary} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.waterBtn} onPress={onAdd} hitSlop={8}>
+          <TouchableOpacity style={styles.waterBtn} onPress={onAdd} hitSlop={8} accessibilityRole="button" accessibilityLabel="Add 250 millilitres of water">
             <Ionicons name="add" size={16} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
