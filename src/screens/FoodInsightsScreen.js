@@ -13,7 +13,7 @@
  *
  * Voice rules from COACHING_VOICE_SYNTHESIS_LOCKED.md.
  */
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
@@ -75,7 +75,6 @@ export default function FoodInsightsScreen({ navigation }) {
   }, [userId, startDate, endDate]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
-  useEffect(() => { load(); }, [load]);
 
   const rollupByDate = useMemo(() => {
     const out = new Map();
@@ -127,7 +126,7 @@ export default function FoodInsightsScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
           <Ionicons name="close" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Insights</Text>
@@ -145,7 +144,12 @@ export default function FoodInsightsScreen({ navigation }) {
               ? Math.abs(kcal - targets.targetKcal) / targets.targetKcal <= 0.1
               : false;
             return (
-              <View key={d} style={styles.barRow}>
+              <View
+                key={d}
+                style={styles.barRow}
+                accessible
+                accessibilityLabel={`${dayLabel(d)}, ${kcal} kcal${targetMet ? ', on target' : ''}`}
+              >
                 <Text style={styles.barDay}>{dayLabel(d)}</Text>
                 <View style={styles.barTrack}>
                   <View style={[
@@ -192,6 +196,8 @@ export default function FoodInsightsScreen({ navigation }) {
           style={styles.exportBtn}
           onPress={onExport}
           disabled={exporting}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: exporting }}
           accessibilityLabel="Export the last seven days as a CSV file"
         >
           {exporting ? (
@@ -216,7 +222,7 @@ function within(value, target, tolerance) {
 function AdherenceRow({ label, hit, total }) {
   const pct = total > 0 ? Math.round((hit / total) * 100) : 0;
   return (
-    <View style={styles.adherenceRow}>
+    <View style={styles.adherenceRow} accessible accessibilityLabel={`${label}, hit ${hit} of ${total} days`}>
       <Text style={styles.adherenceLabel}>{label}</Text>
       <View style={styles.adherenceTrack}>
         <View style={[styles.adherenceFill, { width: `${pct}%` }]} />
