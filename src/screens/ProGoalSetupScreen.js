@@ -8,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import Chip from '../components/Chip';
-import OptionCard from '../components/OptionCard';
+import Dropdown from '../components/Dropdown';
 import SegmentedControl from '../components/SegmentedControl';
 import BackHeader from '../components/BackHeader';
 import { useToast } from '../components/Toast';
@@ -396,32 +396,24 @@ export default function ProGoalSetupScreen({ navigation }) {
           Drives your calorie target and how the plan is built. Pick what your current block is doing.
         </Text>
 
-        {TRAINING_PHASES.map(phase => (
-          <OptionCard
-            key={phase.value}
-            icon={phase.icon}
-            label={phase.label}
-            detail={phase.detail}
-            active={selectedPhase === phase.value}
-            onPress={() => setSelectedPhase(phase.value)}
-          />
-        ))}
+        <Dropdown
+          value={selectedPhase}
+          options={TRAINING_PHASES.map(p => ({ value: p.value, label: p.label, sub: p.detail }))}
+          onChange={setSelectedPhase}
+          placeholder="Select your focus"
+        />
 
         {/* ── Training experience ── */}
         <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Experience</Text>
         <Text style={styles.sectionSub}>
           Sets starting volume and exercise selection. You can change this when your training maturity moves.
         </Text>
-        {EXPERIENCE_OPTIONS.map(opt => (
-          <OptionCard
-            key={opt.value}
-            icon="trophy-outline"
-            label={opt.label}
-            detail={opt.sub}
-            active={experience === opt.value}
-            onPress={() => setExperience(opt.value)}
-          />
-        ))}
+        <Dropdown
+          value={experience}
+          options={EXPERIENCE_OPTIONS}
+          onChange={setExperience}
+          placeholder="Select your experience"
+        />
 
         {/* ── Training schedule ── */}
         <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Training days per week</Text>
@@ -448,32 +440,24 @@ export default function ProGoalSetupScreen({ navigation }) {
         <Text style={styles.sectionSub}>
           What you have access to. Exercise selection adapts to the kit available.
         </Text>
-        {EQUIPMENT_OPTIONS.map(opt => (
-          <OptionCard
-            key={opt.value}
-            icon="barbell-outline"
-            label={opt.label}
-            detail={opt.sub}
-            active={equipment === opt.value}
-            onPress={() => setEquipment(opt.value)}
-          />
-        ))}
+        <Dropdown
+          value={equipment}
+          options={EQUIPMENT_OPTIONS}
+          onChange={setEquipment}
+          placeholder="Select your equipment"
+        />
 
         {/* ── Recovery ── */}
         <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Recovery</Text>
         <Text style={styles.sectionSub}>
           How well you're recovering between sessions. Influences how aggressively the coach progresses you.
         </Text>
-        {RECOVERY_OPTIONS.map(opt => (
-          <OptionCard
-            key={opt.value}
-            icon="bed-outline"
-            label={opt.label}
-            detail={opt.sub}
-            active={recoveryRating === opt.value}
-            onPress={() => setRecoveryRating(opt.value)}
-          />
-        ))}
+        <Dropdown
+          value={recoveryRating}
+          options={RECOVERY_OPTIONS}
+          onChange={setRecoveryRating}
+          placeholder="Select your recovery"
+        />
 
         {/* ── Protein target ── */}
         <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Protein target</Text>

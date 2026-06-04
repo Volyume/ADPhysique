@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import { VolyumeIcon } from '../components/BrandMark';
 import SegmentedControl from '../components/SegmentedControl';
+import Dropdown from '../components/Dropdown';
 import OAuthButtons from '../components/auth/OAuthButtons';
 import EmailPasswordFields from '../components/auth/EmailPasswordFields';
 import useAppStore from '../store/useAppStore';
@@ -97,52 +98,6 @@ function fmt12(h) {
   if (h < 12) return `${h} am`;
   if (h === 12) return '12 pm';
   return `${h - 12} pm`;
-}
-
-// Inline dropdown component, expands in place, no modal needed.
-function Dropdown({ label, hint, value, options, onChange, placeholder = 'Select...' }) {
-  const [open, setOpen] = useState(false);
-  const selected = options.find(o => o.value === value);
-  return (
-    <View style={styles.dropdownWrap}>
-      {label ? <Text style={styles.fieldLabel}>{label}</Text> : null}
-      {hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
-      <TouchableOpacity
-        style={[styles.dropdownTrigger, value && styles.dropdownTriggerFilled, open && styles.dropdownTriggerOpen]}
-        onPress={() => setOpen(v => !v)}
-        activeOpacity={0.8}
-      >
-        <Text style={[styles.dropdownValue, !value && styles.dropdownPlaceholder]}>
-          {selected?.label ?? placeholder}
-        </Text>
-        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={value ? colors.primary : colors.textMuted} />
-      </TouchableOpacity>
-      {open && (
-        <View style={styles.dropdownList}>
-          {options.map((opt, i) => (
-            <TouchableOpacity
-              key={opt.value}
-              style={[
-                styles.dropdownItem,
-                value === opt.value && styles.dropdownItemActive,
-                i < options.length - 1 && styles.dropdownItemBorder,
-              ]}
-              onPress={() => { onChange(opt.value); setOpen(false); }}
-              activeOpacity={0.75}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.dropdownItemLabel, value === opt.value && styles.dropdownItemLabelActive]}>
-                  {opt.label}
-                </Text>
-                {opt.sub ? <Text style={styles.dropdownItemSub}>{opt.sub}</Text> : null}
-              </View>
-              {value === opt.value && <Ionicons name="checkmark" size={16} color={colors.primary} />}
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-    </View>
-  );
 }
 
 export default function ProOnboardingScreen({ navigation }) {
@@ -1452,34 +1407,6 @@ const styles = StyleSheet.create({
   // sex and body-weight-unit pickers now use the shared SegmentedControl.
   segmentActive: { backgroundColor: colors.primary },
   segmentTextActive: { color: colors.background },
-
-  // Dropdown
-  dropdownWrap: { marginBottom: spacing.xl },
-  dropdownTrigger: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    borderWidth: 1.5, borderColor: colors.border,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md + 2,
-  },
-  dropdownTriggerFilled: { borderColor: withAlpha(colors.primary, 0.376) },
-  dropdownTriggerOpen: { borderColor: colors.primary, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
-  dropdownValue: { fontSize: fontSize.md, color: colors.textPrimary, flex: 1, marginRight: spacing.sm },
-  dropdownPlaceholder: { color: colors.textDisabled },
-  dropdownList: {
-    backgroundColor: colors.surface, borderWidth: 1.5,
-    borderColor: colors.primary, borderTopWidth: 0,
-    borderBottomLeftRadius: radius.md, borderBottomRightRadius: radius.md,
-    overflow: 'hidden',
-  },
-  dropdownItem: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-  },
-  dropdownItemBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
-  dropdownItemActive: { backgroundColor: colors.primaryBg },
-  dropdownItemLabel: { ...type.body, color: colors.textSecondary, marginBottom: 1 },
-  dropdownItemLabelActive: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
-  dropdownItemSub: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
 
   // Notifications
   notifSection: {
