@@ -250,3 +250,28 @@ File: `src/screens/BuildWorkoutScreen.js`.
 Verification: eslint clean; screen-mount green (455). Attribute-only, no
 behaviour/copy/layout change.
 Commit: see git log.
+
+## Item 15 — Active Workout screen — IMPLEMENTED 2026-06-04
+File: `src/screens/ActiveWorkoutScreen.js`.
+Approved all three; change 2 resolved as REMOVE (the live setTargets/beat-chip
+already covers progression).
+- Removed 20 dead style keys (progression badge, prev-sets card, old
+  set-targets block, add-warmup button, unused modal/sheet styles).
+- Reclaimed dead compute/IO from superseded features: deleted the
+  `_progression` state + the progression effect + both getProgressionSuggestion
+  calls; the `_exerciseNote` state + its getExerciseUserNote DB read; the
+  `_weeklyPlan`/`_weeklyActual` state + their derivations AND the
+  getPlannedMuscleVolume read (it only fed them). Kept getCurrentMesocycleWeek
+  (feeds the live isDeloadWeek + deload prescription). Removed three now-unused
+  imports (getExerciseUserNote, getPlannedMuscleVolume, getProgressionSuggestion).
+  Net: two fewer DB reads + redundant progression compute per exercise change.
+- A11y: added roles/labels to the set-type picker options (radio), the swap
+  modal close/items/browse, the stale-recovery buttons, the discard-modal
+  buttons, the superset-modal buttons, and the EmptyExerciseView header + nav
+  tabs.
+- Kept: the entire sub-30s logging core, clusters, supersets, time-crunch,
+  deload prescription, unilateral, drift-free timer, crash recovery, immediate
+  cloud sync. No copy or visible-behaviour change.
+Verification: repo eslint 0 problems; FULL suite green (174 suites, 2820
+passing) — confirms the deload path (shares currentWeek) stays intact.
+Commit: see git log.

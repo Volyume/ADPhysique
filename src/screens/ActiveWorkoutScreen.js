@@ -26,12 +26,11 @@ import RestTimer from '../components/RestTimer';
 import ExercisePickerModal from '../components/ExercisePickerModal';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise, getLastNWorkoutSets, getExerciseUserNote, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout } from '../lib/database';
+import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import {
   detectPR,
-  getProgressionSuggestion,
   computeSetTargets,
   calculate1RM,
   summariseWorkoutSets,
@@ -183,7 +182,6 @@ export default function ActiveWorkoutScreen({ navigation }) {
   const [clusterReps, setClusterReps] = useState('');
   // Exercise IDs the user logs per-side (unilateral). Device-local pref.
   const [unilateralExercises, setUnilateralExercises] = useState(() => new Set());
-  const [_progression, setProgression] = useState(null);
   const [setTargets, setSetTargets] = useState([]);
   const [targetReason, setTargetReason] = useState(null);
   const [showSetTypePicker, setShowSetTypePicker] = useState(false);
@@ -195,11 +193,8 @@ export default function ActiveWorkoutScreen({ navigation }) {
   const [timeCrunchActive, setTimeCrunchActive] = useState(false);
   const [timeCrunchMsg, setTimeCrunchMsg] = useState('');
   const [preCrunchSnapshot, setPreCrunchSnapshot] = useState(null);
-  const [_weeklyPlan, setWeeklyPlan] = useState(null);  // { plannedSets, muscle } for this exercise
-  const [_weeklyActual, setWeeklyActual] = useState(0); // sets this week for this muscle
   const [isDeloadWeek, setIsDeloadWeek] = useState(false);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
-  const [_exerciseNote, setExerciseNote] = useState('');       // persisted per-user per-exercise note
   const [ghostSet, setGhostSet] = useState(null); // pre-fill from last session (same set index)
   const [nextTimeNotes, setNextTimeNotes] = useState([]);  // "next time" coaching notes for this routine
   // Cluster counter for myo-reps / rest-pause: 0 = activation set, 1+ = mini-set N+1
@@ -317,7 +312,6 @@ export default function ActiveWorkoutScreen({ navigation }) {
     setAllTimeSets([]);
     setLoggedSets([]);
     sessionSetsRef.current = [];
-    setProgression(null);
   }
 
   // Single entry point for the exercise picker, whether it was opened to add or
@@ -583,12 +577,6 @@ export default function ActiveWorkoutScreen({ navigation }) {
         setGhostSet(null);
       }
 
-      // Load persisted user note for this exercise
-      if (user?.id && exercise?.id) {
-        const savedNote = await getExerciseUserNote(user.id, exercise.id);
-        setExerciseNote(savedNote || '');
-      }
-
       // Layoff detection: last session was more than 7 days ago
       const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
       const lastTs = prev.reduce((m, s) => Math.max(m, s.createdAt ?? s.created_at ?? 0), 0);
@@ -669,22 +657,10 @@ export default function ActiveWorkoutScreen({ navigation }) {
       // warm-up first tap the "Add warm-up set" button which flips
       // the current entry to warmup with sensible defaults.
 
-      // Load planned volume for this exercise's muscle this week
+      // Read the current mesocycle week for the deload state + prescription.
       try {
         const currentWeek = await getCurrentMesocycleWeek(user?.id);
         if (currentWeek) {
-          const plannedVols = await getPlannedMuscleVolume(currentWeek.id);
-          const primaryMuscle = (exercise.primaryMuscle || exercise.primary_muscle || '').toLowerCase();
-          const plan = plannedVols.find(p => p.muscle === primaryMuscle);
-          setWeeklyPlan(plan ? { plannedSets: plan.planned_sets, muscle: plan.muscle } : null);
-
-          // Count actual working sets logged this week for this muscle
-          const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-          const weekSets = allTime.filter(s =>
-            s.setType !== 'warmup' && s.createdAt >= weekAgo
-          );
-          setWeeklyActual(weekSets.length);
-
           setIsDeloadWeek(!!currentWeek.isDeload);
 
           // If this is a deload week, generate deload prescription from week-1 sets
@@ -722,20 +698,6 @@ export default function ActiveWorkoutScreen({ navigation }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exercise?.id, currentExerciseIndex]);
 
-
-  useEffect(() => {
-    if (prevSets.length > 0 && currentSet.weight && currentSet.reps) {
-      const suggestion = getProgressionSuggestion(
-        [currentSet],
-        prevSets,
-        routineExercise?.recommendedRepsMin,
-        routineExercise?.recommendedRepsMax,
-        units,
-      );
-      setProgression(suggestion);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentSet.weight, currentSet.reps, prevSets]);
 
   async function handleCompleteSet(overrides = {}) {
     if (!exercise || !activeWorkout) return;
@@ -838,16 +800,6 @@ export default function ActiveWorkoutScreen({ navigation }) {
         showPRCelebration({ ...prs[0], exerciseName: exercise.name });
         setDetectedPRs(prev => [...prev, ...prs.map(p => ({ ...p, exerciseName: exercise.name, units }))]);
       }
-
-      // Recalculate suggestion
-      const suggestion = getProgressionSuggestion(
-        newLoggedSets,
-        prevSets,
-        routineExercise?.recommendedRepsMin,
-        routineExercise?.recommendedRepsMax,
-        units,
-      );
-      setProgression(suggestion);
 
       // Pre-fill next set from per-set targets (same beat-rep logic as initial load)
       if (currentSet.setType !== 'warmup') {
@@ -1869,6 +1821,8 @@ export default function ActiveWorkoutScreen({ navigation }) {
               <TouchableOpacity
                 style={styles.supPrimaryBtn}
                 onPress={() => setSupersetHeadsUp(null)}
+                accessibilityRole="button"
+                accessibilityLabel="Got it, start"
               >
                 <Text style={styles.supPrimaryBtnText}>Got it, start</Text>
               </TouchableOpacity>
@@ -1880,6 +1834,8 @@ export default function ActiveWorkoutScreen({ navigation }) {
                     handleTogglePair(); // unpair
                     setSupersetHeadsUp(null);
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Unlink the superset"
                 >
                   <Ionicons name="unlink" size={14} color={colors.textSecondary} />
                   <Text style={styles.supSecondaryBtnText}>Unlink</Text>
@@ -1890,6 +1846,8 @@ export default function ActiveWorkoutScreen({ navigation }) {
                     setSupersetHeadsUp(null);
                     handleOpenSwap();
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Swap exercise"
                 >
                   <Ionicons name="swap-horizontal" size={14} color={colors.textSecondary} />
                   <Text style={styles.supSecondaryBtnText}>Swap exercise</Text>
@@ -1908,13 +1866,13 @@ export default function ActiveWorkoutScreen({ navigation }) {
               <Text style={styles.staleBody}>
                 This workout has been inactive for a while. What would you like to do?
               </Text>
-              <TouchableOpacity style={styles.staleResume} onPress={() => { updateLastActivity(); setShowStaleModal(false); }}>
+              <TouchableOpacity style={styles.staleResume} onPress={() => { updateLastActivity(); setShowStaleModal(false); }} accessibilityRole="button" accessibilityLabel="Resume workout">
                 <Text style={styles.staleResumeText}>Resume</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.staleFinish} onPress={() => { setShowStaleModal(false); handleFinishWorkout(); }}>
+              <TouchableOpacity style={styles.staleFinish} onPress={() => { setShowStaleModal(false); handleFinishWorkout(); }} accessibilityRole="button" accessibilityLabel="Finish workout">
                 <Text style={styles.staleFinishText}>Finish Workout</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.staleDiscard} onPress={() => {
+              <TouchableOpacity style={styles.staleDiscard} accessibilityRole="button" accessibilityLabel="Discard workout" onPress={() => {
                 Alert.alert('Discard workout?', 'All logged sets will be lost.', [
                   { text: 'Cancel', style: 'cancel' },
                   {
@@ -1968,6 +1926,9 @@ export default function ActiveWorkoutScreen({ navigation }) {
                   setCurrentSet(s => ({ ...s, setType: opt.value }));
                   setShowSetTypePicker(false);
                 }}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: currentSet.setType === opt.value }}
+                accessibilityLabel={`${opt.label}. ${opt.description}`}
               >
                 <View style={styles.sheetOptionText}>
                   <Text style={[styles.sheetOptionLabel, currentSet.setType === opt.value && styles.sheetOptionLabelActive]}>
@@ -2024,7 +1985,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
           <SafeAreaView style={styles.swapSafe} edges={['top', 'bottom']}>
             <View style={styles.swapHeader}>
               <Text style={styles.swapTitle}>Swap Exercise</Text>
-              <TouchableOpacity onPress={() => setShowSwapModal(false)}>
+              <TouchableOpacity onPress={() => setShowSwapModal(false)} accessibilityRole="button" accessibilityLabel="Close swap">
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
@@ -2038,7 +1999,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
               contentContainerStyle={{ padding: spacing.lg }}
               ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
               renderItem={({ item }) => (
-                <TouchableOpacity style={styles.swapItem} onPress={() => handleConfirmSwap(item.exercise)}>
+                <TouchableOpacity style={styles.swapItem} onPress={() => handleConfirmSwap(item.exercise)} accessibilityRole="button" accessibilityLabel={`Swap in ${item.exercise.name}`}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.swapItemName}>{item.exercise.name}</Text>
                     <Text style={styles.swapItemReason}>{item.reason}</Text>
@@ -2062,6 +2023,8 @@ export default function ActiveWorkoutScreen({ navigation }) {
                     setPickerMode('swap');
                     setShowExercisePicker(true);
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Search all exercises or add your own"
                 >
                   <Ionicons name="search" size={18} color={colors.primary} />
                   <Text style={styles.swapBrowseText}>Search all exercises or add your own</Text>
@@ -2078,11 +2041,13 @@ export default function ActiveWorkoutScreen({ navigation }) {
               <Text style={styles.discardBody}>
                 This will delete the current workout session. Your plan will not advance.
               </Text>
-              <TouchableOpacity style={styles.keepTrainingBtn} onPress={() => setShowDiscardModal(false)}>
+              <TouchableOpacity style={styles.keepTrainingBtn} onPress={() => setShowDiscardModal(false)} accessibilityRole="button" accessibilityLabel="Keep training">
                 <Text style={styles.keepTrainingBtnText}>Keep Training</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.discardConfirmBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Discard workout"
                 onPress={async () => {
                   const discardId = activeWorkout?.id;
                   endWorkout();
@@ -2109,11 +2074,11 @@ function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, workoutExercise
   return (
     <View style={styles.emptyView}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onCancel} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity onPress={onCancel} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Cancel workout">
           <Ionicons name="close" size={22} color={colors.textSecondary} />
         </TouchableOpacity>
         <Text style={styles.timerText}>{elapsed}</Text>
-        <TouchableOpacity onPress={onFinish} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity onPress={onFinish} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Finish workout">
           <Text style={styles.finishBtn}>Finish</Text>
         </TouchableOpacity>
       </View>
@@ -2121,7 +2086,7 @@ function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, workoutExercise
       {workoutExercises.length > 0 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.exerciseNav} contentContainerStyle={styles.exerciseNavContent}>
           {workoutExercises.map((entry, i) => (
-            <TouchableOpacity key={i} style={[styles.navTab, i === currentExerciseIndex && styles.navTabActive]} onPress={() => setCurrentExerciseIndex(i)}>
+            <TouchableOpacity key={i} style={[styles.navTab, i === currentExerciseIndex && styles.navTabActive]} onPress={() => setCurrentExerciseIndex(i)} accessibilityRole="button" accessibilityState={{ selected: i === currentExerciseIndex }} accessibilityLabel={entry.exercise?.name || `Exercise ${i + 1}`}>
               <Text style={[styles.navTabText, i === currentExerciseIndex && styles.navTabTextActive]} numberOfLines={1}>
                 {entry.exercise?.name?.split(' ').slice(0, 2).join(' ')}
               </Text>
@@ -2135,7 +2100,7 @@ function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, workoutExercise
         <Ionicons name="barbell-outline" size={64} color={colors.surface3} />
         <Text style={styles.emptyTitle}>Add your first exercise</Text>
         <Text style={styles.emptySubtitle}>Search the exercise library to get started</Text>
-        <TouchableOpacity style={styles.addFirstBtn} onPress={onAdd}>
+        <TouchableOpacity style={styles.addFirstBtn} onPress={onAdd} accessibilityRole="button" accessibilityLabel="Add exercise">
           <Ionicons name="add" size={22} color={colors.background} />
           <Text style={styles.addFirstBtnText}>Add Exercise</Text>
         </TouchableOpacity>
@@ -2156,8 +2121,6 @@ const styles = StyleSheet.create({
   finishBtn: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary, paddingVertical: spacing.xs },
   headerCenter: { flex: 1, alignItems: 'center' },
   timerText: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.primary, fontVariant: ['tabular-nums'] },
-  headerMuscle: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 1 },
-  addExerciseBtn: { width: 40, height: 40, borderRadius: radius.xl, backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
   exerciseNav: { borderBottomWidth: 1, borderBottomColor: colors.border, maxHeight: 48 },
   exerciseNavContent: { paddingHorizontal: spacing.lg, gap: spacing.sm, alignItems: 'center' },
   navTab: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full, backgroundColor: colors.surface2, maxWidth: 140 },
@@ -2184,12 +2147,6 @@ const styles = StyleSheet.create({
   swapBrowseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
   swapBrowseText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   exerciseMuscle: { fontSize: fontSize.sm, color: colors.textSecondary },
-  prevCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border, gap: spacing.xs },
-  prevTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2 },
-  prevSetsSummary: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, lineHeight: 22, fontVariant: ['tabular-nums'] },
-  prevEmpty: { fontSize: fontSize.sm, color: colors.textMuted, fontStyle: 'italic' },
-  progressionBadge: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.primaryBg, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, alignSelf: 'flex-start' },
-  progressionText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium, flexShrink: 1 },
   targetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   targetText: { fontSize: fontSize.sm, color: colors.textMuted },
   setEntryCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.md },
@@ -2241,13 +2198,6 @@ const styles = StyleSheet.create({
   clusterAddBtnText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
   clusterCancel: { alignItems: 'center', paddingVertical: spacing.xs },
   clusterCancelText: { fontSize: fontSize.sm, color: colors.textMuted },
-  addWarmupBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, paddingVertical: spacing.sm + 2,
-    borderRadius: radius.md, borderWidth: 1, borderColor: withAlpha(colors.warning, 0.376),
-    backgroundColor: colors.warningBg || colors.surface, marginTop: spacing.sm,
-  },
-  addWarmupBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.warning },
   secondaryActions: { flexDirection: 'row', gap: spacing.sm },
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.md, borderWidth: 1, borderColor: colors.border },
   actionBtnDanger: { borderColor: withAlpha(colors.error, 0.251) },
@@ -2284,8 +2234,6 @@ const styles = StyleSheet.create({
   setNumText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
   loggedSetText: { flex: 1, fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   loggedEst1RM: { fontSize: fontSize.xs, color: colors.textMuted },
-  modalOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
-  modalContent: { padding: spacing.lg, paddingBottom: spacing.xxl },
   emptyView: { flex: 1, backgroundColor: colors.background },
   emptyContent: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: spacing.xxxl * 2, gap: spacing.lg, paddingHorizontal: spacing.xxl },
   emptyTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
@@ -2297,9 +2245,7 @@ const styles = StyleSheet.create({
   sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: spacing.lg },
   sheetTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.sm },
   sheetExplainer: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.lg },
-  sheetSection: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2, marginBottom: spacing.sm, marginTop: spacing.md },
   sheetOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
-  sheetOptionActive: { backgroundColor: 'transparent' },
   sheetOptionText: { flex: 1, gap: spacing.xxs },
   sheetOptionLabel: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   sheetOptionLabelActive: { color: colors.primary },
@@ -2352,12 +2298,6 @@ const styles = StyleSheet.create({
   keepTrainingBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
   discardConfirmBtn: { alignItems: 'center', paddingVertical: spacing.md },
   discardConfirmBtnText: { fontSize: fontSize.sm, color: colors.error, fontWeight: fontWeight.medium },
-  setTargetsBlock: { marginTop: spacing.sm, gap: spacing.xs },
-  setTargetsLabel: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: fontWeight.semibold, marginBottom: spacing.xxs },
-  setTargetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  setTargetNum: { fontSize: fontSize.xs, color: colors.textMuted, width: 36 },
-  setTargetVal: { fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
-  setTargetReason: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xs, fontStyle: 'italic' },
   inlineTargetChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     backgroundColor: colors.primaryBg, borderRadius: radius.sm,

@@ -162,3 +162,17 @@ Approved changes:
 3. Label the rep min/max inputs.
 Kept: per-exercise steppers, Travel mode, dashed Add affordance, Skip Setup,
 lazy capped picker. Impact Low; Effort Low. Attribute-only.
+
+## Item 15 — Active Workout screen — APPROVED 2026-06-04 ("Approved")
+Doc: `deep-audit-16-active-workout.md`. Approved all three; change 2 = REMOVE.
+Approved changes:
+1. Remove 20 dead style keys.
+2. Reclaim dead compute/IO: drop _progression + effect + 2 getProgressionSuggestion
+   calls; _exerciseNote + getExerciseUserNote read; _weeklyPlan/_weeklyActual +
+   derivations + getPlannedMuscleVolume read; keep getCurrentMesocycleWeek for
+   live deload. (Recommendation was remove, not restore.)
+3. A11y roles/labels on set-type picker, swap modal, stale/discard/superset
+   modal buttons, empty-view header + nav tabs.
+Kept: full logging core, clusters, supersets, time-crunch, deload, unilateral,
+drift-free timer, crash recovery, cloud sync. Verified: FULL suite green (2820).
+Impact Low (1) / Medium (2) / Low (3). Runtime-critical change full-suite verified.

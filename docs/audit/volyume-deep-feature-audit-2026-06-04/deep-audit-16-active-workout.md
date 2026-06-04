@@ -3,7 +3,7 @@
 **Document:** deep-audit-16-active-workout.md
 **Item:** 15 of master inventory (screen #11 — `ActiveWorkoutScreen`; the live-logging core)
 **File:** `src/screens/ActiveWorkoutScreen.js` (2430 lines), components `SetEntry`, `RestTimer`, `ExercisePickerModal`, libs `algorithms`, `swapEngine`, `clusterSet`, `unilateral`, `mesocycle`
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04, "Approved" — change 2 = remove, all three). Removed 20 dead style keys; removed the dead `_progression`/`_weeklyPlan`/`_weeklyActual`/`_exerciseNote` state + the compute/IO exclusive to it (the progression effect + two getProgressionSuggestion calls, the getExerciseUserNote read, the getPlannedMuscleVolume read + weeklyPlan/weeklyActual derivations) while keeping getCurrentMesocycleWeek for the live deload path; cleaned three now-unused imports; added a11y roles/labels to the set-type picker, swap modal, stale/discard/superset modal buttons and the empty-view header + nav tabs. Verified: repo eslint 0 problems; FULL suite green (174 suites, 2820 passing).
 **Timestamp:** 2026-06-04
 
 > Runtime-critical: live logging, store mutations, the workout timer, PR
