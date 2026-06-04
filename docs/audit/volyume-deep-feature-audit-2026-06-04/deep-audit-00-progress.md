@@ -7,7 +7,7 @@ Single source of truth for where the audit stands. Update on each session end.
 Branch `main`, 0/0 with origin, working tree clean, repo eslint **0 problems**,
 full suite green (174 suites, 2820 passing).
 
-### Done (51 items / batched from 47 + the lint sweep), each: audited → researched → proposed →
+### Done (56 items / batched from 47 + the lint sweep), each: audited → researched → proposed →
 ### approved → implemented → pushed. Doc per item in this folder.
 
 | # | Item | Screen | Doc |
@@ -59,6 +59,7 @@ full suite green (174 suites, 2820 passing).
 | 45 | Coaching History | CoachHeldHistoryScreen | deep-audit-46 |
 | 46 | Block Reflection | BlockReflectionScreen | deep-audit-47 |
 | 47-51 | Batch 1: ProGoalSetup, GoalChangeSummary, CoachingReminders, WellbeingCheck, NotificationSettings | deep-audit-48 |
+| 52-56 | Batch 2: Import, PrivacyPolicy, SubscriptionPolicy, Subscription, CascadeGate | deep-audit-49 |
 
 Plus: the full lint sweep (779 → 0 warnings, 0 errors) across commits
 e518807 / 16cbad7 / e345a06 / d2f797f, and the `__mocks__/expo-application.js`
