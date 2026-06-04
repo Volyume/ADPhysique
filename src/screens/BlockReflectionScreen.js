@@ -115,7 +115,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
           <>
             {/* Block title and dates */}
             <View style={styles.blockTitle}>
-              <Text style={styles.blockName}>{data.meso?.name ?? 'Training Block'}</Text>
+              <Text style={styles.blockName} accessibilityRole="header">{data.meso?.name ?? 'Training Block'}</Text>
               {data.startDate ? (
                 <Text style={styles.blockDates}>
                   {fmtDate(data.startDate)}
@@ -151,7 +151,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
                   <Ionicons name="trophy-outline" size={16} color={colors.primary} />
-                  <Text style={styles.sectionTitle}>Records set this block</Text>
+                  <Text style={styles.sectionTitle} accessibilityRole="header">Records set this block</Text>
                 </View>
                 {data.prs.map((pr, i) => (
                   <View key={i} style={styles.prRow}>
@@ -181,7 +181,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
 
             {/* What's next */}
             <View style={styles.nextSection}>
-              <Text style={styles.nextTitle}>What's next</Text>
+              <Text style={styles.nextTitle} accessibilityRole="header">What's next</Text>
               <Text style={styles.nextBody}>
                 Take a few days of lighter activity to recover, then start your next block. The gains from this block consolidate during that transition.
               </Text>
@@ -192,6 +192,8 @@ export default function BlockReflectionScreen({ navigation, route }) {
                   setTimeout(() => navigation.navigate('MesocycleBuilder'), 300);
                 }}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Start a new block"
               >
                 <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
                 <Text style={styles.newBlockBtnText}>Start a new block</Text>
@@ -200,7 +202,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
           </>
         )}
 
-        <TouchableOpacity style={styles.doneBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+        <TouchableOpacity style={styles.doneBtn} onPress={() => navigation.goBack()} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Done">
           <Text style={styles.doneBtnText}>Done</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -213,8 +215,6 @@ const styles = StyleSheet.create({
 
 
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
-
-  loadingText: { fontSize: fontSize.sm, color: colors.textMuted, textAlign: 'center', paddingTop: spacing.xl },
 
   emptyCard: {
     backgroundColor: colors.surface,
