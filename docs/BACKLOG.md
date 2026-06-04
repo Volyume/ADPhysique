@@ -69,6 +69,7 @@ These were on the NEVER list and have since been re-opened. Recorded so the orig
 | Coach Builder v2 periodisation | **Done.** `planEngine.buildWeeklyPlan` wraps the week-1 template into a multi-week progressive plan. Foundation/Building/Peak/Deload labelling at `planEngine.js:856-872`. |
 | Contest prep gating (beyond basic) | Partial. `contest_prep` phase is gated with a warning + volume reduction in `nutritionEngine`. Full contest-prep mode (peak week, water/sodium, carb-load scheduling) explicitly excluded per the Peak Week NEVER row. |
 | Plan sharing / export | Deferred. Plans are local SQLite. Sharing as file or URL requires a serialisation format. |
+| Frequency-first weak-point specialisation | **Spec'd, deferred to after launch.** The plan engine builds a fixed split then slots a weak muscle into existing same-pattern days, so a lower-body weak point in an upper-focused division (e.g. glutes in Men's Physique, one leg day) only trains 1x/week. Real coaches specialise by frequency (2-3x/week + others to maintenance). Full design in `docs/audit/volyume-planengine-rebuild-2026-06-01/planengine-rebuild-09-frequency-first-weakpoint-SPEC.md`. The placement-correctness fix (no wrong-day contamination) already shipped 2026-06-04; this is the magnitude/frequency follow-on. Reopen with founder go-ahead. |
 
 ### Nutrition
 
