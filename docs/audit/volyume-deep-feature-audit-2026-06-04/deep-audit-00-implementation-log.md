@@ -375,3 +375,15 @@ Approved 2026-06-04 ("Approved"). Attribute-only.
 
 Verify: `npx eslint src/screens/ExerciseDetailScreen.js` clean; screen-mount 455/455.
 Doc: deep-audit-23-exercise-detail.md.
+
+## Item 23 — ManualBuilderScreen (dead styles + a11y)
+
+Approved 2026-06-04 ("Proceed"). Style deletions + attribute-only.
+
+- Removed 2 dead styles: `pillRow`, `dayPill` (orphaned days-per-week picker).
+- Exercise row (priority): role + `{name}, {sets} sets` + `accessibilityHint="Hold to remove"` (long-press remove now announced/discoverable).
+- Goal pills: role + `accessibilityState={{ selected }}`.
+- Create / Save Draft / Save & Activate: role + `accessibilityState={{ disabled }}`.
+- Add Exercise / Add Day / success-modal Stay Here / Go to Train: role + label.
+
+Verify: eslint clean; screen-mount 455/455. Doc: deep-audit-24-manual-builder.md.

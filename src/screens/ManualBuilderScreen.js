@@ -374,6 +374,9 @@ export default function ManualBuilderScreen({ navigation }) {
                     key={g.key}
                     style={[styles.pill, selectedGoal === g.key && styles.pillActive]}
                     onPress={() => setGoal(g.key)}
+                    accessibilityRole="button"
+                    accessibilityLabel={g.label}
+                    accessibilityState={{ selected: selectedGoal === g.key }}
                   >
                     <Text style={[styles.pillText, selectedGoal === g.key && styles.pillTextActive]}>
                       {g.label}
@@ -387,6 +390,9 @@ export default function ManualBuilderScreen({ navigation }) {
               style={[styles.primaryBtn, creating && styles.btnDisabled]}
               onPress={handleCreatePlan}
               disabled={creating}
+              accessibilityRole="button"
+              accessibilityLabel="Create plan and add workouts"
+              accessibilityState={{ disabled: creating }}
             >
               <Ionicons name="add-circle" size={20} color={colors.background} />
               <Text style={styles.primaryBtnText}>Create Plan & Add Workouts</Text>
@@ -449,6 +455,9 @@ export default function ManualBuilderScreen({ navigation }) {
                     onLongPress={() => handleLongPressExercise(dayIdx, ex.localId, ex.name)}
                     delayLongPress={400}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${ex.name}, ${ex.sets} sets`}
+                    accessibilityHint="Hold to remove"
                   >
                     <View style={styles.exRowLeft}>
                       <Text style={styles.exName}>{ex.name}</Text>
@@ -463,7 +472,7 @@ export default function ManualBuilderScreen({ navigation }) {
             )}
 
             {/* Add exercise button */}
-            <TouchableOpacity style={styles.addExBtn} onPress={() => openPicker(dayIdx)}>
+            <TouchableOpacity style={styles.addExBtn} onPress={() => openPicker(dayIdx)} accessibilityRole="button" accessibilityLabel="Add exercise">
               <Ionicons name="add" size={16} color={colors.primary} />
               <Text style={styles.addExText}>Add Exercise</Text>
             </TouchableOpacity>
@@ -471,7 +480,7 @@ export default function ManualBuilderScreen({ navigation }) {
         ))}
 
         {/* Add day */}
-        <TouchableOpacity style={styles.addDayBtn} onPress={handleAddDay}>
+        <TouchableOpacity style={styles.addDayBtn} onPress={handleAddDay} accessibilityRole="button" accessibilityLabel="Add day">
           <Ionicons name="add-circle-outline" size={20} color={colors.textSecondary} />
           <Text style={styles.addDayText}>Add Day</Text>
         </TouchableOpacity>
@@ -485,6 +494,9 @@ export default function ManualBuilderScreen({ navigation }) {
             style={[styles.draftBtn, saving && styles.btnDisabled]}
             onPress={handleSaveDraft}
             disabled={saving}
+            accessibilityRole="button"
+            accessibilityLabel="Save draft"
+            accessibilityState={{ disabled: saving }}
           >
             <Text style={styles.draftBtnText}>Save Draft</Text>
           </TouchableOpacity>
@@ -492,6 +504,9 @@ export default function ManualBuilderScreen({ navigation }) {
             style={[styles.activateBtn, saving && styles.btnDisabled]}
             onPress={handleSaveAndActivate}
             disabled={saving}
+            accessibilityRole="button"
+            accessibilityLabel="Save and activate"
+            accessibilityState={{ disabled: saving }}
           >
             <Ionicons name="flash" size={18} color={colors.background} />
             <Text style={styles.activateBtnText}>Save & Activate</Text>
@@ -513,12 +528,16 @@ export default function ManualBuilderScreen({ navigation }) {
               <TouchableOpacity
                 style={styles.successSecondary}
                 onPress={() => setSuccessModal(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Stay here"
               >
                 <Text style={styles.successSecondaryText}>Stay Here</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.successPrimary}
                 onPress={() => { setSuccessModal(false); navigation.navigate('HomeTab'); }}
+                accessibilityRole="button"
+                accessibilityLabel="Go to Train"
               >
                 <Ionicons name="home" size={16} color={colors.background} />
                 <Text style={styles.successPrimaryText}>Go to Train</Text>
@@ -574,10 +593,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  pillRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
   pill: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -585,16 +600,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.border,
-  },
-  dayPill: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   pillActive: {
     backgroundColor: colors.primaryBg,

@@ -7,7 +7,7 @@ Single source of truth for where the audit stands. Update on each session end.
 Branch `main`, 0/0 with origin, working tree clean, repo eslint **0 problems**,
 full suite green (174 suites, 2820 passing).
 
-### Done (22 items + the lint sweep), each: audited → researched → proposed →
+### Done (23 items + the lint sweep), each: audited → researched → proposed →
 ### approved → implemented → pushed. Doc per item in this folder.
 
 | # | Item | Screen | Doc |
@@ -34,6 +34,7 @@ full suite green (174 suites, 2820 passing).
 | 20 | Plan Detail | PlanDetailScreen | deep-audit-21 |
 | 21 | Routine Detail | RoutineDetailScreen | deep-audit-22 |
 | 22 | Exercise Detail | ExerciseDetailScreen | deep-audit-23 |
+| 23 | Manual Builder | ManualBuilderScreen | deep-audit-24 |
 
 Plus: the full lint sweep (779 → 0 warnings, 0 errors) across commits
 e518807 / 16cbad7 / e345a06 / d2f797f, and the `__mocks__/expo-application.js`
@@ -45,8 +46,8 @@ test mock.
 
 ## NEXT (resume here)
 
-Inventory order, next un-audited screen: **#20 `ManualBuilderScreen`** (Plans
-sub-stack), then #21 PlanLibrary, #22 MesocycleBuilder, the A4 Diary sub-stack
+Inventory order, next un-audited screen: **#21 `PlanLibraryScreen`** (Plans
+sub-stack), then #22 MesocycleBuilder, the A4 Diary sub-stack
 (#24 FoodSearch onward), and the A6 You sub-stack incl. the coach-engine
 surfaces (CoachOutput, WeeklyCheckIn, ProGoalSetup, etc.). Master list:
 `deep-audit-01-master-inventory.md`.

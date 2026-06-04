@@ -3,7 +3,7 @@
 **Document:** deep-audit-24-manual-builder.md
 **Item:** 23 of master inventory (screen #20 — `ManualBuilderScreen`; Plans stack, build a plan from scratch)
 **File:** `src/screens/ManualBuilderScreen.js` (896 lines, two StyleSheets: `styles` + `balanceStyles`), components `BackHeader`, `ExercisePickerModal`, libs `database`, `algorithms` (`VOLUME_LANDMARKS`, `MUSCLE_DISPLAY_NAMES`)
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04, "Proceed"). Removed the 2 dead styles (`pillRow`, `dayPill`); added roles/labels/state to the goal pills (selected), Create/Save Draft/Save & Activate (disabled), Add Exercise/Add Day, the success-modal buttons, and the exercise row (role + label + "Hold to remove" hint so the long-press remove is announced). Attribute-only + style deletions.
 **Timestamp:** 2026-06-04
 
 ---

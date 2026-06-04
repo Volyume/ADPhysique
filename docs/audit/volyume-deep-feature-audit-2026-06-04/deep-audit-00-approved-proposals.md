@@ -230,3 +230,10 @@ search-all, re-link recovery. Impact Low; Effort Low.
 A11y-only: roles/labels on the goal link, the icon-only pencil ("Edit target"),
 the chart-mode toggle (role + selected state), the substitute cards (`View {name}`),
 and the goal-modal Save (+ disabled) / Remove. No behaviour, copy, or layout change.
+
+## Item 23 — ManualBuilderScreen — APPROVED 2026-06-04
+Remove 2 dead styles (pillRow, dayPill); complete control a11y, with the
+long-press-only exercise remove the priority (role + label + "Hold to remove"
+hint). Goal pills get selected state; Create/Draft/Activate get disabled state;
+Add Exercise/Add Day/success-modal buttons get roles. No behaviour/copy/layout
+change.
