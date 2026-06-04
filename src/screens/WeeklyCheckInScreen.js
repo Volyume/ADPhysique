@@ -148,6 +148,9 @@ function ChipRow({ options, selected, onSelect }) {
             style={[styles.chip, isSelected && styles.chipSelected]}
             onPress={() => onSelect(isSelected ? null : opt.value)}
             activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isSelected }}
+            accessibilityLabel={`${opt.value} ${opt.label}`}
           >
             <Text style={[styles.chipValue, isSelected && styles.chipValueSelected]}>
               {opt.value}
@@ -173,6 +176,9 @@ function OptionRow({ options, selected, onSelect }) {
             style={[styles.optionBtn, isSelected && styles.optionBtnSelected]}
             onPress={() => onSelect(isSelected ? null : opt.value)}
             activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isSelected }}
+            accessibilityLabel={opt.label}
           >
             <Text style={[styles.optionBtnText, isSelected && styles.optionBtnTextSelected]}>
               {opt.label}
@@ -561,6 +567,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             style={styles.shortInput}
             value={sleepHours}
             onChangeText={setSleepHours}
+            accessibilityLabel="Average sleep hours"
             keyboardType="decimal-pad"
             placeholder="7.5"
             placeholderTextColor={colors.textMuted}
@@ -649,7 +656,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         ) : (
           <View style={styles.section}>
             <SectionLabel>Calorie target</SectionLabel>
-            <TouchableOpacity onPress={() => navigation.navigate('NutritionTargets')} activeOpacity={0.75}>
+            <TouchableOpacity onPress={() => navigation.navigate('NutritionTargets')} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Set up nutrition targets">
               <Text style={styles.skipNoteTappable}>
                 Nutrition targets not set. Tap to set them up and unlock calorie coaching.
               </Text>
@@ -690,6 +697,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
                   style={styles.shortInput}
                   value={stepsManual}
                   onChangeText={t => setStepsManual(t.replace(/[^0-9]/g, ''))}
+                  accessibilityLabel="Average steps a day"
                   keyboardType="number-pad"
                   placeholder="8000"
                   placeholderTextColor={colors.textMuted}
@@ -761,6 +769,9 @@ export default function WeeklyCheckInScreen({ navigation }) {
                       )
                     }
                     activeOpacity={0.75}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: sel }}
+                    accessibilityLabel={muscle}
                   >
                     <Text style={[styles.muscleChipText, sel && styles.muscleChipTextSelected]}>
                       {muscle}
@@ -791,6 +802,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             value={notes}
             onChangeText={setNotes}
             multiline
+            accessibilityLabel="Anything else to flag?"
             placeholder="Anything Volyume should factor in this week…"
             placeholderTextColor={colors.textMuted}
             maxLength={280}
@@ -834,6 +846,9 @@ export default function WeeklyCheckInScreen({ navigation }) {
                   style={[styles.perfCard, isSelected && styles.perfCardSelected]}
                   onPress={() => setTrainingPerformance(isSelected ? null : opt.value)}
                   activeOpacity={0.75}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  accessibilityLabel={opt.label}
                 >
                   <Ionicons
                     name={opt.icon}
@@ -873,7 +888,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             screen title in line. Empty card style below mirrors the
             BodyMetrics empty state for visual consistency. */}
         <View style={styles.gateHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close">
             <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.gateHeaderTitle}>Weekly Check-In</Text>
@@ -890,7 +905,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
               You can change the day in Settings → Coaching reminders. In the meantime, log your weight each morning from the Train tab. Every reading makes the trend more accurate.
             </Text>
           </View>
-          <TouchableOpacity style={styles.gateBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
+          <TouchableOpacity style={styles.gateBtn} onPress={() => navigation.goBack()} activeOpacity={0.85} accessibilityRole="button">
             <Text style={styles.gateBtnText}>Got it</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -903,7 +918,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.gateHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close">
             <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
@@ -917,7 +932,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             {'\n\n'}
             Coaching adjustments compare this week to last. With nothing to compare against yet, the weekly read would be guesswork. Log your morning weight each day and food data if you're on Diary, and the first check-in lands on {nextDayLabel} (your chosen day, {scheduledDayName}).
           </Text>
-          <TouchableOpacity style={styles.gateBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
+          <TouchableOpacity style={styles.gateBtn} onPress={() => navigation.goBack()} activeOpacity={0.85} accessibilityRole="button">
             <Text style={styles.gateBtnText}>Got it</Text>
           </TouchableOpacity>
         </View>
@@ -931,7 +946,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.gateHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close">
             <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
@@ -947,10 +962,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
             {'\n\n'}
             Log {remaining} more {remaining === 1 ? 'reading' : 'readings'} from the Train tab and come back on {dayName}.
           </Text>
-          <TouchableOpacity style={styles.gateBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
+          <TouchableOpacity style={styles.gateBtn} onPress={() => navigation.goBack()} activeOpacity={0.85} accessibilityRole="button">
             <Text style={styles.gateBtnText}>Log my weight first</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.gateDeferBtn} onPress={() => setGateState('open')} activeOpacity={0.75}>
+          <TouchableOpacity style={styles.gateDeferBtn} onPress={() => setGateState('open')} activeOpacity={0.75} accessibilityRole="button">
             <Text style={styles.gateDeferBtnText}>Check in anyway</Text>
           </TouchableOpacity>
         </View>
@@ -970,10 +985,16 @@ export default function WeeklyCheckInScreen({ navigation }) {
           onPress={() => step > 0 ? setStep(s => s - 1) : navigation.goBack()}
           style={styles.backBtn}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel={step > 0 ? 'Previous step' : 'Back'}
         >
           <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <View style={styles.headerCenter}>
+        <View
+          style={styles.headerCenter}
+          accessible
+          accessibilityLabel={`${checkinDayLabel}, step ${step + 1} of ${TOTAL_STEPS}`}
+        >
           <Text style={styles.headerTitle}>{checkinDayLabel}</Text>
           <StepBar current={step} total={TOTAL_STEPS} />
         </View>
@@ -1016,6 +1037,9 @@ export default function WeeklyCheckInScreen({ navigation }) {
                 onPress={() => setStep(s => s + 1)}
                 disabled={!stepCanAdvance(step)}
                 activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !stepCanAdvance(step) }}
+                accessibilityLabel="Next"
               >
                 <Text style={[styles.ctaBtnText, !stepCanAdvance(step) && styles.ctaBtnTextDisabled]}>
                   Next
@@ -1032,6 +1056,9 @@ export default function WeeklyCheckInScreen({ navigation }) {
                 onPress={handleSubmit}
                 disabled={!stepCanAdvance(step) || busy}
                 activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !stepCanAdvance(step) || busy }}
+                accessibilityLabel="See this week's coaching"
               >
                 {busy ? (
                   <ActivityIndicator color={colors.background} />
