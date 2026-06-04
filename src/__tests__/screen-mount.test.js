@@ -1897,3 +1897,70 @@ describe('Fuzz: 20-tap chains across 10 seeds on every Pro screen', () => {
     });
   }
 });
+
+// ─── ProOnboarding resume after the Article 9 consent gate ───────────────────
+//
+// Regression: creating an account manually looped. The Article 9 consent
+// gate unmounts the onboarding stack right after sign-up, wiping the
+// screen's local `step` state. On remount the recovery effect used to be
+// blocked by `if (userProfile) return`, but the sign-up sync hydrates a
+// profile, so it stranded the user on Step 1 (Create your account). The
+// persisted store flag proOnboardingAccountCreated drives the resume now.
+
+describe('ProOnboarding resumes past Step 1 after the consent detour', () => {
+  function collectText(node, out = []) {
+    if (node == null) return out;
+    if (typeof node === 'string' || typeof node === 'number') { out.push(String(node)); return out; }
+    if (Array.isArray(node)) { node.forEach(n => collectText(n, out)); return out; }
+    if (node.children) collectText(node.children, out);
+    return out;
+  }
+
+  test('a created account with a hydrated profile still advances to Step 2', async () => {
+    useAppStore.setState({
+      user: { id: 'u-cloud', email: 't@e.com', isLocal: false },
+      session: { user: { id: 'u-cloud' } },
+      tier: 'pro',
+      firstRunComplete: false,
+      healthConsent: true,
+      healthConsentChecked: true,
+      proOnboardingAccountCreated: true,
+      // A hydrated profile is exactly what used to (wrongly) block the resume.
+      userProfile: { tier: 'pro' },
+    });
+    const Screen = require('../screens/ProOnboardingScreen').default;
+    let tree = null;
+    try {
+      const { tree: t } = await mountScreen(Screen);
+      tree = t;
+      const text = collectText(tree.toJSON()).join('');
+      expect(text).not.toMatch(/Create account and continue/i);
+      expect(text).toMatch(/Step\s*2\s*of/i);
+    } finally {
+      unmountTree(tree);
+    }
+  });
+
+  test('a local user with no created account still sees Step 1', async () => {
+    useAppStore.setState({
+      user: { id: 'u-local', isLocal: true },
+      session: null,
+      tier: 'pro',
+      firstRunComplete: false,
+      healthConsent: null,
+      healthConsentChecked: false,
+      proOnboardingAccountCreated: false,
+      userProfile: null,
+    });
+    const Screen = require('../screens/ProOnboardingScreen').default;
+    let tree = null;
+    try {
+      const { tree: t } = await mountScreen(Screen);
+      tree = t;
+      const text = collectText(tree.toJSON()).join('');
+      expect(text).toMatch(/Step\s*1\s*of/i);
+    } finally {
+      unmountTree(tree);
+    }
+  });
+});

@@ -141,6 +141,15 @@ const useAppStore = create((set, get) => ({
   healthConsent: null,
   setHealthConsent: (value, checked = true) => set({ healthConsent: value, healthConsentChecked: checked }),
 
+  // True once the Pro onboarding wizard has created (or signed into) the
+  // cloud account in this session. Lives in the store, not the screen's
+  // local state, so it survives the wizard stack being unmounted by the
+  // Article 9 consent gate. ProOnboarding reads it to resume past Step 1
+  // (Create your account) instead of stranding the user there. Reset on
+  // sign-out and once first-run completes.
+  proOnboardingAccountCreated: false,
+  setProOnboardingAccountCreated: (v) => set({ proOnboardingAccountCreated: !!v }),
+
   setUser: (user) => {
     // A real sign-in lifts the SYNC-3 sign-out wipe guard (covers the
     // dev/Expo-Go path where sign-out doesn't reload the app). Sign-out
@@ -410,6 +419,7 @@ const useAppStore = create((set, get) => ({
       // sign-in won't trigger the gate again unnecessarily.
       healthConsent: null,
       healthConsentChecked: false,
+      proOnboardingAccountCreated: false,
       activeWorkout: null,
       workoutExercises: [],
       currentExerciseIndex: 0,
@@ -829,7 +839,7 @@ const useAppStore = create((set, get) => ({
       // skip the cloud read entirely. Only this user's key, not global.
       if (uid) await AsyncStorage.setItem(FIRST_RUN_KEY_PFX + uid, 'true');
     } catch (_e) {}
-    set({ firstRunComplete: true });
+    set({ firstRunComplete: true, proOnboardingAccountCreated: false });
     // Mirror to cloud so a user who signs in on a new device doesn't
     // have to redo onboarding. Fire-and-forget; if offline the next
     // bulk sync catches it.

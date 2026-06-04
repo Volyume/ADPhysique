@@ -103,6 +103,7 @@ function fmt12(h) {
 export default function ProOnboardingScreen({ navigation }) {
   const {
     user, setUnits, bodyWeightUnits, setBodyWeightUnits, userProfile, saveLocalProfile,
+    proOnboardingAccountCreated, setProOnboardingAccountCreated,
   } = useAppStore(useShallow(s => ({
     user: s.user,
     setUnits: s.setUnits,
@@ -110,6 +111,8 @@ export default function ProOnboardingScreen({ navigation }) {
     setBodyWeightUnits: s.setBodyWeightUnits,
     userProfile: s.userProfile,
     saveLocalProfile: s.saveLocalProfile,
+    proOnboardingAccountCreated: s.proOnboardingAccountCreated,
+    setProOnboardingAccountCreated: s.setProOnboardingAccountCreated,
   })));
 
   const [step, setStep] = useState(1);
@@ -215,15 +218,26 @@ export default function ProOnboardingScreen({ navigation }) {
   // created a cloud account yet.
   useEffect(() => {
     if (step === 1 && user && !user.isLocal) {
-      // Don't auto-advance if userProfile is already set, that means
-      // restoreSessionFromCloud hydrated an existing account and the
-      // navigator is about to unmount us. Auto-advancing here would
-      // briefly flash Step 2 before the navigator catches up.
+      // If this session already created (or signed into) the account,
+      // resume past Step 1 no matter what. The Article 9 consent gate
+      // unmounts this stack right after sign-up, wiping the local step
+      // state; the persisted flag is how we get back to where the wizard
+      // continues instead of stranding the user on Create your account.
+      // The old userProfile guard failed here because the sign-up sync
+      // hydrates a profile, so it wrongly blocked the resume (the loop).
+      if (proOnboardingAccountCreated) {
+        setAccountCreated(true);
+        setStep(2);
+        return;
+      }
+      // Otherwise an existing account is being restored and the
+      // navigator is about to send the user to MainTabs. A hydrated
+      // userProfile means don't flash Step 2 before it catches up.
       if (userProfile) return;
       setAccountCreated(true);
       setStep(2);
     }
-  }, [step, user, userProfile]);
+  }, [step, user, userProfile, proOnboardingAccountCreated]);
 
 
   // ── Step transition helpers ──────────────────────────────────────────────────
@@ -257,6 +271,7 @@ export default function ProOnboardingScreen({ navigation }) {
       // here, the onboarding wizard collects the training fields in the
       // next steps. Mark the auth step complete and advance.
       logInfo('ProOnboarding.oauth.success', `provider=${provider}, advancing to step 2`);
+      setProOnboardingAccountCreated(true);
       setAccountCreated(true);
       setStep(2);
     } catch (e) {
@@ -321,6 +336,7 @@ export default function ProOnboardingScreen({ navigation }) {
           pullFromCloud(supabaseUserId)
             .catch(e => logError('ProOnboarding.pullFromCloud', e, { supabaseUserId }));
         }
+        setProOnboardingAccountCreated(true);
         setAccountCreated(true);
         setBusy(false);
         setStep(2);
