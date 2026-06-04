@@ -362,10 +362,9 @@ export default function PlansScreen({ navigation }) {
     !blockSnoozed;
 
   const isProWithPlan = tier === 'pro' && !!activePlan;
-  // Three audiences share this list:
-  //   * Pro with an active plan → "switch / re-run wizard" framing
-  //   * Pro with active plan → switch framings (update goals / library / manual)
-  //   * Pro without a plan (rare, just after first sign-up) → default order
+  // Two card sets cover three audiences:
+  //   * Pro with an active plan → switch framings (update goals / library / manual)
+  //   * Pro without a plan (rare, just after first sign-up) → same Pro set
   //   * Free → default order (library first, manual second)
   // Every Pro user gets the coached-builder card set, not only those who
   // already have an active plan. A new Pro user with no plan previously fell
@@ -443,7 +442,7 @@ export default function PlansScreen({ navigation }) {
                 {/* CTAs only shown when block is complete and recovery is done */}
                 {blockAdvice.action === 'post_recovery' && (
                   <View style={styles.blockCardActions}>
-                    <TouchableOpacity style={styles.blockRestartBtn} onPress={handleRestartPlan} activeOpacity={0.85}>
+                    <TouchableOpacity style={styles.blockRestartBtn} onPress={handleRestartPlan} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel={blockAdvice.nextBlock.actionLabel}>
                       <Ionicons name="refresh-outline" size={15} color={colors.background} />
                       <Text style={styles.blockRestartBtnText}>{blockAdvice.nextBlock.actionLabel}</Text>
                     </TouchableOpacity>
@@ -451,6 +450,8 @@ export default function PlansScreen({ navigation }) {
                       style={styles.blockNewBtn}
                       onPress={() => navigation.navigate(tier === 'pro' ? 'ProGoalSetup' : 'ProUpgrade')}
                       activeOpacity={0.85}
+                      accessibilityRole="button"
+                      accessibilityLabel={blockAdvice.nextBlock.secondaryLabel}
                     >
                       <Text style={styles.blockNewBtnText}>{blockAdvice.nextBlock.secondaryLabel}</Text>
                     </TouchableOpacity>
@@ -462,10 +463,10 @@ export default function PlansScreen({ navigation }) {
             {/* Early deload dismiss options */}
             {blockAdvice.action === 'early_deload' && (
               <View style={styles.blockCardActions}>
-                <TouchableOpacity style={styles.blockRestartBtn} onPress={handleSnoozeBlock} activeOpacity={0.85}>
+                <TouchableOpacity style={styles.blockRestartBtn} onPress={handleSnoozeBlock} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="Got it, ease off this week">
                   <Text style={styles.blockRestartBtnText}>Got it, ease off this week</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.blockNewBtn} onPress={handleSnoozeBlock} activeOpacity={0.85}>
+                <TouchableOpacity style={styles.blockNewBtn} onPress={handleSnoozeBlock} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="Keep going">
                   <Text style={styles.blockNewBtnText}>Keep going</Text>
                 </TouchableOpacity>
               </View>
@@ -473,7 +474,14 @@ export default function PlansScreen({ navigation }) {
 
             {/* Snooze links for recovery states */}
             {(blockAdvice.action === 'in_recovery' || blockAdvice.action === 'post_recovery') && (
-              <TouchableOpacity onPress={handleSnoozeBlock} style={styles.blockSnooze}>
+              <TouchableOpacity
+                onPress={handleSnoozeBlock}
+                style={styles.blockSnooze}
+                accessibilityRole="button"
+                accessibilityLabel={blockAdvice.action === 'in_recovery'
+                  ? 'Remind me after recovery week'
+                  : 'Not quite ready. Remind me later.'}
+              >
                 <Text style={styles.blockSnoozeText}>
                   {blockAdvice.action === 'in_recovery'
                     ? 'Remind me after recovery week'
@@ -487,7 +495,7 @@ export default function PlansScreen({ navigation }) {
                 recovery states; the next weekly check-in (or fresh signals)
                 will surface the banner again if conditions still apply. */}
             {blockAdvice.action === 'heads_up' && (
-              <TouchableOpacity onPress={handleSnoozeBlock} style={styles.blockSnooze}>
+              <TouchableOpacity onPress={handleSnoozeBlock} style={styles.blockSnooze} accessibilityRole="button" accessibilityLabel="Got it">
                 <Text style={styles.blockSnoozeText}>Got it</Text>
               </TouchableOpacity>
             )}
@@ -523,13 +531,20 @@ export default function PlansScreen({ navigation }) {
                 </Text>
               )}
               <View style={styles.activePlanActions}>
-                <TouchableOpacity style={styles.startNextBtn} onPress={() => handleStartNextWorkout(activePlan)}>
+                <TouchableOpacity
+                  style={styles.startNextBtn}
+                  onPress={() => handleStartNextWorkout(activePlan)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Start next workout"
+                >
                   <Ionicons name="play" size={15} color={colors.background} />
                   <Text style={styles.startNextBtnText}>Start Next Workout</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.viewPlanBtn}
                   onPress={() => navigation.navigate('PlanDetail', { planId: activePlan.id, isLibrary: false })}
+                  accessibilityRole="button"
+                  accessibilityLabel="View plan"
                 >
                   <Text style={styles.viewPlanBtnText}>View Plan</Text>
                 </TouchableOpacity>
@@ -580,12 +595,16 @@ export default function PlansScreen({ navigation }) {
                   <TouchableOpacity
                     onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View ${plan.name}`}
                   >
                     <Text style={styles.planCardFooterGhost}>View plan</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => handleSetActive(plan)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Set ${plan.name} as active plan`}
                   >
                     <Text style={styles.planCardFooterPrimary}>Set as active</Text>
                   </TouchableOpacity>
@@ -603,6 +622,9 @@ export default function PlansScreen({ navigation }) {
               style={styles.archivedHeader}
               onPress={() => setArchivedExpanded(v => !v)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: archivedExpanded }}
+              accessibilityLabel={`Archived plans, ${archivedPlans.length}`}
             >
               <Text style={styles.archivedHeaderText}>
                 Archived plans · {archivedPlans.length}
@@ -643,12 +665,16 @@ export default function PlansScreen({ navigation }) {
                   <TouchableOpacity
                     onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View ${plan.name}`}
                   >
                     <Text style={styles.planCardFooterGhost}>View plan</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={async () => { await unarchivePlan(plan.id); await loadData(); }}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Restore ${plan.name}`}
                   >
                     <Text style={styles.planCardFooterPrimary}>Restore</Text>
                   </TouchableOpacity>
@@ -672,7 +698,12 @@ export default function PlansScreen({ navigation }) {
                   ) : null}
                 </View>
                 <View style={styles.templateActions}>
-                  <TouchableOpacity style={styles.startTemplateBtn} onPress={() => handleStartTemplate(routine)}>
+                  <TouchableOpacity
+                    style={styles.startTemplateBtn}
+                    onPress={() => handleStartTemplate(routine)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Start ${routine.name}`}
+                  >
                     <Ionicons name="play" size={13} color={colors.background} />
                     <Text style={styles.startTemplateBtnText}>Start</Text>
                   </TouchableOpacity>
@@ -760,40 +791,10 @@ export default function PlansScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
-  cardioCard: {
-    backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1,
-    borderColor: colors.border, padding: spacing.md, gap: spacing.sm,
-  },
-  cardioHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  cardioTitle: { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
-  cardioHistoryLink: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
-  cardioSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
-  cardioBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs, alignSelf: 'flex-start',
-    paddingVertical: spacing.xs, paddingHorizontal: spacing.md,
-    backgroundColor: colors.primaryBg, borderRadius: radius.sm,
-  },
-  cardioBtnText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
   skeletonWrap: { gap: spacing.lg },
-  screenHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  pageTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
   section: { gap: spacing.md },
   sectionTitle: { ...type.label, color: colors.textSecondary },
   sectionSubtitle: { ...type.caption, color: colors.textMuted, marginTop: -spacing.sm },
-  sectionDeemphasised: { opacity: 0.85 },
-
-  goalsPointer: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.surface2, borderRadius: radius.md,
-    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  goalsPointerText: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18 },
-  goalsPointerLink: { color: colors.primary, fontWeight: fontWeight.semibold },
 
   trainingBlocksRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
@@ -915,20 +916,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: withAlpha(colors.primary, 0.251),
   },
-  // Pro-locked variant, matches the shared lockedCard pattern so gating
-  // reads the same across the app.
-  actionCardLocked: { opacity: 0.6 },
-  actionCardTitleLocked: { color: colors.textSecondary },
-  lockBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: colors.surface2, borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm, paddingVertical: 3,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  lockBadgeText: {
-    fontSize: fontSize.micro, fontWeight: fontWeight.semibold, color: colors.textMuted,
-  },
-
   // Block advisor card
   blockCard: {
     borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md,
@@ -1016,39 +1003,4 @@ const styles = StyleSheet.create({
   blockNewBtnText: { ...type.label, color: colors.textSecondary },
   blockSnooze: { alignItems: 'center', paddingTop: spacing.xs },
   blockSnoozeText: { ...type.caption, color: colors.textMuted },
-
-  // Training days picker
-  trainingDaysRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  dayChip: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  dayChipOn: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  dayChipLabel: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.textSecondary,
-  },
-  dayChipLabelOn: {
-    color: colors.background,
-  },
-  trainingDaysHint: {
-    ...type.caption,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
-  },
 });

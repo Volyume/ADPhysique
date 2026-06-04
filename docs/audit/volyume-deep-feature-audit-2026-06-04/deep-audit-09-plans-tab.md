@@ -3,7 +3,7 @@
 **Document:** deep-audit-09-plans-tab.md
 **Item:** 8 of master inventory (Group 2 — tab landings; `PlansTab` / title "Plans")
 **File:** `src/screens/PlansScreen.js` (1054 lines), components `PeekMenu`, `PressableCard`, `AnimatedEntrance`, `ScreenHeader`, libs `blockAdvisor`, `planSwitch`
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04, "A" — resume audit and implement). Removed 23 verified-dead style keys (cardio cluster, screenHeader/pageTitle, goalsPointer, Pro-lock variant, training-days picker, sectionDeemphasised); added accessibilityRole/Label to the active-plan Start/View, the My-plans + archived footer links, the template Start, and the block-card buttons, plus expanded state on the archived header; de-duplicated the audience comment. No behaviour change.
 **Timestamp:** 2026-06-04
 
 ---

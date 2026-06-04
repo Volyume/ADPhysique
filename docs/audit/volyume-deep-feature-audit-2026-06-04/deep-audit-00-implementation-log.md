@@ -150,3 +150,19 @@ Verification: screen-mount green (455 tests); eslint 0 errors (warnings all
 pre-existing). No HomeScreen-specific test beyond screen-mount; the banner
 gating is pure derivation. No start/sync/contract behaviour changed.
 Commit: see git log.
+
+## Item 8 — Plans tab (PlansScreen) — IMPLEMENTED 2026-06-04
+File: `src/screens/PlansScreen.js`.
+- Removed 23 verified-unused style keys (the cardio-card cluster left from the
+  move to Progress, screenHeader/pageTitle now handled by ScreenHeader,
+  goalsPointer*, the Pro-lock variant actionCardLocked/lockBadge*, the
+  training-days picker dayChip*/trainingDays*, and sectionDeemphasised). Each
+  grep-confirmed at 0 references.
+- A11y: added accessibilityRole="button" + labels to the active-plan Start-Next
+  and View-Plan, the My-plans and archived footer links (View / Set active /
+  Restore), the template Start, and the six block-advisor buttons; added
+  accessibilityState={{ expanded }} to the archived-section header.
+- De-duplicated the audience comment above the actionCards selection.
+Verification: PlansScreen eslint clean (0 problems); screen-mount green (455).
+No behaviour, data, or navigation change.
+Commit: see git log.
