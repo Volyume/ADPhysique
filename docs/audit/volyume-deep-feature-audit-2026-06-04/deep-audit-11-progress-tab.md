@@ -3,7 +3,7 @@
 **Document:** deep-audit-11-progress-tab.md
 **Item:** 10 of master inventory (Group 2 — tab landings; `ProgressTab` / title "Progress")
 **File:** `src/screens/AnalyticsScreen.js` (495 lines, presentational) + `src/hooks/useProgressData.js` (448 lines, data layer), components `CardioPlanCard`, `InfoTooltip`, `EmptyChartIllustration`, `ScreenHeader`
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04, "Approved"). Removed the header/pageTitle dead styles and the dead units store-read + prop pass; added accessibilityRole/Label to the All-sessions link, the PR window toggle, the insight dismiss and both volume-summary cards; dropped "Keep pushing." from the PR empty state (voice rule). No behaviour change.
 **Timestamp:** 2026-06-04
 
 ---

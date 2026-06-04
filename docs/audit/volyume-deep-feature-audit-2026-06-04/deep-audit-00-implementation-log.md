@@ -181,3 +181,20 @@ File: `src/screens/DiaryScreen.js`.
 Verification: DiaryScreen eslint clean (0 problems); screen-mount green (455).
 Attribute-only, no behaviour/data/navigation change.
 Commit: see git log.
+
+## Item 10 — Progress tab (AnalyticsScreen) — IMPLEMENTED 2026-06-04
+File: `src/screens/AnalyticsScreen.js`.
+- Removed the dead `header` and `pageTitle` styles (superseded by ScreenHeader)
+  and the dead `units` flow (the store read + the `units={units}` prop pass;
+  SessionCard already ignored it after the lint sweep).
+- A11y: added accessibilityRole="button" + labels to the "All sessions" link,
+  the PR window toggle, the insight-row dismiss, and both VolumeSummaryStrip
+  cards (empty + populated).
+- Copy: dropped "Keep pushing." from the PR empty state ("No new bests in the
+  last N days.") per the no-unearned-encouragement voice rule.
+- Kept: recent-sessions-first, the volume summary drilling to the single
+  heatmap, the auto-detected PR sparkline + gold highlight, dismissible
+  insights, the locked Year-of-Lifts tile, the useProgressData view/data split.
+Verification: AnalyticsScreen eslint clean (0 problems); screen-mount green
+(455). No behaviour, data, or navigation change.
+Commit: see git log.

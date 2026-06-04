@@ -112,3 +112,14 @@ Approved changes:
 Kept: search-first add, copy-yesterday, save-as-meal, flexible meal ladder,
 multi-select tools, macro-cycle/refeed awareness, local-day correctness.
 Impact Low; Effort Low. Attribute-only.
+
+## Item 10 — Progress tab (AnalyticsScreen) — APPROVED 2026-06-04 ("Approved")
+Doc: `deep-audit-11-progress-tab.md`. Approved.
+Approved changes:
+1. Remove dead styles (header, pageTitle) + the dead units store-read/prop pass.
+2. Add a11y roles/labels to the All-sessions link, PR window toggle, insight
+   dismiss, and both volume-summary cards.
+3. Copy: drop "Keep pushing." from the PR empty state (voice rule).
+Kept: recent-sessions-first, volume summary -> heatmap, PR sparkline + gold,
+dismissible insights, locked Year-of-Lifts tile, useProgressData split.
+Impact Low; Effort Low.

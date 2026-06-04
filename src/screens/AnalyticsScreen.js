@@ -25,7 +25,6 @@ const SEVERITY_STYLE = {
 };
 
 export default function AnalyticsScreen({ navigation }) {
-  const units = useAppStore(s => s.units);
   const user = useAppStore(s => s.user);
   const userProfile = useAppStore(s => s.userProfile);
   const tier = useAppStore(s => s.tier);
@@ -90,12 +89,16 @@ export default function AnalyticsScreen({ navigation }) {
           <View style={styles.section}>
             <View style={styles.rowBetween}>
               <Text style={styles.sectionLabel}>Recent sessions</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('WorkoutHistory')}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('WorkoutHistory')}
+                accessibilityRole="button"
+                accessibilityLabel="See all sessions"
+              >
                 <Text style={styles.seeAll}>All sessions</Text>
               </TouchableOpacity>
             </View>
             {recentSessions.map(w => (
-              <SessionCard key={w.id} workout={w} units={units} />
+              <SessionCard key={w.id} workout={w} />
             ))}
           </View>
         )}
@@ -141,6 +144,8 @@ export default function AnalyticsScreen({ navigation }) {
               style={styles.windowToggle}
               onPress={handlePrWindowToggle}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={`Personal-bests window, ${prWindow} days. Tap to change.`}
             >
               <Text style={styles.windowToggleText}>{prWindow}d</Text>
               <Ionicons name="chevron-forward" size={12} color={colors.primary} />
@@ -213,6 +218,8 @@ function InsightRow({ insight, onDismiss }) {
         onPress={onDismiss}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         style={styles.insightDismiss}
+        accessibilityRole="button"
+        accessibilityLabel="Dismiss insight"
       >
         <Ionicons name="close" size={14} color={colors.textMuted} />
       </TouchableOpacity>
@@ -229,7 +236,13 @@ function VolumeSummaryStrip({ volume, onPress }) {
   const trained = MUSCLES.filter(m => (volume[m]?.workingSets ?? 0) > 0);
   if (trained.length === 0) {
     return (
-      <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
+      <TouchableOpacity
+        style={styles.card}
+        onPress={onPress}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="This week's volume. Open the heatmap."
+      >
         <Text style={styles.volEmptyText}>Nothing logged this week yet.</Text>
       </TouchableOpacity>
     );
@@ -247,7 +260,13 @@ function VolumeSummaryStrip({ volume, onPress }) {
   if (below > 0) flags.push({ key: 'below', n: below, label: 'below target', color: volumeColors.below });
   if (over > 0) flags.push({ key: 'over', n: over, label: 'over max', color: volumeColors.overMrv });
   return (
-    <TouchableOpacity style={[styles.card, styles.volSummary]} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={[styles.card, styles.volSummary]}
+      onPress={onPress}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel="This week's volume. Open the heatmap."
+    >
       <View style={styles.volSummaryMain}>
         <Text style={styles.volSummaryCount}>{trained.length}</Text>
         <Text style={styles.volSummaryLabel}>
@@ -274,7 +293,7 @@ function PRSparkline({ bars, windowDays }) {
   if (total === 0) {
     return (
       <View style={styles.prEmpty}>
-        <Text style={styles.prEmptyText}>No new bests in the last {windowDays} days. Keep pushing.</Text>
+        <Text style={styles.prEmptyText}>No new bests in the last {windowDays} days.</Text>
       </View>
     );
   }
@@ -376,9 +395,6 @@ function diffChipColor(d) {
 const styles = StyleSheet.create({
   safe:        { flex: 1, backgroundColor: colors.background },
   content:     { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxxl },
-  header:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  pageTitle:   { ...type.h3, color: colors.textPrimary },
-
   section:     { gap: spacing.md },
   sectionLabel: {
     ...type.label,
