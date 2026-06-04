@@ -185,6 +185,20 @@ describe('getTrainingNote', () => {
   test('does not throw for unknown goal / signal', () => {
     expect(() => getTrainingNote('made_up_goal', 'whatever', 'something', false)).not.toThrow();
   });
+
+  test("a 'reduce' signal (first poor week, not yet a deload) never returns push copy", () => {
+    // Regression: getTrainingNote had no 'reduce' branch, so a reduce signal
+    // with matrixDeload=false fell through to the push note, telling the user
+    // to push while the prescription said reduce. The note must now reflect a
+    // pull-back, for every goal.
+    const goals = ['general', 'mens_physique', 'classic_physique', 'bodybuilding',
+      'bikini', 'wellness', 'figure', 'womens_physique'];
+    for (const g of goals) {
+      const note = getTrainingNote(g, -2, 'reduce', false);
+      expect(note.toLowerCase()).not.toMatch(/push|add (a )?set|more work/);
+      expect(note.toLowerCase()).toMatch(/ease|pull|trim|back|recovery/);
+    }
+  });
 });
 
 describe('migrateProfileGoals', () => {

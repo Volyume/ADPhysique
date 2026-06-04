@@ -533,6 +533,24 @@ export function getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matr
     return 'Multiple signs are pointing to fatigue. Cut sets back roughly in half this week and focus on quality over quantity. Your body needs this.';
   }
 
+  // A single-week pull-back: recovery has dipped but it is not yet a full
+  // deload (that needs a second poor week). Without this branch a 'reduce'
+  // signal fell through to the push copy below, so the note told the user to
+  // push while the prescription said reduce.
+  if (trainingSignal === 'reduce') {
+    const reduceNotes = {
+      general:          'Recovery dipped this week. Ease the volume back a little and keep the effort on quality, not new sets.',
+      mens_physique:    'Recovery dipped. Ease back on shoulder and back volume this week and keep the quality high.',
+      classic_physique: 'Recovery dipped. Pull volume back across the groups this week and let it come back.',
+      bodybuilding:     'Recovery dipped. Trim a set or two across the board this week and let recovery catch up.',
+      bikini:           'Recovery dipped. Ease back on glute and hamstring volume this week and keep form sharp.',
+      wellness:         'Recovery dipped. Pull lower-body volume back a little this week before adding again.',
+      figure:           'Recovery dipped. Ease back on shoulder and back volume this week and keep quality high.',
+      womens_physique:  'Recovery dipped. Trim volume across the groups this week and let recovery catch up.',
+    };
+    return reduceNotes[trainingGoal] ?? reduceNotes.general;
+  }
+
   if (trainingSignal === 'hold') {
     const holdNotes = {
       general:          'Performance and recovery need to stabilise. Hold your current plan before adding anything more.',
