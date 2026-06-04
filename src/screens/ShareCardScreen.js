@@ -727,12 +727,16 @@ export default function ShareCardScreen({ route }) {
     milestoneData = null,
   } = route.params || {};
 
+  // Session is the default whenever session data is present (founder
+  // direction) so a workout share leads with the session card even when it
+  // also carries a PR. The standalone "Share this PR" path passes prData only,
+  // so it still opens as a PR card.
   const [cardType, setCardType] = useState(
-    prData ? 'pr' : milestoneData ? 'milestone' : 'session',
+    sessionData ? 'session' : prData ? 'pr' : milestoneData ? 'milestone' : 'session',
   );
-  // Default to story (Instagram-Stories first), the richer, taller layout
-  // is the primary use case. Square is the secondary option for feed posts.
-  const [format, setFormat] = useState('story');
+  // Default to square 1:1 (founder direction): it posts cleanly to a feed and
+  // crops predictably everywhere. Story stays available as the taller option.
+  const [format, setFormat] = useState('square');
   const [sharing, setSharing] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [webViewReady, setWebViewReady] = useState(false);
