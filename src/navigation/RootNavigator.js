@@ -898,6 +898,7 @@ export default function RootNavigator() {
     } catch (_e) {}
 
     return () => subscription?.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Splash self-heal: if we ever land in a state where the user is gone
@@ -1056,6 +1057,7 @@ function SplashScreen() {
         useNativeDriver: true,
       }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

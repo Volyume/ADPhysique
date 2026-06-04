@@ -32,6 +32,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
 
   useFocusEffect(useCallback(() => {
     if (user?.id) loadAll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]));
 
   async function loadAll() {

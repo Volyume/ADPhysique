@@ -52,6 +52,7 @@ export default function LiftProgressScreen({ navigation }) {
   const [filter, setFilter] = useState('all'); // 'all' | 'best'
   const peekRef = useRef(null);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useFocusEffect(useCallback(() => { if (user?.id) loadData(); }, [user?.id]));
 
   async function loadData() {

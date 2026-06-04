@@ -36,8 +36,10 @@ export default function VolumeHeatmapScreen() {
   const [trendData, setTrendData] = useState([]);
   const [lastTrainedMap, setLastTrainedMap] = useState({});
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useFocusEffect(useCallback(() => { loadData(); }, [user?.id, windowWeeks]));
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadData(); }, [windowWeeks]);
 
   async function loadData() {

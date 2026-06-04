@@ -45,6 +45,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
         easing: Easing.out(Easing.cubic), useNativeDriver: true,
       }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

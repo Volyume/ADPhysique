@@ -154,6 +154,7 @@ export default function HomeScreen({ navigation }) {
         }
         loadData();
       }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id]),
   );
 

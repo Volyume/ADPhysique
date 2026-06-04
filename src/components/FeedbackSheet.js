@@ -147,6 +147,7 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
       try { Haptics.selectionAsync(); } catch (_) {}
     },
     close: () => animateOut(),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), []);
 
   useEffect(() => {

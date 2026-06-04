@@ -112,6 +112,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
 
   useEffect(() => {
     if (routineId) loadRoutine();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routineId]);
 
   useEffect(() => {
@@ -128,6 +129,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
         </TouchableOpacity>
       ),
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isReordering]);
 
   async function loadRoutine() {

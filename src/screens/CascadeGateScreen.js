@@ -123,6 +123,7 @@ export default function CascadeGateScreen({ navigation, route }) {
     } finally {
       setBusy(null);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pricingWindow, content?.surface, dismiss]);
 
   const handleSkip = useCallback(async (targetTier) => {
@@ -145,6 +146,7 @@ export default function CascadeGateScreen({ navigation, route }) {
     } finally {
       setBusy(null);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content?.surface, dismiss]);
 
   const handleBilling = useCallback(() => {
@@ -160,6 +162,7 @@ export default function CascadeGateScreen({ navigation, route }) {
       logError('CascadeGate.openBilling', e);
       toast.show("Couldn't open billing settings", { variant: 'error' });
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!content) {

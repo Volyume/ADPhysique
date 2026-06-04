@@ -53,6 +53,7 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
       setConfig(cfg);
     },
     close: () => animateOut(),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), []);
 
   function animateOut(then) {
@@ -85,6 +86,7 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
         easing: Easing.out(Easing.cubic), useNativeDriver: true,
       }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config, reduceMotion]);
 
   if (!config) return null;

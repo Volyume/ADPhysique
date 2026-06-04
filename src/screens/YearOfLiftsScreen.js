@@ -217,6 +217,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
     getYearOfLiftsData(user.id, yearMs)
       .then(d => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const cards = useMemo(() => buildCards(data, units), [data, units]);

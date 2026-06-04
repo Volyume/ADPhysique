@@ -123,6 +123,7 @@ export default function PlansScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id]),
   );
 

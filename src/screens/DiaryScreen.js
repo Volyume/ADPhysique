@@ -286,6 +286,7 @@ export default function DiaryScreen({ navigation }) {
     } else {
       toast.show(`${sel.length} ${sel.length === 1 ? 'entry' : 'entries'} added to today.`, { variant: 'success' });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedEntries, userId, selectedDate, exitSelection, load]);
 
   const doMoveSelected = useCallback(async (slot) => {
@@ -330,6 +331,7 @@ export default function DiaryScreen({ navigation }) {
     } catch (_) {
       toast.show('Couldn\'t save. Try again.', { variant: 'error' });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saveMealName, saveMealItems, userId, exitSelection]);
 
   async function openEditSheet(entry) {
@@ -446,6 +448,7 @@ export default function DiaryScreen({ navigation }) {
         },
       ],
     );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, selectedDate, load]);
 
   return (

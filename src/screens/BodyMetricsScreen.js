@@ -383,6 +383,7 @@ export default function BodyMetricsScreen() {
     if (selectedMeasurement == null && measurementsWithData.length > 0) {
       setSelectedMeasurement(measurementsWithData[0].key);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [measurementsWithData]);
 
   const STORAGE_KEY = `@volyume_body_metrics_${user?.id}`;
@@ -401,6 +402,7 @@ export default function BodyMetricsScreen() {
         }
       });
       getWellbeingMode().then(m => setCalm(isCalm(m)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
 
@@ -412,6 +414,7 @@ export default function BodyMetricsScreen() {
       await loadNutritionTargets();
       await loadRecentIntake();
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [physiqueEnabled, user?.id]);
 
   async function migrateFromAsyncStorage() {

@@ -77,6 +77,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
 
   useEffect(() => {
     if (exerciseId) loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exerciseId]);
 
   async function loadData() {

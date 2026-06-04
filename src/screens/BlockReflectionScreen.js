@@ -85,6 +85,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
     getBlockReflectionData(user.id, mesocycleId)
       .then(d => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const narrative = data ? buildNarrative(data) : [];

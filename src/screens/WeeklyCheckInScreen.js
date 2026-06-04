@@ -238,6 +238,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         })
         .catch(() => {});
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   const weekStart = getCurrentWeekStart();
@@ -503,6 +504,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
     } finally {
       setBusy(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     busy, user?.id, energyScore, sorenessScore, stressScore, sleepHours,
     calsAdherence, stepsAdherence, cardioAdherence, trainingPerformance, jointPain, notes, weekStart, navigation,

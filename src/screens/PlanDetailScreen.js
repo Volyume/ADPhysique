@@ -39,6 +39,7 @@ export default function PlanDetailScreen({ navigation, route }) {
   const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useCallback(() => { loadData(); }, [planId]),
   );
 

@@ -140,10 +140,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         } catch (_e) {}
       })();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     loadVolumeAndHistory();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load the routine/day name so the share card can title the session with the
@@ -282,6 +284,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     }
     const decisions = runAdaptiveEngine(muscleFeedback);
     setAdaptiveDecisions(decisions);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feedback, weeklyVolume, feedbackHistory]);
 
   useEffect(() => {
@@ -302,6 +305,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     return () => {
       if (feedbackDebounceRef.current) clearTimeout(feedbackDebounceRef.current);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feedback, notes]);
 
   async function loadVolumeAndHistory() {

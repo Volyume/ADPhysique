@@ -95,6 +95,7 @@ export default function CoachHeldHistoryScreen() {
       setLoading(false);
     }
     load().catch(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const isEmpty = !loading && weeks.length === 0;

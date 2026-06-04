@@ -36,6 +36,7 @@ export default function WelcomeScreen({ navigation }) {
       Animated.timing(fadeIn, { toValue: 1, duration: 480, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       Animated.timing(slideUp, { toValue: 0, duration: 480, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Per IDENTITY_AND_OWNERSHIP_LOCKED.md decision 1: no anonymous

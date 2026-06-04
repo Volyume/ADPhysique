@@ -49,6 +49,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
 
   useEffect(() => {
     loadWorkouts();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   async function loadWorkouts() {

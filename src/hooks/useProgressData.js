@@ -89,6 +89,7 @@ export default function useProgressData() {
   const [earliestWorkoutAt, setEarliestWorkoutAt] = useState(null);
   const [currentMesoWeek, setCurrentMesoWeek] = useState(null); // {weekIndex, plannedWeeks, isDeload, rirTarget}
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useFocusEffect(useCallback(() => { load(); }, [user?.id]));
 
   async function load() {

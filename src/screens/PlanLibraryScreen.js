@@ -234,6 +234,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
   const [quizResult, setQuizResult] = useState(null);
 
   useFocusEffect(
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useCallback(() => { loadData(); }, []),
   );
 
@@ -242,6 +243,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
   // finished, so seedRoutinesIfNeeded was skipped on first mount.
   useEffect(() => {
     if (user?.id) loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   async function loadData() {

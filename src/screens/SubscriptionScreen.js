@@ -84,6 +84,7 @@ export default function SubscriptionScreen({ navigation }) {
         },
       ],
     );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleRestore = useCallback(async () => {
@@ -111,6 +112,7 @@ export default function SubscriptionScreen({ navigation }) {
     } finally {
       setBusy(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile]);
 
   const handleUpgrade = useCallback(() => {

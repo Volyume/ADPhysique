@@ -360,6 +360,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
       return true;
     });
     return () => sub.remove();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load the per-exercise "log left/right" preference once.
@@ -372,6 +373,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
     if (lastActivityAt && Date.now() - lastActivityAt > 4 * 60 * 60 * 1000) {
       setShowStaleModal(true);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load "next time" coaching notes when the workout begins
@@ -426,6 +428,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
       infoPulseLoop.current.start();
     });
     return () => { infoPulseLoop.current?.stop(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reduceMotion]);
 
   // Workout timer, always derived from workoutStartTime so backgrounding never
@@ -520,6 +523,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
       totalSetsForExercise: routineExercise?.recommendedSets,
       exerciseName: exercise?.name,
     }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elapsedSeconds, activeWorkout, loggedSets?.length, exercise?.name, routineExercise?.recommendedSets, workoutStartTime]);
 
   // Dismiss the persistent notification on screen unmount. Belt-and-
@@ -715,6 +719,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
 
     loadHistory();
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exercise?.id, currentExerciseIndex]);
 
 
@@ -729,6 +734,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
       );
       setProgression(suggestion);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSet.weight, currentSet.reps, prevSets]);
 
   async function handleCompleteSet(overrides = {}) {

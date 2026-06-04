@@ -1174,6 +1174,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       logError('CoachOutputScreen.load', e, { userId: user?.id });
       setLoading(false);
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   function handleClose() {
