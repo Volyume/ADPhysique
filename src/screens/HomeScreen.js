@@ -434,11 +434,19 @@ export default function HomeScreen({ navigation }) {
       setLastSession(completed[0] || null);
       setTotalSessions(completed.length);
 
-      // Only show the coaching nudge once the user has real training data to review
+      // Only show the check-in nudge on the user's actual check-in day,
+      // once they have real training data to review. Gating on the
+      // scheduled day (checkinDay in notif prefs, default Sunday) stops it
+      // claiming the check-in is ready when it is still days away.
       if (tier === 'pro' && completed.length >= 3) {
-        AsyncStorage.getItem('@volyume_seen_coaching_nudge').then(val => {
-          if (val !== 'true') setShowCoachingNudge(true);
-        });
+        try {
+          const seen = await AsyncStorage.getItem('@volyume_seen_coaching_nudge');
+          if (seen !== 'true') {
+            const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
+            const checkinDay = raw ? (JSON.parse(raw).checkinDay ?? 0) : 0;
+            if (new Date().getDay() === checkinDay) setShowCoachingNudge(true);
+          }
+        } catch (_) {}
       }
 
 
@@ -1308,9 +1316,9 @@ export default function HomeScreen({ navigation }) {
               <Ionicons name="pulse-outline" size={20} color={colors.primary} />
             </View>
             <View style={{ flex: 1, gap: spacing.xs }}>
-              <Text style={styles.coachingNudgeTitle}>Your weekly coaching review is here</Text>
+              <Text style={styles.coachingNudgeTitle}>Your weekly check-in is ready</Text>
               <Text style={styles.coachingNudgeBody}>
-                Each week Volyume looks at how your training went and suggests what to adjust going forward. Tap to see yours.
+                It's your check-in day. See how your week went and what to adjust.
               </Text>
               <TouchableOpacity
                 style={styles.coachingNudgeBtn}
@@ -1320,7 +1328,7 @@ export default function HomeScreen({ navigation }) {
                 }}
                 activeOpacity={0.8}
               >
-                <Text style={styles.coachingNudgeBtnText}>Show me</Text>
+                <Text style={styles.coachingNudgeBtnText}>Open check-in</Text>
                 <Ionicons name="chevron-forward" size={12} color={colors.primary} />
               </TouchableOpacity>
             </View>
