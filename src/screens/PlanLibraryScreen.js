@@ -176,6 +176,9 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
             key={d.key}
             style={[styles.divisionChip, selectedDivision === d.key && styles.divisionChipActive]}
             onPress={() => onSelectDivision(selectedDivision === d.key ? null : d.key)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: selectedDivision === d.key }}
+            accessibilityLabel={d.label}
           >
             <Text style={[styles.divisionChipText, selectedDivision === d.key && styles.divisionChipTextActive]}>
               {d.label}
@@ -191,6 +194,9 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
             key={d.key}
             style={[styles.divisionChip, selectedDivision === d.key && styles.divisionChipActive]}
             onPress={() => onSelectDivision(selectedDivision === d.key ? null : d.key)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: selectedDivision === d.key }}
+            accessibilityLabel={d.label}
           >
             <Text style={[styles.divisionChipText, selectedDivision === d.key && styles.divisionChipTextActive]}>
               {d.label}
@@ -398,6 +404,9 @@ export default function PlanLibraryScreen({ navigation, route }) {
               if (item.key !== 'division') setSelectedDivision(null);
               listRef.current?.scrollToOffset({ offset: 0, animated: false });
             }}
+            accessibilityRole="button"
+            accessibilityState={{ selected: activeCollection === item.key }}
+            accessibilityLabel={item.label}
           >
             {item.key === 'division' && (
               <Ionicons
@@ -432,7 +441,13 @@ export default function PlanLibraryScreen({ navigation, route }) {
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         ListHeaderComponent={
           showQuizBanner ? (
-            <TouchableOpacity style={styles.quizBanner} onPress={openQuiz} activeOpacity={0.88}>
+            <TouchableOpacity
+              style={styles.quizBanner}
+              onPress={openQuiz}
+              activeOpacity={0.88}
+              accessibilityRole="button"
+              accessibilityLabel="Not sure where to start? Answer 2 quick questions for a plan suggestion"
+            >
               <View style={styles.quizBannerIcon}>
                 <Ionicons name="help-circle-outline" size={20} color={colors.primary} />
               </View>
@@ -459,7 +474,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                 {queryLower
                   ? 'Try a different search term.'
                   : activeCollection === 'division' && selectedDivision
-                    ? "No plans yet for this division. Check back soon."
+                    ? 'No plans for this division yet.'
                     : 'No plans match this filter yet.'}
               </Text>
             </View>
@@ -478,6 +493,13 @@ export default function PlanLibraryScreen({ navigation, route }) {
                 style={styles.planCardMain}
                 onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: true })}
                 activeOpacity={0.88}
+                accessibilityRole="button"
+                accessibilityLabel={[
+                  plan.name,
+                  plan.difficulty != null ? (DIFFICULTY_LABELS[plan.difficulty] ?? 'Intermediate') : null,
+                  wc ? `${wc} workout${wc !== 1 ? 's' : ''}` : null,
+                ].filter(Boolean).join(', ')}
+                accessibilityHint="Opens plan preview"
               >
                 {/* Top row: badges */}
                 <View style={styles.planCardTopRow}>
@@ -507,6 +529,8 @@ export default function PlanLibraryScreen({ navigation, route }) {
               <View style={styles.planCardFooter}>
                 <TouchableOpacity
                   onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: true })}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Preview ${plan.name}`}
                 >
                   <Text style={styles.previewText}>Preview plan</Text>
                 </TouchableOpacity>
@@ -514,6 +538,8 @@ export default function PlanLibraryScreen({ navigation, route }) {
                   testID="volyume-btn-copy-from-library"
                   style={styles.addBtn}
                   onPress={() => handleAddToMyPlans(plan)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Add ${plan.name} to my plans`}
                 >
                   <Text style={styles.addBtnText}>Add to my plans</Text>
                 </TouchableOpacity>
@@ -537,7 +563,11 @@ export default function PlanLibraryScreen({ navigation, route }) {
             {quizStep < QUIZ_STEPS.length ? (
               // Question step
               <>
-                <View style={styles.quizProgress}>
+                <View
+                  style={styles.quizProgress}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                >
                   {QUIZ_STEPS.map((_, i) => (
                     <View
                       key={i}
@@ -553,6 +583,8 @@ export default function PlanLibraryScreen({ navigation, route }) {
                       style={styles.quizOptionBtn}
                       onPress={() => handleQuizOption(QUIZ_STEPS[quizStep].key, opt.key)}
                       activeOpacity={0.82}
+                      accessibilityRole="button"
+                      accessibilityLabel={opt.label}
                     >
                       {opt.icon && (
                         <Ionicons name={opt.icon} size={20} color={colors.primary} style={{ marginRight: spacing.md }} />
@@ -562,7 +594,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                     </TouchableOpacity>
                   ))}
                 </View>
-                <TouchableOpacity style={styles.quizSkip} onPress={dismissQuiz}>
+                <TouchableOpacity style={styles.quizSkip} onPress={dismissQuiz} accessibilityRole="button">
                   <Text style={styles.quizSkipText}>Skip and browse all plans</Text>
                 </TouchableOpacity>
               </>
@@ -585,16 +617,18 @@ export default function PlanLibraryScreen({ navigation, route }) {
                     </Text>
                   )}
                 </View>
-                <TouchableOpacity style={styles.quizStartBtn} onPress={handleQuizStartPlan} activeOpacity={0.88}>
+                <TouchableOpacity style={styles.quizStartBtn} onPress={handleQuizStartPlan} activeOpacity={0.88} accessibilityRole="button" accessibilityLabel={`Add ${quizResult.name}`}>
                   <Text style={styles.quizStartText}>Add this plan</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.quizBrowseBtn}
                   onPress={() => { dismissQuiz(); navigation.navigate('PlanDetail', { planId: quizResult.id, isLibrary: true }); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Preview ${quizResult.name}`}
                 >
                   <Text style={styles.quizBrowseText}>Preview first</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.quizSkip} onPress={handleQuizBrowse}>
+                <TouchableOpacity style={styles.quizSkip} onPress={handleQuizBrowse} accessibilityRole="button">
                   <Text style={styles.quizSkipText}>Browse all plans instead</Text>
                 </TouchableOpacity>
               </>
@@ -603,7 +637,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
               <>
                 <Text style={styles.quizResultTitle}>No exact match found</Text>
                 <Text style={styles.quizResultDesc}>Browse all plans below. Something will fit.</Text>
-                <TouchableOpacity style={styles.quizStartBtn} onPress={handleQuizBrowse} activeOpacity={0.88}>
+                <TouchableOpacity style={styles.quizStartBtn} onPress={handleQuizBrowse} activeOpacity={0.88} accessibilityRole="button">
                   <Text style={styles.quizStartText}>Browse all plans</Text>
                 </TouchableOpacity>
               </>
