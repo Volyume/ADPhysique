@@ -27,3 +27,19 @@ Approved changes:
 5. Email-confirmation round trip flagged only (auth-architecture decision),
    not changed.
 Impact High (1) / Medium (2) / Low (3-4); Effort Low.
+
+## Item 3 — Article 9 health-data consent screen — APPROVED 2026-06-04 ("Ok")
+Doc: `deep-audit-04-article9-consent.md`. Approved (founder: propose freely,
+not deferring to the locked copy doc).
+Approved changes:
+1. Add an Art 7(3) "you can withdraw" notice before consent (copy) — wording
+   in place, flagged for legal sign-off.
+2. Show the policy in-app (navigate to PrivacyPolicyScreen) instead of the
+   external browser.
+3. Pin the consent-text version (CONSENT_VERSION) in telemetry now; RPC/
+   consent_log server column flagged as a server-side item.
+4. Announce the disabled Continue button to screen readers. Bullet-text font
+   bump judged unnecessary (AAA contrast + lineHeight already adequate).
+5. "Freely given" hard-gate + withdrawal=deletion: flagged for legal, not
+   changed.
+Impact High (1-2) / Medium (3) / Low (4); Effort Low.

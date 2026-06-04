@@ -398,6 +398,10 @@ function Article9ConsentStack() {
   return (
     <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Article9Consent" component={Article9ConsentScreen} />
+      {/* Registered here so the consent gate can show the policy in-app
+          (native PrivacyPolicyScreen, with its own BackHeader) rather than
+          bouncing the user out to the system browser mid-consent. */}
+      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
     </Stack.Navigator>
   );
 }

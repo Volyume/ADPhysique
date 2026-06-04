@@ -3,7 +3,7 @@
 **Document:** deep-audit-04-article9-consent.md
 **Item:** 3 of master inventory (Group 1, core flows — consent gate in FL1)
 **File:** `src/screens/Article9ConsentScreen.js`
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04, "Ok"; changes 1-4 applied, 5 flagged). NOTE: change 1 (withdrawal-notice copy) and change 3's server leg still want legal/founder sign-off.
 **Timestamp:** 2026-06-04
 
 > Note on "locked": founder directed (2026-06-04) that the audit propose freely

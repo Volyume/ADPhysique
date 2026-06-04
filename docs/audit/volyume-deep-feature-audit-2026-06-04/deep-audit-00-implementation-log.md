@@ -35,3 +35,19 @@ Verification: LoginScreen/auth/screen-mount suites + identityGate.proOnboarding
 green (514 tests across the runs); eslint 0 errors. No new behaviour-class
 logic beyond the intent match; existing auth tests cover the form.
 Commit: see git log.
+
+## Item 3 — Article 9 health-data consent screen — IMPLEMENTED 2026-06-04
+Files: `src/screens/Article9ConsentScreen.js`, `src/navigation/RootNavigator.js`.
+- Art 7(3) withdrawal notice added before consent: "You can withdraw this
+  consent at any time in You -> Privacy." (new withdrawNote style). FLAGGED for
+  legal sign-off on wording + mechanics.
+- Policy link now shows the in-app PrivacyPolicyScreen (navigation.navigate),
+  registered in Article9ConsentStack; removed the external Linking.openURL and
+  the now-unused Linking/LINKS imports.
+- Added CONSENT_VERSION ('2026-05-23') constant; included as consentVersion in
+  the article9_consent_recorded telemetry. Server-side: adding _consent_version
+  to record_health_consent + a consent_log column is flagged, not built.
+- Continue button now sets accessibilityState={{ disabled }}.
+Verification: screen-mount + healthConsentRouting.guard suites green (459
+tests); eslint 0 errors.
+Commit: see git log.
