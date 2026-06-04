@@ -124,3 +124,29 @@ Verification: screen-mount green (455 tests); eslint 0 errors (1 pre-existing
 React-unused warning). No logic or contract change. Note: screen is off the
 live path while PRO_BETA_ACTIVE forces Pro.
 Commit: see git log.
+
+## Item 7 — Train tab (HomeScreen) — IMPLEMENTED 2026-06-04
+File: `src/screens/HomeScreen.js`.
+Approved all three changes (banner priority coach > deload > phase).
+- Removed 26 verified-unused style keys (~150 lines of dead CSS) left from
+  cards the founder removed (weekCard cluster, the local header block now
+  superseded by ScreenHeader, quickRow/quickLink, sectionLabel, trainingBrain*,
+  weightInput/weightCardHint, proTeaserSub, weekStats style). Each was
+  grep-confirmed at 0 `styles.X` references before removal; the weekStats
+  *state* (used by the coach brief + glance card) was left intact.
+- A11y: added accessibilityRole/Label to the Edit + Log weight buttons, the
+  coach-update banner and its dismiss, the deload banner and its dismiss, the
+  Pro-teaser card, the intent-prompt options, and the change-workout picker
+  rows (with selected state).
+- Banner governor: added showCoachBanner/showDeloadBanner/showPhaseBanner so at
+  most one of the three attention banners renders at a time (coach review >
+  deload > phase). Lower-priority banners still surface on a later load once the
+  one above is dismissed, so nothing is lost, just sequenced. Dismissal
+  persistence is unchanged.
+- Left untouched (runtime-critical / earned): the multi-trigger loadData
+  orchestration (+3s/+10s safety timers), crash recovery, optimistic weight
+  logging, skeletons, the start/intent flows. No copy changed.
+Verification: screen-mount green (455 tests); eslint 0 errors (warnings all
+pre-existing). No HomeScreen-specific test beyond screen-mount; the banner
+gating is pure derivation. No start/sync/contract behaviour changed.
+Commit: see git log.

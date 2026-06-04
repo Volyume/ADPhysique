@@ -76,3 +76,15 @@ Approved changes:
 Kept: single-field design + deferred plan choice, kg-only, auto-focus,
 disabled-until-valid CTA, busy guard, single exit, Plans hint.
 Impact Low; Effort Low. (Off the live path while PRO_BETA_ACTIVE forces Pro.)
+
+## Item 7 — Train tab (HomeScreen) — APPROVED 2026-06-04 ("Approved")
+Doc: `deep-audit-08-train-home.md`. Approved all three, banner priority
+coach > deload > phase.
+Approved changes:
+1. Remove the 26 verified-dead style keys (~150 lines).
+2. Close the a11y gaps on the secondary controls (roles + labels).
+3. Cap/prioritise the banner stack: at most one of coach-review / deload /
+   phase shows at once (coach > deload > phase); lower ones resurface later.
+Kept: load orchestration + safety timers, crash recovery, optimistic weight
+logging, skeletons, start/intent flows, mesocycle chip + coach brief.
+Impact Low (1) / Low (2) / Medium (3); Effort Low (1-2) / Medium (3).

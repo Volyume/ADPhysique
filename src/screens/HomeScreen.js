@@ -706,6 +706,17 @@ export default function HomeScreen({ navigation }) {
 
   const today = format(new Date(), 'EEE d MMM');
 
+  // Banner priority: keep the primary "Start" action prominent by showing at
+  // most one of the three attention banners at once. A fresh weekly coach
+  // review outranks a suggested recovery week, which outranks the nutrition-
+  // phase nudge. Lower-priority banners still surface on a later load once the
+  // one above is dismissed, so nothing is lost, just sequenced.
+  const showCoachBanner = tier === 'pro' && !!latestCoachOutput && !coachBannerDismissed
+    && (Date.now() - (latestCoachOutput.weekStart ?? 0) < 7 * 86400000);
+  const showDeloadBanner = !!deloadSuggestion && !deloadDismissed && !showCoachBanner;
+  const showPhaseBanner = !!phaseMismatch && !phaseBannerDismissed
+    && !showCoachBanner && !showDeloadBanner;
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
@@ -739,7 +750,7 @@ export default function HomeScreen({ navigation }) {
             force a sync. */}
 
         {/* ── Nutrition phase sync banner ── */}
-        {phaseMismatch && !phaseBannerDismissed && (
+        {showPhaseBanner && (
           <View style={styles.phaseBanner}>
             <Ionicons name="information-circle-outline" size={18} color={colors.primary} style={{ marginTop: 1 }} />
             <Text style={styles.phaseBannerText} numberOfLines={3}>
@@ -765,11 +776,13 @@ export default function HomeScreen({ navigation }) {
         )}
 
         {/* ── Fresh coach update banner ── */}
-        {tier === 'pro' && latestCoachOutput && !coachBannerDismissed && (Date.now() - (latestCoachOutput.weekStart ?? 0) < 7 * 86400000) && (
+        {showCoachBanner && (
           <TouchableOpacity
             style={styles.coachBanner}
             onPress={() => navigation.navigate('CoachOutput', { weekStart: latestCoachOutput.weekStart })}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="This week's coaching review. Tap to open."
           >
             <View style={styles.coachBannerLeft}>
               <Ionicons name="sparkles" size={18} color={colors.primary} />
@@ -788,6 +801,8 @@ export default function HomeScreen({ navigation }) {
                 setCoachBannerDismissed(true);
               }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss coaching review banner"
             >
               <Ionicons name="close" size={16} color={colors.textMuted} />
             </TouchableOpacity>
@@ -795,11 +810,13 @@ export default function HomeScreen({ navigation }) {
         )}
 
         {/* ── Recovery week banner ── */}
-        {deloadSuggestion && !deloadDismissed && (
+        {showDeloadBanner && (
           <TouchableOpacity
             style={styles.deloadBanner}
             onPress={() => navigation.navigate('CoachReview')}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Recovery week suggested. Tap to review."
           >
             <View style={styles.deloadBannerLeft}>
               <Ionicons name="battery-charging-outline" size={20} color={colors.warning} />
@@ -810,7 +827,12 @@ export default function HomeScreen({ navigation }) {
                 </Text>
               </View>
             </View>
-            <TouchableOpacity onPress={() => setDeloadDismissed(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity
+              onPress={() => setDeloadDismissed(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss recovery week banner"
+            >
               <Ionicons name="close" size={16} color={colors.textMuted} />
             </TouchableOpacity>
           </TouchableOpacity>
@@ -857,6 +879,8 @@ export default function HomeScreen({ navigation }) {
                 setTodayWeight(null);
               }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Edit today's weight"
             >
               <Text style={styles.weightCardEdit}>Edit</Text>
             </TouchableOpacity>
@@ -907,6 +931,9 @@ export default function HomeScreen({ navigation }) {
               style={[styles.weightLogBtn, ((!weightInput && !weightInputSt) || savingWeight) && styles.weightLogBtnDisabled]}
               onPress={handleLogWeight}
               disabled={(!weightInput && !weightInputSt) || savingWeight}
+              accessibilityRole="button"
+              accessibilityLabel="Log morning weight"
+              accessibilityState={{ disabled: (!weightInput && !weightInputSt) || savingWeight }}
             >
               <Text style={styles.weightLogBtnText}>Log</Text>
             </TouchableOpacity>
@@ -944,6 +971,8 @@ export default function HomeScreen({ navigation }) {
             style={styles.proTeaserCard}
             onPress={() => navigation.navigate('ProUpgrade')}
             activeOpacity={0.88}
+            accessibilityRole="button"
+            accessibilityLabel="Learn about Pro coaching"
           >
             <View style={styles.proTeaserLeft}>
               <Ionicons name="sparkles" size={18} color={colors.primary} />
@@ -1342,6 +1371,9 @@ export default function HomeScreen({ navigation }) {
                     );
                     setShowChangeWorkout(false);
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Day ${i + 1}, ${routine.name}`}
+                  accessibilityState={{ selected: isNext || isSel }}
                 >
                   <View style={[styles.dayBadge, (isNext || isSel) && styles.dayBadgeActive]}>
                     <Text style={[styles.dayNum, (isNext || isSel) && styles.dayNumActive]}>
@@ -1391,6 +1423,8 @@ export default function HomeScreen({ navigation }) {
                 style={styles.intentOption}
                 onPress={() => confirmStart(opt.key)}
                 activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel={`${opt.label}. ${opt.sub}`}
               >
                 <View style={styles.intentOptionIcon}>
                   <Ionicons name={opt.icon} size={20} color={colors.primary} />
@@ -1595,13 +1629,6 @@ const styles = StyleSheet.create({
   weightCardPrompt: {
     ...type.label, color: colors.textPrimary,
   },
-  weightCardHint: {
-    fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 16,
-  },
-  weightInput: {
-    flex: 1, fontSize: fontSize.sm, color: colors.textPrimary,
-    paddingVertical: spacing.xs,
-  },
   weightInputCompact: {
     fontSize: fontSize.sm, color: colors.textPrimary,
     paddingVertical: spacing.xs, minWidth: 48, textAlign: 'right',
@@ -1617,30 +1644,6 @@ const styles = StyleSheet.create({
   weightLogBtnDisabled: { backgroundColor: colors.surface3 },
   weightLogBtnText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.background },
 
-  // Header, matches Plans/Progress/Athlete Hub pattern
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: spacing.xs,
-  },
-  headerText: { gap: 1 },
-  pageTitle: {
-    ...type.h3,
-    color: colors.textPrimary,
-  },
-  greeting: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-    fontWeight: fontWeight.regular,
-  },
-  trainingBrainHeaderText: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
-    letterSpacing: 0.2,
-  },
-
   // Training schedule context line
   scheduleContextLine: {
     fontSize: fontSize.sm,
@@ -1650,77 +1653,6 @@ const styles = StyleSheet.create({
   scheduleContextLineToday: {
     color: colors.primary,
     fontWeight: fontWeight.semibold,
-  },
-
-  // Week card with progress bars
-  weekCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.md,
-  },
-  weekCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  streakChip: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderRadius: radius.full,
-    backgroundColor: colors.primaryBg,
-  },
-  streakChipText: {
-    fontSize: fontSize.xs,
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
-    fontVariant: ['tabular-nums'],
-  },
-  weekLabel: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.textMuted,
-    letterSpacing: 0.2,
-  },
-  weekStats: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  weekBarCell: {
-    flex: 1,
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  weekDivider: {
-    width: 1,
-    height: 48,
-    backgroundColor: colors.border,
-    alignSelf: 'center',
-  },
-  weekBarValue: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.black,
-    color: colors.textPrimary,
-    fontVariant: ['tabular-nums'],
-  },
-  weekBarLabel: {
-    ...type.caption,
-    color: colors.textMuted,
-  },
-  weekBarTrack: {
-    width: '70%',
-    height: 3,
-    backgroundColor: colors.surface3,
-    borderRadius: radius.full,
-    overflow: 'hidden',
-    marginTop: spacing.xs,
-  },
-  weekBarFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: radius.full,
   },
 
   // Continue card
@@ -1911,13 +1843,6 @@ const styles = StyleSheet.create({
   },
 
   // Plan builder cards
-  sectionLabel: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.textMuted,
-    letterSpacing: 0.2,
-    paddingBottom: spacing.xs,
-  },
   builderCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1988,20 +1913,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   lastSessionStatText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
-
-  // Quick nav
-  quickRow: { flexDirection: 'row', gap: spacing.sm },
-  quickLink: {
-    flex: 1,
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  quickLinkLabel: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
 
   // Change workout sheet
   sheetBackdrop: { flex: 1, backgroundColor: colors.scrim },
@@ -2079,20 +1990,6 @@ const styles = StyleSheet.create({
   },
   coachingNudgeBtnText: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary,
-  },
-
-  trainingBrainRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.xs,
-  },
-  trainingBrainText: {
-    flex: 1,
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    lineHeight: 17,
   },
 
   intentOverlay: {
@@ -2177,12 +2074,6 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 19,
   },
-  proTeaserSub: {
-    ...type.caption,
-    color: colors.primary,
-    marginTop: 1,
-  },
-
   // Recovery week banner
   coachBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

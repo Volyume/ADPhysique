@@ -3,7 +3,7 @@
 **Document:** deep-audit-08-train-home.md
 **Item:** 7 of master inventory (Group 2 — tab landings; the default landing after onboarding, registered as `HomeTab` / title "Train")
 **File:** `src/screens/HomeScreen.js` (2301 lines — the largest screen in the app), helpers `buildCoachBrief`, `getRelativeDay`, sub-components `PlanBuilderCard`, `CoachBriefCard`; child components `StepsCard`, `CardioCard`, `Sparkline`, `ScreenHeader`
-**Status:** AWAITING APPROVAL
+**Status:** IMPLEMENTED (approved 2026-06-04, "Approved" — all three changes, banner priority coach > deload > phase). Removed 26 verified-dead style keys (~150 lines); added roles/labels to the secondary controls; added a banner-priority governor so at most one of the coach-review / deload / phase banners shows at once (lower ones resurface on a later load once the top is dismissed). Load orchestration, start flows and sync left untouched.
 **Timestamp:** 2026-06-04
 
 ---
