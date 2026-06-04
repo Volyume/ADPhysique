@@ -104,7 +104,7 @@ const { getSupabaseClient } = require('../../supabase');
 const prefs = require('../../notifications/preferences');
 const db = require('../../database');
 const foodDb = require('../../food/db');
-const { SYNC_REGISTRY, getRegistryEntry } = require('../registry');
+const { SYNC_REGISTRY } = require('../registry');
 const { MIGRATED_TABLES, pushTable, pullTable, beginFoodRun } = require('../transport');
 
 // ---------------------------------------------------------------------------

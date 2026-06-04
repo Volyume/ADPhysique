@@ -17,7 +17,7 @@ import {
   saveWeeklyCheckin, saveNextTimeNote, getRoutineWorkoutTonnages,
   getRoutineById,
 } from '../lib/database';
-import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, computeAdaptiveDecision, VOLUME_LANDMARKS, evaluateDeloadTriggers } from '../lib/algorithms';
+import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, VOLUME_LANDMARKS, evaluateDeloadTriggers } from '../lib/algorithms';
 import { evaluateAutoReg, predictDeloadWeek, getMesoSchedule } from '../lib/mesocycle';
 import { getDeloadPredictionMessage, getAutoRegMessage } from '../lib/whyThisTemplates';
 import useAppStore from '../store/useAppStore';

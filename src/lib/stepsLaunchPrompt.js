@@ -20,7 +20,7 @@
  * Voice rules: CLAUDE.md. No em dashes; plain spoken; British English.
  */
 
-import { Platform, Alert } from 'react-native';
+import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // One flag per install (not per user): the prompt is about the device's

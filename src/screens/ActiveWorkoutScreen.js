@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -26,7 +26,7 @@ import RestTimer from '../components/RestTimer';
 import ExercisePickerModal from '../components/ExercisePickerModal';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise, getLastNWorkoutSets, saveExerciseUserNote, getExerciseUserNote, getNextTimeNotes, markNoteShown, updateWorkoutSetPostRating, getWorkoutSetsForWorkout } from '../lib/database';
+import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise, getLastNWorkoutSets, getExerciseUserNote, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import {
@@ -45,7 +45,6 @@ import { FORM_TIPS } from '../lib/formTips';
 import InfoTooltip from '../components/InfoTooltip';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage } from '../lib/whyThisTemplates';
-import { estimateWorkoutMinutes } from '../lib/planEngine';
 
 const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 2 };
 

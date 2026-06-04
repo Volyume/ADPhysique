@@ -38,13 +38,10 @@ const { generatePlan } = require('../lib/planEngine');
 const { buildPlanInputs } = require('../lib/planAutoGen');
 const { runWeeklyCoach } = require('../lib/weeklyCoach');
 const {
-  evaluateAutoReg,
   predictDeloadWeek,
-  getCurrentMesoWeek,
   isRecoveryWeek,
-  buildWeeklyProgression,
 } = require('../lib/mesocycle');
-const { detectPR, calculate1RM, calculateTonnage } = require('../lib/algorithms');
+const { detectPR } = require('../lib/algorithms');
 const { computeRecoveryEMAs } = require('../lib/recoveryEMA');
 
 const DAY_MS = 24 * 60 * 60 * 1000;

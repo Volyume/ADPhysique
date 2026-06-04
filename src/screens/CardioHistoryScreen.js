@@ -13,7 +13,7 @@ import { View, Text, StyleSheet, TouchableOpacity, SectionList, Alert } from 're
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
 import EmptyState from '../components/EmptyState';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';

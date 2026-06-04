@@ -14,7 +14,7 @@
  * Voice rules: CLAUDE.md. No em dashes.
  */
 import { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, AppState } from 'react-native';
+import { Text, StyleSheet, TouchableOpacity, AppState } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 

@@ -13,7 +13,6 @@ import { SkeletonCard } from '../components/Skeleton';
 import PressableCard from '../components/PressableCard';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import PeekMenu from '../components/PeekMenu';
-import { EmptyPlanIllustration } from '../components/Illustrations';
 import {
   getActivePlan, getAllPlansForUser, getArchivedPlansForUser,
   getWorkoutTemplates, getPlanWorkoutCounts, getAllRoutineExerciseCounts,

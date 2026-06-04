@@ -4,7 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StackActions } from '@react-navigation/native';
 export const navigationRef = createNavigationContainerRef();
-import { View, Text, Image, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
+import { View, Image, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 

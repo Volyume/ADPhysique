@@ -7,10 +7,8 @@ import {
   getMesoSchedule,
   getWeekSetsMultiplier,
   isRecoveryWeek,
-  getVolumeTargetsForWeek,
   buildWeeklyProgression,
   evaluateAutoReg,
-  predictDeloadWeek,
   applyTimeCrunch,
   getBlockStatus,
 } from '../mesocycle';

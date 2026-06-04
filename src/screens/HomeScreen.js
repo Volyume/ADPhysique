@@ -10,7 +10,6 @@ import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type } from '../styles/theme';
 import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
-import { VolyumeIcon } from '../components/BrandMark';
 import ScreenHeader from '../components/ScreenHeader';
 import PressableCard from '../components/PressableCard';
 import { SkeletonCard } from '../components/Skeleton';
@@ -32,7 +31,6 @@ import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDe
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import InfoTooltip from '../components/InfoTooltip';
 
 // Soft targets used only to size the weekly progress bars, not enforced
 

@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { startOfWeek, endOfWeek, format, isWithinInterval } from 'date-fns';
 import { colors, spacing, fontSize, fontWeight, radius, type, withAlpha } from '../styles/theme';
 import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentCheckins } from '../lib/database';
-import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles } from '../lib/algorithms';
+import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles } from '../lib/algorithms';
 import { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
 

@@ -16,7 +16,7 @@
  */
 
 import { useRef } from 'react';
-import { Animated, Pressable, View } from 'react-native';
+import { Animated, Pressable } from 'react-native';
 import useAppStore from '../store/useAppStore';
 
 export default function PressableCard({

@@ -19,7 +19,6 @@ import useAppStore from '../store/useAppStore';
 import { formatBodyWeightShort } from '../lib/units';
 import { computeEWMA } from '../lib/weeklyCoach';
 import {
-  logMorningWeight,
   saveWeeklyCheckin,
   getMorningWeightsLast14Days,
   getWeeklySessionStats,

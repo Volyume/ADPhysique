@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getAllExercises, insertExercise, insertExerciseWithId, updateExerciseMetadata } from './database';
+import { getAllExercises, insertExerciseWithId, updateExerciseMetadata } from './database';
 import { deriveExerciseMetadata } from './exerciseMetadata';
 
 const SEEDED_KEY = '@volyume_exercises_seeded_v7';

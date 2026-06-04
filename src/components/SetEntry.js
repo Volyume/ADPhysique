@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, Keyboard } from 'r
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import InfoTooltip from './InfoTooltip';
 import { calculate1RM } from '../lib/algorithms';
 
 const SET_TYPE_LABELS = {

@@ -16,7 +16,6 @@
  */
 
 import { getRegistryEntry } from './registry';
-import { logSyncError } from './telemetry';
 import {
   pushNotificationPreferences,
   pullNotificationPreferences,

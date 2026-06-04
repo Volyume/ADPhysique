@@ -4,7 +4,7 @@
  * Pure functions only, no side effects, no DB calls, no Math.random().
  */
 
-import { GOAL_LABELS as _GOAL_LABELS, GOAL_OVERLAYS, PHASE_OVERLAYS, GOALS_WITH_WEAK_POINTS } from './coachingGoals';
+import { GOAL_LABELS as _GOAL_LABELS, GOAL_OVERLAYS, PHASE_OVERLAYS } from './coachingGoals';
 import { VOLUME_LANDMARKS } from './algorithms';
 import { generatePoolFromLibrary } from './poolGenerator';
 
