@@ -200,6 +200,20 @@ jobs:
           echo "AGP pinned to:"
           grep '^agp' "$FILE"
 
+      # compileSdk 35 marks PackageInfo.requestedPermissions @Nullable, but
+      # expo-modules-core and expo-sensors (SDK 51) call it without a null check,
+      # which fails Kotlin compilation: "Only safe (?.) or non-null asserted
+      # (!!.) calls are allowed on a nullable receiver". Make the calls
+      # null-safe. (Fixed upstream in later Expo; patched here to keep SDK 51.)
+      - name: Patch Expo modules for compileSdk 35 nullability
+        run: |
+          F1=node_modules/expo-modules-core/android/src/main/java/expo/modules/adapters/react/permissions/PermissionsService.kt
+          sed -i 's|return requestedPermissions\.contains(permission)|return requestedPermissions?.contains(permission) ?: false|' "$F1"
+          grep -n 'requestedPermissions?' "$F1" || echo "✗ expo-modules-core patch did not apply"
+          F2=node_modules/expo-sensors/android/src/main/java/expo/modules/sensors/services/BaseSensorService.kt
+          sed -i 's|requestedPermissions\.contains(Manifest.permission.HIGH_SAMPLING_RATE_SENSORS)|requestedPermissions?.contains(Manifest.permission.HIGH_SAMPLING_RATE_SENSORS) ?: false|' "$F2"
+          grep -n 'requestedPermissions?' "$F2" || echo "✗ expo-sensors patch did not apply"
+
       # react-native-iap publishes two Android variants — `playRelease`
       # (Google Play Billing) and `amazonRelease` (Amazon Appstore).
       # Gradle can't pick one automatically; without the
