@@ -3,6 +3,11 @@
     "name": "Volyume",
     "slug": "volyume",
     "owner": "volyume",
+    "extra": {
+      "eas": {
+        "projectId": "2f60a6ed-8b37-4cd6-8057-60ee04e39ea8"
+      }
+    },
     "scheme": "volyume",
     "version": "1.1.1",
     "runtimeVersion": {
