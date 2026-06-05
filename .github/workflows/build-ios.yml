@@ -61,6 +61,12 @@ jobs:
           [ "$missing" = "0" ] || { echo "::error::Add the missing secrets in Settings → Secrets and variables → Actions, then re-run."; exit 1; }
           echo "✓ All required secrets present"
 
+      # Link (or create) the EAS project for this account so the secret-sync and
+      # build steps know which project to target, without anyone running eas init
+      # locally. Idempotent: a no-op once app.json has extra.eas.projectId.
+      - name: Link EAS project
+        run: eas init --non-interactive
+
       - name: Write App Store Connect API key to a file
         env:
           ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
