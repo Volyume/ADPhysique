@@ -36,7 +36,7 @@ const WORDMARK = require('../../assets/volyume-wordmark.png');
 // usually overlays its UI, so the V mark stays visible above their chrome.
 // Square 1080×1080 is the secondary format for feed posts.
 // ──────────────────────────────────────────────────────────────────────────────
-const WEBVIEW_HTML = `<!DOCTYPE html>
+export const WEBVIEW_HTML = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
@@ -59,6 +59,37 @@ var B = {
   text:'#FFFFFF', textSecondary:'#9E9E9E', textMuted:'#727272',
   divider:'rgba(255,255,255,0.06)'
 };
+
+// withAlpha mirrors styles/theme.js. This script runs inside the WebView, which
+// has no access to the React Native module scope, so the helper has to be
+// defined here. It used to be inlined as a "color + 20" hex-alpha concat; the
+// app-wide withAlpha migration (ad5f75b) swapped those for withAlpha() calls but
+// the canvas had no such function, so every session card (intensity badge) and
+// PR card (badge) threw "withAlpha is not defined" and surfaced to the user as
+// "Couldn't generate card, try again". Keep this in sync with the theme helper.
+function withAlpha(color, alpha) {
+  var a = Math.max(0, Math.min(1, isFinite(alpha) ? alpha : 1));
+  if (typeof color !== 'string') return color;
+  var c = color.trim();
+  if (c.charAt(0) === '#') {
+    var hex = c.slice(1);
+    if (hex.length === 3) hex = hex.split('').map(function(ch){ return ch + ch; }).join('');
+    if (hex.length === 8) hex = hex.slice(0, 6);
+    if (hex.length !== 6) return color;
+    var r = parseInt(hex.slice(0, 2), 16);
+    var g = parseInt(hex.slice(2, 4), 16);
+    var b = parseInt(hex.slice(4, 6), 16);
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return color;
+    return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + a + ')';
+  }
+  var m = c.match(/^rgba?\(\s*([^)]+)\)$/i);
+  if (m) {
+    var parts = m[1].split(',');
+    if (parts.length < 3) return color;
+    return 'rgba(' + parts[0].trim() + ', ' + parts[1].trim() + ', ' + parts[2].trim() + ', ' + a + ')';
+  }
+  return color;
+}
 
 function rrect(ctx, x, y, w, h, r) {
   ctx.beginPath();
