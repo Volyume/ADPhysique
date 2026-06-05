@@ -1,0 +1,59 @@
+name: Build iOS (EAS)
+
+# iOS cannot be built on the Linux/Gradle runner the Android workflow uses, so
+# this kicks off an EAS Build (Expo's cloud) instead. The heavy lifting (Xcode
+# compile, Apple signing) happens on Expo's servers; this job only triggers it.
+#
+# Manual trigger only: the first iOS build must be run once interactively
+# (locally: `eas build -p ios --profile production`) so EAS can create the Apple
+# distribution certificate + provisioning profile. After that, or after an App
+# Store Connect API key is uploaded to EAS, this workflow can build (and
+# optionally submit) non-interactively. See docs/IOS_RELEASE.md.
+on:
+  workflow_dispatch:
+    inputs:
+      auto_submit:
+        description: 'Also submit the build to TestFlight (needs submit.production.ios in eas.json)'
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    name: EAS iOS build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Verify EXPO_TOKEN is set
+        run: |
+          if [ -z "${{ secrets.EXPO_TOKEN }}" ]; then
+            echo "::error::EXPO_TOKEN secret is not set. Create one at expo.dev (Account → Access tokens) and add it in repo Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          echo "✓ EXPO_TOKEN present"
+
+      # --no-wait returns once the build is queued; track progress + download the
+      # .ipa on the EAS dashboard. The EXPO_PUBLIC_* values come from EAS secrets
+      # (set on expo.dev), not from here, so the bundle isn't built with empty
+      # config. autoIncrement in eas.json bumps the iOS build number.
+      - name: Trigger EAS iOS build
+        run: |
+          EXTRA=""
+          if [ "${{ inputs.auto_submit }}" = "true" ]; then EXTRA="--auto-submit"; fi
+          eas build --platform ios --profile production --non-interactive --no-wait $EXTRA
