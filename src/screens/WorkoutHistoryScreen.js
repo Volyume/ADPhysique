@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
-  format, formatDistanceToNow,
+  format,
   startOfMonth, getDaysInMonth, getDay,
   addMonths, subMonths, isSameDay,
 } from 'date-fns';
@@ -16,6 +16,7 @@ import { EmptyWorkoutsIllustration } from '../components/Illustrations';
 import { getAllWorkouts, getWorkoutSetsForWorkoutIds, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import { calculateTonnage } from '../lib/algorithms';
+import { workoutDayMs, workoutDayKey, calendarRelativeLabel } from '../lib/workoutDate';
 import useAppStore from '../store/useAppStore';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
@@ -59,7 +60,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
       const allWorkouts = await getAllWorkouts(user.id);
       const mine = allWorkouts
         .filter(w => w.isCompleted)
-        .sort((a, b) => b.startedAt - a.startedAt);
+        .sort((a, b) => workoutDayMs(b) - workoutDayMs(a));
 
       // LB-7: the list only renders the most recent 50, so fetch only
       // those workouts' sets rather than every set ever logged.
@@ -193,7 +194,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
 
     // Calendar day selection takes priority in calendar mode
     if (viewMode === 'calendar' && selectedDay) {
-      return result.filter(item => isSameDay(new Date(item.workout.startedAt), selectedDay));
+      return result.filter(item => isSameDay(new Date(workoutDayMs(item.workout)), selectedDay));
     }
 
     const now = new Date();
@@ -201,7 +202,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
 
     switch (filter) {
       case 'month':
-        result = result.filter(item => new Date(item.workout.startedAt) >= monthStart);
+        result = result.filter(item => new Date(workoutDayMs(item.workout)) >= monthStart);
         break;
       case 'upper':
         result = result.filter(item =>
@@ -230,7 +231,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
       const calMonthStart = startOfMonth(calendarDate);
       const calMonthEnd = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0, 23, 59, 59, 999);
       result = result.filter(item => {
-        const d = new Date(item.workout.startedAt);
+        const d = new Date(workoutDayMs(item.workout));
         return d >= calMonthStart && d <= calMonthEnd;
       });
     }
@@ -240,7 +241,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
 
   // ─── Calendar helpers ────────────────────────────────────────────────────────
   const trainedDatesSet = useMemo(() => {
-    return new Set(workouts.map(item => format(new Date(item.workout.startedAt), 'yyyy-MM-dd')));
+    return new Set(workouts.map(item => workoutDayKey(item.workout)));
   }, [workouts]);
 
   function buildCalendarCells() {
@@ -259,7 +260,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
   // ─── Render helpers ──────────────────────────────────────────────────────────
   function renderItem({ item, index }) {
     const { workout, setCount, workingSetCount, exerciseCount, tonnage, exerciseNames } = item;
-    const date = new Date(workout.startedAt);
+    const date = new Date(workoutDayMs(workout));
     const isExpanded = expandedId === workout.id;
     const exerciseDetail = expandedSets[workout.id];
 
@@ -275,7 +276,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
               <Text style={styles.cardDate}>{format(date, 'd MMM yyyy')}</Text>
-              <Text style={styles.cardTime}>{formatDistanceToNow(date, { addSuffix: true })}</Text>
+              <Text style={styles.cardTime}>{calendarRelativeLabel(workoutDayMs(workout))}</Text>
             </View>
             <View style={styles.cardHeaderRight}>
               <View style={styles.cardMeta}>
@@ -358,6 +359,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
                   workingSetCount,
                   tonnage,
                   exerciseNames,
+                  startedAt: workout.startedAt,
+                  endedAt: workout.endedAt,
                   readOnly: true,
                 })
               }
@@ -384,6 +387,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
                   workingSetCount,
                   tonnage,
                   exerciseNames,
+                  startedAt: workout.startedAt,
+                  endedAt: workout.endedAt,
                   readOnly: true,
                 })
               }

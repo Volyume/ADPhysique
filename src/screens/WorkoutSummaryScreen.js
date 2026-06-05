@@ -21,6 +21,7 @@ import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
 import { syncWorkout } from '../lib/sync';
 import { incrementSessionCount, shouldPromptReview, requestReview } from '../lib/storeReview';
+import { workoutDayMs } from '../lib/workoutDate';
 
 const RATING_LABELS = {
   sessionDifficulty: ['', 'Very Easy', 'Easy', 'Moderate', 'Hard', 'Brutal'],
@@ -75,6 +76,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     workoutId, durationMinutes, exerciseCount, setCount, workingSetCount, tonnage,
     exerciseNames = [], readOnly = false,
     routineId = null, detectedPRs = [], exerciseData = [],
+    startedAt = null, endedAt = null,
   } = route.params || {};
   const { user, units, userProfile, session } = useAppStore();
   const toast = useToast();
@@ -511,7 +513,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
 
   const displayWorkingSets = workingSetCount ?? setCount ?? 0;
 
-  const completionDate = new Date().toLocaleDateString('en-GB', {
+  // The session's own day (when it was trained/completed), NOT the moment this
+  // screen is opened. Viewing a past workout used to show today's date because
+  // this read new Date(); now it reads the workout's ended/started time.
+  const completionDate = new Date(workoutDayMs({ startedAt, endedAt })).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'long', year: 'numeric',
   });
 

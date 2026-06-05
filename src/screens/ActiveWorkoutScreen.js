@@ -1104,6 +1104,8 @@ export default function ActiveWorkoutScreen({ navigation }) {
               navigation.replace('WorkoutSummary', {
                 workoutId: activeWorkout.id,
                 routineId: activeWorkout.routineId || null,
+                startedAt: activeWorkout.startedAt,
+                endedAt: Date.now(),
                 durationMinutes: Math.round(snapshotElapsed / 60),
                 exerciseCount: snapshotExercises.length,
                 setCount: totalSets,
