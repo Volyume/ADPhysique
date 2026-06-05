@@ -3120,8 +3120,13 @@ export async function buildWorkoutCSV(userId) {
 
   for (const r of rows) {
     const dt = r.set_created_at ? new Date(r.set_created_at) : null;
-    const date = dt ? dt.toISOString().slice(0, 10) : '';
-    const time = dt ? dt.toISOString().slice(11, 19) : '';
+    // Local date + time, not UTC. A set logged at 00:30 BST belongs to the
+    // user's "today", not yesterday 23:30 (locked rule: every date the user
+    // sees is their local calendar day).
+    const date = dt ? localDayKey(r.set_created_at) : '';
+    const time = dt
+      ? `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}:${String(dt.getSeconds()).padStart(2, '0')}`
+      : '';
     const wkg = r.weight ?? '';
     const wlb = r.weight != null ? Math.round(r.weight * 2.20462 * 10) / 10 : '';
     lines.push([
