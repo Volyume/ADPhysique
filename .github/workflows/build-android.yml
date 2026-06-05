@@ -13,6 +13,13 @@ on:
       - '.ci-status/**'
   workflow_dispatch:
 
+# One Android build per branch at a time. A new push cancels an
+# in-flight run on the same ref, so a stuck or superseded build does
+# not sit on a runner for the full 6h default timeout.
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
 # Needed so the "Publish build status" step can push a small status
 # file back to the same branch. The auto-commit uses [skip ci] in the
 # message so it doesn't trigger another run.
@@ -279,6 +286,18 @@ jobs:
       # assembleRelease produces an APK (for sideload), bundleRelease
       # produces an AAB (the format Play Store wants). Signing credentials
       # are passed via -P so they never have to be written to disk.
+      # Single ABI (arm64-v8a) for this CI compile-check. The default RN
+      # template builds all four ABIs (armeabi-v7a, arm64-v8a, x86, x86_64).
+      # Under the New Architecture each ABI compiles a large amount of C++
+      # (Fabric, TurboModule codegen, nitro, reanimated worklets), so four
+      # ABIs took ~60+ min and risked OOM thrash on the runner, against
+      # ~15 min for the old-architecture SDK 51 build. arm64-v8a covers every
+      # modern device and is all we need to prove the native side compiles.
+      #
+      # IMPORTANT: this makes the AAB arm64-only. It is fine for the free
+      # compile-validation we run here and for sideload onto a 64-bit device,
+      # but it is NOT a Play-production bundle. Before any real Play release,
+      # widen reactNativeArchitectures back to at least armeabi-v7a,arm64-v8a.
       - name: Build Release APK + AAB
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
@@ -292,6 +311,7 @@ jobs:
         run: |
           cd android && ./gradlew assembleRelease bundleRelease \
             --no-daemon --no-configuration-cache \
+            -PreactNativeArchitectures=arm64-v8a \
             -PVOLYUME_UPLOAD_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD" \
             -PVOLYUME_UPLOAD_KEY_ALIAS="$ANDROID_KEY_ALIAS" \
             -PVOLYUME_UPLOAD_KEY_PASSWORD="$ANDROID_KEY_PASSWORD"
