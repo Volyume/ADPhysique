@@ -86,15 +86,24 @@ jobs:
 
       # First-time iOS credential creation cannot be done with --non-interactive:
       # EAS refuses to mint the very first Distribution Certificate without a real
-      # terminal, even with all four ASC env vars set. The one prompt it needs
-      # answered (captured from a prior run's log) is a select menu:
+      # terminal, even with all four ASC env vars set. The prompts it needs
+      # answered (captured from prior runs' logs) are two select menus plus the
+      # yes/no confirms:
       #     ? Select your Apple Team Type:
       #         Enterprise  /  Company/Organization  /  Individual
+      #     ? Would you like to set up Push Notifications for your project?
+      #         Yes  /  No  /  No, don't ask again
       # We drive it with `expect`: force interactive mode (CI=false), allocate a
-      # pty so EAS sees a terminal, pick "Individual" (3rd item = two down-arrows
-      # then Return), and accept the default on any follow-up confirm. Credential
-      # generation happens before the build is queued, so a wrong answer fails for
-      # free. Once the cert exists on EAS, future runs work non-interactively.
+      # pty so EAS sees a terminal, pick "Individual" for the team type (3rd item
+      # = two down-arrows then Return), pick "Yes" for push (1st item = the
+      # default, so a bare Return), and accept the default on any follow-up
+      # confirm. The app ships push (expo-notifications, aps-environment), so
+      # "Yes" is correct: EAS then generates the APNs key via the ASC API key,
+      # and its "Generate a new ... key? (Y/n)" confirm is covered by the (Y/n)
+      # matcher below. Credential generation happens before the build is queued,
+      # so a wrong answer fails for free. The Apple Team Type select-menu hang at
+      # run #10 (2026-06-05) was this push prompt going unanswered for 110 min.
+      # Once the credentials exist on EAS, future runs work non-interactively.
       - name: Build iOS (EAS, waits for completion)
         env:
           EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
@@ -108,9 +117,10 @@ jobs:
           set timeout 6600
           spawn eas build --platform ios --profile production --wait
           expect {
-            -re {Select your Apple Team Type} { send -- "\033\[B\033\[B\r"; exp_continue }
-            -re {\(Y/n\)}                      { send -- "\r";              exp_continue }
-            -re {\(y/N\)}                      { send -- "y\r";             exp_continue }
+            -re {Select your Apple Team Type}     { send -- "\033\[B\033\[B\r"; exp_continue }
+            -re {set up Push Notifications}        { send -- "\r";              exp_continue }
+            -re {\(Y/n\)}                          { send -- "\r";              exp_continue }
+            -re {\(y/N\)}                          { send -- "y\r";             exp_continue }
             timeout { puts "\n::error::Stuck for 110 min with no progress, aborting. Check the log above for the prompt EAS was waiting on."; exit 2 }
             eof
           }
