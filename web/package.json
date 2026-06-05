@@ -1,0 +1,17 @@
+{
+  "name": "volyume-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Volyume web platform monorepo (user web, admin, coaches). Self-contained alongside the React Native app at the repo root.",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @volyume/web dev",
+    "build": "pnpm --filter @volyume/web build",
+    "start": "pnpm --filter @volyume/web start",
+    "lint": "pnpm -r --if-present lint",
+    "typecheck": "pnpm -r --if-present typecheck"
+  }
+}

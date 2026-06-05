@@ -1,0 +1,19 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+
+# build output
+dist/
+
+# env (never commit real keys; .env.example is committed)
+.env
+.env.local
+.env*.local
+
+# misc
+.turbo/
+*.tsbuildinfo
+.DS_Store
