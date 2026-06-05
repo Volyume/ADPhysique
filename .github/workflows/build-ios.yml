@@ -1,26 +1,31 @@
 name: Build iOS (EAS)
 
-# iOS cannot be built on the Linux/Gradle runner the Android workflow uses, so
-# this kicks off an EAS Build (Expo's cloud) instead. The heavy lifting (Xcode
-# compile, Apple signing) happens on Expo's servers; this job only triggers it.
+# Builds and (optionally) submits the iOS app entirely in CI, no Mac and no
+# local terminal. EAS (Expo's cloud) does the Xcode compile and the Apple
+# signing; this job just drives it non-interactively using:
+#   - EXPO_TOKEN ............ Expo account access token (expo.dev)
+#   - ASC_API_KEY_P8 ........ App Store Connect API key (.p8 file contents)
+#   - ASC_KEY_ID ............ the key's Key ID
+#   - ASC_ISSUER_ID ......... the key's Issuer ID
+#   - EXPO_PUBLIC_* ......... the same app-config secrets the Android build uses
+# all set in repo Settings → Secrets and variables → Actions.
 #
-# Manual trigger only: the first iOS build must be run once interactively
-# (locally: `eas build -p ios --profile production`) so EAS can create the Apple
-# distribution certificate + provisioning profile. After that, or after an App
-# Store Connect API key is uploaded to EAS, this workflow can build (and
-# optionally submit) non-interactively. See docs/IOS_RELEASE.md.
+# The App Store Connect API key (role Admin) lets EAS create the distribution
+# certificate + provisioning profile for you, and submit to TestFlight, with no
+# interactive Apple login. app.json must carry the EAS project id (extra.eas.projectId).
 on:
   workflow_dispatch:
     inputs:
-      auto_submit:
-        description: 'Also submit the build to TestFlight (needs submit.production.ios in eas.json)'
+      submit:
+        description: 'Submit to TestFlight after the build finishes'
         type: boolean
-        default: false
+        default: true
 
 jobs:
   build:
-    name: EAS iOS build
+    name: EAS iOS build + submit
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,20 +45,55 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Verify EXPO_TOKEN is set
+      - name: Check required secrets are set
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
-          if [ -z "${{ secrets.EXPO_TOKEN }}" ]; then
-            echo "::error::EXPO_TOKEN secret is not set. Create one at expo.dev (Account → Access tokens) and add it in repo Settings → Secrets and variables → Actions."
-            exit 1
-          fi
-          echo "✓ EXPO_TOKEN present"
+          missing=0
+          for v in EXPO_TOKEN ASC_API_KEY_P8 ASC_KEY_ID ASC_ISSUER_ID EXPO_PUBLIC_SUPABASE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY; do
+            if [ -z "${!v}" ]; then echo "::error::Missing repo secret: $v"; missing=1; fi
+          done
+          [ "$missing" = "0" ] || { echo "::error::Add the missing secrets in Settings → Secrets and variables → Actions, then re-run."; exit 1; }
+          echo "✓ All required secrets present"
 
-      # --no-wait returns once the build is queued; track progress + download the
-      # .ipa on the EAS dashboard. The EXPO_PUBLIC_* values come from EAS secrets
-      # (set on expo.dev), not from here, so the bundle isn't built with empty
-      # config. autoIncrement in eas.json bumps the iOS build number.
-      - name: Trigger EAS iOS build
+      - name: Write App Store Connect API key to a file
+        env:
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
         run: |
-          EXTRA=""
-          if [ "${{ inputs.auto_submit }}" = "true" ]; then EXTRA="--auto-submit"; fi
-          eas build --platform ios --profile production --non-interactive --no-wait $EXTRA
+          printf '%s' "$ASC_API_KEY_P8" > "$RUNNER_TEMP/asc-api-key.p8"
+          test -s "$RUNNER_TEMP/asc-api-key.p8" && echo "✓ ASC API key written ($(wc -c < "$RUNNER_TEMP/asc-api-key.p8") bytes)"
+
+      # Push the app-config secrets up to EAS so the cloud build bundles real
+      # values (not empty strings). Idempotent: --force overwrites if they exist.
+      - name: Sync app config to EAS
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
+          EXPO_PUBLIC_USDA_API_KEY: ${{ secrets.EXPO_PUBLIC_USDA_API_KEY }}
+        run: |
+          eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_URL --value "$EXPO_PUBLIC_SUPABASE_URL" --force
+          eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "$EXPO_PUBLIC_SUPABASE_ANON_KEY" --force
+          if [ -n "$EXPO_PUBLIC_SENTRY_DSN" ]; then eas secret:create --scope project --name EXPO_PUBLIC_SENTRY_DSN --value "$EXPO_PUBLIC_SENTRY_DSN" --force; fi
+          if [ -n "$EXPO_PUBLIC_USDA_API_KEY" ]; then eas secret:create --scope project --name EXPO_PUBLIC_USDA_API_KEY --value "$EXPO_PUBLIC_USDA_API_KEY" --force; fi
+          echo "✓ Config synced to EAS"
+
+      - name: Build iOS (EAS, waits for completion)
+        env:
+          EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
+          EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: eas build --platform ios --profile production --non-interactive --wait
+
+      - name: Submit to TestFlight
+        if: ${{ inputs.submit }}
+        env:
+          EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
+          EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: eas submit --platform ios --latest --non-interactive
