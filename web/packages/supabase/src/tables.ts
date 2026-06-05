@@ -11,6 +11,8 @@ export const TABLES = {
   workouts: 'workouts',
   workoutSets: 'workout_sets',
   exercises: 'exercises',
+  routines: 'routines',
+  routineExercises: 'routine_exercises',
   coachOutputs: 'coach_outputs',
   programmes: 'programmes',
   mesocycles: 'mesocycles',

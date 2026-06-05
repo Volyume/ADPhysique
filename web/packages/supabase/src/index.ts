@@ -9,3 +9,4 @@ export { canonicalExerciseId } from './canonicalExerciseId';
 export * from './queries/dashboard';
 export * from './queries/progress';
 export * from './queries/coaching';
+export * from './queries/plan';
