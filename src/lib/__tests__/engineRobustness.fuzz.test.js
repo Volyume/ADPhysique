@@ -193,3 +193,32 @@ describe('Engine robustness: adversarial inputs never produce NaN/Infinity or th
     expect(failures.slice(0, 20)).toEqual([]);
   });
 });
+
+// ─── Insights engine robustness ──────────────────────────────────────────────
+// generateInsights runs on the Home/Insights surface from raw workout + set
+// rows. A null or malformed row (or a null args object) must never crash it.
+describe('generateInsights tolerates malformed workout/set rows', () => {
+  // eslint-disable-next-line global-require
+  const { generateInsights } = require('../insightsEngine');
+  const N2 = [null, undefined, NaN, Infinity, -1, 1e9, '5', '', 'abc', true, {}, []];
+  const aset = (r) => ({ weight: pick(r, N2), reps: pick(r, N2), actualReps: pick(r, N2), created_at: pick(r, [Date.now(), pick(r, N2)]) });
+  test('never throws across 2500 garbage inputs and odd args', () => {
+    const r = rng(31);
+    const failures = [];
+    for (let i = 0; i < 2500; i++) {
+      const sets = Array.from({ length: Math.floor(r() * 8) }, () => pick(r, [null, aset(r)]));
+      const workouts = Array.from({ length: Math.floor(r() * 5) }, () => pick(r, [null, undefined, {}, {
+        id: pick(r, N2), startedAt: pick(r, [Date.now(), pick(r, N2)]),
+        isCompleted: pick(r, [true, false, null]), soreness24hBefore: pick(r, N2),
+      }]));
+      try {
+        const out = generateInsights({ workouts, sets, exerciseMap: pick(r, [{}, null]), now: pick(r, [Date.now(), pick(r, N2)]) });
+        if (out != null && !Array.isArray(out)) failures.push('not an array');
+      } catch (e) { failures.push(`threw: ${e.message}`); }
+    }
+    for (const a of [undefined, null, {}, 'x', 42, { workouts: 'x', sets: 42 }, { workouts: [null], sets: [null] }]) {
+      try { generateInsights(a); } catch (e) { failures.push(`arg threw: ${e.message}`); }
+    }
+    expect([...new Set(failures)].slice(0, 15)).toEqual([]);
+  });
+});

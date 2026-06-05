@@ -57,7 +57,14 @@ function sessionsByDay(sets) {
  * @param {number} [args.now]
  * @returns {Array} insight objects (unsorted/uncapped, caller persists & caps)
  */
-export function generateInsights({ workouts = [], sets = [], exerciseMap = {}, now = Date.now() }) {
+export function generateInsights(rawArgs = {}) {
+  const args = (rawArgs && typeof rawArgs === 'object') ? rawArgs : {};
+  // Drop null/malformed rows up front so one corrupt workout or set entry can
+  // never crash the insights surface (e.g. w.isCompleted on a null workout).
+  const workouts = Array.isArray(args.workouts) ? args.workouts.filter(w => w && typeof w === 'object') : [];
+  const sets = Array.isArray(args.sets) ? args.sets.filter(s => s && typeof s === 'object') : [];
+  const exerciseMap = (args.exerciseMap && typeof args.exerciseMap === 'object') ? args.exerciseMap : {};
+  const now = Number.isFinite(args.now) ? args.now : Date.now();
   const insights = [];
 
   // A "low volume for 3 weeks" nudge only makes sense once there is an
