@@ -21,12 +21,12 @@ Seed library parsed: 448 exercises.
 | General | upper_lower | Barbell Bench Press | 74 | none | none | none |
 | Men's Physique | V-Taper | Lat Pulldown (Wide Grip) | 81 | none | none | none |
 | Classic Physique | X-Frame | Lat Pulldown (Wide Grip) | 79 | none | none | none |
-| Bodybuilding | upper_lower | Incline Barbell Bench Press | 94 | none | none | none |
+| Bodybuilding | upper_lower | Incline Barbell Bench Press | 97 | none | none | none |
 | Bikini | Glute Focus | Barbell Hip Thrust | 81 | none | none | none |
-| Wellness | Lower Focus | Barbell Hip Thrust | 72 | none | none | none |
+| Wellness | Lower Focus | Barbell Hip Thrust | 73 | none | none | none |
 | Figure | X-Frame | Lat Pulldown (Wide Grip) | 81 | none | none | none |
-| Women's Physique | V-Taper | Lat Pulldown (Wide Grip) | 81 | none | none | none |
-| Women's Bodybuilding | upper_lower | Barbell Bench Press | 94 | none | none | none |
+| Women's Physique | V-Taper | Lat Pulldown (Wide Grip) | 80 | none | none | none |
+| Women's Bodybuilding | upper_lower | Barbell Bench Press | 96 | none | none | none |
 
 ## POOL vs library path: same structural guarantees?
 
@@ -35,12 +35,12 @@ Seed library parsed: 448 exercises.
 | General | 76 | 74 | Barbell Bench Press | Barbell Bench Press |
 | Men's Physique | 83 | 81 | Lat Pulldown (Wide Grip) | Lat Pulldown (Wide Grip) |
 | Classic Physique | 77 | 79 | Lat Pulldown (Wide Grip) | Lat Pulldown (Wide Grip) |
-| Bodybuilding | 94 | 94 | Incline Barbell Bench Press | Incline Barbell Bench Press |
+| Bodybuilding | 98 | 97 | Incline Barbell Bench Press | Incline Barbell Bench Press |
 | Bikini | 81 | 81 | Barbell Hip Thrust | Barbell Hip Thrust |
-| Wellness | 71 | 72 | Barbell Hip Thrust | Barbell Hip Thrust |
+| Wellness | 71 | 73 | Barbell Hip Thrust | Barbell Hip Thrust |
 | Figure | 81 | 81 | Lat Pulldown (Wide Grip) | Lat Pulldown (Wide Grip) |
-| Women's Physique | 81 | 81 | Lat Pulldown (Wide Grip) | Lat Pulldown (Wide Grip) |
-| Women's Bodybuilding | 94 | 94 | Barbell Bench Press | Barbell Bench Press |
+| Women's Physique | 83 | 80 | Lat Pulldown (Wide Grip) | Lat Pulldown (Wide Grip) |
+| Women's Bodybuilding | 96 | 96 | Barbell Bench Press | Barbell Bench Press |
 
 ## Bikini-vs-MP exercise overlap (the 3c gate target is < 30%)
 

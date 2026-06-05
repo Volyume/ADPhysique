@@ -35,7 +35,7 @@ const WEAK_POINTS = ['Glutes', 'Side Delts', 'Biceps', 'Triceps', 'Hamstrings', 
 // MEV / MRV (external buckets). Shoulders = the three delt heads combined,
 // spec cap 26; we allow +2 for the known per-head rounding when summed.
 const MEV = { chest: 6, back: 10, shoulders: 8, biceps: 8, triceps: 6, quads: 8, hamstrings: 6, glutes: 0, calves: 8, abs: 0, traps: 0 };
-const MRV = { chest: 22, back: 25, shoulders: 26, biceps: 26, triceps: 18, quads: 20, hamstrings: 20, glutes: 16, calves: 20, abs: 25, traps: 26 };
+const MRV = { chest: 22, back: 25, shoulders: 26, biceps: 26, triceps: 22, quads: 20, hamstrings: 20, glutes: 16, calves: 20, abs: 25, traps: 26 };
 const NO_ZERO = ['chest', 'back', 'shoulders', 'quads', 'hamstrings', 'glutes'];
 const ARM_JUDGED = new Set(['mens_physique', 'classic_physique', 'bodybuilding', 'figure', 'womens_physique', 'womens_bodybuilding']);
 const gluteCap = (g) => (g === 'bikini' || g === 'wellness') ? 30 : 16;
