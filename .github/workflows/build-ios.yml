@@ -13,13 +13,37 @@ name: Build iOS (EAS)
 # The App Store Connect API key (role Admin) lets EAS create the distribution
 # certificate + provisioning profile for you, and submit to TestFlight, with no
 # interactive Apple login. app.json must carry the EAS project id (extra.eas.projectId).
+#
+# Trigger: push to main builds and submits automatically, the same shape as the
+# Android workflow, so a merged change reaches the iPhone via TestFlight without
+# a manual step. Two differences from Android, both because an EAS cloud build
+# costs build credits (unlike the free GitHub-runner Android build):
+#   - main only, not feature branches, so feature-branch pushes don't spend credits.
+#   - paths-ignore for docs/markdown/config-only commits, so a docs edit doesn't
+#     spend a credit.
+# workflow_dispatch is kept so a build can still be run by hand, with a toggle to
+# skip the TestFlight submit. The concurrency guard cancels an in-flight build
+# when a newer push lands, so a superseded commit doesn't sit on a paid runner.
 on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - '.gitignore'
+      - 'LICENSE'
+      - '.ci-status/**'
   workflow_dispatch:
     inputs:
       submit:
         description: 'Submit to TestFlight after the build finishes'
         type: boolean
         default: true
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -128,8 +152,11 @@ jobs:
           exit [lindex $result 3]
           EOF
 
+      # Submit on every push (inputs.submit is empty for a push event, so the
+      # bare `inputs.submit` used before would skip it). A manual run still
+      # respects the toggle: untick it to build without submitting.
       - name: Submit to TestFlight
-        if: ${{ inputs.submit }}
+        if: ${{ github.event_name == 'push' || inputs.submit }}
         env:
           EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
           EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
