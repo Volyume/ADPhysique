@@ -34,13 +34,18 @@ import { detectDifferentialTrigger } from './differentialPaywall';
  * up by accident.
  */
 export function computeEWMA(weights, alpha = 0.1) {
-  if (!weights || weights.length === 0) return [];
-  const sorted = [...weights].sort((a, b) => a.loggedAt - b.loggedAt);
+  if (!Array.isArray(weights)) return [];
+  // Drop malformed rows (null entries, missing or non-numeric weightKg) before
+  // smoothing so one corrupt weigh-in cannot crash the coach or poison the
+  // trend with NaN.
+  const clean = weights.filter((w) => w && Number.isFinite(Number(w.weightKg)));
+  if (clean.length === 0) return [];
+  const sorted = [...clean].sort((a, b) => a.loggedAt - b.loggedAt);
   const result = [];
-  let ema = sorted[0].weightKg;
+  let ema = Number(sorted[0].weightKg);
   for (const w of sorted) {
-    ema = alpha * w.weightKg + (1 - alpha) * ema;
-    result.push({ loggedAt: w.loggedAt, rawKg: w.weightKg, ewmaKg: Math.round(ema * 100) / 100 });
+    ema = alpha * Number(w.weightKg) + (1 - alpha) * ema;
+    result.push({ loggedAt: w.loggedAt, rawKg: Number(w.weightKg), ewmaKg: Math.round(ema * 100) / 100 });
   }
   return result;
 }
@@ -312,12 +317,12 @@ export function runWeeklyCoach(inputs) {
   const {
     checkin,
     morningWeights = [],
-    sessionsCompleted = 0,
-    sessionsPlanned = 3,
-    prsThisWeek = 0,
+    sessionsCompleted: _sessionsCompletedRaw = 0,
+    sessionsPlanned: _sessionsPlannedRaw = 3,
+    prsThisWeek: _prsThisWeekRaw = 0,
     goalPhase = 'maint',
     trainingGoal = null,
-    weeksInPhase = 1,
+    weeksInPhase: _weeksInPhaseRaw = 1,
     goalStartDate = null,
     consecutiveOffTargetWeeks = 0,
     consecutivePoorRecoveryWeeks = 0,
@@ -387,6 +392,15 @@ export function runWeeklyCoach(inputs) {
     cardioEnabled = true,
   } = inputs;
 
+  // Defensive sanitisation. These come from DB counts and date math; coerce any
+  // non-finite value to a safe integer so it can never leak into user-facing
+  // copy (e.g. "You hit all -Infinity of your sessions" or "Week Infinity").
+  const _safeInt = (v, d) => (Number.isFinite(v) ? Math.max(0, Math.round(v)) : d);
+  const sessionsCompleted = _safeInt(_sessionsCompletedRaw, 0);
+  const sessionsPlanned = _safeInt(_sessionsPlannedRaw, 3);
+  const prsThisWeek = _safeInt(_prsThisWeekRaw, 0);
+  const weeksInPhase = Number.isFinite(_weeksInPhaseRaw) ? Math.max(1, Math.round(_weeksInPhaseRaw)) : 1;
+
   // ── DATA CONFIDENCE ───────────────────────────────────────────────────────
   const confidence = assessDataConfidence({
     weigh_ins: morningWeights.length,
@@ -401,7 +415,7 @@ export function runWeeklyCoach(inputs) {
       hasEnoughData: false,
       dataNote: confidence.holdMessage,
       confidence: confidence.level,
-      weekLabel: `Week ${weeksInPhase} · ${phaseConfig(goalPhase).label}`,
+      weekLabel: `Week ${Number.isFinite(weeksInPhase) ? Math.round(weeksInPhase) : 1} · ${phaseConfig(goalPhase).label}`,
       trend: { ewma7: ewmaNow, delta: null, onTarget: false, deltaLabel: 'Log morning weight', rateLabel: null },
       whatWorking: ['Check-in saved.'],
       adjustments: { training: { signal: 'hold', note: 'Plan unchanged. A few more weigh-ins needed to act on.' }, calories: null, steps: null, cardio: null },
@@ -485,7 +499,7 @@ export function runWeeklyCoach(inputs) {
 
   // ── Week label ────────────────────────────────────────────────────────────
   const weekLabel = [
-    weeksInPhase >= 1 ? `Week ${weeksInPhase}` : null,
+    Number.isFinite(weeksInPhase) && weeksInPhase >= 1 ? `Week ${Math.round(weeksInPhase)}` : null,
     phase.label,
   ].filter(Boolean).join(' · ');
 
@@ -664,8 +678,8 @@ export function runWeeklyCoach(inputs) {
   let ffmFloorHeld = false;
   let ffmFloorContext = null;
   if (
-    bodyweightKg != null &&
-    recentIntakeAvgKcal != null &&
+    Number.isFinite(bodyweightKg) && bodyweightKg > 0 &&
+    Number.isFinite(recentIntakeAvgKcal) &&
     recentIntakeDaysLogged >= 5
   ) {
     const floor = computeFFMFloor(bodyweightKg, {

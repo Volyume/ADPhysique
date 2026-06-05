@@ -15,7 +15,9 @@
  * weight/workout local-midnight buckets.
  */
 export function localDayKey(ms = Date.now()) {
-  const d = new Date(ms);
+  // Guard a non-finite timestamp so a bad caller can never produce the
+  // 'NaN-NaN-NaN' key that would corrupt a day bucket. Fall back to now.
+  const d = new Date(Number.isFinite(ms) ? ms : Date.now());
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');

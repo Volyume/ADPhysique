@@ -169,11 +169,16 @@ const EWMA_ALPHA = 0.28; // smoothing factor : MacroFactor uses ~0.3
 // { loggedAt, rawKg, ewmaKg } there) so callers can't accidentally use
 // the wrong one and have the wrong field names compile.
 export function computeEWMA(weightData, alpha = EWMA_ALPHA) {
-  if (!weightData || weightData.length === 0) return [];
+  if (!Array.isArray(weightData)) return [];
+  // Drop malformed rows (null entries, missing or non-numeric weightKg) so one
+  // corrupt weigh-in can neither crash the smoother nor poison every later
+  // point with NaN.
+  const clean = weightData.filter((p) => p && Number.isFinite(Number(p.weightKg)));
+  if (clean.length === 0) return [];
   const result = [];
-  let ewma = weightData[0].weightKg;
-  for (const point of weightData) {
-    ewma = alpha * point.weightKg + (1 - alpha) * ewma;
+  let ewma = Number(clean[0].weightKg);
+  for (const point of clean) {
+    ewma = alpha * Number(point.weightKg) + (1 - alpha) * ewma;
     result.push({ ...point, ewma: parseFloat(ewma.toFixed(3)) });
   }
   return result;
@@ -375,6 +380,12 @@ export function computeAdaptiveTDEEAdjustment({
 function calcBMR(sex, ageYears, heightCm, weightKg, bodyFatPercent, bodyFatSource) {
   const useKatchMcArdle =
     Number.isFinite(bodyFatPercent) &&
+    // Range guard: a corrupt or fat-fingered body-fat reading (negative, 0,
+    // or > 60%) would poison the lean-mass formula and produce absurd calorie
+    // and protein targets. Mirror the same physiological band computeFFMFloor
+    // already enforces, and fall back to Mifflin outside it.
+    bodyFatPercent > 0 &&
+    bodyFatPercent < 60 &&
     bodyFatSource !== null &&
     bodyFatSource !== undefined &&
     bodyFatSource !== 'visual';
