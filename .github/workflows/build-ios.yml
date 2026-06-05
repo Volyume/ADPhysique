@@ -118,16 +118,25 @@ jobs:
       #     ? Would you like to set up Push Notifications for your project?
       #         Yes  /  No  /  No, don't ask again
       # We drive it with `expect`: force interactive mode (CI=false), allocate a
-      # pty so EAS sees a terminal, pick "Individual" for the team type (3rd item
-      # = two down-arrows then Return), pick "Yes" for push (1st item = the
-      # default, so a bare Return), and accept the default on any follow-up
-      # confirm. The app ships push (expo-notifications, aps-environment), so
-      # "Yes" is correct: EAS then generates the APNs key via the ASC API key,
-      # and its "Generate a new ... key? (Y/n)" confirm is covered by the (Y/n)
-      # matcher below. Credential generation happens before the build is queued,
-      # so a wrong answer fails for free. The Apple Team Type select-menu hang at
-      # run #10 (2026-06-05) was this push prompt going unanswered for 110 min.
-      # Once the credentials exist on EAS, future runs work non-interactively.
+      # pty so EAS sees a terminal, and pick "Individual" for the team type (3rd
+      # item = two down-arrows then Return).
+      #
+      # Push setup is answered NO (2nd item = one down-arrow then Return). It must
+      # be No, not Yes: creating the APNs key needs an interactive Apple Developer
+      # login (Apple ID + password), which the App Store Connect API key cannot
+      # do. Run #11 (2026-06-05) answered Yes, EAS created the cert + profile fine,
+      # then asked to generate the push key, which dropped to "Log in to your Apple
+      # Developer account ... Apple ID:" and hung the full 110 min. The build does
+      # not need the push key: the provisioning profile already carries the Push
+      # Notifications capability (entitlement), so the app builds and installs via
+      # TestFlight. The APNs key (server-side send credential) is set up once
+      # later, on expo.dev or by adding EXPO_APPLE_ID + EXPO_APPLE_APP_SPECIFIC_
+      # PASSWORD secrets for username/password auth. Until then remote push won't
+      # deliver, but nothing else is blocked.
+      #
+      # The Apple ID matcher is a fail-fast guard: if EAS ever drops to an
+      # interactive login again, abort in seconds instead of burning 110 min of
+      # paid runner. Once credentials exist on EAS, future runs work non-interactively.
       - name: Build iOS (EAS, waits for completion)
         env:
           EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
@@ -142,7 +151,8 @@ jobs:
           spawn eas build --platform ios --profile production --wait
           expect {
             -re {Select your Apple Team Type}     { send -- "\033\[B\033\[B\r"; exp_continue }
-            -re {set up Push Notifications}        { send -- "\r";              exp_continue }
+            -re {set up Push Notifications}        { send -- "\033\[B\r";        exp_continue }
+            -re {Apple ID:}                        { puts "\n::error::EAS dropped to an interactive Apple ID login. Push-key creation needs username/password auth the ASC API key cannot do; the build answers No to push setup to avoid it. If you see this, set up the APNs key once on expo.dev or add EXPO_APPLE_ID + EXPO_APPLE_APP_SPECIFIC_PASSWORD secrets."; exit 3 }
             -re {\(Y/n\)}                          { send -- "\r";              exp_continue }
             -re {\(y/N\)}                          { send -- "y\r";             exp_continue }
             timeout { puts "\n::error::Stuck for 110 min with no progress, aborting. Check the log above for the prompt EAS was waiting on."; exit 2 }
