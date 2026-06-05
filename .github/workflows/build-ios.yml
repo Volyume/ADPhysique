@@ -88,7 +88,7 @@ jobs:
           EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
           EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-        run: eas build --platform ios --profile production --non-interactive --wait
+        run: yes | eas build --platform ios --profile production --wait
 
       - name: Submit to TestFlight
         if: ${{ inputs.submit }}
@@ -96,4 +96,4 @@ jobs:
           EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
           EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-        run: eas submit --platform ios --latest --non-interactive
+        run: yes | eas submit --platform ios --latest
