@@ -88,7 +88,19 @@ jobs:
           EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
           EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-        run: yes | eas build --platform ios --profile production --wait
+          CI: ""
+        run: |
+          sudo apt-get install -y expect -qq 2>/dev/null
+          expect -c 'set timeout 7200
+          spawn eas build --platform ios --profile production --wait
+          expect {
+            "(Y/n)" { send "Y\r"; exp_continue }
+            "(y/N)" { send "y\r"; exp_continue }
+            "? (Yes" { send "Yes\r"; exp_continue }
+            eof
+          }
+          catch wait res
+          exit [lindex $res 3]'
 
       - name: Submit to TestFlight
         if: ${{ inputs.submit }}
@@ -96,4 +108,14 @@ jobs:
           EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
           EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-        run: yes | eas submit --platform ios --latest
+          CI: ""
+        run: |
+          expect -c 'set timeout 300
+          spawn eas submit --platform ios --latest
+          expect {
+            "(Y/n)" { send "Y\r"; exp_continue }
+            "(y/N)" { send "y\r"; exp_continue }
+            eof
+          }
+          catch wait res
+          exit [lindex $res 3]'
