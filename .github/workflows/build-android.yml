@@ -214,6 +214,20 @@ jobs:
           sed -i 's|requestedPermissions\.contains(Manifest.permission.HIGH_SAMPLING_RATE_SENSORS)|requestedPermissions?.contains(Manifest.permission.HIGH_SAMPLING_RATE_SENSORS) ?: false|' "$F2"
           grep -n 'requestedPermissions?' "$F2" || echo "✗ expo-sensors patch did not apply"
 
+      # Android 15 (API 35) added Java List.removeFirst()/removeLast()
+      # (SequencedCollection). When compiled against SDK 35, Kotlin's
+      # removeFirst()/removeLast() extension calls bind to those new Java methods,
+      # which do not exist on Android 14 and earlier, so the app crashes there
+      # with NoSuchMethodError (Play flags this in pre-launch). react-native-screens
+      # calls removeLast() on a MutableList; rewrite it to removeAt(lastIndex),
+      # exactly as Google advise. Fixed upstream in a later react-native-screens.
+      - name: Patch react-native-screens for Android 15 removeLast() crash
+        run: |
+          FILE=node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenStack.kt
+          sed -i 's|drawingOpPool.removeLast()|drawingOpPool.removeAt(drawingOpPool.lastIndex)|' "$FILE"
+          echo "Patched line:"
+          grep -n 'removeAt(drawingOpPool.lastIndex)' "$FILE" || echo "✗ Patch did not apply"
+
       # react-native-iap publishes two Android variants — `playRelease`
       # (Google Play Billing) and `amazonRelease` (Amazon Appstore).
       # Gradle can't pick one automatically; without the
