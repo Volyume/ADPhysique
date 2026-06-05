@@ -156,120 +156,19 @@ jobs:
       - name: Make Gradlew executable
         run: chmod +x android/gradlew
 
-      # Pin Gradle wrapper to 8.9. Several Expo SDK 51 packages (expo-notifications,
-      # react-native-reanimated, @shopify/react-native-skia, etc.) use deprecated
-      # Gradle APIs that are incompatible with Gradle 9.0. Pinning to 8.9 fixes
-      # all of them in one step rather than patching each package individually.
-      - name: Pin Gradle wrapper to 8.9
-        run: |
-          PROPS=android/gradle/wrapper/gradle-wrapper.properties
-          sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.9-all.zip|' "$PROPS"
-          echo "Gradle wrapper pinned to:"
-          grep distributionUrl "$PROPS"
+      # Expo SDK 54 / RN 0.81 ships the correct Gradle (8.13) and AGP, and
+      # includes the upstream fixes that previously needed patching here on
+      # SDK 51 / RN 0.74: the Gradle 8.9 pin, the AGP 8.6.0 force, the
+      # expo-modules-core `components.release` and `serviceOf` edits, the
+      # compileSdk-35 nullability patches, and the react-native-screens
+      # removeLast() rewrite. Those steps were removed with the SDK 54 upgrade;
+      # forcing them now would downgrade the toolchain and break the build.
 
-      # expo-modules-core 1.12.x uses `from components.release` inside
-      # afterEvaluate which fails with AGP 8.4+. Run this patch as the
-      # very last step before Gradle so nothing can undo it.
-      - name: Patch expo-modules-core for AGP 8.4+ compatibility
-        run: |
-          FILE=node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle
-          sed -i '/from components\.release/d' "$FILE"
-          grep -n 'components' "$FILE" || echo "✓ No components references remain"
-
-      # @react-native/gradle-plugin imports `serviceOf` from an internal
-      # Gradle package that was relocated in Gradle 8.7+. Without this
-      # patch the plugin's own build.gradle.kts fails to compile under
-      # the Gradle 8.9 we pin above with:
-      #   Unresolved reference: serviceOf
-      - name: Patch @react-native/gradle-plugin for Gradle 8.7+ compatibility
-        run: |
-          FILE=node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts
-          sed -i 's|org.gradle.configurationcache.extensions.serviceOf|org.gradle.kotlin.dsl.support.serviceOf|' "$FILE"
-          grep -n 'serviceOf' "$FILE" || echo "✗ Patch did not apply"
-
-      # Play Store now requires targetSdk 35 (Android 15). compiling against
-      # API 35 needs Android Gradle Plugin >= 8.6.0, but RN 0.74.5 pins AGP
-      # 8.2.1 in @react-native/gradle-plugin (which caps compileSdk at 34 and
-      # is why the earlier 35 attempt was reverted). The settings plugin reads
-      # the AGP version from that package's version catalogue, so bump it here.
-      # Gradle is pinned to 8.9 above, which AGP 8.6.0 requires (>= 8.7).
-      - name: Force Android Gradle Plugin 8.6.0 for API 35
-        run: |
-          FILE=node_modules/@react-native/gradle-plugin/gradle/libs.versions.toml
-          sed -i 's|^agp = ".*"|agp = "8.6.0"|' "$FILE"
-          echo "AGP pinned to:"
-          grep '^agp' "$FILE"
-
-      # compileSdk 35 marks PackageInfo.requestedPermissions @Nullable, but
-      # expo-modules-core and expo-sensors (SDK 51) call it without a null check,
-      # which fails Kotlin compilation: "Only safe (?.) or non-null asserted
-      # (!!.) calls are allowed on a nullable receiver". Make the calls
-      # null-safe. (Fixed upstream in later Expo; patched here to keep SDK 51.)
-      - name: Patch Expo modules for compileSdk 35 nullability
-        run: |
-          F1=node_modules/expo-modules-core/android/src/main/java/expo/modules/adapters/react/permissions/PermissionsService.kt
-          sed -i 's|return requestedPermissions\.contains(permission)|return requestedPermissions?.contains(permission) ?: false|' "$F1"
-          grep -n 'requestedPermissions?' "$F1" || echo "✗ expo-modules-core patch did not apply"
-          F2=node_modules/expo-sensors/android/src/main/java/expo/modules/sensors/services/BaseSensorService.kt
-          sed -i 's|requestedPermissions\.contains(Manifest.permission.HIGH_SAMPLING_RATE_SENSORS)|requestedPermissions?.contains(Manifest.permission.HIGH_SAMPLING_RATE_SENSORS) ?: false|' "$F2"
-          grep -n 'requestedPermissions?' "$F2" || echo "✗ expo-sensors patch did not apply"
-
-      # Android 15 (API 35) added Java List.removeFirst()/removeLast()
-      # (SequencedCollection). When compiled against SDK 35, Kotlin's
-      # removeFirst()/removeLast() extension calls bind to those new Java methods,
-      # which do not exist on Android 14 and earlier, so the app crashes there
-      # with NoSuchMethodError (Play flags this in pre-launch). react-native-screens
-      # calls removeLast() on a MutableList; rewrite it to removeAt(lastIndex),
-      # exactly as Google advise. Fixed upstream in a later react-native-screens.
-      - name: Patch react-native-screens for Android 15 removeLast() crash
-        run: |
-          FILE=node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenStack.kt
-          sed -i 's|drawingOpPool.removeLast()|drawingOpPool.removeAt(drawingOpPool.lastIndex)|' "$FILE"
-          echo "Patched line:"
-          grep -n 'removeAt(drawingOpPool.lastIndex)' "$FILE" || echo "✗ Patch did not apply"
-
-      # react-native-iap publishes two Android variants — `playRelease`
-      # (Google Play Billing) and `amazonRelease` (Amazon Appstore).
-      # Gradle can't pick one automatically; without the
-      # missingDimensionStrategy below, the build fails at
-      # configuration time with:
-      #   "Cannot choose between the following variants of project
-      #    :react-native-iap: amazonReleaseApiElements,
-      #    playReleaseApiElements"
-      # We're Google-Play-direct (founder override 2026-05-25, see
-      # docs/CURRENT_STATUS.md) so we always want the 'play' flavor.
-      # Patch the generated app/build.gradle to add the strategy
-      # inside defaultConfig{}. Idempotent: skips if already present.
-      - name: Patch app/build.gradle for react-native-iap store flavor
-        run: |
-          FILE=android/app/build.gradle
-          if grep -q 'missingDimensionStrategy.*store.*play' "$FILE"; then
-            echo "✓ missingDimensionStrategy already present, skipping"
-          else
-            # Insert just inside defaultConfig {.
-            python3 - <<'PYEOF'
-          import pathlib, re, sys
-          p = pathlib.Path('android/app/build.gradle')
-          src = p.read_text()
-          if "missingDimensionStrategy" in src and "'store'" in src and "'play'" in src:
-              print("Already patched, skipping")
-              sys.exit(0)
-          # Insert after the first `defaultConfig {` line. Indent with
-          # 8 spaces to match the surrounding block.
-          new_src, count = re.subn(
-              r'(defaultConfig\s*\{)',
-              r"\1\n        missingDimensionStrategy 'store', 'play'",
-              src,
-              count=1,
-          )
-          if count == 0:
-              print('::error::Could not find defaultConfig { in app/build.gradle to patch')
-              sys.exit(1)
-          p.write_text(new_src)
-          print('✓ Patched defaultConfig with missingDimensionStrategy store=play')
-          PYEOF
-          fi
-          grep -n 'missingDimensionStrategy' android/app/build.gradle || true
+      # react-native-iap 15 no longer publishes play/amazon store flavours on a
+      # `store` dimension (SDK 51 used iap 12, which did and needed a
+      # missingDimensionStrategy patch here). iap 15 resolves its own platform
+      # flavour internally, defaulting to Google Play, so no app-side strategy
+      # is required. The patch was removed with the SDK 54 upgrade.
 
       # Decode the upload keystore from the ANDROID_KEYSTORE_BASE64 secret
       # and wire it into the release signing config. When the secret is
