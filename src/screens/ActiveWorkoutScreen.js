@@ -705,14 +705,21 @@ export default function ActiveWorkoutScreen({ navigation }) {
     // (unilateral) exercise logs one reps value, done on both sides at the
     // same weight, so it validates and stores like any other set: one
     // weight, one rep count, no separate left/right.
-    if (!overrides.actualReps && (!currentSet.reps || currentSet.reps < 1)) {
+    // Parse reps up front and validate as a real number. The old check
+    // (`currentSet.reps < 1`) was a string comparison, so a pasted or
+    // non-numeric value ("abc") gave NaN < 1 === false and slipped through,
+    // logging a NaN-rep set that then poisoned tonnage, PRs and the summary.
+    const repsNum = overrides.actualReps != null
+      ? overrides.actualReps
+      : parseInt(currentSet.reps, 10);
+    if (!Number.isFinite(repsNum) || repsNum < 1) {
       Alert.alert('Enter reps', 'Please enter the number of reps completed.');
       return;
     }
     // Cluster sets (myo-reps / rest-pause) commit the whole cluster as one
     // row: actualReps is the summed total and notes carry the breakdown.
     // Both arrive via `overrides` from finishCluster.
-    const effectiveReps = overrides.actualReps ?? parseInt(currentSet.reps, 10);
+    const effectiveReps = repsNum;
     const effectiveNotes = overrides.notes ?? (noteText || null);
     // Weight is required unless this is a bodyweight movement. A blank or
     // non-numeric field means the user hasn't entered a load yet, block
@@ -902,7 +909,8 @@ export default function ActiveWorkoutScreen({ navigation }) {
   // breakdown note). See lib/clusterSet.js.
 
   function startCluster() {
-    if (!currentSet.reps || currentSet.reps < 1) {
+    const activationReps = parseInt(currentSet.reps, 10);
+    if (!Number.isFinite(activationReps) || activationReps < 1) {
       Alert.alert('Enter reps', 'Enter your activation set reps first.');
       return;
     }
@@ -915,7 +923,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
     setCluster({
       setType: currentSet.setType,
       weight: currentSet.weight,
-      reps: [parseInt(currentSet.reps, 10)],
+      reps: [activationReps],
     });
     setClusterReps('');
     hapticsVocab.setLogged();
