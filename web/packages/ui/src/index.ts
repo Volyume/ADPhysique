@@ -6,3 +6,4 @@ export { Card, CardHeader, CardTitle } from './components/Card';
 export { Button, type ButtonVariant } from './components/Button';
 export { Sparkline } from './components/Sparkline';
 export { StatusDot } from './components/StatusDot';
+export { LineChart, type ChartSeries, type LineChartProps } from './components/LineChart';

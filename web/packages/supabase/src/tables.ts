@@ -9,6 +9,8 @@ export const TABLES = {
   nutritionTargets: 'nutrition_targets',
   dailyIntakeRollups: 'daily_intake_rollups',
   workouts: 'workouts',
+  workoutSets: 'workout_sets',
+  exercises: 'exercises',
   coachOutputs: 'coach_outputs',
   programmes: 'programmes',
   mesocycles: 'mesocycles',

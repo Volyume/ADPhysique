@@ -3,4 +3,8 @@
 // subpath exports for the environment-specific Supabase clients.
 export * from './tables';
 export * from './stats';
+export * from './volume';
+export * from './exerciseLibrary';
+export { canonicalExerciseId } from './canonicalExerciseId';
 export * from './queries/dashboard';
+export * from './queries/progress';

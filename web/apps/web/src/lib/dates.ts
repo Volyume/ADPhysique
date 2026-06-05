@@ -77,3 +77,13 @@ export function ukDisplayDate(d: Date = new Date()): string {
     year: 'numeric',
   }).format(d);
 }
+
+// Short UK date for chart axes, e.g. "5 Jun".
+export function ukShortDate(t: number): string {
+  return new Intl.DateTimeFormat('en-GB', { timeZone: TZ, day: 'numeric', month: 'short' }).format(new Date(t));
+}
+
+// ISO instant N days before now, for gte filters against ISO timestamp columns.
+export function isoDaysAgo(days: number): string {
+  return new Date(Date.now() - days * 86_400_000).toISOString();
+}

@@ -10,7 +10,7 @@ import { cn } from '@volyume/ui';
 const items: { key: string; label: string; href?: string }[] = [
   { key: 'dashboard', label: 'Dashboard', href: '/dashboard' },
   { key: 'plan', label: 'Plan' },
-  { key: 'progress', label: 'Progress' },
+  { key: 'progress', label: 'Progress', href: '/progress' },
   { key: 'diary', label: 'Diary' },
   { key: 'coaching', label: 'Coaching' },
   { key: 'account', label: 'Account' },
