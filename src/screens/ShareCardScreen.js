@@ -14,7 +14,7 @@ let LinearGradient;
 let Print;
 let Asset;
 try { WebView = require('react-native-webview').WebView; } catch (_) {}
-try { FileSystem = require('expo-file-system'); } catch (_) {}
+try { FileSystem = require('expo-file-system/legacy'); } catch (_) {}
 try { Sharing = require('expo-sharing'); } catch (_) {}
 try { LinearGradient = require('expo-linear-gradient').LinearGradient; } catch (_) {}
 try { Print = require('expo-print'); } catch (_) {}

@@ -21,7 +21,7 @@
 let Audio;
 let FileSystem;
 try { Audio = require('expo-av').Audio; } catch (_) {}
-try { FileSystem = require('expo-file-system'); } catch (_) {}
+try { FileSystem = require('expo-file-system/legacy'); } catch (_) {}
 
 // Lazy cache, populated on first playBeep() call. Survives the whole app
 // session because preloading is async and we'd rather pay it once than

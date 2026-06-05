@@ -16,6 +16,7 @@
     "orientation": "portrait",
     "icon": "./assets/volyume-icon.png",
     "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
     "backgroundColor": "#0D0D0D",
     "primaryColor": "#F59E0B",
     "splash": {

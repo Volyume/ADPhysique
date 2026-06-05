@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { View, Text, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';

@@ -6,7 +6,7 @@
  *
  * Voice: no marketing copy, raw data only.
  */
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { resolveFoodRef } from './sources/localCache';
 
