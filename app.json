@@ -46,7 +46,7 @@
         "backgroundColor": "#0D0D0D"
       },
       "package": "app.volyume",
-      "versionCode": 8,
+      "versionCode": 9,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
@@ -139,7 +139,8 @@
         }
       ],
       "react-native-health-connect",
-      "./plugins/withHealthConnectPermissionDelegate"
+      "./plugins/withHealthConnectPermissionDelegate",
+      "./plugins/withEdgeToEdgeOptOut"
     ],
     "notification": {
       "icon": "./assets/notification-icon.png",
