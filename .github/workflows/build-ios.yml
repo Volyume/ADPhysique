@@ -51,11 +51,12 @@ jobs:
           ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
           missing=0
-          for v in EXPO_TOKEN ASC_API_KEY_P8 ASC_KEY_ID ASC_ISSUER_ID EXPO_PUBLIC_SUPABASE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY; do
+          for v in EXPO_TOKEN ASC_API_KEY_P8 ASC_KEY_ID ASC_ISSUER_ID APPLE_TEAM_ID EXPO_PUBLIC_SUPABASE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY; do
             if [ -z "${!v}" ]; then echo "::error::Missing repo secret: $v"; missing=1; fi
           done
           [ "$missing" = "0" ] || { echo "::error::Add the missing secrets in Settings → Secrets and variables → Actions, then re-run."; exit 1; }
@@ -83,24 +84,18 @@ jobs:
           if [ -n "$EXPO_PUBLIC_USDA_API_KEY" ]; then eas secret:create --scope project --name EXPO_PUBLIC_USDA_API_KEY --value "$EXPO_PUBLIC_USDA_API_KEY" --type string --force; fi
           echo "✓ Config synced to EAS"
 
+      # EXPO_APPLE_TEAM_ID is required (alongside the three ASC API key vars) for
+      # EAS to authenticate to Apple's Developer portal and create/validate the
+      # iOS distribution certificate non-interactively. Without it, the build
+      # fails with "Distribution Certificate is not validated for non-interactive
+      # builds". Documented at docs.expo.dev/build/building-on-ci.
       - name: Build iOS (EAS, waits for completion)
         env:
           EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
           EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          CI: "false"
-        run: |
-          sudo apt-get install -y expect -qq 2>/dev/null
-          expect -c 'set timeout 7200
-          spawn eas build --platform ios --profile production --wait
-          expect {
-            "(Y/n)" { send "Y\r"; exp_continue }
-            "(y/N)" { send "y\r"; exp_continue }
-            "? (Yes" { send "Yes\r"; exp_continue }
-            eof
-          }
-          catch wait res
-          exit [lindex $res 3]'
+          EXPO_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: eas build --platform ios --profile production --non-interactive --wait
 
       - name: Submit to TestFlight
         if: ${{ inputs.submit }}
@@ -108,14 +103,5 @@ jobs:
           EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
           EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          CI: ""
-        run: |
-          expect -c 'set timeout 300
-          spawn eas submit --platform ios --latest
-          expect {
-            "(Y/n)" { send "Y\r"; exp_continue }
-            "(y/N)" { send "y\r"; exp_continue }
-            eof
-          }
-          catch wait res
-          exit [lindex $res 3]'
+          EXPO_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: eas submit --platform ios --latest --non-interactive
