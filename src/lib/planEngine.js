@@ -278,6 +278,11 @@ const GENERATOR_LANDMARK_OVERRIDES = {
   side_delts: { MV: 6, MRV: 20 }, // direct side-delt ceiling; combined delt cap 26 binds in practice
   biceps:     { MEV: 8, MRV: 20 },
   abs:        { MEV: 6 },
+  // The tracker mrv for these was raised (recovery capacity + indirect volume,
+  // volume-landmark audit 2026-06-05) so the heatmap stops over-flagging them,
+  // but the GENERATOR keeps the conservative programming ceiling, so pin MRV.
+  triceps:     { MRV: 18 },
+  front_delts: { MRV: 12 },
   // Forearms/adductors are an assumption flagged in the rebuild docs (not in
   // the original spec table); kept here so the generator caps them.
   forearms:   { MV: 0, MEV: 0, MRV: 16 },

@@ -20,8 +20,8 @@ describe('VOLUME_LANDMARKS, delt split', () => {
     expect(VOLUME_LANDMARKS.shoulders).toBeUndefined();
   });
 
-  test('front_delts landmark exists and is conservative (gets indirect volume from pressing)', () => {
-    expect(VOLUME_LANDMARKS.front_delts).toEqual({ mv: 0, mev: 0, mav: 6, mrv: 12 });
+  test('front_delts landmark reflects heavy indirect volume from pressing', () => {
+    expect(VOLUME_LANDMARKS.front_delts).toEqual({ mv: 0, mev: 0, mav: 8, mrv: 14 });
   });
 
   test('side_delts landmark includes mv field and correct MRV', () => {
@@ -29,7 +29,30 @@ describe('VOLUME_LANDMARKS, delt split', () => {
   });
 
   test('rear_delts landmark exists with unified values', () => {
-    expect(VOLUME_LANDMARKS.rear_delts).toEqual({ mv: 0, mev: 6, mav: 14, mrv: 22 });
+    expect(VOLUME_LANDMARKS.rear_delts).toEqual({ mv: 0, mev: 6, mav: 16, mrv: 24 });
+  });
+
+  test('triceps mrv matches biceps: similar recovery, heavy indirect from pressing', () => {
+    expect(VOLUME_LANDMARKS.triceps).toEqual({ mv: 4, mev: 6, mav: 14, mrv: 22 });
+  });
+
+  test('forearms ceiling is not pinned right above mav (high-frequency tolerant)', () => {
+    expect(VOLUME_LANDMARKS.forearms).toEqual({ mv: 2, mev: 4, mav: 16, mrv: 22 });
+  });
+
+  test('traps ceiling reflects high volume tolerance and indirect load', () => {
+    expect(VOLUME_LANDMARKS.traps).toEqual({ mv: 0, mev: 4, mav: 14, mrv: 24 });
+  });
+
+  test('every muscle keeps the invariant mv <= mev <= mav <= mrv', () => {
+    for (const lm of Object.values(VOLUME_LANDMARKS)) {
+      expect(lm.mv).toBeLessThanOrEqual(lm.mev);
+      expect(lm.mev).toBeLessThanOrEqual(lm.mav);
+      expect(lm.mav).toBeLessThanOrEqual(lm.mrv);
+      // Guard against another mrv-just-above-mav regression: a real productive
+      // band sits between mav and mrv for every trained muscle.
+      if (lm.mrv > 0) expect(lm.mrv - lm.mav).toBeGreaterThanOrEqual(2);
+    }
   });
 });
 
@@ -61,13 +84,13 @@ describe('getVolumeStatus, delt heads', () => {
     expect(result.status).toBe('below');
   });
 
-  test('12 sets overhead press → front_delts at MRV (near_mrv warning)', () => {
+  test('12 sets → front_delts approaching MRV (near_mrv warning)', () => {
     const result = getVolumeStatus(12, 'front_delts');
     expect(result.status).toBe('near_mrv');
   });
 
-  test('13 sets overhead press → front_delts over MRV (over_mrv)', () => {
-    const result = getVolumeStatus(13, 'front_delts');
+  test('15 sets → front_delts over MRV (over_mrv)', () => {
+    const result = getVolumeStatus(15, 'front_delts');
     expect(result.status).toBe('over_mrv');
   });
 

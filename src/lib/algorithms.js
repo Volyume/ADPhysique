@@ -13,12 +13,20 @@
 export const VOLUME_LANDMARKS = {
   chest:       { mv: 4,  mev: 6,  mav: 14, mrv: 22 },
   back:        { mv: 8,  mev: 10, mav: 16, mrv: 25 },
-  front_delts: { mv: 0,  mev: 0,  mav: 6,  mrv: 12 },
+  // Front/rear delts, triceps, biceps, forearms and traps all receive large
+  // INDIRECT volume from compound work (pressing, rows, deads/shrugs/curls) and
+  // recover well. The tracker credits indirect sets at 0.5 each, so a direct-only
+  // ceiling flagged these muscles "too much" too early (volume-landmark audit
+  // 2026-06-05). Their mav/mrv now reflect total (direct + indirect) recovery
+  // capacity. The plan GENERATOR keeps its conservative programming ceilings via
+  // GENERATOR_LANDMARK_OVERRIDES, so what we program is unchanged; only how we
+  // judge adequacy on the heatmap moved.
+  front_delts: { mv: 0,  mev: 0,  mav: 8,  mrv: 14 },
   side_delts:  { mv: 0,  mev: 8,  mav: 16, mrv: 26 },
-  rear_delts:  { mv: 0,  mev: 6,  mav: 14, mrv: 22 },
+  rear_delts:  { mv: 0,  mev: 6,  mav: 16, mrv: 24 },
   biceps:      { mv: 5,  mev: 6,  mav: 14, mrv: 22 },
-  triceps:     { mv: 4,  mev: 6,  mav: 12, mrv: 18 },
-  forearms:    { mv: 2,  mev: 4,  mav: 12, mrv: 14 },
+  triceps:     { mv: 4,  mev: 6,  mav: 14, mrv: 22 },
+  forearms:    { mv: 2,  mev: 4,  mav: 16, mrv: 22 },
   quads:       { mv: 6,  mev: 8,  mav: 14, mrv: 20 },
   hamstrings:  { mv: 4,  mev: 6,  mav: 14, mrv: 20 },
   // Glute ceiling raised for the physique divisions (coach-plan audit
@@ -33,7 +41,7 @@ export const VOLUME_LANDMARKS = {
   adductors:   { mv: 0,  mev: 0,  mav: 10, mrv: 14 },
   calves:      { mv: 6,  mev: 8,  mav: 14, mrv: 20 },
   abs:         { mv: 0,  mev: 4,  mav: 16, mrv: 25 },
-  traps:       { mv: 0,  mev: 4,  mav: 12, mrv: 20 },
+  traps:       { mv: 0,  mev: 4,  mav: 14, mrv: 24 },
   neck:        { mv: 0,  mev: 2,  mav: 8,  mrv: 12 },
   tibialis:    { mv: 0,  mev: 2,  mav: 8,  mrv: 12 },
 };
