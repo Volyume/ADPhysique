@@ -12,7 +12,7 @@
 import { db, runInTransaction } from '../database';
 import { CURATED_MEALS, mealItems } from './curatedMeals';
 import { resolveFoodRef } from './sources/localCache';
-import { todayLocalKey, localDayKey } from '../dayKey';
+import { todayLocalKey, localDayKey, parseLocalDay } from '../dayKey';
 // Single id generator (A2-036); aliased to keep the local uid() call sites.
 import { generateUUID as uid } from '../uuid';
 
@@ -341,9 +341,13 @@ export async function getRollupsForRange(userId, startDate, endDate) {
 export async function getRecentIntakeSummary(userId, asOfDate = null) {
   const d = await db();
   const asOf = asOfDate ?? todayLocalKey();
-  const startDate = new Date(asOf);
+  // Build the 7-day window on the LOCAL calendar. new Date('YYYY-MM-DD') parses
+  // as UTC midnight, so in BST the start day used to slip back a day and the
+  // window covered 8 days. parseLocalDay + localDayKey keep it aligned to the
+  // same local day-keys the rollup rows are stored under.
+  const startDate = parseLocalDay(asOf);
   startDate.setDate(startDate.getDate() - 6);
-  const startStr = startDate.toISOString().slice(0, 10);
+  const startStr = localDayKey(startDate.getTime());
   const rows = await d.getAllAsync(
     `SELECT entry_date, kcal_total
      FROM daily_intake_rollups
