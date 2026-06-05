@@ -13,7 +13,7 @@ const items: { key: string; label: string; href?: string }[] = [
   { key: 'progress', label: 'Progress', href: '/progress' },
   { key: 'diary', label: 'Diary' },
   { key: 'coaching', label: 'Coaching', href: '/coaching' },
-  { key: 'account', label: 'Account' },
+  { key: 'account', label: 'Account', href: '/account' },
 ];
 
 export function LeftRail() {

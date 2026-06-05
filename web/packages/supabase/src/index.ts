@@ -10,3 +10,4 @@ export * from './queries/dashboard';
 export * from './queries/progress';
 export * from './queries/coaching';
 export * from './queries/plan';
+export * from './queries/account';
