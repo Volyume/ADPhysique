@@ -1,6 +1,6 @@
 # Web platform — Phase 6a: USER WEB APPLICATION (screen-by-screen)
 
-Status: PROPOSAL — awaiting approval before Phase 6b (admin) | Date: 2026-06-05 |
+Status: APPROVED & LOCKED (founder, 2026-06-05) | Date: 2026-06-05 |
 Depends on: Phases 0-5.
 
 `app.volyume.app`. The companion **analysis + management cockpit** for existing
@@ -110,8 +110,12 @@ user's own rows under RLS (Phase 4). No screen here writes a workout set.
   series + muted comparison series (accent discipline); tabular labels; hover
   tooltips; progressive disclosure (headline → trend → detail). All via the
   shared `chartGeometry.js` rendered as SVG (Phase 4/5).
-- **New infra**: none (all data exists). Optionally a couple of read RPCs to
-  shape long-window aggregates server-side for speed.
+- **New infra**: no new write contracts. **Sanctioned** (founder, 2026-06-05): a
+  small set of **read-only aggregate RPCs** to shape long-window Progress data
+  server-side (est-1RM-per-lift series, weekly volume per muscle, EWMA body
+  trend), so the browser fetches summarised rows instead of full set history.
+  Read-only, RLS-scoped to the caller, additive, safe to re-run. Detailed in the
+  deep-dive appendix below.
 - **Vs**: directly beats Whoop's and MFP's thin desktop (Phase 2), this is the
   whole reason the web app exists.
 
@@ -208,5 +212,112 @@ it is never the logging surface (Phase 1).
 
 ---
 
-**STOP — awaiting approval of the user web proposal before producing Phase 6b
-(admin). No code until the proposal is approved.**
+# Appendix — deep detail on the four core screens
+
+Approved direction (founder, 2026-06-05): 6a locked as-is, with a second pass of
+depth on Progress, Coaching, Plan and Diary, and read-only aggregate RPCs
+sanctioned. Scope lines confirmed: logging stays mobile-only; no new back-end of
+substance; read aggregate RPCs allowed. This appendix expands those four screens
+to build-brief depth. It adds nothing to scope, it sharpens what is already there.
+
+## A. Progress cockpit — sub-view by sub-view
+
+The flagship. The rule across every sub-view: one hero chart, a supporting table
+beneath, amber for the primary series, a single muted series for any comparison,
+tabular axis labels, hover for exact values, headline → trend → detail.
+
+- **`/progress/lifts`** — per-lift est-1RM and top-set weight over a long window.
+  - Controls: lift selector, window (8w / 6m / 1y / all), an optional second lift
+    as the muted series.
+  - Chart: est-1RM line (amber) + top-set markers; hover gives date, weight, reps,
+    est-1RM. A faint band for the working range.
+  - Table below: every qualifying set for the window, sortable by date / weight /
+    est-1RM, with the session it came from.
+  - Reads: `workout_sets` joined to `workouts`; long windows via the
+    `lift_progress` read RPC (below).
+- **`/progress/volume`** — the full-size body heatmap as the hero, per-muscle
+  weekly bars vs MEV/MAV/MRV beneath.
+  - Heatmap: front/back body, each muscle shaded by the week's volume against its
+    landmark band (green within target, amber approaching MRV, red over). The
+    sanctioned encoding, at desktop size, all muscles legible at once.
+  - Bars: weekly sets per muscle with MEV/MAV/MRV reference lines; a muscle picker
+    to pin two or three for side-by-side.
+  - Reads: `planned_muscle_volume` for landmarks + computed actual weekly volume
+    via the `weekly_muscle_volume` read RPC.
+- **`/progress/body`** — morning-weight EWMA trend with the coach's target band
+  overlaid, across months.
+  - Chart: raw morning weights as faint dots, the EWMA line (amber) on top, the
+    coach's target-rate band as a shaded corridor; on/off-target reads at a glance.
+  - Secondary: body-fat and measurement trends (waist, etc.) on the same time axis.
+  - Reads: `morning_weights`, `body_metric_log`; EWMA via the `body_trend` read RPC
+    so the corridor maths is server-side and identical to mobile.
+- **`/progress/cardio`** — sessions, minutes, and trend from `cardio_log`; a simple
+  hero line (weekly minutes) + a session table.
+- **`/progress/prs`** — a true desktop PR table: lift / date / est-1RM / the set
+  that set it, sortable and filterable by lift and movement pattern. No phone cards.
+- **`/progress/year`** — the year-of-lifts summary at size: total volume, sessions,
+  PRs, biggest movers, rendered as one readable annual page, not a social card.
+
+**Read RPCs (read-only, RLS-scoped, additive, safe to re-run):**
+`lift_progress(lift_id, window)`, `weekly_muscle_volume(window)`,
+`body_trend(window)`. Each returns pre-aggregated rows for the caller's own data
+only. No write RPCs. These are an optimisation of reads that already work against
+the base tables, so the screen degrades gracefully if an RPC is absent.
+
+## B. Coaching review + decision history — full shape
+
+- **`/coaching`** — the latest weekly review, expanded:
+  - Headline call (e.g. "Hold calories, add a set to back").
+  - What's working / off-track, as short factual lines (no encouragement).
+  - The numeric adjustments in tabular call-outs: calories, training change,
+    steps target, cardio note, deload / diet-break flags.
+  - The "why this week" rationale as readable prose (max ~70ch column).
+  - Check-in status: when the next weekly check-in is due, with a note that the
+    check-in itself is done on mobile (web shows the output, never collects it).
+- **`/coaching/history`** — the chronological decision record: every past weekly
+  call, its date, the change made, and its reason, collapsed by default, each
+  entry expandable to the full rationale. This is the stored, explainable coaching
+  trail no competitor's data supports.
+- Reads: `coach_outputs` only. No new contract. Prose first, numbers in tabular
+  call-outs, this week expanded, history collapsed (progressive disclosure).
+
+## C. Plan view & manage — full shape
+
+- **`/plan`** — the active mesocycle, all training days visible at once (the
+  desktop advantage over the one-day-at-a-time phone view):
+  - A left day-index (amber on the active day), a wide detail pane per day.
+  - Each exercise row: sets × rep-range × rest, the muscles it covers, dense but
+    legible.
+  - "Week X of Y · phase" progress, the deload week marked.
+  - "Why this plan": the coach's full plan rationale (mobile `whyThis`) at size.
+- **`/plan/history`** — past blocks/mesocycles with their outcomes and block
+  reflections. Reads `mesocycles`, `coach_outputs`.
+- **`/plan/update`** — the goal / phase / schedule / equipment / experience change
+  flow (mobile's "Update your plan" dropdowns). Rebuilds plan + nutrition targets
+  through the existing plan-generation path under the caller's own `user_id`,
+  history retained. Never re-keys `user_id`.
+- **Excluded, restated:** starting or logging a workout. The plan is read + manage
+  only; logging is mobile.
+
+## D. Diary — full shape
+
+- **`/diary?date=YYYY-MM-DD`** (local UK day-key via `localDayKey` / `parseLocalDay`,
+  never UTC):
+  - Two-column day: meal sections left (incl. peri-workout / numbered meals), the
+    day's totals vs targets right (rings + tabular numbers), water below.
+  - Each entry: food, quantity, the macro columns, an edit and a remove control.
+  - **Add/edit/remove**: search the curated food DB, set quantity, assign a meal;
+    edit quantity/meal inline; remove with confirm. Water add/adjust.
+  - Date navigator + a week strip for quick day hops.
+  - Reads/writes: `food_entries`, `daily_intake_rollups`, `daily_water` via the
+    locked composite-PK upsert with an `updated_at` touch; mobile reconciles by
+    last-writer-wins (Phase 0 §B6). No new write contract.
+- **Excluded, restated:** barcode scan / label OCR (camera, mobile-only). Manual
+  search + add is the web path. The day always buckets by the user's local UK
+  calendar day.
+
+---
+
+**STOP — user web proposal (6a) is approved and locked. Proceeding to Phase 6b
+(admin) per the founder's order (6b → 6c → summary). No application code until a
+build is approved.**
