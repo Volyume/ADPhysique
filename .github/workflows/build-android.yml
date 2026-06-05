@@ -394,6 +394,13 @@ jobs:
       # to the Actions trigger system for this repo. The fix removes
       # the workflow's outbound git push entirely; the status file
       # is still produced and is downloadable from the run page.
+      #
+      # 2026-06-05: push-trigger flaked again. Commit d2c2c4b (a build-ios.yml
+      # change, a non-ignored path) landed on main but did not start a run after
+      # several minutes, and the API dispatch route is not available to the
+      # automation token (403 "Resource not accessible by integration"). This
+      # commit is a no-op nudge to re-fire the push trigger and validate the
+      # SDK 54 release fix (lint handled via -x task exclusions, promise hoisted).
       - name: Write build status
         if: always()
         env:
