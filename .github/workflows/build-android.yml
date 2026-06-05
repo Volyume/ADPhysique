@@ -111,6 +111,14 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      # API 35 (Android 15) is now the Play Store minimum target. Make sure the
+      # platform and build-tools the build compiles against are installed, so
+      # the Gradle build doesn't fail on a missing SDK component.
+      - name: Install Android SDK 35 + build-tools 35
+        run: |
+          yes | sdkmanager "platforms;android-35" "build-tools;35.0.0" >/dev/null || true
+          echo "✓ Requested platforms;android-35 and build-tools;35.0.0"
+
       - name: Run Expo Prebuild
         run: npx expo prebuild --platform android --clean
         env:
@@ -178,6 +186,19 @@ jobs:
           FILE=node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts
           sed -i 's|org.gradle.configurationcache.extensions.serviceOf|org.gradle.kotlin.dsl.support.serviceOf|' "$FILE"
           grep -n 'serviceOf' "$FILE" || echo "✗ Patch did not apply"
+
+      # Play Store now requires targetSdk 35 (Android 15). compiling against
+      # API 35 needs Android Gradle Plugin >= 8.6.0, but RN 0.74.5 pins AGP
+      # 8.2.1 in @react-native/gradle-plugin (which caps compileSdk at 34 and
+      # is why the earlier 35 attempt was reverted). The settings plugin reads
+      # the AGP version from that package's version catalogue, so bump it here.
+      # Gradle is pinned to 8.9 above, which AGP 8.6.0 requires (>= 8.7).
+      - name: Force Android Gradle Plugin 8.6.0 for API 35
+        run: |
+          FILE=node_modules/@react-native/gradle-plugin/gradle/libs.versions.toml
+          sed -i 's|^agp = ".*"|agp = "8.6.0"|' "$FILE"
+          echo "AGP pinned to:"
+          grep '^agp' "$FILE"
 
       # react-native-iap publishes two Android variants — `playRelease`
       # (Google Play Billing) and `amazonRelease` (Amazon Appstore).
