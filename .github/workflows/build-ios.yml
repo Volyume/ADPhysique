@@ -84,18 +84,39 @@ jobs:
           if [ -n "$EXPO_PUBLIC_USDA_API_KEY" ]; then eas secret:create --scope project --name EXPO_PUBLIC_USDA_API_KEY --value "$EXPO_PUBLIC_USDA_API_KEY" --type string --force; fi
           echo "✓ Config synced to EAS"
 
-      # EXPO_APPLE_TEAM_ID is required (alongside the three ASC API key vars) for
-      # EAS to authenticate to Apple's Developer portal and create/validate the
-      # iOS distribution certificate non-interactively. Without it, the build
-      # fails with "Distribution Certificate is not validated for non-interactive
-      # builds". Documented at docs.expo.dev/build/building-on-ci.
+      # First-time iOS credential creation cannot be done with --non-interactive:
+      # EAS refuses to mint the very first Distribution Certificate without a real
+      # terminal, even with all four ASC env vars set. The one prompt it needs
+      # answered (captured from a prior run's log) is a select menu:
+      #     ? Select your Apple Team Type:
+      #         Enterprise  /  Company/Organization  /  Individual
+      # We drive it with `expect`: force interactive mode (CI=false), allocate a
+      # pty so EAS sees a terminal, pick "Individual" (3rd item = two down-arrows
+      # then Return), and accept the default on any follow-up confirm. Credential
+      # generation happens before the build is queued, so a wrong answer fails for
+      # free. Once the cert exists on EAS, future runs work non-interactively.
       - name: Build iOS (EAS, waits for completion)
         env:
           EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
           EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           EXPO_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: eas build --platform ios --profile production --non-interactive --wait
+          CI: "false"
+        run: |
+          sudo apt-get install -y expect -qq 2>/dev/null
+          expect <<'EOF'
+          set timeout 6600
+          spawn eas build --platform ios --profile production --wait
+          expect {
+            -re {Select your Apple Team Type} { send -- "\033\[B\033\[B\r"; exp_continue }
+            -re {\(Y/n\)}                      { send -- "\r";              exp_continue }
+            -re {\(y/N\)}                      { send -- "y\r";             exp_continue }
+            timeout { puts "\n::error::Stuck for 110 min with no progress, aborting. Check the log above for the prompt EAS was waiting on."; exit 2 }
+            eof
+          }
+          catch wait result
+          exit [lindex $result 3]
+          EOF
 
       - name: Submit to TestFlight
         if: ${{ inputs.submit }}
