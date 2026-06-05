@@ -29,7 +29,10 @@ export const volyumePreset: Partial<Config> = {
       borderRadius: { ...px(radius), full: '9999px' },
       fontSize: px(fontSize),
       fontWeight: fontWeight,
-      lineHeight: lineHeight,
+      // Tailwind's lineHeight theme type expects string values.
+      lineHeight: Object.fromEntries(
+        Object.entries(lineHeight).map(([k, v]) => [k, String(v)]),
+      ) as Record<keyof typeof lineHeight, string>,
       letterSpacing: px(letterSpacing),
       fontFamily: {
         sans: [

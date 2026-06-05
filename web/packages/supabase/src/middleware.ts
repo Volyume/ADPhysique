@@ -1,6 +1,8 @@
-import { createServerClient } from '@supabase/ssr';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSupabaseEnv } from './env';
+
+type CookieToSet = { name: string; value: string; options: CookieOptions };
 
 // Refreshes the Supabase auth session on every matched request and returns the
 // current user. Keeps the cookie alive so Server Components see a valid session.
@@ -14,7 +16,7 @@ export async function updateSession(request: NextRequest) {
       getAll() {
         return request.cookies.getAll();
       },
-      setAll(cookiesToSet) {
+      setAll(cookiesToSet: CookieToSet[]) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
         supabaseResponse = NextResponse.next({ request });
         cookiesToSet.forEach(({ name, value, options }) =>
