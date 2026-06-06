@@ -50,15 +50,12 @@ export default function SettingsAboutScreen({ navigation }) {
       <View style={styles.about}>
         <View style={styles.appNameRow}>
           <Text style={styles.appName}>Volyume</Text>
-          <View style={styles.betaBadge}>
-            <Text style={styles.betaBadgeText}>BETA</Text>
-          </View>
         </View>
         <TouchableOpacity
           onPress={() => {
-            // Tap to share the build identifier. Useful for beta
-            // testers when they file bugs: paste this into the
-            // report and we know exactly which build they're on.
+            // Tap to share the build identifier. Useful when someone
+            // files a bug: paste this into the report and we know
+            // exactly which build they're on.
             const v = Constants.expoConfig?.version ?? '1.1.0';
             const code = Platform.OS === 'ios'
               ? Constants.expoConfig?.ios?.buildNumber

@@ -37,7 +37,7 @@ const STAGE_LABEL = {
 };
 
 const PRICING_WINDOW_LABEL = {
-  open_beta: 'Open beta pricing',
+  open_beta: 'Launch pricing',
   founders:  'Founders pricing',
   standard:  'Standard pricing',
 };

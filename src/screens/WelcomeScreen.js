@@ -70,7 +70,7 @@ export default function WelcomeScreen({ navigation }) {
                 <View style={styles.proTitleRow}>
                   <Text style={styles.proTitle}>Pro</Text>
                   <View style={styles.betaBadge}>
-                    <Text style={styles.betaBadgeText}>Free beta</Text>
+                    <Text style={styles.betaBadgeText}>Free for 14 days</Text>
                   </View>
                 </View>
                 <Text style={styles.proSubtitle}>The coach who writes back.</Text>

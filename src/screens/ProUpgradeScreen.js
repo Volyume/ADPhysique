@@ -281,7 +281,7 @@ export default function ProUpgradeScreen({ navigation }) {
           ) : (
             <>
               <Text style={styles.accountNote}>
-                Pro needs a free account so your plan and progress are backed up and your access carries over after beta.
+                Pro needs a free account so your plan and progress are backed up and your access carries over across devices.
               </Text>
 
               {/* OAuth buttons, Google on both platforms, Apple on iOS only
