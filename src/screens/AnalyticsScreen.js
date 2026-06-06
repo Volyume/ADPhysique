@@ -159,6 +159,10 @@ export default function AnalyticsScreen({ navigation }) {
           <View style={styles.navGrid}>
             <NavTile icon="pulse" color={colors.success} label="Consistency" onPress={() => navigation.navigate('Consistency')} />
             <NavTile icon="barbell" color={colors.primary} label="Lifts" onPress={() => navigation.navigate('LiftProgress')} />
+            {/* Weight trend lives in the Pro Body Metrics screen (EWMA + the
+                up/down line chart). Surfacing it here makes it discoverable from
+                Progress; the guard shows the upsell to free users. */}
+            <NavTile icon="trending-up" color={colors.warning} label="Weight" onPress={() => navigation.navigate('BodyMetrics')} />
             <NavTile icon="time" color={colors.textSecondary} label="Full History" onPress={() => navigation.navigate('WorkoutHistory')} />
             {(() => {
               // Year of Lifts unlocks once the user has 365 days of
