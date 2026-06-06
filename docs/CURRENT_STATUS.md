@@ -88,10 +88,27 @@ suites now fail to load entirely under the SDK-54 jest setup (`__DEV__ is not
 defined`, `StyleSheet` undefined). The 06-06 readiness docs called these "a known
 pre-existing `act()` baseline, not product failures"; that is inaccurate on both
 counts (they are upgrade-induced, not pre-existing, and not all `act()`), and
-those docs have been corrected. **This is a real must-fix: the locked testing
-acceptance check (the Jest suite green on `main`,
-`TESTING_STRATEGY_LOCKED.md:244`) is currently not met.** A fix has not been
-attempted yet, pending founder direction.
+those docs have been corrected.
+
+**Resolved later the same day (commit `4707b92`).** The suite is green again:
+**179 suites / 2959 passing, 0 failures, eslint 0 errors.** Fixed at the test
+layer only, no production source changed: an auto-mock
+(`__mocks__/react-test-renderer.js`) wraps `create()` in `act()` to restore
+React 18 flush behaviour; `jest.setup.js` defines `__DEV__` +
+`IS_REACT_ACT_ENVIRONMENT`; stub mocks + `moduleNameMapper` for
+`expo-file-system/legacy` / `expo-sharing` / `expo-document-picker` stop the
+`expo-modules-core` load crash; and four stale tests were corrected (csvExport
+mock path, stepsLaunchPrompt + foodComponents asserting the themed `appAlert`
+instead of `Alert.alert`, the feedback test's `userId` key). The locked testing
+acceptance check (`TESTING_STRATEGY_LOCKED.md:244`) is met again.
+
+**Expo Doctor also cleared (commit follows).** The duplicate `@expo/fingerprint`
+(react-native-health nested 0.6.1 vs root 0.15.5) is deduped via a scoped npm
+`override` (lockfile regenerated, `npm ci` verified), and the RN-directory
+metadata warnings are handled with an `expo.doctor.reactNativeDirectoryCheck`
+config (exclude the two New-Arch-untested packages, `listUnknownPackages:false`
+for the local modules). With the Jest job green and lint at 0 errors, Main CI is
+expected green on the next run.
 
 **Founder-side queue (additions this arc):** apply migrations 065 + 066 (after
 060-064); create `pro_monthly` / `pro_annual` Play subscriptions with a 7-day

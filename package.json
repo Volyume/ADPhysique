@@ -104,13 +104,25 @@
     "xlsx": "^0.18.5"
   },
   "overrides": {
-    "@babel/runtime": "^7.29.7"
+    "@babel/runtime": "^7.29.7",
+    "react-native-health": {
+      "@expo/fingerprint": "0.15.5"
+    }
   },
   "expo": {
     "install": {
       "exclude": [
         "@sentry/react-native"
       ]
+    },
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "listUnknownPackages": false,
+        "exclude": [
+          "@react-native-ml-kit/text-recognition",
+          "react-native-health"
+        ]
+      }
     }
   },
   "private": true
