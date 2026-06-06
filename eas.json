@@ -31,8 +31,7 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "APP_VARIANT": "production",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "APP_VARIANT": "production"
       },
       "android": {
         "buildType": "app-bundle"

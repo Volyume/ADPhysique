@@ -55,6 +55,7 @@
       },
       "package": "app.volyume",
       "versionCode": 11,
+      "allowBackup": false,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
@@ -67,6 +68,11 @@
         "android.permission.health.WRITE_EXERCISE",
         "android.permission.health.WRITE_ACTIVE_CALORIES_BURNED",
         "android.permission.ACTIVITY_RECOGNITION"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.SYSTEM_ALERT_WINDOW"
       ],
       "intentFilters": [
         {
@@ -124,6 +130,7 @@
             "targetSdkVersion": 35,
             "minSdkVersion": 26,
             "buildToolsVersion": "35.0.0",
+            "usesCleartextTraffic": false,
             "manifestQueries": {
               "package": ["com.google.android.apps.healthdata"]
             }

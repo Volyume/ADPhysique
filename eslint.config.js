@@ -84,6 +84,12 @@ module.exports = [
       'coverage/**',
       'dist/**',
       'web-build/**',
+      // The Next.js marketing site is a separate project with its own browser
+      // env + toolchain; its source and .next/ build artifacts are not part of
+      // the React Native app and must not be linted with the RN config (they
+      // produced 834 phantom errors from minified bundles).
+      'web/**',
+      '**/.next/**',
       'public/**',
       'scripts/**',
       '*.config.js',

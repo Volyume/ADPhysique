@@ -8,9 +8,18 @@ the `https://volyume.app` host. Without this file at the live
 fails the auto-verify and deep links open in the browser instead of
 the app.
 
-The placeholder `REPLACE_WITH_SHA256_OF_UPLOAD_KEY_CERT` must be
-replaced with the actual SHA-256 of the Google Play upload-key
-certificate before any new AAB ships. On the founder machine:
+Two placeholders must be replaced before relying on App Links:
+
+1. `REPLACE_WITH_SHA256_OF_PLAY_APP_SIGNING_KEY_CERT` — this is the
+   important one. Under Play App Signing, Google re-signs the
+   delivered APK with the **app signing key**, so installs from the
+   Play Store carry that cert, and Android verifies App Links against
+   it. Copy it from Play Console → Setup → App integrity → App signing
+   key certificate → SHA-256 certificate fingerprint.
+2. `REPLACE_WITH_SHA256_OF_UPLOAD_KEY_CERT` — the upload key. Needed so
+   internal-app-sharing / sideloaded builds (signed by the upload key,
+   not yet re-signed by Google) also verify. From the same Play
+   Console page (Upload key certificate), or on the founder machine:
 
 ```sh
 keytool -list -v -keystore <path-to-upload.keystore> -alias <alias> \
@@ -18,8 +27,6 @@ keytool -list -v -keystore <path-to-upload.keystore> -alias <alias> \
   | head -1
 ```
 
-Or copy the value from Play Console → Setup → App integrity →
-"App signing key certificate" → SHA-256 certificate fingerprint.
 Strip the colons before pasting (or leave them in; Android accepts
 both forms).
 

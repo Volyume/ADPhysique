@@ -5,6 +5,7 @@
       "namespace": "android_app",
       "package_name": "app.volyume",
       "sha256_cert_fingerprints": [
+        "REPLACE_WITH_SHA256_OF_PLAY_APP_SIGNING_KEY_CERT",
         "REPLACE_WITH_SHA256_OF_UPLOAD_KEY_CERT"
       ]
     }
