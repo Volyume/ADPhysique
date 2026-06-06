@@ -1272,7 +1272,12 @@ export default function HomeScreen({ navigation }) {
               </TouchableOpacity>
             </View>
             <Text style={styles.lastSessionName} numberOfLines={1}>
-              {lastSession.name || lastSession.routineName || 'Session'}
+              {/* Prefer the plan-day name (routineName, e.g. "Day 2: Back Width
+                  & Thickness"). The workout's own `name` is overwritten at
+                  finish with an exercise-derived summary ("Cable & Iso-Lateral"),
+                  so it is only the right label for a blank session with no
+                  routine. */}
+              {lastSession.routineName || lastSession.name || 'Session'}
             </Text>
             <View style={styles.lastSessionStatRow}>
               {lastSession.durationMinutes ? (
