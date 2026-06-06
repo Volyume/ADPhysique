@@ -43,11 +43,9 @@ you need to keep growing.
 BUILT FOR SERIOUS TRAINING
 
 Volyume is designed for anyone who trains with intent. Whether you're building
-your first programme or competing on stage, the tools adapt to where you are.
-
-Log weight, reps, and effort for every set. See your previous performance
-alongside the current set, so you always know whether you're progressing. A rest
-timer starts automatically after each working set so you never lose track.
+your first programme or competing on stage, the tools adapt to where you are. Log
+weight, reps, and effort for every set, see your previous performance alongside
+the current one, and a rest timer starts automatically after each working set.
 
 ---
 
@@ -57,39 +55,42 @@ The Pro tier builds your personalised training plan based on your goal, schedule
 recovery capacity, and available equipment. It adjusts week to week based on how
 your body responds.
 
-Set your physique goal, whether that's building muscle, staying lean, competing,
-or improving your strength. Choose your training phase (building, cutting,
-maintaining, or contest preparation). Your plan and nutrition targets update
-immediately.
+Set your physique goal and training phase, from building muscle to cutting for
+the stage. Your plan and nutrition targets update immediately.
 
 Nutrition targets are calculated from your body weight, age, height, and activity
-level using established scientific principles. Protein, carbohydrates, and fat
-targets adapt to your phase: more carbs when you're building, controlled deficits
-when you're cutting.
+level. Protein, carbohydrate, and fat targets adapt to your phase: more carbs
+when you're building, controlled deficits when you're cutting.
 
-Check in once a week. Tell us how your training felt. Volyume adjusts your plan
-for the next week based on your feedback.
+Check in once a week and tell us how your training felt. Volyume adjusts your
+plan for the next week based on your feedback.
+
+---
+
+FOOD DIARY (PRO)
+
+Log what you eat in seconds. Search a food database, scan a barcode, or point
+your camera at a nutrition label and Volyume reads it on your device. Build
+recipes once and log them as one line, save the meals you eat often, or quick
+add a calorie figure. Daily rings show protein, carbs, and fat against your
+targets. Log cardio too, and see the energy it cost.
 
 ---
 
 A COACH THAT LOOKS OUT FOR YOU
 
-If your weight starts dropping too fast, or your energy stays low for too long,
-Volyume pauses your calorie cut, tells you why in plain words, and points you to
-support. Most apps just keep cutting. Volyume would rather pause than push.
+If your weight drops too fast or your energy stays low for too long, Volyume
+pauses your calorie cut, tells you why in plain words, and points you to support.
+Most apps just keep cutting. Volyume would rather pause than push.
 
 ---
 
 PRIVATE BY DESIGN
 
-Your training data belongs to you. No social feed. No public profiles. No sharing
-your stats with anyone.
-
-All data is stored on your device. If you create an account, it syncs to your
-private cloud backup that is visible only to you.
-
-Export your full workout history at any time as a CSV. Take it with you wherever
-you go.
+Your training data belongs to you. No social feed, no public profiles, no sharing
+your stats with anyone. Data is stored on your device; if you create an account it
+syncs to a private cloud backup only you can see. Export your full history as a
+CSV any time.
 
 ---
 
@@ -103,30 +104,35 @@ Training
 - Exercise library with 400+ movements
 - Swap exercises mid-session without losing progress
 - Build custom training programmes
-- Warm-up set tracking (separate from working sets)
 
 Progress
-- Weekly training volume by muscle group
+- Weekly training volume by muscle group, with trends
 - Personal records for every exercise
 - Strength-to-bodyweight comparisons
 - Workout history with session details
-- Muscle group volume trends over time
 
-Body
+Body (Pro)
 - Body weight log with trend chart
 - Body measurements tracking (waist, chest, arms, etc.)
 
+Food diary (Pro)
+- Search a food database and log in seconds
+- Scan a barcode to add a food
+- Scan a nutrition label, read on your device
+- Build recipes and log them as one line, save your regular meals, quick add
+- Daily protein, carb, and fat rings against your targets
+
 Nutrition (Pro)
-- Daily calorie and macro targets
-- Adjusts automatically to your training phase
+- Daily calorie and macro targets that adjust to your training phase
 - Three protein levels: Standard, Optimised, and Advanced
-- Targets adapt as your weight changes
+
+Cardio (Pro)
+- Log any cardio session with duration and effort, and see the energy it cost
 
 Coaching (Pro)
 - Personalised plan generation
 - Weekly check-ins and plan adjustments
 - Recovery week detection
-- Volume adjustment based on your response
 
 ---
 
@@ -140,9 +146,8 @@ a further 7 days free before your first payment. Then it's £4.99 a month, or
 
 NOT MEDICAL ADVICE
 
-Volyume provides training and nutrition guidance based on established scientific
-principles. This is not medical advice. Consult a qualified professional before
-making significant changes to your diet or exercise programme.
+Volyume provides training and nutrition guidance, not medical advice. Consult a
+qualified professional before making significant changes to your diet or exercise.
 ```
 
 ---
@@ -171,13 +176,14 @@ Pro starts with a 14-day free trial, no card needed.
 | Phone screenshots | Min 2, max 8 | 16:9 or 9:16. Min 320 dp short side |
 | Tablet screenshots | Optional | 7" and 10" if supported |
 
-**Minimum screenshot set (recommended 6):**
-1. Home screen — weekly volume overview
-2. Active workout — set logging with rest timer
+**Minimum screenshot set (recommended 7):**
+1. Home screen, weekly volume overview
+2. Active workout, set logging with rest timer
 3. PR celebration screen
 4. Volume tracking per muscle group
-5. Coaching plan screen
-6. Nutrition targets screen
+5. Coaching plan screen (Pro)
+6. Food diary with barcode scan (Pro)
+7. Nutrition targets screen (Pro)
 
 ---
 
