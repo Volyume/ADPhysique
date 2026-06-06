@@ -9,7 +9,7 @@
       }
     },
     "scheme": "volyume",
-    "version": "1.1.1",
+    "version": "1.2.0",
     "runtimeVersion": {
       "policy": "appVersion"
     },
@@ -54,7 +54,7 @@
         "backgroundColor": "#0D0D0D"
       },
       "package": "app.volyume",
-      "versionCode": 10,
+      "versionCode": 11,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",

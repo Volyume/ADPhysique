@@ -8,7 +8,7 @@ _Ready to paste into Google Play Console. All fields comply with Play Store poli
 
 | Field | Value |
 |---|---|
-| **App name** | Volyume — Hypertrophy Logbook |
+| **App name** | Volyume: Hypertrophy Logbook |
 | **Default language** | English (United Kingdom) |
 | **App category** | Health & Fitness |
 | **Content rating** | Everyone (PEGI 3) |
@@ -72,6 +72,14 @@ for the next week based on your feedback.
 
 ---
 
+A COACH THAT LOOKS OUT FOR YOU
+
+If your weight starts dropping too fast, or your energy stays low for too long,
+Volyume pauses your calorie cut, tells you why in plain words, and points you to
+support. Most apps just keep cutting. Volyume would rather pause than push.
+
+---
+
 PRIVATE BY DESIGN
 
 Your training data belongs to you. No social feed. No public profiles. No sharing
@@ -92,7 +100,7 @@ Training
 - See last session's performance inline
 - Automatic rest timer after each set
 - PR detection: know when you hit a lifetime best
-- Exercise library with 150+ movements
+- Exercise library with 400+ movements
 - Swap exercises mid-session without losing progress
 - Build custom training programmes
 - Warm-up set tracking (separate from working sets)
@@ -122,9 +130,11 @@ Coaching (Pro)
 
 ---
 
-FREE DURING BETA
+YOUR FREE TRIAL
 
-All Pro features are free while we're in beta. No payment required.
+Try Pro free for 14 days. No card needed. Keep it after that and Google Play adds
+a further 7 days free before your first payment. Then it's £4.99 a month, or
+£29.99 a year. Cancel anytime. The Free tier stays free with no time limit.
 
 ---
 
@@ -137,14 +147,17 @@ making significant changes to your diet or exercise programme.
 
 ---
 
-## What's New (Release Notes — v1.1.0 Beta)
+## What's New (Release Notes, v1.2.0)
 
 ```
-Beta 1.1. Initial beta release.
+The full release of Volyume.
 
-Training logbook with automatic rest timer, PR detection, and inline previous
-performance display. Pro Coaching with personalised plan generation, weekly
-check-ins, and nutrition targets. All Pro features free during beta.
+A training logbook with an automatic rest timer, PR detection, and your previous
+performance shown inline. Pro adds Precision Coaching: a personalised plan,
+weekly check-ins that adjust your training and nutrition, and a coach that pauses
+your cut if your weight drops too fast or your energy runs low.
+
+Pro starts with a 14-day free trial, no card needed.
 ```
 
 ---

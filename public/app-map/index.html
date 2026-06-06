@@ -321,10 +321,10 @@ Train   ·  Plans  ·  Diary [PRO]  ·  Progress  ·  You</div>
     <p>In some failure patterns (one workout in a batch fails while a later one succeeds; a chunk of sets fails its upload), the failure isn't always counted, so the system can believe everything synced when one item didn't. Rare, needs a real failure to trigger, but worth tightening the error counting since it touches user data.</p>
     <p class="where">src/lib/sync.js (watermark push) · src/lib/database.js (_upsertSets)</p>
   </div>
-  <div class="bug b-should">
-    <h4>Data export exists in code but has no button <span class="pill should">SHOULD-FIX</span></h4>
-    <p>The policy offers data export (a GDPR right) and the code can produce it, but there's no visible Settings option to trigger it. Add the button, or the right isn't really exercisable.</p>
-    <p class="where">src/lib/database.js dumpAllTables() (no UI call site found)</p>
+  <div class="bug b-dismissed">
+    <h4>"Data export exists in code but has no button" <span class="pill dismissed">CHECKED &amp; CLEARED</span></h4>
+    <p>It does have buttons. Settings &gt; Your data has "Back up everything (JSON)" and "Export workout log (CSV)". The export right is exercisable.</p>
+    <p class="where">src/screens/SettingsDataScreen.js</p>
   </div>
 
   <h3>Polish</h3>
