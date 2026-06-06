@@ -308,7 +308,7 @@ const origConsoleError = console.error;
 beforeAll(() => {
   console.error = (msg, ...rest) => {
     const text = typeof msg === 'string' ? msg : String(msg);
-    if (/wrap.*act|environment has been torn down|Cannot log after tests|Each child in a list/i.test(text)) return;
+    if (/wrap.*act|environment has been torn down|Cannot log after tests|Each child in a list|react-test-renderer is deprecated/i.test(text)) return;
     origConsoleError(msg, ...rest);
   };
 });
@@ -375,7 +375,7 @@ async function mountScreen(Screen, props = {}) {
     // tests, not a real failure signal. Likewise filter out the
     // "test environment torn down" warnings that fire when an
     // unawaited useEffect lands after a test completes.
-    if (/wrap.*act|environment has been torn down|Cannot log after tests|Each child in a list|Function components cannot be given refs|forwardRef|inside StrictMode/i.test(text)) return;
+    if (/wrap.*act|environment has been torn down|Cannot log after tests|Each child in a list|Function components cannot be given refs|forwardRef|inside StrictMode|react-test-renderer is deprecated/i.test(text)) return;
     errors.push(text);
   };
   let tree = null;

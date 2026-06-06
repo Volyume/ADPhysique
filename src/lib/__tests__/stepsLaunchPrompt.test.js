@@ -10,11 +10,15 @@
  */
 
 let mockPlatformOS = 'android';
-const mockAlert = jest.fn();
+const mockAppAlert = jest.fn();
 jest.mock('react-native', () => ({
   Platform: { get OS() { return mockPlatformOS; } },
-  Alert: { alert: (...args) => mockAlert(...args) },
 }));
+// The prompt now raises the themed in-app dialog (appAlert), not the native
+// Alert.alert (06-06 change, commit 7b9197d). Mock AppAlert so requiring the
+// prompt does not pull StyleSheet et al., and assert on appAlert. appAlert has
+// the same (title, message, buttons) shape as Alert.alert.
+jest.mock('../../components/AppAlert', () => ({ appAlert: (...args) => mockAppAlert(...args) }));
 
 const mockStore = { getItem: jest.fn(), setItem: jest.fn() };
 jest.mock('@react-native-async-storage/async-storage', () => mockStore);
@@ -95,13 +99,13 @@ describe('maybePromptStepsConnect', () => {
     });
     expect(result).toBe('shown');
     expect(mockStore.setItem).toHaveBeenCalledWith(STEPS_PROMPT_KEY, 'true');
-    expect(mockAlert).toHaveBeenCalledTimes(1);
+    expect(mockAppAlert).toHaveBeenCalledTimes(1);
   });
 
   test('flips the flag BEFORE raising the Alert (no re-nag on force-quit)', async () => {
     const order = [];
     mockStore.setItem.mockImplementation(async () => { order.push('setItem'); });
-    mockAlert.mockImplementation(() => { order.push('alert'); });
+    mockAppAlert.mockImplementation(() => { order.push('alert'); });
     await maybePromptStepsConnect({ userId: 'u1', firstRunComplete: true, stepsEnabled: true });
     expect(order).toEqual(['setItem', 'alert']);
   });
@@ -112,7 +116,7 @@ describe('maybePromptStepsConnect', () => {
       userId: 'u1', firstRunComplete: true, stepsEnabled: true,
     });
     expect(result).toBe('skipped');
-    expect(mockAlert).not.toHaveBeenCalled();
+    expect(mockAppAlert).not.toHaveBeenCalled();
   });
 
   test('skips when steps are switched off', async () => {
@@ -120,7 +124,7 @@ describe('maybePromptStepsConnect', () => {
       userId: 'u1', firstRunComplete: true, stepsEnabled: false,
     });
     expect(result).toBe('skipped');
-    expect(mockAlert).not.toHaveBeenCalled();
+    expect(mockAppAlert).not.toHaveBeenCalled();
   });
 
   test('skips when the health source is unavailable', async () => {
@@ -132,7 +136,7 @@ describe('maybePromptStepsConnect', () => {
   });
 
   test('Connect → asks for steps and weight together', async () => {
-    mockAlert.mockImplementation((title, body, buttons) => {
+    mockAppAlert.mockImplementation((title, body, buttons) => {
       const connect = buttons.find(b => b.text === 'Connect');
       connect.onPress();
     });
@@ -147,7 +151,7 @@ describe('maybePromptStepsConnect', () => {
   test('Connect → sdk_unavailable raises the install prompt', async () => {
     mockActivity.connectHealthStepsAndWeight.mockResolvedValue('sdk_unavailable');
     const titles = [];
-    mockAlert.mockImplementation((title, body, buttons) => {
+    mockAppAlert.mockImplementation((title, body, buttons) => {
       titles.push(title);
       const connect = buttons?.find(b => b.text === 'Connect');
       if (connect) connect.onPress();

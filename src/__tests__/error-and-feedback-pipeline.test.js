@@ -238,7 +238,7 @@ describe('Error logging pipeline', () => {
 
 describe('Feedback submission pipeline', () => {
   const FRESH_PROFILE = {
-    user_id: 'u-test',
+    userId: 'u-test',
     trigger: 'crash_recovery',
     sentiment: 'love',
     message: 'It is great',

@@ -13,6 +13,9 @@
   },
   "jest": {
     "testEnvironment": "node",
+    "setupFiles": [
+      "<rootDir>/jest.setup.js"
+    ],
     "testMatch": [
       "**/__tests__/**/*.test.js",
       "**/tests/**/*.test.js"
@@ -25,7 +28,10 @@
     ],
     "moduleNameMapper": {
       "\\.(png|jpg|jpeg|gif|svg|webp|ttf|otf|mp3|mp4|wav)$": "<rootDir>/__mocks__/asset-stub.js",
-      "^react-native-url-polyfill/auto$": "<rootDir>/__mocks__/url-polyfill-stub.js"
+      "^react-native-url-polyfill/auto$": "<rootDir>/__mocks__/url-polyfill-stub.js",
+      "^expo-file-system/legacy$": "<rootDir>/__mocks__/expo-file-system-legacy.js",
+      "^expo-sharing$": "<rootDir>/__mocks__/expo-sharing.js",
+      "^expo-document-picker$": "<rootDir>/__mocks__/expo-document-picker.js"
     }
   },
   "dependencies": {

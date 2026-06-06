@@ -10,6 +10,10 @@
  */
 import { create, act as actRender } from 'react-test-renderer';
 
+// HeldDecisionCard's support fallback now raises the themed in-app dialog
+// (appAlert), not the native Alert.alert (06-06 change, commit 7b9197d).
+jest.mock('../../AppAlert', () => ({ appAlert: jest.fn(), AppAlertHost: () => null }));
+
 jest.mock('react-native-gesture-handler/Swipeable', () => {
   const React = require('react');
   return function MockSwipeable(props) {
@@ -90,18 +94,18 @@ describe('HeldDecisionCard', () => {
     openURL.mockRestore();
   });
 
-  test('Get support falls back to an Alert when the link cannot open (no dead-end)', async () => {
-    const { Linking, Alert } = require('react-native');
+  test('Get support falls back to an in-app dialog when the link cannot open (no dead-end)', async () => {
+    const { Linking } = require('react-native');
+    const { appAlert } = require('../../AppAlert');
     const openURL = jest.spyOn(Linking, 'openURL').mockRejectedValue(new Error('no handler'));
-    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    appAlert.mockClear();
     let tree;
     actRender(() => { tree = create(<HeldDecisionCard type="ed_pattern" body="x" />); });
     const link = tree.root.findByProps({ accessibilityRole: 'link' });
     await actRender(async () => { await link.props.onPress(); });
-    expect(alert).toHaveBeenCalled();
-    expect(alert.mock.calls[0][1]).toContain('beateatingdisorders');
+    expect(appAlert).toHaveBeenCalled();
+    expect(appAlert.mock.calls[0][1]).toContain('beateatingdisorders');
     openURL.mockRestore();
-    alert.mockRestore();
   });
 });
 

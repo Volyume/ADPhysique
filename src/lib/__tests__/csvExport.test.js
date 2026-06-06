@@ -5,7 +5,7 @@
  * rules, and the food-lookup miss fallback (food_ref appears in
  * the food column).
  */
-jest.mock('expo-file-system', () => ({ cacheDirectory: '/tmp/', writeAsStringAsync: jest.fn(), EncodingType: { UTF8: 'utf8' } }));
+jest.mock('expo-file-system/legacy', () => ({ cacheDirectory: '/tmp/', writeAsStringAsync: jest.fn(), EncodingType: { UTF8: 'utf8' } }));
 jest.mock('expo-sharing', () => ({ isAvailableAsync: async () => false, shareAsync: jest.fn() }));
 jest.mock('../food/sources/localCache', () => ({ resolveFoodRef: async () => null }));
 
