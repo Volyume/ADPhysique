@@ -149,15 +149,30 @@ export function setSentryUser(user) {
 export function captureError(error, ctx = {}) {
   if (!SentryNative || !initialised) return;
   try {
+    // Coerce non-Error values into a real Error. Supabase/PostgREST rejects with
+    // a plain object {code, details, hint, message}; passing that straight to
+    // captureException makes Sentry report the useless "Object captured as
+    // exception with keys: code, details, hint, message" and lose the message.
+    // Wrap it so events group by the real message, and keep the original as an
+    // extra so code/details/hint survive.
+    let err = error;
+    let extra = ctx.extra;
+    if (!(error instanceof Error)) {
+      const msg = error && typeof error === 'object'
+        ? (error.message || error.code || JSON.stringify(error).slice(0, 200))
+        : String(error);
+      err = new Error(msg || 'Non-Error value captured');
+      extra = { ...(ctx.extra || {}), originalError: error };
+    }
     SentryNative.withScope((scope) => {
       if (ctx.scope) scope.setTag('scope', ctx.scope);
       if (ctx.tags) {
         for (const [k, v] of Object.entries(ctx.tags)) scope.setTag(k, String(v));
       }
-      if (ctx.extra) {
-        for (const [k, v] of Object.entries(ctx.extra)) scope.setExtra(k, v);
+      if (extra) {
+        for (const [k, v] of Object.entries(extra)) scope.setExtra(k, v);
       }
-      SentryNative.captureException(error);
+      SentryNative.captureException(err);
     });
   } catch (_) {}
 }
