@@ -4,42 +4,45 @@ Single source of truth for the Android and iOS build work done this session.
 Written for handoff. Everything below is verified against CI run logs and the
 repo state at `origin/main` = `3f038c1`.
 
-## 2026-06-06 correction + automated fix (read this first)
+## 2026-06-06 resolution (read this first)
 
-The iOS diagnosis below was partly wrong. The real cause was read straight from
-the run #13 job log, not inferred:
+The iOS blocker is resolved by **dropping Associated Domains for now** (founder
+decision). The path there, with the real evidence each step was read from, not
+inferred:
 
-- The ASC API key **did** enable the capability. The log shows
-  `Synced capabilities: Enabled: Associated Domains, Push Notifications`. So the
-  claim "regenerating the profile needs an Apple ID login the ASC key can't do"
-  is incorrect for the capability itself. No Apple ID login is required to enable
-  Associated Domains.
-- The actual failure: EAS reused the **stale stored provisioning profile** from
-  run #10 (`Updated 7 hours ago`, minted before the capability existed). EAS
-  validates a profile by expiry, certificate and bundle id only, not by its
-  entitlements, so the stale profile passed EAS's check ("All credentials are
-  ready to build") and Xcode then rejected it.
-- The `Skipping capability identifier syncing ... not using Cookies` line is a
-  red herring. It is about capability *identifiers* (App Groups, iCloud
-  containers, Merchant IDs), none of which this app uses.
-- No hidden second blocker: run #13's Xcode error named only Associated Domains.
-  Xcode lists every missing entitlement at once, so the stale profile already
-  carries HealthKit and Push. A fresh profile satisfies all three.
+1. The stored profile was stale, but that was not the whole story. A CI step was
+   added that used the ASC API key to delete the stale App Store profile and
+   force EAS to mint a fresh one (run #14, commit `977ff71`). It worked: the log
+   shows `Provisioning profile 3K52LC4W38 does not exist in Apple Developer
+   Portal`, then `Created Apple provisioning profile` (`ZJFWRGUWY2`).
+2. The **freshly minted** profile *still* lacked the Associated Domains
+   entitlement, and Xcode rejected it again. Apple includes whatever capabilities
+   are enabled on the Bundle ID when the profile is created, so a brand-new
+   profile missing it proves the **ASC API key path does not actually persist
+   Associated Domains**, even though EAS prints
+   `Synced capabilities: Enabled: Associated Domains`. This is the same class as
+   eas-cli #804 (Sign In with Apple not sticking): these capabilities need Apple
+   ID **cookie** auth, not an API token.
+3. Sign-in does not depend on Associated Domains. The Supabase auth redirect is
+   the custom scheme `volyume://` (`src/lib/supabase.js`), and `App.js` handles
+   `volyume://` callbacks. Associated Domains only powers `https://volyume.app`
+   universal links opening the app, a secondary nicety.
 
-**Fix shipped (automated, no founder action, no Apple ID secrets):**
-`build-ios.yml` now runs `scripts/ci/regenerate-ios-profile.mjs` before the
-build. Using the same ASC API key, it deletes only the App Store profile(s) for
-`app.volyume` whose embedded entitlements lack
-`com.apple.developer.associated-domains`. EAS then has no valid App Store
-profile and mints a fresh, correct one during the same build. It is
-self-limiting: once a correct profile exists it deletes nothing, so it does not
-churn credentials or force a regeneration on later builds. A free self-test
-(`scripts/ci/regenerate-ios-profile.test.mjs`) runs first so a regression in the
-JWT signer or entitlement check fails before any paid EAS step.
+**What shipped:** `ios.associatedDomains` removed from `app.json`. The app's only
+profile-relevant entitlements are now HealthKit and Push, both of which the
+existing profile `ZJFWRGUWY2` already carries, so the build passes with no
+further credential work. The temporary ASC-API profile-cleanup script was
+removed (a dormant profile-deleting CI step is a footgun); `build-ios.yml` is
+back to its prior shape.
 
-The Apple-ID-secrets path (option 1 below) is still the route for **remote
-push** (the APNs key), which is a separate, later task and not needed for the
-build to reach TestFlight.
+**To restore universal links later (and enable remote push in the same task):**
+add `EXPO_APPLE_ID` + `EXPO_APPLE_APP_SPECIFIC_PASSWORD` repo secrets and switch
+the build to Apple ID cookie auth. That path manages capabilities through the
+developer portal, so it gets Associated Domains into the profile AND can create
+the APNs push key. Then re-add `ios.associatedDomains: ["applinks:volyume.app"]`.
+
+Earlier note still standing: run #13's Xcode error named only Associated Domains,
+so HealthKit and Push were already in the profile.
 
 ## Status at a glance
 
@@ -47,7 +50,7 @@ build to reach TestFlight.
 |---|---|---|
 | Android AAB + APK | **Fixed, verified** | CI run #1306 green; APK sideloaded and runs on device |
 | Share Card export | **Fixed, verified locally** | Unit test + lint green; not yet checked on device |
-| iOS (EAS → TestFlight) | **Not complete** | Build reaches Xcode and fails on one remaining item: a stale provisioning profile. Needs an Apple-credentials decision (below). |
+| iOS (EAS → TestFlight) | **Unblocked 2026-06-06** | Associated Domains dropped (it cannot go in the profile via the ASC API key, proven in run #14). Build now signs with the existing HealthKit + Push profile. See the 2026-06-06 resolution note above. |
 
 ## Repo state
 
