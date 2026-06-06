@@ -19,7 +19,7 @@ import {
   getCardioLogRange,
   activityDayKey,
 } from '../lib/database';
-import { localDayKey, todayLocalKey } from '../lib/dayKey';
+import { localDayKey, todayLocalKey, localWeekStartMs } from '../lib/dayKey';
 import { summariseWeekSteps } from '../lib/stepsSummary';
 import { summariseWeekCardio, cardioComplianceFromLog } from '../lib/cardio/cardioEngine';
 import { getRollupsForRange } from '../lib/food/db';
@@ -36,19 +36,18 @@ const MIN_WEIGH_INS = 3;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+// Local Monday 00:00 of the current week (UK-local, never UTC). Returns a
+// Date so the existing callers (.getTime() for storage, formatWeekRange for
+// display) are unchanged in shape.
 function getCurrentWeekStart() {
-  const d = new Date();
-  const day = (d.getUTCDay() + 6) % 7;
-  d.setUTCHours(0, 0, 0, 0);
-  d.setUTCDate(d.getUTCDate() - day);
-  return d;
+  return new Date(localWeekStartMs());
 }
 
 function formatWeekRange(weekStart) {
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const sun = new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
-  const fmt = (d) => `${days[d.getUTCDay()]} ${d.getUTCDate()} ${months[d.getUTCMonth()]}`;
+  const fmt = (d) => `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
   return `${fmt(weekStart)} – ${fmt(sun)}`;
 }
 

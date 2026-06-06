@@ -212,13 +212,11 @@ describe('scheduleNextCheckinReminder', () => {
     expect(mockScheduleAsync).toHaveBeenCalled();
   });
 
-  test('with this-week checkin already in the past-but-current-cycle: skips this cycle', async () => {
-    // current week's Monday in UTC
-    const d = new Date();
-    const day = (d.getUTCDay() + 6) % 7;
-    d.setUTCHours(0, 0, 0, 0);
-    d.setUTCDate(d.getUTCDate() - day);
-    mockGetLatestCheckin.mockResolvedValue({ weekStart: d.getTime() });
+  test('with this-week checkin already made: skips this cycle', async () => {
+    // A check-in created now is inside the current local week, so the
+    // upcoming reminder day is skipped. Suppression matches on created_at
+    // (an absolute instant), not the stored week_start.
+    mockGetLatestCheckin.mockResolvedValue({ createdAt: Date.now() });
 
     await scheduler.scheduleNextCheckinReminder('user-1', 0, 12, 0);
     const fireDate = mockScheduleAsync.mock.calls[0][0].trigger.date;

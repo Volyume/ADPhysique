@@ -39,3 +39,21 @@ export function parseLocalDay(isoStr) {
   if (!y || !m || !d) return new Date(NaN);
   return new Date(y, m - 1, d);
 }
+
+/**
+ * Start of the LOCAL week (Monday 00:00 local) containing `ms`, in epoch ms.
+ *
+ * The training / coaching week anchors on the user's local Monday, never
+ * UTC, so a session or check-in logged near midnight (especially during
+ * British Summer Time, when local is UTC+1) lands in the right week. Using
+ * getUTCDay/setUTCHours here put the boundary up to an hour off and could
+ * bucket a Monday-morning check-in into the previous week. Use this for
+ * every "this week" boundary; do not recompute with the UTC getters.
+ */
+export function localWeekStartMs(ms = Date.now()) {
+  const d = new Date(Number.isFinite(ms) ? ms : Date.now());
+  const day = (d.getDay() + 6) % 7; // 0 = Monday
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - day);
+  return d.getTime();
+}

@@ -6,7 +6,7 @@
  * Jest runs in UTC by default (process.env.TZ unset -> UTC), so we assert the
  * UTC-equivalent behaviour and the relationship to getFullYear/Month/Date.
  */
-import { localDayKey, todayLocalKey } from '../dayKey';
+import { localDayKey, todayLocalKey, localWeekStartMs } from '../dayKey';
 
 describe('localDayKey', () => {
   test('formats as zero-padded YYYY-MM-DD', () => {
@@ -42,5 +42,40 @@ describe('localDayKey', () => {
     const spy = jest.spyOn(Date, 'now').mockReturnValue(Date.UTC(2026, 5, 3, 9, 0, 0));
     expect(todayLocalKey()).toBe(localDayKey(Date.now()));
     spy.mockRestore();
+  });
+});
+
+describe('localWeekStartMs (local Monday week boundary)', () => {
+  test('returns a Monday at local midnight', () => {
+    const d = new Date(localWeekStartMs(Date.UTC(2026, 5, 3, 14, 30))); // a Wednesday
+    expect(d.getDay()).toBe(1); // Monday
+    expect(d.getHours()).toBe(0);
+    expect(d.getMinutes()).toBe(0);
+    expect(d.getSeconds()).toBe(0);
+  });
+
+  test('is the start of the week containing the input', () => {
+    const input = Date.UTC(2026, 5, 3, 14, 30);
+    const start = localWeekStartMs(input);
+    expect(start).toBeLessThanOrEqual(input);
+    expect(input - start).toBeLessThan(7 * 86400000);
+  });
+
+  test('every day within a week maps to the same Monday', () => {
+    const start = localWeekStartMs(Date.UTC(2026, 5, 3, 12));
+    for (let i = 0; i < 7; i++) {
+      expect(localWeekStartMs(start + i * 86400000 + 3600000)).toBe(start);
+    }
+  });
+
+  test('is idempotent and ignores time of day', () => {
+    const start = localWeekStartMs(Date.UTC(2026, 5, 3, 12));
+    expect(localWeekStartMs(start)).toBe(start);
+    expect(localWeekStartMs(start + 23 * 3600000)).toBe(start);
+  });
+
+  test('a non-finite input falls back to now without throwing', () => {
+    expect(() => localWeekStartMs(NaN)).not.toThrow();
+    expect(Number.isFinite(localWeekStartMs(NaN))).toBe(true);
   });
 });

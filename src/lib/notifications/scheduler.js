@@ -22,6 +22,7 @@ import {
   shiftDateOutOfQuietHours,
 } from './quietHours';
 import { trackNotificationFailed } from './telemetry';
+import { localWeekStartMs } from '../dayKey';
 
 const NOTIF_ID_MORNING = 'volyume_morning_weight';
 const NOTIF_ID_CHECKIN = 'volyume_weekly_checkin';
@@ -163,15 +164,12 @@ export async function scheduleCheckinReminder(weekday = 0, hour = 12, minute = 0
 }
 
 /**
- * Returns the start (Monday 00:00 UTC) of the current ISO week, in
- * epoch ms. Mirrors getCurrentWeekStart in WeeklyCheckInScreen.
+ * Start (Monday 00:00 LOCAL) of the current week, in epoch ms. Local, not
+ * UTC, so it matches getCurrentWeekStart in WeeklyCheckInScreen and the
+ * rest of the app's week boundary (UK-local rule).
  */
 function getCurrentMondayWeekStartMs() {
-  const d = new Date();
-  const day = (d.getUTCDay() + 6) % 7;
-  d.setUTCHours(0, 0, 0, 0);
-  d.setUTCDate(d.getUTCDate() - day);
-  return d.getTime();
+  return localWeekStartMs();
 }
 
 /**
@@ -188,8 +186,13 @@ export async function scheduleNextCheckinReminder(userId, weekday = 0, hour = 12
       const latest = await getLatestCheckin(userId);
       const cycleStart = getCurrentMondayWeekStartMs();
       const now = Date.now();
-      const weekStartMs = latest?.weekStart ?? 0;
-      if (latest && weekStartMs >= cycleStart && weekStartMs <= now) {
+      // Suppress on the check-in's actual creation instant, not its stored
+      // week_start. created_at is an absolute timestamp, so it matches the
+      // local week regardless of how week_start was computed (older rows
+      // stored a UTC-Monday week_start); falls back to weekStart only if a
+      // row somehow lacks created_at.
+      const madeAt = latest?.createdAt ?? latest?.weekStart ?? 0;
+      if (latest && madeAt >= cycleStart && madeAt <= now) {
         alreadyDone = true;
       }
     }

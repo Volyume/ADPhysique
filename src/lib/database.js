@@ -4032,9 +4032,14 @@ export async function insertDailyStepsFromCloud(userId, row) {
 export async function saveWeeklyCheckin(userId, data) {
   const d = await db();
   const now = Date.now();
+  // Find this week's check-in by when it was made, not its stored
+  // week_start: created_at is an absolute instant, so a row written under
+  // the older UTC-Monday week_start convention is still matched and updated
+  // rather than duplicated. data.weekStart is the local Monday 00:00.
+  const weekEnd = data.weekStart + 7 * 86400000;
   const existing = await d.getFirstAsync(
-    'SELECT id FROM weekly_checkins WHERE user_id = ? AND week_start = ?',
-    [userId, data.weekStart],
+    'SELECT id FROM weekly_checkins WHERE user_id = ? AND created_at >= ? AND created_at < ? ORDER BY created_at DESC LIMIT 1',
+    [userId, data.weekStart, weekEnd],
   );
   let savedId;
   if (existing?.id) {
