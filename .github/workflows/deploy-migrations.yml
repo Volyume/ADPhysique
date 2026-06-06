@@ -1,0 +1,88 @@
+name: Apply Supabase migrations
+
+# Auto-applies the supabase/migrate_*.sql files to the cloud database so
+# migrations never need pasting into the SQL Editor by hand (founder direction
+# 2026-06-06: "I do not deploy anything"). Safe by construction:
+#
+#   * A tracking table (claude_schema_migrations) records what has run, so each
+#     file applies at most once. Re-running the workflow is a no-op.
+#   * A baseline seed marks every migration numbered <= 058 as already applied
+#     (they were applied historically, per supabase/README.md), so they are
+#     never re-run against the live DB.
+#   * A HELD list (049, 059) is never auto-applied: those ship WITH an app build
+#     by deliberate policy, not ahead of it.
+#   * Each file runs in a single transaction with ON_ERROR_STOP, so a failure
+#     rolls back and fails the run loudly rather than half-applying.
+#
+# One-time secret (already configured per founder, 2026-06-06):
+#   SUPABASE_DB_URL = the project's Postgres connection string
+#     (Supabase dashboard -> Project Settings -> Database -> Connection string,
+#     URI form, including the password). If your DB secret has a different name,
+#     point it at SUPABASE_DB_URL or tell me the name and I'll update this file.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrate_*.sql'
+  workflow_dispatch:
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check required secret
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL is empty. Add it in repo Settings -> Secrets and variables -> Actions (Supabase dashboard -> Project Settings -> Database -> Connection string, URI form with password)."
+            exit 1
+          fi
+
+      - name: Install psql
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+
+      - name: Apply pending migrations
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          run_sql() { psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -tA -c "$1"; }
+
+          echo "Ensuring tracking table…"
+          run_sql "CREATE TABLE IF NOT EXISTS claude_schema_migrations (filename text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());"
+
+          echo "Seeding the applied baseline (migrations <= 058 are already live)…"
+          for f in $(ls supabase/migrate_*.sql | sort); do
+            base="$(basename "$f")"
+            num="$(echo "$base" | sed -E 's/migrate_0*([0-9]+)_.*/\1/')"
+            if [ "$num" -le 58 ]; then
+              run_sql "INSERT INTO claude_schema_migrations(filename) VALUES ('$base') ON CONFLICT DO NOTHING;" >/dev/null
+            fi
+          done
+
+          applied_any=0
+          for f in $(ls supabase/migrate_*.sql | sort); do
+            base="$(basename "$f")"
+            case "$base" in
+              migrate_049_*|migrate_059_*)
+                echo "HELD, skipping $base (ships with an app build)"; continue;;
+            esac
+            seen="$(run_sql "SELECT 1 FROM claude_schema_migrations WHERE filename='$base';")"
+            if [ "$seen" = "1" ]; then continue; fi
+            echo "Applying $base …"
+            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 --single-transaction -f "$f"
+            run_sql "INSERT INTO claude_schema_migrations(filename) VALUES ('$base') ON CONFLICT DO NOTHING;" >/dev/null
+            applied_any=1
+            echo "Applied $base"
+          done
+
+          if [ "$applied_any" = "0" ]; then
+            echo "No pending migrations to apply."
+          fi
