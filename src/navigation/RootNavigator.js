@@ -116,6 +116,13 @@ const GatedBodyMetrics      = withProGuard(BodyMetricsScreen, 'Body metrics');
 const GatedCoachOutput      = withProGuard(CoachOutputScreen, 'Your week');
 const GatedProGoalSetup     = withProGuard(ProGoalSetupScreen, 'Pro goal setup');
 const GatedCoachingReminders = withProGuard(CoachingRemindersScreen, 'Coaching reminders');
+// Diary domain is Pro (free is Plan Library, custom training, Progress, You).
+// Gating the Diary tab root covers the food sub-screens, which are only reached
+// from it; cardio screens are gated directly because they are also registered in
+// the Home and Progress stacks, so they need the guard at every entry point.
+const GatedDiary            = withProGuard(DiaryScreen, 'Food diary');
+const GatedLogCardio        = withProGuard(LogCardioScreen, 'Cardio');
+const GatedCardioHistory    = withProGuard(CardioHistoryScreen, 'Cardio');
 
 const stackOptions = {
   headerStyle: { backgroundColor: colors.surface, borderBottomColor: colors.border },
@@ -178,7 +185,7 @@ function DiaryStack({ navigation }) {
   }, [navigation]);
   return (
     <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
-      <Stack.Screen name="Diary" component={DiaryScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Diary" component={GatedDiary} options={{ headerShown: false }} />
       <Stack.Screen
         name="FoodSearch"
         component={FoodSearchScreen}
@@ -201,12 +208,12 @@ function DiaryStack({ navigation }) {
       />
       <Stack.Screen
         name="LogCardio"
-        component={LogCardioScreen}
+        component={GatedLogCardio}
         options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen
         name="CardioHistory"
-        component={CardioHistoryScreen}
+        component={GatedCardioHistory}
         options={{ headerShown: false }}
       />
       <Stack.Screen
@@ -251,7 +258,7 @@ function HomeStack({ navigation }) {
       <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ title: 'Weekly Review' }} />
       {/* Cardio is launched from the Train tab's CardioCard. Registering it here
           keeps the modal in this stack so saving returns to Train, not the Diary. */}
-      <Stack.Screen name="LogCardio" component={LogCardioScreen} options={{ headerShown: false, presentation: 'modal' }} />
+      <Stack.Screen name="LogCardio" component={GatedLogCardio} options={{ headerShown: false, presentation: 'modal' }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
     </Stack.Navigator>
   );
@@ -298,8 +305,8 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ title: 'Share Card' }} />
       {/* Cardio is launched from the Progress tab (AnalyticsScreen). Registering
           both here keeps them in this stack so save/back return to Progress. */}
-      <Stack.Screen name="LogCardio" component={LogCardioScreen} options={{ headerShown: false, presentation: 'modal' }} />
-      <Stack.Screen name="CardioHistory" component={CardioHistoryScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="LogCardio" component={GatedLogCardio} options={{ headerShown: false, presentation: 'modal' }} />
+      <Stack.Screen name="CardioHistory" component={GatedCardioHistory} options={{ headerShown: false }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
     </Stack.Navigator>
   );
