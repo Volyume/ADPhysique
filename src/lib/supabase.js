@@ -155,8 +155,52 @@ async function _signInWithOAuthProvider(provider) {
   }
 }
 
-export function signInWithGoogle() {
-  return _signInWithOAuthProvider('google');
+// Public Google OAuth Web client ID. Not a secret: it ships in the app binary
+// and is the audience Supabase's Google provider is configured with. Native
+// Google Sign-In requests an ID token with this as the audience, which Supabase
+// verifies via signInWithIdToken.
+const GOOGLE_WEB_CLIENT_ID = '520741631478-apaethkp3g55o06lott116jag73l0ves.apps.googleusercontent.com';
+
+// Native Google Sign-In: shows the OS account-picker sheet (no browser, no
+// supabase.co URL on screen), returns a Google ID token, and exchanges it with
+// Supabase via signInWithIdToken. Same real account + session as the old
+// browser OAuth flow, so the locked identity model is unaffected. The native
+// module is lazy-required so jest and any non-native env don't try to load it.
+//
+// Founder setup (one-time): an Android OAuth client in Google Cloud with the
+// app's package (app.volyume) and signing SHA-1, plus the Web client above
+// configured in Supabase Authentication → Providers → Google.
+export async function signInWithGoogle() {
+  const c = getSupabaseClient();
+  if (!c) {
+    return { error: { message: 'Cloud sign-in is not available right now. Try again.' } };
+  }
+  let GoogleSignin;
+  let statusCodes;
+  try {
+    // eslint-disable-next-line global-require, import/no-unresolved
+    ({ GoogleSignin, statusCodes } = require('@react-native-google-signin/google-signin'));
+  } catch (_) {
+    return { error: { message: 'Google sign-in is unavailable in this build.' } };
+  }
+  try {
+    GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    const resp = await GoogleSignin.signIn();
+    // v13+ shape: { type: 'success' | 'cancelled', data }. Older: { idToken }.
+    if (resp?.type === 'cancelled') return { cancelled: true };
+    const idToken = resp?.data?.idToken ?? resp?.idToken ?? null;
+    if (!idToken) return { error: { message: 'Google did not return a sign-in token.' } };
+    const { error } = await c.auth.signInWithIdToken({ provider: 'google', token: idToken });
+    if (error) return { error };
+    return { ok: true };
+  } catch (e) {
+    const code = e?.code;
+    if (statusCodes && (code === statusCodes.SIGN_IN_CANCELLED || code === statusCodes.IN_PROGRESS)) {
+      return { cancelled: true };
+    }
+    return { error: { message: e?.message ?? 'Google sign-in failed.' } };
+  }
 }
 
 export function signInWithApple() {
