@@ -90,18 +90,17 @@ export default function SubscriptionPolicyScreen() {
         <Section
           icon="time-outline"
           tint={colors.primary}
-          title="The free-beta period"
+          title="Your free trial"
         >
           <Body>
-            Volyume is fully free during the beta, including Pro features, while we test, listen, and improve.
+            New accounts get Pro free for 14 days, no card needed. You get the full coaching layer and can decide whether it's for you.
           </Body>
           <Body>
-            When Pro becomes a paid feature, beta users get:
+            To keep Pro after that, subscribe in the app. Google Play adds a further 7 days free, then it renews monthly at the price shown at checkout until you cancel.
           </Body>
-          <Bullet>At least <Strong>90 days' notice</Strong> in the app and by email before any charge.</Bullet>
-          <Bullet>Anything you built during the free beta stays yours, readable forever, even if you stay on Free.</Bullet>
-          <Bullet>A clear list of what's moving behind Pro, and what stays free, well before the change.</Bullet>
-          <Bullet>An honest reason for the change, which will be about supporting continued work on the app.</Bullet>
+          <Bullet>The Free tier has no time limit: the plan library, your own training, and your progress charts stay free.</Bullet>
+          <Bullet>Anything you built on Pro stays yours and readable even if you move to Free; only new coaching changes pause.</Bullet>
+          <Bullet>Cancel anytime in Google Play. You keep Pro until the period you've paid for ends, then you drop to Free.</Bullet>
         </Section>
 
         <Section
