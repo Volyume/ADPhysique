@@ -2,7 +2,7 @@
 
 Status: COMPLETE. Date 2026-06-06. Each item: what, where, how, blocking?
 
-## App Store Connect — app record + listing
+## App Store Connect: app record + listing
 - [ ] Confirm the app record (App Apple ID 6777083702, bundle `app.volyume`)
   details. Where: App Store Connect > Apps. Blocking: no (exists).
 - [ ] Set Primary Category Health & Fitness, Secondary Sports; Primary language
@@ -26,7 +26,7 @@ Status: COMPLETE. Date 2026-06-06. Each item: what, where, how, blocking?
   free-only needs the free agreement). Where: Business > Agreements. Blocking:
   yes for IAP.
 
-## Apple Developer Portal — capabilities
+## Apple Developer Portal: capabilities
 - [ ] If implementing native Sign in with Apple (C2): enable the Sign in with
   Apple capability on the `app.volyume` App ID and create the Services ID +
   return URL for the Supabase token exchange. Blocking: yes for C2.
@@ -43,7 +43,7 @@ Status: COMPLETE. Date 2026-06-06. Each item: what, where, how, blocking?
   the new Edge Function. Blocking: yes for paid iOS.
 NOTE: not needed if shipping the free-beta iOS build (Phase 4 Option A).
 
-## Push (APNs) — only if enabling remote push
+## Push (APNs): only if enabling remote push
 - [ ] Create the APNs auth key and add it to EAS credentials (needs Apple ID
   cookie auth: add `EXPO_APPLE_ID` + an app-specific password as repo secrets, or
   do it once on expo.dev). Blocking: no (local notifications work without it).

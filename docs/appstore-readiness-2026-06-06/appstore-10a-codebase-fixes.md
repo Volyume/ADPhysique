@@ -26,7 +26,7 @@ go-ahead per the checkpoint). Items already staged this session are marked.
 
 ## HIGH
 
-### H1. App Store screenshots (Phase 8) — asset production, not code. Manual.
+### H1. App Store screenshots (Phase 8): asset production, not code. Manual.
 
 ## MEDIUM
 

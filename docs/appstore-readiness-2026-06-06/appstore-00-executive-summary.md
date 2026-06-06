@@ -1,4 +1,4 @@
-# Volyume App Store readiness — executive summary
+# Volyume App Store readiness: executive summary
 
 Status: AUDIT COMPLETE (all per-phase documents written; no fixes implemented
 yet, awaiting go-ahead). See appstore-00..10b in this folder.
@@ -30,7 +30,7 @@ and line 193 ("Android-only at v1. When iOS lands... validate Apple receipts").
 > makes iOS submittable now WITHOUT building StoreKit. Full StoreKit (Option B)
 > is only needed when iOS actually monetises.
 
-### B1. No iOS in-app purchases (Guideline 3.1.1) — dead purchase UI on iOS
+### B1. No iOS in-app purchases (Guideline 3.1.1): dead purchase UI on iOS
 The payments layer is Google Play Billing only. `src/lib/payments/playBilling.js`
 wraps `react-native-iap` but is Google-specific end to end:
 `setObfuscatedAccountIdAndroid`, `isAcknowledgedAndroid`, server validation via
@@ -48,7 +48,7 @@ receipt-validation Edge Function, App Store Server Notifications v2, and the
 specifies this (lines 374-435); it was just never built.
 Apple source: App Review Guidelines §3.1.1.
 
-### B2. Sign in with Apple is web OAuth, not native, with a non-standard button (Guideline 4.8) — HIGH
+### B2. Sign in with Apple is web OAuth, not native, with a non-standard button (Guideline 4.8): HIGH
 `src/screens/LoginScreen.js` offers Google sign-in, so Apple's 4.8 applies. An
 Apple option does exist and is shown first on iOS, which is good. But
 `signInWithApple` in `src/lib/supabase.js` is `_signInWithOAuthProvider('apple')`
@@ -81,27 +81,30 @@ Apple source: App Review Guidelines §4.8.
 - Deployment target 16.0; HealthKit + Push entitlements present and correct;
   `ITSAppUsesNonExemptEncryption=false` set.
 
-## Needs verification or follow-up (not yet deep-audited)
+## Findings from the completed per-phase audit
 
-- Restore Purchases button (3.1.1 requires it): `restore.js` exists and the doc
-  cites "You → Subscription → Restore"; not yet confirmed visible + functional
-  on iOS.
-- Remote push: APNs key not set up (per the build handoff); push entitlement is
-  in the build, but remote delivery won't work until the key is added. Local
-  notifications unaffected. Not a submission blocker.
-- App Store Connect metadata, privacy nutrition labels, screenshots, age rating,
-  product config: all manual, all outstanding (Phase 8/10b).
-- Accessibility (Phase 7), performance/crash (Phase 6), full notifications
-  (Phase 9): not yet deep-audited; pending scope decision.
+- Restore Purchases button: EXISTS (`src/screens/SubscriptionScreen.js`, wired to
+  `restore.js`). On iOS it calls the Google path, so it is part of the C1 fix
+  (hide on iOS during free beta). Phase 4.
+- Performance/stability (Phase 6): no blockers. Root error boundary, Sentry crash
+  reporting, offline-first, `src/` lint-clean and tsc-clean.
+- Accessibility (Phase 7): good label coverage and reduce-motion support; chart
+  labels (M2) and a Dynamic Type decision (M3) are the meaningful gaps. No blocker.
+- Notifications (Phase 9): contextual permission prompt + graceful denial.
+  Exemplary. Remote push (APNs) deferred, not a blocker.
+- Metadata (Phase 8): listing copy prepared, but SCREENSHOTS do not exist (H1,
+  manual). 6.9" iPhone 1320x2868, no transparency. 1024 icon must be alpha-free.
+- Privacy (Phase 2): no blocker; add an app-level privacy manifest (M1) and fill
+  the App Store privacy nutrition labels (manual).
 
 ## Confidence
 
-High confidence on the two blockers (read from source + the locked strategy doc)
-and on the cleared items (verified against the actual accepted Build 6 and the
-generated iOS project). The remaining phases are scoped but not yet deep-dived,
-because B1 and B2 alone mean the app cannot pass review today and they change
-the plan: there is no point producing a screenshot-spec document before deciding
-whether iOS purchases get built now or the App Store push waits.
+High. Findings are read from source, the generated iOS project, the actual
+accepted Build 6, and current Apple docs. For a FREE-BETA iOS submission only two
+in-codebase fixes are blockers (C1 hide the dead iOS purchase UI, C2 native/
+compliant Sign in with Apple) plus the manual App Store Connect assets
+(screenshots, icon, age rating, privacy labels, live URLs). Full StoreKit IAP and
+remote push are separate later projects.
 
 ## Path to a submittable iOS build (free beta)
 
