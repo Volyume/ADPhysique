@@ -43,13 +43,22 @@ function buildKcalReason(prevKcal, nextKcal, nextPhase) {
   if (prevKcal == null || nextKcal == null) return null;
   const delta = nextKcal - prevKcal;
   if (Math.abs(delta) < 50) return `Your daily calories stay roughly the same.`;
-  const direction = delta > 0 ? 'up' : 'down';
+  const up = delta > 0;
+  const direction = up ? 'up' : 'down';
   const absDelta = Math.abs(delta);
   if (nextPhase === 'cut') {
-    return `Calories come ${direction} by ${absDelta} kcal/day to set the deficit your new phase needs.`;
+    // Reason must track the actual direction: a deeper cut goes down, a milder
+    // cut goes up. Never imply a rise sets a bigger deficit.
+    return up
+      ? `Calories come up by ${absDelta} kcal/day for the smaller deficit your new phase needs.`
+      : `Calories come down by ${absDelta} kcal/day to set the deficit your new phase needs.`;
   }
   if (nextPhase === 'bulk' || nextPhase === 'lean_gain') {
-    return `Calories go ${direction} by ${absDelta} kcal/day to fuel new muscle growth.`;
+    // A rise fuels growth; a fall is a leaner, more controlled gain. Do not say
+    // a calorie cut "fuels new muscle growth": that reads as contradictory.
+    return up
+      ? `Calories go up by ${absDelta} kcal/day to fuel new muscle growth.`
+      : `Calories come down by ${absDelta} kcal/day for a leaner, more controlled gain.`;
   }
   return `Calories shift ${direction} by ${absDelta} kcal/day to match your new phase.`;
 }
