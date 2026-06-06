@@ -80,17 +80,87 @@ function _loadRNIap() {
 }
 
 /**
- * The real Google Play Billing provider. Wraps `react-native-iap` to
+ * Pick the Play offer token to purchase a subscription with.
+ *
+ * Google returns, per subscription product, a list of offers in
+ * `subscriptionOfferDetailsAndroid`: the base plan (no `offerId`) plus any
+ * offers, e.g. the 7-day free trial. To buy WITH the free trial we must pass
+ * that offer's `offerToken`; pass the base plan's token (or none) and Google
+ * bills immediately at the regular price. Eligibility is enforced server
+ * side: once a user has used the intro offer Google stops returning it, so we
+ * fall back to the base plan automatically.
+ *
+ * Preference order:
+ *   1. an offer whose pricing has a free phase (priceAmountMicros === 0)
+ *   2. the base plan offer (no offerId)
+ *   3. the first offer
+ * Returns null only if the product exposes no offers at all (misconfigured).
+ *
+ * @param {object} product  a ProductSubscription from fetchProducts({type:'subs'})
+ * @returns {string|null}
+ */
+export function selectOfferToken(product) {
+  const offers = product?.subscriptionOfferDetailsAndroid;
+  if (!Array.isArray(offers) || offers.length === 0) return null;
+  const hasFreePhase = (o) =>
+    Array.isArray(o?.pricingPhases?.pricingPhaseList)
+    && o.pricingPhases.pricingPhaseList.some(
+      (p) => p && Number(p.priceAmountMicros) === 0,
+    );
+  const freeTrial = offers.find(hasFreePhase);
+  if (freeTrial?.offerToken) return freeTrial.offerToken;
+  const basePlan = offers.find((o) => !o?.offerId);
+  if (basePlan?.offerToken) return basePlan.offerToken;
+  return offers[0]?.offerToken ?? null;
+}
+
+/**
+ * The real Google Play Billing provider. Wraps `react-native-iap` v15 to
  * match the provider contract the cascade module + UI call against.
- * Returned by buildRealProvider() and injected by tryWireRealProvider()
+ * Returned by _buildRealProvider() and injected by tryWireRealProvider()
  * at app boot when the native module is present.
+ *
+ * v15 note: the purchase result arrives via purchaseUpdatedListener, NOT the
+ * return of requestPurchase. purchasePackage() bridges that event back to its
+ * awaited Promise so the paywall callers keep the same contract (await ->
+ * { transactionId, sku, customerInfo }).
+ *
+ * The RNIap argument defaults to the lazily-required native module; tests
+ * inject a fake.
  *
  * CustomerInfo shape we expose:
  *   { activeEntitlements: ['pro'], latestTransactionId: '…', activeSku: 'pro_monthly_…' }
  */
-function _buildRealProvider() {
-  const RNIap = _loadRNIap();
+export function _buildRealProvider(RNIap = _loadRNIap()) {
   if (!RNIap) return null;
+
+  // sku -> offerToken, filled in initialise() from fetchProducts so the
+  // 7-day trial offer is ready before the first purchase.
+  const offerTokens = {};
+  // Captured at initialise(); v15 takes obfuscatedAccountId in the request.
+  let providerAppUserID = null;
+  // The single in-flight purchase bridge. v15 delivers the result on the
+  // listener, so purchasePackage() parks its resolve/reject here and the
+  // listeners settle it.
+  let pending = null; // { skus:Set, resolve, reject, timer }
+
+  function _settleResolve(purchase) {
+    if (!pending) return;
+    const pid = purchase?.productId
+      ?? (Array.isArray(purchase?.ids) ? purchase.ids[0] : null);
+    // If we can read a product id and it isn't the one we're waiting on, this
+    // is an out-of-band event (e.g. a restore); leave our pending alone.
+    if (pid && pending.skus.size && !pending.skus.has(pid)) return;
+    const p = pending; pending = null;
+    try { clearTimeout(p.timer); } catch (_) { /* tolerate */ }
+    p.resolve(purchase);
+  }
+  function _settleReject(err) {
+    if (!pending) return;
+    const p = pending; pending = null;
+    try { clearTimeout(p.timer); } catch (_) { /* tolerate */ }
+    p.reject(err);
+  }
 
   function _purchasesToCustomerInfo(purchases) {
     const known = (purchases || []).filter(p => {
@@ -116,18 +186,25 @@ function _buildRealProvider() {
 
   return {
     async initialise({ appUserID } = {}) {
+      providerAppUserID = appUserID ?? null;
       await RNIap.initConnection();
-      // Pre-fetch SKU metadata so the first call to requestSubscription
-      // doesn't pay the round-trip cost while the user waits.
+      // Pre-fetch the subscription products so the offer tokens (the 7-day
+      // free trial) are cached before the first purchase, and the first tap
+      // doesn't pay the round-trip while the user waits.
       try {
-        await RNIap.getSubscriptions({ skus: allSkuIds() });
+        const products = await RNIap.fetchProducts({ skus: allSkuIds(), type: 'subs' });
+        for (const product of products || []) {
+          const id = product?.id ?? product?.productId;
+          const token = selectOfferToken(product);
+          if (id && token) offerTokens[id] = token;
+        }
       } catch (e) {
-        logWarn('payments.playBilling.getSubscriptions', e?.message ?? 'unknown', {});
+        logWarn('payments.playBilling.fetchProducts', e?.message ?? 'unknown', {});
       }
-      // Purchase listener fires for both fresh purchases and pending
-      // transactions resolved out of band (e.g. payment was
-      // PENDING and later approved). Acknowledge via finishTransaction
-      // so Google considers the purchase consumed/handled.
+      // Purchase listener fires for fresh purchases and for pending
+      // transactions resolved out of band (e.g. payment was PENDING and later
+      // approved). Acknowledge via finishTransaction so Google considers it
+      // handled, then settle the awaiting purchasePackage() call.
       _purchaseListener = RNIap.purchaseUpdatedListener(async (purchase) => {
         try {
           if (purchase?.purchaseToken && !purchase?.isAcknowledgedAndroid) {
@@ -143,27 +220,26 @@ function _buildRealProvider() {
           });
         } catch (e) {
           logWarn('payments.playBilling.finishTransaction', e?.message ?? 'unknown', {});
+        } finally {
+          _settleResolve(purchase);
         }
       });
       _errorListener = RNIap.purchaseErrorListener((err) => {
-        // Don't log user-cancel as an error; it's a normal flow.
         const code = err?.code ?? '';
-        if (code === 'E_USER_CANCELLED') return;
-        logWarn('payments.playBilling.purchaseError',
-          err?.message ?? 'unknown', { code });
-        _trackPurchase('purchase_failed', {
-          error_code: code || 'unknown',
-          error_message: err?.message ?? 'unknown',
-        });
+        // User-cancel is a normal flow, not an error to log, but it still has
+        // to settle the awaiting call so the UI stops spinning.
+        if (code !== 'E_USER_CANCELLED') {
+          logWarn('payments.playBilling.purchaseError',
+            err?.message ?? 'unknown', { code });
+          _trackPurchase('purchase_failed', {
+            error_code: code || 'unknown',
+            error_message: err?.message ?? 'unknown',
+          });
+        }
+        const e = new Error(err?.message ?? 'purchase_error');
+        e.code = code || 'purchase_error';
+        _settleReject(e);
       });
-      if (appUserID) {
-        // Stamp the obfuscated account ID so RTDN events come back
-        // correlated to our auth uid (Google forwards this field in
-        // the developer notification payload).
-        try {
-          await RNIap.setObfuscatedAccountIdAndroid?.(appUserID);
-        } catch (_) { /* older lib versions don't expose this */ }
-      }
     },
 
     async getCustomerInfo() {
@@ -173,11 +249,47 @@ function _buildRealProvider() {
 
     async purchasePackage(skuId) {
       _trackPurchase('purchase_initiated', { sku: skuId });
-      // requestSubscription returns a Promise resolving to the
-      // purchase object once Google has confirmed. The purchase
-      // listener also fires; we wait for the Promise here so the
-      // caller gets a transactionId immediately.
-      const purchase = await RNIap.requestSubscription({ sku: skuId });
+      const offerToken = offerTokens[skuId] ?? null;
+      // Android subscriptions must name an offer; without a token the trial
+      // can't be selected and Google rejects the purchase, so fail clearly
+      // rather than firing a request that silently bills full price or errors.
+      if (!offerToken) {
+        throw new Error(`No Play offer for ${skuId} (product not found or no base plan configured)`);
+      }
+      // v15: result comes via the listener. Park resolve/reject here, fire the
+      // request, and let the listeners settle. A timeout guards against a
+      // dialog the user dismisses without an event ever arriving.
+      const purchase = await new Promise((resolve, reject) => {
+        const entry = { skus: new Set([skuId]), resolve, reject, timer: null };
+        entry.timer = setTimeout(() => {
+          if (pending === entry) {
+            pending = null;
+            const e = new Error('purchase_timed_out');
+            e.code = 'E_PURCHASE_TIMEOUT';
+            reject(e);
+          }
+        }, 90000);
+        pending = entry;
+        Promise.resolve()
+          .then(() => RNIap.requestPurchase({
+            request: {
+              google: {
+                skus: [skuId],
+                subscriptionOffers: [{ sku: skuId, offerToken }],
+                ...(providerAppUserID ? { obfuscatedAccountId: providerAppUserID } : {}),
+              },
+            },
+            type: 'subs',
+          }))
+          .catch((err) => {
+            // Synchronous store rejection (E_NOT_PREPARED, validation, …).
+            if (pending === entry) {
+              pending = null;
+              try { clearTimeout(entry.timer); } catch (_) { /* tolerate */ }
+            }
+            reject(err);
+          });
+      });
       const info = _purchasesToCustomerInfo([purchase]);
       return {
         transactionId: purchase?.transactionId
@@ -199,6 +311,10 @@ function _buildRealProvider() {
       try { _errorListener?.remove?.(); } catch (_) { /* tolerate */ }
       _purchaseListener = null;
       _errorListener = null;
+      if (pending) {
+        try { clearTimeout(pending.timer); } catch (_) { /* tolerate */ }
+        pending = null;
+      }
       try { await RNIap.endConnection(); } catch (_) { /* tolerate */ }
     },
   };
@@ -239,7 +355,7 @@ const _stubProvider = Object.freeze({
 
 /**
  * Replace the active provider. Called once at app boot in production
- * with the real `react-native-purchases` adapter; called by tests
+ * with the real `react-native-iap` v15 adapter; called by tests
  * with a mock.
  */
 export function injectProvider(provider) {
