@@ -74,6 +74,10 @@ export default function PaywallScreen({ navigation, route }) {
       const result = await cascade.payAt('pro', ref, surface);
       if (!result.ok) {
         logError('Paywall.payAt.failed', new Error(result.error ?? 'unknown'), { surface });
+        // Google took the payment but our record write failed (usually
+        // offline). The Play webhook confirms it server-side, so don't let
+        // the user think it failed; tell them it's being confirmed.
+        appAlert('Payment received', "We're confirming your Pro access. It can take a moment to unlock.");
       }
       logInfo('Paywall.paid', `surface=${surface} sku=${sku.id}`);
       if (navigation?.canGoBack?.()) navigation.goBack();

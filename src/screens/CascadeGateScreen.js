@@ -109,6 +109,9 @@ export default function CascadeGateScreen({ navigation, route }) {
         logError('CascadeGate.payAt.failed',
           new Error(cascadeResult.error ?? 'unknown'),
           { targetTier });
+        // Google took the payment but our write failed; the Play webhook
+        // reconciles it server-side. Reassure rather than look un-upgraded.
+        toast.show('Payment received. Confirming your Pro access, it can take a moment.', { variant: 'info', duration: 5000 });
       }
       logInfo('CascadeGate.paid', `tier=${targetTier} sku=${sku.id}`);
       dismiss();

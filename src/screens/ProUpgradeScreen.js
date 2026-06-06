@@ -67,7 +67,12 @@ export default function ProUpgradeScreen({ navigation }) {
       const pr = await playBilling.purchasePackage(sku.id);
       const ref = pr?.transactionId ?? `client_${Date.now()}`;
       const r = await cascade.payAt('pro', ref, 'pro_upgrade');
-      if (!r.ok) logError('ProUpgrade.payAt.failed', new Error(r.error ?? 'unknown'), {});
+      if (!r.ok) {
+        logError('ProUpgrade.payAt.failed', new Error(r.error ?? 'unknown'), {});
+        // Payment went through at Google but our write failed; the webhook
+        // confirms it server-side. Tell the user it's being confirmed.
+        appAlert('Payment received', "We're confirming your Pro access. It can take a moment to unlock.");
+      }
       setDone(true);
     } catch (e) {
       const msg = e?.message ?? '';
