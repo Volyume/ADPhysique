@@ -1,0 +1,37 @@
+name: Print signing SHA fingerprints
+
+# Prints the SHA-1 / SHA-256 of the upload keystore so they can be pasted into
+# a Google Cloud Android OAuth client (for native Google Sign-In) and into
+# assetlinks. A fingerprint is public, not a secret, so logging it is safe.
+# Run it from the Actions tab (Run workflow), or it can be triggered via the API.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fingerprints:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print upload-key fingerprints
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is empty."
+            exit 1
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > /tmp/upload.keystore
+          echo "================ UPLOAD KEY FINGERPRINTS ================"
+          keytool -list -v \
+            -keystore /tmp/upload.keystore \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            ${ANDROID_KEY_ALIAS:+-alias "$ANDROID_KEY_ALIAS"} \
+            | grep -iE "SHA1:|SHA-1:|SHA256:|SHA-256:" || \
+          keytool -list -v -keystore /tmp/upload.keystore -storepass "$ANDROID_KEYSTORE_PASSWORD"
+          echo "========================================================"
+          echo "Copy the SHA1 value into the Google Cloud Android OAuth client."
+          echo "This is the UPLOAD key (for sideloaded APKs). The Play App"
+          echo "Signing SHA-1 (for Play-installed builds) is in Play Console ->"
+          echo "App integrity -> App signing -> App signing key certificate."
