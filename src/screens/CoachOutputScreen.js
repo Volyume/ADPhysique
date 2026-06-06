@@ -1808,10 +1808,8 @@ const styles = StyleSheet.create({
 
   // Done button (secondary style, surface fill, border, no solid colour)
   doneBtn: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.primary,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
     paddingVertical: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1819,8 +1817,8 @@ const styles = StyleSheet.create({
   },
   doneBtnText: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
+    fontWeight: fontWeight.bold,
+    color: colors.background,
   },
   credentialNote: {
     fontSize: fontSize.xs,
