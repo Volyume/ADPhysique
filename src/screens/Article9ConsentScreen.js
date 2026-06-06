@@ -48,6 +48,19 @@ export default function Article9ConsentScreen({ navigation }) {
     try {
       const sb = getSupabaseClient();
       if (!sb) throw new Error('Cloud client unavailable');
+      // Make sure a profile row exists first. A brand-new account may not
+      // have one yet, and both record_health_consent (an UPDATE) and
+      // start_cascade (which raises 'profile not found' on a missing row)
+      // need it. Without this the post-beta trial never starts for a new
+      // user, so they fall through to the free setup instead of Pro
+      // onboarding. The protect-tier trigger forces the new row to 'free'.
+      if (user?.id) {
+        try {
+          await sb.from('users_profile').upsert({ id: user.id }, { onConflict: 'id' });
+        } catch (e) {
+          logError('Article9.ensureProfileRow', e, { uid: user?.id });
+        }
+      }
       const { error } = await sb.rpc('record_health_consent', {
         _granted: true,
         _app_version: Application.nativeApplicationVersion ?? null,
@@ -92,7 +105,11 @@ export default function Article9ConsentScreen({ navigation }) {
       try {
         // eslint-disable-next-line global-require
         const { cascade } = require('../lib/payments');
-        cascade.startCascade().catch((e) => {
+        // Await so the trial grant (tier='pro') lands before the navigator
+        // re-renders on healthConsentGranted; otherwise a new user briefly
+        // flashes the free setup before the cloud catches up. Failure is
+        // tolerated: they proceed and can upgrade later.
+        await cascade.startCascade().catch((e) => {
           logError('Article9.consent.startCascade', e, { uid: user?.id });
         });
       } catch (e) {
