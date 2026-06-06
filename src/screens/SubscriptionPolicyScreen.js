@@ -6,8 +6,7 @@
  *
  * Modelled on Hevy's downgrade-friendly approach (Help Center article
  * 38279350428695): anything created on Pro stays accessible read-only
- * on Free. Volyume extends this to anything created during the free
- * beta period: yours forever, even after we move Pro to paid.
+ * on Free, yours forever, even after a downgrade.
  *
  * Linked from Settings → Account and ProUpgradeScreen.
  */
