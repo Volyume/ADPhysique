@@ -1416,6 +1416,54 @@ superseded.
 
 ## 9. Founder action queue
 
+### Android production readiness (2026-06-06, code-verified)
+
+Verdict after checking the actual code (not trusting "done" labels in the
+readiness docs): **the code side is production-ready.** Main CI is green (Jest
+2959 passing, ESLint 0 errors, Expo Doctor passing). Everything below is
+founder-side or on-device, the parts that cannot be done from the repo. This is
+the live gate list; supersedes the older "Now" items beneath where they overlap.
+
+**Code, verified in source (no work outstanding):**
+- Subscriptions path is complete: `App.js:42` wires the real react-native-iap v15
+  provider at boot; `RootNavigator.js:619` initialises it post-sign-in; the three
+  purchase surfaces call `purchasePackage` → `cascade.payAt('pro', ref)` →
+  `upgrade_tier` RPC (server write); restore mirrors it; offer selection picks the
+  7-day free-trial token. Immediate unlock does not depend on the RTDN webhook.
+  15 payments tests pass.
+- Store-audit config verified in the real files: `app.json` allowBackup=false +
+  blockedPermissions + cleartext=false + v1.2.0 (no associatedDomains);
+  `babel.config.js` prod console-strip; `eslint.config.js` ignores web/.next;
+  `build-android.yml` Sentry upload conditional on the secret; `deploy-pages.yml`
+  assetlinks SHA injection; assetlinks.json two-fingerprint template.
+- No stub/placeholder/TODO debt in the runtime; every screen mounts and its
+  touchables fire across all four tier/data states (screen-mount, 547 green).
+
+**Founder-side / on-device (these gate production approval):**
+1. **Play Console subscriptions:** create `pro_monthly` (£4.99/mo) and
+   `pro_annual` (£29.99/yr), each with a base plan + a 7-day free-trial offer.
+   Product IDs MUST equal `src/lib/payments/catalogue.js` exactly.
+2. **Apply migrations 060-066** in order (all drafted/pending; verification
+   queries in `supabase/README.md`), then **deploy `play-billing-rtdn`** (+
+   `send-push`) and confirm the Pub/Sub RTDN topic is wired.
+3. **Sandbox purchase** end-to-end on a real device via a licensed tester;
+   confirm a `tier_history` row + `trial_state` + `billing_period` write land.
+4. **Signing / App Links:** enrol in Play App Signing at first upload; set the
+   `PLAY_APP_SIGNING_SHA256` repo secret. Optional: `SENTRY_AUTH_TOKEN` for
+   symbolicated crashes. Both degrade gracefully if absent.
+5. **16 KB page-size check** on the built AAB (the internal track reports it);
+   bump any misaligned native lib if it fails.
+6. **Store paperwork:** Health Apps Declaration, Data Safety form, data-deletion
+   URL (`volyume.app/privacy`, reachable without sign-in), content rating (IARC),
+   target-audience + permissions declarations, listing assets
+   (`docs/PLAY_STORE_LISTING.md`).
+7. **Closed-test gate to confirm:** a new personal Play account must run closed
+   testing with **≥12 testers for ≥14 continuous days** before production access
+   is granted. Confirm whether this is already satisfied; it can block "production
+   today" independent of the code being ready. Widen `reactNativeArchitectures`
+   to `armeabi-v7a,arm64-v8a` for the real Play upload (CI currently builds
+   arm64-v8a only).
+
 ### Now
 
 1. **Apply the pending migrations 060-063** in the Supabase SQL Editor (all additive, old-AAB compatible; verification queries in `supabase/README.md`). Nothing breaks until they land; each gates a feature, not the app:
