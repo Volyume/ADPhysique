@@ -3,7 +3,7 @@
 // patch fails fast instead of corrupting the submit profile.
 import crypto from 'node:crypto';
 import assert from 'node:assert/strict';
-import { makeTokenFromPem, injectAscAppId } from './resolve-asc-app-id.mjs';
+import { makeTokenFromPem, injectSubmitConfig } from './resolve-asc-app-id.mjs';
 
 let passed = 0;
 function check(name, fn) {
@@ -30,20 +30,30 @@ check('JWT is a verifiable ES256 token with ASC claims', () => {
   );
 });
 
-check('injectAscAppId sets only ios.ascAppId and preserves siblings', () => {
+check('injectSubmitConfig writes ios fields and preserves siblings', () => {
   const eas = {
     build: { production: { env: { APP_VARIANT: 'production' } } },
     submit: { production: { android: { track: 'internal' } } },
   };
-  const out = injectAscAppId(eas, '1234567890');
+  const out = injectSubmitConfig(eas, {
+    ascAppId: '1234567890',
+    ascApiKeyPath: '/tmp/key.p8',
+    ascApiKeyId: 'KID',
+    ascApiKeyIssuerId: 'ISS',
+  });
   assert.equal(out.submit.production.ios.ascAppId, '1234567890');
+  assert.equal(out.submit.production.ios.ascApiKeyPath, '/tmp/key.p8');
+  assert.equal(out.submit.production.ios.ascApiKeyId, 'KID');
+  assert.equal(out.submit.production.ios.ascApiKeyIssuerId, 'ISS');
   assert.equal(out.submit.production.android.track, 'internal');
   assert.equal(out.build.production.env.APP_VARIANT, 'production');
 });
 
-check('injectAscAppId creates the submit path when missing', () => {
-  const out = injectAscAppId({ build: {} }, '999');
+check('injectSubmitConfig creates the submit path and skips empty values', () => {
+  const out = injectSubmitConfig({ build: {} }, { ascAppId: '999', ascApiKeyPath: '', ascApiKeyId: undefined });
   assert.equal(out.submit.production.ios.ascAppId, '999');
+  assert.equal('ascApiKeyPath' in out.submit.production.ios, false);
+  assert.equal('ascApiKeyId' in out.submit.production.ios, false);
 });
 
 console.log(`\n${passed} checks passed.`);

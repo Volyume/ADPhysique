@@ -45,12 +45,20 @@ export function makeTokenFromPem(p8Pem, keyId, issuerId, now = Math.floor(Date.n
   return `${signingInput}.${b64url(sig)}`;
 }
 
-// Set submit.production.ios.ascAppId without disturbing the rest of eas.json.
-export function injectAscAppId(easJson, ascAppId) {
+// Set submit.production.ios fields without disturbing the rest of eas.json.
+// eas submit needs the App Store Connect API key in the submit profile too
+// (ascApiKeyPath/ascApiKeyId/ascApiKeyIssuerId): it does NOT read the EXPO_ASC_*
+// env vars that eas build uses, and without these it tries to set up a key
+// interactively and fails in --non-interactive mode.
+export function injectSubmitConfig(easJson, fields) {
+  const ios = {};
+  for (const [k, v] of Object.entries(fields)) {
+    if (v) ios[k] = v;
+  }
   const next = { ...easJson };
   next.submit = { ...(next.submit || {}) };
   next.submit.production = { ...(next.submit.production || {}) };
-  next.submit.production.ios = { ...(next.submit.production.ios || {}), ascAppId };
+  next.submit.production.ios = { ...(next.submit.production.ios || {}), ...ios };
   return next;
 }
 
@@ -99,9 +107,16 @@ async function main() {
   const ascAppId = apps[0].id;
   console.log(`Resolved ascAppId ${ascAppId} for ${bundleId} ("${apps[0].attributes?.name || ''}").`);
 
+  // eas submit needs the API key in the profile too, not just ascAppId.
+  const submitFields = {
+    ascAppId,
+    ascApiKeyPath: keyPath,
+    ascApiKeyId: keyId,
+    ascApiKeyIssuerId: issuerId,
+  };
   const easJson = JSON.parse(fs.readFileSync(easJsonPath, 'utf8'));
-  fs.writeFileSync(easJsonPath, `${JSON.stringify(injectAscAppId(easJson, ascAppId), null, 2)}\n`);
-  console.log(`✓ Wrote submit.production.ios.ascAppId into ${easJsonPath}.`);
+  fs.writeFileSync(easJsonPath, `${JSON.stringify(injectSubmitConfig(easJson, submitFields), null, 2)}\n`);
+  console.log(`✓ Wrote submit.production.ios (ascAppId + ASC API key fields) into ${easJsonPath}.`);
 }
 
 const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
