@@ -86,17 +86,28 @@ Still open, none blocking:
    annual) to confirm the v15 provider and the 7-day offer apply. This is
    the only piece I can't test from here.
 
-## The final switch (last, done together)
+## The final switch — DONE
 
-On the build where the sandbox purchase passed:
+`PRO_BETA_ACTIVE = false` is committed on `main` (2026-06-06). Tier now
+resolves from each user's real trial / subscription state; Free is
+actually free and the gates and paid flow are live. The full test suite
+returned to its pre-flip baseline (no new failures). The push triggered a
+GitHub Actions build, so a production AAB (`versionCode` 11) is being
+produced now.
 
-- Flip `PRO_BETA_ACTIVE = false` in `src/lib/proGate.js`. This makes Free
-  actually free and the gates live. **Do this last**, on the verified
-  build, not before the products exist.
-- Your 12 closed-test users drop to Free and subscribe like everyone else
-  (your "no grandfather" decision).
-- Cut the production AAB (`versionCode` 11) via the GitHub Actions
-  workflow, upload to the production track, roll out.
+Remaining to ship, your side:
+
+1. Apply migrations 059–066, deploy `play-billing-rtdn` (+ redeploy after
+   066) and `send-push`, wire Pub/Sub.
+2. One sandbox purchase on a device (monthly and annual) to confirm the
+   offer applies. The only piece I can't test from here.
+3. Download the AAB from the latest GitHub Actions run and upload to the
+   production track once Google grants production access, then roll out.
+
+Note: the build from this push has the beta switch OFF, it is the
+production build. Do not upload it to the closed test track unless you
+want your 12 testers moved to the paid flow now; otherwise leave the
+current beta build on closed test until production goes live.
 
 ## Accepted at launch (known, minor)
 
