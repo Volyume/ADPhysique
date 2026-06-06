@@ -17,6 +17,7 @@ import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import {
   detectPR,
+  bestPRPerExercise,
   computeSetTargets,
   calculate1RM,
   summariseWorkoutSets,
@@ -791,7 +792,13 @@ export default function ActiveWorkoutScreen({ navigation }) {
       const prs = detectPR(setData, prHistory, exercise, units);
       if (prs.length > 0) {
         showPRCelebration({ ...prs[0], exerciseName: exercise.name });
-        setDetectedPRs(prev => [...prev, ...prs.map(p => ({ ...p, exerciseName: exercise.name, units }))]);
+        // Keep one PR per exercise (the most significant), so a multi-set,
+        // multi-exercise session reports a handful of PRs, not dozens. The
+        // per-set celebration above still fires each time a new best lands.
+        setDetectedPRs(prev => bestPRPerExercise([
+          ...prev,
+          ...prs.map(p => ({ ...p, exerciseId: exercise.id, exerciseName: exercise.name, units })),
+        ]));
       }
 
       // Pre-fill next set from per-set targets (same beat-rep logic as initial load)

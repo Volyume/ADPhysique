@@ -563,6 +563,54 @@ export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
   return prs;
 }
 
+// Significance order for collapsing a session's PRs: an estimated-1RM PR
+// is the headline strength gain, then a new heaviest weight, then most
+// reps at a weight.
+const PR_TYPE_RANK = {
+  '1rm_estimate': 3,
+  heaviest_weight: 2,
+  most_reps_at_weight: 1,
+};
+
+/**
+ * Collapse a session's raw PR list to ONE PR per exercise.
+ *
+ * detectPR can return up to three PR types for a single set, and every
+ * set that beats the running best counts again, so six exercises can
+ * report dozens of PRs. A session should read as "one PR for that
+ * exercise": this keeps the most significant PR per exercise (by type
+ * rank, then larger value within a type) and preserves the order each
+ * exercise's first PR was seen. Display only, the stored all-time
+ * records are computed from full set history elsewhere, so this never
+ * loses a real record.
+ *
+ * @param {Array<object>} prs  PR objects, each ideally with exerciseId
+ *                             (falls back to exerciseName), type, value.
+ * @returns {Array<object>}    one PR per exercise.
+ */
+export function bestPRPerExercise(prs) {
+  if (!Array.isArray(prs) || prs.length === 0) return [];
+  const bestByKey = new Map();
+  const order = [];
+  for (const pr of prs) {
+    if (!pr) continue;
+    const key = pr.exerciseId ?? pr.exerciseName ?? pr.exercise ?? '';
+    const rank = PR_TYPE_RANK[pr.type] ?? 0;
+    const existing = bestByKey.get(key);
+    if (!existing) {
+      bestByKey.set(key, pr);
+      order.push(key);
+      continue;
+    }
+    const existingRank = PR_TYPE_RANK[existing.type] ?? 0;
+    if (rank > existingRank
+        || (rank === existingRank && (pr.value ?? 0) > (existing.value ?? 0))) {
+      bestByKey.set(key, pr);
+    }
+  }
+  return order.map(k => bestByKey.get(k));
+}
+
 // Algorithm 6: Auto-Regulation
 // perMuscleStimulusRatings: optional array of { primaryMuscle, pump, connection } from
 // post-exercise ratings. When present, per-muscle pump overrides the session-level overallPump

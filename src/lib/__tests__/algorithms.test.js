@@ -11,6 +11,7 @@ import {
   PLATE_SETS,
   DEFAULT_BAR_WEIGHT,
   calculate1RM,
+  bestPRPerExercise,
 } from '../algorithms';
 
 // ─── VOLUME_LANDMARKS shape ────────────────────────────────────────────────────
@@ -523,5 +524,59 @@ describe('numeric edge cases (CALC-2/4/5/6/7)', () => {
   test('CALC-7: calculatePlates terminates when availablePlates contains 0', () => {
     const res = calculatePlates(100, 20, [25, 0, 5]);
     expect(Array.isArray(res.plates)).toBe(true); // returned, did not hang
+  });
+});
+
+describe('bestPRPerExercise (one PR per exercise per session)', () => {
+  test('collapses the three PR types from one exercise to a single PR, keeping the 1RM', () => {
+    const out = bestPRPerExercise([
+      { exerciseId: 'bench', type: '1rm_estimate', value: 110 },
+      { exerciseId: 'bench', type: 'heaviest_weight', value: 100 },
+      { exerciseId: 'bench', type: 'most_reps_at_weight', value: 8 },
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].type).toBe('1rm_estimate');
+  });
+
+  test('keeps one PR per exercise and preserves first-seen order', () => {
+    const out = bestPRPerExercise([
+      { exerciseId: 'squat', type: 'heaviest_weight', value: 140 },
+      { exerciseId: 'bench', type: '1rm_estimate', value: 110 },
+      { exerciseId: 'squat', type: '1rm_estimate', value: 180 },
+    ]);
+    expect(out.map(p => p.exerciseId)).toEqual(['squat', 'bench']);
+    expect(out.find(p => p.exerciseId === 'squat').type).toBe('1rm_estimate');
+  });
+
+  test('within a type, the larger value (a better later set) wins', () => {
+    const out = bestPRPerExercise([
+      { exerciseId: 'ohp', type: '1rm_estimate', value: 60 },
+      { exerciseId: 'ohp', type: '1rm_estimate', value: 65 },
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].value).toBe(65);
+  });
+
+  test('a six-exercise session of many raw PRs collapses to six', () => {
+    const raw = [];
+    for (let i = 0; i < 6; i++) {
+      for (const t of ['1rm_estimate', 'heaviest_weight', 'most_reps_at_weight']) {
+        raw.push({ exerciseId: `ex${i}`, type: t, value: 100 + i });
+        raw.push({ exerciseId: `ex${i}`, type: t, value: 105 + i }); // a better later set
+      }
+    }
+    expect(raw.length).toBeGreaterThan(20);
+    expect(bestPRPerExercise(raw)).toHaveLength(6);
+  });
+
+  test('falls back to exerciseName and tolerates empty/invalid input', () => {
+    expect(bestPRPerExercise([])).toEqual([]);
+    expect(bestPRPerExercise(null)).toEqual([]);
+    const out = bestPRPerExercise([
+      { exerciseName: 'Curl', type: 'heaviest_weight', value: 20 },
+      { exerciseName: 'Curl', type: 'most_reps_at_weight', value: 12 },
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].type).toBe('heaviest_weight');
   });
 });
