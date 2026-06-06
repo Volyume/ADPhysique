@@ -168,9 +168,14 @@ async function getGoogleAccessToken(): Promise<string | null> {
   }
   let creds: { client_email: string; private_key: string };
   try {
-    creds = JSON.parse(atob(sa));
+    // Accept the service-account key either as the raw JSON (paste the .json
+    // file contents straight in) or base64-encoded. Raw JSON starts with '{';
+    // anything else is treated as base64.
+    const trimmed = sa.trim();
+    const rawJson = trimmed.startsWith("{") ? trimmed : atob(trimmed);
+    creds = JSON.parse(rawJson);
   } catch (_) {
-    log("error", "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not valid base64-JSON");
+    log("error", "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not valid JSON (raw or base64)");
     return null;
   }
   const now = Math.floor(Date.now() / 1000);
