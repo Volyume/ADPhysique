@@ -4,6 +4,43 @@ Single source of truth for the Android and iOS build work done this session.
 Written for handoff. Everything below is verified against CI run logs and the
 repo state at `origin/main` = `3f038c1`.
 
+## 2026-06-06 correction + automated fix (read this first)
+
+The iOS diagnosis below was partly wrong. The real cause was read straight from
+the run #13 job log, not inferred:
+
+- The ASC API key **did** enable the capability. The log shows
+  `Synced capabilities: Enabled: Associated Domains, Push Notifications`. So the
+  claim "regenerating the profile needs an Apple ID login the ASC key can't do"
+  is incorrect for the capability itself. No Apple ID login is required to enable
+  Associated Domains.
+- The actual failure: EAS reused the **stale stored provisioning profile** from
+  run #10 (`Updated 7 hours ago`, minted before the capability existed). EAS
+  validates a profile by expiry, certificate and bundle id only, not by its
+  entitlements, so the stale profile passed EAS's check ("All credentials are
+  ready to build") and Xcode then rejected it.
+- The `Skipping capability identifier syncing ... not using Cookies` line is a
+  red herring. It is about capability *identifiers* (App Groups, iCloud
+  containers, Merchant IDs), none of which this app uses.
+- No hidden second blocker: run #13's Xcode error named only Associated Domains.
+  Xcode lists every missing entitlement at once, so the stale profile already
+  carries HealthKit and Push. A fresh profile satisfies all three.
+
+**Fix shipped (automated, no founder action, no Apple ID secrets):**
+`build-ios.yml` now runs `scripts/ci/regenerate-ios-profile.mjs` before the
+build. Using the same ASC API key, it deletes only the App Store profile(s) for
+`app.volyume` whose embedded entitlements lack
+`com.apple.developer.associated-domains`. EAS then has no valid App Store
+profile and mints a fresh, correct one during the same build. It is
+self-limiting: once a correct profile exists it deletes nothing, so it does not
+churn credentials or force a regeneration on later builds. A free self-test
+(`scripts/ci/regenerate-ios-profile.test.mjs`) runs first so a regression in the
+JWT signer or entitlement check fails before any paid EAS step.
+
+The Apple-ID-secrets path (option 1 below) is still the route for **remote
+push** (the APNs key), which is a separate, later task and not needed for the
+build to reach TestFlight.
+
 ## Status at a glance
 
 | Target | State | Where it stands |
