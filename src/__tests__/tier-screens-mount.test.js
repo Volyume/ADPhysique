@@ -39,6 +39,9 @@ jest.mock('../lib/payments/cascade', () => ({
 
 jest.mock('../lib/payments/playBilling', () => ({
   purchasePackage: jest.fn(async () => ({ transactionId: 'txn_test', sku: 'pro_monthly_open_beta' })),
+  // usePlayPrices reads these; return empty so the screens fall back to catalogue text.
+  ensureDisplayPrices: jest.fn(async () => ({})),
+  getDisplayPrices: jest.fn(() => ({})),
 }));
 
 jest.mock('../lib/payments/restore', () => ({

@@ -48,6 +48,20 @@ let _currentAppUserID = null;
 let _purchaseListener = null;
 let _errorListener = null;
 
+// C-2: localised display prices per sku, captured from the store at fetch time.
+// Store policy (Apple + Google) requires showing the store's localised price,
+// not a hardcoded one. Populated by the real provider's loadOfferTokens; read by
+// the paywall surfaces (via usePlayPrices), falling back to the catalogue text
+// before products load. Module-level so the UI can read it without the provider
+// closure.
+const _displayPrices = {};
+export function getDisplayPrice(skuId) {
+  return _displayPrices[skuId] ?? null;
+}
+export function getDisplayPrices() {
+  return { ..._displayPrices };
+}
+
 // Funnel telemetry for the IAP dialog. Reads user from the store
 // lazily so the payments module stays free of store imports at
 // evaluation time. Falls back to _currentAppUserID (set during
@@ -115,6 +129,35 @@ export function selectOfferToken(product) {
 }
 
 /**
+ * The localised recurring price string to display for a subscription product,
+ * read from the store (e.g. "£4.99", "$6.99", "8,99 €"). Returns the first
+ * non-free pricing phase's `formattedPrice` from the base plan (or any offer),
+ * which is the price the user actually pays after any trial. Returns null when
+ * the product exposes no priced phase, so callers fall back to the catalogue
+ * text. Pure; mirrors selectOfferToken so it can be unit-tested.
+ *
+ * @param {object} product a ProductSubscription from fetchProducts({type:'subs'})
+ * @returns {string|null}
+ */
+export function selectDisplayPrice(product) {
+  const offers = product?.subscriptionOfferDetailsAndroid;
+  if (!Array.isArray(offers) || offers.length === 0) return null;
+  const pricedPhase = (o) =>
+    (o?.pricingPhases?.pricingPhaseList || []).find(
+      (p) => p && Number(p.priceAmountMicros) > 0 && p.formattedPrice,
+    );
+  // Prefer the base plan's recurring price; fall back to any offer's.
+  const basePlan = offers.find((o) => !o?.offerId);
+  const fromBase = basePlan && pricedPhase(basePlan);
+  if (fromBase?.formattedPrice) return fromBase.formattedPrice;
+  for (const o of offers) {
+    const ph = pricedPhase(o);
+    if (ph?.formattedPrice) return ph.formattedPrice;
+  }
+  return null;
+}
+
+/**
  * The real Google Play Billing provider. Wraps `react-native-iap` v15 to
  * match the provider contract the cascade module + UI call against.
  * Returned by _buildRealProvider() and injected by tryWireRealProvider()
@@ -173,6 +216,9 @@ export function _buildRealProvider(RNIap = _loadRNIap()) {
         const id = product?.id ?? product?.productId;
         const token = selectOfferToken(product);
         if (id && token) offerTokens[id] = token;
+        // C-2: cache the localised display price for the paywall surfaces.
+        const price = selectDisplayPrice(product);
+        if (id && price) _displayPrices[id] = price;
       }
     } catch (e) {
       logWarn('payments.playBilling.fetchProducts', e?.message ?? 'unknown', {});
@@ -202,6 +248,8 @@ export function _buildRealProvider(RNIap = _loadRNIap()) {
   }
 
   return {
+    // Exposed so the paywall can force a price fetch if initialise hasn't run.
+    loadProducts: loadOfferTokens,
     async initialise({ appUserID } = {}) {
       providerAppUserID = appUserID ?? null;
       await RNIap.initConnection();
@@ -215,7 +263,12 @@ export function _buildRealProvider(RNIap = _loadRNIap()) {
       // handled, then settle the awaiting purchasePackage() call.
       _purchaseListener = RNIap.purchaseUpdatedListener(async (purchase) => {
         try {
-          if (purchase?.purchaseToken && !purchase?.isAcknowledgedAndroid) {
+          // L-1: only acknowledge a PURCHASED transaction. Android delivers
+          // PENDING purchases (slow payment, parental approval) to this listener
+          // too; acknowledging one errors. purchaseStateAndroid: 1=purchased,
+          // 2=pending. Treat anything explicitly pending as not-yet-finishable.
+          const isPending = purchase?.purchaseStateAndroid === 2;
+          if (purchase?.purchaseToken && !purchase?.isAcknowledgedAndroid && !isPending) {
             await RNIap.finishTransaction({ purchase, isConsumable: false });
           }
           logInfo('payments.playBilling.purchaseUpdated',
@@ -373,6 +426,7 @@ const STUB_CUSTOMER_INFO = Object.freeze({
 
 const _stubProvider = Object.freeze({
   async initialise() { /* no-op */ },
+  async loadProducts() { /* no-op; no store prices in the stub env */ },
   async getCustomerInfo() { return { ...STUB_CUSTOMER_INFO }; },
   async purchasePackage() {
     throw new Error('Play Billing provider not injected (Phase A stub)');
@@ -380,6 +434,18 @@ const _stubProvider = Object.freeze({
   async restorePurchases() { return { ...STUB_CUSTOMER_INFO }; },
   async logOut() { /* no-op */ },
 });
+
+/**
+ * Ensure the localised display prices are loaded, then return the
+ * { skuId: formattedPrice } map. The paywall calls this; if prices are already
+ * cached (initialise ran at sign-in) it returns immediately, otherwise it forces
+ * one fetch. Returns {} in the stub env, so callers fall back to catalogue text.
+ */
+export async function ensureDisplayPrices() {
+  if (Object.keys(_displayPrices).length > 0) return getDisplayPrices();
+  try { await _active().loadProducts?.(); } catch (_) { /* tolerate */ }
+  return getDisplayPrices();
+}
 
 /**
  * Replace the active provider. Called once at app boot in production

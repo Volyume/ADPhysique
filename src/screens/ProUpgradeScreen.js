@@ -12,7 +12,8 @@ import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 import { PRO_BETA_ACTIVE } from '../lib/proGate';
 import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
-import { skuFor, priceTextFor, annualSavingsPct } from '../lib/payments/catalogue';
+import { skuFor, annualSavingsPct } from '../lib/payments/catalogue';
+import { usePlayPrices } from '../lib/payments/usePlayPrices';
 
 const PRO_PERKS = [
   { icon: 'sparkles', text: 'A plan built around your schedule, goals, and experience level' },
@@ -29,6 +30,11 @@ export default function ProUpgradeScreen({ navigation }) {
 
   const hasAccount = Boolean(session?.user?.id) && !user?.isLocal;
   const canTrial = cascade.canStillTrial(userProfile);
+
+  // C-2: localised store prices, catalogue text as the pre-load fallback.
+  const priceFor = usePlayPrices();
+  const monthlyPrice = priceFor('pro', 'monthly');
+  const annualPrice = priceFor('pro', 'annual');
 
   const [mode, setMode] = useState('signup'); // 'signup' | 'signin'
   const [email, setEmail] = useState('');
@@ -351,10 +357,10 @@ export default function ProUpgradeScreen({ navigation }) {
                     disabled={busy}
                     accessibilityRole="button"
                     accessibilityState={{ selected: period === 'monthly' }}
-                    accessibilityLabel="Monthly, £4.99 a month"
+                    accessibilityLabel={`Monthly, ${monthlyPrice}`}
                   >
                     <Text style={[styles.periodLabel, period === 'monthly' && styles.periodTextActive]}>Monthly</Text>
-                    <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{priceTextFor('pro', 'monthly')}</Text>
+                    <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{monthlyPrice}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.periodBtn, period === 'annual' && styles.periodBtnActive]}
@@ -362,11 +368,11 @@ export default function ProUpgradeScreen({ navigation }) {
                     disabled={busy}
                     accessibilityRole="button"
                     accessibilityState={{ selected: period === 'annual' }}
-                    accessibilityLabel="Annual, £29.99 a year, save 50 per cent"
+                    accessibilityLabel={`Annual, ${annualPrice}, save ${annualSavingsPct()} per cent`}
                   >
                     <View style={styles.saveBadge}><Text style={styles.saveBadgeText}>Save {annualSavingsPct()}%</Text></View>
                     <Text style={[styles.periodLabel, period === 'annual' && styles.periodTextActive]}>Annual</Text>
-                    <Text style={[styles.periodPrice, period === 'annual' && styles.periodTextActive]}>{priceTextFor('pro', 'annual')}</Text>
+                    <Text style={[styles.periodPrice, period === 'annual' && styles.periodTextActive]}>{annualPrice}</Text>
                   </TouchableOpacity>
                 </View>
               ) : null}

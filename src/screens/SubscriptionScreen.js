@@ -26,6 +26,7 @@ import { isPaidTier } from '../lib/proGate';
 import * as cascade from '../lib/payments/cascade';
 import { restorePurchases } from '../lib/payments/restore';
 import { skuFor } from '../lib/payments/catalogue';
+import { usePlayPrices } from '../lib/payments/usePlayPrices';
 import { logError, logInfo } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 
@@ -52,6 +53,8 @@ export default function SubscriptionScreen({ navigation }) {
   // monthly price. Only show a price once the user is actually paying.
   const period = billingPeriod === 'annual' ? 'annual' : 'monthly';
   const currentSku = stage === 'paid' ? skuFor('pro', period) : null;
+  // C-2: localised store price, catalogue text as the pre-load fallback.
+  const priceFor = usePlayPrices();
 
   const [busy, setBusy] = useState(false);
 
@@ -111,7 +114,7 @@ export default function SubscriptionScreen({ navigation }) {
 
   const handleUpgrade = useCallback(() => {
     audit('subscription.upgrade.tap', { from: 'subscription_screen' });
-    navigation?.navigate?.('CascadeGate', { variant: 'day21', period });
+    navigation?.navigate?.('CascadeGate', { variant: 'day14', period });
   }, [navigation, period]);
 
   return (
@@ -135,7 +138,7 @@ export default function SubscriptionScreen({ navigation }) {
         {currentSku ? (
           <Card borderless style={styles.card}>
             <Text style={styles.cardLabel}>Price</Text>
-            <Text style={styles.cardValue}>{currentSku.priceText}</Text>
+            <Text style={styles.cardValue}>{priceFor('pro', period)}</Text>
             <Text style={styles.cardSub}>
               {period === 'annual' ? 'Billed yearly' : 'Billed monthly'}
             </Text>

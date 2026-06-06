@@ -121,6 +121,13 @@ export async function startCascade() {
   return r;
 }
 
+// C-1 (2026-06-06): the paid 'pro' grant is server-authoritative. The client no
+// longer writes its own tier (the authenticated upgrade_tier rejects 'pro',
+// migration 067), which closes the self-grant hole. On a confirmed purchase we
+// unlock Pro optimistically in-memory for instant UX; the Google Play RTDN
+// (after Play Developer API verification) writes the real tier via
+// upgrade_tier_for_user, and refreshTierFromCloud reconciles to it within the
+// optimistic window. A purchase that never reached the server reverts to free.
 export async function payAt(targetTier, paymentRef, sourceSurface = null) {
   if (!paymentRef) {
     return { ok: false, error: 'payment_ref_required' };
@@ -129,14 +136,13 @@ export async function payAt(targetTier, paymentRef, sourceSurface = null) {
   if (targetTier !== 'pro') {
     return { ok: false, error: 'invalid_target_tier' };
   }
-  const r = await _call('upgrade_tier', {
-    _target_tier: targetTier,
-    _reason: 'user_paid',
-    _source_surface: sourceSurface,
-    _payment_ref: paymentRef,
-  });
-  if (r.ok) _trackTransition({ reason: 'user_paid', sourceSurface, targetTier, paymentRef });
-  return r;
+  try {
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../../store/useAppStore').default;
+    await useAppStore.getState().setOptimisticPaid();
+  } catch (_) { /* tolerate; the RTDN grant + next refresh still unlock */ }
+  _trackTransition({ reason: 'user_paid', sourceSurface, targetTier, paymentRef });
+  return { ok: true, optimistic: true };
 }
 
 export async function skipToFree(sourceSurface = null) {

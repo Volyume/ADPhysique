@@ -21,6 +21,12 @@ jest.mock('../errorLog', () => ({
   logInfo: jest.fn(),
 }));
 
+// payAt now does an optimistic local unlock (C-1) instead of an RPC tier write.
+const mockSetOptimisticPaid = jest.fn();
+jest.mock('../../store/useAppStore', () => ({
+  default: { getState: () => ({ user: null, setOptimisticPaid: mockSetOptimisticPaid }) },
+}));
+
 const cascade = require('../payments/cascade');
 
 beforeEach(() => {
@@ -54,16 +60,13 @@ describe('startCascade', () => {
 });
 
 describe('payAt', () => {
-  test('user paying for pro calls upgrade_tier correctly', async () => {
-    mockRpc.mockResolvedValue({ data: { trial_state: 'paid_pro' }, error: null });
+  test('paying for pro unlocks optimistically; the real grant is server-side (C-1)', async () => {
+    // C-1: the client must not write its own paid tier. payAt unlocks Pro
+    // optimistically in-memory; the Play RTDN writes the authoritative tier.
     const r = await cascade.payAt('pro', 'txn_123', 'cascade_day21_gate');
-    expect(mockRpc).toHaveBeenCalledWith('upgrade_tier', {
-      _target_tier: 'pro',
-      _reason: 'user_paid',
-      _source_surface: 'cascade_day21_gate',
-      _payment_ref: 'txn_123',
-    });
-    expect(r.ok).toBe(true);
+    expect(r).toEqual({ ok: true, optimistic: true });
+    expect(mockSetOptimisticPaid).toHaveBeenCalled();
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 
   test('rejects payment without payment_ref before any RPC call', async () => {

@@ -14,7 +14,7 @@
  */
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
-import { skuFor } from '../lib/payments/catalogue';
+import { usePlayPrices } from '../lib/payments/usePlayPrices';
 
 // Three-row content for the 2-tier model. Free on the left (the lesser
 // tier), Pro on the right (the fuller, paid tier).
@@ -29,7 +29,8 @@ export default function TierComparisonStrip({
   highlighted = 'pro',   // 'free' | 'pro', which column gets the amber outline
   onPickPro,             // optional: makes the Pro column tappable
 }) {
-  const proSku = skuFor('pro', pricingWindow);
+  // C-2: localised store price, catalogue text as the pre-load fallback.
+  const priceFor = usePlayPrices();
 
   const FreeColumn = (
     <View
@@ -58,7 +59,7 @@ export default function TierComparisonStrip({
       ]}
     >
       <Text style={styles.colHeader}>Pro</Text>
-      <Text style={styles.colPrice}>{proSku?.priceText ?? '-'}</Text>
+      <Text style={styles.colPrice}>{priceFor('pro', pricingWindow)}</Text>
       {COMPARISON_ROWS.map((row, i) => (
         <Text key={`pro-${i}`} style={styles.rowText} numberOfLines={2}>
           {row.pro}

@@ -438,6 +438,20 @@ const useAppStore = create((set, get) => ({
   // the Play webhook's billing_period column. Null shows the monthly price.
   billingPeriod: null,
 
+  // C-1 (2026-06-06): a just-completed purchase unlocks Pro optimistically in
+  // the app while the Google Play RTDN writes the authoritative tier
+  // server-side. Until this timestamp, refreshTierFromCloud won't downgrade a
+  // pro user back to free (the RTDN write can lag the on-device purchase by a
+  // few seconds). After it lapses, normal server reconciliation resumes, so a
+  // purchase that never reached the server (e.g. a spoofed local call) reverts
+  // to free. The real grant is always the server's, never the client's.
+  _optimisticPaidUntil: 0,
+  setOptimisticPaid: async () => {
+    const until = Date.now() + 5 * 60 * 1000; // 5 minutes
+    set({ tier: 'pro', _optimisticPaidUntil: until });
+    try { await AsyncStorage.setItem(TIER_KEY, 'pro'); } catch (_) { /* tolerate */ }
+  },
+
   // Cloud sync status surface. Set from RootNavigator when a fresh
   // SIGNED_IN triggers pullFromCloud. Screens subscribe to
   // cloudSyncVersion so they re-fetch from SQLite once data finishes
@@ -774,7 +788,13 @@ const useAppStore = create((set, get) => ({
         // blocks writes, no webhook yet).
         // eslint-disable-next-line global-require
         const { PRO_BETA_ACTIVE } = require('../lib/proGate');
-        const effectiveTier = PRO_BETA_ACTIVE ? 'pro' : data.tier;
+        let effectiveTier = PRO_BETA_ACTIVE ? 'pro' : data.tier;
+        // C-1: don't clobber a just-purchased optimistic unlock while the Play
+        // RTDN is still writing the server tier. Within the optimistic window we
+        // never downgrade pro→free; once it lapses the server value governs.
+        if (effectiveTier !== 'pro' && (get()._optimisticPaidUntil ?? 0) > Date.now()) {
+          effectiveTier = 'pro';
+        }
         // Persist BEFORE setting in-memory state so a crash between the
         // two doesn't leave AsyncStorage out of sync with the store.
         await AsyncStorage.setItem(TIER_KEY, effectiveTier);

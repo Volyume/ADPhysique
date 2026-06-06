@@ -17,12 +17,15 @@ import { payAt } from './cascade';
 
 /**
  * Returns:
- *   { ok: true, tier: 'pro' | 'complete' | null, alreadyCurrent: bool }
+ *   { ok: true, tier: 'pro' | null, alreadyCurrent: bool }
  *   { ok: false, error: string }
  *
- * tier: the entitled tier Play Billing reports, or null if nothing
- *   to restore. alreadyCurrent: true when the local trial_state already
- *   matches; no upgrade_tier call was needed.
+ * tier: 'pro' if Play Billing reports an active Pro entitlement, else null
+ *   (nothing to restore). alreadyCurrent: true when the local trial_state
+ *   already matches, so no unlock was needed.
+ *
+ * 2-tier model: the only purchaseable entitlement is 'pro' (M-2: the legacy
+ * 'complete' branch was removed; there is no Complete SKU).
  */
 export async function restorePurchases({ currentTrialState = null } = {}) {
   let info;
@@ -36,9 +39,7 @@ export async function restorePurchases({ currentTrialState = null } = {}) {
   const entitlements = Array.isArray(info?.activeEntitlements)
     ? info.activeEntitlements
     : [];
-  let restoredTier = null;
-  if (entitlements.includes('complete')) restoredTier = 'complete';
-  else if (entitlements.includes('pro')) restoredTier = 'pro';
+  const restoredTier = entitlements.includes('pro') ? 'pro' : null;
 
   if (!restoredTier) {
     logInfo('payments.restore.nothingToRestore',
@@ -46,16 +47,16 @@ export async function restorePurchases({ currentTrialState = null } = {}) {
     return { ok: true, tier: null, alreadyCurrent: false };
   }
 
-  // Skip the round-trip if local state already matches.
+  // Skip the unlock if local state already matches.
   if (currentTrialState === `paid_${restoredTier}`) {
     return { ok: true, tier: restoredTier, alreadyCurrent: true };
   }
 
-  // Sync server-side. Use 'admin' reason, restore is not a fresh
-  // purchase, it's a tier-state reconciliation against an existing
-  // entitlement. payment_ref carries the latest Play Billing purchase
-  // token (or transaction ID) so the audit row points at the right
-  // transaction.
+  // C-1: restore is server-authoritative like a purchase. The active
+  // entitlement Play reports was originally written to the server by its
+  // purchase RTDN, so payAt unlocks Pro optimistically and the next
+  // refreshTierFromCloud reconciles to the server tier. The client does not
+  // write its own paid tier (migration 067).
   const ref = info?.latestTransactionId ?? null;
   const result = await payAt(restoredTier, ref ?? 'restore', 'restore_purchases');
   return {

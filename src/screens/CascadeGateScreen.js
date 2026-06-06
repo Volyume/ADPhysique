@@ -31,19 +31,20 @@ import Button from '../components/Button';
 import { useToast } from '../components/Toast';
 import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
-import { skuFor, priceTextFor, annualSavingsPct } from '../lib/payments/catalogue';
+import { skuFor, annualSavingsPct } from '../lib/payments/catalogue';
+import { usePlayPrices } from '../lib/payments/usePlayPrices';
 import { logError, logInfo } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 
-// 2-tier model (founder override 2026-05-25): one gate at day 21,
-// plus the payment-failure overlay. The legacy 'day14' variant from
-// the 3-tier cascade is accepted as a synonym of 'day21' so any
-// stale navigation calls don't crash; both render the same surface.
+// 2-tier model (founder override 2026-05-25): one trial-end gate, plus the
+// payment-failure overlay. M-3 (2026-06-06): the trial is 14+7, so 'day14' is
+// the canonical variant; 'day21'/'day28' are accepted as synonyms so stale
+// navigation calls don't crash. All render the same trial-end surface.
 
 function _variantContent(variant) {
   switch (variant) {
-    case 'day21':
-    case 'day14':   // legacy synonym
+    case 'day14':
+    case 'day21':   // legacy synonym
     case 'day28':   // legacy synonym
       return {
         title: 'Your Pro trial is winding down',
@@ -54,7 +55,7 @@ function _variantContent(variant) {
         secondaryTarget: null,
         tertiaryCta: 'Drop to Free',
         tertiaryTarget: 'free',
-        surface: 'cascade_day21_gate',
+        surface: 'cascade_trial_end_gate',
       };
     case 'payment_failure':
       return {
@@ -81,6 +82,11 @@ export default function CascadeGateScreen({ navigation, route }) {
   const [period, setPeriod] = useState(route?.params?.period === 'annual' ? 'annual' : 'monthly');
   const content = _variantContent(variant);
   const [busy, setBusy] = useState(null);  // which CTA is in-flight
+
+  // C-2: localised store prices, catalogue text as the pre-load fallback.
+  const priceFor = usePlayPrices();
+  const monthlyPrice = priceFor('pro', 'monthly');
+  const annualPrice = priceFor('pro', 'annual');
 
   const dismiss = useCallback(() => {
     if (navigation?.canGoBack?.()) navigation.goBack();
@@ -206,10 +212,10 @@ export default function CascadeGateScreen({ navigation, route }) {
               disabled={busy !== null}
               accessibilityRole="button"
               accessibilityState={{ selected: period === 'monthly' }}
-              accessibilityLabel="Monthly, £4.99 a month"
+              accessibilityLabel={`Monthly, ${monthlyPrice}`}
             >
               <Text style={[styles.periodLabel, period === 'monthly' && styles.periodTextActive]}>Monthly</Text>
-              <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{priceTextFor('pro', 'monthly')}</Text>
+              <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{monthlyPrice}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.periodBtn, period === 'annual' && styles.periodBtnActive]}
@@ -217,11 +223,11 @@ export default function CascadeGateScreen({ navigation, route }) {
               disabled={busy !== null}
               accessibilityRole="button"
               accessibilityState={{ selected: period === 'annual' }}
-              accessibilityLabel="Annual, £29.99 a year, save 50 per cent"
+              accessibilityLabel={`Annual, ${annualPrice}, save ${annualSavingsPct()} per cent`}
             >
               <View style={styles.saveBadge}><Text style={styles.saveBadgeText}>Save {annualSavingsPct()}%</Text></View>
               <Text style={[styles.periodLabel, period === 'annual' && styles.periodTextActive]}>Annual</Text>
-              <Text style={[styles.periodPrice, period === 'annual' && styles.periodTextActive]}>{priceTextFor('pro', 'annual')}</Text>
+              <Text style={[styles.periodPrice, period === 'annual' && styles.periodTextActive]}>{annualPrice}</Text>
             </TouchableOpacity>
           </View>
         ) : null}

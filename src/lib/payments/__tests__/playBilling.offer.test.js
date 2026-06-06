@@ -10,7 +10,7 @@
  * the request we build and the event handling, not Google's side.
  */
 
-import { selectOfferToken, _buildRealProvider } from '../playBilling';
+import { selectOfferToken, selectDisplayPrice, _buildRealProvider } from '../playBilling';
 
 const FREE_TOKEN = 'offer-free-7d';
 const BASE_TOKEN = 'offer-base-plan';
@@ -56,6 +56,45 @@ function makeFakeIap(overrides = {}) {
     ...overrides,
   };
 }
+
+describe('selectDisplayPrice (C-2: show the store-localised price)', () => {
+  function pricedProduct(formatted) {
+    return {
+      id: SKU,
+      subscriptionOfferDetailsAndroid: [
+        {
+          offerId: null, offerToken: BASE_TOKEN,
+          pricingPhases: { pricingPhaseList: [
+            { priceAmountMicros: '6990000', billingPeriod: 'P1M', formattedPrice: formatted },
+          ] },
+        },
+      ],
+    };
+  }
+  test('returns the base plan recurring formattedPrice (localised)', () => {
+    expect(selectDisplayPrice(pricedProduct('$6.99'))).toBe('$6.99');
+    expect(selectDisplayPrice(pricedProduct('8,99 €'))).toBe('8,99 €');
+  });
+  test('skips the free phase and returns the first priced phase', () => {
+    const product = {
+      subscriptionOfferDetailsAndroid: [{
+        offerId: 'free-trial-7d', offerToken: FREE_TOKEN,
+        pricingPhases: { pricingPhaseList: [
+          { priceAmountMicros: '0', billingPeriod: 'P1W', formattedPrice: 'Free' },
+          { priceAmountMicros: '4990000', billingPeriod: 'P1M', formattedPrice: '£4.99' },
+        ] },
+      }],
+    };
+    expect(selectDisplayPrice(product)).toBe('£4.99');
+  });
+  test('returns null when no priced phase exposes a formattedPrice', () => {
+    expect(selectDisplayPrice(null)).toBeNull();
+    expect(selectDisplayPrice({ subscriptionOfferDetailsAndroid: [] })).toBeNull();
+    // priced but no formattedPrice -> null so the caller falls back to catalogue
+    const noFmt = { subscriptionOfferDetailsAndroid: [{ offerId: null, pricingPhases: { pricingPhaseList: [{ priceAmountMicros: '4990000' }] } }] };
+    expect(selectDisplayPrice(noFmt)).toBeNull();
+  });
+});
 
 describe('selectOfferToken', () => {
   it('prefers the offer with a free pricing phase (the trial)', () => {

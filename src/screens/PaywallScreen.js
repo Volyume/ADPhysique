@@ -27,7 +27,9 @@ import TierComparisonStrip from '../components/TierComparisonStrip';
 import Button from '../components/Button';
 import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
-import { skuFor, priceTextFor, annualSavingsPct } from '../lib/payments/catalogue';
+import { restorePurchases } from '../lib/payments/restore';
+import { skuFor, annualSavingsPct } from '../lib/payments/catalogue';
+import { usePlayPrices } from '../lib/payments/usePlayPrices';
 import { track as trackEvent } from '../lib/engineTelemetry';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -103,11 +105,13 @@ export default function PaywallScreen({ navigation, route }) {
     audit('paywall.restore.tap', { surface });
     setBusy(true);
     try {
-      const info = await playBilling.restorePurchases();
-      const hasPro = Array.isArray(info?.activeEntitlements) && info.activeEntitlements.includes('pro');
-      if (hasPro) {
-        const ref = info.latestTransactionId ?? `restore_${Date.now()}`;
-        await cascade.payAt('pro', ref, 'restore_purchases');
+      // M-1: one restore implementation. Route through the shared restore module
+      // (also used by SubscriptionScreen) instead of a second inline copy.
+      const result = await restorePurchases();
+      if (!result.ok) {
+        logError('Paywall.restoreFailed', new Error(result.error ?? 'unknown'), { surface });
+        appAlert('Could not restore', 'Try again in a moment.');
+      } else if (result.tier === 'pro') {
         logInfo('Paywall.restored', `surface=${surface}`);
         appAlert('Pro restored', 'Your subscription is active again.');
         if (navigation?.canGoBack?.()) navigation.goBack();
@@ -122,7 +126,11 @@ export default function PaywallScreen({ navigation, route }) {
     }
   }, [busy, surface, navigation]);
 
-  const priceText = priceTextFor('pro', period) ?? '£4.99/month';
+  // C-2: localised store prices (Play), catalogue text as the pre-load fallback.
+  const priceFor = usePlayPrices();
+  const priceText = priceFor('pro', period);
+  const monthlyPrice = priceFor('pro', 'monthly');
+  const annualPrice = priceFor('pro', 'annual');
   const renewCadence = period === 'annual' ? 'yearly' : 'monthly';
   // Trial shape (founder override 2026-06-06, SUBSCRIPTION_AND_PAYMENT_LOCKED):
   // 14 cardless days run inside the app BEFORE a purchase surface, then the
@@ -169,21 +177,21 @@ export default function PaywallScreen({ navigation, route }) {
             onPress={() => setPeriod('monthly')}
             accessibilityRole="button"
             accessibilityState={{ selected: period === 'monthly' }}
-            accessibilityLabel="Monthly, £4.99 a month"
+            accessibilityLabel={`Monthly, ${monthlyPrice}`}
           >
             <Text style={[styles.periodLabel, period === 'monthly' && styles.periodTextActive]}>Monthly</Text>
-            <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{priceTextFor('pro', 'monthly')}</Text>
+            <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{monthlyPrice}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.periodBtn, period === 'annual' && styles.periodBtnActive]}
             onPress={() => setPeriod('annual')}
             accessibilityRole="button"
             accessibilityState={{ selected: period === 'annual' }}
-            accessibilityLabel="Annual, £29.99 a year, save 50 per cent"
+            accessibilityLabel={`Annual, ${annualPrice}, save ${annualSavingsPct()} per cent`}
           >
             <View style={styles.saveBadge}><Text style={styles.saveBadgeText}>Save {annualSavingsPct()}%</Text></View>
             <Text style={[styles.periodLabel, period === 'annual' && styles.periodTextActive]}>Annual</Text>
-            <Text style={[styles.periodPrice, period === 'annual' && styles.periodTextActive]}>{priceTextFor('pro', 'annual')}</Text>
+            <Text style={[styles.periodPrice, period === 'annual' && styles.periodTextActive]}>{annualPrice}</Text>
           </TouchableOpacity>
         </View>
 

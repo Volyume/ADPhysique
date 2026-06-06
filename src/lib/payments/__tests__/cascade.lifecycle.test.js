@@ -10,8 +10,12 @@ const mockRpc = jest.fn();
 jest.mock('../../supabase', () => ({
   getSupabaseClient: () => ({ rpc: mockRpc }),
 }));
-// Keep _trackTransition a no-op: no signed-in user, so it returns early.
-jest.mock('../../../store/useAppStore', () => ({ default: { getState: () => ({ user: null }) } }));
+// _trackTransition reads the store lazily (no signed-in user, returns early);
+// payAt calls setOptimisticPaid (C-1 optimistic unlock), captured here.
+const mockSetOptimisticPaid = jest.fn();
+jest.mock('../../../store/useAppStore', () => ({
+  default: { getState: () => ({ user: null, setOptimisticPaid: mockSetOptimisticPaid }) },
+}));
 jest.mock('../../engineTelemetry', () => ({ track: jest.fn(() => Promise.resolve()) }));
 
 import {
@@ -25,12 +29,13 @@ beforeEach(() => {
 });
 
 describe('cascade lifecycle verbs call upgrade_tier with the right payload', () => {
-  test('payAt(pro) → upgrade_tier user_paid with the payment ref', async () => {
+  test('payAt(pro) unlocks optimistically and does NOT write the tier (C-1)', async () => {
+    // The paid grant is server-authoritative (RTDN). payAt must NOT call
+    // upgrade_tier; it only sets the optimistic local unlock.
     const r = await payAt('pro', 'gpa.123', 'paywall');
-    expect(r.ok).toBe(true);
-    expect(mockRpc).toHaveBeenCalledWith('upgrade_tier', {
-      _target_tier: 'pro', _reason: 'user_paid', _source_surface: 'paywall', _payment_ref: 'gpa.123',
-    });
+    expect(r).toEqual({ ok: true, optimistic: true });
+    expect(mockSetOptimisticPaid).toHaveBeenCalled();
+    expect(mockRpc).not.toHaveBeenCalledWith('upgrade_tier', expect.objectContaining({ _reason: 'user_paid' }));
   });
 
   test('payAt rejects a missing payment ref without hitting the RPC', async () => {
@@ -80,7 +85,8 @@ describe('cascade lifecycle verbs call upgrade_tier with the right payload', () 
 
   test('an RPC error surfaces as { ok:false } and never throws', async () => {
     mockRpc.mockResolvedValue({ data: null, error: { message: 'boom' } });
-    const r = await payAt('pro', 'gpa.1', 'paywall');
+    // Use a verb that still hits the RPC (payAt is now optimistic/no-RPC).
+    const r = await skipToFree('day14_gate');
     expect(r.ok).toBe(false);
     expect(r.error).toBe('boom');
   });
