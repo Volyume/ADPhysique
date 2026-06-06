@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Volyume — Data &amp; Outputs by Area</title>
+<meta name="description" content="The actual content every Volyume screen displays: stats, options, scales, and the exact words the coach writes, quoted from the code.">
+<meta name="theme-color" content="#0D0D0D">
+<style>
+  :root{--bg:#0D0D0D;--surface:#161616;--surface2:#1F1F1F;--border:#2A2A2A;--text:#EEEEEE;--muted:#AFAFAF;--accent:#F59E0B;--link:#FBBF24;--good:#34D399;--pro:#F59E0B;--free:#7DD3FC;}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,sans-serif;font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .layout{max-width:1080px;margin:0 auto;padding:28px 20px 96px}
+  header.page{margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:18px}
+  header.page h1{font-size:26px;margin:0 0 6px}
+  header.page .lede{color:var(--muted);margin:0 0 8px}
+  .meta{font-size:13px;color:var(--muted)}
+  a,nav.toc a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}
+  nav.toc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin:20px 0 34px}
+  nav.toc h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 10px}
+  nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:28px}
+  nav.toc li{margin:4px 0;break-inside:avoid}
+  section{margin:40px 0}
+  section>h2{font-size:21px;margin:0 0 6px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  h3{font-size:16.5px;margin:22px 0 4px}
+  h4{font-size:12.5px;margin:14px 0 4px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  p,ul,ol{margin:7px 0 12px}ul,ol{padding-left:20px}li{margin:3px 0}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 15px;margin:10px 0}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+  .free{background:rgba(125,211,252,.15);color:var(--free);border:1px solid rgba(125,211,252,.35)}
+  .pro{background:rgba(245,158,11,.15);color:var(--pro);border:1px solid rgba(245,158,11,.4)}
+  table{width:100%;border-collapse:collapse;margin:10px 0 16px;font-size:14px}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase}
+  tr:last-child td{border-bottom:none}
+  .q{color:var(--text);font-weight:600}
+  .opts{color:var(--muted)}
+  blockquote{margin:6px 0;padding:8px 12px;border-left:3px solid var(--accent);background:var(--surface);border-radius:0 8px 8px 0;color:var(--text);font-size:14.5px}
+  .note{color:var(--muted);font-size:14px}
+  code{background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:13px}
+  hr{border:none;border-top:1px solid var(--border);margin:24px 0}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<header class="page">
+  <h1>Volyume — Data &amp; Outputs by Area</h1>
+  <p class="lede">The actual content each area shows: the stats, the options and scales people pick from, and the exact words the coach writes. Quoted from the code on 6 June 2026. Companion to the <a href="./index.html">App Map &amp; Audit</a>.</p>
+  <p class="meta">Where you see a list of options, those are the literal choices in the app. Where you see a quote box, that's wording the user actually reads.</p>
+</header>
+
+<nav class="toc">
+  <h2>Areas</h2>
+  <ol>
+    <li><a href="#train">Train &amp; workouts</a></li>
+    <li><a href="#plans">Plans</a></li>
+    <li><a href="#diary">Diary, food &amp; cardio</a></li>
+    <li><a href="#progress">Progress &amp; body</a></li>
+    <li><a href="#coaching">Coaching (the coach's words)</a></li>
+    <li><a href="#onboarding">Onboarding, paywall &amp; settings</a></li>
+  </ol>
+</nav>
+
+<!-- ===================== TRAIN ===================== -->
+<section id="train">
+  <h2>1. Train &amp; workouts <span class="pill free">FREE</span></h2>
+
+  <h3>Home dashboard</h3>
+  <h4>Greeting (by time of day)</h4>
+  <p class="opts">"Up early", "Morning", "Afternoon", "Evening", "Late night" (+ first name).</p>
+  <h4>This week's stats</h4>
+  <p class="opts">"Sessions this week" (count) · "Last session" ("Today" / "Yesterday" / "X days ago"). Last-session card: duration "{m}", "{n} sets", "{kg} kg".</p>
+  <h4>Pre-workout readiness prompt</h4>
+  <p class="opts">"Sharp" (Energised and ready) · "Average" (Normal day, feeling fine) · "Below par" (Tired, stressed, or off).</p>
+  <h4>Coach brief lines</h4>
+  <p class="opts">"Recovery week" · "Fatigue building" · "Good to see you back" · "Muscle groups need attention" · "Looking good" · "Ready when you are".</p>
+
+  <h3>Active workout (live logging)</h3>
+  <h4>Set types</h4>
+  <table>
+    <tr><th>Type</th><th>What the app says</th></tr>
+    <tr><td>Working</td><td>"Counts toward your weekly totals and progress tracking."</td></tr>
+    <tr><td>Warm-up</td><td>"Lighter sets before your main work. Not counted in your weekly totals."</td></tr>
+    <tr><td>Drop set</td><td>"Reduce the weight at failure and keep going. Counts toward weekly volume, not the set-target counter."</td></tr>
+    <tr><td>Myo-reps</td><td>"A heavy activation set, then short mini-sets with a few breaths between."</td></tr>
+    <tr><td>Rest-pause</td><td>"Hit failure, rest 10 to 20 seconds, then squeeze out more reps."</td></tr>
+    <tr><td>AMRAP</td><td>"As many reps as possible, usually the last set."</td></tr>
+  </table>
+  <h4>Live prompts</h4>
+  <p class="opts">Target chip: "Target: {sets} sets · {min}–{max} reps". Beat chip: "Last time: {w} × {r} reps. Can you hit {r+1}?". Stalled nudge: "Same load 3 sessions running. Try {w+2.5} × {r-1}, or stick at {w} for {r+1} reps." Deload banner: "Recovery week · Light loads · full recovery · no PRs."</p>
+
+  <h3>Post-workout summary</h3>
+  <h4>Stat grid</h4>
+  <p class="opts">Exercises · Working sets · Duration (m) · Total kg.</p>
+  <h4>"How did it feel?" scales (the feedback form)</h4>
+  <table>
+    <tr><th>Question</th><th>Options</th></tr>
+    <tr><td>Session difficulty</td><td class="opts">Very Easy · Easy · Moderate · Hard · Brutal</td></tr>
+    <tr><td>Overall pump</td><td class="opts">None · Mild · Good</td></tr>
+    <tr><td>Soreness coming in</td><td class="opts">Fresh · Mild · Sore</td></tr>
+    <tr><td>Fatigue</td><td class="opts">Fresh · Mild · Moderate · High · Exhausted</td></tr>
+    <tr><td>Joint discomfort</td><td class="opts">None · Slight · Moderate · Significant</td></tr>
+    <tr><td>Energy</td><td class="opts">Low · Fair · Moderate · Good · High</td></tr>
+    <tr><td>Sleep quality</td><td class="opts">Poor · Fair · OK · Good · Excellent</td></tr>
+  </table>
+  <h4>4-week comparison verdicts</h4>
+  <p class="opts">"Strongest session in 4 weeks" · "{pct}% vs your 4-week average" · "On pace with your last sessions" · (down) "Recovery or stress matter. Don't chase yesterday's volume; trust the trend."</p>
+  <h4>Volume status bands (per muscle)</h4>
+  <p class="opts">Below minimum (grey) · At minimum · Optimal (green) · Approaching upper limit (amber) · Over your recovery limit (red). Shown as "{n} sets · [status] (target: {mev}–{mrv} sets/week)".</p>
+
+  <h3>Share card</h3>
+  <p class="opts">Hero stat priority: PRs → Total kg → Working sets. Intensity badges: "EPIC SESSION" / "TOUGH SESSION" / "SOLID SESSION". Closers: "New PR. Banked." · "Earned. Every rep." · "Solid work. Recovery starts now." Footer: wordmark + "SMARTER TRAINING". Privacy line: "Name, bodyweight, measurements and private notes are never included."</p>
+
+  <h3>Volume heatmap</h3>
+  <p class="opts">Windows: 1 / 2 / 4 weeks. Legend: Below minimum · Optimal · Getting close · Too much. Per muscle: a bar with two ticks (minimum, sweet spot) and the recovery ceiling at the end; "last trained" chip.</p>
+</section>
+
+<!-- ===================== PLANS ===================== -->
+<section id="plans">
+  <h2>2. Plans <span class="pill free">FREE</span></h2>
+
+  <h3>Plan Library</h3>
+  <h4>Collections</h4>
+  <p class="opts">All plans · Featured · For women · For men · Beginner · Dumbbells only · Short sessions · Bodybuilding Divisions.</p>
+  <h4>Bodybuilding divisions (with their descriptions)</h4>
+  <table>
+    <tr><th>Division</th><th>Description shown</th></tr>
+    <tr><td>Men's Physique</td><td>"Wide shoulders, lean midsection, board shorts. Upper-body biased."</td></tr>
+    <tr><td>Classic Physique</td><td>"Balanced golden-era build: capped shoulders, full chest, and legs."</td></tr>
+    <tr><td>Men's Bodybuilding</td><td>"Maximum muscular development across every group. High set count per week."</td></tr>
+    <tr><td>Bikini</td><td>"Lean and athletic with rounded glutes. The most glute-forward division."</td></tr>
+    <tr><td>Wellness</td><td>"Developed lower body, proportionally smaller upper body."</td></tr>
+    <tr><td>Figure</td><td>"Athletic and muscular: strong shoulders and back with proportional legs."</td></tr>
+    <tr><td>Women's Physique</td><td>"More muscle across every group. Visible arms, back, and full legs."</td></tr>
+    <tr><td>Women's Bodybuilding</td><td>"Maximum female muscular development across every group."</td></tr>
+  </table>
+  <h4>"Not sure where to start?" quiz</h4>
+  <p class="opts"><span class="q">Goal:</span> Build muscle · Get stronger · Improve conditioning · Get on stage. <span class="q">Equipment:</span> Full gym · Dumbbells only · Home / no equipment.</p>
+
+  <h3>Plan detail</h3>
+  <p class="opts">Stats: Workouts · Est. sets/week · Level (Beginner / Intermediate / Advanced). Section "Why this plan, for you" explains: schedule, goal, experience, progression, equipment, recovery, nutrition, weak points.</p>
+
+  <h3>Manual builder</h3>
+  <p class="opts">Goal options: Build Muscle · Balanced Bodybuilding · Aesthetic Focus · Strength-Biased · Lose Fat, Keep Muscle. Plan-balance grid flags per muscle: "No {muscle} work" / "{muscle} work is low" / "{muscle} volume is very high".</p>
+
+  <h3>Training block (mesocycle)</h3>
+  <p class="opts">Shows "Week {n} of {total} · recovery week", a weekly-load bar chart, and recovery metrics (Soreness / Fatigue / Joints). Deload advice: "A lighter week is likely in about {n} weeks" or (urgent) "Your body is signalling it needs a lighter week."</p>
+</section>
+
+<!-- ===================== DIARY ===================== -->
+<section id="diary">
+  <h2>3. Diary, food &amp; cardio <span class="pill pro">PRO</span></h2>
+
+  <h3>Food diary</h3>
+  <h4>Macro fields</h4>
+  <p class="opts">Calories (kcal) · Protein (g) · Carbs (g) · Fat (g) · Fibre (g). Day-type labels: "Refeed day" / "Training day" / "Rest day".</p>
+  <h4>Meal slots</h4>
+  <p class="opts">Breakfast · Lunch · Dinner · Snacks · Pre/Post-workout, plus the flexible "Meal 1 … Meal N" (defaults to 4 meals, extendable). Water target default 3,000 ml, logged in 250 ml steps.</p>
+  <h4>Food search tabs</h4>
+  <p class="opts">Recents · Suggested · Favourites · Frequents · Custom. Suggested-meal hint: "Sized for this meal: around {protein}g protein, {kcal} kcal."</p>
+  <h4>Custom food fields (per 100g)</h4>
+  <p class="opts">Name · Brand · Calories · Protein · Carbs · Fat · Fibre, then Serving (g) and Eaten (g). Low-confidence note: "Amber figures aren't certain, check them."</p>
+
+  <h3>Cardio</h3>
+  <h4>Intensity scale</h4>
+  <p class="opts">Easy · Moderate · Hard.</p>
+  <h4>The full activity library (36 activities, 10 categories)</h4>
+  <table>
+    <tr><th>Category</th><th>Activities</th></tr>
+    <tr><td>Walking</td><td class="opts">Walking · Incline Treadmill Walk · Hiking</td></tr>
+    <tr><td>Running</td><td class="opts">Treadmill Run · Outdoor Run · Trail Run · Sprint Intervals</td></tr>
+    <tr><td>Cycling</td><td class="opts">Indoor Bike (Steady) · Spin / Bike Intervals · Outdoor Cycling · Recumbent Bike</td></tr>
+    <tr><td>Rowing</td><td class="opts">Indoor Row (Steady) · Row Intervals</td></tr>
+    <tr><td>Swimming</td><td class="opts">Swim (Freestyle) · Swim (Intervals) · Swim (Breaststroke)</td></tr>
+    <tr><td>Machines</td><td class="opts">Elliptical · Stair Climber · Ski Erg · Assault / Air Bike</td></tr>
+    <tr><td>HIIT</td><td class="opts">HIIT · Tabata / Sprint Sets · Jump Rope</td></tr>
+    <tr><td>Conditioning</td><td class="opts">Circuit Training · Kettlebell Cardio · Battle Ropes · Sled / Prowler Push · Boxing / Bag Work · Kickboxing / Sparring</td></tr>
+    <tr><td>Sport</td><td class="opts">Football / Soccer · Basketball · Racket Sports · Climbing / Bouldering</td></tr>
+    <tr><td>Other</td><td class="opts">Cardio Dance · Elliptical Intervals · Other Cardio</td></tr>
+  </table>
+  <p class="note">Calorie estimate line: "Burned about {kcal} kcal" with "An estimate. We don't add it to your food target, your weight trend already accounts for it." Sport activities are logged but never prescribed by the coach.</p>
+
+  <h3>Food insights</h3>
+  <p class="opts">7-day calorie bars (green within 10% of target), macro adherence ("4/7" style), and "Export 7 days as CSV".</p>
+</section>
+
+<!-- ===================== PROGRESS ===================== -->
+<section id="progress">
+  <h2>4. Progress &amp; body</h2>
+
+  <h3>The six insight messages <span class="pill pro">PRO</span></h3>
+  <p class="note">These are the actual "insights" shown on the Progress tab, one at a time:</p>
+  <blockquote>"Your {muscle} hasn't had much work in 3 weeks. Adding a set or two this week will get it growing again."</blockquote>
+  <blockquote>"You hit the top of your rep range on {exercise} twice in a row. Time to add a little weight next session."</blockquote>
+  <blockquote>"{exercise} has been stuck at the same weight for 4 sessions but you've had reps left in the tank. Push closer to your limit or nudge the weight up."</blockquote>
+  <blockquote>"Your soreness coming into sessions is trending up week-on-week. Prioritise sleep and protein. If it keeps climbing, a lighter week is coming."</blockquote>
+  <blockquote>"Your training load and fatigue are both running high. A lighter week soon will let you come back stronger. Not a setback, just part of the plan."</blockquote>
+  <blockquote>"You've trained {n} of the last 21 days. Steady work. This is what progress looks like."</blockquote>
+
+  <h3>Strength standards <span class="pill free">FREE</span></h3>
+  <p class="opts">Levels: Untrained → Beginner → Novice → Intermediate → Advanced → Elite. Benchmarks are multiples of bodyweight:</p>
+  <table>
+    <tr><th>Lift</th><th>Beginner</th><th>Novice</th><th>Intermediate</th><th>Advanced</th><th>Elite</th></tr>
+    <tr><td>Bench press</td><td>0.50×</td><td>0.75×</td><td>1.00×</td><td>1.25×</td><td>1.50×</td></tr>
+    <tr><td>Squat</td><td>0.75×</td><td>1.00×</td><td>1.50×</td><td>2.00×</td><td>2.50×</td></tr>
+    <tr><td>Deadlift</td><td>1.00×</td><td>1.25×</td><td>1.75×</td><td>2.25×</td><td>2.75×</td></tr>
+    <tr><td>Overhead press</td><td>0.35×</td><td>0.55×</td><td>0.75×</td><td>1.00×</td><td>1.25×</td></tr>
+    <tr><td>Barbell row</td><td>0.50×</td><td>0.75×</td><td>1.00×</td><td>1.25×</td><td>1.50×</td></tr>
+  </table>
+
+  <h3>Body metrics <span class="pill pro">PRO</span></h3>
+  <p class="opts">Weight phase chips: "Gaining" / "Losing weight" / "Maintaining". Smoothed trend: "Weight trend {kg}", "Weekly change: {±kg}". Estimated daily burn: "{kcal}/day" with confidence "High confidence" / "Firming up" / "Early estimate". Measurements: Chest · Shoulders · Arms (flex) · Forearms · Waist · Hips · Quads · Hamstrings · Calves. Body-fat is optional, manual entry.</p>
+
+  <h3>Year of Lifts <span class="pill free">FREE</span></h3>
+  <p class="opts">Swipeable cards: total sessions ("Roughly {n} a week. That's consistency."), kg moved ("Every set you logged, stacked end to end."), sets, busiest month, top lifts, personal bests. Outro: "Onwards. Same hands. Same bar. New numbers." Unlocks after a full year of training.</p>
+</section>
+
+<!-- ===================== COACHING ===================== -->
+<section id="coaching">
+  <h2>5. Coaching, the coach's actual words <span class="pill pro">PRO</span></h2>
+
+  <h3>The weekly check-in (every question &amp; option)</h3>
+  <table>
+    <tr><th>Question</th><th>Options</th></tr>
+    <tr><td>Energy &amp; motivation</td><td class="opts">Low · Below normal · Normal · Good · High</td></tr>
+    <tr><td>Stress this week</td><td class="opts">Low · Mild · Moderate · High · Very high</td></tr>
+    <tr><td>Average sleep hours</td><td class="opts">(typed, e.g. 7.5)</td></tr>
+    <tr><td>Cycle (if applicable)</td><td class="opts">Affecting the scale · Not this week</td></tr>
+    <tr><td>Calorie target</td><td class="opts">Hit it · Missed it · Didn't track (auto-read from the diary when ≥4 days logged)</td></tr>
+    <tr><td>Steps</td><td class="opts">Auto-averaged, or typed</td></tr>
+    <tr><td>Prescribed cardio</td><td class="opts">Did it · Mostly · Missed it</td></tr>
+    <tr><td>Muscle soreness</td><td class="opts">None · Mild · Moderate · High · Very high</td></tr>
+    <tr><td>Which muscles (if sore)</td><td class="opts">Chest · Back · Shoulders · Biceps · Triceps · Quads · Hamstrings · Glutes · Calves · Core</td></tr>
+    <tr><td>Joint / tendon pain</td><td class="opts">No · Yes</td></tr>
+    <tr><td>Anything else to flag</td><td class="opts">(free text, 280 chars)</td></tr>
+    <tr><td>Training felt like</td><td class="opts">Beat my targets · Hit targets as planned · Struggled to hit targets · Performance dropped</td></tr>
+  </table>
+  <p class="note">Gates protect data quality: "Come back on {day}", "First check-in needs more data" (needs 5 days), "A few more weight readings needed" (needs 3 weigh-ins).</p>
+
+  <h3>"Your week" headline</h3>
+  <p class="opts">e.g. "Your calorie target was raised to {kcal}." / "Your weight trend is on target." / "Your weight trend is off target, so your targets hold for another week of data."</p>
+
+  <h3>The "why this week" library (what the coach tells you)</h3>
+  <blockquote>"Weight is tracking the target rate. No change needed this week."</blockquote>
+  <blockquote>"Trend is off target, so your calorie target goes up." / "…comes down."</blockquote>
+  <blockquote>"Your recovery's down. Calories hold until it's back."</blockquote>
+  <blockquote>"Your strength is dipping. Calories hold until it stabilises."</blockquote>
+  <blockquote>"Not enough data yet to adjust. Keep logging weight and sessions and the read will catch up."</blockquote>
+  <blockquote>"Sessions were inconsistent this week, so the plan holds steady until that settles."</blockquote>
+  <blockquote>"Trend is behind target, so your step target goes up: it's the lowest-fatigue lever."</blockquote>
+  <blockquote>"Recovery's flagging across several signals, so next week is lighter to set up the next run."</blockquote>
+  <blockquote>"You've been in a deficit a long stretch. A short break at maintenance will help the next one."</blockquote>
+  <blockquote>"Recovery and performance both look clean, so there's more work in the plan."</blockquote>
+  <blockquote>"Your calorie target holds. Your seven-day average intake is at or below the safety floor for your fat-free mass."</blockquote>
+  <blockquote>"Weight dropped fast this week with low energy, so calories go up now rather than waiting two weeks."</blockquote>
+
+  <h3>"Focus this week" lines</h3>
+  <p class="opts">"Log morning weight every day…" · "Sleep is the priority this week. Aim for 7 hours or more…" · "Hit all {n} sessions. Adherence beats everything else." · "Track your calories this week…" · "Stay inside the calorie target." · "Keep doing what you did this week."</p>
+
+  <h3>Volume &amp; calorie next-week signals</h3>
+  <p class="opts">Volume: "Add {n} set(s) to each muscle group" / "Hold your current volume" / "Pull back {n} set(s) per muscle group" / "Take a recovery week". Calories: "+{n} kcal" or "Calories held". Steps and cardio adjustments have their own one-liners.</p>
+
+  <h3>The eating-disorder safety messages (verbatim)</h3>
+  <div class="card">
+    <h4>Hold (lockout)</h4>
+    <blockquote>"We've held your calorie cut. We've noticed a few signals together: your weight has been dropping faster than your intake suggests, your energy scores have been low, and your food log shows you eating less than your target for a few weeks running. Even when a cut is going well in numbers, sustained low energy is a safety signal. We'd rather pause than push. Once your fuelling and energy recover for two weeks, we'll suggest new targets."</blockquote>
+    <p class="note">Plus a "Read more" explainer about relative energy deficiency, a locale-specific support link (Beat in the UK), and "You can keep using Volyume normally… Only the calorie target stops shifting."</p>
+    <h4>Hold lifted</h4>
+    <blockquote>"The signals that triggered the hold have settled for two weeks. We're back to the standard coach output… Take this gently. Energy recovery beats rushing back into a deep cut."</blockquote>
+    <h4>Acted immediately (rapid loss)</h4>
+    <blockquote>"Your weight dropped more than 1.5% this week and your energy is low. We're not waiting two weeks to react; we've bumped your daily target up immediately. This isn't a punishment for hitting your goal too fast. It's a safety call. Steady is the goal."</blockquote>
+  </div>
+  <p class="note">Triggers: rapid loss (≥1.5%/week), low energy (≥2 weeks), under-eating (2 of 3 weeks), weight-only check-ins. Fires on 2 stacked signals (or 3 if the user set an advanced goal-lock).</p>
+
+  <h3>Nutrition targets</h3>
+  <h4>Protein approaches</h4>
+  <table>
+    <tr><th>Approach</th><th>Range</th><th>What it says</th></tr>
+    <tr><td>Standard</td><td>2.0–2.7 g/kg</td><td>"Enough for consistent training. Easy to sustain day to day."</td></tr>
+    <tr><td>Optimised (default)</td><td>2.2–3.0 g/kg</td><td>"The proven target for serious training. Best for most people."</td></tr>
+    <tr><td>Advanced</td><td>2.5–3.2 g/kg</td><td>"Upper end for competitive athletes and harder cuts."</td></tr>
+    <tr><td>Custom</td><td>your value</td><td>capped at 3.5 g/kg</td></tr>
+  </table>
+  <h4>Phases</h4>
+  <p class="opts">Build muscle (lean gain) · Build muscle (bulk) · Strength + size · Bring up a weak point · Lose fat (cut) · Recomp · Maintain. Each has a plain-English calorie/macro rationale (e.g. cut: "A {pct}% deficit ({delta} kcal below maintenance) puts you on track to lose roughly {rate} kg/week.").</p>
+  <p class="note">The screen also shows the resting burn, maintenance calories, projected weekly change, per-meal protein split, and a confidence rating based on how body-fat was estimated.</p>
+</section>
+
+<!-- ===================== ONBOARDING ===================== -->
+<section id="onboarding">
+  <h2>6. Onboarding, paywall &amp; settings</h2>
+
+  <h3>Welcome screen</h3>
+  <p class="opts"><span class="q">Pro</span> "The coach who writes back." <span class="q">Free</span> "The logbook a coach would write in." Pro bullets: a plan around your schedule/goals/level; Precision Coaching that adjusts training and nutrition; personalised calorie and protein targets; a written reason for every change.</p>
+
+  <h3>Pro onboarding (the option lists)</h3>
+  <p class="opts"><span class="q">Experience:</span> Beginner (&lt;18 months) · Intermediate (18mo–3yr) · Advanced (3–5yr) · Competitive (5yr+). <span class="q">Session length:</span> 45 / 60 / 75 / 90 min. <span class="q">Days/week:</span> 3 / 4 / 5 / 6. <span class="q">Equipment:</span> Full Gym · Machines &amp; Cables · Dumbbells Only · Barbell &amp; Plates · Home Gym · Bodyweight. <span class="q">Recovery:</span> Poor · Average · Good.</p>
+  <div class="card"><p class="note">How it explains itself: "Each morning you weigh in. Once a week you check in. Your coach reads the trend and adjusts your calories and training. Logging your food makes each call more accurate, and your weight trend carries the rest."</p></div>
+
+  <h3>Health-data consent (Article 9)</h3>
+  <p class="opts">Lists what it uses (weight, body fat &amp; lean mass, food diary, weekly check-ins, eating-habits screening), what it never does ("Never sell it" / "Never share it with advertisers" / "Never use it to train a public AI model"), and where it lives ("On your phone, in encrypted local storage" / UK servers with row-level security / "removed within 30 days" on deletion). Checkbox: "I agree to Volyume using my health and nutrition data to coach me."</p>
+  <p class="note">Two flags from the audit live here: the "within 30 days" line (the code deletes immediately), and the eating-habits screening is named but the automated eating-disorder detection isn't.</p>
+
+  <h3>Paywall &amp; trial</h3>
+  <p class="opts">Title "Pro is the coach". Trial CTA: "Try Pro free for 7 days" with "Free for 7 days, then {price}. Renews monthly until you cancel. Manage or cancel anytime in Google Play." Non-trial: "Get Pro for {price}". Day-14 gate: "Your Pro trial is winding down" → "Stay on Pro" / "Drop to Free". Payment failure: "We couldn't take your payment… within 3 days."</p>
+
+  <h3>Subscription &amp; pricing</h3>
+  <p class="opts">Status: Not started / Pro trial / Paid / Free with "{n} days remaining". Price windows: "Launch pricing" (£0.99) · "Founders pricing" (£1.99) · "Standard pricing" (£3.99), "locked for life of subscription".</p>
+
+  <h3>Settings (every area)</h3>
+  <p class="opts">Account · Profile (name, diet preference: Omnivore / Vegetarian / Vegan) · Coaching (Calmer experience, Daily step target, Cardio, Cycle tracking) · Notifications · Display &amp; accessibility (Larger text, Higher contrast, Colour-blind safe palette, Reduce motion) · Health (read weight/steps, write workouts) · Your data (Cloud sync, Import from Hevy/Strong, Back up JSON, Restore, Export CSV, Clear history) · Privacy &amp; legal (health-data consent, share labels with Open Food Facts, share usage data, policy) · Help &amp; about.</p>
+</section>
+
+<hr>
+<p class="meta">Extracted from the codebase on 6 June 2026, quoted as written. This is a representative dump of the high-value content (options, scales, and the coach's wording); a handful of purely generic labels are summarised rather than listed. See the <a href="./index.html">App Map &amp; Audit</a> for structure and the bug list.</p>
+
+</div>
+</body>
+</html>
