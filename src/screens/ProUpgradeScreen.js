@@ -9,6 +9,10 @@ import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
 import { signUpWithEmail, signInWithEmail, signInWithGoogle, signInWithApple, getSupabaseClient } from '../lib/supabase';
 import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
+import { PRO_BETA_ACTIVE } from '../lib/proGate';
+import * as cascade from '../lib/payments/cascade';
+import * as playBilling from '../lib/payments/playBilling';
+import { skuFor } from '../lib/payments/catalogue';
 
 const PRO_PERKS = [
   { icon: 'sparkles', text: 'A plan built around your schedule, goals, and experience level' },
@@ -24,6 +28,7 @@ export default function ProUpgradeScreen({ navigation }) {
   } = useAppStore();
 
   const hasAccount = Boolean(session?.user?.id) && !user?.isLocal;
+  const canTrial = cascade.canStillTrial(userProfile);
 
   const [mode, setMode] = useState('signup'); // 'signup' | 'signin'
   const [email, setEmail] = useState('');
@@ -45,13 +50,73 @@ export default function ProUpgradeScreen({ navigation }) {
     refreshTierFromCloud(getSupabaseClient(), supabaseUserId).catch(() => {});
   }
 
+  // Post-beta subscribe: the real Google Play purchase. Mirrors
+  // PaywallScreen.handlePay so there's one purchase path. Google's offer
+  // eligibility decides 7-days-free (used the in-app trial, never paid) vs
+  // pay now (already used the Play trial and cancelled).
+  async function subscribePro() {
+    const { logError } = require('../lib/errorLog');
+    const pricingWindow = userProfile?.lockedInPriceTier ?? 'open_beta';
+    const sku = skuFor('pro', pricingWindow);
+    if (!sku) {
+      toast.show('Subscription unavailable, try again later', { variant: 'error' });
+      return;
+    }
+    try {
+      const pr = await playBilling.purchasePackage(sku.id);
+      const ref = pr?.transactionId ?? `client_${Date.now()}`;
+      const r = await cascade.payAt('pro', ref, 'pro_upgrade');
+      if (!r.ok) logError('ProUpgrade.payAt.failed', new Error(r.error ?? 'unknown'), {});
+      setDone(true);
+    } catch (e) {
+      const msg = e?.message ?? '';
+      if (!/cancel|abort/i.test(msg)) {
+        logError('ProUpgrade.purchaseFailed', e, {});
+        toast.show('Purchase did not complete, try again', { variant: 'error' });
+      }
+    }
+  }
+
+  // Single entry the auth paths call once a user is signed in. Beta grants
+  // Pro free (the locked PRO_BETA_ACTIVE switch). Post-beta: a brand-new
+  // account is entitled to the 14-day cardless trial, which onboarding's
+  // Article 9 step starts, so route into setup; an existing free user who
+  // has used the trial subscribes. Everyone has a real account, so there's
+  // no local-only path.
+  async function completeUpgrade(supabaseUserId, { isNew }) {
+    if (PRO_BETA_ACTIVE) {
+      await activatePro(supabaseUserId, { isNew });
+      setDone(true);
+      return;
+    }
+    // Never write tier from the client (syncProfile ignores it; the server
+    // owns tier). Just make sure the account holds the local data.
+    syncProfile(supabaseUserId, userProfile, tier, { isBetaTester: false }).catch(() => {});
+    if (isNew) {
+      bulkUploadLocalData(supabaseUserId, user?.id).catch(() => {});
+    } else {
+      pullFromCloud(supabaseUserId).catch(() => {});
+    }
+    if (cascade.canStillTrial(userProfile)) {
+      // Entitled to the 14-day cardless trial. resetFirstRun routes into
+      // onboarding, whose Article 9 step calls startCascade.
+      try {
+        const result = await resetFirstRun();
+        if (result && result.ok === false && result.error === 'workout_in_progress') {
+          toast.show('Finish your workout in progress first, then set up Pro', { variant: 'warning', duration: 5000 });
+        }
+      } catch (_) {}
+      return;
+    }
+    await subscribePro();
+  }
+
   // Free user who already has a cloud account: just flip the tier.
   async function confirmExistingAccount() {
     if (!session?.user?.id) return;
     setBusy(true);
     try {
-      await activatePro(session.user.id, { isNew: false });
-      setDone(true);
+      await completeUpgrade(session.user.id, { isNew: false });
     } catch (_) {
       toast.show('Something went wrong, try again', { variant: 'error' });
     }
@@ -91,8 +156,7 @@ export default function ProUpgradeScreen({ navigation }) {
       }
       if (signedInId) {
         logInfo('ProUpgrade.oauth.success', `provider=${provider} uid=${signedInId}`);
-        await activatePro(signedInId, { isNew: false });
-        setDone(true);
+        await completeUpgrade(signedInId, { isNew: false });
       } else {
         // Distinguishing cancel vs timeout reliably needs platform hooks
         // we don't have; both end up here. Log so we can spot patterns.
@@ -137,8 +201,7 @@ export default function ProUpgradeScreen({ navigation }) {
         return;
       }
       if (data.session) {
-        await activatePro(data.session.user.id, { isNew: mode === 'signup' });
-        setDone(true);
+        await completeUpgrade(data.session.user.id, { isNew: mode === 'signup' });
       }
     } catch (_) {
       toast.show('Something went wrong, try again', { variant: 'error' });
@@ -268,10 +331,16 @@ export default function ProUpgradeScreen({ navigation }) {
           {hasAccount ? (
             <>
               <Text style={styles.accountNote}>
-                Your account is ready. Activate Pro to switch on the coaching features.
+                {PRO_BETA_ACTIVE
+                  ? 'Your account is ready. Activate Pro to switch on the coaching features.'
+                  : canTrial
+                    ? 'Your account is ready. Start your 14-day free trial, no card needed.'
+                    : 'Your account is ready. Subscribe to switch the coaching features on.'}
               </Text>
               <Button
-                title="Activate Pro"
+                title={PRO_BETA_ACTIVE
+                  ? 'Activate Pro'
+                  : canTrial ? 'Start your free trial' : 'Subscribe to Pro'}
                 icon="sparkles"
                 size="lg"
                 loading={busy}

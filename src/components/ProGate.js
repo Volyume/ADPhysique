@@ -4,14 +4,14 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
-import { PRO_BETA_ACTIVE } from '../lib/proGate';
 
 /**
  * ProGate wraps any content that requires a Pro tier.
- * Free users see the content with a lock overlay, tapping it opens a
- * one-tap upgrade sheet. During beta, upgrading is instant (no payment).
+ * Free users see the content with a lock overlay, tapping it opens an
+ * upgrade sheet that routes to ProUpgrade, which starts the trial or
+ * subscribes depending on whether the user has used their trial.
  *
  * Usage:
  *   <ProGate feature="Weekly coaching">
@@ -65,23 +65,12 @@ export default function ProGate({ children, feature = 'This feature', style }) {
 
             <Text style={styles.sheetTitle}>{feature}</Text>
             <Text style={styles.sheetBody}>
-              {PRO_BETA_ACTIVE
-                ? 'This is part of Pro. It is completely free during beta. Create a quick account and it unlocks straight away.'
-                : 'This is part of Pro. Upgrade to unlock intelligent coaching, weekly guidance, and nutrition tools.'}
+              This is part of Pro: weekly coaching, the food diary, and your body metrics.
             </Text>
-
-            {PRO_BETA_ACTIVE && (
-              <View style={styles.betaBanner}>
-                <Ionicons name="gift-outline" size={14} color={colors.primary} />
-                <Text style={styles.betaBannerText}>Pro is free during beta</Text>
-              </View>
-            )}
 
             <TouchableOpacity style={styles.upgradeBtn} onPress={upgrade} activeOpacity={0.88}>
               <Ionicons name="sparkles" size={16} color={colors.background} />
-              <Text style={styles.upgradeBtnText}>
-                {PRO_BETA_ACTIVE ? 'Go Pro, it\'s free' : 'Upgrade to Pro'}
-              </Text>
+              <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.dismissBtn} onPress={() => setModalVisible(false)}>
@@ -108,9 +97,7 @@ export function ProLocked({ feature = 'This' }) {
         </View>
         <Text style={styles.lockedTitle}>{feature} is part of Pro</Text>
         <Text style={styles.lockedBody}>
-          {PRO_BETA_ACTIVE
-            ? 'Pro is the intelligent coaching layer, and it is completely free during beta. Create a quick account to unlock it.'
-            : 'Pro adds intelligent coaching, weekly guidance, and nutrition tools.'}
+          Pro is the coaching layer: weekly check-ins, nutrition targets, the food diary, and your body metrics.
         </Text>
         <TouchableOpacity
           style={styles.lockedBtn}
@@ -118,9 +105,7 @@ export function ProLocked({ feature = 'This' }) {
           activeOpacity={0.88}
         >
           <Ionicons name="sparkles" size={16} color={colors.background} />
-          <Text style={styles.lockedBtnText}>
-            {PRO_BETA_ACTIVE ? 'Go Pro, it\'s free' : 'Upgrade to Pro'}
-          </Text>
+          <Text style={styles.lockedBtnText}>Upgrade to Pro</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.lockedBack} onPress={() => navigation.goBack()}>
           <Text style={styles.lockedBackText}>Not now</Text>
@@ -192,14 +177,6 @@ const styles = StyleSheet.create({
   sheetBody: {
     fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 21,
   },
-  betaBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
-  },
-  betaBannerText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
-
   upgradeBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
     backgroundColor: colors.primary, borderRadius: radius.lg,
