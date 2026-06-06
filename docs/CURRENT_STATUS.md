@@ -14,6 +14,75 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
+### 0.000000000000000001. 2026-06-06 (evening): subscriptions deployed end to end, native Google sign-in, RESUME-HERE state
+
+Continuation of the same day. The subscription system was audited, fixed, and
+the founder stood up the whole cloud + Play side; Google sign-in was switched to
+native. This entry is the authoritative resume point.
+
+**Shipped to `main` this session (code):**
+- **Subscription audit + fixes** (`docs/subscriptions-audit-2026-06-06/`). Two
+  criticals closed: C-1 (the self-grant hole) via migration 067 making the
+  client `upgrade_tier` downgrade-only, and C-2 (hardcoded prices) by rendering
+  the store-fetched localised price. Plus M-1/M-2 (one restore path), M-3 (day14
+  gate naming), L-1 (no finishTransaction on a pending purchase). Full audit in
+  that folder; 09a/09b/implementation-log.
+- **Server-authoritative purchase grant WITHOUT Pub/Sub.** `play-billing-rtdn`
+  now also accepts a client call `{ purchaseToken, subscriptionId }`: it verifies
+  the token against the Play Developer API and grants Pro via
+  `upgrade_tier_for_user`, reading the user id from Google's
+  `obfuscatedExternalAccountId`. The three purchase surfaces call
+  `cascade.confirmPurchase()` after the optimistic unlock. So a purchase grants
+  Pro with just the service account, no Pub/Sub. The RTDN/Pub/Sub path still
+  exists for renewals/cancels/refunds and is wired later.
+- **Native Google Sign-In** (`@react-native-google-signin/google-signin`).
+  Replaced the Supabase `signInWithOAuth` browser flow (which showed the
+  `supabase.co` URL) with the native account picker → `signInWithIdToken`. Same
+  real Supabase account/session, so the locked identity model is unaffected.
+  Apple stays on the browser flow (native Apple deferred to Monday).
+- **Migrations 060-067 applied** by the founder in the SQL Editor (049, 059 still
+  held). `supabase/README.md` reflects this.
+- **CI:** Main CI green (Jest 2990, eslint 0, Expo Doctor). Added auto-deploy of
+  Edge Functions on push, a migration-apply workflow (needs `SUPABASE_DB_URL`,
+  not used since migrations were applied by hand), and a print-signing-sha
+  workflow.
+
+**Founder-side cloud setup completed this session:**
+- Play Console subscriptions **`pro_monthly` (£4.99/mo)** and **`pro_annual`
+  (£29.99/yr)**, each with a base plan + **7-day free-trial offer**, active. UK
+  price is VAT-inclusive (Google is merchant of record; the £4.99 row with 20%
+  is the all-in price).
+- `play-billing-rtdn` (+ `send-push`) deployed via the dashboard; **Verify JWT
+  turned OFF** on play-billing-rtdn (required for Google OIDC); function secrets
+  set: `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` (raw JSON accepted now),
+  `GOOGLE_PLAY_PACKAGE_NAME=app.volyume`, `RTDN_OIDC_AUDIENCE` = the function URL.
+- Google Cloud **service account `volyume-rtdn`** created, key set, granted Play
+  access (View financial data / Manage orders + subscriptions).
+- Google **Android OAuth client** created (package `app.volyume` + the upload-key
+  SHA-1 from the print-signing-sha workflow). The **Web** OAuth client id is
+  hardcoded in `src/lib/supabase.js` (public, not a secret).
+- Supabase project ref: `sujrylzzxcqxxfygptns`.
+
+**RESUME HERE (what is next):**
+1. **Confirm build `a85ae35` (Build Android) is green** (first build with the
+   native Google module). If red, fix the google-signin config and rebuild.
+2. **Sideload the APK** from that run and test **native Google sign-in** (native
+   picker, no Supabase URL). The sideload APK is upload-key signed, matching the
+   Android OAuth client, so sign-in works.
+3. **Test the real purchase** by uploading the **AAB to Internal testing** and
+   installing from Play with a licence tester (Play Billing does not work on a
+   sideload). Verify: purchase → `play-billing-rtdn` logs the client verify →
+   `users_profile.tier='pro'` + `billing_period` set.
+4. **Pub/Sub RTDN** for auto-handling renewals/cancels/refunds is still deferred
+   (the verify-at-purchase path covers the initial grant). Set it up when ready.
+5. **Monday (iOS):** iOS build, native Apple sign-in (`expo-apple-authentication`),
+   an iOS Google OAuth client, App Store Connect. Also add a **second Android
+   OAuth client** with the **Play App Signing** SHA-1 for Play-installed Google
+   sign-in.
+6. **Store paperwork for production:** Data Safety form (draft in
+   `docs/PLAY_STORE_LISTING.md`), Health Apps Declaration, content rating,
+   data-deletion URL, listing assets.
+
 ### 0.00000000000000001. 2026-06-06 (documentation reconciliation after a 3-day undocumented build arc, Claude): the 06-04 → 06-06 work (SDK 54 upgrade, iOS pipeline, web platform, payments rewrite, beta off, store readiness) shipped to `main` but was never written into the docs. This entry plus the section corrections below close that gap. One open code issue: the Jest suite is red.
 
 Honest meta-note first (Rule 8). Three days of major change shipped to `main`
@@ -1440,16 +1509,23 @@ the live gate list; supersedes the older "Now" items beneath where they overlap.
 - No stub/placeholder/TODO debt in the runtime; every screen mounts and its
   touchables fire across all four tier/data states (screen-mount, 547 green).
 
+**Status update 2026-06-06 (evening):** items 1-3 below are now largely DONE (see
+the § 0 evening entry). What remains is testing + store paperwork + iOS.
+
 **Founder-side / on-device (these gate production approval):**
-1. **Play Console subscriptions:** create `pro_monthly` (£4.99/mo) and
-   `pro_annual` (£29.99/yr), each with a base plan + a 7-day free-trial offer.
-   Product IDs MUST equal `src/lib/payments/catalogue.js` exactly.
-2. ~~Apply migrations 060-067~~ **DONE 2026-06-06** (founder ran the 8 SQL files
-   in the Supabase SQL Editor; 049/059 still held). Still to do: **deploy
-   `play-billing-rtdn`** (+ `send-push`) via the Supabase dashboard Edge
-   Functions editor, and wire the Pub/Sub RTDN topic.
-3. **Sandbox purchase** end-to-end on a real device via a licensed tester;
-   confirm a `tier_history` row + `trial_state` + `billing_period` write land.
+1. ~~Play Console subscriptions~~ **DONE.** `pro_monthly` (£4.99/mo) and
+   `pro_annual` (£29.99/yr) created, each active with a base plan + a 7-day
+   free-trial offer. IDs match `catalogue.js`.
+2. ~~Apply migrations 060-067~~ **DONE** (049/059 still held). ~~Deploy
+   `play-billing-rtdn` + `send-push`~~ **DONE** (dashboard; Verify-JWT off on the
+   RTDN; secrets set; service account `volyume-rtdn` created + granted Play
+   access). The initial Pro grant uses the **verify-at-purchase** path (no
+   Pub/Sub). **Still optional/later:** Pub/Sub RTDN for auto refunds/cancels.
+3. **Test the purchase** by uploading the **AAB to Internal testing** and buying
+   as a licence tester (Play Billing does not work on a sideload). Confirm
+   `tier='pro'` + `billing_period` land. **Not done yet.**
+   - Native **Google sign-in** is also testable: sideload the APK (upload-key
+     signed, matches the Android OAuth client created this session).
 4. **Signing / App Links:** enrol in Play App Signing at first upload; set the
    `PLAY_APP_SIGNING_SHA256` repo secret. Optional: `SENTRY_AUTH_TOKEN` for
    symbolicated crashes. Both degrade gracefully if absent.

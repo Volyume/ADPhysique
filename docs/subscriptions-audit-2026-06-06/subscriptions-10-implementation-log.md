@@ -91,3 +91,23 @@ passing, ESLint 0 errors).
 Deploy `play-billing-rtdn` (the server-authoritative grant + refund/cancel/
 expiry reconciliation now depends on it), create the Play products + 7-day
 offer, apply migrations 060-067, sandbox-purchase test.
+
+## Post-checkpoint additions (2026-06-06 evening)
+
+- **Verify-at-purchase, no Pub/Sub.** To let the C-1 server grant work without
+  the founder wiring Pub/Sub, `play-billing-rtdn` now also accepts a client call
+  `{ purchaseToken, subscriptionId }`: it verifies the token against the Play
+  Developer API and grants Pro via `upgrade_tier_for_user`, taking the user id
+  from Google's `obfuscatedExternalAccountId`. The three purchase surfaces call
+  `cascade.confirmPurchase()` after the optimistic unlock. Safe unauthenticated
+  (a fake token verifies to nothing; you can only grant the real buyer). The
+  RTDN/Pub/Sub path is unchanged and still handles renewals/cancels/refunds when
+  Pub/Sub is set up later.
+- **Deployment DONE (founder).** Migrations 060-067 applied; `play-billing-rtdn`
+  + `send-push` deployed (Verify-JWT off on the RTDN); function secrets set
+  (service-account key as raw JSON, `GOOGLE_PLAY_PACKAGE_NAME=app.volyume`,
+  `RTDN_OIDC_AUDIENCE`); Google service account `volyume-rtdn` created + granted
+  Play access; Play products `pro_monthly`/`pro_annual` + 7-day offers active.
+- **Still to do:** test a real purchase from Internal testing (Play Billing does
+  not work on a sideload); set up Pub/Sub for auto refund/cancel reconciliation
+  when wanted. See `docs/CURRENT_STATUS.md` § 0 (evening entry) for the live list.
