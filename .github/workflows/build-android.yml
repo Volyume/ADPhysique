@@ -133,10 +133,14 @@ jobs:
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
           EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
           EXPO_PUBLIC_USDA_API_KEY: ${{ secrets.EXPO_PUBLIC_USDA_API_KEY }}
-          # Sentry uses DSN at runtime to send events. Source-map upload
-          # at build time is disabled; events arrive without symbolicated
-          # stack traces, which is fine for v1.
-          SENTRY_DISABLE_AUTO_UPLOAD: 'true'
+          # Sentry source-map upload. When the SENTRY_AUTH_TOKEN repo secret is
+          # set, the gradle bundle step (below) uploads Hermes source maps so
+          # production stack traces symbolicate. When it is absent (e.g. a fork
+          # or a branch without the secret), upload auto-disables so the build
+          # still succeeds. The token is also needed here so the Sentry Expo
+          # plugin configures consistently during prebuild.
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_DISABLE_AUTO_UPLOAD: ${{ secrets.SENTRY_AUTH_TOKEN != '' && 'false' || 'true' }}
 
       # Raise the Gradle JVM heap for the release build. The last build
       # (run failed with "Execution failed for task
@@ -304,7 +308,8 @@ jobs:
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
           EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
           EXPO_PUBLIC_USDA_API_KEY: ${{ secrets.EXPO_PUBLIC_USDA_API_KEY }}
-          SENTRY_DISABLE_AUTO_UPLOAD: 'true'
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_DISABLE_AUTO_UPLOAD: ${{ secrets.SENTRY_AUTH_TOKEN != '' && 'false' || 'true' }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}

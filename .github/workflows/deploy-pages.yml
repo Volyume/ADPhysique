@@ -34,6 +34,56 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # Inject the Android App Links fingerprints into assetlinks.json at deploy
+      # time so the served file at volyume.app/.well-known/assetlinks.json carries
+      # real values, while the committed file stays a placeholder template. The
+      # upload-key SHA-256 is derived here from the same keystore the build signs
+      # with (no keytool on anyone's machine). The Play App Signing key SHA-256 is
+      # read once from Play Console and pasted into the PLAY_APP_SIGNING_SHA256
+      # repo secret. With neither secret set, the placeholders are left as-is and
+      # a warning is logged.
+      - name: Inject assetlinks fingerprints
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          PLAY_APP_SIGNING_SHA256: ${{ secrets.PLAY_APP_SIGNING_SHA256 }}
+        run: |
+          set -e
+          UPLOAD_SHA256=""
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEYSTORE_PASSWORD" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > /tmp/upload.keystore
+            UPLOAD_SHA256=$(keytool -list -v -keystore /tmp/upload.keystore \
+              -storepass "$ANDROID_KEYSTORE_PASSWORD" 2>/dev/null \
+              | grep -E 'SHA256:' | head -1 | awk '{print $2}')
+          fi
+          python3 - public/.well-known/assetlinks.json "$PLAY_APP_SIGNING_SHA256" "$UPLOAD_SHA256" <<'PY'
+          import json, sys
+          path, play, upload = sys.argv[1], sys.argv[2].strip(), sys.argv[3].strip()
+          data = json.load(open(path))
+          out = []
+          for v in (play, upload):
+              if v and v not in out:
+                  out.append(v)
+          # Preserve any already-real fingerprints, drop the placeholders.
+          for f in data[0]["target"]["sha256_cert_fingerprints"]:
+              if f.startswith("REPLACE_WITH"):
+                  continue
+              if f not in out:
+                  out.append(f)
+          if out:
+              data[0]["target"]["sha256_cert_fingerprints"] = out
+              json.dump(data, open(path, "w"), indent=2)
+              print("assetlinks fingerprints injected:", out)
+          else:
+              print("::warning::No assetlinks fingerprints available. Set PLAY_APP_SIGNING_SHA256 (and the keystore secrets) so https://volyume.app App Links verify.")
+          PY
+
       - name: Upload public/ as artifact
         uses: actions/upload-pages-artifact@v3
         with:
