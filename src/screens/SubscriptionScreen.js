@@ -12,10 +12,8 @@
  * locked_in_price_tier, complete_trial_ends_at, pro_trial_ends_at).
  */
 import { useState, useCallback } from 'react';
-import {
-  View, Text, StyleSheet, Alert,
-  ScrollView, Platform, Linking,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, ScrollView, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
@@ -62,7 +60,7 @@ export default function SubscriptionScreen({ navigation }) {
   const [busy, setBusy] = useState(false);
 
   const handleCancel = useCallback(() => {
-    Alert.alert(
+    appAlert(
       'Cancel your Volyume subscription?',
       "You'll keep your features until the current billing period ends. After that you'll drop to Free. Your training history, food log, and check-ins all stay; some features become read-only.",
       [

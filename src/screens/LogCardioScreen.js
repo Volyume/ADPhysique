@@ -10,9 +10,8 @@
  * Voice rules: CLAUDE.md. No em dashes, no encouragement.
  */
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
@@ -136,7 +135,7 @@ export default function LogCardioScreen({ navigation, route }) {
       });
       navigation.goBack();
     } catch (_e) {
-      Alert.alert('Couldn\'t log', 'Try again.');
+      appAlert('Couldn\'t log', 'Try again.');
       setSaving(false);
     }
   }

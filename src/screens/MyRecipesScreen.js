@@ -14,10 +14,9 @@
  * No em dashes; plain spoken voice; British English.
  */
 import { todayLocalKey } from '../lib/dayKey';
+import { appAlert } from '../components/AppAlert';
 import { useCallback, useState } from 'react';
-import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -87,7 +86,7 @@ export default function MyRecipesScreen({ navigation, route }) {
   }
 
   function onDelete(recipe) {
-    Alert.alert(
+    appAlert(
       `Delete "${recipe.name}"?`,
       'The recipe goes from your list. Past entries you logged from it stay in your diary.',
       [

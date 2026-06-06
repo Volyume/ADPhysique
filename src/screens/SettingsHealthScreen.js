@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { View, Text, Switch, Alert } from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, Switch } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
@@ -45,7 +46,7 @@ export default function SettingsHealthScreen() {
   // listing. Returns true if it handled an sdk_unavailable status.
   async function handleSdkUnavailable(status) {
     if (status !== 'sdk_unavailable') return false;
-    Alert.alert(
+    appAlert(
       'Health Connect needed',
       'Volyume reads and writes this through Health Connect. It isn\'t set up on this phone yet. Install or update it, then try again.',
       [

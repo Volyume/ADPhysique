@@ -1,13 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Switch,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, Switch, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -384,7 +377,7 @@ export default function NotificationSettingsScreen({ navigation }) {
 
   async function handleTrainingToggle(value) {
     if (value && permissionStatus !== 'granted') {
-      Alert.alert(
+      appAlert(
         'Notifications disabled',
         'You\'ll need to enable notifications in your device settings first.',
       );
@@ -405,7 +398,7 @@ export default function NotificationSettingsScreen({ navigation }) {
 
   function handleTrainingTimePick() {
     const currentLabel = `${String(trainingHour).padStart(2, '0')}:${String(trainingMinute).padStart(2, '0')}`;
-    Alert.alert(
+    appAlert(
       'Reminder time',
       `Current: ${currentLabel}`,
       TRAINING_PRESET_TIMES.map((label) => ({

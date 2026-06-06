@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
-  Modal, KeyboardAvoidingView, Platform, Animated,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, KeyboardAvoidingView, Platform, Animated } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, withAlpha } from '../styles/theme';
@@ -486,7 +484,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
 
   function handleSaveAsTemplate() {
     if (!exerciseData.length) {
-      Alert.alert('No exercises', 'No exercise data available to save as template.');
+      appAlert('No exercises', 'No exercise data available to save as template.');
       return;
     }
     setTemplateName(exerciseNames.slice(0, 2).join(' & ') || 'My Workout');

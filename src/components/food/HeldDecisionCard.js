@@ -9,7 +9,8 @@
  *   - Optional "Why" link for the longer explanation
  *   - For ED-pattern only: "Get support" button linking to Beat
  */
-import { View, Text, Pressable, StyleSheet, Linking, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
+import { appAlert } from '../AppAlert';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
 
 const BEAT_URL = 'https://www.beateatingdisorders.org.uk/';
@@ -18,7 +19,7 @@ const BEAT_URL = 'https://www.beateatingdisorders.org.uk/';
 // address so the user can still reach help, rather than swallowing the error.
 function openSupport() {
   Linking.openURL(BEAT_URL).catch(() => {
-    Alert.alert('Get support', `You can reach Beat at ${BEAT_URL}`);
+    appAlert('Get support', `You can reach Beat at ${BEAT_URL}`);
   });
 }
 

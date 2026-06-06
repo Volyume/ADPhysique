@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Share } from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
@@ -30,7 +31,7 @@ export default function DebugLogScreen() {
   useEffect(() => { load(); }, [load]);
 
   async function handleClear() {
-    Alert.alert(
+    appAlert(
       'Clear all logs?',
       'This deletes the in-app error history. Use this after copying anything you want to keep.',
       [
@@ -69,7 +70,7 @@ export default function DebugLogScreen() {
       logInfo(`diag.sync.${table}`, JSON.stringify(buckets), { table });
     }
     await load();
-    Alert.alert(
+    appAlert(
       'Diagnostic complete',
       `Scanned ${Object.keys(report.tables).length} tables. ` +
       `${report.summary.totalRowsUnderForeignUids} rows are under user_ids that aren't your current session (${report.summary.distinctForeignUids.length} distinct foreign uid${report.summary.distinctForeignUids.length === 1 ? '' : 's'}). ` +

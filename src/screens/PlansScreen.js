@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
@@ -191,7 +190,7 @@ export default function PlansScreen({ navigation }) {
 
   async function handleRestartPlan() {
     if (!activePlan) return;
-    Alert.alert(
+    appAlert(
       'Restart this plan?',
       'A new training block starts today with the same workouts. Try to beat your numbers from last time.',
       [
@@ -287,7 +286,7 @@ export default function PlansScreen({ navigation }) {
         icon: 'archive-outline',
         label: 'Archive plan',
         destructive: true,
-        onPress: () => Alert.alert(
+        onPress: () => appAlert(
           'Archive Plan?',
           'The plan will be hidden from My plans. Session history stays intact and you can restore it from the Archived section.',
           [
@@ -317,12 +316,12 @@ export default function PlansScreen({ navigation }) {
   }
 
   async function handleTemplateOptions(routine) {
-    Alert.alert(routine.name, undefined, [
+    appAlert(routine.name, undefined, [
       { text: 'Edit', onPress: () => navigation.navigate('RoutineDetail', { routineId: routine.id }) },
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () => Alert.alert(
+        onPress: () => appAlert(
           'Delete template?',
           `"${routine.name}" will be removed.`,
           [

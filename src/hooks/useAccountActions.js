@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Platform } from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Updates from 'expo-updates';
@@ -40,13 +41,13 @@ export default function useAccountActions() {
     // which reads as data loss even though nothing is lost.
     const activeWorkout = useAppStore.getState().activeWorkout;
     if (activeWorkout) {
-      Alert.alert(
+      appAlert(
         'Finish your workout first',
         'You have a session in progress. Finish or discard it before signing out so nothing gets left in a half-state.',
       );
       return;
     }
-    Alert.alert(
+    appAlert(
       'Sign out?',
       user?.isLocal
         ? "You're signed in locally on this device. Your data stays on this phone. Sign back in any time."
@@ -89,7 +90,7 @@ export default function useAccountActions() {
                 // out", let the user decide. 'skipped'/'error' often means the
                 // device is offline or a background sync held the lock; the
                 // user may accept losing unsynced changes to sign out anyway.
-                Alert.alert(
+                appAlert(
                   'Sync incomplete',
                   "We couldn't sync your latest changes (you might be offline). Sign out anyway? Any changes since your last successful sync may be lost.",
                   [
@@ -124,7 +125,7 @@ export default function useAccountActions() {
   async function handleDeleteAccount() {
     audit('account.delete.tap', { isLocal: !!user?.isLocal });
     // Two-step confirmation so a thumb-tap can't nuke an account.
-    Alert.alert(
+    appAlert(
       'Delete account?',
       user?.isLocal
         ? 'This permanently deletes your local data on this device. Local accounts have no cloud backup. This cannot be undone.'
@@ -136,7 +137,7 @@ export default function useAccountActions() {
           style: 'destructive',
           onPress: () => {
             // Second confirmation
-            Alert.alert(
+            appAlert(
               'Are you sure?',
               user?.isLocal
                 ? "There's no undo. All your workouts, plans, and progress are wiped from this device."
@@ -237,7 +238,7 @@ export default function useAccountActions() {
         // profile they thought they deleted. Now we surface the failure
         // and leave the session alone so they can retry or contact us.
         if (!cloudOk) {
-          Alert.alert(
+          appAlert(
             "Couldn't delete your account",
             'Try again.',
           );
@@ -310,7 +311,7 @@ export default function useAccountActions() {
   // all wiped within the 30-day window the policy promises.
   async function handleWithdrawConsent() {
     if (withdrawing || deletingAccount) return;
-    Alert.alert(
+    appAlert(
       'Withdraw health-data consent?',
       "Withdrawing consent means we lose the legal basis to keep " +
         "your weight, food, body composition, and check-in data. " +
@@ -322,7 +323,7 @@ export default function useAccountActions() {
           text: 'Continue',
           style: 'destructive',
           onPress: () => {
-            Alert.alert(
+            appAlert(
               'Are you sure?',
               "There's no undo. All your workouts, plans, check-ins, " +
                 "food log, and progress are wiped from every device " +
@@ -376,7 +377,7 @@ export default function useAccountActions() {
                       await performDeleteAccount('consent_withdrawal');
                     } catch (e) {
                       logError('SettingsScreen.withdrawConsent', e, { uid: user?.id });
-                      Alert.alert("Couldn't withdraw", e?.message ?? 'Unknown error.');
+                      appAlert("Couldn't withdraw", e?.message ?? 'Unknown error.');
                     } finally {
                       setWithdrawing(false);
                     }

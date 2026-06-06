@@ -1,14 +1,6 @@
 import { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Alert,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
@@ -96,7 +88,7 @@ export default function LoginScreen({ route }) {
             || msg.includes('invalid')
           );
         if (looksUnregistered) {
-          Alert.alert(
+          appAlert(
             'No account found',
             `We couldn't sign in with that email. Want to create a new account instead?`,
             [
@@ -119,7 +111,7 @@ export default function LoginScreen({ route }) {
         // the wizard, not MainTabs, no matter how long email confirmation
         // takes (A2-021).
         useAppStore.getState().noteSignupPendingOnboarding(data.user.id);
-        Alert.alert(
+        appAlert(
           'Check your email',
           'We\'ve sent a confirmation link to ' + email.trim() + '.\n\nOnce you\'ve confirmed, come back here and sign in with your email and password.',
           [{ text: 'Got it', onPress: () => setMode('signin') }],

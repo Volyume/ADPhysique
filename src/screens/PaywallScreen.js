@@ -17,10 +17,8 @@
  * close. Either decision is logged via paywall_tapped_cta telemetry.
  */
 import { useState, useCallback } from 'react';
-import {
-  View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Alert, Linking,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, fontWeight, hitSlop, type } from '../styles/theme';
@@ -60,7 +58,7 @@ export default function PaywallScreen({ navigation, route }) {
     setBusy(true);
     const sku = skuFor('pro', pricingWindow);
     if (!sku) {
-      Alert.alert('Subscription unavailable', 'Could not load the subscription option. Try again later.');
+      appAlert('Subscription unavailable', 'Could not load the subscription option. Try again later.');
       setBusy(false);
       return;
     }
@@ -82,7 +80,7 @@ export default function PaywallScreen({ navigation, route }) {
         logInfo('Paywall.purchaseCancelled', `surface=${surface}`);
       } else {
         logError('Paywall.purchaseFailed', e, { surface });
-        Alert.alert('Purchase did not complete', 'Try again or pick a different option.');
+        appAlert('Purchase did not complete', 'Try again or pick a different option.');
       }
     } finally {
       setBusy(false);
@@ -104,14 +102,14 @@ export default function PaywallScreen({ navigation, route }) {
         const ref = info.latestTransactionId ?? `restore_${Date.now()}`;
         await cascade.payAt('pro', ref, 'restore_purchases');
         logInfo('Paywall.restored', `surface=${surface}`);
-        Alert.alert('Pro restored', 'Your subscription is active again.');
+        appAlert('Pro restored', 'Your subscription is active again.');
         if (navigation?.canGoBack?.()) navigation.goBack();
       } else {
-        Alert.alert('Nothing to restore', 'We could not find an active subscription on this Google account.');
+        appAlert('Nothing to restore', 'We could not find an active subscription on this Google account.');
       }
     } catch (e) {
       logError('Paywall.restoreFailed', e, { surface });
-      Alert.alert('Could not restore', 'Try again in a moment.');
+      appAlert('Could not restore', 'Try again in a moment.');
     } finally {
       setBusy(false);
     }

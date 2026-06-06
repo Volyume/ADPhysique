@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -53,7 +54,7 @@ export default function WellbeingCheckScreen({ navigation }) {
         await saveUserBodyProfile(user.id, { scoffScore: score }).catch(() => {});
       }
       if (score >= 2) {
-        Alert.alert(
+        appAlert(
           'Thank you for sharing that',
           "Some of your answers suggest it may be worth speaking to your GP or a registered dietitian alongside your training. We've noted this so your coaching focuses on performance and support rather than restriction.",
           [{ text: 'Got it', onPress: () => navigation.goBack() }],

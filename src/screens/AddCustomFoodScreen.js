@@ -8,10 +8,9 @@
  * Voice rules from COACHING_VOICE_SYNTHESIS_LOCKED.md.
  */
 import { todayLocalKey } from '../lib/dayKey';
+import { appAlert } from '../components/AppAlert';
 import { useState, useMemo } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
@@ -93,7 +92,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
       const sanity = checkFoodSanity(food);
       if (!sanity.valid) {
         const confirmed = await new Promise((resolve) => {
-          Alert.alert(
+          appAlert(
             'Numbers look off',
             sanity.reason,
             [

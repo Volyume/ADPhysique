@@ -10,10 +10,8 @@
  * designed empty state (diary-tab redesign 2026-06-01).
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
-  Alert, Modal, Pressable, TextInput,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, Pressable, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
@@ -253,7 +251,7 @@ export default function DiaryScreen({ navigation }) {
   const doDeleteSelected = useCallback(() => {
     const sel = selectedEntries();
     if (sel.length === 0) return;
-    Alert.alert(
+    appAlert(
       `Delete ${sel.length} ${sel.length === 1 ? 'entry' : 'entries'}?`,
       undefined,
       [
@@ -384,7 +382,7 @@ export default function DiaryScreen({ navigation }) {
   // destroying the row; the swipeable's ref is closed if the user
   // cancels so the row snaps back.
   const requestDelete = useCallback((entry, closeSwipe) => {
-    Alert.alert(
+    appAlert(
       'Delete entry?',
       `${friendlyFoodName(entry)} (${Math.round(entry.kcal ?? 0)} kcal)`,
       [
@@ -417,7 +415,7 @@ export default function DiaryScreen({ navigation }) {
       toast.show('Nothing logged yesterday to copy.', { variant: 'info' });
       return;
     }
-    Alert.alert(
+    appAlert(
       `Copy ${yEntries.length} ${yEntries.length === 1 ? 'entry' : 'entries'} from yesterday?`,
       'They\'ll land in today\'s diary at the same meal slots.',
       [

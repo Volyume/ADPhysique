@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -124,7 +123,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
   }
 
   function handleRepeatWorkout(workout) {
-    Alert.alert(
+    appAlert(
       'Repeat session',
       'How would you like to continue?',
       [

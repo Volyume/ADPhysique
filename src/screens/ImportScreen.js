@@ -11,9 +11,8 @@
  */
 
 import { useState } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
@@ -132,7 +131,7 @@ export default function ImportScreen({ navigation }) {
     } catch (e) {
       logError('ImportScreen.runImport', e);
       setStage('preview');
-      Alert.alert(
+      appAlert(
         'Import failed',
         e?.message ?? 'Something went wrong writing the data. Nothing was saved.',
       );

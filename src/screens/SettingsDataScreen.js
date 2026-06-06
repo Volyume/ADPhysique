@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { View, Text, Alert } from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -69,7 +70,7 @@ export default function SettingsDataScreen({ navigation }) {
     try {
       const { csv, rowCount } = await buildWorkoutCSV(user.id);
       if (rowCount === 0) {
-        Alert.alert('Nothing to export', 'Log some workouts first, then export your data here.');
+        appAlert('Nothing to export', 'Log some workouts first, then export your data here.');
         return;
       }
       const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -95,17 +96,17 @@ export default function SettingsDataScreen({ navigation }) {
   async function handleFullBackup() {
     try {
       const { bytes } = await exportBackup();
-      Alert.alert(
+      appAlert(
         'Backup created',
         `Your entire Volyume database (${(bytes / 1024).toFixed(0)} KB) was exported. Save it to Files, email it to yourself, or move it to your new device. Then use "Restore from backup" there.`,
       );
     } catch (e) {
-      Alert.alert('Backup failed', e?.message ?? 'Could not create a backup. Please try again.');
+      appAlert('Backup failed', e?.message ?? 'Could not create a backup. Please try again.');
     }
   }
 
   function handleRestoreBackup() {
-    Alert.alert(
+    appAlert(
       'Restore from backup?',
       'This replaces ALL current data (workouts, routines, plans, body metrics and settings) with the contents of the backup file you choose. This cannot be undone.',
       [
@@ -118,12 +119,12 @@ export default function SettingsDataScreen({ navigation }) {
               const res = await importBackup();
               if (res?.cancelled) return;
               const total = Object.values(res.counts || {}).reduce((a, b) => a + b, 0);
-              Alert.alert(
+              appAlert(
                 'Restore complete',
                 `${total} records restored. Please fully close and reopen Volyume so every screen reloads from the restored data.`,
               );
             } catch (e) {
-              Alert.alert('Restore failed', e?.message ?? 'Could not read that backup file.');
+              appAlert('Restore failed', e?.message ?? 'Could not read that backup file.');
             }
           },
         },
@@ -132,7 +133,7 @@ export default function SettingsDataScreen({ navigation }) {
   }
 
   async function handleClearHistory() {
-    Alert.alert(
+    appAlert(
       'Clear workout history?',
       'This permanently deletes all your logged sessions and sets. Your personal records will also be cleared as they are calculated from your history. This cannot be undone.',
       [
@@ -147,7 +148,7 @@ export default function SettingsDataScreen({ navigation }) {
               toast.show('Workout history cleared', { variant: 'success' });
             } catch (e) {
               logError('SettingsScreen.handleClearHistory', e, { userId: user.id });
-              Alert.alert('Couldn\'t clear history', e?.message ?? 'Try again.');
+              appAlert('Couldn\'t clear history', e?.message ?? 'Try again.');
             }
           },
         },

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput, ScrollView,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
@@ -206,7 +205,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
   function handleConfirmSwap(newExercise) {
     if (!swapState) return;
     const originalName = swapState.exercise?.name || 'this exercise';
-    Alert.alert(
+    appAlert(
       'Swap this exercise in the routine?',
       `${originalName} will be replaced with ${newExercise.name}. This affects all future sessions of this routine. Your set, rep and rest targets stay the same.`,
       [
@@ -253,7 +252,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
       exerciseCount: exercises.length,
     });
     if (exercises.length === 0) {
-      Alert.alert(
+      appAlert(
         'No exercises',
         'This routine has no exercises yet.',
         [
@@ -417,7 +416,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   <Ionicons name="swap-horizontal" size={20} color={colors.textMuted} />
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => Alert.alert(
+                  onPress={() => appAlert(
                     'Remove exercise?',
                     `Remove ${exercise.name} from this routine?`,
                     [

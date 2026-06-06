@@ -1,4 +1,5 @@
-import { View, Alert } from 'react-native';
+import { View } from 'react-native';
+import { appAlert } from '../components/AppAlert';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import useAccountActions from '../hooks/useAccountActions';
@@ -41,7 +42,7 @@ export default function SettingsAccountScreen({ navigation }) {
             icon="arrow-down-circle-outline"
             label="Switch to Free"
             onPress={() =>
-              Alert.alert(
+              appAlert(
                 'Switch to Free?',
                 'Everything you\'ve logged stays. Past coach outputs, check-ins, training blocks and PRs remain readable. You just won\'t get new Precision Coaching adjustments until you re-enable Pro.',
                 [

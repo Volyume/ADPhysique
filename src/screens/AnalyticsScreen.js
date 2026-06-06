@@ -1,8 +1,6 @@
 import { useRef, useEffect } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  RefreshControl, Alert,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useScrollToTop } from '@react-navigation/native';
@@ -186,7 +184,7 @@ export default function AnalyticsScreen({ navigation }) {
                   }
                   onPress={() => {
                     if (!unlocked) {
-                      Alert.alert(
+                      appAlert(
                         'Year of Lifts',
                         earliestWorkoutAt
                           ? `Your wrap-up unlocks after a full year of training. ${daysLeft} day${daysLeft === 1 ? '' : 's'} to go.`

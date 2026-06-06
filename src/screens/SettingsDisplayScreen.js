@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { View, Text, Switch, Alert } from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, Switch } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 import * as Updates from 'expo-updates';
 import useAppStore from '../store/useAppStore';
@@ -12,7 +13,7 @@ import { SettingsPage, SettingRow, settingsStyles as styles } from '../component
 // in App.js re-applies them before screens load. Prompt the user to reload now
 // rather than leaving them confused that the toggle "did nothing".
 async function promptRestartForA11y(label) {
-  Alert.alert(
+  appAlert(
     `${label} saved`,
     `Volyume needs to reopen to apply this. Your data and current screen are safe.`,
     [
@@ -25,7 +26,7 @@ async function promptRestartForA11y(label) {
             // Dev clients / Expo Go without OTA support, fall back to a
             // soft message. The toggle is saved; next manual restart picks
             // it up.
-            Alert.alert('Reload failed', 'Close and reopen Volyume to apply the change.');
+            appAlert('Reload failed', 'Close and reopen Volyume to apply the change.');
           }
         },
       },

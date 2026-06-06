@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  View, Text, StyleSheet, Pressable, TextInput, Keyboard, Alert,
-} from 'react-native';
+import { appAlert } from '../AppAlert';
+import { View, Text, StyleSheet, Pressable, TextInput, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
 import BottomSheet from '../BottomSheet';
@@ -82,7 +81,7 @@ export default function FoodDetailSheet({
   }
 
   function handleDelete() {
-    Alert.alert(
+    appAlert(
       'Remove this entry?',
       'It comes off this day\'s totals.',
       [

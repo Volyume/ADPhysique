@@ -20,8 +20,9 @@
  * Voice rules: CLAUDE.md. No em dashes; plain spoken; British English.
  */
 
-import { Alert } from 'react-native';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { appAlert } from '../components/AppAlert';
 
 // One flag per install (not per user): the prompt is about the device's
 // health connection, which is shared across any accounts on the phone.
@@ -105,7 +106,7 @@ export async function maybePromptStepsConnect({ userId, firstRunComplete, stepsE
     // reappear on the next launch.
     await markStepsPromptShown();
 
-    Alert.alert(
+    appAlert(
       'Track steps and weight?',
       'Volyume can read your daily steps and bodyweight from your watch, phone, scale or tracker, so your step target, weight log and check-ins stay accurate without typing them in. You can change this any time in Settings.',
       [
@@ -120,7 +121,7 @@ export async function maybePromptStepsConnect({ userId, firstRunComplete, stepsE
               if (status === 'sdk_unavailable') {
                 // eslint-disable-next-line global-require
                 const { openHealthConnectInstall } = require('./health');
-                Alert.alert(
+                appAlert(
                   'Health Connect needed',
                   'Volyume reads your steps and weight through Health Connect. It isn\'t set up on this phone yet. Install or update it, then connect from Settings.',
                   [

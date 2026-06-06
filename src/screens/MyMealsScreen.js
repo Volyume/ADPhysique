@@ -16,11 +16,9 @@
  * Voice rules from CLAUDE.md: no em dashes, plain spoken, British English.
  */
 import { todayLocalKey } from '../lib/dayKey';
+import { appAlert } from '../components/AppAlert';
 import { useCallback, useState } from 'react';
-import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert,
-  Modal, Pressable, TextInput,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, Pressable, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -79,7 +77,7 @@ export default function MyMealsScreen({ navigation, route }) {
   }, [userId, mealSlot, entryDate, navigation, toast]);
 
   function confirmLog(meal) {
-    Alert.alert(
+    appAlert(
       `Log "${meal.name}"?`,
       `Adds ${meal.itemCount} ${meal.itemCount === 1 ? 'food' : 'foods'} to ${SLOT_LABELS[mealSlot] ?? mealSlot}.`,
       [
@@ -90,7 +88,7 @@ export default function MyMealsScreen({ navigation, route }) {
   }
 
   function openMenu(meal) {
-    Alert.alert(
+    appAlert(
       meal.name,
       undefined,
       [
@@ -98,7 +96,7 @@ export default function MyMealsScreen({ navigation, route }) {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => Alert.alert(
+          onPress: () => appAlert(
             `Delete "${meal.name}"?`,
             'The meal goes from your list. Anything you already logged from it stays in your diary.',
             [

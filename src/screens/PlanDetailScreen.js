@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -80,7 +79,7 @@ export default function PlanDetailScreen({ navigation, route }) {
   }
 
   async function handleAddToMyPlans() {
-    Alert.alert(
+    appAlert(
       'Add to My Plans',
       `Copy "${plan?.name}" into your plans?`,
       [
@@ -90,7 +89,7 @@ export default function PlanDetailScreen({ navigation, route }) {
           onPress: async () => {
             try {
               const copy = await copyPlanFromLibrary(planId, user.id);
-              Alert.alert(
+              appAlert(
                 'Added to My Plans',
                 'Set this as your Active Plan now?',
                 [
@@ -145,7 +144,7 @@ export default function PlanDetailScreen({ navigation, route }) {
   }
 
   async function handleArchive() {
-    Alert.alert(
+    appAlert(
       'Archive Plan?',
       'The plan will be hidden. Session history remains intact.',
       [

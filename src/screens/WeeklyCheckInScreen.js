@@ -1,16 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  StyleSheet,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -490,7 +480,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
       const goCoach = () => navigation.navigate('CoachOutput', { weekStart: weekStart.getTime() });
       const permStatus = await getNotificationPermissionStatus();
       if (permStatus === 'undetermined') {
-        Alert.alert(
+        appAlert(
           'Daily weight reminders',
           'Logging your weight each morning makes your coaching more accurate. A 7-day trend is much more reliable than a single reading. Enable a daily nudge?',
           [
@@ -510,7 +500,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
       }
     } catch (e) {
       logError('WeeklyCheckInScreen.submit', e, { userId: user?.id });
-      Alert.alert(
+      appAlert(
         'Couldn\'t save check-in',
         e?.message ?? 'Try again.',
       );

@@ -1,20 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Modal,
-  Alert,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  FlatList,
-  BackHandler,
-  AppState,
-  Animated,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform, FlatList, BackHandler, AppState, Animated } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as hapticsVocab from '../lib/haptics';
@@ -262,10 +248,10 @@ export default function ActiveWorkoutScreen({ navigation }) {
 
   function handleRemoveExercise() {
     if (workoutExercises.length <= 1) {
-      Alert.alert('Cannot remove', 'This is the only exercise in your session.');
+      appAlert('Cannot remove', 'This is the only exercise in your session.');
       return;
     }
-    Alert.alert(
+    appAlert(
       'Remove exercise?',
       `Remove ${exercise.name} from this session. Your plan is not changed.`,
       [
@@ -713,7 +699,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
       ? overrides.actualReps
       : parseInt(currentSet.reps, 10);
     if (!Number.isFinite(repsNum) || repsNum < 1) {
-      Alert.alert('Enter reps', 'Please enter the number of reps completed.');
+      appAlert('Enter reps', 'Please enter the number of reps completed.');
       return;
     }
     // Cluster sets (myo-reps / rest-pause) commit the whole cluster as one
@@ -727,7 +713,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
     const isBodyweight = /body\s*weight/i.test(exercise.equipment || '');
     const weightNum = parseFloat(currentSet.weight);
     if (!isBodyweight && (currentSet.weight === '' || currentSet.weight == null || isNaN(weightNum) || weightNum <= 0)) {
-      Alert.alert('Enter weight', `Enter the weight used (in ${units}) before completing this set.`);
+      appAlert('Enter weight', `Enter the weight used (in ${units}) before completing this set.`);
       return;
     }
 
@@ -894,7 +880,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
         exerciseId: exercise?.id,
         setType: currentSet.setType,
       });
-      Alert.alert(
+      appAlert(
         'Couldn\'t save set',
         'Your set wasn\'t saved. Tap Log set to retry. Tell me if this keeps happening: ' + (e?.message ?? 'unknown error'),
       );
@@ -911,13 +897,13 @@ export default function ActiveWorkoutScreen({ navigation }) {
   function startCluster() {
     const activationReps = parseInt(currentSet.reps, 10);
     if (!Number.isFinite(activationReps) || activationReps < 1) {
-      Alert.alert('Enter reps', 'Enter your activation set reps first.');
+      appAlert('Enter reps', 'Enter your activation set reps first.');
       return;
     }
     const isBodyweight = /body\s*weight/i.test(exercise?.equipment || '');
     const weightNum = parseFloat(currentSet.weight);
     if (!isBodyweight && (currentSet.weight === '' || currentSet.weight == null || isNaN(weightNum) || weightNum <= 0)) {
-      Alert.alert('Enter weight', `Enter the weight used (in ${units}) before starting the cluster.`);
+      appAlert('Enter weight', `Enter the weight used (in ${units}) before starting the cluster.`);
       return;
     }
     setCluster({
@@ -934,7 +920,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
   function addMiniSet() {
     const n = parseInt(clusterReps, 10);
     if (!Number.isFinite(n) || n <= 0) {
-      Alert.alert('Enter reps', 'Enter the mini-set reps.');
+      appAlert('Enter reps', 'Enter the mini-set reps.');
       return;
     }
     setCluster((c) => (c ? { ...c, reps: [...c.reps, n] } : c));
@@ -1029,7 +1015,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
       workoutId: activeWorkout?.id ?? null,
       loggedSetCount: loggedSets.length,
     });
-    Alert.alert(
+    appAlert(
       'Finish Workout?',
       `You've logged ${workoutExercises.reduce((sum, e) => sum + (e.sets?.length ?? 0), 0)} sets across ${workoutExercises.length} exercises.`,
       [
@@ -1140,7 +1126,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
               // happy path the guard stays set forever because we've
               // already navigated away from this screen.
               finishingRef.current = false;
-              Alert.alert(
+              appAlert(
                 'Couldn\'t finish workout',
                 'Your sets are still saved but the workout didn\'t close. Tap Finish to retry: ' + (e?.message ?? 'unknown error'),
               );
@@ -1883,7 +1869,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
                 <Text style={styles.staleFinishText}>Finish Workout</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.staleDiscard} accessibilityRole="button" accessibilityLabel="Discard workout" onPress={() => {
-                Alert.alert('Discard workout?', 'All logged sets will be lost.', [
+                appAlert('Discard workout?', 'All logged sets will be lost.', [
                   { text: 'Cancel', style: 'cancel' },
                   {
                     text: 'Discard',

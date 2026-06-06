@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor } from '../styles/theme';
@@ -117,7 +116,7 @@ export default function VolumeHeatmapScreen() {
   }
 
   async function resetToDefaults() {
-    Alert.alert('Reset volume targets?', 'This will restore the default recommended values.', [
+    appAlert('Reset volume targets?', 'This will restore the default recommended values.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Reset',

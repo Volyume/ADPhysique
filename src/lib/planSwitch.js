@@ -1,5 +1,6 @@
-import { Alert } from 'react-native';
+
 import { getActiveBlock } from './database';
+import { appAlert } from '../components/AppAlert';
 import { getBlockStatus } from './mesocycle';
 
 // Asks the user to confirm before activating a new plan when the current
@@ -40,7 +41,7 @@ export async function confirmPlanSwitchMidBlock(userId, opts = {}) {
     ' Your workout history and PRs are kept.';
 
   return new Promise(resolve => {
-    Alert.alert(
+    appAlert(
       'Restart your training block?',
       body,
       [

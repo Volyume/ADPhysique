@@ -1,8 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Alert, RefreshControl, Modal, Pressable,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -275,7 +273,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
       toast.show('Setting up your profile, try again in a second', { variant: 'info' });
       return;
     }
-    Alert.alert(
+    appAlert(
       'Add to my plans',
       `Copy "${plan.name}" into your plans?`,
       [
@@ -286,7 +284,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
             try {
               const copy = await copyPlanFromLibrary(plan.id, user.id);
               if (!copy?.id) throw new Error('Copy failed.');
-              Alert.alert(
+              appAlert(
                 'Added to my plans',
                 fromFirstRun
                   ? `"${plan.name}" added. Set it as your active plan and start logging?`

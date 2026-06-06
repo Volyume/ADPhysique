@@ -727,6 +727,8 @@ export default function App() {
   const { ToastProvider } = require('./src/components/Toast');
   // eslint-disable-next-line global-require
   const { FeedbackProvider } = require('./src/components/FeedbackSheet');
+  // eslint-disable-next-line global-require
+  const { AppAlertHost } = require('./src/components/AppAlert');
 
   return (
     <ErrorBoundary>
@@ -747,6 +749,7 @@ export default function App() {
                 />
               )}
               <CrashRecoveryToast priorCrash={priorCrash} />
+              <AppAlertHost />
             </FeedbackProvider>
           </ToastProvider>
         </SafeAreaProvider>

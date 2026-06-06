@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import {
-  View, Text, StyleSheet, TouchableOpacity, TextInput,
-  ScrollView, Alert, Platform, KeyboardAvoidingView,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
@@ -130,7 +128,7 @@ export default function ProUpgradeScreen({ navigation }) {
         // the wizard, not MainTabs, no matter how long email confirmation
         // takes (A2-021).
         useAppStore.getState().noteSignupPendingOnboarding(data.user.id);
-        Alert.alert(
+        appAlert(
           'Check your email',
           'We sent a confirmation link. Confirm it, sign in here, and your Pro access activates.',
         );

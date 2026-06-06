@@ -9,7 +9,8 @@
  * Voice rules: CLAUDE.md. No em dashes, no encouragement.
  */
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SectionList, Alert } from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, TouchableOpacity, SectionList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -54,7 +55,7 @@ export default function CardioHistoryScreen({ navigation }) {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   function confirmDelete(row) {
-    Alert.alert('Remove this session?', `${row.activityName}, ${row.durationMin} min.`, [
+    appAlert('Remove this session?', `${row.activityName}, ${row.durationMin} min.`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',

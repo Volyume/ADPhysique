@@ -1,8 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import {
-  View, Text, StyleSheet, TouchableOpacity, TextInput,
-  ScrollView, Alert, ActivityIndicator, Platform, KeyboardAvoidingView,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -263,7 +261,7 @@ export default function ProOnboardingScreen({ navigation }) {
       const result = await fn();
       if (result?.error) {
         logError('ProOnboarding.oauth.providerError', result.error, { provider });
-        Alert.alert('Sign-in failed', result.error.message);
+        appAlert('Sign-in failed', result.error.message);
         return;
       }
       if (result?.cancelled) {
@@ -287,11 +285,11 @@ export default function ProOnboardingScreen({ navigation }) {
   async function advanceFrom1() {
     if (accountCreated) { setStep(2); return; }
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Missing fields', 'Enter your email and a password to continue.');
+      appAlert('Missing fields', 'Enter your email and a password to continue.');
       return;
     }
     if (authMode === 'signup' && password.length < 8) {
-      Alert.alert('Password too short', 'Use at least 8 characters.');
+      appAlert('Password too short', 'Use at least 8 characters.');
       return;
     }
     setBusy(true);
@@ -299,7 +297,7 @@ export default function ProOnboardingScreen({ navigation }) {
       const fn = authMode === 'signup' ? signUpWithEmail : signInWithEmail;
       const { data, error } = await fn(email.trim(), password);
       if (error) {
-        Alert.alert(authMode === 'signup' ? 'Sign-up error' : 'Sign-in error', error.message);
+        appAlert(authMode === 'signup' ? 'Sign-up error' : 'Sign-in error', error.message);
         setBusy(false);
         return;
       }
@@ -308,7 +306,7 @@ export default function ProOnboardingScreen({ navigation }) {
         // the wizard, not MainTabs, no matter how long email confirmation
         // takes (A2-021).
         useAppStore.getState().noteSignupPendingOnboarding(data.user.id);
-        Alert.alert(
+        appAlert(
           'Check your email',
           'We sent a confirmation link. Confirm it, sign in here, then continue.',
         );
@@ -346,14 +344,14 @@ export default function ProOnboardingScreen({ navigation }) {
         return;
       }
     } catch (_) {
-      Alert.alert('Something went wrong', 'Try again.');
+      appAlert('Something went wrong', 'Try again.');
     }
     setBusy(false);
   }
 
   function advanceFrom2() {
     if (!firstName.trim()) {
-      Alert.alert('Your name', 'Please enter your first name to continue.');
+      appAlert('Your name', 'Please enter your first name to continue.');
       return;
     }
     // Validate body weight, used downstream to compute calorie / protein
@@ -363,14 +361,14 @@ export default function ProOnboardingScreen({ navigation }) {
       ? stoneLbsToKg(bodyWeightSt, bodyWeightStLbs || '0')
       : parseBodyWeightToKg(bodyWeight, localBWUnits);
     if (!bwKg || isNaN(bwKg) || bwKg < 30 || bwKg > 300) {
-      Alert.alert(
+      appAlert(
         'Body weight',
         'Enter your body weight so we can calculate your calorie and protein targets.',
       );
       return;
     }
     if (!age || isNaN(parseInt(age, 10)) || parseInt(age, 10) < 13 || parseInt(age, 10) > 100) {
-      Alert.alert('Age', 'Enter your age (13 to 100).');
+      appAlert('Age', 'Enter your age (13 to 100).');
       return;
     }
     setStep(3);
@@ -381,7 +379,7 @@ export default function ProOnboardingScreen({ navigation }) {
     // The goal/phase questions moved to step 4 so neither step carries more
     // than a handful of fields (the 3-5-per-step rule).
     if (!experience || !sessionLengthMinutes || !equipment) {
-      Alert.alert('Complete all fields', 'Please fill out your training setup to continue.');
+      appAlert('Complete all fields', 'Please fill out your training setup to continue.');
       return;
     }
     setStep(4);
@@ -389,7 +387,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
   function advanceFrom4() {
     if (!trainingGoal || !trainingPhase) {
-      Alert.alert('Almost there', 'Choose what you are focused on to continue.');
+      appAlert('Almost there', 'Choose what you are focused on to continue.');
       return;
     }
     // The "aggressive cuts" goal-lock interstitial was removed from
@@ -404,7 +402,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
   async function advanceFrom5() {
     if (!recoveryRating) {
-      Alert.alert('Recovery rating', 'Please select your recovery level to continue.');
+      appAlert('Recovery rating', 'Please select your recovery level to continue.');
       return;
     }
 
@@ -563,14 +561,14 @@ export default function ProOnboardingScreen({ navigation }) {
         if (!planResult.ok) {
           // eslint-disable-next-line global-require
           try { require('../lib/errorLog').logError('ProOnboardingScreen.generateAndSavePlan', planResult.error, { userId: user.id }); } catch (_) {}
-          Alert.alert(
+          appAlert(
             'Plan setup didn\'t finish',
             `Your profile is saved but your training plan didn\'t generate (${planResult.error}). Open Home and tap "Build my plan" to retry.`,
           );
         }
       }
     } catch (e) {
-      Alert.alert('Something went wrong', e?.message ?? 'Try again.');
+      appAlert('Something went wrong', e?.message ?? 'Try again.');
       setBusy(false);
       return;
     }

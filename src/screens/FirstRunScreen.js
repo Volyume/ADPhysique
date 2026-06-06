@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import {
-  View, Text, StyleSheet, TextInput, ScrollView, Alert,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, TextInput, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
@@ -35,7 +34,7 @@ export default function FirstRunScreen({ navigation: _navigation }) {
       if (user?.id) await saveLocalProfile(user.id, merged);
       await completeFirstRun();
     } catch (e) {
-      Alert.alert('Something went wrong', e?.message ?? 'Try again.');
+      appAlert('Something went wrong', e?.message ?? 'Try again.');
       setBusy(false);
     }
   }

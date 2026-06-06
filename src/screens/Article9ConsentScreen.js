@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Pressable, Platform, Alert,
-} from 'react-native';
+import { appAlert } from '../components/AppAlert';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Pressable, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -102,7 +101,7 @@ export default function Article9ConsentScreen({ navigation }) {
       healthConsentGranted?.();
     } catch (e) {
       logError('Article9.consent.failed', e, { uid: user?.id });
-      Alert.alert(
+      appAlert(
         'Could not save',
         'We could not record your consent. Check your connection and try again.',
       );
