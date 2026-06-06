@@ -209,17 +209,44 @@ Answer these in the Play Console content rating questionnaire:
 
 ## Data Safety Section (Play Console)
 
-Complete the Data Safety form with these answers:
+Derived from the code (the actual data flows), 2026-06-06. "Shared" in Play's
+sense means transfer to a third party for THEIR own use; Supabase (backend) and
+Sentry (crash reporting) are service providers / processors, so their data is
+"collected", not "shared". Nothing is sold or shared for third-party use.
 
 **Data collected:**
-| Data type | Collected | Shared | Required | Encrypted | Deletable |
-|---|---|---|---|---|---|
-| Email address | Yes (if account created) | No | No (optional) | Yes | Yes |
-| Name | Yes (first name only) | No | No | Yes | Yes |
-| Fitness info (workouts, sets, weights) | Yes | No | Yes | Yes | Yes |
-| Health info (body weight, measurements) | Yes | No | No (optional) | Yes | Yes |
+| Data type | Category | Collected | Shared | Optional | Encrypted in transit | Deletable | Purpose |
+|---|---|---|---|---|---|---|---|
+| Email address | Personal info | Yes (account) | No | No (account needs it) | Yes | Yes | Account management, app functionality |
+| Name (first name) | Personal info | Yes | No | Yes | Yes | Yes | App functionality (personalisation) |
+| Workouts, sets, reps, weights, programmes | Health & fitness (fitness) | Yes | No | No | Yes | Yes | App functionality |
+| Body weight, measurements, body fat, steps, cardio | Health & fitness (health) | Yes | No | Yes | Yes | Yes | App functionality |
+| Food / nutrition logs | Health & fitness | Yes | No | Yes | Yes | Yes | App functionality |
+| In-app events (analytics, e.g. workout/paywall) | App activity (app interactions) | Yes | No | Yes (opt-out in Settings) | Yes | Yes | Analytics, app functionality |
+| Crash logs | App info & performance | Yes (Sentry) | No | No | Yes | n/a | Crash reporting |
+| Diagnostics (performance) | App info & performance | Yes (Sentry) | No | No | Yes | n/a | Diagnostics |
+| Push token | Device or other IDs | Yes | No | Yes | Yes | Yes | Push notifications |
 
-**Data not collected:** Financial info, messages, location, contacts, app activity beyond the app itself.
+**Data NOT collected:** Financial / payment info (Google Play handles the
+purchase; the app never receives card data), location, contacts, messages,
+calendar, web-browsing history, audio. **Photos / camera:** the camera is used
+for barcode and nutrition-label scanning, processed **on-device** (MLKit /
+vision-camera); no image is collected, uploaded, or stored.
+
+**Third-party destinations (all processor / functional, no PII sold):**
+- **Supabase** — encrypted cloud backup of the account's own data (RLS, own-rows).
+- **Sentry** — crash + performance. Events run through a PII scrub; the user's
+  `id` and `email` are attached to crash reports (`src/lib/sentry.js`). *Note for
+  the founder: if you'd rather Sentry not receive the email, switch `setUser` to
+  id-only. Flagged, not changed.*
+- **OpenFoodFacts / USDA FoodData Central** — barcode or food-name lookups only;
+  no personal data is sent.
+- **Google Play Billing** — subscription purchase; Google owns the payment data.
+- **Expo push** — device push token for notifications.
+
+**Security practices to declare:** data encrypted in transit (TLS; cleartext
+disabled, `app.json`); auth tokens stored in SecureStore (Android Keystore);
+users can request deletion in-app (account deletion) and via the public web URL.
 
 ---
 
