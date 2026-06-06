@@ -12,7 +12,7 @@ import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 import { PRO_BETA_ACTIVE } from '../lib/proGate';
 import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
-import { skuFor } from '../lib/payments/catalogue';
+import { skuFor, priceTextFor, annualSavingsPct } from '../lib/payments/catalogue';
 
 const PRO_PERKS = [
   { icon: 'sparkles', text: 'A plan built around your schedule, goals, and experience level' },
@@ -38,6 +38,7 @@ export default function ProUpgradeScreen({ navigation }) {
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [period, setPeriod] = useState('monthly'); // billing period when subscribing
 
   async function activatePro(supabaseUserId, { isNew }) {
     syncProfile(supabaseUserId, userProfile, 'pro', { isBetaTester: isNew }).catch(() => {});
@@ -56,9 +57,8 @@ export default function ProUpgradeScreen({ navigation }) {
   // pay now (already used the Play trial and cancelled).
   async function subscribePro() {
     const { logError } = require('../lib/errorLog');
-    // Flat pricing: subscribe at the monthly plan from here. The
-    // monthly/annual choice lives on the Paywall surface.
-    const sku = skuFor('pro', 'monthly');
+    // Flat pricing: subscribe at the period the user picked (monthly/annual).
+    const sku = skuFor('pro', period);
     if (!sku) {
       toast.show('Subscription unavailable, try again later', { variant: 'error' });
       return;
@@ -343,6 +343,33 @@ export default function ProUpgradeScreen({ navigation }) {
                     ? 'Your account is ready. Start your 14-day free trial, no card needed.'
                     : 'Your account is ready. Subscribe to switch the coaching features on.'}
               </Text>
+              {!PRO_BETA_ACTIVE && !canTrial ? (
+                <View style={styles.periodRow}>
+                  <TouchableOpacity
+                    style={[styles.periodBtn, period === 'monthly' && styles.periodBtnActive]}
+                    onPress={() => setPeriod('monthly')}
+                    disabled={busy}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: period === 'monthly' }}
+                    accessibilityLabel="Monthly, £4.99 a month"
+                  >
+                    <Text style={[styles.periodLabel, period === 'monthly' && styles.periodTextActive]}>Monthly</Text>
+                    <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{priceTextFor('pro', 'monthly')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.periodBtn, period === 'annual' && styles.periodBtnActive]}
+                    onPress={() => setPeriod('annual')}
+                    disabled={busy}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: period === 'annual' }}
+                    accessibilityLabel="Annual, £29.99 a year, save 50 per cent"
+                  >
+                    <View style={styles.saveBadge}><Text style={styles.saveBadgeText}>Save {annualSavingsPct()}%</Text></View>
+                    <Text style={[styles.periodLabel, period === 'annual' && styles.periodTextActive]}>Annual</Text>
+                    <Text style={[styles.periodPrice, period === 'annual' && styles.periodTextActive]}>{priceTextFor('pro', 'annual')}</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
               <Button
                 title={PRO_BETA_ACTIVE
                   ? 'Activate Pro'
@@ -524,6 +551,22 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm, color: colors.textMuted,
     lineHeight: 19, marginBottom: spacing.lg,
   },
+  periodRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg },
+  periodBtn: {
+    flex: 1, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.border,
+    backgroundColor: colors.surface, paddingVertical: spacing.md, paddingHorizontal: spacing.sm,
+    alignItems: 'center', gap: 2,
+  },
+  periodBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
+  periodLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
+  periodPrice: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  periodTextActive: { color: colors.primary },
+  saveBadge: {
+    position: 'absolute', top: -9, alignSelf: 'center',
+    backgroundColor: colors.primary, borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm, paddingVertical: 1,
+  },
+  saveBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.3 },
 
   section: { marginBottom: spacing.lg },
   fieldLabel: {

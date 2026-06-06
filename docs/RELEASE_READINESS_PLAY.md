@@ -52,10 +52,12 @@ the beta switch. None of what's left is a rebuild.
   product and the Subscription screen reads it, so annual subscribers see
   £29.99/year.
 
+- **Annual on ProUpgrade, done.** The lock-screen subscribe path now has
+  the monthly/annual toggle too, so all three purchase surfaces (Paywall,
+  day-14 gate, ProUpgrade) offer annual.
+
 Still open, none blocking:
 
-- **Annual on ProUpgrade.** The lock-screen ProUpgrade path subscribes
-  monthly only; annual is on the Paywall and the day-14 gate. Low priority.
 - **Remote push** is code-ready; it needs the token migration + the send
   function deployed (your side, below).
 
