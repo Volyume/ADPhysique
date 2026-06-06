@@ -108,36 +108,6 @@ jobs:
           if [ -n "$EXPO_PUBLIC_USDA_API_KEY" ]; then eas secret:create --scope project --name EXPO_PUBLIC_USDA_API_KEY --value "$EXPO_PUBLIC_USDA_API_KEY" --type string --force; fi
           echo "✓ Config synced to EAS"
 
-      # Self-test the profile-cleanup script (JWT signer + entitlement check)
-      # before anything paid runs. A regression here fails fast and free.
-      - name: Self-test iOS profile cleanup script
-        run: node scripts/ci/regenerate-ios-profile.test.mjs
-
-      # Remove a stale App Store provisioning profile so EAS mints a fresh one.
-      #
-      # EAS enables Bundle ID capabilities during the build (the "Synced
-      # capabilities" step works with the ASC API key, no Apple ID login), but it
-      # does NOT regenerate an already-stored provisioning profile when those
-      # capabilities change: it only checks expiry, certificate and bundle id,
-      # not entitlements. So a profile minted before a capability was added is
-      # judged "active" and shipped to Xcode, which rejects it ("doesn't include
-      # the Associated Domains capability", CI run #13, 2026-06-05).
-      #
-      # This step uses the same ASC API key to delete ONLY the App Store
-      # profile(s) for app.volyume whose embedded entitlements are missing a
-      # required one. EAS then has no valid App Store profile and mints a fresh,
-      # correct one during the build below. It is self-limiting: once a correct
-      # profile exists it deletes nothing, so it is safe to leave in place and
-      # does not force a regeneration (or churn credits) on later builds.
-      - name: Regenerate stale iOS provisioning profile (self-limiting)
-        env:
-          ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          IOS_BUNDLE_ID: app.volyume
-          REQUIRED_ENTITLEMENTS: com.apple.developer.associated-domains
-        run: node scripts/ci/regenerate-ios-profile.mjs
-
       # First-time iOS credential creation cannot be done with --non-interactive:
       # EAS refuses to mint the very first Distribution Certificate without a real
       # terminal, even with all four ASC env vars set. The prompts it needs
