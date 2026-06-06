@@ -22,6 +22,7 @@ import {
   configureNotificationHandler,
   installNotificationListeners,
   restoreNotifications,
+  routeForNotificationType,
 } from '../lib/notifications';
 
 // Auth screens
@@ -492,22 +493,21 @@ export default function RootNavigator() {
   }, []);
 
   useEffect(() => {
-    // Routing for a tapped notification. The listeners module owns
-    // the expo wiring and the telemetry firings; the navigator owns
-    // only the data_type -> screen mapping.
-    function routeFor(type) {
-      if (type === 'weekly_checkin') return ['ProfileTab', 'WeeklyCheckIn'];
-      if (type === 'year_of_lifts_unlock') return ['ProgressTab', 'YearOfLifts'];
-      return null;
-    }
-
+    // Routing for a tapped notification. The listeners module owns the expo
+    // wiring and the telemetry firings; the navigator owns only "given a
+    // target, navigate". The data_type -> target mapping is the pure
+    // routeForNotificationType helper (tested separately) so every scheduled
+    // notification type has a route and none dead-ends.
     function onTap(response) {
       const type = response?.notification?.request?.content?.data?.type;
-      const target = routeFor(type);
+      const target = routeForNotificationType(type);
       if (!target) return;
       const tryNavigate = (attempts = 0) => {
         if (navigationRef.isReady()) {
-          navigationRef.navigate(target[0], { screen: target[1] });
+          navigationRef.navigate(target.tab, {
+            screen: target.screen,
+            ...(target.params ? { params: target.params } : {}),
+          });
         } else if (attempts < 20) {
           setTimeout(() => tryNavigate(attempts + 1), 150);
         }

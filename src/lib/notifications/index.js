@@ -34,6 +34,8 @@ export { configureNotificationHandler } from './handler';
 
 export { installNotificationListeners } from './listeners';
 
+export { routeForNotificationType } from './notificationRoute';
+
 export {
   scheduleMorningWeightNotification,
   scheduleCheckinReminder,
