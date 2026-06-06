@@ -174,36 +174,26 @@ function drawBackground(ctx, W, H) {
   glow.addColorStop(1, 'transparent');
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
+  // Subtle card border, matching the in-app preview's 1px frame so the
+  // exported image reads as the same bordered card, not a bleed.
+  ctx.strokeStyle = B.border;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, W - 2, H - 2);
 }
 
 function drawTopAccentBar(ctx, W) {
-  var grad = ctx.createLinearGradient(0, 0, W, 0);
-  grad.addColorStop(0, B.accent);
-  grad.addColorStop(0.5, B.accentSoft);
-  grad.addColorStop(1, 'transparent');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, 6);
+  // Solid full-width amber bar, matching the in-app preview's topAccent
+  // (the old left-to-right fade-to-transparent read as "no accent" once
+  // exported). 8px on the 1080-wide canvas mirrors the preview's 3px bar.
+  ctx.fillStyle = B.accent;
+  ctx.fillRect(0, 0, W, 8);
 }
 
-function drawTopBrand(ctx, W, pad, y) {
-  // Small brand mark at the top, sets the tone without competing with
-  // the session content. Bottom footer carries the bigger logo. Uses the
-  // real wordmark image when it loaded; falls back to the V mark + Arial.
-  var logo = window.__logoImg;
-  if (logo && logo.complete && logo.naturalWidth) {
-    var h = 30;
-    var w = h * (logo.naturalWidth / logo.naturalHeight);
-    ctx.save();
-    ctx.globalAlpha = 0.62;
-    ctx.drawImage(logo, pad, y - h, w, h);
-    ctx.restore();
-    return;
-  }
-  var markSz = 32;
-  drawVMark(ctx, pad, y - markSz * 0.86, markSz, B.textSecondary, B.accent);
-  ctx.fillStyle = B.textSecondary;
-  ctx.font = '700 22px Arial,sans-serif';
-  ctx.fillText('olyume', pad + markSz + 4, y - 2);
+function drawTopBrand() {
+  // Top-left logo removed (founder direction 2026-06-06): the brand now lives
+  // once, big, in the footer, matching the in-app preview. The date still
+  // prints top-right from each card's own draw. Kept as a no-op so the call
+  // sites stay stable.
 }
 
 // Branded footer, the real branding moment. Big V mark, wordmark, tagline,
@@ -218,33 +208,49 @@ function drawBrandFooter(ctx, W, H, pad, isSquare) {
   ctx.fillStyle = B.divider;
   ctx.fillRect(pad, fy, W - pad * 2, 1);
 
-  // The Volyume logo lives at the top of the card. The footer carries only the
-  // tagline and URL, not a second wordmark, so the brand mark is not duplicated
-  // (founder direction). Tagline sits centred in the footer band.
-  var taglineY = fy + (isSquare ? 74 : 124);
+  // Big Volyume wordmark, centred: the single branding moment, matching the
+  // in-app preview's footer. Uses the real wordmark image; if it did not
+  // decode, falls back to the V mark + "olyume" centred so something on-brand
+  // always shows.
+  var markH = isSquare ? 40 : 56;
+  var markY = fy + (isSquare ? 16 : 28);
+  var logo = window.__logoImg;
+  if (logo && logo.complete && logo.naturalWidth) {
+    var mw = markH * (logo.naturalWidth / logo.naturalHeight);
+    ctx.drawImage(logo, (W - mw) / 2, markY, mw, markH);
+  } else {
+    ctx.font = '700 ' + Math.round(markH * 0.72) + 'px Arial,sans-serif';
+    ctx.textAlign = 'left';
+    var txt = 'olyume';
+    var tw = ctx.measureText(txt).width;
+    var totalW = markH + 6 + tw;
+    var sx = (W - totalW) / 2;
+    drawVMark(ctx, sx, markY, markH, B.text, B.accent);
+    ctx.fillStyle = B.text;
+    ctx.fillText(txt, sx + markH + 6, markY + markH * 0.78);
+  }
 
   // Tagline
+  var taglineY = fy + (isSquare ? 84 : 130);
   var tagFont = isSquare ? 18 : 26;
   ctx.fillStyle = B.accent;
   ctx.font = '600 ' + tagFont + 'px Arial,sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('SMARTER  TRAINING', W / 2, taglineY);
 
-  // URL, subtle bottom line
+  // Short centred amber accent directly under the tagline (matches the
+  // preview's footerAccent: 40% width, amber).
+  var accW = (W - pad * 2) * 0.4;
+  ctx.fillStyle = B.accent;
+  ctx.fillRect((W - accW) / 2, taglineY + (isSquare ? 12 : 16), accW, 3);
+
+  // URL, subtle bottom line (story only)
   if (!isSquare) {
     ctx.fillStyle = B.textMuted;
     ctx.font = '500 22px Arial,sans-serif';
-    ctx.fillText('volyume.app', W / 2, H - 42);
+    ctx.fillText('volyume.app', W / 2, H - 34);
   }
   ctx.textAlign = 'left';
-
-  // Bottom accent bar
-  var grad = ctx.createLinearGradient(0, 0, W, 0);
-  grad.addColorStop(0, 'transparent');
-  grad.addColorStop(0.5, B.accent);
-  grad.addColorStop(1, 'transparent');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, H - 4, W, 4);
 }
 
 // Intensity badge, auto-derived chip that gives a flavour read on the
