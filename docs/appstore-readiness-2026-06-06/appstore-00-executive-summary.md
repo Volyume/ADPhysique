@@ -1,6 +1,7 @@
 # Volyume App Store readiness — executive summary
 
-Status: CHECKPOINT (findings only, no code changes committed yet)
+Status: AUDIT COMPLETE (all per-phase documents written; no fixes implemented
+yet, awaiting go-ahead). See appstore-00..10b in this folder.
 Date: 2026-06-06
 Auditor: direct read of the repo + generated iOS project (`expo prebuild`) +
 current Apple documentation. Every finding cites a file or an Apple source.
@@ -21,7 +22,15 @@ and line 193 ("Android-only at v1. When iOS lands... validate Apple receipts").
 
 ## Submission blockers (must fix before App Store review)
 
-### B1. No iOS in-app purchases (Guideline 3.1.1) — CRITICAL, large
+> Update after full audit: B1 is smaller than first stated. Pro is FREE during
+> beta (`PRO_BETA_ACTIVE`), so nothing is sold and there is no external-payment
+> violation. The real problem is only that the iOS purchase UI is a dead StoreKit
+> call. The near-term fix (Phase 4 Option A) is to hide/disable the iOS purchase
+> + restore CTAs during the free beta and not wire the IAP provider on iOS. That
+> makes iOS submittable now WITHOUT building StoreKit. Full StoreKit (Option B)
+> is only needed when iOS actually monetises.
+
+### B1. No iOS in-app purchases (Guideline 3.1.1) — dead purchase UI on iOS
 The payments layer is Google Play Billing only. `src/lib/payments/playBilling.js`
 wraps `react-native-iap` but is Google-specific end to end:
 `setObfuscatedAccountIdAndroid`, `isAcknowledgedAndroid`, server validation via
@@ -94,14 +103,23 @@ because B1 and B2 alone mean the app cannot pass review today and they change
 the plan: there is no point producing a screenshot-spec document before deciding
 whether iOS purchases get built now or the App Store push waits.
 
-## Recommendation / decision needed
+## Path to a submittable iOS build (free beta)
 
-Pick the scope before I implement:
-1. Full App Store path: build B1 (StoreKit IAP) + B2 (native Apple Sign-In).
-   Substantial; I can plan and implement both, with the App Store Connect
-   product/capability steps as a manual checklist for you.
-2. TestFlight-only for now: keep iOS as internal testing, ship the small safe
-   fixes (purpose strings, restore-button check, privacy manifest), and defer
-   B1/B2 to a dedicated build, consistent with the existing locked strategy.
-3. Continue the full 14-document per-phase audit first (accessibility, metadata,
-   performance, etc.) before any implementation.
+The audit is complete. The shortest honest path to an App-Store-passable iOS
+build, given Pro is free in beta, is:
+
+1. C1 (Phase 4 Option A): hide/disable the iOS purchase + restore CTAs during the
+   free beta; do not wire the IAP provider on iOS. Small, in-codebase.
+2. C2 (Phase 5): native Sign in with Apple + the official Apple button (or, at
+   minimum, verify the Supabase Apple web flow works and use a compliant button).
+3. M1 privacy manifest, M2 chart labels, M3 Dynamic Type decision: quality.
+4. Manual (Phase 10b): screenshots, 1024 icon (no alpha), age rating, privacy
+   nutrition labels, live policy/support URLs.
+
+Full StoreKit IAP (Phase 4 Option B) and remote push (APNs) are separate, larger
+projects needed only when iOS monetises / enables server push, not for a
+free-beta submission.
+
+Codebase fixes are listed by severity in appstore-10a; manual App Store Connect
+steps in appstore-10b. Nothing here is implemented yet: say the word and I start
+at C1.
