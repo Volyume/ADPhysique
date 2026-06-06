@@ -40,6 +40,10 @@ on:
         description: 'Submit to TestFlight after the build finishes'
         type: boolean
         default: true
+      skip_build:
+        description: 'Skip the EAS build and submit the latest existing build (no build credit spent)'
+        type: boolean
+        default: false
 
 concurrency:
   group: ios-${{ github.ref }}
@@ -138,6 +142,7 @@ jobs:
       # interactive login again, abort in seconds instead of burning 110 min of
       # paid runner. Once credentials exist on EAS, future runs work non-interactively.
       - name: Build iOS (EAS, waits for completion)
+        if: ${{ !inputs.skip_build }}
         env:
           EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
           EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -162,9 +167,28 @@ jobs:
           exit [lindex $result 3]
           EOF
 
+      # eas submit needs submit.production.ios.ascAppId (the App Store Connect
+      # numeric app id). Rather than commit it, resolve it at submit time from the
+      # same ASC API key (a free API call, no build credit) and patch eas.json.
+      # Fails loudly with the one-time action if the app record does not yet exist
+      # in App Store Connect.
+      - name: Self-test app-id resolver
+        if: ${{ github.event_name == 'push' || inputs.submit }}
+        run: node scripts/ci/resolve-asc-app-id.test.mjs
+
+      - name: Resolve App Store Connect app id
+        if: ${{ github.event_name == 'push' || inputs.submit }}
+        env:
+          ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          IOS_BUNDLE_ID: app.volyume
+        run: node scripts/ci/resolve-asc-app-id.mjs
+
       # Submit on every push (inputs.submit is empty for a push event, so the
       # bare `inputs.submit` used before would skip it). A manual run still
-      # respects the toggle: untick it to build without submitting.
+      # respects the toggle: untick it to build without submitting. With skip_build
+      # ticked, this submits the latest existing EAS build, no new build credit.
       - name: Submit to TestFlight
         if: ${{ github.event_name == 'push' || inputs.submit }}
         env:
