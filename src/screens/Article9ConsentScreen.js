@@ -31,7 +31,7 @@ const CONSENT_KEY_PFX = '@volyume_health_consent_';
 // audit trail (Art 7(1) / EDPB: the record should capture which consent copy
 // was presented, not just the app version). Bump this whenever the consent
 // body copy changes. Mirrors the locked-copy date in PRIVACY_CONSENT_LOCKED.md.
-const CONSENT_VERSION = '2026-05-23';
+const CONSENT_VERSION = '2026-06-06';
 
 export default function Article9ConsentScreen({ navigation }) {
   const { user, healthConsentGranted } = useAppStore(s => ({
@@ -132,6 +132,11 @@ export default function Article9ConsentScreen({ navigation }) {
           'Your weekly check-ins, including energy, recovery, and how you feel',
           'The screening questions you answer about eating habits',
         ]} />
+
+        <Text style={styles.subhead}>An automated safety check:</Text>
+        <Text style={styles.body}>
+          Volyume watches your weight trend, energy, and food logs together for signs of under-fuelling or disordered eating. If a concerning pattern shows up, it pauses your calorie changes and points you to support. This runs automatically on your health data.
+        </Text>
 
         <Text style={styles.subhead}>What we never do with it:</Text>
         <BulletList items={[
