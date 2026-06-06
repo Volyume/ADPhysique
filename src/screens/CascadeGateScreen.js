@@ -110,15 +110,11 @@ export default function CascadeGateScreen({ navigation, route }) {
       // updates immediately (idempotent, webhook will reconcile).
       const purchaseResult = await playBilling.purchasePackage(sku.id);
       const ref = purchaseResult?.transactionId ?? `client_${Date.now()}`;
-      const cascadeResult = await cascade.payAt(targetTier, ref, content.surface);
-      if (!cascadeResult.ok) {
-        logError('CascadeGate.payAt.failed',
-          new Error(cascadeResult.error ?? 'unknown'),
-          { targetTier });
-        // Google took the payment but our write failed; the Play webhook
-        // reconciles it server-side. Reassure rather than look un-upgraded.
-        toast.show('Payment received. Confirming your Pro access, it can take a moment.', { variant: 'info', duration: 5000 });
-      }
+      await cascade.payAt(targetTier, ref, content.surface);
+      // Server-authoritative grant: verify the token with Google, write Pro
+      // server-side. Fire-and-forget; the optimistic unlock holds meanwhile.
+      cascade.confirmPurchase({ purchaseToken: purchaseResult?.purchaseToken, subscriptionId: sku.id })
+        .catch((e) => logError('CascadeGate.confirmPurchase', e, { targetTier }));
       logInfo('CascadeGate.paid', `tier=${targetTier} sku=${sku.id}`);
       dismiss();
     } catch (e) {

@@ -145,6 +145,46 @@ export async function payAt(targetTier, paymentRef, sourceSurface = null) {
   return { ok: true, optimistic: true };
 }
 
+/**
+ * Server-authoritative purchase confirmation (C-1). After a successful Play
+ * purchase, send the purchase token to the play-billing-rtdn function, which
+ * verifies it against the Google Play Developer API and grants Pro via the
+ * service-role upgrade_tier_for_user. The client never writes its own paid
+ * tier. On success we pull the authoritative tier so the optimistic unlock is
+ * reconciled immediately rather than waiting for the next foreground refresh.
+ *
+ * Fire-and-forget from the purchase surfaces: the optimistic local unlock has
+ * already happened, so a slow or failed call just means the next cloud refresh
+ * (within the optimistic window) does the reconcile instead.
+ */
+export async function confirmPurchase({ purchaseToken, subscriptionId } = {}) {
+  if (!purchaseToken || !subscriptionId) {
+    return { ok: false, error: 'missing_purchase_token' };
+  }
+  const sb = getSupabaseClient();
+  if (!sb) return { ok: false, error: 'no_client' };
+  try {
+    const { data, error } = await sb.functions.invoke('play-billing-rtdn', {
+      body: { purchaseToken, subscriptionId },
+    });
+    if (error) {
+      logWarn('payments.cascade.confirmPurchase.invoke', error.message ?? 'invoke_failed', {});
+      return { ok: false, error: error.message ?? 'invoke_failed' };
+    }
+    // Pull the server-written tier so Pro is confirmed straight away.
+    try {
+      // eslint-disable-next-line global-require
+      const useAppStore = require('../../store/useAppStore').default;
+      const st = useAppStore.getState();
+      await st.refreshTierFromCloud?.(sb, st.user?.id);
+    } catch (_) { /* the optimistic window + next refresh still reconcile */ }
+    return { ok: true, data };
+  } catch (e) {
+    logError('payments.cascade.confirmPurchase.threw', e, { message: e?.message });
+    return { ok: false, error: e?.message ?? 'threw' };
+  }
+}
+
 export async function skipToFree(sourceSurface = null) {
   const r = await _call('upgrade_tier', {
     _target_tier: 'free',

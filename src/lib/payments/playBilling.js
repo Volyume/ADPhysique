@@ -376,6 +376,8 @@ export function _buildRealProvider(RNIap = _loadRNIap()) {
         transactionId: purchase?.transactionId
           ?? purchase?.purchaseToken
           ?? null,
+        // The Play purchase token, needed for server-side verification.
+        purchaseToken: purchase?.purchaseToken ?? null,
         sku: skuId,
         customerInfo: info,
       };

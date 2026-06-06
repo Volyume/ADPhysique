@@ -358,24 +358,77 @@ async function setBillingPeriod(
   }
 }
 
+function jsonResponse(status: number, obj: unknown): Response {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+// Client-initiated purchase confirmation. The app POSTs
+// { purchaseToken, subscriptionId } right after a successful Play purchase, so
+// Pro can be granted server-side WITHOUT Pub/Sub being wired (the RTDN path
+// below still handles renewals / cancels / refunds once Pub/Sub is set up).
+//
+// Security: this branch is not OIDC-gated and the app's JWT is not trusted.
+// Safety comes from verifying the token against the Play Developer API: a fake
+// token resolves to nothing, and the user it grants to is read from Google's
+// own obfuscatedExternalAccountId (set to the buyer's id at purchase time), not
+// from anything the caller claims. So a caller can only ever grant Pro to the
+// real buyer of a real purchase.
+async function handleClientVerify(
+  body: { purchaseToken: string; subscriptionId: string },
+): Promise<Response> {
+  const { purchaseToken, subscriptionId } = body;
+  const subscription = await verifyWithPlayApi(subscriptionId, purchaseToken);
+  if (!subscription) {
+    log("warn", "client verify: could not verify purchase with Play", { subscriptionId });
+    return jsonResponse(400, { ok: false, error: "unverified" });
+  }
+  const userId = subscription.obfuscatedExternalAccountId;
+  if (!userId) {
+    log("warn", "client verify: purchase has no obfuscatedExternalAccountId");
+    return jsonResponse(400, { ok: false, error: "no_account_id" });
+  }
+  // paymentState: 1 = received, 2 = free trial. Either grants Pro. Guard expiry.
+  const expired = subscription.expiryTimeMillis != null &&
+    Number(subscription.expiryTimeMillis) < Date.now();
+  const paid = subscription.paymentState === 1 || subscription.paymentState === 2;
+  if (expired || !paid) {
+    log("warn", "client verify: purchase not active", {
+      paymentState: subscription.paymentState ?? null, expired,
+    });
+    return jsonResponse(400, { ok: false, error: "not_active" });
+  }
+  const paymentRef = subscription.orderId ?? purchaseToken;
+  await callUpgradeTier(userId, "pro", "user_paid", paymentRef, "client_verify");
+  await setBillingPeriod(userId, subscriptionId === "pro_annual" ? "annual" : "monthly");
+  log("info", "client verify: granted pro", { userId, subscriptionId });
+  return jsonResponse(200, { ok: true, tier: "pro" });
+}
+
 serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
-  // HP-4: authenticate the caller as Google's Pub/Sub push before doing
-  // any work. 401 (not 200) on failure so a forged caller is rejected
-  // rather than silently acked.
-  const oidc = await verifyPubSubOidc(req);
-  if (!oidc.ok) {
-    log("warn", `rejected unauthenticated RTDN: ${oidc.reason}`);
-    return new Response("Unauthorized", { status: 401 });
-  }
-  let body: PubSubPushBody;
+  let body: PubSubPushBody & { purchaseToken?: string; subscriptionId?: string };
   try {
     body = await req.json();
   } catch (_) {
     log("warn", "non-JSON body");
     return new Response("Bad request", { status: 400 });
+  }
+  // Client purchase-confirmation call (not a Google Pub/Sub push).
+  if (typeof body?.purchaseToken === "string" && typeof body?.subscriptionId === "string" && !body?.message) {
+    return await handleClientVerify({ purchaseToken: body.purchaseToken, subscriptionId: body.subscriptionId });
+  }
+  // Google Pub/Sub RTDN path. HP-4: authenticate the caller as Google's Pub/Sub
+  // push before doing any work. 401 (not 200) on failure so a forged caller is
+  // rejected rather than silently acked.
+  const oidc = await verifyPubSubOidc(req);
+  if (!oidc.ok) {
+    log("warn", `rejected unauthenticated RTDN: ${oidc.reason}`);
+    return new Response("Unauthorized", { status: 401 });
   }
   const dataB64 = body?.message?.data;
   if (!dataB64) {
