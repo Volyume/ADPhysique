@@ -4,7 +4,8 @@
  * Locked in MOVE_4_DIFFERENTIAL_PAYWALL.md. The conversion lever for
  * free users: when their weekly coach output references a context
  * where food data would change the conclusion, surface a one-tap
- * "Try Pro free for 14 days" badge with the locked copy.
+ * "Try Pro free for 7 days" badge with the locked copy (7 = the Play
+ * intro offer this badge's purchase CTA leads to; see LOCKED_COPY note).
  *
  * Trigger conditions (ALL must hold):
  *   1. user is on the 'free' tier
@@ -38,11 +39,17 @@
 // Locked verbatim copy. Editing requires updating the snapshot test.
 // ────────────────────────────────────────────────────────────────────
 
+// The trial figure here is 7, not 14: this badge's CTA routes to the Play
+// purchase surface (CoachOutputScreen → navigate('Paywall')), where the
+// subscription carries Google's 7-day intro free trial. The 14-day cardless
+// trial runs earlier, before any purchase prompt (founder override
+// 2026-06-06, SUBSCRIPTION_AND_PAYMENT_LOCKED). Stating 14 here would promise
+// a trial length the store will not honour.
 export const LOCKED_COPY = Object.freeze({
-  stalled_lift: "Your bench has stalled for three weeks. With food data, we could tell you if it's training or fuel. Try Pro free for 14 days.",
-  deload: "We're holding a deload this week. With food data, we'd know if your fuel is the cause. Pro shows you, free for 14 days.",
-  missing_tdee: "Your weight is moving faster than your calories suggest. Pro tracks your true daily burn from your own data. 14 days free.",
-  block_summary: "Your training block ended. With food data, we'd show how fuel shaped your results. Try Pro free for 14 days.",
+  stalled_lift: "Your bench has stalled for three weeks. With food data, we could tell you if it's training or fuel. Try Pro free for 7 days.",
+  deload: "We're holding a deload this week. With food data, we'd know if your fuel is the cause. Pro shows you, free for 7 days.",
+  missing_tdee: "Your weight is moving faster than your calories suggest. Pro tracks your true daily burn from your own data. 7 days free.",
+  block_summary: "Your training block ended. With food data, we'd show how fuel shaped your results. Try Pro free for 7 days.",
 });
 
 // Alternate copy for users who've already used their cascade trial.

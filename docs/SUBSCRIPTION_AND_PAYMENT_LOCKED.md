@@ -1,5 +1,34 @@
 # Subscription and payment (locked)
 
+> **Founder override 2026-06-06 (trial shape):** The single Pro trial
+> splits into two halves, 21 days free total still:
+>
+> 1. **14 cardless days in the app.** Article 9 consent starts the
+>    `pro_trial_active` window, now **14 days** (migration 065 changes
+>    `start_cascade` from `interval '21 days'` to `interval '14 days'`).
+>    No card. The day-14 worker reverts to Free if the user does
+>    nothing.
+> 2. **7-day Google Play intro free trial** on the Pro subscription
+>    product. When the user subscribes (at the day-14 ask or any earlier
+>    Pro touch), Google's intro offer gives 7 more days free with the
+>    card on file, then bills. This half is Play Console config, not a
+>    database concern: our state machine treats a Play subscriber as
+>    `paid_pro` the moment the subscription starts, intro trial or not.
+>
+> Net: 14 + 7 = 21 days free, but the card is only captured at the
+> point of subscribing (day 14 onward), so the "no early ask" principle
+> holds. The day-21 references below become **day-14** for the in-app
+> gate; the 7-day figure is the Play purchase-surface disclosure.
+> Rationale and the conversion trade-off (vs a 28-day variant) are in
+> `docs/TRIAL_CONVERSION_STRATEGY_2026-06-06.md`. The in-app figures
+> below that still read "21" predate this override; where they conflict
+> this block governs.
+>
+> **Not yet live:** the real Play Billing path is still a stub
+> (`src/lib/payments/playBilling.js`), and the Play Console 7-day offer
+> must be created before any of this converts. See the founder-action
+> checklist in the strategy memo.
+
 > **Founder override 2026-05-25:** Three structural changes since
 > the original 2026-05-23 lock:
 >
@@ -83,7 +112,8 @@ transitions for the 2-tier model.
 States:
 
 - `unstarted`: fresh account, hasn't passed Article 9 consent yet
-- `pro_trial_active`: days 1-21 of the Pro trial
+- `pro_trial_active`: days 1-14 of the cardless in-app Pro trial
+  (was 21; see the 2026-06-06 override at the top)
 - `paid_pro`: user paid for Pro (any pricing window)
 - `free`: trial expired without payment, or user skipped to Free
 - `cascade_expired`: equivalent to `free`; kept distinct for telemetry
@@ -98,7 +128,7 @@ Transitions:
 | From | Trigger | To |
 |---|---|---|
 | `unstarted` | Article 9 consent confirmed | `pro_trial_active` |
-| `pro_trial_active` | Day 21 + no action | `cascade_expired` |
+| `pro_trial_active` | Day 14 + no action | `cascade_expired` |
 | `pro_trial_active` | User pays Pro | `paid_pro` |
 | `pro_trial_active` | User skips to Free | `free` |
 | `paid_pro` | Play Billing reports cancellation | `free` (after grace period) |
@@ -282,11 +312,13 @@ Edge Function. Reject any request with bad signature with 401.
 
 Two places a user encounters payment:
 
-### Day-21 trial gate
+### Day-14 trial gate
 
 Modal with:
 - The Free vs Pro feature strip.
-- "Continue at Pro" CTA → purchases the current Pro SKU.
+- "Continue at Pro" CTA → starts the Pro subscription. Google's 7-day
+  intro free trial applies here, so the purchase disclosure reads "Free
+  for 7 days, then £X/month" (the Play offer), not 21.
 - "Drop to Free" → fires `upgrade_tier('free', 'user_skip')`.
 
 ### Differential paywall trigger (move #4)
@@ -294,7 +326,8 @@ Modal with:
 Inline card in the relevant insight surface (Stalled Lift, Energy
 Crash, etc.) per the conversion copy locked in
 `MOVE_4_DIFFERENTIAL_PAYWALL.md`.
-- Single CTA: "Try Pro free for 21 days."
+- Single CTA: "Try Pro free for 7 days" (the Play intro offer; the
+  14 cardless days run before the user reaches a purchase surface).
 - Tapping a free user who has already completed their trial
   surfaces a different copy: "Get Pro for £[current price]/month."
 

@@ -1043,8 +1043,9 @@ export default function CoachOutputScreen({ navigation, route }) {
         // Move #4 differential paywall inputs. Tier comes from
         // proGate so paid users (or beta users) skip the trigger.
         // hasUsedTrial is inverted from cascade.canStillTrial; if
-        // they still have entitlement, the CTA is "Try free for 14
-        // days" rather than the buy-now variant.
+        // they still have entitlement, the CTA is "Try free for 7
+        // days" (the Play intro offer it routes to) rather than the
+        // buy-now variant.
         userTier: require('../lib/proGate').isPaidTier(userProfile),
         hasUsedTrial: !require('../lib/payments/cascade').canStillTrial(userProfile),
         currentCardioTarget: userProfile?.cardioTarget ?? null,

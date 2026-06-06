@@ -3,7 +3,9 @@
 The conversion lever. When a free user reports adherence as "under"
 or "over" in 2 of the last 3 check-ins, the relevant weekly coach
 insight surfaces a "with food data, this card would have said X"
-preview, tied to a 14-day Pro trial CTA. Locked 2026-05-23.
+preview, tied to a Pro trial CTA. Locked 2026-05-23. (Trial figure
+updated 2026-06-06: the CTA offers Google's 7-day intro trial, see
+the copy block below.)
 
 ## Why this is move #4 not earlier
 
@@ -59,34 +61,40 @@ src/screens/PaywallScreen.js              NEW
 Verbatim from `RESEARCH_FINDINGS_SYNTHESISED.md` Section 3 move #4.
 Max 25 words each, no blocklist terms.
 
+> **Trial figure updated 2026-06-06:** these CTAs route to the Play
+> purchase surface, so the trial promised is Google's 7-day intro
+> offer, not 14. The 14-day cardless trial runs before any purchase
+> prompt. All "free for 7 days" / "7 days free" below now read 7.
+> See `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` 2026-06-06 override.
+
 ```
 Stalled lift:
   "Your bench has stalled for three weeks. With food data, we could
-  tell you if it's training or fuel. Try Pro free for 14 days."
+  tell you if it's training or fuel. Try Pro free for 7 days."
 
 Extreme soreness:
   "Your soreness scores are stacking up. Food intake usually
-  explains half of recovery. See yours with Pro, free for 14 days."
+  explains half of recovery. See yours with Pro, free for 7 days."
 
 Deload:
   "We're holding a deload this week. With food data, we'd know if
-  your fuel is the cause. Pro shows you, free for 14 days."
+  your fuel is the cause. Pro shows you, free for 7 days."
 
 Missing TDEE:
   "Your weight is moving faster than your calories suggest. Pro
-  tracks your true daily burn from your own data. 14 days free."
+  tracks your true daily burn from your own data. 7 days free."
 
 Block summary:
   "Your training block ended. With food data, we'd show how fuel
-  shaped your results. Try Pro free for 14 days."
+  shaped your results. Try Pro free for 7 days."
 
 Energy crash:
   "Your energy scores have dropped two weeks running. Food data
-  usually shows why. Pro can tell you. 14 days free."
+  usually shows why. Pro can tell you. 7 days free."
 ```
 
 If the user has already used their trial entitlement, the copy
-swaps "Try Pro free for 14 days" with "Get Pro for £[current
+swaps "Try Pro free for 7 days" with "Get Pro for £[current
 price]/month" (current price reads from the active pricing window).
 
 ### Telemetry
@@ -140,7 +148,7 @@ e2e/differential_paywall_dismiss.yaml
     dismisses paywall, returns to insights normally.
 
 e2e/differential_paywall_start_trial.yaml
-  - Free user taps "Try Pro free for 14 days", cascade trial
+  - Free user taps "Try Pro free for 7 days", cascade trial
     activates in Phase B test environment.
 ```
 

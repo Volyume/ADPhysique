@@ -33,8 +33,11 @@ export default function DifferentialBadge({
 
   if (!differential?.shown) return null;
 
+  // 7 days = the Play intro free trial this CTA leads to (the 14-day cardless
+  // trial runs before any purchase prompt). See SUBSCRIPTION_AND_PAYMENT_LOCKED
+  // 2026-06-06 override. The 'try_pro_14d' id is internal, left as-is.
   const ctaLabel = differential.paywall_cta === 'try_pro_14d'
-    ? 'Try Pro free for 14 days'
+    ? 'Try Pro free for 7 days'
     : `Get Pro for ${pricingPriceText ?? '£2.99/month'}`;
 
   return (

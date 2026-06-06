@@ -116,13 +116,20 @@ export default function PaywallScreen({ navigation, route }) {
   }, [busy, surface, navigation]);
 
   const priceText = priceTextFor('pro', pricingWindow) ?? priceTextFor('pro', 'open_beta') ?? '£0.99/month';
+  // Trial shape (founder override 2026-06-06, SUBSCRIPTION_AND_PAYMENT_LOCKED):
+  // 14 cardless days run inside the app BEFORE a purchase surface, then the
+  // Play subscription carries a 7-day intro free trial. This screen is a Play
+  // purchase surface, so its disclosure must state the 7-day Play offer (what
+  // Google actually bills), not the 21-day journey total. Once real Play
+  // Billing is wired, drive this length from the SDK's reported offer +
+  // eligibility rather than the hardcoded 7.
   const ctaLabel = ctaMode === 'try_pro_14d'
-    ? 'Try Pro free for 21 days'
+    ? 'Try Pro free for 7 days'
     : `Get Pro for ${priceText}`;
   // Play subscription disclosure. Auto-renew, price, billing period and
   // how to cancel must be on the purchase surface itself.
   const termsText = ctaMode === 'try_pro_14d'
-    ? `Free for 21 days, then ${priceText}. Renews monthly until you cancel. Manage or cancel anytime in Google Play.`
+    ? `Free for 7 days, then ${priceText}. Renews monthly until you cancel. Manage or cancel anytime in Google Play.`
     : `${priceText}, renewing monthly until you cancel. Manage or cancel anytime in Google Play.`;
 
   return (

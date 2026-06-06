@@ -3,6 +3,31 @@
 Date 2026-06-06. Grounds the 4-week-trial decision in what is already built
 plus current trial-conversion benchmarks. Strategy, not a code change.
 
+> **Decision (2026-06-06, founder): 14 + 7, 21 days free total.** 14
+> cardless days in the app, then a 7-day Google Play intro free trial on
+> the Pro subscription. Chosen over the 28-day variant for tighter
+> conversion and faster revenue while still covering both early
+> adjustment cycles. The card is captured only when the user subscribes
+> (day 14 onward), so the "no early ask" principle holds. This supersedes
+> the "28 days" recommendation in the body below. Code/doc state put in
+> place 2026-06-06: migration 065 (trial 21→14), the locked-doc override,
+> and the purchase-surface copy now reads the 7-day Play offer.
+>
+> **Founder-action checklist (these gate go-live; I can't do them):**
+> 1. **Play Console:** on the Pro subscription product, add a base plan
+>    with a **7-day free-trial offer** (auto-renewing monthly), for the
+>    current pricing-window SKU. Eligibility is once-per-user, enforced by
+>    Google.
+> 2. **Wire the real Play Billing SDK.** `src/lib/payments/playBilling.js`
+>    is still a stub. It must read the actual offer + eligibility (so the
+>    "7 days" copy can be SDK-driven, not hardcoded) and run the purchase.
+> 3. **Edge Function** `play-billing-rtdn` for server-side receipt
+>    validation + RTDN, per SUBSCRIPTION_AND_PAYMENT_LOCKED.
+> 4. **Apply migration 065** (in numeric order, after 064) so new trials
+>    are 14 days. Safe during beta (PRO_BETA_ACTIVE masks expiry).
+> 5. Only after 1-4: move the trial-start trigger to the first Pro touch
+>    and ship the day-14 value-anchored ask.
+
 ## What is already built (do not rebuild)
 - A single Pro trial, no card upfront, started at onboarding (Article 9 consent
   sets `trial_state = pro_trial_active`). Currently **21 days**
