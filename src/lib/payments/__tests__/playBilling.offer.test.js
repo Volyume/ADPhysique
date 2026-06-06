@@ -130,6 +130,49 @@ describe('_buildRealProvider', () => {
     expect(fake.requestPurchase).not.toHaveBeenCalled();
   });
 
+  it('re-fetches offer tokens on demand when the initial load came back empty', async () => {
+    // First fetch (in initialise) fails/empties; the second (lazy, in
+    // purchasePackage) succeeds. A flaky first load must not permanently block.
+    const fetchProducts = jest.fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([trialProduct()]);
+    const fake = makeFakeIap({ fetchProducts });
+    const provider = _buildRealProvider(fake);
+    await provider.initialise({ appUserID: 'u' });
+
+    const purchasing = provider.purchasePackage(SKU);
+    await Promise.resolve(); await Promise.resolve(); // allow the retry fetch + request
+    fake.emitPurchase({ productId: SKU, purchaseToken: 'tok-2', transactionId: 'txn-2', isAcknowledgedAndroid: false });
+
+    const res = await purchasing;
+    expect(res.transactionId).toBe('txn-2');
+    expect(fetchProducts).toHaveBeenCalledTimes(2);
+    expect(fake.requestPurchase).toHaveBeenCalledWith(expect.objectContaining({
+      request: { google: expect.objectContaining({ subscriptionOffers: [{ sku: SKU, offerToken: FREE_TOKEN }] }) },
+      type: 'subs',
+    }));
+  });
+
+  it('supersedes a still-parked purchase when a second tap arrives before the first settles', async () => {
+    const fake = makeFakeIap({ fetchProducts: jest.fn().mockResolvedValue([trialProduct()]) });
+    const provider = _buildRealProvider(fake);
+    await provider.initialise({ appUserID: 'u' });
+
+    // First tap parks a pending bridge but never gets an event (user backed out
+    // of the dialog). Second tap must settle the first as superseded.
+    const first = provider.purchasePackage(SKU);
+    await Promise.resolve();
+    const second = provider.purchasePackage(SKU);
+    await Promise.resolve();
+
+    await expect(first).rejects.toMatchObject({ code: 'E_PURCHASE_SUPERSEDED' });
+
+    // The second bridge still settles normally.
+    fake.emitPurchase({ productId: SKU, purchaseToken: 'tok-3', transactionId: 'txn-3', isAcknowledgedAndroid: false });
+    const res = await second;
+    expect(res.transactionId).toBe('txn-3');
+  });
+
   it('rejects with E_USER_CANCELLED when the user dismisses the dialog', async () => {
     const fake = makeFakeIap({ fetchProducts: jest.fn().mockResolvedValue([trialProduct()]) });
     const provider = _buildRealProvider(fake);

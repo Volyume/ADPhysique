@@ -142,6 +142,58 @@ describe('Scenario: Pro signs out + signs back in (cloud profile intact)', () =>
   });
 });
 
+// ─── Scenario 3a: Trial cascade fields ride onto userProfile ─────────────────
+
+describe('Scenario: cloud trial state lands on userProfile', () => {
+  // The Subscription / ProUpgrade / CoachOutput screens resolve a user's
+  // paid/trial stage off userProfile via lib/payments/cascade. If trial_state
+  // and pro_trial_ends_at don't ride along with the cloud read, every
+  // signed-in user reads back as 'free' / unstarted and the paywall misfires.
+  test('refreshTierFromCloud merges trial_state + pro_trial_ends_at onto a cached profile', async () => {
+    // Cached profile already in memory (the cold-launch session-restore path).
+    useAppStore.setState({
+      user: { id: 'u1' }, session: { user: { id: 'u1' } },
+      userProfile: { firstName: 'Allan', units: 'kg', barWeight: 20 },
+    });
+    mockCloudProfile = {
+      tier: 'pro',
+      billing_period: 'annual',
+      trial_state: 'trialing',
+      pro_trial_ends_at: '2026-06-20T00:00:00.000Z',
+    };
+
+    await useAppStore.getState().refreshTierFromCloud(getSupabaseClient(), 'u1');
+
+    const p = useAppStore.getState().userProfile;
+    expect(p.trialState).toBe('trialing');
+    expect(p.proTrialEndsAt).toBe('2026-06-20T00:00:00.000Z');
+    // The cached fields survive the merge.
+    expect(p.firstName).toBe('Allan');
+    expect(useAppStore.getState().billingPeriod).toBe('annual');
+  });
+
+  test('restoreSessionFromCloud hydrates trial fields on a fresh profile', async () => {
+    mockCloudProfile = {
+      first_name: 'Allan',
+      training_focus: 'bodybuilding',
+      training_age: 5,
+      primary_equipment: 'full_gym',
+      units: 'kg',
+      bar_weight: 20,
+      tier: 'pro',
+      trial_state: 'expired',
+      pro_trial_ends_at: '2026-05-01T00:00:00.000Z',
+      first_run_complete: true,
+    };
+
+    await useAppStore.getState().restoreSessionFromCloud('u1');
+
+    const p = useAppStore.getState().userProfile;
+    expect(p.trialState).toBe('expired');
+    expect(p.proTrialEndsAt).toBe('2026-05-01T00:00:00.000Z');
+  });
+});
+
 // ─── Scenario 3b: Sign-out push-first gate (food-loss guard) ─────────────────
 
 describe('Scenario: sign-out aborts when the cloud push does not complete', () => {

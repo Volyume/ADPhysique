@@ -640,7 +640,7 @@ const useAppStore = create((set, get) => ({
       const READ_TIMEOUT_MS = 10_000;
       const readPromise = sb
         .from('users_profile')
-        .select('first_name, training_focus, training_age, primary_equipment, units, bar_weight, tier, first_run_complete')
+        .select('first_name, training_focus, training_age, primary_equipment, units, bar_weight, tier, trial_state, pro_trial_ends_at, first_run_complete')
         .eq('id', supabaseUserId)
         .maybeSingle();
       let readTimeoutId;
@@ -698,6 +698,12 @@ const useAppStore = create((set, get) => ({
         primaryEquipment: cloudData.primary_equipment ?? null,
         units: 'kg', // kg-only; ignore any legacy lbs value from the cloud
         barWeight: cloudData.bar_weight ?? 20,
+        // Trial cascade fields. The Subscription / ProUpgrade / CoachOutput
+        // screens resolve a user's paid/trial stage off userProfile via
+        // lib/payments/cascade, so these must ride along with the profile or
+        // every signed-in user reads back as 'free' / unstarted.
+        trialState: cloudData.trial_state ?? null,
+        proTrialEndsAt: cloudData.pro_trial_ends_at ?? null,
       };
       try { await AsyncStorage.setItem(PROFILE_KEY_PFX + supabaseUserId, JSON.stringify(profile)); } catch (_) {}
       const hydratedTimestamps = await _hydrateProfileTimestamps(supabaseUserId);
@@ -747,7 +753,7 @@ const useAppStore = create((set, get) => ({
     try {
       const queryPromise = supabaseClient
         .from('users_profile')
-        .select('tier, billing_period')
+        .select('tier, billing_period, trial_state, pro_trial_ends_at')
         .eq('id', supabaseUserId)
         .maybeSingle();
       let tierTimeoutId;
@@ -775,7 +781,23 @@ const useAppStore = create((set, get) => ({
         // billing_period (monthly/annual) is display-only for the
         // Subscription screen; null until the Play webhook records a
         // purchase, which the screen treats as monthly.
-        set({ tier: effectiveTier, billingPeriod: data.billing_period ?? null });
+        //
+        // trial_state / pro_trial_ends_at ride onto userProfile so the
+        // Subscription / ProUpgrade / CoachOutput screens resolve the trial
+        // cascade stage correctly. This is the always-runs path (it fires on
+        // session-restore where the profile is already loaded from cache),
+        // so it's the reliable place to keep the cascade fields fresh.
+        set((s) => ({
+          tier: effectiveTier,
+          billingPeriod: data.billing_period ?? null,
+          userProfile: s.userProfile
+            ? {
+                ...s.userProfile,
+                trialState: data.trial_state ?? null,
+                proTrialEndsAt: data.pro_trial_ends_at ?? null,
+              }
+            : s.userProfile,
+        }));
       }
     } catch (e) {
       require('../lib/errorLog').logWarn(

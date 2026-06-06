@@ -162,6 +162,23 @@ export function _buildRealProvider(RNIap = _loadRNIap()) {
     p.reject(err);
   }
 
+  // Fetch the subscription products and cache each one's offer token (the
+  // 7-day free trial when present, else the base plan). Called at initialise
+  // and again lazily from purchasePackage if the map is empty, so a transient
+  // network failure on the first load doesn't permanently block a purchase.
+  async function loadOfferTokens() {
+    try {
+      const products = await RNIap.fetchProducts({ skus: allSkuIds(), type: 'subs' });
+      for (const product of products || []) {
+        const id = product?.id ?? product?.productId;
+        const token = selectOfferToken(product);
+        if (id && token) offerTokens[id] = token;
+      }
+    } catch (e) {
+      logWarn('payments.playBilling.fetchProducts', e?.message ?? 'unknown', {});
+    }
+  }
+
   function _purchasesToCustomerInfo(purchases) {
     const known = (purchases || []).filter(p => {
       const sku = p?.productId ?? p?.sku;
@@ -191,16 +208,7 @@ export function _buildRealProvider(RNIap = _loadRNIap()) {
       // Pre-fetch the subscription products so the offer tokens (the 7-day
       // free trial) are cached before the first purchase, and the first tap
       // doesn't pay the round-trip while the user waits.
-      try {
-        const products = await RNIap.fetchProducts({ skus: allSkuIds(), type: 'subs' });
-        for (const product of products || []) {
-          const id = product?.id ?? product?.productId;
-          const token = selectOfferToken(product);
-          if (id && token) offerTokens[id] = token;
-        }
-      } catch (e) {
-        logWarn('payments.playBilling.fetchProducts', e?.message ?? 'unknown', {});
-      }
+      await loadOfferTokens();
       // Purchase listener fires for fresh purchases and for pending
       // transactions resolved out of band (e.g. payment was PENDING and later
       // approved). Acknowledge via finishTransaction so Google considers it
@@ -249,7 +257,15 @@ export function _buildRealProvider(RNIap = _loadRNIap()) {
 
     async purchasePackage(skuId) {
       _trackPurchase('purchase_initiated', { sku: skuId });
-      const offerToken = offerTokens[skuId] ?? null;
+      let offerToken = offerTokens[skuId] ?? null;
+      // The token map can be empty if initialise's fetch failed (transient
+      // network) or the user reached the paywall before it finished. Re-fetch
+      // once on demand before giving up, so a flaky first load doesn't
+      // permanently block the purchase.
+      if (!offerToken) {
+        await loadOfferTokens();
+        offerToken = offerTokens[skuId] ?? null;
+      }
       // Android subscriptions must name an offer; without a token the trial
       // can't be selected and Google rejects the purchase, so fail clearly
       // rather than firing a request that silently bills full price or errors.
@@ -269,6 +285,18 @@ export function _buildRealProvider(RNIap = _loadRNIap()) {
             reject(e);
           }
         }, 90000);
+        // A previous purchase bridge can still be parked here (the user backed
+        // out of the Play dialog without an event firing, then tapped again
+        // before the 90s timeout). Settle it as superseded so its awaiting
+        // caller stops spinning and its timer doesn't outlive it.
+        if (pending) {
+          const stale = pending;
+          pending = null;
+          try { clearTimeout(stale.timer); } catch (_) { /* tolerate */ }
+          const se = new Error('purchase_superseded');
+          se.code = 'E_PURCHASE_SUPERSEDED';
+          try { stale.reject(se); } catch (_) { /* tolerate */ }
+        }
         pending = entry;
         Promise.resolve()
           .then(() => RNIap.requestPurchase({
