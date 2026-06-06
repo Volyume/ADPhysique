@@ -74,8 +74,8 @@ entry records what actually shipped, and the numbered sections below (§1, §3, 
   Monday.
 
 **Migrations added since this doc was last current:** 065 (trial 21→14), 066
-(`users_profile.billing_period`). Both drafted, pending founder apply.
-`supabase/README.md` tracks 060-066 (all pending apply) and is the authoritative,
+(`users_profile.billing_period`). **Applied 2026-06-06 with the rest of 060-067.**
+`supabase/README.md` tracks 060-067 (applied 2026-06-06) and is the authoritative,
 current migration tracker. § 3 below was extended to match.
 
 **Open code issue, recorded straight (not minimised).** The Jest suite is
@@ -1216,9 +1216,10 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 | 065 | `start_cascade` reverse-trial window 21 → 14 days (founder direction 2026-06-06: 14 cardless in-app days + a 7-day Play intro trial = 21 free total) | **Drafted 2026-06-06, pending founder apply.** Only the interval changes; signature / return keys / `tier_history` insert identical to migration 033. Safe during beta (the override masked expiry); with the override now off, apply alongside the real Play Billing path + the Play Console 7-day offer. Idempotent. Verification in `supabase/README.md` row 065. |
 | 066 | `users_profile.billing_period` (nullable text) so the Subscription screen shows monthly vs annual price (flat pricing 2026-06-06) | **Drafted 2026-06-06, pending founder apply.** Set by the `play-billing-rtdn` webhook from the purchased product id (`pro_monthly`→'monthly', `pro_annual`→'annual'); client reads only. NULL shows the monthly price, so frozen-AAB + pre-webhook rows are fine. Additive, idempotent. Redeploy `play-billing-rtdn` after applying. Verification in `supabase/README.md` row 066. |
 
-**Apply state (2026-06-06):** migrations 060-066 are all DRAFTED and pending
-founder apply (049 and 059 remain held until the next AAB ships). `supabase/README.md`
-is the authoritative tracker and carries the per-migration verification queries.
+**Apply state (2026-06-06):** migrations **060-067 were APPLIED by the founder on
+2026-06-06** (the 8 pending SQL files, run in the Supabase SQL Editor). Only 049
+and 059 remain held until the next AAB ships. `supabase/README.md` is the
+authoritative tracker and carries the per-migration verification queries.
 
 ---
 
@@ -1443,9 +1444,10 @@ the live gate list; supersedes the older "Now" items beneath where they overlap.
 1. **Play Console subscriptions:** create `pro_monthly` (£4.99/mo) and
    `pro_annual` (£29.99/yr), each with a base plan + a 7-day free-trial offer.
    Product IDs MUST equal `src/lib/payments/catalogue.js` exactly.
-2. **Apply migrations 060-066** in order (all drafted/pending; verification
-   queries in `supabase/README.md`), then **deploy `play-billing-rtdn`** (+
-   `send-push`) and confirm the Pub/Sub RTDN topic is wired.
+2. ~~Apply migrations 060-067~~ **DONE 2026-06-06** (founder ran the 8 SQL files
+   in the Supabase SQL Editor; 049/059 still held). Still to do: **deploy
+   `play-billing-rtdn`** (+ `send-push`) via the Supabase dashboard Edge
+   Functions editor, and wire the Pub/Sub RTDN topic.
 3. **Sandbox purchase** end-to-end on a real device via a licensed tester;
    confirm a `tier_history` row + `trial_state` + `billing_period` write land.
 4. **Signing / App Links:** enrol in Play App Signing at first upload; set the
