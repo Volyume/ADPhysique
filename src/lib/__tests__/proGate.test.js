@@ -10,12 +10,15 @@
 
 const realProGate = require('../proGate');
 
-describe('proGate (PRO_BETA_ACTIVE = true, current beta phase)', () => {
-  test('isPaidTier returns pro during beta regardless of profile', () => {
-    expect(realProGate.isPaidTier(null)).toBe('pro');
-    expect(realProGate.isPaidTier({ trialState: 'free' })).toBe('pro');
-    expect(realProGate.isPaidTier({ trialState: 'unstarted' })).toBe('pro');
-    expect(realProGate.isPaidTier({})).toBe('pro');
+describe('proGate live isPaidTier (production, PRO_BETA_ACTIVE = false)', () => {
+  test('reads the real trial state: paid and active trial are pro, the rest free', () => {
+    expect(realProGate.isPaidTier({ trialState: 'paid_pro' })).toBe('pro');
+    expect(realProGate.isPaidTier({ trialState: 'pro_trial_active' })).toBe('pro');
+    expect(realProGate.isPaidTier({ trialState: 'free' })).toBe('free');
+    expect(realProGate.isPaidTier({ trialState: 'cascade_expired' })).toBe('free');
+    expect(realProGate.isPaidTier({ trialState: 'unstarted' })).toBe('free');
+    expect(realProGate.isPaidTier(null)).toBe('free');
+    expect(realProGate.isPaidTier({})).toBe('free');
   });
 });
 

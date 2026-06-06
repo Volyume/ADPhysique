@@ -53,8 +53,19 @@ jest.mock('../engineTelemetry', () => ({
 // jest.resetModules which would re-require AsyncStorage with a fresh
 // mock that doesn't share state with the singleton instance.
 const useAppStore = require('../../store/useAppStore').default;
+const { getSupabaseClient } = require('../supabase');
 const AsyncStorage = require('@react-native-async-storage/async-storage').default
   ?? require('@react-native-async-storage/async-storage');
+
+// Production (PRO_BETA_ACTIVE = false): tier is authoritative from the
+// cloud users_profile.tier, read by refreshTierFromCloud.
+// restoreSessionFromCloud restores the profile + first-run flag but not
+// tier. The real onAuthStateChange runs both, so the scenarios below do
+// too where the end-state tier matters.
+async function signInFlow(uid) {
+  await useAppStore.getState().restoreSessionFromCloud(uid);
+  await useAppStore.getState().refreshTierFromCloud(getSupabaseClient(), uid);
+}
 
 beforeEach(async () => {
   mockCloudProfile = null;
@@ -111,7 +122,8 @@ describe('Scenario: Pro signs out + signs back in (cloud profile intact)', () =>
     expect(useAppStore.getState().tier).toBeNull();
     expect(useAppStore.getState().firstRunComplete).toBe(false);
 
-    // Step 3, sign back in. Cloud profile exists; cloud.tier='free' (beta)
+    // Step 3, sign back in. Cloud profile intact; this user is a paying
+    // Pro subscriber, so cloud.tier='pro'.
     mockCloudProfile = {
       first_name: 'Allan',
       training_focus: 'bodybuilding',
@@ -119,10 +131,10 @@ describe('Scenario: Pro signs out + signs back in (cloud profile intact)', () =>
       primary_equipment: 'full_gym',
       units: 'kg',
       bar_weight: 20,
-      tier: 'free',
+      tier: 'pro',
       first_run_complete: true,
     };
-    await useAppStore.getState().restoreSessionFromCloud('u1');
+    await signInFlow('u1');
 
     expect(useAppStore.getState().tier).toBe('pro');
     expect(useAppStore.getState().firstRunComplete).toBe(true);
@@ -264,28 +276,45 @@ describe('Scenario: sign-out aborts when the cloud push does not complete', () =
 // ─── Scenario 4: Sign in with deleted account (no cloud profile) ─────────────
 
 describe('Scenario: Sign-in with deleted account (cloud profile missing)', () => {
-  test('tier becomes pro; firstRunComplete unchanged (stays false from sign-out)', async () => {
+  test('no cloud profile leaves tier null and firstRunComplete false (onboarding)', async () => {
     await useAppStore.getState().clearAuthStateForSignOut();
     mockCloudProfile = null;
-    await useAppStore.getState().restoreSessionFromCloud('u1');
-    expect(useAppStore.getState().tier).toBe('pro');
+    await signInFlow('u1');
+    // No cloud row -> nothing to grant; the user is routed to onboarding.
+    expect(useAppStore.getState().tier).toBeNull();
     expect(useAppStore.getState().firstRunComplete).toBe(false);
   });
 });
 
 // ─── Scenario 5: App restart while signed in as Pro ──────────────────────────
 
-describe('Scenario: App restart while signed in as Pro', () => {
-  test('refreshTierFromCloud preserves pro even though cloud says free', async () => {
+describe('Scenario: App restart, cloud tier is authoritative', () => {
+  test('refreshTierFromCloud adopts the cloud tier, correcting a stale local pro', async () => {
     await AsyncStorage.setItem('@volyume_tier', 'pro');
     await useAppStore.getState().checkTier();
     expect(useAppStore.getState().tier).toBe('pro');
 
+    // Cloud says this user is on Free (trial ended / never paid). Post-beta
+    // the cloud is the source of truth, so the stale local 'pro' is corrected.
     const fakeClient = {
       from: () => ({
         select: () => ({
           eq: () => ({
             maybeSingle: async () => ({ data: { tier: 'free' }, error: null }),
+          }),
+        }),
+      }),
+    };
+    await useAppStore.getState().refreshTierFromCloud(fakeClient, 'u1');
+    expect(useAppStore.getState().tier).toBe('free');
+  });
+
+  test('refreshTierFromCloud keeps pro when the cloud says pro', async () => {
+    const fakeClient = {
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            maybeSingle: async () => ({ data: { tier: 'pro' }, error: null }),
           }),
         }),
       }),
@@ -309,14 +338,15 @@ describe('Scenario: Brand new Pro signup', () => {
 
 // ─── Scenario 7: Free user upgrades to Pro via ProUpgrade OAuth ──────────────
 
-describe('Scenario: Free user upgrades to Pro via OAuth', () => {
-  test('Free + firstRunComplete=true → Pro + firstRunComplete=true (no re-onboard)', async () => {
+describe('Scenario: A subscribed user signs in', () => {
+  test('cloud.tier=pro + first_run_complete=true → Pro, no re-onboard', async () => {
     await useAppStore.getState().setTier('free');
     await AsyncStorage.setItem('@volyume_first_run_complete', 'true');
     useAppStore.setState({ firstRunComplete: true, firstRunChecked: true });
 
-    mockCloudProfile = null; // brand-new cloud account, no profile yet
-    await useAppStore.getState().restoreSessionFromCloud('u1');
+    // They subscribed, so the cloud profile says Pro.
+    mockCloudProfile = { first_name: 'Allan', tier: 'pro', first_run_complete: true };
+    await signInFlow('u1');
 
     expect(useAppStore.getState().tier).toBe('pro');
     expect(useAppStore.getState().firstRunComplete).toBe(true);
@@ -382,10 +412,13 @@ describe('Scenario: refreshTierFromCloud safety guards', () => {
 // ─── Scenario 11: Cloud query error mid sign-in ──────────────────────────────
 
 describe('Scenario: Cloud query error during restoreSessionFromCloud', () => {
-  test('tier still forced to pro via beta policy', async () => {
+  test('the optimistic local tier is left in place (the failed read cannot override it)', async () => {
+    // The user was already resolved to Pro locally (cached / optimistic).
+    await useAppStore.getState().setTier('pro');
     mockCloudProfile = null;
     mockSupabaseError = new Error('Network error');
     await useAppStore.getState().restoreSessionFromCloud('u1');
+    // A failed cloud read returns early; it must not wipe the local decision.
     expect(useAppStore.getState().tier).toBe('pro');
   });
 });
@@ -394,10 +427,10 @@ describe('Scenario: Cloud query error during restoreSessionFromCloud', () => {
 
 describe('Scenario: Three sign-in/sign-out cycles', () => {
   test('every cycle lands in the right end state', async () => {
-    mockCloudProfile = { tier: 'free', first_run_complete: true, first_name: 'Allan' };
+    mockCloudProfile = { tier: 'pro', first_run_complete: true, first_name: 'Allan' };
 
     for (let i = 0; i < 3; i++) {
-      await useAppStore.getState().restoreSessionFromCloud('u1');
+      await signInFlow('u1');
       expect(useAppStore.getState().tier).toBe('pro');
       expect(useAppStore.getState().firstRunComplete).toBe(true);
 
@@ -432,10 +465,10 @@ describe('Scenario: User A signs out, User B signs in (different cloud account)'
       training_age: 2,
       units: 'lbs',
       bar_weight: 45,
-      tier: 'free',
+      tier: 'pro',
       first_run_complete: true,
     };
-    await useAppStore.getState().restoreSessionFromCloud('userB');
+    await signInFlow('userB');
 
     expect(useAppStore.getState().tier).toBe('pro');
     expect(useAppStore.getState().userProfile?.firstName).toBe('Bob');

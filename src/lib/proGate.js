@@ -5,9 +5,10 @@
  *
  * Gating is all-or-nothing (founder decision 2026-05-29): the app is
  * either Pro or Free, enforced by the ProGate component checking
- * store.tier === 'pro'. During the closed-testing beta
- * (PRO_BETA_ACTIVE) every signed-in user resolves to 'pro' so the full
- * feature set is exercised before payments wire up.
+ * store.tier === 'pro'. PRO_BETA_ACTIVE was the closed-test override that
+ * forced every signed-in user to 'pro'; it is now false for the
+ * production launch (2026-06-06), so tier comes from each user's real
+ * trial / subscription state.
  *
  * History: a granular per-feature/per-route entitlement layer
  * (FEATURE_MAP, hasFeature, hasGoalUnlock, PRO_ROUTES, isProRoute,
@@ -22,7 +23,9 @@
  * ED-pattern lockout, rapid-loss compression) MUST NOT consult tier.
  */
 
-export const PRO_BETA_ACTIVE = true;
+// Production launch 2026-06-06: beta override OFF. Tier now resolves from
+// the user's real trial / subscription state, not a blanket 'pro'.
+export const PRO_BETA_ACTIVE = false;
 
 /**
  * Pure tier resolver. Exported as `_resolveTier` so tests can drive the
