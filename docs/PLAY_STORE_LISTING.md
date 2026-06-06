@@ -234,15 +234,15 @@ for barcode and nutrition-label scanning, processed **on-device** (MLKit /
 vision-camera); no image is collected, uploaded, or stored.
 
 **Third-party destinations (all processor / functional, no PII sold):**
-- **Supabase** — encrypted cloud backup of the account's own data (RLS, own-rows).
-- **Sentry** — crash + performance. Events run through a PII scrub; the user's
+- **Supabase**: encrypted cloud backup of the account's own data (RLS, own-rows).
+- **Sentry**: crash + performance. Events run through a PII scrub; the user's
   `id` and `email` are attached to crash reports (`src/lib/sentry.js`). *Note for
   the founder: if you'd rather Sentry not receive the email, switch `setUser` to
   id-only. Flagged, not changed.*
-- **OpenFoodFacts / USDA FoodData Central** — barcode or food-name lookups only;
+- **OpenFoodFacts / USDA FoodData Central**: barcode or food-name lookups only,
   no personal data is sent.
-- **Google Play Billing** — subscription purchase; Google owns the payment data.
-- **Expo push** — device push token for notifications.
+- **Google Play Billing**: subscription purchase; Google owns the payment data.
+- **Expo push**: device push token for notifications.
 
 **Security practices to declare:** data encrypted in transit (TLS; cleartext
 disabled, `app.json`); auth tokens stored in SecureStore (Android Keystore);
