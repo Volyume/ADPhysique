@@ -44,6 +44,18 @@ the APNs push key. Then re-add `ios.associatedDomains: ["applinks:volyume.app"]`
 Earlier note still standing: run #13's Xcode error named only Associated Domains,
 so HealthKit and Push were already in the profile.
 
+**Next blocker, then fixed (run #15).** With Associated Domains gone the build
+signed and compiled for 7 minutes, then failed at the very end on the Sentry
+source-map upload: `sentry-cli ... Auth token is required for this request`. The
+`@sentry/react-native` build phase tries to upload source maps and needs
+`SENTRY_AUTH_TOKEN`, which the EAS cloud build does not have. The Android build
+already sidesteps this with `SENTRY_DISABLE_AUTO_UPLOAD=true` (build-android.yml).
+The same switch is now set for the EAS build in `eas.json`
+(`build.production.env.SENTRY_DISABLE_AUTO_UPLOAD = "true"`); it goes in
+`eas.json`, not the workflow, because the upload runs on the EAS cloud builder,
+not the GitHub runner. iOS crash reports will not be symbolicated until a
+`SENTRY_AUTH_TOKEN` EAS secret is added (same trade-off Android already takes).
+
 ## Status at a glance
 
 | Target | State | Where it stands |
