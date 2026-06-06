@@ -123,6 +123,17 @@ describe('CascadeGateScreen mount', () => {
     expect(r.toJSON()).toBeTruthy();
   });
 
+  test('upgrade variant (go-Pro from free) renders go-Pro copy, not winddown', async () => {
+    const Screen = require('../screens/CascadeGateScreen').default;
+    const r = await mount(Screen, {
+      navigation: noopNav,
+      route: { params: { variant: 'upgrade' } },
+    });
+    const tree = JSON.stringify(r.toJSON());
+    expect(tree).toContain('Go Pro');
+    expect(tree).not.toContain('winding down');
+  });
+
   test('payment_failure variant renders without throwing', async () => {
     const Screen = require('../screens/CascadeGateScreen').default;
     const r = await mount(Screen, {

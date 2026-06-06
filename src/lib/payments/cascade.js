@@ -104,6 +104,36 @@ function _trackTransition({ reason, sourceSurface, targetTier, paymentRef }) {
 export async function startCascade() {
   const r = await _call('start_cascade', {});
   if (r.ok) {
+    // Reflect the trial in the local store straight away. RootNavigator
+    // routes onboarding on store.tier and ProGate unlocks on it, but the
+    // RPC only writes the server row, so without this mirror a fresh
+    // trial leaves the user on the free FirstRunStack (the "just your
+    // name" screen) instead of the Pro setup questionnaire. The RPC set
+    // the server tier='pro' + trial_state='pro_trial_active'; we copy
+    // that down without a second round-trip. Only ever moves the local
+    // tier up to 'pro' (never demotes), and the already-started branch
+    // omits `tier`, so resolve from the returned trial_state.
+    try {
+      // eslint-disable-next-line global-require
+      const useAppStore = require('../../store/useAppStore').default;
+      // eslint-disable-next-line global-require
+      const { _resolveTier } = require('../proGate');
+      const ts = r.data?.trial_state ?? 'pro_trial_active';
+      const nextTier = r.data?.tier ?? _resolveTier(ts, false);
+      const st = useAppStore.getState();
+      if (nextTier === 'pro') {
+        st.setTier?.('pro', 'cascade.startCascade').catch?.(() => {});
+      }
+      useAppStore.setState((s) => (s.userProfile
+        ? {
+            userProfile: {
+              ...s.userProfile,
+              trialState: ts,
+              proTrialEndsAt: r.data?.pro_trial_ends_at ?? s.userProfile.proTrialEndsAt ?? null,
+            },
+          }
+        : {}));
+    } catch (_) { /* tolerate; refreshTierFromCloud reconciles next read */ }
     _trackTransition({ reason: 'cascade_started', sourceSurface: 'article9_consent', targetTier: 'pro_trial' });
     // Lay the local cascade-gate reminders (day 19 + day 21 at 10:00)
     // from the trial end date the RPC just returned. Fire-and-forget:

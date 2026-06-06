@@ -186,6 +186,14 @@ export async function signInWithGoogle() {
   try {
     GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    // Start from a clean native state. The Google SDK keeps the last
+    // account signed in at the native layer, and that cache outlives a
+    // Volyume sign-out or account deletion (those clear the Supabase
+    // session and local storage, not the Google SDK). A stale cache makes
+    // the next signIn() resolve with the old account and no fresh idToken,
+    // so the button looked dead after deleting an account. Clearing it
+    // first forces the account picker and a fresh token every time.
+    try { await GoogleSignin.signOut(); } catch (_) { /* not signed in, fine */ }
     const resp = await GoogleSignin.signIn();
     // v13+ shape: { type: 'success' | 'cancelled', data }. Older: { idToken }.
     if (resp?.type === 'cancelled') return { cancelled: true };

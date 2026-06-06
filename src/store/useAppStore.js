@@ -285,7 +285,26 @@ const useAppStore = create((set, get) => ({
         const { syncAll } = require('../lib/sync');
         // eslint-disable-next-line global-require
         const { flushPendingTelemetry } = require('../lib/engineTelemetry');
-        const res = await syncAll({ userId: prevUid, localUserId: prevUid, triggeredBy: 'sign_out' });
+        // Bound the push-first sync. Without this, a stalled network request
+        // makes syncAll never resolve, so clearAuthStateForSignOut never
+        // returns and the UI sticks on "Signing out..." forever (observed
+        // 2026-06-06). On timeout we throw; the catch below turns that into an
+        // abort (normal: user gets the "Sign out anyway" prompt) or lets a
+        // forced sign-out proceed to the wipe.
+        const SIGN_OUT_SYNC_TIMEOUT_MS = 20_000;
+        let _signOutSyncTimer;
+        let res;
+        try {
+          res = await Promise.race([
+            syncAll({ userId: prevUid, localUserId: prevUid, triggeredBy: 'sign_out' }),
+            new Promise((_, reject) => {
+              _signOutSyncTimer = setTimeout(
+                () => reject(new Error('signout-sync-timeout')), SIGN_OUT_SYNC_TIMEOUT_MS);
+            }),
+          ]);
+        } finally {
+          clearTimeout(_signOutSyncTimer);
+        }
         // Abort the wipe only when we can't prove the push reached cloud:
         //   'error'           - a migrated table push threw/failed
         //   'skipped'         - another sync held the lock, OURS didn't run

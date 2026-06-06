@@ -43,6 +43,22 @@ import { audit } from '../lib/observability';
 
 function _variantContent(variant) {
   switch (variant) {
+    case 'upgrade':
+      // A free / never-started user choosing to go Pro for the first time.
+      // The trial-end "winding down" copy is wrong here: there is no trial
+      // running, so frame it as going Pro. No "Drop to Free" option, the
+      // user is already on Free; the close button dismisses.
+      return {
+        title: 'Go Pro',
+        subtitle: 'Pro keeps the weekly coaching and the food log. Free keeps your data and safety checks, but some features stay read-only.',
+        primaryCta: 'Go Pro',
+        primaryTarget: 'pro',
+        secondaryCta: null,
+        secondaryTarget: null,
+        tertiaryCta: null,
+        tertiaryTarget: null,
+        surface: 'subscription_upgrade_gate',
+      };
     case 'day14':
     case 'day21':   // legacy synonym
     case 'day28':   // legacy synonym
@@ -118,11 +134,19 @@ export default function CascadeGateScreen({ navigation, route }) {
       logInfo('CascadeGate.paid', `tier=${targetTier} sku=${sku.id}`);
       dismiss();
     } catch (e) {
-      // Purchase cancelled by user OR genuine failure. Distinguish
-      // by message if possible; surface a generic friendly note.
+      // Three outcomes to tell apart:
+      //  - the user backed out, or re-opened the gate so a stale purchase
+      //    bridge was superseded: benign, no toast, no Sentry issue;
+      //  - the Play sheet closed without a result (timeout): let them retry
+      //    without an alarming error;
+      //  - anything else: a real failure worth logging + a warning toast.
+      const code = e?.code ?? '';
       const msg = e?.message ?? '';
-      if (/cancel|abort/i.test(msg)) {
-        logInfo('CascadeGate.purchaseCancelled', `tier=${targetTier}`);
+      if (code === 'E_USER_CANCELLED' || code === 'E_PURCHASE_SUPERSEDED' || /cancel|abort/i.test(msg)) {
+        logInfo('CascadeGate.purchaseCancelled', `tier=${targetTier} code=${code || 'cancel'}`);
+      } else if (code === 'E_PURCHASE_TIMEOUT') {
+        logInfo('CascadeGate.purchaseTimedOut', `tier=${targetTier}`);
+        toast.show('Purchase did not finish. Try again.', { variant: 'warning', duration: 4000 });
       } else {
         logError('CascadeGate.purchaseFailed', e, { targetTier });
         toast.show('Purchase did not complete. Try again or pick a different option', { variant: 'warning', duration: 5000 });

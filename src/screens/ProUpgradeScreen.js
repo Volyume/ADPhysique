@@ -108,8 +108,16 @@ export default function ProUpgradeScreen({ navigation }) {
       pullFromCloud(supabaseUserId).catch(() => {});
     }
     if (cascade.canStillTrial(userProfile)) {
-      // Entitled to the 14-day cardless trial. resetFirstRun routes into
-      // onboarding, whose Article 9 step calls startCascade.
+      // Entitled to the 14-day cardless trial. Start it here: a brand-new
+      // account starts the trial at the Article 9 consent step, but an
+      // existing user who already consented skips that gate, so without
+      // this their "Start your free trial" tap reset onboarding without
+      // ever starting the trial and, with the tier still 'free', dropped
+      // them on the free FirstRunStack name screen instead of the Pro
+      // setup. startCascade is idempotent (no-ops once started), sets the
+      // server tier='pro' + trial_state, and mirrors tier='pro' locally so
+      // resetFirstRun routes into ProOnboardingStack.
+      try { await cascade.startCascade(); } catch (_) {}
       try {
         const result = await resetFirstRun();
         if (result && result.ok === false && result.error === 'workout_in_progress') {

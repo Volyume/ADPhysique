@@ -114,8 +114,17 @@ export default function SubscriptionScreen({ navigation }) {
 
   const handleUpgrade = useCallback(() => {
     audit('subscription.upgrade.tap', { from: 'subscription_screen' });
-    navigation?.navigate?.('CascadeGate', { variant: 'day14', period });
-  }, [navigation, period]);
+    // A user mid pro-trial taps "Stay on Pro" to lock in, which is the
+    // day14 purchase gate. A free / never-started user is going Pro for the
+    // first time: send them through ProUpgrade, which starts the 14-day
+    // cardless trial and routes into the full Pro setup, rather than the
+    // CascadeGate purchase sheet (which would charge them and skip setup).
+    if (stage === 'pro_trial') {
+      navigation?.navigate?.('CascadeGate', { variant: 'day14', period });
+    } else {
+      navigation?.navigate?.('ProUpgrade');
+    }
+  }, [navigation, period, stage]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
