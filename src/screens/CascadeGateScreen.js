@@ -26,12 +26,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSize, fontWeight, hitSlop, type } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, radius, hitSlop, type } from '../styles/theme';
 import Button from '../components/Button';
 import { useToast } from '../components/Toast';
 import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
-import { skuFor } from '../lib/payments/catalogue';
+import { skuFor, priceTextFor, annualSavingsPct } from '../lib/payments/catalogue';
 import { logError, logInfo } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 
@@ -76,9 +76,9 @@ function _variantContent(variant) {
 export default function CascadeGateScreen({ navigation, route }) {
   const toast = useToast();
   const variant = route?.params?.variant ?? 'day14';
-  // Flat pricing (2026-06-06): the choice is billing period, not a window.
-  // Defaults to monthly; the monthly/annual toggle lives on the Paywall.
-  const period = route?.params?.period ?? 'monthly';
+  // Flat pricing (2026-06-06): the choice is billing period. Monthly by
+  // default; the toggle below lets the user pick annual at the gate.
+  const [period, setPeriod] = useState(route?.params?.period === 'annual' ? 'annual' : 'monthly');
   const content = _variantContent(variant);
   const [busy, setBusy] = useState(null);  // which CTA is in-flight
 
@@ -195,6 +195,34 @@ export default function CascadeGateScreen({ navigation, route }) {
             in the 2-tier model the gate is a single Pro / Free
             decision and the strip is dropped from this surface. */}
 
+        {content.primaryTarget === 'pro' ? (
+          <View style={styles.periodRow}>
+            <TouchableOpacity
+              style={[styles.periodBtn, period === 'monthly' && styles.periodBtnActive]}
+              onPress={() => setPeriod('monthly')}
+              disabled={busy !== null}
+              accessibilityRole="button"
+              accessibilityState={{ selected: period === 'monthly' }}
+              accessibilityLabel="Monthly, £4.99 a month"
+            >
+              <Text style={[styles.periodLabel, period === 'monthly' && styles.periodTextActive]}>Monthly</Text>
+              <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{priceTextFor('pro', 'monthly')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.periodBtn, period === 'annual' && styles.periodBtnActive]}
+              onPress={() => setPeriod('annual')}
+              disabled={busy !== null}
+              accessibilityRole="button"
+              accessibilityState={{ selected: period === 'annual' }}
+              accessibilityLabel="Annual, £29.99 a year, save 50 per cent"
+            >
+              <View style={styles.saveBadge}><Text style={styles.saveBadgeText}>Save {annualSavingsPct()}%</Text></View>
+              <Text style={[styles.periodLabel, period === 'annual' && styles.periodTextActive]}>Annual</Text>
+              <Text style={[styles.periodPrice, period === 'annual' && styles.periodTextActive]}>{priceTextFor('pro', 'annual')}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         <View style={styles.ctaStack}>
           {content.primaryTarget === 'billing' ? (
             <Button
@@ -266,6 +294,22 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: spacing.xl,
   },
+  periodRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
+  periodBtn: {
+    flex: 1, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.border,
+    backgroundColor: colors.surface, paddingVertical: spacing.md, paddingHorizontal: spacing.sm,
+    alignItems: 'center', gap: 2,
+  },
+  periodBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
+  periodLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
+  periodPrice: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  periodTextActive: { color: colors.primary },
+  saveBadge: {
+    position: 'absolute', top: -9, alignSelf: 'center',
+    backgroundColor: colors.primary, borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm, paddingVertical: 1,
+  },
+  saveBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.3 },
   ctaStack: {
     gap: spacing.md,
   },
