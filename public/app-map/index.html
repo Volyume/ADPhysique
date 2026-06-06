@@ -4,972 +4,416 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Volyume App Map &amp; Audit</title>
-<meta name="description" content="A complete plain-English map of the Volyume app, every screen, every feature, every link, and what is broken or missing.">
-<link rel="icon" type="image/png" href="/favicon.png">
+<meta name="description" content="A complete plain-English map of the Volyume app: every screen, feature, service, flow, the data it holds, and every bug or gap rated by severity.">
 <meta name="theme-color" content="#0D0D0D">
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <style>
-  :root {
-    --bg: #0D0D0D;
-    --surface: #161616;
-    --surface2: #1F1F1F;
-    --border: #2A2A2A;
-    --text: #EEEEEE;
-    --muted: #AFAFAF;
-    --accent: #F59E0B;
-    --link: #FBBF24;
-    --good: #34D399;
-    --warn: #FBBF24;
-    --bad:  #F87171;
-    --info: #60A5FA;
+  :root{
+    --bg:#0D0D0D;--surface:#161616;--surface2:#1F1F1F;--border:#2A2A2A;
+    --text:#EEEEEE;--muted:#AFAFAF;--accent:#F59E0B;--link:#FBBF24;
+    --good:#34D399;--warn:#FBBF24;--bad:#F87171;--info:#60A5FA;--pro:#F59E0B;--free:#7DD3FC;
   }
-  * { box-sizing: border-box; }
-  html, body {
-    margin: 0; padding: 0;
-    background: var(--bg); color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    font-size: 16px; line-height: 1.55;
-    -webkit-font-smoothing: antialiased;
-  }
-  .layout { max-width: 1100px; margin: 0 auto; padding: 32px 24px 96px; }
-  header.page { margin-bottom: 32px; border-bottom: 1px solid var(--border); padding-bottom: 24px; }
-  header.page h1 { font-size: 28px; margin: 0 0 8px; }
-  header.page .lede { color: var(--muted); margin: 0; }
-  nav.toc { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin: 24px 0 40px; }
-  nav.toc h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0 0 12px; }
-  nav.toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 32px; }
-  nav.toc li { margin: 4px 0; break-inside: avoid; }
-  nav.toc a { color: var(--link); text-decoration: none; }
-  nav.toc a:hover { text-decoration: underline; }
-  section { margin: 48px 0; }
-  section > h2 { font-size: 22px; margin: 0 0 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
-  section > h3 { font-size: 18px; margin: 24px 0 8px; }
-  section > h4 { font-size: 15px; margin: 16px 0 4px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
-  p, ul, ol { margin: 8px 0 16px; }
-  ul, ol { padding-left: 22px; }
-  li { margin: 4px 0; }
-  code { background: var(--surface2); padding: 2px 6px; border-radius: 4px; font-size: 14px; color: var(--accent); font-family: "SFMono-Regular", Menlo, Consolas, monospace; }
-  pre { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; overflow-x: auto; }
-  pre code { background: transparent; padding: 0; color: var(--text); }
-  table { width: 100%; border-collapse: collapse; margin: 12px 0 24px; font-size: 14px; }
-  th, td { padding: 8px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
-  th { background: var(--surface); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
-  .pill { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
-  .pill.good { background: rgba(52, 211, 153, 0.16); color: var(--good); }
-  .pill.warn { background: rgba(251, 191, 36, 0.18); color: var(--warn); }
-  .pill.bad  { background: rgba(248, 113, 113, 0.18); color: var(--bad); }
-  .pill.info { background: rgba(96, 165, 250, 0.18); color: var(--info); }
-  .mermaid { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin: 16px 0 24px; }
-  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 16px 0; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
-  .legend .item { display: flex; align-items: center; gap: 6px; }
-  .legend .swatch { width: 14px; height: 14px; border-radius: 3px; }
-  .legend .good   { background: var(--good); }
-  .legend .warn   { background: var(--warn); }
-  .legend .bad    { background: var(--bad); }
-  .legend .info   { background: var(--info); }
-  .note { background: var(--surface); border-left: 3px solid var(--accent); padding: 10px 16px; margin: 12px 0; border-radius: 4px; font-size: 14px; color: var(--muted); }
-  .gap { background: rgba(248, 113, 113, 0.06); border: 1px solid rgba(248, 113, 113, 0.3); border-radius: 8px; padding: 12px 16px; margin: 8px 0; }
-  .gap h4 { color: var(--bad); margin-top: 0; }
-  a { color: var(--link); }
-  footer.page { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--border); color: var(--muted); font-size: 13px; }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,sans-serif;
+    font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .layout{max-width:1080px;margin:0 auto;padding:28px 20px 96px}
+  header.page{margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:20px}
+  header.page h1{font-size:27px;margin:0 0 6px}
+  header.page .lede{color:var(--muted);margin:0 0 10px}
+  .meta{font-size:13px;color:var(--muted)}
+  .verdict{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);
+    border-radius:10px;padding:16px 18px;margin:18px 0}
+  .verdict strong{color:var(--accent)}
+  nav.toc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin:22px 0 36px}
+  nav.toc h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 10px}
+  nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:28px}
+  nav.toc li{margin:4px 0;break-inside:avoid}
+  nav.toc a,a{color:var(--link);text-decoration:none}
+  nav.toc a:hover,a:hover{text-decoration:underline}
+  section{margin:42px 0}
+  section>h2{font-size:21px;margin:0 0 6px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  h3{font-size:17px;margin:22px 0 6px}
+  h4{font-size:13px;margin:16px 0 4px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  p,ul,ol{margin:8px 0 14px}ul,ol{padding-left:20px}li{margin:4px 0}
+  table{width:100%;border-collapse:collapse;margin:12px 0 18px;font-size:14.5px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.03em}
+  tr:last-child td{border-bottom:none}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin:12px 0}
+  .pill{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;letter-spacing:.02em;white-space:nowrap}
+  .free{background:rgba(125,211,252,.15);color:var(--free);border:1px solid rgba(125,211,252,.35)}
+  .pro{background:rgba(245,158,11,.15);color:var(--pro);border:1px solid rgba(245,158,11,.4)}
+  .live{background:rgba(52,211,153,.15);color:var(--good);border:1px solid rgba(52,211,153,.35)}
+  .pending{background:rgba(251,191,36,.13);color:var(--warn);border:1px solid rgba(251,191,36,.35)}
+  .blocker{background:rgba(248,113,113,.15);color:var(--bad);border:1px solid rgba(248,113,113,.4)}
+  .should{background:rgba(251,191,36,.13);color:var(--warn);border:1px solid rgba(251,191,36,.35)}
+  .polish{background:rgba(96,165,250,.13);color:var(--info);border:1px solid rgba(96,165,250,.35)}
+  .dismissed{background:rgba(175,175,175,.12);color:var(--muted);border:1px solid var(--border)}
+  .bug{border-left:3px solid var(--border);padding:10px 14px;margin:10px 0;background:var(--surface)}
+  .bug.b-blocker{border-left-color:var(--bad)}
+  .bug.b-should{border-left-color:var(--warn)}
+  .bug.b-polish{border-left-color:var(--info)}
+  .bug.b-dismissed{border-left-color:#555;opacity:.85}
+  .bug h4{margin:0 0 4px;color:var(--text);text-transform:none;letter-spacing:0;font-size:15px}
+  .bug .where{font-size:12.5px;color:var(--muted);font-family:ui-monospace,Menlo,monospace}
+  .tree{font-family:ui-monospace,Menlo,monospace;font-size:13.5px;background:var(--surface2);border:1px solid var(--border);
+    border-radius:8px;padding:14px 16px;white-space:pre;overflow-x:auto;color:var(--muted)}
+  .tree b{color:var(--text)}
+  .legend{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 4px}
+  .note{color:var(--muted);font-size:14px}
+  hr{border:none;border-top:1px solid var(--border);margin:28px 0}
+  .big{font-size:15px}
+  code{background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:13px}
 </style>
 </head>
 <body>
 <div class="layout">
 
 <header class="page">
-  <h1>Volyume App Map &amp; Audit</h1>
-  <p class="lede">A plain-English walk through every screen, every flow, every feature, and what's working or broken. Built end-to-end from the actual code on 2026-05-27.</p>
+  <h1>Volyume — App Map &amp; Audit</h1>
+  <p class="lede">A complete, plain-English map of the whole app: every area, every feature, every flow, the services behind it, the data it holds, and every bug or gap rated by how much it matters.</p>
+  <p class="meta">Compiled 6 June 2026 from the live code, not from memory. Every claim was checked against the actual files. Where an automated pass flagged something that turned out to be wrong, it's marked <span class="pill dismissed">CHECKED &amp; CLEARED</span> so you can trust the rest.</p>
 </header>
+
+<div class="verdict big">
+  <strong>The one-line verdict:</strong> the product itself is built and deep. The training and coaching engine, the food diary, the body and progress tracking, the sync, the privacy handling, all of it is real and working. What stands between you and a paid launch is a short, specific list: turn the payment plumbing on (your merchant account + one switch), a handful of genuine bugs (timezone day-boundary, a couple of sync hardening jobs), and some compliance copy that promises things the code doesn't yet do (an age check, a 30-day deletion window). None of it is a rebuild. It's a finishing list.
+</div>
 
 <nav class="toc">
   <h2>Contents</h2>
   <ol>
-    <li><a href="#how-to-read">How to read this</a></li>
-    <li><a href="#legend">Status legend</a></li>
-    <li><a href="#one-paragraph">The app in one paragraph</a></li>
-    <li><a href="#overall-map">Overall app map</a></li>
-    <li><a href="#tab-train">Train tab</a></li>
-    <li><a href="#tab-plans">Plans tab</a></li>
-    <li><a href="#tab-diary">Diary tab</a></li>
-    <li><a href="#tab-progress">Progress tab</a></li>
-    <li><a href="#tab-you">You tab</a></li>
-    <li><a href="#flow-onboarding">Flow: new user onboarding</a></li>
-    <li><a href="#flow-daily">Flow: a normal training day</a></li>
-    <li><a href="#flow-weekly">Flow: weekly check-in &amp; coach</a></li>
-    <li><a href="#flow-payment">Flow: subscription &amp; cascade</a></li>
-    <li><a href="#flow-account">Flow: sign-out, restore, delete account</a></li>
-    <li><a href="#data-local">Where data lives on the device</a></li>
-    <li><a href="#data-cloud">Where data lives in the cloud</a></li>
-    <li><a href="#data-sync">How data syncs between them</a></li>
-    <li><a href="#externals">External services</a></li>
-    <li><a href="#feature-matrix">Feature matrix (every feature, every status)</a></li>
-    <li><a href="#gaps">Real gaps the engineering punch list missed</a></li>
-    <li><a href="#voice-audit">Voice / copy audit</a></li>
-    <li><a href="#bugs">Bugs &amp; suspicious code surfaced during the walk</a></li>
-    <li><a href="#glossary">Glossary for non-coders</a></li>
+    <li><a href="#what">What Volyume is</a></li>
+    <li><a href="#tiers">Free vs Pro, and the trial</a></li>
+    <li><a href="#map">The map: tabs &amp; features</a></li>
+    <li><a href="#journeys">How people move through it</a></li>
+    <li><a href="#brain">The coaching brain</a></li>
+    <li><a href="#services">Services &amp; plumbing</a></li>
+    <li><a href="#data">Data &amp; privacy</a></li>
+    <li><a href="#bugs">Bugs, gaps &amp; risks</a></li>
+    <li><a href="#copy">Words &amp; facts</a></li>
+    <li><a href="#elite">What to fix to make it elite</a></li>
   </ol>
 </nav>
 
-<!-- ============================================================== -->
-<section id="how-to-read">
-<h2>1. How to read this</h2>
-
-<p>This is a map, not source code. You don't need to know how to program to use it. The point is to give you, the founder, a way to <strong>check whether the app actually does what it says it does</strong>, without opening any code file.</p>
-
-<p>Each section answers one question:</p>
-<ul>
-  <li><strong>What is here?</strong> — what feature, what screen, what it's for.</li>
-  <li><strong>Is it working?</strong> — a coloured pill (green / amber / red) tells you at a glance.</li>
-  <li><strong>What connects to what?</strong> — diagrams show how screens link, where data comes from, where it goes.</li>
-  <li><strong>What's broken or missing?</strong> — flagged explicitly with the file or table it relates to.</li>
-</ul>
-
-<p>You can sideload an APK on your phone and walk through any flow on this page step by step to confirm what it says.</p>
+<!-- ============================================================= -->
+<section id="what">
+  <h2>1. What Volyume is</h2>
+  <p>Volyume is a strength-training app with a coach built in. The free side is a serious training logbook: pick or build a plan, log every set, and watch your lifts and volume trend over months. The paid side (Pro) is the coach: it reads your training, your weight trend, and your food, then every week it adjusts your plan and your calorie and protein targets and tells you, in plain words, exactly what it changed and why.</p>
+  <p>It's Android-first, built with React Native and Expo, backed by a UK-hosted Supabase database, and it works offline: everything is logged on the phone first and synced to the cloud when there's a connection.</p>
+  <p class="note">Roughly 70 screens, five bottom tabs, a deterministic coaching engine, and a full offline-sync layer. It is a large, mature codebase, not a prototype.</p>
 </section>
 
-<!-- ============================================================== -->
-<section id="legend">
-<h2>2. Status legend</h2>
+<!-- ============================================================= -->
+<section id="tiers">
+  <h2>2. Free vs Pro, and the trial</h2>
+  <h3>What's free, what's Pro</h3>
+  <table>
+    <tr><th>Free</th><th>Pro</th></tr>
+    <tr>
+      <td>
+        <ul>
+          <li>The Plan Library and building your own plans</li>
+          <li>Logging every workout, sets, reps, weight, PRs</li>
+          <li>All training progress: lift trends, volume, consistency, year-of-lifts, heatmaps</li>
+          <li>Your profile, settings, sharing a workout card</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li>The whole food diary: logging, barcode scan, label scan, recipes, meals, water, steps</li>
+          <li>All cardio logging</li>
+          <li>All coaching: weekly check-in, the "Your week" output, nutrition targets, goal changes, reminders</li>
+          <li>Body metrics &amp; weight tracking</li>
+        </ul>
+      </td>
+    </tr>
+  </table>
+  <p class="note">This boundary is enforced in code and was audited end to end: <strong>no leaks were found</strong>. A free user genuinely cannot reach the Pro screens.</p>
 
-<div class="legend">
-  <div class="item"><span class="swatch good"></span><span><span class="pill good">Built</span> — implemented end-to-end, tested or manually verified</span></div>
-  <div class="item"><span class="swatch warn"></span><span><span class="pill warn">Partial</span> — exists but missing pieces (e.g. data layer wired, UI absent)</span></div>
-  <div class="item"><span class="swatch bad"></span><span><span class="pill bad">Missing</span> — no code, no UI, not built</span></div>
-  <div class="item"><span class="swatch info"></span><span><span class="pill info">Deferred</span> — explicitly out of scope per spec or founder decision</span></div>
-</div>
-
-<p>Where a feature is partial, the "what's missing" column tells you exactly which piece.</p>
+  <h3>The trial (your locked decision: 14 + 7)</h3>
+  <ol>
+    <li><strong>14 days free, no card.</strong> A new account gets the full Pro coach for 14 days. No payment details asked. If they do nothing, on day 14 they drop to Free.</li>
+    <li><strong>7 more days free, via Google.</strong> When they subscribe, Google Play adds its own 7-day free trial (card on file), then bills monthly. So the card is only ever asked for at day 14, never at signup.</li>
+  </ol>
+  <p>Prices by launch window: <strong>£0.99/month</strong> (launch), <strong>£1.99</strong> (founders), <strong>£3.99</strong> (standard). Whoever signs up keeps their price for as long as they stay subscribed.</p>
+  <p class="note">When a lapsed free user later taps "Upgrade", they go straight to the paywall and Google decides whether they still get the 7-day trial (first time) or pay immediately (already used it). That matches your "no grandfather" decision.</p>
 </section>
 
-<!-- ============================================================== -->
-<section id="one-paragraph">
-<h2>3. The app in one paragraph</h2>
+<!-- ============================================================= -->
+<section id="map">
+  <h2>3. The map: tabs &amp; features</h2>
+  <p>Five tabs after sign-in, plus the onboarding flows before it.</p>
+  <div class="tree"><b>Before the app:</b>
+Welcome (choose Free or Pro)
+  └─ Sign up / sign in (email, Google)
+       └─ Health-data consent (required, GDPR)
+            └─ Free: quick setup  ·  Pro: 5-step coach setup
 
-<p>Volyume is an Android-only training + nutrition logbook with an automatic weekly coach. The user trains, logs food, weighs in, and ticks a weekly check-in. Every week the coach computes whether the body weight trend matches the goal and adjusts calorie targets up or down (within safety floors) and surfaces volume / RPE suggestions for training. The Free tier covers logging; Pro adds the coach output, body composition, and the food layer's deeper insights. All data is stored on-device in SQLite and synced to Supabase in the background; sign-out wipes the device, account deletion wipes everything end-to-end.</p>
+<b>The five tabs:</b>
+Train   ·  Plans  ·  Diary [PRO]  ·  Progress  ·  You</div>
+
+  <h3>Train tab <span class="pill free">FREE</span></h3>
+  <p>Your home base. The next session to do, this week's stats (sessions, sets, volume), a morning-weight quick-log with a trend line, and (for Pro) the latest coach card. Start a workout, log it live with a rest timer and automatic personal-record detection, finish with a feedback form, then share a card.</p>
+  <table>
+    <tr><th>Feature</th><th>What it does</th><th></th></tr>
+    <tr><td>Live workout logging</td><td>Log weight/reps/effort per set, rest timer, form tips, automatic PR detection, per-side (left/right) logging</td><td><span class="pill free">FREE</span></td></tr>
+    <tr><td>Workout history &amp; volume heatmap</td><td>Every past session, muscle-by-muscle volume, 12-week heat bands</td><td><span class="pill free">FREE</span></td></tr>
+    <tr><td>Exercise library</td><td>~475 exercises with form tips, plus your own custom ones</td><td><span class="pill free">FREE</span></td></tr>
+    <tr><td>Share card</td><td>A clean image of your session to share</td><td><span class="pill free">FREE</span></td></tr>
+  </table>
+
+  <h3>Plans tab <span class="pill free">FREE</span></h3>
+  <p>Your active plan and the controls to change it. Pick from the curated Plan Library, build one by hand, or let the engine generate a 3–6 week block around your goal, experience, equipment and weak points.</p>
+  <table>
+    <tr><th>Feature</th><th>What it does</th><th></th></tr>
+    <tr><td>Plan Library</td><td>Curated templates (full body, upper/lower, push-pull-legs…) tuned to your level and goal</td><td><span class="pill free">FREE</span></td></tr>
+    <tr><td>Adaptive volume</td><td>Sets-per-muscle targets scale with your level, recovery and phase (the MEV–MRV "sweet spot")</td><td><span class="pill free">FREE</span></td></tr>
+    <tr><td>Exercise swaps</td><td>Swap a movement while keeping the training intent</td><td><span class="pill free">FREE</span></td></tr>
+    <tr><td>Mesocycle builder</td><td>Hand-edit the block: length, progression model, deload week</td><td><span class="pill pro">PRO</span></td></tr>
+  </table>
+
+  <h3>Diary tab <span class="pill pro">PRO</span></h3>
+  <p>The food diary. Log by search, barcode, photo of a label, saved recipe or meal. Macro rings show the day against target. Water and steps live here too.</p>
+  <table>
+    <tr><th>Feature</th><th>What it does</th><th></th></tr>
+    <tr><td>Food logging &amp; search</td><td>Search across your cache, an offline snapshot, OpenFoodFacts and USDA</td><td><span class="pill pro">PRO</span></td></tr>
+    <tr><td>Barcode &amp; label scan</td><td>Scan a barcode, or photograph a label and read the numbers off it</td><td><span class="pill pro">PRO</span></td></tr>
+    <tr><td>Recipes, meals, frequents, diet preference</td><td>Save recipes/meals, quick-log your top foods, filter by omnivore/veggie/vegan</td><td><span class="pill pro">PRO</span></td></tr>
+    <tr><td>Water &amp; steps</td><td>Daily water; steps auto-imported from the phone's health data or typed in</td><td><span class="pill pro">PRO</span></td></tr>
+  </table>
+
+  <h3>Progress tab <span class="pill free">FREE</span> <span class="note">(training progress is free; body metrics within it is Pro)</span></h3>
+  <table>
+    <tr><th>Feature</th><th>What it does</th><th></th></tr>
+    <tr><td>Lift progress &amp; PR wall</td><td>Per-exercise strength trend and an estimated one-rep max</td><td><span class="pill free">FREE</span></td></tr>
+    <tr><td>Volume, consistency, year-of-lifts</td><td>Weekly volume vs the healthy range, adherence, a year heatmap of training days</td><td><span class="pill free">FREE</span></td></tr>
+    <tr><td>Body metrics &amp; weight trend</td><td>Morning weight, smoothed trend line, body-fat and measurements</td><td><span class="pill pro">PRO</span></td></tr>
+    <tr><td>Cardio summary</td><td>This week's logged cardio</td><td><span class="pill pro">PRO</span></td></tr>
+  </table>
+
+  <h3>You tab <span class="pill free">FREE</span> <span class="note">(coaching screens inside it are Pro)</span></h3>
+  <p>Profile, all settings, subscription, and the coaching surfaces. Account essentials (sign out, delete account, switch tier), profile and display settings, notifications, health-integration and privacy controls. The coaching screens, weekly check-in, "Your week", nutrition targets, goal setup, reminders, are Pro.</p>
 </section>
 
-<!-- ============================================================== -->
-<section id="overall-map">
-<h2>4. Overall app map</h2>
+<!-- ============================================================= -->
+<section id="journeys">
+  <h2>4. How people move through it</h2>
 
-<p>The app has <strong>five bottom tabs</strong>. Each tab has its own stack of screens. The diagram below shows every tab and its main screens. Modals (camera, scan, paywall) hover over the active tab.</p>
+  <h3>Free signup</h3>
+  <p>Welcome → choose Free → create account → agree to the health-data consent → quick setup (name, units) → into the app. Pick a plan or build one, start logging. Progress charts fill in as they train.</p>
 
-<div class="mermaid">
-flowchart TB
-    classDef tab fill:#F59E0B,stroke:#F59E0B,color:#0D0D0D,font-weight:700
-    classDef screen fill:#1F1F1F,stroke:#2A2A2A,color:#EEEEEE
-    classDef modal fill:#0D0D0D,stroke:#FBBF24,color:#FBBF24,stroke-dasharray: 4 4
+  <h3>Pro signup</h3>
+  <p>Welcome → choose Pro → create account → health-data consent (this starts the 14-day trial) → a 5-step coach setup (profile, training, recovery, plan generated, nutrition generated) → a summary of the plan and targets → into the app with the coach live.</p>
 
-    App([App launches])
-    App --> Splash([Splash 2.5s])
-    Splash --> Auth{Signed in?}
-    Auth -- no --> Welcome[Welcome / Login / Sign up]
-    Auth -- yes --> Consent{Article 9 consent?}
-    Consent -- no --> A9[Article 9 consent screen]
-    Consent -- yes --> FirstRun{First run done?}
-    FirstRun -- no --> Onboard[Pro onboarding wizard]
-    FirstRun -- yes --> Tabs[Main tabs]
+  <h3>A normal training day</h3>
+  <p>Open Train → tap the next session → log each set with the rest timer → finish → fill the short feedback form (how it felt, soreness, sleep) → see tonnage, muscle volume and any PRs → optionally share the card. It syncs in the background.</p>
 
-    Tabs --> Train[🏋️ Train tab]
-    Tabs --> Plans[📋 Plans tab]
-    Tabs --> Diary[🍽️ Diary tab]
-    Tabs --> Progress[📊 Progress tab]
-    Tabs --> You[👤 You tab]
+  <h3>The weekly coaching loop <span class="pill pro">PRO</span></h3>
+  <p>Weigh in most mornings. Once a week, do the check-in (energy, sleep, soreness, how the week went, adherence). The coach reads that plus your training and weight trend and produces "Your week": what it changed (calories up/down, volume hold/push/cut, deload if needed), what it left alone, and why. It deliberately holds big changes until it has about two weeks of weigh-ins, so the first real adjustment lands around day 14.</p>
 
-    class App,Splash,Welcome,A9,Onboard,Tabs tab
-    class Train,Plans,Diary,Progress,You tab
-</div>
-
-<p>Once past auth + first-run, the user spends most of their time in the five tabs. Each is walked in its own section below.</p>
-
+  <h3>Upgrading, cancelling, signing out, deleting</h3>
+  <ul>
+    <li><strong>Upgrade:</strong> tap a locked Pro feature → the upgrade sheet → it routes to the paywall, where Google handles payment (with the 7-day trial if eligible).</li>
+    <li><strong>Cancel:</strong> You → Subscription → Cancel deep-links into Google Play (Google requires their own screen). Pro stays until the paid period ends, then drops to Free.</li>
+    <li><strong>Sign out:</strong> pushes any unsynced data to the cloud first, then wipes the phone's local copy. Sign in anywhere to get it back.</li>
+    <li><strong>Delete account:</strong> two confirmations, then it deletes everything from the cloud and the phone.</li>
+  </ul>
 </section>
 
-<!-- ============================================================== -->
-<section id="tab-train">
-<h2>5. Train tab (the "Home" surface)</h2>
-
-<p><strong>What it's for.</strong> The screen the user lands on. Shows today's session, weekly progress, the latest coach output, and the day's intake summary. Quick action: tap "Continue session" or "Start next session".</p>
-
-<h3>Screens in this stack</h3>
-<table>
-  <thead><tr><th>Screen</th><th>What it does</th><th>Status</th></tr></thead>
-  <tbody>
-    <tr><td><code>HomeScreen</code></td><td>Today's session card, weekly progress bars (sessions/sets/volume), week-streak chip, mesocycle context, latest coach output preview, today's intake macro chips, FatigueTrendCard, deload banner.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>BuildWorkoutScreen</code></td><td>Pick a routine to start (when no plan is active or for an ad-hoc session).</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>ActiveWorkoutScreen</code></td><td>Set-by-set logger. Weight + reps inputs, rest timer, supersets, warm-up exclusion, Est. 1RM chip, repeat-last chip, plate calculator, exercise swap.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>WorkoutSummaryScreen</code></td><td>"Session complete" recap: tonnage, sets, PR celebrations, share card link.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>WorkoutHistoryScreen</code></td><td>Past sessions, expand any to see set breakdown.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>VolumeHeatmapScreen</code></td><td>Muscle-group volume heatmap on a stylised front+back body figure.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>ShareCardScreen</code></td><td>"Share my session" card (HTML inside WebView, dark theme with brand accent). Hardcoded hex; intentional.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>CoachReviewScreen</code></td><td>Weekly review preview (entry point into CoachOutput from training side).</td><td><span class="pill good">Built</span></td></tr>
-  </tbody>
-</table>
-
-<h3>What the Train tab links to</h3>
-<div class="mermaid">
-flowchart LR
-    Home[HomeScreen]
-    BW[BuildWorkout]
-    AW[ActiveWorkout]
-    WS[WorkoutSummary]
-    Hist[WorkoutHistory]
-    Heat[VolumeHeatmap]
-    Share[ShareCard]
-    CR[CoachReview]
-    Pay[ProUpgrade modal]
-
-    Home -- Start session --> AW
-    Home -- Continue --> AW
-    Home -- Build --> BW --> AW
-    AW -- Finish --> WS
-    WS -- View history --> Hist
-    WS -- Share --> Share
-    Home -- Coach card --> CR
-    CR -- Open --> CoachOutput[You/CoachOutput]
-    Home -- Volume --> Heat
-    Home -- Pro feature gate --> Pay
-</div>
-
-<div class="note">
-The Train tab is the most-used and most-complete surface. No real gaps. Last work landed: skeleton loaders, set-entry repeat-last chip, plate calculator surfacing, stalled-progress nudge.
-</div>
+<!-- ============================================================= -->
+<section id="brain">
+  <h2>5. The coaching brain</h2>
+  <p>The "intelligence" is a set of deterministic engines, not a chatbot. Same inputs always give the same answer, which is what you want for coaching people can trust. In plain terms:</p>
+  <ul>
+    <li><strong>Plan engine</strong> — builds your training block from your goal, experience, equipment and weak points, with sets-per-muscle inside the science-backed range, and progresses the volume week to week.</li>
+    <li><strong>Weekly coach</strong> — reads recovery (soreness × energy) against performance (adherence × PRs), and decides push, hold or cut volume, or call a deload. It <em>holds</em> its decision when it doesn't have enough weigh-ins yet, and says so.</li>
+    <li><strong>Nutrition engine</strong> — works out maintenance calories and protein from your weight (and body-fat % if given), sets a sensible deficit or surplus, adjusts calories from your actual weight trend (capped, never on rapid loss), and suggests a diet break after long cuts.</li>
+    <li><strong>Safety layer</strong> — watches for too-fast weight loss and under-fuelling, and can hold or lock changes. This is the eating-disorder safeguard, and it stays on for everyone.</li>
+    <li><strong>Cardio &amp; recovery</strong> — cardio adds to a fatigue signal the coach reads; calories burned are shown as feedback only, never added to your target.</li>
+  </ul>
 </section>
 
-<!-- ============================================================== -->
-<section id="tab-plans">
-<h2>6. Plans tab</h2>
-
-<p><strong>What it's for.</strong> Manage training plans. Pick a ready-made plan from the library, build a custom plan, edit routines, swap exercises, look up exercises.</p>
-
-<table>
-  <thead><tr><th>Screen</th><th>What it does</th><th>Status</th></tr></thead>
-  <tbody>
-    <tr><td><code>PlansScreen</code></td><td>List of the user's plans, active plan highlighted, archived plans collapsible.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>PlanDetailScreen</code></td><td>The routines that make up a plan, week structure, deload weeks.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>RoutineDetailScreen</code></td><td>The exercises that make up a routine. Per-exercise swap icon opens a substitute modal.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>ExerciseLibraryScreen</code></td><td>Browse the full exercise registry (~450 canonical + user custom).</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>ExerciseDetailScreen</code></td><td>Per-exercise muscle map, execution notes, set log, e1RM trend.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>ManualBuilderScreen</code></td><td>Build a plan from scratch step-by-step.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>PlanLibraryScreen</code></td><td>Browse curated ready-made plans, filtered by division / level.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>MesocycleBuilderScreen</code></td><td>Multi-week progressive structure (MEV → ramp → deload at 60%).</td><td><span class="pill good">Built</span></td></tr>
-  </tbody>
-</table>
-
-<div class="note">
-The Plans tab is feature-complete. Auto-generation (<code>planAutoGen.js</code>) wraps the wizard's week-1 template into a full multi-week periodised plan. The "Coach Builder is AI" trap is avoided — copy describes it as deterministic.
-</div>
-
+<!-- ============================================================= -->
+<section id="services">
+  <h2>6. Services &amp; plumbing</h2>
+  <p>What's switched on, what's coded and waiting for you to deploy or apply.</p>
+  <table>
+    <tr><th>Service</th><th>What it does</th><th>Status</th></tr>
+    <tr><td>Supabase (database + sign-in)</td><td>Stores everything in the cloud (UK), handles email + Google sign-in, row-level security so each person only sees their own data</td><td><span class="pill live">LIVE</span></td></tr>
+    <tr><td>Offline sync</td><td>Logs on the phone first, syncs both ways, resolves clashes by newest-wins</td><td><span class="pill live">LIVE</span></td></tr>
+    <tr><td>The coaching engines</td><td>Plan, weekly coach, nutrition, cardio, recovery, safety</td><td><span class="pill live">LIVE</span></td></tr>
+    <tr><td>Food data (OpenFoodFacts + USDA)</td><td>Barcode and food search, with an offline snapshot fallback</td><td><span class="pill live">LIVE</span></td></tr>
+    <tr><td>Sentry (crash reports)</td><td>Tells you when the app errors, with health data scrubbed off first</td><td><span class="pill live">LIVE</span></td></tr>
+    <tr><td>Local notifications</td><td>Weight, check-in and coaching reminders, with quiet hours</td><td><span class="pill live">LIVE</span></td></tr>
+    <tr><td>Google Play Billing</td><td>Taking the actual payment (rewritten this week for the current library version)</td><td><span class="pill pending">NEEDS YOUR MERCHANT ACCOUNT + ON-DEVICE TEST</span></td></tr>
+    <tr><td>Payment webhook (renewals/cancels)</td><td>Edge function that keeps Pro status in sync with Google</td><td><span class="pill pending">CODE READY · DEPLOY + SET 1 ENV VAR</span></td></tr>
+    <tr><td>Remote push (payment-failure alerts)</td><td>Pushes a "your payment failed" notice; the app's project ID is set, so it just needs the token table + send function deployed</td><td><span class="pill pending">APPLY MIGRATION 053 + DEPLOY send-push</span></td></tr>
+  </table>
 </section>
 
-<!-- ============================================================== -->
-<section id="tab-diary">
-<h2>7. Diary tab</h2>
-
-<p><strong>What it's for.</strong> Food log. Add meals, see today's macros against target, scan barcodes, scan nutrition labels (OCR), favourite foods, copy yesterday's diary.</p>
-
-<table>
-  <thead><tr><th>Screen</th><th>What it does</th><th>Status</th></tr></thead>
-  <tbody>
-    <tr><td><code>DiaryScreen</code></td><td>Date pager, kcal + macro rings, four meal slots (Breakfast/Lunch/Dinner/Snacks), per-meal totals, swipe-delete, copy-yesterday, water tracker.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>FoodSearchScreen</code> (modal)</td><td>Search the food database. Sections: Recents, Favourites, search results. "Add custom food" + "Scan barcode" entry points.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>AddCustomFoodScreen</code> (modal)</td><td>Add a food not in the database. Per-100g + per-serving form.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>ScanBarcodeScreen</code> (modal)</td><td>Live camera barcode scanner. Hits OpenFoodFacts → USDA waterfall.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>ScanLabelScreen</code> (modal)</td><td>OCR fallback: scan a nutrition label when barcode misses.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>FoodInsightsScreen</code></td><td>7-day macro adherence, weight trend smoothing, CSV export.</td><td><span class="pill good">Built</span></td></tr>
-  </tbody>
-</table>
-
-<h3>What's missing on the Diary tab</h3>
-
-<div class="gap">
-<h4>Recipe builder <span class="pill bad">Missing</span></h4>
-<p>The database tables (<code>recipes</code>, <code>recipe_ingredients</code>) exist with full cloud sync wired. There is no screen registered to create, edit, or pick a recipe. The Search tab's "My Recipes" section per <code>UI_FLOWS_LOCKED.md</code> is absent.</p>
-</div>
-
-<div class="gap">
-<h4>Saved meals / meal templates <span class="pill bad">Missing</span></h4>
-<p>The <code>saved_meals</code> table exists. Helpers (<code>getAllSavedMealsSince</code>, <code>applySavedMealFromCloud</code>) exist in <code>src/lib/food/db.js</code>. Cloud round-trip works. No UI to save a meal as a template or apply one. The Search tab's "My Meals" section per the spec is absent.</p>
-</div>
-
-<div class="note">
-<strong>Food dislikes / exclusions</strong> <span class="pill good">Built 2026-05-27</span>
-<p>Long-press any food row to cycle <em>none → fav → dislike → none</em>. Disliked foods render with struck-through name + cross-circle and surface in a collapsible "Excluded" section above search. Shared <code>kind</code> column on <code>food_favourites</code> (cloud migration 048) carries both states in one table. Coach-side meal-suggester filter is future-wired; inert until a meal suggester ships.</p>
-</div>
-
+<!-- ============================================================= -->
+<section id="data">
+  <h2>7. Data &amp; privacy</h2>
+  <p><strong>What it holds:</strong> workouts, body weight and measurements, the food diary, weekly check-ins (energy, sleep, mood), the eating-habits screening answers, steps, cardio, and anonymous usage stats. The body, food and check-in data is health-sensitive.</p>
+  <p><strong>Where it lives:</strong> on the phone in storage the operating system encrypts, and in the cloud (Supabase, UK). Signing out wipes the phone's copy entirely.</p>
+  <p><strong>Who can see it:</strong> only the user. Row-level security means one account can never read another's data. Crash reports go to Sentry with every sensitive field stripped off first (this was checked, the scrubbing is thorough). Google sees billing only. Food databases see only the barcode or search term, never your data.</p>
+  <p><strong>Consent:</strong> a health-data consent screen blocks the app until the user agrees, and every agreement is logged for the audit trail. They can withdraw it later.</p>
+  <p><strong>Identity:</strong> everyone has a real account (no anonymous mode), each row is tied to its owner and that link never changes, and signing out leaves nothing behind on the device.</p>
+  <p class="note">The privacy posture is genuinely strong. The gaps below are about promises in the policy that the code doesn't yet keep, not about data leaking.</p>
 </section>
 
-<!-- ============================================================== -->
-<section id="tab-progress">
-<h2>8. Progress tab</h2>
-
-<p><strong>What it's for.</strong> Look back. Trends. Personal records. Body metrics. Year of Lifts story.</p>
-
-<table>
-  <thead><tr><th>Screen</th><th>What it does</th><th>Status</th></tr></thead>
-  <tbody>
-    <tr><td><code>AnalyticsScreen</code></td><td>Hub for Progress tab. Tiles into the screens below.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>WorkoutHistoryScreen</code></td><td>Same as Train tab — every completed session.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>VolumeHeatmapScreen</code></td><td>Muscle-group volume heatmap.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>PRWallScreen</code></td><td>Personal records with strength-standard labels (Beginner → Elite) by bodyweight ratio.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>BodyMetricsScreen</code></td><td>Daily weight log, body fat %, measurements, weight trend chart.</td><td><span class="pill warn">Partial</span></td></tr>
-    <tr><td><code>ExerciseLibraryScreen / ExerciseDetailScreen</code></td><td>Per-lift trend and e1RM history.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>YearOfLiftsScreen</code></td><td>Spotify-Wrapped-style swipeable story of the year. Annual unlock.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>ShareCardScreen</code></td><td>Share a workout / PR / week.</td><td><span class="pill good">Built</span></td></tr>
-  </tbody>
-</table>
-
-<div class="gap">
-<h4>Body composition trend charts beyond weight <span class="pill warn">Partial</span></h4>
-<p><code>BodyMetricsScreen</code> ships a <code>WeightTrendChart</code> (line 120). There is no BF % trend chart, no measurement-over-time chart. Pro tier promises full body-composition charts; only the weight chart actually delivers.</p>
-</div>
-
-<div class="gap">
-<h4>Photo progress timeline <span class="pill info">Deferred</span></h4>
-<p>Spec marks this as v1.1 (deferred). No <code>Photo*</code> screen is registered. Listed here so it's not forgotten when v1.1 work starts.</p>
-</div>
-
-</section>
-
-<!-- ============================================================== -->
-<section id="tab-you">
-<h2>9. You tab (Profile / Settings / Coach)</h2>
-
-<p><strong>What it's for.</strong> Account stuff, settings, the coach output, nutrition targets, body metrics input, weekly check-in, subscription, privacy, sign out, delete account. The "boring tab" that holds everything administrative plus the coaching surface that drives the product.</p>
-
-<table>
-  <thead><tr><th>Screen</th><th>What it does</th><th>Status</th></tr></thead>
-  <tbody>
-    <tr><td><code>AthleteHubScreen</code></td><td>The tab's landing. Tiles into weekly check-in, body metrics, coach output, goal lock, held decisions, settings.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>SettingsScreen</code></td><td>Notifications, units, health (HealthKit / Health Connect), privacy, credits, sign-out, account deletion, debug log.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>NutritionTargetsScreen</code></td><td>Daily kcal + macro targets. Auto-computed from onboarding; user can override.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>NutritionEducationScreen</code></td><td>One-time explainer for the food layer.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>BodyMetricsScreen</code></td><td>Same as Progress tab.</td><td><span class="pill warn">Partial</span></td></tr>
-    <tr><td><code>WeeklyCheckInScreen</code></td><td>Once-a-week form: energy, soreness, stress, sleep, adherence chips, joint pain, sore muscles, notes.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>CoachOutputScreen</code></td><td>The weekly coach card. Trend chip, headline, what-went-well, what-was-off, kcal adjustment (auto-applied), training focus, recent decisions.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>CoachHeldHistoryScreen</code></td><td>History of held-decisions (when the coach refused to act and why).</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>BlockReflectionScreen</code></td><td>End-of-mesocycle reflection.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>ProGoalSetupScreen / GoalChangeSummaryScreen</code></td><td>Change goal / phase. Surfaces consequences.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>GoalLockConsentScreen</code></td><td>Self-attested experience confirmation for physique competition / advanced recomp goals.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>NotificationSettingsScreen / CoachingRemindersScreen</code></td><td>Toggle morning weight + weekly check-in reminders. Quiet hours configurable.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>WellbeingCheckScreen</code></td><td>Lightweight mood / energy check, separate from the formal weekly check-in.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>ImportScreen</code></td><td>Import workout history from CSV / JSON backup.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>PrivacyPolicyScreen</code></td><td>Privacy policy (also at volyume.app/privacy when DNS resolves).</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>SubscriptionScreen / SubscriptionPolicyScreen</code></td><td>Tier state, current price, days remaining, manage subscription.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>CascadeGateScreen</code> (modal)</td><td>Modal that appears at trial day 19 / 21. Pay / skip / read policy.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>PaywallScreen / ProUpgradeScreen</code> (modals)</td><td>Differential paywall / direct upgrade.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>CreditsScreen</code></td><td>OFF, CoFID, USDA attributions.</td><td><span class="pill good">Built</span></td></tr>
-    <tr><td><code>DebugLogScreen</code></td><td>Last 200 in-app errors. For your own troubleshooting.</td><td><span class="pill good">Built</span></td></tr>
-  </tbody>
-</table>
-
-<h3>You tab links</h3>
-<div class="mermaid">
-flowchart TB
-    Hub[AthleteHub]
-    Hub --> Settings
-    Hub --> Nut[NutritionTargets]
-    Hub --> Body[BodyMetrics]
-    Hub --> WCI[WeeklyCheckIn]
-    Hub --> CO[CoachOutput]
-    Hub --> Held[CoachHeldHistory]
-    Hub --> Goal[ProGoalSetup]
-    Hub --> Lock[GoalLockConsent]
-    Hub --> Sub[Subscription]
-    Settings --> Privacy[PrivacyPolicy]
-    Settings --> Notifs[NotificationSettings]
-    Settings --> Credits
-    Settings --> Debug[DebugLog]
-    Settings --> Import
-    Sub --> Cascade[CascadeGate modal]
-    Sub --> Paywall[Paywall modal]
-    Sub --> SubPol[SubscriptionPolicy]
-    WCI --> CO
-    CO --> Held
-    Goal --> Lock
-    Goal --> GCS[GoalChangeSummary]
-</div>
-</section>
-
-<!-- ============================================================== -->
-<section id="flow-onboarding">
-<h2>10. Flow: new user onboarding</h2>
-
-<p>What happens between a fresh app install and the first time the user sees the Home tab.</p>
-
-<div class="mermaid">
-flowchart TB
-    Install([Fresh install])
-    Install --> Welcome[Welcome screen]
-    Welcome --> Auth{Sign in or Sign up}
-    Auth -- Sign up email --> Email[Email + password]
-    Auth -- Sign in with Google --> Google[Google OAuth]
-    Auth -- Sign in with Apple --> Apple[Apple OAuth]
-    Auth -- Continue locally --> Local[Local-only user]
-    Email --> A9
-    Google --> A9
-    Apple --> A9
-    Local --> A9
-    A9[Article 9 health-data consent]
-    A9 -- Decline --> Bounce[Bounced back to Welcome]
-    A9 -- Agree --> ProOB1[Step 1: Welcome &amp; goal pick]
-    ProOB1 --> ProOB2[Step 2: Body profile - height, weight, sex, DOB]
-    ProOB2 --> ProOB3[Step 3: Goal selection]
-    ProOB3 --> GoalLock{Advanced goal?}
-    GoalLock -- yes --> GLC[GoalLockConsent screen]
-    GoalLock -- no --> ProOB4[Step 4: SCOFF screener]
-    GLC --> ProOB4
-    ProOB4 --> ProOB5[Step 5: Activity level]
-    ProOB5 --> ProOB6[Step 6: Equipment + frequency]
-    ProOB6 --> ProOB7[Step 7: Nutrition target preview]
-    ProOB7 --> ProOB8[Step 8: Permissions - notifications]
-    ProOB8 --> Done[ProSetupComplete - hand-off]
-    Done --> Home[Home tab]
-</div>
-
-<h3>What was checked</h3>
-<ul>
-  <li><span class="pill good">Built</span> Article 9 consent screen exists, separate from ToS, audit row written to <code>consent_log</code>.</li>
-  <li><span class="pill good">Built</span> Body profile saves to <code>user_body_profile</code> table.</li>
-  <li><span class="pill good">Built</span> SCOFF screener present.</li>
-  <li><span class="pill good">Built</span> Goal lock fires only for physique competition / advanced recomp.</li>
-  <li><span class="pill good">Built</span> Nutrition targets auto-computed from onboarding profile (FFM-aware floor).</li>
-  <li><span class="pill info">Removed deliberately</span> The "Food layer intro" screen was deleted 2026-05-24 (it was marketing fluff; the Diary tab is the real entry point). Not a gap.</li>
-</ul>
-
-</section>
-
-<!-- ============================================================== -->
-<section id="flow-daily">
-<h2>11. Flow: a normal training day</h2>
-
-<div class="mermaid">
-flowchart TB
-    Open([User opens app, lands on Home])
-    Open --> AM{Logged morning weight today?}
-    AM -- no --> WeightModal[Quick log weight modal]
-    AM -- yes --> Card[Today's session card]
-    WeightModal --> Card
-    Card -- Start session --> AW[ActiveWorkout]
-    AW -- Set complete --> Rest[Rest timer fires]
-    Rest -- Timer ends --> Notif[Sticky notification + sound]
-    Rest --> NextSet[Next set]
-    NextSet --> AW
-    AW -- All sets done --> Finish[Finish session]
-    Finish --> WS[WorkoutSummary]
-    WS --> Diary[User taps Diary tab]
-    Diary --> AddFood[Add food via Search or Scan]
-    AddFood --> Saved[Macro rings update]
-    Saved --> Insights[Tap Insights for 7-day view]
-</div>
-
-<h3>What was checked</h3>
-<ul>
-  <li><span class="pill good">Built</span> Morning weight quick-log modal fires when no entry exists for today.</li>
-  <li><span class="pill good">Built</span> Active workout: set entry, rest timer, supersets, warm-up exclusion, plate calculator.</li>
-  <li><span class="pill good">Built</span> Rest timer fires a sticky notification with end time + sound on completion.</li>
-  <li><span class="pill good">Built</span> Workout summary writes to <code>workouts</code> + <code>workout_sets</code>, fires PR celebrations.</li>
-  <li><span class="pill good">Built</span> Diary updates macro rings live as foods are added.</li>
-</ul>
-
-</section>
-
-<!-- ============================================================== -->
-<section id="flow-weekly">
-<h2>12. Flow: weekly check-in &amp; coach output</h2>
-
-<p>The most important automated flow. This is where the product earns its keep.</p>
-
-<div class="mermaid">
-flowchart TB
-    Day7([7 days since last check-in])
-    Day7 --> Reminder[Push notification - Weekly check-in]
-    Reminder --> WCI[WeeklyCheckIn screen]
-    WCI --> Energy[Energy score 1-5]
-    Energy --> Sore[Soreness 1-5]
-    Sore --> Stress[Stress 1-5]
-    Stress --> Sleep[Sleep hours]
-    Sleep --> Cals[Calorie adherence: hit/under/over/untracked]
-    Cals --> Steps[Step adherence]
-    Steps --> Train[Training performance feedback]
-    Train --> Joint[Joint pain yes/no]
-    Joint --> Submit[Submit]
-    Submit --> Save[Save to weekly_checkins table - queues sync to weekly_checkins_v2]
-    Save --> Compute[runWeeklyCoach computes adjustments]
-    Compute --> Safe{ED-pattern or FFM-floor triggered?}
-    Safe -- yes --> Held[Decision held with reason - HeldDecisionCard rendered]
-    Safe -- no --> Apply[Auto-apply calorie adjustment]
-    Apply --> NT[saveNutritionTargets - new kcal, protein same, fat/carbs ratio-scaled]
-    NT --> CO[CoachOutput screen renders]
-    Held --> CO
-    CO --> Sync[Background sync pushes to cloud]
-</div>
-
-<h3>What was checked</h3>
-<ul>
-  <li><span class="pill good">Built</span> Check-in form persists every field.</li>
-  <li><span class="pill good">Built</span> <code>runWeeklyCoach()</code> in <code>src/lib/weeklyCoach.js</code> tested at the algorithm layer (50+ assertions, 10+ simulator scenarios). Caps adjustments at ±300 kcal/week (±120 at low confidence).</li>
-  <li><span class="pill good">Built</span> Auto-apply of calorie change: <code>CoachOutputScreen.js:666</code> reads the adjustment, calls <code>saveNutritionTargets</code> with the new kcal + ratio-scaled fat/carbs, protein constant.</li>
-  <li><span class="pill good">Built</span> FFM safety floor (30 kcal/kg FFM/day) blocks deficits below it.</li>
-  <li><span class="pill good">Built</span> ED-pattern detector (4 signals, 2/3 threshold under goal lock).</li>
-  <li><span class="pill good">Built</span> Rapid-loss compression: bypasses the 2-week cooldown to add calories when weight loss &gt; 1.5%/week AND energy ≤ 2.</li>
-  <li><span class="pill warn">Partial</span> Training adjustments (sets / RPE) are displayed but not auto-applied like calorie changes are. User must hand-edit routines.</li>
-</ul>
-
-</section>
-
-<!-- ============================================================== -->
-<section id="flow-payment">
-<h2>13. Flow: subscription &amp; trial cascade</h2>
-
-<p>Two-tier model (founder consolidated 2026-05-25): Free and Pro. Single 21-day Pro trial on signup. No "Complete tier" any more. Billing is direct Google Play Billing (no RevenueCat).</p>
-
-<div class="mermaid">
-flowchart TB
-    Signup([User signs up])
-    Signup --> Trial[Pro trial starts - day 1]
-    Trial --> Daily{Day count}
-    Daily -- day 1 to 18 --> Free[Full Pro access free]
-    Daily -- day 19 --> Notif19[Push: trial ends in 2 days]
-    Notif19 --> Modal19[CascadeGate modal: Pay or Skip to Free]
-    Modal19 -- Pay --> RTDN[Play Billing receipt to RTDN webhook]
-    Modal19 -- Skip --> Free
-    Daily -- day 21 --> Auto[Auto-downgrade to Free unless paid]
-    RTDN --> EdgeFn[supabase/functions/play-billing-rtdn validates]
-    EdgeFn --> Upgrade[upgrade_tier_for_user RPC writes tier_history]
-    Upgrade --> Pro[User now on paid Pro]
-    Auto --> Free
-    Free --> Paywall[Pro feature gates show Paywall modal]
-    Paywall --> Modal19
-</div>
-
-<h3>What was checked</h3>
-<ul>
-  <li><span class="pill good">Built</span> Trial state lives in <code>profiles.tier</code> + <code>profiles.trial_state</code>; transitions logged in <code>tier_history</code> with reasons (<code>auto_downgrade</code>, <code>user_skip</code>, <code>user_paid</code>).</li>
-  <li><span class="pill good">Built</span> Cascade gate UI at <code>CascadeGateScreen</code>; appears at day 19 + day 21.</li>
-  <li><span class="pill good">Built</span> Play Billing client (<code>src/lib/payments/playBilling.js</code>) + catalogue + restore.</li>
-  <li><span class="pill good">Built</span> RTDN edge function (<code>supabase/functions/play-billing-rtdn</code>) + contract test.</li>
-  <li><span class="pill warn">Partial</span> Sandbox purchase has not been run end-to-end. Code exists; needs founder to: deploy the edge function, create SKUs in Play Console, set up Pub/Sub topic, run a sandbox tester through the full purchase, verify <code>tier_history</code> row + <code>trial_state</code> update.</li>
-  <li><span class="pill good">Built</span> Re-entry rules: a user who skipped the cascade cannot re-enter the trial; a lapsed Pro reverts to Free, not back to trial.</li>
-</ul>
-
-</section>
-
-<!-- ============================================================== -->
-<section id="flow-account">
-<h2>14. Flow: sign-out, restore, delete account</h2>
-
-<div class="mermaid">
-flowchart TB
-    Signed([User signed in])
-    Signed --> Action{Action}
-    Action -- Sign out --> SO[signOut]
-    SO --> Wipe[AsyncStorage.clear + SQLite wipe + SecureStore wipe]
-    Wipe --> Welcome
-    Welcome([Welcome screen])
-    Action -- Delete account --> DA[Settings: Delete account]
-    DA --> Confirm[Two-step destructive confirm]
-    Confirm --> Audit1[account_deletions_log row written - started_at set]
-    Audit1 --> RPCDel[delete_user_data RPC wipes every user-scoped cloud table]
-    RPCDel --> AuthDel[auth.admin.deleteUser via Edge Function]
-    AuthDel --> Audit2[account_deletions_log row updated - completed_at set]
-    Audit2 --> Wipe
-    Signed --> Newdev[Sign in on new device]
-    Newdev --> Pull[Background sync pulls everything]
-    Pull --> Home[Home tab populated]
-</div>
-
-<h3>What was checked</h3>
-<ul>
-  <li><span class="pill good">Built</span> Sign-out is a full device wipe. No carve-outs. (Founder direction 2026-05-24.)</li>
-  <li><span class="pill good">Built</span> Restore flow: sign back in on the same or new device pulls all cloud data via the sync layer.</li>
-  <li><span class="pill good">Built</span> Account deletion: audit log + cloud wipe RPC + auth.admin.deleteUser, two-step destructive confirm UI.</li>
-  <li><span class="pill warn">Open</span> "Delete account end-to-end re-test" outstanding in BACKLOG.md design-debt table. Code wiring complete; one full happy-path device run remains.</li>
-</ul>
-
-</section>
-
-<!-- ============================================================== -->
-<section id="data-local">
-<h2>15. Where data lives on the device</h2>
-
-<p>The device uses <strong>SQLite</strong> (via <code>expo-sqlite</code>) as the single source of truth. The cloud is a mirror, not the master. This means the app works fully offline; sync runs in the background.</p>
-
-<p>There are <strong>39 tables</strong> in the local database. The big categories:</p>
-
-<table>
-  <thead><tr><th>Category</th><th>Tables</th><th>What's stored</th></tr></thead>
-  <tbody>
-    <tr><td>Identity</td><td><code>user_body_profile</code></td><td>Sex, DOB, height, training experience, goal.</td></tr>
-    <tr><td>Training plans</td><td><code>programmes</code>, <code>routines</code>, <code>routine_exercises</code>, <code>mesocycles</code>, <code>mesocycle_weeks</code>, <code>peak_week_plans</code></td><td>The user's plan(s), routines inside them, exercises inside routines, multi-week structure.</td></tr>
-    <tr><td>Training history</td><td><code>workouts</code>, <code>workout_sets</code>, <code>workout_notes</code>, <code>workout_notes_v</code></td><td>Every completed session and every set within it.</td></tr>
-    <tr><td>Exercises</td><td><code>exercises</code>, <code>custom_exercises</code>, <code>exercise_user_notes</code>, <code>exercise_goals</code></td><td>Canonical exercise library (450+ rows) + per-user custom exercises (renamed to <code>custom_exercises</code> after the identity refactor).</td></tr>
-    <tr><td>Adaptive engine</td><td><code>adaptation_events</code>, <code>planned_muscle_volume</code>, <code>weekly_checkins</code>, <code>coach_outputs</code>, <code>user_insights</code>, <code>ed_pattern_flags</code></td><td>Coach inputs + outputs over time, the adaptive engine's internal state.</td></tr>
-    <tr><td>Body</td><td><code>body_metric_log</code>, <code>morning_weights</code></td><td>Daily weight, body fat %, measurements.</td></tr>
-    <tr><td>Food (Move #1 + #1.5)</td><td><code>foods</code>, <code>food_entries</code>, <code>custom_foods</code>, <code>saved_meals</code>, <code>recipes</code>, <code>recipe_ingredients</code>, <code>food_favourites</code>, <code>daily_water</code>, <code>daily_intake_rollups</code></td><td>Food log, custom foods, recipes, favourites, water, computed daily totals.</td></tr>
-    <tr><td>Nutrition targets</td><td><code>nutrition_targets</code></td><td>kcal + macro targets, BMR / TDEE, phase, confidence.</td></tr>
-    <tr><td>Subscription</td><td><code>tier_history</code></td><td>Every transition between Free / Pro / trial states, with reason.</td></tr>
-    <tr><td>Telemetry</td><td><code>engine_telemetry</code></td><td>Engine events (anonymised) for debugging and dashboards.</td></tr>
-    <tr><td>Sync plumbing</td><td><code>pending_sync_ops</code>, <code>sync_meta</code>, <code>adaptation_events_sync</code>, <code>planned_muscle_volume_sync</code></td><td>Queue of operations waiting to push to cloud; last-pulled timestamps.</td></tr>
-  </tbody>
-</table>
-
-<div class="note">
-Local SQLite is <strong>wiped on sign-out</strong>. The user's data lives in two places — on the device they're signed into right now, and in the cloud. Sign in on a new device, sync pulls everything back from the cloud.
-</div>
-
-</section>
-
-<!-- ============================================================== -->
-<section id="data-cloud">
-<h2>16. Where data lives in the cloud</h2>
-
-<p>The cloud is <strong>Supabase</strong> (Postgres + RLS + Edge Functions). Every user-scoped table has Row Level Security ON; users can only read / write their own rows.</p>
-
-<p>The sync registry — the master list of which tables sync — has <strong>16 tables</strong>:</p>
-
-<table>
-  <thead><tr><th>Cloud table</th><th>Direction</th><th>Conflict strategy</th><th>Soft delete</th></tr></thead>
-  <tbody>
-    <tr><td><code>weekly_checkins_v2</code></td><td>bidirectional</td><td>last-write-wins</td><td>no</td></tr>
-    <tr><td><code>body_metrics</code> (alias of <code>body_composition_log</code> registry name)</td><td>bidirectional</td><td>last-write-wins</td><td>yes</td></tr>
-    <tr><td><code>food_entries</code>, <code>custom_foods</code>, <code>saved_meals</code>, <code>recipes</code>, <code>recipe_ingredients</code></td><td>bidirectional via bulk RPC (<code>food_sync_push</code> / <code>food_sync_pull</code>)</td><td>last-write-wins</td><td>yes</td></tr>
-    <tr><td><code>food_favourites</code>, <code>daily_water</code></td><td>bidirectional via bulk RPC</td><td>last-write-wins</td><td>no</td></tr>
-    <tr><td><code>daily_intake_rollups</code></td><td>pull-only (server computes)</td><td>server wins</td><td>no</td></tr>
-    <tr><td><code>nutrition_targets</code></td><td>bidirectional</td><td>last-write-wins</td><td>no</td></tr>
-    <tr><td><code>users_profile</code> (registry: <code>profiles</code>)</td><td>bidirectional</td><td>per-column merge</td><td>no</td></tr>
-    <tr><td><code>notification_preferences</code></td><td>bidirectional</td><td>last-write-wins (composite PK)</td><td>no</td></tr>
-    <tr><td><code>ed_pattern_flags</code>, <code>tier_history</code></td><td>pull-only</td><td>server wins</td><td>no</td></tr>
-  </tbody>
-</table>
-
-<div class="note">
-"Last-write-wins" means: when both device and cloud have a row with the same id, whichever side has the newer <code>updated_at</code> timestamp wins. "Per-column merge" (only for profiles) means: each field can be updated independently — Device A changes first_name, Device B changes units, both land safely. The merge is gated by a <code>column_updates_at</code> JSON column on the cloud side.
-</div>
-
-<p>The audit query at <code>supabase/audit_cloud_schema_drift.sql</code> can be run any time in the Supabase SQL Editor to verify every column the client expects is present on the cloud. (Run it after every sync handler change.)</p>
-
-</section>
-
-<!-- ============================================================== -->
-<section id="data-sync">
-<h2>17. How data syncs between device and cloud</h2>
-
-<div class="mermaid">
-flowchart LR
-    Write[User write on device]
-    Write --> Local[SQLite saved immediately]
-    Local --> Queue[pending_sync_ops queued]
-    Local --> UI[UI updates instantly]
-    Queue --> Trigger{Sync trigger}
-    Trigger -- App foregrounds --> Run[syncAll]
-    Trigger -- Network reconnects --> Run
-    Trigger -- Debounced write --> Run
-    Trigger -- 15-min interval --> Run
-    Run --> Push[Per-table push for migrated tables - then legacy bulk]
-    Push --> Cloud[Supabase]
-    Cloud --> Pull[Per-table pull for migrated tables - then legacy bulk]
-    Pull --> Merge[LWW + soft-delete + tombstone propagation]
-    Merge --> Local2[SQLite updated from cloud]
-    Local2 --> UI2[UI re-renders if focused]
-</div>
-
-<h3>How it actually works</h3>
-<ul>
-  <li>Every write hits SQLite first. The UI updates instantly. The user never waits on the network.</li>
-  <li>The write is queued in <code>pending_sync_ops</code> for later push.</li>
-  <li>One of four triggers fires <code>syncAll</code>: app foregrounds, network reconnects, debounced after a write, or every 15 minutes.</li>
-  <li>The 16 registered tables push and pull individually; legacy bulk push/pull handles anything not yet migrated to the per-table transport.</li>
-  <li>The sync status badge in the navigation header shows <code>synced</code> / <code>pending</code> / <code>offline</code> / <code>error</code> with a tap-for-details sheet.</li>
-</ul>
-
-<h3>What was checked</h3>
-<ul>
-  <li><span class="pill good">Built</span> All 16 registered tables on per-table transport (<code>src/lib/sync/tables/</code> — one file per non-food table, food-domain coordinator for the 7 food tables).</li>
-  <li><span class="pill good">Built</span> Regression matrix at <code>src/lib/sync/__tests__/sync.regressionMatrix.test.js</code> — 50 actionable assertions across every table for insert / update / soft-delete / pull / conflict / push-error scenarios. Tests against mocked Supabase, fast.</li>
-  <li><span class="pill good">Built</span> Schema drift audit at <code>supabase/audit_cloud_schema_drift.sql</code> — pasted into Supabase SQL Editor returns any client-vs-cloud column mismatches.</li>
-  <li><span class="pill info">Out of scope (deleted 2026-05-27)</span> Live-cloud two-device propagation tests (T7 / T8 from the testing spec). The scenario doesn't apply to an Android-only single-device product. Sign-out + sign-in on a new handset is manually tested per release.</li>
-</ul>
-
-</section>
-
-<!-- ============================================================== -->
-<section id="externals">
-<h2>18. External services</h2>
-
-<table>
-  <thead><tr><th>Service</th><th>What it's for</th><th>Status</th></tr></thead>
-  <tbody>
-    <tr><td><strong>Supabase</strong> (eu-region)</td><td>Auth, Postgres database, RLS, RPCs, Edge Functions. Production project active.</td><td><span class="pill good">Live</span></td></tr>
-    <tr><td><strong>OpenFoodFacts</strong> (free)</td><td>Live barcode lookup. UK products covered.</td><td><span class="pill good">Live</span></td></tr>
-    <tr><td><strong>USDA FoodData Central</strong> (free, key optional)</td><td>Fallback after OFF misses. Optional API key in <code>EXPO_PUBLIC_USDA_API_KEY</code> repo secret.</td><td><span class="pill good">Live</span></td></tr>
-    <tr><td><strong>ML Kit (text recognition)</strong></td><td>Free on-device OCR for nutrition labels (replaces the paid Google Vision adapter).</td><td><span class="pill good">Live</span></td></tr>
-    <tr><td><strong>Sentry</strong> (free tier)</td><td>Crash / error reporting with PII scrub. Session tagging + auto-instrumentation.</td><td><span class="pill good">Live</span></td></tr>
-    <tr><td><strong>Google Play Billing</strong></td><td>In-app subscriptions. Direct integration (no RevenueCat per founder override 2026-05-25).</td><td><span class="pill warn">Code complete, not yet sandbox-tested</span></td></tr>
-    <tr><td><strong>Pub/Sub (Google Cloud)</strong></td><td>Real-Time Developer Notifications target for Play Billing receipts → Supabase Edge Function.</td><td><span class="pill warn">Code complete, not yet deployed</span></td></tr>
-    <tr><td><strong>Apple App Store</strong></td><td>iOS path. Out of scope per founder decision (Android-only Phase B).</td><td><span class="pill info">Deferred</span></td></tr>
-  </tbody>
-</table>
-
-</section>
-
-<!-- ============================================================== -->
-<section id="feature-matrix">
-<h2>19. Feature matrix</h2>
-
-<p>Every feature in the spec docs, every feature found in the code, with status. This is what you check against when sideloading an APK.</p>
-
-<h3>Food &amp; nutrition</h3>
-<table>
-  <thead><tr><th>Feature</th><th>Status</th><th>Evidence / Notes</th></tr></thead>
-  <tbody>
-    <tr><td>Food logging (manual entry)</td><td><span class="pill good">Built</span></td><td><code>DiaryScreen</code> + <code>FoodSearchScreen</code> + <code>FoodDetailSheet</code></td></tr>
-    <tr><td>Food favourites (like)</td><td><span class="pill good">Built</span></td><td><code>food_favourites</code> table + heart toggle on every row</td></tr>
-    <tr><td>Food dislikes (exclude / "don't suggest")</td><td><span class="pill good">Built</span></td><td>2026-05-27. <code>food_favourites.kind</code> column (mig 048), long-press cycle on every row, Excluded section in Search. Coach-side filter future-wired.</td></tr>
-    <tr><td>Barcode scan</td><td><span class="pill good">Built</span></td><td><code>ScanBarcodeScreen</code>, vision-camera CodeScanner, OFF + USDA waterfall</td></tr>
-    <tr><td>OCR nutrition label scan</td><td><span class="pill good">Built</span></td><td><code>ScanLabelScreen</code> with ML Kit text recognition</td></tr>
-    <tr><td>Custom food (per 100 g + per serving)</td><td><span class="pill good">Built</span></td><td><code>AddCustomFoodScreen</code> + <code>custom_foods</code> table with <code>barcode_ean</code></td></tr>
-    <tr><td>Recipe builder UI</td><td><span class="pill bad">Missing</span></td><td>Tables + sync wired (mig 015 + 046). No screen registered.</td></tr>
-    <tr><td>Saved meals UI (meal templates)</td><td><span class="pill bad">Missing</span></td><td>Tables + helpers exist. No screen to create / pick / apply.</td></tr>
-    <tr><td>Daily water tracker</td><td><span class="pill good">Built</span></td><td>Inline on <code>DiaryScreen</code> with increment / decrement</td></tr>
-    <tr><td>Macro rings (visual targets)</td><td><span class="pill good">Built</span></td><td><code>components/food/MacroRings.js</code> (Skia-based, animated)</td></tr>
-    <tr><td>7-day macro adherence</td><td><span class="pill good">Built</span></td><td><code>FoodInsightsScreen</code></td></tr>
-    <tr><td>CSV export (food + workout history)</td><td><span class="pill good">Built</span></td><td>Settings → Export</td></tr>
-    <tr><td>OFF write-back queue</td><td><span class="pill good">Built</span></td><td>Custom foods with barcode get pushed back to OFF</td></tr>
-    <tr><td>Bundled OFF UK snapshot</td><td><span class="pill info">Deferred</span></td><td>Spec defers to v1.1; current live OFF API call is sufficient.</td></tr>
-  </tbody>
-</table>
-
-<h3>Coaching engine</h3>
-<table>
-  <thead><tr><th>Feature</th><th>Status</th><th>Evidence / Notes</th></tr></thead>
-  <tbody>
-    <tr><td>Weekly check-in form</td><td><span class="pill good">Built</span></td><td><code>WeeklyCheckInScreen</code>, persists every field</td></tr>
-    <tr><td>Coach output card</td><td><span class="pill good">Built</span></td><td><code>CoachOutputScreen</code> ~730 lines: trend, headline, decision, focus, recent decisions</td></tr>
-    <tr><td>Calorie adjustment auto-apply</td><td><span class="pill good">Built</span></td><td><code>CoachOutputScreen.js:666</code> — auto-write to nutrition_targets, protein constant, fat/carbs ratio-scaled</td></tr>
-    <tr><td>Training adjustment auto-apply</td><td><span class="pill warn">Partial</span></td><td>Engine surfaces volume / RPE suggestions; user must hand-edit routines. Asymmetric with calorie path.</td></tr>
-    <tr><td>FFM-aware safety floor</td><td><span class="pill good">Built</span></td><td>30 kcal/kg FFM/day. Tier-blind.</td></tr>
-    <tr><td>ED-pattern detector</td><td><span class="pill good">Built</span></td><td>4-signal, 2/3 threshold under goal-lock. <code>edPatternDetector.js</code></td></tr>
-    <tr><td>Goal lock (advanced goals)</td><td><span class="pill good">Built</span></td><td><code>GoalLockConsentScreen</code>; physique competition / advanced recomp only</td></tr>
-    <tr><td>Rapid-loss upward gate compression</td><td><span class="pill good">Built</span></td><td><code>weeklyCoach.js</code>; +calories immediately when weight loss &gt; 1.5%/wk AND energy ≤ 2</td></tr>
-    <tr><td>Held decisions card</td><td><span class="pill good">Built</span></td><td>Renders ED-pattern, FFM-floor, rapid-loss, data-thin holds</td></tr>
-    <tr><td>SCOFF screener</td><td><span class="pill good">Built</span></td><td>In onboarding step 7</td></tr>
-    <tr><td>Diet break trigger (MATADOR)</td><td><span class="pill good">Built</span></td><td>Fires at 8+ weeks in deficit, calm suggestion card</td></tr>
-    <tr><td>Block reflection</td><td><span class="pill good">Built</span></td><td><code>BlockReflectionScreen</code>; end-of-mesocycle review</td></tr>
-  </tbody>
-</table>
-
-<h3>Training</h3>
-<table>
-  <thead><tr><th>Feature</th><th>Status</th><th>Evidence / Notes</th></tr></thead>
-  <tbody>
-    <tr><td>Active workout logger</td><td><span class="pill good">Built</span></td><td><code>ActiveWorkoutScreen</code> ~1200 lines</td></tr>
-    <tr><td>Rest timer (live notification)</td><td><span class="pill good">Built</span></td><td><code>RestTimer</code> + sticky / ongoing notification</td></tr>
-    <tr><td>Superset pairing</td><td><span class="pill good">Built</span></td><td>Pair / Paired button on <code>ActiveWorkoutScreen</code></td></tr>
-    <tr><td>Myo-rep / rest-pause set types</td><td><span class="pill good">Built</span></td><td>Set type picker; cluster banner with mini-set counter</td></tr>
-    <tr><td>Live e1RM chip</td><td><span class="pill good">Built</span></td><td>SetEntry shows "Est. max ≈ Nkg" as weight × reps entered</td></tr>
-    <tr><td>Plate calculator</td><td><span class="pill good">Built</span></td><td>"Plates" pill on SetEntry; opens pre-filled calculator</td></tr>
-    <tr><td>Exercise swap (per-routine, permanent)</td><td><span class="pill good">Built</span></td><td>Swap icon on RoutineDetailScreen rows</td></tr>
-    <tr><td>Auto-generated deload weeks</td><td><span class="pill good">Built</span></td><td><code>shouldDeload</code> + amber banner on HomeScreen</td></tr>
-    <tr><td>Plan auto-generation</td><td><span class="pill good">Built</span></td><td><code>planAutoGen.js</code> wraps wizard week-1 into a full periodised plan</td></tr>
-    <tr><td>Mesocycle context chip</td><td><span class="pill good">Built</span></td><td>"Week 3 of 6 · RIR 1" or "Deload · pull effort back" on workout card</td></tr>
-    <tr><td>Stalled-progress nudge</td><td><span class="pill good">Built</span></td><td>First working set: "Try N+2.5kg × R-1, or stick at N for R+1"</td></tr>
-    <tr><td>Repeat-last quick chip</td><td><span class="pill good">Built</span></td><td>One-tap copy of last logged set</td></tr>
-    <tr><td>Discard workout cleanup</td><td><span class="pill good">Built</span></td><td>Hard-deletes incomplete workout row + sets</td></tr>
-  </tbody>
-</table>
-
-<h3>Progress &amp; analytics</h3>
-<table>
-  <thead><tr><th>Feature</th><th>Status</th><th>Evidence / Notes</th></tr></thead>
-  <tbody>
-    <tr><td>Volume heatmap on body diagram</td><td><span class="pill good">Built</span></td><td><code>BodyDiagramHeatmap</code> SVG front+back figures</td></tr>
-    <tr><td>Strength standards (Beginner → Elite)</td><td><span class="pill good">Built</span></td><td><code>PRWallScreen</code> by bodyweight ratio</td></tr>
-    <tr><td>Fatigue trend graph</td><td><span class="pill good">Built</span></td><td><code>FatigueTrendCard</code> on HomeScreen, last 6 sessions</td></tr>
-    <tr><td>Year of Lifts (annual story)</td><td><span class="pill good">Built</span></td><td><code>YearOfLiftsScreen</code> swipeable card stack</td></tr>
-    <tr><td>Body weight trend chart</td><td><span class="pill good">Built</span></td><td><code>BodyMetricsScreen</code> <code>WeightTrendChart</code> via react-native-gifted-charts</td></tr>
-    <tr><td>Body fat % trend chart</td><td><span class="pill bad">Missing</span></td><td>BF % data captured; no chart renderer</td></tr>
-    <tr><td>Measurement trend charts</td><td><span class="pill bad">Missing</span></td><td>Waist / chest / hips etc. captured; no chart renderer</td></tr>
-    <tr><td>Photo progress timeline</td><td><span class="pill info">Deferred</span></td><td>v1.1 per BUDGET_POSTURE</td></tr>
-    <tr><td>Volume landmark per-user calibration</td><td><span class="pill info">Deferred</span></td><td>MEV / MAV / MRV defaults from RP baked in; per-user calibration deferred</td></tr>
-  </tbody>
-</table>
-
-<h3>Identity, privacy, billing</h3>
-<table>
-  <thead><tr><th>Feature</th><th>Status</th><th>Evidence / Notes</th></tr></thead>
-  <tbody>
-    <tr><td>Article 9 consent</td><td><span class="pill good">Built</span></td><td><code>Article9ConsentScreen</code> + <code>consent_log</code> + <code>record_health_consent</code> RPC</td></tr>
-    <tr><td>Consent withdrawal (in Settings)</td><td><span class="pill good">Built</span></td><td>Destructive-confirm flow; fires <code>article9_consent_withdrawn</code> event</td></tr>
-    <tr><td>Sign-out (full wipe)</td><td><span class="pill good">Built</span></td><td>AsyncStorage.clear() + SQLite wipe + SecureStore wipe</td></tr>
-    <tr><td>Account deletion (GDPR)</td><td><span class="pill good">Built</span></td><td><code>account_deletions_log</code> audit + <code>delete_user_data</code> RPC + auth.admin.deleteUser</td></tr>
-    <tr><td>Two-tier model (Free / Pro)</td><td><span class="pill good">Built</span></td><td>Consolidated 2026-05-25; Complete tier removed</td></tr>
-    <tr><td>21-day Pro trial</td><td><span class="pill good">Built</span></td><td>Day 19 warning, day 21 auto-downgrade</td></tr>
-    <tr><td>Cascade gate UI</td><td><span class="pill good">Built</span></td><td><code>CascadeGateScreen</code> modal</td></tr>
-    <tr><td>Differential paywall</td><td><span class="pill good">Built</span></td><td><code>PaywallScreen</code> with Pro-only feature gates</td></tr>
-    <tr><td>Sandbox purchase tested end-to-end</td><td><span class="pill warn">Pending</span></td><td>Code wired; needs founder to run on a sandbox tester</td></tr>
-  </tbody>
-</table>
-
-<h3>Notifications</h3>
-<table>
-  <thead><tr><th>Feature</th><th>Status</th><th>Evidence / Notes</th></tr></thead>
-  <tbody>
-    <tr><td>Notification module</td><td><span class="pill good">Built</span></td><td><code>src/lib/notifications/</code> 13 files: categories, scheduler, handler, permissions, preferences, quietHours, listeners</td></tr>
-    <tr><td>Morning weight reminder</td><td><span class="pill good">Built</span></td><td>Daily, user-configurable time</td></tr>
-    <tr><td>Weekly check-in reminder</td><td><span class="pill good">Built</span></td><td>Sunday 18:00 local default</td></tr>
-    <tr><td>Rest timer notification</td><td><span class="pill good">Built</span></td><td>Sticky ongoing during workout</td></tr>
-    <tr><td>Quiet hours (22:00 → 07:00)</td><td><span class="pill good">Built</span></td><td>Wrap-aware, AsyncStorage-persisted, configurable</td></tr>
-    <tr><td>Cascade gate notifications (day 19 / 21)</td><td><span class="pill good">Built</span></td><td><code>categories.js</code> has cascade categories</td></tr>
-    <tr><td>Year of Lifts unlock notification</td><td><span class="pill good">Built</span></td><td>Annual; fires through the standard categories</td></tr>
-    <tr><td>Notification preferences sync</td><td><span class="pill good">Built</span></td><td><code>notification_preferences</code> cloud table, per-category</td></tr>
-    <tr><td>ED-pattern flag push</td><td><span class="pill info">Deliberately blocked</span></td><td>ED-pattern fires in-app only, never push. Spec rule.</td></tr>
-  </tbody>
-</table>
-
-</section>
-
-<!-- ============================================================== -->
-<section id="gaps">
-<h2>20. Real gaps the engineering punch list missed</h2>
-
-<p>These are user-facing feature gaps that the engineering punch list did not catch because the punch list was tracking sync / migrations / telemetry / CI, not feature completeness. Surfaced by founder challenge 2026-05-27.</p>
-
-<div class="note">
-<strong>1. Food dislikes / exclusion list</strong> <span class="pill good">Built 2026-05-27</span>
-<p><strong>Shipped.</strong> Shared <code>kind</code> column on <code>food_favourites</code> (cloud migration 048). Long-press cycles <em>none → fav → dislike → none</em>. Excluded section in Search. <code>getDislikes</code> helper available for the future meal suggester.</p>
-</div>
-
-<div class="gap">
-<h4>2. Recipe builder UI <span class="pill bad">Missing</span></h4>
-<p><strong>Impact:</strong> Users can't build their own recipes ("home-made chilli with my macros"). The database is ready; the UX isn't.</p>
-<p><strong>What's needed:</strong> A new <code>RecipeBuilderScreen</code> (create / edit ingredients), a <code>MyRecipesScreen</code> (list), and route registration in <code>RootNavigator.js</code>. Search tab needs a "My Recipes" section.</p>
-</div>
-
-<div class="gap">
-<h4>3. Saved meals UI (meal templates) <span class="pill bad">Missing</span></h4>
-<p><strong>Impact:</strong> Users can't save a meal as "my usual breakfast" and one-tap re-log it.</p>
-<p><strong>What's needed:</strong> A <code>SavedMealsScreen</code> (list + apply), a "Save as meal" button on each meal section in <code>DiaryScreen</code>, and route registration. Search tab needs a "My Meals" section.</p>
-</div>
-
-<div class="gap">
-<h4>4. Body composition trend charts beyond weight <span class="pill warn">Partial</span></h4>
-<p><strong>Impact:</strong> Pro tier promises full body comp charts. Weight delivers; BF % and measurements don't.</p>
-<p><strong>What's needed:</strong> Add BF % and measurement chart components to <code>BodyMetricsScreen</code>. Data already in <code>body_metric_log</code>.</p>
-</div>
-
-<div class="gap">
-<h4>5. Coach training adjustment auto-apply <span class="pill warn">Partial</span></h4>
-<p><strong>Impact:</strong> Calorie changes auto-apply to nutrition targets; training changes (volume / RPE) are shown as recommendations only and the user must hand-edit routines. Asymmetric.</p>
-<p><strong>What's needed:</strong> Decide: symmetric auto-apply (apply suggested set count to the upcoming week's routine), confirm-then-apply, or keep manual. Founder decision; then 1-2 hour implementation.</p>
-</div>
-
-</section>
-
-<!-- ============================================================== -->
-<section id="voice-audit">
-<h2>21. Voice / copy audit</h2>
-
-<p>Per <code>CLAUDE.md</code> voice rules and <code>BACKLOG.md</code> "Copy &amp; UX rules". Audit ran on every <code>src/screens/*.js</code> and <code>src/components/**/*.js</code> file.</p>
-
-<h3>Violations found AND fixed 2026-05-27</h3>
-<ul>
-  <li>Em dash fallback for missing stage label, <code>SubscriptionScreen.js:136</code> — replaced with ASCII hyphen.</li>
-  <li>Em dash fallback for missing date, <code>BodyMetricsScreen.js:849</code> — replaced.</li>
-  <li>"This shapes your entire programme." → "...your entire plan." in <code>ProOnboardingScreen.js:912</code>.</li>
-  <li>"Browse ready-made programmes for every level..." → "...plans for every level..." in <code>HomeScreen.js:1223</code>.</li>
-  <li>"These programmes are built around..." → "These plans are built around..." in <code>PlanLibraryScreen.js:167</code>.</li>
-  <li>"to pick a programme from the library..." → "...a plan from the library..." in <code>FirstRunScreen.js:91</code>.</li>
-</ul>
-
-<h3>Still open (tracked as punch list item 15)</h3>
-<ul>
-  <li>Em dashes in code comments across many files. Voice rules technically apply to code comments too. Cosmetic, not user-visible.</li>
-  <li>Hardcoded hex colours in <code>Article9ConsentScreen.js:151,262</code> (<code>#000</code> on checkmark + CTA), <code>CoachOutputScreen.js:1391</code> (<code>#000</code>), <code>NutritionTargetsScreen.js:906</code> (<code>#A78BFA</code>). BACKLOG forbids. <code>ShareCardScreen.js</code> is excluded — intentional HTML template that runs inside a WebView where theme tokens aren't accessible.</li>
-</ul>
-
-<h3>Clean — no violations found</h3>
-<ul>
-  <li>Marketing absolutes (<code>perfect</code>, <code>guaranteed</code>, <code>beast mode</code>, <code>crush</code>, <code>shred</code>, <code>hacks</code>): zero hits.</li>
-  <li>AI-tell phrases (<code>Let me</code>, <code>I'll</code>, <code>Certainly</code>, <code>Of course</code>, <code>leverage</code>, <code>streamline</code>, <code>robust</code>, <code>seamless</code>, <code>comprehensive</code>, <code>It's important to note</code>, <code>It's worth noting</code>): zero hits.</li>
-  <li>Jargon blocklist (<code>metabolic adaptation</code>, <code>training stimulus</code>, <code>stimulus-to-fatigue</code>, <code>progressive overload protocol</code>): zero hits.</li>
-  <li>Coach Builder described as AI / ML: zero hits.</li>
-  <li>US spellings in user-facing strings (<code>color</code>/<code>center</code> matches were all React Native style-prop names, exempt per code-identifier rule).</li>
-</ul>
-
-</section>
-
-<!-- ============================================================== -->
+<!-- ============================================================= -->
 <section id="bugs">
-<h2>22. Bugs &amp; suspicious code surfaced during the walk</h2>
+  <h2>8. Bugs, gaps &amp; risks</h2>
+  <p class="big">Rated by impact. I verified the serious ones in the code myself; the ones an automated pass got wrong are listed at the end as <span class="pill dismissed">CHECKED &amp; CLEARED</span> so you're not chasing ghosts.</p>
+  <div class="legend">
+    <span class="pill blocker">BLOCKER</span> fix before charging anyone
+    <span class="pill should">SHOULD-FIX</span> fix soon, before or just after launch
+    <span class="pill polish">POLISH</span> nice to tidy, low risk
+  </div>
 
-<p>None blocking. These are observations from walking the screens that warrant a second look but didn't surface as a user-facing crash.</p>
+  <h3>Blockers</h3>
+  <div class="bug b-blocker">
+    <h4>The payment rail isn't live yet <span class="pill blocker">BLOCKER</span></h4>
+    <p>The "Subscribe" button can't take money until your Google merchant account is verified, the subscription product with the 7-day offer is created in Play Console, the payment webhook is deployed, and one real test purchase has gone through on a device. The billing code was rewritten this week for the current library and unit-tested, but the on-device test is the part only you can do.</p>
+    <p class="where">src/lib/payments/playBilling.js · supabase/functions/play-billing-rtdn</p>
+  </div>
+  <div class="bug b-blocker">
+    <h4>The beta switch is still on <span class="pill blocker">BLOCKER</span></h4>
+    <p>Right now every signed-in person is treated as Pro (<code>PRO_BETA_ACTIVE = true</code>). That's correct for the closed test. The day you flip it off, free becomes free and the gates go live, so it must be flipped last, on the build where the test purchase worked. Note: your 12 testers will drop to Free and have to subscribe like everyone else, which is your "no grandfather" decision, not a bug.</p>
+    <p class="where">src/lib/proGate.js</p>
+  </div>
 
-<table>
-  <thead><tr><th>Where</th><th>What</th><th>Severity</th></tr></thead>
-  <tbody>
-    <tr><td><code>YearOfLiftsScreen.js</code> header comment</td><td>Says <code>The classic "scroll through stats" view is gone — Spotify Wrapped proved that the swipe-story is the format people actually read.</code> Contains an em dash in the comment. Cosmetic.</td><td>Low</td></tr>
-    <tr><td><code>BodyMetricsScreen.js</code></td><td>Only renders a weight trend chart. BF % + measurements are captured but not charted. Pro-tier promise not fully delivered.</td><td>Medium (UX gap)</td></tr>
-    <tr><td><code>CoachOutputScreen.js:1391</code></td><td>Hardcoded <code>color: '#000'</code> in a style block. Should use a theme token.</td><td>Low (cosmetic)</td></tr>
-    <tr><td>Maestro emulator CI</td><td>Has been failing repeatedly. Spec says it's nice-to-have, not blocking. Recommend downgrading to "Phase B if needed" rather than continuing to fight it.</td><td>Low (CI noise only)</td></tr>
-  </tbody>
-</table>
+  <h3>Should-fix</h3>
+  <div class="bug b-should">
+    <h4>Check-in reminders use UTC for the week boundary <span class="pill should">SHOULD-FIX</span></h4>
+    <p>One reminder calculation works out "which week is it" using UTC instead of UK local time. In British Summer Time, and around Sunday/Monday midnight, that can land the reminder a day off or fail to suppress a duplicate. This is exactly the timezone class of bug you've flagged before. Confirmed in the code.</p>
+    <p class="where">src/lib/notifications/scheduler.js:169-173 (getUTCDay/setUTCHours/setUTCDate)</p>
+  </div>
+  <div class="bug b-should">
+    <h4>"Deleted within 30 days" but the code deletes instantly <span class="pill should">SHOULD-FIX</span></h4>
+    <p>The privacy text promises deletion within 30 days; the code actually hard-deletes everything immediately. Deleting faster than promised isn't a legal problem, but the wording should match reality (say "immediately") or the docs should agree. Several docs disagree on this (24 hours vs 30 days).</p>
+    <p class="where">public/privacy-policy.md · docs/PRIVACY_CONSENT_LOCKED.md · schema.sql delete_user_data()</p>
+  </div>
+  <div class="bug b-should">
+    <h4>Promised under-16 age block isn't enforced <span class="pill should">SHOULD-FIX</span></h4>
+    <p>The policy says under-16s are blocked at signup, but there's no age check anywhere in the signup flow. Either add the check or change the wording. For a health app this is worth getting right.</p>
+    <p class="where">src/screens/LoginScreen.js / WelcomeScreen.js (no age gate found)</p>
+  </div>
+  <div class="bug b-should">
+    <h4>Eating-disorder detection isn't named in the consent text <span class="pill should">SHOULD-FIX</span></h4>
+    <p>The app automatically watches for disordered-eating patterns (a good safety feature), but the consent screen mentions the screening questions without disclosing the automated flagging. Under GDPR, automated decisions on health data should be disclosed. Add a line to the consent and policy.</p>
+    <p class="where">src/screens/Article9ConsentScreen.js · src/lib/edPatternDetector.js</p>
+  </div>
+  <div class="bug b-should">
+    <h4>If Google charges but the cloud write fails, status reconciles only later <span class="pill should">SHOULD-FIX</span></h4>
+    <p>If a purchase succeeds at Google but the app's own record fails (poor connection), the user briefly looks un-upgraded until the payment webhook or next sync catches up. There's a Close button so they're not trapped, but a "we're confirming your purchase" state would be cleaner. The webhook (once deployed) is what makes this self-heal.</p>
+    <p class="where">src/screens/PaywallScreen.js · CascadeGateScreen.js</p>
+  </div>
+  <div class="bug b-should">
+    <h4>Sign-out wipe has a 5-second escape hatch <span class="pill should">SHOULD-FIX</span></h4>
+    <p>Sign-out pushes data up first and waits for sync to settle before wiping the phone, which is correct. But the wait gives up after 5 seconds, and in theory a slow sync could still be writing as the wipe starts. There's a guard in place; the safe hardening is a longer or smarter wait. Real but bounded, not the cross-account leak an automated pass feared.</p>
+    <p class="where">src/store/useAppStore.js:332-371</p>
+  </div>
+  <div class="bug b-should">
+    <h4>A few sync edge cases could drop a row silently <span class="pill should">SHOULD-FIX</span></h4>
+    <p>In some failure patterns (one workout in a batch fails while a later one succeeds; a chunk of sets fails its upload), the failure isn't always counted, so the system can believe everything synced when one item didn't. Rare, needs a real failure to trigger, but worth tightening the error counting since it touches user data.</p>
+    <p class="where">src/lib/sync.js (watermark push) · src/lib/database.js (_upsertSets)</p>
+  </div>
+  <div class="bug b-should">
+    <h4>Data export exists in code but has no button <span class="pill should">SHOULD-FIX</span></h4>
+    <p>The policy offers data export (a GDPR right) and the code can produce it, but there's no visible Settings option to trigger it. Add the button, or the right isn't really exercisable.</p>
+    <p class="where">src/lib/database.js dumpAllTables() (no UI call site found)</p>
+  </div>
 
+  <h3>Polish</h3>
+  <div class="bug b-polish">
+    <h4>Stale "RevenueCat" references <span class="pill polish">POLISH</span></h4>
+    <p>You moved to Google Play Billing direct, but the old internal docs and this very app-map page still listed RevenueCat as a payment processor. Make sure the public privacy policy doesn't name it either.</p>
+  </div>
+  <div class="bug b-polish">
+    <h4>App store name has an em dash <span class="pill polish">POLISH</span></h4>
+    <p>The store name "Volyume — Hypertrophy Logbook" uses an em dash, which your own voice rules ban everywhere. Use a colon: "Volyume: Hypertrophy Logbook".</p>
+    <p class="where">app.json</p>
+  </div>
+  <div class="bug b-polish">
+    <h4>Play Store listing still says "free during beta" <span class="pill polish">POLISH</span></h4>
+    <p>The store-listing draft frames the free access as a beta gift. Reword to the real trial before you submit.</p>
+    <p class="where">docs/PLAY_STORE_LISTING.md</p>
+  </div>
+  <div class="bug b-polish">
+    <h4>No "support viewed your data" audit log <span class="pill polish">POLISH</span></h4>
+    <p>The policy says support may access data "with strict controls", but there's no log of when support views an account. Worth adding before you have a support team, not urgent at launch.</p>
+  </div>
+
+  <h3>Checked &amp; cleared (flagged by an automated pass, but wrong)</h3>
+  <div class="bug b-dismissed">
+    <h4>"Remote push is dead because the project ID is missing" <span class="pill dismissed">CHECKED &amp; CLEARED</span></h4>
+    <p>The project ID <em>is</em> set in <code>app.json</code>. Remote push just needs the token table applied and the send function deployed, which is on the founder list anyway.</p>
+  </div>
+  <div class="bug b-dismissed">
+    <h4>"The upgrade screen traps you with no way out" <span class="pill dismissed">CHECKED &amp; CLEARED</span></h4>
+    <p>It has a close (X) button and a "Maybe later" link.</p>
+  </div>
+  <div class="bug b-dismissed">
+    <h4>"The trial gate locks with no escape if payment fails" <span class="pill dismissed">CHECKED &amp; CLEARED</span></h4>
+    <p>It has a Close button. The genuine, smaller issue (reconciling a successful charge) is listed under should-fix.</p>
+  </div>
+  <div class="bug b-dismissed">
+    <h4>"The consent gate deadlocks if the cloud check fails" <span class="pill dismissed">CHECKED &amp; CLEARED</span></h4>
+    <p>The opposite: a failed check fails open (lets the user through), and the local consent cache covers it. Not a deadlock.</p>
+  </div>
+  <div class="bug b-dismissed">
+    <h4>"The paywall wrongly says 7 days instead of 14" <span class="pill dismissed">CHECKED &amp; CLEARED</span></h4>
+    <p>7 days is correct on the paywall: that's the Google trial, and the 14 cardless days happen before anyone reaches a payment screen.</p>
+  </div>
 </section>
 
-<!-- ============================================================== -->
-<section id="glossary">
-<h2>23. Glossary for non-coders</h2>
-
-<dl>
-  <dt><strong>Screen</strong></dt><dd>One page the user sees. Home, Diary, Settings, etc. The app has 56 of them.</dd>
-  <dt><strong>Tab</strong></dt><dd>The icons across the bottom of the app. Volyume has 5: Train / Plans / Diary / Progress / You.</dd>
-  <dt><strong>Modal</strong></dt><dd>A screen that pops up on top of whatever you were doing, like the barcode scanner or the paywall.</dd>
-  <dt><strong>Stack</strong></dt><dd>The sequence of screens you can go back through with the back button.</dd>
-  <dt><strong>SQLite</strong></dt><dd>The database that lives on the phone itself. Survives an offline trip. Survives a flight.</dd>
-  <dt><strong>Supabase</strong></dt><dd>The cloud database. Where data lives when the phone isn't to hand.</dd>
-  <dt><strong>RLS (Row Level Security)</strong></dt><dd>Postgres feature that means user A literally cannot query user B's rows, even if they tried.</dd>
-  <dt><strong>RPC (Remote Procedure Call)</strong></dt><dd>A function that lives in the cloud database and gets called by the app. Used for things like upgrading a tier or computing daily rollups.</dd>
-  <dt><strong>Sync</strong></dt><dd>Copying changes between the phone and the cloud. Bidirectional: phone pushes its writes; phone pulls cloud changes.</dd>
-  <dt><strong>LWW (Last-Write-Wins)</strong></dt><dd>The conflict rule: if the phone and cloud both have a row with the same id, whichever side has the newer timestamp wins.</dd>
-  <dt><strong>Tombstone</strong></dt><dd>A "deleted" row that hasn't actually been removed yet. Kept around so the deletion can be synced before being purged.</dd>
-  <dt><strong>FFM (Fat-Free Mass)</strong></dt><dd>Your body weight minus your body fat. Used for the safety floor: nobody should be eating below 30 kcal per kg of FFM per day.</dd>
-  <dt><strong>e1RM (estimated one-rep max)</strong></dt><dd>What you could probably lift for one rep, calculated from a heavier set. Standard formula, reliable for 1-15 reps.</dd>
-  <dt><strong>Mesocycle</strong></dt><dd>A multi-week training block, typically 4-6 weeks of progressive load + 1 week deload.</dd>
-  <dt><strong>Deload</strong></dt><dd>A planned easy week to recover. Volume drops to ~60% of the previous week.</dd>
-  <dt><strong>MEV / MAV / MRV</strong></dt><dd>Minimum Effective Volume, Maximum Adaptive Volume, Maximum Recoverable Volume. The set-count ranges per muscle group per week. Defaults from Renaissance Periodization, currently not per-user calibrated.</dd>
-  <dt><strong>Cascade</strong></dt><dd>The trial-to-Free downgrade flow. Day 19 warning, day 21 auto-downgrade unless the user pays.</dd>
-  <dt><strong>RTDN (Real-Time Developer Notifications)</strong></dt><dd>The Google Cloud Pub/Sub stream that tells the backend a user's subscription state changed (purchased, renewed, cancelled, refunded).</dd>
-  <dt><strong>Article 9</strong></dt><dd>The UK GDPR section that covers health and nutrition data. Requires explicit, separate consent — not buried in the ToS.</dd>
-  <dt><strong>SCOFF</strong></dt><dd>A short clinical screener for disordered eating risk. Asked once during onboarding.</dd>
-  <dt><strong>ED-pattern detector</strong></dt><dd>Multi-signal harm check that fires if the user shows several markers of eating-disorder behaviour. Locks the coach from suggesting further calorie reductions.</dd>
-  <dt><strong>Goal lock</strong></dt><dd>Self-attested experience flag that has to be ticked for advanced goals like physique competition. Raises the ED-pattern detector's threshold (more signals required to fire).</dd>
-</dl>
-
+<!-- ============================================================= -->
+<section id="copy">
+  <h2>9. Words &amp; facts</h2>
+  <p>The writing is in good shape: plain, direct, British English, no chatbot tells, terse error messages, no false encouragement, scientific claims kept to where they belong. The fixes are small and listed above (em dash in the store name, the "free during beta" listing, stale RevenueCat). One judgement call for you:</p>
+  <div class="card">
+    <p><strong>The Welcome screen badge says "Free for 14 days."</strong> That's the in-app trial length and it's accurate. But because the full journey is 21 days free (14 + 7), an automated pass called it a contradiction. It isn't wrong, but if you'd rather not anchor people on a single number before they see the full terms, change it to "Start free" and let the policy screen explain. Your call, low stakes.</p>
+  </div>
 </section>
 
-<footer class="page">
-  <p>Generated by hand-walking <code>src/</code> at 2026-05-27. To regenerate, re-walk the file inventory in <code>src/screens/</code>, <code>src/components/</code>, <code>src/lib/</code>, and the navigation graph in <code>src/navigation/RootNavigator.js</code>.</p>
-  <p>This page is auto-deployed to GitHub Pages from <code>public/app-map/index.html</code>. Live URL: <a href="https://allansdouglas1983-cmyk.github.io/ADPhysique/app-map/">allansdouglas1983-cmyk.github.io/ADPhysique/app-map/</a> (today) → <code>volyume.app/app-map/</code> once DNS resolves.</p>
-</footer>
+<!-- ============================================================= -->
+<section id="elite">
+  <h2>10. What to fix to make it elite</h2>
+
+  <h3>Must-do before charging anyone</h3>
+  <ol>
+    <li>Finish the payment rail: merchant account verified, the Pro product + 7-day offer created in Play Console, the payment webhook deployed (one env var), and one real test purchase on a device.</li>
+    <li>Apply the pending database migrations (a short, additive batch: 059–065).</li>
+    <li>Flip the beta switch off, last, on that verified build.</li>
+    <li>Fix the compliance copy: the under-16 age check (add it or reword), the 30-day deletion wording (match the code), and name the eating-disorder detection in the consent text. Remove the em dash and the "free during beta" listing.</li>
+  </ol>
+
+  <h3>Should-do, before or just after launch</h3>
+  <ol>
+    <li>Move the check-in week boundary from UTC to UK local time.</li>
+    <li>Tighten the sync failure-counting and the sign-out wait so a row can never be silently dropped.</li>
+    <li>Add the "confirming your purchase" state for the rare charge-but-not-recorded case (the webhook makes it self-heal once deployed).</li>
+    <li>Add the data-export button.</li>
+    <li>Turn on remote push (token table + send function) so payment-failure alerts reach people.</li>
+  </ol>
+
+  <h3>To genuinely feel elite</h3>
+  <ul>
+    <li>Drive the paywall's "7 days free vs pay now" wording from Google's real eligibility, so a returning user is never shown a trial they can't have.</li>
+    <li>A single onboarding line that sets the expectation: "log your weight daily; your first coaching adjustment lands in about two weeks." It's the highest-leverage change for turning trials into subscribers, because it ties week one to the moment they'll pay for.</li>
+    <li>A "support viewed your data" audit log before you hire support.</li>
+  </ul>
+
+  <div class="verdict">
+    <strong>Bottom line:</strong> this is a deep, genuinely capable product with a real coaching engine, strong privacy, and clean tier gating. Nothing here is a rebuild. It's a finishing list, and most of it is yours to action (merchant account, deploys, the switch) rather than more code. Clear the must-do list and you have something you can confidently charge for.
+  </div>
+</section>
+
+<hr>
+<p class="meta">Built from the codebase on 6 June 2026. Every severity here was checked against the actual files; automated findings that didn't hold up are marked cleared rather than dropped, so this page is the honest state, not a wish-list.</p>
 
 </div>
-
-<script>
-mermaid.initialize({
-  startOnLoad: true,
-  theme: 'dark',
-  themeVariables: {
-    darkMode: true,
-    background: '#161616',
-    primaryColor: '#1F1F1F',
-    primaryTextColor: '#EEEEEE',
-    primaryBorderColor: '#2A2A2A',
-    lineColor: '#AFAFAF',
-    fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
-  },
-});
-</script>
-
 </body>
 </html>
