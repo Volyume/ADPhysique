@@ -1,5 +1,21 @@
 # Tier scope (locked)
 
+> **Founder override 2026-06-06 (supersedes the trial + pricing in the
+> 2026-05-25 block below):**
+> - **Trial is now 14 + 7**, 21 days free total: 14 cardless in-app days
+>   (migration 065 sets `start_cascade` to 14 days) then a 7-day Google
+>   Play intro free trial on the Pro product. See
+>   `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` and
+>   `TRIAL_CONVERSION_STRATEGY_2026-06-06.md`.
+> - **Pricing is flat: £4.99/month or £29.99/year** (migration 066 stores
+>   the bought period). The escalating launch / founders / standard
+>   windows are retired.
+> - **`PRO_BETA_ACTIVE` is OFF** (`src/lib/proGate.js:28`): new accounts
+>   flow through the trial / cascade, not an automatic Pro grant.
+> The two-tier model, the single one-time trial entitlement, and the
+> server-side `trial_state` in the 2026-05-25 block all still govern; only
+> the trial length, the pricing, and the beta override changed.
+
 > **Founder override 2026-05-25:** Volyume ships as **two tiers**
 > (Free, Pro), not three. The Complete tier and the 28-day Complete→Pro
 > cascade are removed. Pro becomes "the whole app". Peak Week

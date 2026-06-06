@@ -56,9 +56,18 @@ artifact, not the truth. Every fix lands in `app.json` / `eas.json` /
   E2E fast-follow, version-string sync.
 
 ## Test + security posture
-- Jest: 2838 pass / 96 fail — the 96 are a known pre-existing `act()` baseline,
-  not product failures; critical numeric logic (calorie/MET, planEngine,
-  check-in, PR/volume, dayKey) is tested and green.
+- Jest: 2838 pass / 96 fail. **Correction 2026-06-06 (later in the day):** the
+  earlier "known pre-existing `act()` baseline, not product failures" framing was
+  wrong on two counts. (1) Not pre-existing: the suite was fully green (2770
+  passing) on 06-03; the 96 failures appeared with the 06-05 Expo SDK 54 / RN
+  0.81 / React 19 upgrade. (2) Not all `act()`: the component-render suites fail
+  because React 19's `react-test-renderer` no longer flushes `create()` outside
+  `act()`, but several other suites fail to load at all under the SDK-54 jest
+  setup (`__DEV__ is not defined`, `StyleSheet` undefined), so their tests do not
+  run. Main CI has been red on every code commit since 06-05. Critical numeric
+  logic (calorie/MET, planEngine, check-in, PR/volume, dayKey) is still tested
+  and passes, but **the red suite is a production blocker** under the 2026-06-06
+  "all errors cleared" goal, not a benign baseline.
 - Security: no critical/high client-side defect; tokens encrypted, RLS
   comprehensive, tier + payments server-authoritative, triple-layer PII scrub.
   npm-audit's 18 findings are all build-time tooling, none in the runtime bundle.

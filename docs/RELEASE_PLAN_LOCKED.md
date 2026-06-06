@@ -3,6 +3,20 @@
 How we get from "the moves are merging" to "real users on real
 devices paying real money." Locked 2026-05-23.
 
+> **Founder override 2026-06-06 (release posture):** Closed testing
+> completes 2026-06-06. The immediate target is **Android full
+> production**, approved once three gates are met: (1) subscriptions in
+> place (real Play Billing path off the react-native-iap v15 provider,
+> Play Console products + 7-day offer, `play-billing-rtdn` deployed,
+> sandbox purchase verified); (2) all functionality 100% in place; (3)
+> all audits and errors cleared (Play + App store readiness findings, and
+> the red Jest suite / Main CI restored to green). **iOS is in scope
+> alongside Android** (EAS/TestFlight pipeline built; founder continues it
+> Monday). Pricing is flat £4.99/month or £29.99/year (the £0.99 / £1.99
+> open-beta windows below are retired). The Phase A → B → C framing below
+> is preserved for history; `docs/CURRENT_STATUS.md` § "Release phase" and
+> § 0 (2026-06-06) carry the live plan.
+
 ## Phases
 
 ```

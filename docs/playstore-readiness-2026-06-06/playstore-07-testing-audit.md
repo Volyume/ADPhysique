@@ -8,10 +8,18 @@ $ npx jest
 Test Suites: 10 failed, 169 passed, 179 total
 Tests:       96 failed, 3 skipped, 2838 passed, 2937 total
 ```
-- The **96 failures are a known, pre-existing baseline**: React `act()` warnings
-  in component-mount suites under the jest-expo env, not product logic failures.
-  They predate this audit and were confirmed stable across the trialState fix
-  (the suite returned to exactly 96 after that change, no new failures).
+- ~~The **96 failures are a known, pre-existing baseline**: React `act()` warnings
+  in component-mount suites under the jest-expo env, not product logic failures.~~
+  **Correction 2026-06-06:** this was wrong. The 96 are **regressions from the
+  06-05 SDK 54 / RN 0.81 / React 19 upgrade** (the suite was green at 2770 on
+  06-03), not a pre-existing baseline, and they are not all `act()`. Two distinct
+  classes: (a) component-render suites where React 19's `react-test-renderer` no
+  longer flushes `create()` outside `act()`; (b) suites that fail to load at all
+  under the SDK-54 jest setup (`__DEV__ is not defined` in csvExport,
+  `StyleSheet` undefined in stepsLaunchPrompt via AppAlert), so their tests never
+  run and "2838 passing" overstates real coverage. Main CI is red on every code
+  commit since 06-05. Under the 2026-06-06 production goal this is a blocker to
+  clear, not a baseline to accept.
 - 2838 passing tests cover: auth scenarios, sync registry/conflict, payments
   cascade + Play offer bridge, dayKey/timezone, proGate, notifications, planEngine,
   algorithms (PR/volume), food DB, and the two config plugins.

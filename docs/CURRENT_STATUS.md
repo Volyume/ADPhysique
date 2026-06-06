@@ -14,6 +14,92 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
+### 0.00000000000000001. 2026-06-06 (documentation reconciliation after a 3-day undocumented build arc, Claude): the 06-04 → 06-06 work (SDK 54 upgrade, iOS pipeline, web platform, payments rewrite, beta off, store readiness) shipped to `main` but was never written into the docs. This entry plus the section corrections below close that gap. One open code issue: the Jest suite is red.
+
+Honest meta-note first (Rule 8). Three days of major change shipped to `main`
+between 06-04 and 06-06 and the canonical docs were not updated, so this doc sat
+at the 06-03 cardio state while the app moved underneath it. That is the exact
+doc-drift the operational protocol exists to prevent; the founder caught it. This
+entry records what actually shipped, and the numbered sections below (§1, §3, §8,
+"Beta tier behaviour", "Locked founder overrides") were corrected to match.
+
+**The build arc (oldest first, all on `main`):**
+- **Expo SDK 54 / RN 0.81 / React 19 upgrade** (`306e0ef`, 06-05). The trigger
+  was the Play closed-test Android API-35 requirement plus enabling an iOS build.
+  Followed by a chain of Android-release CI fixes (single-ABI arm64-v8a build,
+  lint-vital task exclusions, edge-to-edge + react-native-screens crashes,
+  versionCode 7→11) and dependency follow-ups (`react-native-nitro-modules` peer
+  for react-native-iap 15, `expo-system-ui`).
+- **iOS / EAS / TestFlight pipeline** (`build-ios.yml`, 06-05/06). Bundle
+  `app.volyume`, EAS projectId pinned, deployment target 16.0, non-interactive
+  ASC-API-key build + TestFlight submit. Associated Domains dropped for now (the
+  ASC API key cannot persist that entitlement; restore later via Apple-ID cookie
+  auth, which also enables the APNs push key). Full detail in
+  `docs/BUILD_RELEASE_HANDOFF_2026-06-05.md`. **iOS is now an active target
+  alongside Android** (founder decision 2026-06-06), superseding the old
+  "deferred until Android ships" framing.
+- **Web platform** (`web/` pnpm monorepo + `docs/web-platform/`, 06-05).
+  Dashboard, progress cockpit, coaching review, plan view, account / subscription
+  / settings. **Framed as a parallel / experimental track** (founder decision
+  2026-06-06): it does not gate the Android release and mobile stays the v1
+  priority. This supersedes the "web app for end users: never at v1" line in § 8.
+- **Payments rewritten for `react-native-iap` v15** (`de392c7`). Still Google
+  Play Billing direct (not RevenueCat); `playBilling.js` now wraps react-native-iap
+  v15 (`initConnection`, subscriptions, purchase) behind the same injectable
+  provider, with a safe stub default until the real provider is wired in.
+  `react-native-iap ^15.3.1` + `react-native-nitro-modules` added.
+- **Beta override turned OFF** (`bf33823`): `PRO_BETA_ACTIVE = false`
+  (`src/lib/proGate.js:28`). New accounts now flow through the trial / cascade
+  rather than an automatic Pro grant. This affects future / sideloaded builds
+  only; the frozen closed-test AAB is unchanged.
+- **Pricing flattened** (`c6907c3`): one monthly £4.99 + one annual £29.99,
+  retiring the £0.99 / £1.99 / £3.99 windows (`src/lib/payments/catalogue.js`;
+  migration 066 stores the bought period).
+- **Trial reshaped to 14 + 7** (founder decision,
+  `docs/TRIAL_CONVERSION_STRATEGY_2026-06-06.md`): 14 cardless in-app days then a
+  7-day Google Play intro trial, 21 free total. Migration 065 changes
+  `start_cascade` to 14 days.
+- **Play Store + App Store readiness audits**
+  (`docs/playstore-readiness-2026-06-06/`, `docs/appstore-readiness-2026-06-06/`).
+  Implemented: `allowBackup=false`, production console-strip
+  (`transform-remove-console`, prod only), `blockedPermissions` (RECORD_AUDIO et
+  al.), Sentry source-map upload wired conditionally on `SENTRY_AUTH_TOKEN`,
+  assetlinks two-fingerprint shape with the upload-key SHA derived in the
+  pages-deploy workflow, eslint ignores `web/`. R8 left off, cleartext locked,
+  version 1.2.0.
+- **Fixes:** fatal startup crash from deprecated expo-av removed (`8f2973d`);
+  Share Card export (`withAlpha` defined inside the WebView canvas); Sentry
+  non-Error coercion; one-PR-per-exercise; nutrition-targets breakdown; native
+  `Alert` replaced with a themed in-app dialog; coaching week anchored on local
+  Monday.
+
+**Migrations added since this doc was last current:** 065 (trial 21→14), 066
+(`users_profile.billing_period`). Both drafted, pending founder apply.
+`supabase/README.md` tracks 060-066 (all pending apply) and is the authoritative,
+current migration tracker. § 3 below was extended to match.
+
+**Open code issue, recorded straight (not minimised).** The Jest suite is
+**red: 96 failures across 10 suites, and has been since the 06-05 SDK 54
+upgrade.** It was fully green (2770 passing) on 06-03. Main CI ("tests + lint +
+Expo Doctor") has failed on every code commit since. The root causes are the
+toolchain bump, not product logic: React 19's `react-test-renderer` no longer
+flushes `create()` outside `act()` (the component-render suites), and several
+suites now fail to load entirely under the SDK-54 jest setup (`__DEV__ is not
+defined`, `StyleSheet` undefined). The 06-06 readiness docs called these "a known
+pre-existing `act()` baseline, not product failures"; that is inaccurate on both
+counts (they are upgrade-induced, not pre-existing, and not all `act()`), and
+those docs have been corrected. **This is a real must-fix: the locked testing
+acceptance check (the Jest suite green on `main`,
+`TESTING_STRATEGY_LOCKED.md:244`) is currently not met.** A fix has not been
+attempted yet, pending founder direction.
+
+**Founder-side queue (additions this arc):** apply migrations 065 + 066 (after
+060-064); create `pro_monthly` / `pro_annual` Play subscriptions with a 7-day
+intro offer; deploy `play-billing-rtdn`; optionally set `SENTRY_AUTH_TOKEN` and
+`PLAY_APP_SIGNING_SHA256` repo secrets (both degrade gracefully if absent); to
+finish iOS universal links + remote push, add `EXPO_APPLE_ID` +
+`EXPO_APPLE_APP_SPECIFIC_PASSWORD` and restore Associated Domains.
+
 ### 0.0000000000000001. 2026-06-03 (cardio integration built end to end, Claude): the full user-led cardio service shipped to `main`, foundation through recovery + history. Only founder-side item: apply migration 064.
 
 Built the cardio integration from the audit
@@ -962,19 +1048,40 @@ Documentation rewrite + drift closure. Rewrote `CURRENT_STATUS.md`, `HANDOFF.md`
 
 ### Release phase
 
-**Phase A: Internal closed test** per `RELEASE_PLAN_LOCKED.md` lines 9-13. We do not exit Phase A until every Move (#0 through #5) is merged, tested, and the Phase A exit checklist (lines 77-89) is green.
+**Founder direction 2026-06-06: closed testing completes today; the target is
+Android full production.** This supersedes the earlier "closed-testing build
+stays frozen until the whole project is built out" policy (release policy
+2026-05-24). Production is approved only once three gates are met:
+1. **Subscriptions in place** (real Play Billing path wired off the
+   `react-native-iap` v15 provider, not the stub; Play Console products + 7-day
+   offer created; `play-billing-rtdn` deployed; sandbox purchase verified).
+2. **All functionality 100% in place** (the Phase A move set plus the founder
+   queue items that gate features).
+3. **All audits and errors cleared** (the Play + App store readiness findings
+   actioned, and the red Jest suite / Main CI restored to green: see the
+   2026-06-06 session entry above and § "Outstanding work").
+
+iOS continues Monday and is in scope alongside Android; Android production is the
+immediate goal. Historical framing: this was "Phase A internal closed test" per
+`RELEASE_PLAN_LOCKED.md` lines 9-13; that doc carries a dated override note.
 
 ### Distribution state
 
 | Surface | State |
 |---|---|
-| Google Play | AAB live in Closed Testing. The build is the pre-food-layer v1.1.0+4. Sideloaded debug APKs are how the build-out work is tested. The Closed Testing track stays frozen until Phase A exit. |
-| Apple App Store | No Apple Developer account, no App Store Connect entity, no iOS bundle. iOS is deferred until Android ships, not locked never. |
+| Google Play | Closed Testing completes 2026-06-06 (founder direction); the next AAB targets production. The current Closed Testing build is the pre-food-layer v1.1.0+4; the production candidate is SDK-54, version 1.2.0, versionCode 11, arm64-v8a (widen `reactNativeArchitectures` to `armeabi-v7a,arm64-v8a` before the real Play upload). Sideloaded debug APKs are how build-out work is verified on device. |
+| Apple App Store | Apple Developer account + App Store Connect now set up. Bundle `app.volyume`, iOS build runs on EAS and submits to TestFlight (`build-ios.yml`). Associated Domains dropped for now (restore later via Apple-ID cookie auth; see `BUILD_RELEASE_HANDOFF_2026-06-05.md`). **iOS is in scope alongside Android; founder continues it Monday.** |
 | Marketing site | `volyume.app` registered (Namecheap). Privacy policy lives at `public/privacy/index.html`, served via `deploy-pages.yml`. Resolves at `volyume.app/privacy` once founder configures DNS. |
 
 ### Signing
 
-**No keystore exists yet.** `build-android.yml` has signing config that has never been exercised in production. A keystore needs to be generated and Play App Signing configured before any new AAB can replace the Closed Testing build. Phase A exit blocker but not blocking current code work.
+**Upload keystore now exists** as the `ANDROID_KEYSTORE_BASE64` CI secret and
+signs CI release builds: run #1306 (06-05) passed the upload-keystore
+release-signing check and the AAB built. The upload-key SHA-256 is derived from
+that secret in the pages-deploy workflow and injected into `assetlinks.json`.
+**Still pending for production:** Play App Signing enrolment in the Console, then
+put the Play signing-key SHA-256 into a `PLAY_APP_SIGNING_SHA256` repo secret so
+App Links verify for Play-Store-signed installs too. Founder-side.
 
 ### Branch state
 
@@ -984,13 +1091,34 @@ Documentation rewrite + drift closure. Rewrote `CURRENT_STATUS.md`, `HANDOFF.md`
 ### Locked founder overrides (2026-05-25)
 
 1. **Cloud infrastructure migration (Azure/AWS) deferred** until the app is stable in production. Supabase + Sentry stay.
-2. **Google Play Billing direct, not RevenueCat.** iOS deferred to post-Android-launch so RevenueCat's cross-platform value is moot. `src/lib/payments/playBilling.js` keeps the abstraction so the underlying SDK can swap without touching cascade / UI / RPCs.
-3. **2-tier model (Free, Pro).** Complete tier removed; Peak Week module removed entirely. Founder direction: "peak week needs a human eye, not numbers". 21-day single Pro trial. Pricing £0.99 (open beta) / £1.99 (founders) / £3.99 (standard).
-4. **Closed Testing build stays frozen** until the WHOLE project is built out. No new closed-testing release proposed, scheduled, or triggered.
+2. **Google Play Billing direct, not RevenueCat.** Still direct. As of 2026-06-06
+   the provider is `react-native-iap` v15 (`react-native-iap ^15.3.1` +
+   `react-native-nitro-modules`). `src/lib/payments/playBilling.js` keeps the
+   injectable abstraction (real react-native-iap v15 provider + a safe stub
+   default) so the underlying SDK can swap without touching cascade / UI / RPCs.
+3. **2-tier model (Free, Pro).** Complete tier removed; Peak Week module removed
+   entirely. Founder direction: "peak week needs a human eye, not numbers".
+   **Trial (updated 2026-06-06): 14 cardless in-app days + a 7-day Google Play
+   intro trial, 21 days free total** (migration 065). **Pricing (updated
+   2026-06-06): flat £4.99/month or £29.99/year** (migration 066 stores the bought
+   period); the old £0.99 / £1.99 / £3.99 windows are retired.
+4. ~~**Closed Testing build stays frozen** until the WHOLE project is built out.~~
+   **Superseded 2026-06-06:** closed testing completes today; the next AAB targets
+   production once the three gates in § "Release phase" are met. A production AAB
+   is now in scope (it was not before this date).
 
 ### Beta tier behaviour
 
-`src/lib/proGate.js:22` sets `PRO_BETA_ACTIVE = true`. Every signed-in user receives `tier: 'pro'` automatically during closed testing so the full feature set is exercised before payments wire up. Legacy `complete_*` trial states map to `pro` for migration-030 compat. This explains why `LoginScreen.js:162` and `ProUpgradeScreen.js:43` default new accounts to Pro: intentional.
+**Updated 2026-06-06: the beta override is OFF.** `src/lib/proGate.js:28` now sets
+`PRO_BETA_ACTIVE = false` (`bf33823`). New accounts no longer receive `tier:
+'pro'` automatically; they flow through the trial / cascade. During closed
+testing the override was `true` so the full feature set could be exercised before
+payments wired up. Turning it off only affects future / sideloaded builds; the
+frozen closed-test AAB is unaffected. Legacy `complete_*` trial states still map
+to `pro` for migration-030 compat. **Consequence to watch (production gate):** with
+the override off, the real Play Billing path must be wired and the Play Console
+products live, or a post-trial user has no way to subscribe. See § "Release
+phase" gate 1.
 
 ---
 
@@ -1068,6 +1196,12 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 | 062 | delete_user_data fallback extended to the five post-025 user-scoped tables (HP-3) | **Drafted 2026-06-03, pending founder apply.** Adds `tier_history`, `notification_preferences`, `food_frequents`, `device_push_tokens`, `daily_steps` to the fallback erasure RPC (the primary Edge-Function cascade path already wiped them). `account_deletions_log` deliberately NOT wiped (surviving audit trail). Identical signature, old builds unaffected. Idempotent. Verification in `supabase/README.md` row 062. |
 | 063 | record_engine_telemetry allow-list + workout_started/workout_completed/plan_activated (LB-8) | **Drafted 2026-06-03, pending founder apply.** The activation/retention loop the dashboards were missing; payloads carry counts/flags only and flow through the LB-9 opt-out gate. Until applied those three pushes are rejected and retried, nothing else affected. Idempotent. Verification in `supabase/README.md` row 063. |
 | 064 | cardio_log table (one row per cardio session, PK (user_id, id), soft delete + LWW, RLS + touch trigger) for user-led cardio logging | **Drafted 2026-06-03, pending founder apply.** Backs the cardio integration; cardio survives reinstall + syncs via the `cardio_log` registry entry + `src/lib/sync/tables/cardioLog.js`. Fully additive, frozen-AAB safe (no writer/reader on the old build); local cardio works before it lands (push errors are caught per-table). Verification in `supabase/README.md` row 064. |
+| 065 | `start_cascade` reverse-trial window 21 → 14 days (founder direction 2026-06-06: 14 cardless in-app days + a 7-day Play intro trial = 21 free total) | **Drafted 2026-06-06, pending founder apply.** Only the interval changes; signature / return keys / `tier_history` insert identical to migration 033. Safe during beta (the override masked expiry); with the override now off, apply alongside the real Play Billing path + the Play Console 7-day offer. Idempotent. Verification in `supabase/README.md` row 065. |
+| 066 | `users_profile.billing_period` (nullable text) so the Subscription screen shows monthly vs annual price (flat pricing 2026-06-06) | **Drafted 2026-06-06, pending founder apply.** Set by the `play-billing-rtdn` webhook from the purchased product id (`pro_monthly`→'monthly', `pro_annual`→'annual'); client reads only. NULL shows the monthly price, so frozen-AAB + pre-webhook rows are fine. Additive, idempotent. Redeploy `play-billing-rtdn` after applying. Verification in `supabase/README.md` row 066. |
+
+**Apply state (2026-06-06):** migrations 060-066 are all DRAFTED and pending
+founder apply (049 and 059 remain held until the next AAB ships). `supabase/README.md`
+is the authoritative tracker and carries the per-migration verification queries.
 
 ---
 
@@ -1248,12 +1382,18 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`. The live ranked version with foun
 - Email notifications client-facing: v1.1.
 - AI photo logging: never.
 - Apple Watch app: never at v1.
-- Web app for end users: never at v1.
+- ~~Web app for end users: never at v1.~~ **Reframed 2026-06-06:** a web platform
+  is now being built (`web/` monorepo, `docs/web-platform/`) as a **parallel /
+  experimental track**. It does NOT gate the Android production release and mobile
+  stays the v1 priority; it is no longer an absolute "never at v1".
 - Peak Week module: founder removed 2026-05-25.
 - Complete tier + 28-day cascade: founder consolidated to 2-tier 2026-05-25.
 - RevenueCat: founder switched to Play Billing direct 2026-05-25.
 
-**iOS is deferred until Android ships, not locked never.** Adjust framing in any doc that claims otherwise.
+**iOS is in scope alongside Android (updated 2026-06-06).** The EAS/TestFlight
+pipeline is built and the founder continues iOS Monday; Android production is the
+immediate goal. Earlier docs that say "iOS deferred until Android ships" are
+superseded.
 
 ---
 

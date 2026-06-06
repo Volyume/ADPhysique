@@ -72,8 +72,12 @@ set risks release-only crashes. Revisit post-launch.
 - `npx eslint .` → exit 0 (0 errors; 4 pre-existing tests/simulator warnings).
 - `npx eslint src App.js index.js plugins` → exit 0.
 - Babel config: NODE_ENV=test → `[worklets]`; NODE_ENV=production → `[transform-remove-console, worklets]`. Verified.
-- `npx jest` (full) → **96 failed / 2838 passed**, identical to the pre-existing
-  `act()` baseline. **Zero new failures introduced.**
+- `npx jest` (full) → **96 failed / 2838 passed**. This audit's edits introduced
+  no new failures, but the **96 are not a "pre-existing baseline"** as first
+  written: they were introduced by the 06-05 SDK 54 / React 19 upgrade (the suite
+  was green at 2770 on 06-03) and are not all `act()` (several suites fail to load
+  entirely). Corrected in the exec summary and testing audit. The red suite is a
+  production blocker, not benign.
 
 ## Remaining external values (everything else is wired into the workflows)
 Nothing here is a command to run. Two values live only inside accounts the repo
