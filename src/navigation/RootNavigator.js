@@ -969,17 +969,27 @@ export default function RootNavigator() {
   // arrives.
 
   // Navigation priority:
-  // 1. No tier chosen yet → WelcomeScreen (tier selection)
+  // 1. Not signed in → WelcomeScreen (tier selection) + Login
   // 2. Signed-in + Article 9 consent missing → Article9ConsentStack
   //    (compliance gate per IDENTITY_AND_OWNERSHIP_LOCKED.md +
   //    PRIVACY_CONSENT_LOCKED.md). Blocks the rest of the app until
-  //    the user explicitly agrees to health-data processing. Local
-  //    users without a cloud account skip the gate.
-  // 3. Pro + first-run not done → ProOnboardingStack (guided 5-step setup)
+  //    the user explicitly agrees to health-data processing. The Article 9
+  //    step is where start_cascade grants the 14-day Pro trial, which sets
+  //    tier='pro' for a new user.
+  // 3. Pro + first-run not done → ProOnboardingStack (guided setup)
   // 4. Free + first-run not done → FirstRunStack (quick setup)
   // 5. Both done → MainTabs
   function renderNavigator() {
-    if (!tier) return <WelcomeStack />;
+    // Gate on whether the user is SIGNED IN, not on tier. Post-beta a
+    // freshly authenticated account has no tier yet (no cloud profile row,
+    // and the PRO_BETA_ACTIVE override that used to force tier='pro' is
+    // gone). Keying this on `!tier` parked a signed-in user back on the
+    // login screen forever: signed in at Supabase, stuck at Login in the
+    // app. Identity is cloud-only (no anonymous mode per
+    // IDENTITY_AND_OWNERSHIP_LOCKED.md), so a non-null `user` means signed
+    // in. A null/free tier from here resolves through the Article 9 trial
+    // grant (→ pro) or falls to the free setup.
+    if (!user) return <WelcomeStack />;
     if (user && !user.isLocal && healthConsentChecked && healthConsent === false) {
       return <Article9ConsentStack />;
     }
