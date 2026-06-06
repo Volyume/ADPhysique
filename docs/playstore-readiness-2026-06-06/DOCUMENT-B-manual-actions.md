@@ -46,9 +46,21 @@ upload.
 
 ## BLOCKS — signing / App Links
 - **Play App Signing.** Enrol at first upload (default for new apps).
-- **assetlinks SHA-256.** After enrolment, copy the **Play App Signing SHA-256**
-  (App integrity → App signing) into `public/.well-known/assetlinks.json`
-  (Document A H-1), redeploy the site, then re-trigger App Links verification.
+- **assetlinks SHA-256 — now automated.** The upload-key fingerprint is derived
+  in the pages-deploy workflow from the keystore secret. The only outstanding
+  input is the **Play App Signing SHA-256** as the `PLAY_APP_SIGNING_SHA256` repo
+  secret (Play Console → App integrity → App signing key certificate). Once it
+  exists, the next pages deploy injects it; no file edit, no keytool. Not a
+  submission blocker on its own.
+
+## Two optional secret values (everything else is wired in code/workflows)
+These live only inside accounts the repo can't log into, so they're the genuine
+remaining inputs. Neither blocks the build or store submission; both degrade
+gracefully. They are repo Actions secrets:
+- **`SENTRY_AUTH_TOKEN`** — enables production crash symbolication. Without it
+  the build and app are fine; crashes just arrive minified.
+- **`PLAY_APP_SIGNING_SHA256`** — lets https App Links verify for Play-signed
+  installs (the upload key is already auto-injected).
 
 ## BLOCKS — store listing
 - Title ≤30 / short ≤80 / full ≤4000 (use `docs/PLAY_STORE_LISTING.md`); icon

@@ -38,12 +38,11 @@ thresholds can only be measured against a real build + pre-launch report.
   (`beforeSend`/`beforeBreadcrumb`), session tracking, `attachStacktrace`, 5%
   prod trace sampling, release/dist auto-detected so maps line up. ANR (AnrV2)
   and NDK native-crash capture are @sentry/react-native Android defaults (on).
-- **Gap (H-2):** `eas.json` production env sets `SENTRY_DISABLE_AUTO_UPLOAD:
-  "true"`. If no separate CI step uploads Hermes source maps for the production
-  build, every prod stack trace arrives **minified** — exactly the failure the
-  `sentry.js` header comment warns about. Verify the upload path; if absent,
-  remove the flag or add an explicit `sentry-cli sourcemaps upload` step. →
-  Document A H-2.
+- **H-2 (fixed):** the real Play build workflow `build-android.yml` hardcoded
+  `SENTRY_DISABLE_AUTO_UPLOAD: 'true'`, so the gradle `...SentryUpload...` task
+  was SKIPPED on every build (confirmed in CI run 27063477423 logs) — prod
+  traces arrived minified. The workflow now uploads maps when `SENTRY_AUTH_TOKEN`
+  is set and auto-disables otherwise. Activates once that secret exists.
 
 ## Android Vitals — measured post-build
 Crash <1.09%, ANR <0.47%, cold start <5 s, frozen frames <0.1% are **runtime**

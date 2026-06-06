@@ -41,8 +41,11 @@ artifact, not the truth. Every fix lands in `app.json` / `eas.json` /
 ## Critical / High codebase fixes (Document A)
 - **H-1** `assetlinks.json` ships a placeholder cert fingerprint → App Links
   won't verify. Fix once Play App Signing gives the SHA-256.
-- **H-2** `eas.json` production sets `SENTRY_DISABLE_AUTO_UPLOAD=true` → prod
-  crashes may be unsymbolicated. Verify the CI upload path; fix if absent.
+- **H-2** the production build workflow `build-android.yml` hardcoded
+  `SENTRY_DISABLE_AUTO_UPLOAD=true`, so the Sentry upload task was SKIPPED on
+  every build (confirmed in CI logs) → prod crashes arrive minified. Fixed in the
+  workflow: uploads when `SENTRY_AUTH_TOKEN` secret exists, auto-disables when
+  absent. (The real Play build is this GitHub Actions workflow, not EAS.)
 - **H-3** unused dangerous permissions (RECORD_AUDIO, SYSTEM_ALERT_WINDOW, …)
   may survive the merged manifest → block them via app.json `blockedPermissions`
   after checking a fresh prebuild.
@@ -68,8 +71,20 @@ artifact, not the truth. Every fix lands in `app.json` / `eas.json` /
   the **internal track** to get the 16 KB + pre-launch report, do the Console
   paperwork in parallel, then promote.
 
-## Checkpoint
-Per the brief, **no code has been changed.** Awaiting your go-ahead on which
-Document-A items to implement (and the M-2 allowBackup + L-1 R8 decisions, which
-are yours to make). On confirmation I implement in severity order and log to
-`playstore-09-implementation-log.md`.
+## Status (updated after implementation)
+The founder approved the full Document-A H/M/L set, allowBackup=false, and R8
+off. All fixes are implemented and pushed to `main`. Build/config changes land
+in the Expo source of truth + the GitHub Actions workflows (the real Play build
+pipeline), not the gitignored `android/`.
+
+**Incident, recorded honestly:** the first fix commit (`1e2f1f3`) added a Babel
+devDependency without updating `package-lock.json`, which broke `npm ci` and
+failed two Android builds. Fixed in `b104d50`; the subsequent build cleared the
+install + prebuild steps and proceeded into the gradle compile. H-2 was also
+initially edited in the wrong file (eas.json) before being corrected in the
+real workflow. Both are detailed in `playstore-09-implementation-log.md`.
+
+**Remaining inputs:** two optional values that live only in the Sentry and Google
+Play accounts (`SENTRY_AUTH_TOKEN`, `PLAY_APP_SIGNING_SHA256`). Neither blocks the
+build or submission; both degrade gracefully if never set. Everything else is
+wired into the workflows.

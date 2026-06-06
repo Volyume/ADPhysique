@@ -77,8 +77,10 @@ Consequences that govern every fix in this audit:
 - **Sentry:** `src/lib/sentry.js` init with DSN validation, PII scrub in
   `beforeSend`/`beforeBreadcrumb`, session tracking, 5% prod trace sampling,
   release/dist auto-detected. ANR + NDK use @sentry/react-native defaults (on).
-  Caveat: `eas.json` production sets `SENTRY_DISABLE_AUTO_UPLOAD: "true"` —
-  see Document A, finding H-2.
+  Source-map upload: the real Play build is the GitHub Actions workflow
+  `build-android.yml` (not EAS); it now uploads maps when `SENTRY_AUTH_TOKEN`
+  exists (H-2, done). Historically the upload task was SKIPPED (confirmed in CI
+  logs) due to a hardcoded disable flag, now removed.
 - **Health Connect wiring:** custom `plugins/withHealthConnectPermissionDelegate.js`
   (delegate registration + rationale activity + Android 14 usage alias) and
   `plugins/withEdgeToEdgeOptOut.js` (opts out of API-35 edge-to-edge). Both unit-tested.

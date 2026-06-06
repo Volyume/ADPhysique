@@ -12,9 +12,9 @@ unverifiable here.
 - ☑ versionName 1.2.0
 - ☑ Hermes enabled
 - ◐ R8/ProGuard — OFF by decision (Hermes covers JS); see Document A L-1
-- ☐ No console.log in prod bundle — currently 71 ship; Document A M-1
-- ☐ Sentry source maps uploaded for release — blocked by `SENTRY_DISABLE_AUTO_UPLOAD`;
-  Document A H-2
+- ☑ No console.log in prod bundle — `transform-remove-console` added (M-1, done)
+- ◐ Sentry source maps uploaded for release — workflow now uploads when the
+  `SENTRY_AUTH_TOKEN` secret exists (H-2, wired); set the secret to activate
 
 ## Play Console content
 - ☐ Privacy Policy URL — `https://volyume.app/privacy` exists; confirm it is

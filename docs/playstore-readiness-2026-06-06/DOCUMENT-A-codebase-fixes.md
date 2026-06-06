@@ -1,35 +1,43 @@
-# DOCUMENT A — codebase fixes (await confirmation before any change)
+# DOCUMENT A — codebase fixes (IMPLEMENTED)
 
-Date: 2026-06-06. HEAD `7a944a5`. NO code has been changed. Every fix below
-lands in the **Expo source of truth** (app.json / eas.json / babel.config.js /
-plugins / public), never in the gitignored generated `android/`.
+Date: 2026-06-06. Approved by the founder and pushed to `main`. Fixes land in
+the **Expo source of truth** (app.json / babel.config.js / package.json /
+public) and the **GitHub Actions workflows** (the real Play build pipeline),
+never in the gitignored generated `android/`.
 
 Ordering: Critical → High → Medium → Low. There are **no pure-code Critical
 blockers**; the one Critical-class item (16 KB) is verify-on-AAB (Document B).
+
+> Incident: the first fix commit added a Babel devDependency to package.json
+> without updating package-lock.json, which broke `npm ci` and failed two
+> Android builds (`1e2f1f3`, `c7b1344`). Fixed in `b104d50`. Rule learned: any
+> package.json dependency change regenerates package-lock.json in the same
+> commit. Details in playstore-09-implementation-log.md.
 
 ---
 
 ## HIGH
 
-### H-1 — assetlinks.json has a placeholder cert fingerprint
-- **File:** `public/.well-known/assetlinks.json`
-- **Now:** `"sha256_cert_fingerprints": ["REPLACE_WITH_SHA256_OF_UPLOAD_KEY_CERT"]`
-- **Impact:** `https://volyume.app` App Links (autoVerify=true) never verify, so
-  those links don't open the app. Security/trust item too.
-- **Fix:** replace the placeholder with the real **Play App Signing SHA-256**
-  (and the upload-key SHA-256 as a second entry). The fingerprint comes from Play
-  Console (Document B), so this is a code edit gated on a manual value. Commit +
-  redeploy the GitHub Pages site so the file is live before relying on App Links.
+### H-1 — assetlinks.json placeholder → DONE (wired into deploy workflow)
+- **Files:** `public/.well-known/assetlinks.json`, `.github/workflows/deploy-pages.yml`
+- **Was:** single placeholder `REPLACE_WITH_SHA256_OF_UPLOAD_KEY_CERT`, so
+  `https://volyume.app` App Links never verified.
+- **Done:** file moved to the two-fingerprint shape. The pages-deploy workflow now
+  derives the **upload-key SHA-256 automatically** from the existing keystore
+  secret (`ANDROID_KEYSTORE_BASE64`) and injects it at deploy time. The **Play
+  App Signing SHA-256** is read from a `PLAY_APP_SIGNING_SHA256` repo secret
+  (Document B) and injected too. Committed file stays a placeholder template;
+  the served file carries real values. No manual file edit, no keytool.
 
-### H-2 — production builds may ship without Sentry source maps
-- **File:** `eas.json` → `build.production.env.SENTRY_DISABLE_AUTO_UPLOAD: "true"`
-- **Impact:** with auto-upload off and no separate upload step, prod crashes
-  arrive minified (the exact failure `src/lib/sentry.js` warns about).
-- **Fix:** confirm whether CI uploads maps for the production profile. If not,
-  either remove the flag (let the Expo Sentry plugin upload during EAS build) or
-  add an explicit `sentry-cli sourcemaps upload` CI step keyed to the release.
-  Requires `SENTRY_AUTH_TOKEN` in the build env. Verify, then act — do not flip
-  blind if a CI step already handles it.
+### H-2 — Sentry source maps not uploaded → DONE (wired into build workflow)
+- **File:** `.github/workflows/build-android.yml` (the real Play build pipeline,
+  NOT eas.json — that was the initial mistake).
+- **Was:** `SENTRY_DISABLE_AUTO_UPLOAD: 'true'` hardcoded, so the gradle
+  `...SentryUpload...` task was SKIPPED on every build (confirmed in CI logs).
+- **Done:** the workflow passes `SENTRY_AUTH_TOKEN` and sets the disable flag to
+  `false` when that secret exists, `true` when absent (build never breaks). Maps
+  upload automatically once the token secret is set. eas.json also updated for
+  any future EAS use.
 
 ### H-3 — unused dangerous permissions may survive the merged manifest
 - **Source:** generated `AndroidManifest.xml` snapshot shows `RECORD_AUDIO`,
