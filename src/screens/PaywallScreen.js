@@ -21,13 +21,13 @@ import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSize, fontWeight, hitSlop, type } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, radius, hitSlop, type } from '../styles/theme';
 import { LINKS } from '../lib/links';
 import TierComparisonStrip from '../components/TierComparisonStrip';
 import Button from '../components/Button';
 import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
-import { skuFor, priceTextFor } from '../lib/payments/catalogue';
+import { skuFor, priceTextFor, annualSavingsPct } from '../lib/payments/catalogue';
 import { track as trackEvent } from '../lib/engineTelemetry';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -37,8 +37,11 @@ import { audit } from '../lib/observability';
 export default function PaywallScreen({ navigation, route }) {
   const trigger = route?.params?.trigger ?? 'unknown';
   const ctaMode = route?.params?.ctaMode ?? 'try_pro_14d';
-  const pricingWindow = route?.params?.pricingWindow ?? 'open_beta';
   const surface = `differential_${trigger}`;
+
+  // Billing period the user is buying. Defaults to monthly (the lower-commitment
+  // yes for a new app); the annual option is one tap away with the saving shown.
+  const [period, setPeriod] = useState(route?.params?.period === 'annual' ? 'annual' : 'monthly');
 
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
   const userId = user?.id;
@@ -56,7 +59,7 @@ export default function PaywallScreen({ navigation, route }) {
   const handlePay = useCallback(async () => {
     audit('paywall.upgrade.tap', { surface, target: 'pro' });
     setBusy(true);
-    const sku = skuFor('pro', pricingWindow);
+    const sku = skuFor('pro', period);
     if (!sku) {
       appAlert('Subscription unavailable', 'Could not load the subscription option. Try again later.');
       setBusy(false);
@@ -85,7 +88,7 @@ export default function PaywallScreen({ navigation, route }) {
     } finally {
       setBusy(false);
     }
-  }, [pricingWindow, userId, surface, navigation]);
+  }, [period, userId, surface, navigation]);
 
   // Restore is a Play requirement: a user who already bought Pro (new
   // phone, reinstall) must be able to get their entitlement back without
@@ -115,7 +118,8 @@ export default function PaywallScreen({ navigation, route }) {
     }
   }, [busy, surface, navigation]);
 
-  const priceText = priceTextFor('pro', pricingWindow) ?? priceTextFor('pro', 'open_beta') ?? '£0.99/month';
+  const priceText = priceTextFor('pro', period) ?? '£4.99/month';
+  const renewCadence = period === 'annual' ? 'yearly' : 'monthly';
   // Trial shape (founder override 2026-06-06, SUBSCRIPTION_AND_PAYMENT_LOCKED):
   // 14 cardless days run inside the app BEFORE a purchase surface, then the
   // Play subscription carries a 7-day intro free trial. This screen is a Play
@@ -129,8 +133,8 @@ export default function PaywallScreen({ navigation, route }) {
   // Play subscription disclosure. Auto-renew, price, billing period and
   // how to cancel must be on the purchase surface itself.
   const termsText = ctaMode === 'try_pro_14d'
-    ? `Free for 7 days, then ${priceText}. Renews monthly until you cancel. Manage or cancel anytime in Google Play.`
-    : `${priceText}, renewing monthly until you cancel. Manage or cancel anytime in Google Play.`;
+    ? `Free for 7 days, then ${priceText}. Renews ${renewCadence} until you cancel. Manage or cancel anytime in Google Play.`
+    : `${priceText}, renewing ${renewCadence} until you cancel. Manage or cancel anytime in Google Play.`;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -150,9 +154,33 @@ export default function PaywallScreen({ navigation, route }) {
 
         <View style={styles.stripWrap}>
           <TierComparisonStrip
-            pricingWindow={pricingWindow}
+            pricingWindow={period}
             highlighted="pro"
           />
+        </View>
+
+        <View style={styles.periodRow}>
+          <TouchableOpacity
+            style={[styles.periodBtn, period === 'monthly' && styles.periodBtnActive]}
+            onPress={() => setPeriod('monthly')}
+            accessibilityRole="button"
+            accessibilityState={{ selected: period === 'monthly' }}
+            accessibilityLabel="Monthly, £4.99 a month"
+          >
+            <Text style={[styles.periodLabel, period === 'monthly' && styles.periodTextActive]}>Monthly</Text>
+            <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{priceTextFor('pro', 'monthly')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.periodBtn, period === 'annual' && styles.periodBtnActive]}
+            onPress={() => setPeriod('annual')}
+            accessibilityRole="button"
+            accessibilityState={{ selected: period === 'annual' }}
+            accessibilityLabel="Annual, £29.99 a year, save 50 per cent"
+          >
+            <View style={styles.saveBadge}><Text style={styles.saveBadgeText}>Save {annualSavingsPct()}%</Text></View>
+            <Text style={[styles.periodLabel, period === 'annual' && styles.periodTextActive]}>Annual</Text>
+            <Text style={[styles.periodPrice, period === 'annual' && styles.periodTextActive]}>{priceTextFor('pro', 'annual')}</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.ctaStack}>
@@ -221,7 +249,23 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: spacing.xl,
   },
-  stripWrap: { marginBottom: spacing.xl },
+  stripWrap: { marginBottom: spacing.lg },
+  periodRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
+  periodBtn: {
+    flex: 1, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.border,
+    backgroundColor: colors.surface, paddingVertical: spacing.md, paddingHorizontal: spacing.sm,
+    alignItems: 'center', gap: 2,
+  },
+  periodBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
+  periodLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
+  periodPrice: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  periodTextActive: { color: colors.primary },
+  saveBadge: {
+    position: 'absolute', top: -9, alignSelf: 'center',
+    backgroundColor: colors.primary, borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm, paddingVertical: 1,
+  },
+  saveBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.3 },
   ctaStack: { gap: spacing.md },
   terms: {
     color: colors.textMuted,

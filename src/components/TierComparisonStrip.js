@@ -25,7 +25,7 @@ const COMPARISON_ROWS = [
 ];
 
 export default function TierComparisonStrip({
-  pricingWindow = 'open_beta',
+  pricingWindow = 'monthly',  // billing period now ('monthly' | 'annual'); legacy name
   highlighted = 'pro',   // 'free' | 'pro', which column gets the amber outline
   onPickPro,             // optional: makes the Pro column tappable
 }) {

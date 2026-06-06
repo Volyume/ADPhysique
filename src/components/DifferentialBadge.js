@@ -17,8 +17,8 @@ import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
 
 export default function DifferentialBadge({
   differential,        // { shown, trigger, with_food_data_message, paywall_cta }
-  pricingWindow: _pricingWindow, // 'open_beta' | 'founders' | 'standard'
-  pricingPriceText,    // e.g. "£2.99/month", pre-resolved by caller for the buy_pro CTA
+  pricingWindow: _pricingWindow, // legacy, unused; billing period now lives on the Paywall
+  pricingPriceText,    // e.g. "£4.99/month", pre-resolved by caller for the buy_pro CTA
   onTapCta,            // (action: 'pay' | 'dismiss' | 'shown') => void ('shown' is the impression ping)
 }) {
   // Fire the locked paywall_shown telemetry once per mount with a

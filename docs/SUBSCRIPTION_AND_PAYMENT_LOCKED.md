@@ -29,6 +29,19 @@
 > must be created before any of this converts. See the founder-action
 > checklist in the strategy memo.
 
+> **Founder override 2026-06-06 (pricing):** Flat pricing replaces the
+> escalating launch/founders/standard windows. Pro is **£4.99/month** or
+> **£29.99/year** (annual ~50% off). Two Play Console products to create:
+> `pro_monthly` and `pro_annual`, each carrying the 7-day intro free-trial
+> offer. The `locked_in_price_tier` window machinery is retired client-side
+> (`src/lib/payments/catalogue.js` now keys on billing period, not window);
+> the Paywall carries a monthly/annual toggle, other purchase surfaces
+> default to monthly. The SKU tables further down that still list
+> £0.99/£1.99/£3.99 windows are superseded by this block. Follow-up: the
+> server should store the purchased period on the profile so the
+> Subscription screen shows the right price for annual subscribers, and the
+> CascadeGate / ProUpgrade purchase surfaces could gain the annual toggle.
+
 > **Founder override 2026-05-25:** Three structural changes since
 > the original 2026-05-23 lock:
 >

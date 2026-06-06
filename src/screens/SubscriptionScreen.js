@@ -36,12 +36,6 @@ const STAGE_LABEL = {
   free:            'Free',
 };
 
-const PRICING_WINDOW_LABEL = {
-  open_beta: 'Launch pricing',
-  founders:  'Founders pricing',
-  standard:  'Standard pricing',
-};
-
 export default function SubscriptionScreen({ navigation }) {
   const toast = useToast();
   const { userProfile } = useAppStore(useShallow((s) => ({
@@ -51,11 +45,14 @@ export default function SubscriptionScreen({ navigation }) {
   const tier = isPaidTier(userProfile);
   const stage = cascade.stageOf(userProfile);
   const daysLeft = cascade.daysRemaining(userProfile);
-  const lockedWindow = userProfile?.lockedInPriceTier ?? userProfile?.locked_in_price_tier ?? null;
-
-  const currentSku = tier === 'pro' && lockedWindow
-    ? skuFor('pro', lockedWindow)
-    : null;
+  // Flat pricing (2026-06-06): no more pricing windows. The billing period
+  // (monthly/annual) is what matters; until the server stores it on the
+  // profile we read it from the legacy field if present, else default to
+  // monthly. Only show a price once the user is actually paying.
+  const period = (userProfile?.billingPeriod ?? userProfile?.locked_in_price_tier) === 'annual'
+    ? 'annual'
+    : 'monthly';
+  const currentSku = stage === 'paid' ? skuFor('pro', period) : null;
 
   const [busy, setBusy] = useState(false);
 
@@ -115,8 +112,8 @@ export default function SubscriptionScreen({ navigation }) {
 
   const handleUpgrade = useCallback(() => {
     audit('subscription.upgrade.tap', { from: 'subscription_screen' });
-    navigation?.navigate?.('CascadeGate', { variant: 'day21', pricingWindow: lockedWindow ?? 'open_beta' });
-  }, [navigation, lockedWindow]);
+    navigation?.navigate?.('CascadeGate', { variant: 'day21', period });
+  }, [navigation, period]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -141,8 +138,7 @@ export default function SubscriptionScreen({ navigation }) {
             <Text style={styles.cardLabel}>Price</Text>
             <Text style={styles.cardValue}>{currentSku.priceText}</Text>
             <Text style={styles.cardSub}>
-              {PRICING_WINDOW_LABEL[currentSku.pricingWindow] ?? currentSku.pricingWindow}
-              {' · locked for life of subscription'}
+              {period === 'annual' ? 'Billed yearly' : 'Billed monthly'}
             </Text>
           </Card>
         ) : null}

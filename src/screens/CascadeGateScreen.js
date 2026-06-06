@@ -76,7 +76,9 @@ function _variantContent(variant) {
 export default function CascadeGateScreen({ navigation, route }) {
   const toast = useToast();
   const variant = route?.params?.variant ?? 'day14';
-  const pricingWindow = route?.params?.pricingWindow ?? 'open_beta';
+  // Flat pricing (2026-06-06): the choice is billing period, not a window.
+  // Defaults to monthly; the monthly/annual toggle lives on the Paywall.
+  const period = route?.params?.period ?? 'monthly';
   const content = _variantContent(variant);
   const [busy, setBusy] = useState(null);  // which CTA is in-flight
 
@@ -87,10 +89,10 @@ export default function CascadeGateScreen({ navigation, route }) {
   const handlePay = useCallback(async (targetTier) => {
     audit('cascade.pay.tap', { targetTier, gateDay: variant });
     setBusy(targetTier);
-    const sku = skuFor(targetTier, pricingWindow);
+    const sku = skuFor(targetTier, period);
     if (!sku) {
       logError('CascadeGate.skuMissing', new Error('sku not found'), {
-        targetTier, pricingWindow,
+        targetTier, period,
       });
       toast.show("Couldn't load the subscription option, try again later", { variant: 'error' });
       setBusy(null);
@@ -124,7 +126,7 @@ export default function CascadeGateScreen({ navigation, route }) {
       setBusy(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pricingWindow, content?.surface, dismiss]);
+  }, [period, content?.surface, dismiss]);
 
   const handleSkip = useCallback(async (targetTier) => {
     audit('cascade.skip.tap', { targetTier, gateDay: variant });

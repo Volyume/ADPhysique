@@ -149,7 +149,7 @@ export default function Article9ConsentScreen({ navigation }) {
         <BulletList items={[
           'On your phone, in encrypted local storage',
           'On our servers in the UK, with row-level security so only you and the team supporting your account can see it',
-          'If you delete your account, all of it is removed within 30 days',
+          'If you delete your account, all of it is removed straight away',
         ]} />
 
         <Pressable

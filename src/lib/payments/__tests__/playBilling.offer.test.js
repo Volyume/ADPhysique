@@ -14,7 +14,7 @@ import { selectOfferToken, _buildRealProvider } from '../playBilling';
 
 const FREE_TOKEN = 'offer-free-7d';
 const BASE_TOKEN = 'offer-base-plan';
-const SKU = 'pro_monthly_open_beta';
+const SKU = 'pro_monthly';
 
 function trialProduct() {
   return {

@@ -56,8 +56,9 @@ export default function ProUpgradeScreen({ navigation }) {
   // pay now (already used the Play trial and cancelled).
   async function subscribePro() {
     const { logError } = require('../lib/errorLog');
-    const pricingWindow = userProfile?.lockedInPriceTier ?? 'open_beta';
-    const sku = skuFor('pro', pricingWindow);
+    // Flat pricing: subscribe at the monthly plan from here. The
+    // monthly/annual choice lives on the Paywall surface.
+    const sku = skuFor('pro', 'monthly');
     if (!sku) {
       toast.show('Subscription unavailable, try again later', { variant: 'error' });
       return;
