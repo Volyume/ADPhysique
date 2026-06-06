@@ -433,6 +433,10 @@ const useAppStore = create((set, get) => ({
   // Tier, 'free' | 'pro' | null (null = not yet chosen → show WelcomeScreen)
   tier: null,
   tierChecked: false,
+  // Billing period of the active paid plan, 'monthly' | 'annual' | null.
+  // Display-only (Subscription screen); set by refreshTierFromCloud from
+  // the Play webhook's billing_period column. Null shows the monthly price.
+  billingPeriod: null,
 
   // Cloud sync status surface. Set from RootNavigator when a fresh
   // SIGNED_IN triggers pullFromCloud. Screens subscribe to
@@ -743,7 +747,7 @@ const useAppStore = create((set, get) => ({
     try {
       const queryPromise = supabaseClient
         .from('users_profile')
-        .select('tier')
+        .select('tier, billing_period')
         .eq('id', supabaseUserId)
         .maybeSingle();
       let tierTimeoutId;
@@ -768,7 +772,10 @@ const useAppStore = create((set, get) => ({
         // Persist BEFORE setting in-memory state so a crash between the
         // two doesn't leave AsyncStorage out of sync with the store.
         await AsyncStorage.setItem(TIER_KEY, effectiveTier);
-        set({ tier: effectiveTier });
+        // billing_period (monthly/annual) is display-only for the
+        // Subscription screen; null until the Play webhook records a
+        // purchase, which the screen treats as monthly.
+        set({ tier: effectiveTier, billingPeriod: data.billing_period ?? null });
       }
     } catch (e) {
       require('../lib/errorLog').logWarn(

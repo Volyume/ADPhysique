@@ -325,6 +325,34 @@ async function callUpgradeTier(
   }
 }
 
+// Record which plan the user bought (monthly vs annual) so the in-app
+// Subscription screen shows the right price. billing_period is not the
+// tier, so it is not guarded by the protect_users_profile_tier trigger;
+// a service-role PATCH writes it directly. Migration 066 adds the column.
+async function setBillingPeriod(
+  userId: string,
+  period: "monthly" | "annual",
+): Promise<void> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return;
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/users_profile?id=eq.${userId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal",
+      },
+      body: JSON.stringify({ billing_period: period }),
+    },
+  );
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    log("error", `set billing_period failed: ${res.status} ${body}`);
+  }
+}
+
 serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
@@ -389,6 +417,8 @@ serve(async (req: Request) => {
     case "purchase":
     case "restart":
       await callUpgradeTier(userId, "pro", "user_paid", paymentRef, "play_billing_rtdn");
+      // Store the plan they bought (pro_annual -> annual, else monthly).
+      await setBillingPeriod(userId, sub.subscriptionId === "pro_annual" ? "annual" : "monthly");
       break;
     case "expire":
       await callUpgradeTier(userId, "free", "user_cancelled", paymentRef, "play_billing_rtdn");

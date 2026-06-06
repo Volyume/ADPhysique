@@ -38,20 +38,19 @@ const STAGE_LABEL = {
 
 export default function SubscriptionScreen({ navigation }) {
   const toast = useToast();
-  const { userProfile } = useAppStore(useShallow((s) => ({
+  const { userProfile, billingPeriod } = useAppStore(useShallow((s) => ({
     userProfile: s.userProfile,
+    billingPeriod: s.billingPeriod,
   })));
 
   const tier = isPaidTier(userProfile);
   const stage = cascade.stageOf(userProfile);
   const daysLeft = cascade.daysRemaining(userProfile);
   // Flat pricing (2026-06-06): no more pricing windows. The billing period
-  // (monthly/annual) is what matters; until the server stores it on the
-  // profile we read it from the legacy field if present, else default to
-  // monthly. Only show a price once the user is actually paying.
-  const period = (userProfile?.billingPeriod ?? userProfile?.locked_in_price_tier) === 'annual'
-    ? 'annual'
-    : 'monthly';
+  // (monthly/annual) is set by the Play webhook on purchase and read here
+  // via refreshTierFromCloud -> store.billingPeriod. Null/unknown shows the
+  // monthly price. Only show a price once the user is actually paying.
+  const period = billingPeriod === 'annual' ? 'annual' : 'monthly';
   const currentSku = stage === 'paid' ? skuFor('pro', period) : null;
 
   const [busy, setBusy] = useState(false);

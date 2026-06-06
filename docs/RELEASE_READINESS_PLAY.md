@@ -37,24 +37,25 @@ the beta switch. None of what's left is a rebuild.
 
 ## Remaining code (mine), none blocking
 
-- **Timezone week boundary.** The weekly check-in buckets its week by UTC
-  Monday, not UK-local Monday: a ≤1-hour edge each week during British
-  Summer Time. It's internally consistent today (the check-in screen and
-  the reminder scheduler agree), so the real impact is a reminder
-  mis-timing in a one-hour window. Fixing it properly is a coordinated
-  change to the week-keyed coaching path (check-in screen + scheduler +
-  the stored week_start + the coach-output week), best done as a focused,
-  fully-tested change rather than bundled into launch. **Recommend doing
-  this as the next task.**
-- **Purchase "confirming" state.** If Google charges but the local write
-  fails (poor connection), the user briefly looks un-upgraded until the
-  RTDN webhook reconciles. A short "confirming your purchase" state would
-  be cleaner. Self-heals once the webhook is deployed.
-- **Annual everywhere.** The monthly/annual toggle is on the Paywall; the
-  day-14 gate and the lock-screen upsell default to monthly. Worth adding
-  the toggle to the day-14 gate (a prime conversion moment), and the
-  server should store the purchased period so the Subscription screen
-  shows annual subscribers the right figure.
+- **Timezone week boundary, fixed.** The check-in week now anchors on
+  local Monday (new `localWeekStartMs` in dayKey.js); the reminder
+  suppression and the de-dup match on `created_at`, so old UTC-stored rows
+  still match with no transition glitch. Tested.
+- **Purchase "confirming" state, done.** If Google charges but the local
+  write fails, the Paywall, day-14 gate and ProUpgrade now show "Payment
+  received, we're confirming your access" instead of looking un-upgraded;
+  the webhook reconciles it.
+- **Annual at the day-14 gate, done.** The monthly/annual toggle is now on
+  the day-14 gate too, not just the Paywall.
+- **Purchased period stored, done.** Migration 066 adds
+  `users_profile.billing_period`; the webhook sets it from the bought
+  product and the Subscription screen reads it, so annual subscribers see
+  £29.99/year.
+
+Still open, none blocking:
+
+- **Annual on ProUpgrade.** The lock-screen ProUpgrade path subscribes
+  monthly only; annual is on the Paywall and the day-14 gate. Low priority.
 - **Remote push** is code-ready; it needs the token migration + the send
   function deployed (your side, below).
 
@@ -73,8 +74,9 @@ the beta switch. None of what's left is a rebuild.
    (renewals, cancels, refunds, payment failures).
 4. **Deploy `send-push` + apply migration 053** (device_push_tokens) so
    payment-failure notifications can reach users.
-5. **Apply the pending migrations** in numeric order (059–065) in the
-   Supabase SQL Editor (all additive; see `supabase/README.md`).
+5. **Apply the pending migrations** in numeric order (059–066) in the
+   Supabase SQL Editor (all additive; see `supabase/README.md`). After
+   066, **redeploy `play-billing-rtdn`** so it writes `billing_period`.
 6. **Store listing.** Paste the refreshed `docs/PLAY_STORE_LISTING.md`,
    set the two price points, complete the Data Safety and content-rating
    forms, add screenshots.

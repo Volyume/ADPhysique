@@ -1,0 +1,32 @@
+-- ====================================================================
+-- Migration 066: users_profile.billing_period
+-- ====================================================================
+-- Purpose
+--   Flat pricing (2026-06-06) has two plans: monthly (£4.99) and annual
+--   (£29.99). Store which one a subscriber bought so the in-app
+--   Subscription screen shows the right price instead of defaulting to
+--   monthly. Authoritative source is the Play Billing RTDN webhook
+--   (supabase/functions/play-billing-rtdn), which sets it from the
+--   purchased product id (pro_monthly -> 'monthly', pro_annual ->
+--   'annual') on SUBSCRIPTION_PURCHASED / RECOVERED / RESTARTED. The
+--   client only reads it.
+--
+-- What changes
+--   ALTER TABLE users_profile ADD COLUMN billing_period text (nullable,
+--   no default). Additive. The protect_users_profile_tier trigger guards
+--   the `tier` column only, so the webhook's service-role PATCH of
+--   billing_period is not reverted.
+--
+-- Applied locally (dev Supabase project):   NO  (pending)
+-- Applied remotely (closed-test project):    NO  (pending founder apply)
+-- Safe to re-run:   Yes (ADD COLUMN IF NOT EXISTS).
+-- Rollback:         ALTER TABLE users_profile DROP COLUMN billing_period;
+--
+-- App-code dependency
+--   * Redeploy the play-billing-rtdn edge function to write it.
+--   * Client reads it via refreshTierFromCloud -> store.billingPeriod ->
+--     SubscriptionScreen. NULL is treated as monthly, so the frozen AAB
+--     and any pre-webhook rows are fine.
+-- ====================================================================
+
+ALTER TABLE users_profile ADD COLUMN IF NOT EXISTS billing_period text;

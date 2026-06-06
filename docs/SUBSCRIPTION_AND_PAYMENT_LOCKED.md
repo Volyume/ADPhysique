@@ -37,10 +37,11 @@
 > (`src/lib/payments/catalogue.js` now keys on billing period, not window);
 > the Paywall carries a monthly/annual toggle, other purchase surfaces
 > default to monthly. The SKU tables further down that still list
-> £0.99/£1.99/£3.99 windows are superseded by this block. Follow-up: the
-> server should store the purchased period on the profile so the
-> Subscription screen shows the right price for annual subscribers, and the
-> CascadeGate / ProUpgrade purchase surfaces could gain the annual toggle.
+> £0.99/£1.99/£3.99 windows are superseded by this block. The day-14 gate
+> now also carries the monthly/annual toggle. The purchased period is
+> stored on the profile (migration 066 `billing_period`, set by the
+> play-billing-rtdn webhook) and read by the Subscription screen, so
+> annual subscribers see £29.99/year. ProUpgrade still subscribes monthly.
 
 > **Founder override 2026-05-25:** Three structural changes since
 > the original 2026-05-23 lock:
