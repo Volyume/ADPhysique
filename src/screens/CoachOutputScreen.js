@@ -34,6 +34,7 @@ import {
 } from '../lib/database';
 import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
 import { getRecentIntakeSummary } from '../lib/food/db';
+import { localWeekStartMs } from '../lib/dayKey';
 import { track as trackEngineEvent } from '../lib/engineTelemetry';
 import DifferentialBadge from '../components/DifferentialBadge';
 import { SkeletonCard } from '../components/Skeleton';
@@ -683,7 +684,13 @@ function InsufficientDataView({ dataNote, onClose }) {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function CoachOutputScreen({ navigation, route }) {
-  const { weekStart } = route.params ?? {};
+  // Default to the current local week when no week is passed. The weekly
+  // "your plan is ready" notification routes here with no params; without this
+  // weekStart was undefined, which made getWeeklySessionStats build a NaN
+  // window (0 sessions), weekRangeLabel render an Invalid Date, and the screen
+  // fall through to the baseline view, the "building baseline" screen the user
+  // saw on tapping the notification.
+  const weekStart = route.params?.weekStart ?? localWeekStartMs();
   const { user, userProfile, units, saveLocalProfile } = useAppStore();
 
   const [output, setOutput] = useState(null);

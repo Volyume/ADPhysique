@@ -307,15 +307,19 @@ const COACH_READY_COPY = {
 };
 
 /**
- * Schedule the recurring "weekly coach output ready" reminder.
+ * Schedule a ONE-OFF "weekly coach output ready" reminder for the next Monday.
  *
  * @param {number} hour    0-23, default 9 (09:00 local)
  * @param {number} minute  0-59, default 0
  *
- * expo's WEEKLY trigger uses weekday 1=Sunday..7=Saturday; Monday is 2.
- * Quiet hours are applied to the hour/minute the same way the morning
- * reminder does. Recurring (repeats:true), so it fires every Monday
- * until cancelled. Re-running cancels and re-lays, so it's idempotent.
+ * This is laid only when the user submits a check-in
+ * (WeeklyCheckInScreen.handleSubmit), so the "your plan is ready" notification
+ * fires only in a week the user actually checked in, i.e. only when a real
+ * review exists. A week with no check-in gets no notification. Previously this
+ * was a RECURRING weekly notification that fired every Monday regardless, and
+ * tapping it (with no review for the week) dropped the user on the
+ * "building baseline" screen. One-off + re-laid each check-in fixes that.
+ * Re-running cancels and re-lays, so it stays idempotent.
  */
 export async function scheduleWeeklyCoachReady(hour = 9, minute = 0) {
   if (Platform.OS === 'web') return;
@@ -323,6 +327,8 @@ export async function scheduleWeeklyCoachReady(hour = 9, minute = 0) {
     await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_COACH_READY).catch(() => {});
     const quiet = await getQuietHours();
     const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hour, minute, quiet);
+    // Next Monday at h:m (getNextWeekdayDate uses JS getDay, Monday = 1).
+    const fireAt = getNextWeekdayDate(1, h, m, new Date());
     await Notifications.scheduleNotificationAsync({
       identifier: NOTIF_ID_COACH_READY,
       content: {
@@ -332,10 +338,8 @@ export async function scheduleWeeklyCoachReady(hour = 9, minute = 0) {
         sound: false,
       },
       trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-        weekday: 2, // Monday (1=Sunday)
-        hour: h,
-        minute: m,
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: fireAt,
       },
     });
   } catch (e) {

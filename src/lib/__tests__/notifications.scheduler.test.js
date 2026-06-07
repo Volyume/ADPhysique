@@ -391,23 +391,25 @@ describe('scheduleCascadeGateNotifications', () => {
 // ─── scheduleWeeklyCoachReady ──────────────────────────────────────
 
 describe('scheduleWeeklyCoachReady', () => {
-  test('default Monday 09:00 schedules a repeating WEEKLY trigger', async () => {
+  test('schedules a ONE-OFF date trigger for the next Monday 09:00', async () => {
     await scheduler.scheduleWeeklyCoachReady(); // defaults 9, 0
     expect(mockCancelAsync).toHaveBeenCalledWith('volyume_weekly_coach_ready');
     expect(mockScheduleAsync).toHaveBeenCalledTimes(1);
     const arg = mockScheduleAsync.mock.calls[0][0];
     expect(arg.identifier).toBe('volyume_weekly_coach_ready');
     expect(arg.content.data).toEqual({ type: 'weekly_coach_ready' });
-    expect(arg.trigger.type).toBe('weekly');
-    expect(arg.trigger.weekday).toBe(2); // Monday
-    expect(arg.trigger.hour).toBe(9);
-    expect(arg.trigger.minute).toBe(0);
+    expect(arg.trigger.type).toBe('date');
+    // Next Monday (JS getDay === 1) at 09:00 local.
+    expect(arg.trigger.date instanceof Date).toBe(true);
+    expect(arg.trigger.date.getDay()).toBe(1);
+    expect(arg.trigger.date.getHours()).toBe(9);
+    expect(arg.trigger.date.getTime()).toBeGreaterThan(Date.now());
   });
 
   test('09:00 is outside the default quiet window, unshifted', async () => {
     await scheduler.scheduleWeeklyCoachReady(9, 0);
     const arg = mockScheduleAsync.mock.calls[0][0];
-    expect(arg.trigger.hour).toBe(9);
+    expect(arg.trigger.date.getHours()).toBe(9);
   });
 
   test('web: no-op', async () => {
