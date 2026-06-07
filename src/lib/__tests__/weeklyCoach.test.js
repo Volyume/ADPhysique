@@ -279,6 +279,26 @@ describe('off-target threshold gating', () => {
     expect(out.adjustments.calories).not.toBeNull();
     expect(out.adjustments.calories.change).toBeLessThan(0);
   });
+
+  test('lean bulk gaining too slowly (flat weight) → apply calorie increase', () => {
+    // The symmetric partner of the gaining-too-fast case: a bulker whose
+    // weight is flat is under their target gain rate, so the coach feeds them
+    // more, not less. Confirmed against the real engine in the pre-launch
+    // adversarial pass; this pins the direction so it can't regress.
+    const out = runWeeklyCoach(baseInputs({
+      goalPhase: 'mild_bulk',
+      morningWeights: trend(80, 0), // flat: below the lean-bulk gain target
+      bodyweightKg: 80,
+      currentCalTarget: 3000,
+      weeksInPhase: 5,
+      consecutiveOffTargetWeeks: 2,
+      lastCalAdjustmentWeeksAgo: 99,
+    }));
+    expect(out.adjustments.calories).not.toBeNull();
+    expect(out.adjustments.calories.change).toBeGreaterThan(0);
+    // direction up, still inside the +/-5% cap (3000 * 0.05 = 150)
+    expect(out.adjustments.calories.change).toBeLessThanOrEqual(150);
+  });
 });
 
 // ── Steps average as a secondary signal ────────────────────────────────────
