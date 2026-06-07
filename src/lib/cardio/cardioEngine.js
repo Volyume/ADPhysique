@@ -122,14 +122,20 @@ export function summariseWeekCardio(rows) {
  *
  *   { currentTarget, sessionsLogged, stillOffTrendInCut, poorRecovery }
  */
-export function nextCardioTarget({ currentTarget, sessionsLogged, stillOffTrendInCut, poorRecovery } = {}) {
+export function nextCardioTarget({ currentTarget, sessionsLogged, stillOffTrendInCut, poorRecovery, complianceOverride = null } = {}) {
   const cur = currentTarget || cutCardioTarget();
   const mode = cur.mode || 'deficit';
 
   if (poorRecovery) return pausedCardioTarget(mode);
   if (mode === 'health') return { ...healthCardioTarget() };
 
-  const compliance = cardioComplianceFromLog(sessionsLogged, cur);
+  // Prefer the check-in's compliance verdict when supplied. It is itself
+  // pre-filled from the log and may be user-overridden (cardio done but not
+  // logged here), so honouring it lets the coach act on what actually
+  // happened rather than only the raw logged count.
+  const compliance = (complianceOverride === 'hit' || complianceOverride === 'mostly' || complianceOverride === 'missed')
+    ? complianceOverride
+    : cardioComplianceFromLog(sessionsLogged, cur);
 
   if (stillOffTrendInCut && compliance === 'hit' && cur.sessionsPerWeek < MAX_CARDIO_SESSIONS) {
     const sessionsPerWeek = cur.sessionsPerWeek + 1;

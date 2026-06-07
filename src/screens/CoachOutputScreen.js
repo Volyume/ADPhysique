@@ -16,6 +16,8 @@ import {
   getWeeklyPRCount,
   getNutritionTargets,
   saveNutritionTargets,
+  getUserBodyProfile,
+  getBodyMetricLog,
   saveCoachOutput,
   getLatestCoachOutput,
   getCoachOutputHistory,
@@ -31,6 +33,7 @@ import {
   activityDayKey,
 } from '../lib/database';
 import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
+import { getRecentIntakeSummary } from '../lib/food/db';
 import { track as trackEngineEvent } from '../lib/engineTelemetry';
 import DifferentialBadge from '../components/DifferentialBadge';
 import { SkeletonCard } from '../components/Skeleton';
@@ -954,6 +957,35 @@ export default function CoachOutputScreen({ navigation, route }) {
       const prs = await getWeeklyPRCount(user.id, weekStart);
       const nutrition = await getNutritionTargets(user.id);
 
+      // Food intake (trailing 7 days) + body composition feed the calorie
+      // safety floor and the adaptive-TDEE sizing. Without these the RED-S
+      // FFM floor can never fire and the adherence correction stays neutral.
+      const intake = await getRecentIntakeSummary(user.id).catch(() => ({ avgKcal: null, daysLogged: 0 }));
+      const bodyProfile = await getUserBodyProfile(user.id).catch(() => null);
+      const latestBf = (await getBodyMetricLog(user.id, 60).catch(() => []))
+        .find(m => m.bodyFatPercent != null) ?? null;
+
+      // Map the check-in's calorie answer ('yes'/'no'/'untracked') onto the
+      // engine's vocabulary ('hit'/'under'/'over'/'untracked'). 'no' splits to
+      // under/over from the logged average vs target so the adherence-sized
+      // correction and the differential paywall gate (which only count
+      // under/over) actually fire. Done here at the boundary, not in the DB,
+      // so the stored value and the frozen build are untouched.
+      const mapCals = (raw) => {
+        if (raw == null) return null;
+        if (raw === 'untracked' || raw === 'hit' || raw === 'under' || raw === 'over') return raw;
+        if (raw === 'yes') return 'hit';
+        if (raw === 'no') {
+          const t = nutrition?.targetKcal;
+          if (intake.avgKcal != null && t) return intake.avgKcal < t ? 'under' : 'over';
+          return 'under';
+        }
+        return raw;
+      };
+      const engineCheckin = checkin
+        ? { ...checkin, calsAdherence: mapCals(checkin.calsAdherence) }
+        : checkin;
+
       // Compute weeksInPhase from stored start timestamp
       const phaseStartedAt = userProfile?.phaseStartedAt ?? null;
       const weeksInPhase = phaseStartedAt
@@ -989,7 +1021,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       // Most-recent-first to match the detector's contract.
       const recentWeeklyHistory = recentCheckins.map(ci => ({
         energy: ci.energyScore ?? null,
-        adherence: ci.calsAdherence ?? null,
+        adherence: mapCals(ci.calsAdherence),
         hasCheckin: true,
         // Food data presence is best-judged at the check-in row:
         // hasFoodData true when calsAdherence was tracked.
@@ -1012,11 +1044,20 @@ export default function CoachOutputScreen({ navigation, route }) {
       } catch (_) { /* cardio optional; coach runs without it */ }
 
       const result = runWeeklyCoach({
-        checkin,
+        checkin: engineCheckin,
         morningWeights: weights,
         sessionsCompleted: sessionStats.completed,
         sessionsPlanned: sessionStats.planned,
         prsThisWeek: prs,
+        // Calorie safety + adherence sizing inputs (food log + body comp).
+        recentIntakeAvgKcal: intake.avgKcal,
+        recentIntakeDaysLogged: intake.daysLogged,
+        bodyFatPercent: latestBf?.bodyFatPercent ?? null,
+        bodyFatSource: latestBf?.bodyFatSource ?? null,
+        sex: bodyProfile?.sex ?? null,
+        // Cardio compliance from the check-in (pre-filled from the log,
+        // user-overridable) so the coach acts on it, not just the raw count.
+        cardioCompliance: checkin?.cardioAdherence ?? null,
         goalPhase: userProfile?.goalPhase ?? 'maint',
         trainingGoal: userProfile?.trainingGoal ?? null,
         weeksInPhase,

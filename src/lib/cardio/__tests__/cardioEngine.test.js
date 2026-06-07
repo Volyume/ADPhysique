@@ -94,6 +94,35 @@ describe('next-week adjustment', () => {
     expect(t.note).toMatch(/before adding more/i);
   });
 
+  test('check-in compliance override drives the dose over the raw count', () => {
+    // The log shows 1 session (would read "missed"), but the user's check-in
+    // verdict (pre-filled from the log, then overridden) says they hit it, so
+    // the coach escalates as if hit.
+    const t = nextCardioTarget({
+      currentTarget: cur, sessionsLogged: 1, stillOffTrendInCut: true,
+      poorRecovery: false, complianceOverride: 'hit',
+    });
+    expect(t.sessionsPerWeek).toBe(4);
+    expect(t.note).toMatch(/add one more/i);
+  });
+
+  test('override of missed holds even when the log count would read as hit', () => {
+    const t = nextCardioTarget({
+      currentTarget: cur, sessionsLogged: 3, stillOffTrendInCut: true,
+      poorRecovery: false, complianceOverride: 'missed',
+    });
+    expect(t.sessionsPerWeek).toBe(3);
+    expect(t.note).toMatch(/before adding more/i);
+  });
+
+  test('a null override falls back to the logged count', () => {
+    const t = nextCardioTarget({
+      currentTarget: cur, sessionsLogged: 3, stillOffTrendInCut: true,
+      poorRecovery: false, complianceOverride: null,
+    });
+    expect(t.sessionsPerWeek).toBe(4);
+  });
+
   test('health mode never escalates', () => {
     const health = healthCardioTarget();
     const t = nextCardioTarget({ currentTarget: health, sessionsLogged: 2, stillOffTrendInCut: false, poorRecovery: false });

@@ -390,6 +390,13 @@ export function runWeeklyCoach(inputs) {
     cardioSessionsLogged = 0,
     cardioWeekSummary = null,
     cardioEnabled = true,
+    // The week's cardio compliance verdict from the check-in ('hit' | 'mostly'
+    // | 'missed'). It is pre-filled from the cardio_log and the user can
+    // override it (cardio done but not logged here). When present it drives the
+    // next cardio dose instead of recomputing compliance from the raw logged
+    // count, so the coach acts on the check-in answer. Null leaves the prior
+    // log-only behaviour unchanged for every other caller.
+    cardioCompliance = null,
   } = inputs;
 
   // Defensive sanitisation. These come from DB counts and date math; coerce any
@@ -775,6 +782,7 @@ export function runWeeklyCoach(inputs) {
         sessionsLogged: cardioSessionsLogged,
         stillOffTrendInCut: true,
         poorRecovery: false,
+        complianceOverride: cardioCompliance,
       })
       : cutCardioTarget(consecutiveOffTargetWeeks, goalPhase);
     cardioAdjustment = {
