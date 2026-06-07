@@ -14,7 +14,94 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
-### 0.000000000000000001. 2026-06-06 (evening): subscriptions deployed end to end, native Google sign-in, RESUME-HERE state
+### 0.0000000000000000001. 2026-06-07: post-beta breakage fixed (auth wall, trial start, account deletion), weekly check-in analysed not built, RESUME-HERE state
+
+Session ended early and unhappily. The assistant overstepped repeatedly,
+making product decisions that are the founder's to make and widening scope
+instead of doing the narrow thing asked. This entry records the factual state
+only. The check-in design is the founder's call; nothing about it was decided
+or built.
+
+**Shipped to `main` this session (code, all pushed, HEAD `0111a3c`):**
+- `1a863f0`: post-beta Pro upgrade + trial start + native Google sign-in cache.
+  - `cascade.startCascade()` now mirrors the granted tier into the local store
+    so the navigator mounts ProOnboardingStack, not the free FirstRunStack.
+  - `ProUpgradeScreen` starts the 14-day trial for an existing consented user
+    (who skips the Article 9 gate where it otherwise fires).
+  - `SubscriptionScreen` "Upgrade" for a free user routes through `ProUpgrade`
+    (trial + setup) instead of the CascadeGate purchase sheet.
+  - `CascadeGate` gained a "Go Pro" upgrade variant; superseded/timed-out
+    purchases no longer log to Sentry as errors.
+  - `signInWithGoogle` clears the native Google SDK cache before `signIn()` so
+    re-auth after an account delete works without clearing app data.
+  - Sign-out push-first sync bounded by a timeout so it can't hang.
+- `93fe941`: the auth wall + un-deletable accounts.
+  - `RootNavigator.renderNavigator` now gates the app on `user` (signed in),
+    NOT on `tier`. Post-beta a freshly authenticated account has no tier yet,
+    and gating on `!tier` parked signed-in users on the login screen forever.
+  - Migration 069 (FK cascade) written.
+- `0111a3c`: Article 9 upserts a `users_profile` row before `record_health_consent`
+  / `start_cascade`, and awaits the trial grant, so a brand-new account's trial
+  actually starts (it raised "profile not found" before).
+
+**Root cause of the day's breakage (now understood, grounded in code):** turning
+`PRO_BETA_ACTIVE` off (commit `bf33823`, earlier) exposed three things the
+post-beta path never handled: (1) the navigator gated app entry on `tier`, which
+is null for a new account once the beta override that forced `pro` was gone;
+(2) `start_cascade` and the other tier RPCs bypass the protect-tier trigger with
+`session_replication_role`, a superuser-only setting, so they throw
+"permission denied to set parameter session_replication_role" on hosted Supabase
+and the trial cannot start (confirmed in the founder's Sentry); (3) ~25 public
+tables reference `auth.users` with no `ON DELETE CASCADE`, so account deletion
+fails with "Database error deleting user".
+
+**PENDING, founder must apply in the Supabase SQL editor (NOT applied):**
+- `supabase/migrate_068_tier_trigger_guc_bypass.sql`: makes the protect-tier
+  trigger honour a session-local `app.allow_tier_change` GUC (no superuser) and
+  re-creates `start_cascade`, `upgrade_tier`, `upgrade_tier_for_user`,
+  `cascade_advance_due_users` to use it instead of `session_replication_role`.
+  Without this the 14-day trial cannot start. Verification query in the footer.
+- `supabase/migrate_069_auth_user_fk_cascade.sql`: converts every blocking
+  public FK to `auth.users` to `ON DELETE CASCADE` so deletion works everywhere.
+  Both are logged in `supabase/README.md`.
+
+**Founder did this session:** set their own account permanently Pro directly in
+SQL (`users_profile.tier='pro'`, `trial_state='paid_pro'` for
+`allansdouglas1983@gmail.com`).
+
+**Weekly check-in, ANALYSED ONLY, no code written, no fix decided:**
+A full line-by-line read of the engine (`WeeklyCheckInScreen`, `weeklyCoach`,
+`nutritionEngine`, `algorithms`, `coachApply`, `insightsEngine`, `recoveryEMA`,
+`CoachOutputScreen` data+apply path, plus the data-source DB functions). Finding:
+the coaching engine is complete and evidence-sound; the failure is purely the
+data pipeline into the weekly coach. Open findings for the founder to direct:
+- Real food intake is never passed to `runWeeklyCoach` (`CoachOutputScreen`
+  ~`:1014` omits `recentIntakeAvgKcal`/`recentIntakeDaysLogged`), so the RED-S
+  floor (`weeklyCoach:680`) and the adaptive-TDEE adherence factor
+  (`weeklyCoach:586`) can never act. The coach judges calories off the scale
+  alone.
+- `calsAdherence` is written `yes/no/untracked` (`WeeklyCheckIn:637`) but every
+  consumer reads `under/over/hit` (`weeklyCoach:586,628,1034`;
+  `CoachOutput:114-120,144-148`); those branches are dead.
+- Steps are gated behind `hasStepsTarget` (`WeeklyCheckIn:435,658`); when hidden,
+  `stepsAvg` is null and the engine's step logic gets nothing.
+- Training performance is a fabricated `completed/planned` ratio
+  (`WeeklyCheckIn:79`) instead of the existing PR/volume/plateau/progression
+  functions in `algorithms.js`.
+- The check-in form does not prefill from a saved row (no `getLatestCheckin`
+  call in the screen).
+NONE of this was changed. The fix approach is the founder's decision.
+
+**Open / unresolved (not code, needs founder + Supabase dashboard):**
+- Email verification not arriving for email signups. The signup code is
+  unchanged (`supabase.auth.signUp`); this is server-side Auth/SMTP. Needs the
+  Authentication → Logs export + the Email provider settings to diagnose.
+
+**Build:** the Android build auto-triggers on push and was running for `0111a3c`.
+
+---
+
+### 0.000000000000000001. 2026-06-06 (evening): subscriptions deployed end to end, native Google sign-in
 
 Continuation of the same day. The subscription system was audited, fixed, and
 the founder stood up the whole cloud + Play side; Google sign-in was switched to

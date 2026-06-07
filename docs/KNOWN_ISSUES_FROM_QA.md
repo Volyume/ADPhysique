@@ -5,6 +5,16 @@ device-log testing this session reconciled below. Earlier multi-agent
 audits 2026-05-20, 2026-05-21, 2026-05-22, and 2026-05-24 device pass
 still apply for the older items._
 
+## 2026-06-07: open issues (not yet fixed)
+
+Two items left open at the end of the 2026-06-07 session. Full context in
+`docs/CURRENT_STATUS.md` § 0 (2026-06-07 entry).
+
+| Issue | Severity | Status | Notes |
+|---|---|---|---|
+| Weekly check-in does not pick up calories, steps, or training automatically, and the weekly coach acts on almost none of it. Real food intake is never passed to `runWeeklyCoach` (`CoachOutputScreen` ~`:1014`), so the RED-S floor and adaptive-TDEE cannot act. `calsAdherence` is written `yes/no/untracked` but read as `under/over/hit` (dead branches). Steps gated behind `hasStepsTarget`. Training performance is a `completed/planned` ratio, not the real PR/volume/progression functions that already exist. The form does not prefill a saved row. The engine itself is complete and evidence-sound; only the data pipeline is broken. | **High** | **Open, not started** | Analysed in full this session. No code written. Fix scope/approach is a founder decision. |
+| Email verification email does not arrive for email signups. Signup code is unchanged (`supabase.auth.signUp`); server-side Auth/SMTP. | **Medium** | **Open, needs dashboard** | Diagnose via Authentication to Logs export + Email provider settings in Supabase. Not a code issue. |
+
 ## 2026-05-25 (evening) — sideloaded APK device-log pass
 
 The founder built and sideloaded a fresh debug APK after the build
