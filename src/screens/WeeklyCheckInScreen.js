@@ -10,6 +10,7 @@ import { formatBodyWeightShort } from '../lib/units';
 import { computeEWMA } from '../lib/weeklyCoach';
 import {
   saveWeeklyCheckin,
+  getLatestCheckin,
   getMorningWeightsLast14Days,
   getWeeklySessionStats,
   getWeeklyPRCount,
@@ -252,6 +253,9 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  // True when a weekly check-in already exists for this week, so the form is
+  // prefilled for editing rather than shown blank.
+  const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
 
   // Weight data
   const [weekWeights, setWeekWeights] = useState([]);
@@ -371,6 +375,14 @@ export default function WeeklyCheckInScreen({ navigation }) {
           rollups,
           targetKcal: targets?.targetKcal ?? null,
         });
+        // Has the user already completed THIS week's check-in? A row can exist
+        // from a completed workout (which now writes only sleep_quality), so
+        // presence alone is not enough: a real weekly check-in always sets an
+        // energy score (step 0 is required). energyScore != null is therefore
+        // the reliable "already checked in this week" signal.
+        const existingCheckin = await getLatestCheckin(user.id, weekStartMs).catch(() => null);
+        const alreadyDone = !!(existingCheckin && existingCheckin.energyScore != null);
+
         if (!cancelled) {
           setAutoDerived({
             trainingPerformance: trainingPerf,
@@ -382,10 +394,32 @@ export default function WeeklyCheckInScreen({ navigation }) {
               target: targets.targetKcal,
             } : null,
           });
-          // Pre-select the derived values so the user only has to
-          // override when the data is wrong, not pick from scratch.
-          if (trainingPerf) setTrainingPerformance(trainingPerf);
-          if (calsAdh) setCalsAdherence(calsAdh);
+          if (alreadyDone) {
+            // Re-entry: prefill the user's saved answers so they edit, not
+            // restart, and the derived figures above still show the intelligence.
+            setAlreadyCheckedIn(true);
+            setEnergyScore(existingCheckin.energyScore ?? null);
+            setStressScore(existingCheckin.stressScore ?? null);
+            setSleepHours(existingCheckin.sleepHours != null ? String(existingCheckin.sleepHours) : '');
+            setSorenessScore(existingCheckin.sorenessScore ?? null);
+            setSoreMuscles(existingCheckin.soreMuscles
+              ? String(existingCheckin.soreMuscles).split(',').map(s => s.trim()).filter(Boolean)
+              : []);
+            setJointPain(existingCheckin.jointPain ? 'yes' : 'no');
+            setCycle(existingCheckin.cycleOverride ? 'yes' : 'no');
+            setCalsAdherence(existingCheckin.calsAdherence ?? null);
+            setCardioAdherence(existingCheckin.cardioAdherence ?? null);
+            setTrainingPerformance(existingCheckin.trainingPerformance ?? null);
+            if (existingCheckin.stepsAvg != null) {
+              setStepsManual(String(existingCheckin.stepsAvg));
+              setStepsOverride(true);
+            }
+          } else {
+            // First check-in this week: pre-select the derived values so the
+            // user only overrides when the data is wrong, not pick from scratch.
+            if (trainingPerf) setTrainingPerformance(trainingPerf);
+            if (calsAdh) setCalsAdherence(calsAdh);
+          }
         }
 
         // Gate evaluation. Order: wrong day -> first check-in too
@@ -1060,6 +1094,15 @@ export default function WeeklyCheckInScreen({ navigation }) {
           {/* Week label */}
           <Text style={styles.weekLabel}>{weekLabel}</Text>
 
+          {alreadyCheckedIn && step === 0 && (
+            <View style={styles.alreadyInRow}>
+              <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+              <Text style={styles.alreadyInText}>
+                You've checked in this week. Your answers are loaded, edit and resubmit to update.
+              </Text>
+            </View>
+          )}
+
           {/* Step content */}
           {step === 0 && renderStep0()}
           {step === 1 && renderStep1()}
@@ -1215,6 +1258,14 @@ const styles = StyleSheet.create({
     color: colors.primary,
     marginBottom: spacing.lg,
   },
+  alreadyInRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
+    backgroundColor: colors.surface2, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  alreadyInText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
   stepHeading: {
     ...type.h3,
     color: colors.textPrimary,
