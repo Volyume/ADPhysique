@@ -4114,8 +4114,12 @@ export async function saveWeeklyCheckin(userId, data) {
 export async function getLatestCheckin(userId, weekStart = null) {
   const d = await db();
   if (weekStart != null) {
+    // Prefer a real check-in row (energy_score set) over a workout's
+    // sleep-only contribution if both ever share a week_start, and be
+    // deterministic when more than one row exists.
     const row = await d.getFirstAsync(
-      'SELECT * FROM weekly_checkins WHERE user_id = ? AND week_start = ?',
+      `SELECT * FROM weekly_checkins WHERE user_id = ? AND week_start = ?
+       ORDER BY (energy_score IS NOT NULL) DESC, created_at DESC LIMIT 1`,
       [userId, weekStart],
     );
     return rowToCamel(row);

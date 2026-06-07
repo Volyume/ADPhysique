@@ -978,19 +978,24 @@ export default function CoachOutputScreen({ navigation, route }) {
       // correction and the differential paywall gate (which only count
       // under/over) actually fire. Done here at the boundary, not in the DB,
       // so the stored value and the frozen build are untouched.
-      const mapCals = (raw) => {
+      const mapCals = (raw, avgKcal) => {
         if (raw == null) return null;
         if (raw === 'untracked' || raw === 'hit' || raw === 'under' || raw === 'over') return raw;
         if (raw === 'yes') return 'hit';
         if (raw === 'no') {
           const t = nutrition?.targetKcal;
-          if (intake.avgKcal != null && t) return intake.avgKcal < t ? 'under' : 'over';
-          return 'under';
+          // Only split to under/over when we actually have that week's logged
+          // average to judge direction. With no in-app food data (tracked
+          // elsewhere) leave it as a plain off-target 'no': the engine treats
+          // that as tracked with a neutral adherence factor (1.0), rather than
+          // guessing a direction and sizing the calorie change the wrong way.
+          if (avgKcal != null && t) return avgKcal < t ? 'under' : 'over';
+          return 'no';
         }
         return raw;
       };
       const engineCheckin = checkin
-        ? { ...checkin, calsAdherence: mapCals(checkin.calsAdherence) }
+        ? { ...checkin, calsAdherence: mapCals(checkin.calsAdherence, intake.avgKcal) }
         : checkin;
 
       // Compute weeksInPhase from stored start timestamp
@@ -1028,7 +1033,9 @@ export default function CoachOutputScreen({ navigation, route }) {
       // Most-recent-first to match the detector's contract.
       const recentWeeklyHistory = recentCheckins.map(ci => ({
         energy: ci.energyScore ?? null,
-        adherence: mapCals(ci.calsAdherence),
+        // Per-week intake for past weeks is not available here, so do not guess
+        // under/over from THIS week's average; map 'no' to a neutral off-target.
+        adherence: mapCals(ci.calsAdherence, null),
         hasCheckin: true,
         // Food data presence is best-judged at the check-in row:
         // hasFoodData true when calsAdherence was tracked.

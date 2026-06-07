@@ -100,11 +100,25 @@ function deriveTrainingPerformance({ completed, planned, prs, volDeltaPct }) {
 // within 10% of target on the average daily intake counts as "hit".
 function deriveCalsAdherence({ rollups, targetKcal }) {
   if (!targetKcal || !rollups || rollups.length === 0) return null;
-  const daysLogged = rollups.filter(r => (r.kcal_total ?? 0) > 0).length;
-  if (daysLogged < 1) return null;
-  const avg = rollups.reduce((a, r) => a + (r.kcal_total ?? 0), 0) / daysLogged;
+  // Number.isFinite excludes a NaN kcal_total (which `?? 0` would let through
+  // and poison the average) as well as null/0.
+  const logged = rollups.filter(r => Number.isFinite(r.kcal_total) && r.kcal_total > 0);
+  if (logged.length < 1) return null;
+  const avg = logged.reduce((a, r) => a + r.kcal_total, 0) / logged.length;
   const drift = Math.abs(avg - targetKcal) / targetKcal;
   return drift <= 0.10 ? 'yes' : 'no';
+}
+
+// Recover the user's free-text note from a stored notes string by removing the
+// joint/sore lines handleSubmit appends, so prefill-then-resubmit cannot
+// duplicate them. Kept in sync with the append format in handleSubmit.
+function stripAutoNotes(raw) {
+  if (!raw) return '';
+  return String(raw)
+    .replace(/Joint pain flagged this week\./g, '')
+    .replace(/Sore:[^.]*\./g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 // Plain-language read of the derived training verdict, shown next to the
@@ -247,7 +261,11 @@ export default function WeeklyCheckInScreen({ navigation }) {
       getCardioLogRange(user.id, fromDate, toDate)
         .then(rows => {
           const s = summariseWeekCardio(rows);
-          setCardioAdherence(cardioComplianceFromLog(s.sessions, cardioTarget || { sessionsPerWeek: 3 }));
+          const derived = cardioComplianceFromLog(s.sessions, cardioTarget || { sessionsPerWeek: 3 });
+          // Only fill when nothing is set yet, so this log-derived prefill can't
+          // race with (and clobber) a saved override loaded by the re-entry
+          // prefill in load(). Functional setter avoids a stale-closure read.
+          setCardioAdherence(prev => prev ?? derived);
         })
         .catch(() => {});
     }
@@ -408,14 +426,18 @@ export default function WeeklyCheckInScreen({ navigation }) {
         const existingCheckin = await getLatestCheckin(user.id, weekStartMs).catch(() => null);
         const alreadyDone = !!(existingCheckin && existingCheckin.energyScore != null);
 
+        // Days with a finite, positive logged intake (NaN/null/0 excluded), so
+        // the shown average can never render NaN.
+        const loggedRollups = rollups.filter(r => Number.isFinite(r.kcal_total) && r.kcal_total > 0);
+
         if (!cancelled) {
           setAutoDerived({
             trainingPerformance: trainingPerf,
             trainingMeta: { completed: sessions?.completed ?? 0, planned: sessions?.planned ?? 0, prs: prCount ?? 0, volDeltaPct, volThisWeek, volLastWeek },
             calsAdherence: calsAdh,
             calsMeta: targets?.targetKcal ? {
-              daysLogged: rollups.filter(r => (r.kcal_total ?? 0) > 0).length,
-              avgKcal: rollups.length ? Math.round(rollups.reduce((a, r) => a + (r.kcal_total ?? 0), 0) / Math.max(1, rollups.filter(r => (r.kcal_total ?? 0) > 0).length)) : 0,
+              daysLogged: loggedRollups.length,
+              avgKcal: loggedRollups.length ? Math.round(loggedRollups.reduce((a, r) => a + r.kcal_total, 0) / loggedRollups.length) : 0,
               target: targets.targetKcal,
             } : null,
           });
@@ -432,9 +454,20 @@ export default function WeeklyCheckInScreen({ navigation }) {
               : []);
             setJointPain(existingCheckin.jointPain ? 'yes' : 'no');
             setCycle(existingCheckin.cycleOverride ? 'yes' : 'no');
-            setCalsAdherence(existingCheckin.calsAdherence ?? null);
+            const VALID_CALS = ['yes', 'no', 'untracked'];
+            const VALID_PERF = ['exceeded', 'hit', 'struggled', 'dropped'];
+            setCalsAdherence(VALID_CALS.includes(existingCheckin.calsAdherence)
+              ? existingCheckin.calsAdherence : (calsAdh ?? null));
             setCardioAdherence(existingCheckin.cardioAdherence ?? null);
-            setTrainingPerformance(existingCheckin.trainingPerformance ?? null);
+            // Legacy rows (pre-fix) could hold a session-difficulty string in
+            // training_performance, which matches no card. Fall back to the
+            // derived verdict so the user never sees a stuck non-selection or
+            // resubmits an invalid value to the coach.
+            setTrainingPerformance(VALID_PERF.includes(existingCheckin.trainingPerformance)
+              ? existingCheckin.trainingPerformance : (trainingPerf ?? null));
+            // Restore the user's free-text note, stripping the auto-appended
+            // joint/sore lines so resubmitting can't duplicate them.
+            setNotes(stripAutoNotes(existingCheckin.notes));
             if (existingCheckin.stepsAvg != null) {
               setStepsManual(String(existingCheckin.stepsAvg));
               setStepsOverride(true);

@@ -69,7 +69,11 @@ async function _alreadyCheckedInThisWeek() {
     const daysFromMon = d.getDay() === 0 ? 6 : d.getDay() - 1;
     const monMs = new Date(d.getFullYear(), d.getMonth(), d.getDate() - daysFromMon).getTime();
     const ci = await getLatestCheckin(uid, monMs);
-    return !!ci;
+    // A row can exist from a completed workout (which contributes only
+    // sleep_quality), so bare presence is not "checked in". A real weekly
+    // check-in always sets an energy score, so gate on that, otherwise the
+    // reminder is wrongly suppressed for a user who trained but never checked in.
+    return !!(ci && ci.energyScore != null);
   } catch (_) { return false; }
 }
 

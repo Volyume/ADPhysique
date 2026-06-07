@@ -120,11 +120,17 @@ describe('handleNotification, morning_weight', () => {
 });
 
 describe('handleNotification, weekly_checkin', () => {
-  test('checkin row exists for this week -> suppress', async () => {
-    mockGetLatestCheckin.mockResolvedValue({ id: 'x' });
+  test('real checkin (energy set) for this week -> suppress', async () => {
+    mockGetLatestCheckin.mockResolvedValue({ id: 'x', energyScore: 3 });
     const h = captureHandler();
     expect(await h(notif('weekly_checkin'))).toEqual(SUPPRESS);
     expect(mockGetLatestCheckin).toHaveBeenCalledWith('user-1', expect.any(Number));
+  });
+
+  test('sleep-only row (no energy, e.g. from a workout) -> still show', async () => {
+    mockGetLatestCheckin.mockResolvedValue({ id: 'x', sleepQuality: 4 });
+    const h = captureHandler();
+    expect(await h(notif('weekly_checkin'))).toEqual(SHOW);
   });
 
   test('no checkin for this week -> show', async () => {

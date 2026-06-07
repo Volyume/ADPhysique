@@ -191,8 +191,12 @@ export async function scheduleNextCheckinReminder(userId, weekday = 0, hour = 12
       // local week regardless of how week_start was computed (older rows
       // stored a UTC-Monday week_start); falls back to weekStart only if a
       // row somehow lacks created_at.
+      // A row can exist from a completed workout (which contributes only
+      // sleep_quality), so require a real check-in: energy_score is always set
+      // by the weekly check-in. Without this, training suppressed the next
+      // check-in reminder even though the user never checked in.
       const madeAt = latest?.createdAt ?? latest?.weekStart ?? 0;
-      if (latest && madeAt >= cycleStart && madeAt <= now) {
+      if (latest && latest.energyScore != null && madeAt >= cycleStart && madeAt <= now) {
         alreadyDone = true;
       }
     }

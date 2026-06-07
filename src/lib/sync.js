@@ -490,6 +490,8 @@ export async function syncWeeklyCheckin(supabaseUserId, checkin) {
       sleep_hours: checkin.sleepHours ?? null,
       cals_adherence: checkin.calsAdherence ?? null,
       steps_adherence: checkin.stepsAdherence ?? null,
+      cardio_adherence: checkin.cardioAdherence ?? null,
+      steps_avg: checkin.stepsAvg ?? null,
       training_performance: checkin.trainingPerformance ?? null,
       joint_pain: !!checkin.jointPain,
       sore_muscles: checkin.soreMuscles ?? null,
