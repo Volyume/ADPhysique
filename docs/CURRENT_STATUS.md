@@ -14,6 +14,108 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
+### 0.00000000000000000001. 2026-06-07 (later): check-in to coach pipeline shipped, write-path hardening, readiness testing, HANDOFF
+
+Two things to know up front. First, this session shipped the weekly
+check-in to coach pipeline and a set of defensive guards, all on `main`.
+Second, the assistant repeatedly over-inferred, including inventing a
+"billing outage" that did not exist, and the founder ended the session
+to hand off to another agent. Treat the subscription system as DONE (see
+`docs/subscriptions-audit-2026-06-06/`), not as needing work.
+
+**Shipped to `main` this session (all pushed, HEAD `08311b0` = `origin/main`):**
+
+Check-in to coach pipeline (audit docs `7a04161`, `8c4a74f`, `d53cf67`;
+code `9d7c48a`, `4f8b150`, `6d4cf36`, `73ed02b`, `ff5229f`, `451e9f2`,
+`194ad18`):
+- `9d7c48a`: fixed the check-in data window so derived calories / training
+  / steps actually show. The screen passed a Date where epoch-ms was
+  required, collapsing the week window to today, so every derivation came
+  back null and the form showed blind buttons.
+- `4f8b150`: the coach now feeds and acts on all four check-in levers
+  (calories, training, steps, cardio).
+- `6d4cf36`: the check-in records completion and prefills on re-entry, so
+  a returning user no longer gets a blank survey.
+- `73ed02b`: the "your review is in" coach notification fires only when a
+  real review exists and never lands on the building-baseline screen.
+- `ff5229f`: the check-in assesses training improvement vs stagnation from
+  week-over-week working-set volume.
+- `451e9f2`: code-review fixes (calorie-mapping direction, prefill
+  validation, note preservation, cardio prefill race, NaN guard,
+  notification gating, deterministic getLatestCheckin ordering).
+- `194ad18`: onboarding collects body fat so bulk calories match Nutrition
+  Targets. Onboarding had ignored body fat, fell back to Mifflin, and the
+  bulk number came out roughly equal to lean bulk.
+- Audit: `docs/audit/volyume-checkin-coach-audit-2026-06-07/` (00 system
+  map, 01 current state, 02 proposals).
+
+Write-path hardening with tests (`5d449be`): `logMorningWeight` rejects a
+non-finite or non-positive `weightKg` with a clear error instead of an
+opaque NOT NULL failure. `logFoodEntry` coerces the five NOT NULL numeric
+columns to finite (default 0) so a stray NaN never crashes a diary write.
+`getWeeklySessionStats` / `getWeeklyPRCount` coerce a Date to epoch-ms and
+reject a non-finite window via a shared `coerceWeekStartMs` helper, which
+also closes the `Number(null) = 0` 1970-window trap. All of these are
+defence in depth: the UI already guards before the call. Tests:
+`src/lib/__tests__/database.writeGuards.test.js`,
+`src/lib/food/__tests__/logFoodEntry.guard.test.js`.
+
+Coach direction test (`08311b0`): pinned "lean bulk gaining too slowly
+raises calories" in `weeklyCoach.test.js`, the symmetric partner of the
+gaining-too-fast test, which was the only calorie direction not explicitly
+covered.
+
+**Readiness / adversarial testing this session (READ-ONLY, no code
+changed).** Ran the real engine and DB layer in node plus the full jest
+suite (184 suites, 3013 passing, 0 failing at HEAD). No launch blocker
+found:
+- Notifications: the coach-ready one-off survives a normal signed-in
+  launch (`restoreNotifications` only runs on the signed-out path). One
+  dead-code gap noted: `rescheduleForTimezoneIfChanged` is never called,
+  low impact under the UK-locale lock.
+- Weekly coach: direction, the plus/minus 5% cap, the RED-S FFM floor
+  (holds a cut below the floor, never blocks an increase), data_hold,
+  cooldown, the rapid-loss override, determinism, and degenerate-input
+  fuzz all hold. Already covered by the committed suite.
+- Sync (food and training): no watermark-advance-on-failure (every path
+  advances only on a clean pass), FK parent-before-child ordering holds,
+  per-row failures are counted and surfaced. Invariants are test-locked
+  (`foodDomain.pullWatermark.test.js`, `migratedTablesOrder.test.js`,
+  `bulkUpload.pushWatermark.test.js`).
+
+**Subscriptions: NOT touched, and NOT broken.** The assistant wrongly
+framed migration 068 as a live "billing outage / launch blocker". That was
+false inference. Per `docs/subscriptions-audit-2026-06-06/` (doc 10
+implementation log), the subscription system was built, audited,
+implemented and deployed on 2026-06-06: C-1 self-grant closed
+(server-authoritative paid grant), C-2 store-fetched prices, the
+`play-billing-rtdn` and `send-push` functions deployed, Play products plus
+7-day offers active, and a verify-at-purchase path added. Remaining
+founder-side items: a real Internal-testing purchase test, optional
+Pub/Sub for auto refund / cancel reconciliation, and iOS (a separate
+build). No client subscription code was changed this session.
+
+**Migrations (per founder confirmation 2026-06-07):** 068 (tier-RPC GUC
+bypass) and 069 (auth.users FK cascade) are APPLIED. 068 still needs its
+verification query run to confirm the tier RPCs no longer throw. The RTDN
+function was redeployed after 066. See `supabase/README.md`.
+
+**Repo / container note.** Mid-session the git proxy restarted (the push
+port changed) and the LOCAL HEAD was reset onto a stale ancestor
+(`0111a3c`); a doc commit got authored on that stale base. Recovered with
+`git reset --hard origin/main`. No committed work was lost: `5d449be` and
+`08311b0` were confirmed present on `origin/main` throughout. HEAD is
+`08311b0` = `origin/main`, working tree clean.
+
+**RESUME-HERE for the next agent:**
+- HEAD and `origin/main` are `08311b0`; working tree clean.
+- The check-in to coach pipeline and the onboarding-calorie fix are
+  shipped. Verify on a real device build: the data path is tested, the
+  rendered screens are not (this environment cannot run the native app).
+- Run the migration 068 verification query in Supabase to close it out.
+- Do NOT treat subscriptions as outstanding; the system is deployed bar
+  the Internal-testing purchase test.
+
 ### 0.0000000000000000001. 2026-06-07: post-beta breakage fixed (auth wall, trial start, account deletion), weekly check-in analysed not built, RESUME-HERE state
 
 Session ended early and unhappily. The assistant overstepped repeatedly,
