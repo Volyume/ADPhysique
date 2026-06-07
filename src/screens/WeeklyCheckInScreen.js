@@ -85,18 +85,28 @@ function deriveTrainingPerformance({ completed, planned, prs }) {
   return 'dropped';
 }
 
-// Derive calorie adherence from the week's food rollups. Requires
-// food data on at least 5 of the 7 days -- below that we return null
-// and the user falls back to manually picking. Threshold: within
-// 10% of target on the average daily intake counts as "hit".
+// Derive calorie adherence from the week's food rollups. Returns a verdict
+// from whatever days were logged (the screen shows the days-logged count and
+// the average alongside, so the user sees the confidence and can override).
+// Returns null only when there is no target or no logged day. Threshold:
+// within 10% of target on the average daily intake counts as "hit".
 function deriveCalsAdherence({ rollups, targetKcal }) {
   if (!targetKcal || !rollups || rollups.length === 0) return null;
   const daysLogged = rollups.filter(r => (r.kcal_total ?? 0) > 0).length;
-  if (daysLogged < 5) return null;
+  if (daysLogged < 1) return null;
   const avg = rollups.reduce((a, r) => a + (r.kcal_total ?? 0), 0) / daysLogged;
   const drift = Math.abs(avg - targetKcal) / targetKcal;
   return drift <= 0.10 ? 'yes' : 'no';
 }
+
+// Plain-language read of the derived training verdict, shown next to the
+// session count so the user sees what the app concluded before overriding.
+const PERF_VERDICT_TEXT = {
+  exceeded: 'looks like you beat your targets',
+  hit: 'on track with your plan',
+  struggled: 'a bit below your usual',
+  dropped: 'well down on your usual',
+};
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -334,16 +344,22 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
         // Auto-derive context. Loaded in parallel with the gate
         // evaluation so the screen is fully populated when it lands.
-        const weekStart = getCurrentWeekStart();
+        // weekStartMs is epoch milliseconds (local Monday 00:00), NOT a Date.
+        // getWeeklySessionStats / getWeeklyPRCount and localDayKey all require
+        // ms. Passing a Date (the old bug) made weekEnd a string and made
+        // localDayKey fall back to now, collapsing the week window to today,
+        // so sessions read 0 and the rollup range covered a single day and
+        // nothing was ever derived: the form showed only blind buttons.
+        const weekStartMs = localWeekStartMs();
         const [sessions, prCount, targets] = await Promise.all([
-          getWeeklySessionStats(user.id, weekStart).catch(() => ({ completed: 0, planned: 0 })),
-          getWeeklyPRCount(user.id, weekStart).catch(() => 0),
+          getWeeklySessionStats(user.id, weekStartMs).catch(() => ({ completed: 0, planned: 0 })),
+          getWeeklyPRCount(user.id, weekStartMs).catch(() => 0),
           getNutritionTargets(user.id).catch(() => null),
         ]);
         let rollups = [];
         if (targets?.targetKcal) {
-          const startIso = localDayKey(weekStart); // TZ-1: local-day bounds match the rollup keys
-          const endIso = localDayKey(weekStart + 6 * 86400000);
+          const startIso = localDayKey(weekStartMs); // local-day bounds match the rollup keys
+          const endIso = localDayKey(weekStartMs + 6 * 86400000);
           rollups = await getRollupsForRange(user.id, startIso, endIso).catch(() => []);
         }
         const trainingPerf = deriveTrainingPerformance({
@@ -627,10 +643,22 @@ export default function WeeklyCheckInScreen({ navigation }) {
         {hasNutritionTarget ? (
           <View style={styles.section}>
             <SectionLabel>Calorie target: how did you get on?</SectionLabel>
-            {autoDerived.calsAdherence && autoDerived.calsMeta ? (
-              <Text style={styles.autoDerivedNote}>
-                Read from your diary: {autoDerived.calsMeta.daysLogged} days logged, average {autoDerived.calsMeta.avgKcal} kcal vs target {autoDerived.calsMeta.target}. Tap to override.
-              </Text>
+            {autoDerived.calsMeta ? (
+              autoDerived.calsMeta.daysLogged > 0 ? (
+                <Text style={styles.autoDerivedNote}>
+                  From your diary: {autoDerived.calsMeta.daysLogged} of 7 days logged,
+                  averaging {autoDerived.calsMeta.avgKcal.toLocaleString('en-GB')} kcal a day
+                  against your {autoDerived.calsMeta.target.toLocaleString('en-GB')} target ({
+                    autoDerived.calsMeta.avgKcal <= autoDerived.calsMeta.target * 0.9 ? 'under target'
+                    : autoDerived.calsMeta.avgKcal >= autoDerived.calsMeta.target * 1.1 ? 'over target'
+                    : 'on target'
+                  }). Adjust below only if your logging was off, for example you tracked in another app.
+                </Text>
+              ) : (
+                <Text style={styles.autoDerivedNote}>
+                  No food logged in your diary this week. If you tracked elsewhere, set it below.
+                </Text>
+              )
             ) : null}
             <OptionRow
               options={[
@@ -674,6 +702,19 @@ export default function WeeklyCheckInScreen({ navigation }) {
                     Averaged {Math.round(stepsSummary.avgSteps).toLocaleString('en-GB')} a day. Tap to override.
                   </Text>
                 </TouchableOpacity>
+                {(() => {
+                  const target = Number(userProfile?.stepsTarget ?? userProfile?.steps_target) || 0;
+                  if (!target) return null;
+                  const avg = Math.round(stepsSummary.avgSteps);
+                  const verdict = avg >= target ? 'on target'
+                    : avg >= target * 0.9 ? 'just under target'
+                    : 'under target';
+                  return (
+                    <Text style={styles.autoDerivedNote}>
+                      Against your {target.toLocaleString('en-GB')} step target ({verdict}). Override only if your steps were tracked on a device not synced here.
+                    </Text>
+                  );
+                })()}
               </>
             ) : (
               <>
@@ -816,11 +857,18 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
         <View style={styles.section}>
           <SectionLabel>This week's training felt like</SectionLabel>
-          {autoDerived.trainingPerformance && autoDerived.trainingMeta ? (
+          {autoDerived.trainingMeta && autoDerived.trainingMeta.completed > 0 ? (
             <Text style={styles.autoDerivedNote}>
-              Read from your sessions: {autoDerived.trainingMeta.completed}/{autoDerived.trainingMeta.planned} sessions, {autoDerived.trainingMeta.prs} PR{autoDerived.trainingMeta.prs === 1 ? '' : 's'} this week.
+              From your logged sessions: {autoDerived.trainingMeta.completed} session{autoDerived.trainingMeta.completed === 1 ? '' : 's'} this
+              week, {autoDerived.trainingMeta.prs} PR{autoDerived.trainingMeta.prs === 1 ? '' : 's'}
+              {autoDerived.trainingPerformance ? `, ${PERF_VERDICT_TEXT[autoDerived.trainingPerformance]}` : ''}.
+              Tap a card to override.
             </Text>
-          ) : null}
+          ) : (
+            <Text style={styles.autoDerivedNote}>
+              No sessions logged in the app this week. Pick how training went below.
+            </Text>
+          )}
           <View style={styles.perfGrid}>
             {[
               { value: 'exceeded', label: 'Beat my targets', icon: 'trending-up' },

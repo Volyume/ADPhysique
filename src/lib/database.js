@@ -4041,49 +4041,72 @@ export async function saveWeeklyCheckin(userId, data) {
     'SELECT id FROM weekly_checkins WHERE user_id = ? AND created_at >= ? AND created_at < ? ORDER BY created_at DESC LIMIT 1',
     [userId, data.weekStart, weekEnd],
   );
+
+  // Column map: data key -> [column, coerce]. The write is PRESERVING: a field
+  // is only touched when the caller actually provides it (value !== undefined).
+  // weekly_checkins has two writers (the weekly check-in and, for sleep
+  // quality, WorkoutSummaryScreen). The old write set every column to
+  // `value ?? null`, so whichever writer ran last NULLED the other's answers,
+  // wiping the user's calorie / steps / cardio / training data within a week.
+  // Now a writer that owns only some fields leaves the rest untouched. Passing
+  // an explicit null still clears a field; only `undefined` means "leave the
+  // stored value alone".
+  const COLS = [
+    ['energyScore', 'energy_score', (v) => v],
+    ['sorenessScore', 'soreness_score', (v) => v],
+    ['stressScore', 'stress_score', (v) => v],
+    ['sleepHours', 'sleep_hours', (v) => v],
+    ['calsAdherence', 'cals_adherence', (v) => v],
+    ['stepsAdherence', 'steps_adherence', (v) => v],
+    ['cardioAdherence', 'cardio_adherence', (v) => v],
+    ['stepsAvg', 'steps_avg', (v) => v],
+    ['cycleOverride', 'cycle_override', (v) => (v ? 1 : 0)],
+    ['notes', 'notes', (v) => v],
+    ['trainingPerformance', 'training_performance', (v) => v],
+    ['jointPain', 'joint_pain', (v) => (v ? 1 : 0)],
+    ['soreMuscles', 'sore_muscles', (v) => v],
+    ['sleepQuality', 'sleep_quality', (v) => v],
+  ];
+
   let savedId;
   if (existing?.id) {
+    const setParts = [];
+    const args = [];
+    for (const [key, col, coerce] of COLS) {
+      if (data[key] === undefined) continue; // preserve the stored value
+      setParts.push(`${col} = ?`);
+      args.push(coerce(data[key]));
+    }
+    setParts.push('updated_at = ?');
+    args.push(now, existing.id);
     await d.runAsync(
-      `UPDATE weekly_checkins SET
-        energy_score = ?, soreness_score = ?, stress_score = ?, sleep_hours = ?,
-        cals_adherence = ?, steps_adherence = ?, cardio_adherence = ?, steps_avg = ?, cycle_override = ?, notes = ?,
-        training_performance = ?, joint_pain = ?, sore_muscles = ?, sleep_quality = ?, updated_at = ?
-       WHERE id = ?`,
-      [
-        data.energyScore ?? null, data.sorenessScore ?? null, data.stressScore ?? null,
-        data.sleepHours ?? null, data.calsAdherence ?? null, data.stepsAdherence ?? null,
-        data.cardioAdherence ?? null, data.stepsAvg ?? null,
-        data.cycleOverride ? 1 : 0, data.notes ?? null,
-        data.trainingPerformance ?? null, data.jointPain ? 1 : 0,
-        data.soreMuscles ?? null, data.sleepQuality ?? null, now, existing.id,
-      ],
+      `UPDATE weekly_checkins SET ${setParts.join(', ')} WHERE id = ?`,
+      args,
     );
     savedId = existing.id;
   } else {
     savedId = uid();
+    const cols = ['id', 'user_id', 'week_start'];
+    const vals = [savedId, userId, data.weekStart];
+    for (const [key, col, coerce] of COLS) {
+      cols.push(col);
+      vals.push(data[key] === undefined ? null : coerce(data[key]));
+    }
+    cols.push('created_at', 'updated_at');
+    vals.push(now, now);
     await d.runAsync(
-      `INSERT INTO weekly_checkins
-        (id, user_id, week_start, energy_score, soreness_score, stress_score, sleep_hours,
-         cals_adherence, steps_adherence, cardio_adherence, steps_avg, cycle_override, notes,
-         training_performance, joint_pain, sore_muscles, sleep_quality, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        savedId, userId, data.weekStart,
-        data.energyScore ?? null, data.sorenessScore ?? null, data.stressScore ?? null,
-        data.sleepHours ?? null, data.calsAdherence ?? null, data.stepsAdherence ?? null,
-        data.cardioAdherence ?? null, data.stepsAvg ?? null,
-        data.cycleOverride ? 1 : 0, data.notes ?? null,
-        data.trainingPerformance ?? null, data.jointPain ? 1 : 0,
-        data.soreMuscles ?? null, data.sleepQuality ?? null, now, now,
-      ],
+      `INSERT INTO weekly_checkins (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
+      vals,
     );
   }
-  // Fire-and-forget cloud push, fires from BOTH insert and update
-  // paths so an edit-then-sign-out doesn't strand the change.
+  // Fire-and-forget cloud push. Push the full MERGED row (re-read from local)
+  // rather than just the fields this caller passed, so a partial writer can't
+  // null the cloud copy either. Fires from both insert and update paths.
   try {
     // eslint-disable-next-line global-require
     const { syncWeeklyCheckin } = require('./sync');
-    syncWeeklyCheckin(userId, { id: savedId, ...data }).catch(() => {});
+    const savedRow = await d.getFirstAsync('SELECT * FROM weekly_checkins WHERE id = ?', [savedId]);
+    if (savedRow) syncWeeklyCheckin(userId, rowToCamel(savedRow)).catch(() => {});
   } catch (_) { /* sync module unavailable, bulk upload will catch up later */ }
   return savedId;
 }

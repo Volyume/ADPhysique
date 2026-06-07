@@ -343,21 +343,21 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       });
     } catch (_e) {}
 
-    // Save energy and sleep quality to weekly_checkins for recovery tracking
+    // Contribute this session's sleep-quality rating to the week's recovery
+    // record. This is the ONLY field WorkoutSummary writes to weekly_checkins:
+    // sleep_quality is not held on the workouts table and is read by
+    // CoachReview + the recovery-trend insight, and the weekly coach does NOT
+    // read it. Everything else this screen used to write either duplicated a
+    // weekly-coach input on a conflicting scale (energy, soreness,
+    // training_performance) or is sourced better elsewhere (per-session
+    // soreness/fatigue live on the workouts row). The save is now preserving,
+    // so passing only sleepQuality leaves the user's calorie / steps / cardio /
+    // training answers for the week untouched.
     if (user?.id) {
       try {
         await saveWeeklyCheckin(user.id, {
           weekStart: getWeekStart(),
-          energyScore: feedback.energyScore || null,
-          sorenessScore: feedback.soreness24hBefore || null,
           sleepQuality: feedback.sleepQuality || null,
-          sleepHours: null,
-          calsAdherence: null,
-          stepsAdherence: null,
-          notes: null,
-          trainingPerformance: String(feedback.sessionDifficulty || ''),
-          jointPain: feedback.jointDiscomfort >= 2 ? 1 : 0,
-          soreMuscles: null,
         });
       } catch (_e) {}
     }
