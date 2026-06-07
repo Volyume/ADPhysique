@@ -1,292 +1,235 @@
-# Check-in and Coach audit, 02: proposals
+# checkin-audit-02-proposals
 
-Date: 2026-06-07. These are proposals for your decision, not decisions
-taken. The weekly coach is a runtime-critical system (CLAUDE.md Rule 5),
-so every code change here ships with tests in the same commit (Rule 7),
-and changes are additive where possible. Nothing is implemented until you
-confirm, proposal by proposal.
+Date: 2026-06-07. One proposal per issue, each naming exact files and
+functions. The weekly coach is a runtime-critical system (CLAUDE.md Rule 5),
+so every engine-touching change ships with tests in the same commit (Rule 7),
+and changes are additive where possible. Nothing is implemented until each
+proposal is confirmed. Replaces the earlier draft.
 
-A note on scope: defects 1-5 in 01 are wiring/contract fixes that make the
-existing engine work as designed. Defect 6 (load-based performance
-assessment) is a genuine design extension, larger, and I have flagged it
-separately so you can take it on its own merits.
-
----
-
-## Proposal 1, check-in completion state and prefill
-
-Defect 1. The screen never reads the saved row.
-
-Recommended approach:
-- In `WeeklyCheckInScreen.js`, import `getLatestCheckin` and, in load()
-  (285), read `getLatestCheckin(user.id, weekStart.getTime())` for the
-  current week.
-- If a row exists, prefill every field from it (energyScore, stressScore,
-  sleepHours, sorenessScore, soreMuscles split back to an array, jointPain,
-  calsAdherence, stepsAvg, cardioAdherence, trainingPerformance, cycle,
-  notes), instead of leaving them null. The derived defaults only fill
-  fields the saved row left empty.
-- Add a small "already checked in this week, editing" line so the user
-  knows they are amending, not starting fresh. One line, no tutorial voice.
-- saveWeeklyCheckin already upserts by week (4040-4061), so an edit
-  overwrites cleanly. No new write path needed.
-
-Decision points for you:
-- (a) On re-entry after submit, do you want the form to open in an
-  editable prefilled state, or a read-only "you have checked in" summary
-  with an Edit button? I recommend editable prefilled, it is less code and
-  matches the upsert.
-- (b) soreMuscles is stored as a comma string (448); prefill splits on
-  comma. Confirm that is acceptable rather than a normalised list.
-
-Files: WeeklyCheckInScreen.js only. No DB, no migration. Tests: a mount
-test that a saved row prefills.
+Decision points are marked DECISION. Where the founder already chose during
+the first pass, the choice is noted; the two-writer finding (D0) changes some
+of them, so they are re-surfaced.
 
 ---
 
-## Proposal 2, calorie adherence vocabulary
+## PROPOSAL 0 (prerequisite) — resolve the two-writer collision (D0)
 
-Defect 2. Screen writes yes/no/untracked; engine refinements expect
-hit/under/over.
+Everything else sits on top of this. Today `saveWeeklyCheckin`
+(database.js 4032-4089) is called by both WeeklyCheckInScreen.handleSubmit
+(429-454) and WorkoutSummaryScreen.handleFinish (349-361), and it NULLs every
+omitted field. They share columns with different scales.
 
-There are two clean ways to fix this. They are mutually exclusive; pick one.
+Two ways to fix. DECISION required: which one.
 
-Option A (map at the boundary, no engine change):
-- Translate the check-in's verdict into the engine vocabulary when building
-  the coach input, in CoachOutputScreen.load (around 1015) or in a small
-  pure mapper: yes -> 'hit', no -> derive 'under' or 'over' from the sign of
-  the weight trend or the logged-vs-target average, untracked -> 'untracked'.
-- Pro: the engine's existing hit/under/over branches come alive with no
-  engine edit. Con: "no" is ambiguous (missed high or missed low), so the
-  under/over split needs a rule. The honest rule is to read the logged
-  average vs target from the rollups (over if average above target, under
-  if below), which means passing that figure anyway (see Proposal 3).
+Option A (separate the two purposes, recommended):
+- Stop WorkoutSummaryScreen writing weekly_checkins. Move its per-workout
+  recovery feedback (energy, soreness_24h_before, sleep_quality,
+  session_difficulty, joint) to where it already partly lives: the `workouts`
+  row (it already writes session_difficulty / soreness_24h_before /
+  fatigue_level / overall_pump via updateWorkout 336-343). The recovery
+  surfaces that currently read these off weekly_checkins
+  (ReadinessCards.computeRecoveryTrendInsight, CoachReview avgSleep/avgEnergy)
+  switch to reading the per-session feedback off `workouts` (the same source
+  `computeRecoveryEMAs` already uses in ReadinessCards 128).
+- Result: weekly_checkins becomes single-writer (the weekly check-in only).
+  No more clobbering, no scale conflict, the coaching fields are stable.
+- Effort: medium. Touches WorkoutSummaryScreen, ReadinessCards, CoachReview.
+  Tests for the recovery-trend insight reading workouts.
 
-Option B (make the engine understand yes/no directly):
-- In weeklyCoach.js, treat 'yes' as 'hit' and 'no' as "off but direction
-  unknown" at lines 586-588, 628 and 1034, so the credit and the larger
-  step fire on 'yes' and the factor stays neutral on 'no'.
-- Pro: smallest change, no new data needed. Con: leaves the under/over
-  adherence factor permanently neutral, which is a real signal lost.
+Option B (make the write preserving, smaller):
+- Change saveWeeklyCheckin's UPDATE to COALESCE: keep the existing column
+  value when the caller passes null/undefined, only overwrite on a real
+  value. Add an explicit clear path for fields the user genuinely blanks.
+- Still leaves two writers on one row and the scale/vocabulary conflicts
+  (soreness 1-3 vs 1-5; training_performance "3" vs verdict), which then need
+  per-field normalisation. So B alone does not fix the soreness scale or the
+  training_performance pollution; those need the writers reconciled anyway.
 
-Recommendation: do Proposal 3 first (pass the intake average), then take
-Option A, because the intake average gives an honest under/over split and
-also feeds the safety floor. If you do not want Proposal 3, take Option B.
+Recommendation: Option A. It removes the conflict at the source; B papers
+over it and still needs the scale fixes. DECISION: A or B.
 
-Decision point: A or B, and if A, confirm the under/over rule (logged
-average vs target).
-
-Files: CoachOutputScreen.js (A) or weeklyCoach.js (B). Tests: engine unit
-tests asserting the credit and step on each verdict.
-
----
-
-## Proposal 3, wire food intake into the coach
-
-Defect 3. recentIntakeAvgKcal / recentIntakeDaysLogged / bodyFat* / sex
-are never passed at the call site, so the FFM-floor safety gate and the
-adaptive-TDEE intake context are dead.
-
-Recommended approach:
-- In CoachOutputScreen.load (948), fetch the week's rollups the same way
-  the check-in does (getRollupsForRange for the local week, the import and
-  pattern already exist in WeeklyCheckInScreen 25, 347).
-- Compute recentIntakeAvgKcal = average kcal_total over days with
-  kcal_total > 0, and recentIntakeDaysLogged = that day count, then pass
-  both into runWeeklyCoach (1014-1055).
-- Also pass bodyFatPercent, bodyFatSource and sex from userProfile / body
-  profile so computeFFMFloor takes the right path (the engine already
-  threads these, 595-598, 685-689).
-
-Why it matters: this is the safety gate that refuses a calorie cut when
-seven-day intake is at or below the RED-S floor (669-705). Right now it can
-never fire. This is a harm-prevention path, so I would treat it as the
-highest-priority wire of the set.
-
-Decision points:
-- (a) Window: the FFM gate and the engine comment say "7-day rolling
-  intake" (672). The check-in uses the Monday-to-Sunday week. Confirm you
-  want the trailing 7 days to match the engine's contract, or the calendar
-  week to match the check-in. I recommend trailing 7 days for the floor.
-- (b) Source of bodyFatPercent/sex: confirm the field names on
-  userProfile / getUserBodyProfile so I read the right ones (I will verify
-  in code before writing).
-
-Files: CoachOutputScreen.js, plus a tiny pure helper if you want it tested
-in isolation. Tests: a coach run where intake below floor holds a cut.
+Files: WorkoutSummaryScreen.js, ReadinessCards.js, CoachReviewScreen.js (A);
+or database.js saveWeeklyCheckin (B). Tests alongside.
 
 ---
 
-## Proposal 4, steps compliance display in the check-in
+## PROPOSAL 1 — completion state and prefill (D1)
 
-Defect: the steps section shows only the average number, not target vs
-actual or a verdict. The engine already does the comparison; the gap is
-purely what the USER sees.
+After P0 makes the row single-writer:
+- WeeklyCheckInScreen: import getLatestCheckin (exists, 4091) and in load()
+  (285) read getLatestCheckin(user.id, weekStart.getTime()). If a row exists,
+  prefill every field (energyScore, stressScore, sleepHours, sorenessScore,
+  soreMuscles split on comma, jointPain, calsAdherence, stepsAvg/override,
+  cardioAdherence, trainingPerformance, cycle, notes). Derived defaults only
+  fill fields the saved row left empty.
+- Show a one-line "checked in this week, editing" state; saveWeeklyCheckin
+  already upserts so an edit overwrites cleanly.
 
-Recommended approach (display only, no contract change):
-- In renderStep1 steps section (658-699), when a target exists show the
-  target alongside the average and a one-line derived verdict (on target /
-  close / below), using the same thresholds the engine uses (>= target,
-  >= 90 percent, else below; 1022-1027). Keep the tap-to-override.
-- No change to what is saved (stepsAvg stays the contract the engine
-  reads). The override already exists.
+DECISION: editable prefilled form (recommended, matches the upsert) vs a
+read-only summary with an Edit button.
 
-Decision point: do you want the verdict line, or is the average enough?
-The steps pipeline already works end to end; this is a transparency
-improvement so the check-in shows the user what the app derived. Low risk.
-
-Files: WeeklyCheckInScreen.js. Tests: render assertion.
+Files: WeeklyCheckInScreen.js. Test: a saved row prefills on mount.
 
 ---
 
-## Proposal 5, cardio compliance, stop the dead write or use the field
+## PROPOSAL 2 — smart calorie adherence (D2 + D3)
 
-Defect 4. cardioAdherence is saved but the engine ignores it; the engine
-uses the log count.
+- Target: getNutritionTargets(user.id).targetKcal (already loaded).
+- Logged data: getRecentIntakeSummary(user.id) (food/db 341), trailing-7-day
+  {avgKcal, daysLogged} (founder chose trailing 7 days). The check-in already
+  computes an equivalent for display.
+- Show: target, logged average, derived verdict (on target within 10%; under;
+  significantly under; not logged below 5 days). The override buttons appear
+  only to correct the derived verdict.
+- Map at the boundary (founder chose this): in CoachOutput.load build the
+  engine's calsAdherence from the stored yes/no/untracked plus the intake
+  average vs target: yes->'hit'; no->'under' if avg<target else 'over';
+  untracked->'untracked'. Pass the mapped value as checkin.calsAdherence so
+  the engine's hit/under/over branches (586-588, 628, 1034), the render's
+  buildOffItems/buildFocus, and detectDifferentialTrigger all come alive.
+  Also map the recentWeeklyHistory entries the same way so the differential
+  2-of-3 gate counts them.
+- Wire intake into the floor (D3): in CoachOutput.load pass recentIntakeAvgKcal,
+  recentIntakeDaysLogged (from getRecentIntakeSummary), and bodyFatPercent /
+  bodyFatSource (latest getBodyMetricLog) / sex (getUserBodyProfile) into
+  runWeeklyCoach (1014-1055). This activates the RED-S FFM-floor gate
+  (680-705) and the adaptive-TDEE ffmFloorContext (595-600).
 
-Two honest options:
-
-Option A (lean on the log, drop the dead write):
-- Keep the engine as is (log-driven compliance is more trustworthy than a
-  self-report). In the check-in, turn the cardio section into a confirm/
-  override of the LOGGED count: show "you logged N of T prescribed
-  sessions" and let the user correct it only if they did cardio Volyume did
-  not capture. When they override, that correction needs to reach the
-  engine, which currently it cannot, see Option B.
-
-Option B (make the override count):
-- If you want the user's override to actually change the coach decision,
-  the engine must accept an override of cardioSessionsLogged. Add an
-  optional input (e.g. cardioSessionsReported) that, when present,
-  supersedes the log count inside the cardio block (757-786), and pass the
-  check-in's verdict-or-count through. This is an additive engine change
-  with tests.
-
-Recommendation: Option A unless you specifically want self-reported cardio
-to override the log. Most coaching apps trust the log here. Either way, the
-current state (save a value the engine silently ignores) should not stay.
-
-Decision point: A or B.
-
-Files: WeeklyCheckInScreen.js (A), plus weeklyCoach.js + CoachOutputScreen.js
-(B). Tests: engine test if B.
+DECISION: confirm the under/over rule (avg vs target). Files:
+CoachOutputScreen.js, WeeklyCheckInScreen.js (display). Tests: mapper unit
+test + a coach run where intake below floor holds a cut.
 
 ---
 
-## Proposal 6, load-based performance progression (the design extension)
+## PROPOSAL 3 — smart training performance (D6 input quality)
 
-Defect 6. The weekly coach judges training by session count and PRs, not
-by week-over-week load/volume. This is the one genuine design decision in
-the set, and it is yours to shape. I am NOT proposing a specific algorithm
-as decided; I am laying out what the code already gives us so you can
-choose.
+- Load for the week: getWeeklySessionStats (count, planned), getWeeklyPRCount,
+  and NEW: the week's working-set volume and tonnage via getCompletedWorkoutSets
+  + an exerciseMap + calculateWeeklyVolume (algorithms 172) / calculateTonnage
+  (97), plus last week's equivalent for comparison.
+- Derive the verdict from volume/PRs not just attendance: beat = volume up and
+  a PR; hit = volume on track and sessions complete; struggled = volume down or
+  sessions shortened; dropped = sessions missed significantly. Show the user
+  session count, load vs last week, PRs and the derived verdict so the reasoning
+  is visible. Keep override.
+- Store the verdict (unchanged column) and ensure WorkoutSummary no longer
+  writes training_performance (P0 Option A removes that pollution).
+- Coach use: the verdict already feeds getPerformanceScore (150-155). The
+  load-trend itself feeding the matrix is PROPOSAL 6.
 
-What already exists and could feed it (verified):
-- calculateWeeklyVolume(sets, exerciseMap) in algorithms.js, used by
-  insightsEngine to compute per-muscle working sets per week (insightsEngine
-  91-99). Tonnage per session is computed in getYearOfLiftsData (4232) and
-  liftProgress. So weekly working-set volume and tonnage are both derivable
-  from data we hold.
-- insightsEngine already detects stalled_lift, peaked_lift and
-  under_mev_muscle over multi-week windows (111-166). These are separate
-  from the weekly coach.
-
-Options for how load trend feeds the weekly coach:
-- (a) Compute week-over-week working-set volume and/or tonnage in
-  CoachOutputScreen.load and pass it as a new input; have the engine fold a
-  "volume up / flat / down over N weeks" signal into getPerformanceScore or
-  a new gate. Thresholds and the number of stagnation weeks before acting
-  are your call.
-- (b) Keep the weekly coach as is and instead surface load-trend coaching
-  through the existing CoachReview / insights surfaces, which already do
-  volume analysis, rather than overloading the weekly card.
-
-Recommendation: this needs your direction before any code. It is the kind
-of change where elite-coach practice (progressive overload judged on load,
-not attendance) argues for (a), but it touches the runtime-critical engine
-and changes coach behaviour, so it should not be done off my own bat. If
-you want it, tell me the rule: what counts as progress (load up X percent),
-what counts as stagnation (flat for N weeks), and what the coach should do
-(push / hold / flag). I will not invent those numbers.
-
-Files (if a): CoachOutputScreen.js, weeklyCoach.js, a pure volume-trend
-helper, with a full test suite. Treat as its own change after 1-5 land.
+DECISION: the exact volume/PR thresholds for the four verdicts (founder to
+set; I will not invent the numbers). Files: WeeklyCheckInScreen.js, a pure
+volume-trend helper, tests.
 
 ---
 
-## Proposal 7, Train screen notification fix
+## PROPOSAL 4 — steps compliance in check-in (display)
 
-Defect 5. Blind weekly recurrence, routed with no weekStart, lands on a
-wrong/baseline screen.
+- hasStepsTarget already gates the section (281). When a target exists, show
+  the target alongside the derived average and a one-line verdict (on target
+  >= target; close >= 90%; below), using the engine's own thresholds
+  (1022-1027). Keep tap-to-override.
+- No contract change: stepsAvg stays what the engine reads (442). Steps already
+  works end to end; this is transparency only.
 
-Recommended approach:
-- Make the route resolve the current local week. Either pass the current
-  local-Monday weekStart in routeForNotificationType('weekly_coach_ready')
-  via the navigator that handles the tap (the cleanest place is wherever
-  the route's params are applied, so the screen gets a real weekStart), or
-  give CoachOutputScreen a fallback: when route.params.weekStart is
-  undefined, default to localWeekStartMs() (the same helper the check-in
-  uses, dayKey.js). I recommend the screen-level fallback because it also
-  fixes any other entry point that forgets the param, and it is one place.
-- Guard the screen against an undefined weekStart everywhere it is used
-  (getWeeklySessionStats, getWeeklyPRCount, weekRangeLabel) so a NaN window
-  and an Invalid Date header can never render again.
-- Gating the notification itself: optionally, only treat the tap as a real
-  "review ready" when a check-in exists for the week; if none exists, route
-  to the check-in instead of a baseline card. This is a behaviour choice.
-
-Decision points:
-- (a) Screen-level weekStart fallback to the current local week, yes? (My
-  recommendation.)
-- (b) Do you want the Monday notification to still fire when no check-in
-  was done that week, and if so should it nudge the check-in rather than
-  open a baseline card? Right now it fires unconditionally.
-
-Files: CoachOutputScreen.js (fallback + guards), notificationRoute.js
-and/or the tap handler (if you want week-aware routing), scheduler.js (if
-you want conditional firing). Tests: route test, and a screen test that an
-undefined param resolves to the current week.
+DECISION: include the verdict line, yes/no. Files: WeeklyCheckInScreen.js.
 
 ---
 
-## Proposal 8, coach data mapping, close the remaining gaps
+## PROPOSAL 5 — cardio compliance in check-in (D4)
 
-This consolidates the field-level fixes so every check-in field either
-feeds a coach decision or is deliberately display-only.
+Prior audit cardio-qa-03 CI-1 already flagged this. The founder chose
+"override feeds the engine".
+- Engine: add an optional input (e.g. cardioSessionsReported, or pass the
+  check-in's cardioAdherence verdict) that supersedes the log-derived count
+  inside the cardio block (weeklyCoach 757-786, via nextCardioTarget). Additive,
+  defaulted so every other caller is unchanged.
+- CoachOutput.load: read the week's checkin.cardioAdherence (or the override
+  count) and pass it in.
+- Check-in: show prescribed sessions vs logged sessions (numbers) with the
+  override; store cardioAdherence (already written).
+- Also close CI-2 if wanted: pass cardioWeekSummary to cardioRecoveryFlag (the
+  engine already computes cardioFlag 799-801; it renders 1379-1384). This is
+  already partly wired; confirm it is reaching the user.
 
-- calsAdherence: fixed by Proposal 2 (+3).
-- cardioAdherence: fixed by Proposal 5.
-- recentIntake*: fixed by Proposal 3.
-- stress_score: currently saved, never read. Decision: either feed it into
-  the recovery/deload picture (it is a plausible stressor signal) or accept
-  it as a logged-only field. I will not wire it without your say.
-- joint_pain and sore_muscles: reach the engine only as free-text inside
-  notes (451-452). Decision: leave as is (the notes string already trips
-  hasUnusualEvent and is shown in CoachReview), or promote joint_pain to a
-  structured recovery input. I recommend leaving them unless you want
-  joint pain to actively hold volume.
-- sleep_quality: a column exists (4050) but the screen never sets it
-  (handleSubmit passes only sleepHours, 432); data.sleepQuality is always
-  undefined. Decision: drop the unused field from the write, or start
-  collecting it. I recommend dropping it from the write to stop a confusing
-  always-null column, unless you plan a sleep-quality question.
-
-No migration is required for 1-5 and 7; the columns already exist. Only
-Proposal 6, and any decision to persist a new derived value, would add a
-column, and that would follow the migration tracking rules (Rule 6) with a
-supabase/README.md entry.
+DECISION: confirm "override feeds engine" still holds post-restart, and
+whether to also wire CI-2 recovery load into the training hold/push. Files:
+weeklyCoach.js, CoachOutputScreen.js, WeeklyCheckInScreen.js, tests.
 
 ---
 
-## Suggested order, if you approve
+## PROPOSAL 6 — performance progression assessment (load-based) (D6)
 
-1. Proposal 7 (notification/weekStart) and Proposal 3 (intake into the
-   safety floor) first: one is a visible broken tap, the other is a
-   harm-prevention gate that is currently dead.
-2. Proposal 1 (prefill), Proposal 2 (calorie vocabulary), Proposal 4
-   (steps display), Proposal 5 (cardio).
-3. Proposal 6 (load-based performance) last and only with your rules.
+Founder chose working-set volume as the metric and "the coach is already set
+up" (feed the signal into the existing matrix, do not build a new action
+layer).
+- CoachOutput.load: compute this-week vs last-week total working-set volume
+  (sum over muscles from calculateWeeklyVolume) and pass a volume-trend signal
+  into runWeeklyCoach.
+- Engine: fold the trend into getPerformanceScore (150-156) so the existing
+  autoregulationMatrix acts on it (no new threshold->action layer). Recovery
+  signals already modify the matrix via getRecoveryScore.
+- DECISION still needed: the trend thresholds (what counts as up / flat /
+  down) and how many weeks before it shifts the performance score. The
+  founder's earlier "flat 2wk hold, down 2wk reduce" answer came through
+  garbled; I will restate and confirm before coding. I will not invent the
+  numbers.
 
-Confirm which proposals to proceed with, and the decision points inside
-each. I will restate any amended proposal before writing code, and each
-engine-touching change ships with tests in the same commit.
+Files: CoachOutputScreen.js, weeklyCoach.js, a pure helper, full tests. This
+is the one genuine design extension; it goes last.
+
+---
+
+## PROPOSAL 7 — Train screen notification fix (D5)
+
+Founder chose "suppress until checked in" plus the screen-level current-week
+fallback.
+- Screen guard: CoachOutputScreen default weekStart to localWeekStartMs()
+  when route.params.weekStart is undefined (683), and guard
+  getWeeklySessionStats / getWeeklyPRCount / weekRangeLabel against a missing
+  value so a NaN window / Invalid Date can never render.
+- Firing: change scheduleWeeklyCoachReady from a recurring weekly trigger to a
+  one-off scheduled for the next Monday, laid on each check-in submit. A week
+  with no check-in then gets no notification ("suppress until checked in").
+- The Home banner already gates correctly on a saved coach_outputs row; no
+  change there.
+
+DECISION: confirm one-off-per-check-in firing (recommended implementation of
+"suppress until checked in"). Files: scheduler.js, CoachOutputScreen.js,
+notificationRoute.js if week-aware routing is wanted. Tests: route test +
+screen test that an undefined param resolves to the current week.
+
+---
+
+## PROPOSAL 8 — coach data mapping fix (consolidation)
+
+Make every check-in field either feed a coach decision or be deliberately
+display-only.
+- calsAdherence: fixed by P2.
+- cardioAdherence: fixed by P5.
+- recentIntake*: fixed by P2/D3.
+- training_performance pollution: fixed by P0 Option A.
+- stress_score: founder chose to wire it into the recovery picture. Add it to
+  getRecoveryScore / the deload signal in weeklyCoach (additive, tested).
+- joint_pain: founder chose to let it hold volume. Promote it from a notes
+  string to a structured signal that can hold a volume push (weeklyCoach,
+  additive, tested).
+- sleep_quality: weekly check-in never sets it; under P0 Option A it becomes a
+  per-session (workouts) field. Drop the always-null write from the weekly
+  path. CoachReview/ReadinessCards read it from workouts instead.
+- soreMuscles: keep as the targeted-recovery display it is (no engine wiring
+  unless you ask).
+
+No migration needed for P0-P5, P7, P8 (columns exist). P6 and any decision to
+persist a new derived value would add a column and follow the migration
+tracking rules (Rule 6) with a supabase/README.md entry.
+
+---
+
+## Suggested order
+0 (collision) → 7 (notification) and 2/D3 (calorie + safety floor) → 1
+(prefill) → 4 (steps) → 5 (cardio) → 3 (training-perf input) → 6 (load-based
+progression, last, with your thresholds) → 8 (mapping cleanup, folded through).
+
+STOP. Awaiting confirmation per proposal, and specifically the P0 decision
+(A vs B), before any code.
