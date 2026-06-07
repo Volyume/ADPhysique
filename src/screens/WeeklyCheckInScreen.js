@@ -14,6 +14,7 @@ import {
   getMorningWeightsLast14Days,
   getWeeklySessionStats,
   getWeeklyPRCount,
+  getWeeklyVolumeByMuscle,
   getNutritionTargets,
   getUserBodyProfile,
   getDailyStepsRange,
@@ -73,17 +74,23 @@ function earliestWeightTs(weights) {
 
 const FIRST_CHECKIN_MIN_DAYS = 5;
 
-// Derive training performance from logged session data. Used to
-// pre-select the chip on step 3 so the user doesn't subjectively rate
-// what the engine already measured. Returns null when there's no
-// session data to derive from -- caller falls back to manual select.
-function deriveTrainingPerformance({ completed, planned, prs }) {
+// Derive training performance from logged session data. Used to pre-select
+// the chip on step 3 so the user doesn't subjectively rate what the app
+// already measured. Combines session adherence, PRs and the week-over-week
+// change in total working-set volume so the verdict reflects real progress,
+// stagnation or decline, not just attendance. volDeltaPct is the fractional
+// change in working sets vs last week (e.g. 0.08 = +8%), or null when there
+// is no prior week to compare. Returns null when there is no session data.
+function deriveTrainingPerformance({ completed, planned, prs, volDeltaPct }) {
   if (!planned || completed === 0) return null;
   const ratio = completed / planned;
-  if (ratio >= 1.0 && prs > 0) return 'exceeded';
-  if (ratio >= 0.9) return 'hit';
-  if (ratio >= 0.5) return 'struggled';
-  return 'dropped';
+  const volUp = volDeltaPct != null && volDeltaPct >= 0.05;     // clearly more work
+  const volDown = volDeltaPct != null && volDeltaPct <= -0.10;  // clear drop-off
+  if (ratio < 0.5) return 'dropped';                       // missed most sessions
+  if (ratio >= 1.0 && (prs > 0 || volUp)) return 'exceeded'; // full + improving
+  if (volDown) return 'struggled';                          // volume fell away
+  if (ratio >= 0.9) return 'hit';                           // on plan, holding
+  return 'struggled';
 }
 
 // Derive calorie adherence from the week's food rollups. Returns a verdict
@@ -366,10 +373,28 @@ export default function WeeklyCheckInScreen({ navigation }) {
           const endIso = localDayKey(weekStartMs + 6 * 86400000);
           rollups = await getRollupsForRange(user.id, startIso, endIso).catch(() => []);
         }
+        // Week-over-week working-set volume, so the verdict reflects whether
+        // training is improving, holding or falling away, not just whether
+        // sessions happened. getWeeklyVolumeByMuscle returns [lastWeek, thisWeek]
+        // trailing-7-day windows with the same allocation the heatmap uses.
+        let volDeltaPct = null;
+        let volThisWeek = null;
+        let volLastWeek = null;
+        try {
+          const vol = await getWeeklyVolumeByMuscle(user.id, 2);
+          if (Array.isArray(vol) && vol.length === 2) {
+            const sumSets = (w) => Object.values(w?.volumeByMuscle ?? {}).reduce((a, n) => a + (Number(n) || 0), 0);
+            volLastWeek = Math.round(sumSets(vol[0]));
+            volThisWeek = Math.round(sumSets(vol[1]));
+            if (volLastWeek > 0) volDeltaPct = (volThisWeek - volLastWeek) / volLastWeek;
+          }
+        } catch (_) { /* volume trend optional */ }
+
         const trainingPerf = deriveTrainingPerformance({
           completed: sessions?.completed ?? 0,
           planned: sessions?.planned ?? 0,
           prs: prCount ?? 0,
+          volDeltaPct,
         });
         const calsAdh = deriveCalsAdherence({
           rollups,
@@ -386,7 +411,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         if (!cancelled) {
           setAutoDerived({
             trainingPerformance: trainingPerf,
-            trainingMeta: { completed: sessions?.completed ?? 0, planned: sessions?.planned ?? 0, prs: prCount ?? 0 },
+            trainingMeta: { completed: sessions?.completed ?? 0, planned: sessions?.planned ?? 0, prs: prCount ?? 0, volDeltaPct, volThisWeek, volLastWeek },
             calsAdherence: calsAdh,
             calsMeta: targets?.targetKcal ? {
               daysLogged: rollups.filter(r => (r.kcal_total ?? 0) > 0).length,
@@ -895,6 +920,13 @@ export default function WeeklyCheckInScreen({ navigation }) {
             <Text style={styles.autoDerivedNote}>
               From your logged sessions: {autoDerived.trainingMeta.completed} session{autoDerived.trainingMeta.completed === 1 ? '' : 's'} this
               week, {autoDerived.trainingMeta.prs} PR{autoDerived.trainingMeta.prs === 1 ? '' : 's'}
+              {autoDerived.trainingMeta.volDeltaPct != null
+                ? `, training volume ${
+                    autoDerived.trainingMeta.volDeltaPct >= 0.05 ? `up ${Math.round(autoDerived.trainingMeta.volDeltaPct * 100)}%`
+                    : autoDerived.trainingMeta.volDeltaPct <= -0.10 ? `down ${Math.abs(Math.round(autoDerived.trainingMeta.volDeltaPct * 100))}%`
+                    : 'about level'
+                  } on last week`
+                : ''}
               {autoDerived.trainingPerformance ? `, ${PERF_VERDICT_TEXT[autoDerived.trainingPerformance]}` : ''}.
               Tap a card to override.
             </Text>
