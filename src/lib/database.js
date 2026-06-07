@@ -3626,6 +3626,15 @@ export async function getAdaptiveLandmarkHistory(userId) {
 // ─── Pro: Morning Weights ─────────────────────────────────────────────────────
 
 export async function logMorningWeight(userId, { weightKg, loggedAt = Date.now(), notes = null } = {}) {
+  // Defence in depth. The weight column is NOT NULL and a single precise
+  // measurement, so a non-finite or non-positive value has no sensible
+  // default: coercing it would poison the weight trend. Reject it loudly
+  // here rather than letting it bind as NULL and surface as an opaque
+  // SQLite constraint error. Callers (HomeScreen) already guard the input
+  // and handle a throw by reverting the optimistic update.
+  if (!Number.isFinite(weightKg) || weightKg <= 0) {
+    throw new Error(`logMorningWeight: weightKg must be a positive finite number, got ${weightKg}`);
+  }
   const d = await db();
   const id = uid();
   const now = Date.now();
@@ -4142,20 +4151,45 @@ export async function getRecentCheckins(userId, count = 4) {
 
 // ─── Pro: Weekly session stats ────────────────────────────────────────────────
 
+// TZ/data-window guard for the weekly-stat readers. A Date here (the 2026-06
+// check-in bug) would string-concatenate in `weekStart + 7 * 86400000` and
+// silently break the query window. Coerce a Date to epoch-ms and reject
+// anything that isn't a finite number, so a bad arg surfaces loudly instead
+// of returning wrong session/PR counts. Exported so the coercion is unit
+// tested directly (the CRUD itself runs on device, not under jest).
+export function coerceWeekStartMs(weekStart, fnName = 'weekStart') {
+  // Only a Date, a finite number, or a non-empty numeric string is a valid
+  // window start. Guard against the JS coercion traps: Number(null),
+  // Number('') and Number(false) are all 0 (a silent 1970 window), and an
+  // Invalid Date is NaN. Anything else throws rather than running a wrong
+  // query.
+  if (weekStart instanceof Date) {
+    const ms = weekStart.getTime();
+    if (Number.isFinite(ms)) return ms;
+  } else if (typeof weekStart === 'number' && Number.isFinite(weekStart)) {
+    return weekStart;
+  } else if (typeof weekStart === 'string' && weekStart.trim() !== '') {
+    const n = Number(weekStart);
+    if (Number.isFinite(n)) return n;
+  }
+  throw new Error(`${fnName}: weekStart must be epoch-ms, got ${weekStart}`);
+}
+
 export async function getWeeklySessionStats(userId, weekStart) {
+  const weekStartMs = coerceWeekStartMs(weekStart, 'getWeeklySessionStats');
   const d = await db();
-  const weekEnd = weekStart + 7 * 86400000;
+  const weekEnd = weekStartMs + 7 * 86400000;
   const row = await d.getFirstAsync(
     `SELECT COUNT(*) AS completed FROM workouts
      WHERE user_id = ? AND is_completed = 1 AND started_at >= ? AND started_at < ?`,
-    [userId, weekStart, weekEnd],
+    [userId, weekStartMs, weekEnd],
   );
   const prev4 = await d.getAllAsync(
     `SELECT COUNT(*) AS wk_count FROM workouts
      WHERE user_id = ? AND is_completed = 1
        AND started_at >= ? AND started_at < ?
      GROUP BY CAST((started_at - ?) / (7 * 86400000) AS INTEGER)`,
-    [userId, weekStart - 28 * 86400000, weekStart, weekStart - 28 * 86400000],
+    [userId, weekStartMs - 28 * 86400000, weekStartMs, weekStartMs - 28 * 86400000],
   );
   const avgPrev = prev4.length
     ? prev4.reduce((s, r) => s + (r.wk_count ?? 0), 0) / prev4.length
@@ -4208,8 +4242,11 @@ export async function getFirstWorkoutDateOnOrAfter(userId, sinceMs) {
 }
 
 export async function getWeeklyPRCount(userId, weekStart) {
+  // Same data-window guard as getWeeklySessionStats: coerce a Date to
+  // epoch-ms and reject a non-finite window rather than silently miscount PRs.
+  const weekStartMs = coerceWeekStartMs(weekStart, 'getWeeklyPRCount');
   const d = await db();
-  const weekEnd = weekStart + 7 * 86400000;
+  const weekEnd = weekStartMs + 7 * 86400000;
   const row = await d.getFirstAsync(
     `SELECT COUNT(DISTINCT ws.exercise_id) AS pr_count
      FROM workout_sets ws
@@ -4225,7 +4262,7 @@ export async function getWeeklyPRCount(userId, weekStart) {
            AND w2.is_completed = 1
            AND w2.started_at < ?
        )`,
-    [userId, weekStart, weekEnd, weekStart],
+    [userId, weekStartMs, weekEnd, weekStartMs],
   );
   return row?.pr_count ?? 0;
 }

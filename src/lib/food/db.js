@@ -40,6 +40,13 @@ export async function logFoodEntry(userId, entry) {
   const d = await db();
   const id = uid();
   const now = Date.now();
+  // Defence in depth. quantity_g, kcal, protein_g, carbs_g and fat_g are all
+  // NOT NULL. A non-finite value (a NaN from a bad upstream calc) would bind
+  // as NULL and throw an opaque constraint error, crashing a diary write the
+  // user can do dozens of times a day. Coerce to a finite number (default 0)
+  // so logging never hard-fails; a stray entry is editable. fibre_g is
+  // nullable, so it keeps its null.
+  const finite = (v) => (Number.isFinite(v) ? v : 0);
   await d.runAsync(
     `INSERT INTO food_entries (
       id, user_id, entry_date, meal_slot, food_ref, quantity_g,
@@ -48,8 +55,9 @@ export async function logFoodEntry(userId, entry) {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, userId, entry.entryDate, entry.mealSlot, entry.foodRef,
-      entry.quantityG, entry.kcal, entry.proteinG, entry.carbsG,
-      entry.fatG, entry.fibreG ?? null, now, now, now,
+      finite(entry.quantityG), finite(entry.kcal), finite(entry.proteinG),
+      finite(entry.carbsG), finite(entry.fatG),
+      Number.isFinite(entry.fibreG) ? entry.fibreG : null, now, now, now,
     ]
   );
   await recomputeRollup(userId, entry.entryDate);
