@@ -127,6 +127,14 @@ export default function ProOnboardingScreen({ navigation }) {
   const [bodyWeightSt, setBodyWeightSt] = useState('12');
   const [bodyWeightStLbs, setBodyWeightStLbs] = useState('0');
   const [bodyWeight, setBodyWeight] = useState('80');
+  // Optional body fat, mirrors NutritionTargetsScreen. When a measured value is
+  // given (not visual) the engine uses the lean-mass BMR formula, the same as
+  // Nutrition Targets, so onboarding and the targets screen compute the SAME
+  // maintenance. Without it, onboarding under-estimated maintenance (Mifflin
+  // only) and the bulk target came out ~300 kcal too low, landing on the lean
+  // bulk number.
+  const [bodyFat, setBodyFat] = useState('');
+  const [bfSource, setBfSource] = useState('visual');
   const [localHeightUnits, setLocalHeightUnits] = useState('imperial');
   const [sex, setSex] = useState('male');
   const [age, setAge] = useState('30');
@@ -449,11 +457,17 @@ export default function ProOnboardingScreen({ navigation }) {
       const safeWeightKg = (!isNaN(bwKg) && bwKg > 0) ? bwKg : 80;
       const safeHeightCm = hcm || 175;
       const safeAge = ageNum || 28;
+      // Parse body fat the same way NutritionTargetsScreen does, and only treat
+      // it as set when it is a sane percentage, so a typo can't poison the calc.
+      const bfParsed = parseFloat(bodyFat);
+      const bfNum = bodyFat.trim() && Number.isFinite(bfParsed) && bfParsed > 0 && bfParsed < 60 ? bfParsed : null;
       const nutritionTargets = calculateNutritionTargets({
         sex,
         ageYears: safeAge,
         heightCm: safeHeightCm,
         weightKg: safeWeightKg,
+        bodyFatPercent: bfNum,
+        bodyFatSource: bfNum != null ? bfSource : null,
         activityLevel: daysToActivityLevel(daysPerWeek),
         goal: phaseToNutritionKey(trainingPhase),
         trainingGoal,
@@ -512,7 +526,12 @@ export default function ProOnboardingScreen({ navigation }) {
       }
 
       if (user?.id && !isNaN(bwKg) && bwKg > 0) {
-        await logBodyMetric(user.id, { weightKg: bwKg, loggedAt: Date.now() });
+        await logBodyMetric(user.id, {
+          weightKg: bwKg,
+          bodyFatPercent: bfNum,
+          bodyFatSource: bfNum != null ? bfSource : null,
+          loggedAt: Date.now(),
+        });
         // Also seed the morning weights series so the weekly check-in
         // gate (needs 3 readings in the last 7 days) counts enrolment
         // day. Without this, a user who enrols on their chosen check-in
@@ -864,6 +883,41 @@ export default function ProOnboardingScreen({ navigation }) {
                   textContentType="none"
                 />
               )}
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.fieldLabel}>Body fat % (optional)</Text>
+              <Text style={styles.fieldHint}>
+                If you have a measured figure, it sharpens your calorie targets and keeps them matching your Nutrition Targets. Leave blank if unsure.
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={bodyFat}
+                onChangeText={setBodyFat}
+                placeholder="e.g. 15"
+                placeholderTextColor={colors.textDisabled}
+                keyboardType="decimal-pad"
+                maxLength={4}
+                autoComplete="off"
+                textContentType="none"
+                accessibilityLabel="Body fat percentage, optional"
+              />
+              {bodyFat.trim() ? (
+                <View style={{ marginTop: spacing.sm }}>
+                  <Text style={styles.fieldHint}>How was it measured?</Text>
+                  <SegmentedControl
+                    options={[
+                      { label: 'Visual', value: 'visual' },
+                      { label: 'BIA', value: 'bia' },
+                      { label: 'Caliper', value: 'caliper' },
+                      { label: 'DEXA', value: 'dexa' },
+                    ]}
+                    value={bfSource}
+                    onChange={setBfSource}
+                    accessibilityLabel="Body fat measurement method"
+                  />
+                </View>
+              ) : null}
             </View>
 
             <TouchableOpacity style={styles.primaryBtn} onPress={advanceFrom2} activeOpacity={0.88}>
