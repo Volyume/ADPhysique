@@ -644,16 +644,36 @@ export default function App() {
     let intervalHandle = null;
     let appStateSub = null;
     let netInfoUnsub = null;
+    // PERF-001: caller-side in-flight guard so the periodic interval (and any
+    // other trigger) does not stack a second sync on top of one already
+    // running. syncAll has its own runner lock, but this also avoids spinning
+    // up the session and network reads when a sync is already in progress.
+    let syncInFlight = false;
 
     async function callSyncAll(triggeredBy) {
       if (cancelled) return;
+      // PERF-001 guard 1: a sync is already in progress.
+      if (syncInFlight) return;
       try {
         const sb = getSupabaseClient();
         if (!sb) return;
         const { data: { session: s } = {} } = await sb.auth.getSession();
         const supabaseUserId = s?.user?.id ?? null;
         const localUserId = useAppStore.getState().user?.id ?? null;
+        // PERF-001 guard 2: no user is signed in, nothing to sync.
         if (!supabaseUserId) return;
+        // PERF-001 guard 3: skip when the device is known to be offline. If
+        // NetInfo is unavailable (tests / Expo Go without the native module)
+        // or reports an unknown state, fall through and let the network call
+        // fail gracefully rather than blocking sync on a missing signal.
+        try {
+          // eslint-disable-next-line global-require
+          const NetInfo = require('@react-native-community/netinfo').default;
+          const net = await NetInfo.fetch();
+          if (net && net.isConnected === false) return;
+        } catch (_) { /* NetInfo missing; proceed */ }
+        if (cancelled) return;
+        syncInFlight = true;
         // eslint-disable-next-line global-require
         const { syncAll } = require('./src/lib/sync');
         await syncAll({ userId: supabaseUserId, localUserId, triggeredBy });
@@ -663,7 +683,9 @@ export default function App() {
         // Calling it here as well meant the health read fired twice on
         // every foreground (A2-005). The sync runner stays a pure sync
         // runner; lifecycle health reads live in maybeSync.
-      } catch (_) { /* tolerate */ }
+      } catch (_) { /* tolerate */ } finally {
+        syncInFlight = false;
+      }
     }
 
     // 1. Foreground trigger.
