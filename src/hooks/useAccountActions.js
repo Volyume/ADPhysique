@@ -308,7 +308,8 @@ export default function useAccountActions() {
   // breach. This flow now records the withdrawal in consent_log
   // (the immutable audit trail) THEN drives the standard delete-
   // account pipeline so SQLite, Supabase rows, and auth.users are
-  // all wiped within the 30-day window the policy promises.
+  // all wiped immediately (the delete-account Edge Function deletes
+  // them synchronously; backups are purged within 30 days).
   async function handleWithdrawConsent() {
     if (withdrawing || deletingAccount) return;
     appAlert(
@@ -316,7 +317,8 @@ export default function useAccountActions() {
       "Withdrawing consent means we lose the legal basis to keep " +
         "your weight, food, body composition, and check-in data. " +
         "Your account will be deleted and your data wiped from our " +
-        "servers within 30 days. This cannot be undone.",
+        "servers immediately, with backups purged within 30 days. " +
+        "This cannot be undone.",
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -326,8 +328,8 @@ export default function useAccountActions() {
             appAlert(
               'Are you sure?',
               "There's no undo. All your workouts, plans, check-ins, " +
-                "food log, and progress are wiped from every device " +
-                "within 30 days.",
+                "food log, and progress are wiped from every device and " +
+                "our servers immediately, with backups purged within 30 days.",
               [
                 { text: 'Cancel', style: 'cancel' },
                 {

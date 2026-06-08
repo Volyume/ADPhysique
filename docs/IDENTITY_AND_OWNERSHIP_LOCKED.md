@@ -102,6 +102,16 @@ pull cloud, push edits". Listing them anyway so behaviour is explicit.
 - App wipes AsyncStorage + SecureStore for `U`.
 - Routes to Welcome. Indistinguishable from a fresh install.
 
+**One deliberate exception (migration 071, trial-abuse prevention).** A single
+salted SHA-256 hash of the account's email is kept in `private.trial_ledger`
+and is NOT deleted by `delete_user_data`. This is the only thing that survives
+account deletion. It exists so the 14-day cardless trial cannot be restarted by
+deleting and re-signing-up with the same email. It is a one-way hash, holds no
+email, user id, or other PII, and lives in the `private` schema (never exposed
+via the API). Lawful basis: legitimate interest (preventing trial fraud);
+disclosed in the privacy policy. "Delete wipes everything the user owns" still
+holds, this hash is not user-owned data, it is an abuse-prevention token.
+
 ### F. Uninstall, reinstall
 
 - OS removes app sandbox. Everything local gone.
