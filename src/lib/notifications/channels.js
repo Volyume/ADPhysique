@@ -2,6 +2,10 @@ import * as Notifications from 'expo-notifications';
 
 const TRAINING_REMINDERS_CHANNEL = 'training-reminders';
 const REST_TIMER_CHANNEL = 'rest-timer';
+// Coaching reminders (morning weight, weekly check-in, weekly coach, trial
+// gates). On Android 8+ every notification MUST target a channel or it is
+// dropped/buried; these used to post with no channel and never appeared.
+export const COACHING_REMINDERS_CHANNEL = 'coaching-reminders';
 
 /**
  * Registers the Android notification channels Volyume uses.
@@ -28,6 +32,14 @@ export async function ensureNotifChannels() {
       sound: 'default',
       enableVibrate: true,
       showBadge: false,
+    });
+    await Notifications.setNotificationChannelAsync(COACHING_REMINDERS_CHANNEL, {
+      name: 'Coaching reminders',
+      description: 'Morning weight, weekly check-in and coaching updates',
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: 'default',
+      enableVibrate: true,
+      showBadge: true,
     });
     await Notifications.setNotificationChannelAsync(REST_TIMER_CHANNEL, {
       name: 'Rest timer',

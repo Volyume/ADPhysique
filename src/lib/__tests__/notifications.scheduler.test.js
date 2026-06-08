@@ -84,6 +84,7 @@ describe('scheduleMorningWeightNotification', () => {
     args.forEach((a, i) => {
       expect(a.content.data).toEqual({ type: 'morning_weight' });
       expect(a.trigger).toEqual({
+        channelId: 'coaching-reminders',
         type: SCHEDULE_INPUT_TYPES.WEEKLY,
         weekday: i + 1,
         hour: 7,
@@ -278,7 +279,8 @@ describe('checkYearOfLiftsUnlock', () => {
     const arg = mockScheduleAsync.mock.calls[0][0];
     expect(arg.identifier).toBe('volyume_year_of_lifts_unlock');
     expect(arg.content.data).toEqual({ type: 'year_of_lifts_unlock' });
-    expect(arg.trigger).toBeNull(); // immediate
+    // Immediate, but carries the coaching channel so Android 8+ actually shows it.
+    expect(arg.trigger).toEqual({ channelId: 'coaching-reminders' });
   });
 
   test('idempotent: second call after success is a no-op (AsyncStorage flag)', async () => {

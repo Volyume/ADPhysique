@@ -148,6 +148,11 @@ export async function scheduleTrainingReminders() {
             },
           },
           trigger: {
+            // channelId belongs on the trigger for expo-notifications; the
+            // content.android.channelId above is ignored by the library, so
+            // without this the reminder posted with no channel and never showed
+            // on Android 8+.
+            channelId: TRAINING_REMINDER_CHANNEL,
             type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
             weekday: jsWeekdayToExpo(jsDay),
             hour,

@@ -22,6 +22,7 @@ import {
   shiftDateOutOfQuietHours,
 } from './quietHours';
 import { trackNotificationFailed } from './telemetry';
+import { COACHING_REMINDERS_CHANNEL } from './channels';
 import { localWeekStartMs } from '../dayKey';
 import { logWarn } from '../errorLog';
 
@@ -70,6 +71,7 @@ export async function scheduleMorningWeightNotification(hour = 7, minute = 0) {
           sound: false,
         },
         trigger: {
+          channelId: COACHING_REMINDERS_CHANNEL,
           type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
           weekday: expoWeekday,
           hour: h,
@@ -148,6 +150,7 @@ export async function scheduleCheckinReminder(weekday = 0, hour = 12, minute = 0
         sound: false,
       },
       trigger: {
+        channelId: COACHING_REMINDERS_CHANNEL,
         type: Notifications.SchedulableTriggerInputTypes.DATE,
         date: shiftedDate,
       },
@@ -275,6 +278,7 @@ export async function scheduleCascadeGateNotifications(trialEndsAt) {
           sound: false,
         },
         trigger: {
+          channelId: COACHING_REMINDERS_CHANNEL,
           type: Notifications.SchedulableTriggerInputTypes.DATE,
           date: shifted,
         },
@@ -343,6 +347,7 @@ export async function scheduleWeeklyCoachReady(hour = 9, minute = 0) {
         sound: false,
       },
       trigger: {
+        channelId: COACHING_REMINDERS_CHANNEL,
         type: Notifications.SchedulableTriggerInputTypes.DATE,
         date: fireAt,
       },
@@ -459,7 +464,7 @@ export async function checkYearOfLiftsUnlock(earliestWorkoutAt) {
         data: { type: 'year_of_lifts_unlock' },
         sound: true,
       },
-      trigger: null,
+      trigger: { channelId: COACHING_REMINDERS_CHANNEL },
     });
     await AsyncStorage.setItem(YEAR_OF_LIFTS_NOTIFIED_KEY, 'true');
   } catch (e) {
