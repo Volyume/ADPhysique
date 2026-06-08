@@ -296,10 +296,10 @@ Train   ·  Plans  ·  Diary [PRO]  ·  Progress  ·  You</div>
     <p>The privacy text promises deletion within 30 days; the code actually hard-deletes everything immediately. Deleting faster than promised isn't a legal problem, but the wording should match reality (say "immediately") or the docs should agree. Several docs disagree on this (24 hours vs 30 days).</p>
     <p class="where">public/privacy-policy.md · docs/PRIVACY_CONSENT_LOCKED.md · schema.sql delete_user_data()</p>
   </div>
-  <div class="bug b-should">
-    <h4>Promised under-16 age block isn't enforced <span class="pill should">SHOULD-FIX</span></h4>
-    <p>The policy says under-16s are blocked at signup, but there's no age check anywhere in the signup flow. Either add the check or change the wording. For a health app this is worth getting right.</p>
-    <p class="where">src/screens/LoginScreen.js / WelcomeScreen.js (no age gate found)</p>
+  <div class="bug b-dismissed">
+    <h4>Children policy aligned to 13, no over-promised block <span class="pill dismissed">RESOLVED</span></h4>
+    <p>The minimum is now 13 (UK data-consent age), matching the onboarding age field. The privacy copy and the locked consent doc were reworded to "not knowingly serve under-13s" plus delete-on-discovery, with no claim of an enforced signup block. There is no separate signup age gate by design.</p>
+    <p class="where">public/privacy/index.html, docs/PRIVACY_CONSENT_LOCKED.md, src/screens/ProOnboardingScreen.js (age 13-100)</p>
   </div>
   <div class="bug b-should">
     <h4>Eating-disorder detection isn't named in the consent text <span class="pill should">SHOULD-FIX</span></h4>
@@ -388,7 +388,7 @@ Train   ·  Plans  ·  Diary [PRO]  ·  Progress  ·  You</div>
     <li>Finish the payment rail: merchant account verified, the Pro product + 7-day offer created in Play Console, the payment webhook deployed (one env var), and one real test purchase on a device.</li>
     <li>Apply the pending database migrations (a short, additive batch: 059–065).</li>
     <li>Flip the beta switch off, last, on that verified build.</li>
-    <li>Fix the compliance copy: the under-16 age check (add it or reword) and the deletion wording (match consent, privacy, and the delete flow to one rule). The store-name and "free during beta" listings are already corrected.</li>
+    <li>Compliance copy: the children policy is now aligned to 13 (privacy, consent doc, onboarding) and the deletion wording is being matched across consent, privacy, and the delete flow. The store-name and "free during beta" listings are already corrected.</li>
   </ol>
 
   <h3>Should-do, before or just after launch</h3>

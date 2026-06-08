@@ -94,8 +94,9 @@ Lives at volyume.app/privacy. Required sections, in this order:
    How to exercise each (mostly via the You tab, some by emailing
    support@volyume.app).
 9. **International transfers.** None outside the UK/EU at v1.
-10. **Children.** Volyume is for users 16 and over. Under-16 accounts
-    are not knowingly served.
+10. **Children.** Volyume is for users 13 and over (the UK age of
+    data-processing consent). Under-13 accounts are not knowingly
+    served.
 11. **Breach notification.** Verbatim FTC HBNR language:
 
    > If Volyume discovers a breach of unsecured health information
@@ -227,18 +228,17 @@ Special-category data triggers the Article 9 screen above.
 
 ## Children
 
-The Volyume signup flow asks for date of birth. Accounts where the
-DOB indicates the user is under 16 are blocked from signup with a
-locked message:
+Volyume is for users 13 and over (the UK age at which a person can
+consent to their own data being processed). Onboarding asks the
+user's age (for the calorie calculation) and rejects an age under 13.
+There is no separate date-of-birth gate at signup, so this is not an
+enforced hard block: the policy is "not knowingly serve under-13s",
+not a verified age check. Public copy must not promise an enforced
+signup block (founder direction 2026-06-08; minimum set to 13).
 
-> "Volyume is for people 16 and over. If you're under 16 and want
-> something like Volyume, we recommend chatting with a parent and a
-> GP about how to track training and food in a way that's right for
-> you."
-
-If a user provides a false DOB and is later identified as under 16
-(via support contact, school account email, etc.), the account is
-deleted and the user is refunded any active subscription.
+If a user is later identified as under 13 (via support contact,
+school account email, etc.), the account is deleted and the user is
+refunded any active subscription.
 
 ## What the user sees in the app
 
