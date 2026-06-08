@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 import { generateInsights } from './insightsEngine';
 import { calculate1RM, allocateExerciseVolume } from './algorithms';
-import { logError } from './errorLog';
+import { logError, logWarn } from './errorLog';
 import { localDayKey } from './dayKey';
 
 let _db = null;
@@ -1280,7 +1280,7 @@ export async function runMigrations(d) {
         if (isBenignMigrationError(e)) continue;
         // A genuine migration failure, surface it instead of silently
         // corrupting the schema and crashing later at an unrelated query.
-        console.warn(`[db] migration v${v + 1} failed:`, e?.message || e);
+        logWarn('database.migration', `migration v${v + 1} failed: ${e?.message || e}`);
         throw e;
       }
     }
@@ -3280,7 +3280,7 @@ export async function runInsightsEngine(userId) {
     await persistInsights(userId, insights);
     return getActiveInsights(userId, 3);
   } catch (e) {
-    console.warn('runInsightsEngine failed:', e);
+    logWarn('database.runInsightsEngine', e?.message);
     return [];
   }
 }

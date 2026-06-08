@@ -26,7 +26,7 @@ import {
   getRecentWorkoutFeedback, getLatestCoachOutput,
 } from '../lib/database';
 import { generateAndSavePlan } from '../lib/planAutoGen';
-import { logError } from '../lib/errorLog';
+import { logError, logWarn } from '../lib/errorLog';
 import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, VOLUME_LANDMARKS } from '../lib/algorithms';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
@@ -178,7 +178,7 @@ export default function HomeScreen({ navigation }) {
       setIsStartingWorkout(false);
       if (user?.id) {
         if (!seeded) {
-          seedRoutinesIfNeeded(user.id).catch(console.warn);
+          seedRoutinesIfNeeded(user.id).catch((e) => logWarn('HomeScreen.seedRoutines', e?.message));
           setSeeded(true);
         }
         loadData();

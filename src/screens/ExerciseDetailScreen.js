@@ -19,6 +19,7 @@ import { calculate1RM, MUSCLE_DISPLAY_NAMES, detectPlateau } from '../lib/algori
 import { equipmentDisplayLabel, difficultyDisplayLabel, subregionDisplayLabel } from '../lib/exerciseDisplay';
 import { rankSwaps } from '../lib/swapEngine';
 import useAppStore from '../store/useAppStore';
+import { logError } from '../lib/errorLog';
 import { FORM_TIPS } from '../lib/formTips';
 import InfoTooltip from '../components/InfoTooltip';
 
@@ -144,7 +145,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         // swapEngine unavailable, hide section silently
       }
     } catch (e) {
-      console.error('ExerciseDetail loadData:', e);
+      logError('ExerciseDetailScreen.loadData', e);
     }
   }
 

@@ -476,6 +476,19 @@ function ProOnboardingStack() {
 
 const SPLASH_MIN_MS = 1600;
 
+// CODE-001: route bootstrap fire-and-forget rejections through the error log,
+// not raw console.*, so every fault is captured with a scope and shipped like
+// the rest. Lazy-require keeps this file's no-top-level-errorLog idiom and can
+// never throw out of a boot path.
+function _bootLog(level, scope, err) {
+  try {
+    // eslint-disable-next-line global-require
+    const log = require('../lib/errorLog');
+    if (level === 'error') log.logError(scope, err);
+    else log.logWarn(scope, err?.message ?? String(err ?? ''));
+  } catch (_) { /* never let logging break boot */ }
+}
+
 export default function RootNavigator() {
   // Subscribe only to the fields whose change should reroute. Without a
   // selector this re-rendered the entire navigator on every store
@@ -549,21 +562,21 @@ export default function RootNavigator() {
             .then(() => topUpNewExercisesIfNeeded())
             .then(() => backfillExerciseMetadataIfNeeded())
             .then(() => rederiveExerciseMetadataIfNeeded())
-            .catch(console.warn);
-          cleanupOrphanRoutineExercises().catch(console.warn);
+            .catch((e) => _bootLog('warn', 'RootNavigator.bootstrap.seedExercises', e));
+          cleanupOrphanRoutineExercises().catch((e) => _bootLog('warn', 'RootNavigator.bootstrap.cleanupOrphanRoutines', e));
           // OpenFoodFacts UK snapshot import. Idempotent + safe;
           // logs to errorLog at every fault boundary. Fire-and-
           // forget -- doesn't block app boot. On failure, the food
           // layer falls back to live OFF / USDA / manual.
           // eslint-disable-next-line global-require
           require('../lib/food/seed').importOffSnapshotIfNeeded()
-            .catch((err) => console.warn('[seed] off snapshot import threw:', err?.message));
+            .catch((err) => _bootLog('warn', 'RootNavigator.bootstrap.offSnapshot', err));
           // CoFID UK generic foods (~3k rows). Static dataset, runs
           // once per snapshot version. Fills the gap OFF leaves on
           // raw/unbranded items (chicken breast raw, plain oats, etc.).
           // eslint-disable-next-line global-require
           require('../lib/food/seed').importCofidSnapshotIfNeeded()
-            .catch((err) => console.warn('[seed] cofid snapshot import threw:', err?.message));
+            .catch((err) => _bootLog('warn', 'RootNavigator.bootstrap.cofidSnapshot', err));
           // Food library delta pull (step 3): refresh local foods
           // cache against cloud foods that were updated since the
           // last pull. Throttled to once per 6 hours by default;
@@ -571,20 +584,20 @@ export default function RootNavigator() {
           // pattern as the snapshot import.
           // eslint-disable-next-line global-require
           require('../lib/food/libraryDelta').pullFoodLibraryDelta()
-            .catch((err) => console.warn('[libraryDelta] threw:', err?.message));
+            .catch((err) => _bootLog('warn', 'RootNavigator.bootstrap.libraryDelta', err));
         } catch (e) {
           // eslint-disable-next-line global-require
           try { require('../lib/errorLog').logError('RootNavigator.bootstrap.initDb', e); } catch (_) {}
         }
 
-        checkFirstRun().catch(console.warn);
+        checkFirstRun().catch((e) => _bootLog('warn', 'RootNavigator.bootstrap.checkFirstRun', e));
         // AWAIT checkTier so the local 'pro' value is in the store before
         // refreshTierFromCloud (below) reads it for the beta-demotion
         // guard. Without this they raced: the cloud refresh would see
         // tier=null, fail the "currentTier === 'pro'" check, and accept
         // the cloud's spurious 'free' value. Result was Pro users being
         // silently demoted to Free on every app launch.
-        await checkTier().catch(console.warn);
+        await checkTier().catch((e) => _bootLog('warn', 'RootNavigator.bootstrap.checkTier', e));
 
         try {
           const client = getSupabaseClient();
@@ -678,7 +691,7 @@ export default function RootNavigator() {
           }
         } catch (_e) {}
       } catch (err) {
-        console.error('bootstrap failed:', err);
+        _bootLog('error', 'RootNavigator.bootstrap.failed', err);
         // Failsafe: release auth loading so the splash doesn't hang.
         // No anonymous-mode fallback (spec rule 1), the user lands
         // on Welcome and signs in/up against a real account.
@@ -686,7 +699,7 @@ export default function RootNavigator() {
       }
     }
 
-    bootstrap().catch(console.error);
+    bootstrap().catch((e) => _bootLog('error', 'RootNavigator.bootstrap.unhandled', e));
 
     let subscription;
     try {

@@ -15,7 +15,7 @@ import {
   getAllMesocycles, getAllWorkouts, getCompletedWorkoutSets,
   getActivePlan, getRoutinesForPlan,
 } from '../lib/database';
-import { logError } from '../lib/errorLog';
+import { logError, logWarn } from '../lib/errorLog';
 import { calculateTonnage } from '../lib/algorithms';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
 import { predictDeloadWeek, evaluateAutoReg } from '../lib/mesocycle';
@@ -117,7 +117,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
 
       setActiveStats({ tonnageBars, recovery, autoReg, deloadPrediction, active });
     } catch (e) {
-      console.warn('loadActiveStats:', e);
+      logWarn('MesocycleBuilderScreen.loadActiveStats', e?.message);
       setActiveStats(null);
     }
   }

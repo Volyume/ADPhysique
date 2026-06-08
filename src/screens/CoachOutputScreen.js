@@ -41,7 +41,7 @@ import { usePlayPrices } from '../lib/payments/usePlayPrices';
 import { SkeletonCard } from '../components/Skeleton';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
 import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, computeDietBreakTargets, computeMacroCycle, computeRefeedDay, markApplied, isApplied } from '../lib/coachApply';
-import { logError } from '../lib/errorLog';
+import { logError, logWarn } from '../lib/errorLog';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
 import {
   ED_PATTERN_LOCKOUT_COPY,
@@ -1224,7 +1224,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           setAdaptiveTDEE(tdeeResult);
         }
       } catch (e) {
-        console.warn('Adaptive TDEE computation skipped:', e);
+        logWarn('CoachOutputScreen.adaptiveTDEE', e?.message);
       }
 
       setLoading(false);

@@ -64,13 +64,10 @@ export async function postEvent(userId, event, payload = null) {
   // LB-9: user opted out of product analytics. Drop before persisting.
   if (!_enabled) return null;
   if (!ALLOWED_EVENTS.has(event)) {
-    // Hard fail in dev so a typo doesn't sit dark in production.
-    // eslint-disable-next-line no-undef
-    if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      // eslint-disable-next-line no-console
-      console.warn(`[telemetry] unknown event "${event}" -- check the allow-list`);
-    }
-    logWarn('telemetry.transport.unknownEvent', { event });
+    // Surface a typo rather than letting it sit dark. logWarn already routes to
+    // the console in dev (errorLog), so a separate console.warn is redundant
+    // (CODE-001).
+    logWarn('telemetry.transport.unknownEvent', `unknown event "${event}", check the allow-list`, { event });
     return null;
   }
   const id = await dbRecord(userId, event, payload).catch((e) => {

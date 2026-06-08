@@ -18,6 +18,7 @@ import { getStrengthLevel, summariseStrengthStanding } from '../lib/strengthStan
 import { kgToLbs } from '../lib/units';
 import Sparkline from '../components/Sparkline';
 import useAppStore from '../store/useAppStore';
+import { logError } from '../lib/errorLog';
 
 // Lifts, the single home for "am I getting stronger". It leads with where you
 // stand (overall strength standing + relative strength per lift), then lists
@@ -88,7 +89,7 @@ export default function LiftProgressScreen({ navigation }) {
       }
     } catch (e) {
       // Loading failure leaves the list empty; the empty state covers it.
-      console.error('LiftProgressScreen loadData:', e);
+      logError('LiftProgressScreen.loadData', e);
     } finally {
       setLoading(false);
     }

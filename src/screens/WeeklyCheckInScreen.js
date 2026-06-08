@@ -28,7 +28,7 @@ import { getRollupsForRange } from '../lib/food/db';
 import { getCycleTracking, shouldShowCycleQuestion } from '../lib/cyclePrefs';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder, scheduleWeeklyCoachReady } from '../lib/notifications';
-import { logError } from '../lib/errorLog';
+import { logError, logWarn } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import { SkeletonCard } from '../components/Skeleton';
 
@@ -502,7 +502,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
           setGateState('open');
         }
       } catch (e) {
-        console.warn('[WeeklyCheckIn] failed to load', e);
+        logWarn('WeeklyCheckIn.load', e?.message);
         setGateState('open'); // fail open so users aren't permanently blocked
       } finally {
         if (!cancelled) setLoading(false);

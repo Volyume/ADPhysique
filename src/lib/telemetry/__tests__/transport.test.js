@@ -79,6 +79,7 @@ describe('telemetry/transport.postEvent', () => {
     expect(db.recordEngineTelemetry).not.toHaveBeenCalled();
     expect(errorLog.logWarn).toHaveBeenCalledWith(
       'telemetry.transport.unknownEvent',
+      expect.stringContaining('not_a_real_event'),
       { event: 'not_a_real_event' },
     );
   });

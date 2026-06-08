@@ -23,6 +23,7 @@ import {
 } from './quietHours';
 import { trackNotificationFailed } from './telemetry';
 import { localWeekStartMs } from '../dayKey';
+import { logWarn } from '../errorLog';
 
 const NOTIF_ID_MORNING = 'volyume_morning_weight';
 const NOTIF_ID_CHECKIN = 'volyume_weekly_checkin';
@@ -83,7 +84,7 @@ export async function scheduleMorningWeightNotification(hour = 7, minute = 0) {
       payload: { message: e?.message ?? 'unknown' },
     });
     if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      console.warn('[notifications] scheduleMorningWeight failed:', e?.message);
+      logWarn('notifications.scheduleMorningWeight', e?.message);
     }
   }
 }
@@ -158,7 +159,7 @@ export async function scheduleCheckinReminder(weekday = 0, hour = 12, minute = 0
       payload: { message: e?.message ?? 'unknown' },
     });
     if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      console.warn('[notifications] scheduleCheckin failed:', e?.message);
+      logWarn('notifications.scheduleCheckin', e?.message);
     }
   }
 }
@@ -286,7 +287,7 @@ export async function scheduleCascadeGateNotifications(trialEndsAt) {
       payload: { message: e?.message ?? 'unknown' },
     });
     if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      console.warn('[notifications] scheduleCascadeGate failed:', e?.message);
+      logWarn('notifications.scheduleCascadeGate', e?.message);
     }
   }
 }
@@ -353,7 +354,7 @@ export async function scheduleWeeklyCoachReady(hour = 9, minute = 0) {
       payload: { message: e?.message ?? 'unknown' },
     });
     if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      console.warn('[notifications] scheduleWeeklyCoachReady failed:', e?.message);
+      logWarn('notifications.scheduleWeeklyCoachReady', e?.message);
     }
   }
 }
@@ -468,7 +469,7 @@ export async function checkYearOfLiftsUnlock(earliestWorkoutAt) {
       payload: { message: e?.message ?? 'unknown' },
     });
     if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      console.warn('[notifications] year of lifts unlock failed:', e?.message);
+      logWarn('notifications.yearOfLiftsUnlock', e?.message);
     }
   }
 }

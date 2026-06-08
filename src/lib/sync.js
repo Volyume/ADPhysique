@@ -680,7 +680,7 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
     // transport.js is the source of truth for what no longer flows
     // through here.
 
-    console.log('[sync] bulk upload complete');
+    logInfo('sync.bulkUpload', 'bulk upload complete');
   } catch (e) {
     threw = true;
     logError('sync.bulkUploadLocalData', e, { supabaseUserId, localUserId });

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAllExercises, insertExerciseWithId, updateExerciseMetadata } from './database';
 import { deriveExerciseMetadata } from './exerciseMetadata';
+import { logError, logInfo } from './errorLog';
 
 const SEEDED_KEY = '@volyume_exercises_seeded_v7';
 // Bumped when the derived metadata changes so the backfill re-runs once.
@@ -950,9 +951,9 @@ export async function seedExercisesIfNeeded() {
     // both follow-up passes done to skip the redundant work.
     await AsyncStorage.setItem(METADATA_BACKFILL_KEY, 'true');
     await AsyncStorage.setItem(LIBRARY_VERSION_KEY, 'true');
-    console.log(`[Seed] Inserted ${RAW.length} exercises`);
+    logInfo('seedExercises.seed', `Inserted ${RAW.length} exercises`);
   } catch (err) {
-    console.error('[Seed] seedExercisesIfNeeded failed:', err);
+    logError('seedExercises.seedExercisesIfNeeded', err);
   }
 }
 
@@ -978,9 +979,9 @@ export async function topUpNewExercisesIfNeeded() {
     }
 
     await AsyncStorage.setItem(LIBRARY_VERSION_KEY, 'true');
-    if (added > 0) console.log(`[Seed] Topped up ${added} new exercises`);
+    if (added > 0) logInfo('seedExercises.topUp', `Topped up ${added} new exercises`);
   } catch (err) {
-    console.error('[Seed] topUpNewExercisesIfNeeded failed:', err);
+    logError('seedExercises.topUpNewExercisesIfNeeded', err);
   }
 }
 
@@ -1008,9 +1009,9 @@ export async function backfillExerciseMetadataIfNeeded() {
     }
 
     await AsyncStorage.setItem(METADATA_BACKFILL_KEY, 'true');
-    if (updated > 0) console.log(`[Seed] Backfilled metadata on ${updated} exercises`);
+    if (updated > 0) logInfo('seedExercises.backfill', `Backfilled metadata on ${updated} exercises`);
   } catch (err) {
-    console.error('[Seed] backfillExerciseMetadataIfNeeded failed:', err);
+    logError('seedExercises.backfillExerciseMetadataIfNeeded', err);
   }
 }
 
@@ -1035,8 +1036,8 @@ export async function rederiveExerciseMetadataIfNeeded() {
     }
 
     await AsyncStorage.setItem(METADATA_REDERIVE_KEY, 'true');
-    if (updated > 0) console.log(`[Seed] Re-derived metadata on ${updated} exercises`);
+    if (updated > 0) logInfo('seedExercises.rederive', `Re-derived metadata on ${updated} exercises`);
   } catch (err) {
-    console.error('[Seed] rederiveExerciseMetadataIfNeeded failed:', err);
+    logError('seedExercises.rederiveExerciseMetadataIfNeeded', err);
   }
 }

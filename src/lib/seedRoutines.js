@@ -3,6 +3,7 @@ import {
   getAllExercises, insertExercise, createRoutine, addExerciseToRoutine,
   createProgramme, getLibraryPlans,
 } from './database';
+import { logError, logWarn, logInfo } from './errorLog';
 
 // Bump to v12: adds Mens Physique Width Enhancement plan
 const SEED_KEY = '@volyume_routines_seeded_v12';
@@ -1488,7 +1489,7 @@ export async function seedRoutinesIfNeeded(userId) {
       }
       // Marker set but DB empty, clear marker so the seed below actually runs.
       await AsyncStorage.removeItem(SEED_KEY).catch(() => {});
-      console.warn(`[Seed] Marker was set but no library plans found. Re-seeding.`);
+      logWarn('seedRoutines.reseed', 'Marker was set but no library plans found. Re-seeding.');
     }
 
     const existing = await getAllExercises();
@@ -1541,7 +1542,7 @@ export async function seedRoutinesIfNeeded(userId) {
           const def = workoutDef.exercises[i];
           const exercise = byName[def.name];
           if (!exercise) {
-            console.warn(`seedRoutines: exercise not found: ${def.name}`);
+            logWarn('seedRoutines.exerciseNotFound', `exercise not found: ${def.name}`);
             continue;
           }
           await addExerciseToRoutine(
@@ -1560,8 +1561,8 @@ export async function seedRoutinesIfNeeded(userId) {
     }
 
     await AsyncStorage.setItem(SEED_KEY, '1');
-    console.log(`[Seed] Created ${LIBRARY_PLANS.length} library plans`);
+    logInfo('seedRoutines.created', `Created ${LIBRARY_PLANS.length} library plans`);
   } catch (err) {
-    console.warn('seedRoutinesIfNeeded failed:', err);
+    logError('seedRoutines.seedRoutinesIfNeeded', err);
   }
 }
