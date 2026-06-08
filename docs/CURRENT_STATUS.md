@@ -14,6 +14,46 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
+### 0.0000000000000000000001. 2026-06-08 (later): auth-email deliverability fixed, Google sign-in SHA setup recorded
+
+Two operational pieces sorted and documented this session. Both are
+console-config + this repo, no app code changed.
+
+**Auth-email deliverability** (full detail: `docs/EMAIL_AUTH_DELIVERABILITY.md`):
+- Auth emails send via **Resend custom SMTP** (Supabase project
+  `sujrylzzxcqxxfygptns.supabase.co`), domain `volyume.app` Verified in
+  Resend, DMARC set. Supabase's built-in mailer is NOT used.
+- **Root cause of "only Gmail received":** the confirmation/recovery links
+  pointed at the raw `sujrylzzxcqxxfygptns.supabase.co` URL while the mail
+  was from `volyume.app`, a link/sender domain mismatch that Yahoo and
+  corporate filters treat as phishing and bin. Not SPF/DKIM/DMARC, not the
+  app.
+- **Fix shipped:** new static page `public/auth/confirm/index.html` served
+  at `https://volyume.app/auth/confirm/` (commit `195f919`). It carries the
+  one-time token straight to Supabase's `/auth/v1/verify`, so verification
+  is unchanged but the email's link is now on `volyume.app`, matching the
+  sender. Email templates link to
+  `https://volyume.app/auth/confirm/?token={{ .TokenHash }}&type=signup&redirect_to={{ .RedirectTo }}`.
+- **Confirm signup template: done.** **Reset Password template: founder to
+  apply the same swap with `type=recovery`** (page already handles it).
+- **Result:** Gmail and corporate (Stagecoach) now inbox; Yahoo still spam
+  due to 17-day-old-domain reputation (warms up over weeks, low priority).
+- Gotcha recorded: "no emails anywhere" during testing = rate limits
+  (Supabase ~30/hr, Resend 30/hr new-SMTP + 100/day free), not breakage.
+
+**Google sign-in OAuth / signing SHA** (full detail:
+`docs/GOOGLE_SIGNIN_OAUTH.md`):
+- Native Google Sign-In → `signInWithIdToken`. Web client ID
+  `520741631478-apaethkp…` in the app (unchanged). Android OAuth client
+  `…2pcbatqk…` (package `app.volyume`) holds the **upload-key** SHA
+  `F6:27:29:BB:…:B6:E5` (covers sideloaded APKs only).
+- **Outstanding for production:** add the **Play App Signing** SHA-1 (Play
+  Console → Protected with Play → Play Store protection → Play app signing
+  → App signing key certificate) as a SECOND Android OAuth client, same
+  package. Required for Play-installed builds; not created by going to
+  production (same key across tracks). No API key, no `google-services.json`,
+  no rebuild. Consent screen must be Published for public users.
+
 ### 0.000000000000000000001. 2026-06-08: production status snapshot, volyume.app web + privacy live, migrations 070/071 applied
 
 Status snapshot the founder asked to capture. Figures below are

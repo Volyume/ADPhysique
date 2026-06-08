@@ -5,9 +5,14 @@
 > The privacy policy is published at **https://volyume.app/privacy/** (the URL
 > registered on Google Play) and the apex `/` currently redirects there; the
 > marketing landing is shelved (`docs/web/index.html`, not served). The
-> `web/` Next.js interface is built but not yet deployed. Sections below are
-> the original setup reference; the Supabase auth URL config and SMTP items
-> apply when the web app or magic-link auth go live.
+> `web/` Next.js interface is built but not yet deployed.
+>
+> **Auth email is set up and working** via Resend custom SMTP, and auth-email
+> links now route through `https://volyume.app/auth/confirm/` so they match
+> the sending domain and stay out of spam. The authoritative reference for
+> all of that is **`docs/EMAIL_AUTH_DELIVERABILITY.md`**, and Google
+> Sign-In / signing-SHA setup is in **`docs/GOOGLE_SIGNIN_OAUTH.md`**. The
+> SMTP section below is superseded by the email-deliverability doc.
 
 This guide covers the setup needed to move from local Supabase development to `volyume.app` domain with proper authentication and universal linking.
 
