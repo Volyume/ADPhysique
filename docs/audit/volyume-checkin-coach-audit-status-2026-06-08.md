@@ -10,7 +10,7 @@ Founder decisions taken on this pass:
   `stepsAdherence` fallback (PIPE-004) as **intentional** — documented, not
   changed.
 
-Checks after: tsc strict 0, lint 0 errors, full suite **191 suites / 3067
+Checks after: tsc strict 0, lint 0 errors, full suite **192 suites / 3076
 passed / 3 skipped / 0 fail**.
 
 ## One correction to feed back
@@ -57,8 +57,24 @@ cards, no filler), so I did not add UI to the check-in/coach screens
 unilaterally. The data they would read is already loaded. Say the word and I'll
 build CHECKIN-001 to a layout you approve.
 
-## Tests added
-`src/lib/__tests__/weeklyCoach.signals.audit.test.js` — stress→recovery,
-joint-pain hold, note-flag hold, `parseNoteFlags` false-positive guard, and the
-`mapCalsAdherence` vocabulary. Existing weeklyCoach/coach/database suites stay
-green.
+## Test coverage (precise)
+Two layers, two test styles, because the repo runs SQLite/screen code on device,
+not under jest (no SQL engine or native mounts in CI — see
+`database.writeGuards.test.js`).
+
+- **Behavioural** — the signal/parsing layer:
+  `src/lib/__tests__/weeklyCoach.signals.audit.test.js` runs `runWeeklyCoach`
+  and the pure helpers directly: stress→recovery, joint-pain hold, note-flag
+  hold, `parseNoteFlags` false-positive guard, `mapCalsAdherence` vocabulary
+  (PIPE-001/002/003, ALGO-004/006).
+- **Targeted regression guards** — the DB/screen layer that can't run under
+  jest: `src/lib/__tests__/checkinCoachAudit.guard.test.js` locks the contract
+  of ALGO-001 (anchor param + check-in call site), ALGO-002 (planned from active
+  plan), ALGO-003 (Epley e1RM, old weight-only count gone), ALGO-005 (real
+  elapsed weeks + carried week-start, binary 1/99 gone), PIPE-005 (per-week
+  intake direction) and PIPE-006 (fail-to-error not fail-open). Each guard fails
+  if its fix is reverted.
+
+So the accurate framing is: all 11 fixed in code; behavioural tests for the
+signal layer, targeted regression guards for the DB/screen layer. Existing
+weeklyCoach / coach / database suites stay green.
