@@ -1,228 +1,174 @@
-# VOLYUME — CLAUDE CODE ROOT INSTRUCTIONS
+---
+paths:
+  - supabase/**
+  - src/lib/supabase*
+  - src/services/supabase*
+  - src/api/**
+---
 
-Volyume is a precision physique coaching app for serious athletes and
-competitive bodybuilders. Live on Google Play. iOS in development.
-Every decision affects real paying users. Treat the codebase accordingly.
+# VOLYUME — SUPABASE RULES
+
+These rules apply whenever working in Supabase migrations, edge functions,
+or the Supabase client layer. The most common AI mistakes with Supabase
+silently destroy security. These rules prevent that.
 
 ---
 
-## SACRED RULES — READ FIRST, EVERY SESSION
+## ROW LEVEL SECURITY — MANDATORY ON EVERY TABLE
 
-**Branches:**
-- `main` is production. It is live on Google Play.
-- NEVER commit, push, merge, rebase, or reset on `main`.
-- All work happens on `phase2/development` or `feature/*` branches.
-- If `git status` shows `main`, stop immediately and switch.
-- Before any `git push` or `git merge`: state branch, files changed,
-  tests run. Wait for explicit confirmation before proceeding.
+Every table you create must have all of the following.
+No exceptions. No "we will add it later".
 
-**Billing:**
-- Google Play Billing is live and charging real users.
-- NEVER modify any file under `src/billing/`, `src/services/billing/`,
-  or any RevenueCat or Play Billing file without stating intent
-  and waiting for explicit "proceed".
-- Product IDs: `volyume_pro_monthly`, `volyume_pro_annual`
-- Entitlement: `pro`
-- Never change these identifiers.
+Enable RLS:
+  ALTER TABLE table_name ENABLE ROW LEVEL SECURITY;
 
-**Coaching engine:**
-- The Precision Coaching engine is deterministic. No LLM. No AI.
-- NEVER introduce any AI API call inside coaching logic.
-- If a feature seems to require AI, stop and raise it as a question.
+SELECT policy:
+  CREATE POLICY "Users can read own data"
+    ON table_name FOR SELECT
+    USING (auth.uid() = user_id);
 
-**Production database:**
-- NEVER run `supabase db push`, `supabase db reset`, or any destructive
-  migration against production without explicit instruction containing
-  the exact words "run against production".
-- All migrations run against local or staging only by default.
+INSERT policy:
+  CREATE POLICY "Users can insert own data"
+    ON table_name FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
 
-**Dependencies:**
-- NEVER run `npm install`, `yarn add`, or `expo install` without first
-  stating: package name, purpose, bundle size, licence. Wait for "yes".
+UPDATE policy:
+  CREATE POLICY "Users can update own data"
+    ON table_name FOR UPDATE
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
+DELETE policy (only if delete is permitted for this table):
+  CREATE POLICY "Users can delete own data"
+    ON table_name FOR DELETE
+    USING (auth.uid() = user_id);
+
+If you create a table without RLS, you have created a data breach.
+Stop and fix it before doing anything else.
 
 ---
 
-## BEHAVIOUR RULES
+## VIEWS — SECURITY INVOKER IS MANDATORY
 
-### 1. Think Before Coding
-- State assumptions explicitly before writing a single line.
-- If multiple approaches exist, present them. Never pick silently.
-- If something is unclear, stop. Name what is unclear. Ask.
-- If a simpler approach exists than what was asked, say so.
-- Push back when a request will create a problem. Say why.
+Every view must include WITH (security_invoker = true).
+A view without it silently bypasses RLS and exposes all user data.
 
-### 2. Simplicity First
-- Write the minimum code that solves the problem. Nothing speculative.
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No future flexibility that was not requested.
-- If you write 200 lines and it could be 50, rewrite it.
-- When in doubt about scope: do less and ask.
+Correct:
+  CREATE VIEW my_view
+    WITH (security_invoker = true)
+  AS SELECT ...;
 
-### 3. Surgical Changes
-- Touch only the files and lines required by the task.
-- Do not improve adjacent code, comments, or formatting.
-- Do not refactor anything that is not broken.
-- Match existing code style exactly, even if you would do it differently.
-- If you notice unrelated bugs or dead code, mention them. Do not fix them.
-- Remove imports, variables, and functions YOUR changes made unused.
-- Every changed line must trace directly to the user's request.
-
-### 4. Goal-Driven Execution
-- Define what success looks like before starting.
-- "Fix the bug" means: write a test that reproduces it, then make it pass.
-- "Add validation" means: write tests for invalid inputs, then pass them.
-- After implementing: run `npm run lint && npm test`. Report exact output.
-- Do not move to the next step until the current step is verified.
-
-### 5. Plan Before You Code
-- For any task larger than a single-line change: output your plan first.
-- Plan format: files you will touch, what you will change in each, why.
-- Wait for explicit "go" before implementing.
-- Work one verifiable step at a time. Report after each step.
+Wrong — never do this:
+  CREATE VIEW my_view AS SELECT ...;
 
 ---
 
-## WORKFLOW — EVERY SESSION
+## AUTH PATTERNS
 
-1. Read this file.
-2. Read `.claude/rules/` files relevant to the task.
-3. Check current branch via `git status` and `git branch`.
-4. If on `main`, stop and switch before doing anything else.
-5. State your plan. Wait for "go".
-6. Implement one step at a time.
-7. After each step: state what you did, what confirms it works, what is next.
-8. Before any commit or merge: summarise changes, wait for confirmation.
+Use auth.uid() in all RLS policies. Never hardcode user IDs.
 
----
+Correct:
+  USING (auth.uid() = user_id)
 
-## STACK
+Wrong:
+  USING (user_id = '123e4567-e89b-12d3-a456-426614174000')
 
-- React Native + Expo managed workflow
-- Expo SDK: [INSERT CURRENT VERSION]
-- Supabase EU Dublin — RLS enforced, GDPR compliant
-- WatermelonDB — offline-first, source of truth on device
-- Google Play Billing (live) + RevenueCat (iOS, in progress)
-- Platforms: Android live, iOS in development
-- Language: British English throughout — all strings, comments, docs
+For authorisation claims in application code:
+- Use app_metadata for roles and entitlements
+- Use user_metadata only for display preferences
+- user_metadata is user-editable and must never be trusted for access control
 
----
+Correct:
+  const { data: { user } } = await supabase.auth.getUser()
+  const role = user.app_metadata.role
 
-## ARCHITECTURE — NON-NEGOTIABLE
-
-These decisions are final. Never undo without explicit instruction.
-
-- Offline-first: every feature works with no internet. Design offline path first.
-- WatermelonDB is the UI data source. Components read via observers only.
-  Never query Supabase directly from a component.
-- Supabase is the cloud sync target. Sync runs via `src/sync/` only.
-- Deterministic coaching engine. No probabilistic logic, no AI, no randomness.
-- Expo managed workflow only. Never eject. Never touch `ios/` or `android/`.
-- EU data residency. No PII outside Supabase EU Dublin without approval.
+Wrong:
+  const role = user.user_metadata.role
 
 ---
 
-## FREE vs PRO GATING
+## MIGRATIONS
 
-Free: Plan Library, training builder, workout logging, exercise library,
-      personal bests, progress stats.
+Every schema change requires two things:
+1. A migration file in supabase/migrations/
+2. A bump to the schema version in schema.js (WatermelonDB)
 
-Pro (must be gated): food diary, barcode scanning, smart meal suggestions,
-      nutrition targets, macros, cardio, steps, weekly check-ins,
-      Precision Coaching adjustments, division-specific plans,
-      all safety systems, wearable integration.
+Never run a migration against production without:
+- Explicit instruction containing the exact words "run against production"
+- A backup confirmed
+- The migration tested on staging first
 
-NEVER expose a Pro feature to free users.
-NEVER gate a free feature behind Pro.
-When in doubt which tier: ask.
+Migration file naming:
+  [timestamp]_[description].sql
+  Example: 20260610_add_partnerships_table.sql
 
----
-
-## QUICK RULES — ALWAYS ACTIVE
-
-**Supabase** (full patterns in `.claude/rules/supabase.md`):
-- Every new table: enable RLS + SELECT + write policies
-- Every new view: WITH (security_invoker = true) — mandatory
-- Use auth.uid() for RLS. Never hardcode user IDs.
-
-**WatermelonDB** (full patterns in `.claude/rules/watermelon.md`):
-- Mutations only inside database.write(async () => { }) blocks
-- New tables require schema change AND migration file
-- Never bump schema version without a migration
-
-**Billing** (full patterns in `.claude/rules/billing.md`):
-- Any billing file change: state intent, wait for "proceed"
-- Always check entitlement by customerInfo.entitlements.active['pro']
-- Never check by product ID
-
-**Expo / React Native:**
-- Never modify `ios/` or `android/` directly
-- Never suggest expo eject or expo prebuild
-- New libraries via expo install only. Confirm SDK compatibility first.
-- Lists over 10 items: FlatList not ScrollView
-- Images: expo-image with cachePolicy="memory-disk"
-- Animations: react-native-reanimated worklets only
-- All touch targets minimum 48dp x 48dp
-
-**Visual** (full patterns in `.claude/rules/styling.md`):
-- Background: #0D0D0D screens, #1A1A1A cards
-- Accent: #F59E0B amber — interactive elements only
-- No white backgrounds visible against #0D0D0D
-- Card border radius: 12dp. Buttons minimum 48dp height.
-
-**Language:**
-- British English in all strings, comments, commits, docs
-- colour, behaviour, optimise, organise, analyse, centre, licence
-- Variable names may use US spelling if the library requires it
+Never use Supabase CLI commands that do not exist.
+Known non-existent command hallucinated frequently:
+  supabase db execute — this does not exist.
+Use supabase db push or the SQL editor instead.
 
 ---
 
-## BUILD COMMANDS
+## EDGE FUNCTIONS
 
-npm run start
-npm run android
-npm run lint
-npm run test
-npm run typecheck
-eas build --platform android --profile preview
-eas build --platform ios --profile preview
+Edge functions live in supabase/functions/.
+Every edge function must:
+- Validate the JWT from the Authorization header before processing
+- Return proper CORS headers for mobile clients
+- Return structured JSON errors, never plain text
+- Log errors via Supabase built-in logging
 
-After any change: run lint and test. Report output. Do not claim done without it.
-
----
-
-## SAFETY SYSTEMS — DO NOT TOUCH
-
-The ED safety system lives in `src/coaching/safety/`.
-
-NEVER modify, disable, or work around it.
-NEVER lower the calorie floor (1,200 kcal women / 1,500 kcal men).
-NEVER remove Beat UK signposting.
-NEVER change the rapid-loss intervention threshold (1.5% bodyweight/week).
-If a task requires touching this system: stop and ask.
-
----
-
-## ALWAYS ASK BEFORE
-
-- Adding any new dependency
-- Changing any architecture decision in this file
-- Modifying billing, auth, or sync code
-- Creating a new Supabase table or edge function
-- Merging anything to `main` or `phase2/development`
-- Changing trial structure or Pro gating
-- Any change affecting more than 3 files simultaneously
-- Anything that feels irreversible
-
-When in doubt: ask. Asking is never wrong. Assuming is almost always wrong.
+Auth validation pattern:
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader) {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorised' }),
+      { status: 401, headers: corsHeaders }
+    )
+  }
+  const token = authHeader.replace('Bearer ', '')
+  const { data: { user }, error } = await supabase.auth.getUser(token)
+  if (error || !user) {
+    return new Response(
+      JSON.stringify({ error: 'Invalid token' }),
+      { status: 401, headers: corsHeaders }
+    )
+  }
 
 ---
 
-## POINTERS
+## DATA RESIDENCY
 
-- Supabase patterns       -> .claude/rules/supabase.md
-- WatermelonDB patterns   -> .claude/rules/watermelon.md
-- Billing patterns        -> .claude/rules/billing.md
-- Visual/styling          -> .claude/rules/styling.md
-- Phase 2 rules           -> CLAUDE_PHASE2.md (active on phase2/* branches)
-- Architecture reference  -> docs/ARCHITECTURE.md
+The Supabase project is in EU Dublin.
+All user data is subject to UK GDPR.
+Never introduce a service that stores PII outside EU without raising it.
+Never log user data (body weight, nutrition, health data) to external
+services, analytics, or crash reporters.
+
+---
+
+## SUPABASE CLIENT USAGE IN THE APP
+
+Never import the Supabase client directly in a component.
+Components read from WatermelonDB via observers.
+The sync layer (src/sync/) is the only place that calls Supabase directly.
+
+Wrong — never do this in a component:
+  import { supabase } from '@/lib/supabase'
+  const { data } = await supabase.from('workouts').select('*')
+
+Correct:
+  const workouts = useWorkouts() // hook reading from WatermelonDB
+
+---
+
+## BEFORE WRITING ANY MIGRATION
+
+State all of the following and wait for confirmation:
+1. Tables being created or modified
+2. RLS policies being added
+3. Whether the migration is additive or destructive
+4. Which environment it will run against
+
+Never write a destructive migration (DROP, TRUNCATE, column removal)
+without explicit confirmation and a confirmed backup.
