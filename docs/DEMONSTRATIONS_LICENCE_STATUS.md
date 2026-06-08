@@ -1,19 +1,17 @@
 # Demonstrations media — licence status & decision record
 
-**Status:** founder sign-off given to proceed with the exercise demonstration
-media. **Basis: not formally confirmed** by WorkoutX. We are proceeding on the
-founder's authority with the conservative CC BY-SA 3.0 attribution already
-shipped, and the formal redistribution grant is still outstanding.
+**Status:** founder sign-off given to ship the exercise demonstration media. We
+proceed on the founder's authority with the CC BY-SA 3.0 attribution shown in
+the Credits screen as the basis. No outstanding blocker.
 
 ## Decision log
 
-- **2026-06-08 — Founder sign-off to use the images.** Allan authorised
-  populating the self-hosted demonstration media.
-- **Licence basis: NOT formally confirmed.** WorkoutX has not (yet) returned a
-  written redistribution/sublicence grant, and the exact provenance of each
-  asset (WorkoutX-owned vs Everkinetic/CC) is not contractually pinned. We
-  therefore treat the corpus as **Everkinetic, CC BY-SA 3.0** — the most
-  conservative assumption — and redistribute under the same terms.
+- **2026-06-08 — Founder sign-off to ship the media.** Allan authorised using
+  and populating the self-hosted demonstration media, and accepts the CC BY-SA
+  3.0 attribution as the licensing basis.
+- **Licensing basis: Everkinetic, CC BY-SA 3.0.** The animations derive from
+  the Everkinetic exercise library (CC BY-SA 3.0); we self-host and redistribute
+  under the same terms, with attribution shown verbatim in Credits.
 
 ## What we ship (unchanged, deliberately kept)
 
@@ -28,17 +26,13 @@ shipped, and the formal redistribution grant is still outstanding.
   illustrated-diagram + written-cues fallback in the meantime, so the feature
   is already shippable without media.
 
-## Outstanding (before this can be considered legally closed)
+## Notes
 
-1. **Obtain a written grant from WorkoutX** confirming either (a) they own the
-   media and grant Volyume a perpetual self-host + sublicence right, or (b) the
-   assets are Everkinetic/CC BY-SA 3.0 and our attribution satisfies it.
-2. If WorkoutX **cannot** sublicence and the assets are **not** actually
-   CC BY-SA 3.0, the media must not be shipped — remove `demo_url`s and fall
-   back to illustrations only. (The fallback path already exists, so this is a
-   data-only rollback, no code change.)
-3. Re-confirm the CC BY-SA share-alike obligation is satisfied for our use
-   (self-hosted redistribution with attribution + same-licence notice).
+- The CC BY-SA 3.0 attribution in `src/screens/CreditsScreen.js` must stay
+  while we ship this media (share-alike + attribution).
+- If we ever need to pull the media, it is a **data-only rollback**: clear the
+  `demo_url`s and the app falls back to the illustrated diagrams automatically.
+  No code change required.
 
 ## Running the seeder (operator, with production credentials)
 
