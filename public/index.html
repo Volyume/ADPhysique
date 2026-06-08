@@ -4,10 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Volyume</title>
-<meta name="description" content="Volyume is a private, intelligent bodybuilding logbook for iPhone and Android.">
+<meta name="description" content="A training and food log for people who lift to change how they look. Private by design. On Android.">
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="apple-touch-icon" href="/favicon.png">
 <meta name="theme-color" content="#0D0D0D">
+<meta property="og:title" content="Volyume">
+<meta property="og:description" content="A training and food log for people who lift to change how they look. Private by design.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://volyume.app">
+<meta property="og:image" content="https://volyume.app/favicon.png">
 <style>
   :root {
     --bg: #0D0D0D;
@@ -26,70 +31,138 @@
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
   }
-  .wrap {
+  .page {
     flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 32px 24px;
-  }
-  .card {
-    max-width: 480px;
     width: 100%;
-    text-align: center;
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 64px 24px 48px;
   }
   .wordmark {
-    font-size: 48px;
+    font-size: 40px;
     font-weight: 800;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     color: var(--accent);
-    margin: 0 0 8px;
+    margin: 0 0 16px;
   }
-  .tag {
+  .lead {
+    font-size: 21px;
+    font-weight: 600;
+    margin: 0 0 16px;
+    line-height: 1.35;
+  }
+  .blurb {
     color: var(--muted);
-    margin: 0 0 32px;
     font-size: 16px;
+    margin: 0 0 32px;
+    max-width: 52ch;
   }
-  .links { display: flex; flex-direction: column; gap: 12px; }
-  .links a {
-    display: block;
-    padding: 12px 20px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
+  .cta {
+    display: inline-block;
+    padding: 14px 24px;
+    background: var(--accent);
+    color: #0D0D0D;
+    font-size: 16px;
+    font-weight: 700;
     text-decoration: none;
-    font-size: 15px;
-    transition: border-color 0.15s ease;
+    border-radius: 10px;
   }
-  .links a:hover {
-    border-color: var(--accent);
-  }
-  footer {
-    text-align: center;
-    padding: 24px;
-    color: var(--muted);
+  .cta:active { opacity: 0.9; }
+  .platform {
+    margin: 12px 0 0;
     font-size: 13px;
+    color: var(--muted);
+  }
+  .what {
+    margin: 48px 0 0;
+    padding: 24px 0 0;
     border-top: 1px solid var(--border);
   }
+  .what h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    font-weight: 600;
+    margin: 0 0 16px;
+  }
+  .what ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .what li {
+    padding: 10px 0;
+    font-size: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .what li:last-child { border-bottom: 0; }
+  .privacy {
+    margin: 40px 0 0;
+  }
+  .privacy p {
+    color: var(--muted);
+    font-size: 15px;
+    margin: 0 0 12px;
+    max-width: 52ch;
+  }
+  .privacy a, .blurb a { color: var(--link); }
+  footer {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 24px;
+    text-align: center;
+    border-top: 1px solid var(--border);
+  }
+  footer a { color: var(--muted); text-decoration: none; }
+  footer a:hover { color: var(--accent); }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="card">
-    <h1 class="wordmark">Volyume</h1>
-    <p class="tag">The intelligent bodybuilding logbook for iPhone and Android. Beta.</p>
-    <div class="links">
-      <a href="./privacy/">Privacy policy</a>
-      <a href="./app-map/">App map &amp; audit (internal)</a>
-      <a href="mailto:allansdouglas1983@gmail.com">Contact: allansdouglas1983@gmail.com</a>
-    </div>
-  </div>
-</div>
-<footer>Volyume is currently in closed beta.</footer>
+<main class="page">
+  <h1 class="wordmark">Volyume</h1>
+
+  <p class="lead">A training and food log for people who lift to change how they look.</p>
+
+  <p class="blurb">
+    Log your sets and your meals. Volyume keeps your volume per muscle, your
+    calories and macros, your weight and your lifts in one place, then works out
+    what to change each week. No feed, no followers, no ads.
+  </p>
+
+  <a class="cta" href="https://play.google.com/store/apps/details?id=app.volyume">Get it on Google Play</a>
+  <p class="platform">Android. iPhone later.</p>
+
+  <section class="what">
+    <h2>What it does</h2>
+    <ul>
+      <li>Workout logging, with volume per muscle and your personal records.</li>
+      <li>A food diary with a barcode scanner and macro targets.</li>
+      <li>A weekly check-in that adjusts your training and your calories.</li>
+      <li>Your weight and progress, kept over time.</li>
+    </ul>
+  </section>
+
+  <section class="privacy">
+    <p>
+      Private by design. Your data is yours, it stays in the UK and EU, and you
+      can delete all of it whenever you want. We do not sell it and we do not run ads.
+    </p>
+    <p>
+      <a href="./privacy/">Read the privacy policy</a>
+      &nbsp;&middot;&nbsp;
+      <a href="mailto:support@volyume.app">support@volyume.app</a>
+    </p>
+  </section>
+</main>
+
+<footer>
+  <a href="./privacy/">Privacy</a> &nbsp;&middot;&nbsp; Made in Britain for lifters.
+</footer>
 </body>
 </html>
