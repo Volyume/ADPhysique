@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
-import { priceTextFor } from '../lib/payments/catalogue';
+import { usePlayPrices } from '../lib/payments/usePlayPrices';
 
 const HERO = require('../../assets/volyume-wordmark.png');
 const HERO_ASPECT = 1032 / 277;
@@ -27,6 +27,10 @@ const PRO_BULLETS = [
 
 export default function WelcomeScreen({ navigation }) {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  // PLAY-002: show Google Play's localised price, or drop the figure until it
+  // loads. Never a hardcoded fallback.
+  const priceFor = usePlayPrices();
+  const monthlyPrice = priceFor('pro', 'monthly');
 
   const fadeIn   = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
   const slideUp  = useRef(new Animated.Value(reduceMotion ? 0 : 24)).current;
@@ -91,7 +95,9 @@ export default function WelcomeScreen({ navigation }) {
             </View>
 
             <Text style={styles.trialNote}>
-              Free for 14 days, no card. Then 7 days free on Google Play, then {priceTextFor('pro', 'monthly')} until you cancel.
+              {monthlyPrice
+                ? `Free for 14 days, no card. Then 7 days free on Google Play, then ${monthlyPrice} until you cancel.`
+                : 'Free for 14 days, no card. Then 7 days free on Google Play, then a monthly subscription until you cancel.'}
             </Text>
 
             <View style={styles.proCtaRow}>

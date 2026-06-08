@@ -99,10 +99,13 @@ export default function CascadeGateScreen({ navigation, route }) {
   const content = _variantContent(variant);
   const [busy, setBusy] = useState(null);  // which CTA is in-flight
 
-  // C-2: localised store prices, catalogue text as the pre-load fallback.
+  // C-2 / PLAY-002: localised store prices. priceFor returns null until Google
+  // Play responds; the chips show a short placeholder rather than a hardcoded
+  // price.
   const priceFor = usePlayPrices();
   const monthlyPrice = priceFor('pro', 'monthly');
   const annualPrice = priceFor('pro', 'annual');
+  const PRICE_LOADING = '…';
 
   const dismiss = useCallback(() => {
     if (navigation?.canGoBack?.()) navigation.goBack();
@@ -232,10 +235,10 @@ export default function CascadeGateScreen({ navigation, route }) {
               disabled={busy !== null}
               accessibilityRole="button"
               accessibilityState={{ selected: period === 'monthly' }}
-              accessibilityLabel={`Monthly, ${monthlyPrice}`}
+              accessibilityLabel={monthlyPrice ? `Monthly, ${monthlyPrice}` : 'Monthly'}
             >
               <Text style={[styles.periodLabel, period === 'monthly' && styles.periodTextActive]}>Monthly</Text>
-              <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{monthlyPrice}</Text>
+              <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{monthlyPrice ?? PRICE_LOADING}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.periodBtn, period === 'annual' && styles.periodBtnActive]}
@@ -243,11 +246,11 @@ export default function CascadeGateScreen({ navigation, route }) {
               disabled={busy !== null}
               accessibilityRole="button"
               accessibilityState={{ selected: period === 'annual' }}
-              accessibilityLabel={`Annual, ${annualPrice}, save ${annualSavingsPct()} per cent`}
+              accessibilityLabel={annualPrice ? `Annual, ${annualPrice}, save ${annualSavingsPct()} per cent` : `Annual, save ${annualSavingsPct()} per cent`}
             >
               <View style={styles.saveBadge}><Text style={styles.saveBadgeText}>Save {annualSavingsPct()}%</Text></View>
               <Text style={[styles.periodLabel, period === 'annual' && styles.periodTextActive]}>Annual</Text>
-              <Text style={[styles.periodPrice, period === 'annual' && styles.periodTextActive]}>{annualPrice}</Text>
+              <Text style={[styles.periodPrice, period === 'annual' && styles.periodTextActive]}>{annualPrice ?? PRICE_LOADING}</Text>
             </TouchableOpacity>
           </View>
         ) : null}

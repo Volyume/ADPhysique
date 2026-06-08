@@ -124,11 +124,15 @@ export default function PaywallScreen({ navigation, route }) {
     }
   }, [busy, surface, navigation]);
 
-  // C-2: localised store prices (Play), catalogue text as the pre-load fallback.
+  // C-2 / PLAY-002: localised store prices (Play). priceFor returns null until
+  // Google Play responds; we never substitute a hardcoded price. The CTA and
+  // disclosure drop the figure until it loads, and the chips show a short
+  // placeholder.
   const priceFor = usePlayPrices();
   const priceText = priceFor('pro', period);
   const monthlyPrice = priceFor('pro', 'monthly');
   const annualPrice = priceFor('pro', 'annual');
+  const PRICE_LOADING = '…';
   const renewCadence = period === 'annual' ? 'yearly' : 'monthly';
   // Trial shape (founder override 2026-06-06, SUBSCRIPTION_AND_PAYMENT_LOCKED):
   // 14 cardless days run inside the app BEFORE a purchase surface, then the
@@ -139,12 +143,18 @@ export default function PaywallScreen({ navigation, route }) {
   // eligibility rather than the hardcoded 7.
   const ctaLabel = ctaMode === 'try_pro_14d'
     ? 'Try Pro free for 7 days'
-    : `Get Pro for ${priceText}`;
+    : priceText ? `Get Pro for ${priceText}` : 'Get Pro';
   // Play subscription disclosure. Auto-renew, price, billing period and
-  // how to cancel must be on the purchase surface itself.
+  // how to cancel must be on the purchase surface itself. Until the store
+  // price loads we state the renewal cadence without a figure rather than a
+  // hardcoded price (PLAY-002); the figure appears the moment Play responds.
   const termsText = ctaMode === 'try_pro_14d'
-    ? `Free for 7 days, then ${priceText}. Renews ${renewCadence} until you cancel. Manage or cancel anytime in Google Play.`
-    : `${priceText}, renewing ${renewCadence} until you cancel. Manage or cancel anytime in Google Play.`;
+    ? (priceText
+        ? `Free for 7 days, then ${priceText}. Renews ${renewCadence} until you cancel. Manage or cancel anytime in Google Play.`
+        : `Free for 7 days, then it renews ${renewCadence} until you cancel. Manage or cancel anytime in Google Play.`)
+    : (priceText
+        ? `${priceText}, renewing ${renewCadence} until you cancel. Manage or cancel anytime in Google Play.`
+        : `Renews ${renewCadence} until you cancel. Manage or cancel anytime in Google Play.`);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -175,21 +185,21 @@ export default function PaywallScreen({ navigation, route }) {
             onPress={() => setPeriod('monthly')}
             accessibilityRole="button"
             accessibilityState={{ selected: period === 'monthly' }}
-            accessibilityLabel={`Monthly, ${monthlyPrice}`}
+            accessibilityLabel={monthlyPrice ? `Monthly, ${monthlyPrice}` : 'Monthly'}
           >
             <Text style={[styles.periodLabel, period === 'monthly' && styles.periodTextActive]}>Monthly</Text>
-            <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{monthlyPrice}</Text>
+            <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{monthlyPrice ?? PRICE_LOADING}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.periodBtn, period === 'annual' && styles.periodBtnActive]}
             onPress={() => setPeriod('annual')}
             accessibilityRole="button"
             accessibilityState={{ selected: period === 'annual' }}
-            accessibilityLabel={`Annual, ${annualPrice}, save ${annualSavingsPct()} per cent`}
+            accessibilityLabel={annualPrice ? `Annual, ${annualPrice}, save ${annualSavingsPct()} per cent` : `Annual, save ${annualSavingsPct()} per cent`}
           >
             <View style={styles.saveBadge}><Text style={styles.saveBadgeText}>Save {annualSavingsPct()}%</Text></View>
             <Text style={[styles.periodLabel, period === 'annual' && styles.periodTextActive]}>Annual</Text>
-            <Text style={[styles.periodPrice, period === 'annual' && styles.periodTextActive]}>{annualPrice}</Text>
+            <Text style={[styles.periodPrice, period === 'annual' && styles.periodTextActive]}>{annualPrice ?? PRICE_LOADING}</Text>
           </TouchableOpacity>
         </View>
 

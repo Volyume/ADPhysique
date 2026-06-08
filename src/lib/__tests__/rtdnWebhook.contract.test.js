@@ -72,3 +72,24 @@ describe('play-billing-rtdn → payment-failure push', () => {
     expect(decls).toHaveLength(1);
   });
 });
+
+describe('play-billing-rtdn → client verify surfaces a failed grant (SUB-001)', () => {
+  test('callUpgradeTier reports success/failure rather than void', () => {
+    // Must return a result the caller can act on, not swallow RPC failures.
+    expect(RTDN).toMatch(/callUpgradeTier\([\s\S]*?\):\s*Promise<\{\s*ok:\s*boolean/);
+    expect(RTDN).toMatch(/return\s*\{\s*ok:\s*true\s*\}/);
+    expect(RTDN).toMatch(/return\s*\{\s*ok:\s*false/);
+  });
+
+  test('handleClientVerify returns 502 when the grant does not persist', () => {
+    const fn = RTDN.slice(
+      RTDN.indexOf('async function handleClientVerify'),
+      RTDN.indexOf('serve(async (req'),
+    );
+    // The grant result is checked, and a failed grant returns 502 instead
+    // of the 200 {ok:true} the buggy version always returned.
+    expect(fn).toMatch(/const upgrade = await callUpgradeTier\(/);
+    expect(fn).toMatch(/if\s*\(\s*!upgrade\.ok\s*\)/);
+    expect(fn).toMatch(/jsonResponse\(502/);
+  });
+});

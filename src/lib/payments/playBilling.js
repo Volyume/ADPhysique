@@ -51,9 +51,9 @@ let _errorListener = null;
 // C-2: localised display prices per sku, captured from the store at fetch time.
 // Store policy (Apple + Google) requires showing the store's localised price,
 // not a hardcoded one. Populated by the real provider's loadOfferTokens; read by
-// the paywall surfaces (via usePlayPrices), falling back to the catalogue text
-// before products load. Module-level so the UI can read it without the provider
-// closure.
+// the paywall surfaces (via usePlayPrices). PLAY-002: until a sku is populated
+// here the UI shows a price-free loading state, never a hardcoded fallback.
+// Module-level so the UI can read it without the provider closure.
 const _displayPrices = {};
 export function getDisplayPrice(skuId) {
   return _displayPrices[skuId] ?? null;
@@ -477,7 +477,8 @@ const _stubProvider = Object.freeze({
  * Ensure the localised display prices are loaded, then return the
  * { skuId: formattedPrice } map. The paywall calls this; if prices are already
  * cached (initialise ran at sign-in) it returns immediately, otherwise it forces
- * one fetch. Returns {} in the stub env, so callers fall back to catalogue text.
+ * one fetch. Returns {} in the stub env or before products load; callers then
+ * show a price-free loading state rather than a hardcoded price (PLAY-002).
  */
 export async function ensureDisplayPrices() {
   if (Object.keys(_displayPrices).length > 0) return getDisplayPrices();

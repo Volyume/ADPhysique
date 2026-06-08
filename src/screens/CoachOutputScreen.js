@@ -37,6 +37,7 @@ import { getRecentIntakeSummary } from '../lib/food/db';
 import { localWeekStartMs } from '../lib/dayKey';
 import { track as trackEngineEvent } from '../lib/engineTelemetry';
 import DifferentialBadge from '../components/DifferentialBadge';
+import { usePlayPrices } from '../lib/payments/usePlayPrices';
 import { SkeletonCard } from '../components/Skeleton';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
 import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, computeDietBreakTargets, computeMacroCycle, computeRefeedDay, markApplied, isApplied } from '../lib/coachApply';
@@ -692,6 +693,9 @@ export default function CoachOutputScreen({ navigation, route }) {
   // saw on tapping the notification.
   const weekStart = route.params?.weekStart ?? localWeekStartMs();
   const { user, userProfile, units, saveLocalProfile, tier: storeTier } = useAppStore();
+  // PLAY-002: the differential buy CTA shows Google Play's localised price, or
+  // a price-free "Get Pro" until it loads. Never a hardcoded fallback.
+  const priceFor = usePlayPrices();
 
   const [output, setOutput] = useState(null);
   const [checkin, setCheckin] = useState(null);
@@ -1512,7 +1516,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           <DifferentialBadge
             differential={output.differential_output}
             pricingWindow={userProfile?.lockedInPriceTier ?? 'open_beta'}
-            pricingPriceText={null}
+            pricingPriceText={priceFor('pro', 'monthly')}
             onTapCta={(action) => {
               if (action === 'shown') {
                 trackEngineEvent(user?.id, 'paywall_shown', {

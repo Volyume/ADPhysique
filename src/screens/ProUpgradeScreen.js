@@ -31,10 +31,13 @@ export default function ProUpgradeScreen({ navigation }) {
   const hasAccount = Boolean(session?.user?.id) && !user?.isLocal;
   const canTrial = cascade.canStillTrial(userProfile);
 
-  // C-2: localised store prices, catalogue text as the pre-load fallback.
+  // C-2 / PLAY-002: localised store prices. priceFor returns null until Google
+  // Play responds; we never substitute a hardcoded price. Until it loads, the
+  // price chips show a short placeholder and the copy drops the figure.
   const priceFor = usePlayPrices();
   const monthlyPrice = priceFor('pro', 'monthly');
   const annualPrice = priceFor('pro', 'annual');
+  const PRICE_LOADING = '…';
 
   const [mode, setMode] = useState('signup'); // 'signup' | 'signin'
   const [email, setEmail] = useState('');
@@ -69,14 +72,26 @@ export default function ProUpgradeScreen({ navigation }) {
       toast.show('Subscription unavailable, try again later', { variant: 'error' });
       return;
     }
+    setBusy(true);
     try {
       const pr = await playBilling.purchasePackage(sku.id);
       const ref = pr?.transactionId ?? `client_${Date.now()}`;
       await cascade.payAt('pro', ref, 'pro_upgrade');
       // Server-authoritative grant: verify the token with Google, write Pro
-      // server-side. Fire-and-forget; the optimistic unlock holds meanwhile.
-      cascade.confirmPurchase({ purchaseToken: pr?.purchaseToken, subscriptionId: sku.id })
-        .catch((e) => logError('ProUpgrade.confirmPurchase', e, {}));
+      // server-side. Awaited (not fire-and-forget) so the button stays in its
+      // loading state until the server confirms, and a failed grant is seen
+      // rather than swallowed. The optimistic unlock from payAt still holds, so
+      // a confirm failure does not deny the access they just paid for: the
+      // Google Play RTDN push and the next cloud refresh reconcile it. We
+      // surface the delay rather than silently showing a Pro screen on a server
+      // that never granted it.
+      const confirm = await cascade.confirmPurchase({
+        purchaseToken: pr?.purchaseToken, subscriptionId: sku.id,
+      });
+      if (!confirm.ok) {
+        logError('ProUpgrade.confirmPurchase', confirm.error ?? 'confirm_failed', {});
+        toast.show('Payment received. Finishing activation, this can take a moment', { variant: 'info', duration: 5000 });
+      }
       setDone(true);
     } catch (e) {
       const msg = e?.message ?? '';
@@ -84,6 +99,8 @@ export default function ProUpgradeScreen({ navigation }) {
         logError('ProUpgrade.purchaseFailed', e, {});
         toast.show('Purchase did not complete, try again', { variant: 'error' });
       }
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -352,7 +369,9 @@ export default function ProUpgradeScreen({ navigation }) {
                 {PRO_BETA_ACTIVE
                   ? 'Your account is ready. Activate Pro to switch on the coaching features.'
                   : canTrial
-                    ? `Your account is ready. Pro is free for 14 days, no card needed. When you subscribe, Google Play adds 7 more days free, then it's ${monthlyPrice} until you cancel.`
+                    ? (monthlyPrice
+                        ? `Your account is ready. Pro is free for 14 days, no card needed. When you subscribe, Google Play adds 7 more days free, then it's ${monthlyPrice} until you cancel.`
+                        : "Your account is ready. Pro is free for 14 days, no card needed. When you subscribe, Google Play adds 7 more days free, then your subscription continues until you cancel.")
                     : 'Your account is ready. Subscribe to switch the coaching features on.'}
               </Text>
               {!PRO_BETA_ACTIVE && !canTrial ? (
@@ -363,10 +382,10 @@ export default function ProUpgradeScreen({ navigation }) {
                     disabled={busy}
                     accessibilityRole="button"
                     accessibilityState={{ selected: period === 'monthly' }}
-                    accessibilityLabel={`Monthly, ${monthlyPrice}`}
+                    accessibilityLabel={monthlyPrice ? `Monthly, ${monthlyPrice}` : 'Monthly'}
                   >
                     <Text style={[styles.periodLabel, period === 'monthly' && styles.periodTextActive]}>Monthly</Text>
-                    <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{monthlyPrice}</Text>
+                    <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{monthlyPrice ?? PRICE_LOADING}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.periodBtn, period === 'annual' && styles.periodBtnActive]}
@@ -374,11 +393,11 @@ export default function ProUpgradeScreen({ navigation }) {
                     disabled={busy}
                     accessibilityRole="button"
                     accessibilityState={{ selected: period === 'annual' }}
-                    accessibilityLabel={`Annual, ${annualPrice}, save ${annualSavingsPct()} per cent`}
+                    accessibilityLabel={annualPrice ? `Annual, ${annualPrice}, save ${annualSavingsPct()} per cent` : `Annual, save ${annualSavingsPct()} per cent`}
                   >
                     <View style={styles.saveBadge}><Text style={styles.saveBadgeText}>Save {annualSavingsPct()}%</Text></View>
                     <Text style={[styles.periodLabel, period === 'annual' && styles.periodTextActive]}>Annual</Text>
-                    <Text style={[styles.periodPrice, period === 'annual' && styles.periodTextActive]}>{annualPrice}</Text>
+                    <Text style={[styles.periodPrice, period === 'annual' && styles.periodTextActive]}>{annualPrice ?? PRICE_LOADING}</Text>
                   </TouchableOpacity>
                 </View>
               ) : null}

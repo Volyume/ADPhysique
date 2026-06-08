@@ -29,7 +29,9 @@ export default function TierComparisonStrip({
   highlighted = 'pro',   // 'free' | 'pro', which column gets the amber outline
   onPickPro,             // optional: makes the Pro column tappable
 }) {
-  // C-2: localised store price, catalogue text as the pre-load fallback.
+  // C-2 / PLAY-002: localised store price. priceFor returns null until Google
+  // Play responds; the Pro column shows a short placeholder, never a hardcoded
+  // price.
   const priceFor = usePlayPrices();
 
   const FreeColumn = (
@@ -59,7 +61,7 @@ export default function TierComparisonStrip({
       ]}
     >
       <Text style={styles.colHeader}>Pro</Text>
-      <Text style={styles.colPrice}>{priceFor('pro', pricingWindow)}</Text>
+      <Text style={styles.colPrice}>{priceFor('pro', pricingWindow) ?? '…'}</Text>
       {COMPARISON_ROWS.map((row, i) => (
         <Text key={`pro-${i}`} style={styles.rowText} numberOfLines={2}>
           {row.pro}

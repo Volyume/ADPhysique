@@ -1,18 +1,25 @@
 import { useState, useEffect } from 'react';
 import { ensureDisplayPrices, getDisplayPrices } from './playBilling';
-import { skuFor, priceTextFor } from './catalogue';
+import { skuFor } from './catalogue';
 
 /**
  * C-2: paywall surfaces must show the store's localised price (Apple + Google
- * policy), not a hardcoded one. This hook ensures the prices are fetched from
- * Play and returns a `priceFor(tier, period)` resolver. Before the store
- * responds (or in the stub/dev env) it falls back to the catalogue text, so a
- * UK user always sees something sensible and a non-UK user sees their real
- * localised price once it loads.
+ * policy), not a hardcoded one. This hook fetches the prices from Play and
+ * returns a `priceFor(tier, period)` resolver.
+ *
+ * PLAY-002: the resolver returns `null` until Google Play has responded. It
+ * does NOT fall back to a hardcoded catalogue price. A hardcoded "£4.99" would
+ * show the wrong currency and amount to a non-UK user, and could diverge from
+ * what Google actually charges, both of which break the store's
+ * localised-price requirement. Callers render a price-free "Subscribe" or a
+ * short loading state until a real price arrives. Once loaded the price is
+ * cached at module level, so returning to a paywall in the same session shows
+ * it immediately with no flash.
  *
  * Usage:
  *   const priceFor = usePlayPrices();
- *   <Text>{priceFor('pro', period)}</Text>   // "£4.99" / "$6.99" / "8,99 €"
+ *   const price = priceFor('pro', period);          // "£4.99" / "$6.99" / null
+ *   <Text>{price ?? 'Subscribe'}</Text>
  */
 export function usePlayPrices() {
   const [prices, setPrices] = useState(() => getDisplayPrices());
@@ -20,11 +27,11 @@ export function usePlayPrices() {
     let alive = true;
     ensureDisplayPrices()
       .then((p) => { if (alive) setPrices(p); })
-      .catch(() => { /* keep the catalogue fallback */ });
+      .catch(() => { /* leave prices empty; callers show the loading state */ });
     return () => { alive = false; };
   }, []);
   return function priceFor(tier, period = 'monthly') {
     const sku = skuFor(tier, period);
-    return (sku && prices[sku.id]) || priceTextFor(tier, period);
+    return (sku && prices[sku.id]) || null;
   };
 }

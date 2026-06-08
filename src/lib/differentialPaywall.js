@@ -55,9 +55,9 @@ export const LOCKED_COPY = Object.freeze({
 // Alternate copy for users who've already used their cascade trial.
 // Same six contexts but the closer pivots to a direct purchase CTA
 // per MOVE_4 doc lines 88-90 ("We don't lie about a trial they've
-// used"). The price string is rendered at the UI layer using
-// catalogue.priceTextFor() so it stays in sync with the SKU the
-// purchase will actually charge.
+// used"). The price string is rendered at the UI layer from Google
+// Play's localised price (usePlayPrices); until it loads the CTA shows
+// a price-free "Get Pro" rather than a hardcoded figure (PLAY-002).
 export const LOCKED_COPY_NO_TRIAL = Object.freeze({
   stalled_lift: "Your bench has stalled for three weeks. With food data, we could tell you if it's training or fuel.",
   deload: "We're holding a deload this week. With food data, we'd know if your fuel is the cause.",

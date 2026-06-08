@@ -11,8 +11,15 @@
  * not here; the billing provider reads whichever offer the user is
  * eligible for at purchase time.
  *
- * UK prices are the source of truth; other regions map via Play Console's
- * automatic price tiers. Price strings follow voice rules (plain numbers).
+ * UK prices are the source of truth in Play Console; other regions map via
+ * Play Console's automatic price tiers.
+ *
+ * PLAY-002: the `priceText` / `priceNumber` values below are a reference and
+ * the input to annualSavingsPct(). They are NOT a user-facing display price.
+ * Every paywall renders Google Play's own localised price via usePlayPrices,
+ * and shows a price-free loading state until it arrives. Do not wire priceText
+ * back into a screen as a fallback: it would show the wrong currency and amount
+ * to a non-UK user and could diverge from what Google actually charges.
  *
  * Coach SKUs (phase 2) remain a separate set, purchased via the coach web
  * dashboard, not IAP.
@@ -57,7 +64,9 @@ export function skuFor(tier, period = 'monthly') {
 }
 
 /**
- * Helper for purchase surfaces that show "£X/month" or "£X/year".
+ * Reference price string for (tier, period). NOT for user-facing display
+ * (PLAY-002): paywalls show Google Play's localised price via usePlayPrices.
+ * Kept for tests and any internal reference that needs the UK figure.
  */
 export function priceTextFor(tier, period = 'monthly') {
   return skuFor(tier, period)?.priceText ?? null;

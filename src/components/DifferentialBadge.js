@@ -14,7 +14,6 @@ import { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
-import { priceTextFor } from '../lib/payments/catalogue';
 
 export default function DifferentialBadge({
   differential,        // { shown, trigger, with_food_data_message, paywall_cta }
@@ -37,9 +36,12 @@ export default function DifferentialBadge({
   // 7 days = the Play intro free trial this CTA leads to (the 14-day cardless
   // trial runs before any purchase prompt). See SUBSCRIPTION_AND_PAYMENT_LOCKED
   // 2026-06-06 override. The 'try_pro_14d' id is internal, left as-is.
+  //
+  // PLAY-002: the buy CTA shows the live store price the caller passes, or a
+  // price-free "Get Pro" until it loads. No hardcoded price fallback.
   const ctaLabel = differential.paywall_cta === 'try_pro_14d'
     ? 'Try Pro free for 7 days'
-    : `Get Pro for ${pricingPriceText ?? priceTextFor('pro', 'monthly')}`;
+    : pricingPriceText ? `Get Pro for ${pricingPriceText}` : 'Get Pro';
 
   return (
     <View style={styles.wrap} accessibilityLabel="Differential paywall">

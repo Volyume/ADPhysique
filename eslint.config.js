@@ -93,6 +93,12 @@ module.exports = [
       'public/**',
       'scripts/**',
       '*.config.js',
+      // Audit scratch directories: tooling and generated output that live
+      // outside the app source. They are not shipped and must not be linted
+      // with the RN config (OPS-001).
+      '.audit-tools/**',
+      '.audit-output/**',
+      '.tools/**',
     ],
   },
   {

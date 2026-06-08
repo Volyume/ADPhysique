@@ -296,10 +296,10 @@ async function callUpgradeTier(
   reason: string,
   paymentRef: string | null,
   sourceSurface: string,
-): Promise<void> {
+): Promise<{ ok: boolean; error?: string }> {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     log("error", "SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing; cannot call upgrade_tier_for_user");
-    return;
+    return { ok: false, error: "service_role_unconfigured" };
   }
   // Calls the service-role-only upgrade_tier_for_user RPC
   // (migration 042) which takes the user_id as an explicit
@@ -327,7 +327,9 @@ async function callUpgradeTier(
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     log("error", `upgrade_tier_for_user RPC failed: ${res.status} ${body}`);
+    return { ok: false, error: `rpc_${res.status}` };
   }
+  return { ok: true };
 }
 
 // Record which plan the user bought (monthly vs annual) so the in-app
@@ -401,7 +403,20 @@ async function handleClientVerify(
     return jsonResponse(400, { ok: false, error: "not_active" });
   }
   const paymentRef = subscription.orderId ?? purchaseToken;
-  await callUpgradeTier(userId, "pro", "user_paid", paymentRef, "client_verify");
+  // The purchase is verified and active, but Pro is only really granted once
+  // upgrade_tier_for_user writes the tier row. If that RPC fails, do NOT tell
+  // the client it succeeded: return 502 so the app keeps the purchase pending
+  // and retries (confirmPurchase is idempotent against a real token), rather
+  // than showing Pro on a device whose server tier never changed.
+  const upgrade = await callUpgradeTier(userId, "pro", "user_paid", paymentRef, "client_verify");
+  if (!upgrade.ok) {
+    log("error", "client verify: purchase valid but upgrade_tier_for_user failed", {
+      userId, subscriptionId, error: upgrade.error,
+    });
+    return jsonResponse(502, { ok: false, error: "grant_failed" });
+  }
+  // Billing period is display-only (which price the Subscription screen shows),
+  // so a failure here must not fail the grant. Best-effort, logged inside.
   await setBillingPeriod(userId, subscriptionId === "pro_annual" ? "annual" : "monthly");
   log("info", "client verify: granted pro", { userId, subscriptionId });
   return jsonResponse(200, { ok: true, tier: "pro" });
