@@ -92,7 +92,7 @@ export default function SubscriptionPolicyScreen() {
           title="Your free trial"
         >
           <Body>
-            New accounts get Pro free for 14 days, no card needed. You get the full coaching layer and can decide whether it's for you.
+            New accounts get Pro free for 14 days. You get the full coaching features and can see if it's for you.
           </Body>
           <Body>
             To keep Pro after that, subscribe in the app. Google Play adds a further 7 days free, then it renews monthly at the price shown at checkout until you cancel.

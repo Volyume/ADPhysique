@@ -96,8 +96,8 @@ export default function WelcomeScreen({ navigation }) {
 
             <Text style={styles.trialNote}>
               {monthlyPrice
-                ? `Free for 14 days, no card. Then 7 days free on Google Play, then ${monthlyPrice} until you cancel.`
-                : 'Free for 14 days, no card. Then 7 days free on Google Play, then a monthly subscription until you cancel.'}
+                ? `After that, ${monthlyPrice} a month.`
+                : 'After that, a monthly subscription.'}
             </Text>
 
             <View style={styles.proCtaRow}>
