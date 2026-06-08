@@ -8,7 +8,7 @@ _Ready to paste into Google Play Console. All fields comply with Play Store poli
 
 | Field | Value |
 |---|---|
-| **App name** | Volyume: Hypertrophy Logbook |
+| **App name** | Volyume - Precision Physique Coach (store listing); launcher name "Volyume". Note: Play's app-title field is 30 characters; the full name is 34, so the Play title may need a shorter form (e.g. "Volyume: Physique Coach"). |
 | **Default language** | English (United Kingdom) |
 | **App category** | Health & Fitness |
 | **Content rating** | Everyone (PEGI 3) |

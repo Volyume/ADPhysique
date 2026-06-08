@@ -136,7 +136,7 @@
     <li><strong>14 days free, no card.</strong> A new account gets the full Pro coach for 14 days. No payment details asked. If they do nothing, on day 14 they drop to Free.</li>
     <li><strong>7 more days free, via Google.</strong> When they subscribe, Google Play adds its own 7-day free trial (card on file), then bills monthly. So the card is only ever asked for at day 14, never at signup.</li>
   </ol>
-  <p>Prices by launch window: <strong>£0.99/month</strong> (launch), <strong>£1.99</strong> (founders), <strong>£3.99</strong> (standard). Whoever signs up keeps their price for as long as they stay subscribed.</p>
+  <p>Pricing is flat: <strong>£4.99/month</strong> or <strong>£29.99/year</strong>. The displayed price always comes from Google Play in the user's own currency.</p>
   <p class="note">When a lapsed free user later taps "Upgrade", they go straight to the paywall and Google decides whether they still get the 7-day trial (first time) or pay immediately (already used it). That matches your "no grandfather" decision.</p>
 </section>
 
@@ -332,15 +332,15 @@ Train   ·  Plans  ·  Diary [PRO]  ·  Progress  ·  You</div>
     <h4>Stale "RevenueCat" references <span class="pill polish">POLISH</span></h4>
     <p>You moved to Google Play Billing direct, but the old internal docs and this very app-map page still listed RevenueCat as a payment processor. Make sure the public privacy policy doesn't name it either.</p>
   </div>
-  <div class="bug b-polish">
-    <h4>App store name has an em dash <span class="pill polish">POLISH</span></h4>
-    <p>The store name "Volyume — Hypertrophy Logbook" uses an em dash, which your own voice rules ban everywhere. Use a colon: "Volyume: Hypertrophy Logbook".</p>
-    <p class="where">app.json</p>
+  <div class="bug b-dismissed">
+    <h4>App store name <span class="pill dismissed">RESOLVED</span></h4>
+    <p>The store listing name is "Volyume - Precision Physique Coach" (a hyphen, no em dash); the launcher name stays "Volyume". The full name is 34 characters, over the 30-character store title field, so a shorter compliant form is needed for the title itself.</p>
+    <p class="where">app.json, docs/PLAY_STORE_LISTING.md, docs/APP_STORE_CONNECT_LISTING.md</p>
   </div>
-  <div class="bug b-polish">
-    <h4>Play Store listing still says "free during beta" <span class="pill polish">POLISH</span></h4>
-    <p>The store-listing draft frames the free access as a beta gift. Reword to the real trial before you submit.</p>
-    <p class="where">docs/PLAY_STORE_LISTING.md</p>
+  <div class="bug b-dismissed">
+    <h4>Store listings reworded off "free during beta" <span class="pill dismissed">RESOLVED</span></h4>
+    <p>The store-listing drafts now describe the real model: 14 cardless days, then a 7-day store free trial, then £4.99/month or £29.99/year.</p>
+    <p class="where">docs/PLAY_STORE_LISTING.md, docs/APP_STORE_CONNECT_LISTING.md</p>
   </div>
   <div class="bug b-polish">
     <h4>No "support viewed your data" audit log <span class="pill polish">POLISH</span></h4>
@@ -373,7 +373,7 @@ Train   ·  Plans  ·  Diary [PRO]  ·  Progress  ·  You</div>
 <!-- ============================================================= -->
 <section id="copy">
   <h2>9. Words &amp; facts</h2>
-  <p>The writing is in good shape: plain, direct, British English, no chatbot tells, terse error messages, no false encouragement, scientific claims kept to where they belong. The fixes are small and listed above (em dash in the store name, the "free during beta" listing, stale RevenueCat). One judgement call for you:</p>
+  <p>The writing is in good shape: plain, direct, British English, no chatbot tells, terse error messages, no false encouragement, scientific claims kept to where they belong. The store-name and "free during beta" wording have been corrected; the remaining loose end is any stale RevenueCat mention in the public privacy policy. One judgement call for you:</p>
   <div class="card">
     <p><strong>The Welcome screen badge says "Free for 14 days."</strong> That's the in-app trial length and it's accurate. But because the full journey is 21 days free (14 + 7), an automated pass called it a contradiction. It isn't wrong, but if you'd rather not anchor people on a single number before they see the full terms, change it to "Start free" and let the policy screen explain. Your call, low stakes.</p>
   </div>
@@ -388,7 +388,7 @@ Train   ·  Plans  ·  Diary [PRO]  ·  Progress  ·  You</div>
     <li>Finish the payment rail: merchant account verified, the Pro product + 7-day offer created in Play Console, the payment webhook deployed (one env var), and one real test purchase on a device.</li>
     <li>Apply the pending database migrations (a short, additive batch: 059–065).</li>
     <li>Flip the beta switch off, last, on that verified build.</li>
-    <li>Fix the compliance copy: the under-16 age check (add it or reword), the 30-day deletion wording (match the code), and name the eating-disorder detection in the consent text. Remove the em dash and the "free during beta" listing.</li>
+    <li>Fix the compliance copy: the under-16 age check (add it or reword) and the deletion wording (match consent, privacy, and the delete flow to one rule). The store-name and "free during beta" listings are already corrected.</li>
   </ol>
 
   <h3>Should-do, before or just after launch</h3>

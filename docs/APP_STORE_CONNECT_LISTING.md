@@ -33,10 +33,14 @@ _All character counts verified against Apple's limits._
 **Limit: 30 characters**
 
 ```
-Volyume — Hypertrophy Logbook
+Volyume - Precision Physique Coach
 ```
 
-> Character count: 29 ✓
+> Character count: 34 ✗ — over the 30-character App Name limit. The founder
+> brief's store name is "Volyume - Precision Physique Coach"; it does not fit
+> the title field. Pick a compliant short form (for example "Volyume: Physique
+> Coach" at 23, or App Name "Volyume" with the Subtitle carrying "Precision
+> Physique Coach"). Launcher name stays "Volyume".
 
 ---
 
@@ -55,10 +59,10 @@ Log smarter. Grow faster.
 **Limit: 170 characters — can be updated without a new submission**
 
 ```
-All Pro features are free during beta. Personalised coaching, nutrition targets, and weekly check-ins — no payment required while we're testing.
+Pro is free for 14 days, no card needed. Personalised coaching, nutrition targets, weekly check-ins. Keep it for a 7-day store free trial, then £4.99 a month.
 ```
 
-> Character count: 143 ✓
+> Character count: 156 ✓
 
 ---
 
@@ -129,9 +133,9 @@ Coaching (Pro)
 • Recovery week detection
 • Volume adjustment based on your response
 
-FREE DURING BETA
+YOUR FREE TRIAL
 
-All Pro features are free while we're in beta. No payment required. No trial period. Just the full app.
+Try Pro free for 14 days. No card needed. Keep it after that for a 7-day store free trial before your first payment, then £4.99 a month or £29.99 a year. Cancel anytime. The Free tier stays free with no time limit.
 
 NOT MEDICAL ADVICE
 
@@ -157,9 +161,7 @@ bodybuilding,hypertrophy,gym,workout log,weightlifting,strength,muscle,fitness,t
 **Limit: 4000 characters — plain text**
 
 ```
-Beta 1.0 — First public release.
-
-This is the first beta of Volyume. It is a real, working app — not a preview.
+The full release of Volyume.
 
 WHAT'S IN THIS RELEASE
 
@@ -169,16 +171,12 @@ Pro Coaching with personalised plan generation based on your goal, schedule, rec
 
 Nutrition targets calculated from your body stats and training phase. Protein, carbohydrate, and fat targets update automatically as your weight or phase changes.
 
-All Pro features are free during the beta. No payment, no trial timer.
+Pro starts with a 14-day free trial, no card needed. Keep it for a 7-day store free trial, then £4.99 a month or £29.99 a year. The Free tier stays free with no time limit.
 
-KNOWN LIMITATIONS
-
-This is a beta. Some edges are rough. If you find a bug or something that doesn't feel right, please use the in-app feedback button — it goes directly to the developer and genuinely helps.
-
-Thank you for testing.
+Found a bug or something that does not feel right? The in-app feedback button goes directly to the developer.
 ```
 
-> Character count: 813 ✓ (within 4,000)
+> Character count: ~820 ✓ (within 4,000)
 
 ---
 
@@ -193,9 +191,8 @@ Thank you for testing.
 | **Type** | Auto-Renewable Subscription |
 | **Subscription group name** | Volyume Pro |
 | **Duration** | 1 Month |
-| **Price (beta)** | £1.99 / month |
-| **Price (post-launch)** | £2.99 / month |
-| **Free trial** | None (all Pro features free during beta) |
+| **Price** | £4.99 / month (annual plan £29.99 / year) |
+| **Free trial** | 14-day in-app cardless trial, then a 7-day store intro free trial on subscribe |
 
 **Display name (shown to users):**
 ```
@@ -265,7 +262,7 @@ _30-second script outline — for production by video editor. Do not produce vid
 | 14–18 | PR screen animates in with confetti/highlight | "Every personal record. Automatically detected." |
 | 18–23 | Coaching plan screen — structured weekly programme visible | "Your personalised plan. Adjusts every week." |
 | 23–27 | Nutrition targets screen — macros displayed cleanly | "Targets that move with your training phase." |
-| 27–30 | App icon + name + "Free during beta" + App Store badge | "Volyume. Log smarter. Grow faster." |
+| 27–30 | App icon + name + "Free for 14 days, no card" + App Store badge | "Volyume. Log smarter. Grow faster." |
 
 ---
 
@@ -361,7 +358,7 @@ Volyume does not collect:
 
 Before submitting for review, confirm each item:
 
-- [ ] App name set: `Volyume — Hypertrophy Logbook` (30 chars)
+- [ ] App name set to a compliant form of "Volyume - Precision Physique Coach" (the full brief name is 34 chars, over the 30-char limit; launcher stays "Volyume")
 - [ ] Subtitle set: `Log smarter. Grow faster.` (25 chars)
 - [ ] Promotional text set and reviewed
 - [ ] Description pasted and reviewed
