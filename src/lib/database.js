@@ -37,6 +37,10 @@ function rowToCamel(row) {
     const camelKey = key.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
     if (key === 'secondary_muscles' && typeof value === 'string') {
       try { result[camelKey] = JSON.parse(value); } catch { result[camelKey] = []; }
+    } else if ((key === 'form_cues' || key === 'common_mistakes') && typeof value === 'string') {
+      // Phase 2 demos: structured technique content stored as JSON strings.
+      // form_cues -> object { setup, execution, cues }; common_mistakes -> array.
+      try { result[camelKey] = JSON.parse(value); } catch { result[camelKey] = null; }
     } else {
       result[camelKey] = value;
     }
@@ -1243,6 +1247,21 @@ const SCHEMA_MIGRATIONS = [
     `ALTER TABLE exercises ADD COLUMN home_ok INTEGER DEFAULT 0`,
     `ALTER TABLE exercises ADD COLUMN cue TEXT`,
     `ALTER TABLE exercises ADD COLUMN equipment_profiles TEXT`,
+  ],
+  // Phase 2 — Exercise Demonstrations. Additive, nullable columns holding
+  // per-exercise demo media + structured technique content. Local-only here
+  // (canonical exercises are seeded locally); a matching additive Supabase
+  // migration keeps cloud parity. demo_url / demo_thumbnail_url point at
+  // self-hosted media in the EU Supabase Storage bucket; form_cues and
+  // common_mistakes are JSON strings (parsed in rowToCamel). All null until a
+  // licence-cleared media set is populated, so the detail screen falls through
+  // to the illustrated-diagram + written-cues state with no "missing" feel.
+  [
+    `ALTER TABLE exercises ADD COLUMN demo_url TEXT`,
+    `ALTER TABLE exercises ADD COLUMN demo_thumbnail_url TEXT`,
+    `ALTER TABLE exercises ADD COLUMN form_cues TEXT`,
+    `ALTER TABLE exercises ADD COLUMN common_mistakes TEXT`,
+    `ALTER TABLE exercises ADD COLUMN demo_duration_seconds INTEGER`,
   ],
 ];
 
