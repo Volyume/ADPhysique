@@ -63,7 +63,7 @@
   nav .wrap{display:flex; align-items:center; justify-content:space-between; width:100%;}
   .brand{display:flex; align-items:center; gap:10px;}
   .brand .word{font-weight:800; font-size:18px; letter-spacing:0.2px;}
-  .logo-v{width:30px; height:30px; flex:0 0 auto;}
+  .logo-v{height:32px; width:auto; flex:0 0 auto; display:block;}
   nav .btn{padding:10px 16px; font-size:14px; border-radius:12px;}
 
   /* ---- Hero ---- */
@@ -185,17 +185,7 @@
 <nav id="nav">
   <div class="wrap">
     <a class="brand" href="/" aria-label="Volyume">
-      <svg class="logo-v" viewBox="0 0 100 100" aria-hidden="true">
-        <defs>
-          <radialGradient id="baseLight" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#F5A623" stop-opacity="0.85"/>
-            <stop offset="100%" stop-color="#F5A623" stop-opacity="0"/>
-          </radialGradient>
-        </defs>
-        <ellipse cx="50" cy="80" rx="27" ry="13" fill="url(#baseLight)"/>
-        <path d="M25 23 L50 78" stroke="#F5A623" stroke-width="14" stroke-linecap="round" fill="none"/>
-        <path d="M75 23 L50 78" stroke="#C0C0C0" stroke-width="14" stroke-linecap="round" fill="none"/>
-      </svg>
+      <img class="logo-v" src="/volyume-v.png" alt="" aria-hidden="true">
       <span class="word">Volyume</span>
     </a>
     <a class="btn btn-primary" href="https://play.google.com/store/apps/details?id=app.volyume">
@@ -399,11 +389,7 @@
 <footer>
   <div class="wrap">
     <a class="brand" href="/" aria-label="Volyume">
-      <svg class="logo-v" viewBox="0 0 100 100" aria-hidden="true">
-        <ellipse cx="50" cy="80" rx="27" ry="13" fill="url(#baseLight)"/>
-        <path d="M25 23 L50 78" stroke="#F5A623" stroke-width="14" stroke-linecap="round" fill="none"/>
-        <path d="M75 23 L50 78" stroke="#C0C0C0" stroke-width="14" stroke-linecap="round" fill="none"/>
-      </svg>
+      <img class="logo-v" src="/volyume-v.png" alt="" aria-hidden="true">
       <span class="word">Volyume</span>
     </a>
     <div class="links">
