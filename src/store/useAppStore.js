@@ -23,6 +23,13 @@ const TIER_KEY         = '@volyume_tier';
 // server/RTDN-driven.
 const TRIAL_STATE_KEY   = '@volyume_trial_state';
 const PRO_TRIAL_ENDS_KEY = '@volyume_pro_trial_ends_at';
+// SUB-002: when the paid 'pro' entitlement was last confirmed against an
+// authoritative source (a Play entitlement read, the purchase itself, or a
+// server tier refresh). cascade.reconcilePaidEntitlement reads this to enforce
+// an offline grace window: a paid_pro device that cannot reconfirm its
+// entitlement for longer than the grace period locks itself down locally until
+// it can verify again online. Defence in depth alongside the Play RTDN.
+const PAID_VERIFIED_AT_KEY = '@volyume_paid_verified_at';
 // Crash/kill recovery for an in-progress workout. The store holds the
 // session (activeWorkout + workoutExercises, which carries the logged sets)
 // in memory only; on app kill it was lost and the workouts row stayed
@@ -482,6 +489,35 @@ const useAppStore = create((set, get) => ({
     // the next refreshTierFromCloud writes the authoritative trial_state. A
     // purchase that never actually granted is corrected on the next cloud read.
     try { await AsyncStorage.setItem(TRIAL_STATE_KEY, 'paid_pro'); } catch (_) { /* tolerate */ }
+    // SUB-002: the purchase is a fresh entitlement confirmation, so it seeds the
+    // last-verified clock. Without a seed the offline-grace window has no anchor
+    // and could never trigger.
+    try { await AsyncStorage.setItem(PAID_VERIFIED_AT_KEY, String(Date.now())); } catch (_) { /* tolerate */ }
+  },
+
+  // SUB-002 helpers for cascade.reconcilePaidEntitlement. The store owns the
+  // entitlement cache (the AsyncStorage keys), cascade owns the policy.
+  markPaidEntitlementVerified: async () => {
+    try { await AsyncStorage.setItem(PAID_VERIFIED_AT_KEY, String(Date.now())); } catch (_) { /* tolerate */ }
+  },
+  readPaidEntitlementVerifiedAt: async () => {
+    try {
+      const raw = await AsyncStorage.getItem(PAID_VERIFIED_AT_KEY);
+      const n = raw ? Number(raw) : NaN;
+      return Number.isFinite(n) ? n : null;
+    } catch (_) { return null; }
+  },
+  // Local-only lockdown: drop the device to free without a server write. We do
+  // NOT call upgrade_tier here because we could not confirm the entitlement, so
+  // we do not actually know it lapsed. The server (via the Play RTDN) remains
+  // the source of truth: the next online launch's refreshTierFromCloud restores
+  // Pro if the subscription is in fact still active, or confirms free if it
+  // lapsed. This only stops a device retaining Pro indefinitely while offline /
+  // unverifiable past the grace window.
+  lockStalePaidEntitlement: async () => {
+    set({ _optimisticPaidUntil: 0 });
+    try { await AsyncStorage.setItem(TIER_KEY, 'free'); } catch (_) { /* tolerate */ }
+    await get().setTier('free', 'cascade.lockStalePaidEntitlement');
   },
 
   // Cloud sync status surface. Set from RootNavigator when a fresh
@@ -844,6 +880,11 @@ const useAppStore = create((set, get) => ({
           else await AsyncStorage.removeItem(TRIAL_STATE_KEY);
           if (data.pro_trial_ends_at != null) await AsyncStorage.setItem(PRO_TRIAL_ENDS_KEY, String(data.pro_trial_ends_at));
           else await AsyncStorage.removeItem(PRO_TRIAL_ENDS_KEY);
+          // SUB-002: a server read that reports paid_pro is an authoritative
+          // entitlement confirmation, so it refreshes the last-verified clock.
+          if (data.trial_state === 'paid_pro') {
+            await AsyncStorage.setItem(PAID_VERIFIED_AT_KEY, String(Date.now()));
+          }
         } catch (_) { /* tolerate */ }
         // billing_period (monthly/annual) is display-only for the
         // Subscription screen; null until the Play webhook records a

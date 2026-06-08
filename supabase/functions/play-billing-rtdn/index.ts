@@ -59,9 +59,15 @@
 //
 // Until those values are set, the function will run but log errors
 // rather than apply transitions, so Google's RTDN doesn't pile up
-// pending messages. RTDN_OIDC_AUDIENCE follows the same configure-before-
-// enforce posture: until it is set the OIDC gate is skipped (logged) and
-// the Play Developer API lookup is the sole control.
+// pending messages.
+//
+// BUG-003: RTDN_OIDC_AUDIENCE is fail-closed. If it is unset the Pub/Sub RTDN
+// path is REJECTED (401), because without it the function cannot authenticate
+// that a caller is really Google's Pub/Sub push. The only way to run the RTDN
+// path without OIDC is to explicitly set RTDN_ALLOW_UNAUTHENTICATED_SETUP=true,
+// a setup-only escape hatch that must never be set in production. (The
+// client-verify path is unaffected: it is authenticated by verifying the
+// purchase token against the Play Developer API, not by OIDC.)
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
@@ -80,19 +86,27 @@ const PACKAGE_NAME = Deno.env.get("GOOGLE_PLAY_PACKAGE_NAME") ?? "app.volyume";
 // stops an unauthenticated caller invoking the endpoint at all.
 const RTDN_OIDC_AUDIENCE = Deno.env.get("RTDN_OIDC_AUDIENCE") ?? "";
 const RTDN_SERVICE_ACCOUNT_EMAIL = Deno.env.get("RTDN_SERVICE_ACCOUNT_EMAIL") ?? "";
+// BUG-003: setup-only escape hatch. When RTDN_OIDC_AUDIENCE is unset, the RTDN
+// path is rejected UNLESS this is explicitly "true". Never set it in production.
+const RTDN_ALLOW_UNAUTHENTICATED_SETUP =
+  (Deno.env.get("RTDN_ALLOW_UNAUTHENTICATED_SETUP") ?? "") === "true";
 const GOOGLE_OIDC_JWKS = createRemoteJWKSet(
   new URL("https://www.googleapis.com/oauth2/v3/certs"),
 );
 
 // Verify the Google-signed OIDC token Pub/Sub attaches to a push request.
-// Returns ok:true when the token is valid (or when the audience env var is
-// not set yet, so a not-yet-configured deployment still runs with the Play
-// API verify as its sole control, matching the rest of this function's
-// configure-before-enforce posture).
+// Returns ok:true only when the token is valid. BUG-003: when the audience env
+// var is unset this fails CLOSED (ok:false) so an unauthenticated caller cannot
+// drive the RTDN path, unless an operator has explicitly enabled setup mode via
+// RTDN_ALLOW_UNAUTHENTICATED_SETUP=true (never in production).
 async function verifyPubSubOidc(req: Request): Promise<{ ok: boolean; reason?: string }> {
   if (!RTDN_OIDC_AUDIENCE) {
-    log("warn", "RTDN_OIDC_AUDIENCE not set; skipping Pub/Sub OIDC check (Play API verify still applies)");
-    return { ok: true, reason: "oidc_unconfigured" };
+    if (RTDN_ALLOW_UNAUTHENTICATED_SETUP) {
+      log("warn", "RTDN_OIDC_AUDIENCE unset; RTDN_ALLOW_UNAUTHENTICATED_SETUP=true → allowing unauthenticated RTDN (SETUP MODE, must not be used in production)");
+      return { ok: true, reason: "oidc_setup_mode" };
+    }
+    log("error", "RTDN_OIDC_AUDIENCE unset and setup mode off; rejecting Pub/Sub request (fail closed). Set RTDN_OIDC_AUDIENCE to enable the RTDN path.");
+    return { ok: false, reason: "oidc_unconfigured" };
   }
   const auth = req.headers.get("authorization") ?? "";
   const m = auth.match(/^Bearer\s+(.+)$/i);
@@ -158,6 +172,16 @@ function log(level: "info" | "warn" | "error", msg: string, ctx?: unknown) {
   // Edge Function logs go to Supabase's function logs panel.
   // eslint-disable-next-line no-console
   console[level](`[play-rtdn] ${msg}`, ctx ?? "");
+}
+
+// BUG-003: startup check. Make the OIDC posture loud in the function logs at
+// boot so a misconfigured deployment is obvious before any traffic arrives.
+if (!RTDN_OIDC_AUDIENCE) {
+  if (RTDN_ALLOW_UNAUTHENTICATED_SETUP) {
+    log("warn", "STARTUP: RTDN_OIDC_AUDIENCE is not set and RTDN_ALLOW_UNAUTHENTICATED_SETUP=true. The RTDN path is UNAUTHENTICATED (setup mode). Set RTDN_OIDC_AUDIENCE and remove the setup flag before production.");
+  } else {
+    log("warn", "STARTUP: RTDN_OIDC_AUDIENCE is not set. The Pub/Sub RTDN path is failing closed (401). Set RTDN_OIDC_AUDIENCE to enable it. Client purchase verification is unaffected.");
+  }
 }
 
 async function getGoogleAccessToken(): Promise<string | null> {

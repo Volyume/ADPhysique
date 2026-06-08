@@ -135,10 +135,13 @@ export async function startCascade() {
         : {}));
     } catch (_) { /* tolerate; refreshTierFromCloud reconciles next read */ }
     _trackTransition({ reason: 'cascade_started', sourceSurface: 'article9_consent', targetTier: 'pro_trial' });
-    // Lay the local cascade-gate reminders (day 19 + day 21 at 10:00)
-    // from the trial end date the RPC just returned. Fire-and-forget:
-    // the cascade transition is the important write, the reminders are
-    // a convenience and must not block or fail the return.
+    // Lay the local trial-end reminders from the trial end date the RPC just
+    // returned (the 14-day in-app trial; the 7-day Play intro offer is a
+    // separate store subscription phase that begins only if the user subscribes
+    // afterwards). scheduleCascadeGateNotifications derives the reminder times
+    // from this end date. Fire-and-forget: the cascade transition is the
+    // important write, the reminders are a convenience and must not block or
+    // fail the return.
     const endsAt = r.data?.pro_trial_ends_at ?? r.data?.complete_trial_ends_at ?? null;
     if (endsAt) {
       try {
@@ -215,6 +218,14 @@ export async function confirmPurchase({ purchaseToken, subscriptionId } = {}) {
   }
 }
 
+// SUB-002: how long a paid_pro device may retain Pro without reconfirming its
+// entitlement against an authoritative source (a Play entitlement read, the
+// purchase, or a server tier refresh). Named constant, not a magic number, so
+// the grace window is explicit and tunable. 24 hours balances "don't punish a
+// brief offline spell" against "don't let a lapsed/offline device keep Pro
+// forever".
+const PAID_ENTITLEMENT_OFFLINE_GRACE_MS = 24 * 60 * 60 * 1000;
+
 // C-2 client safety net (trial-subscription audit). The authoritative
 // revocation of a cancelled / lapsed / refunded PAID subscription is the Google
 // Play RTDN Pub/Sub push (play-billing-rtdn → upgrade_tier_for_user 'free').
@@ -223,20 +234,44 @@ export async function confirmPurchase({ purchaseToken, subscriptionId } = {}) {
 // directly on launch for a paid_pro user and downgrades if Google reports no
 // active 'pro' entitlement.
 //
-// Deliberately conservative so it can never wrongly revoke a paying customer:
+// This is defence in depth, NOT a substitute for RTDN (the report's SUB-002):
+// RTDN remains mandatory release infrastructure. Behaviour:
 //   * only runs for trial_state === 'paid_pro' (trials are server-cron driven);
-//   * only when the REAL native provider is installed (the stub reports no
-//     entitlement, which must not be read as "lapsed");
-//   * only acts when the Play read SUCCEEDS — any throw / transient failure
-//     defers to the next launch (and the RTDN once wired), never revokes.
+//   * when the REAL provider is installed AND the Play read SUCCEEDS, an
+//     "active: false" result is an authoritative lapse → server downgrade;
+//   * when the read SUCCEEDS and reports active, the last-verified clock is
+//     refreshed (the device is known-good right now);
+//   * when the entitlement CANNOT be confirmed (no real provider, or the read
+//     throws), it is conservative WITHIN the offline grace window (never revoke
+//     a paying customer on a transient blip), but past the grace window it
+//     locks the device down LOCALLY to free (SUB-002 step 3). The next online
+//     launch's refreshTierFromCloud restores Pro if the sub is in fact still
+//     active, so a false lockdown self-heals once the device can verify again.
 // A false revoke (Play momentarily empty) is recoverable via Restore purchases.
 export async function reconcilePaidEntitlement(profile) {
   try {
     const ts = profile?.trialState ?? profile?.trial_state ?? null;
     if (ts !== 'paid_pro') return { ok: true, checked: false };
     // eslint-disable-next-line global-require
+    const useAppStore = require('../../store/useAppStore').default;
+    const store = useAppStore.getState();
+    const lastVerified = await store.readPaidEntitlementVerifiedAt?.();
+    const staleBeyondGrace = typeof lastVerified === 'number'
+      && (Date.now() - lastVerified > PAID_ENTITLEMENT_OFFLINE_GRACE_MS);
+
+    // eslint-disable-next-line global-require
     const playBilling = require('./playBilling');
-    if (typeof playBilling.isReal !== 'function' || !playBilling.isReal()) {
+    const providerReal = typeof playBilling.isReal === 'function' && playBilling.isReal();
+    if (!providerReal) {
+      // Can't read Play (stub/dev, or native module missing). Within grace this
+      // is a no-op; past grace, lock down locally so a device that can never
+      // reconfirm does not keep Pro forever.
+      if (staleBeyondGrace) {
+        logWarn('payments.cascade.reconcile.staleNoProvider',
+          'paid_pro past offline grace with no Play provider; locking down locally', {});
+        await store.lockStalePaidEntitlement?.();
+        return { ok: true, checked: true, active: false, downgraded: true, reason: 'stale_no_provider' };
+      }
       return { ok: true, checked: false };
     }
     let info;
@@ -244,11 +279,23 @@ export async function reconcilePaidEntitlement(profile) {
       info = await playBilling.getCustomerInfo();
     } catch (e) {
       logWarn('payments.cascade.reconcile.read', e?.message ?? 'unknown', {});
-      return { ok: true, checked: false }; // never revoke on a failed read
+      // Read failed (offline / transient). Within grace, defer. Past grace, lock
+      // down locally rather than trust an unverifiable Pro indefinitely.
+      if (staleBeyondGrace) {
+        logWarn('payments.cascade.reconcile.staleReadFailed',
+          'paid_pro past offline grace and Play read failing; locking down locally', {});
+        await store.lockStalePaidEntitlement?.();
+        return { ok: true, checked: true, active: false, downgraded: true, reason: 'stale_read_failed' };
+      }
+      return { ok: true, checked: false }; // never revoke on a transient read within grace
     }
     const active = Array.isArray(info?.activeEntitlements)
       && info.activeEntitlements.includes('pro');
-    if (active) return { ok: true, checked: true, active: true };
+    if (active) {
+      // Known-good right now: refresh the last-verified clock.
+      await store.markPaidEntitlementVerified?.();
+      return { ok: true, checked: true, active: true };
+    }
     logWarn('payments.cascade.reconcile.lapsed',
       'paid_pro with no active Play entitlement; downgrading to free', {});
     const r = await cancel('client_reconcile');
@@ -282,8 +329,10 @@ export async function skipToPro(_sourceSurface = null) {
 }
 
 export async function autoDowngrade(targetTier, sourceSurface = null) {
-  // 2-tier model: only the day-21 trial expiry transitions to free.
-  // The 3-tier Complete→Pro auto-downgrade no longer exists.
+  // 2-tier model: only the end of the 14-day in-app trial transitions to free.
+  // (The 7-day Play intro offer is a separate store subscription phase, handled
+  // by Play, not this client cascade.) The old 3-tier Complete→Pro
+  // auto-downgrade no longer exists.
   if (targetTier !== 'free') {
     return { ok: false, error: 'invalid_auto_downgrade_target' };
   }

@@ -93,3 +93,22 @@ describe('play-billing-rtdn → client verify surfaces a failed grant (SUB-001)'
     expect(fn).toMatch(/jsonResponse\(502/);
   });
 });
+
+describe('play-billing-rtdn → OIDC fails closed when unconfigured (BUG-003)', () => {
+  test('unset audience rejects the RTDN path unless explicit setup mode', () => {
+    const fn = RTDN.slice(
+      RTDN.indexOf('async function verifyPubSubOidc'),
+      RTDN.indexOf('// Map Google notificationType'),
+    );
+    // Setup-mode escape hatch exists and is the ONLY way an unset audience
+    // returns ok:true; otherwise the unset branch fails closed.
+    expect(RTDN).toMatch(/RTDN_ALLOW_UNAUTHENTICATED_SETUP\s*=\s*\n?\s*\(Deno\.env\.get\("RTDN_ALLOW_UNAUTHENTICATED_SETUP"\)\s*\?\?\s*""\)\s*===\s*"true"/);
+    expect(fn).toMatch(/if\s*\(\s*RTDN_ALLOW_UNAUTHENTICATED_SETUP\s*\)/);
+    // The fail-closed return: unset + no setup flag → ok:false.
+    expect(fn).toMatch(/return\s*\{\s*ok:\s*false,\s*reason:\s*"oidc_unconfigured"\s*\}/);
+  });
+
+  test('logs a startup warning when RTDN_OIDC_AUDIENCE is unset', () => {
+    expect(RTDN).toMatch(/STARTUP: RTDN_OIDC_AUDIENCE is not set/);
+  });
+});
