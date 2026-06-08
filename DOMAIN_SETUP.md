@@ -1,5 +1,14 @@
 # Volyume Domain Setup Guide
 
+> **Status, 2026-06-08.** `volyume.app` is LIVE. DNS is on Namecheap pointed
+> at GitHub Pages, which serves `public/` via the `deploy-pages.yml` workflow.
+> The privacy policy is published at **https://volyume.app/privacy/** (the URL
+> registered on Google Play) and the apex `/` currently redirects there; the
+> marketing landing is shelved (`docs/web/index.html`, not served). The
+> `web/` Next.js interface is built but not yet deployed. Sections below are
+> the original setup reference; the Supabase auth URL config and SMTP items
+> apply when the web app or magic-link auth go live.
+
 This guide covers the setup needed to move from local Supabase development to `volyume.app` domain with proper authentication and universal linking.
 
 ## Prerequisites

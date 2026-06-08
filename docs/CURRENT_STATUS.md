@@ -14,6 +14,67 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
+### 0.000000000000000000001. 2026-06-08: production status snapshot, volyume.app web + privacy live, migrations 070/071 applied
+
+Status snapshot the founder asked to capture. Figures below are
+founder-confirmed on 2026-06-08 or verified against the repo this date.
+
+**Production status (founder-confirmed 2026-06-08):**
+- **Google Play: on the PRODUCTION track, in Google's final review** (not
+  yet public-downloadable). This is the current release posture for status
+  purposes; the long-standing "closed testing stays until the whole
+  project is built" note in `CLAUDE.md` predates this move.
+- **Supabase migrations 070 and 071 are APPLIED to production** (founder,
+  2026-06-08): 070 protects the trial/entitlement columns from client
+  writes, 071 adds the trial ledger that stops delete-and-restart trial
+  abuse. With 068/069 (applied 2026-06-07) the subscription/trial server
+  surface is now fully guarded. Only **049 and 059 remain held** until the
+  next AAB ships. See `supabase/README.md`.
+- **Production infrastructure confirmed live:** volyume.app DNS (Namecheap)
+  → GitHub Pages; the Play Billing RTDN webhook (`play-billing-rtdn` Edge
+  Function) deployed and wired to Google Play notifications; Supabase
+  production env vars + service-role secret set in the build/CI; EAS push
+  `projectId` set in `app.json` (`2f60a6ed-8b37-4cd6-8057-60ee04e39ea8`,
+  owner `volyume`) so remote push tokens can be obtained.
+
+**Web (volyume.app), shipped this session, live on GitHub Pages** (the
+`deploy-pages.yml` workflow serves `public/`):
+- **Privacy policy LIVE at https://volyume.app/privacy/** — the exact URL
+  registered on Google Play, deliberately unchanged. Full policy in the
+  app's own voice, last-updated 8 June 2026, contact `support@volyume.app`,
+  age floor 13, cloud data in Supabase (EU region). Mobile-first, a
+  logo-only nav using the real Volyume wordmark. Also served at
+  `/privacy.html`; the apex `/` redirects to `/privacy/`. A transient
+  `/privacy` ↔ `/privacy.html` redirect loop was found and fixed by making
+  both real pages (only the apex redirects now).
+- **Marketing landing page: SHELVED.** A full landing (nav, hero,
+  problem/answer, how-it-works, six features, CSS phone frames, pricing,
+  founder line, final CTA, footer) was built from the app's design tokens
+  and copy, but the founder judged it not good enough. It lives in
+  `docs/web/index.html` (NOT served); the apex redirects to the privacy
+  page for now. The proper web build is a later session.
+- The Next.js **web interface** in `web/` exists (dashboard, plan,
+  progress, coaching, account, sign-in, its own on-brand landing) but is
+  **not deployed**: it is SSR + Supabase auth, so it needs a Next-capable
+  host (Cloudflare/Vercel), env vars, auth wiring, the missing `/privacy`
+  and `/terms` routes, and its logged-in routes verified end to end.
+- A full **Phase-1 extraction** of the app's design system (theme tokens,
+  type roles, button/logo primitives) and voice/copy (tagline, onboarding
+  steps, feature names, tier lists, pricing, naming conventions) was
+  produced with file:line citations to seed the proper web build.
+- Files touched: `public/index.html` (redirect), `public/privacy/index.html`
+  + `public/privacy.html` (full policy), `public/volyume-wordmark.png`,
+  `docs/web/{index,privacy}.html`, `docs/web/volyume-*.png`. ASO/store
+  research in `docs/audit/volyume-aso-growth-research-2026-06-08.md` and
+  `docs/PLAY_STORE_LISTING.md`.
+
+**Still open / founder-side:** the marketing landing and the `web/` app are
+not deployed (above); pick the final ≤30-char Play title, refresh store
+screenshots, and run Store Listing Experiments (see `docs/PLAY_STORE_LISTING.md`
+and the ASO research). DNS for `volyume.app` is on Namecheap pointed at
+GitHub Pages; if Pages ever stops serving the apex, the documented fallback
+is Cloudflare Pages (`docs/HOSTING_RECOMMENDATION.md`).
+
 ### 0.00000000000000000001. 2026-06-07 (later): check-in to coach pipeline shipped, write-path hardening, readiness testing, HANDOFF
 
 Two things to know up front. First, this session shipped the weekly
@@ -1419,6 +1480,15 @@ Verified by direct code inspection.
 ## 3. Cloud migration application state
 
 Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
+
+> **Applied state as of 2026-06-08 (founder-confirmed):** every migration
+> **037 through 071 is APPLIED to production EXCEPT 049 and 059, which stay
+> held until the next AAB ships.** Some per-row labels below still read
+> "Drafted, pending" from earlier dates (060-067 applied 2026-06-06, 068-069
+> applied 2026-06-07, 070-071 applied 2026-06-08); the authoritative
+> applied status is this banner, § 0, and `supabase/README.md`. The frozen
+> closed-testing AAB references `peak_week_plans` (049) and the fixed
+> meal-slot CHECK (059), which is why those two are deliberately held.
 
 | # | Purpose | Status |
 |---|---|---|
