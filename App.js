@@ -181,6 +181,36 @@ async function handleAuthDeepLink(url) {
 
 const CRASH_LOG_KEY = '@volyume_crash_log';
 
+// Handles Training Partners invite links: volyume://partner/<token> or
+// https://volyume.app/partner/<token>. If the app can navigate, open the
+// Partner Preview screen; otherwise stash the token so it can be picked up
+// after sign-in / first launch. Feature ships dark, so the Pro guard + the
+// service's flag check decide whether anything actually happens. (Kept below
+// CRASH_LOG_KEY so it sits outside the auth-deep-link guard's scan window.)
+const PENDING_PARTNER_TOKEN_KEY = '@volyume_pending_partner_token';
+
+async function handlePartnerDeepLink(url) {
+  if (!url) return false;
+  const match = url.match(/\/partner\/([a-zA-Z0-9\-_]+)/);
+  if (!match) return false;
+  const token = decodeURIComponent(match[1]);
+  try { await AsyncStorage.setItem(PENDING_PARTNER_TOKEN_KEY, token); } catch (_) { /* best-effort stash */ }
+  try {
+    // eslint-disable-next-line global-require
+    const { navigationRef } = require('./src/navigation/RootNavigator');
+    const tryNavigate = (attempts = 0) => {
+      if (navigationRef.isReady()) {
+        navigationRef.navigate('ProfileTab', { screen: 'PartnerPreview', params: { token } });
+        AsyncStorage.removeItem(PENDING_PARTNER_TOKEN_KEY).catch(() => {});
+      } else if (attempts < 20) {
+        setTimeout(() => tryNavigate(attempts + 1), 150);
+      }
+    };
+    tryNavigate();
+  } catch (_) { /* navigation not ready; token stays stashed */ }
+  return true;
+}
+
 // Uncaught exceptions and unhandled rejections are now captured by
 // installGlobalHandlers() above. ErrorBoundary still writes the legacy
 // single-slot crash log so LoginScreen's banner keeps working.
@@ -394,8 +424,13 @@ export default function App() {
   // RootNavigator's onAuthStateChange listener picks up the resulting session
   // automatically and re-routes the user without any extra navigation calls.
   useEffect(() => {
-    Linking.getInitialURL().then(url => { if (url) handleAuthDeepLink(url); }).catch(() => {});
-    const sub = Linking.addEventListener('url', ({ url }) => handleAuthDeepLink(url));
+    const route = (url) => {
+      if (!url) return;
+      // Partner invite links are not auth callbacks; route them separately.
+      handlePartnerDeepLink(url).then(handled => { if (!handled) handleAuthDeepLink(url); });
+    };
+    Linking.getInitialURL().then(route).catch(() => {});
+    const sub = Linking.addEventListener('url', ({ url }) => route(url));
     return () => sub.remove();
   }, []);
 
@@ -613,6 +648,24 @@ export default function App() {
             track(uid, event, { platform: Platform.OS }).catch(() => {});
           }).catch(() => {});
         } catch (_) {}
+      }
+      // Training Partners: on foreground, republish the weekly consistency
+      // signal at most once every 6h. No-op unless the feature is enabled for
+      // the user. Fire-and-forget; throttled via AsyncStorage so it never adds
+      // a cloud round-trip to every foreground.
+      if (state === 'active') {
+        (async () => {
+          try {
+            const uid = useAppStore.getState().user?.id;
+            if (!uid) return;
+            const KEY = '@volyume_partner_last_publish';
+            const last = Number(await AsyncStorage.getItem(KEY)) || 0;
+            if (Date.now() - last < 6 * 3600000) return;
+            await AsyncStorage.setItem(KEY, String(Date.now()));
+            // eslint-disable-next-line global-require
+            require('./src/lib/partners/publishSignal').publishMyWeeklySignal(uid);
+          } catch (_) { /* tolerate */ }
+        })();
       }
       // Fire on BOTH foreground (active) and backgrounding
       // (inactive/background). Foreground sync catches up cloud

@@ -29,6 +29,9 @@ export function routeForNotificationType(type) {
       // Same destination as the You-tab "Precision Coaching" row, which opens
       // CoachOutput with no weekStart (current week).
       return { tab: 'ProfileTab', screen: 'CoachOutput' };
+    case 'partner_digest':
+      // The Sunday-evening Training Partners digest opens the partners screen.
+      return { tab: 'ProfileTab', screen: 'TrainingPartners' };
     default:
       return null;
   }

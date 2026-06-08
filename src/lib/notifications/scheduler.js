@@ -368,6 +368,55 @@ export async function cancelWeeklyCoachReady() {
   try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_COACH_READY); } catch {}
 }
 
+// ─── Training Partners weekly digest ────────────────────────────────────────
+// A Sunday-evening local digest nudging the user to look at their week and
+// their partners'. Local-only (no remote push needed); the body is generic
+// because counts aren't known at schedule time. Scheduled when the user turns
+// on partner sharing, cancelled when they turn it off.
+const NOTIF_ID_PARTNER_DIGEST = 'volyume_partner_digest';
+const PARTNER_DIGEST_COPY = {
+  title: 'Your training week',
+  body: 'See how you and your training partners did this week.',
+};
+
+export async function scheduleWeeklyPartnerDigest(hour = 18, minute = 0) {
+  if (Platform.OS === 'web') return;
+  try {
+    await cancelWeeklyPartnerDigest();
+    const quiet = await getQuietHours();
+    const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hour, minute, quiet);
+    await Notifications.scheduleNotificationAsync({
+      identifier: NOTIF_ID_PARTNER_DIGEST,
+      content: {
+        title: PARTNER_DIGEST_COPY.title,
+        body: PARTNER_DIGEST_COPY.body,
+        data: { type: 'partner_digest' },
+        sound: false,
+      },
+      trigger: {
+        channelId: COACHING_REMINDERS_CHANNEL,
+        type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+        weekday: 1,            // expo weekday 1 = Sunday
+        hour: h,
+        minute: m,
+      },
+    });
+  } catch (e) {
+    trackNotificationFailed({
+      category: CATEGORY.PARTNER_DIGEST,
+      reason: 'schedule_threw',
+      payload: { message: e?.message ?? 'unknown' },
+    });
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      logWarn('notifications.schedulePartnerDigest', e?.message);
+    }
+  }
+}
+
+export async function cancelWeeklyPartnerDigest() {
+  try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_PARTNER_DIGEST); } catch {}
+}
+
 // ─── Cancel helpers ───────────────────────────────────────────────────────────
 
 export async function cancelMorningNotification() {

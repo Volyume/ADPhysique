@@ -1091,6 +1091,17 @@ export default function ActiveWorkoutScreen({ navigation }) {
                   syncWorkout(supabaseUserId, activeWorkout.id).catch(() => {});
                 }
               } catch (_) { /* tolerate */ }
+              // Training Partners: republish this week's derived consistency
+              // signal. No-op unless the feature is enabled for the user; the
+              // server counts real completed workouts, so this only nudges the
+              // refresh. Fire-and-forget.
+              try {
+                const uid = useAppStore.getState().user?.id;
+                if (uid) {
+                  // eslint-disable-next-line global-require
+                  require('../lib/partners/publishSignal').publishMyWeeklySignal(uid);
+                }
+              } catch (_) { /* tolerate */ }
               endWorkout();
               // eslint-disable-next-line global-require
               try { require('../lib/notifications/activeWorkout').dismissActiveWorkoutNotification(); } catch (_) {}

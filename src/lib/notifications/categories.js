@@ -31,6 +31,7 @@ export const CATEGORY = Object.freeze({
   MORNING_WEIGHT: 'morning_weight',
   TRAINING_REMINDER: 'training_reminder',
   YEAR_OF_LIFTS_UNLOCK: 'year_of_lifts_unlock',
+  PARTNER_DIGEST: 'partner_digest',
 });
 
 /**
@@ -60,6 +61,7 @@ export const CATEGORY_CHANNELS = Object.freeze({
   [CATEGORY.MORNING_WEIGHT]: [CHANNEL.PUSH],
   [CATEGORY.TRAINING_REMINDER]: [CHANNEL.PUSH],
   [CATEGORY.YEAR_OF_LIFTS_UNLOCK]: [CHANNEL.PUSH],
+  [CATEGORY.PARTNER_DIGEST]: [CHANNEL.PUSH],
 });
 
 /**
@@ -88,6 +90,7 @@ export function categoryForDataType(type) {
     case 'subscription_payment_failure': return CATEGORY.SUBSCRIPTION_PAYMENT_FAILURE;
     case 'subscription_expiring': return CATEGORY.SUBSCRIPTION_EXPIRING;
     case 'weekly_coach_ready': return CATEGORY.WEEKLY_COACH_READY;
+    case 'partner_digest': return CATEGORY.PARTNER_DIGEST;
     default: return null;
   }
 }

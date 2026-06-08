@@ -59,6 +59,13 @@ export default function SettingsCoachingScreen() {
       await saveLocalProfile(user.id, next);
     }
     await setSharingAll(value);
+    // Sunday-evening local digest follows the master switch.
+    try {
+      // eslint-disable-next-line global-require
+      const sched = require('../lib/notifications/scheduler');
+      if (value) sched.scheduleWeeklyPartnerDigest();
+      else sched.cancelWeeklyPartnerDigest();
+    } catch (_) { /* notifications unavailable */ }
   }
 
   async function toggleCalmMode(value) {
