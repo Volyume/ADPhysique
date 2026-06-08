@@ -68,6 +68,35 @@ export default function HomeScreen({ navigation }) {
     // unnecessary (the guard already prevents clobbering a live session).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  // H-2 (subscriptions audit): present the subscribe-or-Free gate once when the
+  // 14-day trial has ended, so it does not depend on the user having granted
+  // notification permission (the only other way to reach it). One-time per user
+  // via a flag; the gate itself is dismissible, so this is a prompt, not a wall.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user?.id) return;
+      const ts = userProfile?.trialState ?? null;
+      // Only after a trial that actually expired to Free (not paid, not a user
+      // who chose Free up front and never trialled).
+      if (ts !== 'cascade_expired' || tier !== 'free') return;
+      const key = `@volyume_trial_end_gate_shown_${user.id}`;
+      try {
+        if (await AsyncStorage.getItem(key)) return;
+        await AsyncStorage.setItem(key, 'true');
+      } catch (_) { return; }
+      if (cancelled) return;
+      try {
+        navigation.getParent()?.navigate('ProfileTab', {
+          screen: 'CascadeGate',
+          params: { variant: 'day14' },
+        });
+      } catch (_) { /* navigation not ready; the notification path still covers it */ }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, userProfile?.trialState, tier]);
   // Cloud-sync version bumps when pullFromCloud finishes; HomeScreen
   // re-runs loadData so the empty state swaps for real data without
   // the user navigating away and back.

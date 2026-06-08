@@ -225,13 +225,38 @@ export function _buildRealProvider(RNIap = _loadRNIap()) {
     }
   }
 
+  // H-3 (subscriptions audit): acknowledge any purchase Google still considers
+  // unacknowledged. Google auto-refunds an unacknowledged purchase after 3
+  // days. The purchaseUpdatedListener finishes fresh purchases, but one whose
+  // event was missed (app killed before it fired) or that only surfaces via
+  // getAvailablePurchases (restore) would otherwise never be acknowledged.
+  // Idempotent: a finished/acknowledged purchase is skipped.
+  async function acknowledgeOutstanding() {
+    try {
+      const purchases = await RNIap.getAvailablePurchases();
+      for (const purchase of purchases || []) {
+        const isPending = purchase?.purchaseStateAndroid === 2;
+        if (purchase?.purchaseToken && !purchase?.isAcknowledgedAndroid && !isPending) {
+          try {
+            await RNIap.finishTransaction({ purchase, isConsumable: false });
+            logInfo('payments.playBilling.ackOutstanding', `sku=${purchase?.productId}`);
+          } catch (e) {
+            logWarn('payments.playBilling.ackOutstanding.finish', e?.message ?? 'unknown', {});
+          }
+        }
+      }
+    } catch (e) {
+      logWarn('payments.playBilling.ackOutstanding', e?.message ?? 'unknown', {});
+    }
+  }
+
   function _purchasesToCustomerInfo(purchases) {
     const known = (purchases || []).filter(p => {
       const sku = p?.productId ?? p?.sku;
       return sku && skuById(sku) !== null;
     });
     if (known.length === 0) {
-      return { activeEntitlements: [], latestTransactionId: null, activeSku: null };
+      return { activeEntitlements: [], latestTransactionId: null, activeSku: null, latestPurchaseToken: null };
     }
     // Most-recent first by transactionDate (ms epoch).
     known.sort((a, b) => (b.transactionDate ?? 0) - (a.transactionDate ?? 0));
@@ -243,6 +268,10 @@ export function _buildRealProvider(RNIap = _loadRNIap()) {
       latestTransactionId: latest.transactionId
         ?? latest.purchaseToken
         ?? null,
+      // M-2: the raw Play purchase token, so restore can server-verify the
+      // active subscription (confirmPurchase) rather than only optimistically
+      // unlocking and waiting for a cloud read.
+      latestPurchaseToken: latest.purchaseToken ?? null,
       activeSku: sku,
     };
   }
@@ -301,6 +330,9 @@ export function _buildRealProvider(RNIap = _loadRNIap()) {
         e.code = code || 'purchase_error';
         _settleReject(e);
       });
+      // H-3: sweep up any purchase left unacknowledged by a missed event on a
+      // previous run, so it isn't auto-refunded by Google after 3 days.
+      acknowledgeOutstanding().catch(() => {});
     },
 
     async getCustomerInfo() {
@@ -385,6 +417,9 @@ export function _buildRealProvider(RNIap = _loadRNIap()) {
 
     async restorePurchases() {
       _trackPurchase('restore_purchases_attempted', {});
+      // H-3: acknowledge before reading, so a restored-but-unacknowledged
+      // purchase is finished rather than auto-refunded.
+      await acknowledgeOutstanding();
       const purchases = await RNIap.getAvailablePurchases();
       return _purchasesToCustomerInfo(purchases);
     },
@@ -424,6 +459,7 @@ const STUB_CUSTOMER_INFO = Object.freeze({
   activeEntitlements: [],
   latestTransactionId: null,
   activeSku: null,
+  latestPurchaseToken: null,
 });
 
 const _stubProvider = Object.freeze({
