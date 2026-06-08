@@ -3072,6 +3072,29 @@ export async function getLatestBodyWeight(userId) {
   return null;
 }
 
+// Most recent logged body composition that actually carries a body-fat figure.
+// Used by the plan-update and nutrition-target flows to recover BF% + method for
+// users who onboarded before the profile started persisting them, so the BMR
+// formula (Katch-McArdle when a credible BF% exists) stays consistent across
+// onboarding, Update Your Plan and the manual recalc. Read-only, returns null
+// when the user has never logged a body-fat reading.
+export async function getLatestBodyComposition(userId) {
+  const d = await db();
+  const row = await d.getFirstAsync(
+    `SELECT body_fat_percent, body_fat_source, logged_at
+       FROM body_metric_log
+      WHERE user_id = ? AND body_fat_percent IS NOT NULL
+      ORDER BY logged_at DESC LIMIT 1`,
+    [userId],
+  ).catch(() => null);
+  if (!row || row.body_fat_percent == null) return null;
+  return {
+    bodyFatPercent: row.body_fat_percent,
+    bodyFatSource: row.body_fat_source ?? null,
+    loggedAt: row.logged_at ?? 0,
+  };
+}
+
 // ─── CSV / JSON export ────────────────────────────────────────────
 
 function csvEscape(value) {

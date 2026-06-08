@@ -31,7 +31,7 @@ import {
   weakPointSetForGoal,
   phaseToNutritionKey,
   phaseToCoachingKey,
-  daysToActivityLevel,
+  buildNutritionEngineInputs,
 } from '../lib/coachingGoals';
 import { calculateNutritionTargets, PROTEIN_APPROACHES, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
 
@@ -461,18 +461,22 @@ export default function ProOnboardingScreen({ navigation }) {
       // it as set when it is a sane percentage, so a typo can't poison the calc.
       const bfParsed = parseFloat(bodyFat);
       const bfNum = bodyFat.trim() && Number.isFinite(bfParsed) && bfParsed > 0 && bfParsed < 60 ? bfParsed : null;
-      const nutritionTargets = calculateNutritionTargets({
+      // Build inputs through the shared builder so onboarding and Update Your
+      // Plan can never feed the engine different shapes (the bug that made the
+      // two flows disagree). Same values as before, so onboarding output is
+      // unchanged.
+      const nutritionTargets = calculateNutritionTargets(buildNutritionEngineInputs({
         sex,
-        ageYears: safeAge,
+        age: safeAge,
         heightCm: safeHeightCm,
         weightKg: safeWeightKg,
-        bodyFatPercent: bfNum,
+        bodyFatPct: bfNum,
         bodyFatSource: bfNum != null ? bfSource : null,
-        activityLevel: daysToActivityLevel(daysPerWeek),
-        goal: phaseToNutritionKey(trainingPhase),
+        daysPerWeek,
+        trainingPhase,
         trainingGoal,
         proteinApproach,
-      });
+      }));
 
       const goalPhase = phaseToCoachingKey(trainingPhase);
       const trainingFreqBucket = daysToFreqBucket(daysPerWeek);
@@ -508,6 +512,16 @@ export default function ProOnboardingScreen({ navigation }) {
         recoveryRating,
         planWeakPoints,
         proteinApproach,
+        // Persist body composition so later recalcs (Update Your Plan, manual
+        // Nutrition Targets) read the same BF% + method onboarding used and keep
+        // the Katch-McArdle BMR path. Without this the update flow silently fell
+        // back to Mifflin and produced different calories from an unchanged body.
+        bodyFatPct: bfNum,
+        bodyFatSource: bfNum != null ? bfSource : null,
+        // Store the nutrition goal key alongside the phase so surfaces that read
+        // userProfile.goal (Nutrition Targets summary) show the right phase
+        // instead of defaulting to lean_gain.
+        goal: phaseToNutritionKey(trainingPhase),
       };
 
       if (user?.id) await saveLocalProfile(user.id, merged);

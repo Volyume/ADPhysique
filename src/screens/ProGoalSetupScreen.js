@@ -15,10 +15,10 @@ import {
   PHYSIQUE_GOALS,
   TRAINING_PHASES,
   GOALS_WITH_WEAK_POINTS, WEAK_POINT_MUSCLES,
-  phaseToCoachingKey, phaseToNutritionKey, daysToActivityLevel,
+  phaseToCoachingKey, phaseToNutritionKey, buildNutritionEngineInputs,
 } from '../lib/coachingGoals';
 import { calculateNutritionTargets, PROTEIN_APPROACHES, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
-import { saveNutritionTargets, getMorningWeightsLast14Days } from '../lib/database';
+import { saveNutritionTargets, getMorningWeightsLast14Days, getLatestBodyComposition } from '../lib/database';
 import { computeEWMA } from '../lib/weeklyCoach';
 import { formatBodyWeightShort } from '../lib/units';
 import { generateAndSavePlan } from '../lib/planAutoGen';
@@ -168,6 +168,9 @@ export default function ProGoalSetupScreen({ navigation }) {
       trainingGoal: selectedGoal,
       trainingPhase: selectedPhase,
       goalPhase,
+      // nutrition goal key, kept in step with the phase so surfaces reading
+      // userProfile.goal (Nutrition Targets summary) match the saved calories.
+      goal: phaseToNutritionKey(selectedPhase),
       proteinApproach,
       goalStartDate,
       planWeakPoints: nextWeakPoints,
@@ -213,6 +216,23 @@ export default function ProGoalSetupScreen({ navigation }) {
     const safeAge      = (typeof wp.age === 'number' && wp.age > 0) ? wp.age : 28;
     const safeSex      = wp.sex === 'female' ? 'female' : 'male';
 
+    // Body composition for the BMR formula. Prefer the profile (what onboarding
+    // stored), and for users who onboarded before the profile carried body fat,
+    // fall back to the most recent logged reading. Passing both the percentage
+    // AND the source is what keeps this calc on the Katch-McArdle path that
+    // onboarding used, instead of silently dropping to Mifflin.
+    let bodyFatPct    = (typeof wp.bodyFatPct === 'number' && wp.bodyFatPct > 0) ? wp.bodyFatPct : null;
+    let bodyFatSource = wp.bodyFatSource ?? null;
+    if (bodyFatPct == null && user?.id) {
+      try {
+        const comp = await getLatestBodyComposition(user.id);
+        if (comp && typeof comp.bodyFatPercent === 'number') {
+          bodyFatPct    = comp.bodyFatPercent;
+          bodyFatSource = comp.bodyFatSource ?? null;
+        }
+      } catch (_) {}
+    }
+
     // Also persist the latest weight back into the profile so other
     // surfaces that read userProfile.weightKg (BodyMetrics summary,
     // BMR readout, etc) see the current value instead of the stale
@@ -227,17 +247,18 @@ export default function ProGoalSetupScreen({ navigation }) {
 
     let nextTargets = null;
     try {
-      nextTargets = calculateNutritionTargets({
-        weightKg: safeWeightKg,
-        heightCm: safeHeightCm,
-        ageYears: safeAge,
+      nextTargets = calculateNutritionTargets(buildNutritionEngineInputs({
         sex: safeSex,
-        bodyFatPct: wp.bodyFatPct ?? null,
-        activityLevel: daysToActivityLevel(daysPerWeek),
-        goal: phaseToNutritionKey(selectedPhase),
+        age: safeAge,
+        heightCm: safeHeightCm,
+        weightKg: safeWeightKg,
+        bodyFatPct,
+        bodyFatSource,
+        daysPerWeek,
+        trainingPhase: selectedPhase,
         trainingGoal: selectedGoal,
         proteinApproach,
-      });
+      }));
       await AsyncStorage.setItem(NUTRITION_KEY, JSON.stringify(nextTargets));
       if (user?.id) {
         await saveNutritionTargets(user.id, nextTargets);
@@ -246,6 +267,14 @@ export default function ProGoalSetupScreen({ navigation }) {
       // Don't block the goal save if the recalc fails. Surface to the user
       // so they know targets weren't updated this time.
       toast.show("Goal saved, but targets didn't recalculate. Open Nutrition Targets to refresh", { variant: 'warning', duration: 5000 });
+    }
+
+    // Persist the body composition we calculated from, so a value recovered
+    // from the body-metric log gets cached on the profile and the next recalc
+    // reads it directly.
+    if (bodyFatPct != null) {
+      updatedProfile.bodyFatPct = bodyFatPct;
+      updatedProfile.bodyFatSource = bodyFatSource;
     }
 
     await saveLocalProfile(user.id, updatedProfile);

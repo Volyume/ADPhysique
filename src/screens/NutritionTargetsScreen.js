@@ -12,7 +12,8 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '
 import InfoTooltip from '../components/InfoTooltip';
 import { useToast } from '../components/Toast';
 import { calculateNutritionTargets, PROTEIN_APPROACHES } from '../lib/nutritionEngine';
-import { saveNutritionTargets, getNutritionTargets, logBodyMetric, getUserBodyProfile, getLatestBodyWeight } from '../lib/database';
+import { saveNutritionTargets, getNutritionTargets, logBodyMetric, getUserBodyProfile, getLatestBodyWeight, getLatestBodyComposition } from '../lib/database';
+import { daysToActivityLevel } from '../lib/coachingGoals';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
@@ -238,25 +239,51 @@ export default function NutritionTargetsScreen({ navigation }) {
   }, []);
 
   useEffect(() => {
+    // Point the Adjust form's goal + protein approach at whatever was actually
+    // saved, so the form can't show a different goal (e.g. "Build muscle (slow)")
+    // than the calories were built from. Without this the form fell back to its
+    // hardcoded defaults and read as inconsistent with the saved targets.
+    const VALID_SYNC_GOALS = ['lean_gain', 'build', 'maintain', 'recomp', 'mild_cut', 'aggressive_cut', 'contest_prep'];
+    function syncFormFromTargets(t) {
+      // Prefer the goal key; the DB record only persists the phase label, so
+      // fall back to inverting the label when the key is absent.
+      let goalKey = (t?.goal && VALID_SYNC_GOALS.includes(t.goal)) ? t.goal : null;
+      if (!goalKey && t?.phase) goalKey = GOALS.find(g => g.label === t.phase)?.key ?? null;
+      if (goalKey) setGoal(goalKey);
+      if (t?.proteinApproach && PROTEIN_APPROACHES[t.proteinApproach]) setProteinApproach(t.proteinApproach);
+    }
     async function loadSaved() {
       try {
+        // The rich AsyncStorage copy is written by the same save as the DB row
+        // and carries goal + proteinApproach, which the DB columns don't. Read
+        // it up front so we can backfill those onto a DB-loaded record.
+        let rich = null;
+        try {
+          const r = await AsyncStorage.getItem(STORAGE_KEY);
+          if (r) rich = JSON.parse(r);
+        } catch (_) {}
+
         if (user?.id) {
           const fromDb = await getNutritionTargets(user.id).catch(() => null);
           if (fromDb?.targetKcal) {
             const lw = await getLatestBodyWeight(user.id).catch(() => null);
             const weightKg = lw?.weightKg ?? userProfile?.weightKg ?? null;
-            setResults(hydrateLoadedTargets(fromDb, weightKg));
+            const hydrated = hydrateLoadedTargets(fromDb, weightKg);
+            if (rich && Number(rich.targetKcal) === Number(hydrated.targetKcal)) {
+              if (hydrated.goal == null && rich.goal != null) hydrated.goal = rich.goal;
+              if (hydrated.proteinApproach == null && rich.proteinApproach != null) hydrated.proteinApproach = rich.proteinApproach;
+            }
+            setResults(hydrated);
+            syncFormFromTargets(hydrated);
             setFormCollapsed(true);
             return;
           }
         }
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed?.targetKcal) {
-            setResults(hydrateLoadedTargets(parsed, userProfile?.weightKg ?? null));
-            setFormCollapsed(true);
-          }
+        if (rich?.targetKcal) {
+          const hydrated = hydrateLoadedTargets(rich, userProfile?.weightKg ?? null);
+          setResults(hydrated);
+          syncFormFromTargets(hydrated);
+          setFormCollapsed(true);
         }
       } catch (_) {}
     }
@@ -272,20 +299,44 @@ export default function NutritionTargetsScreen({ navigation }) {
       if (!user?.id) return;
       try {
         const profile = await getUserBodyProfile(user.id).catch(() => null);
-        if (!profile) return;
-        if (profile.sex) setSex(profile.sex);
-        if (profile.heightCm) {
+        if (profile?.sex) setSex(profile.sex);
+        if (profile?.heightCm) {
           const totalIn = Math.round(profile.heightCm / 2.54);
           setHeightFt(String(Math.floor(totalIn / 12)));
           setHeightIn(String(totalIn % 12));
         }
-        if (profile.dateOfBirth) {
+        if (profile?.dateOfBirth) {
           const ageNum = new Date().getFullYear() - new Date(profile.dateOfBirth).getFullYear();
           if (ageNum > 0 && ageNum < 100) setAge(String(ageNum));
+        }
+
+        // Weight and body fat aren't on user_body_profile, they live on the
+        // body-metric log / store profile. Prefill them so the form shows the
+        // user's real current numbers instead of blank fields.
+        const lw = await getLatestBodyWeight(user.id).catch(() => null);
+        const wkg = lw?.weightKg ?? userProfile?.weightKg ?? null;
+        if (typeof wkg === 'number' && wkg > 0) setWeight(String(Math.round(wkg * 10) / 10));
+
+        const comp = await getLatestBodyComposition(user.id).catch(() => null);
+        const bf = comp?.bodyFatPercent ?? (typeof userProfile?.bodyFatPct === 'number' ? userProfile.bodyFatPct : null);
+        const bfSrc = comp?.bodyFatSource ?? userProfile?.bodyFatSource ?? null;
+        if (typeof bf === 'number' && bf > 0) {
+          setBodyFat(String(bf));
+          if (bfSrc && BF_SOURCES.some(s => s.key === bfSrc)) setBfSource(bfSrc);
+        }
+
+        // Activity should track how often the user actually trains, not a fixed
+        // "moderate" default. 5 days/week is "active", not "moderate".
+        if (typeof userProfile?.daysPerWeek === 'number' && userProfile.daysPerWeek > 0) {
+          setActivity(daysToActivityLevel(userProfile.daysPerWeek));
         }
       } catch (_) {}
     }
     prefill();
+    // Runs once per user. userProfile fields are read as one-shot prefill seeds,
+    // we deliberately don't re-run when they change so we never stomp on a value
+    // the user is editing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   // Pre-fill goal from profile (userProfile.goal stores the nutritionKey directly)
@@ -696,8 +747,8 @@ export default function NutritionTargetsScreen({ navigation }) {
                 <Ionicons name="nutrition" size={14} color={colors.textMuted} />
                 <Text style={styles.collapsedText} numberOfLines={1}>
                   {age && weight && heightFt
-                    ? `${sex === 'male' ? 'Male' : 'Female'} · ${age}yrs · ${heightFt}ft${heightIn ? ` ${heightIn}in` : ''} · ${weight}kg · ${GOALS.find(g => g.key === goal)?.label ?? goal}`
-                    : `${GOALS.find(g => g.key === goal)?.label ?? 'Targets set during coaching setup'}`}
+                    ? `${sex === 'male' ? 'Male' : 'Female'} · ${age}yrs · ${heightFt}ft${heightIn ? ` ${heightIn}in` : ''} · ${weight}kg · ${results?.phase ?? GOALS.find(g => g.key === goal)?.label ?? goal}`
+                    : `${results?.phase ?? GOALS.find(g => g.key === goal)?.label ?? 'Targets set during coaching setup'}`}
                 </Text>
               </View>
               <TouchableOpacity onPress={() => setFormCollapsed(false)} style={styles.reconfigureBtn} accessibilityRole="button" accessibilityLabel="Adjust">

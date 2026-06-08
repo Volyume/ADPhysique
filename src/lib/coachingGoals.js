@@ -304,6 +304,47 @@ export function daysToActivityLevel(daysPerWeek) {
   return 'very_active';
 }
 
+// Build the exact input object calculateNutritionTargets expects from a user's
+// stored profile fields. Single source of truth so the onboarding wizard and the
+// Update-Your-Plan flow can never drift on which inputs reach the engine. The
+// previous bug was exactly that drift: onboarding passed bodyFatSource (so BMR
+// used Katch-McArdle) while the update flow omitted it (so BMR fell back to
+// Mifflin), producing materially different calories from an unchanged body.
+//
+// Keep this equivalent to the onboarding call site: any change here moves
+// onboarding output too. No experienceLevel key on purpose, no surface passes
+// one today, and adding it would shift existing targets.
+export function buildNutritionEngineInputs({
+  sex,
+  age,
+  heightCm,
+  weightKg,
+  bodyFatPct = null,
+  bodyFatSource = null,
+  daysPerWeek,
+  trainingPhase,
+  trainingGoal = null,
+  proteinApproach = null,
+}) {
+  // Range-guard body fat the same way the onboarding wizard does, so a corrupt
+  // or fat-fingered reading can't flip the BMR formula or poison protein. A
+  // source is only meaningful when a usable percentage came with it.
+  const bf = Number(bodyFatPct);
+  const safeBf = Number.isFinite(bf) && bf > 0 && bf < 60 ? bf : null;
+  return {
+    sex,
+    ageYears: age,
+    heightCm,
+    weightKg,
+    bodyFatPercent: safeBf,
+    bodyFatSource: safeBf != null ? (bodyFatSource ?? null) : null,
+    activityLevel: daysToActivityLevel(daysPerWeek),
+    goal: phaseToNutritionKey(trainingPhase),
+    trainingGoal,
+    proteinApproach,
+  };
+}
+
 // ─── Profile migration ─────────────────────────────────────────────────────
 //
 // Existing user profiles store legacy trainingGoal values that no longer
