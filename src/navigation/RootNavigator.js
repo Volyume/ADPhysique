@@ -65,6 +65,7 @@ import Article9ConsentScreen from '../screens/Article9ConsentScreen';
 import WeeklyCheckInScreen from '../screens/WeeklyCheckInScreen';
 import CoachOutputScreen from '../screens/CoachOutputScreen';
 import ProGoalSetupScreen from '../screens/ProGoalSetupScreen';
+import PlanUpdateScreen from '../screens/PlanUpdateScreen';
 import GoalChangeSummaryScreen from '../screens/GoalChangeSummaryScreen';
 import GoalLockConsentScreen from '../screens/GoalLockConsentScreen';
 import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
@@ -116,6 +117,7 @@ const GatedNutritionTargets = withProGuard(NutritionTargetsScreen, 'Nutrition ta
 const GatedBodyMetrics      = withProGuard(BodyMetricsScreen, 'Body metrics');
 const GatedCoachOutput      = withProGuard(CoachOutputScreen, 'Your week');
 const GatedProGoalSetup     = withProGuard(ProGoalSetupScreen, 'Pro goal setup');
+const GatedPlanUpdate       = withProGuard(PlanUpdateScreen, 'Update training');
 const GatedCoachingReminders = withProGuard(CoachingRemindersScreen, 'Coaching reminders');
 // Diary domain is Pro (free is Plan Library, custom training, Progress, You).
 // Gating the Diary tab root covers the food sub-screens, which are only reached
@@ -274,6 +276,7 @@ function PlansStack({ navigation }) {
   return (
     <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Plans" component={PlansScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="PlanUpdate" component={GatedPlanUpdate} options={{ headerShown: false }} />
       <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ title: 'Plan' }} />
       <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ title: 'Edit Workout' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />

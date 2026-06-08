@@ -47,15 +47,17 @@ const ACTION_CARDS_DEFAULT = [
 ];
 
 // Pro users with an active plan see "switch your active plan" framings.
-// "Update goals" sits at the top: it regenerates the plan via the modern
-// single-screen ProGoalSetup flow (the old 8-step Coach Builder is gone).
+// "Update training and rebuild" sits at the top: it rebuilds the plan via the
+// training-only PlanUpdate screen. Goal and calorie/macro changes live in the
+// You tab (Update your plan / Nutrition targets), so this Plans-side flow never
+// touches nutrition targets.
 const ACTION_CARDS_PRO_SWITCH = [
   {
     id: 'goals',
     icon: 'flag-outline',
-    title: 'Update plan and rebuild',
-    description: 'Change anything from your goal and training phase to your weekly schedule, equipment, and experience. Your plan and nutrition targets rebuild around the new answers. History and PRs are kept.',
-    screen: 'ProGoalSetup',
+    title: 'Update training and rebuild',
+    description: 'Change your weekly schedule, equipment, experience, division or weak points. Your plan rebuilds around the new answers. History and PRs are kept. To change your goal or calorie targets, use Update your plan in the You tab.',
+    screen: 'PlanUpdate',
   },
   {
     id: 'library',
@@ -447,7 +449,7 @@ export default function PlansScreen({ navigation }) {
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.blockNewBtn}
-                      onPress={() => navigation.navigate(tier === 'pro' ? 'ProGoalSetup' : 'ProUpgrade')}
+                      onPress={() => navigation.navigate(tier === 'pro' ? 'PlanUpdate' : 'ProUpgrade')}
                       activeOpacity={0.85}
                       accessibilityRole="button"
                       accessibilityLabel={blockAdvice.nextBlock.secondaryLabel}

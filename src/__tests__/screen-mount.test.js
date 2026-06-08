@@ -610,6 +610,7 @@ const SCREENS_TO_SWEEP = [
   'NutritionTargetsScreen',
   'PlanLibraryScreen',
   'PlansScreen',
+  'PlanUpdateScreen',
   'PrivacyPolicyScreen',
   'ProGoalSetupScreen',
   'ProOnboardingScreen',
