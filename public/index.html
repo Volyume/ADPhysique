@@ -3,13 +3,122 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex">
 <title>Volyume</title>
+<meta name="description" content="Precision training and nutrition coaching that adapts to you, week by week. Private by design.">
 <link rel="icon" type="image/png" href="/favicon.png">
-<meta http-equiv="refresh" content="0; url=/privacy/">
-<link rel="canonical" href="/privacy/">
+<link rel="apple-touch-icon" href="/favicon.png">
+<meta name="theme-color" content="#0D0D0D">
+<meta property="og:title" content="Volyume">
+<meta property="og:description" content="Precision training and nutrition coaching that adapts to you, week by week. Private by design.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://volyume.app">
+<meta property="og:image" content="https://volyume.app/favicon.png">
+<style>
+  /* Ported verbatim from the web app token library (packages/ui tokens +
+     globals.css type roles) so this static page shares the app's visual system. */
+  :root {
+    --background:#0D0D0D; --textPrimary:#FFFFFF; --textSecondary:#9E9E9E;
+    --textMuted:#9B9B9B; --primary:#F5A623; --primaryFill:#E08C0B;
+    --borderSubtle:#2E2E2C;
+  }
+  * { box-sizing:border-box; }
+  html { color-scheme:dark; }
+  body {
+    margin:0; background:var(--background); color:var(--textPrimary);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a { text-decoration:none; }
+
+  /* type roles */
+  .type-display { font-size:40px; font-weight:900; line-height:48px; letter-spacing:-0.5px; }
+  .type-h3 { font-size:20px; font-weight:600; line-height:27px; letter-spacing:-0.25px; }
+  .type-title { font-size:17px; font-weight:600; line-height:23px; }
+  .type-body { font-size:16px; font-weight:400; line-height:24px; }
+  .type-caption { font-size:11px; font-weight:400; line-height:15px; letter-spacing:0.4px; }
+
+  /* layout: centred max-w-3xl column, full viewport height */
+  .page {
+    max-width:768px; margin:0 auto; min-height:100vh;
+    display:flex; flex-direction:column; padding:0 16px;
+  }
+
+  .top { display:flex; align-items:center; justify-content:space-between; padding:24px 0; }
+  .wordmark { font-size:17px; font-weight:700; color:var(--textPrimary); }
+  .top a { color:var(--textSecondary); font-size:16px; }
+  .top a:hover { color:var(--textPrimary); }
+
+  .hero { flex:1; display:flex; flex-direction:column; justify-content:center; padding:48px 0; }
+  .hero h1 { max-width:576px; margin:0; color:var(--textPrimary); }
+  .hero p.sub { max-width:576px; margin:16px 0 0; font-weight:400; color:var(--textSecondary); }
+  .actions { margin-top:24px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .cta {
+    display:inline-flex; align-items:center; gap:10px;
+    background:var(--primaryFill); color:var(--background);
+    padding:12px 24px; border-radius:10px;
+    font-size:17px; font-weight:600; line-height:23px;
+    transition:background-color 200ms cubic-bezier(0.2,0,0,1);
+  }
+  .cta:hover { background:var(--primary); }
+  .cta svg { display:block; }
+  .trial { color:var(--textMuted); font-size:16px; }
+
+  .caps { display:grid; gap:16px; border-top:1px solid var(--borderSubtle); padding:24px 0; }
+  @media (min-width:640px) { .caps { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+  .caps h2 { margin:0; color:var(--textPrimary); }
+  .caps p { margin:4px 0 0; color:var(--textSecondary); }
+
+  .foot {
+    display:flex; flex-wrap:wrap; gap:16px; align-items:center;
+    border-top:1px solid var(--borderSubtle); padding:16px 0;
+    color:var(--textMuted);
+  }
+  .foot a { color:var(--textMuted); }
+  .foot a:hover { color:var(--textSecondary); }
+
+  @media (prefers-reduced-motion:reduce) { * { transition-duration:0.001ms !important; } }
+</style>
 </head>
-<body style="margin:0;background:#0D0D0D;color:#9E9E9E;font-family:-apple-system,Segoe UI,Roboto,sans-serif">
-<p style="padding:24px"><a href="/privacy/" style="color:#F5A623">Privacy policy</a></p>
+<body>
+<main class="page">
+
+  <header class="top">
+    <span class="wordmark">Volyume</span>
+  </header>
+
+  <section class="hero">
+    <h1 class="type-display">Less thinking. More lifting.</h1>
+    <p class="sub type-h3">
+      Precision training and nutrition coaching that adapts to you, week by week. Private by design.
+    </p>
+    <div class="actions">
+      <a class="cta" href="https://play.google.com/store/apps/details?id=app.volyume">
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="#0D0D0D"/></svg>
+        Get it on Google Play
+      </a>
+    </div>
+  </section>
+
+  <section class="caps">
+    <div>
+      <h2 class="type-title">Precision Coaching</h2>
+      <p class="type-body">A weekly review that changes your plan and explains why.</p>
+    </div>
+    <div>
+      <h2 class="type-title">Progress in depth</h2>
+      <p class="type-body">Lifts, volume and body trends, read at full size on the web.</p>
+    </div>
+    <div>
+      <h2 class="type-title">Private by design</h2>
+      <p class="type-body">Your data stays yours. Built on published training science.</p>
+    </div>
+  </section>
+
+  <footer class="foot type-caption">
+    <span>Volyume</span>
+    <a href="/privacy/">Privacy</a>
+  </footer>
+
+</main>
 </body>
 </html>
