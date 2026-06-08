@@ -9,7 +9,8 @@
     "test": "jest",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "release:check": "npm ci --legacy-peer-deps --ignore-scripts && npx tsc --noEmit --strict && npm run lint && npm test -- --runInBand && npm audit --production --audit-level=high"
   },
   "jest": {
     "testEnvironment": "node",

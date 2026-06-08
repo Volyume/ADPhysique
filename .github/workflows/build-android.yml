@@ -383,6 +383,18 @@ jobs:
           path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
 
+      # IMP-001: release quality gate. Runs the release:check script (strict
+      # type-check, lint, full test suite, production audit at the high level)
+      # BEFORE the AAB is published as an artifact, so a build that does not
+      # pass the gate never produces an uploadable Play bundle. A failure here
+      # fails the job. See package.json "release:check".
+      # Note: `npm audit --production --audit-level=high` currently flags the
+      # Expo build-chain advisories (build-host only, not runtime). Clearing or
+      # formally excepting those is a manual action tracked in the audit's
+      # DOCUMENT B; until then this gate will report them.
+      - name: Release gate (release:check)
+        run: npm run release:check
+
       - name: Upload AAB artifact (Play Store)
         uses: actions/upload-artifact@v4
         with:
