@@ -1631,9 +1631,14 @@ export async function getWorkoutSetsForWorkoutIds(workoutIds) {
 // Returns an array of `weeksBack` entries, ordered oldest → newest.
 // Each entry: { weekLabel: 'W1'|...'W4', weekStart: ms, weekEnd: ms, volumeByMuscle: { chest: 8, ... } }
 // Only working sets (set_type != 'warmup') are counted. Uses the exercise's primary_muscle field.
-export async function getWeeklyVolumeByMuscle(userId, weeksBack = 4) {
+export async function getWeeklyVolumeByMuscle(userId, weeksBack = 4, anchorMs = Date.now()) {
   const d = await db();
-  const now = Date.now();
+  // ALGO-001: the trailing windows anchor here. The default Date.now() keeps
+  // the heatmap callers unchanged; the weekly check-in passes the END of its
+  // Monday-anchored week (weekStartMs + 7d) so the week-over-week comparison
+  // matches the week the user is actually submitting, not a rolling 7-day
+  // window read off the wall clock.
+  const now = Number.isFinite(anchorMs) ? anchorMs : Date.now();
   const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
   // Build week boundaries going back `weeksBack` weeks from now.
@@ -4217,10 +4222,25 @@ export async function getWeeklySessionStats(userId, weekStart) {
   const avgPrev = prev4.length
     ? prev4.reduce((s, r) => s + (r.wk_count ?? 0), 0) / prev4.length
     : 3;
-  return {
-    completed: row?.completed ?? 0,
-    planned: Math.max(row?.completed ?? 0, Math.round(avgPrev) || 3),
-  };
+
+  // ALGO-002: planned sessions come from the active plan's training days (the
+  // number of routines in the active programme), which is what the plan
+  // actually prescribes this week. The trailing-average estimate is only a
+  // fallback for users with no active plan to read.
+  let plannedFromPlan = null;
+  try {
+    const plan = await getActivePlan(userId);
+    if (plan?.id) {
+      const routines = await getRoutinesForPlan(plan.id);
+      if (Array.isArray(routines) && routines.length > 0) plannedFromPlan = routines.length;
+    }
+  } catch (_) { /* fall back to the historical estimate below */ }
+
+  const completed = row?.completed ?? 0;
+  const planned = plannedFromPlan != null
+    ? plannedFromPlan
+    : Math.max(completed, Math.round(avgPrev) || 3);
+  return { completed, planned };
 }
 
 // True when a workout exists for the given calendar day (any state,
@@ -4270,22 +4290,34 @@ export async function getWeeklyPRCount(userId, weekStart) {
   const weekStartMs = coerceWeekStartMs(weekStart, 'getWeeklyPRCount');
   const d = await db();
   const weekEnd = weekStartMs + 7 * 86400000;
+  // ALGO-003: a PR is the best estimated 1RM for an exercise beating its prior
+  // best estimated 1RM, not just a heavier top-set weight. Epley e1RM =
+  // weight * (1 + reps/30) credits a same-weight higher-rep set and a pure rep
+  // PR, both of which a weight-only comparison missed. Warm-up sets excluded.
   const row = await d.getFirstAsync(
-    `SELECT COUNT(DISTINCT ws.exercise_id) AS pr_count
-     FROM workout_sets ws
-     JOIN workouts w ON ws.workout_id = w.id
-     WHERE ws.user_id = ? AND w.is_completed = 1
-       AND w.started_at >= ? AND w.started_at < ?
-       AND ws.weight > (
-         SELECT COALESCE(MAX(ws2.weight), 0)
-         FROM workout_sets ws2
-         JOIN workouts w2 ON ws2.workout_id = w2.id
-         WHERE ws2.exercise_id = ws.exercise_id
-           AND ws2.user_id = ws.user_id
-           AND w2.is_completed = 1
-           AND w2.started_at < ?
-       )`,
-    [userId, weekStartMs, weekEnd, weekStartMs],
+    `SELECT COUNT(*) AS pr_count FROM (
+       SELECT ws.exercise_id,
+              MAX(ws.weight * (1.0 + COALESCE(ws.actual_reps, 1) / 30.0)) AS wk_e1rm
+       FROM workout_sets ws
+       JOIN workouts w ON ws.workout_id = w.id
+       WHERE ws.user_id = ? AND w.is_completed = 1
+         AND w.started_at >= ? AND w.started_at < ?
+         AND ws.weight IS NOT NULL AND ws.weight > 0
+         AND (ws.set_type IS NULL OR ws.set_type != 'warmup')
+       GROUP BY ws.exercise_id
+     ) cur
+     WHERE cur.wk_e1rm > COALESCE((
+       SELECT MAX(ws2.weight * (1.0 + COALESCE(ws2.actual_reps, 1) / 30.0))
+       FROM workout_sets ws2
+       JOIN workouts w2 ON ws2.workout_id = w2.id
+       WHERE ws2.exercise_id = cur.exercise_id
+         AND ws2.user_id = ?
+         AND w2.is_completed = 1
+         AND w2.started_at < ?
+         AND ws2.weight IS NOT NULL AND ws2.weight > 0
+         AND (ws2.set_type IS NULL OR ws2.set_type != 'warmup')
+     ), 0)`,
+    [userId, weekStartMs, weekEnd, userId, weekStartMs],
   );
   return row?.pr_count ?? 0;
 }

@@ -134,13 +134,22 @@ export function assessDataConfidence({ weigh_ins, adherenceKnown, weeksInPhase, 
  *   3 = Still slightly sore (energy ≤3 or soreness ≥3)
  *   4 = Soreness limits performance (soreness ≥4)
  */
-function getRecoveryScore(energyScore, sorenessScore) {
+function getRecoveryScore(energyScore, sorenessScore, stressScore = null) {
   const e = energyScore ?? 3;
   const s = sorenessScore ?? 3;
-  if (s >= 4) return 4;
-  if (e <= 2 || s >= 3) return 3;
-  if (e >= 4 && s <= 1) return 1;
-  return 2;
+  let score;
+  if (s >= 4) score = 4;
+  else if (e <= 2 || s >= 3) score = 3;
+  else if (e >= 4 && s <= 1) score = 1;
+  else score = 2;
+  // PIPE-001 / ALGO-006: high life stress impairs recovery. Stress runs 1 (low)
+  // to 5 (very high) on the check-in. A high-stress week can only worsen the
+  // read toward a hold, never improve it, so the matrix won't push more volume
+  // onto someone who is frazzled outside the gym. Below 4 (high) it's left to
+  // energy and soreness as before, so existing behaviour is unchanged.
+  const st = stressScore ?? null;
+  if (st != null && st >= 4 && score < 3) score = 3;
+  return score;
 }
 
 /**
@@ -290,6 +299,46 @@ function pickWhy(keys, seed = 0) {
   return pool[seed % pool.length];
 }
 
+/**
+ * PIPE-003: lift lightweight structured flags out of the free-text note rather
+ * than collapsing it to a single yes/no. The boolean hasUnusualEvent still
+ * drives the confidence hold; these flags let the engine treat an illness or
+ * injury week as a safety reason to hold progression and let callers surface
+ * the context. Deliberately simple word matching, not NLP. Word boundaries
+ * keep "ill" from firing on "will"/"skill" and "pain" stays its own token.
+ */
+export function parseNoteFlags(notes) {
+  const flags = { travel: false, illness: false, injury: false, missedLogging: false, menstrual: false };
+  if (!notes || typeof notes !== 'string') return flags;
+  const t = notes.toLowerCase();
+  flags.travel = /\b(travel\w*|holiday|vacation|flight|flying|hotel|trip|away)\b/.test(t);
+  flags.illness = /\b(ill|illness|sick|cold|flu|fever|virus|covid|unwell|poorly)\b/.test(t);
+  flags.injury = /\b(injur\w*|tweak\w*|strain\w*|sprain\w*|hurt|pulled|pain)\b/.test(t);
+  flags.missedLogging = /\b(forgot|missed|untracked)\b/.test(t) || /did\s*n[o']?t?\s*log/.test(t) || /no\s+log/.test(t);
+  flags.menstrual = /\b(period|menstr\w*|pms)\b/.test(t) || t.includes('time of the month');
+  return flags;
+}
+
+/**
+ * ALGO-004: the single source of truth for translating the check-in's stored
+ * calorie answer ('yes'/'no'/'untracked') into the engine vocabulary
+ * ('hit'/'under'/'over'/'no'/'untracked'). Used by the coach screen at load,
+ * by the history builder, and by tests, so the stored and runtime vocabularies
+ * can't drift across the persistence boundary. avgKcal + targetKcal split a
+ * plain 'no' into a direction; without them a 'no' stays a neutral off-target
+ * rather than guessing a direction and sizing a correction the wrong way.
+ */
+export function mapCalsAdherence(raw, avgKcal = null, targetKcal = null) {
+  if (raw == null) return null;
+  if (raw === 'untracked' || raw === 'hit' || raw === 'under' || raw === 'over') return raw;
+  if (raw === 'yes') return 'hit';
+  if (raw === 'no') {
+    if (avgKcal != null && targetKcal) return avgKcal < targetKcal ? 'under' : 'over';
+    return 'no';
+  }
+  return raw;
+}
+
 // ─── Main algorithm ───────────────────────────────────────────────────────────
 
 /**
@@ -332,6 +381,10 @@ export function runWeeklyCoach(inputs) {
     // Current daily macros, read from nutrition_targets by the caller.
     // Only used to build the high-day / low-day carb cycle (row 6); the
     // cycle holds protein and fat and shifts carbs onto training days.
+    // PIPE-007 (by design, founder 2026-06-08): weekly coaching decisions run
+    // off total calories and weight trend, not macro adherence. Macros inform
+    // the carb cycle only; protein sufficiency is set at plan time, not policed
+    // weekly here.
     currentProteinG = null,
     currentCarbsG = null,
     currentFatG = null,
@@ -440,7 +493,14 @@ export function runWeeklyCoach(inputs) {
   const phase = phaseConfig(goalPhase);
   const energyScore    = checkin?.energyScore    ?? null;
   const sorenessScore  = checkin?.sorenessScore  ?? null;
+  // PIPE-001: stress (1 low … 5 very high) feeds recovery scoring below.
+  const stressScore    = checkin?.stressScore    ?? null;
   const calsAdherence  = checkin?.calsAdherence  ?? 'untracked';
+  // PIPE-004 (kept by design): stepsAdherence is a legacy subjective chip the
+  // current check-in no longer collects. It stays as an explicit fallback for
+  // old rows that carry it (used in WHAT'S WORKING below); modern rows pass
+  // stepsAvg instead. Founder decision 2026-06-08: keep the fallback, don't
+  // drop it, so historical check-ins still read correctly.
   const stepsAdherence = checkin?.stepsAdherence ?? null;
   // Week's average steps: auto when 4+ days are registered, else the manual
   // figure the user typed on the check-in. A secondary signal: it refines the
@@ -538,17 +598,36 @@ export function runWeeklyCoach(inputs) {
   const excellentRec = energyScore != null && energyScore >= 4 && sorenessScore != null && sorenessScore <= 2;
 
   const trainingPerformance = checkin?.trainingPerformance ?? null;
-  const recoveryScore   = getRecoveryScore(energyScore, sorenessScore);
+  const recoveryScore   = getRecoveryScore(energyScore, sorenessScore, stressScore);
   const performanceScore = getPerformanceScore(sessionAdherence, prsThisWeek, trainingPerformance);
   const matrix = autoregulationMatrix(recoveryScore, performanceScore);
 
-  const volumeSignal = matrix.volumeDelta;
-  const trainingSignal = matrix.trainingSignal;
+  let volumeSignal = matrix.volumeDelta;
+  let trainingSignal = matrix.trainingSignal;
   const matrixDeload = matrix.deloadFlag && consecutivePoorRecoveryWeeks >= 1;
-  const recoveryFlag = matrixDeload ? 'deload_suggested' : (poorRecovery ? 'concerned' : 'normal');
+
+  // PIPE-002 + PIPE-003 safety cap. A flagged joint pain, or an illness/injury
+  // mentioned in the free-text note, blocks progression regardless of the
+  // autoregulation read. Pain and illness are safety signals: hold volume and
+  // drop any push. It can only cap an increase, never turn a planned reduce or
+  // deload into a progress, so a recovery week still reduces as intended.
+  const jointPainFlagged = !!(checkin?.jointPain);
+  const noteFlags = parseNoteFlags(checkin?.notes);
+  const safetyHold = jointPainFlagged || noteFlags.injury || noteFlags.illness;
+  let safetyHoldNote = null;
+  if (safetyHold && trainingSignal !== 'reduce') {
+    if (volumeSignal > 0) volumeSignal = 0;
+    if (trainingSignal === 'push') trainingSignal = 'hold';
+    safetyHoldNote = jointPainFlagged
+      ? 'You flagged joint pain, so the plan holds rather than adding work. Ease the load on the sore movement or swap it for a pain-free variation.'
+      : 'You flagged feeling unwell or hurt this week, so the plan holds rather than adding work until it settles.';
+  }
+
+  const recoveryFlag = matrixDeload ? 'deload_suggested' : ((poorRecovery || safetyHold) ? 'concerned' : 'normal');
   const loadSignal = trainingSignal === 'push' ? 'progress' : trainingSignal;
 
-  const trainingNote = getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matrixDeload);
+  const baseTrainingNote = getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matrixDeload);
+  const trainingNote = safetyHoldNote ? `${safetyHoldNote} ${baseTrainingNote}` : baseTrainingNote;
 
   // ── CALORIE ADJUSTMENT ────────────────────────────────────────────────────
   let calorieAdjustment = null;
@@ -1150,6 +1229,11 @@ export function runWeeklyCoach(inputs) {
     volumeSignal,
     loadSignal,
     recoveryFlag,
+    // PIPE-002 / PIPE-003: surface the safety context so the caller and
+    // telemetry can see why progression was held this week.
+    jointPainFlagged,
+    safetyHold,
+    noteFlags,
     goalPhase,
     differential_output,
   };

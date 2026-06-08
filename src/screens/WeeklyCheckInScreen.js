@@ -224,8 +224,11 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const [step, setStep] = useState(0); // 0–3
 
   // ─── Gate state ──────────────────────────────────────────────────────────────
-  // 'loading' | 'wrong_day' | 'too_soon' | 'need_weights' | 'open'
+  // 'loading' | 'wrong_day' | 'too_soon' | 'need_weights' | 'open' | 'load_error'
   const [gateState, setGateState] = useState('loading');
+  // PIPE-006: bump to re-run the loader after a load failure, so the error
+  // state is recoverable rather than failing open into the form.
+  const [reloadKey, setReloadKey] = useState(0);
   // For 'too_soon': how many more days the user needs to wait + which
   // chosen day that lands on. Both surfaced in the gate copy.
   const [tooSoonCtx, setTooSoonCtx] = useState({ daysToWait: 0, nextDayLabel: null });
@@ -398,12 +401,16 @@ export default function WeeklyCheckInScreen({ navigation }) {
         // Week-over-week working-set volume, so the verdict reflects whether
         // training is improving, holding or falling away, not just whether
         // sessions happened. getWeeklyVolumeByMuscle returns [lastWeek, thisWeek]
-        // trailing-7-day windows with the same allocation the heatmap uses.
+        // with the same allocation the heatmap uses. ALGO-001: anchor the
+        // windows to the END of this Monday-anchored check-in week
+        // (weekStartMs + 7d), so "this week" is the week being submitted and
+        // "last week" is the full prior Mon-Sun week, not a rolling 7-day
+        // window read off the wall clock.
         let volDeltaPct = null;
         let volThisWeek = null;
         let volLastWeek = null;
         try {
-          const vol = await getWeeklyVolumeByMuscle(user.id, 2);
+          const vol = await getWeeklyVolumeByMuscle(user.id, 2, weekStartMs + 7 * 86400000);
           if (Array.isArray(vol) && vol.length === 2) {
             const sumSets = (w) => Object.values(w?.volumeByMuscle ?? {}).reduce((a, n) => a + (Number(n) || 0), 0);
             volLastWeek = Math.round(sumSets(vol[0]));
@@ -506,15 +513,20 @@ export default function WeeklyCheckInScreen({ navigation }) {
           setGateState('open');
         }
       } catch (e) {
+        // PIPE-006: do NOT fail open. A load failure means the weight, session
+        // and food context that gates the check-in could not be read, so
+        // opening the form would let the user submit against missing data and
+        // hand the coach a less reliable read. Surface a recoverable error with
+        // a retry instead.
         logWarn('WeeklyCheckIn.load', e?.message);
-        setGateState('open'); // fail open so users aren't permanently blocked
+        if (!cancelled) setGateState('load_error');
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
     load();
     return () => { cancelled = true; };
-  }, [user?.id]);
+  }, [user?.id, reloadKey]);
 
   // Compute EMA trend weight from this week's weigh-ins
   const ewmaSeries = weekWeights.length > 0 ? computeEWMA(weekWeights) : [];
@@ -1112,6 +1124,35 @@ export default function WeeklyCheckInScreen({ navigation }) {
           </TouchableOpacity>
           <TouchableOpacity style={styles.gateDeferBtn} onPress={() => setGateState('open')} activeOpacity={0.75} accessibilityRole="button">
             <Text style={styles.gateDeferBtnText}>Check in anyway</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (gateState === 'load_error') {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.gateHeader}>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close">
+            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.gateCenter}>
+          <View style={styles.gateIconWrap}>
+            <Ionicons name="cloud-offline-outline" size={32} color={colors.warning} />
+          </View>
+          <Text style={styles.gateTitle}>Couldn't load your week</Text>
+          <Text style={styles.gateBody}>
+            We couldn't read this week's data, so the check-in is held to keep the coaching accurate.
+          </Text>
+          <TouchableOpacity
+            style={styles.gateBtn}
+            onPress={() => { setLoading(true); setGateState('loading'); setReloadKey(k => k + 1); }}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+          >
+            <Text style={styles.gateBtnText}>Try again</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>

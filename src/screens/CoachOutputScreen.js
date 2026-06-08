@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import useAppStore from '../store/useAppStore';
-import { runWeeklyCoach } from '../lib/weeklyCoach';
+import { runWeeklyCoach, mapCalsAdherence } from '../lib/weeklyCoach';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getLatestCheckin,
@@ -34,7 +34,7 @@ import {
 } from '../lib/database';
 import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
 import { getRecentIntakeSummary } from '../lib/food/db';
-import { localWeekStartMs } from '../lib/dayKey';
+import { localWeekStartMs, localDayKey } from '../lib/dayKey';
 import { track as trackEngineEvent } from '../lib/engineTelemetry';
 import DifferentialBadge from '../components/DifferentialBadge';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
@@ -976,28 +976,16 @@ export default function CoachOutputScreen({ navigation, route }) {
       const latestBf = (await getBodyMetricLog(user.id, 60).catch(() => []))
         .find(m => m.bodyFatPercent != null) ?? null;
 
-      // Map the check-in's calorie answer ('yes'/'no'/'untracked') onto the
-      // engine's vocabulary ('hit'/'under'/'over'/'untracked'). 'no' splits to
-      // under/over from the logged average vs target so the adherence-sized
-      // correction and the differential paywall gate (which only count
-      // under/over) actually fire. Done here at the boundary, not in the DB,
-      // so the stored value and the frozen build are untouched.
-      const mapCals = (raw, avgKcal) => {
-        if (raw == null) return null;
-        if (raw === 'untracked' || raw === 'hit' || raw === 'under' || raw === 'over') return raw;
-        if (raw === 'yes') return 'hit';
-        if (raw === 'no') {
-          const t = nutrition?.targetKcal;
-          // Only split to under/over when we actually have that week's logged
-          // average to judge direction. With no in-app food data (tracked
-          // elsewhere) leave it as a plain off-target 'no': the engine treats
-          // that as tracked with a neutral adherence factor (1.0), rather than
-          // guessing a direction and sizing the calorie change the wrong way.
-          if (avgKcal != null && t) return avgKcal < t ? 'under' : 'over';
-          return 'no';
-        }
-        return raw;
-      };
+      // ALGO-004: map the check-in's stored calorie answer
+      // ('yes'/'no'/'untracked') onto the engine vocabulary via the single
+      // shared helper in weeklyCoach, so the persistence and runtime
+      // vocabularies can't drift. 'no' splits to under/over from the logged
+      // average vs target (so the adherence-sized correction and the
+      // differential paywall gate, which only count under/over, actually fire);
+      // with no in-app food data it stays a neutral off-target. Done here at the
+      // boundary, not in the DB, so the stored value and the frozen build are
+      // untouched.
+      const mapCals = (raw, avgKcal) => mapCalsAdherence(raw, avgKcal, nutrition?.targetKcal);
       const engineCheckin = checkin
         ? { ...checkin, calsAdherence: mapCals(checkin.calsAdherence, intake.avgKcal) }
         : checkin;
@@ -1029,21 +1017,45 @@ export default function CoachOutputScreen({ navigation, route }) {
       const lastCalAdjustmentDirection = lastOutput?.adjustments?.calories?.change
         ? (lastOutput.adjustments.calories.change > 0 ? 'up' : 'down')
         : null;
-      const lastCalAdjustmentWeeksAgo = lastCalAdjustmentDirection ? 1 : 99;
+      // ALGO-005: real elapsed weeks since the last calorie change, not a binary
+      // 1/99. Each saved output carries lastCalAdjustmentWeekStart (the week a
+      // change was last applied, carried forward across holds), so the two-week
+      // cooldown counts the actual elapsed weeks rather than treating "adjusted
+      // last week" and "adjusted ten weeks ago" the same. 99 when no calorie
+      // change has ever been recorded.
+      const prevCalAdjustmentWeekStart = lastOutput?.lastCalAdjustmentWeekStart ?? null;
+      const lastCalAdjustmentWeeksAgo = prevCalAdjustmentWeekStart != null
+        ? Math.max(0, Math.round((weekStart - prevCalAdjustmentWeekStart) / (7 * 86400000)))
+        : 99;
 
       // ED-pattern detector context (Move #2). Build the rolling
       // weekly history from the recent check-ins we already loaded.
       // Each entry: { energy, adherence, hasCheckin, hasFoodData }.
       // Most-recent-first to match the detector's contract.
-      const recentWeeklyHistory = recentCheckins.map(ci => ({
-        energy: ci.energyScore ?? null,
-        // Per-week intake for past weeks is not available here, so do not guess
-        // under/over from THIS week's average; map 'no' to a neutral off-target.
-        adherence: mapCals(ci.calsAdherence, null),
-        hasCheckin: true,
-        // Food data presence is best-judged at the check-in row:
-        // hasFoodData true when calsAdherence was tracked.
-        hasFoodData: ci.calsAdherence != null && ci.calsAdherence !== 'untracked',
+      // PIPE-005: recover the direction (under/over) of each past week's
+      // calorie adherence. For every recent check-in week, read that week's own
+      // trailing-7-day intake average (anchored to the week-ending day-key) and
+      // map a plain 'no' into under/over against the current target. Older weeks
+      // are judged against the current target, which is an approximation when
+      // the target has since changed, but it recovers the direction the
+      // multi-week logic needs instead of dropping it.
+      const recentWeeklyHistory = await Promise.all(recentCheckins.map(async (ci) => {
+        let weekAvg = null;
+        if (ci.weekStart) {
+          try {
+            const weekEndKey = localDayKey(ci.weekStart + 6 * 86400000);
+            const weekIntake = await getRecentIntakeSummary(user.id, weekEndKey);
+            weekAvg = weekIntake?.avgKcal ?? null;
+          } catch (_) { /* leave null; mapCals keeps a neutral off-target */ }
+        }
+        return {
+          energy: ci.energyScore ?? null,
+          adherence: mapCals(ci.calsAdherence, weekAvg),
+          hasCheckin: true,
+          // Food data presence is best-judged at the check-in row:
+          // hasFoodData true when calsAdherence was tracked.
+          hasFoodData: ci.calsAdherence != null && ci.calsAdherence !== 'untracked',
+        };
       }));
       const goalLockAdvanced = !!userProfile?.goalLockAdvanced;
       const openFlag = await getOpenEdPatternFlag(user.id).catch(() => null);
@@ -1184,7 +1196,14 @@ export default function CoachOutputScreen({ navigation, route }) {
       // confirm-then-apply: the suggestion is surfaced with an Apply
       // button and only writes to nutrition_targets when the user taps.
       // See handleApplyCalories below.
-      await saveCoachOutput(user.id, { weekStart, ...result });
+      // ALGO-005: carry forward the week a calorie change was last applied, so
+      // future runs compute real elapsed weeks. This week's weekStart when a
+      // change is applied now; otherwise the value carried from the previous
+      // output (or null if none has ever been made).
+      const lastCalAdjustmentWeekStart = result.adjustments?.calories?.change
+        ? weekStart
+        : prevCalAdjustmentWeekStart;
+      await saveCoachOutput(user.id, { weekStart, ...result, lastCalAdjustmentWeekStart });
 
       setOutput(result);
 
