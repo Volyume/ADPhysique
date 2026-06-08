@@ -1,11 +1,11 @@
 /**
  * CoachingNotesPanel
  *
- * Collapsible technique notes shown below the demo/illustration. Collapsed by
- * default (progressive disclosure: advanced users glance at the loop and move
- * on; beginners are one tap from the detail). Renders structured form_cues
- * when present, and folds in the existing FORM_TIPS prose / coaching cue /
- * exercise notes so nothing is duplicated.
+ * The "Technique guide" shown below the demo/illustration. Open by default so
+ * the written how-to is visible immediately (when there's no animation, this IS
+ * the demonstration). Renders structured form_cues when present, and folds in
+ * the existing FORM_TIPS prose / coaching cue / exercise notes so nothing is
+ * duplicated.
  *
  * Renders nothing if there is no content at all.
  *
@@ -36,7 +36,10 @@ function NumberedList({ items }) {
 }
 
 export default function CoachingNotesPanel({ formCues, commonMistakes, formTip, coachingCue, notes }) {
-  const [open, setOpen] = useState(false);
+  // Open by default. When there's no demo animation this written guide IS the
+  // demonstration, so it must be visible, not hidden behind a tap — the card
+  // above promises "Technique guide below", and this is it.
+  const [open, setOpen] = useState(true);
 
   const cues = formCues && typeof formCues === 'object' ? formCues : null;
   const mistakes = Array.isArray(commonMistakes) ? commonMistakes : null;
@@ -58,10 +61,10 @@ export default function CoachingNotesPanel({ formCues, commonMistakes, formTip, 
         onPress={toggle}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        accessibilityLabel="Coaching notes"
+        accessibilityLabel="Technique guide"
       >
         <Ionicons name="bulb-outline" size={16} color={colors.primary} />
-        <Text style={styles.headerText}>Coaching notes</Text>
+        <Text style={styles.headerText}>Technique guide</Text>
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
       </Pressable>
 
