@@ -18,7 +18,7 @@ import {
 import { stoneLbsToKg, ftInToCm, parseBodyWeightToKg } from '../lib/units';
 import { signUpWithEmail, signInWithEmail, signInWithGoogle, signInWithApple } from '../lib/supabase';
 import { bulkUploadLocalData, syncProfile, pullFromCloud } from '../lib/sync';
-import { generateAndSavePlan } from '../lib/planAutoGen';
+import { generateAndSavePlan, planShortfallNote } from '../lib/planAutoGen';
 import {
   requestNotificationPermissions,
   scheduleMorningWeightNotification,
@@ -571,9 +571,19 @@ export default function ProOnboardingScreen({ navigation }) {
         carbsG: nutritionTargets.carbsG,
         maintenanceKcal: nutritionTargets.maintenanceKcal,
       };
+      // FF-005: the AsyncStorage copy is what other screens read; the DB save is
+      // now awaited (not fire-and-forget) so a failure is logged rather than
+      // silently dropped. Targets stay usable from AsyncStorage and sync retries
+      // the cloud write, so onboarding still completes (founder decision
+      // 2026-06-08: complete + retry from Home).
       await AsyncStorage.setItem('@volyume_nutrition_targets', JSON.stringify(nutritionData)).catch(() => {});
       if (user?.id) {
-        await saveNutritionTargets(user.id, nutritionData).catch(() => {});
+        try {
+          await saveNutritionTargets(user.id, nutritionData);
+        } catch (e) {
+          // eslint-disable-next-line global-require
+          try { require('../lib/errorLog').logError('ProOnboardingScreen.saveNutritionTargets', e, { userId: user.id }); } catch (_) {}
+        }
       }
 
       // Auto-generate the training plan so the user lands on a ready-to-train
@@ -599,6 +609,10 @@ export default function ProOnboardingScreen({ navigation }) {
             'Plan setup didn\'t finish',
             `Your profile is saved but your training plan didn\'t generate (${planResult.error}). Open Home and tap "Build my plan" to retry.`,
           );
+        } else if (planResult.partial) {
+          // FF-003: the plan generated but couldn't fulfil every requested move
+          // (typically constrained equipment). Tell the user plainly.
+          appAlert('Plan ready', planShortfallNote(planResult.missedCount));
         }
       }
     } catch (e) {

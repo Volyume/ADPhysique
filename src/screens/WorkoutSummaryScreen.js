@@ -20,6 +20,7 @@ import { useToast } from '../components/Toast';
 import { syncWorkout } from '../lib/sync';
 import { incrementSessionCount, shouldPromptReview, requestReview } from '../lib/storeReview';
 import { workoutDayMs } from '../lib/workoutDate';
+import { localWeekStartMs } from '../lib/dayKey';
 
 const RATING_LABELS = {
   sessionDifficulty: ['', 'Very Easy', 'Easy', 'Moderate', 'Hard', 'Brutal'],
@@ -30,16 +31,6 @@ const RATING_LABELS = {
   energyScore: ['', 'Low', 'Fair', 'Moderate', 'Good', 'High'],
   sleepQuality: ['', 'Poor', 'Fair', 'OK', 'Good', 'Excellent'],
 };
-
-function getWeekStart() {
-  const now = new Date();
-  const day = now.getDay(); // 0=Sun, 1=Mon...
-  const diff = (day === 0 ? -6 : 1 - day); // Monday-first
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + diff);
-  monday.setHours(0, 0, 0, 0);
-  return monday.getTime();
-}
 
 function RatingRow({ label, field, value, max, onChange }) {
   const labels = RATING_LABELS[field];
@@ -356,7 +347,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     if (user?.id) {
       try {
         await saveWeeklyCheckin(user.id, {
-          weekStart: getWeekStart(),
+          // FF-006: attribute the sleep-quality rating to the workout's own
+          // week, not the wall clock at summary-close time. A late or
+          // cross-midnight close used to land it in the wrong weekly bucket.
+          // localWeekStartMs is the locked-rule, local Monday-anchored helper.
+          weekStart: localWeekStartMs(workoutDayMs({ startedAt, endedAt })),
           sleepQuality: feedback.sleepQuality || null,
         });
       } catch (_e) {}

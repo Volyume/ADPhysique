@@ -13,7 +13,7 @@ import {
   PHYSIQUE_GOALS,
   GOALS_WITH_WEAK_POINTS, WEAK_POINT_MUSCLES,
 } from '../lib/coachingGoals';
-import { generateAndSavePlan } from '../lib/planAutoGen';
+import { generateAndSavePlan, planShortfallNote } from '../lib/planAutoGen';
 
 // Training setup options, mirror the lists in ProOnboardingScreen and
 // ProGoalSetupScreen so a re-run here produces the same plan structure as a
@@ -105,10 +105,12 @@ export default function PlanUpdateScreen({ navigation }) {
       recoveryRating,
     };
 
-    try {
-      await saveLocalProfile(user.id, updatedProfile);
-    } catch (_) {}
-
+    // FF-002: rebuild the plan FIRST off the staged profile
+    // (generateAndSavePlan reads the profile passed to it, not storage). Only
+    // commit the new training profile as canonical once the rebuild succeeds,
+    // so a failed rebuild can't leave a split-brain state (profile says one
+    // setup, the active plan still the old one). On failure, keep the user here
+    // to retry instead of saving and navigating away.
     let planResult = { ok: false, error: 'not attempted' };
     try {
       planResult = await generateAndSavePlan(user.id, updatedProfile);
@@ -116,10 +118,21 @@ export default function PlanUpdateScreen({ navigation }) {
       planResult = { ok: false, error: e?.message ?? 'unknown' };
     }
 
+    if (!planResult.ok) {
+      setSaving(false);
+      toast.show(`Couldn't rebuild your plan (${planResult.error}). Your training setup wasn't changed, try again.`, { variant: 'error', duration: 5000 });
+      return;
+    }
+
+    try {
+      await saveLocalProfile(user.id, updatedProfile);
+    } catch (_) {}
+
     setSaving(false);
 
-    if (!planResult.ok) {
-      toast.show(`Training saved, but the plan didn't rebuild (${planResult.error}). On Home, tap Build my plan to retry`, { variant: 'warning', duration: 5000 });
+    if (planResult.partial) {
+      // FF-003: the plan generated but couldn't fulfil every requested move.
+      toast.show(planShortfallNote(planResult.missedCount), { variant: 'warning', duration: 6000 });
     } else {
       toast.show('Plan rebuilt around your new training setup', { variant: 'success' });
     }

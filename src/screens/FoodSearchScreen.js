@@ -260,24 +260,40 @@ export default function FoodSearchScreen({ navigation, route }) {
     // (each logFoodEntry mints a fresh id, so duplicates can't be deduped).
     if (loggingPlateRef.current) return;
     loggingPlateRef.current = true;
+    const total = plate.length;
+    let logged = 0;
     try {
-    for (const it of plate) {
-      // eslint-disable-next-line no-await-in-loop
-      await logFoodEntry(userId, {
-        entryDate,
-        mealSlot,
-        foodRef: it.food.food_ref,
-        quantityG: it.quantityG,
-        kcal: it.kcal,
-        proteinG: it.proteinG,
-        carbsG: it.carbsG,
-        fatG: it.fatG,
-        fibreG: it.fibreG,
-      });
-    }
-    setPlate([]);
-    setShowPlate(false);
-    navigation.goBack();
+      for (const it of plate) {
+        // eslint-disable-next-line no-await-in-loop
+        await logFoodEntry(userId, {
+          entryDate,
+          mealSlot,
+          foodRef: it.food.food_ref,
+          quantityG: it.quantityG,
+          kcal: it.kcal,
+          proteinG: it.proteinG,
+          carbsG: it.carbsG,
+          fatG: it.fatG,
+          fibreG: it.fibreG,
+        });
+        logged++;
+      }
+      setPlate([]);
+      setShowPlate(false);
+      navigation.goBack();
+    } catch (e) {
+      // FF-007: a mid-plate write failure used to leave the plate up with no
+      // feedback. Tell the user what actually logged, drop the logged items so a
+      // retry can't double-log them (entries are sequential), and stay on screen.
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logError('FoodSearch.logPlate', e); } catch (_) {}
+      toast.show(
+        logged > 0
+          ? `Logged ${logged} of ${total}. The rest didn't save, try again.`
+          : "Couldn't log your plate, try again.",
+        { variant: 'error', duration: 5000 },
+      );
+      if (logged > 0) setPlate((p) => p.slice(logged));
     } finally {
       loggingPlateRef.current = false;
     }
@@ -357,7 +373,11 @@ export default function FoodSearchScreen({ navigation, route }) {
       audit('food.suggestMeal', { mealId: s.id, mealSlot, itemCount: s.itemCount });
       await applyCuratedMealToDiary(userId, s.id, { mealSlot, entryDate });
       navigation.goBack();
-    } catch (_) {
+    } catch (e) {
+      // FF-007: surface the failure instead of only resetting the spinner.
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logError('FoodSearch.logCuratedMeal', e, { mealId: s.id }); } catch (_) {}
+      toast.show("Couldn't add that meal, try again.", { variant: 'error', duration: 4000 });
       setLoggingMealId(null);
     }
   }

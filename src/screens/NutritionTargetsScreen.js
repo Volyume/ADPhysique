@@ -403,10 +403,20 @@ export default function NutritionTargetsScreen({ navigation }) {
       });
 
       setResults(targets);
-      // Write to both stores: SQLite (primary) + AsyncStorage (read by other screens)
+      // Write to both stores: SQLite (primary) + AsyncStorage (read by other screens).
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(targets));
       if (user?.id) {
-        saveNutritionTargets(user.id, { ...targets, gdprConsented: true }).catch(() => {});
+        // FF-005: await the database save and surface a failure rather than
+        // fire-and-forget. The AsyncStorage copy above is already written, so
+        // the user keeps their targets locally; the toast tells them the full
+        // save didn't complete and to recalculate to retry.
+        try {
+          await saveNutritionTargets(user.id, { ...targets, gdprConsented: true });
+        } catch (e) {
+          // eslint-disable-next-line global-require
+          try { require('../lib/errorLog').logError('NutritionTargets.save', e, { userId: user.id }); } catch (_) {}
+          toast.show('Targets calculated and saved on this device, but the full save didn\'t finish. Recalculate to retry.', { variant: 'warning', duration: 6000 });
+        }
       }
 
       // Auto-seed Body Metrics with today's weight if no entry exists for today

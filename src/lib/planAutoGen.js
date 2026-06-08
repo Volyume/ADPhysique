@@ -101,8 +101,20 @@ export function buildPlanInputs(profile) {
 }
 
 /**
+ * FF-003: a short, plain-English note for a partial plan generation, used by
+ * onboarding and the rebuild flow. `missedCount` is how many requested moves
+ * could not be matched to the user's equipment / library.
+ */
+export function planShortfallNote(missedCount) {
+  const n = Number.isFinite(missedCount) ? missedCount : 0;
+  if (n <= 0) return 'Your plan is built. A couple of moves were swapped to fit your equipment.';
+  return `Your plan is built, but ${n} move${n === 1 ? '' : 's'} couldn't be matched to your equipment, so it may look a little lighter.`;
+}
+
+/**
  * Generate a plan and persist it. Activates it as the user's current
- * mesocycle. Returns { ok, programmeId, error } so callers can react.
+ * mesocycle. Returns { ok, programmeId, error } so callers can react. On a
+ * partial match it also returns { partial: true, missedCount, missedExercises }.
  */
 export async function generateAndSavePlan(userId, profile) {
   if (!userId) return { ok: false, error: 'No user' };
@@ -190,7 +202,15 @@ export async function generateAndSavePlan(userId, profile) {
     // plan. Users can restore any archived plan from the Archived
     // section on the Plans tab.
     await archiveOtherUserPlans(userId, prog.id);
-    return { ok: true, programmeId: prog.id };
+    const result = { ok: true, programmeId: prog.id };
+    if (totalWritten < totalRequested) {
+      // FF-003: surface the shortfall to the caller so onboarding / rebuild can
+      // tell the user the plan is thinner than requested.
+      result.partial = true;
+      result.missedCount = totalRequested - totalWritten;
+      result.missedExercises = missedNames;
+    }
+    return result;
   } catch (e) {
     return { ok: false, error: e?.message ?? 'DB write failed' };
   }

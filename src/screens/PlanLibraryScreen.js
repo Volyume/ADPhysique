@@ -230,6 +230,9 @@ export default function PlanLibraryScreen({ navigation, route }) {
   const listRef = useRef(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  // FF-004: distinguish a real load/init failure from a genuinely empty library
+  // so the list can offer a retry instead of a misleading "No plans found".
+  const [loadError, setLoadError] = useState(false);
 
   // Quiz state
   const [quizVisible, setQuizVisible] = useState(false);
@@ -256,11 +259,25 @@ export default function PlanLibraryScreen({ navigation, route }) {
       const [lib, pwc] = await Promise.all([getLibraryPlans(), getPlanWorkoutCounts()]);
       setPlans(lib);
       setWorkoutCounts(pwc);
-    } catch (_e) {
+      setLoadError(false);
+    } catch (e) {
+      // FF-004: a real init/storage failure must not masquerade as an empty
+      // library. Flag it so the list renders a retryable failure surface.
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logWarn('PlanLibrary.load', e?.message ?? 'unknown'); } catch (_) {}
+      setLoadError(true);
     } finally {
       setLoaded(true);
     }
   }
+
+  // FF-004: retry a failed load.
+  const handleRetry = useCallback(() => {
+    setLoaded(false);
+    setLoadError(false);
+    loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -458,7 +475,16 @@ export default function PlanLibraryScreen({ navigation, route }) {
           ) : null
         }
         ListEmptyComponent={
-          !loaded ? (
+          loadError ? (
+            <View style={styles.empty}>
+              <Ionicons name="cloud-offline-outline" size={48} color={colors.warning} />
+              <Text style={styles.emptyTitle}>Couldn't load plans</Text>
+              <Text style={styles.emptyText}>Something went wrong loading the plan library.</Text>
+              <TouchableOpacity onPress={handleRetry} accessibilityRole="button" style={{ marginTop: 14 }}>
+                <Text style={[styles.emptyText, { color: colors.primary }]}>Try again</Text>
+              </TouchableOpacity>
+            </View>
+          ) : !loaded ? (
             <View style={styles.skeletonWrap}>
               <SkeletonCard height={96} />
               <SkeletonCard height={96} />

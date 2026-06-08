@@ -6,7 +6,7 @@ and states, for each item, whether it is closed in code or remains a manual /
 operational action.
 
 Base: `main`. Checks at this point: `tsc --noEmit --strict` 0 errors, `eslint .`
-0 errors, full suite **193 suites / 3081 passed / 3 skipped / 0 fail**.
+0 errors, full suite **194 suites / 3088 passed / 3 skipped / 0 fail**.
 
 Detail / evidence docs (kept, referenced from here):
 - `volyume-codex-fixes-applied-2026-06-08.md` — per-change record for the main
@@ -20,6 +20,8 @@ Detail / evidence docs (kept, referenced from here):
 3. SUB-004 — trial reset via account deletion.
 4. ONB-001/002 — onboarding/consent routing race.
 5. Check-in / coach / training / nutrition audit — 11 data/algorithm findings.
+6. Full-flow audit (onboarding, plan gen/library, workout summary, nutrition,
+   diary/food, failure handling) — FF-001 … FF-007.
 
 ## What changed this closeout session
 - **SUB-003 made consistent across every purchase path.** ProUpgradeScreen
@@ -46,6 +48,17 @@ Detail / evidence docs (kept, referenced from here):
 - **Check-in/coach audit:** PIPE-001/002/003/005/006, ALGO-001/002/003/004/005/006
   all fixed. PIPE-007 (macros), DEAD-002 (sleep_quality), PIPE-004
   (stepsAdherence fallback) kept by design and documented.
+- **Full-flow audit:** FF-001 (already closed by the SUB-003 work), FF-002
+  (plan rebuild is now a transaction: rebuild first, commit profile on success,
+  stay on screen + retry on failure; onboarding still completes + retries from
+  Home per founder call), FF-003 (partial-plan shortfall surfaced to the user),
+  FF-004 (plan library shows a retryable error, not a false empty state),
+  FF-005 (nutrition DB save awaited + surfaced, not fire-and-forget), FF-006
+  (workout-summary sleep-quality attributed to the workout's week via
+  `localWeekStartMs(workoutDayMs(...))`), FF-007 (food plate/curated-meal
+  failures now toast with partial-write info). Tests:
+  `fullFlowAudit.guard.test.js` (FF-003 behavioural + FF-002/004/005/006/007
+  guards).
 
 ### Test coverage (precise)
 - **Behavioural** (runs the code): the coach signal/parsing layer
