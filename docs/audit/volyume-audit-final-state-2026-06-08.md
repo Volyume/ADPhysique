@@ -90,8 +90,10 @@ layer that isn't.
    The RTDN path now **fails closed** until `RTDN_OIDC_AUDIENCE` is set; do NOT
    set `RTDN_ALLOW_UNAUTHENTICATED_SETUP` in prod.
 5. **DEP-001** Expo build-chain advisories (4 high / 14 moderate, build-host
-   only): resolve via a controlled Expo bump or add a documented audit
-   exception. Also unblocks the IMP-001 release gate.
+   only): now **formally excepted** in the release gate (`release:audit` prints
+   them but no longer fails the build, per `npm-audit-survey-2026-06-01.md`), so
+   the AAB builds. Full resolution (a controlled Expo SDK bump) is still
+   deferred; revisit on the next bump.
 6. **Play Console store setup:** subscriptions + 7-day intro offer tokens,
    regional pricing, Data Safety form, health declaration, account-deletion URL,
    privacy-policy URL, assets/screenshots.

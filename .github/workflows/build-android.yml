@@ -384,14 +384,16 @@ jobs:
           retention-days: 30
 
       # IMP-001: release quality gate. Runs the release:check script (strict
-      # type-check, lint, full test suite, production audit at the high level)
-      # BEFORE the AAB is published as an artifact, so a build that does not
-      # pass the gate never produces an uploadable Play bundle. A failure here
-      # fails the job. See package.json "release:check".
-      # Note: `npm audit --production --audit-level=high` currently flags the
-      # Expo build-chain advisories (build-host only, not runtime). Clearing or
-      # formally excepting those is a manual action tracked in the audit's
-      # DOCUMENT B; until then this gate will report them.
+      # type-check, lint, full test suite, then the production audit) BEFORE the
+      # AAB is published as an artifact, so a build that fails type-check, lint
+      # or tests never produces an uploadable Play bundle. A failure here fails
+      # the job. See package.json "release:check".
+      # DEP-001: the production audit (`release:audit`) reports the Expo
+      # build-chain advisories (@xmldom/xmldom, postcss, uuid) but no longer
+      # FAILS the gate on them. They are build-host-only tooling, not shipped in
+      # the app runtime, and are formally excepted per
+      # docs/audit/npm-audit-survey-2026-06-01.md. The advisories are still
+      # printed in the log; revisit on the next Expo SDK bump.
       - name: Release gate (release:check)
         run: npm run release:check
 
