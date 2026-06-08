@@ -1024,6 +1024,22 @@ export default function RootNavigator() {
     // in. A null/free tier from here resolves through the Article 9 trial
     // grant (→ pro) or falls to the free setup.
     if (!user) return <WelcomeStack />;
+    // ONB-001 / ONB-002: hold a real (cloud) signed-in account on a blocking
+    // resolver until the Article 9 consent check has resolved, instead of
+    // letting it fall through to an onboarding branch. While the check is in
+    // flight (healthConsentChecked === false) a brand-new Pro-path account
+    // has tier=null and firstRunComplete=false, so the branch below would
+    // route it into FirstRunStack (the free "name only" flow) and flash it
+    // before the consent gate and the trial grant land. Routing only once
+    // consent is resolved also stops the Article 9 screen reading as a late
+    // reroute. This wait always ends: the consent check runs on SIGNED_IN and
+    // INITIAL_SESSION and sets healthConsentChecked=true in every branch
+    // (granted, ungranted, or transient read failure), and the flag only
+    // resets on sign-out (clearAuthStateForSignOut). Returning users who have
+    // already finished setup (firstRunComplete) skip the wait and route on.
+    if (user && !user.isLocal && !firstRunComplete && !healthConsentChecked) {
+      return <SplashScreen />;
+    }
     if (user && !user.isLocal && healthConsentChecked && healthConsent === false) {
       return <Article9ConsentStack />;
     }

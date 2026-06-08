@@ -2,10 +2,10 @@
 
 Hand this back to Codex to re-assess. It covers everything actioned against the
 Codex audit report, the additional finding SUB-004, and the founder-brief
-reconciliation addendum. Base checkout: `bd26b04` (origin/main). All work is on
-`main` and pushed (HEAD `3106633`).
+reconciliation addendum, plus the follow-up onboarding findings ONB-001/002.
+Base checkout: `bd26b04` (origin/main). All work is on `main` and pushed.
 
-How to verify: `git log bd26b04..3106633`, or the per-item file citations below.
+How to verify: `git log bd26b04..origin/main`, or the per-item file citations below.
 
 Automated checks, after all work:
 
@@ -14,7 +14,7 @@ Automated checks, after all work:
 | `tsc --noEmit --strict` | 0 errors | 0 errors |
 | project `tsc --noEmit` | 0 errors | 0 errors |
 | `eslint .` | 0 errors / 4 warnings | 0 errors / 4 warnings |
-| `npm test -- --runInBand` | 187 suites / 3042 passed / 3 skipped | 189 suites / 3056 passed / 3 skipped, 0 fail |
+| `npm test -- --runInBand` | 187 suites / 3042 passed / 3 skipped | 190 suites / 3060 passed / 3 skipped, 0 fail |
 | `npm audit --production` | 18 (14 mod, 4 high) | 18 (14 mod, 4 high) — see DEP-001 |
 
 The 4 high / 14 moderate are Expo build-chain advisories (`@xmldom/xmldom`,
@@ -35,10 +35,13 @@ The 4 high / 14 moderate are Expo build-chain advisories (`@xmldom/xmldom`,
 | BUG-002 | **Fixed** | `cascade.js` comments no longer reference the retired day-19/21 schedule. |
 | BUG-003 | **Fixed** | `play-billing-rtdn/index.ts`: OIDC fails closed when `RTDN_OIDC_AUDIENCE` unset, unless `RTDN_ALLOW_UNAUTHENTICATED_SETUP=true`; startup warning. Tests added. |
 | CODE-001 | **Fixed** | All production `console.*` routed through `logInfo/logWarn/logError` (RootNavigator, 6 screens, 6 libs). `errorLog.js` keeps the console sink. |
-| COPY-001 / 002 / 004 | **Fixed** | app-map jargon (MEV/MRV/mesocycle/deload) replaced; ProUpgrade credential line de-jargoned; catalogue comment states Play is the price source. |
+| COPY-001 / COPY-004 | **Fixed** | app-map jargon (MEV/MRV/mesocycle/deload) replaced; catalogue comment states Play is the price source. |
+| COPY-002 | **Fixed** | The report's COPY-002 is the weekly check-in header. `WeeklyCheckInScreen.js:1123` now reads "Weekly check-in"; Precision Coaching branding stays in the supporting gate/intro copy. (An earlier hand-back wrongly merged this ID with the ProUpgrade jargon line; that line is CODE-002, below.) |
 | IMP-001 | **Fixed** | `package.json` `release:check` + gate step in `build-android.yml` before AAB upload. NB: the audit step flags DEP-001 until resolved. |
 | PERF-001 | **Fixed** | `App.js` periodic sync: cleanup already present; added in-flight, signed-in, and offline guards. |
-| CODE-002 / COPY-003 | **Partly** | CODE-002 (ProUpgrade trademark/jargon line) cleaned via COPY-002. COPY-003 (the same Precision Coaching™ claim on `CoachOutputScreen.js:1545`) left as a trademark/legal decision — in manual actions. |
+| CODE-002 | **Fixed** | ProUpgrade jargon ("volume landmarks, autoregulation, RED-S safety limits") replaced with plain copy on `ProUpgradeScreen.js`. |
+| COPY-003 | **Open (manual)** | The Precision Coaching™ claim on `CoachOutputScreen.js:1545` is a trademark/legal decision — in manual actions. |
+| SEC-002 | **Fixed** | Covered by the SUB-002 change: `useAppStore` last-verified timestamp + 24h grace-window revalidation (`markPaidEntitlementVerified` / `readPaidEntitlementVerifiedAt` / `lockStalePaidEntitlement`). The code was in place; this row was missing from the earlier hand-back. |
 | IMP-002 / 003 / 004 | **Open (manual/optional)** | Edge-fn structured logs; trial billing-period preview; baseline-copy length. In manual actions. |
 | PLAY-001 / 003 / 004 | **Open (manual)** | RTDN Play/GCP setup + env vars; AAB target-SDK / 16KB / Hermes checks; rest-timer module SDK. In manual actions. |
 | DEP-001 | **Open (manual)** | Expo build-chain high/moderate advisories; resolve or formally except, also unblocks the IMP-001 gate. |
@@ -47,6 +50,17 @@ The 4 high / 14 moderate are Expo build-chain advisories (`@xmldom/xmldom`,
 
 Documents: `docs/audit/volyume-codex-fixes-applied-2026-06-08.md` (DOCUMENT A),
 `docs/audit/volyume-manual-actions-remaining-2026-06-08.md` (DOCUMENT B).
+
+### Part 1b — Additional onboarding/consent findings (ONB-001, ONB-002)
+
+Sent separately after the main report. Both confirmed in code and fixed.
+
+| ID | Status | Where / how |
+|---|---|---|
+| ONB-001 | **Fixed** | Free first-run flow could flash before a Pro-path account was routed correctly. `renderNavigator()` picked an onboarding branch while the Article 9 consent check was still in flight (`healthConsentChecked === false`): a brand-new account has `tier=null` + `firstRunComplete=false`, so it fell through to `FirstRunStack`. Added a blocking resolver (`SplashScreen`) for a real signed-in account until consent resolves, before the Pro-vs-Free branch. `RootNavigator.js` renderNavigator. |
+| ONB-002 | **Fixed** | Same change. Routing only once consent has resolved also stops the Article 9 screen reading as a late reroute: a signed-in account now waits on the resolver, then goes once into consent (if missing) and on into the correct onboarding path. |
+
+Why it is safe: the consent check runs on `SIGNED_IN` and `INITIAL_SESSION` and sets `healthConsentChecked=true` in every branch (granted, ungranted, transient read failure), and the flag only resets on sign-out, so the resolver wait always ends and cannot strand a cold-start or mid-onboarding user. The pre-existing screen-level mitigation (`Article9ConsentScreen.js:108-114` awaits `startCascade()` so `tier='pro'` lands before consent flips) already covered the post-consent transition; this fix closes the pre-consent window. Test: `src/__tests__/onboardingConsentRouting.guard.test.js` (resolver present, ordered before the onboarding branch, consent gate intact).
 
 ---
 

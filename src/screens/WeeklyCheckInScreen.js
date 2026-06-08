@@ -1120,7 +1120,9 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   // ─── Main check-in screen ──────────────────────────────────────────────────
 
-  const checkinDayLabel = 'Precision Coaching · check-in';
+  // COPY-002: plain visible header. The Precision Coaching branding stays in
+  // the supporting copy (gate and intro text), it does not need to lead here.
+  const checkinDayLabel = 'Weekly check-in';
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
