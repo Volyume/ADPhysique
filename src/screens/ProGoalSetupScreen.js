@@ -258,6 +258,7 @@ export default function ProGoalSetupScreen({ navigation }) {
         trainingPhase: selectedPhase,
         trainingGoal: selectedGoal,
         proteinApproach,
+        experience,
       }));
       await AsyncStorage.setItem(NUTRITION_KEY, JSON.stringify(nextTargets));
       if (user?.id) {

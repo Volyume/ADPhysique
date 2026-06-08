@@ -392,6 +392,10 @@ export default function NutritionTargetsScreen({ navigation }) {
         bodyFatSource:      bfNum != null ? bfSource : null,
         activityLevel:      activity,
         goal,
+        // Scale the surplus by training experience, matching onboarding and the
+        // plan-update flow. Sourced from the profile since this form has no
+        // experience field of its own.
+        experienceLevel:    userProfile?.experience ?? 'intermediate',
         proteinApproach,
         customProteinGPerKg: proteinApproach === 'custom' && customProteinGPerKg.trim()
           ? parseFloat(customProteinGPerKg)

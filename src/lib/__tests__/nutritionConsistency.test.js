@@ -47,9 +47,13 @@ describe('buildNutritionEngineInputs', () => {
       goal: phaseToNutritionKey('bulk'),         // 'build'
       trainingGoal: 'mens_physique',
       proteinApproach: 'advanced',
+      experienceLevel: 'intermediate',           // FIXTURE carries no experience
     });
-    // No experienceLevel key: no surface passes one, adding it would shift output.
-    expect('experienceLevel' in inputs).toBe(false);
+  });
+
+  test('passes experience through and defaults to intermediate', () => {
+    expect(buildNutritionEngineInputs({ ...FIXTURE, experience: 'competitive' }).experienceLevel).toBe('competitive');
+    expect(buildNutritionEngineInputs({ ...FIXTURE, experience: null }).experienceLevel).toBe('intermediate');
   });
 
   test('drops body-fat source when the percentage is missing or out of range', () => {
@@ -91,6 +95,23 @@ describe('onboarding vs Update Your Plan parity', () => {
     const t = calculateNutritionTargets(onboardingInputs);
     expect(t.formulaUsed).toBe('katch_mcardle');
     expect(macros(t)).toEqual({ kcal: 3980, protein: 253, carbs: 549, fat: 86 });
+  });
+
+  test('experience scales the surplus: beginner > intermediate > competitive on a bulk', () => {
+    const kcalFor = (experience) =>
+      calculateNutritionTargets(buildNutritionEngineInputs({ ...FIXTURE, experience })).targetKcal;
+    const beginner = kcalFor('beginner');
+    const intermediate = kcalFor('intermediate');
+    const competitive = kcalFor('competitive');
+    expect(intermediate).toBe(3980);          // unchanged baseline
+    expect(beginner).toBeGreaterThan(intermediate);
+    expect(competitive).toBeLessThan(intermediate);
+  });
+
+  test('experience does not affect a deficit phase', () => {
+    const cut = (experience) =>
+      calculateNutritionTargets(buildNutritionEngineInputs({ ...FIXTURE, trainingPhase: 'cut', experience })).targetKcal;
+    expect(cut('competitive')).toBe(cut('beginner'));
   });
 
   test('regression: dropping body-fat source (the old update bug) diverges', () => {

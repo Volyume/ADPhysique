@@ -476,6 +476,7 @@ export default function ProOnboardingScreen({ navigation }) {
         trainingPhase,
         trainingGoal,
         proteinApproach,
+        experience,
       }));
 
       const goalPhase = phaseToCoachingKey(trainingPhase);

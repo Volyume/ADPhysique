@@ -311,9 +311,13 @@ export function daysToActivityLevel(daysPerWeek) {
 // used Katch-McArdle) while the update flow omitted it (so BMR fell back to
 // Mifflin), producing materially different calories from an unchanged body.
 //
-// Keep this equivalent to the onboarding call site: any change here moves
-// onboarding output too. No experienceLevel key on purpose, no surface passes
-// one today, and adding it would shift existing targets.
+// Keep this equivalent across both call sites: any change here moves both
+// onboarding and Update-Your-Plan output, so they always agree for the same
+// profile. experienceLevel scales the surplus on lean_gain/build phases
+// (advanced and competitive lifters gain fat fast above a modest surplus;
+// beginners use a larger one), and it has no effect on maintenance or deficit
+// phases. It falls back to 'intermediate' (the engine's own default) when the
+// profile carries no experience.
 export function buildNutritionEngineInputs({
   sex,
   age,
@@ -325,6 +329,7 @@ export function buildNutritionEngineInputs({
   trainingPhase,
   trainingGoal = null,
   proteinApproach = null,
+  experience = null,
 }) {
   // Range-guard body fat the same way the onboarding wizard does, so a corrupt
   // or fat-fingered reading can't flip the BMR formula or poison protein. A
@@ -342,6 +347,7 @@ export function buildNutritionEngineInputs({
     goal: phaseToNutritionKey(trainingPhase),
     trainingGoal,
     proteinApproach,
+    experienceLevel: experience ?? 'intermediate',
   };
 }
 
