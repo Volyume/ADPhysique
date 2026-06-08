@@ -22,6 +22,8 @@ import useAppStore from '../store/useAppStore';
 import { logError } from '../lib/errorLog';
 import { FORM_TIPS } from '../lib/formTips';
 import InfoTooltip from '../components/InfoTooltip';
+import DemoCard from '../components/DemoCard';
+import CoachingNotesPanel from '../components/CoachingNotesPanel';
 
 // Loose date parser, accepts "Dec 2025", "December 2025", "2025-12", "12/2025" etc.
 // Returns unix timestamp (ms) for the 1st of the parsed month, or null.
@@ -257,6 +259,13 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
+        {/* Exercise demonstration (or illustrated fallback when no media). FREE. */}
+        <AnimatedEntrance index={0}>
+          <View style={styles.section}>
+            <DemoCard exercise={{ ...exercise, primaryMuscleLabel: primaryMuscle }} />
+          </View>
+        </AnimatedEntrance>
+
         {/* Overview */}
         <AnimatedEntrance index={0}>
         <View style={styles.overviewCard}>
@@ -598,23 +607,18 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           </View>
         )}
 
-        {coachingCue && (
-          <View style={styles.section}>
-            <View style={styles.cueCard}>
-              <Ionicons name="bulb-outline" size={16} color={colors.primary} />
-              <Text style={styles.cueText}>{coachingCue}</Text>
-            </View>
-          </View>
-        )}
-
-        {(formTip || exercise.notes) && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>How to do it</Text>
-            <View style={styles.notesCard}>
-              <Text style={styles.notesText}>{formTip ?? exercise.notes}</Text>
-            </View>
-          </View>
-        )}
+        {/* Coaching notes: structured form_cues if present, else the existing
+            FORM_TIPS prose / coaching cue / notes, folded into one collapsible
+            panel (collapsed by default — progressive disclosure). */}
+        <View style={styles.section}>
+          <CoachingNotesPanel
+            formCues={exercise.formCues}
+            commonMistakes={exercise.commonMistakes}
+            formTip={formTip}
+            coachingCue={coachingCue}
+            notes={exercise.notes}
+          />
+        </View>
       </ScrollView>
 
       {/* Goal-setting bottom sheet */}
