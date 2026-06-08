@@ -3,13 +3,189 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex">
 <title>Privacy policy — Volyume</title>
+<meta name="description" content="What Volyume collects, why, how it is stored, and how to delete it. Private by design.">
 <link rel="icon" type="image/png" href="/favicon.png">
-<meta http-equiv="refresh" content="0; url=/privacy/">
-<link rel="canonical" href="/privacy/">
+<meta name="theme-color" content="#0D0D0D">
+<meta name="robots" content="index, follow">
+<style>
+  :root{
+    --bg:#0D0D0D; --surface:#191917; --surface2:#2A2A27;
+    --border:#6E6E6E; --borderSubtle:#2E2E2C;
+    --amber:#F5A623; --amberFill:#E08C0B; --amberBg:rgba(245,166,35,0.12);
+    --silver:#C0C0C0;
+    --text:#FFFFFF; --textSecondary:#9E9E9E; --textMuted:#9B9B9B;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --nav-h:78px;
+  }
+  *{box-sizing:border-box;}
+  html{color-scheme:dark;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--font);
+    -webkit-font-smoothing:antialiased; line-height:1.5; overflow-x:hidden;}
+  a{color:inherit; text-decoration:none;}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
+
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:10px;
+    font-weight:700; font-size:14px; border-radius:12px; padding:10px 16px; cursor:pointer; border:1px solid transparent;
+    transition:background-color .2s cubic-bezier(.2,0,0,1);}
+  .btn-primary{background:var(--amberFill); color:var(--bg);}
+  .btn-primary:hover{background:var(--amber);}
+  .play-tri{width:18px;height:18px; display:block;}
+
+  nav{position:fixed; top:0; left:0; right:0; height:var(--nav-h); z-index:50;
+    display:flex; align-items:center; background:rgba(13,13,13,0.88); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--borderSubtle);}
+  nav .wrap{display:flex; align-items:center; justify-content:space-between; width:100%;}
+  .brand{display:flex; align-items:center; gap:10px;}
+  .brand .word{font-weight:800; font-size:18px; letter-spacing:0.2px;}
+  .logo-word{height:46px; width:auto; flex:0 0 auto; display:block;}
+
+  .policy{padding:calc(var(--nav-h) + 56px) 0 24px;}
+  .policy .head{max-width:760px;}
+  .policy h1{font-weight:900; letter-spacing:-0.5px; font-size:clamp(34px,6vw,48px); line-height:1.08; margin:0;}
+  .policy .updated{color:var(--textMuted); font-size:14px; margin:14px 0 0;}
+  .policy .intro{color:var(--textSecondary); font-size:18px; line-height:1.6; margin:24px 0 0; max-width:68ch;}
+
+  .policy section{max-width:760px; padding:38px 0; border-top:1px solid var(--borderSubtle);}
+  .policy section:first-of-type{border-top:none;}
+  .policy h2{display:flex; gap:14px; align-items:baseline; font-weight:700; letter-spacing:-0.25px;
+    font-size:24px; line-height:1.2; margin:0 0 16px;}
+  .policy h2 .n{color:var(--amber); font-weight:900; font-size:18px; min-width:1.6em;}
+  .policy p{color:var(--textSecondary); font-size:16px; line-height:1.65; margin:0 0 14px; max-width:68ch;}
+  .policy p:last-child{margin-bottom:0;}
+  .policy strong{color:var(--text); font-weight:600;}
+  .policy ul{margin:0 0 14px; padding:0; list-style:none; display:flex; flex-direction:column; gap:10px; max-width:68ch;}
+  .policy li{display:flex; gap:11px; align-items:flex-start; color:var(--textSecondary); font-size:16px; line-height:1.55;}
+  .policy li::before{content:""; flex:0 0 auto; width:6px; height:6px; border-radius:50%;
+    background:var(--amber); margin-top:9px;}
+  .policy a.inline{color:var(--amber);}
+
+  footer{border-top:1px solid var(--borderSubtle); padding:46px 0; margin-top:24px;}
+  footer .wrap{display:flex; flex-wrap:wrap; gap:20px 32px; align-items:center; justify-content:space-between;}
+  footer .links{display:flex; gap:24px; flex-wrap:wrap;}
+  footer a{color:var(--textMuted); font-size:14px;}
+  footer a:hover{color:var(--amber);}
+  footer .copy{color:var(--textMuted); font-size:13px; width:100%;}
+</style>
 </head>
-<body style="margin:0;background:#0D0D0D;color:#9E9E9E;font-family:-apple-system,Segoe UI,Roboto,sans-serif">
-<p style="padding:24px"><a href="/privacy/" style="color:#F5A623">Volyume privacy policy</a></p>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Volyume">
+      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
+    </a>
+    <a class="btn btn-primary" href="https://play.google.com/store/apps/details?id=app.volyume">
+      <svg class="play-tri" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="#0D0D0D"/></svg>
+      Get it on Google Play
+    </a>
+  </div>
+</nav>
+
+<main class="policy">
+  <div class="wrap">
+    <div class="head">
+      <h1>Privacy policy</h1>
+      <p class="updated">Last updated: 25 May 2026</p>
+      <p class="intro">This policy explains what Volyume collects, why, and how to delete it. Volyume is a training and nutrition self-coaching tool. We are private by design: no social feed, no community, no targeted advertising, no sale of your data.</p>
+    </div>
+
+    <section>
+      <h2><span class="n">1</span> Data we collect</h2>
+      <p>When you create an account we collect your name, email address, body measurements, workout logs, and training preferences.</p>
+      <p>To coach you, Volyume uses your health and nutrition data:</p>
+      <ul>
+        <li>Your weight and how it changes over time</li>
+        <li>Your body fat percentage and lean mass when you enter them</li>
+        <li>Everything you log to your food diary</li>
+        <li>Your weekly check-ins, including energy, recovery, and how you feel</li>
+        <li>The screening questions you answer about eating habits</li>
+      </ul>
+      <p>This is special-category health data under UK GDPR Article 9. We use it only with your explicit consent, recorded on the consent screen at onboarding. Without that consent the engine cannot run.</p>
+    </section>
+
+    <section>
+      <h2><span class="n">2</span> How it is used</h2>
+      <p>Volyume works by using your health and nutrition data to tell you what to train, what to eat, and when to back off. This data is used solely to run the app and give you personalised training and nutrition guidance.</p>
+      <p>We also keep first-party usage telemetry to see which features get used and where the app is slow: things like which screens open, when a sync runs, and whether a purchase flow completes. It is tied to a pseudonymous account id, not your name, and it never includes your training, food, or body data. We do not use third-party analytics or tracking tools, and we do not build advertising profiles. You can switch it off in Settings.</p>
+    </section>
+
+    <section>
+      <h2><span class="n">3</span> Where it is stored</h2>
+      <p>On your phone, your data sits in encrypted local storage: EncryptedSharedPreferences on Android and Keychain on iOS for tokens, and SQLite for your training history, food diary, and rollups.</p>
+      <p>Your cloud data is stored in Supabase (EU region), with row-level security so only you, and the team supporting your account, can see it. It does not leave the UK or EU.</p>
+    </section>
+
+    <section>
+      <h2><span class="n">4</span> The safety check</h2>
+      <p>Volyume watches your weight trend, energy, and food logs together for signs of under-fuelling or disordered eating. If a concerning pattern shows up, it pauses your calorie changes and points you to support. This runs automatically on your health data.</p>
+      <p>When that happens, you can keep using Volyume normally. Your weight log, food diary, training, and check-ins all continue. Only the calorie target stops shifting. The eating-disorder pattern flags are the most sensitive data we hold, and the support team never sees the raw flag data.</p>
+    </section>
+
+    <section>
+      <h2><span class="n">5</span> Health Connect</h2>
+      <p>If you opt in under Settings, Volyume can read your most recent body weight, so the morning-weight card picks up entries from your scale or wearable, and write completed workouts so your health app shows your training. On Android this goes through Health Connect.</p>
+      <p>We do not read heart rate, sleep, HRV, or step data without a separate opt-in. All health-app access is opt-in and revocable from the OS Settings app at any time.</p>
+    </section>
+
+    <section>
+      <h2><span class="n">6</span> Third parties</h2>
+      <p>We never sell it, never share it with advertisers, and never use it to train a public AI model.</p>
+      <p>A small number of sub-processors help run the app, each contractually bound to process your data only for the purpose described:</p>
+      <ul>
+        <li>Supabase (EU region) for the database, authentication and storage</li>
+        <li>Sentry for crash and error reporting, on scrubbed events with your weight, intake and body data removed</li>
+        <li>Google Play (Play Billing) for Android in-app purchases</li>
+      </ul>
+      <p>Adding a new sub-processor requires updating this policy with 30 days' notice via in-app push.</p>
+    </section>
+
+    <section>
+      <h2><span class="n">7</span> Deleting your data</h2>
+      <p>When you confirm deletion, your account and all cloud-stored personal data are deleted immediately, and local data is wiped at once on the device that initiated it. Backup copies are purged within 30 days.</p>
+      <p>We keep one thing after deletion: a one-way hash of your email address, held only to stop the 14-day free trial being restarted by deleting and re-registering. It holds no readable email or other personal data, and is never used to contact you or rebuild your account.</p>
+    </section>
+
+    <section>
+      <h2><span class="n">8</span> Your UK GDPR rights</h2>
+      <p>Under UK and EU GDPR you have the right to:</p>
+      <ul>
+        <li>Access the personal data we hold about you</li>
+        <li>Rectify anything inaccurate</li>
+        <li>Erase your account and data, from Settings, Account, Delete account</li>
+        <li>Port your data: Settings, Privacy, Download my data emails you a CSV bundle</li>
+        <li>Restrict or object to processing</li>
+        <li>Withdraw consent for the Article 9 health and nutrition processing at any time, which deletes your account because the engine cannot run without that data</li>
+        <li>Lodge a complaint with the ICO</li>
+      </ul>
+      <p>We respond to verifiable requests within 30 days.</p>
+    </section>
+
+    <section>
+      <h2><span class="n">9</span> Children</h2>
+      <p>Volyume is for users 13 and over, the UK age at which a person can consent to their own data being processed. We do not knowingly create or serve accounts for under-13s.</p>
+      <p>If we discover an account belongs to someone under 13, we delete the account and refund any active subscription.</p>
+    </section>
+
+    <section>
+      <h2><span class="n">10</span> Contact</h2>
+      <p>Questions or requests: <a class="inline" href="mailto:support@volyume.app">support@volyume.app</a></p>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Volyume">
+      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
+    </a>
+    <div class="links">
+      <a href="/privacy/">Privacy Policy</a>
+      <a href="https://play.google.com/store/apps/details?id=app.volyume">Get it on Google Play</a>
+    </div>
+    <p class="copy">© 2026 Volyume</p>
+  </div>
+</footer>
+
 </body>
 </html>
