@@ -370,8 +370,8 @@ export default function ProUpgradeScreen({ navigation }) {
                   ? 'Your account is ready. Activate Pro to switch on the coaching features.'
                   : canTrial
                     ? (monthlyPrice
-                        ? `You're in. Pro's free for the next 14 days. After that, ${monthlyPrice} a month.`
-                        : "You're in. Pro's free for the next 14 days. After that, a monthly subscription.")
+                        ? `You're in. Pro's free for the next 14 days, and Google Play adds another week free when you subscribe. After that, ${monthlyPrice} a month.`
+                        : "You're in. Pro's free for the next 14 days, and Google Play adds another week free when you subscribe. After that, a monthly subscription.")
                     : 'Your account is ready. Subscribe to switch the coaching features on.'}
               </Text>
               {!PRO_BETA_ACTIVE && !canTrial ? (
