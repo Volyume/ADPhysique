@@ -1,0 +1,189 @@
+/**
+ * TrainingPartnersScreen
+ *
+ * The whole Training Partners surface (You tab → Training Partners). Private,
+ * invite-only circles capped small. Shows the user's own weekly consistency
+ * signal alongside their partners', and nothing else — no feed, no posts, no
+ * weight/food/coaching data (none of that exists on the partner tables).
+ *
+ * Degrades gracefully: renders cached signals offline ("Updated Xh ago") and
+ * never spins forever. The entire screen is gated behind isPartnersEnabled().
+ *
+ * Voice: British English, plain, adult. No em dashes (CLAUDE.md).
+ */
+import { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, Share, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import { useShallow } from 'zustand/react/shallow';
+import useAppStore from '../store/useAppStore';
+import { colors, spacing, type } from '../styles/theme';
+import Button from '../components/Button';
+import { SkeletonCard } from '../components/Skeleton';
+import PartnerSignalCard from '../components/PartnerSignalCard';
+import * as haptics from '../lib/haptics';
+import {
+  getMyCircles, getCircleSignals, createCircle, createInvite,
+  sendNudge,
+} from '../lib/partners/partnerService';
+
+function relativeTime(ts) {
+  if (!ts) return null;
+  const mins = Math.round((Date.now() - ts) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.round(hrs / 24)}d ago`;
+}
+
+export default function TrainingPartnersScreen() {
+  const { user } = useAppStore(useShallow(s => ({ user: s.user })));
+  const [loading, setLoading] = useState(true);
+  const [circle, setCircle] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [signals, setSignals] = useState([]);
+  const [fromCache, setFromCache] = useState(false);
+  const [cachedAt, setCachedAt] = useState(null);
+  const [nudged, setNudged] = useState({});      // userId -> true once nudged this session
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const circles = await getMyCircles();
+      const first = circles[0] ?? null;
+      setCircle(first);
+      if (first?.id) {
+        const res = await getCircleSignals(first.id);
+        setMembers(res.members);
+        setSignals(res.signals);
+        setFromCache(res.fromCache);
+        setCachedAt(res.cachedAt ?? null);
+      } else {
+        setMembers([]); setSignals([]);
+      }
+    } catch (_) { /* graceful: empty state */ }
+    setLoading(false);
+  }, []);
+
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const signalFor = (uid) => signals.find(s => s.user_id === uid) ?? null;
+
+  async function handleInvite() {
+    if (busy) return;
+    setBusy(true);
+    haptics.selection();
+    try {
+      // Create a circle on first invite; reuse the existing one otherwise.
+      let circleId = circle?.id;
+      if (!circleId) {
+        const created = await createCircle(null);
+        if (!created.ok) { setBusy(false); return; }
+        circleId = created.circleId;
+      }
+      const inv = await createInvite(circleId);
+      if (inv.ok) {
+        await Share.share({ message: inv.shareText });
+        load();
+      }
+    } catch (_) { /* user cancelled share, or offline */ }
+    setBusy(false);
+  }
+
+  async function handleNudge(toUserId, emoji) {
+    haptics.selection();
+    setNudged(prev => ({ ...prev, [toUserId]: true }));
+    const res = await sendNudge(circle?.id, toUserId, emoji);
+    if (res.ok && res.sent === false) {
+      Alert.alert('Already nudged', 'You can nudge a partner once a day.');
+    }
+  }
+
+  const partners = members.filter(m => m.user_id !== user?.id);
+  const hasCircle = !!circle;
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <ScrollView contentContainerStyle={styles.content}>
+        {loading ? (
+          <>
+            <SkeletonCard height={92} />
+            <SkeletonCard height={92} />
+          </>
+        ) : !hasCircle ? (
+          <View style={styles.empty}>
+            <Ionicons name="people-outline" size={40} color={colors.primary} />
+            <Text style={styles.emptyTitle}>Stay accountable together</Text>
+            <Text style={styles.emptyBody}>
+              Training with someone? Invite a partner and keep each other honest.
+              Private, and nothing is shared but whether you trained.
+            </Text>
+            <Button
+              title="Invite a training partner"
+              onPress={handleInvite}
+              loading={busy}
+              icon="person-add-outline"
+            />
+          </View>
+        ) : (
+          <>
+            {fromCache ? (
+              <Text style={styles.cacheNote}>
+                Offline. Updated {relativeTime(cachedAt) ?? 'recently'}.
+              </Text>
+            ) : null}
+
+            <PartnerSignalCard
+              displayName="You"
+              isSelf
+              signal={signalFor(user?.id)}
+            />
+
+            {partners.length === 0 ? (
+              <Text style={styles.waiting}>
+                Waiting for your partner to join. Send them the invite again if needed.
+              </Text>
+            ) : (
+              partners.map(p => (
+                <PartnerSignalCard
+                  key={p.user_id}
+                  displayName={p.display_name}
+                  signal={p.sharing_enabled ? signalFor(p.user_id) : null}
+                  nudgeEnabled={p.sharing_enabled}
+                  nudged={!!nudged[p.user_id]}
+                  onNudge={(emoji) => handleNudge(p.user_id, emoji)}
+                  streakLabel={p.sharing_enabled ? undefined : 'sharing paused'}
+                />
+              ))
+            )}
+
+            <Button
+              title="Invite another"
+              variant="secondary"
+              onPress={handleInvite}
+              loading={busy}
+              icon="person-add-outline"
+            />
+            <Text style={styles.footnote}>
+              Manage sharing in Settings → Coaching. You can stop sharing any time.
+            </Text>
+          </>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
+  content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
+  empty: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xxl },
+  emptyTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
+  emptyBody: { ...type.body, color: colors.textSecondary, textAlign: 'center', lineHeight: 21 },
+  cacheNote: { ...type.caption, color: colors.textMuted },
+  waiting: { ...type.caption, color: colors.textMuted, paddingHorizontal: spacing.xs },
+  footnote: { ...type.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm },
+});

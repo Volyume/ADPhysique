@@ -1,14 +1,16 @@
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, Switch } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Switch, Modal, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
-import { colors, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, spacing, radius, type, fontSize, fontWeight, withAlpha } from '../styles/theme';
 import * as haptics from '../lib/haptics';
 import { getUserBodyProfile } from '../lib/database';
 import { getWellbeingMode, setWellbeingMode } from '../lib/wellbeing';
 import { getCycleTracking, setCycleTracking } from '../lib/cyclePrefs';
+import { isPartnersEnabled, setSharingAll } from '../lib/partners/partnerService';
 import { SettingsPage, SettingRow, settingsStyles } from '../components/SettingsPrimitives';
+import Button from '../components/Button';
 
 // Coaching: the levers that shape what the coach asks for and adjusts.
 // Step target and cardio are Pro-only; cycle tracking shows for users
@@ -32,6 +34,32 @@ export default function SettingsCoachingScreen() {
   const [cardioEnabled, setCardioEnabled] = useState(userProfile?.cardioEnabled !== false);
   const [stepTargetInput, setStepTargetInput] = useState(String(userProfile?.stepsTarget ?? 8000));
   const [bioSex, setBioSex] = useState(null);
+  // Training Partners: hidden until the server flag is on for this Pro user.
+  // partnerSharingEnabled is the master switch (default on once consented).
+  const [partnersAvailable, setPartnersAvailable] = useState(false);
+  const [partnerSharing, setPartnerSharing] = useState(userProfile?.partnerSharingEnabled !== false);
+  const [consentVisible, setConsentVisible] = useState(false);
+
+  // Toggling sharing. First-ever enable shows the consent modal; the actual
+  // enable happens on confirm. Disabling flips sharing off everywhere at once.
+  async function onToggleSharing(value) {
+    haptics.selection();
+    if (value && !userProfile?.partnerConsentAt) {
+      setConsentVisible(true);
+      return;
+    }
+    await applySharing(value);
+  }
+
+  async function applySharing(value, recordConsent = false) {
+    setPartnerSharing(value);
+    if (user?.id) {
+      const next = { ...(userProfile || {}), partnerSharingEnabled: value };
+      if (recordConsent) next.partnerConsentAt = new Date().toISOString();
+      await saveLocalProfile(user.id, next);
+    }
+    await setSharingAll(value);
+  }
 
   async function toggleCalmMode(value) {
     haptics.selection();
@@ -83,6 +111,7 @@ export default function SettingsCoachingScreen() {
       getWellbeingMode().then(m => setCalmEnabled(m === 'calm'));
       getCycleTracking().then(setCycleEnabled).catch(() => {});
       if (user?.id) getUserBodyProfile(user.id).then(p => setBioSex(p?.sex ?? null)).catch(() => {});
+      isPartnersEnabled().then(setPartnersAvailable).catch(() => {});
     }, [user?.id]),
   );
 
@@ -156,6 +185,24 @@ export default function SettingsCoachingScreen() {
                 />
               }
             />
+            {partnersAvailable && (
+              <SettingRow
+                icon="people-outline"
+                label="Share with training partners"
+                sub={partnerSharing
+                  ? 'On. The partners you invite see a simple weekly signal: whether you trained, and your session count. Never your weight, food, body data or coaching.'
+                  : 'Off. Your partners see that sharing is paused. Nothing else is shared.'}
+                showArrow={false}
+                rightElement={
+                  <Switch
+                    value={partnerSharing}
+                    onValueChange={onToggleSharing}
+                    trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
+                    thumbColor={partnerSharing ? colors.primary : colors.textMuted}
+                  />
+                }
+              />
+            )}
           </>
         )}
         {bioSex === 'female' && (
@@ -175,6 +222,31 @@ export default function SettingsCoachingScreen() {
           />
         )}
       </View>
+
+      <Modal
+        visible={consentVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setConsentVisible(false)}
+      >
+        <Pressable style={styles.backdrop} onPress={() => setConsentVisible(false)}>
+          <Pressable style={styles.sheet} onPress={() => {}}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>Share with training partners</Text>
+            <Text style={styles.sheetBody}>
+              Training Partners shows the people you invite whether you trained
+              each week: a simple on-track signal and your session count. It never
+              shares your weight, food, body data or coaching. You choose the name
+              they see, and you can stop sharing instantly. Off by default.
+            </Text>
+            <Button
+              title="Turn on"
+              onPress={async () => { setConsentVisible(false); await applySharing(true, true); }}
+            />
+            <Button title="Not now" variant="tertiary" onPress={() => setConsentVisible(false)} />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SettingsPage>
   );
 }
@@ -202,4 +274,16 @@ const styles = StyleSheet.create({
     ...type.body,
     textAlign: 'center',
   },
+  backdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
+    padding: spacing.xl, paddingBottom: spacing.xxl, gap: spacing.md,
+  },
+  sheetHandle: {
+    width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border,
+    alignSelf: 'center', marginBottom: spacing.sm,
+  },
+  sheetTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
+  sheetBody: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 21 },
 });

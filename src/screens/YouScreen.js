@@ -22,6 +22,7 @@ import { ProBadge } from '../components/ProGate';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getAllWorkouts } from '../lib/database';
+import { isPartnersEnabled } from '../lib/partners/partnerService';
 
 function NavRow({ icon, label, sub, onPress }) {
   return (
@@ -43,6 +44,9 @@ export default function YouScreen({ navigation }) {
     user: s.user, userProfile: s.userProfile, tier: s.tier,
   })));
   const [sessions, setSessions] = useState(null);
+  // Training Partners ships dark: the row appears only when the server flag is
+  // enabled for this Pro user. Resolved async; defaults to hidden.
+  const [partnersEnabled, setPartnersEnabled] = useState(false);
 
   useFocusEffect(useCallback(() => {
     let alive = true;
@@ -55,6 +59,7 @@ export default function YouScreen({ navigation }) {
         })
         .catch(() => {});
     }
+    isPartnersEnabled().then(e => { if (alive) setPartnersEnabled(e); }).catch(() => {});
     return () => { alive = false; };
   }, [user?.id]));
 
@@ -145,6 +150,14 @@ export default function YouScreen({ navigation }) {
               sub="Tell Volyume whether you've run aggressive cuts before. It changes how soon the safety check steps in."
               onPress={() => navigation.navigate('GoalLockConsent', { editMode: true })}
             />
+            {partnersEnabled && (
+              <NavRow
+                icon="people-outline"
+                label="Training Partners"
+                sub="Keep each other honest. Invite a partner and share a simple weekly signal, nothing else."
+                onPress={() => navigation.navigate('TrainingPartners')}
+              />
+            )}
           </View>
         )}
 

@@ -83,6 +83,8 @@ import CoachReviewScreen from '../screens/CoachReviewScreen';
 import BlockReflectionScreen from '../screens/BlockReflectionScreen';
 import YearOfLiftsScreen from '../screens/YearOfLiftsScreen';
 import WellbeingCheckScreen from '../screens/WellbeingCheckScreen';
+import TrainingPartnersScreen from '../screens/TrainingPartnersScreen';
+import PartnerPreviewScreen from '../screens/PartnerPreviewScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import DebugLogScreen from '../screens/DebugLogScreen';
 import NutritionEducationScreen from '../screens/NutritionEducationScreen';
@@ -131,6 +133,8 @@ const GatedWeeklyCheckIn    = withProGuard(WeeklyCheckInScreen, 'Weekly check-in
 const GatedNutritionTargets = withProGuard(NutritionTargetsScreen, 'Nutrition targets');
 const GatedBodyMetrics      = withProGuard(BodyMetricsScreen, 'Body metrics');
 const GatedCoachOutput      = withProGuard(CoachOutputScreen, 'Your week');
+const GatedTrainingPartners = withProGuard(TrainingPartnersScreen, 'Training Partners');
+const GatedPartnerPreview   = withProGuard(PartnerPreviewScreen, 'Training Partners');
 const GatedProGoalSetup     = withProGuard(ProGoalSetupScreen, 'Pro goal setup');
 const GatedPlanUpdate       = withProGuard(PlanUpdateScreen, 'Update training');
 const GatedCoachingReminders = withProGuard(CoachingRemindersScreen, 'Coaching reminders');
@@ -365,6 +369,8 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="Import" component={ImportScreen} options={{ title: 'Import history' }} />
       <Stack.Screen name="CoachingReminders" component={GatedCoachingReminders} options={{ title: 'Coaching reminders' }} />
       <Stack.Screen name="WellbeingCheck" component={WellbeingCheckScreen} options={{ title: 'Wellbeing check' }} />
+      <Stack.Screen name="TrainingPartners" component={GatedTrainingPartners} options={{ title: 'Training Partners' }} />
+      <Stack.Screen name="PartnerPreview" component={GatedPartnerPreview} options={{ title: 'Training partner' }} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="DebugLog" component={DebugLogScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SubscriptionPolicy" component={SubscriptionPolicyScreen} options={{ headerShown: false }} />

@@ -224,6 +224,25 @@ export async function setSharing(circleId, enabled) {
   });
 }
 
+/**
+ * Master sharing switch: flip sharing_enabled across ALL the user's active
+ * circles at once (drives the Settings toggle). Turning off makes partners see
+ * zero signal rows immediately (may_view_signal returns false).
+ */
+export async function setSharingAll(enabled) {
+  return _whenEnabled({ ok: false }, async (sb) => {
+    const user = await getCurrentUser();
+    if (!user?.id) return { ok: false };
+    const { error } = await sb
+      .from('partner_members')
+      .update({ sharing_enabled: !!enabled })
+      .eq('user_id', user.id)
+      .eq('status', 'active');
+    track.event?.('partners.sharing.all', { enabled: !!enabled });
+    return error ? { ok: false, error } : { ok: true };
+  });
+}
+
 /** Leave a circle: marks the user's own row removed (RLS members_self). */
 export async function leaveCircle(circleId) {
   return _whenEnabled({ ok: false }, async (sb) => {
