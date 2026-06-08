@@ -313,8 +313,9 @@ export function stageOf(profile) {
 
 /**
  * True iff the user has not yet used their one-time trial
- * entitlement. Used by paywall surfaces to choose between
- * "Try Pro free for 14 days" and "Get Pro for £X/month".
+ * entitlement. Used by paywall surfaces to choose between the
+ * trial CTA ("Try Pro free for 7 days", the Play intro offer that
+ * follows the 14 cardless in-app days) and "Get Pro for £X/month".
  */
 export function canStillTrial(profile) {
   const ts = profile?.trialState ?? profile?.trial_state ?? 'unstarted';

@@ -14,6 +14,7 @@ import { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
+import { priceTextFor } from '../lib/payments/catalogue';
 
 export default function DifferentialBadge({
   differential,        // { shown, trigger, with_food_data_message, paywall_cta }
@@ -38,7 +39,7 @@ export default function DifferentialBadge({
   // 2026-06-06 override. The 'try_pro_14d' id is internal, left as-is.
   const ctaLabel = differential.paywall_cta === 'try_pro_14d'
     ? 'Try Pro free for 7 days'
-    : `Get Pro for ${pricingPriceText ?? '£2.99/month'}`;
+    : `Get Pro for ${pricingPriceText ?? priceTextFor('pro', 'monthly')}`;
 
   return (
     <View style={styles.wrap} accessibilityLabel="Differential paywall">

@@ -352,7 +352,7 @@ export default function ProUpgradeScreen({ navigation }) {
                 {PRO_BETA_ACTIVE
                   ? 'Your account is ready. Activate Pro to switch on the coaching features.'
                   : canTrial
-                    ? 'Your account is ready. Start your 14-day free trial, no card needed.'
+                    ? `Your account is ready. Pro is free for 14 days, no card needed. When you subscribe, Google Play adds 7 more days free, then it's ${monthlyPrice} until you cancel.`
                     : 'Your account is ready. Subscribe to switch the coaching features on.'}
               </Text>
               {!PRO_BETA_ACTIVE && !canTrial ? (

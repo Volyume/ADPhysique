@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
+import { priceTextFor } from '../lib/payments/catalogue';
 
 const HERO = require('../../assets/volyume-wordmark.png');
 const HERO_ASPECT = 1032 / 277;
@@ -88,6 +89,10 @@ export default function WelcomeScreen({ navigation }) {
                 </View>
               ))}
             </View>
+
+            <Text style={styles.trialNote}>
+              Free for 14 days, no card. Then 7 days free on Google Play, then {priceTextFor('pro', 'monthly')} until you cancel.
+            </Text>
 
             <View style={styles.proCtaRow}>
               <Text style={styles.proCtaText}>Go Pro</Text>
@@ -188,6 +193,11 @@ const styles = StyleSheet.create({
   bulletHeader: { ...type.caption, color: colors.textMuted, marginBottom: spacing.xxs },
   bulletRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   bulletText: { fontSize: fontSize.sm, color: colors.textSecondary, flex: 1 },
+
+  trialNote: {
+    fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17,
+    paddingHorizontal: spacing.lg, marginBottom: spacing.sm,
+  },
 
   proCtaRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
