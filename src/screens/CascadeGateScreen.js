@@ -130,10 +130,18 @@ export default function CascadeGateScreen({ navigation, route }) {
       const purchaseResult = await playBilling.purchasePackage(sku.id);
       const ref = purchaseResult?.transactionId ?? `client_${Date.now()}`;
       await cascade.payAt(targetTier, ref, content.surface);
-      // Server-authoritative grant: verify the token with Google, write Pro
-      // server-side. Fire-and-forget; the optimistic unlock holds meanwhile.
-      cascade.confirmPurchase({ purchaseToken: purchaseResult?.purchaseToken, subscriptionId: sku.id })
-        .catch((e) => logError('CascadeGate.confirmPurchase', e, { targetTier }));
+      // SUB-003: verify the token with Google and write Pro server-side,
+      // AWAITED (not fire-and-forget) so a failed grant is surfaced. The
+      // optimistic unlock from payAt holds, so a confirm failure never denies
+      // the paid access; the Play RTDN push and the next cloud refresh
+      // reconcile it.
+      const confirm = await cascade.confirmPurchase({
+        purchaseToken: purchaseResult?.purchaseToken, subscriptionId: sku.id,
+      });
+      if (!confirm.ok) {
+        logError('CascadeGate.confirmPurchase', confirm.error ?? 'confirm_failed', { targetTier });
+        toast.show('Payment received. Finishing activation, this can take a moment', { variant: 'info', duration: 5000 });
+      }
       logInfo('CascadeGate.paid', `tier=${targetTier} sku=${sku.id}`);
       dismiss();
     } catch (e) {

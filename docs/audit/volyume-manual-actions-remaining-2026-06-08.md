@@ -1,3 +1,10 @@
+> **SUPERSEDED (2026-06-08).** This document is out of date: several of its
+> Medium/Low items (deletion wording, paywall framing, stale pricing/naming,
+> under-16, timezone sweep, steps gating) were resolved in the founder-brief
+> addendum work after it was written, and it predates SUB-004/migration 071.
+> For the current manual/operational list, see
+> **`volyume-audit-final-state-2026-06-08.md`**. Kept for history only.
+
 # DOCUMENT B — Manual actions remaining (2026-06-08)
 
 These are the items the Codex audit flagged that are **not** code fixes, plus

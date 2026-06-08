@@ -1,3 +1,8 @@
+> **SUPERSEDED (2026-06-08).** This is the original founder-brief reconciliation
+> as first written. All 9 items have since been actioned (1, 3-9 fixed; 2
+> confirmed correct as-is). For current status see
+> **`volyume-audit-final-state-2026-06-08.md`**. Kept for history only.
+
 # Audit Addendum — Founder Brief Reconciliation (2026-06-08)
 
 This addendum supplements the main audit completed on 2026-06-08 against

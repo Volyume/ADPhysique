@@ -1,3 +1,8 @@
+> **SUPERSEDED (2026-06-08).** This covered the Codex report + SUB-004 +
+> addendum + ONB-001/002, but predates the check-in/coach audit and the SUB-003
+> consistency closeout. The single current handoff is
+> **`volyume-audit-final-state-2026-06-08.md`**. Kept for history / detail.
+
 # Volyume — full status for Codex reassessment (2026-06-08)
 
 Hand this back to Codex to re-assess. It covers everything actioned against the

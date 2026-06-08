@@ -11,8 +11,10 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { weekWindowsEndingAt } = require('../database');
 
 const read = (p) => fs.readFileSync(path.resolve(__dirname, p), 'utf8');
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const DB = read('../database.js');
 const COACH = read('../../screens/CoachOutputScreen.js');
 const CHECKIN = read('../../screens/WeeklyCheckInScreen.js');
@@ -27,12 +29,30 @@ function fnBody(src, decl) {
 }
 
 describe('ALGO-001: weekly volume anchors to the check-in week', () => {
-  const body = fnBody(DB, 'export async function getWeeklyVolumeByMuscle');
-  test('takes an anchorMs param and uses it as the window anchor', () => {
-    expect(body).toMatch(/getWeeklyVolumeByMuscle\(userId, weeksBack = 4, anchorMs = Date\.now\(\)\)/);
-    expect(body).toMatch(/const now = Number\.isFinite\(anchorMs\) \? anchorMs : Date\.now\(\)/);
+  // Behavioural: the window math is a pure helper now, so prove it directly.
+  test('builds weeksBack windows ending at the anchor, oldest first', () => {
+    const anchor = 1_700_000_000_000;
+    const w = weekWindowsEndingAt(anchor, 2);
+    expect(w).toHaveLength(2);
+    expect(w[1]).toEqual({ weekStart: anchor - WEEK_MS, weekEnd: anchor });           // this week
+    expect(w[0]).toEqual({ weekStart: anchor - 2 * WEEK_MS, weekEnd: anchor - WEEK_MS }); // last week
   });
-  test('the check-in screen passes the end of the Monday-anchored week', () => {
+  test('anchoring to the end of the check-in week makes this-week = [weekStart, weekStart+7d]', () => {
+    const weekStartMs = Date.UTC(2026, 5, 1); // a Monday-anchored start
+    const w = weekWindowsEndingAt(weekStartMs + WEEK_MS, 2);
+    expect(w[1]).toEqual({ weekStart: weekStartMs, weekEnd: weekStartMs + WEEK_MS });
+    expect(w[0]).toEqual({ weekStart: weekStartMs - WEEK_MS, weekEnd: weekStartMs });
+  });
+  test('a non-finite anchor falls back to now', () => {
+    const w = weekWindowsEndingAt(NaN, 1);
+    expect(w[0].weekEnd).toBeGreaterThan(Date.now() - 2000);
+    expect(w[0].weekEnd).toBeLessThanOrEqual(Date.now() + 2000);
+  });
+  // Contract: getWeeklyVolumeByMuscle uses the helper and the check-in passes
+  // the week-end anchor.
+  test('getWeeklyVolumeByMuscle uses the helper; the check-in passes the week end', () => {
+    const body = fnBody(DB, 'export async function getWeeklyVolumeByMuscle');
+    expect(body).toMatch(/weekWindowsEndingAt\(now, weeksBack\)/);
     expect(CHECKIN).toMatch(/getWeeklyVolumeByMuscle\(user\.id, 2, weekStartMs \+ 7 \* 86400000\)/);
   });
 });

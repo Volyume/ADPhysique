@@ -1631,25 +1631,33 @@ export async function getWorkoutSetsForWorkoutIds(workoutIds) {
 // Returns an array of `weeksBack` entries, ordered oldest → newest.
 // Each entry: { weekLabel: 'W1'|...'W4', weekStart: ms, weekEnd: ms, volumeByMuscle: { chest: 8, ... } }
 // Only working sets (set_type != 'warmup') are counted. Uses the exercise's primary_muscle field.
+// ALGO-001: pure trailing-week window builder, exported so the boundary math is
+// unit-tested directly (the SQL fetch around it runs on device). Returns
+// `weeksBack` windows ending at `anchorMs`, oldest first: window i spans
+// [anchor-(i+1)w, anchor-i*w]. Anchoring to the END of a Monday-anchored
+// check-in week (weekStartMs + 7d) makes the most-recent window exactly that
+// week, instead of a rolling 7-day window off the wall clock. A non-finite
+// anchor falls back to now.
+export function weekWindowsEndingAt(anchorMs, weeksBack = 4) {
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  const anchor = Number.isFinite(anchorMs) ? anchorMs : Date.now();
+  const windows = [];
+  for (let i = weeksBack - 1; i >= 0; i--) {
+    windows.push({ weekStart: anchor - (i + 1) * WEEK_MS, weekEnd: anchor - i * WEEK_MS });
+  }
+  return windows;
+}
+
 export async function getWeeklyVolumeByMuscle(userId, weeksBack = 4, anchorMs = Date.now()) {
   const d = await db();
   // ALGO-001: the trailing windows anchor here. The default Date.now() keeps
   // the heatmap callers unchanged; the weekly check-in passes the END of its
   // Monday-anchored week (weekStartMs + 7d) so the week-over-week comparison
   // matches the week the user is actually submitting, not a rolling 7-day
-  // window read off the wall clock.
+  // window read off the wall clock. Index 0 = oldest week, last = most recent.
   const now = Number.isFinite(anchorMs) ? anchorMs : Date.now();
   const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-
-  // Build week boundaries going back `weeksBack` weeks from now.
-  // Index 0 = oldest week, index weeksBack-1 = most recent week.
-  const weekBoundaries = [];
-  for (let i = weeksBack - 1; i >= 0; i--) {
-    weekBoundaries.push({
-      weekStart: now - (i + 1) * WEEK_MS,
-      weekEnd: now - i * WEEK_MS,
-    });
-  }
+  const weekBoundaries = weekWindowsEndingAt(now, weeksBack);
 
   // Fetch all completed working sets in the full window in one query.
   const windowStart = now - weeksBack * WEEK_MS;

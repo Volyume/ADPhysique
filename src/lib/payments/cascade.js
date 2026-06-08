@@ -186,9 +186,13 @@ export async function payAt(targetTier, paymentRef, sourceSurface = null) {
  * tier. On success we pull the authoritative tier so the optimistic unlock is
  * reconciled immediately rather than waiting for the next foreground refresh.
  *
- * Fire-and-forget from the purchase surfaces: the optimistic local unlock has
- * already happened, so a slow or failed call just means the next cloud refresh
- * (within the optimistic window) does the reconcile instead.
+ * SUB-003: the purchase surfaces (ProUpgrade, Paywall, CascadeGate) and the
+ * restore path all AWAIT this and check `ok`, surfacing a "finishing
+ * activation" message on failure rather than swallowing it. It never throws:
+ * it always resolves to { ok, error? }. The optimistic local unlock from payAt
+ * has already happened, so a slow or failed grant never denies paid access; the
+ * Play RTDN push and the next cloud refresh (within the optimistic window) do
+ * the reconcile.
  */
 export async function confirmPurchase({ purchaseToken, subscriptionId } = {}) {
   if (!purchaseToken || !subscriptionId) {

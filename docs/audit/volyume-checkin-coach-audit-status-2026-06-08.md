@@ -1,8 +1,12 @@
 # Volyume check-in / coach / training / nutrition audit — status (2026-06-08)
 
 Hand back to Codex. Covers the check-in / Precision Coaching / training /
-nutrition audit. Base: `main`. Every claim below was verified in code before
-acting.
+nutrition audit. Base: `main`. Each finding below was checked against the code
+before acting. Coverage type is stated under "Test coverage (precise)":
+behavioural tests for the signal/parsing layer (and the ALGO-001 window math),
+targeted regression guards for the DB/screen-bound algorithm and data-window
+claims. Not every claim has an end-to-end behavioural test, because the SQLite
+and screen layers run on device, not under jest.
 
 Founder decisions taken on this pass:
 - Implement all code findings now.
@@ -62,19 +66,23 @@ Two layers, two test styles, because the repo runs SQLite/screen code on device,
 not under jest (no SQL engine or native mounts in CI — see
 `database.writeGuards.test.js`).
 
-- **Behavioural** — the signal/parsing layer:
-  `src/lib/__tests__/weeklyCoach.signals.audit.test.js` runs `runWeeklyCoach`
-  and the pure helpers directly: stress→recovery, joint-pain hold, note-flag
-  hold, `parseNoteFlags` false-positive guard, `mapCalsAdherence` vocabulary
-  (PIPE-001/002/003, ALGO-004/006).
-- **Targeted regression guards** — the DB/screen layer that can't run under
-  jest: `src/lib/__tests__/checkinCoachAudit.guard.test.js` locks the contract
-  of ALGO-001 (anchor param + check-in call site), ALGO-002 (planned from active
-  plan), ALGO-003 (Epley e1RM, old weight-only count gone), ALGO-005 (real
-  elapsed weeks + carried week-start, binary 1/99 gone), PIPE-005 (per-week
-  intake direction) and PIPE-006 (fail-to-error not fail-open). Each guard fails
-  if its fix is reverted.
+- **Behavioural** (runs the code):
+  - `weeklyCoach.signals.audit.test.js` runs `runWeeklyCoach` and the pure
+    helpers directly: stress→recovery, joint-pain hold, note-flag hold,
+    `parseNoteFlags` false-positive guard, `mapCalsAdherence` vocabulary
+    (PIPE-001/002/003, ALGO-004/006).
+  - `checkinCoachAudit.guard.test.js` also unit-tests the ALGO-001 window math
+    via the pure `weekWindowsEndingAt` helper (anchor shifts the windows; the
+    week-end anchor yields exactly the check-in week).
+- **Targeted regression guards** (source contract, because the SQLite queries
+  and screen load effects run on device, not under jest):
+  `checkinCoachAudit.guard.test.js` locks ALGO-002 (planned from active plan),
+  ALGO-003 (Epley e1RM, old weight-only count gone), ALGO-005 (real elapsed
+  weeks + carried week-start, binary 1/99 gone), PIPE-005 (per-week intake
+  direction) and PIPE-006 (fail-to-error not fail-open). Each guard fails if its
+  fix is reverted.
 
 So the accurate framing is: all 11 fixed in code; behavioural tests for the
-signal layer, targeted regression guards for the DB/screen layer. Existing
-weeklyCoach / coach / database suites stay green.
+signal layer and the ALGO-001 window math, targeted regression guards for the
+remaining DB/screen-bound claims. Existing weeklyCoach / coach / database suites
+stay green.

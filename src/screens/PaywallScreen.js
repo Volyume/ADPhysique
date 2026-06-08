@@ -74,11 +74,20 @@ export default function PaywallScreen({ navigation, route }) {
       const purchaseResult = await playBilling.purchasePackage(sku.id);
       const ref = purchaseResult?.transactionId ?? `client_${Date.now()}`;
       await cascade.payAt('pro', ref, surface);
-      // Server-authoritative grant: verify the purchase token with Google and
-      // write Pro server-side. Fire-and-forget; the optimistic unlock above
-      // keeps Pro on screen meanwhile.
-      cascade.confirmPurchase({ purchaseToken: purchaseResult?.purchaseToken, subscriptionId: sku.id })
-        .catch((e) => logError('Paywall.confirmPurchase', e, { surface }));
+      // SUB-003: verify the purchase token with Google and write Pro
+      // server-side, AWAITED (not fire-and-forget) so a failed grant is seen
+      // rather than swallowed. The optimistic unlock from payAt still holds, so
+      // a confirm failure never denies the access just paid for: the Play RTDN
+      // push and the next cloud refresh reconcile it. We surface the delay
+      // instead of silently dismissing onto a Pro screen the server never
+      // granted.
+      const confirm = await cascade.confirmPurchase({
+        purchaseToken: purchaseResult?.purchaseToken, subscriptionId: sku.id,
+      });
+      if (!confirm.ok) {
+        logError('Paywall.confirmPurchase', confirm.error ?? 'confirm_failed', { surface });
+        appAlert('Payment received', 'Finishing activation, this can take a moment.');
+      }
       logInfo('Paywall.paid', `surface=${surface} sku=${sku.id}`);
       if (navigation?.canGoBack?.()) navigation.goBack();
     } catch (e) {

@@ -59,20 +59,30 @@ export async function restorePurchases({ currentTrialState = null } = {}) {
   // write its own paid tier (migration 067).
   const ref = info?.latestTransactionId ?? null;
   const result = await payAt(restoredTier, ref ?? 'restore', 'restore_purchases');
-  // M-3 (audit): server-verify the restored subscription so the authoritative
+  // M-3 / SUB-003: server-verify the restored subscription so the authoritative
   // tier is (re)written server-side, not just optimistically unlocked. Without
   // this a device whose server tier is stale would revert to free after the
-  // 5-minute optimistic window. Needs the raw Play token + product id;
-  // fire-and-forget, the optimistic unlock holds meanwhile and
-  // refreshTierFromCloud reconciles to the verified tier.
+  // optimistic window. AWAITED (not fire-and-forget) so the server write is
+  // attempted to completion before the restore reports success, matching the
+  // purchase paths. A failed confirm does NOT fail the restore: Play already
+  // reported the entitlement and payAt unlocked optimistically, and the next
+  // refreshTierFromCloud reconciles. The outcome is returned as serverConfirmed
+  // so callers can tell a server-confirmed restore from an optimistic one.
+  let serverConfirmed = false;
   if (info?.latestPurchaseToken && info?.activeSku) {
-    confirmPurchase({ purchaseToken: info.latestPurchaseToken, subscriptionId: info.activeSku })
-      .catch((e) => logWarn('payments.restore.confirm', e?.message ?? 'unknown', {}));
+    const confirm = await confirmPurchase({
+      purchaseToken: info.latestPurchaseToken, subscriptionId: info.activeSku,
+    });
+    serverConfirmed = !!confirm.ok;
+    if (!confirm.ok) {
+      logWarn('payments.restore.confirm', confirm.error ?? 'unknown', {});
+    }
   }
   return {
     ok: result.ok,
     tier: restoredTier,
     alreadyCurrent: false,
+    serverConfirmed,
     error: result.ok ? undefined : result.error,
   };
 }
