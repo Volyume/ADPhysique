@@ -78,7 +78,7 @@ beforeEach(() => {
   mockSb.value = makeClient({ rpcs: { feature_enabled: { data: true, error: null } } });
 });
 
-describe('gating — a dark feature cannot leak', () => {
+describe('gating — Pro-only, no rollout flag', () => {
   test('unconfigured Supabase → empty, no cloud calls', async () => {
     mockConfigured.value = false;
     expect(await svc.isPartnersEnabled()).toBe(false);
@@ -86,24 +86,18 @@ describe('gating — a dark feature cannot leak', () => {
     expect(await svc.createCircle('x')).toEqual({ ok: false });
   });
 
-  test('free tier → disabled', async () => {
+  test('free tier → disabled (Free/Pro boundary is the only gate)', async () => {
     mockTier.value = 'free';
     expect(await svc.isPartnersEnabled()).toBe(false);
     expect(await svc.getMyCircles()).toEqual([]);
   });
 
-  test('flag off → disabled even for configured Pro user', async () => {
-    mockSb.value = makeClient({ rpcs: { feature_enabled: { data: false, error: null } } });
-    expect(await svc.isPartnersEnabled()).toBe(false);
-  });
-
-  test('flag RPC error → default-false', async () => {
-    mockSb.value = makeClient({ rpcs: { feature_enabled: { data: null, error: { message: 'boom' } } } });
-    expect(await svc.isPartnersEnabled()).toBe(false);
-  });
-
-  test('configured + pro + flag on → enabled', async () => {
+  test('configured + pro → enabled, with no feature flag consulted', async () => {
+    const client = makeClient({});   // note: no feature_enabled rpc defined
+    mockSb.value = client;
     expect(await svc.isPartnersEnabled()).toBe(true);
+    // the removed rollout flag must not be queried any more
+    expect(client._calls.rpc.find((c) => c.name === 'feature_enabled')).toBeUndefined();
   });
 });
 

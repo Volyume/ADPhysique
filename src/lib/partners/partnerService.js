@@ -33,7 +33,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSupabaseClient, isSupabaseConfigured, getCurrentUser } from '../supabase';
 import { track } from '../observability';
 
-export const PARTNERS_FLAG = 'training_partners';
+export const NUDGE_EMOJI_PLACEHOLDER = null; // (kept intentionally minimal)
+
 export const MEMBER_CAP_DEFAULT = 6;
 // First-week onboarding lock: invites are refused for accounts younger than
 // this, mirroring the research that the first week shouldn't be disrupted.
@@ -47,23 +48,16 @@ const CACHE_KEY = '@volyume_partner_signal_cache_v1';
 // ─── Gating ────────────────────────────────────────────────────────────
 
 /**
- * Is the feature available for this user right now? Pro + Supabase configured +
- * the server flag enabled for this user. Default-false on any failure: a dark
- * feature can never leak. `tier` is read lazily from the store so the service
- * stays usable from anywhere without prop-drilling.
+ * Is the feature available for this user? Pro + Supabase configured. There is
+ * NO rollout/feature flag: Training Partners is a shipped Pro feature, live for
+ * every Pro user. Default-false only when cloud isn't configured or not Pro
+ * (the Free/Pro boundary is a hard rule). `tier` is read lazily from the store
+ * so the service stays usable from anywhere without prop-drilling.
  */
 export async function isPartnersEnabled() {
   if (!isSupabaseConfigured()) return false;
   if (_currentTier() !== 'pro') return false;
-  const sb = getSupabaseClient();
-  if (!sb) return false;
-  try {
-    const { data, error } = await sb.rpc('feature_enabled', { p_flag: PARTNERS_FLAG });
-    if (error) return false;
-    return data === true;
-  } catch (_) {
-    return false;
-  }
+  return !!getSupabaseClient();
 }
 
 function _currentTier() {
