@@ -6,13 +6,15 @@ import { Ionicons } from '@expo/vector-icons';
 import * as hapticsVocab from '../lib/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
 import ExercisePickerModal from '../components/ExercisePickerModal';
+import DemoCard from '../components/DemoCard';
+import CoachingNotesPanel from '../components/CoachingNotesPanel';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout } from '../lib/database';
+import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, getExerciseById } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import {
@@ -177,6 +179,9 @@ export default function ActiveWorkoutScreen({ navigation }) {
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [swapCandidates, setSwapCandidates] = useState([]);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
+  // "How to perform": the exercise demonstration sheet for the current lift.
+  const [showHowTo, setShowHowTo] = useState(false);
+  const [howToExercise, setHowToExercise] = useState(null);
   const [timeCrunchActive, setTimeCrunchActive] = useState(false);
   const [timeCrunchMsg, setTimeCrunchMsg] = useState('');
   const [preCrunchSnapshot, setPreCrunchSnapshot] = useState(null);
@@ -203,6 +208,19 @@ export default function ActiveWorkoutScreen({ navigation }) {
   const currentEntry = workoutExercises[currentExerciseIndex];
   const exercise = currentEntry?.exercise;
   const routineExercise = currentEntry?.routineExercise;
+
+  // Open the "How to perform" demonstration sheet for the current lift. Loads
+  // the full exercise row by id so the demo media + structured cues are present
+  // even if the in-memory workout entry only carried a partial exercise object.
+  async function openHowTo() {
+    if (!exercise?.id) return;
+    setHowToExercise(exercise);   // show immediately with what we have
+    setShowHowTo(true);
+    try {
+      const full = await getExerciseById(exercise.id);
+      if (full) setHowToExercise(full);
+    } catch (_) { /* keep the partial */ }
+  }
   const isLastExercise = currentExerciseIndex === workoutExercises.length - 1;
 
   // Superset pairing: two adjacent entries sharing a supersetGroupId are paired.
@@ -1183,6 +1201,43 @@ export default function ActiveWorkoutScreen({ navigation }) {
           onSelect={handlePickerSelect}
           actionLabel={pickerMode === 'swap' ? 'Swap In' : 'Add to Workout'}
         />
+        <Modal
+          visible={showHowTo}
+          animationType="slide"
+          onRequestClose={() => setShowHowTo(false)}
+        >
+          <SafeAreaView style={styles.howToSafe} edges={['top', 'bottom']}>
+            <View style={styles.howToHeader}>
+              <Text style={styles.howToTitle} numberOfLines={1}>{howToExercise?.name}</Text>
+              <TouchableOpacity
+                onPress={() => setShowHowTo(false)}
+                style={styles.howToClose}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+              >
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={styles.howToContent}>
+              <DemoCard
+                exercise={{
+                  ...howToExercise,
+                  primaryMuscleLabel:
+                    MUSCLE_DISPLAY_NAMES[howToExercise?.primaryMuscle ?? howToExercise?.primary_muscle]
+                    ?? howToExercise?.primaryMuscle ?? null,
+                }}
+              />
+              <CoachingNotesPanel
+                formCues={howToExercise?.formCues}
+                commonMistakes={howToExercise?.commonMistakes}
+                formTip={howToExercise?.name ? (FORM_TIPS[howToExercise.name] ?? null) : null}
+                coachingCue={howToExercise?.cue || null}
+                notes={howToExercise?.notes}
+              />
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
       </SafeAreaView>
     );
   }
@@ -1280,6 +1335,15 @@ export default function ActiveWorkoutScreen({ navigation }) {
                   (exercise.primaryMuscle || exercise.primary_muscle || '').slice(1).replace(/_/g, ' '))}
               {' · primary muscle'}
             </Text>
+            <TouchableOpacity
+              style={styles.howToBtn}
+              onPress={openHowTo}
+              accessibilityRole="button"
+              accessibilityLabel={`How to perform ${exercise.name}`}
+            >
+              <Ionicons name="play-circle-outline" size={16} color={colors.primary} />
+              <Text style={styles.howToBtnText}>How to perform</Text>
+            </TouchableOpacity>
             {currentSGI != null && !!pairedExerciseName && (
               <View style={styles.supersetChip}>
                 <Ionicons name="link" size={11} color={colors.primary} />
@@ -2150,6 +2214,22 @@ const styles = StyleSheet.create({
   exerciseName: { flex: 1, fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
   swapBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.surface2, borderRadius: radius.sm, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: colors.border },
   swapBtnText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
+  howToBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs, alignSelf: 'flex-start',
+    backgroundColor: colors.primaryBg, borderRadius: radius.full,
+    paddingVertical: spacing.xs, paddingHorizontal: spacing.md,
+    borderWidth: 1, borderColor: colors.primary, marginTop: spacing.xs,
+  },
+  howToBtnText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
+  howToSafe: { flex: 1, backgroundColor: colors.background },
+  howToHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  howToTitle: { ...type.title, flex: 1, color: colors.textPrimary },
+  howToClose: { padding: spacing.xs },
+  howToContent: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
   swapSafe: { flex: 1, backgroundColor: colors.background },
   swapHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border },
   swapTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
