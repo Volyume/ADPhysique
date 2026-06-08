@@ -13,7 +13,7 @@
 
 import { logInfo, logWarn } from '../errorLog';
 import * as playBilling from './playBilling';
-import { payAt, confirmPurchase } from './cascade';
+import { payAt } from './cascade';
 
 /**
  * Returns:
@@ -59,16 +59,6 @@ export async function restorePurchases({ currentTrialState = null } = {}) {
   // write its own paid tier (migration 067).
   const ref = info?.latestTransactionId ?? null;
   const result = await payAt(restoredTier, ref ?? 'restore', 'restore_purchases');
-  // M-2: server-verify the restored subscription so the authoritative tier is
-  // (re)written server-side, not just optimistically unlocked. Without this a
-  // device whose server tier is stale (e.g. the original grant happened
-  // elsewhere) would revert to free after the 5-minute optimistic window. Needs
-  // the raw Play token + product id; fire-and-forget, the optimistic unlock
-  // holds meanwhile and refreshTierFromCloud reconciles to the verified tier.
-  if (info?.latestPurchaseToken && info?.activeSku) {
-    confirmPurchase({ purchaseToken: info.latestPurchaseToken, subscriptionId: info.activeSku })
-      .catch((e) => logWarn('payments.restore.confirm', e?.message ?? 'unknown', {}));
-  }
   return {
     ok: result.ok,
     tier: restoredTier,

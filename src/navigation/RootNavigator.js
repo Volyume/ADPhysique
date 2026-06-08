@@ -110,21 +110,6 @@ const Stack = createStackNavigator();
 // last enter so a repeat for the same uid within a short window is skipped.
 let _lastAuthEnter = { uid: null, at: 0 };
 
-// C-2 safety net (subscriptions audit): after the cloud tier read, check Play
-// directly for a paid_pro user and downgrade if the subscription has lapsed
-// (the RTDN Pub/Sub push that would normally report this is a separate console
-// step). No-op on the stub provider, on a failed Play read, and for any user
-// who is not paid_pro — see cascade.reconcilePaidEntitlement for the guards.
-function _reconcilePaidEntitlement() {
-  try {
-    // eslint-disable-next-line global-require
-    const { reconcilePaidEntitlement } = require('../lib/payments/cascade');
-    return reconcilePaidEntitlement(useAppStore.getState().userProfile);
-  } catch (_) {
-    return Promise.resolve();
-  }
-}
-
 // Pro-only screens. The guard renders an upgrade prompt for free users,
 // enforcing Pro access no matter how the route is reached.
 const GatedWeeklyCheckIn    = withProGuard(WeeklyCheckInScreen, 'Weekly check-in');
@@ -624,9 +609,7 @@ export default function RootNavigator() {
               // Server-authoritative tier, enforcement point after beta.
               // During beta this guards against spurious pro → free
               // demotion (see useAppStore.refreshTierFromCloud).
-              refreshTierFromCloud(client, session.user.id)
-                .then(() => _reconcilePaidEntitlement())
-                .catch(() => {});
+              refreshTierFromCloud(client, session.user.id).catch(() => {});
 
               // Initialise Google Play Billing with the user's auth uid
               // as the obfuscated account ID. No-op if the native
@@ -793,7 +776,6 @@ export default function RootNavigator() {
                 try { require('../lib/errorLog').logError('RootNavigator.restoreSessionFromCloud', e, { userId: session.user.id }); } catch (_) {}
               });
             refreshTierFromCloud(client, session.user.id)
-              .then(() => _reconcilePaidEntitlement())
               .catch(e => {
                 // eslint-disable-next-line global-require
                 try { require('../lib/errorLog').logError('RootNavigator.refreshTierFromCloud', e, { userId: session.user.id }); } catch (_) {}

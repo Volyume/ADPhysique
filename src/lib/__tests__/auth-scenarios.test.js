@@ -421,15 +421,10 @@ describe('Scenario: App launch, checkTier loads persisted value', () => {
     expect(useAppStore.getState().tier).toBe('free');
   });
 
-  test('no tier + completed first-run no longer auto-grants pro (audit M-3)', async () => {
-    // The legacy "first-run done ⇒ pro" heuristic was removed (subscriptions
-    // audit M-3): it could grant Pro on a cleared tier cache. The cloud read
-    // (refreshTierFromCloud) is now the source of truth; until it lands the
-    // user is unentitled.
+  test('no tier + completed first-run elevates to pro (legacy users)', async () => {
     await AsyncStorage.setItem('@volyume_first_run_complete', 'true');
     await useAppStore.getState().checkTier();
-    expect(useAppStore.getState().tier).toBeNull();
-    expect(useAppStore.getState().tierChecked).toBe(true);
+    expect(useAppStore.getState().tier).toBe('pro');
   });
 
   test('no tier + no first-run leaves tier=null', async () => {
