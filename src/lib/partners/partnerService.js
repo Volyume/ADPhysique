@@ -122,7 +122,8 @@ export async function getCircleSignals(circleId) {
 
     const { data: signals, error: sErr } = await sb
       .from('partner_weekly_signal')
-      .select('user_id, iso_week, sessions_done, sessions_planned, streak_weeks, status, server_updated_at');
+      .select('user_id, iso_week, sessions_done, sessions_planned, streak_weeks, status, server_updated_at')
+      .order('iso_week', { ascending: false });   // latest week first → signalFor picks the current row
     if (sErr) throw sErr;
 
     const result = { members: members ?? [], signals: signals ?? [], fromCache: false };

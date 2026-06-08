@@ -29,8 +29,10 @@
  * LICENCE / ATTRIBUTION: the WorkoutX demonstration corpus derives from the
  * Everkinetic exercise library (Creative Commons Attribution-ShareAlike 3.0).
  * Redistribution therefore carries attribution + share-alike obligations,
- * surfaced verbatim in src/screens/CreditsScreen.js. A direct redistribution
- * grant has been requested from WorkoutX in parallel; see docs/rules.
+ * surfaced verbatim in src/screens/CreditsScreen.js. Founder sign-off to use
+ * the media was given (2026-06-08), but the formal redistribution grant from
+ * WorkoutX is NOT yet confirmed — see docs/DEMONSTRATIONS_LICENCE_STATUS.md for
+ * the decision record and the outstanding legal actions. Keep the attribution.
  *
  * !!! The WorkoutX request/response shape below is isolated in
  *     fetchWorkoutXExercises() + mapWorkoutXExercise(). VERIFY both against
