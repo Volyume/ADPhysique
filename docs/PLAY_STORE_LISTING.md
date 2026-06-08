@@ -4,6 +4,76 @@ _Ready to paste into Google Play Console. All fields comply with Play Store poli
 
 ---
 
+## ⭐ ASO-optimised recommendations (2026-06-08)
+
+Based on `docs/audit/volyume-aso-growth-research-2026-06-08.md`. These supersede
+the older draft below. Validate the keyword shortlist on a real en-GB Google
+Play profile (AppTweak / Sensor Tower) before locking the title + short
+description.
+
+### Title (30-char limit) — pick one and A/B test
+
+```
+Volyume: Workout Tracker        (24 chars — max search coverage on the #1 term)
+Volyume: Gym & Macro Coach      (26 chars — owns the tracker+macros+coaching combo)
+Volyume: Lifting & Macros       (25 chars — middle ground)
+```
+The current "Volyume - Precision Physique Coach" is 34 chars (over the limit).
+
+### Short description (80-char limit)
+
+```
+Workout tracker, food diary and coaching that adapts to your progress.
+```
+
+### Full description (4,000-char limit) — keyword-weighted, problem-first
+
+```
+Volyume is a workout tracker, food diary and coaching app for serious lifters and physique athletes. Log every set in the gym, track your macros and calories, and get weekly coaching that adjusts your training and nutrition as your body responds. One app for lifting, food and progress, instead of three.
+
+TRAIN
+Build your own training plan or start from the plan library. Log every set, rep and weight with fast gym logging that works fully offline. Browse a full exercise library, follow proven training plans, and watch your strength climb with personal bests, lift progress and volume by muscle. Built for hypertrophy and strength training, with progressive overload handled for you.
+
+EAT (Pro)
+A food diary with a barcode scanner and a large food database. Track macros, calories, protein, carbs and fat against targets worked out from your body, your training and your goal. Get meal suggestions, build recipes, and keep your nutrition on track without the guesswork.
+
+COACHING (Pro)
+Every week, a short check-in reads your weight trend, your food and your training. Precision Coaching then adjusts your calories, steps, cardio and training volume, and tells you exactly what changed and why. Built for cutting, lean bulking, maintenance and contest prep, with safety limits that hold changes until there is real data and protect your recovery.
+
+PROGRESS
+See your morning weight trend, body metrics and progress photos in one place. Track steps and cardio alongside your lifting. Clear charts show what is actually changing, not just what you did.
+
+WHO IT'S FOR
+Serious lifters, bodybuilders and physique athletes who want one app for training, nutrition and coaching, in plain numbers with no fluff.
+
+FREE
+Plan library, custom plan builder, unlimited workout logging, exercise library, personal bests and full progress stats. No time limit.
+
+PRO
+Food diary, macros, nutrition targets, cardio, steps, weekly check-ins and Precision Coaching. Free for 14 days, plus a free week on Google Play when you subscribe. Then a monthly subscription. Cancel in Google Play.
+
+Made in the UK. Works in kg and stone. Built for the way you actually train.
+```
+
+(~2,700 chars — room to extend toward 4,000 with more keyword-bearing prose if
+wanted. British spelling throughout, no "AI" claims, no funnel recital.)
+
+### Keywords to weave through the long description
+
+- **Anchors:** workout tracker, gym log, macro tracker, calorie counter
+- **Mid-tail:** weight lifting log, strength training, training log, workout planner, diet coach, nutrition targets, food diary, barcode scanner, progress tracking, exercise library
+- **Identity:** hypertrophy, physique, bodybuilding app, muscle growth, progressive overload, strength tracker
+- **Buyer-intent (white space):** bodybuilding coach app, online coaching app, weekly check-in, progress photos, contest prep, all-in-one workout and nutrition app, macro coaching, personalised training plan
+- **UK overlay (en-GB listing):** British spellings + kg / stone
+
+### Open decisions
+- **Precision Coaching™ trademark (COPY-003):** the draft uses "Precision
+  Coaching" without the ™. Confirm trademark posture before publishing; the app
+  UI still carries ™ in places.
+- Pick the title variant and run it as the first Store Listing Experiment.
+
+---
+
 ## App Details
 
 | Field | Value |
