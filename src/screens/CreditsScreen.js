@@ -35,7 +35,7 @@ export default function CreditsScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
 
         <Text style={styles.intro}>
-          The food data Volyume uses comes from open datasets and APIs published by the people and organisations below. Where their licence calls for it, the required attribution is shown verbatim.
+          The data and media Volyume uses come from open datasets and APIs published by the people and organisations below. Where their licence calls for it, the required attribution is shown verbatim.
         </Text>
 
         {/* OpenFoodFacts */}
@@ -77,6 +77,20 @@ export default function CreditsScreen() {
           </Text>
           <TouchableOpacity onPress={() => openUrl('https://fdc.nal.usda.gov/')} accessibilityRole="link" accessibilityLabel="USDA FoodData Central website">
             <Text style={styles.link}>fdc.nal.usda.gov</Text>
+          </TouchableOpacity>
+        </Card>
+
+        {/* Exercise demonstrations */}
+        <Card borderless style={styles.card}>
+          <Text style={styles.cardTitle}>Exercise demonstrations</Text>
+          <Text style={styles.body}>
+            Animated exercise demonstrations shown on exercise pages, self-hosted by Volyume.
+          </Text>
+          <Text style={styles.attribution}>
+            Exercise demonstration media sourced via WorkoutX. Underlying animations derive from the Everkinetic exercise library, licensed under the Creative Commons Attribution-ShareAlike 3.0 licence; redistributed under the same terms.
+          </Text>
+          <TouchableOpacity onPress={() => openUrl('https://creativecommons.org/licenses/by-sa/3.0/')} accessibilityRole="link" accessibilityLabel="Creative Commons Attribution-ShareAlike 3.0 licence">
+            <Text style={styles.link}>creativecommons.org · CC BY-SA 3.0</Text>
           </TouchableOpacity>
         </Card>
 
