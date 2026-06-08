@@ -456,6 +456,11 @@ export function runWeeklyCoach(inputs) {
   // (The notifications module uses Monday; some older check-in rows stored
   // Sunday, without this normalisation the same week could produce different
   // copy variants depending on the write path.)
+  // NOTE (UK-local rule exemption): the UTC arithmetic here is deliberate and is
+  // NOT a user-facing date. It is only a deterministic bucket for choosing a
+  // copy variant, so it must be stable across timezones, not local. Do not
+  // "fix" it to local: that would make the same week pick different copy by
+  // timezone. The user-facing week boundary lives in dayKey.localWeekStartMs.
   const weekSeed = (() => {
     if (!checkin?.weekStart) return 0;
     const d = new Date(checkin.weekStart);

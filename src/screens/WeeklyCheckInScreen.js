@@ -315,9 +315,13 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   const showCycle = shouldShowCycleQuestion(bioSex, cycleEnabled);
   const hasNutritionTarget = Boolean(nutritionTargets?.targetKcal);
-  // Steps question only when the user keeps a step target. Opting out
-  // (stepsEnabled === false) hides it; undefined means never opted out.
-  const hasStepsTarget = userProfile?.stepsEnabled !== false
+  // Steps section shows whenever the user has not explicitly opted out
+  // (stepsEnabled === false). A step target is no longer required to see it:
+  // without one we still capture the weekly average and show a short line
+  // pointing at Settings (founder direction 2026-06-08). hasStepsTarget is kept
+  // for the target-comparison verdict only.
+  const showSteps = userProfile?.stepsEnabled !== false;
+  const hasStepsTarget = showSteps
     && Boolean(userProfile?.stepsTarget ?? userProfile?.steps_target);
   const hasCardioPrescription = Boolean(userProfile?.cardioPrescription ?? userProfile?.cardio_prescription);
 
@@ -540,7 +544,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         sleepHours: sleepHours.trim() ? parseFloat(sleepHours) : null,
         calsAdherence: calsAdherence ?? null,
         stepsAdherence: stepsAdherence ?? null,
-        stepsAvg: hasStepsTarget
+        stepsAvg: showSteps
           // A typed value always wins (manual fallback, or an override of the
           // auto figure); otherwise use the registered average; otherwise null.
           ? (stepsManual !== ''
@@ -775,7 +779,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
         {/* Steps. Read the registered average when 4+ days are tracked,
             otherwise ask for a single average as the fallback. */}
-        {hasStepsTarget && (
+        {showSteps && (
           <View style={styles.section}>
             {stepsSummary?.registered && !stepsOverride ? (
               <>
@@ -827,6 +831,11 @@ export default function WeeklyCheckInScreen({ navigation }) {
                   maxLength={6}
                 />
               </>
+            )}
+            {!hasStepsTarget && (
+              <Text style={styles.autoDerivedNote}>
+                No step target set. Add one in Settings for step coaching, or just log your average here.
+              </Text>
             )}
           </View>
         )}
