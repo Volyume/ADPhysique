@@ -39,12 +39,18 @@ const STAGE_LABEL = {
 
 export default function SubscriptionScreen({ navigation }) {
   const toast = useToast();
-  const { userProfile, billingPeriod } = useAppStore(useShallow((s) => ({
+  const { userProfile, billingPeriod, storeTier } = useAppStore(useShallow((s) => ({
     userProfile: s.userProfile,
     billingPeriod: s.billingPeriod,
+    storeTier: s.tier,
   })));
 
-  const tier = isPaidTier(userProfile);
+  // M-1 (audit): resolve the Pro/Free value from store.tier, the same source
+  // every feature gate uses, so this screen can't disagree with the gates.
+  // stage / daysRemaining stay derived from trial_state (trial-progress display,
+  // not an entitlement gate). isPaidTier(userProfile) is the fallback before the
+  // store tier has been hydrated.
+  const tier = storeTier ?? isPaidTier(userProfile);
   const stage = cascade.stageOf(userProfile);
   const daysLeft = cascade.daysRemaining(userProfile);
   // Flat pricing (2026-06-06): no more pricing windows. The billing period

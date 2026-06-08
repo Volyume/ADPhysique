@@ -15,6 +15,14 @@ const FIRST_RUN_KEY_PFX = '@volyume_first_run_complete_'; // per-uid: + supabase
 const PROFILE_KEY_PFX  = '@volyume_user_profile_';
 const PROFILE_TIMESTAMPS_KEY_PFX = '@volyume_user_profile_ts_';
 const TIER_KEY         = '@volyume_tier';
+// Cached trial state + end so checkTier can enforce trial expiry locally at
+// launch (trial-subscription audit C-3/H1). Without this the cached tier='pro'
+// was trusted offline / before the cloud read with no comparison to the trial
+// end, so a just-expired trial user kept Pro until the next successful cloud
+// read. Only the trial path is enforced locally; paid_pro lapses are
+// server/RTDN-driven.
+const TRIAL_STATE_KEY   = '@volyume_trial_state';
+const PRO_TRIAL_ENDS_KEY = '@volyume_pro_trial_ends_at';
 // Crash/kill recovery for an in-progress workout. The store holds the
 // session (activeWorkout + workoutExercises, which carries the logged sets)
 // in memory only; on app kill it was lost and the workouts row stayed
@@ -469,6 +477,11 @@ const useAppStore = create((set, get) => ({
     const until = Date.now() + 5 * 60 * 1000; // 5 minutes
     set({ tier: 'pro', _optimisticPaidUntil: until });
     try { await AsyncStorage.setItem(TIER_KEY, 'pro'); } catch (_) { /* tolerate */ }
+    // Optimistically cache paid_pro so checkTier's local trial-expiry guard
+    // (C-3) does not downgrade a user who just paid right at trial end before
+    // the next refreshTierFromCloud writes the authoritative trial_state. A
+    // purchase that never actually granted is corrected on the next cloud read.
+    try { await AsyncStorage.setItem(TRIAL_STATE_KEY, 'paid_pro'); } catch (_) { /* tolerate */ }
   },
 
   // Cloud sync status surface. Set from RootNavigator when a fresh
@@ -506,17 +519,24 @@ const useAppStore = create((set, get) => ({
 
   checkTier: async () => {
     try {
-      const saved = await AsyncStorage.getItem(TIER_KEY);
-      // Existing users who completed first-run before tiers existed → grant pro
-      if (!saved) {
-        const firstRunDone = await AsyncStorage.getItem(FIRST_RUN_KEY);
-        if (firstRunDone === 'true') {
-          await AsyncStorage.setItem(TIER_KEY, 'pro');
-          set({ tier: 'pro', tierChecked: true });
-          return;
+      let tier = (await AsyncStorage.getItem(TIER_KEY)) || null;
+      // C-3/H1: enforce trial expiry locally so a just-expired trial user is
+      // not left on a cached 'pro' offline or in the launch window before
+      // refreshTierFromCloud lands. Only the in-app trial is enforced here;
+      // paid_pro lapses are server/RTDN-driven (the device can't know a paid
+      // sub lapsed without the server). The legacy "first-run done ⇒ pro"
+      // grant was removed (audit M-3): it could grant Pro on a cleared tier
+      // cache, and the cloud read is the real source of truth.
+      if (tier === 'pro') {
+        const ts = await AsyncStorage.getItem(TRIAL_STATE_KEY);
+        const endsRaw = await AsyncStorage.getItem(PRO_TRIAL_ENDS_KEY);
+        const endMs = endsRaw ? Date.parse(endsRaw) : NaN;
+        if (ts === 'pro_trial_active' && Number.isFinite(endMs) && Date.now() > endMs) {
+          tier = 'free';
+          try { await AsyncStorage.setItem(TIER_KEY, 'free'); } catch (_) { /* tolerate */ }
         }
       }
-      set({ tier: saved || null, tierChecked: true });
+      set({ tier, tierChecked: true });
     } catch (_e) {
       set({ tier: null, tierChecked: true });
     }
@@ -817,6 +837,14 @@ const useAppStore = create((set, get) => ({
         // Persist BEFORE setting in-memory state so a crash between the
         // two doesn't leave AsyncStorage out of sync with the store.
         await AsyncStorage.setItem(TIER_KEY, effectiveTier);
+        // Cache trial_state + end so checkTier can enforce trial expiry locally
+        // at the next launch (C-3/H1). Server is the source of truth here.
+        try {
+          if (data.trial_state != null) await AsyncStorage.setItem(TRIAL_STATE_KEY, String(data.trial_state));
+          else await AsyncStorage.removeItem(TRIAL_STATE_KEY);
+          if (data.pro_trial_ends_at != null) await AsyncStorage.setItem(PRO_TRIAL_ENDS_KEY, String(data.pro_trial_ends_at));
+          else await AsyncStorage.removeItem(PRO_TRIAL_ENDS_KEY);
+        } catch (_) { /* tolerate */ }
         // billing_period (monthly/annual) is display-only for the
         // Subscription screen; null until the Play webhook records a
         // purchase, which the screen treats as monthly.

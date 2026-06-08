@@ -215,6 +215,50 @@ export async function confirmPurchase({ purchaseToken, subscriptionId } = {}) {
   }
 }
 
+// C-2 client safety net (trial-subscription audit). The authoritative
+// revocation of a cancelled / lapsed / refunded PAID subscription is the Google
+// Play RTDN Pub/Sub push (play-billing-rtdn → upgrade_tier_for_user 'free').
+// Until that push subscription is wired in the Play/GCP console, the server
+// never learns a paid sub ended, so the tier stays 'pro'. This checks Play
+// directly on launch for a paid_pro user and downgrades if Google reports no
+// active 'pro' entitlement.
+//
+// Deliberately conservative so it can never wrongly revoke a paying customer:
+//   * only runs for trial_state === 'paid_pro' (trials are server-cron driven);
+//   * only when the REAL native provider is installed (the stub reports no
+//     entitlement, which must not be read as "lapsed");
+//   * only acts when the Play read SUCCEEDS — any throw / transient failure
+//     defers to the next launch (and the RTDN once wired), never revokes.
+// A false revoke (Play momentarily empty) is recoverable via Restore purchases.
+export async function reconcilePaidEntitlement(profile) {
+  try {
+    const ts = profile?.trialState ?? profile?.trial_state ?? null;
+    if (ts !== 'paid_pro') return { ok: true, checked: false };
+    // eslint-disable-next-line global-require
+    const playBilling = require('./playBilling');
+    if (typeof playBilling.isReal !== 'function' || !playBilling.isReal()) {
+      return { ok: true, checked: false };
+    }
+    let info;
+    try {
+      info = await playBilling.getCustomerInfo();
+    } catch (e) {
+      logWarn('payments.cascade.reconcile.read', e?.message ?? 'unknown', {});
+      return { ok: true, checked: false }; // never revoke on a failed read
+    }
+    const active = Array.isArray(info?.activeEntitlements)
+      && info.activeEntitlements.includes('pro');
+    if (active) return { ok: true, checked: true, active: true };
+    logWarn('payments.cascade.reconcile.lapsed',
+      'paid_pro with no active Play entitlement; downgrading to free', {});
+    const r = await cancel('client_reconcile');
+    return { ok: r.ok, checked: true, active: false, downgraded: !!r.ok };
+  } catch (e) {
+    logError('payments.cascade.reconcile.threw', e, { message: e?.message });
+    return { ok: false, error: e?.message ?? 'threw' };
+  }
+}
+
 export async function skipToFree(sourceSurface = null) {
   const r = await _call('upgrade_tier', {
     _target_tier: 'free',

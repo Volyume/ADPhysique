@@ -691,7 +691,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // fall through to the baseline view, the "building baseline" screen the user
   // saw on tapping the notification.
   const weekStart = route.params?.weekStart ?? localWeekStartMs();
-  const { user, userProfile, units, saveLocalProfile } = useAppStore();
+  const { user, userProfile, units, saveLocalProfile, tier: storeTier } = useAppStore();
 
   const [output, setOutput] = useState(null);
   const [checkin, setCheckin] = useState(null);
@@ -1101,7 +1101,10 @@ export default function CoachOutputScreen({ navigation, route }) {
         // they still have entitlement, the CTA is "Try free for 7
         // days" (the Play intro offer it routes to) rather than the
         // buy-now variant.
-        userTier: require('../lib/proGate').isPaidTier(userProfile),
+        // M-1 (audit): use store.tier (the value every feature gate reads) so
+        // the differential-paywall trigger can't disagree with the gates;
+        // isPaidTier is the fallback before the store tier has hydrated.
+        userTier: storeTier ?? require('../lib/proGate').isPaidTier(userProfile),
         hasUsedTrial: !require('../lib/payments/cascade').canStillTrial(userProfile),
         currentCardioTarget: userProfile?.cardioTarget ?? null,
         cardioSessionsLogged,
