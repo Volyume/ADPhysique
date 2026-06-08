@@ -290,6 +290,81 @@ async function _setPaused(paused, reason) {
   });
 }
 
+// ─── Nudges (in-app only; push deferred until an EAS projectId exists) ─────
+
+// The fixed emoji set. Keys match migration 076's CHECK constraint; the glyph
+// is the in-app rendering. No free text — a nudge carries no training data.
+export const NUDGE_EMOJI = { flex: '💪', fire: '🔥', fist: '👊', clap: '✊' };
+
+/**
+ * Send a one-tap nudge to a co-member. Server enforces co-membership + the
+ * once-per-recipient-per-day cap and returns false when rate-limited.
+ * Returns { ok, sent }.
+ */
+export async function sendNudge(circleId, toUserId, emoji) {
+  return _whenEnabled({ ok: false }, async (sb) => {
+    if (!circleId || !toUserId || !NUDGE_EMOJI[emoji]) return { ok: false };
+    const { data, error } = await sb.rpc('send_partner_nudge', {
+      p_circle: circleId, p_to_user: toUserId, p_emoji: emoji,
+    });
+    if (error) return { ok: false, error };
+    track.event?.('partners.nudge.sent', { rateLimited: data === false });
+    return { ok: true, sent: data === true };
+  });
+}
+
+/** Unseen nudges addressed to the current user. [] when unavailable. */
+export async function getMyNudges() {
+  return _whenEnabled([], async (sb) => {
+    const { data, error } = await sb
+      .from('partner_nudges')
+      .select('id, circle_id, from_user, emoji, created_at')
+      .eq('seen', false)
+      .order('created_at', { ascending: false });
+    if (error) return [];
+    return data ?? [];
+  });
+}
+
+/** Mark a set of nudge ids as seen so they don't resurface. */
+export async function markNudgesSeen(ids) {
+  return _whenEnabled({ ok: false }, async (sb) => {
+    if (!Array.isArray(ids) || ids.length === 0) return { ok: true };
+    const { error } = await sb.from('partner_nudges').update({ seen: true }).in('id', ids);
+    return error ? { ok: false, error } : { ok: true };
+  });
+}
+
+// ─── Pure view helpers (no I/O; safe to unit-test in isolation) ────────────
+
+const STATUS_LABEL = {
+  on_track: 'on track',
+  in_progress: 'this week',
+  easy: 'taking it easy',
+  quiet: 'quiet week',
+};
+
+/**
+ * Derive the display model for one member's weekly signal. Pure: maps the raw
+ * signal row to { label, done, planned, pips } where pips is an array of
+ * 'done' | 'todo' the card renders as filled/outline circles. Never invents a
+ * "missed" label — an absent signal reads as a neutral "this week".
+ */
+export function deriveSignalView(signal) {
+  const done = Math.max(0, signal?.sessions_done ?? 0);
+  const planned = Math.max(0, signal?.sessions_planned ?? 0);
+  const status = signal?.status ?? 'in_progress';
+  const total = Math.max(planned, done, 1);
+  const pips = Array.from({ length: Math.min(total, 7) }, (_, i) => (i < done ? 'done' : 'todo'));
+  return {
+    label: STATUS_LABEL[status] ?? STATUS_LABEL.in_progress,
+    done,
+    planned,
+    streakWeeks: Math.max(0, signal?.streak_weeks ?? 0),
+    pips,
+  };
+}
+
 // ─── Offline cache (AsyncStorage) ────────────────────────────────────────
 
 async function _readCache(circleId) {

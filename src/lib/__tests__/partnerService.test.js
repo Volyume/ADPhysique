@@ -49,6 +49,8 @@ function makeClient({ responses = {}, rpcs = {}, captureInsert } = {}) {
       select() { return b; },
       eq() { return b; },
       neq() { return b; },
+      in() { return b; },
+      order() { return b; },
       update(v) { b._update = v; return b; },
       insert(v) { if (captureInsert) captureInsert(table, v); b._insert = v; return b; },
       single() { return Promise.resolve(responses[table] ?? { data: null, error: null }); },
@@ -198,6 +200,66 @@ describe('mutations', () => {
     mockSb.value = makeClient({ rpcs: { feature_enabled: { data: true } } });
     expect(await svc.setSharing('c1', false)).toEqual({ ok: true });
     expect(await svc.leaveCircle('c1')).toEqual({ ok: true });
+  });
+});
+
+describe('nudges', () => {
+  test('sendNudge reports sent=true on success', async () => {
+    mockSb.value = makeClient({
+      rpcs: { feature_enabled: { data: true }, send_partner_nudge: { data: true, error: null } },
+    });
+    const res = await svc.sendNudge('c1', 'u2', 'fire');
+    expect(res).toEqual({ ok: true, sent: true });
+  });
+
+  test('sendNudge reports sent=false when rate-limited', async () => {
+    mockSb.value = makeClient({
+      rpcs: { feature_enabled: { data: true }, send_partner_nudge: { data: false, error: null } },
+    });
+    const res = await svc.sendNudge('c1', 'u2', 'fire');
+    expect(res).toEqual({ ok: true, sent: false });
+  });
+
+  test('sendNudge rejects an unknown emoji without a cloud call', async () => {
+    const client = makeClient({ rpcs: { feature_enabled: { data: true } } });
+    mockSb.value = client;
+    const res = await svc.sendNudge('c1', 'u2', 'rocket');
+    expect(res).toEqual({ ok: false });
+    expect(client._calls.rpc.find((c) => c.name === 'send_partner_nudge')).toBeUndefined();
+  });
+
+  test('getMyNudges returns unseen nudges', async () => {
+    mockSb.value = makeClient({
+      rpcs: { feature_enabled: { data: true } },
+      responses: { partner_nudges: { data: [{ id: 'n1', emoji: 'fire' }], error: null } },
+    });
+    expect(await svc.getMyNudges()).toEqual([{ id: 'n1', emoji: 'fire' }]);
+  });
+});
+
+describe('deriveSignalView (pure)', () => {
+  test('on_track with 4 of 4 → all pips done', () => {
+    const v = svc.deriveSignalView({ sessions_done: 4, sessions_planned: 4, status: 'on_track' });
+    expect(v.label).toBe('on track');
+    expect(v.pips).toEqual(['done', 'done', 'done', 'done']);
+  });
+
+  test('partial week → mix of done/todo, never a missed label', () => {
+    const v = svc.deriveSignalView({ sessions_done: 1, sessions_planned: 4, status: 'in_progress' });
+    expect(v.label).toBe('this week');
+    expect(v.pips).toEqual(['done', 'todo', 'todo', 'todo']);
+  });
+
+  test('absent signal reads as neutral this-week with a single todo pip', () => {
+    const v = svc.deriveSignalView(null);
+    expect(v.label).toBe('this week');
+    expect(v.done).toBe(0);
+    expect(v.pips).toEqual(['todo']);
+  });
+
+  test('caps pips at 7 even for a huge plan', () => {
+    const v = svc.deriveSignalView({ sessions_done: 9, sessions_planned: 12, status: 'on_track' });
+    expect(v.pips).toHaveLength(7);
   });
 });
 
