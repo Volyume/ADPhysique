@@ -86,7 +86,7 @@ Every decision affects real paying users. Treat the codebase accordingly.
 ## WORKFLOW — EVERY SESSION
 
 1. Read this file.
-2. Read `.claude/rules/` files relevant to the task.
+2. Read docs/rules/ files relevant to the task.
 3. Check current branch via `git status` and `git branch`.
 4. If on `main`, stop and switch before doing anything else.
 5. State your plan. Wait for "go".
@@ -140,17 +140,17 @@ When in doubt which tier: ask.
 
 ## QUICK RULES — ALWAYS ACTIVE
 
-**Supabase** (full patterns in `.claude/rules/supabase.md`):
+**Supabase** (full patterns in `docs/rules/supabase.md`):
 - Every new table: enable RLS + SELECT + write policies
 - Every new view: WITH (security_invoker = true) — mandatory
 - Use auth.uid() for RLS. Never hardcode user IDs.
 
-**WatermelonDB** (full patterns in `.claude/rules/watermelon.md`):
+**WatermelonDB** (full patterns in `docs/rules/watermelon.md`):
 - Mutations only inside database.write(async () => { }) blocks
 - New tables require schema change AND migration file
 - Never bump schema version without a migration
 
-**Billing** (full patterns in `.claude/rules/billing.md`):
+**Billing** (full patterns in `docs/rules/billing.md`):
 - Any billing file change: state intent, wait for "proceed"
 - Always check entitlement by customerInfo.entitlements.active['pro']
 - Never check by product ID
@@ -164,7 +164,7 @@ When in doubt which tier: ask.
 - Animations: react-native-reanimated worklets only
 - All touch targets minimum 48dp x 48dp
 
-**Visual** (full patterns in `.claude/rules/styling.md`):
+**Visual** (full patterns in `docs/rules/styling.md`):
 - Background: #0D0D0D screens, #1A1A1A cards
 - Accent: #F59E0B amber — interactive elements only
 - No white backgrounds visible against #0D0D0D
@@ -220,9 +220,9 @@ When in doubt: ask. Asking is never wrong. Assuming is almost always wrong.
 
 ## POINTERS
 
-- Supabase patterns       -> .claude/rules/supabase.md
-- WatermelonDB patterns   -> .claude/rules/watermelon.md
-- Billing patterns        -> .claude/rules/billing.md
-- Visual/styling          -> .claude/rules/styling.md
+- Supabase patterns       -> docs/rules/supabase.md
+- WatermelonDB patterns   -> docs/rules/watermelon.md
+- Billing patterns        -> docs/rules/billing.md
+- Visual/styling          -> docs/rules/styling.md
 - Phase 2 rules           -> CLAUDE_PHASE2.md (active on phase2/* branches)
 - Architecture reference  -> docs/ARCHITECTURE.md
