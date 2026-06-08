@@ -347,7 +347,7 @@ export default function ProUpgradeScreen({ navigation }) {
           </View>
 
           <Text style={styles.credentialNote}>
-            Precision Coaching™ is built on published training science: volume landmarks, autoregulation, and RED-S safety limits, configured to your data.
+            Precision Coaching™ is built from training research, your recovery, your food, and your progress.
           </Text>
 
           <TouchableOpacity

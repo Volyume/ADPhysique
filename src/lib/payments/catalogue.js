@@ -6,13 +6,14 @@
  *   - Monthly  £4.99/month
  *   - Annual   £29.99/year   (about 50% off the monthly rate)
  *
- * SKU IDs must match the products created in Google Play Console. The
- * 7-day intro free-trial offer is configured per product in Play Console,
- * not here; the billing provider reads whichever offer the user is
- * eligible for at purchase time.
+ * SKU IDs are the source of truth in code. User-facing prices always come from
+ * Play Billing, never from hardcoded values. SKU IDs must match the products
+ * created in Google Play Console. The 7-day intro free-trial offer is configured
+ * per product in Play Console, not here; the billing provider reads whichever
+ * offer the user is eligible for at purchase time.
  *
- * UK prices are the source of truth in Play Console; other regions map via
- * Play Console's automatic price tiers.
+ * UK prices are the reference in Play Console; other regions map via Play
+ * Console's automatic price tiers.
  *
  * PLAY-002: the `priceText` / `priceNumber` values below are a reference and
  * the input to annualSavingsPct(). They are NOT a user-facing display price.
