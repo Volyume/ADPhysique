@@ -79,8 +79,11 @@ export function decodeJwsPayload<T>(jws: string | undefined | null): T | null {
 
 // Generate the ES256 bearer token the App Store Server API requires.
 async function makeAscToken(): Promise<string | null> {
-  if (!ASC_ISSUER_ID || !ASC_KEY_ID || !ASC_PRIVATE_KEY) {
-    log("warn", "App Store Server API key envs missing (APP_STORE_ISSUER_ID / APP_STORE_KEY_ID / APP_STORE_PRIVATE_KEY); cannot verify with Apple");
+  // The Key ID + .p8 are always needed. The Issuer ID is included only when the
+  // key's Keys page provides one, so the function works with either key type
+  // (In-App Purchase keys and App Store Connect API / Team keys differ on this).
+  if (!ASC_KEY_ID || !ASC_PRIVATE_KEY) {
+    log("warn", "App Store Server API key envs missing (APP_STORE_KEY_ID / APP_STORE_PRIVATE_KEY); cannot verify with Apple");
     return null;
   }
   try {
@@ -88,13 +91,15 @@ async function makeAscToken(): Promise<string | null> {
       ? ASC_PRIVATE_KEY
       : `-----BEGIN PRIVATE KEY-----\n${ASC_PRIVATE_KEY.replace(/\s+/g, "")}\n-----END PRIVATE KEY-----`;
     const key = await importPKCS8(pkcs8, "ES256");
-    return await new SignJWT({ bid: BUNDLE_ID })
+    // App Store Server API token: ES256, header kid = the key's Key ID; payload
+    // aud=appstoreconnect-v1 + bid=bundle id, plus iss (issuer) when available.
+    const signer = new SignJWT({ bid: BUNDLE_ID })
       .setProtectedHeader({ alg: "ES256", kid: ASC_KEY_ID, typ: "JWT" })
-      .setIssuer(ASC_ISSUER_ID)
       .setIssuedAt()
       .setExpirationTime("1h")
-      .setAudience("appstoreconnect-v1")
-      .sign(key);
+      .setAudience("appstoreconnect-v1");
+    if (ASC_ISSUER_ID) signer.setIssuer(ASC_ISSUER_ID);
+    return await signer.sign(key);
   } catch (e) {
     log("error", `ASC token sign failed: ${String((e as Error)?.message ?? e)}`);
     return null;
