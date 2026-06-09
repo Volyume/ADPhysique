@@ -27,6 +27,9 @@ export async function publishMyWeeklySignal(userId) {
     await publishWeeklySignal({
       sessionsPlanned: stats?.planned ?? 0,
       goalPhase: coach?.goalPhase ?? null,
+      // The app's own coach prescribed recovery: the shared week reads as
+      // "resting well" and keeps the streak (rest is training). Read-only.
+      restWeek: !!coach?.deloadSuggested,
     });
   } catch (_) { /* fire-and-forget */ }
 }

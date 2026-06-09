@@ -12,20 +12,21 @@
  * Voice: British English, plain, adult. No em dashes (CLAUDE.md).
  */
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Share, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Share, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
-import { colors, spacing, type } from '../styles/theme';
+import { colors, spacing, type, radius } from '../styles/theme';
 import Button from '../components/Button';
 import { SkeletonCard } from '../components/Skeleton';
 import PartnerSignalCard from '../components/PartnerSignalCard';
 import * as haptics from '../lib/haptics';
+import { appAlert } from '../components/AppAlert';
 import {
   getMyCircles, getCircleSignals, createCircle, createInvite,
-  sendNudge,
+  sendNudge, setCirclePact,
 } from '../lib/partners/partnerService';
 
 function relativeTime(ts) {
@@ -71,6 +72,36 @@ export default function TrainingPartnersScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const signalFor = (uid) => signals.find(s => s.user_id === uid) ?? null;
+  // Signals arrive newest-first per user; [1] is the previous week, used for
+  // the "back this week" reframe (the comeback is shown, never the gap).
+  const prevSignalFor = (uid) => signals.filter(s => s.user_id === uid)[1] ?? null;
+
+  async function handleSetPact() {
+    if (!circle?.id || busy) return;
+    haptics.selection();
+    const options = [2, 3, 4, 5].map(n => ({
+      text: `${n} sessions each`,
+      onPress: async () => {
+        const res = await setCirclePact(circle.id, n);
+        if (res.ok) { setCircle(c => ({ ...c, pact_sessions: n })); load(); }
+      },
+    }));
+    if (circle?.pact_sessions) {
+      options.push({
+        text: 'Remove the pact',
+        style: 'destructive',
+        onPress: async () => {
+          const res = await setCirclePact(circle.id, null);
+          if (res.ok) { setCircle(c => ({ ...c, pact_sessions: null })); load(); }
+        },
+      });
+    }
+    appAlert(
+      'Shared weekly pact',
+      'One target you both commit to. It shows on everyone\'s card; nothing else changes.',
+      [...options, { text: 'Not now', style: 'cancel' }],
+    );
+  }
 
   async function handleInvite() {
     if (busy) return;
@@ -136,10 +167,28 @@ export default function TrainingPartnersScreen() {
               </Text>
             ) : null}
 
+            <TouchableOpacity
+              style={styles.pactRow}
+              onPress={handleSetPact}
+              accessibilityRole="button"
+              accessibilityLabel={circle?.pact_sessions
+                ? `Shared pact: ${circle.pact_sessions} sessions each this week. Tap to change.`
+                : 'Set a shared weekly pact'}
+            >
+              <Ionicons name="ribbon-outline" size={16} color={colors.primary} />
+              <Text style={styles.pactText}>
+                {circle?.pact_sessions
+                  ? `Our pact: ${circle.pact_sessions} sessions each this week`
+                  : 'Set a shared weekly pact'}
+              </Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+            </TouchableOpacity>
+
             <PartnerSignalCard
               displayName="You"
               isSelf
               signal={signalFor(user?.id)}
+              prevSignal={prevSignalFor(user?.id)}
             />
 
             {partners.length === 0 ? (
@@ -152,6 +201,7 @@ export default function TrainingPartnersScreen() {
                   key={p.user_id}
                   displayName={p.display_name}
                   signal={p.sharing_enabled ? signalFor(p.user_id) : null}
+                  prevSignal={p.sharing_enabled ? prevSignalFor(p.user_id) : null}
                   nudgeEnabled={p.sharing_enabled}
                   nudged={!!nudged[p.user_id]}
                   onNudge={(emoji) => handleNudge(p.user_id, emoji)}
@@ -186,4 +236,11 @@ const styles = StyleSheet.create({
   cacheNote: { ...type.caption, color: colors.textMuted },
   waiting: { ...type.caption, color: colors.textMuted, paddingHorizontal: spacing.xs },
   footnote: { ...type.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm },
+  pactRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    borderWidth: 1, borderColor: colors.borderSubtle,
+  },
+  pactText: { ...type.label, flex: 1, color: colors.textPrimary },
 });

@@ -90,9 +90,24 @@ export async function getMyCircles() {
   return _whenEnabled([], async (sb) => {
     const { data, error } = await sb
       .from('partner_circles')
-      .select('id, name, member_cap, created_by, created_at');
+      .select('id, name, member_cap, created_by, created_at, pact_sessions');
     if (error) return [];
     return data ?? [];
+  });
+}
+
+/**
+ * Set or clear the circle's Shared Weekly Pact (the same session target for
+ * every member — the configuration dyadic-accountability evidence favours).
+ * `sessions` 1-7, or null to clear. Any active member may set it.
+ */
+export async function setCirclePact(circleId, sessions) {
+  return _whenEnabled({ ok: false }, async (sb) => {
+    const { error } = await sb.rpc('set_circle_pact', {
+      p_circle: circleId,
+      p_sessions: sessions == null ? null : Math.max(1, Math.min(7, Math.round(sessions))),
+    });
+    return error ? { ok: false, error } : { ok: true };
   });
 }
 
@@ -263,7 +278,7 @@ export async function leaveCircle(circleId) {
  * (e.g. getWeeklySessionStats + the active coach output), so this module never
  * reaches into the coaching engine itself. Fire-and-forget; never blocks UI.
  */
-export async function publishWeeklySignal({ sessionsPlanned = 0, goalPhase = null } = {}) {
+export async function publishWeeklySignal({ sessionsPlanned = 0, goalPhase = null, restWeek = false } = {}) {
   return _whenEnabled({ ok: false }, async (sb) => {
     if (shouldPauseForPhase(goalPhase)) {
       await pauseForContestPrep();
@@ -271,6 +286,9 @@ export async function publishWeeklySignal({ sessionsPlanned = 0, goalPhase = nul
     }
     const { error } = await sb.rpc('publish_my_weekly_signal', {
       p_sessions_planned: Math.max(0, Math.round(sessionsPlanned) || 0),
+      // Deliberate recovery (the coach suggested a deload): the week reads as
+      // 'rest', keeps the streak, and carries no coaching detail.
+      p_rest_week: !!restWeek,
     });
     return error ? { ok: false, error } : { ok: true };
   });
@@ -356,6 +374,7 @@ const STATUS_LABEL = {
   in_progress: 'this week',
   easy: 'taking it easy',
   quiet: 'quiet week',
+  rest: 'resting well',
 };
 
 /**
@@ -364,14 +383,17 @@ const STATUS_LABEL = {
  * 'done' | 'todo' the card renders as filled/outline circles. Never invents a
  * "missed" label — an absent signal reads as a neutral "this week".
  */
-export function deriveSignalView(signal) {
+export function deriveSignalView(signal, prevSignal = null) {
   const done = Math.max(0, signal?.sessions_done ?? 0);
   const planned = Math.max(0, signal?.sessions_planned ?? 0);
   const status = signal?.status ?? 'in_progress';
   const total = Math.max(planned, done, 1);
   const pips = Array.from({ length: Math.min(total, 7) }, (_, i) => (i < done ? 'done' : 'todo'));
+  // Reframe-the-slip: a return after a quiet week is celebrated, never the
+  // gap. Partners only ever see the comeback.
+  const backThisWeek = prevSignal?.status === 'quiet' && done >= 1;
   return {
-    label: STATUS_LABEL[status] ?? STATUS_LABEL.in_progress,
+    label: backThisWeek ? 'back this week' : (STATUS_LABEL[status] ?? STATUS_LABEL.in_progress),
     done,
     planned,
     streakWeeks: Math.max(0, signal?.streak_weeks ?? 0),

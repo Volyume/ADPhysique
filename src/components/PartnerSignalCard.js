@@ -27,10 +27,10 @@ function Pips({ pips }) {
 }
 
 export default function PartnerSignalCard({
-  displayName, signal, isSelf = false, streakLabel,
+  displayName, signal, prevSignal = null, isSelf = false, streakLabel,
   onNudge, nudgeEnabled = false, nudged = false,
 }) {
-  const view = deriveSignalView(signal);
+  const view = deriveSignalView(signal, prevSignal);
   const streak = streakLabel
     || (view.streakWeeks >= 2 ? `week ${view.streakWeeks} of a streak` : null);
 

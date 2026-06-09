@@ -281,6 +281,49 @@ describe('contest-prep auto-pause', () => {
     const res = await svc.publishWeeklySignal({ sessionsPlanned: 4, goalPhase: 'build' });
     expect(res).toEqual({ ok: true });
     const call = client._calls.rpc.find((c) => c.name === 'publish_my_weekly_signal');
-    expect(call.args).toEqual({ p_sessions_planned: 4 });
+    expect(call.args).toEqual({ p_sessions_planned: 4, p_rest_week: false });
+  });
+
+  test('publishWeeklySignal marks a coach-prescribed rest week', async () => {
+    const client = makeClient({
+      rpcs: { publish_my_weekly_signal: { data: null, error: null } },
+    });
+    mockSb.value = client;
+    const res = await svc.publishWeeklySignal({ sessionsPlanned: 3, goalPhase: 'build', restWeek: true });
+    expect(res).toEqual({ ok: true });
+    const call = client._calls.rpc.find((c) => c.name === 'publish_my_weekly_signal');
+    expect(call.args).toEqual({ p_sessions_planned: 3, p_rest_week: true });
+  });
+});
+
+describe('shared weekly pact + kind statuses', () => {
+  test('setCirclePact clamps to 1-7 and calls the RPC', async () => {
+    const client = makeClient({ rpcs: { set_circle_pact: { data: null, error: null } } });
+    mockSb.value = client;
+    const res = await svc.setCirclePact('c1', 9);
+    expect(res).toEqual({ ok: true });
+    const call = client._calls.rpc.find((c) => c.name === 'set_circle_pact');
+    expect(call.args).toEqual({ p_circle: 'c1', p_sessions: 7 });
+  });
+
+  test('setCirclePact null clears the pact', async () => {
+    const client = makeClient({ rpcs: { set_circle_pact: { data: null, error: null } } });
+    mockSb.value = client;
+    await svc.setCirclePact('c1', null);
+    const call = client._calls.rpc.find((c) => c.name === 'set_circle_pact');
+    expect(call.args).toEqual({ p_circle: 'c1', p_sessions: null });
+  });
+
+  test('a rest week reads as "resting well", never quiet', () => {
+    const view = svc.deriveSignalView({ sessions_done: 0, sessions_planned: 3, status: 'rest' });
+    expect(view.label).toBe('resting well');
+  });
+
+  test('a return after a quiet week reads as "back this week"', () => {
+    const view = svc.deriveSignalView(
+      { sessions_done: 1, sessions_planned: 3, status: 'in_progress' },
+      { sessions_done: 0, status: 'quiet' },
+    );
+    expect(view.label).toBe('back this week');
   });
 });
