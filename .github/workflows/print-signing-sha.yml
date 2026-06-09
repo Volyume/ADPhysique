@@ -8,6 +8,11 @@ name: Print signing SHA fingerprints
 on:
   workflow_dispatch:
 
+# GitHub forces JavaScript actions onto Node 24 on 2026-06-16. Opt in early so
+# CI proves Node 24 compatibility on our schedule, not on the forced flag day.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   fingerprints:
     runs-on: ubuntu-latest
