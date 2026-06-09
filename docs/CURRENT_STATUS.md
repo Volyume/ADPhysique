@@ -373,7 +373,7 @@ native. This entry is the authoritative resume point.
    `docs/PLAY_STORE_LISTING.md`), Health Apps Declaration, content rating,
    data-deletion URL, listing assets.
 
-### 0.00000000000000001. 2026-06-06 (documentation reconciliation after a 3-day undocumented build arc, Claude): the 06-04 → 06-06 work (SDK 54 upgrade, iOS pipeline, web platform, payments rewrite, beta off, store readiness) shipped to `main` but was never written into the docs. This entry plus the section corrections below close that gap. One open code issue: the Jest suite is red.
+### 0.00000000000000001. 2026-06-06 (documentation reconciliation after a 3-day undocumented build arc, Claude): the 06-04 → 06-06 work (SDK 54 upgrade, iOS pipeline, web platform, payments rewrite, beta off, store readiness) shipped to `main` but was never written into the docs. This entry plus the section corrections below close that gap. The Jest-suite-red issue noted here was resolved the same day (commit `4707b92`); confirmed green again on 2026-06-09 (182 suites / 2991 passing, 0 failures, tsc + eslint clean).
 
 Honest meta-note first (Rule 8). Three days of major change shipped to `main`
 between 06-04 and 06-06 and the canonical docs were not updated, so this doc sat
