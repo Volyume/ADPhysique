@@ -123,16 +123,31 @@ Google Play subscriptions.
    - **Localization** (App Store display info) → **Add** → Language **English
      (U.K.)** → Display Name `Volyume Pro (Monthly)` → Description (a sentence,
      e.g. "Unlock food diary, coaching adjustments, and all Pro features.").
-6. Add the **free trial**:
-   - On the same subscription page find **Subscription Prices** →
-     **View all Subscription Pricing** → **Introductory Offers** (or a section
-     titled "Introductory Offer") → **Create Introductory Offer**.
-   - Type: **Free**, Duration: **1 week**, Countries: **All**. Save.
+6. Add the **free trial**. This is an **Introductory Offer** — the offer type
+   for *brand-new* subscribers. It is **not** a *Promotional Offer*: that's a
+   separate win-back feature for people who already subscribed/lapsed, it needs
+   its own signing key, and its options are different — don't use it here.
+   - On the subscription's page open the **Introductory Offers** section →
+     **Create** / **Set Up Introductory Offer**.
+   - **Countries or Regions**: select all.
+   - **Start Date / End Date**: App Store Connect makes the offer available
+     **between two dates**, not as a free-standing period. Set the **Start Date**
+     to today (or your launch day) and the **End Date** to **No End Date** so the
+     trial is always on the shelf for new users. (These dates are how long the
+     *offer is available*; the 7 days is the trial's own length, set next.)
+   - **Offer Type**: **Free**.
+   - **Duration**: pick the value that equals a 7-day free trial.
+     ⚠️ I'm not 100% sure of the exact label your screen lists here (Apple words
+     it differently across versions — e.g. "1 week" vs "7 days" vs a
+     periods+unit pair). **Tell me what the dropdown actually shows and I'll
+     pin the exact wording in this guide.**
+   - Save.
 7. Repeat steps 4–6 for the annual plan:
    - **Reference Name**: `Pro Annual`, **Product ID**: `pro_annual`
    - **Duration**: **1 Year**, **Price**: **£29.99**
    - Display Name `Volyume Pro (Annual)`, same kind of description.
-   - **Introductory Offer**: Free, **1 week**, All countries.
+   - **Introductory Offer**: same as step 6 — type **Free**, a 7-day trial,
+     Start Date today, **No End Date**, all countries.
 8. Each subscription needs a **review screenshot** and a **review note** before
    Apple will approve it (a box on the subscription page). A screenshot of the
    in-app paywall is fine; you can add it when you do the app screenshots in
