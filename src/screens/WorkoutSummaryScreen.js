@@ -421,11 +421,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       }).catch(() => {});
     } catch (_) {}
 
-    // Increment session count and request App Store / Play Store review after 5 sessions
-    incrementSessionCount().then(count => {
-      if (count >= 5) {
-        shouldPromptReview().then(should => { if (should) requestReview(); });
-      }
+    // Count the completed session and ask for an App Store / Play Store
+    // review once the habit gates pass (sessions + days, see storeReview.js).
+    incrementSessionCount().then(() => {
+      shouldPromptReview().then(should => { if (should) requestReview(); });
     }).catch(() => {});
 
     setSaving(false);
