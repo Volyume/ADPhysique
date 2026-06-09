@@ -1567,6 +1567,10 @@ export default function CoachOutputScreen({ navigation, route }) {
         <Text style={styles.credentialNote}>
           Precision Coaching™ is built on published training science: volume landmarks, autoregulation, and RED-S safety limits, configured to your data.
         </Text>
+
+        <Text style={styles.credentialNote}>
+          Volyume provides estimates and guidance, not medical advice. Consult a qualified professional before making significant changes to your diet or training.
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
