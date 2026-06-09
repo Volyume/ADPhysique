@@ -6,48 +6,54 @@
  * cancel and a missing token are handled, and that any non-iOS platform falls
  * back to the web-OAuth flow so Android behaviour is unchanged.
  *
- * Robustness: this suite is made immune to cross-file state in a shared jest
- * worker (a sibling suite mocks @supabase/supabase-js and mutates process.env).
- * It (1) re-asserts the Supabase env vars in beforeEach, (2) re-fetches the
- * client in beforeEach (not at collection time), and (3) spies on the live
- * client's auth methods — which works whether the createClient mock below
- * applied (parallel runs) or the real module leaked in (a --runInBand quirk).
+ * Robustness: getSupabaseClient() is a module-level singleton. In a shared CI
+ * worker a sibling suite can initialise it before this suite runs (caching a
+ * client/null that a later env-set can't undo). So each test does
+ * jest.resetModules() and re-requires react-native, expo-apple-authentication
+ * and ../supabase fresh, AFTER setting the env vars — guaranteeing a clean
+ * singleton that initialises with a real (mocked) client.
  */
-const { Platform } = require('react-native');
-
-// Identity-wrap the observability proxy so client.auth is the raw auth object.
 jest.mock('../observability', () => ({ instrumentSupabase: c => c }));
-
-// Deterministic fake client so the happy path never hits the network.
 jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(() => ({
     auth: { signInWithIdToken: jest.fn(), signInWithOAuth: jest.fn() },
   })),
 }));
 
-// expo-apple-authentication is mapped to its mock via jest.moduleNameMapper.
-const appleAuth = require('expo-apple-authentication');
-const { signInWithApple, getSupabaseClient } = require('../supabase');
-
 describe('signInWithApple', () => {
+  let RN;
+  let appleAuth;
+  let signInWithApple;
   let client;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    // Re-assert every test: a sibling suite in the same worker can delete these,
-    // and getSupabaseClient() returns null without them.
+    jest.resetModules();
     process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
     process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-test';
-    Platform.OS = 'ios';
+
+    // Re-require everything fresh so they share one module graph with a clean
+    // Supabase singleton, initialised now that the env vars are set.
+    // eslint-disable-next-line global-require
+    RN = require('react-native');
+    RN.Platform.OS = 'ios';
+    // eslint-disable-next-line global-require
+    appleAuth = require('expo-apple-authentication');
     appleAuth.isAvailableAsync.mockResolvedValue(true);
     appleAuth.signInAsync.mockResolvedValue({ identityToken: 'apple-id-token' });
 
-    client = getSupabaseClient();
+    // eslint-disable-next-line global-require
+    const supabase = require('../supabase');
+    signInWithApple = supabase.signInWithApple;
+    client = supabase.getSupabaseClient();
+    // spyOn works whether client.auth methods are the createClient-mock jest.fns
+    // or (if the module mock ever fails to apply) a real client's methods.
     jest.spyOn(client.auth, 'signInWithIdToken').mockResolvedValue({ error: null });
     jest.spyOn(client.auth, 'signInWithOAuth').mockResolvedValue({ data: { url: null }, error: null });
   });
 
-  afterAll(() => { Platform.OS = 'android'; });
+  afterAll(() => {
+    if (RN) RN.Platform.OS = 'android';
+  });
 
   test('iOS: exchanges the native Apple identity token via signInWithIdToken', async () => {
     const res = await signInWithApple();
@@ -77,7 +83,7 @@ describe('signInWithApple', () => {
   });
 
   test('non-iOS (Android): falls back to web OAuth, never touches the native module', async () => {
-    Platform.OS = 'android';
+    RN.Platform.OS = 'android';
     await signInWithApple();
     expect(appleAuth.signInAsync).not.toHaveBeenCalled();
     expect(client.auth.signInWithOAuth).toHaveBeenCalledWith(expect.objectContaining({ provider: 'apple' }));
