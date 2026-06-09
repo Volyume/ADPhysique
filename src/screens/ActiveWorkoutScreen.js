@@ -25,7 +25,6 @@ import {
   detectPR,
   bestPRPerExercise,
   computeSetTargets,
-  calculate1RM,
   summariseWorkoutSets,
   MUSCLE_DISPLAY_NAMES,
   generateDeloadPrescription,
@@ -73,34 +72,82 @@ function countProgressSets(sets) {
 }
 
 /**
- * One already-logged set in the "This workout" list. Display only, no inputs.
- * Pulled out of the screen's render and memoised so the logged-set rows do not
- * re-render on every workout-timer tick (the parent re-renders each second);
- * with stable props React.memo skips them. `progressNum` is the set's position
- * among counting (non-warm-up, non-dropset) sets, computed by the caller.
+ * Compact set table (the Strong/Hevy idiom): SET | PREVIOUS | KG | REPS | ✓ in
+ * ~40px rows instead of a card per set. Logged sets show their actuals;
+ * remaining planned sets show last session's set as a dimmed ghost target, the
+ * next one highlighted. Display only — input stays in SetEntry above, so the
+ * logging flow itself is untouched. Memoised: the parent re-renders every
+ * timer second.
  */
-const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum }) {
-  const isWarmup = set.setType === 'warmup';
-  const est1RM = isWarmup ? null : calculate1RM(set.weight, set.actualReps);
-  const perSide = formatPerSide(set.leftReps, set.rightReps);
+const SetTable = React.memo(function SetTable({ loggedSets, prevSets, plannedCount, units }) {
+  const rows = [];
+  let workingIdx = 0;
+  for (let i = 0; i < loggedSets.length; i++) {
+    const s = loggedSets[i];
+    const isWarmup = s.setType === 'warmup';
+    const prev = isWarmup ? null : prevSets?.[workingIdx] ?? null;
+    rows.push({ key: `l${i}`, kind: 'logged', set: s, prev, num: isWarmup ? null : workingIdx + 1 });
+    if (!isWarmup) workingIdx++;
+  }
+  const upcoming = Math.max(0, (plannedCount || 0) - workingIdx);
+  for (let j = 0; j < upcoming; j++) {
+    rows.push({
+      key: `u${j}`, kind: j === 0 ? 'next' : 'todo',
+      prev: prevSets?.[workingIdx + j] ?? null, num: workingIdx + j + 1,
+    });
+  }
+  if (!rows.length) return null;
+
   return (
-    <View style={[styles.loggedSetRow, isWarmup && styles.loggedSetRowWarmup]}>
-      {isWarmup ? (
-        <Ionicons name="flame" size={14} color={colors.warning} style={{ width: 22, textAlign: 'center' }} />
-      ) : (
-        <View style={styles.setNumBadge}>
-          <Text style={styles.setNumText}>{progressNum}</Text>
-        </View>
-      )}
-      <Text style={[styles.loggedSetText, isWarmup && styles.loggedSetTextWarmup]}>
-        {set.weight}{units} × {set.actualReps}
-        {perSide ? ` · ${perSide}` : ''}
-        {isWarmup ? ' · Warm-up' : ''}
-      </Text>
-      {!isWarmup && est1RM > 0 && (
-        <Text style={styles.loggedEst1RM}>Est. max ≈{est1RM.toFixed(0)}{units}</Text>
-      )}
-      <Ionicons name="checkmark-circle" size={16} color={isWarmup ? colors.warning : colors.success} />
+    <View style={styles.setTable}>
+      <View style={styles.setTableHead}>
+        <Text style={[styles.setTableHeadText, styles.colSet]}>Set</Text>
+        <Text style={[styles.setTableHeadText, styles.colPrev]}>Previous</Text>
+        <Text style={[styles.setTableHeadText, styles.colNum]}>{units}</Text>
+        <Text style={[styles.setTableHeadText, styles.colNum]}>Reps</Text>
+        <View style={styles.colTick} />
+      </View>
+      {rows.map(r => {
+        const isWarmup = r.kind === 'logged' && r.set.setType === 'warmup';
+        const perSide = r.kind === 'logged' ? formatPerSide(r.set.leftReps, r.set.rightReps) : null;
+        return (
+          <View key={r.key} style={[styles.setTableRow, r.kind === 'next' && styles.setTableRowNext]}>
+            {isWarmup ? (
+              <Ionicons name="flame" size={13} color={colors.warning} style={styles.colSet} />
+            ) : (
+              <Text style={[styles.setTableNum, styles.colSet]}>{r.num}</Text>
+            )}
+            <Text style={[styles.setTablePrev, styles.colPrev]} numberOfLines={1}>
+              {r.prev ? `${r.prev.weight}×${r.prev.actualReps ?? r.prev.actual_reps ?? '–'}` : '–'}
+            </Text>
+            {r.kind === 'logged' ? (
+              <>
+                <Text style={[styles.setTableVal, styles.colNum]}>{r.set.weight}</Text>
+                <Text style={[styles.setTableVal, styles.colNum]}>
+                  {r.set.actualReps}{perSide ? `*` : ''}
+                </Text>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={16}
+                  color={isWarmup ? colors.warning : colors.success}
+                  style={styles.colTick}
+                />
+              </>
+            ) : (
+              <>
+                <Text style={[styles.setTableGhost, styles.colNum]}>{r.prev ? String(r.prev.weight) : '–'}</Text>
+                <Text style={[styles.setTableGhost, styles.colNum]}>{r.prev ? String(r.prev.actualReps ?? r.prev.actual_reps ?? '–') : '–'}</Text>
+                <Ionicons
+                  name={r.kind === 'next' ? 'ellipse-outline' : 'ellipse-outline'}
+                  size={14}
+                  color={r.kind === 'next' ? colors.primary : colors.textDisabled}
+                  style={styles.colTick}
+                />
+              </>
+            )}
+          </View>
+        );
+      })}
     </View>
   );
 });
@@ -1884,18 +1931,17 @@ export default function ActiveWorkoutScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* Logged Sets */}
-          {loggedSets.length > 0 && (
+          {/* Set table: logged actuals + remaining planned sets with last
+              session's numbers as the ghost target (Strong/Hevy idiom) */}
+          {(loggedSets.length > 0 || (routineExercise?.recommendedSets ?? 0) > 0) && (
             <View style={styles.loggedSection}>
               <Text style={styles.loggedTitle}>This workout</Text>
-              {loggedSets.map((s, i) => (
-                <LoggedSetRow
-                  key={i}
-                  set={s}
-                  units={units}
-                  progressNum={countProgressSets(loggedSets.slice(0, i + 1))}
-                />
-              ))}
+              <SetTable
+                loggedSets={loggedSets}
+                prevSets={prevSets}
+                plannedCount={routineExercise?.recommendedSets ?? 0}
+                units={units}
+              />
             </View>
           )}
 
@@ -2439,13 +2485,37 @@ const styles = StyleSheet.create({
   timeCrunchRevertText: { fontSize: fontSize.xs, color: colors.textSecondary },
   loggedSection: { gap: spacing.sm },
   loggedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2 },
-  loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border },
-  loggedSetRowWarmup: { borderColor: withAlpha(colors.warning, 0.376), backgroundColor: colors.warningBg || colors.surface },
-  loggedSetTextWarmup: { color: colors.warning },
-  setNumBadge: { width: 28, height: 28, borderRadius: radius.lg, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
-  setNumText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
-  loggedSetText: { flex: 1, fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  loggedEst1RM: { fontSize: fontSize.xs, color: colors.textMuted },
+  // Compact set table: ~40px rows, hairlines only, whole-row readability.
+  setTable: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    overflow: 'hidden',
+  },
+  setTableHead: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
+    borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
+  },
+  setTableHeadText: {
+    fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted,
+    textTransform: 'uppercase', letterSpacing: 0.6,
+  },
+  setTableRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
+  },
+  setTableRowNext: { backgroundColor: colors.primaryBg },
+  setTableNum: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
+  setTablePrev: { fontSize: fontSize.sm, color: colors.textMuted, fontVariant: ['tabular-nums'] },
+  setTableVal: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, fontVariant: ['tabular-nums'], textAlign: 'center' },
+  setTableGhost: { fontSize: fontSize.md, color: colors.textDisabled, fontVariant: ['tabular-nums'], textAlign: 'center' },
+  colSet: { width: 34 },
+  colPrev: { flex: 1 },
+  colNum: { width: 64, textAlign: 'center' },
+  colTick: { width: 26, textAlign: 'right', marginLeft: 'auto' },
   emptyView: { flex: 1, backgroundColor: colors.background },
   emptyContent: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: spacing.xxxl * 2, gap: spacing.lg, paddingHorizontal: spacing.xxl },
   emptyTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },

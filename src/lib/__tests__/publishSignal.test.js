@@ -28,7 +28,14 @@ test('maps planned sessions + goalPhase into the publish call', async () => {
   getWeeklySessionStats.mockResolvedValue({ completed: 2, planned: 4 });
   getLatestCoachOutput.mockResolvedValue({ goalPhase: 'build' });
   await publishMyWeeklySignal('u1');
-  expect(publishWeeklySignal).toHaveBeenCalledWith({ sessionsPlanned: 4, goalPhase: 'build' });
+  expect(publishWeeklySignal).toHaveBeenCalledWith({ sessionsPlanned: 4, goalPhase: 'build', restWeek: false });
+});
+
+test('a coach-suggested deload publishes as a rest week', async () => {
+  getWeeklySessionStats.mockResolvedValue({ completed: 0, planned: 3 });
+  getLatestCoachOutput.mockResolvedValue({ goalPhase: 'build', deloadSuggested: true });
+  await publishMyWeeklySignal('u1');
+  expect(publishWeeklySignal).toHaveBeenCalledWith({ sessionsPlanned: 3, goalPhase: 'build', restWeek: true });
 });
 
 test('tolerates rejecting gatherers (fire-and-forget, never throws)', async () => {
@@ -36,5 +43,5 @@ test('tolerates rejecting gatherers (fire-and-forget, never throws)', async () =
   getLatestCoachOutput.mockRejectedValue(new Error('db down'));
   await expect(publishMyWeeklySignal('u1')).resolves.toBeUndefined();
   // planned falls back to 0, goalPhase to null
-  expect(publishWeeklySignal).toHaveBeenCalledWith({ sessionsPlanned: 0, goalPhase: null });
+  expect(publishWeeklySignal).toHaveBeenCalledWith({ sessionsPlanned: 0, goalPhase: null, restWeek: false });
 });
