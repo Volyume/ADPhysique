@@ -133,11 +133,11 @@ Evaluate converting set logging to the compact table idiom (SET | PREVIOUS | KG 
 
 ---
 
-## 5. Open decisions
-1. Approve Wave 1 as scoped? (All read-only engine hooks, token changes, one small pact field.)
-2. Logging-table conversion (3.4): prototype now or after Wave 1 ships?
-3. Form Locker: confirm Pro-gating and "measure, don't judge" as a hard product rule.
-4. Pod Streak naming/copy (British English, non-shaming) — founder pass wanted.
-5. Audio cues: in or out of scope for now?
+## 5. Founder decisions — 2026-06-09 (LOCKED)
+1. **Wave 1 approved in full**: type + density pass, intent-prompt streamlining, contextual cueing + "why your coach chose this", Partners Shared Weekly Pact + kind statuses + deload-counts-as-kept.
+2. **Logging-table conversion: prototype NOW**, alongside Wave 1 (Strong/Hevy compact table with previous-set ghost autofill).
+3. **Form Locker: PARKED.** Do not build; revisit after the demos/partners waves ship.
+4. **Audio cues: IN SCOPE.** Speak the one contextual cue at set start. New dependency **expo-speech approved** (MIT, official Expo SDK, on-device TTS, offline, managed-workflow compatible).
+5. Pod Streak / silent freezes / Plan Ping remain Wave 2-3 as roadmapped.
 
 *Companion docs: `phase2-05-best-in-class-proposal.md` (parity plan, media sourcing), research transcripts for all seven streams.*
