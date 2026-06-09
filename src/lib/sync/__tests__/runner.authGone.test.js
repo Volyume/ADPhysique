@@ -11,18 +11,24 @@
 
 const mockGetUser = jest.fn();
 const mockSignOut = jest.fn().mockResolvedValue({ error: null });
-let mockClient = { auth: { getUser: (...a) => mockGetUser(...a), signOut: (...a) => mockSignOut(...a) } };
 
-jest.mock('../../supabase', () => ({
-  getSupabaseClient: () => mockClient,
-}));
-
+// Injected via the module's test seam (_setClientForTests) rather than a
+// jest.mock of ../supabase, so the suite is deterministic in shared workers.
+const { _setClientForTests } = require('../../supabase');
 const { _clearSessionIfAuthUserGone } = require('../runner');
+
+function injectClient(client) {
+  _setClientForTests(client);
+}
 
 describe('_clearSessionIfAuthUserGone', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockClient = { auth: { getUser: (...a) => mockGetUser(...a), signOut: (...a) => mockSignOut(...a) } };
+    injectClient({ auth: { getUser: (...a) => mockGetUser(...a), signOut: (...a) => mockSignOut(...a) } });
+  });
+
+  afterAll(() => {
+    _setClientForTests(null);
   });
 
   test('drops the local session when Auth says the user no longer exists (403 sub claim)', async () => {
@@ -74,9 +80,9 @@ describe('_clearSessionIfAuthUserGone', () => {
   });
 
   test('no client or a thrown getUser resolves false without throwing', async () => {
-    mockClient = null;
+    injectClient(null);
     expect(await _clearSessionIfAuthUserGone()).toBe(false);
-    mockClient = { auth: { getUser: () => { throw new Error('boom'); }, signOut: mockSignOut } };
+    injectClient({ auth: { getUser: () => { throw new Error('boom'); }, signOut: mockSignOut } });
     expect(await _clearSessionIfAuthUserGone()).toBe(false);
     expect(mockSignOut).not.toHaveBeenCalled();
   });

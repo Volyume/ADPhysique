@@ -54,6 +54,16 @@ export function getSupabaseClient() {
   return _client;
 }
 
+// Test seam, mirroring playBilling's injectProvider/_resetForTests pattern.
+// getSupabaseClient() is a module-level singleton driven by env vars at first
+// call, which makes it hostile to test in a shared jest worker (a sibling
+// suite can initialise it first and cache a state no later env-set can undo).
+// Tests inject a fake client here instead of fighting the module registry.
+export function _setClientForTests(client) {
+  _client = client;
+  _initialized = true;
+}
+
 export function isSupabaseConfigured() {
   return !!(
     process.env.EXPO_PUBLIC_SUPABASE_URL &&
