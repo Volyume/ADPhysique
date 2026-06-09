@@ -14,6 +14,69 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
+### 0.000000000000000000000001. 2026-06-09 (later): iOS shipped to TestFlight end to end (Apple sign-in, StoreKit, build-number fix), four-pass production research, overnight quality run
+
+The big one. iOS reached TestFlight **green** for the first time with the
+full feature set, and the path there plus a research-driven quality pass all
+landed on `main` (founder-authorised; the never-touch-main rule was
+explicitly overridden by the founder for this arc).
+
+**iOS launch work (all shipped, build 7 of 1.2.0 accepted by Apple):**
+- Native Sign in with Apple (Guideline 4.8): `expo-apple-authentication`,
+  native `signInAsync` → `signInWithIdToken`, official Apple button,
+  `applesignin` entitlement via plugin. Android keeps web-OAuth, untouched.
+- StoreKit 2 purchases (Guideline 3.1.1): separate iOS provider in
+  `playBilling.js` selected by platform (Google provider byte-identical);
+  `confirmPurchase` routes per store; new Edge Functions `app-store-verify`
+  (client purchase grant) + `app-store-notifications` (Server Notifications
+  V2), both verifying against Apple's App Store Server API and granting via
+  `upgrade_tier_for_user`. **Founder must set APP_STORE_ISSUER_ID / KEY_ID /
+  PRIVATE_KEY on the functions or iOS purchases never grant.**
+- The TestFlight submit failures (runs 98–103) were a build-number
+  collision: `appVersionSource: local` + CI meant every build was 6, which
+  Apple already had. Now `remote` (EAS server counter), seeded at 7.
+- App-level privacy manifest (UserDefaults CA92.1); support page live at
+  volyume.app/support; `docs/IOS_GO_LIVE_STEP_BY_STEP.md` is the founder's
+  click-by-click console guide (subscriptions created: `pro_monthly` +
+  `pro_annual` — the founder recreated the annual one after a `pro_yearly`
+  product-id typo; offers are "free for the first week").
+
+**Four-pass research (app map / store readiness / infra / improvements)**
+synthesised in **`docs/PRODUCTION_ROADMAP_2026-06-09.md`** — the canonical
+to-do. Key facts: 71 screens all reachable and correctly gated; zero code
+blockers for App Store submission; remaining gates are founder console items
+(listing assets, the APP_STORE_* secrets, RTDN_OIDC_AUDIENCE) and the
+Android AAB being arm64-only (widen before the next Play release).
+
+**Overnight quality run (this entry's commits):**
+- All workflows opted into Node 24 early (GitHub forces it 2026-06-16);
+  validated green on the branch before reaching main.
+- Sync runner: after an errored cycle, a narrow auth-user-gone check
+  (401/403 + sub-claim/user_not_found only) signs out locally so a deleted
+  account's device stops the daily_steps FK Sentry noise.
+- Store-review prompt: 10 sessions + 14 days (was 5 sessions), never twice,
+  legacy installs start the clock at their next session.
+- SvgBarSparkline now exposes a spoken summary (the last chart-a11y gap);
+  the fatigue card has domain wording.
+- Coach output footer carries the not-medical-advice line. Deliberately NOT
+  on the Article 9 screen: its copy is version-pinned in the consent audit
+  trail and is the founder's to change.
+- `_setClientForTests` seam in `supabase.js` (playBilling's injection
+  pattern) ended the CI-only auth-apple flake for good; the PII redaction
+  test was de-flaked (the timestamp could contain the asserted digits).
+- Verified items needing NO change: the timezone reschedule is already wired
+  in App.js's foreground handler; textDisabled usages are all genuine
+  disabled states; the BACKLOG's hardcoded-hex entries were already fixed.
+
+**Environment incident, recorded straight:** the cloud container rolled
+back to stale snapshots THREE more times mid-session (same class as the
+06-05/06-09 incidents), twice eating commits that had to be recovered by
+rebasing onto origin. Origin was never wrong; trust the remote, not the
+container.
+
+**Suite at session end: 200 suites / 3,129 passing, tsc --strict clean,
+eslint 0 errors.**
+
 ### 0.00000000000000000000001. 2026-06-09: iOS readiness validated, Sentry build fix landed, Live Activity scoped, daily_steps FK diagnosed, container-rollback incident
 
 Session ended early and is being abandoned for a fresh one because the
