@@ -52,6 +52,9 @@ export default function FatigueTrendCard({ sessions }) {
           barWidth={22}
           barGap={8}
           alignRight
+          accessibilityLabel={`Training fatigue trend, oldest to newest: ${data
+            .map(d => `${d.label || 'session'} level ${d.value} of 4`)
+            .join(', ')}`}
         />
       </View>
       <Text style={styles.coachLine}>{coachingLine(sessions)}</Text>

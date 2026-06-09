@@ -1,4 +1,5 @@
 import React from 'react';
+import { View } from 'react-native';
 import { Svg, Rect, Text as SvgText } from 'react-native-svg';
 import { colors } from '../styles/theme';
 
@@ -20,6 +21,12 @@ import { colors } from '../styles/theme';
  *   defaultColor fallback bar colour when a point has no explicit colour
  *   labelColor   colour for the under-bar labels
  *   minBarHeight smallest visible bar so zero-data points stay legible
+ *   accessibilityLabel
+ *                spoken summary for VoiceOver/TalkBack. SVG content is
+ *                invisible to screen readers, so without this the chart reads
+ *                as nothing. Defaults to a generated left-to-right summary of
+ *                the points ("label value, label value, …"); pass a caller
+ *                label for domain wording (e.g. "Fatigue trend: …").
  */
 export default function SvgBarSparkline({
   data,
@@ -33,8 +40,14 @@ export default function SvgBarSparkline({
   defaultColor = colors.primary,
   labelColor = colors.textMuted,
   minBarHeight = 4,
+  accessibilityLabel,
 }) {
   if (!data || data.length === 0) return null;
+
+  const a11yLabel = accessibilityLabel
+    ?? `Bar chart: ${data
+      .map(d => (d.label ? `${d.label} ${Math.round(d.value || 0)}` : `${Math.round(d.value || 0)}`))
+      .join(', ')}`;
 
   const max = Math.max(maxValue ?? Math.max(...data.map(d => d.value || 0)), 1);
   const count = data.length;
@@ -46,7 +59,8 @@ export default function SvgBarSparkline({
     : Math.max(0, (width - totalBarSpace) / 2);
 
   return (
-    <Svg width={width} height={height + labelRow}>
+    <View accessible accessibilityRole="image" accessibilityLabel={a11yLabel}>
+      <Svg width={width} height={height + labelRow}>
       {data.map((point, i) => {
         const value = Math.max(0, point.value || 0);
         const ratio = max > 0 ? value / max : 0;
@@ -79,6 +93,7 @@ export default function SvgBarSparkline({
           </React.Fragment>
         );
       })}
-    </Svg>
+      </Svg>
+    </View>
   );
 }
