@@ -80,11 +80,23 @@ Volyume's high-traffic surfaces (audit §10) are **HomeScreen** and **ActiveWork
 - **free-exercise-db: I downloaded and viewed the actual images.** They are **real gym photographs** (a model performing the movement with real equipment), a start/end pair per exercise, ~850px JPGs (~40–73 KB) — **not** line drawings or stick figures. They are clearly *more informative* than the current identical generic icon. **However**, the set is aggregated stock: **inconsistent models and settings across exercises** (barbell lifts share a red-wall studio with branded apparel; cable/machine moves are different models in different gyms), **visible third-party apparel branding**, dated (~2012). It reads as "scraped/stock," not bespoke. **Verdict: a real upgrade as the FALLBACK that replaces the generic icon — but not premium enough to be the headline demo for a £4.99/mo app.**
 - **MoveKit: I could NOT verify the render quality.** Their site hard-blocks automated access (returns nothing/403), so I have not seen an actual clip. Verifiable from secondary sources only: single consistent anatomical mannequin, off-white background, **muscle-highlight overlay variants**, 200+ clips, $99 full / $4.99 per, commercial licence, loopable, and a **free 2-exercise sample pack**. **Do NOT approve the $99 until the sample pack is downloaded and the render is judged premium** — if it looks like a 2014 fitness app it will cheapen the product regardless of the clean licence.
 
-**Revised plan:**
-- **Phase 1 — replace the generic icon with the free-exercise-db photo as the FALLBACK** (no licence/dep risk: Unlicense/public-domain, `expo-image` renders JPG, bundled offline, reuses the name-matching infra). Position it honestly as a reference photo, **not** as the premium "demonstration." Caveat to check first: the **visible apparel branding** in some shots (confirm it's not a competitor/trademark issue before shipping).
-- **Phase 2 — premium animation is the hero, but sample-gated:** download MoveKit's **free 2-exercise sample pack** and judge the render on-device. If premium → licence the $99 library, host top ~200 most-logged exercises in the existing `exercise-demos` bucket, cache offline. If not premium → reject and evaluate a higher-end library (Muscle & Motion, Gym Animations) or a small commissioned set. **Buy nothing blind.**
-- **Explicitly reject** the WorkoutX/Everkinetic path (CC BY-SA viral), MuscleWiki/ExRx (no offline), ExerciseDB (licence contradiction). Retire/replace the unverified WorkoutX seeder.
-- **Dependency decision for sign-off:** Phase 1 (photos) needs **no new dep**. Phase 2 MP4 wants **`expo-video`** (new dep, requires approval per CLAUDE.md) — or stay on **animated WebP via `expo-image`** (no new dep, ~1.1 MB/clip). Recommendation: **photo fallback + cues now (no dep); approve `expo-video` only once a premium animation source is confirmed via sample.**
+**Coverage reality (the library is 448 exercises, 47% of them grip/angle/equipment variations):**
+- **No single premium-animation library cleanly covers 448 with a clean offline licence.** MoveKit ~200 is **base movements only** (split by equipment, not fine grip/angle variations) → ~35–45% raw match. Gym Animations (~7,000 clips incl. variations, explicit self-host/offline commercial licence, free demos, **$199–599 one-time**) is the best *single* source at ~75–90%. Muscle & Motion has the best render but **no clean embeddable/offline licence** (bespoke enterprise only) → not viable as the base. ExerciseDB only via its paid asset licence (never the AGPL code path). Everkinetic CC BY-SA viral → reject.
+
+**Revised plan — TIERED with base→variation mapping (recommended):**
+Because every variation shares a base movement, **~200 premium base clips can visually serve ~400+ of the 448** entries by mapping each variation to its base movement's clip (all six "Lat Pulldown" grips → one Lat Pulldown animation; the swap/substitution engine already groups similar movements, so the base grouping largely exists).
+- **Tier 1 — premium 3D for ~150–200 base movements** (the hero, sample-gated). Evaluate **MoveKit's free 2-exercise pack** ($99 full) *and* **Gym Animations' free demos** ($199–599, includes variation-level clips). Pick on render quality seen on-device. Host in the existing `exercise-demos` bucket, cache offline. Covers ~85–95% via mapping.
+- **Tier 2 — public-domain photo fallback** for the genuine long tail: **free-exercise-db** (Unlicense, naming already matches yours, `expo-image` renders JPG offline) → takes coverage to ~100%. Replaces today's generic icon regardless. Caveat: confirm the **visible apparel branding** in some shots isn't a trademark issue.
+- **Cues everywhere** (the 169 `FORM_TIPS` + expand) under every demo.
+- **Result:** ~100% coverage, premium animation on every base movement users actually see, public-domain photos on the rare long tail, **fully offline, clean licence, ≈ $99–599 one-time, no per-user royalty.** **Buy nothing blind** — both premium options are sample-gated.
+- **Explicitly reject** WorkoutX/Everkinetic (CC BY-SA viral), MuscleWiki/ExRx (no offline), ExerciseDB AGPL code path. Retire the unverified WorkoutX seeder.
+- **Build the base→variation mapping table first** — it's the keystone that turns ~200 clips into ~100% coverage.
+- **Dependency decision:** photo fallback needs **no new dep**. Premium MP4 wants **`expo-video`** (new dep, needs approval) — or animated WebP via `expo-image` (no new dep, ~1.1 MB/clip). Recommendation: **photos + cues now (no dep); approve `expo-video` once a premium source passes its sample.**
+
+### 3.3.1 Can AI generate these for free instead? (assessed — no)
+- **Text-to-video AI (Sora/Veo/Kling/Runway-class) is not shippable for form-critical demos.** It produces plausible-but-biomechanically-wrong movement (the dangerous failure for a fitness app — users copy bad form), can't hold one consistent character/style across 448 clips, doesn't loop cleanly, and "free" tiers are watermarked/limited. This matches Volyume's own `phase2-03` finding that AI-generated demos aren't production-ready.
+- **The production-grade "generated" answer already exists and is exactly the 3D libraries above** — they are computer-generated, just **authored/mocap-driven rather than hallucinated**, which is why they're correct and consistent. To *own* rather than licence, the route is commissioning a rigged 3D avatar + animation set (~$30–150/clip), not text-to-video AI.
+- **Where AI legitimately helps:** drafting the written cues/common-mistakes text (human-reviewed), muscle-highlight overlays/static illustration (reviewed), and possibly pose-guided clean-up of a *correct* reference — none of which replace the core visual.
 
 ### 3.4 Integration points (reuse what exists; no rebuild)
 - Schema, bucket, `DemoCard`, `CoachingNotesPanel`, name-matching seeder infra, `expo-image` caching, and the in-workout sheet all already exist — the work is **content + placement + consolidation**, not new scaffolding.
@@ -116,17 +128,21 @@ The architecture is already best-in-class and privacy-correct (§1, §2). **Do n
 
 ## 5. Sourcing & licensing decision matrix (for sign-off)
 
-| Source | Licence | Format | Offline OK? | Verdict |
-|---|---|---|---|---|
-| **free-exercise-db** | Unlicense (public domain) | Real **photos**, start/end pair (~850px) — *inspected* | ✅ | **Fallback only** (real photo > generic icon; too inconsistent/stock to be the hero; check apparel branding) |
-| **MoveKit** | Commercial, own the files (~$99/200+) | 3D MP4 + muscle-highlight variants — *render NOT yet seen* | ✅ | **Sample-gated:** get the free 2-exercise pack, judge premium quality; adopt only if it looks premium |
-| Everkinetic / wrkout | CC BY-SA (viral ShareAlike) | Illustrations | ✅ | Reject (closed-app conflict) |
-| MuscleWiki | API, no media storage | Video | ❌ | Reject (no offline) |
-| ExRx | Paid, no redistribution | GIF/video | ❌ | Reject (no offline) |
-| ExerciseDB | AGPL code vs restrictive media | GIF | ⚠️ | Reject (licence contradiction) |
-| WorkoutX (prior) | Unverified; Everkinetic-derived | GIF | ⚠️ | Retire |
+Library = 448 exercises (47% variations). "Coverage" = realistic % of the 448 served *with base→variation mapping*.
 
-*(All licences verified 2026-06-09; re-check before launch.)*
+| Source | Coverage | Format / quality | Licence | Offline self-host? | Price | Sample? | Verdict |
+|---|---|---|---|---|---|---|---|
+| **Gym Animations** | ~75–90% (incl. variations) | 3D MP4/GIF, good-not-elite | Commercial; no *resale* of files | ✅ | $199–599 one-time | ✅ free demos | **Tier-1 candidate** — best single coverage; sample-gate quality |
+| **MoveKit** | ~35–45% raw / ~85–95% via mapping | Premium 3D + muscle-highlight overlay | Commercial, own files | ✅ | $99 (or $4.99/clip) | ✅ free 2-pack | **Tier-1 candidate** — best polish; base movements only |
+| **free-exercise-db** | ~100% of long tail (incl. variations) | Real **photos** (start/end), stock-grade — *inspected* | Unlicense (public domain) | ✅ | Free | repo | **Tier-2 fallback** — replaces generic icon; check apparel branding |
+| Muscle & Motion | 1,200+ | Best render (3D anatomical) | **No clean embeddable licence** (bespoke only) | ⚠️ unconfirmed | enterprise | — | Reject as base (licence) |
+| ExerciseDB | 1,300–11,000 | GIF | Paid asset OK in-app; **AGPL code path = no** | ⚠️ | paid tiers | free tier | Only via paid asset licence; never the code path |
+| Everkinetic | few hundred | Illustration | CC BY-SA (viral ShareAlike) | ✅ | repo | Reject (closed-app conflict) |
+| MuscleWiki / ExRx | large | Video/GIF | Forbid offline storage | ❌ | paid | Reject (no offline) |
+| WorkoutX (prior) | unknown | GIF | Unverified; Everkinetic-derived | ⚠️ | — | Retire |
+| AI text-to-video | n/a | Generated video | n/a | n/a | "free"/credits | Reject (wrong form, inconsistent, no loop — see §3.3.1) |
+
+*(All licences/coverage verified 2026-06-09; re-check before launch. MoveKit/Gym Animations/M&M render quality not viewable from the research sandbox — sample-gate on-device.)*
 
 ---
 
@@ -139,9 +155,10 @@ The architecture is already best-in-class and privacy-correct (§1, §2). **Do n
 ---
 
 ## 7. Open decisions for sign-off
-1. **Demo media at launch:** free-exercise-db photo as the *fallback* now (real, but stock-looking — see samples) + a premium animation source as the hero next — or hold the fallback too and wait for premium only?
-2. **`expo-video` dependency:** approve for MP4, or ship animated WebP via `expo-image` (no new dep)?
-3. **MoveKit spend** (~$99): **not** a blind yes — first download the **free 2-exercise sample pack** and confirm the 3D render looks premium on-device. Approve the spend only after seeing it. (I couldn't view it from here — their site blocks automated access.)
+1. **Tiered media strategy:** approve premium 3D for ~150–200 base movements + base→variation mapping + public-domain photo fallback for the long tail (≈100% coverage, ≈$99–599 one-time)? Or photo-only for now?
+2. **Premium source:** evaluate **both** samples — MoveKit (best polish, base only, $99) vs **Gym Animations** (variation-level clips, ~75–90% coverage, $199–599) — and pick on render quality seen on-device. Which do you want sampled first? (Neither bought blind; both have free samples. M&M rejected on licence.)
+3. **`expo-video` dependency:** approve for MP4, or ship animated WebP via `expo-image` (no new dep)?
+4. **AI-generated media:** confirmed not shippable for form-critical demos (§3.3.1) — agree to drop it as an option?
 4. **Training Partners discoverability:** approve the one-time onboarding hint + the `WorkoutSummary` entry point (keeping Home clean)?
 5. **Coverage target:** demo on every library exercise (avoid the "partial coverage" complaint) — agree the priority list (most-logged first)?
 
