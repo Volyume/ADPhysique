@@ -32,6 +32,7 @@
  * cross the module boundary.
  */
 
+import { Platform } from 'react-native';
 import { getSupabaseClient } from '../supabase';
 import { logError, logWarn } from '../errorLog';
 
@@ -179,20 +180,28 @@ export async function payAt(targetTier, paymentRef, sourceSurface = null) {
 }
 
 /**
- * Server-authoritative purchase confirmation (C-1). After a successful Play
- * purchase, send the purchase token to the play-billing-rtdn function, which
- * verifies it against the Google Play Developer API and grants Pro via the
+ * Server-authoritative purchase confirmation (C-1). After a successful
+ * purchase, send the verification token to the store's Edge Function, which
+ * verifies it against the store's server API and grants Pro via the
  * service-role upgrade_tier_for_user. The client never writes its own paid
  * tier. On success we pull the authoritative tier so the optimistic unlock is
  * reconciled immediately rather than waiting for the next foreground refresh.
+ *
+ * Per-store, independent paths (the token shape and verifier differ):
+ *   - Android → play-billing-rtdn, body { purchaseToken, subscriptionId },
+ *     verified against the Google Play Developer API.
+ *   - iOS     → app-store-verify, body { jws, productId }, the StoreKit 2 JWS
+ *     verified against the App Store Server API.
+ * The caller passes the provider's `purchaseToken` (the Play token on Android,
+ * the StoreKit JWS on iOS) and `subscriptionId`; this routes by platform.
  *
  * SUB-003: the purchase surfaces (ProUpgrade, Paywall, CascadeGate) and the
  * restore path all AWAIT this and check `ok`, surfacing a "finishing
  * activation" message on failure rather than swallowing it. It never throws:
  * it always resolves to { ok, error? }. The optimistic local unlock from payAt
  * has already happened, so a slow or failed grant never denies paid access; the
- * Play RTDN push and the next cloud refresh (within the optimistic window) do
- * the reconcile.
+ * store's server notification and the next cloud refresh (within the optimistic
+ * window) do the reconcile.
  */
 export async function confirmPurchase({ purchaseToken, subscriptionId } = {}) {
   if (!purchaseToken || !subscriptionId) {
@@ -200,9 +209,14 @@ export async function confirmPurchase({ purchaseToken, subscriptionId } = {}) {
   }
   const sb = getSupabaseClient();
   if (!sb) return { ok: false, error: 'no_client' };
+  const isIos = Platform.OS === 'ios';
+  const fnName = isIos ? 'app-store-verify' : 'play-billing-rtdn';
+  const fnBody = isIos
+    ? { jws: purchaseToken, productId: subscriptionId }
+    : { purchaseToken, subscriptionId };
   try {
-    const { data, error } = await sb.functions.invoke('play-billing-rtdn', {
-      body: { purchaseToken, subscriptionId },
+    const { data, error } = await sb.functions.invoke(fnName, {
+      body: fnBody,
     });
     if (error) {
       logWarn('payments.cascade.confirmPurchase.invoke', error.message ?? 'invoke_failed', {});

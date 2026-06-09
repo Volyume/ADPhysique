@@ -39,6 +39,7 @@
  * fewer middlemen.
  */
 
+import { Platform } from 'react-native';
 import { logInfo, logWarn } from '../errorLog';
 import { allSkuIds, skuById } from './catalogue';
 
@@ -155,6 +156,254 @@ export function selectDisplayPrice(product) {
     if (ph?.formattedPrice) return ph.formattedPrice;
   }
   return null;
+}
+
+/**
+ * The localised recurring price string to display for an App Store subscription
+ * product. Apple does not use Google's `subscriptionOfferDetailsAndroid`; the
+ * StoreKit product carries its own formatted, localised price string
+ * (`displayPrice` in react-native-iap v15, `localizedPrice` in older shapes).
+ * Returns null when no string price is present so callers fall back to the
+ * price-free loading state (PLAY-002 applies to both stores). Pure; the iOS
+ * sibling of selectDisplayPrice.
+ *
+ * @param {object} product a ProductSubscription from fetchProducts({type:'subs'})
+ * @returns {string|null}
+ */
+export function selectIosDisplayPrice(product) {
+  if (!product) return null;
+  const candidates = [product.displayPrice, product.localizedPrice, product.priceString];
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.length > 0) return c;
+  }
+  return null;
+}
+
+/**
+ * The real Apple App Store (StoreKit) provider. Wraps the SAME cross-platform
+ * `react-native-iap` v15 module the Google provider uses, but speaks StoreKit's
+ * dialect:
+ *   - no Android offer tokens (StoreKit applies an eligible introductory offer
+ *     automatically), so there is no loadOfferTokens/offer-selection step;
+ *   - the verification token is the StoreKit 2 JWS (`purchaseToken` in the v15
+ *     unified shape, `jwsRepresentationIos` on older shapes), not a Play token;
+ *   - finishTransaction is still required to finish a StoreKit transaction, but
+ *     there is no acknowledge / purchaseStateAndroid concept to gate on.
+ *
+ * It deliberately does NOT touch _buildRealProvider (Google): the two providers
+ * are independent so Android billing is unaffected. tryWireRealProvider() picks
+ * this one only on iOS. The provider contract returned here is identical to the
+ * Google one, so cascade.js and the paywall callers are unchanged.
+ *
+ * The RNIap argument defaults to the lazily-required native module; tests
+ * inject a fake.
+ */
+export function _buildIosStoreKitProvider(RNIap = _loadRNIap()) {
+  if (!RNIap) return null;
+
+  // The user's Supabase auth.uid() (a UUID). Passed to StoreKit as the
+  // appAccountToken so Apple binds it into the signed transaction; the server
+  // reads it back to route the grant to the right user (the iOS equivalent of
+  // Google's obfuscatedExternalAccountId).
+  let providerAppUserID = null;
+  let pending = null; // { skus:Set, resolve, reject, timer }
+
+  function _settleResolve(purchase) {
+    if (!pending) return;
+    const pid = purchase?.productId
+      ?? (Array.isArray(purchase?.ids) ? purchase.ids[0] : null);
+    if (pid && pending.skus.size && !pending.skus.has(pid)) return;
+    const p = pending; pending = null;
+    try { clearTimeout(p.timer); } catch (_) { /* tolerate */ }
+    p.resolve(purchase);
+  }
+  function _settleReject(err) {
+    if (!pending) return;
+    const p = pending; pending = null;
+    try { clearTimeout(p.timer); } catch (_) { /* tolerate */ }
+    p.reject(err);
+  }
+
+  // The StoreKit 2 signed JWS for a purchase. Server-side verification needs it.
+  function _iosToken(purchase) {
+    return purchase?.purchaseToken ?? purchase?.jwsRepresentationIos ?? null;
+  }
+
+  // Fetch the subscription products to cache each one's localised display price
+  // for the paywall (PLAY-002: never show a hardcoded price). No offer tokens on
+  // iOS. Tolerant of a transient failure; the paywall re-requests on demand.
+  async function loadProducts() {
+    try {
+      const products = await RNIap.fetchProducts({ skus: allSkuIds(), type: 'subs' });
+      for (const product of products || []) {
+        const id = product?.id ?? product?.productId;
+        const price = selectIosDisplayPrice(product);
+        if (id && price) _displayPrices[id] = price;
+      }
+    } catch (e) {
+      logWarn('payments.appStore.fetchProducts', e?.message ?? 'unknown', {});
+    }
+  }
+
+  // Finish any StoreKit transaction left unfinished by a missed event (app
+  // killed before the listener fired). Idempotent: finishing an already-finished
+  // transaction is a no-op on StoreKit. The iOS sibling of acknowledgeOutstanding.
+  async function finishOutstanding() {
+    try {
+      const purchases = await RNIap.getAvailablePurchases();
+      for (const purchase of purchases || []) {
+        if (!purchase) continue;
+        try {
+          await RNIap.finishTransaction({ purchase, isConsumable: false });
+        } catch (e) {
+          logWarn('payments.appStore.finishOutstanding.finish', e?.message ?? 'unknown', {});
+        }
+      }
+    } catch (e) {
+      logWarn('payments.appStore.finishOutstanding', e?.message ?? 'unknown', {});
+    }
+  }
+
+  function _purchasesToCustomerInfo(purchases) {
+    const known = (purchases || []).filter((p) => {
+      const sku = p?.productId ?? p?.id ?? p?.sku;
+      return sku && skuById(sku) !== null;
+    });
+    if (known.length === 0) {
+      return { activeEntitlements: [], latestTransactionId: null, activeSku: null, latestPurchaseToken: null };
+    }
+    known.sort((a, b) => (b.transactionDate ?? 0) - (a.transactionDate ?? 0));
+    const latest = known[0];
+    const sku = latest.productId ?? latest.id ?? latest.sku;
+    const skuRecord = skuById(sku);
+    return {
+      activeEntitlements: skuRecord ? [skuRecord.tier] : [],
+      latestTransactionId: latest.transactionId ?? _iosToken(latest) ?? null,
+      // The StoreKit JWS, so restore can server-verify the active subscription.
+      latestPurchaseToken: _iosToken(latest),
+      activeSku: sku,
+    };
+  }
+
+  return {
+    loadProducts,
+    async initialise({ appUserID } = {}) {
+      providerAppUserID = appUserID ?? null;
+      await RNIap.initConnection();
+      await loadProducts();
+      _purchaseListener = RNIap.purchaseUpdatedListener(async (purchase) => {
+        try {
+          // StoreKit: finish any purchase carrying a transaction token. There is
+          // no PENDING/acknowledge gate as on Android; finishing is always safe.
+          if (_iosToken(purchase)) {
+            await RNIap.finishTransaction({ purchase, isConsumable: false });
+          }
+          logInfo('payments.appStore.purchaseUpdated',
+            `sku=${purchase?.productId} txn=${purchase?.transactionId ?? ''}`);
+          _trackPurchase('purchase_completed', {
+            sku: purchase?.productId ?? null,
+            transaction_id: purchase?.transactionId ?? null,
+          });
+        } catch (e) {
+          logWarn('payments.appStore.finishTransaction', e?.message ?? 'unknown', {});
+        } finally {
+          _settleResolve(purchase);
+        }
+      });
+      _errorListener = RNIap.purchaseErrorListener((err) => {
+        const code = err?.code ?? '';
+        if (code !== 'E_USER_CANCELLED') {
+          logWarn('payments.appStore.purchaseError', err?.message ?? 'unknown', { code });
+          _trackPurchase('purchase_failed', {
+            error_code: code || 'unknown',
+            error_message: err?.message ?? 'unknown',
+          });
+        }
+        const e = new Error(err?.message ?? 'purchase_error');
+        e.code = code || 'purchase_error';
+        _settleReject(e);
+      });
+      finishOutstanding().catch(() => {});
+    },
+
+    async getCustomerInfo() {
+      const purchases = await RNIap.getAvailablePurchases();
+      return _purchasesToCustomerInfo(purchases);
+    },
+
+    async purchasePackage(skuId) {
+      _trackPurchase('purchase_initiated', { sku: skuId });
+      // v15: the result arrives on the listener. Park resolve/reject, fire the
+      // request, let the listener settle it. Mirrors the Google provider's
+      // bridge, minus the offer token (StoreKit auto-applies an intro offer).
+      const purchase = await new Promise((resolve, reject) => {
+        const entry = { skus: new Set([skuId]), resolve, reject, timer: null };
+        entry.timer = setTimeout(() => {
+          if (pending === entry) {
+            pending = null;
+            const e = new Error('purchase_timed_out');
+            e.code = 'E_PURCHASE_TIMEOUT';
+            reject(e);
+          }
+        }, 90000);
+        if (pending) {
+          const stale = pending;
+          pending = null;
+          try { clearTimeout(stale.timer); } catch (_) { /* tolerate */ }
+          const se = new Error('purchase_superseded');
+          se.code = 'E_PURCHASE_SUPERSEDED';
+          try { stale.reject(se); } catch (_) { /* tolerate */ }
+        }
+        pending = entry;
+        Promise.resolve()
+          .then(() => RNIap.requestPurchase({
+            request: {
+              ios: {
+                sku: skuId,
+                // Bind the buyer's Supabase id into the StoreKit transaction so
+                // the server can route the grant. Must be a UUID; auth.uid() is.
+                ...(providerAppUserID ? { appAccountToken: providerAppUserID } : {}),
+              },
+            },
+            type: 'subs',
+          }))
+          .catch((err) => {
+            if (pending === entry) {
+              pending = null;
+              try { clearTimeout(entry.timer); } catch (_) { /* tolerate */ }
+            }
+            reject(err);
+          });
+      });
+      const info = _purchasesToCustomerInfo([purchase]);
+      return {
+        transactionId: purchase?.transactionId ?? _iosToken(purchase) ?? null,
+        // The StoreKit JWS, needed for server-side verification (confirmPurchase).
+        purchaseToken: _iosToken(purchase),
+        sku: skuId,
+        customerInfo: info,
+      };
+    },
+
+    async restorePurchases() {
+      _trackPurchase('restore_purchases_attempted', {});
+      await finishOutstanding();
+      const purchases = await RNIap.getAvailablePurchases();
+      return _purchasesToCustomerInfo(purchases);
+    },
+
+    async logOut() {
+      try { _purchaseListener?.remove?.(); } catch (_) { /* tolerate */ }
+      try { _errorListener?.remove?.(); } catch (_) { /* tolerate */ }
+      _purchaseListener = null;
+      _errorListener = null;
+      if (pending) {
+        try { clearTimeout(pending.timer); } catch (_) { /* tolerate */ }
+        pending = null;
+      }
+      try { await RNIap.endConnection(); } catch (_) { /* tolerate */ }
+    },
+  };
 }
 
 /**
@@ -439,17 +688,19 @@ export function _buildRealProvider(RNIap = _loadRNIap()) {
 }
 
 /**
- * Call once at app boot. Injects the real Google Play Billing
- * provider if the native module is linked; otherwise leaves the
- * default stub in place (cascade UI still renders, purchase tap
- * throws "provider not injected" until a real build ships).
+ * Call once at app boot. Injects the real store provider if the native module
+ * is linked; otherwise leaves the default stub in place (cascade UI still
+ * renders, purchase tap throws "provider not injected" until a real build
+ * ships). The provider is chosen by platform: StoreKit on iOS, Google Play
+ * Billing on Android. The two are fully independent so each store keeps its own
+ * requirements; neither path affects the other.
  *
  * Safe to call multiple times, only the first install replaces the
  * provider; subsequent calls are no-ops.
  */
 export function tryWireRealProvider() {
   if (_provider !== null) return true;
-  const real = _buildRealProvider();
+  const real = Platform.OS === 'ios' ? _buildIosStoreKitProvider() : _buildRealProvider();
   if (!real) return false;
   injectProvider(real);
   return true;

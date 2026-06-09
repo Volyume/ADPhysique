@@ -34,6 +34,8 @@ on:
         options:
           - send-push
           - play-billing-rtdn
+          - app-store-verify
+          - app-store-notifications
           - all
 
 jobs:
@@ -81,4 +83,12 @@ jobs:
           if [ "$CHOICE" = "play-billing-rtdn" ] || [ "$CHOICE" = "all" ]; then
             echo "Deploying play-billing-rtdn (--no-verify-jwt for Google Pub/Sub OIDC)"
             supabase functions deploy play-billing-rtdn --project-ref "$REF" --no-verify-jwt
+          fi
+          if [ "$CHOICE" = "app-store-verify" ] || [ "$CHOICE" = "all" ]; then
+            echo "Deploying app-store-verify (JWT verification on; the app calls it authenticated)"
+            supabase functions deploy app-store-verify --project-ref "$REF"
+          fi
+          if [ "$CHOICE" = "app-store-notifications" ] || [ "$CHOICE" = "all" ]; then
+            echo "Deploying app-store-notifications (--no-verify-jwt; Apple presents no Supabase JWT)"
+            supabase functions deploy app-store-notifications --project-ref "$REF" --no-verify-jwt
           fi
