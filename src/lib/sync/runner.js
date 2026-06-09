@@ -224,6 +224,18 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
 
     queueAfter = await getQueueDepth();
     if (erroredCount > 0) status = queueAfter < queueBefore ? 'partial' : 'failure';
+
+    // Deleted-account residual sync (CURRENT_STATUS 2026-06-09, the
+    // daily_steps FK noise): when the auth user has been deleted but the
+    // device still holds a live JWT, every push fails its auth.users FK until
+    // the token expires, logging errors for up to an hour. After an errored
+    // cycle, ask Auth whether the user still exists; if the account is gone,
+    // drop the local session so the device stops pushing as a ghost and the
+    // navigator routes back to sign-in. A transient network failure never
+    // matches the check, so flaky connectivity cannot sign anyone out.
+    if (erroredCount > 0 && userId) {
+      await _clearSessionIfAuthUserGone();
+    }
   } finally {
     const durationMs = Date.now() - startMs;
     _lastRunAt = Date.now();
@@ -255,6 +267,40 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
     // the same cycle (status 'partial' maps to 'synced' but errors occurred).
     errored_count: erroredCount,
   };
+}
+
+/**
+ * If the signed-in auth user no longer exists (deleted account), drop the
+ * local session. Returns true only when a session was actually cleared.
+ *
+ * The check is deliberately narrow: auth.getUser() must come back with a
+ * 401/403 whose message says the user is gone (Supabase: "User from sub claim
+ * in JWT does not exist" / user_not_found). Any other failure — offline,
+ * timeout, 5xx — leaves the session untouched, so flaky connectivity can
+ * never sign a real user out. signOut uses scope 'local' because there is no
+ * server-side session left to revoke for a deleted account.
+ *
+ * Exported for tests. Lazy-requires the Supabase client so the runner stays
+ * importable in test environments that mock the sync surface only.
+ */
+export async function _clearSessionIfAuthUserGone() {
+  try {
+    // eslint-disable-next-line global-require
+    const { getSupabaseClient } = require('../supabase');
+    const sb = getSupabaseClient();
+    if (!sb) return false;
+    const { data, error } = await sb.auth.getUser();
+    if (!error && data?.user) return false;
+    const statusCode = error?.status ?? null;
+    const message = String(error?.message ?? '');
+    const userGone = (statusCode === 401 || statusCode === 403)
+      && /does not exist|user_not_found|sub claim/i.test(message);
+    if (!userGone) return false;
+    await sb.auth.signOut({ scope: 'local' });
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 /**
