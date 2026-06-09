@@ -12,6 +12,7 @@ import RestTimer from '../components/RestTimer';
 import ExercisePickerModal from '../components/ExercisePickerModal';
 import DemoCard from '../components/DemoCard';
 import CoachingNotesPanel from '../components/CoachingNotesPanel';
+import { getSampleDemo } from '../lib/demos/sampleDemos';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, getExerciseById } from '../lib/database';
@@ -1227,10 +1228,11 @@ export default function ActiveWorkoutScreen({ navigation }) {
                     MUSCLE_DISPLAY_NAMES[howToExercise?.primaryMuscle ?? howToExercise?.primary_muscle]
                     ?? howToExercise?.primaryMuscle ?? null,
                 }}
+                localFrames={getSampleDemo(howToExercise?.name)?.frames}
               />
               <CoachingNotesPanel
-                formCues={howToExercise?.formCues}
-                commonMistakes={howToExercise?.commonMistakes}
+                formCues={howToExercise?.formCues ?? getSampleDemo(howToExercise?.name)?.formCues}
+                commonMistakes={howToExercise?.commonMistakes ?? getSampleDemo(howToExercise?.name)?.commonMistakes}
                 formTip={howToExercise?.name ? (FORM_TIPS[howToExercise.name] ?? null) : null}
                 coachingCue={howToExercise?.cue || null}
                 notes={howToExercise?.notes}
@@ -1317,7 +1319,16 @@ export default function ActiveWorkoutScreen({ navigation }) {
           {/* Exercise Title */}
           <View style={styles.exerciseHeader}>
             <View style={styles.exerciseNameRow}>
-              <Text style={styles.exerciseName}>{exercise.name}</Text>
+              <TouchableOpacity
+                style={styles.exerciseNameTap}
+                onPress={openHowTo}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`${exercise.name}. Tap to see the demonstration`}
+              >
+                <Text style={styles.exerciseName}>{exercise.name}</Text>
+                <Ionicons name="play-circle" size={18} color={colors.primary} style={styles.exerciseNamePlay} />
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.swapBtn}
                 onPress={handleOpenSwap}
@@ -2211,7 +2222,9 @@ const styles = StyleSheet.create({
   scrollContent: { padding: spacing.md, paddingTop: spacing.sm, gap: spacing.sm },
   exerciseHeader: { gap: spacing.xs },
   exerciseNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
-  exerciseName: { flex: 1, fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
+  exerciseNameTap: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  exerciseName: { flexShrink: 1, fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
+  exerciseNamePlay: { marginLeft: spacing.sm },
   swapBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.surface2, borderRadius: radius.sm, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: colors.border },
   swapBtnText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
   howToBtn: {

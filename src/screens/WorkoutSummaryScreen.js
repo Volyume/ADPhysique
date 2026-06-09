@@ -20,6 +20,7 @@ import { useToast } from '../components/Toast';
 import { syncWorkout } from '../lib/sync';
 import { incrementSessionCount, shouldPromptReview, requestReview } from '../lib/storeReview';
 import { workoutDayMs } from '../lib/workoutDate';
+import { isPartnersEnabled } from '../lib/partners/partnerService';
 import { localWeekStartMs } from '../lib/dayKey';
 
 const RATING_LABELS = {
@@ -75,6 +76,16 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // name in the same block.
   const feedbackSheet = useFeedback();
   const insets = useSafeAreaInsets();
+
+  // Training Partners is Pro-only and easy to miss in You → Coaching. Surface a
+  // quiet, opt-in entry on the post-session summary — the moment accountability
+  // lands — without nagging Free users or cluttering the training flow.
+  const [partnersEnabled, setPartnersEnabled] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    isPartnersEnabled().then(e => { if (alive) setPartnersEnabled(e); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   const [feedback, setFeedback] = useState({
     sessionDifficulty: 3,
@@ -784,6 +795,24 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </View>
           </RevealSection>
         )}
+
+        {!readOnly && partnersEnabled && (
+          <RevealSection delay={1900}>
+          <TouchableOpacity
+            style={styles.partnersCard}
+            onPress={() => navigation.navigate('TrainingPartners')}
+            accessibilityRole="button"
+            accessibilityLabel="Training Partners: keep each other honest"
+          >
+            <Ionicons name="people-outline" size={20} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.partnersTitle}>Training Partners</Text>
+              <Text style={styles.partnersSub}>Keep each other honest. Share whether you trained, nothing else.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+          </RevealSection>
+        )}
       </ScrollView>
 
       <View style={[styles.stickyFooter, { paddingBottom: Math.max(spacing.lg, insets.bottom) }]}>
@@ -1084,6 +1113,14 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   templateBtnText: { ...type.label, color: colors.textSecondary },
+  partnersCard: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.25),
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginTop: spacing.md,
+  },
+  partnersTitle: { ...type.label, color: colors.textPrimary },
+  partnersSub: { ...type.caption, color: colors.textMuted, marginTop: 2 },
   stickyFooter: {
     borderTopWidth: 1,
     borderTopColor: colors.border,

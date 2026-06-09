@@ -21,6 +21,7 @@ import { rankSwaps } from '../lib/swapEngine';
 import useAppStore from '../store/useAppStore';
 import { logError } from '../lib/errorLog';
 import { FORM_TIPS } from '../lib/formTips';
+import { getSampleDemo } from '../lib/demos/sampleDemos';
 import InfoTooltip from '../components/InfoTooltip';
 import DemoCard from '../components/DemoCard';
 import CoachingNotesPanel from '../components/CoachingNotesPanel';
@@ -262,7 +263,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {/* Exercise demonstration (or illustrated fallback when no media). FREE. */}
         <AnimatedEntrance index={0}>
           <View style={styles.section}>
-            <DemoCard exercise={{ ...exercise, primaryMuscleLabel: primaryMuscle }} />
+            <DemoCard exercise={{ ...exercise, primaryMuscleLabel: primaryMuscle }} localFrames={getSampleDemo(exercise.name)?.frames} />
           </View>
         </AnimatedEntrance>
 
@@ -612,8 +613,8 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             panel (collapsed by default — progressive disclosure). */}
         <View style={styles.section}>
           <CoachingNotesPanel
-            formCues={exercise.formCues}
-            commonMistakes={exercise.commonMistakes}
+            formCues={exercise.formCues ?? getSampleDemo(exercise.name)?.formCues}
+            commonMistakes={exercise.commonMistakes ?? getSampleDemo(exercise.name)?.commonMistakes}
             formTip={formTip}
             coachingCue={coachingCue}
             notes={exercise.notes}
