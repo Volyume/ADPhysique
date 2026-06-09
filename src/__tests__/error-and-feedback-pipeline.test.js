@@ -231,8 +231,13 @@ describe('Error logging pipeline', () => {
       },
     });
     const exported = await exportErrorsAsText();
+    // Assert the sensitive values are redacted next to their keys, rather than a
+    // bare not.toContain('92'): the ISO timestamp (e.g. ".192Z") can
+    // coincidentally contain those digits, which made the old check flaky.
     expect(exported).not.toContain('a@b.com');
-    expect(exported).not.toContain('92');
+    expect(exported).toContain('[redacted]');
+    expect(exported).not.toMatch(/weightKg"?\s*:\s*"?92\b/);
+    expect(exported).not.toMatch(/heightCm"?\s*:\s*"?180\b/);
   });
 });
 
