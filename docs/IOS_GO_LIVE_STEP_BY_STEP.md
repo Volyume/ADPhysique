@@ -135,18 +135,21 @@ Google Play subscriptions.
      to today (or your launch day) and the **End Date** to **No End Date** so the
      trial is always on the shelf for new users. (These dates are how long the
      *offer is available*; the 7 days is the trial's own length, set next.)
-   - **Offer Type**: **Free**.
-   - **Duration**: pick the value that equals a 7-day free trial.
-     ⚠️ I'm not 100% sure of the exact label your screen lists here (Apple words
-     it differently across versions — e.g. "1 week" vs "7 days" vs a
-     periods+unit pair). **Tell me what the dropdown actually shows and I'll
-     pin the exact wording in this guide.**
+   - **Offer Type / what they get**: choose **Free for the first week** (that's
+     the 7-day free trial — same as the Google Play trial).
    - Save.
+
+   > **If it says you must create a key first:** App Store Connect won't let the
+   > offer/subscription be used until the **In-App Purchase key** exists. That's
+   > the key in **Phase 4 below** — go do Phase 4 now (it takes two minutes),
+   > then come back here. It's the same key the server uses to confirm purchases,
+   > so you need it either way. (This is *not* the "promotional offer" signing
+   > key — you're on the Introductory Offer, which is correct.)
 7. Repeat steps 4–6 for the annual plan:
    - **Reference Name**: `Pro Annual`, **Product ID**: `pro_annual`
    - **Duration**: **1 Year**, **Price**: **£29.99**
    - Display Name `Volyume Pro (Annual)`, same kind of description.
-   - **Introductory Offer**: same as step 6 — type **Free**, a 7-day trial,
+   - **Introductory Offer**: same as step 6 — **Free for the first week**,
      Start Date today, **No End Date**, all countries.
 8. Each subscription needs a **review screenshot** and a **review note** before
    Apple will approve it (a box on the subscription page). A screenshot of the
