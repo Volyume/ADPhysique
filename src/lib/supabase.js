@@ -1,4 +1,5 @@
 import 'react-native-url-polyfill/auto';
+import { Platform } from 'react-native';
 import { createClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 
@@ -211,13 +212,57 @@ export async function signInWithGoogle() {
   }
 }
 
-export function signInWithApple() {
-  // Apple Sign-In via the Supabase OAuth browser flow. For a fully-native
-  // experience on iOS (Apple's preferred path, and required for App Store
-  // approval), a future enhancement should wire expo-apple-authentication's
-  // native button. For now the browser-based flow works and the Apple ID
-  // session lands back via the volyume:// deep link.
-  return _signInWithOAuthProvider('apple');
+// Native Sign in with Apple on iOS. App Store Guideline 4.8 requires the
+// native flow (not a web view) and Apple's official button whenever any other
+// social sign-in is offered, which we do (Google). Uses
+// expo-apple-authentication's signInAsync to get an Apple identity token, then
+// exchanges it with Supabase via signInWithIdToken — the same real account +
+// session model as native Google, so the locked identity model is unaffected.
+//
+// On any non-iOS platform (Android) or if the native module is unavailable,
+// it falls back to the Supabase Apple web-OAuth flow. Android behaviour is
+// therefore completely unchanged: it never touches expo-apple-authentication.
+//
+// Founder setup (one-time): enable Sign in with Apple on the app.volyume App
+// ID, and configure the Apple provider in Supabase (Authentication →
+// Providers → Apple) with the app's bundle id (app.volyume) as an allowed
+// client id so signInWithIdToken accepts the native token.
+export async function signInWithApple() {
+  if (Platform.OS !== 'ios') {
+    return _signInWithOAuthProvider('apple');
+  }
+  const c = getSupabaseClient();
+  if (!c) {
+    return { error: { message: 'Cloud sign-in is not available right now. Try again.' } };
+  }
+  let AppleAuthentication;
+  try {
+    // eslint-disable-next-line global-require, import/no-unresolved
+    AppleAuthentication = require('expo-apple-authentication');
+  } catch (_) {
+    return _signInWithOAuthProvider('apple');
+  }
+  try {
+    const available = await AppleAuthentication.isAvailableAsync();
+    if (!available) return _signInWithOAuthProvider('apple');
+    const credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+    });
+    const idToken = credential?.identityToken;
+    if (!idToken) return { error: { message: 'Apple did not return a sign-in token.' } };
+    const { error } = await c.auth.signInWithIdToken({ provider: 'apple', token: idToken });
+    if (error) return { error };
+    return { ok: true };
+  } catch (e) {
+    // The native sheet throws a cancellation error code when the user backs out.
+    if (e?.code === 'ERR_REQUEST_CANCELED' || e?.code === 'ERR_CANCELED') {
+      return { cancelled: true };
+    }
+    return { error: { message: e?.message ?? 'Apple sign-in failed.' } };
+  }
 }
 
 export async function upsertUserProfile(userId, profile) {

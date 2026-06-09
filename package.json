@@ -32,6 +32,7 @@
       "\\.(png|jpg|jpeg|gif|svg|webp|ttf|otf|mp3|mp4|wav)$": "<rootDir>/__mocks__/asset-stub.js",
       "^react-native-url-polyfill/auto$": "<rootDir>/__mocks__/url-polyfill-stub.js",
       "^expo-file-system/legacy$": "<rootDir>/__mocks__/expo-file-system-legacy.js",
+      "^expo-apple-authentication$": "<rootDir>/__mocks__/expo-apple-authentication.js",
       "^expo-sharing$": "<rootDir>/__mocks__/expo-sharing.js",
       "^expo-document-picker$": "<rootDir>/__mocks__/expo-document-picker.js"
     }
@@ -50,6 +51,7 @@
     "@supabase/supabase-js": "^2.43.4",
     "date-fns": "^3.6.0",
     "expo": "~54.0.35",
+    "expo-apple-authentication": "~8.0.8",
     "expo-asset": "~12.0.13",
     "expo-background-fetch": "~14.0.9",
     "expo-build-properties": "~1.0.10",

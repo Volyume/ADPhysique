@@ -46,6 +46,14 @@
         ],
         "NSSupportsLiveActivities": true,
         "NSSupportsLiveActivitiesFrequentUpdates": true
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          }
+        ]
       }
     },
     "android": {
@@ -106,6 +114,7 @@
     },
     "plugins": [
       "expo-secure-store",
+      "expo-apple-authentication",
       "@react-native-google-signin/google-signin",
       [
         "react-native-vision-camera",
