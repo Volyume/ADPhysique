@@ -1,5 +1,16 @@
 # iOS release (TestFlight + App Store) from CI, no Mac, no terminal
 
+> **Status, 2026-06-09.** iOS is build-and-TestFlight ready on the current
+> tree (all checks green; `expo prebuild --platform ios` produces a clean
+> Xcode project with HealthKit + Push entitlements). Apple build
+> prerequisites are in place (founder-confirmed). The EAS build no longer
+> fails on a missing Sentry token: `build-ios.yml` syncs `SENTRY_AUTH_TOKEN`
+> to EAS if set, else disables source-map upload. The rest-timer **Live
+> Activity** is not in the build yet and needs a Widget Extension target plus
+> an `app.volyume.widget` App ID; full plan in
+> **`docs/LIVE_ACTIVITY_IOS.md`**. App version is **1.2.0** (this doc's body
+> still says 1.1.1 below; build number auto-increments via `eas.json`).
+
 The Android app is built by the Gradle GitHub workflow. iOS can't build there
 (no Xcode on Linux), so iOS goes through **EAS Build** (Expo's cloud) via the
 **Build iOS (EAS)** GitHub workflow. EAS does the Xcode compile and creates all

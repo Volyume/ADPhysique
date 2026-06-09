@@ -14,7 +14,79 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
-### 0.0000000000000000000001. 2026-06-08 (later): auth-email deliverability fixed, Google sign-in SHA setup recorded
+### 0.00000000000000000000001. 2026-06-09: iOS readiness validated, Sentry build fix landed, Live Activity scoped, daily_steps FK diagnosed, container-rollback incident
+
+Session ended early and is being abandoned for a fresh one because the
+cloud container kept rolling back (see the incident note at the end). All
+approved work is committed and pushed; `origin/main` is at `253305f`.
+
+**iOS is build-and-TestFlight ready on the current tree.** Full checks run
+this session, all green:
+- `tsc --noEmit` clean, `eslint .` 0 errors (4 test-file warnings).
+- **Jest green: 182 suites / 2991 passing, 0 failures.** This supersedes
+  the old "suite is red" note (fixed back at `4707b92`).
+- `expo config` evaluates; `expo prebuild --platform ios` generates a clean
+  Xcode project. Entitlements correct: HealthKit + Push, Associated Domains
+  correctly absent. Deployment target 16.1, Hermes, new arch, privacy
+  manifest on. `rest-timer-live` is Android-only, no iOS concern.
+
+**Sentry build fix (committed + pushed, `253305f`).** `1e2f1f3` had removed
+`SENTRY_DISABLE_AUTO_UPLOAD` from `eas.json` to enable symbolicated prod
+crashes, with the note that `SENTRY_AUTH_TOKEN` must be an EAS secret before
+the next build. But `build-ios.yml` never synced that token to the EAS
+builder, so a build with no token would die at the sentry-cli source-map
+upload (the run #15 failure). `build-ios.yml` now syncs `SENTRY_AUTH_TOKEN`
+to EAS if the repo secret is set (source maps upload, crashes symbolicate)
+and otherwise sets `SENTRY_DISABLE_AUTO_UPLOAD=true` so the build can never
+fail on a missing token. Mirrors `build-android.yml`. Apple build
+prerequisites confirmed in place by founder (EXPO_TOKEN, ASC_*, APPLE_TEAM_ID
+secrets + App Store Connect app record).
+
+**Live Activity (iOS rest-timer): scoped, NOT built, picks up next session.**
+Full plan in **`docs/LIVE_ACTIVITY_IOS.md`**. Short version: the SwiftUI
+sources already exist; what is missing is a Widget Extension target. Because
+`ios/` is gitignored, the only EAS-viable path is a config plugin that
+recreates the target each prebuild, plus a **mandatory founder step**: a
+separate App ID `app.volyume.widget` with the Live Activities capability and
+a matching distribution profile in EAS, without which no iOS build can sign
+the extension. It cannot be verified from a Linux container (needs a Mac
+`pod install` + Xcode), so it is EAS-build-verified and may need a round or
+two. A file restructure (move the `@main` widget bundle out of the
+autolinked module `ios/` dir) was prepared and reverted on the stop; redo
+per the doc.
+
+**daily_steps FK Sentry error diagnosed (no code change).** Production Sentry
+`insert or update on table "daily_steps" violates foreign key constraint
+"daily_steps_user_id_fkey"` is a `23503` FK to `auth.users`. RLS passed (so
+`user_id` = `auth.uid()`), which means the only way the FK fails is the auth
+row is gone: a deleted account whose device still held a live JWT pushed one
+last sync. Fits the 069 account-deletion fixes (test accounts being
+deleted/recreated at launch). NOT a crash, caught by the sync runner
+(`runner.js:139`), self-limiting (token expires within the hour). **No
+correct database-side fix exists** (making the insert succeed would orphan
+rows for a ghost user, which the locked ownership rules forbid). The real
+fix is app-side: clear the session on an auth-user-gone / 401 push response;
+ships in a normal build, no rush. Founder verify: look up
+`a1cf4812-0ef1-4850-88d1-4413a5c465a9` in Supabase Auth (absent = confirmed
+deleted-account residual sync, benign).
+
+**Container-rollback incident (environment defect, recorded straight).**
+The cloud container rolled back to a stale 6-June snapshot (`0111a3c`, 73
+commits behind `origin/main`) TWICE mid-session, while actively working. The
+evidence is filesystem-level, not a git operation: the git **reflog itself**
+was replaced with an older one (the in-session fast-forward vanished from
+it) and freshly-installed `node_modules` was gone. That only happens when
+the whole disk, `.git` included, is restored from an earlier image. This is
+NOT a normal inactivity reclaim (it happened during active work) and NOT a
+GitHub problem; it is specific to this container/session and also occurred
+on 2026-06-05/06 (see `docs/BUILD_RELEASE_HANDOFF_2026-06-05.md`,
+"Container resets mid-session"). Decision: abandon this session and start a
+fresh one off `main`. Worth reporting to Anthropic as an environment bug;
+the reflog-replacement detail proves it is a snapshot restore, not a branch
+reset. If a fresh container also rolls back, the environment definition
+itself (not just the container) is the culprit and should be recreated.
+
+
 
 Two operational pieces sorted and documented this session. Both are
 console-config + this repo, no app code changed.
