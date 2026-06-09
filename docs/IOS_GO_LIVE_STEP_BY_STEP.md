@@ -139,12 +139,11 @@ Google Play subscriptions.
      the 7-day free trial — same as the Google Play trial).
    - Save.
 
-   > **If it says you must create a key first:** App Store Connect won't let the
-   > offer/subscription be used until the **In-App Purchase key** exists. That's
-   > the key in **Phase 4 below** — go do Phase 4 now (it takes two minutes),
-   > then come back here. It's the same key the server uses to confirm purchases,
-   > so you need it either way. (This is *not* the "promotional offer" signing
-   > key — you're on the Introductory Offer, which is correct.)
+   > **If it says you must create a key first:** the button takes you to **App
+   > Store Connect API → Team Keys**. That's the key in **Phase 4 below** (the
+   > same *type* of key as your iOS build key — you may already have it). Go do
+   > Phase 4 now, then come back here. It's the key the server uses to confirm
+   > purchases, so you need it either way.
 7. Repeat steps 4–6 for the annual plan:
    - **Reference Name**: `Pro Annual`, **Product ID**: `pro_annual`
    - **Duration**: **1 Year**, **Price**: **£29.99**
@@ -162,26 +161,32 @@ Google Play subscriptions.
 
 ---
 
-# PHASE 4 — Create the App Store Server API key (lets our server confirm purchases)
+# PHASE 4 — The App Store Connect API key (lets our server confirm purchases)
 
-When someone buys, our server has to ask Apple "is this real?" before granting
-Pro. That needs a special key. **This is a different key from the one the build
-uses** — make sure you create the *In-App Purchase* one.
+When someone buys, our server asks Apple "is this real?" before granting Pro.
+That uses an **App Store Connect API key (Team Key)** — the same *type* of key
+you created for the iOS build. The server token the app builds uses this key's
+**Issuer ID + Key ID + the bundle id**, which is exactly the App Store Connect
+API shape, so the code already matches it.
 
-1. **App Store Connect** → top-right avatar is not it — go to **Users and
-   Access** (top nav).
-2. Click the **Integrations** tab.
-3. In the left list choose **In-App Purchase** (under "Keys"). *(Not "App Store
-   Connect API" — that's the build key you already made.)*
-4. Click **Generate In-App Purchase Key** (or the **+**). Name it
-   `volyume-server`. Click **Generate**.
-5. Three things to copy — do this now, the file downloads only once:
+> **You may already have this key.** The iOS build setup created an App Store
+> Connect API Team Key (its three values are the `ASC_API_KEY_P8`, `ASC_KEY_ID`,
+> `ASC_ISSUER_ID` GitHub secrets). If you still have that **`.p8`** file you
+> downloaded back then, you can reuse it here — skip to 4b and use the same Key
+> ID, Issuer ID and `.p8`. The `.p8` only downloads once, so if you don't have
+> the file any more, generate a fresh key below (having two keys is fine).
+
+1. **App Store Connect** → **Users and Access** (top nav) → **Integrations** tab.
+2. In the left list choose **App Store Connect API** → the **Team Keys** tab.
+3. Click the **+** / **Generate API Key**. Name it `volyume-server`, give it the
+   **Admin** access role (so it can call the App Store Server API), **Generate**.
+4. Three things to copy — the file downloads only once:
    - Click **Download** to get the **`.p8`** file. Open it in TextEdit/Notepad;
      it's a few lines starting `-----BEGIN PRIVATE KEY-----`. You'll paste the
      whole text shortly.
    - Note the **Key ID** (a 10-character code next to the key).
-   - Note the **Issuer ID** (a long UUID shown at the **top** of this Keys
-     page).
+   - Note the **Issuer ID** (a long UUID shown at the **top** of this Team Keys
+     page — the same Issuer ID your build key already uses).
 
 ### 4b. Put those three values into Supabase (so the function can use them)
 
