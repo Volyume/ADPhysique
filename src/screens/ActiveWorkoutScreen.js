@@ -13,6 +13,9 @@ import ExercisePickerModal from '../components/ExercisePickerModal';
 import DemoCard from '../components/DemoCard';
 import CoachingNotesPanel from '../components/CoachingNotesPanel';
 import { getSampleDemo } from '../lib/demos/sampleDemos';
+import { getContextualCue } from '../lib/demos/cueEngine';
+import { getExerciseWhyThis } from '../lib/whyThisTemplates';
+import * as Speech from 'expo-speech';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, getExerciseById } from '../lib/database';
@@ -183,6 +186,10 @@ export default function ActiveWorkoutScreen({ navigation }) {
   // "How to perform": the exercise demonstration sheet for the current lift.
   const [showHowTo, setShowHowTo] = useState(false);
   const [howToExercise, setHowToExercise] = useState(null);
+  // Contextual cue: the ONE coaching line most relevant to this lift right now
+  // (first-time / plateau / recovery / load-aware), picked deterministically.
+  const [contextualCue, setContextualCue] = useState(null);
+  const [speakCues, setSpeakCues] = useState(false);
   const [timeCrunchActive, setTimeCrunchActive] = useState(false);
   const [timeCrunchMsg, setTimeCrunchMsg] = useState('');
   const [preCrunchSnapshot, setPreCrunchSnapshot] = useState(null);
@@ -703,6 +710,40 @@ export default function ActiveWorkoutScreen({ navigation }) {
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exercise?.id, currentExerciseIndex]);
+
+  // Contextual cue for the current lift; optionally spoken (eyes-free, opt-in).
+  useEffect(() => {
+    let cancelled = false;
+    setContextualCue(null);
+    if (!exercise?.id || !user?.id) return undefined;
+    getContextualCue(user.id, exercise, { repMin: routineExercise?.repMin ?? null })
+      .then(cue => {
+        if (cancelled || !cue) return;
+        setContextualCue(cue);
+        if (speakCues && cue.cue) {
+          Speech.stop();
+          Speech.speak(`${cue.headline ? cue.headline + '. ' : ''}${cue.cue}`, { language: 'en-GB' });
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; Speech.stop(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exercise?.id, user?.id]);
+
+  useEffect(() => {
+    AsyncStorage.getItem('@volyume_speak_cues_v1')
+      .then(v => setSpeakCues(v === 'true'))
+      .catch(() => {});
+  }, []);
+
+  function toggleSpeakCues() {
+    setSpeakCues(prev => {
+      const next = !prev;
+      AsyncStorage.setItem('@volyume_speak_cues_v1', String(next)).catch(() => {});
+      if (!next) Speech.stop();
+      return next;
+    });
+  }
 
 
   async function handleCompleteSet(overrides = {}) {
@@ -1230,6 +1271,19 @@ export default function ActiveWorkoutScreen({ navigation }) {
                 }}
                 localFrames={getSampleDemo(howToExercise?.name)?.frames}
               />
+              {howToExercise?.subregion ? (
+                <View style={styles.whyThisCard}>
+                  <Ionicons name="compass-outline" size={16} color={colors.primary} style={{ marginTop: 1 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.whyThisLabel}>Why this exercise</Text>
+                    <Text style={styles.whyThisText}>
+                      {getExerciseWhyThis(howToExercise.name, howToExercise.subregion)}
+                      {(howToExercise?.sfr ?? howToExercise?.stimulusToFatigueRatio) >= 4
+                        ? ' High training payoff for the effort it costs.' : ''}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
               <CoachingNotesPanel
                 formCues={howToExercise?.formCues ?? getSampleDemo(howToExercise?.name)?.formCues}
                 commonMistakes={howToExercise?.commonMistakes ?? getSampleDemo(howToExercise?.name)?.commonMistakes}
@@ -1237,6 +1291,22 @@ export default function ActiveWorkoutScreen({ navigation }) {
                 coachingCue={howToExercise?.cue || null}
                 notes={howToExercise?.notes}
               />
+              <TouchableOpacity
+                style={styles.speakCuesRow}
+                onPress={toggleSpeakCues}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: speakCues }}
+                accessibilityLabel="Speak cues at the start of each exercise"
+              >
+                <Ionicons
+                  name={speakCues ? 'volume-high' : 'volume-mute-outline'}
+                  size={18}
+                  color={speakCues ? colors.primary : colors.textMuted}
+                />
+                <Text style={styles.speakCuesText}>
+                  Speak the cue when each exercise starts: {speakCues ? 'on' : 'off'}
+                </Text>
+              </TouchableOpacity>
             </ScrollView>
           </SafeAreaView>
         </Modal>
@@ -1340,21 +1410,27 @@ export default function ActiveWorkoutScreen({ navigation }) {
                 <Text style={styles.swapBtnText}>Swap</Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.exerciseMuscle}>
-              {MUSCLE_DISPLAY_NAMES[exercise.primaryMuscle ?? exercise.primary_muscle] ??
-                ((exercise.primaryMuscle || exercise.primary_muscle || '').charAt(0).toUpperCase() +
-                  (exercise.primaryMuscle || exercise.primary_muscle || '').slice(1).replace(/_/g, ' '))}
-              {' · primary muscle'}
-            </Text>
-            <TouchableOpacity
-              style={styles.howToBtn}
-              onPress={openHowTo}
-              accessibilityRole="button"
-              accessibilityLabel={`How to perform ${exercise.name}`}
-            >
-              <Ionicons name="play-circle-outline" size={16} color={colors.primary} />
-              <Text style={styles.howToBtnText}>How to perform</Text>
-            </TouchableOpacity>
+            {/* Muscle + "How to" share one compact row: the header cost
+                100-120px before the first input (design audit 2026-06-09);
+                folding these saves ~32px on the highest-traffic screen. */}
+            <View style={styles.exerciseSubRow}>
+              <Text style={styles.exerciseMuscle}>
+                {MUSCLE_DISPLAY_NAMES[exercise.primaryMuscle ?? exercise.primary_muscle] ??
+                  ((exercise.primaryMuscle || exercise.primary_muscle || '').charAt(0).toUpperCase() +
+                    (exercise.primaryMuscle || exercise.primary_muscle || '').slice(1).replace(/_/g, ' '))}
+                {' · primary muscle'}
+              </Text>
+              <TouchableOpacity
+                style={styles.howToBtn}
+                onPress={openHowTo}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={`How to perform ${exercise.name}`}
+              >
+                <Ionicons name="play-circle-outline" size={14} color={colors.primary} />
+                <Text style={styles.howToBtnText}>How to</Text>
+              </TouchableOpacity>
+            </View>
             {currentSGI != null && !!pairedExerciseName && (
               <View style={styles.supersetChip}>
                 <Ionicons name="link" size={11} color={colors.primary} />
@@ -1364,6 +1440,37 @@ export default function ActiveWorkoutScreen({ navigation }) {
               </View>
             )}
           </View>
+
+          {/* Contextual cue: the one line that matters for this lift right now */}
+          {contextualCue?.cue ? (
+            <View style={styles.cueBanner}>
+              <Ionicons
+                name={contextualCue.kind === 'plateau' ? 'trending-up-outline'
+                  : contextualCue.kind === 'recovery' ? 'battery-charging-outline'
+                  : contextualCue.kind === 'first_time' ? 'school-outline' : 'bulb-outline'}
+                size={16}
+                color={colors.primary}
+                style={{ marginTop: 1 }}
+              />
+              <Text style={styles.cueBannerText} numberOfLines={3}>
+                {contextualCue.headline ? (
+                  <Text style={styles.cueBannerHeadline}>{contextualCue.headline}. </Text>
+                ) : null}
+                {contextualCue.cue}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  Speech.stop();
+                  Speech.speak(`${contextualCue.headline ? contextualCue.headline + '. ' : ''}${contextualCue.cue}`, { language: 'en-GB' });
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Hear this cue"
+              >
+                <Ionicons name="volume-medium-outline" size={18} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+          ) : null}
 
           {/* Next-time coaching notes */}
           {nextTimeNotes.map(note => (
@@ -2227,12 +2334,10 @@ const styles = StyleSheet.create({
   exerciseNamePlay: { marginLeft: spacing.sm },
   swapBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.surface2, borderRadius: radius.sm, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: colors.border },
   swapBtnText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
-  howToBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs, alignSelf: 'flex-start',
-    backgroundColor: colors.primaryBg, borderRadius: radius.full,
-    paddingVertical: spacing.xs, paddingHorizontal: spacing.md,
-    borderWidth: 1, borderColor: colors.primary, marginTop: spacing.xs,
+  exerciseSubRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm,
   },
+  howToBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   howToBtnText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
   howToSafe: { flex: 1, backgroundColor: colors.background },
   howToHeader: {
@@ -2253,7 +2358,7 @@ const styles = StyleSheet.create({
   swapItemReason: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
   swapBrowseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
   swapBrowseText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
-  exerciseMuscle: { fontSize: fontSize.sm, color: colors.textSecondary },
+  exerciseMuscle: { flexShrink: 1, fontSize: fontSize.sm, color: colors.textSecondary },
   targetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   targetText: { fontSize: fontSize.sm, color: colors.textMuted },
   setEntryCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.md },
@@ -2452,6 +2557,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: withAlpha(colors.primary, 0.251),
   },
+  cueBanner: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+  cueBannerText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
+  cueBannerHeadline: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  whyThisCard: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    padding: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle,
+  },
+  whyThisLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 1 },
+  whyThisText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19, marginTop: spacing.xxs },
+  speakCuesRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm },
+  speakCuesText: { fontSize: fontSize.sm, color: colors.textSecondary },
   nextTimeBannerText: {
     flex: 1,
     fontSize: fontSize.sm,

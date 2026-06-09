@@ -133,6 +133,11 @@ export default function HomeScreen({ navigation }) {
   const [showCoachingNudge, setShowCoachingNudge] = useState(false);
   const [totalSessions, setTotalSessions] = useState(0);
   const [showIntentPrompt, setShowIntentPrompt] = useState(false);
+  // Readiness memory: the prompt used to block every session start. We now
+  // remember the last answer ('sharp'|'average'|'below_par'|'skipped'), start
+  // in one tap with it, and offer a small "change" affordance instead.
+  const [lastIntentRaw, setLastIntentRaw] = useState(undefined); // undefined = loading
+  const [intentSheetMode, setIntentSheetMode] = useState('start'); // 'start' | 'edit'
   const [teaserInsight, setTeaserInsight] = useState(null);
   const [deloadSuggestion, setDeloadSuggestion] = useState(null);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
@@ -226,6 +231,7 @@ export default function HomeScreen({ navigation }) {
         loadFatigueTrend(),
         loadScheduleContext(),
         loadBriefDismissal(),
+        loadLastIntent(),
         ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadFirstRunCue()] : []),
       ]);
     } finally {
@@ -633,12 +639,47 @@ export default function HomeScreen({ navigation }) {
         supersetGroupId: routineExercise?.supersetGroupId ?? null,
       }));
       pendingStartRef.current = { routineId: routine.id, initialExercises };
-      setShowIntentPrompt(true);
+      maybePromptIntent();
     } catch (e) {
       setIsStartingWorkout(false);
       logError('HomeScreen.handleStartNextWorkout', e, { userId: user?.id, routineId: target?.routine?.id });
       toast.show("Couldn't load workout, try again", { variant: 'error' });
     }
+  }
+
+  async function loadLastIntent() {
+    try {
+      const v = await AsyncStorage.getItem('@volyume_last_intent_v1');
+      setLastIntentRaw(v); // null when never answered
+    } catch (_) {
+      setLastIntentRaw(null);
+    }
+  }
+
+  function persistIntent(intent) {
+    const raw = intent ?? 'skipped';
+    setLastIntentRaw(raw);
+    AsyncStorage.setItem('@volyume_last_intent_v1', raw).catch(() => {});
+  }
+
+  // One-tap start: a remembered readiness answer starts the session
+  // immediately; the sheet only appears the first time (or via "change").
+  function maybePromptIntent() {
+    if (lastIntentRaw != null) {
+      confirmStart(lastIntentRaw === 'skipped' ? null : lastIntentRaw);
+      return;
+    }
+    setIntentSheetMode('start');
+    setShowIntentPrompt(true);
+  }
+
+  function handleIntentOption(intent) {
+    persistIntent(intent);
+    if (intentSheetMode === 'edit') {
+      setShowIntentPrompt(false);
+      return;
+    }
+    confirmStart(intent);
   }
 
   async function confirmStart(intent) {
@@ -710,7 +751,7 @@ export default function HomeScreen({ navigation }) {
       }
 
       pendingStartRef.current = { routineId, initialExercises };
-      setShowIntentPrompt(true);
+      maybePromptIntent();
     } catch (e) {
       logError('HomeScreen.handleRepeatLastSession', e, { userId: user?.id, lastSessionId: lastSession?.id, routineId });
       toast.show("Couldn't load last session, try again", { variant: 'error' });
@@ -1138,6 +1179,22 @@ export default function HomeScreen({ navigation }) {
                 </TouchableOpacity>
               ) : null}
             </View>
+            {lastIntentRaw != null && (
+              <TouchableOpacity
+                style={styles.readinessRow}
+                onPress={() => { setIntentSheetMode('edit'); setShowIntentPrompt(true); }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Change how you're feeling today"
+              >
+                <Text style={styles.readinessText}>
+                  {lastIntentRaw === 'skipped'
+                    ? 'Readiness check: off'
+                    : `Feeling: ${{ sharp: 'Sharp', average: 'Average', below_par: 'Below par' }[lastIntentRaw] ?? lastIntentRaw}`}
+                  <Text style={styles.readinessChange}> · change</Text>
+                </Text>
+              </TouchableOpacity>
+            )}
             <View style={styles.heroSecondaryRow}>
               <TouchableOpacity
                 style={styles.heroSecondaryBtn}
@@ -1451,7 +1508,11 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.intentOverlay}>
           <View style={styles.intentSheet}>
             <Text style={styles.intentTitle}>How are you feeling today?</Text>
-            <Text style={styles.intentSub}>Takes a second. Helps us read your sessions better over time.</Text>
+            <Text style={styles.intentSub}>
+              {intentSheetMode === 'edit'
+                ? 'Your answer is remembered, so starting stays one tap.'
+                : 'Asked once. We remember your answer so starting stays one tap.'}
+            </Text>
             {[
               { key: 'sharp', label: 'Sharp', sub: 'Energised and ready', icon: 'flash-outline' },
               { key: 'average', label: 'Average', sub: 'Normal day, feeling fine', icon: 'remove-outline' },
@@ -1460,7 +1521,7 @@ export default function HomeScreen({ navigation }) {
               <TouchableOpacity
                 key={opt.key}
                 style={styles.intentOption}
-                onPress={() => confirmStart(opt.key)}
+                onPress={() => handleIntentOption(opt.key)}
                 activeOpacity={0.85}
                 accessibilityRole="button"
                 accessibilityLabel={`${opt.label}. ${opt.sub}`}
@@ -1477,7 +1538,7 @@ export default function HomeScreen({ navigation }) {
             ))}
             <TouchableOpacity
               style={styles.intentSkip}
-              onPress={() => confirmStart(null)}
+              onPress={() => handleIntentOption(null)}
             >
               <Text style={styles.intentSkipText}>Skip</Text>
             </TouchableOpacity>
@@ -1651,7 +1712,9 @@ function CoachBriefCard({ brief, onDismiss }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
-  content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
+  // gap md (not lg): with 15+ sections a 16px gap alone cost ~240px of
+  // viewport (design audit 2026-06-09); 12px keeps air without the sprawl.
+  content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
 
   // Morning weight card
   weightCard: {
@@ -1728,11 +1791,14 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     fontWeight: fontWeight.semibold,
   },
+  // 20px semibold, not 24px black: one hero element per screen, hierarchy by
+  // weight/opacity rather than size (benchmark audit 2026-06-09). A two-line
+  // workout name now costs 52px, not 60px.
   workoutName: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.black,
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
-    lineHeight: 30,
+    lineHeight: 26,
   },
   workoutMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
   mesoBriefChip: {
@@ -1766,6 +1832,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   startBtnSplit: { flex: 1, marginTop: 0 },
+  readinessRow: { alignSelf: 'center', marginTop: spacing.xxs },
+  readinessText: { fontSize: fontSize.xs, color: colors.textMuted },
+  readinessChange: { color: colors.primary, fontWeight: fontWeight.semibold },
   viewWorkoutBtn: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
@@ -1888,7 +1957,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     backgroundColor: colors.surface,
     borderRadius: radius.md,
-    padding: spacing.lg,
+    padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -1910,7 +1979,7 @@ const styles = StyleSheet.create({
   lastSessionCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    padding: spacing.lg,
+    padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
     gap: spacing.sm,
