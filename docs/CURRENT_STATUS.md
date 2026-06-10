@@ -14,7 +14,35 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
-### 0.0000000000000000000000001 (newest). 2026-06-10: iOS TestFlight beta-review submission; iOS steps-across-restart + Rate-link fixes; trial-ledger field note
+### 0.00000000000000000000000001 (newest). 2026-06-10 (late): build 15 done; competitive audit rounds 1+2 complete and committed
+
+- **Build 15: DONE** (founder-confirmed 2026-06-10 late session). The
+  build-15 action from the entry below is resolved — the steps-across-restart
+  fix (`0f53fdc`) and the Rate Volyume link fix (`350fcd1`) ship in it.
+  Verification note for next session: the last successful `build-ios.yml`
+  Actions run visible from this container was #110 (main @ `57cd4c9`,
+  pre-fixes), and the two fix commits live on
+  `claude/main-branch-content-update-dcqicf`, not main — so build 15 was
+  produced outside that Actions history (e.g. EAS direct / a later run).
+  One-minute check in App Store Connect that build 15's binary has the
+  steps + Rate fixes is the only follow-up.
+- **Competitive audit 2026-06-10, both rounds, fully committed** on this
+  branch under `docs/competitive-audit-2026-06-10/`:
+  - Round 1: baseline, 14 research reports, comparison matrix, 30 scored
+    proposals, founder-approved final action list (27 items + NEW-002).
+  - Round 2: implementation blueprints in `implementation/` — 26 of 28
+    complete and committed as of this entry; the orchestrator's working
+    summaries live in `implementation/.blueprint-summaries-scratch.md`.
+  - **No build decisions taken** — founder explicitly deferred all
+    decisions on the blueprints to the next session.
+- **Container reset incident (recorded so the lesson sticks):** the cloud
+  container reset mid-session and rolled the local checkout back ~50
+  commits. Nothing pushed was lost — the branch was fully recovered by
+  fast-forwarding to origin. The only casualty was one not-yet-committed
+  blueprint file (COMP-008), regenerated the same session. Rule reaffirmed:
+  commit + push after EVERY file that matters; never batch.
+
+### 0.0000000000000000000000001. 2026-06-10: iOS TestFlight beta-review submission; iOS steps-across-restart + Rate-link fixes; trial-ledger field note
 
 Worked on branch **`claude/main-branch-content-update-dcqicf`** this session,
 NOT main. (The never-touch-main rule was overridden by the founder only for the
@@ -49,8 +77,9 @@ need build 15):**
   iOS-only; Android (Health Connect) untouched. Verified by deep web research
   against Apple docs + react-native-health issues #18/#41. New test:
   `src/lib/__tests__/health.ios-steps.test.js`. (`src/lib/health.js`.)
-- **ACTION FOR NEXT SESSION: trigger build 15 from this branch (NOT main)** so
-  both fixes ship. Build 14 does not contain them.
+- ~~**ACTION FOR NEXT SESSION: trigger build 15 from this branch (NOT main)** so
+  both fixes ship. Build 14 does not contain them.~~ **RESOLVED — build 15
+  done (founder-confirmed 2026-06-10 late; see the newest entry above).**
 
 **Trial ledger (migration 071) — field observation.** The founder reports that
 delete-account + re-signup with the same email lands on FREE
