@@ -18,8 +18,16 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
 
 // severity: 0 info · 1 notice · 2 warning
-function mkInsight(type, severity, copy, key, actionPayload = null) {
-  return { type, severity, copy, key, actionPayload, generatedAt: Date.now() };
+// `coachAction` is the deterministic "what happens next" line that ties the
+// insight back to the weekly coaching loop. It is folded into actionPayload so
+// it round-trips through the existing user_insights JSON column with no
+// migration. The render layer shows it only to Pro users (the weekly review is
+// a Pro surface), so it never leaks a Pro feature to free users.
+function mkInsight(type, severity, copy, key, actionPayload = null, coachAction = null) {
+  const payload = coachAction
+    ? { ...(actionPayload || {}), coachAction }
+    : actionPayload;
+  return { type, severity, copy, key, actionPayload: payload, coachAction, generatedAt: Date.now() };
 }
 
 function topSetOf(sets) {
@@ -104,6 +112,7 @@ export function generateInsights(rawArgs = {}) {
         `Your ${name.toLowerCase()} hasn't had much work in 3 weeks. Adding a set or two this week will get it growing again.`,
         `under_mev_${muscleKey}`,
         { muscle: muscleKey },
+        'Your next weekly review will weigh raising this muscle group.',
       ));
     }
   }
@@ -142,6 +151,7 @@ export function generateInsights(rawArgs = {}) {
           `You hit the top of your rep range on ${exName} twice in a row. Time to add a little weight next session.`,
           `peaked_${exId}`,
           { exerciseId: exId },
+          'Your logging targets will step the weight up next time you train it.',
         ));
         continue;
       }
@@ -161,6 +171,7 @@ export function generateInsights(rawArgs = {}) {
         `${exName} has been stuck at the same weight for 4 sessions but you've had reps left in the tank. Push closer to your limit or nudge the weight up.`,
         `stalled_${exId}`,
         { exerciseId: exId },
+        'Your next weekly review can reset the load or push the intensity target.',
       ));
     }
   }
@@ -177,6 +188,7 @@ export function generateInsights(rawArgs = {}) {
       `Your soreness coming into sessions is trending up week-on-week. Prioritise sleep and protein. If it keeps climbing, a lighter week is coming.`,
       'recovery_warn',
       { sorenessWoW: Math.round(sorenessWoW) },
+      'If it keeps climbing, your weekly review will propose an easier week.',
     ));
   }
 
@@ -205,6 +217,7 @@ export function generateInsights(rawArgs = {}) {
       `Your training load and fatigue are both running high. A lighter week soon will let you come back stronger. Not a setback, just part of the plan.`,
       'deload_due',
       { overMrvWeeks, fatigue: fatigue != null ? Math.round(fatigue * 10) / 10 : null },
+      'Your weekly review will offer a lighter week to apply when you are ready.',
     ));
   }
 

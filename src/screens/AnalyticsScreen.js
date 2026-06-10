@@ -76,7 +76,7 @@ export default function AnalyticsScreen({ navigation }) {
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>For you</Text>
             {insights.map(ins => (
-              <InsightRow key={ins.id} insight={ins} onDismiss={() => handleDismiss(ins.id)} />
+              <InsightRow key={ins.id} insight={ins} isPro={tier === 'pro'} onDismiss={() => handleDismiss(ins.id)} />
             ))}
           </View>
         )}
@@ -210,12 +210,23 @@ export default function AnalyticsScreen({ navigation }) {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function InsightRow({ insight, onDismiss }) {
+function InsightRow({ insight, onDismiss, isPro }) {
   const sev = SEVERITY_STYLE[insight.severity ?? 0] ?? SEVERITY_STYLE[0];
+  // The coach-action line ties the insight to the weekly review. It is a Pro
+  // surface, so free users only see the insight itself.
+  const coachAction = isPro ? insight.actionPayload?.coachAction : null;
   return (
     <View style={[styles.insightRow, { borderLeftColor: sev.color }]}>
       <Ionicons name={sev.icon} size={18} color={sev.color} style={{ marginTop: 1 }} />
-      <Text style={styles.insightCopy} numberOfLines={3}>{insight.copy}</Text>
+      <View style={styles.insightBody}>
+        <Text style={styles.insightCopy} numberOfLines={3}>{insight.copy}</Text>
+        {coachAction ? (
+          <View style={styles.insightCoach}>
+            <Ionicons name="sparkles-outline" size={12} color={colors.primary} style={{ marginTop: 2 }} />
+            <Text style={styles.insightCoachText} numberOfLines={2}>{coachAction}</Text>
+          </View>
+        ) : null}
+      </View>
       <TouchableOpacity
         onPress={onDismiss}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -420,7 +431,10 @@ const styles = StyleSheet.create({
     padding: spacing.md, borderWidth: 1, borderColor: colors.border,
     borderLeftWidth: 3,
   },
-  insightCopy:    { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  insightBody:    { flex: 1 },
+  insightCopy:    { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  insightCoach:   { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, marginTop: spacing.xs },
+  insightCoachText: { flex: 1, fontSize: fontSize.xs, color: colors.primary, lineHeight: 15 },
   insightDismiss: { padding: spacing.xxs },
 
   // ── Volume snapshot ──

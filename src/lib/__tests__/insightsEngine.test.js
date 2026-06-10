@@ -70,6 +70,35 @@ describe('generateInsights, base cases', () => {
       expect(typeof i.key).toBe('string');
     }
   });
+
+  test('problem insights carry a coach-action line, folded into actionPayload', () => {
+    // A stalled lift is a problem insight, so it should ship a coachAction
+    // that also round-trips through actionPayload (the persisted column).
+    const days = [21, 14, 7, 0];
+    const workouts = days.map(d => mkWorkout(d));
+    const sets = [];
+    for (const d of days) {
+      for (let s = 0; s < 3; s++) {
+        sets.push(mkSet(d, 'bench', { setNumber: s + 1, weight: 100, actualReps: 6, rir: 3 }));
+      }
+    }
+    const stalled = generateInsights({ workouts, sets, exerciseMap, now: NOW })
+      .find(i => i.type === 'stalled_lift');
+    expect(stalled).toBeTruthy();
+    expect(typeof stalled.coachAction).toBe('string');
+    expect(stalled.coachAction.length).toBeGreaterThan(0);
+    // Survives persistence: the action line lives on actionPayload too.
+    expect(stalled.actionPayload.coachAction).toBe(stalled.coachAction);
+    // Voice rule: no em dashes in user-facing copy.
+    expect(stalled.coachAction).not.toMatch(/—/);
+  });
+
+  test('the positive rhythm insight has no coach-action line', () => {
+    const workouts = Array.from({ length: 6 }, (_, i) => mkWorkout(i * 3));
+    const rhythm = generateInsights({ workouts, sets: [], exerciseMap, now: NOW })
+      .find(i => i.type === 'gentle_rhythm');
+    if (rhythm) expect(rhythm.coachAction).toBeNull();
+  });
 });
 
 describe('rankAndCapInsights', () => {
