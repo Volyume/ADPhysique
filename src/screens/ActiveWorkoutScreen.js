@@ -332,7 +332,6 @@ export default function ActiveWorkoutScreen({ navigation }) {
   const [ghostSet, setGhostSet] = useState(null); // pre-fill from last session (same set index)
   const [nextTimeNotes, setNextTimeNotes] = useState([]);  // "next time" coaching notes for this routine
   // Cluster counter for myo-reps / rest-pause: 0 = activation set, 1+ = mini-set N+1
-  const autoAdvanceRef = useRef(null);
   const sessionSetsRef = useRef([]);   // tracks sets in this session, used for PR detection
   const warmupHintSeenRef = useRef(false); // show one-liner warmup note only on first warmup of this session
   const finishingRef = useRef(false); // gates handleFinishWorkout so a rapid double-tap can't double-finish
@@ -374,7 +373,6 @@ export default function ActiveWorkoutScreen({ navigation }) {
     : '';
 
   function handleNextExercise() {
-    if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
     // WK-5: skip over exercises Time Crunch dropped (_timeCrunchSkipped). They
     // stay in the list so the action can be reverted, but advancing onto one
     // would let the user log against a slot they were told was dropped. Stop at
@@ -421,7 +419,6 @@ export default function ActiveWorkoutScreen({ navigation }) {
           text: 'Remove',
           style: 'destructive',
           onPress: () => {
-            if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
             const store = useAppStore.getState();
             const updated = workoutExercises.filter((_, i) => i !== currentExerciseIndex);
             store.setWorkoutExercises(updated);
@@ -1000,15 +997,10 @@ export default function ActiveWorkoutScreen({ navigation }) {
       // Start rest timer with per-exercise duration
       startRestTimer(routineExercise?.restSeconds || 90);
 
-      // Auto-advance to next exercise when target sets just completed
-      const newWorkingCount = countProgressSets(newLoggedSets);
-      const justHitTarget = targetSets && newWorkingCount >= targetSets && workingLogged < targetSets;
-      if (justHitTarget && !isLastExercise) {
-        if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
-        autoAdvanceRef.current = setTimeout(() => {
-          handleNextExercise();
-        }, 1800);
-      }
+      // No auto-advance on hitting the target. It used to jump to the next
+      // exercise after 1.8s, which yanked the "+ Complete Extra Set" / Next
+      // choice away before the user could tap it (founder feedback). The
+      // target-complete state now waits for an explicit tap.
 
       // Clear ghost, will be re-computed for the next set index on the next render cycle
       setGhostSet(null);
