@@ -16,16 +16,15 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ### 0.00000000000000000000000001 (newest). 2026-06-10 (late): build 15 done; competitive audit rounds 1+2 complete and committed
 
-- **Build 15: DONE** (founder-confirmed 2026-06-10 late session). The
-  build-15 action from the entry below is resolved — the steps-across-restart
-  fix (`0f53fdc`) and the Rate Volyume link fix (`350fcd1`) ship in it.
-  Verification note for next session: the last successful `build-ios.yml`
-  Actions run visible from this container was #110 (main @ `57cd4c9`,
-  pre-fixes), and the two fix commits live on
-  `claude/main-branch-content-update-dcqicf`, not main — so build 15 was
-  produced outside that Actions history (e.g. EAS direct / a later run).
-  One-minute check in App Store Connect that build 15's binary has the
-  steps + Rate fixes is the only follow-up.
+- **Build 15: CODE done, workflow run NOT done.** The steps-across-restart
+  fix (`0f53fdc`, `src/lib/health.js` + test) and the Rate Volyume link fix
+  (`350fcd1`, `src/screens/SettingsAboutScreen.js`, Apple App ID 6777083702)
+  are complete, verified present in the working tree, and pushed on
+  `claude/main-branch-content-update-dcqicf`. The founder will trigger the
+  build-15 workflow **from this branch (NOT main)** as a side task when
+  other jobs are done — no code work remains for it. Build 14 (in Beta App
+  Review) does not contain these fixes. Last successful `build-ios.yml`
+  run was #110 (main @ `57cd4c9`, pre-fixes), consistent with this.
 - **Competitive audit 2026-06-10, both rounds, fully committed** on this
   branch under `docs/competitive-audit-2026-06-10/`:
   - Round 1: baseline, 14 research reports, comparison matrix, 30 scored
@@ -77,9 +76,10 @@ need build 15):**
   iOS-only; Android (Health Connect) untouched. Verified by deep web research
   against Apple docs + react-native-health issues #18/#41. New test:
   `src/lib/__tests__/health.ios-steps.test.js`. (`src/lib/health.js`.)
-- ~~**ACTION FOR NEXT SESSION: trigger build 15 from this branch (NOT main)** so
-  both fixes ship. Build 14 does not contain them.~~ **RESOLVED — build 15
-  done (founder-confirmed 2026-06-10 late; see the newest entry above).**
+- **ACTION STILL OPEN: trigger build 15 from this branch (NOT main)** so
+  both fixes ship. Build 14 does not contain them. The code is done and
+  pushed; only the workflow run remains (founder will do it as a side task
+  — see the newest entry above).
 
 **Trial ledger (migration 071) — field observation.** The founder reports that
 delete-account + re-signup with the same email lands on FREE
