@@ -49,6 +49,7 @@
 | 19 | COMP-019 | **Interactive charts → widgets → Live Activity** — staged: Skia chart windows with recomputed takeaway first, scrubbing second, widgets third, fixed rest-timer Live Activity last | I8/E7 |
 | 20 | COMP-018 | **Shame-free weekly consistency streak** — rest-aware, pause + repair, suppressed under wellbeing/ED flags; feeds the monthly recap | I8/E4 |
 | 21 | COMP-020 | **Apple Watch companion** (then Wear OS) — remote control for the live session: exercise, target, previous, log set, rest haptics. Starts only after COMP-001 ships (the phone screen is the spec). Expo config-plugin route, no eject. | I8/E8 |
+| 21b | **NEW-002** | **Training Partners** — added by founder 2026-06-10 (supersedes the COMP-017 rejection; the rejected version was passive/one-directional and imagined buried in Settings). Approved design basis: Apple-Activity-Sharing-style chosen private circle on derived signals only; (a) rate-limited one-tap partner cheer (~1/partner/day, push "Sam sent you a cheer"); (b) optional SHARED consistency streak counted in training weeks with a deload/"resting" forgiveness state that never reads as broken; (c) plain-English privacy receipt on the invite sheet. Explicit anti-features: no leaderboards, no raw-metric comparison, no stakes, no punitive shared consequences, no feed. Evidence base: 83-study meta-analysis (55,440 participants) tying online social comparison to body-image/ED symptoms — hence derived-signals-only; Strava kudos' peer-reviewed activity lift; Future's scheduled check-ins ~95% goal-completion; Duolingo shared streaks with forgiveness → +D14 retention. Founder scores: I7/E3. Coordinates with COMP-018 (solo streak is the foundation). | I7/E3 |
 
 ## PHASE D — Longer term + items needing explicit sign-off before build
 
@@ -64,7 +65,7 @@
 ## REJECTED (decided 2026-06-10 — do not resurrect without new instruction)
 
 - **COMP-021 Plate calculator wiring** — no.
-- **COMP-017 Training Partner / Coach View** — no. (Per the audit's own warnings, nothing social ships; share cards remain the only outward surface.)
+- **COMP-017 Training Partner / Coach View (passive version)** — rejected 2026-06-10, then SUPERSEDED by NEW-002 Training Partners (active, reciprocal, Apple-Activity-Sharing-pattern) added by the founder later the same day. The rejection of the passive/buried-in-Settings shape stands; the active shape proceeds to blueprint research.
 - **COMP-014 / COMP-028 (photos, licensed loops, self-filming)** — replaced by NEW-001 research; founder explicitly rules out self-filmed content and is unconvinced by photos/loops.
 
 ## Dependency notes
