@@ -123,7 +123,12 @@ export default function RestTimer() {
   const isCountdown = restTimerActive && restTimerRemaining <= 3 && restTimerRemaining > 0;
   const isAlmostDone = restTimerRemaining <= 10 && restTimerActive;
 
-  if (!restTimerActive && restTimerRemaining === 0 && !showDone) return null;
+  // Only ever visible while the timer is actually running, or for the brief
+  // "Start next set" flash after it finishes. The store seeds
+  // restTimerRemaining to 90 (not 0) at rest, so gating on remaining === 0
+  // wrongly showed a frozen "1:30 rest" bar on a cold workout start before
+  // any set was logged.
+  if (!restTimerActive && !showDone) return null;
 
   const mins = Math.floor(restTimerRemaining / 60);
   const secs = restTimerRemaining % 60;
