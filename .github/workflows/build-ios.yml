@@ -10,6 +10,15 @@ name: Build iOS (EAS)
 #   - EXPO_PUBLIC_* ......... the same app-config secrets the Android build uses
 # all set in repo Settings → Secrets and variables → Actions.
 #
+# GOTCHA (cost us a day, 2026-06-10): EAS stores and REUSES the provisioning
+# profile across builds. If a capability is added to the App ID later (e.g.
+# Sign In with Apple), every new build is still signed with the OLD profile and
+# the feature fails at runtime (ASAuthorizationError 1000, "authorization
+# attempt failed for an unknown reason") even though the entitlement is in the
+# binary and the capability is enabled. Fix: delete the provisioning profile on
+# expo.dev → project → Credentials (keep the distribution certificate); the
+# next build mints a fresh profile carrying all current App ID capabilities.
+#
 # The App Store Connect API key (role Admin) lets EAS create the distribution
 # certificate + provisioning profile for you, and submit to TestFlight, with no
 # interactive Apple login. app.json must carry the EAS project id (extra.eas.projectId).
