@@ -268,6 +268,22 @@ export default function TrainingPartnersScreen() {
             >
               <Text style={styles.inviteDoneText}>Done</Text>
             </TouchableOpacity>
+            {/* Privacy receipt: spell out exactly what crosses to a partner,
+                and what never does. Accountability without exposure. */}
+            <View style={styles.receipt}>
+              <View style={styles.receiptRow}>
+                <Ionicons name="eye-outline" size={14} color={colors.textSecondary} />
+                <Text style={styles.receiptText}>
+                  They see: whether you trained this week, and your weekly streak.
+                </Text>
+              </View>
+              <View style={styles.receiptRow}>
+                <Ionicons name="eye-off-outline" size={14} color={colors.textMuted} />
+                <Text style={styles.receiptTextMuted}>
+                  They never see: your weights, body data, food, or any numbers.
+                </Text>
+              </View>
+            </View>
             <Text style={styles.inviteNote}>
               Single-use and private. The link expires once your partner joins.
             </Text>
@@ -298,6 +314,13 @@ const styles = StyleSheet.create({
   inviteDone: { paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
   inviteDoneText: { ...type.body, color: colors.textSecondary, fontWeight: fontWeight.semibold },
   inviteNote: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
+  receipt: {
+    width: '100%', gap: spacing.xs,
+    backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md,
+  },
+  receiptRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  receiptText: { ...type.caption, color: colors.textSecondary, flex: 1, lineHeight: 16 },
+  receiptTextMuted: { ...type.caption, color: colors.textMuted, flex: 1, lineHeight: 16 },
   footnote: { ...type.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm },
   pactRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
