@@ -11,7 +11,8 @@ import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
 import { GOAL_LABELS, PHASE_LABELS, isCompetitionGoal } from '../lib/coachingGoals';
 import { getSplitRationale } from '../lib/whyThisTemplates';
-import { getActivePlan, getRoutinesForPlan } from '../lib/database';
+import { getActivePlan, getRoutinesForPlan, getRoutineExercisesWithDetails } from '../lib/database';
+import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
 
 // Order the rationale reads top-to-bottom: how the week is structured,
@@ -29,6 +30,8 @@ export default function ProSetupCompleteScreen({ navigation }) {
   const [planName, setPlanName] = useState(null);
   const [planOpen, setPlanOpen] = useState(false);
   const [whyThis, setWhyThis] = useState(null);
+  // routineId -> { count, muscles: [displayName, ...] } for the per-day reveal
+  const [routineFocus, setRoutineFocus] = useState({});
 
   const opacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
   const slideY  = useRef(new Animated.Value(reduceMotion ? 0 : 20)).current;
@@ -68,6 +71,28 @@ export default function ProSetupCompleteScreen({ navigation }) {
           setPlanName(active.name);
           const routines = await getRoutinesForPlan(active.id);
           setPlanRoutines(routines || []);
+
+          // Per-day structure for the reveal: how many exercises and which
+          // muscle groups each session leads with. Surfaces the generator's
+          // intelligence ("built for you") instead of a bare list of names.
+          const focus = {};
+          for (const r of (routines || [])) {
+            try {
+              const exs = await getRoutineExercisesWithDetails(r.id);
+              const setsByMuscle = {};
+              for (const re of exs) {
+                const m = re.exercise?.primaryMuscle;
+                if (!m) continue;
+                setsByMuscle[m] = (setsByMuscle[m] || 0) + (re.recommendedSets || 1);
+              }
+              const muscles = Object.entries(setsByMuscle)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([m]) => (MUSCLE_DISPLAY_NAMES[m] ?? m));
+              focus[r.id] = { count: exs.length, muscles };
+            } catch (_) { /* a single routine read must not break the reveal */ }
+          }
+          setRoutineFocus(focus);
         }
         const raw = await AsyncStorage.getItem(PLAN_WHYTHIS_KEY(user.id));
         if (raw) {
@@ -256,14 +281,26 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 {!whyThis && planRoutines[0]?.split_type ? (
                   <Text style={styles.splitWhy}>{getSplitRationale(planRoutines[0].split_type)}</Text>
                 ) : null}
-                {planRoutines.map((r, i) => (
-                  <View key={r.id} style={[styles.splitRow, i < planRoutines.length - 1 && styles.splitRowBorder]}>
-                    <View style={styles.splitBadge}>
-                      <Text style={styles.splitBadgeText}>{i + 1}</Text>
+                {planRoutines.map((r, i) => {
+                  const f = routineFocus[r.id];
+                  const sub = f
+                    ? [
+                        f.count ? `${f.count} exercise${f.count !== 1 ? 's' : ''}` : null,
+                        f.muscles?.length ? f.muscles.join(', ').toLowerCase() : null,
+                      ].filter(Boolean).join(' · ')
+                    : null;
+                  return (
+                    <View key={r.id} style={[styles.splitRow, i < planRoutines.length - 1 && styles.splitRowBorder]}>
+                      <View style={styles.splitBadge}>
+                        <Text style={styles.splitBadgeText}>{i + 1}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.splitName}>{r.name}</Text>
+                        {sub ? <Text style={styles.splitFocus}>{sub}</Text> : null}
+                      </View>
                     </View>
-                    <Text style={styles.splitName}>{r.name}</Text>
-                  </View>
-                ))}
+                  );
+                })}
                 {whyThis && WHY_ORDER.some(k => whyThis[k]) ? (
                   <View style={styles.whyPlanWrap}>
                     <Text style={styles.whyPlanTitle}>Why this plan, for you</Text>
@@ -407,7 +444,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   splitBadgeText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary },
-  splitName: { ...type.label, color: colors.textPrimary, flex: 1 },
+  splitName: { ...type.label, color: colors.textPrimary },
+  splitFocus: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs, lineHeight: 15 },
   whyPlanWrap: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md, gap: spacing.sm },
   whyPlanTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
   whyPlanItem: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
