@@ -282,7 +282,7 @@ notification, telemetry on sent/tapped/failed. Push infrastructure
 3. No daily coaching touchpoint between weekly reviews (daily narrative
    one-liner only).
 4. Two sync layers coexist (consolidation planned).
-5. High/low-day macros and the refeed engine exist as dead/unbuilt code.
+5. (Corrected 2026-06-10) Refeeds, diet breaks, and high/low-day macros are SHIPPED (confirm-then-apply, safety-gated); the dead-code note was from a stale survey.
 6. `cycleOverride` (menstrual-cycle awareness) is a dead input — coach
    reads it, no UI sets it.
 7. Wearable integration listed as a Pro feature but HR/HRV import is out

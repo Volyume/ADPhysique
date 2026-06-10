@@ -105,14 +105,27 @@ IMPLEMENTATION NOTES: The waterfall + bundled-snapshot pipeline already exists; 
 ID: COMP-007
 AREA: Nutrition coaching
 TITLE: Ship the refeed engine and high/low-day macros (safety-gated)
-CURRENT STATE: Refeed recommendation code exists but is dead (`getPlanNutritionContext` never called); high/low-day macros don't exist; users of every competitor hand-edit days to simulate these.
-PROPOSED CHANGE: Wire refeeds and diet breaks through the existing confirm-then-apply weekly review (coach proposes, explains, user applies); add high/low training-day macro splits as a deterministic layout over the existing weekly target. Gate availability behind cut-phase context and ALL existing safety floors.
-BEST REFERENCE: No competitor ships this natively — even MacroFactor users hand-edit and lock days for refeeds/banking.
-USER EVIDENCE: Nutrition report: refeeds/diet breaks/calorie banking are the most-wished-for features in r/MacroFactor and adjacent communities.
-IMPACT SCORE: 9 — leapfrogs the #1 nutrition player on its users' top wish; deepens the periodisation moat.
-EFFORT SCORE: 6 — engine scaffolding exists but the apply paths, diary surfaces and safety interactions need careful build + simulator scenarios.
-PRIORITY SCORE: 1.5
-IMPLEMENTATION NOTES: Must route through `coachApply` confirm-then-apply; `saveNutritionTargets` is a full-row write (known trap); RED-S/floor checks run on the LOW day, not the weekly average. Add locked simulator scenarios before shipping.
+STATUS: ALREADY SHIPPED (audit correction 2026-06-10). The "dead code"
+finding came from the stale CODE_TRUTH_SURVEY snapshot. In the live code,
+`weeklyCoach` emits refeed, diet-break, and high/low-day (macro-cycle)
+suggestions; `coachApply` provides `computeRefeedDay`, `computeMacroCycle`,
+and `computeDietBreakTargets`; `CoachOutputScreen` renders `RefeedCard`,
+`MacroCycleCard`, and `DietBreakCard` as confirm-then-apply cards, gated to
+aggressive cuts / competition goals, writing to `userProfile.refeed` /
+`userProfile.macroCycle` (the Diary reads both). Covered by
+`coachApply.test.js`. No build required. Remaining optional polish (not
+done): surface a one-line "what is a refeed" education link, and add a
+locked simulator scenario exercising a multi-week refeed cadence.
+CURRENT STATE: shipped and tested as above.
+PROPOSED CHANGE: none beyond the optional polish noted.
+BEST REFERENCE: still ahead of the field, no competitor ships this natively.
+USER EVIDENCE: refeeds/diet breaks/calorie banking are the most-wished-for
+features in r/MacroFactor and adjacent communities.
+IMPACT SCORE: n/a (already delivered)
+EFFORT SCORE: n/a
+PRIORITY SCORE: n/a
+IMPLEMENTATION NOTES: confirm-then-apply routes through `coachApply`;
+gating is cut + aggressive/competition only, inside the safety boundary.
 ---
 
 ---
