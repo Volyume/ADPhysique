@@ -1305,6 +1305,83 @@ export default function ActiveWorkoutScreen({ navigation }) {
   const workingLogged = countProgressSets(loggedSets);
   const targetComplete = targetSets && workingLogged >= targetSets;
 
+  // The "how to" demonstration sheet. Defined once and rendered in BOTH the
+  // empty-state and the main return — previously it lived only in the
+  // !exercise branch, so the Info / How-to button did nothing during an
+  // actual workout (the modal that listens to showHowTo was never mounted).
+  const howToSheet = (
+    <Modal
+      visible={showHowTo}
+      animationType="slide"
+      onRequestClose={() => setShowHowTo(false)}
+    >
+      <SafeAreaView style={styles.howToSafe} edges={['top', 'bottom']}>
+        <View style={styles.howToHeader}>
+          <Text style={styles.howToTitle} numberOfLines={1}>{howToExercise?.name}</Text>
+          <TouchableOpacity
+            onPress={() => setShowHowTo(false)}
+            style={styles.howToClose}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+          >
+            <Ionicons name="close" size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+        <ScrollView contentContainerStyle={styles.howToContent}>
+          <DemoCard
+            exercise={{
+              ...howToExercise,
+              primaryMuscleLabel:
+                MUSCLE_DISPLAY_NAMES[howToExercise?.primaryMuscle ?? howToExercise?.primary_muscle]
+                ?? howToExercise?.primaryMuscle ?? null,
+            }}
+            localFrames={getSampleDemo(howToExercise?.name)?.frames}
+            localVideo={getSampleDemo(howToExercise?.name)?.video}
+          />
+          {howToExercise?.subregion ? (
+            <View style={styles.whyThisCard}>
+              <Ionicons name="compass-outline" size={16} color={colors.primary} style={{ marginTop: 1 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.whyThisLabel}>Why this exercise</Text>
+                <Text style={styles.whyThisText}>
+                  {getExerciseWhyThis(howToExercise.name, howToExercise.subregion)}
+                  {(howToExercise?.sfr ?? howToExercise?.stimulusToFatigueRatio) >= 4
+                    ? ' High training payoff for the effort it costs.' : ''}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+          <CoachingNotesPanel
+            formCues={howToExercise?.formCues ?? getSampleDemo(howToExercise?.name)?.formCues}
+            commonMistakes={howToExercise?.commonMistakes ?? getSampleDemo(howToExercise?.name)?.commonMistakes}
+            formTip={howToExercise?.name ? (FORM_TIPS[howToExercise.name] ?? null) : null}
+            coachingCue={howToExercise?.cue || null}
+            notes={howToExercise?.notes}
+          />
+          {voiceReady ? (
+            <TouchableOpacity
+              style={styles.speakCuesRow}
+              onPress={toggleSpeakCues}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: speakCues }}
+              accessibilityLabel="Speak cues at the start of each exercise"
+            >
+              <Ionicons
+                name={speakCues ? 'volume-high' : 'volume-mute-outline'}
+                size={18}
+                color={speakCues ? colors.primary : colors.textMuted}
+              />
+              <Text style={styles.speakCuesText}>
+                Speak the cue when each exercise starts: {speakCues ? 'on' : 'off'}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
+
   if (!exercise) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -1323,76 +1400,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
           onSelect={handlePickerSelect}
           actionLabel={pickerMode === 'swap' ? 'Swap In' : 'Add to Workout'}
         />
-        <Modal
-          visible={showHowTo}
-          animationType="slide"
-          onRequestClose={() => setShowHowTo(false)}
-        >
-          <SafeAreaView style={styles.howToSafe} edges={['top', 'bottom']}>
-            <View style={styles.howToHeader}>
-              <Text style={styles.howToTitle} numberOfLines={1}>{howToExercise?.name}</Text>
-              <TouchableOpacity
-                onPress={() => setShowHowTo(false)}
-                style={styles.howToClose}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                accessibilityRole="button"
-                accessibilityLabel="Close"
-              >
-                <Ionicons name="close" size={24} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView contentContainerStyle={styles.howToContent}>
-              <DemoCard
-                exercise={{
-                  ...howToExercise,
-                  primaryMuscleLabel:
-                    MUSCLE_DISPLAY_NAMES[howToExercise?.primaryMuscle ?? howToExercise?.primary_muscle]
-                    ?? howToExercise?.primaryMuscle ?? null,
-                }}
-                localFrames={getSampleDemo(howToExercise?.name)?.frames}
-                localVideo={getSampleDemo(howToExercise?.name)?.video}
-              />
-              {howToExercise?.subregion ? (
-                <View style={styles.whyThisCard}>
-                  <Ionicons name="compass-outline" size={16} color={colors.primary} style={{ marginTop: 1 }} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.whyThisLabel}>Why this exercise</Text>
-                    <Text style={styles.whyThisText}>
-                      {getExerciseWhyThis(howToExercise.name, howToExercise.subregion)}
-                      {(howToExercise?.sfr ?? howToExercise?.stimulusToFatigueRatio) >= 4
-                        ? ' High training payoff for the effort it costs.' : ''}
-                    </Text>
-                  </View>
-                </View>
-              ) : null}
-              <CoachingNotesPanel
-                formCues={howToExercise?.formCues ?? getSampleDemo(howToExercise?.name)?.formCues}
-                commonMistakes={howToExercise?.commonMistakes ?? getSampleDemo(howToExercise?.name)?.commonMistakes}
-                formTip={howToExercise?.name ? (FORM_TIPS[howToExercise.name] ?? null) : null}
-                coachingCue={howToExercise?.cue || null}
-                notes={howToExercise?.notes}
-              />
-              {voiceReady ? (
-                <TouchableOpacity
-                  style={styles.speakCuesRow}
-                  onPress={toggleSpeakCues}
-                  accessibilityRole="switch"
-                  accessibilityState={{ checked: speakCues }}
-                  accessibilityLabel="Speak cues at the start of each exercise"
-                >
-                  <Ionicons
-                    name={speakCues ? 'volume-high' : 'volume-mute-outline'}
-                    size={18}
-                    color={speakCues ? colors.primary : colors.textMuted}
-                  />
-                  <Text style={styles.speakCuesText}>
-                    Speak the cue when each exercise starts: {speakCues ? 'on' : 'off'}
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
-            </ScrollView>
-          </SafeAreaView>
-        </Modal>
+        {howToSheet}
       </SafeAreaView>
     );
   }
@@ -1751,15 +1759,6 @@ export default function ActiveWorkoutScreen({ navigation }) {
                 </TouchableOpacity>
               );
             })()}
-            {showInfoTipPulse && loggedSets.length === 0 && prevSets.length === 0 && (
-              <View style={styles.firstSetHint}>
-                <Ionicons name="sparkles-outline" size={14} color={colors.primary} />
-                <Text style={styles.firstSetHintText}>
-                  Choose a weight and reps, then tap Log set when done.
-                  Tap Info below to see how to do this exercise correctly.
-                </Text>
-              </View>
-            )}
             {currentSet.isGhost && ghostSet && (
               <View style={styles.ghostChip}>
                 <Ionicons name="time-outline" size={12} color={colors.textMuted} />
@@ -2038,6 +2037,9 @@ export default function ActiveWorkoutScreen({ navigation }) {
           onSelect={handlePickerSelect}
           actionLabel={pickerMode === 'swap' ? 'Swap In' : 'Add to Workout'}
         />
+
+        {/* Demonstration sheet — rendered here so Info / How-to works mid-workout */}
+        {howToSheet}
 
         {/* Superset heads-up modal, appears once per pair when the user
             lands on a paired exercise. Educational for first-timers,
