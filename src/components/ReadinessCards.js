@@ -257,7 +257,7 @@ function RecoveryGauge({ label, value, invertGood = false }) {
   const display = hasValue ? value.toFixed(1) : 'N/A';
 
   let dotColor = colors.textMuted;
-  let scaleNote = 'No data yet';
+  let scaleNote = 'Nothing to show yet';
   if (hasValue) {
     const v = parseFloat(value);
     if (invertGood) {

@@ -53,7 +53,7 @@ export default function SettingsDataScreen({ navigation }) {
       const snap = await getSyncStatus();
       setSyncSnapshot(snap);
       toast.show(
-        (snap?.queue_depth ?? 0) > 0 ? 'Synced. Some changes are still uploading.' : 'Synced.',
+        (snap?.queue_depth ?? 0) > 0 ? 'Backing up a few recent changes.' : 'Everything\'s backed up and safe.',
         { variant: 'success' },
       );
     } catch (e) {

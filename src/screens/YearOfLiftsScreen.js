@@ -144,8 +144,8 @@ function buildCards(data, units) {
     type: 'outro',
     icon: 'checkmark-circle',
     tone: 'gold',
-    headline: 'Onwards.',
-    subline: 'Same hands. Same bar. New numbers.',
+    headline: 'Here\'s to the year ahead.',
+    subline: 'Same hands, same bar, new numbers to chase.',
   });
 
   return cards;

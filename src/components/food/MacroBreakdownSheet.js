@@ -68,7 +68,7 @@ export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClo
       </View>
 
       {rows.length === 0 ? (
-        <Text style={styles.empty}>No food logged.</Text>
+        <Text style={styles.empty}>Nothing logged yet. Your macro breakdown will appear here.</Text>
       ) : (
         <View>
           {rows.map((r) => (

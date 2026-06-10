@@ -158,7 +158,7 @@ export default function MyRecipesScreen({ navigation, route }) {
         </View>
       ) : recipes.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>No recipes yet.</Text>
+          <Text style={styles.emptyTitle}>Build your first recipe</Text>
           <Text style={styles.emptyBody}>
             Build a recipe once. Log it as one line in your diary every time you eat it.
           </Text>

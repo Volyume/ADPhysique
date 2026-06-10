@@ -410,7 +410,7 @@ export default function CoachReviewScreen() {
         {!hasData && (
           <Card>
             <Text style={styles.emptyText}>
-              No sessions logged this week. Start a session from the home screen.
+              No sessions logged this week yet. Start one from the home screen whenever it suits you.
             </Text>
           </Card>
         )}
@@ -504,7 +504,7 @@ export default function CoachReviewScreen() {
               {watchMuscles.length === 0 && !deloadResult?.deload && !jointFlag ? (
                 <Card>
                   <Text style={styles.emptySubText}>
-                    Nothing to flag this week. Training looks balanced.
+                    Nothing to flag this week, your training is looking nicely balanced.
                   </Text>
                 </Card>
               ) : (

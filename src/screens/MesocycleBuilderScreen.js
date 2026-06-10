@@ -290,7 +290,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
             <View style={styles.empty}>
               <Ionicons name="calendar-outline" size={48} color={colors.surface3} />
               <Text style={styles.emptyTitle}>
-                {activePlan ? 'No active block' : 'No training blocks yet'}
+                {activePlan ? 'No block running yet' : 'Your training blocks start here'}
               </Text>
               <Text style={styles.emptyText}>
                 {activePlan

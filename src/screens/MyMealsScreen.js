@@ -159,7 +159,7 @@ export default function MyMealsScreen({ navigation, route }) {
         </View>
       ) : meals.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>No saved meals yet.</Text>
+          <Text style={styles.emptyTitle}>Save your go-to meals</Text>
           <Text style={styles.emptyBody}>
             Select foods in your diary and tap "Save as meal".
           </Text>

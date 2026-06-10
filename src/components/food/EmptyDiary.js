@@ -12,7 +12,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
 
-export const EMPTY_DIARY_COPY = 'Nothing logged yet.';
+export const EMPTY_DIARY_COPY = 'Nothing logged yet today. Add a meal whenever you\'re ready.';
 
 export default function EmptyDiary({ onAdd, onCopyYesterday }) {
   return (

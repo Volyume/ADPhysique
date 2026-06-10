@@ -216,7 +216,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               ListEmptyComponent={
                 <View style={styles.pickerEmpty}>
                   <Ionicons name="search-outline" size={32} color={colors.textMuted} style={{ marginBottom: spacing.md }} />
-                  <Text style={styles.pickerEmptyText}>No exercises found</Text>
+                  <Text style={styles.pickerEmptyText}>No matches found. Try a different search.</Text>
                 </View>
               }
             />

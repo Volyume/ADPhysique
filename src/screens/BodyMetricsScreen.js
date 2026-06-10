@@ -778,7 +778,7 @@ export default function BodyMetricsScreen() {
         ) : (
           <View style={styles.emptyCard}>
             <EmptyBodyIllustration size={140} />
-            <Text style={styles.emptyTitle}>No entries logged yet</Text>
+            <Text style={styles.emptyTitle}>Your progress starts here</Text>
             {onboardingWeightKg ? (
               <>
                 <Text style={styles.emptyText}>

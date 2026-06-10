@@ -611,7 +611,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
           ) : (
             <View style={styles.empty}>
               <EmptyWorkoutsIllustration size={140} />
-              <Text style={styles.emptyTitle}>No sessions logged yet</Text>
+              <Text style={styles.emptyTitle}>Your sessions will appear here</Text>
               <Text style={styles.emptyText}>
                 Completed workouts appear here. Each session is saved automatically when you finish.
               </Text>
