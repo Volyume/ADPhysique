@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 
-import { colors, fontSize, fontWeight, spacing, radius, volumeColors, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, volumeColors, type, withAlpha } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import { EmptyChartIllustration } from '../components/Illustrations';
 import InfoTooltip from '../components/InfoTooltip';
@@ -39,10 +39,31 @@ export default function AnalyticsScreen({ navigation }) {
   const {
     loading, refreshing,
     insights, weeklyVolume, prBars, prWindow,
-    recentSessions, allSets, earliestWorkoutAt,
+    recentSessions, allSets, earliestWorkoutAt, monthlyReport,
     hasData, enoughForTrends,
     handleDismiss, handlePrWindowToggle, handleRefresh,
   } = useProgressData();
+
+  function shareMonthlyReport() {
+    if (!monthlyReport) return;
+    const stats = [
+      { value: String(monthlyReport.trainingDays), label: 'training days' },
+      { value: monthlyReport.tonnageLabel, label: 'moved' },
+    ];
+    if (monthlyReport.prs > 0) {
+      stats.push({ value: String(monthlyReport.prs), label: monthlyReport.prs === 1 ? 'new PR' : 'new PRs' });
+    }
+    navigation.navigate('ShareCard', {
+      milestoneData: {
+        eyebrow: monthlyReport.isFirstBlock ? 'First block' : 'This month',
+        title: monthlyReport.title,
+        heroValue: String(monthlyReport.sessions),
+        heroUnit: 'sessions',
+        caption: '',
+        stats,
+      },
+    });
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -78,6 +99,39 @@ export default function AnalyticsScreen({ navigation }) {
             {insights.map(ins => (
               <InsightRow key={ins.id} insight={ins} isPro={tier === 'pro'} onDismiss={() => handleDismiss(ins.id)} />
             ))}
+          </View>
+        )}
+
+        {/* ── Monthly report / first-block recap: a recurring, shareable
+            celebration that lands inside the early-churn window. ── */}
+        {monthlyReport && (
+          <View style={[styles.section, styles.reportCard]}>
+            <View style={styles.reportHeadRow}>
+              <Ionicons
+                name={monthlyReport.isFirstBlock ? 'ribbon-outline' : 'calendar-outline'}
+                size={16}
+                color={colors.primary}
+              />
+              <Text style={styles.reportTitle}>{monthlyReport.title}</Text>
+            </View>
+            <Text style={styles.reportHeadline}>{monthlyReport.headline}</Text>
+            <View style={styles.reportStats}>
+              <ReportStat value={String(monthlyReport.sessions)} label="sessions" />
+              <ReportStat value={String(monthlyReport.trainingDays)} label="days" />
+              <ReportStat value={monthlyReport.tonnageLabel} label="moved" />
+              {monthlyReport.prs > 0 && (
+                <ReportStat value={String(monthlyReport.prs)} label={monthlyReport.prs === 1 ? 'PR' : 'PRs'} />
+              )}
+            </View>
+            <TouchableOpacity
+              style={styles.reportShare}
+              onPress={shareMonthlyReport}
+              accessibilityRole="button"
+              accessibilityLabel="Share this report"
+            >
+              <Ionicons name="share-outline" size={15} color={colors.textSecondary} />
+              <Text style={styles.reportShareText}>Share</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -209,6 +263,15 @@ export default function AnalyticsScreen({ navigation }) {
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
+
+function ReportStat({ value, label }) {
+  return (
+    <View style={styles.reportStat}>
+      <Text style={styles.reportStatValue}>{value}</Text>
+      <Text style={styles.reportStatLabel}>{label}</Text>
+    </View>
+  );
+}
 
 function InsightRow({ insight, onDismiss, isPro }) {
   const sev = SEVERITY_STYLE[insight.severity ?? 0] ?? SEVERITY_STYLE[0];
@@ -431,6 +494,23 @@ const styles = StyleSheet.create({
     padding: spacing.md, borderWidth: 1, borderColor: colors.border,
     borderLeftWidth: 3,
   },
+  reportCard: {
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, 0.251),
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  reportHeadRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  reportTitle: { ...type.h3, color: colors.textPrimary },
+  reportHeadline: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
+  reportStats: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg, marginTop: spacing.xs },
+  reportStat: { alignItems: 'flex-start' },
+  reportStatValue: { ...type.num('h2'), color: colors.textPrimary },
+  reportStatLabel: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
+  reportShare: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, alignSelf: 'flex-start', marginTop: spacing.xs },
+  reportShareText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.semibold },
   insightBody:    { flex: 1 },
   insightCopy:    { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
   insightCoach:   { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, marginTop: spacing.xs },

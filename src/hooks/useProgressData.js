@@ -12,6 +12,7 @@ import {
   calculateWeeklyVolume, VOLUME_LANDMARKS,
   calculate1RM, calculateTonnage, shouldDeload,
 } from '../lib/algorithms';
+import { buildMonthlyReport } from '../lib/monthlyReport';
 import { logError } from '../lib/errorLog';
 import { localDayKey } from '../lib/dayKey';
 
@@ -86,6 +87,7 @@ export default function useProgressData() {
   const [showAllMuscles, setShowAllMuscles] = useState(false);
   const [workloadData, setWorkloadData]     = useState(null);
   const [fatigueSessions, setFatigueSessions] = useState([]);   // last 6 sessions w/ feedback
+  const [monthlyReport, setMonthlyReport] = useState(null);     // 30-day report + first-block recap
   const [blockProgress, setBlockProgress]     = useState([]);   // planned vs actual per muscle
   const [earliestWorkoutAt, setEarliestWorkoutAt] = useState(null);
   const [currentMesoWeek, setCurrentMesoWeek] = useState(null); // {weekIndex, plannedWeeks, isDeload, rirTarget}
@@ -115,6 +117,14 @@ export default function useProgressData() {
 
       const wl = await getAcuteChronicWorkload(user.id).catch(() => null);
       setWorkloadData(wl);
+
+      // 30-day report + one-off first-block recap. PR count reuses the same
+      // window helper the PR bars use, so the figure matches the rest of the
+      // screen. Best-effort: a failure here never blocks the dashboard.
+      try {
+        const prCount = computePRsPerWeek(sets, exMap, 30).reduce((sum, n) => sum + n, 0);
+        setMonthlyReport(buildMonthlyReport({ workouts, sets, prCount, units: 'kg', now: Date.now() }));
+      } catch (_) { setMonthlyReport(null); }
 
       await Promise.all([
         loadMesocycle(workouts, sets, exMap),
@@ -443,7 +453,7 @@ export default function useProgressData() {
     activeMeso, mesoTonnage, insights, weeklyVolume, prBars, prWindow,
     calValues, recentSessions, allSets, exerciseMap, deloadAlert,
     durationBars, muscleFreq, showAllMuscles, setShowAllMuscles,
-    workloadData, fatigueSessions, blockProgress, earliestWorkoutAt,
+    workloadData, fatigueSessions, blockProgress, earliestWorkoutAt, monthlyReport,
     currentMesoWeek,
     hasData, sessionCount, enoughForTrends,
     handleDismiss, handlePrWindowToggle, handleRefresh,
