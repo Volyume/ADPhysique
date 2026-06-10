@@ -12,10 +12,11 @@
 > detection, Move #3 upward-gate compression, Move #4 differential
 > paywall, and Move #5 cascade/payments work all postdate this map.
 > **For the canonical current-state reference, read
-> `docs/CURRENT_STATUS.md` first, then `docs/HANDOFF.md` section 11
-> (the 56-screen inventory).** This file is kept for the screen
-> deep-dives that haven't changed; treat anything to do with plan
-> creation flow, first-run paths, tier structure, or the build
+> `docs/CURRENT_STATUS.md` first, then `docs/PRODUCTION_ROADMAP_2026-06-09.md`
+> (the four-pass verified app map / store-readiness / infra / improvement
+> synthesis; the current app is 71 screens across 5 tabs).** This file is
+> kept for the screen deep-dives that haven't changed; treat anything to do
+> with plan creation flow, first-run paths, tier structure, or the build
 > trigger as historical, not current.
 
 ---
