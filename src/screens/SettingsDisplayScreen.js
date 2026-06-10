@@ -37,12 +37,14 @@ async function promptRestartForA11y(label) {
 // Display & accessibility: font scale, contrast, colour-blind palette,
 // reduced motion. All but reduce-motion need a reload to take effect.
 export default function SettingsDisplayScreen() {
-  const { accessibility, setAccessibilityPref, loadAccessibility, accessibilityLoaded } = useAppStore(
+  const { accessibility, setAccessibilityPref, loadAccessibility, accessibilityLoaded, tableLogging, setTableLogging } = useAppStore(
     useShallow(s => ({
       accessibility: s.accessibility,
       setAccessibilityPref: s.setAccessibilityPref,
       loadAccessibility: s.loadAccessibility,
       accessibilityLoaded: s.accessibilityLoaded,
+      tableLogging: s.tableLogging,
+      setTableLogging: s.setTableLogging,
     })),
   );
 
@@ -127,6 +129,24 @@ export default function SettingsDisplayScreen() {
         <Text style={styles.a11yNote}>
           Reduce motion takes effect immediately. Larger text, higher contrast, and the colour-blind safe palette need Volyume to reopen. You'll be prompted to reload after toggling.
         </Text>
+      </View>
+
+      {/* Early access: experimental UI the user opts into knowingly. */}
+      <View style={styles.section}>
+        <SettingRow
+          icon="grid-outline"
+          label="Table logging (early access)"
+          sub="Log sets directly in the set table: type weight and reps in the row and tap the tick. The classic stepper card returns when this is off."
+          showArrow={false}
+          rightElement={
+            <Switch
+              value={!!tableLogging}
+              onValueChange={v => setTableLogging(v)}
+              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
+              thumbColor={tableLogging ? colors.primary : colors.textMuted}
+            />
+          }
+        />
       </View>
     </SettingsPage>
   );

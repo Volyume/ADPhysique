@@ -54,7 +54,7 @@
         "backgroundColor": "#0D0D0D"
       },
       "package": "app.volyume",
-      "versionCode": 21,
+      "versionCode": 22,
       "allowBackup": false,
       "permissions": [
         "android.permission.CAMERA",

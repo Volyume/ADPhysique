@@ -1784,6 +1784,69 @@ describe('ActiveWorkoutScreen with active workout state', () => {
     }
   });
 
+  test('table-logging early access: editable row replaces the stepper card and logs a set', async () => {
+    useAppStore.setState({
+      user: { id: 'u-table', isLocal: false },
+      session: { user: { id: 'u-table' } },
+      tier: 'pro',
+      firstRunComplete: true,
+      tableLogging: true,
+      userProfile: { firstName: 'T', goal: 'lean_gain', units: 'metric' },
+      activeWorkout: { id: 'wt', userId: 'u-table', routineId: 'rt', startedAt: Date.now(), isCompleted: false },
+      workoutStartTime: Date.now(),
+      workoutExercises: [
+        {
+          exercise: { id: 'ex1', name: 'Barbell Bench Press', equipment: 'Barbell', primaryMuscle: 'chest' },
+          routineExercise: { id: 're1', recommendedSets: 3, recommendedRepsMin: 8, recommendedRepsMax: 12 },
+          sets: [
+            { id: 's1', exerciseId: 'ex1', workoutId: 'wt', setNumber: 1, setType: 'straight', actualReps: 10, weight: 60 },
+          ],
+        },
+      ],
+      currentExerciseIndex: 0,
+      restTimerActive: false,
+      accessibility: { reduceMotion: false },
+    });
+    const Screen = require('../screens/ActiveWorkoutScreen').default;
+    let tree = null;
+    try {
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+      expect(tree).not.toBeNull();
+      const byId = (id) => tree.root.findAll(n => n.props?.testID === id);
+      // Table mode: row inputs + tick present, stepper card + big button gone.
+      expect(byId('volyume-table-weight-input').length).toBeGreaterThan(0);
+      expect(byId('volyume-table-reps-input').length).toBeGreaterThan(0);
+      expect(byId('volyume-table-tick').length).toBeGreaterThan(0);
+      expect(byId('volyume-weight-input')).toHaveLength(0);
+      expect(byId('volyume-btn-complete-set')).toHaveLength(0);
+
+      // Type into the row and commit via the tick: must travel the exact
+      // same handleCompleteSet path as the Log set button.
+      await TestRenderer.act(async () => {
+        byId('volyume-table-weight-input')[0].props.onChangeText('62.5');
+        byId('volyume-table-reps-input')[0].props.onChangeText('9');
+      });
+      await TestRenderer.act(async () => {
+        byId('volyume-table-tick')[0].props.onPress();
+        for (let i = 0; i < 15; i++) await Promise.resolve();
+        await new Promise(r => setImmediate(r));
+        for (let i = 0; i < 10; i++) await Promise.resolve();
+      });
+
+      // The whole-screen bash still applies in table mode.
+      const { failures } = await bashTappables(tree);
+      const real = failures.filter(f =>
+        !/getState\b|dispatch\b|navigation\.navigate\b|getParent\b/i.test(f.error),
+      );
+      if (real.length) console.log('[TableLogging] failures:', JSON.stringify(real, null, 2));
+      expect(real).toEqual([]);
+    } finally {
+      unmountTree(tree);
+      useAppStore.setState({ tableLogging: false });
+    }
+  });
+
   test('handles 100-tap chains × 20 seeds in a 5-exercise workout', async () => {
     const mkExercise = (i, sets) => ({
       exercise: { id: `ex${i}`, name: `Exercise ${i}`, equipment: i % 2 ? 'Barbell' : 'Dumbbell', primaryMuscle: 'chest' },

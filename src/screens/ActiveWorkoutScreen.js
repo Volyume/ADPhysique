@@ -101,15 +101,35 @@ function countProgressSets(sets) {
   }).length;
 }
 
+// Labels for the table-mode set-type chip (mirrors SetEntry's picker labels).
+const SET_TYPE_TABLE_LABELS = {
+  straight: 'Working set',
+  warmup: 'Warm-up',
+  dropset: 'Drop set',
+  superset: 'Superset',
+  myo_reps: 'Myo-reps',
+  rest_pause: 'Rest-pause',
+  amrap: 'AMRAP',
+};
+
 /**
  * Compact set table (the Strong/Hevy idiom): SET | PREVIOUS | KG | REPS | ✓ in
  * ~40px rows instead of a card per set. Logged sets show their actuals;
  * remaining planned sets show last session's set as a dimmed ghost target, the
- * next one highlighted. Display only — input stays in SetEntry above, so the
- * logging flow itself is untouched. Memoised: the parent re-renders every
- * timer second.
+ * next one highlighted. Memoised: the parent re-renders every timer second.
+ *
+ * Two modes:
+ *  - Display (default): input stays in SetEntry above; the table is read-only.
+ *  - Editable (table-logging early access, Tier 2 of the density work): the
+ *    next row carries weight/reps inputs bound to the SAME currentSet state
+ *    SetEntry uses, and its tick fires the SAME primary log handler as the
+ *    Log set button. Two views over one state — the logging machinery
+ *    (validation, PRs, rest timer, supersets, prefill) is shared, not forked.
  */
-const SetTable = React.memo(function SetTable({ loggedSets, prevSets, plannedCount, units }) {
+const SetTable = React.memo(function SetTable({
+  loggedSets, prevSets, plannedCount, units,
+  editable = false, editValue = null, onEditChange = null, onCommit = null, saving = false,
+}) {
   const rows = [];
   let workingIdx = 0;
   for (let i = 0; i < loggedSets.length; i++) {
@@ -119,12 +139,26 @@ const SetTable = React.memo(function SetTable({ loggedSets, prevSets, plannedCou
     rows.push({ key: `l${i}`, kind: 'logged', set: s, prev, num: isWarmup ? null : workingIdx + 1 });
     if (!isWarmup) workingIdx++;
   }
+  const editingWarmup = editable && editValue?.setType === 'warmup';
+  if (editingWarmup) {
+    // A warm-up in progress edits its own extra row; planned working rows
+    // stay as dimmed ghosts below it.
+    rows.push({ key: 'e', kind: 'edit', warmup: true, prev: null, num: null });
+  }
   const upcoming = Math.max(0, (plannedCount || 0) - workingIdx);
   for (let j = 0; j < upcoming; j++) {
+    const isEditRow = editable && !editingWarmup && j === 0;
     rows.push({
-      key: `u${j}`, kind: j === 0 ? 'next' : 'todo',
+      key: isEditRow ? 'e' : `u${j}`,
+      kind: isEditRow ? 'edit' : (j === 0 && !editable ? 'next' : 'todo'),
+      warmup: false,
       prev: prevSets?.[workingIdx + j] ?? null, num: workingIdx + j + 1,
     });
+  }
+  // Past the plan (extra sets, or no plan at all): the editable row still
+  // needs somewhere to live, matching the "+ Complete Extra Set" path.
+  if (editable && !editingWarmup && upcoming === 0) {
+    rows.push({ key: 'e', kind: 'edit', warmup: false, prev: prevSets?.[workingIdx] ?? null, num: workingIdx + 1 });
   }
   if (!rows.length) return null;
 
@@ -138,10 +172,10 @@ const SetTable = React.memo(function SetTable({ loggedSets, prevSets, plannedCou
         <View style={styles.colTick} />
       </View>
       {rows.map(r => {
-        const isWarmup = r.kind === 'logged' && r.set.setType === 'warmup';
+        const isWarmup = (r.kind === 'logged' && r.set.setType === 'warmup') || (r.kind === 'edit' && r.warmup);
         const perSide = r.kind === 'logged' ? formatPerSide(r.set.leftReps, r.set.rightReps) : null;
         return (
-          <View key={r.key} style={[styles.setTableRow, r.kind === 'next' && styles.setTableRowNext]}>
+          <View key={r.key} style={[styles.setTableRow, (r.kind === 'next' || r.kind === 'edit') && styles.setTableRowNext]}>
             {isWarmup ? (
               <Ionicons name="flame" size={13} color={colors.warning} style={styles.colSet} />
             ) : (
@@ -150,7 +184,61 @@ const SetTable = React.memo(function SetTable({ loggedSets, prevSets, plannedCou
             <Text style={[styles.setTablePrev, styles.colPrev]} numberOfLines={1}>
               {r.prev ? `${r.prev.weight}×${r.prev.actualReps ?? r.prev.actual_reps ?? '–'}` : '–'}
             </Text>
-            {r.kind === 'logged' ? (
+            {r.kind === 'edit' ? (
+              <>
+                <TextInput
+                  testID="volyume-table-weight-input"
+                  style={[styles.setTableInput, styles.colNum]}
+                  value={editValue.weight == null || editValue.weight === '' ? '' : String(editValue.weight)}
+                  onChangeText={v => {
+                    // Same rule as SetEntry: ≤3 integer digits, ≤2 decimals,
+                    // 500 cap; keep the raw string so "21." survives typing.
+                    if (v === '' || /^\d{0,3}\.?\d{0,2}$/.test(v)) {
+                      const n = parseFloat(v);
+                      if (!isNaN(n) && n > 500) return;
+                      onEditChange({ weight: v });
+                    }
+                  }}
+                  keyboardType="decimal-pad"
+                  returnKeyType="done"
+                  selectTextOnFocus
+                  placeholder={r.prev ? String(r.prev.weight) : '–'}
+                  placeholderTextColor={colors.textDisabled}
+                  accessibilityLabel={`Weight in ${units}`}
+                />
+                <TextInput
+                  testID="volyume-table-reps-input"
+                  style={[styles.setTableInput, styles.colNum]}
+                  value={editValue.reps == null || editValue.reps === '' ? '' : String(editValue.reps)}
+                  onChangeText={v => {
+                    const n = parseInt(v, 10);
+                    if (!isNaN(n)) onEditChange({ reps: Math.min(Math.max(n, 1), 200) });
+                    else if (v === '') onEditChange({ reps: '' });
+                  }}
+                  keyboardType="number-pad"
+                  returnKeyType="done"
+                  selectTextOnFocus
+                  placeholder={r.prev ? String(r.prev.actualReps ?? r.prev.actual_reps ?? '–') : '–'}
+                  placeholderTextColor={colors.textDisabled}
+                  accessibilityLabel="Number of reps"
+                />
+                <TouchableOpacity
+                  testID="volyume-table-tick"
+                  onPress={onCommit}
+                  disabled={saving}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={isWarmup ? 'Done with warm-up' : 'Log set'}
+                  style={styles.colTick}
+                >
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={22}
+                    color={saving ? colors.textDisabled : isWarmup ? colors.warning : colors.primary}
+                  />
+                </TouchableOpacity>
+              </>
+            ) : r.kind === 'logged' ? (
               <>
                 <Text style={[styles.setTableVal, styles.colNum]}>{r.set.weight}</Text>
                 <Text style={[styles.setTableVal, styles.colNum]}>
@@ -215,6 +303,9 @@ export default function ActiveWorkoutScreen({ navigation }) {
     lastActivityAt, updateLastActivity,
   } = store;
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  // Tier 2 early-access: edit weight/reps directly in the set table. OFF by
+  // default; the stepper card remains the proven path.
+  const tableLogging = useAppStore(s => s.tableLogging);
   // Drop assisted machine regressions from swap suggestions for anyone past
   // their first block. A true beginner keeps them. Unknown experience is treated
   // as non-beginner so an athlete is never offered a crutch.
@@ -1036,6 +1127,16 @@ export default function ActiveWorkoutScreen({ navigation }) {
     }
   }
 
+  // Single primary log action shared by the Log set button and the table
+  // tick (table-logging early access): cluster types open the cluster flow,
+  // everything else commits through handleCompleteSet. One entry point so
+  // the two input surfaces can never drift apart.
+  function handlePrimaryLogPress() {
+    const uni = exercise ? unilateralExercises.has(exercise.id) : false;
+    if (isClusterType(currentSet.setType) && !uni) return startCluster();
+    return handleCompleteSet();
+  }
+
   // ─── Cluster sets (myo-reps / rest-pause) ───────────────────────────
   // The activation effort + each mini-set accumulate locally; the whole
   // cluster commits as one workout_sets row on finish (summed reps +
@@ -1777,16 +1878,45 @@ export default function ActiveWorkoutScreen({ navigation }) {
                 exercises. Users who want a warm-up can mark the current
                 set as Warmup via the Set type picker on the SetEntry
                 card below, same outcome, no prompt. */}
-            <SetEntry
-              value={currentSet}
-              onChange={(next) => {
-                if (!next.isGhost && currentSet.isGhost) setGhostSet(null);
-                setCurrentSet(next);
-              }}
-              units={units}
-              onOpenSetTypePicker={() => setShowSetTypePicker(true)}
-              isWarmup={currentSet.setType === 'warmup'}
-            />
+            {tableLogging && !cluster ? (
+              <>
+                <SetTable
+                  loggedSets={loggedSets}
+                  prevSets={prevSets}
+                  plannedCount={routineExercise?.recommendedSets ?? 0}
+                  units={units}
+                  editable
+                  editValue={currentSet}
+                  onEditChange={(patch) => setCurrentSet(cs => ({ ...cs, ...patch, isGhost: false }))}
+                  onCommit={handlePrimaryLogPress}
+                  saving={saving}
+                />
+                {/* Set type stays reachable without the stepper card. */}
+                <TouchableOpacity
+                  style={styles.tableSetTypeChip}
+                  onPress={() => setShowSetTypePicker(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Change set type"
+                >
+                  <Ionicons name="options-outline" size={13} color={colors.textSecondary} />
+                  <Text style={styles.tableSetTypeChipText}>
+                    {SET_TYPE_TABLE_LABELS[currentSet.setType] || 'Working set'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={12} color={colors.textMuted} />
+                </TouchableOpacity>
+              </>
+            ) : (
+              <SetEntry
+                value={currentSet}
+                onChange={(next) => {
+                  if (!next.isGhost && currentSet.isGhost) setGhostSet(null);
+                  setCurrentSet(next);
+                }}
+                units={units}
+                onOpenSetTypePicker={() => setShowSetTypePicker(true)}
+                isWarmup={currentSet.setType === 'warmup'}
+              />
+            )}
 
             {showNoteInput ? (
               <TextInput
@@ -1887,15 +2017,11 @@ export default function ActiveWorkoutScreen({ navigation }) {
                 <Text style={styles.extraSetBtnText}>+ Complete Extra Set</Text>
               </TouchableOpacity>
             </>
-          ) : (
+          ) : tableLogging ? null : (
             <TouchableOpacity
               testID="volyume-btn-complete-set"
               style={[styles.completeBtn, saving && styles.btnDisabled, currentSet.setType === 'warmup' && styles.completeBtnWarmup]}
-              onPress={() => {
-                const uni = exercise ? unilateralExercises.has(exercise.id) : false;
-                if (isClusterType(currentSet.setType) && !uni) return startCluster();
-                return handleCompleteSet();
-              }}
+              onPress={handlePrimaryLogPress}
               disabled={saving}
               accessibilityRole="button"
               accessibilityLabel={
@@ -1975,8 +2101,10 @@ export default function ActiveWorkoutScreen({ navigation }) {
           </View>
 
           {/* Set table: logged actuals + remaining planned sets with last
-              session's numbers as the ghost target (Strong/Hevy idiom) */}
-          {(loggedSets.length > 0 || (routineExercise?.recommendedSets ?? 0) > 0) && (
+              session's numbers as the ghost target (Strong/Hevy idiom).
+              Hidden in table-logging mode — the editable table in the entry
+              card above IS this table, duplicating it would be noise. */}
+          {!tableLogging && (loggedSets.length > 0 || (routineExercise?.recommendedSets ?? 0) > 0) && (
             <View style={styles.loggedSection}>
               <Text style={styles.loggedTitle}>This workout</Text>
               <SetTable
@@ -2571,6 +2699,33 @@ const styles = StyleSheet.create({
   setTablePrev: { fontSize: fontSize.sm, color: colors.textMuted, fontVariant: ['tabular-nums'] },
   setTableVal: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, fontVariant: ['tabular-nums'], textAlign: 'center' },
   setTableGhost: { fontSize: fontSize.md, color: colors.textDisabled, fontVariant: ['tabular-nums'], textAlign: 'center' },
+  tableSetTypeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface3,
+  },
+  tableSetTypeChipText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  setTableInput: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+    fontVariant: ['tabular-nums'],
+    textAlign: 'center',
+    backgroundColor: colors.surface3,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: 0,
+  },
   colSet: { width: 34 },
   colPrev: { flex: 1 },
   colNum: { width: 64, textAlign: 'center' },
