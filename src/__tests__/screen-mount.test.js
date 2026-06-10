@@ -1784,13 +1784,12 @@ describe('ActiveWorkoutScreen with active workout state', () => {
     }
   });
 
-  test('table-logging early access: editable row replaces the stepper card and logs a set', async () => {
+  test('set logging: editable table row is the input and logs a set via the tick', async () => {
     useAppStore.setState({
       user: { id: 'u-table', isLocal: false },
       session: { user: { id: 'u-table' } },
       tier: 'pro',
       firstRunComplete: true,
-      tableLogging: true,
       userProfile: { firstName: 'T', goal: 'lean_gain', units: 'metric' },
       activeWorkout: { id: 'wt', userId: 'u-table', routineId: 'rt', startedAt: Date.now(), isCompleted: false },
       workoutStartTime: Date.now(),
@@ -1814,15 +1813,16 @@ describe('ActiveWorkoutScreen with active workout state', () => {
       tree = result.tree;
       expect(tree).not.toBeNull();
       const byId = (id) => tree.root.findAll(n => n.props?.testID === id);
-      // Table mode: row inputs + tick present, stepper card + big button gone.
+      // The set table is the input: row weight/reps fields + tick present, and
+      // the old stepper card / big Log-set button no longer exist.
       expect(byId('volyume-table-weight-input').length).toBeGreaterThan(0);
       expect(byId('volyume-table-reps-input').length).toBeGreaterThan(0);
       expect(byId('volyume-table-tick').length).toBeGreaterThan(0);
       expect(byId('volyume-weight-input')).toHaveLength(0);
       expect(byId('volyume-btn-complete-set')).toHaveLength(0);
 
-      // Type into the row and commit via the tick: must travel the exact
-      // same handleCompleteSet path as the Log set button.
+      // Type into the row and commit via the tick: travels handleCompleteSet,
+      // the same path every set log uses.
       await TestRenderer.act(async () => {
         byId('volyume-table-weight-input')[0].props.onChangeText('62.5');
         byId('volyume-table-reps-input')[0].props.onChangeText('9');
@@ -1843,7 +1843,6 @@ describe('ActiveWorkoutScreen with active workout state', () => {
       expect(real).toEqual([]);
     } finally {
       unmountTree(tree);
-      useAppStore.setState({ tableLogging: false });
     }
   });
 

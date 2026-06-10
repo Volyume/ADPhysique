@@ -333,8 +333,6 @@ export default function App() {
   const loadAccessibility = useAppStore(s => s.loadAccessibility);
   const privacyLoaded = useAppStore(s => s.privacyLoaded);
   const loadPrivacyPrefs = useAppStore(s => s.loadPrivacyPrefs);
-  const uiPrefsLoaded = useAppStore(s => s.tableLoggingLoaded);
-  const loadUiPrefs = useAppStore(s => s.loadUiPrefs);
   const [calm, setCalm] = useState(false);
   const [themeReady, setThemeReady] = useState(false);
 
@@ -403,12 +401,6 @@ export default function App() {
   useEffect(() => {
     if (!privacyLoaded) loadPrivacyPrefs();
   }, [privacyLoaded, loadPrivacyPrefs]);
-
-  // Hydrate device-local UI prefs (table-logging early access) before the
-  // user can reach the workout screen.
-  useEffect(() => {
-    if (!uiPrefsLoaded) loadUiPrefs();
-  }, [uiPrefsLoaded, loadUiPrefs]);
 
   useEffect(() => {
     if (prCelebration) getWellbeingMode().then(m => setCalm(isCalm(m)));

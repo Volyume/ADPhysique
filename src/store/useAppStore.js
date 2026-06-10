@@ -10,7 +10,6 @@ import { PRIVACY_PREFS_KEY, loadPrivacyPrefs } from '../lib/privacyPrefs';
 // eslint-disable-next-line global-require
 const _observability = (() => { try { return require('../lib/observability'); } catch (_) { return null; } })();
 
-const UI_PREFS_KEY     = '@volyume_ui_prefs';
 const FIRST_RUN_KEY    = '@volyume_first_run_complete';
 const FIRST_RUN_KEY_PFX = '@volyume_first_run_complete_'; // per-uid: + supabase user.id
 const PROFILE_KEY_PFX  = '@volyume_user_profile_';
@@ -1325,25 +1324,6 @@ const useAppStore = create((set, get) => ({
     set({ privacy: next });
     try { await AsyncStorage.setItem(PRIVACY_PREFS_KEY, JSON.stringify(next)); } catch (_) {}
     applyTelemetryEnabled(!next.analyticsOptOut);
-  },
-
-  // Early-access logging prototype: edit weight/reps directly in the set
-  // table instead of the stepper card (design audit 2026-06-09, Tier 2).
-  // Device-local and default OFF — the proven stepper flow stays the
-  // default until the table input has earned the switch.
-  tableLogging: false,
-  tableLoggingLoaded: false,
-  loadUiPrefs: async () => {
-    try {
-      const raw = await AsyncStorage.getItem(UI_PREFS_KEY);
-      const parsed = raw ? JSON.parse(raw) : null;
-      if (parsed) set({ tableLogging: !!parsed.tableLogging });
-    } catch (_) {}
-    set({ tableLoggingLoaded: true });
-  },
-  setTableLogging: async (value) => {
-    set({ tableLogging: !!value });
-    try { await AsyncStorage.setItem(UI_PREFS_KEY, JSON.stringify({ tableLogging: !!value })); } catch (_) {}
   },
 }));
 

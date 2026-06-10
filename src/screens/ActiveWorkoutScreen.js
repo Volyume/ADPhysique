@@ -7,7 +7,6 @@ import * as hapticsVocab from '../lib/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type } from '../styles/theme';
-import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
 import ExercisePickerModal from '../components/ExercisePickerModal';
 import DemoCard from '../components/DemoCard';
@@ -271,9 +270,6 @@ export default function ActiveWorkoutScreen({ navigation }) {
     lastActivityAt, updateLastActivity,
   } = store;
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
-  // Tier 2 early-access: edit weight/reps directly in the set table. OFF by
-  // default; the stepper card remains the proven path.
-  const tableLogging = useAppStore(s => s.tableLogging);
   // Drop assisted machine regressions from swap suggestions for anyone past
   // their first block. A true beginner keeps them. Unknown experience is treated
   // as non-beginner so an athlete is never offered a crutch.
@@ -1748,7 +1744,10 @@ export default function ActiveWorkoutScreen({ navigation }) {
                 exercises. Users who want a warm-up can mark the current
                 set as Warmup via the Set type picker on the SetEntry
                 card below, same outcome, no prompt. */}
-            {tableLogging && !cluster ? (
+            {/* Log straight in the set table: type weight + reps in the row
+                and tap the tick. During a cluster (myo-reps / rest-pause) the
+                cluster banner below is the input instead. */}
+            {!cluster && (
               <>
                 <SetTable
                   loggedSets={loggedSets}
@@ -1761,7 +1760,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
                   onCommit={handlePrimaryLogPress}
                   saving={saving}
                 />
-                {/* Set type stays reachable without the stepper card. */}
+                {/* Set type (warm-up, myo-reps, AMRAP …) stays one tap away. */}
                 <TouchableOpacity
                   style={styles.tableSetTypeChip}
                   onPress={() => setShowSetTypePicker(true)}
@@ -1775,17 +1774,6 @@ export default function ActiveWorkoutScreen({ navigation }) {
                   <Ionicons name="chevron-down" size={12} color={colors.textMuted} />
                 </TouchableOpacity>
               </>
-            ) : (
-              <SetEntry
-                value={currentSet}
-                onChange={(next) => {
-                  if (!next.isGhost && currentSet.isGhost) setGhostSet(null);
-                  setCurrentSet(next);
-                }}
-                units={units}
-                onOpenSetTypePicker={() => setShowSetTypePicker(true)}
-                isWarmup={currentSet.setType === 'warmup'}
-              />
             )}
 
             {showNoteInput ? (
@@ -1887,25 +1875,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
                 <Text style={styles.extraSetBtnText}>+ Complete Extra Set</Text>
               </TouchableOpacity>
             </>
-          ) : tableLogging ? null : (
-            <TouchableOpacity
-              testID="volyume-btn-complete-set"
-              style={[styles.completeBtn, saving && styles.btnDisabled, currentSet.setType === 'warmup' && styles.completeBtnWarmup]}
-              onPress={handlePrimaryLogPress}
-              disabled={saving}
-              accessibilityRole="button"
-              accessibilityLabel={
-                currentSet.setType === 'warmup' ? 'Done with warm-up'
-                : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Complete set'
-              }
-            >
-              <Ionicons name="checkmark-circle" size={20} color={currentSet.setType === 'warmup' ? colors.warning : colors.primary} />
-              <Text style={[styles.completeBtnText, currentSet.setType === 'warmup' && styles.completeBtnTextWarmup]}>
-                {currentSet.setType === 'warmup' ? 'Done'
-                  : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Log set'}
-              </Text>
-            </TouchableOpacity>
-          )}
+          ) : null}
 
           <View style={styles.secondaryActions}>
             <TouchableOpacity
@@ -1970,21 +1940,8 @@ export default function ActiveWorkoutScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* Set table: logged actuals + remaining planned sets with last
-              session's numbers as the ghost target (Strong/Hevy idiom).
-              Hidden in table-logging mode — the editable table in the entry
-              card above IS this table, duplicating it would be noise. */}
-          {!tableLogging && (loggedSets.length > 0 || (routineExercise?.recommendedSets ?? 0) > 0) && (
-            <View style={styles.loggedSection}>
-              <Text style={styles.loggedTitle}>This workout</Text>
-              <SetTable
-                loggedSets={loggedSets}
-                prevSets={prevSets}
-                plannedCount={routineExercise?.recommendedSets ?? 0}
-                units={units}
-              />
-            </View>
-          )}
+          {/* The editable set table in the entry card above is the only set
+              table now — the old read-only "This workout" duplicate is gone. */}
 
           {/* Ghost navigation */}
           {!targetComplete && (
@@ -2540,8 +2497,6 @@ const styles = StyleSheet.create({
   timeCrunchActiveText: { fontSize: fontSize.xs, color: colors.warning, lineHeight: 18 },
   timeCrunchRevertBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, alignSelf: 'flex-start', paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border },
   timeCrunchRevertText: { fontSize: fontSize.xs, color: colors.textSecondary },
-  loggedSection: { gap: spacing.sm },
-  loggedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2 },
   // Compact set table: ~40px rows, hairlines only, whole-row readability.
   setTable: {
     backgroundColor: colors.surface,
