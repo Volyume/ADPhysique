@@ -682,6 +682,32 @@ function InsufficientDataView({ dataNote, onClose }) {
   );
 }
 
+// Shown when the coach load itself failed (network down, a cloud read threw).
+// Distinct from InsufficientDataView so a transient error never masquerades as
+// "you haven't logged enough" — it offers a retry instead of a dead end.
+function LoadErrorView({ onRetry, onClose }) {
+  return (
+    <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.card}>
+        <View style={styles.insufficientIconRow}>
+          <Ionicons name="cloud-offline-outline" size={32} color={colors.textMuted} />
+        </View>
+        <Text style={styles.insufficientTitle}>Couldn&apos;t load your coach.</Text>
+        <Text style={styles.insufficientBody}>
+          Something went wrong fetching this week&apos;s data, usually a
+          dropped connection. Your logs are safe. Try again in a moment.
+        </Text>
+      </View>
+      <TouchableOpacity style={styles.doneBtn} onPress={onRetry} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Try again">
+        <Text style={styles.doneBtnText}>Try again</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.secondaryBtn} onPress={onClose} activeOpacity={0.8} accessibilityRole="button">
+        <Text style={styles.secondaryBtnText}>Close</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function CoachOutputScreen({ navigation, route }) {
@@ -700,6 +726,11 @@ export default function CoachOutputScreen({ navigation, route }) {
   const [output, setOutput] = useState(null);
   const [checkin, setCheckin] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Distinguishes a load failure (network/cloud threw) from a genuine
+  // not-enough-data result, so a transient error shows a retry instead of the
+  // misleading "building your baseline" screen. reloadKey re-runs the effect.
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [coachHistory, setCoachHistory] = useState([]);
   const [_adaptiveTDEE, setAdaptiveTDEE] = useState(null);
   const [applyingKey, setApplyingKey] = useState(null);
@@ -1254,12 +1285,16 @@ export default function CoachOutputScreen({ navigation, route }) {
       setLoading(false);
       return;
     }
+    setLoadError(false);
+    setLoading(true);
     load().catch(e => {
       logError('CoachOutputScreen.load', e, { userId: user?.id });
+      // A thrown load is an error, not "no data yet": surface a retry.
+      setLoadError(true);
       setLoading(false);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [user?.id, reloadKey]);
 
   function handleClose() {
     // The user arrived here from the You tab via WeeklyCheckIn. Closing
@@ -1289,6 +1324,15 @@ export default function CoachOutputScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.safe} edges={['left', 'right']}>
         <LoadingView />
+      </SafeAreaView>
+    );
+  }
+
+  // ── Load error state (retryable) ───────────────────────────────────────────
+  if (loadError) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['left', 'right']}>
+        <LoadErrorView onRetry={() => setReloadKey(k => k + 1)} onClose={handleClose} />
       </SafeAreaView>
     );
   }
@@ -1905,6 +1949,18 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
     color: colors.background,
+  },
+  secondaryBtn: {
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.xs,
+  },
+  secondaryBtnText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textMuted,
   },
   credentialNote: {
     fontSize: fontSize.xs,
