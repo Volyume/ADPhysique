@@ -14,6 +14,63 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
+### 0.0000000000000000000000001 (newest). 2026-06-10: iOS TestFlight beta-review submission; iOS steps-across-restart + Rate-link fixes; trial-ledger field note
+
+Worked on branch **`claude/main-branch-content-update-dcqicf`** this session,
+NOT main. (The never-touch-main rule was overridden by the founder only for the
+2026-06-09 arc; this session is back to feature-branch discipline.)
+
+**TestFlight state (as of 2026-06-10):**
+- iOS reached TestFlight and iterated to **build 14 of 1.2.0** (build 7 was the
+  first Apple-accepted; 8–14 followed). Build 14 is **submitted for Beta App
+  Review** for EXTERNAL testers ("Waiting for Review"). Internal testing needs
+  no review and is available now via an internal group.
+- The Apple-sign-in failures on builds ≤12 were a **stale EAS provisioning
+  profile** that predated the Sign-in-with-Apple capability. Fixed by deleting
+  the profile on expo.dev so EAS minted a fresh one → build 14. (Recorded in
+  57cd4c9 / build-ios.yml.) **If any iOS capability-dependent feature silently
+  fails on a build, suspect the provisioning profile first** — same root cause
+  could in principle affect HealthKit, though steps worked in-session so the
+  HealthKit entitlement is present.
+
+**Two fixes pushed this session (on the branch; NOT in any build yet — they
+need build 15):**
+- `350fcd1` **Rate Volyume store link.** The "Rate Volyume" fallback always
+  built a Google Play URL, so on iOS it opened a dead Play page. Now routes iOS
+  to the App Store review deep link (Apple App ID **6777083702**); Android
+  Play path byte-unchanged. (`src/screens/SettingsAboutScreen.js`.)
+- `0f53fdc` **iOS steps not showing after app restart.** react-native-health's
+  HealthKit init does NOT persist across launches (the in-memory `_iosInited`
+  flag resets), and HealthKit hides read-auth status, so the silent foreground
+  read bailed every launch and the StepsCard (which self-hides until it has a
+  figure) stayed empty. Fix: persist the asked scopes and silently re-init
+  HealthKit for them on each launch before reading (no unprompted sheet; only
+  re-inits scopes the user already granted, with the FULL granted set).
+  iOS-only; Android (Health Connect) untouched. Verified by deep web research
+  against Apple docs + react-native-health issues #18/#41. New test:
+  `src/lib/__tests__/health.ios-steps.test.js`. (`src/lib/health.js`.)
+- **ACTION FOR NEXT SESSION: trigger build 15 from this branch (NOT main)** so
+  both fixes ship. Build 14 does not contain them.
+
+**Trial ledger (migration 071) — field observation.** The founder reports that
+delete-account + re-signup with the same email lands on FREE
+(`trial_state='cascade_expired'`), which is exactly the `private.trial_ledger`
+guard's behaviour — so **071 appears to be LIVE in production** despite its
+header historically saying "pending apply" (header now carries a dated note;
+confirm in the dashboard and correct). To test the 14-day trial on a real
+account, clear that email's hash in the **production** SQL editor:
+`DELETE FROM private.trial_ledger WHERE email_hash = private.email_trial_hash('<email>');`
+(the salt is per-deployment, so it must be the same project).
+
+**Steps gating reminder.** The steps card is Pro-only AND self-hides until
+Apple Health steps are connected and there is a real figure. An empty steps
+card on iOS is almost always "not connected yet" or the (now-fixed) restart
+bug — not a regression or removed feature.
+
+> NOTE: this entry is appended. A full end-to-end rewrite of this doc (per the
+> update protocol above) is overdue and should happen at the next material
+> session.
+
 ### 0.000000000000000000000001. 2026-06-09 (later): iOS shipped to TestFlight end to end (Apple sign-in, StoreKit, build-number fix), four-pass production research, overnight quality run
 
 The big one. iOS reached TestFlight **green** for the first time with the
