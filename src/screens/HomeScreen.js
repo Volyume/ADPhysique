@@ -16,6 +16,7 @@ import { SkeletonCard } from '../components/Skeleton';
 import Sparkline from '../components/Sparkline';
 import StepsCard from '../components/StepsCard';
 import CardioCard from '../components/CardioCard';
+import PartnersHomeCard from '../components/PartnersHomeCard';
 import { useToast } from '../components/Toast';
 import {
   getAllWorkouts, getWorkoutSetsSince, getActivePlan, getRoutinesForPlan,
@@ -1025,6 +1026,13 @@ export default function HomeScreen({ navigation }) {
             undefined as on). Entry point for logging. */}
         {tier === 'pro' && user?.id && userProfile?.cardioEnabled !== false && (
           <CardioCard userId={user.id} onPress={() => navigation.navigate('LogCardio')} />
+        )}
+
+        {/* Training Partners: a visible entry on the home screen (not buried in
+            the You tab). Pro-only; the card self-hides until loaded and is
+            defensive about partner state (phase2-07 placement research). */}
+        {tier === 'pro' && user?.id && (
+          <PartnersHomeCard onPress={() => navigation.navigate('ProfileTab', { screen: 'TrainingPartners', initial: false })} />
         )}
 
         {/* "This week" (Sessions / Sets / Volume) removed from the Train screen
