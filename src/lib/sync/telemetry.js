@@ -79,8 +79,29 @@ export async function trackSyncConflictResolved(userId, payload) {
   }
 }
 
+// A deleted account whose device still holds a live (unexpired) JWT will fail
+// the user_id -> auth.users foreign key (Postgres 23503) on every push until
+// the token expires. That is the CORRECT server response (you cannot write
+// rows for a user that no longer exists), not an app fault — so it must not
+// raise a Sentry error/issue. We match it narrowly (FK violation on a
+// *_user_id_fkey constraint) and demote it to an info breadcrumb; the sync
+// runner's auth-gone check then clears the session so it stops entirely.
+function isDeletedAccountFkError(err) {
+  const code = err?.code ?? err?.cause?.code ?? null;
+  const text = `${err?.message ?? ''} ${err?.details ?? ''} ${err?.hint ?? ''}`.toLowerCase();
+  return code === '23503' && /_user_id_fkey/.test(text);
+}
+
 export function logSyncError(scope, err, ctx) {
   try {
+    if (isDeletedAccountFkError(err)) {
+      logInfo(
+        `${scope}.deletedAccountResidual`,
+        'benign user_id FK rejection from a deleted-account device; session will clear',
+        ctx,
+      );
+      return;
+    }
     logError(scope, err, ctx);
   } catch (_) {}
 }
