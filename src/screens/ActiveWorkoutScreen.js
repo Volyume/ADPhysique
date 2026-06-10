@@ -1522,6 +1522,22 @@ export default function ActiveWorkoutScreen({ navigation }) {
                 <Text style={styles.howToBtnText}>How to</Text>
               </TouchableOpacity>
             </View>
+            {/* Prominent demo entry for exercises that have a bundled
+                demonstration clip. A visible, full-width affordance (not a
+                12px link) per the demo-placement research; opens the hero
+                How-to sheet which plays the clip. */}
+            {getSampleDemo(exercise.name) && (
+              <TouchableOpacity
+                style={styles.demoBanner}
+                onPress={openHowTo}
+                accessibilityRole="button"
+                accessibilityLabel={`Watch the demonstration for ${exercise.name}`}
+              >
+                <Ionicons name="play-circle" size={20} color={colors.primary} />
+                <Text style={styles.demoBannerText}>Watch the demo</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
             {currentSGI != null && !!pairedExerciseName && (
               <View style={styles.supersetChip}>
                 <Ionicons name="link" size={11} color={colors.primary} />
@@ -2415,6 +2431,19 @@ const styles = StyleSheet.create({
   },
   howToBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   howToBtnText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
+  demoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, 0.3),
+    backgroundColor: colors.primaryBg,
+  },
+  demoBannerText: { flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   howToSafe: { flex: 1, backgroundColor: colors.background },
   howToHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md,
