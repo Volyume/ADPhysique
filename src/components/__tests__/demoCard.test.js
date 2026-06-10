@@ -41,6 +41,19 @@ describe('DemoCard', () => {
     expect(texts(tree)).toContain('Reference demo · public domain');
   });
 
+  test('localVideo → renders the bundled MP4 loop (premium offline path), not frames or fallback', () => {
+    mockReduceMotion = false;
+    let tree;
+    act(() => {
+      tree = create(<DemoCard exercise={{ name: 'Barbell Drag Curl', primaryMuscleLabel: 'Biceps' }} localVideo={42} localFrames={[1, 2]} />);
+    });
+    // Not the fallback, and the video branch wins over frames...
+    expect(tree.root.findAllByType(IllustrationCard).length).toBe(0);
+    expect(tree.root.findAllByType(Image).length).toBe(0);
+    // ...auto-playing with the play/pause control.
+    expect(texts(tree)).toContain('Playing');
+  });
+
   test('demoUrl present → uses real media path, not the fallback or the frame loop', () => {
     let tree;
     act(() => {

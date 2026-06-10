@@ -263,7 +263,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {/* Exercise demonstration (or illustrated fallback when no media). FREE. */}
         <AnimatedEntrance index={0}>
           <View style={styles.section}>
-            <DemoCard exercise={{ ...exercise, primaryMuscleLabel: primaryMuscle }} localFrames={getSampleDemo(exercise.name)?.frames} />
+            <DemoCard exercise={{ ...exercise, primaryMuscleLabel: primaryMuscle }} localFrames={getSampleDemo(exercise.name)?.frames} localVideo={getSampleDemo(exercise.name)?.video} />
           </View>
         </AnimatedEntrance>
 

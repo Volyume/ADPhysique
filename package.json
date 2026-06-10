@@ -72,6 +72,7 @@
     "expo-system-ui": "~6.0.9",
     "expo-task-manager": "~14.0.9",
     "expo-updates": "~29.0.18",
+    "expo-video": "~3.0.16",
     "expo-web-browser": "~15.0.11",
     "live-activity": "file:./modules/live-activity",
     "promise": "^8.3.0",

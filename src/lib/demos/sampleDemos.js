@@ -15,6 +15,27 @@
  */
 
 const SAMPLES = {
+  // Licensed MoveKit sample clips (bundled MP4, plays offline). `video` takes
+  // precedence over `frames` in DemoCard; the eventual row-level `demo_url`
+  // still overrides both. These two prove the premium video path end-to-end.
+  'Barbell Drag Curl': {
+    video: require('../../../assets/demos/barbell-drag-curl.mp4'),
+    formCues: {
+      setup: ['Stand tall, bar in a shoulder-width grip resting on the thighs', 'Elbows tucked to your sides, core braced'],
+      execution: ['Drag the bar straight up the body, drawing the elbows back', 'Squeeze the biceps at the top, then lower under control'],
+      cues: ['Bar stays in contact with the torso', 'Elbows travel back, not forward', 'No swinging'],
+    },
+    commonMistakes: ['Letting the elbows drift forward (turning it into a normal curl)', 'Using momentum to swing the bar', 'Cutting the lowering phase short'],
+  },
+  'Donkey Calf Raise': {
+    video: require('../../../assets/demos/bodyweight-donkey-calf-raise.mp4'),
+    formCues: {
+      setup: ['Hinge forward at the hips, forearms on a support', 'Balls of the feet on a raised platform, heels free'],
+      execution: ['Drop the heels for a full stretch at the bottom', 'Drive up onto the toes and squeeze the calves at the top'],
+      cues: ['Full range every rep', 'Pause briefly in the stretch', 'Keep the knees soft, not locked'],
+    },
+    commonMistakes: ['Bouncing out of the bottom', 'Half reps with no stretch', 'Bending the knees to cheat the lift'],
+  },
   'Barbell Bench Press': {
     frames: [require('../../../assets/demos/bench_0.jpg'), require('../../../assets/demos/bench_1.jpg')],
     formCues: {

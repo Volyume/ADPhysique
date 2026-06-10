@@ -1317,6 +1317,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
                     ?? howToExercise?.primaryMuscle ?? null,
                 }}
                 localFrames={getSampleDemo(howToExercise?.name)?.frames}
+                localVideo={getSampleDemo(howToExercise?.name)?.video}
               />
               {howToExercise?.subregion ? (
                 <View style={styles.whyThisCard}>

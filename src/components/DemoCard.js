@@ -1,13 +1,15 @@
 /**
  * DemoCard
  *
- * Top-of-sheet exercise demonstration. Three states, in priority order:
- *  1. `localFrames` (bundled start/end stills) -> an in-app start↔end loop.
- *     This is the offline, public-domain STAND-IN that proves the experience
- *     before premium 3D clips (e.g. MoveKit) are licensed.
- *  2. `exercise.demoUrl` -> real self-hosted media via expo-image (the eventual
- *     premium path; MoveKit/animated-WebP slots in here with no other change).
- *  3. neither -> IllustrationCard fallback (never a broken/"missing" state).
+ * Top-of-sheet exercise demonstration. Four states, in priority order:
+ *  1. `localVideo` (bundled MP4 clip) -> a silent, auto-looping video. This is
+ *     the premium offline path: licensed MoveKit clips ship in the APK and play
+ *     with no network.
+ *  2. `localFrames` (bundled start/end stills) -> an in-app start↔end loop.
+ *     The offline, public-domain STAND-IN for exercises without a clip yet.
+ *  3. `exercise.demoUrl` -> real self-hosted media via expo-image (the eventual
+ *     streamed path; animated-WebP slots in here with no other change).
+ *  4. none -> IllustrationCard fallback (never a broken/"missing" state).
  *
  * Reduce-Motion aware: when on, the loop does NOT auto-play — it shows the start
  * frame with a control to step to the end position. A visible play/pause control
@@ -17,11 +19,53 @@
 import { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { Image } from 'expo-image';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
 import { Skeleton } from './Skeleton';
 import IllustrationCard from './IllustrationCard';
 import useAppStore from '../store/useAppStore';
+
+function VideoLoop({ source, muscleLabel }) {
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  const [playing, setPlaying] = useState(!reduceMotion);
+  const player = useVideoPlayer(source, p => {
+    p.loop = true;
+    p.muted = true; // silent by design — gym etiquette, no audio track needed
+    if (!reduceMotion) p.play();
+  });
+
+  const onPress = () => {
+    setPlaying(p => {
+      const next = !p;
+      if (next) player.play();
+      else player.pause();
+      return next;
+    });
+  };
+
+  return (
+    <Pressable
+      style={styles.card}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${muscleLabel ? muscleLabel + ' ' : ''}demonstration, ${playing ? 'tap to pause' : 'tap to play'}`}
+    >
+      <VideoView
+        style={styles.media}
+        player={player}
+        contentFit="contain"
+        nativeControls={false}
+        pointerEvents="none"
+      />
+      <View style={styles.controlPill} pointerEvents="none">
+        <Ionicons name={playing ? 'pause' : 'play'} size={14} color={colors.background} />
+        <Text style={styles.controlText}>{playing ? 'Playing' : 'Play'}</Text>
+      </View>
+      <Text style={styles.caption}>Reference demo</Text>
+    </Pressable>
+  );
+}
 
 function FrameLoop({ frames, muscleLabel }) {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
@@ -77,14 +121,19 @@ function FrameLoop({ frames, muscleLabel }) {
   );
 }
 
-export default function DemoCard({ exercise, localFrames }) {
+export default function DemoCard({ exercise, localFrames, localVideo }) {
   const demoUrl = exercise?.demoUrl || null;
   const thumbUrl = exercise?.demoThumbnailUrl || null;
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errored, setErrored] = useState(false);
 
-  // 1) Bundled offline stand-in loop (highest priority while no real media).
+  // 1) Bundled premium MP4 clip (highest priority — the licensed offline path).
+  if (localVideo && !demoUrl) {
+    return <VideoLoop source={localVideo} muscleLabel={exercise?.primaryMuscleLabel} />;
+  }
+
+  // 2) Bundled public-domain stand-in loop (for lifts without a clip yet).
   if (localFrames && localFrames.length >= 2 && !demoUrl) {
     return <FrameLoop frames={localFrames} muscleLabel={exercise?.primaryMuscleLabel} />;
   }
