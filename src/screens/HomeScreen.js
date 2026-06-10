@@ -26,6 +26,7 @@ import {
   getMorningWeightToday, getMorningWeights, logMorningWeight, getProgressionTeaser,
   getRecentWorkoutFeedback, getLatestCoachOutput,
 } from '../lib/database';
+import { buildDailyNarrative } from '../lib/dailyNarrative';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 import { logError, logWarn } from '../lib/errorLog';
 import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, VOLUME_LANDMARKS } from '../lib/algorithms';
@@ -782,6 +783,19 @@ export default function HomeScreen({ navigation }) {
       })
     : null;
 
+  // Reactive one-line story: deterministic, training-only, never stacked with
+  // the pre-workout coach brief (that surface tells the richer story). Gives
+  // the home screen daily presence without touching the weekly engine.
+  const dailyNarrative = !showCoachBrief
+    ? buildDailyNarrative({
+        lastWorkoutDaysAgo,
+        sessionsThisWeek: weekStats.sessions,
+        lastSessionTonnage,
+        totalSessions,
+        hasActiveWorkout,
+      })
+    : null;
+
   // Banner priority: keep the primary "Start" action prominent by showing at
   // most one of the three attention banners at once. A fresh weekly coach
   // review outranks a suggested recovery week, which outranks the nutrition-
@@ -816,6 +830,13 @@ export default function HomeScreen({ navigation }) {
               : scheduleContext.daysUntil === 1
                 ? 'Next session: tomorrow'
                 : `Next session: ${scheduleContext.dayName}`}
+          </Text>
+        )}
+
+        {/* ── Reactive daily story (quiet, single line) ── */}
+        {dailyNarrative && (
+          <Text style={styles.dailyNarrativeLine} numberOfLines={2}>
+            {dailyNarrative}
           </Text>
         )}
 
@@ -1763,6 +1784,12 @@ const styles = StyleSheet.create({
   scheduleContextLineToday: {
     color: colors.primary,
     fontWeight: fontWeight.semibold,
+  },
+  dailyNarrativeLine: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+    lineHeight: 18,
   },
 
   // Continue card
