@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import { VolyumeIcon } from '../components/BrandMark';
 import SegmentedControl from '../components/SegmentedControl';
+import { getBodyFatBands } from '../lib/bodyFatEstimate';
 import Dropdown from '../components/Dropdown';
 import OAuthButtons from '../components/auth/OAuthButtons';
 import EmailPasswordFields from '../components/auth/EmailPasswordFields';
@@ -135,6 +136,7 @@ export default function ProOnboardingScreen({ navigation }) {
   // bulk number.
   const [bodyFat, setBodyFat] = useState('');
   const [bfSource, setBfSource] = useState('visual');
+  const [showBfEstimate, setShowBfEstimate] = useState(false);
   const [localHeightUnits, setLocalHeightUnits] = useState('imperial');
   const [sex, setSex] = useState('male');
   const [age, setAge] = useState('30');
@@ -946,7 +948,44 @@ export default function ProOnboardingScreen({ navigation }) {
                     accessibilityLabel="Body fat measurement method"
                   />
                 </View>
-              ) : null}
+              ) : (
+                <View style={{ marginTop: spacing.sm }}>
+                  <TouchableOpacity
+                    onPress={() => setShowBfEstimate(v => !v)}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="Estimate body fat from a description"
+                  >
+                    <Text style={styles.bfEstimateToggle}>
+                      {showBfEstimate ? 'Hide estimate' : 'Not sure? Estimate it'}
+                    </Text>
+                  </TouchableOpacity>
+                  {showBfEstimate ? (
+                    <View style={styles.bfBandRow}>
+                      {getBodyFatBands(sex).map(band => (
+                        <TouchableOpacity
+                          key={band.key}
+                          style={styles.bfBand}
+                          activeOpacity={0.85}
+                          onPress={() => {
+                            // A picked band is a rough visual estimate, flag it
+                            // as such so the engine never treats it as measured.
+                            setBodyFat(String(band.pct));
+                            setBfSource('visual');
+                            setShowBfEstimate(false);
+                          }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${band.label}, around ${band.pct} percent`}
+                        >
+                          <Text style={styles.bfBandLabel}>{band.label}</Text>
+                          <Text style={styles.bfBandPct}>~{band.pct}%</Text>
+                          <Text style={styles.bfBandHint}>{band.hint}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ) : null}
+                </View>
+              )}
             </View>
 
             <TouchableOpacity style={styles.primaryBtn} onPress={advanceFrom2} activeOpacity={0.88}>
@@ -1427,6 +1466,21 @@ const styles = StyleSheet.create({
     color: colors.textMuted, letterSpacing: 0.3, marginBottom: spacing.sm,
   },
   fieldHint: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginBottom: spacing.sm },
+  bfEstimateToggle: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
+  bfBandRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  bfBand: {
+    flexGrow: 1,
+    flexBasis: '47%',
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  bfBandLabel: { fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  bfBandPct: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.bold, marginTop: spacing.xxs },
+  bfBandHint: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs, lineHeight: 15 },
   // Protein target collapsible (step 3). Collapsed by default, the header
   // shows the chosen tier; expanding reveals the three tiers to pick from.
   proteinHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
