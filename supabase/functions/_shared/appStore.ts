@@ -245,8 +245,8 @@ export async function sendPaymentFailurePush(userId: string): Promise<void> {
       },
       body: JSON.stringify({
         user_id: userId,
-        title: "We couldn't take your payment",
-        body: "Update your billing in the App Store to keep Pro.",
+        title: "Your payment didn't go through",
+        body: "No worries, it happens. Update your billing in the App Store to keep your Pro features.",
         data: { type: "subscription_payment_failure" },
       }),
     });

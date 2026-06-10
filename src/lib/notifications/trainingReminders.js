@@ -128,7 +128,8 @@ export async function scheduleTrainingReminders() {
 
     // 7. Notification body. Kept generic on purpose: we don't load the full
     // plan name here, to avoid a database dependency in this utility module.
-    const body = 'Your training session is scheduled for today.';
+    // Warm and encouraging, never a barked command.
+    const body = 'You\'ve got a session on for today. Enjoy it whenever it suits you.';
 
     // 8. Schedule one weekly notification per training day
     await Promise.all(
@@ -137,7 +138,7 @@ export async function scheduleTrainingReminders() {
         return Notifications.scheduleNotificationAsync({
           identifier,
           content: {
-            title: 'Time to train',
+            title: 'Today\'s a training day',
             body,
             sound: true,
             data: { type: 'training_reminder', channelId: TRAINING_REMINDER_CHANNEL },

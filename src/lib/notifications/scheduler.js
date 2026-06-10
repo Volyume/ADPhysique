@@ -29,17 +29,42 @@ import { logWarn } from '../errorLog';
 const NOTIF_ID_MORNING = 'volyume_morning_weight';
 const NOTIF_ID_CHECKIN = 'volyume_weekly_checkin';
 
+// The user's first name for a warm, personal greeting, or '' when we don't
+// have one (so copy reads naturally either way). Read lazily from the store at
+// schedule time, the same lazy-require pattern the rest of lib/ uses, so a name
+// change is picked up the next time notifications are re-laid. Capped so a long
+// or odd value can't blow out a notification title.
+function greetName() {
+  try {
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../../store/useAppStore').default;
+    const raw = useAppStore.getState()?.userProfile?.firstName;
+    if (!raw || typeof raw !== 'string') return '';
+    const first = raw.trim().split(/\s+/)[0];
+    return first && first.length <= 20 ? `, ${first}` : '';
+  } catch (_) {
+    return '';
+  }
+}
+
 // ─── Morning weight copy ──────────────────────────────────────────────────────
 
-const MORNING_COPIES = [
-  { title: 'Morning.', body: 'Weight when you\'re ready.' },
-  { title: 'Daily weight', body: 'Takes 3 seconds.' },
-  { title: 'Step on. Log it. Done.', body: 'One number, then coffee.' },
-  { title: 'One number.', body: 'Step on, log it, done.' },
-];
+// Warm, encouraging morning copy. A gentle good-morning with the user's name
+// (when we have it) and a kind nudge to weigh in. No clipped commands. The
+// pool rotates across the week so it doesn't feel robotic; `name` is the
+// pre-formatted ', First' suffix (or '').
+function morningCopies(name) {
+  return [
+    { title: `Good morning${name}`, body: 'Whenever you\'re ready, hop on the scales and log today\'s weight.' },
+    { title: `Good morning${name}`, body: 'A quiet weigh-in to start the day. No rush, just whenever suits you.' },
+    { title: `Morning${name}`, body: 'When you get a moment, pop on the scales and log the number. That\'s all for now.' },
+    { title: `Rise and shine${name}`, body: 'Logging your weight today keeps your coaching on track. Whenever you\'re ready.' },
+  ];
+}
 
-function pickMorningCopy(dayOfWeek) {
-  return MORNING_COPIES[dayOfWeek % MORNING_COPIES.length];
+function pickMorningCopy(dayOfWeek, name = '') {
+  const copies = morningCopies(name);
+  return copies[dayOfWeek % copies.length];
 }
 
 /**
@@ -55,12 +80,13 @@ export async function scheduleMorningWeightNotification(hour = 7, minute = 0) {
     await cancelMorningNotification();
     const quiet = await getQuietHours();
     const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hour, minute, quiet);
+    const name = greetName();
     // NOTIF-4: schedule one WEEKLY trigger per weekday so the morning copy
     // actually rotates. The old single DAILY trigger froze whatever copy was
     // picked at schedule time, so the per-weekday rotation never happened until
     // the next re-lay. expo weekday is 1=Sunday..7=Saturday -> JS getDay (w-1).
     for (let expoWeekday = 1; expoWeekday <= 7; expoWeekday += 1) {
-      const copy = pickMorningCopy(expoWeekday - 1);
+      const copy = pickMorningCopy(expoWeekday - 1, name);
       // eslint-disable-next-line no-await-in-loop
       await Notifications.scheduleNotificationAsync({
         identifier: `${NOTIF_ID_MORNING}_${expoWeekday}`,
@@ -93,10 +119,12 @@ export async function scheduleMorningWeightNotification(hour = 7, minute = 0) {
 
 // ─── Weekly check-in reminder ─────────────────────────────────────────────────
 
-const CHECKIN_COPY = {
-  title: 'Precision Coaching · check-in',
-  body: 'Two minutes. Your nutrition adjusts automatically based on this week.',
-};
+function checkinCopy(name) {
+  return {
+    title: `How has your week gone${name}`,
+    body: 'A two-minute check-in is all it takes, and your coach tunes next week around it.',
+  };
+}
 
 /**
  * Returns a Date for the next occurrence of (weekday at hour:minute)
@@ -141,11 +169,12 @@ export async function scheduleCheckinReminder(weekday = 0, hour = 12, minute = 0
     const quiet = await getQuietHours();
     const { date: shiftedDate } = shiftDateOutOfQuietHours(fireAt, quiet);
 
+    const checkin = checkinCopy(greetName());
     await Notifications.scheduleNotificationAsync({
       identifier: NOTIF_ID_CHECKIN,
       content: {
-        title: CHECKIN_COPY.title,
-        body: CHECKIN_COPY.body,
+        title: checkin.title,
+        body: checkin.body,
         data: { type: 'weekly_checkin' },
         sound: false,
       },
@@ -220,12 +249,12 @@ const NOTIF_ID_CASCADE_19 = 'volyume_cascade_day19';
 const NOTIF_ID_CASCADE_21 = 'volyume_cascade_day21';
 
 const CASCADE_19_COPY = {
-  title: 'Your Pro trial ends in 2 days',
-  body: 'Tap to choose what\'s next.',
+  title: 'Your free Pro trial ends in two days',
+  body: 'Hope you\'ve been enjoying it. Have a look at your options whenever you\'re ready.',
 };
 const CASCADE_21_COPY = {
-  title: 'You\'re now on Free',
-  body: 'Your data\'s safe. Upgrade whenever you like.',
+  title: 'You\'re back on the free plan',
+  body: 'Everything you\'ve logged is safe and waiting. You can go Pro again any time.',
 };
 
 /**
@@ -311,8 +340,8 @@ export async function cancelCascadeGateNotifications() {
 const NOTIF_ID_COACH_READY = 'volyume_weekly_coach_ready';
 
 const COACH_READY_COPY = {
-  title: 'Your week\'s plan is ready',
-  body: 'Tap to see what changes and why.',
+  title: 'Your coaching for the week is ready',
+  body: 'Have a look at what\'s changed for you this week, and the thinking behind it.',
 };
 
 /**
@@ -459,8 +488,8 @@ export async function checkYearOfLiftsUnlock(earliestWorkoutAt) {
     await Notifications.scheduleNotificationAsync({
       identifier: 'volyume_year_of_lifts_unlock',
       content: {
-        title: 'A year of lifts',
-        body: 'Your wrap-up is ready. Swipe through your training year on the Progress tab.',
+        title: 'A whole year of lifts',
+        body: 'What a year. Your wrap-up is ready, swipe through it on the Progress tab.',
         data: { type: 'year_of_lifts_unlock' },
         sound: true,
       },

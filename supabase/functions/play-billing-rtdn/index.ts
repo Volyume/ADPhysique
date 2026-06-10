@@ -300,8 +300,8 @@ async function sendPaymentFailurePush(userId: string): Promise<void> {
       },
       body: JSON.stringify({
         user_id: userId,
-        title: "We couldn't take your payment",
-        body: "Update your billing in Google Play to keep Pro.",
+        title: "Your payment didn't go through",
+        body: "No worries, it happens. Update your billing in Google Play to keep your Pro features.",
         data: { type: "subscription_payment_failure" },
       }),
     });

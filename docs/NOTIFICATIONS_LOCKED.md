@@ -55,50 +55,70 @@ ends.
 
 ## Copy
 
-All under 80 characters where possible (most push surfaces truncate
-past 80). British English. No jargon-blocklist terms.
+British English. No jargon-blocklist terms. **Voice (founder direction
+2026-06-10): warm, human, welcoming and encouraging — like a good coach, not
+a system alert.** No clipped commands or one-word fragments ("Done.", "Do
+it."). Greet by first name where we have it (`, {First}` suffix, omitted
+cleanly when unknown). Keep within ~80 chars where possible (push truncates),
+but a warm, complete sentence beats a terse one that fits.
 
-### Daily check-in reminder
+Source of truth for the shipped strings is `src/lib/notifications/scheduler.js`
++ `trainingReminders.js`; the payment-failure push lives in the
+`play-billing-rtdn` / `_shared/appStore.ts` Edge Functions.
+
+### Morning weight (rotates across the week)
 ```
-Title: How's today gone?
-Body:  Tap to log your training, food, and how you feel.
+Title: Good morning{, First}
+Body:  Whenever you're ready, hop on the scales and log today's weight.
+       (+ gentle variants: "A quiet weigh-in to start the day…", etc.)
 ```
 
 ### Weekly check-in reminder
 ```
-Title: Sunday check-in
-Body:  Two minutes. Then your week's coach output lands tomorrow.
+Title: How has your week gone{, First}
+Body:  A two-minute check-in is all it takes, and your coach tunes next
+       week around it.
 ```
 
-### Cascade day 19
+### Training day reminder
 ```
-Title: Your Pro trial ends in 2 days
-Body:  Tap to choose what's next.
+Title: Today's a training day
+Body:  You've got a session on for today. Enjoy it whenever it suits you.
+```
+
+### Cascade day 19 (trial winding down)
+```
+Title: Your free Pro trial ends in two days
+Body:  Hope you've been enjoying it. Have a look at your options whenever
+       you're ready.
 ```
 
 ### Cascade day 21 (auto-downgrade fired)
 ```
-Title: You're now on Free
-Body:  Your data stays. Some features are read-only. Upgrade any time.
+Title: You're back on the free plan
+Body:  Everything you've logged is safe and waiting. You can go Pro again
+       any time.
 ```
 
 ### Subscription payment failure
 ```
-Title: We couldn't take your payment
-Body:  Update your billing in [App Store / Google Play] to keep your
-       Complete features.
-```
-
-### Subscription about to expire
-```
-Title: Your Complete ends on [date]
-Body:  Tap to reactivate or to switch tiers.
+Title: Your payment didn't go through
+Body:  No worries, it happens. Update your billing in [the App Store /
+       Google Play] to keep your Pro features.
 ```
 
 ### Weekly coach output ready
 ```
-Title: Your week's plan is ready
-Body:  Tap to see what changes and why.
+Title: Your coaching for the week is ready
+Body:  Have a look at what's changed for you this week, and the thinking
+       behind it.
+```
+
+### A year of lifts (anniversary)
+```
+Title: A whole year of lifts
+Body:  What a year. Your wrap-up is ready, swipe through it on the
+       Progress tab.
 ```
 
 ## Implementation
