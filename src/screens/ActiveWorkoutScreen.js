@@ -25,6 +25,7 @@ import {
   summariseWorkoutSets,
   MUSCLE_DISPLAY_NAMES,
   generateDeloadPrescription,
+  calculate1RM,
 } from '../lib/algorithms';
 import { rankSwaps } from '../lib/swapEngine';
 import { isClusterType, clusterLabel, summariseCluster, mergeClusterNote } from '../lib/clusterSet';
@@ -82,16 +83,14 @@ const SET_TYPE_TABLE_LABELS = {
 /**
  * Compact set table (the Strong/Hevy idiom): SET | PREVIOUS | KG | REPS | ✓ in
  * ~40px rows instead of a card per set. Logged sets show their actuals;
- * remaining planned sets show last session's set as a dimmed ghost target, the
- * next one highlighted. Memoised: the parent re-renders every timer second.
+ * remaining planned sets show last session's set as a dimmed ghost target.
+ * Memoised: the parent re-renders every timer second.
  *
- * Two modes:
- *  - Display (default): input stays in SetEntry above; the table is read-only.
- *  - Editable (table-logging early access, Tier 2 of the density work): the
- *    next row carries weight/reps inputs bound to the SAME currentSet state
- *    SetEntry uses, and its tick fires the SAME primary log handler as the
- *    Log set button. Two views over one state — the logging machinery
- *    (validation, PRs, rest timer, supersets, prefill) is shared, not forked.
+ * This IS the logging surface. When `editable`, the current row carries
+ * weight/reps inputs bound to the parent's currentSet state, and its tick
+ * fires handlePrimaryLogPress — the one path every set log travels (validation,
+ * PRs, rest timer, supersets, prefill). Read-only mode (no `editable`) is used
+ * for history/summary views elsewhere.
  */
 const SetTable = React.memo(function SetTable({
   loggedSets, prevSets, plannedCount, units,
@@ -142,7 +141,11 @@ const SetTable = React.memo(function SetTable({
         const isWarmup = (r.kind === 'logged' && r.set.setType === 'warmup') || (r.kind === 'edit' && r.warmup);
         const perSide = r.kind === 'logged' ? formatPerSide(r.set.leftReps, r.set.rightReps) : null;
         return (
-          <View key={r.key} style={[styles.setTableRow, (r.kind === 'next' || r.kind === 'edit') && styles.setTableRowNext]}>
+          <View key={r.key} style={[
+            styles.setTableRow,
+            r.kind === 'next' && styles.setTableRowNext,
+            r.kind === 'edit' && styles.setTableRowEdit,
+          ]}>
             {isWarmup ? (
               <Ionicons name="flame" size={13} color={colors.warning} style={styles.colSet} />
             ) : (
@@ -193,16 +196,18 @@ const SetTable = React.memo(function SetTable({
                   testID="volyume-table-tick"
                   onPress={onCommit}
                   disabled={saving}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                   accessibilityRole="button"
                   accessibilityLabel={isWarmup ? 'Done with warm-up' : 'Log set'}
                   style={styles.colTick}
                 >
-                  <Ionicons
-                    name="checkmark-circle"
-                    size={22}
-                    color={saving ? colors.textDisabled : isWarmup ? colors.warning : colors.primary}
-                  />
+                  <View style={[
+                    styles.tickBtn,
+                    isWarmup && styles.tickBtnWarmup,
+                    saving && styles.tickBtnDisabled,
+                  ]}>
+                    <Ionicons name="checkmark" size={20} color={colors.background} />
+                  </View>
                 </TouchableOpacity>
               </>
             ) : r.kind === 'logged' ? (
@@ -1760,6 +1765,20 @@ export default function ActiveWorkoutScreen({ navigation }) {
                   onCommit={handlePrimaryLogPress}
                   saving={saving}
                 />
+                {/* Live estimated 1RM as you type (working sets only) — the one
+                    coaching read-out the stepper card used to show. */}
+                {(() => {
+                  const w = parseFloat(currentSet.weight);
+                  const reps = parseInt(currentSet.reps, 10);
+                  if (currentSet.setType === 'warmup' || !(w > 0) || !(reps >= 1 && reps <= 15)) return null;
+                  const e1rm = calculate1RM(w, reps);
+                  return e1rm > 0 ? (
+                    <View style={styles.tableE1rmRow}>
+                      <Ionicons name="trending-up-outline" size={12} color={colors.textMuted} />
+                      <Text style={styles.tableE1rmText}>Est. 1RM ≈ {Math.round(e1rm)}{units}</Text>
+                    </View>
+                  ) : null;
+                })()}
                 {/* Set type (warm-up, myo-reps, AMRAP …) stays one tap away. */}
                 <TouchableOpacity
                   style={styles.tableSetTypeChip}
@@ -2520,6 +2539,24 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   setTableRowNext: { backgroundColor: colors.primaryBg },
+  setTableRowEdit: {
+    backgroundColor: colors.primaryBg,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+    paddingVertical: spacing.sm + 2,
+  },
+  tickBtn: {
+    width: 34, height: 34, borderRadius: 17,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.primary,
+  },
+  tickBtnWarmup: { backgroundColor: colors.warning },
+  tickBtnDisabled: { backgroundColor: colors.textDisabled },
+  tableE1rmRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    alignSelf: 'flex-start', marginTop: spacing.sm,
+  },
+  tableE1rmText: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: fontWeight.medium },
   setTableNum: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
   setTablePrev: { fontSize: fontSize.sm, color: colors.textMuted, fontVariant: ['tabular-nums'] },
   setTableVal: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, fontVariant: ['tabular-nums'], textAlign: 'center' },
@@ -2539,22 +2576,22 @@ const styles = StyleSheet.create({
   },
   tableSetTypeChipText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
   setTableInput: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     fontVariant: ['tabular-nums'],
     textAlign: 'center',
-    backgroundColor: colors.surface3,
+    backgroundColor: colors.surface,
     borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: spacing.xs,
+    borderWidth: 1.5,
+    borderColor: withAlpha(colors.primary, 0.45),
+    paddingVertical: spacing.xs + 1,
     paddingHorizontal: 0,
   },
   colSet: { width: 34 },
   colPrev: { flex: 1 },
   colNum: { width: 64, textAlign: 'center' },
-  colTick: { width: 26, textAlign: 'right', marginLeft: 'auto' },
+  colTick: { width: 42, textAlign: 'right', alignItems: 'flex-end', marginLeft: 'auto' },
   emptyView: { flex: 1, backgroundColor: colors.background },
   emptyContent: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: spacing.xxxl * 2, gap: spacing.lg, paddingHorizontal: spacing.xxl },
   emptyTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
