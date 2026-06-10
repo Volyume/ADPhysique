@@ -212,6 +212,19 @@ export default function PaywallScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
 
+        <View style={styles.charter}>
+          {[
+            'Works fully offline',
+            'Your data stays yours, export any time',
+            'We never paywall a feature that was free',
+          ].map(line => (
+            <View key={line} style={styles.charterRow}>
+              <Ionicons name="shield-checkmark-outline" size={13} color={colors.textMuted} />
+              <Text style={styles.charterText}>{line}</Text>
+            </View>
+          ))}
+        </View>
+
         <View style={styles.ctaStack}>
           <Button title={ctaLabel} size="lg" loading={busy} onPress={handlePay} />
           <Button title="Not now" variant="tertiary" disabled={busy} onPress={dismiss} />
@@ -296,6 +309,9 @@ const styles = StyleSheet.create({
   },
   saveBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.3 },
   ctaStack: { gap: spacing.md },
+  charter: { gap: spacing.xs, marginBottom: spacing.lg },
+  charterRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  charterText: { fontSize: fontSize.xs, color: colors.textMuted, flex: 1 },
   terms: {
     color: colors.textMuted,
     fontSize: fontSize.xs,

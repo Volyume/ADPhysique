@@ -23,6 +23,7 @@ const PRO_BULLETS = [
   'Precision Coaching™ that adjusts your training and nutrition as your body responds',
   'Personalised calorie and protein targets, updated as your goals change',
   'After every check-in, your coach explains every decision. What changed, what was left alone, and why.',
+  'Built-in safety limits keep your targets healthy, with UK support signposting if you ever need it.',
 ];
 
 export default function WelcomeScreen({ navigation }) {
@@ -130,6 +131,22 @@ export default function WelcomeScreen({ navigation }) {
           </TouchableOpacity>
         </Animated.View>
 
+        {/* Fairness charter: the moats that are usually invisible. Works
+            offline, your data stays yours, and we never claw back a free
+            feature behind a paywall. */}
+        <Animated.View style={[styles.charter, { opacity: fadeIn }]}>
+          {[
+            'Works fully offline, even your food search',
+            'Your data stays yours, export it any time',
+            'We never paywall a feature that was free',
+          ].map(line => (
+            <View key={line} style={styles.charterRow}>
+              <Ionicons name="shield-checkmark-outline" size={13} color={colors.textMuted} />
+              <Text style={styles.charterText}>{line}</Text>
+            </View>
+          ))}
+        </Animated.View>
+
         <Animated.View style={{ opacity: fadeIn }}>
           <TouchableOpacity
             style={styles.signInLink}
@@ -162,6 +179,10 @@ const styles = StyleSheet.create({
   tagline: { fontSize: fontSize.sm, color: colors.textMuted, letterSpacing: 0.3 },
 
   cards: { gap: spacing.md },
+
+  charter: { gap: spacing.xs },
+  charterRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  charterText: { fontSize: fontSize.xs, color: colors.textMuted, flex: 1 },
 
   // Pro card
   proCard: {
