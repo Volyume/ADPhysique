@@ -4,12 +4,12 @@
  * the callbacks the screens depend on. No auth logic lives in these components.
  */
 import { create, act } from 'react-test-renderer';
-import { TextInput, TouchableOpacity } from 'react-native';
+import { TextInput, TouchableOpacity, Platform } from 'react-native';
 import OAuthButtons from '../OAuthButtons';
 import EmailPasswordFields from '../EmailPasswordFields';
 
 describe('OAuthButtons', () => {
-  test('Google press fires onGoogle', () => {
+  test('Google press fires onGoogle (Android)', () => {
     const onGoogle = jest.fn();
     const tree = create(<OAuthButtons onGoogle={onGoogle} onApple={() => {}} disabled={false} />);
     const google = tree.root.findAllByProps({ accessibilityLabel: 'Continue with Google' })[0];
@@ -17,10 +17,22 @@ describe('OAuthButtons', () => {
     expect(onGoogle).toHaveBeenCalledTimes(1);
   });
 
-  test('disabled flag disables the Google button', () => {
+  test('disabled flag disables the Google button (Android)', () => {
     const tree = create(<OAuthButtons onGoogle={() => {}} onApple={() => {}} disabled />);
     const google = tree.root.findAllByProps({ accessibilityLabel: 'Continue with Google' })[0];
     expect(google.props.disabled).toBe(true);
+  });
+
+  test('iOS hides Google (no iOS client id) and keeps Apple', () => {
+    const prev = Platform.OS;
+    Platform.OS = 'ios';
+    try {
+      const tree = create(<OAuthButtons onGoogle={() => {}} onApple={() => {}} disabled={false} />);
+      expect(tree.root.findAllByProps({ accessibilityLabel: 'Continue with Google' })).toHaveLength(0);
+      expect(tree.root.findAllByProps({ accessibilityLabel: 'Continue with Apple' }).length).toBeGreaterThan(0);
+    } finally {
+      Platform.OS = prev;
+    }
   });
 });
 

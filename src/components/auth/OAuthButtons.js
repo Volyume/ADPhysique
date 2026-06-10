@@ -56,16 +56,22 @@ export default function OAuthButtons({ onApple, onGoogle, disabled, dividerLabel
           </TouchableOpacity>
         )
       )}
-      <TouchableOpacity
-        style={[styles.btn, disabled && styles.btnDisabled]}
-        onPress={onGoogle}
-        disabled={disabled}
-        accessibilityRole="button"
-        accessibilityLabel="Continue with Google"
-      >
-        <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
-        <Text style={styles.btnText}>Continue with Google</Text>
-      </TouchableOpacity>
+      {/* Google native sign-in needs an iOS OAuth client id that isn't wired
+          for iOS; offering it there fails ("failed to determine clientID").
+          iOS therefore shows Apple + email only, which still satisfies
+          Guideline 4.8 (Apple sign-in present). Android keeps Google. */}
+      {Platform.OS !== 'ios' && (
+        <TouchableOpacity
+          style={[styles.btn, disabled && styles.btnDisabled]}
+          onPress={onGoogle}
+          disabled={disabled}
+          accessibilityRole="button"
+          accessibilityLabel="Continue with Google"
+        >
+          <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
+          <Text style={styles.btnText}>Continue with Google</Text>
+        </TouchableOpacity>
+      )}
       <View style={styles.divider}>
         <View style={styles.dividerLine} />
         <Text style={styles.dividerText}>{dividerLabel}</Text>
