@@ -34,6 +34,15 @@ export default function SettingsAboutScreen({ navigation }) {
                 return;
               }
             } catch (_) { /* fall through to the store URL */ }
+            // Platform-specific store fallback. iOS must never open a Play URL
+            // (it lands on a dead page); send it to the App Store review deep
+            // link, falling back to the https App Store URL.
+            if (Platform.OS === 'ios') {
+              const APPLE_APP_ID = '6777083702';
+              const appStore = `apps.apple.com/app/id${APPLE_APP_ID}?action=write-review`;
+              Linking.openURL(`itms-apps://${appStore}`).catch(() => Linking.openURL(`https://${appStore}`).catch(() => {}));
+              return;
+            }
             const pkg = Constants.expoConfig?.android?.package || 'app.volyume';
             const web = `https://play.google.com/store/apps/details?id=${pkg}`;
             Linking.openURL(`market://details?id=${pkg}`).catch(() => Linking.openURL(web).catch(() => {}));
