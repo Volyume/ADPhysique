@@ -1007,6 +1007,19 @@ export default function CoachOutputScreen({ navigation, route }) {
         return count;
       })();
 
+      // Steps baseline (COMP-012): the user's recent NEAT norm, averaged from
+      // prior check-ins' step averages (excluding this week). Lets the coach
+      // tell a behavioural stall (movement dropped) from a metabolic one. Needs
+      // at least 2 prior weeks of step data to be stable, else null (the
+      // modifier then simply never fires).
+      const stepsBaselineAvg = (() => {
+        const priorSteps = recentCheckins
+          .filter(ci => ci && ci.weekStart !== checkin?.weekStart && Number.isFinite(ci.stepsAvg) && ci.stepsAvg > 0)
+          .map(ci => ci.stepsAvg);
+        if (priorSteps.length < 2) return null;
+        return Math.round(priorSteps.reduce((a, b) => a + b, 0) / priorSteps.length);
+      })();
+
       // Compute consecutiveOffTargetWeeks from recent coach outputs
       const lastOutput = await getLatestCoachOutput(user.id);
       const consecutiveOffTargetWeeks = lastOutput?.trend?.onTarget === false
@@ -1103,6 +1116,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         currentMaintenanceKcal: nutrition?.tdee ?? null,
         lastRefeedAt: userProfile?.refeed?.appliedAt ?? null,
         currentStepsTarget: userProfile?.stepsTarget ?? 8000,
+        stepsBaselineAvg,
         // Undefined/null means the user never opted out, so default on.
         stepsEnabled: userProfile?.stepsEnabled !== false,
         bodyweightKg: userProfile?.weightKg ?? null,

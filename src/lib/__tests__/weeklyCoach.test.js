@@ -249,6 +249,55 @@ describe('off-target threshold gating', () => {
     // cap at 5% of current target (2400 * 0.05 = 120)
     expect(Math.abs(out.adjustments.calories.change)).toBeLessThanOrEqual(120);
   });
+});
+
+describe('NEAT-collapse modifier (COMP-012): behavioural vs metabolic stall', () => {
+  const stalledCut = (extra = {}) => baseInputs({
+    morningWeights: trend(85, 0),
+    weeksInPhase: 4,
+    consecutiveOffTargetWeeks: 2,
+    lastCalAdjustmentWeeksAgo: 99,
+    ...extra,
+  });
+
+  test('movement collapsed vs baseline → hold the food cut, steer steps back', () => {
+    const out = runWeeklyCoach(stalledCut({
+      stepsBaselineAvg: 9000,
+      checkin: checkin({ stepsAvg: 5000 }),
+    }));
+    // The cut is held: no calorie card this week.
+    expect(out.adjustments.calories).toBeNull();
+    // Steps carry the explanation and steer back toward baseline.
+    expect(out.adjustments.steps).not.toBeNull();
+    expect(out.adjustments.steps.note).toMatch(/movement dropped/i);
+    expect(out.adjustments.steps.target).toBeGreaterThan(8000);
+  });
+
+  test('no baseline supplied → unchanged behaviour, the cut still fires', () => {
+    const out = runWeeklyCoach(stalledCut({
+      checkin: checkin({ stepsAvg: 5000 }),
+    }));
+    expect(out.adjustments.calories).not.toBeNull();
+    expect(out.adjustments.calories.change).toBeLessThan(0);
+  });
+
+  test('steps steady vs baseline → metabolic stall, the cut still fires', () => {
+    const out = runWeeklyCoach(stalledCut({
+      stepsBaselineAvg: 9000,
+      checkin: checkin({ stepsAvg: 8800 }),
+    }));
+    expect(out.adjustments.calories).not.toBeNull();
+    expect(out.adjustments.calories.change).toBeLessThan(0);
+  });
+
+  test('a small dip under the absolute floor does not trip the modifier', () => {
+    const out = runWeeklyCoach(stalledCut({
+      stepsBaselineAvg: 9000,
+      checkin: checkin({ stepsAvg: 8000 }), // 1,000 drop: under the 1,500 gate
+    }));
+    expect(out.adjustments.calories).not.toBeNull();
+    expect(out.adjustments.calories.change).toBeLessThan(0);
+  });
 
   test('weight dropping too fast on cut → apply calorie increase (protect muscle)', () => {
     const out = runWeeklyCoach(baseInputs({

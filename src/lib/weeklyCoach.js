@@ -393,6 +393,11 @@ export function runWeeklyCoach(inputs) {
     currentMaintenanceKcal = null,
     lastRefeedAt = null,
     currentStepsTarget = 8000,
+    // Prior-weeks average daily steps (the user's recent NEAT norm). Optional;
+    // when supplied, lets the coach tell a behavioural stall (movement
+    // collapsed) apart from a metabolic one. Defaults null so every prior
+    // caller is unchanged and the modifier simply never fires.
+    stepsBaselineAvg = null,
     // Whether the user keeps a daily step target. Defaults true so existing
     // users and every prior caller are unchanged. When false (the user opted
     // out at setup or in Settings) the coach makes no step prescription and
@@ -507,6 +512,21 @@ export function runWeeklyCoach(inputs) {
   // step note and stops the coach raising a target the user is not yet
   // hitting. Null on legacy check-ins, in which case behaviour is unchanged.
   const stepsAvg       = checkin?.stepsAvg       ?? null;
+  // NEAT-collapse detection (COMP-012). When this week's steps are materially
+  // below the user's own recent baseline, a cut stall is most likely
+  // behavioural (movement dropped) rather than metabolic (true expenditure
+  // fell). Deterministic gate: baseline and week both known, week <= 85% of
+  // baseline, AND an absolute drop of at least 1,500 steps/day so small
+  // wobbles never trip it. Used only to HOLD a calorie cut for one week and
+  // steer the user back to movement first, never to cut more or block an
+  // increase, so it cannot interact with the safety floors.
+  const neatCollapsed = (
+    Number.isFinite(stepsBaselineAvg) && stepsBaselineAvg > 0 &&
+    Number.isFinite(stepsAvg) &&
+    stepsAvg <= stepsBaselineAvg * 0.85 &&
+    (stepsBaselineAvg - stepsAvg) >= 1500
+  );
+  const neatDropSteps = neatCollapsed ? Math.round(stepsBaselineAvg - stepsAvg) : 0;
   const cycleOverride  = !!(checkin?.cycleOverride);
   const sleepHours     = checkin?.sleepHours     ?? null;
 
@@ -715,9 +735,20 @@ export function runWeeklyCoach(inputs) {
       calNote = "Weight is dropping faster than the target rate and energy is low. Adding calories straight away to protect recovery.";
       rapidLossCorrectionApplied = true;
     } else if (phase.isCut && offTargetDirection > 0) {
-      // Losing too slowly
-      change = calsAdherence === 'hit' ? -150 : -100;
-      calNote = "Weight is coming down slower than the target rate.";
+      // Losing too slowly. If the user's daily movement collapsed this week,
+      // the stall is behavioural, not metabolic: hold the food cut and restore
+      // steps first. Holding a cut never lowers intake further, so this is safe
+      // against the floor. Movement is the gentlest lever; cutting food on top
+      // of a NEAT drop would be the wrong call.
+      if (neatCollapsed) {
+        // Hold the food cut this week (change stays 0, so no calorie card is
+        // produced). The steps block below carries the explanation and steers
+        // movement back to baseline.
+        change = 0;
+      } else {
+        change = calsAdherence === 'hit' ? -150 : -100;
+        calNote = "Weight is coming down slower than the target rate.";
+      }
     } else if (phase.isCut && offTargetDirection < 0) {
       // Losing too fast, protect muscle (standard, non-compressed)
       change = +125;
@@ -804,7 +835,20 @@ export function runWeeklyCoach(inputs) {
     // cardio block below sees the step lever as unavailable and can fire.
     stepsAdjustment = null;
   } else if (phase.isCut && !onTarget && offTargetDirection > 0 && !poorRecovery) {
-    if (stepsAvg != null && currentStepsTarget > 0 && stepsAvg < currentStepsTarget * 0.9) {
+    if (neatCollapsed) {
+      // Behavioural stall: movement fell well below the user's own norm.
+      // Name it and steer back to baseline rather than piling food cuts on
+      // top of a NEAT drop. Restoring movement is the gentlest fix.
+      const restoreTarget = Math.min(
+        Math.max(currentStepsTarget, Math.round(stepsBaselineAvg / 500) * 500),
+        band.upper,
+      );
+      stepsAdjustment = {
+        target: restoreTarget,
+        change: restoreTarget - currentStepsTarget,
+        note: `Your daily movement dropped about ${neatDropSteps.toLocaleString('en-GB')} steps this week, which explains most of the slowdown. Food stays put. Get back to roughly ${restoreTarget.toLocaleString('en-GB')} steps a day before anything else changes.`,
+      };
+    } else if (stepsAvg != null && currentStepsTarget > 0 && stepsAvg < currentStepsTarget * 0.9) {
       // Secondary signal: the user is not even hitting their current target,
       // so raising it would not help. Ask them to hold the current one first.
       stepsAdjustment = {
