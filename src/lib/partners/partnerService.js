@@ -62,10 +62,14 @@ export async function isPartnersEnabled() {
 
 function _currentTier() {
   try {
-    // Lazy require avoids any import cycle with the store.
+    // Lazy require avoids any import cycle with the store. The store is a
+    // DEFAULT export only — destructuring a named `useAppStore` yields
+    // undefined and silently pins every user to the free tier, which hid
+    // Training Partners from all Pro users. Read `.default`.
     // eslint-disable-next-line global-require
-    const { useAppStore } = require('../../store/useAppStore');
-    return useAppStore.getState?.().tier ?? null;
+    const mod = require('../../store/useAppStore');
+    const store = mod.default ?? mod.useAppStore ?? mod;
+    return store?.getState?.().tier ?? null;
   } catch (_) {
     return null;
   }

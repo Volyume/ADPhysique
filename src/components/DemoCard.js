@@ -20,6 +20,7 @@ import { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { Image } from 'expo-image';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { Asset } from 'expo-asset';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
 import { Skeleton } from './Skeleton';
@@ -29,7 +30,21 @@ import useAppStore from '../store/useAppStore';
 function VideoLoop({ source, muscleLabel }) {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const [playing, setPlaying] = useState(!reduceMotion);
-  const player = useVideoPlayer(source, p => {
+  // Bundled videos must be extracted to a real file:// path before ExoPlayer /
+  // AVPlayer can read them in a release build — a raw require() resolves to a
+  // packaged-asset URI that plays in dev but not in production. expo-asset's
+  // downloadAsync copies it out to a playable localUri (cached, still offline).
+  const [uri, setUri] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const asset = Asset.fromModule(source);
+    asset.downloadAsync()
+      .then(() => { if (alive) setUri(asset.localUri || asset.uri); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [source]);
+
+  const player = useVideoPlayer(uri ? { uri } : '', p => {
     p.loop = true;
     p.muted = true; // silent by design — gym etiquette, no audio track needed
     if (!reduceMotion) p.play();

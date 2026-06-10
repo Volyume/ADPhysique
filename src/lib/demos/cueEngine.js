@@ -61,8 +61,8 @@ export function selectCue({ exercise, sessions = [], coachOutput = null, swapCan
       kind: 'first_time',
       headline: 'First time on this one',
       cue: mistake
-        ? `Most people get this wrong at first: ${mistake.charAt(0).toLowerCase()}${mistake.slice(1)}. Start light and groove the movement.`
-        : 'Start light. Pick a weight you could lift 15 to 20 times and focus on the movement, not the load.',
+        ? `Common mistake: ${mistake.charAt(0).toLowerCase()}${mistake.slice(1)}. Start light.`
+        : 'Start light. Pick a weight you could lift 15 to 20 times.',
       sub: firstSentence(FORM_TIPS[name]),
     };
   }

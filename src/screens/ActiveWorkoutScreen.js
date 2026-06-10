@@ -39,6 +39,36 @@ import { getTimeCrunchMessage } from '../lib/whyThisTemplates';
 
 const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 2 };
 
+// Spoken cues use a British MALE voice or none at all — the default Android TTS
+// voice is a robotic female that undercuts the coaching tone. We resolve the
+// best en-GB male voice once and cache it; if the device has no decent match we
+// stay silent rather than speak in the wrong voice.
+let _cueVoiceId; // undefined = unresolved, null = none suitable, string = chosen
+async function resolveCueVoice() {
+  if (_cueVoiceId !== undefined) return _cueVoiceId;
+  try {
+    const voices = await Speech.getAvailableVoicesAsync();
+    const enGB = (voices || []).filter(v => /en[-_]GB/i.test(v.language || ''));
+    const id = v => `${v.identifier || ''} ${v.name || ''}`.toLowerCase();
+    // Known male en-GB identifiers (Google: gbb/gbd/rjs; generic 'male').
+    const male = enGB.find(v => /\b(gbb|gbd|rjs|male)\b|男|#male/i.test(id(v)))
+      || enGB.find(v => /(gbb|gbd|rjs|male)/i.test(id(v)));
+    _cueVoiceId = male ? male.identifier : null;
+  } catch (_) {
+    _cueVoiceId = null;
+  }
+  return _cueVoiceId;
+}
+async function speakCue(text) {
+  if (!text) return;
+  const voice = await resolveCueVoice();
+  if (!voice) return; // no decent British man → leave it out (founder's call)
+  try {
+    Speech.stop();
+    Speech.speak(text, { language: 'en-GB', voice, pitch: 0.96, rate: 0.98 });
+  } catch (_) { /* never let a cue crash the set */ }
+}
+
 
 
 const SET_TYPE_OPTIONS = [
@@ -237,6 +267,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
   // (first-time / plateau / recovery / load-aware), picked deterministically.
   const [contextualCue, setContextualCue] = useState(null);
   const [speakCues, setSpeakCues] = useState(false);
+  const [voiceReady, setVoiceReady] = useState(false); // a British male voice exists on this device
   const [timeCrunchActive, setTimeCrunchActive] = useState(false);
   const [timeCrunchMsg, setTimeCrunchMsg] = useState('');
   const [preCrunchSnapshot, setPreCrunchSnapshot] = useState(null);
@@ -768,8 +799,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
         if (cancelled || !cue) return;
         setContextualCue(cue);
         if (speakCues && cue.cue) {
-          Speech.stop();
-          Speech.speak(`${cue.headline ? cue.headline + '. ' : ''}${cue.cue}`, { language: 'en-GB' });
+          speakCue(`${cue.headline ? cue.headline + '. ' : ''}${cue.cue}`);
         }
       })
       .catch(() => {});
@@ -781,6 +811,9 @@ export default function ActiveWorkoutScreen({ navigation }) {
     AsyncStorage.getItem('@volyume_speak_cues_v1')
       .then(v => setSpeakCues(v === 'true'))
       .catch(() => {});
+    // Only expose the audio controls if the device actually has a usable
+    // British male voice; otherwise the feature stays hidden, not robotic.
+    resolveCueVoice().then(id => setVoiceReady(!!id)).catch(() => {});
   }, []);
 
   function toggleSpeakCues() {
@@ -1339,22 +1372,24 @@ export default function ActiveWorkoutScreen({ navigation }) {
                 coachingCue={howToExercise?.cue || null}
                 notes={howToExercise?.notes}
               />
-              <TouchableOpacity
-                style={styles.speakCuesRow}
-                onPress={toggleSpeakCues}
-                accessibilityRole="switch"
-                accessibilityState={{ checked: speakCues }}
-                accessibilityLabel="Speak cues at the start of each exercise"
-              >
-                <Ionicons
-                  name={speakCues ? 'volume-high' : 'volume-mute-outline'}
-                  size={18}
-                  color={speakCues ? colors.primary : colors.textMuted}
-                />
-                <Text style={styles.speakCuesText}>
-                  Speak the cue when each exercise starts: {speakCues ? 'on' : 'off'}
-                </Text>
-              </TouchableOpacity>
+              {voiceReady ? (
+                <TouchableOpacity
+                  style={styles.speakCuesRow}
+                  onPress={toggleSpeakCues}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: speakCues }}
+                  accessibilityLabel="Speak cues at the start of each exercise"
+                >
+                  <Ionicons
+                    name={speakCues ? 'volume-high' : 'volume-mute-outline'}
+                    size={18}
+                    color={speakCues ? colors.primary : colors.textMuted}
+                  />
+                  <Text style={styles.speakCuesText}>
+                    Speak the cue when each exercise starts: {speakCues ? 'on' : 'off'}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
             </ScrollView>
           </SafeAreaView>
         </Modal>
@@ -1506,17 +1541,19 @@ export default function ActiveWorkoutScreen({ navigation }) {
                 ) : null}
                 {contextualCue.cue}
               </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  Speech.stop();
-                  Speech.speak(`${contextualCue.headline ? contextualCue.headline + '. ' : ''}${contextualCue.cue}`, { language: 'en-GB' });
-                }}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel="Hear this cue"
-              >
-                <Ionicons name="volume-medium-outline" size={18} color={colors.textSecondary} />
-              </TouchableOpacity>
+              {voiceReady ? (
+                <TouchableOpacity
+                  onPress={async () => {
+                    try { if (await Speech.isSpeakingAsync()) { Speech.stop(); return; } } catch (_) { /* fall through to speak */ }
+                    speakCue(`${contextualCue.headline ? contextualCue.headline + '. ' : ''}${contextualCue.cue}`);
+                  }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Hear this cue, tap again to stop"
+                >
+                  <Ionicons name="volume-medium-outline" size={18} color={colors.textSecondary} />
+                </TouchableOpacity>
+              ) : null}
             </View>
           ) : null}
 

@@ -33,8 +33,12 @@ jest.mock('../observability', () => ({
 }));
 
 const mockTier = { value: 'pro' };
+// Mirror the real module: a DEFAULT export only. (A previous named-export mock
+// masked a bug where partnerService read `{ useAppStore }` and always saw the
+// free tier, hiding Training Partners from every Pro user.)
 jest.mock('../../store/useAppStore', () => ({
-  useAppStore: { getState: () => ({ tier: mockTier.value }) },
+  __esModule: true,
+  default: { getState: () => ({ tier: mockTier.value }) },
 }));
 
 const svc = require('../partners/partnerService');
