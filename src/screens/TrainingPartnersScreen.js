@@ -12,13 +12,14 @@
  * Voice: British English, plain, adult. No em dashes (CLAUDE.md).
  */
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Share, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Share, Alert, TouchableOpacity, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import QRCode from 'react-native-qrcode-svg';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
-import { colors, spacing, type, radius } from '../styles/theme';
+import { colors, spacing, type, radius, fontWeight } from '../styles/theme';
 import Button from '../components/Button';
 import { SkeletonCard } from '../components/Skeleton';
 import PartnerSignalCard from '../components/PartnerSignalCard';
@@ -49,6 +50,7 @@ export default function TrainingPartnersScreen() {
   const [cachedAt, setCachedAt] = useState(null);
   const [nudged, setNudged] = useState({});      // userId -> true once nudged this session
   const [busy, setBusy] = useState(false);
+  const [inviteModal, setInviteModal] = useState(null); // { link, shareText } when an invite is live
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -117,10 +119,13 @@ export default function TrainingPartnersScreen() {
       }
       const inv = await createInvite(circleId);
       if (inv.ok) {
-        await Share.share({ message: inv.shareText });
+        // Show the QR + link sheet (in-person scan or one-tap share) instead
+        // of firing the OS share sheet blind. Either path lands on the same
+        // deep link the app already handles (App.js: /partner/<token>).
+        setInviteModal({ link: inv.link, shareText: inv.shareText });
         load();
       }
-    } catch (_) { /* user cancelled share, or offline */ }
+    } catch (_) { /* offline, or invite creation failed */ }
     setBusy(false);
   }
 
@@ -223,6 +228,52 @@ export default function TrainingPartnersScreen() {
           </>
         )}
       </ScrollView>
+
+      {/* Invite sheet: scan in person, or share the link. Both routes hit the
+          same deep link the app already handles. */}
+      <Modal
+        visible={!!inviteModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setInviteModal(null)}
+      >
+        <View style={styles.inviteOverlay}>
+          <View style={styles.inviteSheet}>
+            <Text style={styles.inviteTitle}>Invite your partner</Text>
+            <Text style={styles.inviteBody}>
+              Have them scan this with their camera, or send the link.
+            </Text>
+            <View style={styles.qrWrap}>
+              {inviteModal ? (
+                <QRCode
+                  value={inviteModal.link}
+                  size={180}
+                  backgroundColor={colors.textPrimary}
+                  color={colors.background}
+                />
+              ) : null}
+            </View>
+            <Button
+              title="Share link"
+              icon="share-outline"
+              onPress={() => {
+                if (inviteModal) Share.share({ message: inviteModal.shareText }).catch(() => {});
+              }}
+            />
+            <TouchableOpacity
+              onPress={() => setInviteModal(null)}
+              style={styles.inviteDone}
+              accessibilityRole="button"
+              accessibilityLabel="Done"
+            >
+              <Text style={styles.inviteDoneText}>Done</Text>
+            </TouchableOpacity>
+            <Text style={styles.inviteNote}>
+              Single-use and private. The link expires once your partner joins.
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -235,6 +286,18 @@ const styles = StyleSheet.create({
   emptyBody: { ...type.body, color: colors.textSecondary, textAlign: 'center', lineHeight: 21 },
   cacheNote: { ...type.caption, color: colors.textMuted },
   waiting: { ...type.caption, color: colors.textMuted, paddingHorizontal: spacing.xs },
+  inviteOverlay: { flex: 1, backgroundColor: colors.scrim, alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
+  inviteSheet: {
+    width: '100%', maxWidth: 360, alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  inviteTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
+  inviteBody: { ...type.body, color: colors.textSecondary, textAlign: 'center' },
+  qrWrap: { backgroundColor: colors.textPrimary, padding: spacing.md, borderRadius: radius.md },
+  inviteDone: { paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
+  inviteDoneText: { ...type.body, color: colors.textSecondary, fontWeight: fontWeight.semibold },
+  inviteNote: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
   footnote: { ...type.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm },
   pactRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,

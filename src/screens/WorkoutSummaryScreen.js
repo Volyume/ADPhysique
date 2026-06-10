@@ -20,7 +20,7 @@ import { useToast } from '../components/Toast';
 import { syncWorkout } from '../lib/sync';
 import { incrementSessionCount, shouldPromptReview, requestReview } from '../lib/storeReview';
 import { workoutDayMs } from '../lib/workoutDate';
-import { isPartnersEnabled } from '../lib/partners/partnerService';
+import { isPartnersEnabled, getMyCircles, getCircleSignals, deriveSignalView } from '../lib/partners/partnerService';
 import { localWeekStartMs } from '../lib/dayKey';
 
 const RATING_LABELS = {
@@ -81,11 +81,31 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // quiet, opt-in entry on the post-session summary — the moment accountability
   // lands — without nagging Free users or cluttering the training flow.
   const [partnersEnabled, setPartnersEnabled] = useState(false);
+  // The partner's current-week signal, surfaced the moment a session lands
+  // (the "signal after a workout" the research recommends). Supportive, never
+  // comparative. Defensive: any missing piece leaves the generic card.
+  const [partnerSignal, setPartnerSignal] = useState(null); // { name, label } | null
   useEffect(() => {
     let alive = true;
-    isPartnersEnabled().then(e => { if (alive) setPartnersEnabled(e); }).catch(() => {});
+    isPartnersEnabled().then(async (e) => {
+      if (!alive) return;
+      setPartnersEnabled(e);
+      if (!e) return;
+      try {
+        const circles = await getMyCircles();
+        const first = circles?.[0];
+        if (!first?.id) return;
+        const { members, signals } = await getCircleSignals(first.id);
+        const partner = (members || []).find(m => m.user_id !== user?.id && m.sharing_enabled);
+        if (!partner) return;
+        const sig = (signals || []).find(s => s.user_id === partner.user_id);
+        if (!sig) return;
+        const view = deriveSignalView(sig);
+        if (alive) setPartnerSignal({ name: partner.display_name || 'Your partner', label: view.label });
+      } catch (_) { /* leave the generic card */ }
+    }).catch(() => {});
     return () => { alive = false; };
-  }, []);
+  }, [user?.id]);
 
   const [feedback, setFeedback] = useState({
     sessionDifficulty: 3,
@@ -807,7 +827,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <Ionicons name="people-outline" size={20} color={colors.primary} />
             <View style={{ flex: 1 }}>
               <Text style={styles.partnersTitle}>Training Partners</Text>
-              <Text style={styles.partnersSub}>Keep each other honest. Share whether you trained, nothing else.</Text>
+              <Text style={styles.partnersSub}>
+                {partnerSignal
+                  ? `${partnerSignal.name} this week: ${partnerSignal.label}`
+                  : 'Keep each other honest. Share whether you trained, nothing else.'}
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
