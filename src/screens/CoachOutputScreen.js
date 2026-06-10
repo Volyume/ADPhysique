@@ -42,7 +42,7 @@ import { SkeletonCard } from '../components/Skeleton';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
 import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, computeDietBreakTargets, computeMacroCycle, computeRefeedDay, markApplied, isApplied } from '../lib/coachApply';
 import { logError, logWarn } from '../lib/errorLog';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type } from '../styles/theme';
 import {
   ED_PATTERN_LOCKOUT_COPY,
   ED_PATTERN_CLEARED_COPY,
@@ -701,7 +701,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   const [checkin, setCheckin] = useState(null);
   const [loading, setLoading] = useState(true);
   const [coachHistory, setCoachHistory] = useState([]);
-  const [_adaptiveTDEE, setAdaptiveTDEE] = useState(null);
+  const [adaptiveTDEE, setAdaptiveTDEE] = useState(null);
   const [applyingKey, setApplyingKey] = useState(null);
   // Next mesocycle week that a training-volume apply would write to.
   // Loaded once on mount; null when there's no active block or the
@@ -1240,7 +1240,10 @@ export default function CoachOutputScreen({ navigation, route }) {
             currentTDEEEstimate: currentTDEE,
             adherenceFactor: 1.0,
           });
-          setAdaptiveTDEE(tdeeResult);
+          // Keep the "was" value alongside the recomputed estimate so the
+          // review can lead with the discovery ("now X, was Y") rather than
+          // only the adjustment.
+          setAdaptiveTDEE({ ...tdeeResult, previousTDEE: Math.round(currentTDEE) });
         }
       } catch (e) {
         logWarn('CoachOutputScreen.adaptiveTDEE', e?.message);
@@ -1412,6 +1415,33 @@ export default function CoachOutputScreen({ navigation, route }) {
           <Ionicons name="share-outline" size={15} color={colors.textSecondary} />
           <Text style={styles.shareWeekText}>Share this week</Text>
         </TouchableOpacity>
+
+        {/* Expenditure discovery: lead with what we learned about the body,
+            not just the adjustment. Only when the estimate is confident and
+            has moved enough to be worth naming. */}
+        {(() => {
+          if (!adaptiveTDEE) return null;
+          const { adjustedTDEE, previousTDEE, confidence } = adaptiveTDEE;
+          if (confidence === 'insufficient_data' || confidence === 'low') return null;
+          if (!Number.isFinite(adjustedTDEE) || !Number.isFinite(previousTDEE)) return null;
+          const delta = adjustedTDEE - previousTDEE;
+          if (Math.abs(delta) < 50) return null;
+          const dir = delta > 0 ? 'higher' : 'lower';
+          return (
+            <View style={styles.discoveryCard}>
+              <View style={styles.discoveryHeadRow}>
+                <Ionicons name="flame-outline" size={16} color={colors.primary} />
+                <Text style={styles.discoveryHead}>What your body told us</Text>
+              </View>
+              <Text style={styles.discoveryNumber}>
+                {adjustedTDEE.toLocaleString()} <Text style={styles.discoveryUnit}>kcal/day</Text>
+              </Text>
+              <Text style={styles.discoverySub}>
+                Your maintenance energy looks {dir} than before, about {previousTDEE.toLocaleString()} kcal. Measured from {adaptiveTDEE.weeks} weeks of your own weight trend, not a textbook formula.
+              </Text>
+            </View>
+          );
+        })()}
 
         {/* 3. What went well */}
         {whatWorking && whatWorking.length > 0 && (
@@ -1709,6 +1739,19 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.sm,
   },
+  discoveryCard: {
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, 0.251),
+    padding: spacing.lg,
+    gap: spacing.xs,
+  },
+  discoveryHeadRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  discoveryHead: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
+  discoveryNumber: { ...type.num('h1'), color: colors.textPrimary, marginTop: spacing.xxs },
+  discoveryUnit: { ...type.label, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  discoverySub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
   focusCard: {
     backgroundColor: colors.primaryBg,
     borderRadius: radius.lg,
