@@ -330,7 +330,6 @@ export default function ActiveWorkoutScreen({ navigation }) {
   const [preCrunchSnapshot, setPreCrunchSnapshot] = useState(null);
   const [isDeloadWeek, setIsDeloadWeek] = useState(false);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
-  const [ghostSet, setGhostSet] = useState(null); // pre-fill from last session (same set index)
   const [nextTimeNotes, setNextTimeNotes] = useState([]);  // "next time" coaching notes for this routine
   // Cluster counter for myo-reps / rest-pause: 0 = activation set, 1+ = mini-set N+1
   const sessionSetsRef = useRef([]);   // tracks sets in this session, used for PR detection
@@ -683,7 +682,6 @@ export default function ActiveWorkoutScreen({ navigation }) {
     setPrevSets([]);
     setAllTimeSets([]);
     setCurrentSet({ ...DEFAULT_SET });
-    setGhostSet(null);
     // An unfinished cluster belongs to the exercise it was started on;
     // abandon it on any exercise change (incl. superset auto-jump) so
     // its banner can't carry stale reps onto the next exercise.
@@ -712,15 +710,6 @@ export default function ActiveWorkoutScreen({ navigation }) {
       const allLoggedAtLoad = workoutExercises[currentExerciseIndex]?.sets || [];
       const ghostIndex = allLoggedAtLoad.length; // 0-based index of next set to log
       const ghostCandidate = prev[ghostIndex] ?? prev[prev.length - 1] ?? null;
-      if (ghostCandidate && ghostCandidate.weight > 0) {
-        setGhostSet({
-          weight: ghostCandidate.weight,
-          reps: ghostCandidate.actualReps ?? ghostCandidate.actual_reps ?? 0,
-          rir: ghostCandidate.rir ?? null,
-        });
-      } else {
-        setGhostSet(null);
-      }
 
       // Layoff detection: last session was more than 7 days ago
       const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
@@ -990,7 +979,6 @@ export default function ActiveWorkoutScreen({ navigation }) {
           setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 50);
           setNoteText('');
           setShowNoteInput(false);
-          setGhostSet(null);
           return;
         }
       }
@@ -1002,9 +990,6 @@ export default function ActiveWorkoutScreen({ navigation }) {
       // exercise after 1.8s, which yanked the "+ Complete Extra Set" / Next
       // choice away before the user could tap it (founder feedback). The
       // target-complete state now waits for an explicit tap.
-
-      // Clear ghost, will be re-computed for the next set index on the next render cycle
-      setGhostSet(null);
 
       // Prepare next set
       setNoteText('');
@@ -1692,13 +1677,15 @@ export default function ActiveWorkoutScreen({ navigation }) {
               const prev = prevSets[workingLogged];
               const cw = parseFloat(currentSet.weight) || 0;
               const sameWeight = Math.abs(cw - prev.weight) < 0.1;
+              // The table's Previous column already shows last time's numbers,
+              // so only surface the progressive-overload nudge: same load on
+              // the bar means the win is one more rep.
+              if (!sameWeight) return null;
               return (
                 <View style={styles.beatChip}>
-                  <Ionicons name="time-outline" size={11} color={colors.textMuted} />
+                  <Ionicons name="trending-up-outline" size={11} color={colors.textMuted} />
                   <Text style={styles.beatChipText}>
-                    {sameWeight
-                      ? `Last time: ${prev.weight}${units} × ${prev.actualReps} reps. Can you hit ${prev.actualReps + 1}?`
-                      : `Last time: ${prev.weight}${units} × ${prev.actualReps} reps`}
+                    Same weight as last time. Can you hit {prev.actualReps + 1} reps?
                   </Text>
                 </View>
               );
@@ -1737,12 +1724,6 @@ export default function ActiveWorkoutScreen({ navigation }) {
                 </TouchableOpacity>
               );
             })()}
-            {currentSet.isGhost && ghostSet && (
-              <View style={styles.ghostChip}>
-                <Ionicons name="time-outline" size={12} color={colors.textMuted} />
-                <Text style={styles.ghostChipText}>Pre-filled from last session. Tap to confirm.</Text>
-              </View>
-            )}
             {/* Warm-ups are no longer auto-suggested. Two reasons: the
                 chip auto-appeared on every exercise's first set and
                 supersets don't make sense having warm-ups between paired
@@ -2456,8 +2437,6 @@ const styles = StyleSheet.create({
   firstSetHintText: { flex: 1, fontSize: fontSize.xs, color: colors.primary, lineHeight: 18 },
   setEntryTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2 },
   noteInput: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, fontSize: fontSize.sm, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 60 },
-  ghostChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, backgroundColor: colors.surface2, borderRadius: radius.sm, alignSelf: 'flex-start', marginBottom: spacing.xs },
-  ghostChipText: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
   // Log set is the primary action on this screen, so it reads as a filled
   // amber button with a clear label rather than a tinted outline. Dark label
   // for contrast on amber (white on amber fails WCAG). Warm-ups stay visually
