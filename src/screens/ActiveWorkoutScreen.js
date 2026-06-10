@@ -1604,16 +1604,6 @@ export default function ActiveWorkoutScreen({ navigation }) {
             </View>
           )}
 
-          {/* Target */}
-          {routineExercise && (
-            <View style={styles.targetRow}>
-              <Ionicons name="flag-outline" size={14} color={colors.textMuted} />
-              <Text style={styles.targetText}>
-                Target: {routineExercise.recommendedSets || 3} sets · {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
-              </Text>
-            </View>
-          )}
-
           {/* Rest timer, sits ABOVE the SetEntry card, in the slot vacated
               by the old weekly-sets calendar row. Stays in the user's
               eye-line with the inputs but doesn't clutter the card border.

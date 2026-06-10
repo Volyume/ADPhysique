@@ -11,13 +11,6 @@ import useAppStore from '../store/useAppStore';
 import { playRestBeep, preloadRestBeeps } from '../lib/restSound';
 import { clampRestDelta } from '../lib/restTimerMath';
 
-const TIME_ADJUSTMENTS = [
-  { delta: -30, label: '−30s' },
-  { delta: -15, label: '−15s' },
-  { delta: 15,  label: '+15s' },
-  { delta: 30,  label: '+30s' },
-];
-
 export default function RestTimer() {
   // Subscribe to only the fields this component needs; using
   // `useAppStore()` without a selector re-renders this on every store
@@ -147,10 +140,8 @@ export default function RestTimer() {
 
   return (
     <View style={styles.container}>
-      {/* Timer row. accessibilityLiveRegion announces each tick to screen
-          readers without forcing focus, useful so a non-sighted user
-          knows when their rest is nearly up. We use 'polite' to avoid
-          interrupting other VoiceOver / TalkBack output. */}
+      {/* Single slim row: time + inline ±15 + Skip. accessibilityLiveRegion
+          announces each tick to screen readers without forcing focus. */}
       <View
         style={styles.row}
         accessible
@@ -167,6 +158,24 @@ export default function RestTimer() {
         )}
         <Text style={styles.label}>{isCountdown ? 'seconds' : 'rest'}</Text>
         <TouchableOpacity
+          style={[styles.adjBtn, styles.adjBtnNeg]}
+          onPress={() => handleAdjust(-15)}
+          hitSlop={{ top: 12, bottom: 12, left: 4, right: 4 }}
+          accessibilityRole="button"
+          accessibilityLabel="Subtract 15 seconds"
+        >
+          <Text style={[styles.adjBtnText, styles.adjBtnTextNeg]}>−15</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.adjBtn}
+          onPress={() => handleAdjust(15)}
+          hitSlop={{ top: 12, bottom: 12, left: 4, right: 4 }}
+          accessibilityRole="button"
+          accessibilityLabel="Add 15 seconds"
+        >
+          <Text style={styles.adjBtnText}>+15</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
           onPress={stopRestTimer}
           style={styles.skipBtn}
           hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
@@ -175,23 +184,6 @@ export default function RestTimer() {
         >
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
-      </View>
-
-      {/* Time adjustment row */}
-      <View style={styles.adjustRow}>
-        {TIME_ADJUSTMENTS.map(({ delta, label }) => {
-          const isNeg = delta < 0;
-          return (
-            <TouchableOpacity
-              key={delta}
-              style={[styles.adjBtn, isNeg && styles.adjBtnNeg]}
-              onPress={() => handleAdjust(delta)}
-              hitSlop={{ top: 10, bottom: 10, left: 4, right: 4 }}
-            >
-              <Text style={[styles.adjBtnText, isNeg && styles.adjBtnTextNeg]}>{label}</Text>
-            </TouchableOpacity>
-          );
-        })}
       </View>
     </View>
   );
@@ -203,15 +195,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    marginVertical: spacing.sm,
+    marginVertical: spacing.xs,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
   },
   timeText: {
     // eslint-disable-next-line no-restricted-syntax -- rest-timer countdown is a hero numeral
@@ -245,16 +236,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   skipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
-  adjustRow: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-  },
   adjBtn: {
-    flex: 1,
     alignItems: 'center',
-    paddingVertical: spacing.xs + 2,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: withAlpha(colors.primary, 0.314),
