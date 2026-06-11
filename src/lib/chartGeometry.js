@@ -98,3 +98,18 @@ export function paddedDomain(values, fraction = 0.1) {
   const pad = (max - min) * fraction;
   return { min: min - pad, max: max + pad };
 }
+
+// COMP-019 Stage 1b — scrub hit-testing. Given plotted points ([{x, y}] in the
+// same pixel space as the touch) and a touch x, return the index of the point
+// nearest in x. Renderer-agnostic and pure so the scrub logic is unit-tested
+// without a canvas. Returns -1 for empty input; ties resolve to the lower index.
+export function nearestPointIndex(points, touchX) {
+  if (!points || points.length === 0) return -1;
+  let best = 0;
+  let bestDist = Infinity;
+  for (let i = 0; i < points.length; i++) {
+    const dist = Math.abs((points[i]?.x ?? 0) - touchX);
+    if (dist < bestDist) { bestDist = dist; best = i; }
+  }
+  return best;
+}

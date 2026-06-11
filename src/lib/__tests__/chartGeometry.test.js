@@ -8,7 +8,26 @@
  */
 import {
   scale, plotPoints, linePath, smoothPath, areaPath, ticks, paddedDomain,
+  nearestPointIndex,
 } from '../chartGeometry';
+
+describe('nearestPointIndex (COMP-019 scrub)', () => {
+  const pts = [{ x: 0, y: 5 }, { x: 10, y: 4 }, { x: 20, y: 6 }, { x: 30, y: 3 }];
+  test('returns the index of the point nearest in x', () => {
+    expect(nearestPointIndex(pts, 0)).toBe(0);
+    expect(nearestPointIndex(pts, 9)).toBe(1);
+    expect(nearestPointIndex(pts, 24)).toBe(2);
+    expect(nearestPointIndex(pts, 100)).toBe(3); // beyond last → clamps to last
+    expect(nearestPointIndex(pts, -50)).toBe(0); // before first → clamps to first
+  });
+  test('ties resolve to the lower index', () => {
+    expect(nearestPointIndex(pts, 5)).toBe(0); // equidistant from 0 and 10 → 0
+  });
+  test('empty / missing input returns -1', () => {
+    expect(nearestPointIndex([], 5)).toBe(-1);
+    expect(nearestPointIndex(null, 5)).toBe(-1);
+  });
+});
 
 describe('scale', () => {
   test('maps domain onto range linearly', () => {
