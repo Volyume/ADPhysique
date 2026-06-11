@@ -344,3 +344,46 @@ coaching+safety); `RAPID_LOSS_PCT_PER_WEEK = -1.5` (`edPatternDetector.js:30`);
 - **The manual `cycleOverride` flag STAYS** — complementary, not replaced.
   Smoothing fixes the trend READING; `cycleOverride` HOLDS calorie decisions.
   Do not delete or auto-set it. ED safety system not modified.
+
+## 13. COMP-026 step-informed TDEE — engine maths gate (2026-06-11)
+Walked with the founder. Coaching-engine maths change; maths gate. Verified the
+blueprint's load-bearing claims against source:
+- **Dormant adaptive-TDEE resize CONFIRMED dead in production.** The live caller
+  `CoachOutputScreen.js:997` fetches only `getMorningWeightsLast14Days` (14d);
+  `nutritionEngine.js:290` `weeks = floor(ewmaData.length / 7)` ≤ 2;
+  `nutritionEngine.js:313` `confidence = weeks >= 4 ? 'high'...`; so
+  `weeklyCoach.js:701` `useAdaptiveCal = confidence === 'high'` is NEVER true.
+  Today every calorie change uses blunt fixed ±100/125/150 steps. The 50%
+  damping COMP-026 parameterises is the literal `* 0.5` at `nutritionEngine.js:309`.
+
+COMP-026 is therefore TWO coupled engine-maths changes:
+- **(A) Activate the dormant adaptive-TDEE resize** — widen the weight window to
+  ~42 days (via `getMorningWeights(userId, limit)`) + make `weeks` date-span-
+  based not row-count-based (so same-day weigh-ins can't inflate confidence).
+  This turns on adaptive calorie SIZING (from real energy balance) for users
+  with ≥4 weeks of weight, replacing the blunt fixed steps. The bigger change.
+- **(B) Step-trend modifier** layered on top: update gain 0.50 → max 0.65, ONLY
+  when a sustained step shift AGREES with the weight-trend discrepancy direction.
+  Steps never produce/size/reverse an adjustment and are NEVER given a kcal
+  value. Bounded ×1.3 on an already-damped, ±5%-capped, FFM-floor-clamped number.
+
+**Decisions:**
+- **Approach — BOTH TOGETHER, shadowed jointly.** Activate (A) and add (B) in one
+  shadow phase, reviewed together before enable. (Founder chose this over
+  sequencing; accept that shadow review must look at (A) and (B) jointly.)
+- **Design + constants — APPROVED as shadow starting point.** Mechanism as
+  specified; constants 1,500-step delta / 0.20 ratio / 4,000 floor / 1,000
+  persistence / 0.65 cap / 10-of-14 + 14-of-28 day gates. Re-tuned after founder
+  reviews shadow activation-rate (target 10–25% of runs) + gain distribution
+  before the enable flip (`STEP_TDEE_GAIN_ENABLED`).
+- **Safety — all interlocks stay SENIOR and verified:** FFM floor (after
+  damping), rapid-loss upward-only override, `cycleOverride`/`scoffPositive`
+  hold, ED-pattern lockout, ±5% weekly cap, absolute 1,200/1,500 floors. The
+  "moving less" line is SUPPRESSED whenever a wellbeing/ED flag is open.
+- **Rollout — SHADOW MODE (one full release)** with no-PII
+  `step_tdee_modifier_evaluated` telemetry (needs a server CHECK migration —
+  STAGING only per DB rules), then a constant flip. No schema change to
+  `daily_steps`. Display surface is COMP-004's trend card (shipped).
+- Mention-only (pre-existing, not fixed here): the dead `useAdaptiveCal` path
+  predates this work; `weeklyCoach.js:676` comment says "~4 weeks" but the
+  production caller supplies 14 days.
