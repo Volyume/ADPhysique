@@ -1348,6 +1348,7 @@ const useAppStore = create((set, get) => ({
     higherContrast: false, // brightens muted text + thickens borders via theme tokens
     colorBlindSafe: false, // swaps red/green success/error to blue/orange
     reduceMotion: false,   // skips PRCelebration particles, RestTimer pulse, big spring anims
+    theme: 'dark',         // COMP-029: 'dark' | 'light' | 'system'. Default dark, no existing user changes
   },
   accessibilityLoaded: false,
   loadAccessibility: async () => {

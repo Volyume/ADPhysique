@@ -13,7 +13,7 @@ const HERO_ASPECT = 1032 / 277;
 const SPLASH_W = Math.round(Dimensions.get('window').width * 0.7);
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, resolvedTheme } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { getSupabaseClient } from '../lib/supabase';
 import { initDatabase, cleanupOrphanRoutineExercises } from '../lib/database';
@@ -1132,7 +1132,7 @@ export default function RootNavigator() {
         } catch (_) { /* tolerate */ }
       }}
       theme={{
-        dark: true,
+        dark: resolvedTheme !== 'light',
         colors: {
           primary: colors.primary,
           background: colors.background,

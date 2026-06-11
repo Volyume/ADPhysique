@@ -112,7 +112,7 @@ Notifications.setNotificationHandler({
 import useAppStore from './src/store/useAppStore';
 import { getWellbeingMode, isCalm } from './src/lib/wellbeing';
 import { getSupabaseClient } from './src/lib/supabase';
-import { applyAccessibility } from './src/styles/theme';
+import { applyAccessibility, resolvedTheme } from './src/styles/theme';
 import { loadA11yPrefs } from './src/lib/accessibilityPrefs';
 import * as Updates from 'expo-updates';
 
@@ -122,7 +122,17 @@ import * as Updates from 'expo-updates';
 // StyleSheets.
 async function bootstrapAccessibility() {
   const prefs = await loadA11yPrefs();
-  if (prefs) applyAccessibility(prefs);
+  // Always apply so the theme (incl. 'system') resolves and resolvedTheme is
+  // set for the chrome below; null prefs resolve to dark (no user changes).
+  applyAccessibility(prefs || {});
+  // COMP-029: align native surfaces (keyboards, pickers, OS alerts) with the
+  // in-app choice. Requires app.json userInterfaceStyle "automatic" + a native
+  // rebuild to take effect; harmless before then.
+  try {
+    // eslint-disable-next-line global-require
+    const { Appearance } = require('react-native');
+    Appearance.setColorScheme?.(resolvedTheme === 'light' ? 'light' : 'dark');
+  } catch (_) { /* native surfaces fall back to app.json */ }
 }
 
 // Shown when an auth email link fails to establish a session (expired or
@@ -784,7 +794,10 @@ export default function App() {
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
-          <StatusBar style="light" backgroundColor="#0D0D0D" />
+          <StatusBar
+            style={resolvedTheme === 'light' ? 'dark' : 'light'}
+            backgroundColor={resolvedTheme === 'light' ? '#FAFAF7' : '#0D0D0D'}
+          />
           <ToastProvider>
             <FeedbackProvider>
               <RootNavigator />
