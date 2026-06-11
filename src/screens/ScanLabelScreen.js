@@ -37,6 +37,7 @@ import { Camera, useCameraDevice } from 'react-native-vision-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
+import NetInfo from '@react-native-community/netinfo';
 import { isOcrConfigured, recogniseText, recogniseBlocks } from '../lib/food/ocr';
 import { parseNutritionLabel } from '../lib/food/ocrParser';
 import { pickProductName } from '../lib/food/labelName';
@@ -58,6 +59,23 @@ export default function ScanLabelScreen({ navigation, route }) {
   const cameraRef = useRef(null);
   const device = useCameraDevice('back');
   const ocrAvailable = isOcrConfigured();
+
+  // COMP-022 arrival choice: a barcode miss lands here. Rather than dumping the
+  // user straight into the camera, present a one-tap decision (scan the label /
+  // type it in). Skipped when OCR isn't in the binary (the existing type-in CTA
+  // path covers that — State C). `reachable` picks honest copy: a confirmed
+  // miss (online) vs "couldn't check" (offline) — no waterfall hot-path change.
+  const [arrivalChoice, setArrivalChoice] = useState(!!prefillBarcode && ocrAvailable);
+  const [reachable, setReachable] = useState(null); // null = checking, treated as online
+  useEffect(() => {
+    if (!prefillBarcode) return;
+    let cancelled = false;
+    NetInfo.fetch()
+      .then((s) => { if (!cancelled) setReachable(s?.isConnected !== false && s?.isInternetReachable !== false); })
+      .catch(() => { if (!cancelled) setReachable(true); });
+    return () => { cancelled = true; };
+  }, [prefillBarcode]);
+  const offline = reachable === false;
 
   useFocusEffect(useCallback(() => {
     setFocused(true);
@@ -250,7 +268,11 @@ export default function ScanLabelScreen({ navigation, route }) {
         />
         {prefillBarcode ? (
           <View style={styles.missBanner} pointerEvents="none">
-            <Text style={styles.missTitle}>Barcode {prefillBarcode} not in our database</Text>
+            <Text style={styles.missTitle}>
+              {offline
+                ? `Barcode ${prefillBarcode} · saved on this phone`
+                : `Barcode ${prefillBarcode} not in our database`}
+            </Text>
             <Text style={styles.missBody}>
               {!ocrAvailable
                 ? 'Type the nutrition in. The barcode is saved with it, so next time it scans straight away.'
@@ -290,6 +312,25 @@ export default function ScanLabelScreen({ navigation, route }) {
           )}
         </View>
       </View>
+
+      {/* COMP-022 arrival choice — camera warm behind the scrim, one tap in. */}
+      {arrivalChoice ? (
+        <View style={styles.choiceOverlay}>
+          <View style={styles.choiceScrim} />
+          <View style={styles.choiceCard}>
+            <Text style={styles.choiceTitle}>
+              {offline ? 'Couldn’t check the full database' : 'Not in the database yet'}
+            </Text>
+            <Text style={styles.choiceBody}>
+              {offline
+                ? 'You’re offline, so only the on-device list was checked. Label scanning still works offline. Whatever you save is kept on this phone.'
+                : 'Fix it once and it’s yours. Scan the label, about 30 seconds, or type it in. The barcode is saved either way, so next time it scans instantly.'}
+            </Text>
+            <Button title="Scan the label" onPress={() => setArrivalChoice(false)} />
+            <Button title="Type it in" variant="tertiary" onPress={gotoManual} />
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -303,6 +344,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   headerTitle: { ...type.title, color: colors.textPrimary },
+  choiceOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end' },
+  choiceScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.scrim },
+  choiceCard: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
+    padding: spacing.xl, gap: spacing.md,
+  },
+  choiceTitle: { ...type.title, color: colors.textPrimary },
+  choiceBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
   // eslint-disable-next-line no-restricted-syntax -- camera viewport is true black behind the live preview
   cameraWrap: { flex: 1, backgroundColor: '#000' },
   overlay: { flex: 1, alignItems: 'center', justifyContent: 'center' },
