@@ -10,7 +10,7 @@ import { SwipeableEntryRow } from './EntryRow';
 // the number a training user defends); the add affordance is a quiet in-card
 // row, not a dashed placeholder box.
 export default function MealSection({
-  slot, entries, onAdd, onEdit, onDelete,
+  slot, entries, onAdd, onQuickAdd, onEdit, onDelete,
   selectionMode = false, selectedIds, onLongPressEntry, onToggleSelect,
 }) {
   const hasEntries = entries.length > 0;
@@ -44,6 +44,19 @@ export default function MealSection({
         <Ionicons name="add" size={18} color={colors.primary} />
         <Text style={styles.addLabel}>Add food</Text>
       </TouchableOpacity>
+      {/* Escape hatch for meals that aren't worth a lookup (restaurant,
+          estimate, retro-logging). Secondary to search by design: quieter
+          colour, below the primary row. */}
+      {onQuickAdd ? (
+        <TouchableOpacity
+          style={[styles.addRow, styles.addRowDivided]}
+          onPress={onQuickAdd}
+          accessibilityLabel={`Quick add to ${slot.label}`}
+        >
+          <Ionicons name="flash-outline" size={16} color={colors.textSecondary} />
+          <Text style={styles.quickAddLabel}>Quick add</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -72,4 +85,5 @@ const styles = StyleSheet.create({
   // divider, so the card reads as one clean block, not a placeholder.
   addRowDivided: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
   addLabel: { ...type.body, color: colors.primary, marginLeft: spacing.xs },
+  quickAddLabel: { ...type.body, fontSize: fontSize.sm, color: colors.textSecondary, marginLeft: spacing.xs },
 });

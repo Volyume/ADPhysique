@@ -32,6 +32,7 @@ import { useShallow } from 'zustand/react/shallow';
 import MacroRings from '../components/food/MacroRings';
 import MacroBreakdownSheet from '../components/food/MacroBreakdownSheet';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
+import QuickAddSheet from '../components/food/QuickAddSheet';
 import EmptyDiary from '../components/food/EmptyDiary';
 import MealSection from '../components/food/MealSection';
 import { friendlyFoodName } from '../components/food/EntryRow';
@@ -205,6 +206,30 @@ export default function DiaryScreen({ navigation }) {
   }
 
   const [editSheet, setEditSheet] = useState(null); // { entry, food } | null
+
+  // Quick add straight from a meal card (COMP-003): the escape hatch for
+  // meals not worth a lookup. Same sheet and write path as the tertiary
+  // flash-icon route in FoodSearchScreen, reached with zero navigation.
+  const [quickAddSlot, setQuickAddSlot] = useState(null); // meal slot key | null
+
+  async function confirmQuickAdd({ kcal, protein, carbs, fat, mealSlot }) {
+    // food_ref 'quick:adhoc' has no resolvable name, so the diary shows it
+    // as "Quick add" with no gram weight.
+    // eslint-disable-next-line global-require
+    const { logFoodEntry } = require('../lib/food/db');
+    await logFoodEntry(userId, {
+      entryDate: selectedDate,
+      mealSlot,
+      foodRef: 'quick:adhoc',
+      quantityG: 0,
+      kcal,
+      proteinG: protein,
+      carbsG: carbs,
+      fatG: fat,
+      fibreG: null,
+    });
+    await load();
+  }
 
   // Multi-select (GAP row 26) + per-meal breakdown sheet (GAP row 27).
   const [selectionMode, setSelectionMode] = useState(false);
@@ -510,6 +535,7 @@ export default function DiaryScreen({ navigation }) {
                   slot={slot}
                   entries={entriesBySlot[slot.key] ?? []}
                   onAdd={() => addFood(slot.key)}
+                  onQuickAdd={() => setQuickAddSlot(slot.key)}
                   onEdit={openEditSheet}
                   onDelete={requestDelete}
                   selectionMode={selectionMode}
@@ -546,6 +572,13 @@ export default function DiaryScreen({ navigation }) {
         onSave={saveEditSheet}
         onDelete={deleteFromEditSheet}
         onClose={() => setEditSheet(null)}
+      />
+
+      <QuickAddSheet
+        visible={!!quickAddSlot}
+        initialMealSlot={quickAddSlot ?? 'snack'}
+        onSave={confirmQuickAdd}
+        onClose={() => setQuickAddSlot(null)}
       />
 
       <MacroBreakdownSheet

@@ -72,7 +72,9 @@ export async function logFoodEntry(userId, entry) {
     track(userId, 'food_logged', {
       // HP-2: source + slot only. The amount eaten (quantity_g) is the
       // user's dietary content and does not belong in product telemetry.
-      food_ref_source: entry.foodRef?.startsWith('custom:') ? 'custom' : 'global',
+      food_ref_source: entry.foodRef?.startsWith('quick:') ? 'quick_add'
+        : entry.foodRef?.startsWith('custom:') ? 'custom'
+          : 'global',
       meal_slot: entry.mealSlot,
     }).catch(() => {});
   } catch (_) { /* tolerate test env without telemetry */ }
