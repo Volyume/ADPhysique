@@ -38,6 +38,47 @@ their licensing as suspect; not recommended without clear provenance.
 3. **£0 fallback: Free Exercise DB**, only if a paid route is rejected and
    only after the image rights are confirmed.
 
+## Sample validation — 2 MoveKit clips (founder-supplied, 2026-06-11)
+
+Founder added two MoveKit samples to `assets/demos/` (on branch
+`claude/tender-albattani-crloK`): `barbell-drag-curl.mp4` and
+`bodyweight-donkey-calf-raise.mp4`. Inspected with ffmpeg.
+
+**Technical — exactly what the transcode pipeline wants:**
+| | drag curl | donkey calf raise |
+|---|---|---|
+| Codec | H.264 High, yuv420p | H.264 High, yuv420p |
+| Resolution | 1936×1072 | 1936×1072 |
+| Frame rate | 30 fps | 30 fps |
+| Duration | 8.0 s | 5.6 s |
+| Audio | none (muted) | none (muted) |
+| Size | 2.31 MB | 1.14 MB |
+
+Standard muted H.264 ~1080p, 5.6–8 s loops — plays natively via expo-video
+and re-encodes cleanly to the planned muted HEVC loops. Raw size (1–2.3 MB
+H.264 each) confirms the earlier finding: don't bundle raw at 150–449
+clips; transcode to HEVC (~0.2–0.4 MB/loop) first, as the bundle plan
+already assumed.
+
+**Visual — good, with two caveats:**
+- GOOD: one **consistent grey 3D male model** across both clips; clean,
+  professional render; **anatomically sculpted** (musculature readable in
+  the geometry); **neutral** imagery, safe for the ED-safety posture;
+  legible at small (420 px) size; correct, recognisable exercise form.
+- CAVEAT 1 — **no red target-muscle highlighting** in these samples: the
+  model is uniform grey. NEW-001's differentiator was the highlighted
+  target muscle (M&M-style). Either MoveKit sells a separate highlighted
+  variant or these are the plain set — must confirm (does the highlighted
+  version exist, at what coverage/price?).
+- CAVEAT 2 — **baked light-grey background**, not transparent. On Volyume's
+  dark theme these render as a bright light card. Decide: accept a light
+  demo frame, or request transparent-background versions.
+
+**Verdict:** by the founder's stated bar ("if it's good then coverage is
+fine"), the quality and format pass — MoveKit is worth considering. The two
+caveats are questions to put to MoveKit alongside the licensing set, all
+still £0.
+
 ## The six licensing questions to send each paid vendor (in writing, £0)
 
 1. Does the licence permit use of the clips **inside a paid mobile app** sold
@@ -51,6 +92,10 @@ their licensing as suspect; not recommended without clear provenance.
 5. Is the licence **perpetual and one-time**, or does continued use require a
    subscription? What happens to already-shipped clips if we stop paying?
 6. What **attribution**, if any, is required, and where?
+
+Plus, from the sample review: (7) is there a **target-muscle-highlighted
+variant**, and what is its coverage and price? (8) are
+**transparent-background** versions available (for the dark theme)?
 
 ## Go/no-go visual validation (£0, before buying)
 
