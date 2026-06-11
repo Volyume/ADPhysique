@@ -297,6 +297,14 @@ export function computeAdaptiveTDEEAdjustment({
   // of the adjustment value so a misconfigured caller can't push a
   // cut while the override is on.
   rapidLossOverride = false,
+  // COMP-026 (B): the adaptive-update gain that damps the raw energy-balance
+  // signal. Default 0.5 reproduces the original 50% damping byte-identically
+  // for every existing caller/test. The step-trend modifier may raise it to at
+  // most 0.65 when a sustained step shift agrees with the weight-trend
+  // discrepancy. Clamped to [0.5, 0.65] here as a hard invariant: a
+  // misconfigured caller can never weaken the damping below 50% nor pierce the
+  // 0.65 cap, and the FFM floor / rapid-loss / +/-5% clamps all stay senior.
+  updateGain = 0.5,
 }) {
   const MIN_POINTS = 14; // need at least 2 weeks
 
@@ -322,8 +330,11 @@ export function computeAdaptiveTDEEAdjustment({
   // If gaining more than expected → TDEE is lower than estimated → reduce TDEE estimate
   const rawAdjustmentKcal = Math.round(-discrepancy * KCAL_PER_KG / 7);
 
-  // Dampen adjustment: apply only 50% of the signal to avoid overcorrection
-  const adjustmentKcal = Math.round(rawAdjustmentKcal * 0.5);
+  // Dampen adjustment: apply the update gain (default 50%) of the signal to
+  // avoid overcorrection. COMP-026's step modifier may raise the gain to at
+  // most 0.65; clamp here so it can never weaken below 0.5 or exceed 0.65.
+  const safeGain = Math.min(0.65, Math.max(0.5, Number(updateGain) || 0.5));
+  const adjustmentKcal = Math.round(rawAdjustmentKcal * safeGain);
   const adjustedTDEE = Math.round(currentTDEEEstimate + adjustmentKcal);
 
   // Confidence based on data length
@@ -387,6 +398,149 @@ export function computeAdaptiveTDEEAdjustment({
     insight: finalInsight,
     weeks,
     floorHeld,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// COMP-026 (B) — step-trend confidence modifier
+// ---------------------------------------------------------------------------
+//
+// Steps NEVER produce, size, or reverse a calorie change, and are NEVER given a
+// kcal value (the documented MyFitnessPal "eat-back" anti-pattern). This
+// function decides only how fast the adaptive-TDEE resize is allowed to update:
+// when the user's daily-step LEVEL has sustainably shifted AND that shift agrees
+// with the direction the weight-trend discrepancy already points, the update
+// gain rises from 0.50 to at most 0.65 -- a bounded x1.3 on a number that is
+// already damped, FFM-floor-clamped and +/-5%-capped downstream. In every other
+// situation the gain stays 0.50. Deterministic: no randomness, no clock read.
+//
+// All thresholds are named constants the founder may retune at maths review.
+const STEP_WINSOR_CAP = 40000;      // clamp one day before use (DB caps at 200k)
+const STEP_DELTA_MIN = 1500;        // smallest sustained level shift, steps/day
+const STEP_DELTA_RATIO_MIN = 0.20;  // ...and >= 20% of the (floored) baseline
+const STEP_BASELINE_FLOOR = 4000;   // stops tiny baselines passing the ratio test
+const STEP_PERSIST_MIN = 1000;      // each recent half must clear baseline by this
+const STEP_GAIN_BASE = 0.50;
+const STEP_GAIN_MAX = 0.65;
+const STEP_GAIN_RAMP_SPAN = 2500;   // delta span (above MIN) over which gain ramps
+
+// Days-since-epoch for a 'YYYY-MM-DD' key. UTC-based and used only for
+// differences, so it is timezone-stable for day arithmetic. NaN on bad input.
+function _stepDayNumber(key) {
+  const parts = String(key).split('-').map(Number);
+  const [y, m, d] = parts;
+  if (!y || !m || !d) return NaN;
+  return Math.floor(Date.UTC(y, m - 1, d) / 86400000);
+}
+
+function _stepMedian(nums) {
+  if (!nums.length) return null;
+  const s = nums.slice().sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+// computeStepTrendModifier({ stepRows, todayKey, adjustmentSign })
+//   -> { gain, active, direction, recentMedian, baselineMedian, deltaSteps, reason }
+//
+// stepRows       : getDailyStepsRange output over the last ~42 days,
+//                  [{ entryDate: 'YYYY-MM-DD', steps, source }], any order.
+//                  steps <= 0 or a missing day is "unlogged" (matches
+//                  summariseWeekSteps semantics).
+// todayKey       : local day-key anchoring the windows. recent = last 14 days
+//                  (ages 0..13), baseline = the 28 days before that (14..41).
+// adjustmentSign : sign of the raw energy-balance adjustment the weight trend
+//                  produced (+1 = TDEE underestimated / add calories,
+//                  -1 = overestimated / cut, 0 = none). The gain only rises when
+//                  the step shift AGREES with this sign.
+export function computeStepTrendModifier({ stepRows, todayKey, adjustmentSign = 0 } = {}) {
+  const inactive = (reason, extra = {}) => ({
+    gain: STEP_GAIN_BASE,
+    active: false,
+    direction: 0,
+    recentMedian: null,
+    baselineMedian: null,
+    deltaSteps: null,
+    reason,
+    ...extra,
+  });
+
+  const todayNum = _stepDayNumber(todayKey);
+  if (!Array.isArray(stepRows) || !Number.isFinite(todayNum)) {
+    return inactive('insufficient_step_data');
+  }
+
+  // Bucket logged days by age into the recent (0..13) and baseline (14..41)
+  // windows. winsorise each day at 40k so one fat-finger or double-counted
+  // Android raw-sum day can't move a median.
+  const recent = [];
+  const baseline = [];
+  for (const row of stepRows) {
+    if (!row) continue;
+    const steps = Math.min(STEP_WINSOR_CAP, Number(row.steps) || 0);
+    if (steps <= 0) continue; // unlogged / zero day
+    const age = todayNum - _stepDayNumber(row.entryDate);
+    if (!Number.isFinite(age) || age < 0) continue;
+    if (age <= 13) recent.push({ age, steps });
+    else if (age <= 41) baseline.push({ age, steps });
+  }
+
+  // Data sufficiency: >= 10 of the last 14 days AND >= 14 of the prior 28.
+  // Tighter than the 4-of-7 display default because this feeds coach maths.
+  if (recent.length < 10 || baseline.length < 14) {
+    return inactive('insufficient_step_data');
+  }
+
+  const recentMedian = _stepMedian(recent.map((r) => r.steps));
+  const baselineMedian = _stepMedian(baseline.map((r) => r.steps));
+  const deltaSteps = recentMedian - baselineMedian;
+  const absDelta = Math.abs(deltaSteps);
+  const partial = { recentMedian, baselineMedian, deltaSteps };
+
+  // Sustained-shift candidacy: absolute AND relative thresholds both bind.
+  const ratio = absDelta / Math.max(baselineMedian, STEP_BASELINE_FLOOR);
+  if (absDelta < STEP_DELTA_MIN || ratio < STEP_DELTA_RATIO_MIN) {
+    return inactive('not_shifted', partial);
+  }
+
+  // Persistence: split the recent 14 into older (ages 7..13) and newer
+  // (ages 0..6) halves; the median of each must sit on the SAME side of the
+  // baseline by >= 1,000 steps/day. One big weekend cannot pass; a real
+  // two-week-old habit change does. Halves with < 3 logged days fail.
+  const dir = Math.sign(deltaSteps); // +1 up, -1 down
+  const olderHalf = recent.filter((r) => r.age >= 7).map((r) => r.steps);
+  const newerHalf = recent.filter((r) => r.age <= 6).map((r) => r.steps);
+  if (olderHalf.length < 3 || newerHalf.length < 3) {
+    return inactive('not_sustained', partial);
+  }
+  const persistsBy = (m) =>
+    dir > 0 ? m - baselineMedian >= STEP_PERSIST_MIN : baselineMedian - m >= STEP_PERSIST_MIN;
+  if (!persistsBy(_stepMedian(olderHalf)) || !persistsBy(_stepMedian(newerHalf))) {
+    return inactive('not_sustained', partial);
+  }
+
+  // Direction agreement (the non-negotiable): steps-up only accelerates a
+  // positive (add-calories) adjustment, steps-down only a negative one. On
+  // disagreement, or when the weight trend produced no adjustment, the gain
+  // stays 0.50. The modifier can never reverse or create an adjustment.
+  if (adjustmentSign === 0 || Math.sign(adjustmentSign) !== dir) {
+    return {
+      gain: STEP_GAIN_BASE, active: false, direction: dir, ...partial,
+      reason: 'direction_disagree',
+    };
+  }
+
+  // Gain schedule: linear from 0.50 at a 1,500-step shift to the hard cap 0.65
+  // at >= 4,000. Maximum effect on any week's change: x1.3 on an already-capped,
+  // already-floor-clamped number.
+  const ramp = Math.min(1, Math.max(0, (absDelta - STEP_DELTA_MIN) / STEP_GAIN_RAMP_SPAN));
+  const gain = STEP_GAIN_BASE + (STEP_GAIN_MAX - STEP_GAIN_BASE) * ramp;
+  return {
+    gain: parseFloat(gain.toFixed(4)),
+    active: true,
+    direction: dir,
+    ...partial,
+    reason: 'active',
   };
 }
 
