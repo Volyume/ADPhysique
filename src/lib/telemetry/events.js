@@ -52,6 +52,12 @@ export const TELEMETRY_EVENTS = Object.freeze([
   { name: 'subscription_cancelled',          deferred: false, panel: 5 },
   { name: 'paywall_shown',                   deferred: false, panel: 5 },
   { name: 'paywall_tapped_cta',              deferred: false, panel: 5 },
+  // COMP-025-A: cancellation-reason capture. enum reason + surface only, no
+  // PII (free text routes to user_feedback, never here).
+  //   reason  = price|not_using|missing_feature|switching|temporary_break
+  //   surface = pre_store_handoff|post_lapse_sheet
+  // Server allow-list: supabase/migrate_079_cancel_reason_telemetry.sql.
+  { name: 'cancel_reason_captured',          deferred: false, panel: 5 },
   { name: 'purchase_initiated',              deferred: false, panel: 5 },
   { name: 'purchase_completed',              deferred: false, panel: 5 },
   { name: 'purchase_failed',                 deferred: false, panel: 5 },
