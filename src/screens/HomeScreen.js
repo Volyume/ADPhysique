@@ -1818,35 +1818,8 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
 
-  // Morning weight card
-  weightCard: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  weightCardEmpty: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    paddingVertical: spacing.sm,
-  },
-  weightCardPrompt: {
-    ...type.label, color: colors.textPrimary,
-  },
-  weightInputCompact: {
-    fontSize: fontSize.sm, color: colors.textPrimary,
-    paddingVertical: spacing.xs, minWidth: 48, textAlign: 'right',
-    fontVariant: ['tabular-nums'],
-  },
-  weightInputUnit: { fontSize: fontSize.sm, color: colors.textSecondary },
-  weightCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
-  weightCardEdit: { ...type.caption, color: colors.primary },
-  weightLogBtn: {
-    backgroundColor: colors.primary, borderRadius: radius.sm,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
-  },
-  weightLogBtnDisabled: { backgroundColor: colors.surface3 },
-  weightLogBtnText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.background },
+  // (Morning-weight card styles retired with COMP-027 Part B — the weight cell
+  //  now lives in TodayStrip.)
 
   // Training schedule context line
   scheduleContextLine: {
