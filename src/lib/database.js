@@ -4505,7 +4505,12 @@ export async function getBlockReflectionData(userId, mesocycleId) {
     [userId, mesocycleId],
   );
   const sets = await d.getAllAsync(
-    `SELECT ws.weight, ws.actual_reps, ws.set_type, ws.exercise_id, ex.name AS exercise_name
+    // COMP-005: ws.workout_id is projected so the first/last-week tonnage
+    // filters below can match sets to their workout. Without it s.workout_id
+    // was undefined, both week buckets were always empty, and tonnageDelta
+    // (the block story's "climb" slide + BlockReflectionScreen's progress
+    // figure) always computed as null.
+    `SELECT ws.workout_id, ws.weight, ws.actual_reps, ws.set_type, ws.exercise_id, ex.name AS exercise_name
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
      LEFT JOIN exercises ex ON ex.id = ws.exercise_id
