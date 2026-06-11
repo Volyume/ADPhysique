@@ -70,3 +70,35 @@ come to the founder individually before any amendment is made.
    026, 010, 005, 009, 019, 020, 030.
 Parked pending money/billing: COMP-007, COMP-016, NEW-001 purchase,
 COMP-025-B, Supabase Pro backup.
+
+## Build log — session of 2026-06-11 (same day as the questionnaire)
+SHIPPED on this branch, each commit lint-clean with the full suite green:
+- **COMP-003** quick add (8103261): Quick add row in every meal card,
+  QuickAddSheet wired into DiaryScreen, quick_add telemetry source.
+  Optional name field deferred per blueprint's builder decision.
+- **COMP-001 steps 1–5 + telemetry** (dc56186, 3a0cbb6, d8425a4, 49e67e6,
+  bd646ef): three-line card header with tappable beat line; 5-button row →
+  2 + overflow sheet; logged sets above the fold; one-row 3-control rest
+  timer with long-press repeat; ghost nav / muscle line / time-crunch bar
+  deleted (glyph in header, revert in overflow); M2–M4 audit events;
+  countProgressSets extracted to src/lib/workoutHelpers.js; compact timer
+  on <700pt screens. Blueprint deviations (deliberate): 'Add exercise'
+  label kept truthful (blueprint's 'Add set' named the exercise-picker
+  handler); first-set hint copy points at ⋯.
+- **COMP-011** cardio explainer (9ca4917): three surfaces, locked
+  vocabulary, blueprint copy as written.
+- **COMP-002** meal-slot memory (2f3c314): food_slot_recents client-only
+  table, 'Add again' tab, last-used portion pre-fill, unit tests.
+
+PARKED (founder eyes wanted, not blockers):
+- COMP-001 step 6 remainder: logged-set cap + 'All sets (N)' expander
+  contradicts the blueprint's own above-the-fold screenshot thesis; nav
+  maxHeight 40 clamp conflicts with the new 40pt pill sizing; nav-pill
+  middle-out truncation helper under-specified. Decide at COMP-001 visual
+  review.
+- COMP-012/COMP-006: each wants a Welcome/paywall trust line — paywall
+  lines are HELD with billing anyway.
+
+NEXT IN QUEUE: COMP-008 survey diet (regenerate its lost blueprint from
+the preserved summary first) → COMP-015, and COMP-023 + the trial-push
+cascade fix (decision 5 makes it time-sensitive).
