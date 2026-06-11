@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius, type, stateColors } from '../styles/theme';
-import SvgLineChart from './SvgLineChart';
+import VolyumeChart from './VolyumeChart';
 import { formatBodyWeight } from '../lib/units';
 
 /**
@@ -68,7 +68,7 @@ export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
           onLayout={(e) => setChartWidth(e.nativeEvent.layout.width)}
         >
           {chartWidth > 0 && (
-            <SvgLineChart
+            <VolyumeChart
               data={lineData}
               data2={rawSeries}
               width={chartWidth}

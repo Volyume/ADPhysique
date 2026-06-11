@@ -1,7 +1,7 @@
 // Pure geometry helpers for the SVG chart components. No React, no
 // react-native, no theme. Kept dependency-free on purpose so the maths
 // behind every chart can be unit-tested in isolation, away from the
-// rendering layer. The SVG components (SvgLineChart, Sparkline) turn the
+// rendering layer. The SVG components (VolyumeChart, Sparkline) turn the
 // {x,y} points and path strings these produce into actual <Path> nodes.
 
 // Round to 2dp. SVG path strings don't need more, and shorter strings

@@ -1,12 +1,16 @@
-// VolyumeChart — the app's interactive line/area chart (COMP-019 Stage 1b).
+// VolyumeChart — the app's single line/area chart (COMP-019 Stage 1b).
 //
-// Renders through the same hand-rolled engine as SvgLineChart (react-native-svg
-// + the unit-tested maths in ../lib/chartGeometry), so it is pixel-identical to
-// the static charts — we keep ONE chart engine, not two. On top of that static
-// render it adds a tap-and-hold scrub: long-press (300ms) shows a crosshair +
-// tooltip, dragging snaps to the nearest point with a selection haptic per point
+// Renders through the hand-rolled SVG engine (react-native-svg + the
+// unit-tested maths in ../lib/chartGeometry). On top of that static render it
+// adds a tap-and-hold scrub: long-press (300ms) shows a crosshair + tooltip,
+// dragging snaps to the nearest point with a selection haptic per point
 // (haptics.selection() already no-ops under Reduce Motion — the off-switch the
 // proposal requires). No pinch/pan (evidence: windowing > scrubbing > zoom).
+//
+// With `interactive={false}` (the default) it is a plain static chart — this is
+// what the body-metrics, weight-trend and other non-scrub hosts use, so the app
+// keeps ONE line-chart engine. (It superseded the old standalone SvgLineChart,
+// now removed.)
 //
 // IMPLEMENTATION NOTE: the COMP-019 blueprint proposed redrawing the line in
 // Skia. The chart is static during a scrub (only the crosshair + tooltip move),
@@ -16,7 +20,7 @@
 // scrub, haptics, a11y) is identical to the spec. Swappable to Skia later behind
 // this same API if the founder wants UI-thread scrub smoothness.
 //
-// Data shape mirrors SvgLineChart: [{ value:number, label?:string }]; pass
+// Data shape: [{ value:number, label?:string }]; pass
 // `data2` for a faint secondary series (e.g. raw behind a smoothed trend).
 // `interactive` enables the scrub; `formatTooltip(index) => { title, sub }` lets
 // the host phrase the tooltip from its own (dated) data.

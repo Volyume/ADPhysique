@@ -22,7 +22,6 @@ function safeFormatDate(value, fmt) {
   }
 }
 import { useFocusEffect } from '@react-navigation/native';
-import SvgLineChart from '../components/SvgLineChart';
 import VolyumeChart from '../components/VolyumeChart';
 import { useToast } from '../components/Toast';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
@@ -273,7 +272,7 @@ function BodyFatTrendChart({ entries }) {
 
   return (
     <View style={chartStyles.wrap}>
-      <SvgLineChart
+      <VolyumeChart
         data={data}
         data2={rawData}
         width={chartWidth}
@@ -332,7 +331,7 @@ function MeasurementTrendChart({ entries, measureKey, label }) {
 
   return (
     <View style={chartStyles.wrap}>
-      <SvgLineChart
+      <VolyumeChart
         data={data}
         width={chartWidth}
         height={100}
