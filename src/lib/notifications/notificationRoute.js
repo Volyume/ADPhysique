@@ -21,6 +21,11 @@ export function routeForNotificationType(type) {
       return { tab: 'ProfileTab', screen: 'WeeklyCheckIn' };
     case 'year_of_lifts_unlock':
       return { tab: 'ProgressTab', screen: 'YearOfLifts' };
+    case 'monthly_recap':
+      // COMP-005: lands on Progress, where the ephemeral recap card and the
+      // Recaps tile open the story. The month window is dynamic, so it is not
+      // carried on the static notification route.
+      return { tab: 'ProgressTab', screen: 'Analytics' };
     case 'cascade_gate':
       // The in-app trial-ending gate. Variant default matches the 14+7 trial
       // (the 'day14' content is the generic "trial winding down" copy).

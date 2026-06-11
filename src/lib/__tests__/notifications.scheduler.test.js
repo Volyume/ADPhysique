@@ -299,6 +299,49 @@ describe('checkYearOfLiftsUnlock', () => {
   });
 });
 
+// ─── checkMonthlyRecapReady (COMP-005) ─────────────────────────────
+
+describe('checkMonthlyRecapReady', () => {
+  const ok = { completedCount: 12, monthSessions: 8, monthKey: '2026-05', monthLabel: 'May' };
+
+  test('does nothing below the 10-session unlock', async () => {
+    await scheduler.checkMonthlyRecapReady({ ...ok, completedCount: 9 });
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+
+  test('does nothing for a zero-session month (silence, not shame)', async () => {
+    await scheduler.checkMonthlyRecapReady({ ...ok, monthSessions: 0 });
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+
+  test('schedules the recap notification when unlocked and the month had sessions', async () => {
+    await scheduler.checkMonthlyRecapReady(ok);
+    expect(mockScheduleAsync).toHaveBeenCalledTimes(1);
+    const arg = mockScheduleAsync.mock.calls[0][0];
+    expect(arg.identifier).toBe('volyume_monthly_recap_2026-05');
+    expect(arg.content.title).toBe('Your May recap is ready');
+    expect(arg.content.data).toEqual({ type: 'monthly_recap' });
+  });
+
+  test('neutral body under calm / ED flag', async () => {
+    await scheduler.checkMonthlyRecapReady({ ...ok, monthKey: '2026-04', neutral: true });
+    const arg = mockScheduleAsync.mock.calls[0][0];
+    expect(arg.content.body).toMatch(/summed up/);
+  });
+
+  test('idempotent per month', async () => {
+    await scheduler.checkMonthlyRecapReady({ ...ok, monthKey: '2026-03' });
+    await scheduler.checkMonthlyRecapReady({ ...ok, monthKey: '2026-03' });
+    expect(mockScheduleAsync).toHaveBeenCalledTimes(1);
+  });
+
+  test('web: no-op', async () => {
+    mockPlatformOS = 'web';
+    await scheduler.checkMonthlyRecapReady({ ...ok, monthKey: '2026-02' });
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+});
+
 // ─── restoreNotifications ──────────────────────────────────────────
 
 describe('restoreNotifications', () => {

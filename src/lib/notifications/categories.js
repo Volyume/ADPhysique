@@ -31,6 +31,7 @@ export const CATEGORY = Object.freeze({
   MORNING_WEIGHT: 'morning_weight',
   TRAINING_REMINDER: 'training_reminder',
   YEAR_OF_LIFTS_UNLOCK: 'year_of_lifts_unlock',
+  MONTHLY_RECAP: 'monthly_recap', // COMP-005
 });
 
 /**
@@ -60,6 +61,7 @@ export const CATEGORY_CHANNELS = Object.freeze({
   [CATEGORY.MORNING_WEIGHT]: [CHANNEL.PUSH],
   [CATEGORY.TRAINING_REMINDER]: [CHANNEL.PUSH],
   [CATEGORY.YEAR_OF_LIFTS_UNLOCK]: [CHANNEL.PUSH],
+  [CATEGORY.MONTHLY_RECAP]: [CHANNEL.PUSH],
 });
 
 /**
@@ -84,6 +86,7 @@ export function categoryForDataType(type) {
     case 'weekly_checkin': return CATEGORY.WEEKLY_CHECKIN_REMINDER;
     case 'training_reminder': return CATEGORY.TRAINING_REMINDER;
     case 'year_of_lifts_unlock': return CATEGORY.YEAR_OF_LIFTS_UNLOCK;
+    case 'monthly_recap': return CATEGORY.MONTHLY_RECAP;
     case 'cascade_gate': return CATEGORY.CASCADE_GATE;
     case 'subscription_payment_failure': return CATEGORY.SUBSCRIPTION_PAYMENT_FAILURE;
     case 'subscription_expiring': return CATEGORY.SUBSCRIPTION_EXPIRING;

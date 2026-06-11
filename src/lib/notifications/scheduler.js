@@ -507,3 +507,43 @@ export async function checkYearOfLiftsUnlock(earliestWorkoutAt) {
     }
   }
 }
+
+const MONTHLY_RECAP_NOTIFIED_PREFIX = '@volyume_recap_notified_';
+
+// COMP-005: one-shot monthly recap nudge. Mirrors checkYearOfLiftsUnlock —
+// fires once per calendar month (idempotent per-month AsyncStorage key) on the
+// app open that first satisfies the conditions: the user has unlocked recaps
+// (>=10 lifetime sessions) AND trained at least once in the month being
+// recapped. A zero-session month gets nothing — silence, not shame. The body
+// softens under calm mode / an open ED flag (passed in as `neutral`).
+export async function checkMonthlyRecapReady({ completedCount = 0, monthSessions = 0, monthKey, monthLabel, neutral = false } = {}) {
+  if (Platform.OS === 'web') return;
+  if (!monthKey || !monthLabel || completedCount < 10 || monthSessions < 1) return;
+  const key = `${MONTHLY_RECAP_NOTIFIED_PREFIX}${monthKey}`;
+  try {
+    const already = await AsyncStorage.getItem(key);
+    if (already === 'true') return;
+    await Notifications.scheduleNotificationAsync({
+      identifier: `volyume_monthly_recap_${monthKey}`,
+      content: {
+        title: `Your ${monthLabel} recap is ready`,
+        body: neutral
+          ? 'Last month\'s training, summed up. Have a look when you fancy.'
+          : '45 seconds of what you put in last month. Have a look when you fancy.',
+        data: { type: 'monthly_recap' },
+        sound: true,
+      },
+      trigger: { channelId: COACHING_REMINDERS_CHANNEL },
+    });
+    await AsyncStorage.setItem(key, 'true');
+  } catch (e) {
+    trackNotificationFailed({
+      category: CATEGORY.MONTHLY_RECAP,
+      reason: 'schedule_threw',
+      payload: { message: e?.message ?? 'unknown' },
+    });
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      logWarn('notifications.monthlyRecap', e?.message);
+    }
+  }
+}

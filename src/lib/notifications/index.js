@@ -50,6 +50,7 @@ export {
   restoreNotifications,
   rescheduleForTimezoneIfChanged,
   checkYearOfLiftsUnlock,
+  checkMonthlyRecapReady,
 } from './scheduler';
 
 export {

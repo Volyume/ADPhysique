@@ -568,13 +568,39 @@ export default function App() {
             // eslint-disable-next-line global-require
             const { db } = require('./src/lib/database');
             // eslint-disable-next-line global-require
-            const { checkYearOfLiftsUnlock } = require('./src/lib/notifications');
+            const { checkYearOfLiftsUnlock, checkMonthlyRecapReady } = require('./src/lib/notifications');
             db().then(async (d) => {
               const row = await d.getFirstAsync(
-                'SELECT MIN(started_at) AS first_at FROM workouts WHERE user_id = ? AND is_completed = 1',
+                'SELECT MIN(started_at) AS first_at, COUNT(*) AS completed FROM workouts WHERE user_id = ? AND is_completed = 1',
                 [localUserId],
               ).catch(() => null);
               await checkYearOfLiftsUnlock(row?.first_at ?? null);
+              // COMP-005: monthly recap nudge for the last completed calendar
+              // month. Same idempotent on-app-open pattern as the year unlock.
+              try {
+                const now = new Date();
+                const curMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+                const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+                const prev = new Date(prevMonthStart);
+                const monthRow = await d.getFirstAsync(
+                  'SELECT COUNT(*) AS n FROM workouts WHERE user_id = ? AND is_completed = 1 AND started_at >= ? AND started_at < ?',
+                  [localUserId, prevMonthStart, curMonthStart],
+                ).catch(() => null);
+                const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                let neutral = false;
+                try {
+                  // eslint-disable-next-line global-require
+                  const { getWellbeingMode, isCalm } = require('./src/lib/wellbeing');
+                  neutral = isCalm(await getWellbeingMode());
+                } catch (_) { /* default not-neutral */ }
+                await checkMonthlyRecapReady({
+                  completedCount: row?.completed ?? 0,
+                  monthSessions: monthRow?.n ?? 0,
+                  monthKey: `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`,
+                  monthLabel: MONTHS[prev.getMonth()],
+                  neutral,
+                });
+              } catch (_) { /* tolerate */ }
             }).catch(() => {});
           } catch (_) { /* tolerate — feature is a "nice to have" */ }
         }
