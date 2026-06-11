@@ -31,10 +31,13 @@ import { requestNotificationPermissions, getNotificationPermissionStatus, schedu
 import { logError, logWarn } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import { SkeletonCard } from '../components/Skeleton';
+// COMP-023: the first-check-in gate constants live in trialActivation.js as the
+// single source of truth, so the day-3 unlock date this screen gates on and the
+// date the trial moment promises can never drift apart.
+import { FIRST_CHECKIN_MIN_DAYS, MIN_WEIGH_INS } from '../lib/trialActivation';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 const DAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const MIN_WEIGH_INS = 3;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -71,8 +74,6 @@ function earliestWeightTs(weights) {
   return Math.min(...weights.map(w => w.loggedAt ?? w.logged_at ?? Infinity)
     .filter(Number.isFinite));
 }
-
-const FIRST_CHECKIN_MIN_DAYS = 5;
 
 // Derive training performance from logged session data. Used to pre-select
 // the chip on step 3 so the user doesn't subjectively rate what the app
