@@ -26,6 +26,7 @@ import {
 } from '../lib/algorithms';
 import { rankSwaps } from '../lib/swapEngine';
 import { isClusterType, clusterLabel, summariseCluster, mergeClusterNote } from '../lib/clusterSet';
+import { countProgressSets } from '../lib/workoutHelpers';
 import { formatPerSide, loadUnilateralExercises } from '../lib/unilateral';
 import { FORM_TIPS } from '../lib/formTips';
 import { applyTimeCrunch } from '../lib/mesocycle';
@@ -56,14 +57,8 @@ function getBestAnchorSet(sets, workingIdx) {
   return best;
 }
 
-// Drop sets count for weekly volume but NOT toward the set-target progress.
-// Only straight, amrap, myo-reps, rest-pause and superset sets tick the target counter.
-function countProgressSets(sets) {
-  return sets.filter(s => {
-    const t = s.setType ?? s.set_type ?? 'straight';
-    return t !== 'warmup' && t !== 'dropset';
-  }).length;
-}
+// countProgressSets moved to src/lib/workoutHelpers.js (COMP-001) so the
+// Live Activity fix and watch companion share the same counting rule.
 
 /**
  * One already-logged set in the "This workout" list. Display only, no inputs.
@@ -264,6 +259,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
           text: 'Remove',
           style: 'destructive',
           onPress: () => {
+            audit('workout.exercise.removed', { exerciseId: exercise?.id });
             if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
             const store = useAppStore.getState();
             const updated = workoutExercises.filter((_, i) => i !== currentExerciseIndex);
@@ -687,6 +683,15 @@ export default function ActiveWorkoutScreen({ navigation }) {
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exercise?.id, currentExerciseIndex]);
+
+  // COMP-001 measurement: the logged list renders above the action row now;
+  // emit the count as it grows so the fold maths can be validated in
+  // production (no set data, just how many rows are on screen).
+  useEffect(() => {
+    if (loggedSets.length > 0) {
+      audit('workout.loggedsets.visible', { count: loggedSets.length });
+    }
+  }, [loggedSets.length]);
 
 
   async function handleCompleteSet(overrides = {}) {
@@ -1326,6 +1331,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
                     setShowInfoTipPulse(false);
                     AsyncStorage.setItem('@volyume_seen_workout_info', 'true').catch(() => {});
                   }
+                  audit('workout.overflow.open', { exerciseId: exercise?.id });
                   setShowOverflow(true);
                 }}
                 hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
@@ -1466,6 +1472,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
                     style={styles.beatLine}
                     onPress={() => {
                       hapticsVocab.setLogged();
+                      audit('workout.beatline.apply', { exerciseId: exercise?.id, setIndex: workingLogged });
                       setCurrentSet(s => ({ ...s, weight: String(target.weight ?? 0), reps: target.repsMin ?? s.reps, isGhost: false }));
                     }}
                     hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
@@ -1490,6 +1497,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
                     style={styles.beatLine}
                     onPress={() => {
                       hapticsVocab.setLogged();
+                      audit('workout.beatline.apply', { exerciseId: exercise?.id, setIndex: workingLogged });
                       setCurrentSet(s => ({
                         ...s,
                         weight: String(prev.weight ?? 0),
