@@ -119,9 +119,42 @@ SHIPPED on this branch, each commit lint-clean with the full suite green:
 - **COMP-004** 'Your trend' card (2cd74f4): pure deriveWeightTrend +
   useWeightTrend hook + WeightTrendCard on Progress, states 0-3, Class B
   rules, 8 unit tests.
+- **COMP-018 v0** (881d948): getDeloadWeeksInRange query + pure streak.js
+  (10 tests) + read-only 'weeks running' Progress strip.
+- **COMP-012** (94649a6): Welcome trust row + Play 'Your data, plainly'
+  block; duplicate 'offline' bullet trimmed. Paywall footer left (billing).
+- **COMP-010** (ec7b842): BlockShapeCard week dots (Ease in/Build/Push/
+  Recover) via the tappable Home meso chip. PlanDetail mount deferred.
+- **COMP-022 (partial)** (6e12f6f): deterministic custom-barcode resolution
+  (ORDER BY updated_at). Rest of COMP-022 deferred (privacy/hot-path).
+- NEW-001 MoveKit samples validated (format+quality pass; 2 caveats), then
+  PAUSED low-priority per founder; brief ready for revisit.
 
 (Container reset once mid-session at ~commit a2cc7f3; recovered by
 fast-forward to origin per the handoff note. Nothing lost.)
+
+## "Build all you can of the free updates" — what's left and why it waits
+After the safe free items above, the remaining audit items are NOT
+unattended-safe and were deliberately NOT built:
+- **COMP-022 rest** (OFF write-back consent relocation, scan arrival-choice
+  state, miss-vs-unreachable waterfall tagging, one-time consent card):
+  privacy-sensitive (data leaving device to Open Food Facts) + scan hot
+  path. Attended.
+- **COMP-006 methodology page:** makes specific engine claims (2-week
+  cooldown, volume matrix, FFM floor); blueprint says founder review
+  against the engine is non-negotiable because wrong copy damages trust.
+  Verify claims with founder before building.
+- **COMP-013 plan reveal:** animation/labour-illusion sequence + a
+  timeCrunch floor code gap; visual, unverifiable unattended.
+- **COMP-019 charts/widgets:** Stage 1a (window chips) is OTA-able but
+  visual; Stages 2-3 need the native widget/Live-Activity targets.
+- **COMP-024 / COMP-026:** coaching-ENGINE algorithm changes (weight
+  smoother / step TDEE). CLAUDE.md bars touching the engine without sign-
+  off; both need a founder maths gate + shadow mode.
+- **COMP-005 recap, COMP-025-A, COMP-030, NEW-002:** large/visual, or
+  billing-adjacent (025), or DPO-gated (030, NEW-002).
+- **COMP-018 UI follow-ups** (pause/goal/ConsistencyScreen/milestones):
+  need a synced pause/goal table + copy review.
 
 PARKED (founder eyes wanted, not blockers):
 - COMP-001 step 6 remainder: logged-set cap + 'All sets (N)' expander
