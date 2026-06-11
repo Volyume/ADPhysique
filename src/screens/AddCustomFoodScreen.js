@@ -17,7 +17,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/t
 import Button from '../components/Button';
 import { useToast } from '../components/Toast';
 import { insertCustomFood, logFoodEntry } from '../lib/food/db';
-import { queueContribution, getConsent } from '../lib/food/writeback';
+import { queueContribution, getConsent, markScanChainCompleted } from '../lib/food/writeback';
 import { checkFoodSanity } from '../lib/food/sanityChecks';
 import { fieldNeedsCheck } from '../lib/food/ocrParser';
 import { audit } from '../lib/observability';
@@ -173,6 +173,9 @@ export default function AddCustomFoodScreen({ navigation, route }) {
             });
           }
         } catch (_) { /* contribution is best-effort, never blocks the save */ }
+        // A heal chain completed — make the one-time OFF-consent card eligible
+        // (offered later on the Diary, never mid-task). Fire-and-forget.
+        markScanChainCompleted().catch(() => {});
         // Confirm the healing: the loop-closing reward (COMP-022).
         toast.show('Saved. Next time this barcode scans instantly.');
       }

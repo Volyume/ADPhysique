@@ -39,6 +39,7 @@ import { friendlyFoodName } from '../components/food/EntryRow';
 import ScreenHeader from '../components/ScreenHeader';
 import { useToast } from '../components/Toast';
 import { deleteEntries, moveEntriesToSlot, copyEntriesToDate } from '../lib/food/bulkEntryOps';
+import { shouldShowOffConsentCard, dismissOffConsentCard } from '../lib/food/writeback';
 import { buildMealSlots, highestLoggedMeal, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
 
 // TZ-1: all diary day-keys are the LOCAL calendar day, matching the local-day
@@ -184,6 +185,20 @@ export default function DiaryScreen({ navigation }) {
   const [prefMeals, setPrefMeals] = useState(DEFAULT_MEALS_PER_DAY);
   const [addedMeals, setAddedMeals] = useState(0);
   useEffect(() => { setAddedMeals(0); }, [selectedDate]);
+
+  // COMP-022 one-time OFF-consent card: offered after a first completed
+  // barcode-heal chain, never mid-task. Re-checked on focus so flipping consent
+  // (or dismissing) makes it disappear next time.
+  const [showOffCard, setShowOffCard] = useState(false);
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    shouldShowOffConsentCard().then((show) => { if (active) setShowOffCard(show); }).catch(() => {});
+    return () => { active = false; };
+  }, []));
+  const onDismissOffCard = useCallback(() => {
+    setShowOffCard(false);
+    dismissOffConsentCard().catch(() => {});
+  }, []);
   useFocusEffect(useCallback(() => {
     let active = true;
     AsyncStorage.getItem('@volyume_meals_per_day').then((v) => {
@@ -522,6 +537,27 @@ export default function DiaryScreen({ navigation }) {
           />
         </View>
 
+        {showOffCard ? (
+          <View style={styles.offCard}>
+            <Text style={styles.offCardText}>
+              You fixed a barcode. Want fixes like this shared with Open Food Facts so the next person gets a hit? Off by default.
+            </Text>
+            <View style={styles.offCardRow}>
+              <TouchableOpacity onPress={onDismissOffCard} hitSlop={8} accessibilityRole="button" accessibilityLabel="Not now">
+                <Text style={styles.offCardDismiss}>Not now</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => { onDismissOffCard(); navigation.navigate('SettingsPrivacy'); }}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Open sharing settings"
+              >
+                <Text style={styles.offCardCta}>Sharing settings</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : null}
+
         {entries.length === 0 ? (
           <EmptyDiary
             onAdd={() => addFood('meal_1')}
@@ -807,6 +843,17 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   macroRingsWrap: { marginBottom: spacing.lg },
+  offCard: {
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
+    padding: spacing.md, marginBottom: spacing.lg,
+  },
+  offCardText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  offCardRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.lg },
+  offCardDismiss: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textMuted },
+  offCardCta: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   addMealRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, minHeight: 44,

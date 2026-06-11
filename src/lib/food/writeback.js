@@ -25,6 +25,10 @@ import { track as trackEvent } from '../engineTelemetry';
 
 const CONSENT_KEY = '@volyume_off_writeback_consent_v1';
 const QUEUE_KEY   = '@volyume_off_writeback_queue_v1';
+// COMP-022 one-time Diary OFF-consent card (offered after a first completed
+// barcode-heal chain, never mid-task).
+const CHAIN_DONE_KEY = '@volyume_scan_chain_completed_v1';
+const OFF_CARD_DISMISSED_KEY = '@volyume_off_consent_card_dismissed_v1';
 
 const MAX_RETRIES = 3;
 const RETRY_BACKOFF_MS = [2000, 8000, 30000];
@@ -34,6 +38,27 @@ const USER_AGENT = 'Volyume/1.1 (https://volyume.app)';
 export async function getConsent() {
   const v = await AsyncStorage.getItem(CONSENT_KEY).catch(() => null);
   return v === '1';
+}
+
+// COMP-022: a barcode-heal chain finished (custom food saved with a barcode).
+// Marks that the one-time consent card is now eligible to appear.
+export async function markScanChainCompleted() {
+  await AsyncStorage.setItem(CHAIN_DONE_KEY, '1').catch(() => {});
+}
+
+export async function dismissOffConsentCard() {
+  await AsyncStorage.setItem(OFF_CARD_DISMISSED_KEY, '1').catch(() => {});
+}
+
+// Show once: after a first completed chain, only while consent is still off and
+// the card hasn't been dismissed. Consent already on (or dismissed) -> never.
+export async function shouldShowOffConsentCard() {
+  const [done, dismissed, consent] = await Promise.all([
+    AsyncStorage.getItem(CHAIN_DONE_KEY).catch(() => null),
+    AsyncStorage.getItem(OFF_CARD_DISMISSED_KEY).catch(() => null),
+    getConsent(),
+  ]);
+  return done === '1' && dismissed !== '1' && !consent;
 }
 
 export async function setConsent(on) {
