@@ -330,10 +330,16 @@ export function predictDeloadWeek(feedbackWindow = [], mesoWeek = 1, experience 
  * @param {number}   estimateFn     - function(exercises) => estimated minutes
  * @returns {{ exercises: Object[], restReduction: number, dropped: string[] }}
  */
-export function applyTimeCrunch(exercises, targetMinutes, estimateFn) {
+export function applyTimeCrunch(exercises, targetMinutes, estimateFn, options = {}) {
   if (!exercises?.length) {
     return { exercises: [], restReduction: 0.30, dropped: [] };
   }
+
+  // Starter-session bounds (COMP-013). Off by default: when neither is set the
+  // function behaves exactly as before for every existing caller. When set, a
+  // final deterministic trim (Step 3) caps the session to a finishable subset.
+  const { maxSetsPerExercise, maxExercises } = options;
+  const hasStarterTrim = maxSetsPerExercise != null || maxExercises != null;
 
   // Step 1: reduce rest by 30%
   const withReducedRest = exercises.map(ex => ({
@@ -341,7 +347,7 @@ export function applyTimeCrunch(exercises, targetMinutes, estimateFn) {
     restSec: Math.round((ex.restSec ?? 90) * 0.70),
   }));
 
-  if (estimateFn(withReducedRest) <= targetMinutes) {
+  if (!hasStarterTrim && estimateFn(withReducedRest) <= targetMinutes) {
     return { exercises: withReducedRest, restReduction: 0.30, dropped: [] };
   }
 
@@ -370,6 +376,25 @@ export function applyTimeCrunch(exercises, targetMinutes, estimateFn) {
     if (idx !== -1) {
       dropped.push(result[idx].exerciseName);
       result.splice(idx, 1);
+    }
+  }
+
+  // Step 3 (starter sessions only): bound the session to a finishable subset.
+  // Runs as a final deterministic trim after the isolation drop — keep the
+  // first `maxExercises` in plan order and cap each at `maxSetsPerExercise`.
+  // Same lifts, same order, same per-set targets: a true subset of Day 1.
+  if (hasStarterTrim) {
+    if (maxExercises != null && result.length > maxExercises) {
+      for (const ex of result.slice(maxExercises)) {
+        if (!dropped.includes(ex.exerciseName)) dropped.push(ex.exerciseName);
+      }
+      result = result.slice(0, maxExercises);
+    }
+    if (maxSetsPerExercise != null) {
+      result = result.map(ex => ({
+        ...ex,
+        sets: Math.min(ex.sets ?? 0, maxSetsPerExercise),
+      }));
     }
   }
 

@@ -137,6 +137,74 @@ describe('applyTimeCrunch', () => {
   test('does not crash on empty input', () => {
     expect(() => applyTimeCrunch([], 30, () => 30)).not.toThrow();
   });
+
+  // COMP-013 starter-session bounds. Options default off → existing callers
+  // unchanged; when set, a final deterministic trim caps the subset.
+  describe('starter-session options (COMP-013)', () => {
+    const day1 = [
+      { exerciseName: 'Squat',        sets: 4, restSec: 120, compoundIsolation: 'compound' },
+      { exerciseName: 'Bench',        sets: 3, restSec: 120, compoundIsolation: 'compound' },
+      { exerciseName: 'Row',          sets: 3, restSec: 90,  compoundIsolation: 'compound' },
+      { exerciseName: 'Overhead',     sets: 3, restSec: 90,  compoundIsolation: 'compound' },
+      { exerciseName: 'Curl',         sets: 3, restSec: 60,  compoundIsolation: 'isolation' },
+      { exerciseName: 'Lateral Raise',sets: 3, restSec: 60,  compoundIsolation: 'isolation' },
+    ];
+    // A real-ish estimator: every set costs work + rest minutes.
+    const estimate = (exs) => exs.reduce((t, ex) => t + (ex.sets * (ex.restSec / 60 + 0.75)), 0);
+
+    test('caps to the first N exercises in plan order', () => {
+      const { exercises } = applyTimeCrunch(day1, 15, estimate, { maxExercises: 4, maxSetsPerExercise: 2 });
+      expect(exercises).toHaveLength(4);
+      expect(exercises.map(e => e.exerciseName)).toEqual(['Squat', 'Bench', 'Row', 'Overhead']);
+    });
+
+    test('caps every kept exercise at maxSetsPerExercise', () => {
+      const { exercises } = applyTimeCrunch(day1, 15, estimate, { maxExercises: 4, maxSetsPerExercise: 2 });
+      expect(exercises.every(e => e.sets <= 2)).toBe(true);
+    });
+
+    test('keeps the same lifts and order it kept — a true subset of Day 1', () => {
+      const { exercises } = applyTimeCrunch(day1, 15, estimate, { maxExercises: 4, maxSetsPerExercise: 2 });
+      const original = day1.map(e => e.exerciseName);
+      exercises.forEach((e, i) => {
+        expect(original).toContain(e.exerciseName);
+        if (i > 0) {
+          // order preserved relative to the original plan
+          expect(original.indexOf(e.exerciseName)).toBeGreaterThan(
+            original.indexOf(exercises[i - 1].exerciseName),
+          );
+        }
+      });
+    });
+
+    test('lands a compound-heavy Day 1 near a 15-minute budget, far below the full session', () => {
+      const { exercises } = applyTimeCrunch(day1, 15, estimate, { maxExercises: 4, maxSetsPerExercise: 2 });
+      const trimmed = estimate(exercises);
+      const full = estimate(day1);
+      // "About 15 minutes": the 4×2 subset lands in a believable band (~14-16),
+      // not the exact target — the blueprint flags this as an approximate floor.
+      expect(trimmed).toBeLessThanOrEqual(17);
+      // and is dramatically shorter than the un-trimmed Day 1.
+      expect(trimmed).toBeLessThan(full / 2);
+    });
+
+    test('is deterministic — identical input yields identical output', () => {
+      const a = applyTimeCrunch(day1, 15, estimate, { maxExercises: 4, maxSetsPerExercise: 2 });
+      const b = applyTimeCrunch(day1, 15, estimate, { maxExercises: 4, maxSetsPerExercise: 2 });
+      expect(a).toEqual(b);
+    });
+
+    test('options absent → behaviour unchanged (compounds protected, sets intact)', () => {
+      const { exercises } = applyTimeCrunch(day1, 15, estimate);
+      // every compound survives and keeps its full set count
+      const compounds = day1.filter(e => e.compoundIsolation === 'compound');
+      compounds.forEach((c) => {
+        const kept = exercises.find(e => e.exerciseName === c.exerciseName);
+        expect(kept).toBeDefined();
+        expect(kept.sets).toBe(c.sets);
+      });
+    });
+  });
 });
 
 describe('getBlockStatus', () => {
