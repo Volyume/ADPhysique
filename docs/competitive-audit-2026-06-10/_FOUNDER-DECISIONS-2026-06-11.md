@@ -723,7 +723,38 @@ was deferred to the host decision (now made: both surfaces).
 - `weeklyCoach.js` change is therefore comment-only in the live decision path
   (no behavioural diff there); `edPatternDetector`, floors, threshold untouched.
 
-### What remains from "do them all" (NOT built — for the next session)
-COMP-026 (engine, do first + fresh), COMP-004 door (both surfaces),
-COMP-029 light theme, COMP-019 Stage 2 widgets, and the COMP-024
-decision-promotion (after the clamp rework). Billing held throughout.
+### Session 7 build log — COMP-026 step-informed TDEE (LIVE, no shadow), 5 commits
+Built both halves of §13 live on `claude/main-branch-content-update-dcqicf`, each
+commit lint-clean with the full suite green. Final baseline: **0 errors, 4
+pre-existing warnings, 221 suites / 3429 tests pass (3 skip)**.
+- **(A) adaptive resize activated.** It was dead in production (the coach fetched
+  only 14d of weight → confidence capped at 'low'). c1: confidence week-count is
+  now distinct-calendar-day based (`ewmaCoverageWeeks`, can't be gamed by
+  same-day logs); `CoachOutputScreen` weight window 14d → 60d. Real users with
+  4+ weeks now get energy-balance-sized calorie changes instead of blunt fixed
+  ±100/125/150 steps.
+- **(B) step-trend modifier.** c2 pure `computeStepTrendModifier` + an
+  `updateGain` param (hard-clamped [0.5,0.65]); c3 wired into `runWeeklyCoach`
+  (optional `dailyStepsSeries`/`stepsTodayKey`, recompute-with-gain when active,
+  never on the rapid-loss path). §13 constants as the approved start.
+- **Validation substitute for the waived shadow (the no-shadow gate):** c4 added
+  BLOCKING engine-invariants — the gain can never weaken the FFM floor /
+  rapid-loss override / ±5% cap / cycleOverride / scoffPositive / ED lockout,
+  never create or reverse a change, and stays ∈ [0.5,0.65]; the full
+  `tests/simulator/scenarios/*` suite (incl. `bulk_aggressive`) stays green. No
+  regression — unlike COMP-024, the resize was already exercised by the
+  simulator, so activation carried no surprise.
+- c5 surfaces + telemetry: COMP-004 card line (up/down, ED-suppressed; hosts on
+  Progress + Diary = the founder's "both surfaces"), CoachOutput receipt
+  sentence, COMP-006 methodology section, `step_tdee_modifier_evaluated`
+  (no-PII) + `migrate_080` (file only, STAGING, founder applies).
+- **Carry-forward:** `migrate_080` joins `072`–`079` pending the founder's manual
+  apply (the event no-ops server-side until then). Copy gate covers the card
+  lines + receipt + methodology section. Constants pending the founder's maths
+  retune. No on-device surface needs eyes beyond the one card line.
+
+### What remains from "do them all" (NOT built)
+COMP-004 door (the TodayStrip tap-through deep-link to Progress — both-surfaces
+hosting is done; the strip cell link is the remaining piece), COMP-029 light
+theme, COMP-019 Stage 2 widgets, and the COMP-024 decision-promotion (after the
+clamp rework). Billing held throughout. **COMP-026 is DONE.**

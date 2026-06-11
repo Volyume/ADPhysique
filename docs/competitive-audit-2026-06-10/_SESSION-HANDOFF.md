@@ -7,6 +7,16 @@ live state. `_FOUNDER-DECISIONS-2026-06-11.md` holds the detailed decisions +
 the full per-commit build log. This file remains only the index of what the
 original audit produced (the 28 blueprints).
 
+**Status note (2026-06-11, session 7):** **COMP-026 step-informed TDEE shipped
+LIVE in full** (no shadow) — both the dormant adaptive-TDEE resize activation
+and the step-trend modifier, gated by new BLOCKING engine-invariants + the full
+simulator suite (no regression). Surfaces: COMP-004 card line (Progress +
+Diary), CoachOutput receipt, COMP-006 methodology section; telemetry
+`step_tdee_modifier_evaluated` + `migrate_080` (file only, STAGING, founder
+applies). Baseline **221 suites / 3432 tests**, 0 errors, 4 warnings. Next:
+COMP-004 tap-through door, then COMP-029 / COMP-019 Stage 2. See
+`_START-HERE-NEXT-SESSION.md` `⏩ RESTART HERE`.
+
 **Status note (2026-06-11, session 6):** **COMP-024 cycle-robust smoothing
 shipped LIVE** (founder dropped shadow mode for everything — see
 `_FOUNDER-DECISIONS-2026-06-11.md` §14). Live: the robust smoother

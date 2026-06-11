@@ -9,7 +9,7 @@ hand-off. Read this first. Two companion docs hold the detail:
 
 ---
 
-## ⏩ RESTART HERE — the next session's first move (written end of session 6)
+## ⏩ RESTART HERE — the next session's first move (written end of session 7)
 
 **Branch:** `claude/main-branch-content-update-dcqicf` (NOT main). Everything
 below is committed + pushed there. If the container reset and local is behind:
@@ -17,8 +17,18 @@ below is committed + pushed there. If the container reset and local is behind:
 `git merge --ff-only origin/claude/main-branch-content-update-dcqicf`.
 
 **Health baseline (verify before you start — `npm run lint && npm test`):**
-0 errors, 4 pre-existing warnings, **219 suites / 3395 tests** (3392 pass, 3
+0 errors, 4 pre-existing warnings, **221 suites / 3432 tests** (3429 pass, 3
 skip). Fewer suites / more warnings = a regression you introduced.
+
+**Session 7 shipped COMP-026 in full (LIVE, no shadow), 5 commits.** Both the
+dormant adaptive-TDEE resize activation (A) AND the step-trend modifier (B).
+Real users with 4+ weeks of weight now get energy-balance-sized calorie changes;
+a sustained, agreeing step shift speeds the update (gain 0.50→max 0.65), bounded
+by every senior safety clamp (proven by new BLOCKING invariants + the full
+simulator suite). Surfaces: COMP-004 card line (Progress + Diary), CoachOutput
+receipt, COMP-006 methodology section. Telemetry `step_tdee_modifier_evaluated`
++ `migrate_080` (file only, STAGING, founder applies). See impl-COMP-026's
+"SHIPPED LIVE — session 7" block + FOUNDER-DECISIONS §14 session-7 log.
 
 **Locked founder decisions from sessions 5–6 — DO NOT re-ask (detail in
 FOUNDER-DECISIONS §14):**
@@ -40,13 +50,12 @@ FOUNDER-DECISIONS §14):**
   New engine maths routes THROUGH those clamps, never around them.
 
 **Recommended next-step ORDER (all build live, no shadow):**
-1. **COMP-026** (adaptive-TDEE resize activation + step modifier) — the biggest
-   remaining engine change; it alters live **calorie sizing**. Do it FIRST and
-   FRESH. Read `impl-COMP-026-step-tdee.md` + its new "build-live" note + §13.
-   Heed the **COMP-024 lesson** (below): add a blocking safety invariant that a
-   genuine rapid loss + the FFM floors + the ±5% cap are never weakened by the
-   resize, exactly like COMP-024's F4.
-2. **COMP-004 door** (both surfaces) — pure UI, low risk, quick win.
+1. ~~**COMP-026**~~ — **DONE (session 7).** Built live with blocking safety
+   invariants + the full simulator suite as the gate. See the session-7 notes.
+2. **COMP-004 door** (the remaining piece) — the card now hosts on Progress AND
+   Diary (both-surfaces done). What's left is wiring the TodayStrip
+   logged-weight cell as the tap-through deep-link to the Progress trend card.
+   Pure UI, low risk, quick win — do this FIRST next.
 3. **COMP-029 light theme** — `expo-system-ui` + the 122-site token migration
    (JS/config; native rebuild on EAS).
 4. **COMP-019 Stage 2 widgets** — JS/config (native build on EAS; the

@@ -452,10 +452,56 @@ explanation.
 
 ---
 
+## SHIPPED LIVE — session 7, 2026-06-11 (no shadow)
+
+**Built in full, live on `claude/main-branch-content-update-dcqicf`, 5 commits,
+each lint-clean with the full suite green.** Both (A) the dormant adaptive-TDEE
+resize activation and (B) the step-trend modifier shipped. Hard lines held: no
+`main`, no `src/coaching/` safety edits, the 1,200/1,500 floors + the −1.5%/wk
+rapid-loss threshold + `edPatternDetector` thresholds untouched.
+
+- **c1 — Part A activation.** `nutritionEngine` confidence week-count is now
+  DISTINCT-calendar-day based (`ewmaCoverageWeeks`), not raw rows, so the wider
+  window can't be gamed by same-day weigh-ins (28 rows / 10 days = 1 week).
+  `CoachOutputScreen` widened its coach weight fetch 14d → 60d so a 4+ week user
+  reaches `'high'` confidence and the resize engages (it was dead in production).
+  Display untouched. 2 fixtures.
+- **c2 — Part B pure fn.** `computeStepTrendModifier({stepRows, todayKey,
+  adjustmentSign})` per §4.2: 42-day window, 14/28 medians, winsorise 40k,
+  10-of-14 + 14-of-28 gates, ≥1,500 & ≥20% candidacy, two-half persistence,
+  direction-agreement, gain 0.50→0.65. `computeAdaptiveTDEEAdjustment` gains an
+  `updateGain` param (default 0.5, **hard-clamped to [0.5,0.65]**). 19 fixtures.
+- **c3 — wiring (live).** `runWeeklyCoach` gains optional `dailyStepsSeries` +
+  `stepsTodayKey`; computes the modifier after the gain-0.5 sign is known,
+  recomputes with the raised gain when active so every clamp re-applies; never on
+  the rapid-loss path. Surfaces `stepModifier` + `stepTrendApplied`.
+  `CoachOutputScreen` reads 42 days of steps. 4 wiring tests.
+- **c4 — BLOCKING safety invariants** (the no-shadow gate). `updateGain` clamp
+  proven (junk→0.5); 300-case fuzz: gain bounds magnitude, never flips/creates;
+  FFM floor + rapid-loss + ±5% cap + cycleOverride + scoffPositive all stay
+  senior; a 500-case modifier fuzz proves gain ∈ [0.5,0.65] always; steps never
+  suppress a rapid-loss flag nor create a change on-target. All 12 simulator
+  scenarios green (incl. `bulk_aggressive`).
+- **c5 — surfaces + telemetry.** COMP-004 card line (up/down, ED-suppressed, no
+  numbers, hosts on Progress + Diary); CoachOutput receipt sentence (rides with
+  the adjustment); COMP-006 "How your steps inform the estimate" section
+  ("Steps are never given a calorie value"); `step_tdee_modifier_evaluated`
+  telemetry (flags/buckets only, no step counts/weight) + `migrate_080`
+  (file only, STAGING, founder applies).
+
+**Health baseline after: 0 errors, 4 pre-existing warnings, 221 suites / 3429
+tests pass (3 skip).** No simulator regression — unlike COMP-024's
+decision-promotion, the resize was already exercised by the simulator (which
+builds the full window); only the production 14-day caller kept it dead, so
+activation carried no surprise. **Constants are the §13-approved starting point;
+founder retunes at maths review.** `migrate_080` is the only carry-forward.
+
+---
+
 ## BUILD-APPROACH UPDATE — build LIVE, no shadow (session 6, 2026-06-11)
 
-**Not yet built.** This is the top remaining engine item; do it FIRST and FRESH
-next session.
+**[SUPERSEDED — shipped in session 7, see the block above.]** This was the top
+remaining engine item; built FIRST and FRESH next session as directed.
 
 The §13 "shadow mode (one full release)" rollout is **overridden** by the
 founder's no-shadow directive (see `_FOUNDER-DECISIONS-2026-06-11.md` §14): build
