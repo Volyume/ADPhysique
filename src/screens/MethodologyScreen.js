@@ -18,11 +18,13 @@
 // This page is a living document: if the engine maths change, the copy must be
 // re-reviewed against weeklyCoach.js / nutritionEngine.js.
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, spacing, radius, type } from '../styles/theme';
+import useAppStore from '../store/useAppStore';
+import { track } from '../lib/engineTelemetry';
 
 // The always-open opener.
 const INTRO =
@@ -102,11 +104,20 @@ function CollapsibleSection({ title, body, open, onToggle }) {
   );
 }
 
-export default function MethodologyScreen() {
+export default function MethodologyScreen({ route }) {
   // First collapsible section starts open so the page never reads as a wall of
   // closed rows; the rest are tap-to-open. Set is keyed by section key.
   const [openKeys, setOpenKeys] = useState({ [SECTIONS[0].key]: true });
   const toggle = (key) => setOpenKeys(prev => ({ ...prev, [key]: !prev[key] }));
+
+  // COMP-006: one-time trust-formation signal. source distinguishes the entry
+  // point (why_block / held_decisions / you_tab / paywall); no PII.
+  useEffect(() => {
+    const userId = useAppStore.getState().user?.id;
+    if (!userId) return;
+    track(userId, 'methodology_opened', { source: route?.params?.source ?? 'unknown' })?.catch?.(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>

@@ -103,6 +103,11 @@ export const TELEMETRY_EVENTS = Object.freeze([
   // Server allow-list: supabase/migrate_073_session_adjustment_telemetry.sql.
   { name: 'session_adjustment_shown',        deferred: false, panel: 2 },
   { name: 'session_adjustment_reverted',     deferred: false, panel: 2 },
+
+  // COMP-006: methodology page open (trust formation). source param only
+  // (why_block / held_decisions / you_tab / paywall); no PII.
+  // Server allow-list: supabase/migrate_074_methodology_telemetry.sql.
+  { name: 'methodology_opened',              deferred: false, panel: 2 },
 ]);
 
 /**
