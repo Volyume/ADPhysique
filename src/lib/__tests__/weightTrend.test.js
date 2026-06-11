@@ -122,4 +122,35 @@ describe('deriveWeightTrend', () => {
     // no numbers leak into ED-flag copy
     expect(stable.insight).not.toMatch(/\d/);
   });
+
+  // COMP-026 (B): the step-trend line.
+  describe('step-trend line', () => {
+    const base = {
+      ewmaData: series(30),
+      weeklyChange: 0.1,
+      adaptiveBurn: { confidence: 'high', adjustedTDEE: 2400, weeks: 4, actualKgPerWeek: 0.6, expectedKgPerWeek: -0.5 },
+    };
+
+    test('no stepTrend (or not applied) shows no line', () => {
+      expect(deriveWeightTrend(base).stepTrendLine).toBeNull();
+      expect(deriveWeightTrend({ ...base, stepTrend: { applied: false, direction: 1 } }).stepTrendLine).toBeNull();
+    });
+
+    test('applied + up direction shows the faster-update line', () => {
+      const vm = deriveWeightTrend({ ...base, stepTrend: { applied: true, direction: 1 } });
+      expect(vm.stepTrendLine).toMatch(/movement has risen/i);
+      expect(vm.stepTrendLine).not.toMatch(/\d/); // no numbers
+      expect(vm.stepTrendLine).not.toMatch(/step/i); // never a steps->kcal implication
+    });
+
+    test('applied + down direction shows the settling-sooner line', () => {
+      const vm = deriveWeightTrend({ ...base, stepTrend: { applied: true, direction: -1 } });
+      expect(vm.stepTrendLine).toMatch(/moving less/i);
+    });
+
+    test('suppressed entirely under an open ED flag, even when applied', () => {
+      const vm = deriveWeightTrend({ ...base, edFlagOpen: true, stepTrend: { applied: true, direction: -1 } });
+      expect(vm.stepTrendLine).toBeUndefined(); // ED branch returns before the line is built
+    });
+  });
 });

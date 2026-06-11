@@ -14,7 +14,7 @@
  */
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { getMorningWeights, getNutritionTargets, getOpenEdPatternFlag } from '../lib/database';
+import { getMorningWeights, getNutritionTargets, getOpenEdPatternFlag, getLatestCoachOutput } from '../lib/database';
 import { getRecentIntakeSummary } from '../lib/food/db';
 import { computeEWMA, computeWeeklyWeightChange, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
 import { deriveWeightTrend } from '../lib/weightTrend';
@@ -30,11 +30,12 @@ export default function useWeightTrend(userId) {
       return;
     }
     try {
-      const [weights, targets, recentIntake, edFlag] = await Promise.all([
+      const [weights, targets, recentIntake, edFlag, lastCoach] = await Promise.all([
         getMorningWeights(userId, 90),
         getNutritionTargets(userId).catch(() => null),
         getRecentIntakeSummary(userId).catch(() => null),
         getOpenEdPatternFlag(userId).catch(() => null),
+        getLatestCoachOutput(userId).catch(() => null),
       ]);
 
       const ewmaData = computeEWMA(weights || []);
@@ -53,11 +54,19 @@ export default function useWeightTrend(userId) {
         ? computeAdaptiveTDEEAdjustment({ ewmaData, prescribedKcal, currentTDEEEstimate, adherenceFactor })
         : null;
 
+      // COMP-026 (B): surface the step-trend line only in a week the latest
+      // coach run actually sized the calorie change with the modifier. The
+      // pure builder suppresses it under an open ED flag.
+      const stepTrend = lastCoach?.stepTrendApplied
+        ? { applied: true, direction: lastCoach?.stepModifier?.direction ?? 0 }
+        : null;
+
       const vm = deriveWeightTrend({
         ewmaData,
         weeklyChange,
         adaptiveBurn,
         edFlagOpen: !!edFlag,
+        stepTrend,
       });
 
       setResult({ ...vm, ewmaData, rawData: weights || [], loading: false });

@@ -46,6 +46,19 @@ const SECTIONS = [
       'away, without waiting for the two weeks.',
   },
   {
+    key: 'steps',
+    title: 'How your steps inform the estimate',
+    body:
+      'Steps are never given a calorie value, and they never add or remove calories ' +
+      'on their own. What they do is sharpen confidence: when your daily movement has ' +
+      'clearly shifted for a couple of weeks and that shift points the same way as ' +
+      'your weight trend, Precision Coaching lets your maintenance estimate update a ' +
+      'little faster. If your steps and your weight disagree, or the change is just a ' +
+      'noisy week, nothing changes. The shift can only speed up a change your weight ' +
+      'trend already justified. It can never reverse one, create one, or move past any ' +
+      'of the safety floors.',
+  },
+  {
     key: 'holds',
     title: 'Why holds happen',
     body:

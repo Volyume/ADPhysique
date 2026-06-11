@@ -799,7 +799,14 @@ export function runWeeklyCoach(inputs) {
     }
 
     if (change !== 0) {
-      calorieAdjustment = { change, note: calNote };
+      // COMP-026 (B) receipt: when the applied change was gain-resized by an
+      // active step trend, append one sentence (the WHY_LIBRARY receipt
+      // pattern). Rides with calorieAdjustment so it disappears too if a senior
+      // clamp (FFM floor / ED lockout) later nulls the change.
+      const note = stepTrendApplied
+        ? `${calNote} Your step trend backed this up, so the change is sized with more confidence.`
+        : calNote;
+      calorieAdjustment = { change, note };
     }
   }
 

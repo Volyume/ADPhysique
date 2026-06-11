@@ -136,6 +136,12 @@ export const TELEMETRY_EVENTS = Object.freeze([
   { name: 'streak_week_resolved',            deferred: false, panel: 1 },
   { name: 'streak_milestone_reached',        deferred: false, panel: 1 },
   { name: 'streak_paused',                   deferred: false, panel: 1 },
+
+  // COMP-026 (B): step-trend TDEE modifier evaluated on a coach run. Counts and
+  // flags only (active/direction/gain bucket, agreement, logged-day counts,
+  // adjustment magnitudes at 0.50 vs the applied gain); no PII, no step counts,
+  // no weight. Server allow-list: supabase/migrate_080_step_tdee_telemetry.sql.
+  { name: 'step_tdee_modifier_evaluated',    deferred: false, panel: 2 },
 ]);
 
 /**

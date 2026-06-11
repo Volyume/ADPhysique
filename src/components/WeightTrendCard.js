@@ -33,7 +33,7 @@ export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
   const {
     state, ewmaNow, ewmaData = [], rawData = [],
     showRate, weeklyChange, dot, insight, maintenance,
-    hasSparkline, showRaw = true,
+    hasSparkline, showRaw = true, stepTrendLine = null,
   } = vm;
 
   const dotColor = dot && DOT_COLORS[dot] ? DOT_COLORS[dot]() : null;
@@ -56,6 +56,7 @@ export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
     ewmaNow != null && state >= 2 ? `${formatBodyWeight(ewmaNow, bodyWeightUnits)} now.` : '',
     showRate && rateText ? rateText + '.' : '',
     insight,
+    stepTrendLine,
   ].filter(Boolean).join(' ');
 
   return (
@@ -112,6 +113,10 @@ export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
           </View>
         )
       )}
+
+      {/* COMP-026 (B): step-trend line, only in a week the modifier sized the
+          change. Already suppressed under an open ED flag by the view-model. */}
+      {stepTrendLine && <Text style={styles.stepTrendLine}>{stepTrendLine}</Text>}
     </View>
   );
 }
@@ -137,4 +142,5 @@ const styles = StyleSheet.create({
   maintenanceValue: { fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   maintenanceLabel: { fontSize: fontSize.xs, color: colors.textMuted },
   maintenanceBuilding: { fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 18 },
+  stepTrendLine: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17, fontStyle: 'italic' },
 });

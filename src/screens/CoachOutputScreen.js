@@ -1260,6 +1260,18 @@ export default function CoachOutputScreen({ navigation, route }) {
             current_intake_avg_kcal: result.ffmFloorContext?.recentIntakeAvgKcal ?? null,
           }).catch(() => {});
         }
+        // COMP-026 (B): emit when the step-trend modifier was actually evaluated
+        // (steps supplied, not on the rapid-loss path). Flags + buckets only:
+        // no step counts, no weight, no PII.
+        if (result.stepModifier && result.stepModifier.reason !== 'not_evaluated') {
+          trackEngineEvent(user.id, 'step_tdee_modifier_evaluated', {
+            active: !!result.stepModifier.active,
+            direction: result.stepModifier.direction ?? 0,
+            gain: result.stepModifier.gain ?? 0.5,
+            reason: result.stepModifier.reason ?? null,
+            applied: !!result.stepTrendApplied,
+          }).catch(() => {});
+        }
       } catch (e) {
         logError('CoachOutputScreen.engineTelemetry', e);
       }

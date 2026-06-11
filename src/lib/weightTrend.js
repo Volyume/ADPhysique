@@ -48,9 +48,26 @@ function isDiverging(actual, expected) {
  * @param {?number} input.weeklyChange computeWeeklyWeightChange output (kg/week) or null
  * @param {?object} input.adaptiveBurn computeAdaptiveTDEEAdjustment output or null
  * @param {boolean} input.edFlagOpen   true when an ED/wellbeing flag is open
+ * @param {?object} input.stepTrend    COMP-026 latest-run modifier state
+ *                                      { applied:boolean, direction:-1|0|1 }, or null
  * @returns {object} view-model for WeightTrendCard
  */
-export function deriveWeightTrend({ ewmaData, weeklyChange, adaptiveBurn, edFlagOpen = false } = {}) {
+// COMP-026 (B): the secondary line shown on the card in a week the step-trend
+// modifier sized the calorie change. British English, no numbers, no "gain",
+// no steps->kcal implication. Suppressed entirely under an open ED/wellbeing
+// flag (that branch returns before this runs), per impl-COMP-026 section 4.6.
+function stepTrendLineFor(stepTrend) {
+  if (!stepTrend || !stepTrend.applied) return null;
+  if (stepTrend.direction === 1) {
+    return 'Your daily movement has risen lately, so your maintenance estimate is updating a little faster.';
+  }
+  if (stepTrend.direction === -1) {
+    return 'You have been moving less lately, so your maintenance estimate is settling to match a little sooner.';
+  }
+  return null;
+}
+
+export function deriveWeightTrend({ ewmaData, weeklyChange, adaptiveBurn, edFlagOpen = false, stepTrend = null } = {}) {
   const data = Array.isArray(ewmaData) ? ewmaData : [];
   const n = data.length;
   const state = trendStateFor(n);
@@ -148,6 +165,7 @@ export function deriveWeightTrend({ ewmaData, weeklyChange, adaptiveBurn, edFlag
     maintenance: hasMaintenance
       ? { kcal: adaptiveBurn.adjustedTDEE, label: confidenceLabel(confidence, weeks), weeks }
       : { building: true },
+    stepTrendLine: stepTrendLineFor(stepTrend),
     edFlagOpen: false,
   };
 }
