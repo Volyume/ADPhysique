@@ -66,6 +66,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     exerciseNames = [], readOnly = false,
     routineId = null, detectedPRs = [], exerciseData = [],
     startedAt = null, endedAt = null,
+    // COMP-015: the session's nonzero adjustments, passed from the finish flow
+    // ([{ muscle, setDelta }]). Live path only; history (readOnly) has none.
+    sessionAdjustments = [],
   } = route.params || {};
   const { user, units, userProfile, session } = useAppStore();
   const toast = useToast();
@@ -741,6 +744,21 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </RevealSection>
         )}
 
+        {/* COMP-015: confirmation row — closes the loop at the moment the user
+            is about to give the next round of feedback. Live path only. */}
+        {!readOnly && sessionAdjustments.length > 0 && (
+          <RevealSection delay={1520}>
+            <View style={styles.adjustedSummaryRow}>
+              <Ionicons name="sparkles" size={15} color={colors.primary} />
+              <Text style={styles.adjustedSummaryText}>
+                Adjusted today: {sessionAdjustments.map(a =>
+                  `${(MUSCLE_DISPLAY_NAMES[a.muscle] || a.muscle).toLowerCase()}, ${a.setDelta < 0 ? '1 set fewer' : '1 set added'}`,
+                ).join(' · ')}
+              </Text>
+            </View>
+          </RevealSection>
+        )}
+
         {!readOnly && (
           <RevealSection delay={1580}>
           <View style={styles.section}>
@@ -1090,6 +1108,14 @@ const styles = StyleSheet.create({
   },
   feedbackToggleBtnText: { fontSize: fontSize.md, color: colors.textSecondary, fontWeight: fontWeight.medium },
   feedbackCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.lg, borderWidth: 1, borderColor: colors.border },
+  // COMP-015 confirmation row
+  adjustedSummaryRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginBottom: spacing.md,
+  },
+  adjustedSummaryText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
   ratingRow: { gap: spacing.sm },
   ratingLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   ratingLabel: { ...type.label, color: colors.textSecondary },

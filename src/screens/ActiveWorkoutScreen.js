@@ -118,12 +118,15 @@ export default function ActiveWorkoutScreen({ navigation }) {
     workoutStartTime: s.workoutStartTime,
     lastActivityAt: s.lastActivityAt,
     updateLastActivity: s.updateLastActivity,
+    sessionAdjustments: s.sessionAdjustments,
+    revertSessionAdjustment: s.revertSessionAdjustment,
+    tier: s.tier,
   })));
   const {
     user, units, activeWorkout, workoutExercises, currentExerciseIndex,
     setCurrentExerciseIndex, addExerciseToWorkout, addSetToCurrentExercise,
     startRestTimer, showPRCelebration, endWorkout, workoutStartTime,
-    lastActivityAt, updateLastActivity,
+    lastActivityAt, updateLastActivity, sessionAdjustments, revertSessionAdjustment, tier,
   } = store;
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   // Drop assisted machine regressions from swap suggestions for anyone past
@@ -202,6 +205,37 @@ export default function ActiveWorkoutScreen({ navigation }) {
   const exercise = currentEntry?.exercise;
   const routineExercise = currentEntry?.routineExercise;
   const isLastExercise = currentExerciseIndex === workoutExercises.length - 1;
+
+  // COMP-015: this session's adjustment for the current exercise, if any. Only
+  // Pro sessions ever carry adjustments; a reverted one is ignored. A nonzero
+  // setDelta changes the working-set target everywhere recommendedSets drives
+  // the session (orientation row, target line, persistent notification); a
+  // hold (delta 0) carries only a coaching line.
+  const sessionAdjustment = (tier === 'pro' && exercise?.id)
+    ? (sessionAdjustments || []).find(a => a.exerciseId === exercise.id && !a.reverted) ?? null
+    : null;
+  const adjustedSetCount = (sessionAdjustment && sessionAdjustment.setDelta !== 0)
+    ? sessionAdjustment.adjustedSets
+    : routineExercise?.recommendedSets;
+
+  // COMP-015: coverage telemetry — fire once per exercise when its adjustment
+  // line first becomes visible. muscle + direction + reasonCode only, no PII.
+  const shownAdjRef = useRef(new Set());
+  useEffect(() => {
+    if (!sessionAdjustment?.show || !exercise?.id) return;
+    if (shownAdjRef.current.has(exercise.id)) return;
+    shownAdjRef.current.add(exercise.id);
+    try {
+      // eslint-disable-next-line global-require
+      const { track } = require('../lib/engineTelemetry');
+      track(user?.id, 'session_adjustment_shown', {
+        muscle: sessionAdjustment.muscle,
+        direction: sessionAdjustment.setDelta < 0 ? 'drop' : sessionAdjustment.setDelta > 0 ? 'add' : 'hold',
+        reasonCode: sessionAdjustment.reasonCode,
+      })?.catch?.(() => {});
+    } catch (_) { /* telemetry best-effort */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionAdjustment?.show, exercise?.id]);
 
   // Superset pairing: two adjacent entries sharing a supersetGroupId are paired.
   const currentSGI = workoutExercises[currentExerciseIndex]?.supersetGroupId ?? null;
@@ -475,14 +509,14 @@ export default function ActiveWorkoutScreen({ navigation }) {
       // notification when the user logged a warm-up before the first
       // working set. totalSetsForExercise is the *working* target.
       currentSetIndex: countProgressSets(loggedSets) + 1,
-      totalSetsForExercise: routineExercise?.recommendedSets,
+      totalSetsForExercise: adjustedSetCount, // COMP-015: reflect any session adjustment
       exerciseName: exercise?.name,
     }).catch(() => {});
     // Intentionally exclude elapsedSeconds, that's handled by
     // the throttled effect below. This effect responds only to
     // user-driven state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeWorkout?.id, loggedSets?.length, exercise?.name, routineExercise?.recommendedSets, workoutStartTime]);
+  }, [activeWorkout?.id, loggedSets?.length, exercise?.name, adjustedSetCount, workoutStartTime]);
 
   // Path 2: throttled elapsed-time refresh.
   useEffect(() => {
@@ -500,11 +534,11 @@ export default function ActiveWorkoutScreen({ navigation }) {
       // notification when the user logged a warm-up before the first
       // working set. totalSetsForExercise is the *working* target.
       currentSetIndex: countProgressSets(loggedSets) + 1,
-      totalSetsForExercise: routineExercise?.recommendedSets,
+      totalSetsForExercise: adjustedSetCount, // COMP-015
       exerciseName: exercise?.name,
     }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [elapsedSeconds, activeWorkout, loggedSets?.length, exercise?.name, routineExercise?.recommendedSets, workoutStartTime]);
+  }, [elapsedSeconds, activeWorkout, loggedSets?.length, exercise?.name, adjustedSetCount, workoutStartTime]);
 
   // Dismiss the persistent notification on screen unmount. Belt-and-
   // braces because endWorkout() / handleFinishWorkout also clear it,
@@ -1099,11 +1133,18 @@ export default function ActiveWorkoutScreen({ navigation }) {
                   syncWorkout(supabaseUserId, activeWorkout.id).catch(() => {});
                 }
               } catch (_) { /* tolerate */ }
+              // COMP-015: capture the session's real (nonzero, non-reverted)
+              // adjustments BEFORE endWorkout clears the slice, so the summary
+              // can show its confirmation row.
+              const finishedAdjustments = (useAppStore.getState().sessionAdjustments || [])
+                .filter(a => a.setDelta !== 0 && !a.reverted)
+                .map(a => ({ muscle: a.muscle, setDelta: a.setDelta }));
               endWorkout();
               // eslint-disable-next-line global-require
               try { require('../lib/notifications/activeWorkout').dismissActiveWorkoutNotification(); } catch (_) {}
               navigation.replace('WorkoutSummary', {
                 workoutId: activeWorkout.id,
+                sessionAdjustments: finishedAdjustments,
                 routineId: activeWorkout.routineId || null,
                 startedAt: activeWorkout.startedAt,
                 endedAt: Date.now(),
@@ -1158,7 +1199,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
   };
   const elapsedStr = `${elapsed.mins}:${elapsed.secs.toString().padStart(2, '0')}`;
 
-  const targetSets = routineExercise?.recommendedSets;
+  const targetSets = adjustedSetCount; // COMP-015: session-adjusted working-set target
   const workingLogged = countProgressSets(loggedSets);
   const targetComplete = targetSets && workingLogged >= targetSets;
 
@@ -1399,7 +1440,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
             <View style={styles.targetRow}>
               <Ionicons name="flag-outline" size={14} color={colors.textMuted} />
               <Text style={styles.targetText}>
-                Target: {routineExercise.recommendedSets || 3} sets · {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
+                Target: {adjustedSetCount || routineExercise.recommendedSets || 3} sets · {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
               </Text>
             </View>
           )}
@@ -1533,25 +1574,31 @@ export default function ActiveWorkoutScreen({ navigation }) {
             })()}
 
             {/* Line 3: coaching line, max one, first working set only.
-                Priority: stalled advice over coach reason. Absent while
-                the deload banner is showing (one context line at a time).
-                Tap opens the exercise info sheet. */}
+                Priority (COMP-015): session adjustment > stalled advice >
+                coach reason. Absent while the deload banner is showing (one
+                context line at a time; deload never co-occurs with an
+                adjustment — the engine is silent on deload weeks). Tap opens
+                the exercise info sheet, including the Adjusted today section. */}
             {currentSet.setType !== 'warmup' && workingLogged === 0 &&
-              !(isDeloadWeek && !deloadDismissed) && (stalledAdvice || targetReason) && (
+              !(isDeloadWeek && !deloadDismissed) && (sessionAdjustment?.show || stalledAdvice || targetReason) && (
               <TouchableOpacity
                 style={styles.coachLine}
                 onPress={() => setShowExecution(true)}
                 hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
                 accessibilityRole="button"
-                accessibilityLabel={stalledAdvice
-                  ? `Same weight 3 sessions running. Try ${stalledAdvice.w0 + 2.5} ${units} times ${Math.max(1, stalledAdvice.r0 - 1)}, or stay at ${stalledAdvice.w0} ${units} and push for ${stalledAdvice.r0 + 1}.`
-                  : targetReason}
+                accessibilityLabel={sessionAdjustment?.show
+                  ? `${sessionAdjustment.reasonText} Double-tap for details and to restore the plan.`
+                  : stalledAdvice
+                    ? `Same weight 3 sessions running. Try ${stalledAdvice.w0 + 2.5} ${units} times ${Math.max(1, stalledAdvice.r0 - 1)}, or stay at ${stalledAdvice.w0} ${units} and push for ${stalledAdvice.r0 + 1}.`
+                    : targetReason}
               >
                 <Ionicons name="sparkles-outline" size={13} color={colors.primary} style={{ marginTop: spacing.xxs }} />
                 <Text style={styles.coachLineText} numberOfLines={2}>
-                  {stalledAdvice
-                    ? `Same weight 3 sessions running. Try ${stalledAdvice.w0 + 2.5}${units} × ${Math.max(1, stalledAdvice.r0 - 1)}, or stay at ${stalledAdvice.w0}${units} and push for ${stalledAdvice.r0 + 1}.`
-                    : targetReason}
+                  {sessionAdjustment?.show
+                    ? sessionAdjustment.reasonText
+                    : stalledAdvice
+                      ? `Same weight 3 sessions running. Try ${stalledAdvice.w0 + 2.5}${units} × ${Math.max(1, stalledAdvice.r0 - 1)}, or stay at ${stalledAdvice.w0}${units} and push for ${stalledAdvice.r0 + 1}.`
+                      : targetReason}
                 </Text>
                 <Ionicons name="chevron-forward" size={13} color={colors.textSecondary} style={{ marginTop: spacing.xxs }} />
               </TouchableOpacity>
@@ -2070,10 +2117,40 @@ export default function ActiveWorkoutScreen({ navigation }) {
               <View style={styles.infoTargetRow}>
                 <Ionicons name="checkmark-circle-outline" size={14} color={colors.primary} />
                 <Text style={styles.infoTarget}>
-                  {routineExercise.recommendedSets} sets of {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
+                  {adjustedSetCount || routineExercise.recommendedSets} sets of {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
                 </Text>
               </View>
             ) : null}
+
+            {/* COMP-015: Adjusted today — the reason, the plain-words signals,
+                and the one-tap revert. Shown for any visible adjustment; the
+                revert button only when there's a real set change to undo. */}
+            {sessionAdjustment?.show ? (
+              <View style={styles.adjustedSection}>
+                <View style={styles.adjustedHeader}>
+                  <Ionicons name="sparkles" size={14} color={colors.primary} />
+                  <Text style={styles.adjustedTitle}>Adjusted today</Text>
+                </View>
+                <Text style={styles.adjustedReason}>{sessionAdjustment.reasonText}</Text>
+                {sessionAdjustment.signals?.lastTrainedAt ? (
+                  <Text style={styles.adjustedSignal}>
+                    Last trained {new Date(sessionAdjustment.signals.lastTrainedAt).toLocaleDateString(undefined, { weekday: 'long' })}.
+                  </Text>
+                ) : null}
+                {sessionAdjustment.setDelta !== 0 ? (
+                  <TouchableOpacity
+                    style={styles.adjustedRevertBtn}
+                    onPress={() => { revertSessionAdjustment(exercise.id); setShowExecution(false); }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Use planned sets instead. ${routineExercise?.recommendedSets ?? ''} sets as written.`}
+                  >
+                    <Ionicons name="arrow-undo-outline" size={15} color={colors.primary} />
+                    <Text style={styles.adjustedRevertText}>Use planned sets instead</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ) : null}
+
             <Text style={styles.infoNotesLabel}>How to do it</Text>
             <Text style={styles.infoNotes}>
               {routineExercise?.notes || FORM_TIPS[exercise?.name] || exercise?.notes || 'No coaching notes yet for this exercise.\n\nIf you\'re not sure how much weight to use, start light. Pick something you could comfortably lift 15 to 20 times. Getting comfortable with the movement matters more than the weight, especially early on.\n\nFocus on controlled movement, feel the target muscle working, and stop a couple of reps before you truly cannot do any more.'}
@@ -2348,6 +2425,23 @@ const styles = StyleSheet.create({
   infoMuscle: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.sm },
   infoNotesLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.5, marginBottom: spacing.xs, marginTop: spacing.sm },
   infoNotes: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 22 },
+  // COMP-015 "Adjusted today" section in the info sheet
+  adjustedSection: {
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, 0.376),
+    padding: spacing.md,
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  adjustedHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  adjustedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary, letterSpacing: 0.5 },
+  adjustedReason: { fontSize: fontSize.sm, color: colors.textPrimary, lineHeight: 20 },
+  adjustedSignal: { fontSize: fontSize.xs, color: colors.textMuted },
+  adjustedRevertBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs, paddingVertical: spacing.xs },
+  adjustedRevertText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
   targetBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.successBg, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.success },
   targetBannerText: { fontSize: fontSize.sm, color: colors.success, fontWeight: fontWeight.semibold, flex: 1 },
   // Superset heads-up modal

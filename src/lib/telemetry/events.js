@@ -97,6 +97,12 @@ export const TELEMETRY_EVENTS = Object.freeze([
     deferralReason: 'per-type events already cover Panel 2; umbrella duplicates without adding signal' },
   { name: 'held_decision_cleared',           deferred: true, panel: 2,
     deferralReason: 'same as held_decision_created' },
+
+  // COMP-015: visible session autoregulation. coverage + trust metrics.
+  // Payloads carry muscle keys + direction only, never training content.
+  // Server allow-list: supabase/migrate_073_session_adjustment_telemetry.sql.
+  { name: 'session_adjustment_shown',        deferred: false, panel: 2 },
+  { name: 'session_adjustment_reverted',     deferred: false, panel: 2 },
 ]);
 
 /**

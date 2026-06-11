@@ -1020,6 +1020,41 @@ const useAppStore = create((set, get) => ({
     _persistActiveWorkout(get());
   },
 
+  // COMP-015: the one-tap "Use planned sets instead". Marks the adjustment
+  // reverted (so the set count + line fall back to the plan immediately) and
+  // logs session_adjustment_reverted, which both feeds revert-memory (two
+  // reverts per muscle per meso stops the engine adjusting it) and the
+  // telemetry trust metric. Best-effort logging; the UI revert is instant.
+  revertSessionAdjustment: (exerciseId) => {
+    const list = get().sessionAdjustments || [];
+    const target = list.find(a => a.exerciseId === exerciseId && !a.reverted);
+    if (!target) return;
+    set({ sessionAdjustments: list.map(a => (a.exerciseId === exerciseId ? { ...a, reverted: true } : a)) });
+    _persistActiveWorkout(get());
+    try {
+      // eslint-disable-next-line global-require
+      const { createAdaptationEvent } = require('../lib/database');
+      createAdaptationEvent({
+        mesocycleWeekId: get().activeWorkout?.mesocycleWeekId ?? null,
+        muscle: target.muscle,
+        exerciseId,
+        decision: 'session_adjustment_reverted',
+        delta: 0,
+        reasonCode: 'session_adjustment_reverted',
+        reasonText: 'You restored the planned sets.',
+        signals: { revertedReasonCode: target.reasonCode, originalDelta: target.setDelta },
+      }).catch(() => {});
+    } catch (_) { /* best-effort */ }
+    try {
+      // eslint-disable-next-line global-require
+      const { track } = require('../lib/engineTelemetry');
+      track(get().user?.id, 'session_adjustment_reverted', {
+        muscle: target.muscle,
+        direction: target.setDelta < 0 ? 'drop' : 'add',
+      })?.catch?.(() => {});
+    } catch (_) {}
+  },
+
   setActiveWorkout: (workout) => set({ activeWorkout: workout }),
   setWorkoutExercises: (next) => {
     set((state) => ({
