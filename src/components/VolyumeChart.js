@@ -183,7 +183,9 @@ export default function VolyumeChart({
               key={`bar-${i}`}
               x={b.x} y={b.y} width={b.w} height={b.h} rx={2}
               fill={b.color}
-              opacity={activeIndex >= 0 && activeIndex !== i ? 0.4 : 1}
+              // Bound by bars.length so a stale index (e.g. after the window
+              // narrows) dims nothing rather than every bar.
+              opacity={activeIndex >= 0 && activeIndex < bars.length && activeIndex !== i ? 0.4 : 1}
             />
           ))}
         </Svg>
