@@ -16,7 +16,7 @@ If git status shows main, stop and switch before doing anything.
 Google Play Billing is live and charging real users.
 Before editing any billing file: state exactly what you are changing and why.
 Wait for explicit "proceed". No exceptions. No small billing changes.
-Product IDs volyume_pro_monthly and volyume_pro_annual never change.
+Product IDs pro_monthly and pro_annual never change.
 
 **Never touch the coaching engine AI boundary.**
 The Precision Coaching engine is deterministic. No LLM. No AI. No randomness.

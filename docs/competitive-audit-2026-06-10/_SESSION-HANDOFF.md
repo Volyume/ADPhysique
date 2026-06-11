@@ -1,5 +1,10 @@
 # Session handoff — competitive audit 2026-06-10
 
+**2026-06-11 update: the questionnaire in "Next session" below has been
+answered. `_FOUNDER-DECISIONS-2026-06-11.md` is now the authoritative
+record of those decisions and the build queue. This file remains the index
+of what the audit produced.**
+
 This file is the authoritative entry point for the next session. It supersedes
 the `PENDING` section at the bottom of `implementation/.blueprint-summaries-scratch.md`
 (that list named COMP-005/007/009/010/011 as pending — they are all DONE now).
