@@ -1,4 +1,5 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,6 +26,32 @@ const SEVERITY_STYLE = {
   1: { icon: 'alert-circle-outline',       color: colors.warning },
   2: { icon: 'warning-outline',            color: colors.error },
 };
+
+// COMP-005: which monthly recap the Recaps tile / ephemeral card opens. The last
+// completed calendar month when the user was training before this month began;
+// otherwise the current month-to-date (so a just-unlocked user in their first
+// month sees "June so far" rather than an empty last month). Local time, like
+// the app's week rule. Returns RecapStory route params.
+function recentMonthRecapParams(earliestWorkoutAt) {
+  const now = new Date();
+  const curMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+  const startOfTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
+  if (earliestWorkoutAt != null && earliestWorkoutAt < curMonthStart) {
+    return {
+      variant: 'month',
+      startMs: prevMonthStart,
+      endMs: curMonthStart,
+      monthLabel: format(new Date(prevMonthStart), 'MMMM'),
+    };
+  }
+  return {
+    variant: 'month',
+    startMs: curMonthStart,
+    endMs: startOfTomorrow,
+    monthLabel: `${format(new Date(curMonthStart), 'MMMM')} so far`,
+  };
+}
 
 export default function AnalyticsScreen({ navigation }) {
   const user = useAppStore(s => s.user);
@@ -54,10 +81,26 @@ export default function AnalyticsScreen({ navigation }) {
   const {
     loading, refreshing,
     insights, weeklyVolume, prBars, prWindow,
-    recentSessions, allSets, earliestWorkoutAt,
+    recentSessions, allSets, earliestWorkoutAt, completedWorkoutCount,
     hasData, enoughForTrends,
     handleDismiss, handlePrWindowToggle, handleRefresh,
   } = useProgressData();
+
+  // COMP-005: ephemeral recap card — for the first 7 days of the month, once
+  // the user has unlocked recaps, a one-line nudge at the top of the insight
+  // stack. Dismissable; gone after first open or day 7 (per-month key).
+  const [recapCardHidden, setRecapCardHidden] = useState(true);
+  const recapMonthKey = format(new Date(), 'yyyy-MM');
+  useEffect(() => {
+    if (new Date().getDate() > 7 || completedWorkoutCount < 10) { setRecapCardHidden(true); return; }
+    AsyncStorage.getItem(`@volyume_recap_card_${recapMonthKey}`)
+      .then(v => setRecapCardHidden(v === 'dismissed'))
+      .catch(() => setRecapCardHidden(false));
+  }, [completedWorkoutCount, recapMonthKey]);
+  const dismissRecapCard = () => {
+    setRecapCardHidden(true);
+    AsyncStorage.setItem(`@volyume_recap_card_${recapMonthKey}`, 'dismissed').catch(() => {});
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -94,6 +137,30 @@ export default function AnalyticsScreen({ navigation }) {
               Your progress charts will appear here after your first few sessions. Log a workout to get started.
             </Text>
           </View>
+        )}
+
+        {/* COMP-005: ephemeral recap nudge */}
+        {!recapCardHidden && (
+          <TouchableOpacity
+            style={styles.recapCard}
+            activeOpacity={0.85}
+            onPress={() => { dismissRecapCard(); navigation.navigate('RecapStory', recentMonthRecapParams(earliestWorkoutAt)); }}
+            accessibilityRole="button"
+            accessibilityLabel="Open your monthly recap, about 45 seconds"
+          >
+            <Ionicons name="sparkles" size={18} color={colors.primary} />
+            <Text style={styles.recapCardText}>
+              Your {recentMonthRecapParams(earliestWorkoutAt).monthLabel.replace(' so far', '')} recap is ready · 45 seconds
+            </Text>
+            <TouchableOpacity
+              onPress={dismissRecapCard}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss"
+            >
+              <Ionicons name="close" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+          </TouchableOpacity>
         )}
 
         {/* ── 2 · Insight Stack ─────────────────────────────── */}
@@ -199,39 +266,45 @@ export default function AnalyticsScreen({ navigation }) {
             <NavTile icon="trending-up" color={colors.warning} label="Weight" onPress={() => navigation.navigate('BodyMetrics')} />
             <NavTile icon="time" color={colors.textSecondary} label="Full History" onPress={() => navigation.navigate('WorkoutHistory')} />
             {(() => {
-              // Year of Lifts unlocks once the user has 365 days of
-              // training history. Until then it shows a locked state
-              // with the remaining days so the user has a concrete
-              // milestone to look forward to.
+              // COMP-005: Recaps replaces the year-long locked Year-of-Lifts
+              // tile. It unlocks after 10 logged sessions (~a fortnight, not a
+              // year) and opens the most recent monthly recap. Year of Lifts
+              // stays the annual crown but only appears once it has unlocked,
+              // so it is never shown dimmed for a year.
+              const RECAP_GATE = 10;
+              const recapUnlocked = completedWorkoutCount >= RECAP_GATE;
+              const toGo = Math.max(0, RECAP_GATE - completedWorkoutCount);
+              return (
+                <NavTile
+                  icon="sparkles-outline"
+                  color={colors.textSecondary}
+                  label="Recaps"
+                  locked={!recapUnlocked}
+                  lockedSub={`${toGo} session${toGo === 1 ? '' : 's'} to go`}
+                  onPress={() => {
+                    if (!recapUnlocked) {
+                      appAlert(
+                        'Recaps',
+                        `Your first monthly recap unlocks after ${RECAP_GATE} logged sessions. ${toGo} to go.`,
+                      );
+                      return;
+                    }
+                    navigation.navigate('RecapStory', recentMonthRecapParams(earliestWorkoutAt));
+                  }}
+                />
+              );
+            })()}
+            {(() => {
+              // Year of Lifts: the annual crown, shown only once unlocked.
               const YEAR_MS = 365 * 86400000;
-              const elapsed = earliestWorkoutAt ? Date.now() - earliestWorkoutAt : 0;
-              const unlocked = elapsed >= YEAR_MS;
-              const daysLeft = earliestWorkoutAt
-                ? Math.max(0, Math.ceil((YEAR_MS - elapsed) / 86400000))
-                : 365;
+              const unlocked = earliestWorkoutAt && (Date.now() - earliestWorkoutAt) >= YEAR_MS;
+              if (!unlocked) return null;
               return (
                 <NavTile
                   icon="calendar-outline"
                   color={colors.textSecondary}
                   label="Year of Lifts"
-                  locked={!unlocked}
-                  lockedSub={
-                    earliestWorkoutAt
-                      ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} to go`
-                      : 'Start training to unlock'
-                  }
-                  onPress={() => {
-                    if (!unlocked) {
-                      appAlert(
-                        'Year of Lifts',
-                        earliestWorkoutAt
-                          ? `Your wrap-up unlocks after a full year of training. ${daysLeft} day${daysLeft === 1 ? '' : 's'} to go.`
-                          : 'Log your first session to start the year-long countdown.',
-                      );
-                      return;
-                    }
-                    navigation.navigate('YearOfLifts');
-                  }}
+                  onPress={() => navigation.navigate('YearOfLifts')}
                 />
               );
             })()}
@@ -448,6 +521,13 @@ const styles = StyleSheet.create({
   },
 
   // ── Insight rows ──
+  recapCard: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.primary,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginBottom: spacing.md,
+  },
+  recapCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   insightRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
     backgroundColor: colors.surface, borderRadius: radius.md,
