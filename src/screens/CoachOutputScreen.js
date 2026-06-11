@@ -10,7 +10,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getLatestCheckin,
   getRecentCheckins,
-  getMorningWeightsLast14Days,
   getMorningWeights,
   getWeeklySessionStats,
   getWeeklyPRCount,
@@ -1019,7 +1018,13 @@ export default function CoachOutputScreen({ navigation, route }) {
     async function load() {
       const checkin = await getLatestCheckin(user.id, weekStart);
       setCheckin(checkin);
-      const weights = await getMorningWeightsLast14Days(user.id);
+      // COMP-026 (A): the adaptive-TDEE resize needs ~4+ weeks of weight to
+      // reach 'high' confidence and size the calorie change from real energy
+      // balance instead of the blunt fixed step. A 14-day window capped
+      // confidence at 'low', leaving that path dead in production. Widen to a
+      // 60-day window; confidence is distinct-calendar-day based
+      // (ewmaCoverageWeeks) so the wider fetch can't be gamed by same-day logs.
+      const weights = await getMorningWeights(user.id, 60);
       const sessionStats = await getWeeklySessionStats(user.id, weekStart);
       const prs = await getWeeklyPRCount(user.id, weekStart);
       const nutrition = await getNutritionTargets(user.id);

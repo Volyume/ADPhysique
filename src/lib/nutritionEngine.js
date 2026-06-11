@@ -246,6 +246,23 @@ export function computeWeeklyWeightChange(ewmaData) {
 
 const KCAL_PER_KG = 7700; // energy in 1 kg of body tissue (mixed lean + fat)
 
+// Confidence week-count for the adaptive resize. Counts DISTINCT calendar
+// days the EWMA series covers, not raw rows, so several weigh-ins on the
+// same day can't inflate confidence: 28 rows spread across 10 days reads as
+// 1 week, not 4. (COMP-026 prerequisite: the production caller now supplies a
+// wide weight window, so a row-count week would over-credit a burst of
+// same-day logs.) Falls back to the row count when entries carry no usable
+// date, preserving byte-identical behaviour for date-less callers/tests.
+function ewmaCoverageWeeks(ewmaData) {
+  const days = new Set();
+  for (const p of ewmaData) {
+    const ms = p && p.date != null ? Date.parse(p.date) : NaN;
+    if (Number.isFinite(ms)) days.add(new Date(ms).toISOString().slice(0, 10));
+  }
+  const distinctDays = days.size > 0 ? days.size : ewmaData.length;
+  return Math.floor(distinctDays / 7);
+}
+
 // Compute TDEE adjustment from actual weight trend vs. expected.
 // Requires at least 3 weeks (21 data points) before producing a reliable correction.
 //
@@ -287,7 +304,7 @@ export function computeAdaptiveTDEEAdjustment({
     return { adjustmentKcal: 0, confidence: 'insufficient_data', insight: null, floorHeld: false };
   }
 
-  const weeks = Math.floor(ewmaData.length / 7);
+  const weeks = ewmaCoverageWeeks(ewmaData);
   const actualKgPerWeek = computeWeeklyWeightChange(ewmaData);
   if (actualKgPerWeek === null) return { adjustmentKcal: 0, confidence: 'insufficient_data', insight: null };
 
