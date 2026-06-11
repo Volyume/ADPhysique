@@ -171,6 +171,7 @@ export default function ScanLabelScreen({ navigation, route }) {
   const gotoManual = () => {
     navigation.replace('AddCustomFood', {
       mealSlot, entryDate, prefillBarcode, prefillName: productName || undefined,
+      from: 'scan_manual',
     });
   };
 
@@ -270,7 +271,7 @@ export default function ScanLabelScreen({ navigation, route }) {
           <View style={styles.missBanner} pointerEvents="none">
             <Text style={styles.missTitle}>
               {offline
-                ? `Barcode ${prefillBarcode} · saved on this phone`
+                ? `Barcode ${prefillBarcode}`
                 : `Barcode ${prefillBarcode} not in our database`}
             </Text>
             <Text style={styles.missBody}>
@@ -304,6 +305,13 @@ export default function ScanLabelScreen({ navigation, route }) {
               {onFront && !busy ? (
                 <TouchableOpacity onPress={skipName} hitSlop={12} style={styles.skipBtn} accessibilityRole="button" accessibilityLabel="Skip name">
                   <Text style={styles.skipText}>Skip name</Text>
+                </TouchableOpacity>
+              ) : null}
+              {/* COMP-022: a barcode heal must never dead-end mid-capture — a
+                  persistent escape that keeps the barcode (✕ would discard it). */}
+              {prefillBarcode && !busy ? (
+                <TouchableOpacity onPress={gotoManual} hitSlop={12} style={styles.skipBtn} accessibilityRole="button" accessibilityLabel="Type it in">
+                  <Text style={styles.skipText}>Type it in</Text>
                 </TouchableOpacity>
               ) : null}
             </>

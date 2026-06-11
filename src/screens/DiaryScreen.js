@@ -537,7 +537,7 @@ export default function DiaryScreen({ navigation }) {
           />
         </View>
 
-        {showOffCard ? (
+        {showOffCard && selectedDate === isoDate(new Date()) ? (
           <View style={styles.offCard}>
             <Text style={styles.offCardText}>
               You fixed a barcode. Want fixes like this shared with Open Food Facts so the next person gets a hit? Off by default.
