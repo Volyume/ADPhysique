@@ -33,11 +33,17 @@ const baseColors = {
   primaryDim: '#B45309',
   primaryBg: 'rgba(245, 166, 35, 0.12)',
 
-  // Semantic status
+  // Semantic status. warning is Okabe-Ito yellow (#F0E442), retuned off the
+  // amber axis (COMP-027): the old #FFC107 sat ~7 deg from brand amber
+  // #F5A623, so a 'watch' status mark and an amber action chip weren't
+  // reliably distinguishable, worst under the CVD palette where both are
+  // kept. Okabe-Ito yellow is the same hue in the default and CVD palettes
+  // and markedly lighter than both amber and the red, satisfying the
+  // accessible-traffic-light luminance rule. Consumed via stateColors.watch.
   success: '#4CAF50',
   successBg: 'rgba(76, 175, 80, 0.15)',
-  warning: '#FFC107',
-  warningBg: 'rgba(255, 193, 7, 0.15)',
+  warning: '#F0E442',
+  warningBg: 'rgba(240, 228, 66, 0.15)',
   error: '#F44336',
   errorBg: 'rgba(244, 67, 54, 0.15)',
 
@@ -162,7 +168,9 @@ export const fontSize = { ...baseFontSize };
 // Colour-blind safe (Okabe–Ito deuteranopia-tested swaps):
 //   success #4CAF50 (green)  → #56B4E9 (sky blue)
 //   error   #F44336 (red)    → #CC79A7 (reddish purple, distinct from amber)
-// Amber primary and warning yellow are kept (CVD-distinguishable already).
+// Amber primary and warning yellow are kept: warning is already Okabe-Ito
+// #F0E442 (COMP-027 retune), the same hue in both palettes and distinct from
+// amber, so no swap is needed.
 //
 // Larger text multiplies every fontSize token by 1.2 (rounded). The user
 // can also lean on the OS-level font size; this in-app toggle stacks
@@ -315,6 +323,23 @@ export const shadow = {
   },
 };
 
+// The state-colour grammar (COMP-027): one learned-once vocabulary for every
+// surface that signals a coaching state. Action words, not progress words:
+//   onTrack — nothing needed, inside the productive band
+//   watch   — worth a look, approaching a limit or drifting; no demand
+//   act     — the coach suggests a concrete, reversible change
+//   neutral — no state (unknown / suppressed / body-data under an ED flag)
+// Lazy getters aliasing the semantic tokens (same pattern as volumeColors)
+// so the CVD and higher-contrast swaps in applyAccessibility propagate for
+// free and there is never a second palette. Bg variants resolve the same
+// way via successBg / warningBg / errorBg.
+export const stateColors = {
+  get onTrack() { return colors.success; },
+  get watch()   { return colors.warning; },
+  get act()     { return colors.error; },
+  get neutral() { return colors.textMuted; },
+};
+
 // Lazy getters so that swapping colors.success / colors.error (color-blind
 // safe palette) or colors.textMuted (higher contrast) propagates to volume
 // bands without callers re-importing.
@@ -330,13 +355,17 @@ export const volumeColors = {
 // the theme), so it returns a status string and the colour is resolved here.
 // Getters so the colour-blind-safe and high-contrast palette swaps in
 // applyAccessibility propagate to the body heatmap and volume bars. (A2-038.)
+// Re-pointed onto stateColors (COMP-027): volume bands are a Class A
+// capacity surface, so they are the first consumer of the shared grammar
+// rather than a parallel mapping. Resolves identically (stateColors aliases
+// the same semantic tokens), so no visual change.
 const volumeStatusColors = {
-  get unknown()  { return colors.textMuted; },
-  get below()    { return colors.textMuted; },
-  get minimum()  { return colors.warning; },
-  get optimal()  { return colors.success; },
-  get near_mrv() { return colors.warning; },
-  get over_mrv() { return colors.error; },
+  get unknown()  { return stateColors.neutral; },
+  get below()    { return stateColors.neutral; },
+  get minimum()  { return stateColors.watch; },
+  get optimal()  { return stateColors.onTrack; },
+  get near_mrv() { return stateColors.watch; },
+  get over_mrv() { return stateColors.act; },
 };
 
 // Resolve a volume-status string to its themed colour, falling back to the

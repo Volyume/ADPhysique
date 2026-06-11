@@ -853,7 +853,9 @@ export default function HomeScreen({ navigation }) {
             accessibilityLabel="Recovery week suggested. Tap to review."
           >
             <View style={styles.deloadBannerLeft}>
-              <Ionicons name="battery-charging-outline" size={20} color={colors.warning} />
+              {/* Class C (COMP-027): recovery is rest-positive, the coach
+                  working for you, not a hazard. Primary amber, not warning. */}
+              <Ionicons name="battery-charging-outline" size={20} color={colors.primary} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.deloadBannerTitle}>Recovery week suggested</Text>
                 <Text style={styles.deloadBannerBody}>
@@ -2129,7 +2131,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.35), marginBottom: spacing.md,
   },
   deloadBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
-  deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.warning, marginBottom: spacing.xxs },
+  deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
   deloadBannerBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 17 },
 
   // Nutrition phase sync banner

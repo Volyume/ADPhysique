@@ -661,3 +661,42 @@ document.
   interaction with the expanded cell under the hero — ScrollView
   already uses `keyboardDismissMode="on-drag"`, verify auto-scroll into
   view on focus during implementation.
+
+---
+
+## Implementation note — Part A shipped 2026-06-11
+
+**Built (founder hue sign-off recorded in `_FOUNDER-DECISIONS-2026-06-11.md`):**
+- `stateColors` lazy getters (`onTrack`/`watch`/`act`/`neutral`) added to
+  `theme.js`, aliasing `success`/`warning`/`error`/`textMuted` — one system,
+  CVD swaps free.
+- `warning` retuned `#FFC107` → `#F0E442` (Okabe–Ito yellow), `warningBg` to
+  `rgba(240,228,66,0.15)`. The CVD comment block was updated: warning is now
+  Okabe–Ito and needs no swap.
+- `volumeStatusColors` internals re-pointed onto `stateColors` (no visual
+  change — identical resolution).
+- The three named Class B/C migrations: CoachOutput trend chip (off-target
+  caps at `watch`, never `act`; weight numeral forced `textPrimary`; neutral
+  under an open ED-pattern flag derived from `heldDecisions`); BodyMetrics
+  `DeltaBadge` (success/error → neutral `textMuted` arrow + `textPrimary`
+  figure — direction is not valence); Home deload banner icon **and** title
+  `warning` → `primary` (rest-positive).
+- Tests extended in `volumeStatusColor.test.js`: stateColors aliasing, the
+  `#F0E442` retune, grammar resolution, and the CVD-propagation contract
+  (onTrack/act swap, watch stays yellow in both palettes).
+
+**Call-site classification (the §A6 sweep, conclusion not a 144-row table):**
+the retune is purely the one hex — every `colors.warning` consumer inherits
+the new yellow automatically and needs no edit. `colors.error` consumers were
+left untouched on purpose: input-validation errors and destructive-action
+confirmations are *not* coaching states and keep `error`. Only the three
+semantic body-data/rest violations above were re-coloured. No bulk recolour
+was performed or is needed.
+
+**PARKED — Part B (the Home `TodayStrip` reorder).** Not built this session:
+it is a 3–4 day visual rebuild (new `TodayStrip.js` absorbing StepsCard +
+CardioCard + the weight input flow, hero-first reorder, morning-expanded
+state, small-screen/larger-text layouts), it overlaps COMP-004's surface
+decisions, and it carries the weigh-in-completion guardrail (§8 metric 2)
+that needs the founder's eyes on the live layout. Do Part B in an attended
+session. Part A stands alone and unblocks COMP-029 (light theme) as intended.

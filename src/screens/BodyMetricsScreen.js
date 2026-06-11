@@ -767,7 +767,7 @@ export default function BodyMetricsScreen() {
                   <View style={styles.bodyFatValueRow}>
                     <Text style={styles.bodyFatValue}>{latest.body_fat}%</Text>
                     {getDelta('body_fat') && (
-                      <DeltaBadge delta={parseFloat(getDelta('body_fat'))} units="%" small neutral />
+                      <DeltaBadge delta={parseFloat(getDelta('body_fat'))} units="%" small />
                     )}
                   </View>
                 </View>
@@ -1022,13 +1022,18 @@ export default function BodyMetricsScreen() {
   );
 }
 
-function DeltaBadge({ delta, units, small, neutral }) {
+// Class B body-data surface (COMP-027): on a body metric, direction is not
+// valence. Losing or gaining weight / fat / a measurement is neither "good"
+// (green) nor "bad" (red), so the badge carries no state colour: the arrow
+// and sign show direction, the figure stays textPrimary, the arrow textMuted.
+// (The `neutral` prop is retained for call-site compatibility; every delta is
+// neutral now.)
+function DeltaBadge({ delta, units, small }) {
   const isUp = delta > 0;
-  const color = neutral ? colors.textMuted : (isUp ? colors.success : colors.error);
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
-      <Ionicons name={isUp ? 'trending-up' : 'trending-down'} size={small ? 11 : 14} color={color} />
-      <Text style={{ fontSize: small ? 10 : fontSize.xs, color, fontWeight: fontWeight.semibold }}>
+      <Ionicons name={isUp ? 'trending-up' : 'trending-down'} size={small ? 11 : 14} color={colors.textMuted} />
+      <Text style={{ fontSize: small ? 10 : fontSize.xs, color: colors.textPrimary, fontWeight: fontWeight.semibold }}>
         {isUp ? '+' : ''}{delta} {units}
       </Text>
     </View>

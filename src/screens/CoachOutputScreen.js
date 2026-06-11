@@ -42,7 +42,7 @@ import { SkeletonCard } from '../components/Skeleton';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
 import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, computeDietBreakTargets, computeMacroCycle, computeRefeedDay, markApplied, isApplied } from '../lib/coachApply';
 import { logError, logWarn } from '../lib/errorLog';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, stateColors } from '../styles/theme';
 import {
   ED_PATTERN_LOCKOUT_COPY,
   ED_PATTERN_CLEARED_COPY,
@@ -1368,17 +1368,27 @@ export default function CoachOutputScreen({ navigation, route }) {
     sessionsPlanned,
   } = output;
 
-  // Trend chip: arrow icon + colour
+  // Trend chip: arrow icon + colour. Class B body-data surface (COMP-027):
+  // a body-weight trend never wears red. On target reads onTrack; off target
+  // caps at watch (worth a look, not a verdict); under an open ED-pattern
+  // flag the chip drops to neutral entirely. The weight numeral itself is
+  // always textPrimary (set on the value below), colour lives on the icon.
+  const edPatternOpen = !!(heldDecisions?.some(d => d.type === 'ed_pattern_lockout'));
   let trendIcon = 'remove-outline';
   let trendColor = colors.textMuted;
-  if (trend.delta !== null) {
+  if (trend.delta !== null && !edPatternOpen) {
+    const dirColor = trend.onTarget ? stateColors.onTrack : stateColors.watch;
     if (trend.delta > 0.01) {
       trendIcon = 'arrow-up-outline';
-      trendColor = trend.onTarget ? colors.success : colors.error;
+      trendColor = dirColor;
     } else if (trend.delta < -0.01) {
       trendIcon = 'arrow-down-outline';
-      trendColor = trend.onTarget ? colors.success : colors.error;
+      trendColor = dirColor;
     }
+  } else if (trend.delta !== null) {
+    // Flag open: keep the direction arrow, drop the valence colour.
+    trendIcon = trend.delta > 0.01 ? 'arrow-up-outline'
+      : trend.delta < -0.01 ? 'arrow-down-outline' : 'remove-outline';
   }
 
   const weightChipValue =
@@ -1427,7 +1437,8 @@ export default function CoachOutputScreen({ navigation, route }) {
             icon={trendIcon}
             iconColor={trendColor}
             value={weightChipValue}
-            valueColor={trend.delta !== null ? trendColor : colors.textMuted}
+            // Class B: no colour on a body-weight numeral, ever.
+            valueColor={colors.textPrimary}
           />
           <StatChip
             icon="barbell-outline"
