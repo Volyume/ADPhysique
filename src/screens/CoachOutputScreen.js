@@ -29,6 +29,7 @@ import {
   upsertPlannedMuscleVolume,
   setMesocycleWeekDeload,
   getCardioLogRange,
+  getDailyStepsRange,
   activityDayKey,
 } from '../lib/database';
 import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
@@ -1134,6 +1135,14 @@ export default function CoachOutputScreen({ navigation, route }) {
         cardioSessionsLogged = cardioWeekSummary.sessions;
       } catch (_) { /* cardio optional; coach runs without it */ }
 
+      // COMP-026 (B): the last ~42 days of daily steps feed the step-trend
+      // confidence modifier. Optional; the coach runs unchanged without it.
+      let dailyStepsSeries = null;
+      const stepsTodayKey = activityDayKey();
+      try {
+        dailyStepsSeries = await getDailyStepsRange(user.id, activityDayKey(Date.now() - 41 * 86400000), stepsTodayKey);
+      } catch (_) { /* steps optional; modifier stays inert (gain 0.50) */ }
+
       const result = runWeeklyCoach({
         checkin: engineCheckin,
         morningWeights: weights,
@@ -1149,6 +1158,9 @@ export default function CoachOutputScreen({ navigation, route }) {
         // Cardio compliance from the check-in (pre-filled from the log,
         // user-overridable) so the coach acts on it, not just the raw count.
         cardioCompliance: checkin?.cardioAdherence ?? null,
+        // COMP-026 (B) step-trend confidence modifier inputs.
+        dailyStepsSeries,
+        stepsTodayKey,
         goalPhase: userProfile?.goalPhase ?? 'maint',
         trainingGoal: userProfile?.trainingGoal ?? null,
         weeksInPhase,
