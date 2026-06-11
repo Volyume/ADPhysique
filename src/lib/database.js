@@ -4493,6 +4493,98 @@ export async function getYearOfLiftsData(userId, yearMs = null) {
   };
 }
 
+// COMP-005: window-bounded recap aggregates for the monthly recap story (and
+// reusable for any [startMs, endMs) window). getYearOfLiftsData is deliberately
+// left untouched so Year of Lifts stays byte-identical; this is a sibling, not a
+// refactor of it. Unlike the year function it (a) takes an explicit end bound,
+// (b) divides sessions by the window's actual weeks rather than a flat 52,
+// (c) surfaces the best single session by tonnage, and (d) optionally runs the
+// same aggregates over the immediately preceding window for delta captions.
+export async function getRecapData(userId, { startMs, endMs = Date.now(), compare = false } = {}) {
+  const d = await db();
+  const WEEK = 7 * 86400000;
+
+  const aggregate = async (s, e) => {
+    const workouts = await d.getAllAsync(
+      `SELECT w.id, w.started_at
+       FROM workouts w
+       WHERE w.user_id = ? AND w.is_completed = 1 AND w.started_at >= ? AND w.started_at < ?
+       ORDER BY w.started_at ASC`,
+      [userId, s, e],
+    );
+    const sets = await d.getAllAsync(
+      `SELECT ws.workout_id, ws.weight, ws.actual_reps, ws.exercise_id, ex.name AS exercise_name
+       FROM workout_sets ws
+       JOIN workouts w ON ws.workout_id = w.id
+       LEFT JOIN exercises ex ON ex.id = ws.exercise_id
+       WHERE ws.user_id = ? AND w.is_completed = 1 AND w.started_at >= ? AND w.started_at < ?
+         AND ws.set_type != 'warmup' AND ws.actual_reps > 0 AND ws.weight > 0`,
+      [userId, s, e],
+    );
+    return { workouts, sets };
+  };
+
+  const { workouts, sets } = await aggregate(startMs, endMs);
+  const totalSessions = workouts.length;
+  const totalSets = sets.length;
+  const tonnage = Math.round(sets.reduce((t, x) => t + x.weight * x.actual_reps, 0));
+  const weeks = Math.max(1, (endMs - startMs) / WEEK);
+  const avgSessionsPerWeek = totalSessions > 0 ? Math.round((totalSessions / weeks) * 10) / 10 : 0;
+
+  const exerciseCounts = {};
+  for (const x of sets) {
+    const k = x.exercise_name ?? 'Unknown';
+    exerciseCounts[k] = (exerciseCounts[k] ?? 0) + 1;
+  }
+  const topExercises = Object.entries(exerciseCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([name, count]) => ({ name, sets: count }));
+  const uniqueExercises = Object.keys(exerciseCounts).length;
+
+  // Best single session by tonnage in the window.
+  const tonnageByWorkout = {};
+  for (const x of sets) {
+    tonnageByWorkout[x.workout_id] = (tonnageByWorkout[x.workout_id] ?? 0) + x.weight * x.actual_reps;
+  }
+  let bestSession = null;
+  for (const w of workouts) {
+    const t = Math.round(tonnageByWorkout[w.id] ?? 0);
+    if (t > 0 && (!bestSession || t > bestSession.tonnage)) {
+      bestSession = { startedAt: w.started_at, tonnage: t };
+    }
+  }
+
+  // Best estimated 1RM per exercise this window (the personal_records table was
+  // never created locally; derive from logged sets, mirroring getYearOfLiftsData).
+  const bestByExercise = new Map();
+  for (const x of sets) {
+    if (!x.exercise_name) continue;
+    const e1rm = calculate1RM(x.weight || 0, x.actual_reps || 0);
+    if (!e1rm) continue;
+    const prev = bestByExercise.get(x.exercise_name);
+    if (!prev || e1rm > prev.value) {
+      bestByExercise.set(x.exercise_name, { value: parseFloat(e1rm.toFixed(1)), reps: x.actual_reps, exerciseName: x.exercise_name });
+    }
+  }
+  const topPRs = Array.from(bestByExercise.values()).sort((a, b) => b.value - a.value).slice(0, 5);
+
+  let previous = null;
+  if (compare) {
+    const len = endMs - startMs;
+    const { workouts: pw, sets: ps } = await aggregate(startMs - len, startMs);
+    previous = {
+      totalSessions: pw.length,
+      tonnage: Math.round(ps.reduce((t, x) => t + x.weight * x.actual_reps, 0)),
+    };
+  }
+
+  return {
+    startMs, endMs, totalSessions, totalSets, tonnage,
+    avgSessionsPerWeek, uniqueExercises, topExercises, bestSession, topPRs, previous,
+  };
+}
+
 export async function getBlockReflectionData(userId, mesocycleId) {
   const d = await db();
   const meso = await d.getFirstAsync('SELECT * FROM mesocycles WHERE id = ?', [mesocycleId]);
