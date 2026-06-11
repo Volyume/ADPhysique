@@ -99,6 +99,11 @@ export function ProLocked({ feature = 'This' }) {
         <Text style={styles.lockedBody}>
           Pro is the coaching layer: weekly check-ins, nutrition targets, the food diary, and your body metrics.
         </Text>
+        {/* COMP-025-A §4b: a held seat, not a wall. Reassures lapsed users
+            their data is intact and untouched. */}
+        <Text style={styles.lockedHeldSeat}>
+          Everything you logged is saved, and will be exactly as you left it if you come back.
+        </Text>
         <TouchableOpacity
           style={styles.lockedBtn}
           onPress={() => navigation.navigate('ProUpgrade')}
@@ -204,6 +209,11 @@ const styles = StyleSheet.create({
   },
   lockedBody: {
     fontSize: fontSize.sm, color: colors.textSecondary,
+    textAlign: 'center', lineHeight: 21,
+    marginBottom: spacing.sm,
+  },
+  lockedHeldSeat: {
+    fontSize: fontSize.sm, color: colors.textMuted,
     textAlign: 'center', lineHeight: 21,
     marginBottom: spacing.sm,
   },
