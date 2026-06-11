@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getEpisode, openEpisode, markReasonCaptured, markWinbackLaid, getLastFiredAt,
   clearEpisode, setStatedReturn, getStatedReturn,
+  shouldShowPostLapseSheet, markLapseSheetShown,
   winbackFireDate, canLayWinback,
   WINBACK_FLOOR_MS, DEFAULT_WINBACK_DELAY_DAYS, STATED_RETURN_DELAY_DAYS,
 } from '../winbackState';
@@ -108,6 +109,20 @@ describe('episode lifecycle', () => {
     expect(canLayWinback({ episode, lastFiredAt: lastFired, now: 1000 + DAY_MS })).toBe(false);
     // ...but allowed once the floor clears.
     expect(canLayWinback({ episode, lastFiredAt: lastFired, now: 1000 + WINBACK_FLOOR_MS + DAY_MS })).toBe(true);
+  });
+});
+
+describe('post-lapse sheet (one-time per episode)', () => {
+  test('not shown with no episode', async () => {
+    expect(await shouldShowPostLapseSheet()).toBe(false);
+  });
+
+  test('shown once, then suppressed after markLapseSheetShown', async () => {
+    await openEpisode(1);
+    expect(await shouldShowPostLapseSheet()).toBe(true);
+    await markLapseSheetShown();
+    expect(await shouldShowPostLapseSheet()).toBe(false);
+    expect((await getEpisode()).lapseSheetShown).toBe(true);
   });
 });
 

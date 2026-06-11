@@ -97,6 +97,24 @@ export async function openEpisode(lapseAt = Date.now()) {
   }
 }
 
+/**
+ * Whether the one-time post-lapse sheet should still be shown: an episode is
+ * open and its sheet hasn't been shown yet.
+ */
+export async function shouldShowPostLapseSheet() {
+  const ep = await getEpisode();
+  return !!ep && !ep.lapseSheetShown;
+}
+
+export async function markLapseSheetShown() {
+  try {
+    const ep = await getEpisode();
+    if (!ep || ep.lapseSheetShown) return;
+    ep.lapseSheetShown = true;
+    await AsyncStorage.setItem(EPISODE_KEY, JSON.stringify(ep));
+  } catch (_) { /* tolerate */ }
+}
+
 export async function markReasonCaptured() {
   try {
     const ep = await getEpisode();
