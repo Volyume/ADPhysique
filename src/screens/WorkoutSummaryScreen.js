@@ -242,6 +242,26 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     return () => { cancelled = true; };
   }, [readOnly, workoutId]);
 
+  // COMP-005: block-end recap. When the session just finished sits in the final
+  // planned week of the active mesocycle, offer the block story in-flow (no
+  // push needed — the user is right here). Heuristic detection: there is no
+  // status='completed' writer, so the final-week reached (weekIndex >=
+  // plannedWeeks) is the signal, tolerant of training past the planned end.
+  const [blockStory, setBlockStory] = useState(null);
+  useEffect(() => {
+    if (readOnly || !user?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const wk = await getCurrentMesocycleWeek(user.id);
+        if (!cancelled && wk && wk.mesocycleId && wk.plannedWeeks > 0 && wk.weekIndex >= wk.plannedWeeks) {
+          setBlockStory({ mesocycleId: wk.mesocycleId, name: wk.mesoName });
+        }
+      } catch (_e) {}
+    })();
+    return () => { cancelled = true; };
+  }, [readOnly, user?.id]);
+
   useEffect(() => {
     // Map feedback to adaptive engine scales per muscle, then run adaptive engine
     // soreness24hBefore: 1=fresh→2, 2=mild→3, 3=sore→4 (now sourced pre-workout)
@@ -744,6 +764,23 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </RevealSection>
         )}
 
+        {/* COMP-005: block-end recap, the in-flow moment at the end of a block. */}
+        {!readOnly && blockStory && (
+          <RevealSection delay={1480}>
+            <TouchableOpacity
+              style={styles.blockRecapRow}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('RecapStory', { variant: 'block', mesocycleId: blockStory.mesocycleId, blockName: blockStory.name })}
+              accessibilityRole="button"
+              accessibilityLabel="Watch your block story"
+            >
+              <Ionicons name="sparkles" size={16} color={colors.primary} />
+              <Text style={styles.blockRecapText}>Block complete. Watch your block story.</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+            </TouchableOpacity>
+          </RevealSection>
+        )}
+
         {/* COMP-015: confirmation row — closes the loop at the moment the user
             is about to give the next round of feedback. Live path only. */}
         {!readOnly && sessionAdjustments.length > 0 && (
@@ -1116,6 +1153,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginBottom: spacing.md,
   },
   adjustedSummaryText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  // COMP-005 block-end recap row
+  blockRecapRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.primary,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginBottom: spacing.md,
+  },
+  blockRecapText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   ratingRow: { gap: spacing.sm },
   ratingLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   ratingLabel: { ...type.label, color: colors.textSecondary },

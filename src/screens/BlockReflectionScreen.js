@@ -92,7 +92,20 @@ export default function BlockReflectionScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <BackHeader title="Block summary" />
+      <BackHeader
+        title="Block summary"
+        right={data ? (
+          // COMP-005: this analytic screen gains the story as its front door.
+          <TouchableOpacity
+            onPress={() => navigation.navigate('RecapStory', { variant: 'block', mesocycleId, blockName: data.meso?.name })}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Play block story"
+          >
+            <Ionicons name="play-circle-outline" size={24} color={colors.primary} />
+          </TouchableOpacity>
+        ) : null}
+      />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {loading && (
