@@ -754,7 +754,16 @@ pre-existing warnings, 221 suites / 3429 tests pass (3 skip)**.
   retune. No on-device surface needs eyes beyond the one card line.
 
 ### What remains from "do them all" (NOT built)
-COMP-004 door (the TodayStrip tap-through deep-link to Progress — both-surfaces
-hosting is done; the strip cell link is the remaining piece), COMP-029 light
-theme, COMP-019 Stage 2 widgets, and the COMP-024 decision-promotion (after the
-clamp rework). Billing held throughout. **COMP-026 is DONE.**
+COMP-029 light theme, COMP-019 Stage 2 widgets, and the COMP-024
+decision-promotion (after the clamp rework). Billing held throughout.
+**COMP-026 and COMP-004 are DONE.**
+
+### Session 7 (cont.) — COMP-004 door SHIPPED
+Per §14 "both surfaces": the WeightTrendCard now hosts on Progress (existing)
+AND on DiaryScreen (today only, below the macro rings; Diary is Pro so already
+gated). The Home TodayStrip logged-weight cell is the tap-through door —
+tap opens the Progress trend (deep-link + scroll-to-section), long-press still
+edits the weigh-in (so the correction path is preserved and the door is the
+primary tap). Logging an empty cell is untouched (weigh-in-completion path
+safe). **On-device review wanted (not a blocker):** the tap=door / long-press=
+edit swap on the daily weigh-in cell, and the Diary card placement.

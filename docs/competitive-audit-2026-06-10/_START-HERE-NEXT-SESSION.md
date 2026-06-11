@@ -52,12 +52,13 @@ FOUNDER-DECISIONS §14):**
 **Recommended next-step ORDER (all build live, no shadow):**
 1. ~~**COMP-026**~~ — **DONE (session 7).** Built live with blocking safety
    invariants + the full simulator suite as the gate. See the session-7 notes.
-2. **COMP-004 door** (the remaining piece) — the card now hosts on Progress AND
-   Diary (both-surfaces done). What's left is wiring the TodayStrip
-   logged-weight cell as the tap-through deep-link to the Progress trend card.
-   Pure UI, low risk, quick win — do this FIRST next.
+2. ~~**COMP-004 door**~~ — **DONE (session 7).** Card now hosts on Progress AND
+   Diary (today only); the TodayStrip logged cell taps through to the Progress
+   trend (long-press still edits). **On-device review wanted:** the tap=door /
+   long-press=edit swap on the daily weigh-in cell, and the Diary placement
+   (below the macro rings) — both honour §14 but a live app deserves eyes.
 3. **COMP-029 light theme** — `expo-system-ui` + the 122-site token migration
-   (JS/config; native rebuild on EAS).
+   (JS/config; native rebuild on EAS). **Next up.**
 4. **COMP-019 Stage 2 widgets** — JS/config (native build on EAS; the
    `@bacons/expo-apple-targets` issue-#175 spike still applies).
 5. **COMP-024 decision-promotion** (the held piece) — only if you first rework
