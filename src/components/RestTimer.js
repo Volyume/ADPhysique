@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, AppState } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, AppState, Dimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useShallow } from 'zustand/react/shallow';
@@ -10,6 +10,11 @@ import useAppStore from '../store/useAppStore';
 // component still uses imports from theme + store + haptics.
 import { playRestBeep, preloadRestBeeps } from '../lib/restSound';
 import { clampRestDelta } from '../lib/restTimerMath';
+
+// Compact variant on short screens (COMP-001 step 6): smaller numeral and a
+// 56pt row so the timer never pushes the set inputs below the fold. Module
+// scope per house pattern (every other screen reads Dimensions this way).
+const COMPACT_SCREEN = Dimensions.get('window').height < 700;
 
 // Two deltas only (COMP-001): the −30/+30 pair added visual weight without
 // covering anything long-press-repeat can't. Holding ±15 repeats at 200 ms.
@@ -146,6 +151,8 @@ export default function RestTimer() {
   }
   useEffect(() => () => stopRepeat(), []);
 
+  const compact = COMPACT_SCREEN;
+
   const isCountdown = restTimerActive && restTimerRemaining <= 3 && restTimerRemaining > 0;
   const isAlmostDone = restTimerRemaining <= 10 && restTimerActive;
 
@@ -171,7 +178,7 @@ export default function RestTimer() {
           knows when their rest is nearly up. We use 'polite' to avoid
           interrupting other VoiceOver / TalkBack output. */}
       <View
-        style={styles.row}
+        style={[styles.row, compact && styles.rowCompact]}
         accessible
         accessibilityLiveRegion="polite"
         accessibilityLabel={isCountdown
@@ -180,9 +187,9 @@ export default function RestTimer() {
       >
         <Ionicons name="timer-outline" size={18} color={isAlmostDone ? colors.warning : colors.primary} />
         {isCountdown ? (
-          <Text style={styles.countdownNum}>{restTimerRemaining}</Text>
+          <Text style={[styles.countdownNum, compact && styles.countdownNumCompact]}>{restTimerRemaining}</Text>
         ) : (
-          <Text style={[styles.timeText, isAlmostDone && styles.almostDone]}>{timeStr}</Text>
+          <Text style={[styles.timeText, compact && styles.timeTextCompact, isAlmostDone && styles.almostDone]}>{timeStr}</Text>
         )}
         <Text style={styles.label} numberOfLines={1}>{isCountdown ? 'seconds' : 'rest'}</Text>
         {TIME_ADJUSTMENTS.map(({ delta, label }) => {
@@ -243,6 +250,9 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
     letterSpacing: -0.5,
   },
+  rowCompact: { minHeight: 56 },
+  // eslint-disable-next-line no-restricted-syntax -- compact hero numeral on short screens
+  timeTextCompact: { fontSize: 24 },
   almostDone: { color: colors.warning },
   countdownNum: {
     fontSize: fontSize.xxxl,
@@ -252,6 +262,7 @@ const styles = StyleSheet.create({
     minWidth: 40,
     textAlign: 'center',
   },
+  countdownNumCompact: { fontSize: fontSize.xxl, minWidth: 32 },
   label: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
