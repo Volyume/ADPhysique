@@ -12,8 +12,9 @@ import {
   getActivePlan, getRoutinesForPlan, advancePlanNextWorkout,
   createAdaptationEvent, getCurrentMesocycleWeek,
   saveWeeklyCheckin, saveNextTimeNote, getRoutineWorkoutTonnages,
-  getRoutineById, getWorkoutById,
+  getRoutineById, getWorkoutById, getOpenEdPatternFlag,
 } from '../lib/database';
+import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 import { calculateWeeklyVolume, getVolumeStatus, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, VOLUME_LANDMARKS } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
@@ -101,6 +102,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [weeklyVolume, setWeeklyVolume] = useState({});
   const [saving, setSaving] = useState(false);
   const [completedWorkoutCount, setCompletedWorkoutCount] = useState(null);
+  // COMP-013: the calibrated first-session acknowledgement, shown only on the
+  // live summary of a user's very first completed session. null = not the first
+  // session, or suppressed under calmer experience / an open ED pattern flag
+  // (the header's neutral "Session Complete" is acknowledgement enough; no push).
+  const [firstSessionLine, setFirstSessionLine] = useState(null);
   // Default-expanded so the energy + sleep prompts surface naturally
   // at the end of the session. The coach engine relies on these
   // signals; hiding them behind a tap was making the post-workout
@@ -334,6 +340,20 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     const fourWeeksAgo = Date.now() - 28 * 24 * 60 * 60 * 1000;
     const completed = allWorkouts.filter(w => w.isCompleted && w.startedAt >= fourWeeksAgo);
     setCompletedWorkoutCount(completed.length);
+
+    // COMP-013: first completed session ever → the calibrated acknowledgement.
+    // Live summary only (never the read-only history view). The just-finished
+    // workout is already marked complete by the time this runs.
+    if (!readOnly) {
+      const totalCompleted = allWorkouts.filter(w => w.isCompleted).length;
+      if (totalCompleted === 1) {
+        let calm = false;
+        let edFlag = null;
+        try { calm = isCalm(await getWellbeingMode()); } catch (_) {}
+        try { edFlag = user?.id ? await getOpenEdPatternFlag(user.id) : null; } catch (_) {}
+        setFirstSessionLine((calm || edFlag) ? null : 'First session done. That is the hard part.');
+      }
+    }
 
     // For readOnly (history) view, load and group sets by exercise
     if (readOnly && workoutId) {
@@ -585,6 +605,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <Text style={styles.completionTitle}>Session Complete</Text>
           </View>
           <Text style={styles.completionDate}>{completionDate}</Text>
+          {firstSessionLine ? (
+            <Text style={styles.firstSessionLine}>{firstSessionLine}</Text>
+          ) : null}
         </View>
 
         <View style={styles.statsGrid}>
@@ -1096,6 +1119,7 @@ const styles = StyleSheet.create({
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   completionTitle: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
   completionDate: { fontSize: fontSize.sm, color: colors.textMuted },
+  firstSessionLine: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary, marginTop: spacing.xs },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   statBox: {
     flex: 1, minWidth: '45%', backgroundColor: colors.surface, borderRadius: radius.md,
