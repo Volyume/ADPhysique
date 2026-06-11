@@ -312,3 +312,35 @@ and the RED-S literature), not "lean mass", throughout the page copy.
 **No engine code changes.** COMP-006 is a new static screen + web page + two
 nav links; `weeklyCoach.js` / `whyThisTemplates.js` are NOT modified. Copy
 reviewed at PR (locked copy-in-principle approach).
+
+## 12. COMP-024 cycle-robust weight smoothing — engine maths gate (2026-06-11)
+Walked with the founder. Touches the coaching engine maths AND the ED-safety
+seam, so this is a maths-gate decision. Code facts verified: two distinct EWMAs
+(`nutritionEngine.js:171` fast ~0.28 display; `weeklyCoach.js:36` slow 0.1
+coaching+safety); `RAPID_LOSS_PCT_PER_WEEK = -1.5` (`edPatternDetector.js:30`);
+`cycleOverride` action-hold seam (`weeklyCoach.js:510/648/654/900/1085`).
+
+- **Algorithm — Candidate A (asymmetric Huber-clamped robust-innovation EWMA).**
+  Damps upward water-weight spikes, lets downward (loss) innovations pass
+  through. Keeps alpha=0.1 memory (no blanket lag). One clamp line + a MAD
+  helper. Candidate B (median prefilter) / C (dual-EWMA blend) NOT chosen.
+- **Scope — UNIVERSAL (all users), no bioSex branch.** Water-weight noise is
+  universal; avoids special-category inference, no medical claim, framed as
+  "water weight" never "cycle". The bioSex-conditioned alternative is rejected.
+- **Safety design — APPROVED.** Three-lock guard: (1) asymmetric clamp
+  (downward losses undamped); (2) the rapid-loss/ED detectors read their OWN
+  less-damped `safetyTrendPct`, and safety WINS any −1.5% disagreement; (3) F4
+  hard-gate test (synthetic −1.8%/wk must still fire `rapidLossOverride` +
+  ED-flag) becomes a permanent blocking engine-invariant. Calorie floors and the
+  −1.5% threshold untouched. `edPatternDetector.js` thresholds untouched.
+- **Constants — APPROVED as shadow starting point** (k≈1.5, alpha=0.1, MAD
+  window N≈14, scale floor 0.25 kg, downward knee 4·s); re-tuned after the
+  founder reviews real shadow divergence before any default flip.
+- **Rollout — SHADOW MODE MANDATORY** (blueprint requirement given the safety
+  seam): land behind a default-OFF flag, compute both trends, emit a no-PII
+  `weight_trend_shadow_divergence` telemetry event, promote consumers one at a
+  time (display/BodyMetrics first, never the safety series), founder reviews
+  divergence before any default change.
+- **The manual `cycleOverride` flag STAYS** — complementary, not replaced.
+  Smoothing fixes the trend READING; `cycleOverride` HOLDS calorie decisions.
+  Do not delete or auto-set it. ED safety system not modified.
