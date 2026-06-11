@@ -24,7 +24,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, AccessibilityInfo } from 'react-native';
 import Svg, {
-  Path, Line, Circle, Text as SvgText, Defs, LinearGradient, Stop,
+  Path, Line, Circle, Rect, Text as SvgText, Defs, LinearGradient, Stop,
 } from 'react-native-svg';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
@@ -65,7 +65,16 @@ export default function VolyumeChart({
   interactive = false,
   formatTooltip = null,
   accessibilityLabel,
+  // COMP-019 Stage 1b bar variant. variant='bar' renders compact bars (no axes)
+  // with per-bar colour from data[i].color; scrub dims the non-active bars and
+  // reports the active index via onScrubIndex so a host with no tooltip room
+  // (e.g. the 24px per-muscle volume rows) can show the value in its own layout.
+  variant = 'line',
+  barWidth = null,
+  barGap = 2,
+  onScrubIndex = null,
 }) {
+  const isBar = variant === 'bar';
   const gradId = useRef(`volyumeFill${Math.random().toString(36).slice(2, 9)}`).current;
   const [activeIndex, setActiveIndex] = useState(-1);
   const activeRef = useRef(-1);
@@ -99,7 +108,21 @@ export default function VolyumeChart({
   const baselineY = box.top + box.height;
   const span = max - min;
 
-  const points = values.length >= 2 ? plotPoints(values, box, min, max) : [];
+  // Bar layout (variant='bar'): 0-based heights, left-aligned, fixed or
+  // distributed width. Independent of the line `box`/padded domain.
+  const barMax = Math.max(...values, 1);
+  const barW = isBar
+    ? (barWidth ?? (values.length > 0 ? Math.max(1, (width - barGap * (values.length - 1)) / values.length) : 1))
+    : 0;
+  const bars = isBar ? values.map((v, i) => {
+    const h = v <= 0 ? 2 : Math.max(2, Math.round((v / barMax) * (height - 2)));
+    const x = i * (barW + barGap);
+    return { x, y: height - h, w: barW, h, cx: x + barW / 2, color: data[i]?.color || color };
+  }) : [];
+
+  const points = isBar
+    ? bars.map(b => ({ x: b.cx, y: b.y }))
+    : (values.length >= 2 ? plotPoints(values, box, min, max) : []);
 
   function scrubTo(touchX) {
     if (!points.length) return;
@@ -108,6 +131,7 @@ export default function VolyumeChart({
       activeRef.current = idx;
       setActiveIndex(idx);
       haptics.selection();
+      if (onScrubIndex) onScrubIndex(idx);
       if (formatTooltip) {
         const t = formatTooltip(idx);
         if (t) AccessibilityInfo.announceForAccessibility(`${t.title}${t.sub ? `, ${t.sub}` : ''}`);
@@ -117,6 +141,7 @@ export default function VolyumeChart({
   function endScrub() {
     activeRef.current = -1;
     setActiveIndex(-1);
+    if (onScrubIndex) onScrubIndex(null);
   }
 
   // Keep the latest scrub handlers in a ref so the (stable) gesture always calls
@@ -141,6 +166,32 @@ export default function VolyumeChart({
   }, []);
 
   if (values.length < 2) return null;
+
+  // Bar variant render: compact bars, the non-active bars dim while scrubbing.
+  // No axes and no overlay tooltip (the host shows the value via onScrubIndex).
+  if (isBar) {
+    const barChart = (
+      <View
+        style={{ width, height, backgroundColor }}
+        pointerEvents={interactive ? 'auto' : 'none'}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityHint={interactive ? 'Touch and hold, then drag to read each bar.' : undefined}
+      >
+        <Svg width={width} height={height}>
+          {bars.map((b, i) => (
+            <Rect
+              key={`bar-${i}`}
+              x={b.x} y={b.y} width={b.w} height={b.h} rx={2}
+              fill={b.color}
+              opacity={activeIndex >= 0 && activeIndex !== i ? 0.4 : 1}
+            />
+          ))}
+        </Svg>
+      </View>
+    );
+    if (!interactive) return barChart;
+    return <GestureDetector gesture={pan}>{barChart}</GestureDetector>;
+  }
 
   const points2 = values2.length >= 2 ? plotPoints(values2, box, min, max) : null;
   const mainPath = curved ? smoothPath(points) : linePath(points);
