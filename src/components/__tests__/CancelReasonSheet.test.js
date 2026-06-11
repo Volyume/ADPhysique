@@ -21,6 +21,8 @@ const mockSubmitFeedback = jest.fn(() => ({ catch: () => {} }));
 jest.mock('../../lib/telemetry', () => ({ track: (...a) => mockTrack(...a) }));
 jest.mock('../../lib/feedback', () => ({ submitFeedback: (...a) => mockSubmitFeedback(...a) }));
 jest.mock('../../lib/haptics', () => ({ selection: jest.fn() }));
+const mockSetStatedReturn = jest.fn();
+jest.mock('../../lib/payments/winbackState', () => ({ setStatedReturn: (...a) => mockSetStatedReturn(...a) }));
 
 import CancelReasonSheet from '../CancelReasonSheet';
 
@@ -51,6 +53,7 @@ function render(props = {}) {
 beforeEach(() => {
   mockTrack.mockClear();
   mockSubmitFeedback.mockClear();
+  mockSetStatedReturn.mockClear();
 });
 
 describe('CancelReasonSheet', () => {
@@ -108,6 +111,29 @@ describe('CancelReasonSheet', () => {
     expect(JSON.stringify(tree.toJSON())).toContain('What was missing?');
     pressByLabel(tree, "I'm switching to another app");
     expect(JSON.stringify(tree.toJSON())).toContain('Which one?');
+  });
+
+  test('temporary_break reveals the break-window chips, and the choice is stored locally', () => {
+    const tree = render();
+    expect(JSON.stringify(tree.toJSON())).not.toContain("When do you think you'll be back?");
+    pressByLabel(tree, "I'm taking a break from training");
+    expect(JSON.stringify(tree.toJSON())).toContain("When do you think you'll be back?");
+    pressByLabel(tree, '2-3 months');
+    pressByLabel(tree, 'Continue to Google Play');
+    expect(mockSetStatedReturn).toHaveBeenCalledWith('two_three_months');
+    // The window is local-only — never in the telemetry payload.
+    expect(mockTrack).toHaveBeenCalledWith('u1', 'cancel_reason_captured', {
+      reason: 'temporary_break', surface: 'pre_store_handoff',
+    });
+  });
+
+  test('switching away from temporary_break clears the break window', () => {
+    const tree = render();
+    pressByLabel(tree, "I'm taking a break from training");
+    pressByLabel(tree, 'In a month');
+    pressByLabel(tree, 'It costs too much'); // change of mind
+    pressByLabel(tree, 'Continue to Google Play');
+    expect(mockSetStatedReturn).not.toHaveBeenCalled();
   });
 
   test('free text routes to user_feedback (never telemetry payload)', () => {
