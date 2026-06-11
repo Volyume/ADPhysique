@@ -13,11 +13,13 @@ and the step-trend modifier, gated by new BLOCKING engine-invariants + the full
 simulator suite (no regression). Surfaces: COMP-004 card line (Progress +
 Diary), CoachOutput receipt, COMP-006 methodology section; telemetry
 `step_tdee_modifier_evaluated` + `migrate_080` (file only, STAGING, founder
-applies). Baseline **221 suites / 3434 tests**, 0 errors, 4 warnings. **COMP-004 door
-also shipped this session** (card now on Progress + Diary; the Home TodayStrip
-logged cell taps through to the trend, long-press edits) — on-device review of
-the tap-vs-edit swap wanted. Next: COMP-029 light theme, then COMP-019 Stage 2.
-See `_START-HERE-NEXT-SESSION.md` `⏩ RESTART HERE`.
+applies). Baseline **221 suites / 3442 tests**, 0 errors, 4 warnings. This session also
+shipped **COMP-004 door** (card on Progress + Diary; Home cell taps through to
+the trend) and **COMP-029 light theme code-complete** (onPrimary migration +
+light palette + WCAG contrast tests + Appearance row; default stays Dark). The
+COMP-029 native rebuild, on-device brand sign-off and manual sweep are founder
+steps. Next: COMP-019 Stage 2 widgets. See `_START-HERE-NEXT-SESSION.md`
+`⏩ RESTART HERE`.
 
 **Status note (2026-06-11, session 6):** **COMP-024 cycle-robust smoothing
 shipped LIVE** (founder dropped shadow mode for everything — see

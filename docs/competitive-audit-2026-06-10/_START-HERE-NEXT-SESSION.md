@@ -57,10 +57,16 @@ FOUNDER-DECISIONS §14):**
    trend (long-press still edits). **On-device review wanted:** the tap=door /
    long-press=edit swap on the daily weigh-in cell, and the Diary placement
    (below the macro rings) — both honour §14 but a live app deserves eyes.
-3. **COMP-029 light theme** — `expo-system-ui` + the 122-site token migration
-   (JS/config; native rebuild on EAS). **Next up.**
+3. ~~**COMP-029 light theme**~~ — **CODE-COMPLETE (session 7).** Phase 0
+   (onPrimary, 124 sites) + Phase 1a (light palette + theme-layer mechanism +
+   WCAG contrast tests) + Phase 1b (Appearance row + chrome + app.json). Default
+   stays Dark. **Founder steps remain:** the EAS native rebuild (`app.json`
+   userInterfaceStyle is now `automatic`), on-device brand sign-off of the light
+   hues (esp. the darkened amber ink `#8A5200` + derived `warning #6E6300`), and
+   the manual ~60-screen sweep before public release. See impl-COMP-029's
+   "SHIPPED (code-complete)" block.
 4. **COMP-019 Stage 2 widgets** — JS/config (native build on EAS; the
-   `@bacons/expo-apple-targets` issue-#175 spike still applies).
+   `@bacons/expo-apple-targets` issue-#175 spike still applies). **Next up.**
 5. **COMP-024 decision-promotion** (the held piece) — only if you first rework
    the smoother so it tracks sustained trends (see the COMP-024 lesson).
 

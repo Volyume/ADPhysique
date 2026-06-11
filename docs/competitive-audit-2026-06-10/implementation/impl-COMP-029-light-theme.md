@@ -1,5 +1,54 @@
 # COMP-029 — Token-derived light theme (opt-in) — implementation blueprint
 
+---
+
+## SHIPPED (code-complete) — session 7, 2026-06-11 (LIVE, no shadow)
+
+Built code-complete on `claude/main-branch-content-update-dcqicf`, 3 commits,
+each lint-clean with the full suite green (221 suites, 34 snapshots unchanged).
+Default stays Dark, so no existing user's appearance changes.
+
+- **Phase 0 (onPrimary):** new `onPrimary` token (`#0D0D0D`); migrated the 124
+  `colors.background`-as-ink sites (80 `color:` + 44 `color={}`) across 52 files.
+  Zero visual diff in dark (onPrimary === background), so every snapshot/mount
+  is unchanged. The hard gate.
+- **Phase 1a (palette + mechanism + tests):** `lightColors` (§4a table; `warning`
+  re-derived as a darkened yellow-olive `#6E6300` since the dark token drifted to
+  Okabe-Ito `#F0E442` post-COMP-027, kept distinct from the amber primary ink);
+  theme-keyed HC/CVD tables (dark reproduces prior values verbatim); light
+  shadows carry elevation; `resolvedTheme` live binding; `applyAccessibility`
+  rewritten to the §4b order (reset → theme → HC → CVD → larger text); '`system`'
+  resolves the OS scheme at call time. **Executable WCAG-ratio tests** in
+  `theme.test.js` lock every light text/ink role ≥4.5:1 on every surface,
+  borders/chart ≥3:1, onPrimary on the amber fill, light HC/CVD composition, and
+  assert the dark tables unchanged.
+- **Phase 1b (user-reachable):** `theme: 'dark'` in the store accessibility
+  slice (generic setter persists + syncs); the free "Appearance" segmented row
+  (Dark / Light / Match phone) on SettingsDisplayScreen with the reload prompt;
+  `App.js` bootstrap always applies + `Appearance.setColorScheme(resolved)`;
+  StatusBar + NavigationContainer follow `resolvedTheme`; `app.json`
+  `userInterfaceStyle` → `"automatic"`. `expo-system-ui` was already a dep.
+
+**FOUNDER STEPS REMAINING (cannot be done in the cloud container):**
+1. **Native rebuild on EAS** — the `app.json` `userInterfaceStyle: "automatic"`
+   flip needs a signed build to take effect (harmless until then:
+   `setColorScheme` pins the resolved scheme so dark users keep dark native
+   surfaces).
+2. **On-device brand sign-off** of the rendered light hues, especially the
+   darkened amber ink `#8A5200` (blueprint risk #3: reads brown out of context)
+   and the derived `warning #6E6300` — sign off on real screens, not swatches.
+3. **Manual sweep** of ~60 screens on light (blueprint §4f) + the internal-track
+   soak (Phase 2) before public (Phase 3). The CI contrast tests catch ratio
+   drift; the "looked-right-by-coincidence" tail needs eyes.
+
+Deliberately NOT built: the `theme_changed` telemetry event (§8 — needs a
+founder-approved allowlist entry; measurement-only) and the second light
+mount-test Jest project (§4f — limited extra value over the contrast tests,
+since light is pure token swaps with no theme-conditional render paths).
+
+---
+
+
 > Round-2 blueprint per `impl-00-shared-brief.md`. Approved spec seed:
 > `../competitive-audit-03-master-proposals.md` COMP-029 (Impact 6 ·
 > Effort 6 · **[FOUNDER SIGN-OFF — brand decision]**). Code ground truth

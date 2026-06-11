@@ -754,9 +754,21 @@ pre-existing warnings, 221 suites / 3429 tests pass (3 skip)**.
   retune. No on-device surface needs eyes beyond the one card line.
 
 ### What remains from "do them all" (NOT built)
-COMP-029 light theme, COMP-019 Stage 2 widgets, and the COMP-024
-decision-promotion (after the clamp rework). Billing held throughout.
-**COMP-026 and COMP-004 are DONE.**
+COMP-019 Stage 2 widgets and the COMP-024 decision-promotion (after the clamp
+rework). Billing held throughout. **COMP-026, COMP-004 and COMP-029 (code) are
+DONE.**
+
+### Session 7 (cont.) — COMP-029 light theme SHIPPED (code-complete)
+Built live in 3 commits: Phase 0 (onPrimary token + the 124 ink-on-fill site
+migration, zero visual diff in dark), Phase 1a (light palette + theme-layer
+mechanism + executable WCAG contrast tests), Phase 1b (free Appearance row +
+StatusBar/Nav chrome + app.json userInterfaceStyle automatic). Default stays
+Dark; no existing user changes. **Founder steps remaining (can't be done in the
+cloud container):** the EAS native rebuild, on-device brand sign-off of the
+light hues (the darkened amber ink #8A5200 + the re-derived warning #6E6300),
+and the manual ~60-screen sweep + internal-track soak before public release.
+The `warning` light hue is a NEW brand decision (the dark token drifted to
+Okabe-Ito yellow after the blueprint) and explicitly wants sign-off.
 
 ### Session 7 (cont.) — COMP-004 door SHIPPED
 Per §14 "both surfaces": the WeightTrendCard now hosts on Progress (existing)
