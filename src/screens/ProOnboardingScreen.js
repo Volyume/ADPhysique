@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView, Animated, AccessibilityInfo } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion } from '../styles/theme';
 import { VolyumeIcon } from '../components/BrandMark';
 import SegmentedControl from '../components/SegmentedControl';
 import Dropdown from '../components/Dropdown';
@@ -28,6 +28,7 @@ import {
   PHYSIQUE_GOALS,
   TRAINING_PHASES,
   GOALS_WITH_WEAK_POINTS,
+  GOAL_LABELS,
   weakPointSetForGoal,
   phaseToNutritionKey,
   phaseToCoachingKey,
@@ -47,6 +48,16 @@ const PROTEIN_SHORT = {
 };
 
 const TOTAL_STEPS = 5;
+
+// COMP-013 "Building your plan" sequence. Four honest stage lines, each mapped
+// to a real _generatePlanInner phase, displayed for a minimum 800ms dwell while
+// the real plan generation + DB writes run underneath. 3.2s total sits inside
+// the evidence band (>2s informative, ~3-5s the working range of plan-build
+// screens) without escalating into theatre. The sequence never completes before
+// the real work does; failure aborts it instantly (no completion tick).
+const STAGE_DWELL_MS = 800;
+const SEQUENCE_TOTAL_MS = STAGE_DWELL_MS * 4;
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Default days per week, used for nutrition calc without asking the user.
 const DEFAULT_DAYS_PER_WEEK = 4;
@@ -114,6 +125,15 @@ export default function ProOnboardingScreen({ navigation }) {
   })));
 
   const [step, setStep] = useState(1);
+
+  // COMP-013: Reduce Motion skips the staged build sequence entirely (the button
+  // spinner stays, exactly the old behaviour). Same flag ProSetupComplete reads.
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  const [sequenceActive, setSequenceActive] = useState(false);
+  // How many stage lines have entered so far (1..4). 0 = not started.
+  const [sequenceStage, setSequenceStage] = useState(0);
+  const stageTimersRef = useRef([]);
+  const sequenceFade = useRef(new Animated.Value(0)).current;
 
   // Step 1, profile
   const [firstName, setFirstName] = useState(userProfile?.firstName || '');
@@ -408,13 +428,68 @@ export default function ProOnboardingScreen({ navigation }) {
     setStep(5);
   }
 
+  // The four honest stage lines, mapped to real _generatePlanInner phases.
+  // Stage 2 gains a division-priorities suffix for the physique divisions
+  // (it maps to applyGoalOverlay); stage 4 names the user's actual session
+  // length — the single highest-leverage word, proving the labels are real.
+  function sequenceStages() {
+    const divisionLabel = trainingGoal && trainingGoal !== 'general' ? GOAL_LABELS[trainingGoal] : null;
+    return [
+      'Balancing your week',
+      divisionLabel ? `Setting your starting volume · ${divisionLabel} priorities` : 'Setting your starting volume',
+      'Choosing your exercises',
+      `Fitting sessions to your ${sessionLengthMinutes} minutes`,
+    ];
+  }
+
+  function cancelSequenceTimers() {
+    stageTimersRef.current.forEach(clearTimeout);
+    stageTimersRef.current = [];
+  }
+
+  function startSequence() {
+    const lines = sequenceStages();
+    setSequenceActive(true);
+    setSequenceStage(1);
+    sequenceFade.setValue(0);
+    Animated.timing(sequenceFade, {
+      toValue: 1, duration: motion.enter, useNativeDriver: true,
+    }).start();
+    AccessibilityInfo.announceForAccessibility(lines[0]);
+    cancelSequenceTimers();
+    const ids = [];
+    for (let i = 2; i <= lines.length; i++) {
+      ids.push(setTimeout(() => {
+        setSequenceStage(i);
+        AccessibilityInfo.announceForAccessibility(lines[i - 1]);
+      }, STAGE_DWELL_MS * (i - 1)));
+    }
+    stageTimersRef.current = ids;
+  }
+
+  function endSequence() {
+    cancelSequenceTimers();
+    setSequenceActive(false);
+    setSequenceStage(0);
+  }
+
+  // Tidy the stage timers if the screen unmounts mid-sequence.
+  useEffect(() => cancelSequenceTimers, []);
+
   async function advanceFrom5() {
     if (!recoveryRating) {
       appAlert('Recovery rating', 'Please select your recovery level to continue.');
       return;
     }
 
-    setBusy(true);
+    // Reduce Motion keeps the plain button spinner; everyone else gets the
+    // staged sequence. The real work below is identical either way.
+    const useSequence = !reduceMotion;
+    const startedAt = Date.now();
+    if (useSequence) startSequence();
+    else setBusy(true);
+
+    let planFailed = false;
     try {
       if (morningEnabled || checkinEnabled) {
         const status = await requestNotificationPermissions();
@@ -605,6 +680,11 @@ export default function ProOnboardingScreen({ navigation }) {
         if (!planResult.ok) {
           // eslint-disable-next-line global-require
           try { require('../lib/errorLog').logError('ProOnboardingScreen.generateAndSavePlan', planResult.error, { userId: user.id }); } catch (_) {}
+          // COMP-013: a failed generation must abort the sequence — three
+          // seconds of "building" followed by "didn't generate" is worse than
+          // a bare spinner. Flag it; the post-try block falls back to the form
+          // with this alert and never plays a completion tick.
+          planFailed = true;
           appAlert(
             'Plan setup didn\'t finish',
             `Your profile is saved but your training plan didn\'t generate (${planResult.error}). Open Home and tap "Build my plan" to retry.`,
@@ -617,8 +697,25 @@ export default function ProOnboardingScreen({ navigation }) {
       }
     } catch (e) {
       appAlert('Something went wrong', e?.message ?? 'Try again.');
+      endSequence();
       setBusy(false);
       return;
+    }
+
+    // Plan generation failed: abort the sequence instantly and fall back to the
+    // step-5 form (the alert is already up). No navigation, no completion tick.
+    if (planFailed) {
+      endSequence();
+      setBusy(false);
+      return;
+    }
+
+    // Success: hold the sequence on its final stage until the minimum display
+    // time has elapsed, so the real work (which may finish faster) never makes
+    // the sequence complete before the named labour reads as real.
+    if (useSequence) {
+      const elapsed = Date.now() - startedAt;
+      if (elapsed < SEQUENCE_TOTAL_MS) await wait(SEQUENCE_TOTAL_MS - elapsed);
     }
     setBusy(false);
     navigation.replace('ProSetupComplete');
@@ -1176,6 +1273,44 @@ export default function ProOnboardingScreen({ navigation }) {
   if (step === 5) {
     const canContinue = !!recoveryRating;
 
+    // COMP-013: the staged "Building your plan" sequence replaces the dead
+    // button spinner. Same header furniture (brand row + a now-full progress
+    // bar), no new route — so a failure can fall back to the form below.
+    if (sequenceActive) {
+      const lines = sequenceStages();
+      return (
+        <SafeAreaView key="step-5-building" style={styles.safe}>
+          <Animated.View style={[styles.seqWrap, { opacity: sequenceFade }]}>
+            <View style={styles.brandRow}>
+              <VolyumeIcon size={22} />
+              <View style={styles.proBadge}>
+                <Text style={styles.proBadgeText}>PRO</Text>
+              </View>
+            </View>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: '100%' }]} />
+            </View>
+            <Text style={styles.seqHeading}>Building your plan</Text>
+            <View style={styles.seqList} accessibilityLiveRegion="polite">
+              {lines.slice(0, sequenceStage).map((line, i) => {
+                const isCurrent = i === sequenceStage - 1;
+                return (
+                  <View key={i} style={styles.seqRow}>
+                    {isCurrent ? (
+                      <ActivityIndicator size="small" color={colors.primary} style={styles.seqIcon} />
+                    ) : (
+                      <Ionicons name="checkmark-circle" size={20} color={colors.primary} style={styles.seqIcon} />
+                    )}
+                    <Text style={styles.seqLine}>{line}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </Animated.View>
+        </SafeAreaView>
+      );
+    }
+
     return (
       <SafeAreaView key="step-5" style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll}>
@@ -1414,6 +1549,18 @@ const styles = StyleSheet.create({
     color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 30,
   },
   stepSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+
+  // COMP-013 "Building your plan" sequence (replaces the step-5 button spinner).
+  seqWrap: { flex: 1, padding: spacing.xl, justifyContent: 'center' },
+  seqHeading: {
+    fontSize: fontSize.xxl, fontWeight: fontWeight.bold,
+    color: colors.textPrimary, marginTop: spacing.xl, marginBottom: spacing.xl,
+    lineHeight: 30,
+  },
+  seqList: { gap: spacing.md },
+  seqRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  seqIcon: { width: 22, alignItems: 'center' },
+  seqLine: { flex: 1, fontSize: fontSize.md, color: colors.textPrimary, lineHeight: 22 },
 
   // Back affordance, inline at the left of the brand row so it reads as part of
   // the header chrome instead of floating above the logo. Negative left margin
