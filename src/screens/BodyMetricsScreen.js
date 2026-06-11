@@ -26,8 +26,14 @@ import SvgLineChart from '../components/SvgLineChart';
 import { useToast } from '../components/Toast';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { logBodyMetric, getBodyMetricLog } from '../lib/database';
+import { logBodyMetric, getBodyMetricLog, getOpenEdPatternFlag } from '../lib/database';
 import { localDayKey } from '../lib/dayKey';
+import WindowChips from '../components/WindowChips';
+import {
+  TREND_WINDOWS, DEFAULT_WINDOW_KEY, windowByKey, filterByWindow,
+  pickInitialWindowKey, weightTakeaway,
+} from '../lib/chartWindows';
+import { track } from '../lib/engineTelemetry';
 import { getRecentIntakeSummary } from '../lib/food/db';
 import { EmptyBodyIllustration } from '../components/Illustrations';
 import { syncBodyMetric } from '../lib/sync';
@@ -120,16 +126,41 @@ function detectPhase(entries) {
 
 // ─── Weight Trend Chart ───────────────────────────────────────────────────────
 
-function WeightTrendChart({ entries, bodyWeightUnits }) {
-  const withWeight = useMemo(() => {
-    const sorted = entries
-      .filter(e => e.body_weight != null)
-      .sort((a, b) => a.metric_date.localeCompare(b.metric_date))
-      .slice(-12);
-    return sorted;
-  }, [entries]);
+// COMP-019: per-chart window persistence.
+const WEIGHT_WINDOW_STORE_KEY = '@volyume_chart_window_weight';
+const weightDateOf = (e) => new Date(e.metric_date).getTime();
 
-  if (withWeight.length < 2) {
+function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen }) {
+  // All weight entries with a usable date, oldest → newest (no count slicing —
+  // COMP-019 windows by date instead).
+  const allWeights = useMemo(() => entries
+    .filter(e => e.body_weight != null && e.metric_date)
+    .sort((a, b) => a.metric_date.localeCompare(b.metric_date)), [entries]);
+
+  const [windowKey, setWindowKey] = useState(DEFAULT_WINDOW_KEY);
+
+  // On load (and when the dataset size changes), keep the persisted window if it
+  // holds enough points, otherwise widen to the narrowest one that does.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let pref = DEFAULT_WINDOW_KEY;
+      try { const v = await AsyncStorage.getItem(WEIGHT_WINDOW_STORE_KEY); if (v) pref = v; } catch (_) {}
+      if (cancelled) return;
+      setWindowKey(pickInitialWindowKey(allWeights, weightDateOf, TREND_WINDOWS, pref));
+    })();
+    return () => { cancelled = true; };
+  // Re-evaluate only when the dataset size changes (not on every array identity).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allWeights.length]);
+
+  function selectWindow(key) {
+    setWindowKey(key);
+    AsyncStorage.setItem(WEIGHT_WINDOW_STORE_KEY, key).catch(() => {});
+    try { track(null, 'chart_window_changed', { chart_id: 'weight', window: key })?.catch?.(() => {}); } catch (_) {}
+  }
+
+  if (allWeights.length < 2) {
     return (
       <View style={chartStyles.emptyHint}>
         <Text style={chartStyles.emptyHintText}>
@@ -139,36 +170,51 @@ function WeightTrendChart({ entries, bodyWeightUnits }) {
     );
   }
 
-  const weights = withWeight.map(e => e.body_weight);
-  const minW = Math.floor(Math.min(...weights) - 1);
-  const maxW = Math.ceil(Math.max(...weights) + 1);
-  const data = withWeight.map((e, i) => ({
-    value: e.body_weight,
-    label: i === 0 || i === withWeight.length - 1
-      ? safeFormatDate(e.metric_date, 'MMM d')
-      : '',
-  }));
-
+  const win = windowByKey(TREND_WINDOWS, windowKey) ?? windowByKey(TREND_WINDOWS, DEFAULT_WINDOW_KEY);
+  const windowed = filterByWindow(allWeights, weightDateOf, win.days);
+  const coversAll = windowed.length === allWeights.length;
   const chartWidth = SCREEN_W - spacing.lg * 2 - 32;
 
+  const sparse = windowed.length < 2;
+  const weights = windowed.map(e => e.body_weight);
+  const smoothed = sparse ? [] : ewmaValues(weights);
+  const takeaway = sparse ? '' : weightTakeaway({
+    windowKey, coversAll, points: windowed, dateOf: weightDateOf,
+    ewma: smoothed, unit: 'kg', edFlagOpen,
+  });
+
   return (
-    <View style={chartStyles.wrap}>
-      <SvgLineChart
-        data={data}
-        width={chartWidth}
-        height={120}
-        color={colors.primary}
-        thickness={2}
-        area
-        curved
-        showDots={withWeight.length <= 6}
-        dotRadius={3}
-        yAxisSuffix={bodyWeightUnits === 'st' ? ' kg' : ` ${bodyWeightUnits || 'kg'}`}
-        sections={3}
-        min={minW}
-        max={maxW}
-        backgroundColor={colors.surface}
-      />
+    <View>
+      <WindowChips windows={TREND_WINDOWS} selectedKey={windowKey} onSelect={selectWindow}
+        accessibilityPrefix="weight trend window" />
+      {!!takeaway && <Text style={chartStyles.takeaway}>{takeaway}</Text>}
+      {sparse ? (
+        <View style={chartStyles.emptyHint}>
+          <Text style={chartStyles.emptyHintText}>Not enough data in this window yet.</Text>
+        </View>
+      ) : (
+        <View style={chartStyles.wrap}>
+          <SvgLineChart
+            data={windowed.map((e, i) => ({
+              value: e.body_weight,
+              label: i === 0 || i === windowed.length - 1 ? safeFormatDate(e.metric_date, 'MMM d') : '',
+            }))}
+            width={chartWidth}
+            height={120}
+            color={colors.primary}
+            thickness={2}
+            area
+            curved
+            showDots={windowed.length <= 6}
+            dotRadius={3}
+            yAxisSuffix={bodyWeightUnits === 'st' ? ' kg' : ` ${bodyWeightUnits || 'kg'}`}
+            sections={3}
+            min={Math.floor(Math.min(...weights) - 1)}
+            max={Math.ceil(Math.max(...weights) + 1)}
+            backgroundColor={colors.surface}
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -295,6 +341,7 @@ function MeasurementTrendChart({ entries, measureKey, label }) {
 
 const chartStyles = StyleSheet.create({
   wrap: { marginTop: spacing.sm, marginHorizontal: -spacing.xs },
+  takeaway: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: spacing.sm, lineHeight: 18 },
   emptyHint: { paddingTop: spacing.md },
   emptyHintText: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
   smoothedHint: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center' },
@@ -338,6 +385,7 @@ export default function BodyMetricsScreen() {
   const toast = useToast();
   const [physiqueEnabled, setPhysiqueEnabled] = useState(null); // null = loading
   const [calm, setCalm] = useState(false);
+  const [edFlagOpen, setEdFlagOpen] = useState(false);
   const [sessionConfirmed, setSessionConfirmed] = useState(bodyMetricsSessionConfirmed);
   const [history, setHistory] = useState([]);
   const [nutritionTargets, setNutritionTargets] = useState(null);
@@ -401,6 +449,9 @@ export default function BodyMetricsScreen() {
         }
       });
       getWellbeingMode().then(m => setCalm(isCalm(m)));
+      // COMP-019: suppress the weight takeaway's rate-of-change under an open ED
+      // pattern flag (COMP-004 safety behaviour), in addition to calmer mode.
+      if (user?.id) getOpenEdPatternFlag(user.id).then(f => setEdFlagOpen(!!f)).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
@@ -687,7 +738,7 @@ export default function BodyMetricsScreen() {
             )}
 
             {/* Weight trend chart */}
-            <WeightTrendChart entries={history} units={units} bodyWeightUnits={bwu} />
+            <WeightTrendChart entries={history} units={units} bodyWeightUnits={bwu} edFlagOpen={calm || edFlagOpen} />
 
             {history.length < 3 && (
               <Text style={styles.trendHint}>

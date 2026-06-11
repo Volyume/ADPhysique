@@ -117,6 +117,11 @@ export const TELEMETRY_EVENTS = Object.freeze([
   // variant. choice param only (short / full); no PII.
   // Server allow-list: supabase/migrate_076_first_session_choice_telemetry.sql.
   { name: 'first_session_choice',            deferred: false, panel: 1 },
+
+  // COMP-019: chart window changed (interactive charts). chart_id + window
+  // labels only (e.g. weight/e1rm/volume, 3M); no PII, no values.
+  // Server allow-list: supabase/migrate_077_chart_window_telemetry.sql.
+  { name: 'chart_window_changed',            deferred: false, panel: 1 },
 ]);
 
 /**
