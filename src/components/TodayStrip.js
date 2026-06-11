@@ -63,6 +63,11 @@ export default function TodayStrip({
   stepsTarget = null,
   cardioEnabled = true,
   onCardioPress,
+  // COMP-004 door: when provided, tapping the LOGGED weight cell opens the
+  // "Your trend" card on Progress (the morning-ritual tap-through). Correcting
+  // a weigh-in moves to a long-press so the door is the primary action. When
+  // absent, the logged cell falls back to tap-to-edit.
+  onOpenTrend,
 }) {
   // ── Weight draft (owned here; data owned by the parent) ──
   const [weightInput, setWeightInput] = useState('');
@@ -231,12 +236,17 @@ export default function TodayStrip({
 
   // The weight cell content, sans wrapper (the wrapper differs expanded vs cell).
   function WeightLogged() {
+    const hasTrendDoor = typeof onOpenTrend === 'function';
     return (
       <TouchableOpacity
         style={styles.cellInner}
-        onPress={startEdit}
+        onPress={hasTrendDoor ? onOpenTrend : startEdit}
+        onLongPress={startEdit}
+        delayLongPress={300}
         accessibilityRole="button"
-        accessibilityLabel={`Weight ${formatBodyWeightShort(todayWeight, bwu)} logged today. Tap to edit.`}
+        accessibilityLabel={hasTrendDoor
+          ? `Weight ${formatBodyWeightShort(todayWeight, bwu)} logged today. Tap to see your trend, long press to edit.`
+          : `Weight ${formatBodyWeightShort(todayWeight, bwu)} logged today. Tap to edit.`}
       >
         <Text style={styles.cellLabel}>WEIGHT</Text>
         <View style={styles.loggedRow}>

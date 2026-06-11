@@ -1345,6 +1345,7 @@ export default function HomeScreen({ navigation }) {
             stepsTarget={userProfile?.stepsTarget}
             cardioEnabled={userProfile?.cardioEnabled !== false}
             onCardioPress={() => navigation.navigate('LogCardio')}
+            onOpenTrend={() => navigation.getParent()?.navigate('ProgressTab', { screen: 'Analytics', params: { focusWeightTrend: true } })}
           />
         )}
 

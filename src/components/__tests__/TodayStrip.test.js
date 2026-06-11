@@ -61,6 +61,28 @@ describe('weight cell', () => {
     expect(json(tree)).not.toContain('Sparkline');
   });
 
+  // COMP-004 door: with onOpenTrend, tapping the logged cell opens the trend
+  // (the door) and a long-press edits; without it, tap still edits.
+  test('logged with a trend door: tap opens the trend, long-press edits', async () => {
+    const onOpenTrend = jest.fn();
+    const tree = await render({ todayWeight: 82.4, recentWeights: [80, 81, 82], onOpenTrend, cardioEnabled: false });
+    const cell = tree.root.findAll(n => n.props.accessibilityLabel?.includes('Tap to see your trend'))[0];
+    expect(cell).toBeTruthy();
+    act(() => cell.props.onPress());
+    expect(onOpenTrend).toHaveBeenCalled();
+    // Long-press opens the inline editor (the morning-weight input row).
+    act(() => cell.props.onLongPress());
+    expect(json(tree)).toContain('MORNING WEIGHT');
+  });
+
+  test('logged without a trend door: tap still edits (fallback)', async () => {
+    const tree = await render({ todayWeight: 82.4, recentWeights: [80, 81, 82], cardioEnabled: false });
+    const cell = tree.root.findAll(n => n.props.accessibilityLabel?.includes('Tap to edit'))[0];
+    expect(cell).toBeTruthy();
+    act(() => cell.props.onPress());
+    expect(json(tree)).toContain('MORNING WEIGHT');
+  });
+
   test('after the morning window with no log: compact Log prompt (not expanded)', async () => {
     hoursSpy = jest.spyOn(Date.prototype, 'getHours').mockReturnValue(15);
     const tree = await render({ todayWeight: null, cardioEnabled: false });

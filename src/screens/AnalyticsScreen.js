@@ -64,7 +64,7 @@ function recentMonthRecapParams(earliestWorkoutAt) {
   };
 }
 
-export default function AnalyticsScreen({ navigation }) {
+export default function AnalyticsScreen({ navigation, route }) {
   const user = useAppStore(s => s.user);
   const userProfile = useAppStore(s => s.userProfile);
   const tier = useAppStore(s => s.tier);
@@ -115,6 +115,20 @@ export default function AnalyticsScreen({ navigation }) {
       scrollRef.current?.scrollTo({ y: 0, animated: true });
     });
   }, [navigation]);
+
+  // COMP-004 door: arriving from the Home TodayStrip weight cell scrolls the
+  // "Your trend" section into view (once the card has rendered), then clears
+  // the param so a normal re-focus does not re-scroll. Programmatic navigation
+  // does not fire 'tabPress', so this never fights the scroll-to-top above.
+  const trendSectionY = useRef(0);
+  useEffect(() => {
+    if (!route?.params?.focusWeightTrend || !weightTrend.render) return undefined;
+    const t = setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: Math.max(0, trendSectionY.current - 12), animated: true });
+    }, 350);
+    navigation.setParams({ focusWeightTrend: undefined });
+    return () => clearTimeout(t);
+  }, [route?.params?.focusWeightTrend, weightTrend.render, navigation]);
 
   const {
     loading, refreshing,
@@ -231,7 +245,10 @@ export default function AnalyticsScreen({ navigation }) {
             insight stack and recent sessions. Pro-only; self-hides until
             there are morning weights to interpret. ── */}
         {tier === 'pro' && weightTrend.render && (
-          <View style={styles.section}>
+          <View
+            style={styles.section}
+            onLayout={(e) => { trendSectionY.current = e.nativeEvent.layout.y; }}
+          >
             <WeightTrendCard vm={weightTrend} bodyWeightUnits={bodyWeightUnits || 'st'} />
           </View>
         )}
