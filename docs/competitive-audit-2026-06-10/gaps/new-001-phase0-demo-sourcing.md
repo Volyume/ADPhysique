@@ -79,6 +79,13 @@ fine"), the quality and format pass — MoveKit is worth considering. The two
 caveats are questions to put to MoveKit alongside the licensing set, all
 still £0.
 
+**Status 2026-06-11: PAUSED, low priority (founder).** "Pause this facility
+for now and move with the genuinely free updates; I'll think about
+purchasing MoveKit but for now it's low priority." No purchase, no vendor
+contact yet. This brief stands ready for when NEW-001 is revisited: lead
+option MoveKit (~$99, validated above), the 8 questions to send, and the
+background decision (light card vs transparent) explicitly deferred.
+
 ## The six licensing questions to send each paid vendor (in writing, £0)
 
 1. Does the licence permit use of the clips **inside a paid mobile app** sold
