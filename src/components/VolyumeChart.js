@@ -119,15 +119,26 @@ export default function VolyumeChart({
     setActiveIndex(-1);
   }
 
+  // Keep the latest scrub handlers in a ref so the (stable) gesture always calls
+  // the CURRENT closure — never a stale `points`/`formatTooltip` captured when
+  // the gesture was first built. Assigning in render is the standard latest-ref
+  // pattern; it makes the gesture immune to data changes that leave point count
+  // and domain unchanged (e.g. an in-place weight edit within the same range).
+  const handlersRef = useRef({ scrub: scrubTo, end: endScrub });
+  handlersRef.current.scrub = scrubTo;
+  handlersRef.current.end = endScrub;
+
   // Long-press-then-drag so a quick swipe still scrolls the page; only a
-  // deliberate hold begins a scrub.
-  const pan = useMemo(() => Gesture.Pan()
-    .activateAfterLongPress(300)
-    .onBegin((e) => { runOnJS(scrubTo)(e.x); })
-    .onUpdate((e) => { runOnJS(scrubTo)(e.x); })
-    .onFinalize(() => { runOnJS(endScrub)(); }),
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  [points.length, min, max, width, height]);
+  // deliberate hold begins a scrub. Stable (deps []) — freshness via the ref.
+  const pan = useMemo(() => {
+    const onScrub = (x) => handlersRef.current.scrub(x);
+    const onEnd = () => handlersRef.current.end();
+    return Gesture.Pan()
+      .activateAfterLongPress(300)
+      .onBegin((e) => { runOnJS(onScrub)(e.x); })
+      .onUpdate((e) => { runOnJS(onScrub)(e.x); })
+      .onFinalize(() => { runOnJS(onEnd)(); });
+  }, []);
 
   if (values.length < 2) return null;
 
