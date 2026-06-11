@@ -14,6 +14,7 @@ import {
   getWeekPhaseDescription,
   getSplitRationale,
   getSetupReceiptLine,
+  getStarterSessionMessage,
   getDeloadPredictionMessage,
   getTimeCrunchMessage,
   getTravelModeMessage,
@@ -98,6 +99,19 @@ describe('whyThisTemplates: locked output snapshots', () => {
     // missing days → safe generic, never a broken string
     expect(getSetupReceiptLine({ trainingGoal: 'general' })).toMatchInlineSnapshot(
       `"Built around your plan."`
+    );
+  });
+
+  test('getStarterSessionMessage frames the subset honestly (COMP-013)', () => {
+    expect(getStarterSessionMessage('Back + Delts (Width)', 4, 2)).toMatchInlineSnapshot(
+      `"Short version of Back + Delts (Width): 4 exercises, 2 sets each. The full session starts next time."`
+    );
+    expect(getStarterSessionMessage('Lower + Abs', 1, 2)).toMatchInlineSnapshot(
+      `"Short version of Lower + Abs: 1 exercise, 2 sets each. The full session starts next time."`
+    );
+    // missing name → safe generic, never a broken string
+    expect(getStarterSessionMessage(null, 3)).toMatchInlineSnapshot(
+      `"Short version of your plan: 3 exercises, 2 sets each. The full session starts next time."`
     );
   });
 

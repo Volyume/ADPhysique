@@ -30,7 +30,7 @@ import { countProgressSets } from '../lib/workoutHelpers';
 import { formatPerSide, loadUnilateralExercises } from '../lib/unilateral';
 import { FORM_TIPS } from '../lib/formTips';
 import { applyTimeCrunch } from '../lib/mesocycle';
-import { getTimeCrunchMessage } from '../lib/whyThisTemplates';
+import { getTimeCrunchMessage, getStarterSessionMessage } from '../lib/whyThisTemplates';
 
 const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 2 };
 
@@ -93,7 +93,7 @@ const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum 
   );
 });
 
-export default function ActiveWorkoutScreen({ navigation }) {
+export default function ActiveWorkoutScreen({ navigation, route }) {
   // Use a shallow selector so every store mutation (rest timer ticks,
   // PR celebration flag flips, accessibility toggles) doesn't re-render
   // the 2000-line tree. Without this the rest timer alone fires
@@ -178,6 +178,11 @@ export default function ActiveWorkoutScreen({ navigation }) {
   const [timeCrunchActive, setTimeCrunchActive] = useState(false);
   const [timeCrunchMsg, setTimeCrunchMsg] = useState('');
   const [preCrunchSnapshot, setPreCrunchSnapshot] = useState(null);
+  // COMP-013: a starter session is a one-tap 15-minute subset of Day 1, applied
+  // once at session start. It reuses the time-crunch machinery (snapshot +
+  // revert) but caps sets and exercise count via the starter options.
+  const [starterActive, setStarterActive] = useState(false);
+  const starterAppliedRef = useRef(false);
   const [isDeloadWeek, setIsDeloadWeek] = useState(false);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
   // Ghost pre-fill bookkeeping. The value itself is no longer rendered (the
@@ -997,10 +1002,69 @@ export default function ActiveWorkoutScreen({ navigation }) {
     if (!preCrunchSnapshot) return;
     store.setWorkoutExercises(preCrunchSnapshot);
     setTimeCrunchActive(false);
+    setStarterActive(false);
     setTimeCrunchMsg('');
     setPreCrunchSnapshot(null);
     hapticsVocab.commit();
   }
+
+  // COMP-013: build the 15-minute starter — a true subset of Day 1. Reuses the
+  // shared applyTimeCrunch with starter options (first 4 exercises, 2 sets
+  // each), then maps the result back onto the session: trimmed exercises are
+  // marked _timeCrunchSkipped, kept exercises keep their lifts/targets but have
+  // their working-set target capped and rest cut. Revert restores Day 1 in full.
+  function applyStarterSession() {
+    const all = workoutExercises;
+    if (!all.length) return;
+    setPreCrunchSnapshot([...all]);
+
+    const asExercises = all.map(e => ({
+      exerciseName:      e.exercise?.name ?? '',
+      sets:              e.routineExercise?.recommendedSets ?? e.exercise?.recommendedSets ?? 3,
+      restSec:           e.exercise?.restSec ?? 90,
+      compoundIsolation: e.exercise?.compoundIsolation ?? 'isolation',
+    }));
+    const estimate = (exs) => exs.reduce((t, ex) => t + (ex.sets * ((ex.restSec ?? 60) / 60 + 0.75)), 0);
+    const { exercises: trimmed, dropped } = applyTimeCrunch(
+      asExercises, 15, estimate, { maxExercises: 4, maxSetsPerExercise: 2 },
+    );
+
+    const keptSets = new Map(trimmed.map(ex => [ex.exerciseName, ex.sets]));
+    const droppedNames = new Set(dropped);
+
+    store.setWorkoutExercises(prev => prev.map((entry) => {
+      const name = entry.exercise?.name ?? '';
+      if (droppedNames.has(name) && !keptSets.has(name)) {
+        return { ...entry, _timeCrunchSkipped: true };
+      }
+      const cappedSets = keptSets.get(name);
+      return {
+        ...entry,
+        routineExercise: {
+          ...entry.routineExercise,
+          recommendedSets: cappedSets ?? entry.routineExercise?.recommendedSets,
+        },
+        exercise: entry.exercise ? {
+          ...entry.exercise,
+          restSec: Math.round((entry.exercise.restSec ?? 90) * 0.70),
+        } : entry.exercise,
+      };
+    }));
+
+    setTimeCrunchMsg(getStarterSessionMessage(activeWorkout?.name, trimmed.length, 2));
+    setTimeCrunchActive(true);
+    setStarterActive(true);
+  }
+
+  // Apply the starter trim exactly once, when the session opens with the param.
+  useEffect(() => {
+    if (starterAppliedRef.current) return;
+    if (!route?.params?.starterSession) return;
+    if (!workoutExercises.length) return;
+    starterAppliedRef.current = true;
+    applyStarterSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route?.params?.starterSession, workoutExercises.length]);
 
   function handleTimeCrunch() {
     if (timeCrunchActive) return;
@@ -1306,6 +1370,23 @@ export default function ActiveWorkoutScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* COMP-013: starter-session banner — the short first session framed as
+            the smart first step, with a one-tap path back to the full session. */}
+        {starterActive && (
+          <View style={styles.starterBanner}>
+            <Ionicons name="flash-outline" size={16} color={colors.primary} />
+            <Text style={styles.starterBannerText}>{timeCrunchMsg}</Text>
+            <TouchableOpacity
+              onPress={handleRevertTimeCrunch}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Do the full session instead"
+            >
+              <Text style={styles.starterBannerAction}>Full session</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Exercise Navigator */}
         {workoutExercises.length > 1 && (
@@ -2299,6 +2380,14 @@ const styles = StyleSheet.create({
   finishBtn: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary, paddingVertical: spacing.xs },
   headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
   timerText: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.primary, fontVariant: ['tabular-nums'] },
+  starterBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+    backgroundColor: withAlpha(colors.primary, 0.08),
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  starterBannerText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  starterBannerAction: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   exerciseNav: { borderBottomWidth: 1, borderBottomColor: colors.border, maxHeight: 48 },
   exerciseNavContent: { paddingHorizontal: spacing.lg, gap: spacing.sm, alignItems: 'center' },
   navTab: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.md, borderRadius: radius.full, backgroundColor: colors.surface2, maxWidth: 140 },

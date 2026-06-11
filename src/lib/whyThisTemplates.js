@@ -346,6 +346,24 @@ export function getTimeCrunchMessage(droppedExercises, restReductionPct, newEsti
   return clean(parts.join(' '));
 }
 
+/**
+ * COMP-013 starter-session banner. The first session is a true subset of the
+ * user's real Day 1 — same lifts and order, just the first few exercises at a
+ * couple of sets each — framed as the smart first step, never remedial. The
+ * "full session starts next time" line sets the honest expectation.
+ * COPY: blueprint copy, founder voice review at PR before merge to main.
+ *
+ * @param {string} routineName  - the real routine/day name
+ * @param {number} exerciseCount - exercises kept in the starter
+ * @param {number} [setsEach]    - sets per kept exercise (default 2)
+ * @returns {string}
+ */
+export function getStarterSessionMessage(routineName, exerciseCount, setsEach = 2) {
+  const name = routineName || 'your plan';
+  const ex = `${exerciseCount} exercise${exerciseCount === 1 ? '' : 's'}`;
+  return clean(`Short version of ${name}: ${ex}, ${setsEach} sets each. The full session starts next time.`);
+}
+
 // ---------------------------------------------------------------------------
 // Travel mode message
 // ---------------------------------------------------------------------------
