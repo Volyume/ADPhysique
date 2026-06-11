@@ -38,6 +38,7 @@ import { getRecentIntakeSummary } from '../lib/food/db';
 import { EmptyBodyIllustration } from '../components/Illustrations';
 import { syncBodyMetric } from '../lib/sync';
 import { computeEWMA, ewmaValues, computeWeeklyWeightChange, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
+import { robustValues } from '../lib/robustTrend';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { formatBodyWeight, formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg } from '../lib/units';
@@ -177,7 +178,10 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
 
   const sparse = windowed.length < 2;
   const weights = windowed.map(e => e.body_weight);
-  const smoothed = sparse ? [] : ewmaValues(weights);
+  // COMP-024: the displayed weight trend uses the water-weight-robust smoother
+  // (raw dots stay visible beside it). Display-only promotion; coaching
+  // decisions + safety keep the plain EWMA (see weeklyCoach §12 note).
+  const smoothed = sparse ? [] : robustValues(weights);
   const takeaway = sparse ? '' : weightTakeaway({
     windowKey, coversAll, points: windowed, dateOf: weightDateOf,
     ewma: smoothed, unit: 'kg', edFlagOpen,

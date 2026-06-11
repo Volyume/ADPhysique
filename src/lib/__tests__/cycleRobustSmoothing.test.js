@@ -6,7 +6,7 @@
  * masked, F5 plateau-then-shift) live with the weeklyCoach wiring + the engine
  * invariants; this file proves the smoother's own behaviour in isolation.
  */
-import { robustEwma, mad, median } from '../robustTrend';
+import { robustEwma, robustValues, mad, median } from '../robustTrend';
 import { computeEWMA } from '../weeklyCoach';
 
 const DAY = 86400000;
@@ -122,6 +122,20 @@ describe('F7 — sparse logging', () => {
     expect(robustEwma([])).toEqual([]);
     expect(robustEwma(null)).toEqual([]);
     expect(robustEwma([{ loggedAt: T0, weightKg: 'x' }, null])).toEqual([]);
+  });
+});
+
+describe('robustValues (number-array form, for display surfaces)', () => {
+  test('damps an upward spike but lets a downward move through; empty → []', () => {
+    expect(robustValues([])).toEqual([]);
+    const flat = Array.from({ length: 20 }, () => 70);
+    flat[18] = 73; // a +3kg one-day spike
+    const out = robustValues(flat);
+    expect(Math.abs(out[18] - 70)).toBeLessThan(0.5); // spike damped
+    // a genuine step down is not damped (wide downward knee)
+    const loss = Array.from({ length: 20 }, (_, i) => 70 - i * 0.2);
+    const r = robustValues(loss);
+    expect(r[r.length - 1]).toBeLessThan(69); // tracked the loss down
   });
 });
 

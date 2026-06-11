@@ -543,6 +543,15 @@ export function runWeeklyCoach(inputs) {
     ? (weightDelta / bwRef) * 100
     : null;
 
+  // COMP-024 NOTE: the cycle-robust smoother (robustTrend.js) is promoted to the
+  // DISPLAY trend only (BodyMetrics line) for now. The coaching DECISIONS below
+  // deliberately stay on the plain alpha-0.1 EWMA (actualRatePct): the
+  // asymmetric upward-innovation clamp also damps SUSTAINED gains (it can't tell
+  // a 5-day water spike that reverts from a real ongoing gain), which suppressed
+  // fast-bulk downward adjustments (the bulk_aggressive simulator caught it).
+  // Promoting the decision reads to the robust trend needs the shadow-divergence
+  // validation that was waived; until that's done, decisions + safety both read
+  // the plain trend. (See START-HERE / FOUNDER-DECISIONS §12.)
   const onTarget = (actualRatePct != null)
     ? Math.abs(actualRatePct - phase.goalRatePct) <= 0.2 * Math.abs(phase.goalRatePct) + 0.05
     : null;

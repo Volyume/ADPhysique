@@ -15,7 +15,8 @@
  * bug we fixed in wave 2 was exactly this, only NaN for rir > 0 with no
  * rpe, would have surfaced here).
  */
-import { runWeeklyCoach } from '../weeklyCoach';
+import { runWeeklyCoach, computeWeeklyTrendPct } from '../weeklyCoach';
+import { detectEdPatternFlag } from '../edPatternDetector';
 import {
   calculate1RM,
   calculateTonnage,
@@ -149,6 +150,41 @@ describe('runWeeklyCoach: fuzz invariants', () => {
       currentCalTarget: null, currentStepsTarget: 8000,
       bodyweightKg: null, units: 'kg',
     })).not.toThrow();
+  });
+
+  // ── COMP-024 SAFETY INVARIANT (blocking, §4d F4) ──────────────────────────
+  // The cycle-robust smoother must NEVER mask a genuine rapid loss. A real
+  // -1.8%/wk drop with low energy on a cut must still fire the rapid-loss
+  // safety flag AND the ED-pattern s1 signal — exactly as before COMP-024,
+  // because the safety reads stay on the plain alpha-0.1 EWMA.
+  test('F4: a genuine rapid loss still fires rapid-loss safety + ED s1 (robust smoothing must not mask it)', () => {
+    // A clearly-rapid sustained loss (~2.5%/wk raw). 21 days so the alpha-0.1
+    // EWMA reaches steady slope and the 7-day-ago lookup spans the full drop.
+    // Anchor to real Date.now() because getEwmaSevenDaysAgo() reads the live clock.
+    const now = Date.now();
+    const morningWeights = Array.from({ length: 21 }, (_, i) => ({
+      loggedAt: now - (21 - i) * DAY,
+      weightKg: 85 - i * 0.30,
+    }));
+    const out = runWeeklyCoach({
+      checkin: { weekStart: now - 7 * DAY, energyScore: 2, sorenessScore: 3, sleepHours: 7, calsAdherence: 'hit', stepsAdherence: 'hit', trainingPerformance: 'hit', jointPain: false },
+      morningWeights,
+      sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 0,
+      goalPhase: 'mod_cut', weeksInPhase: 4,
+      consecutiveOffTargetWeeks: 1, consecutivePoorRecoveryWeeks: 0,
+      lastCalAdjustmentDirection: null, lastCalAdjustmentWeeksAgo: 99,
+      currentCalTarget: 2400, currentStepsTarget: 8000,
+      bodyweightKg: 85, units: 'kg',
+    });
+    // Safety flag fires (reads the plain trend, unaffected by the robust smoother).
+    expect(out.rapidWeightLossFlag).toBe(true);
+
+    // The ED-pattern s1 (rapid_loss) signal still sees the drop via the plain
+    // computeWeeklyTrendPct feed.
+    const trendPct = computeWeeklyTrendPct(morningWeights, 85);
+    expect(trendPct).toBeLessThanOrEqual(-1.5);
+    const ed = detectEdPatternFlag({ weightTrendPctPerWeek: trendPct, energyScore: 2 }, [], false);
+    expect(ed.signals.s1).toBe(true);
   });
 
   test('idempotent for identical inputs', () => {

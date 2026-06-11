@@ -88,6 +88,35 @@ export function robustEwma(weights, opts = {}) {
   return result;
 }
 
+/**
+ * Robust smoother over a plain number array (mirrors nutritionEngine.ewmaValues
+ * for the display surfaces, e.g. the BodyMetrics trend takeaway). Same
+ * asymmetric Huber-clamped update; returns a number array rounded to 2dp.
+ *
+ * Display-only by intent: the asymmetric clamp damps sustained gains as well as
+ * transient spikes, which is fine beside the visible raw dots but is why the
+ * coaching DECISIONS stay on the plain EWMA (see weeklyCoach §12 note).
+ */
+export function robustValues(values, opts = {}) {
+  const { alpha, k, madWindow, scaleFloor, downwardKnee } = { ...ROBUST_DEFAULTS, ...opts };
+  if (!Array.isArray(values)) return [];
+  const nums = values.map((v) => Number(v)).filter((n) => Number.isFinite(n));
+  if (nums.length === 0) return [];
+  const out = [];
+  const innovations = [];
+  let m = nums[0];
+  for (const x of nums) {
+    const r = x - m;
+    const s = Math.max(scaleFloor, mad(innovations.slice(-madWindow)));
+    const knee = (r > 0 ? k : downwardKnee) * s;
+    const rClamped = Math.sign(r) * Math.min(Math.abs(r), knee);
+    m = m + alpha * rClamped;
+    innovations.push(r);
+    out.push(parseFloat(m.toFixed(2)));
+  }
+  return out;
+}
+
 /** Latest robust trend value, or null. Mirrors getLatestEwma. */
 export function robustLatest(weights, opts = {}) {
   const series = robustEwma(weights, opts);
