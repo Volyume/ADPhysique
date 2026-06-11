@@ -52,6 +52,12 @@ describe('routeForNotificationType', () => {
     });
   });
 
+  test('winback opens the Subscription screen in the You tab (COMP-025-A)', () => {
+    expect(routeForNotificationType('winback')).toEqual({
+      tab: 'ProfileTab', screen: 'Subscription',
+    });
+  });
+
   test('an unknown or no-op type returns null (no navigation)', () => {
     expect(routeForNotificationType('morning_weight')).toBeNull();
     expect(routeForNotificationType('unknown')).toBeNull();

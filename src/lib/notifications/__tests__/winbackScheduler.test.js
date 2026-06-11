@@ -33,10 +33,8 @@ jest.mock('../../database', () => ({
   getAllWorkouts: (...a) => mockGetAllWorkouts(...a),
 }));
 
-const mockSent = jest.fn();
 const mockFailed = jest.fn();
 jest.mock('../telemetry', () => ({
-  trackNotificationSent: (...a) => mockSent(...a),
   trackNotificationFailed: (...a) => mockFailed(...a),
 }));
 
@@ -67,7 +65,6 @@ beforeEach(async () => {
   mockGetEd.mockResolvedValue(null);
   mockGetAllWorkouts.mockClear();
   mockGetAllWorkouts.mockResolvedValue([]);
-  mockSent.mockClear();
   mockFailed.mockClear();
   mockPlatformOS = 'android';
 });
@@ -94,7 +91,6 @@ test('open episode with a future fire date schedules the win-back and marks it l
   const content = laidContent();
   expect(content.identifier).toBe('volyume_winback');
   expect(content.content.data).toEqual({ type: 'winback' });
-  expect(mockSent).toHaveBeenCalledTimes(1);
   const ep = await winbackState.getEpisode();
   expect(ep.winbackLaid).toBe(true);
   expect(await winbackState.getLastFiredAt()).not.toBeNull();

@@ -25,7 +25,7 @@
  * never throws.
  */
 
-import { openEpisode, clearEpisode } from './winbackState';
+import { openEpisode, clearEpisode, getEpisode } from './winbackState';
 
 /** A real, client-confirmed paid_pro → free lapse (not a stale lockdown). */
 export function isAuthoritativeLapse(result) {
@@ -48,14 +48,17 @@ export function isConfirmedActive(result) {
 export async function handlePotentialLapse(result, userId = null) {
   try {
     if (isConfirmedActive(result)) {
-      // Still paying / returned to Pro: fresh slate, and stand down any
-      // pending win-back.
-      await clearEpisode();
-      try {
-        // eslint-disable-next-line global-require
-        const { cancelWinbackNotification } = require('../notifications/scheduler');
-        await cancelWinbackNotification();
-      } catch (_) { /* best-effort */ }
+      // Still paying / returned to Pro: fresh slate, and stand down any pending
+      // win-back. Only act when an episode is actually open, so the healthy
+      // paid launch (the common case) never touches the OS notification layer.
+      if (await getEpisode()) {
+        await clearEpisode();
+        try {
+          // eslint-disable-next-line global-require
+          const { cancelWinbackNotification } = require('../notifications/scheduler');
+          await cancelWinbackNotification();
+        } catch (_) { /* best-effort */ }
+      }
       return { lapsed: false, opened: false };
     }
 

@@ -36,6 +36,10 @@ export function routeForNotificationType(type, data = {}) {
       // Same destination as the You-tab "Precision Coaching" row, which opens
       // CoachOutput with no weekStart (current week).
       return { tab: 'ProfileTab', screen: 'CoachOutput' };
+    case 'winback':
+      // COMP-025-A: the +30-day win-back. Lands on the Subscription screen,
+      // which shows the returning offer when one is store-eligible (§4c).
+      return { tab: 'ProfileTab', screen: 'Subscription' };
     case 'trial_day3':
       // COMP-023 day-3 value moment. S1/S2 land on the check-in gate screen
       // (which shows the countdown made visible); S3 (no sessions yet) lands on

@@ -21,7 +21,7 @@ import {
   shiftHourMinuteOutOfQuietHours,
   shiftDateOutOfQuietHours,
 } from './quietHours';
-import { trackNotificationFailed, trackNotificationSent } from './telemetry';
+import { trackNotificationFailed } from './telemetry';
 import { COACHING_REMINDERS_CHANNEL } from './channels';
 import { winbackPush, monthLabel } from './winbackContent';
 import {
@@ -512,7 +512,10 @@ export async function scheduleWinbackNotification(userId) {
         date: shifted,
       },
     });
-    trackNotificationSent({ category: CATEGORY.WINBACK, scheduledFor: shifted });
+    // notification_sent telemetry fires from the OS-received listener
+    // (listeners.js), which derives the WINBACK category from data.type — the
+    // same convention the other schedulers follow. Emitting it here would
+    // double-count on every count-refresh re-lay.
     if (firstLay) await markWinbackLaid();
   } catch (e) {
     trackNotificationFailed({
