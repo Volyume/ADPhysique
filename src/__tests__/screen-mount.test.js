@@ -222,8 +222,14 @@ jest.mock('react-native-webview', () => {
 jest.mock('react-native-gesture-handler', () => {
   const React = require('react');
   const passthrough = name => props => React.createElement(name, props, props.children);
+  // Gesture builder: every method is chainable and returns the same stub, so
+  // VolyumeChart's Gesture.Pan().activateAfterLongPress(300).onBegin(...)... chain
+  // resolves to a harmless object under test.
+  const gestureStub = new Proxy({}, { get: () => () => gestureStub });
   return {
     GestureHandlerRootView: passthrough('GHRoot'),
+    GestureDetector: passthrough('GestureDetector'),
+    Gesture: { Pan: () => gestureStub, Tap: () => gestureStub, LongPress: () => gestureStub },
     PanGestureHandler: passthrough('PanGH'),
     TapGestureHandler: passthrough('TapGH'),
     State: {},
