@@ -1018,6 +1018,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (!all.length) return;
     setPreCrunchSnapshot([...all]);
 
+    const MAX_EX = 4;
+    const MAX_SETS = 2;
     const asExercises = all.map(e => ({
       exerciseName:      e.exercise?.name ?? '',
       sets:              e.routineExercise?.recommendedSets ?? e.exercise?.recommendedSets ?? 3,
@@ -1025,24 +1027,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       compoundIsolation: e.exercise?.compoundIsolation ?? 'isolation',
     }));
     const estimate = (exs) => exs.reduce((t, ex) => t + (ex.sets * ((ex.restSec ?? 60) / 60 + 0.75)), 0);
-    const { exercises: trimmed, dropped } = applyTimeCrunch(
-      asExercises, 15, estimate, { maxExercises: 4, maxSetsPerExercise: 2 },
+    const { exercises: trimmed } = applyTimeCrunch(
+      asExercises, 15, estimate, { maxExercises: MAX_EX, maxSetsPerExercise: MAX_SETS },
     );
 
-    const keptSets = new Map(trimmed.map(ex => [ex.exerciseName, ex.sets]));
-    const droppedNames = new Set(dropped);
-
-    store.setWorkoutExercises(prev => prev.map((entry) => {
-      const name = entry.exercise?.name ?? '';
-      if (droppedNames.has(name) && !keptSets.has(name)) {
-        return { ...entry, _timeCrunchSkipped: true };
-      }
-      const cappedSets = keptSets.get(name);
+    // applyTimeCrunch's starter trim returns the first N entries in plan order,
+    // so the first `keepCount` store entries are kept and the rest skipped. Map
+    // by INDEX, not exercise name — duplicate or unnamed exercises can't collide.
+    const keepCount = trimmed.length;
+    store.setWorkoutExercises(prev => prev.map((entry, i) => {
+      if (i >= keepCount) return { ...entry, _timeCrunchSkipped: true };
       return {
         ...entry,
         routineExercise: {
           ...entry.routineExercise,
-          recommendedSets: cappedSets ?? entry.routineExercise?.recommendedSets,
+          recommendedSets: Math.min(
+            entry.routineExercise?.recommendedSets ?? entry.exercise?.recommendedSets ?? MAX_SETS,
+            MAX_SETS,
+          ),
         },
         exercise: entry.exercise ? {
           ...entry.exercise,
@@ -1051,18 +1053,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       };
     }));
 
-    setTimeCrunchMsg(getStarterSessionMessage(activeWorkout?.name, trimmed.length, 2));
+    setTimeCrunchMsg(getStarterSessionMessage(route?.params?.starterRoutineName, keepCount, MAX_SETS));
     setTimeCrunchActive(true);
     setStarterActive(true);
   }
 
   // Apply the starter trim exactly once, when the session opens with the param.
+  // Consume the param afterwards so a reused screen instance can never re-apply
+  // it to a later (full) session via React Navigation's param merging.
   useEffect(() => {
     if (starterAppliedRef.current) return;
     if (!route?.params?.starterSession) return;
     if (!workoutExercises.length) return;
     starterAppliedRef.current = true;
     applyStarterSession();
+    navigation.setParams({ starterSession: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route?.params?.starterSession, workoutExercises.length]);
 

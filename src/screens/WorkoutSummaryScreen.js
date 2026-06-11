@@ -349,8 +349,14 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       if (totalCompleted === 1) {
         let calm = false;
         let edFlag = null;
-        try { calm = isCalm(await getWellbeingMode()); } catch (_) {}
-        try { edFlag = user?.id ? await getOpenEdPatternFlag(user.id) : null; } catch (_) {}
+        try {
+          const [mode, flag] = await Promise.all([
+            getWellbeingMode(),
+            user?.id ? getOpenEdPatternFlag(user.id) : Promise.resolve(null),
+          ]);
+          calm = isCalm(mode);
+          edFlag = flag;
+        } catch (_) {}
         setFirstSessionLine((calm || edFlag) ? null : 'First session done. That is the hard part.');
       }
     }

@@ -158,6 +158,21 @@ describe('applyTimeCrunch', () => {
       expect(exercises.map(e => e.exerciseName)).toEqual(['Squat', 'Bench', 'Row', 'Overhead']);
     });
 
+    test('keeps the first N in plan order even when an early exercise is an isolation', () => {
+      // The starter is the first N exercises of Day 1 — it must NOT run the
+      // budget-fit isolation drop first (which would discard an early isolation
+      // and pull in a later compound, breaking the "first N in order" promise).
+      const mixed = [
+        { exerciseName: 'Curl',     sets: 3, restSec: 60,  compoundIsolation: 'isolation' },
+        { exerciseName: 'Squat',    sets: 4, restSec: 120, compoundIsolation: 'compound' },
+        { exerciseName: 'Bench',    sets: 3, restSec: 120, compoundIsolation: 'compound' },
+        { exerciseName: 'Row',      sets: 3, restSec: 90,  compoundIsolation: 'compound' },
+        { exerciseName: 'Overhead', sets: 3, restSec: 90,  compoundIsolation: 'compound' },
+      ];
+      const { exercises } = applyTimeCrunch(mixed, 15, estimate, { maxExercises: 4, maxSetsPerExercise: 2 });
+      expect(exercises.map(e => e.exerciseName)).toEqual(['Curl', 'Squat', 'Bench', 'Row']);
+    });
+
     test('caps every kept exercise at maxSetsPerExercise', () => {
       const { exercises } = applyTimeCrunch(day1, 15, estimate, { maxExercises: 4, maxSetsPerExercise: 2 });
       expect(exercises.every(e => e.sets <= 2)).toBe(true);

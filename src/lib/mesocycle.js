@@ -351,6 +351,24 @@ export function applyTimeCrunch(exercises, targetMinutes, estimateFn, options = 
     return { exercises: withReducedRest, restReduction: 0.30, dropped: [] };
   }
 
+  // Starter sessions (COMP-013): a finishable subset that does NOT depend on the
+  // minutes budget. Keep the first `maxExercises` in plan order and cap each at
+  // `maxSetsPerExercise` — deterministic, the same lifts and order as Day 1, the
+  // first N exercises (not the first N of an isolation-dropped survivor list).
+  // This runs INSTEAD of the budget-fit isolation drop below.
+  if (hasStarterTrim) {
+    let starter = withReducedRest;
+    const starterDropped = [];
+    if (maxExercises != null && starter.length > maxExercises) {
+      for (const ex of starter.slice(maxExercises)) starterDropped.push(ex.exerciseName);
+      starter = starter.slice(0, maxExercises);
+    }
+    if (maxSetsPerExercise != null) {
+      starter = starter.map(ex => ({ ...ex, sets: Math.min(ex.sets ?? 0, maxSetsPerExercise) }));
+    }
+    return { exercises: starter, restReduction: 0.30, dropped: starterDropped };
+  }
+
   // Step 2: drop lowest-priority isolation exercises (compound always protected)
   // Priority order: compound > isolation (by compoundIsolation tag); within each, sort by sets
   const dropped = [];
@@ -376,25 +394,6 @@ export function applyTimeCrunch(exercises, targetMinutes, estimateFn, options = 
     if (idx !== -1) {
       dropped.push(result[idx].exerciseName);
       result.splice(idx, 1);
-    }
-  }
-
-  // Step 3 (starter sessions only): bound the session to a finishable subset.
-  // Runs as a final deterministic trim after the isolation drop — keep the
-  // first `maxExercises` in plan order and cap each at `maxSetsPerExercise`.
-  // Same lifts, same order, same per-set targets: a true subset of Day 1.
-  if (hasStarterTrim) {
-    if (maxExercises != null && result.length > maxExercises) {
-      for (const ex of result.slice(maxExercises)) {
-        if (!dropped.includes(ex.exerciseName)) dropped.push(ex.exerciseName);
-      }
-      result = result.slice(0, maxExercises);
-    }
-    if (maxSetsPerExercise != null) {
-      result = result.map(ex => ({
-        ...ex,
-        sets: Math.min(ex.sets ?? 0, maxSetsPerExercise),
-      }));
     }
   }
 

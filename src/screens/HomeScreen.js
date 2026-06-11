@@ -679,7 +679,7 @@ export default function HomeScreen({ navigation }) {
         // ActiveWorkoutScreen renders them as paired from the start.
         supersetGroupId: routineExercise?.supersetGroupId ?? null,
       }));
-      pendingStartRef.current = { routineId: routine.id, initialExercises, starter };
+      pendingStartRef.current = { routineId: routine.id, initialExercises, starter, routineName: routine.name };
       // Clear any readiness from a previously-cancelled prompt so each session
       // starts from blank chips.
       setReadiness({ soreness24hBefore: null, sleepQuality: null, energyScore: null });
@@ -705,7 +705,12 @@ export default function HomeScreen({ navigation }) {
         ...readinessOverride,
       });
       startWorkout(workout, pending.initialExercises);
-      navigation.navigate('ActiveWorkout', pending.starter ? { starterSession: true } : undefined);
+      // Always pass starterSession explicitly so a normal start can never inherit
+      // a stale starterSession:true param on a reused ActiveWorkout instance.
+      navigation.navigate('ActiveWorkout', {
+        starterSession: !!pending.starter,
+        starterRoutineName: pending.routineName,
+      });
       // COMP-015 (Pro): compute + log this session's adjustments in the
       // background so it never delays the session opening. The line appears a
       // moment later once the local reads resolve. Runs once per start; a
@@ -1164,7 +1169,7 @@ export default function HomeScreen({ navigation }) {
                 plan and no sessions yet — the smart-first-step short session,
                 with the full session one tap away and a dismiss back to the
                 standard hero. Gated identically to the retired cue row. */}
-            {tier === 'pro' && totalSessions === 0 && !firstRunCueDismissed ? (
+            {tier === 'pro' && !initialLoading && totalSessions === 0 && !firstRunCueDismissed ? (
               <View style={styles.firstRunHero}>
                 <Text style={styles.firstRunHeroLine}>
                   First session: a short one to learn the ropes. About 15 minutes.

@@ -134,6 +134,10 @@ export default function ProOnboardingScreen({ navigation }) {
   const [sequenceStage, setSequenceStage] = useState(0);
   const stageTimersRef = useRef([]);
   const sequenceFade = useRef(new Animated.Value(0)).current;
+  // Guards a synchronous double-tap on Continue: in sequence mode the button is
+  // covered by the overlay rather than disabled by `busy`, so a fast second tap
+  // before the overlay commits could fire two plan generations.
+  const submittingRef = useRef(false);
 
   // Step 1, profile
   const [firstName, setFirstName] = useState(userProfile?.firstName || '');
@@ -481,6 +485,8 @@ export default function ProOnboardingScreen({ navigation }) {
       appAlert('Recovery rating', 'Please select your recovery level to continue.');
       return;
     }
+    if (submittingRef.current) return;
+    submittingRef.current = true;
 
     // Reduce Motion keeps the plain button spinner; everyone else gets the
     // staged sequence. The real work below is identical either way.
@@ -699,14 +705,20 @@ export default function ProOnboardingScreen({ navigation }) {
       appAlert('Something went wrong', e?.message ?? 'Try again.');
       endSequence();
       setBusy(false);
+      submittingRef.current = false;
       return;
     }
 
-    // Plan generation failed: abort the sequence instantly and fall back to the
-    // step-5 form (the alert is already up). No navigation, no completion tick.
+    // Plan generation failed, but the profile + targets are saved. Abort the
+    // sequence's celebratory hold instantly (no min-display pad, no completion
+    // tick) and still go to the completion screen — which handles the no-plan
+    // state and whose alert ("Open Home and tap Build my plan") then reads
+    // correctly. Stranding the user on the step-5 form would not.
     if (planFailed) {
-      endSequence();
+      cancelSequenceTimers();
       setBusy(false);
+      submittingRef.current = false;
+      navigation.replace('ProSetupComplete');
       return;
     }
 
