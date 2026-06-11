@@ -125,5 +125,24 @@ DEFERRED (need founder/attended session, not done unattended):
 - COMP-029 light theme: needs expo-system-ui install + native rebuild +
   the 122-site zero-visual-diff Phase 0 migration; heavily visual.
 
-NEXT IN QUEUE (clean, unattended-safe): COMP-018 streak (pure
-src/lib/streak.js + Progress strip; NEW-002 consumes it).
+COMP-018 streak — BLOCKED on a data source (found while scoping it
+2026-06-11). The run-length rule requires knowing whether each PAST
+calendar week was an engine-prescribed deload (those count as 'resting',
+never 'missed'). `mesocycle_weeks` is keyed by week-index within a
+mesocycle, not by calendar week, and only `getCurrentMesocycleWeek`
+exists. Without a `getDeloadWeeksInRange(userId, fromMonday, toMonday)`
+(or equivalent calendar-week→is_deload mapping), a correctly-deloaded
+user would see their run wrongly lapse — the exact delayed-punishment bug
+the blueprint is built to avoid. Prereq: add that query (maps mesocycle
+start date + week_index → calendar Monday), THEN build the pure
+`src/lib/streak.js` + the read-only Progress strip. Pause/goal editor,
+ConsistencyScreen 'Your weeks' section, and milestones are a second pass
+(need a synced pause/goal table per the blueprint, + founder copy review).
+
+NEXT IN QUEUE (clean, unattended-safe): none remaining that are both
+unblocked and non-visual. Everything left needs founder eyes (COMP-027
+Part B, COMP-029, COMP-018 UI), a missing data source (COMP-018 deload
+history), engine-timing review (COMP-008→COMP-015), billing (COMP-007,
+COMP-025-B), or spend (COMP-016, NEW-001). Recommend the next session be
+attended for the visual/engine items, or start with the COMP-018 deload
+query (pure, testable) as the one remaining non-visual prerequisite.
