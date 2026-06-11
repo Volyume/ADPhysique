@@ -449,3 +449,39 @@ explanation.
   `useAdaptiveCal` path (§4.0) predates this work; `weeklyCoach.js:676`'s
   comment ("~4 weeks of weight data") does not match what the production
   caller supplies.
+
+---
+
+## BUILD-APPROACH UPDATE — build LIVE, no shadow (session 6, 2026-06-11)
+
+**Not yet built.** This is the top remaining engine item; do it FIRST and FRESH
+next session.
+
+The §13 "shadow mode (one full release)" rollout is **overridden** by the
+founder's no-shadow directive (see `_FOUNDER-DECISIONS-2026-06-11.md` §14): build
+(A) the dormant adaptive-TDEE resize activation and (B) the step-trend modifier
+**live/active** on the branch, gated only by the founder's PR-merge. The
+`STEP_TDEE_GAIN_ENABLED` flag concept is no longer a dormant gate — wire it on
+(or drop it) per "no flags I won't flip."
+
+**Validation substitute (since no shadow review):** lean on the
+engine-invariant + simulator harness as the gate. Specifically, add BLOCKING
+engine-invariants (mirroring COMP-024's F4) proving the resize NEVER weakens:
+the absolute 1,200/1,500 floors, the FFM floor (applied after damping), the
+±5% weekly cap, the rapid-loss upward-only override, the `cycleOverride`/
+`scoffPositive` holds, and the ED-pattern lockout. Run the FULL
+`tests/simulator/scenarios/*` suite (cuts, bulks, maintenance, supervised +
+unsupervised) — all must stay green.
+
+**⚠️ Carry the COMP-024 lesson.** When COMP-024's robust trend was promoted into
+coaching DECISIONS it regressed `bulk_aggressive` (the clamp damped sustained
+gains); the simulator caught it and that promotion was HELD. COMP-026 changes
+live **calorie sizing** off the adaptive resize — the analogous risk is the
+resize mis-sizing a change near a phase boundary or under sparse/erratic data.
+Build it, but if a simulator scenario regresses, treat it as a real finding and
+hold that piece rather than forcing it. The §13 design + constants
+(1,500-step delta / 0.20 ratio / 4,000 floor / 1,000 persistence / 0.65 cap /
+10-of-14 + 14-of-28 gates; widen the weight window to ~42 days; make `weeks`
+date-span-based not row-count-based) are approved as the starting point.
+The `step_tdee_modifier_evaluated` telemetry still needs a server CHECK
+migration (STAGING only per DB rules; founder applies).

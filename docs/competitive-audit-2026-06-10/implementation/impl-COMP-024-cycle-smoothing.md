@@ -518,3 +518,37 @@ maths claims (RobustTrend Huber, EWMA-as-Kalman) are from arXiv/journal
 abstracts also via search extract. Re-verify exact MacroFactor wording and
 the Kanellakis numeric (0.450 kg) against the primary sources before the
 founder review.
+
+---
+
+## Implementation note — built LIVE (no shadow), session 6 (2026-06-11)
+
+Founder overrode the §6/§12 shadow-mandatory rollout ("no shadows, build live"),
+so this shipped active on `claude/main-branch-content-update-dcqicf`, gated only
+by the eventual PR-to-main.
+
+**SHIPPED (live):**
+- `src/lib/robustTrend.js` — Candidate A (asymmetric Huber-clamped
+  robust-innovation EWMA), `robustEwma` (object series) + `robustValues` (number
+  array), `mad`/`median` helpers. Approved constants (k=1.5, alpha=0.1, MAD
+  window 14, scale floor 0.25 kg, downward knee 4·s).
+- **Display promotion:** `BodyMetricsScreen` weight-trend takeaway now smooths
+  with `robustValues` (raw dots still shown alongside). The blueprint's "display
+  first" step.
+- **Safety:** the F4 fixture is now a **blocking engine-invariant** in
+  `engine-invariants.test.js` (genuine rapid loss still fires
+  `rapidWeightLossFlag` + `detectEdPatternFlag` s1). Plus F1–F8 in
+  `src/lib/__tests__/cycleRobustSmoothing.test.js`. Calorie floors, the −1.5%
+  threshold, and `edPatternDetector` are untouched; `cycleOverride` untouched.
+
+**HELD (not shipped) — the coaching-DECISION promotion (§4d step 2/3).** Wiring
+the robust trend into the on-target / off-target reads regressed bulk coaching:
+the asymmetric upward clamp damps SUSTAINED gains as well as transient spikes
+(the innovation clamp can't tell a 5-day spike that reverts from a real ongoing
+gain), so the `bulk_aggressive` simulator's fast bulk stopped triggering the
+downward calorie pull. Reverted — decisions + safety stay on the plain
+alpha-0.1 EWMA (no regression). **To promote decisions safely**, rework the
+smoother so sustained trends pass through (the median-prefilter Candidate B
+tracks sustained moves with a fixed ~2-day lag and would not have regressed; or
+a trend-aware robust scale). Re-run the full simulator suite — `bulk_aggressive`
+and the cut scenarios must all stay green — before promoting decisions.

@@ -7,6 +7,19 @@ live state. `_FOUNDER-DECISIONS-2026-06-11.md` holds the detailed decisions +
 the full per-commit build log. This file remains only the index of what the
 original audit produced (the 28 blueprints).
 
+**Status note (2026-06-11, session 6):** **COMP-024 cycle-robust smoothing
+shipped LIVE** (founder dropped shadow mode for everything — see
+`_FOUNDER-DECISIONS-2026-06-11.md` §14). Live: the robust smoother
+(`robustTrend.js`) + the BodyMetrics display promotion + a blocking rapid-loss
+safety invariant. HELD: the coaching-decision promotion — it regressed bulk
+coaching (the simulator caught the clamp damping sustained gains), so decisions
++ safety stay on the plain EWMA until the smoother is reworked. Baseline **219
+suites / 3395 tests**, 0 errors, 4 warnings. **Next session START at the
+`⏩ RESTART HERE` block in `_START-HERE-NEXT-SESSION.md`** — locked decisions
+(no-shadow, deps approved, billing held, COMP-004 both surfaces) + the ordered
+next steps (COMP-026 first and fresh, then COMP-004 door, COMP-029, COMP-019
+Stage 2). Read the "COMP-024 lesson" before COMP-026.
+
 **Status note (2026-06-11, session 5):** **COMP-027 Part B shipped** — the Home
 hero-first reorder + the new `TodayStrip` glance row (weight/steps/cardio in one
 card under the hero), retiring StepsCard + CardioCard. Pure JS/RN, no gates; the

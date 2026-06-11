@@ -657,3 +657,73 @@ heavy tests. No billing files touched; Phase B (store offers) NOT built.
 - COMP-025 **Phase B** (store win-back offers) remains billing-gated and unbuilt.
 - The only unattended code-only leftover is the COMP-019-1b static-chart
   migrations (cosmetic).
+
+---
+
+## 14. Session 5–6 decisions + the NO-SHADOW override (2026-06-11)
+
+A follow-on working session. The founder said, in substance: "Just do them, I
+don't need to supervise." I held the hard gates and asked which lanes to open;
+the binding answers:
+
+- **NO SHADOW MODE, anywhere — build live, in full.** Founder, verbatim: "I
+  don't want anything shadow I don't have capability to flip anything this is a
+  bad idea no shadows. Do them all in full and if anything else has been done in
+  this shadow then flip them too." This **overrides §12 and §13's
+  "shadow-mode mandatory"** gate. Rationale accepted: a shadow build behind a
+  flag the founder won't operate is dormant code that never helps users. The
+  validation substitute (since shadow data won't be reviewed) is the
+  engine-invariant + simulator test harness, the safety clamps staying
+  authoritative, and the founder's PR-merge-to-main as the production gate.
+- **Dependencies APPROVED (all three):** `expo-system-ui` (COMP-029 light
+  theme), `react-native-android-widget` (COMP-019 Android widgets),
+  `@bacons/expo-apple-targets` (COMP-019 iOS widgets/Live Activity + COMP-020
+  watch). Approval = write the JS/config now; the **signed native build is the
+  founder's EAS step** (the cloud build container cannot sign/run a device). The
+  `@bacons/expo-apple-targets` issue-#175 spike still applies before relying on it.
+- **Billing: HELD (reaffirmed).** COMP-007 + COMP-025 Phase B stay research-only;
+  nothing in `src/lib/payments/*`.
+- **COMP-004 Home door: "both surfaces."** Host the "Your trend" card on Progress
+  AND Diary; the TodayStrip logged-weight cell deep-links to Progress.
+- **Hard lines that still bind:** no `main`; no `src/coaching/` safety edits; the
+  1,200/1,500 floors, the −1.5%/wk rapid-loss threshold and `edPatternDetector`
+  thresholds are untouchable. New maths routes through those clamps.
+
+### Session 5 build log — COMP-027 Part B (Home reorder), 4 commits
+Hero-first Home hierarchy: new `src/components/TodayStrip.js` (weight/steps/
+cardio glance row under the hero, four weight-cell states incl. the
+morning-window expanded input, degradation 3→2→1, larger-text stack); HomeScreen
+reordered (hero first, strip under it, free teaser below, skeleton order
+flipped); `handleLogWeight(kg)` refactored (strip owns the draft); new
+`edFlagOpen` state drops the sparkline under a wellbeing flag; `StepsCard.js` +
+`CardioCard.js` deleted (loaders absorbed) + dead weight-card styles removed.
+Carry-forward: the §8 weigh-in-completion guardrail + small-screen/keyboard/
+larger-text layouts are an on-device PR check; the COMP-004 tap-through "door"
+was deferred to the host decision (now made: both surfaces).
+
+### Session 6 build log — COMP-024 cycle-robust smoothing (LIVE, no shadow), 2 commits
+- c1 `src/lib/robustTrend.js` — Candidate A (asymmetric Huber-clamped
+  robust-innovation EWMA) + a number-array `robustValues` form; pure; 11
+  fixtures (F1 excursion ~80% damped, F2 weekend, F3 loss undamped, F6
+  fat-finger, F7 sparse, F8 determinism). Approved constants (k=1.5, alpha=0.1,
+  MAD window 14, scale floor 0.25, downward knee 4·s).
+- c2 **DISPLAY promotion LIVE** (BodyMetrics weight-trend takeaway smooths with
+  the robust trend; raw dots still shown) + the **F4 blocking safety invariant**
+  in `engine-invariants.test.js` (a genuine rapid loss still fires
+  `rapidWeightLossFlag` + ED s1; safety reads never touch the robust trend).
+- **HELD — coaching-decision promotion.** I wired the robust trend into the
+  on-target / off-target reads first; the `bulk_aggressive` simulator caught a
+  real regression — the asymmetric upward clamp damps SUSTAINED gains (not just
+  transient spikes), so a fast bulk stopped triggering the downward calorie
+  pull. Reverted; decisions + safety stay on the plain EWMA. To promote
+  decisions safely the clamp needs reworking (median-prefilter, or a
+  trend-aware scale) so sustained trends pass — that is the remaining COMP-024
+  piece. This is the concrete cost of dropping shadow, and the simulator
+  harness is now doing the job shadow review would have.
+- `weeklyCoach.js` change is therefore comment-only in the live decision path
+  (no behavioural diff there); `edPatternDetector`, floors, threshold untouched.
+
+### What remains from "do them all" (NOT built — for the next session)
+COMP-026 (engine, do first + fresh), COMP-004 door (both surfaces),
+COMP-029 light theme, COMP-019 Stage 2 widgets, and the COMP-024
+decision-promotion (after the clamp rework). Billing held throughout.

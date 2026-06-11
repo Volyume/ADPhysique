@@ -9,6 +9,65 @@ hand-off. Read this first. Two companion docs hold the detail:
 
 ---
 
+## ⏩ RESTART HERE — the next session's first move (written end of session 6)
+
+**Branch:** `claude/main-branch-content-update-dcqicf` (NOT main). Everything
+below is committed + pushed there. If the container reset and local is behind:
+`git fetch origin claude/main-branch-content-update-dcqicf` then
+`git merge --ff-only origin/claude/main-branch-content-update-dcqicf`.
+
+**Health baseline (verify before you start — `npm run lint && npm test`):**
+0 errors, 4 pre-existing warnings, **219 suites / 3395 tests** (3392 pass, 3
+skip). Fewer suites / more warnings = a regression you introduced.
+
+**Locked founder decisions from sessions 5–6 — DO NOT re-ask (detail in
+FOUNDER-DECISIONS §14):**
+- **NO SHADOW MODE, anywhere.** Founder: "I don't have capability to flip
+  anything … no shadows. Do them all in full." This OVERRIDES the
+  shadow-mandatory gate in §12/§13. Build engine work **live/active** on the
+  branch. The real production gate is the founder's eventual PR-merge to main.
+- **Dependencies APPROVED (all three):** `expo-system-ui` (COMP-029),
+  `react-native-android-widget` + `@bacons/expo-apple-targets` (COMP-019 Stage
+  2 / COMP-020). Write the JS/config; the **signed native build runs on the
+  founder's EAS** — this cloud container cannot sign or run a device.
+- **Billing: still HELD.** Nothing in `src/lib/payments/*`. COMP-007 + COMP-025
+  Phase B stay untouched.
+- **COMP-004 Home door: "both surfaces"** — host the "Your trend" card on
+  Progress AND Diary; the TodayStrip logged-weight cell links to Progress.
+- **Hard lines that still bind despite "do it all":** never touch `main`; never
+  edit `src/coaching/` safety presentation; never move the 1,200/1,500 calorie
+  floors or the −1.5%/wk rapid-loss threshold or `edPatternDetector` thresholds.
+  New engine maths routes THROUGH those clamps, never around them.
+
+**Recommended next-step ORDER (all build live, no shadow):**
+1. **COMP-026** (adaptive-TDEE resize activation + step modifier) — the biggest
+   remaining engine change; it alters live **calorie sizing**. Do it FIRST and
+   FRESH. Read `impl-COMP-026-step-tdee.md` + its new "build-live" note + §13.
+   Heed the **COMP-024 lesson** (below): add a blocking safety invariant that a
+   genuine rapid loss + the FFM floors + the ±5% cap are never weakened by the
+   resize, exactly like COMP-024's F4.
+2. **COMP-004 door** (both surfaces) — pure UI, low risk, quick win.
+3. **COMP-029 light theme** — `expo-system-ui` + the 122-site token migration
+   (JS/config; native rebuild on EAS).
+4. **COMP-019 Stage 2 widgets** — JS/config (native build on EAS; the
+   `@bacons/expo-apple-targets` issue-#175 spike still applies).
+5. **COMP-024 decision-promotion** (the held piece) — only if you first rework
+   the smoother so it tracks sustained trends (see the COMP-024 lesson).
+
+**⚠️ THE COMP-024 LESSON (read before COMP-026) — the concrete cost of "no
+shadow":** I promoted the cycle-robust trend into the coaching DECISIONS and the
+`bulk_aggressive` simulator caught a real regression — the asymmetric
+upward-innovation clamp damps *sustained* gains, not just transient water-weight
+spikes, so a fast bulk stopped triggering the downward calorie pull. That is
+exactly what shadow-divergence review existed to vet. The test harness caught it
+instead, and I **held** the decision-promotion (decisions + safety stay on the
+plain EWMA). Takeaway for COMP-026: build live, but lean HARD on the
+engine-invariant + simulator scenarios as the validation gate, and add a
+blocking invariant for every safety interlock the change touches. If a simulator
+scenario regresses, that is a real finding — hold that piece, don't force it.
+
+---
+
 ## UPDATE 2026-06-11 (session 6 — COMP-024 SHIPPED LIVE, no shadow) — READ THIS FIRST
 
 Founder directed: **no shadow mode anywhere — build live, in full** ("I don't
