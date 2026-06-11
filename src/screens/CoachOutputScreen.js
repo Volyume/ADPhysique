@@ -357,11 +357,23 @@ function TrainingNextWeekCard({
   );
 }
 
-function WhyBlock({ text }) {
+function WhyBlock({ text, onLearnMore }) {
   return (
     <View style={styles.whyBlock}>
       <Text style={styles.whyLabel}>Why this week:</Text>
       <Text style={styles.whyText}>{text}</Text>
+      {/* COMP-006: every why can be explained. A quiet link to the methodology
+          page; always present, not conditional on the decision type. */}
+      {onLearnMore ? (
+        <TouchableOpacity
+          onPress={onLearnMore}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          accessibilityRole="button"
+          accessibilityLabel="Understand how this decision was made"
+        >
+          <Text style={styles.whyLearnMore}>Understand how this decision was made</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -503,7 +515,7 @@ function RefeedCard({ refeed, applied, onApply, applying }) {
   );
 }
 
-function HeldDecisionsCard({ decisions, history, onSeeAll }) {
+function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore }) {
   if (!decisions || decisions.length === 0) return null;
   const edLockout = decisions.find(d => d.type === 'ed_pattern_lockout');
   const edCleared = decisions.find(d => d.type === 'ed_pattern_cleared');
@@ -534,6 +546,19 @@ function HeldDecisionsCard({ decisions, history, onSeeAll }) {
               <Text style={styles.heldText}>{d.reason}</Text>
             </View>
           ))}
+          {/* COMP-006: only on standard holds — never alongside the ED-pattern
+              or rapid-loss blocks, whose own copy + CTAs must not be diluted. */}
+          {onLearnMore ? (
+            <TouchableOpacity
+              style={styles.heldLearnMore}
+              onPress={onLearnMore}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel="See how Precision Coaching decides"
+            >
+              <Text style={styles.heldLearnMoreText}>See how Precision Coaching decides</Text>
+            </TouchableOpacity>
+          ) : null}
         </>
       ) : null}
       {historyWithHeld.length > 0 ? (
@@ -1547,7 +1572,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         )}
 
         {/* 6. Why */}
-        {whyThisWeek ? <WhyBlock text={whyThisWeek} /> : null}
+        {whyThisWeek ? <WhyBlock text={whyThisWeek} onLearnMore={() => navigation.navigate('Methodology', { source: 'why_block' })} /> : null}
 
         {/* 7. One focus for next week */}
         {(() => {
@@ -1580,6 +1605,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             decisions={heldDecisions}
             history={coachHistory}
             onSeeAll={() => navigation.navigate('CoachHeldHistory')}
+            onLearnMore={() => navigation.navigate('Methodology', { source: 'held_decisions' })}
           />
         )}
 
@@ -1918,6 +1944,19 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 21,
     fontStyle: 'italic',
+  },
+  // COMP-006 methodology links (secondary, muted, no affordance beyond text)
+  whyLearnMore: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    marginTop: spacing.sm,
+    textDecorationLine: 'underline',
+  },
+  heldLearnMore: { marginTop: spacing.sm },
+  heldLearnMoreText: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    textDecorationLine: 'underline',
   },
 
 
