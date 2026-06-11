@@ -48,6 +48,29 @@ change, propagates via stateColors aliases.
 Training partners: up to three partners for ALL users. Overrides the
 blueprint's one-free/three-Pro proposal. No Pro gate anywhere in NEW-002.
 
+## 9. Second questionnaire — answers of 2026-06-11 (afternoon)
+- **Next build:** COMP-018 streak only. SHIPPED v0 (881d948): deload query +
+  pure streak.js + read-only Progress strip. UI follow-ups deferred.
+- **COMP-001 step 6:** DROP the logged-set cap. No cap was ever added, so
+  step 6 is CLOSED as shipped (compact timer only). The nav-pill clamp
+  concern is moot; the middle-out nav truncation helper is dropped as
+  unneeded polish.
+- **Billing:** STAYS FULLY HELD. COMP-007 and COMP-025 Phase B remain
+  research-only.
+- **Spend:**
+  - **COMP-016 UK food layer — DROPPED COMPLETELY.** Founder: "no chance at
+    any stage." Removed from the roadmap; blueprint marked rejected. Its
+    foods.source CHECK locked-doc amendment is therefore also dropped.
+  - **NEW-001 Gym Animations $599 — DROPPED.** Founder: cheaper/better
+    alternatives exist. The $599 vendor is rejected; NEW-001 Phase 0 is
+    repurposed to source cheaper alternatives (£0 research) before any
+    direction is chosen.
+  - **NEW-001 Phase 0 (£0) — RUN.** Licensing questions + sourcing cheaper
+    exercise-demo-loop options. No money moves. See
+    `gaps/new-001-phase0-demo-sourcing.md`.
+  - **Supabase Pro backup $25/mo — DEFERRED (not rejected).** "Not needed
+    now, maybe for the future." Backup/DR risk stays on the books.
+
 ## 8. Copy + locked docs — APPROVE IN PRINCIPLE
 Build with blueprint copy as written (COMP-006 methodology, COMP-015
 adjustment lines, COMP-011 cardio explainer, COMP-010 effort vocabulary,

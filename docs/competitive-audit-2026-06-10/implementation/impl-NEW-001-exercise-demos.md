@@ -1,5 +1,13 @@
 # impl-NEW-001 — Exercise demonstration solutions (gating deep research)
 
+> **VENDOR DROPPED 2026-06-11 (founder decision).** The recommended Gym
+> Animations $599 package is rejected: "drop it, there are better
+> alternatives a lot cheaper." The £0 Phase 0 still runs, repurposed to
+> source cheaper/free alternatives before any direction is chosen — see
+> `../gaps/new-001-phase0-demo-sourcing.md`. The rest of this blueprint's
+> analysis (placement, offline-first constraint, bundle maths) still holds;
+> only the vendor/cost recommendation is superseded.
+
 Date: 2026-06-10. Round-2 blueprint replacing rejected COMP-014/COMP-028.
 Founder constraints honoured throughout: **no self-filmed content; static
 photos and generic licensed GIF loops are not convincing on their own; no

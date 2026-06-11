@@ -1,5 +1,11 @@
 # COMP-016 — Verified UK food layer: implementation blueprint
 
+> **DROPPED 2026-06-11 (founder decision).** "No chance at any stage the UK
+> food layer will be approved — drop that idea completely." The ~£4-6k
+> contracted data-ops cost is rejected outright. This document is retained
+> as research only; do not build, and do not action its foods.source CHECK
+> locked-doc amendment.
+
 > Round-2 blueprint per `impl-00-shared-brief.md`. Approved seed:
 > `../competitive-audit-03-master-proposals.md` COMP-016 (impact 9 /
 > effort 7). Extends `docs/FOOD_DATA_STRATEGY_LOCKED.md` (locked
