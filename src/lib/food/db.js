@@ -192,6 +192,41 @@ export async function getFoodFrequents(userId, limit = 20) {
   );
 }
 
+// ─── food_slot_recents (COMP-002, client-only "Add again" memory) ────────
+//
+// Per-(user, slot, food) log frequency and last-used portion, written on
+// every food log from the picker and read by the slot-aware "Add again"
+// tab. Never synced: derived data that rebuilds itself as the user logs.
+
+export async function upsertSlotRecent(userId, { mealSlot, foodRef, quantityG }) {
+  // Quick-adds aren't foods (no resolvable record) so they never earn a
+  // slot-recent row.
+  if (!userId || !mealSlot || !foodRef || foodRef.startsWith('quick:')) return;
+  const d = await db();
+  await d.runAsync(
+    `INSERT INTO food_slot_recents
+       (user_id, meal_slot, food_ref, log_count, last_logged_at, last_quantity_g)
+     VALUES (?, ?, ?, 1, ?, ?)
+     ON CONFLICT(user_id, meal_slot, food_ref) DO UPDATE SET
+       log_count = log_count + 1,
+       last_logged_at = excluded.last_logged_at,
+       last_quantity_g = excluded.last_quantity_g`,
+    [userId, mealSlot, foodRef, Date.now(), Number.isFinite(quantityG) ? quantityG : 0],
+  );
+}
+
+export async function getSlotRecents(userId, mealSlot, limit = 10) {
+  const d = await db();
+  return d.getAllAsync(
+    `SELECT food_ref, last_quantity_g, log_count
+     FROM food_slot_recents
+     WHERE user_id = ? AND meal_slot = ?
+     ORDER BY log_count DESC, last_logged_at DESC
+     LIMIT ?`,
+    [userId, mealSlot, limit],
+  );
+}
+
 // ─── custom_foods ────────────────────────────────────────────────────────
 
 export async function insertCustomFood(userId, food) {

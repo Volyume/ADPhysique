@@ -1244,6 +1244,23 @@ const SCHEMA_MIGRATIONS = [
     `ALTER TABLE exercises ADD COLUMN cue TEXT`,
     `ALTER TABLE exercises ADD COLUMN equipment_profiles TEXT`,
   ],
+  // food_slot_recents: client-only memory of what's been logged to each meal
+  // slot (COMP-002 "Add again" tab). One row per (user, slot, food) holding
+  // how often and how much, so the picker's first tab shows this slot's
+  // staples with the last-used portion pre-filled. Written on every food log,
+  // never synced: derived/disposable data that rebuilds as the user logs, so
+  // it sits outside the food_sync_pull/push cycle like food_frequents.
+  [
+    `CREATE TABLE IF NOT EXISTS food_slot_recents (
+      user_id         TEXT NOT NULL,
+      meal_slot       TEXT NOT NULL,
+      food_ref        TEXT NOT NULL,
+      log_count       INTEGER NOT NULL DEFAULT 1,
+      last_logged_at  INTEGER NOT NULL,
+      last_quantity_g REAL NOT NULL,
+      PRIMARY KEY (user_id, meal_slot, food_ref)
+    )`,
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on

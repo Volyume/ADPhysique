@@ -7,8 +7,11 @@
 // Suggested is handled by the screen, not selectTabRows, since it lists meals,
 // not food rows. (My Recipes stays a CTA, not a tab, per the 2026-05-28 call.)
 
+// "Add again" (COMP-002): the first tab is the slot-aware recents list,
+// filtered to the meal slot being logged with last-used portions pre-filled.
+// The key stays 'recents' so state, telemetry and empty-copy keys are stable.
 export const SEARCH_TABS = [
-  { key: 'recents', label: 'Recents' },
+  { key: 'recents', label: 'Add again' },
   { key: 'suggested', label: 'Suggested' },
   { key: 'favourites', label: 'Favourites' },
   { key: 'frequents', label: 'Frequents' },
