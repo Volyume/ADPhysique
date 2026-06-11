@@ -322,6 +322,7 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="Consistency" component={ConsistencyScreen} options={{ title: 'Consistency' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
       <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="RecapStory" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ title: 'Share Card' }} />
       {/* Cardio is launched from the Progress tab (AnalyticsScreen). Registering
           both here keeps them in this stack so save/back return to Progress. */}
