@@ -919,7 +919,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </TouchableOpacity>
           {!readOnly && (
             <TouchableOpacity style={styles.shareFooterBtn} onPress={handleShareCard} accessibilityRole="button" accessibilityLabel="Share session card">
-              <Ionicons name="share-social-outline" size={20} color={colors.background} />
+              <Ionicons name="share-social-outline" size={20} color={colors.onPrimary} />
             </TouchableOpacity>
           )}
         </View>
@@ -1201,7 +1201,7 @@ const styles = StyleSheet.create({
   },
   ratingBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   ratingBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textSecondary },
-  ratingBtnTextActive: { color: colors.background },
+  ratingBtnTextActive: { color: colors.onPrimary },
   ratingValueLabel: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium },
   notesInput: {
     ...type.body,
@@ -1243,7 +1243,7 @@ const styles = StyleSheet.create({
   btnDisabled: { opacity: 0.6 },
   doneBtnText: {
     ...type.title,
-    color: colors.background,
+    color: colors.onPrimary,
   },
   shareFooterBtn: {
     width: 52,
@@ -1322,7 +1322,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
     borderRadius: radius.md, backgroundColor: colors.primary,
   },
-  templateModalSaveText: { ...type.label, color: colors.background },
+  templateModalSaveText: { ...type.label, color: colors.onPrimary },
 
   // 4-week comparison card, same surface treatment as other summary
   // cards but borderColor is set inline per-verdict (gold for best, green

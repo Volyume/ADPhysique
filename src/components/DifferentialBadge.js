@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaText: {
-    color: colors.background,
+    color: colors.onPrimary,
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
   },

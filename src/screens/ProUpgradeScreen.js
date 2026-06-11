@@ -282,7 +282,7 @@ export default function ProUpgradeScreen({ navigation }) {
       <SafeAreaView style={styles.safe}>
         <View style={styles.successWrap}>
           <View style={styles.successCircle}>
-            <Ionicons name="checkmark" size={40} color={colors.background} />
+            <Ionicons name="checkmark" size={40} color={colors.onPrimary} />
           </View>
           <Text style={styles.successTitle}>You're Pro.</Text>
           <Text style={styles.successBody}>
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: radius.sm,
     paddingHorizontal: spacing.sm, paddingVertical: 1,
   },
-  saveBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.3 },
+  saveBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0.3 },
 
   section: { marginBottom: spacing.lg },
   fieldLabel: {

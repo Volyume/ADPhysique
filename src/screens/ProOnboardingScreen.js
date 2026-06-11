@@ -818,13 +818,13 @@ export default function ProOnboardingScreen({ navigation }) {
               activeOpacity={busy ? 1 : 0.88}
             >
               {busy ? (
-                <ActivityIndicator color={colors.background} />
+                <ActivityIndicator color={colors.onPrimary} />
               ) : (
                 <>
                   <Text style={styles.primaryBtnText}>
                     {authMode === 'signup' ? 'Create account and continue' : 'Sign in and continue'}
                   </Text>
-                  <Ionicons name="arrow-forward" size={18} color={colors.background} />
+                  <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
                 </>
               )}
             </TouchableOpacity>
@@ -1060,7 +1060,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <TouchableOpacity style={styles.primaryBtn} onPress={advanceFrom2} activeOpacity={0.88}>
               <Text style={styles.primaryBtnText}>Continue</Text>
-              <Ionicons name="arrow-forward" size={18} color={colors.background} />
+              <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
             </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -1134,7 +1134,7 @@ export default function ProOnboardingScreen({ navigation }) {
               activeOpacity={canContinue ? 0.88 : 1}
             >
               <Text style={styles.primaryBtnText}>Continue</Text>
-              <Ionicons name="arrow-forward" size={18} color={colors.background} />
+              <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
             </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -1272,7 +1272,7 @@ export default function ProOnboardingScreen({ navigation }) {
               activeOpacity={canContinue ? 0.88 : 1}
             >
               <Text style={styles.primaryBtnText}>Continue</Text>
-              <Ionicons name="arrow-forward" size={18} color={colors.background} />
+              <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
             </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -1514,11 +1514,11 @@ export default function ProOnboardingScreen({ navigation }) {
             activeOpacity={canContinue && !busy ? 0.88 : 1}
           >
             {busy ? (
-              <ActivityIndicator color={colors.background} />
+              <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <>
                 <Text style={styles.primaryBtnText}>Continue</Text>
-                <Ionicons name="arrow-forward" size={18} color={colors.background} />
+                <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
               </>
             )}
           </TouchableOpacity>
@@ -1546,7 +1546,7 @@ const styles = StyleSheet.create({
   },
   proBadgeText: {
     fontSize: fontSize.micro, fontWeight: fontWeight.black,
-    color: colors.background, letterSpacing: 0.8,
+    color: colors.onPrimary, letterSpacing: 0.8,
   },
 
   progressTrack: {
@@ -1665,7 +1665,7 @@ const styles = StyleSheet.create({
   // Shared by the compact height-units toggle (ft+in / cm). The full-width
   // sex and body-weight-unit pickers now use the shared SegmentedControl.
   segmentActive: { backgroundColor: colors.primary },
-  segmentTextActive: { color: colors.background },
+  segmentTextActive: { color: colors.onPrimary },
 
   // Notifications
   notifSection: {
@@ -1710,7 +1710,7 @@ const styles = StyleSheet.create({
   },
   hourChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   hourChipText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
-  hourChipTextActive: { color: colors.background, fontWeight: fontWeight.bold },
+  hourChipTextActive: { color: colors.onPrimary, fontWeight: fontWeight.bold },
 
   // Beta offer card
   offerCard: {
@@ -1726,7 +1726,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', backgroundColor: colors.primary,
     borderRadius: 4, paddingHorizontal: spacing.sm, paddingVertical: 3,
   },
-  offerBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.8 },
+  offerBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0.8 },
   offerHeadline: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 26 },
   offerBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.md },
   offerPerks: { gap: spacing.xs },
@@ -1739,7 +1739,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm, backgroundColor: colors.primary,
     borderRadius: radius.lg, paddingVertical: spacing.lg + 2, marginBottom: spacing.md,
   },
-  primaryBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
+  primaryBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.onPrimary },
   primaryBtnDisabled: { opacity: 0.4 },
   switchAuthBtn: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.sm },
   switchAuthText: { fontSize: fontSize.sm, color: colors.textMuted },

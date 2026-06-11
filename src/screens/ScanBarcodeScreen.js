@@ -279,5 +279,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md, borderRadius: radius.md,
   },
-  permissionBtnText: { color: colors.background, ...type.bodyStrong },
+  permissionBtnText: { color: colors.onPrimary, ...type.bodyStrong },
 });

@@ -223,7 +223,7 @@ export default function PlanDetailScreen({ navigation, route }) {
             )}
             {plan.tags && plan.tags.includes('featured') && (
               <View style={styles.featuredBadge}>
-                <Ionicons name="sparkles" size={9} color={colors.background} />
+                <Ionicons name="sparkles" size={9} color={colors.onPrimary} />
                 <Text style={styles.featuredBadgeText}>Featured</Text>
               </View>
             )}
@@ -305,7 +305,7 @@ export default function PlanDetailScreen({ navigation, route }) {
                       accessibilityRole="button"
                       accessibilityLabel={`Start ${routine.name}`}
                     >
-                      <Ionicons name="play" size={13} color={colors.background} />
+                      <Ionicons name="play" size={13} color={colors.onPrimary} />
                     </TouchableOpacity>
                   </View>
                 )}
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', backgroundColor: colors.primary, borderRadius: radius.full,
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
   },
-  featuredBadgeText: { fontSize: fontSize.xs, color: colors.background, fontWeight: fontWeight.bold },
+  featuredBadgeText: { fontSize: fontSize.xs, color: colors.onPrimary, fontWeight: fontWeight.bold },
   planName: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
   planDesc: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
   planStats: { flexDirection: 'row', gap: spacing.xl },

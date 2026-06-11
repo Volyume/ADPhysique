@@ -40,5 +40,5 @@ const styles = StyleSheet.create({
   },
   segmentActive: { backgroundColor: colors.primary },
   segmentText: { ...type.label, color: colors.textMuted },
-  segmentTextActive: { color: colors.background },
+  segmentTextActive: { color: colors.onPrimary },
 });

@@ -744,7 +744,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 accessibilityLabel="I consent to storing this data on my device"
               >
                 <View style={[styles.checkbox, consent && styles.checkboxChecked]}>
-                  {consent && <Ionicons name="checkmark" size={13} color={colors.background} />}
+                  {consent && <Ionicons name="checkmark" size={13} color={colors.onPrimary} />}
                 </View>
                 <Text style={styles.consentCheckLabel}>
                   I consent to storing this data on my device
@@ -1365,7 +1365,7 @@ const styles = StyleSheet.create({
   },
   calcBtnText: {
     ...type.title,
-    color: colors.background,
+    color: colors.onPrimary,
   },
   calcBtnTextDisabled: {
     color: colors.textDisabled,

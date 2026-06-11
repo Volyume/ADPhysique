@@ -32,6 +32,14 @@ const baseColors = {
   primaryFill: '#E08C0B',
   primaryDim: '#B45309',
   primaryBg: 'rgba(245, 166, 35, 0.12)',
+  // Ink on an amber/coloured FILL (buttons, active chips, badges). Held
+  // separate from `background` so a light theme can keep dark ink on the
+  // bright amber fill (amber stays the fill in both modes; the ink on it is
+  // always near-black). COMP-029 §4d: this replaces the ~124 `colors.background`
+  // foreground sites that meant "dark ink on a coloured fill". In dark it is
+  // value-identical to `background` (#0D0D0D), so the migration is a
+  // zero-visual-diff change.
+  onPrimary: '#0D0D0D',
 
   // Semantic status. warning is Okabe-Ito yellow (#F0E442), retuned off the
   // amber axis (COMP-027): the old #FFC107 sat ~7 deg from brand amber

@@ -696,5 +696,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     alignItems: 'center',
   },
-  saveBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  saveBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
 });

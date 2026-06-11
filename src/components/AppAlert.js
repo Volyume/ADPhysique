@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
   btnDestructive: { backgroundColor: 'transparent' },
   btnCancel: { backgroundColor: 'transparent' },
   btnText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold },
-  btnTextPrimary: { color: colors.background, fontWeight: fontWeight.bold },
+  btnTextPrimary: { color: colors.onPrimary, fontWeight: fontWeight.bold },
   btnTextDestructive: { color: colors.error },
   btnTextCancel: { color: colors.textMuted },
 });

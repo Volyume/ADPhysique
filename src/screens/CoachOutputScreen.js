@@ -1916,7 +1916,7 @@ const styles = StyleSheet.create({
   applyBtnText: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
-    color: colors.background,
+    color: colors.onPrimary,
   },
   dietBreakApplyBtn: { alignSelf: 'flex-start', marginTop: spacing.md },
 
@@ -2027,7 +2027,7 @@ const styles = StyleSheet.create({
   doneBtnText: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
-    color: colors.background,
+    color: colors.onPrimary,
   },
   secondaryBtn: {
     borderRadius: radius.lg,
@@ -2138,7 +2138,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   edLockoutCtaPrimaryText: {
-    color: colors.background,
+    color: colors.onPrimary,
     fontWeight: fontWeight.bold,
     fontSize: fontSize.sm,
   },

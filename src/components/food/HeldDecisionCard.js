@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   badgeText: {
-    color: colors.background,
+    color: colors.onPrimary,
     fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
   },

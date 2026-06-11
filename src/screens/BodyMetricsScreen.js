@@ -375,7 +375,7 @@ function PhysiqueOptIn({ onEnable }) {
         device. It is never shared or uploaded.
       </Text>
       <TouchableOpacity style={styles.optInBtn} onPress={onEnable} accessibilityRole="button" accessibilityLabel="Enable Physique Tracking">
-        <Ionicons name="body-outline" size={18} color={colors.background} />
+        <Ionicons name="body-outline" size={18} color={colors.onPrimary} />
         <Text style={styles.optInBtnText}>Enable Physique Tracking</Text>
       </TouchableOpacity>
     </View>
@@ -868,7 +868,7 @@ export default function BodyMetricsScreen() {
           accessibilityState={{ expanded: showForm }}
           accessibilityLabel={showForm ? 'Cancel' : 'Log Weight'}
         >
-          <Ionicons name={showForm ? 'chevron-up' : 'add-circle'} size={20} color={colors.background} />
+          <Ionicons name={showForm ? 'chevron-up' : 'add-circle'} size={20} color={colors.onPrimary} />
           <Text style={styles.logBtnText}>{showForm ? 'Cancel' : 'Log Weight'}</Text>
         </TouchableOpacity>
 
@@ -1128,7 +1128,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: radius.lg,
     paddingVertical: spacing.lg, paddingHorizontal: spacing.xl, marginTop: spacing.md,
   },
-  optInBtnText: { ...type.bodyStrong, color: colors.background },
+  optInBtnText: { ...type.bodyStrong, color: colors.onPrimary },
   confirmCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl,
     borderWidth: 1, borderColor: colors.border, gap: spacing.md, alignItems: 'flex-start',
@@ -1139,7 +1139,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch', alignItems: 'center', backgroundColor: colors.primary,
     borderRadius: radius.lg, paddingVertical: spacing.lg, marginTop: spacing.sm,
   },
-  confirmBtnText: { ...type.bodyStrong, color: colors.background },
+  confirmBtnText: { ...type.bodyStrong, color: colors.onPrimary },
   confirmHelpline: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginTop: spacing.sm },
 
 
@@ -1194,7 +1194,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
     backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg,
   },
-  logBtnText: { ...type.title, color: colors.background },
+  logBtnText: { ...type.title, color: colors.onPrimary },
   formCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
     gap: spacing.md, borderWidth: 1, borderColor: colors.border,
@@ -1219,7 +1219,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginTop: spacing.sm,
   },
   btnDisabled: { opacity: 0.6 },
-  saveBtnText: { ...type.bodyStrong, color: colors.background },
+  saveBtnText: { ...type.bodyStrong, color: colors.onPrimary },
   section: { gap: spacing.sm },
   historyRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

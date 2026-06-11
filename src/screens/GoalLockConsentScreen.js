@@ -204,5 +204,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaDisabled: { opacity: 0.5 },
-  ctaText: { ...type.bodyStrong, color: colors.background },
+  ctaText: { ...type.bodyStrong, color: colors.onPrimary },
 });

@@ -155,7 +155,7 @@ const DIFFICULTY_LABELS = ['Beginner', 'Intermediate', 'Advanced'];
 function PlanBadge({ label, amber }) {
   return (
     <View style={[styles.badge, amber && styles.badgeAmber]}>
-      {amber && <Ionicons name="sparkles" size={9} color={colors.background} style={{ marginRight: spacing.xxs }} />}
+      {amber && <Ionicons name="sparkles" size={9} color={colors.onPrimary} style={{ marginRight: spacing.xxs }} />}
       <Text style={[styles.badgeText, amber && styles.badgeTextAmber]}>{label}</Text>
     </View>
   );
@@ -841,7 +841,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: radius.lg,
     paddingVertical: spacing.md, alignItems: 'center',
   },
-  quizStartText: { ...type.bodyStrong, color: colors.background },
+  quizStartText: { ...type.bodyStrong, color: colors.onPrimary },
   quizBrowseBtn: {
     backgroundColor: colors.surface2, borderRadius: radius.lg,
     paddingVertical: spacing.md, alignItems: 'center',

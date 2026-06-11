@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: radius.sm,
     paddingHorizontal: spacing.sm, paddingVertical: 1,
   },
-  saveBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.3 },
+  saveBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0.3 },
   ctaStack: {
     gap: spacing.md,
   },

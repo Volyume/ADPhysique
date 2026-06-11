@@ -444,7 +444,7 @@ export default function PlansScreen({ navigation }) {
                 {blockAdvice.action === 'post_recovery' && (
                   <View style={styles.blockCardActions}>
                     <TouchableOpacity style={styles.blockRestartBtn} onPress={handleRestartPlan} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel={blockAdvice.nextBlock.actionLabel}>
-                      <Ionicons name="refresh-outline" size={15} color={colors.background} />
+                      <Ionicons name="refresh-outline" size={15} color={colors.onPrimary} />
                       <Text style={styles.blockRestartBtnText}>{blockAdvice.nextBlock.actionLabel}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -538,7 +538,7 @@ export default function PlansScreen({ navigation }) {
                   accessibilityRole="button"
                   accessibilityLabel="Start next workout"
                 >
-                  <Ionicons name="play" size={15} color={colors.background} />
+                  <Ionicons name="play" size={15} color={colors.onPrimary} />
                   <Text style={styles.startNextBtnText}>Start Next Workout</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -705,7 +705,7 @@ export default function PlansScreen({ navigation }) {
                     accessibilityRole="button"
                     accessibilityLabel={`Start ${routine.name}`}
                   >
-                    <Ionicons name="play" size={13} color={colors.background} />
+                    <Ionicons name="play" size={13} color={colors.onPrimary} />
                     <Text style={styles.startTemplateBtnText}>Start</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -840,7 +840,7 @@ const styles = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md,
   },
-  startNextBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.background },
+  startNextBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
   viewPlanBtn: {
     paddingHorizontal: spacing.lg, borderRadius: radius.md, paddingVertical: spacing.md,
     backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
@@ -887,7 +887,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     backgroundColor: colors.primary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
-  startTemplateBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.background },
+  startTemplateBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
 
   actionCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
@@ -995,7 +995,7 @@ const styles = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md,
   },
-  blockRestartBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.background },
+  blockRestartBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
   blockNewBtn: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.surface2, borderRadius: radius.md, paddingVertical: spacing.md,

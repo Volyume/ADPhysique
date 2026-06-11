@@ -2365,7 +2365,7 @@ function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, workoutExercise
         <Text style={styles.emptyTitle}>Add your first exercise</Text>
         <Text style={styles.emptySubtitle}>Search the exercise library to get started</Text>
         <TouchableOpacity style={styles.addFirstBtn} onPress={onAdd} accessibilityRole="button" accessibilityLabel="Add exercise">
-          <Ionicons name="add" size={22} color={colors.background} />
+          <Ionicons name="add" size={22} color={colors.onPrimary} />
           <Text style={styles.addFirstBtnText}>Add Exercise</Text>
         </TouchableOpacity>
       </View>
@@ -2400,7 +2400,7 @@ const styles = StyleSheet.create({
   navTabText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
   navTabTextActive: { color: colors.primary },
   navTabBadge: { width: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  navTabBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background },
+  navTabBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary },
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.md, paddingTop: spacing.sm, gap: spacing.sm },
   exerciseHeader: { gap: spacing.xs },
@@ -2450,7 +2450,7 @@ const styles = StyleSheet.create({
   // secondary via the tinted-outline override below.
   completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderRadius: radius.lg, paddingVertical: spacing.lg, backgroundColor: colors.primaryFill },
   btnDisabled: { opacity: 0.5 },
-  completeBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.background, letterSpacing: 0.6 },
+  completeBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.onPrimary, letterSpacing: 0.6 },
   completeBtnWarmup: { backgroundColor: colors.warningBg || colors.surface, borderWidth: 1, borderColor: colors.warning },
   completeBtnTextWarmup: { color: colors.warning },
   // Text button below the primary CTA (COMP-001): quiet, 44pt target.
@@ -2503,7 +2503,7 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
   emptySubtitle: { fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center' },
   addFirstBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.primary, borderRadius: radius.lg, paddingHorizontal: spacing.xxl, paddingVertical: spacing.lg, marginTop: spacing.lg },
-  addFirstBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
+  addFirstBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.onPrimary },
   sheetOverlay: { flex: 1, backgroundColor: colors.scrim },
   sheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingHorizontal: spacing.xl, paddingTop: spacing.md },
   sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: spacing.lg },
@@ -2547,7 +2547,7 @@ const styles = StyleSheet.create({
   supPairCard: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, borderLeftWidth: 3, borderLeftColor: colors.primary, gap: spacing.xs },
   supPairRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   supPairChip: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  supPairChipText: { color: colors.background, fontSize: fontSize.xs, fontWeight: fontWeight.bold },
+  supPairChipText: { color: colors.onPrimary, fontSize: fontSize.xs, fontWeight: fontWeight.bold },
   supPairName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold, flex: 1 },
   supPairConnector: { width: 2, height: 14, backgroundColor: colors.border, marginLeft: 10 },
   supSteps: { gap: spacing.sm, marginTop: spacing.xs },
@@ -2556,7 +2556,7 @@ const styles = StyleSheet.create({
   supStepText: { color: colors.textPrimary, fontSize: fontSize.sm, lineHeight: 20, flex: 1 },
   supTip: { color: colors.textMuted, fontSize: fontSize.xs, fontStyle: 'italic', marginTop: spacing.xs },
   supPrimaryBtn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.sm },
-  supPrimaryBtnText: { color: colors.background, fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  supPrimaryBtnText: { color: colors.onPrimary, fontSize: fontSize.md, fontWeight: fontWeight.bold },
   supSecondaryRow: { flexDirection: 'row', gap: spacing.sm },
   supSecondaryBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: 'transparent' },
   supSecondaryBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
@@ -2566,7 +2566,7 @@ const styles = StyleSheet.create({
   staleTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
   staleBody: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: spacing.md },
   staleResume: { width: '100%', backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center' },
-  staleResumeText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  staleResumeText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
   staleFinish: { width: '100%', backgroundColor: colors.surface2, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center' },
   staleFinishText: { fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textPrimary },
   staleDiscard: { width: '100%', paddingVertical: spacing.md, alignItems: 'center' },
@@ -2576,7 +2576,7 @@ const styles = StyleSheet.create({
   discardTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
   discardBody: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: spacing.xs },
   keepTrainingBtn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md + 2, alignItems: 'center' },
-  keepTrainingBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  keepTrainingBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
   discardConfirmBtn: { alignItems: 'center', paddingVertical: spacing.md },
   discardConfirmBtnText: { fontSize: fontSize.sm, color: colors.error, fontWeight: fontWeight.medium },
   nextTimeBanner: {

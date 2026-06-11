@@ -1365,7 +1365,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
                 accessibilityLabel="See this week's coaching"
               >
                 {busy ? (
-                  <ActivityIndicator color={colors.background} />
+                  <ActivityIndicator color={colors.onPrimary} />
                 ) : (
                   <Text style={[styles.ctaBtnText, !fastCanSubmit && styles.ctaBtnTextDisabled]}>
                     See this week's coaching
@@ -1402,7 +1402,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
                 accessibilityLabel="See this week's coaching"
               >
                 {busy ? (
-                  <ActivityIndicator color={colors.background} />
+                  <ActivityIndicator color={colors.onPrimary} />
                 ) : (
                   <Text style={[styles.ctaBtnText, !stepCanAdvance(step) && styles.ctaBtnTextDisabled]}>
                     See this week's coaching
@@ -1489,7 +1489,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg, alignItems: 'center',
   },
   gateBtnText: {
-    fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background,
+    fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary,
   },
   gateDeferBtn: {
     paddingVertical: spacing.md, alignItems: 'center',
@@ -1663,7 +1663,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg, height: 52,
   },
   ctaBtnDisabled: { backgroundColor: colors.surface3 },
-  ctaBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background, letterSpacing: 0.3 },
+  ctaBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary, letterSpacing: 0.3 },
   ctaBtnTextDisabled: { color: colors.textMuted },
   ctaHint: { textAlign: 'center', fontSize: fontSize.sm, color: colors.textMuted, marginTop: spacing.sm },
 

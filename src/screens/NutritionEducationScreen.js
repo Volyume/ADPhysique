@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
 
   bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.xs },
   bulletChip: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  bulletChipText: { color: colors.background, fontSize: fontSize.xs, fontWeight: fontWeight.bold },
+  bulletChipText: { color: colors.onPrimary, fontSize: fontSize.xs, fontWeight: fontWeight.bold },
 
   footer: { color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 17, textAlign: 'center', marginTop: spacing.sm, fontStyle: 'italic' },
 });

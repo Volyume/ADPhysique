@@ -171,7 +171,7 @@ export default function ImportScreen({ navigation }) {
             </View>
 
             <PressableCard onPress={handlePickFile} style={styles.primaryCta}>
-              <Ionicons name="document-attach-outline" size={20} color={colors.background} />
+              <Ionicons name="document-attach-outline" size={20} color={colors.onPrimary} />
               <Text style={styles.primaryCtaText}>Pick CSV file</Text>
             </PressableCard>
 
@@ -236,7 +236,7 @@ export default function ImportScreen({ navigation }) {
             </View>
 
             <PressableCard onPress={handleConfirmImport} style={styles.primaryCta}>
-              <Ionicons name="checkmark" size={20} color={colors.background} />
+              <Ionicons name="checkmark" size={20} color={colors.onPrimary} />
               <Text style={styles.primaryCtaText}>Import {analysis.workoutCount} sessions</Text>
             </PressableCard>
 
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
   },
   primaryCtaText: {
     ...type.bodyStrong,
-    color: colors.background,
+    color: colors.onPrimary,
   },
   secondaryCta: {
     alignItems: 'center',

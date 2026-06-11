@@ -177,7 +177,7 @@ export default function Article9ConsentScreen({ navigation }) {
           accessibilityLabel="I agree to Volyume using my health and nutrition data to coach me"
         >
           <View style={[styles.checkbox, agreed && styles.checkboxChecked]}>
-            {agreed ? <Ionicons name="checkmark" size={18} color={colors.background} /> : null}
+            {agreed ? <Ionicons name="checkmark" size={18} color={colors.onPrimary} /> : null}
           </View>
           <Text style={styles.consentText}>
             I agree to Volyume using my health and nutrition data to coach me.
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaDisabled: { opacity: 0.5 },
-  ctaPrimaryText: { ...type.bodyStrong, color: colors.background },
+  ctaPrimaryText: { ...type.bodyStrong, color: colors.onPrimary },
   ctaGhost: {
     marginTop: spacing.sm,
     paddingVertical: spacing.md,

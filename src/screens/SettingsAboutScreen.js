@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   betaBadgeText: {
     fontSize: fontSize.micro,
     fontWeight: fontWeight.bold,
-    color: colors.background,
+    color: colors.onPrimary,
     letterSpacing: 1,
   },
   appVersion: { fontSize: fontSize.sm, color: colors.textMuted },

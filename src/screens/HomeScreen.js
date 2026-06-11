@@ -1062,7 +1062,7 @@ export default function HomeScreen({ navigation }) {
           >
             <View style={styles.continueInner}>
               <View style={styles.continueIcon}>
-                <Ionicons name="play" size={20} color={colors.background} />
+                <Ionicons name="play" size={20} color={colors.onPrimary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.continueTitle}>Session in Progress</Text>
@@ -1133,7 +1133,7 @@ export default function HomeScreen({ navigation }) {
                     accessibilityRole="button"
                     accessibilityLabel={isStartingWorkout ? 'Starting workout' : 'Start short session, about 15 minutes'}
                   >
-                    <Ionicons name="flash" size={16} color={colors.background} />
+                    <Ionicons name="flash" size={16} color={colors.onPrimary} />
                     <Text style={styles.primaryBtnText}>
                       {isStartingWorkout ? 'Starting…' : 'Start short session'}
                     </Text>
@@ -1167,7 +1167,7 @@ export default function HomeScreen({ navigation }) {
                   accessibilityRole="button"
                   accessibilityLabel={isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`}
                 >
-                  <Ionicons name="play" size={16} color={colors.background} />
+                  <Ionicons name="play" size={16} color={colors.onPrimary} />
                   <Text style={styles.primaryBtnText}>
                     {isStartingWorkout ? 'Starting…' : 'Start workout'}
                   </Text>
@@ -1254,7 +1254,7 @@ export default function HomeScreen({ navigation }) {
                 }}
                 activeOpacity={0.88}
               >
-                <Ionicons name="sparkles" size={18} color={colors.background} />
+                <Ionicons name="sparkles" size={18} color={colors.onPrimary} />
                 <Text style={styles.proRecoverBtnText}>Build my plan</Text>
               </TouchableOpacity>
             )}
@@ -1845,7 +1845,7 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(colors.background, 0.2),
     alignItems: 'center', justifyContent: 'center',
   },
-  continueTitle: { ...type.bodyStrong, color: colors.background },
+  continueTitle: { ...type.bodyStrong, color: colors.onPrimary },
   continueSub: { ...type.caption, color: withAlpha(colors.background, 0.8), marginTop: spacing.xxs },
 
   // Hero plan card. Restrained: flat surface, one primary CTA, two
@@ -1894,7 +1894,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     marginTop: spacing.xs,
   },
-  primaryBtnText: { ...type.bodyStrong, color: colors.background },
+  primaryBtnText: { ...type.bodyStrong, color: colors.onPrimary },
   // Two-button row: primary "Start workout" + secondary "View" so the
   // user can preview the routine's exercises before committing. Mirrors
   // the Start Next Workout + View Plan layout on PlansScreen for visual
@@ -1952,7 +1952,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: 14, marginTop: spacing.sm,
   },
   proRecoverBtnText: {
-    ...type.bodyStrong, color: colors.background,
+    ...type.bodyStrong, color: colors.onPrimary,
   },
   noPlanHero: {
     alignItems: 'center',

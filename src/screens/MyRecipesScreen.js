@@ -203,5 +203,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     backgroundColor: colors.primary, borderRadius: radius.md,
   },
-  emptyCtaText: { ...type.bodyStrong, color: colors.background },
+  emptyCtaText: { ...type.bodyStrong, color: colors.onPrimary },
 });

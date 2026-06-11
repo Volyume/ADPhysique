@@ -201,10 +201,10 @@ export default function FoodInsightsScreen({ navigation }) {
           accessibilityLabel="Export the last seven days as a CSV file"
         >
           {exporting ? (
-            <ActivityIndicator color={colors.background} />
+            <ActivityIndicator color={colors.onPrimary} />
           ) : (
             <>
-              <Ionicons name="download-outline" size={18} color={colors.background} />
+              <Ionicons name="download-outline" size={18} color={colors.onPrimary} />
               <Text style={styles.exportBtnText}>Export 7 days as CSV</Text>
             </>
           )}
@@ -282,5 +282,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     minHeight: 48,
   },
-  exportBtnText: { ...type.bodyStrong, color: colors.background },
+  exportBtnText: { ...type.bodyStrong, color: colors.onPrimary },
 });

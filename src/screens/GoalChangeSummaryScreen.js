@@ -350,5 +350,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg, alignItems: 'center',
     marginTop: spacing.md,
   },
-  doneBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background, letterSpacing: 0.4 },
+  doneBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary, letterSpacing: 0.4 },
 });

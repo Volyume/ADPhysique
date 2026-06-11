@@ -737,7 +737,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   dayNumSelected: {
-    color: colors.background,
+    color: colors.onPrimary,
     fontWeight: fontWeight.bold,
   },
   clearDayBtn: {

@@ -394,7 +394,7 @@ export default function ManualBuilderScreen({ navigation }) {
               accessibilityLabel="Create plan and add workouts"
               accessibilityState={{ disabled: creating }}
             >
-              <Ionicons name="add-circle" size={20} color={colors.background} />
+              <Ionicons name="add-circle" size={20} color={colors.onPrimary} />
               <Text style={styles.primaryBtnText}>Create Plan & Add Workouts</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -508,7 +508,7 @@ export default function ManualBuilderScreen({ navigation }) {
             accessibilityLabel="Save and activate"
             accessibilityState={{ disabled: saving }}
           >
-            <Ionicons name="flash" size={18} color={colors.background} />
+            <Ionicons name="flash" size={18} color={colors.onPrimary} />
             <Text style={styles.activateBtnText}>Save & Activate</Text>
           </TouchableOpacity>
         </View>
@@ -539,7 +539,7 @@ export default function ManualBuilderScreen({ navigation }) {
                 accessibilityRole="button"
                 accessibilityLabel="Go to Train"
               >
-                <Ionicons name="home" size={16} color={colors.background} />
+                <Ionicons name="home" size={16} color={colors.onPrimary} />
                 <Text style={styles.successPrimaryText}>Go to Train</Text>
               </TouchableOpacity>
             </View>
@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
   },
   primaryBtnText: {
     ...type.title,
-    color: colors.background,
+    color: colors.onPrimary,
   },
   btnDisabled: {
     opacity: 0.5,
@@ -761,7 +761,7 @@ const styles = StyleSheet.create({
   },
   activateBtnText: {
     ...type.bodyStrong,
-    color: colors.background,
+    color: colors.onPrimary,
   },
   successOverlay: {
     flex: 1,
@@ -829,7 +829,7 @@ const styles = StyleSheet.create({
   },
   successPrimaryText: {
     ...type.bodyStrong,
-    color: colors.background,
+    color: colors.onPrimary,
   },
 });
 

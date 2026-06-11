@@ -1139,7 +1139,7 @@ const styles = StyleSheet.create({
   },
   saveGoalBtnText: {
     ...type.bodyStrong,
-    color: colors.background,
+    color: colors.onPrimary,
   },
   removeGoalLink: {
     alignItems: 'center',

@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
   proBadge: {
     backgroundColor: colors.primary, borderRadius: 4, paddingHorizontal: 7, paddingVertical: spacing.xxs,
   },
-  proBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.8 },
+  proBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0.8 },
 
   // Matched to the wizard's continuous track, drawn full here (setup complete).
   progressTrack: {

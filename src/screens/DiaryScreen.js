@@ -651,7 +651,7 @@ export default function DiaryScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel="Scan barcode"
         >
-          <Ionicons name="barcode-outline" size={26} color={colors.background} />
+          <Ionicons name="barcode-outline" size={26} color={colors.onPrimary} />
         </TouchableOpacity>
       ) : null}
 
@@ -734,7 +734,7 @@ export default function DiaryScreen({ navigation }) {
                 <Text style={styles.saveMealBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={submitSaveMeal} style={[styles.saveMealBtn, styles.saveMealBtnPrimary]}>
-                <Text style={[styles.saveMealBtnText, { color: colors.background, fontWeight: fontWeight.bold }]}>Save</Text>
+                <Text style={[styles.saveMealBtnText, { color: colors.onPrimary, fontWeight: fontWeight.bold }]}>Save</Text>
               </TouchableOpacity>
             </View>
           </Pressable>

@@ -1115,10 +1115,10 @@ export default function ShareCardScreen({ route }) {
           disabled={sharing}
         >
           {sharing ? (
-            <ActivityIndicator color={colors.background} size="small" />
+            <ActivityIndicator color={colors.onPrimary} size="small" />
           ) : (
             <>
-              <Ionicons name="share-outline" size={20} color={colors.background} />
+              <Ionicons name="share-outline" size={20} color={colors.onPrimary} />
               <Text style={styles.shareBtnText}>
                 {cardType === 'session' ? 'Share Session Card' : cardType === 'pr' ? 'Share PR Card' : 'Share Card'}
               </Text>
@@ -1607,7 +1607,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
   },
   btnDisabled: { opacity: 0.5 },
-  shareBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  shareBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
   pdfBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.sm, borderRadius: radius.lg, paddingVertical: spacing.lg,

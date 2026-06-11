@@ -435,5 +435,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   logBtnDisabled: { opacity: 0.5 },
-  logBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.background },
+  logBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
 });

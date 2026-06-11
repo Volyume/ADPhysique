@@ -105,7 +105,7 @@ export default function WelcomeScreen({ navigation }) {
 
             <View style={styles.proCtaRow}>
               <Text style={styles.proCtaText}>Go Pro</Text>
-              <Ionicons name="arrow-forward" size={16} color={colors.background} />
+              <Ionicons name="arrow-forward" size={16} color={colors.onPrimary} />
             </View>
           </TouchableOpacity>
 
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: 4,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
   },
-  betaBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.5 },
+  betaBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0.5 },
   proSubtitle: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
 
   divider: { height: 1, backgroundColor: colors.border, marginHorizontal: spacing.lg },
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, paddingVertical: spacing.md, margin: spacing.md,
     borderRadius: radius.lg,
   },
-  proCtaText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.background },
+  proCtaText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
 
   // Free card
   freeCard: {

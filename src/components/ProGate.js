@@ -43,7 +43,7 @@ export default function ProGate({ children, feature = 'This feature', style }) {
         </View>
         <TouchableOpacity style={styles.lockOverlay} onPress={() => setModalVisible(true)} activeOpacity={0.85}>
           <View style={styles.lockChip}>
-            <Ionicons name="lock-closed" size={13} color={colors.background} />
+            <Ionicons name="lock-closed" size={13} color={colors.onPrimary} />
             <Text style={styles.lockChipText}>Pro</Text>
           </View>
         </TouchableOpacity>
@@ -69,7 +69,7 @@ export default function ProGate({ children, feature = 'This feature', style }) {
             </Text>
 
             <TouchableOpacity style={styles.upgradeBtn} onPress={upgrade} activeOpacity={0.88}>
-              <Ionicons name="sparkles" size={16} color={colors.background} />
+              <Ionicons name="sparkles" size={16} color={colors.onPrimary} />
               <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
             </TouchableOpacity>
 
@@ -109,7 +109,7 @@ export function ProLocked({ feature = 'This' }) {
           onPress={() => navigation.navigate('ProUpgrade')}
           activeOpacity={0.88}
         >
-          <Ionicons name="sparkles" size={16} color={colors.background} />
+          <Ionicons name="sparkles" size={16} color={colors.onPrimary} />
           <Text style={styles.lockedBtnText}>Upgrade to Pro</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.lockedBack} onPress={() => navigation.goBack()}>
@@ -140,7 +140,7 @@ export function ProBadge({ size = 'sm' }) {
   const isSmall = size === 'sm';
   return (
     <View style={[styles.badge, isSmall ? styles.badgeSm : styles.badgeMd]}>
-      <Ionicons name="sparkles" size={isSmall ? 8 : 10} color={colors.background} />
+      <Ionicons name="sparkles" size={isSmall ? 8 : 10} color={colors.onPrimary} />
       <Text style={[styles.badgeText, isSmall ? styles.badgeTextSm : styles.badgeTextMd]}>PRO</Text>
     </View>
   );
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: radius.sm,
     paddingHorizontal: 10, paddingVertical: 5,
   },
-  lockChipText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.background },
+  lockChipText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.onPrimary },
 
   backdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   sheet: {
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md, alignSelf: 'stretch',
     marginTop: spacing.sm,
   },
-  upgradeBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  upgradeBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
   dismissBtn: { paddingVertical: spacing.sm },
   dismissText: { fontSize: fontSize.sm, color: colors.textMuted },
 
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg, paddingVertical: spacing.md + 2,
     paddingHorizontal: spacing.xxl, alignSelf: 'stretch',
   },
-  lockedBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  lockedBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
   lockedBack: { paddingVertical: spacing.sm },
   lockedBackText: { fontSize: fontSize.sm, color: colors.textMuted },
 
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   },
   badgeSm: { paddingHorizontal: 5, paddingVertical: spacing.xxs },
   badgeMd: { paddingHorizontal: 7, paddingVertical: 3 },
-  badgeText: { fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.3 },
+  badgeText: { fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0.3 },
   badgeTextSm: { fontSize: fontSize.micro },
   badgeTextMd: { fontSize: fontSize.micro },
 });

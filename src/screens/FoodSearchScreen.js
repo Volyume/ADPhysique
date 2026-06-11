@@ -842,7 +842,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md, paddingHorizontal: spacing.xl,
     borderRadius: radius.md,
   },
-  noResultsBtnText: { color: colors.background, fontWeight: fontWeight.bold },
+  noResultsBtnText: { color: colors.onPrimary, fontWeight: fontWeight.bold },
 
   footerBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -866,7 +866,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm, paddingHorizontal: spacing.lg,
     borderRadius: radius.md,
   },
-  plateLogText: { ...type.bodyStrong, color: colors.background },
+  plateLogText: { ...type.bodyStrong, color: colors.onPrimary },
   plateModalBackdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   plateModalSheet: {
     backgroundColor: colors.surface,

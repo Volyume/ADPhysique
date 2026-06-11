@@ -713,7 +713,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: spacing.xs,
   },
-  editSaveBtnText: { ...type.bodyStrong, color: colors.background },
+  editSaveBtnText: { ...type.bodyStrong, color: colors.onPrimary },
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',

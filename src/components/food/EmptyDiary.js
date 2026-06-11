@@ -27,7 +27,7 @@ export default function EmptyDiary({ onAdd, onCopyYesterday }) {
             accessibilityRole="button"
             accessibilityLabel="Add food"
           >
-            <Ionicons name="add" size={18} color={colors.background} />
+            <Ionicons name="add" size={18} color={colors.onPrimary} />
             <Text style={[styles.btnText, styles.btnTextPrimary]}>Add food</Text>
           </TouchableOpacity>
         ) : null}
@@ -71,5 +71,5 @@ const styles = StyleSheet.create({
   btnPrimary: { backgroundColor: colors.primary },
   btnSecondary: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
   btnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  btnTextPrimary: { color: colors.background, fontWeight: fontWeight.bold },
+  btnTextPrimary: { color: colors.onPrimary, fontWeight: fontWeight.bold },
 });
