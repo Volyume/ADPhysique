@@ -108,6 +108,10 @@ export const TELEMETRY_EVENTS = Object.freeze([
   // (why_block / held_decisions / you_tab / paywall); no PII.
   // Server allow-list: supabase/migrate_074_methodology_telemetry.sql.
   { name: 'methodology_opened',              deferred: false, panel: 2 },
+
+  // COMP-005: recap story open. variant param only (month / block); no PII.
+  // Server allow-list: supabase/migrate_075_recap_telemetry.sql.
+  { name: 'recap_opened',                    deferred: false, panel: 2 },
 ]);
 
 /**

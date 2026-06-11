@@ -26,6 +26,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/t
 import useAppStore from '../store/useAppStore';
 import { getYearOfLiftsData, getRecapData, getBlockReflectionData, getOpenEdPatternFlag } from '../lib/database';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
+import { track } from '../lib/engineTelemetry';
 import GradientCard from '../components/GradientCard';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -392,6 +393,15 @@ export default function YearOfLiftsScreen({ navigation, route }) {
     if (variant === 'block') return buildBlockCards(data, units);
     return buildCards(data, units);
   }, [data, units, variant, monthLabel, neutral]);
+
+  // COMP-005: open-rate telemetry for the recap surfaces (month/block). variant
+  // only, no PII. Year of Lifts keeps its own (untracked) path unchanged.
+  useEffect(() => {
+    if (variant !== 'month' && variant !== 'block') return;
+    if (!user?.id) return;
+    track(user.id, 'recap_opened', { variant })?.catch?.(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function goTo(i) {
     if (!listRef.current || i < 0 || i >= cards.length) return;
