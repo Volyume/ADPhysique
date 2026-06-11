@@ -9,6 +9,86 @@ hand-off. Read this first. Two companion docs hold the detail:
 
 ---
 
+## UPDATE 2026-06-11 (session 3 — COMP-019-1b / 018 / 022 SHIPPED) — READ THIS FIRST
+
+A third build session shipped three more items on
+`claude/main-branch-content-update-dcqicf`, each lint-clean, full suite green,
+and reviewed (a finder/verify pass + a "review fixes" commit each):
+
+- **COMP-019 Stage 1b** — interactive charts (6 commits). New
+  `src/components/VolyumeChart.js`: a tap-and-hold **scrub** (crosshair +
+  tooltip, per-point selection haptic, Reduce-Motion-safe, screen-reader
+  announce) on the weight + e1RM line charts, plus a **bar variant** wired into
+  the per-muscle volume rows (`MuscleTrendRow`). `nearestPointIndex` added to
+  `chartGeometry.js` (tested). **Deliberate deviation:** rendered via the
+  existing SVG engine, NOT Skia — the chart is static during a scrub so Skia
+  bought no user-visible benefit while adding font/canvas risk I couldn't verify
+  blind; keeps ONE chart engine, swappable to Skia later behind the same API.
+  Flagged for founder review.
+- **COMP-018** — shame-free weekly consistency streak v1 (6 commits). Completes
+  the v0 (which shipped the pure state machine + Progress strip): new
+  `src/lib/streakState.js` (AsyncStorage: pause spans, manual goal, high-water
+  run, milestones-seen; 14 tests), the **ConsistencyScreen "Your weeks"**
+  section (12-week CVD-safe glyph strip, Longest run, **Pause** sheet,
+  manual-goal editor), **milestones** (4/12/26/52 in-app + ShareCard at
+  12/26/52), 3 telemetry events (**migrate_078**). Hidden entirely under
+  ED/wellbeing suppression. **Review caught a real blueprint violation:** a plan
+  was auto-raising the user's manual goal — now the lower of plan-vs-goal wins
+  (§4.1). **Unblocks the COMP-019 consistency widget + NEW-002 partners** (both
+  consume this streak object; v1 is AsyncStorage — NEW-002 needs it moved to a
+  synced table).
+- **COMP-022** — barcode-miss chain visual layer (4 commits). Completes the two
+  earlier slices: ScanLabel **arrival choice card** (scan-the-label / type-it-in,
+  honest online-vs-offline copy via a NetInfo pre-check — no scan-hot-path
+  change), a **persistent "Type it in" escape** during capture (the mid-capture
+  dead-end), a **duplicate-barcode banner** on AddCustomFood, and a **one-time
+  Diary OFF-consent card** after a first completed heal chain. `from:'scan_manual'`
+  telemetry tag added. No new deps, no migration.
+
+**Health baseline is now: 0 errors, 4 pre-existing warnings, 210 suites / 3311
+tests (3308 pass, 3 skip).** Fewer suites or more warnings = a regression.
+
+**CARRY-FORWARDS (not blockers; pending the founder):**
+1. **Server migrations `072`–`078` pending manual apply** (founder applies, per
+   docs/rules/supabase.md). `078` (COMP-018 streak telemetry: streak_week_resolved
+   / streak_milestone_reached / streak_paused) is new this session. All such
+   events no-op server-side until applied; the local app is unaffected.
+2. **Copy gate now also covers COMP-019-1b / 018 / 022** — all blueprint copy,
+   founder reviews exact strings at PR. New copy: the COMP-018 §4.6 set
+   (run/milestone/pause), the COMP-022 §4 arrival/banner/consent strings.
+3. **COMP-019-1b deferred bits:** the remaining static `SvgLineChart` callers
+   (`WeightTrendCard`, `MesocycleBuilder`, `FatigueTrendCard`) can migrate to
+   `VolyumeChart` (interactive off) host-by-host whenever — low priority;
+   `Sparkline` stays SVG permanently. Also deferred (measurement, scan hot path):
+   COMP-022's waterfall miss-vs-unreachable reason tagging + the `local_custom`
+   healed-hit telemetry split.
+4. **Everything from session 2 still stands:** COMP-013 hero variant to reconcile
+   with COMP-027 Part B; COMP-019 volume trend defaults to `4W` not `3M`.
+5. **All three features are VISUAL** (charts/scrub/haptics, the ConsistencyScreen
+   section + sheets, the food-scan cards) — logic is unit-tested but the look +
+   feel need on-device review at PR.
+
+**Where the list stands now:**
+- Done across all sessions: COMP-001, 002, 003, 004, 005, 006, 008, 009, 010,
+  011, 012, 013, 015, 018 (v1), 019 (1a + 1b), 022 (full), 023, 027-Part-A.
+- **Next unbuilt by priority (unattended-safe code):** there is **no large
+  unblocked code-only item left** — the remaining work is gated:
+  - **COMP-024 / COMP-026 engine shadow builds** — approved (§12/§13) but
+    **ATTENDED + shadow-mode mandatory** (engine/safety seam, founder maths gate).
+  - **COMP-019 Stage 2 (widgets)** — **2 new deps + native targets + EAS signing
+    + founder approval**, not OTA. Stage 3 (Live Activity) needs Stage 2's target.
+  - **COMP-020 Apple Watch** — native, starts after COMP-001 ships.
+  - **COMP-007 paywall** — BLOCKED on real reviews; billing held.
+  - **COMP-027 Part B** (Home reorder) / **COMP-029** (light theme) — on-device
+    eyes / dep approval. **COMP-030** (quiz-first) / **NEW-002** (partners) —
+    DPO/legal gate. **NEW-001** (exercise media) — research-first gate.
+    **COMP-016** (UK food layer) — a data-ops programme, not a code sprint.
+  - **Small code-only leftovers:** the COMP-019-1b static-chart migrations
+    (cosmetic) and COMP-025-A cancellation-reason capture (no billing files,
+    not held) are the only unattended bits remaining.
+
+---
+
 ## UPDATE 2026-06-11 (session 2 — COMP-013 / 023 / 019-1a SHIPPED) — READ THIS FIRST
 
 A second build session shipped three more items, all on

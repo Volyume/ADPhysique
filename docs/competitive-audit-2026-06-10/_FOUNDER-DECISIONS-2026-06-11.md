@@ -541,3 +541,66 @@ fixes" commit. Baseline at session end: **209 suites / 3288 tests** (3285 pass,
 - Copy gate now also covers COMP-013 / 023 / 019 user-facing strings.
 - COMP-013's hero first-run variant must be reconciled when COMP-027 Part B
   reorders Home.
+
+---
+
+## SESSION 3 BUILD LOG (2026-06-11) — COMP-019-1b / 018 / 022
+
+All on `claude/main-branch-content-update-dcqicf`, each unit lint-clean + full
+suite green, each closed with a finder/verify review + a "review fixes" commit.
+Baseline at session end: **210 suites / 3311 tests** (3308 pass, 3 skip), 0
+errors, 4 pre-existing warnings.
+
+### COMP-019 Stage 1b — interactive charts (commits 1–6)
+- c1 `nearestPointIndex` pure scrub helper in chartGeometry.js (+ tests).
+- c2 `VolyumeChart` — SVG-rendered interactive line/area chart; tap-and-hold
+  (Gesture.Pan().activateAfterLongPress(300)) → crosshair + tooltip + per-point
+  selection haptic (Reduce-Motion-safe) + screen-reader announce; latest-ref
+  gesture pattern.
+- c3 migrate weight + e1RM line charts to VolyumeChart (chips/takeaway stay
+  host-owned).
+- c4 review fix: stale scrub closure (latest-ref).
+- c5 bar variant + wire MuscleTrendRow (per-bar colour, onScrubIndex, host shows
+  scrubbed count — no tooltip room in a 24px row).
+- c6 review fix: bound the bar-dim by bars.length (stale-index glitch).
+- **Founder decisions:** build the component + both line charts, then the bar
+  variant "anyway" despite my flag that scrub on the micro-rows is low-value.
+- **Deliberate deviation (flagged):** SVG, not Skia — chart is static during a
+  scrub, so Skia adds risk without user-visible benefit; one engine kept,
+  swappable later behind the same API.
+
+### COMP-018 — consistency streak v1 (commits 1–6)
+- c1 `streakState.js` (AsyncStorage: pauses/goal/high-water/milestones) + 14
+  tests.
+- c2 resolver wiring (useWeeklyStreak): pause→per-week flag, manual goal as
+  target, high-water guard, shared by both surfaces.
+- c3 ConsistencyScreen "Your weeks" (glyph strip, Longest run, pause sheet, goal
+  editor).
+- c4 milestones (4/12/26/52) on the Progress strip + ShareCard at 12/26/52.
+- c5 telemetry (3 events) + migrate_078.
+- c6 review fixes: **manual goal lower-wins** (was auto-raised by a plan — §4.1
+  violation), userId in telemetry dedup key, milestone gated on render.
+- **v1 is AsyncStorage** (no migration); must move to a synced table before
+  NEW-002. **Unblocks** the COMP-019 widget + NEW-002 (both consume the streak
+  object).
+
+### COMP-022 — barcode-miss chain visual layer (commits 1–4)
+- c1 ScanLabel arrival choice card (scan/type-in) + honest online/offline copy
+  via NetInfo (no waterfall hot-path change).
+- c2 AddCustomFood duplicate-barcode banner ("Log that instead").
+- c3 one-time Diary OFF-consent card (after a first completed heal chain;
+  writeback flag helpers).
+- c4 review fixes: persistent "Type it in" capture-step escape (mid-capture
+  dead-end), from:'scan_manual' telemetry tag, honest offline banner, OFF card
+  gated to today.
+- **Deferred (measurement, scan hot path):** waterfall miss-vs-unreachable
+  reason tag + `local_custom` healed-hit split.
+
+### Carry-forwards from session 3 (NOT blockers)
+- Migrate_078 (streak telemetry) joins `072`–`077` pending the founder's manual
+  apply.
+- Copy gate now also covers COMP-019-1b / 018 / 022.
+- All three are visual — need on-device review.
+- No large unblocked code-only item remains; next steps are gated (attended
+  engine builds / dep approval / native / DPO) — see the START-HERE session-3
+  block.
