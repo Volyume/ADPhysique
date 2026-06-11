@@ -7,6 +7,15 @@ live state. `_FOUNDER-DECISIONS-2026-06-11.md` holds the detailed decisions +
 the full per-commit build log. This file remains only the index of what the
 original audit produced (the 28 blueprints).
 
+**Status note (2026-06-11, session 5):** **COMP-027 Part B shipped** — the Home
+hero-first reorder + the new `TodayStrip` glance row (weight/steps/cardio in one
+card under the hero), retiring StepsCard + CardioCard. Pure JS/RN, no gates; the
+weigh-in-completion guardrail + small-screen/larger-text layouts are an
+on-device PR check. Baseline **218 suites / 3385 tests**, 0 errors, 4 warnings.
+With this, **every audit item is either shipped or founder-gated** (billing,
+engine/safety-attended, deps, native/EAS, DPO/legal, on-device, data-ops) — there
+is no remaining item buildable unattended without one of those unblocks.
+
 **Status note (2026-06-11, session 4):** **COMP-025-A shipped in full (Phase A)**
 — cancellation-reason capture (both moments), the ProLocked held-seat line, the
 local +30-day win-back (episode state machine, ED-suppressed, single-shot +

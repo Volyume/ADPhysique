@@ -9,6 +9,49 @@ hand-off. Read this first. Two companion docs hold the detail:
 
 ---
 
+## UPDATE 2026-06-11 (session 5 — COMP-027 PART B SHIPPED) — READ THIS FIRST
+
+Founder said "just do them, no supervision"; I held the hard gates (billing,
+engine/safety, deps, native/EAS, DPO) and asked which lane to take — founder
+chose **COMP-027 Part B (Home reorder)**, the one pure-JS/RN item with no gate.
+Shipped on `claude/main-branch-content-update-dcqicf` in 3 lint-clean,
+full-suite-green commits.
+
+What shipped (blueprint `implementation/impl-COMP-027-colour-home.md` Part B):
+- **New `src/components/TodayStrip.js`** — the "one big thing" glance row that
+  now sits directly under the session hero, replacing the three stacked utility
+  cards (morning weight, steps, cardio) that used to push the hero ~150pt down.
+  Up to three divided cells; degradation 3→2→1; larger-text stacks; the only
+  state colour is the logged tick (Part A Class B — no red on weight). Weight
+  cell keeps one-tap logging across four states (logged / logged-under-ED /
+  compact-empty after the morning window / morning-window expanded input, pre
+  11:00, suppressed during an active session). 11 unit tests.
+- **HomeScreen reorder:** hero first, strip under it, free-tier teaser moved
+  below the hero, skeleton order flipped to teach the hierarchy.
+  `handleLogWeight(weightKg)` now takes a parsed kg (the strip owns the draft +
+  parsing); HomeScreen stays the weight-data owner. New `edFlagOpen` state from
+  the existing ED-flag read drops the sparkline under a wellbeing flag.
+- **Retired** `StepsCard.js` + `CardioCard.js` (loaders absorbed into the
+  strip) and the dead morning-weight-card styles.
+
+**Health baseline is now: 0 errors, 4 pre-existing warnings, 218 suites / 3385
+tests (3382 pass, 3 skip).**
+
+**CARRY-FORWARDS (Part B):**
+1. **On-device review needed at PR (the blueprint's guardrail, §8):** the
+   morning-state salience + the weigh-in-completion metric (must not drop >5%),
+   keyboard behaviour with the expanded cell under the hero (verify auto-scroll
+   into view on focus), and the small-screen / larger-text (2+1) layouts.
+2. **COMP-004 Home door deferred:** the logged weight cell taps to *edit*
+   (the existing weigh-in-correction path preserved). Wiring it as the
+   tap-through *door* to COMP-004's "Your trend" card still waits on where
+   COMP-004 lands (Diary top vs Progress) — a host decision, not built here.
+3. **COMP-013 hero first-run variant** is untouched and still lives inside the
+   hero block (the strip is separate), so the §4c coupling the blueprint flagged
+   is moot — they no longer fight over the same surface.
+
+---
+
 ## UPDATE 2026-06-11 (session 4 — COMP-025-A FULL PHASE A SHIPPED) — READ THIS FIRST
 
 A fourth build session shipped **COMP-025-A in full (Phase A)** on

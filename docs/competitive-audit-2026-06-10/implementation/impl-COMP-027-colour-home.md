@@ -693,10 +693,24 @@ confirmations are *not* coaching states and keep `error`. Only the three
 semantic body-data/rest violations above were re-coloured. No bulk recolour
 was performed or is needed.
 
-**PARKED — Part B (the Home `TodayStrip` reorder).** Not built this session:
-it is a 3–4 day visual rebuild (new `TodayStrip.js` absorbing StepsCard +
-CardioCard + the weight input flow, hero-first reorder, morning-expanded
-state, small-screen/larger-text layouts), it overlaps COMP-004's surface
-decisions, and it carries the weigh-in-completion guardrail (§8 metric 2)
-that needs the founder's eyes on the live layout. Do Part B in an attended
-session. Part A stands alone and unblocks COMP-029 (light theme) as intended.
+**~~PARKED~~ SHIPPED — Part B (the Home `TodayStrip` reorder), session 5
+(2026-06-11).** Built: new `src/components/TodayStrip.js` (absorbs the StepsCard
++ CardioCard loaders and the weight input flow; four weight-cell states incl.
+the morning-window expansion; degradation ladder; larger-text stacking; 11
+tests); HomeScreen reordered hero-first with the strip under it and the
+free-tier teaser moved below; `handleLogWeight(weightKg)` now takes a parsed kg
+(the strip owns the draft); new `edFlagOpen` drops the sparkline under a
+wellbeing flag; skeleton order flipped; `StepsCard.js` + `CardioCard.js` deleted
+(loaders absorbed) and the dead weight-card styles removed. No schema/engine/
+billing/safety changes.
+
+**Deferred from Part B (need the founder / a host decision, NOT built):**
+- The §8 guardrails are an **on-device PR check**: weigh-in-completion must not
+  drop >5%; morning-state salience; keyboard behaviour with the expanded cell
+  under the hero; small-screen / larger-text (2+1) layouts.
+- The **COMP-004 Home door**: the logged weight cell taps to *edit* (existing
+  path preserved); wiring it as the tap-through to COMP-004's trend card waits
+  on where COMP-004 lands (Diary top vs Progress).
+- The original blueprint paired Part A + Part B "ship together"; they shipped in
+  separate sessions (Part A in session 2). No functional gap — Part A's grammar
+  is what the strip consumes, and it was already live.
