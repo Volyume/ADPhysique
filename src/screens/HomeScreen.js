@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,14 +9,11 @@ import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type } from '../styles/theme';
-import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
 import ScreenHeader from '../components/ScreenHeader';
 import BlockShapeCard from '../components/BlockShapeCard';
 import PressableCard from '../components/PressableCard';
 import { SkeletonCard } from '../components/Skeleton';
-import Sparkline from '../components/Sparkline';
-import StepsCard from '../components/StepsCard';
-import CardioCard from '../components/CardioCard';
+import TodayStrip from '../components/TodayStrip';
 import { useToast } from '../components/Toast';
 import {
   getAllWorkouts, getWorkoutSetsSince, getActivePlan, getRoutinesForPlan,
@@ -166,10 +163,10 @@ export default function HomeScreen({ navigation }) {
   const [coachBannerDismissed, setCoachBannerDismissed] = useState(false);
   const [todayWeight, setTodayWeight] = useState(null);       // logged weight for today
   const [recentWeights, setRecentWeights] = useState([]);     // last 14 entries for sparkline
-  const [weightInput, setWeightInput] = useState('');          // draft for kg/lbs mode
-  const [weightInputSt, setWeightInputSt] = useState('');     // stone field (st mode)
-  const [weightInputStLbs, setWeightInputStLbs] = useState(''); // lbs field (st mode)
   const [savingWeight, setSavingWeight] = useState(false);
+  // COMP-027 Part B: open ED/wellbeing flag → the strip's weight cell drops the
+  // sparkline (value only), consistent with COMP-004's hide-the-rate rule.
+  const [edFlagOpen, setEdFlagOpen] = useState(false);
   const [showCoachingNudge, setShowCoachingNudge] = useState(false);
   const [totalSessions, setTotalSessions] = useState(0);
   const [showIntentPrompt, setShowIntentPrompt] = useState(false);
@@ -504,50 +501,25 @@ export default function HomeScreen({ navigation }) {
         const recent14 = await getMorningWeights(user.id, 14);
         setRecentWeights(recent14.map(w => w.weightKg).filter(Number.isFinite));
       } catch (_) {}
-      // Prefill the log-weight inputs with the previously logged weight
-      // (most recent morning weight, falling back to onboarding weight).
-      // Blank inputs every day forced the user to retype the same number
-      //, annoying, and easy to typo.
-      if (!entry?.weightKg) {
-        let prefillKg = null;
-        try {
-          const recent = await getMorningWeights(user.id, 1);
-          if (recent.length > 0) prefillKg = recent[recent.length - 1]?.weightKg;
-        } catch (_) {}
-        if (!prefillKg && userProfile?.weightKg && userProfile.weightKg > 0) {
-          prefillKg = userProfile.weightKg;
-        }
-        if (prefillKg && prefillKg > 0) {
-          if (bwu === 'st') {
-            const { stoneStr, lbsStr } = kgToStoneLbsStrings(prefillKg);
-            setWeightInputSt(stoneStr);
-            setWeightInputStLbs(lbsStr);
-          } else if (bwu === 'lbs') {
-            setWeightInput(String(Math.round(kgToLbs(prefillKg))));
-          } else {
-            setWeightInput(String(Math.round(prefillKg * 10) / 10));
-          }
-        }
-      }
+      // COMP-027 Part B: open ED/wellbeing flag → the strip shows the weight
+      // value only (no sparkline). The strip prefills its own draft from the
+      // last known weight (passed as lastWeightKg).
+      try {
+        const flag = await getOpenEdPatternFlag(user.id);
+        setEdFlagOpen(!!flag);
+      } catch (_) {}
     } catch (_) {}
   }
 
-  async function handleLogWeight() {
-    let weightKg;
-    if (bwu === 'st') {
-      if (!weightInputSt) return;
-      weightKg = stoneLbsToKg(weightInputSt, weightInputStLbs || '0');
-    } else {
-      weightKg = parseBodyWeightToKg(weightInput, bwu);
-    }
+  // COMP-027 Part B: TodayStrip owns the draft input + parsing and hands a kg
+  // value here. HomeScreen stays the weight-data owner (it reloads on focus and
+  // feeds the coach) and does the optimistic write.
+  async function handleLogWeight(weightKg) {
     if (!weightKg || isNaN(weightKg) || weightKg <= 0 || weightKg > 300) return;
-    // Optimistic: show the logged weight + clear inputs immediately.
-    // SQLite write happens in the background. On failure, revert.
+    // Optimistic: show the logged weight immediately. SQLite write happens in
+    // the background. On failure, revert.
     const previousTodayWeight = todayWeight;
     setTodayWeight(weightKg);
-    setWeightInput('');
-    setWeightInputSt('');
-    setWeightInputStLbs('');
     setSavingWeight(true);
     try {
       await logMorningWeight(user.id, { weightKg, loggedAt: Date.now() });
@@ -1068,152 +1040,13 @@ export default function HomeScreen({ navigation }) {
             SQLite reads to complete on a fresh app start. */}
         {initialLoading && (
           <View style={{ gap: spacing.md, marginBottom: spacing.md }}>
-            <SkeletonCard height={84} />
-            <SkeletonCard height={120} />
+            {/* COMP-027 Part B: the skeleton teaches the new hierarchy —
+                hero-shaped first, the Today strip second. */}
             <SkeletonCard height={160} />
+            <SkeletonCard height={64} />
           </View>
         )}
 
-        {/* ── Morning weight card ── */}
-        {tier === 'pro' && (todayWeight != null ? (
-          <View style={styles.weightCard}>
-            <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-            <Text style={styles.weightCardText}>
-              {formatBodyWeightShort(todayWeight, bwu)} logged today
-            </Text>
-            {recentWeights.length >= 3 && (
-              <Sparkline data={recentWeights} width={64} height={20} color={colors.primary} />
-            )}
-            <TouchableOpacity
-              onPress={() => {
-                // Prefill inputs with the value being edited so a typo
-                // correction doesn't require retyping the whole weight.
-                if (todayWeight && todayWeight > 0) {
-                  if (bwu === 'st') {
-                    const { stoneStr, lbsStr } = kgToStoneLbsStrings(todayWeight);
-                    setWeightInputSt(stoneStr);
-                    setWeightInputStLbs(lbsStr);
-                  } else if (bwu === 'lbs') {
-                    setWeightInput(String(Math.round(kgToLbs(todayWeight))));
-                  } else {
-                    setWeightInput(String(Math.round(todayWeight * 10) / 10));
-                  }
-                }
-                setTodayWeight(null);
-              }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="Edit today's weight"
-            >
-              <Text style={styles.weightCardEdit}>Edit</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={[styles.weightCard, styles.weightCardEmpty]}>
-            <Ionicons name="scale-outline" size={16} color={colors.primary} />
-            <Text style={styles.weightCardPrompt}>Morning weight</Text>
-            {bwu === 'st' ? (
-              <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
-                <TextInput
-                  style={styles.weightInputCompact}
-                  value={weightInputSt}
-                  onChangeText={setWeightInputSt}
-                  placeholder="12st"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="number-pad"
-                  maxLength={3}
-                />
-                <TextInput
-                  style={styles.weightInputCompact}
-                  value={weightInputStLbs}
-                  onChangeText={setWeightInputStLbs}
-                  placeholder="7lb"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="decimal-pad"
-                  maxLength={4}
-                  returnKeyType="done"
-                  onSubmitEditing={handleLogWeight}
-                />
-              </View>
-            ) : (
-              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs }}>
-                <TextInput
-                  style={styles.weightInputCompact}
-                  value={weightInput}
-                  onChangeText={setWeightInput}
-                  placeholder={bwu}
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="decimal-pad"
-                  returnKeyType="done"
-                  onSubmitEditing={handleLogWeight}
-                />
-                <Text style={styles.weightInputUnit}>{bwu}</Text>
-              </View>
-            )}
-            <TouchableOpacity
-              style={[styles.weightLogBtn, ((!weightInput && !weightInputSt) || savingWeight) && styles.weightLogBtnDisabled]}
-              onPress={handleLogWeight}
-              disabled={(!weightInput && !weightInputSt) || savingWeight}
-              accessibilityRole="button"
-              accessibilityLabel="Log morning weight"
-              accessibilityState={{ disabled: (!weightInput && !weightInputSt) || savingWeight }}
-            >
-              <Text style={styles.weightLogBtnText}>Log</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-
-        {/* ── Steps, a small just-info line under the weight bit (Pro;
-            automatic from the health aggregator, self-hides when none) ── */}
-        {tier === 'pro' && user?.id && userProfile?.stepsEnabled !== false && (
-          <StepsCard userId={user.id} stepsTarget={userProfile?.stepsTarget} />
-        )}
-
-        {/* Cardio line (available, not allocated; default on, gate treats
-            undefined as on). Entry point for logging. */}
-        {tier === 'pro' && user?.id && userProfile?.cardioEnabled !== false && (
-          <CardioCard userId={user.id} onPress={() => navigation.navigate('LogCardio')} />
-        )}
-
-        {/* "This week" (Sessions / Sets / Volume) removed from the Train screen
-            (founder 2026-06-03). The weekly volume home lives on the Progress
-            tab ("This week's volume"), with recent sessions alongside it, so
-            the glance bars here were a duplicate. weekStats is still computed
-            for the coach inputs and the no-plan "at a glance" card below. */}
-
-        {/* Today's intake card removed from the Train screen (founder
-            2026-05-29): food and macros live on the Diary tab; the Train
-            screen stays training-only. */}
-
-        {/* ── Training trend mini-graph ── */}
-        {/* Training trend moved to Progress tab, sits with Mesocycle pulse there. */}
-
-        {/* ── Pro teaser (free tier only, after 3+ sessions) ── */}
-        {tier === 'free' && totalSessions >= 3 && (
-          <TouchableOpacity
-            style={styles.proTeaserCard}
-            onPress={() => navigation.navigate('ProUpgrade')}
-            activeOpacity={0.88}
-            accessibilityRole="button"
-            accessibilityLabel="Learn about Pro coaching"
-          >
-            <View style={styles.proTeaserLeft}>
-              <Ionicons name="sparkles" size={18} color={colors.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.proTeaserTitle}>
-                  {teaserInsight?.progressed && teaserInsight?.stalled
-                    ? `${teaserInsight.progressed} went up. ${teaserInsight.stalled} held. Pro tells you what to do next.`
-                    : teaserInsight?.progressed
-                      ? `${teaserInsight.progressed} progressed this week. Pro builds on it.`
-                      : totalSessions >= 10
-                        ? `${totalSessions} sessions logged. Pro coaching uses all of it.`
-                        : 'Add a coach that adjusts your plan each week.'}
-                </Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-          </TouchableOpacity>
-        )}
 
         {/* COMP-013: the standalone first-run cue row retired here — its job
             folds into the hero first-run variant below (a net minus-one-card on
@@ -1491,6 +1324,56 @@ export default function HomeScreen({ navigation }) {
               </TouchableOpacity>
             )}
           </View>
+        )}
+
+        {/* ── Today strip (COMP-027 Part B) ── */}
+        {/* The glance row sits directly under the hero, replacing the three
+            stacked utility cards that used to push the hero down. Pro only;
+            free tier shows the upgrade teaser below instead. */}
+        {tier === 'pro' && user?.id && (
+          <TodayStrip
+            userId={user.id}
+            bwu={bwu}
+            todayWeight={todayWeight}
+            recentWeights={recentWeights}
+            lastWeightKg={recentWeights.length ? recentWeights[recentWeights.length - 1] : (userProfile?.weightKg ?? null)}
+            savingWeight={savingWeight}
+            onLogWeight={handleLogWeight}
+            hasActiveWorkout={hasActiveWorkout}
+            edFlagOpen={edFlagOpen}
+            stepsEnabled={userProfile?.stepsEnabled !== false}
+            stepsTarget={userProfile?.stepsTarget}
+            cardioEnabled={userProfile?.cardioEnabled !== false}
+            onCardioPress={() => navigation.navigate('LogCardio')}
+          />
+        )}
+
+        {/* ── Pro teaser (free tier only, after 3+ sessions) ── now below the
+            hero with the same hero-first reorder. */}
+        {tier === 'free' && totalSessions >= 3 && (
+          <TouchableOpacity
+            style={styles.proTeaserCard}
+            onPress={() => navigation.navigate('ProUpgrade')}
+            activeOpacity={0.88}
+            accessibilityRole="button"
+            accessibilityLabel="Learn about Pro coaching"
+          >
+            <View style={styles.proTeaserLeft}>
+              <Ionicons name="sparkles" size={18} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.proTeaserTitle}>
+                  {teaserInsight?.progressed && teaserInsight?.stalled
+                    ? `${teaserInsight.progressed} went up. ${teaserInsight.stalled} held. Pro tells you what to do next.`
+                    : teaserInsight?.progressed
+                      ? `${teaserInsight.progressed} progressed this week. Pro builds on it.`
+                      : totalSessions >= 10
+                        ? `${totalSessions} sessions logged. Pro coaching uses all of it.`
+                        : 'Add a coach that adjusts your plan each week.'}
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
         )}
 
         {/* ── Last session ── */}
