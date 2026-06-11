@@ -64,6 +64,7 @@ import FirstRunScreen from '../screens/FirstRunScreen';
 import Article9ConsentScreen from '../screens/Article9ConsentScreen';
 import WeeklyCheckInScreen from '../screens/WeeklyCheckInScreen';
 import CoachOutputScreen from '../screens/CoachOutputScreen';
+import MethodologyScreen from '../screens/MethodologyScreen';
 import ProGoalSetupScreen from '../screens/ProGoalSetupScreen';
 import PlanUpdateScreen from '../screens/PlanUpdateScreen';
 import GoalChangeSummaryScreen from '../screens/GoalChangeSummaryScreen';
@@ -355,6 +356,7 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ title: 'Body Metrics' }} />
       <Stack.Screen name="WeeklyCheckIn" component={GatedWeeklyCheckIn} options={{ headerShown: false }} />
       <Stack.Screen name="CoachOutput" component={GatedCoachOutput} options={{ title: 'Precision Coaching™' }} />
+      <Stack.Screen name="Methodology" component={MethodologyScreen} options={{ title: 'How Precision Coaching works' }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ title: 'Share Card' }} />
       <Stack.Screen name="CoachHeldHistory" component={CoachHeldHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BlockReflection" component={BlockReflectionScreen} options={{ headerShown: false }} />

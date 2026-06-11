@@ -605,6 +605,7 @@ const SCREENS_TO_SWEEP = [
   'LoginScreen',
   'ManualBuilderScreen',
   'MesocycleBuilderScreen',
+  'MethodologyScreen',
   'NotificationSettingsScreen',
   'NutritionEducationScreen',
   'NutritionTargetsScreen',

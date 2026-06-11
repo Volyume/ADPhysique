@@ -148,6 +148,18 @@ export default function YouScreen({ navigation }) {
           </View>
         )}
 
+        {/* COMP-006: how the coaching decides. A first-class row, not a
+            preference, and shown to everyone — it is static trust copy, not a
+            Pro feature, and a free user weighing up Pro benefits from it. */}
+        <View style={styles.section}>
+          <NavRow
+            icon="book-outline"
+            label="How Precision Coaching works"
+            sub="The rules behind every change, and every hold. Every change has a reason. Every non-change has a reason too."
+            onPress={() => navigation.navigate('Methodology', { source: 'you_tab' })}
+          />
+        </View>
+
         {/* Preferences */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Preferences</Text>
