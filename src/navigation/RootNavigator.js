@@ -799,6 +799,54 @@ export default function RootNavigator() {
               return;
             }
             _lastAuthEnter = { uid: _enterUid, at: _enterNow };
+
+            // COMP-009: a cross-account sign-in is gated behind an explicit
+            // choice BEFORE any restore / sync / wipe side-effect runs, so the
+            // whole sign-in body below is wrapped in this async IIFE. "Keep this
+            // device's data" aborts cleanly (sign back out, touch nothing);
+            // "Switch accounts" snapshots first, then the existing flow runs.
+            // Same-account and first-ever sign-ins fall straight through with no
+            // modal. The existing cross-user wipe + last-account key write
+            // further down are unchanged — the gate is purely additive.
+            (async () => {
+              try {
+                const _lastUid = await AsyncStorage.getItem('@volyume_last_supabase_user_id').catch(() => null);
+                if (_lastUid && _lastUid !== session.user.id) {
+                  // eslint-disable-next-line global-require
+                  const { appAlert } = require('../components/AppAlert');
+                  const choice = await new Promise(resolve => {
+                    let settled = false;
+                    const pick = (v) => { if (!settled) { settled = true; resolve(v); } };
+                    appAlert(
+                      'You\'re signing in to a different account',
+                      'This device currently holds data for a different account. Switching will replace what\'s on this device with the account you\'re signing into. We\'ll save a snapshot first, so nothing is gone for good. You can restore it from Settings, Your data.',
+                      [
+                        { text: 'Keep this device\'s data', style: 'cancel', onPress: () => pick('keep') },
+                        { text: 'Switch accounts', style: 'destructive', onPress: () => pick('switch') },
+                      ],
+                      { cancelable: false },
+                    );
+                  });
+                  if (choice !== 'switch') {
+                    // Keep: never wipe, restore, or re-stamp. Sign the new
+                    // account back out — the SIGNED_OUT event resets routing but
+                    // does NOT wipe local SQLite (only an explicit sign-out
+                    // button does) — leaving this device's data intact and the
+                    // last-account key unchanged, so signing back in is silent.
+                    try { await client.auth.signOut(); } catch (_) {}
+                    // eslint-disable-next-line global-require
+                    try { require('../lib/errorLog').logInfo('SignIn.accountSwitch.kept', `aborted sign-in to ${session.user.id}; device data kept`); } catch (_) {}
+                    return;
+                  }
+                  // Switch: snapshot this device's data before the existing wipe.
+                  try {
+                    // eslint-disable-next-line global-require
+                    const { snapshotBeforeAccountSwitch } = require('../lib/dbSnapshot');
+                    await snapshotBeforeAccountSwitch();
+                  } catch (_) {}
+                }
+              } catch (_) { /* gate best-effort; fall through to the normal flow */ }
+
             // Optimistic sign-in: kick off the cloud restore but DON'T
             // await it. restoreSessionFromCloud makes its routing
             // decision synchronously at the top (per-uid cache OR
@@ -960,6 +1008,7 @@ export default function RootNavigator() {
             require('../lib/notifications')
               .registerPushToken(session.user.id)
               .catch(() => {});
+            })();
           }
         });
         subscription = data.subscription;
