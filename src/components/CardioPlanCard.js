@@ -50,6 +50,13 @@ export default function CardioPlanCard({ userId, target, onPress, onHistory }) {
         <Ionicons name="add" size={16} color={colors.primary} />
         <Text style={styles.cardioBtnText}>Log cardio</Text>
       </TouchableOpacity>
+      {/* COMP-011: only when there's logged cardio to misread; the empty
+          state has nothing to double-count and stays clean. */}
+      {done > 0 ? (
+        <Text style={styles.cardioFootnote}>
+          Cardio is already counted in your calorie target. Nothing to add back.
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -69,4 +76,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg, borderRadius: radius.sm,
   },
   cardioBtnText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
+  cardioFootnote: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
 });

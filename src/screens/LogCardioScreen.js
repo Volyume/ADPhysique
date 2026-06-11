@@ -5,7 +5,7 @@
  * recents first, then browse the library or search), set duration + intensity,
  * see the estimated calories as feedback, save. The estimate is never added to
  * the food target; the energy-balance model already accounts for cardio through
- * the weight trend, which the one-time footnote explains.
+ * the weight trend, which the recurring footnote explains.
  *
  * Voice rules: CLAUDE.md. No em dashes, no encouragement.
  */
@@ -223,7 +223,7 @@ export default function LogCardioScreen({ navigation, route }) {
                 <Text style={styles.kcalText}>Burned about {estKcal} kcal</Text>
               </View>
               <Text style={styles.footnote}>
-                An estimate. We don't add it to your food target, your weight trend already accounts for it.
+                Already counted. This isn't added to your calorie target, your weight trend includes everything you burn.
               </Text>
             </>
           )}
