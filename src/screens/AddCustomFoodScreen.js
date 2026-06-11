@@ -17,6 +17,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/t
 import Button from '../components/Button';
 import { useToast } from '../components/Toast';
 import { insertCustomFood, logFoodEntry } from '../lib/food/db';
+import { queueContribution, getConsent } from '../lib/food/writeback';
 import { checkFoodSanity } from '../lib/food/sanityChecks';
 import { fieldNeedsCheck } from '../lib/food/ocrParser';
 import { audit } from '../lib/observability';
@@ -140,6 +141,26 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         fatG:      Math.round(food.fat100g     * factor * 10) / 10,
         fibreG:    food.fibre100g != null ? Math.round(food.fibre100g * factor * 10) / 10 : null,
       });
+
+      // OFF contribution (COMP-022): relocated here from ScanLabel capture so
+      // it carries the values the user actually confirmed, plus name/brand.
+      // queueContribution hard-gates on consent internally; the barcode check
+      // keeps it to scanned-and-healed items. Fire-and-forget.
+      if (food.barcodeEan) {
+        try {
+          if (await getConsent()) {
+            await queueContribution(userId, {
+              barcode: food.barcodeEan,
+              name: food.name, brand: food.brand,
+              kcal100g: food.kcal100g, protein100g: food.protein100g,
+              carbs100g: food.carbs100g, fat100g: food.fat100g,
+              fibre100g: food.fibre100g, servingG: food.servingG,
+            });
+          }
+        } catch (_) { /* contribution is best-effort, never blocks the save */ }
+        // Confirm the healing: the loop-closing reward (COMP-022).
+        toast.show('Saved. Next time this barcode scans instantly.');
+      }
       navigation.goBack();
     } catch (_err) {
       toast.show('Couldn\'t save. Try again.', { variant: 'error' });

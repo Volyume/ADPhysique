@@ -40,14 +40,8 @@ import Button from '../components/Button';
 import { isOcrConfigured, recogniseText, recogniseBlocks } from '../lib/food/ocr';
 import { parseNutritionLabel } from '../lib/food/ocrParser';
 import { pickProductName } from '../lib/food/labelName';
-import { queueContribution, getConsent } from '../lib/food/writeback';
-import useAppStore from '../store/useAppStore';
-import { useShallow } from 'zustand/react/shallow';
 
 export default function ScanLabelScreen({ navigation, route }) {
-  const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
-  const userId = user?.id;
-
   const mealSlot = route?.params?.mealSlot ?? 'snack';
   const entryDate = route?.params?.entryDate ?? todayLocalKey();
   const prefillBarcode = route?.params?.prefillBarcode ?? null;
@@ -128,23 +122,15 @@ export default function ScanLabelScreen({ navigation, route }) {
       const macros = parsed?.fields || {};
       const confidence = parsed?.confidence || null;
 
-      // Queue OFF contribution if the user opted in AND we have a
-      // barcode to attach. Fires now; the parsed macros are what
-      // the user is about to confirm in AddCustomFood. We could
-      // wait for the save to fire, but queuing on capture is simpler
-      // and the user can abort the save if the OCR was nonsense.
-      if (prefillBarcode && (await getConsent())) {
-        await queueContribution(userId, {
-          barcode: prefillBarcode,
-          kcal100g: macros.kcal100g, protein100g: macros.protein100g,
-          carbs100g: macros.carbs100g, fat100g: macros.fat100g,
-          fibre100g: macros.fibre100g, servingG: macros.servingG,
-        });
-      }
-
+      // OFF contribution is NOT queued here any more (COMP-022): queuing at
+      // capture sent unconfirmed OCR, which contradicts the consent copy
+      // ("the macros you confirm") and left an orphan queue entry if the
+      // user abandoned the save. It now fires from AddCustomFood's onSave
+      // with the values the user actually confirmed.
       navigation.replace('AddCustomFood', {
         mealSlot, entryDate, prefillBarcode, prefillMacros: macros,
         prefillConfidence: confidence, prefillName: nameParam,
+        from: 'scan_chain',
       });
     } catch {
       if (step === 'front') {
@@ -156,7 +142,7 @@ export default function ScanLabelScreen({ navigation, route }) {
         mealSlot, entryDate, prefillBarcode, prefillName: productName || undefined,
       });
     }
-  }, [busy, navigation, mealSlot, entryDate, prefillBarcode, userId, torch, step, productName]);
+  }, [busy, navigation, mealSlot, entryDate, prefillBarcode, torch, step, productName]);
 
   // Skip the name step and go straight to the nutrition panel.
   const skipName = () => {
