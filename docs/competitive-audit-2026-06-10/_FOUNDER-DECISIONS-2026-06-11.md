@@ -228,3 +228,49 @@ history), engine-timing review (COMP-008→COMP-015), billing (COMP-007,
 COMP-025-B), or spend (COMP-016, NEW-001). Recommend the next session be
 attended for the visual/engine items, or start with the COMP-018 deload
 query (pure, testable) as the one remaining non-visual prerequisite.
+
+## 10. COMP-008 → COMP-015 decisions (attended session, 2026-06-11)
+Walked with the founder. Binding for the build phase. COMP-008 ships FIRST
+(it lays the pre-session capture + schema that COMP-015 reads); COMP-015 builds
+on the populated columns afterwards.
+
+### COMP-008 — survey diet + fast check-in (APPROVED to build)
+- **Engine soreness input — re-source to PRE-workout.** The post-workout
+  adaptive engine (`WorkoutSummaryScreen.js:222`) currently reads
+  `feedback.soreness24hBefore` from a post-session rating. After COMP-008 it
+  reads the pre-workout soreness answer written to the workout row. Founder's
+  reasoning accepted: concurrent capture is more accurate than tired
+  retrospective recall; no engine signal is lost, the input just arrives from a
+  better capture point. This is the ONLY engine-input change in COMP-008.
+- **Weekly sleep write — KEEP, sourced pre-session.** The weekly recovery
+  record still receives a sleep value, now from the most recent session's
+  pre-workout `sleepQuality`. The weekly coach's available inputs are unchanged.
+- **Schema — APPROVED.** Add nullable `sleep_quality` and `energy_score` to the
+  `workouts` table (reuse existing `soreness_24h_before`, no re-add). New LOCAL
+  SQLite migration version + matching SUPABASE migration file, both columns
+  wired into `rowToCamel` + the sync column lists. Per docs/rules/supabase.md:
+  migration FILES only — NOTHING is run against production; the founder applies.
+- Post-workout block becomes 4 rows + notes (difficulty, pump, joint, fatigue),
+  not 3 — `fatigueLevel` stays (read by getRecentWorkoutFeedback/buildCoachBrief).
+  Pre-workout chips optional; Skip starts the session instantly, no confirmation.
+
+### COMP-015 — visible per-muscle session autoregulation (APPROVED to build)
+- **Scope — DROPS + ADDS, as specified.** Full blueprint rule matrix R0–R6:
+  −1 set on a still-sore/recovering muscle (R2); +1 set on an under-stimulated,
+  well-recovered muscle (R4). Adds hard-capped at +1/muscle/week from the
+  session layer and blocked under weekly 'reduce'/deload/safety hold. Drops
+  always allowed (safety right-of-way). Session-scoped only: ±1 set, max 2
+  adjusted exercises/session, clamped [mev, mrv], floor 1 set, NEVER written to
+  routines/planned volume/mesocycle (preserves the 2026-05-28 decision).
+- **Rollout — BUILD LIVE DIRECTLY.** No shadow-mode warm-up. Relies on the
+  pure/fuzz/golden test coverage + the caps. Coverage telemetry
+  (`session_adjustment_shown`, target 15–30%) still ships for monitoring.
+- **Copy — REVIEW AT PR.** Build with blueprint copy as written (§4.4/§4.5);
+  founder signs off exact strings at PR. Consistent with the copy-in-principle
+  decision.
+- Determinism is mandatory (no LLM/AI/randomness; caller passes `now`). Engine
+  boundary honoured. ED safety system not touched. Line-3 coaching slot
+  confirmed present (`ActiveWorkoutScreen.js:1535`, "stalled advice > coach
+  reason" priority) — COMP-015 inserts session adjustment at the top of it.
+- Stale comment noted, NOT fixed here: `WorkoutSummaryScreen.js:362` references
+  an "Engine Log on the You tab" that does not exist.
