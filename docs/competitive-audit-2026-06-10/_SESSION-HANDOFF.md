@@ -1,9 +1,10 @@
 # Session handoff — competitive audit 2026-06-10
 
-**2026-06-11 update: the questionnaire in "Next session" below has been
-answered. `_FOUNDER-DECISIONS-2026-06-11.md` is now the authoritative
-record of those decisions and the build queue. This file remains the index
-of what the audit produced.**
+**>> START AT `_START-HERE-NEXT-SESSION.md` <<** (written 2026-06-11 end of
+build session) — it is the current single entry point: branch, what shipped,
+locked decisions, and the prioritised next-steps. `_FOUNDER-DECISIONS-2026-06-11.md`
+holds the detailed decisions + per-commit build log. This file remains only
+the index of what the original audit produced (the 28 blueprints).
 
 This file is the authoritative entry point for the next session. It supersedes
 the `PENDING` section at the bottom of `implementation/.blueprint-summaries-scratch.md`
