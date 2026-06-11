@@ -627,6 +627,7 @@ const SCREENS_TO_SWEEP = [
   'SettingsDataScreen',
   'SettingsPrivacyScreen',
   'SettingsAboutScreen',
+  'SnapshotsScreen',
   'SubscriptionPolicyScreen',
   'VolumeHeatmapScreen',
   'WeeklyCheckInScreen',

@@ -47,6 +47,7 @@ import SettingsNotificationsScreen from '../screens/SettingsNotificationsScreen'
 import SettingsDisplayScreen from '../screens/SettingsDisplayScreen';
 import SettingsHealthScreen from '../screens/SettingsHealthScreen';
 import SettingsDataScreen from '../screens/SettingsDataScreen';
+import SnapshotsScreen from '../screens/SnapshotsScreen';
 import SettingsPrivacyScreen from '../screens/SettingsPrivacyScreen';
 import SettingsAboutScreen from '../screens/SettingsAboutScreen';
 import LiftProgressScreen from '../screens/LiftProgressScreen';
@@ -350,6 +351,7 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="SettingsDisplay" component={SettingsDisplayScreen} options={{ title: 'Display & accessibility' }} />
       <Stack.Screen name="SettingsHealth" component={SettingsHealthScreen} options={{ title: 'Health' }} />
       <Stack.Screen name="SettingsData" component={SettingsDataScreen} options={{ title: 'Your data' }} />
+      <Stack.Screen name="Snapshots" component={SnapshotsScreen} options={{ title: 'Restore a snapshot' }} />
       <Stack.Screen name="SettingsPrivacy" component={SettingsPrivacyScreen} options={{ title: 'Privacy & legal' }} />
       <Stack.Screen name="SettingsAbout" component={SettingsAboutScreen} options={{ title: 'Help & about' }} />
       <Stack.Screen name="NutritionTargets" component={GatedNutritionTargets} options={{ title: 'Nutrition Targets' }} />

@@ -183,6 +183,12 @@ export default function SettingsDataScreen({ navigation }) {
           onPress={handleRestoreBackup}
         />
         <SettingRow
+          icon="time-outline"
+          label="Restore a snapshot"
+          sub="Automatic safety copies from before each app update"
+          onPress={() => navigation.navigate('Snapshots')}
+        />
+        <SettingRow
           icon="download-outline"
           label="Export workout log (CSV)"
           onPress={exportData}
