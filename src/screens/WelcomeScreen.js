@@ -12,7 +12,7 @@ const HERO = require('../../assets/volyume-wordmark.png');
 const HERO_ASPECT = 1032 / 277;
 
 const FREE_BULLETS = [
-  'Unlimited workout logging, fully offline',
+  'Unlimited workout logging',
   'Exercise library and Personal Records',
   'Plan library and custom plan builder',
   'Training blocks and full progress stats',
@@ -130,6 +130,27 @@ export default function WelcomeScreen({ navigation }) {
           </TouchableOpacity>
         </Animated.View>
 
+        {/* Trust row (COMP-012): one muted, non-interactive line that
+            applies to both tiers, hit at the moment of CTA hesitation.
+            Claims are all structurally true (no ad SDK, CSV/file export,
+            data never sold). 'No trackers' is deliberately NOT claimed. */}
+        <Animated.View style={{ opacity: fadeIn }}>
+          <View
+            style={styles.trustRow}
+            accessible
+            accessibilityLabel="Works fully offline. Your data exports anytime. No ads, ever."
+          >
+            <Ionicons name="cloud-offline-outline" size={13} color={colors.textMuted} importantForAccessibility="no" />
+            <Text style={styles.trustText}>Works fully offline</Text>
+            <Text style={styles.trustDot}>·</Text>
+            <Ionicons name="download-outline" size={13} color={colors.textMuted} importantForAccessibility="no" />
+            <Text style={styles.trustText}>Exports anytime</Text>
+            <Text style={styles.trustDot}>·</Text>
+            <Ionicons name="shield-checkmark-outline" size={13} color={colors.textMuted} importantForAccessibility="no" />
+            <Text style={styles.trustText}>No ads, ever</Text>
+          </View>
+        </Animated.View>
+
         <Animated.View style={{ opacity: fadeIn }}>
           <TouchableOpacity
             style={styles.signInLink}
@@ -204,6 +225,12 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17,
     paddingHorizontal: spacing.lg, marginBottom: spacing.sm,
   },
+  trustRow: {
+    flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.xs, paddingHorizontal: spacing.lg,
+  },
+  trustText: { fontSize: fontSize.xs, color: colors.textMuted },
+  trustDot: { fontSize: fontSize.xs, color: colors.textMuted },
 
   proCtaRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
