@@ -32,6 +32,7 @@ import {
   computeEWMA,
   computeWeeklyWeightChange,
   computeAdaptiveTDEEAdjustment,
+  computeStepTrendModifier,
   shouldSuggestDietBreak,
 } from '../nutritionEngine';
 import { emaValue, computeRecoveryEMAs } from '../recoveryEMA';
@@ -201,6 +202,156 @@ describe('runWeeklyCoach: fuzz invariants', () => {
     const a = runWeeklyCoach(inputs);
     const b = runWeeklyCoach(inputs);
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+  });
+});
+
+// ── COMP-026 SAFETY INVARIANTS (blocking) ─────────────────────────────────
+// No-shadow gate: the step-trend modifier may only SPEED an adaptive resize the
+// weight trend already justified. It must never weaken a safety clamp, create a
+// change, reverse a change, or pierce the +/-5% cap. If any of these fails, the
+// modifier is unsafe to ship live and the change is held (the COMP-024 lesson).
+describe('COMP-026: step-trend gain safety invariants (blocking)', () => {
+  // A dated, daily EWMA series so confidence reaches 'high' (>=4 distinct weeks).
+  const DATED = (perDayKg, days = 30, start = 85) =>
+    Array.from({ length: days }, (_, j) => {
+      const ms = NOW - (days - 1 - j) * DAY;
+      const w = parseFloat((start + perDayKg * j).toFixed(3));
+      return { loggedAt: ms, weightKg: w, ewma: w, date: new Date(ms).toISOString() };
+    });
+
+  test('updateGain is hard-clamped to [0.50, 0.65]: never weakens the damping nor pierces the cap', () => {
+    const at = (g) => computeAdaptiveTDEEAdjustment({
+      ewmaData: DATED(0.04), prescribedKcal: 2200, currentTDEEEstimate: 2500, adherenceFactor: 1.0, updateGain: g,
+    }).adjustmentKcal;
+    const lo = at(0.5);
+    const hi = at(0.65);
+    // Below 0.5 clamps UP to 0.5; above 0.65 clamps DOWN to 0.65; junk -> 0.5.
+    expect(at(0.4)).toBe(lo);
+    expect(at(0)).toBe(lo);
+    expect(at(-2)).toBe(lo);
+    expect(at(NaN)).toBe(lo);
+    expect(at(undefined)).toBe(lo);
+    expect(at(1.0)).toBe(hi);
+    expect(at(5)).toBe(hi);
+    // The higher gain raises magnitude, never flips the sign.
+    expect(Math.sign(hi)).toBe(Math.sign(lo));
+    expect(Math.abs(hi)).toBeGreaterThanOrEqual(Math.abs(lo));
+  });
+
+  test('fuzz: the gain bounds every result in magnitude and can neither create nor reverse a change', () => {
+    for (let i = 0; i < 300; i++) {
+      const base = {
+        ewmaData: DATED(rfloat(-0.2, 0.2), rint(14, 45)),
+        prescribedKcal: rint(1200, 4000),
+        currentTDEEEstimate: rint(1200, 4000),
+        adherenceFactor: rfloat(0.6, 1.2),
+      };
+      const lo = computeAdaptiveTDEEAdjustment({ ...base, updateGain: 0.5 }).adjustmentKcal;
+      const hi = computeAdaptiveTDEEAdjustment({ ...base, updateGain: 0.65 }).adjustmentKcal;
+      const g = computeAdaptiveTDEEAdjustment({ ...base, updateGain: rfloat(-1, 3) }).adjustmentKcal;
+      const loA = Math.abs(lo);
+      const hiA = Math.abs(hi);
+      expect(Math.abs(g)).toBeGreaterThanOrEqual(Math.min(loA, hiA) - 1); // -1 for rounding
+      expect(Math.abs(g)).toBeLessThanOrEqual(Math.max(loA, hiA) + 1);
+      if (lo !== 0) expect(Math.sign(g) === 0 || Math.sign(g) === Math.sign(lo)).toBe(true);
+    }
+  });
+
+  test('FFM floor outranks the gain: a cut held at gain 0.50 stays held at 0.65', () => {
+    const ffmFloorContext = { weightKg: 80, bodyFatPercent: 15, bodyFatSource: 'dexa', sex: 'male', recentIntakeAvgKcal: 1800, recentIntakeDaysLogged: 7 };
+    const base = { ewmaData: DATED(0.04), prescribedKcal: 1500, currentTDEEEstimate: 2000, adherenceFactor: 1.0, ffmFloorContext };
+    for (const g of [0.5, 0.575, 0.65]) {
+      const r = computeAdaptiveTDEEAdjustment({ ...base, updateGain: g });
+      expect(r.floorHeld).toBe(true);
+      expect(r.adjustmentKcal).toBe(0);
+    }
+  });
+
+  test('rapid-loss upward-only override outranks the gain: a cut clamps to 0 at any gain', () => {
+    const base = { ewmaData: DATED(0.04), prescribedKcal: 1800, currentTDEEEstimate: 2200, adherenceFactor: 1.0, rapidLossOverride: true };
+    for (const g of [0.5, 0.65]) {
+      expect(computeAdaptiveTDEEAdjustment({ ...base, updateGain: g }).adjustmentKcal).toBe(0);
+    }
+  });
+
+  test('fuzz: computeStepTrendModifier never proposes a gain outside [0.50, 0.65] and never throws', () => {
+    for (let i = 0; i < 500; i++) {
+      const n = rint(0, 50);
+      const stepRows = Array.from({ length: n }, () => ({
+        entryDate: new Date(NOW - rint(0, 50) * DAY).toISOString().slice(0, 10),
+        steps: rng() < 0.1 ? (rng() < 0.5 ? null : NaN) : rint(-500, 250000),
+        source: pick(['health', 'manual', undefined]),
+      }));
+      const todayKey = rng() < 0.1 ? 'bad-key' : new Date(NOW).toISOString().slice(0, 10);
+      const adjustmentSign = pick([-1, 0, 1, NaN]);
+      let r;
+      expect(() => { r = computeStepTrendModifier({ stepRows, todayKey, adjustmentSign }); }).not.toThrow();
+      expect(r.gain).toBeGreaterThanOrEqual(0.5);
+      expect(r.gain).toBeLessThanOrEqual(0.65);
+      if (!r.active) expect(r.gain).toBe(0.5); // an inactive modifier never moves the gain
+    }
+  });
+});
+
+describe('COMP-026: runWeeklyCoach composition invariants (blocking)', () => {
+  const TODAY = '2024-02-15';
+  const keyAgo = (age) => {
+    const [y, m, d] = TODAY.split('-').map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d) - age * DAY);
+    return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+  };
+  const risingWeights = (start = 80, perDayKg = 0.015, days = 42) =>
+    Array.from({ length: days }, (_, i) => ({ weightKg: start + perDayKg * i, loggedAt: Date.now() - (days - 1 - i) * DAY }));
+  const stepSeries = (recent, baseline) =>
+    Array.from({ length: 42 }, (_, age) => ({ entryDate: keyAgo(age), steps: age <= 13 ? recent : baseline, source: 'health' }));
+  const inputs = (over = {}) => ({
+    checkin: { energyScore: 4, recoveryScore: 4, calsAdherence: 'hit', cycleOverride: false },
+    currentCalTarget: 2000, currentMaintenanceKcal: 2400, currentStepsTarget: 8000,
+    sessionsCompleted: 4, sessionsPlanned: 4, morningWeights: risingWeights(),
+    goalPhase: 'mod_cut', weeksInPhase: 6, consecutiveOffTargetWeeks: 3, lastCalAdjustmentWeeksAgo: 4,
+    bodyweightKg: 80, stepsTodayKey: TODAY, ...over,
+  });
+
+  test('+/-5% weekly cap holds even with an active 0.65 gain', () => {
+    const out = runWeeklyCoach(inputs({ dailyStepsSeries: stepSeries(6000, 12000) }));
+    expect(out.stepModifier.gain).toBe(0.65); // confirm the gain really did rise
+    if (out.adjustments.calories) {
+      expect(Math.abs(out.adjustments.calories.change)).toBeLessThanOrEqual(Math.round(2000 * 0.05));
+    }
+  });
+
+  test('cycleOverride holds the whole calorie block regardless of the step gain', () => {
+    const out = runWeeklyCoach(inputs({
+      checkin: { energyScore: 4, calsAdherence: 'hit', cycleOverride: true },
+      dailyStepsSeries: stepSeries(6000, 12000),
+    }));
+    expect(out.adjustments.calories).toBeNull();
+  });
+
+  test('scoffPositive holds the calorie block regardless of the step gain', () => {
+    const out = runWeeklyCoach(inputs({ scoffPositive: true, dailyStepsSeries: stepSeries(6000, 12000) }));
+    expect(out.adjustments.calories).toBeNull();
+  });
+
+  test('an active agreeing step series never suppresses a genuine rapid-loss flag', () => {
+    const now = Date.now();
+    const out = runWeeklyCoach({
+      checkin: { weekStart: now - 7 * DAY, energyScore: 2, calsAdherence: 'hit', stepsAdherence: 'hit', trainingPerformance: 'hit', jointPain: false },
+      morningWeights: Array.from({ length: 21 }, (_, i) => ({ loggedAt: now - (21 - i) * DAY, weightKg: 85 - i * 0.30 })),
+      sessionsCompleted: 4, sessionsPlanned: 4, goalPhase: 'mod_cut', weeksInPhase: 4,
+      currentCalTarget: 2400, currentStepsTarget: 8000, bodyweightKg: 85, units: 'kg',
+      dailyStepsSeries: stepSeries(6000, 12000), stepsTodayKey: TODAY,
+    });
+    expect(out.rapidWeightLossFlag).toBe(true);
+  });
+
+  test('steps never CREATE a change: on-target weight with an active step series stays null', () => {
+    const flat = Array.from({ length: 42 }, (_, i) => ({ weightKg: 80, loggedAt: Date.now() - (41 - i) * DAY }));
+    const out = runWeeklyCoach(inputs({
+      goalPhase: 'maint', currentMaintenanceKcal: 2000, morningWeights: flat,
+      consecutiveOffTargetWeeks: 0, dailyStepsSeries: stepSeries(12000, 6000),
+    }));
+    expect(out.adjustments.calories).toBeNull();
   });
 });
 
