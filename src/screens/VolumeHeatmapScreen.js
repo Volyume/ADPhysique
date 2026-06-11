@@ -16,6 +16,9 @@ import {
 } from '../lib/algorithms';
 import { useFocusEffect } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
+import WindowChips from '../components/WindowChips';
+import { VOLUME_WINDOWS, windowByKey, volumeTakeaway } from '../lib/chartWindows';
+import { track } from '../lib/engineTelemetry';
 
 const WINDOW_OPTIONS = [
   { weeks: 1, label: '1 week' },
@@ -34,12 +37,28 @@ export default function VolumeHeatmapScreen() {
   const [editValues, setEditValues] = useState({});
   const [trendData, setTrendData] = useState([]);
   const [lastTrainedMap, setLastTrainedMap] = useState({});
+  // COMP-019: the volume trend section gets its own window (4W/8W/3M/6M). Kept
+  // at 4W by default to preserve the section's current shape; chips widen it.
+  const [trendWindowKey, setTrendWindowKey] = useState('4W');
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useFocusEffect(useCallback(() => { loadData(); }, [user?.id, windowWeeks]));
+  useFocusEffect(useCallback(() => { loadData(); }, [user?.id, windowWeeks, trendWindowKey]));
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadData(); }, [windowWeeks]);
+  useEffect(() => { loadData(); }, [windowWeeks, trendWindowKey]);
+
+  // Restore the persisted trend window on mount.
+  useEffect(() => {
+    (async () => {
+      try { const v = await AsyncStorage.getItem('@volyume_chart_window_volume'); if (v) setTrendWindowKey(v); } catch (_) {}
+    })();
+  }, []);
+
+  function selectTrendWindow(key) {
+    setTrendWindowKey(key);
+    AsyncStorage.setItem('@volyume_chart_window_volume', key).catch(() => {});
+    try { track(null, 'chart_window_changed', { chart_id: 'volume', window: key })?.catch?.(() => {}); } catch (_) {}
+  }
 
   async function loadData() {
     if (!user?.id) return;
@@ -61,7 +80,8 @@ export default function VolumeHeatmapScreen() {
       setWeeklyVolume(volume);
       setPreviousVolume(prevVolume);
 
-      const trend = await getWeeklyVolumeByMuscle(user.id, 4);
+      const trendWin = windowByKey(VOLUME_WINDOWS, trendWindowKey) ?? windowByKey(VOLUME_WINDOWS, '4W');
+      const trend = await getWeeklyVolumeByMuscle(user.id, trendWin.weeks);
       setTrendData(trend);
 
       const lastTrained = await getLastTrainedByMuscle(user.id).catch(() => ({}));
@@ -168,6 +188,18 @@ export default function VolumeHeatmapScreen() {
       trendData.some(week => (week.volumeByMuscle[muscle] || 0) > 0),
     );
   }, [trendData, muscles]);
+
+  // COMP-019: total weekly working sets across all muscles, for the trend
+  // takeaway. Weeks with no training are dropped (the average is over training
+  // weeks); leading empties signal the window reaches past the account's start.
+  const volWeeklyTotals = useMemo(() => trendData
+    .map(week => Math.round(Object.values(week.volumeByMuscle || {}).reduce((t, v) => t + v, 0)))
+    .filter(t => t > 0), [trendData]);
+  const volCoversAll = volWeeklyTotals.length > 0 && volWeeklyTotals.length < trendData.length;
+  const volTakeaway = volumeTakeaway({
+    windowKey: trendWindowKey, coversAll: volCoversAll,
+    spanDays: volWeeklyTotals.length * 7, weeklySets: volWeeklyTotals,
+  });
 
   const handleMuscleTap = useCallback((muscleKey) => {
     const offset = rowOffsets.current[muscleKey];
@@ -316,10 +348,13 @@ export default function VolumeHeatmapScreen() {
           })}
         </View>
 
-        {/* 4-week trend, hidden for new users with no data */}
+        {/* Volume trend, hidden for new users with no data */}
         {trainedMuscles.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>4-week trend</Text>
+            <Text style={styles.sectionTitle}>Volume trend</Text>
+            <WindowChips windows={VOLUME_WINDOWS} selectedKey={trendWindowKey} onSelect={selectTrendWindow}
+              accessibilityPrefix="volume trend window" />
+            {!!volTakeaway && <Text style={styles.trendTakeaway}>{volTakeaway}</Text>}
             {trainedMuscles.map(muscle => (
               <MuscleTrendRow
                 key={muscle}
@@ -577,6 +612,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  trendTakeaway: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
   sectionTitle: {
     ...type.label,
     color: colors.textSecondary,
