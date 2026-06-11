@@ -44,6 +44,18 @@ function rowToCamel(row) {
   return result;
 }
 
+// COMP-009: close the SQLite handle and reset init state so the file can be
+// safely overwritten (snapshot restore) and reopened on the next db() call /
+// app relaunch. Restoring a snapshot over a live, open handle risks corruption,
+// so the restore flow closes first. Best-effort: a close error still clears the
+// in-memory handle.
+export async function closeDatabase() {
+  const handle = _db;
+  _db = null;
+  _initPromise = null;
+  try { await handle?.closeAsync?.(); } catch (_) { /* tolerate */ }
+}
+
 export function initDatabase() {
   if (_db) return Promise.resolve(_db);
   if (_initPromise) return _initPromise;
@@ -1292,6 +1304,26 @@ export async function runMigrations(d) {
     const row = await d.getFirstAsync('PRAGMA user_version');
     current = row?.user_version ?? 0;
   } catch (_) { current = 0; }
+
+  // COMP-009: take a byte-for-byte snapshot once, only when migrations are
+  // actually pending, BEFORE the first op runs — so a failed migration is
+  // recoverable from Settings. Pending-only because _doInit runs on every cold
+  // start and snapshotting an unchanged DB each launch would copy a multi-MB
+  // file for nothing. Fully best-effort: a snapshot (or checkpoint) failure
+  // must NEVER block the migration, or a full disk could brick an update.
+  if (current < SCHEMA_MIGRATIONS.length) {
+    try {
+      // Flush WAL so the copied file is a complete, consistent database.
+      await d.execAsync('PRAGMA wal_checkpoint(FULL);');
+    } catch (_) { /* checkpoint best-effort */ }
+    try {
+      // Lazy require keeps expo-file-system out of database.js's module graph
+      // (and out of every test that imports the database module).
+      // eslint-disable-next-line global-require
+      const { snapshotBeforeMigration } = require('./dbSnapshot');
+      await snapshotBeforeMigration(current, SCHEMA_MIGRATIONS.length);
+    } catch (_) { /* snapshot best-effort */ }
+  }
 
   for (let v = current; v < SCHEMA_MIGRATIONS.length; v++) {
     for (const op of SCHEMA_MIGRATIONS[v]) {
