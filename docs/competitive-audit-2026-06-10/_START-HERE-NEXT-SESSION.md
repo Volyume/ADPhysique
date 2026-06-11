@@ -9,6 +9,37 @@ hand-off. Read this first. Two companion docs hold the detail:
 
 ---
 
+## UPDATE 2026-06-11 (attended decisions session) — READ THIS
+
+An attended "walk the questionnaire" session locked the engine-gated cluster.
+All decisions are in `_FOUNDER-DECISIONS-2026-06-11.md` **sections 10–13**
+(authoritative). No code was written — these are build-ready decisions:
+
+- **§10 COMP-008 → COMP-015** APPROVED to build. COMP-008 first (pre-workout
+  soreness feeds the engine; weekly sleep write kept pre-session; schema
+  approved, migration files only — nothing run against prod). COMP-015 full
+  drops+adds, build live, copy at PR.
+- **§11 COMP-006** methodology claims verified; 3 corrections required before
+  build (volume range is −2..+3 not "1 to 3"; cooldown has a safety exception;
+  publish FFM floor figure but keep the absolute 1,200/1,500 floor qualitative).
+- **§12 COMP-024** cycle-robust smoothing: Candidate A, universal, safety design
+  approved, constants as shadow start. **Shadow mode mandatory.**
+- **§13 COMP-026** step-TDEE: activate the dormant adaptive-TDEE resize + the
+  step modifier, BOTH shadowed jointly; design+constants approved as shadow
+  start. Found + confirmed the adaptive resize is dead in production today.
+
+**Still open (next attended session):** the DPO cluster — **COMP-030 quiz-first**
+(IDENTITY_AND_OWNERSHIP + ONBOARDING_SEQUENCE locked-doc amendments + DPO Q1–Q7)
+and **NEW-002 training partners** (partnership tables → RLS + DPO; free/Pro
+already decided: fully free). Also still pending: the `@bacons/expo-apple-targets`
+issue-#175 spike, and NEW-001 Phase 0 £0 sourcing.
+
+Build-order note: COMP-024 + COMP-026 both touch the engine/safety seam and are
+shadow-gated; COMP-008 is the COMP-015 prerequisite. Suggested first build when
+attended: COMP-008 (clean, well-specified, unblocks COMP-015).
+
+---
+
 ## 1. Where the code is
 
 - **Branch:** `claude/main-branch-content-update-dcqicf` (NOT main — CLAUDE.md
