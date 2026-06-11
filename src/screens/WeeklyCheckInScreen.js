@@ -222,6 +222,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const [cycleEnabled, setCycleEnabled] = useState(false);
   const [cycle, setCycle] = useState(null);            // 'yes' | 'no' | null (GAP row 15)
   const [step, setStep] = useState(0); // 0–3
+  // COMP-008 Fast Check-In: when set, the user has chosen to expand the
+  // condensed card into the full four-step wizard. Lets the fast path stay an
+  // offer, never a cage.
+  const [forceFullWizard, setForceFullWizard] = useState(false);
 
   // ─── Gate state ──────────────────────────────────────────────────────────────
   // 'loading' | 'wrong_day' | 'too_soon' | 'need_weights' | 'open' | 'load_error'
@@ -531,6 +535,27 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // Compute EMA trend weight from this week's weigh-ins
   const ewmaSeries = weekWeights.length > 0 ? computeEWMA(weekWeights) : [];
   const trendKg = ewmaSeries.length ? ewmaSeries[ewmaSeries.length - 1].ewmaKg : null;
+
+  // COMP-008 Fast Check-In eligibility: every field the wizard would ask is
+  // already confidently auto-derived for this week, so the only things left to
+  // gather are energy and soreness — the two inputs we deliberately never
+  // derive, because they feed the recovery score and the rapid-loss safety
+  // calorie-raise and must stay a conscious tap. When that holds, the condensed
+  // card replaces the four-step flow (with an "Add more detail" escape into the
+  // full wizard via forceFullWizard). These gate on the to-be-saved state, so a
+  // value the user couldn't auto-fill (e.g. no food logged) falls back to the
+  // wizard rather than silently saving a guess. Weight is already covered:
+  // gateState only reaches 'open' once MIN_WEIGH_INS is met.
+  const fastEligible =
+    gateState === 'open' &&
+    !forceFullWizard &&
+    trainingPerformance != null &&
+    (!hasNutritionTarget || calsAdherence != null) &&
+    (!showSteps || !!stepsSummary?.registered) &&
+    (!hasCardioPrescription || cardioAdherence != null);
+
+  // The fast card's only required inputs: the two we never derive.
+  const fastCanSubmit = energyScore !== null && sorenessScore !== null;
 
   function stepCanAdvance(s) {
     if (s === 0) return energyScore !== null;
@@ -1024,6 +1049,100 @@ export default function WeeklyCheckInScreen({ navigation }) {
     );
   }
 
+  // ─── Fast Check-In ───────────────────────────────────────────────────────────
+  // The condensed card shown when fastEligible holds. The derived facts are
+  // read-only confirmations; energy and soreness are the only two inputs. It
+  // reuses the same energyScore/sorenessScore state and the same handleSubmit
+  // as the wizard, so submitting here is identical to a wizard run where the
+  // user accepted every pre-filled value and answered only the two required
+  // recovery questions.
+  function renderFastCheckIn() {
+    const CALS_TEXT = { yes: 'Hit your target', no: 'Off your target', untracked: "Didn't track" };
+    const CARDIO_TEXT = { hit: 'Did it', mostly: 'Mostly done', missed: 'Missed it' };
+    const summaryRows = [
+      {
+        key: 'training',
+        icon: 'barbell-outline',
+        label: 'Training',
+        value: trainingPerformance ? PERF_VERDICT_TEXT[trainingPerformance] : null,
+      },
+      hasNutritionTarget && {
+        key: 'cals',
+        icon: 'restaurant-outline',
+        label: 'Nutrition',
+        value: calsAdherence ? CALS_TEXT[calsAdherence] : null,
+      },
+      showSteps && stepsSummary?.registered && {
+        key: 'steps',
+        icon: 'walk-outline',
+        label: 'Steps',
+        value: `${Math.round(stepsSummary.avgSteps).toLocaleString('en-GB')} a day`,
+      },
+      hasCardioPrescription && {
+        key: 'cardio',
+        icon: 'heart-outline',
+        label: 'Cardio',
+        value: cardioAdherence ? CARDIO_TEXT[cardioAdherence] : null,
+      },
+      {
+        key: 'weight',
+        icon: 'scale-outline',
+        label: 'Weight',
+        value: `${weekWeights.length} ${weekWeights.length === 1 ? 'day' : 'days'} logged${trendKg ? ` · trend ${formatBodyWeightShort(trendKg, bwu)}` : ''}`,
+      },
+    ].filter(Boolean).filter(r => r.value != null);
+
+    return (
+      <>
+        <Text style={styles.stepHeading}>Quick check-in</Text>
+        <Text style={styles.stepSubtitle}>
+          We've read your week from your logs. Just confirm how you're recovering.
+        </Text>
+
+        <View style={styles.fastSummaryCard}>
+          {summaryRows.map(row => (
+            <View key={row.key} style={styles.fastSummaryRow}>
+              <Ionicons name={row.icon} size={16} color={colors.textSecondary} style={styles.fastSummaryIcon} />
+              <Text style={styles.fastSummaryLabel}>{row.label}</Text>
+              <Text style={styles.fastSummaryValue} numberOfLines={1}>{row.value}</Text>
+              <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.section}>
+          <SectionLabel>Energy and motivation this week</SectionLabel>
+          <ChipRow
+            options={[
+              { value: 1, label: 'Low' },
+              { value: 2, label: 'Below normal' },
+              { value: 3, label: 'Normal' },
+              { value: 4, label: 'Good' },
+              { value: 5, label: 'High' },
+            ]}
+            selected={energyScore}
+            onSelect={setEnergyScore}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <SectionLabel>Overall muscle soreness this week</SectionLabel>
+          <ChipRow
+            options={[
+              { value: 1, label: 'None' },
+              { value: 2, label: 'Mild' },
+              { value: 3, label: 'Moderate' },
+              { value: 4, label: 'High' },
+              { value: 5, label: 'Very high' },
+            ]}
+            selected={sorenessScore}
+            onSelect={setSorenessScore}
+          />
+        </View>
+      </>
+    );
+  }
+
   // ─── Gate screens ──────────────────────────────────────────────────────────
   if (loading || gateState === 'loading') {
     return (
@@ -1170,21 +1289,23 @@ export default function WeeklyCheckInScreen({ navigation }) {
       {/* Header */}
       <View style={styles.headerBar}>
         <TouchableOpacity
-          onPress={() => step > 0 ? setStep(s => s - 1) : navigation.goBack()}
+          onPress={() => (!fastEligible && step > 0) ? setStep(s => s - 1) : navigation.goBack()}
           style={styles.backBtn}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           accessibilityRole="button"
-          accessibilityLabel={step > 0 ? 'Previous step' : 'Back'}
+          accessibilityLabel={(!fastEligible && step > 0) ? 'Previous step' : 'Back'}
         >
           <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View
           style={styles.headerCenter}
           accessible
-          accessibilityLabel={`${checkinDayLabel}, step ${step + 1} of ${TOTAL_STEPS}`}
+          accessibilityLabel={fastEligible ? `${checkinDayLabel}, quick check-in` : `${checkinDayLabel}, step ${step + 1} of ${TOTAL_STEPS}`}
         >
           <Text style={styles.headerTitle}>{checkinDayLabel}</Text>
-          <StepBar current={step} total={TOTAL_STEPS} />
+          {fastEligible
+            ? <Text style={styles.headerQuickTag}>Quick check-in</Text>
+            : <StepBar current={step} total={TOTAL_STEPS} />}
         </View>
         <View style={styles.headerSpacer} />
       </View>
@@ -1200,8 +1321,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Ritual intro, only on step 0 */}
-          {step === 0 && (
+          {/* Ritual intro, only on the wizard's first step */}
+          {!fastEligible && step === 0 && (
             <View style={styles.ritualIntro}>
               <Text style={styles.ritualIntroTitle}>{checkinDayLabel}</Text>
               <Text style={styles.ritualIntroSub}>Four questions. Your coach reads them every week.</Text>
@@ -1211,7 +1332,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
           {/* Week label */}
           <Text style={styles.weekLabel}>{weekLabel}</Text>
 
-          {alreadyCheckedIn && step === 0 && (
+          {alreadyCheckedIn && (fastEligible || step === 0) && (
             <View style={styles.alreadyInRow}>
               <Ionicons name="checkmark-circle" size={16} color={colors.success} />
               <Text style={styles.alreadyInText}>
@@ -1220,15 +1341,37 @@ export default function WeeklyCheckInScreen({ navigation }) {
             </View>
           )}
 
-          {/* Step content */}
-          {step === 0 && renderStep0()}
-          {step === 1 && renderStep1()}
-          {step === 2 && renderStep2()}
-          {step === 3 && renderStep3()}
+          {/* Content: condensed fast card, or the four-step wizard */}
+          {fastEligible ? renderFastCheckIn() : (
+            <>
+              {step === 0 && renderStep0()}
+              {step === 1 && renderStep1()}
+              {step === 2 && renderStep2()}
+              {step === 3 && renderStep3()}
+            </>
+          )}
 
           {/* Navigation CTA */}
           <View style={styles.ctaRow}>
-            {step < TOTAL_STEPS - 1 ? (
+            {fastEligible ? (
+              <TouchableOpacity
+                style={[styles.ctaBtn, !fastCanSubmit && styles.ctaBtnDisabled]}
+                onPress={handleSubmit}
+                disabled={!fastCanSubmit || busy}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !fastCanSubmit || busy }}
+                accessibilityLabel="See this week's coaching"
+              >
+                {busy ? (
+                  <ActivityIndicator color={colors.background} />
+                ) : (
+                  <Text style={[styles.ctaBtnText, !fastCanSubmit && styles.ctaBtnTextDisabled]}>
+                    See this week's coaching
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ) : step < TOTAL_STEPS - 1 ? (
               <TouchableOpacity
                 style={[styles.ctaBtn, !stepCanAdvance(step) && styles.ctaBtnDisabled]}
                 onPress={() => setStep(s => s + 1)}
@@ -1268,7 +1411,24 @@ export default function WeeklyCheckInScreen({ navigation }) {
             )}
           </View>
 
-          {!stepCanAdvance(step) && step !== 1 && (
+          {/* COMP-008: escape from the fast card into the full wizard. */}
+          {fastEligible && (
+            <TouchableOpacity
+              style={styles.fastExpandBtn}
+              onPress={() => { setForceFullWizard(true); setStep(0); }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Add more detail"
+            >
+              <Text style={styles.fastExpandText}>Add more detail</Text>
+            </TouchableOpacity>
+          )}
+
+          {fastEligible && !fastCanSubmit && (
+            <Text style={styles.ctaHint}>Rate your energy and soreness to continue.</Text>
+          )}
+
+          {!fastEligible && !stepCanAdvance(step) && step !== 1 && (
             <Text style={styles.ctaHint}>
               {step === 0 ? 'Rate your energy to continue.' : step === 2 ? 'Rate your soreness to continue.' : 'Pick how training felt to continue.'}
             </Text>
@@ -1505,6 +1665,29 @@ const styles = StyleSheet.create({
   ctaBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background, letterSpacing: 0.3 },
   ctaBtnTextDisabled: { color: colors.textMuted },
   ctaHint: { textAlign: 'center', fontSize: fontSize.sm, color: colors.textMuted, marginTop: spacing.sm },
+
+  // ── COMP-008 Fast Check-In ────────────────────────────────────────────────
+  headerQuickTag: { fontSize: fontSize.xs, color: colors.textMuted, letterSpacing: 0.3 },
+  fastSummaryCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.xl,
+  },
+  fastSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  fastSummaryIcon: { width: 18 },
+  fastSummaryLabel: { fontSize: fontSize.sm, color: colors.textSecondary, width: 76 },
+  fastSummaryValue: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary },
+  fastExpandBtn: { alignItems: 'center', paddingVertical: spacing.md },
+  fastExpandText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
 
   bottomPad: { height: spacing.xxl },
 
