@@ -23,6 +23,7 @@ function safeFormatDate(value, fmt) {
 }
 import { useFocusEffect } from '@react-navigation/native';
 import SvgLineChart from '../components/SvgLineChart';
+import VolyumeChart from '../components/VolyumeChart';
 import { useToast } from '../components/Toast';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -194,7 +195,7 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
         </View>
       ) : (
         <View style={chartStyles.wrap}>
-          <SvgLineChart
+          <VolyumeChart
             data={windowed.map((e, i) => ({
               value: e.body_weight,
               label: i === 0 || i === windowed.length - 1 ? safeFormatDate(e.metric_date, 'MMM d') : '',
@@ -212,6 +213,18 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
             min={Math.floor(Math.min(...weights) - 1)}
             max={Math.ceil(Math.max(...weights) + 1)}
             backgroundColor={colors.surface}
+            interactive
+            accessibilityLabel="Weight trend chart"
+            formatTooltip={(i) => {
+              const e = windowed[i];
+              if (!e) return null;
+              const unit = bodyWeightUnits === 'st' ? 'kg' : (bodyWeightUnits || 'kg');
+              const trend = smoothed[i];
+              return {
+                title: `${e.body_weight} ${unit}`,
+                sub: `${safeFormatDate(e.metric_date, 'MMM d')}${trend != null ? ` · trend ${trend.toFixed(1)} ${unit}` : ''}`,
+              };
+            }}
           />
         </View>
       )}

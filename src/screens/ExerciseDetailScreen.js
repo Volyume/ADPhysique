@@ -7,7 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
-import SvgLineChart from '../components/SvgLineChart';
+import VolyumeChart from '../components/VolyumeChart';
 import WindowChips from '../components/WindowChips';
 import {
   TREND_WINDOWS, DEFAULT_WINDOW_KEY, windowByKey, filterByWindow,
@@ -526,7 +526,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             </View>
             {windowedPoints.length >= 2 ? (
               <View style={styles.chartContainer}>
-                <SvgLineChart
+                <VolyumeChart
                   data={windowedPoints.map(d => ({ value: d[activeYKey] }))}
                   width={SCREEN_W - spacing.lg * 2 - spacing.md * 2}
                   height={96}
@@ -536,6 +536,16 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                   areaTopColor={colors.chartFill}
                   areaBottomColor={colors.chartFill}
                   curved
+                  interactive
+                  accessibilityLabel={chartMode === 'e1rm' ? 'Estimated max trend chart' : 'Max weight trend chart'}
+                  formatTooltip={(i) => {
+                    const p = windowedPoints[i];
+                    if (!p) return null;
+                    return {
+                      title: `${Math.round(p[activeYKey])} ${units}`,
+                      sub: p.date ? format(new Date(p.date), 'MMM d') : '',
+                    };
+                  }}
                 />
               </View>
             ) : (
