@@ -21,8 +21,17 @@ import {
   shiftHourMinuteOutOfQuietHours,
   shiftDateOutOfQuietHours,
 } from './quietHours';
-import { trackNotificationFailed } from './telemetry';
+import { trackNotificationFailed, trackNotificationSent } from './telemetry';
 import { COACHING_REMINDERS_CHANNEL } from './channels';
+import { winbackPush, monthLabel } from './winbackContent';
+import {
+  getEpisode as getWinbackEpisode,
+  getLastFiredAt as getWinbackLastFiredAt,
+  getStatedReturn as getWinbackStatedReturn,
+  markWinbackLaid,
+  winbackFireDate,
+  canLayWinback,
+} from '../payments/winbackState';
 import { localWeekStartMs } from '../dayKey';
 import { logWarn } from '../errorLog';
 import {
@@ -37,6 +46,7 @@ import {
 const NOTIF_ID_MORNING = 'volyume_morning_weight';
 const NOTIF_ID_CHECKIN = 'volyume_weekly_checkin';
 const NOTIF_ID_TRIAL_DAY3 = 'volyume_trial_day3';
+const NOTIF_ID_WINBACK = 'volyume_winback';
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
 // The user's first name for a warm, personal greeting, or '' when we don't
@@ -426,6 +436,96 @@ export async function scheduleTrialDay3Notification(userId, profile) {
   }
 }
 
+// ─── COMP-025-A: post-churn win-back ─────────────────────────────────────────
+// One local notification per churn episode, anchored on the lapse timestamp
+// (+30 days by default, or the §4d stated-return window). Re-laid on each app
+// open while the fire date is still in the future so the session counts stay
+// fresh (local notifications bake content at schedule time). Suppressed
+// entirely while a wellbeing/ED flag is open. Single-shot is enforced by
+// winbackState (one per episode + an absolute 180-day floor across episodes).
+//
+// Honest v1 limit (accepted, see blueprint §4c): a user who never reopens the
+// app during the lapsed window never gets it — quiet hours + prefs live only on
+// device, and an unsolicited server push to the never-returning segment reads
+// most like spam.
+
+export async function cancelWinbackNotification() {
+  try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_WINBACK); } catch {}
+}
+
+export async function scheduleWinbackNotification(userId) {
+  if (Platform.OS === 'web') return;
+  try {
+    const episode = await getWinbackEpisode();
+    if (!episode) { await cancelWinbackNotification(); return; }
+
+    // ED/wellbeing suppression (§5): never lay (and cancel any already-laid one)
+    // while a flag is open. Silence is the respectful behaviour.
+    // eslint-disable-next-line global-require
+    const db = require('../database');
+    const edFlag = userId ? await db.getOpenEdPatternFlag(userId).catch(() => null) : null;
+    if (edFlag) { await cancelWinbackNotification(); return; }
+
+    const statedReturn = await getWinbackStatedReturn();
+    const fire = winbackFireDate(episode.lapseAt, statedReturn);
+    // The window has arrived/passed: leave whatever is already laid (it has
+    // fired or fires imminently); never schedule a past date. v1 does not chase
+    // a window that elapsed while suppressed.
+    if (fire.getTime() <= Date.now()) return;
+
+    // First lay of this episode is gated by the cross-episode 180-day floor;
+    // a re-lay (to refresh counts) of an already-laid episode is not — it is the
+    // same single win-back, rescheduled under one identifier.
+    const firstLay = !episode.winbackLaid;
+    if (firstLay) {
+      const lastFiredAt = await getWinbackLastFiredAt();
+      if (!canLayWinback({ episode, lastFiredAt })) return;
+    }
+
+    // Counts from existing free-tier data (sessions only — never weight or
+    // calorie figures, per §5).
+    const workouts = userId ? await db.getAllWorkouts(userId).catch(() => []) : [];
+    const completed = workouts.filter(w => w.isCompleted);
+    const sessionsSince = completed.filter(w => (w.startedAt ?? 0) >= episode.lapseAt).length;
+    const totalSessions = completed.length;
+    const copy = winbackPush({
+      sessionsSince,
+      totalSessions,
+      sinceLabel: monthLabel(episode.lapseAt),
+      statedReturn,
+    });
+
+    await cancelWinbackNotification();
+    const quiet = await getQuietHours();
+    const { date: shifted } = shiftDateOutOfQuietHours(fire, quiet);
+    await Notifications.scheduleNotificationAsync({
+      identifier: NOTIF_ID_WINBACK,
+      content: {
+        title: copy.title,
+        body: copy.body,
+        data: { type: 'winback' },
+        sound: false,
+      },
+      trigger: {
+        channelId: COACHING_REMINDERS_CHANNEL,
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: shifted,
+      },
+    });
+    trackNotificationSent({ category: CATEGORY.WINBACK, scheduledFor: shifted });
+    if (firstLay) await markWinbackLaid();
+  } catch (e) {
+    trackNotificationFailed({
+      category: CATEGORY.WINBACK,
+      reason: 'schedule_threw',
+      payload: { message: e?.message ?? 'unknown' },
+    });
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      logWarn('notifications.scheduleWinback', e?.message);
+    }
+  }
+}
+
 // ─── Weekly coach output ready ───────────────────────────────────────────────────
 // NOTIFICATIONS_LOCKED.md "Timing": Monday 09:00 local, time-only
 // configurable. Coach output is computed client-side after the weekly
@@ -584,6 +684,15 @@ export async function restoreNotifications(prefs, userId = null) {
       await scheduleTrialDay3Notification(userId ?? store.getState().user?.id ?? null, profile);
     }
   } catch (_) { /* trial re-lay is best-effort */ }
+
+  // COMP-025-A: the win-back was wiped by cancelAllNotifications too. Re-lay it
+  // so it survives launches; the helper self-guards (no-op when there's no open
+  // churn episode, when ED-suppressed, or when the fire date has passed).
+  try {
+    // eslint-disable-next-line global-require
+    const store = require('../../store/useAppStore').default;
+    await scheduleWinbackNotification(userId ?? store.getState().user?.id ?? null);
+  } catch (_) { /* win-back re-lay is best-effort */ }
 }
 
 // ─── Year of Lifts unlock ─────────────────────────────────────────────────────

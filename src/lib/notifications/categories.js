@@ -33,6 +33,7 @@ export const CATEGORY = Object.freeze({
   YEAR_OF_LIFTS_UNLOCK: 'year_of_lifts_unlock',
   MONTHLY_RECAP: 'monthly_recap', // COMP-005
   TRIAL_DAY3: 'trial_day3', // COMP-023
+  WINBACK: 'winback', // COMP-025-A
 });
 
 /**
@@ -64,6 +65,7 @@ export const CATEGORY_CHANNELS = Object.freeze({
   [CATEGORY.YEAR_OF_LIFTS_UNLOCK]: [CHANNEL.PUSH],
   [CATEGORY.MONTHLY_RECAP]: [CHANNEL.PUSH],
   [CATEGORY.TRIAL_DAY3]: [CHANNEL.PUSH, CHANNEL.IN_APP], // COMP-023
+  [CATEGORY.WINBACK]: [CHANNEL.PUSH, CHANNEL.IN_APP], // COMP-025-A
 });
 
 /**
@@ -91,6 +93,7 @@ export function categoryForDataType(type) {
     case 'monthly_recap': return CATEGORY.MONTHLY_RECAP;
     case 'cascade_gate': return CATEGORY.CASCADE_GATE;
     case 'trial_day3': return CATEGORY.TRIAL_DAY3;
+    case 'winback': return CATEGORY.WINBACK;
     case 'subscription_payment_failure': return CATEGORY.SUBSCRIPTION_PAYMENT_FAILURE;
     case 'subscription_expiring': return CATEGORY.SUBSCRIPTION_EXPIRING;
     case 'weekly_coach_ready': return CATEGORY.WEEKLY_COACH_READY;
