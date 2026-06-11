@@ -18,7 +18,17 @@ import useWeightTrend from '../hooks/useWeightTrend';
 import WeightTrendCard from '../components/WeightTrendCard';
 import useWeeklyStreak from '../hooks/useWeeklyStreak';
 import WeeklyStreakStrip from '../components/WeeklyStreakStrip';
+import { markMilestoneSeen } from '../lib/streakState';
 import { VOLUME_LANDMARKS } from '../lib/algorithms';
+
+// COMP-018 milestone copy (§4.6.8). Weeks of showing up against your own plan —
+// no comparison, no rank. Founder copy review at PR.
+const STREAK_MILESTONE_COPY = {
+  4: '4 weeks of showing up.',
+  12: '12 weeks of showing up. That\'s a habit.',
+  26: 'Half a year of showing up.',
+  52: 'A year of showing up. Few do that.',
+};
 
 // Severity → icon + color mapping (jargon-free UI)
 const SEVERITY_STYLE = {
@@ -68,6 +78,27 @@ export default function AnalyticsScreen({ navigation }) {
   // for all tiers. Self-hides until the first session; suppressed under an
   // open ED/wellbeing flag.
   const weeklyStreak = useWeeklyStreak(user?.id, userProfile?.scoffScore);
+
+  // COMP-018 milestone: when the run crosses 4/12/26/52, the strip shows a
+  // one-line celebration this view, then marks it seen so it fires once (next
+  // focus reload returns null). In-app only, no push, no confetti.
+  const pendingMilestone = weeklyStreak.pendingMilestone;
+  useEffect(() => {
+    if (pendingMilestone && user?.id) markMilestoneSeen(user.id, pendingMilestone).catch(() => {});
+  }, [pendingMilestone, user?.id]);
+
+  function makeStreakCard(m) {
+    navigation.navigate('ShareCard', {
+      milestoneData: {
+        eyebrow: 'Weeks running',
+        heroValue: String(m),
+        heroUnit: m === 1 ? 'week' : 'weeks',
+        title: STREAK_MILESTONE_COPY[m] || `${m} weeks of showing up.`,
+        caption: '',
+        stats: [],
+      },
+    });
+  }
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -125,6 +156,22 @@ export default function AnalyticsScreen({ navigation }) {
         {weeklyStreak.render && (
           <View style={styles.section}>
             <WeeklyStreakStrip vm={weeklyStreak} />
+            {pendingMilestone ? (
+              <View style={styles.milestoneRow}>
+                <Ionicons name="ribbon-outline" size={16} color={colors.primary} />
+                <Text style={styles.milestoneText}>{STREAK_MILESTONE_COPY[pendingMilestone]}</Text>
+                {pendingMilestone >= 12 ? (
+                  <TouchableOpacity
+                    onPress={() => makeStreakCard(pendingMilestone)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Make a card"
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.milestoneCta}>Make a card</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ) : null}
           </View>
         )}
 
@@ -505,6 +552,9 @@ const styles = StyleSheet.create({
   safe:        { flex: 1, backgroundColor: colors.background },
   content:     { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxxl },
   section:     { gap: spacing.md },
+  milestoneRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.xs },
+  milestoneText: { flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  milestoneCta: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   sectionLabel: {
     ...type.label,
     color: colors.textSecondary,
