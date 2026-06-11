@@ -296,7 +296,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   function selectChartWindow(key) {
     setChartWindowKey(key);
     AsyncStorage.setItem('@volyume_chart_window_e1rm', key).catch(() => {});
-    try { track(null, 'chart_window_changed', { chart_id: 'e1rm', window: key })?.catch?.(() => {}); } catch (_) {}
+    try { track(user?.id, 'chart_window_changed', { chart_id: 'e1rm', window: key })?.catch?.(() => {}); } catch (_) {}
   }
 
   return (

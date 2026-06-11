@@ -57,7 +57,7 @@ export default function VolumeHeatmapScreen() {
   function selectTrendWindow(key) {
     setTrendWindowKey(key);
     AsyncStorage.setItem('@volyume_chart_window_volume', key).catch(() => {});
-    try { track(null, 'chart_window_changed', { chart_id: 'volume', window: key })?.catch?.(() => {}); } catch (_) {}
+    try { track(user?.id, 'chart_window_changed', { chart_id: 'volume', window: key })?.catch?.(() => {}); } catch (_) {}
   }
 
   async function loadData() {
@@ -195,10 +195,12 @@ export default function VolumeHeatmapScreen() {
   const volWeeklyTotals = useMemo(() => trendData
     .map(week => Math.round(Object.values(week.volumeByMuscle || {}).reduce((t, v) => t + v, 0)))
     .filter(t => t > 0), [trendData]);
-  const volCoversAll = volWeeklyTotals.length > 0 && volWeeklyTotals.length < trendData.length;
+  // Always use the window's canonical phrase. We can't tell "window reaches
+  // past the account start" apart from "a rest week sits inside the window"
+  // without the first-workout date, and the latter must not read as "All N
+  // weeks" — so the volume takeaway names the window, not a guessed span.
   const volTakeaway = volumeTakeaway({
-    windowKey: trendWindowKey, coversAll: volCoversAll,
-    spanDays: volWeeklyTotals.length * 7, weeklySets: volWeeklyTotals,
+    windowKey: trendWindowKey, coversAll: false, spanDays: 0, weeklySets: volWeeklyTotals,
   });
 
   const handleMuscleTap = useCallback((muscleKey) => {

@@ -130,7 +130,7 @@ function detectPhase(entries) {
 const WEIGHT_WINDOW_STORE_KEY = '@volyume_chart_window_weight';
 const weightDateOf = (e) => new Date(e.metric_date).getTime();
 
-function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen }) {
+function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
   // All weight entries with a usable date, oldest → newest (no count slicing —
   // COMP-019 windows by date instead).
   const allWeights = useMemo(() => entries
@@ -157,7 +157,7 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen }) {
   function selectWindow(key) {
     setWindowKey(key);
     AsyncStorage.setItem(WEIGHT_WINDOW_STORE_KEY, key).catch(() => {});
-    try { track(null, 'chart_window_changed', { chart_id: 'weight', window: key })?.catch?.(() => {}); } catch (_) {}
+    try { track(userId, 'chart_window_changed', { chart_id: 'weight', window: key })?.catch?.(() => {}); } catch (_) {}
   }
 
   if (allWeights.length < 2) {
@@ -738,7 +738,7 @@ export default function BodyMetricsScreen() {
             )}
 
             {/* Weight trend chart */}
-            <WeightTrendChart entries={history} units={units} bodyWeightUnits={bwu} edFlagOpen={calm || edFlagOpen} />
+            <WeightTrendChart entries={history} units={units} bodyWeightUnits={bwu} edFlagOpen={calm || edFlagOpen} userId={user?.id} />
 
             {history.length < 3 && (
               <Text style={styles.trendHint}>
