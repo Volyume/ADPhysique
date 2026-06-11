@@ -42,6 +42,8 @@ export {
   scheduleNextCheckinReminder,
   scheduleCascadeGateNotifications,
   cancelCascadeGateNotifications,
+  scheduleTrialDay3Notification,
+  cancelTrialDay3Notification,
   scheduleWeeklyCoachReady,
   cancelWeeklyCoachReady,
   cancelMorningNotification,

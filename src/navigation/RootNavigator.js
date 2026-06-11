@@ -535,8 +535,9 @@ export default function RootNavigator() {
     // routeForNotificationType helper (tested separately) so every scheduled
     // notification type has a route and none dead-ends.
     function onTap(response) {
-      const type = response?.notification?.request?.content?.data?.type;
-      const target = routeForNotificationType(type);
+      const data = response?.notification?.request?.content?.data;
+      const type = data?.type;
+      const target = routeForNotificationType(type, data);
       if (!target) return;
       const tryNavigate = (attempts = 0) => {
         if (navigationRef.isReady()) {

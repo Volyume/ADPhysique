@@ -25,9 +25,19 @@ import { trackNotificationFailed } from './telemetry';
 import { COACHING_REMINDERS_CHANNEL } from './channels';
 import { localWeekStartMs } from '../dayKey';
 import { logWarn } from '../errorLog';
+import {
+  trialDay3FireDate,
+  trialStartFromEndsAt,
+  selectTrialVariant,
+  firstReviewUnlockDate,
+  dayName,
+  trialDay3Push,
+} from '../trialActivation';
 
 const NOTIF_ID_MORNING = 'volyume_morning_weight';
 const NOTIF_ID_CHECKIN = 'volyume_weekly_checkin';
+const NOTIF_ID_TRIAL_DAY3 = 'volyume_trial_day3';
+const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
 // The user's first name for a warm, personal greeting, or '' when we don't
 // have one (so copy reads naturally either way). Read lazily from the store at
@@ -330,6 +340,92 @@ export async function cancelCascadeGateNotifications() {
   try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_CASCADE_21); } catch {}
 }
 
+// ─── COMP-023: trial day-3 "the coach saw you" moment ─────────────────────────
+// One local notification per trial, fired at trial start + 3 days, 10:00 local
+// (quiet-hours-shifted), variant + copy baked from live local counters at
+// schedule time. Like the cascade gates, this is wiped by cancelAllNotifications
+// on restore, so restoreNotifications re-lays it. Suppressed entirely under an
+// open ED flag (the Home banner carries a neutral, no-weight line instead).
+
+export async function cancelTrialDay3Notification() {
+  try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_TRIAL_DAY3); } catch {}
+}
+
+export async function scheduleTrialDay3Notification(userId, profile) {
+  if (Platform.OS === 'web') return;
+  try {
+    // eslint-disable-next-line global-require
+    const { stageOf } = require('../payments/cascade');
+    if (!profile || stageOf(profile) !== 'pro_trial') { await cancelTrialDay3Notification(); return; }
+
+    const endsAt = profile.proTrialEndsAt ?? profile.pro_trial_ends_at ?? null;
+    const fire = trialDay3FireDate(endsAt);
+    // No valid date, or day 3 already passed (user opening later in the trial):
+    // nothing to lay; the Home banner carries the moment in-app.
+    if (!fire || fire.getTime() <= Date.now()) { await cancelTrialDay3Notification(); return; }
+
+    // eslint-disable-next-line global-require
+    const db = require('../database');
+    const [workouts, weights, edFlag] = await Promise.all([
+      userId ? db.getAllWorkouts(userId).catch(() => []) : Promise.resolve([]),
+      userId ? db.getMorningWeightsLast14Days(userId).catch(() => []) : Promise.resolve([]),
+      userId ? db.getOpenEdPatternFlag(userId).catch(() => null) : Promise.resolve(null),
+    ]);
+
+    // Open ED flag → never schedule a weight-adjacent push; the banner falls
+    // back to a neutral line with no counts or weight ask.
+    if (edFlag) { await cancelTrialDay3Notification(); return; }
+
+    const trialStart = trialStartFromEndsAt(endsAt);
+    const completedSessions = workouts.filter(w => w.isCompleted && (w.startedAt ?? 0) >= trialStart).length;
+    const weekAgo = Date.now() - 7 * 86400000;
+    const weighIns7d = weights.filter(w => (w.loggedAt ?? 0) >= weekAgo).length;
+    const firstWeightAt = weights.length
+      ? Math.min(...weights.map(w => w.loggedAt ?? Infinity))
+      : null;
+
+    let checkinDay = 0;
+    try {
+      const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (Number.isFinite(p?.checkinDay)) checkinDay = p.checkinDay;
+      }
+    } catch (_) { /* default Sunday */ }
+
+    const variant = selectTrialVariant({ completedSessions, weighIns7d });
+    const unlock = firstReviewUnlockDate(firstWeightAt, checkinDay);
+    const copy = trialDay3Push({ variant, completedSessions, weighIns7d, unlockDayName: dayName(unlock) });
+
+    await cancelTrialDay3Notification();
+    const quiet = await getQuietHours();
+    const { date: shifted } = shiftDateOutOfQuietHours(fire, quiet);
+    await Notifications.scheduleNotificationAsync({
+      identifier: NOTIF_ID_TRIAL_DAY3,
+      content: {
+        title: copy.title,
+        body: copy.body,
+        data: { type: 'trial_day3', variant },
+        sound: false,
+      },
+      trigger: {
+        channelId: COACHING_REMINDERS_CHANNEL,
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: shifted,
+      },
+    });
+  } catch (e) {
+    trackNotificationFailed({
+      category: CATEGORY.TRIAL_DAY3,
+      reason: 'schedule_threw',
+      payload: { message: e?.message ?? 'unknown' },
+    });
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      logWarn('notifications.scheduleTrialDay3', e?.message);
+    }
+  }
+}
+
 // ─── Weekly coach output ready ───────────────────────────────────────────────────
 // NOTIFICATIONS_LOCKED.md "Timing": Monday 09:00 local, time-only
 // configurable. Coach output is computed client-side after the weekly
@@ -468,6 +564,24 @@ export async function restoreNotifications(prefs, userId = null) {
       prefs.checkinMinute ?? 0,
     );
   }
+
+  // cancelAllNotifications above wiped the trial-window pushes too. They were
+  // previously laid once at startCascade and never restored, so on the next app
+  // launch the cascade-gate (day 12/14) and COMP-023 day-3 pushes silently
+  // vanished. Re-lay them here from the stored trial end date so they survive.
+  // Both helpers are idempotent and no-op when the user isn't in a Pro trial.
+  try {
+    // eslint-disable-next-line global-require
+    const store = require('../../store/useAppStore').default;
+    const profile = store.getState().userProfile;
+    // eslint-disable-next-line global-require
+    const { stageOf } = require('../payments/cascade');
+    if (profile && stageOf(profile) === 'pro_trial') {
+      const endsAt = profile.proTrialEndsAt ?? profile.pro_trial_ends_at ?? null;
+      if (endsAt) await scheduleCascadeGateNotifications(endsAt);
+      await scheduleTrialDay3Notification(userId ?? store.getState().user?.id ?? null, profile);
+    }
+  } catch (_) { /* trial re-lay is best-effort */ }
 }
 
 // ─── Year of Lifts unlock ─────────────────────────────────────────────────────

@@ -56,6 +56,8 @@ describe('categoryForDataType', () => {
     expect(categoryForDataType('weekly_checkin')).toBe(CATEGORY.WEEKLY_CHECKIN_REMINDER);
     expect(categoryForDataType('training_reminder')).toBe(CATEGORY.TRAINING_REMINDER);
     expect(categoryForDataType('year_of_lifts_unlock')).toBe(CATEGORY.YEAR_OF_LIFTS_UNLOCK);
+    expect(categoryForDataType('cascade_gate')).toBe(CATEGORY.CASCADE_GATE);
+    expect(categoryForDataType('trial_day3')).toBe(CATEGORY.TRIAL_DAY3);
   });
 
   test('returns null for unknown data.type values', () => {

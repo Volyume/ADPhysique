@@ -31,6 +31,27 @@ describe('routeForNotificationType', () => {
     });
   });
 
+  test('trial_day3 S1/S2 land on the check-in gate screen', () => {
+    expect(routeForNotificationType('trial_day3', { variant: 'S1' })).toEqual({
+      tab: 'ProfileTab', screen: 'WeeklyCheckIn',
+    });
+    expect(routeForNotificationType('trial_day3', { variant: 'S2' })).toEqual({
+      tab: 'ProfileTab', screen: 'WeeklyCheckIn',
+    });
+  });
+
+  test('trial_day3 S3 (no sessions yet) lands on Home for re-onboarding', () => {
+    expect(routeForNotificationType('trial_day3', { variant: 'S3' })).toEqual({
+      tab: 'HomeTab',
+    });
+  });
+
+  test('trial_day3 with no variant data defaults to the check-in gate (not a dead-end)', () => {
+    expect(routeForNotificationType('trial_day3')).toEqual({
+      tab: 'ProfileTab', screen: 'WeeklyCheckIn',
+    });
+  });
+
   test('an unknown or no-op type returns null (no navigation)', () => {
     expect(routeForNotificationType('morning_weight')).toBeNull();
     expect(routeForNotificationType('unknown')).toBeNull();
