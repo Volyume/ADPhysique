@@ -112,6 +112,11 @@ export const TELEMETRY_EVENTS = Object.freeze([
   // COMP-005: recap story open. variant param only (month / block); no PII.
   // Server allow-list: supabase/migrate_075_recap_telemetry.sql.
   { name: 'recap_opened',                    deferred: false, panel: 2 },
+
+  // COMP-013: first-session activation choice on the Home hero first-run
+  // variant. choice param only (short / full); no PII.
+  // Server allow-list: supabase/migrate_076_first_session_choice_telemetry.sql.
+  { name: 'first_session_choice',            deferred: false, panel: 1 },
 ]);
 
 /**

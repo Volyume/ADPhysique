@@ -657,7 +657,17 @@ export default function HomeScreen({ navigation }) {
     setRefreshing(false);
   }
 
-  async function handleStartNextWorkout() {
+  // COMP-013: a brand-new Pro user can start a 15-minute starter (a true subset
+  // of Day 1) from the hero first-run variant. The starter flag rides through
+  // the intent prompt into confirmStart, which passes it to ActiveWorkout.
+  function trackFirstSessionChoice(choice) {
+    try {
+      // eslint-disable-next-line global-require
+      require('../lib/engineTelemetry').track(user?.id, 'first_session_choice', { choice })?.catch?.(() => {});
+    } catch (_) { /* telemetry best-effort */ }
+  }
+
+  async function handleStartNextWorkout(starter = false) {
     const target = selectedWorkoutOverride || nextWorkout;
     if (!target?.routine) return;
     try {
@@ -669,7 +679,7 @@ export default function HomeScreen({ navigation }) {
         // ActiveWorkoutScreen renders them as paired from the start.
         supersetGroupId: routineExercise?.supersetGroupId ?? null,
       }));
-      pendingStartRef.current = { routineId: routine.id, initialExercises };
+      pendingStartRef.current = { routineId: routine.id, initialExercises, starter };
       // Clear any readiness from a previously-cancelled prompt so each session
       // starts from blank chips.
       setReadiness({ soreness24hBefore: null, sleepQuality: null, energyScore: null });
@@ -695,7 +705,7 @@ export default function HomeScreen({ navigation }) {
         ...readinessOverride,
       });
       startWorkout(workout, pending.initialExercises);
-      navigation.navigate('ActiveWorkout');
+      navigation.navigate('ActiveWorkout', pending.starter ? { starterSession: true } : undefined);
       // COMP-015 (Pro): compute + log this session's adjustments in the
       // background so it never delays the session opening. The line appears a
       // moment later once the local reads resolve. Runs once per start; a
@@ -1083,32 +1093,10 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
-        {/* ── First-run cue ──
-            One line for a brand-new Pro user with a plan and no sessions yet,
-            pointing at the Start button right below. Tapping it begins the first
-            session; the close dismisses it. Gated on totalSessions === 0 so it
-            never returns once they've trained, and on a saved flag so a dismiss
-            sticks if they leave before starting. */}
-        {tier === 'pro' && !initialLoading && !hasActiveWorkout && activePlan && nextWorkout
-          && totalSessions === 0 && !firstRunCueDismissed && (
-          <TouchableOpacity
-            style={styles.firstRunCue}
-            activeOpacity={0.85}
-            onPress={() => { dismissFirstRunCue(); handleStartNextWorkout(); }}
-            accessibilityRole="button"
-            accessibilityLabel="Your plan is ready. Start your first session."
-          >
-            <Ionicons name="sparkles" size={18} color={colors.primary} />
-            <Text style={styles.firstRunCueText}>Your plan is ready. Start your first session.</Text>
-            <TouchableOpacity
-              onPress={dismissFirstRunCue}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityLabel="Dismiss"
-            >
-              <Ionicons name="close" size={16} color={colors.textMuted} />
-            </TouchableOpacity>
-          </TouchableOpacity>
-        )}
+        {/* COMP-013: the standalone first-run cue row retired here — its job
+            folds into the hero first-run variant below (a net minus-one-card on
+            Home, the direction COMP-027 demands: hero first, fewer stacked
+            utilities). The dismissal key and gating are reused there. */}
 
         {/* ── Primary workout area ── */}
         {hasActiveWorkout ? (
@@ -1172,35 +1160,79 @@ export default function HomeScreen({ navigation }) {
             {coachBrief && (
               <CoachBriefCard brief={coachBrief} onDismiss={dismissBrief} />
             )}
-            <View style={styles.startWorkoutRow}>
-              <TouchableOpacity
-                style={[styles.primaryBtn, styles.startBtnSplit, isStartingWorkout && { opacity: 0.6 }]}
-                onPress={handleStartNextWorkout}
-                disabled={isStartingWorkout}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel={isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`}
-              >
-                <Ionicons name="play" size={16} color={colors.background} />
-                <Text style={styles.primaryBtnText}>
-                  {isStartingWorkout ? 'Starting…' : 'Start workout'}
+            {/* COMP-013: hero first-run variant for a brand-new Pro user with a
+                plan and no sessions yet — the smart-first-step short session,
+                with the full session one tap away and a dismiss back to the
+                standard hero. Gated identically to the retired cue row. */}
+            {tier === 'pro' && totalSessions === 0 && !firstRunCueDismissed ? (
+              <View style={styles.firstRunHero}>
+                <Text style={styles.firstRunHeroLine}>
+                  First session: a short one to learn the ropes. About 15 minutes.
                 </Text>
-              </TouchableOpacity>
-              {displayWorkout?.routine?.id ? (
+                <View style={styles.startWorkoutRow}>
+                  <TouchableOpacity
+                    style={[styles.primaryBtn, styles.startBtnSplit, isStartingWorkout && { opacity: 0.6 }]}
+                    onPress={() => { trackFirstSessionChoice('short'); handleStartNextWorkout(true); }}
+                    disabled={isStartingWorkout}
+                    activeOpacity={0.85}
+                    accessibilityRole="button"
+                    accessibilityLabel={isStartingWorkout ? 'Starting workout' : 'Start short session, about 15 minutes'}
+                  >
+                    <Ionicons name="flash" size={16} color={colors.background} />
+                    <Text style={styles.primaryBtnText}>
+                      {isStartingWorkout ? 'Starting…' : 'Start short session'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.viewWorkoutBtn}
+                    onPress={dismissFirstRunCue}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Dismiss the short first session"
+                  >
+                    <Ionicons name="close" size={16} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
                 <TouchableOpacity
-                  style={styles.viewWorkoutBtn}
-                  onPress={() => navigation.navigate('PlansTab', {
-                    screen: 'RoutineDetail',
-                    params: { routineId: displayWorkout.routine.id },
-                  })}
+                  onPress={() => { trackFirstSessionChoice('full'); handleStartNextWorkout(false); }}
+                  disabled={isStartingWorkout}
+                  accessibilityRole="button"
+                  accessibilityLabel="Start the full session instead"
+                >
+                  <Text style={styles.firstRunHeroFull}>or start the full session</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.startWorkoutRow}>
+                <TouchableOpacity
+                  style={[styles.primaryBtn, styles.startBtnSplit, isStartingWorkout && { opacity: 0.6 }]}
+                  onPress={() => handleStartNextWorkout(false)}
+                  disabled={isStartingWorkout}
                   activeOpacity={0.85}
                   accessibilityRole="button"
-                  accessibilityLabel={`View ${displayWorkout?.routine?.name || 'workout'} before starting`}
+                  accessibilityLabel={isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`}
                 >
-                  <Text style={styles.viewWorkoutBtnText}>View</Text>
+                  <Ionicons name="play" size={16} color={colors.background} />
+                  <Text style={styles.primaryBtnText}>
+                    {isStartingWorkout ? 'Starting…' : 'Start workout'}
+                  </Text>
                 </TouchableOpacity>
-              ) : null}
-            </View>
+                {displayWorkout?.routine?.id ? (
+                  <TouchableOpacity
+                    style={styles.viewWorkoutBtn}
+                    onPress={() => navigation.navigate('PlansTab', {
+                      screen: 'RoutineDetail',
+                      params: { routineId: displayWorkout.routine.id },
+                    })}
+                    activeOpacity={0.85}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View ${displayWorkout?.routine?.name || 'workout'} before starting`}
+                  >
+                    <Text style={styles.viewWorkoutBtnText}>View</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            )}
             <View style={styles.heroSecondaryRow}>
               <TouchableOpacity
                 style={styles.heroSecondaryBtn}
@@ -2315,25 +2347,23 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.xs,
   },
 
-  // First-run cue, a touch more prominent than the info banners since it's the
-  // one action a new user should take.
-  firstRunCue: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  // COMP-013: hero first-run variant. The short-session line + the "or start
+  // the full session" link sit inside the hero card, replacing the retired
+  // standalone first-run cue row.
+  firstRunHero: {
     gap: spacing.sm,
-    backgroundColor: colors.primaryBg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.314),
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.md,
   },
-  firstRunCueText: {
-    flex: 1,
+  firstRunHeroLine: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
+  firstRunHeroFull: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
+    color: colors.primary,
+    textAlign: 'center',
+    paddingVertical: spacing.xs,
   },
 
   // Pre-workout coaching brief card
