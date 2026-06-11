@@ -84,12 +84,15 @@ export default function AnalyticsScreen({ navigation }) {
   // one-line celebration this view, then marks it seen so it fires once (next
   // focus reload returns null). In-app only, no push, no confetti.
   const pendingMilestone = weeklyStreak.pendingMilestone;
+  const streakRenders = weeklyStreak.render;
   useEffect(() => {
-    if (pendingMilestone && user?.id) {
+    // Only consume + fire when the strip actually renders, so a milestone is
+    // never marked seen on a view the user couldn't see it on.
+    if (pendingMilestone && streakRenders && user?.id) {
       markMilestoneSeen(user.id, pendingMilestone).catch(() => {});
       try { track(user.id, 'streak_milestone_reached', { milestone: pendingMilestone })?.catch?.(() => {}); } catch (_) {}
     }
-  }, [pendingMilestone, user?.id]);
+  }, [pendingMilestone, streakRenders, user?.id]);
 
   function makeStreakCard(m) {
     navigation.navigate('ShareCard', {

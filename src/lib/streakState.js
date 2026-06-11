@@ -10,9 +10,12 @@
  * longestRun / pendingMilestone) carry the rules and are unit-tested; the I/O
  * wrappers are thin load-modify-save helpers.
  *
- * Record shape:
+ * Record shape (weekKey is the resolver's week key — in v1 the epoch-ms string
+ * of the local Monday, String(localWeekStartMs); NOT a 'YYYY-MM-DD' date.
+ * The NEW-002 synced-table migration must preserve whatever key the resolver
+ * emits, since pausedWeekKeys matches startKey against that exact format):
  *   { v:1, manualGoal:number|null,
- *     pauses:[{ startKey:'YYYY-MM-DD', weeks:number }],
+ *     pauses:[{ startKey:weekKey, weeks:number }],
  *     highWater:{ [weekKey]:number },   // shown run per week — never shrinks
  *     milestonesSeen:number[] }
  */

@@ -79,9 +79,14 @@ export default function useWeeklyStreak(userId, scoffScore = 0) {
         loadStreakState(userId),
       ]);
 
-      const target = planTarget != null
-        ? planTarget
-        : (Number.isFinite(streakState.manualGoal) ? streakState.manualGoal : null);
+      // Generosity (blueprint §4.1): the manual goal is never auto-raised by a
+      // plan. With both a plan and a stored manual goal the LOWER applies; with
+      // only one, that one; with neither, no target (session-count mode).
+      const hasManual = Number.isFinite(streakState.manualGoal);
+      let target = null;
+      if (planTarget != null && hasManual) target = Math.min(planTarget, streakState.manualGoal);
+      else if (planTarget != null) target = planTarget;
+      else if (hasManual) target = streakState.manualGoal;
 
       const deloadSet = new Set(deloadWeeks);
       const orderedWeekKeys = weekStarts.map(String);
@@ -114,7 +119,9 @@ export default function useWeeklyStreak(userId, scoffScore = 0) {
       // target (a streak to measure), never under suppression. Derived only.
       if (!edSuppressed && target != null && streak.current) {
         const source = planTarget != null ? 'plan' : 'manual-goal';
-        const fireKey = `${currentWeekKey}:${streak.current.state}`;
+        // Key includes userId so an account switch in the same process doesn't
+        // suppress the next user's identical (week, state) event.
+        const fireKey = `${userId}:${currentWeekKey}:${streak.current.state}`;
         if (!_resolvedFired.has(fireKey)) {
           _resolvedFired.add(fireKey);
           track(userId, 'streak_week_resolved', {
