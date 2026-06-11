@@ -9,6 +9,79 @@ hand-off. Read this first. Two companion docs hold the detail:
 
 ---
 
+## UPDATE 2026-06-11 (session 2 — COMP-013 / 023 / 019-1a SHIPPED) — READ THIS FIRST
+
+A second build session shipped three more items, all on
+`claude/main-branch-content-update-dcqicf`, each lint-clean with the full suite
+green and reviewed (a finder/verify pass per item; fixes folded in as a final
+"review fixes" commit each):
+
+- **COMP-013** plan reveal moment + 15-minute starter (7 commits). `applyTimeCrunch`
+  gained an optional starter-trim arg (`{maxSetsPerExercise, maxExercises}`, off by
+  default); a staged "Building your plan" sequence in ProOnboarding (Reduce-Motion
+  skips it; a failed generation aborts to ProSetupComplete, no celebratory hold); a
+  reveal receipt line + week-view-open-by-default; a true-subset 15-min starter session
+  (ActiveWorkout `starterSession` route param, reuses the time-crunch machinery,
+  index-based mapping); a Home hero first-run variant (retires the old standalone cue
+  row); a first-session line on the summary (suppressed under calm/ED). Telemetry
+  `first_session_choice` (**migrate_076**).
+- **COMP-023** day-3 trial value moment (4 commits). New pure `src/lib/trialActivation.js`
+  (variant S1/S2/S3 + the unlock-date maths) with a **gate-parity invariant test** so the
+  promised date can never disagree with the check-in gate; `FIRST_CHECKIN_MIN_DAYS` /
+  `MIN_WEIGH_INS` now live there as the single source of truth and `WeeklyCheckInScreen`
+  imports them back. One day-3 push + one Home banner (2nd priority in the single-banner
+  stack, ED-neutral fallback). No new telemetry event (uses the existing allowlist).
+  **Adjacent fix (founder-approved):** `restoreNotifications` now re-lays the cascade-gate
+  (day 12/14) AND the day-3 pushes — they were silently wiped on every app launch before.
+  Touched `cascade.js` (one fire-and-forget schedule line, founder-approved, no billing
+  logic).
+- **COMP-019 Stage 1a** charts (4 commits): window chips + recomputed takeaway. New pure
+  `src/lib/chartWindows.js` + shared `src/components/WindowChips.js`; the weight, e1RM and
+  volume hero charts now window by DATE (not count) with a one-line takeaway (average +
+  first-to-last delta). Weight suppresses rate-of-change under calm/ED. Telemetry
+  `chart_window_changed` (**migrate_077**). The review caught — and fixed — that the
+  telemetry was firing with `userId=null` (dropped by `postEvent`); now live.
+
+**Health baseline is now: 0 errors, 4 pre-existing warnings, 209 suites / 3288 tests
+(3285 pass, 3 skip).** (Up from 207/3240.) Fewer suites or more warnings = a regression.
+
+**CARRY-FORWARDS (not blockers; pending the founder):**
+1. **Server migrations `072`–`077` pending manual apply** (founder applies, per
+   docs/rules/supabase.md — nothing run against prod by Claude). New this session:
+   `076` (first_session_choice), `077` (chart_window_changed). Those two events silently
+   no-op server-side until applied; the local app is unaffected.
+2. **Copy gate now spans COMP-005 / 006 / 015 (prior) + COMP-013 / 023 / 019 (this
+   session)** — all built with blueprint copy as written; founder reviews exact strings at
+   PR before merge to main. New copy to eyeball: the COMP-013 receipt/stage/starter
+   strings, the COMP-023 push/banner strings, and the COMP-019 takeaway sentences.
+3. **COMP-013's Home hero first-run variant was built against the CURRENT hero.**
+   COMP-027 Part B rebuilds that hero — reconcile the variant when Part B lands (the §4c
+   coupling the blueprint flagged; founder chose to build now anyway).
+4. **COMP-019 volume trend defaults to `4W`** (blueprint specced `3M`) to avoid cramped
+   week-bars — a one-line flip if the founder prefers 3M. **COMP-019 Stage 1a is visual**
+   across three screens: logic is unit-tested, layout needs on-device eyes.
+
+**Where the list stands now:**
+- Done across all sessions: COMP-001, 002, 003, 004, 005, 006, 008, 009, 010, 011, 012,
+  013, 015, 018-v0, 019-1a, 022 (2 slices), 023, 027-Part-A.
+- **Next unbuilt by priority:**
+  - **COMP-019 Stage 1b** — `VolyumeChart` on Skia (already-shipped dep) + tap-and-hold
+    scrub with haptic ticks. Option A (hand-rolled on the existing Skia + chartGeometry.js,
+    **no new deps**), OTA-patchable; migrate hosts one at a time. Cleanest next code-only
+    slice.
+  - **COMP-024 / COMP-026 engine shadow builds** — decision-approved (§12/§13) but
+    **ATTENDED + shadow-mode mandatory**; they touch the engine/safety seam (founder maths
+    gate). Do NOT start unattended.
+  - **COMP-019 Stage 2 (widgets)** — needs **2 new deps + native targets + EAS signing +
+    founder approval**, NOT OTA-patchable. Stage 3 (Live Activity re-enable + the
+    set-index fix) needs Stage 2's iOS target.
+  - **COMP-007 paywall (4.0)** — BLOCKED on collecting real reviews; billing held regardless.
+  - **COMP-027 Part B** (Home hero reorder) + **COMP-029** (light theme) — need on-device
+    eyes. **COMP-030** (quiz-first) + **NEW-002** (partners) — DPO/legal gate.
+    **NEW-001** (exercise media) — research-first gate.
+
+---
+
 ## UPDATE 2026-06-11 (build session — engine cluster SHIPPED) — READ THIS FIRST
 
 The attended decisions below (§10–13) were then BUILT. Shipped this session, all

@@ -470,3 +470,74 @@ session: **0 errors, 4 pre-existing warnings, 207 suites / 3240 tests
 - Everything else unchanged: COMP-023 (trial moment + cascade-wipe fix),
   COMP-024 / COMP-026 (engine shadow builds), COMP-019, COMP-027 Part B,
   COMP-029, COMP-030, NEW-002.
+
+---
+
+## SESSION 2 BUILD LOG (2026-06-11) — COMP-013 / 023 / 019-1a
+
+All on `claude/main-branch-content-update-dcqicf`, each unit lint-clean + full
+suite green, each item closed with a finder/verify review pass and a "review
+fixes" commit. Baseline at session end: **209 suites / 3288 tests** (3285 pass,
+3 skip), 0 errors, 4 pre-existing warnings.
+
+### COMP-013 — plan reveal moment + 15-min starter (commits 1–7)
+- c1 `applyTimeCrunch` optional starter arg `{maxSetsPerExercise, maxExercises}`
+  — off by default (every existing caller byte-identical); deterministic
+  first-N-in-plan-order + set cap. Pure-engine, tested.
+- c2 staged "Building your plan" sequence in ProOnboarding (4 honest stage lines
+  mapped to real `_generatePlanInner` phases, 3.2s min display, Reduce-Motion
+  skip, abort-on-failure).
+- c3 reveal receipt line (`getSetupReceiptLine`) + week view open-by-default.
+- c4 15-min starter session in ActiveWorkout (`starterSession` route param;
+  reuses time-crunch snapshot/revert; visible banner).
+- c5 Home hero first-run variant; retires the standalone first-run cue row;
+  `first_session_choice` telemetry + **migrate_076**.
+- c6 first-session line on WorkoutSummary, gated on first session ever,
+  suppressed under calm / open ED flag.
+- c7 review fixes: starter banner now names the real routine (route param, not
+  the nameless workout row); index-based starter mapping (no duplicate-name
+  collisions); starter keeps first N in plan order (bypasses isolation drop);
+  plan-fail navigates to ProSetupComplete (no form-strand); double-submit guard;
+  `!initialLoading` hero guard; WorkoutSummary `Promise.all`.
+- **Founder decisions:** build all four parts now (incl. the starter against the
+  CURRENT Home hero, ahead of COMP-027 Part B — reconcile later); copy ships as
+  blueprint copy, reviewed at PR.
+
+### COMP-023 — day-3 trial value moment (commits 1–4)
+- c1 pure `src/lib/trialActivation.js` — `firstReviewUnlockDate` (midnight-safe
+  so the named day is open at any hour), `selectTrialVariant` (S1/S2/S3), copy
+  builders. `FIRST_CHECKIN_MIN_DAYS`/`MIN_WEIGH_INS` moved here as the single
+  source of truth; `WeeklyCheckInScreen` imports them back. Gate-parity invariant
+  test included.
+- c2 `scheduleTrialDay3Notification` (trial start + 3d, 10:00, quiet-hours-shifted,
+  ED-suppressed) + categories/route/cascade wiring. **Adjacent fix:**
+  `restoreNotifications` now re-lays cascade-gate + day-3 pushes (previously wiped
+  on every launch).
+- c3 Home value-countdown banner at 2nd priority (coach > trial > deload > phase),
+  ED-neutral fallback, retires on first review.
+- c4 review fixes.
+- **Founder decisions:** fix the cascade-gate-wipe bug in this PR; the one
+  `cascade.js` schedule line is OK (not billing logic). No new telemetry event.
+
+### COMP-019 Stage 1a — chart windows + takeaway (commits 1–4)
+- c1 pure `src/lib/chartWindows.js` (windows, date filter, widen-on-sparse,
+  takeaway builders) + 14 tests.
+- c2 weight chart: `WindowChips` shared component, date windows, EWMA takeaway
+  (rate-of-change suppressed under calm/ED); `chart_window_changed` telemetry +
+  **migrate_077**.
+- c3 e1RM + volume charts (e1RM uncaps sessions for the chart but keeps the last-8
+  history list/best; volume trend gains its own window).
+- c4 review fixes: telemetry was firing with `userId=null` (dropped by
+  `postEvent`) — now passes the real id; volume takeaway no longer mislabels a
+  rest week as "All N weeks".
+- **Founder decisions:** build all three charts now; add the telemetry + migration.
+- **Open visual notes:** Stage 1a is visual (needs on-device eyes); volume trend
+  defaults to `4W` not the blueprint's `3M` (flip if preferred).
+
+### Carry-forwards from session 2 (NOT blockers)
+- Server migrations **`076`** (first_session_choice) + **`077`** (chart_window_changed)
+  join `072`–`075` pending the founder's manual apply. Those events no-op
+  server-side until applied; local app unaffected.
+- Copy gate now also covers COMP-013 / 023 / 019 user-facing strings.
+- COMP-013's hero first-run variant must be reconciled when COMP-027 Part B
+  reorders Home.

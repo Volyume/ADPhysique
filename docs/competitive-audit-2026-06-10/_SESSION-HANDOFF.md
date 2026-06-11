@@ -2,18 +2,21 @@
 
 **>> START AT `_START-HERE-NEXT-SESSION.md` <<** — it is the current single
 entry point: branch, what shipped, locked decisions, and the prioritised
-next-steps. Its TOP block (2026-06-11 build session) is authoritative for live
-state. `_FOUNDER-DECISIONS-2026-06-11.md` holds the detailed decisions + the
-full per-commit build log. This file remains only the index of what the original
-audit produced (the 28 blueprints).
+next-steps. Its TOP block (the latest "session 2" UPDATE) is authoritative for
+live state. `_FOUNDER-DECISIONS-2026-06-11.md` holds the detailed decisions +
+the full per-commit build log. This file remains only the index of what the
+original audit produced (the 28 blueprints).
 
-**Status note (2026-06-11):** the §10–13 engine cluster is now BUILT —
-COMP-008, COMP-015, COMP-006, COMP-005 and COMP-009 all shipped on the branch
-(see the START-HERE top block + the FOUNDER-DECISIONS build log). The
-"questionnaire" framing below is historical; that cluster is done. Next unbuilt
-by priority is **COMP-013 plan reveal**. Two carry-forwards: server migrations
-`072`–`075` await the founder's manual apply, and COMP-005/006/015 copy is still
-behind the founder copy gate.
+**Status note (2026-06-11, session 2):** since the engine cluster, three more
+items shipped on the branch — **COMP-013** (plan reveal + 15-min starter),
+**COMP-023** (day-3 trial moment + cascade-gate survival fix), and **COMP-019
+Stage 1a** (chart windows + takeaway). Baseline is now **209 suites / 3288
+tests**, 0 errors, 4 warnings. The "questionnaire" framing below is historical.
+Next unbuilt by priority is **COMP-019 Stage 1b** (Skia chart + scrub, no new
+deps). Carry-forwards: server migrations **`072`–`077`** await the founder's
+manual apply; the copy gate now also covers COMP-013/023/019; COMP-013's hero
+first-run variant must be reconciled when COMP-027 Part B reorders Home. See the
+START-HERE top block for the full list.
 
 This file is the authoritative entry point for the next session. It supersedes
 the `PENDING` section at the bottom of `implementation/.blueprint-summaries-scratch.md`
