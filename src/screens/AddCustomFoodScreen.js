@@ -9,7 +9,7 @@
  */
 import { todayLocalKey } from '../lib/dayKey';
 import { appAlert } from '../components/AppAlert';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +23,7 @@ import { fieldNeedsCheck } from '../lib/food/ocrParser';
 import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import { findLocalByBarcode } from '../lib/food/sources/localCache';
 
 const MEAL_LABELS = {
   breakfast: 'Breakfast',
@@ -63,6 +64,20 @@ export default function AddCustomFoodScreen({ navigation, route }) {
 
   const [name, setName] = useState(prefillName);
   const [brand, setBrand] = useState('');
+
+  // COMP-022 duplicate guard: this barcode can already belong to a custom food
+  // if sync pulled it (or a soft-delete was restored) after the miss routed the
+  // user here. Surface it so they can log the existing food instead of making a
+  // second; saving anyway is allowed (newest wins in barcode resolution).
+  const [dupeFood, setDupeFood] = useState(null);
+  useEffect(() => {
+    if (!prefillBarcode || !userId) return;
+    let cancelled = false;
+    findLocalByBarcode(prefillBarcode, userId)
+      .then((hit) => { if (!cancelled && hit && hit.source === 'custom') setDupeFood(hit); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [prefillBarcode, userId]);
   const [servingG, setServingG] = useState(_num(prefillMacros?.servingG) || '100');
   const [kcal, setKcal] = useState(_num(prefillMacros?.kcal100g));
   const [protein, setProtein] = useState(_num(prefillMacros?.protein100g));
@@ -189,6 +204,18 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         {prefillBarcode ? (
           <Text style={styles.barcodeHint}>Scanned barcode: {prefillBarcode}</Text>
         ) : null}
+        {dupeFood ? (
+          <View style={styles.dupeBanner}>
+            <Text style={styles.dupeText}>
+              You’ve saved this barcode before as {dupeFood.name}.
+            </Text>
+            <Button
+              title="Log that instead"
+              variant="secondary"
+              onPress={() => navigation.replace('FoodSearch', { mealSlot, entryDate, scannedFood: dupeFood })}
+            />
+          </View>
+        ) : null}
 
         <Field label="Name" value={name} onChange={setName} placeholder="Chicken breast, raw" autoFocus />
         <Field label="Brand (optional)" value={brand} onChange={setBrand} placeholder="Tesco" />
@@ -283,6 +310,14 @@ const styles = StyleSheet.create({
     color: colors.primary,
     marginTop: -spacing.md, marginBottom: spacing.lg,
   },
+  dupeBanner: {
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
+    padding: spacing.md, marginBottom: spacing.lg,
+  },
+  dupeText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
 
   sectionLabel: {
     color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold,
