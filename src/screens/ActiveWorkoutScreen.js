@@ -1240,6 +1240,14 @@ export default function ActiveWorkoutScreen({ navigation }) {
           </View>
           <View style={styles.headerCenter}>
             <Text style={styles.timerText}>{elapsedStr}</Text>
+            {timeCrunchActive && (
+              <Ionicons
+                name="timer"
+                size={15}
+                color={colors.warning}
+                accessibilityLabel="Time crunch active"
+              />
+            )}
           </View>
           <View style={styles.headerSideRight}>
             <TouchableOpacity
@@ -1329,12 +1337,8 @@ export default function ActiveWorkoutScreen({ navigation }) {
                 </Animated.View>
               </TouchableOpacity>
             </View>
-            <Text style={styles.exerciseMuscle}>
-              {MUSCLE_DISPLAY_NAMES[exercise.primaryMuscle ?? exercise.primary_muscle] ??
-                ((exercise.primaryMuscle || exercise.primary_muscle || '').charAt(0).toUpperCase() +
-                  (exercise.primaryMuscle || exercise.primary_muscle || '').slice(1).replace(/_/g, ' '))}
-              {' · primary muscle'}
-            </Text>
+            {/* Muscle line deleted (COMP-001): primary muscle and equipment
+                already show in the exercise info sheet. */}
             {currentSGI != null && !!pairedExerciseName && (
               <View style={styles.supersetChip}>
                 <Ionicons name="link" size={11} color={colors.primary} />
@@ -1663,9 +1667,9 @@ export default function ActiveWorkoutScreen({ navigation }) {
                 onPress={handleCompleteSet}
                 disabled={saving}
                 accessibilityRole="button"
-                accessibilityLabel="Complete extra set"
+                accessibilityLabel="Log another set"
               >
-                <Text style={styles.extraSetBtnText}>+ Complete Extra Set</Text>
+                <Text style={styles.extraSetBtnText}>Log another set</Text>
               </TouchableOpacity>
             </>
           ) : (
@@ -1733,35 +1737,11 @@ export default function ActiveWorkoutScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* Ghost navigation */}
-          {!targetComplete && (
-            isLastExercise ? (
-              <TouchableOpacity testID="volyume-btn-finish-ghost" style={styles.finishWorkoutLargeBtn} onPress={handleFinishWorkout}>
-                <Ionicons name="checkmark-done" size={18} color={colors.success} />
-                <Text style={styles.finishWorkoutLargeBtnText}>Finish Workout</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity testID="volyume-btn-next-exercise-ghost" style={styles.nextExerciseBtn} onPress={handleNextExercise}>
-                <Text style={styles.nextExerciseBtnText}>Next Exercise</Text>
-                <Ionicons name="arrow-forward" size={18} color={colors.primary} />
-              </TouchableOpacity>
-            )
-          )}
-
-          {/* Time crunch moved into the ⋯ overflow sheet (COMP-001); only
-              the active-state bar still renders inline. */}
-          {timeCrunchActive && !!timeCrunchMsg && (
-            <View style={styles.timeCrunchActiveBar}>
-              <Ionicons name="timer" size={14} color={colors.warning} style={{ marginTop: spacing.xxs }} />
-              <View style={styles.timeCrunchActiveContent}>
-                <Text style={styles.timeCrunchActiveText}>{timeCrunchMsg}</Text>
-                <TouchableOpacity style={styles.timeCrunchRevertBtn} onPress={handleRevertTimeCrunch} activeOpacity={0.75}>
-                  <Ionicons name="refresh-outline" size={13} color={colors.textSecondary} />
-                  <Text style={styles.timeCrunchRevertText}>Revert</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
+          {/* Ghost navigation deleted (COMP-001): Next exercise / Finish
+              live in the CTA state-swap when the target completes; the
+              exercise navigator covers moving on early. Time-crunch active
+              state is the timer glyph in the header; revert lives in the
+              ⋯ overflow sheet. */}
 
           <View style={{ height: Math.max(spacing.xxl, insets.bottom + spacing.lg) }} />
         </ScrollView>
@@ -2027,6 +2007,22 @@ export default function ActiveWorkoutScreen({ navigation }) {
                 </View>
               </TouchableOpacity>
             )}
+            {timeCrunchActive && (
+              <TouchableOpacity
+                style={styles.sheetOption}
+                onPress={() => { setShowOverflow(false); handleRevertTimeCrunch(); }}
+                accessibilityRole="button"
+                accessibilityLabel="Revert time crunch"
+              >
+                <View style={styles.overflowOptionRow}>
+                  <Ionicons name="refresh-outline" size={18} color={colors.textSecondary} />
+                  <View style={styles.sheetOptionText}>
+                    <Text style={styles.sheetOptionLabel}>Revert time crunch</Text>
+                    {!!timeCrunchMsg && <Text style={styles.sheetOptionDesc}>{timeCrunchMsg}</Text>}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={styles.sheetOption}
               onPress={() => { setShowOverflow(false); handleRemoveExercise(); }}
@@ -2216,13 +2212,13 @@ const styles = StyleSheet.create({
   headerSide: { width: 64, alignItems: 'flex-start', justifyContent: 'center' },
   headerSideRight: { width: 64, alignItems: 'flex-end', justifyContent: 'center' },
   finishBtn: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary, paddingVertical: spacing.xs },
-  headerCenter: { flex: 1, alignItems: 'center' },
+  headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
   timerText: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.primary, fontVariant: ['tabular-nums'] },
   exerciseNav: { borderBottomWidth: 1, borderBottomColor: colors.border, maxHeight: 48 },
   exerciseNavContent: { paddingHorizontal: spacing.lg, gap: spacing.sm, alignItems: 'center' },
-  navTab: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full, backgroundColor: colors.surface2, maxWidth: 140 },
+  navTab: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.md, borderRadius: radius.full, backgroundColor: colors.surface2, maxWidth: 140 },
   navTabActive: { backgroundColor: colors.primaryBg },
-  navTabText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  navTabText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
   navTabTextActive: { color: colors.primary },
   navTabBadge: { width: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   navTabBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background },
@@ -2243,7 +2239,6 @@ const styles = StyleSheet.create({
   swapItemReason: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
   swapBrowseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
   swapBrowseText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
-  exerciseMuscle: { fontSize: fontSize.sm, color: colors.textSecondary },
   targetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   targetText: { fontSize: fontSize.sm, color: colors.textMuted },
   setEntryCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.md },
@@ -2279,8 +2274,9 @@ const styles = StyleSheet.create({
   completeBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.background, letterSpacing: 0.6 },
   completeBtnWarmup: { backgroundColor: colors.warningBg || colors.surface, borderWidth: 1, borderColor: colors.warning },
   completeBtnTextWarmup: { color: colors.warning },
-  extraSetBtn: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingVertical: spacing.md },
-  extraSetBtnText: { fontSize: fontSize.md, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  // Text button below the primary CTA (COMP-001): quiet, 44pt target.
+  extraSetBtn: { alignItems: 'center', justifyContent: 'center', minHeight: 44 },
+  extraSetBtnText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
   clusterBanner: {
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.502), borderRadius: radius.lg,
     backgroundColor: colors.primaryBg, padding: spacing.md, gap: spacing.sm, marginBottom: spacing.sm,
@@ -2314,15 +2310,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   supersetChipText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
-  nextExerciseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1.5, borderColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg },
-  nextExerciseBtnText: { fontSize: fontSize.md, color: colors.primary, fontWeight: fontWeight.bold },
-  finishWorkoutLargeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1.5, borderColor: colors.success, borderRadius: radius.lg, paddingVertical: spacing.lg },
-  finishWorkoutLargeBtnText: { fontSize: fontSize.md, color: colors.success, fontWeight: fontWeight.bold },
-  timeCrunchActiveBar: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, padding: spacing.sm, backgroundColor: colors.warningBg ?? colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: withAlpha(colors.warning, 0.267) },
-  timeCrunchActiveContent: { flex: 1, gap: spacing.sm },
-  timeCrunchActiveText: { fontSize: fontSize.xs, color: colors.warning, lineHeight: 18 },
-  timeCrunchRevertBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, alignSelf: 'flex-start', paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border },
-  timeCrunchRevertText: { fontSize: fontSize.xs, color: colors.textSecondary },
   loggedSection: { gap: spacing.sm },
   loggedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2 },
   loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border },
