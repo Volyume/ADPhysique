@@ -5,7 +5,7 @@
  * map, and the revert-memory derivation. The fuzz invariants live alongside the
  * other engines in engine-invariants.test.js.
  */
-import { computeSessionAdjustments } from '../algorithms';
+import { computeSessionAdjustments, buildSessionAdjustmentInput } from '../algorithms';
 import {
   CHECKIN_MUSCLE_MAP,
   SESSION_REASON_CODES as RC,
@@ -297,5 +297,72 @@ describe('CHECKIN_MUSCLE_MAP', () => {
     expect(SESSION_SHOWN_CODES.has(RC.DROP_RESIDUAL_SORENESS)).toBe(true);
     expect(SESSION_SHOWN_CODES.has(RC.ADD_UNDER_STIMULUS)).toBe(true);
     expect(SESSION_SHOWN_CODES.has(RC.HOLD_JOINT)).toBe(false);
+  });
+});
+
+describe('buildSessionAdjustmentInput — pure assembler mappings', () => {
+  const exercises = [{ exerciseId: 'e', primaryMuscle: 'side_delts', plannedSets: 4 }];
+
+  test('maps session difficulty to the adaptive performance scale', () => {
+    const mk = (d) => buildSessionAdjustmentInput({
+      todaysExercises: exercises,
+      perMuscle: { side_delts: { lastTrainedAt: 1, sessionDifficulty: d, pump: 2, joint: 1 } },
+    }).muscleSignals.side_delts.lastFeedback;
+    expect(mk(1).performance).toBe(1); // very easy → exceeded
+    expect(mk(3).performance).toBe(2); // moderate → met
+    expect(mk(4).performance).toBe(3); // hard → struggled
+    expect(mk(5).performance).toBe(4); // brutal → failed
+    expect(mk(null).performance).toBe(2); // unknown → met (neutral)
+    // pump/joint pass through
+    expect(mk(3).pump).toBe(2);
+    expect(mk(3).joint).toBe(1);
+  });
+
+  test('fans check-in sore display names out to engine keys (Shoulders → delts)', () => {
+    const out = buildSessionAdjustmentInput({
+      todaysExercises: [
+        { exerciseId: 'a', primaryMuscle: 'rear_delts', plannedSets: 3 },
+        { exerciseId: 'b', primaryMuscle: 'chest', plannedSets: 3 },
+      ],
+      checkin: { soreMuscles: 'Shoulders, Core', checkinAt: 123 },
+    });
+    expect(out.muscleSignals.rear_delts.checkinSore).toBe(true);  // from Shoulders
+    expect(out.muscleSignals.chest.checkinSore).toBe(false);
+    expect(out.muscleSignals.rear_delts.checkinAt).toBe(123);
+  });
+
+  test('maps coach volumeSignal to weeklySignal and carries safetyHold/deload', () => {
+    const ctx = (vs, safety) => buildSessionAdjustmentInput({
+      todaysExercises: exercises,
+      coachOutput: { volumeSignal: vs, safetyHold: safety },
+      isDeload: true,
+    }).weeklyContext;
+    expect(ctx(-2, false).weeklySignal).toBe('reduce');
+    expect(ctx(0, false).weeklySignal).toBe('hold');
+    expect(ctx(3, false).weeklySignal).toBe('push');
+    expect(ctx(0, true).safetyHold).toBe(true);
+    expect(ctx(0, false).isDeload).toBe(true);
+  });
+
+  test('no coach output → weeklySignal hold, safetyHold false', () => {
+    const ctx = buildSessionAdjustmentInput({ todaysExercises: exercises }).weeklyContext;
+    expect(ctx.weeklySignal).toBe('hold');
+    expect(ctx.safetyHold).toBe(false);
+  });
+
+  test('assembled input flows through computeSessionAdjustments end to end', () => {
+    const input = buildSessionAdjustmentInput({
+      todaysExercises: exercises,
+      perMuscle: { side_delts: { lastTrainedAt: 1000, sessionDifficulty: 5, pump: 3, joint: 0 } },
+      checkin: { soreMuscles: 'Shoulders', checkinAt: 900 },
+      presessionSoreness: 1,
+      landmarks: { side_delts: { mev: 8, mav: 16, mrv: 26 } },
+      weeklyVolumeByMuscle: { side_delts: 10 },
+      now: 1000 + 24 * 3600 * 1000, // 1 day after last trained → within 72h
+      weekStartMs: 0,
+    });
+    const out = computeSessionAdjustments(input);
+    // fresh check-in flagged shoulders + trained <=72h → residual-soreness drop
+    expect(out.find(o => o.muscle === 'side_delts')?.setDelta).toBe(-1);
   });
 });

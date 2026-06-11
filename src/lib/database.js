@@ -5734,6 +5734,54 @@ export async function deleteExerciseUserNote(userId, exerciseId) {
  * Returns the last `limit` completed workouts that have a fatigue_level value,
  * ordered newest-first so the caller can reverse for chart display.
  */
+// COMP-015: the read side of session autoregulation. Per-muscle "last
+// completed session" signals + the latest weekly check-in's sore-muscle flags,
+// local only. Returns RAW scales (no mapping); buildSessionAdjustmentInput in
+// algorithms.js maps them to the engine's input shape and applies the shared
+// muscle-name map. Thin and defensive like getAdaptiveLandmarkHistory; the
+// tested logic lives in the pure engine, not here.
+export async function getSessionAdjustmentSignals(userId) {
+  const d = await db();
+  let perMuscle = {};
+  try {
+    // MAX(w.started_at) with bare columns: SQLite returns the other columns
+    // from the row holding that max within each group, i.e. the most recent
+    // completed session that trained each primary muscle. Warmups excluded so a
+    // warmup-only touch never counts as training the muscle.
+    const rows = await d.getAllAsync(
+      `SELECT e.primary_muscle AS muscle,
+              MAX(w.started_at) AS last_trained_at,
+              w.session_difficulty,
+              w.overall_pump,
+              w.joint_discomfort
+       FROM workouts w
+       JOIN workout_sets ws ON ws.workout_id = w.id AND ws.set_type != 'warmup'
+       JOIN exercises e ON e.id = ws.exercise_id
+       WHERE w.user_id = ? AND w.is_completed = 1 AND e.primary_muscle IS NOT NULL
+       GROUP BY e.primary_muscle`,
+      [userId],
+    );
+    for (const r of rows) {
+      perMuscle[r.muscle] = {
+        lastTrainedAt: r.last_trained_at ?? null,
+        sessionDifficulty: r.session_difficulty ?? null,
+        pump: r.overall_pump ?? null,
+        joint: r.joint_discomfort ?? 0,
+      };
+    }
+  } catch (_e) {
+    perMuscle = {};
+  }
+
+  let checkin = null;
+  try {
+    const c = await getLatestCheckin(userId);
+    if (c) checkin = { soreMuscles: c.soreMuscles ?? null, checkinAt: c.createdAt ?? c.weekStart ?? null };
+  } catch (_e) { /* no check-in yet */ }
+
+  return { perMuscle, checkin };
+}
+
 export async function getRecentWorkoutFeedback(userId, limit = 6) {
   try {
     const d = await db();

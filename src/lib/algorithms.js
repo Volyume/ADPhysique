@@ -3,6 +3,7 @@
 import {
   SESSION_REASON_CODES,
   SESSION_SHOWN_CODES,
+  CHECKIN_MUSCLE_MAP,
   getSessionAdjustmentMessage,
 } from './whyThisTemplates';
 
@@ -1265,6 +1266,82 @@ export function computeSessionAdjustments({
     return candidates.filter(c => c.setDelta === 0 || keep.has(c.exerciseId));
   }
   return candidates;
+}
+
+// Maps a session difficulty rating (1=Very Easy … 5=Brutal) to the adaptive
+// engine's performance scale (1=exceeded … 4=failed), the same mapping
+// WorkoutSummary uses when it runs the weekly adaptive engine. Null → 2 (met),
+// a neutral read that triggers neither a drop nor an add on its own.
+const _DIFFICULTY_TO_PERFORMANCE = { 1: 1, 2: 1, 3: 2, 4: 3, 5: 4 };
+
+/**
+ * Pure assembler: turns the raw reads (getSessionAdjustmentSignals + the
+ * weekly/meso context) into the exact input object computeSessionAdjustments
+ * expects. Kept pure and separate from the IO so the scale mappings (difficulty
+ * → performance, sore-muscle CSV → keys, volumeSignal → reduce/hold/push) are
+ * unit-testable without a database.
+ */
+export function buildSessionAdjustmentInput({
+  todaysExercises = [],
+  perMuscle = {},
+  checkin = null,
+  presessionSoreness = null,
+  presessionIntent = null,
+  coachOutput = null,
+  isDeload = false,
+  weeklyVolumeByMuscle = {},
+  landmarks = {},
+  recentSessionEvents = [],
+  weekStartMs = 0,
+  now = 0,
+} = {}) {
+  // Sore-muscle display names from the latest check-in → engine keys.
+  const soreKeys = new Set();
+  if (checkin && checkin.soreMuscles) {
+    for (const name of String(checkin.soreMuscles).split(',').map(s => s.trim()).filter(Boolean)) {
+      const keys = CHECKIN_MUSCLE_MAP[name] || [name.toLowerCase()];
+      for (const k of keys) soreKeys.add(k);
+    }
+  }
+  const checkinAt = checkin?.checkinAt ?? null;
+
+  const muscleSignals = {};
+  for (const ex of todaysExercises) {
+    const m = ex.primaryMuscle;
+    if (!m || muscleSignals[m]) continue;
+    const last = perMuscle[m] ?? {};
+    muscleSignals[m] = {
+      lastTrainedAt: last.lastTrainedAt ?? null,
+      lastFeedback: {
+        pump: last.pump ?? 3,
+        joint: last.joint ?? 0,
+        performance: _DIFFICULTY_TO_PERFORMANCE[last.sessionDifficulty] ?? 2,
+      },
+      checkinSore: soreKeys.has(m),
+      checkinAt,
+      presessionSoreness: presessionSoreness ?? null,
+      displayName: MUSCLE_DISPLAY_NAMES[m] || m,
+    };
+  }
+
+  const vs = coachOutput?.volumeSignal ?? 0;
+  const weeklySignal = vs < 0 ? 'reduce' : vs > 0 ? 'push' : 'hold';
+
+  return {
+    todaysExercises,
+    muscleSignals,
+    weeklyContext: {
+      doneThisWeekByMuscle: weeklyVolumeByMuscle,
+      landmarks,
+      weeklySignal,
+      safetyHold: !!coachOutput?.safetyHold,
+      isDeload: !!isDeload,
+      weekStartMs,
+    },
+    recentSessionEvents,
+    now,
+    presessionIntent,
+  };
 }
 
 // Effective set weighting by RIR proximity, continuous curve per Robinson et al. (2024,
