@@ -9,6 +9,88 @@ hand-off. Read this first. Two companion docs hold the detail:
 
 ---
 
+## UPDATE 2026-06-11 (session 4 — COMP-025-A FULL PHASE A SHIPPED) — READ THIS FIRST
+
+A fourth build session shipped **COMP-025-A in full (Phase A)** on
+`claude/main-branch-content-update-dcqicf`, in 8 lint-clean, full-suite-green
+commits (the last is a self-review fixes commit). **Attended founder decision
+this session:** asked whether to stop at the unattended-safe core or build the
+entitlement-seam pieces too — founder chose **"build both now"**, so Moment 2 +
+the win-back were built unattended (defensively, heavy tests). No billing files
+touched (the §9 boundary held); Phase B (store offers) remains billing-gated and
+NOT built.
+
+What shipped (blueprint `implementation/impl-COMP-025-winback.md`):
+- **Reason capture, both moments (§4a).** Moment 1: `CancelReasonSheet` replaces
+  the bare confirm alert on SubscriptionScreen — five single-select reasons, a
+  conditional free-text (missing_feature / switching) routed to `user_feedback`,
+  the store handoff ALWAYS enabled (anti-dark-pattern: never gated on
+  answering). Moment 2: `PostLapseSheet` (one-time, first-open-after-lapse) with
+  the data-safety body + the same question only if none captured this episode.
+  Shared via `src/lib/cancelReason.js` + `src/components/ReasonPicker.js` so the
+  two can't drift. New telemetry `cancel_reason_captured { reason, surface }`
+  (enum only) — **migrate_079**.
+- **Lapse experience (§4b).** A held-seat line on `ProLocked` ("Everything you
+  logged is saved … if you come back"). Binary gate unchanged (read-only diary
+  stays a deferred founder gating call).
+- **Win-back (§4c).** `scheduleWinbackNotification` on the cascade-gate pattern:
+  one local notification per episode (+30d default, or the §4d stated-return
+  window), re-laid each open while future to keep session counts fresh, ED-
+  suppressed, single-shot enforced by `src/lib/payments/winbackState.js` (one per
+  episode + a 180-day cross-episode floor). Pure copy in `winbackContent.js`
+  (numbers the hero, never a zero, no discount clause). New `WINBACK` category +
+  tap route → Subscription. **No new telemetry event** — uses existing
+  notification_sent/_tapped (category winback) per §8.
+- **Lapse detection (§4a Moment-2 trigger).** `src/lib/payments/lapseDetect.js`
+  reads the existing `reconcilePaidEntitlement` result (makes no entitlement
+  decision): a real client-confirmed paid_pro→free lapse arms the loop; the
+  stale-entitlement lockdown (reason `stale_*`) and trial auto-downgrade never
+  do (blueprint risk #4). Wired fire-and-forget into RootNavigator's reconcile
+  helper at both auth-enter call sites. **Note:** in production today the RTDN
+  Pub/Sub push is NOT wired, so the client reconcile IS the authoritative churn
+  signal — this path is the real one, not an edge case.
+- **Temporary-break (§4d).** A break-window chip row on Moment 1
+  (In a month / 2-3 months / Not sure) stored locally (never telemetry) to shift
+  the single win-back; an Android-only "Play can pause instead" line.
+
+**Health baseline is now: 0 errors, 4 pre-existing warnings, 217 suites / 3374
+tests (3371 pass, 3 skip).** Fewer suites or more warnings = a regression.
+
+**CARRY-FORWARDS (not blockers; pending the founder):**
+1. **Server migration `079`** (`cancel_reason_captured` allow-list) joins
+   `072`–`078` pending manual apply. The event no-ops server-side until applied;
+   the local app is unaffected.
+2. **Copy gate now also covers COMP-025-A** — all blueprint copy: the cancel-sheet
+   question + disclosure, the post-lapse data-safety body, the win-back push
+   strings, the ProLocked held-seat line, the break-window prompt + Android pause
+   line. Founder reviews exact strings at PR. (Note: em dashes were swapped for
+   colons/commas to satisfy the no-em-dash lint rule — e.g. the cancel title and
+   the win-back body.)
+3. **COMP-025 Phase B NOT built (billing-gated):** App Store Connect + Play
+   Console win-back offers (console config) + the Billing-Library offer-tag
+   surfacing + the iOS 18 StoreKit win-back sheet. Touches `src/lib/payments/*`
+   — needs explicit founder billing permission. The win-back copy already leaves
+   the offer clause out by design until then.
+4. **Named-and-deferred (not built):** read-only lapsed diary (founder gating
+   call); RTDN type-3 early-cancel signal; the server-push win-back worker (which
+   would reach users who never reopen — the accepted v1 local-notification gap).
+5. **All four surfaces are VISUAL** (the two cancel/lapse sheets, the ProLocked
+   line, the win-back notification) — logic is unit-tested but the look + feel,
+   and the on-device lapse→sheet→win-back flow, need a device pass at PR.
+
+**Where the list stands now:**
+- Done across all sessions: COMP-001, 002, 003, 004, 005, 006, 008, 009, 010,
+  011, 012, 013, 015, 018 (v1), 019 (1a + 1b), 022 (full), 023, **025-A (full
+  Phase A)**, 027-Part-A.
+- **Next unbuilt:** the remaining work is all gated — COMP-024/026 engine shadow
+  (attended), COMP-019 Stage 2 widgets (deps + native), COMP-020 watch (native),
+  COMP-007 paywall (billing/reviews), COMP-027 Part B + COMP-029 (on-device /
+  deps), COMP-030 + NEW-002 (DPO), NEW-001 (research), COMP-016 (data-ops),
+  COMP-025 Phase B (billing). **The only unattended code-only leftover is the
+  COMP-019-1b static-chart migrations (cosmetic).**
+
+---
+
 ## UPDATE 2026-06-11 (session 3 — COMP-019-1b / 018 / 022 SHIPPED) — READ THIS FIRST
 
 A third build session shipped three more items on

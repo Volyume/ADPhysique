@@ -7,19 +7,22 @@ live state. `_FOUNDER-DECISIONS-2026-06-11.md` holds the detailed decisions +
 the full per-commit build log. This file remains only the index of what the
 original audit produced (the 28 blueprints).
 
-**Status note (2026-06-11, session 3):** three further items shipped —
-**COMP-019 Stage 1b** (interactive chart scrub + bar variant), **COMP-018**
-(weekly consistency streak v1: ConsistencyScreen "Your weeks", pause, goal,
-milestones), and **COMP-022** (barcode-miss chain visual layer). Baseline is now
-**210 suites / 3311 tests**, 0 errors, 4 warnings. The "questionnaire" framing
-below is historical. **There is no large unblocked code-only item left** — the
-remainder is gated (COMP-024/026 attended engine seam; Stage 2 widgets + COMP-029
-need dep approval/native; COMP-020 native; COMP-030/NEW-002 DPO; COMP-007
-billing-held; COMP-016 data-ops). Small unattended leftovers: the COMP-019-1b
-static-chart migrations and COMP-025-A cancel-reason capture. Carry-forwards:
-server migrations **`072`–`078`** await the founder's manual apply; the copy gate
-now spans COMP-013/023/019/018/022; COMP-013's hero variant must reconcile with
-COMP-027 Part B. See the START-HERE top block (session 3) for the full list.
+**Status note (2026-06-11, session 4):** **COMP-025-A shipped in full (Phase A)**
+— cancellation-reason capture (both moments), the ProLocked held-seat line, the
+local +30-day win-back (episode state machine, ED-suppressed, single-shot +
+180-day floor), authoritative lapse detection wired into RootNavigator, and the
+temporary-break path. 8 commits; no billing files touched; Phase B (store
+offers) billing-gated and NOT built. Founder decision this session: **"build
+both now"** authorised the entitlement-seam pieces (Moment 2 + win-back).
+Baseline is now **217 suites / 3374 tests**, 0 errors, 4 warnings. **There is no
+large unblocked code-only item left** — the remainder is gated (COMP-024/026
+attended engine seam; Stage 2 widgets + COMP-029 dep/native; COMP-020 native;
+COMP-030/NEW-002 DPO; COMP-007 + COMP-025 Phase B billing; COMP-016 data-ops).
+The only unattended code-only leftover is the COMP-019-1b static-chart
+migrations (cosmetic). Carry-forwards: server migrations **`072`–`079`** await
+the founder's manual apply; the copy gate now spans
+COMP-013/023/019/018/022/025-A. See the START-HERE top block (session 4) for the
+full list.
 
 This file is the authoritative entry point for the next session. It supersedes
 the `PENDING` section at the bottom of `implementation/.blueprint-summaries-scratch.md`

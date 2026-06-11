@@ -604,3 +604,56 @@ errors, 4 pre-existing warnings.
 - No large unblocked code-only item remains; next steps are gated (attended
   engine builds / dep approval / native / DPO) — see the START-HERE session-3
   block.
+
+---
+
+## Session 4 build log (2026-06-11) — COMP-025-A full Phase A
+
+**Attended decision this session:** at the point where the unattended-safe core
+(reason capture) was done, the founder was asked whether to stop or build the
+entitlement-seam pieces (Moment 2 post-lapse sheet + the win-back). Founder
+chose **"build both now"** — so they were built unattended, defensively, with
+heavy tests. No billing files touched; Phase B (store offers) NOT built.
+
+### COMP-025-A — cancellation-reason capture + local win-back (commits 1–8)
+- c1 Moment 1 `CancelReasonSheet` (replaces the SubscriptionScreen cancel alert)
+  + `cancel_reason_captured` telemetry + **migrate_079**. Store handoff always
+  enabled; free text → user_feedback; no purchase/entitlement/trial logic
+  touched.
+- c2 §4b held-seat line on `ProLocked`.
+- c3 `winbackState.js` — pure episode state machine (lapseAt / reasonCaptured /
+  winbackLaid; one-per-episode + 180-day floor; stated-return; fire-date maths).
+- c4 win-back notification: `winbackContent.js` (pure copy), `WINBACK` category,
+  `scheduleWinbackNotification` on the cascade-gate pattern, re-laid in
+  restoreNotifications. ED-suppressed; counts are sessions only.
+- c5 `lapseDetect.js` + RootNavigator wiring — authoritative paid_pro→free lapse
+  only (NOT the stale-`reason` lockdown, NOT trial auto-downgrade); fire-and-
+  forget, never blocks tier refresh.
+- c6 Moment 2 `PostLapseSheet` + `PostLapseSheetHost` (App.js); extracted the
+  shared `cancelReason.js` + `ReasonPicker.js` so both moments share capture.
+- c7 §4d temporary-break: break-window chips on Moment 1 (local-only stated
+  return) + Android pause line.
+- c8 review fixes: win-back tap route → Subscription; removed the divergent
+  schedule-time notification_sent (the OS-received listener fires it with the
+  WINBACK category, the app's convention); lapseDetect clears/cancels only when
+  an episode is actually open.
+
+### Decisions / deviations baked in
+- **Lapse trigger is client-reconcile-only (deliberate).** RTDN Pub/Sub isn't
+  wired in production, so `reconcilePaidEntitlement` IS the authoritative churn
+  signal here — this is the real path, not an edge case. The pure-RTDN-expiry
+  path (server downgrades before the client reconciles) is a documented v1
+  consideration, not a gap that affects current production.
+- **No discount/offer in the cancel path or the win-back copy** (§4c/§7) — the
+  offer is Phase-B store-native and billing-gated.
+- **Em dashes swapped for colons/commas** throughout the copy to satisfy the
+  no-em-dash lint rule; founder reviews exact strings at PR.
+
+### Carry-forwards from session 4 (NOT blockers)
+- **migrate_079** (cancel_reason_captured) joins `072`–`078` pending manual apply.
+- Copy gate now also covers COMP-025-A.
+- All four surfaces are visual — need on-device review of the
+  lapse→sheet→win-back flow.
+- COMP-025 **Phase B** (store win-back offers) remains billing-gated and unbuilt.
+- The only unattended code-only leftover is the COMP-019-1b static-chart
+  migrations (cosmetic).
