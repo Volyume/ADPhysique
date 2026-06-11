@@ -126,7 +126,33 @@ SHIPPED on this branch, each commit lint-clean with the full suite green:
 - **COMP-010** (ec7b842): BlockShapeCard week dots (Ease in/Build/Push/
   Recover) via the tappable Home meso chip. PlanDetail mount deferred.
 - **COMP-022 (partial)** (6e12f6f): deterministic custom-barcode resolution
-  (ORDER BY updated_at). Rest of COMP-022 deferred (privacy/hot-path).
+  (ORDER BY updated_at).
+- **COMP-022 (save slice)** (ae86b66): OFF write-back relocated from
+  ScanLabel capture to AddCustomFood's confirmed save (sends the values the
+  user actually confirmed + name/brand, no orphan queue entry, consent gate
+  intact); healing toast 'Saved. Next time this barcode scans instantly.';
+  from:'scan_chain' telemetry tag.
+
+## Second "build all you can" pass — what shipped vs stopped (2026-06-11 eve)
+Founder ticked COMP-022, COMP-006, COMP-010, COMP-019. Outcome:
+- COMP-010 — already shipped earlier this session (ec7b842). Done.
+- COMP-022 — shipped the two high-confidence, testable slices above
+  (determinism + the save-side consent/toast). REMAINING (deferred, fresh
+  context / on-device look): the ScanLabel arrival-choice 'fix it once'
+  state + offline-vs-miss copy, the waterfall miss-vs-unreachable tagging,
+  the duplicate-barcode banner, and the one-time Diary OFF-consent card.
+- COMP-006 methodology page — NOT built. The page makes specific engine
+  claims (2-week cooldown, volume matrix, FFM floor) and the blueprint says
+  founder review against the engine is non-negotiable because wrong copy
+  damages trust. Needs claim-by-claim verification against weeklyCoach.js /
+  whyThisTemplates.js with the founder; deferred rather than risk shipping
+  a subtly-wrong claim unattended.
+- COMP-019 stage 1a — NOT built. It is a 3-screen visual change
+  (BodyMetrics + ExerciseDetail + VolumeHeatmap: window chips + recomputed
+  takeaway copy + date-window queries), unverifiable without a device.
+  Deferred to an attended pass.
+Stopped deliberately at the point where remaining work is copy-correctness-
+or visual-verification-gated, on a live paying app, after a long session.
 - NEW-001 MoveKit samples validated (format+quality pass; 2 caveats), then
   PAUSED low-priority per founder; brief ready for revisit.
 
