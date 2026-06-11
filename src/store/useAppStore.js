@@ -86,6 +86,10 @@ function _persistActiveWorkout(state) {
       workoutExercises: state.workoutExercises,
       currentExerciseIndex: state.currentExerciseIndex,
       workoutStartTime: state.workoutStartTime,
+      // COMP-015: persist the computed session adjustments so a crash-recovery
+      // restore rehydrates them WITHOUT recomputing — which would otherwise
+      // re-log duplicate adaptation_events.
+      sessionAdjustments: state.sessionAdjustments,
       savedAt: Date.now(),
     };
     AsyncStorage.setItem(ACTIVE_WORKOUT_KEY, JSON.stringify(snapshot)).catch(() => {});
@@ -1003,6 +1007,18 @@ const useAppStore = create((set, get) => ({
   currentExerciseIndex: 0,
   workoutStartTime: null,
   lastActivityAt: null,
+  // COMP-015: this session's per-exercise adjustments, computed once at session
+  // start (Pro-only) and read by ActiveWorkoutScreen. Empty for free users,
+  // non-meso sessions, or when nothing fired.
+  sessionAdjustments: [],
+
+  // COMP-015: set by HomeScreen after computeAndLogSessionAdjustments resolves.
+  // Persisted into the active-workout snapshot so a crash restore does not
+  // recompute (and re-log) the adjustments.
+  setSessionAdjustments: (list) => {
+    set({ sessionAdjustments: Array.isArray(list) ? list : [] });
+    _persistActiveWorkout(get());
+  },
 
   setActiveWorkout: (workout) => set({ activeWorkout: workout }),
   setWorkoutExercises: (next) => {
@@ -1060,6 +1076,9 @@ const useAppStore = create((set, get) => ({
       currentExerciseIndex: 0,
       workoutStartTime: Date.now(),
       lastActivityAt: Date.now(),
+      // COMP-015: a fresh session starts with no adjustments; HomeScreen fills
+      // them in once the (async, Pro-only) compute resolves.
+      sessionAdjustments: [],
     });
     _persistActiveWorkout(get());
   },
@@ -1102,6 +1121,9 @@ const useAppStore = create((set, get) => ({
         currentExerciseIndex: snap.currentExerciseIndex ?? 0,
         workoutStartTime: snap.workoutStartTime ?? Date.now(),
         lastActivityAt: Date.now(),
+        // COMP-015: rehydrate the already-computed adjustments; do NOT recompute
+        // on restore (that would re-log duplicate adaptation_events).
+        sessionAdjustments: Array.isArray(snap.sessionAdjustments) ? snap.sessionAdjustments : [],
       });
       return true;
     } catch (_) {
@@ -1141,6 +1163,7 @@ const useAppStore = create((set, get) => ({
       workoutStartTime: null,
       restTimerActive: false,
       lastActivityAt: null,
+      sessionAdjustments: [], // COMP-015
     });
     // Clear the crash-recovery snapshot so a finished/cancelled session
     // can't be resurrected on next launch (activeWorkout is now null).

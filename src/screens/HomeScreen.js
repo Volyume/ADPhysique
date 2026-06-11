@@ -26,6 +26,7 @@ import {
   getMorningWeightToday, getMorningWeights, logMorningWeight, getProgressionTeaser,
   getRecentWorkoutFeedback, getLatestCoachOutput,
 } from '../lib/database';
+import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 import { logError, logWarn } from '../lib/errorLog';
 import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, VOLUME_LANDMARKS } from '../lib/algorithms';
@@ -71,8 +72,8 @@ const READINESS_ROWS = [
 
 export default function HomeScreen({ navigation }) {
   const toast = useToast();
-  const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce } = useAppStore(
-    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce }))
+  const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments } = useAppStore(
+    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce, setSessionAdjustments: s.setSessionAdjustments }))
   );
 
   // WK-1: recover an in-progress workout after an app kill/crash. The store
@@ -695,6 +696,15 @@ export default function HomeScreen({ navigation }) {
       });
       startWorkout(workout, pending.initialExercises);
       navigation.navigate('ActiveWorkout');
+      // COMP-015 (Pro): compute + log this session's adjustments in the
+      // background so it never delays the session opening. The line appears a
+      // moment later once the local reads resolve. Runs once per start; a
+      // crash-recovery restore rehydrates the result instead of recomputing.
+      if (tier === 'pro') {
+        computeAndLogSessionAdjustments({ userId: user.id, workout, exercises: pending.initialExercises })
+          .then(setSessionAdjustments)
+          .catch(() => {});
+      }
     } catch (e) {
       setIsStartingWorkout(false);
       logError('HomeScreen.confirmStart', e, { userId: user?.id, routineId: pending?.routineId, intent });
