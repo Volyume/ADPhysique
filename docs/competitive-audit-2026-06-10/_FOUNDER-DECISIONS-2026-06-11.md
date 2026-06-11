@@ -89,6 +89,16 @@ SHIPPED on this branch, each commit lint-clean with the full suite green:
   vocabulary, blueprint copy as written.
 - **COMP-002** meal-slot memory (2f3c314): food_slot_recents client-only
   table, 'Add again' tab, last-used portion pre-fill, unit tests.
+- **COMP-027 Part A** colour grammar (87f99ac): stateColors aliases,
+  warning #FFC107 → #F0E442 Okabe-Ito retune (founder-approved), the 3
+  Class B/C migrations (CoachOutput trend chip, BodyMetrics delta, Home
+  deload banner), tests. Implementation note appended to the blueprint.
+- **COMP-004** 'Your trend' card (2cd74f4): pure deriveWeightTrend +
+  useWeightTrend hook + WeightTrendCard on Progress, states 0-3, Class B
+  rules, 8 unit tests.
+
+(Container reset once mid-session at ~commit a2cc7f3; recovered by
+fast-forward to origin per the handoff note. Nothing lost.)
 
 PARKED (founder eyes wanted, not blockers):
 - COMP-001 step 6 remainder: logged-set cap + 'All sets (N)' expander
@@ -96,9 +106,24 @@ PARKED (founder eyes wanted, not blockers):
   maxHeight 40 clamp conflicts with the new 40pt pill sizing; nav-pill
   middle-out truncation helper under-specified. Decide at COMP-001 visual
   review.
+- COMP-027 **Part B** (Home TodayStrip reorder): 3-4 day visual rebuild
+  with the weigh-in-completion guardrail; needs the founder's eyes on the
+  live layout. Part A stands alone and unblocks COMP-029.
+- COMP-004 follow-ups: Home TodayStrip tap-through door (waits on Part B);
+  dashed goal-band chart overlay (visual polish); State 4 high-confidence
+  maintenance (firms up with COMP-026's 90-day window).
 - COMP-012/COMP-006: each wants a Welcome/paywall trust line — paywall
   lines are HELD with billing anyway.
 
-NEXT IN QUEUE: COMP-008 survey diet (regenerate its lost blueprint from
-the preserved summary first) → COMP-015, and COMP-023 + the trial-push
-cascade fix (decision 5 makes it time-sensitive).
+DEFERRED (need founder/attended session, not done unattended):
+- COMP-008 survey diet: blueprint file is present again, but it changes
+  the createWorkout call path and the TIMING of coaching-engine inputs
+  (soreness/sleep/energy) - engine-sensitive, do with founder available.
+  COMP-015 hard-depends on it.
+- COMP-023 + trial-push cascade fix: revenue-relevant (decision 5) but a
+  2-2.5 day notification/scheduler/banner build; do attended.
+- COMP-029 light theme: needs expo-system-ui install + native rebuild +
+  the 122-site zero-visual-diff Phase 0 migration; heavily visual.
+
+NEXT IN QUEUE (clean, unattended-safe): COMP-018 streak (pure
+src/lib/streak.js + Progress strip; NEW-002 consumes it).
