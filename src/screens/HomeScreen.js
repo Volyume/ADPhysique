@@ -45,6 +45,30 @@ function getGreeting(firstName) {
   return `Late night${name}.`;
 }
 
+// COMP-008: the three pre-workout readiness rows shown beneath the intent
+// options. Each is an optional low/middle/high chip. Stored values match the
+// scales the workout row + its readers expect: soreness on the existing 1-3
+// (Fresh/Mild/Sore) scale the adaptive engine + computeRecoveryEMAs read;
+// sleep + energy on the 1-5 domain (chips offer 2/3/4) so the weekly
+// sleep_quality write and CoachReview's <2.5 thresholds stay valid.
+const READINESS_ROWS = [
+  {
+    key: 'soreness24hBefore',
+    label: 'Soreness coming in',
+    chips: [{ label: 'Fresh', value: 1 }, { label: 'Mild', value: 2 }, { label: 'Sore', value: 3 }],
+  },
+  {
+    key: 'sleepQuality',
+    label: 'Sleep last night',
+    chips: [{ label: 'Poor', value: 2 }, { label: 'OK', value: 3 }, { label: 'Good', value: 4 }],
+  },
+  {
+    key: 'energyScore',
+    label: 'Energy today',
+    chips: [{ label: 'Low', value: 2 }, { label: 'OK', value: 3 }, { label: 'High', value: 4 }],
+  },
+];
+
 export default function HomeScreen({ navigation }) {
   const toast = useToast();
   const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce } = useAppStore(
@@ -135,6 +159,16 @@ export default function HomeScreen({ navigation }) {
   const [showCoachingNudge, setShowCoachingNudge] = useState(false);
   const [totalSessions, setTotalSessions] = useState(0);
   const [showIntentPrompt, setShowIntentPrompt] = useState(false);
+  // COMP-008: the three "walked-in-with" readiness facts, captured on the
+  // pre-workout prompt where they are accurate rather than recalled after the
+  // session. All optional, reset each time the prompt opens. Stored on the
+  // scales the workout row + its readers expect (soreness 1-3; sleep/energy on
+  // the 1-5 domain, the chips offering 2/3/4).
+  const [readiness, setReadiness] = useState({
+    soreness24hBefore: null,
+    sleepQuality: null,
+    energyScore: null,
+  });
   const [teaserInsight, setTeaserInsight] = useState(null);
   const [deloadSuggestion, setDeloadSuggestion] = useState(null);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
@@ -635,6 +669,9 @@ export default function HomeScreen({ navigation }) {
         supersetGroupId: routineExercise?.supersetGroupId ?? null,
       }));
       pendingStartRef.current = { routineId: routine.id, initialExercises };
+      // Clear any readiness from a previously-cancelled prompt so each session
+      // starts from blank chips.
+      setReadiness({ soreness24hBefore: null, sleepQuality: null, energyScore: null });
       setShowIntentPrompt(true);
     } catch (e) {
       setIsStartingWorkout(false);
@@ -643,13 +680,19 @@ export default function HomeScreen({ navigation }) {
     }
   }
 
-  async function confirmStart(intent) {
+  // COMP-008: an intent tap carries whatever readiness chips were set; Skip
+  // passes intent null and no readiness (see the Modal). The values flow
+  // straight into createWorkout, which writes them to the workout row.
+  async function confirmStart(intent, readinessOverride = readiness) {
     setShowIntentPrompt(false);
     const pending = pendingStartRef.current;
     if (!pending) return;
     setIsStartingWorkout(true);
     try {
-      const workout = await createWorkout(user.id, pending.routineId, { intent });
+      const workout = await createWorkout(user.id, pending.routineId, {
+        intent,
+        ...readinessOverride,
+      });
       startWorkout(workout, pending.initialExercises);
       navigation.navigate('ActiveWorkout');
     } catch (e) {
@@ -1516,9 +1559,43 @@ export default function HomeScreen({ navigation }) {
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </TouchableOpacity>
             ))}
+
+            {/* COMP-008: optional readiness chips. These tune the session
+                without blocking it; tapping an intent option above (or Skip)
+                still starts immediately, carrying whatever is selected here. */}
+            {READINESS_ROWS.map(row => (
+              <View key={row.key} style={styles.readinessRow}>
+                <Text style={styles.readinessLabel}>{row.label}</Text>
+                <View style={styles.readinessChips} accessibilityRole="radiogroup" accessibilityLabel={row.label}>
+                  {row.chips.map(chip => {
+                    const selected = readiness[row.key] === chip.value;
+                    return (
+                      <TouchableOpacity
+                        key={chip.value}
+                        style={[styles.readinessChip, selected && styles.readinessChipActive]}
+                        onPress={() => setReadiness(r => ({
+                          // Tapping the selected chip again clears it, so the
+                          // row stays genuinely optional.
+                          ...r,
+                          [row.key]: selected ? null : chip.value,
+                        }))}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected }}
+                        accessibilityLabel={`${row.label}: ${chip.label}`}
+                      >
+                        <Text style={[styles.readinessChipText, selected && styles.readinessChipTextActive]}>
+                          {chip.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            ))}
+
             <TouchableOpacity
               style={styles.intentSkip}
-              onPress={() => confirmStart(null)}
+              onPress={() => confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null })}
             >
               <Text style={styles.intentSkipText}>Skip</Text>
             </TouchableOpacity>
@@ -2120,6 +2197,39 @@ const styles = StyleSheet.create({
     ...type.caption,
     color: colors.textSecondary,
     marginTop: spacing.xxs,
+  },
+  // COMP-008 readiness chips
+  readinessRow: {
+    gap: spacing.xs,
+  },
+  readinessLabel: {
+    ...type.caption,
+    color: colors.textSecondary,
+  },
+  readinessChips: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  readinessChip: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2 ?? colors.background,
+  },
+  readinessChipActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryBg,
+  },
+  readinessChipText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  readinessChipTextActive: {
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
   },
   intentSkip: {
     alignItems: 'center',
