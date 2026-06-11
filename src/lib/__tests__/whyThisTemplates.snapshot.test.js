@@ -13,6 +13,7 @@ import {
   getAutoRegMessage,
   getWeekPhaseDescription,
   getSplitRationale,
+  getSetupReceiptLine,
   getDeloadPredictionMessage,
   getTimeCrunchMessage,
   getTravelModeMessage,
@@ -72,6 +73,32 @@ describe('whyThisTemplates: locked output snapshots', () => {
     expect(getSplitRationale('full_body')).toContain('Every session trains all your muscle groups');
     expect(getSplitRationale('upper_lower')).toContain('Alternating upper and lower');
     expect(getSplitRationale('ppl')).toContain('Push, Pull, Legs');
+  });
+
+  test('getSetupReceiptLine: division leads with identity (COMP-013)', () => {
+    expect(getSetupReceiptLine({ trainingGoal: 'mens_physique' })).toMatchInlineSnapshot(
+      `"Built for Men's Physique. Shoulders and back width lead, midsection stays tight."`
+    );
+    expect(getSetupReceiptLine({ trainingGoal: 'bikini' })).toMatchInlineSnapshot(
+      `"Built for Bikini. Glutes and hamstrings lead, upper body stays lean."`
+    );
+  });
+
+  test('getSetupReceiptLine: general echoes days + weak points the engine acted on', () => {
+    expect(getSetupReceiptLine({ trainingGoal: 'general', daysPerWeek: 4, weakPointLabels: ['Rear Delts'] })).toMatchInlineSnapshot(
+      `"Built around your 4 days. Extra work on rear delts, like you asked."`
+    );
+    expect(getSetupReceiptLine({ trainingGoal: 'general', daysPerWeek: 5, weakPointLabels: ['Glutes', 'Calves'] })).toMatchInlineSnapshot(
+      `"Built around your 5 days. Extra work on glutes and calves, like you asked."`
+    );
+    // no weak points → just the commitment, no over-claim
+    expect(getSetupReceiptLine({ trainingGoal: 'general', daysPerWeek: 3 })).toMatchInlineSnapshot(
+      `"Built around your 3 days."`
+    );
+    // missing days → safe generic, never a broken string
+    expect(getSetupReceiptLine({ trainingGoal: 'general' })).toMatchInlineSnapshot(
+      `"Built around your plan."`
+    );
   });
 
   test('getTravelModeMessage', () => {

@@ -247,6 +247,58 @@ export function getSplitRationale(splitType) {
 }
 
 // ---------------------------------------------------------------------------
+// Setup-complete receipt line (COMP-013 reveal moment)
+// One short "we built this for you" line shown directly under the reveal
+// headline. For a competition division it leads with the division identity
+// and the muscle groups the engine actually prioritises (DIVISION_MATRIX /
+// applyGoalOverlay); for the general goal it echoes the days committed and any
+// weak points the engine acted on. Every claim is derivable from the same
+// inputs buildWhyThis used — nothing the plan did not act on.
+// COPY: blueprint copy, founder voice review at PR before merge to main.
+// ---------------------------------------------------------------------------
+
+const RECEIPT_DIVISION = {
+  mens_physique:       "Built for Men's Physique. Shoulders and back width lead, midsection stays tight.",
+  classic_physique:    'Built for Classic Physique. Balanced mass and proportion, waist kept tight.',
+  bodybuilding:        'Built for Bodybuilding. Full development across every muscle group.',
+  bikini:              'Built for Bikini. Glutes and hamstrings lead, upper body stays lean.',
+  wellness:            'Built for Wellness. Glutes and legs lead, upper body stays balanced.',
+  figure:              'Built for Figure. Shoulders and back width lead, athletic symmetry throughout.',
+  womens_physique:     "Built for Women's Physique. Full upper-body development with balanced legs.",
+  womens_bodybuilding: "Built for Women's Bodybuilding. Maximum development across every muscle group.",
+};
+
+function joinWithAnd(items) {
+  if (items.length === 0) return '';
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
+/**
+ * Returns the reveal receipt line, or null to fall back to the generic sub.
+ *
+ * @param {object} opts
+ * @param {string} opts.trainingGoal    - division key or 'general'
+ * @param {string[]} [opts.weakPointLabels] - muscle labels the engine prioritised
+ * @param {number} [opts.daysPerWeek]
+ * @returns {string|null}
+ */
+export function getSetupReceiptLine({ trainingGoal, weakPointLabels = [], daysPerWeek } = {}) {
+  const divisionLine = RECEIPT_DIVISION[trainingGoal];
+  if (divisionLine) return clean(divisionLine);
+
+  // General / non-division goal: lead with the commitment, echo weak points.
+  const days = Number.isFinite(daysPerWeek) ? daysPerWeek : null;
+  const base = days ? `Built around your ${days} days.` : 'Built around your plan.';
+  const labels = (weakPointLabels || []).filter(Boolean).map(l => l.toLowerCase());
+  if (labels.length) {
+    return clean(`${base} Extra work on ${joinWithAnd(labels)}, like you asked.`);
+  }
+  return clean(base);
+}
+
+// ---------------------------------------------------------------------------
 // Deload prediction message
 // ---------------------------------------------------------------------------
 
