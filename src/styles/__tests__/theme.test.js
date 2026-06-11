@@ -17,6 +17,7 @@ import {
   type,
   num,
   applyAccessibility,
+  resolvedTheme,
 } from '../theme';
 
 describe('withAlpha', () => {
@@ -159,5 +160,101 @@ describe('lineHeight / letterSpacing scales', () => {
   test('letterSpacing tightens for display, loosens for caption', () => {
     expect(letterSpacing.display).toBeLessThan(letterSpacing.body);
     expect(letterSpacing.caption).toBeGreaterThan(letterSpacing.body);
+  });
+});
+
+// ─── COMP-029 light theme: contrast + composition ──────────────────────────
+// The standout move (blueprint §4f): the light table's WCAG ratios are
+// executable, so it can never silently drift below its bar on a future edit.
+// All ratios computed with the WCAG 2.x relative-luminance formula.
+describe('COMP-029 light theme', () => {
+  function relLum(hex) {
+    const h = String(hex).replace('#', '');
+    const ch = (i) => {
+      const c = parseInt(h.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * ch(0) + 0.7152 * ch(2) + 0.0722 * ch(4);
+  }
+  function ratio(a, b) {
+    const la = relLum(a);
+    const lb = relLum(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  }
+
+  afterEach(() => applyAccessibility({})); // reset to dark for the rest of the file
+
+  test('resolvedTheme reflects the chosen palette (absent => dark)', () => {
+    applyAccessibility({ theme: 'light' });
+    expect(resolvedTheme).toBe('light');
+    expect(colors.background).toBe('#FAFAF7');
+    applyAccessibility({ theme: 'dark' });
+    expect(resolvedTheme).toBe('dark');
+    expect(colors.background).toBe('#0D0D0D');
+    applyAccessibility({});
+    expect(resolvedTheme).toBe('dark'); // no theme key => dark, no user changes
+  });
+
+  test('light text roles clear their WCAG bars on every surface', () => {
+    applyAccessibility({ theme: 'light' });
+    const { surface, background, surface2, surface3 } = colors;
+    const surfaces = [surface, background, surface2, surface3];
+    // Body text AAA-ish.
+    expect(ratio(colors.textPrimary, surface)).toBeGreaterThanOrEqual(7);
+    expect(ratio(colors.textSecondary, surface)).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(colors.textSecondary, background)).toBeGreaterThanOrEqual(4.5);
+    // textMuted and the amber primary INK must clear 4.5:1 on EVERY surface.
+    for (const s of surfaces) {
+      expect(ratio(colors.textMuted, s)).toBeGreaterThanOrEqual(4.5);
+      expect(ratio(colors.primary, s)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  test('light status + trophy inks clear 4.5:1 on white', () => {
+    applyAccessibility({ theme: 'light' });
+    for (const role of ['success', 'warning', 'error', 'gold', 'silver', 'bronze']) {
+      expect(ratio(colors[role], '#FFFFFF')).toBeGreaterThanOrEqual(4.5);
+    }
+    // warning stays distinct from the amber primary ink (COMP-027 separation).
+    expect(colors.warning).not.toBe(colors.primary);
+  });
+
+  test('onPrimary ink clears the bright amber FILL in both themes', () => {
+    applyAccessibility({ theme: 'light' });
+    expect(ratio(colors.onPrimary, colors.primaryFill)).toBeGreaterThanOrEqual(4.5);
+    applyAccessibility({});
+    expect(ratio(colors.onPrimary, colors.primaryFill)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test('light borders + chart line clear the 3:1 non-text bar', () => {
+    applyAccessibility({ theme: 'light' });
+    expect(ratio(colors.border, colors.surface)).toBeGreaterThanOrEqual(3);
+    expect(ratio(colors.border, colors.background)).toBeGreaterThanOrEqual(3);
+    expect(ratio(colors.chartLine, '#FFFFFF')).toBeGreaterThanOrEqual(3);
+  });
+
+  test('light + higher-contrast lifts text further (composition order)', () => {
+    applyAccessibility({ theme: 'light', higherContrast: true });
+    expect(colors.background).toBe('#FAFAF7'); // theme landed first
+    expect(colors.textSecondary).toBe('#3D3D3B'); // then the light HC table
+    expect(ratio(colors.textSecondary, colors.background)).toBeGreaterThanOrEqual(7);
+  });
+
+  test('light + colour-blind-safe uses the Okabe-Ito light hues', () => {
+    applyAccessibility({ theme: 'light', colorBlindSafe: true });
+    expect(colors.success).toBe('#0072B2');
+    expect(colors.error).toBe('#9C4D76');
+    expect(ratio(colors.success, '#FFFFFF')).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(colors.error, '#FFFFFF')).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test('dark theme is unchanged: HC + CVD tables reproduce the prior values', () => {
+    applyAccessibility({ higherContrast: true });
+    expect(colors.background).toBe('#0D0D0D');
+    expect(colors.textSecondary).toBe('#D0D0D0');
+    expect(colors.border).toBe('#999999');
+    applyAccessibility({ colorBlindSafe: true });
+    expect(colors.success).toBe('#56B4E9');
+    expect(colors.error).toBe('#CC79A7');
   });
 });
