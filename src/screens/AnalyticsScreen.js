@@ -13,6 +13,8 @@ import InfoTooltip from '../components/InfoTooltip';
 import CardioPlanCard from '../components/CardioPlanCard';
 import useAppStore from '../store/useAppStore';
 import useProgressData from '../hooks/useProgressData';
+import useWeightTrend from '../hooks/useWeightTrend';
+import WeightTrendCard from '../components/WeightTrendCard';
 import { VOLUME_LANDMARKS } from '../lib/algorithms';
 
 // Severity → icon + color mapping (jargon-free UI)
@@ -26,6 +28,12 @@ export default function AnalyticsScreen({ navigation }) {
   const user = useAppStore(s => s.user);
   const userProfile = useAppStore(s => s.userProfile);
   const tier = useAppStore(s => s.tier);
+  const bodyWeightUnits = useAppStore(s => s.bodyWeightUnits);
+
+  // COMP-004 "Your trend": Pro-only weight-trend read (morning weighing is a
+  // Pro feature, so the card never appears for free users). The hook always
+  // runs (hooks are unconditional); the card self-hides until there is data.
+  const weightTrend = useWeightTrend(tier === 'pro' ? user?.id : null);
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -78,6 +86,15 @@ export default function AnalyticsScreen({ navigation }) {
             {insights.map(ins => (
               <InsightRow key={ins.id} insight={ins} onDismiss={() => handleDismiss(ins.id)} />
             ))}
+          </View>
+        )}
+
+        {/* ── Your trend (COMP-004): the calm weight-trend read, between the
+            insight stack and recent sessions. Pro-only; self-hides until
+            there are morning weights to interpret. ── */}
+        {tier === 'pro' && weightTrend.render && (
+          <View style={styles.section}>
+            <WeightTrendCard vm={weightTrend} bodyWeightUnits={bodyWeightUnits || 'st'} />
           </View>
         )}
 
