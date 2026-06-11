@@ -12,6 +12,7 @@ import {
   MuscleFrequencyTable, TrainingCalendar,
 } from '../components/ProgressSections';
 import useProgressData from '../hooks/useProgressData';
+import StreakWeeksSection from '../components/StreakWeeksSection';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -20,7 +21,9 @@ import { useShallow } from 'zustand/react/shallow';
 // session length, how often each muscle gets hit, and the 12-week calendar.
 // Pulled off the Progress landing so the landing reads as a hub, not a wall.
 export default function ConsistencyScreen({ navigation }) {
-  const { user, tier } = useAppStore(useShallow(s => ({ user: s.user, tier: s.tier })));
+  const { user, tier, scoffScore } = useAppStore(useShallow(s => ({
+    user: s.user, tier: s.tier, scoffScore: s.userProfile?.scoffScore,
+  })));
   const {
     activeMeso, mesoTonnage, mesoProgress, mesoCurrentWeek,
     fatigueSessions, blockProgress, currentMesoWeek,
@@ -37,6 +40,9 @@ export default function ConsistencyScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
         }
       >
+        {/* ── Your weeks (COMP-018 consistency streak) ── */}
+        <StreakWeeksSection userId={user?.id} scoffScore={scoffScore} />
+
         {/* ── Lighter week banner ── */}
         {deloadAlert && (
           <View style={styles.deloadBanner}>
