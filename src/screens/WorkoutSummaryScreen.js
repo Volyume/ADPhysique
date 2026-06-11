@@ -12,7 +12,7 @@ import {
   getActivePlan, getRoutinesForPlan, advancePlanNextWorkout,
   createAdaptationEvent, getCurrentMesocycleWeek,
   saveWeeklyCheckin, saveNextTimeNote, getRoutineWorkoutTonnages,
-  getRoutineById,
+  getRoutineById, getWorkoutById,
 } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, VOLUME_LANDMARKS } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
@@ -22,14 +22,14 @@ import { incrementSessionCount, shouldPromptReview, requestReview } from '../lib
 import { workoutDayMs } from '../lib/workoutDate';
 import { localWeekStartMs } from '../lib/dayKey';
 
+// COMP-008: soreness, energy and sleep moved to the pre-workout intent prompt
+// (captured where they are accurate). The post-workout block keeps only the
+// three session-response ratings plus fatigue.
 const RATING_LABELS = {
   sessionDifficulty: ['', 'Very Easy', 'Easy', 'Moderate', 'Hard', 'Brutal'],
   overallPump: ['', 'None', 'Mild', 'Good'],
-  soreness24hBefore: ['', 'Fresh', 'Mild', 'Sore'],
   fatigueLevel: ['', 'Fresh', 'Mild', 'Moderate', 'High', 'Exhausted'],
   jointDiscomfort: ['None', 'Slight', 'Moderate', 'Significant'],
-  energyScore: ['', 'Low', 'Fair', 'Moderate', 'Good', 'High'],
-  sleepQuality: ['', 'Poor', 'Fair', 'OK', 'Good', 'Excellent'],
 };
 
 function RatingRow({ label, field, value, max, onChange }) {
@@ -79,11 +79,16 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [feedback, setFeedback] = useState({
     sessionDifficulty: 3,
     overallPump: 2,
-    soreness24hBefore: 1,
     fatigueLevel: 2,
     jointDiscomfort: 0,
-    energyScore: 3,
-    sleepQuality: 3,
+  });
+  // COMP-008: soreness and sleep are now captured before the session and live
+  // on the workout row. The summary reads them back so the adaptive engine
+  // still gets a soreness input and the weekly recovery record still receives a
+  // sleep value, both sourced from the more accurate pre-workout capture.
+  const [preWorkoutReadiness, setPreWorkoutReadiness] = useState({
+    soreness24hBefore: null,
+    sleepQuality: null,
   });
   const [notes, setNotes] = useState('');
   const [nextTimeNote, setNextTimeNote] = useState('');
@@ -213,13 +218,34 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       .catch(() => setComparison(null));
   }, [readOnly, routineId, user?.id, workoutId, tonnage]);
 
+  // COMP-008: pull the pre-workout soreness + sleep off the workout row so the
+  // engine and the weekly sleep write read the concurrent capture rather than a
+  // post-session rating. A Skip-started (or pre-COMP-008) session leaves these
+  // null, which both readers already treat as a neutral default.
+  useEffect(() => {
+    if (readOnly || !workoutId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const w = await getWorkoutById(workoutId);
+        if (!cancelled && w) {
+          setPreWorkoutReadiness({
+            soreness24hBefore: w.soreness24hBefore ?? null,
+            sleepQuality: w.sleepQuality ?? null,
+          });
+        }
+      } catch (_e) {}
+    })();
+    return () => { cancelled = true; };
+  }, [readOnly, workoutId]);
+
   useEffect(() => {
     // Map feedback to adaptive engine scales per muscle, then run adaptive engine
-    // soreness24hBefore: 1=fresh→2, 2=mild→3, 3=sore→4
+    // soreness24hBefore: 1=fresh→2, 2=mild→3, 3=sore→4 (now sourced pre-workout)
     // sessionDifficulty: 1=veryEasy→1(exceeded), 2=easy→1, 3=moderate→2(met), 4=hard→3(struggled), 5=brutal→4(failed)
     // overallPump: 1=none→1, 2=mild→2, 3=good→4
     // jointDiscomfort: 0=none→0, 1=slight→1, 2=moderate→2, 3=significant→3
-    const soreness = [0, 2, 3, 4][feedback.soreness24hBefore - 1] ?? 2;
+    const soreness = [0, 2, 3, 4][preWorkoutReadiness.soreness24hBefore - 1] ?? 2;
     const performance = [0, 1, 1, 2, 3, 4][feedback.sessionDifficulty] ?? 2;
     const pump = [1, 1, 2, 4][feedback.overallPump - 1] ?? 3;
     const joint = feedback.jointDiscomfort ?? 0;
@@ -244,7 +270,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     const decisions = runAdaptiveEngine(muscleFeedback);
     setAdaptiveDecisions(decisions);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feedback, weeklyVolume]);
+  }, [feedback, weeklyVolume, preWorkoutReadiness]);
 
   useEffect(() => {
     if (!workoutId || readOnly) return;
@@ -254,7 +280,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         await updateWorkout(workoutId, {
           sessionDifficulty: feedback.sessionDifficulty,
           overallPump: feedback.overallPump,
-          soreness24hBefore: feedback.soreness24hBefore,
+          // COMP-008: soreness_24h_before is written pre-session by
+          // createWorkout; the summary no longer rates or writes it, so it
+          // must not be sent here or it would clobber the pre-workout value.
           jointDiscomfort: feedback.jointDiscomfort,
           fatigueLevel: feedback.fatigueLevel,
           notes: notes || null,
@@ -327,7 +355,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       await updateWorkout(workoutId, {
         sessionDifficulty: feedback.sessionDifficulty,
         overallPump: feedback.overallPump,
-        soreness24hBefore: feedback.soreness24hBefore,
+        // COMP-008: soreness_24h_before is written pre-session by createWorkout;
+        // not sent here so the post-workout save can't clobber it.
         jointDiscomfort: feedback.jointDiscomfort,
         fatigueLevel: feedback.fatigueLevel,
         notes: notes || null,
@@ -336,15 +365,21 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
 
     // Contribute this session's sleep-quality rating to the week's recovery
     // record. This is the ONLY field WorkoutSummary writes to weekly_checkins:
-    // sleep_quality is not held on the workouts table and is read by
-    // CoachReview + the recovery-trend insight, and the weekly coach does NOT
-    // read it. Everything else this screen used to write either duplicated a
-    // weekly-coach input on a conflicting scale (energy, soreness,
-    // training_performance) or is sourced better elsewhere (per-session
-    // soreness/fatigue live on the workouts row). The save is now preserving,
-    // so passing only sleepQuality leaves the user's calorie / steps / cardio /
+    // sleep_quality is read by CoachReview + the recovery-trend insight, and the
+    // weekly coach does NOT read it. Everything else this screen used to write
+    // either duplicated a weekly-coach input on a conflicting scale (energy,
+    // soreness, training_performance) or is sourced better elsewhere (per-session
+    // soreness/fatigue live on the workouts row). The save is preserving, so
+    // passing only sleepQuality leaves the user's calorie / steps / cardio /
     // training answers for the week untouched.
-    if (user?.id) {
+    //
+    // COMP-008: sleep is now captured pre-session and lives on the workout row,
+    // so the value comes from preWorkoutReadiness rather than a post-workout
+    // rating. Only write when the lifter actually answered it — passing null
+    // would clear a sleep value the weekly check-in (or an earlier session)
+    // already set this week, since saveWeeklyCheckin treats explicit null as
+    // "clear".
+    if (user?.id && preWorkoutReadiness.sleepQuality != null) {
       try {
         await saveWeeklyCheckin(user.id, {
           // FF-006: attribute the sleep-quality rating to the workout's own
@@ -352,7 +387,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           // cross-midnight close used to land it in the wrong weekly bucket.
           // localWeekStartMs is the locked-rule, local Monday-anchored helper.
           weekStart: localWeekStartMs(workoutDayMs({ startedAt, endedAt })),
-          sleepQuality: feedback.sleepQuality || null,
+          sleepQuality: preWorkoutReadiness.sleepQuality,
         });
       } catch (_e) {}
     }
@@ -732,13 +767,14 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             </TouchableOpacity>
             {feedbackExpanded && (
               <View style={styles.feedbackCard}>
+                {/* COMP-008: Soreness, Energy and Sleep moved to the
+                    pre-workout intent prompt. The block keeps the three session
+                    responses you can only judge once the work is done, plus
+                    fatigue. */}
                 <RatingRow label="Difficulty" field="sessionDifficulty" value={feedback.sessionDifficulty} max={5} onChange={v => setFeedback(f => ({ ...f, sessionDifficulty: v }))} />
                 <RatingRow label="Muscle engagement" field="overallPump" value={feedback.overallPump} max={3} onChange={v => setFeedback(f => ({ ...f, overallPump: v }))} />
-                <RatingRow label="Soreness coming in" field="soreness24hBefore" value={feedback.soreness24hBefore} max={3} onChange={v => setFeedback(f => ({ ...f, soreness24hBefore: v }))} />
-                <RatingRow label="Fatigue" field="fatigueLevel" value={feedback.fatigueLevel} max={5} onChange={v => setFeedback(f => ({ ...f, fatigueLevel: v }))} />
                 <RatingRow label="Joint discomfort" field="jointDiscomfort" value={feedback.jointDiscomfort} max={3} onChange={v => setFeedback(f => ({ ...f, jointDiscomfort: v }))} />
-                <RatingRow label="Energy today" field="energyScore" value={feedback.energyScore} max={5} onChange={v => setFeedback(f => ({ ...f, energyScore: v }))} />
-                <RatingRow label="Sleep last night" field="sleepQuality" value={feedback.sleepQuality} max={5} onChange={v => setFeedback(f => ({ ...f, sleepQuality: v }))} />
+                <RatingRow label="Fatigue" field="fatigueLevel" value={feedback.fatigueLevel} max={5} onChange={v => setFeedback(f => ({ ...f, fatigueLevel: v }))} />
                 <TextInput
                   style={styles.notesInput}
                   value={notes}
