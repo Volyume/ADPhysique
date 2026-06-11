@@ -1261,6 +1261,18 @@ const SCHEMA_MIGRATIONS = [
       PRIMARY KEY (user_id, meal_slot, food_ref)
     )`,
   ],
+  // COMP-008 survey diet: pre-workout readiness capture. sleep_quality and
+  // energy_score are captured on the pre-workout intent prompt and written to
+  // the workout row at createWorkout time (soreness_24h_before already exists,
+  // line 95, and is reused — no re-add). Both nullable: a Skip-started or
+  // pre-COMP-008 session simply leaves them NULL, which every reader already
+  // tolerates. Mirrors supabase/migrate_072_workouts_readiness_columns.sql;
+  // additive + nullable, so the frozen old AAB that never writes them is
+  // unaffected. Duplicate-column is tolerated by isBenignMigrationError.
+  [
+    'ALTER TABLE workouts ADD COLUMN sleep_quality INTEGER',
+    'ALTER TABLE workouts ADD COLUMN energy_score INTEGER',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -1506,7 +1518,16 @@ function _trackEvent(userId, event, payload) {
   } catch (_) { /* tolerate test env without telemetry */ }
 }
 
-export async function createWorkout(userId, routineId = null, { intent = null } = {}) {
+export async function createWorkout(
+  userId,
+  routineId = null,
+  // COMP-008: the pre-workout intent prompt now also captures the three
+  // walked-in-with readiness facts. soreness24hBefore is on the existing 1-3
+  // scale (Fresh/Mild/Sore) the adaptive engine + computeRecoveryEMAs read;
+  // sleepQuality/energyScore are on the 1-5 domain (the prompt offers 2/3/4).
+  // All three are optional: a Skip start passes none and they stay NULL.
+  { intent = null, soreness24hBefore = null, sleepQuality = null, energyScore = null } = {},
+) {
   const d = await db();
   // Auto-link to the active mesocycle so tonnage + recovery data flows into the block dashboard
   const activeMeso = await d.getFirstAsync(
@@ -1526,14 +1547,14 @@ export async function createWorkout(userId, routineId = null, { intent = null } 
   const id = uid();
   const now = Date.now();
   await d.runAsync(
-    `INSERT INTO workouts (id, user_id, routine_id, mesocycle_id, mesocycle_week_id, started_at, is_completed, pre_workout_intent, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
-    [id, userId, routineId, mesocycleId, mesocycleWeekId, now, intent, now, now],
+    `INSERT INTO workouts (id, user_id, routine_id, mesocycle_id, mesocycle_week_id, started_at, is_completed, pre_workout_intent, soreness_24h_before, sleep_quality, energy_score, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)`,
+    [id, userId, routineId, mesocycleId, mesocycleWeekId, now, intent, soreness24hBefore, sleepQuality, energyScore, now, now],
   );
   // LB-8: a session was started. from_routine distinguishes plan-driven
   // starts from free/empty sessions; no training content in the payload.
   _trackEvent(userId, 'workout_started', { from_routine: !!routineId });
-  return { id, userId, routineId, mesocycleId, mesocycleWeekId, startedAt: now, isCompleted: 0, preWorkoutIntent: intent, createdAt: now, updatedAt: now };
+  return { id, userId, routineId, mesocycleId, mesocycleWeekId, startedAt: now, isCompleted: 0, preWorkoutIntent: intent, soreness24hBefore, sleepQuality, energyScore, createdAt: now, updatedAt: now };
 }
 
 export async function updateWorkout(id, data) {
@@ -5086,9 +5107,10 @@ export async function insertWorkoutFromCloud(userId, w) {
        started_at, ended_at, duration_minutes,
        notes, name, pre_workout_intent,
        session_difficulty, overall_pump, soreness_24h_before, fatigue_level, joint_discomfort,
+       sleep_quality, energy_score,
        set_count, total_volume,
        is_completed, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)`,
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)`,
     [
       w.id, userId, w.routine_id ?? null, w.mesocycle_id ?? null, w.mesocycle_week_id ?? null,
       // started_at falls back to now when the cloud row carries none, so a
@@ -5099,6 +5121,8 @@ export async function insertWorkoutFromCloud(userId, w) {
       w.notes ?? null, w.name ?? null, w.pre_workout_intent ?? null,
       w.session_difficulty ?? null, w.overall_pump ?? null,
       w.soreness_24h_before ?? null, w.fatigue_level ?? null, w.joint_discomfort ?? null,
+      // COMP-008 pre-workout readiness, column-symmetric with _upsertWorkout.
+      w.sleep_quality ?? null, w.energy_score ?? null,
       w.set_count ?? null, w.total_volume ?? null,
       toMs(w.started_at) ?? Date.now(), cloudMs ?? Date.now(),
     ],

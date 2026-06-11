@@ -325,6 +325,10 @@ async function _upsertWorkout(sb, supabaseUserId, w) {
     soreness_24h_before: w.soreness24hBefore ?? null,
     fatigue_level: w.fatigueLevel ?? null,
     joint_discomfort: w.jointDiscomfort ?? null,
+    // COMP-008 pre-workout readiness, kept column-symmetric with
+    // insertWorkoutFromCloud in database.js.
+    sleep_quality: w.sleepQuality ?? null,
+    energy_score: w.energyScore ?? null,
     set_count: w.setCount ?? null,
     total_volume: w.totalVolume ?? null,
     is_completed: true,
