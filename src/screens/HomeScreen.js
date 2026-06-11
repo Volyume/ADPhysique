@@ -303,6 +303,17 @@ export default function HomeScreen({ navigation }) {
   async function loadTrialBanner() {
     try {
       if (!user?.id || stageOf(userProfile) !== 'pro_trial') { setTrialBanner(null); return; }
+
+      // Re-lay the day-3 push on every Home open during the trial so its baked
+      // variant/copy/unlock-day track the freshest counters. It is laid once at
+      // trial start (day 0, when the user has done nothing → S3); without this
+      // refresh an active user who never cold-relaunches would get that stale
+      // "you've done nothing" push on day 3. No-ops once day 3 has passed.
+      try {
+        // eslint-disable-next-line global-require
+        require('../lib/notifications').scheduleTrialDay3Notification(user.id, userProfile)?.catch?.(() => {});
+      } catch (_) { /* best-effort */ }
+
       const endsAt = userProfile?.proTrialEndsAt ?? userProfile?.pro_trial_ends_at ?? null;
       const trialStart = trialStartFromEndsAt(endsAt);
       if (trialStart == null) { setTrialBanner(null); return; }
@@ -336,11 +347,13 @@ export default function HomeScreen({ navigation }) {
         variant, completedSessions, weighIns7d,
         unlockDayName: dayName(unlock), trialDay, edFlagOpen: !!edFlag,
       });
-      setTrialBanner({ line, variant });
 
+      // Read the per-trial dismissal BEFORE revealing the banner so a banner the
+      // user already dismissed can't flash for a frame while the read resolves.
       const dKey = `@volyume_trial_value_banner_dismissed_${user.id}`;
       const dv = await AsyncStorage.getItem(dKey).catch(() => null);
       setTrialBannerDismissed(dv === 'true');
+      setTrialBanner({ line, variant });
     } catch (_) {
       setTrialBanner(null);
     }

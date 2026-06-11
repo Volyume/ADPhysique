@@ -567,8 +567,10 @@ export async function restoreNotifications(prefs, userId = null) {
 
   // cancelAllNotifications above wiped the trial-window pushes too. They were
   // previously laid once at startCascade and never restored, so on the next app
-  // launch the cascade-gate (day 12/14) and COMP-023 day-3 pushes silently
-  // vanished. Re-lay them here from the stored trial end date so they survive.
+  // launch the cascade-gate pushes (legacy ids _19/_21, which fire at trial
+  // end−2d and trial end — i.e. day 12 and day 14 of the 14-day trial) and the
+  // COMP-023 day-3 push silently vanished. Re-lay them from the stored trial end
+  // date so they survive.
   // Both helpers are idempotent and no-op when the user isn't in a Pro trial.
   try {
     // eslint-disable-next-line global-require
