@@ -1,22 +1,11 @@
 import { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Keyboard } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { calculate1RM } from '../lib/algorithms';
 
-const SET_TYPE_LABELS = {
-  straight: 'Working',
-  warmup: 'Warm-up',
-  dropset: 'Drop set',
-  superset: 'Superset',
-  myo_reps: 'Myo-reps',
-  rest_pause: 'Rest-pause',
-  amrap: 'AMRAP',
-};
-
-export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypePicker, isWarmup = false }) {
-  const { weight, reps, setType, isGhost } = value;
+export default function SetEntry({ value, onChange, units = 'kg', isWarmup = false }) {
+  const { weight, reps, isGhost } = value;
   const repsRef = useRef(null);
 
   function adjust(field, delta) {
@@ -40,8 +29,6 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
   function setField(field, val) {
     onChange({ ...value, [field]: val, isGhost: false });
   }
-
-  const setTypeLabel = SET_TYPE_LABELS[setType] || 'Working';
 
   const liveWeight = parseFloat(value.weight);
   const liveReps = parseInt(value.actualReps || value.reps, 10);
@@ -145,40 +132,15 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
         </View>
       </View>
 
-      {/* Live estimated 1RM chip, shown when weight and reps are present, not a warm-up */}
-      {live1RM > 0 && liveReps >= 1 && liveReps <= 15 && !isWarmup && (
-        <View
-          style={styles.oneRmChip}
-          accessible
-          accessibilityLabel={`Estimated one rep max ${Math.round(live1RM)} ${units}`}
-        >
-          <Ionicons name="trending-up-outline" size={12} color={colors.textMuted} />
-          <Text style={styles.oneRmChipText}>
-            Est. max ≈ {Math.round(live1RM)}{units}
-          </Text>
-        </View>
-      )}
-
       {/* Effort picker removed, was rarely used in practice. RIR still
           gets recorded internally (defaulted in DEFAULT_SET) so the
           autoregulation engine keeps working; we just don't ask the
           user to set it per-set. */}
 
-      {/* Set Type, compact inline row */}
-      <TouchableOpacity
-        testID="volyume-set-type-btn"
-        style={styles.setTypeRow}
-        onPress={onOpenSetTypePicker}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityLabel={`Set type: ${setTypeLabel}, tap to change`}
-      >
-        <Text style={styles.setTypeLabel}>Set type</Text>
-        <View style={styles.setTypeRight}>
-          <Text style={styles.setTypeValue}>{setTypeLabel}</Text>
-          <Ionicons name="chevron-forward" size={13} color={colors.primary} style={{ marginLeft: spacing.xxs }} />
-        </View>
-      </TouchableOpacity>
+      {/* Set-type row removed (COMP-001): the card header's orientation
+          row in ActiveWorkoutScreen is now the set-type picker's entry
+          point. The duplicate 1RM chip went with it; the inline e1rmHint
+          beside the Reps label is the single in-card estimate. */}
     </View>
   );
 }
@@ -293,43 +255,5 @@ const styles = StyleSheet.create({
   },
   rirBtnTextActive: {
     color: colors.primary,
-  },
-  setTypeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  setTypeLabel: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
-  },
-  setTypeRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  setTypeValue: {
-    fontSize: fontSize.sm,
-    color: colors.textPrimary,
-    fontWeight: fontWeight.semibold,
-  },
-  oneRmChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-    backgroundColor: colors.surface2,
-    borderRadius: radius.sm,
-    marginTop: spacing.xs,
-  },
-  oneRmChipText: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    fontWeight: fontWeight.medium,
   },
 });

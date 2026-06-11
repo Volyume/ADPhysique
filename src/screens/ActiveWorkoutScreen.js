@@ -28,7 +28,6 @@ import { rankSwaps } from '../lib/swapEngine';
 import { isClusterType, clusterLabel, summariseCluster, mergeClusterNote } from '../lib/clusterSet';
 import { formatPerSide, loadUnilateralExercises } from '../lib/unilateral';
 import { FORM_TIPS } from '../lib/formTips';
-import InfoTooltip from '../components/InfoTooltip';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage } from '../lib/whyThisTemplates';
 
@@ -172,6 +171,7 @@ export default function ActiveWorkoutScreen({ navigation }) {
   const [setTargets, setSetTargets] = useState([]);
   const [targetReason, setTargetReason] = useState(null);
   const [showSetTypePicker, setShowSetTypePicker] = useState(false);
+  const [showOverflow, setShowOverflow] = useState(false);
   const [showExecution, setShowExecution] = useState(false);
   const [showStaleModal, setShowStaleModal] = useState(false);
   const [showSwapModal, setShowSwapModal] = useState(false);
@@ -182,7 +182,10 @@ export default function ActiveWorkoutScreen({ navigation }) {
   const [preCrunchSnapshot, setPreCrunchSnapshot] = useState(null);
   const [isDeloadWeek, setIsDeloadWeek] = useState(false);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
-  const [ghostSet, setGhostSet] = useState(null); // pre-fill from last session (same set index)
+  // Ghost pre-fill bookkeeping. The value itself is no longer rendered (the
+  // ghost chip went in COMP-001; the muted input colour carries the state),
+  // but the setter still arms/clears the pre-fill in loadHistory/onChange.
+  const [_ghostSet, setGhostSet] = useState(null);
   const [nextTimeNotes, setNextTimeNotes] = useState([]);  // "next time" coaching notes for this routine
   // Cluster counter for myo-reps / rest-pause: 0 = activation set, 1+ = mini-set N+1
   const autoAdvanceRef = useRef(null);
@@ -1154,6 +1157,50 @@ export default function ActiveWorkoutScreen({ navigation }) {
   const workingLogged = countProgressSets(loggedSets);
   const targetComplete = targetSets && workingLogged >= targetSets;
 
+  // Card-header line 1 (COMP-001): where am I, what kind of set. The whole
+  // line opens the set-type picker (it replaced SetEntry's card-foot row).
+  const orientationLabel = (() => {
+    if (currentSet.setType === 'warmup') {
+      return `Warm-up · Set W${loggedSets.filter(s => s.setType === 'warmup').length + 1}`;
+    }
+    if (isDeloadWeek) return `Light set ${workingLogged + 1} · Easy`;
+    const pos = targetSets ? `Set ${workingLogged + 1} of ${targetSets}` : `Set ${workingLogged + 1}`;
+    const mode = (currentSGI != null && pairedExerciseName)
+      ? 'Superset'
+      : (SET_TYPE_OPTIONS.find(o => o.value === currentSet.setType)?.label ?? 'Working');
+    return `${pos} · ${mode}`;
+  })();
+
+  // Stalled-progress nudge: same weight & reps across the last 3 sessions
+  // means the suggestion engine isn't doing enough on its own, pull back
+  // the loop and offer a concrete next step. First working set only, so it
+  // doesn't blare repeatedly. Renders as the card header's coaching line.
+  const stalledAdvice = (() => {
+    if (currentSet.setType === 'warmup' || workingLogged !== 0) return null;
+    if (!allTimeSets || allTimeSets.length < 9) return null;
+    // Group by workoutId, take the heaviest set of each session
+    const bySession = new Map();
+    for (const s of allTimeSets) {
+      if ((s.setType ?? s.set_type ?? 'straight') === 'warmup') continue;
+      const wid = s.workoutId ?? s.workout_id;
+      if (!wid) continue;
+      const cur = bySession.get(wid);
+      if (!cur || (s.weight ?? 0) > (cur.weight ?? 0)) bySession.set(wid, s);
+    }
+    const sessions = Array.from(bySession.values())
+      .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
+      .slice(0, 3);
+    if (sessions.length < 3) return null;
+    const w0 = sessions[0].weight ?? 0;
+    const r0 = sessions[0].actualReps ?? 0;
+    const stalled = sessions.every(s =>
+      Math.abs((s.weight ?? 0) - w0) < 0.1 &&
+      Math.abs((s.actualReps ?? 0) - r0) <= 1,
+    );
+    if (!stalled || w0 === 0) return null;
+    return { w0, r0 };
+  })();
+
   if (!exercise) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -1262,6 +1309,25 @@ export default function ActiveWorkoutScreen({ navigation }) {
                 <Ionicons name="swap-horizontal" size={16} color={colors.primary} />
                 <Text style={styles.swapBtnText}>Swap</Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.overflowBtn}
+                onPress={() => {
+                  if (showInfoTipPulse) {
+                    infoPulseLoop.current?.stop();
+                    infoPulseAnim.setValue(1);
+                    setShowInfoTipPulse(false);
+                    AsyncStorage.setItem('@volyume_seen_workout_info', 'true').catch(() => {});
+                  }
+                  setShowOverflow(true);
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="More options for this exercise"
+              >
+                <Animated.View style={showInfoTipPulse ? { transform: [{ scale: infoPulseAnim }] } : null}>
+                  <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
+                </Animated.View>
+              </TouchableOpacity>
             </View>
             <Text style={styles.exerciseMuscle}>
               {MUSCLE_DISPLAY_NAMES[exercise.primaryMuscle ?? exercise.primary_muscle] ??
@@ -1362,130 +1428,129 @@ export default function ActiveWorkoutScreen({ navigation }) {
                 Get the muscles and joints ready. Light weight, easy reps. Tap Done when you're ready to work.
               </Text>
             )}
-            <Text style={styles.setEntryTitle}>
-              {currentSet.setType === 'warmup'
-                ? 'Warm-up set'
-                : isDeloadWeek
-                  ? `Light set ${workingLogged + 1} · Easy`
-                  : routineExercise?.recommendedSets
-                    ? `Set ${workingLogged + 1} / ${routineExercise.recommendedSets}`
-                    : `Set ${workingLogged + 1}`}
-            </Text>
-            {currentSet.setType !== 'warmup' && setTargets[workingLogged] && (
-              <View style={styles.inlineTargetChip}>
-                <Ionicons name="flag-outline" size={11} color={colors.primary} />
-                <Text style={styles.inlineTargetText}>
-                  Target: {setTargets[workingLogged].weight}{units} × {setTargets[workingLogged].repsMin === setTargets[workingLogged].repsMax ? setTargets[workingLogged].repsMin : `${setTargets[workingLogged].repsMin}–${setTargets[workingLogged].repsMax}`}
-                  {setTargets[workingLogged].action === 'increase' ? ' ↑' : setTargets[workingLogged].action === 'decrease' ? ' ↓' : ''}
-                </Text>
-              </View>
-            )}
-            {currentSet.setType !== 'warmup' && targetReason && (
-              <View style={styles.coachReasonChip}>
-                <Ionicons name="sparkles-outline" size={11} color={colors.primary} />
-                <Text style={styles.coachReasonText}>{targetReason}</Text>
-              </View>
-            )}
-            {/* Stalled-progress nudge: if the user has done the same
-                weight & reps for the same exercise across the last 3
-                sessions, the suggestion engine isn't doing enough on
-                its own, pull-back the loop and offer a concrete next
-                step. Only shown on the first working set of an
-                exercise so it doesn't blare repeatedly. */}
-            {currentSet.setType !== 'warmup' && workingLogged === 0 && (() => {
-              if (!allTimeSets || allTimeSets.length < 9) return null;
-              // Group by workoutId, take the heaviest set of each session
-              const bySession = new Map();
-              for (const s of allTimeSets) {
-                if ((s.setType ?? s.set_type ?? 'straight') === 'warmup') continue;
-                const wid = s.workoutId ?? s.workout_id;
-                if (!wid) continue;
-                const cur = bySession.get(wid);
-                if (!cur || (s.weight ?? 0) > (cur.weight ?? 0)) bySession.set(wid, s);
-              }
-              const sessions = Array.from(bySession.values())
-                .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
-                .slice(0, 3);
-              if (sessions.length < 3) return null;
-              const w0 = sessions[0].weight ?? 0;
-              const r0 = sessions[0].actualReps ?? 0;
-              const stalled = sessions.every(s =>
-                Math.abs((s.weight ?? 0) - w0) < 0.1 &&
-                Math.abs((s.actualReps ?? 0) - r0) <= 1,
-              );
-              if (!stalled || w0 === 0) return null;
-              const bumpKg = 2.5; // gym weights are kg-only
-              return (
-                <View style={styles.stalledChip}>
-                  <Ionicons name="trending-up-outline" size={12} color={colors.warning} />
-                  <Text style={styles.stalledChipText}>
-                    Same load 3 sessions running. Try {w0 + bumpKg}{units} × {Math.max(1, r0 - 1)}, or stick at {w0}{units} for {r0 + 1} reps.
-                  </Text>
-                </View>
-              );
-            })()}
-            {currentSet.setType !== 'warmup' && prevSets[workingLogged] && (() => {
+            {/* Card header (COMP-001): three fixed lines replace the old
+                chip stack (set title, target chip, coach-reason chip,
+                stalled chip, beat chip, repeat-last button, ghost chip).
+                One mechanism for previous performance, at input size,
+                tappable. Ghost pre-fill state is still communicated by
+                the muted input colour (valueInputGhost). */}
+
+            {/* Line 1: orientation row. Also the set-type picker's only
+                entry point now the SetEntry card-foot row is gone. */}
+            <TouchableOpacity
+              testID="volyume-set-type-btn"
+              style={styles.orientationRow}
+              onPress={() => setShowSetTypePicker(true)}
+              hitSlop={{ top: 8, bottom: 4, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={`${orientationLabel}, tap to change set type`}
+            >
+              <Text style={styles.orientationText}>{orientationLabel}</Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
+            </TouchableOpacity>
+
+            {/* Line 2: beat line. The previous-performance anchor plus
+                target range and direction, promoted from xs italic to
+                input-size numerals. Tap applies last session's numbers,
+                the Hevy tap-previous-to-fill mechanic. */}
+            {currentSet.setType !== 'warmup' && (() => {
+              const target = setTargets[workingLogged];
               const prev = prevSets[workingLogged];
-              const cw = parseFloat(currentSet.weight) || 0;
-              const sameWeight = Math.abs(cw - prev.weight) < 0.1;
+              if (target?.isDeload) {
+                return (
+                  <TouchableOpacity
+                    style={styles.beatLine}
+                    onPress={() => {
+                      hapticsVocab.setLogged();
+                      setCurrentSet(s => ({ ...s, weight: String(target.weight ?? 0), reps: target.repsMin ?? s.reps, isGhost: false }));
+                    }}
+                    hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Recovery week: ${target.weight} ${units} times ${target.repsMin}. Tap to apply.`}
+                  >
+                    <Text style={styles.beatLineLabel}>
+                      Recovery week  ·  <Text style={styles.beatLineValue}>{target.weight}{units} × {target.repsMin}</Text>
+                    </Text>
+                  </TouchableOpacity>
+                );
+              }
+              const range = target
+                ? (target.repsMin === target.repsMax ? `${target.repsMin}` : `${target.repsMin}–${target.repsMax}`)
+                : (routineExercise?.recommendedRepsMin != null
+                  ? `${routineExercise.recommendedRepsMin}–${routineExercise.recommendedRepsMax}`
+                  : null);
+              const glyph = target?.action === 'increase' ? '↑' : target?.action === 'decrease' ? '↓' : null;
+              if (prev) {
+                return (
+                  <TouchableOpacity
+                    style={styles.beatLine}
+                    onPress={() => {
+                      hapticsVocab.setLogged();
+                      setCurrentSet(s => ({
+                        ...s,
+                        weight: String(prev.weight ?? 0),
+                        reps: prev.actualReps ?? s.reps,
+                        isGhost: false,
+                      }));
+                    }}
+                    hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Last session: ${prev.weight} ${units} times ${prev.actualReps} reps.${range ? ` Target ${range}.` : ''} Tap to apply.`}
+                  >
+                    <Text style={styles.beatLineLabel}>
+                      Last: <Text style={styles.beatLineValue}>{prev.weight}{units} × {prev.actualReps}</Text>
+                      {range ? '  ·  Target ' : ''}
+                      {range ? <Text style={styles.beatLineValue}>{range}</Text> : null}
+                      {glyph ? <Text style={styles.beatLineGlyph}> {glyph}</Text> : null}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              }
+              if (!range) return null;
               return (
-                <View style={styles.beatChip}>
-                  <Ionicons name="time-outline" size={11} color={colors.textMuted} />
-                  <Text style={styles.beatChipText}>
-                    {sameWeight
-                      ? `Last time: ${prev.weight}${units} × ${prev.actualReps} reps. Can you hit ${prev.actualReps + 1}?`
-                      : `Last time: ${prev.weight}${units} × ${prev.actualReps} reps`}
+                <View
+                  style={styles.beatLine}
+                  accessible
+                  accessibilityLabel={`First time on this exercise. Target ${range} reps.`}
+                >
+                  <Text style={styles.beatLineLabel}>
+                    First time  ·  Target <Text style={styles.beatLineValue}>{range}</Text>
                   </Text>
                 </View>
               );
             })()}
-            {/* Quick-repeat: pre-fill the entry card from the most
-                recent logged set so the user doesn't have to type the
-                same numbers twice in a row. Hidden when the entry
-                already matches the last logged set (no value) or when
-                no sets have been logged this session yet. */}
-            {(() => {
-              const last = loggedSets[loggedSets.length - 1];
-              if (!last) return null;
-              const cw = parseFloat(currentSet.weight) || 0;
-              const cr = parseInt(currentSet.reps, 10) || 0;
-              if (Math.abs(cw - (last.weight ?? 0)) < 0.01 && cr === (last.actualReps ?? 0)) return null;
-              return (
-                <TouchableOpacity
-                  style={styles.repeatLastBtn}
-                  onPress={() => {
-                    hapticsVocab.setLogged();
-                    setCurrentSet(s => ({
-                      ...s,
-                      weight: String(last.weight ?? 0),
-                      reps: last.actualReps ?? s.reps,
-                      isGhost: false,
-                    }));
-                  }}
-                  hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Repeat last set: ${last.weight}${units} times ${last.actualReps}`}
-                >
-                  <Ionicons name="repeat-outline" size={13} color={colors.textSecondary} />
-                  <Text style={styles.repeatLastText}>
-                    Repeat last: {last.weight}{units} × {last.actualReps}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })()}
+
+            {/* Line 3: coaching line, max one, first working set only.
+                Priority: stalled advice over coach reason. Absent while
+                the deload banner is showing (one context line at a time).
+                Tap opens the exercise info sheet. */}
+            {currentSet.setType !== 'warmup' && workingLogged === 0 &&
+              !(isDeloadWeek && !deloadDismissed) && (stalledAdvice || targetReason) && (
+              <TouchableOpacity
+                style={styles.coachLine}
+                onPress={() => setShowExecution(true)}
+                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                accessibilityRole="button"
+                accessibilityLabel={stalledAdvice
+                  ? `Same weight 3 sessions running. Try ${stalledAdvice.w0 + 2.5} ${units} times ${Math.max(1, stalledAdvice.r0 - 1)}, or stay at ${stalledAdvice.w0} ${units} and push for ${stalledAdvice.r0 + 1}.`
+                  : targetReason}
+              >
+                <Ionicons name="sparkles-outline" size={13} color={colors.primary} style={{ marginTop: spacing.xxs }} />
+                <Text style={styles.coachLineText} numberOfLines={2}>
+                  {stalledAdvice
+                    ? `Same weight 3 sessions running. Try ${stalledAdvice.w0 + 2.5}${units} × ${Math.max(1, stalledAdvice.r0 - 1)}, or stay at ${stalledAdvice.w0}${units} and push for ${stalledAdvice.r0 + 1}.`
+                    : targetReason}
+                </Text>
+                <Ionicons name="chevron-forward" size={13} color={colors.textSecondary} style={{ marginTop: spacing.xxs }} />
+              </TouchableOpacity>
+            )}
             {showInfoTipPulse && loggedSets.length === 0 && prevSets.length === 0 && (
               <View style={styles.firstSetHint}>
                 <Ionicons name="sparkles-outline" size={14} color={colors.primary} />
                 <Text style={styles.firstSetHintText}>
                   Choose a weight and reps, then tap Log set when done.
-                  Tap Info below to see how to do this exercise correctly.
+                  Tap ⋯ above for how to do this exercise correctly.
                 </Text>
-              </View>
-            )}
-            {currentSet.isGhost && ghostSet && (
-              <View style={styles.ghostChip}>
-                <Ionicons name="time-outline" size={12} color={colors.textMuted} />
-                <Text style={styles.ghostChipText}>Pre-filled from last session. Tap to confirm.</Text>
               </View>
             )}
             {/* Warm-ups are no longer auto-suggested. Two reasons: the
@@ -1501,7 +1566,6 @@ export default function ActiveWorkoutScreen({ navigation }) {
                 setCurrentSet(next);
               }}
               units={units}
-              onOpenSetTypePicker={() => setShowSetTypePicker(true)}
               isWarmup={currentSet.setType === 'warmup'}
             />
 
@@ -1628,70 +1692,9 @@ export default function ActiveWorkoutScreen({ navigation }) {
             </TouchableOpacity>
           )}
 
-          <View style={styles.secondaryActions}>
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => setShowNoteInput(v => !v)}
-              accessibilityRole="button"
-              accessibilityLabel="Add note to set"
-            >
-              <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
-              <Text style={styles.actionBtnText}>Note</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.actionBtnGuide]}
-              onPress={() => {
-                if (showInfoTipPulse) {
-                  infoPulseLoop.current?.stop();
-                  infoPulseAnim.setValue(1);
-                  setShowInfoTipPulse(false);
-                  AsyncStorage.setItem('@volyume_seen_workout_info', 'true').catch(() => {});
-                }
-                setShowExecution(true);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="View exercise guide"
-            >
-              <Animated.View style={showInfoTipPulse ? { transform: [{ scale: infoPulseAnim }] } : null}>
-                <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
-              </Animated.View>
-              <Text style={[styles.actionBtnText, styles.actionBtnGuideText]}>Info</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              testID="volyume-btn-add-mid-workout"
-              style={styles.actionBtn}
-              onPress={() => setShowExercisePicker(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Add exercise to workout"
-            >
-              <Ionicons name="add-circle-outline" size={18} color={colors.textSecondary} />
-              <Text style={styles.actionBtnText}>Add</Text>
-            </TouchableOpacity>
-            {!isLastExercise && (
-              <TouchableOpacity
-                style={[styles.actionBtn, isPairedWithNext && styles.actionBtnPaired]}
-                onPress={handleTogglePair}
-                accessibilityRole="button"
-                accessibilityLabel={isPairedWithNext ? 'Unpair from next exercise' : 'Pair as superset with next exercise'}
-              >
-                <Ionicons name={isPairedWithNext ? 'link' : 'link-outline'} size={18} color={isPairedWithNext ? colors.primary : colors.textSecondary} />
-                <Text style={[styles.actionBtnText, isPairedWithNext && { color: colors.primary }]}>
-                  {isPairedWithNext ? 'Paired' : 'Pair'}
-                </Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.actionBtnDanger]}
-              onPress={handleRemoveExercise}
-              accessibilityRole="button"
-              accessibilityLabel="Remove exercise from workout"
-            >
-              <Ionicons name="trash-outline" size={18} color={colors.error} />
-              <Text style={[styles.actionBtnText, { color: colors.error }]}>Remove</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Logged Sets */}
+          {/* Logged sets sit ABOVE the action row (COMP-001): the session
+              receipt builds above the fold, so each logged set is visible
+              without scrolling past secondary actions. */}
           {loggedSets.length > 0 && (
             <View style={styles.loggedSection}>
               <Text style={styles.loggedTitle}>This workout</Text>
@@ -1705,6 +1708,30 @@ export default function ActiveWorkoutScreen({ navigation }) {
               ))}
             </View>
           )}
+
+          {/* Action row (COMP-001): two legible buttons. Swap, info, pair,
+              time crunch and remove live in the ⋯ overflow sheet. */}
+          <View style={styles.secondaryActions}>
+            <TouchableOpacity
+              testID="volyume-btn-add-mid-workout"
+              style={styles.actionBtn}
+              onPress={() => setShowExercisePicker(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Add exercise to workout"
+            >
+              <Ionicons name="add-circle-outline" size={18} color={colors.textSecondary} />
+              <Text style={styles.actionBtnText}>Add exercise</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => setShowNoteInput(v => !v)}
+              accessibilityRole="button"
+              accessibilityLabel="Add note to set"
+            >
+              <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
+              <Text style={styles.actionBtnText}>Note</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Ghost navigation */}
           {!targetComplete && (
@@ -1721,23 +1748,8 @@ export default function ActiveWorkoutScreen({ navigation }) {
             )
           )}
 
-          {/* Phase 6: Time Crunch button */}
-          {!timeCrunchActive && workoutExercises.length > currentExerciseIndex + 1 && (
-            <View style={styles.timeCrunchRow}>
-              <TouchableOpacity style={styles.timeCrunchBtn} onPress={handleTimeCrunch} activeOpacity={0.75}>
-                <Ionicons name="timer-outline" size={15} color={colors.warning} />
-                <Text style={styles.timeCrunchBtnText}>Time crunch today</Text>
-              </TouchableOpacity>
-              <InfoTooltip
-                size={15}
-                text={
-                  'Shortens your remaining session to fit the time you have left.\n\n' +
-                  'Cuts rest times by around 30%, drops any isolation exercises you haven\'t started yet, and keeps everything you\'ve already begun. Your main lifts stay in.\n\n' +
-                  'You can undo it straight away if you change your mind.'
-                }
-              />
-            </View>
-          )}
+          {/* Time crunch moved into the ⋯ overflow sheet (COMP-001); only
+              the active-state bar still renders inline. */}
           {timeCrunchActive && !!timeCrunchMsg && (
             <View style={styles.timeCrunchActiveBar}>
               <Ionicons name="timer" size={14} color={colors.warning} style={{ marginTop: spacing.xxs }} />
@@ -1944,6 +1956,88 @@ export default function ActiveWorkoutScreen({ navigation }) {
                 )}
               </TouchableOpacity>
             ))}
+          </View>
+        </Modal>
+
+        {/* Exercise overflow sheet (COMP-001): secondary and destructive
+            exercise actions, off the permanent surface. Remove keeps its
+            own confirm alert inside handleRemoveExercise. */}
+        <Modal
+          visible={showOverflow}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowOverflow(false)}
+        >
+          <TouchableOpacity
+            style={styles.sheetOverlay}
+            activeOpacity={1}
+            onPress={() => setShowOverflow(false)}
+          />
+          <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>{exercise?.name}</Text>
+            <TouchableOpacity
+              style={styles.sheetOption}
+              onPress={() => { setShowOverflow(false); handleOpenSwap(); }}
+              accessibilityRole="button"
+              accessibilityLabel="Swap exercise"
+            >
+              <View style={styles.overflowOptionRow}>
+                <Ionicons name="swap-horizontal" size={18} color={colors.textSecondary} />
+                <Text style={styles.sheetOptionLabel}>Swap exercise</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.sheetOption}
+              onPress={() => { setShowOverflow(false); setShowExecution(true); }}
+              accessibilityRole="button"
+              accessibilityLabel="Exercise info"
+            >
+              <View style={styles.overflowOptionRow}>
+                <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
+                <Text style={styles.sheetOptionLabel}>Exercise info</Text>
+              </View>
+            </TouchableOpacity>
+            {!isLastExercise && (
+              <TouchableOpacity
+                style={styles.sheetOption}
+                onPress={() => { setShowOverflow(false); handleTogglePair(); }}
+                accessibilityRole="button"
+                accessibilityLabel={isPairedWithNext ? 'Unpair from next exercise' : 'Pair as superset with next exercise'}
+              >
+                <View style={styles.overflowOptionRow}>
+                  <Ionicons name={isPairedWithNext ? 'link' : 'link-outline'} size={18} color={isPairedWithNext ? colors.primary : colors.textSecondary} />
+                  <Text style={styles.sheetOptionLabel}>{isPairedWithNext ? 'Unpair superset' : 'Pair as superset'}</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+            {!timeCrunchActive && workoutExercises.length > currentExerciseIndex + 1 && (
+              <TouchableOpacity
+                style={styles.sheetOption}
+                onPress={() => { setShowOverflow(false); handleTimeCrunch(); }}
+                accessibilityRole="button"
+                accessibilityLabel="Time crunch today"
+              >
+                <View style={styles.overflowOptionRow}>
+                  <Ionicons name="timer-outline" size={18} color={colors.textSecondary} />
+                  <View style={styles.sheetOptionText}>
+                    <Text style={styles.sheetOptionLabel}>Time crunch today</Text>
+                    <Text style={styles.sheetOptionDesc}>Shortens the rest of today's session to fit the time you have left. Undo any time.</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.sheetOption}
+              onPress={() => { setShowOverflow(false); handleRemoveExercise(); }}
+              accessibilityRole="button"
+              accessibilityLabel="Remove exercise from workout"
+            >
+              <View style={styles.overflowOptionRow}>
+                <Ionicons name="trash-outline" size={18} color={colors.error} />
+                <Text style={[styles.sheetOptionLabel, { color: colors.error }]}>Remove exercise</Text>
+              </View>
+            </TouchableOpacity>
           </View>
         </Modal>
 
@@ -2166,10 +2260,16 @@ const styles = StyleSheet.create({
   },
   firstSetHint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, backgroundColor: colors.primaryBg, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm },
   firstSetHintText: { flex: 1, fontSize: fontSize.xs, color: colors.primary, lineHeight: 18 },
-  setEntryTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2 },
+  // COMP-001 card header: three lines replace the old chip stack.
+  orientationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.xs },
+  orientationText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
+  beatLine: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
+  beatLineLabel: { fontSize: fontSize.sm, color: colors.textSecondary },
+  beatLineValue: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
+  beatLineGlyph: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary },
+  coachLine: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs2 },
+  coachLineText: { flex: 1, fontSize: fontSize.sm, color: colors.primary, lineHeight: 18 },
   noteInput: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, fontSize: fontSize.sm, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 60 },
-  ghostChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, backgroundColor: colors.surface2, borderRadius: radius.sm, alignSelf: 'flex-start', marginBottom: spacing.xs },
-  ghostChipText: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
   // Log set is the primary action on this screen, so it reads as a filled
   // amber button with a clear label rather than a tinted outline. Dark label
   // for contrast on amber (white on amber fails WCAG). Warm-ups stay visually
@@ -2202,12 +2302,10 @@ const styles = StyleSheet.create({
   clusterCancel: { alignItems: 'center', paddingVertical: spacing.xs },
   clusterCancelText: { fontSize: fontSize.sm, color: colors.textMuted },
   secondaryActions: { flexDirection: 'row', gap: spacing.sm },
-  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.md, borderWidth: 1, borderColor: colors.border },
-  actionBtnDanger: { borderColor: withAlpha(colors.error, 0.251) },
-  actionBtnGuide: { borderColor: withAlpha(colors.primary, 0.376), backgroundColor: colors.primaryBg },
-  actionBtnPaired: { borderColor: withAlpha(colors.primary, 0.376), backgroundColor: colors.primaryBg },
-  actionBtnText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
-  actionBtnGuideText: { color: colors.primary },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.md, minHeight: 44, borderWidth: 1, borderColor: colors.border },
+  actionBtnText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  overflowBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  overflowOptionRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   supersetChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     alignSelf: 'flex-start',
@@ -2220,9 +2318,6 @@ const styles = StyleSheet.create({
   nextExerciseBtnText: { fontSize: fontSize.md, color: colors.primary, fontWeight: fontWeight.bold },
   finishWorkoutLargeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1.5, borderColor: colors.success, borderRadius: radius.lg, paddingVertical: spacing.lg },
   finishWorkoutLargeBtnText: { fontSize: fontSize.md, color: colors.success, fontWeight: fontWeight.bold },
-  timeCrunchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  timeCrunchBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: withAlpha(colors.warning, 0.333), backgroundColor: colors.warningBg ?? colors.surface },
-  timeCrunchBtnText: { fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium },
   timeCrunchActiveBar: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, padding: spacing.sm, backgroundColor: colors.warningBg ?? colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: withAlpha(colors.warning, 0.267) },
   timeCrunchActiveContent: { flex: 1, gap: spacing.sm },
   timeCrunchActiveText: { fontSize: fontSize.xs, color: colors.warning, lineHeight: 18 },
@@ -2301,45 +2396,6 @@ const styles = StyleSheet.create({
   keepTrainingBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
   discardConfirmBtn: { alignItems: 'center', paddingVertical: spacing.md },
   discardConfirmBtnText: { fontSize: fontSize.sm, color: colors.error, fontWeight: fontWeight.medium },
-  inlineTargetChip: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    backgroundColor: colors.primaryBg, borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm, paddingVertical: 3,
-    alignSelf: 'flex-start', marginBottom: spacing.xs,
-  },
-  inlineTargetText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
-  coachReasonChip: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    backgroundColor: colors.surface2, borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
-    alignSelf: 'flex-start', marginBottom: spacing.xs,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.188),
-  },
-  coachReasonText: { fontSize: fontSize.xs, color: colors.textSecondary, flexShrink: 1 },
-  beatChip: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    marginBottom: spacing.xs,
-    alignSelf: 'flex-start',
-  },
-  beatChipText: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
-  repeatLastBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    alignSelf: 'flex-start', marginBottom: spacing.xs,
-    paddingVertical: spacing.xs, paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  repeatLastText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
-  stalledChip: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 6,
-    marginBottom: spacing.xs,
-    paddingVertical: 6, paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm,
-    backgroundColor: colors.warningBg,
-    borderWidth: 1, borderColor: withAlpha(colors.warning, 0.251),
-  },
-  stalledChipText: { fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium, flex: 1, lineHeight: 16 },
   nextTimeBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     backgroundColor: colors.primaryBg,
