@@ -9,6 +9,56 @@ hand-off. Read this first. Two companion docs hold the detail:
 
 ---
 
+## UPDATE 2026-06-11 (session 6 — COMP-024 SHIPPED LIVE, no shadow) — READ THIS FIRST
+
+Founder directed: **no shadow mode anywhere — build live, in full** ("I don't
+have capability to flip anything"). So §12/§13's shadow-mandatory gate is
+overridden. COMP-024 built live on `claude/main-branch-content-update-dcqicf`
+(2 commits). Hard lines held: no `main`, no `src/coaching` safety edits, calorie
+floors + the −1.5% rapid-loss threshold + `edPatternDetector` untouched.
+
+What shipped (COMP-024 cycle-robust weight smoothing):
+- **`src/lib/robustTrend.js`** — the founder-approved Candidate A (asymmetric
+  Huber-clamped robust-innovation EWMA) + a number-array form; pure, 11
+  fixtures (§5: F1 excursion ~80% damped, F2 weekend, F3 loss undamped, F6
+  fat-finger, F7 sparse, F8 determinism).
+- **DISPLAY promotion is LIVE:** the BodyMetrics weight-trend takeaway smooths
+  with the robust trend (raw dots still shown). The blueprint's "display first"
+  step.
+- **F4 safety invariant (blocking)** in `engine-invariants.test.js`: a genuine
+  rapid loss still fires `rapidWeightLossFlag` + ED s1. Safety reads never touch
+  the robust trend.
+
+**IMPORTANT FINDING — the cost of dropping shadow is already concrete.** I wired
+the robust trend into the coaching DECISIONS (on-target / off-target sizing)
+first; the **bulk_aggressive simulator caught a real regression** — the
+asymmetric upward clamp damps *sustained* gains, not only transient water-weight
+spikes, so a fast bulk stopped triggering downward calorie pulls. This is
+exactly what shadow-divergence review exists to vet. With shadow waived, the
+test harness caught it instead, and I **held the decision-promotion** (decisions
++ safety stay on the plain EWMA — no regression) rather than ship broken bulk
+coaching. To promote the coaching decisions to the robust trend safely, the
+clamp needs reworking so it tracks sustained trends (e.g. a median-prefilter, or
+a trend-aware scale) — that work, and its validation, is the remaining COMP-024
+piece. **Health baseline: 0 errors, 4 warnings, 219 suites / 3395 tests.**
+
+**STILL TO DO from the founder's "do them all" (NOT yet built this session):**
+- **COMP-026** (adaptive-TDEE resize activation + step modifier) — the other
+  engine change. Large + safety-adjacent (FFM floors, ±5% cap, rapid-loss
+  interlocks). Approved deps not needed here; it's pure engine. Build live next,
+  with the same safety-invariant discipline. **Do this fresh, not at the tail of
+  a long session — it changes live calorie SIZING.**
+- **COMP-004 door** — founder chose **"both surfaces"**: host the trend card on
+  Progress + Diary; the TodayStrip logged cell links to Progress. Pure UI.
+- **COMP-029 light theme** (`expo-system-ui` approved) — the 122-site token
+  migration + system background; JS/config here, native rebuild on founder EAS.
+- **COMP-019 Stage 2 widgets** (`react-native-android-widget` +
+  `@bacons/expo-apple-targets` approved) — JS/config here; signed native build
+  on founder EAS. The #175 spike still applies to the Apple targets.
+- **Billing stays HELD** (founder kept it held).
+
+---
+
 ## UPDATE 2026-06-11 (session 5 — COMP-027 PART B SHIPPED) — READ THIS FIRST
 
 Founder said "just do them, no supervision"; I held the hard gates (billing,
