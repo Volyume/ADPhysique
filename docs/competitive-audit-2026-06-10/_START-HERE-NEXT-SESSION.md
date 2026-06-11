@@ -9,6 +9,70 @@ hand-off. Read this first. Two companion docs hold the detail:
 
 ---
 
+## UPDATE 2026-06-11 (build session — engine cluster SHIPPED) — READ THIS FIRST
+
+The attended decisions below (§10–13) were then BUILT. Shipped this session, all
+on `claude/main-branch-content-update-dcqicf`, each lint-clean with the full
+suite green:
+
+- **COMP-008** survey diet + Fast Check-In (4 commits: e6461f3, 0124047,
+  74ecc12, 0651d9b). Pre-workout readiness capture (soreness/sleep/energy) on the
+  intent prompt; soreness + weekly sleep re-sourced PRE-session per §10;
+  post-workout block trimmed; condensed weekly Fast Check-In. Schema: nullable
+  `sleep_quality` + `energy_score` on `workouts` (local SQLite migration +
+  `supabase/migrate_072_workouts_readiness_columns.sql`).
+- **COMP-015** visible per-muscle session autoregulation (4 commits: 9510adb,
+  b11a2c7, ff02b18, 37c8ad3). Built LIVE (no shadow) per §10: pure engine +
+  tests, read helper + input assembler, run-at-session-start (Pro), then visible
+  surfaces + revert + `session_adjustment_shown` telemetry. ±1 set, max 2
+  exercises/session, clamped [mev,mrv], never written to routines. Engine
+  boundary + ED safety untouched.
+- **COMP-006** methodology page (4 commits: 50e1fbd, 640b0f0, d5496dd, a6306ce).
+  MethodologyScreen + nav + You-tab row, methodology receipts on coach output,
+  identity line on Welcome, `methodology_opened` telemetry. The §11 corrections
+  are baked in (−2..+3 volume range; cooldown safety-exception carve-out; FFM
+  floor figure published, absolute floor kept qualitative; "fat-free mass"
+  wording). No engine code changed.
+- **COMP-005** monthly/block recap (8 commits: 9b3ccd9 → d792b6e). Fixed a
+  tonnageDelta projection bug, window-bounded getRecapData aggregates, month +
+  block story variants, Recaps tile + ephemeral card, monthly notification +
+  deep link, block-end entry points, `recap_opened` telemetry.
+- **COMP-009** account snapshots + cross-account guard (3 commits: 688465c,
+  2e7a98e, 59caa6e). Pre-migration SQLite snapshots, Snapshots restore screen +
+  settings entry, and the Keep/Switch modal gated AHEAD of the optimistic restore
+  on cross-account sign-in (Keep signs out without wiping; Switch snapshots then
+  wipes). **§4b "careful reorder" is DONE — do not re-open.**
+
+**Health baseline is now: 0 errors, 4 pre-existing warnings, 207 suites /
+3240 tests (3237 pass, 3 skip).** (Up from 204/3159.) If you see fewer suites or
+more warnings, something regressed.
+
+**TWO carry-forwards from this session (NOT blockers, but pending the founder):**
+1. **Server migrations pending manual apply (founder applies, per
+   docs/rules/supabase.md — nothing run against prod by Claude):**
+   `migrate_072` (workouts readiness columns), `migrate_073`
+   (session_adjustment telemetry allow-list), `migrate_074` (methodology
+   telemetry), `migrate_075` (recap telemetry). The LOCAL SQLite side of 072
+   ships automatically with the app on device upgrade; the SERVER files wait.
+   Telemetry for COMP-015/006/005 silently no-ops on the server until applied.
+2. **User-facing copy across COMP-005 / COMP-006 / COMP-015 is still behind the
+   founder copy gate** — built with blueprint copy as written (copy-in-principle,
+   §8); founder reviews exact strings at PR before merge to main.
+
+**Where the list stands now:**
+- Done across both sessions: COMP-001, 002, 003, 004, 005, 006, 008, 009, 010,
+  011, 012, 015, 018-v0, 022 (2 slices), 027-Part-A.
+- **Next unbuilt by priority: COMP-013 plan reveal moment (3.5)** — honest staged
+  "Building your plan" sequence + a 15-minute starter session as the first action
+  after the reveal. Visual; the blueprint also flags a `timeCrunch` floor code
+  gap. Read its blueprint + ground claims, then plan.
+- COMP-007 paywall (4.0) stays BLOCKED on collecting real reviews first (and
+  billing is held anyway).
+- The rest of §4 below (COMP-023 trial moment + cascade fix, COMP-024/026 engine
+  shadow builds, COMP-019, COMP-027-B, COMP-029, COMP-030, NEW-002) is unchanged.
+
+---
+
 ## UPDATE 2026-06-11 (attended decisions session) — READ THIS
 
 An attended "walk the questionnaire" session locked the engine-gated cluster.

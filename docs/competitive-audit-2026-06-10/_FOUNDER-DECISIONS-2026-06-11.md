@@ -387,3 +387,86 @@ COMP-026 is therefore TWO coupled engine-maths changes:
 - Mention-only (pre-existing, not fixed here): the dead `useAdaptiveCal` path
   predates this work; `weeklyCoach.js:676` comment says "~4 weeks" but the
   production caller supplies 14 days.
+
+## Build log — engine-cluster build session (2026-06-11, after §10–13)
+The §10–13 decisions were built. All on `claude/main-branch-content-update-dcqicf`,
+each commit lint-clean with the full suite green. Final baseline after the
+session: **0 errors, 4 pre-existing warnings, 207 suites / 3240 tests
+(3237 pass, 3 skip)**.
+
+- **COMP-008 survey diet + Fast Check-In** — SHIPPED per §10.
+  - e6461f3 schema + sync: nullable `sleep_quality` + `energy_score` on
+    `workouts` (soreness_24h_before reused, not re-added). Local SQLite
+    migration (additive, nullable, benign-duplicate-tolerant) + matching
+    `supabase/migrate_072_workouts_readiness_columns.sql`; both wired into
+    rowToCamel + sync column lists. MIGRATION FILES ONLY — server side pending
+    founder apply.
+  - 0124047 capture pre-workout readiness (soreness/sleep/energy chips) on the
+    intent prompt; Skip starts the session instantly with NULLs.
+  - 74ecc12 trim post-workout block + re-source soreness to the pre-workout
+    answer and the weekly sleep write to the most recent session's pre-workout
+    `sleepQuality` (the only engine-input change, per §10). `fatigueLevel`
+    kept.
+  - 0651d9b condensed weekly Fast Check-In.
+- **COMP-015 visible session autoregulation** — SHIPPED LIVE (no shadow) per §10.
+  - 9510adb Stage 1: pure session-autoregulation engine + tests, no wiring
+    (R0–R6 matrix, ±1 set, max 2 exercises/session, clamp [mev,mrv], floor 1,
+    adds blocked under reduce/deload/safety, deterministic — caller passes
+    `now`).
+  - b11a2c7 Stage 2: read helper + pure input assembler.
+  - ff02b18 Stage 3: run engine at session start, log events (Pro, no UI yet).
+  - 37c8ad3 Stage 4+5: visible surfaces (top of the line-3 coaching slot at
+    ActiveWorkoutScreen.js:1535) + per-exercise revert + `session_adjustment_shown`
+    telemetry (target 15–30%). Engine boundary + ED safety untouched; nothing
+    written to routines/planned volume/mesocycle.
+- **COMP-006 methodology page** — SHIPPED with the §11 corrections baked in.
+  - 50e1fbd MethodologyScreen + navigation + You-tab row.
+  - 640b0f0 methodology receipts on coach output.
+  - d5496dd identity line on Welcome.
+  - a6306ce `methodology_opened` telemetry (server allow-list:
+    `supabase/migrate_074_methodology_telemetry.sql`).
+  - §11 corrections applied: volume range stated as "removes up to 2 / adds up
+    to 3"; cooldown safety-exception carve-out present; FFM floor 30 kcal/kg
+    published, absolute 1,200/1,500 floor kept QUALITATIVE (no exact numbers on
+    the public page); "fat-free mass" wording throughout. No engine code
+    modified.
+- **COMP-005 monthly/block recap** — SHIPPED.
+  - 9b3ccd9 fix tonnageDelta (block-progress) projection bug.
+  - 974f83e getRecapData window-bounded aggregates.
+  - 123e61b month + block recap story variants.
+  - edd75e1 Recaps tile + ephemeral recap card.
+  - 7a0c5b1 monthly recap notification + deep link.
+  - 87d96f8 block-end recap entry points.
+  - d792b6e `recap_opened` telemetry (server allow-list:
+    `supabase/migrate_075_recap_telemetry.sql`).
+- **COMP-009 account snapshots + cross-account guard** — SHIPPED; §4b
+  "careful reorder" decision is DONE.
+  - 688465c (commits 1+2) pre-migration SQLite snapshots.
+  - 2e7a98e Snapshots restore screen + settings entry.
+  - 59caa6e cross-account sign-in Keep/Switch modal: the modal is gated AHEAD
+    of the optimistic restore. Keep signs out WITHOUT wiping; Switch snapshots
+    THEN wipes. (This re-litigated nothing — it is the careful-reorder option
+    the founder confirmed.)
+
+### Carry-forwards from this session (NOT blockers)
+- **Server migrations pending the founder's manual apply** (per
+  docs/rules/supabase.md — Claude ran nothing against prod): `migrate_072`
+  (workouts readiness cols), `migrate_073` (session_adjustment telemetry
+  allow-list), `migrate_074` (methodology telemetry), `migrate_075` (recap
+  telemetry). The local SQLite half of 072 ships with the app automatically;
+  the COMP-015/006/005 telemetry no-ops server-side until the allow-list
+  migrations are applied.
+- **Copy gate still open** for COMP-005 / COMP-006 / COMP-015 user-facing
+  strings — built with blueprint copy as written (§8 copy-in-principle);
+  founder signs off exact strings at PR before any merge to main.
+
+### Next unbuilt by priority
+- **COMP-013 plan reveal moment (3.5)** — honest staged "Building your plan"
+  sequence + a 15-minute starter session as the first post-reveal action.
+  Visual; blueprint flags a `timeCrunch` floor code gap to resolve. Read the
+  blueprint + ground its claims, then plan before building.
+- **COMP-007 paywall (4.0)** — BLOCKED on collecting real reviews first; billing
+  held regardless.
+- Everything else unchanged: COMP-023 (trial moment + cascade-wipe fix),
+  COMP-024 / COMP-026 (engine shadow builds), COMP-019, COMP-027 Part B,
+  COMP-029, COMP-030, NEW-002.

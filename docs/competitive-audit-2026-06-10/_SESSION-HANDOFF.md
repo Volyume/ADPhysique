@@ -1,10 +1,19 @@
 # Session handoff — competitive audit 2026-06-10
 
-**>> START AT `_START-HERE-NEXT-SESSION.md` <<** (written 2026-06-11 end of
-build session) — it is the current single entry point: branch, what shipped,
-locked decisions, and the prioritised next-steps. `_FOUNDER-DECISIONS-2026-06-11.md`
-holds the detailed decisions + per-commit build log. This file remains only
-the index of what the original audit produced (the 28 blueprints).
+**>> START AT `_START-HERE-NEXT-SESSION.md` <<** — it is the current single
+entry point: branch, what shipped, locked decisions, and the prioritised
+next-steps. Its TOP block (2026-06-11 build session) is authoritative for live
+state. `_FOUNDER-DECISIONS-2026-06-11.md` holds the detailed decisions + the
+full per-commit build log. This file remains only the index of what the original
+audit produced (the 28 blueprints).
+
+**Status note (2026-06-11):** the §10–13 engine cluster is now BUILT —
+COMP-008, COMP-015, COMP-006, COMP-005 and COMP-009 all shipped on the branch
+(see the START-HERE top block + the FOUNDER-DECISIONS build log). The
+"questionnaire" framing below is historical; that cluster is done. Next unbuilt
+by priority is **COMP-013 plan reveal**. Two carry-forwards: server migrations
+`072`–`075` await the founder's manual apply, and COMP-005/006/015 copy is still
+behind the founder copy gate.
 
 This file is the authoritative entry point for the next session. It supersedes
 the `PENDING` section at the bottom of `implementation/.blueprint-summaries-scratch.md`
