@@ -20,9 +20,23 @@ import { computeStreak } from '../lib/streak';
 import {
   loadStreakState, pausedWeekKeys, persistHighWater, longestRun, pendingMilestone,
 } from '../lib/streakState';
+import { track } from '../lib/engineTelemetry';
 
 const WEEKS = 12;
 const WEEK_MS = 7 * 86400000;
+
+// Fire streak_week_resolved at most once per (week, state) per app run — the
+// resolver runs on every Progress focus, and the event measures a distribution,
+// not focuses.
+const _resolvedFired = new Set();
+function runBucket(n) {
+  if (n == null) return 'none';
+  if (n < 1) return '0';
+  if (n <= 3) return '1-3';
+  if (n <= 11) return '4-11';
+  if (n <= 25) return '12-25';
+  return '26+';
+}
 
 const EMPTY = {
   loading: true, render: false, runLength: null, current: null, suppressed: false,
@@ -95,6 +109,19 @@ export default function useWeeklyStreak(userId, scoffScore = 0) {
       }
       const longest = longestRun(streakState.highWater, runLength ?? 0);
       const milestone = edSuppressed ? null : pendingMilestone(runLength, streakState.milestonesSeen);
+
+      // Telemetry: one resolution per (week, state) per run; only for a real
+      // target (a streak to measure), never under suppression. Derived only.
+      if (!edSuppressed && target != null && streak.current) {
+        const source = planTarget != null ? 'plan' : 'manual-goal';
+        const fireKey = `${currentWeekKey}:${streak.current.state}`;
+        if (!_resolvedFired.has(fireKey)) {
+          _resolvedFired.add(fireKey);
+          track(userId, 'streak_week_resolved', {
+            state: streak.current.state, run_bucket: runBucket(runLength), source,
+          })?.catch?.(() => {});
+        }
+      }
 
       // Render once the user has trained at all in the window (a strip with
       // nothing in it is noise for a brand-new user).

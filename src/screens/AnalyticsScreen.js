@@ -19,6 +19,7 @@ import WeightTrendCard from '../components/WeightTrendCard';
 import useWeeklyStreak from '../hooks/useWeeklyStreak';
 import WeeklyStreakStrip from '../components/WeeklyStreakStrip';
 import { markMilestoneSeen } from '../lib/streakState';
+import { track } from '../lib/engineTelemetry';
 import { VOLUME_LANDMARKS } from '../lib/algorithms';
 
 // COMP-018 milestone copy (§4.6.8). Weeks of showing up against your own plan —
@@ -84,7 +85,10 @@ export default function AnalyticsScreen({ navigation }) {
   // focus reload returns null). In-app only, no push, no confetti.
   const pendingMilestone = weeklyStreak.pendingMilestone;
   useEffect(() => {
-    if (pendingMilestone && user?.id) markMilestoneSeen(user.id, pendingMilestone).catch(() => {});
+    if (pendingMilestone && user?.id) {
+      markMilestoneSeen(user.id, pendingMilestone).catch(() => {});
+      try { track(user.id, 'streak_milestone_reached', { milestone: pendingMilestone })?.catch?.(() => {}); } catch (_) {}
+    }
   }, [pendingMilestone, user?.id]);
 
   function makeStreakCard(m) {

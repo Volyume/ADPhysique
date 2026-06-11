@@ -122,6 +122,14 @@ export const TELEMETRY_EVENTS = Object.freeze([
   // labels only (e.g. weight/e1rm/volume, 3M); no PII, no values.
   // Server allow-list: supabase/migrate_077_chart_window_telemetry.sql.
   { name: 'chart_window_changed',            deferred: false, panel: 1 },
+
+  // COMP-018: weekly consistency streak. Derived values only — week state, a
+  // run-length bucket, the target source, a milestone number, a pause-duration
+  // bucket; never any training or body data.
+  // Server allow-list: supabase/migrate_078_streak_telemetry.sql.
+  { name: 'streak_week_resolved',            deferred: false, panel: 1 },
+  { name: 'streak_milestone_reached',        deferred: false, panel: 1 },
+  { name: 'streak_paused',                   deferred: false, panel: 1 },
 ]);
 
 /**

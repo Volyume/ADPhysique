@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import useWeeklyStreak from '../hooks/useWeeklyStreak';
 import { addPause, setManualGoal } from '../lib/streakState';
+import { track } from '../lib/engineTelemetry';
 import * as haptics from '../lib/haptics';
 
 const PAUSE_OPTIONS = [
@@ -71,6 +72,7 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
     setPauseOpen(false);
     if (!userId || !currentWeekKey) return;
     await addPause(userId, currentWeekKey, w);
+    try { track(userId, 'streak_paused', { weeks: w })?.catch?.(() => {}); } catch (_) {}
     haptics.commit();
     vm.reload?.();
   }
