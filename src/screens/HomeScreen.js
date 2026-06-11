@@ -25,7 +25,16 @@ import {
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getAllExercises,
   getMorningWeightToday, getMorningWeights, logMorningWeight, getProgressionTeaser,
   getRecentWorkoutFeedback, getLatestCoachOutput,
+  getMorningWeightsLast14Days, getOpenEdPatternFlag,
 } from '../lib/database';
+import { stageOf } from '../lib/payments/cascade';
+import {
+  trialStartFromEndsAt,
+  selectTrialVariant,
+  firstReviewUnlockDate,
+  dayName,
+  trialBannerLine,
+} from '../lib/trialActivation';
 import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 import { logError, logWarn } from '../lib/errorLog';
@@ -145,6 +154,10 @@ export default function HomeScreen({ navigation }) {
   const [currentMesoWeek, setCurrentMesoWeek] = useState(null);
   const [showBlockShape, setShowBlockShape] = useState(false); // COMP-010 meso chip tap-through
   const [latestCoachOutput, setLatestCoachOutput] = useState(null);
+  // COMP-023: day-3 trial value banner. { line, variant } when in-window, else
+  // null. Computed from live counters in loadTrialBanner.
+  const [trialBanner, setTrialBanner] = useState(null);
+  const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
   // First-load flag, flipped false in loadData. While true, the
   // home screen renders skeleton cards in place of the main cards so
   // the user sees structure instantly on cold launch rather than a
@@ -263,7 +276,7 @@ export default function HomeScreen({ navigation }) {
         loadFatigueTrend(),
         loadScheduleContext(),
         loadBriefDismissal(),
-        ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadFirstRunCue()] : []),
+        ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadFirstRunCue(), loadTrialBanner()] : []),
       ]);
     } finally {
       setInitialLoading(false);
@@ -282,6 +295,62 @@ export default function HomeScreen({ navigation }) {
         setCoachBannerDismissed(false);
       }
     } catch (_) {}
+  }
+
+  // COMP-023: build the day-3 value banner from live counters. Null unless the
+  // user is in a Pro trial, within days 2–7, with no first review yet. Under an
+  // open ED flag the line is the neutral fallback (no counts, no weight ask).
+  async function loadTrialBanner() {
+    try {
+      if (!user?.id || stageOf(userProfile) !== 'pro_trial') { setTrialBanner(null); return; }
+      const endsAt = userProfile?.proTrialEndsAt ?? userProfile?.pro_trial_ends_at ?? null;
+      const trialStart = trialStartFromEndsAt(endsAt);
+      if (trialStart == null) { setTrialBanner(null); return; }
+      const trialDay = Math.floor((Date.now() - trialStart) / 86400000);
+      if (trialDay < 2 || trialDay > 7) { setTrialBanner(null); return; }
+
+      // A coach output existing means the first review already happened — the
+      // value moment is past, so the banner retires permanently.
+      const [coachOut, workouts, weights, edFlag] = await Promise.all([
+        getLatestCoachOutput(user.id).catch(() => null),
+        getAllWorkouts(user.id).catch(() => []),
+        getMorningWeightsLast14Days(user.id).catch(() => []),
+        getOpenEdPatternFlag(user.id).catch(() => null),
+      ]);
+      if (coachOut) { setTrialBanner(null); return; }
+
+      const completedSessions = workouts.filter(w => w.isCompleted && (w.startedAt ?? 0) >= trialStart).length;
+      const weekAgo = Date.now() - 7 * 86400000;
+      const weighIns7d = weights.filter(w => (w.loggedAt ?? 0) >= weekAgo).length;
+      const firstWeightAt = weights.length ? Math.min(...weights.map(w => w.loggedAt ?? Infinity)) : null;
+
+      let checkinDay = 0;
+      try {
+        const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
+        if (raw) { const p = JSON.parse(raw); if (Number.isFinite(p?.checkinDay)) checkinDay = p.checkinDay; }
+      } catch (_) {}
+
+      const variant = selectTrialVariant({ completedSessions, weighIns7d });
+      const unlock = firstReviewUnlockDate(firstWeightAt, checkinDay);
+      const line = trialBannerLine({
+        variant, completedSessions, weighIns7d,
+        unlockDayName: dayName(unlock), trialDay, edFlagOpen: !!edFlag,
+      });
+      setTrialBanner({ line, variant });
+
+      const dKey = `@volyume_trial_value_banner_dismissed_${user.id}`;
+      const dv = await AsyncStorage.getItem(dKey).catch(() => null);
+      setTrialBannerDismissed(dv === 'true');
+    } catch (_) {
+      setTrialBanner(null);
+    }
+  }
+
+  function dismissTrialBanner() {
+    setTrialBannerDismissed(true);
+    if (user?.id) {
+      AsyncStorage.setItem(`@volyume_trial_value_banner_dismissed_${user.id}`, 'true').catch(() => {});
+    }
   }
 
   async function loadBriefDismissal() {
@@ -817,9 +886,15 @@ export default function HomeScreen({ navigation }) {
   // one above is dismissed, so nothing is lost, just sequenced.
   const showCoachBanner = tier === 'pro' && !!latestCoachOutput && !coachBannerDismissed
     && (Date.now() - (latestCoachOutput.weekStart ?? 0) < 7 * 86400000);
-  const showDeloadBanner = !!deloadSuggestion && !deloadDismissed && !showCoachBanner;
+  // COMP-023 trial value banner: second priority, below a fresh coach review and
+  // suppressed by the day-of coaching nudge so two voices never say the same
+  // thing. Slots above deload/phase; the one-banner invariant holds.
+  const showTrialCountdownBanner = !!trialBanner && !trialBannerDismissed
+    && !showCoachBanner && !showCoachingNudge;
+  const showDeloadBanner = !!deloadSuggestion && !deloadDismissed
+    && !showCoachBanner && !showTrialCountdownBanner;
   const showPhaseBanner = !!phaseMismatch && !phaseBannerDismissed
-    && !showCoachBanner && !showDeloadBanner;
+    && !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -909,6 +984,35 @@ export default function HomeScreen({ navigation }) {
               accessibilityLabel="Dismiss coaching review banner"
             >
               <Ionicons name="close" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        )}
+
+        {/* ── COMP-023 trial value countdown banner (second priority) ── */}
+        {showTrialCountdownBanner && (
+          <TouchableOpacity
+            style={styles.trialBanner}
+            onPress={() => {
+              if (trialBanner.variant === 'S3') {
+                scrollRef.current?.scrollTo({ y: 0, animated: true });
+              } else {
+                navigation.getParent()?.navigate('ProfileTab', { screen: 'WeeklyCheckIn' });
+              }
+            }}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={trialBanner.line}
+          >
+            <Ionicons name="sparkles" size={18} color={colors.primary} />
+            <Text style={styles.trialBannerText} numberOfLines={2}>{trialBanner.line}</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+            <TouchableOpacity
+              onPress={dismissTrialBanner}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss trial banner"
+            >
+              <Ionicons name="close" size={15} color={colors.textMuted} />
             </TouchableOpacity>
           </TouchableOpacity>
         )}
@@ -2317,6 +2421,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg, borderRadius: radius.lg,
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
     padding: 14, marginBottom: spacing.md, gap: spacing.md,
+  },
+  // COMP-023 trial value banner — one line, matches the coach banner system.
+  trialBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.primaryBg, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginBottom: spacing.md,
+  },
+  trialBannerText: {
+    flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
+    color: colors.textPrimary, lineHeight: 18,
   },
   coachBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
   coachBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
