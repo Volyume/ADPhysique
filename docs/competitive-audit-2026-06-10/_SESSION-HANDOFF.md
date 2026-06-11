@@ -18,8 +18,10 @@ Baseline is now **217 suites / 3374 tests**, 0 errors, 4 warnings. **There is no
 large unblocked code-only item left** — the remainder is gated (COMP-024/026
 attended engine seam; Stage 2 widgets + COMP-029 dep/native; COMP-020 native;
 COMP-030/NEW-002 DPO; COMP-007 + COMP-025 Phase B billing; COMP-016 data-ops).
-The only unattended code-only leftover is the COMP-019-1b static-chart
-migrations (cosmetic). Carry-forwards: server migrations **`072`–`079`** await
+**The COMP-019-1b static-chart migration (the last unattended code-only item)
+also shipped this session** — WeightTrendCard + BodyMetricsScreen moved to
+VolyumeChart and the orphaned SvgLineChart was deleted; there is now no
+unattended code-only item left. Carry-forwards: server migrations **`072`–`079`** await
 the founder's manual apply; the copy gate now spans
 COMP-013/023/019/018/022/025-A. See the START-HERE top block (session 4) for the
 full list.

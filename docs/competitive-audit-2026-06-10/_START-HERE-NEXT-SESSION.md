@@ -56,6 +56,15 @@ What shipped (blueprint `implementation/impl-COMP-025-winback.md`):
 **Health baseline is now: 0 errors, 4 pre-existing warnings, 217 suites / 3374
 tests (3371 pass, 3 skip).** Fewer suites or more warnings = a regression.
 
+**ALSO this session — COMP-019-1b static-chart migration completed.** The last
+static `SvgLineChart` *line* callers (WeightTrendCard + BodyMetricsScreen's two
+trend charts) now render through `VolyumeChart` (interactive off) — prop-for-prop,
+pixel-identical, zero visual diff. `SvgLineChart.js` was fully orphaned by that
+and has been **deleted**, consolidating the app onto ONE line-chart engine.
+(The `SvgBarSparkline` callers — FatigueTrendCard, MesocycleBuilderScreen — are
+the bar-sparkline family, like `Sparkline`; they stay SVG by design and were
+never line-chart targets, despite the looser session-3 wording.)
+
 **CARRY-FORWARDS (not blockers; pending the founder):**
 1. **Server migration `079`** (`cancel_reason_captured` allow-list) joins
    `072`–`078` pending manual apply. The event no-ops server-side until applied;
@@ -86,8 +95,11 @@ tests (3371 pass, 3 skip).** Fewer suites or more warnings = a regression.
   (attended), COMP-019 Stage 2 widgets (deps + native), COMP-020 watch (native),
   COMP-007 paywall (billing/reviews), COMP-027 Part B + COMP-029 (on-device /
   deps), COMP-030 + NEW-002 (DPO), NEW-001 (research), COMP-016 (data-ops),
-  COMP-025 Phase B (billing). **The only unattended code-only leftover is the
-  COMP-019-1b static-chart migrations (cosmetic).**
+  COMP-025 Phase B (billing). **There is now NO unattended code-only item left
+  at all** — the COMP-019-1b static-chart migration (the last one) shipped this
+  session. Every remaining item needs the founder: attended supervision, a
+  dependency/native build, billing permission, DPO/legal, on-device eyes, or a
+  data-ops programme.
 
 ---
 
