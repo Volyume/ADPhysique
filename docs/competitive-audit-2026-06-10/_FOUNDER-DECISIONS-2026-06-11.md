@@ -274,3 +274,41 @@ on the populated columns afterwards.
   reason" priority) — COMP-015 inserts session adjustment at the top of it.
 - Stale comment noted, NOT fixed here: `WorkoutSummaryScreen.js:362` references
   an "Engine Log on the You tab" that does not exist.
+
+## 11. COMP-006 methodology page — claims verified against engine (2026-06-11)
+Walked with the founder. The page publishes claims about how the engine works,
+so every claim was checked against source before approval (blueprint Risk 1).
+
+**Verified ACCURATE (publish as-is):**
+- Two-week calorie cooldown — `weeklyCoach.js:662` (`lastCalAdjustmentWeeksAgo
+  >= 2`). True for normal adjustments.
+- FFM floor = 30 kcal/kg fat-free mass — `nutritionEngine.js:119`
+  (`FFM_FLOOR_KCAL_PER_KG = 30`), sourced from Mountjoy 2014/2023 IOC RED-S
+  consensus (`weeklyCoach.js:761`). True.
+
+**CORRECTIONS REQUIRED before build (blueprint copy was wrong/incomplete):**
+- **Volume range is −2 to +3 sets, NOT "1 to 3".** `weeklyCoach.js:169`
+  `volumeDelta: -2|-1|0|1|2|3`. The §4.4 Example 4 copy understated the drop
+  side (a recovery cut removes up to 2 sets; −2 is the deload path). Page copy
+  must say "removes up to 2 sets or adds up to 3", reviewed at PR.
+- **Cooldown has a safety exception.** `weeklyCoach.js:292`: rapid weight loss +
+  low energy RAISES calories immediately, bypassing the two-week rule. The page
+  must carve this out — and it is a better story ("safety can raise your
+  calories sooner than the two-week rule"). An absolute "changes at most once
+  every two weeks" claim would break trust the first time safety overrides it.
+
+**Floor-disclosure decision — FFM exact + absolute qualitative.** The page
+states the FFM floor figure (30 kcal/kg fat-free mass, already shown in-app to
+affected users) but describes the absolute floor qualitatively ("there is also
+a fixed minimum below which we never suggest cutting") WITHOUT printing the
+exact 1,500/1,200 numbers — especially on the PUBLIC web page — to avoid handing
+a pro-ana visitor a precise target. The absolute floor lives at
+`nutritionEngine.js:616` (1,500 male / 1,200 female); it is a sacred ED-safety
+number per CLAUDE.md.
+
+**Terminology:** use "fat-free mass" (matches the engine's own reason strings
+and the RED-S literature), not "lean mass", throughout the page copy.
+
+**No engine code changes.** COMP-006 is a new static screen + web page + two
+nav links; `weeklyCoach.js` / `whyThisTemplates.js` are NOT modified. Copy
+reviewed at PR (locked copy-in-principle approach).
