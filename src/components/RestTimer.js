@@ -11,11 +11,11 @@ import useAppStore from '../store/useAppStore';
 import { playRestBeep, preloadRestBeeps } from '../lib/restSound';
 import { clampRestDelta } from '../lib/restTimerMath';
 
+// Two deltas only (COMP-001): the −30/+30 pair added visual weight without
+// covering anything long-press-repeat can't. Holding ±15 repeats at 200 ms.
 const TIME_ADJUSTMENTS = [
-  { delta: -30, label: '−30s' },
-  { delta: -15, label: '−15s' },
-  { delta: 15,  label: '+15s' },
-  { delta: 30,  label: '+30s' },
+  { delta: -15, label: '−15' },
+  { delta: 15,  label: '+15' },
 ];
 
 export default function RestTimer() {
@@ -49,7 +49,7 @@ export default function RestTimer() {
       // (showed N=current+1 against M=target, which read as "Set 3
       // of 2" mid-set) and added more friction than it removed,
       // per user feedback during beta-prep. The in-app countdown
-      // card with Skip / +15 / +30 / -15 / -30 stays.
+      // card with Skip / ±15 stays.
     } else {
       clearInterval(intervalRef.current);
     }
@@ -123,9 +123,28 @@ export default function RestTimer() {
 
   function handleAdjust(delta) {
     Haptics.selectionAsync();
-    const safeAmount = clampRestDelta(delta, restTimerRemaining);
+    // Read remaining straight off the store: during a long-press repeat this
+    // runs inside a setInterval whose closure would otherwise clamp against
+    // the remaining value captured at press time.
+    const remaining = useAppStore.getState().restTimerRemaining;
+    const safeAmount = clampRestDelta(delta, remaining);
     if (safeAmount !== 0) addRestTime(safeAmount);
   }
+
+  // Long-press repeat on the ±15 buttons: hold to keep adjusting (covers the
+  // old −30/+30 buttons' use case). Cleared on release and on unmount.
+  const repeatRef = useRef(null);
+  function stopRepeat() {
+    if (repeatRef.current) {
+      clearInterval(repeatRef.current);
+      repeatRef.current = null;
+    }
+  }
+  function startRepeat(delta) {
+    stopRepeat();
+    repeatRef.current = setInterval(() => handleAdjust(delta), 200);
+  }
+  useEffect(() => () => stopRepeat(), []);
 
   const isCountdown = restTimerActive && restTimerRemaining <= 3 && restTimerRemaining > 0;
   const isAlmostDone = restTimerRemaining <= 10 && restTimerActive;
@@ -165,20 +184,7 @@ export default function RestTimer() {
         ) : (
           <Text style={[styles.timeText, isAlmostDone && styles.almostDone]}>{timeStr}</Text>
         )}
-        <Text style={styles.label}>{isCountdown ? 'seconds' : 'rest'}</Text>
-        <TouchableOpacity
-          onPress={stopRestTimer}
-          style={styles.skipBtn}
-          hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-          accessibilityLabel="Skip rest timer"
-          accessibilityRole="button"
-        >
-          <Text style={styles.skipText}>Skip</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Time adjustment row */}
-      <View style={styles.adjustRow}>
+        <Text style={styles.label} numberOfLines={1}>{isCountdown ? 'seconds' : 'rest'}</Text>
         {TIME_ADJUSTMENTS.map(({ delta, label }) => {
           const isNeg = delta < 0;
           return (
@@ -186,12 +192,26 @@ export default function RestTimer() {
               key={delta}
               style={[styles.adjBtn, isNeg && styles.adjBtnNeg]}
               onPress={() => handleAdjust(delta)}
-              hitSlop={{ top: 10, bottom: 10, left: 4, right: 4 }}
+              onLongPress={() => startRepeat(delta)}
+              delayLongPress={300}
+              onPressOut={stopRepeat}
+              hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
+              accessibilityRole="button"
+              accessibilityLabel={isNeg ? 'Remove 15 seconds' : 'Add 15 seconds'}
             >
               <Text style={[styles.adjBtnText, isNeg && styles.adjBtnTextNeg]}>{label}</Text>
             </TouchableOpacity>
           );
         })}
+        <TouchableOpacity
+          onPress={stopRestTimer}
+          style={styles.skipBtn}
+          hitSlop={{ top: 12, bottom: 12, left: 4, right: 8 }}
+          accessibilityLabel="Skip rest timer"
+          accessibilityRole="button"
+        >
+          <Text style={styles.skipText}>Skip</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -205,13 +225,15 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     marginVertical: spacing.sm,
   },
+  // Single row (COMP-001): numeral left, ±15 and Skip right. Collapsed from
+  // the old two-row layout, recovering ~32pt of vertical space.
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+    minHeight: 64,
   },
   timeText: {
     // eslint-disable-next-line no-restricted-syntax -- rest-timer countdown is a hero numeral
@@ -238,23 +260,19 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   skipBtn: {
+    minHeight: 44,
+    justifyContent: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
   },
   skipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
-  adjustRow: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-  },
   adjBtn: {
-    flex: 1,
+    minHeight: 44,
     alignItems: 'center',
-    paddingVertical: spacing.xs + 2,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: withAlpha(colors.primary, 0.314),
@@ -265,7 +283,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface3,
   },
   adjBtnText: {
-    fontSize: fontSize.xs,
+    fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
     color: colors.primary,
   },
