@@ -2,7 +2,7 @@ import * as SQLite from 'expo-sqlite';
 import { generateInsights } from './insightsEngine';
 import { calculate1RM, allocateExerciseVolume } from './algorithms';
 import { logError, logWarn } from './errorLog';
-import { localDayKey } from './dayKey';
+import { localDayKey, localWeekStartMs } from './dayKey';
 
 let _db = null;
 let _initPromise = null;
@@ -4226,6 +4226,35 @@ export function coerceWeekStartMs(weekStart, fnName = 'weekStart') {
     if (Number.isFinite(n)) return n;
   }
   throw new Error(`${fnName}: weekStart must be epoch-ms, got ${weekStart}`);
+}
+
+// Which past calendar weeks were engine-prescribed deload (recovery) weeks.
+// COMP-018's run-length must treat a deload week as "resting", never a miss,
+// so a user who correctly backs off during a planned recovery week is not
+// punished. There is no calendar-dated deload record (mesocycle_weeks are
+// keyed by week-index, not date), so we infer it the only reliable way: a
+// calendar week is a deload week if a completed workout in it was linked to a
+// mesocycle_week flagged is_deload = 1. Returns an array of week-start epochs
+// (local Monday 00:00). Known gap: a deload week with zero logged sessions
+// has no workout to link, so it cannot be detected here; a single such week
+// is covered by the streak's one-week repair, which is why this is correct
+// for realistic 1-week deloads.
+export async function getDeloadWeeksInRange(userId, fromMs, toMs) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT w.started_at AS startedAt
+     FROM workouts w
+     JOIN mesocycle_weeks mw ON mw.id = w.mesocycle_week_id
+     WHERE w.user_id = ? AND w.is_completed = 1
+       AND w.started_at >= ? AND w.started_at < ?
+       AND mw.is_deload = 1`,
+    [userId, fromMs, toMs],
+  );
+  const set = new Set();
+  for (const r of rows) {
+    if (Number.isFinite(r.startedAt)) set.add(localWeekStartMs(r.startedAt));
+  }
+  return Array.from(set);
 }
 
 export async function getWeeklySessionStats(userId, weekStart) {

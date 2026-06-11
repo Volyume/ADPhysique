@@ -15,6 +15,8 @@ import useAppStore from '../store/useAppStore';
 import useProgressData from '../hooks/useProgressData';
 import useWeightTrend from '../hooks/useWeightTrend';
 import WeightTrendCard from '../components/WeightTrendCard';
+import useWeeklyStreak from '../hooks/useWeeklyStreak';
+import WeeklyStreakStrip from '../components/WeeklyStreakStrip';
 import { VOLUME_LANDMARKS } from '../lib/algorithms';
 
 // Severity → icon + color mapping (jargon-free UI)
@@ -34,6 +36,11 @@ export default function AnalyticsScreen({ navigation }) {
   // Pro feature, so the card never appears for free users). The hook always
   // runs (hooks are unconditional); the card self-hides until there is data.
   const weightTrend = useWeightTrend(tier === 'pro' ? user?.id : null);
+
+  // COMP-018 "This week": training consistency is a free feature, so it runs
+  // for all tiers. Self-hides until the first session; suppressed under an
+  // open ED/wellbeing flag.
+  const weeklyStreak = useWeeklyStreak(user?.id, userProfile?.scoffScore);
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -67,6 +74,16 @@ export default function AnalyticsScreen({ navigation }) {
       >
         {/* ── Header ────────────────────────────────────────── */}
         <ScreenHeader title="Progress" />
+
+        {/* ── This week (COMP-018): the first thing on Progress is a
+            one-glance answer to "am I on track?" — sessions this week and
+            the run state. Free for all tiers; self-hides for a brand-new
+            user and under an open wellbeing flag. ── */}
+        {weeklyStreak.render && (
+          <View style={styles.section}>
+            <WeeklyStreakStrip vm={weeklyStreak} />
+          </View>
+        )}
 
         {/* ── Empty state ───────────────────────────────────── */}
         {!loading && allSets.length === 0 && (
