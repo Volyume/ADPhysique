@@ -24,7 +24,9 @@ import {
   getSetEffectivenessWeight,
   detectLaggingMuscles,
   calculatePlates,
+  computeSessionAdjustments,
 } from '../algorithms';
+import { SESSION_REASON_CODES } from '../whyThisTemplates';
 import {
   computeEWMA,
   computeWeeklyWeightChange,
@@ -382,5 +384,132 @@ describe('planEngine.generatePlan: invariants across goal/phase grid', () => {
       }
     }
     expect(combos).toBeGreaterThan(50); // sanity: we actually ran some combos
+  });
+});
+
+// ── computeSessionAdjustments (COMP-015) ───────────────────────────────────
+
+describe('computeSessionAdjustments: fuzz invariants', () => {
+  const MUSCLES = ['chest', 'back', 'quads', 'hamstrings', 'side_delts', 'biceps', 'triceps', 'calves', 'abs'];
+  const SIGNALS = ['reduce', 'hold', 'push'];
+  const VALID_CODES = new Set(Object.values(SESSION_REASON_CODES));
+
+  function randomInput() {
+    const trained = [...new Set(Array.from({ length: rint(0, 5) }, () => pick(MUSCLES)))];
+    const todaysExercises = trained.map((m, i) => ({
+      exerciseId: rmaybe(0.9, () => `ex${i}`, null),
+      primaryMuscle: m,
+      plannedSets: rint(1, 6),
+    }));
+    const muscleSignals = {};
+    const landmarks = {};
+    for (const m of trained) {
+      // landmarks: keep mev<mav<mrv ordered and finite
+      const mev = rint(0, 6);
+      const mav = mev + rint(2, 10);
+      const mrv = mav + rint(2, 8);
+      landmarks[m] = { mev, mav, mrv };
+      muscleSignals[m] = rmaybe(0.85, () => ({
+        lastTrainedAt: NOW - rint(0, 7) * DAY,
+        lastFeedback: { pump: rint(1, 3), joint: rint(0, 3), performance: rint(1, 4) },
+        checkinSore: rng() < 0.4,
+        checkinAt: NOW - rint(0, 8) * DAY,
+        presessionSoreness: rint(1, 3),
+      }), {});
+    }
+    const doneThisWeekByMuscle = {};
+    for (const m of trained) doneThisWeekByMuscle[m] = rint(0, 18);
+    const recentSessionEvents = Array.from({ length: rint(0, 4) }, () => ({
+      muscle: pick(MUSCLES),
+      decision: pick(['session_add_under_stimulus', 'session_adjustment_reverted', 'session_drop_residual_soreness']),
+      createdAt: NOW - rint(0, 20) * DAY,
+    }));
+    return {
+      todaysExercises,
+      muscleSignals,
+      weeklyContext: {
+        doneThisWeekByMuscle,
+        landmarks,
+        weeklySignal: pick(SIGNALS),
+        safetyHold: rng() < 0.3,
+        isDeload: rng() < 0.15,
+        weekStartMs: NOW - rint(0, 6) * DAY,
+      },
+      recentSessionEvents,
+      now: NOW,
+      presessionIntent: pick(['sharp', 'average', 'below_par', null]),
+    };
+  }
+
+  test('never throws; no NaN/Infinity; respects all structural invariants on 2000 inputs', () => {
+    for (let i = 0; i < 2000; i++) {
+      const input = randomInput();
+      let out;
+      expect(() => { out = computeSessionAdjustments(input); }).not.toThrow();
+      assertNoBadNumbers(`sessionAdj[${i}]`, out);
+
+      // Idempotence (invariant 2)
+      expect(JSON.stringify(computeSessionAdjustments(input))).toBe(JSON.stringify(out));
+
+      // Deload → all-zero/empty (invariant 5)
+      if (input.weeklyContext.isDeload) {
+        expect(out).toEqual([]);
+        continue;
+      }
+
+      const trainedMuscles = new Set(input.todaysExercises.map(e => e.primaryMuscle));
+      const perMuscleAdjusted = {};
+      let nonzeroCount = 0;
+
+      for (const o of out) {
+        // setDelta domain + floor (invariant 3)
+        expect([-1, 0, 1]).toContain(o.setDelta);
+        expect(o.adjustedSets).toBeGreaterThanOrEqual(1);
+        expect(o.adjustedSets).toBe(o.plannedSets + o.setDelta);
+
+        // Only muscles trained today, with signals, ever appear (invariant 6)
+        expect(trainedMuscles.has(o.muscle)).toBe(true);
+
+        // reasonCode closed enum + non-empty reasonText (invariant 7)
+        expect(VALID_CODES.has(o.reasonCode)).toBe(true);
+        expect(typeof o.reasonText).toBe('string');
+        expect(o.reasonText.length).toBeGreaterThan(0);
+
+        if (o.setDelta !== 0) {
+          nonzeroCount++;
+          perMuscleAdjusted[o.muscle] = (perMuscleAdjusted[o.muscle] ?? 0) + 1;
+
+          // Landmark clamp (invariant 4), directional: a DROP never takes
+          // projected weekly below mev (the recovery floor); an ADD never pushes
+          // projected past mrv (the session layer must not exceed the working
+          // ceiling on its own). The opposite rails don't apply — a drop from an
+          // already-over-mrv muscle legitimately stays > mrv, and an add on an
+          // under-trained muscle legitimately stays < mev while climbing.
+          const lk = input.weeklyContext.landmarks[o.muscle];
+          const projected = (input.weeklyContext.doneThisWeekByMuscle[o.muscle] ?? 0) + o.adjustedSets;
+          if (o.setDelta < 0) expect(projected).toBeGreaterThanOrEqual(lk.mev);
+          if (o.setDelta > 0) expect(projected).toBeLessThanOrEqual(lk.mrv);
+
+          // safetyHold / weeklySignal reduce → no positive deltas (invariant 5)
+          if (input.weeklyContext.safetyHold || input.weeklyContext.weeklySignal === 'reduce') {
+            expect(o.setDelta).toBeLessThanOrEqual(0);
+          }
+        }
+      }
+
+      // ≤1 adjusted exercise per muscle, ≤2 per session (invariant 3)
+      for (const n of Object.values(perMuscleAdjusted)) expect(n).toBeLessThanOrEqual(1);
+      expect(nonzeroCount).toBeLessThanOrEqual(2);
+
+      // Add-frequency cap (invariant 8): an add this week blocks further adds for M
+      const addedThisWeek = new Set(
+        input.recentSessionEvents
+          .filter(e => e.decision.startsWith('session_add') && e.createdAt >= input.weeklyContext.weekStartMs)
+          .map(e => e.muscle),
+      );
+      for (const o of out) {
+        if (o.setDelta > 0) expect(addedThisWeek.has(o.muscle)).toBe(false);
+      }
+    }
   });
 });
