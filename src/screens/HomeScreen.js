@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type } from '../styles/theme';
 import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
 import ScreenHeader from '../components/ScreenHeader';
+import BlockShapeCard from '../components/BlockShapeCard';
 import PressableCard from '../components/PressableCard';
 import { SkeletonCard } from '../components/Skeleton';
 import Sparkline from '../components/Sparkline';
@@ -117,6 +118,7 @@ export default function HomeScreen({ navigation }) {
   const [lastSessionTonnage, setLastSessionTonnage] = useState(null);
   const [blockProgress, setBlockProgress] = useState([]);
   const [currentMesoWeek, setCurrentMesoWeek] = useState(null);
+  const [showBlockShape, setShowBlockShape] = useState(false); // COMP-010 meso chip tap-through
   const [latestCoachOutput, setLatestCoachOutput] = useState(null);
   // First-load flag, flipped false in loadData. While true, the
   // home screen renders skeleton cards in place of the main cards so
@@ -1092,7 +1094,12 @@ export default function HomeScreen({ navigation }) {
                 session, the way an RP-style plan would. Tooltip-free
                 because the row is glanceable on its own. */}
             {currentMesoWeek && (
-              <View style={styles.mesoBriefChip}>
+              <TouchableOpacity
+                style={styles.mesoBriefChip}
+                onPress={() => setShowBlockShape(true)}
+                accessibilityRole="button"
+                accessibilityLabel="See the shape of your training block"
+              >
                 <Ionicons
                   name={currentMesoWeek.isDeload ? 'bed-outline' : 'trending-up-outline'}
                   size={12}
@@ -1106,7 +1113,8 @@ export default function HomeScreen({ navigation }) {
                         ? ` · stop ${currentMesoWeek.rirTarget} short of failure`
                         : '')}
                 </Text>
-              </View>
+                <Ionicons name="chevron-forward" size={12} color={colors.textMuted} />
+              </TouchableOpacity>
             )}
             {coachBrief && (
               <CoachBriefCard brief={coachBrief} onDismiss={dismissBrief} />
@@ -1383,6 +1391,37 @@ export default function HomeScreen({ navigation }) {
       </ScrollView>
 
       {/* Change Workout Sheet */}
+      {/* COMP-010: the shape of the current training block, opened from the
+          meso chip. Makes periodisation visible and the recovery week a
+          destination rather than a dip. */}
+      <Modal
+        visible={showBlockShape}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowBlockShape(false)}
+      >
+        <TouchableOpacity
+          style={styles.sheetBackdrop}
+          activeOpacity={1}
+          onPress={() => setShowBlockShape(false)}
+        />
+        <View style={styles.sheet}>
+          <View style={styles.sheetHandle} />
+          <Text style={styles.sheetTitle}>Your block</Text>
+          {currentMesoWeek?.mesoName ? <Text style={styles.sheetSub}>{currentMesoWeek.mesoName}</Text> : null}
+          <View style={{ paddingVertical: spacing.md }}>
+            <BlockShapeCard
+              weekIndex={currentMesoWeek?.weekIndex}
+              plannedWeeks={currentMesoWeek?.plannedWeeks}
+              isDeload={currentMesoWeek?.isDeload}
+            />
+          </View>
+          <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowBlockShape(false)}>
+            <Text style={styles.sheetCancelText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
       <Modal
         visible={showChangeWorkout}
         transparent
