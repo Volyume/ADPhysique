@@ -204,14 +204,20 @@ These are explicit requirements, not options:
 - **Real meals, not random food piles.** Components must form a coherent plate
   someone would actually choose for that slot.
 
-## 4. Open founder decisions (asked separately, not blocking research)
-1. Do we keep a fully-generated plan as the default, or shift to a
-   **flexible scaffold** (a few fixed favourites + variety on the rest) closer to
-   the adherence evidence?
-2. How adventurous should the default British dinner set be (plain
-   chicken-rice-veg vs familiar comfort meals like pie/chilli/curry)?
-3. Vegan/vegetarian: confirm the per-meal plant-protein uplift and that
-   isolate-based meals are acceptable in those plans.
+## 4. Founder decisions — ANSWERED 2026-06-12 (locked)
+1. **Plan model: FULLY GENERATED, EASILY SWAPPED.** Generate a complete day
+   every time, but every slot carries a deep, style-diverse swap pool (the
+   "many options, not 2 clones" requirement is load-bearing here — a fully
+   generated plan is only acceptable if the swaps are genuinely generous and
+   varied).
+2. **Dinner style: MIX OF BOTH.** Familiar British comfort dinners
+   (cottage pie, chilli, spag bol, curry/fakeaway, fajitas, stir-fry, baked
+   fish & chips) AND simple staple plates, balance influenced by the
+   variety setting.
+3. **Protein sources: ANIMAL-ANCHORED OMNIVORE.** Omnivore meals anchor on
+   whey/dairy/eggs/lean meat/fish; legumes are carbs-with-side-protein, never
+   omnivore anchors; soy/pea isolates are vegan/veg-plan tools with the
+   ~20-30% per-meal leucine uplift applied. (§3.4 stands as written.)
 
 ---
 
