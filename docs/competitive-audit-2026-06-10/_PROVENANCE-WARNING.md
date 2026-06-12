@@ -1,10 +1,9 @@
 # PROVENANCE WARNING (added 2026-06-12, after a verified tooling failure)
 
 Every `competitive-audit-01-*-research.md` document in this folder presents
-itself as external/competitive research. These were produced by cloud
-sessions in a container whose proxy BLOCKS page fetches (verified by live
-control test, 2026-06-12: example.com 403s; only an allowlist passes).
-Search digests were the only available source. No document here discloses
+itself as external/competitive research. Their production method is UNVERIFIABLE: the 2026-06-12 session that audited
+them was itself fetch-blocked (live-tested), but other sessions may have had
+working access - a fresh session on 2026-06-12 did. What IS factual: No document here discloses
 that. None has had a citation audit (contrast: the 2026-06-08 coaching-voice
 research, which was run on real browsing platforms and citation-audited,
 catching 11 miscitations and 1 fabrication).
