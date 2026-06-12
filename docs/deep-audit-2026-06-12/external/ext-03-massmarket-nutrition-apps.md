@@ -1,4 +1,13 @@
 # ext-03 — Mass-Market Nutrition / Food-Logging / Diet-Coaching Apps
+
+> **PROVENANCE NOTICE (2026-06-12, added after a verified research-tooling
+> failure):** this document presents itself as external/competitive research.
+> The session that produced it cannot be verified from here, and the cloud
+> environment used for this build BLOCKS page fetches (search digests only).
+> Treat every competitive claim and citation in this document as UNVALIDATED
+> until re-verified through a working /deep-research run or primary sources.
+> Features built from it have NOT been proven better than competitors.
+
 **Deep Audit 2026-06-12 · External slice**
 *Read `_SHARED-BRIEF.md` before acting on anything here.*
 

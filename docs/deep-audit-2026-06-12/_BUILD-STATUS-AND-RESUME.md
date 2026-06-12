@@ -5,6 +5,16 @@
 `_FOUNDER-DECISIONS-2026-06-12.md` (the seven decisions + operating model).
 The operating model is also locked in `CLAUDE.md` (BUILD OPERATING MODEL).
 
+> **RESEARCH VALIDITY WARNING (2026-06-12):** the founder's standing order was
+> deep research + comparison against all other providers BEFORE building.
+> A verified tooling failure (page fetches blocked; digests only) means the
+> external research corpus (external/ext-01..07) and everything derived from
+> it is UNVALIDATED. No feature in this build has been PROVEN better than
+> competitors. Before any further feature work: re-run the competitive
+> research in an environment with working network access, validate or amend
+> the blueprints, and put deltas to the founder. The engine/test contracts
+> stand; the competitive claims do not.
+
 ## Where we are
 - **Branch:** `claude/main-branch-content-update-dcqicf` (NEVER main). All work
   committed + pushed. If local is behind: `git fetch origin` +

@@ -1,5 +1,14 @@
 # Mass-Market Strength & Workout-Logging Apps — Competitive Research
 
+> **PROVENANCE NOTICE (2026-06-12, added after a verified research-tooling
+> failure):** this document presents itself as external/competitive research.
+> The session that produced it cannot be verified from here, and the cloud
+> environment used for this build BLOCKS page fetches (search digests only).
+> Treat every competitive claim and citation in this document as UNVALIDATED
+> until re-verified through a working /deep-research run or primary sources.
+> Features built from it have NOT been proven better than competitors.
+
+
 **Audit date:** 2026-06-12  
 **Agent:** ext-01 — mass-market strength / workout-logging / hypertrophy apps  
 **Additive to:** `docs/competitive-audit-2026-06-10/competitive-audit-01-workout-screen-research.md` (logging UX) and `-exercise-library-research.md` (demos), which covered those slices in depth. This report deliberately avoids re-stating their findings and focuses on the dual-market angles they under-covered: **beginner adoption, hand-holding, guided-program UX, retention mechanics, word-of-mouth, and psychology**. Where prior audit conclusions are contested, this is flagged explicitly.
