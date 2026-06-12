@@ -331,10 +331,13 @@ export default function AnalyticsScreen({ navigation, route }) {
           <View style={styles.navGrid}>
             <NavTile icon="pulse" color={colors.success} label="Consistency" onPress={() => navigation.navigate('Consistency')} />
             <NavTile icon="barbell" color={colors.primary} label="Lifts" onPress={() => navigation.navigate('LiftProgress')} />
-            {/* Weight trend lives in the Pro Body Metrics screen (EWMA + the
-                up/down line chart). Surfacing it here makes it discoverable from
-                Progress; the guard shows the upsell to free users. */}
-            <NavTile icon="trending-up" color={colors.warning} label="Weight" onPress={() => navigation.navigate('BodyMetrics')} />
+            {/* Body Metrics carries the weight EWMA trend once 2+ logs exist,
+                but it is a metrics screen, so the tile says what it opens
+                (founder device-walk 2026-06-12: a "Weight" tile promised a
+                progress chart and landed on a logging form). The IA pass will
+                lead that screen with the trend; the label stops over-promising
+                now. */}
+            <NavTile icon="body" color={colors.warning} label="Body Metrics" onPress={() => navigation.navigate('BodyMetrics')} />
             <NavTile icon="time" color={colors.textSecondary} label="Full History" onPress={() => navigation.navigate('WorkoutHistory')} />
             {(() => {
               // COMP-005: Recaps replaces the year-long locked Year-of-Lifts
