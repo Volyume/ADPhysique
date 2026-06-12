@@ -60,6 +60,12 @@ describe('routeForNotificationType', () => {
     });
   });
 
+  test('NEW-002: a partner cheer lands on the Progress consistency screen', () => {
+    expect(routeForNotificationType('partner_cheer')).toEqual({
+      tab: 'ProgressTab', screen: 'Consistency',
+    });
+  });
+
   test('an unknown or no-op type returns null (no navigation)', () => {
     expect(routeForNotificationType('morning_weight')).toBeNull();
     expect(routeForNotificationType('unknown')).toBeNull();

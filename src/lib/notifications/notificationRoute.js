@@ -42,6 +42,10 @@ export function routeForNotificationType(type, data = {}) {
       // COMP-025-B: fromWinback carries through to the resubscribe so the
       // win-back Play offer is preferred (inert if none is configured).
       return { tab: 'ProfileTab', screen: 'Subscription', params: { fromWinback: true } };
+    case 'partner_cheer':
+      // NEW-002: a partner sent a cheer. Lands on the Progress consistency
+      // screen, where the partner row hosts the cheer caption + reciprocity.
+      return { tab: 'ProgressTab', screen: 'Consistency' };
     case 'trial_day3':
       // COMP-023 day-3 value moment. S1/S2 land on the check-in gate screen
       // (which shows the countdown made visible); S3 (no sessions yet) lands on
