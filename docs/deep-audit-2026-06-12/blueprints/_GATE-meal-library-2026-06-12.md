@@ -125,9 +125,29 @@ one coaching system; where corroboration is Beverly-only it says so.
 - **Tofu / halloumi / paneer / Quorn / lentil mains** — **STRUCTURE**. No fetched competitor source eats these (every diary is omnivore). They stand on the macro-role engine + the protein-quality uplift policy (the leucine/DIAAS literature is textbook and the position stands are now verified in src-e, but no competitor diary corroborates the meals). src-f (vegan/vegetarian competitor days) is in flight and will upgrade or amend this section.
 - **Dairy/whey snacks** (Skyr & berries pot, Greek yogurt whey & almonds, cottage cheese variants, whey shake & banana) — **CORROBORATED/ARCHETYPE** per the dairy findings above [A1, B4, D7, D3].
 
-## VEGAN — verdicts
+## VEGAN — verdicts (updated after src-f, vegan competitor research)
 
-- **Entire section — STRUCTURE, pending src-f.** Soya/pea protein, tofu, tempeh, seitan, soya mince anchor meals follow the uplift policy (~20–30% per-meal protein uplift for plant anchors — consistent with the verified per-meal dosing literature in src-e, applied with the engine's computed macros). No competitor-diary corroboration exists in the current corpus; the vegan-competitor research agent reports shortly. HOLD any vegan library expansion until it lands; existing meals can remain behind the gate as provisional.
+src-f extracted 5 usable written days (Nimai Delgado IFBB Pro prep; Torre
+Washington IFBB Pro off-season; Derek Tresize WNBF; Bradie Crandall (flagged:
+powerlifter); Natalie Matthews ex-IFBB bikini) plus 1 partial. Findings:
+
+- **Tofu, legumes and soy products are the real anchors** (tofu in 4 of 5 days;
+  beans/lentils widespread; soya chunks / vegan chicken common). Tofu and
+  soya-mince meals: **CORROBORATED**.
+- **Seitan appears once across all days; tempeh appears in none.** The current
+  library over-weights both. **AMEND: rebalance vegan anchors toward
+  tofu/legume/soya forms; demote (not necessarily delete) seitan/tempeh
+  prominence** — they remain legitimate high-protein staples but must not be
+  presented as what vegan competitors predominantly eat.
+- **Protein powder is a target-dependent top-up, not a universal base**: loose
+  trackers hit protein through uplifted whole-food portions (Washington: no
+  powder; Tresize: one shake); precise-target athletes stack powders/bars on
+  top (Crandall 210g, Matthews 130g). This matches the app's uplift policy and
+  supports keeping powders concentrated in breakfast/snack/shake slots while
+  mains anchor on whole foods.
+- Lacto-ovo vegetarian competitor days: none found in writing — the vegetarian
+  mains stay STRUCTURE-labelled with the dairy/egg meals carrying the
+  corroborated end.
 
 ---
 
@@ -187,22 +207,23 @@ one coaching system; where corroboration is Beverly-only it says so.
   muscleandstrength.com hard-blocked; web.archive.org blocked by this
   environment's egress policy. All logged per-URL in the src files.
 
-## FOUNDER SIGN-OFF — decisions needed
+## FOUNDER SIGN-OFF — decisions RECORDED (2026-06-12, structured questions)
 
-1. **CORROBORATED meals (≈30)** — approve as the library spine? (Evidence is
-   strong; no change recommended.)
-2. **ARCHETYPE meals** — accept UK vehicles (bagel, wrap, jacket potato, wedges,
-   Skyr/Weetabix dairy mappings) as deliberate supermarket mapping, with the
-   in-app methodology never claiming competitor provenance for the vehicle?
-3. **FOUNDER comfort meals** (pasta family, cottage pie, fajitas, fakeaway
-   curry) — confirm they stay on the adherence rationale, clearly not
-   research-claimed? (Your 2026-06-12 decision says yes; re-confirm at gate.)
-4. **THIN meals** — keep, cut, or re-vehicle: prawn & noodle stir-fry, prawn &
-   egg fried rice, chicken chow mein, chicken & quinoa salad, turkey & cottage
-   cheese plate, tuna & rice cakes pair. (My recommendation: cut prawn & egg
-   fried rice and chicken & quinoa salad; re-vehicle the rest or keep
-   consciously as mappings.)
-5. **Recommended addition**: a post-workout shake + fast-carb meal family
-   (whey + banana exists; add whey + cereal slot per B2/A2 evidence)?
-6. **Vegan section**: hold expansion until src-f lands (recommended), or
-   release as STRUCTURE-labelled now?
+1. **CORROBORATED meals (≈30)** — pending formal nod; presented as the library
+   spine with no change recommended. (Rides with decision 4's "keep" posture.)
+2. **ARCHETYPE meals / UK vehicles** — **ACCEPTED, all** (bagels, wraps, jacket
+   potatoes, wedges, Skyr/Weetabix mappings). In-app methodology must never
+   claim competitor provenance for the vehicle.
+3. **FOUNDER comfort meals** — stand per the founder's 2026-06-12 decision
+   (adherence rationale, never research-claimed). Formal re-confirm rides with
+   final gate approval.
+4. **THIN meals** — **KEEP ALL SIX** (founder verdict): prawn & noodle stir-fry,
+   prawn & egg fried rice, chicken chow mein, chicken & quinoa salad, turkey &
+   cottage cheese plate, tuna & rice cakes. Kept as labelled UK mappings.
+5. **Post-workout shake + fast-carb family** — **APPROVED, ADD** (whey + banana
+   exists; add whey + cereal variants per B2/A2 evidence). Queued as a build
+   item against this gate.
+6. **Vegan section** — held for src-f as decided; src-f has now landed and its
+   verdict is recorded above: **rebalance anchors toward tofu/legume/soya;
+   demote seitan/tempeh prominence; powders as target-dependent top-ups.**
+   Rebalance queued as a build item against this gate.
