@@ -1686,6 +1686,29 @@ export async function deleteIncompleteWorkout(workoutId) {
   await d.runAsync('DELETE FROM workouts WHERE id = ? AND is_completed = 0', [workoutId]);
 }
 
+// Hard-delete ANY workout and its sets (founder request 2026-06-12: remove a
+// half-logged session, or start fresh, from Workout History). Local rows go
+// immediately; every derived surface (streaks, weekly volume, PRs, lift
+// progress) recomputes from local rows, so they self-heal on next view. The
+// streak high-water deliberately never shrinks (retro-shrink guard) and
+// already-seen milestones stay seen, both by design.
+//
+// The CLOUD copy is removed by sync.deleteWorkoutFromCloud (the caller pairs
+// the two; on failure it enqueues a 'workout_delete' op) so a restore pull
+// cannot resurrect the session. Scoped to the owning user as a guard against
+// a stale id crossing accounts on a shared device.
+export async function deleteWorkoutAndSets(userId, workoutId) {
+  if (!userId || !workoutId) return false;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT id FROM workouts WHERE id = ? AND user_id = ?', [workoutId, userId],
+  );
+  if (!row) return false;
+  await d.runAsync('DELETE FROM workout_sets WHERE workout_id = ?', [workoutId]);
+  await d.runAsync('DELETE FROM workouts WHERE id = ?', [workoutId]);
+  return true;
+}
+
 // ─── Workout Sets ──────────────────────────────────────────────────────────────────────────────────────
 
 export async function getAllWorkoutSets(userId) {
