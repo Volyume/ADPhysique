@@ -22,9 +22,14 @@
  *
  * ED/calm suppression is the CALLER's job (same gate as firstSessionLine): a
  * suppressed surface never calls claimMilestones, so a rung crossed during a
- * wellbeing hold is simply caught and shown later, never lost. First-30-days
- * rule (ext-05): every rung here is a positive, identity-framed acknowledgement
- * — there is no streak-loss, no shame, no "don't break it" framing anywhere.
+ * wellbeing hold is caught and shown once the hold lifts rather than fired into
+ * a void. When several rungs are unseen at one claim — an imported history, or a
+ * hold that spanned more than one rung — the most significant is shown and the
+ * rest are marked seen: the user gets the biggest CURRENT beat, never a rung-by-
+ * rung replay of every past one (so a smaller co-crossed rung is folded in, not
+ * separately celebrated). First-30-days rule (ext-05): every rung here is a
+ * positive, identity-framed acknowledgement — no streak-loss, no shame, no
+ * "don't break it" framing anywhere.
  *
  * Record shape (AsyncStorage only, per-user key, matching streakState's v1):
  *   { v:1, seen:string[] }   // milestone keys already claimed
