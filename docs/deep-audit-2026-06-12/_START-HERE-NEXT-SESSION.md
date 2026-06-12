@@ -38,3 +38,16 @@ Nothing research-derived is built before its research passes audit.
 3. `_BUILD-STATUS-AND-RESUME.md` (carries the validity warning)
 The founder's trust was burned on 2026-06-12 by sessions presenting digest
 output as deep research. Method honesty outranks output. Show your sources.
+
+## Reconstructing the founder's original orders (the chat was cleared)
+The verbatim morning prompts are NOT needed and may be lost (/clear). Use the
+in-repo record instead — it is the spec-as-understood plus the spec-as-built:
+- `_SHARED-BRIEF.md` — today's mandate (dual-market Besa+Eddie; usability,
+  placement, coaching voice, retention, virality).
+- `competitive-audit-2026-06-10/implementation/impl-NEW-002-training-partners.md`
+  and the other `impl-*.md` — per-feature specs the build was meant to hit.
+- `_FOUNDER-DECISIONS-2026-06-11.md` + `_FOUNDER-DECISIONS-2026-06-12.md`.
+- `git log origin/main..HEAD` diffs — what was ACTUALLY built.
+Diff spec-as-understood against spec-as-built and produce a GAP LIST for the
+founder: built-as-ordered / built-wrong / not-built. The founder decides
+keep/strip/rebuild per item. Research first, every time.
