@@ -94,6 +94,12 @@ function _loadRNIap() {
   }
 }
 
+// COMP-025-B: the offer-id (tag) the founder gives the WIN-BACK offer when
+// creating it on the Pro base plan in Play Console. The resubscribe path from a
+// win-back notification prefers an offer whose offerId contains this; until such
+// an offer exists, everything falls back to the normal purchase (inert).
+export const WINBACK_OFFER_ID = 'winback';
+
 /**
  * Pick the Play offer token to purchase a subscription with.
  *
@@ -106,17 +112,31 @@ function _loadRNIap() {
  * fall back to the base plan automatically.
  *
  * Preference order:
+ *   0. (COMP-025-B) when `preferOfferId` is given, an offer whose offerId
+ *      contains it (the win-back offer configured in Play Console). INERT BY
+ *      FALLBACK: if no such offer is returned (not configured, or the user is
+ *      ineligible — eligibility is server-enforced), selection falls through to
+ *      the normal order below, so a win-back preference can NEVER break or
+ *      change a regular purchase.
  *   1. an offer whose pricing has a free phase (priceAmountMicros === 0)
  *   2. the base plan offer (no offerId)
  *   3. the first offer
  * Returns null only if the product exposes no offers at all (misconfigured).
  *
  * @param {object} product  a ProductSubscription from fetchProducts({type:'subs'})
+ * @param {object} [opts]   { preferOfferId?: string }
  * @returns {string|null}
  */
-export function selectOfferToken(product) {
+export function selectOfferToken(product, { preferOfferId = null } = {}) {
   const offers = product?.subscriptionOfferDetailsAndroid;
   if (!Array.isArray(offers) || offers.length === 0) return null;
+  if (preferOfferId) {
+    const wanted = String(preferOfferId).toLowerCase();
+    const match = offers.find(
+      (o) => o?.offerId && o?.offerToken && String(o.offerId).toLowerCase().includes(wanted),
+    );
+    if (match?.offerToken) return match.offerToken;
+  }
   const hasFreePhase = (o) =>
     Array.isArray(o?.pricingPhases?.pricingPhaseList)
     && o.pricingPhases.pricingPhaseList.some(
@@ -429,6 +449,11 @@ export function _buildRealProvider(RNIap = _loadRNIap()) {
   // sku -> offerToken, filled in initialise() from fetchProducts so the
   // 7-day trial offer is ready before the first purchase.
   const offerTokens = {};
+  // COMP-025-B: sku -> win-back offer token, set only when Play returns a
+  // distinct offer tagged WINBACK_OFFER_ID for this product/user. Empty until
+  // the founder configures the offer in Play Console, which keeps the win-back
+  // purchase path identical to a normal purchase (inert by fallback).
+  const winbackOfferTokens = {};
   // Captured at initialise(); v15 takes obfuscatedAccountId in the request.
   let providerAppUserID = null;
   // The single in-flight purchase bridge. v15 delivers the result on the
@@ -465,6 +490,11 @@ export function _buildRealProvider(RNIap = _loadRNIap()) {
         const id = product?.id ?? product?.productId;
         const token = selectOfferToken(product);
         if (id && token) offerTokens[id] = token;
+        // COMP-025-B: cache a win-back offer token ONLY when it is a distinct
+        // offer (different token from the default), so preferWinback selects it
+        // and otherwise leaves the normal purchase untouched.
+        const winbackToken = selectOfferToken(product, { preferOfferId: WINBACK_OFFER_ID });
+        if (id && winbackToken && winbackToken !== token) winbackOfferTokens[id] = winbackToken;
         // C-2: cache the localised display price for the paywall surfaces.
         const price = selectDisplayPrice(product);
         if (id && price) _displayPrices[id] = price;
@@ -589,16 +619,20 @@ export function _buildRealProvider(RNIap = _loadRNIap()) {
       return _purchasesToCustomerInfo(purchases);
     },
 
-    async purchasePackage(skuId) {
-      _trackPurchase('purchase_initiated', { sku: skuId });
-      let offerToken = offerTokens[skuId] ?? null;
+    async purchasePackage(skuId, opts = {}) {
+      // COMP-025-B: a resubscribe from a win-back notification asks for the
+      // win-back offer. Used only when Play actually returned a distinct
+      // win-back offer for this user; otherwise this is a normal purchase.
+      const wantWinback = !!opts?.preferWinback && !!winbackOfferTokens[skuId];
+      _trackPurchase('purchase_initiated', { sku: skuId, winback: wantWinback });
+      let offerToken = (wantWinback ? winbackOfferTokens[skuId] : offerTokens[skuId]) ?? null;
       // The token map can be empty if initialise's fetch failed (transient
       // network) or the user reached the paywall before it finished. Re-fetch
       // once on demand before giving up, so a flaky first load doesn't
       // permanently block the purchase.
       if (!offerToken) {
         await loadOfferTokens();
-        offerToken = offerTokens[skuId] ?? null;
+        offerToken = (wantWinback ? winbackOfferTokens[skuId] : offerTokens[skuId]) ?? null;
       }
       // Android subscriptions must name an offer; without a token the trial
       // can't be selected and Google rejects the purchase, so fail clearly
@@ -813,8 +847,8 @@ export async function getCustomerInfo() {
  * truth for renewals / cancellations / refunds; this client-side
  * call gives the user immediate feedback at purchase time.
  */
-export async function purchasePackage(skuId) {
-  return _active().purchasePackage(skuId);
+export async function purchasePackage(skuId, opts = {}) {
+  return _active().purchasePackage(skuId, opts);
 }
 
 export async function restorePurchases() {

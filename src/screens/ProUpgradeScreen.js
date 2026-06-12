@@ -22,7 +22,7 @@ const PRO_PERKS = [
   { icon: 'eye-outline', text: 'After every check-in, your coach explains every decision. What changed, what was left alone, and why.' },
 ];
 
-export default function ProUpgradeScreen({ navigation }) {
+export default function ProUpgradeScreen({ navigation, route }) {
   const toast = useToast();
   const {
     user, session, userProfile, tier, setTier, refreshTierFromCloud, resetFirstRun, firstRunComplete,
@@ -76,7 +76,9 @@ export default function ProUpgradeScreen({ navigation }) {
     }
     setBusy(true);
     try {
-      const pr = await playBilling.purchasePackage(sku.id);
+      // COMP-025-B: prefer the win-back Play offer when the user arrived from a
+      // win-back notification. Inert (normal purchase) if no offer is configured.
+      const pr = await playBilling.purchasePackage(sku.id, { preferWinback: !!route?.params?.fromWinback });
       const ref = pr?.transactionId ?? `client_${Date.now()}`;
       await cascade.payAt('pro', ref, 'pro_upgrade');
       // Server-authoritative grant: verify the token with Google, write Pro

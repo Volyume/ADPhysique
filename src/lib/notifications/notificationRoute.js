@@ -39,7 +39,9 @@ export function routeForNotificationType(type, data = {}) {
     case 'winback':
       // COMP-025-A: the +30-day win-back. Lands on the Subscription screen,
       // which shows the returning offer when one is store-eligible (§4c).
-      return { tab: 'ProfileTab', screen: 'Subscription' };
+      // COMP-025-B: fromWinback carries through to the resubscribe so the
+      // win-back Play offer is preferred (inert if none is configured).
+      return { tab: 'ProfileTab', screen: 'Subscription', params: { fromWinback: true } };
     case 'trial_day3':
       // COMP-023 day-3 value moment. S1/S2 land on the check-in gate screen
       // (which shows the countdown made visible); S3 (no sessions yet) lands on

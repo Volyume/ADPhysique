@@ -224,3 +224,34 @@ describe('_buildRealProvider', () => {
     await expect(purchasing).rejects.toMatchObject({ code: 'E_USER_CANCELLED' });
   });
 });
+
+// COMP-025-B: win-back offer preference (inert by fallback).
+describe('selectOfferToken — win-back offer (COMP-025-B)', () => {
+  const WINBACK_TOKEN = 'offer-winback';
+  function winbackProduct() {
+    const p = trialProduct();
+    p.subscriptionOfferDetailsAndroid.push({
+      basePlanId: 'monthly',
+      offerId: 'winback-30',
+      offerToken: WINBACK_TOKEN,
+      pricingPhases: { pricingPhaseList: [
+        { priceAmountMicros: '490000', billingPeriod: 'P1M' },
+      ] },
+    });
+    return p;
+  }
+
+  test('prefers an offer whose offerId contains the win-back tag', () => {
+    expect(selectOfferToken(winbackProduct(), { preferOfferId: 'winback' })).toBe(WINBACK_TOKEN);
+  });
+
+  test('INERT BY FALLBACK: with no win-back offer, falls through to the normal token', () => {
+    // The default trial product has no win-back offer -> free-trial token wins,
+    // exactly as a normal purchase (a win-back preference can never break it).
+    expect(selectOfferToken(trialProduct(), { preferOfferId: 'winback' })).toBe(FREE_TOKEN);
+  });
+
+  test('no preference => unchanged behaviour even when a win-back offer exists', () => {
+    expect(selectOfferToken(winbackProduct())).toBe(FREE_TOKEN);
+  });
+});

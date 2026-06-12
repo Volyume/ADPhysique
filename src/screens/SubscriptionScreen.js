@@ -37,7 +37,7 @@ const STAGE_LABEL = {
   free:            'Free',
 };
 
-export default function SubscriptionScreen({ navigation }) {
+export default function SubscriptionScreen({ navigation, route }) {
   const toast = useToast();
   const { userProfile, billingPeriod, storeTier, userId } = useAppStore(useShallow((s) => ({
     userProfile: s.userProfile,
@@ -123,9 +123,11 @@ export default function SubscriptionScreen({ navigation }) {
     if (stage === 'pro_trial') {
       navigation?.navigate?.('CascadeGate', { variant: 'day14', period });
     } else {
-      navigation?.navigate?.('ProUpgrade');
+      // COMP-025-B: carry the win-back arrival through so the resubscribe
+      // prefers the win-back Play offer (inert when none is configured).
+      navigation?.navigate?.('ProUpgrade', { fromWinback: !!route?.params?.fromWinback });
     }
-  }, [navigation, period, stage]);
+  }, [navigation, period, stage, route]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

@@ -52,9 +52,11 @@ describe('routeForNotificationType', () => {
     });
   });
 
-  test('winback opens the Subscription screen in the You tab (COMP-025-A)', () => {
+  test('winback opens the Subscription screen in the You tab (COMP-025-A/B)', () => {
     expect(routeForNotificationType('winback')).toEqual({
-      tab: 'ProfileTab', screen: 'Subscription',
+      // COMP-025-B: fromWinback carries through so the resubscribe prefers the
+      // win-back Play offer (inert when none is configured).
+      tab: 'ProfileTab', screen: 'Subscription', params: { fromWinback: true },
     });
   });
 
