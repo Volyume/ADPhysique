@@ -54,6 +54,25 @@ If something feels irreversible: stop and ask first.
 
 ---
 
+## BUILD OPERATING MODEL (founder rule, 2026-06-12)
+
+Claude builds the spine HANDS-ON: engine code, safety-adjacent logic, and
+anything needing design judgement. Agents do leverage work only: research,
+audits, and well-specified surfaces.
+
+After every completed feature: dispatch a fresh-eyes adversarial REVIEW
+agent (no authorship bias) to check the work against its blueprint before
+moving on.
+
+Tests are the contract, written to fail: every feature gets invariant tests
+against the REAL engine for whatever it must never do. CI is the final
+arbiter; the founder device-walks new flows from green builds.
+
+When founder decisions are needed: never stop and wait. Ask structured
+multi-choice questions and keep working.
+
+---
+
 ## ARCHITECTURE — DECISIONS THAT NEVER CHANGE
 
 These were deliberate decisions. Never undo them without explicit instruction.

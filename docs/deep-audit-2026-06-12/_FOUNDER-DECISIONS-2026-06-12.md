@@ -37,7 +37,6 @@ imply are drafted as addenda and reviewed by the founder at PR (the
 
 **Standing instruction (founder):** when founder decisions are needed, do not
 stop and wait — ask structured multi-choice questions and continue.
-</content>
 
 ## Operating model (founder-approved, 2026-06-12, later session)
 - **Claude builds the spine hands-on** (engine code, safety-adjacent logic,
