@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import { useToast } from '../components/Toast';
+import { appAlert } from '../components/AppAlert';
 import useAppStore from '../store/useAppStore';
 import { colors, fontSize, fontWeight, spacing, radius, hitSlop } from '../styles/theme';
 import { mealSlotLabel } from '../lib/food/mealSlots';
@@ -59,6 +60,7 @@ function sumDayTotals(slots) {
 export default function MealPlanScreen({ navigation }) {
   const user = useAppStore((s) => s.user);
   const userProfile = useAppStore((s) => s.userProfile);
+  const addMealPlanExcludedFood = useAppStore((s) => s.addMealPlanExcludedFood);
   const toast = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -186,6 +188,51 @@ export default function MealPlanScreen({ navigation }) {
     }
   }, [user?.id, record, plan, day, dayIndex, busy, toast]);
 
+  // "Never show me this" (R1): persist the exclusion to the profile, then
+  // swap the food out of the current plan honouring the new exclusion so
+  // it cannot return through the alternative either.
+  const handleFlagFood = useCallback((slotKey, foodKey, foodName) => {
+    if (!user?.id || !record || !day || busy) return;
+    appAlert(
+      'Never show this again?',
+      `${foodName} will be left out of your plans from now on, and swapped out of this one.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Leave it out',
+          onPress: async () => {
+            setBusy(true);
+            try {
+              await addMealPlanExcludedFood(foodKey);
+              const slot = day.slots.find((s) => s.slot === slotKey);
+              const mergedPrefs = {
+                ...plan.prefs,
+                excludeFoodKeys: [...(plan.prefs?.excludeFoodKeys || []), foodKey],
+              };
+              const res = slot?.components
+                ? swapFoodInMeal({ components: slot.components, foodKeyOut: foodKey, prefs: mergedPrefs })
+                : null;
+              if (res) {
+                const newSlot = { ...slot, components: res.components, items: res.items, totals: res.totals };
+                const newSlots = day.slots.map((s) => (s.slot === slotKey ? newSlot : s));
+                const newDay = { ...day, slots: newSlots, totals: sumDayTotals(newSlots) };
+                const days = plan.days.map((d, i) => (i === dayIndex ? newDay : d));
+                const nextPlan = { ...plan, prefs: mergedPrefs, days, lastEditType: 'rotation' };
+                await updateMealPlan(user.id, record.id, nextPlan);
+                setRecord({ ...record, plan: nextPlan });
+              }
+              toast.show(`${foodName} left out from now on.`, { variant: 'success' });
+            } catch (_) {
+              toast.show("Couldn't update. Try again.", { variant: 'error' });
+            } finally {
+              setBusy(false);
+            }
+          },
+        },
+      ],
+    );
+  }, [user?.id, record, plan, day, dayIndex, busy, addMealPlanExcludedFood, toast]);
+
   const dayTypeLabel = day?.variant === 'training' ? 'Training day' : 'Rest day';
   const target = plan?.targetSnapshot;
   const cycleOn = (plan?.cycleDeltaKcal || 0) > 0;
@@ -280,9 +327,10 @@ export default function MealPlanScreen({ navigation }) {
                           style={styles.itemRow}
                           disabled={!canSwap || busy}
                           onPress={() => handleSwapFood(slot.slot, foodKey)}
+                          onLongPress={() => canSwap && handleFlagFood(slot.slot, foodKey, it.name)}
                           hitSlop={hitSlop}
                           accessibilityRole={canSwap ? 'button' : 'text'}
-                          accessibilityLabel={canSwap ? `${it.quantityG} grams ${it.name}. Tap to swap for an alternative.` : `${it.quantityG} grams ${it.name}`}
+                          accessibilityLabel={canSwap ? `${it.quantityG} grams ${it.name}. Tap to swap, long press to leave it out for good.` : `${it.quantityG} grams ${it.name}`}
                         >
                           <Text style={styles.itemLine}>{`${it.quantityG} g ${it.name}`}</Text>
                           {canSwap ? <Ionicons name="swap-horizontal-outline" size={13} color={colors.textSecondary} /> : null}

@@ -1414,6 +1414,22 @@ const useAppStore = create((set, get) => ({
     }
   },
 
+  // Meal-plan food exclusions ("never show me this", deep-audit Theme G
+  // R1). A local profile field (the meal plan is local-only for now, so no
+  // cloud column / pushPrefSoon); the generator + swaps read it via
+  // preferencesFromProfile. Idempotent append.
+  addMealPlanExcludedFood: async (foodKey) => {
+    const { user, userProfile } = get();
+    if (!user?.id || !foodKey) return;
+    const current = Array.isArray(userProfile?.mealPlanExcludeFoods)
+      ? userProfile.mealPlanExcludeFoods : [];
+    if (current.includes(foodKey)) return;
+    const updated = { ...(userProfile || {}), mealPlanExcludeFoods: [...current, foodKey] };
+    const key = PROFILE_KEY_PFX + user.id;
+    try { await AsyncStorage.setItem(key, JSON.stringify(updated)); } catch (_) {}
+    set({ userProfile: updated });
+  },
+
   // Bar weight for plate calculator, persisted alongside units
   barWeight: 20,
   setBarWeight: async (w) => {
