@@ -1,5 +1,7 @@
 # ext-03 — Mass-Market Nutrition / Food-Logging / Diet-Coaching Apps
 
+> Citations reconciled 2026-06-12 against validation/val-ext-*.md — see that report for per-claim verdicts.
+
 > **PROVENANCE NOTICE (2026-06-12, added after a verified research-tooling
 > failure):** this document presents itself as external/competitive research.
 > The session that produced it cannot be verified from here, and the cloud
@@ -35,11 +37,11 @@ Prior findings this report endorses without repeating: MacroFactor's FLSI speed 
 
 **What this audit adds:**
 
-**Adherence-neutral design is a system, not a style choice.** The mechanism: no red numbers, no streak penalties, no "you went over" warnings. The *functional* reason is that shame suppresses honest logging, and dishonest logs corrupt the TDEE algorithm — so non-shaming design is algorithmically self-interested, not just ethical. Quote from MacroFactor's own documentation: "Avoiding shame-based messaging and visual elements comes with a functional benefit: it makes people more likely to actually log everything they eat… updated recommendations are based on actual energy intake and changes in weight, not how well you stuck to recommendations." This is the strongest single argument for replicating this design philosophy in Volyume — it is not soft, it is hard-edged algorithm protection.
+**Adherence-neutral design is a system, not a style choice.** The mechanism: no red numbers, no streak penalties, no "you went over" warnings. The *functional* reason is that shame suppresses honest logging, and dishonest logs corrupt the TDEE algorithm — so non-shaming design is algorithmically self-interested, not just ethical. Quote from MacroFactor's own documentation: "Avoiding shame-based messaging and visual elements comes with a functional benefit: it makes people more likely to actually log everything they eat." MacroFactor further states it "will make appropriate adjustments… based on what you log, regardless of how close you came to hitting your targets". [Corrected 2026-06-12 citation audit — the first sentence is verbatim, but the earlier second half ("updated recommendations are based on actual energy intake… not how well you stuck to recommendations") was a paraphrase spliced into the same quotation marks. See validation/val-ext-03-06.md E3-02.] This is the strongest single argument for replicating this design philosophy in Volyume — it is not soft, it is hard-edged algorithm protection.
 
-**Beginner bottleneck is real and documented.** Multiple 2026 review aggregations identify a consistent failure mode: "The settings screens, the weekly weigh-in cadence, the coaching card stack, the expenditure graphs, and the dense nutrient summaries add friction to a workflow that should take ten seconds per meal." (Hoot Fitness, 2026.) Users recommended it as a MacroFactor alternative site literally label the category "apps like MacroFactor but simpler." This is Volyume's opening: match MF's coaching quality, beat its beginner UX. The prior audit noted "too many numbers, too many charts" but did not fully explore what a simpler entry path looks like.
+**Beginner bottleneck is real and documented.** The Hoot Fitness 2026 MacroFactor-alternatives page describes "a steeper learning curve for casual users", with logging that can feel "tedious". [Corrected 2026-06-12 citation audit — the earlier quotation ("The settings screens, the weekly weigh-in cadence, the coaching card stack… ten seconds per meal") was FABRICATED; it does not appear on the cited Hoot Fitness page. The complaint is real but mild-to-moderate, not as heavily documented as implied. See validation/val-ext-03-06.md E3-03, E3-04.] Sites recommending MacroFactor alternatives literally label the category "apps like MacroFactor but simpler." This is Volyume's opening: match MF's coaching quality, beat its beginner UX. The prior audit noted "too many numbers, too many charts" but did not fully explore what a simpler entry path looks like.
 
-**No functional free tier** ($71.99/yr, 7-day trial) — the conversion funnel depends entirely on the trial. RevenueCat 2026: trials improve first-renewal retention by 8–60% in H&F. MF leverages this well; Volyume's 14-day cardless trial is structurally equivalent and should not be shortened.
+**No functional free tier** ($71.99/yr, 7-day trial) — the conversion funnel depends entirely on the trial. Adapty 2026: trial users **across all categories** retain 8–60% better at first renewal than non-trial users. [Corrected 2026-06-12 citation audit — the 8–60% figure is across all categories, not an H&F-specific figure (though the article notes trials boost H&F LTV specifically). See validation/val-ext-03-06.md E3-06.] MF leverages this well; Volyume's 14-day cardless trial is structurally equivalent and should not be shortened.
 
 **Sources:** MacroFactor adherence-neutral documentation (macrofactorapp.com/adherence-neutral/); Strongerbyscience.com/macrofactor-algorithms-philosophy/; hootfitness.com/blog/9-best-macrofactor-alternatives; nutrola.app/en/blog/apps-like-macrofactor-but-simpler.
 
@@ -53,9 +55,9 @@ Prior findings this report endorses without repeating: MacroFactor's FLSI speed 
 
 **The algorithmic philosophy contrast:** MacroFactor says "show me what you actually did and I'll work with that"; Carbon says "follow the plan and I'll adjust for you." This maps directly onto the autonomy spectrum: MacroFactor rewards non-compliance by adapting to it; Carbon expects compliance and recalibrates when you don't deliver. For elite competitors (Eddie) doing contest prep with tight periodisation, Carbon's compliance-first model is a feature, not a bug. For beginners (Besa) who will inevitably have bad weeks, MacroFactor's approach is more forgiving.
 
-**Pricing premium signal:** Carbon raised to $14.99/month or $99.99/year in 2026, more than MacroFactor ($11.99/$71.99). This frames it as "like having a coach without paying $100/month human coaching." The positioning is explicitly against human coaching economics — relevant given Stronger U's closure (31 March 2026) as documented in the prior audit.
+**Pricing premium signal:** Carbon raised to $11.99/month ($59.99/6mo, $99.99/year) in 2026, more than MacroFactor ($11.99/$71.99 — comparable monthly, costlier annually). [Corrected 2026-06-12 citation audit — the official pricing page shows $11.99/mo, not $14.99. See validation/val-ext-03-06.md E3-07.] This frames it as "like having a coach without paying $100/month human coaching." The positioning is explicitly against human coaching economics — relevant given Stronger U's closure (31 March 2026) as documented in the prior audit.
 
-**Carb-cycling and time-of-day tracking** are specialty features no other mass-market app matches — directly relevant to Eddie's contest prep needs. MacroFactor's Collaborative mode can approximate refeeds manually; Carbon's dedicated carb-cycling mode removes that burden.
+**Carb-cycling:** [Corrected 2026-06-12 citation audit — the earlier claim that "Carbon has a dedicated carb-cycling mode" and time-of-day tracking was FABRICATED, and is the reverse of reality. Carbon's own help centre states: "Unfortunately, we don't have a feature that allows this", citing fluid-shift confounds; it offers only a Calorie Planner (calorie cycling at a fixed carb:fat ratio), and no time-of-day tracking appears anywhere in its marketing or help pages. This actually **strengthens** Volyume's TD/NTD differentiation — Carbon, Volyume's nearest philosophical competitor, does *not* own carb cycling. See validation/val-ext-03-06.md E3-10.]
 
 **Volyume comparison:** Volyume's Precision Coaching engine is philosophically closer to Carbon (deterministic, compliance-informed) but with MATADOR diet breaks and refeeds as named coached features (which Carbon lacks). Volyume's explicit "Apply" consent per adjustment is unique. The gap: Carbon exposes its coaching engine as the primary value proposition in marketing and UI; Volyume's engine quality is less visible to a new user before they experience a coaching cycle.
 
@@ -76,15 +78,15 @@ Prior findings this report endorses without repeating: MacroFactor's FLSI speed 
 
 **What works (worth copying):**
 - **Daily micro-lessons** tied to a specific behaviour: 10 minutes, one concept, one exercise. Beginners report this reduces overwhelm vs being shown everything at once. It is habit-stacking in the Fogg/Clear sense: a new behaviour is attached to an existing daily routine (opening the app).
-- **Identity framing:** lessons explicitly reframe from outcome ("I want to lose weight") to identity ("I am someone who makes thoughtful food choices"). Research published in *Journal of Personality and Social Psychology* 2024 found identity-framing is more durable than outcome-goal framing for habit retention.
+- **Identity framing:** lessons explicitly reframe from outcome ("I want to lose weight") to identity ("I am someone who makes thoughtful food choices"). [The earlier citation to a "*Journal of Personality and Social Psychology* 2024" identity-framing study was UNSUPPORTED — no such 2024 JPSP paper could be found, and the circulating "32% better adherence" version is uncited blog lore. Identity-framing remains a reasonable design heuristic but currently has no verified quantitative evidence behind it; real adjacent work (Wood 2024, Bauer 2024, the habit–identity literature) exists but is not this study. Removed 2026-06-12 citation audit; see validation/val-ext-03-06.md E3-57.]
 - **Non-numerical coaching voice:** the colour system provides guidance without displaying a calorie number. For beginners who find calorie counts anxiety-inducing, this lowers the psychological activation energy to start.
 
 **What fails (do not copy):**
-- **1,200 kcal default is dangerous and widely criticised.** Most women receive 1,200 kcal regardless of height, weight, or activity level — dietitians across multiple independent reviews call this "unrealistic" and "unsafe." One study found 73% of MFP users with eating disorders said the app "at least somewhat contributed" — Noom has similar structural risk because the psychological framing of "no bad foods" conflicts directly with its calorie restriction mechanics. No eating disorder screening at intake. Former coaches revealed 95% of responses are copy-pasted and coaches are not equipped to handle disordered eating patterns.
+- **The 1,200 kcal default was dangerous and widely criticised.** Historically most women received 1,200 kcal regardless of height, weight, or activity level — dietitians across multiple independent reviews called this "unrealistic" and "unsafe." [Corrected 2026-06-12 citation audit — Noom subsequently raised its minimums ~10% to **1,310 kcal (women) / 1,540 kcal (men)**; the "1,200 default" attack line must be updated before reuse. Note this leaves Volyume's floors (1,200/1,500) comparable to Noom's *revised* floors, slightly weakening any "structurally safer on floors alone" framing — the rest of the safety-system comparison (screening, signposting, rapid-loss lockout) stands. See validation/val-ext-03-06.md E3-20.] A 2017 study of an ED-clinical population (Levinson, Fewell & Brosof, *Eating Behaviors* 27:14–16; n=105 recently discharged from residential/partial ED treatment) found **73.1% of the MyFitnessPal users in that sample** said the app at least somewhat contributed to their eating disorder — Noom plausibly carries similar structural risk, though that extension is an inference, not the study's finding. [Corrected 2026-06-12 citation audit — the study is a 2017 ED-clinical-population paper, not a survey of general "MFP users with eating disorders"; see validation/val-ext-03-06.md E3-21.] Eating-disorder screening at signup **does exist but is bypassable** — answering "yes" does not prevent enrolment and the answer can be changed. [Corrected from "no ED screening at intake"; see E3-22.] One former coach quoted in the Femestella investigation estimated ~95% of responses are copy-pasted from spreadsheets; treat this as a single-source former-employee estimate, not an established statistic, though templated coaching at scale is independently corroborated. [Corrected 2026-06-12 citation audit; see E3-23.]
 - **The colour system is implicitly shaming.** Despite "no forbidden foods" marketing, heavy orange-red food consumption triggers negative coaching messages. Users report guilt. The Femestella investigation documents ED harm from Noom specifically.
 - **GLP-1 pivot signals strategic retreat from pure behaviour coaching.** Behaviour change is becoming the upsell, not the product. This is actually a Volyume opportunity: a deterministic, evidence-based coaching engine without pharmacological shortcuts is increasingly the market differentiator.
 
-**Volyume comparison:** Volyume's ED safety system (Beat UK signposting, 1,200/1,500 kcal floors, rapid-loss lockout) makes it structurally safer than Noom by a significant margin. Volyume has no equivalent of Noom's daily psychology lessons — this is a genuine gap for beginner engagement. The coaching voice in check-ins and target explanations is functional but not psychologically scaffolded for beginners.
+**Volyume comparison:** Volyume's ED safety system (Beat UK signposting, 1,200/1,500 kcal floors, rapid-loss lockout) makes it structurally safer than Noom — though note Noom's revised floors (1,310/1,540) are now comparable on the calorie-floor dimension alone, so the safety advantage rests on screening, signposting and the rapid-loss lockout rather than floors. Volyume has no equivalent of Noom's daily psychology lessons — this is a genuine gap for beginner engagement. The coaching voice in check-ins and target explanations is functional but not psychologically scaffolded for beginners.
 
 **Sources:** barbend.com/noom-weight-loss-app-review/; millennialhawk.com/noom-review/; www.femestella.com/noom-reviews-horror-stories-eating-disorders/; abbylangernutrition.com/noom-review-is-this-app-legit; sacra.com/c/noom/; nutriscan.app/blog/posts/is-noom-worth-it-2026; www.noom.com/in-the-news/noom-launches-microdose-glp-1.
 
@@ -144,18 +146,18 @@ Prior findings this report endorses without repeating: MacroFactor's FLSI speed 
 **Not covered in prior audit.**
 
 **What Welling does:**
-- Photo + voice note + text chat → meal logged in 2.6 seconds average.
-- Claims 95.6% food-identification accuracy across 15,000 test meals, ±1.2% portion-estimation error.
+- Photo + voice note + text chat → meal logged in seconds.
+- Welling's *own* benchmark numbers (a vendor-affiliated study, not independent measurement) — and the figures move: an April 2026 version claimed 2.6s / 95.6% accuracy / ±1.2% / 15,000 meals; a May 2026 version reports 96.8% accuracy across 18,400 meals, ±0.9%, 2.2s. The genuinely independent FeastGood review notes it "isn't always accurate here, and you might need to do some manual edits." [Corrected 2026-06-12 citation audit — these are moving marketing numbers presented earlier as stable single-source-of-truth figures. See validation/val-ext-03-06.md E3-30.]
 - Conversational AI coach: contextualises each meal against daily target, gives forward-looking suggestions ("here's what to eat for dinner to hit your protein").
-- Android launched early 2026; positioned as "ChatGPT for weight loss."
+- Android launched early 2026. [The "ChatGPT for weight loss" positioning phrase was UNSUPPORTED — not found in any source; the closest is a reviewer noting the UI "looks more like ChatGPT than a calorie tracking app", i.e. an interface observation, not market positioning. Removed 2026-06-12 citation audit; see E3-32.]
 - Non-judgmental framing throughout — "like a friend who's great at nutrition."
-- Named top pick in multiple independent 2026 roundups for beginners specifically.
+- Named a top pick in several 2026 roundups for beginners — but the "independent" sources are largely an AI-generated affiliate-review cluster plus Welling's own articles; genuine independent coverage (FeastGood) is positive but more measured. [Corrected 2026-06-12 citation audit; see E3-33.]
 
 **Threat assessment:**
 Welling is the most direct threat to beginner acquisition in this audit. It solves the #1 dropout cause (logging friction) with photo/voice entry. For Besa the Beginner, Welling's frictionless entry is categorically different from any manual-search-based app. The conversational AI coach provides the psychological scaffolding that beginner users say they want but Volyume cannot match without crossing the LLM boundary.
 
 **Constraint analysis:** Volyume cannot replicate Welling's AI photo logging or its conversational coach without violating the hard no-AI/LLM rule. However:
-- Welling's claimed accuracy (±1.2% MAPE) is almost certainly a controlled-test figure; real-world complex meals and restaurant food will perform much worse (see MFP Meal Scan at ±18% in the prior audit's cited benchmark). 
+- Welling's claimed accuracy (a sub-±1.2% vendor figure) is a controlled-test number; real-world complex meals and restaurant food will perform much worse (see MFP Meal Scan at ±18% in the prior audit's cited benchmark, and FeastGood's note that Welling needs manual edits). 
 - Volyume's deterministic per-meal-slot memory + verified UK database + barcode + label OCR chain delivers comparable speed with far higher accuracy for the foods UK gym-goers actually eat.
 - The psychological scaffolding Welling provides via AI can be partially replicated via deterministic contextual coaching messages — see Transferable Ideas section.
 
@@ -190,11 +192,11 @@ Welling is the most direct threat to beginner acquisition in this audit. It solv
 
 **What this audit adds:**
 
-Avatar persists and has carved out a specific niche: reverse dieting and High/Low day carb cycling with adjustable macro sliders. Users on a reverse diet can set High days (more carbs/fat) and Low days that balance them. For the physique competitor transitioning out of a show diet, this is a useful structured tool that Carbon and MacroFactor require manual workarounds to replicate.
+Avatar persists with reverse dieting as a core advertised feature, adjusting macros via weekly check-in-driven changes that the user accepts or rejects. [The earlier claim of "High/Low day carb cycling with adjustable macro sliders" was UNSUPPORTED — it is not on Avatar's current homepage or its adaptive-nutrition page (which describe weekly check-in adjustments, no High/Low days, no sliders). It may be a legacy feature, but as a 2026 competitive claim it is unsupported. Removed 2026-06-12 citation audit; see validation/val-ext-03-06.md E3-39.]
 
-Avatar's pricing ($14.99/month or $99/year as of 2026) has not kept pace with UI modernisation. Reviews consistently note dated interface vs Carbon/MacroFactor. It survives on the strength of its science positioning (Layne Norton's methodology, despite his departure) and lack of a compelling free alternative for this specific use case.
+Avatar's pricing (**$9.99/month with a 14-day free trial**; no annual price advertised, as of 2026) has not kept pace with UI modernisation. [Corrected 2026-06-12 citation audit from "$14.99/month or $99/year"; see E3-38.] Reviews consistently note dated interface vs Carbon/MacroFactor. It survives on the strength of its science positioning (Layne Norton's methodology, despite his departure) and lack of a compelling free alternative for this specific use case.
 
-**Volyume comparison:** Volyume's MATADOR protocol and built-in refeed support is more sophisticated than Avatar's High/Low day system. Avatar's moat is almost entirely historical — Volyume can close this gap with better surfacing of its existing engine features.
+**Volyume comparison:** Volyume's MATADOR protocol and built-in refeed support is more sophisticated than Avatar's reverse-diet adjustment tooling. Avatar's moat is almost entirely historical — Volyume can close this gap with better surfacing of its existing engine features.
 
 **Sources:** avatarnutrition.com; avatarnutrition.com/how-it-works/adaptive-nutrition; dr-muscle.com/free-paid-macrofactor-alternatives/; calorietrackerlab.com/articles/macro-tracking-apps-comparison-2026/.
 
@@ -216,7 +218,7 @@ The Lifesum case is the clearest 2025–2026 cautionary tale about AI-first feat
 
 **Prior audit covered:** USDA/lab-verified database, 84 nutrients, no adaptive coaching, 45s per entry. 
 
-**2026 update:** Multiple independent reviews now explicitly state "not for beginners" and cite the UI as the primary barrier — "opening the app to 82+ nutrient targets with colored progress bars is a lot to process when your goal is simply to start counting calories." No beginner mode has been added. Cronometer's positioning has fully bifurcated to dietitians, athletes, biohackers, and clinical users.
+**2026 update:** Reviews now explicitly state "not for beginners" and cite the UI as the primary barrier — the interface "is dense and can feel clinical or overwhelming to new users" (and Cronometer tracks 84 nutrients). [Corrected 2026-06-12 citation audit — the earlier quotation ("opening the app to 82+ nutrient targets with colored progress bars is a lot to process…") was FABRICATED; it does not appear on the cited review, though the substance (dense, overwhelming for new users) is directionally right. See validation/val-ext-03-06.md E3-41.] No beginner mode has been added. Cronometer's positioning has fully bifurcated to dietitians, athletes, biohackers, and clinical users.
 
 **Implication for Volyume:** Cronometer is not a beginner-acquisition threat; it is an Eddie-retention threat. If Eddie wants full micronutrient visibility (selenium, individual amino acids, fatty acid subtypes), Cronometer provides that and Volyume currently does not surface it. However, Eddie using Volyume for training *and* checking Cronometer for micronutrients is a fragmentation Volyume could close by adding a basic micronutrient overview panel (not full Cronometer depth — just the critical six: vitamin D, iron, calcium, omega-3, zinc, magnesium).
 
@@ -259,7 +261,7 @@ The Lifesum case is the clearest 2025–2026 cautionary tale about AI-first feat
 
 **Prior audit noted:** truly free barcode scanning, UK-localised database, stagnant development.
 
-**2026 confirmation:** Still the only major app with full core features genuinely free (no trial expiration, no feature removals). UK database filters out US products by default — useful. Average calorie deviation ±8.4% from lab measurements (highest error margin tested). Restaurant and generic entries unreliable. Described as "stopped evolving" in 2026 reviews.
+**2026 confirmation:** Still the only major app with full core features genuinely free (no trial expiration, no feature removals). UK database filters out US products by default — useful. [The "±8.4% average calorie deviation (highest error margin tested)" figure exists only in one AI-content-cluster review site's unaudited, unpublished "test meal protocol" — treat it as "one review site's claim", not a lab-grade benchmark. Corrected 2026-06-12 citation audit; see validation/val-ext-03-06.md E3-46.] Restaurant and generic entries unreliable. Described as "stopped evolving" in 2026 reviews.
 
 **Implication:** FatSecret is not a competitive threat but is an acquisition source — users who discover Volyume via FatSecret are typically free-tier users frustrated by data quality who would upgrade to Pro for reliable UK branded data plus coaching.
 
@@ -296,7 +298,7 @@ Noom's approach of front-loading lesson content and fading it over time is the c
 
 ### 2.4 Identity framing outperforms outcome framing for beginners
 
-Multiple sources — including a 2024 *Journal of Personality and Social Psychology* study — confirm that framing nutrition tracking as identity ("I am someone who knows what I eat") rather than outcome ("I want to lose 5 kg") produces more durable habits. Apps implementing this: Simple ("sustainable habits, not strict rules"), Noom's CBT lessons, Welling ("like a food-aware friend"). Apps not implementing this: MFP, Lose It, Cronometer — all framed around outcome numbers.
+Practitioner sources suggest that framing nutrition tracking as identity ("I am someone who knows what I eat") rather than outcome ("I want to lose 5 kg") produces more durable habits. [The earlier citation to a "2024 *Journal of Personality and Social Psychology* study" was UNSUPPORTED — no such paper could be found; treat identity-framing as a design heuristic, not evidence-backed. Corrected 2026-06-12 citation audit; see validation/val-ext-03-06.md E3-57.] Apps implementing this: Simple ("sustainable habits, not strict rules"), Noom's CBT lessons, Welling ("like a food-aware friend"). Apps not implementing this: MFP, Lose It, Cronometer — all framed around outcome numbers.
 
 **Implication for Volyume:** coaching voice at onboarding and early check-ins should include identity-framing language. "You're now someone who trains and tracks" is more retention-durable than "You need to hit 2,200 kcal today."
 
@@ -316,24 +318,24 @@ From RevenueCat State of Subscription Apps 2026 and Adapty Health & Fitness Benc
 
 | Metric | H&F category median | Notes |
 |--------|---------------------|-------|
-| Trial-to-paid conversion | 35.0% | Highest of any app category |
-| Install LTV | $1.21 | Highest of any app category |
-| Day 380 annual trial retention | 19.9% | vs 14.2% monthly, 5.5% weekly |
-| First-renewal retention | 30.3% | Lowest in H&F despite high conversion |
-| Annual plan revenue share | 60.6% (H&F) | Only category where annual dominates |
-| Conversion day pattern | Day 0 or Days 4–7 | "Genuine intent" window; mid-week nudges have near-zero ROI |
-| Long-trial (17–32 day) conversion | 42.5% median | vs 25.5% for <4-day trials — 70% better |
-| Hard paywall Day 35 conversion | 5× better than soft | Across categories |
+| Trial-to-paid conversion | 35.0% | Highest of any app category (vs 25.6% global) |
+| Install LTV | $1.21 | Highest of any app category (Adapty) |
+| Day 380 trial-cohort retention | 19.9% annual | vs 14.2% monthly, 5.5% weekly. Source: **Adapty** State of In-App Subscriptions 2026 (via Airbridge), not RevenueCat — corrected 2026-06-12 audit (E3-50) |
+| First-renewal retention | 54% weekly / 57% monthly / 25% annual | RevenueCat 2026 plan-type medians; H&F "quietly consistent across all three". The earlier "30.3%, lowest in H&F" figure was UNSUPPORTED/confected — corrected 2026-06-12 audit (E3-51) |
+| Annual plan revenue share | ~61% (H&F, 2025) | Grew from 51% (2023); only App Store category where annual continues to gain share (Adapty). Earlier "60.6%" ≈ right — corrected 2026-06-12 audit (E3-52) |
+| Conversion day pattern | Day 0 or Days 4–7 | 86.1% of H&F trial conversions land Day 0; near-zero-ROI window is Days 1–3 |
+| Long-trial (17–32 day) conversion | 42.5% median | vs 25.5% for <4-day trials — ~70% better (RevenueCat 2026) |
+| Hard paywall Day 35 conversion | 10.7% vs 2.1% freemium (~5×) | RevenueCat 2026: hard paywall vs **freemium** (not "soft paywall"); $3.09 vs $0.38 RPI at day 60 — corrected 2026-06-12 audit (E3-55) |
 
 **Implications for Volyume's 14-day cardless trial:**
 - 14 days is within the "long trial" band that converts at 42.5% vs 25.5% for short trials. Do not shorten.
 - Day 0 converters are already motivated — the paywall's job is to not obstruct. Day 4–7 converters have experienced the coaching engine; the paywall trigger should appear after a first coaching recommendation or first check-in.
-- First-renewal retention (30.3% category median) is the real churn risk, not initial conversion. The user who renews at month 13 has survived the hardest churn window. Volyume's deterministic Precision Coaching improvements (target adaptations, mesocycle transitions) should be the retention narrative at renewal.
+- First-renewal retention (real H&F plan-type medians 54% weekly / 57% monthly / 25% annual; the earlier "30.3%" was confected — see E3-51) is the real churn risk, not initial conversion. The user who renews at month 13 has survived the hardest churn window. Volyume's deterministic Precision Coaching improvements (target adaptations, mesocycle transitions) should be the retention narrative at renewal.
 - Annual-first positioning is correct. Monthly creates a low-friction cancel decision every 4 weeks; annual creates a default-continue dynamic.
 
 **What converts free→paid (pattern from Cal AI Superwall case study + category evidence):**
-- Paywall triggered at "success moments" (first coaching recommendation, first personal best, first check-in result) converts 30%+ better than time-based triggers.
-- Soft paywalls (features visible but blurred/locked) outperform hard blocks for discoverability but convert less on their own.
+- The Cal AI case study's +31% is the relative trial-to-paid improvement over 12 months from a *whole experimentation programme* (46 trigger points, 123 A/B experiments, 424 variants) — **not** a measured comparison of success-moment vs time-based triggers. [Corrected 2026-06-12 citation audit — the "success-moment paywalls convert 30%+ better than time-based triggers" mechanism was invented around a real number. The real RevenueCat 2026 data favours **hard** paywalls (10.7% vs 2.1% freemium at Day 35); there is no verified number supporting a specific lift from a success-moment trigger. See validation/val-ext-03-06.md E3-55, E3-56.] What *is* verified: conversion lands Day 0 or Days 4–7, so a success/value moment before the paywall is sound logic even without a quantified lift.
+- Soft paywalls (features visible but blurred/locked) aid discoverability but, on the verified data, convert worse than hard gates on their own.
 - Showing the paywall after onboarding completes (not during) is critical — interrupting onboarding produces immediate abandonment.
 
 **Sources:** revenuecat.com/blog/growth/subscription-app-trends-benchmarks-2026/; adapty.io/blog/health-fitness-app-subscription-benchmarks/; superwall.com/case-studies/cal-ai; adapty.io/blog/trial-conversion-rates-for-in-app-subscriptions/.
@@ -416,7 +418,7 @@ This addresses the documented harm of streak psychology (loss aversion → anxie
 
 **Constraint:** None. Does not conflict with ED safety (no calorie floors involved). British English: "Logged 5 of the last 7 days" not "5-day streak."
 
-**Evidence:** streaks-gamification analysis (nuancebehavior.com/article/designing-streaks-for-long-term-user-growth); gamification research finding 40–60% higher DAU for apps combining streaks with milestones; trophy.so/blog/streaks-gamification-case-study.
+**Evidence:** streaks-gamification analysis (nuancebehavior.com/article/designing-streaks-for-long-term-user-growth); trophy.so/blog/streaks-gamification-case-study. [The "40–60% higher DAU" figure was UNVERIFIABLE — an unattributed practitioner claim; the underlying mechanics (streak freeze, loss aversion) are real but the number should not be treated as evidence. Flagged 2026-06-12 citation audit; see validation/val-ext-03-06.md E3-58.]
 
 ---
 
@@ -425,7 +427,7 @@ This addresses the documented harm of streak psychology (loss aversion → anxie
 
 **What to implement:** Reframe early coaching language from outcome to identity. Current pattern (estimated): "Your calorie target is 2,200 kcal to lose 0.5 kg/week." Proposed: "You're now training and tracking like someone who takes this seriously. Your daily fuel target is 2,200 kcal." After first logged day: "Day 1 done — you're already a food-tracker." After first check-in: "You're the kind of person who tracks consistently — that's what makes the coaching accurate."
 
-Based on 2024 *Journal of Personality and Social Psychology* research finding identity-based framing produces more durable habits than outcome-goal framing. Noom implements this explicitly in its CBT lessons; Simple uses it in its app tone throughout.
+Identity-based framing is a reasonable design choice for early coaching voice. [The earlier "2024 *Journal of Personality and Social Psychology*" citation was UNSUPPORTED and has been removed — treat this as a design choice, not evidence-backed (validation/val-ext-03-06.md E3-57).] Noom implements identity framing explicitly in its CBT lessons; Simple uses it in its app tone throughout.
 
 **Constraint:** None. Copy change only. British English required.
 

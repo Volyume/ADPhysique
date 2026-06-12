@@ -1,5 +1,7 @@
 # ext-07 — Virality, Social Proof, Community & Word-of-Mouth
 
+> Citations reconciled 2026-06-12 against validation/val-ext-*.md — see that report for per-claim verdicts.
+
 > **PROVENANCE NOTICE (2026-06-12, added after a verified research-tooling
 > failure):** this document presents itself as external/competitive research.
 > The session that produced it cannot be verified from here, and the cloud
@@ -34,9 +36,13 @@ on social media consistently finds that sharing a workout is a way of saying
 *"this is who I am."* A study linking Instagram fitness posting to exercise
 identity found that "the percentage of exercise-related Instagram posts and
 fitness-related followings were significantly associated with exercise identity"
-— crucially, the number of likes received was **not** related to identity, so
-it is the *act of sharing*, not the social response, that carries the identity
-signal ([Hyung-Min Kim, 2024, Health Psychology & Behavioural Medicine, SAGE](https://journals.sagepub.com/doi/abs/10.1177/13591053241233370)).
+— crucially, the number of likes received was **not** related to identity (%PA
+posts r=.38, fitness followings r=.39, likes r=.05, ns), so it is the *act of
+sharing*, not the social response, that carries the identity signal
+([Liu, Perdew, Lithopoulos & Rhodes, 2021, JMIR 23(4):e20954](https://www.jmir.org/2021/4/e20954/))
+[corrected 2026-06-12 citation audit — finding is real but the doc cited the
+wrong paper (Kim 2024, *J Health Psychology*) and wrong journal name; design
+implication survives on the correct citation; see V1].
 
 Strava articulates this as: "every kudos, follow, and segment leaderboard is
 designed to make ordinary effort feel witnessed — a Tuesday tempo run used to
@@ -53,8 +59,10 @@ whom.
 
 ### 1.2 Social currency (Optimal Distinctiveness Theory)
 
-Spotify Wrapped is the canonical case. Its psychology is "Optimal Distinctiveness
-Theory: people want two opposite things at once — to belong and to stand out."
+Spotify Wrapped is the canonical case. One useful framing for its psychology is
+Optimal Distinctiveness Theory: people want two opposite things at once — to
+belong and to stand out [the ODT attribution is marketing-blog framing, not
+evidence — treat as a lens, not a finding; see V3].
 Wrapped gives users a story that is at once relatable ("I also listen to too
 much of one artist") and unique ("but my top artist is specifically this one").
 The share is a statement about individual taste that simultaneously places the
@@ -122,11 +130,14 @@ The deep-linked landing page is the acquisition moment. This is distinct from
 a share card — it is a *functional* artefact (the actual plan) that has
 instrumental value to the viewer, which is why it converts.
 
-**The Spotify Wrapped effect in fitness.** Strava's Year in Sport achieves an
-86% view-through rate and Strava saw a 25% spike in app re-installs in January
-2025, driven substantially by Year in Sport sharing
-([Strava Year in Sport 2024, Khoi B Phan portfolio](https://www.khoibphan.com/portfolio/strava-year-in-sport-24);
-[Here & There Club analysis](https://www.hereandthere.club/p/a-look-at-stravas-2025-year-in-sport)).
+**The Spotify Wrapped effect in fitness.** Strava's Year in Sport is the
+canonical fitness analogue of Wrapped — a personal, story-formatted annual
+artefact that users share to external platforms
+[stat removed 2026-06-12 citation audit — the "86% view-through rate" was
+unverifiable (sole source a designer's portfolio; not in any Strava release —
+note Strava's 2025 release carries a *different* 86%: "86% of Runna-connected
+runners achieved a personal best"); see V7. The "25% January re-install spike"
+was also unverifiable and has been removed; see V8].
 The mechanics that make it spread: (1) it tells a *story* from raw numbers
 ("you ran X km, which is equivalent to Y"); (2) it is time-limited (December
 only, though Strava has since paywalled it, which triggered user backlash —
@@ -137,8 +148,9 @@ that signals app membership; (4) it is formatted for Instagram Stories / TikTok.
 "Fitness Wrapped," a third-party app that applies the same mechanic to Apple
 Fitness data, has emerged as a product category in itself
 ([Fitness Wrapped App Store page](https://apps.apple.com/us/app/fitness-wrapped/id6739229787)).
-Boostcamp now ships a "year in review" shareable for the same reason
-([Boostcamp, 2025](https://www.boostcamp.app/blogs/boostcamp-workout-app-november-features-updates)).
+[stat removed 2026-06-12 citation audit — the claim that "Boostcamp now ships a
+year-in-review shareable" was unsupported as cited: the linked post covers
+weekly progress reports and PR summaries, with no year-in-review; see V11.]
 
 **The key design insight for share cards:** raw numbers don't spread. A
 *contextualised* number does. "You lifted 47,000 kg this month" spreads; "You
@@ -164,12 +176,13 @@ reciprocity effects — but only among people who also gave kudos. Upward
 comparison produces no lift; *acknowledgement* within a reciprocal relationship
 does ([Franken, Bekhuis & Tolsma, Social Networks 2023](https://www.sciencedirect.com/science/article/pii/S0378873322000909)).
 
-Strava reported 14 billion kudos given in 2025, up 20% year-on-year, with
-activities including photos receiving 3.1× as many kudos as those without
-([Strava Year in Sport 2025 trend report](https://press.strava.com/articles/strava-releases-12th-annual-year-in-sport-trend-report-2025)).
-The photo finding is significant: visual richness correlates with social
-engagement, which is why share cards with imagery (a PR badge, a volume chart)
-outperform plain text.
+Strava reported 14 billion kudos given in 2025
+([Strava Year in Sport 2025 trend report](https://press.strava.com/articles/strava-releases-12th-annual-year-in-sport-trend-report-2025))
+[corrected 2026-06-12 citation audit — the "+20% YoY" growth figure and the
+"3.1× kudos for photo activities" multiplier are not in the release and were not
+found elsewhere; both dropped; see V14]. The broader point still holds: visual
+richness plausibly correlates with social engagement, which is why share cards
+with imagery (a PR badge, a volume chart) are likely to outperform plain text.
 
 **Virality implication:** kudos are a *retention* driver, not a direct
 acquisition driver. They work inside the app once users are already there.
@@ -179,10 +192,17 @@ constraint-safe version of kudos.
 
 ### 2.3 Clubs / small groups as both retention and acquisition
 
-Strava's data is striking: club membership increases 12-month retention **3.5×**
-([SQ Magazine Strava statistics](https://sqmagazine.co.uk/strava-statistics/)).
+Strava's data is striking: club-affiliated athletes are **more than twice as
+likely** to log a weekly activity
+([Strava Year in Sport 2025 trend report](https://press.strava.com/articles/strava-releases-12th-annual-year-in-sport-trend-report-2025))
+[corrected 2026-06-12 citation audit — the "3.5× 12-month retention" figure came
+from an aggregator (SQ Magazine) with no primary; replaced with Strava's own
+"more than twice as likely" framing; see V15].
 New clubs on Strava nearly quadrupled in 2025, reaching 1 million total, with
-group activities receiving approximately twice the kudos of solo activities.
+group activities receiving roughly 30–95% more kudos than solo activities
+depending on group size
+[corrected 2026-06-12 citation audit — "approximately twice the kudos" was a
+clean-2× overstatement; the real figure varies ~30–95% by group size; see V17].
 Among Gen Z, 66% said they made new friends through running groups in 2024.
 
 The acquisition mechanism: a club leader or member posts about the club on
@@ -203,13 +223,19 @@ NEW-002's pairing flow is already designed as a viral loop: every partnership
 requires the partner to install Volyume to accept the invite. The landing page
 at `volyume://partner/<code>` (NEW-002 §4.2) is described as "itself a
 word-of-mouth asset" — it states the derived-signals-only promise and links to
-the store. This is the highest-conversion acquisition channel for social apps:
-deep links deliver 30%+ click-to-install rates vs 5% for generic journeys
-([deep-linking data, adapty.io](https://adapty.io/blog/app-deep-linking/)).
+the store. Deep-linked invite journeys are *plausibly* higher-converting than
+generic store journeys, but the often-quoted "30%+ click-to-install vs 5%"
+benchmark is unsupported (the adapty.io page states it with no source) and
+should be treated as a hypothesis to test, not a number to plan against
+[stat softened 2026-06-12 citation audit — the 30%-vs-5% figure is vendor-grade
+and unsourced; treat as hypothesis; see V19].
 
-The psychology behind invitation virality in fitness: 70% of members who made
-friends through their gym identify as promoters
-([GymRats referral research, resources.rework.com](https://resources.rework.com/libraries/gym-fitness-growth/gym-referral-programs)).
+The psychology behind invitation virality in fitness is that a friend's
+recommendation is credible precisely because it comes from a specific known
+person, not an ad
+[stat removed 2026-06-12 citation audit — the "70% of members who made gym
+friends are promoters" figure was unverifiable (vendor library page, not
+fetched); see V20].
 The friend relationship is the *reason* the invitation is credible — it is not
 an ad, it is a specific person you know saying "I use this and I want to train
 with you on it." That context is worth more than any paid acquisition.
@@ -252,9 +278,9 @@ The Spotify Wrapped effect is now a design pattern with quantified outcomes.
 Spotify saw a 21% increase in mobile app downloads after the 2020 Wrapped
 release, driven by FOMO and viral sharing of story cards
 ([Campaign del Mar analysis](https://www.campaigndelmar.com/blog/spotify-wrapped-is-marketing-genius)).
-The 2024 Strava Year in Sport: 86% view-through rate on the personal film;
-Strava's January 2025 re-install spike is directly attributable to December
-Year in Sport sharing.
+Strava's Year in Sport is the direct fitness analogue
+[stat removed 2026-06-12 citation audit — the "86% view-through rate" and the
+"January 2025 re-install spike" were both unverifiable; see V7 and V8].
 
 The anatomy of a Wrapped-style card that spreads: (1) **personal narrative** —
 not just numbers, but a story arc ("you trained through your first bulk, added
@@ -382,8 +408,9 @@ to follow it.
 **Why this works:** it is a functional artefact (the plan itself has value),
 not a decorative card. The Hevy routine-sharing mechanic and Boostcamp's
 coach-distribution model are both built on exactly this. The landing page is
-the acquisition moment: deep links deliver 30%+ click-to-install vs 5% for
-generic journeys.
+the acquisition moment [the "30%+ vs 5%" deep-link figure is an unsourced
+vendor benchmark — see V19; treat the conversion advantage as a hypothesis,
+and keep the 30%-install claim out of any business case].
 
 **For Eddie:** sharing his current prep programme is status signalling — "I'm
 running this structured 16-week Men's Physique peak protocol." For Besa: sharing
@@ -563,7 +590,9 @@ an engineering effort.
 
 **Sources:** [Hevy shareables](https://www.hevyapp.com/features/shareable/);
 [Startup Signals Strava analysis](https://startupsignals.substack.com/p/strava-if-its-not-on-strava-it-didnt);
-[identity sharing research, SAGE 2024](https://journals.sagepub.com/doi/abs/10.1177/13591053241233370)
+[identity sharing research, Liu, Perdew, Lithopoulos & Rhodes, JMIR 2021;23(4):e20954](https://www.jmir.org/2021/4/e20954/)
+[corrected 2026-06-12 citation audit — was the wrong SAGE DOI (Kim 2024,
+*J Health Psychology*); the identity-sharing finding belongs to Liu 2021; see V1]
 
 ---
 
@@ -633,8 +662,9 @@ data; the effort is the visual design and the "story copy" generation
 (deterministic from the data — no AI).
 
 **Sources:** [Spotify Wrapped virality analysis, Campaign del Mar](https://www.campaigndelmar.com/blog/spotify-wrapped-is-marketing-genius);
-[Strava Year in Sport 86% VTR, Khoi B Phan](https://www.khoibphan.com/portfolio/strava-year-in-sport-24);
 [Fitness Wrapped App Store](https://apps.apple.com/us/app/fitness-wrapped/id6739229787)
+[Khoi B Phan "86% VTR" portfolio source removed 2026-06-12 citation audit —
+figure unverifiable; see V7]
 
 ---
 
@@ -647,10 +677,13 @@ year — total sessions, volume, PRs, mesocycles, consistency streak, division
 context. Portrait format, shareable to Instagram Stories. Story copy is
 deterministic from training data.
 
-**Why it matters now:** Strava's Year in Sport achieves an 86% VTR and drives
-a 25% January re-install spike. Boostcamp now does this. Fitness Wrapped (a
-third-party app that applies this mechanic to Apple Fitness data) exists as a
-product because there is unfulfilled demand. Volyume has richer, more structured
+**Why it matters now:** Strava's Year in Sport is the most visible fitness
+analogue of the Wrapped moment, and Fitness Wrapped (a third-party app that
+applies this mechanic to Apple Fitness data) exists as a product because there
+is unfulfilled demand
+[stats removed 2026-06-12 citation audit — the "86% VTR", the "25% January
+re-install spike" and the "Boostcamp now does this" year-in-review precedent
+were all unverifiable; see V7, V8 and V11]. Volyume has richer, more structured
 data than any of these (mesocycle structure, division context, volume landmarks,
 coach-style milestones) — a Volyume annual recap *should* be more compelling
 than a generic step-count summary.
@@ -672,8 +705,9 @@ invite line. "Your best year yet. Want to make the next one a shared one?" is
 the lowest-friction invite moment of the year.
 
 **Sources:** [Strava YiS paywall backlash](https://gadgetsandwearables.com/2025/12/20/strava-year-in-sport/);
-[Spotify Wrapped 21% install spike, Campaign del Mar](https://www.campaigndelmar.com/blog/spotify-wrapped-is-marketing-genius);
-[Boostcamp year-in-review](https://www.boostcamp.app/blogs/boostcamp-workout-app-november-features-updates)
+[Spotify Wrapped 21% install spike, Campaign del Mar](https://www.campaigndelmar.com/blog/spotify-wrapped-is-marketing-genius)
+[Boostcamp year-in-review source removed 2026-06-12 citation audit — claim
+unsupported at that citation; see V11]
 
 ---
 
@@ -695,7 +729,9 @@ event. This is the Fitbit friends-and-family challenge, alive and updated.
 
 **Why it retains:** a defined commitment window (4 weeks) creates a contract
 effect. The Matthews research (NEW-002 §0): weekly progress reports to a known
-person roughly double goal follow-through. A challenge with friends is a
+person lifted goal follow-through by +33 percentage points (76% vs 43%)
+[corrected 2026-06-12 citation audit — "roughly double" overstates it; the real
+effect is 76% vs 43% = 1.77×, i.e. +33pp; see V22]. A challenge with friends is a
 collective contract — the social cost of breaking it is higher than a solo
 streak.
 
@@ -731,9 +767,13 @@ the derived-signals-only commitment, and a store download CTA.
 
 **Why it matters for virality:** this page is the acquisition moment for every
 partner invite. Its conversion rate directly determines the K-factor of the
-invitation loop. A generic "download Volyume" CTA converts at ~5%; a specific,
-compelling, trust-building page that says "your friend trained 4 of 4 sessions
-this week. They want to train with you." converts at 30%+.
+invitation loop. A specific, compelling, trust-building page that says "your
+friend trained 4 of 4 sessions this week. They want to train with you."
+should plausibly out-convert a generic "download Volyume" CTA
+[stat softened 2026-06-12 citation audit — the specific "~5% generic vs 30%+
+deep-link" conversion figures are unsourced vendor benchmarks (adapty.io,
+no source); keep K-factor as a concept but plan against measured numbers, not
+these; see V19].
 
 **What excellent copy includes:** the partner's first name, their training streak
 ("Sam has trained 4 of 4 sessions this week"), the derived-signals promise
@@ -835,7 +875,7 @@ established the trap list and designed NEW-002. It under-covered:
 
 Peer-reviewed research:
 [Kudos make you run! (Social Networks 2023)](https://www.sciencedirect.com/science/article/pii/S0378873322000909) ·
-[Fitness self-presentation and social support (SAGE 2024)](https://journals.sagepub.com/doi/abs/10.1177/13591053241233370) ·
+[Exercise identity and fitness posting (Liu, Perdew, Lithopoulos & Rhodes, JMIR 2021;23(4):e20954)](https://www.jmir.org/2021/4/e20954/) [corrected 2026-06-12 citation audit — replaced the wrong SAGE DOI (Kim 2024, *J Health Psychology*); see V1] ·
 [Motivation crowding in gamified fitness apps (PMC10807424)](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10807424/) ·
 [Duolingo Friend Streak product blog](https://blog.duolingo.com/product-lessons-friend-streak/) ·
 [Dominican University accountability study](https://www.dominican.edu/sites/default/files/2020-02/gailmatthews-harvard-goals-researchsummary.pdf)

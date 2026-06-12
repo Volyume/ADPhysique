@@ -65,11 +65,16 @@ S = days, M = ~1–2 weeks, L = multi-week / dependency.
 
 ### THEME A — Make the transparent coach FELT: the coach-voice / feedback layer  ★ highest leverage
 The engine computes the decision but presents a terse line; it never speaks like a
-coach. Elite coaching's universal **five-part response** is missing: (1) specific,
+coach. A **five-part response** pattern is missing: (1) specific,
 data-referenced acknowledgement → (2) plain-language trend interpretation →
 (3) the decision + the reason → (4) one tactical cue for the week → (5) a
-forward-pull "see you next check-in" anchor. The #1 reason coaching clients leave
-is "felt unseen"; this is the fix, and it's copy/UX over data the engine already has.
+forward-pull "see you next check-in" anchor. [The "universal five-part response that
+human coaches use" was UNSUPPORTED as research — corrected 2026-06-12 citation audit;
+treat it as Volyume's own design pattern (each component is separately attested in
+verified WAG/Stronger U/RippedBody material), not a documented industry universal. See
+validation/val-ext-03-06.md E6-11.] That coaching clients leave more over
+relationship/communication failure than programming ("felt unseen") is well
+corroborated; this is the fix, and it's copy/UX over data the engine already has.
 *Evidence:* ext-06 (OPP-C01, its #1), ext-02 (#1 "coach message renderer"),
 int-02 (F4 "best logic is invisible", F1 cold-start), int-04. *Persona:* Both.
 *Effort:* S–M. *Constraint:* none (no engine change, no AI — templated en-GB).
@@ -285,10 +290,17 @@ founder call before the dependent items ship (the rest proceeds without asking):
    ghost-prevention and milestone pushes (`NOTIFICATIONS_LOCKED`)?
 6. **"Today's plate" free teaser** — a read-only generated meal preview for free
    users (real targets, real meals, nothing loggable) on onboarding-complete and
-   the empty Diary. The monetisation research's highest-conviction conversion
-   lever (~30–50% better conversion for soft paywalls), but it is a deliberate
-   Free/Pro line redraw and, once launched, can never be pulled back (the Strava
-   lesson). Approve / reject before G-b ships.
+   the empty Diary. [The "~30–50% better conversion for soft paywalls" justification
+   did NOT survive validation — corrected 2026-06-12 citation audit. The real
+   RevenueCat 2026 data favours **hard** paywalls (10.7% vs 2.1% freemium at Day 35),
+   and the Cal AI "+31%" was a whole experimentation programme, not a teaser effect;
+   there is no verified number for a read-only teaser's lift. What IS verified:
+   conversion lands Day 0 or Days 4–7 after experiencing value, so a teaser is a
+   reasonable value-demonstration device — but it must ship as an A/B experiment with
+   a hard Pro gate and a pre-agreed kill criterion, NOT as a presumed win. See
+   validation/val-ext-03-06.md E3-55, E3-56 and delta verdict (c).] It is also a
+   deliberate Free/Pro line redraw and, once launched, can never be pulled back (the
+   Strava lesson). Approve / reject before G-b ships.
 7. **Meal-plan launch pricing** — recommendation is NO price change at launch
    (reframe the paywall copy instead); a £39.99-annual test is documented for
    later and needs separate billing sign-off. Confirm the no-change default.

@@ -41,13 +41,13 @@ what she is paying for before she is asked to pay.
 | Product | What it includes | Monthly | Annual | Notes |
 |---|---|---|---|---|
 | **RP Diet Coach** (v1.52) | Adaptive macro targets, meal-by-meal macro splits around training, food suggestions per slot, weekly coaching check-in, phase management (cut/maintain/bulk) | ~$35/mo | ~$209/yr (~$17.40/mo eff.) | **Meal-plan-led product, physique-specific.** No meal-plan generation; suggests foods per slot but the user assembles the day. No food diary integration. No training plan. |
-| **Carbon Diet Coach** | Adaptive macro targets, carb cycling, 3-question check-in, four goal modes | $14.99/mo | $99.99/yr (~$8.33/mo eff.) | No generated plan; macro targets only. Raised pricing 2026. |
+| **Carbon Diet Coach** | Adaptive macro targets, 3-question check-in, four goal modes (incl. reverse diet) | $11.99/mo | $99.99/yr (~$8.33/mo eff.) | No generated plan; macro targets only. [Corrected 2026-06-12 citation audit — pricing is $11.99/mo not $14.99 (E3-07); "carb cycling" struck — Carbon's help centre confirms it has NO carb-cycling feature (E3-10), which strengthens Volyume's TD/NTD position.] |
 | **Eat This Much (Premium)** | Auto-generates full day/week meal plan from macro targets, grocery list, regenerate meals, block foods | ~$9.99/mo | ~$59.99/yr | Consumer-grade; no coaching engine; no training; generic food DB. |
 | **Strongr Fastr (Premium)** | Meal plan from macro goals, swap with auto portion-adjust | Free + premium ~$9.99/mo | ~$49.99/yr | No coaching, no training, no physique-specific knowledge. |
 | **MealPrepPro** | Dietitian-approved weekly meal plans, batch-cook orientation, macro tracking | $9.99/mo | ~$79.99/yr | No coaching, no training, not physique-specific. |
 | **MacroFactor** | Adaptive TDEE coaching, verified food DB, expenditure algorithm; **explicitly no meal plan** | $11.99/mo | $71.99/yr | The gap Volyume fills. |
 | **Alpha Progression** | Training plan generator, progression tracking, analytics; no nutrition | ~$9.99/mo | ~$59.99/yr | Training-only comparator. |
-| **WAG Seismic (Coaching Plus)** | Human coach assigns macros + curated 7-day plan + 100+ meal ideas | £239–399/mo per client | N/A | Human coaching floor. |
+| **WAG (Working Against Gravity)** | Human coach assigns macros + curated plan + meal ideas | $99–219/mo per client (Lite $99 / Essentials $179 / Plus $219; 12-mo Essentials $129) | N/A | Human coaching floor. [Corrected 2026-06-12 citation audit — the earlier "£239–399/mo" roughly doubled reality and would be indefensible in public copy; WAG is $99–219/mo (E6-16). See validation/val-ext-03-06.md delta verdict (d).] |
 | **Stronger U (closed)** | Human macro coaching | ~$149–189/mo | N/A | Closed March 2026. This pricing is now an available anchor — its users need an app. |
 | **Precision Nutrition** | Human coaching programme | ~$1,999–2,999/yr | N/A | High-end human floor. |
 | **Online physique prep coaches** | Check-ins, macro plans, meal plan PDF + swaps | £150–400/mo typical | N/A | Elite end. Spreadsheet-based; takes 45–90 min to build per client per week (per `bp-meal-plan-coach-systems-research.md`). |
@@ -166,10 +166,18 @@ top beginner acquisition lever.
   targets is the beginner draw: 'it tells me what to eat, I don't have to
   think.'" (ext-03 §1.12.) Yazio's plan feature is prominently visible before
   paywall — it is the product, not a feature.
-- RevenueCat 2026: soft paywalls (feature visible, action locked) convert ~50%
-  better at the gate than hard paywalls that reveal nothing. The mechanism is
-  desire creation: you cannot want what you cannot see. The teaser creates
-  desire at zero value delivery cost.
+- [Corrected 2026-06-12 citation audit — the earlier claim that "soft paywalls
+  convert ~50% better than hard paywalls" did NOT survive validation and is the
+  reverse of the real data. RevenueCat 2026 found **hard** paywalls convert ~5×
+  better than freemium at Day 35 (10.7% vs 2.1%; $3.09 vs $0.38 RPI at day 60), and
+  the Cal AI "+31%" was a whole experimentation programme, not a teaser effect. There
+  is no verified number supporting a specific lift from a read-only teaser. See
+  validation/val-ext-03-06.md E3-55, E3-56 and delta verdict (c).] What IS verified
+  and supports a *carefully scoped* teaser: H&F conversion lands Day 0 or Days 4–7
+  after experiencing value (E3-53), so a teaser is a reasonable value-demonstration
+  device for the Day 4–7 cohort — but it should ship as an A/B experiment behind a
+  hard Pro gate with a pre-agreed kill criterion, not as a presumed-win conversion
+  lever. Do not write copy claiming a "~30–50%" expected lift.
 - The OMENA case (COMP-007): a redesign that let users see what they were
   paying for before paying doubled trial starts. Doubling trial starts at the
   same conversion rate doubles revenue — this is a funnel lever, not an

@@ -1,5 +1,7 @@
 # Mass-Market Strength & Workout-Logging Apps — Competitive Research
 
+> Citations reconciled 2026-06-12 against validation/val-ext-*.md — see that report for per-claim verdicts.
+
 > **PROVENANCE NOTICE (2026-06-12, added after a verified research-tooling
 > failure):** this document presents itself as external/competitive research.
 > The session that produced it cannot be verified from here, and the cloud
@@ -73,7 +75,7 @@ Source: [healthynexercise.com/boostcamp review](https://healthynexercise.com/bes
 **Retention mechanic:** Volume heat-map anatomy chart. Post-workout, users see a body-map shaded by muscle volume logged. A beginner can immediately see if they are neglecting legs or back. This is a concrete, visual progress signal that requires zero fitness knowledge to interpret.  
 Source: search result from [sensai.fit](https://www.sensai.fit/blog/fitness-app-comparison)
 
-**Known weaknesses:** App can feel overwhelming at first session ("somewhat overwhelming interface initially"); minor bugs after updates; exercise substitution is paywalled.  
+**Known weaknesses:** App can feel overwhelming at first session ("somewhat overwhelming interface initially"); minor bugs after updates. (Note: an earlier claim that exercise substitution is paywalled was FABRICATED — Boostcamp's own current FAQ confirms "exercise alternatives… are all in the free tier." Corrected 2026-06-12 citation audit; see validation/val-ext-01-02.md #18.)  
 Source: [healthynexercise.com/boostcamp review](https://healthynexercise.com/best-free-fitness-apps/boostcamp/)
 
 **Persona:** Besa (program-first solves the blank-screen problem cleanly), Eddie (respects author credibility, advanced programs available).
@@ -98,7 +100,7 @@ Source: [indiehackers.com Fitbod review 2026](https://www.indiehackers.com/post/
 
 ### 1.4 Boostcamp auto-progression detail (the most-praised mechanic in the segment)
 
-The prior audit mentioned auto-progression briefly. More detail is warranted. Boostcamp's implementation: after a user logs a session, the app evaluates reps hit vs target. If all sets hit top of the range, the algorithm adds weight for next session per the program's defined increment. Each program defines its own progression rules — Starting Strength adds 2.5kg to lower-body and 5kg to upper-body barbell lifts after each session; 5/3/1 for Beginners advances per cycle based on percentage. The result: **the user never decides when to progress — the program tells them**. For Besa, this removes one of the most paralysing decisions in early training ("should I go heavier?"). For Eddie, explicit periodisation within the named program schema is credible.  
+The prior audit mentioned auto-progression briefly. More detail is warranted. Boostcamp's implementation: after a user logs a session, the app evaluates reps hit vs target. If all sets hit top of the range, the algorithm adds weight for next session per the program's defined increment. Each program defines its own progression rules — Starting Strength adds **+10 lb (≈4.5 kg) to lower-body** (squat/deadlift) and **+5 lb (≈2.25 kg) to upper-body** (bench/press) barbell lifts per session early on, tapering as progress slows; 5/3/1 for Beginners advances per cycle based on percentage. [Corrected 2026-06-12 citation audit — the earlier "+2.5kg lower / +5kg upper" was inverted and used invented metric values; the lower body gets the *larger* increment. See validation/val-ext-01-02.md #17.] The result: **the user never decides when to progress — the program tells them**. For Besa, this removes one of the most paralysing decisions in early training ("should I go heavier?"). For Eddie, explicit periodisation within the named program schema is credible.  
 Source: [boostcamp.app/features](https://www.boostcamp.app/features); [setgraph.app best-strength apps 2026 blog](https://setgraph.app/ai-blog/best-strength-training-apps-2026)
 
 ---
@@ -139,7 +141,7 @@ Source: [caliberstrong.com/blog/introducing-strength-score/](https://caliberstro
 
 **What it is:** Workout-delivery app; coach-programmed sessions with real video demos and in-ear audio cues per movement; team-based social structure. Not a free-form logger — users follow a coach's program.
 
-**Growth:** ~2,000% subscriber growth in two years (approximately 10k → 175k subscribers). Mechanism: turned in-house coaches into TikTok/Instagram short-form content creators, converted best organic content to paid ads, used a 15-question web onboarding quiz to predict user LTV and optimise ad spend.  
+**Growth:** ~2,000% subscriber growth in two years (approximately 10k → 175k subscribers). Mechanism: turned in-house coaches into TikTok/Instagram short-form content creators, converted best organic content to paid ads, used a web onboarding quiz to predict user LTV and optimise ad spend. [The specific "15-question" count was UNSUPPORTED — found in no source; quiz itself verified. Corrected 2026-06-12 citation audit; see validation/val-ext-01-02.md #29.]  
 Source: [podcasts.apple.com "How Ladder Nailed Product/Channel Fit"](https://podcasts.apple.com/us/podcast/how-ladder-nailed-product-channel-fit-on-tiktok-and/id1794011543?i=1000688294562); [subclub.com Ladder episode](https://subclub.com/episode/how-ladder-cracked-tiktok-and-grew-500-greg-stewart-ladder)
 
 **Why beginners love it:** "The coaches demonstrate all the exercises via video tutorial… so I know I'm doing each move correctly." The team structure provides social accountability: members post session results, celebrate each other's achievements, and the group dynamic turns a solo gym habit into a shared identity.  
@@ -259,14 +261,13 @@ Volyume currently delivers **zero of these six** at D0 for a free beginner. The 
 
 ### 2.2 Beginner psychology: what the data says
 
-- Gym anxiety has four distinct components: not knowing what to do, fear of looking stupid, not seeing results, and doing something wrong that causes injury. The best apps address component 1 (programmed guidance), component 3 (progress visualisation), and component 4 (exercise instruction/demos). Apps that address all three see disproportionate beginner retention.  
-  Source: [healthline.com gym anxiety](https://www.healthline.com/health/fitness/gym-anxiety); Lucid.now retention metrics
+- Gym anxiety has several recognised triggers — beginner status, an unfamiliar environment, equipment confusion, and fear of judgement/appearance. The best apps address these through programmed guidance, progress visualisation, and exercise instruction/demos. Apps that address several see disproportionate beginner retention. [Corrected 2026-06-12 citation audit — the earlier "four distinct components" taxonomy was the doc's own synthesis, not in the cited Healthline page, which lists triggers without a four-component framework. See validation/val-ext-01-02.md #46.]  
+  Source: [healthline.com gym anxiety](https://www.healthline.com/health/fitness/gym-anxiety)
 
-- D1–D7 is the critical window: "The steepest drop happens between D1 and D7. If you're losing most users in that window, your onboarding likely works but your application hasn't given people a reason to form a habit." Health/Fitness apps average ~20–27% D1 retention and ~7% D7 — most users are gone within a week.  
-  Source: [lucid.now retention metrics](https://www.lucid.now/blog/retention-metrics-for-fitness-apps-industry-insights/); [mwm.ai glossary](https://mwm.ai/glossary/retention)
+- D1–D7 is the critical window: the steepest drop in app usage happens early — fitness/health apps lose the large majority of daily users within the first few days, and most users are gone within a week. [The earlier specific figures (~20–27% D1, ~7% D7) and the quoted "steepest drop happens between D1 and D7…" sentence were UNSUPPORTED — the cited lucid.now page gives different numbers (fitness apps D1 30–35%, D7 15–20%; health apps D1 27%, D7 13%) and does not contain that quote. The directional point is supported there by "apps lose 77% of daily users within three days." Corrected 2026-06-12 citation audit; see validation/val-ext-01-02.md #43.]  
+  Source: [lucid.now retention metrics](https://www.lucid.now/blog/retention-metrics-for-fitness-apps-industry-insights/)
 
-- People who consistently log workouts are 42% more likely to stick with their training long-term — the logging habit is the retention mechanism, not the coaching depth.  
-  Source: [orangesoft.co fitness engagement strategies](https://orangesoft.co/blog/strategies-to-increase-fitness-app-engagement-and-retention)
+- [Stat removed 2026-06-12 citation audit — the claim "people who consistently log workouts are 42% more likely to stick with their training" was FABRICATED; the cited orangesoft.co page does not contain it, and the figure appears to be a mutation of the unrelated Gail Matthews goal-*writing* study. See validation/val-ext-01-02.md #44.]
 
 - Completing a first workout is the single most predictive activation event: "Users who complete their first workout are significantly more likely to return for a second session."  
   Source: [dev.to PaywallPro fitness onboarding guide](https://dev.to/paywallpro/fitness-app-onboarding-guide-data-motivation-completion-an0)

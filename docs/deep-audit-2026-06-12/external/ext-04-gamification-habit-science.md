@@ -1,5 +1,7 @@
 # ext-04 — Gamification, Streaks, Habit Formation & Behaviour-Change Mechanics
 
+> Citations reconciled 2026-06-12 against validation/val-ext-*.md — see that report for per-claim verdicts.
+
 > **PROVENANCE NOTICE (2026-06-12, added after a verified research-tooling
 > failure):** this document presents itself as external/competitive research.
 > The session that produced it cannot be verified from here, and the cloud
@@ -34,50 +36,81 @@ target behaviour. The psychological power comes from three converging mechanisms
 
 1. **Loss aversion.** People experience losses roughly twice as intensely as equivalent
    gains (Kahneman & Tversky). A 60-day streak is not just 60 days of progress — losing
-   it feels like losing 60 days of effort. Duolingo's own data shows that streak
-   motivation varies non-linearly: going from 2 to 3 days feels like +50%, going from
-   200 to 201 feels like +0.5%. Early streak-building is the highest-leverage window.
+   it feels like losing 60 days of effort. Streak motivation is widely described as
+   varying non-linearly: going from 2 to 3 days feels like +50%, going from 200 to 201
+   feels like +0.5%. Early streak-building is the highest-leverage window.
+   [corrected 2026-06-12 citation audit — this is illustrative arithmetic (1/2 vs
+   1/200) from a game designer's Medium post, NOT "Duolingo's own data" as previously
+   attributed; see G2]
    ([Duolingo: Streak System Detailed Breakdown, Premjit Singha, Medium](https://medium.com/@salamprem49/duolingo-streak-system-detailed-breakdown-design-flow-886f591c953f))
 
 2. **Endowment effect / sunk cost.** The longer the streak, the more "owned" it becomes.
-   A randomised trial with step goals showed participants given an endowment that was
-   deducted for failure met their goals 50% more often than those given the same amount
-   as a reward — mathematically identical conditions, opposite psychology.
-   ([Loss aversion in app retention, Glance](https://thisisglance.com/learning-centre/how-can-loss-aversion-psychology-transform-app-retention/))
+   A randomised trial with step goals (Patel et al. 2016) showed participants given a
+   loss-framed endowment that was deducted for failure met their daily goal on 45% of
+   days, versus 35% for the gain-framed (equivalent reward) arm and 30% for control —
+   mathematically identical incentive sizes, opposite psychology. The headline "50%
+   more" holds only against the no-incentive control (45 vs 30); against the equivalent
+   reward it is roughly 29% more (45 vs 35). The direction is robust; the loose "50% vs
+   the same reward" framing was not.
+   [corrected 2026-06-12 citation audit — primary source is Patel et al. 2016, Ann
+   Intern Med 164(6):385–394 (PMC6029433); prior "Glance" blog citation now dead; see G3]
+   ([Patel et al. 2016, Ann Intern Med — PMC6029433](https://pmc.ncbi.nlm.nih.gov/articles/PMC6029433/))
 
 3. **Zeigarnik effect.** Uncompleted tasks are remembered more vividly than completed
    ones. An in-progress streak creates a permanent open loop the brain wants to close.
    ([Psychology of Streaks, Cohorty Blog](https://blog.cohorty.app/the-psychology-of-streaks-why-they-work-and-when-they-backfire/))
 
-**Duolingo's full retention machine — what 600+ A/B tests produced:**
-- 32 million daily active users carry a 7+ day streak (2024 data).
-- Streak Freeze: users can pre-purchase protection against a missed day. Introduction
-  reduced churn by 21% among at-risk users.
-  ([Trophy — Designing Streaks for Long-Term Growth](https://trophy.so/blog/designing-streaks-for-long-term-user-growth))
-- Users with streak-freeze functionality average 17.19 days of streak vs 11.62 days
-  without — a 48% longer average streak length.
+**Duolingo's full retention machine — what 600+ streak A/B experiments produced:**
+- Nearly 70% of daily active users hold a streak longer than 7 days (Q3 FY22
+  shareholder letter, repeated Q3 FY23, SEC-filed — a share, not a count).
+  [corrected 2026-06-12 citation audit — prior "32 million DAU carry a 7+ day streak"
+  was unpublished arithmetic; the published figure is the ~70% share; see G6]
+- The 600+ figure is specifically 600+ streak experiments in roughly four years, per
+  Duolingo Group PM (Retention) Jackson Shuttleworth on Lenny's Podcast — not a
+  company-total.
+  ([Lenny's Podcast — Behind the Product: Duolingo Streaks](https://www.lennysnewsletter.com/p/behind-the-product-duolingo-streaks))
+- Streak Freeze: users can pre-purchase protection against a missed day. Duolingo's
+  own *published* streak-protection data (2017 blog) is: Streak Wager +14% D7
+  retention; Weekend Amulet +4% week-later return.
+  [stat removed 2026-06-12 citation audit — the "reduced churn by 21% among at-risk
+  users" claim was unverifiable; not on the cited Trophy page, traces only to unsourced
+  growth blogs; see validation/val-ext-04-05-07.md G7]
+  ([Duolingo — How the Streak Builds Habit](https://blog.duolingo.com/how-duolingo-streak-builds-habit/))
+- [stat removed 2026-06-12 citation audit — the "streak-freeze users average 17.19 vs
+  11.62 days (+48%)" figures were FABRICATED; absent from the cited Trophy page and
+  found nowhere on the indexed web; see validation/val-ext-04-05-07.md G8]
 - Streak Repair: if a streak is lost, users can restore it within a window (using
   premium currency). The "sunk cost" psychology makes many users pay.
-- Streak Society: a social layer for users above a threshold (e.g., 30 days) that
-  provides community recognition without requiring any public leaderboard.
-- Push notification lifecycle: Duolingo calibrates push frequency to the streak — a
-  3-day streak gets a different cadence than a 100-day one. Notification volume
-  actually reduces for long streaks because intrinsic motivation has taken over.
+- Streak Society: a tiered social layer (joined around 7 days, reward tiers at
+  30/100/365 days, VIP status at 365) that provides community recognition without
+  requiring any public leaderboard.
+- Push notification lifecycle: Duolingo's documented practice is to stop notifications
+  after about 7 days of *inactivity*.
+  [corrected 2026-06-12 citation audit — the "push cadence calibrated to streak length,
+  volume falls for long streaks" claim was not on the cited Audiencers page and could
+  not be verified; replaced with the documented inactivity-based behaviour; see G11]
   ([Duolingo Streak Mechanics, Audiencers](https://theaudiencers.com/55-learn-from-duolingos-impressive-streak-retention-strategy/))
-- iOS widget with streak count: when added, user commitment surged 60% in one test.
-  ([Smashing Magazine — Designing A Streak System, 2026](https://www.smashingmagazine.com/2026/02/designing-streak-system-ux-psychology/))
-- Churn declined from 47% (2020) to 28% (2024) in Western markets; streaks are cited
-  as the single most effective retention lever in the product.
+- [stat removed 2026-06-12 citation audit — the "iOS widget → +60% commitment" claim
+  was unverifiable; the Smashing Magazine article sources it to orizon.co, which gives
+  no source, and Duolingo has published no such figure; see validation/val-ext-04-05-07.md G12]
+- [stat removed 2026-06-12 citation audit — the "churn 47% (2020) → 28% (2024), streaks
+  the single most effective lever" claim was unverifiable; it appears only in uncited
+  third-party blogs and is in no Duolingo shareholder letter found; see
+  validation/val-ext-04-05-07.md G13]
 
 **The dark side — and why Volyume's design already avoids most of it:**
 - Streak anxiety is documented: users report "going to extreme lengths to maintain
   their streaks" even at the cost of the underlying goal (learning vanishes, the
   number remains).
   ([Streak Creep, The Decision Lab](https://thedecisionlab.com/insights/consumer-insights/streak-creep-the-perils-of-too-much-gamification))
-- A 2026 study "From immersion to burnout" (PMC12913498) documents anxiety and
-  motivational exhaustion as a direct pathway from high-pressure gamified health
-  systems. The mechanism: guilt on a missed day in a health context feels like
-  "evidence of a character flaw", not a game failure.
+- A 2026 study "From immersion to burnout" (Lin, Mo & Wei, Frontiers in Public Health
+  2026, PMC12913498) documents anxiety and motivational exhaustion via an inverted-U
+  pathway (immersion reduces anxiety but indirectly raises burnout through motivational
+  depletion).
+  [corrected 2026-06-12 citation audit — the paper studies gamified health EDUCATION
+  in 350 university students, NOT health-app streaks; the "guilt on a missed day feels
+  like evidence of a character flaw" mechanism is not in it (editorial embellishment);
+  see G15]
 - Duolingo has been listed for dark patterns including shame-based push notifications
   ("You made Duo sad 😢"). Research from 2014 found repeated guilt-induction leads to
   resistance and anger toward the product.
@@ -85,7 +118,11 @@ target behaviour. The psychological power comes from three converging mechanisms
 - Overjustification effect: external rewards (badges, streaks, points) can crowd out
   intrinsic motivation. If a user starts tracking workouts "to keep the streak" rather
   than because they enjoy training, removing the gamification collapses the habit.
-  ([Motivation crowding, PMC10807424](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10807424/))
+  [corrected 2026-06-12 citation audit — PMC10807424 (Huang, Chen & Zhou, Front Psychol)
+  found the OPPOSITE: financial reward and social recognition CROWDED IN intrinsic
+  motivation; it cannot support crowding-out. For genuine crowding-out cite Deci,
+  Koestner & Ryan 1999 instead; see G18]
+  ([Deci, Koestner & Ryan 1999, Psychological Bulletin 125(6):627–668](https://pubmed.ncbi.nlm.nih.gov/10589297/))
 
 **What COMP-018 already gets right:** weekly cadence (not daily — eliminates daily-
 deadline pressure), plan-relative counting (rest days and deloads count as compliance),
@@ -113,12 +150,16 @@ anticipation of a reward AND on receiving it; a visible, unearned milestone is a
 free reward the app can manufacture from data it already has.
 
 **Industry evidence:**
-- Users who complete at least one achievement on their first day in an app retain at
-  33.42%, versus 20.46% for those who don't — a 64% difference in day-1 retention.
-  ([Nike Run Club Gamification Case Study, Trophy](https://trophy.so/blog/nike-run-club-gamification-case-study))
+- Users who complete at least one achievement on their first day are reported to retain
+  at 33.42%, versus 20.46% for those who don't — a 64% difference in day-1 retention.
+  [corrected 2026-06-12 citation audit — these are Trophy's OWN gamification-platform
+  vendor data, NOT Nike Run Club data; do not present as Nike evidence; see G19]
+  ([Trophy platform data, via NRC case study](https://trophy.so/blog/nike-run-club-gamification-case-study))
 - Nike Run Club: milestones at race distances (5K, 10K, half-marathon, marathon) and
-  cumulative lifetime-distance badges. Time-limited challenges regularly go viral —
-  NRC saw ~400,000 new iOS downloads in the US in early 2026 from a seasonal challenge.
+  cumulative lifetime-distance badges. Time-limited challenges regularly go viral.
+  [stat removed 2026-06-12 citation audit — the "~400,000 new US iOS downloads from a
+  seasonal challenge" framing was unverifiable; ~400k appears to be a routine *monthly*
+  US download estimate, not a challenge surge; see validation/val-ext-04-05-07.md G20]
 - Trainerize/ABC Coach: automated milestone badges with shareable cards have become
   table-stakes in B2B coach platforms.
   ([ABC Trainerize — Milestone Badges](https://help.trainerize.com/hc/en-us/articles/360041662991-Motivate-Your-Clients-with-Milestone-Badges-for-Workouts-and-Achievements))
@@ -172,15 +213,19 @@ hyper-personal (it IS your data), presented in a shareable, branded format that 
 post on social media without any monetary incentive.
 
 **Scale evidence:**
-- Spotify Wrapped 2025 reached 200 million engaged users in ~24 hours (vs 62 hours in
-  2024 — a 3× improvement). Over 60 million shares annually.
+- Spotify Wrapped 2025 reached 200 million engaged users in ~24 hours (vs ~62 hours in
+  2024 — roughly 2.6× faster), with about 500 million shares (+41% YoY).
+  [corrected 2026-06-12 citation audit — "3×" is loose (≈2.6×); "60M+ shares annually"
+  was years out of date (the verified 2025 figure is ~500M shares); 200M engaged in
+  ~24h is verified; see G23]
   ([Music Business Worldwide](https://www.musicbusinessworldwide.com/spotify-wrapped-campaign-hit-200m-engaged-users-in-24-hours-a-19-yoy-increase/))
 - Users become brand evangelists because the content is about THEM: "personalised
   content engineered for public consumption". The viral coefficient approaches 1
   because every share exposes the app to the sharer's entire social network.
   ([NoGood — Spotify Wrapped Strategy](https://nogood.io/blog/spotify-wrapped-marketing-strategy/))
-- 71% of consumers are more likely to act based on friends' social media posts;
-  81% say their purchases are impacted by friends' posts.
+- [stat removed 2026-06-12 citation audit — the "71% act on friends' posts; 81% of
+  purchases impacted" figures were unverifiable unattributed marketing aggregates with
+  no primary source; see validation/val-ext-04-05-07.md G24]
 
 **Volyume already has this:** The YearOfLiftsScreen is a Spotify Wrapped-style swipeable
 story (the comment in the file is explicit: "Spotify Wrapped proved that the swipe-story
@@ -295,9 +340,12 @@ plan says no training today — that counts) from an unplanned skip.
 **How sharing drives installs (the funnel):**
 Every share of a workout card, a PR, or a milestone is an impression on the sharer's
 social network, with a provenance signal ("this is my actual data from this app").
-Organic app downloads make up ~69% of all App Store downloads; social proof is a
-primary driver of organic discovery.
-([Wezom — How to Make a Mobile App Go Viral](https://wezom.com/blog/how-to-make-a-mobile-app-go-viral-in-2025-proven-growth-strategies))
+Apple states that 65% of App Store downloads come from App Store search; social proof
+is a primary driver of organic discovery.
+[corrected 2026-06-12 citation audit — the prior "organic ≈69% of App Store downloads"
+came from a Wezom vendor blog and was unverifiable; replaced with Apple's stated 65%
+of downloads from App Store search; see G29]
+([Apple — App Store search statistic, via App Store developer materials](https://developer.apple.com/app-store/search/))
 
 The viral coefficient (K-factor) measures new users per existing user. K > 1 is
 self-sustaining growth. For fitness apps, K is structurally lower than social apps
@@ -309,7 +357,10 @@ retweet.
 **What Strava actually proved:**
 Strava's growth ran on what happens natively: athletes share routes and clubs develop
 real-world meet-ups; every shared activity acts as a "micro-ad" with no spend. The
-Kudos system generated 14 billion interactions in 2025 (+20% YoY). The peer-reviewed
+Kudos system generated 14 billion interactions in 2025.
+[corrected 2026-06-12 citation audit — the "14 billion" is verified (Strava 12th Year
+in Sport press release) but the "+20% YoY" was not in the release and is unverified —
+dropped; see G30] The peer-reviewed
 evidence (Social Networks, 2023) showed kudos-recipients run more often AND more
 frequently — a rare case where a social mechanic demonstrably improves the underlying
 health behaviour.
@@ -724,9 +775,15 @@ an achievement on day 1 have 64% higher day-1 retention.
   content Volyume can produce: it is the "I finally started" post that every person
   in the sharer's network who has been "thinking about going to the gym" responds to.
 
-**Why this matters especially for Besa:** Gymtimidation research shows that 80%+ of
-people experience imposter syndrome when starting at the gym. The fear is "I don't
-belong here." A first-session celebration — from the app, privately, before sharing
+**Why this matters especially for Besa:** Gymtimidation is real and well-evidenced:
+around 50% of US adults report being too intimidated to work out around others
+(Flex/OnePoll, n≈2,000), and PureGym's 2025/26 report finds 12% of UK adults find the
+gym intimidating (rising; 79% of those cite exercising in front of others). The fear is
+"I don't belong here."
+[corrected 2026-06-12 citation audit — the prior "80%+ imposter syndrome when starting
+at the gym" had no source; replaced with the verified ~50% US figure and PureGym
+12%/79%; see G38]
+A first-session celebration — from the app, privately, before sharing
 is prompted — is a safety signal: "You belong here. We're glad you're here."
 The share prompt comes second, never first.
 
@@ -841,7 +898,7 @@ suggested at some point.
 | Global leaderboard (any metric) | Fitocracy's XP leaderboard enabled cheating (Goodhart's law). Strava KOMs required ML fraud detection. Peloton's leaderboard is hidden by its best users. PMC10807424 shows leaderboards help only the already-active, harming the least active. | Demotivates Besa. Alienates Eddie (his metrics are not comparable to a beginner's). |
 | XP / points system (game currency) | Fitocracy's XP detached from actual training quality within months. Overjustification effect: once points become the goal, training quality suffers. | No plausible XP mapping for a periodised programme where volume intentionally varies. |
 | Virtual pet / RPG character | Alienates Eddie (irreversible brand damage with the precision/credibility positioning). | Contradicts the product's entire design language. |
-| Leagues with demotion (Duolingo-style) | "Penalises users who hit their own plan" — the PMC arXiv gamification study finding. Duolingo leagues penalise high-achievers who have completed their goals. | Directly contradicts "your plan, your rate" coaching philosophy. |
+| Leagues with demotion (Duolingo-style) | Leagues penalise high-achievers who have completed their own goals; the no-leagues conclusion stands on this and on the comparison-harm literature. [corrected 2026-06-12 citation audit — arXiv 2203.16175 (Mogavi et al., "When Gamification Spoils Your Learning") does NOT contain the "penalises users who hit their own plan" claim; the conclusion holds on other grounds; see G37] | Directly contradicts "your plan, your rate" coaching philosophy. |
 | Daily check-in as streak (nutrition/calories) | MFP's decade of pro-ana drift shows calorie-logging streaks are structurally unsafe in a community context. Volyume's own ED safety system exists precisely to prevent this. | ED safety system is untouchable. Nutrition streaks would create perverse incentives. |
 | Public sharing of nutrition/body data (any form) | MFP open forums (10-year moderation burden). ED safety system is there for a reason. | Hard constraint: never expose body weight, macros, calories in any social surface. |
 | Default-on sharing | Strava bodyguard incident (2024, Le Monde). Strava heatmap (2018). | EU data residency + no-PII constraint. Privacy-first brand. |
@@ -962,8 +1019,13 @@ in the app) is the correct primary surface.
 [How to make a fitness app viral — Wezom](https://wezom.com/blog/how-to-make-a-mobile-app-go-viral-in-2025-proven-growth-strategies)
 
 **Streak forgiveness — comparative data:**
-[Apps with streak freezes: 17.19 days vs 11.62 without (+48%) — Trophy](https://trophy.so/blog/designing-streaks-for-long-term-user-growth) ·
-[First-achievement users: 33.42% vs 20.46% (+64%) D1 retention — Trophy/NRC case study](https://trophy.so/blog/nike-run-club-gamification-case-study)
+[stat removed 2026-06-12 citation audit — the "apps with streak freezes: 17.19 days vs
+11.62 without (+48%)" figures were FABRICATED; absent from the cited Trophy page and
+found nowhere on the indexed web; see validation/val-ext-04-05-07.md G8] ·
+[First-achievement users: 33.42% vs 20.46% (+64%) D1 retention — Trophy's OWN
+gamification-platform vendor data, NOT Nike Run Club data; do not present as Nike
+evidence](https://trophy.so/blog/nike-run-club-gamification-case-study)
+[corrected 2026-06-12 citation audit — re-attributed to Trophy platform data; see G19]
 
 ---
 

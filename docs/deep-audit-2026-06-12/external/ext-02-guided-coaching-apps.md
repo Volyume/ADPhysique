@@ -1,5 +1,7 @@
 # Guided Coaching Apps — Competitive Deep Audit
 
+> Citations reconciled 2026-06-12 against validation/val-ext-*.md — see that report for per-claim verdicts.
+
 > **PROVENANCE NOTICE (2026-06-12, added after a verified research-tooling
 > failure):** this document presents itself as external/competitive research.
 > The session that produced it cannot be verified from here, and the cloud
@@ -31,9 +33,12 @@ onboarding conversion mechanics, but it under-covered:
 - **Programmes as journeys.** The audit covered streaks (COMP-018) but not the programme
   narrative arc — the feeling of being on a 4–12-week journey with a beginning, middle, and
   end that skilled apps use to lock in beginners who would otherwise drift.
-- **Gym anxiety as the real beginner barrier.** ~50% of beginners report intimidation in gym
-  environments ([RunRepeat 2020 survey](https://runrepeat.com/gym-anxiety)); no prior document
-  names this explicitly or proposes a mechanic to address it.
+- **Gym anxiety as the real beginner barrier.** ~50% of US adults report being too intimidated
+  to work out around others (2019 OnePoll survey for Isopure, n≈2,000, via [StudyFinds](https://studyfinds.org/gymtimidation-half-americans-afraid-working-out/));
+  no prior document names this explicitly or proposes a mechanic to address it.
+  [Corrected 2026-06-12 citation audit — the earlier "~50% of beginners (RunRepeat 2020 survey)"
+  cited a dead URL (runrepeat.com/gym-anxiety returns 404) and the figure measures US adults, not
+  "beginners". See validation/val-ext-01-02.md #82.]
 - **The dual-market design pattern.** The layered-complexity approach used by Caliber, Apple
   Fitness+, and Ladder — showing beginners a simple surface while keeping elite depth
   accessible — was never stated as a design system principle.
@@ -47,10 +52,13 @@ onboarding conversion mechanics, but it under-covered:
 
 ### 1.1 Nike Training Club — gold standard for free-tier coaching volume
 
-**How they deliver coaching feel.** NTC offers 487+ free guided workout classes with
-non-stop audio instruction. Instructors "never let you be in silence for more than a few
-seconds" and provide constant form cues, breathing reminders, and tempo instructions
-([Yahoo Health, NTC review](https://health.yahoo.com/wellness/fitness/online-fitness/articles/nike-training-club-review-better-203000725.html)).
+**How they deliver coaching feel.** NTC offers 185+ free guided workout classes (Nike's
+current advertised figure; some pages say 200+) with audio instruction throughout. Instructors
+provide form cues, breathing reminders, and tempo instructions. [Corrected 2026-06-12 citation
+audit — the earlier "487+" figure is a stale February 2022 Tom's Guide number; Nike's own pages
+now advertise 185+. The quote "never let you be in silence for more than a few seconds" was
+UNSUPPORTED — it is not in the retrievable content of the cited Yahoo Health review. See
+validation/val-ext-01-02.md #48, #49.]
 Every workout class is led by a real, identifiable trainer — not an anonymous voice —
 and programs are structured in 4–6-week arcs with "clear paths to follow"
 ([MadMuscles review](https://madmuscles-review.com/workout-apps/nike-training-club-app-review/)).
@@ -66,10 +74,14 @@ intermediate/advanced users (sport-specific conditioning, advanced HIIT, yoga fl
 volume and difficulty filter rather than separate tiers. No elite-specific depth (no
 periodisation, no autoregulation) — which is why NTC grows wide but not deep.
 
-**Monetisation.** NTC went fully free in 2020 to drive user acquisition (+60% active users),
-monetising through Nike.com product sales (members get access to Nike Experts and 60-day
-product trials) rather than subscription conversion
+**Monetisation.** NTC went fully free in 2020 to drive user acquisition, monetising through
+Nike.com product sales (members get access to Nike Experts and 60-day product trials) rather
+than subscription conversion
 ([AppVenturez case study](https://www.appventurez.com/blog/nike-training-club-app-case-study)).
+[The "+60% active users" figure is imprecise and secondary — corrected 2026-06-12 citation audit.
+The primary Motley Fool reporting gives different metrics (China NTC MAU +350%; 50M workouts logged
+in a quarter); the ~60% traces to a CNBC report of Nike *members* (not NTC actives) rising "by
+nearly 60%". Use with caution. See validation/val-ext-01-02.md #52.]
 This is a *brand-as-flywheel* model, not a subscription model. The lesson for Volyume:
 free-tier brand trust is earnable at a fraction of the real acquisition cost, but NTC shows
 the model only makes financial sense if the product anchors a broader commerce ecosystem.
@@ -92,9 +104,10 @@ technical cues, and conversational encouragement. The explicit design principle 
 "choosing a trainer whose motivation style aligns with personal preference increases the
 likelihood of returning for the next session."
 
-**Beginner confidence mechanics.** A 2025 "Make Your Fitness Comeback" programme — 4 weeks,
-three 10-minute workouts per week — specifically targets people "returning to movement or
-simply looking for a reset" ([MacObserver, Fitness+ review](https://www.macobserver.com/tips/apple-fitness-review/)).
+**Beginner confidence mechanics.** A January 2026 "Make Your Fitness Comeback" programme —
+4 weeks, three 10-minute workouts per week — specifically targets people "returning to movement or
+simply looking for a reset" [Corrected 2026-06-12 citation audit — announced 2 Jan 2026, live 5 Jan
+2026, not "2025". See validation/val-ext-01-02.md #54.] ([MacObserver, Fitness+ review](https://www.macobserver.com/tips/apple-fitness-review/)).
 Workouts are "just challenging enough while still being approachable and genuinely fun for
 on-again, off-again exercisers"
 ([Woman and Home, Fitness+ review](https://www.womanandhome.com/health-wellbeing/fitness/apple-fitness-review/)).
@@ -157,7 +170,10 @@ convert from "just trying" to "subscriber identity".
 **Monetisation.** Peloton ended its free app tier because it was "cannibalising paid
 conversion" — the free tier attracted users who never converted
 ([Peloton Buddy, free tier ending](https://www.pelobuddy.com/free-app-tier-ending/)).
-Current model: 30-day trial, then £12.99/mo. Lesson: a generous free tier only works if
+Current model: 7-day default trial, then two app tiers (App One and App+), raised October 2025 to
+$15.99 / $28.99 (USD). [Corrected 2026-06-12 citation audit — the earlier "30-day trial, then
+£12.99/mo" was stale on both the trial length and the (USD, two-tier) pricing. See
+validation/val-ext-01-02.md #60.] Lesson: a generous free tier only works if
 it creates the conditions for conversion (Volyume's free logger floor does this;
 Peloton's free classes did not, because classes are the product, not a gateway to it).
 
@@ -191,8 +207,10 @@ and "Ignite"; advanced users get "The Foundation" (12-week strength) or specific
 conditioning. A single membership unlocks all. The framing is "find your level", not
 "unlock harder tiers" — no hierarchy of content, just different paths.
 
-**Monetisation.** £119.99/year or £29.99/month
+**Monetisation.** $119.99/year or $29.99/month (USD), with a 7-day free trial
 ([Centr, shop](https://shop.centr.com/products/centr-digital-coaching-app)).
+[Corrected 2026-06-12 citation audit — pricing is USD, transposed to sterling without basis. See
+validation/val-ext-01-02.md #62.]
 The celebrity anchor does the acquisition work; the beginner confidence system does the
 retention work. The 7-day free trial matches the industry norm.
 
@@ -220,13 +238,16 @@ goal (the full workout). This is a concrete example of *aspirational scaling*: t
 exists in the product and beginner users can see it, making mastery tangible and motivating.
 Partial completion is normalised, never punished.
 
-**Coaching voice in Coach+.** The 2025 Coach+ upgrade adds "custom motivational messages",
-lets users "set the tone for how Coach+ talks to them" (i.e. tone preference), and provides
+**Coaching voice in Coach+.** The Coach+ upgrade (launched **July 2024**) adds "custom motivational
+messages", lets users "set the tone for how Coach+ talks to them" (i.e. tone preference), and provides
 "real-time, conversational support" for guidance on exercises, nutrition, and motivation
 ([Freeletics, Coach+ announcement](https://www.freeletics.com/en/blog/posts/freeletics-coach-plus/),
 [Fitt Insider, Coach+ press](https://insider.fitt.co/press-release/freeletics-unveils-a-new-era-in-digital-fitness-with-the-launch-of-coach/)).
 The key differentiation: the user *chooses* their coaching tone — a personalisation of voice
-rather than content, exactly the pattern proposed above under Apple Fitness+.
+rather than content, exactly the pattern proposed above under Apple Fitness+. [Corrected 2026-06-12
+citation audit — Coach+ launched July 2024, not 2025, and is explicitly **generative/conversational
+AI**, so it is a demand signal for tone preference, not a deterministic precedent. See
+validation/val-ext-01-02.md #65.]
 
 **Dual-market balance.** Freeletics uses "Training Journeys" — multi-week thematic programmes
 (strength, endurance, hybrid) with named arcs. Beginners start with beginner Journeys;
@@ -244,13 +265,18 @@ that MacroFactor and Freeletics both exploit.
 
 ### 1.6 Future — the proof that humans-as-coaches convert at scale
 
-**How they deliver coaching feel.** Future pairs each user with a real, named human coach who:
-(a) conducts an initial FaceTime consultation, (b) designs a fresh personalised plan every week,
-(c) exchanges ~4 messages per day including pre-workout check-ins and post-workout feedback
-([Active.com, Future review](https://www.active.com/fitness/articles/future-app-review)).
-The 4.9/5.0 App Store rating from 9,400+ reviews (January 2026) and $199/month price point
-demonstrate that users will pay a premium for *genuine human accountability*
+**How they deliver coaching feel.** Future pairs each user with a real, named human coach who
+designs a fresh personalised plan every week and provides asynchronous coaching ("your trainer
+texts you each morning"; live real-time sessions are not the standard format)
 ([Cora Health, Future review](https://www.corahealth.app/compare/future)).
+[The "initial FaceTime consultation" and "~4 messages per day" specifics were UNVERIFIABLE and
+partially in tension with the fetched Cora review, which describes asynchronous coaching — removed
+2026-06-12 citation audit; see validation/val-ext-01-02.md #67.]
+The 4.9/5.0 App Store rating from 9,400+ reviews (January 2026) and **$199/month** monthly price
+point ($149/mo on annual) demonstrate that users will pay a premium for *genuine human
+accountability*. [Pricing corrected and rating re-attributed 2026-06-12 citation audit — the 4.9/9,400+
+figure is corroborated by a sports-nerd review, not the cited Cora page. See
+validation/val-ext-01-02.md #66.]
 
 **Beginner confidence mechanics.** "The 1-on-1 coaching model is actually ideal for beginners
 because you get personalised guidance without the intimidation of a gym" — coaches are explicitly
@@ -283,24 +309,31 @@ The named trainer (Kayla) is simultaneously the coach, the brand ambassador, and
 accountability relationship — her Instagram following (16M+) pre-built the parasocial
 attachment before users install the app.
 
-**Beginner confidence mechanics.** All programmes include 4 weeks of beginner workouts before
-the main programme begins — a mandatory soft-start that prevents intimidation
+**Beginner confidence mechanics.** High Intensity with Kayla offers **eight optional Beginner
+weeks** before Week 1, for those who need them — a soft-start that prevents intimidation
 ([Sweat support, beginner FAQ](https://support.sweat.com/hc/en-us/articles/360004473775-Do-you-have-workouts-for-Beginners)).
+[Corrected 2026-06-12 citation audit — it is eight *optional* weeks on one programme, not "4 weeks…
+mandatory… across all programmes". See validation/val-ext-01-02.md #68.]
 Milestone sharing (first workout badge, 100th workout, streak milestones) via the Activity
 tab creates a celebratory feedback loop
 ([Sweat, 16 features](https://sweat.com/blogs/fitness/sweat-app-features)).
 The Community Forum tab hosts thousands of women supporting each other — a genuine peer
 accountability network without a public leaderboard.
 
-**Growth model.** Sweat grew to ~$100M ARR from 1M+ monthly active users via:
+**Growth model.** Sweat reached ~$100M annual revenue (at the July 2021 iFIT acquisition, from
+~450k paid subscribers; "1M+ active users/month across 145 countries" is a separate, later
+engagement stat) via:
 (1) Kayla's social media presence as a zero-cost acquisition engine;
 (2) community forums creating switching costs;
 (3) a subscription model with no meaningful free tier
 ([TechAhead, Sweat growth story](https://www.techaheadcorp.com/blog/how-the-sweat-app-conquered-fitness-with-100-million-in-revenue/)).
+[Corrected 2026-06-12 citation audit — conflating the ~$100M revenue with "1M+ MAU" implied paid
+scale Sweat did not have (the revenue came from ~450k paid subscribers). See
+validation/val-ext-01-02.md #69.]
 The lesson: identity-level connection to a named coach/founder creates switching costs that
 generic apps cannot replicate.
 
-**Gap relevance for Volyume.** Sweat's mandatory 4-week beginner soft-start and milestone
+**Gap relevance for Volyume.** Sweat's optional eight-week beginner soft-start and milestone
 celebration mechanics are directly applicable to Volyume's onboarding arc. Volyume knows
 which mesocycle week a user is in; it can badge-celebrate "first session complete", "first
 week done", "first mesocycle milestone" with a coach-voiced message in the existing
@@ -311,8 +344,11 @@ coverage gap G6 from the prior audit).
 
 ### 1.8 BetterMe — the mass-market quiz-to-coach conversion template
 
-**How they deliver coaching feel.** BetterMe opens with a 15–20 question quiz that "by the
-time users see the cost, they have already invested several minutes of emotional engagement"
+**How they deliver coaching feel.** BetterMe opens with a personalisation quiz of ~26 questions
+within a ~41-step onboarding flow, so that "by the time users see the cost, they have already
+invested several minutes of emotional engagement" [Corrected 2026-06-12 citation audit — the quiz
+is longer than the earlier "15–20 question" claim (teardowns put it at ~26 questions / ~41 steps).
+See validation/val-ext-01-02.md #71.]
 ([Nutrola, BetterMe free vs paid](https://nutrola.app/en/blog/betterme-free-vs-paid-what-do-you-actually-get)).
 Chat-based human coaching is available as an add-on for challenged-length programmes, creating
 a tiered coaching model where the mass market gets algorithmic coaching and premium users
@@ -459,8 +495,8 @@ wanting progress), action (ride), variable reward (what badge/level/unlock?), in
 (choosing a goal route, investing XP in a target bike) creates a classic Nir Eyal Hook cycle
 ([techArchitect, Zwift gamification](https://techarchitect.io/zwift-a-gamification-hook-framework-case-study/)).
 
-**Dual-market balance.** Zwift's segments and racing (Zwift Racing League — 35,000+ racers,
-1,800 teams per season) serve competitive cyclists; free-ride mode and novice routes serve
+**Dual-market balance.** Zwift's segments and racing (Zwift Racing League — 35,000+ racers
+per season) serve competitive cyclists; free-ride mode and novice routes serve
 casual riders. The same world contains both without either feeling out of place. The key:
 the division is by *feature selection*, not by product tier or separate app screen.
 
@@ -497,9 +533,11 @@ respect; beginners need more context, not more hand-holding.
 
 **Adherence-neutral is the single most transferable concept from this research.**
 MacroFactor's published design philosophy
-([MacroFactor, adherence neutral](https://macrofactorapp.com/adherence-neutral/)):
-"No red numbers. No warnings. No guilt pop-ups. Nothing about MacroFactor will tell you
-that you're doing something bad if you don't adhere to your diet."
+([MacroFactor, adherence neutral](https://macrofactorapp.com/adherence-neutral/)) is to design
+"without any red numbers, pop-ups, warnings, or visual elements that can promote feelings of shame
+and guilt". [The earlier quotation ("No red numbers. No warnings. No guilt pop-ups…") was a
+paraphrase wrapped in quotation marks, not the published sentence — corrected 2026-06-12 citation
+audit; see validation/val-ext-01-02.md #81.]
 The research basis: shaming people for non-adherence makes them less likely to adhere.
 Volyume currently has a neutral tone in the coaching engine, but the check-in screen and
 nutrition logging surface have not been audited for shame-trigger language.
@@ -563,8 +601,8 @@ highlighted first.
 |---|---|---|---|---|
 | NTC | Fully free | Everything | Nothing (brand flywheel) | Not applicable; no commerce ecosystem |
 | Apple Fitness+ | £9.99/mo, hardware bundled | Nothing | Hardware ownership | Not applicable |
-| Peloton | 30-day trial, £12.99/mo | Nothing (ended free tier) | Class library depth | Free tier must be a gateway, not a destination |
-| Centr | 7-day trial, £119.99/yr | Nothing | Celebrity + holistic content | Brand anchor drives conversion |
+| Peloton | 7-day trial, $15.99–$28.99/mo | Nothing (ended free tier) | Class library depth | Free tier must be a gateway, not a destination |
+| Centr | 7-day trial, $119.99/yr | Nothing | Celebrity + holistic content | Brand anchor drives conversion |
 | Freeletics | Free bodyweight tier, paid Coach | Basic workouts | Adaptive Coach personalisation | The engine differentiates; generic workouts do not |
 | Future | $199/mo | Nothing | Human accountability | Price anchoring: human coach = premium |
 | Sweat | 7-day trial | Nothing | Community switching cost | Community creates exit barrier |
@@ -770,7 +808,9 @@ sourcing), 3 plain-language form cues (not technical coaching jargon), and an op
 "Set a lighter first set to learn the movement" suggestion. After workout 3, the guided
 mode silently steps back unless the user re-enables it in Settings.
 
-**Evidence base.** ~50% of beginners report gym intimidation ([RunRepeat 2020]). Fitbod's
+**Evidence base.** ~50% of US adults report being too intimidated to work out around others
+(2019 OnePoll/Isopure survey, n≈2,000 — corrected 2026-06-12 citation audit from the dead
+"RunRepeat 2020" cite; see validation/val-ext-01-02.md #82). Fitbod's
 first-workout completion as the activation metric. Ladder's form feedback described as
 "especially valuable for learning proper technique early". The key insight: the anxiety
 is not about the exercise itself but about "am I doing this right?" in a public space.

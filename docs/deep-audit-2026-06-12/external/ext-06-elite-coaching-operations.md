@@ -1,5 +1,7 @@
 # ext-06 — Elite Coaching Operations
 
+> Citations reconciled 2026-06-12 against validation/val-ext-*.md — see that report for per-claim verdicts.
+
 > **PROVENANCE NOTICE (2026-06-12, added after a verified research-tooling
 > failure):** this document presents itself as external/competitive research.
 > The session that produced it cannot be verified from here, and the cloud
@@ -36,7 +38,7 @@ The 2026-06-10 competitive audit (agent 13: check-in systems; agent 3: AI coachi
 
 ### 1.1 The canonical human-coaching check-in (WAG/Stronger U model)
 
-The gold standard in the industry is WAG (Working Against Gravity) running on their Seismic platform. It is widely cited as the format every algorithmic app tries to emulate. The anatomy is:
+The gold standard in the industry is WAG (Working Against Gravity) running on their Seismic platform. It is widely cited as the format every algorithmic app tries to emulate. The skeleton below — auto-compiled data, a member narrative, and a coach response within 24 hours — is verified against WAG and Stronger U; the finer parameters (which items are "non-negotiably asked", the exact rating-scale format, and the writing-time estimate) are a fair *abstraction* of that practice rather than a documented spec. [corrected 2026-06-12 citation audit — 3-layer skeleton verified, fine-print specifics are embellishment; see E6-02]
 
 **LAYER 1 — Auto-compiled quantitative data (coach reads, client doesn't re-enter)**
 - Daily body weight log → weekly average trend
@@ -45,10 +47,10 @@ The gold standard in the industry is WAG (Working Against Gravity) running on th
 - Body measurements (waist, hips, chest, arms, legs — varies by client)
 - Steps / activity from wearable sync
 
-**LAYER 2 — Subjective narrative (client writes, ~5–15 min)**
-- Highs of the week (what went well, non-negotiably asked)
+**LAYER 2 — Subjective narrative (client writes)**
+- Highs of the week (what went well)
 - Lows of the week (what was hard, what got missed)
-- Energy, sleep, stress, hunger ratings (4–6 items, 1–10 scale)
+- Energy, sleep, stress, hunger ratings (subjective-feel items, typically on a numeric scale)
 - Specific questions if the coach flagged something last week ("how did the lower carb days feel?")
 - Free-text "anything else your coach should know"
 
@@ -64,7 +66,7 @@ Sources: [WAG How Does It Work](https://www.workingagainstgravity.com/how-does-w
 
 ### 1.2 What the best coaches are actually looking for
 
-Based on cross-referencing coaching-industry content, physique-specific coaching study (PMC10299204), RP Strength's methodology, and RippedBody's evidence-based coaching framework, elite physique coaches prioritise inputs in this order:
+Synthesised from coaching-industry content, RP Strength's methodology, and RippedBody's evidence-based coaching framework, the priority ordering below is a reasonable abstraction of how elite physique coaches weigh inputs. [corrected 2026-06-12 citation audit — presented as synthesis, not cross-referenced findings; the ordered hierarchy, the "photos every 2–4 weeks" cadence and "flat vs full as a primary dial" are not documented specs, and PMC10299204 (cited below) does not support them — that paper covers protein, cardio, supplementation and PED recommendations, nothing on monitoring or adjustment logic; see E6-04, E6-05]
 
 **PRIMARY (decisive):**
 1. **Weight trend, not single reading.** EWMA or 7-day average. A single day's weight is never a signal. Coaches look at 2–4 weeks of trend before attributing change to the intervention.
@@ -104,16 +106,17 @@ Step 3 — Consider NEAT / cardio increase first.
   Limit: if cardio is already high, this lever is exhausted.
 
 Step 4 — Calorie reduction.
-  Conservative: 100–200 kcal/day reduction.
-  Never more than 250–300 kcal/day in one adjustment.
-  Re-assess after 2–3 weeks minimum before cutting again.
+  Conservative: 100–200 kcal/day reduction (RippedBody gives ~5–8%).
+  [uncited heuristic — "never more than 250–300 kcal/day in one adjustment;
+  re-assess after 2–3 weeks" could not be confirmed against RippedBody or any
+  other source; treat as practitioner rule of thumb, not sourced; see E6-07]
 
 Step 5 — Protein re-distribution / macro timing.
   Rarely a lever at this stage but used for satiety problems.
 ```
 
 **For training specifically (deload decision):**
-The 2024 deload survey (Sports Medicine Open) found coaches and athletes deload for three reasons in order of frequency: (1) scheduled on the programme (65%), (2) feeling beat up — soreness + joint ache + pain (63%), (3) performance stalled or decreased (54%). Frequency: typically every 4–6 weeks, with individual variation from 3–12 weeks. Duration: ~6–7 days. Volume reduction: 25–50% or more; frequency maintained; intensity reduced via RIR increase.
+The 2024 deload survey (Sports Medicine Open) found coaches and athletes deload for three reasons in order of frequency: (1) scheduled on the programme (65%), (2) feeling beat up — soreness + joint ache + pain (63%), (3) performance stalled or decreased (54%). Frequency: typically every 4–6 weeks, with individual variation from 3–12 weeks. Duration: ~6–7 days. Volume cut by reducing weekly sets (78.9% of respondents) and/or reps (52.8%); frequency maintained; intensity reduced via RIR increase. A practical 25–50% volume reduction is recommended in the deloading practical-recommendations literature (Bell et al., "A Practical Approach to Deloading"), not in this survey. [corrected 2026-06-12 citation audit — the survey reports the set/rep reductions above but does not quantify volume as a percentage; 25–50% re-anchored to Bell et al.; see E6-09]
 
 The Menno Henselmans / autoregulation research (shura.shu.ac.uk deload PDF) adds a decision checkpoint model: rather than mandatory time-point deloads, elite coaches now use a "checkpoint" within the programme to actively decide based on cumulative readiness signals.
 
@@ -123,7 +126,7 @@ Sources: [RippedBody macro adjustment guide](https://rippedbody.com/how-to-adjus
 
 ## 2. The anatomy of a great coaching feedback message
 
-This is the most under-studied element in the prior audit and the most important for the "coached feeling." Based on synthesis across coaching platforms, coaching-business content, and Barbell Logic / PTDC / coaching academy sources:
+This is the most under-studied element in the prior audit and the most important for the "coached feeling." The five-part structure below is **Volyume's own design pattern**, not a documented industry universal — its individual components each appear separately in verified coaching material (specific acknowledgement and highs-first: Stronger U; decision-with-reason: RippedBody/Carbon; forward anchor: standard practice), but no source describes them as a single named framework. [corrected 2026-06-12 citation audit — presented as Volyume's design pattern rather than a cited five-part research finding; see E6-11]
 
 ### 2.1 Structure (the 5-part coach response)
 
@@ -152,9 +155,8 @@ The research converges on a narrow band that elite coaches operate in:
 
 - **Data-first, not motivational-first.** Beginners appreciate encouragement; advanced athletes find excessive cheerleading patronising. The credibility comes from showing you read the data, not from pep talks.
 - **Adherence-neutral.** MacroFactor's explicit philosophy ([macrofactor.com/adherence-neutral](https://macrofactorapp.com/adherence-neutral/)) is the formal articulation of what elite coaches do intuitively: the algorithm (or coach) works with what was logged, without judgment. No red numbers. No "you should have done better." The plan adapts to reality. This is directly retention-positive — shame-based coaching causes ghosting.
-- **Confident, not hedging.** "I'm keeping calories the same" not "I think maybe we could consider holding." Decisiveness signals competence.
-- **Brief.** The best coach responses are 150–250 words. Not a wall of text. Not a list of 12 bullet points. The signal-to-noise ratio is what creates the "coach who knows what they're doing" impression.
-- **Named.** Using the client's first name once, at the start, activates the personal-relationship feeling.
+- **Confident, not hedging.** "I'm keeping calories the same" not "I think maybe we could consider holding." [stat removed 2026-06-12 citation audit — "decisiveness signals competence", the "150–250 words" length band, and "use the first name once" had no source and were unverifiable; see validation/val-ext-03-06.md E6-12]
+- **Brief.** Keep the response tight — not a wall of text, not a list of 12 bullet points. A high signal-to-noise ratio reads as "a coach who knows what they're doing"; the specific word count is a design choice, not a sourced figure.
 
 ### 2.3 What makes clients feel *neglected* (the anti-patterns)
 
@@ -174,24 +176,23 @@ From PTDC survey, CoachRx ghost-client analysis, coaching-industry loss data:
 
 | Platform | Check-in capability | Coach intelligence | Weakness |
 |---|---|---|---|
-| **WAG Seismic** | Gold standard: auto-compiled data + narrative layer + photos + comparison | Human only | Expensive ($200+/mo), human bottleneck |
-| **TrueCoach** | Good: photo tasks, metric tracking, side-by-side comparison; coach responds manually | Human only | No structured form builder historically; being addressed |
+| **WAG Seismic** | Gold standard: auto-compiled data + narrative layer + photos + comparison | Human only | Top tier ~$219/mo (Lite $99 / Essentials $179 / Plus $219; 12-mo Essentials $129) — only the top tier is "$200+"; human bottleneck [corrected 2026-06-12 citation audit — was "$200+/mo"; see E6-16] |
+| **TrueCoach** | Good UI, metric graphs, coach comments per exercise; photo tasks, metric tracking, side-by-side comparison; coach responds manually | Human only | No structured form builder historically (being addressed); no algorithmic intelligence [corrected 2026-06-12 citation audit — merged duplicate TrueCoach rows; see E6-17] |
 | **Everfit** | Best B2B tooling: scheduled forms, photo tasks, Responses Comparison, 10am push reminders | Human only | Intelligence stays with coach, no algorithmic layer |
 | **Trainerize** | Weakest of the big three: no native check-in form for years (community complaint) | Human + AI workout builder | Check-in gap being filled only recently |
-| **TrueCoach** | Good UI; metric graphs; coach comments per exercise | Human only | No algorithmic intelligence |
 | **CoachRx** | Customisable weekly check-ins, activity feed, athlete performance summaries | Human only | Smaller community |
 
 **Key lesson:** Every B2B coaching platform is intelligence-free. All the "smart" work (decision-making, data interpretation) happens in the coach's head, not in the software. Volyume's engine encodes this intelligence algorithmically — which is why it is structurally closer to WAG+Seismic than to any app competitor.
 
 ### 3.2 RP Strength coaching practice
 
-RP coaches check in multiple times per week (twice-weekly for nutrition; weekly for training). Full Access Coaching includes weekly Zoom. Essentials is email-only. All tiers get: macro adjustments at every check-in (no cap), response within 24 hours on business days, and a stated philosophy that deloads should be *explained* so clients don't feel they're stepping backward. ([RP Strength coaching page](https://rpstrength.com/pages/coaching))
+RP coaches run email check-ins 2–3×/week on both tiers. Coaching Essentials ($349.99/mo) is email-based with no live calls; Full Access ($599.99/mo) adds a weekly 20-minute video call plus texting. Both tiers respond within 24 hours on business days, with a stated philosophy that deloads should be *explained* so clients don't feel they're stepping backward. [corrected 2026-06-12 citation audit — was "twice-weekly nutrition / weekly training" and omitted prices; email check-ins are 2–3×/week on BOTH tiers; "macro adjustments at every check-in (no cap)" is not stated on the page; see E6-18] ([RP Strength coaching page](https://rpstrength.com/pages/coaching))
 
-The RP Hypertrophy app's in-session feedback (pump/soreness/effort per exercise) closes the loop *within the mesocycle*: each session's ratings adjust the next session's volume targets. Users consistently praise this: "if your quads aren't just right that day it'll lower the volume or the prescribed weight." The complaint is survey fatigue and the $35/mo price — not the mechanism. ([Powerlifting Technique JuggernautAI review](https://powerliftingtechnique.com/juggernaut-ai-review/))
+The RP Hypertrophy app's in-session feedback (pump/soreness/effort per exercise) closes the loop *within the mesocycle*: each session's ratings adjust the next session's volume targets. Users praise this loop, and the recurring complaints are survey fatigue and the price (~$34.99/mo) rather than the mechanism itself. [corrected 2026-06-12 citation audit — regular price verified at $34.99/mo, but the "if your quads aren't just right…" quote and its attribution to a JuggernautAI review at powerliftingtechnique.com (a different product) are unverifiable; quote and miscited source removed; see E6-19]
 
 ### 3.3 3DMJ coaching model
 
-3DMJ (Team 3D Muscle Journey) operate with: weekly check-ins for active competitors, biweekly for off-season athletes, video calls for programming discussions. Their published coaching philosophy (Eric Helms et al.) centres on three principles: (1) reasonable expectations set from day one; (2) the plan is collaborative, not dictated; (3) career-spanning relationship, not short-cycle programming. What is notable for Volyume: they explicitly negotiate with each client what is *optimal* versus what is *adhereable* and set the plan at the intersection — this is the autonomy/adherence trade-off that every beginner-facing product should encode. ([3DMJ coaching philosophy](https://www.3dmusclejourney.com/blog/my-coaching-philosophy-3-keys-to-keep-in-mind-with-every-coaching-interaction))
+3DMJ (Team 3D Muscle Journey) operate a relationship-led, collaborative coaching model. Their published coaching philosophy — an article by **Brad Loomis** (Feb 2025) — centres on three keys: (1) know the client's goals; (2) care about and acknowledge their progress; (3) provide clear, frequent guidance. What is notable for Volyume: the article does describe negotiating what is *optimal* versus what is *adhereable* and setting an "enjoyable yet flexible plan for the best adherence possible" — the autonomy/adherence trade-off that every beginner-facing product should encode. [corrected 2026-06-12 citation audit — the cited article is by Brad Loomis (Feb 2025), not "Eric Helms et al."; its three keys differ from those previously listed; and the weekly-for-competitors / biweekly-off-season cadence claims are not in the source and have been removed; see E6-20] ([3DMJ coaching philosophy](https://www.3dmusclejourney.com/blog/my-coaching-philosophy-3-keys-to-keep-in-mind-with-every-coaching-interaction))
 
 ---
 
@@ -199,11 +200,10 @@ The RP Hypertrophy app's in-session feedback (pump/soreness/effort per exercise)
 
 ### 4.1 Retention data
 
-- Average coaching client retention: 50–65%; strong coaches achieve 65–80%; elite coaches 80–90%+ through systematic client-success management. ([Everfit retention guide](https://blog.everfit.io/how-to-retain-personal-training-clients))
-- Members who complete a structured onboarding programme (orientation + 3 follow-up sessions over 2–3 weeks) retain at **87% at 6 months** vs 60% for standard orientation — a 27-point gap. ([Optimized Growth gym onboarding](https://optimizedgrowth.com/gyms/blog/gym-onboarding-first-30-days/))
-- Members who visit the gym 8+ times in month 1 retain significantly longer; 3 sessions/week in month 1 = 4× retention rate vs sporadic attendance. This is the gym equivalent of D1–D7 activation in apps.
-- 50% of new gym members cancel within 6 months; attrition concentrates in the first 90 days. ([Virtuagym onboarding](https://business.virtuagym.com/blog/fitness-onboarding/))
-- Accountability structures increase goal achievement by 65%; committing to meet someone = 95% goal-achievement rate (vs self-directed). ([businesscoachvas accountability](https://businesscoachvas.com/blog/coaching-client-retention-strategies))
+- Standard PT client retention is around 75–80%, dropping to ~70% seasonally, with 90% held up as an aspirational goal through systematic client-success management. [corrected 2026-06-12 citation audit — the previous three-tier breakdown ("average 50–65% / strong coaches 65–80% / elite 80–90%+") was fabricated; the cited Everfit article contains none of those figures; see E6-21] ([Everfit retention guide](https://blog.everfit.io/how-to-retain-personal-training-clients))
+- [stat removed 2026-06-12 citation audit — "structured onboarding retains 87% at 6 months vs 60%, a 27-point gap" is absent from the cited Optimized Growth source and could not be found; see validation/val-ext-03-06.md E6-22]
+- Members who attend ~3 sessions/week in month 1 retain at roughly 4× the rate of those who attend sporadically — the gym equivalent of D1–D7 activation in apps. (Directional: this is gym-marketing content with no underlying citation; treat as industry folklore.) [corrected 2026-06-12 citation audit — kept the 4× figure (verified as cited, E6-23) but removed the unsupported "8+ visits in month 1" claim, E6-24; see E6-23/E6-24] ([Optimized Growth gym onboarding](https://optimizedgrowth.com/gyms/blog/gym-onboarding-first-30-days/))
+- New gym members typically decide whether to stay within the first 30 days, making early activation the critical window. [corrected 2026-06-12 citation audit — was "50% cancel within 6 months; attrition concentrates in the first 90 days"; the cited Virtuagym source carries neither figure, only the first-30-days point; see E6-25] ([Virtuagym onboarding](https://business.virtuagym.com/blog/fitness-onboarding/))
 
 ### 4.2 The top-5 reasons clients leave (PTDC survey + industry data)
 
@@ -237,7 +237,7 @@ The challenge: Elite users (Eddie) want data density, credible methodology, and 
 
 The resolution that elite coaching actually uses: **progressive disclosure through the relationship.**
 
-In WAG, a new client starts with macros, weight, and two narrative questions. After 4 weeks, measurements and photos are introduced. After 8 weeks, advanced biofeedback. The coaching depth scales with demonstrated engagement, not with the app's perception of the user's sophistication.
+Progressive disclosure is a sound general principle — it is supported by Volyume's own verified sources (RP simplifying its app for new users; documented MacroFactor complexity complaints for beginners). The coaching depth should scale with demonstrated engagement, not with the app's perception of the user's sophistication. [stat removed 2026-06-12 citation audit — the staged WAG schedule ("new client starts with macros, weight and two narrative questions; measurements and photos at +4 weeks; advanced biofeedback at +8 weeks") was unverifiable: no trace on WAG's own pages, and WAG's actual flow has before-photos/measurements submitted at setup; progressive disclosure retained as a general principle, not as this WAG example; see validation/val-ext-03-06.md E6-29]
 
 For Volyume: the Pro check-in is already sophisticated. The beginner onboarding / activation window (D0–D14) should offer a *simplified* version of the same structure — fewer asks, more explicit interpretation, more encouragement — that graduates toward the full check-in as the user demonstrates consistent logging.
 
@@ -319,7 +319,7 @@ This is the single highest-leverage improvement in this audit. Elite coaches say
 
 ### OPP-C04 — Progressive disclosure check-in for D0–D30 (Beginner activation)
 **Persona:** Besa (Beginner)
-**Effect:** Activation + D7/D30 retention — structured onboarding adds 27 percentage points to 6-month retention in gym research; similar leverage applies here
+**Effect:** Activation + D7/D30 retention — early activation is the critical window (new gym members typically decide whether to stay within the first 30 days, E6-25), and structured onboarding plausibly improves retention; similar leverage applies here [corrected 2026-06-12 citation audit — was "structured onboarding adds 27 percentage points to 6-month retention", which relied on the unsupported 87%/60% stat; see E6-22/E6-25]
 **Effort:** Medium — requires a simplified check-in variant and a graduation trigger
 **Constraint:** None
 **Placement:** During the first 4 weeks of app use (or until user has completed 3 check-ins), show a simplified 2-step check-in: (1) weight trend only, auto-derived; (2) one open question ("How did this week feel? Any wins?"). The coach output is simplified: one sentence on what the trend means, one sentence on what will happen next. After 3 completed check-ins, graduate to the full Pro check-in with an explicit "your data is now complete enough for full coaching" moment.
@@ -402,7 +402,7 @@ The prior audit (agent 3) identified this gap (no named credible author, no publ
 
 **Extension:** The prior audit did not cover the ghost-prevention / missed-check-in re-engagement dynamic, which is the most documented cause of coaching-client churn and maps directly to app churn. OPP-C03 addresses this gap.
 
-**Extension:** The prior audit did not surface the beginner-specific onboarding issue: 50% of gym members cancel in 6 months, concentrated in days 1–90, with a proven 27-point retention lift from structured early touchpoints. OPP-C04 (progressive disclosure for Besa) addresses this directly and was not in the prior work.
+**Extension:** The prior audit did not surface the beginner-specific onboarding issue: new gym members typically decide whether to stay within the first 30 days, making early activation the critical window. OPP-C04 (progressive disclosure for Besa) addresses this directly and was not in the prior work. [corrected 2026-06-12 citation audit — was "50% of gym members cancel in 6 months, concentrated in days 1–90, with a proven 27-point retention lift"; the first clause is unsupported by the cited Virtuagym source (E6-25) and the 27-point figure relied on the unsupported 87%/60% stat (E6-22); re-anchored to the verified first-30-days point; see E6-22/E6-25]
 
 **Extension:** The "one tactical cue for the week ahead" (OPP-C02) is a coaching pattern with no algorithmic analogue in any competitor app. It is low-effort and creates a mid-week micro-engagement loop that no competitor offers.
 
