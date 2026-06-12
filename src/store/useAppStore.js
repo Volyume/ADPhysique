@@ -90,6 +90,10 @@ function _persistActiveWorkout(state) {
       // restore rehydrates them WITHOUT recomputing — which would otherwise
       // re-log duplicate adaptation_events.
       sessionAdjustments: state.sessionAdjustments,
+      // COMP-020: persist the applied watch event ids so replay after a crash /
+      // background-relaunch stays idempotent (never double-logs a set).
+      appliedRemoteEventIds: Array.isArray(state.appliedRemoteEventIds)
+        ? state.appliedRemoteEventIds.slice(-500) : [],
       savedAt: Date.now(),
     };
     AsyncStorage.setItem(ACTIVE_WORKOUT_KEY, JSON.stringify(snapshot)).catch(() => {});
@@ -1007,6 +1011,9 @@ const useAppStore = create((set, get) => ({
   currentExerciseIndex: 0,
   workoutStartTime: null,
   lastActivityAt: null,
+  // COMP-020: ids of watch set-events already applied this session, so replay
+  // (a reconnect, or a background-relaunch) is idempotent. Persisted on WK-1.
+  appliedRemoteEventIds: [],
   // COMP-015: this session's per-exercise adjustments, computed once at session
   // start (Pro-only) and read by ActiveWorkoutScreen. Empty for free users,
   // non-meso sessions, or when nothing fired.
@@ -1102,6 +1109,75 @@ const useAppStore = create((set, get) => ({
     _persistActiveWorkout(get());
   },
 
+  // COMP-020: the headless, idempotent set-commit path the watch bridge calls.
+  // Reuses the same primitives as the screen (createWorkoutSet +
+  // addSetToCurrentExercise + startRestTimer) but does NOT run PR
+  // detection/celebration (that fires only when the screen is mounted; a
+  // watch-applied set queues its PR check for the summary instead — §4.3).
+  // Idempotent by eventId so replay after a reconnect / background-relaunch
+  // never double-logs. Returns { applied, reason? }.
+  applyRemoteSetEvent: async (event) => {
+    try {
+      const { eventId, workoutId, type = 'logSet', payload = {} } = event || {};
+      if (!eventId) return { applied: false, reason: 'no_event_id' };
+      const state = get();
+      if ((state.appliedRemoteEventIds || []).includes(eventId)) {
+        return { applied: false, reason: 'duplicate' };
+      }
+      const aw = state.activeWorkout;
+      if (!aw || (workoutId && aw.id !== workoutId)) {
+        return { applied: false, reason: 'no_active_workout' };
+      }
+      if (type !== 'logSet') return { applied: false, reason: 'unsupported_type' };
+
+      const exEntry = state.workoutExercises[state.currentExerciseIndex];
+      if (!exEntry?.exercise?.id) return { applied: false, reason: 'no_exercise' };
+
+      // eslint-disable-next-line global-require
+      const { createWorkoutSet } = require('../lib/database');
+      // eslint-disable-next-line global-require
+      const { countProgressSets } = require('../lib/workoutHelpers');
+      const re = exEntry.routineExercise;
+      const setNumber = countProgressSets(exEntry.sets || []) + 1; // recomputed phone-side
+
+      const savedSet = await createWorkoutSet({
+        userId: state.user?.id,
+        workoutId: aw.id,
+        exerciseId: exEntry.exercise.id,
+        setNumber,
+        setType: payload.setType || 'straight',
+        targetRepsMin: re?.recommendedRepsMin ?? null,
+        targetRepsMax: re?.recommendedRepsMax ?? null,
+        actualReps: Number.isFinite(payload.reps) ? payload.reps : (parseInt(payload.reps, 10) || 0),
+        weight: Number.isFinite(payload.weight) ? payload.weight : (parseFloat(payload.weight) || 0),
+        rir: payload.rir != null ? parseInt(payload.rir, 10) : null,
+        rpe: null,
+        failed: false,
+        notes: null,
+        isAmrap: payload.setType === 'amrap',
+        leftReps: null,
+        rightReps: null,
+      });
+
+      get().addSetToCurrentExercise(savedSet || {
+        exerciseId: exEntry.exercise.id, setNumber,
+        weight: payload.weight, actualReps: payload.reps, setType: payload.setType || 'straight',
+      });
+
+      const restSeconds = Number.isFinite(payload.restSeconds) ? payload.restSeconds
+        : (re?.restSeconds ?? 90);
+      get().startRestTimer(restSeconds);
+
+      set((s) => ({ appliedRemoteEventIds: [...(s.appliedRemoteEventIds || []), eventId].slice(-500) }));
+      _persistActiveWorkout(get());
+      return { applied: true, setNumber };
+    } catch (e) {
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logError('store.applyRemoteSetEvent', e, {}); } catch (_) {}
+      return { applied: false, reason: 'error' };
+    }
+  },
+
   startWorkout: (workout, initialExercises = []) => {
     // eslint-disable-next-line global-require
     try { require('../lib/errorLog').logInfo('workout.start', `id=${workout?.id} exercises=${initialExercises.length}`); } catch (_) {}
@@ -1159,6 +1235,7 @@ const useAppStore = create((set, get) => ({
         // COMP-015: rehydrate the already-computed adjustments; do NOT recompute
         // on restore (that would re-log duplicate adaptation_events).
         sessionAdjustments: Array.isArray(snap.sessionAdjustments) ? snap.sessionAdjustments : [],
+        appliedRemoteEventIds: Array.isArray(snap.appliedRemoteEventIds) ? snap.appliedRemoteEventIds : [],
       });
       return true;
     } catch (_) {
