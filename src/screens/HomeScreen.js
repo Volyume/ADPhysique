@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import BlockShapeCard from '../components/BlockShapeCard';
+import Button from '../components/Button';
 import PressableCard from '../components/PressableCard';
 import { SkeletonCard } from '../components/Skeleton';
 import TodayStrip from '../components/TodayStrip';
@@ -1300,50 +1301,63 @@ export default function HomeScreen({ navigation }) {
           </View>
         ) : (
           <View style={styles.noPlanSection}>
-            <View style={styles.noPlanHero}>
-              <View style={styles.noPlanIconWrap}>
-                <Ionicons name="barbell-outline" size={28} color={colors.primary} />
-              </View>
-              {tier === 'pro' ? (
-                <>
+            {tier === 'pro' ? (
+              <>
+                <View style={styles.noPlanHero}>
+                  <View style={styles.noPlanIconWrap}>
+                    <Ionicons name="barbell-outline" size={28} color={colors.primary} />
+                  </View>
                   <Text style={styles.noPlanTitle}>No active plan on this device</Text>
                   <Text style={styles.noPlanSub}>
                     If you just signed in we may still be pulling your data from the cloud, give it a moment. If nothing arrives, tap below to rebuild your plan from your profile.
                   </Text>
-                </>
-              ) : lastSession == null ? (
-                <>
-                  <Text style={styles.noPlanTitle}>Welcome.</Text>
-                  <Text style={styles.noPlanSub}>
-                    Recommendations build up over your first few weeks of training.
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.noPlanTitle}>Pick up where you left off</Text>
-                  <Text style={styles.noPlanSub}>
-                    You've been training without a set plan. Setting one up will keep things structured and help Volyume track your progress properly.
-                  </Text>
-                </>
-              )}
-            </View>
-
-            {tier === 'pro' && (
-              <TouchableOpacity
-                style={styles.proRecoverBtn}
-                onPress={async () => {
-                  const result = await generateAndSavePlan(user.id, userProfile);
-                  if (result.ok) {
-                    await loadData();
-                  } else {
-                    toast.show(`Couldn't build plan: ${result.error}`, { variant: 'error', duration: 5000 });
-                  }
-                }}
-                activeOpacity={0.88}
-              >
-                <Ionicons name="sparkles" size={18} color={colors.onPrimary} />
-                <Text style={styles.proRecoverBtnText}>Build my plan</Text>
-              </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  style={styles.proRecoverBtn}
+                  onPress={async () => {
+                    const result = await generateAndSavePlan(user.id, userProfile);
+                    if (result.ok) {
+                      await loadData();
+                    } else {
+                      toast.show(`Couldn't build plan: ${result.error}`, { variant: 'error', duration: 5000 });
+                    }
+                  }}
+                  activeOpacity={0.88}
+                >
+                  <Ionicons name="sparkles" size={18} color={colors.onPrimary} />
+                  <Text style={styles.proRecoverBtnText}>Build my plan</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              /* B2: the free "what do I do today" answer. One strong, calm
+                 card: the micro-quiz first, the library second. Replaces the
+                 old low-emphasis welcome + stacked builder cards. */
+              <View style={styles.starterCard}>
+                <View style={styles.noPlanIconWrap}>
+                  <Ionicons name="compass-outline" size={28} color={colors.primary} />
+                </View>
+                <Text style={styles.noPlanTitle}>
+                  {lastSession == null ? 'Not sure where to start?' : 'Put a plan behind your training'}
+                </Text>
+                <Text style={styles.noPlanSub}>
+                  {lastSession == null
+                    ? "Answer three quick questions and we'll set you up with a plan that tells you exactly what to do each session."
+                    : "You've been training without a set plan. Answer three quick questions and we'll suggest one, so your progress is tracked properly."}
+                </Text>
+                <View style={styles.starterActions}>
+                  <Button
+                    title="Find my plan"
+                    onPress={() => navigation.navigate('FreeStarter')}
+                    accessibilityLabel="Answer three quick questions to find your plan"
+                  />
+                  <Button
+                    title="Browse plans"
+                    variant="secondary"
+                    onPress={() => navigation.navigate('PlansTab', { screen: 'PlanLibrary', initial: false })}
+                    accessibilityLabel="Browse the plan library"
+                  />
+                </View>
+              </View>
             )}
 
             {/* Progress at a glance, shown when there's history but no plan */}
@@ -1366,47 +1380,34 @@ export default function HomeScreen({ navigation }) {
               </View>
             )}
 
-            <PressableCard
-              style={styles.quickStartCard}
-              onPress={() => startBlankSession()}
-              accessibilityLabel="Start your first session"
-            >
-              <View style={styles.quickStartIcon}>
-                <Ionicons name="barbell-outline" size={28} color={colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.quickStartTitle}>Start your first session</Text>
-                <Text style={styles.quickStartSub}>Log sets as you go. No plan needed to start. Your profile builds as you train.</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-            </PressableCard>
-
-            {tier !== 'pro' && (
-              <>
-                <PlanBuilderCard
-                  icon="library-outline"
-                  title="Plan Library"
-                  desc="Browse ready-made plans for every level, schedule, and goal."
-                  badge="Recommended"
-                  onPress={() => navigation.navigate('PlansTab', { screen: 'PlanLibrary', initial: false })}
-                />
-                <PlanBuilderCard
-                  icon="barbell-outline"
-                  title="Start a manual session"
-                  desc="Log sets as you go. No plan required. Volyume builds your profile as you train."
-                  onPress={() => startBlankSession()}
-                />
-              </>
+            {/* Pro keeps the quick-start escape hatch while cloud restore
+                lands. The free path's blank-session route is the quiet link
+                below the starter card instead. */}
+            {tier === 'pro' && (
+              <PressableCard
+                style={styles.quickStartCard}
+                onPress={() => startBlankSession()}
+                accessibilityLabel="Start your first session"
+              >
+                <View style={styles.quickStartIcon}>
+                  <Ionicons name="barbell-outline" size={28} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.quickStartTitle}>Start your first session</Text>
+                  <Text style={styles.quickStartSub}>Log sets as you go. No plan needed to start. Your profile builds as you train.</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+              </PressableCard>
             )}
 
             {tier !== 'pro' && (
               <TouchableOpacity
                 style={styles.blankSessionLink}
-                onPress={() => navigation.navigate('BuildWorkout')}
+                onPress={() => startBlankSession()}
                 accessibilityRole="button"
-                accessibilityLabel="Start a blank session"
+                accessibilityLabel="Just want to log? Start a blank session"
               >
-                <Text style={styles.blankSessionLinkText}>Start a blank session instead</Text>
+                <Text style={styles.blankSessionLinkText}>Just want to log? Start a blank session</Text>
                 <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
               </TouchableOpacity>
             )}
@@ -1840,28 +1841,6 @@ function getRelativeDay(ts) {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function PlanBuilderCard({ icon, title, desc, badge, onPress }) {
-  return (
-    <PressableCard style={styles.builderCard} onPress={onPress} accessibilityLabel={title}>
-      <View style={styles.builderIconWrap}>
-        <Ionicons name={icon} size={20} color={colors.primary} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <View style={styles.builderTitleRow}>
-          <Text style={styles.builderTitle}>{title}</Text>
-          {badge && (
-            <View style={styles.builderBadge}>
-              <Text style={styles.builderBadgeText}>{badge}</Text>
-            </View>
-          )}
-        </View>
-        <Text style={styles.builderDesc}>{desc}</Text>
-      </View>
-      <Ionicons name="chevron-forward" size={15} color={colors.textMuted} />
-    </PressableCard>
-  );
-}
-
 // ── Coach Brief Card ──────────────────────────────────────────────────────────
 
 const BRIEF_ICON = { go: 'fitness-outline', caution: 'warning-outline', recover: 'leaf-outline' };
@@ -2067,6 +2046,21 @@ const styles = StyleSheet.create({
   },
   blankSessionLinkText: { fontSize: fontSize.sm, color: colors.textMuted },
 
+  // B2: free no-plan starter card. One calm card, quiz first, library second.
+  starterCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
+    padding: spacing.lg,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  starterActions: {
+    alignSelf: 'stretch',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+
   // Progress at a glance (no-plan + has history)
   glanceCard: {
     backgroundColor: colors.surface,
@@ -2106,31 +2100,6 @@ const styles = StyleSheet.create({
     height: 40,
     backgroundColor: colors.border,
   },
-
-  // Plan builder cards
-  builderCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  builderIconWrap: {
-    width: 40, height: 40, borderRadius: radius.sm,
-    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
-  },
-  builderTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxs },
-  builderTitle: { ...type.label, color: colors.textPrimary },
-  builderBadge: {
-    backgroundColor: colors.primaryBg, borderRadius: radius.full,
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
-  },
-  builderBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.bold, color: colors.primary },
-  builderDesc: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
 
   // Last session
   lastSessionCard: {
