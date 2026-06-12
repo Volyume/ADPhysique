@@ -43,7 +43,7 @@ import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngi
 import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, computeDietBreakTargets, computeMacroCycle, computeRefeedDay, markApplied, isApplied } from '../lib/coachApply';
 import { applyCoachAdjustmentToActivePlan } from '../lib/food/mealPlanService';
 import { buildPlanEditNarration } from '../lib/food/planExplain';
-import { buildCoachResponse } from '../lib/coachResponse';
+import { buildRegisteredCoachResponse, resolveRegister } from '../lib/coachRegister';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 import { logError, logWarn } from '../lib/errorLog';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, stateColors } from '../styles/theme';
@@ -810,8 +810,14 @@ export default function CoachOutputScreen({ navigation, route }) {
       // saying what moved (the transparent-coach moat, at the gram of
       // rice). Floor-clamped inside the service; silent when off-plan.
       try {
-        const register = (userProfile?.experienceLevel === 'advanced'
-          || userProfile?.experienceLevel === 'competitive') ? 'precise' : 'supportive';
+        // C1: the plan-edit narration follows the same register resolution as
+        // the five-part response (tone preference wins, automatic falls back
+        // to experience), so the coach never mixes tones on one screen.
+        const register = resolveRegister({
+          coachTone: userProfile?.coachTone ?? 'automatic',
+          experienceLevel: userProfile?.experienceLevel ?? null,
+          trainingAgeYears: userProfile?.trainingAgeYears ?? null,
+        });
         const { change: planChange } = await applyCoachAdjustmentToActivePlan(user.id, { adjustmentKcal: change });
         const narration = buildPlanEditNarration(planChange, { register });
         setPlanEditNote(narration);
@@ -1504,12 +1510,11 @@ export default function CoachOutputScreen({ navigation, route }) {
   const weightChipValue =
     trend.deltaLabel && trend.delta !== null ? trend.deltaLabel : 'No weights logged';
 
-  // Five-part coach response (Theme A, OPP-C01/C02/C06): the
-  // acknowledgement + interpretation lead the card, the decision cards
-  // below stay as part 3, the cue feeds the focus card and the forward
-  // line closes above the held decisions. Suppression (open ED flag or
-  // calm mode) mirrors the existing COMP-004 behaviour.
-  const coachResponse = buildCoachResponse({
+  // Five-part coach response (Theme A, OPP-C01/C02/C06), rendered in the
+  // user's register (C1, founder decision #2): tone preference wins, else
+  // automatic keys off experience. Same facts, same decisions; suppression
+  // (open ED flag or calm mode) renders the supportive base untouched.
+  const coachResponse = buildRegisteredCoachResponse({
     output,
     checkin,
     history: coachHistory,
@@ -1518,6 +1523,9 @@ export default function CoachOutputScreen({ navigation, route }) {
     edFlagOpen: edPatternOpen,
     calmMode,
     checkinDayName,
+    coachTone: userProfile?.coachTone ?? 'automatic',
+    experienceLevel: userProfile?.experienceLevel ?? null,
+    trainingAgeYears: userProfile?.trainingAgeYears ?? null,
   });
 
   // Share the week as a single milestone card. Facts only (sessions, weight

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, Switch } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Switch, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
@@ -32,6 +32,27 @@ export default function SettingsCoachingScreen() {
   const [cardioEnabled, setCardioEnabled] = useState(userProfile?.cardioEnabled !== false);
   const [stepTargetInput, setStepTargetInput] = useState(String(userProfile?.stepsTarget ?? 8000));
   const [bioSex, setBioSex] = useState(null);
+  // C1/C2 (founder decision #2): coaching tone register + the opt-in science
+  // layer. Both are LOCAL-ONLY profile fields (no synced column; the pull
+  // merge in sync/tables/profiles.js spreads local first, so they survive).
+  const [coachTone, setCoachToneState] = useState(userProfile?.coachTone ?? 'automatic');
+  const [showScience, setShowScience] = useState(userProfile?.showScience === true);
+
+  async function setTone(next) {
+    haptics.selection();
+    setCoachToneState(next);
+    if (user?.id) {
+      await saveLocalProfile(user.id, { ...(userProfile || {}), coachTone: next });
+    }
+  }
+
+  async function toggleScience(value) {
+    haptics.selection();
+    setShowScience(value);
+    if (user?.id) {
+      await saveLocalProfile(user.id, { ...(userProfile || {}), showScience: value });
+    }
+  }
 
   async function toggleCalmMode(value) {
     haptics.selection();
@@ -156,6 +177,59 @@ export default function SettingsCoachingScreen() {
                 />
               }
             />
+            {/* C1: coaching tone register. Same facts, same decisions, same
+                honesty rules in every tone; only the prose shape changes.
+                Safety copy is identical whatever is chosen. */}
+            <View style={styles.toneBlock}>
+              <Text style={styles.toneLabel}>Coaching tone</Text>
+              <Text style={styles.toneSub}>
+                {coachTone === 'supportive'
+                  ? 'Plainer wording with a little more explanation.'
+                  : coachTone === 'precise'
+                    ? 'Terser. Numbers first, no padding.'
+                    : 'The coach matches its wording to your training experience.'}
+              </Text>
+              <View style={styles.toneChips}>
+                {[
+                  { key: 'automatic', label: 'Automatic' },
+                  { key: 'supportive', label: 'Supportive' },
+                  { key: 'precise', label: 'Precise' },
+                ].map(({ key, label }) => {
+                  const sel = coachTone === key;
+                  return (
+                    <TouchableOpacity
+                      key={key}
+                      style={[styles.toneChip, sel && styles.toneChipOn]}
+                      onPress={() => setTone(key)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: sel }}
+                      accessibilityLabel={`Coaching tone ${label}`}
+                    >
+                      <Text style={[styles.toneChipText, sel && styles.toneChipTextOn]}>{label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+            {/* C2: the opt-in science layer. Off by default; everything stays
+                plain English. On adds the technical term in brackets after the
+                plain one on the coach's explanation surfaces. */}
+            <SettingRow
+              icon="flask-outline"
+              label="Show the science"
+              sub={showScience
+                ? 'On. Technical terms appear in brackets after the plain ones on coaching explanations.'
+                : 'Off. Everything stays in plain English.'}
+              showArrow={false}
+              rightElement={
+                <Switch
+                  value={showScience}
+                  onValueChange={toggleScience}
+                  trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
+                  thumbColor={showScience ? colors.primary : colors.textMuted}
+                />
+              }
+            />
           </>
         )}
         {bioSex === 'female' && (
@@ -180,6 +254,30 @@ export default function SettingsCoachingScreen() {
 }
 
 const styles = StyleSheet.create({
+  // C1 coaching tone selector
+  toneBlock: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing.xs,
+  },
+  toneLabel: { ...type.body, color: colors.textPrimary },
+  toneSub: { ...type.caption, color: colors.textMuted },
+  toneChips: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
+  toneChip: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    minHeight: 40,
+    justifyContent: 'center',
+  },
+  toneChipOn: { borderColor: colors.primary, backgroundColor: withAlpha(colors.primary, 0.12) },
+  toneChipText: { ...type.caption, color: colors.textSecondary },
+  toneChipTextOn: { color: colors.primary },
   stepTargetRow: {
     flexDirection: 'row',
     alignItems: 'center',
