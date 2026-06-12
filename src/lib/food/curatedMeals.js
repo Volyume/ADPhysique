@@ -58,20 +58,14 @@ export const CURATED_MEALS = Object.freeze([
   // ─── OMNIVORE — staple expansion (rethink §3.5: common, easy, makeable
   //     British meals; familiar comfort dinners made macro-friendly + simple
   //     staples, per founder decision "mix of both") ───────────────────────
-  m('curated_om_bacon_egg_roll', 'Bacon & egg breakfast roll', 'omnivore', ['breakfast'], [{ food: 'bacon_medallions', g: 70 }, { food: 'eggs', g: 100 }, { food: 'wholemeal_bread', g: 80 }]),
-  m('curated_om_lighter_cooked_breakfast', 'Lighter cooked breakfast', 'omnivore', ['breakfast'], [{ food: 'bacon_medallions', g: 70 }, { food: 'eggs', g: 100 }, { food: 'baked_beans', g: 100 }, { food: 'mushrooms', g: 80 }, { food: 'tomatoes', g: 80 }]),
   m('curated_om_chicken_salad_wrap', 'Chicken salad wrap', 'omnivore', ['lunch'], [{ food: 'chicken_breast', g: 120 }, { food: 'tortilla', g: 60 }, { food: 'salad', g: 80 }]),
   m('curated_om_tuna_jacket', 'Jacket potato with tuna', 'omnivore', ['lunch', 'dinner'], [{ food: 'white_potato', g: 300 }, { food: 'tuna_water', g: 120 }, { food: 'salad', g: 60 }]),
-  m('curated_om_ham_salad_sandwich', 'Ham salad sandwich', 'omnivore', ['lunch'], [{ food: 'ham_lean', g: 100 }, { food: 'wholemeal_bread', g: 80 }, { food: 'salad', g: 60 }]),
   m('curated_om_chicken_pasta_pot', 'Chicken & tomato pasta pot', 'omnivore', ['lunch'], [{ food: 'chicken_breast', g: 120 }, { food: 'pasta', g: 60 }, { food: 'tomato_sauce', g: 80 }]),
   m('curated_om_cottage_pie', 'Lean cottage pie & veg', 'omnivore', ['dinner'], [{ food: 'beef_mince_5', g: 175 }, { food: 'white_potato', g: 250 }, { food: 'mixed_veg', g: 120 }, { food: 'tomato_sauce', g: 60 }]),
   m('curated_om_chicken_fajitas', 'Chicken fajitas', 'omnivore', ['dinner'], [{ food: 'chicken_breast', g: 150 }, { food: 'tortilla', g: 120 }, { food: 'stirfry_veg', g: 100 }, { food: 'salsa', g: 60 }, { food: 'cheddar_light', g: 20 }]),
   m('curated_om_spag_bol', 'Lean spaghetti bolognese', 'omnivore', ['dinner'], [{ food: 'beef_mince_5', g: 150 }, { food: 'pasta', g: 70 }, { food: 'tomato_sauce', g: 120 }]),
   m('curated_om_chilli_con_carne', 'Chilli con carne & rice', 'omnivore', ['dinner'], [{ food: 'beef_mince_5', g: 150 }, { food: 'kidney_beans', g: 100 }, { food: 'white_rice', g: 150 }, { food: 'tomato_sauce', g: 80 }]),
   m('curated_om_chicken_curry', 'Chicken curry & rice (fakeaway)', 'omnivore', ['dinner'], [{ food: 'chicken_breast', g: 150 }, { food: 'white_rice', g: 180 }, { food: 'tomato_sauce', g: 100 }]),
-  m('curated_om_roast_chicken_dinner', 'Roast chicken dinner', 'omnivore', ['dinner'], [{ food: 'chicken_breast', g: 160 }, { food: 'white_potato', g: 250 }, { food: 'mixed_veg', g: 120 }, { food: 'peas', g: 80 }]),
-  m('curated_om_chicken_thigh_traybake', 'Chicken thigh traybake', 'omnivore', ['dinner'], [{ food: 'chicken_thigh', g: 160 }, { food: 'white_potato', g: 220 }, { food: 'mixed_veg', g: 120 }]),
-  m('curated_om_beef_burgers_wedges', 'Homemade beef burgers & wedges', 'omnivore', ['dinner'], [{ food: 'beef_mince_5', g: 150 }, { food: 'wholemeal_bread', g: 60 }, { food: 'potato_wedges', g: 150 }, { food: 'salad', g: 60 }]),
   m('curated_om_salmon_noodle_stirfry', 'Salmon noodle stir-fry', 'omnivore', ['dinner'], [{ food: 'salmon', g: 140 }, { food: 'noodles', g: 150 }, { food: 'stirfry_veg', g: 120 }]),
 
   // ─── VEGETARIAN ────────────────────────────────────────────────────
@@ -93,9 +87,7 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_veg_edamame_egg', 'Edamame & boiled egg', 'vegetarian', ['snack'], [{ food: 'edamame', g: 100 }, { food: 'eggs', g: 50 }]),
 
   // ─── VEGETARIAN — staple expansion (rethink §3.5) ────────────────────
-  m('curated_veg_weetabix_whey', 'Wheat biscuits, milk & a scoop', 'vegetarian', ['breakfast'], [{ food: 'weetabix', g: 45 }, { food: 'milk_skimmed', g: 250 }, { food: 'whey', g: 25 }]),
-  m('curated_veg_eggs_crumpets', 'Scrambled eggs on crumpets', 'vegetarian', ['breakfast'], [{ food: 'eggs', g: 150 }, { food: 'crumpets', g: 90 }]),
-  m('curated_veg_beans_toast_eggs', 'Beans on toast with eggs', 'vegetarian', ['breakfast'], [{ food: 'baked_beans', g: 200 }, { food: 'wholemeal_bread', g: 80 }, { food: 'eggs', g: 100 }]),
+  m('curated_veg_weetabix_whey', 'Weetabix, milk & a scoop of whey', 'vegetarian', ['breakfast'], [{ food: 'weetabix', g: 45 }, { food: 'milk_skimmed', g: 250 }, { food: 'whey', g: 25 }]),
   m('curated_veg_cottage_jacket', 'Jacket potato with cottage cheese', 'vegetarian', ['lunch'], [{ food: 'white_potato', g: 300 }, { food: 'cottage_cheese', g: 150 }, { food: 'salad', g: 60 }]),
   m('curated_veg_quorn_spag_bol', 'Meat-free spaghetti bolognese', 'vegetarian', ['dinner'], [{ food: 'quorn_mince', g: 150 }, { food: 'pasta', g: 70 }, { food: 'tomato_sauce', g: 120 }]),
   m('curated_veg_halloumi_fajitas', 'Halloumi fajitas', 'vegetarian', ['dinner'], [{ food: 'halloumi', g: 100 }, { food: 'tortilla', g: 120 }, { food: 'stirfry_veg', g: 120 }, { food: 'salsa', g: 60 }]),

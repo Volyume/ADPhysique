@@ -47,7 +47,7 @@ const ROLE = Object.freeze({
   lentil_pasta: 'carb', noodles: 'carb', rice_cakes: 'carb', granola: 'carb',
   white_potato: 'carb', potato_wedges: 'carb', sweet_potato: 'carb',
   banana: 'carb', apple: 'carb', berries: 'carb', pineapple: 'carb',
-  honey: 'carb', tomato_sauce: 'carb', crumpets: 'carb', weetabix: 'carb',
+  honey: 'carb', tomato_sauce: 'carb', weetabix: 'carb',
   lentils: 'carb', lentil_dahl: 'carb', chickpeas: 'carb',
   kidney_beans: 'carb', black_beans: 'carb', baked_beans: 'carb',
   milk_skimmed: 'carb', soy_milk: 'carb',
@@ -61,8 +61,8 @@ const ROLE = Object.freeze({
   salsa: 'free',
 
   // Proteins
-  chicken_breast: 'protein', chicken_thigh: 'protein', ham_lean: 'protein',
-  bacon_medallions: 'protein', turkey_breast: 'protein', turkey_mince: 'protein',
+  chicken_breast: 'protein',
+  turkey_breast: 'protein', turkey_mince: 'protein',
   beef_mince_5: 'protein', steak_lean: 'protein', cod: 'protein',
   salmon: 'protein', smoked_salmon: 'protein', tuna_water: 'protein',
   prawns: 'protein', eggs: 'protein', egg_whites: 'protein',
@@ -91,8 +91,7 @@ const ROLE = Object.freeze({
 // Evidence: bp-meal-plan-RETHINK-2026-06-12.md §2.4.
 const PROTEIN_QUALITY = Object.freeze({
   // high
-  chicken_breast: 'high', chicken_thigh: 'high', ham_lean: 'high',
-  bacon_medallions: 'high', cheddar_light: 'high',
+  chicken_breast: 'high', cheddar_light: 'high',
   turkey_breast: 'high', turkey_mince: 'high',
   beef_mince_5: 'high', steak_lean: 'high', cod: 'high', salmon: 'high',
   smoked_salmon: 'high', tuna_water: 'high', prawns: 'high', eggs: 'high',
@@ -152,7 +151,7 @@ const STATE = Object.freeze({
 // ─── FSA allergen tags (the 14-allergen vocabulary, where present) ──────
 const TAGS = Object.freeze({
   oats: ['cereals_gluten'], wholemeal_bread: ['cereals_gluten'],
-  crumpets: ['cereals_gluten'], weetabix: ['cereals_gluten'],
+  weetabix: ['cereals_gluten'],
   cheddar_light: ['milk'],
   bagel: ['cereals_gluten'], tortilla: ['cereals_gluten'],
   pasta: ['cereals_gluten'], noodles: ['cereals_gluten', 'eggs'],
