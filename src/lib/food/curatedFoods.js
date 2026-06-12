@@ -29,6 +29,8 @@ export const CURATED_FOODS = Object.freeze({
   noodles:         F('Noodles (cooked)', 140, 4.5, 28, 1),
   rice_cakes:      F('Rice cakes', 387, 8, 82, 3),
   granola:         F('Granola', 450, 10, 64, 16),
+  crumpets:        F('Crumpets', 180, 6, 38, 0.5),
+  weetabix:        F('Wheat biscuit cereal', 362, 12, 69, 2),
   white_potato:    F('Potato (boiled)', 79, 2, 17, 0.1),
   potato_wedges:   F('Potato wedges', 130, 2.5, 24, 3),
   sweet_potato:    F('Sweet potato', 86, 1.6, 20, 0.1),
@@ -49,9 +51,14 @@ export const CURATED_FOODS = Object.freeze({
   salad:           F('Mixed salad', 20, 1.5, 3, 0.2),
   salsa:           F('Salsa', 30, 1, 6, 0.1),
   tomato_sauce:    F('Tomato sauce', 50, 1.5, 8, 1.5),
+  mushrooms:       F('Mushrooms', 22, 3.1, 0.3, 0.3),
+  tomatoes:        F('Tomatoes', 18, 0.9, 3.9, 0.2),
 
   // Omnivore proteins
   chicken_breast:  F('Chicken breast (cooked)', 165, 31, 0, 3.6),
+  chicken_thigh:   F('Chicken thigh fillet (cooked)', 177, 24, 0, 9),
+  ham_lean:        F('Lean ham', 105, 21, 1.5, 2),
+  bacon_medallions: F('Bacon medallions (grilled)', 110, 21, 0.5, 2.5),
   turkey_breast:   F('Turkey breast (cooked)', 140, 30, 0, 2),
   turkey_mince:    F('Turkey mince (5%)', 113, 20, 0, 3.3),
   beef_mince_5:    F('Beef mince (5%)', 137, 21, 0, 5),
@@ -71,6 +78,7 @@ export const CURATED_FOODS = Object.freeze({
   cottage_cheese:  F('Cottage cheese (low-fat)', 72, 12, 3, 1),
   halloumi:        F('Halloumi', 320, 22, 2, 25),
   paneer:          F('Paneer', 265, 18, 3, 21),
+  cheddar_light:   F('Reduced-fat cheddar', 311, 27, 0.1, 22),
   milk_skimmed:    F('Skimmed milk', 35, 3.4, 5, 0.1),
   whey:            F('Whey protein', 380, 80, 8, 6),
 
