@@ -33,6 +33,9 @@ import {
   trialBannerLine,
 } from '../lib/trialActivation';
 import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
+import { buildFreeCoachLine } from '../lib/coachResponse';
+import { localWeekStartMs } from '../lib/dayKey';
+import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 import { logError, logWarn } from '../lib/errorLog';
 import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, VOLUME_LANDMARKS } from '../lib/algorithms';
@@ -155,6 +158,12 @@ export default function HomeScreen({ navigation }) {
   // null. Computed from live counters in loadTrialBanner.
   const [trialBanner, setTrialBanner] = useState(null);
   const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
+  // Free-tier weekly one-liner (founder decision 4c): one read-only
+  // sentence built from training plus weight direction only. Dismissed
+  // per week; defaults dismissed so it never flashes before the stored
+  // dismissal has been read.
+  const [freeCoachLine, setFreeCoachLine] = useState(null);
+  const [freeCoachLineDismissed, setFreeCoachLineDismissed] = useState(true);
   // First-load flag, flipped false in loadData. While true, the
   // home screen renders skeleton cards in place of the main cards so
   // the user sees structure instantly on cold launch rather than a
@@ -274,6 +283,7 @@ export default function HomeScreen({ navigation }) {
         loadScheduleContext(),
         loadBriefDismissal(),
         ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadFirstRunCue(), loadTrialBanner()] : []),
+        ...(tier === 'free' ? [loadFreeCoachLine()] : []),
       ]);
     } finally {
       setInitialLoading(false);
@@ -360,6 +370,52 @@ export default function HomeScreen({ navigation }) {
     setTrialBannerDismissed(true);
     if (user?.id) {
       AsyncStorage.setItem(`@volyume_trial_value_banner_dismissed_${user.id}`, 'true').catch(() => {});
+    }
+  }
+
+  // Free-tier weekly one-liner (founder decision 4c). Free-safe data
+  // only: completed sessions this week plus the direction of any logged
+  // morning weights. No rates, no figures, no targets, no food data and
+  // no Pro functionality; the card is a read-only sentence with a Pro
+  // footer. Suppressed to a training-only line under an open ED flag or
+  // calm mode, per the existing COMP-004/COMP-023 rules.
+  async function loadFreeCoachLine() {
+    try {
+      if (!user?.id) { setFreeCoachLine(null); return; }
+      const weekStartMs = localWeekStartMs();
+      const dKey = `@volyume_free_coach_line_dismissed_${user.id}_${weekStartMs}`;
+      const [workouts, weights, edFlag, wellbeing, dismissed] = await Promise.all([
+        getAllWorkouts(user.id).catch(() => []),
+        getMorningWeightsLast14Days(user.id).catch(() => []),
+        getOpenEdPatternFlag(user.id).catch(() => null),
+        getWellbeingMode().catch(() => 'unspecified'),
+        AsyncStorage.getItem(dKey).catch(() => null),
+      ]);
+      const sessionsThisWeek = workouts.filter(
+        w => w.isCompleted && (w.startedAt ?? 0) >= weekStartMs,
+      ).length;
+      const line = buildFreeCoachLine({
+        sessionsThisWeek,
+        morningWeights: weights,
+        edFlagOpen: !!edFlag,
+        calmMode: isCalm(wellbeing),
+      });
+      // Read the dismissal BEFORE revealing the card so a line the user
+      // already dismissed can't flash for a frame (trial-banner pattern).
+      setFreeCoachLineDismissed(dismissed === 'true');
+      setFreeCoachLine(line);
+    } catch (_) {
+      setFreeCoachLine(null);
+    }
+  }
+
+  function dismissFreeCoachLine() {
+    setFreeCoachLineDismissed(true);
+    if (user?.id) {
+      AsyncStorage.setItem(
+        `@volyume_free_coach_line_dismissed_${user.id}_${localWeekStartMs()}`,
+        'true',
+      ).catch(() => {});
     }
   }
 
@@ -880,6 +936,11 @@ export default function HomeScreen({ navigation }) {
     && !showCoachBanner && !showTrialCountdownBanner;
   const showPhaseBanner = !!phaseMismatch && !phaseBannerDismissed
     && !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner;
+  // Free-tier weekly one-liner (founder decision 4c): lowest priority in
+  // the banner stack, free tier only, dismissible per week. The
+  // one-banner invariant holds.
+  const showFreeCoachLine = tier === 'free' && !!freeCoachLine && !freeCoachLineDismissed
+    && !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner && !showPhaseBanner;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -1031,6 +1092,32 @@ export default function HomeScreen({ navigation }) {
               <Ionicons name="close" size={16} color={colors.textMuted} />
             </TouchableOpacity>
           </TouchableOpacity>
+        )}
+
+        {/* ── Free weekly coach one-liner (founder decision 4c) ── */}
+        {showFreeCoachLine && (
+          <View style={styles.freeCoachCard}>
+            <View style={styles.freeCoachTopRow}>
+              <Ionicons name="pulse-outline" size={16} color={colors.primary} style={{ marginTop: 1 }} />
+              <Text style={styles.freeCoachLineText}>{freeCoachLine}</Text>
+              <TouchableOpacity
+                onPress={dismissFreeCoachLine}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss this week's summary"
+              >
+                <Ionicons name="close" size={15} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ProUpgrade')}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel="Pro reads the full story. Learn about Pro coaching."
+            >
+              <Text style={styles.freeCoachFooter}>Pro reads the full story</Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         {/* Skeleton placeholders shown during initial cold-load. As
@@ -2314,6 +2401,24 @@ const styles = StyleSheet.create({
   deloadBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
   deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
   deloadBannerBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 17 },
+
+  // Free-tier weekly one-liner (founder decision 4c). One line plus a
+  // quiet Pro footer; matches the banner system's tokens.
+  freeCoachCard: {
+    backgroundColor: colors.primaryBg, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    marginBottom: spacing.md, gap: spacing.xs,
+  },
+  freeCoachTopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  freeCoachLineText: {
+    flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
+    color: colors.textPrimary, lineHeight: 18,
+  },
+  freeCoachFooter: {
+    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
+    color: colors.primary, marginLeft: spacing.sm + 16,
+  },
 
   // Nutrition phase sync banner
   phaseBanner: {
