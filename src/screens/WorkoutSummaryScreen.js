@@ -15,6 +15,8 @@ import {
   getRoutineById, getWorkoutById, getOpenEdPatternFlag,
 } from '../lib/database';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
+import { claimMilestones } from '../lib/milestones';
+import { selection as hapticSelection } from '../lib/haptics';
 import { calculateWeeklyVolume, getVolumeStatus, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, VOLUME_LANDMARKS } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
@@ -107,6 +109,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // session, or suppressed under calmer experience / an open ED pattern flag
   // (the header's neutral "Session Complete" is acknowledgement enough; no push).
   const [firstSessionLine, setFirstSessionLine] = useState(null);
+  // D1 (int-04 F1): the beginner early-win ladder. The single milestone rung
+  // crossed by this session (first_week, 5/10/25/50/100 sessions), or null.
+  // Claimed once per rung from local workout rows; inherits the same calm/ED
+  // suppression as firstSessionLine. PRs are owned by PRCelebration and the
+  // first session by COMP-013, so neither double-celebrates here.
+  const [milestone, setMilestone] = useState(null);
   // Default-expanded so the energy + sleep prompts surface naturally
   // at the end of the session. The coach engine relies on these
   // signals; hiding them behind a tap was making the post-workout
@@ -341,23 +349,52 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     const completed = allWorkouts.filter(w => w.isCompleted && w.startedAt >= fourWeeksAgo);
     setCompletedWorkoutCount(completed.length);
 
-    // COMP-013: first completed session ever → the calibrated acknowledgement.
-    // Live summary only (never the read-only history view). The just-finished
-    // workout is already marked complete by the time this runs.
+    // COMP-013 + D1: the first-session line and the early-win milestone ladder
+    // share one wellbeing read. Live summary only (never the read-only history
+    // view). The just-finished workout is already marked complete by the time
+    // this runs, so it is counted here.
     if (!readOnly) {
-      const totalCompleted = allWorkouts.filter(w => w.isCompleted).length;
+      const completedWorkouts = allWorkouts.filter(w => w.isCompleted);
+      const totalCompleted = completedWorkouts.length;
+      // Calm-mode / open-ED flag suppress BOTH surfaces. When suppressed we
+      // skip the milestone claim entirely, so a rung crossed during a wellbeing
+      // hold is caught and shown later rather than silently consumed.
+      let calm = false;
+      let edFlag = null;
+      try {
+        const [mode, flag] = await Promise.all([
+          getWellbeingMode(),
+          user?.id ? getOpenEdPatternFlag(user.id) : Promise.resolve(null),
+        ]);
+        calm = isCalm(mode);
+        edFlag = flag;
+      } catch (_) {}
+      const suppressed = calm || !!edFlag;
+
+      // COMP-013: first completed session ever → the calibrated acknowledgement.
       if (totalCompleted === 1) {
-        let calm = false;
-        let edFlag = null;
+        setFirstSessionLine(suppressed ? null : 'First session done. That is the hard part.');
+      }
+
+      // D1: claim the early-win milestone for this session. Skipped on the very
+      // first session (COMP-013 owns that beat) and whenever suppressed. PRs are
+      // owned by PRCelebration, so everHitPR is held false here — first_pr never
+      // fires a second celebration on top of the PR burst.
+      if (!suppressed && totalCompleted > 1 && user?.id) {
         try {
-          const [mode, flag] = await Promise.all([
-            getWellbeingMode(),
-            user?.id ? getOpenEdPatternFlag(user.id) : Promise.resolve(null),
-          ]);
-          calm = isCalm(mode);
-          edFlag = flag;
+          const sessionDaysMs = completedWorkouts
+            .map(w => w.startedAt)
+            .filter(Number.isFinite);
+          const shown = await claimMilestones(user.id, {
+            sessionCount: totalCompleted,
+            sessionDaysMs,
+            everHitPR: false,
+          });
+          if (shown) {
+            setMilestone(shown);
+            hapticSelection();
+          }
         } catch (_) {}
-        setFirstSessionLine((calm || edFlag) ? null : 'First session done. That is the hard part.');
       }
     }
 
@@ -615,6 +652,24 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <Text style={styles.firstSessionLine}>{firstSessionLine}</Text>
           ) : null}
         </View>
+
+        {/* D1 (int-04 F1): the early-win milestone card — the celebratory beat
+            for a beginner crossing first week / 5 / 10 / 25 / 50 / 100 sessions.
+            Sits at the top emotional peak, only rendered on the rare session a
+            rung is crossed (and never under calm/ED). Calm in tone, not loud. */}
+        {milestone ? (
+          <RevealSection delay={120}>
+            <View style={styles.milestoneCard}>
+              <View style={styles.milestoneIconWrap}>
+                <Ionicons name={milestone.icon} size={22} color={colors.gold} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.milestoneTitle}>{milestone.title}</Text>
+                <Text style={styles.milestoneBody}>{milestone.body}</Text>
+              </View>
+            </View>
+          </RevealSection>
+        ) : null}
 
         <View style={styles.statsGrid}>
           <StatBox icon="barbell-outline" value={String(exerciseCount || 0)} label="Exercises" animateOrder={0} />
@@ -1126,6 +1181,20 @@ const styles = StyleSheet.create({
   completionTitle: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
   completionDate: { fontSize: fontSize.sm, color: colors.textMuted },
   firstSessionLine: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary, marginTop: spacing.xs },
+  // D1 early-win milestone card. Gold accent (an achievement beat, kin to the
+  // PR row) but calm: a soft surface card, no confetti, no full-screen takeover.
+  milestoneCard: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.gold, 0.376),
+  },
+  milestoneIconWrap: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: withAlpha(colors.gold, 0.125),
+    alignItems: 'center', justifyContent: 'center',
+  },
+  milestoneTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  milestoneBody: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 3, lineHeight: 17 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   statBox: {
     flex: 1, minWidth: '45%', backgroundColor: colors.surface, borderRadius: radius.md,
