@@ -25,7 +25,8 @@ import {
   scheduleCheckinReminder,
   scheduleMissedCheckinFollowups,
   cancelMissedCheckinFollowups,
-  cancelAllNotifications,
+  cancelMorningNotification,
+  cancelCheckinNotification,
   requestNotificationPermissions,
 } from '../lib/notifications';
 import { setPreference as setPrefRow } from '../lib/notifications/preferences';
@@ -75,7 +76,16 @@ function formatNextFire(date) {
 async function applyScheduled(prefs, permissionStatus) {
   // Always cancels and reschedules BOTH coaching reminders (no toggles).
   // Training reminders are independent and managed by NotificationSettings.
-  await cancelAllNotifications();
+  //
+  // Cancel ONLY the two notifications this screen owns (morning weight +
+  // weekly check-in). Previously this called cancelAllNotifications(), which
+  // wiped every scheduled notification laid elsewhere (cascade gates, trial
+  // day-3, win-back, weekly coach-ready) until the next launch re-laid them —
+  // the historic wipe-bug class NotificationSettingsScreen already fixed.
+  // Each schedule* helper self-cancels its own ID too, so the explicit
+  // cancels here only matter for the permission-not-granted case.
+  await cancelMorningNotification();
+  await cancelCheckinNotification();
   if (permissionStatus === 'granted') {
     await scheduleMorningWeightNotification(prefs.morningHour, prefs.morningMinute);
     await scheduleCheckinReminder(
@@ -96,9 +106,10 @@ async function applyScheduled(prefs, permissionStatus) {
     morningEnabled: true,
     checkinEnabled: true,
   }));
-  // OPP-C03: cancelAllNotifications above wiped the missed-check-in
-  // follow-ups too; re-lay them from the freshly saved schedule (the
-  // helper self-guards on tier, toggle and ED flag).
+  // OPP-C03: the check-in day/time may have changed, so re-lay the
+  // missed-check-in follow-up pair against the freshly saved schedule
+  // (the helper self-cancels its own pair and self-guards on tier,
+  // toggle and ED flag).
   if (permissionStatus === 'granted') {
     try {
       await scheduleMissedCheckinFollowups(useAppStore.getState().user?.id ?? null);
