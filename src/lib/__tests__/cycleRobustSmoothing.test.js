@@ -6,7 +6,10 @@
  * masked, F5 plateau-then-shift) live with the weeklyCoach wiring + the engine
  * invariants; this file proves the smoother's own behaviour in isolation.
  */
-import { robustEwma, robustValues, mad, median } from '../robustTrend';
+import {
+  robustEwma, robustValues, mad, median,
+  robustTrackingEwma, robustTrackingLatest, robustTrackingSevenDaysAgo,
+} from '../robustTrend';
 import { computeEWMA } from '../weeklyCoach';
 
 const DAY = 86400000;
@@ -143,5 +146,46 @@ describe('F8 — determinism', () => {
   test('same input twice → identical output', () => {
     const data = series([70, 71.4, 70.2, 70.1, 69.9, 70.8, 70.0, 69.8]);
     expect(robustEwma(data)).toEqual(robustEwma(data));
+  });
+});
+
+// COMP-024 decision-promotion: the trend-tracking smoother used by the coaching
+// DECISIONS. Must TRACK sustained moves (the held-promotion fix) while still
+// damping transient water-weight spikes.
+describe('robustTracking — trend-aware (decision promotion)', () => {
+  test('a sustained +0.1kg/day gain is TRACKED (lags far less than plain or display-robust)', () => {
+    const data = series(Array.from({ length: 40 }, (_, i) => 70 + 0.1 * i + noise(i)));
+    const trueFinal = 70 + 0.1 * 39; // 73.9
+    const track = robustTrackingLatest(data);
+    const plainFinal = computeEWMA(data, 0.1).slice(-1)[0].ewmaKg;
+    const origRobustFinal = robustEwma(data).slice(-1)[0].ewmaKg;
+    expect(Math.abs(track - trueFinal)).toBeLessThan(0.5);
+    // The whole point: it lags less than BOTH the plain EWMA and the display
+    // smoother (whose over-damping of sustained gains held the promotion).
+    expect(Math.abs(track - trueFinal)).toBeLessThan(Math.abs(plainFinal - trueFinal));
+    expect(Math.abs(track - trueFinal)).toBeLessThan(Math.abs(origRobustFinal - trueFinal));
+  });
+
+  test('a transient +1.5kg 5-day excursion barely moves the tracking trend', () => {
+    const base = Array.from({ length: 40 }, (_, i) => 70 + noise(i));
+    for (let i = 20; i < 25; i++) base[i] += 1.5;
+    const out = robustTrackingEwma(series(base));
+    expect(peakDevFrom(out, 70)).toBeLessThan(0.7);
+  });
+
+  test('a sustained loss is tracked and not damped (loss safety)', () => {
+    const data = series(Array.from({ length: 40 }, (_, i) => 80 - 0.05 * i)); // ~-0.35kg/wk
+    const trueFinal = 80 - 0.05 * 39;
+    expect(Math.abs(robustTrackingLatest(data) - trueFinal)).toBeLessThan(0.5);
+  });
+
+  test('deterministic; tolerates empty / malformed / sparse input', () => {
+    const data = series([70, 70.2, 69.9, 70.1, 70.3]);
+    expect(robustTrackingEwma(data)).toEqual(robustTrackingEwma(data));
+    expect(robustTrackingEwma([])).toEqual([]);
+    expect(robustTrackingEwma(null)).toEqual([]);
+    expect(robustTrackingEwma([{ loggedAt: T0, weightKg: 'x' }, null])).toEqual([]);
+    expect(robustTrackingLatest([])).toBeNull();
+    expect(robustTrackingSevenDaysAgo(series([70]))).toBeNull();
   });
 });

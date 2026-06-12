@@ -131,3 +131,86 @@ export function robustSevenDaysAgo(weights, opts = {}) {
   const older = [...series].reverse().find((e) => e.loggedAt <= cutoff);
   return older?.ewmaKg ?? series[0].ewmaKg;
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// COMP-024 decision-promotion — the cycle-robust TREND-TRACKING smoother.
+//
+// The display smoother above (robustEwma / robustValues) clamps innovations
+// against the LEVEL, so a sustained gain/loss produces a run of same-signed
+// innovations whose robust scale (MAD) collapses toward zero, tightening the
+// knee and damping the very trend we want to keep. That over-damping of
+// SUSTAINED moves is why promoting it to the coaching DECISIONS regressed the
+// bulk_aggressive simulator (a fast bulk stopped triggering the downward pull),
+// so the promotion was held (FOUNDER-DECISIONS §12, START-HERE COMP-024 lesson).
+//
+// This variant fixes that with a Holt's-linear core (a level AND a slow trend
+// term) and an asymmetric robust clamp on the residual-from-PREDICTION:
+//   pred  = level + trend                 // the trend absorbs sustained drift
+//   e     = x - pred                      // residual: a transient spike is large
+//   s     = max(scaleFloor, MAD(recent residuals))
+//   knee  = (e > 0) ? k·s : downwardKnee·s   // upward tight, downward wide (loss safe)
+//   level = pred + alpha · clamp(e, knee)
+//   trend = beta·(level_new - level_old) + (1-beta)·trend
+// A sustained gain is carried by `trend`, so residuals stay small and nothing is
+// clamped away; a water-weight spike is a large residual against a small scale
+// and is clamped. Used ONLY for the off-target DECISION reads in weeklyCoach;
+// the rapid-loss / ED SAFETY reads keep the plain less-damped EWMA. Pure +
+// deterministic (the *SevenDaysAgo helper reads the clock, like its plain twin).
+export const ROBUST_TRACKING_DEFAULTS = Object.freeze({
+  alpha: 0.1,        // level memory, identical to the plain slow EWMA
+  beta: 0.05,        // trend memory: slow, so a brief run cannot manufacture a trend
+  k: 1.5,            // upward Huber knee multiplier (transient-spike clamp)
+  madWindow: 14,     // residuals in the robust-scale window
+  scaleFloor: 0.25,  // kg
+  downwardKnee: 4,   // losses pass freely (≈ undamped), protecting the trend read
+});
+
+export function robustTrackingEwma(weights, opts = {}) {
+  const { alpha, beta, k, madWindow, scaleFloor, downwardKnee } = { ...ROBUST_TRACKING_DEFAULTS, ...opts };
+  if (!Array.isArray(weights)) return [];
+  const clean = weights.filter((w) => w && Number.isFinite(Number(w.weightKg)));
+  if (clean.length === 0) return [];
+  const sorted = [...clean].sort((a, b) => a.loggedAt - b.loggedAt);
+
+  const result = [];
+  const residuals = [];
+  let level = Number(sorted[0].weightKg);
+  let trend = 0;
+
+  for (const w of sorted) {
+    const x = Number(w.weightKg);
+    const pred = level + trend;
+    const e = x - pred;
+    // Scale = typical residual MAGNITUDE (median |residual|), NOT MAD. MAD
+    // measures spread around the median, so a run of consistent trend-residuals
+    // collapses it toward zero and tightens the knee onto the very trend we want
+    // to keep (the held-promotion bug). Median |residual| stays ~the residual's
+    // own size during a sustained move, so a consistent trend passes (e < ~1.5·s)
+    // while a lone outlier (e >> the typical residual) is still clamped.
+    const recentAbs = residuals.slice(-madWindow).map(Math.abs);
+    const s = Math.max(scaleFloor, median(recentAbs) ?? 0);
+    const knee = (e > 0 ? k : downwardKnee) * s;
+    const eClamped = Math.sign(e) * Math.min(Math.abs(e), knee);
+    const newLevel = pred + alpha * eClamped;
+    trend = beta * (newLevel - level) + (1 - beta) * trend;
+    level = newLevel;
+    residuals.push(e);
+    result.push({ loggedAt: w.loggedAt, rawKg: x, ewmaKg: Math.round(level * 100) / 100 });
+  }
+  return result;
+}
+
+/** Latest trend-tracking value, or null. Mirrors getLatestEwma. */
+export function robustTrackingLatest(weights, opts = {}) {
+  const series = robustTrackingEwma(weights, opts);
+  return series.length ? series[series.length - 1].ewmaKg : null;
+}
+
+/** Trend-tracking value ~7 days ago, or null. Mirrors getEwmaSevenDaysAgo. */
+export function robustTrackingSevenDaysAgo(weights, opts = {}) {
+  const series = robustTrackingEwma(weights, opts);
+  if (series.length < 2) return null;
+  const cutoff = Date.now() - 7 * 86400000;
+  const older = [...series].reverse().find((e) => e.loggedAt <= cutoff);
+  return older?.ewmaKg ?? series[0].ewmaKg;
+}

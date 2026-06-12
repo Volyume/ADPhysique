@@ -18,6 +18,7 @@ import {
   computeEWMA as nutritionComputeEWMA,
 } from './nutritionEngine';
 import { localDayKey } from './dayKey';
+import { robustTrackingLatest, robustTrackingSevenDaysAgo } from './robustTrend';
 import { computeMacroCycle, computeRefeedDay } from './coachApply';
 import { detectEdPatternFlag, hasEdPatternCleared } from './edPatternDetector';
 import { detectDifferentialTrigger } from './differentialPaywall';
@@ -552,21 +553,33 @@ export function runWeeklyCoach(inputs) {
     ? (weightDelta / bwRef) * 100
     : null;
 
-  // COMP-024 NOTE: the cycle-robust smoother (robustTrend.js) is promoted to the
-  // DISPLAY trend only (BodyMetrics line) for now. The coaching DECISIONS below
-  // deliberately stay on the plain alpha-0.1 EWMA (actualRatePct): the
-  // asymmetric upward-innovation clamp also damps SUSTAINED gains (it can't tell
-  // a 5-day water spike that reverts from a real ongoing gain), which suppressed
-  // fast-bulk downward adjustments (the bulk_aggressive simulator caught it).
-  // Promoting the decision reads to the robust trend needs the shadow-divergence
-  // validation that was waived; until that's done, decisions + safety both read
-  // the plain trend. (See START-HERE / FOUNDER-DECISIONS §12.)
-  const onTarget = (actualRatePct != null)
-    ? Math.abs(actualRatePct - phase.goalRatePct) <= 0.2 * Math.abs(phase.goalRatePct) + 0.05
+  // COMP-024 decision-promotion: the off-target DECISION reads (onTarget /
+  // offTargetDirection) use the cycle-robust TREND-TRACKING trend
+  // (robustTrackingEwma: Holt's level+trend + an asymmetric robust clamp on the
+  // residual-from-prediction). It damps transient water-weight spikes WITHOUT
+  // lagging sustained gains/losses — the median-|residual| scale lets a
+  // consistent trend pass while clamping lone outliers, fixing the over-damping
+  // that held the original promotion (the bulk_aggressive regression, §12).
+  // SAFETY stays on the plain less-damped EWMA: rapid-loss (actualRatePct <=
+  // -1.5 below), the +calorie boost magnitude, and the ED detector
+  // (computeWeeklyTrendPct) all read the plain trend, never this robust read.
+  const robustNow = morningWeights.length >= 3 ? robustTrackingLatest(morningWeights) : null;
+  const robustPrior = morningWeights.length >= 3 ? robustTrackingSevenDaysAgo(morningWeights) : null;
+  const robustWeightDelta = (robustNow != null && robustPrior != null)
+    ? Math.round((robustNow - robustPrior) * 100) / 100
+    : null;
+  const robustRatePct = (robustWeightDelta != null && bwRef)
+    ? (robustWeightDelta / bwRef) * 100
+    : null;
+  // Fall back to the plain rate when there isn't enough data for the robust read.
+  const decisionRatePct = robustRatePct != null ? robustRatePct : actualRatePct;
+
+  const onTarget = (decisionRatePct != null)
+    ? Math.abs(decisionRatePct - phase.goalRatePct) <= 0.2 * Math.abs(phase.goalRatePct) + 0.05
     : null;
 
-  const offTargetDirection = (actualRatePct != null)
-    ? Math.sign(actualRatePct - phase.goalRatePct)
+  const offTargetDirection = (decisionRatePct != null)
+    ? Math.sign(decisionRatePct - phase.goalRatePct)
     : 0;
 
   const enoughWeightData = morningWeights.length >= 4;
