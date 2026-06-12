@@ -216,3 +216,56 @@ describe('swapMealInPlan slot character', () => {
     });
   });
 });
+
+describe('style-diverse swap pool (rethink §3.3 — many options, not near-clones)', () => {
+  const { mealStyleSignature } = require('../mealSwap');
+  const { CURATED_MEALS, mealItems, mealTotals } = require('../curatedMeals');
+
+  const dayWith = (mealId) => {
+    const meal = CURATED_MEALS.find((m) => m.id === mealId);
+    const items = mealItems(meal);
+    return {
+      slots: [
+        { slot: 'meal_1', mealId: 'curated_om_oats_whey_banana', totals: { kcal: 500, protein: 40, carbs: 60, fat: 10 } },
+        { slot: 'meal_3', mealId: meal.id, totals: mealTotals(items) },
+      ],
+    };
+  };
+
+  test('the pool is deep (close to poolSize), not a 1+3 list', () => {
+    const res = swapMealInPlan({ day: dayWith('curated_om_chicken_rice_broc'), slotKey: 'meal_3', prefs: { diet: 'omnivore' } });
+    expect(res.alternatives.length).toBeGreaterThanOrEqual(8);
+  });
+
+  test('the first four alternatives spread across styles, not macro clones', () => {
+    const res = swapMealInPlan({ day: dayWith('curated_om_chicken_rice_broc'), slotKey: 'meal_3', prefs: { diet: 'omnivore' } });
+    const sigs = res.alternatives.slice(0, 4).map((a) => {
+      const meal = CURATED_MEALS.find((m) => m.id === a.mealId);
+      return mealStyleSignature(meal);
+    });
+    expect(new Set(sigs).size).toBe(sigs.length); // all four genuinely different plates
+  });
+
+  test('signature reads anchors and vehicles from the real food table', () => {
+    const chicken = CURATED_MEALS.find((m) => m.id === 'curated_om_chicken_rice_broc');
+    expect(mealStyleSignature(chicken)).toBe('poultry|rice');
+    const bol = CURATED_MEALS.find((m) => m.id === 'curated_om_spag_bol');
+    expect(mealStyleSignature(bol)).toBe('beef|pasta');
+  });
+
+  test('diversity never breaks eligibility: every pool entry stays slot- and diet-legal', () => {
+    const res = swapMealInPlan({ day: dayWith('curated_om_chicken_rice_broc'), slotKey: 'meal_3', prefs: { diet: 'vegan' } });
+    if (res) {
+      res.alternatives.forEach((a) => {
+        const meal = CURATED_MEALS.find((m) => m.id === a.mealId);
+        expect(meal.diet).toBe('vegan');
+      });
+    }
+  });
+
+  test('deterministic: same inputs, same pool', () => {
+    const a = swapMealInPlan({ day: dayWith('curated_om_chicken_rice_broc'), slotKey: 'meal_3', prefs: { diet: 'omnivore' } });
+    const b = swapMealInPlan({ day: dayWith('curated_om_chicken_rice_broc'), slotKey: 'meal_3', prefs: { diet: 'omnivore' } });
+    expect(a.alternatives.map((x) => x.mealId)).toEqual(b.alternatives.map((x) => x.mealId));
+  });
+});

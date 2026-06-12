@@ -37,6 +37,55 @@ import {
 
 const ROLE_DISTANCE_FAT_WEIGHT = 2;
 
+// ─── Style signature (rethink §3.3) ─────────────────────────────────────
+// A swap pool must spread across genuinely different plates, not macro
+// near-clones (founder directive 2026-06-12: "many swap options, not 2
+// near-clones"). Style = (protein anchor class, carb vehicle class),
+// derived from where the meal's protein and carbs actually come from.
+
+const ANCHOR_CLASS = {
+  chicken_breast: 'poultry', turkey_breast: 'poultry', turkey_mince: 'poultry',
+  beef_mince_5: 'beef', steak_lean: 'beef',
+  cod: 'fish', salmon: 'fish', smoked_salmon: 'fish', tuna_water: 'fish', prawns: 'fish',
+  eggs: 'eggs', egg_whites: 'eggs',
+  greek_yogurt_0: 'dairy', greek_yogurt_2: 'dairy', skyr: 'dairy', cottage_cheese: 'dairy',
+  halloumi: 'dairy', paneer: 'dairy', cheddar_light: 'dairy', whey: 'dairy', milk_skimmed: 'dairy',
+  tofu_firm: 'plant', tempeh: 'plant', seitan: 'plant', tvp_dry: 'plant', quorn_mince: 'plant',
+  edamame: 'plant', soy_protein: 'plant', pea_protein: 'plant', soy_yogurt_hp: 'plant', soy_milk: 'plant',
+  lentils: 'legume', lentil_dahl: 'legume', chickpeas: 'legume', kidney_beans: 'legume',
+  black_beans: 'legume', baked_beans: 'legume',
+};
+
+const VEHICLE_CLASS = {
+  white_rice: 'rice', brown_rice: 'rice',
+  pasta: 'pasta', lentil_pasta: 'pasta',
+  white_potato: 'potato', sweet_potato: 'potato', potato_wedges: 'potato',
+  wholemeal_bread: 'bread', bagel: 'bread', tortilla: 'bread',
+  noodles: 'noodles',
+  oats: 'oats', weetabix: 'oats', granola: 'oats',
+  rice_cakes: 'ricecakes', quinoa: 'quinoa',
+};
+
+/**
+ * The meal's style signature: which class supplies the most protein
+ * (the anchor) + which vehicle class supplies the most carbs. Pure,
+ * deterministic; 'none' when a side is absent.
+ */
+export function mealStyleSignature(meal) {
+  const protByClass = {};
+  const carbByClass = {};
+  for (const c of meal.components || []) {
+    const item = resolveComponent(c.food, c.g);
+    if (!item) continue;
+    const a = ANCHOR_CLASS[c.food];
+    if (a) protByClass[a] = (protByClass[a] || 0) + (item.proteinG || 0);
+    const v = VEHICLE_CLASS[c.food];
+    if (v) carbByClass[v] = (carbByClass[v] || 0) + (item.carbsG || 0);
+  }
+  const top = (m) => Object.entries(m).sort((x, y) => (y[1] - x[1]) || (x[0] < y[0] ? -1 : 1))[0]?.[0] || 'none';
+  return `${top(protByClass)}|${top(carbByClass)}`;
+}
+
 /**
  * Candidate replacement foods for one staple, preference-ordered:
  * curated coach-style switches first, then every other same-role staple
@@ -149,7 +198,7 @@ export function swapFoodInMeal({ components, foodKeyOut, prefs, preferKey = null
  * { replacement: { mealId, name, items, totals, components }, alternatives }
  * or null when nothing eligible exists. Deterministic: ties break on id.
  */
-export function swapMealInPlan({ day, slotKey, prefs, excludeMealIds = [] } = {}) {
+export function swapMealInPlan({ day, slotKey, prefs, excludeMealIds = [], poolSize = 12 } = {}) {
   const p = normalisePreferences(prefs);
   const slots = (day && day.slots) || [];
   const outgoing = slots.find((s) => s.slot === slotKey);
@@ -196,8 +245,29 @@ export function swapMealInPlan({ day, slotKey, prefs, excludeMealIds = [] } = {}
     items,
     totals,
   });
+
+  // Style-diverse pool (rethink §3.3, founder directive): the default
+  // replacement stays the closest macro fit (least surprising), but the
+  // alternatives are picked greedily for STYLE SPREAD — each pass takes
+  // the closest candidate whose (anchor|vehicle) signature is not already
+  // in the pool, then remaining slots fill by distance. Deep enough to
+  // scroll, never a pair of near-clones.
+  const replacement = ranked[0];
+  const rest = ranked.slice(1);
+  const seen = new Set([mealStyleSignature(replacement.m)]);
+  const pool = [];
+  const taken = new Set();
+  const want = Math.max(0, poolSize - 1);
+  while (pool.length < want) {
+    let pick = rest.find((r) => !taken.has(r.m.id) && !seen.has(mealStyleSignature(r.m)));
+    if (!pick) pick = rest.find((r) => !taken.has(r.m.id));
+    if (!pick) break;
+    taken.add(pick.m.id);
+    seen.add(mealStyleSignature(pick.m));
+    pool.push(pick);
+  }
   return {
-    replacement: toShape(ranked[0]),
-    alternatives: ranked.slice(1, 4).map(toShape),
+    replacement: toShape(replacement),
+    alternatives: pool.map(toShape),
   };
 }
