@@ -13,6 +13,7 @@ import {
 } from '../components/ProgressSections';
 import useProgressData from '../hooks/useProgressData';
 import StreakWeeksSection from '../components/StreakWeeksSection';
+import PartnerSection from '../components/PartnerSection';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -42,6 +43,9 @@ export default function ConsistencyScreen({ navigation }) {
       >
         {/* ── Your weeks (COMP-018 consistency streak) ── */}
         <StreakWeeksSection userId={user?.id} scoffScore={scoffScore} />
+
+        {/* ── Training partner (NEW-002), directly beneath the streak card ── */}
+        <PartnerSection userId={user?.id} tier={tier} />
 
         {/* ── Lighter week banner ── */}
         {deloadAlert && (
