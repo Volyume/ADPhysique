@@ -84,9 +84,12 @@ have a repeat of earlier")
 ## Status
 
 - [x] Mandate recorded; tooling verification live (this session)
-- [ ] Phase 1: 01 → 18 in serial
-- [ ] Phase 2 per area
-- [ ] Phase 3 synthesis + proposals
+- [x] Phase 1: 18/18 audits complete (+ a-08 supplement), all committed
+- [x] Phase 2: 18/18 research reports, every one spot-checked before
+      acceptance (17 verbatim passes, 1 stale claim caught + corrected);
+      2 agent failures caught + recovered; 3 audit-vs-audit discrepancies
+      resolved with definitive evidence
+- [ ] Phase 3 synthesis + proposals — IN PROGRESS
 
 Hard constraints bind throughout: deterministic engine (no AI/LLM), ED safety
 untouchable, offline-first, EU residency, free/pro gating, British English,
