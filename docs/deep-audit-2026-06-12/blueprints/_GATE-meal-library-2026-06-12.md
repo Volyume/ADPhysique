@@ -1,196 +1,208 @@
-# FOUNDER GATE — provisional meal library (2026-06-12)
+# FOUNDER GATE — meal library, source-mapped (real research pass, 2026-06-12)
 
-> METHOD NOTICE: the library content below was assembled under DEGRADED
-> research tooling (search digests only; no full-source verification).
-> It is PROVISIONAL. The real /deep-research pass (see
-> _BRIEF-bodybuilding-meals-deep-research.md) or the founder's own coach
-> sheets must validate or replace it before it is treated as final.
+> METHOD STATEMENT (replaces the old degraded-tooling notice): this gate was
+> rebuilt on 2026-06-12 in a verified full-network environment. Tooling proofs
+> ran first (live fetch of example.com, the ISSN nutrient-timing position stand
+> fetched end-to-end with verbatim quotes, agent dispatch confirmed). Six
+> research agents fetched FULL primary documents; every extract lives in
+> `docs/deep-audit-2026-06-12/meal-research/src-{a..f}-*.md` with URLs, dates
+> and a failure log per source. Nothing below cites a source that was not
+> actually fetched. Where corroboration is missing, that is stated rather than
+> papered over.
 
-## Omnivore
+## How to read the verdicts
+
+- **CORROBORATED** — the composed meal (or a near-exact form of it) appears in
+  2+ independent primary sources, listed by ID.
+- **ARCHETYPE** — every component role is corroborated 2+ times but the vehicle
+  or exact combination is our UK-supermarket mapping (mapping done LAST, per
+  the brief). The underlying archetype and its sources are named.
+- **VARIANT** — a corroborated archetype re-seasoned (e.g. the chilli family on
+  the seasoned-mince-and-rice archetype); the delta from source is stated.
+- **FOUNDER** — British-comfort meals ordered by founder decision (2026-06-12,
+  "mix of British comforts AND staple plates"). These have NO competitor-diet
+  source and never claimed one; they are macro-fitted adherence meals. Their
+  justification is the founder decision plus the flexible-vs-rigid adherence
+  rationale — not bodybuilding diaries.
+- **STRUCTURE** — vegetarian/vegan meals built from the macro-role engine +
+  protein-uplift policy. No omnivore competitor diary covers these; a vegan
+  competitor research pass (src-f) is running and will upgrade or amend.
+- **THIN** — only one primary source found; founder judgement required.
+
+## Source register (primary documents actually fetched, full text)
+
+| ID | Source | Context |
+|---|---|---|
+| A1 | Fouad Abiad — Hosstile, 2020 | IFBB Open, off-season, 6 meals |
+| A2 | Derek Lunsford — Fitness Volt, 2025 | Open, prep 3wk out, high-carb day |
+| A3 | Chris Bumstead — Fitness Volt, 2023 | Classic, prep 1wk out, 2,700 kcal w/ per-meal macros |
+| A4 | Chris Bumstead — Fitness Volt, 2023 | Classic, off-season rest day, 3,700 kcal |
+| A5 | Derek Lunsford — Fitness Volt, 2022 | 212, off-season rest day, 50P/60–80C per meal |
+| A6 | Sadik Hadzovic — Cellucor, 2022 | Physique/Classic, early prep |
+| A7 | Nick Walker — Fitness Volt, 2024 | Open, prep 5wk out, high day |
+| B1 | "Matt" — Gym Revolution (UK), NPA, 8wk out | UK natural, full day w/ macros, 2,408 kcal |
+| B2 | Akash Vaghela — RNT Fitness (UK), BNBF, 2017 | 21-week prep diary: week-1 TD+rest days, week 16, carb-load, show day |
+| B3 | John Cancea — Brighton blog (UK), 2022 | Novice peak week: depletion + carb-load days |
+| B4 | Eric Helms — 3DMJ Default Diet, 2025 | Natural pro coach, own prep low day + phase rules |
+| B5 | Nigel St Lewis — SimplyShredded, 2012 | BNBF British Champion (no portions) |
+| C1 | Beverly International — Classic Physique plan | 3-phase printed coach plan, full foods+amounts |
+| C2 | Beverly International — Contest Countdown 8wk | Male + female printed plans, carb-up rules |
+| C3 | Beverly International — Men's Physique (Liberman) | 6-meal 2,460 kcal contest diet |
+| C6 | Layne Norton — Ultimate Cutting Diet, 2010 | Rules template: macros, timing %, refeeds |
+| C7 | Renaissance Periodization — 3 primary articles + labelled template review | 6 TD / 5 NTD meals, 5 food roles, carbs scale to session |
+| C8 | John Meadows — Mountain Dog (partial, labelled) | 6–8 feedings; starch post-training, fats on off days |
+| D1 | Megan — NPC bikini, 12wk out, 2014 | 5 meals, zero-fat prep |
+| D2 | Lori — bikini wk3, 2013 | 5 meals, oz amounts |
+| D3 | Anon bikini ("Journey to Pro"), c.2014 | 6 meals, designated post-workout meal |
+| D4 | Amy Roskelley — NPC Masters bikini, 2023 | 2 logged days WITH kcal+macros (1,208 / 1,354) |
+| D5 | Lydia Rees — UKBFF bikini (UK), 2010 | Off-season, metric grams |
+| D6 | Jonelle Baglia — figure (WNBF pro card), Beverly | 5–6 meals; fats cut near show |
+| D7 | "Katie" — NPC figure, Beverly, 2012 | 6 feedings incl. protein-oat loaf |
+| D8 | Dana Linn Bailey — women's physique (PARTIAL) | approx amounts, flagged |
+| E  | Position stands fetched verbatim: ISSN nutrient timing; Helms 2014; Iraki 2019; Aragon & Schoenfeld 2013 | structure rules |
+
+Independence notes: A6 and the Cellucor coach doc are the same article (counted
+once). Helms appears as both competitor day and coach system (one document).
+C1/C2/C3/D6/D7 are all Beverly International — different plans and athletes,
+one coaching system; where corroboration is Beverly-only it says so.
+
+---
+
+## OMNIVORE — verdicts
+
 ### breakfast
-- **Oats, whey & banana** — Porridge oats 60g, Whey protein 35g, Banana 120g
-- **Protein pancakes & banana** — Porridge oats 50g, Egg whites 150g, Whey protein 20g, Banana 80g
-- **Egg & veg omelette with toast** — Whole eggs 150g, Mixed veg 80g, Wholemeal bread 40g
-- **Smoked salmon & egg bagel** — Smoked salmon 80g, Bagel 85g, Whole eggs 50g
-- **Chicken & egg breakfast bagel** — Whole eggs 100g, Chicken breast (cooked) 80g, Bagel 85g
-- **Turkey & egg sweet potato hash** — Turkey breast (cooked) 100g, Whole eggs 100g, Sweet potato 150g
-- **Smoked salmon scrambled eggs** — Smoked salmon 70g, Whole eggs 100g, Egg whites 100g, Wholemeal bread 40g
-- **Savoury tuna omelette** — Tuna (in water) 80g, Whole eggs 150g, Spinach 60g
+- **Oats, whey & banana** — **CORROBORATED** [B1 (100g oats + 36g whey), D5 (100g oats + whey, ×2 meals), B2 (whey + oats blended), D9-template]. Fruit-with-oats: B1, D3, D7.
+- **Protein pancakes & banana** — **CORROBORATED** [A3 (egg whites 250g + oats 70g + whey pancakes — Bumstead's actual Meal 1 in prep), D1 (egg-white + oatmeal pancake), D7 (egg whites + UMP + oats baked loaf), D4 (protein waffle)]. Men's and women's divisions both.
+- **Egg & veg omelette with toast** — **CORROBORATED** [B4 (300g egg whites + 2 eggs + veg omelette), D2 (egg-white veg scramble), A1 (eggs + Ezekiel toast), B2 rest-day M1]. The canonical bodybuilding breakfast.
+- **Smoked salmon scrambled eggs** — **CORROBORATED** [B2 (egg whites + egg + 50g smoked salmon + oats — weekly through a 21-week BNBF prep, incl. show-day), B1 (120g smoked salmon supper), B4 (salmon sashimi option)].
+- **Savoury tuna omelette** — **CORROBORATED** [B4 (tuna + 2 whole eggs scramble, verbatim option), C2 (tuna + egg-white meals, ×2 plans)].
+- **Smoked salmon & egg bagel** — **ARCHETYPE** (salmon+eggs: B2, B1; bread vehicle: A1/A6 use Ezekiel toast). The bagel appears in NO source — it is our UK mapping. Founder choice: keep as mapped vehicle or shift to toast.
+- **Chicken & egg breakfast bagel** — **ARCHETYPE** (lean meat + eggs at breakfast: C1 (6oz meat + eggs + oats), C2 (5oz beef + egg whites), D6 (2oz ground chicken + 4 egg whites + oats), D2). Bagel vehicle unsourced, as above.
+- **Turkey & egg sweet potato hash** — **ARCHETYPE** (meat+eggs+starch breakfast: C1, C2, D6; sweet potato at breakfast unsourced). Weakest of the breakfast family — founder may prefer to cut or re-vehicle.
 
 ### lunch
-- **Chicken, rice & broccoli** — Chicken breast (cooked) 150g, White rice (cooked) 200g, Broccoli 120g
-- **Chicken, sweet potato & spinach** — Chicken breast (cooked) 150g, Sweet potato 250g, Spinach 80g
-- **Cod, sweet potato & veg** — Cod / white fish 200g, Sweet potato 250g, Green beans 120g
-- **Beef burrito bowl** — Beef mince (5%) 150g, White rice (cooked) 150g, Black beans (cooked) 80g, Salsa 40g
-- **Prawn & noodle stir-fry** — Prawns 150g, Noodles (cooked) 150g, Stir-fry veg 120g
-- **Turkey & avocado wrap** — Turkey breast (cooked) 120g, Tortilla wrap 60g, Avocado 60g, Mixed salad 60g
-- **Chicken salad wrap** — Chicken breast (cooked) 120g, Tortilla wrap 60g, Mixed salad 80g
-- **Jacket potato with tuna** — Potato (boiled) 300g, Tuna (in water) 120g, Mixed salad 60g
-- **Chicken & tomato pasta pot** — Chicken breast (cooked) 120g, Pasta (dry) 60g, Tomato sauce 80g
-- **Savoury tuna omelette** — Tuna (in water) 80g, Whole eggs 150g, Spinach 60g
-- **Chicken jacket potato & salad** — Chicken breast (cooked) 140g, Potato (boiled) 300g, Mixed salad 80g
-- **Tuna jacket potato & beans** — Tuna (in water) 120g, Potato (boiled) 300g, Baked beans 100g
-- **Chicken & quinoa salad** — Chicken breast (cooked) 140g, Quinoa (cooked) 150g, Mixed salad 100g, Olive oil 6g
-- **Chicken & tomato pasta** — Chicken breast (cooked) 150g, Pasta (dry) 70g, Tomato sauce 100g, Broccoli 100g
-- **Beef mince, rice & greens** — Beef mince (5%) 150g, White rice (cooked) 180g, Green beans 100g
-- **Turkey chilli & rice** — Turkey mince (5%) 150g, Kidney beans (cooked) 100g, White rice (cooked) 150g, Salsa 40g
-- **Prawn & egg fried rice** — Prawns 150g, White rice (cooked) 180g, Whole eggs 50g, Garden peas 80g
-- **Cod, rice & peas** — Cod / white fish 200g, White rice (cooked) 180g, Garden peas 100g
-- **Chicken fajita wrap** — Chicken breast (cooked) 130g, Tortilla wrap 60g, Salsa 40g, Mixed salad 60g
-- **Chicken chow mein noodles** — Chicken breast (cooked) 150g, Noodles (cooked) 200g, Stir-fry veg 120g
-- **Tuna pasta salad** — Tuna (in water) 120g, Pasta (dry) 70g, Mixed salad 80g, Tomato sauce 60g
+- **Chicken, rice & broccoli** — **CORROBORATED** [A2, A3, A6, B2 (×3 daily through 21 weeks), B3, B5, C3]. The single most-documented meal in bodybuilding.
+- **Chicken, sweet potato & spinach** — **CORROBORATED** [D1 (×2 daily), D2, C1 (8oz meat + 6oz sweet potato), D6].
+- **Cod, sweet potato & veg** — **CORROBORATED** as white-fish+starch+veg [A3 (cod+rice), A2 (10oz cod+rice), C3 (cod+brown rice); sweet-potato vehicle from D1/D2/C1].
+- **Beef burrito bowl** — **VARIANT** of seasoned-mince+rice [A6 (8oz ground beef + 6.5oz rice), A5 (taco-seasoned ground chicken + rice), D8, D3 (taco salad)]. Black beans appear in no source — our addition; flag to founder.
+- **Jacket potato with tuna** — **ARCHETYPE** (tuna meals: C2 ×2, D6, B4; baked potato meals: C2 ("1 six-oz baked potato"), A4/A5/B3). Tuna-on-jacket specifically is the UK form of Beverly's baked-potato + lean-protein meals.
+- **Chicken jacket potato & salad / Tuna jacket potato & beans** — **ARCHETYPE** as above [B3 (250g potato + chicken ×1 daily), C2]. Baked beans unsourced (UK mapping).
+- **Turkey & avocado wrap** — **ARCHETYPE** (turkey: D2, D3, D5 ×2; avocado: D3, D6; wrap vehicle unsourced — closest is D3's tortilla chips).
+- **Chicken salad wrap / Chicken fajita wrap** — **FOUNDER** (wrap vehicle; chicken+salad corroborated everywhere, the wrap form is adherence mapping).
+- **Prawn & noodle stir-fry** — **THIN** [A2 (shrimp+rice is the only crustacean appearance); noodles: only D4's shirataki]. Founder judgement.
+- **Chicken & quinoa salad** — **THIN** [quinoa appears only in D9, a no-name template]. Quinoa is in NO competitor plan. Recommend re-vehicle to rice/potato or accept as mapping.
+- **Chicken & tomato pasta / pasta pot / Tuna pasta salad** — **FOUNDER** (pasta appears in zero fetched competitor/coach plans).
+- **Beef mince, rice & greens** — **CORROBORATED** [A6, D8, B2 (lamb-mince variant)].
+- **Turkey chilli & rice** — **VARIANT** (seasoned mince + rice: A6, A5, D8; beans + chilli form ours).
+- **Prawn & egg fried rice** — **THIN** (no egg-fried-rice in any source; prawns single-source). Candidate cut.
+- **Cod, rice & peas** — **CORROBORATED** [A2, A3, C3].
+- **Chicken chow mein noodles** — **THIN** [D4 (chicken + shirataki noodles + soy) is the only chicken-noodle appearance]. Founder judgement.
 
 ### dinner
-- **Chicken, rice & broccoli** — Chicken breast (cooked) 150g, White rice (cooked) 200g, Broccoli 120g
-- **Chicken, sweet potato & spinach** — Chicken breast (cooked) 150g, Sweet potato 250g, Spinach 80g
-- **Cod, sweet potato & veg** — Cod / white fish 200g, Sweet potato 250g, Green beans 120g
-- **Beef burrito bowl** — Beef mince (5%) 150g, White rice (cooked) 150g, Black beans (cooked) 80g, Salsa 40g
-- **Prawn & noodle stir-fry** — Prawns 150g, Noodles (cooked) 150g, Stir-fry veg 120g
-- **Lean steak, potatoes & greens** — Lean steak (cooked) 150g, Potato (boiled) 250g, Mixed salad 100g
-- **Salmon, rice & asparagus** — Salmon 150g, White rice (cooked) 180g, Asparagus 100g
-- **Turkey bolognese & pasta** — Turkey mince (5%) 150g, Pasta (dry) 70g, Tomato sauce 100g
-- **White fish, wedges & peas** — Cod / white fish 200g, Potato wedges 200g, Garden peas 80g
-- **Jacket potato with tuna** — Potato (boiled) 300g, Tuna (in water) 120g, Mixed salad 60g
-- **Lean cottage pie & veg** — Beef mince (5%) 175g, Potato (boiled) 250g, Mixed veg 120g, Tomato sauce 60g
-- **Chicken fajitas** — Chicken breast (cooked) 150g, Tortilla wrap 120g, Stir-fry veg 100g, Salsa 60g, Reduced-fat cheddar 20g
-- **Lean spaghetti bolognese** — Beef mince (5%) 150g, Pasta (dry) 70g, Tomato sauce 120g
-- **Chilli con carne & rice** — Beef mince (5%) 150g, Kidney beans (cooked) 100g, White rice (cooked) 150g, Tomato sauce 80g
-- **Chicken curry & rice (fakeaway)** — Chicken breast (cooked) 150g, White rice (cooked) 180g, Tomato sauce 100g
-- **Salmon noodle stir-fry** — Salmon 140g, Noodles (cooked) 150g, Stir-fry veg 120g
-- **Chicken & tomato pasta** — Chicken breast (cooked) 150g, Pasta (dry) 70g, Tomato sauce 100g, Broccoli 100g
-- **Beef mince, rice & greens** — Beef mince (5%) 150g, White rice (cooked) 180g, Green beans 100g
-- **Turkey chilli & rice** — Turkey mince (5%) 150g, Kidney beans (cooked) 100g, White rice (cooked) 150g, Salsa 40g
-- **Salmon, new potatoes & green beans** — Salmon 150g, Potato (boiled) 250g, Green beans 100g
-- **Steak & rice stir-fry** — Lean steak (cooked) 150g, White rice (cooked) 180g, Stir-fry veg 120g
-- **Prawn & egg fried rice** — Prawns 150g, White rice (cooked) 180g, Whole eggs 50g, Garden peas 80g
-- **Cod, rice & peas** — Cod / white fish 200g, White rice (cooked) 180g, Garden peas 100g
-- **Turkey & lentil pasta bolognese** — Turkey mince (5%) 130g, Lentil pasta (dry) 80g, Tomato sauce 100g
-- **Chicken chow mein noodles** — Chicken breast (cooked) 150g, Noodles (cooked) 200g, Stir-fry veg 120g
+(All lunch verdicts carry over where the meal repeats. Dinner-only items:)
+- **Lean steak, potatoes & greens** — **CORROBORATED** [A4 (300g potatoes + 225g bison), A5 ("steak and rice, it's a staple"; steak + potatoes M1), B5 (steak + potato + veg)].
+- **Salmon, rice & asparagus** — **CORROBORATED** [A3 (salmon + jasmine rice M6, asparagus through the day), B2 (salmon fillets M1), D2 (salmon + sweet potato), D9].
+- **Salmon, new potatoes & green beans** — **ARCHETYPE** (same salmon+starch+green-veg archetype, UK vehicle).
+- **White fish, wedges & peas** — **ARCHETYPE** [fish + potato: B5, C2; "wedges" is the UK vehicle].
+- **Steak & rice stir-fry** — **CORROBORATED** [A5, A7 (steak + jasmine rice post-workout)].
+- **Salmon noodle stir-fry** — **THIN** (noodle vehicle, as above).
+- **Lean cottage pie & veg / Lean spaghetti bolognese / Turkey bolognese & pasta / Chicken fajitas / Chicken curry & rice (fakeaway) / Turkey & lentil pasta bolognese** — **FOUNDER** (decision 2026-06-12: British comforts stay for adherence; macro-fitted; no competitor-source claim is made for them). Chilli con carne & rice — **VARIANT** (seasoned-mince+rice corroborated; bean/chilli form ours).
 
 ### snack
-- **Tuna & rice cakes** — Tuna (in water) 100g, Rice cakes 32g
-- **Boiled eggs & apple** — Whole eggs 150g, Apple 150g
-- **Chicken, apple & almonds** — Chicken breast (cooked) 80g, Apple 120g, Almonds 15g
-- **Tuna & avocado rice cakes** — Tuna (in water) 100g, Rice cakes 24g, Avocado 40g
-- **Turkey & cottage cheese plate** — Turkey breast (cooked) 80g, Cottage cheese (low-fat) 100g, Mixed salad 50g
+- **Whey shake & banana** (listed under vegetarian, applies here) — **CORROBORATED** [A2 (50g whey + 2 bananas, his actual post-workout), B1 (shake + fruit ×2 daily), D3 (shake + apple)].
+- **Boiled eggs & apple** — **CORROBORATED** as egg-whites-as-final/snack-meal + fruit snack [C2 (6 egg whites as Meal 6), D3 (4 egg whites evening), B1/D3 (apples at snacks)].
+- **Chicken, apple & almonds** — **CORROBORATED** as protein + fruit + almonds [D3 (almonds + shake + apple, near-exact), D7 (UMP + berries + almonds, ×2 daily)].
+- **Tuna & rice cakes / Tuna & avocado rice cakes** — **ARCHETYPE-THIN** (tuna snack meals: C2, D6; rice cakes appear once [D3, post-workout with PB] and B2 uses Rice Krispies treats show-day only; src-b's negative finding: rice cakes absent from all UK plans fetched). Founder judgement on the vehicle.
+- **Turkey & cottage cheese plate** — **THIN** [B5 (eggs + cottage cheese + veg, Meal 6) is the only cottage-cheese appearance].
 
-## Vegetarian
-### breakfast
-- **Greek yogurt, oats & berries** — Greek yogurt (0%) 200g, Porridge oats 40g, Mixed berries 80g, Honey 15g
-- **Egg scramble, toast & beans** — Whole eggs 100g, Egg whites 120g, Wholemeal bread 40g, Baked beans 100g
-- **Skyr, oats & peanut butter** — Skyr 200g, Porridge oats 40g, Peanut butter 15g
-- **Cottage cheese pancakes** — Cottage cheese (low-fat) 150g, Porridge oats 40g, Egg whites 100g
-- **Protein oat smoothie** — Whey protein 30g, Porridge oats 30g, Mixed berries 80g, Skimmed milk 200g
-- **Weetabix, milk & a scoop of whey** — Weetabix 45g, Skimmed milk 250g, Whey protein 25g
-- **Greek yogurt, granola & seeds** — Greek yogurt (0%) 200g, Granola 30g, Mixed seeds 10g, Mixed berries 60g
-- **Skyr, berries & almonds** — Skyr 200g, Mixed berries 80g, Almonds 15g
-- **Eggs & avocado on toast** — Whole eggs 150g, Wholemeal bread 60g, Avocado 50g
-- **Overnight oats with skyr** — Porridge oats 50g, Skyr 150g, Skimmed milk 100g, Mixed berries 60g
-- **Cottage cheese & egg on toast** — Cottage cheese (low-fat) 150g, Whole eggs 100g, Wholemeal bread 40g
+## VEGETARIAN — verdicts
 
-### lunch
-- **Tofu stir-fry with rice** — Firm tofu 200g, White rice (cooked) 180g, Stir-fry veg 120g
-- **Lentil & quinoa bowl** — Lentils (cooked) 250g, Quinoa (cooked) 120g, Mixed veg 120g
-- **Halloumi & chickpea salad** — Halloumi 80g, Chickpeas (cooked) 150g, Mixed salad 120g
-- **Paneer curry & rice** — Paneer 100g, White rice (cooked) 150g, Mixed veg 100g
-- **Egg fried rice** — Whole eggs 100g, Egg whites 100g, White rice (cooked) 200g, Garden peas 100g
-- **Tofu katsu & rice** — Firm tofu 150g, White rice (cooked) 180g, Mixed veg 80g
-- **Jacket potato with cottage cheese** — Potato (boiled) 300g, Cottage cheese (low-fat) 150g, Mixed salad 60g
-- **Halloumi & quinoa bowl** — Halloumi 80g, Quinoa (cooked) 150g, Mixed veg 100g
-- **Paneer & chickpea curry** — Paneer 80g, Chickpeas (cooked) 150g, White rice (cooked) 150g, Spinach 60g
-- **Egg & lentil salad bowl** — Whole eggs 150g, Lentils (cooked) 200g, Mixed salad 100g
-- **Meat-free mince pasta** — Quorn mince 150g, Pasta (dry) 70g, Tomato sauce 100g
-- **Cottage cheese jacket potato** — Cottage cheese (low-fat) 200g, Potato (boiled) 300g, Mixed salad 60g
-- **Tofu & chickpea curry** — Firm tofu 150g, Chickpeas (cooked) 100g, White rice (cooked) 150g
-- **Halloumi & salad wrap** — Halloumi 80g, Tortilla wrap 60g, Chickpeas (cooked) 80g, Mixed salad 60g
-- **Veggie egg & paneer rice** — Whole eggs 100g, Paneer 60g, White rice (cooked) 180g, Garden peas 80g
+- **Greek yogurt, oats & berries / Greek yogurt, granola & seeds** — **CORROBORATED** [A1 (200g Greek yogurt + 30g granola + whey scoop — near-exact), B4 (500g low-fat Greek yogurt as a meal), D7 ("low carb yogurts" ×2 feedings)].
+- **Skyr / Quark / Weetabix family** (Skyr oats & PB; Skyr berries & almonds; Skyr & whey bowls; Weetabix milk & whey; overnight oats with skyr) — **ARCHETYPE** (high-protein dairy + oats/cereal: A1, B4, D7; cereal + whey: B2 (40g whey + 130g Coco Pops post-workout — a real BNBF prep slot)). **Negative finding logged honestly: Weetabix, Skyr, Quark, Fage appear in NO fetched plan** — they are pure UK-supermarket mappings of the corroborated dairy/cereal archetypes. The founder's earlier instinct to keep these as UK staples is consistent with the mapping-last rule, but they must not be presented as competitor-sourced.
+- **Egg scramble, toast & beans / Eggs & avocado on toast / Cottage cheese & egg on toast** — **CORROBORATED** (egg-and-toast archetype: A1, A6, B2, B4) with UK additions (beans unsourced).
+- **Protein oat smoothie** — **CORROBORATED** [B4 (whey + greens + berries smoothie, his actual Meal 1), B2 (whey + oats blended pre-workout)].
+- **Cottage cheese pancakes** — **ARCHETYPE** (pancake archetype corroborated [A3, D1, D7]; cottage-cheese version is our variant).
+- **Tofu / halloumi / paneer / Quorn / lentil mains** — **STRUCTURE**. No fetched competitor source eats these (every diary is omnivore). They stand on the macro-role engine + the protein-quality uplift policy (the leucine/DIAAS literature is textbook and the position stands are now verified in src-e, but no competitor diary corroborates the meals). src-f (vegan/vegetarian competitor days) is in flight and will upgrade or amend this section.
+- **Dairy/whey snacks** (Skyr & berries pot, Greek yogurt whey & almonds, cottage cheese variants, whey shake & banana) — **CORROBORATED/ARCHETYPE** per the dairy findings above [A1, B4, D7, D3].
 
-### dinner
-- **Tofu stir-fry with rice** — Firm tofu 200g, White rice (cooked) 180g, Stir-fry veg 120g
-- **Halloumi & chickpea salad** — Halloumi 80g, Chickpeas (cooked) 150g, Mixed salad 120g
-- **Paneer curry & rice** — Paneer 100g, White rice (cooked) 150g, Mixed veg 100g
-- **Egg fried rice** — Whole eggs 100g, Egg whites 100g, White rice (cooked) 200g, Garden peas 100g
-- **Tofu katsu & rice** — Firm tofu 150g, White rice (cooked) 180g, Mixed veg 80g
-- **Tempeh & sweet potato** — Tempeh 120g, Sweet potato 250g, Spinach 100g
-- **Meat-free chilli & rice** — Quorn mince 150g, Kidney beans (cooked) 100g, White rice (cooked) 120g
-- **Meat-free spaghetti bolognese** — Quorn mince 150g, Pasta (dry) 70g, Tomato sauce 120g
-- **Halloumi fajitas** — Halloumi 100g, Tortilla wrap 120g, Stir-fry veg 120g, Salsa 60g
-- **Halloumi & quinoa bowl** — Halloumi 80g, Quinoa (cooked) 150g, Mixed veg 100g
-- **Paneer & chickpea curry** — Paneer 80g, Chickpeas (cooked) 150g, White rice (cooked) 150g, Spinach 60g
-- **Meat-free mince pasta** — Quorn mince 150g, Pasta (dry) 70g, Tomato sauce 100g
-- **Tofu & chickpea curry** — Firm tofu 150g, Chickpeas (cooked) 100g, White rice (cooked) 150g
-- **Paneer saag & potato** — Paneer 100g, Potato (boiled) 200g, Spinach 120g
-- **Veggie egg & paneer rice** — Whole eggs 100g, Paneer 60g, White rice (cooked) 180g, Garden peas 80g
-- **Meat-free mince & sweet potato** — Quorn mince 150g, Sweet potato 250g, Green beans 100g
+## VEGAN — verdicts
 
-### snack
-- **Protein oat smoothie** — Whey protein 30g, Porridge oats 30g, Mixed berries 80g, Skimmed milk 200g
-- **Cottage cheese, pineapple & rice cakes** — Cottage cheese (low-fat) 200g, Pineapple 100g, Rice cakes 24g
-- **Greek yogurt, whey & almonds** — Greek yogurt (2%) 150g, Whey protein 15g, Almonds 15g
-- **Edamame & boiled egg** — Edamame 100g, Whole eggs 50g
-- **Skyr & berries pot** — Skyr 150g, Mixed berries 80g
-- **Whey shake & banana** — Whey protein 30g, Skimmed milk 250g, Banana 100g
-- **Skyr, berries & almonds** — Skyr 200g, Mixed berries 80g, Almonds 15g
-- **Greek yogurt, PB & banana** — Greek yogurt (0%) 200g, Peanut butter 15g, Banana 80g
-- **Cottage cheese, seeds & apple** — Cottage cheese (low-fat) 200g, Mixed seeds 12g, Apple 100g
-- **Skyr & whey berry bowl** — Skyr 150g, Whey protein 15g, Mixed berries 80g
-- **Egg white & cottage rice cakes** — Egg whites 150g, Cottage cheese (low-fat) 100g, Rice cakes 24g
+- **Entire section — STRUCTURE, pending src-f.** Soya/pea protein, tofu, tempeh, seitan, soya mince anchor meals follow the uplift policy (~20–30% per-meal protein uplift for plant anchors — consistent with the verified per-meal dosing literature in src-e, applied with the engine's computed macros). No competitor-diary corroboration exists in the current corpus; the vegan-competitor research agent reports shortly. HOLD any vegan library expansion until it lands; existing meals can remain behind the gate as provisional.
 
-## Vegan
-### breakfast
-- **Soya protein oats & banana** — Porridge oats 60g, Soya protein 30g, Banana 120g
-- **Soya yogurt, protein & oats** — High-protein soya yogurt 200g, Pea protein 15g, Porridge oats 40g, Mixed berries 80g
-- **Pea protein & PB smoothie** — Pea protein 33g, Banana 100g, Peanut butter 15g, Soya milk 200g
-- **Tofu scramble on toast** — Firm tofu 200g, Wholemeal bread 40g, Spinach 60g
-- **Tofu & avocado toast** — Firm tofu 150g, Wholemeal bread 60g, Avocado 50g
-- **Soya yogurt oats & seeds** — High-protein soya yogurt 200g, Porridge oats 40g, Mixed seeds 12g, Soya protein 15g
-- **Pea protein overnight oats** — Porridge oats 50g, Pea protein 20g, Soya milk 200g, Banana 80g
-- **Tofu scramble & beans** — Firm tofu 200g, Baked beans 120g, Wholemeal bread 40g
-- **Soya protein berry smoothie** — Soya protein 30g, Porridge oats 30g, Mixed berries 80g, Soya milk 200g
-- **Tofu, seeds & avocado toast** — Firm tofu 150g, Wholemeal bread 60g, Avocado 40g, Mixed seeds 10g
+---
 
-### lunch
-- **Seitan, rice & veg stir-fry** — Seitan 130g, White rice (cooked) 180g, Stir-fry veg 120g
-- **Tempeh, quinoa & roast veg** — Tempeh 120g, Quinoa (cooked) 120g, Mixed veg 120g, Olive oil 8g
-- **Tempeh burrito bowl** — Tempeh 120g, White rice (cooked) 150g, Black beans (cooked) 80g, Salsa 40g
-- **High-protein lentil pasta** — Lentil pasta (dry) 100g, Tomato sauce 120g, Mixed veg 100g
-- **Tofu, chickpea & quinoa salad** — Firm tofu 100g, Chickpeas (cooked) 120g, Quinoa (cooked) 100g, Mixed salad 100g, Olive oil 8g
-- **Edamame, rice & veg** — Edamame 200g, White rice (cooked) 150g, Mixed veg 100g
-- **Tofu, black bean & sweet potato bowl** — Firm tofu 100g, Black beans (cooked) 150g, Sweet potato 200g, Mixed veg 100g
-- **Seitan & noodle stir-fry** — Seitan 130g, Noodles (cooked) 200g, Stir-fry veg 120g
-- **Tofu & sweet potato bowl** — Firm tofu 200g, Sweet potato 200g, Broccoli 100g
-- **Chickpea & lentil curry** — Chickpeas (cooked) 200g, Lentils (cooked) 100g, White rice (cooked) 150g, Spinach 60g
-- **Tempeh peanut noodles** — Tempeh 120g, Noodles (cooked) 180g, Stir-fry veg 100g, Peanut butter 12g
-- **Edamame & quinoa salad** — Edamame 200g, Quinoa (cooked) 120g, Mixed salad 100g, Tahini 12g
-- **Tofu curry & rice** — Firm tofu 200g, White rice (cooked) 180g, Mixed veg 100g
-- **Black bean & soya burrito** — Soya mince (dry) 40g, Black beans (cooked) 120g, Tortilla wrap 60g, Salsa 40g
-- **Seitan, quinoa & roast veg** — Seitan 120g, Quinoa (cooked) 150g, Mixed veg 120g, Olive oil 6g
+## Cross-cutting structure findings (engine implications — all source-verified)
 
-### dinner
-- **Seitan, rice & veg stir-fry** — Seitan 130g, White rice (cooked) 180g, Stir-fry veg 120g
-- **Tempeh, quinoa & roast veg** — Tempeh 120g, Quinoa (cooked) 120g, Mixed veg 120g, Olive oil 8g
-- **Tempeh burrito bowl** — Tempeh 120g, White rice (cooked) 150g, Black beans (cooked) 80g, Salsa 40g
-- **High-protein lentil pasta** — Lentil pasta (dry) 100g, Tomato sauce 120g, Mixed veg 100g
-- **Soya mince chilli with rice** — Soya mince (dry) 50g, Kidney beans (cooked) 120g, White rice (cooked) 150g, Tomato sauce 100g
-- **Lentil dahl & rice** — Red lentil dahl 320g, White rice (cooked) 150g, Spinach 50g
-- **Tofu, black bean & sweet potato bowl** — Firm tofu 100g, Black beans (cooked) 150g, Sweet potato 200g, Mixed veg 100g
-- **Seitan & noodle stir-fry** — Seitan 130g, Noodles (cooked) 200g, Stir-fry veg 120g
-- **Tofu & sweet potato bowl** — Firm tofu 200g, Sweet potato 200g, Broccoli 100g
-- **Soya mince bolognese** — Soya mince (dry) 45g, Pasta (dry) 70g, Tomato sauce 120g
-- **Seitan, potatoes & greens** — Seitan 130g, Potato (boiled) 250g, Green beans 100g
-- **Chickpea & lentil curry** — Chickpeas (cooked) 200g, Lentils (cooked) 100g, White rice (cooked) 150g, Spinach 60g
-- **Tempeh peanut noodles** — Tempeh 120g, Noodles (cooked) 180g, Stir-fry veg 100g, Peanut butter 12g
-- **Tofu curry & rice** — Firm tofu 200g, White rice (cooked) 180g, Mixed veg 100g
-- **Black bean & soya burrito** — Soya mince (dry) 40g, Black beans (cooked) 120g, Tortilla wrap 60g, Salsa 40g
-- **Lentil dahl with chickpeas** — Red lentil dahl 250g, Chickpeas (cooked) 120g, White rice (cooked) 120g
-- **Seitan, quinoa & roast veg** — Seitan 120g, Quinoa (cooked) 150g, Mixed veg 120g, Olive oil 6g
+1. **5–6 meals/day is universal** across pros, UK naturals, coach plans and
+   women's divisions [A1–A7, B1–B3, B5, C1–C3, D1–D3, D5–D7]. Helms/RP-Simplified
+   run deliberate 3+snack low-decision outliers. ISSN/Helms verbatim: 3–6 meals,
+   20–40g (0.25–0.40 g/kg) protein per meal every ~3h [E]. **Engine default of
+   4–6 meals: VALIDATED.**
+2. **TD/NTD carbs-only lever: VALIDATED.** Protein and fat held constant, carbs
+   move — Vaghela explicit (490C training / 360C rest, same P/F), RP verbatim
+   ("the only thing you have to alter between workout day difficulty is carb
+   amounts"), Lunsford ("same protein… just increasing the carbs"), Walker
+   high/low days. The engine's TD/NTD design matches real practice exactly.
+   The fabricated "3.1%" outcome figure stays dead: no study supports a specific
+   percentage advantage (Campbell 2020 refeed trial: no significant total-FFM
+   difference; methodology page must stay honest).
+3. **Post-workout whey + fast carbs is a real, near-universal slot** [B2 (whey +
+   Coco Pops), A2 (whey + 2 bananas), A3 (isolate shake), C6 (whey + dextrose
+   intra/post %), B6 (Recover Ex)]. The library lacks a dedicated post-workout
+   shake-plus-fast-carb meal family — **recommended addition** (maps cleanly to
+   UK staples: whey + banana exists; consider whey + cereal).
+4. **Fat is the prep lever** — slashed in deep prep (A3: 42g/day; D1: "no fat";
+   D6 drops mayo/avocado near show), liberal off-season (A4: 115g). Supports the
+   rest-day-fat preference setting and phase-aware fat handling.
+5. **Real preps REPEAT meals** (B2: identical chicken-rice-oil meal ×3 daily for
+   21 weeks; B3 ×4–6; A6/A3 chicken ×2). The mass-market variety preference and
+   the elite repeat-tolerance are BOTH real — validates the variety-vs-repeat
+   user preference rather than forcing either.
+6. **Substitution is built into real coach plans** — Beverly Option A/B meals,
+   Helms' three interchangeable Meal-2 options, "chicken/turkey/fish" slots
+   [C1, C2, B4]. **Validates the swap-pool design**; swap tolerance ±2–5g on the
+   role macro matches the coach-spreadsheet convention already extracted.
+7. **Animal-anchored omnivore: VALIDATED.** Every omnivore competitor meal in
+   the corpus anchors on meat/fish/eggs/dairy/whey. Legumes never anchor a meal
+   in any fetched plan (beans appear only as our additions). The founder's
+   protein-anchor ruling matches the evidence base exactly.
+8. **Women's plans = same skeleton, scaled portions** (Beverly prints parallel
+   male/female plans: 5–12oz vs 3–5oz protein per meal; Roskelley logs 1,208 to
+   1,354 kcal at 161–166g protein) [C2, D4]. Supports portion scaling by
+   bodyweight/sex rather than different meal designs.
+9. **Fixed-day carb-ups vs training-day refeeds — both real** (Beverly: Mon/Thu,
+   women every 3rd day; Vaghela/RP: leg-day/session-scaled) [C1, C2, B2, C7].
+   Engine's training-day-linked approach is the better-supported modern form
+   (RP 3.0, Vaghela); note Beverly's fixed-day convention as an alternative.
 
-### snack
-- **Pea protein & PB smoothie** — Pea protein 33g, Banana 100g, Peanut butter 15g, Soya milk 200g
-- **Pea protein shake & berries** — Pea protein 33g, Mixed berries 100g
-- **Soya yogurt, granola & peanut butter** — High-protein soya yogurt 200g, Granola 25g, Peanut butter 12g
-- **Soya protein berry smoothie** — Soya protein 30g, Porridge oats 30g, Mixed berries 80g, Soya milk 200g
-- **Soya yogurt, PB & banana** — High-protein soya yogurt 200g, Pea protein 15g, Peanut butter 12g, Banana 80g
-- **Edamame & tahini rice cakes** — Edamame 150g, Rice cakes 24g, Tahini 10g
-- **Pea protein oat shake** — Pea protein 30g, Porridge oats 30g, Soya milk 200g
-- **Soya yogurt, apple & almonds** — Soya protein 15g, High-protein soya yogurt 200g, Apple 100g, Almonds 12g
+## Gaps stated plainly
+
+- **Wellness division**: no written named-competitor day of eating exists in
+  fetchable form (searched; video/paid-PDF only). Recorded, not invented.
+- **Vegan competitor days**: research in flight (src-f); vegan section gated
+  until it lands.
+- **UK women's prep day**: the one UK women's plan (D5) is off-season; no UK
+  female prep day found in writing this pass.
+- **Dead sources**: EliteFTS nutrition archive deleted sitewide (404s verified);
+  muscleandstrength.com hard-blocked; web.archive.org blocked by this
+  environment's egress policy. All logged per-URL in the src files.
+
+## FOUNDER SIGN-OFF — decisions needed
+
+1. **CORROBORATED meals (≈30)** — approve as the library spine? (Evidence is
+   strong; no change recommended.)
+2. **ARCHETYPE meals** — accept UK vehicles (bagel, wrap, jacket potato, wedges,
+   Skyr/Weetabix dairy mappings) as deliberate supermarket mapping, with the
+   in-app methodology never claiming competitor provenance for the vehicle?
+3. **FOUNDER comfort meals** (pasta family, cottage pie, fajitas, fakeaway
+   curry) — confirm they stay on the adherence rationale, clearly not
+   research-claimed? (Your 2026-06-12 decision says yes; re-confirm at gate.)
+4. **THIN meals** — keep, cut, or re-vehicle: prawn & noodle stir-fry, prawn &
+   egg fried rice, chicken chow mein, chicken & quinoa salad, turkey & cottage
+   cheese plate, tuna & rice cakes pair. (My recommendation: cut prawn & egg
+   fried rice and chicken & quinoa salad; re-vehicle the rest or keep
+   consciously as mappings.)
+5. **Recommended addition**: a post-workout shake + fast-carb meal family
+   (whey + banana exists; add whey + cereal slot per B2/A2 evidence)?
+6. **Vegan section**: hold expansion until src-f lands (recommended), or
+   release as STRUCTURE-labelled now?
