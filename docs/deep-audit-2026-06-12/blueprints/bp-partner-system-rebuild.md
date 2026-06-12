@@ -78,15 +78,37 @@ No feed, no comments, no leaderboards, no workout detail sharing, no
 partner-finding/matching (stranger discovery is a different, riskier
 product), no group chat. One-to-one pairs only.
 
-## 3. Founder decisions needed
-1. Day-to-day presence: should the paired state get a small Home chip, or
-   live only on Consistency + WorkoutSummary beats?
-2. Push notifications for cheer received / weekly streak kept: in or out (in-app only)?
+## 3. Decisions — RESOLVED 2026-06-12
+1. **Placement (decided via the placement research below):** the partner
+   lives WITH the consistency streak, plus a first-class destination:
+   - a dedicated **PartnerScreen** (Apple Fitness pattern: minimal-signal
+     sharing still gets a proper named home, never a buried row);
+   - a **"Partner" NavTile on the Progress hub** (alongside Consistency /
+     Lifts / Body Metrics) with a paired-state hint;
+   - a **slim status row inside Consistency's "Your weeks" area** (Duolingo
+     pattern: the friend streak lives at the streak's own home) opening the
+     screen — replacing the old in-place mega-section;
+   - the **WorkoutSummary beat** (Duolingo's post-lesson nudge is the
+     highest-value re-engagement moment) with the cheer inline;
+   - NO new You-tab row (founder has flagged You-tab button creep) and no
+     Home chip (Home stays an action surface).
+   Placement evidence: Duolingo surfaces the friend streak from the user's
+   own streak flame + post-lesson nudges "from the friend"
+   ([friend streak](https://blog.duolingo.com/friend-streak/),
+   [widget/flame placement](https://duolingo.fandom.com/wiki/Streak));
+   Apple Fitness gives sharing a root-level tab with rings + encouragement
+   ([Activity Sharing](https://support.apple.com/guide/iphone/share-your-activity-iph0b826155d/ios));
+   Hevy's home IS its feed — the feed-first pole we are deliberately not
+   ([Hevy social](https://www.hevyapp.com/features/content-feed/)).
+2. **Pushes (founder, 2026-06-12): cheer received + weekly shared-streak
+   kept.** Both inside the NOTIFICATIONS_LOCKED budget, collision rules
+   apply; cheer push framed as from the partner ("Sam cheered you"), never
+   from the app; no miss/shame framing exists in the system by design.
 
 ## 4. Build order (each step reviewed + tested)
-1. PartnerScreen (house style) + nav entries (You row, Consistency slim row).
+1. PartnerScreen (house style) + Progress NavTile + Consistency slim row.
 2. WorkoutSummary partner beat (with cheer inline).
-3. Notification beats (pending decision 2, inside the budget).
+3. The two notification beats, inside the budget.
 4. Invariant tests: signals stay derived-only (no raw metric ever crosses the
    pair boundary — extend the existing partner sync tests), suppression
-   freeze, cheer once-per-day.
+   freeze, cheer once-per-day, budget compliance.
