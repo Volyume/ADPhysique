@@ -1,3 +1,7 @@
+> **▶ NEXT SESSION STARTS HERE:** read
+> `docs/deep-audit-2026-06-12/_BUILD-STATUS-AND-RESUME.md` first — it is the
+> live "what's done / what's next" marker. This file is the strategy behind it.
+
 # Deep Audit 2026-06-12 — Synthesis & Dual-Market Roadmap
 
 Synthesises 12 agent reports (5 internal code audits `internal/int-0*`, 7 external
