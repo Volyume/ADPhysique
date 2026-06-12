@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import { SkeletonCard } from '../components/Skeleton';
+import Button from '../components/Button';
 import PressableCard from '../components/PressableCard';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import PeekMenu from '../components/PeekMenu';
@@ -552,6 +553,35 @@ export default function PlansScreen({ navigation }) {
               </View>
             </View>
           </View>
+        ) : tier !== 'pro' ? (
+          /* B2: the free no-plan state is a proper card, sitting where the
+             active plan card would be, so a new user never scrolls past
+             empty sections looking for a way in. Quiz first, library second. */
+          <View style={styles.noPlanCard}>
+            <View style={styles.noPlanCardHeader}>
+              <View style={styles.noPlanCardIcon}>
+                <Ionicons name="compass-outline" size={20} color={colors.primary} />
+              </View>
+              <Text style={styles.noPlanCardTitle}>No active plan yet</Text>
+            </View>
+            <Text style={styles.noPlanCardBody}>
+              Answer three quick questions and we'll set you up with a starter plan,
+              or browse the library and pick your own.
+            </Text>
+            <View style={styles.noPlanCardActions}>
+              <Button
+                title="Find my plan"
+                onPress={() => navigation.navigate('FreeStarter')}
+                accessibilityLabel="Answer three quick questions to find your plan"
+              />
+              <Button
+                title="Browse the library"
+                variant="secondary"
+                onPress={() => navigation.navigate('PlanLibrary')}
+                accessibilityLabel="Browse the plan library"
+              />
+            </View>
+          </View>
         ) : (
           <View style={styles.noActivePlanRow}>
             <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
@@ -820,6 +850,21 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   noActivePlanText: { flex: 1, fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 20 },
+
+  // B2: free no-plan card. The on-ramp sits where the active plan would be.
+  noPlanCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251), gap: spacing.md,
+  },
+  noPlanCardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  noPlanCardIcon: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
+  },
+  noPlanCardTitle: { flex: 1, ...type.bodyStrong, color: colors.textPrimary },
+  noPlanCardBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  noPlanCardActions: { gap: spacing.sm },
 
   activePlanCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
