@@ -35,6 +35,7 @@ export const CATEGORY = Object.freeze({
   TRIAL_DAY3: 'trial_day3', // COMP-023
   WINBACK: 'winback', // COMP-025-A
   PARTNER_CHEER: 'partner_cheer', // NEW-002
+  CHECKIN_MISSED: 'checkin_missed', // OPP-C03 ghost prevention
 });
 
 /**
@@ -72,6 +73,10 @@ export const CATEGORY_CHANNELS = Object.freeze({
   // in-app-only (handled at send time, §5) — pushing at a flagged user is the
   // harm pattern, exactly as ED_PATTERN_LOCKOUT/FFM_FLOOR_HOLD.
   [CATEGORY.PARTNER_CHEER]: [CHANNEL.PUSH, CHANNEL.IN_APP], // NEW-002
+  // OPP-C03: the missed check-in follow-ups. Push only; ED-flag
+  // suppression and the never-shame copy rule live in the scheduler
+  // (scheduleMissedCheckinFollowups) and handler.
+  [CATEGORY.CHECKIN_MISSED]: [CHANNEL.PUSH],
 });
 
 /**
@@ -101,6 +106,7 @@ export function categoryForDataType(type) {
     case 'trial_day3': return CATEGORY.TRIAL_DAY3;
     case 'winback': return CATEGORY.WINBACK;
     case 'partner_cheer': return CATEGORY.PARTNER_CHEER;
+    case 'checkin_missed': return CATEGORY.CHECKIN_MISSED;
     case 'subscription_payment_failure': return CATEGORY.SUBSCRIPTION_PAYMENT_FAILURE;
     case 'subscription_expiring': return CATEGORY.SUBSCRIPTION_EXPIRING;
     case 'weekly_coach_ready': return CATEGORY.WEEKLY_COACH_READY;

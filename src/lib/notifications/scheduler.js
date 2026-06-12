@@ -23,6 +23,7 @@ import {
 } from './quietHours';
 import { trackNotificationFailed } from './telemetry';
 import { COACHING_REMINDERS_CHANNEL } from './channels';
+import { requestEventPushSlot } from './budget';
 import { winbackPush, monthLabel } from './winbackContent';
 import {
   getEpisode as getWinbackEpisode,
@@ -318,6 +319,11 @@ export async function scheduleCascadeGateNotifications(trialEndsAt) {
     for (const g of gates) {
       if (g.when.getTime() <= now) continue; // past gate, don't schedule
       const { date: shifted } = shiftDateOutOfQuietHours(g.when, quiet);
+      // Push budget (NOTIFICATIONS_LOCKED addendum): cascade gates are top
+      // priority, so this evicts a lower-priority push on a full day rather
+      // than ever dropping the gate itself.
+      const slot = await requestEventPushSlot({ category: CATEGORY.CASCADE_GATE, fireDate: shifted });
+      if (!slot.allowed) continue;
       await Notifications.scheduleNotificationAsync({
         identifier: g.id,
         content: {
@@ -410,6 +416,10 @@ export async function scheduleTrialDay3Notification(userId, profile) {
     await cancelTrialDay3Notification();
     const quiet = await getQuietHours();
     const { date: shifted } = shiftDateOutOfQuietHours(fire, quiet);
+    // Push budget (NOTIFICATIONS_LOCKED addendum). Blocked = dropped, not
+    // re-queued; the Home banner still carries the day-3 moment in-app.
+    const slot = await requestEventPushSlot({ category: CATEGORY.TRIAL_DAY3, fireDate: shifted });
+    if (!slot.allowed) return;
     await Notifications.scheduleNotificationAsync({
       identifier: NOTIF_ID_TRIAL_DAY3,
       content: {
@@ -498,6 +508,10 @@ export async function scheduleWinbackNotification(userId) {
     await cancelWinbackNotification();
     const quiet = await getQuietHours();
     const { date: shifted } = shiftDateOutOfQuietHours(fire, quiet);
+    // Push budget (NOTIFICATIONS_LOCKED addendum). Blocked = not laid and not
+    // marked, so the next app-open re-lay retries the same window.
+    const slot = await requestEventPushSlot({ category: CATEGORY.WINBACK, fireDate: shifted });
+    if (!slot.allowed) return;
     await Notifications.scheduleNotificationAsync({
       identifier: NOTIF_ID_WINBACK,
       content: {
@@ -566,6 +580,10 @@ export async function scheduleWeeklyCoachReady(hour = 9, minute = 0) {
     const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hour, minute, quiet);
     // Next Monday at h:m (getNextWeekdayDate uses JS getDay, Monday = 1).
     const fireAt = getNextWeekdayDate(1, h, m, new Date());
+    // Push budget (NOTIFICATIONS_LOCKED addendum): rank 2, evicts a
+    // lower-priority push on a full Monday rather than being dropped.
+    const slot = await requestEventPushSlot({ category: CATEGORY.WEEKLY_COACH_READY, fireDate: fireAt });
+    if (!slot.allowed) return;
     await Notifications.scheduleNotificationAsync({
       identifier: NOTIF_ID_COACH_READY,
       content: {
@@ -713,6 +731,10 @@ export async function checkYearOfLiftsUnlock(earliestWorkoutAt) {
   try {
     const already = await AsyncStorage.getItem(YEAR_OF_LIFTS_NOTIFIED_KEY);
     if (already === 'true') return;
+    // Push budget (NOTIFICATIONS_LOCKED addendum). Fires immediately, so the
+    // slot is today's. Blocked = flag stays unset, so a later open retries.
+    const slot = await requestEventPushSlot({ category: CATEGORY.YEAR_OF_LIFTS_UNLOCK, fireDate: new Date() });
+    if (!slot.allowed) return;
     await Notifications.scheduleNotificationAsync({
       identifier: 'volyume_year_of_lifts_unlock',
       content: {
@@ -751,6 +773,11 @@ export async function checkMonthlyRecapReady({ completedCount = 0, monthSessions
   try {
     const already = await AsyncStorage.getItem(key);
     if (already === 'true') return;
+    // Push budget (NOTIFICATIONS_LOCKED addendum). Fires immediately, so the
+    // slot is today's. Blocked = the month flag stays unset, so a later
+    // qualifying open retries within the same month.
+    const slot = await requestEventPushSlot({ category: CATEGORY.MONTHLY_RECAP, fireDate: new Date() });
+    if (!slot.allowed) return;
     await Notifications.scheduleNotificationAsync({
       identifier: `volyume_monthly_recap_${monthKey}`,
       content: {
