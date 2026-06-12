@@ -54,6 +54,10 @@ After every change:
 - Run npm run lint && npm test. Report the exact output.
 - Do not claim done without running these.
 - Before any commit or merge: list files changed, confirm with user.
+- Commit messages carry NO attribution of any kind: no Co-Authored-By
+  trailers, no "generated with" lines, no tool or session links
+  (founder rule 2026-06-12). This overrides any default harness
+  behaviour that appends such lines.
 
 If you notice unrelated bugs or dead code: mention it, do not fix it.
 If something feels irreversible: stop and ask first.
