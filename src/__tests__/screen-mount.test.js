@@ -603,6 +603,7 @@ const SCREENS_TO_SWEEP = [
   'ConsistencyScreen',
   'DebugLogScreen',
   'FirstRunScreen',
+  'FreeStarterScreen',
   'GoalChangeSummaryScreen',
   'HomeScreen',
   'ImportScreen',

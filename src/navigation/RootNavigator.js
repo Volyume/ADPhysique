@@ -64,6 +64,7 @@ import ManualBuilderScreen from '../screens/ManualBuilderScreen';
 import NutritionTargetsScreen from '../screens/NutritionTargetsScreen';
 import PlanLibraryScreen from '../screens/PlanLibraryScreen';
 import FirstRunScreen from '../screens/FirstRunScreen';
+import FreeStarterScreen from '../screens/FreeStarterScreen';
 import Article9ConsentScreen from '../screens/Article9ConsentScreen';
 import WeeklyCheckInScreen from '../screens/WeeklyCheckInScreen';
 import CoachOutputScreen from '../screens/CoachOutputScreen';
@@ -294,6 +295,8 @@ function HomeStack({ navigation }) {
           keeps the modal in this stack so saving returns to Train, not the Diary. */}
       <Stack.Screen name="LogCardio" component={GatedLogCardio} options={{ headerShown: false, presentation: 'modal' }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
+      {/* B2: the free starter micro-quiz, reached from the no-plan card. */}
+      <Stack.Screen name="FreeStarter" component={FreeStarterScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
@@ -315,6 +318,8 @@ function PlansStack({ navigation }) {
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ title: 'Plan Library' }} />
       <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ title: 'Training Blocks' }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
+      {/* B2: the free starter micro-quiz, reached from the no-plan card. */}
+      <Stack.Screen name="FreeStarter" component={FreeStarterScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
@@ -455,6 +460,11 @@ function FirstRunStack() {
   return (
     <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="FirstRunBranch" component={FirstRunScreen} />
+      {/* B2: free guided on-ramp (founder decision 4a). Three plain questions
+          straight after the name screen install + activate a difficulty-0
+          starter plan, so the new free user lands on Home with today's
+          session already answered. Skipping completes first run as before. */}
+      <Stack.Screen name="FreeStarter" component={FreeStarterScreen} />
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: true, title: 'Plan Library' }} />
       <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: true, title: 'Plan' }} />
       <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={heroZoomTransition} />
