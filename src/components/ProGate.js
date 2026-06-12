@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, Modal, StyleSheet, Pressable, SafeAreaView,
+  View, Text, TouchableOpacity, Modal, StyleSheet, Pressable, SafeAreaView, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
+import TodaysPlateTeaser from './food/TodaysPlateTeaser';
 
 /**
  * ProGate wraps any content that requires a Pro tier.
@@ -89,9 +90,14 @@ export default function ProGate({ children, feature = 'This feature', style }) {
  */
 export function ProLocked({ feature = 'This' }) {
   const navigation = useNavigation();
+  // Show-then-sell: on the food-diary lock, free users get a read-only
+  // example day above the upgrade ask (founder decision #6). It exposes no
+  // Pro action, only the value. Other Pro locks keep the plain held-seat.
+  const showPlateTeaser = feature === 'Food diary';
   return (
     <SafeAreaView style={styles.lockedSafe}>
-      <View style={styles.lockedInner}>
+      <ScrollView contentContainerStyle={styles.lockedScroll} showsVerticalScrollIndicator={false}>
+        {showPlateTeaser ? <TodaysPlateTeaser /> : null}
         <View style={styles.lockedIcon}>
           <Ionicons name="lock-closed" size={28} color={colors.primary} />
         </View>
@@ -115,7 +121,7 @@ export function ProLocked({ feature = 'This' }) {
         <TouchableOpacity style={styles.lockedBack} onPress={() => navigation.goBack()}>
           <Text style={styles.lockedBackText}>Not now</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -193,8 +199,8 @@ const styles = StyleSheet.create({
   dismissText: { fontSize: fontSize.sm, color: colors.textMuted },
 
   lockedSafe: { flex: 1, backgroundColor: colors.background },
-  lockedInner: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
+  lockedScroll: {
+    flexGrow: 1, alignItems: 'center', justifyContent: 'center',
     padding: spacing.xl, gap: spacing.md,
   },
   lockedIcon: {
