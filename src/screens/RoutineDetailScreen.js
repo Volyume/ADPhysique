@@ -32,20 +32,15 @@ function computeMuscleCoverage(exercises) {
     .map(([muscle, count]) => ({ muscle, count }));
 }
 
+// Factual chips only — NO balance warnings here (founder device-walk
+// 2026-06-12). A split day is supposed to be "unbalanced": the old
+// day-level heuristic told every generated Back + Delts day it had "no
+// hamstring work" and a Chest + Arms day it had "no pulling work" -
+// criticising the app's own plans with week-level logic applied to one
+// day. Balance is the generator's job across the WEEK; authoring-time
+// feedback lives in the manual builder.
 function MuscleTagRow({ exercises }) {
   const coverage = computeMuscleCoverage(exercises);
-
-  // Warning logic: check whether back (pulling) and hamstrings are absent
-  const muscleKeys = new Set(coverage.map(c => c.muscle));
-  const noBack = !muscleKeys.has('back');
-  const noHamstrings = !muscleKeys.has('hamstrings');
-
-  let warning = null;
-  if (noBack && noHamstrings) {
-    warning = 'No pulling work. Consider adding a row or pull variation.';
-  } else if (noHamstrings) {
-    warning = 'No hamstring work. Consider adding an RDL or leg curl.';
-  }
 
   if (coverage.length === 0) return null;
 
@@ -80,12 +75,6 @@ function MuscleTagRow({ exercises }) {
           );
         })}
       </ScrollView>
-      {warning ? (
-        <View style={tagStyles.warningRow}>
-          <Ionicons name="alert-circle-outline" size={13} color={colors.warning} style={tagStyles.warningIcon} />
-          <Text style={tagStyles.warningText}>{warning}</Text>
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -823,20 +812,5 @@ const tagStyles = StyleSheet.create({
   },
   chipTextHigh: {
     color: colors.primary,
-  },
-  warningRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  warningIcon: {
-    marginTop: 1,
-  },
-  warningText: {
-    fontSize: fontSize.xs,
-    color: colors.warning,
-    flex: 1,
-    lineHeight: 16,
   },
 });
