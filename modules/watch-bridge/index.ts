@@ -55,7 +55,13 @@ try {
   native = null;
 }
 
-const emitter = native ? new EventEmitter(native) : null;
+// Typed event map: without it expo-modules-core's EventEmitter defaults to
+// Record<never, never> and addListener rejects every event name (TS2345).
+type WatchBridgeEvents = {
+  onWatchEvent: (e: WatchEvent) => void;
+};
+
+const emitter = native ? new EventEmitter<WatchBridgeEvents>(native) : null;
 
 export function isSupported(): boolean {
   try { return !!native && native.isSupported(); } catch (_) { return false; }
