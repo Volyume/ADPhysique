@@ -28,6 +28,8 @@ import {
 // Auth screens
 import LoginScreen from '../screens/LoginScreen';
 import WelcomeScreen from '../screens/WelcomeScreen';
+import QuizScreen from '../screens/QuizScreen';
+import PlanPreviewScreen from '../screens/PlanPreviewScreen';
 
 // Main screens
 import HomeScreen from '../screens/HomeScreen';
@@ -440,6 +442,10 @@ function WelcomeStack() {
   return (
     <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
+      {/* COMP-030: quiz-first pre-account screens. Registered always (harmless);
+          only reached when ONBOARDING_QUIZ_FIRST is on and the user picks Pro. */}
+      <Stack.Screen name="QuizTraining" component={QuizScreen} />
+      <Stack.Screen name="PlanPreview" component={PlanPreviewScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
     </Stack.Navigator>
   );

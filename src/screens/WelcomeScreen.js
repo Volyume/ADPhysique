@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
+import { ONBOARDING_QUIZ_FIRST } from '../lib/onboarding/quizFlow';
 
 const HERO = require('../../assets/volyume-wordmark.png');
 const HERO_ASPECT = 1032 / 277;
@@ -52,6 +53,13 @@ export default function WelcomeScreen({ navigation }) {
   // LoginScreen.newAccountSetup (Pro) or the same flow defaulting to
   // Free if the user doesn't enable Pro.
   function chooseTier(tier) {
+    // COMP-030: when quiz-first is on, the Pro CTA opens the pre-account quiz
+    // (the plan takes shape before the account wall). Free path is unchanged,
+    // and when the flag is off both CTAs route straight to sign-up as before.
+    if (tier === 'pro' && ONBOARDING_QUIZ_FIRST) {
+      navigation.navigate('QuizTraining');
+      return;
+    }
     navigation.navigate('Login', { intent: tier === 'pro' ? 'pro_signup' : 'free_signup' });
   }
 

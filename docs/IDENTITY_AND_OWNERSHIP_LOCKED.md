@@ -280,3 +280,23 @@ Why this is compliant with the four locked decisions:
   it would need a tracked migration); it is now simply never written.
   It stays on the `WIPE_DIRECT_TABLES` and `diagnoseSyncConflicts`
   lists so a user-switch still clears it.
+
+---
+
+## COMP-030 addendum (2026-06-12) — quiz-first onboarding, behind a flag
+
+Variant B of COMP-030 (quiz-first onboarding) ships behind a local config flag
+`ONBOARDING_QUIZ_FIRST` (`src/lib/onboarding/quizFlow.js`), **default OFF**, so
+the account-first behaviour decision 1 describes is byte-unchanged in production
+until the founder flips it.
+
+Reconciliation with decision 1 (no anonymous identity): the flag, when on,
+inserts a pre-account quiz before the account wall, but it creates **no
+identity, no uid, no row, and no persisted key** — the quiz answers live ONLY in
+in-memory store state (`onboardingQuiz`, never AsyncStorage/SQLite, never
+transmitted), and account creation still precedes the first persisted row and
+any server contact. Both Welcome CTAs still lead to sign-up; on the Pro path the
+user merely expresses preferences one screen earlier. The "no sign-in-skip path"
+anti-pattern is intact: there is still no way to reach the app without an
+account. Founder to confirm this reading at PR review (per the 2026-06-11 "DPO
+is a red herring — normal PR bar" instruction).

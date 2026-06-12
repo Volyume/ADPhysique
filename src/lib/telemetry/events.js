@@ -165,6 +165,14 @@ export const TELEMETRY_EVENTS = Object.freeze([
   // until that watch-side tag lands (the allow-list carries it ready).
   { name: 'watch_replay_recovered',          deferred: true,  panel: 1,
     deferralReason: 'needs the native transferUserInfo channel to tag recovered events' },
+
+  // COMP-030: one consolidated event emitted on account_created carrying the
+  // pre-account quiz step timings + variant flag (pre-account events cannot
+  // reach the server — the RPC requires auth.uid()). Deferred until quiz-first
+  // is enabled (ONBOARDING_QUIZ_FIRST) and the emitter is wired at
+  // account_created; a server allow-list migration lands with that wiring.
+  { name: 'onboarding_quiz_completed',       deferred: true,  panel: 1,
+    deferralReason: 'emitted at account_created only when ONBOARDING_QUIZ_FIRST is on; wiring + server allow-list land together' },
 ]);
 
 /**
