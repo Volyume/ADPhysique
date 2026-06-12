@@ -85,11 +85,19 @@ COMP-025-B), **DPO PROCEED, draft for review** (COMP-030 + NEW-002), and **build
 the native** (COMP-019 widgets + COMP-020 watch). NEW-001 waits on founder-
 sourced media assets only.
 
-**NEXT SESSION: execute `_GREEN-LIT-QUEUE.md`** — six approved, scoped features,
-one tested/reviewable commit each (don't batch; two touch live billing, two
-create new PII, two are blind-native verified via CI build). Suggested order:
-COMP-007 → COMP-025-B → NEW-002 (after moving COMP-018 streak to a synced table)
-→ COMP-030 → COMP-019 widgets → COMP-020 watch.
+**`_GREEN-LIT-QUEUE.md` progress (session 7): COMP-007 + COMP-025-B SHIPPED**
+(both billing items). **Four remain, all unblocked + scoped** — the heaviest:
+- **NEW-002 training partners** (new PII: tables + RLS + DPO note for review;
+  move COMP-018 streak to a synced table first). Pure invite/partnership state
+  machine is testable; tables/RLS need founder review before merge.
+- **COMP-030 quiz-first onboarding** (new PII: a quiz profile + locked-doc
+  amendments for review). Pure quiz scoring is testable; flow + persistence
+  after review.
+- **COMP-019 widget native targets** + **COMP-020 watch** — native, CI-build
+  verified (recipes in impl-COMP-019 / the watch module README).
+
+These were paced (not deferred): RLS/PII and unverifiable native code each want a
+focused, fully-tested build, not a long-context tail. Pick any and go.
 
 **⚠️ THE COMP-024 LESSON (read before COMP-026) — the concrete cost of "no
 shadow":** I promoted the cycle-robust trend into the coaching DECISIONS and the

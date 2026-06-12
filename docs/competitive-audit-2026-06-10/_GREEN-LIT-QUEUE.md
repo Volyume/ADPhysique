@@ -14,7 +14,16 @@ These are APPROVED and SCOPED. They are sequenced (not blocked) so each lands as
 its own tested, reviewable commit — live billing + new PII + blind-native each
 deserve a focused build, not a batch.
 
-## 1. COMP-007 — paywall annual-first flip + social proof  [BILLING: PROCEED given]
+## STATUS (session 7): 1 + 2 SHIPPED. 3-6 remain (unblocked, scoped).
+- ✅ **COMP-007 SHIPPED** — annual-first ordering live; social-proof block ships
+  dark (fill `src/screens/paywallExcerpts.js` from real Play reviews to light it).
+- ✅ **COMP-025-B SHIPPED (code)** — win-back offer preference, inert by fallback.
+  FOUNDER: create the win-back offer in Play Console tagged `winback` + verify on
+  the internal track; the iOS 18 StoreKit win-back sheet is a later slice.
+- ⏭ **3-6 below remain** — the heaviest items: two create new PII (DPO review),
+  two are native (CI-build verified). Each wants a focused, fully-tested build.
+
+## 1. COMP-007 — paywall annual-first flip + social proof  [SHIPPED]
 - Flip the paywall to present **annual as the default/recommended** option with a
   "save ~50%" badge (annualSavingsPct() already exists in catalogue.js).
 - Files: `PaywallScreen.js` / `ProUpgradeScreen.js` (ordering + emphasis),
@@ -24,7 +33,7 @@ deserve a focused build, not a batch.
   founder-supplied placeholder (was gated on "collect real reviews first").
 - Verify: mount tests + on-device look (visual).
 
-## 2. COMP-025-B — store win-back offers  [BILLING: PROCEED given]
+## 2. COMP-025-B — store win-back offers  [SHIPPED (code); founder: Console offer + verify]
 - Code half: surface the Billing-Library offer tag in `playBilling.js` + the
   win-back path (the local win-back copy already leaves the offer clause out by
   design until this lands).
