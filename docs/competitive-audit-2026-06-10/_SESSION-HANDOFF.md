@@ -18,8 +18,14 @@ shipped **COMP-004 door** (card on Progress + Diary; Home cell taps through to
 the trend) and **COMP-029 light theme code-complete** (onPrimary migration +
 light palette + WCAG contrast tests + Appearance row; default stays Dark). The
 COMP-029 native rebuild, on-device brand sign-off and manual sweep are founder
-steps. Next: COMP-019 Stage 2 widgets. See `_START-HERE-NEXT-SESSION.md`
-`⏩ RESTART HERE`.
+steps. Session 7 also shipped **COMP-024 decision-promotion** (trend-aware
+`robustTrackingEwma` now drives coaching decisions; full simulator green incl.
+bulk_aggressive) and **COMP-019 Stage 2** (#175 spike = GO; pure
+`widgets/snapshot.js` brains built; native shell = an EAS recipe in the
+blueprint). Baseline now **222 suites / 3454 tests**. The audit build-list is
+fully worked through; everything left is a founder/EAS/device action — see
+`_START-HERE-NEXT-SESSION.md`, `_MIGRATIONS-TO-APPLY.md`,
+`_COMP-029-LIGHT-SWEEP.md`.
 
 **Status note (2026-06-11, session 6):** **COMP-024 cycle-robust smoothing
 shipped LIVE** (founder dropped shadow mode for everything — see

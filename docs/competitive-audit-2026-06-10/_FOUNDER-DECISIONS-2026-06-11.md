@@ -754,9 +754,28 @@ pre-existing warnings, 221 suites / 3429 tests pass (3 skip)**.
   retune. No on-device surface needs eyes beyond the one card line.
 
 ### What remains from "do them all" (NOT built)
-COMP-019 Stage 2 widgets and the COMP-024 decision-promotion (after the clamp
-rework). Billing held throughout. **COMP-026, COMP-004 and COMP-029 (code) are
-DONE.**
+**Nothing code-only remains.** COMP-026, COMP-004, COMP-029 (code), COMP-024
+(decision-promotion) and COMP-019 Stage 2 (spike + JS snapshot brains) are all
+DONE. The leftovers are founder/EAS/device actions: the COMP-019 native widget
+shell, the COMP-029 native rebuild + on-device sweep, the server migrations, and
+the held billing/DPO/native/research gates. Billing held throughout.
+
+### Session 7 (cont.) — COMP-024 decision-promotion + COMP-019 Stage 2
+- **COMP-024 decision-promotion SHIPPED.** Founder deferred the clamp choice to
+  me ("do what the blueprint says, research, make the choice"). Chose the
+  trend-aware scale over the §12-rejected median-prefilter: new
+  `robustTrackingEwma` (Holt's level+trend + asymmetric robust clamp on the
+  residual-from-prediction, scaled by median-|residual| so a consistent trend
+  passes while lone outliers are clamped). Wired into the off-target DECISION
+  reads (onTarget/offTargetDirection); SAFETY untouched (plain EWMA for
+  rapid-loss/ED). Full simulator green incl. bulk_aggressive (the held
+  regression). Per founder: build + commit since green.
+- **COMP-019 Stage 2: #175 spike = GO** (watchOS bug, not a widget blocker;
+  @bacons/apple-targets v4.x builds widgets on SDK 54/EAS). Built the pure,
+  tested `src/lib/widgets/snapshot.js` (OTA brains, no PII, ED-suppressed
+  consistency). Native shell = a turnkey EAS recipe in the blueprint.
+- Founder prep artifacts added: `_MIGRATIONS-TO-APPLY.md` (072-080 apply
+  checklist) and `_COMP-029-LIGHT-SWEEP.md` (brand sign-off + ~60-screen sweep).
 
 ### Session 7 (cont.) — COMP-029 light theme SHIPPED (code-complete)
 Built live in 3 commits: Phase 0 (onPrimary token + the 124 ink-on-fill site

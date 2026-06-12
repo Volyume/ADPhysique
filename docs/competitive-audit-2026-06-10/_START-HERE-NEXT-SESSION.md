@@ -65,10 +65,23 @@ FOUNDER-DECISIONS §14):**
    hues (esp. the darkened amber ink `#8A5200` + derived `warning #6E6300`), and
    the manual ~60-screen sweep before public release. See impl-COMP-029's
    "SHIPPED (code-complete)" block.
-4. **COMP-019 Stage 2 widgets** — JS/config (native build on EAS; the
-   `@bacons/expo-apple-targets` issue-#175 spike still applies). **Next up.**
-5. **COMP-024 decision-promotion** (the held piece) — only if you first rework
-   the smoother so it tracks sustained trends (see the COMP-024 lesson).
+4. ~~**COMP-019 Stage 2 widgets**~~ — **SPIKE DONE + JS brains SHIPPED (session
+   7).** #175 is a watchOS bug, NOT a widget blocker → GO (Android-first). Built
+   `src/lib/widgets/snapshot.js` (pure, tested, OTA brains). **Remaining = the
+   native shell on EAS:** Swift/Kotlin targets + storage bridge/writer + app.json
+   plugins + App-ID/signing — captured as a turnkey recipe in impl-COMP-019
+   ("STAGE 2 — #175 SPIKE RESULT + BUILD RECIPE").
+5. ~~**COMP-024 decision-promotion**~~ — **DONE (session 7).** The held piece
+   shipped: a trend-aware `robustTrackingEwma` (Holt's + median-|residual| scale,
+   NOT the §12-rejected median-prefilter) now drives the off-target coaching
+   decisions; safety stays on the plain EWMA. Full simulator green incl.
+   bulk_aggressive (the regression that held it).
+
+**The audit build-list is now fully worked through.** Every remaining piece is a
+founder/EAS/device action, not code: the COMP-019 native shell, the COMP-029
+native rebuild + light sweep (`_COMP-029-LIGHT-SWEEP.md`), the server migrations
+(`_MIGRATIONS-TO-APPLY.md`), and the held gates (billing: COMP-007 / COMP-025-B;
+DPO: COMP-030 / NEW-002; native: COMP-020 watch; research/paused: NEW-001).
 
 **⚠️ THE COMP-024 LESSON (read before COMP-026) — the concrete cost of "no
 shadow":** I promoted the cycle-robust trend into the coaching DECISIONS and the
