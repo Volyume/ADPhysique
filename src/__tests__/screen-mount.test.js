@@ -1919,6 +1919,122 @@ describe('Fuzz: 20-tap chains across 10 seeds on every Pro screen', () => {
 // profile, so it stranded the user on Step 1 (Create your account). The
 // persisted store flag proOnboardingAccountCreated drives the resume now.
 
+// ─── MealPlanScreen: "Training today?" per-day control (rethink §3.2) ─────
+//
+// The engine + service are tested elsewhere; this pins the screen wiring:
+// the control renders on the day in view when a plan exists, and tapping
+// the other option calls answerTrainingTodayOnActivePlan with the day's
+// index and the chosen training flag. We monkey-patch the loaded service
+// module (the file's established pattern, jest.doMock + resetModules
+// breaks hooks held by react-test-renderer).
+
+describe('MealPlanScreen "Training today?" control', () => {
+  function findByLabel(tree, label) {
+    const out = [];
+    function visit(node) {
+      if (!node || typeof node === 'string' || typeof node === 'number') return;
+      if (node.props?.accessibilityLabel === label && node.props?.onPress) out.push(node);
+      const c = node.children;
+      if (Array.isArray(c)) c.forEach(visit); else if (c && typeof c === 'object') visit(c);
+    }
+    const root = tree.toJSON();
+    if (Array.isArray(root)) root.forEach(visit); else visit(root);
+    return out;
+  }
+
+  // A minimal two-day plan: Day 1 training, Day 2 rest. The screen opens
+  // on Day 1 (dayIndex 0), so the control should pre-select "Training".
+  function makePlanRecord() {
+    const mkDay = (variant) => ({
+      variant,
+      slots: [{ slot: 'meal_1', name: 'Meal 1', totals: { kcal: 600, protein: 50, carbs: 60, fat: 15 } }],
+      totals: { kcal: 600, protein: 50, carbs: 60, fat: 15 },
+      withinTolerance: true,
+    });
+    return {
+      id: 'plan-1',
+      plan: {
+        kind: 'week',
+        schedule: ['training', 'rest'],
+        days: [mkDay('training'), mkDay('rest')],
+        variants: { training: { kcal: 2600 }, rest: { kcal: 2400 } },
+        prefs: { diet: 'omnivore', mealsPerDay: 4 },
+        targetSnapshot: { targetKcal: 2600, kcalMin: 2340, kcalMax: 2860, proteinG: 180 },
+      },
+    };
+  }
+
+  test('renders on the current day with a plan, and tapping Rest calls the service', async () => {
+    useAppStore.setState(STATE_VARIANTS[0].state);
+    const service = require('../lib/food/mealPlanService');
+    const orig = {
+      loadActiveMealPlan: service.loadActiveMealPlan,
+      answerTrainingTodayOnActivePlan: service.answerTrainingTodayOnActivePlan,
+    };
+    const record = makePlanRecord();
+    service.loadActiveMealPlan = () => Promise.resolve(record);
+    // Return a plan with day 0 flipped to rest so state updates cleanly.
+    const restPlan = {
+      ...record.plan,
+      schedule: ['rest', 'rest'],
+      days: [{ ...record.plan.days[0], variant: 'rest' }, record.plan.days[1]],
+    };
+    const answerSpy = jest.fn(() => Promise.resolve({ plan: restPlan, changed: true }));
+    service.answerTrainingTodayOnActivePlan = answerSpy;
+
+    let tree = null;
+    try {
+      const Screen = require('../screens/MealPlanScreen').default;
+      const { tree: t, errors } = await mountScreen(Screen);
+      tree = t;
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+
+      // Both options present; the day in view (Day 1) pre-selects Training.
+      const training = findByLabel(tree, 'Training today?: Training');
+      const rest = findByLabel(tree, 'Training today?: Rest');
+      expect(training.length).toBe(1);
+      expect(rest.length).toBe(1);
+      // Pre-selected Training is disabled (the selected radio); Rest is live.
+      expect(training[0].props.accessibilityState.selected).toBe(true);
+      expect(rest[0].props.accessibilityState.selected).toBe(false);
+
+      // Tapping Rest re-variants this day via the service: dayIndex 0,
+      // training: false.
+      await TestRenderer.act(async () => {
+        rest[0].props.onPress?.();
+        for (let i = 0; i < 5; i++) await Promise.resolve();
+      });
+      expect(answerSpy).toHaveBeenCalledTimes(1);
+      const [, args] = answerSpy.mock.calls[0];
+      expect(args).toEqual({ dayIndex: 0, training: false });
+    } finally {
+      unmountTree(tree);
+      Object.assign(service, orig);
+    }
+  });
+
+  test('does not render the control when there is no active plan', async () => {
+    useAppStore.setState(STATE_VARIANTS[0].state);
+    const service = require('../lib/food/mealPlanService');
+    const orig = service.loadActiveMealPlan;
+    service.loadActiveMealPlan = () => Promise.resolve(null);
+    let tree = null;
+    try {
+      const Screen = require('../screens/MealPlanScreen').default;
+      const { tree: t, errors } = await mountScreen(Screen);
+      tree = t;
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+      expect(findByLabel(tree, 'Training today?: Training')).toEqual([]);
+      expect(findByLabel(tree, 'Training today?: Rest')).toEqual([]);
+    } finally {
+      unmountTree(tree);
+      service.loadActiveMealPlan = orig;
+    }
+  });
+});
+
 describe('ProOnboarding resumes past Step 1 after the consent detour', () => {
   function collectText(node, out = []) {
     if (node == null) return out;

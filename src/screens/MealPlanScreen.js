@@ -32,6 +32,7 @@ import {
   generateAndSaveMealPlan,
   regenerateActiveMealPlan,
   applyPlanDayToDiary,
+  answerTrainingTodayOnActivePlan,
   swapMealInPlan,
   swapFoodInMeal,
 } from '../lib/food/mealPlanService';
@@ -160,6 +161,25 @@ export default function MealPlanScreen({ navigation }) {
       setBusy(false);
     }
   }, [user?.id, day, busy, toast]);
+
+  // "Training today?" on the day in view (rethink §3.2): the day's
+  // training/rest variant follows the user's answer, never an asserted
+  // weekly spread. Re-variants only this day through the service and
+  // updates state from the returned plan. A no-op answer (already that
+  // variant) and the no-plan case both leave the screen as-is.
+  const handleAnswerTraining = useCallback(async (training) => {
+    if (!user?.id || !record || busy) return;
+    setBusy(true);
+    try {
+      const res = await answerTrainingTodayOnActivePlan(user.id, { dayIndex, training });
+      if (res.error === 'no_plan' || !res.plan) return;
+      setRecord({ ...record, plan: res.plan });
+    } catch (_) {
+      toast.show("Couldn't update the day. Try again.", { variant: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  }, [user?.id, record, dayIndex, busy, toast]);
 
   const handleSwapMeal = useCallback(async (slotKey) => {
     if (!user?.id || !record || !day || busy) return;
@@ -340,6 +360,19 @@ export default function MealPlanScreen({ navigation }) {
               </Text>
             ) : null}
           </View>
+          {/* Training today? — per-day input (rethink §3.2). Defaults from
+              the plan's current variant for this day; always overridable.
+              Changing it re-variants only this day. */}
+          <PrefRow
+            label="Training today?"
+            options={[
+              { value: true, label: 'Training' },
+              { value: false, label: 'Rest' },
+            ]}
+            value={day?.variant === 'training'}
+            onSelect={(v) => handleAnswerTraining(v)}
+            busy={busy}
+          />
           {cycleOn ? (
             <Text style={styles.cycleNote}>
               Training days carry more carbs; rest days fewer. Protein never moves.
