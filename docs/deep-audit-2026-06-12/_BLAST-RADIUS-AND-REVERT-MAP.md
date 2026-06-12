@@ -64,6 +64,15 @@ degraded-method notices; competitive claims withdrawn.
 - The founder's own device-walks remain the only trusted quality signal
   until the research re-runs.
 
+## CORRECTION (16:23): the window is WIDER than first stated
+The competitive-audit-2026-06-10 folder (13 research docs, exec summary,
+the 2026-06-11 founder decisions, the green-lit queue) is the SAME class:
+container-produced, no disclosures, no citation audit. The failing window
+is 2026-06-10 -> 2026-06-12. Last verified research: 2026-06-08 (voice,
+multi-platform + citation-audited). See _PROVENANCE-WARNING.md in that
+folder. Everything green-lit from the 06-10 audit needs the same triage
+as Category C above.
+
 ## How far back the failing goes (forensic pass, 16:20)
 - **Tainted window: the deep-audit cycle only (~last 48h).** The external
   corpus (ext-01..07) was committed 2026-06-12, produced in this container,
