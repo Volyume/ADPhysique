@@ -32,15 +32,28 @@ import {
   regenerateActiveMealPlan,
   applyPlanDayToDiary,
   swapMealInPlan,
+  swapFoodInMeal,
 } from '../lib/food/mealPlanService';
 import { updateMealPlan } from '../lib/food/db';
 
-const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+// The week plan is an abstract Day 1..7 (training/rest spread), NOT calendar-
+// anchored, so label the picker by day number rather than implying weekdays.
+const DAY_LABELS = ['1', '2', '3', '4', '5', '6', '7'];
 
 function planSlotLabel(slotKey) {
   if (slotKey === 'pre_workout') return 'Pre-workout';
   if (slotKey === 'post_workout') return 'Post-workout';
   return mealSlotLabel(slotKey);
+}
+
+// Re-total a day from its slots (same rounding as the assembler).
+function sumDayTotals(slots) {
+  return slots.reduce((a, s) => ({
+    kcal: a.kcal + (s.totals?.kcal || 0),
+    protein: Math.round((a.protein + (s.totals?.protein || 0)) * 10) / 10,
+    carbs: Math.round((a.carbs + (s.totals?.carbs || 0)) * 10) / 10,
+    fat: Math.round((a.fat + (s.totals?.fat || 0)) * 10) / 10,
+  }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
 }
 
 export default function MealPlanScreen({ navigation }) {
@@ -51,11 +64,9 @@ export default function MealPlanScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [record, setRecord] = useState(null); // { id, plan }
-  const [dayIndex, setDayIndex] = useState(() => {
-    // Monday-first index of today, matching the schedule layout.
-    const js = new Date().getDay(); // 0 = Sunday
-    return (js + 6) % 7;
-  });
+  // The schedule is an abstract Day 1..7 (not calendar-anchored), so start
+  // on Day 1 rather than implying "today" maps to a slot it doesn't own.
+  const [dayIndex, setDayIndex] = useState(0);
   const [expanded, setExpanded] = useState({}); // slotKey -> bool
 
   const load = useCallback(async () => {
@@ -130,13 +141,7 @@ export default function MealPlanScreen({ navigation }) {
       const newSlots = day.slots.map((s) => (s.slot === slotKey
         ? { ...res.replacement, slot: slotKey }
         : s));
-      const totals = newSlots.reduce((a, s) => ({
-        kcal: a.kcal + (s.totals?.kcal || 0),
-        protein: Math.round((a.protein + (s.totals?.protein || 0)) * 10) / 10,
-        carbs: Math.round((a.carbs + (s.totals?.carbs || 0)) * 10) / 10,
-        fat: Math.round((a.fat + (s.totals?.fat || 0)) * 10) / 10,
-      }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
-      const newDay = { ...day, slots: newSlots, totals };
+      const newDay = { ...day, slots: newSlots, totals: sumDayTotals(newSlots) };
       const days = plan.days.map((d, i) => (i === dayIndex ? newDay : d));
       const nextPlan = { ...plan, days, lastEditType: 'rotation' };
       await updateMealPlan(user.id, record.id, nextPlan);
@@ -144,6 +149,38 @@ export default function MealPlanScreen({ navigation }) {
       toast.show(`Swapped for ${res.replacement.name}.`, { variant: 'success' });
     } catch (_) {
       toast.show("Couldn't swap that one. Try again.", { variant: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  }, [user?.id, record, plan, day, dayIndex, busy, toast]);
+
+  // Swap one food inside a plate for a same-role alternative at the grams
+  // that hold the role macro (the "don't like the rice" path, R1/R2).
+  const handleSwapFood = useCallback(async (slotKey, foodKey) => {
+    if (!user?.id || !record || !day || busy) return;
+    const slot = day.slots.find((s) => s.slot === slotKey);
+    if (!slot?.components) {
+      toast.show('This meal cannot be part-swapped.', { variant: 'info' });
+      return;
+    }
+    const res = swapFoodInMeal({ components: slot.components, foodKeyOut: foodKey, prefs: plan.prefs });
+    if (!res) {
+      toast.show('No close match for that food with your preferences.', { variant: 'info' });
+      return;
+    }
+    setBusy(true);
+    try {
+      const newSlot = { ...slot, components: res.components, items: res.items, totals: res.totals };
+      const newSlots = day.slots.map((s) => (s.slot === slotKey ? newSlot : s));
+      const newDay = { ...day, slots: newSlots, totals: sumDayTotals(newSlots) };
+      const days = plan.days.map((d, i) => (i === dayIndex ? newDay : d));
+      const nextPlan = { ...plan, days, lastEditType: 'rotation' };
+      await updateMealPlan(user.id, record.id, nextPlan);
+      setRecord({ ...record, plan: nextPlan });
+      const { swap } = res;
+      toast.show(`${swap.gramsIn} g ${swap.foodInName} for ${swap.foodOutName}. Macros held.`, { variant: 'success' });
+    } catch (_) {
+      toast.show("Couldn't swap that food. Try again.", { variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -189,7 +226,7 @@ export default function MealPlanScreen({ navigation }) {
                   accessibilityState={{ selected }}
                   accessibilityLabel={`Day ${i + 1}, ${variant === 'training' ? 'training day' : 'rest day'}`}
                 >
-                  <Text style={[styles.dayLetter, selected && styles.dayLetterOn]}>{DAY_LETTERS[i]}</Text>
+                  <Text style={[styles.dayLetter, selected && styles.dayLetterOn]}>{DAY_LABELS[i]}</Text>
                   <View style={[styles.dayDot, variant === 'training' && styles.dayDotTrain]} />
                 </TouchableOpacity>
               );
@@ -234,11 +271,24 @@ export default function MealPlanScreen({ navigation }) {
                 </TouchableOpacity>
                 {open ? (
                   <View style={styles.mealDetail}>
-                    {(slot.items || []).map((it, i) => (
-                      <Text key={`${it.foodRef}-${i}`} style={styles.itemLine}>
-                        {`${it.quantityG} g ${it.name}`}
-                      </Text>
-                    ))}
+                    {(slot.items || []).map((it, i) => {
+                      const foodKey = (it.foodRef || '').startsWith('curated:') ? it.foodRef.slice(8) : null;
+                      const canSwap = !!foodKey && !!slot.components;
+                      return (
+                        <TouchableOpacity
+                          key={`${it.foodRef}-${i}`}
+                          style={styles.itemRow}
+                          disabled={!canSwap || busy}
+                          onPress={() => handleSwapFood(slot.slot, foodKey)}
+                          hitSlop={hitSlop}
+                          accessibilityRole={canSwap ? 'button' : 'text'}
+                          accessibilityLabel={canSwap ? `${it.quantityG} grams ${it.name}. Tap to swap for an alternative.` : `${it.quantityG} grams ${it.name}`}
+                        >
+                          <Text style={styles.itemLine}>{`${it.quantityG} g ${it.name}`}</Text>
+                          {canSwap ? <Ionicons name="swap-horizontal-outline" size={13} color={colors.textSecondary} /> : null}
+                        </TouchableOpacity>
+                      );
+                    })}
                     <Text style={styles.macroLine}>
                       {`P ${slot.totals.protein} g · C ${slot.totals.carbs} g · F ${slot.totals.fat} g`}
                     </Text>
@@ -307,9 +357,10 @@ const styles = StyleSheet.create({
   mealKcal: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
   mealName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
   mealDetail: { gap: 2, paddingTop: spacing.xs },
-  itemLine: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
+  itemRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 28, gap: spacing.sm },
+  itemLine: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'], flex: 1 },
   macroLine: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.xs, fontVariant: ['tabular-nums'] },
-  swapBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingVertical: 4 },
+  swapBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingVertical: spacing.sm, minHeight: 44 },
   swapText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   totalsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.xs },
   totalsLabel: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },

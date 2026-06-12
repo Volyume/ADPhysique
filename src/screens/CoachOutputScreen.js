@@ -790,6 +790,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   async function handleApplyCalories() {
     if (applyingKey || !user?.id || !output) return;
     if (isApplied(output, 'calories')) return;
+    setPlanEditNote(null); // clear any stale receipt before re-applying
     setApplyingKey('calories');
     try {
       const current = await getNutritionTargets(user.id);
@@ -814,7 +815,11 @@ export default function CoachOutputScreen({ navigation, route }) {
         const { change: planChange } = await applyCoachAdjustmentToActivePlan(user.id, { adjustmentKcal: change });
         const narration = buildPlanEditNarration(planChange, { register });
         setPlanEditNote(narration);
-      } catch (_) { /* off-plan or no edit: nothing to surface */ }
+      } catch (e) {
+        // Off-plan is the common, silent case; but a real persist failure
+        // should be observable rather than vanish.
+        logError('CoachOutputScreen.applyPlanEdit', e, { userId: user?.id });
+      }
     } catch (e) {
       logError('CoachOutputScreen.handleApplyCalories', e, { userId: user?.id });
     } finally {
