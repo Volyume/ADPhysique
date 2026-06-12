@@ -77,11 +77,19 @@ FOUNDER-DECISIONS §14):**
    decisions; safety stays on the plain EWMA. Full simulator green incl.
    bulk_aggressive (the regression that held it).
 
-**The audit build-list is now fully worked through.** Every remaining piece is a
-founder/EAS/device action, not code: the COMP-019 native shell, the COMP-029
-native rebuild + light sweep (`_COMP-029-LIGHT-SWEEP.md`), the server migrations
-(`_MIGRATIONS-TO-APPLY.md`), and the held gates (billing: COMP-007 / COMP-025-B;
-DPO: COMP-030 / NEW-002; native: COMP-020 watch; research/paused: NEW-001).
+**ALL GATES LIFTED (founder, session 7).** The founder corrected the build model
+— CI builds iOS+Android + auto-applies migrations on merge (see
+`_GREEN-LIT-QUEUE.md`), so native/EAS/migrations were never manual gates. The
+founder then explicitly green-lit the rest: **billing PROCEED** (COMP-007 +
+COMP-025-B), **DPO PROCEED, draft for review** (COMP-030 + NEW-002), and **build
+the native** (COMP-019 widgets + COMP-020 watch). NEW-001 waits on founder-
+sourced media assets only.
+
+**NEXT SESSION: execute `_GREEN-LIT-QUEUE.md`** — six approved, scoped features,
+one tested/reviewable commit each (don't batch; two touch live billing, two
+create new PII, two are blind-native verified via CI build). Suggested order:
+COMP-007 → COMP-025-B → NEW-002 (after moving COMP-018 streak to a synced table)
+→ COMP-030 → COMP-019 widgets → COMP-020 watch.
 
 **⚠️ THE COMP-024 LESSON (read before COMP-026) — the concrete cost of "no
 shadow":** I promoted the cycle-robust trend into the coaching DECISIONS and the
