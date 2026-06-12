@@ -508,9 +508,24 @@ function estimateWorkoutKcal({ durationMin, tonnageKg, bodyWeightKg }) {
  * the workout permission wasn't granted or the native module isn't
  * loaded.
  */
+/**
+ * COMP-020: when an Apple Watch session captured most of the workout, the WATCH
+ * saves the HKWorkout (real HR + energy) and the phone must NOT write a second,
+ * estimated-kcal duplicate. Rule: skip the phone write when the watch session
+ * ran for >= 50% of the workout's duration. Pure + tested.
+ */
+export function shouldSkipPhoneHealthWrite(workout) {
+  const total = (workout?.endedAt ?? 0) - (workout?.startedAt ?? 0);
+  if (!(total > 0)) return false;
+  const covered = Number(workout?.watchSessionMs) || 0;
+  return covered / total >= 0.5;
+}
+
 export async function writeWorkoutToHealth(workout) {
   if (!isHealthAvailable()) return false;
   if (!workout?.startedAt || !workout?.endedAt || workout.endedAt <= workout.startedAt) return false;
+  // The watch already saved this workout (real HR/energy) — don't duplicate it.
+  if (shouldSkipPhoneHealthWrite(workout)) return false;
   const status = await getHealthPermissionStatus(['workout']);
   if (status !== 'granted') return false;
 
