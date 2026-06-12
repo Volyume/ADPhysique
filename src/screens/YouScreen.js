@@ -21,7 +21,7 @@ import PressableCard from '../components/PressableCard';
 import { ProBadge } from '../components/ProGate';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { getAllWorkouts } from '../lib/database';
+import { getAllWorkouts, getOpenEdPatternFlag } from '../lib/database';
 
 function NavRow({ icon, label, sub, onPress }) {
   return (
@@ -43,6 +43,9 @@ export default function YouScreen({ navigation }) {
     user: s.user, userProfile: s.userProfile, tier: s.tier,
   })));
   const [sessions, setSessions] = useState(null);
+  // The supplement-guide row is hidden while an ED-pattern flag is open:
+  // supplement talk is suppressed entirely during a wellbeing flag.
+  const [edFlagOpen, setEdFlagOpen] = useState(false);
 
   useFocusEffect(useCallback(() => {
     let alive = true;
@@ -53,6 +56,9 @@ export default function YouScreen({ navigation }) {
           const completed = (ws || []).filter(w => !!(w.isCompleted ?? w.is_completed));
           setSessions(completed.length);
         })
+        .catch(() => {});
+      getOpenEdPatternFlag(user.id)
+        .then(flag => { if (alive) setEdFlagOpen(!!flag); })
         .catch(() => {});
     }
     return () => { alive = false; };
@@ -158,6 +164,14 @@ export default function YouScreen({ navigation }) {
             sub="The rules behind every change, and every hold. Every change has a reason. Every non-change has a reason too."
             onPress={() => navigation.navigate('Methodology', { source: 'you_tab' })}
           />
+          {!edFlagOpen ? (
+            <NavRow
+              icon="nutrition-outline"
+              label="Supplements, honestly"
+              sub="The short list with real evidence, and the longer list that is a waste of your money. We have nothing to sell you."
+              onPress={() => navigation.navigate('SupplementGuide')}
+            />
+          ) : null}
         </View>
 
         {/* Preferences */}
