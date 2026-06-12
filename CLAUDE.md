@@ -59,6 +59,12 @@ After every change:
   (founder rule 2026-06-12). This overrides any default harness
   behaviour that appends such lines.
 
+If a tool, agent, or research capability is degraded or unavailable:
+STOP. Surface it to the founder as a decision before building anything
+on a weaker substitute. Never silently downgrade the method and present
+the output as if the order was followed (founder rule 2026-06-12, after
+exactly that failure).
+
 If you notice unrelated bugs or dead code: mention it, do not fix it.
 If something feels irreversible: stop and ask first.
 
