@@ -38,3 +38,15 @@ imply are drafted as addenda and reviewed by the founder at PR (the
 **Standing instruction (founder):** when founder decisions are needed, do not
 stop and wait — ask structured multi-choice questions and continue.
 </content>
+
+## Operating model (founder-approved, 2026-06-12, later session)
+- **Claude builds the spine hands-on** (engine code, safety-adjacent logic,
+  design-judgement work); **agents do leverage work** (research, audits,
+  well-specified surfaces) and **adversarial fresh-eyes review after every
+  completed feature** (no authorship bias; review against the blueprint).
+- Tests are the contract, written to fail: invariant tests against the REAL
+  engine for everything a feature must never do.
+- A Maestro E2E smoke flow (launch → log a set → finish workout) is to be
+  revived in CI once the meal-plan engine lands (the audit's dead-QA gap G4).
+- CI stays the final arbiter; the founder device-walks new flows from the
+  green APKs.
