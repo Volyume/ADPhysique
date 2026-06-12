@@ -459,3 +459,50 @@ highest-value slice for ~20% of the budget.
 release notes/dashboard pages, docs.expo.dev, help.macrofactorapp.com.
 Fetched directly: EvanBacon/expo-apple-targets README, expo/expo docs source
 (raw GitHub). All accessed 2026-06-10.
+
+---
+
+## STAGE 2 — #175 SPIKE RESULT + BUILD RECIPE (session 7, 2026-06-11)
+
+**#175 go/no-go: GO.** The spike researched `EvanBacon/expo-apple-targets`
+issue #175 (web, 2026-06-11): it is a **watchOS** target-wiring bug (self-
+dependency, missing "Embed Watch Content" phase, stale `watch.app` refs) with a
+patch-package workaround — it affects **COMP-020 (the watch), NOT the widget**
+extension target (a different product type/code path). Widget extensions build
+on Expo SDK 54 (we are on 54.0.35) + EAS Build; there is an official
+`expo-apple-widget-example`. Caveats: the npm package is **`@bacons/apple-targets`
+v4.x** (not the repo name), codesigning is "tested mainly with one widget" and
+may need a manual signing-tab pass per target, and widgets need iOS 18 to appear.
+
+**Sequencing recommendation:** Android first (`react-native-android-widget`,
+mature, JSX→RemoteViews, no Kotlin), then iOS (`@bacons/apple-targets`); apply
+the #175 patch only when/if the watch target lands.
+
+### SHIPPED this session (code-only, verifiable)
+- **`src/lib/widgets/snapshot.js`** — the OTA "brains": pure `buildWidgetSnapshot`
+  ({ v, nextSession, consistency, computedAt }) + `emptyWidgetSnapshot`. No PII
+  (no weight/calories/macros — only a routine name + session counts); consistency
+  is suppressed under an open ED flag (COMP-018 rule). 8 fixtures. This is the
+  half the blueprint says must live in JS so content fixes ship OTA.
+
+### FOUNDER / EAS BUILD RECIPE (the native shell — cannot be built or verified in the cloud container)
+1. **Deps (approved §14):** `npm i react-native-android-widget @bacons/apple-targets`.
+2. **Storage bridge + writer:** add `writeWidgetSnapshot(userId)` that gathers
+   inputs from the existing reads (active plan + `@volyume_schedule_v1`,
+   `getCurrentMesocycleWeek` for the week-in-block chip, the COMP-018 streak
+   calc + `getOpenEdPatternFlag` for `edFlagOpen`), calls `buildWidgetSnapshot`,
+   and persists to the shared store: iOS App Group via `@bacons/apple-targets`
+   `ExtensionStorage`, Android via `react-native-android-widget`'s storage; then
+   request a timeline/widget reload. Triggers (no polling): workout finish,
+   plan/schedule change, foreground→background, and the existing
+   `expo-background-fetch` date-rollover task.
+3. **iOS target:** `/targets/widget` SwiftUI (two static layouts: small + medium
+   Next session; small Weekly consistency) reading the App-Group snapshot; new
+   App ID `app.volyume.widget` + profiles in EAS credentials (the existing
+   `modules/live-activity/ios/widget/README.md` documents this path).
+4. **Android target:** widget JSX via `react-native-android-widget` (RemoteViews).
+5. **app.json:** add the two config plugins. Widgets are native — every change is
+   a store release; keep the widget UI dumb (render the snapshot), logic stays in
+   `snapshot.js` (OTA).
+6. **Verify on a real build:** iOS 18 device + an OLED Android; tap-through opens
+   the app to Train; ED-flag → consistency widget shows neutral next-session.
