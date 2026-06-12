@@ -57,6 +57,17 @@ status. The systemic conclusion is at the bottom.
   (research done, founder decisions locked, increment 1 shipped: Meal 1 places
   a breakfast meal; swaps respect slot character).
 
+## 7. "How Precision Coaching works" — an extra You button — FIXED
+- **Finding:** "Why not have the info in the Precision Coaching Screen?
+  Rather than an extra button further down You."
+- **Reality check:** the coach screen ALREADY links to the methodology
+  in-context (the why-block's "learn more" + the held-decisions card), so the
+  You row was redundant for Pro users. It was, however, a free user's ONLY
+  path to the trust copy (free users have no coach screen; deliberate
+  conversion decision).
+- **Action taken:** the You row now shows for FREE users only; Pro users use
+  the in-context links on the coaching screen.
+
 ## Systemic conclusion (the real finding)
 Several agent-built surfaces shipped without device-level visual verification
 and without conformance to docs/rules/styling.md. The phantom-token guard now
