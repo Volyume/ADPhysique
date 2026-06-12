@@ -142,6 +142,17 @@ export const TELEMETRY_EVENTS = Object.freeze([
   // adjustment magnitudes at 0.50 vs the applied gain); no PII, no step counts,
   // no weight. Server allow-list: supabase/migrate_080_step_tdee_telemetry.sql.
   { name: 'step_tdee_modifier_evaluated',    deferred: false, panel: 2 },
+
+  // NEW-002: training partners. Counts and booleans ONLY, NEVER partner
+  // identity. invite_sent -> invite_accepted is the pairing-rate funnel;
+  // cheer_sent carries a `reciprocal` boolean (the Strava finding: reciprocity,
+  // not volume, is the active ingredient); blocked is expected ~0 (any sustained
+  // nonzero triggers a design review). Server allow-list:
+  // supabase/migrate_081_training_partners.sql.
+  { name: 'partner_invite_sent',             deferred: false, panel: 1 },
+  { name: 'partner_invite_accepted',         deferred: false, panel: 1 },
+  { name: 'partner_cheer_sent',              deferred: false, panel: 1 },
+  { name: 'partner_blocked',                 deferred: false, panel: 1 },
 ]);
 
 /**
