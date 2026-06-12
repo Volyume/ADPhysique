@@ -123,7 +123,7 @@ App.js (ErrorBoundary)
         │   ├── ExerciseLibraryScreen        ← search / filter exercises
         │   ├── ExerciseDetailScreen         ← exercise history + PRs
         │   ├── ManualBuilderScreen          ← manual plan creation wizard
-        │   ├── CoachBuilderScreen           ← AI plan wizard (also in FirstRun)
+        │   ├── CoachBuilderScreen           ← deterministic plan wizard (NOT AI; also in FirstRun)
         │   └── PlanLibraryScreen            ← library of pre-built plans
         │
         ├── [Progress] ProgressStack
@@ -256,7 +256,7 @@ Core pure-function calculation library. No side effects.
 | `computeAdaptiveLandmarks(history, baseDefaults)` | Personalises MEV/MAV/MRV landmarks from rolling session history. |
 
 ### 6.2 planEngine.js (1,223 lines)
-AI plan generator. Produces complete weekly workout schedules from user inputs.
+Deterministic plan generator (no AI/LLM). Produces complete weekly workout schedules from user inputs.
 
 | Function | Purpose |
 |---|---|

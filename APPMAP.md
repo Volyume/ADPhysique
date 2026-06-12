@@ -179,7 +179,7 @@ App.js (ErrorBoundary)
 - **Purpose:** Full plan builder from scratch — name, split, add workout days, add exercises.
 
 #### `CoachBuilderScreen` (935 lines)
-- **Purpose:** AI-guided plan creation. Asks about goals, experience, equipment, frequency → generates a full plan and saves to `programmes` table.
+- **Purpose:** Deterministic guided plan creation (NOT AI/LLM — same inputs always produce the same plan). Asks about goals, experience, equipment, frequency → generates a full plan and saves to `programmes` table.
 
 ---
 
