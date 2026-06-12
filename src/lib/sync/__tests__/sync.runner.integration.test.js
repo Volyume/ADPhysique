@@ -60,6 +60,8 @@ jest.mock('../../database', () => ({
 }));
 
 jest.mock('../../food/db', () => ({
+  getLatestMealPlanRowForSync: jest.fn().mockResolvedValue(null),
+  applyMealPlanRowFromCloud: jest.fn().mockResolvedValue(false),
   getAllFoodEntriesSince: jest.fn().mockResolvedValue([]),
   getAllCustomFoodsSince: jest.fn().mockResolvedValue([]),
   getAllSavedMealsSince: jest.fn().mockResolvedValue([]),

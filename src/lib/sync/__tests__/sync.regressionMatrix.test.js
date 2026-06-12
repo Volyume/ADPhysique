@@ -205,6 +205,10 @@ describe('Matrix coverage', () => {
       // pull both members + cheers, prune on unpair-while-offline — covered in
       // the dedicated sync.partners.test.js.
       'partner_signals',
+      // meal_plans (Theme G active-plan mirror): push latest row incl.
+      // tombstone, LWW pull via applyMealPlanRowFromCloud - covered in the
+      // dedicated sync.mealPlans.test.js.
+      'meal_plans',
       // Pull-only handlers:
       'ed_pattern_flags', 'tier_history', 'daily_intake_rollups',
       // Aliased no-op handler:

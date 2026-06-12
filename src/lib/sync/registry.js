@@ -194,6 +194,20 @@ export const SYNC_REGISTRY = [
     softDelete: false,
     direction: 'bidirectional',
   },
+  {
+    // Theme G (2026-06-12): the assembled meal plan is computed on device
+    // from the synced target + prefs, but the EXACT active plan (swaps,
+    // coach edits, training-day answers) must survive a device change
+    // rather than regenerate differently. One latest row per user moves;
+    // deletes propagate as tombstones. Cloud migration 086. Handler:
+    // src/lib/sync/tables/mealPlans.js.
+    table: 'meal_plans',
+    pk: 'id',
+    conflictStrategy: 'last_write_wins',
+    serverAuthoritative: false,
+    softDelete: true,
+    direction: 'bidirectional',
+  },
 ];
 
 export function getRegistryEntry(tableName) {

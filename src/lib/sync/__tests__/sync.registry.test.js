@@ -32,6 +32,7 @@ const EXPECTED_TABLES = [
   'profiles',
   'notification_preferences',
   'partner_signals', // NEW-002 pair-scoped shape (cloud migration 081)
+  'meal_plans', // Theme G active-plan mirror (cloud migration 086)
 ];
 
 describe('SYNC_REGISTRY shape', () => {

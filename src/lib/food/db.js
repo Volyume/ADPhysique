@@ -1054,6 +1054,65 @@ export async function deleteMealPlan(userId, id) {
 }
 
 /**
+ * The user's most recent meal-plan row for sync, INCLUDING tombstones so a
+ * delete on this device propagates to others. Raw row (plan_json stays a
+ * string); null when the user has never had a plan.
+ */
+export async function getLatestMealPlanRowForSync(userId) {
+  const d = await db();
+  const row = await d.getFirstAsync(
+    `SELECT id, plan_json, is_active, deleted_at, created_at, updated_at
+     FROM meal_plans
+     WHERE user_id = ?
+     ORDER BY updated_at DESC
+     LIMIT 1`,
+    [userId]
+  );
+  return row || null;
+}
+
+/**
+ * Apply a cloud meal-plan row locally with a last-write-wins guard: a
+ * local row with the same id and an equal-or-newer updated_at is never
+ * trampled. When the incoming row is the active plan, any other active
+ * local plan is deactivated in the same transaction (one active plan per
+ * user, same invariant saveActiveMealPlan keeps). Pull-side only: never
+ * schedules a push. Returns true when the row was applied.
+ */
+export async function applyMealPlanRowFromCloud(userId, row) {
+  if (!userId || !row?.id || typeof row.plan_json !== 'string') return false;
+  const incomingUpdated = Number(row.updated_at) || 0;
+  const d = await db();
+  const local = await d.getFirstAsync(
+    'SELECT updated_at FROM meal_plans WHERE id = ? AND user_id = ?',
+    [row.id, userId]
+  );
+  if (local && Number(local.updated_at) >= incomingUpdated) return false;
+
+  const isActive = row.is_active ? 1 : 0;
+  const deletedAt = row.deleted_at == null ? null : Number(row.deleted_at);
+  await runInTransaction(d, async () => {
+    if (isActive && deletedAt == null) {
+      await d.runAsync(
+        `UPDATE meal_plans SET is_active = 0, updated_at = updated_at
+         WHERE user_id = ? AND is_active = 1 AND id != ?`,
+        [userId, row.id]
+      );
+    }
+    await d.runAsync(
+      `INSERT OR REPLACE INTO meal_plans
+         (id, user_id, plan_json, is_active, deleted_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        row.id, userId, row.plan_json, isActive, deletedAt,
+        Number(row.created_at) || incomingUpdated, incomingUpdated,
+      ]
+    );
+  });
+  return true;
+}
+
+/**
  * Log a recipe to the diary as a single entry (food_ref 'recipe:<id>'),
  * scaled to the servings eaten. Macros are denormalised at log time like
  * any other entry, and resolveFoodRef renders the recipe name plus a
