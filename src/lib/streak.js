@@ -61,6 +61,37 @@ function applyRepair(labelled) {
 }
 
 /**
+ * computeWeekState — the single per-week seam (NEW-002 §4.10).
+ *
+ * The partner view and the solo streak card must read ONE consistency engine.
+ * This pure function collapses a week's gathered facts into the small object
+ * NEW-002 serialises into `partner_week_signals` and the solo card consumes:
+ *   { planned, done, weekMet, state: 'training' | 'resting' }
+ *
+ * Rules, inherited verbatim from the solo derivation above (no second engine):
+ *  - A paused, engine-deload, or ED/wellbeing-suppressed week is 'resting' and
+ *    counts as met — recovery is compliance, never a miss, and the partner can
+ *    never tell a wellbeing hold from a planned recovery week (the privacy
+ *    property in §5: the forgiveness state doubles as the safety state).
+ *  - Otherwise the week is 'training' and is met when done >= target.
+ *  - With no target the week is 'training' and unmet (session-count mode); the
+ *    ticks still carry done/planned so "3 of 4" renders.
+ */
+export function computeWeekState({
+  completed = 0, planned = 0, target = null,
+  isDeload = false, paused = false, edSuppressed = false,
+} = {}) {
+  const done = Math.max(0, Math.round(Number(completed) || 0));
+  // planned ticks prefer an explicit planned count, else the target.
+  const plannedRaw = Number.isFinite(planned) && planned > 0 ? planned : target;
+  const plannedCount = Math.max(0, Math.round(Number(plannedRaw) || 0));
+  const resting = !!paused || !!isDeload || !!edSuppressed;
+  const hasT = Number.isFinite(target) && target > 0;
+  const weekMet = resting ? true : (hasT && done >= target);
+  return { planned: plannedCount, done, weekMet, state: resting ? 'resting' : 'training' };
+}
+
+/**
  * @param {object} input
  * @param {Array}  input.weeks  oldest-first, each { weekKey, completed, target, isDeload, paused, isCurrent }
  * @param {boolean} input.edSuppressed  open ED/wellbeing flag

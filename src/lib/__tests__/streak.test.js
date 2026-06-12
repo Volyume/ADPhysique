@@ -6,7 +6,7 @@
  * judged, an open ED flag freezes the run and suppresses the number, and a
  * missing target drops to session-count mode.
  */
-import { computeStreak } from '../streak';
+import { computeStreak, computeWeekState } from '../streak';
 
 // Convenience week builders (oldest-first).
 const kept = (k, target = 4) => ({ weekKey: k, completed: target, target, isDeload: false, paused: false });
@@ -92,5 +92,48 @@ describe('computeStreak', () => {
     const r = computeStreak({ weeks: [kept('w1'), paused, kept('w3'), current('w4', 1)] });
     expect(r.weeks[1].state).toBe('paused');
     expect(r.runLength).toBe(3);
+  });
+});
+
+describe('computeWeekState (NEW-002 partner-signal seam)', () => {
+  test('a met training week: done >= target', () => {
+    expect(computeWeekState({ completed: 4, planned: 4, target: 4 }))
+      .toEqual({ planned: 4, done: 4, weekMet: true, state: 'training' });
+  });
+
+  test('an unmet training week carries the ticks but is not met', () => {
+    expect(computeWeekState({ completed: 2, planned: 4, target: 4 }))
+      .toEqual({ planned: 4, done: 2, weekMet: false, state: 'training' });
+  });
+
+  test('a paused week is resting and counts as met (recovery is compliance)', () => {
+    expect(computeWeekState({ completed: 0, planned: 4, target: 4, paused: true }))
+      .toEqual({ planned: 4, done: 0, weekMet: true, state: 'resting' });
+  });
+
+  test('an engine deload week is resting and met', () => {
+    expect(computeWeekState({ completed: 0, target: 4, isDeload: true }))
+      .toEqual({ planned: 4, done: 0, weekMet: true, state: 'resting' });
+  });
+
+  test('an ED-suppressed week reads identically to a deload (the privacy property)', () => {
+    const deloadWeek = computeWeekState({ completed: 0, planned: 4, target: 4, isDeload: true });
+    const flaggedWeek = computeWeekState({ completed: 0, planned: 4, target: 4, edSuppressed: true });
+    expect(flaggedWeek).toEqual(deloadWeek);
+    expect(flaggedWeek.state).toBe('resting');
+  });
+
+  test('no target: session-count mode — training, unmet, ticks still carried', () => {
+    expect(computeWeekState({ completed: 3, planned: 0, target: null }))
+      .toEqual({ planned: 0, done: 3, weekMet: false, state: 'training' });
+  });
+
+  test('planned falls back to target when no explicit planned count', () => {
+    expect(computeWeekState({ completed: 1, target: 3 }).planned).toBe(3);
+  });
+
+  test('empty input is safe', () => {
+    expect(computeWeekState())
+      .toEqual({ planned: 0, done: 0, weekMet: false, state: 'training' });
   });
 });
