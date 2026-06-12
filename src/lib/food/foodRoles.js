@@ -76,6 +76,62 @@ const ROLE = Object.freeze({
   halloumi: 'fat', paneer: 'fat',
 });
 
+// ─── Protein quality (meal-plan rethink §3.4, founder decision 2026-06-12) ──
+// Drives PLAN POLICY (who may anchor a meal on it), not a nutrition claim:
+//  - 'high': animal-quality anchors (whey/dairy/eggs/meat/fish; DIAAS >= ~0.9,
+//    leucine-dense). The ONLY class an omnivore plan may anchor a meal on.
+//  - 'moderate': the plant anchors (soy/pea isolates, tofu, tempeh, seitan,
+//    quorn, edamame). Vegan/vegetarian-plan tools; the curated plant meals
+//    carry a ~20-30% per-meal protein uplift so leucine-matched outcomes
+//    hold (the rethink's cited RCTs).
+//  - 'carb_protein': legumes and grain proteins — carbs with side protein,
+//    never a meal's protein anchor in any plan.
+// Evidence: bp-meal-plan-RETHINK-2026-06-12.md §2.4.
+const PROTEIN_QUALITY = Object.freeze({
+  // high
+  chicken_breast: 'high', turkey_breast: 'high', turkey_mince: 'high',
+  beef_mince_5: 'high', steak_lean: 'high', cod: 'high', salmon: 'high',
+  smoked_salmon: 'high', tuna_water: 'high', prawns: 'high', eggs: 'high',
+  egg_whites: 'high', greek_yogurt_0: 'high', greek_yogurt_2: 'high',
+  skyr: 'high', cottage_cheese: 'high', whey: 'high', milk_skimmed: 'high',
+  halloumi: 'high', paneer: 'high',
+  // moderate (plant anchors)
+  tofu_firm: 'moderate', tempeh: 'moderate', seitan: 'moderate',
+  tvp_dry: 'moderate', quorn_mince: 'moderate', edamame: 'moderate',
+  soy_protein: 'moderate', pea_protein: 'moderate', soy_yogurt_hp: 'moderate',
+  soy_milk: 'moderate',
+  // carb_protein (legumes / grain proteins)
+  lentils: 'carb_protein', lentil_dahl: 'carb_protein', chickpeas: 'carb_protein',
+  kidney_beans: 'carb_protein', black_beans: 'carb_protein',
+  baked_beans: 'carb_protein', lentil_pasta: 'carb_protein',
+});
+
+/** The protein-quality class of a curated food, or null (not a protein contributor). */
+export function proteinQualityOf(foodKey) {
+  return PROTEIN_QUALITY[foodKey] ?? null;
+}
+
+/**
+ * The quality class of a meal's protein ANCHOR: the component contributing
+ * the most protein grams. Returns 'high' | 'moderate' | 'carb_protein', or
+ * null when no component carries a quality class (no real protein source).
+ * Pure; grams come from the meal's components, per-100g protein from the
+ * curated food table.
+ */
+export function mealProteinAnchorQuality(meal) {
+  const components = Array.isArray(meal?.components) ? meal.components : [];
+  let best = null;
+  let bestG = 0;
+  for (const c of components) {
+    const cls = PROTEIN_QUALITY[c.food];
+    if (!cls) continue;
+    const food = CURATED_FOODS[c.food];
+    const proteinG = food ? (Number(food.protein) || 0) * (Number(c.g) || 0) / 100 : 0;
+    if (proteinG > bestG) { best = cls; bestG = proteinG; }
+  }
+  return best;
+}
+
 // ─── Weight state ───────────────────────────────────────────────────────
 // Plans must say which weight a number means: 50 g dry pasta is ~115 g
 // cooked with identical carbs (the round-2 "dry/cooked trap"). Everything

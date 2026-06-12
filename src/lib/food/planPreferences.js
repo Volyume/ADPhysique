@@ -16,7 +16,7 @@
  */
 
 import { CURATED_MEALS, dietAllows } from './curatedMeals';
-import { tagsOf } from './foodRoles';
+import { tagsOf, mealProteinAnchorQuality } from './foodRoles';
 
 export const FAT_CONVENTIONS = Object.freeze(['equalised', 'higher_rest_day']);
 
@@ -75,13 +75,29 @@ export function foodAllowed(foodKey, prefs) {
 
 /**
  * Is a curated meal allowed? Diet axis first (vegan ⊂ vegetarian ⊂
- * omnivore, the existing rule), then every component food must pass.
+ * omnivore, the existing rule), then the protein-anchor policy, then every
+ * component food must pass.
  * Meal shape: { diet, components: [{ food, g }] } (curatedMeals schema).
+ *
+ * Protein-anchor policy (rethink §3.4, founder decision 2026-06-12):
+ * an OMNIVORE plan anchors every meal's protein on an animal-quality source
+ * (whey/dairy/eggs/lean meat/fish) — soy/pea isolates, tofu and legume
+ * "protein" meals are vegan/vegetarian-plan tools, not omnivore staples.
+ * A VEGETARIAN plan may anchor on dairy/eggs or the plant anchors, never on
+ * a bare legume. A VEGAN plan uses its uplifted plant library unrestricted
+ * (the per-meal protein uplift is enforced on the library itself). Meals
+ * with no protein contributor at all (none curated today) anchor nothing
+ * and stay allowed: the policy gates anchors, not garnishes.
  */
 export function mealAllowed(meal, prefs) {
   if (!meal) return false;
   const p = normalisePreferences(prefs);
   if (!dietAllows(p.diet, meal.diet)) return false;
+  const anchor = mealProteinAnchorQuality(meal);
+  if (anchor) {
+    if (p.diet === 'omnivore' && anchor !== 'high') return false;
+    if (p.diet === 'vegetarian' && anchor === 'carb_protein') return false;
+  }
   const components = Array.isArray(meal.components) ? meal.components : [];
   return components.every((c) => foodAllowed(c.food, p));
 }
