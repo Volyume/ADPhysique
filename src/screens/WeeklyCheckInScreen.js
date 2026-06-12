@@ -604,15 +604,21 @@ export default function WeeklyCheckInScreen({ navigation }) {
       });
 
       // Reschedule the check-in reminder so we don't bug them again this week.
+      // The prefs blob is FLAT (checkinEnabled, checkinDay, checkinHour,
+      // checkinMinute) — the shape CoachingRemindersScreen,
+      // NotificationSettingsScreen and ProOnboardingScreen write and
+      // restoreNotifications reads. This used to read a nested
+      // prefs.checkin.enabled shape that nothing writes, so the post-submit
+      // reschedule never fired.
       try {
         const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
         const prefs = raw ? JSON.parse(raw) : null;
-        if (prefs?.checkin?.enabled) {
+        if (prefs?.checkinEnabled) {
           await scheduleNextCheckinReminder(
             userId,
-            prefs.checkin.weekday ?? 0,
-            prefs.checkin.hour ?? 12,
-            prefs.checkin.minute ?? 0,
+            prefs.checkinDay ?? 0,
+            prefs.checkinHour ?? 12,
+            prefs.checkinMinute ?? 0,
           );
         }
         // A check-in just landed, so next week's coach output computes
