@@ -5,6 +5,17 @@ research reports `external/ext-0*`) plus the flag investigation. Personas:
 **Besa** (nervous mass-market beginner) and **Eddie** (elite physique competitor),
 now co-equal targets. Additive to the 2026-06-10 competitive audit.
 
+> **UPDATED (same day, later session):** the founder escalated Theme G into a
+> flagship **generated meal plan** and commissioned five further research passes.
+> Theme G below is rewritten accordingly; a supplement-guidance verdict and a
+> monetisation update are folded in; §3 and §4 are refreshed. The meal-plan
+> blueprint cluster lives in `blueprints/` — read
+> `bp-meal-plan-generator.md` (round-2 reconciled) first, then
+> `bp-meal-plan-research-round2.md`, `bp-meal-plan-coach-systems-research.md`,
+> `bp-supplement-guidance.md`, `bp-monetisation-mealplan-update.md`, and the
+> founder requirement notes `_REQ-*`. The founder's old-coach spreadsheet is
+> extracted at `inputs/coach-spreadsheet-extract.md` (reference, not gospel).
+
 ---
 
 ## 1. The unifying thesis
@@ -122,14 +133,40 @@ polish + share CTA) → M/L (plan-link landing page). *Constraint:* no body/nutr
 data in artefacts, no global leaderboards/public profiles, EU residency, decide the
 Free/Pro line for share artefacts BEFORE launch and never move it (Strava backlash).
 
-### THEME G — "What to eat": nutrition guidance for beginners
-For Besa the nutrition killer isn't logging mechanics, it's **decision fatigue —
-not knowing what to eat**. Deepen `mealSuggest.js` into real "what should I eat
-today" guidance, add calorie-budget framing, and a rule-based **food-quality score**
-(0–100) computed from the NOVA data already bundled in Open Food Facts — no AI.
-Position "verified UK data beats AI guesses" against the new Welling-style AI
-loggers. *Evidence:* ext-03. *Persona:* Besa-led. *Effort:* M. *Constraint:* Pro
-feature (gating intact); deterministic.
+### THEME G — THE GENERATED MEAL PLAN (escalated to flagship — founder-directed)
+For Besa the nutrition killer is **decision fatigue — not knowing what to eat**;
+for Eddie a macro-exact plan is what a £150–400/month prep coach sells. The
+founder escalated this into the audit's flagship feature: a **deterministic,
+coach-grade generated meal plan** that hits the day's calories/macros within
+tolerance, with **macro-preserving food swaps** (role-macro match ±2–5g, exact-gram
+rescale), **meal-level swaps**, **dislike/allergy exclusions with automatic
+alternatives**, **day-to-day variety** (the "3-3-3" rotation with a variety-vs-
+repeat dial), **TD/NTD day variants** (protein constant, carbs the lever),
+pre/post-workout slots, per-food constraint rules, supplement line items, and —
+the uncopyable bit — **coach integration**: when Precision Coaching adjusts
+nutrition, it edits the actual plan at the food level and explains it ("I've
+taken 50g of carbs off your plan: 65g less rice at dinner"), floor-clamped,
+protein-protected. Research verdict: no platform or app combines macro-exact
+generation + gram-rescaling swaps + curated UK physique library + coach
+plan-edits — genuinely uncopyable. Mostly assembly over existing machinery
+(`mealSuggest.js`, `curatedMeals.js`, `nutritionEngine.js`, the swap pattern):
+six new pure modules. The rule-based **food-quality score** (NOVA/Nutri-Score
+data already bundled) rides along. *Evidence:* ext-03, the full `blueprints/`
+meal-plan cluster, the founder's coach-spreadsheet. *Persona:* BOTH, co-equal.
+*Effort:* L (staged; Besa's "Plan my day" value ships before Eddie's precision
+surface). *Constraint:* Pro (with a read-only free teaser as a founder decision,
+§4); deterministic; ED-safety floors routed through by construction.
+
+### THEME G2 — Supplement guidance (small, calm, anti-spend)
+Verdict from dedicated research: **build one static offline reference screen**,
+You-tab (Methodology-page pattern), **free**, suppressed under ED flags, ~0.5–1
+sprint. The short list (creatine — incl. the water-weight note that protects
+weight-trend trust; vitamin D UK winter; protein-as-food; caffeine) plus the
+honest **"save your money" list** (glutamine, BCAAs, pre-workouts, test boosters,
+greens powders) and an **Informed Sport batch-testing callout** for tested
+competitors. "We have nothing to sell you" is the trust line; supplement line
+items in the meal plan link here. Never PED-adjacent, never fat burners.
+*Evidence:* `bp-supplement-guidance.md`. *Persona:* Both. *Effort:* S.
 
 ### THEME H — Exercise instruction + a browsable library (the one below-floor gap)
 0% of 449 exercises have any visual demo; ~62% have no form tip; and there is **no
@@ -196,11 +233,28 @@ safety presentation / billing get an explicit nod first.
 - I1 IA fixes: Diary teaser state for free, Progress "act now" lead card, set-type
   gating, wire PlateCalculator (Theme I) — `S–M`.
 
-**WAVE 3 — Word-of-mouth + nutrition + library**
+**WAVE 3 — THE MEAL-PLAN FLAGSHIP (Theme G)** — built per
+`bp-meal-plan-generator.md` (round-2 reconciled), in its staged build-order:
+- G-a Pure engine first: plan assembler (greedy protein-first + day-balance pass,
+  tolerance close-out), macro-preserving swap (role-macro ±2–5g, exact grams,
+  raw/cooked flags), preference/exclusion model, 3-3-3 rotation + variety dial,
+  TD/NTD variants, per-food constraints. All unit-tested; floor-routing invariant
+  test mandatory.
+- G-b Besa surface: "Plan my day" on the Diary empty-state → day view → one-tap
+  log-all → swap anything. Then Eddie surface: full plan screen (grams+kcal,
+  TD/NTD toggle, week view, repeat dial, peri-workout slots, water target,
+  supplement line items).
+- G-c Coach integration: the inverse plan-edit engine + the food-level coach
+  voice line + "See your meal plan" deep link (depends on A1's coach-voice card).
+- G2 Supplement reference screen (free, You tab) — `S`.
+- Monetisation work that rides the flagship: paywall hero copy rewrite ("Your
+  plate, sorted" / "Your prep coach for £2.50 a month"), store-listing update,
+  and — pending the §4 decision — the read-only "Today's plate" free teaser.
+
+**WAVE 4 — Word-of-mouth + library + positioning**
 - F1 Share-card quality upgrade + 2-tap PR/milestone/block-completion share (Theme F) — `S–M`.
 - F2 Shareable plan-link + non-user landing page (the acquisition loop) (Theme F) — `M–L`,
   positioning/Free-Pro nod.
-- G1 "What to eat" meal guidance + rule-based NOVA food-quality score (Theme G) — `M`.
 - H1 Standalone browsable exercise library screen (Theme H) — `M`. (Visual demos H2
   = `L`, waits on founder media — track separately.)
 - J1 Named-methodology anchoring on onboarding/check-in/paywall (Theme J) — `S`.
@@ -225,6 +279,15 @@ founder call before the dependent items ship (the rest proceeds without asking):
    the highest-stakes repositioning lever and the one most likely to move adoption.
 5. **Notifications** — accept reconciling the push budget for the new coach-cue,
    ghost-prevention and milestone pushes (`NOTIFICATIONS_LOCKED`)?
+6. **"Today's plate" free teaser** — a read-only generated meal preview for free
+   users (real targets, real meals, nothing loggable) on onboarding-complete and
+   the empty Diary. The monetisation research's highest-conviction conversion
+   lever (~30–50% better conversion for soft paywalls), but it is a deliberate
+   Free/Pro line redraw and, once launched, can never be pulled back (the Strava
+   lesson). Approve / reject before G-b ships.
+7. **Meal-plan launch pricing** — recommendation is NO price change at launch
+   (reframe the paywall copy instead); a £39.99-annual test is documented for
+   later and needs separate billing sign-off. Confirm the no-change default.
 
 ---
 
