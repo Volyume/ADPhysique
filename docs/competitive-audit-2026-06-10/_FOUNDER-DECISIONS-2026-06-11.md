@@ -753,12 +753,46 @@ pre-existing warnings, 221 suites / 3429 tests pass (3 skip)**.
   lines + receipt + methodology section. Constants pending the founder's maths
   retune. No on-device surface needs eyes beyond the one card line.
 
-### What remains from "do them all" (NOT built)
-**Nothing code-only remains.** COMP-026, COMP-004, COMP-029 (code), COMP-024
-(decision-promotion) and COMP-019 Stage 2 (spike + JS snapshot brains) are all
-DONE. The leftovers are founder/EAS/device actions: the COMP-019 native widget
-shell, the COMP-029 native rebuild + on-device sweep, the server migrations, and
-the held billing/DPO/native/research gates. Billing held throughout.
+## 15. Session-7 gate lifts + the build model correction (2026-06-11, eve)
+The founder corrected two things and lifted every remaining gate:
+- **Build model:** CI does the builds + deploys, not the founder by hand.
+  `build-android.yml` (push to main + `claude/**`), `build-ios.yml` (EAS +
+  TestFlight on merge to main), `deploy-migrations.yml` (auto-applies
+  `migrate_*.sql` on merge). So "native / EAS / migrations" were never manual
+  gates — write the code, CI ships it; build success / TestFlight is the verify.
+  `_MIGRATIONS-TO-APPLY.md` corrected (072-080 auto-apply on merge).
+- **Billing hold LIFTED (explicit proceed):** COMP-007 + COMP-025-B. SHIPPED
+  this session (see below). Product IDs pro_monthly/pro_annual never changed;
+  no price values touched.
+- **"DPO is a red herring."** Data-protection is NOT a gate on COMP-030 or
+  NEW-002. Build them at the normal bar; founder reviews copy / locked-doc
+  wording at PR like any feature. RLS on partner tables is normal security
+  hygiene, not a DPO ceremony. **Do not re-erect a DPO gate.**
+- **Native to build (CI compiles):** COMP-019 widget targets + COMP-020 watch.
+- Founder's chosen next two: **NEW-002 + COMP-030 (quiz-first)**, with a fresh
+  code audit + deep-research blueprint at the top of the next (clear) session.
+
+### Session 7 (cont.) — COMP-007 + COMP-025-B SHIPPED (billing hold lifted)
+- **COMP-007** paywall annual-first ordering (default + chip order on
+  PaywallScreen + ProUpgradeScreen) + TierComparisonStrip cadence suffix +
+  a DARK social-proof block (`src/screens/paywallExcerpts.js`, empty list = the
+  flag; lights up via a content edit once ≥3 real Play reviews pass the honesty
+  contract). Presentation only — no purchase/price/ID logic touched.
+- **COMP-025-B** win-back store-offer surfacing: `selectOfferToken(product,
+  {preferOfferId})` + a cached win-back token + `purchasePackage(skuId,
+  {preferWinback})`, all INERT BY FALLBACK (a normal purchase until the founder
+  creates the offer in Play Console tagged `winback`). Route wired: win-back
+  notification → Subscription (params.fromWinback) → ProUpgrade → purchase.
+  Founder/device: create the Console offer + verify; iOS 18 StoreKit sheet later.
+
+### What remains (all UNBLOCKED + scoped — `_GREEN-LIT-QUEUE.md`)
+Four, paced for focused builds: **NEW-002** partners + **COMP-030** quiz (DPO is
+NOT a blocker), **COMP-019** widget native targets, **COMP-020** watch. NEW-001
+waits on founder-sourced media only. Everything else this audit is DONE.
+
+### (earlier session-7 note, superseded by §15)
+COMP-026, COMP-004, COMP-029 (code), COMP-024 and COMP-019 Stage 2 (spike + JS
+brains) all DONE.
 
 ### Session 7 (cont.) — COMP-024 decision-promotion + COMP-019 Stage 2
 - **COMP-024 decision-promotion SHIPPED.** Founder deferred the clamp choice to

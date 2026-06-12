@@ -86,18 +86,27 @@ the native** (COMP-019 widgets + COMP-020 watch). NEW-001 waits on founder-
 sourced media assets only.
 
 **`_GREEN-LIT-QUEUE.md` progress (session 7): COMP-007 + COMP-025-B SHIPPED**
-(both billing items). **Four remain, all unblocked + scoped** — the heaviest:
-- **NEW-002 training partners** (new PII: tables + RLS + DPO note for review;
-  move COMP-018 streak to a synced table first). Pure invite/partnership state
-  machine is testable; tables/RLS need founder review before merge.
-- **COMP-030 quiz-first onboarding** (new PII: a quiz profile + locked-doc
-  amendments for review). Pure quiz scoring is testable; flow + persistence
-  after review.
-- **COMP-019 widget native targets** + **COMP-020 watch** — native, CI-build
-  verified (recipes in impl-COMP-019 / the watch module README).
+(both billing items). **Four remain, all unblocked + scoped.**
 
-These were paced (not deferred): RLS/PII and unverifiable native code each want a
-focused, fully-tested build, not a long-context tail. Pick any and go.
+**⚠️ FOUNDER 2026-06-11: "DPO is a red herring."** Do NOT treat data-protection
+as a gate on NEW-002 or COMP-030. Build them at the normal bar (founder reviews
+copy / any locked-doc wording at PR, like every feature). RLS on the partner
+tables is just normal security hygiene, not a DPO ceremony. Migrations
+auto-apply on merge (deploy-migrations.yml) — the founder's merge is the review.
+
+**FOUNDER'S CHOSEN NEXT TWO (build these first, fresh session):**
+1. **NEW-002 training partners** (FULLY FREE, all tiers — founder §7). Schema +
+   RLS migration + pure invite/accept/remove state machine (testable) + UI. Move
+   the COMP-018 streak object to a SYNCED table first (it's AsyncStorage today).
+2. **COMP-030 quiz-first onboarding.** Pure quiz scoring/profile logic (testable)
+   + the onboarding flow rework. Touch IDENTITY/ONBOARDING locked docs if needed.
+
+(The founder also asked for a fresh code audit + a deep-research-built blueprint
+for these two before/while building — worth doing at the top of the session.)
+
+**Then the two native (CI-build verified):** COMP-019 widget targets + COMP-020
+watch — recipes in `impl-COMP-019` / the watch module README. NEW-001 still waits
+on founder-sourced media assets only.
 
 **⚠️ THE COMP-024 LESSON (read before COMP-026) — the concrete cost of "no
 shadow":** I promoted the cycle-robust trend into the coaching DECISIONS and the

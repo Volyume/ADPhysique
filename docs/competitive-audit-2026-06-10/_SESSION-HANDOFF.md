@@ -7,7 +7,20 @@ live state. `_FOUNDER-DECISIONS-2026-06-11.md` holds the detailed decisions +
 the full per-commit build log. This file remains only the index of what the
 original audit produced (the 28 blueprints).
 
-**Status note (2026-06-11, session 7):** **COMP-026 step-informed TDEE shipped
+**Status note (2026-06-11, session 7 FINAL):** Seven items shipped this session:
+COMP-026, COMP-004 door, COMP-029 (code), COMP-024 decision-promotion, COMP-019
+Stage 2 (spike + JS brains), and **both billing items COMP-007 + COMP-025-B**
+(hold lifted). All green on `claude/main-branch-content-update-dcqicf`
+(**223 suites / 3457 tests**, 0 errors, 4 warnings). **Build model corrected:**
+CI builds iOS+Android + auto-applies migrations on merge (not manual). **Founder:
+"DPO is a red herring"** — NOT a gate on NEW-002 / COMP-030. **NEXT (clear
+session): NEW-002 partners + COMP-030 quiz-first** (fresh code audit +
+deep-research blueprint at the top), then COMP-019/COMP-020 native. Start at
+`_START-HERE-NEXT-SESSION.md` → `_GREEN-LIT-QUEUE.md`.
+
+---
+
+**(session 7 detail):** **COMP-026 step-informed TDEE shipped
 LIVE in full** (no shadow) — both the dormant adaptive-TDEE resize activation
 and the step-trend modifier, gated by new BLOCKING engine-invariants + the full
 simulator suite (no regression). Surfaces: COMP-004 card line (Progress +

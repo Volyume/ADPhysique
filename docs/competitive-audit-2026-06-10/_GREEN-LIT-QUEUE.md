@@ -41,22 +41,25 @@ deserve a focused build, not a batch.
   Store Connect. Code reads whichever offer the user is eligible for.
 - iOS 18 StoreKit win-back sheet is a separate later slice.
 
-## 3. COMP-030 — quiz-first onboarding  [DPO: PROCEED, draft for review]
+## 3. COMP-030 — quiz-first onboarding  [BUILD — DPO is NOT a blocker]
+**Founder 2026-06-11: "DPO is a red herring."** Do not treat data-protection as
+a gate on this. Build it; the founder reviews copy + any locked-doc wording at
+PR like every other feature — same bar as the rest, no special DPO ceremony.
 - A quiz-first entry that builds a profile before the plan. Pure quiz scoring/
   profile logic (testable) + the onboarding flow rework (visual).
-- Locked-doc amendments to draft for founder review: IDENTITY_AND_OWNERSHIP +
-  ONBOARDING_SEQUENCE; DPO Q1-Q7 (the quiz profile is new personal data).
-- Nothing ships to main without the founder's review of the data-protection
-  wording.
+- Touch IDENTITY_AND_OWNERSHIP + ONBOARDING_SEQUENCE if the flow needs it; note
+  the change in the PR for founder review (not a blocker).
 
-## 4. NEW-002 — training partners (FULLY FREE, all tiers)  [DPO: PROCEED, draft for review]
+## 4. NEW-002 — training partners (FULLY FREE, all tiers)  [BUILD — DPO is NOT a blocker]
+**Founder: "DPO is a red herring."** Build it; standard PR review, no DPO gate.
 - New partnership tables + **RLS policies** (a partner can see only what the
-  relationship grants) + a pure invite/accept/remove state machine (testable) +
-  UI. Up to 3 partners, every tier, no Pro gate (founder §7).
+  relationship grants — this is normal security hygiene, not a DPO ceremony) +
+  a pure invite/accept/remove state machine (testable) + UI. Up to 3 partners,
+  every tier, no Pro gate (founder §7).
 - v1 consumes the COMP-018 streak object (currently AsyncStorage) — that streak
   state must move to a SYNCED table first (noted in COMP-018 carry-forward).
-- DPO: the partnership is a new PII relationship; draft the RLS + DPO note for
-  founder review before merge.
+- Migrations auto-apply on merge to main (deploy-migrations.yml); the founder's
+  merge is the review point.
 
 ## 5. COMP-019 Stage 2 — widget native targets  [NATIVE via CI]
 - Recipe in `impl-COMP-019` ("STAGE 2 — #175 SPIKE RESULT + BUILD RECIPE").
