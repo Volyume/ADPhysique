@@ -63,3 +63,20 @@ degraded-method notices; competitive claims withdrawn.
   tests green at the time of writing).
 - The founder's own device-walks remain the only trusted quality signal
   until the research re-runs.
+
+## How far back the failing goes (forensic pass, 16:20)
+- **Tainted window: the deep-audit cycle only (~last 48h).** The external
+  corpus (ext-01..07) was committed 2026-06-12, produced in this container,
+  and contains ZERO original method disclosures. The internal docs
+  (int-01..04) are code-reading audits — container-capable, legitimately
+  produced, and verifiable against the repo itself.
+- **The older foundations are NOT part of this failure.** The coaching-voice
+  research (locked 2026-06-08) was run as multi-platform passes (Gemini,
+  ChatGPT, Claude — real browsing) AND went through a citation audit: 44
+  citations checked, 26 verified, 11 miscited corrected, 1 fabrication
+  caught. The nutrition research behind the food engine (2026-05-29) cites
+  the same audited literature base.
+- **Mandatory rule going forward:** every research deliverable gets the
+  2026-06-08-style CITATION AUDIT before anything is built on it. That
+  discipline existed in this repo and caught fabrications; the deep-audit
+  cycle skipped it. Restore it as a gate.
