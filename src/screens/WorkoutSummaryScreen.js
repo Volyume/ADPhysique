@@ -654,7 +654,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             accent = colors.success;
           } else if (verdict === 'down') {
             headline = `${pct}% vs your 4-week average`;
-            sub = `Recovery or stress matter. Don't chase yesterday's volume; trust the trend.`;
+            sub = `Sessions vary with recovery, sleep and stress. The 4-week trend carries more signal than any single session.`;
             accent = colors.textSecondary;
           } else {
             headline = `On pace with your last ${priorCount} session${priorCount !== 1 ? 's' : ''}`;
