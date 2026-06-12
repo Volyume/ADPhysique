@@ -601,6 +601,7 @@ const SCREENS_TO_SWEEP = [
   'CoachReviewScreen',
   'CoachingRemindersScreen',
   'ConsistencyScreen',
+  'PartnerScreen',
   'DebugLogScreen',
   'FirstRunScreen',
   'FreeStarterScreen',

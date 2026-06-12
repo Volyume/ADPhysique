@@ -54,6 +54,7 @@ import SettingsPrivacyScreen from '../screens/SettingsPrivacyScreen';
 import SettingsAboutScreen from '../screens/SettingsAboutScreen';
 import LiftProgressScreen from '../screens/LiftProgressScreen';
 import ConsistencyScreen from '../screens/ConsistencyScreen';
+import PartnerScreen from '../screens/PartnerScreen';
 import YouScreen from '../screens/YouScreen';
 import PlansScreen from '../screens/PlansScreen';
 import PlanDetailScreen from '../screens/PlanDetailScreen';
@@ -346,6 +347,7 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ title: 'Body Metrics' }} />
       <Stack.Screen name="LiftProgress" component={LiftProgressScreen} options={{ title: 'Lifts' }} />
       <Stack.Screen name="Consistency" component={ConsistencyScreen} options={{ title: 'Consistency' }} />
+      <Stack.Screen name="Partner" component={PartnerScreen} options={{ title: 'Training partner' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
       <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="RecapStory" component={YearOfLiftsScreen} options={{ headerShown: false }} />

@@ -338,6 +338,10 @@ export default function AnalyticsScreen({ navigation, route }) {
                 lead that screen with the trend; the label stops over-promising
                 now. */}
             <NavTile icon="body" color={colors.warning} label="Body Metrics" onPress={() => navigation.navigate('BodyMetrics')} />
+            {/* NEW-002 rebuild: the partner's first-class destination (Apple
+                Fitness pattern: minimal-signal sharing still gets a proper
+                named home, never a buried row). */}
+            <NavTile icon="people" color={colors.primary} label="Partner" onPress={() => navigation.navigate('Partner')} />
             <NavTile icon="time" color={colors.textSecondary} label="Full History" onPress={() => navigation.navigate('WorkoutHistory')} />
             {(() => {
               // COMP-005: Recaps replaces the year-long locked Year-of-Lifts
