@@ -32,8 +32,10 @@ jest.mock('expo-notifications', () => ({
 }));
 
 const mockGetLatestCheckin = jest.fn();
+const mockGetOpenEdFlag = jest.fn(() => Promise.resolve(null));
 jest.mock('../database', () => ({
   getLatestCheckin: (...args) => mockGetLatestCheckin(...args),
+  getOpenEdPatternFlag: (...args) => mockGetOpenEdFlag(...args),
 }));
 
 const mockTrack = jest.fn(() => Promise.resolve());
@@ -61,6 +63,8 @@ beforeEach(async () => {
   mockCancelAllAsync.mockReset();
   mockCancelAllAsync.mockImplementation(() => Promise.resolve());
   mockGetLatestCheckin.mockReset();
+  mockGetOpenEdFlag.mockReset();
+  mockGetOpenEdFlag.mockImplementation(() => Promise.resolve(null));
   mockTrack.mockReset();
   mockTrack.mockImplementation(() => Promise.resolve());
   mockPlatformOS = 'android';
@@ -469,6 +473,111 @@ describe('scheduleWeeklyCoachReady', () => {
     expect(mockTrack).toHaveBeenCalledWith(
       'user-1', 'notification_failed',
       expect.objectContaining({ category: 'weekly_coach_ready', reason: 'schedule_threw' }),
+    );
+  });
+});
+
+// ─── scheduleMissedCheckinFollowups (OPP-C03) ──────────────────────
+
+describe('scheduleMissedCheckinFollowups', () => {
+  const ID_EVENING = 'volyume_checkin_missed_evening';
+  const ID_48H = 'volyume_checkin_missed_48h';
+
+  // A check-in day 3 days out at 18:00 keeps both slots in the future
+  // whatever day the test runs on.
+  async function setProPrefs(extra = {}) {
+    mockGetState.mockImplementation(() => ({ user: { id: 'user-1' }, tier: 'pro' }));
+    await AsyncStorage.setItem('@volyume_notification_prefs', JSON.stringify({
+      checkinDay: (new Date().getDay() + 3) % 7,
+      checkinHour: 18,
+      checkinMinute: 0,
+      ...extra,
+    }));
+  }
+
+  afterEach(() => {
+    mockGetState.mockImplementation(() => ({ user: { id: 'user-1' } }));
+  });
+
+  test('web: no-op', async () => {
+    mockPlatformOS = 'web';
+    await setProPrefs();
+    await scheduler.scheduleMissedCheckinFollowups('user-1');
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+    expect(mockCancelAsync).not.toHaveBeenCalled();
+  });
+
+  test('free tier: cancels the pair and never schedules (Pro-only)', async () => {
+    mockGetState.mockImplementation(() => ({ user: { id: 'user-1' }, tier: 'free' }));
+    await scheduler.scheduleMissedCheckinFollowups('user-1');
+    expect(mockCancelAsync).toHaveBeenCalledWith(ID_EVENING);
+    expect(mockCancelAsync).toHaveBeenCalledWith(ID_48H);
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+
+  test('category toggle off: cancels the pair and never schedules', async () => {
+    await setProPrefs({ missedCheckinEnabled: false });
+    await scheduler.scheduleMissedCheckinFollowups('user-1');
+    expect(mockCancelAsync).toHaveBeenCalledWith(ID_EVENING);
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+
+  test('open ED flag: suppressed entirely (cancels, never schedules)', async () => {
+    await setProPrefs();
+    mockGetOpenEdFlag.mockResolvedValue({ id: 'flag-1' });
+    await scheduler.scheduleMissedCheckinFollowups('user-1');
+    expect(mockCancelAsync).toHaveBeenCalledWith(ID_EVENING);
+    expect(mockCancelAsync).toHaveBeenCalledWith(ID_48H);
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+
+  test('lays the evening nudge (20:00 on the check-in day) and the +48h follow-up', async () => {
+    await setProPrefs();
+    mockGetLatestCheckin.mockResolvedValue(null);
+    await scheduler.scheduleMissedCheckinFollowups('user-1');
+
+    expect(mockScheduleAsync).toHaveBeenCalledTimes(2);
+    const byId = {};
+    for (const call of mockScheduleAsync.mock.calls) byId[call[0].identifier] = call[0];
+
+    const evening = byId[ID_EVENING];
+    expect(evening.content.data).toEqual({ type: 'checkin_missed', slot: 'evening' });
+    expect(evening.trigger.type).toBe(SCHEDULE_INPUT_TYPES.DATE);
+    expect(evening.trigger.channelId).toBe('coaching-reminders');
+    expect(evening.trigger.date.getHours()).toBe(20);
+    expect(evening.trigger.date.getTime()).toBeGreaterThan(Date.now());
+
+    const followup = byId[ID_48H];
+    expect(followup.content.data).toEqual({ type: 'checkin_missed', slot: 'followup' });
+    expect(followup.trigger.date.getHours()).toBe(18); // occurrence hour + 48h
+    // Exactly 48h after the occurrence = evening day at 18:00 plus 2 days.
+    expect(followup.trigger.date.getTime() - evening.trigger.date.getTime())
+      .toBe(2 * 86400000 - 2 * 60 * 60 * 1000);
+  });
+
+  test('never shame copy: neither push says "missed"', async () => {
+    await setProPrefs();
+    await scheduler.scheduleMissedCheckinFollowups('user-1');
+    for (const call of mockScheduleAsync.mock.calls) {
+      expect(`${call[0].content.title} ${call[0].content.body}`).not.toMatch(/miss/i);
+    }
+  });
+
+  test('re-lay cancels its own identifiers first (idempotent across launches)', async () => {
+    await setProPrefs();
+    await scheduler.scheduleMissedCheckinFollowups('user-1');
+    expect(mockCancelAsync).toHaveBeenCalledWith(ID_EVENING);
+    expect(mockCancelAsync).toHaveBeenCalledWith(ID_48H);
+    expect(mockScheduleAsync).toHaveBeenCalledTimes(2);
+  });
+
+  test('schedule failure fires notification_failed with checkin_missed', async () => {
+    await setProPrefs();
+    mockScheduleAsync.mockRejectedValue(new Error('os down'));
+    await scheduler.scheduleMissedCheckinFollowups('user-1');
+    expect(mockTrack).toHaveBeenCalledWith(
+      'user-1', 'notification_failed',
+      expect.objectContaining({ category: 'checkin_missed', reason: 'schedule_threw' }),
     );
   });
 });

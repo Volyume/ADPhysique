@@ -46,6 +46,15 @@ export function routeForNotificationType(type, data = {}) {
       // NEW-002: a partner sent a cheer. Lands on the Progress consistency
       // screen, where the partner row hosts the cheer caption + reciprocity.
       return { tab: 'ProgressTab', screen: 'Consistency' };
+    case 'checkin_missed':
+      // OPP-C03 ghost prevention. The same-evening nudge lands on the
+      // check-in wizard (it is still the user's check-in day); the +48h
+      // value follow-up promises the weekly trend, so it lands on the
+      // Progress trend view rather than dead-ending on the check-in
+      // screen's wrong-day gate.
+      return data?.slot === 'followup'
+        ? { tab: 'ProgressTab', screen: 'Analytics' }
+        : { tab: 'ProfileTab', screen: 'WeeklyCheckIn' };
     case 'trial_day3':
       // COMP-023 day-3 value moment. S1/S2 land on the check-in gate screen
       // (which shows the countdown made visible); S3 (no sessions yet) lands on

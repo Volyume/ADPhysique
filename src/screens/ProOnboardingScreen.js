@@ -537,6 +537,18 @@ export default function ProOnboardingScreen({ navigation }) {
             await scheduleCheckinReminder(checkinDay, 12, 0);
           }
           await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs)).catch(() => {});
+          // OPP-C03: pre-lay the missed check-in follow-up pair for the
+          // first check-in cycle (reads the prefs blob just saved; the
+          // helper self-guards on tier, toggle and ED flag).
+          if (checkinEnabled) {
+            try {
+              // eslint-disable-next-line global-require
+              const { scheduleMissedCheckinFollowups } = require('../lib/notifications');
+              // eslint-disable-next-line global-require
+              const { default: store } = require('../store/useAppStore');
+              await scheduleMissedCheckinFollowups(store.getState().user?.id ?? null);
+            } catch (_) {}
+          }
         }
       }
 

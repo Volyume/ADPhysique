@@ -46,6 +46,8 @@ export {
   cancelTrialDay3Notification,
   scheduleWeeklyCoachReady,
   cancelWeeklyCoachReady,
+  scheduleMissedCheckinFollowups,
+  cancelMissedCheckinFollowups,
   cancelMorningNotification,
   cancelCheckinNotification,
   cancelAllNotifications,

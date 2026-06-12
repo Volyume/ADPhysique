@@ -66,6 +66,22 @@ describe('routeForNotificationType', () => {
     });
   });
 
+  test('OPP-C03: the same-evening missed check-in nudge opens the check-in wizard', () => {
+    expect(routeForNotificationType('checkin_missed', { slot: 'evening' })).toEqual({
+      tab: 'ProfileTab', screen: 'WeeklyCheckIn',
+    });
+    // No slot data behaves like the evening nudge (not a dead-end).
+    expect(routeForNotificationType('checkin_missed')).toEqual({
+      tab: 'ProfileTab', screen: 'WeeklyCheckIn',
+    });
+  });
+
+  test('OPP-C03: the +48h value follow-up lands on the Progress trend view', () => {
+    expect(routeForNotificationType('checkin_missed', { slot: 'followup' })).toEqual({
+      tab: 'ProgressTab', screen: 'Analytics',
+    });
+  });
+
   test('an unknown or no-op type returns null (no navigation)', () => {
     expect(routeForNotificationType('morning_weight')).toBeNull();
     expect(routeForNotificationType('unknown')).toBeNull();

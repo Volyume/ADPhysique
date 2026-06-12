@@ -43,6 +43,7 @@ import {
   dayName,
   trialDay3Push,
 } from '../trialActivation';
+import { missedCheckinFireDates, missedCheckinPush } from './missedCheckin';
 
 const NOTIF_ID_MORNING = 'volyume_morning_weight';
 const NOTIF_ID_CHECKIN = 'volyume_weekly_checkin';
@@ -543,6 +544,119 @@ export async function scheduleWinbackNotification(userId) {
   }
 }
 
+// ─── OPP-C03: missed check-in ghost prevention ───────────────────────────────
+// Two single-shot pushes per missed check-in episode: a gentle same-evening
+// nudge (20:00 local on the check-in day) and a value-led +48h follow-up.
+// Never shame copy. Pro-only, toggleable (Settings → Coaching reminders),
+// suppressed entirely under an open ED flag, quiet-hours shifted and gated
+// through the push budget. Like the cascade gates, the pair is wiped by
+// cancelAllNotifications on restore, so restoreNotifications re-lays it; the
+// episode maths in missedCheckin.js keeps re-lays single-shot (a slot whose
+// date has passed is never laid again for the same episode).
+
+const NOTIF_ID_CHECKIN_MISSED_EVENING = 'volyume_checkin_missed_evening';
+const NOTIF_ID_CHECKIN_MISSED_48H = 'volyume_checkin_missed_48h';
+
+export async function cancelMissedCheckinFollowups() {
+  try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_CHECKIN_MISSED_EVENING); } catch {}
+  try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_CHECKIN_MISSED_48H); } catch {}
+}
+
+export async function scheduleMissedCheckinFollowups(userId) {
+  if (Platform.OS === 'web') return;
+  try {
+    // Pro-only: check-ins are a Pro coaching input, so the follow-ups never
+    // reach free users.
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../../store/useAppStore').default;
+    if (useAppStore.getState()?.tier !== 'pro') {
+      await cancelMissedCheckinFollowups();
+      return;
+    }
+
+    // Category toggle (default on) + the user's check-in schedule, from the
+    // same prefs blob the check-in reminder uses.
+    let prefs = {};
+    try {
+      const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+      if (raw) prefs = JSON.parse(raw) ?? {};
+    } catch (_) { /* defaults below */ }
+    if (prefs.missedCheckinEnabled === false) {
+      await cancelMissedCheckinFollowups();
+      return;
+    }
+    const weekday = Number.isFinite(prefs.checkinDay) ? prefs.checkinDay : 0;
+    const hour = Number.isFinite(prefs.checkinHour) ? prefs.checkinHour : 18;
+    const minute = Number.isFinite(prefs.checkinMinute) ? prefs.checkinMinute : 0;
+
+    // Open ED/wellbeing flag → never lay (and retire anything laid). Silence
+    // is the respectful behaviour; the suppression is consumed here, never
+    // altered.
+    // eslint-disable-next-line global-require
+    const db = require('../database');
+    const edFlag = userId ? await db.getOpenEdPatternFlag(userId).catch(() => null) : null;
+    if (edFlag) {
+      await cancelMissedCheckinFollowups();
+      return;
+    }
+
+    // The last REAL check-in (energy score present, same rule as the
+    // reminder's skip logic) resolves the episode: a checked-in week pre-lays
+    // for the next expected occurrence instead.
+    let lastCheckinMs = 0;
+    try {
+      const latest = userId ? await db.getLatestCheckin(userId) : null;
+      if (latest && latest.energyScore != null) {
+        lastCheckinMs = latest.createdAt ?? latest.weekStart ?? 0;
+      }
+    } catch (_) { /* treat as never checked in */ }
+
+    const { evening, followup } = missedCheckinFireDates({
+      weekday, hour, minute, now: new Date(), lastCheckinMs, minGapDays: 7,
+    });
+
+    await cancelMissedCheckinFollowups();
+    const quiet = await getQuietHours();
+    const copy = missedCheckinPush(greetName());
+    const slots = [
+      { id: NOTIF_ID_CHECKIN_MISSED_EVENING, when: evening, copy: copy.evening, slot: 'evening' },
+      { id: NOTIF_ID_CHECKIN_MISSED_48H, when: followup, copy: copy.followup, slot: 'followup' },
+    ];
+    for (const s of slots) {
+      if (!s.when || s.when.getTime() <= Date.now()) continue; // past slot: never chased
+      const { date: shifted } = shiftDateOutOfQuietHours(s.when, quiet);
+      // Push budget: blocked = dropped for this episode, never re-queued.
+      // eslint-disable-next-line no-await-in-loop
+      const slotOk = await requestEventPushSlot({ category: CATEGORY.CHECKIN_MISSED, fireDate: shifted });
+      if (!slotOk.allowed) continue;
+      // eslint-disable-next-line no-await-in-loop
+      await Notifications.scheduleNotificationAsync({
+        identifier: s.id,
+        content: {
+          title: s.copy.title,
+          body: s.copy.body,
+          data: { type: 'checkin_missed', slot: s.slot },
+          sound: false,
+        },
+        trigger: {
+          channelId: COACHING_REMINDERS_CHANNEL,
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: shifted,
+        },
+      });
+    }
+  } catch (e) {
+    trackNotificationFailed({
+      category: CATEGORY.CHECKIN_MISSED,
+      reason: 'schedule_threw',
+      payload: { message: e?.message ?? 'unknown' },
+    });
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      logWarn('notifications.scheduleMissedCheckin', e?.message);
+    }
+  }
+}
+
 // ─── Weekly coach output ready ───────────────────────────────────────────────────
 // NOTIFICATIONS_LOCKED.md "Timing": Monday 09:00 local, time-only
 // configurable. Coach output is computed client-side after the weekly
@@ -714,6 +828,16 @@ export async function restoreNotifications(prefs, userId = null) {
     const store = require('../../store/useAppStore').default;
     await scheduleWinbackNotification(userId ?? store.getState().user?.id ?? null);
   } catch (_) { /* win-back re-lay is best-effort */ }
+
+  // OPP-C03: the missed check-in follow-ups were wiped by
+  // cancelAllNotifications too (the same historic wipe pattern that lost the
+  // cascade gates). Re-lay; the helper self-guards (Pro-only, toggle, ED flag,
+  // past slots skipped).
+  try {
+    // eslint-disable-next-line global-require
+    const store = require('../../store/useAppStore').default;
+    await scheduleMissedCheckinFollowups(userId ?? store.getState().user?.id ?? null);
+  } catch (_) { /* follow-up re-lay is best-effort */ }
 }
 
 // ─── Year of Lifts unlock ─────────────────────────────────────────────────────

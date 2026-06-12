@@ -27,7 +27,7 @@ import { summariseWeekCardio, cardioComplianceFromLog } from '../lib/cardio/card
 import { getRollupsForRange } from '../lib/food/db';
 import { getCycleTracking, shouldShowCycleQuestion } from '../lib/cyclePrefs';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
-import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder, scheduleWeeklyCoachReady } from '../lib/notifications';
+import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder, scheduleWeeklyCoachReady, scheduleMissedCheckinFollowups } from '../lib/notifications';
 import { logError, logWarn } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import { SkeletonCard } from '../components/Skeleton';
@@ -625,6 +625,11 @@ export default function WeeklyCheckInScreen({ navigation }) {
           );
         }
       } catch (_) {}
+
+      // OPP-C03: this check-in resolved any pending missed-check-in episode.
+      // Re-lay the follow-up pair against the NEXT expected occurrence (the
+      // helper self-guards: Pro-only, toggle, ED flag).
+      try { await scheduleMissedCheckinFollowups(userId); } catch (_) {}
 
       const goCoach = () => navigation.navigate('CoachOutput', { weekStart: weekStart.getTime() });
       const permStatus = await getNotificationPermissionStatus();
