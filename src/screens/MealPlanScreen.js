@@ -57,10 +57,39 @@ function sumDayTotals(slots) {
   }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
 }
 
+// One labelled segmented row of preference options (a small radio group).
+function PrefRow({ label, options, value, onSelect, busy }) {
+  return (
+    <View style={styles.prefRow}>
+      <Text style={styles.prefLabel}>{label}</Text>
+      <View style={styles.prefOpts} accessibilityRole="radiogroup">
+        {options.map((opt) => {
+          const selected = opt.value === value;
+          return (
+            <TouchableOpacity
+              key={String(opt.value)}
+              style={[styles.prefOpt, selected && styles.prefOptOn]}
+              onPress={() => !selected && onSelect(opt.value)}
+              disabled={busy || selected}
+              hitSlop={hitSlop}
+              accessibilityRole="radio"
+              accessibilityState={{ selected, disabled: busy }}
+              accessibilityLabel={`${label}: ${opt.label}`}
+            >
+              <Text style={[styles.prefOptText, selected && styles.prefOptTextOn]}>{opt.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 export default function MealPlanScreen({ navigation }) {
   const user = useAppStore((s) => s.user);
   const userProfile = useAppStore((s) => s.userProfile);
   const addMealPlanExcludedFood = useAppStore((s) => s.addMealPlanExcludedFood);
+  const setMealPlanPrefs = useAppStore((s) => s.setMealPlanPrefs);
   const toast = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -70,6 +99,7 @@ export default function MealPlanScreen({ navigation }) {
   // on Day 1 rather than implying "today" maps to a slot it doesn't own.
   const [dayIndex, setDayIndex] = useState(0);
   const [expanded, setExpanded] = useState({}); // slotKey -> bool
+  const [prefsOpen, setPrefsOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -233,6 +263,24 @@ export default function MealPlanScreen({ navigation }) {
     );
   }, [user?.id, record, plan, day, dayIndex, busy, addMealPlanExcludedFood, toast]);
 
+  // Change a preference, persist it, and rebuild the plan around it so the
+  // change is visible immediately (same targets, new prefs).
+  const handleSetPref = useCallback(async (patch) => {
+    if (!user?.id || busy) return;
+    setBusy(true);
+    try {
+      await setMealPlanPrefs(patch);
+      await regenerateActiveMealPlan(user.id, { ...userProfile, ...patch });
+      await load();
+      toast.show('Plan updated to match.', { variant: 'success' });
+    } catch (_) {
+      toast.show("Couldn't update preferences. Try again.", { variant: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  }, [user?.id, userProfile, busy, setMealPlanPrefs, load, toast]);
+
+  const prefs = plan?.prefs || {};
   const dayTypeLabel = day?.variant === 'training' ? 'Training day' : 'Rest day';
   const target = plan?.targetSnapshot;
   const cycleOn = (plan?.cycleDeltaKcal || 0) > 0;
@@ -367,6 +415,61 @@ export default function MealPlanScreen({ navigation }) {
             </View>
           ) : null}
 
+          {/* Preferences (Eddie's controls; Besa never needs to open it) */}
+          <TouchableOpacity
+            style={styles.prefsToggle}
+            onPress={() => setPrefsOpen((o) => !o)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: prefsOpen }}
+            accessibilityLabel="Plan preferences"
+          >
+            <Ionicons name="options-outline" size={16} color={colors.textSecondary} />
+            <Text style={styles.prefsToggleText}>Preferences</Text>
+            <Ionicons name={prefsOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+          {prefsOpen ? (
+            <View style={styles.prefsPanel}>
+              <PrefRow
+                label="Meals a day"
+                options={[3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))}
+                value={prefs.mealsPerDay ?? 4}
+                onSelect={(v) => handleSetPref({ mealPlanMealsPerDay: v })}
+                busy={busy}
+              />
+              <PrefRow
+                label="Variety"
+                options={[
+                  { value: 0, label: 'Repeat' },
+                  { value: 0.5, label: 'Mixed' },
+                  { value: 1, label: 'Varied' },
+                ]}
+                value={prefs.variety ?? 0.5}
+                onSelect={(v) => handleSetPref({ mealPlanVariety: v })}
+                busy={busy}
+              />
+              <PrefRow
+                label="Rest-day fat"
+                options={[
+                  { value: 'equalised', label: 'Even' },
+                  { value: 'higher_rest_day', label: 'Higher' },
+                ]}
+                value={prefs.fatConvention ?? 'equalised'}
+                onSelect={(v) => handleSetPref({ mealPlanFatConvention: v })}
+                busy={busy}
+              />
+              <PrefRow
+                label="Workout meals"
+                options={[
+                  { value: false, label: 'Off' },
+                  { value: true, label: 'Pre / post' },
+                ]}
+                value={!!prefs.periWorkoutSlots}
+                onSelect={(v) => handleSetPref({ mealPlanPeriWorkout: v })}
+                busy={busy}
+              />
+            </View>
+          ) : null}
+
           <Button title="Log this day" onPress={handleLogDay} loading={busy} fullWidth />
           <Button title="New meals" variant="secondary" onPress={handleRegenerate} disabled={busy} fullWidth />
           <Text style={styles.footNote}>
@@ -414,4 +517,14 @@ const styles = StyleSheet.create({
   totalsLabel: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   totalsText: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
   footNote: { color: colors.textSecondary, fontSize: fontSize.xs, textAlign: 'center', lineHeight: 17 },
+  prefsToggle: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, minHeight: 44 },
+  prefsToggleText: { flex: 1, color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  prefsPanel: { gap: spacing.md, paddingBottom: spacing.sm },
+  prefRow: { gap: spacing.xs },
+  prefLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0.4 },
+  prefOpts: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  prefOpt: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, minHeight: 40, justifyContent: 'center' },
+  prefOptOn: { borderColor: colors.primary, backgroundColor: colors.surface2 },
+  prefOptText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  prefOptTextOn: { color: colors.primary },
 });

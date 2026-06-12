@@ -1430,6 +1430,24 @@ const useAppStore = create((set, get) => ({
     set({ userProfile: updated });
   },
 
+  // Meal-plan preference controls (deep-audit Theme G R4): meals/day,
+  // variety dial, fat convention, peri-workout slots. Local profile
+  // fields (plan is local-only); merged + persisted, read by
+  // preferencesFromProfile. `partial` carries any of the mealPlan* keys.
+  setMealPlanPrefs: async (partial) => {
+    const { user, userProfile } = get();
+    if (!user?.id || !partial || typeof partial !== 'object') return;
+    const allowed = ['mealPlanMealsPerDay', 'mealPlanVariety', 'mealPlanFatConvention',
+      'mealPlanPeriWorkout', 'mealPlanExcludeTags', 'mealPlanPinnedMeals'];
+    const patch = {};
+    for (const k of allowed) if (k in partial) patch[k] = partial[k];
+    if (Object.keys(patch).length === 0) return;
+    const updated = { ...(userProfile || {}), ...patch };
+    const key = PROFILE_KEY_PFX + user.id;
+    try { await AsyncStorage.setItem(key, JSON.stringify(updated)); } catch (_) {}
+    set({ userProfile: updated });
+  },
+
   // Bar weight for plate calculator, persisted alongside units
   barWeight: 20,
   setBarWeight: async (w) => {
