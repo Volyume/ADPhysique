@@ -14,15 +14,19 @@ status. The systemic conclusion is at the bottom.
 - **Status:** all call sites fixed; `themeTokens.guard.test.js` now fails CI on
   ANY reference to a non-existent theme token, app-wide.
 
-## 2. Partner system buried under You → Consistency — OPEN (research commissioned)
-- **Finding:** the partner feature lives as one row inside the Consistency
-  screen; the founder questions the placement and the half-finished feel.
-- **Context:** NEW-002 shipped as a deliberately quiet derived-signals feature
-  (ticks, shared streak, cheer). The surface under-delivers its blueprint and
-  its placement gives it no discovery story.
-- **Action:** deep research into how partner/accountability systems work in
-  leading fitness apps (placement, pairing UX, signal design, notifications,
-  privacy) → blueprint → rebuild properly. Founder-requested.
+## 2. Partner system buried under You → Consistency — REBUILT (3 commits)
+- **Finding:** the partner feature lived as one row inside Consistency; the
+  founder questioned the placement and the half-finished feel.
+- **Research:** Duolingo Friend Streak (paired accountability beats feeds),
+  adherence literature, category placement scan (Hevy/Apple Fitness/Gentler
+  Streak). Blueprint: `blueprints/bp-partner-system-rebuild.md`.
+- **Rebuilt (77e7a95 + 362525c + 5d95939):** first-class PartnerScreen
+  (both sides of the week, shared streak, cheer, privacy receipt, pairing);
+  Progress-hub "Partner" tile; slim PartnerRow on Consistency; post-workout
+  partner beat with cheer inline; the two pushes (cheer received + shared
+  streak kept) inside the notification budget with watermarks and ED-flag
+  silence. Old PartnerSection retired; behaviours ported + extended in
+  PartnerSurfaces.test.js. Fresh-eyes review in flight.
 
 ## 3. Progress → "Weight" tile lands on Body Metrics — PARTIAL FIX
 - **Finding:** "Why is this under Progress? It's just the body Metrics that was
