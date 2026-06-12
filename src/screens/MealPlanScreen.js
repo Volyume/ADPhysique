@@ -20,6 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
+import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
 import { useToast } from '../components/Toast';
 import { appAlert } from '../components/AppAlert';
@@ -101,6 +102,9 @@ export default function MealPlanScreen({ navigation }) {
   const [dayIndex, setDayIndex] = useState(0);
   const [expanded, setExpanded] = useState({}); // slotKey -> bool
   const [prefsOpen, setPrefsOpen] = useState(false);
+  // The meal-swap sheet: a generous, style-diverse list of alternatives for
+  // one slot (rethink §3.3). { slotKey, replacement, alternatives } when open.
+  const [swapSheet, setSwapSheet] = useState(null);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -181,24 +185,37 @@ export default function MealPlanScreen({ navigation }) {
     }
   }, [user?.id, record, dayIndex, busy, toast]);
 
-  const handleSwapMeal = useCallback(async (slotKey) => {
+  // Open the swap sheet for a slot: the engine returns the closest
+  // replacement plus a style-diverse pool of alternatives (rethink §3.3,
+  // founder directive: a generous scrollable list, not a single "next").
+  // The sheet lets the user choose any one; nothing is applied until a tap.
+  const handleSwapMeal = useCallback((slotKey) => {
     if (!user?.id || !record || !day || busy) return;
     const res = swapMealInPlan({ day, slotKey, prefs: plan.prefs });
     if (!res) {
       toast.show('No good alternative for this one with your preferences.', { variant: 'info' });
       return;
     }
+    setSwapSheet({ slotKey, replacement: res.replacement, alternatives: res.alternatives || [] });
+  }, [user?.id, record, plan, day, busy, toast]);
+
+  // Apply a chosen meal (the highlighted replacement or any alternative) to
+  // the slot, persist it, and close the sheet. Same persistence path the
+  // immediate swap used before; the day re-totals around the new plate.
+  const applyMealChoice = useCallback(async (slotKey, meal) => {
+    if (!user?.id || !record || !day || busy) return;
     setBusy(true);
     try {
       const newSlots = day.slots.map((s) => (s.slot === slotKey
-        ? { ...res.replacement, slot: slotKey }
+        ? { ...meal, slot: slotKey }
         : s));
       const newDay = { ...day, slots: newSlots, totals: sumDayTotals(newSlots) };
       const days = plan.days.map((d, i) => (i === dayIndex ? newDay : d));
       const nextPlan = { ...plan, days, lastEditType: 'rotation' };
       await updateMealPlan(user.id, record.id, nextPlan);
       setRecord({ ...record, plan: nextPlan });
-      toast.show(`Swapped for ${res.replacement.name}.`, { variant: 'success' });
+      setSwapSheet(null);
+      toast.show(`Swapped for ${meal.name}.`, { variant: 'success' });
     } catch (_) {
       toast.show("Couldn't swap that one. Try again.", { variant: 'error' });
     } finally {
@@ -510,6 +527,51 @@ export default function MealPlanScreen({ navigation }) {
           </Text>
         </ScrollView>
       )}
+
+      {/* Meal-swap sheet: the closest replacement first and highlighted, then
+          the generous style-diverse pool, all in a scrollable list. Tapping a
+          row applies that plate to the slot (rethink §3.3). */}
+      <BottomSheet
+        visible={!!swapSheet}
+        onClose={() => setSwapSheet(null)}
+        accessibilityLabel="Swap this meal"
+      >
+        {swapSheet ? (
+          <>
+            <Text style={styles.swapSheetTitle}>Swap this meal</Text>
+            <Text style={styles.swapSheetSub}>
+              Pick any one. Each keeps the day on target; the first is the closest match.
+            </Text>
+            <ScrollView
+              style={styles.swapList}
+              contentContainerStyle={styles.swapListContent}
+              showsVerticalScrollIndicator
+            >
+              {[
+                { meal: swapSheet.replacement, recommended: true },
+                ...swapSheet.alternatives.map((meal) => ({ meal, recommended: false })),
+              ].map(({ meal, recommended }) => (
+                <TouchableOpacity
+                  key={meal.mealId}
+                  style={[styles.swapOption, recommended && styles.swapOptionOn]}
+                  onPress={() => applyMealChoice(swapSheet.slotKey, meal)}
+                  disabled={busy}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${meal.name}, ${meal.totals.kcal} calories, ${meal.totals.protein} grams protein${recommended ? '. Closest match.' : ''}`}
+                >
+                  <View style={styles.swapOptionMain}>
+                    <Text style={styles.swapOptionName}>{meal.name}</Text>
+                    {recommended ? <Text style={styles.swapOptionTag}>Closest match</Text> : null}
+                  </View>
+                  <Text style={styles.swapOptionMacros}>
+                    {`${meal.totals.kcal} kcal · P ${meal.totals.protein} g`}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </>
+        ) : null}
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -560,4 +622,17 @@ const styles = StyleSheet.create({
   prefOptOn: { borderColor: colors.primary, backgroundColor: colors.surface2 },
   prefOptText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   prefOptTextOn: { color: colors.primary },
+  swapSheetTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
+  swapSheetSub: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: -spacing.xs, lineHeight: 19 },
+  swapList: { maxHeight: 360 },
+  swapListContent: { gap: spacing.sm, paddingVertical: spacing.xs },
+  swapOption: {
+    backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.md, gap: spacing.xs, minHeight: 56, justifyContent: 'center',
+  },
+  swapOptionOn: { borderColor: colors.primary },
+  swapOptionMain: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  swapOptionName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold, flex: 1 },
+  swapOptionTag: { color: colors.primary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
+  swapOptionMacros: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
 });
