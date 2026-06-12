@@ -43,6 +43,9 @@ export default function TierComparisonStrip({
     >
       <Text style={styles.colHeader}>Free</Text>
       <Text style={styles.colPrice}>£0</Text>
+      {/* COMP-007: empty cadence spacer keeps Free's rows aligned with Pro's
+          (only Pro shows a real "per year/month" line). */}
+      <Text style={styles.colCadence}> </Text>
       {COMPARISON_ROWS.map((row, i) => (
         <Text key={`free-${i}`} style={styles.rowText} numberOfLines={2}>
           {row.free}
@@ -62,6 +65,8 @@ export default function TierComparisonStrip({
     >
       <Text style={styles.colHeader}>Pro</Text>
       <Text style={styles.colPrice}>{priceFor('pro', pricingWindow) ?? '…'}</Text>
+      {/* COMP-007: cadence suffix so an annual "£29.99" isn't misread as monthly. */}
+      <Text style={styles.colCadence}>{pricingWindow === 'annual' ? 'per year' : 'per month'}</Text>
       {COMPARISON_ROWS.map((row, i) => (
         <Text key={`pro-${i}`} style={styles.rowText} numberOfLines={2}>
           {row.pro}
@@ -106,6 +111,10 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: fontSize.xxl,
     fontWeight: fontWeight.semibold,
+  },
+  colCadence: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
     marginBottom: spacing.md,
   },
   rowText: {

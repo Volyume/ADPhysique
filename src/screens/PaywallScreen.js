@@ -29,6 +29,7 @@ import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
 import { restorePurchases } from '../lib/payments/restore';
 import { skuFor, annualSavingsPct } from '../lib/payments/catalogue';
+import { pickPaywallExcerpt } from './paywallExcerpts';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
 import { track as trackEvent } from '../lib/engineTelemetry';
 import useAppStore from '../store/useAppStore';
@@ -41,9 +42,11 @@ export default function PaywallScreen({ navigation, route }) {
   const ctaMode = route?.params?.ctaMode ?? 'try_pro_14d';
   const surface = `differential_${trigger}`;
 
-  // Billing period the user is buying. Defaults to monthly (the lower-commitment
-  // yes for a new app); the annual option is one tap away with the saving shown.
-  const [period, setPeriod] = useState(route?.params?.period === 'annual' ? 'annual' : 'monthly');
+  // Billing period the user is buying. COMP-007: annual is the default. Health
+  // and fitness is the only category where annual dominates (~60-68% of
+  // revenue) and the saving is honest (50%); monthly stays fully visible as the
+  // escape hatch (anchor, don't hide). Caller can force monthly via param.
+  const [period, setPeriod] = useState(route?.params?.period === 'monthly' ? 'monthly' : 'annual');
 
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
   const userId = user?.id;
@@ -138,6 +141,9 @@ export default function PaywallScreen({ navigation, route }) {
   // disclosure drop the figure until it loads, and the chips show a short
   // placeholder.
   const priceFor = usePlayPrices();
+  // COMP-007 Stage B: deterministic daily pick; null (block hidden) until the
+  // curated list is non-empty. Static, offline, no PII.
+  const excerpt = pickPaywallExcerpt();
   const priceText = priceFor('pro', period);
   const monthlyPrice = priceFor('pro', 'monthly');
   const annualPrice = priceFor('pro', 'annual');
@@ -181,6 +187,21 @@ export default function PaywallScreen({ navigation, route }) {
           Pro reads your training, weight, and food together and adjusts your plan and targets every week, with a written reason for every change.
         </Text>
 
+        {/* COMP-007 Stage B: one verified Google Play excerpt, proof BEFORE
+            price. Renders only when a curated excerpt exists (ships dark until
+            the honesty bar in paywallExcerpts.js is met). */}
+        {excerpt ? (
+          <View style={styles.reviewCard} accessible accessibilityLabel={`${excerpt.stars} star review. ${excerpt.quote}. ${excerpt.name}, ${excerpt.source}, ${excerpt.date}.`}>
+            <View style={styles.reviewStars} accessibilityElementsHidden importantForAccessibility="no">
+              {Array.from({ length: Math.max(0, Math.min(5, excerpt.stars)) }).map((_, i) => (
+                <Ionicons key={i} name="star" size={13} color={colors.primary} />
+              ))}
+            </View>
+            <Text style={styles.reviewQuote} numberOfLines={3}>{`“${excerpt.quote}”`}</Text>
+            <Text style={styles.reviewMeta}>{`${excerpt.name} · ${excerpt.source} · ${excerpt.date}`}</Text>
+          </View>
+        ) : null}
+
         <View style={styles.stripWrap}>
           <TierComparisonStrip
             pricingWindow={period}
@@ -188,17 +209,8 @@ export default function PaywallScreen({ navigation, route }) {
           />
         </View>
 
+        {/* COMP-007: annual first (left) + preselected, monthly visible second. */}
         <View style={styles.periodRow}>
-          <TouchableOpacity
-            style={[styles.periodBtn, period === 'monthly' && styles.periodBtnActive]}
-            onPress={() => setPeriod('monthly')}
-            accessibilityRole="button"
-            accessibilityState={{ selected: period === 'monthly' }}
-            accessibilityLabel={monthlyPrice ? `Monthly, ${monthlyPrice}` : 'Monthly'}
-          >
-            <Text style={[styles.periodLabel, period === 'monthly' && styles.periodTextActive]}>Monthly</Text>
-            <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{monthlyPrice ?? PRICE_LOADING}</Text>
-          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.periodBtn, period === 'annual' && styles.periodBtnActive]}
             onPress={() => setPeriod('annual')}
@@ -209,6 +221,16 @@ export default function PaywallScreen({ navigation, route }) {
             <View style={styles.saveBadge}><Text style={styles.saveBadgeText}>Save {annualSavingsPct()}%</Text></View>
             <Text style={[styles.periodLabel, period === 'annual' && styles.periodTextActive]}>Annual</Text>
             <Text style={[styles.periodPrice, period === 'annual' && styles.periodTextActive]}>{annualPrice ?? PRICE_LOADING}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.periodBtn, period === 'monthly' && styles.periodBtnActive]}
+            onPress={() => setPeriod('monthly')}
+            accessibilityRole="button"
+            accessibilityState={{ selected: period === 'monthly' }}
+            accessibilityLabel={monthlyPrice ? `Monthly, ${monthlyPrice}` : 'Monthly'}
+          >
+            <Text style={[styles.periodLabel, period === 'monthly' && styles.periodTextActive]}>Monthly</Text>
+            <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{monthlyPrice ?? PRICE_LOADING}</Text>
           </TouchableOpacity>
         </View>
 
@@ -279,6 +301,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   stripWrap: { marginBottom: spacing.lg },
+  reviewCard: {
+    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, padding: spacing.md,
+    marginBottom: spacing.xl, gap: spacing.xs,
+  },
+  reviewStars: { flexDirection: 'row', gap: 2 },
+  reviewQuote: { color: colors.textPrimary, fontSize: fontSize.sm, lineHeight: 20, fontStyle: 'italic' },
+  reviewMeta: { color: colors.textMuted, fontSize: fontSize.xs },
   periodRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
   periodBtn: {
     flex: 1, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.border,
