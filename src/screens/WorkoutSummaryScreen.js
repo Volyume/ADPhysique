@@ -607,6 +607,38 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     navigation.navigate('ShareCard', { sessionData, prData });
   }
 
+  // D2 (decision 4b: share artefacts are FREE): a 2-tap share of the early-win
+  // milestone, reusing ShareCard's generic milestone layout. No Pro gate.
+  function handleShareMilestone() {
+    if (!milestone) return;
+    navigation.navigate('ShareCard', {
+      milestoneData: {
+        eyebrow: 'Milestone',
+        title: milestone.title,
+        heroValue: milestone.heroValue ?? '',
+        heroUnit: milestone.heroUnit ?? '',
+        caption: milestone.body,
+        date: Date.now(),
+      },
+    });
+  }
+
+  // D2: share the phase-completion (a block finished) as a free artefact.
+  function handleShareBlock() {
+    if (!blockStory) return;
+    const weeks = mesoWeek?.plannedWeeks;
+    navigation.navigate('ShareCard', {
+      milestoneData: {
+        eyebrow: 'Block complete',
+        title: blockStory.name || 'Training block complete',
+        heroValue: Number.isFinite(weeks) ? String(weeks) : '',
+        heroUnit: Number.isFinite(weeks) ? 'weeks trained' : '',
+        caption: 'A full training block, recovery week and all.',
+        date: Date.now(),
+      },
+    });
+  }
+
   function handleSaveAsTemplate() {
     if (!exerciseData.length) {
       appAlert('No exercises', 'No exercise data available to save as template.');
@@ -677,6 +709,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 <Text style={styles.milestoneTitle}>{milestone.title}</Text>
                 <Text style={styles.milestoneBody}>{milestone.body}</Text>
               </View>
+              <TouchableOpacity
+                style={styles.milestoneShareBtn}
+                onPress={handleShareMilestone}
+                accessibilityRole="button"
+                accessibilityLabel="Share this milestone"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="share-social-outline" size={18} color={colors.gold} />
+              </TouchableOpacity>
             </View>
           </RevealSection>
         ) : null}
@@ -879,8 +920,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </RevealSection>
         )}
 
-        {/* COMP-005: block-end recap, the in-flow moment at the end of a block. */}
-        {!readOnly && blockStory && (
+        {/* COMP-005 + D2: block-end recap. Under calm/ED this stays the quiet
+            neutral link (the recap is still reachable, no celebration cues). */}
+        {!readOnly && blockStory && calmSuppressed && (
           <RevealSection delay={1480}>
             <TouchableOpacity
               style={styles.blockRecapRow}
@@ -893,6 +935,54 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               <Text style={styles.blockRecapText}>Block complete. Watch your block story.</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.primary} />
             </TouchableOpacity>
+          </RevealSection>
+        )}
+
+        {/* D2: phase-completion celebration card — the full beat when a block's
+            final week closes (recap line + what's next), with the block story
+            and a free share artefact (decision 4b). Suppressed under calm/ED,
+            which falls back to the neutral link above. */}
+        {!readOnly && blockStory && !calmSuppressed && (
+          <RevealSection delay={1480}>
+            <View style={styles.phaseCard}>
+              <View style={styles.phaseHeaderRow}>
+                <Ionicons name="flag" size={18} color={colors.gold} />
+                <Text style={styles.phaseTitle}>Block complete</Text>
+              </View>
+              {blockStory.name ? (
+                <Text style={styles.phaseName}>{blockStory.name}</Text>
+              ) : null}
+              <Text style={styles.phaseRecap}>
+                {Number.isFinite(mesoWeek?.plannedWeeks)
+                  ? `${mesoWeek.plannedWeeks} weeks done, recovery week and all. A full training block, in the bank.`
+                  : 'A full training block, recovery week and all, in the bank.'}
+              </Text>
+              <Text style={styles.phaseNext}>
+                What's next: a new block, starting a little heavier than the last. That is how progress compounds over months, not just weeks.
+              </Text>
+              <View style={styles.phaseActions}>
+                <TouchableOpacity
+                  style={styles.phaseActionBtn}
+                  activeOpacity={0.85}
+                  onPress={() => navigation.navigate('RecapStory', { variant: 'block', mesocycleId: blockStory.mesocycleId, blockName: blockStory.name })}
+                  accessibilityRole="button"
+                  accessibilityLabel="Watch your block story"
+                >
+                  <Ionicons name="sparkles" size={15} color={colors.primary} />
+                  <Text style={styles.phaseActionText}>Watch your block story</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.phaseShareBtn}
+                  activeOpacity={0.85}
+                  onPress={handleShareBlock}
+                  accessibilityRole="button"
+                  accessibilityLabel="Share block complete"
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="share-social-outline" size={18} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+            </View>
           </RevealSection>
         )}
 
@@ -1226,6 +1316,34 @@ const styles = StyleSheet.create({
   },
   milestoneTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
   milestoneBody: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 3, lineHeight: 17 },
+  milestoneShareBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: withAlpha(colors.gold, 0.125),
+  },
+  // D2 phase-completion celebration card.
+  phaseCard: {
+    gap: spacing.sm,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.gold, 0.376),
+  },
+  phaseHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  phaseTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  phaseName: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  phaseRecap: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
+  phaseNext: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17 },
+  phaseActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xxs },
+  phaseActionBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    paddingVertical: spacing.md, borderRadius: radius.md,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.376),
+  },
+  phaseActionText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  phaseShareBtn: {
+    width: 44, height: 44, borderRadius: radius.md,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.376),
+  },
   // D2 programme-arc strip wrapper — surface card matching the other summary
   // sections, holding the reused BlockShapeCard (dots + effort word).
   blockArcSection: {

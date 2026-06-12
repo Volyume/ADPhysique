@@ -52,36 +52,43 @@ export const MILESTONES = Object.freeze([
     key: 'first_week', kind: 'first_week', icon: 'calendar-outline',
     title: 'Your first training week',
     body: 'Three sessions inside a week. That is what a training habit looks like — and you are building one.',
+    heroValue: '1', heroUnit: 'week in',
   }),
   Object.freeze({
     key: 'sessions_5', kind: 'sessions', threshold: 5, icon: 'flame-outline',
     title: 'Five sessions in',
     body: 'Five sessions logged. The habit is starting to hold.',
+    heroValue: '5', heroUnit: 'sessions logged',
   }),
   Object.freeze({
     key: 'sessions_10', kind: 'sessions', threshold: 10, icon: 'flame-outline',
     title: 'Ten sessions',
     body: 'Ten in the book. You are not trying the gym any more — you train.',
+    heroValue: '10', heroUnit: 'sessions logged',
   }),
   Object.freeze({
     key: 'sessions_25', kind: 'sessions', threshold: 25, icon: 'ribbon-outline',
     title: 'Twenty-five sessions',
     body: 'Twenty-five sessions logged. That is a genuine training history behind you now.',
+    heroValue: '25', heroUnit: 'sessions logged',
   }),
   Object.freeze({
     key: 'sessions_50', kind: 'sessions', threshold: 50, icon: 'ribbon-outline',
     title: 'Fifty sessions',
     body: 'Fifty sessions of showing up. That is real, steady commitment.',
+    heroValue: '50', heroUnit: 'sessions logged',
   }),
   Object.freeze({
     key: 'sessions_100', kind: 'sessions', threshold: 100, icon: 'medal-outline',
     title: 'One hundred sessions',
     body: 'One hundred sessions logged. You have built something most people only talk about.',
+    heroValue: '100', heroUnit: 'sessions logged',
   }),
   Object.freeze({
     key: 'first_pr', kind: 'first_pr', icon: 'trophy-outline',
     title: 'Your first personal record',
     body: 'Your first logged PR. Proof the work is paying off.',
+    heroValue: '1', heroUnit: 'PR banked',
   }),
 ]);
 
