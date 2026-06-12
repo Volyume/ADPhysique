@@ -733,7 +733,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
     return (
       <>
         <Text style={styles.stepHeading}>This week's data</Text>
-        <Text style={styles.stepSubtitle}>How well did you hit your targets?</Text>
+        <Text style={styles.stepSubtitle}>How did the week go against your targets?</Text>
 
         {/* Weight trend, read-only */}
         {!loading && (
@@ -808,7 +808,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             <OptionRow
               options={[
                 { value: 'yes', label: 'Hit it' },
-                { value: 'no', label: 'Missed it' },
+                { value: 'no', label: 'Off target' },
                 { value: 'untracked', label: "Didn't track" },
               ]}
               selected={calsAdherence}
@@ -898,7 +898,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
               options={[
                 { value: 'hit', label: 'Did it' },
                 { value: 'mostly', label: 'Mostly' },
-                { value: 'missed', label: 'Missed it' },
+                { value: 'missed', label: 'Not this week' },
               ]}
               selected={cardioAdherence}
               onSelect={setCardioAdherence}
@@ -1070,7 +1070,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // recovery questions.
   function renderFastCheckIn() {
     const CALS_TEXT = { yes: 'Hit your target', no: 'Off your target', untracked: "Didn't track" };
-    const CARDIO_TEXT = { hit: 'Did it', mostly: 'Mostly done', missed: 'Missed it' };
+    const CARDIO_TEXT = { hit: 'Did it', mostly: 'Mostly done', missed: 'Not this week' };
     const summaryRows = [
       {
         key: 'training',
@@ -1179,7 +1179,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close">
             <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.gateHeaderTitle}>Weekly Check-In</Text>
+          <Text style={styles.gateHeaderTitle}>Weekly check-in</Text>
           <View style={{ width: 24 }} />
         </View>
         <ScrollView contentContainerStyle={styles.gateScroll}>
