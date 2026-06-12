@@ -5,7 +5,7 @@
  * pairs), and is deterministic.
  */
 import { CURATED_FOODS } from '../curatedFoods';
-import { mealTotals } from '../curatedMeals';
+import { mealTotals, CURATED_MEALS } from '../curatedMeals';
 import { ROLE_TOLERANCE_G, roleOf, roleMacroGrams } from '../foodRoles';
 import {
   findRoleAlternatives,
@@ -173,5 +173,45 @@ describe('swapMealInPlan', () => {
   test('is deterministic', () => {
     expect(swapMealInPlan({ day, slotKey: 'meal_2', prefs: {} }))
       .toEqual(swapMealInPlan({ day, slotKey: 'meal_2', prefs: {} }));
+  });
+});
+
+// ─── Slot character on swaps (rethink 2026-06-12): a swap stays in the
+// slot's character — Meal 1 only offers breakfast meals, the final meal
+// offers cooked mains. ───────────────────────────────────────────────────────
+describe('swapMealInPlan slot character', () => {
+  const tagsOf = (mealId) => CURATED_MEALS.find((m) => m.id === mealId)?.slots ?? [];
+  const day = {
+    slots: [
+      { slot: 'meal_1', mealId: 'curated_om_oats_whey_banana', name: 'Oats, whey & banana', totals: { kcal: 500, protein: 40, carbs: 60, fat: 10 } },
+      { slot: 'meal_2', mealId: 'curated_om_turkey_avocado_wrap', name: 'Turkey & avocado wrap', totals: { kcal: 520, protein: 40, carbs: 45, fat: 18 } },
+      { slot: 'meal_3', mealId: 'curated_om_chicken_rice_broc', name: 'Chicken, rice & broccoli', totals: { kcal: 600, protein: 50, carbs: 70, fat: 12 } },
+    ],
+  };
+
+  test('a Meal 1 swap offers ONLY breakfast meals (the curry fix)', () => {
+    const res = swapMealInPlan({ day, slotKey: 'meal_1', prefs: {} });
+    expect(res).not.toBeNull();
+    [res.replacement, ...res.alternatives].forEach((alt) => {
+      expect(tagsOf(alt.mealId)).toContain('breakfast');
+    });
+  });
+
+  test('a final-meal swap offers ONLY cooked mains', () => {
+    const res = swapMealInPlan({ day, slotKey: 'meal_3', prefs: {} });
+    expect(res).not.toBeNull();
+    [res.replacement, ...res.alternatives].forEach((alt) => {
+      const tags = tagsOf(alt.mealId);
+      expect(tags.includes('lunch') || tags.includes('dinner')).toBe(true);
+    });
+  });
+
+  test('a middle-meal swap never offers a breakfast-only meal', () => {
+    const res = swapMealInPlan({ day, slotKey: 'meal_2', prefs: {} });
+    expect(res).not.toBeNull();
+    [res.replacement, ...res.alternatives].forEach((alt) => {
+      const tags = tagsOf(alt.mealId);
+      expect(tags.every((t) => t === 'breakfast')).toBe(false);
+    });
   });
 });

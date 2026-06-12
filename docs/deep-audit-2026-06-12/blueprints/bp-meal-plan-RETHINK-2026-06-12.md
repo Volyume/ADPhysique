@@ -131,19 +131,25 @@ expected.
 
 ## 3. Blueprint — what to build
 
-### 3.1 Named-slot model (replaces the numbered-meal default)
-- Replace meal_1..N with **named slots**: `breakfast`, optional `lunch`,
-  `dinner`, and 0-2 `snack`s, derived from meals/day. A 5-meal day =
-  breakfast, snack, lunch, snack, dinner (not "meal 1-5").
-- **`slotMatches()` must enforce the tag for named slots** — a breakfast slot
-  only accepts `breakfast`-tagged meals. Numbered fallback is removed for the
-  plan; the diary's own flexible logging is untouched.
-- **Per-slot repetition policy:** breakfast may repeat across the week (and
-  defaults to 1-2 rotating options); dinners maximise variety. Encodes §2.5.
-- **Per-slot food conventions** (the curated tags already exist; tighten them):
-  breakfast = oats/eggs/yogurt/skyr/cottage-cheese/whey-led, sweet or light
-  savoury; lunch = lighter savoury / sandwich-style / leftovers; dinner =
-  familiar British cooked plates made macro-friendly.
+### 3.1 Position-derived slot character (FOUNDER AMENDMENT 2026-06-12)
+**Founder directive supersedes the earlier named-slot idea:** keep the
+bodybuilder numbered-meal model — "Meal 1..N" labels, 3/4/5/6 meals a day, and
+the pre/post-workout slot positioning — and do NOT label slots
+breakfast/lunch/dinner. Instead each numbered position carries an internal FOOD
+CHARACTER the matcher enforces:
+- **Meal 1 places a breakfast meal** (breakfast-tagged candidates only; safe
+  relaxation if a diet/exclusion combo empties the pool, never an empty slot).
+- **The final meal is a cooked main** (lunch/dinner-tagged).
+- **Middle meals** draw mains + snack-shaped meals (macro share + variety
+  decide; small shares naturally pull snack-sized meals on 5-6 meal days).
+  Breakfast-ONLY meals (pancakes, omelette + toast) do not appear mid-day;
+  dual-tagged bowls/smoothies still can via their snack tag.
+- Pre/post-workout slots keep their existing kind-based behaviour and
+  positions.
+- **Per-slot repetition policy:** Meal 1 may repeat across the week (and
+  defaults to a small rotation); the final main maximises variety. Encodes §2.5
+  without renaming anything.
+- The diary's own flexible numbered logging is untouched.
 
 ### 3.2 Daily training-day input (replaces the invented weekly spread)
 - "Plan my day" asks **"Training today?"** (and optionally a rough training

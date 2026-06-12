@@ -199,12 +199,28 @@ function countPinnedAfter(slots, idx, pinnedTaken) {
   return n;
 }
 
-function slotKindForMatching(slotKey) {
-  // Curated meals carry breakfast/lunch/dinner/snack tags; numbered slots
-  // pass everything (mealSuggest.slotMatches handles meal_N), and the two
-  // workout slots behave like 'any' with their own scoring preferences.
+/**
+ * Position-derived slot character (rethink 2026-06-12, founder directive):
+ * the plan keeps the bodybuilder numbered-meal model — "Meal 1..N" labels,
+ * 3-6 meals, pre/post-workout positions — and each position carries a food
+ * character the matcher enforces instead of a breakfast/lunch/dinner label:
+ *   - Meal 1 places a BREAKFAST meal (the curry-for-breakfast fix);
+ *   - the final meal is a cooked MAIN (lunch/dinner-tagged);
+ *   - middle meals draw mains + snack-shaped meals (the per-slot macro share
+ *     naturally pulls snack-sized meals on 5-6 meal days). Breakfast-ONLY
+ *     meals never appear mid-day; dual-tagged bowls still can via 'snack'.
+ * Workout slots keep their kind-based scoring (null = no character filter).
+ * Legacy named slot strings pass through for the diary's suggestion path.
+ */
+export function slotCharacterFor(slotKey, mealsPerDay) {
   if (slotKey === 'pre_workout' || slotKey === 'post_workout') return null;
-  return slotKey;
+  const m = /^meal_(\d+)$/.exec(String(slotKey || ''));
+  if (!m) return slotKey || null;
+  const i = Number(m[1]);
+  const n = Math.max(1, Math.round(Number(mealsPerDay) || 0));
+  if (i === 1) return ['breakfast'];
+  if (i >= n && n >= 2) return ['lunch', 'dinner'];
+  return ['lunch', 'dinner', 'snack'];
 }
 
 // ─── The day assembler ──────────────────────────────────────────────────
@@ -267,8 +283,10 @@ export function assembleDayPlan({
   (prefs.pinnedMealIds || []).forEach((pinId) => {
     const cand = pool.find((c) => c.id === pinId && !usedIds.has(c.id));
     if (!cand) return; // pin no longer exists / excluded by diet: skip
+    // A pin is explicit user intent: tagged meals take the earliest slot whose
+    // character they fit; untagged (saved) meals pass any character.
     const slot = slots.find((s) => !pinnedTaken.has(s.key)
-      && (slotKindForMatching(s.key) === null || slotMatches(cand.slots, slotKindForMatching(s.key))));
+      && slotMatches(cand.slots, slotCharacterFor(s.key, prefs.mealsPerDay)));
     if (!slot) return;
     pinnedTaken.add(slot.key);
     usedIds.add(cand.id);
@@ -285,35 +303,57 @@ export function assembleDayPlan({
     if (pinnedTaken.has(slot.key)) return; // already filled by a pin
     const slotsLeft = slots.length - idx;
     const share = perMealMacros(remaining(), Math.max(1, slotsLeft - countPinnedAfter(slots, idx, pinnedTaken)));
-    const matchKind = slotKindForMatching(slot.key);
+    const matchKind = slotCharacterFor(slot.key, prefs.mealsPerDay);
+    // Per-slot repetition policy (rethink §3.1, breakfast-variety evidence):
+    // Meal 1 tolerates repetition across the week (most people happily repeat
+    // a breakfast), so its variety penalty is heavily discounted; other slots
+    // keep the full dial.
+    const varietyScale = slot.key === 'meal_1' ? 0.25 : 1;
 
-    let best = null;
-    let bestScore = -Infinity;
-    pool.forEach((cand) => {
-      if (usedIds.has(cand.id)) return;
-      if (matchKind && !slotMatches(cand.slots, matchKind)) return;
+    const pickBest = (enforceCharacter) => {
+      let best = null;
+      let bestScore = -Infinity;
+      pool.forEach((cand) => {
+        if (usedIds.has(cand.id)) return;
+        if (enforceCharacter && matchKind) {
+          // The greedy fill needs POSITIVE evidence for a character slot: a
+          // candidate must carry a matching tag. Untagged (saved) meals do
+          // not slip into Meal 1 just because they claim nothing.
+          if (Array.isArray(matchKind)) {
+            if (!Array.isArray(cand.slots) || cand.slots.length === 0) return;
+          }
+          if (!slotMatches(cand.slots, matchKind)) return;
+        }
 
-      let score = fitScore(share, cand.totals);
-      // Variety: penalise meals used recently across the week; the dial
-      // scales the penalty (0 = repeat freely for meal-prep).
-      const lastUsed = recentlyUsed.get(cand.id);
-      if (lastUsed !== undefined && prefs.variety > 0) {
-        score -= prefs.variety * (0.6 / Math.max(1, lastUsed));
-      }
-      // 3-3-3 rotation pool: a soft pull toward the user's chosen staples.
-      score += 0.15 * poolAffinity(cand, prefs.rotationPool);
-      // Peri-workout slot character: low fat going in; protein + carbs out.
-      if (slot.kind === 'pre_workout') score -= (cand.totals.fat / 100);
-      if (slot.kind === 'post_workout') score += (cand.totals.protein / 200);
-      // Seeded jitter: small enough never to outrank a clearly better fit,
-      // large enough that regeneration reshuffles near-ties.
-      score += (rng() - 0.5) * 0.08;
+        let score = fitScore(share, cand.totals);
+        // Variety: penalise meals used recently across the week; the dial
+        // scales the penalty (0 = repeat freely for meal-prep).
+        const lastUsed = recentlyUsed.get(cand.id);
+        if (lastUsed !== undefined && prefs.variety > 0) {
+          score -= varietyScale * prefs.variety * (0.6 / Math.max(1, lastUsed));
+        }
+        // 3-3-3 rotation pool: a soft pull toward the user's chosen staples.
+        score += 0.15 * poolAffinity(cand, prefs.rotationPool);
+        // Peri-workout slot character: low fat going in; protein + carbs out.
+        if (slot.kind === 'pre_workout') score -= (cand.totals.fat / 100);
+        if (slot.kind === 'post_workout') score += (cand.totals.protein / 200);
+        // Seeded jitter: small enough never to outrank a clearly better fit,
+        // large enough that regeneration reshuffles near-ties.
+        score += (rng() - 0.5) * 0.08;
 
-      if (score > bestScore + 1e-9 || (Math.abs(score - bestScore) <= 1e-9 && best && cand.id < best.id)) {
-        best = cand;
-        bestScore = score;
-      }
-    });
+        if (score > bestScore + 1e-9 || (Math.abs(score - bestScore) <= 1e-9 && best && cand.id < best.id)) {
+          best = cand;
+          bestScore = score;
+        }
+      });
+      return best;
+    };
+
+    // Character first; if a diet/exclusion combo empties the character pool,
+    // relax rather than leave the slot unfilled (a plan with a hole is worse
+    // than a plan with an off-character meal).
+    let best = pickBest(true);
+    if (!best && matchKind) best = pickBest(false);
 
     if (best) {
       usedIds.add(best.id);

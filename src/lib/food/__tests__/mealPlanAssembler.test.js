@@ -314,3 +314,130 @@ describe('assembleWeekPlan', () => {
     expect(Math.abs(avg - TARGET.targetKcal)).toBeLessThanOrEqual(TARGET.targetKcal * 0.1);
   });
 });
+
+// ─── SLOT-CHARACTER INVARIANT (rethink 2026-06-12: the curry-for-breakfast
+// fix). The plan keeps numbered labels; each position carries an internal
+// food character: Meal 1 places a breakfast meal, the final meal is a cooked
+// main, breakfast-only meals never appear mid-day. Asserted against the REAL
+// curated library across seeds, diets and meal counts. ──────────────────────
+import { CURATED_MEALS } from '../curatedMeals';
+import { slotCharacterFor } from '../mealPlanAssembler';
+
+const curatedTags = (mealId) => CURATED_MEALS.find((m) => m.id === mealId)?.slots ?? null;
+
+describe('slotCharacterFor', () => {
+  test('Meal 1 is breakfast; the final meal is a cooked main; middles take mains + snacks', () => {
+    expect(slotCharacterFor('meal_1', 4)).toEqual(['breakfast']);
+    expect(slotCharacterFor('meal_4', 4)).toEqual(['lunch', 'dinner']);
+    expect(slotCharacterFor('meal_2', 4)).toEqual(['lunch', 'dinner', 'snack']);
+    expect(slotCharacterFor('meal_3', 4)).toEqual(['lunch', 'dinner', 'snack']);
+  });
+  test('workout slots carry no character filter; legacy named slots pass through', () => {
+    expect(slotCharacterFor('pre_workout', 5)).toBeNull();
+    expect(slotCharacterFor('post_workout', 5)).toBeNull();
+    expect(slotCharacterFor('breakfast', 4)).toBe('breakfast');
+  });
+  test('a 1-meal day is still breakfast-led; 2 meals = breakfast + main', () => {
+    expect(slotCharacterFor('meal_1', 1)).toEqual(['breakfast']);
+    expect(slotCharacterFor('meal_1', 2)).toEqual(['breakfast']);
+    expect(slotCharacterFor('meal_2', 2)).toEqual(['lunch', 'dinner']);
+  });
+});
+
+describe('SLOT-CHARACTER INVARIANT against the real library', () => {
+  const DIETS = ['omnivore', 'vegetarian', 'vegan'];
+  const MEALS = [3, 4, 5, 6];
+  const SEEDS = [1, 7, 13, 21, 34, 55];
+
+  test('Meal 1 always places a breakfast-tagged meal', () => {
+    DIETS.forEach((diet) => MEALS.forEach((mealsPerDay) => SEEDS.forEach((seed) => {
+      const day = assembleDayPlan({
+        target: dayTarget(), band: BAND,
+        prefs: { diet, mealsPerDay }, seed,
+      });
+      const first = day.slots.find((s) => s.slot === 'meal_1');
+      expect(first).toBeTruthy();
+      const tags = curatedTags(first.mealId);
+      expect(tags).toContain('breakfast');
+    })));
+  });
+
+  test('the final meal is always a cooked main (lunch/dinner-tagged)', () => {
+    DIETS.forEach((diet) => MEALS.forEach((mealsPerDay) => SEEDS.forEach((seed) => {
+      const day = assembleDayPlan({
+        target: dayTarget(), band: BAND,
+        prefs: { diet, mealsPerDay }, seed,
+      });
+      const last = day.slots.find((s) => s.slot === `meal_${mealsPerDay}`);
+      expect(last).toBeTruthy();
+      const tags = curatedTags(last.mealId);
+      expect(tags.includes('lunch') || tags.includes('dinner')).toBe(true);
+    })));
+  });
+
+  test('breakfast-ONLY meals never appear in middle or final slots', () => {
+    DIETS.forEach((diet) => SEEDS.forEach((seed) => {
+      const day = assembleDayPlan({
+        target: dayTarget(), band: BAND,
+        prefs: { diet, mealsPerDay: 5 }, seed,
+      });
+      day.slots.forEach((s) => {
+        if (s.slot === 'meal_1' || s.slot === 'pre_workout' || s.slot === 'post_workout') return;
+        const tags = curatedTags(s.mealId);
+        if (!tags) return; // saved meals carry no tags
+        const breakfastOnly = tags.every((t) => t === 'breakfast');
+        expect(breakfastOnly).toBe(false);
+      });
+    }));
+  });
+
+  test('labels stay numbered: slot keys are meal_N, never breakfast/lunch/dinner', () => {
+    const day = assembleDayPlan({ target: dayTarget(), band: BAND, prefs: { mealsPerDay: 5 }, seed: 3 });
+    day.slots.forEach((s) => {
+      expect(/^meal_\d+$|^pre_workout$|^post_workout$/.test(s.slot)).toBe(true);
+    });
+  });
+
+  test('relaxation: a character pool emptied by exclusions still fills the slot (no holes)', () => {
+    // Vegan + soya excluded guts the vegan breakfast pool; the day must still
+    // come back with every numbered slot filled, character relaxed if needed.
+    const day = assembleDayPlan({
+      target: dayTarget(), band: BAND,
+      prefs: { diet: 'vegan', excludeTags: ['soya'], mealsPerDay: 4 }, seed: 9,
+    });
+    const numbered = day.slots.filter((s) => /^meal_\d+$/.test(s.slot));
+    expect(numbered.length).toBe(4);
+  });
+
+  test('an untagged saved meal is never greedily placed at Meal 1', () => {
+    // A saved meal whose macros are a juicy fit for any slot share: without
+    // positive breakfast evidence it must not take Meal 1.
+    const saved = { id: 'saved_x', name: 'My leftovers', slots: [], totals: { kcal: 650, protein: 45, carbs: 65, fat: 19 } };
+    SEEDS.forEach((seed) => {
+      const day = assembleDayPlan({
+        target: dayTarget(), band: BAND,
+        prefs: { mealsPerDay: 4 }, seed, savedMeals: [saved],
+      });
+      const first = day.slots.find((s) => s.slot === 'meal_1');
+      expect(first.source).toBe('curated');
+    });
+  });
+
+  test('a PINNED untagged saved meal may claim Meal 1 (explicit user intent wins)', () => {
+    const saved = { id: 'saved_pin', name: 'My breakfast', slots: [], totals: { kcal: 500, protein: 40, carbs: 50, fat: 12 } };
+    const day = assembleDayPlan({
+      target: dayTarget(), band: BAND,
+      prefs: { mealsPerDay: 4, pinnedMealIds: ['saved_pin'] }, seed: 4, savedMeals: [saved],
+    });
+    const first = day.slots.find((s) => s.slot === 'meal_1');
+    expect(first.mealId).toBe('saved_pin');
+  });
+
+  test('Meal 1 tolerates repetition across a varied week; dinners rotate more', () => {
+    const schedule = ['training', 'rest', 'training', 'rest', 'training', 'training', 'rest'];
+    const week = assembleWeekPlan({ engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 1 }, schedule, seed: 8 });
+    const firsts = new Set(week.days.map((d) => d.slots.find((s) => s.slot === 'meal_1')?.mealId));
+    const lasts = new Set(week.days.map((d) => d.slots.find((s) => s.slot === 'meal_4')?.mealId));
+    expect(firsts.size).toBeLessThanOrEqual(lasts.size);
+  });
+});

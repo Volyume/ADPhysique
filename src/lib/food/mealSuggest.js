@@ -51,15 +51,24 @@ export function mealsLeftToday(mealsPerDay, loggedSlots) {
  * no tags means it fits any slot (so oats won't be offered at dinner, but
  * a chicken/rice bowl can be lunch or dinner). No slot requested = all pass.
  *
- * Numbered meals (the flexible meal model, 'meal_N') carry no breakfast/lunch/
- * dinner character, so a name match cannot apply: they pass everything and the
- * ranking falls back to the macro fit (remaining macros / meals-left), rather
- * than filtering out every curated meal because none is tagged 'meal_3'. The
- * curated tags are kept and still apply to the legacy named slots. (A richer
- * time-of-day context inference for numbered meals is a later refinement.)
+ * Two slot forms are accepted:
+ *  - a STRING ('breakfast', 'lunch', ... or the diary's 'meal_N'). Bare
+ *    numbered slots pass everything: the diary's flexible meal model carries
+ *    no food character and ranking falls back to macro fit.
+ *  - an ARRAY of allowed kinds (meal-plan rethink 2026-06-12): the PLAN's
+ *    numbered slots keep their numbered labels but carry a position-derived
+ *    character (Meal 1 places a breakfast meal; the final meal is a cooked
+ *    main). A candidate passes when any of its tags is allowed. Untagged
+ *    candidates pass here too; callers that need positive evidence (the
+ *    assembler's greedy fill) check for tags themselves.
  */
 export function slotMatches(candidateSlots, slot) {
   if (!slot) return true;
+  if (Array.isArray(slot)) {
+    if (!slot.length) return true;
+    if (!Array.isArray(candidateSlots) || candidateSlots.length === 0) return true;
+    return candidateSlots.includes('any') || slot.some((k) => candidateSlots.includes(k));
+  }
   if (/^meal_\d+$/.test(slot)) return true;
   if (!Array.isArray(candidateSlots) || candidateSlots.length === 0) return true;
   return candidateSlots.includes(slot) || candidateSlots.includes('any');

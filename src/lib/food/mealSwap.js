@@ -23,6 +23,7 @@
 import { CURATED_FOODS, resolveComponent } from './curatedFoods';
 import { CURATED_MEALS, mealItems, mealTotals } from './curatedMeals';
 import { slotMatches } from './mealSuggest';
+import { slotCharacterFor } from './mealPlanAssembler';
 import { normalisePreferences, foodAllowed, mealAllowed } from './planPreferences';
 import {
   ROLE_TOLERANCE_G,
@@ -156,9 +157,15 @@ export function swapMealInPlan({ day, slotKey, prefs, excludeMealIds = [] } = {}
 
   const onDay = new Set(slots.map((s) => s.mealId));
   const skip = new Set([...excludeMealIds, outgoing.mealId]);
-  const matchKind = /^meal_\d+$/.test(slotKey) || slotKey === 'pre_workout' || slotKey === 'post_workout'
-    ? null
-    : slotKey;
+  // Position-derived character (rethink 2026-06-12): a swap stays in the
+  // slot's character — Meal 1 only offers breakfast meals, the final meal
+  // offers cooked mains. Meals-per-day is recovered from the day's own
+  // numbered slots so the swap needs no extra context.
+  const mealsPerDay = slots.reduce((n, s) => {
+    const m = /^meal_(\d+)$/.exec(String(s.slot || ''));
+    return m ? Math.max(n, Number(m[1])) : n;
+  }, 0);
+  const matchKind = slotCharacterFor(slotKey, mealsPerDay);
 
   // Symmetric similarity to the outgoing plate: a candidate that is much
   // lighter is penalised just as much as one that is much heavier, so the
