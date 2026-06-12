@@ -1186,6 +1186,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   }).catch(() => {});
                 }
               } catch (_) { /* tolerate */ }
+              // COMP-019: refresh the home-screen widget snapshot (consistency
+              // tick) and NEW-002: push my own week signal to active partners.
+              // Both fire-and-forget; neither blocks the finish flow.
+              try {
+                const uid2 = useAppStore.getState().user?.id;
+                if (uid2) {
+                  // eslint-disable-next-line global-require
+                  require('../lib/widgets/writer').writeWidgetSnapshot(uid2).catch(() => {});
+                  // eslint-disable-next-line global-require
+                  require('../lib/partners/weekSignalWriter').writeOwnWeekSignals(uid2).catch(() => {});
+                }
+              } catch (_) { /* tolerate */ }
               // Push to cloud IMMEDIATELY on finish. Previously the
               // syncWorkout call only fired when the user tapped Close
               // on the Workout Summary screen, if they swiped away to

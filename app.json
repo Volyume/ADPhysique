@@ -168,7 +168,39 @@
       ],
       "react-native-health-connect",
       "./plugins/withHealthConnectPermissionDelegate",
-      "./plugins/withEdgeToEdgeOptOut"
+      "./plugins/withEdgeToEdgeOptOut",
+      "@bacons/apple-targets",
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "NextSession",
+              "label": "Next session",
+              "minWidth": "180dp",
+              "minHeight": "110dp",
+              "description": "Your next training session at a glance.",
+              "previewImage": "./assets/notification-icon.png",
+              "targetCellWidth": 3,
+              "targetCellHeight": 1,
+              "updatePeriodMillis": 1800000,
+              "resizeMode": "horizontal|vertical"
+            },
+            {
+              "name": "WeeklyConsistency",
+              "label": "Weekly consistency",
+              "minWidth": "110dp",
+              "minHeight": "110dp",
+              "description": "Sessions done this week and your streak.",
+              "previewImage": "./assets/notification-icon.png",
+              "targetCellWidth": 2,
+              "targetCellHeight": 1,
+              "updatePeriodMillis": 1800000,
+              "resizeMode": "none"
+            }
+          ]
+        }
+      ]
     ],
     "notification": {
       "icon": "./assets/notification-icon.png",

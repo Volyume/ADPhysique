@@ -660,6 +660,19 @@ export default function App() {
       if (state === 'active' || state === 'background' || state === 'inactive') {
         maybeSync();
       }
+      // COMP-019: refresh the home-screen widget snapshot when backgrounding
+      // (the blueprint's foreground->background trigger). Fire-and-forget.
+      if (state === 'background') {
+        try {
+          const sb = getSupabaseClient();
+          sb?.auth.getSession().then(({ data: { session: s } = {} } = {}) => {
+            const uid = s?.user?.id;
+            if (!uid) return;
+            // eslint-disable-next-line global-require
+            require('./src/lib/widgets/writer').writeWidgetSnapshot(uid).catch(() => {});
+          }).catch(() => {});
+        } catch (_) {}
+      }
     });
     // Also run once on mount so an app launched after a long offline period
     // catches up immediately.

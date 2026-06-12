@@ -13,9 +13,13 @@
  */
 
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const APP_GROUP = 'group.app.volyume.widget';
 const SNAPSHOT_KEY = 'widget_snapshot_v1';
+// AsyncStorage lives in the app sandbox, which the Android headless widget task
+// handler can read — so it is the canonical snapshot the Android widget renders.
+export const WIDGET_SNAPSHOT_ASYNC_KEY = '@volyume_widget_snapshot_v1';
 const ANDROID_WIDGETS = ['NextSession', 'WeeklyConsistency'];
 
 // Lazy, defensive native requires. Absent module -> null -> no-op.
@@ -39,6 +43,8 @@ function androidWidgetApi() {
  */
 export async function persistWidgetSnapshot(snapshot) {
   const json = JSON.stringify(snapshot);
+  // Always stash a sandbox copy the Android widget task handler reads.
+  try { await AsyncStorage.setItem(WIDGET_SNAPSHOT_ASYNC_KEY, json); } catch (_) { /* best-effort */ }
   try {
     if (Platform.OS === 'ios') {
       const Storage = iosExtensionStorage();
