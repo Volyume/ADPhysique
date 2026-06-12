@@ -5,6 +5,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, withAlpha } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
+import BlockShapeCard from '../components/BlockShapeCard';
 import { useFeedback } from '../components/FeedbackSheet';
 import { shouldPrompt } from '../lib/feedback';
 import {
@@ -115,6 +116,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // suppression as firstSessionLine. PRs are owned by PRCelebration and the
   // first session by COMP-013, so neither double-celebrates here.
   const [milestone, setMilestone] = useState(null);
+  // D2: calm-mode / open-ED suppression flag for the peak-surface celebratory
+  // cards (the programme-arc strip + the phase-completion card). Set once from
+  // the shared wellbeing read in loadVolumeAndHistory.
+  const [calmSuppressed, setCalmSuppressed] = useState(false);
   // Default-expanded so the energy + sleep prompts surface naturally
   // at the end of the session. The coach engine relies on these
   // signals; hiding them behind a tap was making the post-workout
@@ -262,13 +267,17 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // status='completed' writer, so the final-week reached (weekIndex >=
   // plannedWeeks) is the signal, tolerant of training past the planned end.
   const [blockStory, setBlockStory] = useState(null);
+  // D2: the current mesocycle week, for the "Week N of M" programme-arc strip.
+  const [mesoWeek, setMesoWeek] = useState(null);
   useEffect(() => {
     if (readOnly || !user?.id) return;
     let cancelled = false;
     (async () => {
       try {
         const wk = await getCurrentMesocycleWeek(user.id);
-        if (!cancelled && wk && wk.mesocycleId && wk.plannedWeeks > 0 && wk.weekIndex >= wk.plannedWeeks) {
+        if (cancelled || !wk) return;
+        setMesoWeek(wk);
+        if (wk.mesocycleId && wk.plannedWeeks > 0 && wk.weekIndex >= wk.plannedWeeks) {
           setBlockStory({ mesocycleId: wk.mesocycleId, name: wk.mesoName });
         }
       } catch (_e) {}
@@ -370,6 +379,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         edFlag = flag;
       } catch (_) {}
       const suppressed = calm || !!edFlag;
+      setCalmSuppressed(suppressed);
 
       // COMP-013: first completed session ever → the calibrated acknowledgement.
       if (totalCompleted === 1) {
@@ -732,6 +742,27 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             </View>
           );
         })()}</RevealSection>
+        )}
+
+        {/* D2: programme-arc strip — where this session sits in the block, so
+            the work reads as a journey towards the recovery week, not an
+            open-ended grind. Suppressed under calm/ED; needs a real ≥2-week
+            block. Reuses the same BlockShapeCard as Home and Consistency. */}
+        {!readOnly && !calmSuppressed && mesoWeek?.plannedWeeks >= 2 && (
+          <RevealSection delay={1160}>
+            <View style={styles.blockArcSection}>
+              <Text style={styles.sectionTitle}>Your block</Text>
+              {mesoWeek.mesoName ? (
+                <Text style={styles.blockArcName}>{mesoWeek.mesoName}</Text>
+              ) : null}
+              <BlockShapeCard
+                weekIndex={mesoWeek.weekIndex}
+                plannedWeeks={mesoWeek.plannedWeeks}
+                isDeload={mesoWeek.isDeload}
+                compact
+              />
+            </View>
+          </RevealSection>
         )}
 
         <RevealSection delay={1220}>{(() => {
@@ -1195,6 +1226,14 @@ const styles = StyleSheet.create({
   },
   milestoneTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
   milestoneBody: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 3, lineHeight: 17 },
+  // D2 programme-arc strip wrapper — surface card matching the other summary
+  // sections, holding the reused BlockShapeCard (dots + effort word).
+  blockArcSection: {
+    gap: spacing.sm,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  blockArcName: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   statBox: {
     flex: 1, minWidth: '45%', backgroundColor: colors.surface, borderRadius: radius.md,

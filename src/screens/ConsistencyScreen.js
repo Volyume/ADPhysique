@@ -6,6 +6,7 @@ import AnimatedEntrance from '../components/AnimatedEntrance';
 import InfoTooltip from '../components/InfoTooltip';
 import FatigueTrendCard from '../components/FatigueTrendCard';
 import BlockProgressCard from '../components/BlockProgressCard';
+import BlockShapeCard from '../components/BlockShapeCard';
 import ReadinessCards from '../components/ReadinessCards';
 import {
   MesocyclePulseCard, WorkloadCard, SessionDurationChart,
@@ -76,6 +77,17 @@ export default function ConsistencyScreen({ navigation }) {
               'After the recovery week, a new block starts slightly heavier than the last. That is how you keep improving over months, not just weeks.'
             } />
           </View>
+          {/* D2: programme-arc visibility — "Week N of M" dots + effort word,
+              so the block reads as a journey with a destination (the recovery
+              week) rather than an open-ended grind. Neutral orientation, shown
+              alongside the existing (ungated) block cards. */}
+          {currentMesoWeek?.plannedWeeks >= 2 ? (
+            <BlockShapeCard
+              weekIndex={currentMesoWeek.weekIndex}
+              plannedWeeks={currentMesoWeek.plannedWeeks}
+              isDeload={currentMesoWeek.isDeload}
+            />
+          ) : null}
           <MesocyclePulseCard
             meso={activeMeso}
             currentWeek={mesoCurrentWeek()}
