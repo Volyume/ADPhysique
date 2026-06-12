@@ -48,7 +48,18 @@ function describeEdit(edit, { withGrams = true } = {}) {
  */
 export function buildPlanEditNarration(change, opts = {}) {
   if (!change || !Array.isArray(change.edits) || change.edits.length === 0) {
-    // A floored hold with no edits still deserves an honest line.
+    // Already under the floor: the honest message is "eat more", never
+    // "nothing changes to keep you safe".
+    if (change && change.belowFloor) {
+      return {
+        headline: 'Your plan stays as it is, and you have room to eat more.',
+        body: 'You are at the lowest your plan should go. There is nothing to take away. Keep logging.',
+        edits: [],
+        deepLink: null,
+        floorNote: true,
+      };
+    }
+    // A clamped/refused cut with no edits still deserves an honest line.
     if (change && change.floorHeld) {
       return {
         headline: 'Your plan stays as it is this week.',
@@ -65,14 +76,26 @@ export function buildPlanEditNarration(change, opts = {}) {
   const applied = change.adjustmentKcalApplied || 0;
   const absKcal = Math.abs(applied);
   const carbsDelta = (change.macroDelta && change.macroDelta.carbs) || 0;
+  const fatDelta = (change.macroDelta && change.macroDelta.fat) || 0;
   const dirWord = applied < 0 ? 'dropped' : 'went up';
   const takenWord = applied < 0 ? 'taken' : 'added';
   const offWord = applied < 0 ? 'off' : 'onto';
 
-  // Lead line: the number, then the macro, then the food.
-  const carbPhrase = carbsDelta !== 0
-    ? `${Math.abs(carbsDelta)} g of carbs`
-    : `${absKcal} kcal`;
+  // Lead line: the number, then the macro(s) that actually moved, then the
+  // food. When a cut spilled into fat (the 2.25:1 fallback) name both, so
+  // the headline macro can never disagree with the edit list.
+  const movedFat = Math.abs(fatDelta) >= 1;
+  const movedCarb = Math.abs(carbsDelta) >= 1;
+  let carbPhrase;
+  if (movedCarb && movedFat) {
+    carbPhrase = `${Math.abs(carbsDelta)} g of carbs and ${Math.abs(fatDelta)} g of fat`;
+  } else if (movedCarb) {
+    carbPhrase = `${Math.abs(carbsDelta)} g of carbs`;
+  } else if (movedFat) {
+    carbPhrase = `${Math.abs(fatDelta)} g of fat`;
+  } else {
+    carbPhrase = `${absKcal} kcal`;
+  }
 
   const editPhrases = change.edits.map((e) => describeEdit(e, { withGrams: true }));
   const editList = joinList(editPhrases);

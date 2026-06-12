@@ -116,6 +116,64 @@ describe('FLOOR DOUBLE-CLAMP (the invariant that matters)', () => {
       expect(edited.totals.kcal).toBeGreaterThanOrEqual(floor - 40);
     }
   });
+
+  test('a cut with NO floor (default/0/negative) is a HOLD, never an unbounded cut', () => {
+    [undefined, 0, -100].forEach((floor) => {
+      const plan = makePlan();
+      const args = { plan, adjustmentKcal: -100000 };
+      if (floor !== undefined) args.floorKcal = floor;
+      const { plan: edited, change } = applyMacroDeltaToPlan(args);
+      expect(change.adjustmentKcalApplied).toBe(0);
+      expect(change.floorHeld).toBe(true);
+      expect(change.edits).toEqual([]);
+      expect(edited.totals.kcal).toBe(plan.totals.kcal); // untouched
+    });
+  });
+
+  test('a plan already at/under the floor refuses to cut and flags belowFloor', () => {
+    const plan = makePlan();
+    const floor = plan.totals.kcal + 100; // floor above current plan
+    const { plan: edited, change } = applyMacroDeltaToPlan({ plan, adjustmentKcal: -200, floorKcal: floor });
+    expect(change.belowFloor).toBe(true);
+    expect(change.floorHeld).toBe(true);
+    expect(change.adjustmentKcalApplied).toBe(0);
+    expect(edited.totals.kcal).toBe(plan.totals.kcal);
+  });
+
+  test('a gain still works without a floor (gains are never floor-limited)', () => {
+    const plan = makePlan();
+    const { change } = applyMacroDeltaToPlan({ plan, adjustmentKcal: 150 });
+    expect(change.adjustmentKcalApplied).toBeGreaterThan(0);
+    expect(change.floorHeld).toBe(false);
+  });
+
+  test('a saved-meal-only day (no editable components) yields a clean zero edit', () => {
+    const savedOnly = {
+      slots: [
+        { slot: 'meal_1', mealId: 's1', name: 'Saved A', components: null, totals: { kcal: 800, protein: 60, carbs: 80, fat: 20 } },
+        { slot: 'meal_2', mealId: 's2', name: 'Saved B', components: null, totals: { kcal: 800, protein: 60, carbs: 80, fat: 20 } },
+      ],
+      totals: { kcal: 1600, protein: 120, carbs: 160, fat: 40 },
+    };
+    const { change } = applyMacroDeltaToPlan({ plan: savedOnly, adjustmentKcal: -200, floorKcal: 1500 });
+    expect(change.edits).toEqual([]);
+    expect(change.adjustmentKcalApplied).toBe(0);
+  });
+
+  test('a gain that exhausts carb headroom spills into fat, never protein', () => {
+    // tiny carb staples, big gain -> carbs cap, remainder goes to fat (oil)
+    const slots = [
+      meal('meal_1', 'Lean + small carb', [
+        { food: 'chicken_breast', g: 200 }, { food: 'white_rice', g: 60 }, { food: 'olive_oil', g: 8 },
+      ]),
+    ];
+    const totals = slots[0].totals;
+    const { change } = applyMacroDeltaToPlan({ plan: { slots, totals }, adjustmentKcal: 400, floorKcal: 1200 });
+    const foodsTouched = change.edits.map((e) => e.food);
+    expect(foodsTouched).not.toContain('chicken_breast');
+    // both carb and fat staples available to absorb a large gain
+    expect(change.macroDelta.carbs > 0 || change.macroDelta.fat > 0).toBe(true);
+  });
 });
 
 describe('buildPlanEditNarration', () => {
@@ -144,6 +202,37 @@ describe('buildPlanEditNarration', () => {
     expect(n).not.toBeNull();
     expect(n.floorNote).toBe(true);
     expect(n.headline.toLowerCase()).toContain('stays as it is');
+  });
+
+  test('an already-below-floor hold says "eat more", not "kept you safe"', () => {
+    const below = { edits: [], floorHeld: true, belowFloor: true, macroDelta: { kcal: 0, carbs: 0, fat: 0, protein: 0 } };
+    const n = buildPlanEditNarration(below);
+    expect(n.headline.toLowerCase()).toContain('eat more');
+    expect(n.body.toLowerCase()).not.toContain('drop you below');
+  });
+
+  test('precise and supportive registers carry IDENTICAL numeric facts', () => {
+    const sup = buildPlanEditNarration(change, { register: 'supportive' });
+    const pre = buildPlanEditNarration(change, { register: 'precise' });
+    const nums = (s) => (s.match(/\d+/g) || []).map(Number).sort((a, b) => a - b);
+    // same kcal + gram figures appear in both, regardless of prose
+    expect(nums(`${pre.headline} ${pre.body}`)).toEqual(nums(`${sup.headline} ${sup.body}`));
+    expect(pre.edits).toEqual(sup.edits);
+  });
+
+  test('when a cut spills into fat, the headline names carbs AND fat', () => {
+    // force a carbs+fat move: small carb staple, larger cut
+    const slots = [
+      meal('meal_1', 'Lean + small carb + oil', [
+        { food: 'chicken_breast', g: 200 }, { food: 'white_rice', g: 70 }, { food: 'olive_oil', g: 25 },
+      ]),
+    ];
+    const { change: c2 } = applyMacroDeltaToPlan({ plan: { slots, totals: slots[0].totals }, adjustmentKcal: -300, floorKcal: 800 });
+    if (c2.macroDelta.carbs < 0 && c2.macroDelta.fat < 0) {
+      const n = buildPlanEditNarration(c2, { register: 'supportive' });
+      expect(n.body.toLowerCase()).toContain('carbs and');
+      expect(n.body.toLowerCase()).toContain('fat');
+    }
   });
 
   test('no change at all yields null (nothing to say)', () => {

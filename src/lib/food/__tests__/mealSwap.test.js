@@ -107,6 +107,18 @@ describe('swapFoodInMeal', () => {
     expect(swapFoodInMeal({ components, foodKeyOut: 'oats', prefs: {} })).toBeNull();
   });
 
+  test('returns null when no in-tolerance alternative survives exclusions', () => {
+    // exclude every other carb source so nothing can replace the rice
+    const allCarbsGone = {
+      excludeFoodKeys: ['pasta', 'white_potato', 'sweet_potato', 'noodles', 'quinoa',
+        'brown_rice', 'oats', 'wholemeal_bread', 'bagel', 'tortilla', 'rice_cakes',
+        'granola', 'potato_wedges', 'banana', 'apple', 'berries', 'pineapple', 'honey',
+        'lentils', 'lentil_dahl', 'chickpeas', 'kidney_beans', 'black_beans',
+        'baked_beans', 'milk_skimmed', 'soy_milk', 'tomato_sauce', 'lentil_pasta'],
+    };
+    expect(swapFoodInMeal({ components, foodKeyOut: 'white_rice', prefs: allCarbsGone })).toBeNull();
+  });
+
   test('is deterministic', () => {
     const a = swapFoodInMeal({ components, foodKeyOut: 'white_rice', prefs: {} });
     const b = swapFoodInMeal({ components, foodKeyOut: 'white_rice', prefs: {} });
@@ -146,6 +158,16 @@ describe('swapMealInPlan', () => {
 
   test('returns null for an unknown slot', () => {
     expect(swapMealInPlan({ day, slotKey: 'meal_9', prefs: {} })).toBeNull();
+  });
+
+  test('ranks for similarity: the replacement is close to the outgoing plate, not much lighter', () => {
+    const res = swapMealInPlan({ day, slotKey: 'meal_2', prefs: {} });
+    expect(res).not.toBeNull();
+    const out = day.slots[1].totals;
+    const repl = res.replacement.totals;
+    // a like-for-like swap keeps calories within a sensible band of the
+    // outgoing plate, never collapsing the day far lower
+    expect(Math.abs(repl.kcal - out.kcal)).toBeLessThan(out.kcal * 0.6);
   });
 
   test('is deterministic', () => {

@@ -22,7 +22,7 @@
 
 import { CURATED_FOODS, resolveComponent } from './curatedFoods';
 import { CURATED_MEALS, mealItems, mealTotals } from './curatedMeals';
-import { fitScore, slotMatches } from './mealSuggest';
+import { slotMatches } from './mealSuggest';
 import { normalisePreferences, foodAllowed, mealAllowed } from './planPreferences';
 import {
   ROLE_TOLERANCE_G,
@@ -141,9 +141,10 @@ export function swapFoodInMeal({ components, foodKeyOut, prefs, preferKey = null
 
 /**
  * Swap a whole meal in an assembled day. Ranks slot-eligible curated
- * meals against the OUTGOING meal's totals (like for like keeps the day
- * on target), excludes the outgoing meal and everything already on the
- * day, honours preferences, and returns
+ * meals for SIMILARITY to the outgoing plate's macros (so the swap is a
+ * like-for-like, keeping the day close to target when it was on target
+ * before the swap), excludes the outgoing meal and everything already on
+ * the day, honours preferences, and returns
  * { replacement: { mealId, name, items, totals, components }, alternatives }
  * or null when nothing eligible exists. Deterministic: ties break on id.
  */
@@ -159,6 +160,15 @@ export function swapMealInPlan({ day, slotKey, prefs, excludeMealIds = [] } = {}
     ? null
     : slotKey;
 
+  // Symmetric similarity to the outgoing plate: a candidate that is much
+  // lighter is penalised just as much as one that is much heavier, so the
+  // day does not silently drift low after a meal swap (kcal weighted to
+  // dominate; macros keep the shape close too).
+  const ot = outgoing.totals || { kcal: 0, protein: 0, carbs: 0, fat: 0 };
+  const distance = (t) => Math.abs((t.kcal || 0) - (ot.kcal || 0))
+    + 4 * Math.abs((t.protein || 0) - (ot.protein || 0))
+    + 2 * Math.abs((t.carbs || 0) - (ot.carbs || 0))
+    + 2 * Math.abs((t.fat || 0) - (ot.fat || 0));
   let ranked = CURATED_MEALS
     .filter((m) => !skip.has(m.id) && !onDay.has(m.id))
     .filter((m) => mealAllowed(m, p))
@@ -166,9 +176,9 @@ export function swapMealInPlan({ day, slotKey, prefs, excludeMealIds = [] } = {}
     .map((m) => {
       const items = mealItems(m);
       const totals = mealTotals(items);
-      return { m, items, totals, score: fitScore(outgoing.totals, totals) };
+      return { m, items, totals, dist: distance(totals) };
     })
-    .sort((a, b) => (b.score - a.score) || (a.m.id < b.m.id ? -1 : 1));
+    .sort((a, b) => (a.dist - b.dist) || (a.m.id < b.m.id ? -1 : 1));
 
   if (!ranked.length) return null;
   const toShape = ({ m, items, totals }) => ({

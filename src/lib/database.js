@@ -1320,6 +1320,22 @@ const SCHEMA_MIGRATIONS = [
       created_at INTEGER NOT NULL DEFAULT 0
     )`,
   ],
+  // Generated meal plan (deep-audit Theme G). One active plan per user,
+  // stored as JSON like saved_meals: the assembled day/week, the prefs and
+  // engine-target snapshot it was built from (so coach edits + swaps can
+  // re-solve), and the seed. Soft-deleted for sync parity.
+  [
+    `CREATE TABLE IF NOT EXISTS meal_plans (
+      id          TEXT PRIMARY KEY NOT NULL,
+      user_id     TEXT NOT NULL,
+      plan_json   TEXT NOT NULL,
+      is_active   INTEGER NOT NULL DEFAULT 1,
+      deleted_at  INTEGER,
+      created_at  INTEGER NOT NULL,
+      updated_at  INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_meal_plans_user_active ON meal_plans(user_id) WHERE deleted_at IS NULL AND is_active = 1',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on

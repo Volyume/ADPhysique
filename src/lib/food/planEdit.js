@@ -81,26 +81,44 @@ function applyGramChange(slot, compIdx, newG) {
  * @param adjustmentKcal  signed kcal change (negative = cut), the engine's
  *               already-floor-clamped value
  * @param floorKcal  the hard day floor (engine kcalMin or the sex/FFM
- *               floor); the edit can never take the plan total below it
+ *               floor); the edit can never take the plan total below it.
+ *               REQUIRED for a cut: a cut with no positive floor is a HOLD,
+ *               never an unbounded reduction (safety, not convenience).
  * @returns { plan, change } where change is the structured record:
- *   { adjustmentKcalRequested, adjustmentKcalApplied, floorHeld,
+ *   { adjustmentKcalRequested, adjustmentKcalApplied, floorHeld, belowFloor,
  *     edits: [{ food, name, slot, gramsBefore, gramsAfter, kcalDelta }],
- *     macroDelta: { kcal, carbs, fat }, lastEditType: 'macro_adjustment' }
+ *     macroDelta: { kcal, carbs, fat, protein }, lastEditType: 'macro_adjustment' }
+ *   `floorHeld` = a cut was clamped (or refused) to respect the floor.
+ *   `belowFloor` = the plan handed in was ALREADY under the floor (eat more),
+ *   which the coach layer must narrate differently from a clamped cut.
  */
 export function applyMacroDeltaToPlan({ plan, adjustmentKcal = 0, floorKcal = 0 }) {
   const slotsIn = (plan && plan.slots) || [];
   const before = dayTotals(slotsIn);
   const requested = r0(adjustmentKcal);
 
-  // Floor double-clamp: a cut can take the plan no lower than the floor.
+  // Floor double-clamp. A cut REQUIRES a positive floor: with none we hold
+  // (cannot prove the cut is safe, so we refuse it) rather than spend
+  // unbounded. This is the §3.6 / CLAUDE.md sacred-floor invariant and must
+  // never be weakened to a convenience default.
   let budget = requested;
   let floorHeld = false;
-  if (requested < 0 && floorKcal > 0) {
-    const lowestAllowed = floorKcal;
-    const maxCut = before.kcal - lowestAllowed; // >=0 headroom above floor
-    if (Math.abs(requested) > Math.max(0, maxCut)) {
-      budget = -Math.max(0, maxCut);
+  let belowFloor = false;
+  if (requested < 0) {
+    if (!(floorKcal > 0)) {
+      budget = 0; // unknown floor -> a cut is a hold, never a free pass
       floorHeld = true;
+    } else if (before.kcal <= floorKcal) {
+      // The plan is already at/under the floor: cutting is never allowed.
+      budget = 0;
+      floorHeld = true;
+      belowFloor = true;
+    } else {
+      const maxCut = before.kcal - floorKcal; // > 0 headroom above the floor
+      if (Math.abs(requested) > maxCut) {
+        budget = -maxCut;
+        floorHeld = true;
+      }
     }
   }
 
@@ -155,6 +173,7 @@ export function applyMacroDeltaToPlan({ plan, adjustmentKcal = 0, floorKcal = 0 
       adjustmentKcalRequested: requested,
       adjustmentKcalApplied: applied,
       floorHeld,
+      belowFloor,
       edits,
       macroDelta: {
         kcal: applied,
