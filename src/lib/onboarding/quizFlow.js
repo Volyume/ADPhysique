@@ -16,9 +16,10 @@
  * so it is not special-category data.
  */
 
-// Flip to true to ship the quiz-first front door. Reversible: the existing
-// account-first flow is fully intact while this is false.
-export const ONBOARDING_QUIZ_FIRST = false;
+// Quiz-first front door is LIVE (founder decision 2026-06-12, deep-audit
+// decisions doc #3: "flip fully on", incl. the pre-account phase question).
+// Reversible: the account-first flow remains fully intact behind this flag.
+export const ONBOARDING_QUIZ_FIRST = true;
 
 // The pre-account quiz questions, in order. Options reuse the same source of
 // truth the post-account wizard uses (coachingGoals.js / the equipment list),
