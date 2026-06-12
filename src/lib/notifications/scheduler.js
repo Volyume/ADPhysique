@@ -926,3 +926,127 @@ export async function checkMonthlyRecapReady({ completedCount = 0, monthSessions
     }
   }
 }
+
+// ─── NEW-002 rebuild: partner beats (cheer received + shared streak kept) ────
+// Founder decision 2026-06-12: both pushes ship, inside the budget. Pure
+// decision logic lives in partnerBeats.js; this applies the gates (web, ED
+// flag, preferences toggle), the quiet hours shift, the PARTNER_CHEER budget
+// slot, and the per-user watermark so a beat fires exactly once.
+
+const PARTNER_BEATS_KEY = (userId) => `@volyume_partner_beats_v1_${userId}`;
+const NOTIF_ID_PARTNER_CHEER = 'volyume_partner_cheer';
+const NOTIF_ID_PARTNER_STREAK = 'volyume_partner_streak';
+
+/**
+ * Check for newly arrived partner beats and lay their pushes. Called after
+ * the partner sync pull lands (the only moment a cheer can ARRIVE on
+ * device), fire-and-forget. Safe to call repeatedly: watermarks make each
+ * beat fire at most once.
+ */
+export async function schedulePartnerBeats(userId) {
+  if (Platform.OS === 'web' || !userId) return;
+  try {
+    // eslint-disable-next-line global-require
+    const { cheerPush, streakKeptPush, normaliseBeatsState, cheerToNotify, streakRunToNotify } = require('./partnerBeats');
+    // eslint-disable-next-line global-require
+    const db = require('../database');
+
+    // Open ED/wellbeing flag: silence (the partner surface freezes benignly;
+    // pushes must not poke at it).
+    const edFlag = await db.getOpenEdPatternFlag(userId).catch(() => null);
+    if (edFlag) return;
+
+    // Preferences toggle (default ON; the notification settings screen can
+    // surface partnerCheerEnabled later without a schema change).
+    let prefs = {};
+    try {
+      const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+      if (raw) prefs = JSON.parse(raw) ?? {};
+    } catch (_) { /* default on */ }
+    if (prefs.partnerCheerEnabled === false) return;
+
+    // The active partnership; no pair, no beats.
+    const partnerships = await db.getPartnershipsLocal(userId).catch(() => []);
+    const pair = (partnerships || []).find((p) => p.status === 'active');
+    if (!pair) return;
+    const partnerName = pair.partnerFirstName || null;
+    const partnerId = pair.memberA === userId ? pair.memberB : pair.memberA;
+
+    const raw = await AsyncStorage.getItem(PARTNER_BEATS_KEY(userId)).catch(() => null);
+    const state = normaliseBeatsState(raw ? JSON.parse(raw) : null);
+    let nextState = state;
+
+    const quiet = await getQuietHours();
+
+    // ── Beat 1: cheer received ──
+    const lastReceived = await db.getLastCheerReceived(pair.id, userId).catch(() => null);
+    const cheer = cheerToNotify(state, lastReceived);
+    if (cheer) {
+      nextState = { ...nextState, lastCheerId: cheer.id };
+      const { date } = shiftDateOutOfQuietHours(new Date(Date.now() + 5000), quiet);
+      const slot = await requestEventPushSlot({ category: CATEGORY.PARTNER_CHEER, fireDate: date });
+      if (slot.allowed) {
+        const copy = cheerPush(partnerName);
+        await Notifications.scheduleNotificationAsync({
+          identifier: NOTIF_ID_PARTNER_CHEER,
+          content: {
+            title: copy.title, body: copy.body,
+            data: { type: 'partner_cheer' }, sound: false,
+          },
+          trigger: {
+            channelId: COACHING_REMINDERS_CHANNEL,
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date,
+          },
+        });
+      }
+    }
+
+    // ── Beat 2: shared streak kept (run grew) ──
+    if (pair.streakEnabled) {
+      // eslint-disable-next-line global-require
+      const { computeSharedStreak, buildSharedWeeks } = require('../partners/sharedStreak');
+      const pairSignals = await db.getPairWeekSignals(pair.id).catch(() => []);
+      const sharedStreak = computeSharedStreak({
+        enabled: true,
+        weeks: buildSharedWeeks(pairSignals, userId, partnerId),
+      });
+      const run = streakRunToNotify(nextState, sharedStreak);
+      if (run != null) {
+        nextState = { ...nextState, lastStreakRun: run };
+        const { date } = shiftDateOutOfQuietHours(new Date(Date.now() + 5000), quiet);
+        const slot = await requestEventPushSlot({ category: CATEGORY.PARTNER_CHEER, fireDate: date });
+        if (slot.allowed) {
+          const copy = streakKeptPush(partnerName, run);
+          await Notifications.scheduleNotificationAsync({
+            identifier: NOTIF_ID_PARTNER_STREAK,
+            content: {
+              title: copy.title, body: copy.body,
+              data: { type: 'partner_streak' }, sound: false,
+            },
+            trigger: {
+              channelId: COACHING_REMINDERS_CHANNEL,
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date,
+            },
+          });
+        }
+      }
+    }
+
+    // Watermarks advance even when the budget said no: a capped beat is
+    // dropped for the episode, never re-queued later as stale news.
+    if (nextState !== state) {
+      await AsyncStorage.setItem(PARTNER_BEATS_KEY(userId), JSON.stringify(nextState)).catch(() => {});
+    }
+  } catch (e) {
+    trackNotificationFailed({
+      category: CATEGORY.PARTNER_CHEER,
+      reason: 'schedule_threw',
+      payload: { message: e?.message ?? 'unknown' },
+    });
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      logWarn('notifications.partnerBeats', e?.message);
+    }
+  }
+}

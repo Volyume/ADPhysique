@@ -47,6 +47,7 @@ export {
   scheduleWeeklyCoachReady,
   cancelWeeklyCoachReady,
   scheduleMissedCheckinFollowups,
+  schedulePartnerBeats,
   cancelMissedCheckinFollowups,
   cancelMorningNotification,
   cancelCheckinNotification,

@@ -94,3 +94,23 @@ export function sharedStreakLabel({ run = 0, status = 'counting' } = {}) {
 function weeksWord(n) {
   return n === 1 ? 'week' : 'weeks';
 }
+
+/**
+ * Align both members' finished weeks for computeSharedStreak: join the
+ * synced pair signals by week_start; only weeks where BOTH sides have
+ * reported feed the shared streak. (Moved from usePartners so the
+ * notification scheduler and the hook read ONE derivation.)
+ */
+export function buildSharedWeeks(pairSignals, myId, partnerId) {
+  const byWeek = new Map();
+  for (const s of (pairSignals || [])) {
+    const slot = byWeek.get(s.weekStart) || {};
+    if (s.userId === myId) { slot.aMet = !!s.weekMet; slot.aResting = s.state === 'resting'; }
+    else if (s.userId === partnerId) { slot.bMet = !!s.weekMet; slot.bResting = s.state === 'resting'; }
+    byWeek.set(s.weekStart, slot);
+  }
+  return [...byWeek.entries()]
+    .sort((a, b) => Number(a[0]) - Number(b[0]))
+    .map(([, v]) => v)
+    .filter((v) => ('aMet' in v) && ('bMet' in v));
+}

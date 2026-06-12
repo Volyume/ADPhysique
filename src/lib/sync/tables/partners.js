@@ -141,6 +141,17 @@ export async function pullPartners(sb, { userId } = {}) {
       }
     }
 
+    // NEW-002 rebuild: the pull is the only moment a cheer (or the partner's
+    // week resolution) can ARRIVE on device, so this is where the partner
+    // beats are checked. Fire-and-forget; watermarks inside make each beat
+    // fire at most once, and every gate (ED flag, prefs, budget, quiet
+    // hours) lives in the scheduler.
+    try {
+      // eslint-disable-next-line global-require
+      const { schedulePartnerBeats } = require('../../notifications/scheduler');
+      schedulePartnerBeats(userId).catch(() => {});
+    } catch (_) { /* notifications unavailable (tests, web): skip */ }
+
     return { count: applied, errors };
   } catch (e) {
     logSyncError('sync.tables.partners.pull', e);

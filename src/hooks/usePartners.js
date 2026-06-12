@@ -16,7 +16,7 @@ import {
 } from '../lib/database';
 import { todayLocalKey } from '../lib/dayKey';
 import { partnerRowState, cheerAllowed, canAddPartner } from '../lib/partners/signals';
-import { computeSharedStreak } from '../lib/partners/sharedStreak';
+import { computeSharedStreak, buildSharedWeeks } from '../lib/partners/sharedStreak';
 import {
   createPartnerInvite, redeemPartnerInvite, sendCheer, unpairPartner, blockPartner,
 } from '../lib/partners/service';
@@ -118,19 +118,3 @@ export default function usePartners(userId, tier) {
   return { ...state, invite, redeem, cheer, unpair, block };
 }
 
-// Align both members' finished weeks (exclude the in-progress current week is
-// the caller's job; here we just join by week_start across the synced rows).
-function buildSharedWeeks(pairSignals, myId, partnerId) {
-  const byWeek = new Map();
-  for (const s of (pairSignals || [])) {
-    const slot = byWeek.get(s.weekStart) || {};
-    if (s.userId === myId) { slot.aMet = !!s.weekMet; slot.aResting = s.state === 'resting'; }
-    else if (s.userId === partnerId) { slot.bMet = !!s.weekMet; slot.bResting = s.state === 'resting'; }
-    byWeek.set(s.weekStart, slot);
-  }
-  // Only weeks where BOTH sides have reported feed the shared streak.
-  return [...byWeek.entries()]
-    .sort((a, b) => Number(a[0]) - Number(b[0]))
-    .map(([, v]) => v)
-    .filter((v) => ('aMet' in v) && ('bMet' in v));
-}
