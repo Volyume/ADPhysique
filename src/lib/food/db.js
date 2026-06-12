@@ -966,8 +966,9 @@ export async function applyCuratedMealToDiary(userId, mealId, { mealSlot, entryD
 // Generated meal plan (deep-audit Theme G). One active plan per user,
 // stored whole as JSON (the assembled day/week + the prefs and engine-
 // target snapshot it was built from, so swaps and coach edits can
-// re-solve). Mirrors the saved_meals persistence + soft-delete + sync
-// pattern exactly.
+// re-solve). LOCAL-ONLY for now: no sync serialiser exists yet (the
+// soft-delete shape is sync-ready for when one ships); a new device
+// regenerates the plan from the synced target + prefs instead.
 // ───────────────────────────────────────────────────────────────────────
 
 /**
@@ -979,15 +980,18 @@ export async function applyCuratedMealToDiary(userId, mealId, { mealSlot, entryD
 export async function saveActiveMealPlan(userId, plan) {
   if (!userId) throw new Error('saveActiveMealPlan: userId is required');
   if (!plan || typeof plan !== 'object') throw new Error('saveActiveMealPlan: plan is required');
+  const d = await db();
   const id = uid();
   const now = Date.now();
-  await runInTransaction(async (tx) => {
-    await tx.runAsync(
+  // runInTransaction(d, task) — withTransactionAsync passes no tx arg, so
+  // the task uses the same d handle (the established pattern in this file).
+  await runInTransaction(d, async () => {
+    await d.runAsync(
       `UPDATE meal_plans SET is_active = 0, updated_at = ?
        WHERE user_id = ? AND is_active = 1 AND deleted_at IS NULL`,
       [now, userId]
     );
-    await tx.runAsync(
+    await d.runAsync(
       `INSERT INTO meal_plans (id, user_id, plan_json, is_active, created_at, updated_at)
        VALUES (?, ?, ?, 1, ?, ?)`,
       [id, userId, JSON.stringify(plan), now, now]
@@ -1019,7 +1023,7 @@ export async function getActiveMealPlan(userId) {
 
 /**
  * Persist an in-place change to the active plan (a swap or a coach edit).
- * Replaces the stored JSON and bumps updated_at so sync picks it up.
+ * Replaces the stored JSON and bumps updated_at (local-only for now).
  * No-ops when the id is missing or already tombstoned.
  */
 export async function updateMealPlan(userId, id, plan) {
@@ -1035,7 +1039,8 @@ export async function updateMealPlan(userId, id, plan) {
 }
 
 /**
- * Soft-delete a meal plan so the tombstone reaches the cloud.
+ * Soft-delete a meal plan (tombstone shape is sync-ready; local-only
+ * for now).
  */
 export async function deleteMealPlan(userId, id) {
   const d = await db();

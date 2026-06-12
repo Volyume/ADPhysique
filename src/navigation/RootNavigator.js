@@ -95,6 +95,7 @@ import SubscriptionPolicyScreen from '../screens/SubscriptionPolicyScreen';
 import DiaryScreen from '../screens/DiaryScreen';
 import AddCustomFoodScreen from '../screens/AddCustomFoodScreen';
 import FoodSearchScreen from '../screens/FoodSearchScreen';
+import MealPlanScreen from '../screens/MealPlanScreen';
 import ScanBarcodeScreen from '../screens/ScanBarcodeScreen';
 import ScanLabelScreen from '../screens/ScanLabelScreen';
 import LogCardioScreen from '../screens/LogCardioScreen';
@@ -221,6 +222,11 @@ function DiaryStack({ navigation }) {
   return (
     <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Diary" component={GatedDiary} options={{ headerShown: false }} />
+      <Stack.Screen
+        name="MealPlan"
+        component={MealPlanScreen}
+        options={{ headerShown: false }}
+      />
       <Stack.Screen
         name="FoodSearch"
         component={FoodSearchScreen}

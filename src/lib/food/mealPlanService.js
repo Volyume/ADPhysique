@@ -24,6 +24,7 @@ import {
   saveActiveMealPlan,
   updateMealPlan,
   listSavedMeals,
+  logFoodEntry,
 } from './db';
 import { assembleWeekPlan, targetWasFloored } from './mealPlanAssembler';
 import { swapFoodInMeal, swapMealInPlan } from './mealSwap';
@@ -53,6 +54,12 @@ export function storedTargetToEngineTarget(row) {
     warnings,
   };
   t.floorApplied = targetWasFloored(t);
+  // SAFETY: a floored target IS the floor. The engine's generic ±10% band
+  // is not floor-aware, so on a floored 1,200/1,500 target a 0.9× lower
+  // edge would let the close-out (and any coach cut handed kcalMin as its
+  // floor) accept a sub-floor day. The band must never reach below the
+  // floored target itself.
+  if (t.floorApplied) t.kcalMin = targetKcal;
   return t;
 }
 
@@ -156,17 +163,74 @@ export async function loadActiveMealPlan(userId) {
  * gram-level narration via planExplain). No-ops to { change: null } when
  * there is no active plan.
  */
-export async function applyCoachAdjustmentToActivePlan(userId, { adjustmentKcal, dayIndex = 0 } = {}) {
+export async function applyCoachAdjustmentToActivePlan(userId, { adjustmentKcal } = {}) {
   const active = await getActiveMealPlan(userId);
-  if (!active || !active.plan?.days?.[dayIndex]) return { change: null };
-  const day = active.plan.days[dayIndex];
-  const floorKcal = active.plan.targetSnapshot?.kcalMin
-    || Math.round((active.plan.targetSnapshot?.targetKcal || 0) * 0.9);
-  const { plan: editedDay, change } = applyMacroDeltaToPlan({ plan: day, adjustmentKcal, floorKcal });
-  const days = active.plan.days.map((d, i) => (i === dayIndex ? editedDay : d));
+  if (!active || !Array.isArray(active.plan?.days) || active.plan.days.length === 0) {
+    return { change: null };
+  }
+  const snap = active.plan.targetSnapshot || {};
+  // SAFETY: a floored target IS the floor (belt-and-braces for snapshots
+  // stored before storedTargetToEngineTarget raised kcalMin on floored
+  // targets). Never hand planEdit a floor below the floored target.
+  const floorKcal = targetWasFloored(snap)
+    ? (snap.targetKcal || 0)
+    : (snap.kcalMin || Math.round((snap.targetKcal || 0) * 0.9));
+
+  // A weekly coach delta applies to EVERY day of the week plan (each day
+  // routes through its own floor clamp) — editing one day while six stay
+  // stale would realise a seventh of the coach's intent and leave the
+  // plan disagreeing with itself.
+  let firstChange = null;
+  const days = active.plan.days.map((day) => {
+    const { plan: editedDay, change } = applyMacroDeltaToPlan({ plan: day, adjustmentKcal, floorKcal });
+    if (!firstChange && change && (change.edits.length > 0 || change.floorHeld)) firstChange = change;
+    return editedDay;
+  });
   const nextPlan = { ...active.plan, days, lastEditType: 'macro_adjustment' };
   await updateMealPlan(userId, active.id, nextPlan);
-  return { plan: nextPlan, change };
+  return { plan: nextPlan, change: firstChange, appliedToDays: days.length };
+}
+
+/**
+ * Map a plan slot key to the diary's slot vocabulary. Pure. The plan uses
+ * pre_workout/post_workout; the diary's legacy keys are preworkout/
+ * postworkout; numbered meals are shared (meal_N).
+ */
+export function diarySlotFor(planSlotKey) {
+  if (planSlotKey === 'pre_workout') return 'preworkout';
+  if (planSlotKey === 'post_workout') return 'postworkout';
+  return planSlotKey || 'meal_1';
+}
+
+/**
+ * Log every food of one assembled plan day into the diary (the "Log this
+ * day" action). Items already carry computed macros + curated foodRefs,
+ * so this fans them through logFoodEntry exactly like a manual log.
+ * Returns the number of entries logged. Skips junk (no ref / no grams).
+ */
+export async function applyPlanDayToDiary(userId, day, { entryDate } = {}) {
+  if (!userId || !day || !entryDate) return 0;
+  let logged = 0;
+  for (const slot of day.slots || []) {
+    const mealSlot = diarySlotFor(slot.slot);
+    for (const it of slot.items || []) {
+      const q = Number(it?.quantityG);
+      if (!it?.foodRef || !Number.isFinite(q) || q <= 0) continue;
+      // eslint-disable-next-line no-await-in-loop
+      await logFoodEntry(userId, {
+        entryDate,
+        mealSlot,
+        foodRef: it.foodRef,
+        quantityG: q,
+        kcal: Number(it.kcal) || 0,
+        proteinG: Number(it.proteinG) || 0,
+        carbsG: Number(it.carbsG) || 0,
+        fatG: Number(it.fatG) || 0,
+      });
+      logged += 1;
+    }
+  }
+  return logged;
 }
 
 export { swapFoodInMeal, swapMealInPlan };

@@ -3521,6 +3521,9 @@ export const WIPE_DIRECT_TABLES = [
   'recipes', 'recipe_ingredients',
   'daily_water', 'food_favourites', 'daily_intake_rollups',
   'food_frequents',
+  // Generated meal plan (deep-audit Theme G): carries user_id + a calorie-
+  // target snapshot (health data) — must never survive sign-out/delete.
+  'meal_plans',
   // Activity store (cardio/steps audit). Carries user_id locally; wipe so
   // the next account on a shared device never inherits a step history.
   'daily_steps',
@@ -6389,7 +6392,7 @@ export async function diagnoseSyncConflicts(currentSessionUid) {
     'weekly_checkins', 'coach_outputs', 'user_body_profile',
     'user_insights', 'peak_week_plans', 'exercise_user_notes',
     'exercise_goals', 'workout_notes_v2',
-    'custom_exercises',
+    'custom_exercises', 'meal_plans',
     'custom_foods', 'food_entries', 'daily_intake_rollups',
     'saved_meals', 'recipes', 'food_favourites', 'daily_water',
     'daily_steps',

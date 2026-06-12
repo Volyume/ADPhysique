@@ -608,6 +608,7 @@ const SCREENS_TO_SWEEP = [
   'HomeScreen',
   'ImportScreen',
   'LiftProgressScreen',
+  'MealPlanScreen',
   'LogCardioScreen',
   'LoginScreen',
   'ManualBuilderScreen',

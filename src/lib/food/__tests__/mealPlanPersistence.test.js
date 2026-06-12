@@ -23,10 +23,15 @@ function makeDb() {
 let mockDb;
 jest.mock('../../database', () => ({
   db: jest.fn(async () => mockDb),
-  runInTransaction: jest.fn(async (fn) => {
-    // a tx object that records writes through the same channel
-    const tx = { runAsync: jest.fn(async (sql, params) => { txCalls.push({ sql, params }); runCalls.push({ sql, params }); }) };
-    return fn(tx);
+  // Mirrors the REAL signature runInTransaction(d, task) where
+  // withTransactionAsync passes no tx argument — the production caller
+  // must use the d handle. (A one-arg mock previously hid a real
+  // wrong-signature call; never loosen this again.)
+  runInTransaction: jest.fn(async (d, task) => {
+    if (typeof task !== 'function') {
+      throw new TypeError('runInTransaction(d, task): task must be a function');
+    }
+    return task();
   }),
 }));
 jest.mock('../../engineTelemetry', () => ({ track: jest.fn(() => Promise.resolve()) }));
@@ -54,8 +59,8 @@ describe('saveActiveMealPlan', () => {
   test('deactivates the prior active plan then inserts the new one, in a transaction', async () => {
     const id = await food.saveActiveMealPlan('u1', PLAN);
     expect(typeof id).toBe('string');
-    const deactivate = txCalls.find((c) => /UPDATE meal_plans SET is_active = 0/.test(c.sql));
-    const insert = txCalls.find((c) => /INSERT INTO meal_plans/.test(c.sql));
+    const deactivate = runCalls.find((c) => /UPDATE meal_plans SET is_active = 0/.test(c.sql));
+    const insert = runCalls.find((c) => /INSERT INTO meal_plans/.test(c.sql));
     expect(deactivate).toBeTruthy();
     expect(insert).toBeTruthy();
     // insert ordered before nothing else; params: [id, userId, planJson, created, updated]

@@ -36,6 +36,21 @@ describe('storedTargetToEngineTarget', () => {
     expect(storedTargetToEngineTarget(null)).toBeNull();
     expect(storedTargetToEngineTarget({ target_kcal: 0 })).toBeNull();
   });
+
+  test('SAFETY: a floored target raises the band floor to the target itself', () => {
+    // The engine's generic ±10% band is not floor-aware: on a floored
+    // 1,200 target a 0.9x lower edge (1,080) would let the close-out and
+    // any coach cut land 120 kcal below the sacred floor.
+    const floored = storedTargetToEngineTarget({
+      target_kcal: 1200, protein_g: 120, carbs_g: 90, fat_g: 35,
+      warnings: ['Target calories (1130 kcal) below safe minimum (1200 kcal). Raising to floor.'],
+    });
+    expect(floored.kcalMin).toBe(1200); // never 1080
+    expect(floored.kcalMax).toBeGreaterThanOrEqual(1200);
+    // and an un-floored target keeps the normal band
+    const normal = storedTargetToEngineTarget({ target_kcal: 2000, protein_g: 150, carbs_g: 200, fat_g: 60, warnings: [] });
+    expect(normal.kcalMin).toBe(1800);
+  });
 });
 
 describe('preferencesFromProfile', () => {

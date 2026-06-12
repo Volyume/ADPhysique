@@ -579,6 +579,7 @@ export default function DiaryScreen({ navigation }) {
           <EmptyDiary
             onAdd={() => addFood('meal_1')}
             onCopyYesterday={copyYesterday}
+            onPlanDay={() => navigation.navigate('MealPlan')}
           />
         ) : (
           <>
