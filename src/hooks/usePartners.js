@@ -20,6 +20,7 @@ import { computeSharedStreak } from '../lib/partners/sharedStreak';
 import {
   createPartnerInvite, redeemPartnerInvite, sendCheer, unpairPartner, blockPartner,
 } from '../lib/partners/service';
+import { writeOwnWeekSignals } from '../lib/partners/weekSignalWriter';
 
 const EMPTY = {
   loading: true, partnership: null, rowState: 'empty', partnerWeek: null,
@@ -54,6 +55,10 @@ export default function usePartners(userId, tier) {
         });
         return;
       }
+
+      // Keep my own week signal current for the partner's ticks (fire-and-
+      // forget; the workout-finish path and sync layer also drive this).
+      writeOwnWeekSignals(userId).catch(() => {});
 
       const partnerId = primary.memberA === userId ? primary.memberB : primary.memberA;
       const [partnerWeek, myWeek, lastSentOn, lastReceived, pairSignals] = await Promise.all([
