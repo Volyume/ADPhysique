@@ -41,6 +41,8 @@ import { usePlayPrices } from '../lib/payments/usePlayPrices';
 import { SkeletonCard } from '../components/Skeleton';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
 import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, computeDietBreakTargets, computeMacroCycle, computeRefeedDay, markApplied, isApplied } from '../lib/coachApply';
+import { buildCoachResponse } from '../lib/coachResponse';
+import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 import { logError, logWarn } from '../lib/errorLog';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, stateColors } from '../styles/theme';
 import {
@@ -56,6 +58,10 @@ const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
+
+// For the five-part response's forward-pull anchor ("See you Sunday."),
+// indexed by the stored check-in day (0 = Sunday, matching HomeScreen).
+const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 function formatDay(ms) {
   const d = new Date(ms);
@@ -763,6 +769,13 @@ export default function CoachOutputScreen({ navigation, route }) {
   // Loaded once on mount; null when there's no active block or the
   // current week is the last one (nothing to push volume into).
   const [nextTrainingWeekId, setNextTrainingWeekId] = useState(null);
+  // Five-part coach response inputs (Theme A): weigh-ins inside the
+  // displayed week, the calm-mode preference, and the check-in day name
+  // for the forward-pull anchor. All best-effort; the response renders
+  // fewer parts when any are missing.
+  const [weighInsThisWeek, setWeighInsThisWeek] = useState(null);
+  const [calmMode, setCalmMode] = useState(false);
+  const [checkinDayName, setCheckinDayName] = useState(null);
 
   // Confirm-then-apply: write the suggested calorie change to
   // nutrition_targets only when the user taps Apply, then record it on
@@ -1026,6 +1039,27 @@ export default function CoachOutputScreen({ navigation, route }) {
       // 60-day window; confidence is distinct-calendar-day based
       // (ewmaCoverageWeeks) so the wider fetch can't be gamed by same-day logs.
       const weights = await getMorningWeights(user.id, 60);
+      // Weigh-ins inside the displayed week feed the five-part response's
+      // acknowledgement and cue. Counted here so the pure builder never
+      // needs a DB read.
+      try {
+        const weekEnd = weekStart + 7 * 86400000;
+        setWeighInsThisWeek(weights.filter(w => (w.loggedAt ?? 0) >= weekStart && (w.loggedAt ?? 0) < weekEnd).length);
+      } catch (_) { setWeighInsThisWeek(null); }
+      // Calm mode tightens the response the same way an open ED flag does
+      // (no rate language, no weigh-in counts), per the COMP-004 rules.
+      try { setCalmMode(isCalm(await getWellbeingMode())); } catch (_) { setCalmMode(false); }
+      // Check-in day for the forward-pull anchor; same preference read as
+      // HomeScreen. Falls back to "the next check-in" when unset.
+      try {
+        const rawPrefs = await AsyncStorage.getItem('@volyume_notification_prefs');
+        if (rawPrefs) {
+          const prefs = JSON.parse(rawPrefs);
+          if (Number.isFinite(prefs?.checkinDay)) {
+            setCheckinDayName(DAY_NAMES_FULL[prefs.checkinDay] ?? null);
+          }
+        }
+      } catch (_) { /* forward line falls back to "the next check-in" */ }
       const sessionStats = await getWeeklySessionStats(user.id, weekStart);
       const prs = await getWeeklyPRCount(user.id, weekStart);
       const nutrition = await getNutritionTargets(user.id);
@@ -1448,6 +1482,22 @@ export default function CoachOutputScreen({ navigation, route }) {
   const weightChipValue =
     trend.deltaLabel && trend.delta !== null ? trend.deltaLabel : 'No weights logged';
 
+  // Five-part coach response (Theme A, OPP-C01/C02/C06): the
+  // acknowledgement + interpretation lead the card, the decision cards
+  // below stay as part 3, the cue feeds the focus card and the forward
+  // line closes above the held decisions. Suppression (open ED flag or
+  // calm mode) mirrors the existing COMP-004 behaviour.
+  const coachResponse = buildCoachResponse({
+    output,
+    checkin,
+    history: coachHistory,
+    weighInsThisWeek,
+    units,
+    edFlagOpen: edPatternOpen,
+    calmMode,
+    checkinDayName,
+  });
+
   // Share the week as a single milestone card. Facts only (sessions, weight
   // trend, PRs); no bodyweight figure or private data leaves the device.
   function handleShareWeek() {
@@ -1484,6 +1534,24 @@ export default function CoachOutputScreen({ navigation, route }) {
 
         {/* 1. Headline, one sentence */}
         <Text style={styles.headline}>{buildHeadline(output, checkin)}</Text>
+
+        {/* Coach response parts 1 and 2: the specific, data-referenced
+            acknowledgement and the plain-language trend read lead the
+            card before any decision detail. */}
+        {(coachResponse.acknowledgement || coachResponse.interpretation) ? (
+          <View
+            style={styles.coachLeadCard}
+            accessible
+            accessibilityLabel={[coachResponse.acknowledgement, coachResponse.interpretation].filter(Boolean).join(' ')}
+          >
+            {coachResponse.acknowledgement ? (
+              <Text style={styles.coachLeadAck}>{coachResponse.acknowledgement}</Text>
+            ) : null}
+            {coachResponse.interpretation ? (
+              <Text style={styles.coachLeadInterpretation}>{coachResponse.interpretation}</Text>
+            ) : null}
+          </View>
+        ) : null}
 
         {/* 2. Trend chips */}
         <View style={styles.chipsRow}>
@@ -1603,9 +1671,11 @@ export default function CoachOutputScreen({ navigation, route }) {
         {/* 6. Why */}
         {whyThisWeek ? <WhyBlock text={whyThisWeek} onLearnMore={() => navigation.navigate('Methodology', { source: 'why_block' })} /> : null}
 
-        {/* 7. One focus for next week */}
+        {/* 7. One focus for next week. Coach response part 4 (the single
+            tactical cue, deterministic priority, ED/calm aware) feeds this
+            card; buildFocus stays as the fallback when no cue is built. */}
         {(() => {
-          const focus = buildFocus(output, checkin);
+          const focus = coachResponse.cue ?? buildFocus(output, checkin);
           if (!focus) return null;
           return (
             <View style={styles.focusCard}>
@@ -1627,6 +1697,12 @@ export default function CoachOutputScreen({ navigation, route }) {
             applying={applyingKey === 'dietBreak'}
           />
         )}
+
+        {/* Coach response part 5: the forward-pull anchor closes the
+            response above the quieter held-decisions shelf. */}
+        {coachResponse.forward ? (
+          <Text style={styles.forwardLine}>{coachResponse.forward}</Text>
+        ) : null}
 
         {/* Recent decisions, quieter, at the bottom */}
         {heldDecisions && heldDecisions.length > 0 && (
@@ -1822,6 +1898,33 @@ const styles = StyleSheet.create({
     borderColor: withAlpha(colors.warning, 0.251),
     padding: spacing.lg,
     gap: spacing.sm,
+  },
+  // Five-part coach response: parts 1+2 lead card and the part 5
+  // forward-pull line. Same tokens as the surrounding cards.
+  coachLeadCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  coachLeadAck: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+    lineHeight: 22,
+  },
+  coachLeadInterpretation: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+    lineHeight: 22,
+  },
+  forwardLine: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    paddingHorizontal: spacing.xs,
   },
   focusCard: {
     backgroundColor: colors.primaryBg,
