@@ -18,6 +18,8 @@ import {
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 import { claimMilestones } from '../lib/milestones';
 import { selection as hapticSelection } from '../lib/haptics';
+import usePartners from '../hooks/usePartners';
+import { ticksLabel } from '../lib/partners/signals';
 import { calculateWeeklyVolume, getVolumeStatus, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, VOLUME_LANDMARKS } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
@@ -74,8 +76,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     // ([{ muscle, setDelta }]). Live path only; history (readOnly) has none.
     sessionAdjustments = [],
   } = route.params || {};
-  const { user, units, userProfile, session } = useAppStore();
+  const { user, units, userProfile, session, tier } = useAppStore();
   const toast = useToast();
+  // NEW-002 rebuild: the post-workout partner beat (Duolingo's post-lesson
+  // nudge is the highest-value re-engagement moment). Renders only when
+  // paired, live path, and not calm/ED-suppressed.
+  const partners = usePartners(user?.id, tier);
   // Renamed to feedbackSheet to avoid clashing with the per-set
   // feedback state below (sessionDifficulty, overallPump, etc.).
   // Both live in the same scope, JS doesn't let two consts share a
@@ -785,6 +791,39 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         })()}</RevealSection>
         )}
 
+        {/* NEW-002 rebuild: the post-workout partner beat — where a cheer is
+            most natural (you just trained; here is where your partner stands).
+            Paired + live path only; inherits calm/ED suppression; a resting
+            partner never reads as a fail. */}
+        {!readOnly && !calmSuppressed
+          && (partners.rowState === 'active' || partners.rowState === 'resting') && (
+          <RevealSection delay={1130}>
+            <View style={styles.partnerBeatRow}>
+              <Ionicons name="people-outline" size={18} color={colors.primary} />
+              <Text style={styles.partnerBeatText}>
+                {partners.rowState === 'resting'
+                  ? `${partners.partnership?.partnerFirstName || 'Your partner'} is resting this week.`
+                  : `${partners.partnership?.partnerFirstName || 'Your partner'}: ${ticksLabel({ done: partners.partnerWeek?.done, planned: partners.partnerWeek?.planned })} this week.`}
+              </Text>
+              <TouchableOpacity
+                style={[styles.partnerCheerBtn, !partners.cheerEnabled && styles.partnerCheerBtnDone]}
+                onPress={() => {
+                  const reciprocal = partners.partnerWeek?.weekMet || (partners.partnerWeek?.done > 0);
+                  partners.cheer(partners.partnership.id, !!reciprocal);
+                }}
+                disabled={!partners.cheerEnabled}
+                accessibilityRole="button"
+                accessibilityLabel={partners.cheerEnabled ? 'Send a cheer' : 'Cheer sent'}
+              >
+                <Ionicons name="hand-left-outline" size={14} color={partners.cheerEnabled ? colors.onPrimary : colors.textSecondary} />
+                <Text style={[styles.partnerCheerText, !partners.cheerEnabled && styles.partnerCheerTextDone]}>
+                  {partners.cheerEnabled ? 'Cheer' : 'Sent'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </RevealSection>
+        )}
+
         {/* D2: programme-arc strip — where this session sits in the block, so
             the work reads as a journey towards the recovery week, not an
             open-ended grind. Suppressed under calm/ED; needs a real ≥2-week
@@ -1344,6 +1383,21 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.376),
   },
+  // NEW-002 post-workout partner beat
+  partnerBeatRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  partnerBeatText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, lineHeight: 19 },
+  partnerCheerBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    backgroundColor: colors.primary, borderRadius: radius.full,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, minHeight: 40,
+  },
+  partnerCheerBtnDone: { backgroundColor: withAlpha(colors.border, 0.25) },
+  partnerCheerText: { ...type.label, color: colors.onPrimary, fontSize: fontSize.xs },
+  partnerCheerTextDone: { color: colors.textSecondary },
   // D2 programme-arc strip wrapper — surface card matching the other summary
   // sections, holding the reused BlockShapeCard (dots + effort word).
   blockArcSection: {
