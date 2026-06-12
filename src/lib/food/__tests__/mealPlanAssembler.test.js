@@ -66,6 +66,37 @@ describe('dayVariantTargets', () => {
   });
 });
 
+describe('targetWasFloored — structured flag + every real engine warning', () => {
+  test('gates on the structured floorApplied flag first', () => {
+    expect(targetWasFloored({ floorApplied: true, warnings: [] })).toBe(true);
+    expect(targetWasFloored({ floorApplied: false, warnings: [] })).toBe(false);
+  });
+
+  // The engine's ACTUAL warning texts (nutritionEngine.js ~784-823),
+  // verbatim — the fallback for snapshots stored before floorApplied.
+  test.each([
+    ['Target calories (1155 kcal) below safe minimum (1200 kcal). Raising to floor.', true],
+    ['Estimated loss rate (1.82 % BW/week) exceeds the 1.5 % hard gate. Calories have been raised to limit loss to 1.5 % BW/week.', true],
+    ['Estimated loss rate (0.91 % BW/week) exceeds the recommended 0.8 % threshold. Consider slowing the rate to preserve muscle mass.', false],
+    ['Contest Prep is an extreme protocol. Consult a qualified sports dietitian before proceeding.', false],
+  ])('legacy warning fallback: "%s" -> %s', (warning, floored) => {
+    expect(targetWasFloored({ warnings: [warning] })).toBe(floored);
+  });
+
+  test('the engine actually emits floorApplied on a floored call', () => {
+    const floored = calculateNutritionTargets({
+      sex: 'female', ageYears: 30, heightCm: 155, weightKg: 48,
+      activityLevel: 'sedentary', goal: 'aggressive_cut',
+    });
+    expect(floored.floorApplied).toBe(true);
+    const normal = calculateNutritionTargets({
+      sex: 'male', ageYears: 28, heightCm: 180, weightKg: 85,
+      activityLevel: 'moderate', goal: 'maintain',
+    });
+    expect(normal.floorApplied).toBe(false);
+  });
+});
+
 describe('FLOOR-ROUTING INVARIANT (the test that matters)', () => {
   // A REAL engine call that lands on the calorie floor: small, light,
   // aggressive cut. We assert against the genuine warnings shape.
@@ -180,6 +211,65 @@ describe('assembleDayPlan', () => {
           .not.toContain(c.food);
       });
     });
+  });
+
+  test('a pinned meal is always placed, first, in a compatible slot', () => {
+    // pick a real curated meal id deterministically: whatever an
+    // unpinned assembly puts in slot 1, pin it for a DIFFERENT seed and
+    // assert it survives the reshuffle.
+    const base = assembleDayPlan({ target: dayTarget(), band: BAND, prefs: { mealsPerDay: 4 }, seed: 42 });
+    const pinId = base.slots[0].mealId;
+    const pinned = assembleDayPlan({
+      target: dayTarget(), band: BAND, seed: 1234,
+      prefs: { mealsPerDay: 4, pinnedMealIds: [pinId] },
+    });
+    const ids = pinned.slots.map((s) => s.mealId);
+    expect(ids).toContain(pinId);
+    const pinnedSlot = pinned.slots.find((s) => s.mealId === pinId);
+    expect(pinnedSlot.pinned).toBe(true);
+    // still a full, distinct-meal day inside the band
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  test('a pinned id that no longer exists is skipped without breaking the day', () => {
+    const day2 = assembleDayPlan({
+      target: dayTarget(), band: BAND, seed: 5,
+      prefs: { mealsPerDay: 4, pinnedMealIds: ['ghost_meal_id'] },
+    });
+    expect(day2.slots.length).toBe(4);
+  });
+
+  test('assembles against a REAL engine target (shape-drift guard)', () => {
+    const real = calculateNutritionTargets({
+      sex: 'male', ageYears: 28, heightCm: 180, weightKg: 85,
+      activityLevel: 'moderate', goal: 'maintain',
+    });
+    const day2 = assembleDayPlan({
+      target: { kcal: real.targetKcal, proteinG: real.proteinG, carbsG: real.carbsG, fatG: real.fatG },
+      band: { kcalMin: real.kcalMin, kcalMax: real.kcalMax },
+      prefs: { mealsPerDay: real.mealFrequency }, seed: 8,
+    });
+    expect(day2.withinTolerance).toBe(true);
+    expect(day2.totals.kcal).toBeGreaterThanOrEqual(real.kcalMin);
+    expect(day2.totals.kcal).toBeLessThanOrEqual(real.kcalMax);
+  });
+
+  test('an ASSEMBLED day for a floored target never sits below the floor unflagged', () => {
+    const floored = calculateNutritionTargets({
+      sex: 'female', ageYears: 30, heightCm: 155, weightKg: 48,
+      activityLevel: 'sedentary', goal: 'aggressive_cut',
+    });
+    const day2 = assembleDayPlan({
+      target: { kcal: floored.targetKcal, proteinG: floored.proteinG, carbsG: floored.carbsG, fatG: floored.fatG },
+      band: { kcalMin: floored.kcalMin, kcalMax: floored.kcalMax },
+      prefs: { mealsPerDay: 3 }, seed: 4,
+    });
+    // either the day delivers at least kcalMin, or it says so honestly
+    if (day2.totals.kcal < floored.kcalMin) {
+      expect(day2.withinTolerance).toBe(false);
+    } else {
+      expect(day2.totals.kcal).toBeGreaterThanOrEqual(floored.kcalMin);
+    }
   });
 
   test('training variant with peri-workout slots assembles the extra slots', () => {

@@ -784,12 +784,18 @@ export function calculateNutritionTargets(inputs) {
   let targetKcal = Math.round(maintenanceKcal * (1 + phaseAdj));
 
   // --- Safety floors ---
+  // floorApplied is the STRUCTURED signal that a safety system raised this
+  // target (sex floor or the 1.5% hard gate). Downstream consumers (e.g.
+  // the meal-plan TD/NTD cycle, which must never carve calories off a
+  // floored target) gate on this flag, never on warning-string matching.
+  let floorApplied = false;
   const kcalFloor = sex === 'male' ? 1500 : 1200;
   if (targetKcal < kcalFloor) {
     warnings.push(
       `Target calories (${targetKcal} kcal) below safe minimum (${kcalFloor} kcal). Raising to floor.`,
     );
     targetKcal = kcalFloor;
+    floorApplied = true;
   }
 
   // --- Loss rate checks ---
@@ -808,6 +814,7 @@ export function calculateNutritionTargets(inputs) {
       const maxWeeklyDeficit = HARD_GATE_LOSS_RATE * safeWeight * KCAL_PER_KG_FAT;
       const maxDailyDeficit = maxWeeklyDeficit / 7;
       targetKcal = Math.round(maintenanceKcal - maxDailyDeficit);
+      floorApplied = true;
     } else if (lossFraction > MAX_SAFE_LOSS_RATE) {
       warnings.push(
         `Estimated loss rate (${(lossFraction * 100).toFixed(2)} % BW/week) exceeds the recommended 0.8 % threshold. ` +
@@ -883,6 +890,7 @@ export function calculateNutritionTargets(inputs) {
     experienceLevel,
     formulaUsed: formula,
     warnings,
+    floorApplied,    // structured: a safety system raised this target
     isConsentRequired: true,
   };
 }

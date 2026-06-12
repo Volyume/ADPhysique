@@ -49,10 +49,18 @@ function mulberry32(seed) {
   };
 }
 
-/** Did the engine raise this target to a safety floor? (Cycling must then stay flat.) */
+/**
+ * Did the engine raise this target to a safety floor? (Cycling must then
+ * stay flat.) Gates on the engine's STRUCTURED `floorApplied` flag; the
+ * warning-string fallback exists only for plan snapshots stored before
+ * the flag shipped, and covers every floor/hard-gate warning the engine
+ * actually emits (verified against nutritionEngine.js, not from memory).
+ */
 export function targetWasFloored(target) {
+  if (target && target.floorApplied === true) return true;
   const warnings = (target && target.warnings) || [];
-  return warnings.some((w) => /below safe minimum|raising to floor|rapid|capped/i.test(String(w)));
+  return warnings.some((w) =>
+    /below safe minimum|raising to floor|hard gate|raised to limit loss|rapid|capped/i.test(String(w)));
 }
 
 /**
@@ -93,7 +101,11 @@ export function dayVariantTargets(target, { trainingDays = 0, restDays = 0, fatC
   }
   down = Math.max(0, Math.floor(down));
   up = Math.max(0, Math.floor((down * restDays) / trainingDays));
-  if (down === 0 || up === 0) return flat;
+  // A cycle below this is presentation noise, not a carb cycle: when the
+  // engine band leaves too little room (e.g. 1 training day to 6 rest
+  // days), be honestly flat rather than show a fake 8 kcal "cycle".
+  const MIN_MEANINGFUL_CYCLE_KCAL = 50;
+  if (down < MIN_MEANINGFUL_CYCLE_KCAL || up === 0) return flat;
 
   const rest = { ...base, kcal: base.kcal - down };
   const training = { ...base, kcal: base.kcal + up };
@@ -177,6 +189,16 @@ export function buildSlotList({ mealsPerDay, periWorkout = false, variant = 'res
   return slots;
 }
 
+// Unfilled slots after index `idx` that a pin has already claimed: the
+// greedy share divisor must not count slots a pin will not leave open.
+function countPinnedAfter(slots, idx, pinnedTaken) {
+  let n = 0;
+  for (let i = idx + 1; i < slots.length; i += 1) {
+    if (pinnedTaken.has(slots[i].key)) n += 1;
+  }
+  return n;
+}
+
 function slotKindForMatching(slotKey) {
   // Curated meals carry breakfast/lunch/dinner/snack tags; numbered slots
   // pass everything (mealSuggest.slotMatches handles meal_N), and the two
@@ -237,9 +259,32 @@ export function assembleDayPlan({
     fat: Math.max(0, want.fat - consumed.fat),
   });
 
+  // Pinned meals are placed FIRST (blueprint §3.3 step 2): "keep my oats
+  // breakfast" claims its slot before the greedy fill, and its macros are
+  // subtracted so the fill only chases what remains. Pin order is the
+  // user's order; each pin takes the earliest unfilled compatible slot.
+  const pinnedTaken = new Set(); // slot keys already claimed by a pin
+  (prefs.pinnedMealIds || []).forEach((pinId) => {
+    const cand = pool.find((c) => c.id === pinId && !usedIds.has(c.id));
+    if (!cand) return; // pin no longer exists / excluded by diet: skip
+    const slot = slots.find((s) => !pinnedTaken.has(s.key)
+      && (slotKindForMatching(s.key) === null || slotMatches(cand.slots, slotKindForMatching(s.key))));
+    if (!slot) return;
+    pinnedTaken.add(slot.key);
+    usedIds.add(cand.id);
+    placed.push({ slot: slot.key, mealId: cand.id, name: cand.name, source: cand.source, items: cand.items, totals: cand.totals, components: cand.components, pinned: true });
+    consumed = {
+      kcal: consumed.kcal + cand.totals.kcal,
+      protein: consumed.protein + cand.totals.protein,
+      carbs: consumed.carbs + cand.totals.carbs,
+      fat: consumed.fat + cand.totals.fat,
+    };
+  });
+
   slots.forEach((slot, idx) => {
+    if (pinnedTaken.has(slot.key)) return; // already filled by a pin
     const slotsLeft = slots.length - idx;
-    const share = perMealMacros(remaining(), slotsLeft);
+    const share = perMealMacros(remaining(), Math.max(1, slotsLeft - countPinnedAfter(slots, idx, pinnedTaken)));
     const matchKind = slotKindForMatching(slot.key);
 
     let best = null;
@@ -282,6 +327,10 @@ export function assembleDayPlan({
     }
   });
 
+  // Pins were pushed first; restore day order for the close-out + output.
+  const slotOrderIndex = new Map(slots.map((s, i) => [s.key, i]));
+  placed.sort((a, b) => (slotOrderIndex.get(a.slot) ?? 99) - (slotOrderIndex.get(b.slot) ?? 99));
+
   // ── Tolerance close-out: iterative macro-preserving rescales across the
   // day's staples until the day lands in the engine band — exactly what a
   // coach does when sizing a printed plan to a bigger or smaller eater.
@@ -291,61 +340,70 @@ export function assembleDayPlan({
   const kcalMin = Number(band?.kcalMin) || r0(want.kcal * 0.9);
   const kcalMax = Number(band?.kcalMax) || r0(want.kcal * 1.1);
 
+  // One nudge on one staple of the role. Tries every untouched staple of
+  // the role, largest portion first, and succeeds on the first that can
+  // actually move (a staple already at its clamp is marked touched and
+  // skipped, NOT allowed to abandon the role — the give-up-early bug the
+  // engine review caught). Returns true when any staple moved.
   const rescaleOne = (role, touched) => {
-    let bestComp = null;
+    const candidates = [];
     placed.forEach((p, pi) => {
       if (!p.components) return;
       p.components.forEach((c, ci) => {
         if (roleOf(c.food) !== role) return;
         const id = `${pi}:${ci}`;
         if (touched.has(id)) return;
-        if (!bestComp || c.g > bestComp.c.g) bestComp = { p, c, ci, pi, id };
+        candidates.push({ p, c, ci, pi, id });
       });
     });
-    if (!bestComp) return false;
-    const { p, c, ci, pi, id } = bestComp;
-    touched.add(id);
-    const item = p.items[ci];
-    const per100 = {
-      kcal: (item.kcal / c.g) * 100,
-      protein: (item.proteinG / c.g) * 100,
-      carbs: (item.carbsG / c.g) * 100,
-      fat: (item.fatG / c.g) * 100,
-    };
-    if (per100.kcal <= 0) return false;
-    const kcalResidual = want.kcal - consumed.kcal;
-    let gDelta = (kcalResidual / per100.kcal) * 100;
-    const [lo, hi] = gramRangeOf(c.food);
-    const newG = Math.round(Math.min(Math.max(c.g + gDelta, lo), hi) / 5) * 5;
-    gDelta = newG - c.g;
-    if (gDelta === 0) return false;
-    const f = gDelta / 100;
-    consumed = {
-      kcal: r0(consumed.kcal + per100.kcal * f),
-      protein: r1(consumed.protein + per100.protein * f),
-      carbs: r1(consumed.carbs + per100.carbs * f),
-      fat: r1(consumed.fat + per100.fat * f),
-    };
-    const newItems = p.items.map((it, i) => (i === ci ? {
-      ...it,
-      quantityG: newG,
-      kcal: r0(per100.kcal * (newG / 100)),
-      proteinG: r1(per100.protein * (newG / 100)),
-      carbsG: r1(per100.carbs * (newG / 100)),
-      fatG: r1(per100.fat * (newG / 100)),
-    } : it));
-    placed[pi] = {
-      ...p,
-      items: newItems,
-      components: p.components.map((cc, i) => (i === ci ? { ...cc, g: newG } : cc)),
-      totals: mealTotals(newItems),
-    };
-    return true;
+    candidates.sort((a, b) => (b.c.g - a.c.g) || (a.id < b.id ? -1 : 1));
+
+    for (const cand of candidates) {
+      const { p, c, ci, pi, id } = cand;
+      touched.add(id);
+      const item = p.items[ci];
+      const per100 = {
+        kcal: (item.kcal / c.g) * 100,
+        protein: (item.proteinG / c.g) * 100,
+        carbs: (item.carbsG / c.g) * 100,
+        fat: (item.fatG / c.g) * 100,
+      };
+      if (per100.kcal <= 0) continue;
+      const kcalResidual = want.kcal - consumed.kcal;
+      let gDelta = (kcalResidual / per100.kcal) * 100;
+      const [lo, hi] = gramRangeOf(c.food);
+      const newG = Math.round(Math.min(Math.max(c.g + gDelta, lo), hi) / 5) * 5;
+      gDelta = newG - c.g;
+      if (gDelta === 0) continue; // at its clamp: try the next staple
+      const f = gDelta / 100;
+      consumed = {
+        kcal: r0(consumed.kcal + per100.kcal * f),
+        protein: r1(consumed.protein + per100.protein * f),
+        carbs: r1(consumed.carbs + per100.carbs * f),
+        fat: r1(consumed.fat + per100.fat * f),
+      };
+      const newItems = p.items.map((it, i) => (i === ci ? {
+        ...it,
+        quantityG: newG,
+        kcal: r0(per100.kcal * (newG / 100)),
+        proteinG: r1(per100.protein * (newG / 100)),
+        carbsG: r1(per100.carbs * (newG / 100)),
+        fatG: r1(per100.fat * (newG / 100)),
+      } : it));
+      placed[pi] = {
+        ...p,
+        items: newItems,
+        components: p.components.map((cc, i) => (i === ci ? { ...cc, g: newG } : cc)),
+        totals: mealTotals(newItems),
+      };
+      return true;
+    }
+    return false;
   };
 
   const touched = new Set();
   let guard = 0;
-  while ((consumed.kcal < kcalMin || consumed.kcal > kcalMax) && guard < 12) {
+  while ((consumed.kcal < kcalMin || consumed.kcal > kcalMax) && guard < 20) {
     guard += 1;
     if (rescaleOne('carb', touched)) continue;
     if (rescaleOne('fat', touched)) continue;
