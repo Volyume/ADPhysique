@@ -68,6 +68,25 @@ status. The systemic conclusion is at the bottom.
 - **Action taken:** the You row now shows for FREE users only; Pro users use
   the in-context links on the coaching screen.
 
+## 8. Generated split days criticised by their own coverage card — FIXED
+- **Finding:** "Back + Delts" days flagged "No hamstring work", "Chest + Arms"
+  flagged "No pulling work" — the app's own generated plans called out as
+  wrong, with week-level balance logic applied to a single day of a split.
+- **Action taken:** day-level balance warnings removed from RoutineDetail
+  entirely (a split day is supposed to be "unbalanced"; the generator already
+  balances the week; authoring feedback lives in the manual builder). The
+  factual muscle-coverage chips stay.
+
+## 9. Workout History: delete a workout — SHIPPED (founder request)
+- Trash affordance per history card → destructive confirm → local hard delete
+  (workout + sets; derived stats self-heal) + cloud delete with queued retry
+  so a restore pull cannot resurrect it.
+- **Founder action needed:** confirm the Supabase RLS on `workouts` and
+  `workout_sets` permits DELETE for row owners (auth.uid()). If it does not,
+  the cloud delete fails (visible in Debug logs as
+  sync.deleteWorkoutFromCloud), local deletion still works, and a future
+  restore could resurrect the session until the policy is added.
+
 ## Systemic conclusion (the real finding)
 Several agent-built surfaces shipped without device-level visual verification
 and without conformance to docs/rules/styling.md. The phantom-token guard now
