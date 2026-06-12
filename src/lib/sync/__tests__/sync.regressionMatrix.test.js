@@ -201,6 +201,10 @@ describe('Matrix coverage', () => {
       // cardio_log (cardio session store): push/pull covered in the
       // dedicated sync.cardioLog.test.js.
       'cardio_log',
+      // partner_signals (NEW-002 pair-scoped shape): push own week signals,
+      // pull both members + cheers, prune on unpair-while-offline — covered in
+      // the dedicated sync.partners.test.js.
+      'partner_signals',
       // Pull-only handlers:
       'ed_pattern_flags', 'tier_history', 'daily_intake_rollups',
       // Aliased no-op handler:

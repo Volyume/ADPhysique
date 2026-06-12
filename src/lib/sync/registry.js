@@ -180,6 +180,20 @@ export const SYNC_REGISTRY = [
     softDelete: false,
     direction: 'bidirectional',
   },
+  {
+    // NEW-002 training partners — the PAIR-SCOPED shape (not user-scoped). One
+    // registry entry drives all three local mirrors (partnerships,
+    // partner_week_signals, partner_cheers): pull both members' rows for my
+    // active pairs, push my own derived week signals. Cheers go via the
+    // partner-cheer edge function; partnership status is server-authoritative.
+    // Cloud migration 081. Handler: src/lib/sync/tables/partners.js.
+    table: 'partner_signals',
+    pk: ['pair_id', 'user_id', 'week_start'],
+    conflictStrategy: 'last_write_wins',
+    serverAuthoritative: false,
+    softDelete: false,
+    direction: 'bidirectional',
+  },
 ];
 
 export function getRegistryEntry(tableName) {

@@ -1285,6 +1285,41 @@ const SCHEMA_MIGRATIONS = [
     'ALTER TABLE workouts ADD COLUMN sleep_quality INTEGER',
     'ALTER TABLE workouts ADD COLUMN energy_score INTEGER',
   ],
+  // NEW-002 training partners: the local mirror the partner row reads (offline-
+  // first — components never query Supabase). The pair-scoped sync handler
+  // (src/lib/sync/tables/partners.js) populates these from cloud migration 081.
+  // partner_blocks is a server-only write surface, not mirrored locally.
+  [
+    `CREATE TABLE IF NOT EXISTS partnerships (
+      id             TEXT PRIMARY KEY NOT NULL,
+      member_a       TEXT,
+      member_b       TEXT,
+      status         TEXT NOT NULL DEFAULT 'invited',
+      streak_enabled INTEGER NOT NULL DEFAULT 1,
+      created_at     INTEGER,
+      accepted_at    INTEGER,
+      ended_at       INTEGER,
+      updated_at     INTEGER NOT NULL DEFAULT 0
+    )`,
+    `CREATE TABLE IF NOT EXISTS partner_week_signals (
+      pair_id       TEXT NOT NULL,
+      user_id       TEXT NOT NULL,
+      week_start    TEXT NOT NULL,
+      planned_count INTEGER NOT NULL DEFAULT 0,
+      done_count    INTEGER NOT NULL DEFAULT 0,
+      week_met      INTEGER NOT NULL DEFAULT 0,
+      state         TEXT NOT NULL DEFAULT 'training',
+      updated_at    INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (pair_id, user_id, week_start)
+    )`,
+    `CREATE TABLE IF NOT EXISTS partner_cheers (
+      id         TEXT PRIMARY KEY NOT NULL,
+      pair_id    TEXT NOT NULL,
+      sender_id  TEXT NOT NULL,
+      sent_on    TEXT NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT 0
+    )`,
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -3572,6 +3607,17 @@ export async function wipeAllUserData(userId) {
       logError('database.wipeAllUserData.exercises', e, { userId });
     }
     _invalidateExercisesCache();
+
+    // 7. NEW-002 partner mirror. Local SQLite is single-user, so a flat wipe of
+    //    all partner rows is correct on sign-out (partnerships/cheers aren't
+    //    user_id-keyed). The cloud copy is intact; it re-pulls on next sign-in.
+    try {
+      await d.runAsync('DELETE FROM partner_cheers');
+      await d.runAsync('DELETE FROM partner_week_signals');
+      await d.runAsync('DELETE FROM partnerships');
+    } catch (e) {
+      logError('database.wipeAllUserData.partners', e, { userId });
+    }
   });
 }
 
@@ -4140,6 +4186,146 @@ export async function insertDailyStepsFromCloud(userId, row) {
       toMs(row.updated_at),
     ],
   );
+}
+
+// ─── NEW-002: training partners (local mirror) ───────────────────────────────
+// Offline-first reads for the partner row. The pair-scoped sync handler keeps
+// these current; the UI reads here, never Supabase directly. Derived signals
+// only (planned/done/met/state) — never raw workouts.
+
+const _toMsLocal = (v) => (v == null ? null : (typeof v === 'string' ? new Date(v).getTime() : v));
+
+/** The user's partnerships (invited/active/ended), newest first. */
+export async function getPartnershipsLocal(userId) {
+  if (!userId) return [];
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT * FROM partnerships
+     WHERE member_a = ? OR member_b = ?
+     ORDER BY created_at DESC`,
+    [userId, userId],
+  );
+  return rows.map(rowToCamel);
+}
+
+/** Count the user's ACTIVE partnerships (drives the free/Pro cap). */
+export async function getActivePartnerCount(userId) {
+  if (!userId) return 0;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    `SELECT COUNT(*) AS n FROM partnerships
+     WHERE status = 'active' AND (member_a = ? OR member_b = ?)`,
+    [userId, userId],
+  );
+  return row?.n ?? 0;
+}
+
+/** The most recent week signal for a given (pair, user). */
+export async function getPartnerWeekSignal(pairId, userId, weekStart) {
+  if (!pairId || !userId) return null;
+  const d = await db();
+  const row = weekStart
+    ? await d.getFirstAsync(
+        `SELECT * FROM partner_week_signals WHERE pair_id = ? AND user_id = ? AND week_start = ?`,
+        [pairId, userId, String(weekStart)])
+    : await d.getFirstAsync(
+        `SELECT * FROM partner_week_signals WHERE pair_id = ? AND user_id = ? ORDER BY week_start DESC LIMIT 1`,
+        [pairId, userId]);
+  return row ? rowToCamel(row) : null;
+}
+
+/** All week signals for a pair (both members), oldest-first — feeds the shared streak. */
+export async function getPairWeekSignals(pairId) {
+  if (!pairId) return [];
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT * FROM partner_week_signals WHERE pair_id = ? ORDER BY week_start ASC`,
+    [pairId],
+  );
+  return rows.map(rowToCamel);
+}
+
+/** The local day the user last cheered into a pair, or null. */
+export async function getLastCheerSentOn(pairId, senderId) {
+  if (!pairId || !senderId) return null;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    `SELECT sent_on FROM partner_cheers WHERE pair_id = ? AND sender_id = ? ORDER BY sent_on DESC LIMIT 1`,
+    [pairId, senderId],
+  );
+  return row?.sent_on ?? null;
+}
+
+/** The most recent cheer RECEIVED in a pair (sender != me), or null. */
+export async function getLastCheerReceived(pairId, myId) {
+  if (!pairId || !myId) return null;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    `SELECT * FROM partner_cheers WHERE pair_id = ? AND sender_id != ? ORDER BY sent_on DESC LIMIT 1`,
+    [pairId, myId],
+  );
+  return row ? rowToCamel(row) : null;
+}
+
+// ── Cloud-restore writers used by the sync handler ──
+export async function upsertPartnershipFromCloud(row) {
+  if (!row?.id) return;
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO partnerships
+       (id, member_a, member_b, status, streak_enabled, created_at, accepted_at, ended_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      row.id, row.member_a ?? null, row.member_b ?? null, row.status ?? 'invited',
+      row.streak_enabled ? 1 : 0,
+      _toMsLocal(row.created_at), _toMsLocal(row.accepted_at), _toMsLocal(row.ended_at),
+      _toMsLocal(row.updated_at ?? row.accepted_at ?? row.created_at) ?? Date.now(),
+    ],
+  );
+}
+
+export async function upsertPartnerWeekSignalFromCloud(row) {
+  if (!row?.pair_id || !row?.user_id || !row?.week_start) return;
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO partner_week_signals
+       (pair_id, user_id, week_start, planned_count, done_count, week_met, state, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      row.pair_id, row.user_id, String(row.week_start),
+      Math.max(0, Math.round(Number(row.planned_count) || 0)),
+      Math.max(0, Math.round(Number(row.done_count) || 0)),
+      row.week_met ? 1 : 0, row.state === 'resting' ? 'resting' : 'training',
+      _toMsLocal(row.updated_at) ?? Date.now(),
+    ],
+  );
+}
+
+export async function upsertPartnerCheerFromCloud(row) {
+  if (!row?.id || !row?.pair_id) return;
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO partner_cheers (id, pair_id, sender_id, sent_on, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+    [row.id, row.pair_id, row.sender_id, row.sent_on, _toMsLocal(row.created_at) ?? Date.now()],
+  );
+}
+
+/** Local "what cloud rows exist for my pairs" — used to prune unpaired rows on pull. */
+export async function getLocalPartnershipIds(userId) {
+  if (!userId) return [];
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT id FROM partnerships WHERE member_a = ? OR member_b = ?`, [userId, userId]);
+  return rows.map((r) => r.id);
+}
+
+/** Wipe all local partner data (sign-out guard). */
+export async function clearLocalPartners() {
+  const d = await db();
+  await d.runAsync('DELETE FROM partner_cheers');
+  await d.runAsync('DELETE FROM partner_week_signals');
+  await d.runAsync('DELETE FROM partnerships');
 }
 
 // ─── Pro: Weekly Check-Ins ────────────────────────────────────────────────────
