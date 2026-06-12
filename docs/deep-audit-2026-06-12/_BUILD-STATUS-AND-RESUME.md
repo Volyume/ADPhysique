@@ -96,16 +96,19 @@ findings → commit/push. Blueprints live in `docs/deep-audit-2026-06-12/`.
 6. **H1 — standalone browsable exercise library** screen (no catalogue browse
    exists today; int-03 finding 2). (H2 visual demos wait on founder media.)
 7. **J1 — named-methodology anchoring** on onboarding/check-in/paywall (S).
+8. **Theme G follow-ups (founder rule 2026-06-12: must NOT be silently
+   dropped).** (a) Meal-plan SYNC SERIALISER — the plan is local-only today; a
+   new device regenerates from the synced target + prefs. Ship the serialiser
+   (and the server-side `meal_plans` migration it needs, per
+   docs/rules/supabase.md founder-apply flow) for cross-device continuity.
+   (b) Rotation-pool control: a UI for `mealPlanRotationPool` + add the key to
+   the `setMealPlanPrefs` allow-list (currently omitted; harmless until a UI
+   sends it, broken the day one does). (c) Confirm with the founder no other
+   Theme G migration is pending before relying on cross-device anywhere.
 
 ## Carry-forward NITs (cheap, fold in when touching the file)
-- `setMealPlanPrefs` allow-list omits `mealPlanRotationPool` (harmless today;
-  no UI sends it). Add when a rotation-pool control ships.
-- Meal plan is LOCAL-ONLY (no sync serialiser yet); a new device regenerates
-  from the synced target + prefs. Ship a serialiser if cross-device plan
-  continuity is wanted.
-- Migrations pending founder apply (per docs/rules/supabase.md): none NEW from
-  Theme G that must run (the `meal_plans` table is a local SCHEMA_MIGRATIONS
-  entry; no server table). Confirm before relying on cross-device.
+- (Theme G items promoted to NEXT item 8 above — they are scheduled work now,
+  not fold-ins.)
 
 ## To resume in a fresh session, paste:
 "Continue the deep-audit build. Read
