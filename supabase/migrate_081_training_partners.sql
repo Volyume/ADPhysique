@@ -65,10 +65,17 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 
 -- ── partnerships ────────────────────────────────────────────────────────────
+-- member_a/member_b are ON DELETE SET NULL (not CASCADE) so that when one
+-- person deletes their whole account the partnership row SURVIVES as an 'ended'
+-- tombstone — the surviving partner sees exactly "Partnership ended", identical
+-- to a manual unpair, so a deletion is indistinguishable from a departure (no
+-- death-vs-departure leak, §4.8). The delete-account function marks the row
+-- ended and purges the pair's signals + cheers before the auth row goes; the
+-- deleted member's own signal/cheer/block rows cascade away on their user_id.
 CREATE TABLE IF NOT EXISTS partnerships (
   id               uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  member_a         uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  member_b         uuid        REFERENCES auth.users(id) ON DELETE CASCADE,
+  member_a         uuid        REFERENCES auth.users(id) ON DELETE SET NULL,
+  member_b         uuid        REFERENCES auth.users(id) ON DELETE SET NULL,
   status           text        NOT NULL DEFAULT 'invited'
                                  CHECK (status IN ('invited', 'active', 'ended')),
   invite_code_hash text,

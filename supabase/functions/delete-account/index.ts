@@ -126,6 +126,31 @@ serve(async (req) => {
       console.error('[delete-account] record_account_deletion_started threw', e)
     }
 
+    // 4b. NEW-002: end the user's training partnerships before the auth row
+    //     goes. The partnership FKs are ON DELETE SET NULL so the row survives
+    //     as a tombstone the partner sees as "Partnership ended" (identical to
+    //     a manual unpair — no death-vs-departure leak). We also hard-delete
+    //     the pair's week signals + cheers (both sides) so nothing of the
+    //     partnership lingers. Best-effort: a failure here must not block the
+    //     account deletion itself.
+    try {
+      const { data: pairs } = await adminClient
+        .from('partnerships')
+        .select('id')
+        .or(`member_a.eq.${user.id},member_b.eq.${user.id}`)
+      const pairIds = (pairs ?? []).map((p: { id: string }) => p.id)
+      if (pairIds.length > 0) {
+        await adminClient.from('partner_week_signals').delete().in('pair_id', pairIds)
+        await adminClient.from('partner_cheers').delete().in('pair_id', pairIds)
+        await adminClient
+          .from('partnerships')
+          .update({ status: 'ended', ended_at: new Date().toISOString() })
+          .in('id', pairIds)
+      }
+    } catch (e) {
+      console.error('[delete-account] partnership teardown failed (non-fatal)', e)
+    }
+
     // 5. Delete the auth.users row with the service-role client.
     const { error: adminErr } = await adminClient.auth.admin.deleteUser(user.id)
     if (adminErr) {
