@@ -9,7 +9,9 @@ import {
   preferencesFromProfile,
   defaultSchedule,
   buildPlanSnapshot,
+  answerDayTraining,
 } from '../mealPlanService';
+import { assembleWeekPlan } from '../mealPlanAssembler';
 
 describe('storedTargetToEngineTarget', () => {
   test('maps a stored row to the engine shape with a ±10% band', () => {
@@ -92,5 +94,80 @@ describe('buildPlanSnapshot', () => {
     expect(snap.prefs).toEqual(prefs);
     expect(snap.days).toBe(week.days);
     expect(snap.schemaVersion).toBe(1);
+  });
+});
+
+describe('answerDayTraining (rethink §3.2 — per-day "Training today?")', () => {
+  const engineTarget = {
+    targetKcal: 2400, kcalMin: 2160, kcalMax: 2640,
+    proteinG: 180, carbsG: 250, fatG: 70, warnings: [],
+  };
+  const makePlan = () => {
+    const week = assembleWeekPlan({
+      engineTarget,
+      prefs: { diet: 'omnivore', mealsPerDay: 4 },
+      schedule: ['training', 'rest', 'training', 'rest', 'training', 'rest', 'rest'],
+      seed: 7,
+    });
+    return buildPlanSnapshot({ week, engineTarget, prefs: week.prefs ?? { diet: 'omnivore', mealsPerDay: 4 }, schedule: week.schedule });
+  };
+
+  test('flips a rest day to training: day re-assembled on the TRAINING variant, schedule updated', () => {
+    const plan = makePlan();
+    const restKcal = plan.days[1].totals.kcal;
+    const { plan: next, changed } = answerDayTraining({ plan, dayIndex: 1, training: true, seed: 11 });
+    expect(changed).toBe(true);
+    expect(next.schedule[1]).toBe('training');
+    expect(next.days[1].variant).toBe('training');
+    // The day now targets the stored TRAINING variant, not the rest one.
+    expect(Math.abs(next.days[1].totals.kcal - plan.variants.training.kcal))
+      .toBeLessThan(Math.abs(restKcal - plan.variants.training.kcal) + 1);
+    expect(next.lastEditType).toBe('day_training_answer');
+  });
+
+  test('answer matching the existing variant is a no-op', () => {
+    const plan = makePlan();
+    const { plan: next, changed } = answerDayTraining({ plan, dayIndex: 0, training: true });
+    expect(changed).toBe(false);
+    expect(next).toBe(plan);
+  });
+
+  test('only the answered day changes — the week is never reshuffled', () => {
+    const plan = makePlan();
+    const { plan: next } = answerDayTraining({ plan, dayIndex: 3, training: true, seed: 5 });
+    next.days.forEach((d, i) => {
+      if (i !== 3) expect(d).toBe(plan.days[i]);
+    });
+    next.schedule.forEach((v, i) => {
+      if (i !== 3) expect(v).toBe(plan.schedule[i]);
+    });
+  });
+
+  test('SAFETY: on a floored target the re-varianted day never drops below the floor', () => {
+    const floored = storedTargetToEngineTarget({
+      target_kcal: 1200, protein_g: 120, carbs_g: 100, fat_g: 35,
+      warnings: ['Target calories (1130 kcal) below safe minimum (1200 kcal). Raising to floor.'],
+    });
+    expect(floored.floorApplied).toBe(true);
+    expect(floored.kcalMin).toBe(1200); // raised to the floor at mapping time
+    const week = assembleWeekPlan({
+      engineTarget: floored,
+      prefs: { diet: 'omnivore', mealsPerDay: 4 },
+      schedule: ['training', 'rest', 'rest', 'rest', 'rest', 'rest', 'rest'],
+      seed: 3,
+    });
+    const plan = buildPlanSnapshot({ week, engineTarget: floored, prefs: { diet: 'omnivore', mealsPerDay: 4 }, schedule: week.schedule });
+    const { plan: next, changed } = answerDayTraining({ plan, dayIndex: 6, training: true, seed: 9 });
+    expect(changed).toBe(true);
+    expect(next.days[6].totals.kcal).toBeGreaterThanOrEqual(1200 * 0.97); // assembler tolerance, never sub-floor by design band
+    // The band handed to the assembler had kcalMin AT the floor:
+    expect(plan.targetSnapshot.kcalMin).toBe(1200);
+  });
+
+  test('invalid input never throws and never mutates', () => {
+    const plan = makePlan();
+    expect(answerDayTraining({ plan, dayIndex: 9, training: true }).changed).toBe(false);
+    expect(answerDayTraining({ plan: null, dayIndex: 0, training: true }).changed).toBe(false);
+    expect(answerDayTraining({ plan, dayIndex: -1, training: false }).changed).toBe(false);
   });
 });

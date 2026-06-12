@@ -199,6 +199,21 @@ powerlifter); Natalie Matthews ex-IFBB bikini) plus 1 partial. Findings:
    Engine's training-day-linked approach is the better-supported modern form
    (RP 3.0, Vaghela); note Beverly's fixed-day convention as an alternative.
 
+## Gate expansion (built 2026-06-12, fresh-eyes reviewed APPROVE-WITH-NITS)
+
+15 meals added to bring breakfast (29→35) and snack (24→32) into the founder's
+per-slot band; lunch +2 sandwiches per RETHINK §3.5. Verdicts: Steak, eggs &
+potatoes [A5 verbatim]; Egg whites, oats & berries + Egg whites on toast
+[C1/C2/C3, A3, A6]; Beef & egg scramble [C2, A4]; Porridge, whey & berries
+[B1, D5]; Big Greek yogurt bowl + Greek yogurt & honey pot [B4 verbatim, A1];
+Smoked salmon & salad plate [B1 near-exact]; Whey, apple & almonds [D3, D7];
+Cottage cheese & berries bowl [B5 + dairy-bowl family]; chicken/tuna salad
+sandwiches [FOUNDER, §3.5-listed — distinct from the cut ham sandwich];
+Soya yogurt & berries pot, Soya shake & apple, Edamame pot [STRUCTURE,
+consistent with src-f powder policy]. Reviewer flags for device-walk eyeball:
+steak-eggs-potatoes (US-pro-sourced, least default-British plate) and edamame
+pot (single-component, legitimate but austere).
+
 ## Gaps stated plainly
 
 - **Wellness division**: no written named-competitor day of eating exists in

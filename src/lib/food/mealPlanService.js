@@ -26,7 +26,7 @@ import {
   listSavedMeals,
   logFoodEntry,
 } from './db';
-import { assembleWeekPlan, targetWasFloored } from './mealPlanAssembler';
+import { assembleDayPlan, assembleWeekPlan, targetWasFloored } from './mealPlanAssembler';
 import { swapFoodInMeal, swapMealInPlan } from './mealSwap';
 import { applyMacroDeltaToPlan } from './planEdit';
 import { normalisePreferences } from './planPreferences';
@@ -114,6 +114,53 @@ export function buildPlanSnapshot({ week, engineTarget, prefs, schedule }) {
   };
 }
 
+/**
+ * Re-variant ONE day of a stored plan from the user's per-day "Training
+ * today?" answer (meal-plan rethink §3.2: the day's TD/NTD variant follows
+ * the answer, never a generated Mon-Sun spread). Pure.
+ *
+ * Reuses the plan's stored variant targets and band verbatim — no calorie
+ * number is computed or lowered here, so a floored target's raised kcalMin
+ * (set at generation) keeps holding. Other days are left untouched: the
+ * answer is about today, not a reshuffle of the week.
+ *
+ * Returns { plan, changed }: changed=false when the answer matches the
+ * day's existing variant or the input is invalid.
+ */
+export function answerDayTraining({ plan, dayIndex, training, seed = 1, savedMeals = [] } = {}) {
+  const idx = Number(dayIndex);
+  if (
+    !plan || !Array.isArray(plan.days) || !Number.isInteger(idx)
+    || idx < 0 || idx >= plan.days.length || !plan.variants
+  ) {
+    return { plan, changed: false };
+  }
+  const variant = training ? 'training' : 'rest';
+  const schedule = Array.isArray(plan.schedule) ? [...plan.schedule] : [];
+  if (schedule[idx] === variant) return { plan, changed: false };
+
+  const target = plan.variants[variant];
+  if (!target) return { plan, changed: false };
+  const snap = plan.targetSnapshot || {};
+  const band = { kcalMin: snap.kcalMin, kcalMax: snap.kcalMax };
+  const day = assembleDayPlan({
+    target, band, prefs: plan.prefs, variant, seed, savedMeals,
+  });
+
+  const days = plan.days.map((d, i) => (i === idx ? day : d));
+  schedule[idx] = variant;
+  return {
+    plan: {
+      ...plan,
+      days,
+      schedule,
+      lastEditType: 'day_training_answer',
+      withinTolerance: days.every((d) => d.withinTolerance),
+    },
+    changed: true,
+  };
+}
+
 // ─── Async orchestration (the only impure surface) ──────────────────────
 
 /**
@@ -155,6 +202,26 @@ export async function regenerateActiveMealPlan(userId, profile, { seed = Date.no
 /** Load the active plan (parsed) or null. */
 export async function loadActiveMealPlan(userId) {
   return getActiveMealPlan(userId);
+}
+
+/**
+ * Answer "Training today?" on the active plan and persist the re-varianted
+ * day (rethink §3.2). Returns { plan, changed } or { error: 'no_plan' }.
+ */
+export async function answerTrainingTodayOnActivePlan(userId, { dayIndex, training, seed = Date.now() % 100000 } = {}) {
+  const active = await getActiveMealPlan(userId);
+  if (!active?.plan) return { error: 'no_plan' };
+  const savedMeals = await listSavedMeals(userId).catch(() => []);
+  const { plan, changed } = answerDayTraining({
+    plan: active.plan,
+    dayIndex,
+    training,
+    seed,
+    savedMeals: savedMeals.map((m) => ({ id: m.id, name: m.name, slots: [], totals: m.totals })),
+  });
+  if (!changed) return { plan: active.plan, changed: false };
+  await updateMealPlan(userId, active.id, plan);
+  return { plan, changed: true };
 }
 
 /**
