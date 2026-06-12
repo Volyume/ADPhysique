@@ -1,5 +1,13 @@
 # Meal-plan RETHINK — research + blueprint (2026-06-12)
 
+> **METHOD NOTICE (2026-06-12):** the research in this document was
+> gathered under DEGRADED tooling (search digests only; page fetches
+> blocked, research agents unavailable). Citations are real published
+> sources but were NOT verified at full depth. Re-validate via the
+> /deep-research pipeline in a working environment before treating any
+> evidence claim here as settled.
+
+
 **Why this exists.** Founder device-walked the shipped "Plan my day" / meal-plan
 flagship and hit three credibility-breaking faults, all confirmed in code. This
 document is the cited research and the resulting engine blueprint to fix them

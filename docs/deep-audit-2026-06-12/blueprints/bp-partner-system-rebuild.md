@@ -1,5 +1,13 @@
 # Training-partner system rebuild — research + blueprint (2026-06-12)
 
+> **METHOD NOTICE (2026-06-12):** the research in this document was
+> gathered under DEGRADED tooling (search digests only; page fetches
+> blocked, research agents unavailable). Citations are real published
+> sources but were NOT verified at full depth. Re-validate via the
+> /deep-research pipeline in a working environment before treating any
+> evidence claim here as settled.
+
+
 Founder device-walk verdict on NEW-002 as shipped: buried under You →
 Consistency as one row, the sheet rendered black-on-black (fixed, phantom
 token), and the whole thing read as "a half done attempt". This is the
