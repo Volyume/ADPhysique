@@ -46,19 +46,30 @@ ask a structured multi-choice question and keep working — never stall.
   only prefs — all with regression tests.
 - **AI mislabelling corrected** in APPMAP/DEEPMAP (the deterministic Coach
   Builder is NOT AI). No user-facing AI claim exists anywhere (verified).
+- **D1 — beginner early-win milestone ladder (COMPLETE, reviewed):**
+  `src/lib/milestones.js` (pure engine + AsyncStorage seen-set) + a calm gold
+  milestone card on `WorkoutSummaryScreen` at the top emotional peak. Fills the
+  int-04 F1 "celebration desert" between the first-session line and the
+  ten-session recap unlock. See the NEXT-list strike-through below for the full
+  shape. Commits `5c9b05b` + `671fd69`.
 
 ## NEXT — build in this order (Wave 2, then 4)
 Each item: build hands-on → fresh-eyes review under a heartbeat watch → fix
 findings → commit/push. Blueprints live in `docs/deep-audit-2026-06-12/`.
 
-1. **D1 — beginner early-win milestone ladder.** Pure `src/lib/milestones.js`:
-   first workout, first week (3 sessions in 7 days), 5/10/25/50/100 sessions,
-   first PR — from existing local data, deterministic, seen-set persisted like
-   `streakState`. Surface a calm celebratory card at the WorkoutSummary
-   emotional peak; inherit existing calm-mode/ED suppression. **First-30-days
-   rule (ext-05): positive milestones fire; never any streak-loss/shame
-   framing.** Evidence: `internal/int-04-...md` F1, `external/ext-04-...md`,
-   `ext-05-...md`.
+- ~~**D1 — beginner early-win milestone ladder.**~~ **DONE** (commits
+  `5c9b05b` + review fix `671fd69`). Pure `src/lib/milestones.js`: rolling
+  3-in-7 `first_week` + 5/10/25/50/100 lifetime sessions + `first_pr`, seen-set
+  persisted like `streakState` (`@volyume_milestones_v1_<userId>`).
+  `claimMilestones` batch-marks earned-unseen rungs seen + shows only the most
+  significant (no history replay). Calm gold card at the WorkoutSummary top
+  peak, shares the COMP-013 wellbeing read for calm/ED suppression; first
+  session stays owned by COMP-013 and PRs by PRCelebration (`everHitPR:false`),
+  so no double-celebration. 19 invariant tests. Reviewed SHIP-WITH-NITS; the
+  one MEDIUM (a "never lost" doc overclaim vs the deliberate fold-in) fixed in
+  the comment. **Carry-forward:** a future Analytics "milestones strip" (F1's
+  2nd placement) + next-rung copy can reuse `nextSessionRung`/`selectMilestone`;
+  the engine already models `first_pr` for it.
 2. **D2 — programme-arc visibility.** "Week N of M" strip (existing
    block/mesocycle data, reuse BlockShapeCard/week-dots) on WorkoutSummary +
    Consistency; phase-completion celebration card when a block's final week
