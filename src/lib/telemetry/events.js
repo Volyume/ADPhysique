@@ -153,6 +153,18 @@ export const TELEMETRY_EVENTS = Object.freeze([
   { name: 'partner_invite_accepted',         deferred: false, panel: 1 },
   { name: 'partner_cheer_sent',              deferred: false, panel: 1 },
   { name: 'partner_blocked',                 deferred: false, panel: 1 },
+
+  // COMP-020: Apple Watch companion. Adoption + the reliability bar made
+  // visible. Counts/flags only, never training content. Emitters in
+  // src/lib/watch/bridge.js. Server allow-list: migrate_084_watch_telemetry.sql.
+  { name: 'watch_session_attached',          deferred: false, panel: 1 },
+  { name: 'watch_set_logged',                deferred: false, panel: 1 },
+  { name: 'watch_apply_duplicate_dropped',   deferred: false, panel: 1 },
+  // Fired when an event arrives via the durable transferUserInfo queue after a
+  // disconnect; needs the native channel to tag recovered events — deferred
+  // until that watch-side tag lands (the allow-list carries it ready).
+  { name: 'watch_replay_recovered',          deferred: true,  panel: 1,
+    deferralReason: 'needs the native transferUserInfo channel to tag recovered events' },
 ]);
 
 /**

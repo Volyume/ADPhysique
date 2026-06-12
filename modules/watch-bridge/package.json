@@ -1,0 +1,7 @@
+{
+  "name": "watch-bridge",
+  "version": "0.1.0",
+  "description": "iOS WatchConnectivity bridge for the Volyume Apple Watch set-logging companion (COMP-020).",
+  "main": "index.ts",
+  "private": true
+}
