@@ -168,9 +168,13 @@ powerlifter); Natalie Matthews ex-IFBB bikini) plus 1 partial. Findings:
    difference; methodology page must stay honest).
 3. **Post-workout whey + fast carbs is a real, near-universal slot** [B2 (whey +
    Coco Pops), A2 (whey + 2 bananas), A3 (isolate shake), C6 (whey + dextrose
-   intra/post %), B6 (Recover Ex)]. The library lacks a dedicated post-workout
-   shake-plus-fast-carb meal family — **recommended addition** (maps cleanly to
-   UK staples: whey + banana exists; consider whey + cereal).
+   intra/post %), B6 (Recover Ex)]. **CORRECTION (verified against code
+   2026-06-12):** the library ALREADY carries a full pre/post-workout family
+   (curatedMeals.js lines 181–208 — omnivore/veg/vegan: whey+banana shake,
+   whey+oats+honey, whey+rice cakes+banana, yogurt+granola+banana, plus plant
+   equivalents). Decision #5's "add it" is therefore already satisfied; no new
+   meals built (the gate's earlier "missing" note was an error from not reading
+   the whole file). The evidence validates the family that already exists.
 4. **Fat is the prep lever** — slashed in deep prep (A3: 42g/day; D1: "no fat";
    D6 drops mayo/avocado near show), liberal off-season (A4: 115g). Supports the
    rest-day-fat preference setting and phase-aware fat handling.
@@ -220,10 +224,13 @@ powerlifter); Natalie Matthews ex-IFBB bikini) plus 1 partial. Findings:
 4. **THIN meals** — **KEEP ALL SIX** (founder verdict): prawn & noodle stir-fry,
    prawn & egg fried rice, chicken chow mein, chicken & quinoa salad, turkey &
    cottage cheese plate, tuna & rice cakes. Kept as labelled UK mappings.
-5. **Post-workout shake + fast-carb family** — **APPROVED, ADD** (whey + banana
-   exists; add whey + cereal variants per B2/A2 evidence). Queued as a build
-   item against this gate.
-6. **Vegan section** — held for src-f as decided; src-f has now landed and its
-   verdict is recorded above: **rebalance anchors toward tofu/legume/soya;
-   demote seitan/tempeh prominence; powders as target-dependent top-ups.**
-   Rebalance queued as a build item against this gate.
+5. **Post-workout shake + fast-carb family** — **ALREADY PRESENT** (verified in
+   code; see cross-cutting finding #3). No build needed; evidence validates the
+   existing family. The "add" verdict is closed as a no-op.
+6. **Vegan section** — **DONE.** src-f landed; rebalance BUILT 2026-06-12:
+   seitan mains 4→2, tempeh 3→1, freed slots reassigned to tofu / soya-mince /
+   edamame anchors (Tofu burrito bowl, Tofu & noodle stir-fry, Soya mince &
+   quinoa & roast veg, Edamame peanut noodles). Locked with an invariant test
+   (`vegan main meals anchor on tofu/legumes/soya, not seitan/tempeh`). Powders
+   remain concentrated in breakfast/snack/shake slots per the target-dependent
+   top-up finding. 15/15 curated-meals tests green.
