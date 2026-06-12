@@ -64,6 +64,11 @@ After every completed feature: dispatch a fresh-eyes adversarial REVIEW
 agent (no authorship bias) to check the work against its blueprint before
 moving on.
 
+Agents are SUPERVISED, never fire-and-forget: every dispatched agent gets a
+heartbeat watch (stale after ~5 minutes of silence, overrun after ~25).
+A stale or hung agent is killed and relaunched immediately; its job is
+never silently abandoned and never left to block progress.
+
 Tests are the contract, written to fail: every feature gets invariant tests
 against the REAL engine for whatever it must never do. CI is the final
 arbiter; the founder device-walks new flows from green builds.
