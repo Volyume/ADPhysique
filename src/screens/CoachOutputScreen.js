@@ -41,6 +41,8 @@ import { usePlayPrices } from '../lib/payments/usePlayPrices';
 import { SkeletonCard } from '../components/Skeleton';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
 import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, computeDietBreakTargets, computeMacroCycle, computeRefeedDay, markApplied, isApplied } from '../lib/coachApply';
+import { applyCoachAdjustmentToActivePlan } from '../lib/food/mealPlanService';
+import { buildPlanEditNarration } from '../lib/food/planExplain';
 import { buildCoachResponse } from '../lib/coachResponse';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 import { logError, logWarn } from '../lib/errorLog';
@@ -765,6 +767,9 @@ export default function CoachOutputScreen({ navigation, route }) {
   const [coachHistory, setCoachHistory] = useState([]);
   const [_adaptiveTDEE, setAdaptiveTDEE] = useState(null);
   const [applyingKey, setApplyingKey] = useState(null);
+  // Food-level receipt after a calorie apply edits an active meal plan
+  // ({ headline, body, deepLink, floorNote } from planExplain, or null).
+  const [planEditNote, setPlanEditNote] = useState(null);
   // Next mesocycle week that a training-volume apply would write to.
   // Loaded once on mount; null when there's no active block or the
   // current week is the last one (nothing to push volume into).
@@ -798,6 +803,18 @@ export default function CoachOutputScreen({ navigation, route }) {
       const updated = markApplied(output, 'calories', { newKcal: computed.newKcal });
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
+
+      // If the user is on a generated meal plan, pull the same calorie
+      // change THROUGH the plan at the food level and show the coach
+      // saying what moved (the transparent-coach moat, at the gram of
+      // rice). Floor-clamped inside the service; silent when off-plan.
+      try {
+        const register = (userProfile?.experienceLevel === 'advanced'
+          || userProfile?.experienceLevel === 'competitive') ? 'precise' : 'supportive';
+        const { change: planChange } = await applyCoachAdjustmentToActivePlan(user.id, { adjustmentKcal: change });
+        const narration = buildPlanEditNarration(planChange, { register });
+        setPlanEditNote(narration);
+      } catch (_) { /* off-plan or no edit: nothing to surface */ }
     } catch (e) {
       logError('CoachOutputScreen.handleApplyCalories', e, { userId: user?.id });
     } finally {
@@ -1633,6 +1650,26 @@ export default function CoachOutputScreen({ navigation, route }) {
           applyingKey={applyingKey}
         />
 
+        {/* Food-level receipt: when the calorie change edited an active
+            meal plan, the coach says what moved, at the gram of rice. */}
+        {planEditNote ? (
+          <View style={styles.planEditCard} accessibilityRole="summary">
+            <Text style={styles.planEditHead}>{planEditNote.headline}</Text>
+            <Text style={styles.planEditBody}>{planEditNote.body}</Text>
+            {planEditNote.deepLink ? (
+              <TouchableOpacity
+                style={styles.planEditLink}
+                onPress={() => navigation.navigate('DiaryTab', { screen: 'MealPlan' })}
+                accessibilityRole="button"
+                accessibilityLabel={planEditNote.deepLink.label}
+              >
+                <Ionicons name="restaurant-outline" size={14} color={colors.primary} />
+                <Text style={styles.planEditLinkText}>{planEditNote.deepLink.label}</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        ) : null}
+
         {/* P3: cardio recovery caution (one line, advisory, no Apply). */}
         {cardioFlag ? (
           <View style={styles.cardioNoteRow}>
@@ -1770,6 +1807,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
   cardioNoteText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  planEditCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.primary,
+    padding: spacing.md, marginTop: spacing.sm, gap: spacing.xs,
+  },
+  planEditHead: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  planEditBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
+  planEditLink: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, marginTop: spacing.xs },
+  planEditLinkText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   safe: {
     flex: 1,
     backgroundColor: colors.background,
