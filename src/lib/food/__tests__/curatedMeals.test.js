@@ -76,7 +76,9 @@ describe('library data integrity', () => {
     );
     // Tofu/legume/soya anchored mains must clearly outnumber seitan/tempeh ones.
     expect(tofuLegumeSoya.length).toBeGreaterThan(seitanTempeh.length);
-    // Tempeh, absent from every published competitor day, stays an occasional option.
+    // Seitan (once across published days) and tempeh (in none) each stay capped
+    // as occasional options, so neither can creep back to over-weighting.
+    expect(veganMains.filter(m => has(m, 'seitan')).length).toBeLessThanOrEqual(2);
     expect(veganMains.filter(m => has(m, 'tempeh')).length).toBeLessThanOrEqual(2);
   });
 
