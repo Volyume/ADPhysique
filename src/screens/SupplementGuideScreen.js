@@ -1,4 +1,4 @@
-// G2 — "Supplements, honestly".
+// G2 - "Supplements, honestly".
 //
 // A static, offline, copy-only reference (deep-audit Theme G2, blueprint
 // bp-supplement-guidance.md). FREE for everyone; no data dependencies, no

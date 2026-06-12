@@ -1,11 +1,11 @@
 /**
- * TodaysPlateTeaser — a READ-ONLY example day shown to FREE users on the
+ * TodaysPlateTeaser - a READ-ONLY example day shown to FREE users on the
  * Pro-locked Food diary screen (deep-audit Theme G, founder decision #6;
  * the monetisation research's highest-conviction conversion lever:
  * show-then-sell at the success moment).
  *
  * Deliberate free/Pro line: this is a PERMANENT, static preview built from
- * a fixed sample target (NOT the user's data — free users have no
+ * a fixed sample target (NOT the user's data - free users have no
  * nutrition target), with a fixed seed so it is stable. It exposes NO Pro
  * function: nothing is tappable, there is no swap, no log, no generate.
  * It only shows what a generated day looks like, so the upgrade ask lands
