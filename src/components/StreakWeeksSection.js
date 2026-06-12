@@ -60,6 +60,14 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
   else if (hasTarget && Number.isFinite(target)) runLine = `${completed} of ${target} sessions this week`;
   else runLine = `${completed} session${completed === 1 ? '' : 's'} this week`;
 
+  // D2: surface the otherwise-silent streak repair. A 'repaired' week is, by
+  // the engine's bridge rule, always followed by a keeping week (the comeback),
+  // so the comeback has just landed exactly when the second-to-last FINISHED
+  // week is 'repaired'. A calm, forgiving line — never shame, and it self-
+  // expires within a week as the next week finishes and rolls the strip on.
+  const finishedWeeks = weeks.filter(w => w.state !== 'in-progress');
+  const justRepaired = finishedWeeks[finishedWeeks.length - 2]?.state === 'repaired';
+
   // Text equivalent of the glyph strip for screen readers.
   const parts = [];
   const k = strength(weeks, 'kept'); if (k) parts.push(`${k} kept`);
@@ -98,6 +106,13 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
           return <Ionicons key={w.weekKey} name={g.icon} size={16} color={g.color} style={styles.glyph} />;
         })}
       </View>
+
+      {justRepaired ? (
+        <View style={styles.repairRow}>
+          <Ionicons name="git-compare" size={14} color={colors.primary} />
+          <Text style={styles.repairLine}>A lighter week, and you came back. Your run carried on.</Text>
+        </View>
+      ) : null}
 
       {longestRun > 0 ? (
         <Text style={styles.longest}>Longest run: {longestRun} {longestRun === 1 ? 'week' : 'weeks'}.</Text>
@@ -173,6 +188,10 @@ const styles = StyleSheet.create({
   strip: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xxs },
   glyph: { marginRight: 2 },
   longest: { fontSize: fontSize.xs, color: colors.textMuted },
+  // D2 streak-repair line — calm, forgiving; primary tint (a positive bridge),
+  // never a warning colour.
+  repairRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xxs },
+  repairLine: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 16 },
   goalBlock: { gap: spacing.sm, marginTop: spacing.xs },
   goalLabel: { fontSize: fontSize.sm, color: colors.textSecondary },
   goalChips: { flexDirection: 'row', gap: spacing.sm },
