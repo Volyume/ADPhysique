@@ -57,6 +57,20 @@ ask a structured multi-choice question and keep working — never stall.
 Each item: build hands-on → fresh-eyes review under a heartbeat watch → fix
 findings → commit/push. Blueprints live in `docs/deep-audit-2026-06-12/`.
 
+> **PRIORITY INSERT — MEAL-PLAN RETHINK (founder, 2026-06-12, device-walk).**
+> The shipped meal-plan flagship has credibility-breaking faults (slot blindness
+> → curry/bolognese as breakfast; swap = nearest-macro-clone, only ~2 similar
+> options; an invented weekly training schedule; soy/pea isolates treated as
+> omnivore protein anchors). Research + blueprint:
+> `blueprints/bp-meal-plan-RETHINK-2026-06-12.md`. This jumps the queue ahead of
+> C1/C2's remaining surfaces and everything below once the founder confirms the
+> three open decisions in §4 of that doc. Build: named-slot model (breakfast is
+> breakfast), per-day "training today?" input, generous style-diverse swap pool,
+> protein-quality ranking (animal-anchored omnivore meals; plant uplift for
+> veg/vegan), and a common-staple British-palate library expansion (~30-50
+> easy, makeable meals per slot). C1 engine + settings are already shipped; its
+> leftover jargon tap-to-explain leak-sites can fold in after.
+
 - ~~**D1 — beginner early-win milestone ladder.**~~ **DONE** (commits
   `5c9b05b` + review fix `671fd69`). Pure `src/lib/milestones.js`: rolling
   3-in-7 `first_week` + 5/10/25/50/100 lifetime sessions + `first_pr`, seen-set
