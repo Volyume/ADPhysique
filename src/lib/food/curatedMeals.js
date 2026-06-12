@@ -182,6 +182,25 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_vg_pea_oat_shake', 'Pea protein oat shake', 'vegan', ['snack'], [{ food: 'pea_protein', g: 30 }, { food: 'oats', g: 30 }, { food: 'soy_milk', g: 200 }]),
   m('curated_vg_soy_apple_almonds', 'Soya yogurt, apple & almonds', 'vegan', ['snack'], [{ food: 'soy_protein', g: 15 }, { food: 'soy_yogurt_hp', g: 200 }, { food: 'apple', g: 100 }, { food: 'almonds', g: 12 }]),
 
+  // ─── Gate expansion (2026-06-12 primary-source pass): breakfast + snack
+  //     depth to the founder's per-slot target. Every meal maps to a
+  //     corroborated archetype in _GATE-meal-library-2026-06-12.md. ─────────
+  m('curated_om_steak_eggs_potatoes', 'Steak, eggs & potatoes', 'omnivore', ['breakfast'], [{ food: 'steak_lean', g: 100 }, { food: 'eggs', g: 100 }, { food: 'white_potato', g: 200 }]),
+  m('curated_om_eggwhites_oats_berries', 'Egg whites, oats & berries', 'omnivore', ['breakfast'], [{ food: 'egg_whites', g: 200 }, { food: 'oats', g: 50 }, { food: 'berries', g: 80 }]),
+  m('curated_om_beef_egg_scramble', 'Beef & egg breakfast scramble', 'omnivore', ['breakfast'], [{ food: 'beef_mince_5', g: 100 }, { food: 'eggs', g: 100 }, { food: 'wholemeal_bread', g: 40 }]),
+  m('curated_veg_porridge_whey_berries', 'Porridge, whey & berries', 'vegetarian', ['breakfast'], [{ food: 'oats', g: 60 }, { food: 'whey', g: 30 }, { food: 'berries', g: 80 }]),
+  m('curated_veg_big_yogurt_bowl', 'Big Greek yogurt bowl', 'vegetarian', ['breakfast'], [{ food: 'greek_yogurt_0', g: 300 }, { food: 'oats', g: 30 }, { food: 'honey', g: 10 }]),
+  m('curated_vg_soy_yogurt_berries_pot', 'Soya yogurt & berries pot', 'vegan', ['breakfast', 'snack'], [{ food: 'soy_yogurt_hp', g: 250 }, { food: 'pea_protein', g: 20 }, { food: 'berries', g: 80 }]),
+  m('curated_om_chicken_salad_sandwich', 'Chicken salad sandwich', 'omnivore', ['lunch'], [{ food: 'chicken_breast', g: 120 }, { food: 'wholemeal_bread', g: 80 }, { food: 'salad', g: 60 }]),
+  m('curated_om_tuna_salad_sandwich', 'Tuna salad sandwich', 'omnivore', ['lunch'], [{ food: 'tuna_water', g: 120 }, { food: 'wholemeal_bread', g: 80 }, { food: 'salad', g: 60 }]),
+  m('curated_om_whey_apple_almonds', 'Whey shake, apple & almonds', 'omnivore', ['snack'], [{ food: 'whey', g: 25 }, { food: 'apple', g: 120 }, { food: 'almonds', g: 15 }]),
+  m('curated_om_smoked_salmon_salad_plate', 'Smoked salmon & salad plate', 'omnivore', ['snack'], [{ food: 'smoked_salmon', g: 100 }, { food: 'salad', g: 80 }]),
+  m('curated_om_eggwhites_toast_snack', 'Egg whites on toast', 'omnivore', ['snack'], [{ food: 'egg_whites', g: 200 }, { food: 'wholemeal_bread', g: 40 }]),
+  m('curated_veg_yogurt_honey_pot', 'Greek yogurt & honey pot', 'vegetarian', ['snack'], [{ food: 'greek_yogurt_0', g: 250 }, { food: 'honey', g: 15 }]),
+  m('curated_veg_cottage_berries_bowl', 'Cottage cheese & berries bowl', 'vegetarian', ['snack'], [{ food: 'cottage_cheese', g: 200 }, { food: 'berries', g: 80 }, { food: 'honey', g: 10 }]),
+  m('curated_vg_soy_shake_apple', 'Soya protein shake & apple', 'vegan', ['snack'], [{ food: 'soy_protein', g: 30 }, { food: 'soy_milk', g: 250 }, { food: 'apple', g: 100 }]),
+  m('curated_vg_edamame_pot', 'Edamame pot', 'vegan', ['snack'], [{ food: 'edamame', g: 200 }]),
+
   // ── Pre-workout ────────────────────────────────────────────────────────
   // Easy-to-digest carbs with moderate protein, kept low in fat and fibre so
   // they sit light before training. Eaten roughly 60 to 90 minutes out.
