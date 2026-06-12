@@ -1005,6 +1005,23 @@ const useAppStore = create((set, get) => ({
     } catch (_) {}
   },
 
+  // COMP-030: the pre-account quiz answers. IN-MEMORY ONLY — never persisted to
+  // AsyncStorage or SQLite, no device id, no network (the privacy property that
+  // makes quiz-first defensible, §4B/§9). Survives the Article 9 consent-gate
+  // remount because store memory outlives the unmounted screen; lost on a
+  // process kill (accepted — re-entry restarts the short quiz). Carries per-step
+  // timings so account_created can emit one consolidated onboarding_quiz_completed.
+  onboardingQuiz: null,
+  setQuizField: (key, value) => set((state) => ({
+    onboardingQuiz: { ...(state.onboardingQuiz || {}), [key]: value },
+  })),
+  markQuizStep: (stepKey) => set((state) => {
+    const q = state.onboardingQuiz || {};
+    const timings = { ...(q._timings || {}), [stepKey]: Date.now() };
+    return { onboardingQuiz: { ...q, _timings: timings } };
+  }),
+  resetOnboardingQuiz: () => set({ onboardingQuiz: null }),
+
   // Active workout
   activeWorkout: null,
   workoutExercises: [],
