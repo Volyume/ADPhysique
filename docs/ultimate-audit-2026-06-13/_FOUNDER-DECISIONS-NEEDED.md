@@ -79,3 +79,8 @@ Answer inline; I'll record your verdicts here.
 001 U-B-6 CoachReview error-vs-empty · 002 U-F-1 Button onPrimary contrast · 003 U-A-1 workout banner-fold ·
 004 U-C-1 set-it-for-me target · 005 U-B-1 progressive coach output · 006 M1 jargon layer ·
 008 U-D-4 empty states · 009 M2 44px pass. (Gated/founder-batch items D4-full/D5-D9/D12/D15 come AFTER, with specs + safety/locked-doc review.)
+
+### Build-phase progress
+- [x] 002 U-F-1 Button onPrimary contrast — DONE (b7ca91a). Follow-up: destructive variant also flips dark-ink-on-dark-red in LIGHT theme; needs an "on-error" light-ink token decision (separate, not a 2-line swap).
+- [x] 001 U-B-6 CoachReview retryable error state — DONE (b7426eb). Follow-up: screen has no test harness; add an error-state regression test.
+- [ ] 003 U-A-1 workout banner-fold · 004 U-C-1 set-it-for-me · 005 U-B-1 progressive coach output · 006 M1 jargon layer · 008 U-D-4 empty states · 009 M2 44px pass — NEXT (each larger; edit-gated + spec-cited + lint/test per item).
