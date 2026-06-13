@@ -59,3 +59,10 @@ spine; TIER B = locate-and-cite (exact lines, values deferred) for the rest; Sec
 
 GATE [Pass 1 — re-paced]: PASS. Tier A spine fully transcribed + verified; Tier B + Sections 1,3-8
 indexed with exact lines + completeness counts; Section 9 open questions logged. Ready for Pass 2.
+
+## SECTION 9 ADDENDUM — Q1 REFINED (architectural, do not guess)
+Q1 [schema authority]: THREE column-defining sources exist; which is authoritative is unresolved.
+  - supabase/setup_complete.sql (252 column lines; users_profile :23, exercises :61, ...)
+  - supabase/schema.sql (187 column lines; CREATE TABLE locations listed above in this run)
+  - supabase/migrate_*.sql (114 more, incl. migrate_012_complete_sync.sql :159+)
+  Resolution: targeted check before any Pass 4 data-model blueprint. NOT guessed.
