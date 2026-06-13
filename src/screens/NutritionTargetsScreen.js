@@ -201,7 +201,9 @@ export default function NutritionTargetsScreen({ navigation }) {
   const [whyExpanded,  setWhyExpanded]  = useState(true);
   const [calculating,  setCalculating]  = useState(false);
   const [calm,         setCalm]         = useState(false);
-  const [formCollapsed, setFormCollapsed] = useState(false);
+  // U-C-1: the full form starts collapsed behind the "Set it for me" fast path;
+  // "Fine-tune these numbers" (or "Adjust" after results) opens it.
+  const [formCollapsed, setFormCollapsed] = useState(true);
 
   // ── Per-meal distribution, guidance only, daily totals unchanged ───────────────
   // Per-meal MPS window: ~0.4 g/kg (floor) to ~0.55 g/kg (above this, diminishing
@@ -507,6 +509,99 @@ export default function NutritionTargetsScreen({ navigation }) {
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </TouchableOpacity>
 
+          {/* U-C-1: "Set it for me" fast path. Gives a usable daily target from
+              the prefilled body stats before the full form. Reuses the single
+              handleCalculate path (engine floors + calm-mode goal filtering
+              unchanged); the full form is one tap away via "Fine-tune". */}
+          {formCollapsed && !results ? (
+            <View style={styles.fastCard}>
+              <Text style={styles.fastTitle}>Set it for me</Text>
+              <Text style={styles.fastSubtitle}>
+                Pick your goal and we'll set a starting daily target from your saved details. You can fine-tune anything afterwards.
+              </Text>
+
+              <Text style={styles.fieldLabel}>Your goal</Text>
+              <View style={styles.goalGrid}>
+                {GOALS.filter(g => !(calm && g.key === 'aggressive_cut')).map(g => {
+                  const active = goal === g.key;
+                  return (
+                    <TouchableOpacity
+                      key={g.key}
+                      style={[styles.goalCard, active && styles.goalCardActive]}
+                      onPress={() => setGoal(g.key)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={`${g.label}, ${g.detail}`}
+                    >
+                      <Text style={[styles.goalLabel, active && styles.goalLabelActive]}>{g.label}</Text>
+                      <Text style={[styles.goalDetail, active && styles.goalDetailActive]}>{g.detail}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* The same GDPR consent the full form requires, bound to the same
+                  state — only one of the two ever renders at a time. */}
+              <View style={styles.consentCard}>
+                <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} style={{ marginTop: spacing.xxs }} />
+                <View style={styles.consentBody}>
+                  <Text style={styles.consentText}>
+                    Your body data is stored only on this device. It is never shared and you can delete it at any time.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.consentRow}
+                    onPress={() => setConsent(v => !v)}
+                    activeOpacity={0.7}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: consent }}
+                    accessibilityLabel="I consent to storing this data on my device"
+                  >
+                    <View style={[styles.checkbox, consent && styles.checkboxChecked]}>
+                      {consent && <Ionicons name="checkmark" size={13} color={colors.onPrimary} />}
+                    </View>
+                    <Text style={styles.consentCheckLabel}>
+                      I consent to storing this data on my device
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {!(age.trim() && heightFt.trim() && weight.trim()) && (
+                <Text style={styles.fastHint}>
+                  Add your age, height and weight to set targets instantly. Open Fine-tune these numbers below.
+                </Text>
+              )}
+
+              <TouchableOpacity
+                style={[styles.calcBtn, (!formComplete || calculating) && styles.calcBtnDisabled]}
+                onPress={handleCalculate}
+                disabled={!formComplete || calculating}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !formComplete || calculating }}
+                accessibilityLabel="Set my targets"
+              >
+                <Ionicons
+                  name={calculating ? 'hourglass-outline' : 'sparkles-outline'}
+                  size={20}
+                  color={formComplete ? colors.background : colors.textDisabled}
+                />
+                <Text style={[styles.calcBtnText, !formComplete && styles.calcBtnTextDisabled]}>
+                  {calculating ? 'Setting…' : 'Set my targets'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.fineTuneLink}
+                onPress={() => setFormCollapsed(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Fine-tune these numbers"
+              >
+                <Ionicons name="options-outline" size={14} color={colors.primary} />
+                <Text style={styles.fineTuneText}>Fine-tune these numbers</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
           {!formCollapsed ? (
           <>
 
@@ -755,7 +850,7 @@ export default function NutritionTargetsScreen({ navigation }) {
 
           </>) : null}
 
-          {formCollapsed ? (
+          {formCollapsed && results ? (
             <View style={styles.collapsedSummary}>
               <View style={styles.collapsedRow}>
                 <Ionicons name="nutrition" size={14} color={colors.textMuted} />
@@ -1178,6 +1273,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   eduCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, borderLeftWidth: 3, borderLeftColor: colors.primary, padding: spacing.md, marginTop: spacing.sm },
+  // U-C-1: "Set it for me" fast-path card.
+  fastCard: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, marginTop: spacing.md, gap: spacing.md },
+  fastTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  fastSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  fastHint: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
+  fineTuneLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, minHeight: 44 },
+  fineTuneText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   eduIconWrap: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
   eduTitle: { ...type.label, color: colors.textPrimary },
   eduBody: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: spacing.xxs, lineHeight: 17 },
