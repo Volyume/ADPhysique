@@ -43,7 +43,7 @@ import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngi
 import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, computeDietBreakTargets, computeMacroCycle, computeRefeedDay, markApplied, isApplied } from '../lib/coachApply';
 import { applyCoachAdjustmentToActivePlan } from '../lib/food/mealPlanService';
 import { buildPlanEditNarration } from '../lib/food/planExplain';
-import { buildRegisteredCoachResponse, resolveRegister, applyScienceLayer } from '../lib/coachRegister';
+import { buildRegisteredCoachResponse, resolveRegister } from '../lib/coachRegister';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 import { logError, logWarn } from '../lib/errorLog';
 import CollapsibleSection from '../components/CollapsibleSection';
@@ -738,9 +738,6 @@ export default function CoachOutputScreen({ navigation, route }) {
   // saw on tapping the notification.
   const weekStart = route.params?.weekStart ?? localWeekStartMs();
   const { user, userProfile, units, saveLocalProfile, tier: storeTier } = useAppStore();
-  // U-B-9: the opt-in science layer brackets a technical term after the plain
-  // one only when "Show the science" is on (Pro). Default off changes nothing.
-  const showScience = userProfile?.showScience === true;
   // PLAY-002: the differential buy CTA shows Google Play's localised price, or
   // a price-free "Get Pro" until it loads. Never a hardcoded fallback.
   const priceFor = usePlayPrices();
@@ -1557,7 +1554,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       applying={applyingKey === 'training'}
       canApply={!!nextTrainingWeekId}
       deloadSuggested={deloadSuggested}
-      deloadNote={applyScienceLayer(deloadNote, showScience)}
+      deloadNote={deloadNote}
       onApplyDeload={handleApplyDeload}
       applyingDeload={applyingKey === 'deload'}
     />
@@ -1631,10 +1628,10 @@ export default function CoachOutputScreen({ navigation, route }) {
             accessibilityLabel={[coachResponse.acknowledgement, coachResponse.interpretation].filter(Boolean).join(' ')}
           >
             {coachResponse.acknowledgement ? (
-              <Text style={styles.coachLeadAck}>{applyScienceLayer(coachResponse.acknowledgement, showScience)}</Text>
+              <Text style={styles.coachLeadAck}>{coachResponse.acknowledgement}</Text>
             ) : null}
             {coachResponse.interpretation ? (
-              <Text style={styles.coachLeadInterpretation}>{applyScienceLayer(coachResponse.interpretation, showScience)}</Text>
+              <Text style={styles.coachLeadInterpretation}>{coachResponse.interpretation}</Text>
             ) : null}
           </View>
         ) : null}
@@ -1768,7 +1765,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             tactical cue, deterministic priority, ED/calm aware) feeds this
             card; buildFocus stays as the fallback when no cue is built. */}
         {(() => {
-          const focus = applyScienceLayer(coachResponse.cue ?? buildFocus(output, checkin), showScience);
+          const focus = coachResponse.cue ?? buildFocus(output, checkin);
           if (!focus) return null;
           return (
             <View style={styles.focusCard}>
@@ -1795,7 +1792,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         {/* Coach response part 5: the forward-pull anchor closes the response
             below the always-visible safety shelf. */}
         {coachResponse.forward ? (
-          <Text style={styles.forwardLine}>{applyScienceLayer(coachResponse.forward, showScience)}</Text>
+          <Text style={styles.forwardLine}>{coachResponse.forward}</Text>
         ) : null}
 
         {/* Move #4 differential paywall, only renders for free-tier

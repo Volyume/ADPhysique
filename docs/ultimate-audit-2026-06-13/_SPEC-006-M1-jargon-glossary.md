@@ -101,12 +101,11 @@ tooltip/legend; **[A]** = no existing source → **FOUNDER TO AUTHOR/confirm** (
   - `ProOnboardingScreen.js` step "division-specific"/division labels (~:452-459, :1215) — gloss
     'division-specific' once on first appearance (FOUNDER copy: a one-line plain gloss; `GLOSSARY` has
     no division entry yet — add one or reuse existing onboarding copy).
-- [GATED] **U-B-9** tone-keyed copy swap — FOUNDER-GATE (LOCKED doc). It drives the coaching-narration
-  voice, governed by `COACHING_VOICE_SYNTHESIS_LOCKED.md` + a throwing jargon blocklist; the sanctioned
-  mechanism (coachTone register + `withScience`/showScience) already exists. CoachOutput is already
-  register-wired (`CoachOutputScreen.js:1505`); `withScience` is built but unused. Founder authorised the
-  locked path (2026-06-13) with review before merge → see `_SPEC-006b-U-B-9-locked-path.md` (awaiting
-  sign-off on the plain↔technical pairs before I edit the locked surfaces).
+- [REVERSED — NOT DONE] **U-B-9** — FOUNDER-GATE (LOCKED doc, `COACHING_VOICE_SYNTHESIS_LOCKED.md`). My
+  attempt (`89d300a`) was REVERSED on founder instruction (2026-06-13): the term pairs and glosses were
+  INVENTED by me and presented as if audit-approved, and the pairs were inert — never to be done that way.
+  Code reverted, `_SPEC-006b` deleted. U-B-9 must be built STRICTLY from the U-B-9 blueprint with
+  founder-supplied copy (never invented), respecting the locked coaching-voice contract. Not started.
 
 ## SIGN-OFF CHECKLIST (founder)
 - [ ] Approve the **[A]** glosses (or give wording) — Maintenance, Refeed, Macro cycle, Est. max, Effort

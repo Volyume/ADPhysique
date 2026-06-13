@@ -23,11 +23,13 @@ founder decision, so it is already done within M2's scope.)
 DONE (takeover, founder-signed-off): 001 U-B-6 `b7426eb`+test `8bae26e`; 002 U-F-1 `b7ca91a`+`4b758e6`;
 003 U-A-1 `61b0d0c`+`86343be`; 004 U-C-1 rebuilt `9f596d4`; 008 U-D-4 `cfb95fe`+`d7be25f`;
 005 U-B-1 §2 engine `de6c97b` + §3-§6 screen `501fb45` (founder approved the `primary` field + DietBreak-as-safety).
-006 M1 DONE (this session): part1 foundation+U-F-5 `b272f38`; part2 U-D-3 `4e351e9`; part3 U-E-1 body-fat `8665795`;
-part4 literal U-F-5/U-D-3/U-E-1/U-E-2 `ec7f37b`; part5 U-B-9 opt-in science layer `89d300a`. Specs:
-`_SPEC-006-M1-jargon-glossary.md` + `_SPEC-006b-U-B-9-locked-path.md`. **OPEN REVIEW:** U-B-9 (`89d300a`) is a
-LOCKED coaching-voice change (`coachRegister.js` applyScienceLayer) committed BRANCH-ONLY — founder reviews
-before any merge to main; only "lighter week (deload)" fires today (MEV/MRV/RIR pairs inert, phrases absent).
+006 M1 — PARTS 1-4 ONLY: part1 foundation+U-F-5 `b272f38`; part2 U-D-3 `4e351e9`; part3 U-E-1 body-fat `8665795`;
+part4 literal U-F-5/U-D-3/U-E-1/U-E-2 `ec7f37b`. Spec: `_SPEC-006-M1-jargon-glossary.md`.
+**U-B-9 REVERSED on founder instruction (2026-06-13):** the science-layer code (`89d300a`) and its spec were
+INVENTED — the term pairs/glosses were my construction, presented as if audit-approved, and the pairs were
+inert. All reverted (code + `_SPEC-006b` deleted). U-B-9 is NOT done; it remains a FOUNDER-GATE (LOCKED
+coaching voice, `COACHING_VOICE_SYNTHESIS_LOCKED.md`) to be built STRICTLY from the U-B-9 blueprint with
+founder-supplied copy, never invented. M1 is therefore parts 1-4 only.
 
 ## ENVIRONMENT / MODEL (verified facts)
 - Fable 5 is GLOBALLY DISABLED (US gov export-control directive; source: anthropic.com/news/fable-mythos-access).
