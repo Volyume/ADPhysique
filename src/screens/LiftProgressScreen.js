@@ -285,7 +285,14 @@ export default function LiftProgressScreen({ navigation }) {
                 </View>
               </View>
               <View style={styles.cardRight}>
-                <Sparkline data={item.trend} width={84} height={34} color={trendColor(item.deltaPct)} />
+                {/* U-D-4: with only 1–2 points a sparkline reads as a near-flat
+                    line; show an encouragement "building" hint instead until a
+                    real trend exists (3+ points). */}
+                {(item.trend?.length ?? 0) > 2 ? (
+                  <Sparkline data={item.trend} width={84} height={34} color={trendColor(item.deltaPct)} />
+                ) : (
+                  <Text style={styles.trendBuilding}>Building</Text>
+                )}
                 <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
               </View>
             </PressableCard>
@@ -415,6 +422,7 @@ const styles = StyleSheet.create({
   statLabel: { ...type.caption, color: colors.textMuted },
   delta: { ...type.num('label'), marginLeft: spacing.xs },
   cardRight: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  trendBuilding: { width: 84, textAlign: 'center', fontSize: fontSize.xs, color: colors.textMuted },
   empty: { alignItems: 'center', paddingHorizontal: spacing.xxl, paddingTop: spacing.xxxl, gap: spacing.md },
   emptyTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
   emptyText: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
