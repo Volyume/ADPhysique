@@ -8,6 +8,7 @@ import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentChec
 import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles } from '../lib/algorithms';
 import { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
+import Button from '../components/Button';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -228,6 +229,7 @@ export default function CoachReviewScreen() {
   const [checkins, setCheckins] = useState([]);
   const [weekRange, setWeekRange] = useState({ start: null, end: null });
   const [laggingMuscles, setLaggingMuscles] = useState([]);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -241,6 +243,7 @@ export default function CoachReviewScreen() {
     }
 
     try {
+      setLoadError(false);
       const now = new Date();
       const weekStart = startOfWeek(now, { weekStartsOn: 1 });
       const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
@@ -337,7 +340,10 @@ export default function CoachReviewScreen() {
 
       setCheckins(recentCheckins);
     } catch (_e) {
-      // Silently fail, show no-data state
+      // U-B-6: distinguish a genuine read failure from an empty week. Show a
+      // retryable error state instead of the false "no sessions" card (parity
+      // with the Pro CoachOutput screen). Data is not lost — this is a read fault.
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -389,6 +395,31 @@ export default function CoachReviewScreen() {
           <SkeletonCard height={180} />
           <SkeletonCard height={140} />
           <SkeletonCard height={140} />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // U-B-6: a real read failure is shown as a retryable error, never as "no sessions".
+  if (loadError) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+        <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Weekly review</Text>
+          </View>
+          <Card>
+            <Text style={styles.emptyText}>
+              Couldn&apos;t load your review just now. Your sessions are safe. This is a read
+              problem, not a lost week.
+            </Text>
+            <Button
+              title="Try again"
+              fullWidth={false}
+              style={{ marginTop: spacing.md }}
+              onPress={() => { setLoadError(false); setLoading(true); loadData(); }}
+            />
+          </Card>
         </ScrollView>
       </SafeAreaView>
     );
