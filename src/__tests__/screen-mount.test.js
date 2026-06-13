@@ -1793,6 +1793,76 @@ describe('ActiveWorkoutScreen with active workout state', () => {
     }
   });
 
+  // U-A-1 invariant (ULTIMATE-003): the pre-card banner stack collapses into
+  // ONE tappable "N notes" chip — banner contents stay hidden until the chip is
+  // tapped, so the beat line + inputs stay above the fold — and the target line
+  // moved into the set-entry card header. Drives a real "Target reached" banner
+  // (recommendedSets met by the logged working sets) so the fold is exercised.
+  test('U-A-1: banners collapse into one "N notes" chip; target line sits in the card header', async () => {
+    const collectText = (node, out = []) => {
+      if (node == null) return out;
+      if (typeof node === 'string' || typeof node === 'number') { out.push(String(node)); return out; }
+      if (Array.isArray(node)) { node.forEach(n => collectText(n, out)); return out; }
+      if (node.children) collectText(node.children, out);
+      return out;
+    };
+    useAppStore.setState({
+      user: { id: 'u-fold', isLocal: false },
+      session: { user: { id: 'u-fold' } },
+      tier: 'pro',
+      firstRunComplete: true,
+      userProfile: { firstName: 'A', goal: 'lean_gain', units: 'metric' },
+      activeWorkout: { id: 'wfold', userId: 'u-fold', routineId: 'rfold', startedAt: Date.now() - 6e5, isCompleted: false },
+      workoutStartTime: Date.now() - 6e5,
+      workoutExercises: [
+        {
+          exercise: { id: 'exf', name: 'Barbell Bench Press', equipment: 'Barbell', primaryMuscle: 'chest' },
+          // recommendedSets:2 met by the two straight working sets below =>
+          // targetComplete true => the "Target reached" banner is active.
+          routineExercise: { id: 'ref', recommendedSets: 2, recommendedRepsMin: 8, recommendedRepsMax: 12 },
+          sets: [
+            { id: 'sf1', exerciseId: 'exf', workoutId: 'wfold', setNumber: 1, setType: 'straight', actualReps: 10, weight: 60, rir: 2, rpe: null },
+            { id: 'sf2', exerciseId: 'exf', workoutId: 'wfold', setNumber: 2, setType: 'straight', actualReps: 9, weight: 60, rir: 1, rpe: null },
+          ],
+        },
+      ],
+      currentExerciseIndex: 0,
+      restTimerActive: false,
+      restTimerDuration: 0,
+      restTimerRemaining: 0,
+      accessibility: { reduceMotion: false },
+    });
+    const Screen = require('../screens/ActiveWorkoutScreen').default;
+    let tree = null;
+    try {
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+      expect(tree).not.toBeNull();
+
+      // Collapsed (default): the "N notes" chip shows, but the collapsed banner
+      // content ("Target reached") is NOT in the tree yet — it is behind the tap.
+      const collapsed = collectText(tree.toJSON()).join('  ');
+      expect(collapsed).toMatch(/\d+\s+note/);          // the rail chip is present
+      expect(collapsed).not.toMatch(/Target reached/);  // the banner stays folded
+      // The target line moved INTO the card header and still renders.
+      expect(collapsed).toMatch(/Target:\s*2\s*sets/);
+
+      // Expand: tap the chip; the folded banner content then appears.
+      const chips = tree.root.findAll(
+        n => n.props
+          && typeof n.props.onPress === 'function'
+          && typeof n.props.accessibilityLabel === 'string'
+          && /tap to (expand|collapse)/.test(n.props.accessibilityLabel),
+      );
+      expect(chips.length).toBeGreaterThan(0);
+      await TestRenderer.act(async () => { chips[0].props.onPress(); });
+      const expanded = collectText(tree.toJSON()).join('  ');
+      expect(expanded).toMatch(/Target reached/);       // banner visible once expanded
+    } finally {
+      unmountTree(tree);
+    }
+  });
+
   test('handles 100-tap chains × 20 seeds in a 5-exercise workout', async () => {
     const mkExercise = (i, sets) => ({
       exercise: { id: `ex${i}`, name: `Exercise ${i}`, equipment: i % 2 ? 'Barbell' : 'Dumbbell', primaryMuscle: 'chest' },

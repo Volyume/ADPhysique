@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, AppState, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, AppState, useWindowDimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useShallow } from 'zustand/react/shallow';
@@ -12,9 +12,11 @@ import { playRestBeep, preloadRestBeeps } from '../lib/restSound';
 import { clampRestDelta } from '../lib/restTimerMath';
 
 // Compact variant on short screens (COMP-001 step 6): smaller numeral and a
-// 56pt row so the timer never pushes the set inputs below the fold. Module
-// scope per house pattern (every other screen reads Dimensions this way).
-const COMPACT_SCREEN = Dimensions.get('window').height < 700;
+// 56pt row so the timer never pushes the set inputs below the fold. U-A-1:
+// recompute on layout change via useWindowDimensions (below), not once at
+// module load, so rotation / split-screen / runtime metric changes are
+// respected (the once-at-load limitation the workout audit flagged).
+const COMPACT_HEIGHT = 700;
 
 // Two deltas only (COMP-001): the −30/+30 pair added visual weight without
 // covering anything long-press-repeat can't. Holding ±15 repeats at 200 ms.
@@ -151,7 +153,8 @@ export default function RestTimer() {
   }
   useEffect(() => () => stopRepeat(), []);
 
-  const compact = COMPACT_SCREEN;
+  const { height: windowHeight } = useWindowDimensions();
+  const compact = windowHeight < COMPACT_HEIGHT;
 
   const isCountdown = restTimerActive && restTimerRemaining <= 3 && restTimerRemaining > 0;
   const isAlmostDone = restTimerRemaining <= 10 && restTimerActive;
