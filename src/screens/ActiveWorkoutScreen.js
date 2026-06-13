@@ -203,6 +203,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   // First-use info tip highlight
   const [showInfoTipPulse, setShowInfoTipPulse] = useState(false);
+  // U-A-1: the collapsed banner rail ("N notes") above the set-entry card.
+  const [notesExpanded, setNotesExpanded] = useState(false);
   const infoPulseAnim = useRef(new Animated.Value(1)).current;
   const infoPulseLoop = useRef(null);
 
@@ -1388,22 +1390,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           </View>
         </View>
 
-        {/* COMP-013: starter-session banner — the short first session framed as
-            the smart first step, with a one-tap path back to the full session. */}
-        {starterActive && (
-          <View style={styles.starterBanner}>
-            <Ionicons name="flash-outline" size={16} color={colors.primary} />
-            <Text style={styles.starterBannerText}>{timeCrunchMsg}</Text>
-            <TouchableOpacity
-              onPress={handleRevertTimeCrunch}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="Do the full session instead"
-            >
-              <Text style={styles.starterBannerAction}>Full session</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* COMP-013 starter-session banner moved into the collapsed "N notes"
+            rail above the set-entry card (U-A-1). */}
 
         {/* Exercise Navigator */}
         {workoutExercises.length > 1 && (
@@ -1483,65 +1471,111 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
             {/* Muscle line deleted (COMP-001): primary muscle and equipment
-                already show in the exercise info sheet. */}
-            {currentSGI != null && !!pairedExerciseName && (
-              <View style={styles.supersetChip}>
-                <Ionicons name="link" size={11} color={colors.primary} />
-                <Text style={styles.supersetChipText}>
-                  Superset {currentSGI} · alternates with {pairedExerciseName}
-                </Text>
-              </View>
-            )}
+                already show in the exercise info sheet. Superset chip moved
+                into the collapsed "N notes" rail (U-A-1). */}
           </View>
 
-          {/* Next-time coaching notes */}
-          {nextTimeNotes.map(note => (
-            <View key={note.id} style={styles.nextTimeBanner}>
-              <Ionicons name="bulb-outline" size={16} color={colors.primary} style={{ marginTop: 1 }} />
-              <Text style={styles.nextTimeBannerText} numberOfLines={4}>{note.note}</Text>
-              <TouchableOpacity
-                onPress={async () => {
-                  try { await markNoteShown(note.id); } catch (_e) {}
-                  setNextTimeNotes(prev => prev.filter(n => n.id !== note.id));
-                }}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel="Dismiss note"
-              >
-                <Text style={styles.nextTimeBannerDismiss}>Got it</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-
-          {/* Deload Week Banner */}
-          {isDeloadWeek && !deloadDismissed && (
-            <View style={styles.deloadBanner}>
-              <View style={styles.deloadBannerLeft}>
-                <Ionicons name="battery-charging-outline" size={18} color={colors.warning} />
-                <View>
-                  <Text style={styles.deloadBannerTitle}>Recovery week</Text>
-                  <Text style={styles.deloadBannerSub}>Light loads · full recovery · no PRs</Text>
+          {/* U-A-1: collapse the banner stack into one tappable "N notes"
+              rail so the beat line + inputs stay above the fold. The nav
+              strip (above) and the rest timer (below) stay visible; every
+              other banner folds in here and expands on demand. */}
+          {(() => {
+            const notes = [];
+            if (starterActive) {
+              notes.push(
+                <View key="starter" style={styles.starterBanner}>
+                  <Ionicons name="flash-outline" size={16} color={colors.primary} />
+                  <Text style={styles.starterBannerText}>{timeCrunchMsg}</Text>
+                  <TouchableOpacity
+                    onPress={handleRevertTimeCrunch}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Do the full session instead"
+                  >
+                    <Text style={styles.starterBannerAction}>Full session</Text>
+                  </TouchableOpacity>
                 </View>
+              );
+            }
+            if (currentSGI != null && !!pairedExerciseName) {
+              notes.push(
+                <View key="superset" style={styles.supersetChip}>
+                  <Ionicons name="link" size={11} color={colors.primary} />
+                  <Text style={styles.supersetChipText}>
+                    Superset {currentSGI} · alternates with {pairedExerciseName}
+                  </Text>
+                </View>
+              );
+            }
+            nextTimeNotes.forEach(note => {
+              notes.push(
+                <View key={`note-${note.id}`} style={styles.nextTimeBanner}>
+                  <Ionicons name="bulb-outline" size={16} color={colors.primary} style={{ marginTop: 1 }} />
+                  <Text style={styles.nextTimeBannerText} numberOfLines={4}>{note.note}</Text>
+                  <TouchableOpacity
+                    onPress={async () => {
+                      try { await markNoteShown(note.id); } catch (_e) {}
+                      setNextTimeNotes(prev => prev.filter(n => n.id !== note.id));
+                    }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Dismiss note"
+                  >
+                    <Text style={styles.nextTimeBannerDismiss}>Got it</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            });
+            if (isDeloadWeek && !deloadDismissed) {
+              notes.push(
+                <View key="deload" style={styles.deloadBanner}>
+                  <View style={styles.deloadBannerLeft}>
+                    <Ionicons name="battery-charging-outline" size={18} color={colors.warning} />
+                    <View>
+                      <Text style={styles.deloadBannerTitle}>Recovery week</Text>
+                      <Text style={styles.deloadBannerSub}>Light loads · full recovery · no PRs</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setDeloadDismissed(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Dismiss deload banner"
+                  >
+                    <Text style={styles.deloadSkip}>Skip</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            }
+            if (targetComplete) {
+              notes.push(
+                <View key="target-reached" style={styles.targetBanner}>
+                  <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                  <Text style={styles.targetBannerText}>
+                    Target reached: {targetSets} working set{targetSets !== 1 ? 's' : ''} done
+                  </Text>
+                </View>
+              );
+            }
+            if (notes.length === 0) return null;
+            const noteCount = notes.length;
+            return (
+              <View style={styles.notesRail}>
+                <TouchableOpacity
+                  style={styles.notesChip}
+                  onPress={() => setNotesExpanded(v => !v)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: notesExpanded }}
+                  accessibilityLabel={`${noteCount} note${noteCount !== 1 ? 's' : ''}, tap to ${notesExpanded ? 'collapse' : 'expand'}`}
+                >
+                  <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
+                  <Text style={styles.notesChipText}>{noteCount} note{noteCount !== 1 ? 's' : ''}</Text>
+                  <Ionicons name={notesExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+                {notesExpanded && <View style={styles.notesExpanded}>{notes}</View>}
               </View>
-              <TouchableOpacity
-                onPress={() => setDeloadDismissed(true)}
-                accessibilityRole="button"
-                accessibilityLabel="Dismiss deload banner"
-              >
-                <Text style={styles.deloadSkip}>Skip</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Target */}
-          {routineExercise && (
-            <View style={styles.targetRow}>
-              <Ionicons name="flag-outline" size={14} color={colors.textMuted} />
-              <Text style={styles.targetText}>
-                Target: {adjustedSetCount || routineExercise.recommendedSets || 3} sets · {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
-              </Text>
-            </View>
-          )}
+            );
+          })()}
 
           {/* Rest timer, sits ABOVE the SetEntry card, in the slot vacated
               by the old weekly-sets calendar row. Stays in the user's
@@ -1549,16 +1583,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               The timer only renders when active so this space is normally
               empty. */}
           <RestTimer />
-
-          {/* Target complete banner */}
-          {targetComplete && (
-            <View style={styles.targetBanner}>
-              <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-              <Text style={styles.targetBannerText}>
-                Target reached: {targetSets} working set{targetSets !== 1 ? 's' : ''} done
-              </Text>
-            </View>
-          )}
 
           {/* Set Entry */}
           <View style={[
@@ -1597,6 +1621,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <Text style={styles.orientationText}>{orientationLabel}</Text>
               <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
             </TouchableOpacity>
+
+            {/* Target line (U-A-1): the sets · reps prescription, moved off
+                the pre-card banner stack into the card header beside the
+                orientation/beat lines. */}
+            {routineExercise && (
+              <View style={styles.targetRow}>
+                <Ionicons name="flag-outline" size={14} color={colors.textMuted} />
+                <Text style={styles.targetText}>
+                  Target: {adjustedSetCount || routineExercise.recommendedSets || 3} sets · {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
+                </Text>
+              </View>
+            )}
 
             {/* Line 2: beat line. The previous-performance anchor plus
                 target range and direction, promoted from xs italic to
@@ -2415,6 +2451,16 @@ const styles = StyleSheet.create({
   navTabBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary },
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.md, paddingTop: spacing.sm, gap: spacing.sm },
+  // U-A-1: collapsed "N notes" rail above the set-entry card.
+  notesRail: { gap: spacing.xs },
+  notesChip: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    alignSelf: 'flex-start', minHeight: 44,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
+  },
+  notesChipText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
+  notesExpanded: { gap: spacing.sm },
   exerciseHeader: { gap: spacing.xs },
   exerciseNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   exerciseName: { flex: 1, fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
