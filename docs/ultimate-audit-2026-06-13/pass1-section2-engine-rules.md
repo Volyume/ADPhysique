@@ -601,6 +601,136 @@ transcribed verbatim above; no grep used to locate them. [DONE — TIER A]
 
 ---
 
+## planEngine.js — TIER A FULL (chunk 1: lines 1-340 read; rest PENDING)
+
+RULE: EXP_MULT (experience landmark multipliers) | :69-74
+CODE: `beginner: { MEV: 0.70, MRV: 0.75 },` `intermediate: { MEV: 1.00, MRV: 1.00 },` `advanced: { MEV: 1.15, MRV: 1.10 },` `competitive: { MEV: 1.25, MRV: 1.15 },`
+VALUE: per-experience MEV/MRV multipliers | hardcoded | confirmed
+
+RULE: REC_MULT (recovery multipliers) | :76-80
+CODE: `poor: { MEV: 1.10, MRV: 0.80 },` `average: { MEV: 1.00, MRV: 1.00 },` `good: { MEV: 0.95, MRV: 1.15 },` | hardcoded | confirmed
+
+RULE: NUT_MULT (nutrition-phase multipliers) | :82-90
+CODE: `lean_gain {0.95,1.10}` `build {0.95,1.10}` `maintain {1.00,1.00}` `recomp {1.00,1.00}` `mild_cut {1.00,0.90}` `aggressive_cut {1.05,0.80}` `contest_prep {1.10,0.70}` (MEV,MRV) | hardcoded | confirmed
+
+RULE: ageMultipliers | :92-98
+CODE: `(age >= 30 && age < 40)` → {1.00,1.00}; `age < 30` → {1.00,1.05}; `age < 50` → {1.00,0.92}; `age < 60` → {1.05,0.85}; else {1.10,0.75}
+VALUE: age-band MEV/MRV multipliers | hardcoded | confirmed
+
+RULE: computeLandmarks derivation+guards | :108-118
+CODE: `MEVadj = Math.round(base.mev * mExp.MEV * mRec.MEV * mNut.MEV * mAge.MEV)`; `MRVadj = Math.round(base.mrv * ...)`; clash `if (MEVadj >= MRVadj) MEVadj = Math.max(2, MRVadj - 2);`; floor `if (MRVadj < 4 && base.mev > 0) { MRVadj = 4; MEVadj = 2; }`; `MAVlow = MEVadj + 2`; `MAVhigh = Math.max(MAVlow, MRVadj - 1)`
+VALUE: landmark = base × 4 multipliers, rounded; clash/floor guards; MAV band derived | hardcoded | confirmed
+
+RULE: applyGoalOverlay PRIORITY_NORM | :141, 146-147
+CODE: `const PRIORITY_NORM = 0.6;`; `const frac = Math.min(1, (mult - 1) / PRIORITY_NORM);` `t[m] = Math.round(lm.MAVlow + frac * (lm.MRV - lm.MAVlow));`
+VALUE: priority muscles placed in MAV→MRV band by overlay strength (0.6 maps to top) | hardcoded | confirmed
+
+RULE: weak-point bonus | :185-186
+CODE: `const bonus = Math.max(2, Math.round((mrvCap - t[m]) * 0.7));` `const next = Math.max(t[m], Math.min(mrvCap, t[m] + bonus));`
+VALUE: weak-point closes ~70% of gap to (division) MRV, min +2 | hardcoded | confirmed
+
+RULE: per-muscle MRV clamp | :207
+CODE: `const cap = Math.round(landmarks[m].MRV * 1.10);` `t[m] = Math.min(t[m], cap);`
+VALUE: each muscle clamped to 110% of MRV | hardcoded | confirmed
+
+RULE: systemic ceiling | :230-232
+CODE: `const compress3Day = effectiveDays <= 3 && !DIVISION_MATRIX[goal];` `const systemicFactor = compress3Day ? 0.34 : 0.40;` `const systemicCap = Math.round(totalMRV * systemicFactor);`
+VALUE: total weekly sets capped at 34% (≤3-day non-matrix) / 40% of ΣMRV | hardcoded | confirmed
+
+RULE: GENERATOR_LANDMARK_OVERRIDES | :269-285
+CODE: `rear_delts: { MEV: 0, MRV: 14 },` `traps: { MEV: 0, MRV: 26 },` `glutes: { MV: 4, MEV: 6, MRV: 16 },` `side_delts: { MV: 6, MRV: 20 },` `biceps: { MEV: 8, MRV: 20 },` `abs: { MEV: 6 },` `forearms: { MV: 0, MEV: 0, MRV: 16 },` `adductors: { MRV: 12 },`
+VALUE: generator programming ceilings (differ from tracker landmarks by design) | hardcoded | confirmed
+
+RULE: SIDE_REAR_DELT_CAP | :299
+CODE: `const SIDE_REAR_DELT_CAP = 26;`
+VALUE: combined delt-complex weekly ceiling 26 | hardcoded | confirmed
+
+RULE: INDIRECT_SET_FRACTION | :304
+CODE: `const INDIRECT_SET_FRACTION = 0.5;`
+VALUE: secondary muscle on a compound = 0.5 set | hardcoded | confirmed
+
+RULE: divisionMRV (glutes) | :311
+CODE: `if (muscle === 'glutes' && (goal === 'bikini' || goal === 'wellness')) return 30;`
+VALUE: glute MRV 30 for bikini/wellness, else lm.MRV | hardcoded | confirmed
+
+RULE: INDIRECT_TRIM_BUFFER | :317
+CODE: `const INDIRECT_TRIM_BUFFER = 2;` | hardcoded | confirmed
+
+RULE: maintenanceFloor | :324-326
+CODE: `return effectiveDays <= 3 ? 4 : 6;`
+VALUE: structural-muscle maintenance floor 4 (≤3 days) / 6 | hardcoded | confirmed
+
+RULE: bikini/wellness arm floor | :352-354
+CODE: `if ((goal === 'bikini' || goal === 'wellness') && effectiveDays >= 5)` → `t.biceps = Math.max(t.biceps ?? 0, 4); t.triceps = Math.max(t.triceps ?? 0, 4);`
+VALUE: ≥5 days, floor biceps/triceps to 4 sets | hardcoded | confirmed
+
+RULE: trimSynergist (indirect-volume trim) | :365-373
+CODE: `const credit = Math.round((t[driverMuscle] ?? 0) * rate);` `const floor = lm.MEV + INDIRECT_TRIM_BUFFER;`; `trimSynergist('biceps', 'back', 0.4);` `trimSynergist('triceps', 'chest', 0.5);`
+VALUE: biceps trimmed by 0.4×back, triceps by 0.5×chest; floor = MEV+2; never raises, skips weak points | hardcoded | confirmed
+
+RULE: delt-complex cap enforcement | :388-393
+CODE: `if (deltSum > SIDE_REAR_DELT_CAP)` → scale side/rear/front by `SIDE_REAR_DELT_CAP / deltSum`
+VALUE: side+rear+front delts scaled to combined 26 | hardcoded | confirmed
+
+RULE: POOL exercise database | :406-555
+CODE: `export const POOL = { chest:[...], back:[...], side_delts:[...], rear_delts:[...], front_delts:[...], biceps:[...], triceps:[...], quads:[...], hamstrings:[...], glutes:[...], calves:[...], abs:[...], traps:[...] }` — entries `{ n, sub, p:paramKey, eq:[equipment] }`
+VALUE: 13-muscle hardcoded exercise pool (fallback when no library); paramKey ∈ heavy_compound/mod_compound/machine/isolation. (Full exercise list = data; indexed in Section 4, not transcribed per-exercise here.) | hardcoded | confirmed (structure + 13 muscle keys present)
+
+RULE: MIN_GENERATED_PER_MUSCLE | :583
+CODE: `const MIN_GENERATED_PER_MUSCLE = 3;`
+VALUE: <3 library entries for a muscle → fall back to POOL for it | hardcoded | confirmed
+
+RULE: SUBREGION_REQUIREMENTS | :604-628
+CODE: `back {minSets:6, required:['vertical_pull','horizontal_row']}` `hamstrings {6, [hip_extension,knee_flexion]}` `glutes {16, [activator,pumper]}` `quads {8, [sweep,vasti]}` `chest {10, [incline,flat]}` `rear_delts {6, [face_pull,horiz_abduction]}` `triceps {8, [overhead]}` `calves {10, [gastro,soleus]}` `abs {10, [flexion,anti_extension]}`
+VALUE: weekly subregion coverage requirements (minSets gate + required subregions) | hardcoded | confirmed
+
+RULE: REST_SEC | :634-639
+CODE: `heavy_compound: 180, mod_compound: 150, machine: 120, isolation: 75,`
+VALUE: rest seconds by param key (hypertrophy) | hardcoded | confirmed
+
+RULE: TRANS_SEC | :641-648
+CODE: `full_gym: 120, machines_cables: 90, home_gym: 60, dumbbells_only: 45, barbell_plates: 75, bodyweight: 30,`
+VALUE: inter-exercise transition seconds by equipment | hardcoded | confirmed
+
+RULE: REP_RANGES | :654-659
+CODE: `heavy_compound {5,9} mod_compound {8,12} machine {8,15} isolation {10,20}` (repMin,repMax)
+VALUE: hypertrophy rep ranges by param key | hardcoded | confirmed
+
+RULE: STRENGTH_REP_RANGES | :661-666
+CODE: `heavy_compound {4,6} mod_compound {5,8} machine {8,12} isolation {10,15}`
+VALUE: strength-phase rep ranges | hardcoded | confirmed
+
+RULE: STRENGTH_REST | :668-673
+CODE: `heavy_compound: 210, mod_compound: 180, machine: 120, isolation: 75,`
+VALUE: strength-phase rest seconds | hardcoded | confirmed
+
+RULE: baseRir | :675-679
+CODE: `beginner → 3; intermediate → 2; else → 1`
+VALUE: base RIR target by experience | hardcoded | confirmed
+
+RULE: makeEx (cut RIR bump + min sets) | :688-694
+CODE: `const cutPhases = ['mild_cut', 'aggressive_cut', 'contest_prep'];` `if (cutPhases.includes(nutritionPhase)) rir = Math.min(rir + 1, 4);`; `const minSets = (paramKey === 'heavy_compound' || paramKey === 'mod_compound') ? 3 : 2;` `sets: Math.max(minSets, sets)`
+VALUE: cut phases +1 RIR (cap 4); min 3 sets compound / 2 isolation | hardcoded | confirmed
+
+RULE: estimateWorkoutMinutes / estimateSessionMinutes | :709-718, 723-735
+CODE: `const T_SET_LOG = 60;` `const overheadMin = 7.5 + Math.max(0, numCompounds - 1);` `sessionSec += ex.sets * T_SET_LOG + (ex.sets - 1) * ex.restSec;` (+transition per exercise in session variant)
+VALUE: 60s/set log, 7.5min base overhead + compounds, rest+transition | hardcoded | confirmed
+
+RULE: clampDeliveredToMRV | :743-769
+CODE: trims each muscle's delivered sets to `divisionMRV(...)`, delts to `SIDE_REAR_DELT_CAP`; `while (total > cap && ex.sets > 3)` keeps ≥3; never removes last entry
+VALUE: hard delivered-volume ceiling (MRV + delt cap), 3-set floor | hardcoded | confirmed
+
+RULE: trimToTimeBudget | :772-808+
+CODE: `const budget = sessionLengthMinutes - 2;`; phase 1 reduce sets back-to-front while `result[i].sets > 3`; phase 2 drop whole exercises (never first, never `_req` subregion, never a muscle's last)
+VALUE: time-trim to (length−2) min; never below 3 sets; protects first/required/last-of-muscle | hardcoded | confirmed
+
+PLANENGINE.JS STATUS: lines 1-810 transcribed verbatim. PENDING: 810→end (~2200 total) —
+remaining trim protections, DIVISION_MATRIX + split selection, buildSession/buildFromMatrix,
+session frequencies (full-body/UL/PPL), weak-point session augmentation, day clamps, superset gates,
+RDL/SLDL guard, strength notes, generatePlan orchestration.
+
+---
+
 ## PROGRESS POINTER (re-paced 2026-06-13 — two tiers, supersedes full-transcription-of-everything)
 
 TIER A — FULL TRANSCRIPTION (safety + core spine):
