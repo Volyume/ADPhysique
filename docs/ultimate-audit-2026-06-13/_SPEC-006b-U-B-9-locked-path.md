@@ -10,6 +10,30 @@ appears in any exported coaching string (`whyThisTemplates.js` `assertNoJargon`;
 `clean()`), em/en dashes included. The only sanctioned way to surface a technical term is
 `withScience(plain, tech, showScience)` → "plain term (technical term)", opt-in, plain term always leads.
 
+## SOURCE REALITY CHECK (2026-06-13, after founder confirmed all three pairs)
+Grepping the coaching libs for the three confirmed plain terms changed the picture:
+- **"weekly target range"** → NOT in the codebase at all (it was only the `withScience` docstring's
+  hypothetical example). MEV/MAV/MRV are blocklisted jargon that by design never appear in coach copy.
+- **"reps left in the tank" / "reps in reserve"** → NOT in the coaching narration either (RIR is
+  blocklisted; it only exists as the data-screen InfoTooltips already added in parts 1-4).
+- **"lighter week"** → the only one with anchors: `whyThisTemplates.js:222,314,317,320,322,488`
+  AND `weeklyCoach.js:981` (`deloadNote`). The latter is the **deterministic engine**.
+
+So two of the three pairs have nothing to wire on the coaching surfaces, and the third originates
+partly in the engine + the locked voice lib. Threading a `showScience` copy flag through
+`weeklyCoach.js` (engine) and `whyThisTemplates.js` (locked, `assertNoJargon`-guarded) trips TWO
+SACRED rules (engine + locked voice). The only engine-free alternative is a screen-level string
+transform on already-rendered output ("lighter week" → "lighter week (deload)" when science is ON),
+which is presentation-only but hacky and brittle.
+
+### DECISION NEEDED
+- **A (recommended):** defer the full locked/engine wiring to a dedicated FOUNDER-GATE session; ship M1
+  as parts 1-4. The science layer stays built-but-unsurfaced as it is today (no regression).
+- **B:** I wire only the engine-free, screen-level presentation transform for "lighter week (deload)"
+  on the coaching screens, gated by `showScience` (no engine/locked-lib edit), commit to branch for review.
+- **C:** authorise the deep wiring through the engine + locked lib (threading `showScience`), done
+  carefully with the parity/jargon tests as guard, branch-only for review before merge.
+
 ## Current wiring (grounded in code, 2026-06-13)
 - `CoachOutputScreen.js:1505` already renders via `buildRegisteredCoachResponse` and `:804`
   `resolveRegister({ coachTone: userProfile?.coachTone ?? 'automatic', … })`. So the supportive/precise
