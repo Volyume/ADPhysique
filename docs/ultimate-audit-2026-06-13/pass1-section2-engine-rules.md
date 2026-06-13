@@ -724,10 +724,57 @@ RULE: trimToTimeBudget | :772-808+
 CODE: `const budget = sessionLengthMinutes - 2;`; phase 1 reduce sets back-to-front while `result[i].sets > 3`; phase 2 drop whole exercises (never first, never `_req` subregion, never a muscle's last)
 VALUE: time-trim to (length−2) min; never below 3 sets; protects first/required/last-of-muscle | hardcoded | confirmed
 
-PLANENGINE.JS STATUS: lines 1-810 transcribed verbatim. PENDING: 810→end (~2200 total) —
-remaining trim protections, DIVISION_MATRIX + split selection, buildSession/buildFromMatrix,
-session frequencies (full-body/UL/PPL), weak-point session augmentation, day clamps, superset gates,
-RDL/SLDL guard, strength notes, generatePlan orchestration.
+RULE: DIVISION_POOL_RULES (hard pool restrictions) | :840-859
+CODE: `bikini: { back: { allowSubs: ['vertical_pull'] }, quads: { denyParams: ['heavy_compound'] }, chest: { denyParams: ['heavy_compound'] }, side_delts: { denySubs: ['press'] }, front_delts: { denySubs: ['press'] } }`, `mens_physique: { quads: { denyParams: ['heavy_compound'] } }`
+VALUE: division-specific allowed/denied subregions+params; never starve (fall back if all removed, :878) | hardcoded | confirmed
+
+RULE: DIVISION_SUBREGION_BIAS | :887-894
+CODE: `mens_physique {chest:'incline',back:'vertical_pull'}` `figure {...}` `classic_physique {back:'vertical_pull',quads:'sweep'}` `womens_physique {back:'vertical_pull'}` `bikini {glutes:'activator'}` `wellness {glutes:'activator',quads:'sweep'}`
+VALUE: soft scoring nudge toward judged subregion | hardcoded | confirmed
+
+RULE: numExHint | :899-901
+CODE: `return sessionTarget <= 5 ? 1 : 2;`
+VALUE: ≤5 session sets → 1 exercise, else 2 | hardcoded | confirmed
+
+RULE: difficulty/assisted gating | :923-928, 936-941
+CODE: beginner `available.filter(e => e.difficulty == null || e.difficulty < 3)` (if ≥max(2,numExHint) survive); non-beginner `available.filter(e => !ASSISTED_RE.test(e.n))` (same guard); `ASSISTED_RE = /\bassisted\b/i`
+VALUE: beginners drop difficulty≥3; non-beginners drop assisted lifts; never below coverage | hardcoded | confirmed
+
+RULE: sortScore (selection ranking) | :960-978
+CODE: `reqBonus = requiredSubs.includes(e.sub) ? 0 : 100;` `paramOrder {heavy_compound:0,mod_compound:1,machine:2,isolation:3}` `paramBonus = order*10;` `divBonus = preferredSub match ? -5 : 0;` strength `heavyBarbell ? -3 : 0`; hypertrophy `-(e.sfr/10)`; `+ idx`
+VALUE: required-subregion → compound-first → division nudge → goal/SFR tiebreak → pool index | hardcoded | confirmed
+
+RULE: RDL/SLDL guard | :1031-1036
+CODE: hamstrings — never both 'Romanian Deadlift (Barbell)' and 'Stiff-Leg Deadlift' in one session | hardcoded | confirmed
+
+RULE: per-entry set distribution | :1058-1071
+CODE: `const MIN_SETS_PER_ENTRY = 3;` `const MAX_SETS_PER_ENTRY = 6;`; spread sessionTarget across chosen, reserving 3 for later entries, clamp [3,6]
+VALUE: each exercise 3-6 sets; session target spread evenly | hardcoded | confirmed
+
+RULE: selectSplit | :1087-1122
+CODE: 3d `lowerFocus→full_body; (advanced||competitive)?'ppl':'full_body'`; 4d `upper_lower`; 5d `weak_point_spec→upper_lower_wp; lowerFocus→lower_focus; legJudgedBalanced→balanced_ul; else ppl`; 6d `lowerFocus?'lower_focus':'ppl_ab'`; lowerFocus = bikini/wellness; legJudged = bodybuilding/classic/figure/womens_physique/womens_bodybuilding
+VALUE: split by days+experience+division | hardcoded | confirmed
+
+RULE: buildSession per-session cap | :1138-1140
+CODE: `const sessionCap = _weakPointKeys.includes(muscle) ? 12 : 8;` `const sessionTarget = Math.min(sessionCap, Math.round(wTarget / sessions));` `if (sessionTarget < 2) continue;`
+VALUE: 8 sets/muscle/session (12 for weak point); skip <2 | hardcoded | confirmed
+
+RULE: full-body frequency | :1179
+CODE: `sessionsPerMuscle[m] = t <= 0 ? 0 : Math.max(1, Math.min(effectiveDays, Math.round(t / 5)));`
+VALUE: muscle appears ceil(target/5)-ish days, ≥1, ≤effectiveDays | hardcoded | confirmed
+
+RULE: upper/lower + weighted-UL frequencies | :1215-1216, 1242-1246
+CODE: UL `sessionsPerMuscle = 2` all; weighted `upperDays = max(1, effectiveDays - lowerDays)`, upper muscles=upperDays, lower=lowerDays; interleave lower-first
+VALUE: UL 2×/muscle; weighted-UL by lowerDays (lower-first interleave) | hardcoded | confirmed
+
+RULE: PPL frequencies | :1275-1279+
+CODE: 3-day `all muscles 1`; 5-day `push/pull 2` (legs continues below)
+VALUE: PPL session frequencies by days (3/5/6) | hardcoded | confirmed (5/6-day legs continue 1280→)
+
+PLANENGINE.JS STATUS: lines 1-1280 transcribed verbatim. PENDING: 1280→end (~2200 total) —
+rest of PPL frequencies, lower-focus/ppl_ab/weak-point-day splits, buildFromMatrix +
+DIVISION_MATRIX, weak-point session augmentation, day/weak-point clamps, superset planner +
+gates, strength/duration notes, structural-coverage backfill, generatePlan orchestration.
 
 ---
 
