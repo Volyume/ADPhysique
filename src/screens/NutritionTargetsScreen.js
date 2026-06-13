@@ -533,6 +533,9 @@ export default function NutritionTargetsScreen({ navigation }) {
                       accessibilityState={{ selected: active }}
                       accessibilityLabel={`${g.label}, ${g.detail}`}
                     >
+                      {active && (
+                        <Ionicons name="checkmark-circle" size={14} color={colors.primary} style={styles.goalCheck} />
+                      )}
                       <Text style={[styles.goalLabel, active && styles.goalLabelActive]}>{g.label}</Text>
                       <Text style={[styles.goalDetail, active && styles.goalDetailActive]}>{g.detail}</Text>
                     </TouchableOpacity>
