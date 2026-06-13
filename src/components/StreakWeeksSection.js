@@ -107,6 +107,28 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
         })}
       </View>
 
+      {/* U-F-5: on-screen key for the glyph strip, mirroring the screen-reader
+          summary so the strip is not opaque to sighted users. Hidden from
+          screen readers (the strip already carries the text equivalent), and
+          absent under suppression because the whole section returns null above. */}
+      <View
+        style={styles.glyphKey}
+        importantForAccessibility="no-hide-descendants"
+        accessibilityElementsHidden
+      >
+        {[
+          { state: 'kept', label: 'Kept' },
+          { state: 'resting', label: 'Recovery' },
+          { state: 'repaired', label: 'Covered' },
+          { state: 'paused', label: 'Paused' },
+        ].map(({ state, label }) => (
+          <View key={state} style={styles.glyphKeyItem}>
+            <Ionicons name={GLYPH[state].icon} size={12} color={GLYPH[state].color} />
+            <Text style={styles.glyphKeyLabel}>{label}</Text>
+          </View>
+        ))}
+      </View>
+
       {justRepaired ? (
         <View style={styles.repairRow}>
           <Ionicons name="git-compare" size={14} color={colors.primary} />
@@ -187,6 +209,9 @@ const styles = StyleSheet.create({
   runLine: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary, flexShrink: 1, textAlign: 'right' },
   strip: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xxs },
   glyph: { marginRight: 2 },
+  glyphKey: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.sm },
+  glyphKeyItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
+  glyphKeyLabel: { fontSize: fontSize.xs, color: colors.textMuted },
   longest: { fontSize: fontSize.xs, color: colors.textMuted },
   // D2 streak-repair line — calm, forgiving; primary tint (a positive bridge),
   // never a warning colour.

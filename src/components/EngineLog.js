@@ -16,6 +16,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getRecentAdaptationEvents, getCompletedWorkoutSets, getAllExercises } from '../lib/database';
+import InfoTooltip from './InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 
 // Detects exercises with 2+ consecutive weeks of declining average reps
 // (a >= 2 rep drop each week), a sign the load may be too high.
@@ -100,7 +102,11 @@ export default function EngineLog({ userId }) {
             <View key={w.id || `reg_${i}`} style={styles.row}>
               <Ionicons name="alert-circle-outline" size={14} color={colors.warning} />
               <View style={{ flex: 1 }}>
-                <Text style={[styles.muscle, { color: colors.warning }]}>{w.exerciseName}: Rep regression</Text>
+                <View style={styles.regTitleRow}>
+                  <Text style={[styles.muscle, { color: colors.warning }]}>{w.exerciseName}: Rep regression</Text>
+                  {/* U-F-5: define "rep regression" in lay terms (once is enough). */}
+                  {i === 0 && <InfoTooltip text={GLOSSARY.repRegression} size={13} />}
+                </View>
                 {w.reason_text ? <Text style={styles.reason} numberOfLines={3}>{w.reason_text}</Text> : null}
               </View>
             </View>
@@ -155,6 +161,7 @@ const styles = StyleSheet.create({
   headerSub: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xxs },
   body: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md, gap: spacing.md },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  regTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   muscle: { fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   reason: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xxs, lineHeight: 16 },
   date: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },

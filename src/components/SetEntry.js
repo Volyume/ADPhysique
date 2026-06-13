@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, Keyboard } from 'r
 import * as Haptics from 'expo-haptics';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { calculate1RM } from '../lib/algorithms';
+import InfoTooltip from './InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 
 export default function SetEntry({ value, onChange, units = 'kg', isWarmup = false }) {
   const { weight, reps, isGhost } = value;
@@ -93,7 +95,11 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
         <View style={styles.fieldLabelWrap}>
           <Text style={styles.fieldLabel}>Reps</Text>
           {live1RM != null && live1RM > 0 && (
-            <Text style={styles.e1rmHint}>Est. max ≈{Math.round(live1RM)}{units}</Text>
+            <View style={styles.e1rmRow}>
+              <Text style={styles.e1rmHint}>Est. max ≈{Math.round(live1RM)}{units}</Text>
+              {/* U-F-5: plain-English gloss for the estimated-1RM jargon. */}
+              <InfoTooltip text={GLOSSARY.estMax} size={13} />
+            </View>
           )}
         </View>
         <View style={styles.stepper}>
@@ -184,6 +190,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: fontWeight.semibold,
   },
+  e1rmRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   e1rmHint: {
     fontSize: fontSize.xs,
     color: colors.textMuted,

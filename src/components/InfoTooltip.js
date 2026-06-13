@@ -9,7 +9,9 @@ export default function InfoTooltip({ text, size = 14 }) {
     <>
       <TouchableOpacity
         onPress={() => setVisible(true)}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        // U-F-2/U-F-5 (M1): reach the ≥44px WCAG/iOS target via hitSlop so the
+        // touch region grows invisibly (no layout reflow) around the small glyph.
+        hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
         style={styles.trigger}
         accessibilityRole="button"
         accessibilityLabel="More information"

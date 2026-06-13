@@ -1,6 +1,7 @@
 # SPEC — ULTIMATE-006 / M1: jargon-translation layer (glossary copy)
 
-Status: **AWAITING FOUNDER SIGN-OFF** (the gate is the COPY, not the mechanism).
+Status: **SIGNED OFF** (2026-06-13) — founder approved all drafted glosses as-is (tweakable on device
+later) and chose to FOLD the InfoTooltip 44px fix into 006. Building U-F-5 → U-D-3 → U-E-1/2 → U-B-9.
 Source of truth: `ultimate-audit-04-proposals-with-blueprints.md` M1 = §U-F-5 + §U-D-3 +
 §U-E-1 + §U-E-2 + §U-B-9; `phase1/15a-d-components`, `phase1/04-coaching`, `phase1/09-progress-analytics`.
 
