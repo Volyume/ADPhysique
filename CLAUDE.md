@@ -3,6 +3,13 @@
 This is a live production app on Google Play. Real users are paying.
 Every change you make affects them. Work accordingly.
 
+> **ACTIVE WORK (2026-06-13):** the Ultimate Audit is COMPLETE and its Tier-1 build
+> phase is underway. A resuming session reads
+> `docs/ultimate-audit-2026-06-13/_AUDIT-STATUS-AND-RESUME.md` FIRST, then builds the
+> next item in the LOCKED order (next: ULTIMATE-003) via the edit-gate — one item at a
+> time, lint + full test, commit. Do not reorder, pick, or free-flow. Work from the
+> proposal blueprints (source), never a summary.
+
 ---
 
 ## SACRED RULES — THESE ARE ABSOLUTE

@@ -1,54 +1,74 @@
-# Ultimate Audit 2026-06-13 — status & resume marker
+# ▶ NEW SESSION STARTS HERE — Ultimate Audit 2026-06-13 (status & resume)
 
-Points to SOURCE files; not a substitute for them (founder rule 2026-06-13). A
-resuming session READS the files named below — it does not synthesise from this note.
+Read THIS file, then `_FOUNDER-DECISIONS-NEEDED.md` (verdicts), then the specific
+proposal blueprint for the item you're building. Work from the SOURCE files, never a
+summary (founder rule 2026-06-13). Build is READ-the-source → edit-gate → implement →
+lint + full test → commit → close gate, ONE item at a time, in the LOCKED ORDER below.
+No reordering, no picking and choosing (founder, 2026-06-13).
 
-## Spec
-Founder "ULTIMATE AUDIT" prompt (chat transcript, 2026-06-13), Phases 1–6.
-Phase-1 agent brief: `phase1/_FORMAT.md`. Phase-2 brief: `phase2/_RESEARCH-FORMAT.md`.
+## IMMEDIATE NEXT ACTION
+Build **ULTIMATE-003 (U-A-1) — workout banner-fold** (spec fully locked, see §BUILD).
+It is a ~170-line layout refactor of `src/screens/ActiveWorkoutScreen.js` (2,625 lines,
+the highest-frequency screen) — do it with care, gate on lint + full suite, commit only
+if green. Then continue: 003 → 004 → 005 → 006 → 009 → 007 → founder/gated batch → Tier 2/3/4.
 
-## Model (verified)
-- Fable 5 GLOBALLY DISABLED by US gov export-control directive (source fetched:
-  anthropic.com/news/fable-mythos-access). All other models unaffected.
-- FOUNDER DECISION: run on Opus 4.8 (`model:"opus"`) for all agents.
-- FOUNDER INSTRUCTION: when Fable returns, RE-AUDIT + improve with Fable.
+## ENVIRONMENT / MODEL (verified facts)
+- Fable 5 is GLOBALLY DISABLED (US gov export-control directive; source: anthropic.com/news/fable-mythos-access).
+  `model:"fable"` returns "unavailable"; only sonnet|opus|haiku|fable accepted. FOUNDER DECISION: run all
+  agents on **Opus 4.8** (`model:"opus"`). FOUNDER INSTRUCTION: RE-AUDIT with Fable when it returns.
+- Reddit (reddit.com) is BLOCKED here → all Reddit-derived sentiment in the audit is PARTIAL/secondary
+  sourced (flagged). Founder accepted this (D17); re-run only where a proposal hinges on it.
 
-## Phase 1 — DONE & committed
-`ultimate-audit-00-volyume-complete-inventory.md` (6.8k lines: 78 screens + 68
-components, file:line-grounded) and `ultimate-audit-00-navigation-psychology.md`.
-Fragments in `phase1/`.
+## GUARDRAILS (active, do not bypass)
+- Edit-gate `.claude/hooks/edit-gate.sh` + commit-gate `.githooks/pre-commit` (core.hooksPath=.githooks).
+  Editing/committing app code (src/, supabase/) REQUIRES `.claude/edit-gate` to name a real spec file +
+  a verbatim quote that grep-verifies against it. Open it with the proposal-blueprint path + a quote,
+  edit, then `rm .claude/edit-gate` to re-close. (Local to this container; gitignored.)
+- CLAUDE.md founder rules (2026-06-13): work from source not interpretation; handovers point to source files.
 
-## Phase 2 — research, DONE & committed (Opus, web)
-All 15 fragments present in `phase2/research-01..15-*.md` (Phase 2 COMPLETE). Plus
-`ultimate-audit-01-workout-screen-proposal.md` (Agent 1, code-grounded).
-Each fragment: 30–55 apps, honest VERIFIED/PARTIAL/NOT-FOUND with source URLs.
-LIMITATION (surfaced to founder, decision OPEN): **reddit.com is BLOCKED in this
-environment** — confirmed by direct test + all 15 agents. Reddit-derived sentiment
-is marked PARTIAL via secondary sources throughout; NO fabrication. Founder to
-decide: accept PARTIAL Reddit sourcing, or top up Reddit verbatims later from an
-allowed network. This does NOT block synthesis (PARTIAL flags carry through).
+## AUDIT — COMPLETE (all in docs/ultimate-audit-2026-06-13/, committed + pushed)
+- Phase 1: `ultimate-audit-00-volyume-complete-inventory.md` (78 screens + 68 components, file:line) +
+  `ultimate-audit-00-navigation-psychology.md`. Source fragments in `phase1/`.
+- Phase 2: `phase2/research-01..15-*.md` (15 areas, 50+ apps each, VERIFIED/PARTIAL/NOT-FOUND, sourced).
+- Phase 3: `ultimate-audit-02-master-comparison.md` (2.3k lines). Fragments in `phase3/`.
+- Phase 4: `ultimate-audit-03-navigation-proposals.md`.
+- Phase 5: `ultimate-audit-04-proposals-with-blueprints.md` (70 proposals, Tier 1–4 index, merges M1–M8,
+  build order). Source bodies in `phase5/proposals-*.md`. Plus `ultimate-audit-01-workout-screen-proposal.md`.
+- Phase 6: `ultimate-audit-00-executive-summary.md`.
 
-## Phases 3–6 — DONE & committed
-3. `ultimate-audit-02-master-comparison.md` (2.3k lines, 15 areas reconciled).
-4. `ultimate-audit-03-navigation-proposals.md` (nav restructure + Day1/14/60 + dual-audience).
-5. `ultimate-audit-04-proposals-with-blueprints.md` (70 proposals, global Tier 1–4 index,
-   cross-cluster merges M1–M8, build order). Source bodies in `phase5/proposals-*.md`.
-6. `ultimate-audit-00-executive-summary.md`.
-**AUDIT COMPLETE.** Built entirely on Opus 4.8 (Fable disabled); Reddit blocked → user
-sentiment PARTIAL/secondary throughout; no fabrication (every claim status-tagged).
+## FOUNDER VERDICTS (full detail + rationale in `_FOUNDER-DECISIONS-NEEDED.md`)
+D1 by-ability disclosure · D2 translation layer (presentation) · D3 jargon+empty-states FREE ·
+D4 FULL (incl. Coached auto-apply + engine-feed → needs spec+safety review) · D5 overreach warning (safety) ·
+D6 diary anti-shame · D7 lenient streak (safety) · D8 RPE/RIR + readiness BOTH (engine review) ·
+D9 pain flag + rotation BOTH (engine review) · D10 log-confirm guard · D11 contest-prep floor-clamped ·
+D12 demo media: prove in-house + price a licence · D13 food stays boundary-safe (no AI) ·
+D14 nav relocations yes · D15 RENAME locked names (amend locked docs; bring specific proposals) ·
+D16 onboarding tweaks yes · D17 accept PARTIAL Reddit · D18 re-audit w/ Fable later · D19 build order yes ·
+D20 build Tier-1 ungated quick wins now.
 
-## What the FOUNDER now decides (nothing below builds autonomously)
-- **FOUNDER-GATE proposals** (touch engine / `src/coaching/safety/` / billing / locked docs /
-  no-AI): ULTIMATE-017,018,019,020,021,022 + several Tier-3/4 (U-A-5, U-C-3, U-G-3/5/6, U-D-8/9,
-  nav locked-tab items). Route safety items to the safety owner, billing to billing.
-- **Reddit top-up:** accept PARTIAL secondary sourcing, or re-run sentiment from a Reddit-reachable
-  network and fold in.
-- **Re-audit with Fable** when it is reinstated (standing founder instruction).
-- **Build sequencing:** see the executive summary's recommended order (quick wins → Tier-1 on-ramp →
-  founder-decision batch → rest). NOT-DETERMINED implementation facts in each blueprint must be
-  confirmed in code before building (the edit-gate enforces a cited spec at build time).
+## BUILD PHASE — in progress
+DONE (committed): 002 U-F-1 Button onPrimary contrast (`b7ca91a`) · 001 U-B-6 CoachReview error-vs-empty
+(`b7426eb`) · 008 U-D-4 encouragement empty/near-empty (`cfb95fe`).
+LOCKED ORDER (next →): **003 → 004 → 005 → 006 → 009 → 007** → then the FOUNDER-DECISION/GATED batch
+(D4-full, D5–D9, D12, D15, U-NAV gated items, U-G-1/020 etc. — each needs its spec + safety/locked-doc
+review) → then Tier 2/3/4 by ULTIMATE number.
 
-## Guardrails active (do not bypass)
-Edit-gate `.claude/hooks/edit-gate.sh` + commit-gate `.githooks/pre-commit`: app-code
-edits (src/, supabase/) need a grep-verified verbatim quote from a spec file in
-`.claude/edit-gate`. This audit is READ-ONLY — no code changes.
+### 003 (U-A-1) confirmed spec — ready to build (founder-confirmed):
+- Above the set-entry card render ONLY: nav strip (unchanged, ActiveWorkoutScreen.js:1409-1441) + rest
+  timer when running (:1551). Collapse ALL other banners — starter (:1393-1406), superset chip (:1487-1494),
+  next-time notes (:1498-1514), deload (:1517-1534), target-reached (:1554-1561) — into ONE tappable
+  "N notes" chip that expands on demand.
+- Move the target line (:1537-1544) INTO the set-entry card header (by orientation/beat lines).
+- Acceptance: on a 5.4" device (default + larger-text 1.2×) the beat line + first input row are within the
+  initial viewport. No engine/gating change. Add an invariant-style test if feasible; small-phone walk by founder.
+
+## OPEN FOLLOW-UPS (recorded, not yet done)
+- U-F-1 destructive variant: flips dark-ink-on-dark-red in LIGHT theme → needs an "on-error" light-ink token.
+- U-B-6 CoachReview: no test harness → add an error-state regression test.
+- U-D-4: per-row sparkline near-empty treatment in LiftProgress (minor).
+- Universal-link AASA/assetlinks (separate prior partner work) — server-side, outside repo.
+
+## SACRED CONSTRAINTS (never violate; FOUNDER-GATE if touched)
+Deterministic engine (no AI/LLM) + confirm-then-apply contract · `src/coaching/safety/` (ED floors, rapid-loss
+threshold, Beat signposting) · billing (no change without sign-off) · free/Pro gating · British English ·
+never touch main. Gated proposals are INPUT ONLY until the founder + safety/billing owner sign the spec.
