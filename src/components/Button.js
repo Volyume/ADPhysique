@@ -22,7 +22,9 @@ import PressableCard from './PressableCard';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 
 const VARIANTS = {
-  primary: { bg: colors.primary, fg: colors.background, border: 'transparent' },
+  // fg uses onPrimary (always-dark ink, theme.js:42) — NOT `background`, which flips
+  // near-white in the light theme and fails contrast on the amber fill (audit U-F-1).
+  primary: { bg: colors.primary, fg: colors.onPrimary, border: 'transparent' },
   secondary: { bg: colors.surface2, fg: colors.textPrimary, border: colors.border },
   tertiary: { bg: 'transparent', fg: colors.primary, border: 'transparent' },
   destructive: { bg: colors.error, fg: colors.textPrimary, border: 'transparent' },
