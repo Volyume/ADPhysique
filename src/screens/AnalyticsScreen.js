@@ -196,13 +196,22 @@ export default function AnalyticsScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* ── Empty state ───────────────────────────────────── */}
+        {/* ── Empty state (U-D-4: encouragement-framed, matching BodyMetrics) ── */}
         {!loading && allSets.length === 0 && (
           <View style={styles.emptyState}>
             <EmptyChartIllustration size={140} />
-            <Text style={styles.emptyStateHeading}>No data yet</Text>
+            <Text style={styles.emptyStateHeading}>Your progress starts here</Text>
             <Text style={styles.emptyStateBody}>
-              Your progress charts will appear here after your first few sessions. Log a workout to get started.
+              Log your first session and these charts begin filling in. Every workout you log adds to the picture.
+            </Text>
+          </View>
+        )}
+
+        {/* ── Near-empty (U-D-4): a session or two in, frame it as momentum ── */}
+        {!loading && allSets.length > 0 && completedWorkoutCount > 0 && completedWorkoutCount < 3 && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateBody}>
+              Good start. A couple more sessions and your trends really take shape.
             </Text>
           </View>
         )}

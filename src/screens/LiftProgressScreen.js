@@ -297,12 +297,12 @@ export default function LiftProgressScreen({ navigation }) {
             <View style={styles.empty}>
               <Ionicons name="barbell-outline" size={56} color={colors.textMuted} />
               <Text style={styles.emptyTitle}>
-                {filter === 'best' ? 'No recent bests' : 'No lifts logged yet'}
+                {filter === 'best' ? 'Your bests will show here' : 'Your lifts start here'}
               </Text>
               <Text style={styles.emptyText}>
                 {filter === 'best'
-                  ? 'A lift shows here when your latest session beats your best estimated max.'
-                  : "Log a few sessions and each lift's trend shows up here."}
+                  ? "When a session beats your best estimated max, that lift appears here. Keep training and they'll come."
+                  : "Log a few sessions and each lift's trend builds up here."}
               </Text>
             </View>
           ) : null
