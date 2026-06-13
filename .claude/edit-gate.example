@@ -1,0 +1,5 @@
+# Edit-gate. To allow edits, create a file named `.claude/edit-gate` whose
+# FIRST LINE is the repo-relative path of the audit/research/spec file being
+# implemented, e.g.:
+#   docs/ultimate-audit-2026-06-12/audit/a-12-partner-social.md  §"Invite funnel"
+# No such file (or a path that doesn't exist) = all edits are BLOCKED.

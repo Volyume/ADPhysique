@@ -16,6 +16,13 @@ web-build/
 /ios/
 /android/
 *.log
-.claude/
+# .claude/ is local by default, but the spec-gate controls are committed so they
+# apply in every session (founder rule 2026-06-13). Transient/local state
+# (.claude/edit-gate, settings.local.json) stays ignored.
+.claude/*
+!.claude/settings.json
+!.claude/edit-gate.example
+!.claude/hooks/
+!.claude/hooks/*
 google-play-service-account.json
 AuthKey_*.p8
