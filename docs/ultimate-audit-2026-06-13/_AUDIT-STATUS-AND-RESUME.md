@@ -28,20 +28,25 @@ is marked PARTIAL via secondary sources throughout; NO fabrication. Founder to
 decide: accept PARTIAL Reddit sourcing, or top up Reddit verbatims later from an
 allowed network. This does NOT block synthesis (PARTIAL flags carry through).
 
-## Phases 3–6 — PENDING (do HANDS-ON, area-by-area, paced; this is the judgement work)
-Read each source as you synthesise its section — do not hold all at once, do not skim.
-3. `ultimate-audit-02-master-comparison.md` — per area: VOLYUME CURRENT (from the
-   Phase-1 inventory section) vs BEST-IN-CLASS + TOP-50 RANGE + NEWBIE/ATHLETE
-   verdicts + WHERE WE LEAD/LAG + MISSING + USER SENTIMENT + VERIFICATION STATUS,
-   reading the matching `phase2/research-NN-*.md` for each.
-4. `ultimate-audit-03-navigation-proposals.md` — from `ultimate-audit-00-navigation-
-   psychology.md` + research-10 + research-13 + research-15.
-5. `ultimate-audit-04-proposals-with-blueprints.md` — the precise blueprints
-   (ULTIMATE-NNN), tiered, each traceable to a VERIFIED finding; "Claude Code cannot
-   misinterpret" precision. Mark any PARTIAL/Reddit-only support explicitly.
-6. `ultimate-audit-00-executive-summary.md` — written LAST.
-NB Phases 3–6 are large; pace in committed installments + update THIS marker after
-each section so it stays continuable across context compaction.
+## Phases 3–6 — DONE & committed
+3. `ultimate-audit-02-master-comparison.md` (2.3k lines, 15 areas reconciled).
+4. `ultimate-audit-03-navigation-proposals.md` (nav restructure + Day1/14/60 + dual-audience).
+5. `ultimate-audit-04-proposals-with-blueprints.md` (70 proposals, global Tier 1–4 index,
+   cross-cluster merges M1–M8, build order). Source bodies in `phase5/proposals-*.md`.
+6. `ultimate-audit-00-executive-summary.md`.
+**AUDIT COMPLETE.** Built entirely on Opus 4.8 (Fable disabled); Reddit blocked → user
+sentiment PARTIAL/secondary throughout; no fabrication (every claim status-tagged).
+
+## What the FOUNDER now decides (nothing below builds autonomously)
+- **FOUNDER-GATE proposals** (touch engine / `src/coaching/safety/` / billing / locked docs /
+  no-AI): ULTIMATE-017,018,019,020,021,022 + several Tier-3/4 (U-A-5, U-C-3, U-G-3/5/6, U-D-8/9,
+  nav locked-tab items). Route safety items to the safety owner, billing to billing.
+- **Reddit top-up:** accept PARTIAL secondary sourcing, or re-run sentiment from a Reddit-reachable
+  network and fold in.
+- **Re-audit with Fable** when it is reinstated (standing founder instruction).
+- **Build sequencing:** see the executive summary's recommended order (quick wins → Tier-1 on-ramp →
+  founder-decision batch → rest). NOT-DETERMINED implementation facts in each blueprint must be
+  confirmed in code before building (the edit-gate enforces a cited spec at build time).
 
 ## Guardrails active (do not bypass)
 Edit-gate `.claude/hooks/edit-gate.sh` + commit-gate `.githooks/pre-commit`: app-code
