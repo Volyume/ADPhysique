@@ -46,22 +46,33 @@ COMPLETENESS: 11 settings screens listed; key inventory deferred.
 ═══════════════════════════════════════════════════════════════
 ## SECTION 7 — NAVIGATION MAP
 ═══════════════════════════════════════════════════════════════
-Source: single navigator `src/navigation/RootNavigator.js`. Tabs: HomeTab, DiaryTab, PlansTab,
-ProgressTab, ProfileTab. Onboarding fork RootNavigator.js:1138 (`tier === 'pro' ? ProOnboardingStack :
-FirstRunStack`). 78 screen files in src/screens/. Routes (name= in RootNavigator):
-ActiveWorkout, AddCustomFood, Analytics, BlockReflection, BodyMetrics, BuildWorkout, CardioHistory,
-CascadeGate, CoachHeldHistory, CoachOutput, CoachReview, CoachingReminders, Consistency, Credits,
-DebugLog, Diary, DiaryTab, ExerciseDetail, FirstRunBranch, FoodInsights, FoodSearch, FreeStarter,
-GoalChangeSummary, GoalLockConsent, Home, HomeTab, Import, LiftProgress, LogCardio, Login,
-ManualBuilder, MealPlan, MesocycleBuilder, Methodology, MyMeals, MyRecipes, NotificationSettings,
-NutritionEducation, NutritionTargets, Partner, Paywall, PlanDetail, PlanLibrary, PlanPreview,
-PlanUpdate, Plans, PlansTab, PrivacyPolicy, ProGoalSetup, ProOnboarding, ProSetupComplete, ProUpgrade,
-ProfileTab, ProgressTab, QuizTraining, RecapStory, RecipeBuilder, RoutineDetail, ScanBarcode, ScanLabel,
-Settings, SettingsAbout, SettingsAccount, SettingsCoaching, SettingsData, SettingsDisplay, SettingsHealth,
-SettingsNotifications, SettingsPrivacy, SettingsProfile, ShareCard, Snapshots, Subscription,
-SubscriptionPolicy, VolumeHeatmap, WeeklyCheckIn, Welcome, WellbeingCheck, WorkoutHistory, WorkoutSummary.
-COMPLETENESS: ~80 routes in RootNavigator.js + 78 screen files. Per-route exact line + per-nav-action
-file:line = VALUE DEFERRED (all routes are in RootNavigator.js; screen file = src/screens/<Name>Screen.js).
+CORRECTED to standard: every Screen registration located by EXACT line in `src/navigation/RootNavigator.js`
+(**108 registrations**; duplicates across stacks are distinct nav nodes, none collapsed). Component file =
+`src/screens/<Name>Screen.js`. VALUE DEFERRED = each route's options/params only.
+DIARY: Diary :225 · MealPlan :227 · FoodSearch :232 · AddCustomFood :237 · ScanBarcode :242 · ScanLabel :247 ·
+LogCardio :252 · CardioHistory :257 · FoodInsights :262 · MyRecipes :267 · MyMeals :272 · RecipeBuilder :277
+HOME: Home :293 · BuildWorkout :294 · ActiveWorkout :295 · WorkoutSummary :296 · WorkoutHistory :297 ·
+VolumeHeatmap :298 · ShareCard :299 · CoachReview :300 · LogCardio :303 · ProUpgrade :304 · FreeStarter :306
+PLANS: Plans :319 · PlanUpdate :320 · PlanDetail :321 · RoutineDetail :322 · ExerciseDetail :323 ·
+ManualBuilder :324 · PlanLibrary :325 · MesocycleBuilder :326 · ProUpgrade :327 · FreeStarter :329
+PROGRESS: Analytics :342 · WorkoutHistory :343 · WorkoutSummary :344 · VolumeHeatmap :345 · CoachReview :346 ·
+BodyMetrics :347 · LiftProgress :348 · Consistency :349 · Partner :350 · ExerciseDetail :351 · YearOfLifts :352 ·
+RecapStory :353 · ShareCard :354 · LogCardio :357 · CardioHistory :358 · ProUpgrade :359
+PROFILE: You :372 · Settings :373 · SettingsAccount :374 · SettingsProfile :375 · SettingsCoaching :376 ·
+SettingsNotifications :377 · SettingsDisplay :378 · SettingsHealth :379 · SettingsData :380 · Snapshots :381 ·
+SettingsPrivacy :382 · SettingsAbout :383 · NutritionTargets :384 · NutritionEducation :385 · BodyMetrics :386 ·
+WeeklyCheckIn :387 · CoachOutput :388 · Methodology :389 · ShareCard :390 · CoachHeldHistory :391 ·
+BlockReflection :392 · ProGoalSetup :393 · GoalChangeSummary :394 · GoalLockConsent :395 · NotificationSettings :396 ·
+Import :397 · CoachingReminders :398 · WellbeingCheck :399 · PrivacyPolicy :400 · DebugLog :401 ·
+SubscriptionPolicy :402 · Subscription :403 · CascadeGate :404 · Paywall :405 · Credits :406 · ProUpgrade :407
+TABS: HomeTab :445 · PlansTab :446 · DiaryTab :447 · ProgressTab :448 · ProfileTab :449
+WELCOME/AUTH: Welcome :457 · QuizTraining :460 · PlanPreview :461 · Login :462
+FIRST-RUN: FirstRunBranch :470 · FreeStarter :475 · PlanLibrary :476 · PlanDetail :477 · ActiveWorkout :478
+CONSENT: Article9Consent :490 · PrivacyPolicy :494
+PRO-ONBOARDING: ProOnboarding :502 · PlanLibrary :503 · PlanDetail :504 · ActiveWorkout :505 ·
+ProSetupComplete :506 · NutritionEducation :509 · GoalLockConsent :513
+COMPLETENESS: 108 registrations located by exact line (grep `name="` count = 108). Tier fork at
+RootNavigator.js:1138 (tier==='pro' ? ProOnboardingStack : FirstRunStack).
 
 ═══════════════════════════════════════════════════════════════
 ## SECTION 8 — DESIGN SYSTEM REGISTER
