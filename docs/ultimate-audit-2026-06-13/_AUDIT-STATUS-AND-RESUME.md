@@ -19,8 +19,7 @@ components, file:line-grounded) and `ultimate-audit-00-navigation-psychology.md`
 Fragments in `phase1/`.
 
 ## Phase 2 — research, DONE & committed (Opus, web)
-14 of 15 fragments in `phase2/research-01..15-*.md`; **research-12-feature-gaps
-RELAUNCHED** (original stalled) — verify it lands. Plus
+All 15 fragments present in `phase2/research-01..15-*.md` (Phase 2 COMPLETE). Plus
 `ultimate-audit-01-workout-screen-proposal.md` (Agent 1, code-grounded).
 Each fragment: 30–55 apps, honest VERIFIED/PARTIAL/NOT-FOUND with source URLs.
 LIMITATION (surfaced to founder, decision OPEN): **reddit.com is BLOCKED in this
