@@ -452,6 +452,118 @@ Value as written matches the code at the cited lines: confirmed.
 
 ---
 
+## weeklyCoach.js — CONFIG LAYER (lines 1-470 read; main runWeeklyCoach body 470→end PENDING)
+
+RULE: computeEWMA alpha (weekly-coach trend) | :39
+CODE: `export function computeEWMA(weights, alpha = 0.1) {`
+VALUE: 0.1 (~10-day memory; distinct from nutritionEngine 0.28) | hardcoded default | confirmed
+
+RULE: assessDataConfidence holds | :107, 115, 123, 125
+CODE: `if (weigh_ins < 3)` → data_hold; `if (hasUnusualEvent && weigh_ins < 5)` → data_hold; `if (weigh_ins < 5) { level = 'medium' ...}`; `if (weeksInPhase < 2) { level = 'low' ...}`
+VALUE: <3 weigh-ins → hold; unusual+<5 → hold; <5 → medium; <2 weeks → low | hardcoded | confirmed
+
+RULE: getRecoveryScore | :144-154
+CODE: `if (s >= 4) score = 4;` `else if (e <= 2 || s >= 3) score = 3;` `else if (e >= 4 && s <= 1) score = 1;` `else score = 2;`; `if (st != null && st >= 4 && score < 3) score = 3;`
+VALUE: recovery 1-4 from energy/soreness; stress≥4 worsens to ≥3 | hardcoded | confirmed
+
+RULE: getPerformanceScore | :163-166
+CODE: `... 'exceeded' || (prsThisWeek > 0 && sessionAdherence >= 0.9)) return 1;` `'dropped' || sessionAdherence < 0.5) return 4;` `'struggled' || sessionAdherence < 0.75) return 3;` `'hit' || sessionAdherence >= 0.75) return 2;`
+VALUE: performance 1-4 from training perf + session adherence thresholds 0.9/0.5/0.75 | hardcoded | confirmed
+
+RULE: autoregulationMatrix | :176-191
+CODE: `if (recoveryScore === 4 || (recoveryScore >= 3 && performanceScore >= 4))` → {volumeDelta -2, reduce, deload}; `if (recoveryScore === 3 || performanceScore === 3)` → {0, hold}; `if (recoveryScore === 1 && performanceScore === 1)` → {3, push}; `if (recoveryScore === 1 || performanceScore === 1)` → {2, push}; else {1, push}
+VALUE: recovery×performance → volumeDelta/-2..+3/, trainingSignal, deloadFlag | hardcoded | confirmed
+
+RULE: PHASE_CONFIG goal rates | :196-204
+CODE: `agg_cut: goalRatePct: -1.00`; `mod_cut: -0.625`; `mild_cut: -0.375`; `recomp: -0.125`; `maint: 0`; `mild_bulk: 0.1875`; `mod_bulk: 0.375`
+VALUE: weekly goal rate (% BW/week) by phase; isCut/isBulk flags | hardcoded | confirmed
+
+RULE: STEPS_BANDS | :207-215
+CODE: `agg_cut {12000,14000}` `mod_cut {10000,12000}` `mild_cut {9000,11000}` `recomp {9000,11000}` `maint {8000,10000}` `mild_bulk {7000,9000}` `mod_bulk {7000,9000}`
+VALUE: daily step target bands (lower,upper) by phase | hardcoded | confirmed
+
+RULE: stepsBand large-athlete reduction | :237-238
+CODE: `if (bodyweightKg && bodyweightKg > 100)` → `{ lower: band.lower, upper: band.upper - 1000 }`
+VALUE: bodyweight >100kg lowers upper band by 1000 | hardcoded | confirmed
+
+RULE: PHASE_ALIASES | :223
+CODE: `const PHASE_ALIASES = { bulk: 'mod_bulk' };`
+VALUE: 'bulk' phase maps to mod_bulk | hardcoded | confirmed
+
+RULE: WHY_LIBRARY keys | :254-297
+CODE: keys `on_target_holding, off_target_cal_up, off_target_cal_down, recovery_lagging, performance_regressed, building_baseline, stabilise_sessions, steps_bump, deload_suggested, diet_break_suggested, push_volume, low_data_weight, ffm_floor_hold, rapid_loss_corrected` (one plain-English, jargon-free line each)
+VALUE: the "why this week" reason copy library (locked voice, no jargon) | hardcoded | confirmed
+
+(weeklyCoach.js helpers with no numeric thresholds: getLatestEwma :59, getEwmaSevenDaysAgo :84, computeWeeklyTrendPct :71, parseNoteFlags :313 [regex word-matching for travel/illness/injury/missedLogging/menstrual], mapCalsAdherence :334, pickWhy :299, normalisePhaseKey/phaseConfig/stepsBand.)
+
+### weeklyCoach.js — runWeeklyCoach decision body (lines 470-940 read; 940→end PENDING)
+
+RULE: on-target tolerance | :577-578
+CODE: `Math.abs(decisionRatePct - phase.goalRatePct) <= 0.2 * Math.abs(phase.goalRatePct) + 0.05`
+VALUE: on target if |actual − goal| ≤ 20% of |goal| + 0.05 (%/wk); uses robust trend, falls back to plain | hardcoded | confirmed
+
+RULE: hasEnoughData gate | :585-586
+CODE: `const enoughWeightData = morningWeights.length >= 4;` `const hasEnoughData = weeksInPhase >= 2 && enoughWeightData;`
+VALUE: needs ≥2 weeks in phase AND ≥4 weigh-ins | hardcoded | confirmed
+
+RULE: adherence gate | :620-621
+CODE: `const sessionAdherence = ...; if (sessionAdherence < 0.5)` → stabilise output
+VALUE: <50% sessions completed → hold/stabilise | hardcoded | confirmed
+
+RULE: recovery signal thresholds | :626-629
+CODE: `poorEnergy = energyScore <= 2`; `highSoreness = sorenessScore >= 4`; `excellentRec = energyScore >= 4 && sorenessScore <= 2`
+VALUE: energy≤2 or soreness≥4 = poor recovery | hardcoded | confirmed
+
+RULE: matrixDeload | :638
+CODE: `const matrixDeload = matrix.deloadFlag && consecutivePoorRecoveryWeeks >= 1;`
+VALUE: deload needs matrix flag AND ≥1 prior poor-recovery week | hardcoded | confirmed
+
+RULE: safety hold (joint/illness/injury) | :645-651
+CODE: `const safetyHold = jointPainFlagged || noteFlags.injury || noteFlags.illness;` → caps `if (volumeSignal > 0) volumeSignal = 0; if (trainingSignal === 'push') trainingSignal = 'hold';`
+VALUE: joint pain or noted illness/injury caps any push to hold (never reverses a reduce) | hardcoded | confirmed
+
+RULE: off-target weeks required (cooldown gate) | :668, 692-693
+CODE: `const offTargetWeeksRequired = confidence.level === 'high' ? 2 : 3;`; `consecutiveOffTargetWeeks >= offTargetWeeksRequired && lastCalAdjustmentWeeksAgo >= 2`
+VALUE: needs 2 (high conf) / 3 (else) consecutive off-target weeks + 2-week cooldown to adjust calories | hardcoded | confirmed
+
+RULE: rapidLossOverride | :677-682
+CODE: `phase.isCut && !cycleOverride && actualRatePct !== null && actualRatePct <= -1.5 && energyScore !== null && energyScore <= 2`
+VALUE: rapid-loss safety override (cut, not cycle-flagged, loss ≤ −1.5%/wk, energy ≤ 2) — bypasses cooldown + off-target gate, upward-only | hardcoded | confirmed
+
+RULE: adaptive-TDEE data gate | :711
+CODE: `if (currentMaintenanceKcal && currentCalTarget && Array.isArray(morningWeights) && morningWeights.length >= 14)`
+VALUE: adaptive resize only with ≥14 weigh-ins; adherenceFactor under .9/over 1.1/hit 1.0 (:712-714); used only if confidence 'high' (:755) | hardcoded | confirmed
+
+RULE: rapid-loss calorie boost | :766-768
+CODE: `const severityExcess = Math.max(0, -1.5 - actualRatePct);` `const scaledBoost = Math.round(125 + severityExcess * 150);` `change = Math.min(300, scaledBoost);`
+VALUE: +125 base, +150 per extra 1%/wk past −1.5%, capped +300 | hardcoded | confirmed
+
+RULE: fixed calorie-adjust steps | :773, 777, 781, 785
+CODE: cut too slow `change = calsAdherence === 'hit' ? -150 : -100;`; cut too fast `change = +125;`; bulk too slow `change = +150;`; bulk too fast `change = -125;`
+VALUE: cut-slow −150(hit)/−100; cut-fast +125; bulk-slow +150; bulk-fast −125 | hardcoded | confirmed
+
+RULE: calorie change ±5% cap | :810-811
+CODE: `const maxChange = Math.round(currentCalTarget * 0.05);` `change = Math.sign(change) * Math.min(Math.abs(change), maxChange);`
+VALUE: weekly cal change capped at ±5% of current target | hardcoded | confirmed
+
+RULE: FFM-floor hold gate | :837-862
+CODE: fires when `Number.isFinite(bodyweightKg) && bodyweightKg > 0 && Number.isFinite(recentIntakeAvgKcal) && recentIntakeDaysLogged >= 5`; `if (recentIntakeAvgKcal <= floor.floorKcal && calorieAdjustment != null && calorieAdjustment.change < 0)` → `ffmFloorHeld = true; calorieAdjustment = null;`
+VALUE: with ≥5 days intake, refuse a calorie cut when 7-day intake ≤ FFM floor (increases never blocked) | hardcoded | confirmed
+
+RULE: steps prescription | :873, 883
+CODE: `if (stepsAvg != null && currentStepsTarget > 0 && stepsAvg < currentStepsTarget * 0.9)` → hold current; else `const newTarget = Math.min(currentStepsTarget + 1000, band.upper);`
+VALUE: if avg <90% of target → hold; else +1000 steps up to band upper | hardcoded | confirmed
+
+RULE: cardio trigger | :913-914
+CODE: `const stepsAtUpperBand = !stepsEnabled || currentStepsTarget >= band.upper;` `const cardioConditionsMet = phase.isCut && !onTarget && offTargetDirection > 0 && stepsAtUpperBand;`
+VALUE: cardio fires on cut + losing-too-slow + steps maxed/disabled; paused under poor recovery (:916) | hardcoded | confirmed
+
+WEEKLYCOACH.JS STATUS: lines 1-940 transcribed verbatim. PENDING: 940→end — deload-trigger
+assembly, diet-break, refeed cadence, macro-cycle, ED-pattern detector wiring, differential
+paywall trigger, and the final output assembly/return.
+
+---
+
 ## TRANSCRIPTION PROGRESS (full Pass 1, by hand, no agents)
 - [DONE] algorithms.js — read in full (1-1548), all rules transcribed verbatim above.
 - [DONE] nutritionEngine.js SAFETY constants (loss-rate gates, FFM floor, kcal floors, protein caps,
