@@ -51,3 +51,14 @@ Answer inline; I'll record your verdicts here.
 - **D20 Start now?** Shall I begin the **Tier-1 UNGATED quick wins** (ULTIMATE-001 CoachReview error-vs-empty,
   002 Button contrast, 003 banner-fold, 004 set-it-for-me, 005 progressive coach output, 006 jargon layer,
   008 empty states, 009 44px pass) — each edit-gated, spec-cited, one at a time? And/or open a PR for the branch?
+
+---
+## VERDICTS (founder, 2026-06-13)
+- D1 = BY ABILITY (progressive disclosure, not Free/Pro tier).
+- D2 = YES — newbie↔athlete translation layer (presentation-only).
+- D3 = Jargon layer + empty states FREE; coaching depth stays Pro.
+- D4 = FULL — Collaborative/Manual + feedback-to-audit-trail AND "Coached" auto-apply + feedback-to-engine. NB: auto-apply + engine-feed change the confirm-then-apply contract + engine logic → require a careful spec + safety review at build time.
+- D5 = YES — design the overreach→lighter-week intervention with the safety owner.
+- D6 = YES — remove punitive diary colour framing + no pressure streaks (safety-designed).
+- D7 = YES — lenient weekly "showing up" reward (safety-designed, no loss framing).
+- D8 = BOTH NOW — re-enable opt-in per-set RPE/RIR + build the readiness signal (engine-reviewed).
