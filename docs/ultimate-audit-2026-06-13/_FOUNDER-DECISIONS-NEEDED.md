@@ -81,12 +81,27 @@ Answer inline; I'll record your verdicts here.
 008 U-D-4 empty states · 009 M2 44px pass. (Gated/founder-batch items D4-full/D5-D9/D12/D15 come AFTER, with specs + safety/locked-doc review.)
 
 ### Build-phase progress
-- [x] 002 U-F-1 Button onPrimary contrast — DONE (b7ca91a). Follow-up: destructive variant also flips dark-ink-on-dark-red in LIGHT theme; needs an "on-error" light-ink token decision (separate, not a 2-line swap).
-- [x] 001 U-B-6 CoachReview retryable error state — DONE (b7426eb). Follow-up: screen has no test harness; add an error-state regression test.
+- [x] 002 U-F-1 Button onPrimary contrast — DONE (b7ca91a) + FINISHED in takeover (4b758e6): destructive
+  variant now uses a new `onError` ink token (white in every palette — zero-diff dark, fixes white-on-dark-red
+  in light); theme.test.js asserts it; the nutrition CTA icon ink re-pointed off `colors.background`.
+- [x] 001 U-B-6 CoachReview retryable error state — DONE (b7426eb) + FINISHED in takeover (8bae26e): the
+  deferred error-state regression test added (read-throw → "Try again"; clean empty → no-data card).
 - [x] 003 U-A-1 workout banner-fold — DONE (61b0d0c + 86343be): banner stack → one "N notes" chip; target line moved into the set-entry card header; RestTimer compact recomputes on layout change (useWindowDimensions); banner-fold invariant test added. Founder small-phone walk still pending (manual).
-- [x] 004 U-C-1 set-it-for-me — DONE (bdb71f9): fast "Set it for me" path (goal + consent → existing handleCalculate from prefilled stats); full form starts collapsed behind "Fine-tune these numbers"; calm-mode fast-cut hiding + calorie floors preserved; screen stays Pro.
+- [x] 004 U-C-1 set-it-for-me — REBUILT to spec in takeover (9f596d4): the first build (bdb71f9) only worked
+  from already-saved stats and otherwise redirected to the full form, dropping the blueprint's "asks only the
+  minimum the engine needs" core. Now collects the four required inputs (sex/age/height/weight) inline,
+  prefilled when present; activity/protein/body-fat keep their defaults behind "Fine-tune these numbers".
 - [ ] 005 U-B-1 progressive coach output · 006 M1 jargon layer · 009 M2 44px pass · 007 U-C-7 — NEXT (each larger; edit-gated + spec-cited + lint/test per item). NB 005/U-B-1 has FOUNDER-GATES (engine priority for the hero card; safety blocks never collapse).
-- [x] 008 U-D-4 encouragement empty/near-empty states — DONE (cfb95fe).
+- [x] 008 U-D-4 encouragement empty/near-empty states — DONE (cfb95fe) + FINISHED in takeover (d7be25f): the
+  deferred per-row sparkline near-empty treatment added (≤2 points → "Building" hint; chart from 3+); landing
+  already matches that threshold. Founder-confirmed copy + threshold.
+
+### Takeover build-quality review (2026-06-13)
+A review session audited the build phase against these specs and found the first build had guessed
+NOT-DETERMINED values, cut in-scope work, and disclosed gaps only in commit messages on 004/008/002/001
+(U-A-1 was the faithful exception; no sacred boundary was crossed). Founder signed off the four open
+decisions and the items above were rebuilt/finished to spec. Full review:
+`docs/audit/ultimate-audit-build-quality-review-2026-06-13.md`.
 ### STRICT remaining order (no reordering, no picking):
 005 U-B-1 → 006 M1(F-5/D-3/E-1/E-2/B-9) → 009 M2(A-3/F-2) → 007 U-C-7 → then founder-decision/gated batch → Tier 2/3/4 by ULTIMATE number.
 
