@@ -38,4 +38,8 @@ export const GLOSSARY = {
     "Reps in reserve — how many reps you'd have left; “stop 2 short” = leave 2 in the tank.",
   strengthLevel:
     'Where your estimated max sits against typical lifters at your bodyweight.',
+  // U-E-1 onboarding term (drafted 2026-06-13, grounded in the methods themselves;
+  // founder reviewing wording per _SPEC-006).
+  bodyFatMethod:
+    'How a body-fat % was measured: Visual (eyeballed), BIA (a bioelectrical scale or handheld), Caliper (a skinfold pinch), DEXA (a clinical scan — most accurate).',
 };

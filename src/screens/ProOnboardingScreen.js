@@ -7,6 +7,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion } from '../styles/theme';
 import { VolyumeIcon } from '../components/BrandMark';
 import SegmentedControl from '../components/SegmentedControl';
+import InfoTooltip from '../components/InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 import Dropdown from '../components/Dropdown';
 import OAuthButtons from '../components/auth/OAuthButtons';
 import EmailPasswordFields from '../components/auth/EmailPasswordFields';
@@ -1070,7 +1072,11 @@ export default function ProOnboardingScreen({ navigation }) {
               />
               {bodyFat.trim() ? (
                 <View style={{ marginTop: spacing.sm }}>
-                  <Text style={styles.fieldHint}>How was it measured?</Text>
+                  {/* U-E-1: gloss the body-fat method abbreviations (BIA/Caliper/DEXA). */}
+                  <View style={styles.measuredRow}>
+                    <Text style={styles.fieldHint}>How was it measured?</Text>
+                    <InfoTooltip text={GLOSSARY.bodyFatMethod} size={13} />
+                  </View>
                   <SegmentedControl
                     options={[
                       { label: 'Visual', value: 'visual' },
@@ -1614,6 +1620,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted, letterSpacing: 0.3, marginBottom: spacing.sm,
   },
   fieldHint: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginBottom: spacing.sm },
+  measuredRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   // Protein target collapsible (step 3). Collapsed by default, the header
   // shows the chosen tier; expanding reveals the three tiers to pick from.
   proteinHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

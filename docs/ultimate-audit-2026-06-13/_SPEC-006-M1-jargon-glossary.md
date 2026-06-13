@@ -70,7 +70,28 @@ tooltip/legend; **[A]** = no existing source → **FOUNDER TO AUTHOR/confirm** (
 - [x] **U-D-3** progress glosses (`4e351e9`): BodyMetrics 'Weight trend'→EWMA, 'Estimated daily burn'→
   adaptive-TDEE. Verified already-taught (left as-is): landing volume; Lifts relative-strength/level
   taxonomy (`LiftProgressScreen.js:172-175`); Consistency deload + training-block + ACWR tooltips.
-- [ ] **U-E-1 / U-E-2** onboarding glosses — NEXT. Exact spots found:
+- [~] **U-E-1 / U-E-2** onboarding glosses — IN PROGRESS (founder decisions 2026-06-13: reuse InfoTooltip,
+  not a new DefinedTerm; I draft new-term glosses for review; I draft Welcome copy for sign-off before merge).
+  - DONE: ProOnboarding body-fat method (Visual/BIA/Caliper/DEXA) — InfoTooltip with the drafted
+    `GLOSSARY.bodyFatMethod` gloss (grounded in the methods themselves; tweak wording on review).
+  - WORK-FROM-SOURCE DISCREPANCY (surface to founder): the audit's U-E-2 Welcome claims are partly STALE vs
+    the live code — `WelcomeScreen.js:24` PRO_BULLET already glosses the term inline ("Precision Coaching™
+    that adjusts your training and nutrition as your body responds") and **"division-specific" appears
+    nowhere on Welcome**. So U-E-2 is largely already satisfied; the only remaining item is the long
+    two-sentence bullet 4 ("After every check-in…"). Proposed trim (BRAND sign-off needed before merge):
+    "After every check-in, your coach explains what changed and why." — HELD pending sign-off.
+  - ALREADY-TAUGHT, left as-is (verified in source): ProOnboarding protein tiers each show an inline
+    description (`PROTEIN_SHORT`, ProOnboardingScreen.js:1286); experience levels show `sub` text.
+  - DESIGN QUESTION (founder): the Home meso chip (`HomeScreen.js:1180-1202`) and recovery-week banner
+    (`:1068-1096`) are WHOLE-tappable (chip → block-shape sheet; banner → CoachReview), so an inline
+    InfoTooltip would nest touchables. They already tap-through to an explanation. RECOMMEND leave as-is
+    (they have a learn-path); alternatively enhance the block-shape sheet to define deload/RIR. HELD.
+  - DRAFTED new-term glosses for review (not yet wired — no clean host found / held): division-specific
+    "The category you'd compete in (e.g. bodybuilding, classic physique, bikini); plans are tailored to
+    what it's judged on."; phase "Your current aim: lose fat (cut), gain muscle slowly (lean-gain), or
+    hold steady (maintain)."; macros "Protein, carbs and fat — the three nutrients your calories come
+    from." (Approve/edit before they're wired.)
+  - Original exact spots (for reference):
   - `WelcomeScreen.js:24` — "Precision Coaching™ that adjusts your training and nutrition as your body
     responds" ALREADY carries an inline gloss; U-E-2 satisfied here OR add a tooltip with
     `GLOSSARY.precisionCoaching`. Decide minimal-touch (likely leave + optionally tooltip).
