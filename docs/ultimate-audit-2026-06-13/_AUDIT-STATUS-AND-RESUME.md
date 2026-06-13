@@ -14,14 +14,14 @@ do not guess. Use Opus 4.8 agents for parallel research and for a review pass af
 build loop itself stays one-item-at-a-time and gated.
 
 ## IMMEDIATE NEXT ACTION
-Build **ULTIMATE-005 (U-B-1, part of M5) — progressive disclosure of the ~14-card CoachOutput** (one hero
-decision first) (`src/screens/CoachOutputScreen.js`). Read its FULL source chain first (phase5 U-B-1 + U-B-3 +
-`phase3/compare-03` + `phase3/compare-14` + `phase1/04-coaching` + the screen). HARD FOUNDER-GATES inside U-B-1:
-the hero "main move" MUST use the engine's EXISTING priority/ordering — if none exists, adding ordering is engine
-work = FOUNDER-GATE (stop + ask); the safety blocks (rapid-loss, diet-break, held decisions) must NEVER collapse.
-Build only the ungated presentation reorder; flag any gated part to the founder. Then: 005 → 006 → 009 → 007.
-DONE: 003 (U-A-1) `61b0d0c`+`86343be`; 004 (U-C-1) `bdb71f9` ("set it for me" fast nutrition target, full form
-behind "Fine-tune these numbers").
+Build **ULTIMATE-006 (M1 — jargon/newbie↔athlete translation layer)** next, then **009 (M2 — 44px pass)**,
+then **007 (U-C-7)**, in this LOCKED order. Read each item's FULL source chain (phase5 proposal body +
+the cited compare-/phase1 files + the screen) before writing a line; edit-gate every src/ change with a
+verbatim spec quote; lint + full test per item; commit one item at a time. Ask the founder only where the
+audit marks a value NOT-DETERMINED or a SACRED boundary is touched.
+DONE (takeover, founder-signed-off): 001 U-B-6 `b7426eb`+test `8bae26e`; 002 U-F-1 `b7ca91a`+`4b758e6`;
+003 U-A-1 `61b0d0c`+`86343be`; 004 U-C-1 rebuilt `9f596d4`; 008 U-D-4 `cfb95fe`+`d7be25f`;
+005 U-B-1 §2 engine `de6c97b` + §3-§6 screen `501fb45` (founder approved the `primary` field + DietBreak-as-safety).
 
 ## ENVIRONMENT / MODEL (verified facts)
 - Fable 5 is GLOBALLY DISABLED (US gov export-control directive; source: anthropic.com/news/fable-mythos-access).

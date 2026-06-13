@@ -1,10 +1,10 @@
 # SPEC — ULTIMATE-005 / M5 (U-B-1 + U-B-3): progressive disclosure of CoachOutput
 
-Status: **AWAITING FOUNDER SIGN-OFF** (touches the deterministic coaching engine = SACRED).
+Status: **SIGNED OFF + BUILT** (2026-06-13). Founder approved §2 (the engine `primary` derived field) and
+the §3 DietBreakCard-as-safety resolution. Built: §2 `de6c97b` (engine), §3-§6 `501fb45` (screen).
 Decisions already taken: 005 approach = **A (engine exposes priority)**; U-B-3 voice = **A (keep engine
 coachResponse, drop local headline)** (founder, 2026-06-13).
 Source of truth: `ultimate-audit-04-proposals-with-blueprints.md` §U-B-1/§U-B-3; `phase1/04-coaching.md`.
-Nothing here is built until this spec is signed off.
 
 ---
 
@@ -102,6 +102,6 @@ lint + full suite → commit. Edit-gated, citing §U-B-1/§U-B-3 + this spec.
 
 ---
 ## SIGN-OFF CHECKLIST (founder)
-- [ ] §2 engine `primary` derived-field change approved (deterministic, additive, mirrors existing whyKeys).
-- [ ] §3 DietBreakCard treated as safety (renders once; never in the collapsible) — confirmed.
-- [ ] Proceed to build §3-§6 after §2 sign-off.
+- [x] §2 engine `primary` derived-field change approved (deterministic, additive, mirrors existing whyKeys). — APPROVED 2026-06-13, built `de6c97b`.
+- [x] §3 DietBreakCard treated as safety (renders once; never in the collapsible) — confirmed 2026-06-13.
+- [x] Proceed to build §3-§6 after §2 sign-off. — built `501fb45`.

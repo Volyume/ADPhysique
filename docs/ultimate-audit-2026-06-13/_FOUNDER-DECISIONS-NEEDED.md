@@ -91,7 +91,10 @@ Answer inline; I'll record your verdicts here.
   from already-saved stats and otherwise redirected to the full form, dropping the blueprint's "asks only the
   minimum the engine needs" core. Now collects the four required inputs (sex/age/height/weight) inline,
   prefilled when present; activity/protein/body-fat keep their defaults behind "Fine-tune these numbers".
-- [ ] 005 U-B-1 progressive coach output · 006 M1 jargon layer · 009 M2 44px pass · 007 U-C-7 — NEXT (each larger; edit-gated + spec-cited + lint/test per item). NB 005/U-B-1 has FOUNDER-GATES (engine priority for the hero card; safety blocks never collapse).
+- [x] 005 U-B-1 progressive coach output — DONE (takeover, founder-signed-off): §2 engine `primary` derived
+  field `de6c97b` (additive/deterministic, safety never a hero); §3-§6 screen hero/secondary/safety zoning
+  `501fb45` (CollapsibleSection extracted + shared; buildHeadline duplicate dropped; ≥44px targets).
+- [ ] 006 M1 jargon layer · 009 M2 44px pass · 007 U-C-7 — NEXT (each larger; edit-gated + spec-cited + lint/test per item).
 - [x] 008 U-D-4 encouragement empty/near-empty states — DONE (cfb95fe) + FINISHED in takeover (d7be25f): the
   deferred per-row sparkline near-empty treatment added (≤2 points → "Building" hint; chart from 3+); landing
   already matches that threshold. Founder-confirmed copy + threshold.
