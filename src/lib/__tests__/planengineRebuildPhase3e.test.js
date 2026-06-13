@@ -15,8 +15,6 @@
  * Measured on the library path (the live app path), which carries the
  * secondaryMuscles the model reads.
  */
-import fs from 'fs';
-import path from 'path';
 import { DIVISIONS, genLib, gen, weeklySets } from './planengineBench';
 
 function summary(plan) { return plan.weeklyVolumeSummary || {}; }
@@ -112,65 +110,4 @@ describe('Phase 3e: synergist trim keeps EFFECTIVE volume adequate', () => {
     const wp = summary(genLib('classic_physique', { days: 5, extra: { phase: 'weak_point', weakPoints: ['Biceps'] } }));
     expect(wp.biceps.plannedSets).toBeGreaterThan(base.biceps.plannedSets);
   });
-});
-
-test('write phase 3e results doc', () => {
-  const out = [];
-  out.push('Status: COMPLETE | Timestamp: 2026-06-01 | Phase 3e: indirect volume modelling');
-  out.push('');
-  out.push('# planEngine rebuild, phase 3e results: indirect (fractional) volume');
-  out.push('');
-  out.push('A synergist on a compound lift earns half a working set (RP convention).');
-  out.push('The engine reports this as weeklyVolumeSummary.indirectSets, additive to the');
-  out.push('existing plannedSets (direct) count, which is left exactly as it was. The live');
-  out.push('app path carries the secondaryMuscles the model reads (DB secondary_muscles');
-  out.push('column); the hand-written internal POOL carries none, so the POOL path reports');
-  out.push('0 indirect (the field is still present).');
-  out.push('');
-  out.push('## Direct + indirect sets per muscle (4-day, library path)');
-  out.push('');
-  out.push('| Division | muscle: direct (+indirect) |');
-  out.push('|---|---|');
-  for (const [goal, label] of DIVISIONS) {
-    const s = summary(genLib(goal, { days: 4 }));
-    const cells = Object.entries(s)
-      .map(([m, v]) => `${m} ${v.plannedSets}${v.indirectSets ? ' (+' + v.indirectSets + ')' : ''}`)
-      .join(', ');
-    out.push(`| ${label} | ${cells} |`);
-  }
-  out.push('');
-  out.push('## What the numbers show');
-  out.push('');
-  out.push('- Pulling programs feed biceps large indirect volume (MP biceps gets several');
-  out.push('  fractional sets from rows and pulldowns), so heavy direct biceps work is');
-  out.push('  rarely needed on top.');
-  out.push('- Pressing programs feed triceps large indirect volume.');
-  out.push('- Bikini, after the phase 3 delt rule removed pressing, leaves the shoulders');
-  out.push('  with almost no indirect coverage. That is exactly why Bikini trains delts');
-  out.push('  directly with lateral raises. This is the spec "side delts in pressing');
-  out.push('  programs" coverage signal, seen from the no-pressing side.');
-  out.push('');
-  out.push('## Synergist trim (target subtraction) DONE');
-  out.push('');
-  out.push('A synergist with heavy indirect coverage has its DIRECT target trimmed by a');
-  out.push('credit proportional to its driver compound (biceps from back at 0.4, triceps');
-  out.push('from chest at 0.5), floored at MEV + 2. Effective volume (direct + indirect),');
-  out.push('the correct adequacy measure, stays at or above MEV for every arm-judged');
-  out.push('division and day count. Example: Classic biceps target 12 trims to 10, and');
-  out.push('with the delivered-vs-target fix it delivers ~10, plus ~8 indirect.');
-  out.push('');
-  out.push('This was only safe AFTER the delivered-vs-target gap fix: before it, a trimmed');
-  out.push('target cratered DELIVERED volume (a discretisation cliff dropped a 5-set');
-  out.push('session from 2 exercises to 1). Arms are not judged in Bikini or Wellness, so');
-  out.push('their below-MEV arm volume is correct and is not asserted.');
-  out.push('');
-  out.push('## Not done in 3e');
-  out.push('');
-  out.push('- A hard coverage flag forcing isolation when indirect is near zero: largely');
-  out.push('  redundant with the matrix (every division already gets direct side delts),');
-  out.push('  low value, deferred.');
-  out.push('');
-  const dest = path.join(process.cwd(), 'docs/audit/volyume-planengine-rebuild-2026-06-01/planengine-rebuild-05-phase3e-indirect-volume.md');
-  fs.writeFileSync(dest, out.join('\n'), 'utf8');
-  expect(fs.existsSync(dest)).toBe(true);
 });
