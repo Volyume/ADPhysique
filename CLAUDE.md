@@ -3,12 +3,6 @@
 This is a live production app on Google Play. Real users are paying.
 Every change you make affects them. Work accordingly.
 
-> **ACTIVE WORK (2026-06-12):** the deep-audit build is mid-flight on branch
-> `claude/main-branch-content-update-dcqicf`. A resuming session reads
-> `docs/deep-audit-2026-06-12/_BUILD-STATUS-AND-RESUME.md` first for the live
-> done/next list, then keeps grinding the NEXT list in order per the BUILD
-> OPERATING MODEL below.
-
 ---
 
 ## SACRED RULES — THESE ARE ABSOLUTE
