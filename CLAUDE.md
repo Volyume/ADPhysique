@@ -80,6 +80,18 @@ have no place in it (founder rule 2026-06-13, after a session that built
 hours of code off summaries and labels instead of the actual specs, then
 hid it).
 
+Handovers must point to the SOURCE FILES, never to summaries. Any handover,
+resume marker, build-status note, or session summary you write MUST name the
+exact audit/research/spec files to work from (full path) AND the specific
+sections/finding IDs within them, the precise current position in the work,
+and every decision taken so far with its rationale. A summary or "next-steps"
+list is NOT a handover and must never be the thing worked from: the next
+session is to be sent to the actual documents and read them. This is because
+Claude Code is lazy and will otherwise just skim the summary and make the
+rest up — which is exactly what happened. Do not assume the resuming session
+will find the right files; point to them explicitly, by path and section
+(founder rule 2026-06-13).
+
 If you notice unrelated bugs or dead code: mention it, do not fix it.
 If something feels irreversible: stop and ask first.
 
