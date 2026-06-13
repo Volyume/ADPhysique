@@ -19,12 +19,12 @@
 // re-reviewed against weeklyCoach.js / nutritionEngine.js.
 
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, spacing } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { track } from '../lib/engineTelemetry';
+import CollapsibleSection from '../components/CollapsibleSection';
 
 // The always-open opener.
 const INTRO =
@@ -98,25 +98,6 @@ const SECTIONS = [
   },
 ];
 
-function CollapsibleSection({ title, body, open, onToggle }) {
-  return (
-    <View style={styles.section}>
-      <TouchableOpacity
-        style={styles.sectionHeader}
-        onPress={onToggle}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityState={{ expanded: open }}
-        accessibilityLabel={title}
-      >
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSecondary} />
-      </TouchableOpacity>
-      {open ? <Text style={styles.sectionBody}>{body}</Text> : null}
-    </View>
-  );
-}
-
 export default function MethodologyScreen({ route }) {
   // First collapsible section starts open so the page never reads as a wall of
   // closed rows; the rest are tap-to-open. Set is keyed by section key.
@@ -160,17 +141,6 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxxl },
   intro: { fontSize: fontSize.md, color: colors.textPrimary, lineHeight: 24, marginBottom: spacing.sm },
-  section: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sectionTitle: { ...type.bodyStrong, color: colors.textPrimary, flex: 1, paddingRight: spacing.md },
-  sectionBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 22, marginTop: spacing.md },
   credentialNote: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
