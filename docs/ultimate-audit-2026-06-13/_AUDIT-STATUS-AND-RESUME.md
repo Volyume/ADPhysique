@@ -14,14 +14,20 @@ do not guess. Use Opus 4.8 agents for parallel research and for a review pass af
 build loop itself stays one-item-at-a-time and gated.
 
 ## IMMEDIATE NEXT ACTION
-Build **ULTIMATE-006 (M1 — jargon/newbie↔athlete translation layer)** next, then **009 (M2 — 44px pass)**,
-then **007 (U-C-7)**, in this LOCKED order. Read each item's FULL source chain (phase5 proposal body +
-the cited compare-/phase1 files + the screen) before writing a line; edit-gate every src/ change with a
-verbatim spec quote; lint + full test per item; commit one item at a time. Ask the founder only where the
-audit marks a value NOT-DETERMINED or a SACRED boundary is touched.
+Build **ULTIMATE-009 (M2 — 44px touch-target pass, U-A-3 + U-F-2)** next, then **007 (U-C-7 — food search)**,
+in this LOCKED order. Read each item's FULL source chain (phase5 proposal body + the cited compare-/phase1
+files + the screen) before writing a line; edit-gate every src/ change with a verbatim spec quote; lint +
+full test per item; commit one item at a time. Ask the founder only where the audit marks a value
+NOT-DETERMINED or a SACRED boundary is touched. (Note: the InfoTooltip 44px fix was folded into 006 by
+founder decision, so it is already done within M2's scope.)
 DONE (takeover, founder-signed-off): 001 U-B-6 `b7426eb`+test `8bae26e`; 002 U-F-1 `b7ca91a`+`4b758e6`;
 003 U-A-1 `61b0d0c`+`86343be`; 004 U-C-1 rebuilt `9f596d4`; 008 U-D-4 `cfb95fe`+`d7be25f`;
 005 U-B-1 §2 engine `de6c97b` + §3-§6 screen `501fb45` (founder approved the `primary` field + DietBreak-as-safety).
+006 M1 DONE (this session): part1 foundation+U-F-5 `b272f38`; part2 U-D-3 `4e351e9`; part3 U-E-1 body-fat `8665795`;
+part4 literal U-F-5/U-D-3/U-E-1/U-E-2 `ec7f37b`; part5 U-B-9 opt-in science layer `89d300a`. Specs:
+`_SPEC-006-M1-jargon-glossary.md` + `_SPEC-006b-U-B-9-locked-path.md`. **OPEN REVIEW:** U-B-9 (`89d300a`) is a
+LOCKED coaching-voice change (`coachRegister.js` applyScienceLayer) committed BRANCH-ONLY — founder reviews
+before any merge to main; only "lighter week (deload)" fires today (MEV/MRV/RIR pairs inert, phrases absent).
 
 ## ENVIRONMENT / MODEL (verified facts)
 - Fable 5 is GLOBALLY DISABLED (US gov export-control directive; source: anthropic.com/news/fable-mythos-access).
