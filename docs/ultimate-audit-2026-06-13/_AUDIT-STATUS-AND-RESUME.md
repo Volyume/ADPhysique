@@ -6,11 +6,20 @@ summary (founder rule 2026-06-13). Build is READ-the-source → edit-gate → im
 lint + full test → commit → close gate, ONE item at a time, in the LOCKED ORDER below.
 No reordering, no picking and choosing (founder, 2026-06-13).
 
+## PRINCIPLE (founder, 2026-06-13) — non-negotiable
+HIGH QUALITY + FIDELITY over speed, ALWAYS. Follow the audit EXACTLY and build every item in
+full — no skipping, no deferring as a "future refinement", no substituting your own judgement to
+cut scope or pick an inferior alternative. If the audit is genuinely ambiguous, ASK the founder;
+do not guess. Use Opus 4.8 agents for parallel research and for a review pass after each item; the
+build loop itself stays one-item-at-a-time and gated.
+
 ## IMMEDIATE NEXT ACTION
-Build **ULTIMATE-003 (U-A-1) — workout banner-fold** (spec fully locked, see §BUILD).
-It is a ~170-line layout refactor of `src/screens/ActiveWorkoutScreen.js` (2,625 lines,
-the highest-frequency screen) — do it with care, gate on lint + full suite, commit only
-if green. Then continue: 003 → 004 → 005 → 006 → 009 → 007 → founder/gated batch → Tier 2/3/4.
+Build **ULTIMATE-004 (U-C-1) — "set it for me" fast nutrition target** (`src/screens/NutritionTargetsScreen.js`).
+Read its FULL source chain first (phase5 U-C-1 + `phase3/compare-04` + `phase1/07-nutrition-targets` + the
+screen), confirm every NOT-DETERMINED fact in code, edit-gate + lint + full suite, commit only if green.
+Then continue: 004 → 005 → 006 → 009 → 007 → founder/gated batch → Tier 2/3/4.
+003 (U-A-1) is DONE (`61b0d0c` + `86343be`): banner stack folded into one "N notes" chip; target line
+moved into the set-entry card header; RestTimer compact recomputes on layout change; invariant test added.
 
 ## ENVIRONMENT / MODEL (verified facts)
 - Fable 5 is GLOBALLY DISABLED (US gov export-control directive; source: anthropic.com/news/fable-mythos-access).
@@ -25,6 +34,11 @@ if green. Then continue: 003 → 004 → 005 → 006 → 009 → 007 → founder
   a verbatim quote that grep-verifies against it. Open it with the proposal-blueprint path + a quote,
   edit, then `rm .claude/edit-gate` to re-close. (Local to this container; gitignored.)
 - CLAUDE.md founder rules (2026-06-13): work from source not interpretation; handovers point to source files.
+- FRESH-CONTAINER SETUP (local-only state — re-establish at session start): `git config core.hooksPath .githooks`
+  (commit-gate) AND `npm ci --legacy-peer-deps --ignore-scripts` (deps for lint+test). NOTE (verified 2026-06-13):
+  the edit-gate PreToolUse hook only loads at SESSION START — if `.claude/settings.json` arrives mid-session it
+  will NOT enforce that session; the commit-gate is then the binding guardrail, so keep `.claude/edit-gate` valid
+  for every src/ edit regardless.
 
 ## AUDIT — COMPLETE (all in docs/ultimate-audit-2026-06-13/, committed + pushed)
 - Phase 1: `ultimate-audit-00-volyume-complete-inventory.md` (78 screens + 68 components, file:line) +
@@ -48,8 +62,9 @@ D20 build Tier-1 ungated quick wins now.
 
 ## BUILD PHASE — in progress
 DONE (committed): 002 U-F-1 Button onPrimary contrast (`b7ca91a`) · 001 U-B-6 CoachReview error-vs-empty
-(`b7426eb`) · 008 U-D-4 encouragement empty/near-empty (`cfb95fe`).
-LOCKED ORDER (next →): **003 → 004 → 005 → 006 → 009 → 007** → then the FOUNDER-DECISION/GATED batch
+(`b7426eb`) · 008 U-D-4 encouragement empty/near-empty (`cfb95fe`) · 003 U-A-1 workout banner-fold
+(`61b0d0c` + `86343be`: rail collapse, target-line-into-card, RestTimer layout-recompute, invariant test).
+LOCKED ORDER (next →): **004 → 005 → 006 → 009 → 007** → then the FOUNDER-DECISION/GATED batch
 (D4-full, D5–D9, D12, D15, U-NAV gated items, U-G-1/020 etc. — each needs its spec + safety/locked-doc
 review) → then Tier 2/3/4 by ULTIMATE number.
 

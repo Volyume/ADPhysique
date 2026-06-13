@@ -83,10 +83,11 @@ Answer inline; I'll record your verdicts here.
 ### Build-phase progress
 - [x] 002 U-F-1 Button onPrimary contrast — DONE (b7ca91a). Follow-up: destructive variant also flips dark-ink-on-dark-red in LIGHT theme; needs an "on-error" light-ink token decision (separate, not a 2-line swap).
 - [x] 001 U-B-6 CoachReview retryable error state — DONE (b7426eb). Follow-up: screen has no test harness; add an error-state regression test.
-- [ ] 003 U-A-1 workout banner-fold · 004 U-C-1 set-it-for-me · 005 U-B-1 progressive coach output · 006 M1 jargon layer · 008 U-D-4 empty states · 009 M2 44px pass — NEXT (each larger; edit-gated + spec-cited + lint/test per item).
+- [x] 003 U-A-1 workout banner-fold — DONE (61b0d0c + 86343be): banner stack → one "N notes" chip; target line moved into the set-entry card header; RestTimer compact recomputes on layout change (useWindowDimensions); banner-fold invariant test added. Founder small-phone walk still pending (manual).
+- [ ] 004 U-C-1 set-it-for-me · 005 U-B-1 progressive coach output · 006 M1 jargon layer · 009 M2 44px pass · 007 U-C-7 — NEXT (each larger; edit-gated + spec-cited + lint/test per item).
 - [x] 008 U-D-4 encouragement empty/near-empty states — DONE (cfb95fe).
 ### STRICT remaining order (no reordering, no picking):
-003 U-A-1 → 004 U-C-1 → 005 U-B-1 → 006 M1(F-5/D-3/E-1/E-2/B-9) → 009 M2(A-3/F-2) → 007 U-C-7 → then founder-decision/gated batch → Tier 2/3/4 by ULTIMATE number.
+004 U-C-1 → 005 U-B-1 → 006 M1(F-5/D-3/E-1/E-2/B-9) → 009 M2(A-3/F-2) → 007 U-C-7 → then founder-decision/gated batch → Tier 2/3/4 by ULTIMATE number.
 
 ### 003 (U-A-1) confirmed spec — ready to build
 - Above the set-entry card, render ONLY: nav strip (unchanged, :1409-1441) + rest timer when running (:1551). ALL other banners — starter (:1393-1406), superset chip (:1487-1494), next-time notes (:1498-1514), deload (:1517-1534), target-reached (:1554-1561) — collapse into ONE tappable "N notes" chip that expands on demand.
