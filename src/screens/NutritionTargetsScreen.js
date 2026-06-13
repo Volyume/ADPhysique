@@ -517,7 +517,7 @@ export default function NutritionTargetsScreen({ navigation }) {
             <View style={styles.fastCard}>
               <Text style={styles.fastTitle}>Set it for me</Text>
               <Text style={styles.fastSubtitle}>
-                Pick your goal and we'll set a starting daily target from your saved details. You can fine-tune anything afterwards.
+                Answer a few quick questions and we'll set a starting daily target. You can fine-tune anything afterwards.
               </Text>
 
               <Text style={styles.fieldLabel}>Your goal</Text>
@@ -541,6 +541,78 @@ export default function NutritionTargetsScreen({ navigation }) {
                     </TouchableOpacity>
                   );
                 })}
+              </View>
+
+              {/* U-C-1: the minimum inputs the engine needs (sex, age, height,
+                  weight — see formComplete) collected inline so the fast path
+                  produces a real target instead of redirecting to the full form.
+                  Prefilled from the saved body profile when available; activity,
+                  protein approach and body fat % keep their defaults behind
+                  "Fine-tune these numbers". */}
+              <View style={styles.formGroup}>
+                <Text style={styles.fieldLabel}>Biological sex</Text>
+                <PillGroup
+                  options={[{ key: 'male', label: 'Male' }, { key: 'female', label: 'Female' }]}
+                  selected={sex}
+                  onSelect={setSex}
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.fieldLabel}>Age</Text>
+                <TextInput
+                  style={styles.numInput}
+                  value={age}
+                  onChangeText={setAge}
+                  placeholder="e.g. 28"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="number-pad"
+                  maxLength={3}
+                  accessibilityLabel="Age"
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.fieldLabel}>Height</Text>
+                <View style={styles.heightRow}>
+                  <View style={styles.heightUnit}>
+                    <TextInput
+                      style={styles.numInput}
+                      value={heightFt}
+                      onChangeText={setHeightFt}
+                      placeholder="5"
+                      placeholderTextColor={colors.textMuted}
+                      keyboardType="number-pad"
+                      maxLength={1}
+                      accessibilityLabel="Height, feet"
+                    />
+                    <Text style={styles.unitLabel}>ft</Text>
+                  </View>
+                  <View style={styles.heightUnit}>
+                    <TextInput
+                      style={styles.numInput}
+                      value={heightIn}
+                      onChangeText={setHeightIn}
+                      placeholder="10"
+                      placeholderTextColor={colors.textMuted}
+                      keyboardType="decimal-pad"
+                      maxLength={4}
+                      accessibilityLabel="Height, inches"
+                    />
+                    <Text style={styles.unitLabel}>in</Text>
+                  </View>
+                </View>
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.fieldLabel}>Current weight (kg)</Text>
+                <TextInput
+                  style={styles.numInput}
+                  value={weight}
+                  onChangeText={setWeight}
+                  placeholder="e.g. 82"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="decimal-pad"
+                  maxLength={5}
+                  accessibilityLabel="Current weight in kilograms"
+                />
               </View>
 
               {/* The same GDPR consent the full form requires, bound to the same
@@ -568,12 +640,6 @@ export default function NutritionTargetsScreen({ navigation }) {
                   </TouchableOpacity>
                 </View>
               </View>
-
-              {!(age.trim() && heightFt.trim() && weight.trim()) && (
-                <Text style={styles.fastHint}>
-                  Add your age, height and weight to set targets instantly. Open Fine-tune these numbers below.
-                </Text>
-              )}
 
               <TouchableOpacity
                 style={[styles.calcBtn, (!formComplete || calculating) && styles.calcBtnDisabled]}
@@ -1280,7 +1346,6 @@ const styles = StyleSheet.create({
   fastCard: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, marginTop: spacing.md, gap: spacing.md },
   fastTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
   fastSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
-  fastHint: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
   fineTuneLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, minHeight: 44 },
   fineTuneText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   eduIconWrap: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
