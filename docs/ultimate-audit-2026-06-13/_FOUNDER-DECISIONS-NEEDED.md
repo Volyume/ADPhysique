@@ -87,3 +87,8 @@ Answer inline; I'll record your verdicts here.
 - [x] 008 U-D-4 encouragement empty/near-empty states — DONE (cfb95fe).
 ### STRICT remaining order (no reordering, no picking):
 003 U-A-1 → 004 U-C-1 → 005 U-B-1 → 006 M1(F-5/D-3/E-1/E-2/B-9) → 009 M2(A-3/F-2) → 007 U-C-7 → then founder-decision/gated batch → Tier 2/3/4 by ULTIMATE number.
+
+### 003 (U-A-1) confirmed spec — ready to build
+- Above the set-entry card, render ONLY: nav strip (unchanged, :1409-1441) + rest timer when running (:1551). ALL other banners — starter (:1393-1406), superset chip (:1487-1494), next-time notes (:1498-1514), deload (:1517-1534), target-reached (:1554-1561) — collapse into ONE tappable "N notes" chip that expands on demand.
+- Move the target line (:1537-1544) INTO the set-entry card header (by orientation/beat lines).
+- Goal/test: on a 5.4" device (default + larger-text 1.2×), the beat line + first input row are within the initial viewport. No engine/gating change.
