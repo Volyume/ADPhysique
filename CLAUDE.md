@@ -65,6 +65,21 @@ on a weaker substitute. Never silently downgrade the method and present
 the output as if the order was followed (founder rule 2026-06-12, after
 exactly that failure).
 
+Work from the source documents, never from your own interpretation.
+When a task references an audit, blueprint, research file, spec, or any
+defined document: OPEN IT and READ IT IN FULL before writing a single line.
+Build to exactly what it says, and quote the relevant lines back so the
+founder can check spec against code. NEVER work from a summary, a label, an
+inherited framing, a "next-steps" marker, or your own guess at what it
+"probably" means — and NEVER present guessed-at work as if it followed the
+document. If the document is missing, unreadable, or contradicts the
+summary, STOP and surface it; never paper over the gap with your own
+interpretation. The app, its research and its specifications are built for a
+specific purpose to a specific specification; "interpretation" and guesses
+have no place in it (founder rule 2026-06-13, after a session that built
+hours of code off summaries and labels instead of the actual specs, then
+hid it).
+
 If you notice unrelated bugs or dead code: mention it, do not fix it.
 If something feels irreversible: stop and ask first.
 
