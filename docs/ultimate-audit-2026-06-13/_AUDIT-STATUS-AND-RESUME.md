@@ -14,12 +14,14 @@ do not guess. Use Opus 4.8 agents for parallel research and for a review pass af
 build loop itself stays one-item-at-a-time and gated.
 
 ## IMMEDIATE NEXT ACTION
-Build **ULTIMATE-004 (U-C-1) — "set it for me" fast nutrition target** (`src/screens/NutritionTargetsScreen.js`).
-Read its FULL source chain first (phase5 U-C-1 + `phase3/compare-04` + `phase1/07-nutrition-targets` + the
-screen), confirm every NOT-DETERMINED fact in code, edit-gate + lint + full suite, commit only if green.
-Then continue: 004 → 005 → 006 → 009 → 007 → founder/gated batch → Tier 2/3/4.
-003 (U-A-1) is DONE (`61b0d0c` + `86343be`): banner stack folded into one "N notes" chip; target line
-moved into the set-entry card header; RestTimer compact recomputes on layout change; invariant test added.
+Build **ULTIMATE-005 (U-B-1, part of M5) — progressive disclosure of the ~14-card CoachOutput** (one hero
+decision first) (`src/screens/CoachOutputScreen.js`). Read its FULL source chain first (phase5 U-B-1 + U-B-3 +
+`phase3/compare-03` + `phase3/compare-14` + `phase1/04-coaching` + the screen). HARD FOUNDER-GATES inside U-B-1:
+the hero "main move" MUST use the engine's EXISTING priority/ordering — if none exists, adding ordering is engine
+work = FOUNDER-GATE (stop + ask); the safety blocks (rapid-loss, diet-break, held decisions) must NEVER collapse.
+Build only the ungated presentation reorder; flag any gated part to the founder. Then: 005 → 006 → 009 → 007.
+DONE: 003 (U-A-1) `61b0d0c`+`86343be`; 004 (U-C-1) `bdb71f9` ("set it for me" fast nutrition target, full form
+behind "Fine-tune these numbers").
 
 ## ENVIRONMENT / MODEL (verified facts)
 - Fable 5 is GLOBALLY DISABLED (US gov export-control directive; source: anthropic.com/news/fable-mythos-access).
@@ -63,8 +65,9 @@ D20 build Tier-1 ungated quick wins now.
 ## BUILD PHASE — in progress
 DONE (committed): 002 U-F-1 Button onPrimary contrast (`b7ca91a`) · 001 U-B-6 CoachReview error-vs-empty
 (`b7426eb`) · 008 U-D-4 encouragement empty/near-empty (`cfb95fe`) · 003 U-A-1 workout banner-fold
-(`61b0d0c` + `86343be`: rail collapse, target-line-into-card, RestTimer layout-recompute, invariant test).
-LOCKED ORDER (next →): **004 → 005 → 006 → 009 → 007** → then the FOUNDER-DECISION/GATED batch
+(`61b0d0c` + `86343be`: rail collapse, target-line-into-card, RestTimer layout-recompute, invariant test) ·
+004 U-C-1 "set it for me" fast nutrition target (`bdb71f9`).
+LOCKED ORDER (next →): **005 → 006 → 009 → 007** → then the FOUNDER-DECISION/GATED batch
 (D4-full, D5–D9, D12, D15, U-NAV gated items, U-G-1/020 etc. — each needs its spec + safety/locked-doc
 review) → then Tier 2/3/4 by ULTIMATE number.
 
