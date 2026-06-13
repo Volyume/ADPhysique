@@ -771,10 +771,37 @@ RULE: PPL frequencies | :1275-1279+
 CODE: 3-day `all muscles 1`; 5-day `push/pull 2` (legs continues below)
 VALUE: PPL session frequencies by days (3/5/6) | hardcoded | confirmed (5/6-day legs continue 1280→)
 
-PLANENGINE.JS STATUS: lines 1-1280 transcribed verbatim. PENDING: 1280→end (~2200 total) —
-rest of PPL frequencies, lower-focus/ppl_ab/weak-point-day splits, buildFromMatrix +
-DIVISION_MATRIX, weak-point session augmentation, day/weak-point clamps, superset planner +
-gates, strength/duration notes, structural-coverage backfill, generatePlan orchestration.
+RULE: PPL session frequencies | :1275-1283
+CODE: `effectiveDays === 3` → all muscles 1; `=== 5` → push/pull 2, legs 1; else (6-day) all 2
+VALUE: PPL freq by day count | hardcoded | confirmed
+
+RULE: buildWeakPointDay | :1319, 1328, 1339-1340
+CODE: `sessionsPerMuscle[m] = 3;`; `wpTargets[m] = Math.max(landmarks[m].MEV, landmarks[m].MRV - 2);`; `if (session.exercises[0].sets < 4) session.exercises[0] = { ...,, sets: 4 }`
+VALUE: WP day is 3rd session; target = MRV−2 (≥MEV); first exercise floored to 4 sets | hardcoded | confirmed
+
+RULE: buildUpperLowerWPWorkouts MRV clamp | :1355-1376
+CODE: total for weak muscle clamped to `divisionMRV(...)`; WP-day entries trimmed first (`cut = Math.min(ex.sets - 3, excess)`), then dropped if still over
+VALUE: UL+WP total ≤ MRV; trims WP day keeping 3-set min | hardcoded | confirmed
+
+RULE: DIVISION_MATRIX (split skeletons) | :1397-1572
+CODE: `export const DIVISION_MATRIX = { mens_physique, classic_physique, bikini, wellness, figure, womens_physique }`, each with `3/4/5/6`-day arrays of `{ name, muscles:[...] }` (24 session-skeleton cells total)
+VALUE: 6 specialised divisions × 4 day-counts → session split + per-session muscle priority ORDER (frequency = how many sessions list a muscle; session-1 first muscle = division lead). General/Bodybuilding/Women's-BB use legacy selectSplit instead. (Cell muscle-lists are structural data; indexed here, not per-cell transcribed.) | hardcoded | confirmed (6 division keys, 3/4/5/6 cells each, present)
+
+RULE: MUSCLE_PATTERN / PATTERN_ANCHORS / patternFits | :1584-1620
+CODE: `MUSCLE_PATTERN = { chest/front_delts/triceps:'push', back/rear_delts/biceps/traps:'pull', side_delts:'delts', quads/hamstrings/glutes/calves/adductors:'legs', abs:'core' }`; `PATTERN_ANCHORS = { push:['chest','front_delts'], pull:['back'], legs:['quads','hamstrings','glutes'] }`; side_delts fit any upper day; abs only onto an abs day
+VALUE: movement-pattern map + which day a muscle may be added to (augmentation safety) | hardcoded | confirmed
+
+RULE: buildFromMatrix structural coverage + weak-point augmentation | :1630-1671
+CODE: append any missing STRUCTURAL_MUSCLE to a same-pattern session (end=maintenance); weak-point `const desired = Math.min(3, sessions.length, Math.max(2, Math.ceil(wTarget / 9)));` add to same-pattern sessions, `augCount[i] >= 1` (one aug/session), `s.muscles.unshift(m)` (leads)
+VALUE: no structural muscle reads zero; weak point spread to ≤3 same-pattern sessions (~9 sets/session), 1 aug per session | hardcoded | confirmed
+
+RULE: buildVolumeSummary indirect | :1725, 1746
+CODE: `indirect[sec] = (indirect[sec] ?? 0) + ex.sets * INDIRECT_SET_FRACTION;`; `summary[key].indirectSets = Math.round(summary[key].indirectSets * 2) / 2;`
+VALUE: secondary muscle = 0.5 set/working set; indirect reported rounded to halves; side/rear/front delts → 'shoulders' bucket | hardcoded | confirmed
+
+PLANENGINE.JS STATUS: lines 1-1750 transcribed verbatim. PENDING: 1750→end (~2200 total) —
+per-head delt breakdown, superset planner + gates, strength/duration notes, day/weak-point/
+session-length clamps, and generatePlan orchestration (input clamps, pool set/restore, return).
 
 ---
 
