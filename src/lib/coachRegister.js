@@ -315,6 +315,46 @@ export function withScience(plainTerm, technicalTerm, showScience = false) {
   return `${plain} (${tech})`;
 }
 
+// ---------------------------------------------------------------------------
+// U-B-9 (M1): the opt-in science layer applied to whole rendered coaching
+// strings at the presentation layer. The engine and the locked copy builders
+// stay presentation-agnostic (they keep producing the plain term); this only
+// brackets the technical term AFTER the plain one when "Show the science" is
+// on, exactly as withScience does for a single term. Default OFF returns the
+// string byte-for-byte unchanged, so nothing moves anywhere unless opted in.
+//
+// Pairs are founder-confirmed (2026-06-13, _SPEC-006b). A pair is inert if its
+// plain phrase does not appear in the copy (e.g. MEV/MRV/RIR are blocklisted
+// and only "lighter week" currently renders in coach copy).
+export const SCIENCE_PAIRS = Object.freeze([
+  { plain: 'weekly target range', tech: 'MEV to MRV' },
+  { plain: 'lighter week', tech: 'deload' },
+  { plain: 'reps left in the tank', tech: 'RIR' },
+]);
+
+export function applyScienceLayer(text, showScience = false) {
+  const s = String(text ?? '');
+  if (!showScience || !s) return s;
+  let out = s;
+  for (const { plain, tech } of SCIENCE_PAIRS) {
+    const lower = out.toLowerCase();
+    const idx = lower.indexOf(plain.toLowerCase());
+    if (idx === -1) continue;
+    // Skip if already bracketed ("plain (").
+    if (lower.slice(idx + plain.length).trimStart().startsWith('(')) continue;
+    const actual = out.slice(idx, idx + plain.length); // preserve original case
+    out = out.slice(0, idx) + withScience(actual, tech, true) + out.slice(idx + plain.length);
+  }
+  // Dev guard: copy OUTSIDE the brackets must still pass the full blocklist.
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    const { clean: ok, violations } = checkJargonScienceOn(out);
+    if (!ok) {
+      throw new Error(`Science layer produced jargon outside brackets: "${violations.join(', ')}" in: "${out}"`);
+    }
+  }
+  return out;
+}
+
 /**
  * The parallel allowance path for science-ON copy: every character OUTSIDE
  * round brackets must still pass the full jargon blocklist (and the em/en
