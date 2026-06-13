@@ -1231,6 +1231,30 @@ export function runWeeklyCoach(inputs) {
 
   const whyThisWeek = pickWhy(whyKeys, weekSeed);
 
+  // ── PRIMARY (U-B-1 §2) ────────────────────────────────────────────────────
+  // Surface the engine's EXISTING single-winner priority (whyKeys[0], the
+  // deterministic ladder above) as a structured field so the CoachOutput hero
+  // reflects the engine's own top decision rather than a screen heuristic.
+  // Additive + deterministic: it reads the already-computed ladder and changes
+  // nothing about which adjustments fire, any threshold, or the confirm-then-
+  // apply contract. ED-safety reasons (ffm_floor_hold, rapid_loss_corrected)
+  // and the holding state map to domain:null — they are shown by the always-
+  // visible safety/lead zone and must NEVER become a collapsible/applyable hero.
+  const PRIMARY_DOMAIN_BY_WHY = {
+    deload_suggested: 'deload',
+    diet_break_suggested: 'dietBreak',
+    recovery_lagging: 'training',
+    push_volume: 'training',
+    off_target_cal_up: 'calories',
+    off_target_cal_down: 'calories',
+    steps_bump: 'steps',
+  };
+  const primaryReasonKey = whyKeys[0] ?? null;
+  const primary = {
+    domain: PRIMARY_DOMAIN_BY_WHY[primaryReasonKey] ?? null,
+    reasonKey: primaryReasonKey,
+  };
+
   // ── DIFFERENTIAL PAYWALL (Move #4) ────────────────────────────────────────
   // Pure detector. Returns { shown:false } for paid users, when the
   // adherence 2-of-3 gate fails, or when no context signal matches.
@@ -1267,6 +1291,8 @@ export function runWeeklyCoach(inputs) {
       steps: stepsAdjustment,
       cardio: cardioAdjustment,
     },
+    // U-B-1 §2: the engine's top decision, derived from whyKeys[0] above.
+    primary,
     // P3 cardio recovery caution (one line or null); D1 non-cut acknowledgement
     // (one line or null). Both plain notes, no Apply.
     cardioFlag,
@@ -1361,6 +1387,9 @@ function _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, w
       cardio: null,
     },
     whyThisWeek: pickWhy(['stabilise_sessions'], weekSeed),
+    // U-B-1 §2: this path has no applyable adjustment to hero — the lead/holding
+    // state shows instead (domain null), reasonKey mirrors whyThisWeek.
+    primary: { domain: null, reasonKey: 'stabilise_sessions' },
     deloadSuggested: false,
     deloadNote: null,
     dietBreakSuggested: false,
