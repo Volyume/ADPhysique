@@ -35,6 +35,7 @@ import {
 } from '../lib/trialActivation';
 import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
 import { buildFreeCoachLine } from '../lib/coachResponse';
+import { GLOSSARY } from '../lib/coachGlossary';
 import { localWeekStartMs } from '../lib/dayKey';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 import { generateAndSavePlan } from '../lib/planAutoGen';
@@ -1595,6 +1596,10 @@ export default function HomeScreen({ navigation }) {
               isDeload={currentMesoWeek?.isDeload}
             />
           </View>
+          {/* U-E-1/U-D-3: the chip is whole-tappable, so the plain-English
+              definitions of its terms live here, in the sheet it opens. */}
+          <Text style={styles.sheetDefn}>{GLOSSARY.deload}</Text>
+          <Text style={styles.sheetDefn}>{GLOSSARY.rir}</Text>
           <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowBlockShape(false)}>
             <Text style={styles.sheetCancelText}>Close</Text>
           </TouchableOpacity>
@@ -2192,6 +2197,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
   },
   nextBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
+  sheetDefn: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.sm },
   sheetCancel: { marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.md },
   sheetCancelText: { ...type.body, color: colors.textSecondary },
 

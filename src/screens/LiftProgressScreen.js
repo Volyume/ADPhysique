@@ -11,6 +11,7 @@ import AnimatedEntrance from '../components/AnimatedEntrance';
 import PressableCard from '../components/PressableCard';
 import PeekMenu from '../components/PeekMenu';
 import InfoTooltip from '../components/InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
 import { buildLiftProgressRows } from '../lib/liftProgress';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
@@ -277,6 +278,8 @@ export default function LiftProgressScreen({ navigation }) {
                 <View style={styles.statRow}>
                   <Text style={styles.statValue}>{item.bestE1rm}{units}</Text>
                   <Text style={styles.statLabel}>est. max</Text>
+                  {/* U-D-3: plain-English gloss for estimated 1RM on the row. */}
+                  <InfoTooltip text={GLOSSARY.estMax} size={11} />
                   {item.deltaPct != null && item.sessions > 1 && (
                     <Text style={[styles.delta, { color: trendColor(item.deltaPct) }]}>
                       {item.deltaPct > 0 ? '+' : ''}{item.deltaPct}%

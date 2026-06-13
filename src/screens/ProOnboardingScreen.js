@@ -1199,6 +1199,7 @@ export default function ProOnboardingScreen({ navigation }) {
               <Dropdown
                 label="What are you focused on right now?"
                 hint="This drives your calorie target and how your plan is built."
+                tip={GLOSSARY.phase}
                 value={trainingPhase}
                 options={TRAINING_PHASES.map(p => ({ value: p.value, label: p.label, sub: p.detail }))}
                 onChange={setTrainingPhase}
@@ -1212,6 +1213,7 @@ export default function ProOnboardingScreen({ navigation }) {
             <Dropdown
               label="Competing in a category? (optional)"
               hint="Only if you're chasing a competitive physique. It biases your plan toward the muscles that category is judged on."
+              tip={GLOSSARY.division}
               value={trainingGoal}
               options={goalOptions}
               onChange={changeGoal}
@@ -1258,7 +1260,11 @@ export default function ProOnboardingScreen({ navigation }) {
                 activeOpacity={0.8}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.fieldLabel}>Protein target</Text>
+                  <View style={styles.measuredRow}>
+                    <Text style={styles.fieldLabel}>Protein target</Text>
+                    {/* U-E-1: gloss the Standard/Optimised/Advanced protein tiers. */}
+                    <InfoTooltip text={GLOSSARY.proteinTier} size={13} />
+                  </View>
                   <Text style={styles.fieldHint}>
                     {PROTEIN_APPROACHES[proteinApproach]?.label} · {PROTEIN_APPROACHES[proteinApproach]?.range}. Set for you, tap to change.
                   </Text>

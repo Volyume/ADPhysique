@@ -93,7 +93,11 @@ export default function EngineLog({ userId }) {
             <Text style={styles.headerSub}>{repWarnings.length + adaptationHistory.length} recent coaching decisions</Text>
           </View>
         </View>
-        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
+        <View style={styles.headerRight}>
+          {/* U-F-5: define what the log is, in plain English, on the header. */}
+          <InfoTooltip text={GLOSSARY.engineLog} size={15} />
+          <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
+        </View>
       </TouchableOpacity>
 
       {open && (
@@ -161,6 +165,7 @@ const styles = StyleSheet.create({
   headerSub: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xxs },
   body: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md, gap: spacing.md },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   regTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   muscle: { fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   reason: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xxs, lineHeight: 16 },

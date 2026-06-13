@@ -5,6 +5,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import InfoTooltip from '../components/InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 import useAppStore from '../store/useAppStore';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
 import { ONBOARDING_QUIZ_FIRST } from '../lib/onboarding/quizFlow';
@@ -23,7 +25,7 @@ const PRO_BULLETS = [
   'A plan built around your schedule, goals, and experience level',
   'Precision Coaching™ that adjusts your training and nutrition as your body responds',
   'Personalised calorie and protein targets, updated as your goals change',
-  'After every check-in, your coach explains every decision. What changed, what was left alone, and why.',
+  'After every check-in, your coach explains what changed and why.',
 ];
 
 export default function WelcomeScreen({ navigation }) {
@@ -101,6 +103,10 @@ export default function WelcomeScreen({ navigation }) {
                 <View key={b} style={styles.bulletRow}>
                   <Ionicons name="checkmark-circle" size={15} color={colors.primary} />
                   <Text style={styles.bulletText}>{b}</Text>
+                  {/* U-E-1: inline gloss for the brand term on first appearance. */}
+                  {b.includes('Precision Coaching™') && (
+                    <InfoTooltip text={GLOSSARY.precisionCoaching} size={13} />
+                  )}
                 </View>
               ))}
             </View>
