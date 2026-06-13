@@ -799,9 +799,58 @@ RULE: buildVolumeSummary indirect | :1725, 1746
 CODE: `indirect[sec] = (indirect[sec] ?? 0) + ex.sets * INDIRECT_SET_FRACTION;`; `summary[key].indirectSets = Math.round(summary[key].indirectSets * 2) / 2;`
 VALUE: secondary muscle = 0.5 set/working set; indirect reported rounded to halves; side/rear/front delts → 'shoulders' bucket | hardcoded | confirmed
 
-PLANENGINE.JS STATUS: lines 1-1750 transcribed verbatim. PENDING: 1750→end (~2200 total) —
-per-head delt breakdown, superset planner + gates, strength/duration notes, day/weak-point/
-session-length clamps, and generatePlan orchestration (input clamps, pool set/restore, return).
+RULE: progression block length | :1879-1880
+CODE: `const weeks = (experience === 'advanced' || experience === 'competitive') ? 6 : 5;`
+VALUE: 6-week block (advanced/competitive) / 5-week; +~1 set/exercise/week for weeks-1, final week ~half | hardcoded | confirmed
+
+RULE: buildWarnings | :1923-1947
+CODE: `experience === 'beginner' && daysPerWeek > 4`; `recoveryRating === 'poor' && effectiveDays >= 5`; `(aggressive_cut||contest_prep) && effectiveDays >= 5`; `competitive && recoveryRating === 'poor'`; `weakPointUILabels.length === 3`
+VALUE: safety/expectation warnings at those thresholds | hardcoded | confirmed
+
+RULE: SUPERSET_COMPATIBLE / canSuperset | :1973-1997
+CODE: symmetric antagonist/non-competing muscle pairs (e.g. chest↔back, biceps↔triceps; excludes chest+triceps, back+biceps); `canSuperset` checks membership
+VALUE: which muscle pairs may superset | hardcoded | confirmed
+
+RULE: assignSupersets gates | :2009-2032
+CODE: `if (exercises.length < 4) return;` `if (experience === 'beginner') return;` `const timeConstrained = (sessionLengthMinutes ?? 60) <= 50;` `if (!goalAllows && !timeConstrained) return;`; accessory start = skip `restSec >= 150`; `const MAX_PAIRS_PER_WORKOUT = 2;`; quads/hams pair allowed once
+VALUE: supersets only: ≥4 exercises, non-beginner, allowed-goal or ≤50min session; accessories only (rest<150); ≤2 pairs | hardcoded | confirmed
+
+RULE: SUPERSET_GOAL_ALLOWLIST | :2002-2006
+CODE: general, general_hypertrophy, weak_point_spec, mens_physique, classic_physique, bodybuilding, bikini, wellness, figure, womens_physique (strength_size excluded) | hardcoded | confirmed
+
+RULE: generatePlan input clamps | :2099, 2108-2111
+CODE: `const safeWeakPointsUI = weakPoints.slice(0, 3);`; `const clampedDays = Math.min(6, Math.max(3, requestedDays));`; `const effectiveDays = (experience === 'beginner' && clampedDays > 4) ? 4 : clampedDays;`
+VALUE: weak points cap 3; days clamped 3-6; beginners capped at 4 days | hardcoded | confirmed
+
+RULE: matrix-vs-legacy split selection | :2130-2135
+CODE: `const matrixCell = DIVISION_MATRIX[goal] ? DIVISION_MATRIX[goal][effectiveDays] : null;` `splitType = matrixCell ? DIVISION_MATRIX[goal].label : selectSplit(experience, effectiveDays, internalGoal);`
+VALUE: 6 specialised divisions use DIVISION_MATRIX; others use selectSplit | hardcoded | confirmed
+
+RULE: week-1 target start (MEV) | :2142-2144
+CODE: `for (const [m, lm] of Object.entries(landmarks)) { weeklyTargets[m] = lm.MEV; }`
+VALUE: weekly targets begin at MEV (then overlay/floors/caps) | hardcoded | confirmed
+
+RULE: strength notes | :2185-2192
+CODE: `if (internalGoal === 'strength_hypertrophy')` → for ex with `restSec >= 150 && !ex.notes`, add double-progression note
+VALUE: strength-phase note on heavy lifts | hardcoded | confirmed
+
+RULE: pipeline order + durationNote | :2200-2219
+CODE: `clampDeliveredToMRV(...)` → per-workout `deduplicateExercises` → `trimToTimeBudget` → `assignSupersets` → strip internal tags → `estimateSessionMinutes`; `if (dur > sessionLengthMinutes + 15)` add durationNote
+VALUE: finalisation order; duration note when >15min over target | hardcoded | confirmed
+
+RULE: generatePlan pool set/restore | :2071-2079
+CODE: `_effectivePool = buildEffectivePool(inputs?.exerciseLibrary); try { return _generatePlanInner(inputs); } finally { _effectivePool = prevPool; _weakPointKeys = prevWeakPoints; }`
+VALUE: library pool active per-run, restored after (stateless between runs) | hardcoded | confirmed
+
+(planEngine.js 1766-1817 EXPERIENCE/EQUIPMENT/RECOVERY/NUTRITION_PHASE_LABELS + buildWhyThis/
+buildPersonalisationSummary copy = display strings, no thresholds; plan-name label maps :2255-2300.)
+
+PLANENGINE.JS COMPLETENESS: read in full (1-2315); all rule-bearing thresholds/formulas/tables
+transcribed verbatim above; no grep used to locate them. [DONE — TIER A]
+
+=== TIER A COMPLETE: algorithms.js, nutritionEngine.js, weeklyCoach.js, coachApply.js,
+edPatternDetector.js, planEngine.js all fully transcribed. Full transcription STOPS here.
+Remaining Pass 1 work proceeds in TIER B (locate-and-cite, values deferred) + Section 1 gating. ===
 
 ---
 
