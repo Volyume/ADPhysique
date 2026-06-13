@@ -62,3 +62,20 @@ Answer inline; I'll record your verdicts here.
 - D6 = YES — remove punitive diary colour framing + no pressure streaks (safety-designed).
 - D7 = YES — lenient weekly "showing up" reward (safety-designed, no loss framing).
 - D8 = BOTH NOW — re-enable opt-in per-set RPE/RIR + build the readiness signal (engine-reviewed).
+- D9 = BOTH NOW — pain/joint flag capture + deterministic plan-rotation (engine-reviewed at build).
+- D10 = YES — log-confirm guard on unconfirmed default reps.
+- D11 = YES — contest-prep selectable goal, floor-clamped.
+- D12 = Prove an in-house demo clip + price a licensed catalogue; founder picks from real options/cost.
+- D13 = CONFIRM — food logging stays boundary-safe (no AI-photo/LLM).
+- D14 = YES — nav relocations within the locked 5-tab frame.
+- D15 = RENAME for clarity — amend the locked docs (UI_FLOWS/IDENTITY/ONBOARDING); bring specific rename proposals.
+- D16 = YES — all three onboarding tweaks (quiz heading/gate, band reconcile, first-run import).
+- D17 = ACCEPT PARTIAL Reddit sourcing now; re-run only where load-bearing.
+- D18 = YES — re-audit with Fable when reinstated.
+- D19 = YES — recommended build order approved.
+- D20 = START the Tier-1 ungated quick wins now (no PR for now).
+
+## BUILD PHASE (started 2026-06-13) — Tier-1 ungated quick wins, in order, edit-gated + spec-cited + lint/test per item:
+001 U-B-6 CoachReview error-vs-empty · 002 U-F-1 Button onPrimary contrast · 003 U-A-1 workout banner-fold ·
+004 U-C-1 set-it-for-me target · 005 U-B-1 progressive coach output · 006 M1 jargon layer ·
+008 U-D-4 empty states · 009 M2 44px pass. (Gated/founder-batch items D4-full/D5-D9/D12/D15 come AFTER, with specs + safety/locked-doc review.)
