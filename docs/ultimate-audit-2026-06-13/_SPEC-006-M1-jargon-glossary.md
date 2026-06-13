@@ -62,6 +62,30 @@ tooltip/legend; **[A]** = no existing source → **FOUNDER TO AUTHOR/confirm** (
   is ABSENT under the ED/wellbeing suppression flag (U-F-5 edge case 15c:193); the glossary map has no
   empty strings.
 
+## BUILD PROGRESS (takeover, 2026-06-13)
+- [x] Foundation — `src/lib/coachGlossary.js` (the signed-off static map) + InfoTooltip ≥44px (`b272f38`).
+- [x] **U-F-5** deep-data legends/tooltips (`b272f38`): BodyDiagramHeatmap bands (i); EngineLog 'rep
+  regression' (i); StreakWeeksSection on-screen key (suppression-safe); SetEntry 'Est. max' (i);
+  BlockProgressCard 'Effort N/5'.
+- [x] **U-D-3** progress glosses (`4e351e9`): BodyMetrics 'Weight trend'→EWMA, 'Estimated daily burn'→
+  adaptive-TDEE. Verified already-taught (left as-is): landing volume; Lifts relative-strength/level
+  taxonomy (`LiftProgressScreen.js:172-175`); Consistency deload + training-block + ACWR tooltips.
+- [ ] **U-E-1 / U-E-2** onboarding glosses — NEXT. Exact spots found:
+  - `WelcomeScreen.js:24` — "Precision Coaching™ that adjusts your training and nutrition as your body
+    responds" ALREADY carries an inline gloss; U-E-2 satisfied here OR add a tooltip with
+    `GLOSSARY.precisionCoaching`. Decide minimal-touch (likely leave + optionally tooltip).
+  - Home meso chip (COMP-010, `HomeScreen.js` `showBlockShape` ~:156; the chip renders deload/effort —
+    locate the exact chip text) — gloss 'Deload week' (`GLOSSARY.deload`) and RIR / "stop N short of
+    failure" (`GLOSSARY.rir`).
+  - `ProOnboardingScreen.js` step "division-specific"/division labels (~:452-459, :1215) — gloss
+    'division-specific' once on first appearance (FOUNDER copy: a one-line plain gloss; `GLOSSARY` has
+    no division entry yet — add one or reuse existing onboarding copy).
+- [ ] **U-B-9** tone-keyed copy swap — NEXT. Read the EXISTING tone field
+  (`SettingsCoachingScreen.js:183-213`) on `CoachOutputScreen`, `CoachReviewScreen`, `WeeklyCheckInScreen`;
+  on "Supportive"/free show the `GLOSSARY` gloss on a term's first appearance, on "Precise" show native
+  numbers. Static map only (no LLM). Free CoachReview defaults to Supportive glosses (tone lever is Pro).
+  Tests: gloss shows under Supportive, hidden under Precise; free screen shows glosses.
+
 ## SIGN-OFF CHECKLIST (founder)
 - [ ] Approve the **[A]** glosses (or give wording) — Maintenance, Refeed, Macro cycle, Est. max, Effort
   direction, Over-limit, Rep regression, EWMA, RIR, Level taxonomy. I will not ship invented definitions.
