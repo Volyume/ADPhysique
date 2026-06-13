@@ -558,21 +558,69 @@ RULE: cardio trigger | :913-914
 CODE: `const stepsAtUpperBand = !stepsEnabled || currentStepsTarget >= band.upper;` `const cardioConditionsMet = phase.isCut && !onTarget && offTargetDirection > 0 && stepsAtUpperBand;`
 VALUE: cardio fires on cut + losing-too-slow + steps maxed/disabled; paused under poor recovery (:916) | hardcoded | confirmed
 
-WEEKLYCOACH.JS STATUS: lines 1-940 transcribed verbatim. PENDING: 940→end — deload-trigger
-assembly, diet-break, refeed cadence, macro-cycle, ED-pattern detector wiring, differential
-paywall trigger, and the final output assembly/return.
+RULE: rapidWeightLossFlag (safety flag) | :962-967
+CODE: `actualRatePct < -1.5 && energyScore <= 2 && !cycleOverride`
+VALUE: rapid-loss alert flag (note: strict `< -1.5`, vs rapidLossOverride's `<= -1.5` at :680) | hardcoded | confirmed
+
+RULE: deload trigger assembly | :974-979
+CODE: `if (consecutivePoorRecoveryWeeks >= 2) deloadTriggers++;` `if (matrixDeload) deloadTriggers++;` `if (weeksInPhase >= 6 && phase.isCut) deloadTriggers++;` `if (sleepHours != null && sleepHours < 6 && poorEnergy) deloadTriggers++;` `if (deloadTriggers >= 2)` → suggested
+VALUE: 4 triggers; deload suggested at ≥2 | hardcoded | confirmed
+
+RULE: diet-break trigger | :992-1010
+CODE: cut + `shouldSuggestDietBreak(goalStartDate)` (≥8 wks, nutritionEngine) or fallback `else if (weeksInPhase >= 8)`; copy variant at `>= 12` weeks
+VALUE: diet break on ≥8 weeks deficit (≥12 → stronger copy) | hardcoded | confirmed
+
+RULE: macro-cycle eligibility | :1020-1021
+CODE: `if (phase.isCut && (goalLockAdvanced || isCompetitionGoal(trainingGoal)))`; `const trainingDays = Math.max(1, Math.min(6, Math.round(sessionsPlanned)));`
+VALUE: carb cycle only for advanced/competition cutters; training days clamped 1-6 | hardcoded | confirmed
+
+RULE: refeed cadence | :1044-1050
+CODE: `const refeedEligible = phase.isCut && (goalPhase === 'agg_cut' || isCompetitionGoal(trainingGoal));`; `const frequencyWeeks = isCompetitionGoal(trainingGoal) ? 1 : 2;`; `const due = weeksSinceRefeed === null || weeksSinceRefeed >= frequencyWeeks;`
+VALUE: refeed for aggressive-cut/competition; weekly (competition) / 2-weekly (agg cut) | hardcoded | confirmed
+
+RULE: ED-pattern wiring | :1078-1095
+CODE: `if (edPatternOpen)` → `hasEdPatternCleared(...)`; else `detectEdPatternFlag({ weightTrendPctPerWeek }, recentWeeklyHistory, goalLockAdvanced)` (thresholds live in edPatternDetector.js, already transcribed)
+VALUE: raises/clears ED flag; uses plain weekly trend % | wired to edPatternDetector | confirmed
+
+RULE: held-decision precedence + cut-wipes | :1105-1163
+CODE: ed_pattern_lockout (`if (calorieAdjustment && calorieAdjustment.change < 0) calorieAdjustment = null;`) → ffm_floor → rapid_loss_corrected → calories holds (scoffPositive / cycleOverride / onTarget / lastCalAdjustmentWeeksAgo<2 / consecutiveOffTargetWeeks<required / untracked)
+VALUE: ED lockout & FFM floor both null a pending calorie cut; ordered hold reasons | hardcoded | confirmed
+
+RULE: WHY-key precedence ladder | :1219-1230
+CODE: `ffm_floor_hold` > `rapid_loss_corrected` > `deload_suggested` > `diet_break_suggested` > `recovery_lagging` > `push_volume` (`volumeSignal >= 1 && excellentRec`) > `off_target_cal_up` (change>0) > `off_target_cal_down` (change<0) > `steps_bump` > `on_target_holding`; `low_data_weight` appended if `!enoughWeightData`
+VALUE: single-winner reason ladder (drives whyThisWeek + primary) | hardcoded | confirmed
+
+RULE: PRIMARY_DOMAIN_BY_WHY (U-B-1 §2) | :1243-1254
+CODE: `deload_suggested:'deload', diet_break_suggested:'dietBreak', recovery_lagging:'training', push_volume:'training', off_target_cal_up:'calories', off_target_cal_down:'calories', steps_bump:'steps'`; `domain: PRIMARY_DOMAIN_BY_WHY[primaryReasonKey] ?? null`
+VALUE: maps top why-key to hero domain; ED-safety/holding → null (never an applyable hero) | hardcoded | confirmed
+
+(weeklyCoach.js 1340→end: `_buildBaselineOutput`/`_buildAdherenceOutput` helper return shapes — output assembly only, no numeric thresholds. cardioAcknowledgement :950 and differential paywall :1261 delegate to cardioEngine/differentialPaywall, transcribed under those files.)
+
+WEEKLYCOACH.JS COMPLETENESS: read in full (1-~1380); all rule-bearing thresholds/formulas
+transcribed verbatim above; no grep used to locate them. [DONE — TIER A]
 
 ---
 
-## TRANSCRIPTION PROGRESS (full Pass 1, by hand, no agents)
-- [DONE] algorithms.js — read in full (1-1548), all rules transcribed verbatim above.
-- [DONE] nutritionEngine.js SAFETY constants (loss-rate gates, FFM floor, kcal floors, protein caps,
-  EWMA alpha) — remaining nutritionEngine rules (BMR, surplus/gain tables, fat targets, sex floors,
-  step constants, recovery modifiers, deload frequency) still to do via full read.
-- [DONE] coachApply.js floors; edPatternDetector.js thresholds.
+## PROGRESS POINTER (re-paced 2026-06-13 — two tiers, supersedes full-transcription-of-everything)
 
-## NOT YET TRANSCRIBED (to be completed, verbatim, full-read method — none dropped)
-- nutritionEngine.js: the non-safety rules listed above (full read pending).
+TIER A — FULL TRANSCRIPTION (safety + core spine):
+- [DONE] algorithms.js — read in full (1-1548), all rules verbatim above.
+- [DONE] nutritionEngine.js — read in full (1-1103), all rules verbatim above.
+- [DONE] weeklyCoach.js — read in full (1-~1380), all rules verbatim above.
+- [DONE] coachApply.js floors; edPatternDetector.js thresholds.
+- [NEXT — TIER A] planEngine.js — full rigour despite length (~2200 lines); core engine, max downstream risk.
+- After planEngine.js: STOP full transcription. Switch to Tier B.
+
+TIER B — LOCATE-AND-CITE (everything else; exact file:line, VALUE DEFERRED, completeness counts intact):
+- All remaining engine files (mesocycle, blockAdvisor, swapEngine, cardioEngine, insightsEngine,
+  robustTrend, weightTrend, recoveryEMA, stepsSummary, milestones, strengthStandards, poolGenerator,
+  coachingGoals, coachRegister, coachResponse, sessionAdjustments, planAutoGen, planSwitch, clusterSet,
+  liftProgress, restTimerMath, unilateral, wellbeing, coachOutputZones, differentialPaywall, dayKey).
+- Pass 1 Sections 3,4,5,6,7,8 (data model, features, integration, settings, nav, design) — index only.
+- Section 1 (entitlement gating): EXCEPTION — locate-and-cite carefully NOW (exact lines, confirm what
+  each gate checks + spot-verify logic), high downstream consumption.
+
+## (legacy not-yet list — superseded by the two tiers above; retained for the planEngine detail)
 - planEngine.js: EXP/REC/NUT/AGE multipliers, MAV/MRV derivation guards, weak-point bonus, systemic
   factors, generator landmark overrides, rep-range/rest/RIR tables, superset gates, split frequencies.
 - mesocycle.js: standard/advanced week factors, autoregulation rules, block-status.
