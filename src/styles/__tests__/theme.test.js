@@ -226,6 +226,15 @@ describe('COMP-029 light theme', () => {
     expect(ratio(colors.onPrimary, colors.primaryFill)).toBeGreaterThanOrEqual(4.5);
   });
 
+  test('onError ink clears the error FILL in both themes (U-F-1 destructive)', () => {
+    // Destructive button labels are large/bold text → WCAG 3:1 bar. White ink on
+    // the dark-red light-theme fill is the fix; dark stays white (zero-diff).
+    applyAccessibility({ theme: 'light' });
+    expect(ratio(colors.onError, colors.error)).toBeGreaterThanOrEqual(3);
+    applyAccessibility({});
+    expect(ratio(colors.onError, colors.error)).toBeGreaterThanOrEqual(3);
+  });
+
   test('light borders + chart line clear the 3:1 non-text bar', () => {
     applyAccessibility({ theme: 'light' });
     expect(ratio(colors.border, colors.surface)).toBeGreaterThanOrEqual(3);

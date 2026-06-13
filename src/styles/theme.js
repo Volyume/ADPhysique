@@ -41,6 +41,14 @@ const baseColors = {
   // zero-visual-diff change.
   onPrimary: '#0D0D0D',
 
+  // Ink on the `error` FILL (the destructive button). Like onPrimary, held
+  // separate from textPrimary so the light theme keeps a light ink on the
+  // dark-red fill instead of flipping to dark ink (which fails contrast on red,
+  // audit U-F-1). White in every palette: zero-diff in dark (destructive already
+  // rendered white via textPrimary) and the fix in light. Destructive labels are
+  // large/bold text, so the applicable WCAG bar is 3:1.
+  onError: '#FFFFFF',
+
   // Semantic status. warning is Okabe-Ito yellow (#F0E442), retuned off the
   // amber axis (COMP-027): the old #FFC107 sat ~7 deg from brand amber
   // #F5A623, so a 'watch' status mark and an amber action chip weren't

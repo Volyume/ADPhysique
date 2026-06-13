@@ -27,7 +27,9 @@ const VARIANTS = {
   primary: { bg: colors.primary, fg: colors.onPrimary, border: 'transparent' },
   secondary: { bg: colors.surface2, fg: colors.textPrimary, border: colors.border },
   tertiary: { bg: 'transparent', fg: colors.primary, border: 'transparent' },
-  destructive: { bg: colors.error, fg: colors.textPrimary, border: 'transparent' },
+  // fg uses onError (always-light ink, theme.js) — NOT textPrimary, which flips
+  // dark in the light theme and fails contrast on the dark-red fill (audit U-F-1).
+  destructive: { bg: colors.error, fg: colors.onError, border: 'transparent' },
 };
 
 const SIZES = {

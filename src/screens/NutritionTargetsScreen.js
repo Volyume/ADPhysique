@@ -652,7 +652,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 <Ionicons
                   name={calculating ? 'hourglass-outline' : 'sparkles-outline'}
                   size={20}
-                  color={formComplete ? colors.background : colors.textDisabled}
+                  color={formComplete ? colors.onPrimary : colors.textDisabled}
                 />
                 <Text style={[styles.calcBtnText, !formComplete && styles.calcBtnTextDisabled]}>
                   {calculating ? 'Setting…' : 'Set my targets'}
@@ -950,7 +950,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               <Ionicons
                 name={calculating ? 'hourglass-outline' : 'calculator-outline'}
                 size={20}
-                color={formComplete ? colors.background : colors.textDisabled}
+                color={formComplete ? colors.onPrimary : colors.textDisabled}
               />
               <Text style={[styles.calcBtnText, !formComplete && styles.calcBtnTextDisabled]}>
                 {calculating ? 'Calculating…' : 'Calculate targets'}
