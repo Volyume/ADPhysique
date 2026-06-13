@@ -23,6 +23,8 @@ function safeFormatDate(value, fmt) {
 }
 import { useFocusEffect } from '@react-navigation/native';
 import VolyumeChart from '../components/VolyumeChart';
+import InfoTooltip from '../components/InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 import { useToast } from '../components/Toast';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -766,7 +768,11 @@ export default function BodyMetricsScreen() {
             <View style={styles.ewmaCard}>
               {ewmaData.length >= 7 ? (
                 <>
-                  <Text style={styles.ewmaLabel}>Weight trend</Text>
+                  <View style={styles.labelTipRow}>
+                    <Text style={styles.ewmaLabel}>Weight trend</Text>
+                    {/* U-D-3: one-tap gloss for the smoothed-weight (EWMA) concept. */}
+                    <InfoTooltip text={GLOSSARY.ewma} size={13} />
+                  </View>
                   <Text style={styles.ewmaValue}>
                     {ewmaData[ewmaData.length - 1]?.ewma?.toFixed(1)} kg
                   </Text>
@@ -798,7 +804,11 @@ export default function BodyMetricsScreen() {
 
             {ewmaData.length >= 7 ? (
               <View style={styles.burnCard}>
-                <Text style={styles.burnLabel}>Estimated daily burn</Text>
+                <View style={styles.labelTipRow}>
+                  <Text style={styles.burnLabel}>Estimated daily burn</Text>
+                  {/* U-D-3: one-tap gloss for the adaptive-TDEE concept. */}
+                  <InfoTooltip text={GLOSSARY.adaptiveTdee} size={13} />
+                </View>
                 {adaptiveBurn.confidence === 'insufficient_data' ? (
                   <Text style={styles.burnMuted}>
                     Precision Coaching works out your real daily burn from your weight trend and what you log. Keep logging your morning weight and meals for about two weeks and it appears here.
@@ -1235,6 +1245,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     borderRadius: radius.md, padding: spacing.md, gap: spacing.xs,
   },
+  labelTipRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   ewmaLabel: { ...type.caption, color: colors.textSecondary },
   ewmaValue: { ...type.num('h3'), color: colors.textPrimary },
   ewmaWeekly: { fontSize: fontSize.sm, color: colors.textSecondary },
