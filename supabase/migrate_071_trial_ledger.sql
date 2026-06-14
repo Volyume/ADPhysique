@@ -31,7 +31,16 @@
 --   bare sha256(email). Disclosed in the privacy policy (section on deletion).
 --
 -- Applied locally (dev Supabase):   NO  (pending)
--- Applied remotely (prod/closed):   NO  (pending founder apply)
+-- Applied remotely (prod/closed):   UNCONFIRMED. Header originally said
+--   "NO (pending founder apply)", but on 2026-06-10 the founder reported that
+--   delete-account + re-signup with the SAME email now lands on FREE
+--   (trial_state='cascade_expired') instead of a fresh 14-day trial. That is
+--   exactly THIS guard's behaviour, so 071 appears to be LIVE in production.
+--   Confirm in the Supabase dashboard and correct this line. To re-enable the
+--   trial for a specific email (e.g. founder test account), clear its hash:
+--     DELETE FROM private.trial_ledger
+--     WHERE email_hash = private.email_trial_hash('<email>');
+--   Run in the PRODUCTION SQL editor (the salt is per-deployment).
 -- Safe to re-run:                    YES (IF NOT EXISTS + CREATE OR REPLACE;
 --                                    the salt insert is ON CONFLICT DO NOTHING
 --                                    so the salt is generated once and kept)

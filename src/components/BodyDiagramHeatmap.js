@@ -1,6 +1,8 @@
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { G, Ellipse, Rect, Path, Line } from 'react-native-svg';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import InfoTooltip from './InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 
 // Stylised muscle map. Two figures (front + back) drawn from simple primitives.
 // Each muscle region is a tappable shape filled with the volume-status colour.
@@ -265,6 +267,8 @@ export default function BodyDiagramHeatmap({ volumeByMuscle = {}, onMuscleTap })
         <LegendSwatch color={colors.warning} label="Near limit" />
         <LegendSwatch color={colors.error} label="Over limit" />
         <LegendSwatch color={colors.surface2} label="No data" bordered />
+        {/* U-F-5: plain-English gloss for the volume bands / "Over limit" jargon. */}
+        <InfoTooltip text={GLOSSARY.volumeBands} size={14} />
       </View>
     </View>
   );

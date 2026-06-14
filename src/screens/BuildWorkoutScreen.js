@@ -617,5 +617,5 @@ const styles = StyleSheet.create({
     flex: 1, paddingVertical: spacing.md, alignItems: 'center',
     borderRadius: radius.md, backgroundColor: colors.primary,
   },
-  travelConfirmText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.background },
+  travelConfirmText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
 });

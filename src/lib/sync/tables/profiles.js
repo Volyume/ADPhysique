@@ -169,7 +169,14 @@ export async function pullProfiles(sb, { userId } = {}) {
     // means nothing in the cloud changed our state; we still
     // re-set to keep the column_updates_at map consistent (the
     // server's merged jsonb is the source of truth from now on).
+    // Spread the existing local profile FIRST so local-only fields that have
+    // no synced column (e.g. the meal-plan prefs: mealPlanExcludeFoods,
+    // mealPlanMealsPerDay, mealPlanVariety, mealPlanFatConvention,
+    // mealPlanPeriWorkout, ...) survive the pull. Rebuilding from only the
+    // mapped columns would silently wipe them on the next sync — a real
+    // data-loss bug. The synced columns then overwrite their own keys.
     const mergedProfile = {
+      ...localProfile,
       firstName:        merged.first_name ?? null,
       units:            merged.units ?? 'kg',
       trainingFocus:    merged.training_focus ?? 'bodybuilding',

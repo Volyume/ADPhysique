@@ -1,5 +1,14 @@
 # Production Roadmap — 2026-06-09
 
+> **Currency note (2026-06-10).** The "build 7" state below is the 2026-06-09
+> snapshot. Since then iOS iterated to **build 14 of 1.2.0** (build 7 was the
+> first Apple-accepted; the Apple-sign-in failures on builds ≤12 were a stale
+> EAS provisioning profile, fixed by regenerating it). Build 14 is in **Beta
+> App Review** for external TestFlight testers. Two further fixes (iOS
+> steps-across-restart, iOS Rate-link) are on branch
+> `claude/main-branch-content-update-dcqicf` and need **build 15** to ship.
+> See `docs/CURRENT_STATUS.md` (2026-06-10 entry) for the live state.
+
 Synthesis of four full-codebase research passes run on 2026-06-09 (app map,
 App Store readiness re-audit, infrastructure/ops audit, improvement
 opportunities). Every claim below was verified against source with file:line

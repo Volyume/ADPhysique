@@ -247,6 +247,58 @@ export function getSplitRationale(splitType) {
 }
 
 // ---------------------------------------------------------------------------
+// Setup-complete receipt line (COMP-013 reveal moment)
+// One short "we built this for you" line shown directly under the reveal
+// headline. For a competition division it leads with the division identity
+// and the muscle groups the engine actually prioritises (DIVISION_MATRIX /
+// applyGoalOverlay); for the general goal it echoes the days committed and any
+// weak points the engine acted on. Every claim is derivable from the same
+// inputs buildWhyThis used — nothing the plan did not act on.
+// COPY: blueprint copy, founder voice review at PR before merge to main.
+// ---------------------------------------------------------------------------
+
+const RECEIPT_DIVISION = {
+  mens_physique:       "Built for Men's Physique. Shoulders and back width lead, midsection stays tight.",
+  classic_physique:    'Built for Classic Physique. Balanced mass and proportion, waist kept tight.',
+  bodybuilding:        'Built for Bodybuilding. Full development across every muscle group.',
+  bikini:              'Built for Bikini. Glutes and hamstrings lead, upper body stays lean.',
+  wellness:            'Built for Wellness. Glutes and legs lead, upper body stays balanced.',
+  figure:              'Built for Figure. Shoulders and back width lead, athletic symmetry throughout.',
+  womens_physique:     "Built for Women's Physique. Full upper-body development with balanced legs.",
+  womens_bodybuilding: "Built for Women's Bodybuilding. Maximum development across every muscle group.",
+};
+
+function joinWithAnd(items) {
+  if (items.length === 0) return '';
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
+/**
+ * Returns the reveal receipt line, or null to fall back to the generic sub.
+ *
+ * @param {object} opts
+ * @param {string} opts.trainingGoal    - division key or 'general'
+ * @param {string[]} [opts.weakPointLabels] - muscle labels the engine prioritised
+ * @param {number} [opts.daysPerWeek]
+ * @returns {string|null}
+ */
+export function getSetupReceiptLine({ trainingGoal, weakPointLabels = [], daysPerWeek } = {}) {
+  const divisionLine = RECEIPT_DIVISION[trainingGoal];
+  if (divisionLine) return clean(divisionLine);
+
+  // General / non-division goal: lead with the commitment, echo weak points.
+  const days = Number.isFinite(daysPerWeek) ? daysPerWeek : null;
+  const base = days ? `Built around your ${days} days.` : 'Built around your plan.';
+  const labels = (weakPointLabels || []).filter(Boolean).map(l => l.toLowerCase());
+  if (labels.length) {
+    return clean(`${base} Extra work on ${joinWithAnd(labels)}, like you asked.`);
+  }
+  return clean(base);
+}
+
+// ---------------------------------------------------------------------------
 // Deload prediction message
 // ---------------------------------------------------------------------------
 
@@ -294,6 +346,24 @@ export function getTimeCrunchMessage(droppedExercises, restReductionPct, newEsti
   return clean(parts.join(' '));
 }
 
+/**
+ * COMP-013 starter-session banner. The first session is a true subset of the
+ * user's real Day 1 — same lifts and order, just the first few exercises at a
+ * couple of sets each — framed as the smart first step, never remedial. The
+ * "full session starts next time" line sets the honest expectation.
+ * COPY: blueprint copy, founder voice review at PR before merge to main.
+ *
+ * @param {string} routineName  - the real routine/day name
+ * @param {number} exerciseCount - exercises kept in the starter
+ * @param {number} [setsEach]    - sets per kept exercise (default 2)
+ * @returns {string}
+ */
+export function getStarterSessionMessage(routineName, exerciseCount, setsEach = 2) {
+  const name = routineName || 'your plan';
+  const ex = `${exerciseCount} exercise${exerciseCount === 1 ? '' : 's'}`;
+  return clean(`Short version of ${name}: ${ex}, ${setsEach} sets each. The full session starts next time.`);
+}
+
 // ---------------------------------------------------------------------------
 // Travel mode message
 // ---------------------------------------------------------------------------
@@ -335,6 +405,105 @@ export function getPosingConditioningMessage(type, minutesPerSession, weeksToCom
     `${minutesPerSession}-minute low-impact cardio added after each session. ` +
     `This keeps you active and supports body-composition goals without eating into muscle recovery.`
   );
+}
+
+// ---------------------------------------------------------------------------
+// COMP-015 — session autoregulation ("Today, adjusted for you")
+//
+// FOUNDER GATE: the user-facing strings below (the `shown` reason codes) are
+// the blueprint's §4.4 proposed copy and go to founder review before the
+// visible UI (Stage 4) ships. They are jargon-guarded by clean() like every
+// other template here. The logged-only codes carry a plain reason_text for the
+// adaptation_events record; they are never rendered to the user in v1.
+//
+// Voice: [muscle] + [plain cause with a day anchor] + [what changed today].
+// Cause first. Numerals as the hero. No jargon, British English, no em dashes.
+// ---------------------------------------------------------------------------
+
+// Closed enum of session-adjustment reason codes. Namespaced `session_*` so
+// weekly consumers (deload evaluation) never confuse them with weekly events.
+export const SESSION_REASON_CODES = {
+  DROP_RESIDUAL_SORENESS: 'session_drop_residual_soreness',
+  ADD_UNDER_STIMULUS: 'session_add_under_stimulus',
+  HOLD_JOINT: 'session_hold_joint',
+  HOLD_STALE_SORENESS: 'session_hold_stale_soreness',
+  HOLD_WEEKLY_PRECEDENCE: 'session_hold_weekly_precedence',
+  HOLD_SAFETY: 'session_hold_safety',
+  HOLD_USER_PREF: 'session_hold_user_pref',
+};
+
+// Codes whose reasonText is shown on the exercise card by default. The two
+// HOLD precedence codes are shown only after a "Sharp" pre-session answer
+// (decided in computeSessionAdjustments, not here); HOLD_JOINT is shown only
+// when the existing joint-guidance line is already up (a Stage-4 UI concern).
+// Everything else is logged-only.
+export const SESSION_SHOWN_CODES = new Set([
+  SESSION_REASON_CODES.DROP_RESIDUAL_SORENESS,
+  SESSION_REASON_CODES.ADD_UNDER_STIMULUS,
+]);
+
+// Check-in soreness chips use display names; the engine keys are lowercase.
+// Shoulders fans out to the three delt heads, Core maps to abs, the rest are
+// 1:1 lowercase. Exported and tested (one shared map, no duplicate elsewhere).
+export const CHECKIN_MUSCLE_MAP = {
+  Chest: ['chest'],
+  Back: ['back'],
+  Shoulders: ['side_delts', 'rear_delts', 'front_delts'],
+  Biceps: ['biceps'],
+  Triceps: ['triceps'],
+  Quads: ['quads'],
+  Hamstrings: ['hamstrings'],
+  Glutes: ['glutes'],
+  Calves: ['calves'],
+  Core: ['abs'],
+};
+
+/**
+ * Plain-English line for a session adjustment.
+ *
+ * @param {string} reasonCode    one of SESSION_REASON_CODES
+ * @param {object} opts
+ * @param {string} opts.muscleName  display name, e.g. "Rear delts"
+ * @param {string} [opts.dayName]   weekday anchor for residual soreness, e.g. "Friday"
+ * @param {'recent'|'checkin'} [opts.source]  drives the residual-soreness variant
+ * @returns {string}
+ */
+export function getSessionAdjustmentMessage(reasonCode, opts = {}) {
+  const { muscleName = 'This muscle', dayName, source } = opts;
+  const lower = muscleName.toLowerCase();
+  const C = SESSION_REASON_CODES;
+  let msg;
+  switch (reasonCode) {
+    case C.DROP_RESIDUAL_SORENESS:
+      msg = source === 'checkin'
+        ? `You flagged sore ${lower} at check-in. 1 set fewer on ${lower} today.`
+        : dayName
+          ? `${muscleName} is still sore from ${dayName}. 1 set fewer today.`
+          : `${muscleName} is still sore. 1 set fewer today.`;
+      break;
+    case C.ADD_UNDER_STIMULUS:
+      msg = `${muscleName} recovered fast and last session was strong. 1 set added today.`;
+      break;
+    case C.HOLD_WEEKLY_PRECEDENCE:
+      msg = `Feeling sharp, but this is a lighter week. Sets stay as planned.`;
+      break;
+    case C.HOLD_SAFETY:
+      msg = `Feeling sharp, but recovery comes first this week. Sets stay as planned.`;
+      break;
+    // Logged-only codes: plain reason_text for the adaptation_events record.
+    case C.HOLD_JOINT:
+      msg = `${muscleName}: recent joint discomfort. Sets held as planned.`;
+      break;
+    case C.HOLD_STALE_SORENESS:
+      msg = `${muscleName}: soreness looks systemic or stale. Holding sets; the weekly review owns this.`;
+      break;
+    case C.HOLD_USER_PREF:
+      msg = `${muscleName}: you have overridden recent adjustments here, so sets stay as planned.`;
+      break;
+    default:
+      msg = `${muscleName}: sets stay as planned.`;
+  }
+  return clean(msg);
 }
 
 // ---------------------------------------------------------------------------

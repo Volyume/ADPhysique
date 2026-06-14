@@ -1,4 +1,5 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,7 +14,22 @@ import InfoTooltip from '../components/InfoTooltip';
 import CardioPlanCard from '../components/CardioPlanCard';
 import useAppStore from '../store/useAppStore';
 import useProgressData from '../hooks/useProgressData';
+import useWeightTrend from '../hooks/useWeightTrend';
+import WeightTrendCard from '../components/WeightTrendCard';
+import useWeeklyStreak from '../hooks/useWeeklyStreak';
+import WeeklyStreakStrip from '../components/WeeklyStreakStrip';
+import { markMilestoneSeen } from '../lib/streakState';
+import { track } from '../lib/engineTelemetry';
 import { VOLUME_LANDMARKS } from '../lib/algorithms';
+
+// COMP-018 milestone copy (§4.6.8). Weeks of showing up against your own plan —
+// no comparison, no rank. Founder copy review at PR.
+const STREAK_MILESTONE_COPY = {
+  4: '4 weeks of showing up.',
+  12: '12 weeks of showing up. That\'s a habit.',
+  26: 'Half a year of showing up.',
+  52: 'A year of showing up. Few do that.',
+};
 
 // Severity → icon + color mapping (jargon-free UI)
 const SEVERITY_STYLE = {
@@ -22,10 +38,74 @@ const SEVERITY_STYLE = {
   2: { icon: 'warning-outline',            color: colors.error },
 };
 
-export default function AnalyticsScreen({ navigation }) {
+// COMP-005: which monthly recap the Recaps tile / ephemeral card opens. The last
+// completed calendar month when the user was training before this month began;
+// otherwise the current month-to-date (so a just-unlocked user in their first
+// month sees "June so far" rather than an empty last month). Local time, like
+// the app's week rule. Returns RecapStory route params.
+function recentMonthRecapParams(earliestWorkoutAt) {
+  const now = new Date();
+  const curMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+  const startOfTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
+  if (earliestWorkoutAt != null && earliestWorkoutAt < curMonthStart) {
+    return {
+      variant: 'month',
+      startMs: prevMonthStart,
+      endMs: curMonthStart,
+      monthLabel: format(new Date(prevMonthStart), 'MMMM'),
+    };
+  }
+  return {
+    variant: 'month',
+    startMs: curMonthStart,
+    endMs: startOfTomorrow,
+    monthLabel: `${format(new Date(curMonthStart), 'MMMM')} so far`,
+  };
+}
+
+export default function AnalyticsScreen({ navigation, route }) {
   const user = useAppStore(s => s.user);
   const userProfile = useAppStore(s => s.userProfile);
   const tier = useAppStore(s => s.tier);
+  const bodyWeightUnits = useAppStore(s => s.bodyWeightUnits);
+
+  // COMP-004 "Your trend": Pro-only weight-trend read (morning weighing is a
+  // Pro feature, so the card never appears for free users). The hook always
+  // runs (hooks are unconditional); the card self-hides until there is data.
+  const weightTrend = useWeightTrend(tier === 'pro' ? user?.id : null);
+
+  // COMP-018 "This week": training consistency is a free feature, so it runs
+  // for all tiers. Self-hides until the first session; suppressed under an
+  // open ED/wellbeing flag.
+  const weeklyStreak = useWeeklyStreak(user?.id, userProfile?.scoffScore);
+
+  // COMP-018 milestone: when the run crosses 4/12/26/52, the strip shows a
+  // one-line celebration this view, then marks it seen so it fires once (next
+  // focus reload returns null). In-app only, no push, no confetti.
+  const pendingMilestone = weeklyStreak.pendingMilestone;
+  const streakRenders = weeklyStreak.render;
+  useEffect(() => {
+    // Only consume + fire when the strip actually renders, so a milestone is
+    // never marked seen on a view the user couldn't see it on.
+    if (pendingMilestone && streakRenders && user?.id) {
+      markMilestoneSeen(user.id, pendingMilestone).catch(() => {});
+      try { track(user.id, 'streak_milestone_reached', { milestone: pendingMilestone })?.catch?.(() => {}); } catch (_) {}
+    }
+  }, [pendingMilestone, streakRenders, user?.id]);
+
+  function makeStreakCard(m) {
+    navigation.navigate('ShareCard', {
+      milestoneData: {
+        eyebrow: 'Weeks running',
+        heroValue: String(m),
+        heroUnit: m === 1 ? 'week' : 'weeks',
+        title: STREAK_MILESTONE_COPY[m] || `${m} weeks of showing up.`,
+        caption: '',
+        stats: [],
+      },
+    });
+  }
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -36,13 +116,43 @@ export default function AnalyticsScreen({ navigation }) {
     });
   }, [navigation]);
 
+  // COMP-004 door: arriving from the Home TodayStrip weight cell scrolls the
+  // "Your trend" section into view (once the card has rendered), then clears
+  // the param so a normal re-focus does not re-scroll. Programmatic navigation
+  // does not fire 'tabPress', so this never fights the scroll-to-top above.
+  const trendSectionY = useRef(0);
+  useEffect(() => {
+    if (!route?.params?.focusWeightTrend || !weightTrend.render) return undefined;
+    const t = setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: Math.max(0, trendSectionY.current - 12), animated: true });
+    }, 350);
+    navigation.setParams({ focusWeightTrend: undefined });
+    return () => clearTimeout(t);
+  }, [route?.params?.focusWeightTrend, weightTrend.render, navigation]);
+
   const {
     loading, refreshing,
     insights, weeklyVolume, prBars, prWindow,
-    recentSessions, allSets, earliestWorkoutAt,
+    recentSessions, allSets, earliestWorkoutAt, completedWorkoutCount,
     hasData, enoughForTrends,
     handleDismiss, handlePrWindowToggle, handleRefresh,
   } = useProgressData();
+
+  // COMP-005: ephemeral recap card — for the first 7 days of the month, once
+  // the user has unlocked recaps, a one-line nudge at the top of the insight
+  // stack. Dismissable; gone after first open or day 7 (per-month key).
+  const [recapCardHidden, setRecapCardHidden] = useState(true);
+  const recapMonthKey = format(new Date(), 'yyyy-MM');
+  useEffect(() => {
+    if (new Date().getDate() > 7 || completedWorkoutCount < 10) { setRecapCardHidden(true); return; }
+    AsyncStorage.getItem(`@volyume_recap_card_${recapMonthKey}`)
+      .then(v => setRecapCardHidden(v === 'dismissed'))
+      .catch(() => setRecapCardHidden(false));
+  }, [completedWorkoutCount, recapMonthKey]);
+  const dismissRecapCard = () => {
+    setRecapCardHidden(true);
+    AsyncStorage.setItem(`@volyume_recap_card_${recapMonthKey}`, 'dismissed').catch(() => {});
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -60,15 +170,74 @@ export default function AnalyticsScreen({ navigation }) {
         {/* ── Header ────────────────────────────────────────── */}
         <ScreenHeader title="Progress" />
 
-        {/* ── Empty state ───────────────────────────────────── */}
+        {/* ── This week (COMP-018): the first thing on Progress is a
+            one-glance answer to "am I on track?" — sessions this week and
+            the run state. Free for all tiers; self-hides for a brand-new
+            user and under an open wellbeing flag. ── */}
+        {weeklyStreak.render && (
+          <View style={styles.section}>
+            <WeeklyStreakStrip vm={weeklyStreak} />
+            {pendingMilestone ? (
+              <View style={styles.milestoneRow}>
+                <Ionicons name="ribbon-outline" size={16} color={colors.primary} />
+                <Text style={styles.milestoneText}>{STREAK_MILESTONE_COPY[pendingMilestone]}</Text>
+                {pendingMilestone >= 12 ? (
+                  <TouchableOpacity
+                    onPress={() => makeStreakCard(pendingMilestone)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Make a card"
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.milestoneCta}>Make a card</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ) : null}
+          </View>
+        )}
+
+        {/* ── Empty state (U-D-4: encouragement-framed, matching BodyMetrics) ── */}
         {!loading && allSets.length === 0 && (
           <View style={styles.emptyState}>
             <EmptyChartIllustration size={140} />
-            <Text style={styles.emptyStateHeading}>No data yet</Text>
+            <Text style={styles.emptyStateHeading}>Your progress starts here</Text>
             <Text style={styles.emptyStateBody}>
-              Your progress charts will appear here after your first few sessions. Log a workout to get started.
+              Log your first session and these charts begin filling in. Every workout you log adds to the picture.
             </Text>
           </View>
+        )}
+
+        {/* ── Near-empty (U-D-4): a session or two in, frame it as momentum ── */}
+        {!loading && allSets.length > 0 && completedWorkoutCount > 0 && completedWorkoutCount < 3 && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateBody}>
+              Good start. A couple more sessions and your trends really take shape.
+            </Text>
+          </View>
+        )}
+
+        {/* COMP-005: ephemeral recap nudge */}
+        {!recapCardHidden && (
+          <TouchableOpacity
+            style={styles.recapCard}
+            activeOpacity={0.85}
+            onPress={() => { dismissRecapCard(); navigation.navigate('RecapStory', recentMonthRecapParams(earliestWorkoutAt)); }}
+            accessibilityRole="button"
+            accessibilityLabel="Open your monthly recap, about 45 seconds"
+          >
+            <Ionicons name="sparkles" size={18} color={colors.primary} />
+            <Text style={styles.recapCardText}>
+              Your {recentMonthRecapParams(earliestWorkoutAt).monthLabel.replace(' so far', '')} recap is ready · 45 seconds
+            </Text>
+            <TouchableOpacity
+              onPress={dismissRecapCard}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss"
+            >
+              <Ionicons name="close" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+          </TouchableOpacity>
         )}
 
         {/* ── 2 · Insight Stack ─────────────────────────────── */}
@@ -78,6 +247,18 @@ export default function AnalyticsScreen({ navigation }) {
             {insights.map(ins => (
               <InsightRow key={ins.id} insight={ins} onDismiss={() => handleDismiss(ins.id)} />
             ))}
+          </View>
+        )}
+
+        {/* ── Your trend (COMP-004): the calm weight-trend read, between the
+            insight stack and recent sessions. Pro-only; self-hides until
+            there are morning weights to interpret. ── */}
+        {tier === 'pro' && weightTrend.render && (
+          <View
+            style={styles.section}
+            onLayout={(e) => { trendSectionY.current = e.nativeEvent.layout.y; }}
+          >
+            <WeightTrendCard vm={weightTrend} bodyWeightUnits={bodyWeightUnits || 'st'} />
           </View>
         )}
 
@@ -159,45 +340,58 @@ export default function AnalyticsScreen({ navigation }) {
           <View style={styles.navGrid}>
             <NavTile icon="pulse" color={colors.success} label="Consistency" onPress={() => navigation.navigate('Consistency')} />
             <NavTile icon="barbell" color={colors.primary} label="Lifts" onPress={() => navigation.navigate('LiftProgress')} />
-            {/* Weight trend lives in the Pro Body Metrics screen (EWMA + the
-                up/down line chart). Surfacing it here makes it discoverable from
-                Progress; the guard shows the upsell to free users. */}
-            <NavTile icon="trending-up" color={colors.warning} label="Weight" onPress={() => navigation.navigate('BodyMetrics')} />
+            {/* Body Metrics carries the weight EWMA trend once 2+ logs exist,
+                but it is a metrics screen, so the tile says what it opens
+                (founder device-walk 2026-06-12: a "Weight" tile promised a
+                progress chart and landed on a logging form). The IA pass will
+                lead that screen with the trend; the label stops over-promising
+                now. */}
+            <NavTile icon="body" color={colors.warning} label="Body Metrics" onPress={() => navigation.navigate('BodyMetrics')} />
+            {/* NEW-002 rebuild: the partner's first-class destination (Apple
+                Fitness pattern: minimal-signal sharing still gets a proper
+                named home, never a buried row). */}
+            <NavTile icon="people" color={colors.primary} label="Partner" onPress={() => navigation.navigate('Partner')} />
             <NavTile icon="time" color={colors.textSecondary} label="Full History" onPress={() => navigation.navigate('WorkoutHistory')} />
             {(() => {
-              // Year of Lifts unlocks once the user has 365 days of
-              // training history. Until then it shows a locked state
-              // with the remaining days so the user has a concrete
-              // milestone to look forward to.
+              // COMP-005: Recaps replaces the year-long locked Year-of-Lifts
+              // tile. It unlocks after 10 logged sessions (~a fortnight, not a
+              // year) and opens the most recent monthly recap. Year of Lifts
+              // stays the annual crown but only appears once it has unlocked,
+              // so it is never shown dimmed for a year.
+              const RECAP_GATE = 10;
+              const recapUnlocked = completedWorkoutCount >= RECAP_GATE;
+              const toGo = Math.max(0, RECAP_GATE - completedWorkoutCount);
+              return (
+                <NavTile
+                  icon="sparkles-outline"
+                  color={colors.textSecondary}
+                  label="Recaps"
+                  locked={!recapUnlocked}
+                  lockedSub={`${toGo} session${toGo === 1 ? '' : 's'} to go`}
+                  onPress={() => {
+                    if (!recapUnlocked) {
+                      appAlert(
+                        'Recaps',
+                        `Your first monthly recap unlocks after ${RECAP_GATE} logged sessions. ${toGo} to go.`,
+                      );
+                      return;
+                    }
+                    navigation.navigate('RecapStory', recentMonthRecapParams(earliestWorkoutAt));
+                  }}
+                />
+              );
+            })()}
+            {(() => {
+              // Year of Lifts: the annual crown, shown only once unlocked.
               const YEAR_MS = 365 * 86400000;
-              const elapsed = earliestWorkoutAt ? Date.now() - earliestWorkoutAt : 0;
-              const unlocked = elapsed >= YEAR_MS;
-              const daysLeft = earliestWorkoutAt
-                ? Math.max(0, Math.ceil((YEAR_MS - elapsed) / 86400000))
-                : 365;
+              const unlocked = earliestWorkoutAt && (Date.now() - earliestWorkoutAt) >= YEAR_MS;
+              if (!unlocked) return null;
               return (
                 <NavTile
                   icon="calendar-outline"
                   color={colors.textSecondary}
                   label="Year of Lifts"
-                  locked={!unlocked}
-                  lockedSub={
-                    earliestWorkoutAt
-                      ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} to go`
-                      : 'Start training to unlock'
-                  }
-                  onPress={() => {
-                    if (!unlocked) {
-                      appAlert(
-                        'Year of Lifts',
-                        earliestWorkoutAt
-                          ? `Your wrap-up unlocks after a full year of training. ${daysLeft} day${daysLeft === 1 ? '' : 's'} to go.`
-                          : 'Log your first session to start the year-long countdown.',
-                      );
-                      return;
-                    }
-                    navigation.navigate('YearOfLifts');
-                  }}
+                  onPress={() => navigation.navigate('YearOfLifts')}
                 />
               );
             })()}
@@ -398,6 +592,9 @@ const styles = StyleSheet.create({
   safe:        { flex: 1, backgroundColor: colors.background },
   content:     { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxxl },
   section:     { gap: spacing.md },
+  milestoneRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.xs },
+  milestoneText: { flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  milestoneCta: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   sectionLabel: {
     ...type.label,
     color: colors.textSecondary,
@@ -414,6 +611,13 @@ const styles = StyleSheet.create({
   },
 
   // ── Insight rows ──
+  recapCard: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.primary,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginBottom: spacing.md,
+  },
+  recapCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   insightRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
     backgroundColor: colors.surface, borderRadius: radius.md,

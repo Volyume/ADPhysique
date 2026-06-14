@@ -201,7 +201,9 @@ export default function NutritionTargetsScreen({ navigation }) {
   const [whyExpanded,  setWhyExpanded]  = useState(true);
   const [calculating,  setCalculating]  = useState(false);
   const [calm,         setCalm]         = useState(false);
-  const [formCollapsed, setFormCollapsed] = useState(false);
+  // U-C-1: the full form starts collapsed behind the "Set it for me" fast path;
+  // "Fine-tune these numbers" (or "Adjust" after results) opens it.
+  const [formCollapsed, setFormCollapsed] = useState(true);
 
   // ── Per-meal distribution, guidance only, daily totals unchanged ───────────────
   // Per-meal MPS window: ~0.4 g/kg (floor) to ~0.55 g/kg (above this, diminishing
@@ -507,6 +509,168 @@ export default function NutritionTargetsScreen({ navigation }) {
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </TouchableOpacity>
 
+          {/* U-C-1: "Set it for me" fast path. Gives a usable daily target from
+              the prefilled body stats before the full form. Reuses the single
+              handleCalculate path (engine floors + calm-mode goal filtering
+              unchanged); the full form is one tap away via "Fine-tune". */}
+          {formCollapsed && !results ? (
+            <View style={styles.fastCard}>
+              <Text style={styles.fastTitle}>Set it for me</Text>
+              <Text style={styles.fastSubtitle}>
+                Answer a few quick questions and we'll set a starting daily target. You can fine-tune anything afterwards.
+              </Text>
+
+              <Text style={styles.fieldLabel}>Your goal</Text>
+              <View style={styles.goalGrid}>
+                {GOALS.filter(g => !(calm && g.key === 'aggressive_cut')).map(g => {
+                  const active = goal === g.key;
+                  return (
+                    <TouchableOpacity
+                      key={g.key}
+                      style={[styles.goalCard, active && styles.goalCardActive]}
+                      onPress={() => setGoal(g.key)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={`${g.label}, ${g.detail}`}
+                    >
+                      {active && (
+                        <Ionicons name="checkmark-circle" size={14} color={colors.primary} style={styles.goalCheck} />
+                      )}
+                      <Text style={[styles.goalLabel, active && styles.goalLabelActive]}>{g.label}</Text>
+                      <Text style={[styles.goalDetail, active && styles.goalDetailActive]}>{g.detail}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* U-C-1: the minimum inputs the engine needs (sex, age, height,
+                  weight — see formComplete) collected inline so the fast path
+                  produces a real target instead of redirecting to the full form.
+                  Prefilled from the saved body profile when available; activity,
+                  protein approach and body fat % keep their defaults behind
+                  "Fine-tune these numbers". */}
+              <View style={styles.formGroup}>
+                <Text style={styles.fieldLabel}>Biological sex</Text>
+                <PillGroup
+                  options={[{ key: 'male', label: 'Male' }, { key: 'female', label: 'Female' }]}
+                  selected={sex}
+                  onSelect={setSex}
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.fieldLabel}>Age</Text>
+                <TextInput
+                  style={styles.numInput}
+                  value={age}
+                  onChangeText={setAge}
+                  placeholder="e.g. 28"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="number-pad"
+                  maxLength={3}
+                  accessibilityLabel="Age"
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.fieldLabel}>Height</Text>
+                <View style={styles.heightRow}>
+                  <View style={styles.heightUnit}>
+                    <TextInput
+                      style={styles.numInput}
+                      value={heightFt}
+                      onChangeText={setHeightFt}
+                      placeholder="5"
+                      placeholderTextColor={colors.textMuted}
+                      keyboardType="number-pad"
+                      maxLength={1}
+                      accessibilityLabel="Height, feet"
+                    />
+                    <Text style={styles.unitLabel}>ft</Text>
+                  </View>
+                  <View style={styles.heightUnit}>
+                    <TextInput
+                      style={styles.numInput}
+                      value={heightIn}
+                      onChangeText={setHeightIn}
+                      placeholder="10"
+                      placeholderTextColor={colors.textMuted}
+                      keyboardType="decimal-pad"
+                      maxLength={4}
+                      accessibilityLabel="Height, inches"
+                    />
+                    <Text style={styles.unitLabel}>in</Text>
+                  </View>
+                </View>
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.fieldLabel}>Current weight (kg)</Text>
+                <TextInput
+                  style={styles.numInput}
+                  value={weight}
+                  onChangeText={setWeight}
+                  placeholder="e.g. 82"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="decimal-pad"
+                  maxLength={5}
+                  accessibilityLabel="Current weight in kilograms"
+                />
+              </View>
+
+              {/* The same GDPR consent the full form requires, bound to the same
+                  state — only one of the two ever renders at a time. */}
+              <View style={styles.consentCard}>
+                <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} style={{ marginTop: spacing.xxs }} />
+                <View style={styles.consentBody}>
+                  <Text style={styles.consentText}>
+                    Your body data is stored only on this device. It is never shared and you can delete it at any time.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.consentRow}
+                    onPress={() => setConsent(v => !v)}
+                    activeOpacity={0.7}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: consent }}
+                    accessibilityLabel="I consent to storing this data on my device"
+                  >
+                    <View style={[styles.checkbox, consent && styles.checkboxChecked]}>
+                      {consent && <Ionicons name="checkmark" size={13} color={colors.onPrimary} />}
+                    </View>
+                    <Text style={styles.consentCheckLabel}>
+                      I consent to storing this data on my device
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.calcBtn, (!formComplete || calculating) && styles.calcBtnDisabled]}
+                onPress={handleCalculate}
+                disabled={!formComplete || calculating}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !formComplete || calculating }}
+                accessibilityLabel="Set my targets"
+              >
+                <Ionicons
+                  name={calculating ? 'hourglass-outline' : 'sparkles-outline'}
+                  size={20}
+                  color={formComplete ? colors.onPrimary : colors.textDisabled}
+                />
+                <Text style={[styles.calcBtnText, !formComplete && styles.calcBtnTextDisabled]}>
+                  {calculating ? 'Setting…' : 'Set my targets'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.fineTuneLink}
+                onPress={() => setFormCollapsed(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Fine-tune these numbers"
+              >
+                <Ionicons name="options-outline" size={14} color={colors.primary} />
+                <Text style={styles.fineTuneText}>Fine-tune these numbers</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
           {!formCollapsed ? (
           <>
 
@@ -744,7 +908,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 accessibilityLabel="I consent to storing this data on my device"
               >
                 <View style={[styles.checkbox, consent && styles.checkboxChecked]}>
-                  {consent && <Ionicons name="checkmark" size={13} color={colors.background} />}
+                  {consent && <Ionicons name="checkmark" size={13} color={colors.onPrimary} />}
                 </View>
                 <Text style={styles.consentCheckLabel}>
                   I consent to storing this data on my device
@@ -755,7 +919,7 @@ export default function NutritionTargetsScreen({ navigation }) {
 
           </>) : null}
 
-          {formCollapsed ? (
+          {formCollapsed && results ? (
             <View style={styles.collapsedSummary}>
               <View style={styles.collapsedRow}>
                 <Ionicons name="nutrition" size={14} color={colors.textMuted} />
@@ -786,7 +950,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               <Ionicons
                 name={calculating ? 'hourglass-outline' : 'calculator-outline'}
                 size={20}
-                color={formComplete ? colors.background : colors.textDisabled}
+                color={formComplete ? colors.onPrimary : colors.textDisabled}
               />
               <Text style={[styles.calcBtnText, !formComplete && styles.calcBtnTextDisabled]}>
                 {calculating ? 'Calculating…' : 'Calculate targets'}
@@ -866,7 +1030,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                         size={12}
                         text={
                           'How to split your daily protein across the day.\n\n' +
-                          'Each meal should land in a window of roughly 0.4 to 0.55 g of protein per kilogram of bodyweight. Below that, the meal does not give you the full muscle-building benefit. Above it, the extra protein mostly goes to waste at that meal.\n\n' +
+                          'The effective window per meal is roughly 0.4 to 0.55 g of protein per kilogram of bodyweight. Below that, the meal does not give you the full muscle-building benefit. Above it, the extra protein mostly goes to waste at that meal.\n\n' +
                           'Volyume picks the smallest meal count that keeps every meal at or below the ceiling, so your daily target is hit without overshooting per-meal. Your daily total stays exactly the same. This is purely how to split it.'
                         }
                       />
@@ -965,7 +1129,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                   : isCut
                   ? `Your maintenance is ${maintenanceKcal.toLocaleString()} kcal. A ${absPct}% deficit (${Math.abs(surplusDelta)} kcal below maintenance) puts you on track to ${rateDir} roughly ${rateAbs.toFixed(2)} kg/week. That rate is ${rateAbs <= 0.5 ? 'conservative. You will lose mostly fat while holding onto more muscle' : rateAbs <= 0.8 ? 'moderate. Effective fat loss with manageable risk to muscle' : 'aggressive. Protein has been set higher to protect your muscle'}. Consistency over weeks matters far more than perfection each day.`
                   : isMaintain
-                  ? `Your target is ${(results.targetKcal ?? 0).toLocaleString()} kcal, which matches your maintenance level. Eating at maintenance gives you the energy to recover hard and train hard, without gaining fat. With high protein and consistent training, you can still build muscle slowly and improve body composition. No deficit, no surplus: a clean baseline.`
+                  ? `Your target is ${(results.targetKcal ?? 0).toLocaleString()} kcal, which matches your maintenance level. Eating at maintenance gives you the energy to recover hard and train hard, without gaining fat. With high protein and consistent training, you can still build muscle slowly and improve body composition. No deficit, no surplus: a steady baseline.`
                   : isRecomp
                   ? `Your maintenance is ${maintenanceKcal.toLocaleString()} kcal. A small ${Math.abs(absPct)}% deficit (${Math.abs(surplusDelta)} kcal below maintenance) gives just enough of a calorie gap to use body fat as fuel, while high protein and consistent training keep muscle on. Progress is slower than a dedicated muscle building or fat loss phase, but your body composition improves at the same time.`
                   : `Your target is ${(results.targetKcal ?? 0).toLocaleString()} kcal based on your maintenance of ${maintenanceKcal.toLocaleString()} kcal.`;
@@ -1178,6 +1342,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   eduCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, borderLeftWidth: 3, borderLeftColor: colors.primary, padding: spacing.md, marginTop: spacing.sm },
+  // U-C-1: "Set it for me" fast-path card.
+  fastCard: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, marginTop: spacing.md, gap: spacing.md },
+  fastTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  fastSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  fineTuneLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, minHeight: 44 },
+  fineTuneText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   eduIconWrap: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
   eduTitle: { ...type.label, color: colors.textPrimary },
   eduBody: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: spacing.xxs, lineHeight: 17 },
@@ -1365,7 +1535,7 @@ const styles = StyleSheet.create({
   },
   calcBtnText: {
     ...type.title,
-    color: colors.background,
+    color: colors.onPrimary,
   },
   calcBtnTextDisabled: {
     color: colors.textDisabled,

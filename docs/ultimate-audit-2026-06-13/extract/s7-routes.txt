@@ -1,0 +1,108 @@
+225:      <Stack.Screen name="Diary" component={GatedDiary} options={{ headerShown: false }} />
+226:      <Stack.Screen
+231:      <Stack.Screen
+236:      <Stack.Screen
+241:      <Stack.Screen
+246:      <Stack.Screen
+251:      <Stack.Screen
+256:      <Stack.Screen
+261:      <Stack.Screen
+266:      <Stack.Screen
+271:      <Stack.Screen
+276:      <Stack.Screen
+293:      <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
+294:      <Stack.Screen name="BuildWorkout" component={BuildWorkoutScreen} options={{ headerShown: false }} />
+295:      <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={{ headerShown: false, ...heroZoomTransition }} />
+296:      <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ title: 'Session Complete', ...heroZoomTransition }} />
+297:      <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ title: 'Workout History' }} />
+298:      <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ title: 'Volume' }} />
+299:      <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ title: 'Share Card' }} />
+300:      <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ title: 'Weekly Review' }} />
+303:      <Stack.Screen name="LogCardio" component={GatedLogCardio} options={{ headerShown: false, presentation: 'modal' }} />
+304:      <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
+306:      <Stack.Screen name="FreeStarter" component={FreeStarterScreen} options={{ headerShown: false }} />
+319:      <Stack.Screen name="Plans" component={PlansScreen} options={{ headerShown: false }} />
+320:      <Stack.Screen name="PlanUpdate" component={GatedPlanUpdate} options={{ headerShown: false }} />
+321:      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ title: 'Plan' }} />
+322:      <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ title: 'Edit Workout' }} />
+323:      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
+324:      <Stack.Screen name="ManualBuilder" component={ManualBuilderScreen} options={{ headerShown: false }} />
+325:      <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ title: 'Plan Library' }} />
+326:      <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ title: 'Training Blocks' }} />
+327:      <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
+329:      <Stack.Screen name="FreeStarter" component={FreeStarterScreen} options={{ headerShown: false }} />
+342:      <Stack.Screen name="Analytics" component={AnalyticsScreen} options={{ headerShown: false }} />
+343:      <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ title: 'Workout History' }} />
+344:      <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ title: 'Session Complete', ...heroZoomTransition }} />
+345:      <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ title: 'Volume Heatmap' }} />
+346:      <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ title: 'Weekly Review' }} />
+347:      <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ title: 'Body Metrics' }} />
+348:      <Stack.Screen name="LiftProgress" component={LiftProgressScreen} options={{ title: 'Lifts' }} />
+349:      <Stack.Screen name="Consistency" component={ConsistencyScreen} options={{ title: 'Consistency' }} />
+350:      <Stack.Screen name="Partner" component={PartnerScreen} options={{ title: 'Training partner' }} />
+351:      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
+352:      <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
+353:      <Stack.Screen name="RecapStory" component={YearOfLiftsScreen} options={{ headerShown: false }} />
+354:      <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ title: 'Share Card' }} />
+357:      <Stack.Screen name="LogCardio" component={GatedLogCardio} options={{ headerShown: false, presentation: 'modal' }} />
+358:      <Stack.Screen name="CardioHistory" component={GatedCardioHistory} options={{ headerShown: false }} />
+359:      <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
+372:      <Stack.Screen name="You" component={YouScreen} options={{ headerShown: false }} />
+373:      <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
+374:      <Stack.Screen name="SettingsAccount" component={SettingsAccountScreen} options={{ title: 'Account' }} />
+375:      <Stack.Screen name="SettingsProfile" component={SettingsProfileScreen} options={{ title: 'Profile' }} />
+376:      <Stack.Screen name="SettingsCoaching" component={SettingsCoachingScreen} options={{ title: 'Coaching' }} />
+377:      <Stack.Screen name="SettingsNotifications" component={SettingsNotificationsScreen} options={{ title: 'Notifications' }} />
+378:      <Stack.Screen name="SettingsDisplay" component={SettingsDisplayScreen} options={{ title: 'Display & accessibility' }} />
+379:      <Stack.Screen name="SettingsHealth" component={SettingsHealthScreen} options={{ title: 'Health' }} />
+380:      <Stack.Screen name="SettingsData" component={SettingsDataScreen} options={{ title: 'Your data' }} />
+381:      <Stack.Screen name="Snapshots" component={SnapshotsScreen} options={{ title: 'Restore a snapshot' }} />
+382:      <Stack.Screen name="SettingsPrivacy" component={SettingsPrivacyScreen} options={{ title: 'Privacy & legal' }} />
+383:      <Stack.Screen name="SettingsAbout" component={SettingsAboutScreen} options={{ title: 'Help & about' }} />
+384:      <Stack.Screen name="NutritionTargets" component={GatedNutritionTargets} options={{ title: 'Nutrition Targets' }} />
+385:      <Stack.Screen name="NutritionEducation" component={NutritionEducationScreen} options={{ headerShown: false }} />
+386:      <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ title: 'Body Metrics' }} />
+387:      <Stack.Screen name="WeeklyCheckIn" component={GatedWeeklyCheckIn} options={{ headerShown: false }} />
+388:      <Stack.Screen name="CoachOutput" component={GatedCoachOutput} options={{ title: 'Precision Coaching™' }} />
+389:      <Stack.Screen name="Methodology" component={MethodologyScreen} options={{ title: 'How Precision Coaching works' }} />
+390:      <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ title: 'Share Card' }} />
+391:      <Stack.Screen name="CoachHeldHistory" component={CoachHeldHistoryScreen} options={{ headerShown: false }} />
+392:      <Stack.Screen name="BlockReflection" component={BlockReflectionScreen} options={{ headerShown: false }} />
+393:      <Stack.Screen name="ProGoalSetup" component={GatedProGoalSetup} options={{ headerShown: false }} />
+394:      <Stack.Screen name="GoalChangeSummary" component={GoalChangeSummaryScreen} options={{ headerShown: false }} />
+395:      <Stack.Screen name="GoalLockConsent" component={GoalLockConsentScreen} options={{ title: 'Goal lock' }} />
+396:      <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ title: 'Notifications' }} />
+397:      <Stack.Screen name="Import" component={ImportScreen} options={{ title: 'Import history' }} />
+398:      <Stack.Screen name="CoachingReminders" component={GatedCoachingReminders} options={{ title: 'Coaching reminders' }} />
+399:      <Stack.Screen name="WellbeingCheck" component={WellbeingCheckScreen} options={{ title: 'Wellbeing check' }} />
+400:      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: false }} />
+401:      <Stack.Screen name="DebugLog" component={DebugLogScreen} options={{ headerShown: false }} />
+402:      <Stack.Screen name="SubscriptionPolicy" component={SubscriptionPolicyScreen} options={{ headerShown: false }} />
+403:      <Stack.Screen name="Subscription" component={SubscriptionScreen} options={{ headerShown: false }} />
+404:      <Stack.Screen name="CascadeGate" component={CascadeGateScreen} options={{ headerShown: false, presentation: 'modal' }} />
+405:      <Stack.Screen name="Paywall" component={PaywallScreen} options={{ headerShown: false, presentation: 'modal' }} />
+406:      <Stack.Screen name="Credits" component={CreditsScreen} options={{ headerShown: false }} />
+407:      <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
+445:      <Tab.Screen name="HomeTab" component={HomeStack} options={{ title: 'Train' }} />
+446:      <Tab.Screen name="PlansTab" component={PlansStack} options={{ title: 'Plans' }} />
+447:      <Tab.Screen name="DiaryTab" component={DiaryStack} options={{ title: 'Diary' }} />
+448:      <Tab.Screen name="ProgressTab" component={ProgressStack} options={{ title: 'Progress' }} />
+449:      <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ title: 'You' }} />
+457:      <Stack.Screen name="Welcome" component={WelcomeScreen} />
+460:      <Stack.Screen name="QuizTraining" component={QuizScreen} />
+461:      <Stack.Screen name="PlanPreview" component={PlanPreviewScreen} />
+462:      <Stack.Screen name="Login" component={LoginScreen} />
+470:      <Stack.Screen name="FirstRunBranch" component={FirstRunScreen} />
+475:      <Stack.Screen name="FreeStarter" component={FreeStarterScreen} />
+476:      <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: true, title: 'Plan Library' }} />
+477:      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: true, title: 'Plan' }} />
+478:      <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={heroZoomTransition} />
+490:      <Stack.Screen name="Article9Consent" component={Article9ConsentScreen} />
+494:      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+502:      <Stack.Screen name="ProOnboarding" component={ProOnboardingScreen} />
+503:      <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: true, title: 'Plan Library' }} />
+504:      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: true, title: 'Plan' }} />
+505:      <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={heroZoomTransition} />
+506:      <Stack.Screen name="ProSetupComplete" component={ProSetupCompleteScreen} />
+509:      <Stack.Screen name="NutritionEducation" component={NutritionEducationScreen} />
+513:      <Stack.Screen name="GoalLockConsent" component={GoalLockConsentScreen} options={{ headerShown: true, title: 'Goal lock' }} />

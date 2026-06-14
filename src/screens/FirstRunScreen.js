@@ -9,10 +9,11 @@ import useAppStore from '../store/useAppStore';
 
 // First-run for Free users only. Pro signups go through ProOnboardingStack
 // (profile → training → recovery → plan + nutrition generation). Free gets
-// the minimum: name + units, then straight to logging. Plan choice happens
-// later via the Plans tab (Library or Manual Builder).
-export default function FirstRunScreen({ navigation: _navigation }) {
-  const { user, units: _units, setUnits, userProfile, saveLocalProfile, completeFirstRun } = useAppStore();
+// name + units, then the FreeStarter micro-quiz (B2, founder decision 4a):
+// three plain questions that install a beginner plan from the library, with
+// a visible skip for anyone who'd rather choose their own.
+export default function FirstRunScreen({ navigation }) {
+  const { user, units: _units, setUnits, userProfile, saveLocalProfile } = useAppStore();
   // Gym weights are kg-only (UK). No unit choice.
   const localUnits = 'kg';
   const [firstName, setFirstName] = useState('');
@@ -32,7 +33,10 @@ export default function FirstRunScreen({ navigation: _navigation }) {
       if (setUnits) setUnits(localUnits);
       const merged = { ...(userProfile || {}), units: localUnits, firstName: firstName.trim() };
       if (user?.id) await saveLocalProfile(user.id, merged);
-      await completeFirstRun();
+      // B2: hand over to the starter micro-quiz. It calls completeFirstRun
+      // itself, after a plan is installed or the user skips.
+      navigation.navigate('FreeStarter', { fromFirstRun: true });
+      setBusy(false);
     } catch (e) {
       appAlert('Something went wrong', e?.message ?? 'Try again.');
       setBusy(false);
@@ -44,7 +48,7 @@ export default function FirstRunScreen({ navigation: _navigation }) {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Almost there.</Text>
         <Text style={styles.subtitle}>
-          Just your name and you're ready to start logging.
+          Just your name, then a few quick questions to get you set up.
         </Text>
 
         <Text style={styles.fieldLabel}>What should we call you?</Text>
@@ -62,7 +66,7 @@ export default function FirstRunScreen({ navigation: _navigation }) {
         />
 
         <Button
-          title="Start logging"
+          title="Continue"
           trailingIcon="arrow-forward"
           size="lg"
           loading={busy}
@@ -73,8 +77,9 @@ export default function FirstRunScreen({ navigation: _navigation }) {
         <View style={styles.hintCard}>
           <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
           <Text style={styles.hintText}>
-            When you're in, head to <Text style={styles.hintBold}>Plans</Text>{' '}
-            to pick a plan from the library, or build your own from scratch.
+            Next, three quick questions and we'll suggest a starter plan.{' '}
+            Prefer to pick your own? You can <Text style={styles.hintBold}>skip</Text>{' '}
+            and browse the library instead.
           </Text>
         </View>
       </ScrollView>

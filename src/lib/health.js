@@ -31,6 +31,61 @@ let _iosModule = null;
 let _androidModule = null;
 let _iosInited = false;
 
+// iOS only. HealthKit gives the app no way to read its own authorisation
+// state, and _iosInited resets to false on every app launch, so a user who
+// granted steps yesterday would read as "denied" today and the silent
+// foreground read would never fire. We persist the set of scopes the user has
+// already been through the Health sheet for; on a later launch we can silently
+// re-run initHealthKit for exactly those scopes (initHealthKit shows NO sheet
+// once a permission is already determined), so reads survive restarts without
+// ever prompting someone who never connected. Stores e.g. ["steps","weight"].
+const IOS_HEALTH_SCOPES_KEY = '@volyume_ios_health_scopes';
+
+// Build the react-native-health permissions object for a set of scopes.
+function _iosPermsForScopes(scopes) {
+  const HK = getIosModule();
+  const reads = [];
+  const writes = [];
+  const C = HK?.Constants;
+  if (C) {
+    if (scopes.includes('weight')) reads.push(C.Permissions.Weight);
+    if (scopes.includes('steps')) reads.push(C.Permissions.StepCount);
+    if (scopes.includes('workout')) {
+      writes.push(C.Permissions.Workout);
+      writes.push(C.Permissions.ActiveEnergyBurned);
+    }
+  }
+  return { permissions: { read: reads, write: writes } };
+}
+
+async function _getAskedScopes() {
+  try {
+    const raw = await AsyncStorage.getItem(IOS_HEALTH_SCOPES_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch (_) { return []; }
+}
+
+async function _rememberAskedScopes(scopes) {
+  try {
+    const prev = await _getAskedScopes();
+    const merged = Array.from(new Set([...prev, ...scopes]));
+    await AsyncStorage.setItem(IOS_HEALTH_SCOPES_KEY, JSON.stringify(merged));
+  } catch (_) { /* best effort; loses cross-restart persistence only */ }
+}
+
+// iOS read readiness without prompting. Returns true only when every requested
+// scope was previously asked AND HealthKit is (re-)initialised for the full
+// asked set. Re-inits with the whole asked set (not just `scopes`) so one init
+// covers every read the app does and never requests an un-asked permission.
+async function _ensureIosReadyForRead(scopes) {
+  if (Platform.OS !== 'ios' || !getIosModule()) return false;
+  const asked = await _getAskedScopes();
+  if (!scopes.every(s => asked.includes(s))) return false;
+  if (_iosInited) return true;
+  return _ensureIosInited(_iosPermsForScopes(asked));
+}
+
 function getIosModule() {
   if (_iosModule || Platform.OS !== 'ios') return _iosModule;
   try {
@@ -110,18 +165,11 @@ export async function requestHealthPermissions(scopes = ['weight']) {
   if (!isHealthAvailable()) return 'unavailable';
 
   if (Platform.OS === 'ios') {
-    const HK = getIosModule();
-    const Constants = HK.Constants;
-    const reads = [];
-    const writes = [];
-    if (scopes.includes('weight')) reads.push(Constants.Permissions.Weight);
-    if (scopes.includes('steps')) reads.push(Constants.Permissions.StepCount);
-    if (scopes.includes('workout')) {
-      writes.push(Constants.Permissions.Workout);
-      writes.push(Constants.Permissions.ActiveEnergyBurned);
-    }
-    const perms = { permissions: { read: reads, write: writes } };
-    const ok = await _ensureIosInited(perms);
+    const ok = await _ensureIosInited(_iosPermsForScopes(scopes));
+    // A successful init means the Health sheet was presented (or the scopes
+    // were already determined), so record them as "asked": this is what lets a
+    // later launch silently re-init and keep reading without a fresh prompt.
+    if (ok) await _rememberAskedScopes(scopes);
     return ok ? 'granted' : 'denied';
   }
 
@@ -193,10 +241,12 @@ export async function getHealthPermissionStatus(scopes = ['weight']) {
   if (!isHealthAvailable()) return 'unavailable';
 
   if (Platform.OS === 'ios') {
-    // HealthKit deliberately doesn't expose read auth status to the
-    // app, so we treat a successful prior init as granted. Writes do
-    // expose status, but for a uniform API we settle for "init worked".
-    return _iosInited ? 'granted' : 'denied';
+    // HealthKit deliberately doesn't expose read auth status to the app, and
+    // _iosInited resets every launch, so a previously-granted user would read
+    // as denied after a restart. If these scopes were asked before, silently
+    // re-establish the HealthKit connection (no sheet shows once determined)
+    // and treat as granted; otherwise denied (caller maps that to a prompt).
+    return (await _ensureIosReadyForRead(scopes)) ? 'granted' : 'denied';
   }
 
   if (Platform.OS === 'android') {
@@ -378,6 +428,11 @@ export async function readStepsToday() {
   if (Platform.OS === 'ios') {
     const HK = getIosModule();
     if (!HK) return 0;
+    // getStepCount needs HealthKit initialised in THIS process. _iosInited
+    // resets each launch, so re-establish it (silently, for a previously-asked
+    // scope) before reading; without this the foreground read returns 0 and
+    // the steps card stays hidden even though the data is in Apple Health.
+    if (!(await _ensureIosReadyForRead(['steps']))) return 0;
     return new Promise(resolve => {
       HK.getStepCount({ startDate: startISO, endDate: endISO }, (err, result) => {
         if (err || typeof result?.value !== 'number') { resolve(0); return; }
@@ -453,9 +508,24 @@ function estimateWorkoutKcal({ durationMin, tonnageKg, bodyWeightKg }) {
  * the workout permission wasn't granted or the native module isn't
  * loaded.
  */
+/**
+ * COMP-020: when an Apple Watch session captured most of the workout, the WATCH
+ * saves the HKWorkout (real HR + energy) and the phone must NOT write a second,
+ * estimated-kcal duplicate. Rule: skip the phone write when the watch session
+ * ran for >= 50% of the workout's duration. Pure + tested.
+ */
+export function shouldSkipPhoneHealthWrite(workout) {
+  const total = (workout?.endedAt ?? 0) - (workout?.startedAt ?? 0);
+  if (!(total > 0)) return false;
+  const covered = Number(workout?.watchSessionMs) || 0;
+  return covered / total >= 0.5;
+}
+
 export async function writeWorkoutToHealth(workout) {
   if (!isHealthAvailable()) return false;
   if (!workout?.startedAt || !workout?.endedAt || workout.endedAt <= workout.startedAt) return false;
+  // The watch already saved this workout (real HR/energy) — don't duplicate it.
+  if (shouldSkipPhoneHealthWrite(workout)) return false;
   const status = await getHealthPermissionStatus(['workout']);
   if (status !== 'granted') return false;
 

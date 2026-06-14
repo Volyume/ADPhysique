@@ -2,18 +2,30 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import InfoTooltip from './InfoTooltip';
 
 // Inline dropdown, expands in place, no modal needed. Shared by the Pro
 // onboarding wizard and the change-goal screen so both training-setup flows
 // pick experience, equipment, focus and recovery the same way.
 //
 // options: [{ value, label, sub? }]. onChange receives the chosen value.
-export default function Dropdown({ label, hint, value, options, onChange, placeholder = 'Select...' }) {
+// tip: optional plain-English gloss (U-E-1) rendered as an InfoTooltip beside the
+// label; omitted by default so existing usages are unchanged.
+export default function Dropdown({ label, hint, value, options, onChange, placeholder = 'Select...', tip }) {
   const [open, setOpen] = useState(false);
   const selected = options.find(o => o.value === value);
   return (
     <View style={styles.dropdownWrap}>
-      {label ? <Text style={styles.fieldLabel}>{label}</Text> : null}
+      {label ? (
+        tip ? (
+          <View style={styles.labelRow}>
+            <Text style={styles.fieldLabel}>{label}</Text>
+            <InfoTooltip text={tip} size={13} />
+          </View>
+        ) : (
+          <Text style={styles.fieldLabel}>{label}</Text>
+        )
+      ) : null}
       {hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
       <TouchableOpacity
         style={[styles.dropdownTrigger, value && styles.dropdownTriggerFilled, open && styles.dropdownTriggerOpen]}
@@ -60,6 +72,7 @@ export default function Dropdown({ label, hint, value, options, onChange, placeh
 
 const styles = StyleSheet.create({
   dropdownWrap: { marginBottom: spacing.xl },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   fieldLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
     color: colors.textMuted, letterSpacing: 0.3, marginBottom: spacing.sm,

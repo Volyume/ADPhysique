@@ -171,5 +171,5 @@ const styles = StyleSheet.create({
     flex: 1, paddingVertical: spacing.md, borderRadius: radius.md,
     backgroundColor: colors.primary, alignItems: 'center',
   },
-  saveText: { color: colors.background, fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  saveText: { color: colors.onPrimary, fontSize: fontSize.md, fontWeight: fontWeight.bold },
 });

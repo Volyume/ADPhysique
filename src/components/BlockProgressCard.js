@@ -22,7 +22,7 @@ export default function BlockProgressCard({ blockProgress, currentMesoWeek }) {
             Week {currentMesoWeek.weekIndex}/{currentMesoWeek.plannedWeeks}
             {currentMesoWeek.isDeload
               ? ' · Recovery week'
-              : ` · Effort ${currentMesoWeek.rirTarget != null ? 5 - currentMesoWeek.rirTarget : '–'}`}
+              : ` · Effort ${currentMesoWeek.rirTarget != null ? `${5 - currentMesoWeek.rirTarget}/5` : '–'}`}
           </Text>
         )}
       </View>

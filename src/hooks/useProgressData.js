@@ -88,6 +88,7 @@ export default function useProgressData() {
   const [fatigueSessions, setFatigueSessions] = useState([]);   // last 6 sessions w/ feedback
   const [blockProgress, setBlockProgress]     = useState([]);   // planned vs actual per muscle
   const [earliestWorkoutAt, setEarliestWorkoutAt] = useState(null);
+  const [completedWorkoutCount, setCompletedWorkoutCount] = useState(0);
   const [currentMesoWeek, setCurrentMesoWeek] = useState(null); // {weekIndex, plannedWeeks, isDeload, rirTarget}
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -112,6 +113,8 @@ export default function useProgressData() {
         ? completed.reduce((m, w) => (w.startedAt < m ? w.startedAt : m), completed[0].startedAt)
         : null;
       setEarliestWorkoutAt(earliest);
+      // COMP-005: lifetime completed-session count gates the Recaps tile (>=10).
+      setCompletedWorkoutCount(completed.length);
 
       const wl = await getAcuteChronicWorkload(user.id).catch(() => null);
       setWorkloadData(wl);
@@ -444,6 +447,7 @@ export default function useProgressData() {
     calValues, recentSessions, allSets, exerciseMap, deloadAlert,
     durationBars, muscleFreq, showAllMuscles, setShowAllMuscles,
     workloadData, fatigueSessions, blockProgress, earliestWorkoutAt,
+    completedWorkoutCount,
     currentMesoWeek,
     hasData, sessionCount, enoughForTrends,
     handleDismiss, handlePrWindowToggle, handleRefresh,

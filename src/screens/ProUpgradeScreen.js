@@ -22,7 +22,7 @@ const PRO_PERKS = [
   { icon: 'eye-outline', text: 'After every check-in, your coach explains every decision. What changed, what was left alone, and why.' },
 ];
 
-export default function ProUpgradeScreen({ navigation }) {
+export default function ProUpgradeScreen({ navigation, route }) {
   const toast = useToast();
   const {
     user, session, userProfile, tier, setTier, refreshTierFromCloud, resetFirstRun, firstRunComplete,
@@ -47,7 +47,9 @@ export default function ProUpgradeScreen({ navigation }) {
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
-  const [period, setPeriod] = useState('monthly'); // billing period when subscribing
+  // COMP-007: annual is the default (H&F is annual-dominant ~60-68%; the saving
+  // is an honest 50%). Monthly stays visible second. Anchor, don't hide.
+  const [period, setPeriod] = useState('annual'); // billing period when subscribing
 
   async function activatePro(supabaseUserId, { isNew }) {
     syncProfile(supabaseUserId, userProfile, 'pro', { isBetaTester: isNew }).catch(() => {});
@@ -74,7 +76,9 @@ export default function ProUpgradeScreen({ navigation }) {
     }
     setBusy(true);
     try {
-      const pr = await playBilling.purchasePackage(sku.id);
+      // COMP-025-B: prefer the win-back Play offer when the user arrived from a
+      // win-back notification. Inert (normal purchase) if no offer is configured.
+      const pr = await playBilling.purchasePackage(sku.id, { preferWinback: !!route?.params?.fromWinback });
       const ref = pr?.transactionId ?? `client_${Date.now()}`;
       await cascade.payAt('pro', ref, 'pro_upgrade');
       // Server-authoritative grant: verify the token with Google, write Pro
@@ -282,7 +286,7 @@ export default function ProUpgradeScreen({ navigation }) {
       <SafeAreaView style={styles.safe}>
         <View style={styles.successWrap}>
           <View style={styles.successCircle}>
-            <Ionicons name="checkmark" size={40} color={colors.background} />
+            <Ionicons name="checkmark" size={40} color={colors.onPrimary} />
           </View>
           <Text style={styles.successTitle}>You're Pro.</Text>
           <Text style={styles.successBody}>
@@ -376,17 +380,7 @@ export default function ProUpgradeScreen({ navigation }) {
               </Text>
               {!PRO_BETA_ACTIVE && !canTrial ? (
                 <View style={styles.periodRow}>
-                  <TouchableOpacity
-                    style={[styles.periodBtn, period === 'monthly' && styles.periodBtnActive]}
-                    onPress={() => setPeriod('monthly')}
-                    disabled={busy}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: period === 'monthly' }}
-                    accessibilityLabel={monthlyPrice ? `Monthly, ${monthlyPrice}` : 'Monthly'}
-                  >
-                    <Text style={[styles.periodLabel, period === 'monthly' && styles.periodTextActive]}>Monthly</Text>
-                    <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{monthlyPrice ?? PRICE_LOADING}</Text>
-                  </TouchableOpacity>
+                  {/* COMP-007: annual first (left) + preselected; monthly visible second. */}
                   <TouchableOpacity
                     style={[styles.periodBtn, period === 'annual' && styles.periodBtnActive]}
                     onPress={() => setPeriod('annual')}
@@ -398,6 +392,17 @@ export default function ProUpgradeScreen({ navigation }) {
                     <View style={styles.saveBadge}><Text style={styles.saveBadgeText}>Save {annualSavingsPct()}%</Text></View>
                     <Text style={[styles.periodLabel, period === 'annual' && styles.periodTextActive]}>Annual</Text>
                     <Text style={[styles.periodPrice, period === 'annual' && styles.periodTextActive]}>{annualPrice ?? PRICE_LOADING}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.periodBtn, period === 'monthly' && styles.periodBtnActive]}
+                    onPress={() => setPeriod('monthly')}
+                    disabled={busy}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: period === 'monthly' }}
+                    accessibilityLabel={monthlyPrice ? `Monthly, ${monthlyPrice}` : 'Monthly'}
+                  >
+                    <Text style={[styles.periodLabel, period === 'monthly' && styles.periodTextActive]}>Monthly</Text>
+                    <Text style={[styles.periodPrice, period === 'monthly' && styles.periodTextActive]}>{monthlyPrice ?? PRICE_LOADING}</Text>
                   </TouchableOpacity>
                 </View>
               ) : null}
@@ -597,7 +602,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: radius.sm,
     paddingHorizontal: spacing.sm, paddingVertical: 1,
   },
-  saveBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.3 },
+  saveBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0.3 },
 
   section: { marginBottom: spacing.lg },
   fieldLabel: {

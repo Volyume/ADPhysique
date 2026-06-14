@@ -43,6 +43,9 @@ Every week, a short check-in reads your weight trend, your food and your trainin
 PROGRESS
 See your morning weight trend, body metrics and progress photos in one place. Track steps and cardio alongside your lifting. Clear charts show what is actually changing, not just what you did.
 
+YOUR DATA, PLAINLY
+Works fully offline, food search included: log in a basement gym or on a flight and it syncs when you reconnect. Export your workout log as a CSV or back up everything to a file, anytime, no account required. No ads. Your data is never sold or shared with advertisers.
+
 WHO IT'S FOR
 Serious lifters, bodybuilders and physique athletes who want one app for training, nutrition and coaching, in plain numbers with no fluff.
 
@@ -52,7 +55,7 @@ Plan library, custom plan builder, unlimited workout logging, exercise library, 
 PRO
 Food diary, macros, nutrition targets, cardio, steps, weekly check-ins and Precision Coaching. Free for 14 days, plus a free week on Google Play when you subscribe. Then a monthly subscription. Cancel in Google Play.
 
-Made in the UK. Works in kg and stone. Built for the way you actually train.
+Made in the UK. Works in kg and stone. Built for the way you actually train. No ads, and your data is never sold.
 ```
 
 (~2,700 chars — room to extend toward 4,000 with more keyword-bearing prose if

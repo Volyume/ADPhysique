@@ -42,14 +42,20 @@ export {
   scheduleNextCheckinReminder,
   scheduleCascadeGateNotifications,
   cancelCascadeGateNotifications,
+  scheduleTrialDay3Notification,
+  cancelTrialDay3Notification,
   scheduleWeeklyCoachReady,
   cancelWeeklyCoachReady,
+  scheduleMissedCheckinFollowups,
+  schedulePartnerBeats,
+  cancelMissedCheckinFollowups,
   cancelMorningNotification,
   cancelCheckinNotification,
   cancelAllNotifications,
   restoreNotifications,
   rescheduleForTimezoneIfChanged,
   checkYearOfLiftsUnlock,
+  checkMonthlyRecapReady,
 } from './scheduler';
 
 export {

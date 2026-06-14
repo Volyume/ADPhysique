@@ -21,6 +21,9 @@ describe('wipeAllUserData direct-table set (A4)', () => {
       'recipes', 'recipe_ingredients',
       'daily_water', 'food_favourites', 'daily_intake_rollups',
       'food_frequents',
+      // generated meal plan: user_id + a calorie-target snapshot (health
+      // data); must never survive sign-out or account-delete
+      'meal_plans',
     ];
     for (const t of food) expect(WIPE_DIRECT_TABLES).toContain(t);
   });

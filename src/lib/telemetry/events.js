@@ -52,6 +52,12 @@ export const TELEMETRY_EVENTS = Object.freeze([
   { name: 'subscription_cancelled',          deferred: false, panel: 5 },
   { name: 'paywall_shown',                   deferred: false, panel: 5 },
   { name: 'paywall_tapped_cta',              deferred: false, panel: 5 },
+  // COMP-025-A: cancellation-reason capture. enum reason + surface only, no
+  // PII (free text routes to user_feedback, never here).
+  //   reason  = price|not_using|missing_feature|switching|temporary_break
+  //   surface = pre_store_handoff|post_lapse_sheet
+  // Server allow-list: supabase/migrate_079_cancel_reason_telemetry.sql.
+  { name: 'cancel_reason_captured',          deferred: false, panel: 5 },
   { name: 'purchase_initiated',              deferred: false, panel: 5 },
   { name: 'purchase_completed',              deferred: false, panel: 5 },
   { name: 'purchase_failed',                 deferred: false, panel: 5 },
@@ -97,6 +103,76 @@ export const TELEMETRY_EVENTS = Object.freeze([
     deferralReason: 'per-type events already cover Panel 2; umbrella duplicates without adding signal' },
   { name: 'held_decision_cleared',           deferred: true, panel: 2,
     deferralReason: 'same as held_decision_created' },
+
+  // COMP-015: visible session autoregulation. coverage + trust metrics.
+  // Payloads carry muscle keys + direction only, never training content.
+  // Server allow-list: supabase/migrate_073_session_adjustment_telemetry.sql.
+  { name: 'session_adjustment_shown',        deferred: false, panel: 2 },
+  { name: 'session_adjustment_reverted',     deferred: false, panel: 2 },
+
+  // COMP-006: methodology page open (trust formation). source param only
+  // (why_block / held_decisions / you_tab / paywall); no PII.
+  // Server allow-list: supabase/migrate_074_methodology_telemetry.sql.
+  { name: 'methodology_opened',              deferred: false, panel: 2 },
+
+  // COMP-005: recap story open. variant param only (month / block); no PII.
+  // Server allow-list: supabase/migrate_075_recap_telemetry.sql.
+  { name: 'recap_opened',                    deferred: false, panel: 2 },
+
+  // COMP-013: first-session activation choice on the Home hero first-run
+  // variant. choice param only (short / full); no PII.
+  // Server allow-list: supabase/migrate_076_first_session_choice_telemetry.sql.
+  { name: 'first_session_choice',            deferred: false, panel: 1 },
+
+  // COMP-019: chart window changed (interactive charts). chart_id + window
+  // labels only (e.g. weight/e1rm/volume, 3M); no PII, no values.
+  // Server allow-list: supabase/migrate_077_chart_window_telemetry.sql.
+  { name: 'chart_window_changed',            deferred: false, panel: 1 },
+
+  // COMP-018: weekly consistency streak. Derived values only — week state, a
+  // run-length bucket, the target source, a milestone number, a pause-duration
+  // bucket; never any training or body data.
+  // Server allow-list: supabase/migrate_078_streak_telemetry.sql.
+  { name: 'streak_week_resolved',            deferred: false, panel: 1 },
+  { name: 'streak_milestone_reached',        deferred: false, panel: 1 },
+  { name: 'streak_paused',                   deferred: false, panel: 1 },
+
+  // COMP-026 (B): step-trend TDEE modifier evaluated on a coach run. Counts and
+  // flags only (active/direction/gain bucket, agreement, logged-day counts,
+  // adjustment magnitudes at 0.50 vs the applied gain); no PII, no step counts,
+  // no weight. Server allow-list: supabase/migrate_080_step_tdee_telemetry.sql.
+  { name: 'step_tdee_modifier_evaluated',    deferred: false, panel: 2 },
+
+  // NEW-002: training partners. Counts and booleans ONLY, NEVER partner
+  // identity. invite_sent -> invite_accepted is the pairing-rate funnel;
+  // cheer_sent carries a `reciprocal` boolean (the Strava finding: reciprocity,
+  // not volume, is the active ingredient); blocked is expected ~0 (any sustained
+  // nonzero triggers a design review). Server allow-list:
+  // supabase/migrate_081_training_partners.sql.
+  { name: 'partner_invite_sent',             deferred: false, panel: 1 },
+  { name: 'partner_invite_accepted',         deferred: false, panel: 1 },
+  { name: 'partner_cheer_sent',              deferred: false, panel: 1 },
+  { name: 'partner_blocked',                 deferred: false, panel: 1 },
+
+  // COMP-020: Apple Watch companion. Adoption + the reliability bar made
+  // visible. Counts/flags only, never training content. Emitters in
+  // src/lib/watch/bridge.js. Server allow-list: migrate_084_watch_telemetry.sql.
+  { name: 'watch_session_attached',          deferred: false, panel: 1 },
+  { name: 'watch_set_logged',                deferred: false, panel: 1 },
+  { name: 'watch_apply_duplicate_dropped',   deferred: false, panel: 1 },
+  // Fired when an event arrives via the durable transferUserInfo queue after a
+  // disconnect; needs the native channel to tag recovered events — deferred
+  // until that watch-side tag lands (the allow-list carries it ready).
+  { name: 'watch_replay_recovered',          deferred: true,  panel: 1,
+    deferralReason: 'needs the native transferUserInfo channel to tag recovered events' },
+
+  // COMP-030: one consolidated event emitted on account_created carrying the
+  // pre-account quiz step timings + variant flag (pre-account events cannot
+  // reach the server — the RPC requires auth.uid()). Deferred until quiz-first
+  // is enabled (ONBOARDING_QUIZ_FIRST) and the emitter is wired at
+  // account_created; a server allow-list migration lands with that wiring.
+  { name: 'onboarding_quiz_completed',       deferred: true,  panel: 1,
+    deferralReason: 'emitted at account_created only when ONBOARDING_QUIZ_FIRST is on; wiring + server allow-list land together' },
 ]);
 
 /**

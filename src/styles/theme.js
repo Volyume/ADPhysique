@@ -32,12 +32,34 @@ const baseColors = {
   primaryFill: '#E08C0B',
   primaryDim: '#B45309',
   primaryBg: 'rgba(245, 166, 35, 0.12)',
+  // Ink on an amber/coloured FILL (buttons, active chips, badges). Held
+  // separate from `background` so a light theme can keep dark ink on the
+  // bright amber fill (amber stays the fill in both modes; the ink on it is
+  // always near-black). COMP-029 §4d: this replaces the ~124 `colors.background`
+  // foreground sites that meant "dark ink on a coloured fill". In dark it is
+  // value-identical to `background` (#0D0D0D), so the migration is a
+  // zero-visual-diff change.
+  onPrimary: '#0D0D0D',
 
-  // Semantic status
+  // Ink on the `error` FILL (the destructive button). Like onPrimary, held
+  // separate from textPrimary so the light theme keeps a light ink on the
+  // dark-red fill instead of flipping to dark ink (which fails contrast on red,
+  // audit U-F-1). White in every palette: zero-diff in dark (destructive already
+  // rendered white via textPrimary) and the fix in light. Destructive labels are
+  // large/bold text, so the applicable WCAG bar is 3:1.
+  onError: '#FFFFFF',
+
+  // Semantic status. warning is Okabe-Ito yellow (#F0E442), retuned off the
+  // amber axis (COMP-027): the old #FFC107 sat ~7 deg from brand amber
+  // #F5A623, so a 'watch' status mark and an amber action chip weren't
+  // reliably distinguishable, worst under the CVD palette where both are
+  // kept. Okabe-Ito yellow is the same hue in the default and CVD palettes
+  // and markedly lighter than both amber and the red, satisfying the
+  // accessible-traffic-light luminance rule. Consumed via stateColors.watch.
   success: '#4CAF50',
   successBg: 'rgba(76, 175, 80, 0.15)',
-  warning: '#FFC107',
-  warningBg: 'rgba(255, 193, 7, 0.15)',
+  warning: '#F0E442',
+  warningBg: 'rgba(240, 228, 66, 0.15)',
   error: '#F44336',
   errorBg: 'rgba(244, 67, 54, 0.15)',
 
@@ -75,6 +97,113 @@ const baseColors = {
 };
 
 export const colors = { ...baseColors };
+
+// ─── COMP-029 light theme ──────────────────────────────────────────────────
+// Token-derived light counterpart of baseColors (blueprint §4a). Only tokens
+// that differ from dark are listed; anything omitted keeps its dark value
+// (onPrimary stays #0D0D0D ink, primaryDim #B45309 works both sides, the Apple
+// OAuth colours are brand-locked). Every ratio is computed (WCAG 2.x) and
+// asserted in theme.test.js so the light table can never silently drift below
+// its bar. Brand note: the darkened amber ink (#8A5200) and the light hues need
+// the founder's on-device sign-off before public release (blueprint risk #3).
+const lightColors = {
+  background: '#FAFAF7',       // warm near-white, not #FFFFFF (glare; lets white cards register)
+  surface: '#FFFFFF',          // cards/sheets, separated by shadow + borderSubtle
+  surfaceElevated: '#F6F6F1',  // nested cards (inset darkens on light)
+  surface2: '#EFEFEA',         // inputs, chips
+  surface3: '#E7E7E1',         // skeletons, fills, highest emphasis
+  border: '#8F8F8B',           // 3:1+ on surface/bg (WCAG 1.4.11)
+  borderLight: '#767672',      // ~4.5:1
+  borderSubtle: '#E4E4DF',     // hairline inside cards (low-contrast by role)
+  primary: '#8A5200',          // amber INK, >=4.5:1 on every surface
+  primaryFill: '#F5A623',      // the bright brand amber is the fill on light (ink = onPrimary)
+  primaryBg: 'rgba(245, 166, 35, 0.18)',
+  // COMP-029 NOTE: dark `warning` is Okabe-Ito yellow #F0E442 (post-COMP-027
+  // retune); the blueprint table predates that. This is a darkened yellow-olive
+  // that clears 4.5:1 on light AND stays distinct from the amber `primary` ink
+  // (the COMP-027 watch-vs-amber separation). Pending founder brand sign-off.
+  warning: '#6E6300',
+  warningBg: 'rgba(240, 228, 66, 0.18)',
+  success: '#2E7D32',
+  successBg: 'rgba(46, 125, 50, 0.12)',
+  error: '#C62828',
+  errorBg: 'rgba(198, 40, 40, 0.10)',
+  textPrimary: '#1A1A18',      // warm ink, AAA
+  textSecondary: '#555553',    // ~7.5:1
+  textMuted: '#5C5C5A',        // >=5.5:1 on every surface
+  textDisabled: '#8E8E8B',     // disabled-only role, no body bar
+  tabBar: '#FFFFFF',
+  tabBarBorder: '#E4E4DF',
+  inputBg: '#EFEFEA',
+  gold: '#8A6D00',             // trophy INK (bright gold is a fill, keeps onPrimary)
+  silver: '#6E6E6E',
+  bronze: '#8C5318',
+  chartLine: '#B45309',        // clears the 3:1 non-text graphical bar
+  chartFill: 'rgba(180, 83, 9, 0.10)',
+  scrim: 'rgba(0, 0, 0, 0.45)',
+};
+
+// Higher-contrast and colour-blind-safe modifier tables, now theme-keyed
+// (blueprint §4b). The dark tables reproduce the previous inline values exactly
+// (zero behavioural change for existing HC/CVD users); the light tables apply
+// the same proportional lift / the same Okabe-Ito hue families darkened for a
+// light surface.
+const darkHC = {
+  textSecondary: '#D0D0D0',
+  textMuted:     '#C8C8C8',
+  textDisabled:  '#8E8E8E',
+  border:        '#999999',
+  borderLight:   '#AAAAAA',
+};
+const lightHC = {
+  textSecondary: '#3D3D3B',
+  textMuted:     '#4A4A48',
+  textDisabled:  '#6E6E6B',
+  border:        '#5C5C5A',
+  borderLight:   '#4A4A48',
+};
+const darkCVD = {
+  success:   '#56B4E9',
+  successBg: 'rgba(86, 180, 233, 0.15)',
+  error:     '#CC79A7',
+  errorBg:   'rgba(204, 121, 167, 0.15)',
+};
+const lightCVD = {
+  success:   '#0072B2',
+  successBg: 'rgba(0, 114, 178, 0.10)',
+  error:     '#9C4D76',
+  errorBg:   'rgba(156, 77, 118, 0.10)',
+};
+
+// Light shadows are the PRIMARY elevation cue (dark carries it via the surface
+// ladder, which barely reads on charcoal). Same offsets/radii/elevation; only
+// the opacities change (blueprint §4a "Shadows become real").
+const baseShadowOpacity = { sm: 0.3, md: 0.4, lg: 0.5 };
+const lightShadowOpacity = { sm: 0.10, md: 0.14, lg: 0.18 };
+
+// The theme actually resolved by the last applyAccessibility() call. A live
+// binding so the StatusBar + NavigationContainer chrome can follow it. Default
+// 'dark' so no existing user's appearance changes.
+export let resolvedTheme = 'dark';
+
+// Resolve prefs.theme ('dark' | 'light' | 'system' | absent) to a concrete
+// palette. 'system' reads the OS scheme at call time; absent => 'dark'.
+function resolveThemeChoice(prefs) {
+  const t = prefs?.theme;
+  if (t === 'light') return 'light';
+  if (t === 'dark') return 'dark';
+  if (t === 'system') {
+    try {
+      // eslint-disable-next-line global-require
+      const { Appearance } = require('react-native');
+      return Appearance.getColorScheme?.() === 'light' ? 'light' : 'dark';
+    } catch (_) {
+      return 'dark';
+    }
+  }
+  return 'dark';
+}
+
 
 // Apply an alpha to a colour token. Accepts hex (#RGB / #RRGGBB / #RRGGBBAA)
 // or rgb()/rgba() strings and returns an rgba() string. Replaces the fragile
@@ -162,35 +291,45 @@ export const fontSize = { ...baseFontSize };
 // Colour-blind safe (Okabe–Ito deuteranopia-tested swaps):
 //   success #4CAF50 (green)  → #56B4E9 (sky blue)
 //   error   #F44336 (red)    → #CC79A7 (reddish purple, distinct from amber)
-// Amber primary and warning yellow are kept (CVD-distinguishable already).
+// Amber primary and warning yellow are kept: warning is already Okabe-Ito
+// #F0E442 (COMP-027 retune), the same hue in both palettes and distinct from
+// amber, so no swap is needed.
 //
 // Larger text multiplies every fontSize token by 1.2 (rounded). The user
 // can also lean on the OS-level font size; this in-app toggle stacks
 // with allowFontScaling=true (RN default).
 export function applyAccessibility(prefs) {
-  // Reset to defaults first so consecutive applies don't compound.
+  // 1. Reset to dark defaults first so consecutive applies don't compound.
   Object.assign(colors, baseColors);
   Object.assign(fontSize, baseFontSize);
+  shadow.sm.shadowOpacity = baseShadowOpacity.sm;
+  shadow.md.shadowOpacity = baseShadowOpacity.md;
+  shadow.lg.shadowOpacity = baseShadowOpacity.lg;
 
+  // 2. Resolve + apply the base theme. Light is a base PALETTE, not a modifier,
+  //    so it must land before higher-contrast / colour-blind tweaks.
+  const theme = resolveThemeChoice(prefs);
+  resolvedTheme = theme;
+  const isLight = theme === 'light';
+  if (isLight) {
+    Object.assign(colors, lightColors);
+    shadow.sm.shadowOpacity = lightShadowOpacity.sm;
+    shadow.md.shadowOpacity = lightShadowOpacity.md;
+    shadow.lg.shadowOpacity = lightShadowOpacity.lg;
+  }
+
+  // 3. Higher contrast: the resolved theme's HC table.
   if (prefs?.higherContrast) {
-    Object.assign(colors, {
-      textSecondary: '#D0D0D0',
-      textMuted:     '#C8C8C8',
-      textDisabled:  '#8E8E8E',
-      border:        '#999999',
-      borderLight:   '#AAAAAA',
-    });
+    Object.assign(colors, isLight ? lightHC : darkHC);
   }
 
+  // 4. Colour-blind safe: the resolved theme's CVD table (same Okabe-Ito hue
+  //    families, darkened for a light surface).
   if (prefs?.colorBlindSafe) {
-    Object.assign(colors, {
-      success:    '#56B4E9',
-      successBg:  'rgba(86, 180, 233, 0.15)',
-      error:      '#CC79A7',
-      errorBg:    'rgba(204, 121, 167, 0.15)',
-    });
+    Object.assign(colors, isLight ? lightCVD : darkCVD);
   }
 
+  // 5. Larger text: theme-independent.
   if (prefs?.largerText) {
     Object.assign(fontSize, {
       micro:   Math.round(baseFontSize.micro   * 1.2),
@@ -315,6 +454,23 @@ export const shadow = {
   },
 };
 
+// The state-colour grammar (COMP-027): one learned-once vocabulary for every
+// surface that signals a coaching state. Action words, not progress words:
+//   onTrack — nothing needed, inside the productive band
+//   watch   — worth a look, approaching a limit or drifting; no demand
+//   act     — the coach suggests a concrete, reversible change
+//   neutral — no state (unknown / suppressed / body-data under an ED flag)
+// Lazy getters aliasing the semantic tokens (same pattern as volumeColors)
+// so the CVD and higher-contrast swaps in applyAccessibility propagate for
+// free and there is never a second palette. Bg variants resolve the same
+// way via successBg / warningBg / errorBg.
+export const stateColors = {
+  get onTrack() { return colors.success; },
+  get watch()   { return colors.warning; },
+  get act()     { return colors.error; },
+  get neutral() { return colors.textMuted; },
+};
+
 // Lazy getters so that swapping colors.success / colors.error (color-blind
 // safe palette) or colors.textMuted (higher contrast) propagates to volume
 // bands without callers re-importing.
@@ -330,13 +486,17 @@ export const volumeColors = {
 // the theme), so it returns a status string and the colour is resolved here.
 // Getters so the colour-blind-safe and high-contrast palette swaps in
 // applyAccessibility propagate to the body heatmap and volume bars. (A2-038.)
+// Re-pointed onto stateColors (COMP-027): volume bands are a Class A
+// capacity surface, so they are the first consumer of the shared grammar
+// rather than a parallel mapping. Resolves identically (stateColors aliases
+// the same semantic tokens), so no visual change.
 const volumeStatusColors = {
-  get unknown()  { return colors.textMuted; },
-  get below()    { return colors.textMuted; },
-  get minimum()  { return colors.warning; },
-  get optimal()  { return colors.success; },
-  get near_mrv() { return colors.warning; },
-  get over_mrv() { return colors.error; },
+  get unknown()  { return stateColors.neutral; },
+  get below()    { return stateColors.neutral; },
+  get minimum()  { return stateColors.watch; },
+  get optimal()  { return stateColors.onTrack; },
+  get near_mrv() { return stateColors.watch; },
+  get over_mrv() { return stateColors.act; },
 };
 
 // Resolve a volume-status string to its themed colour, falling back to the

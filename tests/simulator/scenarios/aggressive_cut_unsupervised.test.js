@@ -11,7 +11,7 @@
  * the ED detector uses the standard 2-signal threshold. Low energy +
  * sustained 'under' adherence + rapid loss should trigger detection.
  */
-import { simulate, buildWeeklyInputs } from '../runner';
+import { simulate } from '../runner';
 
 test('aggressive_cut_unsupervised: ED-pattern fires by week 4', () => {
   const startWeight = 90;

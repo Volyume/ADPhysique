@@ -9,8 +9,6 @@
  *   2. Writes a human-readable export (every plan in full + a validation
  *      summary + known residuals) to docs for manual review / deep research.
  */
-import fs from 'fs';
-import path from 'path';
 import { genLib, loadSeedLibrary } from './planengineBench';
 
 const LIB = loadSeedLibrary();
@@ -248,10 +246,10 @@ describe('Full verification export', () => {
   out.push('  the over-stuffed full-body case in check. All sets, MRV and coverage correct.');
   out.push('');
 
-  it('writes the export', () => {
-    const dest = path.join(process.cwd(), 'docs/audit/volyume-planengine-rebuild-2026-06-01/planengine-rebuild-08-full-verification-export.md');
-    fs.writeFileSync(dest, out.join('\n'), 'utf8');
-    expect(fs.existsSync(dest)).toBe(true);
+  it('builds the full verification export in memory', () => {
+    // The audit docs were removed (founder instruction 2026-06-13); the export is
+    // no longer written to disk. The engine proof below is the contract.
+    expect(out.length).toBeGreaterThan(0);
   });
 
   it('has zero hard-check failures across the full sweep (the proof)', () => {

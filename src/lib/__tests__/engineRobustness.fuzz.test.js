@@ -155,6 +155,18 @@ describe('Engine robustness: adversarial inputs never produce NaN/Infinity or th
         failures.push(`coach threw: ${e.message}`);
         continue;
       }
+      // U-B-1 §2 invariant: the derived hero `primary` mirrors the existing
+      // whyKeys ladder and NEVER promotes an ED-safety state to a hero.
+      if (out && out.hasEnoughData) {
+        const ALLOWED = [null, 'calories', 'training', 'steps', 'deload', 'dietBreak'];
+        if (!out.primary || !ALLOWED.includes(out.primary.domain)) {
+          failures.push(`primary.domain invalid: ${JSON.stringify(out.primary)}`);
+        } else if ((out.ffmFloorHeld || out.rapidLossCorrectionApplied) && out.primary.domain !== null) {
+          failures.push(`safety promoted to hero: domain=${out.primary.domain} ffm=${out.ffmFloorHeld} rapid=${out.rapidLossCorrectionApplied}`);
+        } else if (typeof out.primary.reasonKey !== 'string' || out.primary.reasonKey.length === 0) {
+          failures.push(`primary.reasonKey not a non-empty string: ${JSON.stringify(out.primary)}`);
+        }
+      }
       // Walk every string in the output; none may contain the literal tokens
       // String(NaN)/String(Infinity)/String(undefined) would print. Match
       // case-sensitively with word boundaries so the phase label "Maintenance"

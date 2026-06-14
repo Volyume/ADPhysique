@@ -72,6 +72,7 @@ export async function findLocalByBarcode(ean, userId = null) {
          kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g
        FROM custom_foods
        WHERE user_id = ? AND barcode_ean = ? AND deleted_at IS NULL
+       ORDER BY updated_at DESC, created_at DESC
        LIMIT 1`,
       [userId, ean]
     );

@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg, alignItems: 'center',
   },
   saveBtnDisabled: { backgroundColor: colors.surface2 },
-  saveBtnText: { color: colors.background, ...type.bodyStrong },
+  saveBtnText: { color: colors.onPrimary, ...type.bodyStrong },
   saveBtnTextDisabled: { color: colors.textMuted },
 
 });

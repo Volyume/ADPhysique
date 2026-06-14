@@ -55,6 +55,10 @@ const Dimensions = {
   addEventListener: () => ({ remove: () => {} }),
 };
 
+// Hook form of Dimensions.get('window'); real RN re-renders on metric change,
+// the mock returns the static window so screens reading it mount cleanly.
+const useWindowDimensions = () => Dimensions.get('window');
+
 const Alert = {
   alert: jest.fn(),
 };
@@ -167,7 +171,7 @@ module.exports = {
   Pressable, TextInput, Image, ImageBackground, Switch, Modal, FlatList, SectionList,
   KeyboardAvoidingView, SafeAreaView, ActivityIndicator, RefreshControl, StatusBar,
   Button, InputAccessoryView, VirtualizedList, DrawerLayoutAndroid, ProgressBarAndroid, ToolbarAndroid,
-  StyleSheet, Platform, Dimensions, Alert, Linking, AppState, BackHandler, Keyboard, Share, Vibration,
+  StyleSheet, Platform, Dimensions, useWindowDimensions, Alert, Linking, AppState, BackHandler, Keyboard, Share, Vibration,
   NativeModules, NativeEventEmitter, PixelRatio, Animated, Easing,
   InteractionManager, LayoutAnimation, UIManager, PermissionsAndroid,
 };

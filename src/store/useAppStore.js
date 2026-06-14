@@ -86,6 +86,14 @@ function _persistActiveWorkout(state) {
       workoutExercises: state.workoutExercises,
       currentExerciseIndex: state.currentExerciseIndex,
       workoutStartTime: state.workoutStartTime,
+      // COMP-015: persist the computed session adjustments so a crash-recovery
+      // restore rehydrates them WITHOUT recomputing — which would otherwise
+      // re-log duplicate adaptation_events.
+      sessionAdjustments: state.sessionAdjustments,
+      // COMP-020: persist the applied watch event ids so replay after a crash /
+      // background-relaunch stays idempotent (never double-logs a set).
+      appliedRemoteEventIds: Array.isArray(state.appliedRemoteEventIds)
+        ? state.appliedRemoteEventIds.slice(-500) : [],
       savedAt: Date.now(),
     };
     AsyncStorage.setItem(ACTIVE_WORKOUT_KEY, JSON.stringify(snapshot)).catch(() => {});
@@ -997,12 +1005,79 @@ const useAppStore = create((set, get) => ({
     } catch (_) {}
   },
 
+  // COMP-030: the pre-account quiz answers. IN-MEMORY ONLY — never persisted to
+  // AsyncStorage or SQLite, no device id, no network (the privacy property that
+  // makes quiz-first defensible, §4B/§9). Survives the Article 9 consent-gate
+  // remount because store memory outlives the unmounted screen; lost on a
+  // process kill (accepted — re-entry restarts the short quiz). Carries per-step
+  // timings so account_created can emit one consolidated onboarding_quiz_completed.
+  onboardingQuiz: null,
+  setQuizField: (key, value) => set((state) => ({
+    onboardingQuiz: { ...(state.onboardingQuiz || {}), [key]: value },
+  })),
+  markQuizStep: (stepKey) => set((state) => {
+    const q = state.onboardingQuiz || {};
+    const timings = { ...(q._timings || {}), [stepKey]: Date.now() };
+    return { onboardingQuiz: { ...q, _timings: timings } };
+  }),
+  resetOnboardingQuiz: () => set({ onboardingQuiz: null }),
+
   // Active workout
   activeWorkout: null,
   workoutExercises: [],
   currentExerciseIndex: 0,
   workoutStartTime: null,
   lastActivityAt: null,
+  // COMP-020: ids of watch set-events already applied this session, so replay
+  // (a reconnect, or a background-relaunch) is idempotent. Persisted on WK-1.
+  appliedRemoteEventIds: [],
+  // COMP-015: this session's per-exercise adjustments, computed once at session
+  // start (Pro-only) and read by ActiveWorkoutScreen. Empty for free users,
+  // non-meso sessions, or when nothing fired.
+  sessionAdjustments: [],
+
+  // COMP-015: set by HomeScreen after computeAndLogSessionAdjustments resolves.
+  // Persisted into the active-workout snapshot so a crash restore does not
+  // recompute (and re-log) the adjustments.
+  setSessionAdjustments: (list) => {
+    set({ sessionAdjustments: Array.isArray(list) ? list : [] });
+    _persistActiveWorkout(get());
+  },
+
+  // COMP-015: the one-tap "Use planned sets instead". Marks the adjustment
+  // reverted (so the set count + line fall back to the plan immediately) and
+  // logs session_adjustment_reverted, which both feeds revert-memory (two
+  // reverts per muscle per meso stops the engine adjusting it) and the
+  // telemetry trust metric. Best-effort logging; the UI revert is instant.
+  revertSessionAdjustment: (exerciseId) => {
+    const list = get().sessionAdjustments || [];
+    const target = list.find(a => a.exerciseId === exerciseId && !a.reverted);
+    if (!target) return;
+    set({ sessionAdjustments: list.map(a => (a.exerciseId === exerciseId ? { ...a, reverted: true } : a)) });
+    _persistActiveWorkout(get());
+    try {
+      // eslint-disable-next-line global-require
+      const { createAdaptationEvent } = require('../lib/database');
+      createAdaptationEvent({
+        mesocycleWeekId: get().activeWorkout?.mesocycleWeekId ?? null,
+        muscle: target.muscle,
+        exerciseId,
+        decision: 'session_adjustment_reverted',
+        delta: 0,
+        reasonCode: 'session_adjustment_reverted',
+        reasonText: 'You restored the planned sets.',
+        signals: { revertedReasonCode: target.reasonCode, originalDelta: target.setDelta },
+      }).catch(() => {});
+    } catch (_) { /* best-effort */ }
+    try {
+      // eslint-disable-next-line global-require
+      const { track } = require('../lib/engineTelemetry');
+      track(get().user?.id, 'session_adjustment_reverted', {
+        muscle: target.muscle,
+        direction: target.setDelta < 0 ? 'drop' : 'add',
+      })?.catch?.(() => {});
+    } catch (_) {}
+  },
 
   setActiveWorkout: (workout) => set({ activeWorkout: workout }),
   setWorkoutExercises: (next) => {
@@ -1051,6 +1126,75 @@ const useAppStore = create((set, get) => ({
     _persistActiveWorkout(get());
   },
 
+  // COMP-020: the headless, idempotent set-commit path the watch bridge calls.
+  // Reuses the same primitives as the screen (createWorkoutSet +
+  // addSetToCurrentExercise + startRestTimer) but does NOT run PR
+  // detection/celebration (that fires only when the screen is mounted; a
+  // watch-applied set queues its PR check for the summary instead — §4.3).
+  // Idempotent by eventId so replay after a reconnect / background-relaunch
+  // never double-logs. Returns { applied, reason? }.
+  applyRemoteSetEvent: async (event) => {
+    try {
+      const { eventId, workoutId, type = 'logSet', payload = {} } = event || {};
+      if (!eventId) return { applied: false, reason: 'no_event_id' };
+      const state = get();
+      if ((state.appliedRemoteEventIds || []).includes(eventId)) {
+        return { applied: false, reason: 'duplicate' };
+      }
+      const aw = state.activeWorkout;
+      if (!aw || (workoutId && aw.id !== workoutId)) {
+        return { applied: false, reason: 'no_active_workout' };
+      }
+      if (type !== 'logSet') return { applied: false, reason: 'unsupported_type' };
+
+      const exEntry = state.workoutExercises[state.currentExerciseIndex];
+      if (!exEntry?.exercise?.id) return { applied: false, reason: 'no_exercise' };
+
+      // eslint-disable-next-line global-require
+      const { createWorkoutSet } = require('../lib/database');
+      // eslint-disable-next-line global-require
+      const { countProgressSets } = require('../lib/workoutHelpers');
+      const re = exEntry.routineExercise;
+      const setNumber = countProgressSets(exEntry.sets || []) + 1; // recomputed phone-side
+
+      const savedSet = await createWorkoutSet({
+        userId: state.user?.id,
+        workoutId: aw.id,
+        exerciseId: exEntry.exercise.id,
+        setNumber,
+        setType: payload.setType || 'straight',
+        targetRepsMin: re?.recommendedRepsMin ?? null,
+        targetRepsMax: re?.recommendedRepsMax ?? null,
+        actualReps: Number.isFinite(payload.reps) ? payload.reps : (parseInt(payload.reps, 10) || 0),
+        weight: Number.isFinite(payload.weight) ? payload.weight : (parseFloat(payload.weight) || 0),
+        rir: payload.rir != null ? parseInt(payload.rir, 10) : null,
+        rpe: null,
+        failed: false,
+        notes: null,
+        isAmrap: payload.setType === 'amrap',
+        leftReps: null,
+        rightReps: null,
+      });
+
+      get().addSetToCurrentExercise(savedSet || {
+        exerciseId: exEntry.exercise.id, setNumber,
+        weight: payload.weight, actualReps: payload.reps, setType: payload.setType || 'straight',
+      });
+
+      const restSeconds = Number.isFinite(payload.restSeconds) ? payload.restSeconds
+        : (re?.restSeconds ?? 90);
+      get().startRestTimer(restSeconds);
+
+      set((s) => ({ appliedRemoteEventIds: [...(s.appliedRemoteEventIds || []), eventId].slice(-500) }));
+      _persistActiveWorkout(get());
+      return { applied: true, setNumber };
+    } catch (e) {
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logError('store.applyRemoteSetEvent', e, {}); } catch (_) {}
+      return { applied: false, reason: 'error' };
+    }
+  },
+
   startWorkout: (workout, initialExercises = []) => {
     // eslint-disable-next-line global-require
     try { require('../lib/errorLog').logInfo('workout.start', `id=${workout?.id} exercises=${initialExercises.length}`); } catch (_) {}
@@ -1060,6 +1204,9 @@ const useAppStore = create((set, get) => ({
       currentExerciseIndex: 0,
       workoutStartTime: Date.now(),
       lastActivityAt: Date.now(),
+      // COMP-015: a fresh session starts with no adjustments; HomeScreen fills
+      // them in once the (async, Pro-only) compute resolves.
+      sessionAdjustments: [],
     });
     _persistActiveWorkout(get());
   },
@@ -1102,6 +1249,10 @@ const useAppStore = create((set, get) => ({
         currentExerciseIndex: snap.currentExerciseIndex ?? 0,
         workoutStartTime: snap.workoutStartTime ?? Date.now(),
         lastActivityAt: Date.now(),
+        // COMP-015: rehydrate the already-computed adjustments; do NOT recompute
+        // on restore (that would re-log duplicate adaptation_events).
+        sessionAdjustments: Array.isArray(snap.sessionAdjustments) ? snap.sessionAdjustments : [],
+        appliedRemoteEventIds: Array.isArray(snap.appliedRemoteEventIds) ? snap.appliedRemoteEventIds : [],
       });
       return true;
     } catch (_) {
@@ -1141,6 +1292,7 @@ const useAppStore = create((set, get) => ({
       workoutStartTime: null,
       restTimerActive: false,
       lastActivityAt: null,
+      sessionAdjustments: [], // COMP-015
     });
     // Clear the crash-recovery snapshot so a finished/cancelled session
     // can't be resurrected on next launch (activeWorkout is now null).
@@ -1262,6 +1414,40 @@ const useAppStore = create((set, get) => ({
     }
   },
 
+  // Meal-plan food exclusions ("never show me this", deep-audit Theme G
+  // R1). A local profile field (the meal plan is local-only for now, so no
+  // cloud column / pushPrefSoon); the generator + swaps read it via
+  // preferencesFromProfile. Idempotent append.
+  addMealPlanExcludedFood: async (foodKey) => {
+    const { user, userProfile } = get();
+    if (!user?.id || !foodKey) return;
+    const current = Array.isArray(userProfile?.mealPlanExcludeFoods)
+      ? userProfile.mealPlanExcludeFoods : [];
+    if (current.includes(foodKey)) return;
+    const updated = { ...(userProfile || {}), mealPlanExcludeFoods: [...current, foodKey] };
+    const key = PROFILE_KEY_PFX + user.id;
+    try { await AsyncStorage.setItem(key, JSON.stringify(updated)); } catch (_) {}
+    set({ userProfile: updated });
+  },
+
+  // Meal-plan preference controls (deep-audit Theme G R4): meals/day,
+  // variety dial, fat convention, peri-workout slots. Local profile
+  // fields (plan is local-only); merged + persisted, read by
+  // preferencesFromProfile. `partial` carries any of the mealPlan* keys.
+  setMealPlanPrefs: async (partial) => {
+    const { user, userProfile } = get();
+    if (!user?.id || !partial || typeof partial !== 'object') return;
+    const allowed = ['mealPlanMealsPerDay', 'mealPlanVariety', 'mealPlanFatConvention',
+      'mealPlanPeriWorkout', 'mealPlanExcludeTags', 'mealPlanPinnedMeals'];
+    const patch = {};
+    for (const k of allowed) if (k in partial) patch[k] = partial[k];
+    if (Object.keys(patch).length === 0) return;
+    const updated = { ...(userProfile || {}), ...patch };
+    const key = PROFILE_KEY_PFX + user.id;
+    try { await AsyncStorage.setItem(key, JSON.stringify(updated)); } catch (_) {}
+    set({ userProfile: updated });
+  },
+
   // Bar weight for plate calculator, persisted alongside units
   barWeight: 20,
   setBarWeight: async (w) => {
@@ -1290,6 +1476,7 @@ const useAppStore = create((set, get) => ({
     higherContrast: false, // brightens muted text + thickens borders via theme tokens
     colorBlindSafe: false, // swaps red/green success/error to blue/orange
     reduceMotion: false,   // skips PRCelebration particles, RestTimer pulse, big spring anims
+    theme: 'dark',         // COMP-029: 'dark' | 'light' | 'system'. Default dark, no existing user changes
   },
   accessibilityLoaded: false,
   loadAccessibility: async () => {

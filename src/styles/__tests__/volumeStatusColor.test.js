@@ -7,7 +7,7 @@
  * must propagate. These tests lock that contract.
  */
 import { getVolumeStatus } from '../../lib/algorithms';
-import { volumeStatusColor, applyAccessibility, colors } from '../theme';
+import { volumeStatusColor, applyAccessibility, colors, stateColors } from '../theme';
 
 afterEach(() => {
   // Reset the in-place palette mutation so tests don't leak into each other.
@@ -53,5 +53,37 @@ describe('volumeStatusColor', () => {
     const after = volumeStatusColor('optimal');
     expect(after).toBe(colors.success); // tracks the live token
     expect(after).not.toBe(before);     // and the token actually changed
+  });
+});
+
+describe('stateColors grammar (COMP-027)', () => {
+  test('aliases the semantic tokens', () => {
+    expect(stateColors.onTrack).toBe(colors.success);
+    expect(stateColors.watch).toBe(colors.warning);
+    expect(stateColors.act).toBe(colors.error);
+    expect(stateColors.neutral).toBe(colors.textMuted);
+  });
+
+  test('warning is the Okabe-Ito yellow retune, not the old amber-axis hue', () => {
+    expect(colors.warning).toBe('#F0E442');
+    expect(stateColors.watch).toBe('#F0E442');
+  });
+
+  test('volumeStatusColor resolves through the grammar (one system, no drift)', () => {
+    expect(volumeStatusColor('optimal')).toBe(stateColors.onTrack);
+    expect(volumeStatusColor('minimum')).toBe(stateColors.watch);
+    expect(volumeStatusColor('near_mrv')).toBe(stateColors.watch);
+    expect(volumeStatusColor('over_mrv')).toBe(stateColors.act);
+    expect(volumeStatusColor('below')).toBe(stateColors.neutral);
+  });
+
+  test('CVD swap propagates to onTrack and act; watch stays Okabe-Ito yellow in both palettes', () => {
+    const watchBefore = stateColors.watch;
+    const onTrackBefore = stateColors.onTrack;
+    applyAccessibility({ colorBlindSafe: true });
+    expect(stateColors.onTrack).toBe(colors.success); // tracks the swapped token
+    expect(stateColors.onTrack).not.toBe(onTrackBefore);
+    expect(stateColors.act).toBe(colors.error);
+    expect(stateColors.watch).toBe(watchBefore); // yellow kept across palettes
   });
 });

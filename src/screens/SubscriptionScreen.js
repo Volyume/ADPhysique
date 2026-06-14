@@ -12,13 +12,13 @@
  * locked_in_price_tier, complete_trial_ends_at, pro_trial_ends_at).
  */
 import { useState, useCallback } from 'react';
-import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import CancelReasonSheet from '../components/CancelReasonSheet';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
@@ -37,12 +37,13 @@ const STAGE_LABEL = {
   free:            'Free',
 };
 
-export default function SubscriptionScreen({ navigation }) {
+export default function SubscriptionScreen({ navigation, route }) {
   const toast = useToast();
-  const { userProfile, billingPeriod, storeTier } = useAppStore(useShallow((s) => ({
+  const { userProfile, billingPeriod, storeTier, userId } = useAppStore(useShallow((s) => ({
     userProfile: s.userProfile,
     billingPeriod: s.billingPeriod,
     storeTier: s.tier,
+    userId: s.user?.id,
   })));
 
   // M-1 (audit): resolve the Pro/Free value from store.tier, the same source
@@ -63,30 +64,24 @@ export default function SubscriptionScreen({ navigation }) {
   const priceFor = usePlayPrices();
 
   const [busy, setBusy] = useState(false);
+  const [cancelSheetVisible, setCancelSheetVisible] = useState(false);
 
   const handleCancel = useCallback(() => {
-    appAlert(
-      'Cancel your Volyume subscription?',
-      "You'll keep your features until the current billing period ends. After that you'll drop to Free. Your training history, food log, and check-ins all stay; some features become read-only.",
-      [
-        { text: 'Keep my subscription', style: 'cancel' },
-        {
-          text: 'Cancel anyway',
-          style: 'destructive',
-          onPress: () => {
-            // Apple + Google both require their own UI for actual
-            // cancellation. We can't cancel server-side.
-            const url = Platform.OS === 'ios'
-              ? 'itms-apps://apps.apple.com/account/subscriptions'
-              : 'https://play.google.com/store/account/subscriptions';
-            Linking.openURL(url).catch((e) => {
-              logError('Subscription.openCancelUrl', e);
-              toast.show("Couldn't open subscription settings", { variant: 'error' });
-            });
-          },
-        },
-      ],
-    );
+    // COMP-025-A: one optional reason question before the store handoff,
+    // replacing the bare confirm alert. The sheet never gates the exit.
+    setCancelSheetVisible(true);
+  }, []);
+
+  const handleStoreHandoff = useCallback(() => {
+    // Apple + Google both require their own UI for actual cancellation.
+    // We can't cancel server-side.
+    const url = Platform.OS === 'ios'
+      ? 'itms-apps://apps.apple.com/account/subscriptions'
+      : 'https://play.google.com/store/account/subscriptions';
+    Linking.openURL(url).catch((e) => {
+      logError('Subscription.openCancelUrl', e);
+      toast.show("Couldn't open subscription settings", { variant: 'error' });
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -128,9 +123,11 @@ export default function SubscriptionScreen({ navigation }) {
     if (stage === 'pro_trial') {
       navigation?.navigate?.('CascadeGate', { variant: 'day14', period });
     } else {
-      navigation?.navigate?.('ProUpgrade');
+      // COMP-025-B: carry the win-back arrival through so the resubscribe
+      // prefers the win-back Play offer (inert when none is configured).
+      navigation?.navigate?.('ProUpgrade', { fromWinback: !!route?.params?.fromWinback });
     }
-  }, [navigation, period, stage]);
+  }, [navigation, period, stage, route]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -195,6 +192,15 @@ export default function SubscriptionScreen({ navigation }) {
           the {Platform.OS === 'ios' ? 'App Store' : 'Play Store'}.
         </Text>
       </ScrollView>
+
+      <CancelReasonSheet
+        visible={cancelSheetVisible}
+        onClose={() => setCancelSheetVisible(false)}
+        onStoreHandoff={handleStoreHandoff}
+        storeLabel={Platform.OS === 'ios' ? 'the App Store' : 'Google Play'}
+        userId={userId}
+        surface="pre_store_handoff"
+      />
     </SafeAreaView>
   );
 }

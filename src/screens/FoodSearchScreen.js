@@ -29,9 +29,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import { SkeletonRow } from '../components/Skeleton';
 import {
-  logFoodEntry, getRecentFoodEntries, getFavourites,
+  logFoodEntry, getFavourites,
   getDislikes, cycleFoodPreference, getAllCustomFoods, getFoodFrequents,
   getRollupForDay, getLoggedMealSlotsForDay, applyCuratedMealToDiary,
+  upsertSlotRecent, getSlotRecents,
 } from '../lib/food/db';
 import { getNutritionTargets } from '../lib/database';
 import { getCuratedCandidates } from '../lib/food/curatedMeals';
@@ -50,7 +51,7 @@ import FoodRow from '../components/food/FoodRow';
 import { mealSlotLabel } from '../lib/food/mealSlots';
 
 const EMPTY_COPY = {
-  recents: 'Nothing logged yet.',
+  recents: 'Nothing logged here yet. Add a food to get started.',
   favourites: 'No favourites yet. Long-press a food to star it.',
   frequents: 'Nothing logged often enough yet.',
 };
@@ -97,19 +98,18 @@ export default function FoodSearchScreen({ navigation, route }) {
     if (!userId) return;
     try {
       const [recentRows, favRows, disRows, customRaw] = await Promise.all([
-        getRecentFoodEntries(userId, 25),
+        // "Add again" (COMP-002): this slot's most-logged foods, not the
+        // global recency list. last_quantity_g rides along so the detail
+        // sheet pre-fills the portion the user used here last time.
+        getSlotRecents(userId, mealSlot, 10),
         getFavourites(userId),
         getDislikes(userId),
         getAllCustomFoods(userId),
       ]);
-      const seen = new Set();
       const recentResolved = [];
       for (const r of recentRows) {
-        if (seen.has(r.food_ref)) continue;
-        seen.add(r.food_ref);
         const food = await resolveFoodRef(userId, r.food_ref);
-        if (food) recentResolved.push(food);
-        if (recentResolved.length >= 25) break;
+        if (food) recentResolved.push({ ...food, last_quantity_g: r.last_quantity_g });
       }
       setRecents(recentResolved);
 
@@ -129,7 +129,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         source: 'custom',
       })));
     } catch (_) { /* tolerate */ }
-  }, [userId]);
+  }, [userId, mealSlot]);
 
   // Frequents is server-computed; pull a fresh snapshot if the local
   // cache is stale, then resolve the refs for display. Lazy: only runs
@@ -277,6 +277,12 @@ export default function FoodSearchScreen({ navigation, route }) {
           fibreG: it.fibreG,
         });
         logged++;
+        // eslint-disable-next-line no-await-in-loop
+        await upsertSlotRecent(userId, {
+          mealSlot,
+          foodRef: it.food.food_ref,
+          quantityG: it.quantityG,
+        }).catch(() => {}); // derived memory only; never fail the log
       }
       setPlate([]);
       setShowPlate(false);
@@ -360,6 +366,11 @@ export default function FoodSearchScreen({ navigation, route }) {
       fatG:      Math.round((food.fat_100g     ?? 0) * factor * 10) / 10,
       fibreG:    food.fibre_100g != null ? Math.round(food.fibre_100g * factor * 10) / 10 : null,
     });
+    await upsertSlotRecent(userId, {
+      mealSlot: chosenSlot,
+      foodRef: food.food_ref,
+      quantityG,
+    }).catch(() => {}); // derived memory only; never fail the log
     navigation.goBack();
   }
 
@@ -723,6 +734,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         visible={!!picker}
         mode="add"
         food={picker?.food}
+        initialQuantityG={picker?.food?.last_quantity_g}
         initialMealSlot={mealSlot}
         initialEntryDate={entryDate}
         onSave={confirmLog}
@@ -830,7 +842,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md, paddingHorizontal: spacing.xl,
     borderRadius: radius.md,
   },
-  noResultsBtnText: { color: colors.background, fontWeight: fontWeight.bold },
+  noResultsBtnText: { color: colors.onPrimary, fontWeight: fontWeight.bold },
 
   footerBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -854,7 +866,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm, paddingHorizontal: spacing.lg,
     borderRadius: radius.md,
   },
-  plateLogText: { ...type.bodyStrong, color: colors.background },
+  plateLogText: { ...type.bodyStrong, color: colors.onPrimary },
   plateModalBackdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   plateModalSheet: {
     backgroundColor: colors.surface,

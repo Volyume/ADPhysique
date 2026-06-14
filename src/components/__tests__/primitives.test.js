@@ -49,6 +49,19 @@ describe('Button', () => {
     const pressable = tree.root.findByProps({ accessibilityRole: 'button' });
     expect(pressable.props.accessibilityLabel).toBe('Add to my plans');
   });
+
+  test('primary ink uses the always-dark onPrimary token, not theme `background` (U-F-1 contrast guard)', () => {
+    // `onPrimary` stays #0D0D0D in both themes; `background` flips near-white in the
+    // light theme and would fail contrast on the amber fill. In the dark-theme test
+    // env onPrimary and background share a value, so this pins the intended ink
+    // token at the value level and catches a swap to any other token.
+    let tree;
+    act(() => { tree = create(<Button title="Save" onPress={() => {}} />); });
+    const label = tree.root.findByType(Text);
+    expect(label.props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ color: colors.onPrimary })]),
+    );
+  });
 });
 
 describe('Card', () => {

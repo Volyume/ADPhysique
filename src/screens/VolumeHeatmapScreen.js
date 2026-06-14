@@ -16,6 +16,10 @@ import {
 } from '../lib/algorithms';
 import { useFocusEffect } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
+import WindowChips from '../components/WindowChips';
+import VolyumeChart from '../components/VolyumeChart';
+import { VOLUME_WINDOWS, windowByKey, volumeTakeaway } from '../lib/chartWindows';
+import { track } from '../lib/engineTelemetry';
 
 const WINDOW_OPTIONS = [
   { weeks: 1, label: '1 week' },
@@ -34,12 +38,28 @@ export default function VolumeHeatmapScreen() {
   const [editValues, setEditValues] = useState({});
   const [trendData, setTrendData] = useState([]);
   const [lastTrainedMap, setLastTrainedMap] = useState({});
+  // COMP-019: the volume trend section gets its own window (4W/8W/3M/6M). Kept
+  // at 4W by default to preserve the section's current shape; chips widen it.
+  const [trendWindowKey, setTrendWindowKey] = useState('4W');
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useFocusEffect(useCallback(() => { loadData(); }, [user?.id, windowWeeks]));
+  useFocusEffect(useCallback(() => { loadData(); }, [user?.id, windowWeeks, trendWindowKey]));
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadData(); }, [windowWeeks]);
+  useEffect(() => { loadData(); }, [windowWeeks, trendWindowKey]);
+
+  // Restore the persisted trend window on mount.
+  useEffect(() => {
+    (async () => {
+      try { const v = await AsyncStorage.getItem('@volyume_chart_window_volume'); if (v) setTrendWindowKey(v); } catch (_) {}
+    })();
+  }, []);
+
+  function selectTrendWindow(key) {
+    setTrendWindowKey(key);
+    AsyncStorage.setItem('@volyume_chart_window_volume', key).catch(() => {});
+    try { track(user?.id, 'chart_window_changed', { chart_id: 'volume', window: key })?.catch?.(() => {}); } catch (_) {}
+  }
 
   async function loadData() {
     if (!user?.id) return;
@@ -61,7 +81,8 @@ export default function VolumeHeatmapScreen() {
       setWeeklyVolume(volume);
       setPreviousVolume(prevVolume);
 
-      const trend = await getWeeklyVolumeByMuscle(user.id, 4);
+      const trendWin = windowByKey(VOLUME_WINDOWS, trendWindowKey) ?? windowByKey(VOLUME_WINDOWS, '4W');
+      const trend = await getWeeklyVolumeByMuscle(user.id, trendWin.weeks);
       setTrendData(trend);
 
       const lastTrained = await getLastTrainedByMuscle(user.id).catch(() => ({}));
@@ -168,6 +189,20 @@ export default function VolumeHeatmapScreen() {
       trendData.some(week => (week.volumeByMuscle[muscle] || 0) > 0),
     );
   }, [trendData, muscles]);
+
+  // COMP-019: total weekly working sets across all muscles, for the trend
+  // takeaway. Weeks with no training are dropped (the average is over training
+  // weeks); leading empties signal the window reaches past the account's start.
+  const volWeeklyTotals = useMemo(() => trendData
+    .map(week => Math.round(Object.values(week.volumeByMuscle || {}).reduce((t, v) => t + v, 0)))
+    .filter(t => t > 0), [trendData]);
+  // Always use the window's canonical phrase. We can't tell "window reaches
+  // past the account start" apart from "a rest week sits inside the window"
+  // without the first-workout date, and the latter must not read as "All N
+  // weeks" — so the volume takeaway names the window, not a guessed span.
+  const volTakeaway = volumeTakeaway({
+    windowKey: trendWindowKey, coversAll: false, spanDays: 0, weeklySets: volWeeklyTotals,
+  });
 
   const handleMuscleTap = useCallback((muscleKey) => {
     const offset = rowOffsets.current[muscleKey];
@@ -316,10 +351,13 @@ export default function VolumeHeatmapScreen() {
           })}
         </View>
 
-        {/* 4-week trend, hidden for new users with no data */}
+        {/* Volume trend, hidden for new users with no data */}
         {trainedMuscles.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>4-week trend</Text>
+            <Text style={styles.sectionTitle}>Volume trend</Text>
+            <WindowChips windows={VOLUME_WINDOWS} selectedKey={trendWindowKey} onSelect={selectTrendWindow}
+              accessibilityPrefix="volume trend window" />
+            {!!volTakeaway && <Text style={styles.trendTakeaway}>{volTakeaway}</Text>}
             {trainedMuscles.map(muscle => (
               <MuscleTrendRow
                 key={muscle}
@@ -395,12 +433,26 @@ function LegendItem({ color, label }) {
 const SPARK_BAR_WIDTH = 8;
 const SPARK_BAR_GAP = 2;
 const SPARK_MAX_HEIGHT = 24;
-const SPARK_EMPTY_HEIGHT = 3;
 
 function MuscleTrendRow({ muscle, trendData, customLandmarks }) {
-  // trendData is the 4-week array (oldest → newest), each entry has volumeByMuscle
+  // trendData is the window's weekly array (oldest → newest), each entry has
+  // volumeByMuscle. COMP-019 Stage 1b: bars render through VolyumeChart's bar
+  // variant with tap-and-hold scrub; since a 24px row has no room for a tooltip
+  // card, the scrubbed week's count surfaces in the trailing label instead.
   const counts = trendData.map(w => w.volumeByMuscle[muscle] || 0);
-  const maxCount = Math.max(...counts, 1); // avoid divide-by-zero
+  const [scrubIdx, setScrubIdx] = useState(null);
+
+  const barColorFor = (count) => (count === 0
+    ? colors.surface3
+    : volumeStatusColor(getVolumeStatus(count, muscle, customLandmarks).status));
+
+  const barData = counts.map(c => ({ value: c, color: barColorFor(c) }));
+  const chartWidth = counts.length * SPARK_BAR_WIDTH + Math.max(0, counts.length - 1) * SPARK_BAR_GAP;
+
+  const showIdx = scrubIdx != null && scrubIdx >= 0 && scrubIdx < counts.length
+    ? scrubIdx
+    : counts.length - 1;
+  const showCount = counts[showIdx] ?? 0;
 
   return (
     <View style={trendStyles.row}>
@@ -408,37 +460,30 @@ function MuscleTrendRow({ muscle, trendData, customLandmarks }) {
         {MUSCLE_DISPLAY_NAMES[muscle]}
       </Text>
       <View style={trendStyles.sparkContainer}>
-        {counts.map((count, idx) => {
-          const isEmpty = count === 0;
-          const barHeight = isEmpty
-            ? SPARK_EMPTY_HEIGHT
-            : Math.max(SPARK_EMPTY_HEIGHT, Math.round((count / maxCount) * SPARK_MAX_HEIGHT));
-          const { status } = getVolumeStatus(count, muscle, customLandmarks);
-          const color = volumeStatusColor(status);
-          const barColor = isEmpty ? colors.surface3 : color;
-          return (
-            <View
-              key={idx}
-              style={[
-                trendStyles.sparkBar,
-                {
-                  width: SPARK_BAR_WIDTH,
-                  height: barHeight,
-                  backgroundColor: barColor,
-                  marginRight: idx < counts.length - 1 ? SPARK_BAR_GAP : 0,
-                },
-              ]}
-            />
-          );
-        })}
+        <VolyumeChart
+          variant="bar"
+          data={barData}
+          width={chartWidth}
+          height={SPARK_MAX_HEIGHT}
+          barWidth={SPARK_BAR_WIDTH}
+          barGap={SPARK_BAR_GAP}
+          color={colors.primary}
+          interactive
+          onScrubIndex={setScrubIdx}
+          accessibilityLabel={`${MUSCLE_DISPLAY_NAMES[muscle]} weekly volume trend`}
+          formatTooltip={(i) => ({
+            title: MUSCLE_DISPLAY_NAMES[muscle],
+            sub: `${trendData[i]?.weekLabel ?? `week ${i + 1}`}: ${counts[i]} sets`,
+          })}
+        />
       </View>
       <Text
         style={[
           trendStyles.currentCount,
-          { color: volumeStatusColor(getVolumeStatus(counts[counts.length - 1], muscle, customLandmarks).status) },
+          { color: volumeStatusColor(getVolumeStatus(showCount, muscle, customLandmarks).status) },
         ]}
       >
-        {counts[counts.length - 1]}
+        {showCount}
       </Text>
     </View>
   );
@@ -461,9 +506,6 @@ const trendStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     height: SPARK_MAX_HEIGHT,
-  },
-  sparkBar: {
-    borderRadius: 2,
   },
   currentCount: {
     width: 20,
@@ -577,6 +619,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  trendTakeaway: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
   sectionTitle: {
     ...type.label,
     color: colors.textSecondary,
@@ -653,5 +696,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     alignItems: 'center',
   },
-  saveBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  saveBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
 });

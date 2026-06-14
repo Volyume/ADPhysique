@@ -300,6 +300,35 @@ export async function syncWorkout(supabaseUserId, workoutId) {
   }
 }
 
+/**
+ * Remove a deleted workout (and its sets) from the cloud so a later restore
+ * pull cannot resurrect it. Local rows are already gone
+ * (database.deleteWorkoutAndSets); this is the cloud half. Returns true on
+ * success; on failure the caller enqueues a 'workout_delete' op so the
+ * drainer retries with backoff. Sets go first so a mid-way failure leaves a
+ * set-less workout shell, never orphaned cloud sets.
+ *
+ * Multi-device note (v1): a device that has ALREADY pulled the session keeps
+ * its local copy until its next full pull (sign-in); the watermark delta pull
+ * has no tombstone to carry, and the cloud rows are simply gone.
+ */
+export async function deleteWorkoutFromCloud(supabaseUserId, workoutId) {
+  const sb = getClient();
+  if (!sb || !supabaseUserId || !workoutId) return false;
+  try {
+    const { error: setsErr } = await sb.from('workout_sets')
+      .delete().eq('user_id', supabaseUserId).eq('workout_id', workoutId);
+    if (setsErr) { logPgErr('sync.deleteWorkoutFromCloud.sets', setsErr); return false; }
+    const { error: wErr } = await sb.from('workouts')
+      .delete().eq('user_id', supabaseUserId).eq('id', workoutId);
+    if (wErr) { logPgErr('sync.deleteWorkoutFromCloud.workout', wErr); return false; }
+    return true;
+  } catch (e) {
+    logWarn('sync.deleteWorkoutFromCloud', e?.message, { workoutId });
+    return false;
+  }
+}
+
 async function _upsertWorkout(sb, supabaseUserId, w) {
   // Columns: every user-entered + computed field on a workout row.
   // The previous payload omitted name / pre_workout_intent /
@@ -325,6 +354,10 @@ async function _upsertWorkout(sb, supabaseUserId, w) {
     soreness_24h_before: w.soreness24hBefore ?? null,
     fatigue_level: w.fatigueLevel ?? null,
     joint_discomfort: w.jointDiscomfort ?? null,
+    // COMP-008 pre-workout readiness, kept column-symmetric with
+    // insertWorkoutFromCloud in database.js.
+    sleep_quality: w.sleepQuality ?? null,
+    energy_score: w.energyScore ?? null,
     set_count: w.setCount ?? null,
     total_volume: w.totalVolume ?? null,
     is_completed: true,

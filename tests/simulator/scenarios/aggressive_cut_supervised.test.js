@@ -16,7 +16,7 @@
  * and OPEN_QUESTIONS_RESOLVED.md), so the same trajectory that fires
  * for the unsupervised athlete stays clean for the supervised one.
  */
-import { simulate, buildWeeklyInputs } from '../runner';
+import { simulate } from '../runner';
 
 test('aggressive_cut_supervised: ED-pattern does NOT fire at 3-signal threshold', () => {
   const startWeight = 90;

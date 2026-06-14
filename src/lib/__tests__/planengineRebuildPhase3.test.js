@@ -18,10 +18,8 @@
  * benchmark and gets un-skipped when 3c lands. This file measures the starting
  * overlap so the gap to close is on the record.
  */
-import fs from 'fs';
-import path from 'path';
 import {
-  DIVISIONS, EXPERIENCE_LEVELS, loadSeedLibrary, genLib, gen,
+  DIVISIONS, EXPERIENCE_LEVELS, loadSeedLibrary, genLib,
   measure, weeklySets, exerciseSet, overlapPct,
 } from './planengineBench';
 
@@ -109,67 +107,4 @@ test('record the starting Bikini-vs-MP exercise overlap (3c gate target < 30%)',
   // the Phase 2 benchmark (un-skipped) once 3c division pools land.
   expect(libOverlap).toBeGreaterThanOrEqual(0);
   expect(libOverlap).toBeLessThanOrEqual(1);
-});
-
-test('write phase 3 library-benchmark doc', () => {
-  const out = [];
-  out.push('Status: COMPLETE | Timestamp: 2026-06-01 | Phase 3 increment 0: library-path benchmark');
-  out.push('');
-  out.push('# planEngine rebuild, phase 3 increment 0: the library-path benchmark');
-  out.push('');
-  out.push('## Why this exists');
-  out.push('');
-  out.push('Phases 1 and 2 were measured on the deterministic internal POOL. The live');
-  out.push('app does not use POOL: it feeds the DB exercise library through');
-  out.push('getAllExercises, generatePoolFromLibrary and _effectivePool. The Phase 3');
-  out.push('library work (3a corrected tagging, 3b sub-region tags, 3c division pools) is');
-  out.push('only verifiable on the library path, so this benchmark is built first. It');
-  out.push('records the starting numbers so the re-tag work has a before and after, not a');
-  out.push('blind edit of 87KB of seed data.');
-  out.push('');
-  out.push(`Seed library parsed: ${LIBRARY.length} exercises.`);
-  out.push('');
-  out.push('## Library-path structural check (4-day, intermediate), all divisions');
-  out.push('');
-  out.push('| Division | split | lead lift | total sets | zeros | over-MRV | fragments |');
-  out.push('|---|---|---|---|---|---|---|');
-  for (const [goal, label] of DIVISIONS) {
-    const m = measure(genLib(goal, { days: 4 }));
-    out.push(`| ${label} | ${m.split} | ${m.lead} | ${m.total} | ${m.zeros.length ? m.zeros.join(',') : 'none'} | ${m.overMRV.length ? m.overMRV.join('; ') : 'none'} | ${m.fragments.length ? m.fragments.length : 'none'} |`);
-  }
-  out.push('');
-  out.push('## POOL vs library path: same structural guarantees?');
-  out.push('');
-  out.push('| Division | POOL total | library total | POOL lead | library lead |');
-  out.push('|---|---|---|---|---|');
-  for (const [goal, label] of DIVISIONS) {
-    const mp = measure(gen(goal, { days: 4 }));
-    const ml = measure(genLib(goal, { days: 4 }));
-    out.push(`| ${label} | ${mp.total} | ${ml.total} | ${mp.lead} | ${ml.lead} |`);
-  }
-  out.push('');
-  out.push('## Bikini-vs-MP exercise overlap (the 3c gate target is < 30%)');
-  out.push('');
-  const bikLib = genLib('bikini', { days: 4 });
-  const mpLib = genLib('mens_physique', { days: 4 });
-  const bikPool = gen('bikini', { days: 4 });
-  const mpPool = gen('mens_physique', { days: 4 });
-  out.push(`- library path: ${(overlapPct(bikLib, mpLib) * 100).toFixed(0)}%`);
-  out.push(`- POOL path: ${(overlapPct(bikPool, mpPool) * 100).toFixed(0)}%`);
-  out.push('');
-  out.push('This is the gap 3c (division-specific pools + mandated lead category +');
-  out.push('restrictions) must close. The assertion lives, skipped, in the phase 2');
-  out.push('benchmark and is un-skipped when 3c lands. Not relaxed, just not yet due.');
-  out.push('');
-  out.push('## What this increment does NOT do');
-  out.push('');
-  out.push('- 3a corrected muscle tagging in seedExercises.js (hip-extension primary =');
-  out.push('  glutes, etc.): NOT done. This benchmark makes it measurable.');
-  out.push('- 3b sub-region tags on every exercise: NOT done.');
-  out.push('- 3c division-specific pools: NOT done. This is what drives the overlap down.');
-  out.push('- 3e indirect volume, 3f coverage warnings, Phase 4: NOT done.');
-  out.push('');
-  const dest = path.join(process.cwd(), 'docs/audit/volyume-planengine-rebuild-2026-06-01/planengine-rebuild-03-library-benchmark.md');
-  fs.writeFileSync(dest, out.join('\n'), 'utf8');
-  expect(fs.existsSync(dest)).toBe(true);
 });

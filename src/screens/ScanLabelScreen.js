@@ -37,17 +37,12 @@ import { Camera, useCameraDevice } from 'react-native-vision-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
+import NetInfo from '@react-native-community/netinfo';
 import { isOcrConfigured, recogniseText, recogniseBlocks } from '../lib/food/ocr';
 import { parseNutritionLabel } from '../lib/food/ocrParser';
 import { pickProductName } from '../lib/food/labelName';
-import { queueContribution, getConsent } from '../lib/food/writeback';
-import useAppStore from '../store/useAppStore';
-import { useShallow } from 'zustand/react/shallow';
 
 export default function ScanLabelScreen({ navigation, route }) {
-  const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
-  const userId = user?.id;
-
   const mealSlot = route?.params?.mealSlot ?? 'snack';
   const entryDate = route?.params?.entryDate ?? todayLocalKey();
   const prefillBarcode = route?.params?.prefillBarcode ?? null;
@@ -64,6 +59,23 @@ export default function ScanLabelScreen({ navigation, route }) {
   const cameraRef = useRef(null);
   const device = useCameraDevice('back');
   const ocrAvailable = isOcrConfigured();
+
+  // COMP-022 arrival choice: a barcode miss lands here. Rather than dumping the
+  // user straight into the camera, present a one-tap decision (scan the label /
+  // type it in). Skipped when OCR isn't in the binary (the existing type-in CTA
+  // path covers that — State C). `reachable` picks honest copy: a confirmed
+  // miss (online) vs "couldn't check" (offline) — no waterfall hot-path change.
+  const [arrivalChoice, setArrivalChoice] = useState(!!prefillBarcode && ocrAvailable);
+  const [reachable, setReachable] = useState(null); // null = checking, treated as online
+  useEffect(() => {
+    if (!prefillBarcode) return;
+    let cancelled = false;
+    NetInfo.fetch()
+      .then((s) => { if (!cancelled) setReachable(s?.isConnected !== false && s?.isInternetReachable !== false); })
+      .catch(() => { if (!cancelled) setReachable(true); });
+    return () => { cancelled = true; };
+  }, [prefillBarcode]);
+  const offline = reachable === false;
 
   useFocusEffect(useCallback(() => {
     setFocused(true);
@@ -128,23 +140,15 @@ export default function ScanLabelScreen({ navigation, route }) {
       const macros = parsed?.fields || {};
       const confidence = parsed?.confidence || null;
 
-      // Queue OFF contribution if the user opted in AND we have a
-      // barcode to attach. Fires now; the parsed macros are what
-      // the user is about to confirm in AddCustomFood. We could
-      // wait for the save to fire, but queuing on capture is simpler
-      // and the user can abort the save if the OCR was nonsense.
-      if (prefillBarcode && (await getConsent())) {
-        await queueContribution(userId, {
-          barcode: prefillBarcode,
-          kcal100g: macros.kcal100g, protein100g: macros.protein100g,
-          carbs100g: macros.carbs100g, fat100g: macros.fat100g,
-          fibre100g: macros.fibre100g, servingG: macros.servingG,
-        });
-      }
-
+      // OFF contribution is NOT queued here any more (COMP-022): queuing at
+      // capture sent unconfirmed OCR, which contradicts the consent copy
+      // ("the macros you confirm") and left an orphan queue entry if the
+      // user abandoned the save. It now fires from AddCustomFood's onSave
+      // with the values the user actually confirmed.
       navigation.replace('AddCustomFood', {
         mealSlot, entryDate, prefillBarcode, prefillMacros: macros,
         prefillConfidence: confidence, prefillName: nameParam,
+        from: 'scan_chain',
       });
     } catch {
       if (step === 'front') {
@@ -156,7 +160,7 @@ export default function ScanLabelScreen({ navigation, route }) {
         mealSlot, entryDate, prefillBarcode, prefillName: productName || undefined,
       });
     }
-  }, [busy, navigation, mealSlot, entryDate, prefillBarcode, userId, torch, step, productName]);
+  }, [busy, navigation, mealSlot, entryDate, prefillBarcode, torch, step, productName]);
 
   // Skip the name step and go straight to the nutrition panel.
   const skipName = () => {
@@ -167,6 +171,7 @@ export default function ScanLabelScreen({ navigation, route }) {
   const gotoManual = () => {
     navigation.replace('AddCustomFood', {
       mealSlot, entryDate, prefillBarcode, prefillName: productName || undefined,
+      from: 'scan_manual',
     });
   };
 
@@ -264,7 +269,11 @@ export default function ScanLabelScreen({ navigation, route }) {
         />
         {prefillBarcode ? (
           <View style={styles.missBanner} pointerEvents="none">
-            <Text style={styles.missTitle}>Barcode {prefillBarcode} not in our database</Text>
+            <Text style={styles.missTitle}>
+              {offline
+                ? `Barcode ${prefillBarcode}`
+                : `Barcode ${prefillBarcode} not in our database`}
+            </Text>
             <Text style={styles.missBody}>
               {!ocrAvailable
                 ? 'Type the nutrition in. The barcode is saved with it, so next time it scans straight away.'
@@ -298,12 +307,38 @@ export default function ScanLabelScreen({ navigation, route }) {
                   <Text style={styles.skipText}>Skip name</Text>
                 </TouchableOpacity>
               ) : null}
+              {/* COMP-022: a barcode heal must never dead-end mid-capture — a
+                  persistent escape that keeps the barcode (✕ would discard it). */}
+              {prefillBarcode && !busy ? (
+                <TouchableOpacity onPress={gotoManual} hitSlop={12} style={styles.skipBtn} accessibilityRole="button" accessibilityLabel="Type it in">
+                  <Text style={styles.skipText}>Type it in</Text>
+                </TouchableOpacity>
+              ) : null}
             </>
           ) : (
             <Button title="Type it in" variant="tertiary" onPress={gotoManual} />
           )}
         </View>
       </View>
+
+      {/* COMP-022 arrival choice — camera warm behind the scrim, one tap in. */}
+      {arrivalChoice ? (
+        <View style={styles.choiceOverlay}>
+          <View style={styles.choiceScrim} />
+          <View style={styles.choiceCard}>
+            <Text style={styles.choiceTitle}>
+              {offline ? 'Couldn’t check the full database' : 'Not in the database yet'}
+            </Text>
+            <Text style={styles.choiceBody}>
+              {offline
+                ? 'You’re offline, so only the on-device list was checked. Label scanning still works offline. Whatever you save is kept on this phone.'
+                : 'Fix it once and it’s yours. Scan the label, about 30 seconds, or type it in. The barcode is saved either way, so next time it scans instantly.'}
+            </Text>
+            <Button title="Scan the label" onPress={() => setArrivalChoice(false)} />
+            <Button title="Type it in" variant="tertiary" onPress={gotoManual} />
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -317,6 +352,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   headerTitle: { ...type.title, color: colors.textPrimary },
+  choiceOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end' },
+  choiceScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.scrim },
+  choiceCard: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
+    padding: spacing.xl, gap: spacing.md,
+  },
+  choiceTitle: { ...type.title, color: colors.textPrimary },
+  choiceBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
   // eslint-disable-next-line no-restricted-syntax -- camera viewport is true black behind the live preview
   cameraWrap: { flex: 1, backgroundColor: '#000' },
   overlay: { flex: 1, alignItems: 'center', justifyContent: 'center' },

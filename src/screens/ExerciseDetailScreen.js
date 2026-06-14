@@ -7,7 +7,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
-import SvgLineChart from '../components/SvgLineChart';
+import VolyumeChart from '../components/VolyumeChart';
+import WindowChips from '../components/WindowChips';
+import {
+  TREND_WINDOWS, DEFAULT_WINDOW_KEY, windowByKey, filterByWindow,
+  pickInitialWindowKey, e1rmTakeaway,
+} from '../lib/chartWindows';
+import { track } from '../lib/engineTelemetry';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import { SkeletonCard } from '../components/Skeleton';
 import AnimatedEntrance from '../components/AnimatedEntrance';
@@ -62,6 +69,10 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const [exercise, setExercise] = useState(null);
   const [history, setHistory] = useState([]);
+  // COMP-019: all sessions (uncapped) feed the windowed chart; history stays
+  // the last-8 view for the History list and all-time best below.
+  const [allSessions, setAllSessions] = useState([]);
+  const [chartWindowKey, setChartWindowKey] = useState(DEFAULT_WINDOW_KEY);
   const [prs, setPRs] = useState([]);
   const [substitutes, setSubstitutes] = useState([]);
   const [plateau, setPlateau] = useState(null);
@@ -81,6 +92,21 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exerciseId]);
 
+  // COMP-019: pick the chart's initial window — persisted choice if it holds
+  // enough sessions, else widen to the narrowest window with >=2 (never dead).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let pref = DEFAULT_WINDOW_KEY;
+      try { const v = await AsyncStorage.getItem('@volyume_chart_window_e1rm'); if (v) pref = v; } catch (_) {}
+      if (cancelled) return;
+      const pts = allSessions.map(s => ({ date: s[0]?.createdAt ?? 0 })).filter(p => p.date);
+      setChartWindowKey(pickInitialWindowKey(pts, p => p.date, TREND_WINDOWS, pref));
+    })();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allSessions.length]);
+
   async function loadData() {
     try {
       const ex = await getExerciseById(exerciseId);
@@ -96,8 +122,9 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         if (!byWorkout[s.workoutId]) byWorkout[s.workoutId] = [];
         byWorkout[s.workoutId].push(s);
       }
-      const sessions = Object.values(byWorkout).slice(0, 8);
-      setHistory(sessions);
+      const sessions = Object.values(byWorkout);
+      setAllSessions(sessions);
+      setHistory(sessions.slice(0, 8));
 
       // Plateau detection
       const sessionArrays = sessions.map(s => s.sets ?? s); // newest-first already
@@ -240,19 +267,37 @@ export default function ExerciseDetailScreen({ navigation, route }) {
     ? Math.max(0, goal.targetWeight - best1RM)
     : 0;
 
-  // Build chart data: one point per session (oldest → newest)
-  const reversedHistory = [...history].reverse();
-  const chartData = reversedHistory.map((sessionSets, i) => {
-    const workingSets = sessionSets.filter(s => (s.weight || 0) > 0 && (s.actualReps || 0) > 0);
-    const topSet = workingSets.reduce((best, s) => {
-      if (!best || (s.weight || 0) > (best.weight || 0)) return s;
-      return best;
-    }, null);
-    const maxWeight = topSet ? (topSet.weight || 0) : 0;
-    const e1rmVal = topSet ? calculate1RM(topSet.weight || 0, topSet.actualReps || 0) : 0;
-    return { x: i, weight: maxWeight, est1rm: e1rmVal };
-  });
+  // COMP-019: one chart point per session, oldest → newest, each carrying its
+  // session date so the window chips slice by date (not by count). Built from
+  // ALL sessions; the window controls what's shown.
+  const allChartPoints = allSessions
+    .map((sessionSets) => {
+      const workingSets = sessionSets.filter(s => (s.weight || 0) > 0 && (s.actualReps || 0) > 0);
+      const topSet = workingSets.reduce((best, s) => (!best || (s.weight || 0) > (best.weight || 0)) ? s : best, null);
+      const maxWeight = topSet ? (topSet.weight || 0) : 0;
+      const e1rmVal = topSet ? calculate1RM(topSet.weight || 0, topSet.actualReps || 0) : 0;
+      return { date: sessionSets[0]?.createdAt ?? 0, weight: maxWeight, est1rm: e1rmVal };
+    })
+    .filter(p => p.weight > 0)
+    .sort((a, b) => a.date - b.date);
+
+  const e1rmDateOf = (p) => p.date;
+  const chartWin = windowByKey(TREND_WINDOWS, chartWindowKey) ?? windowByKey(TREND_WINDOWS, DEFAULT_WINDOW_KEY);
+  const windowedPoints = filterByWindow(allChartPoints, e1rmDateOf, chartWin.days);
+  const chartCoversAll = windowedPoints.length === allChartPoints.length;
   const activeYKey = chartMode === 'e1rm' ? 'est1rm' : 'weight';
+  const chartTakeaway = windowedPoints.length >= 2
+    ? e1rmTakeaway({
+        windowKey: chartWindowKey, coversAll: chartCoversAll, points: windowedPoints,
+        dateOf: e1rmDateOf, values: windowedPoints.map(p => p[activeYKey]), unit: units,
+      })
+    : '';
+
+  function selectChartWindow(key) {
+    setChartWindowKey(key);
+    AsyncStorage.setItem('@volyume_chart_window_e1rm', key).catch(() => {});
+    try { track(user?.id, 'chart_window_changed', { chart_id: 'e1rm', window: key })?.catch?.(() => {}); } catch (_) {}
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -449,9 +494,12 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         )}
 
         {/* Strength trend chart */}
-        {history.length >= 2 && (
+        {allChartPoints.length >= 2 && (
           <View style={styles.chartSection}>
             <Text style={styles.chartLabel}>Strength trend</Text>
+            <WindowChips windows={TREND_WINDOWS} selectedKey={chartWindowKey} onSelect={selectChartWindow}
+              accessibilityPrefix="strength trend window" />
+            {!!chartTakeaway && <Text style={styles.chartTakeaway}>{chartTakeaway}</Text>}
             <View style={styles.chartToggle}>
               <TouchableOpacity
                 style={[styles.chartToggleBtn, chartMode === 'weight' && styles.chartToggleBtnActive]}
@@ -476,19 +524,33 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 </Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.chartContainer}>
-              <SvgLineChart
-                data={chartData.map(d => ({ value: d[activeYKey] }))}
-                width={SCREEN_W - spacing.lg * 2 - spacing.md * 2}
-                height={96}
-                color={colors.primary}
-                thickness={2}
-                area
-                areaTopColor={colors.chartFill}
-                areaBottomColor={colors.chartFill}
-                curved
-              />
-            </View>
+            {windowedPoints.length >= 2 ? (
+              <View style={styles.chartContainer}>
+                <VolyumeChart
+                  data={windowedPoints.map(d => ({ value: d[activeYKey] }))}
+                  width={SCREEN_W - spacing.lg * 2 - spacing.md * 2}
+                  height={96}
+                  color={colors.primary}
+                  thickness={2}
+                  area
+                  areaTopColor={colors.chartFill}
+                  areaBottomColor={colors.chartFill}
+                  curved
+                  interactive
+                  accessibilityLabel={chartMode === 'e1rm' ? 'Estimated max trend chart' : 'Max weight trend chart'}
+                  formatTooltip={(i) => {
+                    const p = windowedPoints[i];
+                    if (!p) return null;
+                    return {
+                      title: `${Math.round(p[activeYKey])} ${units}`,
+                      sub: p.date ? format(new Date(p.date), 'MMM d') : '',
+                    };
+                  }}
+                />
+              </View>
+            ) : (
+              <Text style={styles.chartEmptyHint}>Not enough data in this window yet.</Text>
+            )}
             {chartMode === 'e1rm' && (
               <Text style={styles.e1rmNote}>
                 Estimated from top set using the Epley formula. Best for rep ranges 2–10.
@@ -732,6 +794,8 @@ const styles = StyleSheet.create({
   sfrLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   sfrDivider: { width: 1, height: 36, backgroundColor: colors.border },
   chartSection: { gap: spacing.sm },
+  chartTakeaway: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  chartEmptyHint: { ...type.caption, color: colors.textMuted, fontStyle: 'italic', paddingVertical: spacing.md },
   chartLabel: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
@@ -1075,7 +1139,7 @@ const styles = StyleSheet.create({
   },
   saveGoalBtnText: {
     ...type.bodyStrong,
-    color: colors.background,
+    color: colors.onPrimary,
   },
   removeGoalLink: {
     alignItems: 'center',

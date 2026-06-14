@@ -14,8 +14,12 @@
  *     The engine surfaces leaner meals once the user has had their fat.
  *     (No auto pre/post-workout detection and no goal tags: the macro
  *     targets the engine ranks against are already goal-driven.)
- *   - Higher-protein plant staples (seitan, soya mince/TVP, soy/pea protein,
- *     tempeh, edamame) so vegan/vegetarian meals clear the protein target.
+ *   - Higher-protein plant staples (tofu, soya mince/TVP, legumes, soy/pea
+ *     protein, edamame) so vegan/vegetarian meals clear the protein target.
+ *     Vegan anchors are weighted toward tofu / legumes / soya, with seitan and
+ *     tempeh kept as occasional options — this mirrors what published vegan
+ *     competitor days of eating actually centre on (2026-06-12 primary-source
+ *     research, docs/deep-audit-2026-06-12/meal-research/src-f-*).
  *   - British supermarket staples only.
  *
  * Schema (per meal):
@@ -55,6 +59,19 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_om_tuna_ricecakes', 'Tuna & rice cakes', 'omnivore', ['snack'], [{ food: 'tuna_water', g: 100 }, { food: 'rice_cakes', g: 32 }]),
   m('curated_om_eggs_apple_snack', 'Boiled eggs & apple', 'omnivore', ['snack'], [{ food: 'eggs', g: 150 }, { food: 'apple', g: 150 }]),
 
+  // ─── OMNIVORE — staple expansion (rethink §3.5: common, easy, makeable
+  //     British meals; familiar comfort dinners made macro-friendly + simple
+  //     staples, per founder decision "mix of both") ───────────────────────
+  m('curated_om_chicken_salad_wrap', 'Chicken salad wrap', 'omnivore', ['lunch'], [{ food: 'chicken_breast', g: 120 }, { food: 'tortilla', g: 60 }, { food: 'salad', g: 80 }]),
+  m('curated_om_tuna_jacket', 'Jacket potato with tuna', 'omnivore', ['lunch', 'dinner'], [{ food: 'white_potato', g: 300 }, { food: 'tuna_water', g: 120 }, { food: 'salad', g: 60 }]),
+  m('curated_om_chicken_pasta_pot', 'Chicken & tomato pasta pot', 'omnivore', ['lunch'], [{ food: 'chicken_breast', g: 120 }, { food: 'pasta', g: 60 }, { food: 'tomato_sauce', g: 80 }]),
+  m('curated_om_cottage_pie', 'Lean cottage pie & veg', 'omnivore', ['dinner'], [{ food: 'beef_mince_5', g: 175 }, { food: 'white_potato', g: 250 }, { food: 'mixed_veg', g: 120 }, { food: 'tomato_sauce', g: 60 }]),
+  m('curated_om_chicken_fajitas', 'Chicken fajitas', 'omnivore', ['dinner'], [{ food: 'chicken_breast', g: 150 }, { food: 'tortilla', g: 120 }, { food: 'stirfry_veg', g: 100 }, { food: 'salsa', g: 60 }, { food: 'cheddar_light', g: 20 }]),
+  m('curated_om_spag_bol', 'Lean spaghetti bolognese', 'omnivore', ['dinner'], [{ food: 'beef_mince_5', g: 150 }, { food: 'pasta', g: 70 }, { food: 'tomato_sauce', g: 120 }]),
+  m('curated_om_chilli_con_carne', 'Chilli con carne & rice', 'omnivore', ['dinner'], [{ food: 'beef_mince_5', g: 150 }, { food: 'kidney_beans', g: 100 }, { food: 'white_rice', g: 150 }, { food: 'tomato_sauce', g: 80 }]),
+  m('curated_om_chicken_curry', 'Chicken curry & rice (fakeaway)', 'omnivore', ['dinner'], [{ food: 'chicken_breast', g: 150 }, { food: 'white_rice', g: 180 }, { food: 'tomato_sauce', g: 100 }]),
+  m('curated_om_salmon_noodle_stirfry', 'Salmon noodle stir-fry', 'omnivore', ['dinner'], [{ food: 'salmon', g: 140 }, { food: 'noodles', g: 150 }, { food: 'stirfry_veg', g: 120 }]),
+
   // ─── VEGETARIAN ────────────────────────────────────────────────────
   m('curated_veg_yog_oats_berries', 'Greek yogurt, oats & berries', 'vegetarian', ['breakfast'], [{ food: 'greek_yogurt_0', g: 200 }, { food: 'oats', g: 40 }, { food: 'berries', g: 80 }, { food: 'honey', g: 15 }]),
   m('curated_veg_egg_scramble_beans', 'Egg scramble, toast & beans', 'vegetarian', ['breakfast'], [{ food: 'eggs', g: 100 }, { food: 'egg_whites', g: 120 }, { food: 'wholemeal_bread', g: 40 }, { food: 'baked_beans', g: 100 }]),
@@ -73,6 +90,14 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_veg_yog_whey_almonds', 'Greek yogurt, whey & almonds', 'vegetarian', ['snack'], [{ food: 'greek_yogurt_2', g: 150 }, { food: 'whey', g: 15 }, { food: 'almonds', g: 15 }]),
   m('curated_veg_edamame_egg', 'Edamame & boiled egg', 'vegetarian', ['snack'], [{ food: 'edamame', g: 100 }, { food: 'eggs', g: 50 }]),
 
+  // ─── VEGETARIAN — staple expansion (rethink §3.5) ────────────────────
+  m('curated_veg_weetabix_whey', 'Weetabix, milk & a scoop of whey', 'vegetarian', ['breakfast'], [{ food: 'weetabix', g: 45 }, { food: 'milk_skimmed', g: 250 }, { food: 'whey', g: 25 }]),
+  m('curated_veg_cottage_jacket', 'Jacket potato with cottage cheese', 'vegetarian', ['lunch'], [{ food: 'white_potato', g: 300 }, { food: 'cottage_cheese', g: 150 }, { food: 'salad', g: 60 }]),
+  m('curated_veg_quorn_spag_bol', 'Meat-free spaghetti bolognese', 'vegetarian', ['dinner'], [{ food: 'quorn_mince', g: 150 }, { food: 'pasta', g: 70 }, { food: 'tomato_sauce', g: 120 }]),
+  m('curated_veg_halloumi_fajitas', 'Halloumi fajitas', 'vegetarian', ['dinner'], [{ food: 'halloumi', g: 100 }, { food: 'tortilla', g: 120 }, { food: 'stirfry_veg', g: 120 }, { food: 'salsa', g: 60 }]),
+  m('curated_veg_skyr_berries_pot', 'Skyr & berries pot', 'vegetarian', ['snack'], [{ food: 'skyr', g: 150 }, { food: 'berries', g: 80 }]),
+  m('curated_veg_whey_banana_shake', 'Whey shake & banana', 'vegetarian', ['snack'], [{ food: 'whey', g: 30 }, { food: 'milk_skimmed', g: 250 }, { food: 'banana', g: 100 }]),
+
   // ─── VEGAN ─────────────────────────────────────────────────────────
   m('curated_vg_soy_oats_banana', 'Soya protein oats & banana', 'vegan', ['breakfast'], [{ food: 'oats', g: 60 }, { food: 'soy_protein', g: 30 }, { food: 'banana', g: 120 }]),
   m('curated_vg_soy_yog_oats', 'Soya yogurt, protein & oats', 'vegan', ['breakfast'], [{ food: 'soy_yogurt_hp', g: 200 }, { food: 'pea_protein', g: 15 }, { food: 'oats', g: 40 }, { food: 'berries', g: 80 }]),
@@ -81,13 +106,13 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_vg_tofu_avocado_toast', 'Tofu & avocado toast', 'vegan', ['breakfast'], [{ food: 'tofu_firm', g: 150 }, { food: 'wholemeal_bread', g: 60 }, { food: 'avocado', g: 50 }]),
   m('curated_vg_seitan_rice_veg', 'Seitan, rice & veg stir-fry', 'vegan', ['lunch', 'dinner'], [{ food: 'seitan', g: 130 }, { food: 'white_rice', g: 180 }, { food: 'stirfry_veg', g: 120 }]),
   m('curated_vg_tempeh_quinoa', 'Tempeh, quinoa & roast veg', 'vegan', ['lunch', 'dinner'], [{ food: 'tempeh', g: 120 }, { food: 'quinoa', g: 120 }, { food: 'mixed_veg', g: 120 }, { food: 'olive_oil', g: 8 }]),
-  m('curated_vg_tempeh_burrito', 'Tempeh burrito bowl', 'vegan', ['lunch', 'dinner'], [{ food: 'tempeh', g: 120 }, { food: 'white_rice', g: 150 }, { food: 'black_beans', g: 80 }, { food: 'salsa', g: 40 }]),
+  m('curated_vg_tofu_burrito', 'Tofu burrito bowl', 'vegan', ['lunch', 'dinner'], [{ food: 'tofu_firm', g: 150 }, { food: 'white_rice', g: 150 }, { food: 'black_beans', g: 80 }, { food: 'salsa', g: 40 }]),
   m('curated_vg_lentil_pasta', 'High-protein lentil pasta', 'vegan', ['lunch', 'dinner'], [{ food: 'lentil_pasta', g: 100 }, { food: 'tomato_sauce', g: 120 }, { food: 'mixed_veg', g: 100 }]),
-  m('curated_vg_chickpea_quinoa', 'Chickpea & quinoa salad', 'vegan', ['lunch'], [{ food: 'chickpeas', g: 150 }, { food: 'quinoa', g: 100 }, { food: 'salad', g: 100 }, { food: 'olive_oil', g: 8 }]),
-  m('curated_vg_edamame_rice', 'Edamame, rice & veg', 'vegan', ['lunch'], [{ food: 'edamame', g: 150 }, { food: 'white_rice', g: 150 }, { food: 'mixed_veg', g: 100 }]),
+  m('curated_vg_chickpea_quinoa', 'Tofu, chickpea & quinoa salad', 'vegan', ['lunch'], [{ food: 'tofu_firm', g: 100 }, { food: 'chickpeas', g: 120 }, { food: 'quinoa', g: 100 }, { food: 'salad', g: 100 }, { food: 'olive_oil', g: 8 }]),
+  m('curated_vg_edamame_rice', 'Edamame, rice & veg', 'vegan', ['lunch'], [{ food: 'edamame', g: 200 }, { food: 'white_rice', g: 150 }, { food: 'mixed_veg', g: 100 }]),
   m('curated_vg_tvp_chilli_rice', 'Soya mince chilli with rice', 'vegan', ['dinner'], [{ food: 'tvp_dry', g: 50 }, { food: 'kidney_beans', g: 120 }, { food: 'white_rice', g: 150 }, { food: 'tomato_sauce', g: 100 }]),
-  m('curated_vg_lentil_dahl', 'Lentil dahl & rice', 'vegan', ['dinner'], [{ food: 'lentil_dahl', g: 250 }, { food: 'white_rice', g: 150 }, { food: 'spinach', g: 50 }]),
-  m('curated_vg_blackbean_sweetpot', 'Black bean & sweet potato bowl', 'vegan', ['lunch', 'dinner'], [{ food: 'black_beans', g: 200 }, { food: 'sweet_potato', g: 200 }, { food: 'mixed_veg', g: 100 }]),
+  m('curated_vg_lentil_dahl', 'Lentil dahl & rice', 'vegan', ['dinner'], [{ food: 'lentil_dahl', g: 320 }, { food: 'white_rice', g: 150 }, { food: 'spinach', g: 50 }]),
+  m('curated_vg_blackbean_sweetpot', 'Tofu, black bean & sweet potato bowl', 'vegan', ['lunch', 'dinner'], [{ food: 'tofu_firm', g: 100 }, { food: 'black_beans', g: 150 }, { food: 'sweet_potato', g: 200 }, { food: 'mixed_veg', g: 100 }]),
   m('curated_vg_pea_shake_berries', 'Pea protein shake & berries', 'vegan', ['snack'], [{ food: 'pea_protein', g: 33 }, { food: 'berries', g: 100 }]),
   m('curated_vg_soy_yog_granola_pb', 'Soya yogurt, granola & peanut butter', 'vegan', ['snack'], [{ food: 'soy_yogurt_hp', g: 200 }, { food: 'granola', g: 25 }, { food: 'peanut_butter', g: 12 }]),
 
@@ -141,21 +166,40 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_vg_tofu_scramble_beans', 'Tofu scramble & beans', 'vegan', ['breakfast'], [{ food: 'tofu_firm', g: 200 }, { food: 'baked_beans', g: 120 }, { food: 'wholemeal_bread', g: 40 }]),
   m('curated_vg_soy_smoothie_oats', 'Soya protein berry smoothie', 'vegan', ['breakfast', 'snack'], [{ food: 'soy_protein', g: 30 }, { food: 'oats', g: 30 }, { food: 'berries', g: 80 }, { food: 'soy_milk', g: 200 }]),
   m('curated_vg_tofu_avo_seeds_toast', 'Tofu, seeds & avocado toast', 'vegan', ['breakfast'], [{ food: 'tofu_firm', g: 150 }, { food: 'wholemeal_bread', g: 60 }, { food: 'avocado', g: 40 }, { food: 'mixed_seeds', g: 10 }]),
-  m('curated_vg_seitan_noodles', 'Seitan & noodle stir-fry', 'vegan', ['lunch', 'dinner'], [{ food: 'seitan', g: 130 }, { food: 'noodles', g: 200 }, { food: 'stirfry_veg', g: 120 }]),
+  m('curated_vg_tofu_noodles', 'Tofu & noodle stir-fry', 'vegan', ['lunch', 'dinner'], [{ food: 'tofu_firm', g: 200 }, { food: 'noodles', g: 200 }, { food: 'stirfry_veg', g: 120 }]),
   m('curated_vg_tofu_sweet_potato', 'Tofu & sweet potato bowl', 'vegan', ['lunch', 'dinner'], [{ food: 'tofu_firm', g: 200 }, { food: 'sweet_potato', g: 200 }, { food: 'broccoli', g: 100 }]),
   m('curated_vg_tvp_bolognese', 'Soya mince bolognese', 'vegan', ['dinner'], [{ food: 'tvp_dry', g: 45 }, { food: 'pasta', g: 70 }, { food: 'tomato_sauce', g: 120 }]),
   m('curated_vg_seitan_potato_greens', 'Seitan, potatoes & greens', 'vegan', ['dinner'], [{ food: 'seitan', g: 130 }, { food: 'white_potato', g: 250 }, { food: 'green_beans', g: 100 }]),
   m('curated_vg_chickpea_lentil_curry', 'Chickpea & lentil curry', 'vegan', ['lunch', 'dinner'], [{ food: 'chickpeas', g: 200 }, { food: 'lentils', g: 100 }, { food: 'white_rice', g: 150 }, { food: 'spinach', g: 60 }]),
-  m('curated_vg_tempeh_peanut_noodles', 'Tempeh peanut noodles', 'vegan', ['lunch', 'dinner'], [{ food: 'tempeh', g: 120 }, { food: 'noodles', g: 180 }, { food: 'stirfry_veg', g: 100 }, { food: 'peanut_butter', g: 12 }]),
-  m('curated_vg_edamame_quinoa_salad', 'Edamame & quinoa salad', 'vegan', ['lunch'], [{ food: 'edamame', g: 150 }, { food: 'quinoa', g: 120 }, { food: 'salad', g: 100 }, { food: 'tahini', g: 12 }]),
+  m('curated_vg_edamame_peanut_noodles', 'Edamame peanut noodles', 'vegan', ['lunch', 'dinner'], [{ food: 'edamame', g: 200 }, { food: 'noodles', g: 180 }, { food: 'stirfry_veg', g: 100 }, { food: 'peanut_butter', g: 12 }]),
+  m('curated_vg_edamame_quinoa_salad', 'Edamame & quinoa salad', 'vegan', ['lunch'], [{ food: 'edamame', g: 200 }, { food: 'quinoa', g: 120 }, { food: 'salad', g: 100 }, { food: 'tahini', g: 12 }]),
   m('curated_vg_tofu_curry_rice', 'Tofu curry & rice', 'vegan', ['lunch', 'dinner'], [{ food: 'tofu_firm', g: 200 }, { food: 'white_rice', g: 180 }, { food: 'mixed_veg', g: 100 }]),
   m('curated_vg_blackbean_soya_burrito', 'Black bean & soya burrito', 'vegan', ['lunch', 'dinner'], [{ food: 'tvp_dry', g: 40 }, { food: 'black_beans', g: 120 }, { food: 'tortilla', g: 60 }, { food: 'salsa', g: 40 }]),
   m('curated_vg_lentil_dahl_chickpea', 'Lentil dahl with chickpeas', 'vegan', ['dinner'], [{ food: 'lentil_dahl', g: 250 }, { food: 'chickpeas', g: 120 }, { food: 'white_rice', g: 120 }]),
-  m('curated_vg_seitan_quinoa_veg', 'Seitan, quinoa & roast veg', 'vegan', ['lunch', 'dinner'], [{ food: 'seitan', g: 120 }, { food: 'quinoa', g: 150 }, { food: 'mixed_veg', g: 120 }, { food: 'olive_oil', g: 6 }]),
+  m('curated_vg_soya_quinoa_veg', 'Soya mince, quinoa & roast veg', 'vegan', ['lunch', 'dinner'], [{ food: 'tvp_dry', g: 40 }, { food: 'quinoa', g: 150 }, { food: 'mixed_veg', g: 120 }, { food: 'olive_oil', g: 6 }]),
   m('curated_vg_soy_yog_pb_banana', 'Soya yogurt, PB & banana', 'vegan', ['snack'], [{ food: 'soy_yogurt_hp', g: 200 }, { food: 'pea_protein', g: 15 }, { food: 'peanut_butter', g: 12 }, { food: 'banana', g: 80 }]),
   m('curated_vg_edamame_tahini_ricecakes', 'Edamame & tahini rice cakes', 'vegan', ['snack'], [{ food: 'edamame', g: 150 }, { food: 'rice_cakes', g: 24 }, { food: 'tahini', g: 10 }]),
   m('curated_vg_pea_oat_shake', 'Pea protein oat shake', 'vegan', ['snack'], [{ food: 'pea_protein', g: 30 }, { food: 'oats', g: 30 }, { food: 'soy_milk', g: 200 }]),
   m('curated_vg_soy_apple_almonds', 'Soya yogurt, apple & almonds', 'vegan', ['snack'], [{ food: 'soy_protein', g: 15 }, { food: 'soy_yogurt_hp', g: 200 }, { food: 'apple', g: 100 }, { food: 'almonds', g: 12 }]),
+
+  // ─── Gate expansion (2026-06-12 primary-source pass): breakfast + snack
+  //     depth to the founder's per-slot target. Every meal maps to a
+  //     corroborated archetype in _GATE-meal-library-2026-06-12.md. ─────────
+  m('curated_om_steak_eggs_potatoes', 'Steak, eggs & potatoes', 'omnivore', ['breakfast'], [{ food: 'steak_lean', g: 100 }, { food: 'eggs', g: 100 }, { food: 'white_potato', g: 200 }]),
+  m('curated_om_eggwhites_oats_berries', 'Egg whites, oats & berries', 'omnivore', ['breakfast'], [{ food: 'egg_whites', g: 200 }, { food: 'oats', g: 50 }, { food: 'berries', g: 80 }]),
+  m('curated_om_beef_egg_scramble', 'Beef & egg breakfast scramble', 'omnivore', ['breakfast'], [{ food: 'beef_mince_5', g: 100 }, { food: 'eggs', g: 100 }, { food: 'wholemeal_bread', g: 40 }]),
+  m('curated_veg_porridge_whey_berries', 'Porridge, whey & berries', 'vegetarian', ['breakfast'], [{ food: 'oats', g: 60 }, { food: 'whey', g: 30 }, { food: 'berries', g: 80 }]),
+  m('curated_veg_big_yogurt_bowl', 'Big Greek yogurt bowl', 'vegetarian', ['breakfast'], [{ food: 'greek_yogurt_0', g: 300 }, { food: 'oats', g: 30 }, { food: 'honey', g: 10 }]),
+  m('curated_vg_soy_yogurt_berries_pot', 'Soya yogurt & berries pot', 'vegan', ['breakfast', 'snack'], [{ food: 'soy_yogurt_hp', g: 250 }, { food: 'pea_protein', g: 20 }, { food: 'berries', g: 80 }]),
+  m('curated_om_chicken_salad_sandwich', 'Chicken salad sandwich', 'omnivore', ['lunch'], [{ food: 'chicken_breast', g: 120 }, { food: 'wholemeal_bread', g: 80 }, { food: 'salad', g: 60 }]),
+  m('curated_om_tuna_salad_sandwich', 'Tuna salad sandwich', 'omnivore', ['lunch'], [{ food: 'tuna_water', g: 120 }, { food: 'wholemeal_bread', g: 80 }, { food: 'salad', g: 60 }]),
+  m('curated_om_whey_apple_almonds', 'Whey shake, apple & almonds', 'omnivore', ['snack'], [{ food: 'whey', g: 25 }, { food: 'apple', g: 120 }, { food: 'almonds', g: 15 }]),
+  m('curated_om_smoked_salmon_salad_plate', 'Smoked salmon & salad plate', 'omnivore', ['snack'], [{ food: 'smoked_salmon', g: 100 }, { food: 'salad', g: 80 }]),
+  m('curated_om_eggwhites_toast_snack', 'Egg whites on toast', 'omnivore', ['snack'], [{ food: 'egg_whites', g: 200 }, { food: 'wholemeal_bread', g: 40 }]),
+  m('curated_veg_yogurt_honey_pot', 'Greek yogurt & honey pot', 'vegetarian', ['snack'], [{ food: 'greek_yogurt_0', g: 250 }, { food: 'honey', g: 15 }]),
+  m('curated_veg_cottage_berries_bowl', 'Cottage cheese & berries bowl', 'vegetarian', ['snack'], [{ food: 'cottage_cheese', g: 200 }, { food: 'berries', g: 80 }, { food: 'honey', g: 10 }]),
+  m('curated_vg_soy_shake_apple', 'Soya protein shake & apple', 'vegan', ['snack'], [{ food: 'soy_protein', g: 30 }, { food: 'soy_milk', g: 250 }, { food: 'apple', g: 100 }]),
+  m('curated_vg_edamame_pot', 'Edamame pot', 'vegan', ['snack'], [{ food: 'edamame', g: 200 }]),
 
   // ── Pre-workout ────────────────────────────────────────────────────────
   // Easy-to-digest carbs with moderate protein, kept low in fat and fibre so

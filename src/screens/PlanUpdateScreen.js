@@ -320,6 +320,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxl,
   },
   saveBtnDisabled: { backgroundColor: colors.surface2 },
-  saveBtnText: { color: colors.background, ...type.bodyStrong },
+  saveBtnText: { color: colors.onPrimary, ...type.bodyStrong },
   saveBtnTextDisabled: { color: colors.textMuted },
 });

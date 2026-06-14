@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Commit-gate (founder rule 2026-06-13): no un-sourced app-code commits.
+staged=$(git diff --cached --name-only | grep -E '^(src/|supabase/)' || true)
+[ -z "$staged" ] && exit 0
+gate=".claude/edit-gate"
+[ -s "$gate" ] || { echo "COMMIT BLOCKED: app-code staged but no .claude/edit-gate spec citation." >&2; exit 1; }
+spec="$(head -1 "$gate" | awk '{print $1}')"
+[ -f "$spec" ] || { echo "COMMIT BLOCKED: edit-gate cites missing spec file '$spec'." >&2; exit 1; }
+exit 0

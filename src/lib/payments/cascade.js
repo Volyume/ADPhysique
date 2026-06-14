@@ -147,8 +147,13 @@ export async function startCascade() {
     if (endsAt) {
       try {
         // eslint-disable-next-line global-require
-        const { scheduleCascadeGateNotifications } = require('../notifications');
+        const { scheduleCascadeGateNotifications, scheduleTrialDay3Notification } = require('../notifications');
         scheduleCascadeGateNotifications(endsAt).catch(() => {});
+        // COMP-023: lay the day-3 value moment at trial start. Same fire-and-
+        // forget contract — the cascade transition is the important write.
+        // eslint-disable-next-line global-require
+        const st = require('../../store/useAppStore').default.getState();
+        scheduleTrialDay3Notification(st.user?.id ?? null, st.userProfile)?.catch?.(() => {});
       } catch (_) { /* tolerate */ }
     }
   }

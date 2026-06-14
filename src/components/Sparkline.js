@@ -3,7 +3,7 @@
 // Just the curve: no axes, labels, grid or interaction. Perfect inside
 // cards where the user wants to see "is this going up or down" without
 // leaving the screen for a full chart view. Drawn with react-native-svg
-// (the app's single chart engine, shared with SvgLineChart).
+// (the same engine as the full charts, VolyumeChart).
 //
 // Usage:
 //   <Sparkline data={[80.1, 80.3, 80.0, 79.8, 79.9, 79.5, 79.7]} />

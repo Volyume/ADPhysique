@@ -22,16 +22,25 @@ function safeFormatDate(value, fmt) {
   }
 }
 import { useFocusEffect } from '@react-navigation/native';
-import SvgLineChart from '../components/SvgLineChart';
+import VolyumeChart from '../components/VolyumeChart';
+import InfoTooltip from '../components/InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 import { useToast } from '../components/Toast';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { logBodyMetric, getBodyMetricLog } from '../lib/database';
+import { logBodyMetric, getBodyMetricLog, getOpenEdPatternFlag } from '../lib/database';
 import { localDayKey } from '../lib/dayKey';
+import WindowChips from '../components/WindowChips';
+import {
+  TREND_WINDOWS, DEFAULT_WINDOW_KEY, windowByKey, filterByWindow,
+  pickInitialWindowKey, weightTakeaway,
+} from '../lib/chartWindows';
+import { track } from '../lib/engineTelemetry';
 import { getRecentIntakeSummary } from '../lib/food/db';
 import { EmptyBodyIllustration } from '../components/Illustrations';
 import { syncBodyMetric } from '../lib/sync';
 import { computeEWMA, ewmaValues, computeWeeklyWeightChange, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
+import { robustValues } from '../lib/robustTrend';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { formatBodyWeight, formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg } from '../lib/units';
@@ -120,16 +129,41 @@ function detectPhase(entries) {
 
 // ─── Weight Trend Chart ───────────────────────────────────────────────────────
 
-function WeightTrendChart({ entries, bodyWeightUnits }) {
-  const withWeight = useMemo(() => {
-    const sorted = entries
-      .filter(e => e.body_weight != null)
-      .sort((a, b) => a.metric_date.localeCompare(b.metric_date))
-      .slice(-12);
-    return sorted;
-  }, [entries]);
+// COMP-019: per-chart window persistence.
+const WEIGHT_WINDOW_STORE_KEY = '@volyume_chart_window_weight';
+const weightDateOf = (e) => new Date(e.metric_date).getTime();
 
-  if (withWeight.length < 2) {
+function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
+  // All weight entries with a usable date, oldest → newest (no count slicing —
+  // COMP-019 windows by date instead).
+  const allWeights = useMemo(() => entries
+    .filter(e => e.body_weight != null && e.metric_date)
+    .sort((a, b) => a.metric_date.localeCompare(b.metric_date)), [entries]);
+
+  const [windowKey, setWindowKey] = useState(DEFAULT_WINDOW_KEY);
+
+  // On load (and when the dataset size changes), keep the persisted window if it
+  // holds enough points, otherwise widen to the narrowest one that does.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let pref = DEFAULT_WINDOW_KEY;
+      try { const v = await AsyncStorage.getItem(WEIGHT_WINDOW_STORE_KEY); if (v) pref = v; } catch (_) {}
+      if (cancelled) return;
+      setWindowKey(pickInitialWindowKey(allWeights, weightDateOf, TREND_WINDOWS, pref));
+    })();
+    return () => { cancelled = true; };
+  // Re-evaluate only when the dataset size changes (not on every array identity).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allWeights.length]);
+
+  function selectWindow(key) {
+    setWindowKey(key);
+    AsyncStorage.setItem(WEIGHT_WINDOW_STORE_KEY, key).catch(() => {});
+    try { track(userId, 'chart_window_changed', { chart_id: 'weight', window: key })?.catch?.(() => {}); } catch (_) {}
+  }
+
+  if (allWeights.length < 2) {
     return (
       <View style={chartStyles.emptyHint}>
         <Text style={chartStyles.emptyHintText}>
@@ -139,36 +173,66 @@ function WeightTrendChart({ entries, bodyWeightUnits }) {
     );
   }
 
-  const weights = withWeight.map(e => e.body_weight);
-  const minW = Math.floor(Math.min(...weights) - 1);
-  const maxW = Math.ceil(Math.max(...weights) + 1);
-  const data = withWeight.map((e, i) => ({
-    value: e.body_weight,
-    label: i === 0 || i === withWeight.length - 1
-      ? safeFormatDate(e.metric_date, 'MMM d')
-      : '',
-  }));
-
+  const win = windowByKey(TREND_WINDOWS, windowKey) ?? windowByKey(TREND_WINDOWS, DEFAULT_WINDOW_KEY);
+  const windowed = filterByWindow(allWeights, weightDateOf, win.days);
+  const coversAll = windowed.length === allWeights.length;
   const chartWidth = SCREEN_W - spacing.lg * 2 - 32;
 
+  const sparse = windowed.length < 2;
+  const weights = windowed.map(e => e.body_weight);
+  // COMP-024: the displayed weight trend uses the water-weight-robust smoother
+  // (raw dots stay visible beside it). Display-only promotion; coaching
+  // decisions + safety keep the plain EWMA (see weeklyCoach §12 note).
+  const smoothed = sparse ? [] : robustValues(weights);
+  const takeaway = sparse ? '' : weightTakeaway({
+    windowKey, coversAll, points: windowed, dateOf: weightDateOf,
+    ewma: smoothed, unit: 'kg', edFlagOpen,
+  });
+
   return (
-    <View style={chartStyles.wrap}>
-      <SvgLineChart
-        data={data}
-        width={chartWidth}
-        height={120}
-        color={colors.primary}
-        thickness={2}
-        area
-        curved
-        showDots={withWeight.length <= 6}
-        dotRadius={3}
-        yAxisSuffix={bodyWeightUnits === 'st' ? ' kg' : ` ${bodyWeightUnits || 'kg'}`}
-        sections={3}
-        min={minW}
-        max={maxW}
-        backgroundColor={colors.surface}
-      />
+    <View>
+      <WindowChips windows={TREND_WINDOWS} selectedKey={windowKey} onSelect={selectWindow}
+        accessibilityPrefix="weight trend window" />
+      {!!takeaway && <Text style={chartStyles.takeaway}>{takeaway}</Text>}
+      {sparse ? (
+        <View style={chartStyles.emptyHint}>
+          <Text style={chartStyles.emptyHintText}>Not enough data in this window yet.</Text>
+        </View>
+      ) : (
+        <View style={chartStyles.wrap}>
+          <VolyumeChart
+            data={windowed.map((e, i) => ({
+              value: e.body_weight,
+              label: i === 0 || i === windowed.length - 1 ? safeFormatDate(e.metric_date, 'MMM d') : '',
+            }))}
+            width={chartWidth}
+            height={120}
+            color={colors.primary}
+            thickness={2}
+            area
+            curved
+            showDots={windowed.length <= 6}
+            dotRadius={3}
+            yAxisSuffix={bodyWeightUnits === 'st' ? ' kg' : ` ${bodyWeightUnits || 'kg'}`}
+            sections={3}
+            min={Math.floor(Math.min(...weights) - 1)}
+            max={Math.ceil(Math.max(...weights) + 1)}
+            backgroundColor={colors.surface}
+            interactive
+            accessibilityLabel="Weight trend chart"
+            formatTooltip={(i) => {
+              const e = windowed[i];
+              if (!e) return null;
+              const unit = bodyWeightUnits === 'st' ? 'kg' : (bodyWeightUnits || 'kg');
+              const trend = smoothed[i];
+              return {
+                title: `${e.body_weight} ${unit}`,
+                sub: `${safeFormatDate(e.metric_date, 'MMM d')}${trend != null ? ` · trend ${trend.toFixed(1)} ${unit}` : ''}`,
+              };
+            }}
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -214,7 +278,7 @@ function BodyFatTrendChart({ entries }) {
 
   return (
     <View style={chartStyles.wrap}>
-      <SvgLineChart
+      <VolyumeChart
         data={data}
         data2={rawData}
         width={chartWidth}
@@ -273,7 +337,7 @@ function MeasurementTrendChart({ entries, measureKey, label }) {
 
   return (
     <View style={chartStyles.wrap}>
-      <SvgLineChart
+      <VolyumeChart
         data={data}
         width={chartWidth}
         height={100}
@@ -295,6 +359,7 @@ function MeasurementTrendChart({ entries, measureKey, label }) {
 
 const chartStyles = StyleSheet.create({
   wrap: { marginTop: spacing.sm, marginHorizontal: -spacing.xs },
+  takeaway: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: spacing.sm, lineHeight: 18 },
   emptyHint: { paddingTop: spacing.md },
   emptyHintText: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
   smoothedHint: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center' },
@@ -312,7 +377,7 @@ function PhysiqueOptIn({ onEnable }) {
         device. It is never shared or uploaded.
       </Text>
       <TouchableOpacity style={styles.optInBtn} onPress={onEnable} accessibilityRole="button" accessibilityLabel="Enable Physique Tracking">
-        <Ionicons name="body-outline" size={18} color={colors.background} />
+        <Ionicons name="body-outline" size={18} color={colors.onPrimary} />
         <Text style={styles.optInBtnText}>Enable Physique Tracking</Text>
       </TouchableOpacity>
     </View>
@@ -338,6 +403,7 @@ export default function BodyMetricsScreen() {
   const toast = useToast();
   const [physiqueEnabled, setPhysiqueEnabled] = useState(null); // null = loading
   const [calm, setCalm] = useState(false);
+  const [edFlagOpen, setEdFlagOpen] = useState(false);
   const [sessionConfirmed, setSessionConfirmed] = useState(bodyMetricsSessionConfirmed);
   const [history, setHistory] = useState([]);
   const [nutritionTargets, setNutritionTargets] = useState(null);
@@ -401,6 +467,9 @@ export default function BodyMetricsScreen() {
         }
       });
       getWellbeingMode().then(m => setCalm(isCalm(m)));
+      // COMP-019: suppress the weight takeaway's rate-of-change under an open ED
+      // pattern flag (COMP-004 safety behaviour), in addition to calmer mode.
+      if (user?.id) getOpenEdPatternFlag(user.id).then(f => setEdFlagOpen(!!f)).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
@@ -687,7 +756,7 @@ export default function BodyMetricsScreen() {
             )}
 
             {/* Weight trend chart */}
-            <WeightTrendChart entries={history} units={units} bodyWeightUnits={bwu} />
+            <WeightTrendChart entries={history} units={units} bodyWeightUnits={bwu} edFlagOpen={calm || edFlagOpen} userId={user?.id} />
 
             {history.length < 3 && (
               <Text style={styles.trendHint}>
@@ -699,7 +768,11 @@ export default function BodyMetricsScreen() {
             <View style={styles.ewmaCard}>
               {ewmaData.length >= 7 ? (
                 <>
-                  <Text style={styles.ewmaLabel}>Weight trend</Text>
+                  <View style={styles.labelTipRow}>
+                    <Text style={styles.ewmaLabel}>Weight trend</Text>
+                    {/* U-D-3: one-tap gloss for the smoothed-weight (EWMA) concept. */}
+                    <InfoTooltip text={GLOSSARY.ewma} size={13} />
+                  </View>
                   <Text style={styles.ewmaValue}>
                     {ewmaData[ewmaData.length - 1]?.ewma?.toFixed(1)} kg
                   </Text>
@@ -731,7 +804,11 @@ export default function BodyMetricsScreen() {
 
             {ewmaData.length >= 7 ? (
               <View style={styles.burnCard}>
-                <Text style={styles.burnLabel}>Estimated daily burn</Text>
+                <View style={styles.labelTipRow}>
+                  <Text style={styles.burnLabel}>Estimated daily burn</Text>
+                  {/* U-D-3: one-tap gloss for the adaptive-TDEE concept. */}
+                  <InfoTooltip text={GLOSSARY.adaptiveTdee} size={13} />
+                </View>
                 {adaptiveBurn.confidence === 'insufficient_data' ? (
                   <Text style={styles.burnMuted}>
                     Precision Coaching works out your real daily burn from your weight trend and what you log. Keep logging your morning weight and meals for about two weeks and it appears here.
@@ -767,7 +844,7 @@ export default function BodyMetricsScreen() {
                   <View style={styles.bodyFatValueRow}>
                     <Text style={styles.bodyFatValue}>{latest.body_fat}%</Text>
                     {getDelta('body_fat') && (
-                      <DeltaBadge delta={parseFloat(getDelta('body_fat'))} units="%" small neutral />
+                      <DeltaBadge delta={parseFloat(getDelta('body_fat'))} units="%" small />
                     )}
                   </View>
                 </View>
@@ -801,7 +878,7 @@ export default function BodyMetricsScreen() {
           accessibilityState={{ expanded: showForm }}
           accessibilityLabel={showForm ? 'Cancel' : 'Log Weight'}
         >
-          <Ionicons name={showForm ? 'chevron-up' : 'add-circle'} size={20} color={colors.background} />
+          <Ionicons name={showForm ? 'chevron-up' : 'add-circle'} size={20} color={colors.onPrimary} />
           <Text style={styles.logBtnText}>{showForm ? 'Cancel' : 'Log Weight'}</Text>
         </TouchableOpacity>
 
@@ -1022,13 +1099,18 @@ export default function BodyMetricsScreen() {
   );
 }
 
-function DeltaBadge({ delta, units, small, neutral }) {
+// Class B body-data surface (COMP-027): on a body metric, direction is not
+// valence. Losing or gaining weight / fat / a measurement is neither "good"
+// (green) nor "bad" (red), so the badge carries no state colour: the arrow
+// and sign show direction, the figure stays textPrimary, the arrow textMuted.
+// (The `neutral` prop is retained for call-site compatibility; every delta is
+// neutral now.)
+function DeltaBadge({ delta, units, small }) {
   const isUp = delta > 0;
-  const color = neutral ? colors.textMuted : (isUp ? colors.success : colors.error);
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
-      <Ionicons name={isUp ? 'trending-up' : 'trending-down'} size={small ? 11 : 14} color={color} />
-      <Text style={{ fontSize: small ? 10 : fontSize.xs, color, fontWeight: fontWeight.semibold }}>
+      <Ionicons name={isUp ? 'trending-up' : 'trending-down'} size={small ? 11 : 14} color={colors.textMuted} />
+      <Text style={{ fontSize: small ? 10 : fontSize.xs, color: colors.textPrimary, fontWeight: fontWeight.semibold }}>
         {isUp ? '+' : ''}{delta} {units}
       </Text>
     </View>
@@ -1056,7 +1138,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: radius.lg,
     paddingVertical: spacing.lg, paddingHorizontal: spacing.xl, marginTop: spacing.md,
   },
-  optInBtnText: { ...type.bodyStrong, color: colors.background },
+  optInBtnText: { ...type.bodyStrong, color: colors.onPrimary },
   confirmCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl,
     borderWidth: 1, borderColor: colors.border, gap: spacing.md, alignItems: 'flex-start',
@@ -1067,7 +1149,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch', alignItems: 'center', backgroundColor: colors.primary,
     borderRadius: radius.lg, paddingVertical: spacing.lg, marginTop: spacing.sm,
   },
-  confirmBtnText: { ...type.bodyStrong, color: colors.background },
+  confirmBtnText: { ...type.bodyStrong, color: colors.onPrimary },
   confirmHelpline: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginTop: spacing.sm },
 
 
@@ -1122,7 +1204,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
     backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg,
   },
-  logBtnText: { ...type.title, color: colors.background },
+  logBtnText: { ...type.title, color: colors.onPrimary },
   formCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
     gap: spacing.md, borderWidth: 1, borderColor: colors.border,
@@ -1147,7 +1229,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginTop: spacing.sm,
   },
   btnDisabled: { opacity: 0.6 },
-  saveBtnText: { ...type.bodyStrong, color: colors.background },
+  saveBtnText: { ...type.bodyStrong, color: colors.onPrimary },
   section: { gap: spacing.sm },
   historyRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -1163,6 +1245,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     borderRadius: radius.md, padding: spacing.md, gap: spacing.xs,
   },
+  labelTipRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   ewmaLabel: { ...type.caption, color: colors.textSecondary },
   ewmaValue: { ...type.num('h3'), color: colors.textPrimary },
   ewmaWeekly: { fontSize: fontSize.sm, color: colors.textSecondary },

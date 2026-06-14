@@ -5,6 +5,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, withAlpha } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
+import BlockShapeCard from '../components/BlockShapeCard';
 import { useFeedback } from '../components/FeedbackSheet';
 import { shouldPrompt } from '../lib/feedback';
 import {
@@ -12,8 +13,13 @@ import {
   getActivePlan, getRoutinesForPlan, advancePlanNextWorkout,
   createAdaptationEvent, getCurrentMesocycleWeek,
   saveWeeklyCheckin, saveNextTimeNote, getRoutineWorkoutTonnages,
-  getRoutineById,
+  getRoutineById, getWorkoutById, getOpenEdPatternFlag,
 } from '../lib/database';
+import { getWellbeingMode, isCalm } from '../lib/wellbeing';
+import { claimMilestones } from '../lib/milestones';
+import { selection as hapticSelection } from '../lib/haptics';
+import usePartners from '../hooks/usePartners';
+import { ticksLabel } from '../lib/partners/signals';
 import { calculateWeeklyVolume, getVolumeStatus, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, VOLUME_LANDMARKS } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
@@ -22,14 +28,14 @@ import { incrementSessionCount, shouldPromptReview, requestReview } from '../lib
 import { workoutDayMs } from '../lib/workoutDate';
 import { localWeekStartMs } from '../lib/dayKey';
 
+// COMP-008: soreness, energy and sleep moved to the pre-workout intent prompt
+// (captured where they are accurate). The post-workout block keeps only the
+// three session-response ratings plus fatigue.
 const RATING_LABELS = {
   sessionDifficulty: ['', 'Very Easy', 'Easy', 'Moderate', 'Hard', 'Brutal'],
   overallPump: ['', 'None', 'Mild', 'Good'],
-  soreness24hBefore: ['', 'Fresh', 'Mild', 'Sore'],
   fatigueLevel: ['', 'Fresh', 'Mild', 'Moderate', 'High', 'Exhausted'],
   jointDiscomfort: ['None', 'Slight', 'Moderate', 'Significant'],
-  energyScore: ['', 'Low', 'Fair', 'Moderate', 'Good', 'High'],
-  sleepQuality: ['', 'Poor', 'Fair', 'OK', 'Good', 'Excellent'],
 };
 
 function RatingRow({ label, field, value, max, onChange }) {
@@ -66,9 +72,16 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     exerciseNames = [], readOnly = false,
     routineId = null, detectedPRs = [], exerciseData = [],
     startedAt = null, endedAt = null,
+    // COMP-015: the session's nonzero adjustments, passed from the finish flow
+    // ([{ muscle, setDelta }]). Live path only; history (readOnly) has none.
+    sessionAdjustments = [],
   } = route.params || {};
-  const { user, units, userProfile, session } = useAppStore();
+  const { user, units, userProfile, session, tier } = useAppStore();
   const toast = useToast();
+  // NEW-002 rebuild: the post-workout partner beat (Duolingo's post-lesson
+  // nudge is the highest-value re-engagement moment). Renders only when
+  // paired, live path, and not calm/ED-suppressed.
+  const partners = usePartners(user?.id, tier);
   // Renamed to feedbackSheet to avoid clashing with the per-set
   // feedback state below (sessionDifficulty, overallPump, etc.).
   // Both live in the same scope, JS doesn't let two consts share a
@@ -79,11 +92,16 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [feedback, setFeedback] = useState({
     sessionDifficulty: 3,
     overallPump: 2,
-    soreness24hBefore: 1,
     fatigueLevel: 2,
     jointDiscomfort: 0,
-    energyScore: 3,
-    sleepQuality: 3,
+  });
+  // COMP-008: soreness and sleep are now captured before the session and live
+  // on the workout row. The summary reads them back so the adaptive engine
+  // still gets a soreness input and the weekly recovery record still receives a
+  // sleep value, both sourced from the more accurate pre-workout capture.
+  const [preWorkoutReadiness, setPreWorkoutReadiness] = useState({
+    soreness24hBefore: null,
+    sleepQuality: null,
   });
   const [notes, setNotes] = useState('');
   const [nextTimeNote, setNextTimeNote] = useState('');
@@ -93,6 +111,21 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [weeklyVolume, setWeeklyVolume] = useState({});
   const [saving, setSaving] = useState(false);
   const [completedWorkoutCount, setCompletedWorkoutCount] = useState(null);
+  // COMP-013: the calibrated first-session acknowledgement, shown only on the
+  // live summary of a user's very first completed session. null = not the first
+  // session, or suppressed under calmer experience / an open ED pattern flag
+  // (the header's neutral "Session Complete" is acknowledgement enough; no push).
+  const [firstSessionLine, setFirstSessionLine] = useState(null);
+  // D1 (int-04 F1): the beginner early-win ladder. The single milestone rung
+  // crossed by this session (first_week, 5/10/25/50/100 sessions), or null.
+  // Claimed once per rung from local workout rows; inherits the same calm/ED
+  // suppression as firstSessionLine. PRs are owned by PRCelebration and the
+  // first session by COMP-013, so neither double-celebrates here.
+  const [milestone, setMilestone] = useState(null);
+  // D2: calm-mode / open-ED suppression flag for the peak-surface celebratory
+  // cards (the programme-arc strip + the phase-completion card). Set once from
+  // the shared wellbeing read in loadVolumeAndHistory.
+  const [calmSuppressed, setCalmSuppressed] = useState(false);
   // Default-expanded so the energy + sleep prompts surface naturally
   // at the end of the session. The coach engine relies on these
   // signals; hiding them behind a tap was making the post-workout
@@ -213,13 +246,58 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       .catch(() => setComparison(null));
   }, [readOnly, routineId, user?.id, workoutId, tonnage]);
 
+  // COMP-008: pull the pre-workout soreness + sleep off the workout row so the
+  // engine and the weekly sleep write read the concurrent capture rather than a
+  // post-session rating. A Skip-started (or pre-COMP-008) session leaves these
+  // null, which both readers already treat as a neutral default.
+  useEffect(() => {
+    if (readOnly || !workoutId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const w = await getWorkoutById(workoutId);
+        if (!cancelled && w) {
+          setPreWorkoutReadiness({
+            soreness24hBefore: w.soreness24hBefore ?? null,
+            sleepQuality: w.sleepQuality ?? null,
+          });
+        }
+      } catch (_e) {}
+    })();
+    return () => { cancelled = true; };
+  }, [readOnly, workoutId]);
+
+  // COMP-005: block-end recap. When the session just finished sits in the final
+  // planned week of the active mesocycle, offer the block story in-flow (no
+  // push needed — the user is right here). Heuristic detection: there is no
+  // status='completed' writer, so the final-week reached (weekIndex >=
+  // plannedWeeks) is the signal, tolerant of training past the planned end.
+  const [blockStory, setBlockStory] = useState(null);
+  // D2: the current mesocycle week, for the "Week N of M" programme-arc strip.
+  const [mesoWeek, setMesoWeek] = useState(null);
+  useEffect(() => {
+    if (readOnly || !user?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const wk = await getCurrentMesocycleWeek(user.id);
+        if (cancelled || !wk) return;
+        setMesoWeek(wk);
+        if (wk.mesocycleId && wk.plannedWeeks > 0 && wk.weekIndex >= wk.plannedWeeks) {
+          setBlockStory({ mesocycleId: wk.mesocycleId, name: wk.mesoName });
+        }
+      } catch (_e) {}
+    })();
+    return () => { cancelled = true; };
+  }, [readOnly, user?.id]);
+
   useEffect(() => {
     // Map feedback to adaptive engine scales per muscle, then run adaptive engine
-    // soreness24hBefore: 1=fresh→2, 2=mild→3, 3=sore→4
+    // soreness24hBefore: 1=fresh→2, 2=mild→3, 3=sore→4 (now sourced pre-workout)
     // sessionDifficulty: 1=veryEasy→1(exceeded), 2=easy→1, 3=moderate→2(met), 4=hard→3(struggled), 5=brutal→4(failed)
     // overallPump: 1=none→1, 2=mild→2, 3=good→4
     // jointDiscomfort: 0=none→0, 1=slight→1, 2=moderate→2, 3=significant→3
-    const soreness = [0, 2, 3, 4][feedback.soreness24hBefore - 1] ?? 2;
+    const soreness = [0, 2, 3, 4][preWorkoutReadiness.soreness24hBefore - 1] ?? 2;
     const performance = [0, 1, 1, 2, 3, 4][feedback.sessionDifficulty] ?? 2;
     const pump = [1, 1, 2, 4][feedback.overallPump - 1] ?? 3;
     const joint = feedback.jointDiscomfort ?? 0;
@@ -244,7 +322,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     const decisions = runAdaptiveEngine(muscleFeedback);
     setAdaptiveDecisions(decisions);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feedback, weeklyVolume]);
+  }, [feedback, weeklyVolume, preWorkoutReadiness]);
 
   useEffect(() => {
     if (!workoutId || readOnly) return;
@@ -254,7 +332,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         await updateWorkout(workoutId, {
           sessionDifficulty: feedback.sessionDifficulty,
           overallPump: feedback.overallPump,
-          soreness24hBefore: feedback.soreness24hBefore,
+          // COMP-008: soreness_24h_before is written pre-session by
+          // createWorkout; the summary no longer rates or writes it, so it
+          // must not be sent here or it would clobber the pre-workout value.
           jointDiscomfort: feedback.jointDiscomfort,
           fatigueLevel: feedback.fatigueLevel,
           notes: notes || null,
@@ -283,6 +363,56 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     const fourWeeksAgo = Date.now() - 28 * 24 * 60 * 60 * 1000;
     const completed = allWorkouts.filter(w => w.isCompleted && w.startedAt >= fourWeeksAgo);
     setCompletedWorkoutCount(completed.length);
+
+    // COMP-013 + D1: the first-session line and the early-win milestone ladder
+    // share one wellbeing read. Live summary only (never the read-only history
+    // view). The just-finished workout is already marked complete by the time
+    // this runs, so it is counted here.
+    if (!readOnly) {
+      const completedWorkouts = allWorkouts.filter(w => w.isCompleted);
+      const totalCompleted = completedWorkouts.length;
+      // Calm-mode / open-ED flag suppress BOTH surfaces. When suppressed we
+      // skip the milestone claim entirely, so a rung crossed during a wellbeing
+      // hold is caught and shown later rather than silently consumed.
+      let calm = false;
+      let edFlag = null;
+      try {
+        const [mode, flag] = await Promise.all([
+          getWellbeingMode(),
+          user?.id ? getOpenEdPatternFlag(user.id) : Promise.resolve(null),
+        ]);
+        calm = isCalm(mode);
+        edFlag = flag;
+      } catch (_) {}
+      const suppressed = calm || !!edFlag;
+      setCalmSuppressed(suppressed);
+
+      // COMP-013: first completed session ever → the calibrated acknowledgement.
+      if (totalCompleted === 1) {
+        setFirstSessionLine(suppressed ? null : 'First session done. That is the hard part.');
+      }
+
+      // D1: claim the early-win milestone for this session. Skipped on the very
+      // first session (COMP-013 owns that beat) and whenever suppressed. PRs are
+      // owned by PRCelebration, so everHitPR is held false here — first_pr never
+      // fires a second celebration on top of the PR burst.
+      if (!suppressed && totalCompleted > 1 && user?.id) {
+        try {
+          const sessionDaysMs = completedWorkouts
+            .map(w => w.startedAt)
+            .filter(Number.isFinite);
+          const shown = await claimMilestones(user.id, {
+            sessionCount: totalCompleted,
+            sessionDaysMs,
+            everHitPR: false,
+          });
+          if (shown) {
+            setMilestone(shown);
+            hapticSelection();
+          }
+        } catch (_) {}
+      }
+    }
 
     // For readOnly (history) view, load and group sets by exercise
     if (readOnly && workoutId) {
@@ -327,7 +457,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       await updateWorkout(workoutId, {
         sessionDifficulty: feedback.sessionDifficulty,
         overallPump: feedback.overallPump,
-        soreness24hBefore: feedback.soreness24hBefore,
+        // COMP-008: soreness_24h_before is written pre-session by createWorkout;
+        // not sent here so the post-workout save can't clobber it.
         jointDiscomfort: feedback.jointDiscomfort,
         fatigueLevel: feedback.fatigueLevel,
         notes: notes || null,
@@ -336,15 +467,21 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
 
     // Contribute this session's sleep-quality rating to the week's recovery
     // record. This is the ONLY field WorkoutSummary writes to weekly_checkins:
-    // sleep_quality is not held on the workouts table and is read by
-    // CoachReview + the recovery-trend insight, and the weekly coach does NOT
-    // read it. Everything else this screen used to write either duplicated a
-    // weekly-coach input on a conflicting scale (energy, soreness,
-    // training_performance) or is sourced better elsewhere (per-session
-    // soreness/fatigue live on the workouts row). The save is now preserving,
-    // so passing only sleepQuality leaves the user's calorie / steps / cardio /
+    // sleep_quality is read by CoachReview + the recovery-trend insight, and the
+    // weekly coach does NOT read it. Everything else this screen used to write
+    // either duplicated a weekly-coach input on a conflicting scale (energy,
+    // soreness, training_performance) or is sourced better elsewhere (per-session
+    // soreness/fatigue live on the workouts row). The save is preserving, so
+    // passing only sleepQuality leaves the user's calorie / steps / cardio /
     // training answers for the week untouched.
-    if (user?.id) {
+    //
+    // COMP-008: sleep is now captured pre-session and lives on the workout row,
+    // so the value comes from preWorkoutReadiness rather than a post-workout
+    // rating. Only write when the lifter actually answered it — passing null
+    // would clear a sleep value the weekly check-in (or an earlier session)
+    // already set this week, since saveWeeklyCheckin treats explicit null as
+    // "clear".
+    if (user?.id && preWorkoutReadiness.sleepQuality != null) {
       try {
         await saveWeeklyCheckin(user.id, {
           // FF-006: attribute the sleep-quality rating to the workout's own
@@ -352,7 +489,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           // cross-midnight close used to land it in the wrong weekly bucket.
           // localWeekStartMs is the locked-rule, local Monday-anchored helper.
           weekStart: localWeekStartMs(workoutDayMs({ startedAt, endedAt })),
-          sleepQuality: feedback.sleepQuality || null,
+          sleepQuality: preWorkoutReadiness.sleepQuality,
         });
       } catch (_e) {}
     }
@@ -476,6 +613,38 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     navigation.navigate('ShareCard', { sessionData, prData });
   }
 
+  // D2 (decision 4b: share artefacts are FREE): a 2-tap share of the early-win
+  // milestone, reusing ShareCard's generic milestone layout. No Pro gate.
+  function handleShareMilestone() {
+    if (!milestone) return;
+    navigation.navigate('ShareCard', {
+      milestoneData: {
+        eyebrow: 'Milestone',
+        title: milestone.title,
+        heroValue: milestone.heroValue ?? '',
+        heroUnit: milestone.heroUnit ?? '',
+        caption: milestone.body,
+        date: Date.now(),
+      },
+    });
+  }
+
+  // D2: share the phase-completion (a block finished) as a free artefact.
+  function handleShareBlock() {
+    if (!blockStory) return;
+    const weeks = mesoWeek?.plannedWeeks;
+    navigation.navigate('ShareCard', {
+      milestoneData: {
+        eyebrow: 'Block complete',
+        title: blockStory.name || 'Training block complete',
+        heroValue: Number.isFinite(weeks) ? String(weeks) : '',
+        heroUnit: Number.isFinite(weeks) ? 'weeks trained' : '',
+        caption: 'A full training block, recovery week and all.',
+        date: Date.now(),
+      },
+    });
+  }
+
   function handleSaveAsTemplate() {
     if (!exerciseData.length) {
       appAlert('No exercises', 'No exercise data available to save as template.');
@@ -527,7 +696,37 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <Text style={styles.completionTitle}>Session Complete</Text>
           </View>
           <Text style={styles.completionDate}>{completionDate}</Text>
+          {firstSessionLine ? (
+            <Text style={styles.firstSessionLine}>{firstSessionLine}</Text>
+          ) : null}
         </View>
+
+        {/* D1 (int-04 F1): the early-win milestone card — the celebratory beat
+            for a beginner crossing first week / 5 / 10 / 25 / 50 / 100 sessions.
+            Sits at the top emotional peak, only rendered on the rare session a
+            rung is crossed (and never under calm/ED). Calm in tone, not loud. */}
+        {milestone ? (
+          <RevealSection delay={120}>
+            <View style={styles.milestoneCard}>
+              <View style={styles.milestoneIconWrap}>
+                <Ionicons name={milestone.icon} size={22} color={colors.gold} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.milestoneTitle}>{milestone.title}</Text>
+                <Text style={styles.milestoneBody}>{milestone.body}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.milestoneShareBtn}
+                onPress={handleShareMilestone}
+                accessibilityRole="button"
+                accessibilityLabel="Share this milestone"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="share-social-outline" size={18} color={colors.gold} />
+              </TouchableOpacity>
+            </View>
+          </RevealSection>
+        ) : null}
 
         <View style={styles.statsGrid}>
           <StatBox icon="barbell-outline" value={String(exerciseCount || 0)} label="Exercises" animateOrder={0} />
@@ -567,7 +766,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             accent = colors.success;
           } else if (verdict === 'down') {
             headline = `${pct}% vs your 4-week average`;
-            sub = `Recovery or stress matter. Don't chase yesterday's volume; trust the trend.`;
+            sub = `Sessions vary with recovery, sleep and stress. The 4-week trend carries more signal than any single session.`;
             accent = colors.textSecondary;
           } else {
             headline = `On pace with your last ${priorCount} session${priorCount !== 1 ? 's' : ''}`;
@@ -590,6 +789,60 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             </View>
           );
         })()}</RevealSection>
+        )}
+
+        {/* NEW-002 rebuild: the post-workout partner beat — where a cheer is
+            most natural (you just trained; here is where your partner stands).
+            Paired + live path only; inherits calm/ED suppression; a resting
+            partner never reads as a fail. */}
+        {!readOnly && !calmSuppressed
+          && (partners.rowState === 'active' || partners.rowState === 'resting') && (
+          <RevealSection delay={1130}>
+            <View style={styles.partnerBeatRow}>
+              <Ionicons name="people-outline" size={18} color={colors.primary} />
+              <Text style={styles.partnerBeatText}>
+                {partners.rowState === 'resting'
+                  ? `${partners.partnership?.partnerFirstName || 'Your partner'} is resting this week.`
+                  : `${partners.partnership?.partnerFirstName || 'Your partner'}: ${ticksLabel({ done: partners.partnerWeek?.done, planned: partners.partnerWeek?.planned })} this week.`}
+              </Text>
+              <TouchableOpacity
+                style={[styles.partnerCheerBtn, !partners.cheerEnabled && styles.partnerCheerBtnDone]}
+                onPress={() => {
+                  const reciprocal = partners.partnerWeek?.weekMet || (partners.partnerWeek?.done > 0);
+                  partners.cheer(partners.partnership.id, !!reciprocal);
+                }}
+                disabled={!partners.cheerEnabled}
+                accessibilityRole="button"
+                accessibilityLabel={partners.cheerEnabled ? 'Send a cheer' : 'Cheer sent'}
+              >
+                <Ionicons name="hand-left-outline" size={14} color={partners.cheerEnabled ? colors.onPrimary : colors.textSecondary} />
+                <Text style={[styles.partnerCheerText, !partners.cheerEnabled && styles.partnerCheerTextDone]}>
+                  {partners.cheerEnabled ? 'Cheer' : 'Sent'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </RevealSection>
+        )}
+
+        {/* D2: programme-arc strip — where this session sits in the block, so
+            the work reads as a journey towards the recovery week, not an
+            open-ended grind. Suppressed under calm/ED; needs a real ≥2-week
+            block. Reuses the same BlockShapeCard as Home and Consistency. */}
+        {!readOnly && !calmSuppressed && mesoWeek?.plannedWeeks >= 2 && (
+          <RevealSection delay={1160}>
+            <View style={styles.blockArcSection}>
+              <Text style={styles.sectionTitle}>Your block</Text>
+              {mesoWeek.mesoName ? (
+                <Text style={styles.blockArcName}>{mesoWeek.mesoName}</Text>
+              ) : null}
+              <BlockShapeCard
+                weekIndex={mesoWeek.weekIndex}
+                plannedWeeks={mesoWeek.plannedWeeks}
+                isDeload={mesoWeek.isDeload}
+                compact
+              />
+            </View>
+          </RevealSection>
         )}
 
         <RevealSection delay={1220}>{(() => {
@@ -706,6 +959,87 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </RevealSection>
         )}
 
+        {/* COMP-005 + D2: block-end recap. Under calm/ED this stays the quiet
+            neutral link (the recap is still reachable, no celebration cues). */}
+        {!readOnly && blockStory && calmSuppressed && (
+          <RevealSection delay={1480}>
+            <TouchableOpacity
+              style={styles.blockRecapRow}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('RecapStory', { variant: 'block', mesocycleId: blockStory.mesocycleId, blockName: blockStory.name })}
+              accessibilityRole="button"
+              accessibilityLabel="Watch your block story"
+            >
+              <Ionicons name="sparkles" size={16} color={colors.primary} />
+              <Text style={styles.blockRecapText}>Block complete. Watch your block story.</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+            </TouchableOpacity>
+          </RevealSection>
+        )}
+
+        {/* D2: phase-completion celebration card — the full beat when a block's
+            final week closes (recap line + what's next), with the block story
+            and a free share artefact (decision 4b). Suppressed under calm/ED,
+            which falls back to the neutral link above. */}
+        {!readOnly && blockStory && !calmSuppressed && (
+          <RevealSection delay={1480}>
+            <View style={styles.phaseCard}>
+              <View style={styles.phaseHeaderRow}>
+                <Ionicons name="flag" size={18} color={colors.gold} />
+                <Text style={styles.phaseTitle}>Block complete</Text>
+              </View>
+              {blockStory.name ? (
+                <Text style={styles.phaseName}>{blockStory.name}</Text>
+              ) : null}
+              <Text style={styles.phaseRecap}>
+                {Number.isFinite(mesoWeek?.plannedWeeks)
+                  ? `${mesoWeek.plannedWeeks} weeks done, recovery week and all. A full training block, in the bank.`
+                  : 'A full training block, recovery week and all, in the bank.'}
+              </Text>
+              <Text style={styles.phaseNext}>
+                What's next: a new block, starting a little heavier than the last. That is how progress compounds over months, not just weeks.
+              </Text>
+              <View style={styles.phaseActions}>
+                <TouchableOpacity
+                  style={styles.phaseActionBtn}
+                  activeOpacity={0.85}
+                  onPress={() => navigation.navigate('RecapStory', { variant: 'block', mesocycleId: blockStory.mesocycleId, blockName: blockStory.name })}
+                  accessibilityRole="button"
+                  accessibilityLabel="Watch your block story"
+                >
+                  <Ionicons name="sparkles" size={15} color={colors.primary} />
+                  <Text style={styles.phaseActionText}>Watch your block story</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.phaseShareBtn}
+                  activeOpacity={0.85}
+                  onPress={handleShareBlock}
+                  accessibilityRole="button"
+                  accessibilityLabel="Share block complete"
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="share-social-outline" size={18} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </RevealSection>
+        )}
+
+        {/* COMP-015: confirmation row — closes the loop at the moment the user
+            is about to give the next round of feedback. Live path only. */}
+        {!readOnly && sessionAdjustments.length > 0 && (
+          <RevealSection delay={1520}>
+            <View style={styles.adjustedSummaryRow}>
+              <Ionicons name="sparkles" size={15} color={colors.primary} />
+              <Text style={styles.adjustedSummaryText}>
+                Adjusted today: {sessionAdjustments.map(a =>
+                  `${(MUSCLE_DISPLAY_NAMES[a.muscle] || a.muscle).toLowerCase()}, ${a.setDelta < 0 ? '1 set fewer' : '1 set added'}`,
+                ).join(' · ')}
+              </Text>
+            </View>
+          </RevealSection>
+        )}
+
         {!readOnly && (
           <RevealSection delay={1580}>
           <View style={styles.section}>
@@ -732,13 +1066,14 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             </TouchableOpacity>
             {feedbackExpanded && (
               <View style={styles.feedbackCard}>
+                {/* COMP-008: Soreness, Energy and Sleep moved to the
+                    pre-workout intent prompt. The block keeps the three session
+                    responses you can only judge once the work is done, plus
+                    fatigue. */}
                 <RatingRow label="Difficulty" field="sessionDifficulty" value={feedback.sessionDifficulty} max={5} onChange={v => setFeedback(f => ({ ...f, sessionDifficulty: v }))} />
                 <RatingRow label="Muscle engagement" field="overallPump" value={feedback.overallPump} max={3} onChange={v => setFeedback(f => ({ ...f, overallPump: v }))} />
-                <RatingRow label="Soreness coming in" field="soreness24hBefore" value={feedback.soreness24hBefore} max={3} onChange={v => setFeedback(f => ({ ...f, soreness24hBefore: v }))} />
-                <RatingRow label="Fatigue" field="fatigueLevel" value={feedback.fatigueLevel} max={5} onChange={v => setFeedback(f => ({ ...f, fatigueLevel: v }))} />
                 <RatingRow label="Joint discomfort" field="jointDiscomfort" value={feedback.jointDiscomfort} max={3} onChange={v => setFeedback(f => ({ ...f, jointDiscomfort: v }))} />
-                <RatingRow label="Energy today" field="energyScore" value={feedback.energyScore} max={5} onChange={v => setFeedback(f => ({ ...f, energyScore: v }))} />
-                <RatingRow label="Sleep last night" field="sleepQuality" value={feedback.sleepQuality} max={5} onChange={v => setFeedback(f => ({ ...f, sleepQuality: v }))} />
+                <RatingRow label="Fatigue" field="fatigueLevel" value={feedback.fatigueLevel} max={5} onChange={v => setFeedback(f => ({ ...f, fatigueLevel: v }))} />
                 <TextInput
                   style={styles.notesInput}
                   value={notes}
@@ -799,7 +1134,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </TouchableOpacity>
           {!readOnly && (
             <TouchableOpacity style={styles.shareFooterBtn} onPress={handleShareCard} accessibilityRole="button" accessibilityLabel="Share session card">
-              <Ionicons name="share-social-outline" size={20} color={colors.background} />
+              <Ionicons name="share-social-outline" size={20} color={colors.onPrimary} />
             </TouchableOpacity>
           )}
         </View>
@@ -1005,6 +1340,72 @@ const styles = StyleSheet.create({
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   completionTitle: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
   completionDate: { fontSize: fontSize.sm, color: colors.textMuted },
+  firstSessionLine: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary, marginTop: spacing.xs },
+  // D1 early-win milestone card. Gold accent (an achievement beat, kin to the
+  // PR row) but calm: a soft surface card, no confetti, no full-screen takeover.
+  milestoneCard: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.gold, 0.376),
+  },
+  milestoneIconWrap: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: withAlpha(colors.gold, 0.125),
+    alignItems: 'center', justifyContent: 'center',
+  },
+  milestoneTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  milestoneBody: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 3, lineHeight: 17 },
+  milestoneShareBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: withAlpha(colors.gold, 0.125),
+  },
+  // D2 phase-completion celebration card.
+  phaseCard: {
+    gap: spacing.sm,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.gold, 0.376),
+  },
+  phaseHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  phaseTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  phaseName: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  phaseRecap: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
+  phaseNext: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17 },
+  phaseActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xxs },
+  phaseActionBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    paddingVertical: spacing.md, borderRadius: radius.md,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.376),
+  },
+  phaseActionText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  phaseShareBtn: {
+    width: 44, height: 44, borderRadius: radius.md,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.376),
+  },
+  // NEW-002 post-workout partner beat
+  partnerBeatRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  partnerBeatText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, lineHeight: 19 },
+  partnerCheerBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    backgroundColor: colors.primary, borderRadius: radius.full,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, minHeight: 40,
+  },
+  partnerCheerBtnDone: { backgroundColor: withAlpha(colors.border, 0.25) },
+  partnerCheerText: { ...type.label, color: colors.onPrimary, fontSize: fontSize.xs },
+  partnerCheerTextDone: { color: colors.textSecondary },
+  // D2 programme-arc strip wrapper — surface card matching the other summary
+  // sections, holding the reused BlockShapeCard (dots + effort word).
+  blockArcSection: {
+    gap: spacing.sm,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  blockArcName: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   statBox: {
     flex: 1, minWidth: '45%', backgroundColor: colors.surface, borderRadius: radius.md,
@@ -1054,6 +1455,22 @@ const styles = StyleSheet.create({
   },
   feedbackToggleBtnText: { fontSize: fontSize.md, color: colors.textSecondary, fontWeight: fontWeight.medium },
   feedbackCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.lg, borderWidth: 1, borderColor: colors.border },
+  // COMP-015 confirmation row
+  adjustedSummaryRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginBottom: spacing.md,
+  },
+  adjustedSummaryText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  // COMP-005 block-end recap row
+  blockRecapRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.primary,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginBottom: spacing.md,
+  },
+  blockRecapText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   ratingRow: { gap: spacing.sm },
   ratingLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   ratingLabel: { ...type.label, color: colors.textSecondary },
@@ -1064,7 +1481,7 @@ const styles = StyleSheet.create({
   },
   ratingBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   ratingBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textSecondary },
-  ratingBtnTextActive: { color: colors.background },
+  ratingBtnTextActive: { color: colors.onPrimary },
   ratingValueLabel: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium },
   notesInput: {
     ...type.body,
@@ -1106,7 +1523,7 @@ const styles = StyleSheet.create({
   btnDisabled: { opacity: 0.6 },
   doneBtnText: {
     ...type.title,
-    color: colors.background,
+    color: colors.onPrimary,
   },
   shareFooterBtn: {
     width: 52,
@@ -1185,7 +1602,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
     borderRadius: radius.md, backgroundColor: colors.primary,
   },
-  templateModalSaveText: { ...type.label, color: colors.background },
+  templateModalSaveText: { ...type.label, color: colors.onPrimary },
 
   // 4-week comparison card, same surface treatment as other summary
   // cards but borderColor is set inline per-verdict (gold for best, green

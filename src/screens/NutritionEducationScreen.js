@@ -41,6 +41,15 @@ export default function NutritionEducationScreen() {
             not any single day. One big meal won't undo a week of progress.
           </Body>
           <KeyPoint>Trend over weeks &gt; perfection on any day.</KeyPoint>
+          <Body>
+            Cardio and steps are part of that maintenance number. When you log
+            a session, the calorie estimate is feedback, not extra food budget.
+          </Body>
+          <KeyPoint>
+            Other apps add exercise calories back on top. Volyume never does.
+            Your weight trend already counts everything you burn, so nothing is
+            counted twice.
+          </KeyPoint>
         </Section>
 
         <Section
@@ -282,7 +291,7 @@ const styles = StyleSheet.create({
 
   bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.xs },
   bulletChip: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  bulletChipText: { color: colors.background, fontSize: fontSize.xs, fontWeight: fontWeight.bold },
+  bulletChipText: { color: colors.onPrimary, fontSize: fontSize.xs, fontWeight: fontWeight.bold },
 
   footer: { color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 17, textAlign: 'center', marginTop: spacing.sm, fontStyle: 'italic' },
 });

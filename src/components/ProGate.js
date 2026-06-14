@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, Modal, StyleSheet, Pressable, SafeAreaView,
+  View, Text, TouchableOpacity, Modal, StyleSheet, Pressable, SafeAreaView, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
+import TodaysPlateTeaser from './food/TodaysPlateTeaser';
 
 /**
  * ProGate wraps any content that requires a Pro tier.
@@ -43,7 +44,7 @@ export default function ProGate({ children, feature = 'This feature', style }) {
         </View>
         <TouchableOpacity style={styles.lockOverlay} onPress={() => setModalVisible(true)} activeOpacity={0.85}>
           <View style={styles.lockChip}>
-            <Ionicons name="lock-closed" size={13} color={colors.background} />
+            <Ionicons name="lock-closed" size={13} color={colors.onPrimary} />
             <Text style={styles.lockChipText}>Pro</Text>
           </View>
         </TouchableOpacity>
@@ -69,7 +70,7 @@ export default function ProGate({ children, feature = 'This feature', style }) {
             </Text>
 
             <TouchableOpacity style={styles.upgradeBtn} onPress={upgrade} activeOpacity={0.88}>
-              <Ionicons name="sparkles" size={16} color={colors.background} />
+              <Ionicons name="sparkles" size={16} color={colors.onPrimary} />
               <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
             </TouchableOpacity>
 
@@ -89,9 +90,14 @@ export default function ProGate({ children, feature = 'This feature', style }) {
  */
 export function ProLocked({ feature = 'This' }) {
   const navigation = useNavigation();
+  // Show-then-sell: on the food-diary lock, free users get a read-only
+  // example day above the upgrade ask (founder decision #6). It exposes no
+  // Pro action, only the value. Other Pro locks keep the plain held-seat.
+  const showPlateTeaser = feature === 'Food diary';
   return (
     <SafeAreaView style={styles.lockedSafe}>
-      <View style={styles.lockedInner}>
+      <ScrollView contentContainerStyle={styles.lockedScroll} showsVerticalScrollIndicator={false}>
+        {showPlateTeaser ? <TodaysPlateTeaser /> : null}
         <View style={styles.lockedIcon}>
           <Ionicons name="lock-closed" size={28} color={colors.primary} />
         </View>
@@ -99,18 +105,23 @@ export function ProLocked({ feature = 'This' }) {
         <Text style={styles.lockedBody}>
           Pro is the coaching layer: weekly check-ins, nutrition targets, the food diary, and your body metrics.
         </Text>
+        {/* COMP-025-A §4b: a held seat, not a wall. Reassures lapsed users
+            their data is intact and untouched. */}
+        <Text style={styles.lockedHeldSeat}>
+          Everything you logged is saved, and will be exactly as you left it if you come back.
+        </Text>
         <TouchableOpacity
           style={styles.lockedBtn}
           onPress={() => navigation.navigate('ProUpgrade')}
           activeOpacity={0.88}
         >
-          <Ionicons name="sparkles" size={16} color={colors.background} />
+          <Ionicons name="sparkles" size={16} color={colors.onPrimary} />
           <Text style={styles.lockedBtnText}>Upgrade to Pro</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.lockedBack} onPress={() => navigation.goBack()}>
           <Text style={styles.lockedBackText}>Not now</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -135,7 +146,7 @@ export function ProBadge({ size = 'sm' }) {
   const isSmall = size === 'sm';
   return (
     <View style={[styles.badge, isSmall ? styles.badgeSm : styles.badgeMd]}>
-      <Ionicons name="sparkles" size={isSmall ? 8 : 10} color={colors.background} />
+      <Ionicons name="sparkles" size={isSmall ? 8 : 10} color={colors.onPrimary} />
       <Text style={[styles.badgeText, isSmall ? styles.badgeTextSm : styles.badgeTextMd]}>PRO</Text>
     </View>
   );
@@ -153,7 +164,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: radius.sm,
     paddingHorizontal: 10, paddingVertical: 5,
   },
-  lockChipText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.background },
+  lockChipText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.onPrimary },
 
   backdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   sheet: {
@@ -183,13 +194,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md, alignSelf: 'stretch',
     marginTop: spacing.sm,
   },
-  upgradeBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  upgradeBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
   dismissBtn: { paddingVertical: spacing.sm },
   dismissText: { fontSize: fontSize.sm, color: colors.textMuted },
 
   lockedSafe: { flex: 1, backgroundColor: colors.background },
-  lockedInner: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
+  lockedScroll: {
+    flexGrow: 1, alignItems: 'center', justifyContent: 'center',
     padding: spacing.xl, gap: spacing.md,
   },
   lockedIcon: {
@@ -207,13 +218,18 @@ const styles = StyleSheet.create({
     textAlign: 'center', lineHeight: 21,
     marginBottom: spacing.sm,
   },
+  lockedHeldSeat: {
+    fontSize: fontSize.sm, color: colors.textMuted,
+    textAlign: 'center', lineHeight: 21,
+    marginBottom: spacing.sm,
+  },
   lockedBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.sm, backgroundColor: colors.primary,
     borderRadius: radius.lg, paddingVertical: spacing.md + 2,
     paddingHorizontal: spacing.xxl, alignSelf: 'stretch',
   },
-  lockedBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  lockedBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
   lockedBack: { paddingVertical: spacing.sm },
   lockedBackText: { fontSize: fontSize.sm, color: colors.textMuted },
 
@@ -223,7 +239,7 @@ const styles = StyleSheet.create({
   },
   badgeSm: { paddingHorizontal: 5, paddingVertical: spacing.xxs },
   badgeMd: { paddingHorizontal: 7, paddingVertical: 3 },
-  badgeText: { fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.3 },
+  badgeText: { fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0.3 },
   badgeTextSm: { fontSize: fontSize.micro },
   badgeTextMd: { fontSize: fontSize.micro },
 });

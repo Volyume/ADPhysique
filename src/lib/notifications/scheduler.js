@@ -23,11 +23,33 @@ import {
 } from './quietHours';
 import { trackNotificationFailed } from './telemetry';
 import { COACHING_REMINDERS_CHANNEL } from './channels';
+import { requestEventPushSlot } from './budget';
+import { winbackPush, monthLabel } from './winbackContent';
+import {
+  getEpisode as getWinbackEpisode,
+  getLastFiredAt as getWinbackLastFiredAt,
+  getStatedReturn as getWinbackStatedReturn,
+  markWinbackLaid,
+  winbackFireDate,
+  canLayWinback,
+} from '../payments/winbackState';
 import { localWeekStartMs } from '../dayKey';
 import { logWarn } from '../errorLog';
+import {
+  trialDay3FireDate,
+  trialStartFromEndsAt,
+  selectTrialVariant,
+  firstReviewUnlockDate,
+  dayName,
+  trialDay3Push,
+} from '../trialActivation';
+import { missedCheckinFireDates, missedCheckinPush } from './missedCheckin';
 
 const NOTIF_ID_MORNING = 'volyume_morning_weight';
 const NOTIF_ID_CHECKIN = 'volyume_weekly_checkin';
+const NOTIF_ID_TRIAL_DAY3 = 'volyume_trial_day3';
+const NOTIF_ID_WINBACK = 'volyume_winback';
+const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
 // The user's first name for a warm, personal greeting, or '' when we don't
 // have one (so copy reads naturally either way). Read lazily from the store at
@@ -298,6 +320,11 @@ export async function scheduleCascadeGateNotifications(trialEndsAt) {
     for (const g of gates) {
       if (g.when.getTime() <= now) continue; // past gate, don't schedule
       const { date: shifted } = shiftDateOutOfQuietHours(g.when, quiet);
+      // Push budget (NOTIFICATIONS_LOCKED addendum): cascade gates are top
+      // priority, so this evicts a lower-priority push on a full day rather
+      // than ever dropping the gate itself.
+      const slot = await requestEventPushSlot({ category: CATEGORY.CASCADE_GATE, fireDate: shifted });
+      if (!slot.allowed) continue;
       await Notifications.scheduleNotificationAsync({
         identifier: g.id,
         content: {
@@ -328,6 +355,306 @@ export async function scheduleCascadeGateNotifications(trialEndsAt) {
 export async function cancelCascadeGateNotifications() {
   try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_CASCADE_19); } catch {}
   try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_CASCADE_21); } catch {}
+}
+
+// ─── COMP-023: trial day-3 "the coach saw you" moment ─────────────────────────
+// One local notification per trial, fired at trial start + 3 days, 10:00 local
+// (quiet-hours-shifted), variant + copy baked from live local counters at
+// schedule time. Like the cascade gates, this is wiped by cancelAllNotifications
+// on restore, so restoreNotifications re-lays it. Suppressed entirely under an
+// open ED flag (the Home banner carries a neutral, no-weight line instead).
+
+export async function cancelTrialDay3Notification() {
+  try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_TRIAL_DAY3); } catch {}
+}
+
+export async function scheduleTrialDay3Notification(userId, profile) {
+  if (Platform.OS === 'web') return;
+  try {
+    // eslint-disable-next-line global-require
+    const { stageOf } = require('../payments/cascade');
+    if (!profile || stageOf(profile) !== 'pro_trial') { await cancelTrialDay3Notification(); return; }
+
+    const endsAt = profile.proTrialEndsAt ?? profile.pro_trial_ends_at ?? null;
+    const fire = trialDay3FireDate(endsAt);
+    // No valid date, or day 3 already passed (user opening later in the trial):
+    // nothing to lay; the Home banner carries the moment in-app.
+    if (!fire || fire.getTime() <= Date.now()) { await cancelTrialDay3Notification(); return; }
+
+    // eslint-disable-next-line global-require
+    const db = require('../database');
+    const [workouts, weights, edFlag] = await Promise.all([
+      userId ? db.getAllWorkouts(userId).catch(() => []) : Promise.resolve([]),
+      userId ? db.getMorningWeightsLast14Days(userId).catch(() => []) : Promise.resolve([]),
+      userId ? db.getOpenEdPatternFlag(userId).catch(() => null) : Promise.resolve(null),
+    ]);
+
+    // Open ED flag → never schedule a weight-adjacent push; the banner falls
+    // back to a neutral line with no counts or weight ask.
+    if (edFlag) { await cancelTrialDay3Notification(); return; }
+
+    const trialStart = trialStartFromEndsAt(endsAt);
+    const completedSessions = workouts.filter(w => w.isCompleted && (w.startedAt ?? 0) >= trialStart).length;
+    const weekAgo = Date.now() - 7 * 86400000;
+    const weighIns7d = weights.filter(w => (w.loggedAt ?? 0) >= weekAgo).length;
+    const firstWeightAt = weights.length
+      ? Math.min(...weights.map(w => w.loggedAt ?? Infinity))
+      : null;
+
+    let checkinDay = 0;
+    try {
+      const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (Number.isFinite(p?.checkinDay)) checkinDay = p.checkinDay;
+      }
+    } catch (_) { /* default Sunday */ }
+
+    const variant = selectTrialVariant({ completedSessions, weighIns7d });
+    const unlock = firstReviewUnlockDate(firstWeightAt, checkinDay);
+    const copy = trialDay3Push({ variant, completedSessions, weighIns7d, unlockDayName: dayName(unlock) });
+
+    await cancelTrialDay3Notification();
+    const quiet = await getQuietHours();
+    const { date: shifted } = shiftDateOutOfQuietHours(fire, quiet);
+    // Push budget (NOTIFICATIONS_LOCKED addendum). Blocked = dropped, not
+    // re-queued; the Home banner still carries the day-3 moment in-app.
+    const slot = await requestEventPushSlot({ category: CATEGORY.TRIAL_DAY3, fireDate: shifted });
+    if (!slot.allowed) return;
+    await Notifications.scheduleNotificationAsync({
+      identifier: NOTIF_ID_TRIAL_DAY3,
+      content: {
+        title: copy.title,
+        body: copy.body,
+        data: { type: 'trial_day3', variant },
+        sound: false,
+      },
+      trigger: {
+        channelId: COACHING_REMINDERS_CHANNEL,
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: shifted,
+      },
+    });
+  } catch (e) {
+    trackNotificationFailed({
+      category: CATEGORY.TRIAL_DAY3,
+      reason: 'schedule_threw',
+      payload: { message: e?.message ?? 'unknown' },
+    });
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      logWarn('notifications.scheduleTrialDay3', e?.message);
+    }
+  }
+}
+
+// ─── COMP-025-A: post-churn win-back ─────────────────────────────────────────
+// One local notification per churn episode, anchored on the lapse timestamp
+// (+30 days by default, or the §4d stated-return window). Re-laid on each app
+// open while the fire date is still in the future so the session counts stay
+// fresh (local notifications bake content at schedule time). Suppressed
+// entirely while a wellbeing/ED flag is open. Single-shot is enforced by
+// winbackState (one per episode + an absolute 180-day floor across episodes).
+//
+// Honest v1 limit (accepted, see blueprint §4c): a user who never reopens the
+// app during the lapsed window never gets it — quiet hours + prefs live only on
+// device, and an unsolicited server push to the never-returning segment reads
+// most like spam.
+
+export async function cancelWinbackNotification() {
+  try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_WINBACK); } catch {}
+}
+
+export async function scheduleWinbackNotification(userId) {
+  if (Platform.OS === 'web') return;
+  try {
+    const episode = await getWinbackEpisode();
+    if (!episode) { await cancelWinbackNotification(); return; }
+
+    // ED/wellbeing suppression (§5): never lay (and cancel any already-laid one)
+    // while a flag is open. Silence is the respectful behaviour.
+    // eslint-disable-next-line global-require
+    const db = require('../database');
+    const edFlag = userId ? await db.getOpenEdPatternFlag(userId).catch(() => null) : null;
+    if (edFlag) { await cancelWinbackNotification(); return; }
+
+    const statedReturn = await getWinbackStatedReturn();
+    const fire = winbackFireDate(episode.lapseAt, statedReturn);
+    // The window has arrived/passed: leave whatever is already laid (it has
+    // fired or fires imminently); never schedule a past date. v1 does not chase
+    // a window that elapsed while suppressed.
+    if (fire.getTime() <= Date.now()) return;
+
+    // First lay of this episode is gated by the cross-episode 180-day floor;
+    // a re-lay (to refresh counts) of an already-laid episode is not — it is the
+    // same single win-back, rescheduled under one identifier.
+    const firstLay = !episode.winbackLaid;
+    if (firstLay) {
+      const lastFiredAt = await getWinbackLastFiredAt();
+      if (!canLayWinback({ episode, lastFiredAt })) return;
+    }
+
+    // Counts from existing free-tier data (sessions only — never weight or
+    // calorie figures, per §5).
+    const workouts = userId ? await db.getAllWorkouts(userId).catch(() => []) : [];
+    const completed = workouts.filter(w => w.isCompleted);
+    const sessionsSince = completed.filter(w => (w.startedAt ?? 0) >= episode.lapseAt).length;
+    const totalSessions = completed.length;
+    const copy = winbackPush({
+      sessionsSince,
+      totalSessions,
+      sinceLabel: monthLabel(episode.lapseAt),
+      statedReturn,
+    });
+
+    await cancelWinbackNotification();
+    const quiet = await getQuietHours();
+    const { date: shifted } = shiftDateOutOfQuietHours(fire, quiet);
+    // Push budget (NOTIFICATIONS_LOCKED addendum). Blocked = not laid and not
+    // marked, so the next app-open re-lay retries the same window.
+    const slot = await requestEventPushSlot({ category: CATEGORY.WINBACK, fireDate: shifted });
+    if (!slot.allowed) return;
+    await Notifications.scheduleNotificationAsync({
+      identifier: NOTIF_ID_WINBACK,
+      content: {
+        title: copy.title,
+        body: copy.body,
+        data: { type: 'winback' },
+        sound: false,
+      },
+      trigger: {
+        channelId: COACHING_REMINDERS_CHANNEL,
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: shifted,
+      },
+    });
+    // notification_sent telemetry fires from the OS-received listener
+    // (listeners.js), which derives the WINBACK category from data.type — the
+    // same convention the other schedulers follow. Emitting it here would
+    // double-count on every count-refresh re-lay.
+    if (firstLay) await markWinbackLaid();
+  } catch (e) {
+    trackNotificationFailed({
+      category: CATEGORY.WINBACK,
+      reason: 'schedule_threw',
+      payload: { message: e?.message ?? 'unknown' },
+    });
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      logWarn('notifications.scheduleWinback', e?.message);
+    }
+  }
+}
+
+// ─── OPP-C03: missed check-in ghost prevention ───────────────────────────────
+// Two single-shot pushes per missed check-in episode: a gentle same-evening
+// nudge (20:00 local on the check-in day) and a value-led +48h follow-up.
+// Never shame copy. Pro-only, toggleable (Settings → Coaching reminders),
+// suppressed entirely under an open ED flag, quiet-hours shifted and gated
+// through the push budget. Like the cascade gates, the pair is wiped by
+// cancelAllNotifications on restore, so restoreNotifications re-lays it; the
+// episode maths in missedCheckin.js keeps re-lays single-shot (a slot whose
+// date has passed is never laid again for the same episode).
+
+const NOTIF_ID_CHECKIN_MISSED_EVENING = 'volyume_checkin_missed_evening';
+const NOTIF_ID_CHECKIN_MISSED_48H = 'volyume_checkin_missed_48h';
+
+export async function cancelMissedCheckinFollowups() {
+  try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_CHECKIN_MISSED_EVENING); } catch {}
+  try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_CHECKIN_MISSED_48H); } catch {}
+}
+
+export async function scheduleMissedCheckinFollowups(userId) {
+  if (Platform.OS === 'web') return;
+  try {
+    // Pro-only: check-ins are a Pro coaching input, so the follow-ups never
+    // reach free users.
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../../store/useAppStore').default;
+    if (useAppStore.getState()?.tier !== 'pro') {
+      await cancelMissedCheckinFollowups();
+      return;
+    }
+
+    // Category toggle (default on) + the user's check-in schedule, from the
+    // same prefs blob the check-in reminder uses.
+    let prefs = {};
+    try {
+      const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+      if (raw) prefs = JSON.parse(raw) ?? {};
+    } catch (_) { /* defaults below */ }
+    if (prefs.missedCheckinEnabled === false) {
+      await cancelMissedCheckinFollowups();
+      return;
+    }
+    const weekday = Number.isFinite(prefs.checkinDay) ? prefs.checkinDay : 0;
+    const hour = Number.isFinite(prefs.checkinHour) ? prefs.checkinHour : 18;
+    const minute = Number.isFinite(prefs.checkinMinute) ? prefs.checkinMinute : 0;
+
+    // Open ED/wellbeing flag → never lay (and retire anything laid). Silence
+    // is the respectful behaviour; the suppression is consumed here, never
+    // altered.
+    // eslint-disable-next-line global-require
+    const db = require('../database');
+    const edFlag = userId ? await db.getOpenEdPatternFlag(userId).catch(() => null) : null;
+    if (edFlag) {
+      await cancelMissedCheckinFollowups();
+      return;
+    }
+
+    // The last REAL check-in (energy score present, same rule as the
+    // reminder's skip logic) resolves the episode: a checked-in week pre-lays
+    // for the next expected occurrence instead.
+    let lastCheckinMs = 0;
+    try {
+      const latest = userId ? await db.getLatestCheckin(userId) : null;
+      if (latest && latest.energyScore != null) {
+        lastCheckinMs = latest.createdAt ?? latest.weekStart ?? 0;
+      }
+    } catch (_) { /* treat as never checked in */ }
+
+    const { evening, followup } = missedCheckinFireDates({
+      weekday, hour, minute, now: new Date(), lastCheckinMs, minGapDays: 7,
+    });
+
+    await cancelMissedCheckinFollowups();
+    const quiet = await getQuietHours();
+    const copy = missedCheckinPush(greetName());
+    const slots = [
+      { id: NOTIF_ID_CHECKIN_MISSED_EVENING, when: evening, copy: copy.evening, slot: 'evening' },
+      { id: NOTIF_ID_CHECKIN_MISSED_48H, when: followup, copy: copy.followup, slot: 'followup' },
+    ];
+    for (const s of slots) {
+      if (!s.when || s.when.getTime() <= Date.now()) continue; // past slot: never chased
+      const { date: shifted } = shiftDateOutOfQuietHours(s.when, quiet);
+      // Push budget: blocked = dropped for this episode, never re-queued.
+      // eslint-disable-next-line no-await-in-loop
+      const slotOk = await requestEventPushSlot({ category: CATEGORY.CHECKIN_MISSED, fireDate: shifted });
+      if (!slotOk.allowed) continue;
+      // eslint-disable-next-line no-await-in-loop
+      await Notifications.scheduleNotificationAsync({
+        identifier: s.id,
+        content: {
+          title: s.copy.title,
+          body: s.copy.body,
+          data: { type: 'checkin_missed', slot: s.slot },
+          sound: false,
+        },
+        trigger: {
+          channelId: COACHING_REMINDERS_CHANNEL,
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: shifted,
+        },
+      });
+    }
+  } catch (e) {
+    trackNotificationFailed({
+      category: CATEGORY.CHECKIN_MISSED,
+      reason: 'schedule_threw',
+      payload: { message: e?.message ?? 'unknown' },
+    });
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      logWarn('notifications.scheduleMissedCheckin', e?.message);
+    }
+  }
 }
 
 // ─── Weekly coach output ready ───────────────────────────────────────────────────
@@ -367,6 +694,10 @@ export async function scheduleWeeklyCoachReady(hour = 9, minute = 0) {
     const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hour, minute, quiet);
     // Next Monday at h:m (getNextWeekdayDate uses JS getDay, Monday = 1).
     const fireAt = getNextWeekdayDate(1, h, m, new Date());
+    // Push budget (NOTIFICATIONS_LOCKED addendum): rank 2, evicts a
+    // lower-priority push on a full Monday rather than being dropped.
+    const slot = await requestEventPushSlot({ category: CATEGORY.WEEKLY_COACH_READY, fireDate: fireAt });
+    if (!slot.allowed) return;
     await Notifications.scheduleNotificationAsync({
       identifier: NOTIF_ID_COACH_READY,
       content: {
@@ -468,6 +799,45 @@ export async function restoreNotifications(prefs, userId = null) {
       prefs.checkinMinute ?? 0,
     );
   }
+
+  // cancelAllNotifications above wiped the trial-window pushes too. They were
+  // previously laid once at startCascade and never restored, so on the next app
+  // launch the cascade-gate pushes (legacy ids _19/_21, which fire at trial
+  // end−2d and trial end — i.e. day 12 and day 14 of the 14-day trial) and the
+  // COMP-023 day-3 push silently vanished. Re-lay them from the stored trial end
+  // date so they survive.
+  // Both helpers are idempotent and no-op when the user isn't in a Pro trial.
+  try {
+    // eslint-disable-next-line global-require
+    const store = require('../../store/useAppStore').default;
+    const profile = store.getState().userProfile;
+    // eslint-disable-next-line global-require
+    const { stageOf } = require('../payments/cascade');
+    if (profile && stageOf(profile) === 'pro_trial') {
+      const endsAt = profile.proTrialEndsAt ?? profile.pro_trial_ends_at ?? null;
+      if (endsAt) await scheduleCascadeGateNotifications(endsAt);
+      await scheduleTrialDay3Notification(userId ?? store.getState().user?.id ?? null, profile);
+    }
+  } catch (_) { /* trial re-lay is best-effort */ }
+
+  // COMP-025-A: the win-back was wiped by cancelAllNotifications too. Re-lay it
+  // so it survives launches; the helper self-guards (no-op when there's no open
+  // churn episode, when ED-suppressed, or when the fire date has passed).
+  try {
+    // eslint-disable-next-line global-require
+    const store = require('../../store/useAppStore').default;
+    await scheduleWinbackNotification(userId ?? store.getState().user?.id ?? null);
+  } catch (_) { /* win-back re-lay is best-effort */ }
+
+  // OPP-C03: the missed check-in follow-ups were wiped by
+  // cancelAllNotifications too (the same historic wipe pattern that lost the
+  // cascade gates). Re-lay; the helper self-guards (Pro-only, toggle, ED flag,
+  // past slots skipped).
+  try {
+    // eslint-disable-next-line global-require
+    const store = require('../../store/useAppStore').default;
+    await scheduleMissedCheckinFollowups(userId ?? store.getState().user?.id ?? null);
+  } catch (_) { /* follow-up re-lay is best-effort */ }
 }
 
 // ─── Year of Lifts unlock ─────────────────────────────────────────────────────
@@ -485,6 +855,10 @@ export async function checkYearOfLiftsUnlock(earliestWorkoutAt) {
   try {
     const already = await AsyncStorage.getItem(YEAR_OF_LIFTS_NOTIFIED_KEY);
     if (already === 'true') return;
+    // Push budget (NOTIFICATIONS_LOCKED addendum). Fires immediately, so the
+    // slot is today's. Blocked = flag stays unset, so a later open retries.
+    const slot = await requestEventPushSlot({ category: CATEGORY.YEAR_OF_LIFTS_UNLOCK, fireDate: new Date() });
+    if (!slot.allowed) return;
     await Notifications.scheduleNotificationAsync({
       identifier: 'volyume_year_of_lifts_unlock',
       content: {
@@ -504,6 +878,175 @@ export async function checkYearOfLiftsUnlock(earliestWorkoutAt) {
     });
     if (typeof __DEV__ !== 'undefined' && __DEV__) {
       logWarn('notifications.yearOfLiftsUnlock', e?.message);
+    }
+  }
+}
+
+const MONTHLY_RECAP_NOTIFIED_PREFIX = '@volyume_recap_notified_';
+
+// COMP-005: one-shot monthly recap nudge. Mirrors checkYearOfLiftsUnlock —
+// fires once per calendar month (idempotent per-month AsyncStorage key) on the
+// app open that first satisfies the conditions: the user has unlocked recaps
+// (>=10 lifetime sessions) AND trained at least once in the month being
+// recapped. A zero-session month gets nothing — silence, not shame. The body
+// softens under calm mode / an open ED flag (passed in as `neutral`).
+export async function checkMonthlyRecapReady({ completedCount = 0, monthSessions = 0, monthKey, monthLabel, neutral = false } = {}) {
+  if (Platform.OS === 'web') return;
+  if (!monthKey || !monthLabel || completedCount < 10 || monthSessions < 1) return;
+  const key = `${MONTHLY_RECAP_NOTIFIED_PREFIX}${monthKey}`;
+  try {
+    const already = await AsyncStorage.getItem(key);
+    if (already === 'true') return;
+    // Push budget (NOTIFICATIONS_LOCKED addendum). Fires immediately, so the
+    // slot is today's. Blocked = the month flag stays unset, so a later
+    // qualifying open retries within the same month.
+    const slot = await requestEventPushSlot({ category: CATEGORY.MONTHLY_RECAP, fireDate: new Date() });
+    if (!slot.allowed) return;
+    await Notifications.scheduleNotificationAsync({
+      identifier: `volyume_monthly_recap_${monthKey}`,
+      content: {
+        title: `Your ${monthLabel} recap is ready`,
+        body: neutral
+          ? 'Last month\'s training, summed up. Have a look when you fancy.'
+          : '45 seconds of what you put in last month. Have a look when you fancy.',
+        data: { type: 'monthly_recap' },
+        sound: true,
+      },
+      trigger: { channelId: COACHING_REMINDERS_CHANNEL },
+    });
+    await AsyncStorage.setItem(key, 'true');
+  } catch (e) {
+    trackNotificationFailed({
+      category: CATEGORY.MONTHLY_RECAP,
+      reason: 'schedule_threw',
+      payload: { message: e?.message ?? 'unknown' },
+    });
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      logWarn('notifications.monthlyRecap', e?.message);
+    }
+  }
+}
+
+// ─── NEW-002 rebuild: partner beats (cheer received + shared streak kept) ────
+// Founder decision 2026-06-12: both pushes ship, inside the budget. Pure
+// decision logic lives in partnerBeats.js; this applies the gates (web, ED
+// flag, preferences toggle), the quiet hours shift, the PARTNER_CHEER budget
+// slot, and the per-user watermark so a beat fires exactly once.
+
+const PARTNER_BEATS_KEY = (userId) => `@volyume_partner_beats_v1_${userId}`;
+const NOTIF_ID_PARTNER_CHEER = 'volyume_partner_cheer';
+const NOTIF_ID_PARTNER_STREAK = 'volyume_partner_streak';
+
+/**
+ * Check for newly arrived partner beats and lay their pushes. Called after
+ * the partner sync pull lands (the only moment a cheer can ARRIVE on
+ * device), fire-and-forget. Safe to call repeatedly: watermarks make each
+ * beat fire at most once.
+ */
+export async function schedulePartnerBeats(userId) {
+  if (Platform.OS === 'web' || !userId) return;
+  try {
+    // eslint-disable-next-line global-require
+    const { cheerPush, streakKeptPush, normaliseBeatsState, cheerToNotify, streakRunToNotify } = require('./partnerBeats');
+    // eslint-disable-next-line global-require
+    const db = require('../database');
+
+    // Open ED/wellbeing flag: silence (the partner surface freezes benignly;
+    // pushes must not poke at it).
+    const edFlag = await db.getOpenEdPatternFlag(userId).catch(() => null);
+    if (edFlag) return;
+
+    // Preferences toggle (default ON; the notification settings screen can
+    // surface partnerCheerEnabled later without a schema change).
+    let prefs = {};
+    try {
+      const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+      if (raw) prefs = JSON.parse(raw) ?? {};
+    } catch (_) { /* default on */ }
+    if (prefs.partnerCheerEnabled === false) return;
+
+    // The active partnership; no pair, no beats.
+    const partnerships = await db.getPartnershipsLocal(userId).catch(() => []);
+    const pair = (partnerships || []).find((p) => p.status === 'active');
+    if (!pair) return;
+    const partnerName = pair.partnerFirstName || null;
+    const partnerId = pair.memberA === userId ? pair.memberB : pair.memberA;
+
+    const raw = await AsyncStorage.getItem(PARTNER_BEATS_KEY(userId)).catch(() => null);
+    const state = normaliseBeatsState(raw ? JSON.parse(raw) : null);
+    let nextState = state;
+
+    const quiet = await getQuietHours();
+
+    // ── Beat 1: cheer received ──
+    const lastReceived = await db.getLastCheerReceived(pair.id, userId).catch(() => null);
+    const cheer = cheerToNotify(state, lastReceived);
+    if (cheer) {
+      nextState = { ...nextState, lastCheerId: cheer.id };
+      const { date } = shiftDateOutOfQuietHours(new Date(Date.now() + 5000), quiet);
+      const slot = await requestEventPushSlot({ category: CATEGORY.PARTNER_CHEER, fireDate: date });
+      if (slot.allowed) {
+        const copy = cheerPush(partnerName);
+        await Notifications.scheduleNotificationAsync({
+          identifier: NOTIF_ID_PARTNER_CHEER,
+          content: {
+            title: copy.title, body: copy.body,
+            data: { type: 'partner_cheer' }, sound: false,
+          },
+          trigger: {
+            channelId: COACHING_REMINDERS_CHANNEL,
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date,
+          },
+        });
+      }
+    }
+
+    // ── Beat 2: shared streak kept (run grew) ──
+    if (pair.streakEnabled) {
+      // eslint-disable-next-line global-require
+      const { computeSharedStreak, buildSharedWeeks } = require('../partners/sharedStreak');
+      const pairSignals = await db.getPairWeekSignals(pair.id).catch(() => []);
+      const sharedStreak = computeSharedStreak({
+        enabled: true,
+        weeks: buildSharedWeeks(pairSignals, userId, partnerId),
+      });
+      const run = streakRunToNotify(nextState, sharedStreak);
+      if (run != null) {
+        nextState = { ...nextState, lastStreakRun: run };
+        const { date } = shiftDateOutOfQuietHours(new Date(Date.now() + 5000), quiet);
+        const slot = await requestEventPushSlot({ category: CATEGORY.PARTNER_CHEER, fireDate: date });
+        if (slot.allowed) {
+          const copy = streakKeptPush(partnerName, run);
+          await Notifications.scheduleNotificationAsync({
+            identifier: NOTIF_ID_PARTNER_STREAK,
+            content: {
+              title: copy.title, body: copy.body,
+              data: { type: 'partner_streak' }, sound: false,
+            },
+            trigger: {
+              channelId: COACHING_REMINDERS_CHANNEL,
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date,
+            },
+          });
+        }
+      }
+    }
+
+    // Watermarks advance even when the budget said no: a capped beat is
+    // dropped for the episode, never re-queued later as stale news.
+    if (nextState !== state) {
+      await AsyncStorage.setItem(PARTNER_BEATS_KEY(userId), JSON.stringify(nextState)).catch(() => {});
+    }
+  } catch (e) {
+    trackNotificationFailed({
+      category: CATEGORY.PARTNER_CHEER,
+      reason: 'schedule_threw',
+      payload: { message: e?.message ?? 'unknown' },
+    });
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      logWarn('notifications.partnerBeats', e?.message);
     }
   }
 }

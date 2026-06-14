@@ -286,6 +286,48 @@ describe('computeAdaptiveTDEEAdjustment', () => {
     expect(result.confidence).toBe('high');
   });
 
+  // COMP-026 (A): confidence is DISTINCT-calendar-day based, not row-count,
+  // so a burst of same-day weigh-ins can't inflate it. 28 rows spread across
+  // only 10 distinct days must read as 1 week (low), never 4 (high).
+  test('same-day weigh-ins do not inflate confidence (28 rows, 10 days = low)', () => {
+    const rows = [];
+    for (let day = 0; day < 10; day++) {
+      const reps = day < 8 ? 3 : 2; // 8*3 + 2*2 = 28 rows across 10 days
+      for (let r = 0; r < reps; r++) {
+        rows.push({
+          weightKg: 80,
+          date: `2024-01-${String(day + 1).padStart(2, '0')}T0${r}:00:00.000Z`,
+          ewma: 80,
+        });
+      }
+    }
+    expect(rows.length).toBe(28);
+    const result = computeAdaptiveTDEEAdjustment({
+      ewmaData: rows,
+      prescribedKcal: 2500,
+      currentTDEEEstimate: 2500,
+    });
+    expect(result.weeks).toBe(1);
+    expect(result.confidence).toBe('low');
+  });
+
+  // A wide, genuinely-spanning window (one weigh-in per day across 8 weeks)
+  // reaches high confidence, activating the resize the 14-day window starved.
+  test('60 distinct daily weigh-ins reach high confidence', () => {
+    const rows = Array.from({ length: 60 }, (_, i) => {
+      const d = new Date('2024-01-01T08:00:00.000Z');
+      d.setUTCDate(d.getUTCDate() + i);
+      return { weightKg: 80, date: d.toISOString(), ewma: 80 };
+    });
+    const result = computeAdaptiveTDEEAdjustment({
+      ewmaData: rows,
+      prescribedKcal: 2500,
+      currentTDEEEstimate: 2500,
+    });
+    expect(result.weeks).toBe(8);
+    expect(result.confidence).toBe('high');
+  });
+
   test('weight is stable: adjustmentKcal is close to zero when actual matches expected', () => {
     // Flat weight → actualKgPerWeek ≈ 0; prescribedKcal = TDEE → expectedKgPerWeek ≈ 0
     const result = computeAdaptiveTDEEAdjustment({

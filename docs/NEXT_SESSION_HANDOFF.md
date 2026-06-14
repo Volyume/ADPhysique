@@ -1,5 +1,11 @@
 # Next-session handoff — ready-to-execute tasks
 
+> **SUPERSEDED (2026-06-10).** This file is a 2026-06-02 record; both tasks
+> below are long DONE. For the actual current state and the live next-session
+> action (trigger iOS build 15 from `claude/main-branch-content-update-dcqicf`),
+> read **`docs/CURRENT_STATUS.md`** (2026-06-10 entry). Do not treat the tasks
+> below as outstanding.
+>
 > STATUS 2026-06-03: both tasks below are DONE. Kept here as the record of
 > what changed and why (the locked-doc reconciliation in particular).
 >

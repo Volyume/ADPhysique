@@ -50,9 +50,18 @@ jest.mock('../../database', () => ({
   getCardioLogForPush: jest.fn().mockResolvedValue([]),
   insertCardioLogFromCloud: jest.fn().mockResolvedValue(undefined),
   getCardioLogUpdatedAt: jest.fn().mockResolvedValue(null),
+  // NEW-002 partner mirror.
+  getPartnershipsLocal: jest.fn().mockResolvedValue([]),
+  getPartnerWeekSignal: jest.fn().mockResolvedValue(null),
+  getLocalPartnershipIds: jest.fn().mockResolvedValue([]),
+  upsertPartnershipFromCloud: jest.fn().mockResolvedValue(undefined),
+  upsertPartnerWeekSignalFromCloud: jest.fn().mockResolvedValue(undefined),
+  upsertPartnerCheerFromCloud: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('../../food/db', () => ({
+  getLatestMealPlanRowForSync: jest.fn().mockResolvedValue(null),
+  applyMealPlanRowFromCloud: jest.fn().mockResolvedValue(false),
   getAllFoodEntriesSince: jest.fn().mockResolvedValue([]),
   getAllCustomFoodsSince: jest.fn().mockResolvedValue([]),
   getAllSavedMealsSince: jest.fn().mockResolvedValue([]),
@@ -146,6 +155,9 @@ function makeSupabaseMock({ select = {}, upsertError = null } = {}) {
           }));
           return eqChain;
         }),
+        // NEW-002 pair-scoped pull: .select().or(...) and .select().in(...).
+        or: jest.fn(async () => ({ data: tableSelect, error: null })),
+        in: jest.fn(async () => ({ data: tableSelect, error: null })),
       };
       return {
         select: jest.fn(() => {
@@ -216,6 +228,9 @@ describe('syncAll integration', () => {
     const cloudTableForRegistry = {
       body_composition_log: 'body_metrics',
       profiles: 'users_profile',
+      // NEW-002 pair-scoped pseudo-table: its pull always hits partnerships
+      // first, then (for active pairs) partner_week_signals + partner_cheers.
+      partner_signals: 'partnerships',
     };
     const fromCalls = sb._calls.from;
     const FOOD = new Set([

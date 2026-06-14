@@ -12,7 +12,8 @@ import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/t
 import PressableCard from '../components/PressableCard';
 import Card from '../components/Card';
 import { EmptyWorkoutsIllustration } from '../components/Illustrations';
-import { getAllWorkouts, getWorkoutSetsForWorkoutIds, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails } from '../lib/database';
+import { getAllWorkouts, getWorkoutSetsForWorkoutIds, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails, deleteWorkoutAndSets } from '../lib/database';
+import { enqueueSyncOp } from '../lib/syncQueue';
 import { logError } from '../lib/errorLog';
 import { calculateTonnage } from '../lib/algorithms';
 import { workoutDayMs, workoutDayKey, calendarRelativeLabel } from '../lib/workoutDate';
@@ -33,7 +34,7 @@ const FILTERS = [
 const DAY_HEADERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 export default function WorkoutHistoryScreen({ navigation }) {
-  const { user, startWorkout } = useAppStore(useShallow(s => ({ user: s.user, startWorkout: s.startWorkout })));
+  const { user, startWorkout, session } = useAppStore(useShallow(s => ({ user: s.user, startWorkout: s.startWorkout, session: s.session })));
   const toast = useToast();
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -136,6 +137,45 @@ export default function WorkoutHistoryScreen({ navigation }) {
           onPress: () => navigation.getParent()?.navigate('PlansTab'),
         },
         { text: 'Cancel', style: 'cancel' },
+      ],
+    );
+  }
+
+  // Founder request 2026-06-12: delete a workout from history (a half-logged
+  // session restarted, or a fresh start). Local rows go immediately and every
+  // derived stat recomputes from local data; the cloud copy is removed too so
+  // a restore cannot resurrect it (failure path: queued 'workout_delete' op,
+  // retried with backoff on app foreground).
+  function handleDeleteWorkout(workout) {
+    appAlert(
+      'Delete this workout?',
+      'The session and all its sets are removed from your history, and your stats recalculate. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const ok = await deleteWorkoutAndSets(user.id, workout.id);
+              if (!ok) { toast.show("Couldn't delete that workout. Try again.", { variant: 'error' }); return; }
+              const supabaseUserId = session?.user?.id;
+              if (supabaseUserId) {
+                // eslint-disable-next-line global-require
+                const { deleteWorkoutFromCloud } = require('../lib/sync');
+                deleteWorkoutFromCloud(supabaseUserId, workout.id)
+                  .then((cloudOk) => { if (!cloudOk) return enqueueSyncOp('workout_delete', workout.id, supabaseUserId); })
+                  .catch(() => enqueueSyncOp('workout_delete', workout.id, supabaseUserId));
+              }
+              if (expandedId === workout.id) setExpandedId(null);
+              toast.show('Workout deleted.', { variant: 'success' });
+              loadWorkouts();
+            } catch (e) {
+              logError('WorkoutHistory.delete', e, { workoutId: workout.id });
+              toast.show("Couldn't delete that workout. Try again.", { variant: 'error' });
+            }
+          },
+        },
       ],
     );
   }
@@ -405,6 +445,15 @@ export default function WorkoutHistoryScreen({ navigation }) {
           >
             <Ionicons name="refresh-outline" size={16} color={colors.primary} />
             <Text style={styles.repeatBtnText}>Repeat</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={() => handleDeleteWorkout(workout)}
+            accessibilityRole="button"
+            accessibilityLabel="Delete workout"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="trash-outline" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
       </Card>
@@ -737,7 +786,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   dayNumSelected: {
-    color: colors.background,
+    color: colors.onPrimary,
     fontWeight: fontWeight.bold,
   },
   clearDayBtn: {
@@ -905,6 +954,17 @@ const styles = StyleSheet.create({
   repeatBtnFull: {
     flex: 1,
     justifyContent: 'center',
+  },
+  // Quiet destructive affordance: neutral until the confirm dialog, matching
+  // the row's secondary-button treatment rather than shouting red.
+  deleteBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   repeatBtnText: {
     ...type.label,

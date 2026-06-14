@@ -361,7 +361,15 @@ export default function NotificationSettingsScreen({ navigation }) {
 
   async function persistTrainingPreference(nextPrefs) {
     try {
-      await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(nextPrefs));
+      // Merge over the existing blob so keys this screen doesn't own
+      // (missedCheckinEnabled from Coaching reminders, coachReady) are not
+      // dropped by a training-reminder save.
+      let existing = {};
+      try {
+        const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+        if (raw) existing = JSON.parse(raw) ?? {};
+      } catch (_) {}
+      await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify({ ...existing, ...nextPrefs }));
       const userId = useAppStore.getState().user?.id;
       if (userId) {
         const trainingTime =

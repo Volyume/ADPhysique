@@ -220,6 +220,44 @@ describe('profiles pull (merge)', () => {
     expect(applied.units).toBe('kg');
   });
 
+  test('local-only fields (meal-plan prefs) survive a pull that changes a synced field', async () => {
+    // Regression: pullProfiles must NOT rebuild userProfile from only the
+    // synced columns, or it silently wipes local-only fields (the meal-plan
+    // prefs have no cloud column) on the next sync.
+    const setUserProfile = jest.fn();
+    setStoreState({
+      userProfile: {
+        firstName: 'OldName', units: 'kg', trainingFocus: 'bodybuilding', barWeight: 20,
+        mealPlanExcludeFoods: ['white_rice', 'eggs'],
+        mealPlanMealsPerDay: 5,
+        mealPlanVariety: 0,
+        mealPlanFatConvention: 'higher_rest_day',
+      },
+      userProfileFieldUpdatedAt: { firstName: Date.UTC(2026, 0, 1) },
+      setUserProfile,
+    });
+    const sb = makeMaybeSingleSb({
+      data: {
+        first_name: 'CloudName', units: 'kg', training_focus: 'bodybuilding',
+        training_age: null, primary_equipment: null, bar_weight: 20,
+        diet_preference: 'omnivore',
+        updated_at: new Date(Date.UTC(2026, 5, 1)).toISOString(),
+        column_updates_at: { first_name: '2026-05-15T00:00:00.000Z' },
+      },
+    });
+    getSupabaseClient.mockReturnValue(sb);
+
+    await pullProfiles(sb, { userId: 'u1' });
+
+    const applied = setUserProfile.mock.calls[0][0];
+    expect(applied.firstName).toBe('CloudName'); // synced field updated
+    // local-only meal-plan prefs preserved through the pull
+    expect(applied.mealPlanExcludeFoods).toEqual(['white_rice', 'eggs']);
+    expect(applied.mealPlanMealsPerDay).toBe(5);
+    expect(applied.mealPlanVariety).toBe(0);
+    expect(applied.mealPlanFatConvention).toBe('higher_rest_day');
+  });
+
   test('per-column merge pulls a newer cloud diet_preference', async () => {
     const setUserProfile = jest.fn();
     setStoreState({

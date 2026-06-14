@@ -9,7 +9,7 @@
  */
 import { todayLocalKey } from '../lib/dayKey';
 import { appAlert } from '../components/AppAlert';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,11 +17,13 @@ import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/t
 import Button from '../components/Button';
 import { useToast } from '../components/Toast';
 import { insertCustomFood, logFoodEntry } from '../lib/food/db';
+import { queueContribution, getConsent, markScanChainCompleted } from '../lib/food/writeback';
 import { checkFoodSanity } from '../lib/food/sanityChecks';
 import { fieldNeedsCheck } from '../lib/food/ocrParser';
 import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import { findLocalByBarcode } from '../lib/food/sources/localCache';
 
 const MEAL_LABELS = {
   breakfast: 'Breakfast',
@@ -62,6 +64,20 @@ export default function AddCustomFoodScreen({ navigation, route }) {
 
   const [name, setName] = useState(prefillName);
   const [brand, setBrand] = useState('');
+
+  // COMP-022 duplicate guard: this barcode can already belong to a custom food
+  // if sync pulled it (or a soft-delete was restored) after the miss routed the
+  // user here. Surface it so they can log the existing food instead of making a
+  // second; saving anyway is allowed (newest wins in barcode resolution).
+  const [dupeFood, setDupeFood] = useState(null);
+  useEffect(() => {
+    if (!prefillBarcode || !userId) return;
+    let cancelled = false;
+    findLocalByBarcode(prefillBarcode, userId)
+      .then((hit) => { if (!cancelled && hit && hit.source === 'custom') setDupeFood(hit); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [prefillBarcode, userId]);
   const [servingG, setServingG] = useState(_num(prefillMacros?.servingG) || '100');
   const [kcal, setKcal] = useState(_num(prefillMacros?.kcal100g));
   const [protein, setProtein] = useState(_num(prefillMacros?.protein100g));
@@ -140,6 +156,29 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         fatG:      Math.round(food.fat100g     * factor * 10) / 10,
         fibreG:    food.fibre100g != null ? Math.round(food.fibre100g * factor * 10) / 10 : null,
       });
+
+      // OFF contribution (COMP-022): relocated here from ScanLabel capture so
+      // it carries the values the user actually confirmed, plus name/brand.
+      // queueContribution hard-gates on consent internally; the barcode check
+      // keeps it to scanned-and-healed items. Fire-and-forget.
+      if (food.barcodeEan) {
+        try {
+          if (await getConsent()) {
+            await queueContribution(userId, {
+              barcode: food.barcodeEan,
+              name: food.name, brand: food.brand,
+              kcal100g: food.kcal100g, protein100g: food.protein100g,
+              carbs100g: food.carbs100g, fat100g: food.fat100g,
+              fibre100g: food.fibre100g, servingG: food.servingG,
+            });
+          }
+        } catch (_) { /* contribution is best-effort, never blocks the save */ }
+        // A heal chain completed — make the one-time OFF-consent card eligible
+        // (offered later on the Diary, never mid-task). Fire-and-forget.
+        markScanChainCompleted().catch(() => {});
+        // Confirm the healing: the loop-closing reward (COMP-022).
+        toast.show('Saved. Next time this barcode scans instantly.');
+      }
       navigation.goBack();
     } catch (_err) {
       toast.show('Couldn\'t save. Try again.', { variant: 'error' });
@@ -167,6 +206,18 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         <Text style={styles.contextLabel}>Logging to {MEAL_LABELS[mealSlot] ?? 'Snacks'}</Text>
         {prefillBarcode ? (
           <Text style={styles.barcodeHint}>Scanned barcode: {prefillBarcode}</Text>
+        ) : null}
+        {dupeFood ? (
+          <View style={styles.dupeBanner}>
+            <Text style={styles.dupeText}>
+              You’ve saved this barcode before as {dupeFood.name}.
+            </Text>
+            <Button
+              title="Log that instead"
+              variant="secondary"
+              onPress={() => navigation.replace('FoodSearch', { mealSlot, entryDate, scannedFood: dupeFood })}
+            />
+          </View>
         ) : null}
 
         <Field label="Name" value={name} onChange={setName} placeholder="Chicken breast, raw" autoFocus />
@@ -262,6 +313,14 @@ const styles = StyleSheet.create({
     color: colors.primary,
     marginTop: -spacing.md, marginBottom: spacing.lg,
   },
+  dupeBanner: {
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
+    padding: spacing.md, marginBottom: spacing.lg,
+  },
+  dupeText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
 
   sectionLabel: {
     color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold,

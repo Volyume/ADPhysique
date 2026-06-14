@@ -38,7 +38,7 @@ export function EntryRow({
     >
       {selectionMode ? (
         <View style={[styles.checkbox, selected && styles.checkboxOn]}>
-          {selected ? <Ionicons name="checkmark" size={14} color={colors.background} /> : null}
+          {selected ? <Ionicons name="checkmark" size={14} color={colors.onPrimary} /> : null}
         </View>
       ) : null}
       <View style={styles.entryMain}>

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,13 +9,12 @@ import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type } from '../styles/theme';
-import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
 import ScreenHeader from '../components/ScreenHeader';
+import BlockShapeCard from '../components/BlockShapeCard';
+import Button from '../components/Button';
 import PressableCard from '../components/PressableCard';
 import { SkeletonCard } from '../components/Skeleton';
-import Sparkline from '../components/Sparkline';
-import StepsCard from '../components/StepsCard';
-import CardioCard from '../components/CardioCard';
+import TodayStrip from '../components/TodayStrip';
 import { useToast } from '../components/Toast';
 import {
   getAllWorkouts, getWorkoutSetsSince, getActivePlan, getRoutinesForPlan,
@@ -24,7 +23,21 @@ import {
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getAllExercises,
   getMorningWeightToday, getMorningWeights, logMorningWeight, getProgressionTeaser,
   getRecentWorkoutFeedback, getLatestCoachOutput,
+  getMorningWeightsLast14Days, getOpenEdPatternFlag,
 } from '../lib/database';
+import { stageOf } from '../lib/payments/cascade';
+import {
+  trialStartFromEndsAt,
+  selectTrialVariant,
+  firstReviewUnlockDate,
+  dayName,
+  trialBannerLine,
+} from '../lib/trialActivation';
+import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
+import { buildFreeCoachLine } from '../lib/coachResponse';
+import { GLOSSARY } from '../lib/coachGlossary';
+import { localWeekStartMs } from '../lib/dayKey';
+import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 import { logError, logWarn } from '../lib/errorLog';
 import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, VOLUME_LANDMARKS } from '../lib/algorithms';
@@ -44,10 +57,34 @@ function getGreeting(firstName) {
   return `Late night${name}.`;
 }
 
+// COMP-008: the three pre-workout readiness rows shown beneath the intent
+// options. Each is an optional low/middle/high chip. Stored values match the
+// scales the workout row + its readers expect: soreness on the existing 1-3
+// (Fresh/Mild/Sore) scale the adaptive engine + computeRecoveryEMAs read;
+// sleep + energy on the 1-5 domain (chips offer 2/3/4) so the weekly
+// sleep_quality write and CoachReview's <2.5 thresholds stay valid.
+const READINESS_ROWS = [
+  {
+    key: 'soreness24hBefore',
+    label: 'Soreness coming in',
+    chips: [{ label: 'Fresh', value: 1 }, { label: 'Mild', value: 2 }, { label: 'Sore', value: 3 }],
+  },
+  {
+    key: 'sleepQuality',
+    label: 'Sleep last night',
+    chips: [{ label: 'Poor', value: 2 }, { label: 'OK', value: 3 }, { label: 'Good', value: 4 }],
+  },
+  {
+    key: 'energyScore',
+    label: 'Energy today',
+    chips: [{ label: 'Low', value: 2 }, { label: 'OK', value: 3 }, { label: 'High', value: 4 }],
+  },
+];
+
 export default function HomeScreen({ navigation }) {
   const toast = useToast();
-  const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce } = useAppStore(
-    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce }))
+  const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments } = useAppStore(
+    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce, setSessionAdjustments: s.setSessionAdjustments }))
   );
 
   // WK-1: recover an in-progress workout after an app kill/crash. The store
@@ -117,7 +154,18 @@ export default function HomeScreen({ navigation }) {
   const [lastSessionTonnage, setLastSessionTonnage] = useState(null);
   const [blockProgress, setBlockProgress] = useState([]);
   const [currentMesoWeek, setCurrentMesoWeek] = useState(null);
+  const [showBlockShape, setShowBlockShape] = useState(false); // COMP-010 meso chip tap-through
   const [latestCoachOutput, setLatestCoachOutput] = useState(null);
+  // COMP-023: day-3 trial value banner. { line, variant } when in-window, else
+  // null. Computed from live counters in loadTrialBanner.
+  const [trialBanner, setTrialBanner] = useState(null);
+  const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
+  // Free-tier weekly one-liner (founder decision 4c): one read-only
+  // sentence built from training plus weight direction only. Dismissed
+  // per week; defaults dismissed so it never flashes before the stored
+  // dismissal has been read.
+  const [freeCoachLine, setFreeCoachLine] = useState(null);
+  const [freeCoachLineDismissed, setFreeCoachLineDismissed] = useState(true);
   // First-load flag, flipped false in loadData. While true, the
   // home screen renders skeleton cards in place of the main cards so
   // the user sees structure instantly on cold launch rather than a
@@ -126,13 +174,23 @@ export default function HomeScreen({ navigation }) {
   const [coachBannerDismissed, setCoachBannerDismissed] = useState(false);
   const [todayWeight, setTodayWeight] = useState(null);       // logged weight for today
   const [recentWeights, setRecentWeights] = useState([]);     // last 14 entries for sparkline
-  const [weightInput, setWeightInput] = useState('');          // draft for kg/lbs mode
-  const [weightInputSt, setWeightInputSt] = useState('');     // stone field (st mode)
-  const [weightInputStLbs, setWeightInputStLbs] = useState(''); // lbs field (st mode)
   const [savingWeight, setSavingWeight] = useState(false);
+  // COMP-027 Part B: open ED/wellbeing flag → the strip's weight cell drops the
+  // sparkline (value only), consistent with COMP-004's hide-the-rate rule.
+  const [edFlagOpen, setEdFlagOpen] = useState(false);
   const [showCoachingNudge, setShowCoachingNudge] = useState(false);
   const [totalSessions, setTotalSessions] = useState(0);
   const [showIntentPrompt, setShowIntentPrompt] = useState(false);
+  // COMP-008: the three "walked-in-with" readiness facts, captured on the
+  // pre-workout prompt where they are accurate rather than recalled after the
+  // session. All optional, reset each time the prompt opens. Stored on the
+  // scales the workout row + its readers expect (soreness 1-3; sleep/energy on
+  // the 1-5 domain, the chips offering 2/3/4).
+  const [readiness, setReadiness] = useState({
+    soreness24hBefore: null,
+    sleepQuality: null,
+    energyScore: null,
+  });
   const [teaserInsight, setTeaserInsight] = useState(null);
   const [deloadSuggestion, setDeloadSuggestion] = useState(null);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
@@ -226,7 +284,8 @@ export default function HomeScreen({ navigation }) {
         loadFatigueTrend(),
         loadScheduleContext(),
         loadBriefDismissal(),
-        ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadFirstRunCue()] : []),
+        ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadFirstRunCue(), loadTrialBanner()] : []),
+        ...(tier === 'free' ? [loadFreeCoachLine()] : []),
       ]);
     } finally {
       setInitialLoading(false);
@@ -245,6 +304,121 @@ export default function HomeScreen({ navigation }) {
         setCoachBannerDismissed(false);
       }
     } catch (_) {}
+  }
+
+  // COMP-023: build the day-3 value banner from live counters. Null unless the
+  // user is in a Pro trial, within days 2–7, with no first review yet. Under an
+  // open ED flag the line is the neutral fallback (no counts, no weight ask).
+  async function loadTrialBanner() {
+    try {
+      if (!user?.id || stageOf(userProfile) !== 'pro_trial') { setTrialBanner(null); return; }
+
+      // Re-lay the day-3 push on every Home open during the trial so its baked
+      // variant/copy/unlock-day track the freshest counters. It is laid once at
+      // trial start (day 0, when the user has done nothing → S3); without this
+      // refresh an active user who never cold-relaunches would get that stale
+      // "you've done nothing" push on day 3. No-ops once day 3 has passed.
+      try {
+        // eslint-disable-next-line global-require
+        require('../lib/notifications').scheduleTrialDay3Notification(user.id, userProfile)?.catch?.(() => {});
+      } catch (_) { /* best-effort */ }
+
+      const endsAt = userProfile?.proTrialEndsAt ?? userProfile?.pro_trial_ends_at ?? null;
+      const trialStart = trialStartFromEndsAt(endsAt);
+      if (trialStart == null) { setTrialBanner(null); return; }
+      const trialDay = Math.floor((Date.now() - trialStart) / 86400000);
+      if (trialDay < 2 || trialDay > 7) { setTrialBanner(null); return; }
+
+      // A coach output existing means the first review already happened — the
+      // value moment is past, so the banner retires permanently.
+      const [coachOut, workouts, weights, edFlag] = await Promise.all([
+        getLatestCoachOutput(user.id).catch(() => null),
+        getAllWorkouts(user.id).catch(() => []),
+        getMorningWeightsLast14Days(user.id).catch(() => []),
+        getOpenEdPatternFlag(user.id).catch(() => null),
+      ]);
+      if (coachOut) { setTrialBanner(null); return; }
+
+      const completedSessions = workouts.filter(w => w.isCompleted && (w.startedAt ?? 0) >= trialStart).length;
+      const weekAgo = Date.now() - 7 * 86400000;
+      const weighIns7d = weights.filter(w => (w.loggedAt ?? 0) >= weekAgo).length;
+      const firstWeightAt = weights.length ? Math.min(...weights.map(w => w.loggedAt ?? Infinity)) : null;
+
+      let checkinDay = 0;
+      try {
+        const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
+        if (raw) { const p = JSON.parse(raw); if (Number.isFinite(p?.checkinDay)) checkinDay = p.checkinDay; }
+      } catch (_) {}
+
+      const variant = selectTrialVariant({ completedSessions, weighIns7d });
+      const unlock = firstReviewUnlockDate(firstWeightAt, checkinDay);
+      const line = trialBannerLine({
+        variant, completedSessions, weighIns7d,
+        unlockDayName: dayName(unlock), trialDay, edFlagOpen: !!edFlag,
+      });
+
+      // Read the per-trial dismissal BEFORE revealing the banner so a banner the
+      // user already dismissed can't flash for a frame while the read resolves.
+      const dKey = `@volyume_trial_value_banner_dismissed_${user.id}`;
+      const dv = await AsyncStorage.getItem(dKey).catch(() => null);
+      setTrialBannerDismissed(dv === 'true');
+      setTrialBanner({ line, variant });
+    } catch (_) {
+      setTrialBanner(null);
+    }
+  }
+
+  function dismissTrialBanner() {
+    setTrialBannerDismissed(true);
+    if (user?.id) {
+      AsyncStorage.setItem(`@volyume_trial_value_banner_dismissed_${user.id}`, 'true').catch(() => {});
+    }
+  }
+
+  // Free-tier weekly one-liner (founder decision 4c). Free-safe data
+  // only: completed sessions this week plus the direction of any logged
+  // morning weights. No rates, no figures, no targets, no food data and
+  // no Pro functionality; the card is a read-only sentence with a Pro
+  // footer. Suppressed to a training-only line under an open ED flag or
+  // calm mode, per the existing COMP-004/COMP-023 rules.
+  async function loadFreeCoachLine() {
+    try {
+      if (!user?.id) { setFreeCoachLine(null); return; }
+      const weekStartMs = localWeekStartMs();
+      const dKey = `@volyume_free_coach_line_dismissed_${user.id}_${weekStartMs}`;
+      const [workouts, weights, edFlag, wellbeing, dismissed] = await Promise.all([
+        getAllWorkouts(user.id).catch(() => []),
+        getMorningWeightsLast14Days(user.id).catch(() => []),
+        getOpenEdPatternFlag(user.id).catch(() => null),
+        getWellbeingMode().catch(() => 'unspecified'),
+        AsyncStorage.getItem(dKey).catch(() => null),
+      ]);
+      const sessionsThisWeek = workouts.filter(
+        w => w.isCompleted && (w.startedAt ?? 0) >= weekStartMs,
+      ).length;
+      const line = buildFreeCoachLine({
+        sessionsThisWeek,
+        morningWeights: weights,
+        edFlagOpen: !!edFlag,
+        calmMode: isCalm(wellbeing),
+      });
+      // Read the dismissal BEFORE revealing the card so a line the user
+      // already dismissed can't flash for a frame (trial-banner pattern).
+      setFreeCoachLineDismissed(dismissed === 'true');
+      setFreeCoachLine(line);
+    } catch (_) {
+      setFreeCoachLine(null);
+    }
+  }
+
+  function dismissFreeCoachLine() {
+    setFreeCoachLineDismissed(true);
+    if (user?.id) {
+      AsyncStorage.setItem(
+        `@volyume_free_coach_line_dismissed_${user.id}_${localWeekStartMs()}`,
+        'true',
+      ).catch(() => {});
+    }
   }
 
   async function loadBriefDismissal() {
@@ -385,50 +559,25 @@ export default function HomeScreen({ navigation }) {
         const recent14 = await getMorningWeights(user.id, 14);
         setRecentWeights(recent14.map(w => w.weightKg).filter(Number.isFinite));
       } catch (_) {}
-      // Prefill the log-weight inputs with the previously logged weight
-      // (most recent morning weight, falling back to onboarding weight).
-      // Blank inputs every day forced the user to retype the same number
-      //, annoying, and easy to typo.
-      if (!entry?.weightKg) {
-        let prefillKg = null;
-        try {
-          const recent = await getMorningWeights(user.id, 1);
-          if (recent.length > 0) prefillKg = recent[recent.length - 1]?.weightKg;
-        } catch (_) {}
-        if (!prefillKg && userProfile?.weightKg && userProfile.weightKg > 0) {
-          prefillKg = userProfile.weightKg;
-        }
-        if (prefillKg && prefillKg > 0) {
-          if (bwu === 'st') {
-            const { stoneStr, lbsStr } = kgToStoneLbsStrings(prefillKg);
-            setWeightInputSt(stoneStr);
-            setWeightInputStLbs(lbsStr);
-          } else if (bwu === 'lbs') {
-            setWeightInput(String(Math.round(kgToLbs(prefillKg))));
-          } else {
-            setWeightInput(String(Math.round(prefillKg * 10) / 10));
-          }
-        }
-      }
+      // COMP-027 Part B: open ED/wellbeing flag → the strip shows the weight
+      // value only (no sparkline). The strip prefills its own draft from the
+      // last known weight (passed as lastWeightKg).
+      try {
+        const flag = await getOpenEdPatternFlag(user.id);
+        setEdFlagOpen(!!flag);
+      } catch (_) {}
     } catch (_) {}
   }
 
-  async function handleLogWeight() {
-    let weightKg;
-    if (bwu === 'st') {
-      if (!weightInputSt) return;
-      weightKg = stoneLbsToKg(weightInputSt, weightInputStLbs || '0');
-    } else {
-      weightKg = parseBodyWeightToKg(weightInput, bwu);
-    }
+  // COMP-027 Part B: TodayStrip owns the draft input + parsing and hands a kg
+  // value here. HomeScreen stays the weight-data owner (it reloads on focus and
+  // feeds the coach) and does the optimistic write.
+  async function handleLogWeight(weightKg) {
     if (!weightKg || isNaN(weightKg) || weightKg <= 0 || weightKg > 300) return;
-    // Optimistic: show the logged weight + clear inputs immediately.
-    // SQLite write happens in the background. On failure, revert.
+    // Optimistic: show the logged weight immediately. SQLite write happens in
+    // the background. On failure, revert.
     const previousTodayWeight = todayWeight;
     setTodayWeight(weightKg);
-    setWeightInput('');
-    setWeightInputSt('');
-    setWeightInputStLbs('');
     setSavingWeight(true);
     try {
       await logMorningWeight(user.id, { weightKg, loggedAt: Date.now() });
@@ -620,7 +769,17 @@ export default function HomeScreen({ navigation }) {
     setRefreshing(false);
   }
 
-  async function handleStartNextWorkout() {
+  // COMP-013: a brand-new Pro user can start a 15-minute starter (a true subset
+  // of Day 1) from the hero first-run variant. The starter flag rides through
+  // the intent prompt into confirmStart, which passes it to ActiveWorkout.
+  function trackFirstSessionChoice(choice) {
+    try {
+      // eslint-disable-next-line global-require
+      require('../lib/engineTelemetry').track(user?.id, 'first_session_choice', { choice })?.catch?.(() => {});
+    } catch (_) { /* telemetry best-effort */ }
+  }
+
+  async function handleStartNextWorkout(starter = false) {
     const target = selectedWorkoutOverride || nextWorkout;
     if (!target?.routine) return;
     try {
@@ -632,7 +791,10 @@ export default function HomeScreen({ navigation }) {
         // ActiveWorkoutScreen renders them as paired from the start.
         supersetGroupId: routineExercise?.supersetGroupId ?? null,
       }));
-      pendingStartRef.current = { routineId: routine.id, initialExercises };
+      pendingStartRef.current = { routineId: routine.id, initialExercises, starter, routineName: routine.name };
+      // Clear any readiness from a previously-cancelled prompt so each session
+      // starts from blank chips.
+      setReadiness({ soreness24hBefore: null, sleepQuality: null, energyScore: null });
       setShowIntentPrompt(true);
     } catch (e) {
       setIsStartingWorkout(false);
@@ -641,15 +803,35 @@ export default function HomeScreen({ navigation }) {
     }
   }
 
-  async function confirmStart(intent) {
+  // COMP-008: an intent tap carries whatever readiness chips were set; Skip
+  // passes intent null and no readiness (see the Modal). The values flow
+  // straight into createWorkout, which writes them to the workout row.
+  async function confirmStart(intent, readinessOverride = readiness) {
     setShowIntentPrompt(false);
     const pending = pendingStartRef.current;
     if (!pending) return;
     setIsStartingWorkout(true);
     try {
-      const workout = await createWorkout(user.id, pending.routineId, { intent });
+      const workout = await createWorkout(user.id, pending.routineId, {
+        intent,
+        ...readinessOverride,
+      });
       startWorkout(workout, pending.initialExercises);
-      navigation.navigate('ActiveWorkout');
+      // Always pass starterSession explicitly so a normal start can never inherit
+      // a stale starterSession:true param on a reused ActiveWorkout instance.
+      navigation.navigate('ActiveWorkout', {
+        starterSession: !!pending.starter,
+        starterRoutineName: pending.routineName,
+      });
+      // COMP-015 (Pro): compute + log this session's adjustments in the
+      // background so it never delays the session opening. The line appears a
+      // moment later once the local reads resolve. Runs once per start; a
+      // crash-recovery restore rehydrates the result instead of recomputing.
+      if (tier === 'pro') {
+        computeAndLogSessionAdjustments({ userId: user.id, workout, exercises: pending.initialExercises })
+          .then(setSessionAdjustments)
+          .catch(() => {});
+      }
     } catch (e) {
       setIsStartingWorkout(false);
       logError('HomeScreen.confirmStart', e, { userId: user?.id, routineId: pending?.routineId, intent });
@@ -747,9 +929,20 @@ export default function HomeScreen({ navigation }) {
   // one above is dismissed, so nothing is lost, just sequenced.
   const showCoachBanner = tier === 'pro' && !!latestCoachOutput && !coachBannerDismissed
     && (Date.now() - (latestCoachOutput.weekStart ?? 0) < 7 * 86400000);
-  const showDeloadBanner = !!deloadSuggestion && !deloadDismissed && !showCoachBanner;
+  // COMP-023 trial value banner: second priority, below a fresh coach review and
+  // suppressed by the day-of coaching nudge so two voices never say the same
+  // thing. Slots above deload/phase; the one-banner invariant holds.
+  const showTrialCountdownBanner = !!trialBanner && !trialBannerDismissed
+    && !showCoachBanner && !showCoachingNudge;
+  const showDeloadBanner = !!deloadSuggestion && !deloadDismissed
+    && !showCoachBanner && !showTrialCountdownBanner;
   const showPhaseBanner = !!phaseMismatch && !phaseBannerDismissed
-    && !showCoachBanner && !showDeloadBanner;
+    && !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner;
+  // Free-tier weekly one-liner (founder decision 4c): lowest priority in
+  // the banner stack, free tier only, dismissible per week. The
+  // one-banner invariant holds.
+  const showFreeCoachLine = tier === 'free' && !!freeCoachLine && !freeCoachLineDismissed
+    && !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner && !showPhaseBanner;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -843,6 +1036,35 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
+        {/* ── COMP-023 trial value countdown banner (second priority) ── */}
+        {showTrialCountdownBanner && (
+          <TouchableOpacity
+            style={styles.trialBanner}
+            onPress={() => {
+              if (trialBanner.variant === 'S3') {
+                scrollRef.current?.scrollTo({ y: 0, animated: true });
+              } else {
+                navigation.getParent()?.navigate('ProfileTab', { screen: 'WeeklyCheckIn' });
+              }
+            }}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={trialBanner.line}
+          >
+            <Ionicons name="sparkles" size={18} color={colors.primary} />
+            <Text style={styles.trialBannerText} numberOfLines={2}>{trialBanner.line}</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+            <TouchableOpacity
+              onPress={dismissTrialBanner}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss trial banner"
+            >
+              <Ionicons name="close" size={15} color={colors.textMuted} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        )}
+
         {/* ── Recovery week banner ── */}
         {showDeloadBanner && (
           <TouchableOpacity
@@ -853,7 +1075,9 @@ export default function HomeScreen({ navigation }) {
             accessibilityLabel="Recovery week suggested. Tap to review."
           >
             <View style={styles.deloadBannerLeft}>
-              <Ionicons name="battery-charging-outline" size={20} color={colors.warning} />
+              {/* Class C (COMP-027): recovery is rest-positive, the coach
+                  working for you, not a hazard. Primary amber, not warning. */}
+              <Ionicons name="battery-charging-outline" size={20} color={colors.primary} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.deloadBannerTitle}>Recovery week suggested</Text>
                 <Text style={styles.deloadBannerBody}>
@@ -872,6 +1096,32 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
+        {/* ── Free weekly coach one-liner (founder decision 4c) ── */}
+        {showFreeCoachLine && (
+          <View style={styles.freeCoachCard}>
+            <View style={styles.freeCoachTopRow}>
+              <Ionicons name="pulse-outline" size={16} color={colors.primary} style={{ marginTop: 1 }} />
+              <Text style={styles.freeCoachLineText}>{freeCoachLine}</Text>
+              <TouchableOpacity
+                onPress={dismissFreeCoachLine}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss this week's summary"
+              >
+                <Ionicons name="close" size={15} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ProUpgrade')}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel="Pro reads the full story. Learn about Pro coaching."
+            >
+              <Text style={styles.freeCoachFooter}>Pro reads the full story</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Skeleton placeholders shown during initial cold-load. As
             soon as loadData completes, this block disappears and the
             real content (which is largely below) renders. Without it,
@@ -879,179 +1129,18 @@ export default function HomeScreen({ navigation }) {
             SQLite reads to complete on a fresh app start. */}
         {initialLoading && (
           <View style={{ gap: spacing.md, marginBottom: spacing.md }}>
-            <SkeletonCard height={84} />
-            <SkeletonCard height={120} />
+            {/* COMP-027 Part B: the skeleton teaches the new hierarchy —
+                hero-shaped first, the Today strip second. */}
             <SkeletonCard height={160} />
+            <SkeletonCard height={64} />
           </View>
         )}
 
-        {/* ── Morning weight card ── */}
-        {tier === 'pro' && (todayWeight != null ? (
-          <View style={styles.weightCard}>
-            <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-            <Text style={styles.weightCardText}>
-              {formatBodyWeightShort(todayWeight, bwu)} logged today
-            </Text>
-            {recentWeights.length >= 3 && (
-              <Sparkline data={recentWeights} width={64} height={20} color={colors.primary} />
-            )}
-            <TouchableOpacity
-              onPress={() => {
-                // Prefill inputs with the value being edited so a typo
-                // correction doesn't require retyping the whole weight.
-                if (todayWeight && todayWeight > 0) {
-                  if (bwu === 'st') {
-                    const { stoneStr, lbsStr } = kgToStoneLbsStrings(todayWeight);
-                    setWeightInputSt(stoneStr);
-                    setWeightInputStLbs(lbsStr);
-                  } else if (bwu === 'lbs') {
-                    setWeightInput(String(Math.round(kgToLbs(todayWeight))));
-                  } else {
-                    setWeightInput(String(Math.round(todayWeight * 10) / 10));
-                  }
-                }
-                setTodayWeight(null);
-              }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="Edit today's weight"
-            >
-              <Text style={styles.weightCardEdit}>Edit</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={[styles.weightCard, styles.weightCardEmpty]}>
-            <Ionicons name="scale-outline" size={16} color={colors.primary} />
-            <Text style={styles.weightCardPrompt}>Morning weight</Text>
-            {bwu === 'st' ? (
-              <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
-                <TextInput
-                  style={styles.weightInputCompact}
-                  value={weightInputSt}
-                  onChangeText={setWeightInputSt}
-                  placeholder="12st"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="number-pad"
-                  maxLength={3}
-                />
-                <TextInput
-                  style={styles.weightInputCompact}
-                  value={weightInputStLbs}
-                  onChangeText={setWeightInputStLbs}
-                  placeholder="7lb"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="decimal-pad"
-                  maxLength={4}
-                  returnKeyType="done"
-                  onSubmitEditing={handleLogWeight}
-                />
-              </View>
-            ) : (
-              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs }}>
-                <TextInput
-                  style={styles.weightInputCompact}
-                  value={weightInput}
-                  onChangeText={setWeightInput}
-                  placeholder={bwu}
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="decimal-pad"
-                  returnKeyType="done"
-                  onSubmitEditing={handleLogWeight}
-                />
-                <Text style={styles.weightInputUnit}>{bwu}</Text>
-              </View>
-            )}
-            <TouchableOpacity
-              style={[styles.weightLogBtn, ((!weightInput && !weightInputSt) || savingWeight) && styles.weightLogBtnDisabled]}
-              onPress={handleLogWeight}
-              disabled={(!weightInput && !weightInputSt) || savingWeight}
-              accessibilityRole="button"
-              accessibilityLabel="Log morning weight"
-              accessibilityState={{ disabled: (!weightInput && !weightInputSt) || savingWeight }}
-            >
-              <Text style={styles.weightLogBtnText}>Log</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
 
-        {/* ── Steps, a small just-info line under the weight bit (Pro;
-            automatic from the health aggregator, self-hides when none) ── */}
-        {tier === 'pro' && user?.id && userProfile?.stepsEnabled !== false && (
-          <StepsCard userId={user.id} stepsTarget={userProfile?.stepsTarget} />
-        )}
-
-        {/* Cardio line (available, not allocated; default on, gate treats
-            undefined as on). Entry point for logging. */}
-        {tier === 'pro' && user?.id && userProfile?.cardioEnabled !== false && (
-          <CardioCard userId={user.id} onPress={() => navigation.navigate('LogCardio')} />
-        )}
-
-        {/* "This week" (Sessions / Sets / Volume) removed from the Train screen
-            (founder 2026-06-03). The weekly volume home lives on the Progress
-            tab ("This week's volume"), with recent sessions alongside it, so
-            the glance bars here were a duplicate. weekStats is still computed
-            for the coach inputs and the no-plan "at a glance" card below. */}
-
-        {/* Today's intake card removed from the Train screen (founder
-            2026-05-29): food and macros live on the Diary tab; the Train
-            screen stays training-only. */}
-
-        {/* ── Training trend mini-graph ── */}
-        {/* Training trend moved to Progress tab, sits with Mesocycle pulse there. */}
-
-        {/* ── Pro teaser (free tier only, after 3+ sessions) ── */}
-        {tier === 'free' && totalSessions >= 3 && (
-          <TouchableOpacity
-            style={styles.proTeaserCard}
-            onPress={() => navigation.navigate('ProUpgrade')}
-            activeOpacity={0.88}
-            accessibilityRole="button"
-            accessibilityLabel="Learn about Pro coaching"
-          >
-            <View style={styles.proTeaserLeft}>
-              <Ionicons name="sparkles" size={18} color={colors.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.proTeaserTitle}>
-                  {teaserInsight?.progressed && teaserInsight?.stalled
-                    ? `${teaserInsight.progressed} went up. ${teaserInsight.stalled} held. Pro tells you what to do next.`
-                    : teaserInsight?.progressed
-                      ? `${teaserInsight.progressed} progressed this week. Pro builds on it.`
-                      : totalSessions >= 10
-                        ? `${totalSessions} sessions logged. Pro coaching uses all of it.`
-                        : 'Add a coach that adjusts your plan each week.'}
-                </Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-          </TouchableOpacity>
-        )}
-
-        {/* ── First-run cue ──
-            One line for a brand-new Pro user with a plan and no sessions yet,
-            pointing at the Start button right below. Tapping it begins the first
-            session; the close dismisses it. Gated on totalSessions === 0 so it
-            never returns once they've trained, and on a saved flag so a dismiss
-            sticks if they leave before starting. */}
-        {tier === 'pro' && !initialLoading && !hasActiveWorkout && activePlan && nextWorkout
-          && totalSessions === 0 && !firstRunCueDismissed && (
-          <TouchableOpacity
-            style={styles.firstRunCue}
-            activeOpacity={0.85}
-            onPress={() => { dismissFirstRunCue(); handleStartNextWorkout(); }}
-            accessibilityRole="button"
-            accessibilityLabel="Your plan is ready. Start your first session."
-          >
-            <Ionicons name="sparkles" size={18} color={colors.primary} />
-            <Text style={styles.firstRunCueText}>Your plan is ready. Start your first session.</Text>
-            <TouchableOpacity
-              onPress={dismissFirstRunCue}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityLabel="Dismiss"
-            >
-              <Ionicons name="close" size={16} color={colors.textMuted} />
-            </TouchableOpacity>
-          </TouchableOpacity>
-        )}
+        {/* COMP-013: the standalone first-run cue row retired here — its job
+            folds into the hero first-run variant below (a net minus-one-card on
+            Home, the direction COMP-027 demands: hero first, fewer stacked
+            utilities). The dismissal key and gating are reused there. */}
 
         {/* ── Primary workout area ── */}
         {hasActiveWorkout ? (
@@ -1062,7 +1151,7 @@ export default function HomeScreen({ navigation }) {
           >
             <View style={styles.continueInner}>
               <View style={styles.continueIcon}>
-                <Ionicons name="play" size={20} color={colors.background} />
+                <Ionicons name="play" size={20} color={colors.onPrimary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.continueTitle}>Session in Progress</Text>
@@ -1090,7 +1179,12 @@ export default function HomeScreen({ navigation }) {
                 session, the way an RP-style plan would. Tooltip-free
                 because the row is glanceable on its own. */}
             {currentMesoWeek && (
-              <View style={styles.mesoBriefChip}>
+              <TouchableOpacity
+                style={styles.mesoBriefChip}
+                onPress={() => setShowBlockShape(true)}
+                accessibilityRole="button"
+                accessibilityLabel="See the shape of your training block"
+              >
                 <Ionicons
                   name={currentMesoWeek.isDeload ? 'bed-outline' : 'trending-up-outline'}
                   size={12}
@@ -1104,40 +1198,85 @@ export default function HomeScreen({ navigation }) {
                         ? ` · stop ${currentMesoWeek.rirTarget} short of failure`
                         : '')}
                 </Text>
-              </View>
+                <Ionicons name="chevron-forward" size={12} color={colors.textMuted} />
+              </TouchableOpacity>
             )}
             {coachBrief && (
               <CoachBriefCard brief={coachBrief} onDismiss={dismissBrief} />
             )}
-            <View style={styles.startWorkoutRow}>
-              <TouchableOpacity
-                style={[styles.primaryBtn, styles.startBtnSplit, isStartingWorkout && { opacity: 0.6 }]}
-                onPress={handleStartNextWorkout}
-                disabled={isStartingWorkout}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel={isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`}
-              >
-                <Ionicons name="play" size={16} color={colors.background} />
-                <Text style={styles.primaryBtnText}>
-                  {isStartingWorkout ? 'Starting…' : 'Start workout'}
+            {/* COMP-013: hero first-run variant for a brand-new Pro user with a
+                plan and no sessions yet — the smart-first-step short session,
+                with the full session one tap away and a dismiss back to the
+                standard hero. Gated identically to the retired cue row. */}
+            {tier === 'pro' && !initialLoading && totalSessions === 0 && !firstRunCueDismissed ? (
+              <View style={styles.firstRunHero}>
+                <Text style={styles.firstRunHeroLine}>
+                  First session: a short one to learn the ropes. About 15 minutes.
                 </Text>
-              </TouchableOpacity>
-              {displayWorkout?.routine?.id ? (
+                <View style={styles.startWorkoutRow}>
+                  <TouchableOpacity
+                    style={[styles.primaryBtn, styles.startBtnSplit, isStartingWorkout && { opacity: 0.6 }]}
+                    onPress={() => { trackFirstSessionChoice('short'); handleStartNextWorkout(true); }}
+                    disabled={isStartingWorkout}
+                    activeOpacity={0.85}
+                    accessibilityRole="button"
+                    accessibilityLabel={isStartingWorkout ? 'Starting workout' : 'Start short session, about 15 minutes'}
+                  >
+                    <Ionicons name="flash" size={16} color={colors.onPrimary} />
+                    <Text style={styles.primaryBtnText}>
+                      {isStartingWorkout ? 'Starting…' : 'Start short session'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.viewWorkoutBtn}
+                    onPress={dismissFirstRunCue}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Dismiss the short first session"
+                  >
+                    <Ionicons name="close" size={16} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
                 <TouchableOpacity
-                  style={styles.viewWorkoutBtn}
-                  onPress={() => navigation.navigate('PlansTab', {
-                    screen: 'RoutineDetail',
-                    params: { routineId: displayWorkout.routine.id },
-                  })}
+                  onPress={() => { trackFirstSessionChoice('full'); handleStartNextWorkout(false); }}
+                  disabled={isStartingWorkout}
+                  accessibilityRole="button"
+                  accessibilityLabel="Start the full session instead"
+                >
+                  <Text style={styles.firstRunHeroFull}>or start the full session</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.startWorkoutRow}>
+                <TouchableOpacity
+                  style={[styles.primaryBtn, styles.startBtnSplit, isStartingWorkout && { opacity: 0.6 }]}
+                  onPress={() => handleStartNextWorkout(false)}
+                  disabled={isStartingWorkout}
                   activeOpacity={0.85}
                   accessibilityRole="button"
-                  accessibilityLabel={`View ${displayWorkout?.routine?.name || 'workout'} before starting`}
+                  accessibilityLabel={isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`}
                 >
-                  <Text style={styles.viewWorkoutBtnText}>View</Text>
+                  <Ionicons name="play" size={16} color={colors.onPrimary} />
+                  <Text style={styles.primaryBtnText}>
+                    {isStartingWorkout ? 'Starting…' : 'Start workout'}
+                  </Text>
                 </TouchableOpacity>
-              ) : null}
-            </View>
+                {displayWorkout?.routine?.id ? (
+                  <TouchableOpacity
+                    style={styles.viewWorkoutBtn}
+                    onPress={() => navigation.navigate('PlansTab', {
+                      screen: 'RoutineDetail',
+                      params: { routineId: displayWorkout.routine.id },
+                    })}
+                    activeOpacity={0.85}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View ${displayWorkout?.routine?.name || 'workout'} before starting`}
+                  >
+                    <Text style={styles.viewWorkoutBtnText}>View</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            )}
             <View style={styles.heroSecondaryRow}>
               <TouchableOpacity
                 style={styles.heroSecondaryBtn}
@@ -1163,50 +1302,63 @@ export default function HomeScreen({ navigation }) {
           </View>
         ) : (
           <View style={styles.noPlanSection}>
-            <View style={styles.noPlanHero}>
-              <View style={styles.noPlanIconWrap}>
-                <Ionicons name="barbell-outline" size={28} color={colors.primary} />
-              </View>
-              {tier === 'pro' ? (
-                <>
+            {tier === 'pro' ? (
+              <>
+                <View style={styles.noPlanHero}>
+                  <View style={styles.noPlanIconWrap}>
+                    <Ionicons name="barbell-outline" size={28} color={colors.primary} />
+                  </View>
                   <Text style={styles.noPlanTitle}>No active plan on this device</Text>
                   <Text style={styles.noPlanSub}>
                     If you just signed in we may still be pulling your data from the cloud, give it a moment. If nothing arrives, tap below to rebuild your plan from your profile.
                   </Text>
-                </>
-              ) : lastSession == null ? (
-                <>
-                  <Text style={styles.noPlanTitle}>Welcome.</Text>
-                  <Text style={styles.noPlanSub}>
-                    Recommendations build up over your first few weeks of training.
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.noPlanTitle}>Pick up where you left off</Text>
-                  <Text style={styles.noPlanSub}>
-                    You've been training without a set plan. Setting one up will keep things structured and help Volyume track your progress properly.
-                  </Text>
-                </>
-              )}
-            </View>
-
-            {tier === 'pro' && (
-              <TouchableOpacity
-                style={styles.proRecoverBtn}
-                onPress={async () => {
-                  const result = await generateAndSavePlan(user.id, userProfile);
-                  if (result.ok) {
-                    await loadData();
-                  } else {
-                    toast.show(`Couldn't build plan: ${result.error}`, { variant: 'error', duration: 5000 });
-                  }
-                }}
-                activeOpacity={0.88}
-              >
-                <Ionicons name="sparkles" size={18} color={colors.background} />
-                <Text style={styles.proRecoverBtnText}>Build my plan</Text>
-              </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  style={styles.proRecoverBtn}
+                  onPress={async () => {
+                    const result = await generateAndSavePlan(user.id, userProfile);
+                    if (result.ok) {
+                      await loadData();
+                    } else {
+                      toast.show(`Couldn't build plan: ${result.error}`, { variant: 'error', duration: 5000 });
+                    }
+                  }}
+                  activeOpacity={0.88}
+                >
+                  <Ionicons name="sparkles" size={18} color={colors.onPrimary} />
+                  <Text style={styles.proRecoverBtnText}>Build my plan</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              /* B2: the free "what do I do today" answer. One strong, calm
+                 card: the micro-quiz first, the library second. Replaces the
+                 old low-emphasis welcome + stacked builder cards. */
+              <View style={styles.starterCard}>
+                <View style={styles.noPlanIconWrap}>
+                  <Ionicons name="compass-outline" size={28} color={colors.primary} />
+                </View>
+                <Text style={styles.noPlanTitle}>
+                  {lastSession == null ? 'Not sure where to start?' : 'Put a plan behind your training'}
+                </Text>
+                <Text style={styles.noPlanSub}>
+                  {lastSession == null
+                    ? "Answer three quick questions and we'll set you up with a plan that tells you exactly what to do each session."
+                    : "You've been training without a set plan. Answer three quick questions and we'll suggest one, so your progress is tracked properly."}
+                </Text>
+                <View style={styles.starterActions}>
+                  <Button
+                    title="Find my plan"
+                    onPress={() => navigation.navigate('FreeStarter')}
+                    accessibilityLabel="Answer three quick questions to find your plan"
+                  />
+                  <Button
+                    title="Browse plans"
+                    variant="secondary"
+                    onPress={() => navigation.navigate('PlansTab', { screen: 'PlanLibrary', initial: false })}
+                    accessibilityLabel="Browse the plan library"
+                  />
+                </View>
+              </View>
             )}
 
             {/* Progress at a glance, shown when there's history but no plan */}
@@ -1229,51 +1381,89 @@ export default function HomeScreen({ navigation }) {
               </View>
             )}
 
-            <PressableCard
-              style={styles.quickStartCard}
-              onPress={() => startBlankSession()}
-              accessibilityLabel="Start your first session"
-            >
-              <View style={styles.quickStartIcon}>
-                <Ionicons name="barbell-outline" size={28} color={colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.quickStartTitle}>Start your first session</Text>
-                <Text style={styles.quickStartSub}>Log sets as you go. No plan needed to start. Your profile builds as you train.</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-            </PressableCard>
-
-            {tier !== 'pro' && (
-              <>
-                <PlanBuilderCard
-                  icon="library-outline"
-                  title="Plan Library"
-                  desc="Browse ready-made plans for every level, schedule, and goal."
-                  badge="Recommended"
-                  onPress={() => navigation.navigate('PlansTab', { screen: 'PlanLibrary', initial: false })}
-                />
-                <PlanBuilderCard
-                  icon="barbell-outline"
-                  title="Start a manual session"
-                  desc="Log sets as you go. No plan required. Volyume builds your profile as you train."
-                  onPress={() => startBlankSession()}
-                />
-              </>
+            {/* Pro keeps the quick-start escape hatch while cloud restore
+                lands. The free path's blank-session route is the quiet link
+                below the starter card instead. */}
+            {tier === 'pro' && (
+              <PressableCard
+                style={styles.quickStartCard}
+                onPress={() => startBlankSession()}
+                accessibilityLabel="Start your first session"
+              >
+                <View style={styles.quickStartIcon}>
+                  <Ionicons name="barbell-outline" size={28} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.quickStartTitle}>Start your first session</Text>
+                  <Text style={styles.quickStartSub}>Log sets as you go. No plan needed to start. Your profile builds as you train.</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+              </PressableCard>
             )}
 
             {tier !== 'pro' && (
               <TouchableOpacity
                 style={styles.blankSessionLink}
-                onPress={() => navigation.navigate('BuildWorkout')}
+                onPress={() => startBlankSession()}
                 accessibilityRole="button"
-                accessibilityLabel="Start a blank session"
+                accessibilityLabel="Just want to log? Start a blank session"
               >
-                <Text style={styles.blankSessionLinkText}>Start a blank session instead</Text>
+                <Text style={styles.blankSessionLinkText}>Just want to log? Start a blank session</Text>
                 <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
               </TouchableOpacity>
             )}
           </View>
+        )}
+
+        {/* ── Today strip (COMP-027 Part B) ── */}
+        {/* The glance row sits directly under the hero, replacing the three
+            stacked utility cards that used to push the hero down. Pro only;
+            free tier shows the upgrade teaser below instead. */}
+        {tier === 'pro' && user?.id && (
+          <TodayStrip
+            userId={user.id}
+            bwu={bwu}
+            todayWeight={todayWeight}
+            recentWeights={recentWeights}
+            lastWeightKg={recentWeights.length ? recentWeights[recentWeights.length - 1] : (userProfile?.weightKg ?? null)}
+            savingWeight={savingWeight}
+            onLogWeight={handleLogWeight}
+            hasActiveWorkout={hasActiveWorkout}
+            edFlagOpen={edFlagOpen}
+            stepsEnabled={userProfile?.stepsEnabled !== false}
+            stepsTarget={userProfile?.stepsTarget}
+            cardioEnabled={userProfile?.cardioEnabled !== false}
+            onCardioPress={() => navigation.navigate('LogCardio')}
+            onOpenTrend={() => navigation.getParent()?.navigate('ProgressTab', { screen: 'Analytics', params: { focusWeightTrend: true } })}
+          />
+        )}
+
+        {/* ── Pro teaser (free tier only, after 3+ sessions) ── now below the
+            hero with the same hero-first reorder. */}
+        {tier === 'free' && totalSessions >= 3 && (
+          <TouchableOpacity
+            style={styles.proTeaserCard}
+            onPress={() => navigation.navigate('ProUpgrade')}
+            activeOpacity={0.88}
+            accessibilityRole="button"
+            accessibilityLabel="Learn about Pro coaching"
+          >
+            <View style={styles.proTeaserLeft}>
+              <Ionicons name="sparkles" size={18} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.proTeaserTitle}>
+                  {teaserInsight?.progressed && teaserInsight?.stalled
+                    ? `${teaserInsight.progressed} went up. ${teaserInsight.stalled} held. Pro tells you what to do next.`
+                    : teaserInsight?.progressed
+                      ? `${teaserInsight.progressed} progressed this week. Pro builds on it.`
+                      : totalSessions >= 10
+                        ? `${totalSessions} sessions logged. Pro coaching uses all of it.`
+                        : 'Add a coach that adjusts your plan each week.'}
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
         )}
 
         {/* ── Last session ── */}
@@ -1381,6 +1571,41 @@ export default function HomeScreen({ navigation }) {
       </ScrollView>
 
       {/* Change Workout Sheet */}
+      {/* COMP-010: the shape of the current training block, opened from the
+          meso chip. Makes periodisation visible and the recovery week a
+          destination rather than a dip. */}
+      <Modal
+        visible={showBlockShape}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowBlockShape(false)}
+      >
+        <TouchableOpacity
+          style={styles.sheetBackdrop}
+          activeOpacity={1}
+          onPress={() => setShowBlockShape(false)}
+        />
+        <View style={styles.sheet}>
+          <View style={styles.sheetHandle} />
+          <Text style={styles.sheetTitle}>Your block</Text>
+          {currentMesoWeek?.mesoName ? <Text style={styles.sheetSub}>{currentMesoWeek.mesoName}</Text> : null}
+          <View style={{ paddingVertical: spacing.md }}>
+            <BlockShapeCard
+              weekIndex={currentMesoWeek?.weekIndex}
+              plannedWeeks={currentMesoWeek?.plannedWeeks}
+              isDeload={currentMesoWeek?.isDeload}
+            />
+          </View>
+          {/* U-E-1/U-D-3: the chip is whole-tappable, so the plain-English
+              definitions of its terms live here, in the sheet it opens. */}
+          <Text style={styles.sheetDefn}>{GLOSSARY.deload}</Text>
+          <Text style={styles.sheetDefn}>{GLOSSARY.rir}</Text>
+          <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowBlockShape(false)}>
+            <Text style={styles.sheetCancelText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
       <Modal
         visible={showChangeWorkout}
         transparent
@@ -1475,9 +1700,43 @@ export default function HomeScreen({ navigation }) {
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </TouchableOpacity>
             ))}
+
+            {/* COMP-008: optional readiness chips. These tune the session
+                without blocking it; tapping an intent option above (or Skip)
+                still starts immediately, carrying whatever is selected here. */}
+            {READINESS_ROWS.map(row => (
+              <View key={row.key} style={styles.readinessRow}>
+                <Text style={styles.readinessLabel}>{row.label}</Text>
+                <View style={styles.readinessChips} accessibilityRole="radiogroup" accessibilityLabel={row.label}>
+                  {row.chips.map(chip => {
+                    const selected = readiness[row.key] === chip.value;
+                    return (
+                      <TouchableOpacity
+                        key={chip.value}
+                        style={[styles.readinessChip, selected && styles.readinessChipActive]}
+                        onPress={() => setReadiness(r => ({
+                          // Tapping the selected chip again clears it, so the
+                          // row stays genuinely optional.
+                          ...r,
+                          [row.key]: selected ? null : chip.value,
+                        }))}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected }}
+                        accessibilityLabel={`${row.label}: ${chip.label}`}
+                      >
+                        <Text style={[styles.readinessChipText, selected && styles.readinessChipTextActive]}>
+                          {chip.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            ))}
+
             <TouchableOpacity
               style={styles.intentSkip}
-              onPress={() => confirmStart(null)}
+              onPress={() => confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null })}
             >
               <Text style={styles.intentSkipText}>Skip</Text>
             </TouchableOpacity>
@@ -1587,28 +1846,6 @@ function getRelativeDay(ts) {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function PlanBuilderCard({ icon, title, desc, badge, onPress }) {
-  return (
-    <PressableCard style={styles.builderCard} onPress={onPress} accessibilityLabel={title}>
-      <View style={styles.builderIconWrap}>
-        <Ionicons name={icon} size={20} color={colors.primary} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <View style={styles.builderTitleRow}>
-          <Text style={styles.builderTitle}>{title}</Text>
-          {badge && (
-            <View style={styles.builderBadge}>
-              <Text style={styles.builderBadgeText}>{badge}</Text>
-            </View>
-          )}
-        </View>
-        <Text style={styles.builderDesc}>{desc}</Text>
-      </View>
-      <Ionicons name="chevron-forward" size={15} color={colors.textMuted} />
-    </PressableCard>
-  );
-}
-
 // ── Coach Brief Card ──────────────────────────────────────────────────────────
 
 const BRIEF_ICON = { go: 'fitness-outline', caution: 'warning-outline', recover: 'leaf-outline' };
@@ -1653,35 +1890,8 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
 
-  // Morning weight card
-  weightCard: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  weightCardEmpty: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    paddingVertical: spacing.sm,
-  },
-  weightCardPrompt: {
-    ...type.label, color: colors.textPrimary,
-  },
-  weightInputCompact: {
-    fontSize: fontSize.sm, color: colors.textPrimary,
-    paddingVertical: spacing.xs, minWidth: 48, textAlign: 'right',
-    fontVariant: ['tabular-nums'],
-  },
-  weightInputUnit: { fontSize: fontSize.sm, color: colors.textSecondary },
-  weightCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
-  weightCardEdit: { ...type.caption, color: colors.primary },
-  weightLogBtn: {
-    backgroundColor: colors.primary, borderRadius: radius.sm,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
-  },
-  weightLogBtnDisabled: { backgroundColor: colors.surface3 },
-  weightLogBtnText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.background },
+  // (Morning-weight card styles retired with COMP-027 Part B — the weight cell
+  //  now lives in TodayStrip.)
 
   // Training schedule context line
   scheduleContextLine: {
@@ -1706,7 +1916,7 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(colors.background, 0.2),
     alignItems: 'center', justifyContent: 'center',
   },
-  continueTitle: { ...type.bodyStrong, color: colors.background },
+  continueTitle: { ...type.bodyStrong, color: colors.onPrimary },
   continueSub: { ...type.caption, color: withAlpha(colors.background, 0.8), marginTop: spacing.xxs },
 
   // Hero plan card. Restrained: flat surface, one primary CTA, two
@@ -1755,7 +1965,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     marginTop: spacing.xs,
   },
-  primaryBtnText: { ...type.bodyStrong, color: colors.background },
+  primaryBtnText: { ...type.bodyStrong, color: colors.onPrimary },
   // Two-button row: primary "Start workout" + secondary "View" so the
   // user can preview the routine's exercises before committing. Mirrors
   // the Start Next Workout + View Plan layout on PlansScreen for visual
@@ -1813,7 +2023,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: 14, marginTop: spacing.sm,
   },
   proRecoverBtnText: {
-    ...type.bodyStrong, color: colors.background,
+    ...type.bodyStrong, color: colors.onPrimary,
   },
   noPlanHero: {
     alignItems: 'center',
@@ -1840,6 +2050,21 @@ const styles = StyleSheet.create({
     gap: spacing.xs, paddingVertical: spacing.md,
   },
   blankSessionLinkText: { fontSize: fontSize.sm, color: colors.textMuted },
+
+  // B2: free no-plan starter card. One calm card, quiz first, library second.
+  starterCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
+    padding: spacing.lg,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  starterActions: {
+    alignSelf: 'stretch',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
 
   // Progress at a glance (no-plan + has history)
   glanceCard: {
@@ -1880,31 +2105,6 @@ const styles = StyleSheet.create({
     height: 40,
     backgroundColor: colors.border,
   },
-
-  // Plan builder cards
-  builderCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  builderIconWrap: {
-    width: 40, height: 40, borderRadius: radius.sm,
-    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
-  },
-  builderTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxs },
-  builderTitle: { ...type.label, color: colors.textPrimary },
-  builderBadge: {
-    backgroundColor: colors.primaryBg, borderRadius: radius.full,
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
-  },
-  builderBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.bold, color: colors.primary },
-  builderDesc: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
 
   // Last session
   lastSessionCard: {
@@ -1997,6 +2197,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
   },
   nextBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
+  sheetDefn: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.sm },
   sheetCancel: { marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.md },
   sheetCancelText: { ...type.body, color: colors.textSecondary },
 
@@ -2080,6 +2281,39 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.xxs,
   },
+  // COMP-008 readiness chips
+  readinessRow: {
+    gap: spacing.xs,
+  },
+  readinessLabel: {
+    ...type.caption,
+    color: colors.textSecondary,
+  },
+  readinessChips: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  readinessChip: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2 ?? colors.background,
+  },
+  readinessChipActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryBg,
+  },
+  readinessChipText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  readinessChipTextActive: {
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+  },
   intentSkip: {
     alignItems: 'center',
     paddingVertical: spacing.sm,
@@ -2120,6 +2354,17 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
     padding: 14, marginBottom: spacing.md, gap: spacing.md,
   },
+  // COMP-023 trial value banner — one line, matches the coach banner system.
+  trialBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.primaryBg, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginBottom: spacing.md,
+  },
+  trialBannerText: {
+    flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
+    color: colors.textPrimary, lineHeight: 18,
+  },
   coachBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
   coachBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
   coachBannerBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 17 },
@@ -2129,8 +2374,26 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.35), marginBottom: spacing.md,
   },
   deloadBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
-  deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.warning, marginBottom: spacing.xxs },
+  deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
   deloadBannerBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 17 },
+
+  // Free-tier weekly one-liner (founder decision 4c). One line plus a
+  // quiet Pro footer; matches the banner system's tokens.
+  freeCoachCard: {
+    backgroundColor: colors.primaryBg, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    marginBottom: spacing.md, gap: spacing.xs,
+  },
+  freeCoachTopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  freeCoachLineText: {
+    flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
+    color: colors.textPrimary, lineHeight: 18,
+  },
+  freeCoachFooter: {
+    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
+    color: colors.primary, marginLeft: spacing.sm + 16,
+  },
 
   // Nutrition phase sync banner
   phaseBanner: {
@@ -2154,25 +2417,23 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.xs,
   },
 
-  // First-run cue, a touch more prominent than the info banners since it's the
-  // one action a new user should take.
-  firstRunCue: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  // COMP-013: hero first-run variant. The short-session line + the "or start
+  // the full session" link sit inside the hero card, replacing the retired
+  // standalone first-run cue row.
+  firstRunHero: {
     gap: spacing.sm,
-    backgroundColor: colors.primaryBg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.314),
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.md,
   },
-  firstRunCueText: {
-    flex: 1,
+  firstRunHeroLine: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
+  firstRunHeroFull: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
+    color: colors.primary,
+    textAlign: 'center',
+    paddingVertical: spacing.xs,
   },
 
   // Pre-workout coaching brief card

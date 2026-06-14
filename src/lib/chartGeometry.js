@@ -1,7 +1,7 @@
 // Pure geometry helpers for the SVG chart components. No React, no
 // react-native, no theme. Kept dependency-free on purpose so the maths
 // behind every chart can be unit-tested in isolation, away from the
-// rendering layer. The SVG components (SvgLineChart, Sparkline) turn the
+// rendering layer. The SVG components (VolyumeChart, Sparkline) turn the
 // {x,y} points and path strings these produce into actual <Path> nodes.
 
 // Round to 2dp. SVG path strings don't need more, and shorter strings
@@ -97,4 +97,19 @@ export function paddedDomain(values, fraction = 0.1) {
   }
   const pad = (max - min) * fraction;
   return { min: min - pad, max: max + pad };
+}
+
+// COMP-019 Stage 1b — scrub hit-testing. Given plotted points ([{x, y}] in the
+// same pixel space as the touch) and a touch x, return the index of the point
+// nearest in x. Renderer-agnostic and pure so the scrub logic is unit-tested
+// without a canvas. Returns -1 for empty input; ties resolve to the lower index.
+export function nearestPointIndex(points, touchX) {
+  if (!points || points.length === 0) return -1;
+  let best = 0;
+  let bestDist = Infinity;
+  for (let i = 0; i < points.length; i++) {
+    const dist = Math.abs((points[i]?.x ?? 0) - touchX);
+    if (dist < bestDist) { bestDist = dist; best = i; }
+  }
+  return best;
 }

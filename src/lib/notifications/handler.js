@@ -28,6 +28,14 @@ export function configureNotificationHandler() {
         if (dataType === 'training_reminder' && await _alreadyTrainedToday()) {
           return { shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false };
         }
+        // OPP-C03 follow-ups: stand down if the user has in fact checked in
+        // recently (the episode resolved after the pair was laid), and stay
+        // silent entirely under an open ED flag (suppression consumed here,
+        // never altered).
+        if (dataType === 'checkin_missed'
+            && (await _checkedInRecently() || await _edFlagOpen())) {
+          return { shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false };
+        }
       } catch (_) {
         // Fall through to showing the notification on any DB error.
       }
@@ -74,6 +82,36 @@ async function _alreadyCheckedInThisWeek() {
     // check-in always sets an energy score, so gate on that, otherwise the
     // reminder is wrongly suppressed for a user who trained but never checked in.
     return !!(ci && ci.energyScore != null);
+  } catch (_) { return false; }
+}
+
+// A real check-in (energy score present, same rule as the reminder skip) in
+// the last 72 hours means the missed-check-in episode the follow-up was laid
+// for has been resolved; the push must not pester them.
+async function _checkedInRecently() {
+  try {
+    // eslint-disable-next-line global-require
+    const { getLatestCheckin } = require('../database');
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../../store/useAppStore').default;
+    const uid = useAppStore.getState().user?.id;
+    if (!uid) return false;
+    const ci = await getLatestCheckin(uid);
+    if (!ci || ci.energyScore == null) return false;
+    const madeAt = ci.createdAt ?? ci.weekStart ?? 0;
+    return madeAt >= Date.now() - 72 * 60 * 60 * 1000;
+  } catch (_) { return false; }
+}
+
+async function _edFlagOpen() {
+  try {
+    // eslint-disable-next-line global-require
+    const { getOpenEdPatternFlag } = require('../database');
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../../store/useAppStore').default;
+    const uid = useAppStore.getState().user?.id;
+    if (!uid) return false;
+    return !!(await getOpenEdPatternFlag(uid));
   } catch (_) { return false; }
 }
 

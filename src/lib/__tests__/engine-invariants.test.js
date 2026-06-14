@@ -15,7 +15,8 @@
  * bug we fixed in wave 2 was exactly this, only NaN for rir > 0 with no
  * rpe, would have surfaced here).
  */
-import { runWeeklyCoach } from '../weeklyCoach';
+import { runWeeklyCoach, computeWeeklyTrendPct } from '../weeklyCoach';
+import { detectEdPatternFlag } from '../edPatternDetector';
 import {
   calculate1RM,
   calculateTonnage,
@@ -24,11 +25,14 @@ import {
   getSetEffectivenessWeight,
   detectLaggingMuscles,
   calculatePlates,
+  computeSessionAdjustments,
 } from '../algorithms';
+import { SESSION_REASON_CODES } from '../whyThisTemplates';
 import {
   computeEWMA,
   computeWeeklyWeightChange,
   computeAdaptiveTDEEAdjustment,
+  computeStepTrendModifier,
   shouldSuggestDietBreak,
 } from '../nutritionEngine';
 import { emaValue, computeRecoveryEMAs } from '../recoveryEMA';
@@ -149,6 +153,41 @@ describe('runWeeklyCoach: fuzz invariants', () => {
     })).not.toThrow();
   });
 
+  // ── COMP-024 SAFETY INVARIANT (blocking, §4d F4) ──────────────────────────
+  // The cycle-robust smoother must NEVER mask a genuine rapid loss. A real
+  // -1.8%/wk drop with low energy on a cut must still fire the rapid-loss
+  // safety flag AND the ED-pattern s1 signal — exactly as before COMP-024,
+  // because the safety reads stay on the plain alpha-0.1 EWMA.
+  test('F4: a genuine rapid loss still fires rapid-loss safety + ED s1 (robust smoothing must not mask it)', () => {
+    // A clearly-rapid sustained loss (~2.5%/wk raw). 21 days so the alpha-0.1
+    // EWMA reaches steady slope and the 7-day-ago lookup spans the full drop.
+    // Anchor to real Date.now() because getEwmaSevenDaysAgo() reads the live clock.
+    const now = Date.now();
+    const morningWeights = Array.from({ length: 21 }, (_, i) => ({
+      loggedAt: now - (21 - i) * DAY,
+      weightKg: 85 - i * 0.30,
+    }));
+    const out = runWeeklyCoach({
+      checkin: { weekStart: now - 7 * DAY, energyScore: 2, sorenessScore: 3, sleepHours: 7, calsAdherence: 'hit', stepsAdherence: 'hit', trainingPerformance: 'hit', jointPain: false },
+      morningWeights,
+      sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 0,
+      goalPhase: 'mod_cut', weeksInPhase: 4,
+      consecutiveOffTargetWeeks: 1, consecutivePoorRecoveryWeeks: 0,
+      lastCalAdjustmentDirection: null, lastCalAdjustmentWeeksAgo: 99,
+      currentCalTarget: 2400, currentStepsTarget: 8000,
+      bodyweightKg: 85, units: 'kg',
+    });
+    // Safety flag fires (reads the plain trend, unaffected by the robust smoother).
+    expect(out.rapidWeightLossFlag).toBe(true);
+
+    // The ED-pattern s1 (rapid_loss) signal still sees the drop via the plain
+    // computeWeeklyTrendPct feed.
+    const trendPct = computeWeeklyTrendPct(morningWeights, 85);
+    expect(trendPct).toBeLessThanOrEqual(-1.5);
+    const ed = detectEdPatternFlag({ weightTrendPctPerWeek: trendPct, energyScore: 2 }, [], false);
+    expect(ed.signals.s1).toBe(true);
+  });
+
   test('idempotent for identical inputs', () => {
     const inputs = {
       checkin: { weekStart: NOW - 7 * DAY, energyScore: 3, sorenessScore: 3, sleepHours: 7, calsAdherence: 'hit', stepsAdherence: 'hit', trainingPerformance: 'hit', jointPain: false },
@@ -163,6 +202,156 @@ describe('runWeeklyCoach: fuzz invariants', () => {
     const a = runWeeklyCoach(inputs);
     const b = runWeeklyCoach(inputs);
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+  });
+});
+
+// ── COMP-026 SAFETY INVARIANTS (blocking) ─────────────────────────────────
+// No-shadow gate: the step-trend modifier may only SPEED an adaptive resize the
+// weight trend already justified. It must never weaken a safety clamp, create a
+// change, reverse a change, or pierce the +/-5% cap. If any of these fails, the
+// modifier is unsafe to ship live and the change is held (the COMP-024 lesson).
+describe('COMP-026: step-trend gain safety invariants (blocking)', () => {
+  // A dated, daily EWMA series so confidence reaches 'high' (>=4 distinct weeks).
+  const DATED = (perDayKg, days = 30, start = 85) =>
+    Array.from({ length: days }, (_, j) => {
+      const ms = NOW - (days - 1 - j) * DAY;
+      const w = parseFloat((start + perDayKg * j).toFixed(3));
+      return { loggedAt: ms, weightKg: w, ewma: w, date: new Date(ms).toISOString() };
+    });
+
+  test('updateGain is hard-clamped to [0.50, 0.65]: never weakens the damping nor pierces the cap', () => {
+    const at = (g) => computeAdaptiveTDEEAdjustment({
+      ewmaData: DATED(0.04), prescribedKcal: 2200, currentTDEEEstimate: 2500, adherenceFactor: 1.0, updateGain: g,
+    }).adjustmentKcal;
+    const lo = at(0.5);
+    const hi = at(0.65);
+    // Below 0.5 clamps UP to 0.5; above 0.65 clamps DOWN to 0.65; junk -> 0.5.
+    expect(at(0.4)).toBe(lo);
+    expect(at(0)).toBe(lo);
+    expect(at(-2)).toBe(lo);
+    expect(at(NaN)).toBe(lo);
+    expect(at(undefined)).toBe(lo);
+    expect(at(1.0)).toBe(hi);
+    expect(at(5)).toBe(hi);
+    // The higher gain raises magnitude, never flips the sign.
+    expect(Math.sign(hi)).toBe(Math.sign(lo));
+    expect(Math.abs(hi)).toBeGreaterThanOrEqual(Math.abs(lo));
+  });
+
+  test('fuzz: the gain bounds every result in magnitude and can neither create nor reverse a change', () => {
+    for (let i = 0; i < 300; i++) {
+      const base = {
+        ewmaData: DATED(rfloat(-0.2, 0.2), rint(14, 45)),
+        prescribedKcal: rint(1200, 4000),
+        currentTDEEEstimate: rint(1200, 4000),
+        adherenceFactor: rfloat(0.6, 1.2),
+      };
+      const lo = computeAdaptiveTDEEAdjustment({ ...base, updateGain: 0.5 }).adjustmentKcal;
+      const hi = computeAdaptiveTDEEAdjustment({ ...base, updateGain: 0.65 }).adjustmentKcal;
+      const g = computeAdaptiveTDEEAdjustment({ ...base, updateGain: rfloat(-1, 3) }).adjustmentKcal;
+      const loA = Math.abs(lo);
+      const hiA = Math.abs(hi);
+      expect(Math.abs(g)).toBeGreaterThanOrEqual(Math.min(loA, hiA) - 1); // -1 for rounding
+      expect(Math.abs(g)).toBeLessThanOrEqual(Math.max(loA, hiA) + 1);
+      if (lo !== 0) expect(Math.sign(g) === 0 || Math.sign(g) === Math.sign(lo)).toBe(true);
+    }
+  });
+
+  test('FFM floor outranks the gain: a cut held at gain 0.50 stays held at 0.65', () => {
+    const ffmFloorContext = { weightKg: 80, bodyFatPercent: 15, bodyFatSource: 'dexa', sex: 'male', recentIntakeAvgKcal: 1800, recentIntakeDaysLogged: 7 };
+    const base = { ewmaData: DATED(0.04), prescribedKcal: 1500, currentTDEEEstimate: 2000, adherenceFactor: 1.0, ffmFloorContext };
+    for (const g of [0.5, 0.575, 0.65]) {
+      const r = computeAdaptiveTDEEAdjustment({ ...base, updateGain: g });
+      expect(r.floorHeld).toBe(true);
+      expect(r.adjustmentKcal).toBe(0);
+    }
+  });
+
+  test('rapid-loss upward-only override outranks the gain: a cut clamps to 0 at any gain', () => {
+    const base = { ewmaData: DATED(0.04), prescribedKcal: 1800, currentTDEEEstimate: 2200, adherenceFactor: 1.0, rapidLossOverride: true };
+    for (const g of [0.5, 0.65]) {
+      expect(computeAdaptiveTDEEAdjustment({ ...base, updateGain: g }).adjustmentKcal).toBe(0);
+    }
+  });
+
+  test('fuzz: computeStepTrendModifier never proposes a gain outside [0.50, 0.65] and never throws', () => {
+    for (let i = 0; i < 500; i++) {
+      const n = rint(0, 50);
+      const stepRows = Array.from({ length: n }, () => ({
+        entryDate: new Date(NOW - rint(0, 50) * DAY).toISOString().slice(0, 10),
+        steps: rng() < 0.1 ? (rng() < 0.5 ? null : NaN) : rint(-500, 250000),
+        source: pick(['health', 'manual', undefined]),
+      }));
+      const todayKey = rng() < 0.1 ? 'bad-key' : new Date(NOW).toISOString().slice(0, 10);
+      const adjustmentSign = pick([-1, 0, 1, NaN]);
+      let r;
+      expect(() => { r = computeStepTrendModifier({ stepRows, todayKey, adjustmentSign }); }).not.toThrow();
+      expect(r.gain).toBeGreaterThanOrEqual(0.5);
+      expect(r.gain).toBeLessThanOrEqual(0.65);
+      if (!r.active) expect(r.gain).toBe(0.5); // an inactive modifier never moves the gain
+    }
+  });
+});
+
+describe('COMP-026: runWeeklyCoach composition invariants (blocking)', () => {
+  const TODAY = '2024-02-15';
+  const keyAgo = (age) => {
+    const [y, m, d] = TODAY.split('-').map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d) - age * DAY);
+    return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+  };
+  const risingWeights = (start = 80, perDayKg = 0.015, days = 42) =>
+    Array.from({ length: days }, (_, i) => ({ weightKg: start + perDayKg * i, loggedAt: Date.now() - (days - 1 - i) * DAY }));
+  const stepSeries = (recent, baseline) =>
+    Array.from({ length: 42 }, (_, age) => ({ entryDate: keyAgo(age), steps: age <= 13 ? recent : baseline, source: 'health' }));
+  const inputs = (over = {}) => ({
+    checkin: { energyScore: 4, recoveryScore: 4, calsAdherence: 'hit', cycleOverride: false },
+    currentCalTarget: 2000, currentMaintenanceKcal: 2400, currentStepsTarget: 8000,
+    sessionsCompleted: 4, sessionsPlanned: 4, morningWeights: risingWeights(),
+    goalPhase: 'mod_cut', weeksInPhase: 6, consecutiveOffTargetWeeks: 3, lastCalAdjustmentWeeksAgo: 4,
+    bodyweightKg: 80, stepsTodayKey: TODAY, ...over,
+  });
+
+  test('+/-5% weekly cap holds even with an active 0.65 gain', () => {
+    const out = runWeeklyCoach(inputs({ dailyStepsSeries: stepSeries(6000, 12000) }));
+    expect(out.stepModifier.gain).toBe(0.65); // confirm the gain really did rise
+    if (out.adjustments.calories) {
+      expect(Math.abs(out.adjustments.calories.change)).toBeLessThanOrEqual(Math.round(2000 * 0.05));
+    }
+  });
+
+  test('cycleOverride holds the whole calorie block regardless of the step gain', () => {
+    const out = runWeeklyCoach(inputs({
+      checkin: { energyScore: 4, calsAdherence: 'hit', cycleOverride: true },
+      dailyStepsSeries: stepSeries(6000, 12000),
+    }));
+    expect(out.adjustments.calories).toBeNull();
+  });
+
+  test('scoffPositive holds the calorie block regardless of the step gain', () => {
+    const out = runWeeklyCoach(inputs({ scoffPositive: true, dailyStepsSeries: stepSeries(6000, 12000) }));
+    expect(out.adjustments.calories).toBeNull();
+  });
+
+  test('an active agreeing step series never suppresses a genuine rapid-loss flag', () => {
+    const now = Date.now();
+    const out = runWeeklyCoach({
+      checkin: { weekStart: now - 7 * DAY, energyScore: 2, calsAdherence: 'hit', stepsAdherence: 'hit', trainingPerformance: 'hit', jointPain: false },
+      morningWeights: Array.from({ length: 21 }, (_, i) => ({ loggedAt: now - (21 - i) * DAY, weightKg: 85 - i * 0.30 })),
+      sessionsCompleted: 4, sessionsPlanned: 4, goalPhase: 'mod_cut', weeksInPhase: 4,
+      currentCalTarget: 2400, currentStepsTarget: 8000, bodyweightKg: 85, units: 'kg',
+      dailyStepsSeries: stepSeries(6000, 12000), stepsTodayKey: TODAY,
+    });
+    expect(out.rapidWeightLossFlag).toBe(true);
+  });
+
+  test('steps never CREATE a change: on-target weight with an active step series stays null', () => {
+    const flat = Array.from({ length: 42 }, (_, i) => ({ weightKg: 80, loggedAt: Date.now() - (41 - i) * DAY }));
+    const out = runWeeklyCoach(inputs({
+      goalPhase: 'maint', currentMaintenanceKcal: 2000, morningWeights: flat,
+      consecutiveOffTargetWeeks: 0, dailyStepsSeries: stepSeries(12000, 6000),
+    }));
+    expect(out.adjustments.calories).toBeNull();
   });
 });
 
@@ -382,5 +571,132 @@ describe('planEngine.generatePlan: invariants across goal/phase grid', () => {
       }
     }
     expect(combos).toBeGreaterThan(50); // sanity: we actually ran some combos
+  });
+});
+
+// ── computeSessionAdjustments (COMP-015) ───────────────────────────────────
+
+describe('computeSessionAdjustments: fuzz invariants', () => {
+  const MUSCLES = ['chest', 'back', 'quads', 'hamstrings', 'side_delts', 'biceps', 'triceps', 'calves', 'abs'];
+  const SIGNALS = ['reduce', 'hold', 'push'];
+  const VALID_CODES = new Set(Object.values(SESSION_REASON_CODES));
+
+  function randomInput() {
+    const trained = [...new Set(Array.from({ length: rint(0, 5) }, () => pick(MUSCLES)))];
+    const todaysExercises = trained.map((m, i) => ({
+      exerciseId: rmaybe(0.9, () => `ex${i}`, null),
+      primaryMuscle: m,
+      plannedSets: rint(1, 6),
+    }));
+    const muscleSignals = {};
+    const landmarks = {};
+    for (const m of trained) {
+      // landmarks: keep mev<mav<mrv ordered and finite
+      const mev = rint(0, 6);
+      const mav = mev + rint(2, 10);
+      const mrv = mav + rint(2, 8);
+      landmarks[m] = { mev, mav, mrv };
+      muscleSignals[m] = rmaybe(0.85, () => ({
+        lastTrainedAt: NOW - rint(0, 7) * DAY,
+        lastFeedback: { pump: rint(1, 3), joint: rint(0, 3), performance: rint(1, 4) },
+        checkinSore: rng() < 0.4,
+        checkinAt: NOW - rint(0, 8) * DAY,
+        presessionSoreness: rint(1, 3),
+      }), {});
+    }
+    const doneThisWeekByMuscle = {};
+    for (const m of trained) doneThisWeekByMuscle[m] = rint(0, 18);
+    const recentSessionEvents = Array.from({ length: rint(0, 4) }, () => ({
+      muscle: pick(MUSCLES),
+      decision: pick(['session_add_under_stimulus', 'session_adjustment_reverted', 'session_drop_residual_soreness']),
+      createdAt: NOW - rint(0, 20) * DAY,
+    }));
+    return {
+      todaysExercises,
+      muscleSignals,
+      weeklyContext: {
+        doneThisWeekByMuscle,
+        landmarks,
+        weeklySignal: pick(SIGNALS),
+        safetyHold: rng() < 0.3,
+        isDeload: rng() < 0.15,
+        weekStartMs: NOW - rint(0, 6) * DAY,
+      },
+      recentSessionEvents,
+      now: NOW,
+      presessionIntent: pick(['sharp', 'average', 'below_par', null]),
+    };
+  }
+
+  test('never throws; no NaN/Infinity; respects all structural invariants on 2000 inputs', () => {
+    for (let i = 0; i < 2000; i++) {
+      const input = randomInput();
+      let out;
+      expect(() => { out = computeSessionAdjustments(input); }).not.toThrow();
+      assertNoBadNumbers(`sessionAdj[${i}]`, out);
+
+      // Idempotence (invariant 2)
+      expect(JSON.stringify(computeSessionAdjustments(input))).toBe(JSON.stringify(out));
+
+      // Deload → all-zero/empty (invariant 5)
+      if (input.weeklyContext.isDeload) {
+        expect(out).toEqual([]);
+        continue;
+      }
+
+      const trainedMuscles = new Set(input.todaysExercises.map(e => e.primaryMuscle));
+      const perMuscleAdjusted = {};
+      let nonzeroCount = 0;
+
+      for (const o of out) {
+        // setDelta domain + floor (invariant 3)
+        expect([-1, 0, 1]).toContain(o.setDelta);
+        expect(o.adjustedSets).toBeGreaterThanOrEqual(1);
+        expect(o.adjustedSets).toBe(o.plannedSets + o.setDelta);
+
+        // Only muscles trained today, with signals, ever appear (invariant 6)
+        expect(trainedMuscles.has(o.muscle)).toBe(true);
+
+        // reasonCode closed enum + non-empty reasonText (invariant 7)
+        expect(VALID_CODES.has(o.reasonCode)).toBe(true);
+        expect(typeof o.reasonText).toBe('string');
+        expect(o.reasonText.length).toBeGreaterThan(0);
+
+        if (o.setDelta !== 0) {
+          nonzeroCount++;
+          perMuscleAdjusted[o.muscle] = (perMuscleAdjusted[o.muscle] ?? 0) + 1;
+
+          // Landmark clamp (invariant 4), directional: a DROP never takes
+          // projected weekly below mev (the recovery floor); an ADD never pushes
+          // projected past mrv (the session layer must not exceed the working
+          // ceiling on its own). The opposite rails don't apply — a drop from an
+          // already-over-mrv muscle legitimately stays > mrv, and an add on an
+          // under-trained muscle legitimately stays < mev while climbing.
+          const lk = input.weeklyContext.landmarks[o.muscle];
+          const projected = (input.weeklyContext.doneThisWeekByMuscle[o.muscle] ?? 0) + o.adjustedSets;
+          if (o.setDelta < 0) expect(projected).toBeGreaterThanOrEqual(lk.mev);
+          if (o.setDelta > 0) expect(projected).toBeLessThanOrEqual(lk.mrv);
+
+          // safetyHold / weeklySignal reduce → no positive deltas (invariant 5)
+          if (input.weeklyContext.safetyHold || input.weeklyContext.weeklySignal === 'reduce') {
+            expect(o.setDelta).toBeLessThanOrEqual(0);
+          }
+        }
+      }
+
+      // ≤1 adjusted exercise per muscle, ≤2 per session (invariant 3)
+      for (const n of Object.values(perMuscleAdjusted)) expect(n).toBeLessThanOrEqual(1);
+      expect(nonzeroCount).toBeLessThanOrEqual(2);
+
+      // Add-frequency cap (invariant 8): an add this week blocks further adds for M
+      const addedThisWeek = new Set(
+        input.recentSessionEvents
+          .filter(e => e.decision.startsWith('session_add') && e.createdAt >= input.weeklyContext.weekStartMs)
+          .map(e => e.muscle),
+      );
+      for (const o of out) {
+        if (o.setDelta > 0) expect(addedThisWeek.has(o.muscle)).toBe(false);
+      }
+    }
   });
 });

@@ -1,5 +1,12 @@
 // All 10 hypertrophy algorithms, pure functions, no side effects
 
+import {
+  SESSION_REASON_CODES,
+  SESSION_SHOWN_CODES,
+  CHECKIN_MUSCLE_MAP,
+  getSessionAdjustmentMessage,
+} from './whyThisTemplates';
+
 // Weekly set landmarks per muscle group. Single source of truth, imported by planEngine too.
 //
 // mv  = maintenance volume: minimum to prevent detraining between blocks
@@ -1058,6 +1065,283 @@ export function computeAdaptiveLandmarks(history = [], baseDefaults = VOLUME_LAN
   }
 
   return adapted;
+}
+
+// ── COMP-015: visible per-muscle session autoregulation ────────────────────────
+//
+// `computeSessionAdjustments` is a pure function (no side effects, no Date.now
+// inside — the caller passes `now`), so a crash-recovery recompute from the
+// same as-of-session-start inputs is bit-identical. It NEVER mutates the plan,
+// routines, or weekly volume: it returns at most a ±1 set delta per affected
+// exercise for THIS session only. The weekly coach remains the sole owner of
+// next-week volume direction (founder decision 2026-05-28); the session layer
+// is read-only against the plan and reinforces — never races — the weekly coach,
+// because only one of the two ever writes.
+//
+// Day-of-week anchors in the copy are formatted by an injectable `formatDay`
+// (default: UTC weekday) so the function stays deterministic in tests; the UI
+// layer may pass a device-local formatter.
+const _UTC_WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const _defaultFormatDay = (ts) => (ts == null ? null : _UTC_WEEKDAYS[new Date(ts).getUTCDay()]);
+const HOURS_72 = 72 * 60 * 60 * 1000;
+const DAYS_4 = 4 * 24 * 60 * 60 * 1000;
+
+/**
+ * @param {object} input
+ * @param {Array}  input.todaysExercises  [{ exerciseId, primaryMuscle, plannedSets }]
+ * @param {object} input.muscleSignals    { [muscle]: { lastTrainedAt, lastFeedback: { pump, joint, performance },
+ *                                          checkinSore, checkinAt, presessionSoreness, displayName } }
+ * @param {object} input.weeklyContext    { doneThisWeekByMuscle, landmarks, weeklySignal:'reduce'|'hold'|'push',
+ *                                          safetyHold, isDeload, weekStartMs }
+ * @param {Array}  input.recentSessionEvents  this mesocycle's session_* events [{ muscle, decision, createdAt }]
+ * @param {number} input.now
+ * @param {string} [input.presessionIntent]   'sharp'|'average'|'below_par'|null
+ * @param {function} [input.formatDay]
+ * @returns {Array} [{ exerciseId, muscle, setDelta, adjustedSets, plannedSets, reasonCode, reasonText, show, signals }]
+ */
+export function computeSessionAdjustments({
+  todaysExercises = [],
+  muscleSignals = {},
+  weeklyContext = {},
+  recentSessionEvents = [],
+  now = 0,
+  presessionIntent = null,
+  formatDay = _defaultFormatDay,
+} = {}) {
+  // R0: deload weeks belong entirely to the deload prescription. Engine silent.
+  if (weeklyContext.isDeload) return [];
+
+  const landmarks = weeklyContext.landmarks ?? {};
+  const doneByMuscle = weeklyContext.doneThisWeekByMuscle ?? {};
+  const weekStartMs = weeklyContext.weekStartMs ?? 0;
+  const weeklySignal = weeklyContext.weeklySignal ?? 'hold';
+  const safetyHold = !!weeklyContext.safetyHold;
+
+  // First primary exercise per muscle today, in stable encounter order. Only
+  // one exercise per muscle ever adjusts (and only its PRIMARY muscle — never
+  // secondary credit, matching allocateExerciseVolume semantics).
+  const firstExerciseForMuscle = new Map();
+  const muscleOrder = [];
+  for (const ex of todaysExercises) {
+    const m = ex.primaryMuscle;
+    if (!m || ex.exerciseId == null) continue;          // ad-hoc / unscoped → silent
+    if (!Number.isFinite(ex.plannedSets) || ex.plannedSets < 1) continue;
+    if (!firstExerciseForMuscle.has(m)) {
+      firstExerciseForMuscle.set(m, ex);
+      muscleOrder.push(m);
+    }
+  }
+
+  // Add-frequency cap (this week) and revert memory (this meso), both derived
+  // from adaptation_events — no new state.
+  const addedThisWeek = new Set();
+  const revertCounts = {};
+  for (const ev of recentSessionEvents) {
+    if (!ev || !ev.muscle) continue;
+    const code = ev.decision ?? ev.reasonCode;
+    if (code && code.startsWith('session_add') && (ev.createdAt ?? 0) >= weekStartMs) {
+      addedThisWeek.add(ev.muscle);
+    }
+    if (code === 'session_adjustment_reverted') {
+      revertCounts[ev.muscle] = (revertCounts[ev.muscle] ?? 0) + 1;
+    }
+  }
+
+  const candidates = [];
+  for (const muscle of muscleOrder) {
+    const ex = firstExerciseForMuscle.get(muscle);
+    const sig = muscleSignals[muscle] ?? {};
+    const plannedSets = ex.plannedSets;
+    const displayName = sig.displayName || MUSCLE_DISPLAY_NAMES[muscle] || muscle;
+    const lk = landmarks[muscle] ?? VOLUME_LANDMARKS[muscle] ?? {};
+    const mev = lk.mev ?? 0;
+    const mav = lk.mav ?? Infinity;
+    const mrv = lk.mrv ?? Infinity;
+    // Projected weekly sets for this muscle if today runs as planned.
+    const projectedPlanned = (doneByMuscle[muscle] ?? 0) + plannedSets;
+
+    const lastTrainedAt = sig.lastTrainedAt ?? null;
+    const trainedWithin72h = lastTrainedAt != null && (now - lastTrainedAt) <= HOURS_72 && (now - lastTrainedAt) >= 0;
+    const lf = sig.lastFeedback ?? {};
+    const lastJoint = lf.joint ?? 0;             // 0..3
+    const lastPump = lf.pump ?? 3;               // 1..3 (None/Mild/Good)
+    const lastPerformance = lf.performance ?? 2; // 1=exceeded 2=met 3=struggled 4=failed
+
+    // sore-for-M = (fresh check-in flagged M) OR (came in "Sore" today AND M
+    // was trained in the most recent session ≤72h ago).
+    const checkinFresh = sig.checkinAt != null && (now - sig.checkinAt) <= DAYS_4 && (now - sig.checkinAt) >= 0;
+    const checkinSoreForM = checkinFresh && !!sig.checkinSore;
+    const presessionSoreForM = sig.presessionSoreness === 3 && trainedWithin72h;
+    const soreForM = checkinSoreForM || presessionSoreForM;
+    const soreSource = presessionSoreForM ? 'recent' : 'checkin';
+
+    let reasonCode = null;
+    let setDelta = 0;
+    let msgOpts = { muscleName: displayName };
+
+    if (revertCounts[muscle] >= 2) {
+      // Revert memory: the user has won this argument twice this meso. Hold.
+      reasonCode = SESSION_REASON_CODES.HOLD_USER_PREF;
+    } else if (lastJoint >= 2) {
+      // R1: recent joint discomfort → hold, suppress any add.
+      reasonCode = SESSION_REASON_CODES.HOLD_JOINT;
+    } else if (soreForM && trainedWithin72h) {
+      // R2: residual soreness on a recently trained muscle → drop 1 set, if the
+      // landmark floor allows it (weekly stays ≥ mev) and the exercise keeps ≥1.
+      if (projectedPlanned - 1 >= mev && plannedSets - 1 >= 1) {
+        reasonCode = SESSION_REASON_CODES.DROP_RESIDUAL_SORENESS;
+        setDelta = -1;
+        msgOpts = { muscleName: displayName, source: soreSource, dayName: formatDay(lastTrainedAt) };
+      }
+      // else: clamped by the floor → silent (no event), an edge on very low
+      // weekly volume where dropping further is inadvisable.
+    } else if (soreForM) {
+      // R3: sore but last trained >72h ago → stale/systemic, weekly's territory.
+      reasonCode = SESSION_REASON_CODES.HOLD_STALE_SORENESS;
+    } else {
+      // R4 / R5: well-recovered, under-stimulated → consider +1.
+      const stimulusReady =
+        lastPerformance <= 2 &&
+        lastPump <= 2 &&
+        projectedPlanned < mav &&
+        !addedThisWeek.has(muscle);
+      if (stimulusReady) {
+        const blockedBySafety = safetyHold;
+        const blockedByWeekly = weeklySignal === 'reduce';
+        if (blockedBySafety) {
+          reasonCode = SESSION_REASON_CODES.HOLD_SAFETY;       // R5
+        } else if (blockedByWeekly) {
+          reasonCode = SESSION_REASON_CODES.HOLD_WEEKLY_PRECEDENCE; // R5
+        } else if (projectedPlanned + 1 <= mrv && projectedPlanned + 1 <= mav) {
+          // R4: clamp keeps projected ≤ mav (and ≤ mrv) — the session layer
+          // never pushes a muscle past its working ceiling on its own.
+          reasonCode = SESSION_REASON_CODES.ADD_UNDER_STIMULUS;
+          setDelta = +1;
+        }
+      }
+      // R6: default → no event, no line.
+    }
+
+    if (!reasonCode) continue;
+
+    // R5 honesty holds surface only after a "Sharp" pre-session answer.
+    const isPrecedenceHold =
+      reasonCode === SESSION_REASON_CODES.HOLD_SAFETY ||
+      reasonCode === SESSION_REASON_CODES.HOLD_WEEKLY_PRECEDENCE;
+    const show = SESSION_SHOWN_CODES.has(reasonCode)
+      || (isPrecedenceHold && presessionIntent === 'sharp');
+
+    candidates.push({
+      exerciseId: ex.exerciseId,
+      muscle,
+      setDelta,
+      adjustedSets: plannedSets + setDelta,
+      plannedSets,
+      reasonCode,
+      reasonText: getSessionAdjustmentMessage(reasonCode, msgOpts),
+      show,
+      signals: {
+        soreForM,
+        soreSource: soreForM ? soreSource : null,
+        lastTrainedAt,
+        checkinAt: sig.checkinAt ?? null,
+        presessionSoreness: sig.presessionSoreness ?? null,
+        lastPump,
+        lastPerformance,
+        lastJoint,
+        projectedPlanned,
+        weeklySignal,
+        safetyHold,
+      },
+    });
+  }
+
+  // Per-session cap: at most 2 ADJUSTED (nonzero delta) exercises. Recovery has
+  // right of way, so drops are kept before adds when trimming. Holds (delta 0)
+  // are unaffected — they cost no set change and stay logged.
+  const nonzero = candidates.filter(c => c.setDelta !== 0);
+  if (nonzero.length > 2) {
+    const ranked = [...nonzero].sort((a, b) => a.setDelta - b.setDelta); // drops (−1) first
+    const keep = new Set(ranked.slice(0, 2).map(c => c.exerciseId));
+    return candidates.filter(c => c.setDelta === 0 || keep.has(c.exerciseId));
+  }
+  return candidates;
+}
+
+// Maps a session difficulty rating (1=Very Easy … 5=Brutal) to the adaptive
+// engine's performance scale (1=exceeded … 4=failed), the same mapping
+// WorkoutSummary uses when it runs the weekly adaptive engine. Null → 2 (met),
+// a neutral read that triggers neither a drop nor an add on its own.
+const _DIFFICULTY_TO_PERFORMANCE = { 1: 1, 2: 1, 3: 2, 4: 3, 5: 4 };
+
+/**
+ * Pure assembler: turns the raw reads (getSessionAdjustmentSignals + the
+ * weekly/meso context) into the exact input object computeSessionAdjustments
+ * expects. Kept pure and separate from the IO so the scale mappings (difficulty
+ * → performance, sore-muscle CSV → keys, volumeSignal → reduce/hold/push) are
+ * unit-testable without a database.
+ */
+export function buildSessionAdjustmentInput({
+  todaysExercises = [],
+  perMuscle = {},
+  checkin = null,
+  presessionSoreness = null,
+  presessionIntent = null,
+  coachOutput = null,
+  isDeload = false,
+  weeklyVolumeByMuscle = {},
+  landmarks = {},
+  recentSessionEvents = [],
+  weekStartMs = 0,
+  now = 0,
+} = {}) {
+  // Sore-muscle display names from the latest check-in → engine keys.
+  const soreKeys = new Set();
+  if (checkin && checkin.soreMuscles) {
+    for (const name of String(checkin.soreMuscles).split(',').map(s => s.trim()).filter(Boolean)) {
+      const keys = CHECKIN_MUSCLE_MAP[name] || [name.toLowerCase()];
+      for (const k of keys) soreKeys.add(k);
+    }
+  }
+  const checkinAt = checkin?.checkinAt ?? null;
+
+  const muscleSignals = {};
+  for (const ex of todaysExercises) {
+    const m = ex.primaryMuscle;
+    if (!m || muscleSignals[m]) continue;
+    const last = perMuscle[m] ?? {};
+    muscleSignals[m] = {
+      lastTrainedAt: last.lastTrainedAt ?? null,
+      lastFeedback: {
+        pump: last.pump ?? 3,
+        joint: last.joint ?? 0,
+        performance: _DIFFICULTY_TO_PERFORMANCE[last.sessionDifficulty] ?? 2,
+      },
+      checkinSore: soreKeys.has(m),
+      checkinAt,
+      presessionSoreness: presessionSoreness ?? null,
+      displayName: MUSCLE_DISPLAY_NAMES[m] || m,
+    };
+  }
+
+  const vs = coachOutput?.volumeSignal ?? 0;
+  const weeklySignal = vs < 0 ? 'reduce' : vs > 0 ? 'push' : 'hold';
+
+  return {
+    todaysExercises,
+    muscleSignals,
+    weeklyContext: {
+      doneThisWeekByMuscle: weeklyVolumeByMuscle,
+      landmarks,
+      weeklySignal,
+      safetyHold: !!coachOutput?.safetyHold,
+      isDeload: !!isDeload,
+      weekStartMs,
+    },
+    recentSessionEvents,
+    now,
+    presessionIntent,
+  };
 }
 
 // Effective set weighting by RIR proximity, continuous curve per Robinson et al. (2024,

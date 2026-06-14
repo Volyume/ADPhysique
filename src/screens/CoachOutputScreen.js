@@ -10,7 +10,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getLatestCheckin,
   getRecentCheckins,
-  getMorningWeightsLast14Days,
   getMorningWeights,
   getWeeklySessionStats,
   getWeeklyPRCount,
@@ -30,6 +29,7 @@ import {
   upsertPlannedMuscleVolume,
   setMesocycleWeekDeload,
   getCardioLogRange,
+  getDailyStepsRange,
   activityDayKey,
 } from '../lib/database';
 import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
@@ -41,8 +41,14 @@ import { usePlayPrices } from '../lib/payments/usePlayPrices';
 import { SkeletonCard } from '../components/Skeleton';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
 import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, computeDietBreakTargets, computeMacroCycle, computeRefeedDay, markApplied, isApplied } from '../lib/coachApply';
+import { applyCoachAdjustmentToActivePlan } from '../lib/food/mealPlanService';
+import { buildPlanEditNarration } from '../lib/food/planExplain';
+import { buildRegisteredCoachResponse, resolveRegister } from '../lib/coachRegister';
+import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 import { logError, logWarn } from '../lib/errorLog';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
+import CollapsibleSection from '../components/CollapsibleSection';
+import { selectCoachOutputZones } from '../lib/coachOutputZones';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, stateColors } from '../styles/theme';
 import {
   ED_PATTERN_LOCKOUT_COPY,
   ED_PATTERN_CLEARED_COPY,
@@ -56,6 +62,10 @@ const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
+
+// For the five-part response's forward-pull anchor ("See you Sunday."),
+// indexed by the stored check-in day (0 = Sunday, matching HomeScreen).
+const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 function formatDay(ms) {
   const d = new Date(ms);
@@ -76,26 +86,9 @@ function weekRangeLabel(weekStartMs) {
   return `${startStr} to ${endStr}`;
 }
 
-// ─── Headline / off-items / focus builders ────────────────────────────────────
-
-function buildHeadline(output, _checkin) {
-  if (!output) return '';
-  const { trend, weekLabel, adjustments } = output;
-  // Calories changed
-  if (adjustments?.calories?.applied) {
-    return `${weekLabel}. Your calorie target was ${adjustments.calories.change > 0 ? 'raised' : 'lowered'} to ${adjustments.calories.newKcal}.`;
-  }
-  // On target
-  if (trend?.onTarget) {
-    return `${weekLabel}. Your weight trend is on target.`;
-  }
-  // Trend off target but holding
-  if (trend?.delta != null && !trend.onTarget) {
-    return `${weekLabel}. Your weight trend is off target, so your targets hold for another week of data.`;
-  }
-  // Default
-  return `${weekLabel}.`;
-}
+// ─── Off-items / focus builders ───────────────────────────────────────────────
+// (U-B-3 §4: the local buildHeadline duplicate was removed — the engine
+// coachResponse acknowledgement/interpretation is the single narration lead.)
 
 function buildOffItems(output, checkin) {
   const items = [];
@@ -357,11 +350,24 @@ function TrainingNextWeekCard({
   );
 }
 
-function WhyBlock({ text }) {
+function WhyBlock({ text, onLearnMore }) {
   return (
     <View style={styles.whyBlock}>
       <Text style={styles.whyLabel}>Why this week:</Text>
       <Text style={styles.whyText}>{text}</Text>
+      {/* COMP-006: every why can be explained. A quiet link to the methodology
+          page; always present, not conditional on the decision type. */}
+      {onLearnMore ? (
+        <TouchableOpacity
+          style={styles.link44}
+          onPress={onLearnMore}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          accessibilityRole="button"
+          accessibilityLabel="Understand how this decision was made"
+        >
+          <Text style={styles.whyLearnMore}>Understand how this decision was made</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -503,7 +509,7 @@ function RefeedCard({ refeed, applied, onApply, applying }) {
   );
 }
 
-function HeldDecisionsCard({ decisions, history, onSeeAll }) {
+function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore }) {
   if (!decisions || decisions.length === 0) return null;
   const edLockout = decisions.find(d => d.type === 'ed_pattern_lockout');
   const edCleared = decisions.find(d => d.type === 'ed_pattern_cleared');
@@ -534,6 +540,19 @@ function HeldDecisionsCard({ decisions, history, onSeeAll }) {
               <Text style={styles.heldText}>{d.reason}</Text>
             </View>
           ))}
+          {/* COMP-006: only on standard holds — never alongside the ED-pattern
+              or rapid-loss blocks, whose own copy + CTAs must not be diluted. */}
+          {onLearnMore ? (
+            <TouchableOpacity
+              style={styles.heldLearnMore}
+              onPress={onLearnMore}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel="See how Precision Coaching decides"
+            >
+              <Text style={styles.heldLearnMoreText}>See how Precision Coaching decides</Text>
+            </TouchableOpacity>
+          ) : null}
         </>
       ) : null}
       {historyWithHeld.length > 0 ? (
@@ -734,10 +753,22 @@ export default function CoachOutputScreen({ navigation, route }) {
   const [coachHistory, setCoachHistory] = useState([]);
   const [_adaptiveTDEE, setAdaptiveTDEE] = useState(null);
   const [applyingKey, setApplyingKey] = useState(null);
+  // Food-level receipt after a calorie apply edits an active meal plan
+  // ({ headline, body, deepLink, floorNote } from planExplain, or null).
+  const [planEditNote, setPlanEditNote] = useState(null);
   // Next mesocycle week that a training-volume apply would write to.
   // Loaded once on mount; null when there's no active block or the
   // current week is the last one (nothing to push volume into).
   const [nextTrainingWeekId, setNextTrainingWeekId] = useState(null);
+  // Five-part coach response inputs (Theme A): weigh-ins inside the
+  // displayed week, the calm-mode preference, and the check-in day name
+  // for the forward-pull anchor. All best-effort; the response renders
+  // fewer parts when any are missing.
+  const [weighInsThisWeek, setWeighInsThisWeek] = useState(null);
+  const [calmMode, setCalmMode] = useState(false);
+  const [checkinDayName, setCheckinDayName] = useState(null);
+  // U-B-1 §3: the "More adjustments" secondary zone is collapsed by default.
+  const [moreOpen, setMoreOpen] = useState(false);
 
   // Confirm-then-apply: write the suggested calorie change to
   // nutrition_targets only when the user taps Apply, then record it on
@@ -747,6 +778,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   async function handleApplyCalories() {
     if (applyingKey || !user?.id || !output) return;
     if (isApplied(output, 'calories')) return;
+    setPlanEditNote(null); // clear any stale receipt before re-applying
     setApplyingKey('calories');
     try {
       const current = await getNutritionTargets(user.id);
@@ -760,6 +792,28 @@ export default function CoachOutputScreen({ navigation, route }) {
       const updated = markApplied(output, 'calories', { newKcal: computed.newKcal });
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
+
+      // If the user is on a generated meal plan, pull the same calorie
+      // change THROUGH the plan at the food level and show the coach
+      // saying what moved (the transparent-coach moat, at the gram of
+      // rice). Floor-clamped inside the service; silent when off-plan.
+      try {
+        // C1: the plan-edit narration follows the same register resolution as
+        // the five-part response (tone preference wins, automatic falls back
+        // to experience), so the coach never mixes tones on one screen.
+        const register = resolveRegister({
+          coachTone: userProfile?.coachTone ?? 'automatic',
+          experienceLevel: userProfile?.experienceLevel ?? null,
+          trainingAgeYears: userProfile?.trainingAgeYears ?? null,
+        });
+        const { change: planChange } = await applyCoachAdjustmentToActivePlan(user.id, { adjustmentKcal: change });
+        const narration = buildPlanEditNarration(planChange, { register });
+        setPlanEditNote(narration);
+      } catch (e) {
+        // Off-plan is the common, silent case; but a real persist failure
+        // should be observable rather than vanish.
+        logError('CoachOutputScreen.applyPlanEdit', e, { userId: user?.id });
+      }
     } catch (e) {
       logError('CoachOutputScreen.handleApplyCalories', e, { userId: user?.id });
     } finally {
@@ -994,7 +1048,34 @@ export default function CoachOutputScreen({ navigation, route }) {
     async function load() {
       const checkin = await getLatestCheckin(user.id, weekStart);
       setCheckin(checkin);
-      const weights = await getMorningWeightsLast14Days(user.id);
+      // COMP-026 (A): the adaptive-TDEE resize needs ~4+ weeks of weight to
+      // reach 'high' confidence and size the calorie change from real energy
+      // balance instead of the blunt fixed step. A 14-day window capped
+      // confidence at 'low', leaving that path dead in production. Widen to a
+      // 60-day window; confidence is distinct-calendar-day based
+      // (ewmaCoverageWeeks) so the wider fetch can't be gamed by same-day logs.
+      const weights = await getMorningWeights(user.id, 60);
+      // Weigh-ins inside the displayed week feed the five-part response's
+      // acknowledgement and cue. Counted here so the pure builder never
+      // needs a DB read.
+      try {
+        const weekEnd = weekStart + 7 * 86400000;
+        setWeighInsThisWeek(weights.filter(w => (w.loggedAt ?? 0) >= weekStart && (w.loggedAt ?? 0) < weekEnd).length);
+      } catch (_) { setWeighInsThisWeek(null); }
+      // Calm mode tightens the response the same way an open ED flag does
+      // (no rate language, no weigh-in counts), per the COMP-004 rules.
+      try { setCalmMode(isCalm(await getWellbeingMode())); } catch (_) { setCalmMode(false); }
+      // Check-in day for the forward-pull anchor; same preference read as
+      // HomeScreen. Falls back to "the next check-in" when unset.
+      try {
+        const rawPrefs = await AsyncStorage.getItem('@volyume_notification_prefs');
+        if (rawPrefs) {
+          const prefs = JSON.parse(rawPrefs);
+          if (Number.isFinite(prefs?.checkinDay)) {
+            setCheckinDayName(DAY_NAMES_FULL[prefs.checkinDay] ?? null);
+          }
+        }
+      } catch (_) { /* forward line falls back to "the next check-in" */ }
       const sessionStats = await getWeeklySessionStats(user.id, weekStart);
       const prs = await getWeeklyPRCount(user.id, weekStart);
       const nutrition = await getNutritionTargets(user.id);
@@ -1104,6 +1185,14 @@ export default function CoachOutputScreen({ navigation, route }) {
         cardioSessionsLogged = cardioWeekSummary.sessions;
       } catch (_) { /* cardio optional; coach runs without it */ }
 
+      // COMP-026 (B): the last ~42 days of daily steps feed the step-trend
+      // confidence modifier. Optional; the coach runs unchanged without it.
+      let dailyStepsSeries = null;
+      const stepsTodayKey = activityDayKey();
+      try {
+        dailyStepsSeries = await getDailyStepsRange(user.id, activityDayKey(Date.now() - 41 * 86400000), stepsTodayKey);
+      } catch (_) { /* steps optional; modifier stays inert (gain 0.50) */ }
+
       const result = runWeeklyCoach({
         checkin: engineCheckin,
         morningWeights: weights,
@@ -1119,6 +1208,9 @@ export default function CoachOutputScreen({ navigation, route }) {
         // Cardio compliance from the check-in (pre-filled from the log,
         // user-overridable) so the coach acts on it, not just the raw count.
         cardioCompliance: checkin?.cardioAdherence ?? null,
+        // COMP-026 (B) step-trend confidence modifier inputs.
+        dailyStepsSeries,
+        stepsTodayKey,
         goalPhase: userProfile?.goalPhase ?? 'maint',
         trainingGoal: userProfile?.trainingGoal ?? null,
         weeksInPhase,
@@ -1216,6 +1308,18 @@ export default function CoachOutputScreen({ navigation, route }) {
           trackEngineEvent(user.id, 'ffm_floor_hold_fired', {
             ffm_floor_kcal: result.ffmFloorContext?.floorKcal ?? null,
             current_intake_avg_kcal: result.ffmFloorContext?.recentIntakeAvgKcal ?? null,
+          }).catch(() => {});
+        }
+        // COMP-026 (B): emit when the step-trend modifier was actually evaluated
+        // (steps supplied, not on the rapid-loss path). Flags + buckets only:
+        // no step counts, no weight, no PII.
+        if (result.stepModifier && result.stepModifier.reason !== 'not_evaluated') {
+          trackEngineEvent(user.id, 'step_tdee_modifier_evaluated', {
+            active: !!result.stepModifier.active,
+            direction: result.stepModifier.direction ?? 0,
+            gain: result.stepModifier.gain ?? 0.5,
+            reason: result.stepModifier.reason ?? null,
+            applied: !!result.stepTrendApplied,
           }).catch(() => {});
         }
       } catch (e) {
@@ -1368,21 +1472,49 @@ export default function CoachOutputScreen({ navigation, route }) {
     sessionsPlanned,
   } = output;
 
-  // Trend chip: arrow icon + colour
+  // Trend chip: arrow icon + colour. Class B body-data surface (COMP-027):
+  // a body-weight trend never wears red. On target reads onTrack; off target
+  // caps at watch (worth a look, not a verdict); under an open ED-pattern
+  // flag the chip drops to neutral entirely. The weight numeral itself is
+  // always textPrimary (set on the value below), colour lives on the icon.
+  const edPatternOpen = !!(heldDecisions?.some(d => d.type === 'ed_pattern_lockout'));
   let trendIcon = 'remove-outline';
   let trendColor = colors.textMuted;
-  if (trend.delta !== null) {
+  if (trend.delta !== null && !edPatternOpen) {
+    const dirColor = trend.onTarget ? stateColors.onTrack : stateColors.watch;
     if (trend.delta > 0.01) {
       trendIcon = 'arrow-up-outline';
-      trendColor = trend.onTarget ? colors.success : colors.error;
+      trendColor = dirColor;
     } else if (trend.delta < -0.01) {
       trendIcon = 'arrow-down-outline';
-      trendColor = trend.onTarget ? colors.success : colors.error;
+      trendColor = dirColor;
     }
+  } else if (trend.delta !== null) {
+    // Flag open: keep the direction arrow, drop the valence colour.
+    trendIcon = trend.delta > 0.01 ? 'arrow-up-outline'
+      : trend.delta < -0.01 ? 'arrow-down-outline' : 'remove-outline';
   }
 
   const weightChipValue =
     trend.deltaLabel && trend.delta !== null ? trend.deltaLabel : 'No weights logged';
+
+  // Five-part coach response (Theme A, OPP-C01/C02/C06), rendered in the
+  // user's register (C1, founder decision #2): tone preference wins, else
+  // automatic keys off experience. Same facts, same decisions; suppression
+  // (open ED flag or calm mode) renders the supportive base untouched.
+  const coachResponse = buildRegisteredCoachResponse({
+    output,
+    checkin,
+    history: coachHistory,
+    weighInsThisWeek,
+    units,
+    edFlagOpen: edPatternOpen,
+    calmMode,
+    checkinDayName,
+    coachTone: userProfile?.coachTone ?? 'automatic',
+    experienceLevel: userProfile?.experienceLevel ?? null,
+    trainingAgeYears: userProfile?.trainingAgeYears ?? null,
+  });
 
   // Share the week as a single milestone card. Facts only (sessions, weight
   // trend, PRs); no bodyweight figure or private data leaves the device.
@@ -1406,6 +1538,71 @@ export default function CoachOutputScreen({ navigation, route }) {
     });
   }
 
+  // U-B-1 §3: hero / secondary / safety zoning. The hero is the engine's top
+  // applyable decision (output.primary); the rest collapse under "More
+  // adjustments"; the safety blocks (rapid-loss, diet-break-as-safety, held)
+  // are rendered in an always-visible group below and are NEVER collapsed.
+  const zones = selectCoachOutputZones(output, {
+    dietBreakSuggested,
+    hasMacro: !!macroCycle,
+    hasRefeed: !!refeed,
+  });
+  const trainingCardEl = (
+    <TrainingNextWeekCard
+      output={output}
+      onApply={handleApplyTraining}
+      applying={applyingKey === 'training'}
+      canApply={!!nextTrainingWeekId}
+      deloadSuggested={deloadSuggested}
+      deloadNote={deloadNote}
+      onApplyDeload={handleApplyDeload}
+      applyingDeload={applyingKey === 'deload'}
+    />
+  );
+  const nutritionCardEl = (
+    <NextWeekCard
+      adjustments={adjustments}
+      onApplyCalories={handleApplyCalories}
+      onApplySteps={handleApplySteps}
+      onApplyCardio={handleApplyCardio}
+      applyingKey={applyingKey}
+    />
+  );
+  const macroCardEl = macroCycle ? (
+    <MacroCycleCard
+      macroCycle={macroCycle}
+      applied={isApplied(output, 'macroCycle') || !!userProfile?.macroCycle}
+      onApply={handleApplyMacroCycle}
+      applying={applyingKey === 'macroCycle'}
+    />
+  ) : null;
+  const refeedCardEl = refeed ? (
+    <RefeedCard
+      refeed={refeed}
+      applied={isApplied(output, 'refeed')}
+      onApply={handleApplyRefeed}
+      applying={applyingKey === 'refeed'}
+    />
+  ) : null;
+  const dietBreakCardEl = dietBreakSuggested ? (
+    <DietBreakCard
+      weeksInDeficit={dietBreakWeeksInDeficit}
+      applied={isApplied(output, 'dietBreak')}
+      onApply={handleApplyDietBreak}
+      applying={applyingKey === 'dietBreak'}
+    />
+  ) : null;
+  const CARD_BY_KIND = {
+    training: trainingCardEl,
+    nutrition: nutritionCardEl,
+    macro: macroCardEl,
+    refeed: refeedCardEl,
+  };
+  const heroCardEl = zones.heroKind === 'dietBreak'
+    ? dietBreakCardEl
+    : (zones.heroKind ? CARD_BY_KIND[zones.heroKind] : null);
+  const secondaryEls = zones.secondaryKinds.map(k => CARD_BY_KIND[k]).filter(Boolean);
+
   return (
     <SafeAreaView style={styles.safe} edges={['left', 'right']}>
       <ScrollView
@@ -1418,8 +1615,26 @@ export default function CoachOutputScreen({ navigation, route }) {
           <Text style={styles.weekRange}>{weekRangeLabel(weekStart)}</Text>
         </View>
 
-        {/* 1. Headline, one sentence */}
-        <Text style={styles.headline}>{buildHeadline(output, checkin)}</Text>
+        {/* U-B-3 §4: the local headline duplicate was dropped — the engine
+            coachResponse lead below is the single narration source. */}
+
+        {/* Coach response parts 1 and 2: the specific, data-referenced
+            acknowledgement and the plain-language trend read lead the
+            card before any decision detail. */}
+        {(coachResponse.acknowledgement || coachResponse.interpretation) ? (
+          <View
+            style={styles.coachLeadCard}
+            accessible
+            accessibilityLabel={[coachResponse.acknowledgement, coachResponse.interpretation].filter(Boolean).join(' ')}
+          >
+            {coachResponse.acknowledgement ? (
+              <Text style={styles.coachLeadAck}>{coachResponse.acknowledgement}</Text>
+            ) : null}
+            {coachResponse.interpretation ? (
+              <Text style={styles.coachLeadInterpretation}>{coachResponse.interpretation}</Text>
+            ) : null}
+          </View>
+        ) : null}
 
         {/* 2. Trend chips */}
         <View style={styles.chipsRow}>
@@ -1427,7 +1642,8 @@ export default function CoachOutputScreen({ navigation, route }) {
             icon={trendIcon}
             iconColor={trendColor}
             value={weightChipValue}
-            valueColor={trend.delta !== null ? trendColor : colors.textMuted}
+            // Class B: no colour on a body-weight numeral, ever.
+            valueColor={colors.textPrimary}
           />
           <StatChip
             icon="barbell-outline"
@@ -1481,24 +1697,48 @@ export default function CoachOutputScreen({ navigation, route }) {
           );
         })()}
 
-        {/* 5. The decision */}
-        <TrainingNextWeekCard
-          output={output}
-          onApply={handleApplyTraining}
-          applying={applyingKey === 'training'}
-          canApply={!!nextTrainingWeekId}
-          deloadSuggested={deloadSuggested}
-          deloadNote={deloadNote}
-          onApplyDeload={handleApplyDeload}
-          applyingDeload={applyingKey === 'deload'}
-        />
-        <NextWeekCard
-          adjustments={adjustments}
-          onApplyCalories={handleApplyCalories}
-          onApplySteps={handleApplySteps}
-          onApplyCardio={handleApplyCardio}
-          applyingKey={applyingKey}
-        />
+        {/* 5. The decision — HERO zone (U-B-1 §3): the engine's single top move,
+            promoted to the top with emphasis. The coach lead above carries the
+            "why". When primary.domain is null (on-target/holding), no hero shows. */}
+        {heroCardEl ? (
+          <View style={styles.heroZone}>
+            <Text style={styles.heroLabel}>This week&apos;s main move</Text>
+            {heroCardEl}
+          </View>
+        ) : null}
+
+        {/* SECONDARY zone (U-B-1 §3): the remaining adjustments, collapsed under
+            a "More adjustments (N)" expander. Each card keeps its own Apply +
+            "Applied" chip exactly. Hidden entirely when there is nothing here. */}
+        {secondaryEls.length > 0 ? (
+          <CollapsibleSection
+            title={`More adjustments (${secondaryEls.length})`}
+            open={moreOpen}
+            onToggle={() => setMoreOpen(v => !v)}
+          >
+            {secondaryEls.map((el, i) => <View key={i}>{el}</View>)}
+          </CollapsibleSection>
+        ) : null}
+
+        {/* Food-level receipt: when the calorie change edited an active
+            meal plan, the coach says what moved, at the gram of rice. */}
+        {planEditNote ? (
+          <View style={styles.planEditCard} accessibilityRole="summary">
+            <Text style={styles.planEditHead}>{planEditNote.headline}</Text>
+            <Text style={styles.planEditBody}>{planEditNote.body}</Text>
+            {planEditNote.deepLink ? (
+              <TouchableOpacity
+                style={styles.planEditLink}
+                onPress={() => navigation.navigate('DiaryTab', { screen: 'MealPlan' })}
+                accessibilityRole="button"
+                accessibilityLabel={planEditNote.deepLink.label}
+              >
+                <Ionicons name="restaurant-outline" size={14} color={colors.primary} />
+                <Text style={styles.planEditLinkText}>{planEditNote.deepLink.label}</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        ) : null}
 
         {/* P3: cardio recovery caution (one line, advisory, no Apply). */}
         {cardioFlag ? (
@@ -1515,32 +1755,17 @@ export default function CoachOutputScreen({ navigation, route }) {
           </View>
         ) : null}
 
-        {/* High-day / low-day carb cycle, advanced cuts + competitors only */}
-        {macroCycle && (
-          <MacroCycleCard
-            macroCycle={macroCycle}
-            applied={isApplied(output, 'macroCycle') || !!userProfile?.macroCycle}
-            onApply={handleApplyMacroCycle}
-            applying={applyingKey === 'macroCycle'}
-          />
-        )}
-
-        {/* Refeed day, aggressive cuts + competitors only, on cadence */}
-        {refeed && (
-          <RefeedCard
-            refeed={refeed}
-            applied={isApplied(output, 'refeed')}
-            onApply={handleApplyRefeed}
-            applying={applyingKey === 'refeed'}
-          />
-        )}
+        {/* (Carb-cycle + refeed cards moved into the "More adjustments"
+            secondary zone above — U-B-1 §3.) */}
 
         {/* 6. Why */}
-        {whyThisWeek ? <WhyBlock text={whyThisWeek} /> : null}
+        {whyThisWeek ? <WhyBlock text={whyThisWeek} onLearnMore={() => navigation.navigate('Methodology', { source: 'why_block' })} /> : null}
 
-        {/* 7. One focus for next week */}
+        {/* 7. One focus for next week. Coach response part 4 (the single
+            tactical cue, deterministic priority, ED/calm aware) feeds this
+            card; buildFocus stays as the fallback when no cue is built. */}
         {(() => {
-          const focus = buildFocus(output, checkin);
+          const focus = coachResponse.cue ?? buildFocus(output, checkin);
           if (!focus) return null;
           return (
             <View style={styles.focusCard}>
@@ -1550,27 +1775,25 @@ export default function CoachOutputScreen({ navigation, route }) {
           );
         })()}
 
-        {/* Rapid weight loss safety flag, only if relevant */}
+        {/* SAFETY zone (U-B-1 §3): always visible, NEVER collapsed. Rapid-loss
+            alert, the diet break when it is a safety block (not the hero), and
+            the held-decisions shelf (with its ED/rapid-loss sub-blocks). */}
         {rapidWeightLossFlag && <RapidLossAlert />}
-
-        {/* Diet break, only if relevant */}
-        {dietBreakSuggested && (
-          <DietBreakCard
-            weeksInDeficit={dietBreakWeeksInDeficit}
-            applied={isApplied(output, 'dietBreak')}
-            onApply={handleApplyDietBreak}
-            applying={applyingKey === 'dietBreak'}
-          />
-        )}
-
-        {/* Recent decisions, quieter, at the bottom */}
+        {zones.dietBreakInSafety ? dietBreakCardEl : null}
         {heldDecisions && heldDecisions.length > 0 && (
           <HeldDecisionsCard
             decisions={heldDecisions}
             history={coachHistory}
             onSeeAll={() => navigation.navigate('CoachHeldHistory')}
+            onLearnMore={() => navigation.navigate('Methodology', { source: 'held_decisions' })}
           />
         )}
+
+        {/* Coach response part 5: the forward-pull anchor closes the response
+            below the always-visible safety shelf. */}
+        {coachResponse.forward ? (
+          <Text style={styles.forwardLine}>{coachResponse.forward}</Text>
+        ) : null}
 
         {/* Move #4 differential paywall, only renders for free-tier
             users where 2-of-3 adherence is off-target AND one of the
@@ -1628,6 +1851,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
   cardioNoteText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  planEditCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.primary,
+    padding: spacing.md, marginTop: spacing.sm, gap: spacing.xs,
+  },
+  planEditHead: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  planEditBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
+  planEditLink: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, marginTop: spacing.xs },
+  planEditLinkText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   safe: {
     flex: 1,
     backgroundColor: colors.background,
@@ -1651,6 +1884,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     gap: spacing.xs,
     paddingVertical: spacing.xs,
+    minHeight: 44, // U-B-1 §5: WCAG/iOS touch target
     marginBottom: spacing.md,
   },
   shareWeekText: {
@@ -1733,13 +1967,22 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
 
-  // What's working
-  headline: {
-    fontSize: fontSize.lg,
+  // U-B-1 §3: hero zone — the engine's top move, emphasised at the top.
+  heroZone: {
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: radius.lg,
+    backgroundColor: colors.primaryBg,
+    padding: spacing.sm,
+    gap: spacing.xs,
+  },
+  heroLabel: {
+    fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
-    lineHeight: 26,
-    marginBottom: spacing.md,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: colors.primary,
+    paddingHorizontal: spacing.xs,
   },
   whatsWorkingCard: {
     backgroundColor: colors.successBg,
@@ -1756,6 +1999,33 @@ const styles = StyleSheet.create({
     borderColor: withAlpha(colors.warning, 0.251),
     padding: spacing.lg,
     gap: spacing.sm,
+  },
+  // Five-part coach response: parts 1+2 lead card and the part 5
+  // forward-pull line. Same tokens as the surrounding cards.
+  coachLeadCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  coachLeadAck: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+    lineHeight: 22,
+  },
+  coachLeadInterpretation: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+    lineHeight: 22,
+  },
+  forwardLine: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    paddingHorizontal: spacing.xs,
   },
   focusCard: {
     backgroundColor: colors.primaryBg,
@@ -1844,13 +2114,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     minWidth: 84,
+    minHeight: 44, // U-B-1 §5: WCAG/iOS touch target
     alignItems: 'center',
+    justifyContent: 'center',
   },
   applyBtnBusy: { opacity: 0.6 },
   applyBtnText: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
-    color: colors.background,
+    color: colors.onPrimary,
   },
   dietBreakApplyBtn: { alignSelf: 'flex-start', marginTop: spacing.md },
 
@@ -1908,6 +2180,21 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     fontStyle: 'italic',
   },
+  // COMP-006 methodology links (secondary, muted, no affordance beyond text)
+  whyLearnMore: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    marginTop: spacing.sm,
+    textDecorationLine: 'underline',
+  },
+  // U-B-1 §5: ≥44px tap target shared by the quiet why/held links.
+  link44: { minHeight: 44, justifyContent: 'center' },
+  heldLearnMore: { marginTop: spacing.sm, minHeight: 44, justifyContent: 'center' },
+  heldLearnMoreText: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    textDecorationLine: 'underline',
+  },
 
 
   // Diet break card
@@ -1948,7 +2235,7 @@ const styles = StyleSheet.create({
   doneBtnText: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
-    color: colors.background,
+    color: colors.onPrimary,
   },
   secondaryBtn: {
     borderRadius: radius.lg,
@@ -2059,7 +2346,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   edLockoutCtaPrimaryText: {
-    color: colors.background,
+    color: colors.onPrimary,
     fontWeight: fontWeight.bold,
     fontSize: fontSize.sm,
   },
@@ -2150,6 +2437,7 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
     marginTop: spacing.md,
     paddingVertical: spacing.sm,
+    minHeight: 44, // U-B-1 §5
   },
   heldSeeAllText: {
     fontSize: fontSize.sm,

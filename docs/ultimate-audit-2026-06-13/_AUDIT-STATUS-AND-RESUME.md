@@ -1,0 +1,106 @@
+# _AUDIT-STATUS-AND-RESUME  (read this FIRST, then read `_AUDIT-SPEC.md` in full)
+
+Maintained per CLAUDE.md handover rule. Points to SOURCE files by path; states the exact current
+position against the spec's output structure; records every decision with its rationale. Update this
+file at the end of every working session.
+
+## SOURCE OF TRUTH
+- Spec (verbatim orchestrator): **`_AUDIT-SPEC.md`** — work from it, never from a summary. Its
+  "OUTPUT STRUCTURE" block (lines ~283-300) is the definitive file checklist for every pass.
+- The spec mandates, as hard gates: NOT DETERMINED/guessing/scope-reduction/silent-parking/
+  reinterpretation are BANNED; nothing dropped; every finding ID carried forward and accounted for;
+  Pass-4 blueprints SOURCE-TAGGED ([P1:file:line]/[P2:finding-id]/[P3:gap-id]/[INFERENCE]); missing
+  facts go to a NEEDS-ANSWER register and are resolved from the codebase — the agent does NOT guess,
+  does NOT pick a plausible default, does NOT ask the founder to choose a build option.
+
+## DELIVERY POSITION (against `_AUDIT-SPEC.md` OUTPUT STRUCTURE)
+
+### PASS 1 — TECHNICAL REFERENCE — ✅ COMPLETE, founder-certified (Tier B)
+- Delivered as section files (not one mono-file): `pass1-section1-gating.md`,
+  `pass1-section2-engine-rules.md`, `pass1-section2-tierB-index.md`, `pass1-section3-datamodel.md`,
+  `pass1-section4-features.md`, `pass1-sections-5to8.md`, `pass1-coverage-manifest.md`.
+- Mechanical extracts: `extract/s3-columns.txt` (553), `s3-rls.txt` (114), `s3-check.txt` (135),
+  `s6-settings.txt` (39), `s7-routes.txt` (108), `s8-touch.txt` (189).
+- Certification: `pass1-verification-artifact.md` — founder confirmed 553 columns / 108 routes /
+  189 touch-targets live. **Open item carried:** Q1 schema authority (setup_complete.sql 252 vs
+  schema.sql 187 vs migrations 114) — unresolved, resolve before any data-model blueprint.
+- NOTE: Section 4 mandatory feature list (`_AUDIT-SPEC.md:67-73`) explicitly includes progress photos,
+  streak system, readiness scoring, manual barcode entry, etc. — these are AUDIT TOPICS the spec
+  requires assessing, not free choices.
+
+### PASS 2 — EXTERNAL RESEARCH — ⚠️ PIVOTED, INCOMPLETE vs spec
+- **Decision (founder-directed):** this environment cannot browse (Reddit blocked, US-only search,
+  app-store 429s), so Pass 2 was re-routed from "15 internet agents" to **3 external AIs each running
+  all 15 areas**, pasted back for adjudication. Raw inputs stored verbatim:
+  `pass2-input-01-chatgpt.md`, `pass2-input-02-gemini.md` (Gemini access was SIMULATED — TRAINING-grade),
+  `pass2-input-03-claude.md`.
+- Adjudication done: `pass2-adjudication.md` (corroborated/conflict/single-source/unknown +
+  contamination flags: Pelaris phantom, Gemini reflecting our own FFM-floor spec).
+- **GAP vs spec (still owed):**
+  - `pass2-findings-index.md` — **NOT PRODUCED.** This is the master ID list Pass 3 must fully account
+    for. Must be built by aggregating EVERY finding ID from the three reports (per area, with
+    status/source), per `_AUDIT-SPEC.md:147-156`. **This is the next correct action.**
+  - `pass2-research-[area].md` — 12 of 15 exist but are the EARLIER SHALLOW versions (dated 13 Jun,
+    pre-pivot); newbie-experience / check-in / scaling missing. The 3-AI inputs supersede them as the
+    research substrate, but the per-area findings still need consolidating into the index.
+
+### PASS 3 — GAP ANALYSIS — ✅ COMPLETE (15/15 areas, per-area, to the founder-certified scheme)
+- Method (founder-specified, ai-coaching certified as the pilot): per area, ingest the 3 research docs →
+  reconcile each finding ALL-THREE / TWO / ONE / CONFLICT + which source → resolve gap CONFIRMED
+  YES/NO/PARTIAL with a real Pass-1 file:line; absence-claims ("no X") evidenced by a coverage grep, never
+  a faked file:line; open items → an open-questions list. No embellishment.
+- Files (one per area): `pass3-ai-coaching.md` (certified), `pass3-workout-screen.md`, `pass3-plan-generation.md`,
+  `pass3-nutrition.md`, `pass3-food-logging.md`, `pass3-progress.md`, `pass3-retention.md`, `pass3-onboarding.md`,
+  `pass3-exercise-library.md`, `pass3-navigation.md`, `pass3-design.md`, `pass3-missing-features.md`,
+  `pass3-newbie-experience.md`, `pass3-check-in.md`, `pass3-scaling.md`.
+- SUPERSEDED off-spec files still on disk (the earlier wrong-scheme mess): `pass3-gap-analysis.md`,
+  `pass3-comparison-matrix.md`, `pass3-unresolved-questions.md`, `pass3-unresolved-answers.md`,
+  `pass3-reconciliation.md`, `pass2-findings-index.md`, `pass2-adjudication.md` — pending a founder
+  cleanup decision (proposed for removal; not deleted unilaterally).
+- Confirmed-NO/PARTIAL gaps (the real candidates): progress photos (PR-3), exercise demo media (EL-1/NE-3),
+  HRV/sleep ingestion (MF-1), standalone watch (MF-2), posing/peak-week UI (MF-3), micronutrient/NRV (NU-7),
+  recomp progress view (PR-4), weekly calorie planner (NU-1), autonomy/manual-override modes (SC-3), UI
+  progressive disclosure (SC-1), broad social feed (RE-3), challenges (RE-7), full 44px audit (DE-1).
+- Confirmed-YES leads: full adaptive loop (AC-2), deterministic no-LLM (AC-5/PG-3), always-on ED-safety
+  floors (AC-6), ED-safe streak-freeze (RE-2), colour-blind-safe palette (DE-4), real periodisation (PG-2),
+  smart substitutions (EL-4), wellbeing+conditional check-in (CK), trend smoothing (PR-2).
+- Open questions needing a FOUNDER decision are listed at the foot of each area file (Q-AC1…Q-SC2).
+- **Pass-3 COMPARISON MATRIX — ✅ COMPLETE (15/15 areas), `pass3-comparison-matrix.md`.** Founder-directed
+  re-execution to the spec's Pass-3 comparison-matrix columns (AREA / BEST IN CLASS / WHERE WE LEAD / WHERE WE
+  LAG / MISSING ENTIRELY / VERIFICATION STATUS). Quality graded as capability + execution depth (the ~90%
+  sourceable from competitor feature sets / editorial / app docs); only the residual micro-UX-timing / tap-count /
+  subjective-ranking slice is marked NOT FOUND (specific missing data point named per cell). All 15 rows are
+  read-backed (Read calls in console; lines pasted; verdict tied to those lines — the hard rule). Areas:
+  WS, FL, AC, PR, NU, PG, EL, RE, MF, SC, CK, **ON, NA, DE, NE** (last four added this session).
+  - **CONSOLIDATED NOT-FOUND list (final, 5 cells)** at the foot of the matrix for the founder's per-cell
+    targeted-teardown decision: (1) WS taps-per-set/keyboard-complete, (2) FL seconds/taps per food,
+    (3) ON time-to-first-value + actions-per-screen, (4) NA taps-to-primary-action, (5) DE comparative
+    aesthetic ranking. Plus two **our-side-measurable** flags (not competitor gaps): PG plan-library breadth
+    (`seedRoutines.js`), EL exercise-library size (`seedExercises.js`) — need a parse of our own code.
+  - Real LAGS surfaced (read-backed): FL/NU food DB is OpenFoodFacts crowdsourced vs the curated/verified bar;
+    PR progress-photo UI + recomp-reframing view missing; NU micronutrient/NRV depth; EL/NE no exercise demo
+    media (text form cues only); MF HRV/sleep ingestion + standalone watch + posing/peak-week.
+  - Real LEADS surfaced (read-backed): full adaptive loop (cals+volume+steps+cardio off one trend), in-log
+    progressive prescription, transparent "why" coaching + register switching, composite strength standing,
+    meal-memory depth, ED-safe streak-freeze, check-in auto-derivation + Fast Check-In, guided beginner on-ramp,
+    test-enforced contrast/CVD/larger-text/reduce-motion design tokens.
+
+### PASS 4 — BLUEPRINTS — ▶ NOT STARTED (awaiting founder go + the area open-question decisions)
+
+## DECISIONS LOG (rationale preserved)
+1. Pass-2 pivot to 3-AI external research — environment cannot browse (founder-directed).
+2. Pass-1 Tier A (verbatim safety/engine) + Tier B (locate-and-cite); founder certified Tier B.
+3. Mechanical extraction (grep-sourced, count = wc -l) is the standard for dense sections.
+4. Producer is not the gate: deliver verification artifacts; founder certifies. No self-"PASS".
+5. Pass-1 Q1 (schema authority) carried unresolved.
+6. (VOID) photos D1=local-only/D2=Pro — elicited by a forbidden question; not load-bearing.
+
+## NEXT CORRECT ACTION (do exactly this, from source)
+- Pass 1 ✅, Pass 2 findings-index ✅, Pass 3 ✅ (awaiting founder certification of the Pass-3 gate via
+  `pass3-reconciliation.md`).
+- NEXT: **Pass 4** strictly to `_AUDIT-SPEC.md:206-280` — every Pass-3 gap-id → blueprint / `pass4-deferred.md`
+  / `pass4-no-action.md`; source-tagged; missing facts → `pass4-needs-answer-register.md` (resolve from
+  codebase, NOT by guessing or asking the founder to pick build options); then the Pass-4 exit gate +
+  `pass4-master-priority.md` + `pass4-executive-summary.md`.
+- Carry: Q15 medical-device + barcode pricing = founder-gate deferrals; Pass-1 Q1 schema authority still
+  open (resolve before any data-model blueprint).

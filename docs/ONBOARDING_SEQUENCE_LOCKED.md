@@ -190,3 +190,25 @@ src/navigation/OnboardingNavigator.js (extended with new screens)
   advanced recomp.
 - Declining Article 9 deletes the account and exits cleanly.
 - Backing out and reopening resumes at the last-incomplete screen.
+
+---
+
+## COMP-030 addendum (2026-06-12) — quiz-first variant, flag-gated
+
+A quiz-first front door (COMP-030 Variant B) is available behind the local flag
+`ONBOARDING_QUIZ_FIRST`. **FLIPPED ON 2026-06-12 by explicit founder decision**
+(`docs/deep-audit-2026-06-12/_FOUNDER-DECISIONS-2026-06-12.md` #3 — "flip fully
+on", including the pre-account phase question; the flag remains the rollback
+switch). When ON, the Pro path becomes:
+
+  Welcome → Quiz (training + goal) → Plan preview ("Save your plan") → account
+  wall (existing Login) → Article 9 consent (UNCHANGED position, between sign-in
+  and the basic-stats step) + trial grant (UNCHANGED) → ProOnboarding body
+  stats → recovery → generate.
+
+The post-account wizard reads the in-memory quiz slice to **prefill** the
+training + goal steps, so nothing is re-asked. Pre-account answers are volatile
+(memory only; lost on a process kill, accepted). The Free path
+(`FirstRunScreen`, name-only) is unchanged. Article 9 copy, `CONSENT_VERSION`,
+and the trial-at-consent rule are untouched. If the flag is ever set back to
+OFF, the sequence above this addendum is exactly what ships.

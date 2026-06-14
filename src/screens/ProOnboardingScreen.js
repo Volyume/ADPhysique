@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView, Animated, AccessibilityInfo } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion } from '../styles/theme';
 import { VolyumeIcon } from '../components/BrandMark';
 import SegmentedControl from '../components/SegmentedControl';
+import InfoTooltip from '../components/InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 import Dropdown from '../components/Dropdown';
 import OAuthButtons from '../components/auth/OAuthButtons';
 import EmailPasswordFields from '../components/auth/EmailPasswordFields';
@@ -28,6 +30,7 @@ import {
   PHYSIQUE_GOALS,
   TRAINING_PHASES,
   GOALS_WITH_WEAK_POINTS,
+  GOAL_LABELS,
   weakPointSetForGoal,
   phaseToNutritionKey,
   phaseToCoachingKey,
@@ -47,6 +50,16 @@ const PROTEIN_SHORT = {
 };
 
 const TOTAL_STEPS = 5;
+
+// COMP-013 "Building your plan" sequence. Four honest stage lines, each mapped
+// to a real _generatePlanInner phase, displayed for a minimum 800ms dwell while
+// the real plan generation + DB writes run underneath. 3.2s total sits inside
+// the evidence band (>2s informative, ~3-5s the working range of plan-build
+// screens) without escalating into theatre. The sequence never completes before
+// the real work does; failure aborts it instantly (no completion tick).
+const STAGE_DWELL_MS = 800;
+const SEQUENCE_TOTAL_MS = STAGE_DWELL_MS * 4;
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Default days per week, used for nutrition calc without asking the user.
 const DEFAULT_DAYS_PER_WEEK = 4;
@@ -115,6 +128,19 @@ export default function ProOnboardingScreen({ navigation }) {
 
   const [step, setStep] = useState(1);
 
+  // COMP-013: Reduce Motion skips the staged build sequence entirely (the button
+  // spinner stays, exactly the old behaviour). Same flag ProSetupComplete reads.
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  const [sequenceActive, setSequenceActive] = useState(false);
+  // How many stage lines have entered so far (1..4). 0 = not started.
+  const [sequenceStage, setSequenceStage] = useState(0);
+  const stageTimersRef = useRef([]);
+  const sequenceFade = useRef(new Animated.Value(0)).current;
+  // Guards a synchronous double-tap on Continue: in sequence mode the button is
+  // covered by the overlay rather than disabled by `busy`, so a fast second tap
+  // before the overlay commits could fire two plan generations.
+  const submittingRef = useRef(false);
+
   // Step 1, profile
   const [firstName, setFirstName] = useState(userProfile?.firstName || '');
   const localUnits = 'kg';
@@ -168,6 +194,22 @@ export default function ProOnboardingScreen({ navigation }) {
   const [proteinOpen, setProteinOpen] = useState(false);
   const suggestedApproach = ADVANCED_PROTEIN_GOALS.includes(trainingGoal) ? 'advanced' : 'optimised';
   const proteinApproach = proteinOverride ?? suggestedApproach;
+
+  // COMP-030: prefill the training + goal steps from the pre-account quiz slice
+  // (Variant B), so a quiz-first user confirms rather than re-answers. One-shot
+  // on mount; no-op when the quiz wasn't run (flag off / Free path).
+  const onboardingQuiz = useAppStore(s => s.onboardingQuiz);
+  useEffect(() => {
+    const q = onboardingQuiz;
+    if (!q) return;
+    if (q.experience) setExperience(q.experience);
+    if (Number.isFinite(q.sessionLengthMinutes)) setSessionLengthMinutes(q.sessionLengthMinutes);
+    if (Number.isFinite(q.daysPerWeek)) setDaysPerWeek(q.daysPerWeek);
+    if (q.equipment) setEquipment(q.equipment);
+    if (q.trainingGoal) setTrainingGoal(q.trainingGoal);
+    if (q.trainingPhase) setTrainingPhase(q.trainingPhase);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Changing division re-scopes the weak-point options, so drop any selected
   // muscle that the new division does not offer.
@@ -408,13 +450,70 @@ export default function ProOnboardingScreen({ navigation }) {
     setStep(5);
   }
 
+  // The four honest stage lines, mapped to real _generatePlanInner phases.
+  // Stage 2 gains a division-priorities suffix for the physique divisions
+  // (it maps to applyGoalOverlay); stage 4 names the user's actual session
+  // length — the single highest-leverage word, proving the labels are real.
+  function sequenceStages() {
+    const divisionLabel = trainingGoal && trainingGoal !== 'general' ? GOAL_LABELS[trainingGoal] : null;
+    return [
+      'Balancing your week',
+      divisionLabel ? `Setting your starting volume · ${divisionLabel} priorities` : 'Setting your starting volume',
+      'Choosing your exercises',
+      `Fitting sessions to your ${sessionLengthMinutes} minutes`,
+    ];
+  }
+
+  function cancelSequenceTimers() {
+    stageTimersRef.current.forEach(clearTimeout);
+    stageTimersRef.current = [];
+  }
+
+  function startSequence() {
+    const lines = sequenceStages();
+    setSequenceActive(true);
+    setSequenceStage(1);
+    sequenceFade.setValue(0);
+    Animated.timing(sequenceFade, {
+      toValue: 1, duration: motion.enter, useNativeDriver: true,
+    }).start();
+    AccessibilityInfo.announceForAccessibility(lines[0]);
+    cancelSequenceTimers();
+    const ids = [];
+    for (let i = 2; i <= lines.length; i++) {
+      ids.push(setTimeout(() => {
+        setSequenceStage(i);
+        AccessibilityInfo.announceForAccessibility(lines[i - 1]);
+      }, STAGE_DWELL_MS * (i - 1)));
+    }
+    stageTimersRef.current = ids;
+  }
+
+  function endSequence() {
+    cancelSequenceTimers();
+    setSequenceActive(false);
+    setSequenceStage(0);
+  }
+
+  // Tidy the stage timers if the screen unmounts mid-sequence.
+  useEffect(() => cancelSequenceTimers, []);
+
   async function advanceFrom5() {
     if (!recoveryRating) {
       appAlert('Recovery rating', 'Please select your recovery level to continue.');
       return;
     }
+    if (submittingRef.current) return;
+    submittingRef.current = true;
 
-    setBusy(true);
+    // Reduce Motion keeps the plain button spinner; everyone else gets the
+    // staged sequence. The real work below is identical either way.
+    const useSequence = !reduceMotion;
+    const startedAt = Date.now();
+    if (useSequence) startSequence();
+    else setBusy(true);
+
+    let planFailed = false;
     try {
       if (morningEnabled || checkinEnabled) {
         const status = await requestNotificationPermissions();
@@ -440,6 +539,18 @@ export default function ProOnboardingScreen({ navigation }) {
             await scheduleCheckinReminder(checkinDay, 12, 0);
           }
           await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs)).catch(() => {});
+          // OPP-C03: pre-lay the missed check-in follow-up pair for the
+          // first check-in cycle (reads the prefs blob just saved; the
+          // helper self-guards on tier, toggle and ED flag).
+          if (checkinEnabled) {
+            try {
+              // eslint-disable-next-line global-require
+              const { scheduleMissedCheckinFollowups } = require('../lib/notifications');
+              // eslint-disable-next-line global-require
+              const { default: store } = require('../store/useAppStore');
+              await scheduleMissedCheckinFollowups(store.getState().user?.id ?? null);
+            } catch (_) {}
+          }
         }
       }
 
@@ -605,6 +716,11 @@ export default function ProOnboardingScreen({ navigation }) {
         if (!planResult.ok) {
           // eslint-disable-next-line global-require
           try { require('../lib/errorLog').logError('ProOnboardingScreen.generateAndSavePlan', planResult.error, { userId: user.id }); } catch (_) {}
+          // COMP-013: a failed generation must abort the sequence — three
+          // seconds of "building" followed by "didn't generate" is worse than
+          // a bare spinner. Flag it; the post-try block falls back to the form
+          // with this alert and never plays a completion tick.
+          planFailed = true;
           appAlert(
             'Plan setup didn\'t finish',
             `Your profile is saved but your training plan didn\'t generate (${planResult.error}). Open Home and tap "Build my plan" to retry.`,
@@ -617,8 +733,31 @@ export default function ProOnboardingScreen({ navigation }) {
       }
     } catch (e) {
       appAlert('Something went wrong', e?.message ?? 'Try again.');
+      endSequence();
       setBusy(false);
+      submittingRef.current = false;
       return;
+    }
+
+    // Plan generation failed, but the profile + targets are saved. Abort the
+    // sequence's celebratory hold instantly (no min-display pad, no completion
+    // tick) and still go to the completion screen — which handles the no-plan
+    // state and whose alert ("Open Home and tap Build my plan") then reads
+    // correctly. Stranding the user on the step-5 form would not.
+    if (planFailed) {
+      cancelSequenceTimers();
+      setBusy(false);
+      submittingRef.current = false;
+      navigation.replace('ProSetupComplete');
+      return;
+    }
+
+    // Success: hold the sequence on its final stage until the minimum display
+    // time has elapsed, so the real work (which may finish faster) never makes
+    // the sequence complete before the named labour reads as real.
+    if (useSequence) {
+      const elapsed = Date.now() - startedAt;
+      if (elapsed < SEQUENCE_TOTAL_MS) await wait(SEQUENCE_TOTAL_MS - elapsed);
     }
     setBusy(false);
     navigation.replace('ProSetupComplete');
@@ -709,13 +848,13 @@ export default function ProOnboardingScreen({ navigation }) {
               activeOpacity={busy ? 1 : 0.88}
             >
               {busy ? (
-                <ActivityIndicator color={colors.background} />
+                <ActivityIndicator color={colors.onPrimary} />
               ) : (
                 <>
                   <Text style={styles.primaryBtnText}>
                     {authMode === 'signup' ? 'Create account and continue' : 'Sign in and continue'}
                   </Text>
-                  <Ionicons name="arrow-forward" size={18} color={colors.background} />
+                  <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
                 </>
               )}
             </TouchableOpacity>
@@ -933,7 +1072,11 @@ export default function ProOnboardingScreen({ navigation }) {
               />
               {bodyFat.trim() ? (
                 <View style={{ marginTop: spacing.sm }}>
-                  <Text style={styles.fieldHint}>How was it measured?</Text>
+                  {/* U-E-1: gloss the body-fat method abbreviations (BIA/Caliper/DEXA). */}
+                  <View style={styles.measuredRow}>
+                    <Text style={styles.fieldHint}>How was it measured?</Text>
+                    <InfoTooltip text={GLOSSARY.bodyFatMethod} size={13} />
+                  </View>
                   <SegmentedControl
                     options={[
                       { label: 'Visual', value: 'visual' },
@@ -951,7 +1094,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <TouchableOpacity style={styles.primaryBtn} onPress={advanceFrom2} activeOpacity={0.88}>
               <Text style={styles.primaryBtnText}>Continue</Text>
-              <Ionicons name="arrow-forward" size={18} color={colors.background} />
+              <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
             </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -1025,7 +1168,7 @@ export default function ProOnboardingScreen({ navigation }) {
               activeOpacity={canContinue ? 0.88 : 1}
             >
               <Text style={styles.primaryBtnText}>Continue</Text>
-              <Ionicons name="arrow-forward" size={18} color={colors.background} />
+              <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
             </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -1056,6 +1199,7 @@ export default function ProOnboardingScreen({ navigation }) {
               <Dropdown
                 label="What are you focused on right now?"
                 hint="This drives your calorie target and how your plan is built."
+                tip={GLOSSARY.phase}
                 value={trainingPhase}
                 options={TRAINING_PHASES.map(p => ({ value: p.value, label: p.label, sub: p.detail }))}
                 onChange={setTrainingPhase}
@@ -1069,6 +1213,7 @@ export default function ProOnboardingScreen({ navigation }) {
             <Dropdown
               label="Competing in a category? (optional)"
               hint="Only if you're chasing a competitive physique. It biases your plan toward the muscles that category is judged on."
+              tip={GLOSSARY.division}
               value={trainingGoal}
               options={goalOptions}
               onChange={changeGoal}
@@ -1115,7 +1260,11 @@ export default function ProOnboardingScreen({ navigation }) {
                 activeOpacity={0.8}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.fieldLabel}>Protein target</Text>
+                  <View style={styles.measuredRow}>
+                    <Text style={styles.fieldLabel}>Protein target</Text>
+                    {/* U-E-1: gloss the Standard/Optimised/Advanced protein tiers. */}
+                    <InfoTooltip text={GLOSSARY.proteinTier} size={13} />
+                  </View>
                   <Text style={styles.fieldHint}>
                     {PROTEIN_APPROACHES[proteinApproach]?.label} · {PROTEIN_APPROACHES[proteinApproach]?.range}. Set for you, tap to change.
                   </Text>
@@ -1163,7 +1312,7 @@ export default function ProOnboardingScreen({ navigation }) {
               activeOpacity={canContinue ? 0.88 : 1}
             >
               <Text style={styles.primaryBtnText}>Continue</Text>
-              <Ionicons name="arrow-forward" size={18} color={colors.background} />
+              <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
             </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -1175,6 +1324,44 @@ export default function ProOnboardingScreen({ navigation }) {
 
   if (step === 5) {
     const canContinue = !!recoveryRating;
+
+    // COMP-013: the staged "Building your plan" sequence replaces the dead
+    // button spinner. Same header furniture (brand row + a now-full progress
+    // bar), no new route — so a failure can fall back to the form below.
+    if (sequenceActive) {
+      const lines = sequenceStages();
+      return (
+        <SafeAreaView key="step-5-building" style={styles.safe}>
+          <Animated.View style={[styles.seqWrap, { opacity: sequenceFade }]}>
+            <View style={styles.brandRow}>
+              <VolyumeIcon size={22} />
+              <View style={styles.proBadge}>
+                <Text style={styles.proBadgeText}>PRO</Text>
+              </View>
+            </View>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: '100%' }]} />
+            </View>
+            <Text style={styles.seqHeading}>Building your plan</Text>
+            <View style={styles.seqList} accessibilityLiveRegion="polite">
+              {lines.slice(0, sequenceStage).map((line, i) => {
+                const isCurrent = i === sequenceStage - 1;
+                return (
+                  <View key={i} style={styles.seqRow}>
+                    {isCurrent ? (
+                      <ActivityIndicator size="small" color={colors.primary} style={styles.seqIcon} />
+                    ) : (
+                      <Ionicons name="checkmark-circle" size={20} color={colors.primary} style={styles.seqIcon} />
+                    )}
+                    <Text style={styles.seqLine}>{line}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </Animated.View>
+        </SafeAreaView>
+      );
+    }
 
     return (
       <SafeAreaView key="step-5" style={styles.safe}>
@@ -1367,11 +1554,11 @@ export default function ProOnboardingScreen({ navigation }) {
             activeOpacity={canContinue && !busy ? 0.88 : 1}
           >
             {busy ? (
-              <ActivityIndicator color={colors.background} />
+              <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <>
                 <Text style={styles.primaryBtnText}>Continue</Text>
-                <Ionicons name="arrow-forward" size={18} color={colors.background} />
+                <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
               </>
             )}
           </TouchableOpacity>
@@ -1399,7 +1586,7 @@ const styles = StyleSheet.create({
   },
   proBadgeText: {
     fontSize: fontSize.micro, fontWeight: fontWeight.black,
-    color: colors.background, letterSpacing: 0.8,
+    color: colors.onPrimary, letterSpacing: 0.8,
   },
 
   progressTrack: {
@@ -1415,6 +1602,18 @@ const styles = StyleSheet.create({
   },
   stepSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
 
+  // COMP-013 "Building your plan" sequence (replaces the step-5 button spinner).
+  seqWrap: { flex: 1, padding: spacing.xl, justifyContent: 'center' },
+  seqHeading: {
+    fontSize: fontSize.xxl, fontWeight: fontWeight.bold,
+    color: colors.textPrimary, marginTop: spacing.xl, marginBottom: spacing.xl,
+    lineHeight: 30,
+  },
+  seqList: { gap: spacing.md },
+  seqRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  seqIcon: { width: 22, alignItems: 'center' },
+  seqLine: { flex: 1, fontSize: fontSize.md, color: colors.textPrimary, lineHeight: 22 },
+
   // Back affordance, inline at the left of the brand row so it reads as part of
   // the header chrome instead of floating above the logo. Negative left margin
   // pulls the chevron to the content edge so it lines up with the page padding.
@@ -1427,6 +1626,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted, letterSpacing: 0.3, marginBottom: spacing.sm,
   },
   fieldHint: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginBottom: spacing.sm },
+  measuredRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   // Protein target collapsible (step 3). Collapsed by default, the header
   // shows the chosen tier; expanding reveals the three tiers to pick from.
   proteinHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -1506,7 +1706,7 @@ const styles = StyleSheet.create({
   // Shared by the compact height-units toggle (ft+in / cm). The full-width
   // sex and body-weight-unit pickers now use the shared SegmentedControl.
   segmentActive: { backgroundColor: colors.primary },
-  segmentTextActive: { color: colors.background },
+  segmentTextActive: { color: colors.onPrimary },
 
   // Notifications
   notifSection: {
@@ -1551,7 +1751,7 @@ const styles = StyleSheet.create({
   },
   hourChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   hourChipText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
-  hourChipTextActive: { color: colors.background, fontWeight: fontWeight.bold },
+  hourChipTextActive: { color: colors.onPrimary, fontWeight: fontWeight.bold },
 
   // Beta offer card
   offerCard: {
@@ -1567,7 +1767,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', backgroundColor: colors.primary,
     borderRadius: 4, paddingHorizontal: spacing.sm, paddingVertical: 3,
   },
-  offerBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.8 },
+  offerBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0.8 },
   offerHeadline: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 26 },
   offerBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.md },
   offerPerks: { gap: spacing.xs },
@@ -1580,7 +1780,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm, backgroundColor: colors.primary,
     borderRadius: radius.lg, paddingVertical: spacing.lg + 2, marginBottom: spacing.md,
   },
-  primaryBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
+  primaryBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.onPrimary },
   primaryBtnDisabled: { opacity: 0.4 },
   switchAuthBtn: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.sm },
   switchAuthText: { fontSize: fontSize.sm, color: colors.textMuted },

@@ -72,7 +72,9 @@ export async function logFoodEntry(userId, entry) {
     track(userId, 'food_logged', {
       // HP-2: source + slot only. The amount eaten (quantity_g) is the
       // user's dietary content and does not belong in product telemetry.
-      food_ref_source: entry.foodRef?.startsWith('custom:') ? 'custom' : 'global',
+      food_ref_source: entry.foodRef?.startsWith('quick:') ? 'quick_add'
+        : entry.foodRef?.startsWith('custom:') ? 'custom'
+          : 'global',
       meal_slot: entry.mealSlot,
     }).catch(() => {});
   } catch (_) { /* tolerate test env without telemetry */ }
@@ -187,6 +189,41 @@ export async function getFoodFrequents(userId, limit = 20) {
      WHERE user_id = ? ORDER BY log_count DESC, last_logged_at DESC
      LIMIT ?`,
     [userId, limit],
+  );
+}
+
+// ─── food_slot_recents (COMP-002, client-only "Add again" memory) ────────
+//
+// Per-(user, slot, food) log frequency and last-used portion, written on
+// every food log from the picker and read by the slot-aware "Add again"
+// tab. Never synced: derived data that rebuilds itself as the user logs.
+
+export async function upsertSlotRecent(userId, { mealSlot, foodRef, quantityG }) {
+  // Quick-adds aren't foods (no resolvable record) so they never earn a
+  // slot-recent row.
+  if (!userId || !mealSlot || !foodRef || foodRef.startsWith('quick:')) return;
+  const d = await db();
+  await d.runAsync(
+    `INSERT INTO food_slot_recents
+       (user_id, meal_slot, food_ref, log_count, last_logged_at, last_quantity_g)
+     VALUES (?, ?, ?, 1, ?, ?)
+     ON CONFLICT(user_id, meal_slot, food_ref) DO UPDATE SET
+       log_count = log_count + 1,
+       last_logged_at = excluded.last_logged_at,
+       last_quantity_g = excluded.last_quantity_g`,
+    [userId, mealSlot, foodRef, Date.now(), Number.isFinite(quantityG) ? quantityG : 0],
+  );
+}
+
+export async function getSlotRecents(userId, mealSlot, limit = 10) {
+  const d = await db();
+  return d.getAllAsync(
+    `SELECT food_ref, last_quantity_g, log_count
+     FROM food_slot_recents
+     WHERE user_id = ? AND meal_slot = ?
+     ORDER BY log_count DESC, last_logged_at DESC
+     LIMIT ?`,
+    [userId, mealSlot, limit],
   );
 }
 
@@ -923,6 +960,156 @@ export async function applyCuratedMealToDiary(userId, mealId, { mealSlot, entryD
     logged += 1;
   }
   return logged;
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// Generated meal plan (deep-audit Theme G). One active plan per user,
+// stored whole as JSON (the assembled day/week + the prefs and engine-
+// target snapshot it was built from, so swaps and coach edits can
+// re-solve). LOCAL-ONLY for now: no sync serialiser exists yet (the
+// soft-delete shape is sync-ready for when one ships); a new device
+// regenerates the plan from the synced target + prefs instead.
+// ───────────────────────────────────────────────────────────────────────
+
+/**
+ * Save (replace) the user's active meal plan. Deactivates any prior
+ * active plan and inserts the new one in a single transaction. `plan` is
+ * the assembled object plus its snapshots; it is stored verbatim as JSON.
+ * Returns the new plan id.
+ */
+export async function saveActiveMealPlan(userId, plan) {
+  if (!userId) throw new Error('saveActiveMealPlan: userId is required');
+  if (!plan || typeof plan !== 'object') throw new Error('saveActiveMealPlan: plan is required');
+  const d = await db();
+  const id = uid();
+  const now = Date.now();
+  // runInTransaction(d, task) — withTransactionAsync passes no tx arg, so
+  // the task uses the same d handle (the established pattern in this file).
+  await runInTransaction(d, async () => {
+    await d.runAsync(
+      `UPDATE meal_plans SET is_active = 0, updated_at = ?
+       WHERE user_id = ? AND is_active = 1 AND deleted_at IS NULL`,
+      [now, userId]
+    );
+    await d.runAsync(
+      `INSERT INTO meal_plans (id, user_id, plan_json, is_active, created_at, updated_at)
+       VALUES (?, ?, ?, 1, ?, ?)`,
+      [id, userId, JSON.stringify(plan), now, now]
+    );
+  });
+  _scheduleSync();
+  return id;
+}
+
+/**
+ * The user's active meal plan with its parsed `plan` object, or null when
+ * there is none. The stored snapshot round-trips unchanged.
+ */
+export async function getActiveMealPlan(userId) {
+  const d = await db();
+  const row = await d.getFirstAsync(
+    `SELECT id, plan_json, created_at, updated_at
+     FROM meal_plans
+     WHERE user_id = ? AND is_active = 1 AND deleted_at IS NULL
+     ORDER BY updated_at DESC`,
+    [userId]
+  );
+  if (!row) return null;
+  let plan = null;
+  try { plan = JSON.parse(row.plan_json); } catch (_) { plan = null; }
+  if (!plan) return null;
+  return { id: row.id, plan, created_at: row.created_at, updated_at: row.updated_at };
+}
+
+/**
+ * Persist an in-place change to the active plan (a swap or a coach edit).
+ * Replaces the stored JSON and bumps updated_at (local-only for now).
+ * No-ops when the id is missing or already tombstoned.
+ */
+export async function updateMealPlan(userId, id, plan) {
+  if (!plan || typeof plan !== 'object') throw new Error('updateMealPlan: plan is required');
+  const d = await db();
+  const now = Date.now();
+  await d.runAsync(
+    `UPDATE meal_plans SET plan_json = ?, updated_at = ?
+     WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
+    [JSON.stringify(plan), now, id, userId]
+  );
+  _scheduleSync();
+}
+
+/**
+ * Soft-delete a meal plan (tombstone shape is sync-ready; local-only
+ * for now).
+ */
+export async function deleteMealPlan(userId, id) {
+  const d = await db();
+  const now = Date.now();
+  await d.runAsync(
+    `UPDATE meal_plans SET deleted_at = ?, is_active = 0, updated_at = ?
+     WHERE id = ? AND user_id = ?`,
+    [now, now, id, userId]
+  );
+  _scheduleSync();
+}
+
+/**
+ * The user's most recent meal-plan row for sync, INCLUDING tombstones so a
+ * delete on this device propagates to others. Raw row (plan_json stays a
+ * string); null when the user has never had a plan.
+ */
+export async function getLatestMealPlanRowForSync(userId) {
+  const d = await db();
+  const row = await d.getFirstAsync(
+    `SELECT id, plan_json, is_active, deleted_at, created_at, updated_at
+     FROM meal_plans
+     WHERE user_id = ?
+     ORDER BY updated_at DESC
+     LIMIT 1`,
+    [userId]
+  );
+  return row || null;
+}
+
+/**
+ * Apply a cloud meal-plan row locally with a last-write-wins guard: a
+ * local row with the same id and an equal-or-newer updated_at is never
+ * trampled. When the incoming row is the active plan, any other active
+ * local plan is deactivated in the same transaction (one active plan per
+ * user, same invariant saveActiveMealPlan keeps). Pull-side only: never
+ * schedules a push. Returns true when the row was applied.
+ */
+export async function applyMealPlanRowFromCloud(userId, row) {
+  if (!userId || !row?.id || typeof row.plan_json !== 'string') return false;
+  const incomingUpdated = Number(row.updated_at) || 0;
+  const d = await db();
+  const local = await d.getFirstAsync(
+    'SELECT updated_at FROM meal_plans WHERE id = ? AND user_id = ?',
+    [row.id, userId]
+  );
+  if (local && Number(local.updated_at) >= incomingUpdated) return false;
+
+  const isActive = row.is_active ? 1 : 0;
+  const deletedAt = row.deleted_at == null ? null : Number(row.deleted_at);
+  await runInTransaction(d, async () => {
+    if (isActive && deletedAt == null) {
+      await d.runAsync(
+        `UPDATE meal_plans SET is_active = 0, updated_at = updated_at
+         WHERE user_id = ? AND is_active = 1 AND id != ?`,
+        [userId, row.id]
+      );
+    }
+    await d.runAsync(
+      `INSERT OR REPLACE INTO meal_plans
+         (id, user_id, plan_json, is_active, deleted_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        row.id, userId, row.plan_json, isActive, deletedAt,
+        Number(row.created_at) || incomingUpdated, incomingUpdated,
+      ]
+    );
+  });
+  return true;
 }
 
 /**

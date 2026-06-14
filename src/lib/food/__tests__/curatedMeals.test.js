@@ -59,6 +59,29 @@ describe('library data integrity', () => {
     expect(Math.min(...fats)).toBeLessThanOrEqual(6);
   });
 
+  test('vegan main meals anchor on tofu/legumes/soya, not seitan/tempeh', () => {
+    // Published vegan competitor days of eating centre on tofu, legumes and
+    // soya products; seitan appears rarely and tempeh barely at all
+    // (2026-06-12 primary-source research, src-f-vegan-competitor-days.md).
+    // The library must reflect that weighting, not over-index on seitan/tempeh.
+    const has = (meal, food) => meal.components.some(c => c.food === food);
+    const veganMains = CURATED_MEALS.filter(
+      m => m.diet === 'vegan' && m.slots.some(s => s === 'lunch' || s === 'dinner'),
+    );
+    const seitanTempeh = veganMains.filter(m => has(m, 'seitan') || has(m, 'tempeh'));
+    const tofuLegumeSoya = veganMains.filter(
+      m => has(m, 'tofu_firm') || has(m, 'tvp_dry') || has(m, 'edamame')
+        || has(m, 'lentils') || has(m, 'lentil_dahl') || has(m, 'chickpeas')
+        || has(m, 'black_beans') || has(m, 'kidney_beans') || has(m, 'lentil_pasta'),
+    );
+    // Tofu/legume/soya anchored mains must clearly outnumber seitan/tempeh ones.
+    expect(tofuLegumeSoya.length).toBeGreaterThan(seitanTempeh.length);
+    // Seitan (once across published days) and tempeh (in none) each stay capped
+    // as occasional options, so neither can creep back to over-weighting.
+    expect(veganMains.filter(m => has(m, 'seitan')).length).toBeLessThanOrEqual(2);
+    expect(veganMains.filter(m => has(m, 'tempeh')).length).toBeLessThanOrEqual(2);
+  });
+
   test('covers every slot and all three diets', () => {
     const slotsCovered = new Set();
     const dietsCovered = new Set();

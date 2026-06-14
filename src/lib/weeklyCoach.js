@@ -14,8 +14,11 @@ import {
   shouldSuggestDietBreak,
   computeFFMFloor,
   computeAdaptiveTDEEAdjustment,
+  computeStepTrendModifier,
   computeEWMA as nutritionComputeEWMA,
 } from './nutritionEngine';
+import { localDayKey } from './dayKey';
+import { robustTrackingLatest, robustTrackingSevenDaysAgo } from './robustTrend';
 import { computeMacroCycle, computeRefeedDay } from './coachApply';
 import { detectEdPatternFlag, hasEdPatternCleared } from './edPatternDetector';
 import { detectDifferentialTrigger } from './differentialPaywall';
@@ -450,6 +453,13 @@ export function runWeeklyCoach(inputs) {
     // count, so the coach acts on the check-in answer. Null leaves the prior
     // log-only behaviour unchanged for every other caller.
     cardioCompliance = null,
+    // COMP-026 (B) step-trend modifier inputs. Optional; null/absent leaves
+    // every prior caller byte-identical (no modifier, update gain stays 0.50).
+    // dailyStepsSeries is getDailyStepsRange output over ~42 days
+    // ([{ entryDate, steps, source }]); stepsTodayKey anchors the recent/
+    // baseline windows and defaults to today (a test can pin it).
+    dailyStepsSeries = null,
+    stepsTodayKey = null,
   } = inputs;
 
   // Defensive sanitisation. These come from DB counts and date math; coerce any
@@ -543,12 +553,33 @@ export function runWeeklyCoach(inputs) {
     ? (weightDelta / bwRef) * 100
     : null;
 
-  const onTarget = (actualRatePct != null)
-    ? Math.abs(actualRatePct - phase.goalRatePct) <= 0.2 * Math.abs(phase.goalRatePct) + 0.05
+  // COMP-024 decision-promotion: the off-target DECISION reads (onTarget /
+  // offTargetDirection) use the cycle-robust TREND-TRACKING trend
+  // (robustTrackingEwma: Holt's level+trend + an asymmetric robust clamp on the
+  // residual-from-prediction). It damps transient water-weight spikes WITHOUT
+  // lagging sustained gains/losses — the median-|residual| scale lets a
+  // consistent trend pass while clamping lone outliers, fixing the over-damping
+  // that held the original promotion (the bulk_aggressive regression, §12).
+  // SAFETY stays on the plain less-damped EWMA: rapid-loss (actualRatePct <=
+  // -1.5 below), the +calorie boost magnitude, and the ED detector
+  // (computeWeeklyTrendPct) all read the plain trend, never this robust read.
+  const robustNow = morningWeights.length >= 3 ? robustTrackingLatest(morningWeights) : null;
+  const robustPrior = morningWeights.length >= 3 ? robustTrackingSevenDaysAgo(morningWeights) : null;
+  const robustWeightDelta = (robustNow != null && robustPrior != null)
+    ? Math.round((robustNow - robustPrior) * 100) / 100
+    : null;
+  const robustRatePct = (robustWeightDelta != null && bwRef)
+    ? (robustWeightDelta / bwRef) * 100
+    : null;
+  // Fall back to the plain rate when there isn't enough data for the robust read.
+  const decisionRatePct = robustRatePct != null ? robustRatePct : actualRatePct;
+
+  const onTarget = (decisionRatePct != null)
+    ? Math.abs(decisionRatePct - phase.goalRatePct) <= 0.2 * Math.abs(phase.goalRatePct) + 0.05
     : null;
 
-  const offTargetDirection = (actualRatePct != null)
-    ? Math.sign(actualRatePct - phase.goalRatePct)
+  const offTargetDirection = (decisionRatePct != null)
+    ? Math.sign(decisionRatePct - phase.goalRatePct)
     : 0;
 
   const enoughWeightData = morningWeights.length >= 4;
@@ -673,6 +704,10 @@ export function runWeeklyCoach(inputs) {
   // +/-5% cap. Before ~4 weeks, or without a maintenance estimate, the fixed
   // steps stand. The rapid-loss safety boost is never overridden.
   let adaptiveCal = { adjustmentKcal: 0, confidence: 'insufficient_data' };
+  // COMP-026 (B): computed on every eligible run (for telemetry + the COMP-004
+  // line); only feeds the gain back in when it is active. Default-inert.
+  let stepModifier = { gain: 0.5, active: false, direction: 0, reason: 'not_evaluated' };
+  let stepTrendApplied = false;
   if (currentMaintenanceKcal && currentCalTarget && Array.isArray(morningWeights) && morningWeights.length >= 14) {
     const adherenceFactor = calsAdherence === 'under' ? 0.9
       : calsAdherence === 'over' ? 1.1
@@ -689,14 +724,33 @@ export function runWeeklyCoach(inputs) {
         recentIntakeAvgKcal, recentIntakeDaysLogged, bodyFatPercent, bodyFatSource, sex,
       }
       : null;
-    adaptiveCal = computeAdaptiveTDEEAdjustment({
+    const adaptiveArgs = {
       ewmaData,
       prescribedKcal: currentCalTarget,
       currentTDEEEstimate: currentMaintenanceKcal,
       adherenceFactor,
       ffmFloorContext,
       rapidLossOverride,
-    });
+    };
+    adaptiveCal = computeAdaptiveTDEEAdjustment(adaptiveArgs);
+
+    // COMP-026 (B): a sustained step-level shift that AGREES with the direction
+    // the weight trend already chose lets the resize update a little faster
+    // (gain 0.50 -> max 0.65). The sign is taken from the first (gain-0.50)
+    // pass; when the modifier is active we recompute with its gain so every
+    // safety clamp (FFM floor, rapid-loss, +/-5% cap) re-applies on top. Steps
+    // never produce, size or reverse a change. Never runs on the rapid-loss
+    // path (that boost is fixed and senior).
+    if (Array.isArray(dailyStepsSeries) && dailyStepsSeries.length && !rapidLossOverride) {
+      stepModifier = computeStepTrendModifier({
+        stepRows: dailyStepsSeries,
+        todayKey: stepsTodayKey || localDayKey(Date.now()),
+        adjustmentSign: Math.sign(adaptiveCal.adjustmentKcal),
+      });
+      if (stepModifier.active && stepModifier.gain !== 0.5) {
+        adaptiveCal = computeAdaptiveTDEEAdjustment({ ...adaptiveArgs, updateGain: stepModifier.gain });
+      }
+    }
   }
   const useAdaptiveCal = adaptiveCal.confidence === 'high';
 
@@ -742,6 +796,11 @@ export function runWeeklyCoach(inputs) {
         && adaptiveCal.adjustmentKcal !== 0
         && Math.sign(adaptiveCal.adjustmentKcal) === Math.sign(change)) {
       change = adaptiveCal.adjustmentKcal;
+      // COMP-026 (B): the applied change was energy-balance-sized AND the step
+      // modifier was active and agreed, so this week's change was gain-resized.
+      // Drives the COMP-004 line + the CoachOutput receipt. The "moving less"
+      // copy is suppressed by the card under any open wellbeing/ED flag.
+      stepTrendApplied = stepModifier.active;
     }
 
     // Cap at ±5% of current target. The rapid-loss compression has
@@ -753,7 +812,14 @@ export function runWeeklyCoach(inputs) {
     }
 
     if (change !== 0) {
-      calorieAdjustment = { change, note: calNote };
+      // COMP-026 (B) receipt: when the applied change was gain-resized by an
+      // active step trend, append one sentence (the WHY_LIBRARY receipt
+      // pattern). Rides with calorieAdjustment so it disappears too if a senior
+      // clamp (FFM floor / ED lockout) later nulls the change.
+      const note = stepTrendApplied
+        ? `${calNote} Your step trend backed this up, so the change is sized with more confidence.`
+        : calNote;
+      calorieAdjustment = { change, note };
     }
   }
 
@@ -1165,6 +1231,30 @@ export function runWeeklyCoach(inputs) {
 
   const whyThisWeek = pickWhy(whyKeys, weekSeed);
 
+  // ── PRIMARY (U-B-1 §2) ────────────────────────────────────────────────────
+  // Surface the engine's EXISTING single-winner priority (whyKeys[0], the
+  // deterministic ladder above) as a structured field so the CoachOutput hero
+  // reflects the engine's own top decision rather than a screen heuristic.
+  // Additive + deterministic: it reads the already-computed ladder and changes
+  // nothing about which adjustments fire, any threshold, or the confirm-then-
+  // apply contract. ED-safety reasons (ffm_floor_hold, rapid_loss_corrected)
+  // and the holding state map to domain:null — they are shown by the always-
+  // visible safety/lead zone and must NEVER become a collapsible/applyable hero.
+  const PRIMARY_DOMAIN_BY_WHY = {
+    deload_suggested: 'deload',
+    diet_break_suggested: 'dietBreak',
+    recovery_lagging: 'training',
+    push_volume: 'training',
+    off_target_cal_up: 'calories',
+    off_target_cal_down: 'calories',
+    steps_bump: 'steps',
+  };
+  const primaryReasonKey = whyKeys[0] ?? null;
+  const primary = {
+    domain: PRIMARY_DOMAIN_BY_WHY[primaryReasonKey] ?? null,
+    reasonKey: primaryReasonKey,
+  };
+
   // ── DIFFERENTIAL PAYWALL (Move #4) ────────────────────────────────────────
   // Pure detector. Returns { shown:false } for paid users, when the
   // adherence 2-of-3 gate fails, or when no context signal matches.
@@ -1201,6 +1291,8 @@ export function runWeeklyCoach(inputs) {
       steps: stepsAdjustment,
       cardio: cardioAdjustment,
     },
+    // U-B-1 §2: the engine's top decision, derived from whyKeys[0] above.
+    primary,
     // P3 cardio recovery caution (one line or null); D1 non-cut acknowledgement
     // (one line or null). Both plain notes, no Apply.
     cardioFlag,
@@ -1236,6 +1328,13 @@ export function runWeeklyCoach(inputs) {
     noteFlags,
     goalPhase,
     differential_output,
+    // COMP-026 (B): the full modifier result for telemetry
+    // (step_tdee_modifier_evaluated) and the COMP-004 trend line. stepTrendApplied
+    // is true only when an applied calorie change THIS run was actually
+    // gain-resized AND survived every senior safety clamp (FFM floor / ED
+    // lockout can null the change after the resize, in which case it is false).
+    stepModifier,
+    stepTrendApplied: stepTrendApplied && calorieAdjustment != null,
   };
 }
 
@@ -1288,6 +1387,9 @@ function _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, w
       cardio: null,
     },
     whyThisWeek: pickWhy(['stabilise_sessions'], weekSeed),
+    // U-B-1 §2: this path has no applyable adjustment to hero — the lead/holding
+    // state shows instead (domain null), reasonKey mirrors whyThisWeek.
+    primary: { domain: null, reasonKey: 'stabilise_sessions' },
     deloadSuggested: false,
     deloadNote: null,
     dietBreakSuggested: false,

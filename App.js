@@ -112,7 +112,7 @@ Notifications.setNotificationHandler({
 import useAppStore from './src/store/useAppStore';
 import { getWellbeingMode, isCalm } from './src/lib/wellbeing';
 import { getSupabaseClient } from './src/lib/supabase';
-import { applyAccessibility } from './src/styles/theme';
+import { applyAccessibility, resolvedTheme } from './src/styles/theme';
 import { loadA11yPrefs } from './src/lib/accessibilityPrefs';
 import * as Updates from 'expo-updates';
 
@@ -122,7 +122,17 @@ import * as Updates from 'expo-updates';
 // StyleSheets.
 async function bootstrapAccessibility() {
   const prefs = await loadA11yPrefs();
-  if (prefs) applyAccessibility(prefs);
+  // Always apply so the theme (incl. 'system') resolves and resolvedTheme is
+  // set for the chrome below; null prefs resolve to dark (no user changes).
+  applyAccessibility(prefs || {});
+  // COMP-029: align native surfaces (keyboards, pickers, OS alerts) with the
+  // in-app choice. Requires app.json userInterfaceStyle "automatic" + a native
+  // rebuild to take effect; harmless before then.
+  try {
+    // eslint-disable-next-line global-require
+    const { Appearance } = require('react-native');
+    Appearance.setColorScheme?.(resolvedTheme === 'light' ? 'light' : 'dark');
+  } catch (_) { /* native surfaces fall back to app.json */ }
 }
 
 // Shown when an auth email link fails to establish a session (expired or
@@ -372,6 +382,15 @@ export default function App() {
     if (!privacyLoaded) loadPrivacyPrefs();
   }, [privacyLoaded, loadPrivacyPrefs]);
 
+  // COMP-020: start the Apple Watch bridge (mirrors the active session to the
+  // wrist, applies durable set-events back). No-ops without a paired watch.
+  useEffect(() => {
+    // eslint-disable-next-line global-require
+    const { startWatchBridge, stopWatchBridge } = require('./src/lib/watch/bridge');
+    startWatchBridge();
+    return () => stopWatchBridge();
+  }, []);
+
   useEffect(() => {
     if (prCelebration) getWellbeingMode().then(m => setCalm(isCalm(m)));
   }, [prCelebration]);
@@ -568,13 +587,39 @@ export default function App() {
             // eslint-disable-next-line global-require
             const { db } = require('./src/lib/database');
             // eslint-disable-next-line global-require
-            const { checkYearOfLiftsUnlock } = require('./src/lib/notifications');
+            const { checkYearOfLiftsUnlock, checkMonthlyRecapReady } = require('./src/lib/notifications');
             db().then(async (d) => {
               const row = await d.getFirstAsync(
-                'SELECT MIN(started_at) AS first_at FROM workouts WHERE user_id = ? AND is_completed = 1',
+                'SELECT MIN(started_at) AS first_at, COUNT(*) AS completed FROM workouts WHERE user_id = ? AND is_completed = 1',
                 [localUserId],
               ).catch(() => null);
               await checkYearOfLiftsUnlock(row?.first_at ?? null);
+              // COMP-005: monthly recap nudge for the last completed calendar
+              // month. Same idempotent on-app-open pattern as the year unlock.
+              try {
+                const now = new Date();
+                const curMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+                const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+                const prev = new Date(prevMonthStart);
+                const monthRow = await d.getFirstAsync(
+                  'SELECT COUNT(*) AS n FROM workouts WHERE user_id = ? AND is_completed = 1 AND started_at >= ? AND started_at < ?',
+                  [localUserId, prevMonthStart, curMonthStart],
+                ).catch(() => null);
+                const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                let neutral = false;
+                try {
+                  // eslint-disable-next-line global-require
+                  const { getWellbeingMode, isCalm } = require('./src/lib/wellbeing');
+                  neutral = isCalm(await getWellbeingMode());
+                } catch (_) { /* default not-neutral */ }
+                await checkMonthlyRecapReady({
+                  completedCount: row?.completed ?? 0,
+                  monthSessions: monthRow?.n ?? 0,
+                  monthKey: `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`,
+                  monthLabel: MONTHS[prev.getMonth()],
+                  neutral,
+                });
+              } catch (_) { /* tolerate */ }
             }).catch(() => {});
           } catch (_) { /* tolerate — feature is a "nice to have" */ }
         }
@@ -623,6 +668,19 @@ export default function App() {
       // Android reaps the process.
       if (state === 'active' || state === 'background' || state === 'inactive') {
         maybeSync();
+      }
+      // COMP-019: refresh the home-screen widget snapshot when backgrounding
+      // (the blueprint's foreground->background trigger). Fire-and-forget.
+      if (state === 'background') {
+        try {
+          const sb = getSupabaseClient();
+          sb?.auth.getSession().then(({ data: { session: s } = {} } = {}) => {
+            const uid = s?.user?.id;
+            if (!uid) return;
+            // eslint-disable-next-line global-require
+            require('./src/lib/widgets/writer').writeWidgetSnapshot(uid).catch(() => {});
+          }).catch(() => {});
+        } catch (_) {}
       }
     });
     // Also run once on mount so an app launched after a long offline period
@@ -751,12 +809,17 @@ export default function App() {
   const { FeedbackProvider } = require('./src/components/FeedbackSheet');
   // eslint-disable-next-line global-require
   const { AppAlertHost } = require('./src/components/AppAlert');
+  // eslint-disable-next-line global-require
+  const { PostLapseSheetHost } = require('./src/components/PostLapseSheet');
 
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
-          <StatusBar style="light" backgroundColor="#0D0D0D" />
+          <StatusBar
+            style={resolvedTheme === 'light' ? 'dark' : 'light'}
+            backgroundColor={resolvedTheme === 'light' ? '#FAFAF7' : '#0D0D0D'}
+          />
           <ToastProvider>
             <FeedbackProvider>
               <RootNavigator />
@@ -772,6 +835,7 @@ export default function App() {
               )}
               <CrashRecoveryToast priorCrash={priorCrash} />
               <AppAlertHost />
+              <PostLapseSheetHost />
             </FeedbackProvider>
           </ToastProvider>
         </SafeAreaProvider>

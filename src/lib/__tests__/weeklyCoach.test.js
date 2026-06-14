@@ -163,6 +163,32 @@ describe('runWeeklyCoach output shape', () => {
     expect(out).toHaveProperty('confidence');
   });
 
+  test('U-B-1 §2: primary mirrors the engine ladder (holding → null; off-target → calories)', () => {
+    // On-target hold with steps already low (no bump): nothing fires, so the
+    // hero is the lead/holding state, not an applyable card.
+    const holding = runWeeklyCoach(baseInputs({
+      morningWeights: trend(85, -0.53),
+      weeksInPhase: 4,
+      consecutiveOffTargetWeeks: 0,
+      checkin: checkin({ stepsAvg: 5000 }),
+    }));
+    expect(holding.primary.reasonKey).toBe('on_target_holding');
+    expect(holding.primary.domain).toBeNull();
+
+    // Lean bulk gaining too slowly → off_target_cal_up → calories hero.
+    const calUp = runWeeklyCoach(baseInputs({
+      goalPhase: 'mild_bulk',
+      morningWeights: trend(80, 0),
+      bodyweightKg: 80,
+      currentCalTarget: 3000,
+      weeksInPhase: 5,
+      consecutiveOffTargetWeeks: 2,
+      lastCalAdjustmentWeeksAgo: 99,
+    }));
+    expect(calUp.adjustments.calories.change).toBeGreaterThan(0);
+    expect(calUp.primary.domain).toBe('calories');
+  });
+
   test('no banned narrator/marketing phrases in any user-visible string', () => {
     const samples = [
       runWeeklyCoach(baseInputs({ morningWeights: [] })),

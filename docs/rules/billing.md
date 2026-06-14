@@ -18,8 +18,12 @@ State all of the following. Wait for explicit "proceed" before writing code.
 ## PRODUCT IDENTIFIERS — NEVER CHANGE
 
 These are live in Google Play Console.
-volyume_pro_monthly
-volyume_pro_annual
+pro_monthly
+pro_annual
+
+(Corrected 2026-06-11. Earlier versions of this file named them
+volyume_pro_monthly / volyume_pro_annual — wrong. The live ids are the ones
+in src/lib/payments/catalogue.js, confirmed by the founder.)
 
 If you see these hardcoded anywhere unexpected, extract them to constants.
 Never change their values.

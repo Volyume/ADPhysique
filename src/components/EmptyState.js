@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  primaryBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.background },
+  primaryBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
   secondaryBtn: {
     borderRadius: radius.md,
     paddingHorizontal: spacing.lg,

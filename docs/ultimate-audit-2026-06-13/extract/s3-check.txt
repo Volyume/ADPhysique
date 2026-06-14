@@ -1,0 +1,135 @@
+supabase/migrate_019_health_consent.sql:37:  consent_type    text NOT NULL CHECK (consent_type IN ('health_data', 'marketing', 'analytics')),
+supabase/migrate_019_health_consent.sql:57:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_015_food_logging.sql:20:  source          text NOT NULL CHECK (source IN ('off','usda','cofid','user_ocr')),
+supabase/migrate_015_food_logging.sql:82:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_015_food_logging.sql:92:  meal_slot       text NOT NULL CHECK (meal_slot IN ('breakfast','lunch','dinner','snack')),
+supabase/migrate_015_food_logging.sql:113:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_015_food_logging.sql:139:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_015_food_logging.sql:221:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_015_food_logging.sql:243:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_015_food_logging.sql:262:  WITH CHECK (
+supabase/migrate_015_food_logging.sql:280:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_015_food_logging.sql:297:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_009_nutrition_targets.sql:44:  WITH CHECK (auth.uid() = user_id);
+supabase/setup_complete.sql:79:  tension_at_stretch TEXT DEFAULT 'medium' CHECK(tension_at_stretch IN ('high', 'medium', 'low')),
+supabase/setup_complete.sql:89:    CHECK(tension_at_stretch IN ('high', 'medium', 'low'));
+supabase/setup_complete.sql:276:  energy_score INTEGER CHECK(energy_score BETWEEN 1 AND 5),
+supabase/setup_complete.sql:278:  sleep_quality INTEGER CHECK(sleep_quality BETWEEN 1 AND 5),
+supabase/setup_complete.sql:279:  life_stress INTEGER CHECK(life_stress BETWEEN 1 AND 5),
+supabase/setup_complete.sql:280:  training_motivation INTEGER CHECK(training_motivation BETWEEN 1 AND 5),
+supabase/setup_complete.sql:281:  recovery_rating TEXT CHECK(recovery_rating IN ('poor', 'average', 'good')),
+supabase/setup_complete.sql:283:  adherence_calories TEXT CHECK(adherence_calories IN ('yes', 'mostly', 'no')),
+supabase/setup_complete.sql:284:  adherence_protein TEXT CHECK(adherence_protein IN ('yes', 'mostly', 'no')),
+supabase/setup_complete.sql:346:  biological_sex TEXT CHECK(biological_sex IN ('male', 'female', 'other')),
+supabase/setup_complete.sql:375:  energy_score INTEGER CHECK(energy_score BETWEEN 1 AND 5),
+supabase/setup_complete.sql:376:  soreness_score INTEGER CHECK(soreness_score BETWEEN 1 AND 5),
+supabase/setup_complete.sql:377:  stress_score INTEGER CHECK(stress_score BETWEEN 1 AND 5),
+supabase/setup_complete.sql:424:  FOR INSERT WITH CHECK (true);
+supabase/setup_complete.sql:459:  WITH CHECK (auth.uid() = id);
+supabase/setup_complete.sql:469:  WITH CHECK (auth.uid() = user_id);
+supabase/setup_complete.sql:474:  WITH CHECK (auth.uid() = user_id);
+supabase/setup_complete.sql:481:  WITH CHECK (
+supabase/setup_complete.sql:488:  WITH CHECK (auth.uid() = user_id);
+supabase/setup_complete.sql:495:  WITH CHECK (
+supabase/setup_complete.sql:502:  WITH CHECK (auth.uid() = user_id);
+supabase/setup_complete.sql:507:  WITH CHECK (auth.uid() = user_id);
+supabase/setup_complete.sql:512:  WITH CHECK (auth.uid() = user_id);
+supabase/setup_complete.sql:517:  WITH CHECK (auth.uid() = user_id);
+supabase/setup_complete.sql:522:  WITH CHECK (auth.uid() = user_id);
+supabase/setup_complete.sql:527:  WITH CHECK (auth.uid() = user_id);
+supabase/setup_complete.sql:532:  WITH CHECK (auth.uid() = user_id);
+supabase/setup_complete.sql:537:  WITH CHECK (auth.uid() = user_id);
+supabase/setup_complete.sql:542:  WITH CHECK (auth.uid() = user_id);
+supabase/setup_complete.sql:547:  WITH CHECK (auth.uid() = user_id);
+supabase/setup_complete.sql:554:  WITH CHECK (auth.uid() = user_id);
+supabase/setup_complete.sql:559:  WITH CHECK (auth.uid() = user_id);
+supabase/setup_complete.sql:564:  WITH CHECK (auth.uid() = user_id);
+supabase/setup_complete.sql:569:  WITH CHECK (auth.uid() = user_id);
+supabase/setup_complete.sql:574:  WITH CHECK (auth.uid() = user_id);
+supabase/setup_complete.sql:579:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_081_training_partners.sql:80:                                 CHECK (status IN ('invited', 'active', 'ended')),
+supabase/migrate_081_training_partners.sql:106:  WITH CHECK (auth.uid() = member_a OR auth.uid() = member_b);
+supabase/migrate_081_training_partners.sql:110:  FOR INSERT WITH CHECK (auth.uid() = member_a AND status = 'invited' AND member_b IS NULL);
+supabase/migrate_081_training_partners.sql:123:                              CHECK (state IN ('training', 'resting')),
+supabase/migrate_081_training_partners.sql:152:  ) WITH CHECK (
+supabase/migrate_081_training_partners.sql:208:  FOR INSERT WITH CHECK (
+supabase/migrate_081_training_partners.sql:232:  WITH CHECK (auth.uid() = blocker_id);
+supabase/migrate_052_daily_water_reconcile.sql:51:      WITH CHECK (auth.uid() = user_id);
+supabase/migrate_056_daily_steps.sql:80:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_020_custom_exercises.sql:66:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_020_custom_exercises.sql:71:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_085_notification_preferences_checkin_missed.sql:53:  ADD CONSTRAINT notification_preferences_category_check CHECK (category IN (
+supabase/README.md:58:| 057 | `migrate_057_meal_slots_periworkout.sql` | Relaxes the `food_entries.meal_slot` CHECK (set by migration 015) to also allow `'preworkout'` and `'postworkout'`, backing the new Pre-workout and Post-workout diary sections and the curated peri-workout meals. Purely additive: the four original slots still pass, so nothing stored changes and the frozen AAB (which only sends the original four) keeps syncing. Local SQLite `meal_slot` has no CHECK, so logging works before this is applied; only cloud sync of the new slots needs it. Apply before a build that writes the new slots reaches production sync. | See § Verify peri-workout meal slots |
+supabase/README.md:60:| 059 | `migrate_059_meal_slots_numbered.sql` | **Numbered meal slots. Pending founder apply.** Replaces the fixed `food_entries.meal_slot` CHECK (six legacy values, set by 015 + 057) with a pattern CHECK allowing `meal_[0-9]+` plus the legacy values, backing the flexible "Meal 1..N" diary model (founder direction 2026-06-01). Purely additive: the six legacy values still match, so the frozen AAB keeps syncing; a `meal_N` row synced down to the old build is just not displayed, no crash. Apply before a client that writes `meal_N` slots reaches production sync, otherwise those pushes fail the old CHECK (caught per-table, row stays local, wider run still succeeds). | `SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname LIKE '%meal_slot%';` shows the `meal_[0-9]+` pattern. |
+supabase/README.md:430:-- Expected: one row with definition CHECK ((kind = ANY (ARRAY['fav','dislike'])))
+supabase/README.md:561:--   CHECK ((meal_slot = ANY (ARRAY['breakfast','lunch','dinner',
+supabase/README.md:603:-- Expected: CHECK ((meal_slot ~ '^(breakfast|lunch|dinner|snack|preworkout|postworkout|meal_[0-9]+)$'::text))
+supabase/migrate_053_device_push_tokens.sql:62:  platform         text NOT NULL CHECK (platform IN ('ios', 'android')),
+supabase/migrate_053_device_push_tokens.sql:82:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_053_device_push_tokens.sql:88:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_005_rls_hardening.sql:35:      WITH CHECK (auth.uid() = id);
+supabase/migrate_005_rls_hardening.sql:46:      WITH CHECK (auth.uid() = user_id);
+supabase/migrate_005_rls_hardening.sql:57:      WITH CHECK (auth.uid() = user_id);
+supabase/migrate_005_rls_hardening.sql:70:      WITH CHECK (
+supabase/migrate_005_rls_hardening.sql:83:      WITH CHECK (auth.uid() = user_id);
+supabase/migrate_005_rls_hardening.sql:96:      WITH CHECK (
+supabase/migrate_005_rls_hardening.sql:109:      WITH CHECK (auth.uid() = user_id);
+supabase/migrate_005_rls_hardening.sql:120:      WITH CHECK (auth.uid() = user_id);
+supabase/migrate_005_rls_hardening.sql:131:      WITH CHECK (auth.uid() = user_id);
+supabase/migrate_005_rls_hardening.sql:142:      WITH CHECK (auth.uid() = user_id);
+supabase/migrate_005_rls_hardening.sql:153:      WITH CHECK (auth.uid() = user_id);
+supabase/migrate_005_rls_hardening.sql:164:      WITH CHECK (auth.uid() = user_id);
+supabase/migrate_005_rls_hardening.sql:175:      WITH CHECK (auth.uid() = user_id);
+supabase/migrate_005_rls_hardening.sql:186:      WITH CHECK (auth.uid() = user_id);
+supabase/migrate_005_rls_hardening.sql:197:      WITH CHECK (auth.uid() = user_id);
+supabase/migrate_005_rls_hardening.sql:208:      WITH CHECK (auth.uid() = user_id);
+supabase/migrate_044_notification_preferences.sql:56:  category    text NOT NULL CHECK (category IN (
+supabase/migrate_044_notification_preferences.sql:91:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_044_notification_preferences.sql:97:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_064_cardio_log.sql:91:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_004_schema_improvements.sql:9:  energy_score INTEGER CHECK(energy_score BETWEEN 1 AND 5),
+supabase/migrate_004_schema_improvements.sql:11:  sleep_quality INTEGER CHECK(sleep_quality BETWEEN 1 AND 5),
+supabase/migrate_004_schema_improvements.sql:12:  life_stress INTEGER CHECK(life_stress BETWEEN 1 AND 5),
+supabase/migrate_004_schema_improvements.sql:13:  training_motivation INTEGER CHECK(training_motivation BETWEEN 1 AND 5),
+supabase/migrate_004_schema_improvements.sql:14:  recovery_rating TEXT CHECK(recovery_rating IN ('poor', 'average', 'good')),
+supabase/migrate_004_schema_improvements.sql:16:  adherence_calories TEXT CHECK(adherence_calories IN ('yes', 'mostly', 'no')),
+supabase/migrate_004_schema_improvements.sql:17:  adherence_protein TEXT CHECK(adherence_protein IN ('yes', 'mostly', 'no')),
+supabase/migrate_004_schema_improvements.sql:46:    CHECK(tension_at_stretch IN ('high', 'medium', 'low'));
+supabase/migrate_017_ed_pattern_and_telemetry.sql:17:  flag_state      text NOT NULL CHECK (flag_state IN ('raised', 'cleared')),
+supabase/migrate_017_ed_pattern_and_telemetry.sql:41:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_017_ed_pattern_and_telemetry.sql:46:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_017_ed_pattern_and_telemetry.sql:131:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_007_pro_rls_hardening.sql:39:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_007_pro_rls_hardening.sql:44:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_007_pro_rls_hardening.sql:49:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_007_pro_rls_hardening.sql:54:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_007_pro_rls_hardening.sql:59:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_007_pro_rls_hardening.sql:64:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_012_complete_sync.sql:320:      'CREATE POLICY "Users manage own %s" ON %I FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)',
+supabase/migrate_057_meal_slots_periworkout.sql:4:--   meal_slot text NOT NULL CHECK (meal_slot IN
+supabase/migrate_057_meal_slots_periworkout.sql:48:--                                  CHECK (meal_slot IN
+supabase/migrate_057_meal_slots_periworkout.sql:68:  CHECK (meal_slot IN ('breakfast','lunch','dinner','snack','preworkout','postworkout'));
+supabase/migrate_071_trial_ledger.sql:75:  CONSTRAINT trial_salt_singleton CHECK (id = 1)
+supabase/migrate_013_user_feedback.sql:31:  sentiment     TEXT NOT NULL CHECK (sentiment IN ('love', 'helpful', 'confusing', 'slow', 'buggy')),
+supabase/migrate_013_user_feedback.sql:72:  WITH CHECK (
+supabase/migrate_048_food_preferences_kind.sql:27:--                  CHECK (kind IN ('fav', 'dislike'))
+supabase/migrate_048_food_preferences_kind.sql:79:      CHECK (kind IN ('fav', 'dislike'));
+supabase/schema.sql:43:  tension_at_stretch TEXT DEFAULT 'medium' CHECK(tension_at_stretch IN ('high', 'medium', 'low')),
+supabase/schema.sql:294:  energy_score INTEGER CHECK(energy_score BETWEEN 1 AND 5),
+supabase/schema.sql:296:  sleep_quality INTEGER CHECK(sleep_quality BETWEEN 1 AND 5),
+supabase/schema.sql:297:  life_stress INTEGER CHECK(life_stress BETWEEN 1 AND 5),
+supabase/schema.sql:298:  training_motivation INTEGER CHECK(training_motivation BETWEEN 1 AND 5),
+supabase/schema.sql:299:  recovery_rating TEXT CHECK(recovery_rating IN ('poor', 'average', 'good')),
+supabase/schema.sql:301:  adherence_calories TEXT CHECK(adherence_calories IN ('yes', 'mostly', 'no')),
+supabase/schema.sql:302:  adherence_protein TEXT CHECK(adherence_protein IN ('yes', 'mostly', 'no')),
+supabase/migrate_086_meal_plans.sql:35:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_086_meal_plans.sql:40:  WITH CHECK (auth.uid() = user_id);
+supabase/migrate_059_meal_slots_numbered.sql:4:--   CHECK (meal_slot IN
+supabase/migrate_059_meal_slots_numbered.sql:49:--                                  CHECK (meal_slot IN ('breakfast','lunch',
+supabase/migrate_059_meal_slots_numbered.sql:73:  CHECK (meal_slot ~ '^(breakfast|lunch|dinner|snack|preworkout|postworkout|meal_[0-9]+)$');
+supabase/migrate_030_tier_infrastructure.sql:33:    CHECK (trial_state IN (
+supabase/migrate_030_tier_infrastructure.sql:46:    CHECK (locked_in_price_tier IS NULL OR locked_in_price_tier IN ('open_beta','founders','standard')),
+supabase/migrate_030_tier_infrastructure.sql:66:  from_tier       text NOT NULL CHECK (from_tier IN ('free','pro','complete','complete_trial','pro_trial')),
+supabase/migrate_030_tier_infrastructure.sql:67:  to_tier         text NOT NULL CHECK (to_tier IN ('free','pro','complete','complete_trial','pro_trial')),
+supabase/migrate_030_tier_infrastructure.sql:68:  reason          text NOT NULL CHECK (reason IN (
+supabase/migrate_030_tier_infrastructure.sql:101:  id             int PRIMARY KEY DEFAULT 1 CHECK (id = 1),

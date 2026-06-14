@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
   submitText: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
-    color: colors.background,
+    color: colors.onPrimary,
   },
 
   privacy: {

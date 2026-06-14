@@ -153,7 +153,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 onPress={handleCreate}
                 disabled={creating}
               >
-                <Ionicons name="add-circle" size={20} color={colors.background} />
+                <Ionicons name="add-circle" size={20} color={colors.onPrimary} />
                 <Text style={styles.createSaveBtnText}>{buttonLabel}</Text>
               </TouchableOpacity>
             </ScrollView>
@@ -275,5 +275,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
     backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg, marginTop: spacing.sm,
   },
-  createSaveBtnText: { ...type.title, color: colors.background },
+  createSaveBtnText: { ...type.title, color: colors.onPrimary },
 });

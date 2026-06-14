@@ -1,0 +1,638 @@
+/**
+ * MealPlanScreen — the generated meal plan (deep-audit Theme G, surface
+ * G-b). One plan object, progressive disclosure:
+ *
+ *  - Besa first: "Here's your day" — plates with a single calm line each,
+ *    Log this day, Swap on any plate, New meals. Calories lead; macros
+ *    sit behind a tap. No jargon.
+ *  - Eddie one tap deeper: per-meal grams + kcal, the day totals row vs
+ *    target, the day-type chip (training/rest), and the honest residual
+ *    line when a constrained day could not be hit exactly.
+ *
+ * The screen NEVER computes nutrition: it renders what the engine
+ * assembled and persists edits through the service. Pro surface (lives
+ * inside the gated Diary stack). British English, no em dashes.
+ */
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import BackHeader from '../components/BackHeader';
+import BottomSheet from '../components/BottomSheet';
+import Button from '../components/Button';
+import { useToast } from '../components/Toast';
+import { appAlert } from '../components/AppAlert';
+import useAppStore from '../store/useAppStore';
+import { colors, fontSize, fontWeight, spacing, radius, hitSlop } from '../styles/theme';
+import { mealSlotLabel } from '../lib/food/mealSlots';
+import { todayLocalKey } from '../lib/dayKey';
+import {
+  loadActiveMealPlan,
+  generateAndSaveMealPlan,
+  regenerateActiveMealPlan,
+  applyPlanDayToDiary,
+  answerTrainingTodayOnActivePlan,
+  swapMealInPlan,
+  swapFoodInMeal,
+} from '../lib/food/mealPlanService';
+import { updateMealPlan } from '../lib/food/db';
+
+// The week plan is an abstract Day 1..7 (training/rest spread), NOT calendar-
+// anchored, so label the picker by day number rather than implying weekdays.
+const DAY_LABELS = ['1', '2', '3', '4', '5', '6', '7'];
+
+function planSlotLabel(slotKey) {
+  if (slotKey === 'pre_workout') return 'Pre-workout';
+  if (slotKey === 'post_workout') return 'Post-workout';
+  return mealSlotLabel(slotKey);
+}
+
+// Re-total a day from its slots (same rounding as the assembler).
+function sumDayTotals(slots) {
+  return slots.reduce((a, s) => ({
+    kcal: a.kcal + (s.totals?.kcal || 0),
+    protein: Math.round((a.protein + (s.totals?.protein || 0)) * 10) / 10,
+    carbs: Math.round((a.carbs + (s.totals?.carbs || 0)) * 10) / 10,
+    fat: Math.round((a.fat + (s.totals?.fat || 0)) * 10) / 10,
+  }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+}
+
+// One labelled segmented row of preference options (a small radio group).
+function PrefRow({ label, options, value, onSelect, busy }) {
+  return (
+    <View style={styles.prefRow}>
+      <Text style={styles.prefLabel}>{label}</Text>
+      <View style={styles.prefOpts} accessibilityRole="radiogroup">
+        {options.map((opt) => {
+          const selected = opt.value === value;
+          return (
+            <TouchableOpacity
+              key={String(opt.value)}
+              style={[styles.prefOpt, selected && styles.prefOptOn]}
+              onPress={() => !selected && onSelect(opt.value)}
+              disabled={busy || selected}
+              hitSlop={hitSlop}
+              accessibilityRole="radio"
+              accessibilityState={{ selected, disabled: busy }}
+              accessibilityLabel={`${label}: ${opt.label}`}
+            >
+              <Text style={[styles.prefOptText, selected && styles.prefOptTextOn]}>{opt.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+export default function MealPlanScreen({ navigation }) {
+  const user = useAppStore((s) => s.user);
+  const userProfile = useAppStore((s) => s.userProfile);
+  const addMealPlanExcludedFood = useAppStore((s) => s.addMealPlanExcludedFood);
+  const setMealPlanPrefs = useAppStore((s) => s.setMealPlanPrefs);
+  const toast = useToast();
+
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [record, setRecord] = useState(null); // { id, plan }
+  // The schedule is an abstract Day 1..7 (not calendar-anchored), so start
+  // on Day 1 rather than implying "today" maps to a slot it doesn't own.
+  const [dayIndex, setDayIndex] = useState(0);
+  const [expanded, setExpanded] = useState({}); // slotKey -> bool
+  const [prefsOpen, setPrefsOpen] = useState(false);
+  // The meal-swap sheet: a generous, style-diverse list of alternatives for
+  // one slot (rethink §3.3). { slotKey, replacement, alternatives } when open.
+  const [swapSheet, setSwapSheet] = useState(null);
+
+  const load = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      setRecord(await loadActiveMealPlan(user.id));
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const plan = record?.plan || null;
+  const day = plan?.days?.[dayIndex] || null;
+
+  const handleGenerate = useCallback(async () => {
+    if (!user?.id || busy) return;
+    setBusy(true);
+    try {
+      const res = await generateAndSaveMealPlan(user.id, userProfile);
+      if (res.error === 'no_target') {
+        toast.show('Set your nutrition targets first, then your plan builds from them.', { variant: 'info' });
+        return;
+      }
+      await load();
+      toast.show('Your plan is ready.', { variant: 'success' });
+    } catch (_) {
+      toast.show("Couldn't build your plan. Try again.", { variant: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  }, [user?.id, userProfile, busy, load, toast]);
+
+  const handleRegenerate = useCallback(async () => {
+    if (!user?.id || busy) return;
+    setBusy(true);
+    try {
+      await regenerateActiveMealPlan(user.id, userProfile);
+      await load();
+      toast.show('New meals. Your targets are unchanged.', { variant: 'success' });
+    } catch (_) {
+      toast.show("Couldn't refresh the plan. Try again.", { variant: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  }, [user?.id, userProfile, busy, load, toast]);
+
+  const handleLogDay = useCallback(async () => {
+    if (!user?.id || !day || busy) return;
+    setBusy(true);
+    try {
+      const n = await applyPlanDayToDiary(user.id, day, { entryDate: todayLocalKey() });
+      toast.show(n > 0 ? `${n} foods logged to today.` : 'Nothing to log on this day.', { variant: n > 0 ? 'success' : 'info' });
+    } catch (_) {
+      toast.show("Couldn't log the day. Try again.", { variant: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  }, [user?.id, day, busy, toast]);
+
+  // "Training today?" on the day in view (rethink §3.2): the day's
+  // training/rest variant follows the user's answer, never an asserted
+  // weekly spread. Re-variants only this day through the service and
+  // updates state from the returned plan. A no-op answer (already that
+  // variant) and the no-plan case both leave the screen as-is.
+  const handleAnswerTraining = useCallback(async (training) => {
+    if (!user?.id || !record || busy) return;
+    setBusy(true);
+    try {
+      const res = await answerTrainingTodayOnActivePlan(user.id, { dayIndex, training });
+      if (res.error === 'no_plan' || !res.plan) return;
+      setRecord({ ...record, plan: res.plan });
+    } catch (_) {
+      toast.show("Couldn't update the day. Try again.", { variant: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  }, [user?.id, record, dayIndex, busy, toast]);
+
+  // Open the swap sheet for a slot: the engine returns the closest
+  // replacement plus a style-diverse pool of alternatives (rethink §3.3,
+  // founder directive: a generous scrollable list, not a single "next").
+  // The sheet lets the user choose any one; nothing is applied until a tap.
+  const handleSwapMeal = useCallback((slotKey) => {
+    if (!user?.id || !record || !day || busy) return;
+    const res = swapMealInPlan({ day, slotKey, prefs: plan.prefs });
+    if (!res) {
+      toast.show('No good alternative for this one with your preferences.', { variant: 'info' });
+      return;
+    }
+    setSwapSheet({ slotKey, replacement: res.replacement, alternatives: res.alternatives || [] });
+  }, [user?.id, record, plan, day, busy, toast]);
+
+  // Apply a chosen meal (the highlighted replacement or any alternative) to
+  // the slot, persist it, and close the sheet. Same persistence path the
+  // immediate swap used before; the day re-totals around the new plate.
+  const applyMealChoice = useCallback(async (slotKey, meal) => {
+    if (!user?.id || !record || !day || busy) return;
+    setBusy(true);
+    try {
+      const newSlots = day.slots.map((s) => (s.slot === slotKey
+        ? { ...meal, slot: slotKey }
+        : s));
+      const newDay = { ...day, slots: newSlots, totals: sumDayTotals(newSlots) };
+      const days = plan.days.map((d, i) => (i === dayIndex ? newDay : d));
+      const nextPlan = { ...plan, days, lastEditType: 'rotation' };
+      await updateMealPlan(user.id, record.id, nextPlan);
+      setRecord({ ...record, plan: nextPlan });
+      setSwapSheet(null);
+      toast.show(`Swapped for ${meal.name}.`, { variant: 'success' });
+    } catch (_) {
+      toast.show("Couldn't swap that one. Try again.", { variant: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  }, [user?.id, record, plan, day, dayIndex, busy, toast]);
+
+  // Swap one food inside a plate for a same-role alternative at the grams
+  // that hold the role macro (the "don't like the rice" path, R1/R2).
+  const handleSwapFood = useCallback(async (slotKey, foodKey) => {
+    if (!user?.id || !record || !day || busy) return;
+    const slot = day.slots.find((s) => s.slot === slotKey);
+    if (!slot?.components) {
+      toast.show('This meal cannot be part-swapped.', { variant: 'info' });
+      return;
+    }
+    const res = swapFoodInMeal({ components: slot.components, foodKeyOut: foodKey, prefs: plan.prefs });
+    if (!res) {
+      toast.show('No close match for that food with your preferences.', { variant: 'info' });
+      return;
+    }
+    setBusy(true);
+    try {
+      const newSlot = { ...slot, components: res.components, items: res.items, totals: res.totals };
+      const newSlots = day.slots.map((s) => (s.slot === slotKey ? newSlot : s));
+      const newDay = { ...day, slots: newSlots, totals: sumDayTotals(newSlots) };
+      const days = plan.days.map((d, i) => (i === dayIndex ? newDay : d));
+      const nextPlan = { ...plan, days, lastEditType: 'rotation' };
+      await updateMealPlan(user.id, record.id, nextPlan);
+      setRecord({ ...record, plan: nextPlan });
+      const { swap } = res;
+      toast.show(`${swap.gramsIn} g ${swap.foodInName} for ${swap.foodOutName}. Macros held.`, { variant: 'success' });
+    } catch (_) {
+      toast.show("Couldn't swap that food. Try again.", { variant: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  }, [user?.id, record, plan, day, dayIndex, busy, toast]);
+
+  // "Never show me this" (R1): persist the exclusion to the profile, then
+  // swap the food out of the current plan honouring the new exclusion so
+  // it cannot return through the alternative either.
+  const handleFlagFood = useCallback((slotKey, foodKey, foodName) => {
+    if (!user?.id || !record || !day || busy) return;
+    appAlert(
+      'Never show this again?',
+      `${foodName} will be left out of your plans from now on, and swapped out of this one.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Leave it out',
+          onPress: async () => {
+            setBusy(true);
+            try {
+              await addMealPlanExcludedFood(foodKey);
+              const slot = day.slots.find((s) => s.slot === slotKey);
+              const mergedPrefs = {
+                ...plan.prefs,
+                excludeFoodKeys: [...(plan.prefs?.excludeFoodKeys || []), foodKey],
+              };
+              const res = slot?.components
+                ? swapFoodInMeal({ components: slot.components, foodKeyOut: foodKey, prefs: mergedPrefs })
+                : null;
+              if (res) {
+                const newSlot = { ...slot, components: res.components, items: res.items, totals: res.totals };
+                const newSlots = day.slots.map((s) => (s.slot === slotKey ? newSlot : s));
+                const newDay = { ...day, slots: newSlots, totals: sumDayTotals(newSlots) };
+                const days = plan.days.map((d, i) => (i === dayIndex ? newDay : d));
+                const nextPlan = { ...plan, prefs: mergedPrefs, days, lastEditType: 'rotation' };
+                await updateMealPlan(user.id, record.id, nextPlan);
+                setRecord({ ...record, plan: nextPlan });
+              }
+              toast.show(`${foodName} left out from now on.`, { variant: 'success' });
+            } catch (_) {
+              toast.show("Couldn't update. Try again.", { variant: 'error' });
+            } finally {
+              setBusy(false);
+            }
+          },
+        },
+      ],
+    );
+  }, [user?.id, record, plan, day, dayIndex, busy, addMealPlanExcludedFood, toast]);
+
+  // Change a preference, persist it, and rebuild the plan around it so the
+  // change is visible immediately (same targets, new prefs).
+  const handleSetPref = useCallback(async (patch) => {
+    if (!user?.id || busy) return;
+    setBusy(true);
+    try {
+      await setMealPlanPrefs(patch);
+      await regenerateActiveMealPlan(user.id, { ...userProfile, ...patch });
+      await load();
+      toast.show('Plan updated to match.', { variant: 'success' });
+    } catch (_) {
+      toast.show("Couldn't update preferences. Try again.", { variant: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  }, [user?.id, userProfile, busy, setMealPlanPrefs, load, toast]);
+
+  const prefs = plan?.prefs || {};
+  const dayTypeLabel = day?.variant === 'training' ? 'Training day' : 'Rest day';
+  const target = plan?.targetSnapshot;
+  const cycleOn = (plan?.cycleDeltaKcal || 0) > 0;
+
+  const honestyLine = useMemo(() => {
+    if (!day || day.withinTolerance) return null;
+    return 'Close. Your preferences make this day hard to hit exactly; the totals below are honest.';
+  }, [day]);
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <BackHeader title="Meal plan" onBack={() => navigation.goBack()} />
+      {loading ? (
+        <View style={styles.centre}><ActivityIndicator color={colors.primary} /></View>
+      ) : !plan ? (
+        <View style={styles.emptyWrap}>
+          <Ionicons name="restaurant-outline" size={40} color={colors.textSecondary} />
+          <Text style={styles.emptyTitle}>Your plate, sorted.</Text>
+          <Text style={styles.emptyBody}>
+            A day of real food built to your calories and macros. Swap anything you
+            do not fancy. Your targets stay the coach's job.
+          </Text>
+          <Button title="Plan my week" onPress={handleGenerate} loading={busy} fullWidth />
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.scroll}>
+          {/* Day picker */}
+          <View style={styles.dayRow} accessibilityRole="tablist">
+            {plan.schedule.map((variant, i) => {
+              const selected = i === dayIndex;
+              return (
+                <TouchableOpacity
+                  key={`${variant}-${i}`}
+                  style={[styles.dayBtn, selected && styles.dayBtnOn]}
+                  onPress={() => setDayIndex(i)}
+                  hitSlop={hitSlop}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={`Day ${i + 1}, ${variant === 'training' ? 'training day' : 'rest day'}`}
+                >
+                  <Text style={[styles.dayLetter, selected && styles.dayLetterOn]}>{DAY_LABELS[i]}</Text>
+                  <View style={[styles.dayDot, variant === 'training' && styles.dayDotTrain]} />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Day header: type chip + totals */}
+          <View style={styles.dayHeader}>
+            <View style={styles.typeChip}>
+              <Text style={styles.typeChipText}>{dayTypeLabel}</Text>
+            </View>
+            {day ? (
+              <Text style={styles.dayKcal}>
+                {day.totals.kcal} kcal
+                {target ? <Text style={styles.dayKcalTarget}>{`  of ${day.target?.kcal || target.targetKcal}`}</Text> : null}
+              </Text>
+            ) : null}
+          </View>
+          {/* Training today? — per-day input (rethink §3.2). Defaults from
+              the plan's current variant for this day; always overridable.
+              Changing it re-variants only this day. */}
+          <PrefRow
+            label="Training today?"
+            options={[
+              { value: true, label: 'Training' },
+              { value: false, label: 'Rest' },
+            ]}
+            value={day?.variant === 'training'}
+            onSelect={(v) => handleAnswerTraining(v)}
+            busy={busy}
+          />
+          {cycleOn ? (
+            <Text style={styles.cycleNote}>
+              Training days carry more carbs; rest days fewer. Protein never moves.
+            </Text>
+          ) : null}
+          {honestyLine ? <Text style={styles.honesty}>{honestyLine}</Text> : null}
+
+          {/* Plates */}
+          {(day?.slots || []).map((slot) => {
+            const open = !!expanded[slot.slot];
+            return (
+              <View key={slot.slot} style={styles.mealCard}>
+                <TouchableOpacity
+                  onPress={() => setExpanded((e) => ({ ...e, [slot.slot]: !open }))}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: open }}
+                  accessibilityLabel={`${planSlotLabel(slot.slot)}: ${slot.name}, ${slot.totals.kcal} calories. Tap for details.`}
+                >
+                  <View style={styles.mealHead}>
+                    <Text style={styles.mealSlot}>{planSlotLabel(slot.slot)}</Text>
+                    <Text style={styles.mealKcal}>{slot.totals.kcal} kcal</Text>
+                  </View>
+                  <Text style={styles.mealName}>{slot.name}</Text>
+                </TouchableOpacity>
+                {open ? (
+                  <View style={styles.mealDetail}>
+                    {(slot.items || []).map((it, i) => {
+                      const foodKey = (it.foodRef || '').startsWith('curated:') ? it.foodRef.slice(8) : null;
+                      const canSwap = !!foodKey && !!slot.components;
+                      return (
+                        <TouchableOpacity
+                          key={`${it.foodRef}-${i}`}
+                          style={styles.itemRow}
+                          disabled={!canSwap || busy}
+                          onPress={() => handleSwapFood(slot.slot, foodKey)}
+                          onLongPress={() => canSwap && handleFlagFood(slot.slot, foodKey, it.name)}
+                          hitSlop={hitSlop}
+                          accessibilityRole={canSwap ? 'button' : 'text'}
+                          accessibilityLabel={canSwap ? `${it.quantityG} grams ${it.name}. Tap to swap, long press to leave it out for good.` : `${it.quantityG} grams ${it.name}`}
+                        >
+                          <Text style={styles.itemLine}>{`${it.quantityG} g ${it.name}`}</Text>
+                          {canSwap ? <Ionicons name="swap-horizontal-outline" size={13} color={colors.textSecondary} /> : null}
+                        </TouchableOpacity>
+                      );
+                    })}
+                    <Text style={styles.macroLine}>
+                      {`P ${slot.totals.protein} g · C ${slot.totals.carbs} g · F ${slot.totals.fat} g`}
+                    </Text>
+                  </View>
+                ) : null}
+                <TouchableOpacity
+                  style={styles.swapBtn}
+                  onPress={() => handleSwapMeal(slot.slot)}
+                  disabled={busy}
+                  hitSlop={hitSlop}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Swap ${slot.name} for something else`}
+                >
+                  <Ionicons name="swap-horizontal" size={14} color={colors.primary} />
+                  <Text style={styles.swapText}>Swap</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+
+          {/* Day totals (Eddie's row) */}
+          {day ? (
+            <View style={styles.totalsRow}>
+              <Text style={styles.totalsLabel}>Day</Text>
+              <Text style={styles.totalsText}>
+                {`${day.totals.kcal} kcal · P ${day.totals.protein} · C ${day.totals.carbs} · F ${day.totals.fat}`}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Preferences (Eddie's controls; Besa never needs to open it) */}
+          <TouchableOpacity
+            style={styles.prefsToggle}
+            onPress={() => setPrefsOpen((o) => !o)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: prefsOpen }}
+            accessibilityLabel="Plan preferences"
+          >
+            <Ionicons name="options-outline" size={16} color={colors.textSecondary} />
+            <Text style={styles.prefsToggleText}>Preferences</Text>
+            <Ionicons name={prefsOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+          {prefsOpen ? (
+            <View style={styles.prefsPanel}>
+              <PrefRow
+                label="Meals a day"
+                options={[3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))}
+                value={prefs.mealsPerDay ?? 4}
+                onSelect={(v) => handleSetPref({ mealPlanMealsPerDay: v })}
+                busy={busy}
+              />
+              <PrefRow
+                label="Variety"
+                options={[
+                  { value: 0, label: 'Repeat' },
+                  { value: 0.5, label: 'Mixed' },
+                  { value: 1, label: 'Varied' },
+                ]}
+                value={prefs.variety ?? 0.5}
+                onSelect={(v) => handleSetPref({ mealPlanVariety: v })}
+                busy={busy}
+              />
+              <PrefRow
+                label="Rest-day fat"
+                options={[
+                  { value: 'equalised', label: 'Even' },
+                  { value: 'higher_rest_day', label: 'Higher' },
+                ]}
+                value={prefs.fatConvention ?? 'equalised'}
+                onSelect={(v) => handleSetPref({ mealPlanFatConvention: v })}
+                busy={busy}
+              />
+              <PrefRow
+                label="Workout meals"
+                options={[
+                  { value: false, label: 'Off' },
+                  { value: true, label: 'Pre / post' },
+                ]}
+                value={!!prefs.periWorkoutSlots}
+                onSelect={(v) => handleSetPref({ mealPlanPeriWorkout: v })}
+                busy={busy}
+              />
+            </View>
+          ) : null}
+
+          <Button title="Log this day" onPress={handleLogDay} loading={busy} fullWidth />
+          <Button title="New meals" variant="secondary" onPress={handleRegenerate} disabled={busy} fullWidth />
+          <Text style={styles.footNote}>
+            Built from your targets. Every plate can be swapped; the day stays on target.
+          </Text>
+        </ScrollView>
+      )}
+
+      {/* Meal-swap sheet: the closest replacement first and highlighted, then
+          the generous style-diverse pool, all in a scrollable list. Tapping a
+          row applies that plate to the slot (rethink §3.3). */}
+      <BottomSheet
+        visible={!!swapSheet}
+        onClose={() => setSwapSheet(null)}
+        accessibilityLabel="Swap this meal"
+      >
+        {swapSheet ? (
+          <>
+            <Text style={styles.swapSheetTitle}>Swap this meal</Text>
+            <Text style={styles.swapSheetSub}>
+              Pick any one. Each keeps the day on target; the first is the closest match.
+            </Text>
+            <ScrollView
+              style={styles.swapList}
+              contentContainerStyle={styles.swapListContent}
+              showsVerticalScrollIndicator
+            >
+              {[
+                { meal: swapSheet.replacement, recommended: true },
+                ...swapSheet.alternatives.map((meal) => ({ meal, recommended: false })),
+              ].map(({ meal, recommended }) => (
+                <TouchableOpacity
+                  key={meal.mealId}
+                  style={[styles.swapOption, recommended && styles.swapOptionOn]}
+                  onPress={() => applyMealChoice(swapSheet.slotKey, meal)}
+                  disabled={busy}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${meal.name}, ${meal.totals.kcal} calories, ${meal.totals.protein} grams protein${recommended ? '. Closest match.' : ''}`}
+                >
+                  <View style={styles.swapOptionMain}>
+                    <Text style={styles.swapOptionName}>{meal.name}</Text>
+                    {recommended ? <Text style={styles.swapOptionTag}>Closest match</Text> : null}
+                  </View>
+                  <Text style={styles.swapOptionMacros}>
+                    {`${meal.totals.kcal} kcal · P ${meal.totals.protein} g`}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </>
+        ) : null}
+      </BottomSheet>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
+  centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, gap: spacing.md },
+  emptyTitle: { color: colors.textPrimary, fontSize: fontSize.xl, fontWeight: fontWeight.bold, textAlign: 'center' },
+  emptyBody: { color: colors.textSecondary, fontSize: fontSize.md, textAlign: 'center', lineHeight: 21, marginBottom: spacing.md },
+  scroll: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
+  dayRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  dayBtn: { alignItems: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.md, minWidth: 36 },
+  dayBtnOn: { backgroundColor: colors.surface },
+  dayLetter: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  dayLetterOn: { color: colors.textPrimary },
+  dayDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.border, marginTop: 3 },
+  dayDotTrain: { backgroundColor: colors.primary },
+  dayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  typeChip: { backgroundColor: colors.surface, borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: 4, borderWidth: 1, borderColor: colors.border },
+  typeChipText: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
+  dayKcal: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold, fontVariant: ['tabular-nums'] },
+  dayKcalTarget: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.regular },
+  cycleNote: { color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 19 },
+  honesty: { color: colors.textSecondary, fontSize: fontSize.sm, fontStyle: 'italic', lineHeight: 19 },
+  mealCard: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, gap: spacing.xs },
+  mealHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  mealSlot: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0.4 },
+  mealKcal: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
+  mealName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  mealDetail: { gap: 2, paddingTop: spacing.xs },
+  itemRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 28, gap: spacing.sm },
+  itemLine: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'], flex: 1 },
+  macroLine: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.xs, fontVariant: ['tabular-nums'] },
+  swapBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingVertical: spacing.sm, minHeight: 44 },
+  swapText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  totalsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.xs },
+  totalsLabel: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  totalsText: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
+  footNote: { color: colors.textSecondary, fontSize: fontSize.xs, textAlign: 'center', lineHeight: 17 },
+  prefsToggle: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, minHeight: 44 },
+  prefsToggleText: { flex: 1, color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  prefsPanel: { gap: spacing.md, paddingBottom: spacing.sm },
+  prefRow: { gap: spacing.xs },
+  prefLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0.4 },
+  prefOpts: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  prefOpt: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, minHeight: 40, justifyContent: 'center' },
+  prefOptOn: { borderColor: colors.primary, backgroundColor: colors.surface2 },
+  prefOptText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  prefOptTextOn: { color: colors.primary },
+  swapSheetTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
+  swapSheetSub: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: -spacing.xs, lineHeight: 19 },
+  swapList: { maxHeight: 360 },
+  swapListContent: { gap: spacing.sm, paddingVertical: spacing.xs },
+  swapOption: {
+    backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.md, gap: spacing.xs, minHeight: 56, justifyContent: 'center',
+  },
+  swapOptionOn: { borderColor: colors.primary },
+  swapOptionMain: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  swapOptionName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold, flex: 1 },
+  swapOptionTag: { color: colors.primary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
+  swapOptionMacros: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
+});

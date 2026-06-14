@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import { SkeletonCard } from '../components/Skeleton';
+import Button from '../components/Button';
 import PressableCard from '../components/PressableCard';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import PeekMenu from '../components/PeekMenu';
@@ -444,7 +445,7 @@ export default function PlansScreen({ navigation }) {
                 {blockAdvice.action === 'post_recovery' && (
                   <View style={styles.blockCardActions}>
                     <TouchableOpacity style={styles.blockRestartBtn} onPress={handleRestartPlan} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel={blockAdvice.nextBlock.actionLabel}>
-                      <Ionicons name="refresh-outline" size={15} color={colors.background} />
+                      <Ionicons name="refresh-outline" size={15} color={colors.onPrimary} />
                       <Text style={styles.blockRestartBtnText}>{blockAdvice.nextBlock.actionLabel}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -538,7 +539,7 @@ export default function PlansScreen({ navigation }) {
                   accessibilityRole="button"
                   accessibilityLabel="Start next workout"
                 >
-                  <Ionicons name="play" size={15} color={colors.background} />
+                  <Ionicons name="play" size={15} color={colors.onPrimary} />
                   <Text style={styles.startNextBtnText}>Start Next Workout</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -550,6 +551,35 @@ export default function PlansScreen({ navigation }) {
                   <Text style={styles.viewPlanBtnText}>View Plan</Text>
                 </TouchableOpacity>
               </View>
+            </View>
+          </View>
+        ) : tier !== 'pro' ? (
+          /* B2: the free no-plan state is a proper card, sitting where the
+             active plan card would be, so a new user never scrolls past
+             empty sections looking for a way in. Quiz first, library second. */
+          <View style={styles.noPlanCard}>
+            <View style={styles.noPlanCardHeader}>
+              <View style={styles.noPlanCardIcon}>
+                <Ionicons name="compass-outline" size={20} color={colors.primary} />
+              </View>
+              <Text style={styles.noPlanCardTitle}>No active plan yet</Text>
+            </View>
+            <Text style={styles.noPlanCardBody}>
+              Answer three quick questions and we'll set you up with a starter plan,
+              or browse the library and pick your own.
+            </Text>
+            <View style={styles.noPlanCardActions}>
+              <Button
+                title="Find my plan"
+                onPress={() => navigation.navigate('FreeStarter')}
+                accessibilityLabel="Answer three quick questions to find your plan"
+              />
+              <Button
+                title="Browse the library"
+                variant="secondary"
+                onPress={() => navigation.navigate('PlanLibrary')}
+                accessibilityLabel="Browse the plan library"
+              />
             </View>
           </View>
         ) : (
@@ -705,7 +735,7 @@ export default function PlansScreen({ navigation }) {
                     accessibilityRole="button"
                     accessibilityLabel={`Start ${routine.name}`}
                   >
-                    <Ionicons name="play" size={13} color={colors.background} />
+                    <Ionicons name="play" size={13} color={colors.onPrimary} />
                     <Text style={styles.startTemplateBtnText}>Start</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -821,6 +851,21 @@ const styles = StyleSheet.create({
   },
   noActivePlanText: { flex: 1, fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 20 },
 
+  // B2: free no-plan card. The on-ramp sits where the active plan would be.
+  noPlanCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251), gap: spacing.md,
+  },
+  noPlanCardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  noPlanCardIcon: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
+  },
+  noPlanCardTitle: { flex: 1, ...type.bodyStrong, color: colors.textPrimary },
+  noPlanCardBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  noPlanCardActions: { gap: spacing.sm },
+
   activePlanCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251), gap: spacing.md,
@@ -840,7 +885,7 @@ const styles = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md,
   },
-  startNextBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.background },
+  startNextBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
   viewPlanBtn: {
     paddingHorizontal: spacing.lg, borderRadius: radius.md, paddingVertical: spacing.md,
     backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
@@ -887,7 +932,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     backgroundColor: colors.primary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
-  startTemplateBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.background },
+  startTemplateBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
 
   actionCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
@@ -995,7 +1040,7 @@ const styles = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md,
   },
-  blockRestartBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.background },
+  blockRestartBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
   blockNewBtn: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.surface2, borderRadius: radius.md, paddingVertical: spacing.md,

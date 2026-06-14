@@ -11,6 +11,7 @@ import AnimatedEntrance from '../components/AnimatedEntrance';
 import PressableCard from '../components/PressableCard';
 import PeekMenu from '../components/PeekMenu';
 import InfoTooltip from '../components/InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
 import { buildLiftProgressRows } from '../lib/liftProgress';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
@@ -277,6 +278,8 @@ export default function LiftProgressScreen({ navigation }) {
                 <View style={styles.statRow}>
                   <Text style={styles.statValue}>{item.bestE1rm}{units}</Text>
                   <Text style={styles.statLabel}>est. max</Text>
+                  {/* U-D-3: plain-English gloss for estimated 1RM on the row. */}
+                  <InfoTooltip text={GLOSSARY.estMax} size={11} />
                   {item.deltaPct != null && item.sessions > 1 && (
                     <Text style={[styles.delta, { color: trendColor(item.deltaPct) }]}>
                       {item.deltaPct > 0 ? '+' : ''}{item.deltaPct}%
@@ -285,7 +288,14 @@ export default function LiftProgressScreen({ navigation }) {
                 </View>
               </View>
               <View style={styles.cardRight}>
-                <Sparkline data={item.trend} width={84} height={34} color={trendColor(item.deltaPct)} />
+                {/* U-D-4: with only 1–2 points a sparkline reads as a near-flat
+                    line; show an encouragement "building" hint instead until a
+                    real trend exists (3+ points). */}
+                {(item.trend?.length ?? 0) > 2 ? (
+                  <Sparkline data={item.trend} width={84} height={34} color={trendColor(item.deltaPct)} />
+                ) : (
+                  <Text style={styles.trendBuilding}>Building</Text>
+                )}
                 <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
               </View>
             </PressableCard>
@@ -297,12 +307,12 @@ export default function LiftProgressScreen({ navigation }) {
             <View style={styles.empty}>
               <Ionicons name="barbell-outline" size={56} color={colors.textMuted} />
               <Text style={styles.emptyTitle}>
-                {filter === 'best' ? 'No recent bests' : 'No lifts logged yet'}
+                {filter === 'best' ? 'Your bests will show here' : 'Your lifts start here'}
               </Text>
               <Text style={styles.emptyText}>
                 {filter === 'best'
-                  ? 'A lift shows here when your latest session beats your best estimated max.'
-                  : "Log a few sessions and each lift's trend shows up here."}
+                  ? "When a session beats your best estimated max, that lift appears here. Keep training and they'll come."
+                  : "Log a few sessions and each lift's trend builds up here."}
               </Text>
             </View>
           ) : null
@@ -415,6 +425,7 @@ const styles = StyleSheet.create({
   statLabel: { ...type.caption, color: colors.textMuted },
   delta: { ...type.num('label'), marginLeft: spacing.xs },
   cardRight: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  trendBuilding: { width: 84, textAlign: 'center', fontSize: fontSize.xs, color: colors.textMuted },
   empty: { alignItems: 'center', paddingHorizontal: spacing.xxl, paddingTop: spacing.xxxl, gap: spacing.md },
   emptyTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
   emptyText: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },

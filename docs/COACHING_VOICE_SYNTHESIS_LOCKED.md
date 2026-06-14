@@ -717,3 +717,75 @@ Once this synthesis is locked:
 This document is the source of truth for the voice. Disagreements
 between this doc and any other doc are resolved in favour of this
 one.
+
+## Addendum 2026-06-12: persona-adaptive register + opt-in science layer (founder decision #2)
+
+Authorised by founder decision #2 ("approve both") in
+`docs/deep-audit-2026-06-12/_FOUNDER-DECISIONS-2026-06-12.md`, which
+authorises the Theme C build in
+`docs/deep-audit-2026-06-12/_SYNTHESIS-AND-ROADMAP.md` (Wave-2 C1+C2).
+Evidence: int-02 F2 (register not wired to persona), F3 (jargon leaks
+on diagnostic surfaces), F6 (explanation-depth bimodality); ext-02
+ranked idea #3 (tone preference, Apple Fitness+ / Freeletics
+precedent); ext-05 (SDT: beginners experience jargon as competence
+threat, experienced users as competence support).
+
+This addendum LAYERS on the locked rules above. Nothing above is
+replaced. In particular:
+
+- The honesty test (Section 1), all fifteen phrasing patterns
+  (Section 3), the failure-mode catalogue (Section 6), and the
+  2026-06-03 founder naming override stand unchanged in every
+  register.
+- The engine and its decisions are untouched. Both registers render
+  the SAME facts and the SAME decision from the same deterministic
+  output. Only the prose shape differs.
+
+### Two presentation registers (a rendering layer, not new voices)
+
+1. **Supportive** (default, beginner-safe). Warmer connective prose,
+   plainer terms, slightly fuller sentences. Encouragement remains
+   data-referenced only; no motivational filler enters via this
+   register.
+2. **Precise**. Denser, figure-led, terser. Labels and numbers lead
+   ("Sessions: 4 of 4."); connective prose drops away. No new jargon
+   enters via this register; the blocklist applies as before.
+
+Selection: an explicit user preference (Coaching tone: Supportive /
+Precise / Automatic, default Automatic) always wins. Automatic keys
+off the experience signals already in the profile (`experienceLevel`,
+`trainingAgeYears`) and defaults beginner-safe (supportive) whenever
+the signal is missing or ambiguous.
+
+Safety carve-out: Stage 3 safety-cold copy is register-blind. Safety
+holds, ED-pattern lockout copy, and every suppression branch (open
+flag or calm mode) render IDENTICALLY whatever the register or
+preference. The register layer may never terse-ify or warm up safety
+output.
+
+### Opt-in science layer
+
+A separate, explicit preference (Show the science: Off by default).
+When ON, coach output and the methodology surfaces may show the
+technical term in brackets after the plain term ("weekly target range
+(MEV to MRV)") and the methodology surfaces may carry citation lines
+naming verified sources. When OFF, nothing changes from the rules
+above.
+
+The jargon blocklist relaxes ONLY on these explicit opt-in surfaces,
+and only in the bracketed-after-plain-term form: the plain term always
+leads, the technical term never appears alone. The science-OFF check
+(`checkJargon`) is not weakened; science-ON output is validated by a
+parallel allowance path that still requires all copy OUTSIDE brackets
+to pass the full blocklist. Em and en dashes stay banned everywhere,
+so ranges read "MEV to MRV", never "MEV–MRV". Safety copy never
+carries the science layer.
+
+### Tap-to-explain on diagnostic surfaces (C2)
+
+Where a beginner-facing surface still carries a term of art ("training
+block", "tonnage", "refeed day"), the plain term leads on the surface
+and a one-line plain explanation is available on tap (the existing
+InfoTooltip pattern), which may name the technical term ("we call this
+a mesocycle"). This is progressive disclosure, not a blocklist
+exemption: the surface copy itself stays plain.

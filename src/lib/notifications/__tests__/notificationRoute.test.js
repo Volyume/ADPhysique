@@ -31,6 +31,57 @@ describe('routeForNotificationType', () => {
     });
   });
 
+  test('trial_day3 S1/S2 land on the check-in gate screen', () => {
+    expect(routeForNotificationType('trial_day3', { variant: 'S1' })).toEqual({
+      tab: 'ProfileTab', screen: 'WeeklyCheckIn',
+    });
+    expect(routeForNotificationType('trial_day3', { variant: 'S2' })).toEqual({
+      tab: 'ProfileTab', screen: 'WeeklyCheckIn',
+    });
+  });
+
+  test('trial_day3 S3 (no sessions yet) lands on Home for re-onboarding', () => {
+    expect(routeForNotificationType('trial_day3', { variant: 'S3' })).toEqual({
+      tab: 'HomeTab',
+    });
+  });
+
+  test('trial_day3 with no variant data defaults to the check-in gate (not a dead-end)', () => {
+    expect(routeForNotificationType('trial_day3')).toEqual({
+      tab: 'ProfileTab', screen: 'WeeklyCheckIn',
+    });
+  });
+
+  test('winback opens the Subscription screen in the You tab (COMP-025-A/B)', () => {
+    expect(routeForNotificationType('winback')).toEqual({
+      // COMP-025-B: fromWinback carries through so the resubscribe prefers the
+      // win-back Play offer (inert when none is configured).
+      tab: 'ProfileTab', screen: 'Subscription', params: { fromWinback: true },
+    });
+  });
+
+  test('NEW-002: a partner cheer lands on the Progress consistency screen', () => {
+    expect(routeForNotificationType('partner_cheer')).toEqual({
+      tab: 'ProgressTab', screen: 'Consistency',
+    });
+  });
+
+  test('OPP-C03: the same-evening missed check-in nudge opens the check-in wizard', () => {
+    expect(routeForNotificationType('checkin_missed', { slot: 'evening' })).toEqual({
+      tab: 'ProfileTab', screen: 'WeeklyCheckIn',
+    });
+    // No slot data behaves like the evening nudge (not a dead-end).
+    expect(routeForNotificationType('checkin_missed')).toEqual({
+      tab: 'ProfileTab', screen: 'WeeklyCheckIn',
+    });
+  });
+
+  test('OPP-C03: the +48h value follow-up lands on the Progress trend view', () => {
+    expect(routeForNotificationType('checkin_missed', { slot: 'followup' })).toEqual({
+      tab: 'ProgressTab', screen: 'Analytics',
+    });
+  });
+
   test('an unknown or no-op type returns null (no navigation)', () => {
     expect(routeForNotificationType('morning_weight')).toBeNull();
     expect(routeForNotificationType('unknown')).toBeNull();

@@ -2,7 +2,7 @@ import * as SQLite from 'expo-sqlite';
 import { generateInsights } from './insightsEngine';
 import { calculate1RM, allocateExerciseVolume } from './algorithms';
 import { logError, logWarn } from './errorLog';
-import { localDayKey } from './dayKey';
+import { localDayKey, localWeekStartMs } from './dayKey';
 
 let _db = null;
 let _initPromise = null;
@@ -42,6 +42,18 @@ function rowToCamel(row) {
     }
   }
   return result;
+}
+
+// COMP-009: close the SQLite handle and reset init state so the file can be
+// safely overwritten (snapshot restore) and reopened on the next db() call /
+// app relaunch. Restoring a snapshot over a live, open handle risks corruption,
+// so the restore flow closes first. Best-effort: a close error still clears the
+// in-memory handle.
+export async function closeDatabase() {
+  const handle = _db;
+  _db = null;
+  _initPromise = null;
+  try { await handle?.closeAsync?.(); } catch (_) { /* tolerate */ }
 }
 
 export function initDatabase() {
@@ -1244,6 +1256,86 @@ const SCHEMA_MIGRATIONS = [
     `ALTER TABLE exercises ADD COLUMN cue TEXT`,
     `ALTER TABLE exercises ADD COLUMN equipment_profiles TEXT`,
   ],
+  // food_slot_recents: client-only memory of what's been logged to each meal
+  // slot (COMP-002 "Add again" tab). One row per (user, slot, food) holding
+  // how often and how much, so the picker's first tab shows this slot's
+  // staples with the last-used portion pre-filled. Written on every food log,
+  // never synced: derived/disposable data that rebuilds as the user logs, so
+  // it sits outside the food_sync_pull/push cycle like food_frequents.
+  [
+    `CREATE TABLE IF NOT EXISTS food_slot_recents (
+      user_id         TEXT NOT NULL,
+      meal_slot       TEXT NOT NULL,
+      food_ref        TEXT NOT NULL,
+      log_count       INTEGER NOT NULL DEFAULT 1,
+      last_logged_at  INTEGER NOT NULL,
+      last_quantity_g REAL NOT NULL,
+      PRIMARY KEY (user_id, meal_slot, food_ref)
+    )`,
+  ],
+  // COMP-008 survey diet: pre-workout readiness capture. sleep_quality and
+  // energy_score are captured on the pre-workout intent prompt and written to
+  // the workout row at createWorkout time (soreness_24h_before already exists,
+  // line 95, and is reused — no re-add). Both nullable: a Skip-started or
+  // pre-COMP-008 session simply leaves them NULL, which every reader already
+  // tolerates. Mirrors supabase/migrate_072_workouts_readiness_columns.sql;
+  // additive + nullable, so the frozen old AAB that never writes them is
+  // unaffected. Duplicate-column is tolerated by isBenignMigrationError.
+  [
+    'ALTER TABLE workouts ADD COLUMN sleep_quality INTEGER',
+    'ALTER TABLE workouts ADD COLUMN energy_score INTEGER',
+  ],
+  // NEW-002 training partners: the local mirror the partner row reads (offline-
+  // first — components never query Supabase). The pair-scoped sync handler
+  // (src/lib/sync/tables/partners.js) populates these from cloud migration 081.
+  // partner_blocks is a server-only write surface, not mirrored locally.
+  [
+    `CREATE TABLE IF NOT EXISTS partnerships (
+      id             TEXT PRIMARY KEY NOT NULL,
+      member_a       TEXT,
+      member_b       TEXT,
+      status         TEXT NOT NULL DEFAULT 'invited',
+      streak_enabled INTEGER NOT NULL DEFAULT 1,
+      created_at     INTEGER,
+      accepted_at    INTEGER,
+      ended_at       INTEGER,
+      updated_at     INTEGER NOT NULL DEFAULT 0
+    )`,
+    `CREATE TABLE IF NOT EXISTS partner_week_signals (
+      pair_id       TEXT NOT NULL,
+      user_id       TEXT NOT NULL,
+      week_start    TEXT NOT NULL,
+      planned_count INTEGER NOT NULL DEFAULT 0,
+      done_count    INTEGER NOT NULL DEFAULT 0,
+      week_met      INTEGER NOT NULL DEFAULT 0,
+      state         TEXT NOT NULL DEFAULT 'training',
+      updated_at    INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (pair_id, user_id, week_start)
+    )`,
+    `CREATE TABLE IF NOT EXISTS partner_cheers (
+      id         TEXT PRIMARY KEY NOT NULL,
+      pair_id    TEXT NOT NULL,
+      sender_id  TEXT NOT NULL,
+      sent_on    TEXT NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT 0
+    )`,
+  ],
+  // Generated meal plan (deep-audit Theme G). One active plan per user,
+  // stored as JSON like saved_meals: the assembled day/week, the prefs and
+  // engine-target snapshot it was built from (so coach edits + swaps can
+  // re-solve), and the seed. Soft-deleted for sync parity.
+  [
+    `CREATE TABLE IF NOT EXISTS meal_plans (
+      id          TEXT PRIMARY KEY NOT NULL,
+      user_id     TEXT NOT NULL,
+      plan_json   TEXT NOT NULL,
+      is_active   INTEGER NOT NULL DEFAULT 1,
+      deleted_at  INTEGER,
+      created_at  INTEGER NOT NULL,
+      updated_at  INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_meal_plans_user_active ON meal_plans(user_id) WHERE deleted_at IS NULL AND is_active = 1',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -1263,6 +1355,26 @@ export async function runMigrations(d) {
     const row = await d.getFirstAsync('PRAGMA user_version');
     current = row?.user_version ?? 0;
   } catch (_) { current = 0; }
+
+  // COMP-009: take a byte-for-byte snapshot once, only when migrations are
+  // actually pending, BEFORE the first op runs — so a failed migration is
+  // recoverable from Settings. Pending-only because _doInit runs on every cold
+  // start and snapshotting an unchanged DB each launch would copy a multi-MB
+  // file for nothing. Fully best-effort: a snapshot (or checkpoint) failure
+  // must NEVER block the migration, or a full disk could brick an update.
+  if (current < SCHEMA_MIGRATIONS.length) {
+    try {
+      // Flush WAL so the copied file is a complete, consistent database.
+      await d.execAsync('PRAGMA wal_checkpoint(FULL);');
+    } catch (_) { /* checkpoint best-effort */ }
+    try {
+      // Lazy require keeps expo-file-system out of database.js's module graph
+      // (and out of every test that imports the database module).
+      // eslint-disable-next-line global-require
+      const { snapshotBeforeMigration } = require('./dbSnapshot');
+      await snapshotBeforeMigration(current, SCHEMA_MIGRATIONS.length);
+    } catch (_) { /* snapshot best-effort */ }
+  }
 
   for (let v = current; v < SCHEMA_MIGRATIONS.length; v++) {
     for (const op of SCHEMA_MIGRATIONS[v]) {
@@ -1489,7 +1601,16 @@ function _trackEvent(userId, event, payload) {
   } catch (_) { /* tolerate test env without telemetry */ }
 }
 
-export async function createWorkout(userId, routineId = null, { intent = null } = {}) {
+export async function createWorkout(
+  userId,
+  routineId = null,
+  // COMP-008: the pre-workout intent prompt now also captures the three
+  // walked-in-with readiness facts. soreness24hBefore is on the existing 1-3
+  // scale (Fresh/Mild/Sore) the adaptive engine + computeRecoveryEMAs read;
+  // sleepQuality/energyScore are on the 1-5 domain (the prompt offers 2/3/4).
+  // All three are optional: a Skip start passes none and they stay NULL.
+  { intent = null, soreness24hBefore = null, sleepQuality = null, energyScore = null } = {},
+) {
   const d = await db();
   // Auto-link to the active mesocycle so tonnage + recovery data flows into the block dashboard
   const activeMeso = await d.getFirstAsync(
@@ -1509,14 +1630,14 @@ export async function createWorkout(userId, routineId = null, { intent = null } 
   const id = uid();
   const now = Date.now();
   await d.runAsync(
-    `INSERT INTO workouts (id, user_id, routine_id, mesocycle_id, mesocycle_week_id, started_at, is_completed, pre_workout_intent, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
-    [id, userId, routineId, mesocycleId, mesocycleWeekId, now, intent, now, now],
+    `INSERT INTO workouts (id, user_id, routine_id, mesocycle_id, mesocycle_week_id, started_at, is_completed, pre_workout_intent, soreness_24h_before, sleep_quality, energy_score, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)`,
+    [id, userId, routineId, mesocycleId, mesocycleWeekId, now, intent, soreness24hBefore, sleepQuality, energyScore, now, now],
   );
   // LB-8: a session was started. from_routine distinguishes plan-driven
   // starts from free/empty sessions; no training content in the payload.
   _trackEvent(userId, 'workout_started', { from_routine: !!routineId });
-  return { id, userId, routineId, mesocycleId, mesocycleWeekId, startedAt: now, isCompleted: 0, preWorkoutIntent: intent, createdAt: now, updatedAt: now };
+  return { id, userId, routineId, mesocycleId, mesocycleWeekId, startedAt: now, isCompleted: 0, preWorkoutIntent: intent, soreness24hBefore, sleepQuality, energyScore, createdAt: now, updatedAt: now };
 }
 
 export async function updateWorkout(id, data) {
@@ -1563,6 +1684,29 @@ export async function deleteIncompleteWorkout(workoutId) {
   const d = await db();
   await d.runAsync('DELETE FROM workout_sets WHERE workout_id = ?', [workoutId]);
   await d.runAsync('DELETE FROM workouts WHERE id = ? AND is_completed = 0', [workoutId]);
+}
+
+// Hard-delete ANY workout and its sets (founder request 2026-06-12: remove a
+// half-logged session, or start fresh, from Workout History). Local rows go
+// immediately; every derived surface (streaks, weekly volume, PRs, lift
+// progress) recomputes from local rows, so they self-heal on next view. The
+// streak high-water deliberately never shrinks (retro-shrink guard) and
+// already-seen milestones stay seen, both by design.
+//
+// The CLOUD copy is removed by sync.deleteWorkoutFromCloud (the caller pairs
+// the two; on failure it enqueues a 'workout_delete' op) so a restore pull
+// cannot resurrect the session. Scoped to the owning user as a guard against
+// a stale id crossing accounts on a shared device.
+export async function deleteWorkoutAndSets(userId, workoutId) {
+  if (!userId || !workoutId) return false;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT id FROM workouts WHERE id = ? AND user_id = ?', [workoutId, userId],
+  );
+  if (!row) return false;
+  await d.runAsync('DELETE FROM workout_sets WHERE workout_id = ?', [workoutId]);
+  await d.runAsync('DELETE FROM workouts WHERE id = ?', [workoutId]);
+  return true;
 }
 
 // ─── Workout Sets ──────────────────────────────────────────────────────────────────────────────────────
@@ -3400,6 +3544,9 @@ export const WIPE_DIRECT_TABLES = [
   'recipes', 'recipe_ingredients',
   'daily_water', 'food_favourites', 'daily_intake_rollups',
   'food_frequents',
+  // Generated meal plan (deep-audit Theme G): carries user_id + a calorie-
+  // target snapshot (health data) — must never survive sign-out/delete.
+  'meal_plans',
   // Activity store (cardio/steps audit). Carries user_id locally; wipe so
   // the next account on a shared device never inherits a step history.
   'daily_steps',
@@ -3502,6 +3649,17 @@ export async function wipeAllUserData(userId) {
       logError('database.wipeAllUserData.exercises', e, { userId });
     }
     _invalidateExercisesCache();
+
+    // 7. NEW-002 partner mirror. Local SQLite is single-user, so a flat wipe of
+    //    all partner rows is correct on sign-out (partnerships/cheers aren't
+    //    user_id-keyed). The cloud copy is intact; it re-pulls on next sign-in.
+    try {
+      await d.runAsync('DELETE FROM partner_cheers');
+      await d.runAsync('DELETE FROM partner_week_signals');
+      await d.runAsync('DELETE FROM partnerships');
+    } catch (e) {
+      logError('database.wipeAllUserData.partners', e, { userId });
+    }
   });
 }
 
@@ -4072,6 +4230,146 @@ export async function insertDailyStepsFromCloud(userId, row) {
   );
 }
 
+// ─── NEW-002: training partners (local mirror) ───────────────────────────────
+// Offline-first reads for the partner row. The pair-scoped sync handler keeps
+// these current; the UI reads here, never Supabase directly. Derived signals
+// only (planned/done/met/state) — never raw workouts.
+
+const _toMsLocal = (v) => (v == null ? null : (typeof v === 'string' ? new Date(v).getTime() : v));
+
+/** The user's partnerships (invited/active/ended), newest first. */
+export async function getPartnershipsLocal(userId) {
+  if (!userId) return [];
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT * FROM partnerships
+     WHERE member_a = ? OR member_b = ?
+     ORDER BY created_at DESC`,
+    [userId, userId],
+  );
+  return rows.map(rowToCamel);
+}
+
+/** Count the user's ACTIVE partnerships (drives the free/Pro cap). */
+export async function getActivePartnerCount(userId) {
+  if (!userId) return 0;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    `SELECT COUNT(*) AS n FROM partnerships
+     WHERE status = 'active' AND (member_a = ? OR member_b = ?)`,
+    [userId, userId],
+  );
+  return row?.n ?? 0;
+}
+
+/** The most recent week signal for a given (pair, user). */
+export async function getPartnerWeekSignal(pairId, userId, weekStart) {
+  if (!pairId || !userId) return null;
+  const d = await db();
+  const row = weekStart
+    ? await d.getFirstAsync(
+        `SELECT * FROM partner_week_signals WHERE pair_id = ? AND user_id = ? AND week_start = ?`,
+        [pairId, userId, String(weekStart)])
+    : await d.getFirstAsync(
+        `SELECT * FROM partner_week_signals WHERE pair_id = ? AND user_id = ? ORDER BY week_start DESC LIMIT 1`,
+        [pairId, userId]);
+  return row ? rowToCamel(row) : null;
+}
+
+/** All week signals for a pair (both members), oldest-first — feeds the shared streak. */
+export async function getPairWeekSignals(pairId) {
+  if (!pairId) return [];
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT * FROM partner_week_signals WHERE pair_id = ? ORDER BY week_start ASC`,
+    [pairId],
+  );
+  return rows.map(rowToCamel);
+}
+
+/** The local day the user last cheered into a pair, or null. */
+export async function getLastCheerSentOn(pairId, senderId) {
+  if (!pairId || !senderId) return null;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    `SELECT sent_on FROM partner_cheers WHERE pair_id = ? AND sender_id = ? ORDER BY sent_on DESC LIMIT 1`,
+    [pairId, senderId],
+  );
+  return row?.sent_on ?? null;
+}
+
+/** The most recent cheer RECEIVED in a pair (sender != me), or null. */
+export async function getLastCheerReceived(pairId, myId) {
+  if (!pairId || !myId) return null;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    `SELECT * FROM partner_cheers WHERE pair_id = ? AND sender_id != ? ORDER BY sent_on DESC LIMIT 1`,
+    [pairId, myId],
+  );
+  return row ? rowToCamel(row) : null;
+}
+
+// ── Cloud-restore writers used by the sync handler ──
+export async function upsertPartnershipFromCloud(row) {
+  if (!row?.id) return;
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO partnerships
+       (id, member_a, member_b, status, streak_enabled, created_at, accepted_at, ended_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      row.id, row.member_a ?? null, row.member_b ?? null, row.status ?? 'invited',
+      row.streak_enabled ? 1 : 0,
+      _toMsLocal(row.created_at), _toMsLocal(row.accepted_at), _toMsLocal(row.ended_at),
+      _toMsLocal(row.updated_at ?? row.accepted_at ?? row.created_at) ?? Date.now(),
+    ],
+  );
+}
+
+export async function upsertPartnerWeekSignalFromCloud(row) {
+  if (!row?.pair_id || !row?.user_id || !row?.week_start) return;
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO partner_week_signals
+       (pair_id, user_id, week_start, planned_count, done_count, week_met, state, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      row.pair_id, row.user_id, String(row.week_start),
+      Math.max(0, Math.round(Number(row.planned_count) || 0)),
+      Math.max(0, Math.round(Number(row.done_count) || 0)),
+      row.week_met ? 1 : 0, row.state === 'resting' ? 'resting' : 'training',
+      _toMsLocal(row.updated_at) ?? Date.now(),
+    ],
+  );
+}
+
+export async function upsertPartnerCheerFromCloud(row) {
+  if (!row?.id || !row?.pair_id) return;
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO partner_cheers (id, pair_id, sender_id, sent_on, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+    [row.id, row.pair_id, row.sender_id, row.sent_on, _toMsLocal(row.created_at) ?? Date.now()],
+  );
+}
+
+/** Local "what cloud rows exist for my pairs" — used to prune unpaired rows on pull. */
+export async function getLocalPartnershipIds(userId) {
+  if (!userId) return [];
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT id FROM partnerships WHERE member_a = ? OR member_b = ?`, [userId, userId]);
+  return rows.map((r) => r.id);
+}
+
+/** Wipe all local partner data (sign-out guard). */
+export async function clearLocalPartners() {
+  const d = await db();
+  await d.runAsync('DELETE FROM partner_cheers');
+  await d.runAsync('DELETE FROM partner_week_signals');
+  await d.runAsync('DELETE FROM partnerships');
+}
+
 // ─── Pro: Weekly Check-Ins ────────────────────────────────────────────────────
 
 export async function saveWeeklyCheckin(userId, data) {
@@ -4209,6 +4507,35 @@ export function coerceWeekStartMs(weekStart, fnName = 'weekStart') {
     if (Number.isFinite(n)) return n;
   }
   throw new Error(`${fnName}: weekStart must be epoch-ms, got ${weekStart}`);
+}
+
+// Which past calendar weeks were engine-prescribed deload (recovery) weeks.
+// COMP-018's run-length must treat a deload week as "resting", never a miss,
+// so a user who correctly backs off during a planned recovery week is not
+// punished. There is no calendar-dated deload record (mesocycle_weeks are
+// keyed by week-index, not date), so we infer it the only reliable way: a
+// calendar week is a deload week if a completed workout in it was linked to a
+// mesocycle_week flagged is_deload = 1. Returns an array of week-start epochs
+// (local Monday 00:00). Known gap: a deload week with zero logged sessions
+// has no workout to link, so it cannot be detected here; a single such week
+// is covered by the streak's one-week repair, which is why this is correct
+// for realistic 1-week deloads.
+export async function getDeloadWeeksInRange(userId, fromMs, toMs) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT w.started_at AS startedAt
+     FROM workouts w
+     JOIN mesocycle_weeks mw ON mw.id = w.mesocycle_week_id
+     WHERE w.user_id = ? AND w.is_completed = 1
+       AND w.started_at >= ? AND w.started_at < ?
+       AND mw.is_deload = 1`,
+    [userId, fromMs, toMs],
+  );
+  const set = new Set();
+  for (const r of rows) {
+    if (Number.isFinite(r.startedAt)) set.add(localWeekStartMs(r.startedAt));
+  }
+  return Array.from(set);
 }
 
 export async function getWeeklySessionStats(userId, weekStart) {
@@ -4426,6 +4753,98 @@ export async function getYearOfLiftsData(userId, yearMs = null) {
   };
 }
 
+// COMP-005: window-bounded recap aggregates for the monthly recap story (and
+// reusable for any [startMs, endMs) window). getYearOfLiftsData is deliberately
+// left untouched so Year of Lifts stays byte-identical; this is a sibling, not a
+// refactor of it. Unlike the year function it (a) takes an explicit end bound,
+// (b) divides sessions by the window's actual weeks rather than a flat 52,
+// (c) surfaces the best single session by tonnage, and (d) optionally runs the
+// same aggregates over the immediately preceding window for delta captions.
+export async function getRecapData(userId, { startMs, endMs = Date.now(), compare = false } = {}) {
+  const d = await db();
+  const WEEK = 7 * 86400000;
+
+  const aggregate = async (s, e) => {
+    const workouts = await d.getAllAsync(
+      `SELECT w.id, w.started_at
+       FROM workouts w
+       WHERE w.user_id = ? AND w.is_completed = 1 AND w.started_at >= ? AND w.started_at < ?
+       ORDER BY w.started_at ASC`,
+      [userId, s, e],
+    );
+    const sets = await d.getAllAsync(
+      `SELECT ws.workout_id, ws.weight, ws.actual_reps, ws.exercise_id, ex.name AS exercise_name
+       FROM workout_sets ws
+       JOIN workouts w ON ws.workout_id = w.id
+       LEFT JOIN exercises ex ON ex.id = ws.exercise_id
+       WHERE ws.user_id = ? AND w.is_completed = 1 AND w.started_at >= ? AND w.started_at < ?
+         AND ws.set_type != 'warmup' AND ws.actual_reps > 0 AND ws.weight > 0`,
+      [userId, s, e],
+    );
+    return { workouts, sets };
+  };
+
+  const { workouts, sets } = await aggregate(startMs, endMs);
+  const totalSessions = workouts.length;
+  const totalSets = sets.length;
+  const tonnage = Math.round(sets.reduce((t, x) => t + x.weight * x.actual_reps, 0));
+  const weeks = Math.max(1, (endMs - startMs) / WEEK);
+  const avgSessionsPerWeek = totalSessions > 0 ? Math.round((totalSessions / weeks) * 10) / 10 : 0;
+
+  const exerciseCounts = {};
+  for (const x of sets) {
+    const k = x.exercise_name ?? 'Unknown';
+    exerciseCounts[k] = (exerciseCounts[k] ?? 0) + 1;
+  }
+  const topExercises = Object.entries(exerciseCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([name, count]) => ({ name, sets: count }));
+  const uniqueExercises = Object.keys(exerciseCounts).length;
+
+  // Best single session by tonnage in the window.
+  const tonnageByWorkout = {};
+  for (const x of sets) {
+    tonnageByWorkout[x.workout_id] = (tonnageByWorkout[x.workout_id] ?? 0) + x.weight * x.actual_reps;
+  }
+  let bestSession = null;
+  for (const w of workouts) {
+    const t = Math.round(tonnageByWorkout[w.id] ?? 0);
+    if (t > 0 && (!bestSession || t > bestSession.tonnage)) {
+      bestSession = { startedAt: w.started_at, tonnage: t };
+    }
+  }
+
+  // Best estimated 1RM per exercise this window (the personal_records table was
+  // never created locally; derive from logged sets, mirroring getYearOfLiftsData).
+  const bestByExercise = new Map();
+  for (const x of sets) {
+    if (!x.exercise_name) continue;
+    const e1rm = calculate1RM(x.weight || 0, x.actual_reps || 0);
+    if (!e1rm) continue;
+    const prev = bestByExercise.get(x.exercise_name);
+    if (!prev || e1rm > prev.value) {
+      bestByExercise.set(x.exercise_name, { value: parseFloat(e1rm.toFixed(1)), reps: x.actual_reps, exerciseName: x.exercise_name });
+    }
+  }
+  const topPRs = Array.from(bestByExercise.values()).sort((a, b) => b.value - a.value).slice(0, 5);
+
+  let previous = null;
+  if (compare) {
+    const len = endMs - startMs;
+    const { workouts: pw, sets: ps } = await aggregate(startMs - len, startMs);
+    previous = {
+      totalSessions: pw.length,
+      tonnage: Math.round(ps.reduce((t, x) => t + x.weight * x.actual_reps, 0)),
+    };
+  }
+
+  return {
+    startMs, endMs, totalSessions, totalSets, tonnage,
+    avgSessionsPerWeek, uniqueExercises, topExercises, bestSession, topPRs, previous,
+  };
+}
+
 export async function getBlockReflectionData(userId, mesocycleId) {
   const d = await db();
   const meso = await d.getFirstAsync('SELECT * FROM mesocycles WHERE id = ?', [mesocycleId]);
@@ -4438,7 +4857,12 @@ export async function getBlockReflectionData(userId, mesocycleId) {
     [userId, mesocycleId],
   );
   const sets = await d.getAllAsync(
-    `SELECT ws.weight, ws.actual_reps, ws.set_type, ws.exercise_id, ex.name AS exercise_name
+    // COMP-005: ws.workout_id is projected so the first/last-week tonnage
+    // filters below can match sets to their workout. Without it s.workout_id
+    // was undefined, both week buckets were always empty, and tonnageDelta
+    // (the block story's "climb" slide + BlockReflectionScreen's progress
+    // figure) always computed as null.
+    `SELECT ws.workout_id, ws.weight, ws.actual_reps, ws.set_type, ws.exercise_id, ex.name AS exercise_name
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
      LEFT JOIN exercises ex ON ex.id = ws.exercise_id
@@ -5040,9 +5464,10 @@ export async function insertWorkoutFromCloud(userId, w) {
        started_at, ended_at, duration_minutes,
        notes, name, pre_workout_intent,
        session_difficulty, overall_pump, soreness_24h_before, fatigue_level, joint_discomfort,
+       sleep_quality, energy_score,
        set_count, total_volume,
        is_completed, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)`,
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)`,
     [
       w.id, userId, w.routine_id ?? null, w.mesocycle_id ?? null, w.mesocycle_week_id ?? null,
       // started_at falls back to now when the cloud row carries none, so a
@@ -5053,6 +5478,8 @@ export async function insertWorkoutFromCloud(userId, w) {
       w.notes ?? null, w.name ?? null, w.pre_workout_intent ?? null,
       w.session_difficulty ?? null, w.overall_pump ?? null,
       w.soreness_24h_before ?? null, w.fatigue_level ?? null, w.joint_discomfort ?? null,
+      // COMP-008 pre-workout readiness, column-symmetric with _upsertWorkout.
+      w.sleep_quality ?? null, w.energy_score ?? null,
       w.set_count ?? null, w.total_volume ?? null,
       toMs(w.started_at) ?? Date.now(), cloudMs ?? Date.now(),
     ],
@@ -5664,6 +6091,54 @@ export async function deleteExerciseUserNote(userId, exerciseId) {
  * Returns the last `limit` completed workouts that have a fatigue_level value,
  * ordered newest-first so the caller can reverse for chart display.
  */
+// COMP-015: the read side of session autoregulation. Per-muscle "last
+// completed session" signals + the latest weekly check-in's sore-muscle flags,
+// local only. Returns RAW scales (no mapping); buildSessionAdjustmentInput in
+// algorithms.js maps them to the engine's input shape and applies the shared
+// muscle-name map. Thin and defensive like getAdaptiveLandmarkHistory; the
+// tested logic lives in the pure engine, not here.
+export async function getSessionAdjustmentSignals(userId) {
+  const d = await db();
+  let perMuscle = {};
+  try {
+    // MAX(w.started_at) with bare columns: SQLite returns the other columns
+    // from the row holding that max within each group, i.e. the most recent
+    // completed session that trained each primary muscle. Warmups excluded so a
+    // warmup-only touch never counts as training the muscle.
+    const rows = await d.getAllAsync(
+      `SELECT e.primary_muscle AS muscle,
+              MAX(w.started_at) AS last_trained_at,
+              w.session_difficulty,
+              w.overall_pump,
+              w.joint_discomfort
+       FROM workouts w
+       JOIN workout_sets ws ON ws.workout_id = w.id AND ws.set_type != 'warmup'
+       JOIN exercises e ON e.id = ws.exercise_id
+       WHERE w.user_id = ? AND w.is_completed = 1 AND e.primary_muscle IS NOT NULL
+       GROUP BY e.primary_muscle`,
+      [userId],
+    );
+    for (const r of rows) {
+      perMuscle[r.muscle] = {
+        lastTrainedAt: r.last_trained_at ?? null,
+        sessionDifficulty: r.session_difficulty ?? null,
+        pump: r.overall_pump ?? null,
+        joint: r.joint_discomfort ?? 0,
+      };
+    }
+  } catch (_e) {
+    perMuscle = {};
+  }
+
+  let checkin = null;
+  try {
+    const c = await getLatestCheckin(userId);
+    if (c) checkin = { soreMuscles: c.soreMuscles ?? null, checkinAt: c.createdAt ?? c.weekStart ?? null };
+  } catch (_e) { /* no check-in yet */ }
+
+  return { perMuscle, checkin };
+}
+
 export async function getRecentWorkoutFeedback(userId, limit = 6) {
   try {
     const d = await db();
@@ -5940,7 +6415,7 @@ export async function diagnoseSyncConflicts(currentSessionUid) {
     'weekly_checkins', 'coach_outputs', 'user_body_profile',
     'user_insights', 'peak_week_plans', 'exercise_user_notes',
     'exercise_goals', 'workout_notes_v2',
-    'custom_exercises',
+    'custom_exercises', 'meal_plans',
     'custom_foods', 'food_entries', 'daily_intake_rollups',
     'saved_meals', 'recipes', 'food_favourites', 'daily_water',
     'daily_steps',

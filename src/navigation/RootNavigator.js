@@ -13,7 +13,7 @@ const HERO_ASPECT = 1032 / 277;
 const SPLASH_W = Math.round(Dimensions.get('window').width * 0.7);
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, resolvedTheme } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { getSupabaseClient } from '../lib/supabase';
 import { initDatabase, cleanupOrphanRoutineExercises } from '../lib/database';
@@ -28,6 +28,8 @@ import {
 // Auth screens
 import LoginScreen from '../screens/LoginScreen';
 import WelcomeScreen from '../screens/WelcomeScreen';
+import QuizScreen from '../screens/QuizScreen';
+import PlanPreviewScreen from '../screens/PlanPreviewScreen';
 
 // Main screens
 import HomeScreen from '../screens/HomeScreen';
@@ -47,10 +49,12 @@ import SettingsNotificationsScreen from '../screens/SettingsNotificationsScreen'
 import SettingsDisplayScreen from '../screens/SettingsDisplayScreen';
 import SettingsHealthScreen from '../screens/SettingsHealthScreen';
 import SettingsDataScreen from '../screens/SettingsDataScreen';
+import SnapshotsScreen from '../screens/SnapshotsScreen';
 import SettingsPrivacyScreen from '../screens/SettingsPrivacyScreen';
 import SettingsAboutScreen from '../screens/SettingsAboutScreen';
 import LiftProgressScreen from '../screens/LiftProgressScreen';
 import ConsistencyScreen from '../screens/ConsistencyScreen';
+import PartnerScreen from '../screens/PartnerScreen';
 import YouScreen from '../screens/YouScreen';
 import PlansScreen from '../screens/PlansScreen';
 import PlanDetailScreen from '../screens/PlanDetailScreen';
@@ -61,9 +65,11 @@ import ManualBuilderScreen from '../screens/ManualBuilderScreen';
 import NutritionTargetsScreen from '../screens/NutritionTargetsScreen';
 import PlanLibraryScreen from '../screens/PlanLibraryScreen';
 import FirstRunScreen from '../screens/FirstRunScreen';
+import FreeStarterScreen from '../screens/FreeStarterScreen';
 import Article9ConsentScreen from '../screens/Article9ConsentScreen';
 import WeeklyCheckInScreen from '../screens/WeeklyCheckInScreen';
 import CoachOutputScreen from '../screens/CoachOutputScreen';
+import MethodologyScreen from '../screens/MethodologyScreen';
 import ProGoalSetupScreen from '../screens/ProGoalSetupScreen';
 import PlanUpdateScreen from '../screens/PlanUpdateScreen';
 import GoalChangeSummaryScreen from '../screens/GoalChangeSummaryScreen';
@@ -90,6 +96,7 @@ import SubscriptionPolicyScreen from '../screens/SubscriptionPolicyScreen';
 import DiaryScreen from '../screens/DiaryScreen';
 import AddCustomFoodScreen from '../screens/AddCustomFoodScreen';
 import FoodSearchScreen from '../screens/FoodSearchScreen';
+import MealPlanScreen from '../screens/MealPlanScreen';
 import ScanBarcodeScreen from '../screens/ScanBarcodeScreen';
 import ScanLabelScreen from '../screens/ScanLabelScreen';
 import LogCardioScreen from '../screens/LogCardioScreen';
@@ -115,11 +122,23 @@ let _lastAuthEnter = { uid: null, at: 0 };
 // lapsed (the RTDN Pub/Sub push that would normally report this is a separate
 // console step). No-op on the stub provider, on a failed Play read, and for any
 // user who is not paid_pro — see cascade.reconcilePaidEntitlement for the guards.
-function _reconcilePaidEntitlement() {
+function _reconcilePaidEntitlement(userId = null) {
   try {
     // eslint-disable-next-line global-require
     const { reconcilePaidEntitlement } = require('../lib/payments/cascade');
-    return reconcilePaidEntitlement(useAppStore.getState().userProfile);
+    return Promise.resolve(reconcilePaidEntitlement(useAppStore.getState().userProfile))
+      .then((result) => {
+        // COMP-025-A: an authoritative paid_pro→free lapse arms the post-churn
+        // win-back loop; a confirmed-active result clears it. Fire-and-forget —
+        // it must never block or alter the tier refresh. lapseDetect makes no
+        // entitlement decision; it only reads this result.
+        try {
+          // eslint-disable-next-line global-require
+          const { handlePotentialLapse } = require('../lib/payments/lapseDetect');
+          handlePotentialLapse(result, userId ?? useAppStore.getState().user?.id ?? null).catch(() => {});
+        } catch (_) { /* best-effort */ }
+        return result;
+      });
   } catch (_) {
     return Promise.resolve();
   }
@@ -205,6 +224,11 @@ function DiaryStack({ navigation }) {
     <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Diary" component={GatedDiary} options={{ headerShown: false }} />
       <Stack.Screen
+        name="MealPlan"
+        component={MealPlanScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
         name="FoodSearch"
         component={FoodSearchScreen}
         options={{ headerShown: false, presentation: 'modal' }}
@@ -278,6 +302,8 @@ function HomeStack({ navigation }) {
           keeps the modal in this stack so saving returns to Train, not the Diary. */}
       <Stack.Screen name="LogCardio" component={GatedLogCardio} options={{ headerShown: false, presentation: 'modal' }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
+      {/* B2: the free starter micro-quiz, reached from the no-plan card. */}
+      <Stack.Screen name="FreeStarter" component={FreeStarterScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
@@ -299,6 +325,8 @@ function PlansStack({ navigation }) {
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ title: 'Plan Library' }} />
       <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ title: 'Training Blocks' }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
+      {/* B2: the free starter micro-quiz, reached from the no-plan card. */}
+      <Stack.Screen name="FreeStarter" component={FreeStarterScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
@@ -319,8 +347,10 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ title: 'Body Metrics' }} />
       <Stack.Screen name="LiftProgress" component={LiftProgressScreen} options={{ title: 'Lifts' }} />
       <Stack.Screen name="Consistency" component={ConsistencyScreen} options={{ title: 'Consistency' }} />
+      <Stack.Screen name="Partner" component={PartnerScreen} options={{ title: 'Training partner' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
       <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="RecapStory" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ title: 'Share Card' }} />
       {/* Cardio is launched from the Progress tab (AnalyticsScreen). Registering
           both here keeps them in this stack so save/back return to Progress. */}
@@ -348,6 +378,7 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="SettingsDisplay" component={SettingsDisplayScreen} options={{ title: 'Display & accessibility' }} />
       <Stack.Screen name="SettingsHealth" component={SettingsHealthScreen} options={{ title: 'Health' }} />
       <Stack.Screen name="SettingsData" component={SettingsDataScreen} options={{ title: 'Your data' }} />
+      <Stack.Screen name="Snapshots" component={SnapshotsScreen} options={{ title: 'Restore a snapshot' }} />
       <Stack.Screen name="SettingsPrivacy" component={SettingsPrivacyScreen} options={{ title: 'Privacy & legal' }} />
       <Stack.Screen name="SettingsAbout" component={SettingsAboutScreen} options={{ title: 'Help & about' }} />
       <Stack.Screen name="NutritionTargets" component={GatedNutritionTargets} options={{ title: 'Nutrition Targets' }} />
@@ -355,6 +386,7 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ title: 'Body Metrics' }} />
       <Stack.Screen name="WeeklyCheckIn" component={GatedWeeklyCheckIn} options={{ headerShown: false }} />
       <Stack.Screen name="CoachOutput" component={GatedCoachOutput} options={{ title: 'Precision Coaching™' }} />
+      <Stack.Screen name="Methodology" component={MethodologyScreen} options={{ title: 'How Precision Coaching works' }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ title: 'Share Card' }} />
       <Stack.Screen name="CoachHeldHistory" component={CoachHeldHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BlockReflection" component={BlockReflectionScreen} options={{ headerShown: false }} />
@@ -423,6 +455,10 @@ function WelcomeStack() {
   return (
     <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
+      {/* COMP-030: quiz-first pre-account screens. Registered always (harmless);
+          only reached when ONBOARDING_QUIZ_FIRST is on and the user picks Pro. */}
+      <Stack.Screen name="QuizTraining" component={QuizScreen} />
+      <Stack.Screen name="PlanPreview" component={PlanPreviewScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
     </Stack.Navigator>
   );
@@ -432,6 +468,11 @@ function FirstRunStack() {
   return (
     <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="FirstRunBranch" component={FirstRunScreen} />
+      {/* B2: free guided on-ramp (founder decision 4a). Three plain questions
+          straight after the name screen install + activate a difficulty-0
+          starter plan, so the new free user lands on Home with today's
+          session already answered. Skipping completes first run as before. */}
+      <Stack.Screen name="FreeStarter" component={FreeStarterScreen} />
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: true, title: 'Plan Library' }} />
       <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: true, title: 'Plan' }} />
       <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={heroZoomTransition} />
@@ -530,8 +571,9 @@ export default function RootNavigator() {
     // routeForNotificationType helper (tested separately) so every scheduled
     // notification type has a route and none dead-ends.
     function onTap(response) {
-      const type = response?.notification?.request?.content?.data?.type;
-      const target = routeForNotificationType(type);
+      const data = response?.notification?.request?.content?.data;
+      const type = data?.type;
+      const target = routeForNotificationType(type, data);
       if (!target) return;
       const tryNavigate = (attempts = 0) => {
         if (navigationRef.isReady()) {
@@ -638,7 +680,7 @@ export default function RootNavigator() {
               // During beta this guards against spurious pro → free
               // demotion (see useAppStore.refreshTierFromCloud).
               refreshTierFromCloud(client, session.user.id)
-                .then(() => _reconcilePaidEntitlement())
+                .then(() => _reconcilePaidEntitlement(session.user.id))
                 .catch(() => {});
 
               // Initialise Google Play Billing with the user's auth uid
@@ -794,6 +836,54 @@ export default function RootNavigator() {
               return;
             }
             _lastAuthEnter = { uid: _enterUid, at: _enterNow };
+
+            // COMP-009: a cross-account sign-in is gated behind an explicit
+            // choice BEFORE any restore / sync / wipe side-effect runs, so the
+            // whole sign-in body below is wrapped in this async IIFE. "Keep this
+            // device's data" aborts cleanly (sign back out, touch nothing);
+            // "Switch accounts" snapshots first, then the existing flow runs.
+            // Same-account and first-ever sign-ins fall straight through with no
+            // modal. The existing cross-user wipe + last-account key write
+            // further down are unchanged — the gate is purely additive.
+            (async () => {
+              try {
+                const _lastUid = await AsyncStorage.getItem('@volyume_last_supabase_user_id').catch(() => null);
+                if (_lastUid && _lastUid !== session.user.id) {
+                  // eslint-disable-next-line global-require
+                  const { appAlert } = require('../components/AppAlert');
+                  const choice = await new Promise(resolve => {
+                    let settled = false;
+                    const pick = (v) => { if (!settled) { settled = true; resolve(v); } };
+                    appAlert(
+                      'You\'re signing in to a different account',
+                      'This device currently holds data for a different account. Switching will replace what\'s on this device with the account you\'re signing into. We\'ll save a snapshot first, so nothing is gone for good. You can restore it from Settings, Your data.',
+                      [
+                        { text: 'Keep this device\'s data', style: 'cancel', onPress: () => pick('keep') },
+                        { text: 'Switch accounts', style: 'destructive', onPress: () => pick('switch') },
+                      ],
+                      { cancelable: false },
+                    );
+                  });
+                  if (choice !== 'switch') {
+                    // Keep: never wipe, restore, or re-stamp. Sign the new
+                    // account back out — the SIGNED_OUT event resets routing but
+                    // does NOT wipe local SQLite (only an explicit sign-out
+                    // button does) — leaving this device's data intact and the
+                    // last-account key unchanged, so signing back in is silent.
+                    try { await client.auth.signOut(); } catch (_) {}
+                    // eslint-disable-next-line global-require
+                    try { require('../lib/errorLog').logInfo('SignIn.accountSwitch.kept', `aborted sign-in to ${session.user.id}; device data kept`); } catch (_) {}
+                    return;
+                  }
+                  // Switch: snapshot this device's data before the existing wipe.
+                  try {
+                    // eslint-disable-next-line global-require
+                    const { snapshotBeforeAccountSwitch } = require('../lib/dbSnapshot');
+                    await snapshotBeforeAccountSwitch();
+                  } catch (_) {}
+                }
+              } catch (_) { /* gate best-effort; fall through to the normal flow */ }
+
             // Optimistic sign-in: kick off the cloud restore but DON'T
             // await it. restoreSessionFromCloud makes its routing
             // decision synchronously at the top (per-uid cache OR
@@ -806,7 +896,7 @@ export default function RootNavigator() {
                 try { require('../lib/errorLog').logError('RootNavigator.restoreSessionFromCloud', e, { userId: session.user.id }); } catch (_) {}
               });
             refreshTierFromCloud(client, session.user.id)
-              .then(() => _reconcilePaidEntitlement())
+              .then(() => _reconcilePaidEntitlement(session.user.id))
               .catch(e => {
                 // eslint-disable-next-line global-require
                 try { require('../lib/errorLog').logError('RootNavigator.refreshTierFromCloud', e, { userId: session.user.id }); } catch (_) {}
@@ -955,6 +1045,7 @@ export default function RootNavigator() {
             require('../lib/notifications')
               .registerPushToken(session.user.id)
               .catch(() => {});
+            })();
           }
         });
         subscription = data.subscription;
@@ -1065,7 +1156,7 @@ export default function RootNavigator() {
         } catch (_) { /* tolerate */ }
       }}
       theme={{
-        dark: true,
+        dark: resolvedTheme !== 'light',
         colors: {
           primary: colors.primary,
           background: colors.background,

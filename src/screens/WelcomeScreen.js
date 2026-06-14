@@ -5,14 +5,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import InfoTooltip from '../components/InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 import useAppStore from '../store/useAppStore';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
+import { ONBOARDING_QUIZ_FIRST } from '../lib/onboarding/quizFlow';
 
 const HERO = require('../../assets/volyume-wordmark.png');
 const HERO_ASPECT = 1032 / 277;
 
 const FREE_BULLETS = [
-  'Unlimited workout logging, fully offline',
+  'Unlimited workout logging',
   'Exercise library and Personal Records',
   'Plan library and custom plan builder',
   'Training blocks and full progress stats',
@@ -22,7 +25,7 @@ const PRO_BULLETS = [
   'A plan built around your schedule, goals, and experience level',
   'Precision Coaching™ that adjusts your training and nutrition as your body responds',
   'Personalised calorie and protein targets, updated as your goals change',
-  'After every check-in, your coach explains every decision. What changed, what was left alone, and why.',
+  'After every check-in, your coach explains what changed and why.',
 ];
 
 export default function WelcomeScreen({ navigation }) {
@@ -52,6 +55,13 @@ export default function WelcomeScreen({ navigation }) {
   // LoginScreen.newAccountSetup (Pro) or the same flow defaulting to
   // Free if the user doesn't enable Pro.
   function chooseTier(tier) {
+    // COMP-030: when quiz-first is on, the Pro CTA opens the pre-account quiz
+    // (the plan takes shape before the account wall). Free path is unchanged,
+    // and when the flag is off both CTAs route straight to sign-up as before.
+    if (tier === 'pro' && ONBOARDING_QUIZ_FIRST) {
+      navigation.navigate('QuizTraining');
+      return;
+    }
     navigation.navigate('Login', { intent: tier === 'pro' ? 'pro_signup' : 'free_signup' });
   }
 
@@ -61,6 +71,9 @@ export default function WelcomeScreen({ navigation }) {
         <Animated.View style={[styles.hero, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
           <Image source={HERO} style={styles.logoImg} resizeMode="contain" />
           <Text style={styles.tagline}>Less thinking. More lifting.</Text>
+          {/* COMP-006: the methodology promise, a claim no competitor makes.
+              Reads as a secondary caption beneath the brand tagline. */}
+          <Text style={styles.identityLine}>Every change has a reason. Every non-change has a reason too.</Text>
         </Animated.View>
 
         <Animated.View style={[styles.cards, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
@@ -90,6 +103,10 @@ export default function WelcomeScreen({ navigation }) {
                 <View key={b} style={styles.bulletRow}>
                   <Ionicons name="checkmark-circle" size={15} color={colors.primary} />
                   <Text style={styles.bulletText}>{b}</Text>
+                  {/* U-E-1: inline gloss for the brand term on first appearance. */}
+                  {b.includes('Precision Coaching™') && (
+                    <InfoTooltip text={GLOSSARY.precisionCoaching} size={13} />
+                  )}
                 </View>
               ))}
             </View>
@@ -102,7 +119,7 @@ export default function WelcomeScreen({ navigation }) {
 
             <View style={styles.proCtaRow}>
               <Text style={styles.proCtaText}>Go Pro</Text>
-              <Ionicons name="arrow-forward" size={16} color={colors.background} />
+              <Ionicons name="arrow-forward" size={16} color={colors.onPrimary} />
             </View>
           </TouchableOpacity>
 
@@ -128,6 +145,27 @@ export default function WelcomeScreen({ navigation }) {
               ))}
             </View>
           </TouchableOpacity>
+        </Animated.View>
+
+        {/* Trust row (COMP-012): one muted, non-interactive line that
+            applies to both tiers, hit at the moment of CTA hesitation.
+            Claims are all structurally true (no ad SDK, CSV/file export,
+            data never sold). 'No trackers' is deliberately NOT claimed. */}
+        <Animated.View style={{ opacity: fadeIn }}>
+          <View
+            style={styles.trustRow}
+            accessible
+            accessibilityLabel="Works fully offline. Your data exports anytime. No ads, ever."
+          >
+            <Ionicons name="cloud-offline-outline" size={13} color={colors.textMuted} importantForAccessibility="no" />
+            <Text style={styles.trustText}>Works fully offline</Text>
+            <Text style={styles.trustDot}>·</Text>
+            <Ionicons name="download-outline" size={13} color={colors.textMuted} importantForAccessibility="no" />
+            <Text style={styles.trustText}>Exports anytime</Text>
+            <Text style={styles.trustDot}>·</Text>
+            <Ionicons name="shield-checkmark-outline" size={13} color={colors.textMuted} importantForAccessibility="no" />
+            <Text style={styles.trustText}>No ads, ever</Text>
+          </View>
         </Animated.View>
 
         <Animated.View style={{ opacity: fadeIn }}>
@@ -160,6 +198,7 @@ const styles = StyleSheet.create({
     letterSpacing: 5, marginTop: spacing.xs,
   },
   tagline: { fontSize: fontSize.sm, color: colors.textMuted, letterSpacing: 0.3 },
+  identityLine: { fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'center', lineHeight: 16, paddingHorizontal: spacing.lg },
 
   cards: { gap: spacing.md },
 
@@ -190,7 +229,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: 4,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
   },
-  betaBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.5 },
+  betaBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0.5 },
   proSubtitle: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
 
   divider: { height: 1, backgroundColor: colors.border, marginHorizontal: spacing.lg },
@@ -204,13 +243,19 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17,
     paddingHorizontal: spacing.lg, marginBottom: spacing.sm,
   },
+  trustRow: {
+    flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.xs, paddingHorizontal: spacing.lg,
+  },
+  trustText: { fontSize: fontSize.xs, color: colors.textMuted },
+  trustDot: { fontSize: fontSize.xs, color: colors.textMuted },
 
   proCtaRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
     backgroundColor: colors.primary, paddingVertical: spacing.md, margin: spacing.md,
     borderRadius: radius.lg,
   },
-  proCtaText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.background },
+  proCtaText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
 
   // Free card
   freeCard: {

@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   unitTextActive: {
-    color: colors.background,
+    color: colors.onPrimary,
     fontWeight: fontWeight.bold,
   },
 });

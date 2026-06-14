@@ -330,10 +330,16 @@ export function predictDeloadWeek(feedbackWindow = [], mesoWeek = 1, experience 
  * @param {number}   estimateFn     - function(exercises) => estimated minutes
  * @returns {{ exercises: Object[], restReduction: number, dropped: string[] }}
  */
-export function applyTimeCrunch(exercises, targetMinutes, estimateFn) {
+export function applyTimeCrunch(exercises, targetMinutes, estimateFn, options = {}) {
   if (!exercises?.length) {
     return { exercises: [], restReduction: 0.30, dropped: [] };
   }
+
+  // Starter-session bounds (COMP-013). Off by default: when neither is set the
+  // function behaves exactly as before for every existing caller. When set, a
+  // final deterministic trim (Step 3) caps the session to a finishable subset.
+  const { maxSetsPerExercise, maxExercises } = options;
+  const hasStarterTrim = maxSetsPerExercise != null || maxExercises != null;
 
   // Step 1: reduce rest by 30%
   const withReducedRest = exercises.map(ex => ({
@@ -341,8 +347,26 @@ export function applyTimeCrunch(exercises, targetMinutes, estimateFn) {
     restSec: Math.round((ex.restSec ?? 90) * 0.70),
   }));
 
-  if (estimateFn(withReducedRest) <= targetMinutes) {
+  if (!hasStarterTrim && estimateFn(withReducedRest) <= targetMinutes) {
     return { exercises: withReducedRest, restReduction: 0.30, dropped: [] };
+  }
+
+  // Starter sessions (COMP-013): a finishable subset that does NOT depend on the
+  // minutes budget. Keep the first `maxExercises` in plan order and cap each at
+  // `maxSetsPerExercise` — deterministic, the same lifts and order as Day 1, the
+  // first N exercises (not the first N of an isolation-dropped survivor list).
+  // This runs INSTEAD of the budget-fit isolation drop below.
+  if (hasStarterTrim) {
+    let starter = withReducedRest;
+    const starterDropped = [];
+    if (maxExercises != null && starter.length > maxExercises) {
+      for (const ex of starter.slice(maxExercises)) starterDropped.push(ex.exerciseName);
+      starter = starter.slice(0, maxExercises);
+    }
+    if (maxSetsPerExercise != null) {
+      starter = starter.map(ex => ({ ...ex, sets: Math.min(ex.sets ?? 0, maxSetsPerExercise) }));
+    }
+    return { exercises: starter, restReduction: 0.30, dropped: starterDropped };
   }
 
   // Step 2: drop lowest-priority isolation exercises (compound always protected)

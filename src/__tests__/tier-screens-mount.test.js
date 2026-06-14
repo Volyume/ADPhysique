@@ -15,6 +15,17 @@ jest.mock('@expo/vector-icons', () => ({
   Ionicons: 'Ionicons',
 }));
 
+// SubscriptionScreen → CancelReasonSheet → lib/haptics → expo-haptics, which
+// can't construct its native EventEmitter in the bare test env. Mock it as the
+// other mount suites do (screen-mount.test.js).
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(() => Promise.resolve()),
+  notificationAsync: jest.fn(() => Promise.resolve()),
+  selectionAsync: jest.fn(() => Promise.resolve()),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}));
+
 jest.mock('expo-application', () => ({
   nativeApplicationVersion: '1.2.0',
 }));

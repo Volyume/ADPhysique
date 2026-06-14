@@ -14,7 +14,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,9 +23,13 @@ import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/t
 import {
   scheduleMorningWeightNotification,
   scheduleCheckinReminder,
-  cancelAllNotifications,
+  scheduleMissedCheckinFollowups,
+  cancelMissedCheckinFollowups,
+  cancelMorningNotification,
+  cancelCheckinNotification,
   requestNotificationPermissions,
 } from '../lib/notifications';
+import { setPreference as setPrefRow } from '../lib/notifications/preferences';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
 
@@ -72,7 +76,16 @@ function formatNextFire(date) {
 async function applyScheduled(prefs, permissionStatus) {
   // Always cancels and reschedules BOTH coaching reminders (no toggles).
   // Training reminders are independent and managed by NotificationSettings.
-  await cancelAllNotifications();
+  //
+  // Cancel ONLY the two notifications this screen owns (morning weight +
+  // weekly check-in). Previously this called cancelAllNotifications(), which
+  // wiped every scheduled notification laid elsewhere (cascade gates, trial
+  // day-3, win-back, weekly coach-ready) until the next launch re-laid them —
+  // the historic wipe-bug class NotificationSettingsScreen already fixed.
+  // Each schedule* helper self-cancels its own ID too, so the explicit
+  // cancels here only matter for the permission-not-granted case.
+  await cancelMorningNotification();
+  await cancelCheckinNotification();
   if (permissionStatus === 'granted') {
     await scheduleMorningWeightNotification(prefs.morningHour, prefs.morningMinute);
     await scheduleCheckinReminder(
@@ -80,11 +93,28 @@ async function applyScheduled(prefs, permissionStatus) {
       { lastCheckinMs: prefs.lastCheckinMs ?? 0, minGapDays: 7 },
     );
   }
+  // Merge over the existing blob so keys this screen doesn't own
+  // (missedCheckinEnabled, coachReady, training) survive a save here.
+  let existing = {};
+  try {
+    const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+    if (raw) existing = JSON.parse(raw) ?? {};
+  } catch (_) {}
   await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify({
+    ...existing,
     ...prefs,
     morningEnabled: true,
     checkinEnabled: true,
   }));
+  // OPP-C03: the check-in day/time may have changed, so re-lay the
+  // missed-check-in follow-up pair against the freshly saved schedule
+  // (the helper self-cancels its own pair and self-guards on tier,
+  // toggle and ED flag).
+  if (permissionStatus === 'granted') {
+    try {
+      await scheduleMissedCheckinFollowups(useAppStore.getState().user?.id ?? null);
+    } catch (_) {}
+  }
 }
 
 function ChipRow({ items, selected, onSelect, formatter = (v) => String(v), accessibilityName = 'option' }) {
@@ -119,6 +149,9 @@ export default function CoachingRemindersScreen() {
   const [checkinHour, setCheckinHour] = useState(18);
   const [checkinMinute, setCheckinMinute] = useState(0);
   const [lastCheckinMs, setLastCheckinMs] = useState(0);
+  // OPP-C03: the missed-check-in follow-up pair. Optional (default on),
+  // unlike the two coaching reminders above.
+  const [missedEnabled, setMissedEnabled] = useState(true);
   const [permissionStatus, setPermissionStatus] = useState(null);
   const [saved, setSaved] = useState(false);
   const debounceTimer = useRef(null);
@@ -135,6 +168,9 @@ export default function CoachingRemindersScreen() {
           if (prefs.checkinDay !== undefined) setCheckinDay(prefs.checkinDay);
           if (prefs.checkinHour !== undefined) setCheckinHour(prefs.checkinHour);
           if (prefs.checkinMinute !== undefined) setCheckinMinute(prefs.checkinMinute);
+          if (prefs.missedCheckinEnabled !== undefined) {
+            setMissedEnabled(prefs.missedCheckinEnabled !== false);
+          }
         }
       } catch (_) {}
 
@@ -185,6 +221,37 @@ export default function CoachingRemindersScreen() {
         toast.show('Could not save reminder', { variant: 'error' });
       }
     }, 400);
+  }
+
+  async function handleMissedToggle(value) {
+    setMissedEnabled(value);
+    try {
+      // Merge-write the blob so the schedule keys saved by applyScheduled
+      // survive the toggle.
+      let blob = {};
+      try {
+        const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+        if (raw) blob = JSON.parse(raw) ?? {};
+      } catch (_) {}
+      await AsyncStorage.setItem(
+        NOTIF_PREFS_KEY,
+        JSON.stringify({ ...blob, missedCheckinEnabled: value }),
+      );
+      // Mirror into the per-category SQLite row so the registry-driven
+      // sync carries the preference cross-device (migration 044 pattern).
+      const userId = useAppStore.getState().user?.id;
+      if (userId) {
+        await setPrefRow(userId, 'checkin_missed', { enabled: value, time_pref: null });
+      }
+      if (value) {
+        await scheduleMissedCheckinFollowups(userId ?? null);
+      } else {
+        await cancelMissedCheckinFollowups();
+      }
+      toast.show(value ? 'Check-in follow-up on' : 'Check-in follow-up off', { variant: 'success' });
+    } catch (_) {
+      toast.show('Could not save that change', { variant: 'error' });
+    }
   }
 
   const nextFire = computeNextCheckinFireDate(checkinDay, checkinHour, checkinMinute, lastCheckinMs, 7);
@@ -270,6 +337,30 @@ export default function CoachingRemindersScreen() {
           </View>
         </View>
 
+        {/* Missed check-in follow-up (OPP-C03). Optional, default on. */}
+        <Text style={styles.sectionLabel}>Check-in follow-up</Text>
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.iconWrap}>
+              <Ionicons name="hand-left-outline" size={18} color={colors.primary} />
+            </View>
+            <Text style={[styles.cardTitle, styles.toggleTitle]}>Follow up if a check-in slips by</Text>
+            <Switch
+              value={missedEnabled}
+              onValueChange={handleMissedToggle}
+              trackColor={{ false: colors.surface3, true: colors.primaryBg }}
+              thumbColor={colors.primary}
+              ios_backgroundColor={colors.surface3}
+              accessibilityLabel="Check-in follow-up toggle"
+            />
+          </View>
+          <View style={styles.helperBlock}>
+            <Text style={styles.helperText}>
+              If a check-in day passes without one, you'll get a gentle nudge that evening and a look at your weekly trend two days later. Never more than that, and never a guilt trip.
+            </Text>
+          </View>
+        </View>
+
         {saved && <Text style={styles.savedText}>Saved</Text>}
       </ScrollView>
     </SafeAreaView>
@@ -304,6 +395,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center',
   },
   cardTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  toggleTitle: { flex: 1 },
   pickerLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
     color: colors.textMuted, letterSpacing: 0.2,

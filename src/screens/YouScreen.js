@@ -148,6 +148,23 @@ export default function YouScreen({ navigation }) {
           </View>
         )}
 
+        {/* COMP-006: how the coaching decides. FREE USERS ONLY (founder
+            device-walk 2026-06-12): Pro users already reach this in-context on
+            the Precision Coaching screen (the why-block's learn-more and the
+            held-decisions card), so the You row was a redundant extra button
+            for them. A free user has no coach screen yet, and this static
+            trust copy is part of weighing up Pro, so their path stays. */}
+        {!isPro && (
+          <View style={styles.section}>
+            <NavRow
+              icon="book-outline"
+              label="How Precision Coaching works"
+              sub="The rules behind every change, and every hold. Every change has a reason. Every non-change has a reason too."
+              onPress={() => navigation.navigate('Methodology', { source: 'you_tab' })}
+            />
+          </View>
+        )}
+
         {/* Preferences */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Preferences</Text>

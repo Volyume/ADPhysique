@@ -199,7 +199,7 @@ export default function MyMealsScreen({ navigation, route }) {
                 <Text style={styles.cardBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={submitRename} style={[styles.cardBtn, styles.cardBtnPrimary]} accessibilityRole="button" accessibilityLabel="Save">
-                <Text style={[styles.cardBtnText, { color: colors.background, fontWeight: fontWeight.bold }]}>Save</Text>
+                <Text style={[styles.cardBtnText, { color: colors.onPrimary, fontWeight: fontWeight.bold }]}>Save</Text>
               </TouchableOpacity>
             </View>
           </Pressable>

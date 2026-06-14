@@ -1,0 +1,114 @@
+supabase/migrate_019_health_consent.sql:51:CREATE POLICY "Users can read own consent_log"
+supabase/migrate_019_health_consent.sql:55:CREATE POLICY "Users can write own consent_log"
+supabase/migrate_015_food_logging.sql:47:CREATE POLICY "Authenticated users can read foods" ON foods
+supabase/migrate_015_food_logging.sql:80:CREATE POLICY "Users can manage own custom foods" ON custom_foods
+supabase/migrate_015_food_logging.sql:111:CREATE POLICY "Users can manage own food entries" ON food_entries
+supabase/migrate_015_food_logging.sql:134:CREATE POLICY "Users can read own intake rollups" ON daily_intake_rollups
+supabase/migrate_015_food_logging.sql:137:CREATE POLICY "Users can update own intake rollups" ON daily_intake_rollups
+supabase/migrate_015_food_logging.sql:219:CREATE POLICY "Users can manage own saved meals" ON saved_meals
+supabase/migrate_015_food_logging.sql:241:CREATE POLICY "Users can manage own recipes" ON recipes
+supabase/migrate_015_food_logging.sql:258:CREATE POLICY "Users can manage own recipe ingredients" ON recipe_ingredients
+supabase/migrate_015_food_logging.sql:278:CREATE POLICY "Users can manage own favourites" ON food_favourites
+supabase/migrate_015_food_logging.sql:295:CREATE POLICY "Users can manage own water log" ON daily_water
+supabase/migrate_009_nutrition_targets.sql:42:CREATE POLICY "Users can manage own nutrition targets" ON nutrition_targets
+supabase/setup_complete.sql:423:CREATE POLICY "Anyone can insert debug logs" ON debug_log_uploads
+supabase/setup_complete.sql:457:CREATE POLICY "Users can read/write own profile" ON users_profile
+supabase/setup_complete.sql:463:CREATE POLICY "Anyone can read canonical exercises" ON exercises
+supabase/setup_complete.sql:467:CREATE POLICY "Users can manage own custom exercises" ON exercises
+supabase/setup_complete.sql:472:CREATE POLICY "Users can manage own routines" ON routines
+supabase/setup_complete.sql:477:CREATE POLICY "Users can manage own routine exercises" ON routine_exercises
+supabase/setup_complete.sql:486:CREATE POLICY "Users can manage own mesocycles" ON mesocycles
+supabase/setup_complete.sql:491:CREATE POLICY "Users can manage own mesocycle weeks" ON mesocycle_weeks
+supabase/setup_complete.sql:500:CREATE POLICY "Users can manage own workouts" ON workouts
+supabase/setup_complete.sql:505:CREATE POLICY "Users can manage own sets" ON workout_sets
+supabase/setup_complete.sql:510:CREATE POLICY "Users can manage own landmarks" ON volume_landmarks
+supabase/setup_complete.sql:515:CREATE POLICY "Users can manage own weekly volumes" ON weekly_volumes
+supabase/setup_complete.sql:520:CREATE POLICY "Users can manage own PRs" ON personal_records
+supabase/setup_complete.sql:525:CREATE POLICY "Users can manage own body metrics" ON body_metrics
+supabase/setup_complete.sql:530:CREATE POLICY "Users can manage own photos" ON progress_photos
+supabase/setup_complete.sql:535:CREATE POLICY "Users can manage own achievements" ON achievements
+supabase/setup_complete.sql:540:CREATE POLICY "Users can manage own checkins" ON weekly_checkins
+supabase/setup_complete.sql:545:CREATE POLICY "Users can manage own autoregulation suggestions" ON autoregulation_suggestions
+supabase/setup_complete.sql:552:CREATE POLICY "Users can manage own programmes" ON programmes
+supabase/setup_complete.sql:557:CREATE POLICY "Users can manage own morning weights" ON morning_weights
+supabase/setup_complete.sql:562:CREATE POLICY "Users can manage own coach outputs" ON coach_outputs
+supabase/setup_complete.sql:567:CREATE POLICY "Users can manage own body profile" ON user_body_profile
+supabase/setup_complete.sql:572:CREATE POLICY "Users can manage own exercise notes" ON exercise_user_notes
+supabase/setup_complete.sql:577:CREATE POLICY "Users can manage own v2 checkins" ON weekly_checkins_v2
+supabase/migrate_081_training_partners.sql:100:CREATE POLICY "Members read own partnerships" ON partnerships
+supabase/migrate_081_training_partners.sql:104:CREATE POLICY "Members update own partnerships" ON partnerships
+supabase/migrate_081_training_partners.sql:109:CREATE POLICY "Inviter creates invited partnership" ON partnerships
+supabase/migrate_081_training_partners.sql:133:CREATE POLICY "Pair members read signals" ON partner_week_signals
+supabase/migrate_081_training_partners.sql:145:CREATE POLICY "Members write own signals" ON partner_week_signals
+supabase/migrate_081_training_partners.sql:197:CREATE POLICY "Pair members read cheers" ON partner_cheers
+supabase/migrate_081_training_partners.sql:207:CREATE POLICY "Sender writes own cheers" ON partner_cheers
+supabase/migrate_081_training_partners.sql:230:CREATE POLICY "Blocker manages own blocks" ON partner_blocks
+supabase/migrate_052_daily_water_reconcile.sql:49:    CREATE POLICY "Users can manage own water log" ON daily_water
+supabase/migrate_056_daily_steps.sql:78:CREATE POLICY "Users can manage own steps" ON daily_steps
+supabase/migrate_020_custom_exercises.sql:60:CREATE POLICY "Users can read own custom_exercises"
+supabase/migrate_020_custom_exercises.sql:64:CREATE POLICY "Users can insert own custom_exercises"
+supabase/migrate_020_custom_exercises.sql:68:CREATE POLICY "Users can update own custom_exercises"
+supabase/migrate_020_custom_exercises.sql:73:CREATE POLICY "Users can delete own custom_exercises"
+supabase/migrate_053_device_push_tokens.sql:75:CREATE POLICY "device_push_tokens_select" ON device_push_tokens
+supabase/migrate_053_device_push_tokens.sql:80:CREATE POLICY "device_push_tokens_insert" ON device_push_tokens
+supabase/migrate_053_device_push_tokens.sql:85:CREATE POLICY "device_push_tokens_update" ON device_push_tokens
+supabase/migrate_053_device_push_tokens.sql:91:CREATE POLICY "device_push_tokens_delete" ON device_push_tokens
+supabase/migrate_005_rls_hardening.sql:33:    CREATE POLICY "Users can read/write own profile" ON users_profile
+supabase/migrate_005_rls_hardening.sql:44:    CREATE POLICY "Users can manage own custom exercises" ON exercises
+supabase/migrate_005_rls_hardening.sql:55:    CREATE POLICY "Users can manage own routines" ON routines
+supabase/migrate_005_rls_hardening.sql:66:    CREATE POLICY "Users can manage own routine exercises" ON routine_exercises
+supabase/migrate_005_rls_hardening.sql:81:    CREATE POLICY "Users can manage own mesocycles" ON mesocycles
+supabase/migrate_005_rls_hardening.sql:92:    CREATE POLICY "Users can manage own mesocycle weeks" ON mesocycle_weeks
+supabase/migrate_005_rls_hardening.sql:107:    CREATE POLICY "Users can manage own workouts" ON workouts
+supabase/migrate_005_rls_hardening.sql:118:    CREATE POLICY "Users can manage own sets" ON workout_sets
+supabase/migrate_005_rls_hardening.sql:129:    CREATE POLICY "Users can manage own landmarks" ON volume_landmarks
+supabase/migrate_005_rls_hardening.sql:140:    CREATE POLICY "Users can manage own weekly volumes" ON weekly_volumes
+supabase/migrate_005_rls_hardening.sql:151:    CREATE POLICY "Users can manage own PRs" ON personal_records
+supabase/migrate_005_rls_hardening.sql:162:    CREATE POLICY "Users can manage own body metrics" ON body_metrics
+supabase/migrate_005_rls_hardening.sql:173:    CREATE POLICY "Users can manage own photos" ON progress_photos
+supabase/migrate_005_rls_hardening.sql:184:    CREATE POLICY "Users can manage own achievements" ON achievements
+supabase/migrate_005_rls_hardening.sql:195:    CREATE POLICY "Users can manage own checkins" ON weekly_checkins
+supabase/migrate_005_rls_hardening.sql:206:    CREATE POLICY "Users can manage own autoregulation suggestions" ON autoregulation_suggestions
+supabase/migrate_044_notification_preferences.sql:84:CREATE POLICY "notification_preferences_select" ON notification_preferences
+supabase/migrate_044_notification_preferences.sql:89:CREATE POLICY "notification_preferences_insert" ON notification_preferences
+supabase/migrate_044_notification_preferences.sql:94:CREATE POLICY "notification_preferences_update" ON notification_preferences
+supabase/migrate_044_notification_preferences.sql:100:CREATE POLICY "notification_preferences_delete" ON notification_preferences
+supabase/migrate_064_cardio_log.sql:89:CREATE POLICY "Users can manage own cardio" ON cardio_log
+supabase/migrate_004_schema_improvements.sql:31:    CREATE POLICY "Users can manage own checkins" ON weekly_checkins
+supabase/migrate_017_ed_pattern_and_telemetry.sql:35:CREATE POLICY "Users can read own ed_pattern_flags"
+supabase/migrate_017_ed_pattern_and_telemetry.sql:39:CREATE POLICY "Users can write own ed_pattern_flags"
+supabase/migrate_017_ed_pattern_and_telemetry.sql:43:CREATE POLICY "Users can update own ed_pattern_flags"
+supabase/migrate_017_ed_pattern_and_telemetry.sql:125:CREATE POLICY "Users can read own engine_telemetry"
+supabase/migrate_017_ed_pattern_and_telemetry.sql:129:CREATE POLICY "Users can write own engine_telemetry"
+supabase/migrate_017_ed_pattern_and_telemetry.sql:233:CREATE POLICY "Users can read own engine_overrides"
+supabase/migrate_007_pro_rls_hardening.sql:37:CREATE POLICY "Users can manage own programmes" ON programmes
+supabase/migrate_007_pro_rls_hardening.sql:42:CREATE POLICY "Users can manage own morning weights" ON morning_weights
+supabase/migrate_007_pro_rls_hardening.sql:47:CREATE POLICY "Users can manage own coach outputs" ON coach_outputs
+supabase/migrate_007_pro_rls_hardening.sql:52:CREATE POLICY "Users can manage own body profile" ON user_body_profile
+supabase/migrate_007_pro_rls_hardening.sql:57:CREATE POLICY "Users can manage own exercise notes" ON exercise_user_notes
+supabase/migrate_007_pro_rls_hardening.sql:62:CREATE POLICY "Users can manage own v2 checkins" ON weekly_checkins_v2
+supabase/migrate_012_complete_sync.sql:320:      'CREATE POLICY "Users manage own %s" ON %I FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)',
+supabase/migrate_013_user_feedback.sql:70:CREATE POLICY "Users insert own feedback" ON user_feedback
+supabase/schema.sql:21:CREATE POLICY "Users can read/write own profile" ON users_profile
+supabase/schema.sql:52:CREATE POLICY "Anyone can read canonical exercises" ON exercises
+supabase/schema.sql:54:CREATE POLICY "Users can manage own custom exercises" ON exercises
+supabase/schema.sql:70:CREATE POLICY "Users can manage own routines" ON routines
+supabase/schema.sql:87:CREATE POLICY "Users can manage own routine exercises" ON routine_exercises
+supabase/schema.sql:110:CREATE POLICY "Users can manage own mesocycles" ON mesocycles
+supabase/schema.sql:125:CREATE POLICY "Users can manage own mesocycle weeks" ON mesocycle_weeks
+supabase/schema.sql:151:CREATE POLICY "Users can manage own workouts" ON workouts
+supabase/schema.sql:180:CREATE POLICY "Users can manage own sets" ON workout_sets
+supabase/schema.sql:197:CREATE POLICY "Users can manage own landmarks" ON volume_landmarks
+supabase/schema.sql:216:CREATE POLICY "Users can manage own weekly volumes" ON weekly_volumes
+supabase/schema.sql:234:CREATE POLICY "Users can manage own PRs" ON personal_records
+supabase/schema.sql:257:CREATE POLICY "Users can manage own body metrics" ON body_metrics
+supabase/schema.sql:272:CREATE POLICY "Users can manage own photos" ON progress_photos
+supabase/schema.sql:286:CREATE POLICY "Users can manage own achievements" ON achievements
+supabase/schema.sql:309:CREATE POLICY "Users can manage own checkins" ON weekly_checkins
+supabase/schema.sql:325:CREATE POLICY "Users can manage own autoregulation suggestions" ON autoregulation_suggestions
+supabase/migrate_086_meal_plans.sql:29:CREATE POLICY "Users can read own data"
+supabase/migrate_086_meal_plans.sql:33:CREATE POLICY "Users can insert own data"
+supabase/migrate_086_meal_plans.sql:37:CREATE POLICY "Users can update own data"
+supabase/migrate_051_food_frequents.sql:43:CREATE POLICY food_frequents_select_own ON food_frequents
+supabase/migrate_030_tier_infrastructure.sql:85:CREATE POLICY "Users read own tier history" ON tier_history
+supabase/migrate_030_tier_infrastructure.sql:112:CREATE POLICY "Authenticated can read pricing_config" ON pricing_config

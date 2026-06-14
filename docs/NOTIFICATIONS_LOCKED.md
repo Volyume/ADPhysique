@@ -187,3 +187,100 @@ Aggregated daily in `engine_telemetry_daily`:
 - Disabling "Daily check-in reminder" from You → Notifications
   cancels the schedule on next sync.
 - Tapping a cascade day-14 push routes to the cascade gate screen.
+
+---
+
+## PROPOSED ADDENDUM — push budget reconciliation (2026-06-12)
+
+**Status: PROPOSED, not yet locked. Founder reviews at PR** (deep-audit
+decision 5, `_FOUNDER-DECISIONS-2026-06-12.md`; gap G6 in the
+competitive audit). The locked body above predates several shipped
+push types; this section reconciles the full inventory and adds a
+global budget. New pushes ship only within this budget.
+
+### Full push inventory
+
+| Push | Category (code) | Class | Trigger | Frequency cap |
+| --- | --- | --- | --- | --- |
+| Morning weight | `morning_weight` | Habit | Recurring, every morning at the user's hour (default 07:00) | 1 per day |
+| Training day reminder | `training_reminder` | Habit | Recurring on the user's chosen training days (default 08:00) | 1 per day |
+| Weekly check-in reminder | `weekly_checkin_reminder` | Habit | One-shot per week on the user's check-in day; skipped when already checked in | 1 per week |
+| Trial day-3 moment | `trial_day3` | Event | Trial start + 3 days, 10:00 | Once per trial |
+| Cascade gate, trial winding down | `cascade_gate` | Event | Trial end minus 2 days (day 12 of 14), 10:00 | Once per trial |
+| Cascade gate, downgrade fired | `cascade_gate` | Event | Trial end day (day 14), 10:00 | Once per trial |
+| Weekly coach output ready | `weekly_coach_ready` | Event | Laid at check-in submit; next Monday 09:00 | 1 per week |
+| Monthly recap | `monthly_recap` | Event | First qualifying app open of the new month | 1 per month |
+| Year of lifts | `year_of_lifts_unlock` | Event | 365 days since first workout | Once ever |
+| Win-back | `winback` | Event | Lapse + 30 days (or stated return window); 180-day floor across episodes | 1 per churn episode |
+| Partner cheer | `partner_cheer` | Event | Partner sends a cheer; in-app toast when foregrounded | 1 per topic per day (locked principle) |
+| Missed check-in, same evening (NEW, OPP-C03) | `checkin_missed` | Event | 20:00 local on a missed check-in day (Pro only) | 1 per missed episode |
+| Missed check-in, value follow-up (NEW, OPP-C03) | `checkin_missed` | Event | Check-in time + 48 hours, same episode (Pro only) | 1 per missed episode |
+| Payment failure | `subscription_payment_failure` | Transactional | Server push from the Play Billing RTDN webhook | Per store event |
+| Subscription expiring | `subscription_expiring` | Transactional | Server push | Per store event |
+
+No streak-milestone push exists at v1 (streaks surface in-app only).
+ED-pattern lockout, FFM-floor hold and sync errors remain in-app only,
+never push, as locked above. Safety and consent surfaces never use
+push, full stop.
+
+### Global cap
+
+- **At most 2 event-class pushes per day, and at most 8 per week.**
+- Habit reminders (morning weight, training day, weekly check-in) sit
+  outside the event cap: the user schedules them, each is capped at
+  one per day (check-in one per week), and each self-suppresses at
+  delivery once the action is already done. Counting them inside the
+  event cap would mean a user training five days a week could almost
+  never receive any event push, including the trial-end gate.
+- Transactional pushes (payment failure, expiring) are server-sent
+  store-state notices and are exempt; they cannot be locally budgeted.
+- The cap is enforced on the pending local schedule by
+  `src/lib/notifications/budget.js`; every event push must request a
+  slot through it before scheduling.
+
+### Collision priority (highest first)
+
+1. `cascade_gate`
+2. `weekly_coach_ready`
+3. `checkin_missed`
+4. `trial_day3`
+5. `winback`
+6. `year_of_lifts_unlock`
+7. `monthly_recap`
+8. `partner_cheer`
+
+**Collision rule:** when a day (or week) is at cap, higher priority
+wins. An incoming push that outranks the lowest-priority push already
+laid for that day takes its slot and the loser is dropped, not queued
+to a worse day. An incoming push that does not outrank anything is
+itself dropped. Equal priority never evicts. Drops and evictions are
+recorded as `notification_failed` with reason `budget_capped` /
+`budget_evicted` (existing event name, no new telemetry events).
+
+### Global suppression rules (unchanged, restated)
+
+- An open ED/wellbeing flag suppresses every event push at schedule
+  time, and at delivery where the app is foregrounded. Silence is the
+  respectful behaviour. The flag itself never fires via push.
+- Quiet hours always win, as locked above.
+- One notification per topic per day, as locked above.
+- Every user-facing category keeps a disable path. The new
+  `checkin_missed` category has a toggle in Settings → Coaching
+  reminders (default on, Pro only).
+
+### Missed check-in copy (NEW, OPP-C03)
+
+Shame copy is banned: "you missed" never appears. Both pushes are
+single-shot per missed episode, ED-flag suppressed, quiet-hours
+shifted and budget-gated.
+
+```
+Same evening (20:00 local on the check-in day)
+Title: Your check-in is ready when you are{, First}
+Body:  Your check-in data is ready to review. It takes about two
+       minutes.
+
++48 hours (value-led, from data the engine already has)
+Title: Your weekly trend is ready{, First}
+Body:  Tap to see how the week compares, whenever suits you.
+```

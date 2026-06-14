@@ -34,7 +34,6 @@
  */
 import { runWeeklyCoach } from '../../src/lib/weeklyCoach';
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 function _defaultUser() {
   return {
@@ -163,7 +162,7 @@ export function simulate({ user: userOverrides = {}, weeks = 12, weeklyInputs = 
   };
 
   const weeklyWeights = weeklyInputs.map(
-    (inp, i) => inp?.weight_kg ?? user.weight_kg,
+    (inp) => inp?.weight_kg ?? user.weight_kg,
   );
 
   // Set of week indices the user did NOT log weight in. Used by

@@ -10,7 +10,7 @@ import { VolyumeIcon } from '../components/BrandMark';
 import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
 import { GOAL_LABELS, PHASE_LABELS, isCompetitionGoal } from '../lib/coachingGoals';
-import { getSplitRationale } from '../lib/whyThisTemplates';
+import { getSplitRationale, getSetupReceiptLine } from '../lib/whyThisTemplates';
 import { getActivePlan, getRoutinesForPlan } from '../lib/database';
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
 
@@ -27,7 +27,10 @@ export default function ProSetupCompleteScreen({ navigation }) {
   const [nutritionSummary, setNutritionSummary] = useState(null);
   const [planRoutines, setPlanRoutines] = useState([]);
   const [planName, setPlanName] = useState(null);
-  const [planOpen, setPlanOpen] = useState(false);
+  // COMP-013: the week view IS the reveal, so card 3 opens expanded on first
+  // reveal (this screen is shown only once, at setup completion). Hiding the
+  // named sessions behind a tap would mute the moment.
+  const [planOpen, setPlanOpen] = useState(true);
   const [whyThis, setWhyThis] = useState(null);
 
   const opacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
@@ -86,6 +89,15 @@ export default function ProSetupCompleteScreen({ navigation }) {
   const phaseLabel = PHASE_LABELS[userProfile?.trainingPhase] ?? null;
   const hasPlan = planRoutines.length > 0;
 
+  // COMP-013: the personalisation receipt — the one line that makes the user
+  // feel seen. Built only from inputs the engine acted on (division, weak
+  // points the plan prioritised, days committed).
+  const receiptLine = getSetupReceiptLine({
+    trainingGoal: userProfile?.trainingGoal,
+    weakPointLabels: userProfile?.planWeakPoints || [],
+    daysPerWeek: userProfile?.daysPerWeek,
+  });
+
   // Macro bars for the targets card. The bar length is each macro's share of
   // the day's calories (protein and carbs 4 kcal/g, fat 9), so the three bars
   // read as the real composition of the plan rather than three identical
@@ -124,7 +136,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
           </View>
 
           <Text style={styles.headline}>You're all set, {firstName}.</Text>
-          <Text style={styles.sub}>Here's your daily routine.</Text>
+          <Text style={styles.sub}>{receiptLine || "Here's your daily routine."}</Text>
 
           {/* 1. Log your weight, first thing each morning */}
           <View style={styles.routineCard}>
@@ -324,7 +336,7 @@ const styles = StyleSheet.create({
   proBadge: {
     backgroundColor: colors.primary, borderRadius: 4, paddingHorizontal: 7, paddingVertical: spacing.xxs,
   },
-  proBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.8 },
+  proBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0.8 },
 
   // Matched to the wizard's continuous track, drawn full here (setup complete).
   progressTrack: {

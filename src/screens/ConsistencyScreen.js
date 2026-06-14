@@ -6,12 +6,15 @@ import AnimatedEntrance from '../components/AnimatedEntrance';
 import InfoTooltip from '../components/InfoTooltip';
 import FatigueTrendCard from '../components/FatigueTrendCard';
 import BlockProgressCard from '../components/BlockProgressCard';
+import BlockShapeCard from '../components/BlockShapeCard';
 import ReadinessCards from '../components/ReadinessCards';
 import {
   MesocyclePulseCard, WorkloadCard, SessionDurationChart,
   MuscleFrequencyTable, TrainingCalendar,
 } from '../components/ProgressSections';
 import useProgressData from '../hooks/useProgressData';
+import StreakWeeksSection from '../components/StreakWeeksSection';
+import PartnerRow from '../components/PartnerRow';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -20,7 +23,9 @@ import { useShallow } from 'zustand/react/shallow';
 // session length, how often each muscle gets hit, and the 12-week calendar.
 // Pulled off the Progress landing so the landing reads as a hub, not a wall.
 export default function ConsistencyScreen({ navigation }) {
-  const { user, tier } = useAppStore(useShallow(s => ({ user: s.user, tier: s.tier })));
+  const { user, tier, scoffScore } = useAppStore(useShallow(s => ({
+    user: s.user, tier: s.tier, scoffScore: s.userProfile?.scoffScore,
+  })));
   const {
     activeMeso, mesoTonnage, mesoProgress, mesoCurrentWeek,
     fatigueSessions, blockProgress, currentMesoWeek,
@@ -37,6 +42,14 @@ export default function ConsistencyScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
         }
       >
+        {/* ── Your weeks (COMP-018 consistency streak) ── */}
+        <StreakWeeksSection userId={user?.id} scoffScore={scoffScore} />
+
+        {/* ── Training partner (NEW-002 rebuild): a slim status row beneath
+            the streak card (Duolingo pattern: the friend streak lives at the
+            streak's own home), opening the partner's first-class screen. ── */}
+        <PartnerRow userId={user?.id} tier={tier} onOpen={() => navigation.navigate('Partner')} />
+
         {/* ── Lighter week banner ── */}
         {deloadAlert && (
           <View style={styles.deloadBanner}>
@@ -66,6 +79,17 @@ export default function ConsistencyScreen({ navigation }) {
               'After the recovery week, a new block starts slightly heavier than the last. That is how you keep improving over months, not just weeks.'
             } />
           </View>
+          {/* D2: programme-arc visibility — "Week N of M" dots + effort word,
+              so the block reads as a journey with a destination (the recovery
+              week) rather than an open-ended grind. Neutral orientation, shown
+              alongside the existing (ungated) block cards. */}
+          {currentMesoWeek?.plannedWeeks >= 2 ? (
+            <BlockShapeCard
+              weekIndex={currentMesoWeek.weekIndex}
+              plannedWeeks={currentMesoWeek.plannedWeeks}
+              isDeload={currentMesoWeek.isDeload}
+            />
+          ) : null}
           <MesocyclePulseCard
             meso={activeMeso}
             currentWeek={mesoCurrentWeek()}

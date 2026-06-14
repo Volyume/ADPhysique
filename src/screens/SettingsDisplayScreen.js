@@ -1,11 +1,19 @@
 import { useEffect } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, Switch } from 'react-native';
+import { View, Text, Switch, TouchableOpacity, StyleSheet } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 import * as Updates from 'expo-updates';
 import useAppStore from '../store/useAppStore';
-import { colors, withAlpha } from '../styles/theme';
+import { colors, withAlpha, spacing, radius, fontSize, fontWeight } from '../styles/theme';
 import { SettingsPage, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
+
+// COMP-029: appearance is a FREE display setting (never Pro-gated). Default
+// Dark; Light is opt-in; Match phone follows the OS scheme.
+const THEME_OPTIONS = [
+  { value: 'dark', label: 'Dark' },
+  { value: 'light', label: 'Light' },
+  { value: 'system', label: 'Match phone' },
+];
 
 // Larger Text / Higher Contrast / Colour-Blind Safe mutate theme tokens
 // that StyleSheet.create has already baked at module-evaluation time, so
@@ -53,8 +61,40 @@ export default function SettingsDisplayScreen() {
     if (!accessibilityLoaded) loadAccessibility();
   }, [accessibilityLoaded, loadAccessibility]);
 
+  const currentTheme = accessibility.theme ?? 'dark';
+
   return (
     <SettingsPage>
+      <View style={styles.section}>
+        <Text style={local.title}>Appearance</Text>
+        <Text style={local.sub}>
+          Dark is the Volyume default. Light is easier to read in daylight. Match phone follows your system setting.
+        </Text>
+        <View style={local.segment} accessibilityRole="radiogroup">
+          {THEME_OPTIONS.map((opt) => {
+            const active = currentTheme === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                style={[local.segBtn, active && local.segBtnActive]}
+                onPress={async () => {
+                  if (active) return;
+                  // Await the write before prompting reload (a fast tap can tear
+                  // down the VM before the pref persists).
+                  await setAccessibilityPref('theme', opt.value);
+                  promptRestartForA11y('Appearance');
+                }}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={opt.label}
+              >
+                <Text style={[local.segText, active && local.segTextActive]}>{opt.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+
       <View style={styles.section}>
         <SettingRow
           icon="text-outline"
@@ -125,9 +165,25 @@ export default function SettingsDisplayScreen() {
           }
         />
         <Text style={styles.a11yNote}>
-          Reduce motion takes effect immediately. Larger text, higher contrast, and the colour-blind safe palette need Volyume to reopen. You'll be prompted to reload after toggling.
+          Reduce motion takes effect immediately. Appearance, larger text, higher contrast, and the colour-blind safe palette need Volyume to reopen. You'll be prompted to reload after changing them.
         </Text>
       </View>
     </SettingsPage>
   );
 }
+
+const local = StyleSheet.create({
+  title: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold, marginBottom: spacing.xs },
+  sub: { color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 18, marginBottom: spacing.md },
+  segment: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    padding: spacing.xxs,
+    gap: spacing.xxs,
+  },
+  segBtn: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm },
+  segBtnActive: { backgroundColor: colors.primaryFill },
+  segText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
+  segTextActive: { color: colors.onPrimary, fontWeight: fontWeight.semibold },
+});
