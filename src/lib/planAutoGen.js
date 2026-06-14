@@ -266,6 +266,13 @@ export async function generatePlanDryRun(userId, profile) {
     }
   }
 
+  // Mirror generateAndSavePlan's zero-match guard so the preview never offers a
+  // plan the commit would refuse to save (the diff must not lie — blueprint
+  // ULTIMATE-PLANDIFF-01 EDGE: dry-run must match what commit produces).
+  if (totalWritten === 0) {
+    return { ok: false, error: 'No exercises matched your equipment' };
+  }
+
   const result = { ok: true, plan, sessionLengthMinutes: inputs.sessionLengthMinutes };
   if (totalWritten < totalRequested) {
     result.partial = true;

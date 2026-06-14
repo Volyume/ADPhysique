@@ -16,10 +16,15 @@ jest.mock('../database', () => ({
 }));
 
 import { buildPlanInputs, generatePlanDryRun } from '../planAutoGen';
+import { POOL } from '../planEngine';
 import {
   getAllExercises, createProgramme, createRoutine, addExerciseToRoutine,
   activatePlanWithBlock,
 } from '../database';
+
+// A library that contains every name the engine can pick, so the match loop
+// resolves (mirrors a fully-seeded device).
+const FULL_LIBRARY = Object.values(POOL).flat().map((e) => ({ name: e.n }));
 
 describe('buildPlanInputs', () => {
   test('returns null when trainingGoal is missing', () => {
@@ -145,8 +150,15 @@ describe('generatePlanDryRun', () => {
   };
   beforeEach(() => {
     jest.clearAllMocks();
-    getAllExercises.mockResolvedValue([]); // engine falls back to its built-in pool
+    getAllExercises.mockResolvedValue(FULL_LIBRARY);
   });
+
+  const expectNoWrites = () => {
+    expect(createProgramme).not.toHaveBeenCalled();
+    expect(createRoutine).not.toHaveBeenCalled();
+    expect(addExerciseToRoutine).not.toHaveBeenCalled();
+    expect(activatePlanWithBlock).not.toHaveBeenCalled();
+  };
 
   test('produces a prospective plan WITHOUT writing or activating anything', async () => {
     const res = await generatePlanDryRun('u1', profile);
@@ -154,17 +166,21 @@ describe('generatePlanDryRun', () => {
     expect(Array.isArray(res.plan.workouts)).toBe(true);
     expect(res.plan.workouts.length).toBeGreaterThan(0);
     expect(res.sessionLengthMinutes).toBe(75);
-    // The whole point: no persistence side effects.
-    expect(createProgramme).not.toHaveBeenCalled();
-    expect(createRoutine).not.toHaveBeenCalled();
-    expect(addExerciseToRoutine).not.toHaveBeenCalled();
-    expect(activatePlanWithBlock).not.toHaveBeenCalled();
+    expectNoWrites(); // the whole point: no persistence side effects
+  });
+
+  test('mirrors the commit zero-match guard: no resolvable moves → ok:false, no writes', async () => {
+    getAllExercises.mockResolvedValue([]); // nothing resolves → commit would bail too
+    const res = await generatePlanDryRun('u1', profile);
+    expect(res.ok).toBe(false);
+    expect(res.error).toMatch(/matched/i);
+    expectNoWrites();
   });
 
   test('bails like the commit on a missing user / incomplete profile', async () => {
     expect(await generatePlanDryRun(null, profile)).toEqual({ ok: false, error: 'No user' });
     expect((await generatePlanDryRun('u1', {})).ok).toBe(false);
     expect((await generatePlanDryRun('u1', {})).error).toBe('Profile incomplete');
-    expect(createProgramme).not.toHaveBeenCalled();
+    expectNoWrites();
   });
 });
