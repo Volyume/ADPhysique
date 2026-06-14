@@ -48,9 +48,16 @@ are NOT FOUND, not fabricated. Quality = capability + execution; only micro-UX t
 ## NUTRITION (NU — targets/macros)
 - **BEST IN CLASS:** UK curated DB (see FL); macro flexibility / carb-cycle / calorie-planner (all-three); protein scaled to bodyweight/lean mass (all-three); kcal + UK units; micronutrient/NRV depth (Gemini NU-F3, Claude NU-F2).
 - **WHERE WE LEAD:** protein approaches standard/optimised/advanced/**custom g/kg**, LBM-based (`nutritionEngine.js:65-98`; `NutritionTargetsScreen.js:844-892`); transparent "why these numbers for you" calorie/protein/fat/carb rationale (`NutritionTargetsScreen.js:1093-1207`); carb-cycle + refeed + diet-break (`CoachOutputScreen.js:425-510`); per-meal protein split inside the MPS window (`NutritionTargetsScreen.js:1003-1091`); experience-scaled surplus (`nutritionEngine.js:709-723`).
-- **WHERE WE LAG:** micronutrient depth vs Cronometer; no weekday calorie-banking planner.
-- **MISSING ENTIRELY:** vitamins/minerals/NRV tracking.
-- **VERIFICATION:** flexibility/protein/transparency LEAD = VERIFIED (ours) + corroborated bar; micronutrient MISSING = VERIFIED. No NOT FOUND cells.
+- **WHERE WE LAG:** micronutrient depth vs Cronometer; no weekday calorie-banking planner. **Structured
+  reverse-diet has analogues only** — the goal set carries no reverse-diet (`NutritionTargetsScreen.js:80-87`
+  GOALS = lean_gain/build/maintain/recomp/mild_cut/aggressive_cut); the nearest mechanisms are the
+  return-to-maintenance diet-break + refeed + carb-cycle cards (`CoachOutputScreen.js:389-510`), not a graded
+  multi-week reverse-diet protocol.
+- **MISSING ENTIRELY:** vitamins/minerals/NRV tracking (schema = fibre/sodium/sugar only, `food/db.js:240`);
+  structured reverse-diet mode (analogues exist per above; no dedicated graded protocol).
+- **VERIFICATION:** flexibility/protein/transparency LEAD = VERIFIED (ours) + corroborated bar; micronutrient
+  MISSING = VERIFIED; reverse-diet ABSENT-with-analogues = VERIFIED (`NutritionTargetsScreen.js:80-87` GOALS
+  read; `CoachOutputScreen.js:389-510` analogue cards read) / bar = single-source (AC-9). No NOT FOUND cells.
 
 ## PLAN-GENERATION (PG)
 - **BEST IN CLASS:** deterministic mesocycle periodisation with MEV/MRV landmarks + deloads + weak-point specialisation (RP/Juggernaut/Alpha, all-three PG-F2); inputs goals/equipment/level/frequency/1RM/injury (all-three); beginner-linear vs advanced-mesocycle (all-three); LLM plans distrusted as "slop" (all-three PG-F1); Boostcamp = named expert/community programmes, nSuns/GZCLP (ChatGPT PG-F2, Gemini).
