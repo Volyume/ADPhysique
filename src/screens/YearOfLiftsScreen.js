@@ -44,9 +44,10 @@ function fmtDate(ms) {
 
 /**
  * Builds the story-card list from the year's data. Empty/zero-value
- * cards are dropped so the deck stays tight.
+ * cards are dropped so the deck stays tight. `neutral` (calm mode / open ED
+ * flag) suppresses the year-over-year comparison, mirroring buildMonthCards.
  */
-function buildCards(data, units) {
+export function buildCards(data, units, { neutral = false } = {}) {
   if (!data) return [];
   const cards = [];
 
@@ -73,15 +74,24 @@ function buildCards(data, units) {
     });
   }
 
-  // 3. Volume
+  // 3. Volume — raw number stays the hero (numbers-first); a factual
+  // year-over-year anchor (ULTIMATE-WR-5, NA-wr-10: founder chose relative %)
+  // is added only when there is a previous window and the year is up. A down
+  // year is never negative-framed and neutral mode suppresses it; either way it
+  // falls back to the generic line, never a fabricated comparison. Mirrors the
+  // already-shipped buildMonthCards tonnage caption.
   if (data.tonnage > 0) {
+    const prev = data.previous;
+    const caption = (!neutral && prev && prev.tonnage > 0 && data.tonnage > prev.tonnage)
+      ? `Up ${Math.round(((data.tonnage - prev.tonnage) / prev.tonnage) * 100)}% on the year before.`
+      : 'Every set you logged, stacked end to end.';
     cards.push({
       type: 'stat',
       icon: 'trending-up',
       tone: 'success',
       value: data.tonnage.toLocaleString('en-GB'),
       unit: 'kg moved',
-      caption: 'Every set you logged, stacked end to end.',
+      caption,
     });
   }
 
@@ -379,7 +389,21 @@ export default function YearOfLiftsScreen({ navigation, route }) {
         } else if (variant === 'block') {
           setData(await getBlockReflectionData(user.id, mesocycleId));
         } else {
-          setData(await getYearOfLiftsData(user.id, yearMs));
+          // Year of Lifts: raw tonnage hero + a factual year-over-year anchor
+          // (ULTIMATE-WR-5, NA-wr-10). The previous-window tonnage comes from
+          // getRecapData over the SAME [yearStart, yearEnd] window, so it shares
+          // getYearOfLiftsData's set-filter basis and the % agrees with the
+          // displayed number. Calm mode / open ED flag suppresses the comparison.
+          const yd = await getYearOfLiftsData(user.id, yearMs);
+          const [mode, edFlag, recap] = await Promise.all([
+            getWellbeingMode().catch(() => null),
+            getOpenEdPatternFlag(user.id).catch(() => null),
+            (yd && yd.tonnage > 0 && yd.yearStart != null)
+              ? getRecapData(user.id, { startMs: yd.yearStart, endMs: yd.yearEnd, compare: true }).catch(() => null)
+              : Promise.resolve(null),
+          ]);
+          setNeutral(isCalm(mode) || !!edFlag);
+          setData(recap?.previous ? { ...yd, previous: recap.previous } : yd);
         }
       } catch (_e) { /* leave data null → graceful empty */ }
       setLoading(false);
@@ -391,7 +415,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
   const cards = useMemo(() => {
     if (variant === 'month') return buildMonthCards(data, units, { label: monthLabel, neutral });
     if (variant === 'block') return buildBlockCards(data, units);
-    return buildCards(data, units);
+    return buildCards(data, units, { neutral });
   }, [data, units, variant, monthLabel, neutral]);
 
   // COMP-005: open-rate telemetry for the recap surfaces (month/block). variant

@@ -3,7 +3,7 @@
  * Pins the delta-caption rules (never negative-framed; neutral under calm/ED),
  * the minimum-content rule, and the block climb slide.
  */
-import { buildMonthCards, buildBlockCards } from '../YearOfLiftsScreen';
+import { buildMonthCards, buildBlockCards, buildCards } from '../YearOfLiftsScreen';
 
 const MS = Date.UTC(2026, 5, 1); // 1 Jun 2026
 const JUN_END = Date.UTC(2026, 6, 1); // 1 Jul 2026 (exclusive end)
@@ -68,6 +68,49 @@ describe('buildMonthCards', () => {
 
   test('null data → empty deck', () => {
     expect(buildMonthCards(null, 'kg', {})).toEqual([]);
+  });
+});
+
+describe('buildCards (Year of Lifts) — tonnage year-over-year anchor (ULTIMATE-WR-5)', () => {
+  function fullYear(overrides = {}) {
+    return {
+      totalSessions: 130, totalSets: 1800, tonnage: 48000,
+      avgSessionsPerWeek: 2.5, uniqueExercises: 22,
+      topExercises: [{ name: 'Squat', sets: 200 }],
+      topPRs: [{ exerciseName: 'Squat', value: 150, reps: 3 }],
+      topMonth: 'March',
+      monthlyBreakdown: Array.from({ length: 12 }, (_, i) => ({ month: i, sessions: 10 })),
+      yearStart: Date.UTC(2025, 5, 1), yearEnd: Date.UTC(2026, 5, 1),
+      previous: { totalSessions: 110, tonnage: 40000 },
+      ...overrides,
+    };
+  }
+  const volumeOf = (cards) => find(cards, c => c.unit === 'kg moved');
+
+  test('an up year surfaces a factual relative %', () => {
+    const v = volumeOf(buildCards(fullYear(), 'kg'));
+    expect(v.value).toBe('48,000'); // raw number stays the hero, numbers-first
+    expect(v.caption).toBe('Up 20% on the year before.');
+  });
+
+  test('a down year is never negative-framed (falls back to the generic line)', () => {
+    const v = volumeOf(buildCards(fullYear({ tonnage: 38000, previous: { totalSessions: 110, tonnage: 40000 } }), 'kg'));
+    expect(v.caption).toBe('Every set you logged, stacked end to end.');
+    expect(v.caption).not.toMatch(/down|less|fewer|-/i);
+  });
+
+  test('neutral (calm / ED flag) suppresses the comparison', () => {
+    const v = volumeOf(buildCards(fullYear(), 'kg', { neutral: true }));
+    expect(v.caption).toBe('Every set you logged, stacked end to end.');
+  });
+
+  test('no previous window → generic caption, never a fabricated comparison', () => {
+    const v = volumeOf(buildCards(fullYear({ previous: null }), 'kg'));
+    expect(v.caption).toBe('Every set you logged, stacked end to end.');
+  });
+
+  test('null data → empty deck', () => {
+    expect(buildCards(null, 'kg')).toEqual([]);
   });
 });
 
