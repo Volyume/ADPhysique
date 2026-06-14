@@ -2028,6 +2028,7 @@ describe('MealPlanScreen "Training today?" control', () => {
         schedule: ['training', 'rest'],
         days: [mkDay('training'), mkDay('rest')],
         variants: { training: { kcal: 2600 }, rest: { kcal: 2400 } },
+        cycleDeltaKcal: 200, // a cycling plan: the "Training today?" control shows
         prefs: { diet: 'omnivore', mealsPerDay: 4 },
         targetSnapshot: { targetKcal: 2600, kcalMin: 2340, kcalMax: 2860, proteinG: 180 },
       },
@@ -2089,6 +2090,31 @@ describe('MealPlanScreen "Training today?" control', () => {
     const service = require('../lib/food/mealPlanService');
     const orig = service.loadActiveMealPlan;
     service.loadActiveMealPlan = () => Promise.resolve(null);
+    let tree = null;
+    try {
+      const Screen = require('../screens/MealPlanScreen').default;
+      const { tree: t, errors } = await mountScreen(Screen);
+      tree = t;
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+      expect(findByLabel(tree, 'Training today?: Training')).toEqual([]);
+      expect(findByLabel(tree, 'Training today?: Rest')).toEqual([]);
+    } finally {
+      unmountTree(tree);
+      service.loadActiveMealPlan = orig;
+    }
+  });
+
+  test('does not render the control on a flat plan (no calorie cycling)', async () => {
+    useAppStore.setState(STATE_VARIANTS[0].state);
+    const service = require('../lib/food/mealPlanService');
+    const orig = service.loadActiveMealPlan;
+    // A flat plan: training and rest carry the identical target, so the
+    // day-type control is meaningless and is dropped (NA-nutrition-7).
+    const record = makePlanRecord();
+    record.plan.cycleDeltaKcal = 0;
+    record.plan.variants = { training: { kcal: 2600 }, rest: { kcal: 2600 } };
+    service.loadActiveMealPlan = () => Promise.resolve(record);
     let tree = null;
     try {
       const Screen = require('../screens/MealPlanScreen').default;

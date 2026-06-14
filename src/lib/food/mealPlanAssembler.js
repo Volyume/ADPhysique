@@ -75,7 +75,7 @@ export function targetWasFloored(target) {
  * engine floored the target (or the schedule has no mix of day types)
  * both variants equal the engine target untouched.
  */
-export function dayVariantTargets(target, { trainingDays = 0, restDays = 0, fatConvention = 'equalised' } = {}) {
+export function dayVariantTargets(target, { trainingDays = 0, restDays = 0, fatConvention = 'equalised', allowCycling = true } = {}) {
   const t = target || {};
   const base = {
     kcal: Number(t.targetKcal) || 0,
@@ -84,6 +84,10 @@ export function dayVariantTargets(target, { trainingDays = 0, restDays = 0, fatC
     fatG: Number(t.fatG) || 0,
   };
   const flat = { training: { ...base }, rest: { ...base }, cycleDeltaKcal: 0 };
+  // Gated upstream to match the coach: only advanced cutters and physique
+  // competitors cycle calories between training and rest days; everyone else
+  // gets a flat daily target (coachingGoals.dayCalorieCyclingAllowed).
+  if (!allowCycling) return flat;
   if (!base.kcal || trainingDays <= 0 || restDays <= 0) return flat;
   if (targetWasFloored(t)) return flat;
 
@@ -492,7 +496,7 @@ export function assembleDayPlan({
  * @param engineTarget the calculateNutritionTargets output, verbatim
  * @param schedule     seven entries: 'training' | 'rest'
  */
-export function assembleWeekPlan({ engineTarget, prefs: rawPrefs, schedule, seed = 1, savedMeals = [] } = {}) {
+export function assembleWeekPlan({ engineTarget, prefs: rawPrefs, schedule, seed = 1, savedMeals = [], allowDayCycling = true } = {}) {
   const prefs = normalisePreferences(rawPrefs);
   const week = Array.isArray(schedule) && schedule.length === 7
     ? schedule.map((d) => (d === 'training' ? 'training' : 'rest'))
@@ -504,6 +508,7 @@ export function assembleWeekPlan({ engineTarget, prefs: rawPrefs, schedule, seed
     trainingDays,
     restDays,
     fatConvention: prefs.fatConvention,
+    allowCycling: allowDayCycling,
   });
   const band = { kcalMin: engineTarget?.kcalMin, kcalMax: engineTarget?.kcalMax };
 

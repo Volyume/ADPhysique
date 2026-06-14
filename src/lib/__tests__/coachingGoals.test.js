@@ -17,6 +17,8 @@ import {
   daysToActivityLevel,
   getTrainingNote,
   migrateProfileGoals,
+  isCutPhase,
+  dayCalorieCyclingAllowed,
 } from '../coachingGoals';
 
 describe('Division-specific weak-point sets', () => {
@@ -236,5 +238,33 @@ describe('migrateProfileGoals', () => {
     expect(migrateProfileGoals(null)).toBe(null);
     expect(migrateProfileGoals(undefined)).toBe(undefined);
     expect(() => migrateProfileGoals({})).not.toThrow();
+  });
+});
+
+describe('day-calorie-cycling gate (single source for coach + meal plan)', () => {
+  test('isCutPhase is true only for the three cut phases', () => {
+    ['agg_cut', 'mod_cut', 'mild_cut'].forEach((p) => expect(isCutPhase(p)).toBe(true));
+    ['recomp', 'maint', 'mild_bulk', 'mod_bulk', 'bulk', null, undefined, ''].forEach(
+      (p) => expect(isCutPhase(p)).toBe(false),
+    );
+  });
+
+  test('cycling needs a cut AND (advanced lock OR a competition goal)', () => {
+    // Cut + advanced lock
+    expect(dayCalorieCyclingAllowed({ goalPhase: 'mild_cut', goalLockAdvanced: true })).toBe(true);
+    // Cut + competition goal (no advanced lock)
+    expect(dayCalorieCyclingAllowed({ goalPhase: 'mild_cut', trainingGoal: 'mens_physique' })).toBe(true);
+    // Cut but neither qualifier → flat
+    expect(dayCalorieCyclingAllowed({ goalPhase: 'mild_cut', goalLockAdvanced: false, trainingGoal: 'general' })).toBe(false);
+  });
+
+  test('a non-cut phase never cycles, however advanced or competitive', () => {
+    expect(dayCalorieCyclingAllowed({ goalPhase: 'maint', goalLockAdvanced: true, trainingGoal: 'mens_physique' })).toBe(false);
+    expect(dayCalorieCyclingAllowed({ goalPhase: 'mild_bulk', goalLockAdvanced: true })).toBe(false);
+  });
+
+  test('defaults to flat (no args / empty)', () => {
+    expect(dayCalorieCyclingAllowed()).toBe(false);
+    expect(dayCalorieCyclingAllowed({})).toBe(false);
   });
 });

@@ -18,7 +18,8 @@
  * stored engine target verbatim, exactly like the assembler.
  */
 
-import { getNutritionTargets } from '../database';
+import { getNutritionTargets, getGoalLockAdvanced } from '../database';
+import { dayCalorieCyclingAllowed } from '../coachingGoals';
 import {
   getActiveMealPlan,
   saveActiveMealPlan,
@@ -169,9 +170,10 @@ export function answerDayTraining({ plan, dayIndex, training, seed = 1, savedMea
  * { error: 'no_target' } when the user has no nutrition target yet.
  */
 export async function generateAndSaveMealPlan(userId, profile, { schedule, seed = Date.now() % 100000, daysPerWeek } = {}) {
-  const [row, savedMeals] = await Promise.all([
+  const [row, savedMeals, goalLockAdvanced] = await Promise.all([
     getNutritionTargets(userId),
     listSavedMeals(userId).catch(() => []),
+    getGoalLockAdvanced(userId).catch(() => false),
   ]);
   const engineTarget = storedTargetToEngineTarget(row);
   if (!engineTarget) return { error: 'no_target' };
@@ -180,12 +182,22 @@ export async function generateAndSaveMealPlan(userId, profile, { schedule, seed 
   const sched = schedule
     || defaultSchedule(daysPerWeek ?? profile?.trainingDaysPerWeek ?? 4);
 
+  // Same gate as the coach (coachingGoals.dayCalorieCyclingAllowed): only
+  // advanced cutters and physique competitors cycle calories between training
+  // and rest days; everyone else gets a flat daily target.
+  const allowDayCycling = dayCalorieCyclingAllowed({
+    goalPhase: profile?.goalPhase ?? 'maint',
+    goalLockAdvanced,
+    trainingGoal: profile?.trainingGoal ?? null,
+  });
+
   const week = assembleWeekPlan({
     engineTarget,
     prefs,
     schedule: sched,
     seed,
     savedMeals: savedMeals.map((m) => ({ id: m.id, name: m.name, slots: [], totals: m.totals })),
+    allowDayCycling,
   });
   const plan = buildPlanSnapshot({ week, engineTarget, prefs, schedule: sched });
   const id = await saveActiveMealPlan(userId, plan);

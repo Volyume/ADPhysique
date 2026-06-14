@@ -64,6 +64,17 @@ describe('dayVariantTargets', () => {
     expect(v.rest.kcal).toBe(TARGET.targetKcal);
     expect(v.cycleDeltaKcal).toBe(0);
   });
+
+  test('allowCycling:false forces a flat day even on a cycle-worthy mix', () => {
+    // Same inputs that DO cycle by default (the first test above) must go flat
+    // once the upstream gate says this user does not cycle calories.
+    const v = dayVariantTargets(TARGET, { trainingDays: 4, restDays: 3, allowCycling: false });
+    expect(v.training.kcal).toBe(TARGET.targetKcal);
+    expect(v.rest.kcal).toBe(TARGET.targetKcal);
+    expect(v.training.carbsG).toBe(TARGET.carbsG);
+    expect(v.rest.carbsG).toBe(TARGET.carbsG);
+    expect(v.cycleDeltaKcal).toBe(0);
+  });
 });
 
 describe('targetWasFloored — structured flag + every real engine warning', () => {
@@ -312,6 +323,17 @@ describe('assembleWeekPlan', () => {
     const week = assembleWeekPlan({ engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 0.5 }, schedule, seed: 6 });
     const avg = week.days.reduce((a, d) => a + d.totals.kcal, 0) / 7;
     expect(Math.abs(avg - TARGET.targetKcal)).toBeLessThanOrEqual(TARGET.targetKcal * 0.1);
+  });
+
+  test('allowDayCycling:false plates the same flat target every day', () => {
+    const week = assembleWeekPlan({
+      engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 0.5 }, schedule, seed: 6, allowDayCycling: false,
+    });
+    expect(week.cycleDeltaKcal).toBe(0);
+    expect(week.variants.training.kcal).toBe(TARGET.targetKcal);
+    expect(week.variants.rest.kcal).toBe(TARGET.targetKcal);
+    // every day — training or rest — carries the identical engine target
+    week.days.forEach((d) => expect(d.target.kcal).toBe(TARGET.targetKcal));
   });
 });
 

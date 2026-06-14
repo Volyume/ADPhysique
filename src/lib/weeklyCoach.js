@@ -8,7 +8,7 @@
  * and a plain-English rationale.
  */
 
-import { getTrainingNote, isCompetitionGoal } from './coachingGoals';
+import { getTrainingNote, isCompetitionGoal, dayCalorieCyclingAllowed } from './coachingGoals';
 import { cutCardioTarget, nextCardioTarget, cardioRecoveryFlag } from './cardio/cardioEngine';
 import {
   shouldSuggestDietBreak,
@@ -1017,7 +1017,10 @@ export function runWeeklyCoach(inputs) {
   // here and surfaced as a confirm-then-apply card; nothing writes until
   // the user taps Apply (CoachOutputScreen.handleApplyMacroCycle).
   let macroCycle = null;
-  if (phase.isCut && (goalLockAdvanced || isCompetitionGoal(trainingGoal))) {
+  // Shared gate (coachingGoals.dayCalorieCyclingAllowed): the meal-plan
+  // assembler reads the same predicate so the coach card and the plate plan
+  // can never disagree on who gets train/rest cycling.
+  if (dayCalorieCyclingAllowed({ goalPhase, goalLockAdvanced, trainingGoal })) {
     const trainingDays = Math.max(1, Math.min(6, Math.round(sessionsPlanned)));
     const split = computeMacroCycle(
       { targetKcal: currentCalTarget, proteinG: currentProteinG, carbsG: currentCarbsG, fatG: currentFatG },

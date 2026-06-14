@@ -194,6 +194,25 @@ export function isCompetitionGoal(trainingGoal) {
   return !!trainingGoal && _GOAL_LOCK_COMPETITION_VALUES.has(trainingGoal);
 }
 
+// Phases that count as a cut, mirroring weeklyCoach PHASE_CONFIG.isCut
+// (agg_cut / mod_cut / mild_cut). The sole phase alias (bulk -> mod_bulk) is
+// not a cut, so a plain membership test is byte-identical to phaseConfig.isCut
+// for every goalPhase the coach passes.
+const _CUT_PHASE_KEYS = new Set(['agg_cut', 'mod_cut', 'mild_cut']);
+
+export function isCutPhase(goalPhase) {
+  return _CUT_PHASE_KEYS.has(goalPhase);
+}
+
+// SINGLE SOURCE OF TRUTH for "may calories cycle between training and rest
+// days". Used by BOTH weeklyCoach (the macro-cycle card gate) and the meal-plan
+// assembler so the two can never drift: training/rest calorie (carb) cycling is
+// for advanced cutters and physique competitors only (founder decisions
+// 2026-05-27 and 2026-06-14). Everyone else gets a flat daily target.
+export function dayCalorieCyclingAllowed({ goalPhase = null, goalLockAdvanced = false, trainingGoal = null } = {}) {
+  return isCutPhase(goalPhase) && (!!goalLockAdvanced || isCompetitionGoal(trainingGoal));
+}
+
 // ─── Training phases (the primary "what are you focused on" question) ──────
 // `nutritionKey` maps to nutritionEngine.js PHASE_ADJUSTMENTS keys
 // `coachingPhaseKey` maps to planEngine NUT_MULT and weeklyCoach phaseConfig

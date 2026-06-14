@@ -356,20 +356,25 @@ export default function MealPlanScreen({ navigation }) {
                   hitSlop={hitSlop}
                   accessibilityRole="tab"
                   accessibilityState={{ selected }}
-                  accessibilityLabel={`Day ${i + 1}, ${variant === 'training' ? 'training day' : 'rest day'}`}
+                  accessibilityLabel={cycleOn ? `Day ${i + 1}, ${variant === 'training' ? 'training day' : 'rest day'}` : `Day ${i + 1}`}
                 >
                   <Text style={[styles.dayLetter, selected && styles.dayLetterOn]}>{DAY_LABELS[i]}</Text>
-                  <View style={[styles.dayDot, variant === 'training' && styles.dayDotTrain]} />
+                  <View style={[styles.dayDot, variant === 'training' && cycleOn && styles.dayDotTrain]} />
                 </TouchableOpacity>
               );
             })}
           </View>
 
-          {/* Day header: type chip + totals */}
+          {/* Day header: type chip + totals. The training/rest chip only
+              means something when calories cycle; on a flat plan (everyone bar
+              advanced cutters and competitors) it is dropped so the day is just
+              "the whole number, the same every day". */}
           <View style={styles.dayHeader}>
-            <View style={styles.typeChip}>
-              <Text style={styles.typeChipText}>{dayTypeLabel}</Text>
-            </View>
+            {cycleOn ? (
+              <View style={styles.typeChip}>
+                <Text style={styles.typeChipText}>{dayTypeLabel}</Text>
+              </View>
+            ) : null}
             {day ? (
               <Text style={styles.dayKcal}>
                 {day.totals.kcal} kcal
@@ -379,17 +384,20 @@ export default function MealPlanScreen({ navigation }) {
           </View>
           {/* Training today? — per-day input (rethink §3.2). Defaults from
               the plan's current variant for this day; always overridable.
-              Changing it re-variants only this day. */}
-          <PrefRow
-            label="Training today?"
-            options={[
-              { value: true, label: 'Training' },
-              { value: false, label: 'Rest' },
-            ]}
-            value={day?.variant === 'training'}
-            onSelect={(v) => handleAnswerTraining(v)}
-            busy={busy}
-          />
+              Changing it re-variants only this day. Hidden on a flat plan,
+              where the answer changes nothing. */}
+          {cycleOn ? (
+            <PrefRow
+              label="Training today?"
+              options={[
+                { value: true, label: 'Training' },
+                { value: false, label: 'Rest' },
+              ]}
+              value={day?.variant === 'training'}
+              onSelect={(v) => handleAnswerTraining(v)}
+              busy={busy}
+            />
+          ) : null}
           {cycleOn ? (
             <Text style={styles.cycleNote}>
               Training days carry more carbs; rest days fewer. Protein never moves.
