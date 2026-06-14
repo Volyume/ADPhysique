@@ -1,93 +1,110 @@
-> ⚠️ DRAFT (written ahead of the Pass-4 process). Content is read-backed and valid, but it must be reformatted
-> into the mandated BLUEPRINT FORMAT (`_AUDIT-SPEC.md:252-271`) with a source tag on every factual sentence and an
-> NA-id for the open schema question, as a Pass-4 cluster blueprint. Kept as the content draft, not the final form.
+# PASS-4 BLUEPRINT — Calorie banking (cluster: NUTRITION-SAFETY; spine item, hand-written)
 
-# PASS-4 BLUEPRINT — Calorie banking ("Plan a bigger day")
+Mandated format per `_AUDIT-SPEC.md:252-271`. Safety-adjacent (edits daily calorie targets) → written hands-on,
+not by an agent (CLAUDE.md build model). Decision: `pass3-v2-founder-decisions.md` "APPROVED FOR BUILD within
+SAFETY RAILS". Tags: [P1:file:line] impl fact · [P3] gap/decision · [INFERENCE] my proposal to confirm.
 
-Status: BLUEPRINT for founder review. NO code written yet (touches the safety surface → plan-first per CLAUDE.md).
-Decision source: `pass3-v2-founder-decisions.md` ("APPROVED FOR BUILD within SAFETY RAILS" + coach-integration).
-Source tags: [P3] = founder decision · file:line = read-backed code · [INFERENCE] = design proposal to confirm.
+## ID / CLUSTER / TITLE
+CB-1 / NUTRITION-SAFETY / Calorie banking ("Plan a bigger day")
+- PRIORITY TIER: Tier-2 (founder-requested; safety-gated). IMPACT: high (named founder want; flexibility for
+  real life). EFFORT: medium-high (safety integration + tests). PRIORITY SCORE: [INFERENCE] high-impact /
+  medium-high-effort → schedule after the low-risk cluster items, sequenced alone like a safety feature.
 
-## 1. What it is (UX)
-A Pro user planning an off-plan day (meal out, event) can **"Plan a bigger day"**: pick a day, the engine pulls a
-**capped** amount of calories **evenly from the other days in the week** so that day is higher and the rest are
-slightly lower, with the **weekly total unchanged**. Shows the new per-day numbers; **refuses** if any day would
-breach a floor. No "cheat day"/"binge"/"save up" language [P3 voice rail].
+## CURRENT STATE
+- User-controlled calorie banking is ABSENT [P3: pass3-comparison-matrix.md FL/NU MISSING; gap-corrections B7].
+- A redistribution mechanism already exists: `dayVariantTargets` moves calories between training/rest days within
+  the engine band, weekly total preserved, capped, auto-flat when floored [P1:src/lib/food/mealPlanAssembler.js:78-124].
+- The daily calorie floors: sex floor `male 1500 / else 1200` [P1:src/lib/nutritionEngine.js:792], also
+  `KCAL_FLOOR = 1200` [P1:src/lib/coachApply.js:22]; FFM floor `computeFFMFloor(weightKg,{bodyFatPercent,bodyFatSource,sex})`
+  at 30 kcal/kg [P1:src/lib/nutritionEngine.js:597,:119].
+- The coach judges on the 7-day ROLLING AVERAGE intake + weight trend, not single days
+  [P1:src/lib/weeklyCoach.js:828-834,:1129]; adherence is average-vs-target [P1:src/lib/weeklyCoach.js:334-339].
+- Planned day-variation precedent the coach already accepts without misreading: `macroCycle`/`refeed` stored on
+  the profile and consumed by the diary [P1:src/screens/DiaryScreen.js:73-76,:108-136] and coach
+  [P1:src/lib/weeklyCoach.js:1019-1062].
+- ED-pattern flag + carve-outs the assembler/coach already use: `edPatternOpen` [P1:src/lib/weeklyCoach.js:426],
+  `targetWasFloored` auto-flat [P1:src/lib/food/mealPlanAssembler.js:88].
 
-## 2. Mechanisms it BUILDS ON (do not invent a parallel path)
-- **Redistribution engine already exists:** `mealPlanAssembler.js:78-124 dayVariantTargets` already moves calories
-  between days within the engine's ±band, weekly total preserved, capped at `MAX_CYCLE_DELTA_KCAL`, auto-flat when
-  floored/trivial. Banking = a **user-directed** variant of this, not a new redistributor. [INFERENCE: generalise
-  `dayVariantTargets` to accept an explicit per-day delta map, or add a sibling `bankedDayTargets` that reuses the
-  same clamp/floor guards.]
-- **Planned day-variation precedent:** `userProfile.macroCycle` / `userProfile.refeed` are stored on the profile
-  and consumed by the diary (`DiaryScreen.js:73-76,:108-136`) and the coach (`weeklyCoach.js:1019-1062`). Banking
-  mirrors this storage + consumption pattern exactly.
-- **The coach is weekly-average-based:** judges on 7-day average intake + weight trend, not single days
-  (`weeklyCoach.js:828-834,:1129`; adherence `mapCalsAdherence:334-339`). A banked week has the SAME 7-day average
-  → invisible to the trend logic [P3 coach requirement].
+## THE GAP
+[P3] Users want to pre-plan a bigger off-plan day (meal out/event) by shifting calories within the week, but
+there is no user control to do so; only the engine's automatic day-variant cycling exists.
 
-## 3. Data model [INFERENCE — confirm]
-Store on `userProfile.calorieBank` (mirrors macroCycle/refeed):
-```
-calorieBank = {
-  weekStartKey,                 // which week this applies to
-  bigDayKey,                    // the chosen day
-  perDayDeltaKcal: { [dayKey]: +/-N },  // signed deltas; sum === 0 (weekly total preserved)
-  appliedAt,                    // timestamp
-}
-```
-Per-day target a surface reads = base daily target + `perDayDeltaKcal[dayKey]` (0 if absent). Same shape the diary
-already uses for macroCycle days.
+## THE EVIDENCE
+[P3 founder] Direct founder request 2026-06-14 ("bank calories in the week for an off plan ... if we can do it in
+a stylish way"). No external competitor bar was gathered for banking specifically (not in the v2 brief) — this is
+a founder-originated feature, graded on internal fit + safety, not a competitor teardown. [INFERENCE] Adjacent
+precedent: flexible/“banking” patterns exist in mainstream trackers; not sourced here, so no [P2] claim is made.
 
-## 4. Algorithm (deterministic, no LLM)
-1. Input: the engine's single daily target (`calculateNutritionTargets` output, verbatim — never recompute), the
-   week's day keys, the chosen big day, requested bump.
-2. `cap = min(requestedBump, MAX_BANK_DELTA, room-to-kcalMax-on-big-day)`; spread `cap` evenly as a reduction
-   across the other 6 days.
-3. **Floor check on EVERY day** (see §5): if any other day would fall below its floor, reduce `cap` until all days
-   clear, or refuse if even the minimum meaningful bump can't clear.
-4. Persist `perDayDeltaKcal` with `sum === 0`. Determinism: same inputs → same split.
+## NEWBIE EXPERIENCE AFTER CHANGE
+A beginner sees an optional "Plan a bigger day" on the diary/targets surface. Picking a day shows plain numbers
+("Saturday: 2,900 kcal; the other days drop by about 80 kcal each"). If it cannot be done safely it says so
+plainly and does nothing. No jargon, no "cheat day" language.
 
-## 5. SAFETY RAILS (hard invariants — non-negotiable) [P3]
-- **R1 Weekly total preserved:** `sum(perDayDeltaKcal) === 0`. Banking never creates a net deficit.
-- **R2 Never below floor on ANY day:** each day's banked target ≥ `max(sexFloor, ffmFloor)` where
-  sexFloor = `nutritionEngine.js:792` (`male 1500 / else 1200`; cf. `coachApply.js:22 KCAL_FLOOR`) and
-  ffmFloor = `nutritionEngine.js:597 computeFFMFloor` (30 kcal/kg FFM, `:119`). A day that would breach → refuse.
-- **R3 Capped:** reuse/share the assembler's capped swing (`MAX_CYCLE_DELTA_KCAL`); add `MAX_BANK_DELTA`.
-- **R4 Auto-disabled** when: open ED-pattern flag (`getOpenEdPatternFlag` / `edPatternDetector.js`,
-  `weeklyCoach.js:23,:426 edPatternOpen`), calm/wellbeing mode (`isCalm`), or the target was floored/compressed
-  (`mealPlanAssembler.js:88 targetWasFloored`). Same carve-out the assembler already applies.
-- **R5 Must not trip/mask ED detection:** because R1 preserves the weekly total and the detector works off the
-  7-day average, banking is neutral to `detectEdPatternFlag` and rapid-loss (`weeklyCoach.js:677`). Invariant test
-  must PROVE a banked week and its flat equivalent yield identical detector inputs.
+## ATHLETE EXPERIENCE AFTER CHANGE
+A competitor can deliberately position a higher-calorie social day while holding the weekly total the coach adapts
+on, without the coach reading it as a binge or the lighter days as under-eating.
 
-## 6. Coach / diary / check-in integration [P3]
-- Diary, the floor check, and check-in auto-derivation (`deriveCalsAdherence`) all read the **banked per-day
-  target**, never the flat one — so a deliberately-light banked day is NEVER shown/derived as "under-eaten".
-- Coach keeps adapting on the preserved **weekly average** (no change to weeklyCoach math).
-- The banked plan is a visible intentional marker (`userProfile.calorieBank`), like macroCycle/refeed.
+## IMPLEMENTATION BLUEPRINT
+FILES TO CHANGE:
+- `src/lib/food/mealPlanAssembler.js:78-124` [P1] — generalise `dayVariantTargets` to accept an explicit per-day
+  delta map, OR add a sibling `bankedDayTargets` reusing its clamp/floor/auto-flat guards. [INFERENCE — confirm
+  which; see NA-cb-1.]
+- `src/screens/DiaryScreen.js:73-76,:108-136` [P1] — read a new `userProfile.calorieBank` the same way it reads
+  `macroCycle`/`refeed`, so each day shows its banked target.
+- Check-in derivation that reads diary-vs-target [P1: weeklyCoach.js `deriveCalsAdherence` — NEEDS ANSWER NA-cb-2
+  for exact file:line] — must reference the banked per-day target.
+- A new "Plan a bigger day" surface [INFERENCE: Diary day view; confirm placement, NA-cb-3].
 
-## 7. Voice / copy [P3 + COACHING_VOICE_SYNTHESIS_LOCKED.md]
-Surface name "Plan a bigger day". No "cheat/binge/save-up". Plain language, numbers-first, passes `checkJargon`
-+ the copy-lint. Honesty test on every line.
+DATA:
+- NEW `userProfile.calorieBank = { weekStartKey, bigDayKey, perDayDeltaKcal:{[dayKey]:+/-N}, appliedAt }`
+  [INFERENCE — mirrors `userProfile.macroCycle`/`refeed` shape, P1:DiaryScreen.js:73-76]. Invariant: sum of
+  `perDayDeltaKcal` === 0.
 
-## 8. Invariant tests (write to FAIL first — CLAUDE.md build model)
-1. `sum(perDayDeltaKcal) === 0` for every generated bank.
-2. No banked day < `max(sexFloor, ffmFloor)`; over-bump → refusal, not a sub-floor day.
-3. Banking returns disabled/no-op under ED flag, calm mode, floored target.
-4. Banked week and flat week produce identical 7-day-average → identical ED-detector + rapid-loss inputs (R5).
-5. Capped: no day delta exceeds the cap.
-6. Determinism: same inputs → same split.
+COMPONENT STRUCTURE:
+- New `CalorieBankSheet` invoked from the diary day header [INFERENCE]; parent `src/screens/DiaryScreen.js`
+  [P1:src/screens/DiaryScreen.js:73].
 
-## 9. Out of scope / founder confirms
-- Storage key `userProfile.calorieBank` + the generalise-vs-sibling choice in §2/§3 [INFERENCE].
-- Default `MAX_BANK_DELTA` value (propose: same as `MAX_CYCLE_DELTA_KCAL`).
-- Whether banking is offered to all Pro users or gated (note: distinct from the train/rest-cycling gate decision).
-- Surface placement (Diary day view vs Nutrition Targets).
+USER FLOW (sequence):
+1. User opens "Plan a bigger day", picks the day and a bump amount.
+2. Engine computes `cap = min(requestedBump, MAX_BANK_DELTA, room-to-band-max-on-big-day)` [P1: band/cap pattern
+   mealPlanAssembler.js:90-108]; spreads `cap` as an even reduction across the other days.
+3. Floor check on EVERY day (see ENTITLEMENT/EDGE). If any day would breach, reduce `cap`; if even the minimum
+   meaningful bump can't clear, refuse with a plain message and write nothing.
+4. Persist `userProfile.calorieBank` (sum delta === 0). Diary, floor check, and check-in derivation read the
+   banked per-day target thereafter. Weekly total unchanged → coach unaffected [P1:weeklyCoach.js:828-834].
 
-## 10. Build sequence (edit-gate, when authorised — not this branch)
-1. Pure `bankedDayTargets` (or `dayVariantTargets` generalisation) + the 6 invariant tests (red→green).
-2. Persistence on `userProfile.calorieBank` + diary/check-in read-through.
-3. "Plan a bigger day" surface + voice-compliant copy + copy-lint.
-4. `npm run lint && npm test` (full), founder device-walk from green.
+ENTITLEMENT GATING: PRO (banking sits in the Pro food/coaching domain) — gate via the existing Pro guard
+[P1: NEEDS ANSWER NA-cb-4 for the exact gate fn used by the diary/nutrition surfaces].
+
+EMPTY STATE: "Plan a bigger day. Pick a day and we will shift some calories onto it from the rest of the week.
+Your weekly total stays the same." [British English, no em dashes, passes checkJargon — [INFERENCE] copy, founder
+to confirm wording.]
+
+LOADED STATE: shows the chosen big day's new target and the per-day reduction on the others, with the weekly total
+unchanged line.
+
+ERROR STATE: "That would take one of your days below your safe minimum, so we can't shift that much. Try a smaller
+amount." [British, plain.]
+
+EDGE CASES (each must hold):
+- Any day < max(sexFloor, ffmFloor) → refuse [P1:nutritionEngine.js:792,:597].
+- Open ED-pattern flag / calm mode / floored-or-compressed target → banking disabled (no-op), same carve-out the
+  assembler uses [P1:weeklyCoach.js:426; mealPlanAssembler.js:88].
+- Banking must preserve the weekly total (sum delta === 0) so ED-pattern + rapid-loss detection see identical
+  7-day-average inputs to a flat week [P1:weeklyCoach.js:828-834,:677].
+- No "cheat day"/"binge"/"save up" copy anywhere [P3 voice rail].
+
+DUAL-AUDIENCE DESIGN: default off; one plain control; advanced users get the redistribution, beginners are never
+nudged toward it and never see jargon.
+
+## VERIFICATION
+All implementation facts above tagged [P1] are read-backed this session. OPEN NA-ids (this blueprint is NOT final
+until these are answered with file:line):
+- NA-cb-1: generalise `dayVariantTargets` vs add `bankedDayTargets`? | files: src/lib/food/mealPlanAssembler.js, mealPlanService.js
+- NA-cb-2: exact file:line of the check-in calorie-adherence derivation that reads diary-vs-target | files: src/lib/weeklyCoach.js, src/screens/WeeklyCheckInScreen.js
+- NA-cb-3: surface placement (Diary day view vs Nutrition Targets) | files: src/screens/DiaryScreen.js, NutritionTargetsScreen.js
+- NA-cb-4: exact Pro gate fn for the food/nutrition surfaces | files: src/components/ProGate.js, src/navigation/RootNavigator.js
+- NA-cb-5: confirm `userProfile.macroCycle`/`refeed` persistence path to mirror for `calorieBank` | files: src/store/useAppStore.js, src/lib/database.js
+INVARIANT TESTS (write-to-fail, against the real engine): sum-delta===0; no day < floor (over-bump → refusal);
+disabled under ED flag/calm/floored; banked-week vs flat-week identical 7-day-average → identical detector inputs;
+capped; deterministic.
