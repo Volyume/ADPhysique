@@ -138,7 +138,15 @@ file at the end of every working session.
 - **NEXT:** (1) founder decides the FOUNDER-DECISION NA-ids; (2) resolve Q1; (3) Opus-8 read pass answers the
   read-answerable NA-ids with file:line; (4) banned-phrase/untagged sweep; (5) re-run the exit gate; (6) build per
   `pass4-master-priority.md` Tier-1 first, each with invariant tests + fresh-eyes review.
-- CARRIED: Pass-1 Q1 schema authority — blocks micronutrients/NRV (logged in `pass4-deferred.md` + NA-mn-1).
+- CARRIED: Pass-1 Q1 schema authority — RESOLVED (migrations canonical; micronutrients = new migrate_087).
+- **BUILD MODE (founder 2026-06-14):** "resolve NA-ids per-feature at build" — do NOT run a bulk read pass; for
+  each feature, resolve its NA-ids by reading at build time, complete that blueprint, build with invariant tests +
+  `npm run lint && npm test` + a fresh-eyes review, then the gate passes for that feature. Order = `pass4-master-
+  priority.md` Tier 1 first: (1) gate train/rest cycling, (2) keyboard-completes-the-set, (3) protein-consistency,
+  (4) analytics windows 14/30/90d, (5) cardio trend view, (6) recap relative-% anchor.
+- **OPEN BEFORE CODING:** branch policy conflict — session brief says develop on
+  `claude/audit-work-quality-review-benrin` (an audit/docs branch); CLAUDE.md says app code goes on
+  phase2/development or feature/*. Founder to confirm the build branch before any production code is written.
 
 ## DECISIONS LOG (rationale preserved)
 1. Pass-2 pivot to 3-AI external research — environment cannot browse (founder-directed).
