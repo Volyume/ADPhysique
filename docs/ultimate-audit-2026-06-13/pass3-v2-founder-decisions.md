@@ -160,6 +160,28 @@ expectation; drops the day-type chip for non-advanced users). Build-phase change
 `mealPlanService` (gate the `dayVariantTargets` call on the same predicate the coach uses); keep the floored/
 trivial auto-flat guards. Update tests.
 
+## DECIDED — Section A (original 15-area gaps), 2026-06-14
+**ACCEPTED (build):**
+- Recomp-reframing view (PR) — reframe flat scale-weight as recomposition from existing BF/measurement/strength data.
+- Named autonomy modes (AC/SC) — Coached/Collaborative/Manual toggle (manual control already exists; name it).
+- Micronutrients / NRV tracking (FL/NU) — add vitamin/mineral tracking vs NRV (schema change: today macros+fibre/
+  sodium/sugar only, `food/db.js:240`).
+- Plan diff/preview (PG) — show before/after when a plan rebuilds (U-B-7).
+- Keyboard-completes-the-set (WS) — reps "done" logs the set directly (one fewer tap; `SetEntry.js:126`).
+
+**DISMISSED (not suitable):**
+- Progress-photo UI (PR) — dismissed (consistent with founder's earlier coolness on photos).
+- HRV/sleep ingestion (MF) — dismissed (despite top wearable wish in research).
+- Posing/contest peak-week tool (MF) — dismissed.
+- Reverse-diet protocol (NU) — dismissed (analogues diet-break/refeed remain).
+- Exercise demo media / video-animation (EL/NE) — dismissed (text form-cues stay; biggest newbie aid per
+  research, but founder's call).
+- Challenges/leaderboards + broad social feed (RE) — dismissed (1:1 partners stay).
+- Deeper conditional check-in branching (CK) — dismissed (current branches stay).
+
+All accepted items under the standing no-jargon voice constraint. Micronutrients/NRV = schema migration (build-phase,
+Supabase rules apply). None of the accepted Section-A items touch `src/coaching/safety`.
+
 ## ALL DECIDED — v2 set complete
 Open build queue (approved): grocery list, raw/cooked toggle, calorie banking (rails above), + the Call-1/2
 accepted items (protein-consistency, 14/30/90d windows, recap share/monthly/relative, mid-session swap,
