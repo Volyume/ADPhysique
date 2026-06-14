@@ -1,11 +1,14 @@
 /**
- * FoodInsightsScreen - 7-day adherence (Move #1).
+ * FoodInsightsScreen - food adherence over a selectable window (Move #1).
  *
  * Locked in MOVE_1_FOOD_FOUNDATION_AND_FFM.md and
  * UI_FLOWS_LOCKED.md. Three blocks:
- *   1. Seven days of kcal vs target as horizontal bars.
- *   2. Macro hit rate over those seven days.
+ *   1. Kcal vs target as horizontal bars over the chosen window
+ *      (7/14-day per-day bars; 30/90-day weekly-aggregated bars).
+ *   2. Macro hit rate over the chosen window.
  *   3. Export the diary as CSV.
+ *
+ * Window selector (7/14/30/90 days) added in ULTIMATE-NUT-05; default 7.
  *
  * The Insights tab in the locked nav doesn't exist yet (still on the
  * legacy four-tab layout); we surface this screen via a header
@@ -39,16 +42,29 @@ function shift(d, days) {
   return out;
 }
 
-function last7DayIsoList() {
+// ULTIMATE-NUT-05: window-parameterised day list (was the fixed 7-day list).
+function lastNDayIsoList(n) {
   const out = [];
   const today = new Date();
-  for (let i = 6; i >= 0; i--) out.push(isoDate(shift(today, -i)));
+  for (let i = n - 1; i >= 0; i--) out.push(isoDate(shift(today, -i)));
   return out;
 }
+
+// Window options for the header selector (default 7). Above 14 days the
+// per-day bar list is illegible, so 30/90 render weekly-aggregated bars
+// (NA-nutrition-9, founder decision 2026-06-14: weekly-aggregated bars).
+const WINDOWS = [7, 14, 30, 90];
+const WEEKLY_THRESHOLD = 14; // windows beyond this aggregate into weekly bars
 
 function dayLabel(iso) {
   const d = parseLocalDay(iso); // TZ-1: parse the key as local, not UTC
   return d.toLocaleDateString('en-GB', { weekday: 'short' });
+}
+
+// Short calendar label for a weekly bar, keyed on the week's first day.
+function weekLabel(iso) {
+  const d = parseLocalDay(iso); // TZ-1: parse the key as local, not UTC
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
 export default function FoodInsightsScreen({ navigation }) {
@@ -59,8 +75,11 @@ export default function FoodInsightsScreen({ navigation }) {
   const [rollups, setRollups] = useState([]);
   const [targets, setTargets] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [windowDays, setWindowDays] = useState(7); // ULTIMATE-NUT-05; default 7
+  const isWeekly = windowDays > WEEKLY_THRESHOLD;
 
-  const days = useMemo(() => last7DayIsoList(), []);
+  // Re-keyed on windowDays so startDate/endDate and the range queries recompute.
+  const days = useMemo(() => lastNDayIsoList(windowDays), [windowDays]);
   const startDate = days[0];
   const endDate = days[days.length - 1];
 
@@ -97,13 +116,36 @@ export default function FoodInsightsScreen({ navigation }) {
     return { kcalDays, pDays, cDays, fDays, logged };
   }, [days, rollupByDate, targets]);
 
+  // Calories chart rows. 7/14-day windows render one bar per day; 30/90-day
+  // windows aggregate into weekly bars (avg kcal/day of the LOGGED days that
+  // week) so the list stays legible (NA-nutrition-9, founder: weekly bars).
+  const chartBars = useMemo(() => {
+    if (!isWeekly) {
+      return days.map((d) => {
+        const r = rollupByDate.get(d);
+        return { key: d, label: dayLabel(d), kcal: Math.round(r?.kcal_total ?? 0) };
+      });
+    }
+    const weeks = [];
+    for (let i = 0; i < days.length; i += 7) {
+      const chunk = days.slice(i, i + 7);
+      let sum = 0, n = 0;
+      for (const d of chunk) {
+        const r = rollupByDate.get(d);
+        if (r && r.entries_count > 0) { sum += r.kcal_total ?? 0; n++; }
+      }
+      weeks.push({ key: chunk[0], label: weekLabel(chunk[0]), kcal: n > 0 ? Math.round(sum / n) : 0 });
+    }
+    return weeks;
+  }, [days, rollupByDate, isWeekly]);
+
   async function onExport() {
     if (!userId || exporting) return;
     setExporting(true);
     try {
       const entries = await getFoodEntriesForRange(userId, startDate, endDate);
       if (!entries.length) {
-        toast.show('No entries in the last seven days.', { variant: 'info' });
+        toast.show(`No entries in the last ${windowDays} days.`, { variant: 'info' });
         return;
       }
       const result = await exportDiaryCsv({ userId, entries, startDate, endDate });
@@ -117,11 +159,13 @@ export default function FoodInsightsScreen({ navigation }) {
     }
   }
 
+  // Scale to the bars actually rendered (daily values, or weekly averages),
+  // so longer windows scale correctly rather than against daily peaks.
   const maxKcal = useMemo(() => {
     let m = targets?.targetKcal ?? 0;
-    for (const r of rollups) m = Math.max(m, r.kcal_total ?? 0);
+    for (const b of chartBars) m = Math.max(m, b.kcal);
     return m || 1;
-  }, [rollups, targets]);
+  }, [chartBars, targets]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -133,24 +177,42 @@ export default function FoodInsightsScreen({ navigation }) {
         <View style={{ width: 24 }} />
       </View>
 
+      {/* Window selector (ULTIMATE-NUT-05). Pinned below the header so it stays
+          visible while the cards scroll. Segmented pill convention from PrefRow. */}
+      <View style={styles.windowBar} accessibilityRole="radiogroup">
+        {WINDOWS.map((n) => {
+          const selected = n === windowDays;
+          return (
+            <TouchableOpacity
+              key={n}
+              style={[styles.windowChip, selected && styles.windowChipOn]}
+              onPress={() => !selected && setWindowDays(n)}
+              disabled={selected}
+              hitSlop={8}
+              accessibilityRole="radio"
+              accessibilityState={{ selected }}
+              accessibilityLabel={`Last ${n} days`}
+            >
+              <Text style={[styles.windowChipText, selected && styles.windowChipTextOn]}>{n}d</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.sectionLabel}>LAST 7 DAYS · CALORIES</Text>
+        <Text style={styles.sectionLabel}>LAST {windowDays} DAYS · CALORIES</Text>
         <Card style={styles.card}>
-          {days.map((d) => {
-            const r = rollupByDate.get(d);
-            const kcal = Math.round(r?.kcal_total ?? 0);
-            const pct = Math.min(1, kcal / maxKcal);
-            const targetMet = targets?.targetKcal
-              ? Math.abs(kcal - targets.targetKcal) / targets.targetKcal <= 0.1
-              : false;
+          {chartBars.map((b) => {
+            const pct = Math.min(1, b.kcal / maxKcal);
+            const targetMet = within(b.kcal, targets?.targetKcal, 0.1);
             return (
               <View
-                key={d}
+                key={b.key}
                 style={styles.barRow}
                 accessible
-                accessibilityLabel={`${dayLabel(d)}, ${kcal} kcal${targetMet ? ', on target' : ''}`}
+                accessibilityLabel={`${b.label}, ${b.kcal} kcal${isWeekly ? ' average' : ''}${targetMet ? ', on target' : ''}`}
               >
-                <Text style={styles.barDay}>{dayLabel(d)}</Text>
+                <Text style={styles.barDay}>{b.label}</Text>
                 <View style={styles.barTrack}>
                   <View style={[
                     styles.barFill,
@@ -158,13 +220,15 @@ export default function FoodInsightsScreen({ navigation }) {
                     targetMet && { backgroundColor: colors.success },
                   ]} />
                 </View>
-                <Text style={styles.barValue}>{kcal}</Text>
+                <Text style={styles.barValue}>{b.kcal}</Text>
               </View>
             );
           })}
           {targets?.targetKcal ? (
             <Text style={styles.cardFootnote}>
-              Target: {targets.targetKcal} kcal. Bars within 10% turn green.
+              {isWeekly
+                ? `Target: ${targets.targetKcal} kcal/day. Each bar is a weekly average; within 10% turns green.`
+                : `Target: ${targets.targetKcal} kcal. Bars within 10% turn green.`}
             </Text>
           ) : (
             <Text style={styles.cardFootnote}>
@@ -204,7 +268,7 @@ export default function FoodInsightsScreen({ navigation }) {
             </>
           ) : (
             <Text style={styles.emptyText}>
-              Log a few days to see your macro adherence.
+              Log a few days to see your last {windowDays} days.
             </Text>
           )}
         </Card>
@@ -215,14 +279,14 @@ export default function FoodInsightsScreen({ navigation }) {
           disabled={exporting}
           accessibilityRole="button"
           accessibilityState={{ disabled: exporting }}
-          accessibilityLabel="Export the last seven days as a CSV file"
+          accessibilityLabel={`Export the last ${windowDays} days as a CSV file`}
         >
           {exporting ? (
             <ActivityIndicator color={colors.onPrimary} />
           ) : (
             <>
               <Ionicons name="download-outline" size={18} color={colors.onPrimary} />
-              <Text style={styles.exportBtnText}>Export 7 days as CSV</Text>
+              <Text style={styles.exportBtnText}>Export {windowDays} days as CSV</Text>
             </>
           )}
         </TouchableOpacity>
@@ -259,6 +323,16 @@ const styles = StyleSheet.create({
   headerTitle: { ...type.title, color: colors.textPrimary },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
 
+  windowBar: { flexDirection: 'row', gap: spacing.xs, paddingHorizontal: spacing.lg, paddingTop: spacing.md },
+  windowChip: {
+    flex: 1, minHeight: 40, alignItems: 'center', justifyContent: 'center',
+    paddingVertical: spacing.sm, borderRadius: radius.full,
+    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
+  },
+  windowChipOn: { borderColor: colors.primary, backgroundColor: colors.surface2 },
+  windowChipText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  windowChipTextOn: { color: colors.primary },
+
   sectionLabel: {
     color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold,
     letterSpacing: 1, marginBottom: spacing.sm,
@@ -271,7 +345,7 @@ const styles = StyleSheet.create({
   emptyText: { color: colors.textMuted, fontSize: fontSize.sm, textAlign: 'center', paddingVertical: spacing.lg },
 
   barRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
-  barDay: { color: colors.textSecondary, fontSize: fontSize.sm, width: 36 },
+  barDay: { color: colors.textSecondary, fontSize: fontSize.sm, width: 48 }, // fits weekly date labels (e.g. "30 Jun")
   barTrack: {
     flex: 1, height: 12, borderRadius: radius.sm,
     backgroundColor: colors.surface2,
