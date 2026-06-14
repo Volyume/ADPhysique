@@ -13,7 +13,10 @@ import {
   PHYSIQUE_GOALS,
   GOALS_WITH_WEAK_POINTS, WEAK_POINT_MUSCLES,
 } from '../lib/coachingGoals';
-import { generateAndSavePlan, planShortfallNote } from '../lib/planAutoGen';
+import { generateAndSavePlan, generatePlanDryRun, planShortfallNote } from '../lib/planAutoGen';
+import { getActivePlan, getRoutinesForPlan, getRoutineExercisesWithDetails } from '../lib/database';
+import { diffPlans, summariseProspectivePlan, summariseCurrentPlan } from '../lib/planDiff';
+import BottomSheet from '../components/BottomSheet';
 
 // Training setup options, mirror the lists in ProOnboardingScreen and
 // ProGoalSetupScreen so a re-run here produces the same plan structure as a
@@ -66,6 +69,10 @@ export default function PlanUpdateScreen({ navigation }) {
   const [equipment, setEquipment] = useState(userProfile?.equipment ?? 'full_gym');
   const [recoveryRating, setRecoveryRating] = useState(userProfile?.recoveryRating ?? 'average');
   const [saving, setSaving] = useState(false);
+  // Plan diff/preview (ULTIMATE-PLANDIFF-01): a pre-commit dry-run + diff sheet.
+  const [previewing, setPreviewing] = useState(false);
+  const [diff, setDiff] = useState(null);     // Now/After view-model for the sheet
+  const [staged, setStaged] = useState(null); // { profile, partial, missedCount }
 
   const weakPointsApplicable = GOALS_WITH_WEAK_POINTS.includes(selectedGoal);
 
@@ -80,21 +87,14 @@ export default function PlanUpdateScreen({ navigation }) {
     });
   }
 
-  async function handleSave() {
-    if (saving) return;
-    setSaving(true);
-
-    // Only keep weak points if the goal supports them, switching to a
-    // non-applicable goal clears them so the plan generator doesn't keep
-    // biasing toward muscles the user no longer wants prioritised.
+  // Build the staged training profile from the current form values. Training
+  // fields only; goal, phase, protein approach and body composition are left
+  // exactly as they were, so nothing here changes calorie or macro targets.
+  function buildUpdatedProfile() {
     const nextWeakPoints = GOALS_WITH_WEAK_POINTS.includes(selectedGoal)
       ? planWeakPoints
       : [];
-
-    // Training fields only. Goal, phase, protein approach and body composition
-    // are left exactly as they were, so nothing here changes calorie or macro
-    // targets. generateAndSavePlan reads these to drive plan generation.
-    const updatedProfile = {
+    return {
       ...(userProfile || {}),
       trainingGoal: selectedGoal,
       planWeakPoints: nextWeakPoints,
@@ -104,13 +104,63 @@ export default function PlanUpdateScreen({ navigation }) {
       equipment,
       recoveryRating,
     };
+  }
 
-    // FF-002: rebuild the plan FIRST off the staged profile
-    // (generateAndSavePlan reads the profile passed to it, not storage). Only
-    // commit the new training profile as canonical once the rebuild succeeds,
-    // so a failed rebuild can't leave a split-brain state (profile says one
-    // setup, the active plan still the old one). On failure, keep the user here
-    // to retry instead of saving and navigating away.
+  // Read the current active plan into a comparable summary (NA-coaching-13:
+  // getActivePlan → getRoutinesForPlan → getRoutineExercisesWithDetails).
+  // Returns null when there is no active plan or the read fails; the diff then
+  // shows everything in the prospective plan as new.
+  async function readCurrentPlanSummary() {
+    try {
+      const active = await getActivePlan(user.id);
+      if (!active?.id) return null;
+      const routines = await getRoutinesForPlan(active.id);
+      const withExercises = [];
+      for (const r of (routines || [])) {
+        const rows = await getRoutineExercisesWithDetails(r.id).catch(() => []);
+        withExercises.push({ ...r, exercises: (rows || []).map(x => ({ name: x?.exercise?.name })) });
+      }
+      return summariseCurrentPlan(withExercises, userProfile?.sessionLengthMinutes ?? null);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Step 1 (NEW): "Rebuild my plan" runs a dry-run + diff and opens the preview.
+  // Nothing is written until the user confirms — the active plan and profile are
+  // untouched if they back out.
+  async function handleRebuildPress() {
+    if (previewing || saving) return;
+    setPreviewing(true);
+    const updatedProfile = buildUpdatedProfile();
+    try {
+      const dry = await generatePlanDryRun(user.id, updatedProfile);
+      if (!dry.ok) {
+        toast.show(`Couldn't rebuild your plan (${dry.error}). Your training setup wasn't changed, try again.`, { variant: 'error', duration: 5000 });
+        return;
+      }
+      const nowSummary = await readCurrentPlanSummary();
+      const afterSummary = summariseProspectivePlan(dry.plan, dry.sessionLengthMinutes);
+      setDiff(diffPlans(nowSummary, afterSummary));
+      setStaged({ profile: updatedProfile, partial: !!dry.partial, missedCount: dry.missedCount ?? 0 });
+    } catch (e) {
+      toast.show(`Couldn't rebuild your plan (${e?.message ?? 'unknown'}). Your training setup wasn't changed, try again.`, { variant: 'error', duration: 5000 });
+    } finally {
+      setPreviewing(false);
+    }
+  }
+
+  // Step 2 (NEW): confirm → the real commit. FF-002 split-brain protection is
+  // unchanged: generateAndSavePlan rebuilds-first-then-activates, and the
+  // profile is only saved as canonical once that succeeds.
+  async function handleConfirmRebuild() {
+    if (saving || !staged) return;
+    setSaving(true);
+    const updatedProfile = staged.profile;
+
+    // FF-002 (unchanged invariant): rebuild FIRST, bail on failure without
+    // saving or navigating, and only commit the profile as canonical once the
+    // rebuild succeeds, so a failed rebuild can't split-brain.
     let planResult = { ok: false, error: 'not attempted' };
     try {
       planResult = await generateAndSavePlan(user.id, updatedProfile);
@@ -129,6 +179,8 @@ export default function PlanUpdateScreen({ navigation }) {
     } catch (_) {}
 
     setSaving(false);
+    setDiff(null);
+    setStaged(null);
 
     if (planResult.partial) {
       // FF-003: the plan generated but couldn't fulfil every requested move.
@@ -251,20 +303,112 @@ export default function PlanUpdateScreen({ navigation }) {
         />
 
         <TouchableOpacity
-          style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
-          onPress={handleSave}
-          disabled={saving}
+          style={[styles.saveBtn, (previewing || saving) && styles.saveBtnDisabled]}
+          onPress={handleRebuildPress}
+          disabled={previewing || saving}
           activeOpacity={0.85}
           accessibilityRole="button"
-          accessibilityState={{ disabled: saving }}
+          accessibilityState={{ disabled: previewing || saving }}
           accessibilityLabel="Rebuild my plan"
         >
-          <Text style={[styles.saveBtnText, saving && styles.saveBtnTextDisabled]}>
-            {saving ? 'Rebuilding…' : 'Rebuild my plan'}
+          <Text style={[styles.saveBtnText, (previewing || saving) && styles.saveBtnTextDisabled]}>
+            {previewing ? 'Checking…' : 'Rebuild my plan'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Plan diff/preview (ULTIMATE-PLANDIFF-01): the before/after of what the
+          rebuild would change, shown BEFORE the active plan is overwritten. The
+          real commit only runs on confirm; backing out writes nothing. */}
+      <BottomSheet
+        visible={!!diff}
+        onClose={() => { if (!saving) { setDiff(null); setStaged(null); } }}
+        accessibilityLabel="Plan changes preview"
+      >
+        {diff ? (
+          <>
+            <Text style={styles.diffTitle}>Before you rebuild</Text>
+            {diff.identical ? (
+              <Text style={styles.diffSub}>
+                Nothing would change. Your plan already matches this setup.
+              </Text>
+            ) : (
+              <>
+                <Text style={styles.diffSub}>
+                  Here's what changes. Your current plan stays until you confirm.
+                </Text>
+                <View style={styles.diffTable}>
+                  <View style={styles.diffHeadRow}>
+                    <Text style={[styles.diffCell, styles.diffCellLabel]} />
+                    <Text style={[styles.diffCell, styles.diffHeadText]}>Now</Text>
+                    <Text style={[styles.diffCell, styles.diffHeadText]}>After</Text>
+                  </View>
+                  <DiffRow label="Training days" now={diff.days.now} after={diff.days.after} changed={diff.days.changed} />
+                  <DiffRow label="Split" now={diff.split.now ?? '-'} after={diff.split.after ?? '-'} changed={diff.split.changed} />
+                  <DiffRow
+                    label="Session length"
+                    now={diff.sessionLength.now != null ? `${diff.sessionLength.now} min` : '-'}
+                    after={diff.sessionLength.after != null ? `${diff.sessionLength.after} min` : '-'}
+                    changed={diff.sessionLength.changed}
+                  />
+                </View>
+                {(diff.movesAdded.length > 0 || diff.movesDropped.length > 0) ? (
+                  <View style={styles.diffMoves}>
+                    <Text style={styles.diffMovesLabel}>Moves changed</Text>
+                    {diff.movesAdded.map(m => (
+                      <Text key={`add-${m}`} style={styles.diffMoveText}>Added: {m}</Text>
+                    ))}
+                    {diff.movesDropped.map(m => (
+                      <Text key={`drop-${m}`} style={styles.diffMoveText}>Dropped: {m}</Text>
+                    ))}
+                  </View>
+                ) : null}
+                {staged?.partial ? (
+                  <Text style={styles.diffShortfall}>{planShortfallNote(staged.missedCount)}</Text>
+                ) : null}
+              </>
+            )}
+
+            <TouchableOpacity
+              style={[styles.saveBtn, (saving || diff.identical) && styles.saveBtnDisabled]}
+              onPress={handleConfirmRebuild}
+              disabled={saving || diff.identical}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: saving || diff.identical }}
+              accessibilityLabel="Confirm and rebuild"
+            >
+              <Text style={[styles.saveBtnText, (saving || diff.identical) && styles.saveBtnTextDisabled]}>
+                {saving ? 'Rebuilding…' : 'Confirm and rebuild'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.diffBackBtn}
+              onPress={() => { if (!saving) { setDiff(null); setStaged(null); } }}
+              disabled={saving}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+            >
+              <Text style={styles.diffBackText}>Back</Text>
+            </TouchableOpacity>
+          </>
+        ) : null}
+      </BottomSheet>
     </SafeAreaView>
+  );
+}
+
+// One Now/After row in the diff table. Class-neutral: a changed row is emphasised
+// by weight, not a valence colour (a plan change is neither good nor bad).
+function DiffRow({ label, now, after, changed }) {
+  const fmt = (v) => (v == null ? '-' : String(v));
+  return (
+    <View style={styles.diffRow}>
+      <Text style={[styles.diffCell, styles.diffCellLabel]}>{label}</Text>
+      <Text style={[styles.diffCell, styles.diffNow]}>{fmt(now)}</Text>
+      <Text style={[styles.diffCell, styles.diffAfter, changed && styles.diffAfterChanged]}>{fmt(after)}</Text>
+    </View>
   );
 }
 
@@ -322,4 +466,23 @@ const styles = StyleSheet.create({
   saveBtnDisabled: { backgroundColor: colors.surface2 },
   saveBtnText: { color: colors.onPrimary, ...type.bodyStrong },
   saveBtnTextDisabled: { color: colors.textMuted },
+
+  // Plan diff/preview sheet
+  diffTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
+  diffSub: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.xs, lineHeight: 19 },
+  diffTable: { marginTop: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  diffHeadRow: { flexDirection: 'row', backgroundColor: colors.surface2, paddingVertical: spacing.xs },
+  diffRow: { flexDirection: 'row', paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, alignItems: 'center' },
+  diffCell: { flex: 1, paddingHorizontal: spacing.sm, fontSize: fontSize.sm, color: colors.textPrimary },
+  diffCellLabel: { color: colors.textSecondary },
+  diffHeadText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textMuted, textTransform: 'uppercase' },
+  diffNow: { color: colors.textMuted },
+  diffAfter: { color: colors.textPrimary },
+  diffAfterChanged: { fontWeight: fontWeight.bold },
+  diffMoves: { marginTop: spacing.md, gap: spacing.xxs },
+  diffMovesLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold, textTransform: 'uppercase', letterSpacing: 0.5 },
+  diffMoveText: { color: colors.textPrimary, fontSize: fontSize.sm },
+  diffShortfall: { marginTop: spacing.md, color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 19 },
+  diffBackBtn: { paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.sm },
+  diffBackText: { color: colors.textSecondary, ...type.bodyStrong },
 });

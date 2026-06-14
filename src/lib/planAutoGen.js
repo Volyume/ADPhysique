@@ -215,3 +215,62 @@ export async function generateAndSavePlan(userId, profile) {
     return { ok: false, error: e?.message ?? 'DB write failed' };
   }
 }
+
+/**
+ * ULTIMATE-PLANDIFF-01: generate the prospective plan WITHOUT writing or
+ * activating it, so a before/after diff can be shown pre-commit. This is the
+ * read-only twin of generateAndSavePlan: same inputs, same pure engine
+ * (planEngine has no Math.random / no side effects), and the SAME
+ * library-match loop, so the equipment shortfall it reports is identical to
+ * what the commit will produce (NA-coaching-12, NA-coaching-16). It stops at
+ * the persistence seam — no createProgramme / createRoutine / activate.
+ *
+ * Returns { ok, plan, sessionLengthMinutes, partial?, missedCount?,
+ * missedExercises? } or { ok:false, error }.
+ */
+export async function generatePlanDryRun(userId, profile) {
+  if (!userId) return { ok: false, error: 'No user' };
+  const inputs = buildPlanInputs(profile);
+  if (!inputs) return { ok: false, error: 'Profile incomplete' };
+
+  let allExercises = [];
+  try {
+    allExercises = await getAllExercises();
+  } catch (_) { /* engine falls back to its built-in pool */ }
+
+  let plan;
+  try {
+    plan = generatePlan({ ...inputs, exerciseLibrary: allExercises });
+  } catch (e) {
+    return { ok: false, error: `Plan engine failed: ${e?.message ?? 'unknown'}` };
+  }
+  if (!plan?.workouts?.length) return { ok: false, error: 'Plan engine returned no workouts' };
+
+  // Count library matches exactly as the commit loop does (planAutoGen.js
+  // generateAndSavePlan), but without writing, so the pre-commit shortfall
+  // equals the committed shortfall.
+  const exerciseMap = {};
+  for (const ex of allExercises) exerciseMap[ex.name.toLowerCase()] = ex;
+  let totalRequested = 0;
+  let totalWritten = 0;
+  const missedNames = [];
+  for (const workout of plan.workouts) {
+    for (const ex of workout.exercises) {
+      totalRequested++;
+      const dbEx = exerciseMap[ex.exerciseName?.toLowerCase()];
+      if (!dbEx) {
+        if (missedNames.length < 5 && ex.exerciseName) missedNames.push(ex.exerciseName);
+        continue;
+      }
+      totalWritten++;
+    }
+  }
+
+  const result = { ok: true, plan, sessionLengthMinutes: inputs.sessionLengthMinutes };
+  if (totalWritten < totalRequested) {
+    result.partial = true;
+    result.missedCount = totalRequested - totalWritten;
+    result.missedExercises = missedNames;
+  }
+  return result;
+}

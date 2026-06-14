@@ -11,9 +11,15 @@ jest.mock('../database', () => ({
   addExerciseToRoutine: jest.fn(),
   getAllExercises: jest.fn(),
   activatePlanWithBlock: jest.fn(),
+  archiveOtherUserPlans: jest.fn(),
+  getAllProgrammes: jest.fn(),
 }));
 
-import { buildPlanInputs } from '../planAutoGen';
+import { buildPlanInputs, generatePlanDryRun } from '../planAutoGen';
+import {
+  getAllExercises, createProgramme, createRoutine, addExerciseToRoutine,
+  activatePlanWithBlock,
+} from '../database';
 
 describe('buildPlanInputs', () => {
   test('returns null when trainingGoal is missing', () => {
@@ -127,5 +133,38 @@ describe('buildPlanInputs', () => {
     });
     expect(inputs).not.toBeNull();
     expect(inputs.nutritionPhase).toBe('maintain');
+  });
+});
+
+// ULTIMATE-PLANDIFF-01: the dry-run is the read-only twin of generateAndSavePlan.
+describe('generatePlanDryRun', () => {
+  const profile = {
+    experience: 'intermediate', daysPerWeek: 4, sessionLengthMinutes: 75,
+    equipment: 'full_gym', trainingGoal: 'build_muscle', trainingPhase: 'maintain',
+    recoveryRating: 'average',
+  };
+  beforeEach(() => {
+    jest.clearAllMocks();
+    getAllExercises.mockResolvedValue([]); // engine falls back to its built-in pool
+  });
+
+  test('produces a prospective plan WITHOUT writing or activating anything', async () => {
+    const res = await generatePlanDryRun('u1', profile);
+    expect(res.ok).toBe(true);
+    expect(Array.isArray(res.plan.workouts)).toBe(true);
+    expect(res.plan.workouts.length).toBeGreaterThan(0);
+    expect(res.sessionLengthMinutes).toBe(75);
+    // The whole point: no persistence side effects.
+    expect(createProgramme).not.toHaveBeenCalled();
+    expect(createRoutine).not.toHaveBeenCalled();
+    expect(addExerciseToRoutine).not.toHaveBeenCalled();
+    expect(activatePlanWithBlock).not.toHaveBeenCalled();
+  });
+
+  test('bails like the commit on a missing user / incomplete profile', async () => {
+    expect(await generatePlanDryRun(null, profile)).toEqual({ ok: false, error: 'No user' });
+    expect((await generatePlanDryRun('u1', {})).ok).toBe(false);
+    expect((await generatePlanDryRun('u1', {})).error).toBe('Profile incomplete');
+    expect(createProgramme).not.toHaveBeenCalled();
   });
 });
