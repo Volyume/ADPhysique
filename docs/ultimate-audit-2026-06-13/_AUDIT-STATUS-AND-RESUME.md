@@ -162,10 +162,24 @@ file at the end of every working session.
     (`pass3-v2-founder-decisions.md:93`) fixes only the phrasing, not a stricter band, and the blueprint mandates
     deriving from the existing count. Invariant tests in `src/screens/__tests__/FoodInsightsScreen.test.js`.
     lint+full suite green; fresh-eyes review PASS.
-  - ▶ **NEXT: (4) Food-insights analytics windows 14/30/90d** [NA-nutrition-9, NA-nutrition-10]. Source blueprint:
-    read IN FULL before coding — `pass4-blueprints-nutrition.md` ULTIMATE-NUT-05 (starts ~line 597). NA-nutrition-9
-    (how the calories view renders at 30/90d where 90 daily bars don't fit) is flagged "Do not guess the UX" —
-    resolve from the blueprint/codebase at build time, then build per the edit-gate.
+  - ✅ (4) **Food-insights analytics windows 14/30/90d** — DONE, commit `e39503e`. Source:
+    `pass4-blueprints-nutrition.md:597-721` (ULTIMATE-NUT-05). Added a header window selector (7/14/30/90, default 7)
+    over the range-based loader in `FoodInsightsScreen.js`: `lastNDayIsoList(n)`, `days` re-keyed on `windowDays`,
+    all blocks + export follow the window; de-hard-coded the "7"/"seven" copy.
+    **NA-nutrition-9 resolved by FOUNDER DECISION (2026-06-14): weekly-aggregated bars** — 7/14d keep one bar per
+    day; 30/90d aggregate to one bar per week (avg kcal/day of the logged days that week). `maxKcal` now scales over
+    the rendered bars. **NA-nutrition-10 resolved by reading `src/lib/food/db.js`:** `getRollupsForRange` (:368) and
+    `getFoodEntriesForRange` (:152) are unbounded range selects (no LIMIT) — 90-day range not truncated.
+    Invariant tests added to `src/screens/__tests__/FoodInsightsScreen.test.js`. lint+full suite green; fresh-eyes
+    review PASS. **Open copy note for founder:** the macro empty-state string is the blueprint's verbatim
+    "Log a few days to see your last {N} days." (lines 685-690) — reads slightly oddly under the MACRO ADHERENCE
+    heading; kept to-spec, founder may wish to refine wording.
+  - ▶ **NEXT: (5) Cardio trend view** — per the LOCKED ORDER above (line 146: "(5) cardio trend view,
+    (6) recap relative-% anchor"). Before coding, locate and READ IN FULL the ULTIMATE-* cardio blueprint in the
+    `pass4-blueprints-*` cluster (grep "cardio" / "trend" across `docs/ultimate-audit-2026-06-13/pass4-blueprints-*.md`
+    and `pass4-master-priority.md` for its exact ID + source lines), then resolve its NA-ids by reading at build time
+    and build per the edit-gate (invariant tests + lint + full test + fresh-eyes review). Do NOT free-flow or pick.
+    NOTE: build order is NOT NUT-ID order — items (3)/(4) this run were NUT-04/NUT-05; NUT-01/02/03 are NOT built.
 - **OPEN BEFORE CODING:** branch policy conflict — session brief says develop on
   `claude/audit-work-quality-review-benrin` (an audit/docs branch); CLAUDE.md says app code goes on
   phase2/development or feature/*. Founder to confirm the build branch before any production code is written.
