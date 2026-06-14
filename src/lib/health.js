@@ -878,9 +878,26 @@ export function cardioSessionToLog(session, { sourceTag = 'health', dayKeyFn = n
  * target. De-dups on ext_id (NA-cux-4); manual sessions are left untouched
  * (NA-cux-7 keep-both). Never throws (mirrors importNewWeights): one bad row
  * warns and the loop continues. Safe from foreground listeners + Settings.
+ *
+ * Entitlement guard: cardio is a Pro feature, so the import is gated on the paid
+ * tier as well as the OS permission — otherwise a user who was Pro, granted
+ * cardio read, then downgraded would keep importing (the OS permission survives).
+ * Callers may pass `isPaid`; when omitted it is resolved from the store,
+ * fail-closed (any error → treated as not paid).
  */
-export async function importNewCardio(userId) {
+export async function importNewCardio(userId, { isPaid } = {}) {
   if (!userId) return { imported: 0, latestMs: 0 };
+
+  let paid = isPaid;
+  if (paid === undefined) {
+    try {
+      // eslint-disable-next-line global-require
+      const { default: useAppStore } = require('../store/useAppStore');
+      paid = useAppStore.getState()?.tier === 'pro';
+    } catch (_) { paid = false; }
+  }
+  if (!paid) return { imported: 0, latestMs: 0 };
+
   const status = await getHealthPermissionStatus(['cardio']);
   if (status !== 'granted') return { imported: 0, latestMs: 0 };
 

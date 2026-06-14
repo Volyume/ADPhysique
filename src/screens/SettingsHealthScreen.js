@@ -139,7 +139,7 @@ export default function SettingsHealthScreen() {
       const status = await requestHealthPermissions(['cardio']);
       setHealthCardioStatus(status);
       if (status === 'granted') {
-        const { imported } = await importNewCardio(user?.id);
+        const { imported } = await importNewCardio(user?.id, { isPaid: isPro });
         toast.show(
           imported > 0
             ? `${imported} cardio ${imported === 1 ? 'session' : 'sessions'} imported`

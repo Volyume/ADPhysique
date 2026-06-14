@@ -8,7 +8,7 @@
  * orchestration are device-verified (Apple Health / Health Connect can't run in
  * CI); these tests lock the logic that decides what gets written.
  */
-import { planCardioImport, cardioSessionToLog } from '../health';
+import { planCardioImport, cardioSessionToLog, importNewCardio } from '../health';
 
 const session = (over = {}) => ({
   extId: 'HK-1', startMs: 2000, durationMin: 30, distance: 5000,
@@ -46,6 +46,18 @@ describe('planCardioImport', () => {
     expect(planCardioImport(null, 100)).toEqual({ toInsert: [], latestMs: 100 });
     expect(planCardioImport([], 100)).toEqual({ toInsert: [], latestMs: 100 });
     expect(planCardioImport([session({ startMs: 50 })], 100).toInsert).toEqual([]);
+  });
+});
+
+describe('importNewCardio entitlement guard', () => {
+  test('a non-paid tier no-ops even when the OS cardio permission is granted', async () => {
+    // isPaid:false short-circuits before any permission/cursor/DB work, so a
+    // downgraded ex-Pro user with the OS permission still granted imports nothing.
+    expect(await importNewCardio('u1', { isPaid: false })).toEqual({ imported: 0, latestMs: 0 });
+  });
+
+  test('no user id → no-op regardless of tier', async () => {
+    expect(await importNewCardio(null, { isPaid: true })).toEqual({ imported: 0, latestMs: 0 });
   });
 });
 
