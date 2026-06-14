@@ -155,9 +155,17 @@ file at the end of every working session.
     respects `saving`). NA-ids resolved at build: **NA-wr-1** ActiveWorkout route un-gated (`RootNavigator.js:295/478/505`,
     no `withProGuard`); **NA-wr-2** single `<SetEntry>` site (`ActiveWorkoutScreen.js:1755`), prop optional/non-breaking.
     Invariant tests in `src/components/__tests__/SetEntry.test.js`. lint+full suite green; fresh-eyes review PASS.
-  - ▶ **NEXT: (3) Protein-consistency metric** [NA-nutrition-8]. Source blueprint: read it IN FULL before coding —
-    find the ULTIMATE-* item in the `pass4-blueprints-nutrition.md` cluster (grep "protein" / "NA-nutrition-8"),
-    resolve its NA-ids by reading at build time, then build per the edit-gate.
+  - ✅ (3) **Protein-consistency metric** — DONE, commit `151cbd1`. Source: `pass4-blueprints-nutrition.md:479-595`
+    (ULTIMATE-NUT-04). Added a highlighted "You hit your protein on N of M days you logged." headline above the
+    macro-adherence block in `FoodInsightsScreen.js`, derived from the existing `adherence.pDays`/`adherence.logged`.
+    **NA-nutrition-8 resolved:** re-use the existing 10% protein-hit band — the founder voice decision
+    (`pass3-v2-founder-decisions.md:93`) fixes only the phrasing, not a stricter band, and the blueprint mandates
+    deriving from the existing count. Invariant tests in `src/screens/__tests__/FoodInsightsScreen.test.js`.
+    lint+full suite green; fresh-eyes review PASS.
+  - ▶ **NEXT: (4) Food-insights analytics windows 14/30/90d** [NA-nutrition-9, NA-nutrition-10]. Source blueprint:
+    read IN FULL before coding — `pass4-blueprints-nutrition.md` ULTIMATE-NUT-05 (starts ~line 597). NA-nutrition-9
+    (how the calories view renders at 30/90d where 90 daily bars don't fit) is flagged "Do not guess the UX" —
+    resolve from the blueprint/codebase at build time, then build per the edit-gate.
 - **OPEN BEFORE CODING:** branch policy conflict — session brief says develop on
   `claude/audit-work-quality-review-benrin` (an audit/docs branch); CLAUDE.md says app code goes on
   phase2/development or feature/*. Founder to confirm the build branch before any production code is written.
