@@ -1336,6 +1336,15 @@ const SCHEMA_MIGRATIONS = [
     )`,
     'CREATE INDEX IF NOT EXISTS idx_meal_plans_user_active ON meal_plans(user_id) WHERE deleted_at IS NULL AND is_active = 1',
   ],
+  // Passive cardio import (ULTIMATE-CUX-PCI). ext_id holds the platform sample
+  // id (HealthKit UUID / Health Connect record id) so re-running the import
+  // never duplicates a session. Manual rows leave it NULL; the partial unique
+  // index de-dups imported rows without constraining manual ones. Cloud parity:
+  // supabase/migrate_087_cardio_log_ext_id.sql (apply separately, never from here).
+  [
+    'ALTER TABLE cardio_log ADD COLUMN ext_id TEXT',
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_cardio_log_user_extid ON cardio_log(user_id, ext_id) WHERE ext_id IS NOT NULL',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -4015,19 +4024,35 @@ export async function insertCardioLog(userId, session = {}) {
     created_at: now,
     updated_at: now,
     deleted_at: null,
+    // Platform sample id for imported sessions (ULTIMATE-CUX-PCI); NULL for
+    // manual logs. The partial unique index (user_id, ext_id) backstops dupes.
+    ext_id: session.extId ?? null,
   };
   await d.runAsync(
     `INSERT INTO cardio_log (user_id, id, entry_date, activity_id, activity_name,
        category, duration_min, intensity, met, est_kcal, recovery_impact,
-       impact_type, distance, avg_hr, source, notes, created_at, updated_at, deleted_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       impact_type, distance, avg_hr, source, notes, created_at, updated_at, deleted_at, ext_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [row.user_id, row.id, row.entry_date, row.activity_id, row.activity_name,
       row.category, row.duration_min, row.intensity, row.met, row.est_kcal,
       row.recovery_impact, row.impact_type, row.distance, row.avg_hr, row.source,
-      row.notes, row.created_at, row.updated_at, row.deleted_at],
+      row.notes, row.created_at, row.updated_at, row.deleted_at, row.ext_id],
   );
   _scheduleSync();
   return rowToCamel(row);
+}
+
+// True if an imported cardio session with this platform sample id already
+// exists for the user (ULTIMATE-CUX-PCI de-dup; NA-cux-4). Manual rows have a
+// NULL ext_id and are never matched here.
+export async function cardioExtIdExists(userId, extId) {
+  if (!userId || !extId) return false;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT 1 AS hit FROM cardio_log WHERE user_id = ? AND ext_id = ? LIMIT 1',
+    [userId, extId],
+  );
+  return !!row;
 }
 
 // Patch an existing session (duration/intensity/notes etc.). Recompute of
@@ -4152,8 +4177,8 @@ export async function insertCardioLogFromCloud(userId, row) {
   await d.runAsync(
     `INSERT INTO cardio_log (user_id, id, entry_date, activity_id, activity_name,
        category, duration_min, intensity, met, est_kcal, recovery_impact,
-       impact_type, distance, avg_hr, source, notes, created_at, updated_at, deleted_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       impact_type, distance, avg_hr, source, notes, created_at, updated_at, deleted_at, ext_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(user_id, id) DO UPDATE SET
        entry_date = excluded.entry_date,
        activity_id = excluded.activity_id,
@@ -4170,14 +4195,16 @@ export async function insertCardioLogFromCloud(userId, row) {
        source = excluded.source,
        notes = excluded.notes,
        updated_at = excluded.updated_at,
-       deleted_at = excluded.deleted_at`,
+       deleted_at = excluded.deleted_at,
+       ext_id = excluded.ext_id`,
     [userId, row.id, row.entry_date, row.activity_id ?? null, row.activity_name ?? 'Cardio',
       row.category ?? null, Math.round(Number(row.duration_min) || 0), row.intensity ?? 'moderate',
       row.met != null ? Number(row.met) : null, row.est_kcal != null ? Math.round(Number(row.est_kcal)) : null,
       row.recovery_impact ?? null, row.impact_type ?? null,
       row.distance != null ? Number(row.distance) : null, row.avg_hr != null ? Math.round(Number(row.avg_hr)) : null,
       row.source ?? 'manual', row.notes ?? null,
-      toMs(row.created_at) ?? Date.now(), toMs(row.updated_at) ?? Date.now(), toMs(row.deleted_at)],
+      toMs(row.created_at) ?? Date.now(), toMs(row.updated_at) ?? Date.now(), toMs(row.deleted_at),
+      row.ext_id ?? null],
   );
   return true;
 }

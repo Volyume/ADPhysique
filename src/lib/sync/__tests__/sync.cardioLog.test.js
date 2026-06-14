@@ -68,6 +68,25 @@ describe('cardio_log push', () => {
     });
     expect(upsert.rows[0].updated_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     expect(upsert.rows[0].deleted_at).toBeNull();
+    expect(upsert.rows[0].ext_id).toBeNull(); // manual rows carry no platform id
+  });
+
+  test('carries ext_id for an imported session (ULTIMATE-CUX-PCI)', async () => {
+    dbModule.getCardioLogForPush.mockResolvedValue([
+      {
+        id: 'c3', entryDate: '2026-06-14', activityName: 'Outdoor Run', durationMin: 42,
+        intensity: 'moderate', source: 'apple_health', extId: 'HK-UUID-123',
+        updatedAt: 1700000000000, deletedAt: null,
+      },
+    ]);
+    const sb = makeSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    await pushTable('cardio_log', { userId: 'u1', localUserId: 'u1' });
+
+    expect(sb._calls.upserts[0].rows[0]).toMatchObject({
+      id: 'c3', source: 'apple_health', ext_id: 'HK-UUID-123',
+    });
   });
 
   test('propagates a soft delete (deleted_at set)', async () => {

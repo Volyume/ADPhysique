@@ -94,6 +94,13 @@ describe('cardio_log migration ordering', () => {
     expect(createdCardioLog(d._exec)).toBe(true);
   });
 
+  test('a fresh install adds cardio_log.ext_id + the partial unique de-dup index (ULTIMATE-CUX-PCI)', async () => {
+    const d = makeFakeDb(0);
+    await runMigrations(d);
+    expect(d._exec.some(s => /ALTER TABLE cardio_log ADD COLUMN ext_id/i.test(s))).toBe(true);
+    expect(d._exec.some(s => /CREATE UNIQUE INDEX IF NOT EXISTS idx_cardio_log_user_extid[\s\S]*WHERE ext_id IS NOT NULL/i.test(s))).toBe(true);
+  });
+
   test('an install already at the top version runs nothing further', async () => {
     const probe = makeFakeDb(0);
     await runMigrations(probe);

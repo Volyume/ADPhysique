@@ -70,6 +70,7 @@ export async function pushCardioLog(sb, { userId, localUserId } = {}) {
       distance: r.distance != null ? Number(r.distance) : null,
       avg_hr: r.avgHr != null ? Math.round(Number(r.avgHr)) : null,
       source: r.source ?? 'manual',
+      ext_id: r.extId ?? null,
       notes: r.notes ?? null,
       created_at: _toIso(r.createdAt) ?? nowIso,
       updated_at: _toIso(r.updatedAt) ?? nowIso,
