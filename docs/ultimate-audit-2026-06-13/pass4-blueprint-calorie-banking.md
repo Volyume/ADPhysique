@@ -1,3 +1,7 @@
+> ⚠️ DRAFT (written ahead of the Pass-4 process). Content is read-backed and valid, but it must be reformatted
+> into the mandated BLUEPRINT FORMAT (`_AUDIT-SPEC.md:252-271`) with a source tag on every factual sentence and an
+> NA-id for the open schema question, as a Pass-4 cluster blueprint. Kept as the content draft, not the final form.
+
 # PASS-4 BLUEPRINT — Calorie banking ("Plan a bigger day")
 
 Status: BLUEPRINT for founder review. NO code written yet (touches the safety surface → plan-first per CLAUDE.md).

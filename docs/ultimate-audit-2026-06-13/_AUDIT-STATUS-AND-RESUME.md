@@ -109,7 +109,25 @@ file at the end of every working session.
     Covers the 6 ungraded domains + cross-cutting UX/UI quality. READY TO RUN on 3 AIs (founder action: paste
     back the 3 exports, then build new matrix rows per domain).
 
-### PASS 4 — BLUEPRINTS — ▶ NOT STARTED (awaiting founder go + the area open-question decisions)
+### PASS 4 — BLUEPRINTS — ◐ IN PROGRESS (founder authorised; following `_AUDIT-SPEC.md:214-308`)
+- **Method reconciliation (must be confirmed):** the founder DIRECTED the Pass-3 deliverable to be
+  `pass3-comparison-matrix.md` (per-area LEAD/LAG/MISSING + VERIFICATION) instead of the original spec's
+  `pass3-gap-analysis.md` + `pass2-findings-index.md` + `pass3-reconciliation.md` gate. So the original-form Pass-3
+  EXIT GATE files were never produced (findings-index / reconciliation MISSING) — the matrix + `pass3-v2-founder-
+  decisions.md` are the substitute. The anti-vanish guarantee is delivered via the Pass-4 ledgers below +
+  `pass4-final-reconciliation.md`, anchored to the matrix, NOT the original findings-index. **Open process
+  question for founder:** accept the matrix-path gate, or require the original findings-index/reconciliation to be
+  back-filled first.
+- **DONE this session:** `pass4-no-action.md` (dismissed + leads), `pass4-deferred.md` (cost/niche/commission +
+  carried Q1). Every Pass-3 gap now maps to blueprint / deferred / no-action — none vanish.
+- **Founder decisions** (build/dismiss/defer per item): `pass3-v2-founder-decisions.md`.
+- **DRAFTS pre-process (to be reformatted into mandated BLUEPRINT FORMAT `_AUDIT-SPEC.md:252-271`):**
+  `pass4-blueprint-calorie-banking.md`, `pass4-blueprints-approved-items.md`.
+- **REMAINING (in order):** (1) confirm the gate method with founder; (2) produce cluster blueprints in the
+  mandated tagged format for the ~19 approved items (calorie banking + micronutrients sequenced alone);
+  (3) `pass4-needs-answer-register.md` (incl. Q1 schema authority for the micronutrients blueprint);
+  (4) `pass4-final-reconciliation.md` (gate); (5) `pass4-master-priority.md`; (6) `pass4-executive-summary.md`.
+- CARRIED: Pass-1 Q1 schema authority — blocks the micronutrients/NRV blueprint (logged in `pass4-deferred.md`).
 
 ## DECISIONS LOG (rationale preserved)
 1. Pass-2 pivot to 3-AI external research — environment cannot browse (founder-directed).
