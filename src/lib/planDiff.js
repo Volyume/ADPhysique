@@ -9,19 +9,14 @@
 // the SAME structural facts to everyone (dual-audience); only surrounding prose
 // changes by tone.
 
-// Split codes from planEngine.selectSplit -> friendly labels. Division splits
-// already arrive as friendly labels (e.g. "V-Taper") and pass through unchanged.
-const SPLIT_LABELS = {
-  full_body: 'Full body',
-  ppl: 'Push / Pull / Legs',
-  ppl_ab: 'Push / Pull / Legs + Arms & Abs',
-  upper_lower: 'Upper / Lower',
-  upper_lower_wp: 'Upper / Lower + weak point',
-  lower_focus: 'Lower focus',
-  balanced_ul: 'Balanced Upper / Lower',
-};
+import { SPLIT_LABELS } from './planEngine';
 
-/** A friendly label for a split code, or the value itself if already friendly. */
+/**
+ * A friendly label for a split code, or the value itself if already friendly
+ * (division splits arrive as labels like "V-Taper"). Reuses planEngine's
+ * SPLIT_LABELS so the rebuild diff names a split exactly as the rest of the app
+ * does — one source of truth, no drift.
+ */
 export function splitLabel(code) {
   if (!code) return null;
   return SPLIT_LABELS[code] || code;

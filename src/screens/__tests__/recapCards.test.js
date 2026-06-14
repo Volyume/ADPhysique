@@ -93,6 +93,13 @@ describe('buildCards (Year of Lifts) — tonnage year-over-year anchor (ULTIMATE
     expect(v.caption).toBe('Up 20% on the year before.');
   });
 
+  test('a sub-1% increase falls back to the generic line (never "Up 0%")', () => {
+    // 48000 vs 47800 = +0.42% → rounds to 0; must not render "Up 0% on the year before."
+    const v = volumeOf(buildCards(fullYear({ tonnage: 48000, previous: { totalSessions: 110, tonnage: 47800 } }), 'kg'));
+    expect(v.caption).toBe('Every set you logged, stacked end to end.');
+    expect(v.caption).not.toMatch(/Up 0%/);
+  });
+
   test('a down year is never negative-framed (falls back to the generic line)', () => {
     const v = volumeOf(buildCards(fullYear({ tonnage: 38000, previous: { totalSessions: 110, tonnage: 40000 } }), 'kg'));
     expect(v.caption).toBe('Every set you logged, stacked end to end.');

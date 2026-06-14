@@ -28,7 +28,7 @@ import { GLOSSARY } from '../lib/coachGlossary';
 import { useToast } from '../components/Toast';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { logBodyMetric, getBodyMetricLog, getOpenEdPatternFlag, getCompletedWorkoutSets, getAllExercises } from '../lib/database';
+import { logBodyMetric, getBodyMetricLog, getOpenEdPatternFlag, getWorkoutSetsSince, getAllExercises } from '../lib/database';
 import { deriveRecomp } from '../lib/recompReframe';
 import { localDayKey } from '../lib/dayKey';
 import WindowChips from '../components/WindowChips';
@@ -405,6 +405,10 @@ export default function BodyMetricsScreen() {
   const [physiqueEnabled, setPhysiqueEnabled] = useState(null); // null = loading
   const [calm, setCalm] = useState(false);
   const [edFlagOpen, setEdFlagOpen] = useState(false);
+  // Until the calm / open-ED flags have actually loaded, the recomp reframe is
+  // treated as suppressed (safe default), so it can't flash before the async
+  // safety reads resolve (NA-coaching-6).
+  const [wellbeingLoaded, setWellbeingLoaded] = useState(false);
   const [sessionConfirmed, setSessionConfirmed] = useState(bodyMetricsSessionConfirmed);
   const [history, setHistory] = useState([]);
   // Lift data for the recomposition reframe's strength delta (ULTIMATE-RECOMP-01).
@@ -451,8 +455,8 @@ export default function BodyMetricsScreen() {
   // under calm mode / open ED flag so a "weight flat, fat down" read can never
   // reinforce restriction (NA-coaching-6). Renders nothing when not warranted.
   const recompVm = useMemo(
-    () => deriveRecomp(history, liftSets, exercises, { suppressed: calm || edFlagOpen }),
-    [history, liftSets, exercises, calm, edFlagOpen],
+    () => deriveRecomp(history, liftSets, exercises, { suppressed: !wellbeingLoaded || calm || edFlagOpen }),
+    [history, liftSets, exercises, wellbeingLoaded, calm, edFlagOpen],
   );
 
   // Auto-select first measurement that has data
@@ -478,10 +482,14 @@ export default function BodyMetricsScreen() {
           setPhysiqueEnabled(false);
         }
       });
-      getWellbeingMode().then(m => setCalm(isCalm(m)));
       // COMP-019: suppress the weight takeaway's rate-of-change under an open ED
       // pattern flag (COMP-004 safety behaviour), in addition to calmer mode.
-      if (user?.id) getOpenEdPatternFlag(user.id).then(f => setEdFlagOpen(!!f)).catch(() => {});
+      // Mark the wellbeing flags loaded only once BOTH reads settle, so the
+      // recomp reframe stays suppressed until the real calm/ED state is known.
+      Promise.allSettled([
+        getWellbeingMode().then(m => setCalm(isCalm(m))),
+        user?.id ? getOpenEdPatternFlag(user.id).then(f => setEdFlagOpen(!!f)) : Promise.resolve(),
+      ]).finally(() => setWellbeingLoaded(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
@@ -585,9 +593,13 @@ export default function BodyMetricsScreen() {
 
     // Lift data for the recomposition reframe's strength delta (read-only;
     // a failure just hides the strength line, never the body history above).
+    // Bounded to the last year rather than all-time: deriveRecomp only inspects
+    // the recent flat-weight window, so a full set-history read would be wasted
+    // work on a long-term user's every screen focus.
     try {
+      const RECOMP_SET_WINDOW_MS = 365 * 86400000;
       const [ls, ex] = await Promise.all([
-        getCompletedWorkoutSets(user.id),
+        getWorkoutSetsSince(user.id, Date.now() - RECOMP_SET_WINDOW_MS),
         getAllExercises(),
       ]);
       setLiftSets(ls || []);

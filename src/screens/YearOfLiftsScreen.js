@@ -82,8 +82,14 @@ export function buildCards(data, units, { neutral = false } = {}) {
   // already-shipped buildMonthCards tonnage caption.
   if (data.tonnage > 0) {
     const prev = data.previous;
-    const caption = (!neutral && prev && prev.tonnage > 0 && data.tonnage > prev.tonnage)
-      ? `Up ${Math.round(((data.tonnage - prev.tonnage) / prev.tonnage) * 100)}% on the year before.`
+    // Round first and only surface the relative line when it reads as at least
+    // 1%: a sub-0.5% rise rounds to 0, and "Up 0% on the year before." is neither
+    // factual nor the intended generic fallback.
+    const pct = (!neutral && prev && prev.tonnage > 0 && data.tonnage > prev.tonnage)
+      ? Math.round(((data.tonnage - prev.tonnage) / prev.tonnage) * 100)
+      : 0;
+    const caption = pct >= 1
+      ? `Up ${pct}% on the year before.`
       : 'Every set you logged, stacked end to end.';
     cards.push({
       type: 'stat',

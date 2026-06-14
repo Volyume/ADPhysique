@@ -330,7 +330,7 @@ export default function PlanUpdateScreen({ navigation }) {
             <Text style={styles.diffTitle}>Before you rebuild</Text>
             {diff.identical ? (
               <Text style={styles.diffSub}>
-                Nothing would change. Your plan already matches this setup.
+                Your training days, split and moves already match this setup. Rebuilding refreshes your sets and volume.
               </Text>
             ) : (
               <>
@@ -370,15 +370,15 @@ export default function PlanUpdateScreen({ navigation }) {
             )}
 
             <TouchableOpacity
-              style={[styles.saveBtn, (saving || diff.identical) && styles.saveBtnDisabled]}
+              style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
               onPress={handleConfirmRebuild}
-              disabled={saving || diff.identical}
+              disabled={saving}
               activeOpacity={0.85}
               accessibilityRole="button"
-              accessibilityState={{ disabled: saving || diff.identical }}
+              accessibilityState={{ disabled: saving }}
               accessibilityLabel="Confirm and rebuild"
             >
-              <Text style={[styles.saveBtnText, (saving || diff.identical) && styles.saveBtnTextDisabled]}>
+              <Text style={[styles.saveBtnText, saving && styles.saveBtnTextDisabled]}>
                 {saving ? 'Rebuilding…' : 'Confirm and rebuild'}
               </Text>
             </TouchableOpacity>

@@ -12,11 +12,18 @@ describe('splitLabel', () => {
   test('maps known codes to friendly labels', () => {
     expect(splitLabel('ppl')).toBe('Push / Pull / Legs');
     expect(splitLabel('upper_lower')).toBe('Upper / Lower');
-    expect(splitLabel('full_body')).toBe('Full body');
+    expect(splitLabel('full_body')).toBe('Full Body');
   });
   test('passes through already-friendly division labels and null', () => {
     expect(splitLabel('V-Taper')).toBe('V-Taper');
     expect(splitLabel(null)).toBeNull();
+  });
+  test('uses planEngine SPLIT_LABELS verbatim (one source of truth, no drift)', () => {
+    // eslint-disable-next-line global-require
+    const { SPLIT_LABELS } = require('../planEngine');
+    for (const [code, label] of Object.entries(SPLIT_LABELS)) {
+      expect(splitLabel(code)).toBe(label);
+    }
   });
 });
 
