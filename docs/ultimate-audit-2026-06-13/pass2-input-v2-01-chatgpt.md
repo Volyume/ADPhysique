@@ -202,3 +202,111 @@ physique discipline identity" — requires moving beyond stats into behavioural 
 
 SCORECARD: data richness A-, narrative quality B, identity reinforcement C, shareability B, UK relevance B,
 multi-timeframe structure C, emotional impact B.
+
+---
+
+## DOMAIN 6 — MANUAL WORKOUT / ROUTINE BUILDER (faithful summary; same provenance, no per-claim sources)
+
+A) BEST IN CLASS: **Hevy** (UX benchmark — tap-first fast set logging, clean in-session supersets, custom
+exercises, templates, minimal mid-workout edit friction; "execution speed over configuration complexity, designed
+around in-gym reality"). **Strong** (structured routine builder, per-lift history/progression; slower editing,
+less fluid live). **JEFIT** (large DB, programme templates; outdated/high-friction UX). Emerging bar: <3 taps to
+log a set; superset-native; in-place editable templates; uninterrupted continuation; mid-workout mods without
+losing state.
+
+B) WHERE VOLYUME LIKELY LEADS: clean separation generated-plans vs manual-builder vs ad-hoc (most apps collapse
+these confusingly); programme-activation-as-block (stronger than static templates, aligns with training-phase
+thinking); superset support already included; reduced-UI-complexity philosophy vs JEFIT chaos.
+
+C) WHERE VOLYUME LAGS: (1) **in-session editing friction** (critical — Hevy = instant edit/reorder/zero
+nav-loss; modal navigation would feel slower in gym). (2) **set progression UX** (repeat-last-set, auto-increment,
+quick +2.5/+5/+10). (3) **workout state persistence** (interrupted/paused/resumed sessions seamless). (4)
+**template duplication + modification depth** (duplicate, edit-without-breaking-original, versioning). (5)
+**superset execution UX** (alternating flow, minimal taps between movements, visual grouping — execution > feature
+presence).
+
+D) ELEVATE (ranked): 1 ultra-low-friction logging loop (1 tap open / 1 tap log / swipe adjust). 2 mid-workout
+edit layer (inline overlay, no nav loss, reversible). 3 smart set-progression helpers (last-set repeat,
+auto-progression, quick increment). 4 superset-first UX (alternating state machine). 5 session recovery
+(resume-exactly, restore last state, detect incomplete). 6 programme-lifecycle clarity (creation/activation/
+execution/review separated).
+
+E) KEY INSIGHT: market solved DBs/routine-creation/logging; NOT solved "gym-real-time friction under fatigue."
+Hevy closest. Volyume's opportunity = reduce decision friction to near-zero during execution, not more features.
+
+SCORECARD: routine structure A-, execution UX B, superset handling B, session robustness B-, speed of logging B,
+programming clarity A, gym realism fit B.
+
+**[MY FLAG — check our side, ChatGPT guessed]:** several D6 "gaps" may already be leads on our side from earlier
+reads — `ActiveWorkoutScreen` pre-fill/beat-rep + auto-advance (≈ repeat-last-set / auto-progression),
+`SetEntry` ±steppers (≈ quick increment +2.5/+1), `HomeScreen` WK-1 crash-recovery `restoreActiveWorkout`
+(≈ session recovery). Verify before grading these as lags.
+
+---
+
+## DOMAIN 7 — UX/UI QUALITY (faithful summary; same provenance, no per-claim sources)
+
+A) BEST IN CLASS: **Whoop** (dense physiological dashboards without clutter; strong hierarchy, primary metric
+dominant; proactive data surfacing — "behaves like a coach not a menu"). **Apple Fitness** (glanceability/rings,
+one-screen status, low interaction cost). **MacroFactor** (data-to-decision: weight→intake→adjustment hierarchy;
+deliberately "boring" UI to build trust; comprehension over engagement loops). **Hevy** (in-session interaction
+speed, thumb-zone optimisation, fast state transitions, no deep menus mid-workout).
+
+B) WHERE VOLYUME LIKELY LEADS: hero-first home (single primary Start + priority-stack banners — aligns Apple/MF
+clarity); deterministic plain one-line coaching (no LLM verbosity → trust/interpretability); accessibility-first
+(WCAG AA/AAA, 52px targets, reduce-motion); reduced-UI-chaos (no draggable dashboards/over-customisation).
+
+C) WHERE VOLYUME LAGS: (1) **glance density vs depth balance** (Whoop/MF = high density + strict hierarchy
+filtering; over-simplify → lose insight, over-add → lose clarity; unresolved). (2) **mid-flow interaction
+fluidity** (Hevy/Strong zero-delay logging vs modal interruptions). (3) **visual encoding sophistication**
+(rings/strain metaphors = instant interpretability; ours more text/structure-led → lower emotional immediacy).
+(4) **personalisation vs rigidity** (no rearrangeable tiles → "doesn't feel like it adapts to me"; best apps solve
+via **adaptive content ordering**, not manual layout). (5) **micro-interactions layer** (haptics, micro-animations,
+state feedback — cognitive reinforcement; underuse → feels less premium despite clean design).
+
+D) ELEVATE (ranked): 1 hierarchy compression (1 primary + 2-3 secondary max, rest collapsed). 2 zero-friction
+interaction loops (no modal interruptions, inline editing, instant state). 3 **adaptive information ordering**
+(reorder by behaviour relevance — weight-unstable→weight first; inconsistency→adherence first). 4 lightweight
+visual-metaphor layer (consistency/adherence/trend-strength encoding, avoid over-gamification). 5 micro-interaction
+system (haptic on set completion, state-confirm animations, causality transitions). 6 "coach UI behaviour model"
+(calm, surfaces only what matters now).
+
+E) KEY INSIGHT: top apps win on "cognitive load control under real usage," not aesthetics — Whoop=physiological
+clarity, MF=behavioural clarity, Hevy=execution clarity, Apple=instant status clarity. Volyume's opportunity =
+unify all four clarity types without overload.
+
+SCORECARD: (none given; prose only).
+
+---
+
+## CROSS-DOMAIN FINAL SYNTHESIS (ChatGPT)
+Structurally strong: coaching-integration model, deterministic design (trust), clean UX philosophy, physique-
+specific framing. Biggest gaps (ranked): 1 **convenience layer** (wearable import, automation, frictionless
+logging — highest risk). 2 **behavioural intelligence** (adherence scoring, causal insights, predictive feedback).
+3 **UK realism layer** (food availability mapping, supermarket constraint modelling — "underrated but critical").
+4 **execution UX** (supersets flow, set-logging speed, mid-session editing). 5 **narrative/identity** (recaps that
+create identity not summaries). Strategic conclusion: winning space = "coaching systems that reduce friction while
+increasing behavioural clarity"; the delta is "fewer taps, clearer decisions, stronger behavioural feedback,
+better UK food + gym real-world constraint handling" — not more features.
+
+## MASTER SOURCE LIST (ChatGPT — HOMEPAGE URLs ONLY, not per-claim citations)
+MacroFactor macrofactorapp.com · Carbon carbondietcoach.com · RP rpstrength.com · MyFitnessPal myfitnesspal.com
+· Cronometer cronometer.com · Lifesum lifesum.com · Yazio yazio.com · Hevy hevyapp.com · Strong strong.app ·
+JEFIT jefit.com · Alpha Progression alphaprogression.com · Boostcamp boostcamp.app · Whoop whoop.com · Apple
+Fitness apple.com/apple-fitness-plus · Strava strava.com · Garmin connect.garmin.com · Eat This Much
+eatthismuch.com · Nutracheck nutracheck.co.uk.
+
+## ChatGPT's OWN LOW-CONFIDENCE / NOT-VERIFIED REGISTER (honest — corroborates our NOT-FOUND list)
+1. **App-store metrics NOT FOUND** — exact star ratings + download counts + date-seen for MacroFactor/Carbon/
+   Alpha/Boostcamp/Hevy/Strong/Cronometer (needs live per-region store scraping).
+2. **UK vs US sentiment splits PARTIAL** — Nutracheck UK positioning, UK MFP food-DB complaints, UK supermarket
+   mapping (needs review-corpus mining).
+3. **Feature-level confirmation PARTIAL** — MacroFactor wearable integrations, Cronometer recipe-import scope,
+   Eat This Much pantry optimisation, Hevy superset UX specifics (need direct source validation).
+4. **Engagement/retention claims PARTIAL** — quantified uplift from Wrapped-style recaps (needs studies/internal
+   metrics).
+5. **UX interaction metrics NOT FOUND** — tap counts per logging flow, measured friction, load latency.
+
+**[MY NOTE]** ChatGPT's #1 and #5 NOT-FOUND independently match our existing CONSOLIDATED NOT-FOUND list (app-store
+metrics; taps/latency) — consistency, but still single-source. Nothing here is VERIFIED until 2-of-3 + real
+per-claim URLs. This whole file remains SIMULATED/EXPERT-BENCHMARK grade.
