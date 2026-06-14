@@ -211,11 +211,25 @@ file at the end of every working session.
     calm OR open ED flag. NA-coaching-1 moot (founder-placed Tier-1); NA-coaching-5 = render nothing (blueprint default).
     Invariant tests `src/lib/__tests__/recompReframe.test.js` (12). lint+full suite green (4130 pass); fresh-eyes
     review PASS (no blockers/should-fixes; day-key→ms conversion + ≥2.5kg default both confirmed safe).
-  - ▶ **NEXT: TIER-2 (per `pass4-master-priority.md:17-23`), in order, skipping BLOCKED items:**
-    **(8) Auto grocery list** [NA-nutrition-4] — genuinely absent; actionability win. Source blueprint: read IN FULL
-    before coding — `pass4-blueprints-nutrition.md` (grep "grocery" / "shopping" / "ULTIMATE-" for the exact ID +
-    source lines), resolve NA-nutrition-4 (aisle taxonomy) + any sibling NA-ids by reading at build time / asking the
-    founder structured multi-choice, then build per the edit-gate. Then (9) Plan diff/preview [NA-coaching-12/13],
+  - ✅ **TIER-2 (8) Auto grocery list** — DONE, commits `5047b3b` + `3430708` (review fix). Source:
+    `pass4-blueprints-nutrition.md:182-310` (ULTIMATE-NUT-02). NEW pure `src/lib/food/groceryList.js`
+    `buildGroceryList(plan)`: walks `plan.days[].slots[]`, sums grams per curated food key across the week (prefers
+    `slot.components`, falls back to parsing `items[].foodRef`, then saved-meal `name` → "Other"), groups by macro
+    `roleOf` into Proteins/Carbs/Veg/Fats/Other (fixed order, grams-desc then name sort), returns
+    `{sections,dayCount,isEmpty}`, never throws. `MealPlanScreen.js` gains a "Shopping list" action → read-only
+    `BottomSheet` (existing import), numbers-first rows + "Totals for the whole week across N days." footer; no
+    diary/plan write; PRO inherited from the Diary stack (no new gate). **NA-nutrition-4** resolved: no UK-aisle
+    taxonomy exists + register forbids inventing one → group by `roleOf` (blueprint LOADED STATE). **NA-nutrition-5**:
+    NUT-01 raw/cooked conversion is BLOCKED (no factor in code) → show stored grams as-is; the curated NAME already
+    carries the weight state ("White rice (cooked)") so no added label/fabrication. **Review fix `3430708`:** dropped
+    an initial `stateOf==='cooked'` flag that double-labelled (name already says "(cooked)"). Tests
+    `src/lib/food/__tests__/groceryList.test.js` (9). lint+full suite green (4139 pass); fresh-eyes review PASS (one
+    should-fix found + fixed).
+  - ▶ **NEXT: TIER-2 (per `pass4-master-priority.md:18-23`), in order, skipping BLOCKED items:**
+    **(9) Plan diff/preview** [NA-coaching-12/13] — pre-commit dry-run; both screens already Pro-gated. Source
+    blueprint: read IN FULL before coding — `pass4-blueprints-coaching-progress.md` (grep "diff" / "preview" /
+    "dry-run" / "ULTIMATE-" for the exact ID + source lines), resolve NA-coaching-12/13 by reading at build time /
+    asking the founder structured multi-choice, then build per the edit-gate. Then
     (10) Passive cardio import [NA-cux-4]. **BLOCKED, do NOT start without the founder clearing them:** (11) Named
     autonomy modes [NA-coaching-10 safety], (12) Raw/cooked toggle [NA-nutrition-1: no conversion source in code],
     (14) Core-Haptics [NA-cux-19: NEW dependency → founder approval]. (13) Mid-session swap clause [NA-wr-3 founder
