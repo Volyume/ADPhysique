@@ -94,8 +94,36 @@ are NOT FOUND, not fabricated. Quality = capability + execution; only micro-UX t
 - **MISSING ENTIRELY:** none vs the bar.
 - **VERIFICATION:** short+conditional + fast-path = VERIFIED (ours) / bar corroborated (Claude+Gemini); auto-derivation LEAD = VERIFIED (ours) / bar PARTIAL (Gemini single, trainerize-sourced); menstrual MATCH = VERIFIED. No NOT-FOUND.
 
+## ONBOARDING (ON)
+- **BEST IN CLASS:** quiz/progressive-disclosure onboarding that reaches value fast (all-three ON); ≤~3
+  actions/screen across ~3–5 short screens (all-three, editorial/UX-pattern); **paywall- or jargon-before-value
+  kills beginners** (all-three ON); severe first-month drop-off (D1 ~26% → D28 ~10%, Claude RE-F1/F2; Business
+  of Apps — documented); prefill/confirm rather than re-ask (Gemini onboarding/CK-F3, trainerize).
+- **WHERE WE LEAD:** value-before-paywall by construction — entry is a **tier-choice** screen, not a paywall
+  (`WelcomeScreen.js:57-66 chooseTier`, trust row "Works fully offline · Exports anytime · No ads, ever"),
+  and **Free reaches a ready-to-train Home with a real plan installed** off a **3-question deterministic
+  micro-quiz** (`FreeStarterScreen.js:103-120 handleStartPlan` → `copyPlanFromLibrary`+`activatePlanWithBlock`;
+  questions `:156-183`; skip always visible `:248-256` — autonomy-first). Pro wizard enforces the
+  **3–5-fields-per-step** rule explicitly (`ProOnboardingScreen.js:428-430,:430` comments; 5 steps `TOTAL_STEPS:52`)
+  with progress bar + **endowed-progress** head-start (`:768-781 ProgressBar`, `BASE 0.12`), **quiz→wizard prefill
+  so a quiz-first user confirms rather than re-answers** (`:198-212`), and an **honest named build sequence** mapped
+  to real generation phases, never completing before the real work (`:54-61,:457-465,:755-761`; COMP-013), with a
+  Reduce-Motion path (`:133,:511`). Jargon is glossed in-flow, not assumed (InfoTooltip + GLOSSARY at body-fat
+  method `:1078`, phase/division `:1202,:1216`).
+- **WHERE WE LAG:** none on a corroborated capability bar — quiz, progressive disclosure, prefill/confirm,
+  short stepped screens, and no-paywall-before-value are all present. (The pre-account **quiz-first** variant
+  is flag-gated off by default — `QuizScreen.js:10 ONBOARDING_QUIZ_FIRST`; the live flow is account/tier-first,
+  which still satisfies the value-before-paywall bar.)
+- **MISSING ENTIRELY:** none vs the corroborated bar.
+- **VERIFICATION:** progressive-disclosure + 3–5/step + prefill/confirm + skip/autonomy + no-paywall-before-value
+  LEAD = VERIFIED (ours read) / bar corroborated ALL-THREE; drop-off bar = VERIFIED (Business of Apps,
+  documented) but is a market fact, not a per-screen design grade. **NOT FOUND:** time-to-first-value (seconds)
+  and actions-per-screen *benchmark numbers* for the named competitors — *missing data point: corroborated/public
+  seconds-to-value + taps-per-screen for MacroFactor/Carbon/Hevy onboarding* (un-sourceable beyond editorial
+  pattern statements; ours is runtime/device-measured, not in code).
+
 ---
-(Areas remaining, reading our side in full first: onboarding, navigation, design, newbie-experience.)
+(Areas remaining, reading our side in full first: navigation, design, newbie-experience.)
 
 ## CONSOLIDATED NOT-FOUND CELLS (for your per-cell targeted-teardown decision) — running list
 1. **WS — taps-to-log a set + keyboard-completion behaviour** for Strong/Hevy (only Gemini-simulated + one reddit quote; no corroborated/public number).
