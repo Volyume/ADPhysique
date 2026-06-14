@@ -123,11 +123,22 @@ file at the end of every working session.
 - **Founder decisions** (build/dismiss/defer per item): `pass3-v2-founder-decisions.md`.
 - **DRAFTS pre-process (to be reformatted into mandated BLUEPRINT FORMAT `_AUDIT-SPEC.md:252-271`):**
   `pass4-blueprint-calorie-banking.md`, `pass4-blueprints-approved-items.md`.
-- **REMAINING (in order):** (1) confirm the gate method with founder; (2) produce cluster blueprints in the
-  mandated tagged format for the ~19 approved items (calorie banking + micronutrients sequenced alone);
-  (3) `pass4-needs-answer-register.md` (incl. Q1 schema authority for the micronutrients blueprint);
-  (4) `pass4-final-reconciliation.md` (gate); (5) `pass4-master-priority.md`; (6) `pass4-executive-summary.md`.
-- CARRIED: Pass-1 Q1 schema authority — blocks the micronutrients/NRV blueprint (logged in `pass4-deferred.md`).
+- **DONE (founder gate = A matrix-path):** all 19 approved items blueprinted in mandated format —
+  `pass4-blueprint-calorie-banking.md` (spine), `pass4-blueprints-micronutrients.md` (spine, Q1-blocked),
+  `pass4-blueprints-nutrition.md`, `-coaching-progress.md`, `-workout-recap.md`, `-cardio-ux.md` (4 cluster agents,
+  source tags spot-verified — no fabrication found). Plus `pass4-needs-answer-register.md`,
+  `pass4-final-reconciliation.md`, `pass4-master-priority.md`, `pass4-executive-summary.md`.
+- **BLUEPRINTING FINDINGS (reduce the build):** recap share/export + monthly cadence ALREADY built (COMP-005);
+  mid-session swap exists (routine-safe); cardio import/trend infra + flexible meal-slot model exist. Reclassify
+  toward no-action in founder review. Raw/cooked toggle has NO conversion factor in code (NA-nutrition-1).
+- **GATE NOT YET PASSED:** 66 NA-ids open. Most read-answerable (Opus-8 read pass). FOUNDER DECISIONS pending:
+  NA-coaching-10 (safety: auto-apply during a hold), NA-cux-19 (Core-Haptics NEW dependency), NA-wr-10 (relative
+  framing wording), NA-wr-3 (swap "keeps volume tracking"), NA-cux-15 (timeline replace vs toggle), NA-cb-3
+  (banking surface). BLOCKED: NA-mn-1 = Q1 schema authority.
+- **NEXT:** (1) founder decides the FOUNDER-DECISION NA-ids; (2) resolve Q1; (3) Opus-8 read pass answers the
+  read-answerable NA-ids with file:line; (4) banned-phrase/untagged sweep; (5) re-run the exit gate; (6) build per
+  `pass4-master-priority.md` Tier-1 first, each with invariant tests + fresh-eyes review.
+- CARRIED: Pass-1 Q1 schema authority — blocks micronutrients/NRV (logged in `pass4-deferred.md` + NA-mn-1).
 
 ## DECISIONS LOG (rationale preserved)
 1. Pass-2 pivot to 3-AI external research — environment cannot browse (founder-directed).
