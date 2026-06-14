@@ -84,6 +84,20 @@ file at the end of every working session.
     progressive prescription, transparent "why" coaching + register switching, composite strength standing,
     meal-memory depth, ED-safe streak-freeze, check-in auto-derivation + Fast Check-In, guided beginner on-ramp,
     test-enforced contrast/CVD/larger-text/reduce-motion design tokens.
+  - **RECONCILE + UX RE-GRADE PASS (later session, founder-directed after catching drops):** (a) caught that the
+    matrix was never reconciled against the Pass-1 mandated register → added a full **SECTION-4 RECONCILIATION**
+    table (all 19 features → matrix status) at the foot of `pass3-comparison-matrix.md`; (b) the UX/UI-quality
+    dimension had been reduced to feature on/off — **re-graded DE and NA** against the real UX bars in the
+    substrate (glanceability/data-density NA-F2/F3, 44px mid-workout DE-F1/F2, disable-able animation, data-as-hero,
+    no-AI-slop), all read-backed; (c) carried the **dropped items** found: reverse-diet (NU), plate-calculator
+    built-but-unwired (WS, `components/PlateCalculator.js` has 0 consumers), plan diff/preview (PG, U-B-7),
+    dense/compact mode (DE+NA); (d) **corrected CK** from clean LEAD to PARTIAL (conditional-branching U-B-2).
+  - **RESEARCH NEEDED (founder commission decisions, listed at foot of matrix):** whole UX/UI-quality dimension
+    (dedicated teardown — approved); DE premium-feel ranking; micro-UX timing cells (WS/FL/ON/NA); niche ABSENT
+    features with no market bar (velocity/tempo, VBT, mood correlation, wellbeing-correlation output); DE/NA
+    substrate is single-source (Gemini) — a 3-AI re-run would corroborate/overturn.
+  - **COMPLETENESS LIMIT:** reconciliation covers the 19 mandated features only; a full guarantee needs the
+    **Section-7 79-screen sweep**, NOT yet run against the matrix.
 
 ### PASS 4 — BLUEPRINTS — ▶ NOT STARTED (awaiting founder go + the area open-question decisions)
 
