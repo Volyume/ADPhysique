@@ -172,10 +172,56 @@ are NOT FOUND, not fabricated. Quality = capability + execution; only micro-UX t
   *missing data point: a sourced, objective design-quality score or side-by-side teardown for
   MacroFactor/Whoop/Hevy vs Volyume* (subjective; un-sourceable beyond editorial impression; not a code fact).
 
----
-(Area remaining, reading our side in full first: newbie-experience.)
+## NEWBIE-EXPERIENCE (NE)
+- **BEST IN CLASS:** beginners need a **guided plan, not a blank builder** (all-three NE/PG-F1); **plain
+  language over jargon** or they churn (all-three; ties to the paywall/jargon-before-value finding); **demo
+  media to learn the movement** (HD video/looping animation, Gemini EL-F3, ChatGPT — the single most
+  beginner-facing exercise feature); encouragement / non-shaming framing (all-three RE).
+- **WHERE WE LEAD:** **guided beginner on-ramp installs a real plan** off 3 plain questions, lands the new
+  free user on a ready-to-train Home, and frames the learning curve kindly — *"The first couple of weeks are
+  for learning the movements. That counts as progress."* (`FreeStarterScreen.js:103-120,:190-219`), with a
+  "Beginner friendly" badge (`:196-208`) and an always-visible skip (autonomy, `:248-256`); **the coach
+  auto-selects the plain-language ‘supportive’ register for beginners/intermediates** without the user setting
+  anything (`coachRegister.js:80-88 resolveRegister` — beginner/intermediate → supportive); **jargon is glossed
+  inline** wherever it appears (InfoTooltip + GLOSSARY at est-1RM `SetEntry.js:97-101`, body-fat method/phase/
+  division `ProOnboardingScreen.js:1078,:1202,:1216`); **per-exercise text form cues** for learning technique
+  (`formTips.js FORM_TIPS`, e.g. bench/squat/deadlift `:3,:37`); experience-scaled engine starts beginners on
+  conservative volume + simpler movements (`planEngine.js:69-73`; `EXPERIENCE_OPTIONS` "Less than 18 months").
+- **WHERE WE LAG:** **no demo media for the movements a beginner is learning** — form cues are **text-only**
+  (`formTips.js` is prose; exercises table has no video/image/animation column, `database.js:78-92`), on the
+  wrong side of the HD-video/animation bar (Gemini EL-F3, ChatGPT; app-docs/store). This is the same gap as
+  EL, but it bites beginners hardest (they most need to *see* the lift).
+- **MISSING ENTIRELY:** exercise demonstration video/animation (register #2 ABSENT) — the top beginner-facing
+  learning aid.
+- **VERIFICATION:** guided-on-ramp + auto plain-language register + inline jargon gloss + text form cues +
+  experience-scaled start LEAD = VERIFIED (ours read) / bar corroborated ALL-THREE; demo-media LAG/MISSING =
+  VERIFIED (no media column; register ABSENT; bar app-docs/store VERIFIED). No competitor NOT-FOUND cell — the
+  newbie capability bar is documented in editorial/app docs, not micro-timing.
 
-## CONSOLIDATED NOT-FOUND CELLS (for your per-cell targeted-teardown decision) — running list
-1. **WS — taps-to-log a set + keyboard-completion behaviour** for Strong/Hevy (only Gemini-simulated + one reddit quote; no corroborated/public number).
-2. **FL — seconds/taps to log one food** for best-in-class (Gemini 45–90s is single + simulated).
-(extended as the remaining areas are executed.)
+---
+(All 15 areas executed. Consolidated NOT-FOUND list below.)
+
+## CONSOLIDATED NOT-FOUND CELLS (for your per-cell targeted-teardown decision) — FINAL (all 15 areas)
+
+Every cell below is one I could NOT source to a credible bar. Each names the specific missing data point. They
+share a single shape: they are all **micro-UX-timing / tap-count / subjective-ranking** measurements that need
+either a hands-on competitor device-walk or an objective teardown — none is a capability or execution gap (those
+were all gradeable and are graded above). The other ~90% of every area's quality bar (capability + execution
+depth) was sourced and graded; this is the residual ~10%.
+
+1. **WS — taps-to-log a set + keyboard-completion behaviour** for Strong/Hevy. *Missing: corroborated/public
+   taps-per-set + keyboard-completion behaviour.* (Only Gemini-simulated + one reddit quote.)
+2. **FL — seconds/taps to log one food** for best-in-class. *Missing: corroborated/public seconds-or-taps to log
+   one food.* (Gemini 45–90s is single + simulated.)
+3. **ON — time-to-first-value (seconds) + actions-per-screen benchmark** for MacroFactor/Carbon/Hevy onboarding.
+   *Missing: sourced seconds-to-value + taps-per-screen.* (Un-sourceable beyond editorial pattern statements;
+   ours is runtime/device-measured.)
+4. **NA — taps-to-primary-action** (app open → "start workout"/"log food") for Strong/Hevy/MacroFactor.
+   *Missing: corroborated/public tap-count to the primary action.* (Beyond the general 1–2-tap pattern.)
+5. **DE — comparative aesthetic / "premium-feel" ranking** vs MacroFactor/Whoop/Hevy. *Missing: a sourced,
+   objective design-quality score or side-by-side teardown.* (Subjective; un-sourceable beyond editorial.)
+
+Note — these adjacent cells were NOT marked NOT FOUND but are flagged for your decision because they are
+**our-side measurable** (a parse of our own code), not competitor gaps: PG plan-library breadth/branding
+(`seedRoutines.js LIBRARY_PLANS`), EL exercise-library size (`seedExercises.js`). They need our parse, not a
+competitor teardown.

@@ -65,6 +65,25 @@ file at the end of every working session.
   floors (AC-6), ED-safe streak-freeze (RE-2), colour-blind-safe palette (DE-4), real periodisation (PG-2),
   smart substitutions (EL-4), wellbeing+conditional check-in (CK), trend smoothing (PR-2).
 - Open questions needing a FOUNDER decision are listed at the foot of each area file (Q-AC1…Q-SC2).
+- **Pass-3 COMPARISON MATRIX — ✅ COMPLETE (15/15 areas), `pass3-comparison-matrix.md`.** Founder-directed
+  re-execution to the spec's Pass-3 comparison-matrix columns (AREA / BEST IN CLASS / WHERE WE LEAD / WHERE WE
+  LAG / MISSING ENTIRELY / VERIFICATION STATUS). Quality graded as capability + execution depth (the ~90%
+  sourceable from competitor feature sets / editorial / app docs); only the residual micro-UX-timing / tap-count /
+  subjective-ranking slice is marked NOT FOUND (specific missing data point named per cell). All 15 rows are
+  read-backed (Read calls in console; lines pasted; verdict tied to those lines — the hard rule). Areas:
+  WS, FL, AC, PR, NU, PG, EL, RE, MF, SC, CK, **ON, NA, DE, NE** (last four added this session).
+  - **CONSOLIDATED NOT-FOUND list (final, 5 cells)** at the foot of the matrix for the founder's per-cell
+    targeted-teardown decision: (1) WS taps-per-set/keyboard-complete, (2) FL seconds/taps per food,
+    (3) ON time-to-first-value + actions-per-screen, (4) NA taps-to-primary-action, (5) DE comparative
+    aesthetic ranking. Plus two **our-side-measurable** flags (not competitor gaps): PG plan-library breadth
+    (`seedRoutines.js`), EL exercise-library size (`seedExercises.js`) — need a parse of our own code.
+  - Real LAGS surfaced (read-backed): FL/NU food DB is OpenFoodFacts crowdsourced vs the curated/verified bar;
+    PR progress-photo UI + recomp-reframing view missing; NU micronutrient/NRV depth; EL/NE no exercise demo
+    media (text form cues only); MF HRV/sleep ingestion + standalone watch + posing/peak-week.
+  - Real LEADS surfaced (read-backed): full adaptive loop (cals+volume+steps+cardio off one trend), in-log
+    progressive prescription, transparent "why" coaching + register switching, composite strength standing,
+    meal-memory depth, ED-safe streak-freeze, check-in auto-derivation + Fast Check-In, guided beginner on-ramp,
+    test-enforced contrast/CVD/larger-text/reduce-motion design tokens.
 
 ### PASS 4 — BLUEPRINTS — ▶ NOT STARTED (awaiting founder go + the area open-question decisions)
 
