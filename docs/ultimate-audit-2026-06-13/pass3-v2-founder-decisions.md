@@ -60,7 +60,41 @@ build. Replaces RC "URL import".
 - FI — Weekend weak-spot detection.
 - FI — Deterministic Satiety Index.
 
-## STILL UNDECIDED (awaiting founder verdict — builder/UX/cardio next)
+## DECIDED — Call 2 (builder/UX/cardio), 2026-06-14
+**ACCEPTED (build):**
+- BD — Mid-session exercise substitution (swap occupied-machine exercise without breaking the template; keeps
+  volume tracking).
+- UX — Timeline-style food logging (continuous timestamp; replaces rigid meal buckets).
+- UX — iOS Core-Haptics custom waveforms (we already fire basic haptics; this is the polish layer).
+- CD — Passive wearable import (upgraded from MAYBE → YES): read-only Apple Health/Health Connect cardio-session
+  + HR, feedback-only, deterministic model preserved.
+- CD — Cardio trend view (history list → "done vs planned" over time; plain wording, NOT "adherence").
+
+**DISMISSED (not suitable):**
+- BD — Per-set RIR input picker. **Founder: "No RIR — that's jargon, against our site ethos and the
+  newbie-welcoming approach."** Confirmed by locked work: the per-set effort picker was already removed
+  (`SetEntry.js:141-144`) and `MOVE_0_5_VOICE_RETROFIT.md:115-120` strips "RIR" from seeded notes for ALL users.
+- BD — Standalone phone-free watch.
+- BD — Per-exercise kg/lb units. Founder: "Cable stacks are rarely lbs." (Keeps deliberate kg-only.)
+- UX — Advanced/dense personalisation toggle (keeps the deliberate "no personalisation" stance).
+
+## STANDING CONSTRAINT — VOICE / NO-JARGON (applies to EVERY accepted item above)
+Source (read in full 2026-06-14): **`docs/COACHING_VOICE_SYNTHESIS_LOCKED.md`** (canonical, supersedes all other
+voice docs) + **`docs/MOVE_0_5_VOICE_RETROFIT.md`** (the "for all users" retrofit). Any new user-facing string
+from this v2 work MUST:
+- Pass `checkJargon` + the Section-6 failure-mode copy-lint (CI-enforced). Plain term ALWAYS leads; technical
+  terms (RIR, TDEE, FFM, MEV/MRV, mesocycle, refeed, tonnage, adherence) appear ONLY via the opt-in science layer
+  (bracketed-after-plain) or tap-to-explain — never bare on a surface.
+- Pass the **honesty test** ("true if the user did nothing but kept logging?"), be **numbers-before-narrative**,
+  **mirror-not-infer**, no motivational filler / moral food labels, British English, NO em/en dashes.
+- Safety copy stays register-blind.
+**Per-item voice guards:** "nested base components" → surface as "reusable meal parts" (not "nested recipe");
+"cardio trend" → "how often you did your cardio / done vs planned" (not "adherence"); recap "relative framing" →
+factual ("the weight of N …"), never hype/"crush"; protein-consistency → "how often you hit your protein."
+(Related, not the canonical source, for awareness: `USER_FACING_COPY_AUDIT.md`, `COACHING_VOICE_CITATION_AUDIT.md`.)
+
+## ALL DECIDED — nothing left undecided in the v2 set
+(Remaining open product thread: scope the **bodybuilding-meals** direction — see decision #5.)
 - RC: cooked-weight yield scaling; nested recipes.
 - MP: anti-repetition guarantee; automated grocery aggregation; batch/leftover distribution.
 - FI: 14/30/90-day windows; protein-consistency metric; weak-spot detection; (Gemini idea) deterministic Satiety
