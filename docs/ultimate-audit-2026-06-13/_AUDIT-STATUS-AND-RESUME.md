@@ -225,12 +225,25 @@ file at the end of every working session.
     an initial `stateOf==='cooked'` flag that double-labelled (name already says "(cooked)"). Tests
     `src/lib/food/__tests__/groceryList.test.js` (9). lint+full suite green (4139 pass); fresh-eyes review PASS (one
     should-fix found + fixed).
-  - ▶ **NEXT: TIER-2 (per `pass4-master-priority.md:18-23`), in order, skipping BLOCKED items:**
-    **(9) Plan diff/preview** [NA-coaching-12/13] — pre-commit dry-run; both screens already Pro-gated. Source
-    blueprint: read IN FULL before coding — `pass4-blueprints-coaching-progress.md` (grep "diff" / "preview" /
-    "dry-run" / "ULTIMATE-" for the exact ID + source lines), resolve NA-coaching-12/13 by reading at build time /
-    asking the founder structured multi-choice, then build per the edit-gate. Then
-    (10) Passive cardio import [NA-cux-4]. **BLOCKED, do NOT start without the founder clearing them:** (11) Named
+  - ✅ **TIER-2 (9) Plan diff/preview** — DONE, commits `6611bce` + `eb5e237` (review fixes). Source:
+    `pass4-blueprints-coaching-progress.md:381-534` (ULTIMATE-PLANDIFF-01). NEW generate-only `generatePlanDryRun`
+    in `planAutoGen.js` (read-only twin of `generateAndSavePlan`: same pure engine + same library-match loop, stops
+    at the persistence seam — no createProgramme/createRoutine/activate; mirrors the `totalWritten===0`→ok:false
+    guard). NEW pure `src/lib/planDiff.js` (`summariseProspectivePlan`/`summariseCurrentPlan`/`splitLabel`/`diffPlans`
+    → days/split/sessionLength/movesAdded/movesDropped/identical). `PlanUpdateScreen.js` split into a preview step
+    (dry-run + diff in a BottomSheet) and a confirm step. **FF-002 PRESERVED EXACTLY** (rebuild-first→bail-without-
+    save→commit-profile-on-success; guard test passes unchanged via a local `updatedProfile`). NA-ids: **-12** seam =
+    generatePlan vs DB writes; **-13** current-plan reader EXISTS (`getActivePlan`+`getRoutinesForPlan`+
+    `getRoutineExercisesWithDetails`); **-14** in-screen BottomSheet panel; **-15** "Nothing would change…" +
+    confirm-disabled; **-16** planEngine pure (no Math.random) → dry-run==commit; **-11** moot (founder Tier-1).
+    Tests: `planDiff.test.js` (10) + `planAutoGen.test.js` dry-run (3: match path no-writes, zero-match mirror,
+    incomplete bail). lint+full suite green (4152 pass); fresh-eyes review PASS (1 should-fix + 1 nit, both fixed:
+    zero-match mirror + null diff-cell render).
+  - ▶ **NEXT: TIER-2 (per `pass4-master-priority.md:19-23`), in order, skipping BLOCKED items:**
+    **(10) Passive cardio import** [NA-cux-4] — infra mostly exists; convenience (read-only, feedback-only). Source
+    blueprint: read IN FULL before coding — `pass4-blueprints-cardio-ux.md` (grep "passive" / "import" / "ULTIMATE-"
+    for the exact ID + source lines), resolve NA-cux-4 + siblings by reading at build time / asking the founder
+    structured multi-choice, then build per the edit-gate. **BLOCKED, do NOT start without the founder clearing them:** (11) Named
     autonomy modes [NA-coaching-10 safety], (12) Raw/cooked toggle [NA-nutrition-1: no conversion source in code],
     (14) Core-Haptics [NA-cux-19: NEW dependency → founder approval]. (13) Mid-session swap clause [NA-wr-3 founder
     clarify] is a copy/clause item — confirm wording before building.
