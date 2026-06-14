@@ -44,31 +44,25 @@ file at the end of every working session.
     pre-pivot); newbie-experience / check-in / scaling missing. The 3-AI inputs supersede them as the
     research substrate, but the per-area findings still need consolidating into the index.
 
-### PASS 3 — GAP ANALYSIS — ❌ OFF-SPEC, must be redone
-- `pass3-gap-analysis.md` EXISTS but was FREE-FLOWED: it analyses only a self-selected "C1–C18"
-  corroborated subset, DROPS all single-source/conflict findings (spec forbids dropping), has no
-  GAP-IDs, no per-finding resolution, no NEWBIE/ATHLETE verdicts, no comparison matrix, no
-  reconciliation counts. It does NOT meet `_AUDIT-SPEC.md:158-204`.
-- Missing entirely: `pass3-comparison-matrix.md`, `pass3-unresolved-questions.md`,
-  `pass3-unresolved-answers.md`, `pass3-reconciliation.md`.
-- REQUIRED redo: every finding ID from `pass2-findings-index.md` → exactly one GAP entry (GAP-ID,
-  SOURCE FINDINGS, RESEARCH FINDING, VOLYUME STATUS, PASS 1 REFERENCE file:line, IF PARTIAL,
-  NEWBIE/ATHLETE IMPACT, EVIDENCE QUALITY); unresolved → unresolved-questions; resolution loop →
-  unresolved-answers; exit-gate count reconciliation MUST be equal.
+### PASS 3 — GAP ANALYSIS — ✅ COMPLETE to spec (awaiting founder certification of the gate)
+- `pass3-gap-analysis.md` (REWRITTEN to spec): all 97 finding IDs → 35 GAP entries, none dropped, 2 EXCLUDED
+  carried; each GAP has SOURCE FINDINGS / RESEARCH / VOLYUME STATUS / PASS-1 file:line / IF PARTIAL /
+  NEWBIE+ATHLETE / EVIDENCE QUALITY.
+- `pass3-unresolved-questions.md` (Q1–Q19), `pass3-unresolved-answers.md` (18 code-resolved at file:line;
+  Q15 non-code → Pass-4 founder-gate), `pass3-comparison-matrix.md` (15 areas), `pass3-reconciliation.md`
+  (97=97, 0 open codebase questions).
+- Gate is a verification artifact (`pass3-reconciliation.md`), not a self-PASS — founder certifies.
 
-### PASS 4 — BLUEPRINTS — ❌ OFF-SPEC, must be reversed/redone
-- `pass4-blueprint-01-progress-photos.md` and `pass4-blueprint-02-hrv-sleep-ingestion.md` EXIST but are
-  FREE-FLOWED and VIOLATE the spec: I self-selected topics, used NO source tags, and **asked the founder
-  to choose build options (D1 storage / D2 tier)** — which the spec explicitly forbids (missing facts go
-  to the NEEDS-ANSWER register and are resolved from the codebase; blueprints do not pick plausible
-  defaults or ask the founder to pick build options). They are NOT derived from a Pass-3 gap-id set.
-- **The D1=local-only / D2=Pro "decisions" the founder gave on photos are VOID** — they answered a
-  question that should never have been asked. Do not treat them as load-bearing.
-- Missing entirely: `pass4-needs-answer-register.md`, `pass4-deferred.md`, `pass4-no-action.md`,
-  `pass4-final-reconciliation.md`, `pass4-master-priority.md`, `pass4-executive-summary.md`.
-- REQUIRED: every Pass-3 CONFIRMED NO/PARTIAL gap → a blueprint OR `pass4-deferred.md` (ED-safety-touching
-  gaps = FOUNDER-GATE deferral) OR `pass4-no-action.md`; SOURCE-TAGGED format `_AUDIT-SPEC.md:244-263`;
-  zero open NA-ids.
+### PASS 4 — BLUEPRINTS — ▶ READY TO START (after Pass-3 certification)
+- The two off-spec free-flow files (`pass4-blueprint-01-progress-photos.md`,
+  `pass4-blueprint-02-hrv-sleep-ingestion.md`) have been **git-removed** — they were not spec-format,
+  self-selected, untagged, and asked the founder to pick build options (forbidden). The D1/D2 photo
+  "decisions" remain VOID.
+- TO BUILD per `_AUDIT-SPEC.md:206-280`: every Pass-3 CONFIRMED NO/PARTIAL gap → a blueprint OR
+  `pass4-deferred.md` (ED-safety-touching = FOUNDER-GATE) OR `pass4-no-action.md` (CONFIRMED-YES at
+  best-in-class); SOURCE-TAGGED ([P1:file:line]/[P2:finding-id]/[P3:gap-id]/[INFERENCE]); missing facts →
+  `pass4-needs-answer-register.md` (no guessing, no founder option-menus); exit gate
+  `pass4-final-reconciliation.md` + `pass4-master-priority.md` + `pass4-executive-summary.md`.
 
 ## DECISIONS LOG (rationale preserved)
 1. Pass-2 pivot to 3-AI external research — environment cannot browse (founder-directed).
@@ -79,9 +73,11 @@ file at the end of every working session.
 6. (VOID) photos D1=local-only/D2=Pro — elicited by a forbidden question; not load-bearing.
 
 ## NEXT CORRECT ACTION (do exactly this, from source)
-1. Build `pass2-findings-index.md` — flat list of EVERY finding ID across the 3 adjudicated reports,
-   per area, each with status + source (spec lines 147-156). This is the gate before Pass 3.
-2. Then redo Pass 3 strictly to spec (lines 158-204), accounting for every index ID.
-3. Then redo Pass 4 strictly to spec (lines 206-280), source-tagged, NEEDS-ANSWER not guesses.
-Reverse or supersede the off-spec `pass3-gap-analysis.md` / `pass4-blueprint-01` / `pass4-blueprint-02`
-as part of the redo (do not silently leave off-spec docs presented as audit output).
+- Pass 1 ✅, Pass 2 findings-index ✅, Pass 3 ✅ (awaiting founder certification of the Pass-3 gate via
+  `pass3-reconciliation.md`).
+- NEXT: **Pass 4** strictly to `_AUDIT-SPEC.md:206-280` — every Pass-3 gap-id → blueprint / `pass4-deferred.md`
+  / `pass4-no-action.md`; source-tagged; missing facts → `pass4-needs-answer-register.md` (resolve from
+  codebase, NOT by guessing or asking the founder to pick build options); then the Pass-4 exit gate +
+  `pass4-master-priority.md` + `pass4-executive-summary.md`.
+- Carry: Q15 medical-device + barcode pricing = founder-gate deferrals; Pass-1 Q1 schema authority still
+  open (resolve before any data-model blueprint).

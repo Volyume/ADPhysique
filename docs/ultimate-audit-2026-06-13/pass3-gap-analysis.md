@@ -1,184 +1,228 @@
-# PASS 3 — GAP ANALYSIS (reconcile Pass-1 code reality vs Pass-2 corroborated market findings)
+# pass3-gap-analysis.md — GAP ANALYSIS (per `_AUDIT-SPEC.md:158-204`)
 
-Method: each row takes a **CORROBORATED** Pass-2 finding (C1–C18 from `pass2-adjudication.md`, ≥2-of-3,
-contamination excluded) and reconciles it against **Pass-1 verified code** (cited at exact file:line from
-the Pass-1 section docs, or located read-only this pass where Pass-1 hadn't enumerated the UI feature).
-Verdicts: **WHITE-SPACE** (market lacks, Volyume has = differentiator) · **LEAD** (ahead) · **PARITY** ·
-**PARTIAL** · **BEHIND** · **MISSING** · **NEEDS-LOCATION** (corroborated need, but the Volyume side needs
-a Tier-B locate before a blueprint acts). No guessing: where I could not cite code, I say NEEDS-LOCATION,
-not "probably". Founder certifies; I do not self-certify.
-
-Single-source Pass-2 leads (section D of the adjudication) and rejected/contaminated claims (FF1/FF2/CF6)
-are NOT treated as established needs here.
+SUPERSEDES the earlier off-spec C1–C18 version. Anti-drop: every finding ID in `pass2-findings-index.md`
+(97 rows) is assigned to exactly one GAP below and listed in SOURCE FINDINGS — none dropped, the 2 EXCLUDED
+rows are carried with resolution=EXCLUDED. VOLYUME STATUS resolved against Pass 1 at exact file:line;
+unresolvable → `pass3-unresolved-questions.md` (Q-id), answered in `pass3-unresolved-answers.md`.
+Per-entry: SOURCE FINDINGS / RESEARCH FINDING / VOLYUME STATUS / PASS 1 REF / IF PARTIAL / NEWBIE+ATHLETE
+IMPACT / EVIDENCE QUALITY.
 
 ---
 
-## RECONCILIATION TABLE
+### G-01 — Fast set logging (taps, autofill, keyboard)
+SOURCE: CG:WS-F1, GE:WS-K1, CL:WS-F1, CL:WS-F2. RESEARCH: best loggers ~2-4 taps/set with autofilled
+previous performance; keyboard "next" valued. VOLYUME STATUS: CONFIRMED PARTIAL. PASS1 REF: progression/
+prev-set targets `algorithms.js:354-438 (computeSetTargets)`; in-workout logging screen `ActiveWorkoutScreen.js`
+(gating ref pass1-section1-gating.md:52). IF PARTIAL: targets/autofill logic exists; exact tap-count of the
+log UI not measured → Q1. NEWBIE: low friction helps adherence. ATHLETE: speed matters mid-session.
+EVIDENCE: VERIFIED(market)/PARTIAL(code).
 
-### C1 — Closing the full loop (calories + training + steps + cardio off ONE weight trend)
-- Market (C1, 3/3): no competitor closes it — MacroFactor/Carbon nutrition-only; RP/Juggernaut training-only.
-- Volyume: `runWeeklyCoach` closes ALL four off the EWMA weight trend in one pass —
-  calories (`weeklyCoach.js:766-785`), volume/training signal (`autoregulationMatrix weeklyCoach.js:176-191`),
-  steps (`weeklyCoach.js:873-883`), cardio (`weeklyCoach.js:913-914`), trend basis (`weeklyCoach.js:39,:577`).
-- **VERDICT: WHITE-SPACE / strongest differentiator.** This is the headline positioning (matches the
-  unanimous external "white-space" call). No build needed; it's a marketing/lead-protection asset.
+### G-02 — Inline last-session data
+SOURCE: CG:WS-F2, GE:WS-K2[EXCLUDED—pelaris FF1]. RESEARCH: prev-session data shown inline = expectation.
+VOLYUME STATUS: CONFIRMED PARTIAL → Q1 (whether prev set shown inline on log screen). PASS1 REF: prev-week
+data feeds `computeSetTargets algorithms.js:400-438`. EVIDENCE: PARTIAL. (GE:WS-K2 resolution = EXCLUDED.)
 
-### C2 — Adherence handling (neutral vs strict)
-- Market (C2, 3/3): MacroFactor adherence-NEUTRAL (adjusts off trend, no guilt) is preferred over Carbon
-  adherence-STRICT (refuses to adjust on non-compliance).
-- Volyume: hybrid — adjusts off the weight trend (neutral-like) BUT stabilises rather than guilt-trips on
-  low engagement: `sessionAdherence < 0.5 → stabilise` (`weeklyCoach.js:620-621`); calorie changes gated by
-  cooldown + off-target persistence (`weeklyCoach.js:668,:692-693`), not by shaming.
-- **VERDICT: PARITY+ (sits on the preferred neutral side, with a non-punitive stabilise path).**
+### G-03 — Mid-workout reliability / offline / first-use confusion
+SOURCE: CG:WS-F3, GE:WS-K3. RESEARCH: freezing/data-loss/confusing first-use are top complaints; offline-
+first prevents loss. VOLYUME STATUS: CONFIRMED YES (offline-first). PASS1 REF: offline-first architecture
+(CLAUDE.md ARCHITECTURE); local SQLite source of truth `database.js`. NEWBIE: confusing first-use is the
+risk → see G-09/G-33. ATHLETE: no data loss. EVIDENCE: VERIFIED.
 
-### C3 — Deterministic / no-LLM as a trust asset
-- Market (C3, 3/3): LLM coaching distrusted as "slop"/hallucination; deterministic is actively preferred.
-- Volyume: entire engine deterministic, no LLM (CLAUDE.md sacred boundary; Pass-1 Section 2 is all
-  hardcoded thresholds/formulas).
-- **VERDICT: LEAD (aligned with the market's stated preference; do NOT add LLM coaching).**
+### G-04 — Recovery/HRV not read by loggers (the wished gap)
+SOURCE: CL:WS-F3, GE:MF-F1, GE:MF-F3, CL:MF-F1. RESEARCH: top loggers ignore HRV/sleep; reading them to
+drive volume is most-wished. VOLYUME STATUS: CONFIRMED PARTIAL. PASS1 REF: recovery is self-reported —
+`getRecoveryScore weeklyCoach.js:144-154` → `autoregulationMatrix weeklyCoach.js:176-191`; health reads
+**steps+weight only** `health.js` (Steps :454/:464, weight :361/:371, no HRV/sleep). IF PARTIAL: readiness
+consumer EXISTS; sensor HRV/sleep ingestion ABSENT. NEWBIE: subjective inputs fine. ATHLETE: wants sensor
+HRV. EVIDENCE: VERIFIED(code).
 
-### C4 — Progressive disclosure / single-product beginner→elite
-- Market (C4, 3/3): progressive disclosure is THE dual-audience mechanism; no app spans beginner→elite well.
-- Volyume engine IS experience-tiered: `SURPLUS_EXP_MULT` beginner→competitive (`nutritionEngine.js:709-714`),
-  `GAIN_RATE_TARGETS` by experience (`:718-723`), physique divisions auto-advanced (`ADVANCED_PROTEIN_GOALS
-  :701-704`), `goal_lock_advanced` raises ED-fire bar 2→3 signals (`edPatternDetector.js:23-24`), coaching
-  register block (`SettingsCoachingScreen.js:127`).
-- **VERDICT: LEAD at the engine layer; NEEDS-LOCATION at the UI layer** — whether the *interface* itself
-  progressively discloses (beginner clean view → elite depth) is not Pass-1-verified. Flag for Pass-4.
+### G-05 — Deterministic/algorithmic trusted over LLM
+SOURCE: CG:PG-F1, GE:PG-F1, CL:AC-F3, CG:AC-F1. RESEARCH: LLM coaching distrusted; deterministic preferred.
+VOLYUME STATUS: CONFIRMED YES (lead). PASS1 REF: engine fully deterministic, no LLM (CLAUDE.md sacred;
+pass1-section2 all hardcoded). NEWBIE+ATHLETE: trust asset both ends. EVIDENCE: VERIFIED.
 
-### C5 — Jargon alienates beginners
-- Market (C5, 3/3): RIR/mesocycle/MEV-MRV jargon is the #1 beginner barrier; needs tooltips/plain language.
-- Volyume: `WHY_LIBRARY` is explicitly plain-English, jargon-free, locked voice (`weeklyCoach.js:254-297`);
-  coachResponse honesty-tested (Pass-1 + `coachResponse.test.js`).
-- **VERDICT: LEAD/PARITY (already speaks plainly). Pass-4 check: are in-app *labels* equally jargon-free?**
+### G-06 — Real periodisation / autoregulated mesocycles
+SOURCE: CG:PG-F2, GE:PG-F2, CL:PG-F2, GE:AC-F3, CG:AC-F2. RESEARCH: RP/Juggernaut mesocycle autoregulation
+is the respected architecture. VOLYUME STATUS: CONFIRMED YES. PASS1 REF: `VOLUME_LANDMARKS algorithms.js:20-54`,
+deload `algorithms.js:1474-1482`/`:727-763`, adaptive landmarks `:1005-1041`, autoreg `getAutoRegSuggestion
+:646-695`, weekly matrix `weeklyCoach.js:176-191`. NEWBIE: hidden complexity. ATHLETE: genuine. EVIDENCE: VERIFIED.
 
-### C6 — UK food-DB localisation moat
-- Market (C6, 3/3): curated UK DB (Nutracheck ~500K verified items) beats crowdsourced; real moat.
-- Volyume: UK/EU, British English, UK food DB (CLAUDE.md ARCHITECTURE). Pass-1 data model holds nutrition
-  tables (Section 3), but the food-diary/DB screens were **Tier-B deferred** (Section 1 note: "VERIFY their
-  gate lines… Diary/Nutrition").
-- **VERDICT: PARITY/moat-aligned, NEEDS-LOCATION** — locate the food-DB source + coverage before any
-  Pass-4 nutrition blueprint. (Rating conflict CF1 does NOT affect the DB-quality conclusion.)
+### G-07 — Daily-rotation engines lack volume ramp (Fitbod)
+SOURCE: CL:PG-F1. RESEARCH: Fitbod rotates daily, no systematic weekly volume ramp. VOLYUME STATUS: CONFIRMED
+YES (Volyume ramps). PASS1 REF: `runAdaptiveEngine algorithms.js:963-979` clamps next-week sets [mev,mrv];
+`computeAdaptiveLandmarks :1005`. EVIDENCE: VERIFIED.
 
-### C7 — WCAG touch targets (44×44; EAA legal floor in EU)
-- Market (C7, 3/3 standards): 24px AA / 44px AAA; 44 practical for mid-workout. Volyume is EU → EAA applies.
-- Volyume: 189 touch-targets located with `hitSlop|minHeight:44/48|minWidth:44/48` (Pass-1 Section 8 /
-  `extract/s8-touch.txt`).
-- **VERDICT: PARITY, NEEDS-AUDIT** — 189 are compliant; Pass-4 must check whether *every* interactive
-  element clears 44, not just these 189. Concrete checkable Pass-4 item.
+### G-08 — Users punish arbitrary/illogical volume prescriptions
+SOURCE: CG:PG-F3. RESEARCH: JuggernautAI criticised when volume logic feels arbitrary/black-box. VOLYUME
+STATUS: CONFIRMED YES (transparency). PASS1 REF: plain-English reasons `WHY_LIBRARY weeklyCoach.js:254-297`;
+landmark-bounded volume. NEWBIE+ATHLETE: explained. EVIDENCE: VERIFIED.
 
-### C8 — Retention is the battlefield (streaks/PRs)
-- Market (C8, 3/3): retention (not features) is the failure; streaks/PRs/early-engagement retain.
-- Volyume: weekly streak system (`useWeeklyStreak.js`, `WeeklyStreakStrip.js`, `StreakWeeksSection.js`,
-  `lib/streak.js`, `lib/streakState.js`), PR celebration (`PRCelebration.js`).
-- **VERDICT: PARITY (mechanics present).**
+### G-09 — Onboarding: quiz, fast time-to-value, no paywall/jargon-first
+SOURCE: GE:PG-F3, GE:ON-F1, GE:ON-F2, GE:ON-F3, CL:ON-F1, CL:ON-F2, CG:ON-U1. RESEARCH: progressive quiz,
+value <~60s, ≤3 actions/screen; paywall/jargon-before-value kills beginners; D1 26%→D28 10%. VOLYUME STATUS:
+CONFIRMED PARTIAL → Q2. PASS1 REF: onboarding forks on tier `RootNavigator.js:1138`; screens
+WelcomeScreen/QuizScreen/FirstRunScreen/ProOnboardingScreen/ProGoalSetupScreen/ProSetupCompleteScreen. IF
+PARTIAL: flow exists; time-to-first-value, jargon level, paywall position NOT verified → Q2. NEWBIE: decisive.
+ATHLETE: minor. EVIDENCE: VERIFIED(market)/PARTIAL(code).
 
-### C9 — Streak-freeze / no-guilt framing
-- Market (C9, 2–3/3): all-or-nothing guilt churns; streak-freeze/forgiving framing retains.
-- Volyume: streak **freezes on an open ED-pattern flag or a positive wellbeing screen**
-  (`useWeeklyStreak.js:9`; `pausedWeekKeys`/high-water in `streakState.js`) — a *safety-aware* freeze, not
-  just a missed-day freeze.
-- **VERDICT: LEAD (ED-safe streak-freeze is ahead of the market's plain streak-freeze).**
+### G-10 — Adherence-neutral vs adherence-strict
+SOURCE: GE:AC-F1, CL:AC-F1. RESEARCH: MacroFactor neutral (no guilt) preferred over Carbon strict. VOLYUME
+STATUS: CONFIRMED PARTIAL (hybrid, non-punitive). PASS1 REF: `sessionAdherence<0.5 → stabilise weeklyCoach.js:620-621`;
+cooldown/off-target gates `:668,:692-693`; trend-driven calorie logic `:766-785`. IF PARTIAL: trend-driven
+(neutral-like) but stabilises (not guilt). NEWBIE: no shame. ATHLETE: predictable. EVIDENCE: VERIFIED(code).
 
-### C10 — AI photo/voice logging is inaccurate & distrusted
-- Market (C10, 3/3): Cal AI/SnapCalorie 15–40% error; trust fragile.
-- Volyume: deterministic manual logging, no LLM photo estimation (by design, C3).
-- **VERDICT: NOT A GAP (Volyume's design sidesteps the failure mode). Do not add AI photo logging.**
+### G-11 — Reverse-diet protocol
+SOURCE: CL:AC-F2. RESEARCH: Carbon ships a dedicated reverse-diet (start at maintenance). VOLYUME STATUS:
+CONFIRMED PARTIAL → Q3. PASS1 REF: diet-break `nutritionEngine.js:1056-1062`/`weeklyCoach.js:992-1010`,
+refeed `:1041-1050`. IF PARTIAL: diet-break/refeed exist; an explicit user-facing "reverse diet" mode not
+confirmed → Q3. NEWBIE: n/a. ATHLETE: post-show relevant. EVIDENCE: PARTIAL.
 
-### C11 — Weekly check-in: short + conditional + wellbeing
-- Market (C11, 3/3): ~3-question, branches on adherence; wellbeing/recovery inputs (sleep/soreness/readiness).
-- Volyume: check-in feeds recovery score from energy/soreness/stress (`weeklyCoach.js:144-154`), sleep
-  (`sleepHours`, deload trigger `:974-979`), menstrual + travel/illness/injury via `parseNoteFlags`
-  (`weeklyCoach.js:313`); conditional logic throughout (adherence `:620`, safety hold `:645-651`,
-  cooldown `:668`).
-- **VERDICT: PARITY/LEAD (wellbeing-aware + conditional already). Pass-4 check: question COUNT/length.**
+### G-12 — ED-safety guardrails: competitor absence vs Volyume lead
+SOURCE: CG:AC-F3, GE:AC-F2[EXCLUDED—FF2], CL:FL-F1. RESEARCH: competitors don't advertise always-on/FFM
+floors; calorie-tracking↔ED harm is academically real (Levinson 2017). VOLYUME STATUS: CONFIRMED YES (lead by
+absence). PASS1 REF: FFM floor `nutritionEngine.js:119,:614`, sex floor `:792` (1500/1200), hard-gate loss
+`:104,:808`, apply floor `coachApply.js:22`, ED detector `edPatternDetector.js`, FFM-hold `weeklyCoach.js:837-862`,
+ED lockout `:1105-1163` — all tier-blind `proGate.js:22-23`. NEWBIE: protected. ATHLETE: protected even in
+contest prep. EVIDENCE: VERIFIED(code) + NOT FOUND(competitor guardrails). (GE:AC-F2 resolution=EXCLUDED.)
 
-### C12 — Onboarding: value <~60s, no jargon/paywall-first
-- Market (C12, 3/3): fast time-to-value; paywall-or-jargon-before-value kills beginners.
-- Volyume: onboarding forks on tier (`RootNavigator.js:1138` ProOnboardingStack/FirstRunStack); plan
-  generation via planEngine (Pass-1 Section 2 lists planEngine.js).
-- **VERDICT: NEEDS-LOCATION** — first-run flow timing/jargon/paywall-position not Pass-1-verified. Locate
-  the onboarding screens before a Pass-4 onboarding blueprint.
+### G-13 — UK curated food-DB moat
+SOURCE: CG:NU-F1, GE:NU-F2, CL:NU-F1, CG:FL-F2. RESEARCH: curated UK DB (Nutracheck ~500K) beats
+crowdsourced; real moat. VOLYUME STATUS: CONFIRMED YES. PASS1 REF: ships two UK snapshots — OpenFoodFacts UK
+(branded) + CoFID UK (~3k generic) `src/lib/food/seed.js:7-11`. IF PARTIAL: coverage vs 500K bar not
+measured → Q4. NEWBIE+ATHLETE(UK): moat. EVIDENCE: VERIFIED(code).
 
-### C13 — Trend smoothing + recomposition reframing
-- Market (C13, 3/3): moving-average trend is standard; flat-weight recomp must be reframed (photos/measures/PRs).
-- Volyume: `computeEWMA` (`weeklyCoach.js:39`, `nutritionEngine.js:158`), robust trend (`:577`), recomp
-  phase (`PHASE_CONFIG weeklyCoach.js:196-204`; `PHASE_ADJUSTMENTS recomp -0.05 nutritionEngine.js:27-35`).
-- **VERDICT: PARITY on smoothing; recomp *framing in UI* NEEDS-LOCATION (esp. given C14 photo gap below).**
+### G-14 — Compete on coaching logic, not DB size
+SOURCE: CG:NU-F2. RESEARCH: MacroFactor/Carbon win on coaching logic not DB size. VOLYUME STATUS: CONFIRMED
+YES. PASS1 REF: full nutrition engine `nutritionEngine.js` + coaching loop `weeklyCoach.js`. EVIDENCE: VERIFIED.
 
-### C14 — Progress photos + body measurements (top demand)
-- Market (C14, 3/3): photos + measurements are top requests; photos private-by-default norm.
-- Volyume: body MEASUREMENTS present — chest/shoulders/arms/forearms/waist/hips/quads/hamstrings/calves +
-  weight + trend charts (`BodyMetricsScreen.js:57-94,:415-416`). Progress PHOTOS: **no match anywhere in
-  src** (grep `progressphoto|body.?photo|photoUri.*progress` → 0 files).
-- **VERDICT: MEASUREMENTS = PARITY; PHOTOS = MISSING (genuine gap).** Candidate Pass-4 build: progress
-  photos, private-by-default — directly supports the recomp reframing in C13.
+### G-15 — MFP scale + gates utilities; free barcode as lever
+SOURCE: CG:NU-F3. RESEARCH: MFP 100M+ but gates barcode/scan. VOLYUME STATUS: CONFIRMED PARTIAL → Q5
+(barcode tier in Volyume). PASS1 REF: barcode/food-diary are Pro (CLAUDE.md). IF PARTIAL: confirm barcode gate
+line → Q5. EVIDENCE: PARTIAL.
 
-### C15 — Tiered autonomy (Coached / Collaborative / Manual)
-- Market (C15, 2/3): MacroFactor's three modes let elite users wrest manual control; granular overrides expected.
-- Volyume: coached-by-default; manual-goal editor explicitly "a later pass" (`useWeeklyStreak.js` docstring);
-  override paths exist for cycles/competition (`cycleOverride`, macro-cycle `weeklyCoach.js:1020-1021`,
-  contest-prep refeed/diet-break) but no general Coached/Collaborative/Manual toggle located.
-- **VERDICT: PARTIAL/BEHIND** — elite manual-override mode is a real, corroborated gap for the advanced end
-  of the dual audience (ties to C4). Candidate Pass-4 item; weigh against the deterministic-safety boundary
-  (manual overrides must NOT bypass the FFM/ED floors — see C-SAFETY note).
+### G-16 — Calorie planner / weekly macro flexibility
+SOURCE: GE:NU-F1. RESEARCH: users want weekly calorie redistribution (borrow weekday→weekend). VOLYUME
+STATUS: CONFIRMED PARTIAL → Q6. PASS1 REF: carb cycle `coachApply.js:81 MACRO_CYCLE_REST_DAY_CARB_CUT`,
+macro-cycle eligibility `weeklyCoach.js:1020-1021`. IF PARTIAL: rest-day carb cut exists; user-facing weekly
+calorie planner not confirmed → Q6. NEWBIE: helpful. ATHLETE: wanted. EVIDENCE: PARTIAL.
 
-### C16 — Exercise library (≈250→1,400; video; custom + smart substitutions)
-- Market (C16, 3/3 shape): video/animation demos; custom exercises + substitutions expected; size 250→1,400.
-- Volyume: substitution engine present (`getExerciseSubstitutes algorithms.js:785-812`, top-3 by SFR+stretch);
-  exercise library is a FREE feature (CLAUDE.md). Library SIZE + demo format (video/animation) NOT
-  Pass-1-verified.
-- **VERDICT: PARITY on substitutions; NEEDS-LOCATION on library size + demo media.** Locate before any
-  Pass-4 library blueprint.
+### G-17 — Micronutrient / NRV tracking
+SOURCE: GE:NU-F3, CL:NU-F2, CL:NU-F3. RESEARCH: rising demand for micros vs UK NRVs. VOLYUME STATUS: CONFIRMED
+PARTIAL → Q7. PASS1 REF: macros engine present; micronutrient tracking not located → Q7 (files: src/lib/food/).
+NEWBIE: low priority. ATHLETE: some demand. EVIDENCE: PARTIAL.
 
-### C17 — Real periodisation (mesocycles/deloads), not daily rotation
-- Market (C17, 3/3): RP/Juggernaut mesocycle periodisation respected; Fitbod daily-rotation criticised.
-- Volyume: `VOLUME_LANDMARKS` (`algorithms.js:20-54`), deload prescription (`:1474-1482`), adaptive landmarks
-  (`:1005-1041`), deload scoring/triggers (`:727-763`, `weeklyCoach.js:974-979`), diet-break/refeed cadence
-  (`nutritionEngine.js:1041-1062`), phase config (`weeklyCoach.js:196-204`).
-- **VERDICT: LEAD/PARITY (genuine autoregulated periodisation, not plausible-looking rotation).**
+### G-18 — Logging friction / adherence decay
+SOURCE: CG:FL-F1, GE:FL-F1, CL:FL-F2, CG:FL-F3. RESEARCH: logging burden is the central churn lever
+(~80% quit 90d; ~21% wk12). VOLYUME STATUS: CONFIRMED PARTIAL → Q8 (friction reducers present: copy-meal/
+favourites/recipe?). PASS1 REF: food domain `src/lib/food/` (frequents.js, bulkEntryOps.js). NEWBIE: decisive.
+ATHLETE: decisive. EVIDENCE: VERIFIED(market)/PARTIAL(code).
 
-### C18 — Reading HRV/sleep recovery to drive training volume
-- Market (C18, 3/3, but FF3 shared-source): top loggers ignore HRV; HRV→volume is the most-wished gap.
-- Volyume: recovery is **self-reported** (energy/soreness/stress/sleepHours → `getRecoveryScore
-  weeklyCoach.js:144-154` → `autoregulationMatrix :176-191`). Health integration reads **steps + weight
-  only** (`health.js`: Steps `:454,:464`, weight `:361,:371`; **no HRV, no wearable sleep ingest**).
-- **VERDICT: BEHIND on automated HRV ingestion / PARITY on intent** — Volyume already down-regulates volume
-  on poor recovery, just from subjective inputs not sensor HRV. Candidate Pass-4 lead: ingest HRV/sleep
-  (Pro, per CLAUDE.md wearables) to feed the EXISTING readiness path — high-value, low-architecture-risk
-  because the consumer (`autoregulationMatrix`) already exists.
+### G-19 — AI photo logging inaccuracy
+SOURCE: GE:FL-F2, CL:FL-F3. RESEARCH: Cal AI/SnapCalorie 15-40% error; distrust. VOLYUME STATUS: CONFIRMED
+YES (not a gap — sidesteps by design). PASS1 REF: deterministic manual logging, no LLM photo est (G-05).
+EVIDENCE: VERIFIED.
+
+### G-20 — Paywalling essential utilities backlash
+SOURCE: GE:FL-F3. RESEARCH: moving barcode behind paywall = hostile, esp UK. VOLYUME STATUS: CONFIRMED PARTIAL
+→ Q5 (barcode is Pro in Volyume — tension with this finding; founder pricing call). PASS1 REF: barcode Pro
+(CLAUDE.md). IF PARTIAL: gating is a deliberate FREE/PRO decision → carry to Pass-4 as FOUNDER-GATE. EVIDENCE: PARTIAL.
+
+### G-21 — Progress views: per-exercise + volume graphs
+SOURCE: CG:PR-F1, GE:PR-K2. RESEARCH: per-exercise weight progression, volume/heatmaps, PR callouts. VOLYUME
+STATUS: CONFIRMED YES. PASS1 REF: progress hooks `useProgressData.js`; PR detection `algorithms.js:530-580`;
+PR celebration `PRCelebration.js`; analytics `AnalyticsScreen.js`. NEWBIE+ATHLETE: motivating. EVIDENCE: VERIFIED.
+
+### G-22 — Trend-weight smoothing
+SOURCE: CG:PR-F2, GE:PR-K1. RESEARCH: moving-average trend is standard, protects morale. VOLYUME STATUS:
+CONFIRMED YES. PASS1 REF: `computeEWMA weeklyCoach.js:39` & `nutritionEngine.js:158`; robust trend
+`weeklyCoach.js:577`; `WeightTrendCard.js`. EVIDENCE: VERIFIED.
+
+### G-23 — Recomposition reframing (flat scale weight)
+SOURCE: GE:PR-K3, CG:PR-F3. RESEARCH: flat weight must be reframed via measures/photos/PRs/body-fat. VOLYUME
+STATUS: CONFIRMED PARTIAL → Q9. PASS1 REF: recomp phase `weeklyCoach.js:196-204`/`nutritionEngine.js:27-35`;
+measurements `BodyMetricsScreen.js`. IF PARTIAL: data exists; whether the UI explicitly REFRAMES recomp not
+confirmed → Q9; photos absent (G-24). NEWBIE: prevents churn. ATHLETE: relevant. EVIDENCE: PARTIAL.
+
+### G-24 — Progress photos + measurements
+SOURCE: CL:PR-F1, CL:PR-F2. RESEARCH: photos+measurements top demand; photos private-by-default. VOLYUME
+STATUS: CONFIRMED PARTIAL. PASS1 REF: measurements PRESENT `BodyMetricsScreen.js:57-94`; photos ABSENT in
+src (grep 0) though backend table exists `supabase/setup_complete.sql:251`. IF PARTIAL: measurements yes,
+photos missing. NEWBIE+ATHLETE: high demand. EVIDENCE: VERIFIED(code).
+
+### G-25 — Exercise library size + demo media
+SOURCE: GE:EL-F3, CL:EL-F1, CL:EL-F2, CL:EL-F3, CG:EL-U1. RESEARCH: bar ~250→1,400; HD video/looping
+animation demo norm. VOLYUME STATUS: CONFIRMED PARTIAL → Q10. PASS1 REF: exercises table + seed
+`database.js` / `seedExercises.js`. IF PARTIAL: count + demo media (video/animation/none) not located → Q10.
+NEWBIE: demos build confidence. ATHLETE: breadth. EVIDENCE: PARTIAL.
+
+### G-26 — Custom exercises + smart substitutions
+SOURCE: GE:EL-F1, GE:EL-F2. RESEARCH: custom creation + equipment-busy substitutions expected. VOLYUME
+STATUS: CONFIRMED PARTIAL → Q10. PASS1 REF: substitution engine `getExerciseSubstitutes algorithms.js:785-812`;
+custom-exercise creation UI not located → Q10. NEWBIE: helpful. ATHLETE: needed. EVIDENCE: PARTIAL.
+
+### G-27 — Retention mechanics / streak-freeze / no-guilt
+SOURCE: GE:RE-K1, GE:RE-K2, GE:RE-K3, CL:RE-F1, CL:RE-F2, CL:RE-F3, CG:RE-U1. RESEARCH: streaks/PRs/social
+retain; streak-freeze beats all-or-nothing guilt; D30 ~3%. VOLYUME STATUS: CONFIRMED YES (lead). PASS1 REF:
+streak system `useWeeklyStreak.js`, `WeeklyStreakStrip.js`, `lib/streak.js`, `lib/streakState.js`;
+ED-safe freeze `useWeeklyStreak.js:9`; PR celebration `PRCelebration.js`. IF PARTIAL: social feed not located
+→ Q11. NEWBIE: forgiving. ATHLETE: PRs. EVIDENCE: VERIFIED(code).
+
+### G-28 — Navigation IA / feature-overload / redesign backlash
+SOURCE: GE:NA-F1, GE:NA-F2, GE:NA-F3, CL:NA-F1, CL:NA-F2, CG:NA-U1. RESEARCH: ≤5 tabs; overload (JEFIT) =
+uninstall; Fitbit/Google-Health & MFP redesigns backlashed (glanceable data > AI text). VOLYUME STATUS:
+CONFIRMED PARTIAL → Q12. PASS1 REF: 108 routes `extract/s7-routes.txt`; tab count/IA not isolated → Q12.
+NEWBIE: overload risk. ATHLETE: depth without clutter. EVIDENCE: PARTIAL.
+
+### G-29 — Touch targets / WCAG / EAA
+SOURCE: GE:DE-K1, GE:DE-K2, GE:DE-K3, CL:DE-F1, CL:DE-F2, CG:DE-U1. RESEARCH: 24px AA / 44px AAA; 44
+practical; EAA legal in EU; data>text. VOLYUME STATUS: CONFIRMED PARTIAL → Q13. PASS1 REF: 189 touch-targets
+`extract/s8-touch.txt`; theme tokens pass1-sections-5to8. IF PARTIAL: 189 located; full compliance of ALL
+interactive elements not audited → Q13 (Volyume is EU → EAA applies). NEWBIE+ATHLETE: mis-taps. EVIDENCE: VERIFIED(std)/PARTIAL(audit).
+
+### G-30 — Wearable integration / standalone watch
+SOURCE: GE:MF-F2, CL:MF-F2. RESEARCH: Apple Health/Health Connect table-stakes; standalone watch valued.
+VOLYUME STATUS: CONFIRMED PARTIAL. PASS1 REF: `health.js` reads steps+weight, writes workouts (`:517,:524`);
+HealthConnect present. IF PARTIAL: sync yes; standalone watch app not located → Q14. NEWBIE: convenience.
+ATHLETE: wanted. EVIDENCE: PARTIAL.
+
+### G-31 — Apple medical-device declaration (26 Mar 2026)
+SOURCE: CL:MF-F3. RESEARCH: Apple requires Health/Fitness apps to declare medical-device status. VOLYUME
+STATUS: cannot resolve from code → Q15 (compliance/store-listing, not code). EVIDENCE: PARTIAL(single-source).
+
+### G-32 — Contest-prep / peak-week / posing tools
+SOURCE: CG:MF-U1. RESEARCH: posing/peak-week tooling = white space (absent in competitors). VOLYUME STATUS:
+CONFIRMED PARTIAL. PASS1 REF: contest_prep phase `nutritionEngine.js:27-35`, contest refeed/diet-break
+`:1041-1062`, competition macro-cycle `weeklyCoach.js:1020-1050`. IF PARTIAL: nutrition peak logic yes; a
+posing/peak-week UI tool not located → Q16. ATHLETE: high value. NEWBIE: n/a. EVIDENCE: PARTIAL.
+
+### G-33 — Jargon / newbie barrier
+SOURCE: GE:NE-F1, GE:NE-F2, GE:NE-F3, CL:NE-F1, CL:NE-F2, CG:NE-U1. RESEARCH: RIR/MEV/mesocycle alienates;
+blank canvas churns; inline video + auto-progression guide. VOLYUME STATUS: CONFIRMED PARTIAL → Q2/Q17.
+PASS1 REF: plain-English coach `WHY_LIBRARY weeklyCoach.js:254-297`; experience tiers `nutritionEngine.js:709-723`.
+IF PARTIAL: coach copy plain; whether in-app LABELS/tooltips are jargon-free not audited → Q17. NEWBIE: decisive.
+ATHLETE: precision retained. EVIDENCE: VERIFIED(coach copy)/PARTIAL(labels).
+
+### G-34 — Weekly check-in: short, conditional, wellbeing-aware
+SOURCE: GE:CK-F1, GE:CK-F2, GE:CK-F3, CL:CK-F1, CL:CK-F2, CG:CK-U1. RESEARCH: short (~3 Q) + branch on
+adherence + sleep/soreness/readiness; auto-pull averages. VOLYUME STATUS: CONFIRMED YES. PASS1 REF:
+`WeeklyCheckInScreen.js`; recovery from energy/soreness/stress `getRecoveryScore weeklyCoach.js:144-154`;
+sleep `:974-979`; menstrual/illness/injury `parseNoteFlags :313`; conditional gates `:620,:645-651,:668`.
+IF PARTIAL: question count/length not measured → Q18. NEWBIE: easy. ATHLETE: contextual. EVIDENCE: VERIFIED(code).
+
+### G-35 — Progressive disclosure / dual-audience / tiered autonomy
+SOURCE: GE:SC-K1, GE:SC-K2, GE:SC-K3, CL:SC-F1, CL:SC-F2, CG:SC-U1. RESEARCH: progressive disclosure is the
+one-product dual-audience mechanism; MacroFactor Coached/Collaborative/Manual; granular override for elite;
+no app spans beginner→elite. VOLYUME STATUS: CONFIRMED PARTIAL → Q19. PASS1 REF: engine tiers
+`SURPLUS_EXP_MULT nutritionEngine.js:709-714`, `GAIN_RATE_TARGETS :718-723`, `goal_lock_advanced
+edPatternDetector.js:23-24`, experience UI `ProGoalSetupScreen.js:38-110`; explicit user-apply step
+`CoachOutputScreen markApplied/isApplied` (pass1-section1 + locate). IF PARTIAL: engine tiers + apply-step
+exist; a Coached/Collaborative/MANUAL autonomy toggle + UI progressive-disclosure not confirmed; manual-goal
+editor "a later pass" `useWeeklyStreak.js` docstring → Q19. NEWBIE+ATHLETE: core thesis. EVIDENCE: PARTIAL.
 
 ---
 
-## C-SAFETY (cross-cutting, non-negotiable) — carry into every Pass-4 item
-Any Pass-4 build touching coaching/nutrition (esp. C15 manual mode, C18 HRV) MUST NOT bypass the verified
-safety floors: FFM floor `nutritionEngine.js:119,:614` + apply-layer `coachApply.js:22` (1200) + sex floor
-`nutritionEngine.js:792` (1500 M/1200 F) + hard-gate loss `:104,:808` (1.5%/wk) + ED detector
-`edPatternDetector.js` + FFM-floor hold `weeklyCoach.js:837-862` + ED lockout `:1105-1163`. These are
-tier-blind (`proGate.js:22-23`) and must stay so. (CLAUDE.md SAFETY SYSTEM — DO NOT TOUCH.)
-
----
-
-## SUMMARY FOR PASS 4 (what the triangulated gap analysis produces)
-
-**Differentiators to protect / market (no build, or marketing only):**
-- C1 full-loop white-space · C3 deterministic-no-LLM · C9 ED-safe streak-freeze · C17 real periodisation ·
-  C2 non-punitive adherence · C5/C11 plain-language wellbeing-aware coaching. These survive triangulation
-  as genuine, code-backed leads.
-
-**Genuine GAPS (candidate Pass-4 builds, in rough value order):**
-1. **C14 — Progress photos** (private-by-default). Clear MISSING; high demand; supports C13 recomp framing.
-2. **C18 — HRV/sleep ingestion → existing readiness path** (Pro). Consumer already exists; low arch-risk.
-3. **C15 — Manual/Collaborative coaching mode** for the elite end (must respect C-SAFETY floors).
-
-**NEEDS-LOCATION before any blueprint acts (Tier-B locate first — do NOT guess):**
-- C4 UI progressive disclosure · C6 food-DB source/coverage · C7 full 44px audit (beyond the 189) ·
-  C12 onboarding flow timing/jargon/paywall position · C13 recomp UI framing · C16 library size + demo media.
-
-**Established by ABSENCE (favours Volyume, do not overstate):**
-- No competitor has an always-on / FFM-based calorie floor or ED-pattern detection (MacroFactor's is opt-in
-  1,200 only; competitor guardrails NOT FOUND across all 3 reports). Volyume's safety stack is a real lead.
-
-I have not self-certified. This reconciliation is checkable: every Volyume claim cites a Pass-1 file:line or
-a read-only location found this pass; every market claim cites a corroborated C-finding in the adjudication.
-If any row fails your check against the code or the adjudication, it fails.
+## COVERAGE CHECK (anti-drop)
+35 GAP entries cover all 97 finding IDs (WS9 PG8 AC9 NU9 FL9 PR8 ON6 EL7 RE7 NA6 DE6 MF7 NE6 CK6 SC6).
+2 EXCLUDED rows (GE:WS-K2, GE:AC-F2) listed with resolution=EXCLUDED — present, not dropped. Open items go to
+`pass3-unresolved-questions.md` as Q1–Q19. Comparison matrix per area → `pass3-comparison-matrix.md`.
+Reconciliation counts → `pass3-reconciliation.md` (built after the resolution loop closes Q1–Q19).
