@@ -144,6 +144,22 @@ react as if someone's had a huge eat day or under-eaten") — read-backed:**
       shape of the week, never the weekly total the engine adapts on.
 Implementation = build phase (not this review branch); rails + coach-integration requirements are the spec.
 
+## DECIDED — Meal-plan training/rest calorie cycling, 2026-06-14
+**Finding (read-backed, traced end-to-end):** the user's nutrition TARGET is a single whole daily number
+(NutritionTargets + coach). But the MEAL-PLAN feature silently **splits that one number across the week** for
+everyone: `mealPlanService.generateAndSaveMealPlan:171` derives a train/rest schedule from days/week
+(`defaultSchedule(daysPerWeek):180-181`) → `assembleWeekPlan:183` → `dayVariantTargets:503` (training days +carbs,
+rest days −carbs, weekly total preserved, capped, auto-flat when floored/trivial). The user never CHOSE train/rest
+calories — the engine inferred a schedule and carb-cycled automatically.
+**Inconsistency:** the coach reserves carb-cycling for advanced cutters/competitors only (`weeklyCoach.js:1013-1020`),
+but the meal planner applied it to ALL Pro users (incl. beginners on a bulk).
+**DECISION (founder): GATE TO MATCH THE COACH.** Only advanced cutters + physique competitors
+(`phase.isCut && (goalLockAdvanced || isCompetitionGoal)`) get train/rest cycling in the meal plan. **Everyone
+else: flat daily target = the whole number, the same every day** (matches the founder's "calories as a whole"
+expectation; drops the day-type chip for non-advanced users). Build-phase change in `mealPlanAssembler`/
+`mealPlanService` (gate the `dayVariantTargets` call on the same predicate the coach uses); keep the floored/
+trivial auto-flat guards. Update tests.
+
 ## ALL DECIDED — v2 set complete
 Open build queue (approved): grocery list, raw/cooked toggle, calorie banking (rails above), + the Call-1/2
 accepted items (protein-consistency, 14/30/90d windows, recap share/monthly/relative, mid-session swap,
