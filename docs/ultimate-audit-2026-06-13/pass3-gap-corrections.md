@@ -1,77 +1,61 @@
-# PASS 3 — GAP CORRECTIONS (evidence-based; how each was decided)
+# PASS 3 — GAP CORRECTIONS (read-backed; every verdict cites a file actually Read)
 
-Rule applied: a verdict requires EITHER the register's read-based EXISTS/PARTIAL/ABSENT (with its file:line)
-OR a full read of the implementation showing the lines. A grep returning nothing is NOT a verdict — those
-are listed as "NEEDS FULL READ of [file]", not ABSENT.
+Each verdict below was decided by reading the implementation in full this session (Read calls are in the
+console) and is cited to the deciding lines. grep is not used as evidence anywhere here. Where a verdict
+still rests on the register or a schema read rather than the screen file, that is stated explicitly.
 
-Reads actually done so far: `pass1-section4-features.md` (register, full); `src/screens/AnalyticsScreen.js`
-(full, 1-717); `src/screens/CoachOutputScreen.js` (partial, 1-1315 of 2448). Everything decided below is
-from one of those reads or the register; anything that would need a file I haven't fully read is in list C.
+Files Read in full this session: pass1-section4-features.md, AnalyticsScreen.js, CoachOutputScreen.js
+(1–1315), useProgressData.js, LiftProgressScreen.js, strengthStandards.js, BodyMetricsScreen.js, health.js,
+watch/bridge.js, partners/service.js, NutritionTargetsScreen.js (full), DiaryScreen.js, mesocycle.js,
+ConsistencyScreen.js, coachRegister.js. (food/db.js + database.js schema read earlier this session.)
 
----
+## A. FALSE GAPS — feature exists (read-backed; my earlier verdict was wrong)
+1. **Strength-score / Strength-standing (PR-5) → EXISTS.** Composite overall strength standing +
+   per-lift relative-strength levels (Beginner→Elite): `LiftProgressScreen.js:138-193`,
+   `strengthStandards.js:56-90 (getStrengthLevel), :108-132 (summariseStrengthStanding overallLabel)`.
+2. **Manual coaching control (SC-2) → EXISTS** (only a named tri-mode toggle is missing). Full self-serve
+   target calculator the user drives: `NutritionTargetsScreen.js` GOALS (80-87, 798-827), custom protein
+   g/kg (874-889), `handleCalculate` (356-457), per-meal override (1053-1073), Recalculate (1308-1315);
+   plus per-adjustment confirm-then-apply `CoachOutputScreen.js:778-1045 (markApplied/isApplied)`.
+3. **Register/tone switching (SC-4) → EXISTS.** `coachRegister.js:64,80-88` supportive/precise/automatic;
+   precise renderers 100-235; opt-in science `withScience` 308-316.
+4. **Carb-cycle / refeed / diet-break planning (NU-1, broader) → EXISTS.** `CoachOutputScreen.js:389-423`
+   (DietBreakCard), `:431-470` (MacroCycleCard), `:477-510` (RefeedCard); consumed in `DiaryScreen.js:143-164`.
+5. **Companion watch logging (MF-2, partial) → EXISTS (phone-tethered).** `watch/bridge.js:42-76`
+   (composeSessionScript/Cursor), `:99-111` (`applyRemoteSetEvent`, watch_set_logged). Renders full session
+   + logs sets from the wrist. (My "rest-timer haptic only" was wrong.)
+6. **Progress views / graphs (PR-1) → EXISTS.** `AnalyticsScreen.js:431-524` (volume summary, PR sparkline),
+   `:256-263` (weight trend), `useProgressData.js` loaders.
 
-## A. FALSE GAPS — feature already exists (evidence)
-1. **Recovery / readiness (was WS-5, MF-1 "no recovery read").** Register #6 **EXISTS** — `blockAdvisor.js:45,:78`
-   (checkinReadiness/detectSignals) + `components/ReadinessCards.js` (Pro-gated). Recovery is read and scored.
-   (Only wearable-sensor HRV ingestion is unconfirmed → C10.)
-2. **Social / accountability (was RE-3, WS-7 "no social feed").** Register #8 **EXISTS** — full training-partners
-   feature: `migrate_081_training_partners.sql:75-218` (partnerships/partner_week_signals/partner_cheers/
-   partner_blocks), `lib/partners/signals.js`. Partners IS the social feature.
-3. **Manual barcode (was NU-6, FL-5 "barcode gap").** Register #18 **EXISTS** — `ScanBarcodeScreen.js`,
-   `ScanLabelScreen.js`. Not a feature gap; only a Free-vs-Pro pricing question.
-4. **Progress views / graphs (was PR-1).** Full read `AnalyticsScreen.js`: PR-rate sparkline (:487-524),
-   weekly volume summary → heatmap (:431-485, :295-298), Pro weight-trend card (:256-263), recent sessions
-   (:267-283), nav to Lifts/Consistency/BodyMetrics (:341-353). EXISTS.
-5. **Nutrition planning — carb-cycle / refeed / diet-break (part of NU-1).** Read `CoachOutputScreen.js`:
-   `MacroCycleCard` training/rest-day carb split (:431-470), `RefeedCard` (:477-510), `DietBreakCard`
-   maintenance week (:389-423), all confirm-then-apply (handlers :987-1045, :959-979). EXISTS.
-6. **Per-domain confirm-then-apply coaching (part of SC-2).** Read `CoachOutputScreen.js`: `markApplied/isApplied`
-   used per domain (calories/training/steps/cardio/deload/dietBreak/macroCycle/refeed), handlers :778-1045;
-   Apply UI `AdjustmentRow` :189-220. The user already confirms each adjustment — a "collaborative" step EXISTS.
-7. **Streak (RE-1/RE-2).** Register #7 **EXISTS** — `StreakWeeksSection.js`, `WeeklyStreakStrip.js`,
-   `lib/milestones.js:50,:115`.
+## B. REAL GAPS — survives (read-backed ABSENT/PARTIAL)
+1. **Progress-photo UI (PR-3) → ABSENT (table exists, no client UI).** `BodyMetricsScreen.js` `FIELD_MAP`
+   55-66 + `saveMetrics` 595-669 handle weight/body-fat/measurements/notes only; no image capture/display;
+   no picker/camera import (1-47). Backend table exists (register #1).
+2. **HRV / sleep ingestion (MF-1) → ABSENT.** `health.js` reads weight (`readWeightsSince` 361-412) + steps
+   (`readStepsToday` 421-474) only; perms 45-59 / 188-194 carry no HRV/sleep; header 14-18 states the scope set.
+3. **Micronutrient / NRV (NU-7) → ABSENT.** `DiaryScreen.js` shows macros + fibre + water (239-254, 540-546,
+   752-778); `food/db.js:240` schema = fibre/sodium/sugar only, no vitamin/mineral columns.
+4. **Challenges / leaderboards (RE-7) → ABSENT.** `partners/service.js` = invite/redeem/cheer/block/unpair/
+   week-signal/view (26-171); no challenge/leaderboard/ranking. (RE-3 social/accountability EXISTS — this.)
+5. **Posing / contest peak-week (MF-3) → ABSENT.** `mesocycle.js:14-32` `peak` = highest-volume *training*
+   week; no stage water/sodium/carb-load protocol or posing tool anywhere read.
+6. **Reverse-diet mode (AC-9) → ABSENT (analogues exist).** `NutritionTargetsScreen.js:80-87` goals carry no
+   reverse-diet; analogues = maintain goal + diet-break/refeed (`CoachOutputScreen.js:389-510`).
+7. **Weekday→weekend calorie-banking planner (NU-1, specific) → ABSENT.** Not in NutritionTargets,
+   CoachOutput, or DiaryScreen (all read). Day-type is training/rest/refeed-driven, not a user calorie bank.
+8. **Recomp reframing view (PR-4) → PARTIAL.** Components exist — BF/measurement trends
+   `BodyMetricsScreen.js:242-358`, strength standing `LiftProgressScreen.js`, weight trend
+   `AnalyticsScreen.js:256-263` — but no view reframes flat scale weight as recomposition (Analytics,
+   BodyMetrics, Consistency all read).
+9. **Exercise demo media (EL-1/NE-3) → ABSENT.** Exercises table has no video/image/media column
+   (`database.js:78-92`, schema read this session); register #2 ABSENT. (ExerciseDetailScreen not re-read
+   this session — the absence of any media column is the decisive evidence.)
+10. **Standalone (phone-free) watch (MF-2) → PARTIAL.** Companion logging exists (A5) but it is phone-tethered
+    (`watch/bridge.js` header 6-7: "phone composes; watch renders"; `publish` 85-97); phone-free is the gap.
 
-## B. REAL GAPS — survives (evidence ABSENT/PARTIAL by read)
-1. **Exercise demo media (EL-1, NE-3).** Register #2 **ABSENT** — `ExerciseDetailScreen.js` has no Image/Video
-   import (`:685` is a Modal slide, not media); text-only. REAL.
-2. **Progress-photo UI (PR-3).** Register #1 **PARTIAL** — table exists (`supabase setup_complete.sql:251`),
-   NO UI in src. REAL (build UI on an existing table).
-3. **Full cycle tracking (CK-4).** Register #16 **PARTIAL** — menstrual FLAG exists (`cycleOverride` in check-in;
-   weeklyCoach discounts the flagged weigh-in); full phase TRACKING ABSENT. REAL partial.
-4. **Conditional check-in depth (corrects CK-1).** Register #13 **PARTIAL** — step/cardio conditional sections
-   exist (`WeeklyCheckInScreen.js` stepsEnabled/showSteps); fuller conditional branching is the gap. (My
-   "CONFIRMED YES" was wrong — it's PARTIAL.)
-5. **Plate-calculator UI wiring (corrects WS-8).** Register #3 **PARTIAL** — logic exists (`algorithms.js:836-863`),
-   UI wiring VALUE DEFERRED. (My "CONFIRMED YES" leaned on a grep of PlateCalculator.js I did not read in full
-   → downgrade to PARTIAL pending C-read.)
-
-## C. NEEDS FULL READ — could NOT be confirmed by reading (NOT a verdict; grep is not evidence)
-These were "grep-0" in my Pass-3 files. They are unproven until the named file is read in full.
-1. **Strength-score composite (PR-5).** `AnalyticsScreen.js` (full) shows no composite score, but the metric
-   could live elsewhere → read `LiftProgressScreen.js`, `hooks/useProgressData.js`.
-2. **Recomp progress view (PR-4).** Not in `AnalyticsScreen.js`; → read `BodyMetricsScreen.js`,
-   `ConsistencyScreen.js`.
-3. **Weekly calorie "banking" planner specifically (NU-1 remainder).** Carb-cycle/refeed/diet-break exist (A5);
-   a weekday→weekend banking planner → read `DiaryScreen.js`, `NutritionTargetsScreen.js`, `CoachOutputScreen.js:1316-2448`.
-4. **Explicit reverse-diet mode (AC-9).** DietBreakCard (maintenance) exists (A5); a progressive reverse-diet
-   → read `NutritionTargetsScreen.js`, the reverse-diet path in `nutritionEngine.js`, rest of CoachOutputScreen.
-5. **Autonomy-mode toggle / manual target override (SC-2 remainder).** Confirm-then-apply exists (A6); a
-   Coached/Collaborative/Manual toggle or manual override → read `NutritionTargetsScreen.js`,
-   `SettingsCoachingScreen.js`, rest of CoachOutputScreen.
-6. **Micronutrient/NRV display (NU-7).** Schema carries fibre/sodium/sugar (`food/db.js:240`) but the display
-   is unread → read `DiaryScreen.js`, `FoodDetailScreen.js`, `AddCustomFoodScreen.js`.
-7. **Challenges/leaderboards (RE-7).** → read `lib/partners/service.js`, `signals.js`, `sharedStreak.js`.
-8. **Posing/peak-week tool (MF-3).** A training "peak week" phase exists in `mesocycle.js` (not fully read);
-   → read `mesocycle.js`, `planEngine.js`, any contest-prep screen.
-9. **Standalone watch app (MF-2).** → read `lib/watch/bridge.js` in full + `app.json` watch config.
-10. **Wearable HRV/sleep ingestion (WS-5/MF-1 slice).** Readiness EXISTS (A1); whether health ingests HRV →
-    read `lib/health.js` in full.
-
-## HOLD (register confirms, unchanged)
-RPE/RIR EXISTS (#10), audio cues EXISTS (#9), pain-flag rotation EXISTS (#15), import/export EXISTS (#11),
-custom exercises/substitutions (Pass-2 reconciled, engine-read), colour-blind palette (read `theme.js:328-329`
-earlier — EXISTS), no-LLM (coverage across 9 coaching files — EXISTS). Velocity/tempo (#4), mood (#5), dense
-mode (#17), VBT (#19) ABSENT per register but had no market finding.
-
-## NEXT
-Clear list C by full reads (10 files), then finalise A/B. No founder questions until C is cleared and A/B final.
+## HOLD (read-confirmed EXISTS)
+Streak (register #7 + StreakWeeksSection used in ConsistencyScreen.js:46); accountability/partners (RE-3,
+partners/service.js); barcode (register #18); colour-blind palette (theme.js:328-329 read earlier);
+no-LLM (coverage across 9 engine files); jargon tooltips (InfoTooltip + GLOSSARY used across Analytics/
+BodyMetrics/NutritionTargets/LiftProgress, all read); UI progressive disclosure (NutritionTargets fast-path
+/fine-tune 516-672, CoachOutput moreOpen 771 + CollapsibleSection, BodyMetrics measure toggle 956-971).
