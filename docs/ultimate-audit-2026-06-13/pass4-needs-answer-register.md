@@ -69,6 +69,18 @@ per CLAUDE.md no-deps-without-asking). Full text in file.
   NA-cb-3 (banking surface placement). + all PRIORITY-SCORE NA-ids → resolved by `pass4-master-priority.md`.
 - **BLOCKED (Pass-1 carry):** NA-mn-1 schema authority (Q1).
 
+## FOUNDER-DECISION NA-ids — RESOLVED 2026-06-14 (see pass3-v2-founder-decisions.md)
+- NA-coaching-10 → never auto-apply during a safety hold. NA-cux-19 → Core-Haptics approved (name+licence at build).
+- NA-cux-15 → timeline replaces buckets. NA-cb-3 → both entry points. NA-wr-3 → credit actual exercise's muscle.
+- NA-wr-10 → relative % vs prior period. NA-coaching-4 → recomp = PRO. NA-nutrition-1 → store basis, no conversion.
+- **NA-mn-1 (Q1) RESOLVED:** migrations canonical; micronutrients = new `migrate_087`; snapshots are stale.
+- PRIORITY-SCORE NA-ids → resolved by `pass4-master-priority.md` (3 tiers).
+
+## STILL OPEN — read-answerable NA-ids (~50)
+File:line lookups / schema fields / gate fns / seams across the 6 blueprints. These do NOT need the founder; they
+need a targeted Opus-8 codebase read pass (`_AUDIT-SPEC.md:241-250`), one answer with CONFIRMED file:line each,
+then each blueprint is completed and marked final.
+
 ## RESOLUTION
 A targeted codebase read answers each open NA-id with a CONFIRMED file:line; the owning blueprint is then completed.
-The Pass-4 exit gate (`pass4-final-reconciliation.md`) cannot pass while any NA-id is OPEN.
+The Pass-4 exit gate (`pass4-final-reconciliation.md`) cannot pass while any read-answerable NA-id is OPEN.

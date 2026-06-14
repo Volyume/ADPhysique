@@ -182,6 +182,21 @@ trivial auto-flat guards. Update tests.
 All accepted items under the standing no-jargon voice constraint. Micronutrients/NRV = schema migration (build-phase,
 Supabase rules apply). None of the accepted Section-A items touch `src/coaching/safety`.
 
+## DECIDED — Pass-4 blueprint NA-ids (founder, 2026-06-14)
+- NA-coaching-10 (SAFETY): **Coached never auto-applies while a safety hold / ED-flag / suppression is active** —
+  the decision is shown for the user to confirm; auto-apply resumes only when clear.
+- NA-cux-19 (DEPENDENCY): **Approved in principle** — add a managed-Expo Core-Haptics lib (graceful fallback).
+  CLAUDE.md gate: exact package name + licence to be stated for final yes before install.
+- NA-cux-15: **Timeline replaces the meal buckets** for everyone (model is already a flexible numbered ladder).
+- NA-cb-3: Calorie banking reachable from **both** the Diary day view and Nutrition Targets.
+- NA-wr-3: Mid-session swap credits **the actual swapped-in exercise's muscle** toward weekly volume.
+- NA-wr-10: Recap relative framing = **relative % vs the prior period** (no object/landmark NEW data).
+- NA-coaching-4: Recomp-reframing view is **PRO** (leans on body-fat/measurement Pro data).
+- NA-nutrition-1: Raw/cooked = **store the basis, no conversion** (record which basis the grams are in; use the
+  matching entry). Deterministic; no conversion table needed.
+- NA-mn-1 (Q1 schema authority) RESOLVED by investigation: **migrations (`migrate_001..086`) are canonical**;
+  `setup_complete.sql`/`schema.sql` are stale bootstrap snapshots. Micronutrients = NEW `migrate_087_*.sql`.
+
 ## ALL DECIDED — v2 set complete
 Open build queue (approved): grocery list, raw/cooked toggle, calorie banking (rails above), + the Call-1/2
 accepted items (protein-consistency, 14/30/90d windows, recap share/monthly/relative, mid-session swap,
