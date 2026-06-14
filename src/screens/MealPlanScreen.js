@@ -38,6 +38,7 @@ import {
   swapFoodInMeal,
 } from '../lib/food/mealPlanService';
 import { updateMealPlan } from '../lib/food/db';
+import { buildGroceryList } from '../lib/food/groceryList';
 
 // The week plan is an abstract Day 1..7 (training/rest spread), NOT calendar-
 // anchored, so label the picker by day number rather than implying weekdays.
@@ -105,6 +106,7 @@ export default function MealPlanScreen({ navigation }) {
   // The meal-swap sheet: a generous, style-diverse list of alternatives for
   // one slot (rethink §3.3). { slotKey, replacement, alternatives } when open.
   const [swapSheet, setSwapSheet] = useState(null);
+  const [grocerySheet, setGrocerySheet] = useState(null); // built grocery list or null
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -530,6 +532,7 @@ export default function MealPlanScreen({ navigation }) {
 
           <Button title="Log this day" onPress={handleLogDay} loading={busy} fullWidth />
           <Button title="New meals" variant="secondary" onPress={handleRegenerate} disabled={busy} fullWidth />
+          <Button title="Shopping list" variant="secondary" onPress={() => setGrocerySheet(buildGroceryList(plan))} disabled={busy} fullWidth />
           <Text style={styles.footNote}>
             Built from your targets. Every plate can be swapped; the day stays on target.
           </Text>
@@ -577,6 +580,55 @@ export default function MealPlanScreen({ navigation }) {
                 </TouchableOpacity>
               ))}
             </ScrollView>
+          </>
+        ) : null}
+      </BottomSheet>
+
+      {/* Auto grocery list (ULTIMATE-NUT-02): the week's plan aggregated into a
+          grouped, read-only shopping list. Numbers-first; cooked-weight foods
+          are flagged since there is no raw conversion (NA-nutrition-5). */}
+      <BottomSheet
+        visible={!!grocerySheet}
+        onClose={() => setGrocerySheet(null)}
+        accessibilityLabel="Shopping list"
+      >
+        {grocerySheet ? (
+          <>
+            <Text style={styles.swapSheetTitle}>Shopping list</Text>
+            {grocerySheet.isEmpty ? (
+              <Text style={styles.swapSheetSub}>
+                Nothing to shop for yet. Build a plan and your list fills in.
+              </Text>
+            ) : (
+              <>
+                <Text style={styles.swapSheetSub}>
+                  Totals for the whole week across {grocerySheet.dayCount} {grocerySheet.dayCount === 1 ? 'day' : 'days'}.
+                </Text>
+                <ScrollView
+                  style={styles.swapList}
+                  contentContainerStyle={styles.swapListContent}
+                  showsVerticalScrollIndicator
+                >
+                  {grocerySheet.sections.map((section) => (
+                    <View key={section.label} style={styles.grocerySection}>
+                      <Text style={styles.grocerySectionLabel}>{section.label}</Text>
+                      {section.items.map((item, i) => (
+                        <View key={`${section.label}-${item.name}-${i}`} style={styles.groceryRow}>
+                          <Text style={styles.groceryName}>
+                            {item.name}{item.count ? ` ×${item.count}` : ''}
+                          </Text>
+                          {item.grams != null ? (
+                            <Text style={styles.groceryQty}>
+                              {item.grams} g{item.cooked ? ' (cooked)' : ''}
+                            </Text>
+                          ) : null}
+                        </View>
+                      ))}
+                    </View>
+                  ))}
+                </ScrollView>
+              </>
+            )}
           </>
         ) : null}
       </BottomSheet>
@@ -634,6 +686,17 @@ const styles = StyleSheet.create({
   swapSheetSub: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: -spacing.xs, lineHeight: 19 },
   swapList: { maxHeight: 360 },
   swapListContent: { gap: spacing.sm, paddingVertical: spacing.xs },
+  grocerySection: { marginTop: spacing.sm },
+  grocerySectionLabel: {
+    color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold,
+    textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.xxs,
+  },
+  groceryRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border, gap: spacing.md,
+  },
+  groceryName: { color: colors.textPrimary, fontSize: fontSize.md, flexShrink: 1 },
+  groceryQty: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   swapOption: {
     backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md, gap: spacing.xs, minHeight: 56, justifyContent: 'center',
