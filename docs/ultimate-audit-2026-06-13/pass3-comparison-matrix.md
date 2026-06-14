@@ -340,6 +340,23 @@ corroboration only** — their unique claims are SINGLE-SOURCE SIMULATED. Our si
 **guessed our implementation wrong**, the guess is corrected and marked **[our-side]**. Engine boundary respected:
 every "elevate" item is deterministic or flagged for a founder decision.
 
+**METHOD (founder-directed): NO rerun.** The researchers' guesses about our side are an artefact of my brief
+under-describing us, not a research failure. So their reports are used **only as the best-in-class / competitor
+bar** (the part they were for, and which holds); WHERE-WE-LEAD/LAG is re-derived against our actual code,
+read-backed, **ruling out every "gap" that is already built.**
+
+**RULED OUT — false "gaps" the sources flagged that are ALREADY in place (read-backed):**
+- Steps auto-ingested (`health.js` readStepsToday) — CD.
+- Typeable weight/reps keypad, not steppers-only (`SetEntry.js:57-81`) — BD/UX.
+- Full set-type system straight/warm-up/drop-set/myo-reps/rest-pause/AMRAP (`ActiveWorkoutScreen.js:41-45`) — BD.
+- RIR recorded per set (`DEFAULT_SET`) — BD (only the per-set *input picker* is removed).
+- On-device OCR food/label capture (`ScanLabelScreen`) — RC/FL (the "photo import" half).
+- Block-level recap (`BlockReflectionScreen` → `RecapStory` block) + share/export (`ShareCardScreen`) — RP.
+- Haptics across 7 surfaces (selection/success/impact) — UX (only Core-Haptics waveforms absent).
+- Weight-trend smoothing surfaced (`WeightTrendCard`, EWMA) — FI.
+- Meal-plan swap-meal/swap-food/regenerate (`mealPlanService`) — MP.
+- Menstrual-cycle accounting in the coach (CK lead) — FI overlay only is the gap.
+
 ## CARDIO (CD)
 - **BEST IN CLASS:** MacroFactor — adherence-neutral deterministic TDEE, *refuses* wearable expenditure for
   targets, never adds exercise cals (Claude VERIFIED, MF help docs; corroborated CG+GM). Nutracheck keeps exercise
@@ -361,8 +378,9 @@ every "elevate" item is deterministic or flagged for a founder decision.
 - **BEST IN CLASS:** Eat This Much (deterministic plans to exact targets + constraints, grocery lists, leftover
   logic — Claude [BROWSED] 4.7★/22k, CNN 2025). Nutracheck curated UK DB (Claude 430k / Gemini 500k) with
   supermarket + high-street lines.
-- **WHERE WE LEAD:** progressive-disclosure calm plates + honest residual line + day-type chip (`MealPlanScreen`)
-  — more transparent than ETM "spreadsheet" (Claude). Deterministic (no LLM).
+- **WHERE WE LEAD:** progressive-disclosure calm plates + honest residual line + day-type chip + **swap-meal /
+  swap-food / regenerate / apply-day-to-diary** (`MealPlanScreen` + `mealPlanService.js:31-39`) — richer control
+  than my brief stated; more transparent than ETM "spreadsheet" (Claude). Deterministic (no LLM).
 - **WHERE WE LAG:** (1) no anti-repetition guarantee (week 3-4 fatigue — Claude VERIFIED reviews); (2) no
   UK-availability / supermarket-branded generation (Claude+Gemini — **the wedge**); (3) no automated grocery-list
   aggregation (ETM bar); (4) no batch/leftover distribution.
@@ -396,8 +414,9 @@ every "elevate" item is deterministic or flagged for a founder decision.
 - **WHERE WE LEAD:** weekly adherence bars + macro hit-rate + CSV export (`FoodInsightsScreen`); adherence-neutral
   no-red-bars = ED-safe + MF-praised (Claude); CSV valued by MF users (Claude).
 - **WHERE WE LAG:** (1) 7-day window only — need 14/30/90d (Claude+Gemini); (2) no weak-spot detection (weekend
-  +X kcal); (3) no protein-consistency metric (Claude — most behaviour-relevant); (4) trend smoothing not surfaced
-  in insights [our-side: we compute EWMA in `weeklyCoach` for coaching — verify if exposed here].
+  +X kcal); (3) no protein-consistency metric (Claude — most behaviour-relevant); (4) trend smoothing IS surfaced
+  app-wide (`WeightTrendCard`, EWMA in `weeklyCoach`) — the FoodInsights *screen* is just 7-day adherence
+  [our-side: partial, not absent].
 - **HOW TO ELEVATE:** (1) 14/30/90d windows; (2) protein-consistency metric; (3) deterministic weak-spot insight
   cards; (4) wire analytics into the deterministic weekly decision. *SINGLE-SOURCE SIMULATED:* deterministic
   Satiety Index (Gemini — engine-safe, buildable from our macros+fibre+weight; founder decision) + menstrual
@@ -410,17 +429,20 @@ every "elevate" item is deterministic or flagged for a founder decision.
   PARTIAL industry-est). Strava Year in Sport (since 2016, now $80/yr paywalled 2025 — Claude VERIFIED Ars).
   **Boostcamp already ships a lifting "Wrapped" + weekly Sunday reports** (Claude VERIFIED — direct competitor).
 - **WHERE WE LEAD:** Year of Lifts swipeable one-hero-stat story mirrors the Wrapped pattern (`YearOfLiftsScreen`)
-  — well-judged (all-3).
-- **WHERE WE LAG:** (1) annual-only cadence — need monthly/block recaps (Boostcamp Sunday bar — Claude+Gemini);
-  (2) no shareable image export (acquisition engine — Claude+Gemini); (3) raw absolute tonnage hollow, need
-  relative/milestone framing (Gemini+CG). [our-side: `BlockReflectionScreen` exists — verify if already a block
-  recap, may be PARTIAL.]
-- **HOW TO ELEVATE:** (1) block/meso-cycle "Block Reports" on block completion (Claude+Gemini); (2) shareable
-  9:16 image export, **locally rendered** (CoreGraphics/Canvas) for offline (Gemini — engine/offline-safe);
+  — well-judged (all-3). **[ruled in — sources + my brief MISSED these]: block-level recap ALREADY EXISTS**
+  (`BlockReflectionScreen` "Block summary" — sessions/volume/top-exercise/PRs `:34-71` → `RecapStory` 'block'
+  variant `:96-100`), AND a **share/export mechanism exists** (`ShareCardScreen` — WebView+FileSystem+Sharing).
+- **WHERE WE LAG:** annual + **block** recaps both already exist (above), so the lag SHRINKS to: (1) **monthly/
+  weekly** cadence (Boostcamp Sunday — Claude+Gemini); (2) shareable-image export not yet **wired to** the
+  Year-of-Lifts/block recap cards (the export mechanism exists for ShareCard); (3) raw absolute tonnage hollow vs
+  relative/milestone framing (Gemini+CG). [Corrected: "annual-only" + "no export" were my brief under-describing us.]
+- **HOW TO ELEVATE:** (1) add **monthly** cadence (block already done); (2) wire the existing share/export to the
+  recap cards, **locally rendered** (CoreGraphics/Canvas) for offline (Gemini — engine/offline-safe);
   (3) relative/identity framing tied to a PB/behaviour milestone (all-3). *SINGLE-SOURCE:* UK-landmark
   comparisons (Gemini).
-- **VERIFICATION:** annual-only LAG = VERIFIED (Claude — Boostcamp Sunday); shareability = VERIFIED (Claude+
-  Gemini); Wrapped retention uplift = PARTIAL (Claude caveat — no peer-reviewed fitness stat, industry est).
+- **VERIFICATION:** block-recap + share-export EXIST = VERIFIED [our-side reads `BlockReflectionScreen`/
+  `ShareCardScreen`]; monthly-cadence gap = VERIFIED (Claude — Boostcamp Sunday); recap-share-wiring = our-side
+  gap; Wrapped retention uplift = PARTIAL (Claude — no peer-reviewed fitness stat, industry est).
 
 ## BUILDER (BD)
 - **BEST IN CLASS:** Hevy (4.86★/220k — loved builder: fast logging, easy superset/reorder/swap, haptics, Apple
@@ -428,19 +450,23 @@ every "elevate" item is deterministic or flagged for a founder decision.
   kg/lb mixing) but documented friction. Boostcamp (builder+library, free).
 - **WHERE WE LEAD:** build routine + **activate as training block** alongside generated plans = clean mental model
   (`BuildWorkout`/`ManualBuilder`; all-3 credit the separation). **Weight/reps already typeable keypad** [our-side:
-  `SetEntry.js:57-81` — Gemini's "gross input fails, dozens of taps" is FALSE].
+  `SetEntry.js:57-81` — Gemini's "gross input fails, dozens of taps" is FALSE]. **Set-type system already EXCEEDS
+  the bar** [our-side: `ActiveWorkoutScreen.js:41-45` — straight/warm-up/drop-set/myo-reps/rest-pause/AMRAP with
+  correct volume-counting rules, vs Hevy's basic warmup/drop/failure], and **RIR is recorded per set**
+  (`DEFAULT_SET rir`).
 - **WHERE WE LAG:** (1) **plate calculator built-but-unwired** [our sweep; Strong has it built-in — corroborated
-  bar]; (2) no standalone phone-free watch (our MF lag; Strong/Hevy have it — Claude+Gemini); (3) RIR/RPE recorded
-  internally but **no per-set input surface** [our-side PARTIAL: `SetEntry.js:141-144`]; (4) set-type tags
-  (warmup/drop/failure) — verify our-side; (5) mid-session substitution without breaking template (all-3).
-  [Per-exercise kg/lb = deliberate kg-only UK decision, `SetEntry.js:15-16` — **founder call**, not auto-lag.]
+  bar]; (2) no standalone phone-free watch (our MF lag; Strong/Hevy have it — Claude+Gemini); (3) RIR recorded per
+  set but **no per-set RIR *input* surface** (the picker was removed — `SetEntry.js:141-144`), so the user can't
+  override the default mid-set [our-side PARTIAL]; (4) mid-session substitution without breaking the template
+  (all-3). [Ruled out: "set-type tags missing" — they exist and exceed the bar (see LEAD). Per-exercise kg/lb =
+  deliberate kg-only UK decision, `SetEntry.js:15-16` — **founder call**, not auto-lag.]
 - **HOW TO ELEVATE:** (1) **wire the existing `PlateCalculator` into the workout flow** (low-effort — closes a
   built feature); (2) RIR/RPE per-set stepper surfaced + linked to a deterministic deload prompt (Gemini);
   (3) live biomechanical-equivalent substitution keeping volume tracking (Gemini+Claude); (4) standalone watch;
   (5) set-type tags. Avoid Strong's reorder-reset / replace-erases-notes (Claude VERIFIED dated quotes).
 - **VERIFICATION:** Strong friction = VERIFIED (Claude dated quotes); Hevy loved-builder = VERIFIED (Claude);
   plate-calc-unwired = VERIFIED (our sweep); standalone-watch = VERIFIED (our MF row + Claude/Gemini);
-  RIR-internal = PARTIAL (our-side read).
+  RIR-recorded-no-input-surface = PARTIAL (our-side read); set-type system = LEAD VERIFIED (our-side, exceeds Hevy bar).
 
 ## UX/UI QUALITY (UX) — triangulated; supersedes the single-source DE/NA UX notes
 - **BEST IN CLASS:** Whoop (3-tier hierarchy, customizable tiles, designer-built viz — Claude VERIFIED). Hevy
@@ -451,15 +477,17 @@ every "elevate" item is deterministic or flagged for a founder decision.
   tested WCAG-AA/AAA + CVD + reduce-motion + confetti→quiet-toast (`theme`/`PRCelebration`/`App.js:833`) —
   "arguably ahead of MacroFactor on calm hierarchy" + accessibility edge (Claude). All read-backed.
 - **WHERE WE LAG:** (1) no dense/personalisation/dashboard-reorder mode (Whoop tiles; MF power-user density —
-  Claude+Gemini; real-but-niche — corroborates our DE/NA dense-mode finding); (2) no completion haptics beyond
-  selection (Gemini — Core Haptics); (3) meal logging uses buckets not continuous timeline (Gemini — MF Timeline
-  Logger) [verify our-side: `DiaryScreen` meal sections]. [Gemini "gross-input stepper fails" = FALSE, keypad
-  exists — corrected.]
+  Claude+Gemini; real-but-niche — corroborates our DE/NA dense-mode finding); (2) **[ruled out — haptics exist]**
+  we already fire selection + success/impact haptics across 7 surfaces (`SetEntry`/`PRCelebration`/`RestTimer`/
+  `DiaryScreen`…); the only gap is iOS **Core Haptics** custom waveforms (Gemini) — polish, not absence;
+  (3) meal logging uses buckets not a continuous timeline (`DiaryScreen` six meal sections — confirmed; Gemini —
+  MF Timeline Logger). [Gemini "gross-input stepper fails" = FALSE, keypad exists — corrected.]
 - **HOW TO ELEVATE:** (1) optional advanced/dense toggle for elite users without breaking default calm (Claude+
   Gemini); (2) Core Haptics (rest-zero pulse, PR ascending — Gemini); (3) adaptive content ordering, not manual
   layout (CG+Claude); (4) consider timeline logging (Gemini).
 - **VERIFICATION:** hierarchy/Hevy-haptics/MF-density = VERIFIED (Claude); dense-mode LAG = VERIFIED (Claude+
-  Gemini, corroborates DE/NA); haptics/timeline = SINGLE-SOURCE (Gemini). **NOT FOUND:** comparative premium-feel
+  Gemini, corroborates DE/NA); basic haptics ALREADY PRESENT [our-side, ruled out]; Core-Haptics-waveforms +
+  timeline-logger = SINGLE-SOURCE (Gemini). **NOT FOUND:** comparative premium-feel
   ranking (Claude gives qualitative, not a score).
 
 ## v2 NOT-FOUND (add to consolidated list)
