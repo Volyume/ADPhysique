@@ -103,6 +103,11 @@ file at the end of every working session.
     corrected: `ScanLabelScreen` (on-device two-step OCR, Cronometer-style) is the FL "AI photo logging" bar —
     FL row updated to credit it. Remaining limit: component-level surfaces (modals inside screens) not swept;
     screen-level coverage is now 100%.
+  - **RESEARCH BRIEF v2 — ✅ DRAFTED** (`pass2-research-brief-v2-compare-and-elevate.md`): fixes the v1 root
+    cause (yes/no checklist that never fed in our implementation). Compare-and-elevate format — each block states
+    what Volyume ships, then asks best-in-class / where-we-lag / how-to-elevate, output mapped to matrix columns.
+    Covers the 6 ungraded domains + cross-cutting UX/UI quality. READY TO RUN on 3 AIs (founder action: paste
+    back the 3 exports, then build new matrix rows per domain).
 
 ### PASS 4 — BLUEPRINTS — ▶ NOT STARTED (awaiting founder go + the area open-question decisions)
 
