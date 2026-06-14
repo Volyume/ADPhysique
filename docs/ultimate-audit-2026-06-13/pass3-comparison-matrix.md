@@ -52,9 +52,23 @@ are NOT FOUND, not fabricated. Quality = capability + execution; only micro-UX t
 - **MISSING ENTIRELY:** vitamins/minerals/NRV tracking.
 - **VERIFICATION:** flexibility/protein/transparency LEAD = VERIFIED (ours) + corroborated bar; micronutrient MISSING = VERIFIED. No NOT FOUND cells.
 
+## PLAN-GENERATION (PG)
+- **BEST IN CLASS:** deterministic mesocycle periodisation with MEV/MRV landmarks + deloads + weak-point specialisation (RP/Juggernaut/Alpha, all-three PG-F2); inputs goals/equipment/level/frequency/1RM/injury (all-three); beginner-linear vs advanced-mesocycle (all-three); LLM plans distrusted as "slop" (all-three PG-F1); Boostcamp = named expert/community programmes, nSuns/GZCLP (ChatGPT PG-F2, Gemini).
+- **WHERE WE LEAD:** multi-factor landmark individualisation — experience × recovery × nutrition-phase × age multipliers (`planEngine.js:69-118`), 7 split types (`:17-25`), weak-point day targeting (`:31-57`, `upper_lower_wp` split), goal/phase overlays (`applyGoalOverlay`), deterministic no-LLM (coverage, AC-5). Folding nutrition phase + age + recovery into training volume goes beyond RP/Alpha's experience-only landmarks.
+- **WHERE WE LAG:** named expert/community programme breadth — bar is Boostcamp (nSuns/GZCLP, known coaches); ours is a Plan Library (`seedRoutines.js:33 LIBRARY_PLANS`); breadth/expert-branding not yet graded on our side.
+- **MISSING ENTIRELY:** none clear vs the corroborated bar (periodisation, deloads, weak-points, splits all present).
+- **VERIFICATION:** landmark-periodisation LEAD = VERIFIED (ours read); LLM-distrust alignment = VERIFIED; Boostcamp-breadth = PARTIAL — *our-side measurable: count/branding of `seedRoutines.js` LIBRARY_PLANS (needs our parse); competitor bar AGGREGATOR.* No competitor NOT-FOUND.
+
+## EXERCISE-LIBRARY (EL)
+- **BEST IN CLASS:** HD video / looping-animation demos (Gemini EL-F3, ChatGPT); library size ~250 (specialist) → ~1,400 (JEFIT) (ChatGPT/Claude, store); custom exercises + smart substitutions (all-three); per-exercise form cues (ChatGPT).
+- **WHERE WE LEAD:** smart substitutions ranked by SFR + stretch + fatigue, equipment-aware, top-3 (`algorithms.js:785-812`); per-exercise form tips (`lib/formTips.js`); custom-exercise creation (`database.js:91,:1493`).
+- **WHERE WE LAG:** **no demo media** — exercises table has no video/image/animation column (`database.js:78-92`); form tips are text-only — against the HD-video/animation bar (Gemini EL-F3, ChatGPT; app-docs/store). Library size vs the 250–1,400 bar: our exact count not yet parsed.
+- **MISSING ENTIRELY:** exercise demonstrations (video/animation) — register #2 ABSENT.
+- **VERIFICATION:** demo-media MISSING = VERIFIED (no media column; register ABSENT; bar app-docs/store VERIFIED); substitutions LEAD = VERIFIED; library-size = *our-side measurable: parse `seedExercises.js` for count (needs our parse)*; bar VERIFIED (JEFIT ~1,400 store). No competitor NOT-FOUND.
+
 ---
-(Areas remaining to execute the same way, reading our side in full first: plan-generation, exercise-library,
-retention, onboarding, navigation, design, missing-features/wearables, newbie-experience, check-in, scaling.)
+(Areas remaining to execute the same way, reading our side in full first: retention, onboarding,
+navigation, design, missing-features/wearables, newbie-experience, check-in, scaling.)
 
 ## CONSOLIDATED NOT-FOUND CELLS (for your per-cell targeted-teardown decision) — running list
 1. **WS — taps-to-log a set + keyboard-completion behaviour** for Strong/Hevy (only Gemini-simulated + one reddit quote; no corroborated/public number).
