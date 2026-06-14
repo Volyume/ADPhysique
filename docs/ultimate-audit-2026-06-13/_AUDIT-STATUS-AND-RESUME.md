@@ -185,12 +185,28 @@ file at the end of every working session.
     plain markers Done / Did some / Did less (no "adherence"/streak/shame, voice catalogue :558-577).
     **NA-cux-8** non-blocking (master-priority ranks it Tier-1 #5). Invariant tests added to
     `src/lib/cardio/__tests__/cardioEngine.test.js`. lint+full suite green (4113 pass); fresh-eyes review PASS.
-  - ▶ **NEXT: (6) Recap relative-% anchor** — per the LOCKED ORDER (line 146: "(6) recap relative-% anchor").
-    Before coding, locate and READ IN FULL its ULTIMATE-* blueprint (grep "relative" / "anchor" / "recap" across
-    `docs/ultimate-audit-2026-06-13/pass4-blueprints-workout-recap.md` and `pass4-master-priority.md` for exact ID +
-    source lines), resolve its NA-ids by reading at build time, then build per the edit-gate (invariant tests + lint
-    + full test + fresh-eyes review). Do NOT free-flow or pick. After (6), the Tier-1 list (1-6) is complete — re-read
-    `pass4-master-priority.md` for the Tier-2 order before continuing.
+  - ✅ (6) **Recap relative-% anchor** — DONE, commit `7f9301b`. Source: `pass4-blueprints-workout-recap.md:571-700`
+    (ULTIMATE-WR-5). Added a factual year-over-year caption ("Up X% on the year before.") beneath the raw tonnage
+    hero on the Year-of-Lifts deck (`YearOfLiftsScreen.js` `buildCards`), mirroring the shipped monthly pattern; raw
+    number stays the hero. Previous-window tonnage from `getRecapData(compare)` over the SAME [yearStart,yearEnd]
+    window (identical set-filter basis → % agrees with the displayed number); year branch now computes `neutral`
+    (calm/ED) which suppresses it; down year never negative-framed; no previous → generic fallback (never fabricated).
+    **NA-wr-10 resolved by FOUNDER DECISION (2026-06-14): year-over-year %** (not UK-landmark). **NA-wr-11 moot**
+    (no landmark table, no new data). Share surfaces deliberately untouched (year-over-year tonnage % doesn't map onto
+    the single-session "TOTAL KG LIFTED" hero nor the year-share sessions hero; "tonnage" not surfaced per design).
+    `buildCards` exported for testing; invariant tests in `src/screens/__tests__/recapCards.test.js`. lint+full suite
+    green (4118 pass); fresh-eyes review PASS.
+  - ✅ **TIER-1 COMPLETE (items 1-6).** All built on `claude/audit-work-quality-review-benrin`, each with invariant
+    tests + lint + full test + fresh-eyes review per the build operating model.
+  - ▶ **NEXT: TIER-2 (per `pass4-master-priority.md:15-23`), in order, skipping BLOCKED items:**
+    **(7) Recomp-reframing view** [NA-coaching-3/4] — read-only over existing data. Source blueprint: read IN FULL
+    before coding — `pass4-blueprints-coaching-progress.md` (grep "recomp" / "reframe" / "ULTIMATE-" for exact ID +
+    source lines), resolve NA-coaching-3/4 by reading at build time, then build per the edit-gate. Then (8) Auto
+    grocery list [NA-nutrition-4 — needs aisle taxonomy decision], (9) Plan diff/preview [NA-coaching-12/13],
+    (10) Passive cardio import [NA-cux-4]. **BLOCKED, do NOT start without the founder clearing them:** (11) Named
+    autonomy modes [NA-coaching-10 safety], (12) Raw/cooked toggle [NA-nutrition-1: no conversion source in code],
+    (14) Core-Haptics [NA-cux-19: NEW dependency → founder approval]. (13) Mid-session swap clause [NA-wr-3 founder
+    clarify] is a copy/clause item — confirm wording before building.
 - **OPEN BEFORE CODING:** branch policy conflict — session brief says develop on
   `claude/audit-work-quality-review-benrin` (an audit/docs branch); CLAUDE.md says app code goes on
   phase2/development or feature/*. Founder to confirm the build branch before any production code is written.
