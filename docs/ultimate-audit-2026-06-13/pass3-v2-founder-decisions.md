@@ -36,7 +36,31 @@ recipe book." → The real need is a **curated set of physique-appropriate meals
 "bodybuilding meals" means (criteria: protein density, UK ingredients, prep simplicity, meal-slot fit) before any
 build. Replaces RC "URL import".
 
-## STILL UNDECIDED (awaiting founder verdict — listed for continuation)
+## DECIDED — Call 1 (nutrition/meals/recap), 2026-06-14
+**ACCEPTED (build):**
+- MP — Auto grocery list (aggregated, aisle-grouped shopping list).
+- MP — Batch/leftover logic ("cook once, eat twice").
+- FI — Protein-consistency metric.
+- FI — Longer analytics windows (14/30/90-day).
+- Meal building — Nested base components (reusable 'chicken base'/'rice base').
+- RP — Wire existing ShareCard export to Year-of-Lifts/block recap cards.
+- RP — Monthly recap cadence (block + annual already exist).
+- RP — Relative/landmark framing instead of raw tonnage.
+
+**ACCEPTED with REFINEMENT:**
+- Meal building — weight entry. Founder: *"Maybe cooked and uncooked options? Most people cook uncooked and weigh
+  at that... cooked weight over- and under-cooking is very possible and having too much left over or not cooking
+  enough. Is there a stylish way to incorporate cooked and uncooked weight as options?"* → NOT cooked-only.
+  **Support BOTH raw/uncooked AND cooked weight as per-item options** (raw is how most people actually weigh;
+  cooked yield handles batch variance/leftovers). SCOPE a clean UX for raw-vs-cooked entry; fold into the
+  bodybuilding-meals scope.
+
+**DISMISSED (not suitable):**
+- MP — Anti-repetition guarantee.
+- FI — Weekend weak-spot detection.
+- FI — Deterministic Satiety Index.
+
+## STILL UNDECIDED (awaiting founder verdict — builder/UX/cardio next)
 - RC: cooked-weight yield scaling; nested recipes.
 - MP: anti-repetition guarantee; automated grocery aggregation; batch/leftover distribution.
 - FI: 14/30/90-day windows; protein-consistency metric; weak-spot detection; (Gemini idea) deterministic Satiety
