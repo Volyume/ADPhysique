@@ -5,6 +5,7 @@ import {
   cutCardioTarget, healthCardioTarget, pausedCardioTarget,
   cardioComplianceFromLog, summariseWeekCardio, nextCardioTarget,
   cardioRecoveryFlag, MAX_CARDIO_SESSIONS,
+  summariseCardioByWeek, cardioVerdictLabel,
 } from '../cardioEngine';
 
 describe('structured targets', () => {
@@ -65,6 +66,67 @@ describe('week summary', () => {
   });
   test('empty / non-array is safe', () => {
     expect(summariseWeekCardio(null)).toEqual({ sessions: 0, totalMinutes: 0, totalKcal: 0, highImpactSessions: 0 });
+  });
+});
+
+describe('cardio trend by week (ULTIMATE-CUX-CTV)', () => {
+  // Two contiguous 7-day windows, newest first (as the screen builds them).
+  const windows = [
+    { fromKey: '2026-06-08', toKey: '2026-06-14' }, // this week
+    { fromKey: '2026-06-01', toKey: '2026-06-07' }, // last week
+  ];
+  const target = { sessionsPerWeek: 3 };
+
+  test('buckets rows into the correct week by entry date', () => {
+    const rows = [
+      { entryDate: '2026-06-14', durationMin: 30 }, // this week (boundary)
+      { entryDate: '2026-06-10', durationMin: 20 }, // this week
+      { entryDate: '2026-06-07', durationMin: 25 }, // last week (boundary)
+    ];
+    const out = summariseCardioByWeek(rows, windows, target);
+    expect(out).toHaveLength(2);
+    expect(out[0]).toMatchObject({ fromKey: '2026-06-08', sessions: 2, verdict: 'mostly' });
+    expect(out[1]).toMatchObject({ fromKey: '2026-06-01', sessions: 1, verdict: 'missed' });
+  });
+
+  test('a week with no logged sessions reads 0 against the current target', () => {
+    const out = summariseCardioByWeek([{ entryDate: '2026-06-10' }], windows, target);
+    expect(out[1].sessions).toBe(0);
+    expect(out[1].verdict).toBe('missed'); // honest 0 of 3, judged on the current target (NA-cux-9)
+  });
+
+  test('tolerates snake_case rows and excludes out-of-window dates', () => {
+    const rows = [
+      { entry_date: '2026-06-09' }, // this week, snake_case
+      { entry_date: '2026-05-30' }, // before any window → excluded
+    ];
+    const out = summariseCardioByWeek(rows, windows, target);
+    expect(out[0].sessions).toBe(1);
+    expect(out[1].sessions).toBe(0);
+  });
+
+  test('with no target set, every week is "hit" so nothing reads as a miss', () => {
+    const out = summariseCardioByWeek([], windows, { sessionsPerWeek: 0 });
+    expect(out.every((w) => w.verdict === 'hit')).toBe(true);
+  });
+
+  test('empty / non-array inputs are safe', () => {
+    expect(summariseCardioByWeek(null, windows, target).map((w) => w.sessions)).toEqual([0, 0]);
+    expect(summariseCardioByWeek([], null, target)).toEqual([]);
+  });
+});
+
+describe('cardio verdict label (NA-cux-11 voice)', () => {
+  test('plain British markers, numbers-led', () => {
+    expect(cardioVerdictLabel('hit')).toBe('Done');
+    expect(cardioVerdictLabel('mostly')).toBe('Did some');
+    expect(cardioVerdictLabel('missed')).toBe('Did less');
+  });
+
+  test('never uses adherence, streak, or shame wording', () => {
+    const all = ['hit', 'mostly', 'missed'].map(cardioVerdictLabel).join(' ').toLowerCase();
+    ['adherence', 'streak', 'missed', 'fail', 'behind', 'bad']
+      .forEach((w) => expect(all).not.toContain(w));
   });
 });
 

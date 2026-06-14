@@ -18,10 +18,13 @@ import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
 import EmptyState from '../components/EmptyState';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { getRecentCardioLog, deleteCardioLog } from '../lib/database';
+import { getRecentCardioLog, deleteCardioLog, getCardioLogRange, activityDayKey } from '../lib/database';
+import { summariseCardioByWeek, cardioVerdictLabel } from '../lib/cardio/cardioEngine';
 import { parseLocalDay } from '../lib/dayKey';
 
 const INTENSITY_LABEL = { low: 'Easy', moderate: 'Moderate', high: 'Hard' };
+const TREND_WEEKS = 8; // recent weeks shown in the "done vs planned" trend
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function prettyDate(key) {
   try {
@@ -32,25 +35,101 @@ function prettyDate(key) {
   }
 }
 
+// Newest-first list of contiguous 7-day windows ending today, mirroring the
+// "this week = last 7 days" window CardioPlanCard already uses (activityDayKey).
+function buildWeekWindows(weeks, nowMs = Date.now()) {
+  const out = [];
+  for (let i = 0; i < weeks; i++) {
+    const toKey = activityDayKey(nowMs - i * 7 * DAY_MS);
+    const fromKey = activityDayKey(nowMs - (i * 7 + 6) * DAY_MS);
+    out.push({ fromKey, toKey });
+  }
+  return out;
+}
+
+// Plain British week range, house style "to" not a dash (cf. "20 to 30 min").
+function weekRangeLabel(fromKey, toKey) {
+  try {
+    const f = parseLocalDay(fromKey);
+    const t = parseLocalDay(toKey);
+    const fM = f.toLocaleDateString('en-GB', { month: 'short' });
+    const tM = t.toLocaleDateString('en-GB', { month: 'short' });
+    return fM === tM ? `${f.getDate()} to ${t.getDate()} ${tM}` : `${f.getDate()} ${fM} to ${t.getDate()} ${tM}`;
+  } catch (_) {
+    return '';
+  }
+}
+
+function markStyle(verdict) {
+  if (verdict === 'hit') return { color: colors.success };
+  if (verdict === 'mostly') return { color: colors.textSecondary };
+  return { color: colors.textMuted }; // never red: a quiet marker, not a grade
+}
+
+// Inline "done vs planned over time" section (ULTIMATE-CUX-CTV, NA-cux-10:
+// founder wording "turn the history list into a trend" → inline, no new route).
+function CardioTrend({ weeks, goal }) {
+  return (
+    <View style={styles.trend}>
+      <Text style={styles.trendLabel}>How often you did your cardio</Text>
+      {weeks.map((w, idx) => {
+        const when = idx === 0 ? 'This week' : idx === 1 ? 'Last week' : weekRangeLabel(w.fromKey, w.toKey);
+        const mark = goal > 0 ? cardioVerdictLabel(w.verdict) : null;
+        return (
+          <View
+            key={w.fromKey}
+            style={styles.trendRow}
+            accessible
+            accessibilityLabel={`${when}, ${w.sessions}${goal > 0 ? ` of ${goal}` : ''} sessions${mark ? `, ${mark}` : ''}`}
+          >
+            <Text style={styles.trendWhen}>{when}</Text>
+            <Text style={styles.trendCount}>{goal > 0 ? `${w.sessions} of ${goal}` : `${w.sessions}`}</Text>
+            {mark ? <Text style={[styles.trendMark, markStyle(w.verdict)]}>{mark}</Text> : null}
+          </View>
+        );
+      })}
+      <Text style={styles.trendFootnote}>
+        {goal > 0
+          ? 'Sessions you logged each week, compared with your current cardio target.'
+          : 'Sessions you logged each week. The coach sets a target only if a cut stalls.'}
+      </Text>
+    </View>
+  );
+}
+
 export default function CardioHistoryScreen({ navigation }) {
-  const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
+  const { user, userProfile } = useAppStore(useShallow((s) => ({ user: s.user, userProfile: s.userProfile })));
   const userId = user?.id;
+  const goal = userProfile?.cardioTarget?.sessionsPerWeek ?? 0;
   const [sections, setSections] = useState([]);
+  const [weeks, setWeeks] = useState([]);
 
   const load = useCallback(async () => {
     if (!userId) return;
     try {
-      const rows = await getRecentCardioLog(userId, 200);
+      const windows = buildWeekWindows(TREND_WEEKS);
+      const [rows, rangeRows] = await Promise.all([
+        getRecentCardioLog(userId, 200),
+        getCardioLogRange(userId, windows[windows.length - 1].fromKey, windows[0].toKey),
+      ]);
+
+      // Day-grouped list (unchanged).
       const byDay = new Map();
       for (const r of rows) {
         const key = r.entryDate;
         if (!byDay.has(key)) byDay.set(key, []);
         byDay.get(key).push(r);
       }
-      const out = [...byDay.entries()].map(([key, data]) => ({ title: key, data }));
-      setSections(out);
+      setSections([...byDay.entries()].map(([key, data]) => ({ title: key, data })));
+
+      // Trend: judge every week against the current target (NA-cux-9). Trim the
+      // older all-empty weeks beyond the user's history, but always keep this week.
+      const byWeek = summariseCardioByWeek(rangeRows, windows, { sessionsPerWeek: goal });
+      let lastNonEmpty = -1;
+      byWeek.forEach((w, i) => { if (w.sessions > 0) lastNonEmpty = i; });
+      setWeeks(byWeek.slice(0, Math.max(1, lastNonEmpty + 1)));
     } catch (_) { /* leave last */ }
-  }, [userId]);
+  }, [userId, goal]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -86,6 +165,7 @@ export default function CardioHistoryScreen({ navigation }) {
           sections={sections}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.content}
+          ListHeaderComponent={weeks.length > 0 ? <CardioTrend weeks={weeks} goal={goal} /> : null}
           renderSectionHeader={({ section }) => (
             <Text style={styles.dayHeader}>{prettyDate(section.title)}</Text>
           )}
@@ -129,4 +209,15 @@ const styles = StyleSheet.create({
   },
   activity: { ...type.body, color: colors.textPrimary },
   meta: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: 2, fontVariant: ['tabular-nums'] },
+
+  trend: {
+    marginBottom: spacing.lg, paddingBottom: spacing.md,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  trendLabel: { ...type.title, color: colors.textPrimary, marginBottom: spacing.md },
+  trendRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm },
+  trendWhen: { flex: 1, ...type.body, color: colors.textSecondary },
+  trendCount: { width: 80, textAlign: 'right', ...type.body, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
+  trendMark: { width: 76, textAlign: 'right', fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  trendFootnote: { ...type.caption, color: colors.textMuted, marginTop: spacing.sm },
 });

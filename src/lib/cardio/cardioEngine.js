@@ -113,6 +113,45 @@ export function summariseWeekCardio(rows) {
 }
 
 /**
+ * Per-week "done vs planned" trend (ULTIMATE-CUX-CTV). Pure: takes the cardio
+ * rows and a newest-first list of week windows (each { fromKey, toKey } as local
+ * day-key strings, YYYY-MM-DD so a lexical compare is a date compare), plus the
+ * planned target. NA-cux-9: no per-week target history is stored, so the caller
+ * passes the CURRENT target and every week is judged against it. Reuses
+ * summariseWeekCardio + cardioComplianceFromLog so the verdict matches the rest
+ * of the cardio surfaces. Returns one summary per window, in window order.
+ */
+export function summariseCardioByWeek(rows, weekWindows, target) {
+  const list = Array.isArray(rows) ? rows : [];
+  const windows = Array.isArray(weekWindows) ? weekWindows : [];
+  return windows.map(({ fromKey, toKey }) => {
+    const inWeek = list.filter((r) => {
+      const k = r?.entryDate ?? r?.entry_date;
+      return typeof k === 'string' && k >= fromKey && k <= toKey;
+    });
+    const s = summariseWeekCardio(inWeek);
+    return {
+      fromKey,
+      toKey,
+      sessions: s.sessions,
+      totalMinutes: s.totalMinutes,
+      verdict: cardioComplianceFromLog(s.sessions, target),
+    };
+  });
+}
+
+/**
+ * Plain British surface word for a compliance verdict (NA-cux-11). The numbers
+ * lead ("2 of 3"); this is a quiet factual marker, never "adherence", never a
+ * streak or shame word (COACHING_VOICE_SYNTHESIS_LOCKED.md:569).
+ */
+export function cardioVerdictLabel(verdict) {
+  if (verdict === 'hit') return 'Done';
+  if (verdict === 'mostly') return 'Did some';
+  return 'Did less';
+}
+
+/**
  * Next week's target from this week's compliance. Mirrors the steps lever:
  *   - poor recovery -> pause.
  *   - health mode -> never escalate, hold the light target.
