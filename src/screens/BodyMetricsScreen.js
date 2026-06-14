@@ -28,7 +28,8 @@ import { GLOSSARY } from '../lib/coachGlossary';
 import { useToast } from '../components/Toast';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { logBodyMetric, getBodyMetricLog, getOpenEdPatternFlag } from '../lib/database';
+import { logBodyMetric, getBodyMetricLog, getOpenEdPatternFlag, getCompletedWorkoutSets, getAllExercises } from '../lib/database';
+import { deriveRecomp } from '../lib/recompReframe';
 import { localDayKey } from '../lib/dayKey';
 import WindowChips from '../components/WindowChips';
 import {
@@ -406,6 +407,9 @@ export default function BodyMetricsScreen() {
   const [edFlagOpen, setEdFlagOpen] = useState(false);
   const [sessionConfirmed, setSessionConfirmed] = useState(bodyMetricsSessionConfirmed);
   const [history, setHistory] = useState([]);
+  // Lift data for the recomposition reframe's strength delta (ULTIMATE-RECOMP-01).
+  const [liftSets, setLiftSets] = useState([]);
+  const [exercises, setExercises] = useState([]);
   const [nutritionTargets, setNutritionTargets] = useState(null);
   const [recentIntake, setRecentIntake] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -441,6 +445,14 @@ export default function BodyMetricsScreen() {
   const measurementsWithData = useMemo(() =>
     MEASUREMENTS.filter(m => history.some(e => e[m.key] != null)),
     [history],
+  );
+
+  // Recomposition reframe (ULTIMATE-RECOMP-01). Read-only derivation; suppressed
+  // under calm mode / open ED flag so a "weight flat, fat down" read can never
+  // reinforce restriction (NA-coaching-6). Renders nothing when not warranted.
+  const recompVm = useMemo(
+    () => deriveRecomp(history, liftSets, exercises, { suppressed: calm || edFlagOpen }),
+    [history, liftSets, exercises, calm, edFlagOpen],
   );
 
   // Auto-select first measurement that has data
@@ -570,6 +582,17 @@ export default function BodyMetricsScreen() {
         setEwmaData([]);
       }
     } catch (_e) { setHistory([]); setEwmaData([]); }
+
+    // Lift data for the recomposition reframe's strength delta (read-only;
+    // a failure just hides the strength line, never the body history above).
+    try {
+      const [ls, ex] = await Promise.all([
+        getCompletedWorkoutSets(user.id),
+        getAllExercises(),
+      ]);
+      setLiftSets(ls || []);
+      setExercises(ex || []);
+    } catch (_e) { setLiftSets([]); setExercises([]); }
   }
 
   async function loadNutritionTargets() {
@@ -833,6 +856,11 @@ export default function BodyMetricsScreen() {
                 )}
               </View>
             ) : null}
+
+            {/* Recomposition reframe (ULTIMATE-RECOMP-01): when weight has held
+                steady but shape and/or strength kept moving, say so in numbers.
+                Renders nothing when not warranted or under calm/ED suppression. */}
+            <RecompCard vm={recompVm} weightUnits={units} />
 
             {/* Body composition: body fat % + its own trend, shown once
                 the user has logged it. The delta is rendered neutrally
@@ -1099,6 +1127,44 @@ export default function BodyMetricsScreen() {
   );
 }
 
+// Recomposition reframe card (ULTIMATE-RECOMP-01). Presentation-only: every fact
+// is pre-derived by deriveRecomp; this renders the numbers-first read plus one
+// plain sentence. Class-B body data — no valence colour (COMP-027). Returns null
+// when the reframe is not warranted, exactly like WeightTrendCard on !vm.render.
+function RecompCard({ vm, weightUnits = 'kg' }) {
+  if (!vm || !vm.render) return null;
+
+  const parts = ['Weight steady.'];
+  if (vm.bodyFat) {
+    const d = vm.bodyFat.deltaPP;
+    parts.push(`Body fat ${d < 0 ? 'down' : 'up'} ${Math.abs(d)}%.`);
+  }
+  if (vm.measurement) {
+    const d = vm.measurement.deltaCm;
+    parts.push(`${vm.measurement.label} ${d < 0 ? 'down' : 'up'} ${Math.abs(d)} cm.`);
+  }
+  if (vm.lift) {
+    parts.push(`${vm.lift.name} up ${vm.lift.deltaKg} ${weightUnits}.`);
+  }
+
+  // One plain, honesty-test-passing sentence (true if the user only logged).
+  const shapeMoved = !!(vm.bodyFat || vm.measurement);
+  const moved = shapeMoved && vm.lift ? 'shape and strength'
+    : vm.lift ? 'strength' : 'shape';
+  const sentence = `Your weight has held while your ${moved} kept moving.`;
+
+  return (
+    <View style={styles.recompBlock}>
+      <View style={styles.recompHeaderRow}>
+        <Ionicons name="sync-outline" size={14} color={colors.textMuted} />
+        <Text style={styles.sectionTitle}>Recomposition</Text>
+      </View>
+      <Text style={styles.recompRead}>{parts.join(' ')}</Text>
+      <Text style={styles.recompNote}>{sentence}</Text>
+    </View>
+  );
+}
+
 // Class B body-data surface (COMP-027): on a body metric, direction is not
 // valence. Losing or gaining weight / fat / a measurement is neither "good"
 // (green) nor "bad" (red), so the badge carries no state colour: the arrow
@@ -1177,6 +1243,10 @@ const styles = StyleSheet.create({
   weightValue: { fontSize: fontSize.xxxl, fontWeight: fontWeight.black, color: colors.textPrimary },
   trendHint: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
   bodyFatBlock: { gap: spacing.xs, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md },
+  recompBlock: { gap: spacing.xs, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md },
+  recompHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  recompRead: { ...type.bodyStrong, color: colors.textPrimary },
+  recompNote: { fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 18 },
   bodyFatRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   bodyFatValueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   bodyFatValue: { ...type.num('h3'), color: colors.textPrimary },
