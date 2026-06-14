@@ -66,9 +66,29 @@ are NOT FOUND, not fabricated. Quality = capability + execution; only micro-UX t
 - **MISSING ENTIRELY:** exercise demonstrations (video/animation) — register #2 ABSENT.
 - **VERIFICATION:** demo-media MISSING = VERIFIED (no media column; register ABSENT; bar app-docs/store VERIFIED); substitutions LEAD = VERIFIED; library-size = *our-side measurable: parse `seedExercises.js` for count (needs our parse)*; bar VERIFIED (JEFIT ~1,400 store). No competitor NOT-FOUND.
 
+## RETENTION (RE)
+- **BEST IN CLASS:** streaks + **streak-freeze** beat all-or-nothing guilt (Gemini K2; Claude); social accountability retains (all-three); day-30 retention single-digit / early-window churn (Claude RE-F1/F2; Business of Apps — documented); non-shaming notifications (all-three); annual-sub lock-in (Gemini K3); challenges (Claude RE-F3, Strava 18→32%).
+- **WHERE WE LEAD:** **ED-safe / wellbeing-aware streak-freeze** — freezes the run on an open ED-flag or wellbeing screen, not just a missed day (`lib/streak.js:20,:37 'resting'`; `streakState.js` paused weeks) — exceeds the plain streak-freeze bar; non-shaming re-engagement ("you missed" banned) (`notifications/missedCheckin.js:5-9`); PR celebration (`PRCelebration.js`); 1:1 partner accountability (`partners/service.js`).
+- **WHERE WE LAG:** none on a corroborated quality bar (streak/freeze/social/PR present; ED-safe variant exceeds bar).
+- **MISSING ENTIRELY:** challenges/leaderboards; broad social feed (we have 1:1 partners, not a feed).
+- **VERIFICATION:** streak-freeze LEAD = VERIFIED (ours) / bar PARTIAL (Gemini single + ChatGPT no-shame); challenges MISSING = VERIFIED (ours absent) / bar SINGLE-SOURCE (Claude); social-feed = ours is 1:1 partner (VERIFIED). No competitor NOT-FOUND.
+
+## MISSING-FEATURES / WEARABLES (MF)
+- **BEST IN CLASS:** Apple Health / Health Connect sync = table-stakes; **HRV/sleep → training volume** most-wished (all-three MF-F1); standalone phone-free watch (Gemini MF-F2); contest peak-week/posing = white-space (ChatGPT MF-3); iOS/Android parity (Gemini).
+- **WHERE WE LEAD:** Expo single-codebase cross-platform parity (CLAUDE.md ARCHITECTURE); a readiness path already exists to consume recovery (self-reported, `weeklyCoach.js:144-154`); companion watch logs sets from the wrist (`watch/bridge.js:99-111`).
+- **WHERE WE LAG:** **HRV/sleep ingestion absent** — `health.js` reads weight+steps only (`:45-59,:361-474`) vs the HRV→volume bar (all-three); watch is phone-tethered not standalone (`watch/bridge.js:6-7,85-97`).
+- **MISSING ENTIRELY:** wearable HRV/sleep read; posing / contest peak-week tool (`mesocycle.js:14-32` peak = training volume only).
+- **VERIFICATION:** HRV-ingest MISSING = VERIFIED (ours) + bar ALL-THREE; standalone-watch LAG = VERIFIED (ours tethered) / bar SINGLE-SOURCE (Gemini); posing MISSING = VERIFIED (ours) / bar SINGLE-SOURCE (ChatGPT). No NOT-FOUND.
+
+## SCALING / DUAL-AUDIENCE (SC)
+- **BEST IN CLASS:** progressive disclosure = the single-product dual-audience mechanism (all-three); tiered autonomy modes (Gemini — MacroFactor Coached/Collaborative/Manual); register switching plain↔advanced (ChatGPT/Claude); no app spans beginner→elite (Claude SC-F2).
+- **WHERE WE LEAD:** register switching supportive↔precise + opt-in science layer (`coachRegister.js:80-88,:308-316`); experience-tiered engine beginner→competitive (`planEngine.js:69-73`; `nutritionEngine.js:709-723`); progressive-disclosure UI in practice — "Set it for me"/"Fine-tune" (`NutritionTargetsScreen.js:516-672`), collapsible "More adjustments" (`CoachOutputScreen.js:771` + CollapsibleSection), measurement toggle (`BodyMetricsScreen.js:956-971`).
+- **WHERE WE LAG:** named autonomy modes — manual control + per-domain confirm-then-apply exist (`CoachOutputScreen.js:778-1045`) but no named Coached/Collaborative/Manual toggle.
+- **MISSING ENTIRELY:** named autonomy-mode toggle.
+- **VERIFICATION:** register/disclosure LEAD = VERIFIED (ours) + corroborated; autonomy-modes MISSING = VERIFIED (ours) / bar SINGLE-SOURCE (Gemini). No NOT-FOUND.
+
 ---
-(Areas remaining to execute the same way, reading our side in full first: retention, onboarding,
-navigation, design, missing-features/wearables, newbie-experience, check-in, scaling.)
+(Areas remaining, reading our side in full first: onboarding, navigation, design, newbie-experience, check-in.)
 
 ## CONSOLIDATED NOT-FOUND CELLS (for your per-cell targeted-teardown decision) — running list
 1. **WS — taps-to-log a set + keyboard-completion behaviour** for Strong/Hevy (only Gemini-simulated + one reddit quote; no corroborated/public number).
