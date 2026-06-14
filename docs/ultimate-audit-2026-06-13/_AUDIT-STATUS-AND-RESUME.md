@@ -239,14 +239,34 @@ file at the end of every working session.
     Tests: `planDiff.test.js` (10) + `planAutoGen.test.js` dry-run (3: match path no-writes, zero-match mirror,
     incomplete bail). lint+full suite green (4152 pass); fresh-eyes review PASS (1 should-fix + 1 nit, both fixed:
     zero-match mirror + null diff-cell render).
-  - ▶ **NEXT: TIER-2 (per `pass4-master-priority.md:19-23`), in order, skipping BLOCKED items:**
-    **(10) Passive cardio import** [NA-cux-4] — infra mostly exists; convenience (read-only, feedback-only). Source
-    blueprint: read IN FULL before coding — `pass4-blueprints-cardio-ux.md` (grep "passive" / "import" / "ULTIMATE-"
-    for the exact ID + source lines), resolve NA-cux-4 + siblings by reading at build time / asking the founder
-    structured multi-choice, then build per the edit-gate. **BLOCKED, do NOT start without the founder clearing them:** (11) Named
-    autonomy modes [NA-coaching-10 safety], (12) Raw/cooked toggle [NA-nutrition-1: no conversion source in code],
-    (14) Core-Haptics [NA-cux-19: NEW dependency → founder approval]. (13) Mid-session swap clause [NA-wr-3 founder
-    clarify] is a copy/clause item — confirm wording before building.
+  - ✅ **TIER-2 (10) Passive cardio import** — DONE, commits `cbb7338` (L1 schema/persistence) + `6ed0271`
+    (L2 health scope/import) + `a1ff306` (L3 native config + L4 UI/trigger). Source:
+    `pass4-blueprints-cardio-ux.md:15-96` (ULTIMATE-CUX-PCI). Read-only, feedback-only import of Apple Health /
+    Health Connect cardio sessions + avg HR. **FOUNDER DECISIONS (2026-06-14):** NA-cux-4 = new `cardio_log.ext_id`
+    column + partial unique index (local migration + `supabase/migrate_087_cardio_log_ext_id.sql`); NA-cux-7 =
+    keep-both (manual logs untouched); NA-cux-6 = "from {provider}" tag on imported rows; NA-cux-5 = Settings cardio
+    row hidden for free users. NA-cux-1/2/3 resolved from code (priority moot; Settings row on `SettingsHealthScreen`;
+    trigger = `activitySteps.connectHealthStepsAndWeight` foreground). New: `ext_id` plumbing (insert/sync/cloud),
+    `'cardio'` Health read scope (iOS Workout+HeartRate+Energy+Distance; Android HC ExerciseSession+HeartRate+
+    Distance+ActiveCalories), `readCardioSessionsSince` (best-effort, never-throws), pure `planCardioImport`+
+    `cardioSessionToLog`, `importNewCardio` (own cursor, de-dup, feedback-only). Tests: `cardioImport.test.js` (6),
+    `migrations.cardioLog.test.js` (+1), `sync.cardioLog.test.js` (+1). lint+full suite green (4160 pass); fresh-eyes
+    review APPROVE (no blockers/should-fixes; all 5 sacred checks confirmed). **⚠ FOUNDER ACTIONS REQUIRED before this
+    works on device:** (1) APPLY `supabase/migrate_087_cardio_log_ext_id.sql` to EU-Dublin (additive/idempotent; NOT
+    run from app); (2) cut a new dev/production BUILD so the native Health permissions (Android HC manifest + iOS
+    usage strings) take effect; (3) device-walk the connect + import flow (the SDK reads can't run in CI). Known nit:
+    Android imported `distance` stays null until the separate HC Distance record read is wired (documented in code).
+  - ✅ **TIER-2 UNBLOCKED ITEMS COMPLETE (7-10).** All built on `claude/audit-work-quality-review-benrin`, each with
+    invariant tests + lint + full test + fresh-eyes review.
+  - ▶ **NEXT — remaining work is BLOCKED or decision-gated; bring to founder before building:**
+    Per `pass4-master-priority.md`: Tier-2 (11) Named autonomy modes [BLOCKED NA-coaching-10 safety: auto-apply
+    during a hold], (12) Raw/cooked toggle [BLOCKED NA-nutrition-1: no conversion factor exists in code — needs a
+    sourced factor], (14) Core-Haptics [BLOCKED NA-cux-19: NEW dependency → founder approval]. (13) Mid-session swap
+    "keeps volume tracking" clause [NA-wr-3] is a COPY/clause item — confirm the exact wording with the founder, then
+    it's a small build. Tier-3 (15 timeline food logging, 16 micronutrients [BLOCKED Q1 schema authority — would be
+    migrate_088+ since 087 is now cardio], 17 calorie banking [safety-adjacent, own blueprint + invariant tests]) are
+    large/careful, sequence ALONE after their decisions clear. **A resuming session: do NOT start a BLOCKED item; ask
+    the founder the structured decision first, or build (13) after wording is confirmed.**
 - **OPEN BEFORE CODING:** branch policy conflict — session brief says develop on
   `claude/audit-work-quality-review-benrin` (an audit/docs branch); CLAUDE.md says app code goes on
   phase2/development or feature/*. Founder to confirm the build branch before any production code is written.
