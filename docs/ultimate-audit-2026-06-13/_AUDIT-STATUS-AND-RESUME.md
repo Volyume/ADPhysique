@@ -144,6 +144,20 @@ file at the end of every working session.
   `npm run lint && npm test` + a fresh-eyes review, then the gate passes for that feature. Order = `pass4-master-
   priority.md` Tier 1 first: (1) gate train/rest cycling, (2) keyboard-completes-the-set, (3) protein-consistency,
   (4) analytics windows 14/30/90d, (5) cardio trend view, (6) recap relative-% anchor.
+- **TIER-1 BUILD PROGRESS (branch `claude/audit-work-quality-review-benrin`):**
+  - ✅ (1) **Gate train/rest cycling** — DONE, commit `7d63c72`. Source: `pass3-v2-founder-decisions.md:156-161`.
+    Added `coachingGoals.dayCalorieCyclingAllowed` as single source of truth; weeklyCoach (zero behaviour change)
+    + mealPlanAssembler (`allowCycling`/`allowDayCycling`) + mealPlanService both read it; MealPlanScreen drops
+    the day-type chip + "Training today?" control on a flat plan (NA-nutrition-7). lint+full suite green.
+  - ✅ (2) **Keyboard-completes-the-set** — DONE, commit `ec7cddc`. Source: `pass4-blueprints-workout-recap.md:27-165`
+    (ULTIMATE-WR-1). `SetEntry` gained optional `onSubmitComplete`; reps Done logs the set via one shared
+    `handleCompleteSetPress` used by BOTH the Done key and the Complete-set button (cluster/unilateral identical;
+    respects `saving`). NA-ids resolved at build: **NA-wr-1** ActiveWorkout route un-gated (`RootNavigator.js:295/478/505`,
+    no `withProGuard`); **NA-wr-2** single `<SetEntry>` site (`ActiveWorkoutScreen.js:1755`), prop optional/non-breaking.
+    Invariant tests in `src/components/__tests__/SetEntry.test.js`. lint+full suite green; fresh-eyes review PASS.
+  - ▶ **NEXT: (3) Protein-consistency metric** [NA-nutrition-8]. Source blueprint: read it IN FULL before coding —
+    find the ULTIMATE-* item in the `pass4-blueprints-nutrition.md` cluster (grep "protein" / "NA-nutrition-8"),
+    resolve its NA-ids by reading at build time, then build per the edit-gate.
 - **OPEN BEFORE CODING:** branch policy conflict — session brief says develop on
   `claude/audit-work-quality-review-benrin` (an audit/docs branch); CLAUDE.md says app code goes on
   phase2/development or feature/*. Founder to confirm the build branch before any production code is written.
