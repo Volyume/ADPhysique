@@ -1,0 +1,62 @@
+# pass3-comparison-matrix.md — per-area quality comparison (Pass-3 spec format)
+
+Format per area: BEST IN CLASS (capability bar, provenance) · WHERE WE LEAD (our file:line) · WHERE WE LAG
+(our file:line + bar source) · MISSING ENTIRELY · VERIFICATION STATUS (per cell: VERIFIED = corroborated /
+documented; PARTIAL = aggregator/single/simulated; NOT FOUND = un-sourceable, missing data point named).
+Our side is read-verified (Read calls in console). Competitor side carries provenance; un-sourceable cells
+are NOT FOUND, not fabricated. Quality = capability + execution; only micro-UX timing (taps/seconds) is NOT FOUND.
+
+---
+
+## WORKOUT-SCREEN (WS)
+- **BEST IN CLASS:** fast loggers (Strong/Hevy) — autofill previous, inline last-session, auto rest timer,
+  set types; framed as *"lifting journals with timers, no recovery integration"* (Claude WS-F3, sensai —
+  AGGREGATOR). Inline last-session valued (ChatGPT WS-F2, store sentiment). Offline/no-data-loss expected
+  (ChatGPT WS-F3 store reviews; Gemini WS-K3 simulated).
+- **WHERE WE LEAD:** in-log progressive prescription — pre-filled next-set weight/reps with beat-rep
+  (`algorithms.js:354-438`; `ActiveWorkoutScreen.js:616-660,:853-865`), PR detect+celebrate on log
+  (`:841-851`), auto-advance on hitting target (`:893-900`), deload prescription (`:694-718`), session
+  autoregulation adjustments (`:221-226`), supersets/myo/rest-pause/AMRAP clusters (`:953-996`), time-crunch
+  trim (`:1076-1128`). No competitor in the research does in-log prescription (they are "journals with timers").
+- **WHERE WE LAG:** keyboard-completes-the-set — reps field "Done" dismisses then a separate Log tap
+  (`SetEntry.js:126`) vs Strong's keyboard-complete.
+- **MISSING ENTIRELY:** none vs the corroborated capability bar (inline-prev, rest timer, set types, offline all present).
+- **VERIFICATION:** inline-prev MATCH = VERIFIED (CG+CL); auto rest timer = VERIFIED (all-three; ours `:890`,`RestTimer:1585`); offline-first = VERIFIED (ours, local SQLite, 0 network in log path); in-log-prescription LEAD = VERIFIED(ours) / competitor "journals-with-timers" PARTIAL (AGGREGATOR sensai). **NOT FOUND:** taps-to-log and keyboard-complete benchmark — *missing data point: corroborated/public taps-per-set + keyboard-completion behaviour for Strong/Hevy* (only Gemini-simulated + one reddit quote).
+
+## FOOD-LOGGING (FL)
+- **BEST IN CLASS:** curated/nutritionist-**verified** UK DB (Nutracheck ~500K) explicitly beats
+  **crowdsourced** entries (ChatGPT NU-F1; Gemini NU-F2 *"crowded, unverified, user-generated entries… Nutracheck nutritionist-verified"*; Claude NU-F1 *"conflicting entries that plague crowdsourced databases"*); barcode; meal memory / copy / favourites / quick-add (all-three FL-Q5); Cronometer-grade micronutrients (Gemini NU-F3, Claude NU-F2); AI photo logging fast but 15–40% error (all-three, rated unreliable).
+- **WHERE WE LEAD:** meal-memory depth — per-meal "Add again" pre-filling last portion (`FoodSearchScreen.js:104,:737`), multi-add plate (`:234-306`), one-tap curated meal (`:380`), copy-yesterday + save-as-meal + bulk ops (`DiaryScreen.js:459,:365,:300-343`) — beyond the documented copy/recents/favourites bar.
+- **WHERE WE LAG:** **UK food-DB quality** — our branded source is **OpenFoodFacts, crowdsourced by design** (`food/seed.js:7-8`), on the wrong side of the documented curated-vs-crowdsourced line; CoFID adds only ~3k verified generics. Micronutrient depth below Cronometer.
+- **MISSING ENTIRELY:** vitamins/minerals/NRV tracking (schema = fibre/sodium/sugar only, `food/db.js:240`); weekday→weekend calorie-banking planner.
+- **VERIFICATION:** DB-curation lag = VERIFIED (ours = OFF per `food/seed.js:7`; OFF=crowdsourced per OFF's own model; bar corroborated all-three); meal-memory LEAD = VERIFIED(ours); micronutrient MISSING = VERIFIED. **NOT FOUND:** per-item log speed — *missing data point: corroborated/public seconds-or-taps to log one food* (Gemini 45–90s is single + simulated).
+
+## COACH OUTPUT / AI-COACHING (AC)
+- **BEST IN CLASS:** weekly adaptive loop (MacroFactor/Carbon, all-three); **transparent "why" raises trust, black-box erodes it** — MacroFactor transparent vs Carbon black-box (ChatGPT Q3; Gemini Q3; Claude Q3); adherence-neutral preferred (all-three); each competitor adjusts **either** nutrition **or** training, none both (all-three); deterministic preferred over LLM (all-three).
+- **WHERE WE LEAD:** closes the **full** loop — calories + training-volume + steps + cardio off one weight trend (`weeklyCoach.js:176-191,:766-785,:873-914`) where every competitor does one side only. Specific plain-language adjustments with "why this week" + "learn more" (`WHY_LIBRARY weeklyCoach.js:254-297`; `CoachOutputScreen.js WhyBlock :353-372`) and register supportive/precise (`coachRegister.js:80-88`) vs Carbon's black-box. Always-on, tier-blind ED-safety floors (no competitor advertises any).
+- **WHERE WE LAG:** none on a corroborated quality bar. (Human-coach hybrid, Caliber — absent by deliberate design, not a quality lag.)
+- **MISSING ENTIRELY:** named tiered-autonomy modes (Coached/Collaborative/Manual, MacroFactor) — we have manual control + per-domain confirm-then-apply (`CoachOutputScreen.js:778-1045`) but no named mode toggle.
+- **VERIFICATION:** full-loop LEAD = VERIFIED (ours read) + bar ALL-THREE; transparency LEAD = VERIFIED + corroborated; autonomy-modes bar = PARTIAL (single-source Gemini). No NOT FOUND cells — coaching capability is documented in editorial/app docs, not micro-timing.
+
+## PROGRESS (PR)
+- **BEST IN CLASS:** per-exercise 1RM + volume/heatmap graphs + PR callouts (all-three); trend-weight smoothing standard (ChatGPT PR-F2, Gemini K1); **progress photos + body measurements top demand, photos private-by-default** (all-three; MacroFactor 1,500+ upvotes each, Claude PR-F1); recomposition reframing of flat weight (all-three); composite strength/Strength-Score reframe (Caliber, ChatGPT PR-F3).
+- **WHERE WE LEAD:** composite **strength standing** (overall label + per-lift Beginner→Elite) `LiftProgressScreen.js:138-193` + `strengthStandards.js:108-132` — matches/exceeds Caliber's Strength Score; full graph suite — 1RM, volume→heatmap, PR-rate sparkline, tonnage, ACWR workload, muscle-frequency (`useProgressData.js`; `AnalyticsScreen.js:431-524`); body-fat + 9-site measurement trends (`BodyMetricsScreen.js:88,:242-358`); ED-safe streak-freeze (`streak.js:37`).
+- **WHERE WE LAG:** trend-weight smoothing is a MATCH not a lag — we have it (`computeEWMA weeklyCoach.js:39`, robust trend `:577`, `WeightTrendCard`).
+- **MISSING ENTIRELY:** **progress-photo UI** (backend table exists `supabase setup_complete.sql:251`, no capture in `BodyMetricsScreen.js`) — against the top-demand bar; **recomposition reframing view** (BF/measurement/strength components exist, no view reframes flat scale weight).
+- **VERIFICATION:** graphs MATCH = VERIFIED (all-three); strength-standing LEAD = VERIFIED; photos MISSING = VERIFIED (demand bar all-three); recomp-view MISSING = VERIFIED. No NOT FOUND cells.
+
+## NUTRITION (NU — targets/macros)
+- **BEST IN CLASS:** UK curated DB (see FL); macro flexibility / carb-cycle / calorie-planner (all-three); protein scaled to bodyweight/lean mass (all-three); kcal + UK units; micronutrient/NRV depth (Gemini NU-F3, Claude NU-F2).
+- **WHERE WE LEAD:** protein approaches standard/optimised/advanced/**custom g/kg**, LBM-based (`nutritionEngine.js:65-98`; `NutritionTargetsScreen.js:844-892`); transparent "why these numbers for you" calorie/protein/fat/carb rationale (`NutritionTargetsScreen.js:1093-1207`); carb-cycle + refeed + diet-break (`CoachOutputScreen.js:425-510`); per-meal protein split inside the MPS window (`NutritionTargetsScreen.js:1003-1091`); experience-scaled surplus (`nutritionEngine.js:709-723`).
+- **WHERE WE LAG:** micronutrient depth vs Cronometer; no weekday calorie-banking planner.
+- **MISSING ENTIRELY:** vitamins/minerals/NRV tracking.
+- **VERIFICATION:** flexibility/protein/transparency LEAD = VERIFIED (ours) + corroborated bar; micronutrient MISSING = VERIFIED. No NOT FOUND cells.
+
+---
+(Areas remaining to execute the same way, reading our side in full first: plan-generation, exercise-library,
+retention, onboarding, navigation, design, missing-features/wearables, newbie-experience, check-in, scaling.)
+
+## CONSOLIDATED NOT-FOUND CELLS (for your per-cell targeted-teardown decision) — running list
+1. **WS — taps-to-log a set + keyboard-completion behaviour** for Strong/Hevy (only Gemini-simulated + one reddit quote; no corroborated/public number).
+2. **FL — seconds/taps to log one food** for best-in-class (Gemini 45–90s is single + simulated).
+(extended as the remaining areas are executed.)
