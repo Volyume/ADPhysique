@@ -36,7 +36,7 @@ are NOT FOUND, not fabricated. Quality = capability + execution; only micro-UX t
 - **BEST IN CLASS:** curated/nutritionist-**verified** UK DB (Nutracheck ~500K) explicitly beats
   **crowdsourced** entries (ChatGPT NU-F1; Gemini NU-F2 *"crowded, unverified, user-generated entries… Nutracheck nutritionist-verified"*; Claude NU-F1 *"conflicting entries that plague crowdsourced databases"*); barcode; meal memory / copy / favourites / quick-add (all-three FL-Q5); Cronometer-grade micronutrients (Gemini NU-F3, Claude NU-F2); AI photo logging fast but 15–40% error (all-three, rated unreliable).
 - **WHERE WE LEAD:** meal-memory depth — per-meal "Add again" pre-filling last portion (`FoodSearchScreen.js:104,:737`), multi-add plate (`:234-306`), one-tap curated meal (`:380`), copy-yesterday + save-as-meal + bulk ops (`DiaryScreen.js:459,:365,:300-343`) — beyond the documented copy/recents/favourites bar. Plus **deterministic two-step OCR label scanning** (`ScanLabelScreen.js` — front-of-pack + nutrition-panel via on-device MLKit, Cronometer-style; registered `RootNavigator.js:246-250`) that captures name+macros **without the 15–40% error of AI photo-vision logging** (the bar's documented weakness), and **barcode** (`FoodSearchScreen.js:594`). *(Both were dropped from the first FL grading — the research's "AI photo logging" bar was treated as competitor-only when we ship an on-device OCR equivalent; surfaced by the Section-7 sweep.)*
-- **WHERE WE LAG:** **UK food-DB quality** — our branded source is **OpenFoodFacts, crowdsourced by design** (`food/seed.js:7-8`), on the wrong side of the documented curated-vs-crowdsourced line; CoFID adds only ~3k verified generics. Micronutrient depth below Cronometer.
+- **WHERE WE LAG:** **UK food-DB quality** — our branded source is **OpenFoodFacts, crowdsourced by design** (`food/seed.js:7-8`); CoFID adds ~3k verified generics. Micronutrient depth below Cronometer. **[FOUNDER 2026-06-14: DEFERRED, not an oversight — we ship UK supermarket via 3 sources; the paid curated/verified (Nutracheck-grade) tier is a deliberate cost decision, revisit on traction. Reclassified lag → deferred.]**
 - **MISSING ENTIRELY:** vitamins/minerals/NRV tracking (schema = fibre/sodium/sugar only, `food/db.js:240`); weekday→weekend calorie-banking planner.
 - **VERIFICATION:** DB-curation lag = VERIFIED (ours = OFF per `food/seed.js:7`; OFF=crowdsourced per OFF's own model; bar corroborated all-three); meal-memory LEAD = VERIFIED(ours); micronutrient MISSING = VERIFIED. **NOT FOUND:** per-item log speed — *missing data point: corroborated/public seconds-or-taps to log one food* (Gemini 45–90s is single + simulated).
 
@@ -340,6 +340,9 @@ corroboration only** — their unique claims are SINGLE-SOURCE SIMULATED. Our si
 **guessed our implementation wrong**, the guess is corrected and marked **[our-side]**. Engine boundary respected:
 every "elevate" item is deterministic or flagged for a founder decision.
 
+**FOUNDER DECISIONS on these items are logged in `pass3-v2-founder-decisions.md`** (per-item ACCEPTED/REJECTED/
+MAYBE/DEFERRED/REFRAME) — decided cells are tagged inline below.
+
 **METHOD (founder-directed): NO rerun.** The researchers' guesses about our side are an artefact of my brief
 under-describing us, not a research failure. So their reports are used **only as the best-in-class / competitor
 bar** (the part they were for, and which holds); WHERE-WE-LEAD/LAG is re-derived against our actual code,
@@ -368,7 +371,8 @@ read-backed, **ruling out every "gap" that is already built.**
 - **WHERE WE LAG:** cardio **sessions** manual-only — no passive cardio-session/HR ingestion (`health.js` reads
   steps+weight, no HRV/sleep); reverse-chrono history = no trend/adherence analytics (`CardioHistoryScreen`).
 - **HOW TO ELEVATE:** (1) read-only Apple Health/Health Connect cardio-session + HR import, feedback-only,
-  deterministic model preserved (all-3; engine-safe). (2) cardio trend/adherence view (prescribed/completed/%).
+  deterministic model preserved (all-3; engine-safe) — **[FOUNDER: MAYBE, parked]**. (2) cardio trend/adherence
+  view (prescribed/completed/%) [undecided].
   (3) "cardio lever engaged + why" explainer. *SINGLE-SOURCE SIMULATED:* interference-effect 12h flag (Gemini).
 - **VERIFICATION:** no-add-back LEAD = VERIFIED (Claude MF docs + all-3); wearable-session-import LAG = VERIFIED
   (competitors documented, Claude) + our-side read; HRV absent = VERIFIED (our MF row). Burn-inaccuracy thesis
@@ -384,13 +388,16 @@ read-backed, **ruling out every "gap" that is already built.**
 - **WHERE WE LAG:** (1) no anti-repetition guarantee (week 3-4 fatigue — Claude VERIFIED reviews); (2) no
   UK-availability / supermarket-branded generation (Claude+Gemini — **the wedge**); (3) no automated grocery-list
   aggregation (ETM bar); (4) no batch/leftover distribution.
-- **HOW TO ELEVATE:** (1) **supermarket-specific deterministic generation** (branded UK items — biggest UK wedge,
-  all-3); (2) anti-repetition guarantee (no repeat within N days unless pinned); (3) auto grocery aggregation +
-  UK pack-size rounding; (4) batch "cook once eat twice." All engine-safe (deterministic).
+- **HOW TO ELEVATE:** (1) supermarket-specific deterministic generation — **[FOUNDER: we already ship UK
+  supermarket via 3 sources; the paid curated/verified (Nutracheck-grade) tier is DEFERRED until traction — a
+  cost decision, not an oversight]**; (2) anti-repetition guarantee [undecided]; (3) auto grocery aggregation
+  [undecided]; (4) batch "cook once eat twice" [undecided]. All engine-safe (deterministic). Note: the
+  **bodybuilding-meals scoping** (from RC reframe) feeds this planner.
 - **VERIFICATION:** repetition + US-food-bias LAG = VERIFIED (Claude reviews); **UK-DB wedge = VERIFIED
   (Claude+Gemini, Nutracheck sourced) — corroborates + sources our existing FL/NU crowdsourced-vs-curated lag**;
-  grocery/batch = corroborated (Claude+Gemini). NOT FOUND: quantified week-3-4 abandonment rate (Claude single
-  review = PARTIAL).
+  grocery/batch = corroborated (Claude+Gemini). **UK-DB = curated tier DEFERRED by founder (cost-gated), NOT an
+  unaddressed lag — we ship UK supermarket via 3 sources today.** NOT FOUND: quantified week-3-4 abandonment rate
+  (Claude single review = PARTIAL).
 
 ## RECIPES (RC)
 - **BEST IN CLASS:** MacroFactor — URL paste→auto-parse + **"Total Weight" cooked-yield** (Claude VERIFIED, MF
@@ -401,9 +408,11 @@ read-backed, **ruling out every "gap" that is already built.**
   — the photo half of "photo/text import" via on-device MLKit, no LLM** [our-side, FL row].
 - **WHERE WE LAG:** (1) no URL recipe import (table-stakes — Claude+Gemini); (2) total-servings scaling vs
   cooked-weight yield (Claude leftover-pain quote + Gemini "cooked yield problem"); (3) nested recipes (all-3).
-- **HOW TO ELEVATE:** (1) **deterministic schema.org/Recipe JSON-LD URL parser → UK DB** (Gemini named the
-  engine-safe method; Claude corroborates demand — NO LLM); (2) cooked-mass yield scaling (input cooked grams →
-  macros/1g); (3) nested "base recipe" components.
+- **HOW TO ELEVATE:** (1) ~~URL recipe parser~~ **REJECTED (founder 2026-06-14: "sounds stupid, nobody would do
+  that; this isn't a recipe book")** → REFRAME: **scope curated bodybuilding meals** (physique-appropriate,
+  high-protein, UK-buyable, deterministic) for the planner — NOT a recipe importer (see decisions log);
+  (2) cooked-mass yield scaling (input cooked grams → macros/1g) [undecided]; (3) nested "base recipe"
+  components [undecided].
 - **VERIFICATION:** URL-import LAG = VERIFIED (Claude: MFP + MF changelog); cooked-yield LAG = VERIFIED (Claude
   quote + Gemini); JSON-LD method = engine-safe (deterministic; Gemini single-source but architecturally sound).
 
@@ -454,14 +463,14 @@ read-backed, **ruling out every "gap" that is already built.**
   the bar** [our-side: `ActiveWorkoutScreen.js:41-45` — straight/warm-up/drop-set/myo-reps/rest-pause/AMRAP with
   correct volume-counting rules, vs Hevy's basic warmup/drop/failure], and **RIR is recorded per set**
   (`DEFAULT_SET rir`).
-- **WHERE WE LAG:** (1) **plate calculator built-but-unwired** [our sweep; Strong has it built-in — corroborated
-  bar]; (2) no standalone phone-free watch (our MF lag; Strong/Hevy have it — Claude+Gemini); (3) RIR recorded per
+- **WHERE WE LAG:** (1) ~~plate calculator built-but-unwired~~ **REJECTED (founder: "lame, bloat; UK plates are
+  10/20kg, counting isn't hard")** — will NOT wire; component is dead code (flag for removal); (2) no standalone
+  phone-free watch (our MF lag; Strong/Hevy have it — Claude+Gemini); (3) RIR recorded per
   set but **no per-set RIR *input* surface** (the picker was removed — `SetEntry.js:141-144`), so the user can't
   override the default mid-set [our-side PARTIAL]; (4) mid-session substitution without breaking the template
   (all-3). [Ruled out: "set-type tags missing" — they exist and exceed the bar (see LEAD). Per-exercise kg/lb =
   deliberate kg-only UK decision, `SetEntry.js:15-16` — **founder call**, not auto-lag.]
-- **HOW TO ELEVATE:** (1) **wire the existing `PlateCalculator` into the workout flow** (low-effort — closes a
-  built feature); (2) RIR/RPE per-set stepper surfaced + linked to a deterministic deload prompt (Gemini);
+- **HOW TO ELEVATE:** (1) ~~wire the existing `PlateCalculator`~~ **REJECTED (founder — bloat)**; (2) RIR/RPE per-set stepper surfaced + linked to a deterministic deload prompt (Gemini);
   (3) live biomechanical-equivalent substitution keeping volume tracking (Gemini+Claude); (4) standalone watch;
   (5) set-type tags. Avoid Strong's reorder-reset / replace-erases-notes (Claude VERIFIED dated quotes).
 - **VERIFICATION:** Strong friction = VERIFIED (Claude dated quotes); Hevy loved-builder = VERIFIED (Claude);
