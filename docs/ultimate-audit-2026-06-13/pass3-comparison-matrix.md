@@ -35,7 +35,7 @@ are NOT FOUND, not fabricated. Quality = capability + execution; only micro-UX t
 ## FOOD-LOGGING (FL)
 - **BEST IN CLASS:** curated/nutritionist-**verified** UK DB (Nutracheck ~500K) explicitly beats
   **crowdsourced** entries (ChatGPT NU-F1; Gemini NU-F2 *"crowded, unverified, user-generated entries… Nutracheck nutritionist-verified"*; Claude NU-F1 *"conflicting entries that plague crowdsourced databases"*); barcode; meal memory / copy / favourites / quick-add (all-three FL-Q5); Cronometer-grade micronutrients (Gemini NU-F3, Claude NU-F2); AI photo logging fast but 15–40% error (all-three, rated unreliable).
-- **WHERE WE LEAD:** meal-memory depth — per-meal "Add again" pre-filling last portion (`FoodSearchScreen.js:104,:737`), multi-add plate (`:234-306`), one-tap curated meal (`:380`), copy-yesterday + save-as-meal + bulk ops (`DiaryScreen.js:459,:365,:300-343`) — beyond the documented copy/recents/favourites bar.
+- **WHERE WE LEAD:** meal-memory depth — per-meal "Add again" pre-filling last portion (`FoodSearchScreen.js:104,:737`), multi-add plate (`:234-306`), one-tap curated meal (`:380`), copy-yesterday + save-as-meal + bulk ops (`DiaryScreen.js:459,:365,:300-343`) — beyond the documented copy/recents/favourites bar. Plus **deterministic two-step OCR label scanning** (`ScanLabelScreen.js` — front-of-pack + nutrition-panel via on-device MLKit, Cronometer-style; registered `RootNavigator.js:246-250`) that captures name+macros **without the 15–40% error of AI photo-vision logging** (the bar's documented weakness), and **barcode** (`FoodSearchScreen.js:594`). *(Both were dropped from the first FL grading — the research's "AI photo logging" bar was treated as competitor-only when we ship an on-device OCR equivalent; surfaced by the Section-7 sweep.)*
 - **WHERE WE LAG:** **UK food-DB quality** — our branded source is **OpenFoodFacts, crowdsourced by design** (`food/seed.js:7-8`), on the wrong side of the documented curated-vs-crowdsourced line; CoFID adds only ~3k verified generics. Micronutrient depth below Cronometer.
 - **MISSING ENTIRELY:** vitamins/minerals/NRV tracking (schema = fibre/sodium/sugar only, `food/db.js:240`); weekday→weekend calorie-banking planner.
 - **VERIFICATION:** DB-curation lag = VERIFIED (ours = OFF per `food/seed.js:7`; OFF=crowdsourced per OFF's own model; bar corroborated all-three); meal-memory LEAD = VERIFIED(ours); micronutrient MISSING = VERIFIED. **NOT FOUND:** per-item log speed — *missing data point: corroborated/public seconds-or-taps to log one food* (Gemini 45–90s is single + simulated).
@@ -325,3 +325,8 @@ These are the points where the 3 reports do **not** give a credible bar, so grad
    can't say if they're even gaps. Targeted research needed before grading.
 5. **Coverage gaps in the substrate itself** — DE/NA leaned on one model (Gemini); a re-run with all three
    forced to answer DE/NA would corroborate or overturn the current single-source UX findings.
+6. **Whole feature domains outside the 15 research areas** (from the Section-7 sweep, `pass3-section7-sweep.md`)
+   — **cardio logging, smart meal-planning, recipes, food-insights/analytics, annual recap, manual workout
+   builder**. These ship in the app (read-confirmed screens) but the 15-area prompt never gathered a competitor
+   bar for them, so they can't be graded. Each needs a bar (Strava/Apple Fitness; Eat This Much/MacroFactor;
+   MFP/Cronometer recipes; MacroFactor analytics; Strava year-in-sport; Strong/Hevy builders), then a matrix row.

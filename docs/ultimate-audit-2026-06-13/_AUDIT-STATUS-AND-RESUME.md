@@ -96,8 +96,13 @@ file at the end of every working session.
     (dedicated teardown — approved); DE premium-feel ranking; micro-UX timing cells (WS/FL/ON/NA); niche ABSENT
     features with no market bar (velocity/tempo, VBT, mood correlation, wellbeing-correlation output); DE/NA
     substrate is single-source (Gemini) — a 3-AI re-run would corroborate/overturn.
-  - **COMPLETENESS LIMIT:** reconciliation covers the 19 mandated features only; a full guarantee needs the
-    **Section-7 79-screen sweep**, NOT yet run against the matrix.
+  - **SECTION-7 SWEEP — ✅ DONE** (`pass3-section7-sweep.md`): all 77 `src/screens/*.js` classified A
+    (infra) / B-cov / B-DROP. **Headline finding:** six feature domains sit OUTSIDE the 15 research areas and
+    were never graded (no research bar gathered) — **cardio logging, smart meal-planning, recipes,
+    food-insights/analytics, annual recap (Year of Lifts), manual workout builder**. Plus a dropped LEAD now
+    corrected: `ScanLabelScreen` (on-device two-step OCR, Cronometer-style) is the FL "AI photo logging" bar —
+    FL row updated to credit it. Remaining limit: component-level surfaces (modals inside screens) not swept;
+    screen-level coverage is now 100%.
 
 ### PASS 4 — BLUEPRINTS — ▶ NOT STARTED (awaiting founder go + the area open-question decisions)
 
