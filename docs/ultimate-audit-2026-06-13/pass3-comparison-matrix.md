@@ -87,8 +87,15 @@ are NOT FOUND, not fabricated. Quality = capability + execution; only micro-UX t
 - **MISSING ENTIRELY:** named autonomy-mode toggle.
 - **VERIFICATION:** register/disclosure LEAD = VERIFIED (ours) + corroborated; autonomy-modes MISSING = VERIFIED (ours) / bar SINGLE-SOURCE (Gemini). No NOT-FOUND.
 
+## CHECK-IN (CK)
+- **BEST IN CLASS:** short + conditional check-in — Carbon ~3 questions, branches on adherence (Claude CK-F1, joincarbon); wellbeing/recovery inputs (sleep/soreness/readiness) → rest-day rec (Juggernaut, Claude CK-F2); **auto-pull logged data, confirm don't re-enter** (Gemini CK-F3, trainerize); menstrual accounting (Carbon).
+- **WHERE WE LEAD:** **auto-derivation** — training verdict from sessions+PRs+volume-delta (`deriveTrainingPerformance :85-95`), calorie adherence from diary rollups (`deriveCalsAdherence :102-111`), steps from registered data, cardio compliance from the log (`load :395-496`); the user *confirms a derived verdict*, beyond the "auto-pull a number" bar. **Fast Check-In** collapses to the **two** non-derivable inputs (energy + soreness) when all else is derived (`fastEligible :550-556`, `renderFastCheckIn :1071`) — shorter than Carbon's 3-question. Conditional branching: cycle (female+opt-in), sore-muscles (soreness≥2), cardio (prescription), calorie (targets set) — `:769-907`. Menstrual accounting present (`showCycle`, `:769-785`). Wellbeing depth (energy/stress/sleep/soreness/sore-muscles/joint/notes) feeds recovery + safety.
+- **WHERE WE LAG:** none on a corroborated capability bar.
+- **MISSING ENTIRELY:** none vs the bar.
+- **VERIFICATION:** short+conditional + fast-path = VERIFIED (ours) / bar corroborated (Claude+Gemini); auto-derivation LEAD = VERIFIED (ours) / bar PARTIAL (Gemini single, trainerize-sourced); menstrual MATCH = VERIFIED. No NOT-FOUND.
+
 ---
-(Areas remaining, reading our side in full first: onboarding, navigation, design, newbie-experience, check-in.)
+(Areas remaining, reading our side in full first: onboarding, navigation, design, newbie-experience.)
 
 ## CONSOLIDATED NOT-FOUND CELLS (for your per-cell targeted-teardown decision) — running list
 1. **WS — taps-to-log a set + keyboard-completion behaviour** for Strong/Hevy (only Gemini-simulated + one reddit quote; no corroborated/public number).
