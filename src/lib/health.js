@@ -13,6 +13,9 @@
  *
  * Read scopes supported so far:
  *   - 'weight'   bodyweight in kilograms
+ *   - 'steps'    daily step count
+ *   - 'cardio'   completed cardio sessions + their heart rate (read-only,
+ *                feedback-only; ULTIMATE-CUX-PCI)
  *
  * Write scopes planned (not yet wired):
  *   - 'workout'  log Volyume sessions back to Health
@@ -53,6 +56,14 @@ function _iosPermsForScopes(scopes) {
     if (scopes.includes('workout')) {
       writes.push(C.Permissions.Workout);
       writes.push(C.Permissions.ActiveEnergyBurned);
+    }
+    // Passive cardio import (ULTIMATE-CUX-PCI): READ-only workout sessions + the
+    // heart rate / energy / distance attached to them. Read-only, feedback-only.
+    if (scopes.includes('cardio')) {
+      reads.push(C.Permissions.Workout);
+      reads.push(C.Permissions.HeartRate);
+      reads.push(C.Permissions.ActiveEnergyBurned);
+      reads.push(C.Permissions.DistanceWalkingRunning);
     }
   }
   return { permissions: { read: reads, write: writes } };
@@ -192,6 +203,14 @@ export async function requestHealthPermissions(scopes = ['weight']) {
         recordTypes.push({ accessType: 'write', recordType: 'ExerciseSession' });
         recordTypes.push({ accessType: 'write', recordType: 'ActiveCaloriesBurned' });
       }
+      // Passive cardio import (ULTIMATE-CUX-PCI): READ exercise sessions + the
+      // heart rate / distance / energy attached to them.
+      if (scopes.includes('cardio')) {
+        recordTypes.push({ accessType: 'read', recordType: 'ExerciseSession' });
+        recordTypes.push({ accessType: 'read', recordType: 'HeartRate' });
+        recordTypes.push({ accessType: 'read', recordType: 'Distance' });
+        recordTypes.push({ accessType: 'read', recordType: 'ActiveCaloriesBurned' });
+      }
       const granted = await HC.requestPermission(recordTypes);
       const grantedCount = Array.isArray(granted) ? granted.length : -1;
       const allGranted = grantedCount >= recordTypes.length;
@@ -261,6 +280,9 @@ export async function getHealthPermissionStatus(scopes = ['weight']) {
       if (scopes.includes('steps')) ok = ok && want('Steps', 'read');
       if (scopes.includes('workout')) {
         ok = ok && want('ExerciseSession', 'write') && want('ActiveCaloriesBurned', 'write');
+      }
+      if (scopes.includes('cardio')) {
+        ok = ok && want('ExerciseSession', 'read') && want('HeartRate', 'read');
       }
       return ok ? 'granted' : 'denied';
     } catch (_) { return 'denied'; }
@@ -652,5 +674,259 @@ export async function importNewWeights(userId) {
   }
 
   if (latestMs > sinceMs) await setLastImportMs(userId, latestMs);
+  return { imported, latestMs };
+}
+
+// ─── Passive cardio import (ULTIMATE-CUX-PCI) ─────────────────────────
+
+// Cardio uses its OWN import cursor, separate from the weight cursor above, so
+// advancing one never makes the other skip samples.
+const CARDIO_IMPORT_KEY_PFX = '@volyume_health_cardio_last_import_';
+
+export async function getLastCardioImportMs(userId) {
+  if (!userId) return 0;
+  try {
+    const raw = await AsyncStorage.getItem(CARDIO_IMPORT_KEY_PFX + userId);
+    const n = raw ? parseInt(raw, 10) : 0;
+    return Number.isFinite(n) ? n : 0;
+  } catch (_) { return 0; }
+}
+
+export async function setLastCardioImportMs(userId, ms) {
+  if (!userId) return;
+  try { await AsyncStorage.setItem(CARDIO_IMPORT_KEY_PFX + userId, String(ms)); }
+  catch (_) {}
+}
+
+// The cardio_log.source value for imported rows (a stable platform tag, distinct
+// from the human label getHealthProviderLabel()). Used for de-dup/analytics and
+// to drive the "from {provider}" row tag (NA-cux-6).
+export function getHealthSourceTag() {
+  if (Platform.OS === 'ios') return 'apple_health';
+  if (Platform.OS === 'android') return 'health_connect';
+  return 'health';
+}
+
+// Average heart rate (bpm) within a window, best-effort. Returns null on any
+// failure / no samples. iOS + Android variants.
+async function _avgHeartRateIos(HK, startISO, endISO) {
+  if (!HK?.getHeartRateSamples) return null;
+  try {
+    const samples = await new Promise(resolve => {
+      try {
+        HK.getHeartRateSamples({ startDate: startISO, endDate: endISO }, (err, results) => {
+          resolve(err ? [] : (results || []));
+        });
+      } catch (_) { resolve([]); }
+    });
+    const vals = samples.map(s => Number(s?.value)).filter(v => Number.isFinite(v) && v > 0);
+    if (!vals.length) return null;
+    return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+  } catch (_) { return null; }
+}
+
+async function _avgHeartRateAndroid(HC, startTime, endTime) {
+  if (!HC?.readRecords) return null;
+  try {
+    const res = await HC.readRecords('HeartRate', {
+      timeRangeFilter: { operator: 'between', startTime, endTime },
+    });
+    const vals = [];
+    for (const rec of (res?.records || [])) {
+      for (const s of (rec?.samples || [])) {
+        const bpm = Number(s?.beatsPerMinute);
+        if (Number.isFinite(bpm) && bpm > 0) vals.push(bpm);
+      }
+    }
+    if (!vals.length) return null;
+    return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+  } catch (_) { return null; }
+}
+
+/**
+ * Read completed cardio SESSIONS from Health since `sinceMs` (ULTIMATE-CUX-PCI),
+ * newest-first. Each entry:
+ *   { extId, startMs, durationMin, distance, avgHr, estKcal, activityName, source }
+ * `extId` is the platform sample's stable id (HealthKit UUID / Health Connect
+ * record id), used to de-dup re-imports (NA-cux-4). Best-effort and NEVER throws
+ * (mirrors readWeightsSince): a missing field or failed read yields [] / nulls.
+ *
+ * NOTE (device-verified): distance/avgHr/estKcal and the native sample shapes
+ * cannot be exercised in CI, so they are read defensively and confirmed by the
+ * founder device-walk. durationMin is derived from start/end (unambiguous).
+ */
+export async function readCardioSessionsSince(sinceMs = 0) {
+  if (!isHealthAvailable()) return [];
+  const startISO = new Date(Math.max(0, sinceMs)).toISOString();
+  const endISO = new Date().toISOString();
+
+  if (Platform.OS === 'ios') {
+    const HK = getIosModule();
+    if (!HK?.getAnchoredWorkouts) return [];
+    const workouts = await new Promise(resolve => {
+      try {
+        HK.getAnchoredWorkouts({ startDate: startISO, endDate: endISO }, (err, results) => {
+          if (err) { resolve([]); return; }
+          resolve(results?.data || results || []);
+        });
+      } catch (_) { resolve([]); }
+    });
+    const out = [];
+    for (const w of (Array.isArray(workouts) ? workouts : [])) {
+      const startMs = w?.start ? new Date(w.start).getTime() : null;
+      const endMs = w?.end ? new Date(w.end).getTime() : null;
+      if (!startMs) continue;
+      const durationMin = (endMs && endMs > startMs)
+        ? Math.round((endMs - startMs) / 60000)
+        : Math.round((Number(w?.duration) || 0) / 60);
+      // eslint-disable-next-line no-await-in-loop
+      const avgHr = await _avgHeartRateIos(HK, w?.start ?? startISO, w?.end ?? endISO);
+      out.push({
+        extId: w?.id ? String(w.id) : null,
+        startMs,
+        durationMin,
+        distance: w?.distance != null ? Number(w.distance) : null,
+        avgHr,
+        estKcal: w?.calories != null ? Math.round(Number(w.calories)) : null,
+        activityName: w?.activityName || 'Cardio',
+        source: w?.sourceName || 'Apple Health',
+      });
+    }
+    out.sort((a, b) => b.startMs - a.startMs);
+    return out;
+  }
+
+  if (Platform.OS === 'android') {
+    const HC = getAndroidModule();
+    if (!HC?.readRecords) return [];
+    let records = [];
+    try {
+      const res = await HC.readRecords('ExerciseSession', {
+        timeRangeFilter: { operator: 'between', startTime: startISO, endTime: endISO },
+      });
+      records = res?.records || [];
+    } catch (_) { return []; }
+    const out = [];
+    for (const r of records) {
+      const startMs = r?.startTime ? new Date(r.startTime).getTime() : null;
+      const endMs = r?.endTime ? new Date(r.endTime).getTime() : null;
+      if (!startMs) continue;
+      const durationMin = (endMs && endMs > startMs) ? Math.round((endMs - startMs) / 60000) : 0;
+      // eslint-disable-next-line no-await-in-loop
+      const avgHr = await _avgHeartRateAndroid(HC, r?.startTime ?? startISO, r?.endTime ?? endISO);
+      out.push({
+        extId: r?.metadata?.id ? String(r.metadata.id) : null,
+        startMs,
+        durationMin,
+        distance: null, // HC distance is a separate record type; left null until device-verified
+        avgHr,
+        estKcal: null,
+        activityName: r?.title || r?.exerciseType || 'Cardio',
+        source: r?.metadata?.dataOrigin || 'Health Connect',
+      });
+    }
+    out.sort((a, b) => b.startMs - a.startMs);
+    return out;
+  }
+
+  return [];
+}
+
+/**
+ * Pure: decide which read sessions to import, given the cursor and the set of
+ * platform ids already in cardio_log. De-dups on extId (NA-cux-4). Manual rows
+ * are not represented here, so a manually-logged session is inherently kept
+ * (NA-cux-7 keep-both). Returns the sessions to insert (cursor-filtered,
+ * de-duped) and the advanced cursor.
+ */
+export function planCardioImport(sessions, sinceMs = 0, existingExtIds = new Set()) {
+  const since = Number(sinceMs) || 0;
+  const toInsert = [];
+  let latestMs = since;
+  for (const s of (Array.isArray(sessions) ? sessions : [])) {
+    if (!s || !s.startMs || s.startMs <= since) continue;
+    if (s.startMs > latestMs) latestMs = s.startMs; // advance past everything seen
+    if (s.extId && existingExtIds.has(s.extId)) continue; // already imported
+    toInsert.push(s);
+  }
+  return { toInsert, latestMs };
+}
+
+/**
+ * Pure: map a normalised cardio session to the insertCardioLog payload. The
+ * kcal estimate is feedback-only and is never added to a calorie target.
+ */
+export function cardioSessionToLog(session, { sourceTag = 'health', dayKeyFn = null } = {}) {
+  const startMs = session?.startMs ?? null;
+  return {
+    entryDate: (dayKeyFn && startMs) ? dayKeyFn(startMs) : undefined,
+    activityName: session?.activityName || 'Cardio',
+    durationMin: Math.max(0, Math.round(Number(session?.durationMin) || 0)),
+    intensity: 'moderate',
+    distance: session?.distance != null ? Number(session.distance) : null,
+    avgHr: session?.avgHr != null ? Math.round(Number(session.avgHr)) : null,
+    estKcal: session?.estKcal != null ? Math.max(0, Math.round(Number(session.estKcal))) : null,
+    source: sourceTag,
+    extId: session?.extId ?? null,
+  };
+}
+
+/**
+ * Pull new cardio sessions from Health since the cardio cursor, write them into
+ * cardio_log (source = platform tag, ext_id = platform sample id), advance the
+ * cursor. Read-only + feedback-only; the kcal estimate is never added to a food
+ * target. De-dups on ext_id (NA-cux-4); manual sessions are left untouched
+ * (NA-cux-7 keep-both). Never throws (mirrors importNewWeights): one bad row
+ * warns and the loop continues. Safe from foreground listeners + Settings.
+ */
+export async function importNewCardio(userId) {
+  if (!userId) return { imported: 0, latestMs: 0 };
+  const status = await getHealthPermissionStatus(['cardio']);
+  if (status !== 'granted') return { imported: 0, latestMs: 0 };
+
+  const sinceMs = await getLastCardioImportMs(userId);
+  const sessions = await readCardioSessionsSince(sinceMs);
+  if (!sessions?.length) return { imported: 0, latestMs: sinceMs };
+
+  let insertCardioLog = null;
+  let cardioExtIdExists = null;
+  try {
+    // eslint-disable-next-line global-require
+    ({ insertCardioLog, cardioExtIdExists } = require('./database'));
+  } catch (_) { return { imported: 0, latestMs: sinceMs }; }
+
+  let localDayKey = null;
+  try {
+    // eslint-disable-next-line global-require
+    ({ localDayKey } = require('./dayKey'));
+  } catch (_) { localDayKey = null; }
+
+  // Build the set of platform ids already imported, so planCardioImport can
+  // de-dup re-runs without inserting then catching a unique-constraint throw.
+  const existing = new Set();
+  for (const s of sessions) {
+    if (!s?.extId) continue;
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      if (await cardioExtIdExists(userId, s.extId)) existing.add(s.extId);
+    } catch (_) { /* treat as not-existing; the unique index backstops a race */ }
+  }
+
+  const { toInsert, latestMs } = planCardioImport(sessions, sinceMs, existing);
+  const sourceTag = getHealthSourceTag();
+
+  let imported = 0;
+  for (const s of toInsert) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await insertCardioLog(userId, cardioSessionToLog(s, { sourceTag, dayKeyFn: localDayKey }));
+      imported += 1;
+    } catch (_) {
+      // eslint-disable-next-line global-require
+      try { require('./errorLog').logWarn('health.importNewCardio', 'save failed', { error: 'one row' }); } catch (__) {}
+    }
+  }
+
+  if (latestMs > sinceMs) await setLastCardioImportMs(userId, latestMs);
   return { imported, latestMs };
 }
