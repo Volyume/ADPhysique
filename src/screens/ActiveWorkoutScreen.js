@@ -973,6 +973,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     startRestTimer(20);
   }
 
+  // Keyboard-completes-the-set (ULTIMATE-WR-1): the reps field's Done key and
+  // the Complete-set button share ONE guarded completion, so cluster set-types
+  // still start a cluster and unilateral/normal sets call handleCompleteSet().
+  // Respects the same `saving` guard the button's disabled state enforces, so a
+  // double Done cannot double-log.
+  function handleCompleteSetPress() {
+    if (saving) return;
+    const uni = exercise ? unilateralExercises.has(exercise.id) : false;
+    if (isClusterType(currentSet.setType) && !uni) return startCluster();
+    return handleCompleteSet();
+  }
+
   function addMiniSet() {
     const n = parseInt(clusterReps, 10);
     if (!Number.isFinite(n) || n <= 0) {
@@ -1760,6 +1772,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               }}
               units={units}
               isWarmup={currentSet.setType === 'warmup'}
+              onSubmitComplete={handleCompleteSetPress}
             />
 
             {showNoteInput ? (
@@ -1865,11 +1878,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <TouchableOpacity
               testID="volyume-btn-complete-set"
               style={[styles.completeBtn, saving && styles.btnDisabled, currentSet.setType === 'warmup' && styles.completeBtnWarmup]}
-              onPress={() => {
-                const uni = exercise ? unilateralExercises.has(exercise.id) : false;
-                if (isClusterType(currentSet.setType) && !uni) return startCluster();
-                return handleCompleteSet();
-              }}
+              onPress={handleCompleteSetPress}
               disabled={saving}
               accessibilityRole="button"
               accessibilityLabel={

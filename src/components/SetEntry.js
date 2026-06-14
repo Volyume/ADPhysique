@@ -6,7 +6,7 @@ import { calculate1RM } from '../lib/algorithms';
 import InfoTooltip from './InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 
-export default function SetEntry({ value, onChange, units = 'kg', isWarmup = false }) {
+export default function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitComplete }) {
   const { weight, reps, isGhost } = value;
   const repsRef = useRef(null);
 
@@ -123,7 +123,11 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
             }}
             keyboardType="number-pad"
             returnKeyType="done"
-            onSubmitEditing={() => Keyboard.dismiss()}
+            // Keyboard-completes-the-set (ULTIMATE-WR-1): reps is the last field,
+            // so its Done key logs the set directly. Falls back to dismissing the
+            // keyboard when no handler is supplied, so other call sites are
+            // unaffected.
+            onSubmitEditing={() => (onSubmitComplete ? onSubmitComplete() : Keyboard.dismiss())}
             selectTextOnFocus
             accessibilityLabel="Number of reps"
           />
