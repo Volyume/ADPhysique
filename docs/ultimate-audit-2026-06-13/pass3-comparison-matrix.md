@@ -122,8 +122,32 @@ are NOT FOUND, not fabricated. Quality = capability + execution; only micro-UX t
   seconds-to-value + taps-per-screen for MacroFactor/Carbon/Hevy onboarding* (un-sourceable beyond editorial
   pattern statements; ours is runtime/device-measured, not in code).
 
+## NAVIGATION (NA)
+- **BEST IN CLASS:** standard bottom-tab IA, ≤5 tabs, primary action (start/log) reachable in ~1–2 taps from
+  the home tab; shallow stacks per tab; tab re-tap resets to the tab root (mobile-IA convention, all-three NA
+  references / editorial UX-pattern). Card-expand "tap a card → it grows" transitions are the modern feel
+  (Whoop/Apple Health, pattern statement).
+- **WHERE WE LEAD:** clean 5-tab bottom nav within the ≤5 ceiling — **Train / Plans / Diary / Progress / You**
+  (`RootNavigator.js:445-449`), each its own stack (`HomeStack:285`, `PlansStack:311`, `DiaryStack:217`,
+  `ProgressStack:334`, `ProfileStack:364`); **tab re-tap pops the stack to root** on every tab
+  (`:218-221,:286-289,:312-315,:335-338,:365-368`); **accessibility is wired into the chrome** — tab labels
+  tokenised so they scale with larger-text (`:430-432`), bottom-inset padding for edge-to-edge OS chrome
+  (`:415-427`), and a global **Reduce-Motion** override that disables stack animation live
+  (`:212-215,:224`); **card-expand hero-zoom** transition matching the Whoop/Apple-Health pattern for
+  ActiveWorkout/Summary (`:183-207,:295-296`). Pro-only destinations are guarded at every entry point so IA
+  never dead-ends a free user into a paywalled screen by surprise (`withProGuard` `:149-162`).
+- **WHERE WE LAG:** none on a corroborated capability bar — bottom-tab IA, ≤5 tabs, reset-on-retap, and
+  modern transitions are all present. (Deep Settings nesting under You is a long stack `:373-407`, but that is
+  the documented-acceptable place for depth, not a primary-flow lag.)
+- **MISSING ENTIRELY:** none vs the corroborated bar.
+- **VERIFICATION:** 5-tab bottom IA + reset-on-retap + accessibility chrome + hero-zoom LEAD = VERIFIED (ours
+  read) / bar = mobile-IA convention (VERIFIED as a pattern, editorial). **NOT FOUND:** exact **taps-to-primary-
+  action** benchmark for the named competitors — *missing data point: corroborated/public tap-count from app
+  open to "start workout"/"log food" for Strong/Hevy/MacroFactor* (un-sourceable beyond the general 1–2-tap
+  pattern; ours is a runtime/device count, not in code).
+
 ---
-(Areas remaining, reading our side in full first: navigation, design, newbie-experience.)
+(Areas remaining, reading our side in full first: design, newbie-experience.)
 
 ## CONSOLIDATED NOT-FOUND CELLS (for your per-cell targeted-teardown decision) — running list
 1. **WS — taps-to-log a set + keyboard-completion behaviour** for Strong/Hevy (only Gemini-simulated + one reddit quote; no corroborated/public number).
