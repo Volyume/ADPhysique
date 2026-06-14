@@ -327,6 +327,149 @@ These are the points where the 3 reports do **not** give a credible bar, so grad
    forced to answer DE/NA would corroborate or overturn the current single-source UX findings.
 6. **Whole feature domains outside the 15 research areas** (from the Section-7 sweep, `pass3-section7-sweep.md`)
    — **cardio logging, smart meal-planning, recipes, food-insights/analytics, annual recap, manual workout
-   builder**. These ship in the app (read-confirmed screens) but the 15-area prompt never gathered a competitor
-   bar for them, so they can't be graded. Each needs a bar (Strava/Apple Fitness; Eat This Much/MacroFactor;
-   MFP/Cronometer recipes; MacroFactor analytics; Strava year-in-sport; Strong/Hevy builders), then a matrix row.
+   builder**. NOW GRADED below (v2 research ran) — kept here as the record of why they were added.
+
+---
+
+# v2 DOMAINS — TRIANGULATED (3 sources; provenance per cell)
+
+Research run 2026-06-14 on the compare-and-elevate brief (`pass2-research-brief-v2-compare-and-elevate.md`).
+**Provenance backbone = Claude (live-browsed + sourced, `pass2-input-v2-02-claude.md`).** ChatGPT
+(`-01`, expert-opinion, unsourced) + Gemini (`-03`, static-dataset, no live browse) add **directional
+corroboration only** — their unique claims are SINGLE-SOURCE SIMULATED. Our side is read-backed; where a source
+**guessed our implementation wrong**, the guess is corrected and marked **[our-side]**. Engine boundary respected:
+every "elevate" item is deterministic or flagged for a founder decision.
+
+## CARDIO (CD)
+- **BEST IN CLASS:** MacroFactor — adherence-neutral deterministic TDEE, *refuses* wearable expenditure for
+  targets, never adds exercise cals (Claude VERIFIED, MF help docs; corroborated CG+GM). Nutracheck keeps exercise
+  cals separate (Claude VERIFIED). Wearable auto-sync (Apple Health/Garmin/Fitbit) is table-stakes across Hevy/
+  Fitbod/Cronometer/Nutracheck (Claude).
+- **WHERE WE LEAD:** no-add-back "burn as feedback only" = exactly MF-endorsed (`LogCardioScreen` header;
+  cardio-as-lever-only-on-stall per ProOnboarding); **steps already auto-read** [our-side: `health.js`
+  readStepsToday] — Gemini's "steps not ingested" is FALSE.
+- **WHERE WE LAG:** cardio **sessions** manual-only — no passive cardio-session/HR ingestion (`health.js` reads
+  steps+weight, no HRV/sleep); reverse-chrono history = no trend/adherence analytics (`CardioHistoryScreen`).
+- **HOW TO ELEVATE:** (1) read-only Apple Health/Health Connect cardio-session + HR import, feedback-only,
+  deterministic model preserved (all-3; engine-safe). (2) cardio trend/adherence view (prescribed/completed/%).
+  (3) "cardio lever engaged + why" explainer. *SINGLE-SOURCE SIMULATED:* interference-effect 12h flag (Gemini).
+- **VERIFICATION:** no-add-back LEAD = VERIFIED (Claude MF docs + all-3); wearable-session-import LAG = VERIFIED
+  (competitors documented, Claude) + our-side read; HRV absent = VERIFIED (our MF row). Burn-inaccuracy thesis
+  VERIFIED (Claude — Stanford 2017, 27% avg error).
+
+## MEAL PLANNING (MP)
+- **BEST IN CLASS:** Eat This Much (deterministic plans to exact targets + constraints, grocery lists, leftover
+  logic — Claude [BROWSED] 4.7★/22k, CNN 2025). Nutracheck curated UK DB (Claude 430k / Gemini 500k) with
+  supermarket + high-street lines.
+- **WHERE WE LEAD:** progressive-disclosure calm plates + honest residual line + day-type chip (`MealPlanScreen`)
+  — more transparent than ETM "spreadsheet" (Claude). Deterministic (no LLM).
+- **WHERE WE LAG:** (1) no anti-repetition guarantee (week 3-4 fatigue — Claude VERIFIED reviews); (2) no
+  UK-availability / supermarket-branded generation (Claude+Gemini — **the wedge**); (3) no automated grocery-list
+  aggregation (ETM bar); (4) no batch/leftover distribution.
+- **HOW TO ELEVATE:** (1) **supermarket-specific deterministic generation** (branded UK items — biggest UK wedge,
+  all-3); (2) anti-repetition guarantee (no repeat within N days unless pinned); (3) auto grocery aggregation +
+  UK pack-size rounding; (4) batch "cook once eat twice." All engine-safe (deterministic).
+- **VERIFICATION:** repetition + US-food-bias LAG = VERIFIED (Claude reviews); **UK-DB wedge = VERIFIED
+  (Claude+Gemini, Nutracheck sourced) — corroborates + sources our existing FL/NU crowdsourced-vs-curated lag**;
+  grocery/batch = corroborated (Claude+Gemini). NOT FOUND: quantified week-3-4 abandonment rate (Claude single
+  review = PARTIAL).
+
+## RECIPES (RC)
+- **BEST IN CLASS:** MacroFactor — URL paste→auto-parse + **"Total Weight" cooked-yield** (Claude VERIFIED, MF
+  changelog v5.7.6 May 2026 "ai photo/text recipe import"; Gemini cooked-yield). MyFitnessPal URL import ~90%
+  match (Claude VERIFIED). Cronometer ingredient builder.
+- **WHERE WE LEAD:** live total+per-serving macro preview, reuse food search, one-tap diary log (`RecipeBuilder`/
+  `MyRecipes`) = on par with MF builder (Claude). **We already ship deterministic OCR label capture (`ScanLabel`)
+  — the photo half of "photo/text import" via on-device MLKit, no LLM** [our-side, FL row].
+- **WHERE WE LAG:** (1) no URL recipe import (table-stakes — Claude+Gemini); (2) total-servings scaling vs
+  cooked-weight yield (Claude leftover-pain quote + Gemini "cooked yield problem"); (3) nested recipes (all-3).
+- **HOW TO ELEVATE:** (1) **deterministic schema.org/Recipe JSON-LD URL parser → UK DB** (Gemini named the
+  engine-safe method; Claude corroborates demand — NO LLM); (2) cooked-mass yield scaling (input cooked grams →
+  macros/1g); (3) nested "base recipe" components.
+- **VERIFICATION:** URL-import LAG = VERIFIED (Claude: MFP + MF changelog); cooked-yield LAG = VERIFIED (Claude
+  quote + Gemini); JSON-LD method = engine-safe (deterministic; Gemini single-source but architecturally sound).
+
+## FOOD INSIGHTS (FI)
+- **BEST IN CLASS:** MacroFactor (smoothed trend, expenditure, adherence%, "why isn't the scale moving" — Claude
+  VERIFIED). Cronometer (84 nutrients, custom date ranges — Claude). Hava "Satiety Score" (Gemini SINGLE-SOURCE
+  SIMULATED).
+- **WHERE WE LEAD:** weekly adherence bars + macro hit-rate + CSV export (`FoodInsightsScreen`); adherence-neutral
+  no-red-bars = ED-safe + MF-praised (Claude); CSV valued by MF users (Claude).
+- **WHERE WE LAG:** (1) 7-day window only — need 14/30/90d (Claude+Gemini); (2) no weak-spot detection (weekend
+  +X kcal); (3) no protein-consistency metric (Claude — most behaviour-relevant); (4) trend smoothing not surfaced
+  in insights [our-side: we compute EWMA in `weeklyCoach` for coaching — verify if exposed here].
+- **HOW TO ELEVATE:** (1) 14/30/90d windows; (2) protein-consistency metric; (3) deterministic weak-spot insight
+  cards; (4) wire analytics into the deterministic weekly decision. *SINGLE-SOURCE SIMULATED:* deterministic
+  Satiety Index (Gemini — engine-safe, buildable from our macros+fibre+weight; founder decision) + menstrual
+  overlay (Gemini — complements our existing cycle accounting, CK lead).
+- **VERIFICATION:** 7-day-only LAG = VERIFIED (Claude+Gemini); MF analytics bar = VERIFIED (Claude); Hava/
+  Satiety-Index/menstrual-overlay = SINGLE-SOURCE SIMULATED (Gemini).
+
+## RECAP (RP)
+- **BEST IN CLASS:** Spotify Wrapped (pattern; 41% YoY shares → ~500M, ~200M users/62hrs — Claude VERIFIED MBW,
+  PARTIAL industry-est). Strava Year in Sport (since 2016, now $80/yr paywalled 2025 — Claude VERIFIED Ars).
+  **Boostcamp already ships a lifting "Wrapped" + weekly Sunday reports** (Claude VERIFIED — direct competitor).
+- **WHERE WE LEAD:** Year of Lifts swipeable one-hero-stat story mirrors the Wrapped pattern (`YearOfLiftsScreen`)
+  — well-judged (all-3).
+- **WHERE WE LAG:** (1) annual-only cadence — need monthly/block recaps (Boostcamp Sunday bar — Claude+Gemini);
+  (2) no shareable image export (acquisition engine — Claude+Gemini); (3) raw absolute tonnage hollow, need
+  relative/milestone framing (Gemini+CG). [our-side: `BlockReflectionScreen` exists — verify if already a block
+  recap, may be PARTIAL.]
+- **HOW TO ELEVATE:** (1) block/meso-cycle "Block Reports" on block completion (Claude+Gemini); (2) shareable
+  9:16 image export, **locally rendered** (CoreGraphics/Canvas) for offline (Gemini — engine/offline-safe);
+  (3) relative/identity framing tied to a PB/behaviour milestone (all-3). *SINGLE-SOURCE:* UK-landmark
+  comparisons (Gemini).
+- **VERIFICATION:** annual-only LAG = VERIFIED (Claude — Boostcamp Sunday); shareability = VERIFIED (Claude+
+  Gemini); Wrapped retention uplift = PARTIAL (Claude caveat — no peer-reviewed fitness stat, industry est).
+
+## BUILDER (BD)
+- **BEST IN CLASS:** Hevy (4.86★/220k — loved builder: fast logging, easy superset/reorder/swap, haptics, Apple
+  Watch live-sync, set-type tags — Claude VERIFIED). Strong (depth + plate calc + rest timers + per-exercise
+  kg/lb mixing) but documented friction. Boostcamp (builder+library, free).
+- **WHERE WE LEAD:** build routine + **activate as training block** alongside generated plans = clean mental model
+  (`BuildWorkout`/`ManualBuilder`; all-3 credit the separation). **Weight/reps already typeable keypad** [our-side:
+  `SetEntry.js:57-81` — Gemini's "gross input fails, dozens of taps" is FALSE].
+- **WHERE WE LAG:** (1) **plate calculator built-but-unwired** [our sweep; Strong has it built-in — corroborated
+  bar]; (2) no standalone phone-free watch (our MF lag; Strong/Hevy have it — Claude+Gemini); (3) RIR/RPE recorded
+  internally but **no per-set input surface** [our-side PARTIAL: `SetEntry.js:141-144`]; (4) set-type tags
+  (warmup/drop/failure) — verify our-side; (5) mid-session substitution without breaking template (all-3).
+  [Per-exercise kg/lb = deliberate kg-only UK decision, `SetEntry.js:15-16` — **founder call**, not auto-lag.]
+- **HOW TO ELEVATE:** (1) **wire the existing `PlateCalculator` into the workout flow** (low-effort — closes a
+  built feature); (2) RIR/RPE per-set stepper surfaced + linked to a deterministic deload prompt (Gemini);
+  (3) live biomechanical-equivalent substitution keeping volume tracking (Gemini+Claude); (4) standalone watch;
+  (5) set-type tags. Avoid Strong's reorder-reset / replace-erases-notes (Claude VERIFIED dated quotes).
+- **VERIFICATION:** Strong friction = VERIFIED (Claude dated quotes); Hevy loved-builder = VERIFIED (Claude);
+  plate-calc-unwired = VERIFIED (our sweep); standalone-watch = VERIFIED (our MF row + Claude/Gemini);
+  RIR-internal = PARTIAL (our-side read).
+
+## UX/UI QUALITY (UX) — triangulated; supersedes the single-source DE/NA UX notes
+- **BEST IN CLASS:** Whoop (3-tier hierarchy, customizable tiles, designer-built viz — Claude VERIFIED). Hevy
+  (flow friction, ships haptics, "the UI slaps" — Claude). MacroFactor (data-to-decision; **Timeline Logger**
+  continuous-timestamp vs meal buckets — Gemini; criticised "no simple mode" — Claude).
+- **WHERE WE LEAD:** hero-first + one-banner priority stack (`HomeScreen.js:925-945`) = Whoop "just the answer";
+  ±52px steppers + typeable keypad + tabular nums (`SetEntry`); deterministic one-line coaching, no-AI-slop;
+  tested WCAG-AA/AAA + CVD + reduce-motion + confetti→quiet-toast (`theme`/`PRCelebration`/`App.js:833`) —
+  "arguably ahead of MacroFactor on calm hierarchy" + accessibility edge (Claude). All read-backed.
+- **WHERE WE LAG:** (1) no dense/personalisation/dashboard-reorder mode (Whoop tiles; MF power-user density —
+  Claude+Gemini; real-but-niche — corroborates our DE/NA dense-mode finding); (2) no completion haptics beyond
+  selection (Gemini — Core Haptics); (3) meal logging uses buckets not continuous timeline (Gemini — MF Timeline
+  Logger) [verify our-side: `DiaryScreen` meal sections]. [Gemini "gross-input stepper fails" = FALSE, keypad
+  exists — corrected.]
+- **HOW TO ELEVATE:** (1) optional advanced/dense toggle for elite users without breaking default calm (Claude+
+  Gemini); (2) Core Haptics (rest-zero pulse, PR ascending — Gemini); (3) adaptive content ordering, not manual
+  layout (CG+Claude); (4) consider timeline logging (Gemini).
+- **VERIFICATION:** hierarchy/Hevy-haptics/MF-density = VERIFIED (Claude); dense-mode LAG = VERIFIED (Claude+
+  Gemini, corroborates DE/NA); haptics/timeline = SINGLE-SOURCE (Gemini). **NOT FOUND:** comparative premium-feel
+  ranking (Claude gives qualitative, not a score).
+
+## v2 NOT-FOUND (add to consolidated list)
+- MP — quantified meal-plan abandonment rate at the week-3-4 repetition cliff (Claude single review).
+- RP — peer-reviewed *fitness*-specific retention uplift from Wrapped-style recaps (Spotify figures are industry
+  estimates, not audited).
+- UX — comparative premium-feel/visual-polish score vs named competitors (qualitative only).
+
+## v2 FOUNDER DECISIONS FLAGGED
+- Per-exercise kg/lb units (vs deliberate kg-only UK decision) — BD.
+- Whether to build a deterministic Satiety Index (engine-safe, single-source idea) — FI.
+- Whether to add an advanced/dense UI toggle (breaks the deliberate "no personalisation" stance) — UX.
+- Whether wearable cardio-session import is allowed under EU-residency/offline-first — CD.
