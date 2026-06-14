@@ -93,8 +93,42 @@ from this v2 work MUST:
 factual ("the weight of N …"), never hype/"crush"; protein-consistency → "how often you hit your protein."
 (Related, not the canonical source, for awareness: `USER_FACING_COPY_AUDIT.md`, `COACHING_VOICE_CITATION_AUDIT.md`.)
 
-## ALL DECIDED — nothing left undecided in the v2 set
-(Remaining open product thread: scope the **bodybuilding-meals** direction — see decision #5.)
+## DECIDED — Call 3 (bodybuilding-meals delta), 2026-06-14
+**KEY FINDING (read-backed):** the bodybuilding-meals system **already substantially exists** — `curatedMeals.js`
+(~50 meals omni/veg/vegan, computed macros, British staples), `foodRoles.js` (PRO/CHO/FAT/VEG/FREE + dry/cooked/
+ready weight-state `:139-145`), `mealPlanAssembler.js` (deterministic, ±10% band, training/rest variants,
+floor-safe), `planPreferences.js` (diet/exclusions/meals-per-day/variety/rotation), `mealSwap.js`/`mealSuggest.js`.
+So decision #5 ("scope bodybuilding meals") is mostly DONE; only the deltas below are open.
+- Meal library coverage — **ENOUGH for now** (no expansion).
+- **Raw/cooked weight entry — BUILD.** Data layer already knows dry/cooked (`foodRoles.js`); the gap is a
+  user-facing choice to weigh raw OR cooked at log/build time; engine converts via existing weight-state.
+- **Auto grocery list — BUILD.** Not present today (grep = 0). Aggregated UK shopping list from a plan.
+- Batch/leftover logic — **DISMISSED** (supersedes the Call-1 acceptance — founder reversed).
+- User-saved/nested meal parts — **DISMISSED** (curated components exist internally; user-defined ones not
+  wanted — supersedes the Call-1 "nested base components" acceptance).
+
+## APPROVED FOR BUILD — Calorie banking ("Plan a bigger day"), within SAFETY RAILS (2026-06-14)
+Founder: *"we had calorie banking? So people can select to bank calories in the week for an off plan? That seems
+like a great idea if we can do it in a stylish way."* Decision: **Build within safety rails.**
+Status today (read-backed): user-controlled banking ABSENT (gap-corrections B7); engine day-variant cycling
+EXISTS (`mealPlanAssembler.js dayVariantTargets` — moves calories between days within the ±band, weekly total
+preserved, capped swing, auto-disabled when floored). Banking = let the USER aim that redistribution at a chosen
+day. **HARD SAFETY RAILS (non-negotiable — this edits calorie targets, touches `src/coaching/safety`):**
+1. Redistribution only — **weekly total preserved**; never creates a net deficit.
+2. **Never below the daily floor** (1,200 kcal women / 1,500 men) or the FFM floor on ANY day.
+3. **Capped** banked amount (reuse the assembler's capped day-swing).
+4. **Auto-disabled** under any open ED-pattern flag, calm mode, or a floored/compressed target (same carve-out
+   the assembler already applies).
+5. Must **not trip or mask** ED under-eating / rapid-loss detection.
+6. Copy: **no "cheat day" / "binge" / "save up"** framing (voice + safety). Surface as "Plan a bigger day".
+7. **Invariant tests required** against the REAL safety engine for every rail above (CLAUDE.md build model).
+Implementation = build phase (not this review branch); rails are the spec.
+
+## ALL DECIDED — v2 set complete
+Open build queue (approved): grocery list, raw/cooked toggle, calorie banking (rails above), + the Call-1/2
+accepted items (protein-consistency, 14/30/90d windows, recap share/monthly/relative, mid-session swap,
+timeline logging, core-haptics, passive cardio import, cardio trend) — all under the standing no-jargon voice
+constraint.
 - RC: cooked-weight yield scaling; nested recipes.
 - MP: anti-repetition guarantee; automated grocery aggregation; batch/leftover distribution.
 - FI: 14/30/90-day windows; protein-consistency metric; weak-spot detection; (Gemini idea) deterministic Satiety
