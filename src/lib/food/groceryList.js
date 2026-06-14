@@ -11,8 +11,9 @@
 //  - NA-nutrition-5 (which weight): the raw/cooked toggle (NUT-01) is blocked —
 //    there is no cooked->raw conversion factor in code — so the list shows the
 //    plan's STORED grams as-is and never fabricates a converted figure. Foods
-//    the plan stores as cooked weight (stateOf === 'cooked') are flagged so a
-//    shopper isn't misled into buying the cooked weight.
+//    the plan stores as cooked weight already say so in their curated name
+//    (e.g. "White rice (cooked)", "Potato (boiled)"), so the shopper is told the
+//    figure is a cooked weight without any added label or invented conversion.
 //
 // Plan shape consumed (mealPlanAssembler.js): plan.days[] -> day.slots[] ->
 // each slot { name, items: [{ foodRef, name, quantityG }] | null,
@@ -20,7 +21,7 @@
 // resolved components); saved-meal slots carry neither.
 
 import { CURATED_FOODS } from './curatedFoods';
-import { roleOf, stateOf } from './foodRoles';
+import { roleOf } from './foodRoles';
 
 // Macro role -> quiet section label. 'free' and any unknown role fall to Other.
 const ROLE_SECTION = {
@@ -41,7 +42,7 @@ const foodKeyFromRef = (ref) =>
  * @param {{ days?: Array }} plan  the active plan object (record.plan)
  * @returns {{
  *   sections: Array<{ label: string, items: Array<{
- *     name: string, grams?: number, cooked?: boolean, count?: number }> }>,
+ *     name: string, grams?: number, count?: number }> }>,
  *   dayCount: number,
  *   isEmpty: boolean,
  * }}
@@ -52,7 +53,7 @@ export function buildGroceryList(plan) {
 
   // Curated foods aggregate by key (grams sum); everything without a known
   // curated breakdown (saved meals, unknown keys) aggregates by name under Other.
-  const curated = new Map();   // key -> { name, role, state, grams }
+  const curated = new Map();   // key -> { name, role, grams }
   const other = new Map();     // name -> { name, count }
 
   const addCurated = (key, grams) => {
@@ -61,7 +62,7 @@ export function buildGroceryList(plan) {
     const g = Number(grams) || 0;
     if (g <= 0) return;
     const row = curated.get(key)
-      || { name: food.name, role: roleOf(key), state: stateOf(key), grams: 0 };
+      || { name: food.name, role: roleOf(key), grams: 0 };
     row.grams += g;
     curated.set(key, row);
   };
@@ -97,7 +98,6 @@ export function buildGroceryList(plan) {
     (bySection[label] ||= []).push({
       name: row.name,
       grams: Math.round(row.grams),
-      ...(row.state === 'cooked' ? { cooked: true } : {}),
     });
   }
   for (const row of other.values()) {

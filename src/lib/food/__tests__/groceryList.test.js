@@ -1,9 +1,10 @@
 /**
  * ULTIMATE-NUT-02 — auto grocery list (pure aggregation).
  * Pins: week-wide gram summing per food key, role-derived sections in fixed
- * order, deterministic within-section sort, cooked-weight flag (NA-nutrition-5),
- * saved-meal/unknown → Other (NA-nutrition-4 forbids an invented aisle map),
- * and graceful empty/malformed handling.
+ * order, deterministic within-section sort, stored grams shown as-is with no
+ * added/duplicated weight-state label (NA-nutrition-5), saved-meal/unknown →
+ * Other (NA-nutrition-4 forbids an invented aisle map), and graceful
+ * empty/malformed handling.
  */
 import { buildGroceryList } from '../groceryList';
 import { CURATED_FOODS } from '../curatedFoods';
@@ -45,16 +46,18 @@ describe('buildGroceryList', () => {
     expect(labels).toEqual(['Proteins', 'Carbs', 'Veg', 'Fats']);
   });
 
-  test('flags cooked-weight foods, leaves dry/ready unflagged (NA-nutrition-5)', () => {
+  test('shows stored grams as-is with no added/duplicated weight label (NA-nutrition-5)', () => {
     const plan = { days: [day([slot('Meal', [
-      { food: 'white_rice', g: 300 },   // stateOf = cooked
-      { food: 'chicken_breast', g: 200 }, // ready
+      { food: 'white_rice', g: 300 },     // stored as cooked weight
+      { food: 'chicken_breast', g: 200 },
     ])])] };
     const gl = buildGroceryList(plan);
     const rice = gl.sections.find(s => s.label === 'Carbs').items[0];
-    const chicken = gl.sections.find(s => s.label === 'Proteins').items[0];
-    expect(rice.cooked).toBe(true);
-    expect(chicken.cooked).toBeUndefined();
+    // No invented conversion, no extra flag: the curated name already carries the
+    // weight state ("(cooked)"), so it must appear exactly once, never doubled.
+    expect(rice).toEqual({ name: CURATED_FOODS.white_rice.name, grams: 300 });
+    expect(rice.cooked).toBeUndefined();
+    expect((rice.name.match(/cooked/gi) || []).length).toBe(1);
   });
 
   test('within a section, sorts by grams desc then name', () => {

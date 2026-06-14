@@ -585,8 +585,8 @@ export default function MealPlanScreen({ navigation }) {
       </BottomSheet>
 
       {/* Auto grocery list (ULTIMATE-NUT-02): the week's plan aggregated into a
-          grouped, read-only shopping list. Numbers-first; cooked-weight foods
-          are flagged since there is no raw conversion (NA-nutrition-5). */}
+          grouped, read-only shopping list. Numbers-first; grams are the plan's
+          stored figures as-is (cooked-weight foods say so in their name). */}
       <BottomSheet
         visible={!!grocerySheet}
         onClose={() => setGrocerySheet(null)}
@@ -618,9 +618,7 @@ export default function MealPlanScreen({ navigation }) {
                             {item.name}{item.count ? ` ×${item.count}` : ''}
                           </Text>
                           {item.grams != null ? (
-                            <Text style={styles.groceryQty}>
-                              {item.grams} g{item.cooked ? ' (cooked)' : ''}
-                            </Text>
+                            <Text style={styles.groceryQty}>{item.grams} g</Text>
                           ) : null}
                         </View>
                       ))}
