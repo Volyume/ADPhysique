@@ -146,8 +146,34 @@ are NOT FOUND, not fabricated. Quality = capability + execution; only micro-UX t
   open to "start workout"/"log food" for Strong/Hevy/MacroFactor* (un-sourceable beyond the general 1–2-tap
   pattern; ours is a runtime/device count, not in code).
 
+## DESIGN (DE)
+- **BEST IN CLASS:** premium dark-first aesthetic with a consistent token system, WCAG-AA contrast, and
+  data-as-hero numerals (Whoop/Apple Health/MacroFactor, editorial/UX-pattern, all-three DE references);
+  accessibility table-stakes: dark/light, larger text, reduce motion, colour-blind-safe palette (platform
+  HIG + WCAG 2.x — documented).
+- **WHERE WE LEAD:** a **computed-contrast token system asserted in tests** — every ratio annotated and
+  enforced in `theme.test.js` so the palette can't silently drift below its bar (`theme.js:67-70` AAA text,
+  `:23` WCAG-1.4.11 borders, `:108` light table asserted); **astigmatism-aware near-black** (#0D0D0D not pure
+  black, with the rationale `:9-11`); **full accessibility matrix** — dark + light + **system** theme
+  (`:191-205`), higher-contrast tables both themes (`:151-164,:321-324`), **Okabe-Ito colour-blind-safe**
+  palette (`:165-176,:291-296,:326-330`), **larger-text ×1.2** across every type token (`:333-345`), and
+  **Reduce-Motion** collapsing motion durations (`:519`); **tabular-nums "numerals are the hero"** helper for
+  every data value (`:420-429 num()`); a **semantic state-colour grammar** (onTrack/watch/act/neutral,
+  COMP-027 `:457-472`) so coaching states are one learned vocabulary; Material-3 motion curves + spring
+  (`:521-545`); a complete spacing/radius/type/lineHeight/letterSpacing/shadow scale (`:236-455`). This is a
+  deeper, test-enforced accessibility + token foundation than the bar describes.
+- **WHERE WE LAG:** none on a corroborated capability bar — dark/light, contrast, CVD, larger-text,
+  reduce-motion, tokenised type and data numerals are all present and tested. (Light theme + darkened-amber
+  ink await founder on-device brand sign-off `:107-108,:124` — a release gate, not a capability lag.)
+- **MISSING ENTIRELY:** none vs the corroborated bar.
+- **VERIFICATION:** contrast-tested tokens + CVD + larger-text + reduce-motion + tabular numerals + state-colour
+  grammar LEAD = VERIFIED (ours read, ratios asserted in `theme.test.js`); bar = HIG/WCAG + editorial (VERIFIED
+  as pattern). **NOT FOUND:** comparative **aesthetic/“premium-feel” ranking** against the named competitors —
+  *missing data point: a sourced, objective design-quality score or side-by-side teardown for
+  MacroFactor/Whoop/Hevy vs Volyume* (subjective; un-sourceable beyond editorial impression; not a code fact).
+
 ---
-(Areas remaining, reading our side in full first: design, newbie-experience.)
+(Area remaining, reading our side in full first: newbie-experience.)
 
 ## CONSOLIDATED NOT-FOUND CELLS (for your per-cell targeted-teardown decision) — running list
 1. **WS — taps-to-log a set + keyboard-completion behaviour** for Strong/Hevy (only Gemini-simulated + one reddit quote; no corroborated/public number).
