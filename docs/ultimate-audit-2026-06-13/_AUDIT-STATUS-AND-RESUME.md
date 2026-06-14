@@ -174,12 +174,23 @@ file at the end of every working session.
     review PASS. **Open copy note for founder:** the macro empty-state string is the blueprint's verbatim
     "Log a few days to see your last {N} days." (lines 685-690) — reads slightly oddly under the MACRO ADHERENCE
     heading; kept to-spec, founder may wish to refine wording.
-  - ▶ **NEXT: (5) Cardio trend view** — per the LOCKED ORDER above (line 146: "(5) cardio trend view,
-    (6) recap relative-% anchor"). Before coding, locate and READ IN FULL the ULTIMATE-* cardio blueprint in the
-    `pass4-blueprints-*` cluster (grep "cardio" / "trend" across `docs/ultimate-audit-2026-06-13/pass4-blueprints-*.md`
-    and `pass4-master-priority.md` for its exact ID + source lines), then resolve its NA-ids by reading at build time
-    and build per the edit-gate (invariant tests + lint + full test + fresh-eyes review). Do NOT free-flow or pick.
-    NOTE: build order is NOT NUT-ID order — items (3)/(4) this run were NUT-04/NUT-05; NUT-01/02/03 are NOT built.
+  - ✅ (5) **Cardio trend view** — DONE, commit `30cfd09`. Source: `pass4-blueprints-cardio-ux.md:98-167`
+    (ULTIMATE-CUX-CTV). Added pure `summariseCardioByWeek(rows, weekWindows, target)` + `cardioVerdictLabel` to
+    `cardioEngine.js` (built on existing `summariseWeekCardio`/`cardioComplianceFromLog`); `CardioHistoryScreen.js`
+    renders an inline "done vs planned" section (ListHeaderComponent) above the unchanged day list, fetching recent
+    weeks via `getCardioLogRange` alongside `getRecentCardioLog`.
+    **NA-cux-9 resolved by reading code:** no per-week target history exists (`cardioTarget` is a single current
+    value overwritten weekly at `CoachOutputScreen.js:902`) → each week judged vs the current target; surfaced
+    honestly. No new table (blueprint DATA). **NA-cux-10:** founder wording → inline, no new route. **NA-cux-11:**
+    plain markers Done / Did some / Did less (no "adherence"/streak/shame, voice catalogue :558-577).
+    **NA-cux-8** non-blocking (master-priority ranks it Tier-1 #5). Invariant tests added to
+    `src/lib/cardio/__tests__/cardioEngine.test.js`. lint+full suite green (4113 pass); fresh-eyes review PASS.
+  - ▶ **NEXT: (6) Recap relative-% anchor** — per the LOCKED ORDER (line 146: "(6) recap relative-% anchor").
+    Before coding, locate and READ IN FULL its ULTIMATE-* blueprint (grep "relative" / "anchor" / "recap" across
+    `docs/ultimate-audit-2026-06-13/pass4-blueprints-workout-recap.md` and `pass4-master-priority.md` for exact ID +
+    source lines), resolve its NA-ids by reading at build time, then build per the edit-gate (invariant tests + lint
+    + full test + fresh-eyes review). Do NOT free-flow or pick. After (6), the Tier-1 list (1-6) is complete — re-read
+    `pass4-master-priority.md` for the Tier-2 order before continuing.
 - **OPEN BEFORE CODING:** branch policy conflict — session brief says develop on
   `claude/audit-work-quality-review-benrin` (an audit/docs branch); CLAUDE.md says app code goes on
   phase2/development or feature/*. Founder to confirm the build branch before any production code is written.
