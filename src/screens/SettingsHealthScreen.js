@@ -9,7 +9,7 @@ import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
 import {
   isHealthAvailable, getHealthProviderLabel,
-  getHealthPermissionStatus, requestHealthPermissions, importNewWeights,
+  getHealthPermissionStatus, requestHealthPermissions, importNewWeights, importNewCardio,
   openSystemHealthSettings, openHealthConnectInstall,
 } from '../lib/health';
 import { SettingsPage, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
@@ -19,7 +19,10 @@ import { SettingsPage, SettingRow, settingsStyles as styles } from '../component
 // revoked independently. Runtime-critical (OS permission prompts).
 export default function SettingsHealthScreen() {
   const toast = useToast();
-  const user = useAppStore(useShallow(s => s.user));
+  const { user, tier } = useAppStore(useShallow(s => ({ user: s.user, tier: s.tier })));
+  // Passive cardio import is a Pro cardio feature; the row is hidden for free
+  // users (NA-cux-5). Cardio itself is Pro-gated app-wide (withProGuard 'Cardio').
+  const isPro = tier === 'pro';
 
   // Health integration. Per-scope status: weight read separately from
   // workout write so the user can enable one without the other.
@@ -27,6 +30,7 @@ export default function SettingsHealthScreen() {
   const [healthWeightStatus, setHealthWeightStatus] = useState('unavailable');
   const [healthWorkoutStatus, setHealthWorkoutStatus] = useState('unavailable');
   const [healthStepsStatus, setHealthStepsStatus] = useState('unavailable');
+  const [healthCardioStatus, setHealthCardioStatus] = useState('unavailable');
   const [healthSyncing, setHealthSyncing] = useState(false);
 
   useFocusEffect(
@@ -35,8 +39,9 @@ export default function SettingsHealthScreen() {
         getHealthPermissionStatus(['weight']).then(setHealthWeightStatus).catch(() => {});
         getHealthPermissionStatus(['workout']).then(setHealthWorkoutStatus).catch(() => {});
         getHealthPermissionStatus(['steps']).then(setHealthStepsStatus).catch(() => {});
+        if (isPro) getHealthPermissionStatus(['cardio']).then(setHealthCardioStatus).catch(() => {});
       }
-    }, []),
+    }, [isPro]),
   );
 
   // When a connect attempt comes back 'sdk_unavailable' the problem isn't a
@@ -117,6 +122,37 @@ export default function SettingsHealthScreen() {
       }
     } catch (e) {
       logError('SettingsScreen.toggleSteps', e);
+      toast.show('Could not connect. Try again in a moment.', { variant: 'error' });
+    } finally {
+      setHealthSyncing(false);
+    }
+  }
+
+  async function handleToggleCardio(next) {
+    if (!next) {
+      toast.show('Open Health settings to turn cardio read off', { variant: 'info' });
+      await openSystemHealthSettings();
+      return;
+    }
+    setHealthSyncing(true);
+    try {
+      const status = await requestHealthPermissions(['cardio']);
+      setHealthCardioStatus(status);
+      if (status === 'granted') {
+        const { imported } = await importNewCardio(user?.id);
+        toast.show(
+          imported > 0
+            ? `${imported} cardio ${imported === 1 ? 'session' : 'sessions'} imported`
+            : 'Connected. No new sessions yet.',
+          { variant: 'success' },
+        );
+      } else if (await handleSdkUnavailable(status)) {
+        // handled: prompted to install Health Connect
+      } else if (status === 'denied') {
+        toast.show(`Permission needed to read cardio from ${getHealthProviderLabel()}`, { variant: 'warning' });
+      }
+    } catch (e) {
+      logError('SettingsScreen.toggleCardio', e);
       toast.show('Could not connect. Try again in a moment.', { variant: 'error' });
     } finally {
       setHealthSyncing(false);
@@ -211,6 +247,27 @@ export default function SettingsHealthScreen() {
             />
           }
         />
+        {isPro && (
+          <SettingRow
+            icon="heart-outline"
+            label="Read cardio sessions"
+            sub={
+              healthCardioStatus === 'granted'
+                ? `Connected. Volyume brings in your cardio sessions from ${getHealthProviderLabel()} in the background.`
+                : `Bring in cardio from ${getHealthProviderLabel()}. Read only. Volyume never sends your health data out.`
+            }
+            showArrow={false}
+            rightElement={
+              <Switch
+                value={healthCardioStatus === 'granted'}
+                onValueChange={handleToggleCardio}
+                disabled={healthSyncing}
+                trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
+                thumbColor={healthCardioStatus === 'granted' ? colors.primary : colors.textMuted}
+              />
+            }
+          />
+        )}
         <SettingRow
           icon="barbell-outline"
           label="Write workouts"

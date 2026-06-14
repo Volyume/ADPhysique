@@ -169,7 +169,11 @@ export async function connectHealthStepsAndWeight(userId) {
       // importNewWeights self-gates on the weight permission and only reads
       // since the last import, so it is cheap and safe to fire here.
       health.importNewWeights?.(userId)?.catch?.(() => {});
-    } catch (_) { /* weight import best effort */ }
+      // Passive cardio import rides the same foreground trigger (NA-cux-3). It
+      // self-gates on the 'cardio' permission, so it no-ops until the user has
+      // connected cardio in Settings; once connected it pulls new sessions here.
+      health.importNewCardio?.(userId)?.catch?.(() => {});
+    } catch (_) { /* health import best effort */ }
   }
   return status;
 }

@@ -21,8 +21,14 @@ import { useShallow } from 'zustand/react/shallow';
 import { getRecentCardioLog, deleteCardioLog, getCardioLogRange, activityDayKey } from '../lib/database';
 import { summariseCardioByWeek, cardioVerdictLabel } from '../lib/cardio/cardioEngine';
 import { parseLocalDay } from '../lib/dayKey';
+import { isHealthAvailable, getHealthProviderLabel } from '../lib/health';
 
 const INTENSITY_LABEL = { low: 'Easy', moderate: 'Moderate', high: 'Hard' };
+
+// Imported cardio rows carry a platform source tag (ULTIMATE-CUX-PCI, NA-cux-6);
+// manual rows are 'manual' and show no tag. Map the stored tag to a label.
+const CARDIO_SOURCE_LABEL = { apple_health: 'Apple Health', health_connect: 'Health Connect' };
+const cardioSourceLabel = (source) => CARDIO_SOURCE_LABEL[source] || null;
 const TREND_WEEKS = 8; // recent weeks shown in the "done vs planned" trend
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -158,7 +164,9 @@ export default function CardioHistoryScreen({ navigation }) {
         <EmptyState
           icon="heart-outline"
           title="No cardio yet"
-          text="Sessions you log show up here."
+          text={isHealthAvailable()
+            ? `Sessions you log, or bring in from ${getHealthProviderLabel()}, show up here.`
+            : 'Sessions you log show up here.'}
         />
       ) : (
         <SectionList
@@ -177,6 +185,9 @@ export default function CardioHistoryScreen({ navigation }) {
                   {item.durationMin} min · {INTENSITY_LABEL[item.intensity] || item.intensity}
                   {item.estKcal != null ? ` · ~${item.estKcal} kcal` : ''}
                 </Text>
+                {cardioSourceLabel(item.source) ? (
+                  <Text style={styles.sourceTag}>from {cardioSourceLabel(item.source)}</Text>
+                ) : null}
               </View>
               <TouchableOpacity onPress={() => confirmDelete(item)} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${item.activityName} session`}>
                 <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
@@ -209,6 +220,7 @@ const styles = StyleSheet.create({
   },
   activity: { ...type.body, color: colors.textPrimary },
   meta: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: 2, fontVariant: ['tabular-nums'] },
+  sourceTag: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2, fontStyle: 'italic' },
 
   trend: {
     marginBottom: spacing.lg, paddingBottom: spacing.md,
