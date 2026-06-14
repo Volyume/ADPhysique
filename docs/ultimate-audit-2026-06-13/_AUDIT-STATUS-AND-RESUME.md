@@ -44,25 +44,29 @@ file at the end of every working session.
     pre-pivot); newbie-experience / check-in / scaling missing. The 3-AI inputs supersede them as the
     research substrate, but the per-area findings still need consolidating into the index.
 
-### PASS 3 — GAP ANALYSIS — ✅ COMPLETE to spec (awaiting founder certification of the gate)
-- `pass3-gap-analysis.md` (REWRITTEN to spec): all 97 finding IDs → 35 GAP entries, none dropped, 2 EXCLUDED
-  carried; each GAP has SOURCE FINDINGS / RESEARCH / VOLYUME STATUS / PASS-1 file:line / IF PARTIAL /
-  NEWBIE+ATHLETE / EVIDENCE QUALITY.
-- `pass3-unresolved-questions.md` (Q1–Q19), `pass3-unresolved-answers.md` (18 code-resolved at file:line;
-  Q15 non-code → Pass-4 founder-gate), `pass3-comparison-matrix.md` (15 areas), `pass3-reconciliation.md`
-  (97=97, 0 open codebase questions).
-- Gate is a verification artifact (`pass3-reconciliation.md`), not a self-PASS — founder certifies.
+### PASS 3 — GAP ANALYSIS — ✅ COMPLETE (15/15 areas, per-area, to the founder-certified scheme)
+- Method (founder-specified, ai-coaching certified as the pilot): per area, ingest the 3 research docs →
+  reconcile each finding ALL-THREE / TWO / ONE / CONFLICT + which source → resolve gap CONFIRMED
+  YES/NO/PARTIAL with a real Pass-1 file:line; absence-claims ("no X") evidenced by a coverage grep, never
+  a faked file:line; open items → an open-questions list. No embellishment.
+- Files (one per area): `pass3-ai-coaching.md` (certified), `pass3-workout-screen.md`, `pass3-plan-generation.md`,
+  `pass3-nutrition.md`, `pass3-food-logging.md`, `pass3-progress.md`, `pass3-retention.md`, `pass3-onboarding.md`,
+  `pass3-exercise-library.md`, `pass3-navigation.md`, `pass3-design.md`, `pass3-missing-features.md`,
+  `pass3-newbie-experience.md`, `pass3-check-in.md`, `pass3-scaling.md`.
+- SUPERSEDED off-spec files still on disk (the earlier wrong-scheme mess): `pass3-gap-analysis.md`,
+  `pass3-comparison-matrix.md`, `pass3-unresolved-questions.md`, `pass3-unresolved-answers.md`,
+  `pass3-reconciliation.md`, `pass2-findings-index.md`, `pass2-adjudication.md` — pending a founder
+  cleanup decision (proposed for removal; not deleted unilaterally).
+- Confirmed-NO/PARTIAL gaps (the real candidates): progress photos (PR-3), exercise demo media (EL-1/NE-3),
+  HRV/sleep ingestion (MF-1), standalone watch (MF-2), posing/peak-week UI (MF-3), micronutrient/NRV (NU-7),
+  recomp progress view (PR-4), weekly calorie planner (NU-1), autonomy/manual-override modes (SC-3), UI
+  progressive disclosure (SC-1), broad social feed (RE-3), challenges (RE-7), full 44px audit (DE-1).
+- Confirmed-YES leads: full adaptive loop (AC-2), deterministic no-LLM (AC-5/PG-3), always-on ED-safety
+  floors (AC-6), ED-safe streak-freeze (RE-2), colour-blind-safe palette (DE-4), real periodisation (PG-2),
+  smart substitutions (EL-4), wellbeing+conditional check-in (CK), trend smoothing (PR-2).
+- Open questions needing a FOUNDER decision are listed at the foot of each area file (Q-AC1…Q-SC2).
 
-### PASS 4 — BLUEPRINTS — ▶ READY TO START (after Pass-3 certification)
-- The two off-spec free-flow files (`pass4-blueprint-01-progress-photos.md`,
-  `pass4-blueprint-02-hrv-sleep-ingestion.md`) have been **git-removed** — they were not spec-format,
-  self-selected, untagged, and asked the founder to pick build options (forbidden). The D1/D2 photo
-  "decisions" remain VOID.
-- TO BUILD per `_AUDIT-SPEC.md:206-280`: every Pass-3 CONFIRMED NO/PARTIAL gap → a blueprint OR
-  `pass4-deferred.md` (ED-safety-touching = FOUNDER-GATE) OR `pass4-no-action.md` (CONFIRMED-YES at
-  best-in-class); SOURCE-TAGGED ([P1:file:line]/[P2:finding-id]/[P3:gap-id]/[INFERENCE]); missing facts →
-  `pass4-needs-answer-register.md` (no guessing, no founder option-menus); exit gate
-  `pass4-final-reconciliation.md` + `pass4-master-priority.md` + `pass4-executive-summary.md`.
+### PASS 4 — BLUEPRINTS — ▶ NOT STARTED (awaiting founder go + the area open-question decisions)
 
 ## DECISIONS LOG (rationale preserved)
 1. Pass-2 pivot to 3-AI external research — environment cannot browse (founder-directed).
