@@ -198,11 +198,24 @@ file at the end of every working session.
     green (4118 pass); fresh-eyes review PASS.
   - ✅ **TIER-1 COMPLETE (items 1-6).** All built on `claude/audit-work-quality-review-benrin`, each with invariant
     tests + lint + full test + fresh-eyes review per the build operating model.
-  - ▶ **NEXT: TIER-2 (per `pass4-master-priority.md:15-23`), in order, skipping BLOCKED items:**
-    **(7) Recomp-reframing view** [NA-coaching-3/4] — read-only over existing data. Source blueprint: read IN FULL
-    before coding — `pass4-blueprints-coaching-progress.md` (grep "recomp" / "reframe" / "ULTIMATE-" for exact ID +
-    source lines), resolve NA-coaching-3/4 by reading at build time, then build per the edit-gate. Then (8) Auto
-    grocery list [NA-nutrition-4 — needs aisle taxonomy decision], (9) Plan diff/preview [NA-coaching-12/13],
+  - ✅ **TIER-2 (7) Recomp-reframing view** — DONE, commit `845ae17`. Source: `pass4-blueprints-coaching-progress.md:21-189`
+    (ULTIMATE-RECOMP-01). NEW pure `src/lib/recompReframe.js` `deriveRecomp(history, sets, exercises, {suppressed})`:
+    weight-flat gate + composition deltas + strongest-lift gain all computed over the SAME recent window; returns
+    `{render:false}` on missing/NaN/sparse/not-warranted/suppressed. `BodyMetricsScreen.js` loads lift data (fail-safe,
+    own try/catch), memoises `recompVm` BEFORE the early return, and renders a presentation-only `RecompCard` (Class-B,
+    no valence colour, numbers-first + one honest sentence) before the body-fat block.
+    **FOUNDER DECISIONS (2026-06-14):** NA-coaching-2 = include strength delta now (via `buildLiftProgressRows`);
+    NA-coaching-3 = weight flat reuses `detectPhase` (|slope|≤0.15 kg/entry, last ≤8 entries), composition moved = BF
+    ≥0.5pp OR any site ≥1.0cm (strength counts at ≥2.5kg e1RM gain — implementer default, smallest plate-pair step,
+    documented); NA-coaching-4 = inherit the screen's gating, NO new gate; NA-coaching-6 = suppress the whole card under
+    calm OR open ED flag. NA-coaching-1 moot (founder-placed Tier-1); NA-coaching-5 = render nothing (blueprint default).
+    Invariant tests `src/lib/__tests__/recompReframe.test.js` (12). lint+full suite green (4130 pass); fresh-eyes
+    review PASS (no blockers/should-fixes; day-key→ms conversion + ≥2.5kg default both confirmed safe).
+  - ▶ **NEXT: TIER-2 (per `pass4-master-priority.md:17-23`), in order, skipping BLOCKED items:**
+    **(8) Auto grocery list** [NA-nutrition-4] — genuinely absent; actionability win. Source blueprint: read IN FULL
+    before coding — `pass4-blueprints-nutrition.md` (grep "grocery" / "shopping" / "ULTIMATE-" for the exact ID +
+    source lines), resolve NA-nutrition-4 (aisle taxonomy) + any sibling NA-ids by reading at build time / asking the
+    founder structured multi-choice, then build per the edit-gate. Then (9) Plan diff/preview [NA-coaching-12/13],
     (10) Passive cardio import [NA-cux-4]. **BLOCKED, do NOT start without the founder clearing them:** (11) Named
     autonomy modes [NA-coaching-10 safety], (12) Raw/cooked toggle [NA-nutrition-1: no conversion source in code],
     (14) Core-Haptics [NA-cux-19: NEW dependency → founder approval]. (13) Mid-session swap clause [NA-wr-3 founder
