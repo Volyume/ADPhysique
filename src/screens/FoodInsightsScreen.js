@@ -173,6 +173,23 @@ export default function FoodInsightsScreen({ navigation }) {
           )}
         </Card>
 
+        {/* Protein-consistency headline (ULTIMATE-NUT-04): the single most
+            behaviour-relevant figure, surfaced above the four-row macro block.
+            Derived from the existing protein-hit count (within 10% of target,
+            NA-nutrition-8) — pDays / logged. Hidden until a day is logged,
+            mirroring the macro block's guard. */}
+        {adherence && adherence.logged > 0 ? (
+          <>
+            <Text style={styles.sectionLabel}>PROTEIN</Text>
+            <Card style={styles.card}>
+              <Text style={styles.proteinHeadline}>
+                You hit your protein on {adherence.pDays} of {adherence.logged} {adherence.logged === 1 ? 'day' : 'days'} you logged.
+              </Text>
+              <Text style={styles.cardFootnote}>Hit = within target range.</Text>
+            </Card>
+          </>
+        ) : null}
+
         <Text style={styles.sectionLabel}>MACRO ADHERENCE</Text>
         <Card style={styles.card}>
           {adherence && adherence.logged > 0 ? (
@@ -250,6 +267,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   cardFootnote: { ...type.caption, color: colors.textMuted, marginTop: spacing.md },
+  proteinHeadline: { ...type.title, color: colors.textPrimary },
   emptyText: { color: colors.textMuted, fontSize: fontSize.sm, textAlign: 'center', paddingVertical: spacing.lg },
 
   barRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
