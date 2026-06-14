@@ -122,7 +122,27 @@ day. **HARD SAFETY RAILS (non-negotiable — this edits calorie targets, touches
 5. Must **not trip or mask** ED under-eating / rapid-loss detection.
 6. Copy: **no "cheat day" / "binge" / "save up"** framing (voice + safety). Surface as "Plan a bigger day".
 7. **Invariant tests required** against the REAL safety engine for every rail above (CLAUDE.md build model).
-Implementation = build phase (not this review branch); rails are the spec.
+
+**COACH INTEGRATION (founder requirement 2026-06-14: "the coach must accept this, read/see what's done, and not
+react as if someone's had a huge eat day or under-eaten") — read-backed:**
+- GOOD NEWS by construction: `weeklyCoach.js` already judges on the **7-day rolling AVERAGE intake + weight
+  trend, not single days** (`:828-834`, `:388`, `:1129`); adherence is **average-vs-target** (`mapCalsAdherence
+  :334-339`). Because banking PRESERVES the weekly total, a banked week has the SAME 7-day average and SAME weight
+  trend → the coach sees no "huge eat day" and no "under-eaten" days. It is invisible to the trend logic.
+- PRECEDENT: the coach already consumes deliberate day-variation it does NOT misread — carb-cycle high/low days
+  (`macroCycle :1019`) and refeed days (`refeed :1043-1062`). **Model banking as the same class of planned
+  day-variation** the coach already understands; do NOT invent a parallel path.
+- HARD REQUIREMENTS so no surface misreads it:
+  (a) banking writes a **planned per-day target** that the diary, the safety floor check, and the check-in
+      auto-derivation (`deriveCalsAdherence`) all read — so any per-day "under target" indicator references the
+      **banked** daily target, never the flat one (a deliberately-light banked day must NOT show as under-eaten);
+  (b) the absolute daily floor (1,200/1,500) + FFM floor are checked against the **banked** daily number and any
+      day that would breach is refused (rail #2);
+  (c) the banked plan is **recorded as intentional** (a marker the coach/safety can see), so present + future
+      per-day logic treats it as a plan, not a deviation;
+  (d) the coach keeps judging on the preserved **weekly average** (already how it works) — banking changes the
+      shape of the week, never the weekly total the engine adapts on.
+Implementation = build phase (not this review branch); rails + coach-integration requirements are the spec.
 
 ## ALL DECIDED — v2 set complete
 Open build queue (approved): grocery list, raw/cooked toggle, calorie banking (rails above), + the Call-1/2
