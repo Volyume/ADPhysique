@@ -6,19 +6,13 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/them
 import BottomSheet from '../BottomSheet';
 import { useToast } from '../Toast';
 import { pickerMealSlots } from '../../lib/food/mealSlots';
+import { scaleMacros } from '../../lib/food/macros';
 
+// Display-shaped wrapper over the shared scaling helper (food review U-M2):
+// the preview render reads .protein/.carbs/.fat, the engine returns .*G.
 function macrosFor(food, qtyG) {
-  if (!food || !qtyG || !isFinite(qtyG) || qtyG <= 0) {
-    return { kcal: 0, protein: 0, carbs: 0, fat: 0, fibre: null };
-  }
-  const k = qtyG / 100;
-  return {
-    kcal:    Math.round((food.kcal_100g    ?? 0) * k),
-    protein: Math.round((food.protein_100g ?? 0) * k * 10) / 10,
-    carbs:   Math.round((food.carbs_100g   ?? 0) * k * 10) / 10,
-    fat:     Math.round((food.fat_100g     ?? 0) * k * 10) / 10,
-    fibre:   food.fibre_100g != null ? Math.round((food.fibre_100g) * k * 10) / 10 : null,
-  };
+  const m = scaleMacros(food, qtyG);
+  return { kcal: m.kcal, protein: m.proteinG, carbs: m.carbsG, fat: m.fatG, fibre: m.fibreG };
 }
 
 /**

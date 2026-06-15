@@ -43,6 +43,7 @@ import { useToast } from '../components/Toast';
 import { deleteEntries, moveEntriesToSlot, copyEntriesToDate } from '../lib/food/bulkEntryOps';
 import { shouldShowOffConsentCard, dismissOffConsentCard } from '../lib/food/writeback';
 import { buildMealSlots, highestLoggedMeal, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
+import { scaleMacros } from '../lib/food/macros';
 
 // TZ-1: all diary day-keys are the LOCAL calendar day, matching the local-day
 // food/water writes and the weight/workout buckets, so "today" is the user's
@@ -395,17 +396,12 @@ export default function DiaryScreen({ navigation }) {
 
   async function saveEditSheet({ quantityG, mealSlot, entryDate }) {
     const { entry, food } = editSheet;
-    const k = quantityG / 100;
     await updateFoodEntry(entry.id, userId, {
       entryDate,
       mealSlot,
       foodRef: entry.food_ref,
       quantityG,
-      kcal:     Math.round((food.kcal_100g    ?? 0) * k),
-      proteinG: Math.round((food.protein_100g ?? 0) * k * 10) / 10,
-      carbsG:   Math.round((food.carbs_100g   ?? 0) * k * 10) / 10,
-      fatG:     Math.round((food.fat_100g     ?? 0) * k * 10) / 10,
-      fibreG:   food.fibre_100g != null ? Math.round((food.fibre_100g) * k * 10) / 10 : null,
+      ...scaleMacros(food, quantityG), // { kcal, proteinG, carbsG, fatG, fibreG }
     });
     await load();
   }

@@ -24,6 +24,7 @@ import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { findLocalByBarcode } from '../lib/food/sources/localCache';
+import { scaleMacros } from '../lib/food/macros';
 
 const MEAL_LABELS = {
   breakfast: 'Breakfast',
@@ -141,20 +142,15 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         } catch (_) {}
       }
       const qty = Number(quantityG) || food.servingG;
-      // Macros for the logged entry are scaled from per-100g to the
-      // actual quantity logged. This denormalises at log time so
-      // future edits to the custom food don't rewrite history.
-      const factor = qty / 100;
+      // Macros for the logged entry are scaled from per-100g to the actual
+      // quantity logged. This denormalises at log time so future edits to the
+      // custom food don't rewrite history. Shared helper (food review U-M2).
       await logFoodEntry(userId, {
         entryDate,
         mealSlot,
         foodRef: `custom:${customId}`,
         quantityG: qty,
-        kcal:      Math.round(food.kcal100g    * factor),
-        proteinG:  Math.round(food.protein100g * factor * 10) / 10,
-        carbsG:    Math.round(food.carbs100g   * factor * 10) / 10,
-        fatG:      Math.round(food.fat100g     * factor * 10) / 10,
-        fibreG:    food.fibre100g != null ? Math.round(food.fibre100g * factor * 10) / 10 : null,
+        ...scaleMacros(food, qty), // { kcal, proteinG, carbsG, fatG, fibreG }
       });
 
       // OFF contribution (COMP-022): relocated here from ScanLabel capture so
