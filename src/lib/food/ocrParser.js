@@ -47,14 +47,29 @@ function _hasPer100Anchor(text) {
 // boundary + non-greedy gap of at most 30 non-digit chars.
 function _matchValue(text, keyword) {
   const re = new RegExp(
-    `\\b${keyword}\\b[^0-9\\n\\r]{0,30}(\\d{1,4}(?:\\.\\d{1,2})?)\\s*(kcal|kj|g|mg)?`,
+    `\\b${keyword}\\b([^0-9\\n\\r]{0,30})(\\d{1,4}(?:\\.\\d{1,2})?)\\s*(kcal|kj|g|mg)?`,
     'i'
   );
   const m = text.match(re);
   if (!m) return null;
-  const value = parseFloat(m[1]);
+  let value = parseFloat(m[2]);
+  let unit = (m[3] || '').toLowerCase() || null;
+  // D-M4: if the gap between the keyword and its first number explicitly names
+  // a per-serving/per-portion column (e.g. "Protein per serving 3g ... 10g"),
+  // that first number is the per-serving figure. Volyume stores per-100g, so
+  // skip to the next number (the per-100g column). UK labels normally print the
+  // per-100g column first, in which case the gap has no such qualifier and the
+  // first number is taken as-is.
+  if (/per\s*serving|per\s*portion|\bserving\b|\bportion\b/i.test(m[1] || '')) {
+    const after = text.slice(text.indexOf(m[0]) + m[0].length);
+    const nm = after.match(/(\d{1,4}(?:\.\d{1,2})?)\s*(kcal|kj|g|mg)?/i);
+    if (nm) {
+      const v2 = parseFloat(nm[1]);
+      if (Number.isFinite(v2)) { value = v2; unit = (nm[2] || '').toLowerCase() || null; }
+    }
+  }
   if (!Number.isFinite(value)) return null;
-  return { value, unit: (m[2] || '').toLowerCase() || null };
+  return { value, unit };
 }
 
 // kcal is special: many labels write it as "<NUM> kcal" rather than

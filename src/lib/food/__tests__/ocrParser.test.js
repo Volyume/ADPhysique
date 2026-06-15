@@ -54,6 +54,21 @@ describe('parseNutritionLabel', () => {
     expect(parseNutritionLabel('per 100g Fat 12,5 g').fields.fat100g).toBe(12.5);
   });
 
+  test('two-column label (per 100g first) takes the per-100g column', () => {
+    // UK convention prints the per-100g column first, per-serving second.
+    const label = 'Per 100g Per serving (30g) Energy 350 kcal 105 kcal Fat 12.5g 3.8g Protein 10g 3g';
+    const { fields } = parseNutritionLabel(label);
+    expect(fields.kcal100g).toBe(350);
+    expect(fields.fat100g).toBe(12.5);
+    expect(fields.protein100g).toBe(10);
+  });
+
+  test('skips an explicit per-serving column to the per-100g value (food review D-M4)', () => {
+    // Some labels name the per-serving figure first: "Protein per serving 3g 10g".
+    const { fields } = parseNutritionLabel('per 100g Protein per serving 3g 10g');
+    expect(fields.protein100g).toBe(10);
+  });
+
   test('reads a serving size in grams; missing serving is flagged missing', () => {
     expect(parseNutritionLabel('per 100g Serving size 30g Protein 10g').fields.servingG).toBe(30);
     expect(parseNutritionLabel('per 100g Protein 10g').confidence.servingG).toBe('missing');
