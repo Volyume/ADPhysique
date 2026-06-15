@@ -43,7 +43,7 @@ export const ROLE_TOLERANCE_G = 5;
 const ROLE = Object.freeze({
   // Carbs / grains / starches / fruit
   oats: 'carb', white_rice: 'carb', brown_rice: 'carb', quinoa: 'carb',
-  wholemeal_bread: 'carb', bagel: 'carb', tortilla: 'carb', pasta: 'carb',
+  wholemeal_bread: 'carb', sourdough: 'carb', bagel: 'carb', tortilla: 'carb', pasta: 'carb',
   lentil_pasta: 'carb', noodles: 'carb', rice_cakes: 'carb', granola: 'carb',
   white_potato: 'carb', potato_wedges: 'carb', sweet_potato: 'carb',
   banana: 'carb', apple: 'carb', berries: 'carb', pineapple: 'carb',
@@ -61,15 +61,16 @@ const ROLE = Object.freeze({
   salsa: 'free',
 
   // Proteins
-  chicken_breast: 'protein',
+  chicken_breast: 'protein', chicken_thigh: 'protein',
   turkey_breast: 'protein', turkey_mince: 'protein',
   beef_mince_5: 'protein', steak_lean: 'protein', cod: 'protein',
   salmon: 'protein', smoked_salmon: 'protein', tuna_water: 'protein',
+  mackerel: 'protein', bacon_medallions: 'protein',
   prawns: 'protein', eggs: 'protein', egg_whites: 'protein',
   greek_yogurt_0: 'protein', greek_yogurt_2: 'protein', skyr: 'protein',
   cottage_cheese: 'protein', whey: 'protein',
   tofu_firm: 'protein', tempeh: 'protein', seitan: 'protein',
-  tvp_dry: 'protein', quorn_mince: 'protein', edamame: 'protein',
+  tvp_dry: 'protein', quorn_mince: 'protein', quorn_pieces: 'protein', edamame: 'protein',
   soy_protein: 'protein', pea_protein: 'protein', soy_yogurt_hp: 'protein',
 
   // Fats
@@ -91,16 +92,16 @@ const ROLE = Object.freeze({
 // Evidence: bp-meal-plan-RETHINK-2026-06-12.md §2.4.
 const PROTEIN_QUALITY = Object.freeze({
   // high
-  chicken_breast: 'high', cheddar_light: 'high',
-  turkey_breast: 'high', turkey_mince: 'high',
+  chicken_breast: 'high', chicken_thigh: 'high', cheddar_light: 'high',
+  turkey_breast: 'high', turkey_mince: 'high', bacon_medallions: 'high',
   beef_mince_5: 'high', steak_lean: 'high', cod: 'high', salmon: 'high',
-  smoked_salmon: 'high', tuna_water: 'high', prawns: 'high', eggs: 'high',
+  smoked_salmon: 'high', tuna_water: 'high', mackerel: 'high', prawns: 'high', eggs: 'high',
   egg_whites: 'high', greek_yogurt_0: 'high', greek_yogurt_2: 'high',
   skyr: 'high', cottage_cheese: 'high', whey: 'high', milk_skimmed: 'high',
   halloumi: 'high', paneer: 'high',
   // moderate (plant anchors)
   tofu_firm: 'moderate', tempeh: 'moderate', seitan: 'moderate',
-  tvp_dry: 'moderate', quorn_mince: 'moderate', edamame: 'moderate',
+  tvp_dry: 'moderate', quorn_mince: 'moderate', quorn_pieces: 'moderate', edamame: 'moderate',
   soy_protein: 'moderate', pea_protein: 'moderate', soy_yogurt_hp: 'moderate',
   soy_milk: 'moderate',
   // carb_protein (legumes / grain proteins)
@@ -153,15 +154,16 @@ const TAGS = Object.freeze({
   oats: ['cereals_gluten'], wholemeal_bread: ['cereals_gluten'],
   weetabix: ['cereals_gluten'],
   cheddar_light: ['milk'],
-  bagel: ['cereals_gluten'], tortilla: ['cereals_gluten'],
+  bagel: ['cereals_gluten'], tortilla: ['cereals_gluten'], sourdough: ['cereals_gluten'],
   pasta: ['cereals_gluten'], noodles: ['cereals_gluten', 'eggs'],
   granola: ['cereals_gluten', 'nuts'], seitan: ['cereals_gluten'],
   eggs: ['eggs'], egg_whites: ['eggs'],
+  quorn_mince: ['eggs', 'cereals_gluten'], quorn_pieces: ['eggs'],
   greek_yogurt_0: ['milk'], greek_yogurt_2: ['milk'], skyr: ['milk'],
   cottage_cheese: ['milk'], halloumi: ['milk'], paneer: ['milk'],
   milk_skimmed: ['milk'], whey: ['milk'],
   cod: ['fish'], salmon: ['fish'], smoked_salmon: ['fish'],
-  tuna_water: ['fish'], prawns: ['crustaceans'],
+  tuna_water: ['fish'], mackerel: ['fish'], prawns: ['crustaceans'],
   tofu_firm: ['soya'], tempeh: ['soya'], tvp_dry: ['soya'],
   edamame: ['soya'], soy_protein: ['soya'], soy_milk: ['soya'],
   soy_yogurt_hp: ['soya'],

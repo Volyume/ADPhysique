@@ -18,12 +18,12 @@ import {
 describe('mealNameFromComponents (no stale/lying names after a swap)', () => {
   test('builds an honest "protein & carb" name from components', () => {
     expect(mealNameFromComponents([{ food: 'cod', g: 200 }, { food: 'pasta', g: 70 }, { food: 'salad', g: 80 }]))
-      .toBe('Cod & pasta');
+      .toBe('Cod loin & pasta');
     expect(mealNameFromComponents([{ food: 'chicken_breast', g: 150 }, { food: 'white_rice', g: 200 }]))
-      .toBe('Chicken breast & white rice');
+      .toBe('Chicken breast fillet & white rice');
   });
   test('falls back to protein-only, then a generic label', () => {
-    expect(mealNameFromComponents([{ food: 'cod', g: 200 }, { food: 'salad', g: 80 }])).toBe('Cod');
+    expect(mealNameFromComponents([{ food: 'cod', g: 200 }, { food: 'salad', g: 80 }])).toBe('Cod loin');
     expect(mealNameFromComponents([])).toBe('Custom meal');
   });
 });
@@ -142,7 +142,7 @@ describe('swapFoodInMeal', () => {
         'granola', 'potato_wedges', 'banana', 'apple', 'berries', 'pineapple', 'honey',
         'lentils', 'lentil_dahl', 'chickpeas', 'kidney_beans', 'black_beans',
         'baked_beans', 'milk_skimmed', 'soy_milk', 'tomato_sauce', 'lentil_pasta',
-        'crumpets', 'weetabix'],
+        'crumpets', 'weetabix', 'sourdough'],
     };
     expect(swapFoodInMeal({ components, foodKeyOut: 'white_rice', prefs: allCarbsGone })).toBeNull();
   });
@@ -211,9 +211,9 @@ describe('swapMealInPlan slot character', () => {
   const tagsOf = (mealId) => CURATED_MEALS.find((m) => m.id === mealId)?.slots ?? [];
   const day = {
     slots: [
-      { slot: 'meal_1', mealId: 'curated_om_oats_whey_banana', name: 'Oats, whey & banana', totals: { kcal: 500, protein: 40, carbs: 60, fat: 10 } },
+      { slot: 'meal_1', mealId: 'curated_veg_protein_porridge', name: 'Protein porridge', totals: { kcal: 500, protein: 40, carbs: 60, fat: 10 } },
       { slot: 'meal_2', mealId: 'curated_om_turkey_avocado_wrap', name: 'Turkey & avocado wrap', totals: { kcal: 520, protein: 40, carbs: 45, fat: 18 } },
-      { slot: 'meal_3', mealId: 'curated_om_chicken_rice_broc', name: 'Chicken, rice & broccoli', totals: { kcal: 600, protein: 50, carbs: 70, fat: 12 } },
+      { slot: 'meal_3', mealId: 'curated_om_chicken_rice', name: 'Chicken & rice', totals: { kcal: 600, protein: 50, carbs: 70, fat: 12 } },
     ],
   };
 
@@ -253,19 +253,19 @@ describe('style-diverse swap pool (rethink §3.3 — many options, not near-clon
     const items = mealItems(meal);
     return {
       slots: [
-        { slot: 'meal_1', mealId: 'curated_om_oats_whey_banana', totals: { kcal: 500, protein: 40, carbs: 60, fat: 10 } },
+        { slot: 'meal_1', mealId: 'curated_veg_protein_porridge', totals: { kcal: 500, protein: 40, carbs: 60, fat: 10 } },
         { slot: 'meal_3', mealId: meal.id, totals: mealTotals(items) },
       ],
     };
   };
 
   test('the pool is deep (close to poolSize), not a 1+3 list', () => {
-    const res = swapMealInPlan({ day: dayWith('curated_om_chicken_rice_broc'), slotKey: 'meal_3', prefs: { diet: 'omnivore' } });
+    const res = swapMealInPlan({ day: dayWith('curated_om_chicken_rice'), slotKey: 'meal_3', prefs: { diet: 'omnivore' } });
     expect(res.alternatives.length).toBeGreaterThanOrEqual(8);
   });
 
   test('the first four alternatives spread across styles, not macro clones', () => {
-    const res = swapMealInPlan({ day: dayWith('curated_om_chicken_rice_broc'), slotKey: 'meal_3', prefs: { diet: 'omnivore' } });
+    const res = swapMealInPlan({ day: dayWith('curated_om_chicken_rice'), slotKey: 'meal_3', prefs: { diet: 'omnivore' } });
     const sigs = res.alternatives.slice(0, 4).map((a) => {
       const meal = CURATED_MEALS.find((m) => m.id === a.mealId);
       return mealStyleSignature(meal);
@@ -274,14 +274,14 @@ describe('style-diverse swap pool (rethink §3.3 — many options, not near-clon
   });
 
   test('signature reads anchors and vehicles from the real food table', () => {
-    const chicken = CURATED_MEALS.find((m) => m.id === 'curated_om_chicken_rice_broc');
+    const chicken = CURATED_MEALS.find((m) => m.id === 'curated_om_chicken_rice');
     expect(mealStyleSignature(chicken)).toBe('poultry|rice');
     const bol = CURATED_MEALS.find((m) => m.id === 'curated_om_spag_bol');
     expect(mealStyleSignature(bol)).toBe('beef|pasta');
   });
 
   test('diversity never breaks eligibility: every pool entry stays slot- and diet-legal', () => {
-    const res = swapMealInPlan({ day: dayWith('curated_om_chicken_rice_broc'), slotKey: 'meal_3', prefs: { diet: 'vegan' } });
+    const res = swapMealInPlan({ day: dayWith('curated_om_chicken_rice'), slotKey: 'meal_3', prefs: { diet: 'vegan' } });
     if (res) {
       res.alternatives.forEach((a) => {
         const meal = CURATED_MEALS.find((m) => m.id === a.mealId);
@@ -291,8 +291,8 @@ describe('style-diverse swap pool (rethink §3.3 — many options, not near-clon
   });
 
   test('deterministic: same inputs, same pool', () => {
-    const a = swapMealInPlan({ day: dayWith('curated_om_chicken_rice_broc'), slotKey: 'meal_3', prefs: { diet: 'omnivore' } });
-    const b = swapMealInPlan({ day: dayWith('curated_om_chicken_rice_broc'), slotKey: 'meal_3', prefs: { diet: 'omnivore' } });
+    const a = swapMealInPlan({ day: dayWith('curated_om_chicken_rice'), slotKey: 'meal_3', prefs: { diet: 'omnivore' } });
+    const b = swapMealInPlan({ day: dayWith('curated_om_chicken_rice'), slotKey: 'meal_3', prefs: { diet: 'omnivore' } });
     expect(a.alternatives.map((x) => x.mealId)).toEqual(b.alternatives.map((x) => x.mealId));
   });
 });

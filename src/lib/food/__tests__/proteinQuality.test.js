@@ -31,25 +31,25 @@ describe('proteinQualityOf / mealProteinAnchorQuality', () => {
   });
 
   test('the anchor is the biggest protein contributor', () => {
-    expect(mealProteinAnchorQuality(mealById('curated_om_chicken_rice_broc'))).toBe('high');
-    expect(mealProteinAnchorQuality(mealById('curated_veg_lentil_quinoa'))).toBe('carb_protein');
-    expect(mealProteinAnchorQuality(mealById('curated_veg_tofu_stirfry_rice'))).toBe('moderate');
-    // Halloumi (high, ~18 g) outweighs chickpeas (~11 g) on this plate.
-    expect(mealProteinAnchorQuality(mealById('curated_veg_halloumi_chickpea'))).toBe('high');
+    expect(mealProteinAnchorQuality(mealById('curated_om_chicken_rice'))).toBe('high');
+    expect(mealProteinAnchorQuality(mealById('curated_vg_lentil_chilli'))).toBe('carb_protein');
+    expect(mealProteinAnchorQuality(mealById('curated_vg_tofu_stirfry'))).toBe('moderate');
+    // Halloumi (high) is the protein anchor on this plate.
+    expect(mealProteinAnchorQuality(mealById('curated_veg_halloumi_veg'))).toBe('high');
   });
 });
 
 describe('mealAllowed protein-anchor policy', () => {
   test('omnivore: plant-anchored and legume-anchored meals are out', () => {
-    expect(mealAllowed(mealById('curated_veg_tofu_stirfry_rice'), { diet: 'omnivore' })).toBe(false);
-    expect(mealAllowed(mealById('curated_veg_lentil_quinoa'), { diet: 'omnivore' })).toBe(false);
-    expect(mealAllowed(mealById('curated_om_chicken_rice_broc'), { diet: 'omnivore' })).toBe(true);
+    expect(mealAllowed(mealById('curated_vg_tofu_stirfry'), { diet: 'omnivore' })).toBe(false);
+    expect(mealAllowed(mealById('curated_vg_lentil_chilli'), { diet: 'omnivore' })).toBe(false);
+    expect(mealAllowed(mealById('curated_om_chicken_rice'), { diet: 'omnivore' })).toBe(true);
     // Dairy/egg-anchored vegetarian meals stay available to omnivores.
-    expect(mealAllowed(mealById('curated_veg_yog_oats_berries'), { diet: 'omnivore' })).toBe(true);
+    expect(mealAllowed(mealById('curated_veg_greek_yogurt_bowl'), { diet: 'omnivore' })).toBe(true);
   });
   test('vegetarian: plant anchors fine, bare legume anchors out', () => {
-    expect(mealAllowed(mealById('curated_veg_tofu_stirfry_rice'), { diet: 'vegetarian' })).toBe(true);
-    expect(mealAllowed(mealById('curated_veg_lentil_quinoa'), { diet: 'vegetarian' })).toBe(false);
+    expect(mealAllowed(mealById('curated_vg_tofu_stirfry'), { diet: 'vegetarian' })).toBe(true);
+    expect(mealAllowed(mealById('curated_vg_lentil_chilli'), { diet: 'vegetarian' })).toBe(false);
   });
   test('vegan: the uplifted plant library is unrestricted by the anchor gate', () => {
     CURATED_MEALS.filter((m) => m.diet === 'vegan').forEach((m) => {

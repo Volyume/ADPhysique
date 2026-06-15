@@ -151,7 +151,7 @@ describe('getCuratedCandidates', () => {
 
   test('slot filter only returns meals tagged for that slot', () => {
     const dinner = getCuratedCandidates({ diet: 'omnivore', slot: 'dinner' });
-    expect(dinner.map(meal => meal.id)).not.toContain('curated_om_oats_whey_banana');
+    expect(dinner.map(meal => meal.id)).not.toContain('curated_om_eggs_salmon_oats');
     dinner.forEach(meal => expect(meal.slots.includes('dinner') || meal.slots.includes('any')).toBe(true));
   });
 
@@ -165,7 +165,7 @@ describe('getCuratedCandidates', () => {
     expect(meal1.length).toBe(all.length);
     expect(meal3.length).toBe(all.length);
     // A breakfast-tagged meal is available against a numbered slot.
-    expect(meal1.map(m => m.id)).toContain('curated_om_oats_whey_banana');
+    expect(meal1.map(m => m.id)).toContain('curated_om_eggs_salmon_oats');
     // Diet still applies on numbered slots.
     const veganMeal2 = getCuratedCandidates({ diet: 'vegan', slot: 'meal_2' });
     veganMeal2.forEach(meal => expect(meal.diet).toBe('vegan'));

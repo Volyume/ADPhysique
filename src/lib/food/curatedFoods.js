@@ -5,11 +5,17 @@
  * are defined ONCE here (British supermarket staples, label-grade / CoFID
  * reference values); curated meals reference these by key + grams and have
  * their item + total macros COMPUTED, never hand-typed. That keeps the
- * whole library internally consistent and makes 100+ meals maintainable.
+ * whole library internally consistent and makes the meal library maintainable.
  *
- * Each entry: key -> { name, ref, kcal, protein, carbs, fat } per 100 g.
- * `ref` is the foodRef written onto a logged diary entry ('curated:*');
- * the diary edit sheet falls back to the stored macros if it can't resolve.
+ * UK alignment (founder research report, 2026-06-15 — "Volyume Curated Meal &
+ * Food Library: UK Bodybuilder Research Report"): UK CoFID / own-label values,
+ * UK shelf names, explicit weight state (state lives in foodRoles.js). Notable
+ * corrections from that report: whole egg 131 kcal (CoFID 2021, not USDA 143);
+ * FAGE Total 0%/2% Greek yogurt + skyr to UK label; baked sweet potato (CoFID
+ * ~115); cooked cod loin. New staples: chicken thigh, mackerel, back-bacon
+ * medallions, white sourdough, Quorn chicken-style pieces.
+ *
+ * Each entry: key -> { name, kcal, protein, carbs, fat } per 100 g.
  */
 
 // per 100 g: [kcal, protein, carbs, fat]
@@ -22,6 +28,7 @@ export const CURATED_FOODS = Object.freeze({
   brown_rice:      F('Brown rice (cooked)', 110, 2.6, 23, 0.9),
   quinoa:          F('Quinoa (cooked)', 120, 4.4, 21, 1.9),
   wholemeal_bread: F('Wholemeal bread', 247, 13, 41, 3.4),
+  sourdough:       F('White sourdough', 238, 7.5, 48, 1.5),
   bagel:           F('Bagel', 270, 10, 53, 1.7),
   tortilla:        F('Tortilla wrap', 300, 8, 50, 7),
   pasta:           F('Pasta (dry)', 350, 13, 72, 1.8),
@@ -32,7 +39,7 @@ export const CURATED_FOODS = Object.freeze({
   weetabix:        F('Weetabix', 362, 12, 69, 2),
   white_potato:    F('Potato (boiled)', 79, 2, 17, 0.1),
   potato_wedges:   F('Potato wedges', 130, 2.5, 24, 3),
-  sweet_potato:    F('Sweet potato', 86, 1.6, 20, 0.1),
+  sweet_potato:    F('Sweet potato (baked)', 115, 2, 26, 0.3),
   banana:          F('Banana', 89, 1.1, 23, 0.3),
   apple:           F('Apple', 52, 0.3, 14, 0.2),
   berries:         F('Mixed berries', 44, 0.6, 10, 0.1),
@@ -54,24 +61,27 @@ export const CURATED_FOODS = Object.freeze({
   tomatoes:        F('Tomatoes', 18, 0.9, 3.9, 0.2),
 
   // Omnivore proteins
-  chicken_breast:  F('Chicken breast (cooked)', 165, 31, 0, 3.6),
+  chicken_breast:  F('Chicken breast fillet (cooked)', 165, 31, 0, 3.6),
+  chicken_thigh:   F('Chicken thigh, skinless (cooked)', 209, 26, 0, 11),
   turkey_breast:   F('Turkey breast (cooked)', 140, 30, 0, 2),
-  turkey_mince:    F('Turkey mince (5%)', 113, 20, 0, 3.3),
-  beef_mince_5:    F('Beef mince (5%)', 137, 21, 0, 5),
+  turkey_mince:    F('Turkey breast mince (cooked)', 136, 22, 0, 5),
+  beef_mince_5:    F('Beef mince 5% (cooked)', 168, 25, 0, 7),
   steak_lean:      F('Lean steak (cooked)', 200, 34, 0, 7),
-  cod:             F('Cod / white fish', 82, 18, 0, 0.7),
-  salmon:          F('Salmon', 208, 20, 0, 13),
+  cod:             F('Cod loin (cooked)', 100, 22, 0, 1),
+  salmon:          F('Salmon fillet (cooked)', 208, 24, 0, 13),
   smoked_salmon:   F('Smoked salmon', 146, 25, 0, 4.5),
-  tuna_water:      F('Tuna (in water)', 116, 26, 0, 1),
-  prawns:          F('Prawns', 85, 20, 0, 0.5),
-  eggs:            F('Whole eggs', 143, 13, 1, 10),
+  tuna_water:      F('Tuna chunks in spring water (drained)', 100, 25, 0, 1),
+  mackerel:        F('Mackerel fillets in brine (drained)', 187, 22, 0, 11),
+  prawns:          F('King prawns, cooked & peeled', 85, 20, 0, 0.7),
+  eggs:            F('Whole eggs (medium/large)', 131, 12.5, 0.8, 9),
   egg_whites:      F('Egg whites', 52, 11, 0.7, 0.2),
+  bacon_medallions: F('Back bacon medallions (cooked)', 125, 21, 0.5, 4),
 
   // Dairy
-  greek_yogurt_0:  F('Greek yogurt (0%)', 59, 10, 4, 0),
-  greek_yogurt_2:  F('Greek yogurt (2%)', 73, 10, 4, 3),
-  skyr:            F('Skyr', 63, 11, 4, 0.2),
-  cottage_cheese:  F('Cottage cheese (low-fat)', 72, 12, 3, 1),
+  greek_yogurt_0:  F('Total 0% Greek yogurt', 54, 10.3, 3, 0),
+  greek_yogurt_2:  F('Total 2% Greek yogurt', 70, 9.9, 3, 2),
+  skyr:            F('Skyr (natural)', 63, 11, 3.4, 0.1),
+  cottage_cheese:  F('Cottage cheese (low-fat)', 74, 12, 4, 1.5),
   halloumi:        F('Halloumi', 320, 22, 2, 25),
   paneer:          F('Paneer', 265, 18, 3, 21),
   cheddar_light:   F('Reduced-fat cheddar', 311, 27, 0.1, 22),
@@ -83,7 +93,8 @@ export const CURATED_FOODS = Object.freeze({
   tempeh:          F('Tempeh', 192, 20, 8, 11),
   seitan:          F('Seitan', 150, 25, 4, 1),
   tvp_dry:         F('Soya mince (dry)', 327, 52, 30, 1),
-  quorn_mince:     F('Quorn mince', 95, 14.5, 5, 2),
+  quorn_mince:     F('Quorn mince', 103, 16, 5, 2),
+  quorn_pieces:    F('Quorn chicken-style pieces', 98, 13, 4.5, 1.7),
   edamame:         F('Edamame', 121, 12, 9, 5),
   lentils:         F('Lentils (cooked)', 116, 9, 20, 0.4),
   lentil_dahl:     F('Red lentil dahl', 116, 7, 18, 1.2),
