@@ -27,12 +27,12 @@ function _apiKey() {
   return process.env[_USDA_KEY_NAME] || null;
 }
 
-function _fetchWithTimeout(url, timeoutMs) {
+function _fetchWithTimeout(url, timeoutMs, extraHeaders = null) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   return fetch(url, {
     method: 'GET',
-    headers: { Accept: 'application/json' },
+    headers: { Accept: 'application/json', ...(extraHeaders || {}) },
     signal: ctrl.signal,
   }).finally(() => clearTimeout(t));
 }
@@ -45,11 +45,12 @@ export async function searchUsda(query, limit = 25) {
   if (!key) return [];
   const q = (query || '').trim();
   if (q.length === 0) return [];
-  const url = `${USDA_BASE}/foods/search?api_key=${encodeURIComponent(key)}`
-            + `&query=${encodeURIComponent(q)}&pageSize=${limit}`
+  // Key goes in the X-Api-Key header, not the query string (food review D-m3),
+  // so it isn't captured in proxy/CDN URL logs.
+  const url = `${USDA_BASE}/foods/search?query=${encodeURIComponent(q)}&pageSize=${limit}`
             + '&dataType=Foundation,SR%20Legacy,Branded';
   try {
-    const res = await _fetchWithTimeout(url, USDA_TIMEOUT_MS);
+    const res = await _fetchWithTimeout(url, USDA_TIMEOUT_MS, { 'X-Api-Key': key });
     if (!res.ok) return [];
     const json = await res.json();
     const foods = Array.isArray(json?.foods) ? json.foods : [];
@@ -67,10 +68,9 @@ export async function searchUsda(query, limit = 25) {
 export async function lookupBarcodeUsda(ean) {
   const key = _apiKey();
   if (!key || !ean) return null;
-  const url = `${USDA_BASE}/foods/search?api_key=${encodeURIComponent(key)}`
-            + `&query=${encodeURIComponent(ean)}&pageSize=1&dataType=Branded`;
+  const url = `${USDA_BASE}/foods/search?query=${encodeURIComponent(ean)}&pageSize=1&dataType=Branded`;
   try {
-    const res = await _fetchWithTimeout(url, USDA_TIMEOUT_MS);
+    const res = await _fetchWithTimeout(url, USDA_TIMEOUT_MS, { 'X-Api-Key': key });
     if (!res.ok) return null;
     const json = await res.json();
     const first = Array.isArray(json?.foods) ? json.foods[0] : null;

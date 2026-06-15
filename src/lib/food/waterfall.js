@@ -58,25 +58,33 @@ async function _promoteToLocal(row) {
         (id, source, source_id, barcode_ean, name, brand,
          serving_g, serving_label,
          kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
+         sodium_100g, sugar_100g,
          verified, fetched_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
       [
         id, row.source, sourceId, row.barcode_ean ?? null,
         row.name ?? 'Unknown', row.brand ?? null,
         row.serving_g ?? 100, row.serving_label ?? null,
         row.kcal_100g, row.protein_100g, row.carbs_100g, row.fat_100g,
         row.fibre_100g ?? null,
+        // Carry sodium/sugar when the source has them, matching the bundled +
+        // custom-food rows so the cache shape is consistent (food review D-m1).
+        row.sodium_100g ?? null, row.sugar_100g ?? null,
         now, now, now,
       ]
     );
     return { ...row, food_ref: `global:${id}` };
-  } catch {
-    // Race on uq_foods_source_source_id: re-read.
+  } catch (_e) {
+    // Race on uq_foods_source_source_id: re-read and use the existing row.
     const again = await d.getFirstAsync(
       'SELECT id FROM foods WHERE source = ? AND source_id = ? LIMIT 1',
       [row.source, sourceId]
     );
-    return again?.id ? { ...row, food_ref: `global:${again.id}` } : row;
+    if (again?.id) return { ...row, food_ref: `global:${again.id}` };
+    // Not a race: the food shows but never caches, so every lookup re-hits the
+    // network. Surface it (source only, no PII) so it's diagnosable (D-n4).
+    try { trackEvent('food.promote.failed', { source: row.source }); } catch (_) { /* tolerate */ }
+    return row;
   }
 }
 

@@ -302,7 +302,10 @@ export async function recomputeRollup(userId, entryDate) {
     [
       userId, entryDate,
       row.kcal_total, row.protein_g, row.carbs_g, row.fat_g,
-      row.fibre_g || null, row.entries_count, now,
+      // Store the summed fibre as-is (COALESCEd to 0 above) like the other
+      // macros; the old `|| null` turned a real 0 g total into NULL, making a
+      // zero-fibre day indistinguishable from "no data" (food review D-m5).
+      row.fibre_g, row.entries_count, now,
     ]
   );
 }
@@ -376,10 +379,11 @@ export async function getRollupsForRange(userId, startDate, endDate) {
 }
 
 /**
- * Compute the 7-day rolling intake average + days-logged count for
- * the FFM floor safety gate. Returns { avgKcal, daysLogged } where
- * daysLogged is the number of distinct days in the last 7 that have
- * at least one entry.
+ * Compute the recent intake summary for the FFM floor safety gate over a 7-day
+ * window. Returns { avgKcal, daysLogged } where daysLogged is the number of
+ * distinct days in the last 7 with at least one entry, and avgKcal is the mean
+ * across THOSE LOGGED DAYS (divided by daysLogged, not by 7) — so days the user
+ * didn't log don't dilute the figure the floor gate sees (food review D-n3).
  *
  * Used by callers feeding weeklyCoach inputs.
  */
@@ -1093,10 +1097,14 @@ export async function applyMealPlanRowFromCloud(userId, row) {
   const deletedAt = row.deleted_at == null ? null : Number(row.deleted_at);
   await runInTransaction(d, async () => {
     if (isActive && deletedAt == null) {
+      // Bump updated_at on the deactivated sibling (food review D-m4): the old
+      // `updated_at = updated_at` no-op meant the deactivation never re-pushed,
+      // so a second device could keep showing two "active" plans. Stamping it
+      // with the incoming change time lets the change query pick it up.
       await d.runAsync(
-        `UPDATE meal_plans SET is_active = 0, updated_at = updated_at
+        `UPDATE meal_plans SET is_active = 0, updated_at = ?
          WHERE user_id = ? AND is_active = 1 AND id != ?`,
-        [userId, row.id]
+        [incomingUpdated, userId, row.id]
       );
     }
     await d.runAsync(
