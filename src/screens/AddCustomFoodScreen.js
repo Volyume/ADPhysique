@@ -25,13 +25,8 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { findLocalByBarcode } from '../lib/food/sources/localCache';
 import { scaleMacros } from '../lib/food/macros';
+import { mealSlotLabel } from '../lib/food/mealSlots';
 
-const MEAL_LABELS = {
-  breakfast: 'Breakfast',
-  lunch: 'Lunch',
-  dinner: 'Dinner',
-  snack: 'Snacks',
-};
 
 export default function AddCustomFoodScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
@@ -199,7 +194,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <Text style={styles.contextLabel}>Logging to {MEAL_LABELS[mealSlot] ?? 'Snacks'}</Text>
+        <Text style={styles.contextLabel}>Logging to {mealSlotLabel(mealSlot)}</Text>
         {prefillBarcode ? (
           <Text style={styles.barcodeHint}>Scanned barcode: {prefillBarcode}</Text>
         ) : null}

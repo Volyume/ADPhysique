@@ -248,8 +248,14 @@ export default function MealPlanScreen({ navigation }) {
       const nextPlan = { ...plan, days, lastEditType: 'rotation' };
       await updateMealPlan(user.id, record.id, nextPlan);
       setRecord({ ...record, plan: nextPlan });
+      // Guard the receipt fields: a missing swap object must not throw AFTER a
+      // successful write and surface a false "couldn't swap" error (food review U-M10).
       const { swap } = res;
-      toast.show(`${swap.gramsIn} g ${swap.foodInName} for ${swap.foodOutName}. Macros held.`, { variant: 'success' });
+      toast.show(
+        swap ? `${swap.gramsIn} g ${swap.foodInName} for ${swap.foodOutName}. Macros held.`
+          : 'Food swapped. Macros held.',
+        { variant: 'success' },
+      );
     } catch (_) {
       toast.show("Couldn't swap that food. Try again.", { variant: 'error' });
     } finally {

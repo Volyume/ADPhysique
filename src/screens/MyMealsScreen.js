@@ -31,10 +31,7 @@ import {
 } from '../lib/food/db';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-
-const SLOT_LABELS = {
-  breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snacks',
-};
+import { mealSlotLabel } from '../lib/food/mealSlots';
 
 export default function MyMealsScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
@@ -79,7 +76,7 @@ export default function MyMealsScreen({ navigation, route }) {
   function confirmLog(meal) {
     appAlert(
       `Log "${meal.name}"?`,
-      `Adds ${meal.itemCount} ${meal.itemCount === 1 ? 'food' : 'foods'} to ${SLOT_LABELS[mealSlot] ?? mealSlot}.`,
+      `Adds ${meal.itemCount} ${meal.itemCount === 1 ? 'food' : 'foods'} to ${mealSlotLabel(mealSlot)}.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Log it', onPress: () => onLog(meal) },

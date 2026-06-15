@@ -34,6 +34,7 @@ import MacroBreakdownSheet from '../components/food/MacroBreakdownSheet';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import QuickAddSheet from '../components/food/QuickAddSheet';
 import EmptyDiary from '../components/food/EmptyDiary';
+import { SkeletonRow } from '../components/Skeleton';
 import MealSection from '../components/food/MealSection';
 import { friendlyFoodName } from '../components/food/EntryRow';
 import ScreenHeader from '../components/ScreenHeader';
@@ -88,6 +89,10 @@ export default function DiaryScreen({ navigation }) {
 
   const [selectedDate, setSelectedDate] = useState(() => isoDate(new Date()));
   const [entries, setEntries] = useState([]);
+  // Whether the first load for the current day has resolved. Until then we show
+  // a skeleton instead of the empty state, so a day that DOES have food never
+  // flashes "Nothing logged yet" before it paints (food review U-M7).
+  const [loaded, setLoaded] = useState(false);
   const [rollup, setRollup] = useState(null);
   const [waterMl, setWaterMl] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -132,6 +137,7 @@ export default function DiaryScreen({ navigation }) {
     setTargets(t);
     setIsTrainingDay(trainingDay);
     setRefeedDate(resolvedRefeedDate);
+    setLoaded(true);
   }, [userId, selectedDate, macroCycle, refeed]);
 
   const isRefeedDay = !!refeed && !!refeedDate && refeedDate === selectedDate;
@@ -470,20 +476,37 @@ export default function DiaryScreen({ navigation }) {
           onPress: async () => {
             // eslint-disable-next-line global-require
             const { logFoodEntry } = require('../lib/food/db');
+            let ok = 0;
+            let failed = 0;
             for (const e of yEntries) {
-              await logFoodEntry(userId, {
-                entryDate: selectedDate,
-                mealSlot: e.meal_slot,
-                foodRef: e.food_ref,
-                quantityG: e.quantity_g,
-                kcal: e.kcal,
-                proteinG: e.protein_g,
-                carbsG: e.carbs_g,
-                fatG: e.fat_g,
-                fibreG: e.fibre_g ?? null,
-              }).catch(() => {});
+              try {
+                await logFoodEntry(userId, {
+                  entryDate: selectedDate,
+                  mealSlot: e.meal_slot,
+                  foodRef: e.food_ref,
+                  quantityG: e.quantity_g,
+                  kcal: e.kcal,
+                  proteinG: e.protein_g,
+                  carbsG: e.carbs_g,
+                  fatG: e.fat_g,
+                  fibreG: e.fibre_g ?? null,
+                });
+                ok++;
+              } catch (_) {
+                failed++;
+              }
             }
             await load();
+            // Surface the outcome instead of silently swallowing failures
+            // (food review U-M6), mirroring the FoodSearch logPlate behaviour.
+            if (failed > 0) {
+              toast.show(
+                ok > 0 ? `Copied ${ok}; ${failed} couldn't be added.` : "Couldn't copy yesterday. Try again.",
+                { variant: ok > 0 ? 'info' : 'error' },
+              );
+            } else {
+              toast.show(`Copied ${ok} ${ok === 1 ? 'item' : 'items'} from yesterday.`, { variant: 'success' });
+            }
           },
         },
       ],
@@ -571,7 +594,13 @@ export default function DiaryScreen({ navigation }) {
           </View>
         ) : null}
 
-        {entries.length === 0 ? (
+        {!loaded ? (
+          <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+          </View>
+        ) : entries.length === 0 ? (
           <EmptyDiary
             onAdd={() => addFood('meal_1')}
             onCopyYesterday={copyYesterday}
@@ -780,7 +809,12 @@ function WaterRow({ ml, onAdd, onSub }) {
           </TouchableOpacity>
         </View>
       </View>
-      <View style={styles.waterTrack}>
+      <View
+        style={styles.waterTrack}
+        accessibilityRole="progressbar"
+        accessibilityLabel="Water intake"
+        accessibilityValue={{ min: 0, max: WATER_TARGET_ML, now: Math.round(ml) }}
+      >
         <View style={[styles.waterFill, { width: `${Math.round(progress * 100)}%` }]} />
       </View>
     </View>
