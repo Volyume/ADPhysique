@@ -176,12 +176,14 @@ function _savedMealToCloud(row, userId) {
   };
 }
 
-function _recipeToCloud(row, userId) {
+export function _recipeToCloud(row, userId) {
   return {
     id: row.id,
     user_id: userId,
     name: row.name,
-    servings: row.servings ?? 1,
+    // Cloud column is `servings` (migrate_021/023); the local row column is
+    // `total_servings`. Read the local key, emit the cloud key.
+    servings: row.total_servings ?? 1,
     notes: row.notes ?? null,
     created_at: _msToISOorNull(row.created_at),
     updated_at: _msToISOorNull(row.updated_at),

@@ -1346,7 +1346,9 @@ export async function applyRecipeFromCloud(userId, row) {
       deleted_at, created_at, updated_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      row.id, userId, row.name, row.total_servings, row.notes ?? null,
+      // Cloud sends `servings` (migrate_021/023); tolerate the legacy
+      // `total_servings` key, default 1 so a recipe never lands with NULL servings.
+      row.id, userId, row.name, row.servings ?? row.total_servings ?? 1, row.notes ?? null,
       deletedAt, createdAt, updatedAt,
     ]
   );
