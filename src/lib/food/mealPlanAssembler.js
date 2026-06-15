@@ -111,8 +111,8 @@ export function dayVariantTargets(target, { trainingDays = 0, restDays = 0, fatC
   const MIN_MEANINGFUL_CYCLE_KCAL = 50;
   if (down < MIN_MEANINGFUL_CYCLE_KCAL || up === 0) return flat;
 
-  const rest = { ...base, kcal: base.kcal - down };
-  const training = { ...base, kcal: base.kcal + up };
+  const rest = { ...base };
+  const training = { ...base };
 
   if (fatConvention === 'higher_rest_day') {
     // A quarter of the rest-day cut comes back as fat, so carbs cut deeper.
@@ -123,6 +123,15 @@ export function dayVariantTargets(target, { trainingDays = 0, restDays = 0, fatC
     rest.carbsG = Math.max(0, base.carbsG - r0(down / KCAL_C));
   }
   training.carbsG = base.carbsG + r0(up / KCAL_C);
+
+  // Keep each variant's kcal consistent with the macro grams it actually
+  // carries (food review E-M2): derive the kcal change from the carb/fat grams
+  // moved, not the raw down/up kcal, so the band check and the per-meal macro
+  // share describe the SAME day rather than two ~1% different ones. Clamp to
+  // the engine band so a rounding nudge can never push a variant out of band.
+  const clampK = (k) => Math.min(kcalMax, Math.max(kcalMin, r0(k)));
+  rest.kcal = clampK(base.kcal + KCAL_C * (rest.carbsG - base.carbsG) + KCAL_F * (rest.fatG - base.fatG));
+  training.kcal = clampK(base.kcal + KCAL_C * (training.carbsG - base.carbsG));
 
   return { training, rest, cycleDeltaKcal: down };
 }

@@ -42,6 +42,16 @@ describe('dayVariantTargets', () => {
     expect(Math.abs(weekly - TARGET.targetKcal * 7)).toBeLessThanOrEqual(7); // rounding only
   });
 
+  test('variant kcal matches the macro grams it carries (food review E-M2)', () => {
+    // kcal change from base must equal the kcal of the carb/fat grams moved,
+    // so the band check and the per-meal macro share describe the same day.
+    const v = dayVariantTargets(TARGET, { trainingDays: 4, restDays: 3 });
+    const kcalFromMacro = (x) => TARGET.targetKcal
+      + 4 * (x.carbsG - TARGET.carbsG) + 9 * (x.fatG - TARGET.fatG);
+    expect(Math.abs(v.training.kcal - kcalFromMacro(v.training))).toBeLessThanOrEqual(1);
+    expect(Math.abs(v.rest.kcal - kcalFromMacro(v.rest))).toBeLessThanOrEqual(1);
+  });
+
   test('both variants stay inside the engine band', () => {
     [[1, 6], [3, 4], [6, 1]].forEach(([td, rd]) => {
       const v = dayVariantTargets(TARGET, { trainingDays: td, restDays: rd });
