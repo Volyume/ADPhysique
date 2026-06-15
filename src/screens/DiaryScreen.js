@@ -21,7 +21,7 @@ import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type } f
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
   getFoodEntriesForDay, deleteFoodEntry, updateFoodEntry, getRollupForDay,
-  setWater, getWater, createSavedMeal,
+  setWater, getWater, createSavedMeal, confirmPlannedDay, clearPlannedDay,
 } from '../lib/food/db';
 import { localDayKey, parseLocalDay } from '../lib/dayKey';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
@@ -139,6 +139,35 @@ export default function DiaryScreen({ navigation }) {
     setRefeedDate(resolvedRefeedDate);
     setLoaded(true);
   }, [userId, selectedDate, macroCycle, refeed]);
+
+  // Planned scaffolding from a meal plan (adherence model): shown with a
+  // confirm banner so it counts toward adherence only once the user says they
+  // ate it. "Ate as planned" flips the day's planned meals to actuals; "Clear"
+  // discards them. Future days only offer Clear (you can't have eaten yet).
+  const plannedCount = useMemo(() => entries.filter((e) => e.is_planned).length, [entries]);
+  const isFutureDay = selectedDate > isoDate(new Date());
+
+  const handleConfirmPlanned = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const n = await confirmPlannedDay(userId, selectedDate);
+      await load();
+      toast.show(n > 0 ? `${n} planned ${n === 1 ? 'meal' : 'meals'} marked as eaten.` : 'Nothing to confirm.', { variant: n > 0 ? 'success' : 'info' });
+    } catch (_) {
+      toast.show("Couldn't update. Try again.", { variant: 'error' });
+    }
+  }, [userId, selectedDate, load, toast]);
+
+  const handleClearPlanned = useCallback(async () => {
+    if (!userId) return;
+    try {
+      await clearPlannedDay(userId, selectedDate);
+      await load();
+      toast.show('Planned meals cleared.', { variant: 'info' });
+    } catch (_) {
+      toast.show("Couldn't update. Try again.", { variant: 'error' });
+    }
+  }, [userId, selectedDate, load, toast]);
 
   const isRefeedDay = !!refeed && !!refeedDate && refeedDate === selectedDate;
 
@@ -608,6 +637,29 @@ export default function DiaryScreen({ navigation }) {
           />
         ) : (
           <>
+            {plannedCount > 0 && !selectionMode ? (
+              <View style={styles.plannedBanner}>
+                <Text style={styles.plannedBannerText}>
+                  {plannedCount} planned {plannedCount === 1 ? 'meal' : 'meals'} for this day.
+                  {isFutureDay ? ' Confirm them on the day once eaten.' : " Mark them eaten when you've had them so they count."}
+                </Text>
+                <View style={styles.plannedBannerRow}>
+                  {!isFutureDay ? (
+                    <TouchableOpacity
+                      onPress={handleConfirmPlanned}
+                      style={styles.plannedBtnPrimary}
+                      accessibilityRole="button"
+                      accessibilityLabel="Mark planned meals as eaten"
+                    >
+                      <Text style={styles.plannedBtnPrimaryText}>Ate as planned</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  <TouchableOpacity onPress={handleClearPlanned} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear the planned meals">
+                    <Text style={styles.plannedBtnGhost}>Clear</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : null}
             {mealSlots.map((slot, i) => (
               <AnimatedEntrance key={slot.key} index={i}>
                 <MealSection
@@ -923,6 +975,23 @@ const styles = StyleSheet.create({
     marginTop: -spacing.sm, marginBottom: spacing.lg,
   },
   addMealLabel: { ...type.label, color: colors.textSecondary },
+  plannedBanner: {
+    backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.primary,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  plannedBannerText: { color: colors.textPrimary, fontSize: fontSize.sm, lineHeight: 19 },
+  plannedBannerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
+  plannedBtnPrimary: {
+    backgroundColor: colors.primary, borderRadius: radius.md,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, minHeight: 40,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  plannedBtnPrimaryText: { color: colors.onPrimary, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
+  plannedBtnGhost: { color: colors.primary, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
   waterRow: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.border,
