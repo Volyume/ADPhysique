@@ -120,7 +120,7 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_om_chicken_egg_bagel', 'Chicken & egg breakfast bagel', 'omnivore', ['breakfast'], [{ food: 'eggs', g: 100 }, { food: 'chicken_breast', g: 80 }, { food: 'bagel', g: 85 }]),
   m('curated_om_turkey_egg_hash', 'Turkey & egg sweet potato hash', 'omnivore', ['breakfast'], [{ food: 'turkey_breast', g: 100 }, { food: 'eggs', g: 100 }, { food: 'sweet_potato', g: 150 }]),
   m('curated_om_smoked_salmon_scramble', 'Smoked salmon scrambled eggs', 'omnivore', ['breakfast'], [{ food: 'smoked_salmon', g: 70 }, { food: 'eggs', g: 100 }, { food: 'egg_whites', g: 100 }, { food: 'wholemeal_bread', g: 40 }]),
-  m('curated_om_tuna_egg_omelette', 'Savoury tuna omelette', 'omnivore', ['breakfast', 'lunch'], [{ food: 'tuna_water', g: 80 }, { food: 'eggs', g: 150 }, { food: 'spinach', g: 60 }]),
+  m('curated_om_tuna_egg_omelette', 'Savoury tuna omelette', 'omnivore', ['lunch'], [{ food: 'tuna_water', g: 80 }, { food: 'eggs', g: 150 }, { food: 'spinach', g: 60 }]),
   m('curated_om_chicken_jacket_potato', 'Chicken jacket potato & salad', 'omnivore', ['lunch'], [{ food: 'chicken_breast', g: 140 }, { food: 'white_potato', g: 300 }, { food: 'salad', g: 80 }]),
   m('curated_om_tuna_jacket_potato', 'Tuna jacket potato & beans', 'omnivore', ['lunch'], [{ food: 'tuna_water', g: 120 }, { food: 'white_potato', g: 300 }, { food: 'baked_beans', g: 100 }]),
   m('curated_om_chicken_quinoa_salad', 'Chicken & quinoa salad', 'omnivore', ['lunch'], [{ food: 'chicken_breast', g: 140 }, { food: 'quinoa', g: 150 }, { food: 'salad', g: 100 }, { food: 'olive_oil', g: 6 }]),

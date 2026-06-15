@@ -34,6 +34,30 @@ describe('library data integrity', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  // UK bodybuilder research report (2026-06-15) + founder note: a meal named
+  // after a protein must actually contain it (no "tuna" meal made with cod, and
+  // vice versa), and tinned tuna is never a UK breakfast.
+  const has = (meal, key) => meal.components.some(c => c.food === key);
+  test('a meal named "tuna" uses tuna not cod, and a "cod" meal uses cod not tuna', () => {
+    for (const meal of CURATED_MEALS) {
+      const n = meal.name.toLowerCase();
+      if (/\btuna\b/.test(n)) {
+        expect(has(meal, 'tuna_water')).toBe(true);
+        expect(has(meal, 'cod')).toBe(false);
+      }
+      if (/\bcod\b/.test(n)) {
+        expect(has(meal, 'cod')).toBe(true);
+        expect(has(meal, 'tuna_water')).toBe(false);
+      }
+    }
+  });
+
+  test('no breakfast meal contains tinned tuna (not a UK bodybuilder breakfast)', () => {
+    for (const meal of CURATED_MEALS) {
+      if (meal.slots.includes('breakfast')) expect(has(meal, 'tuna_water')).toBe(false);
+    }
+  });
+
   test('every meal resolves to items with computed macros', () => {
     for (const meal of CURATED_MEALS) {
       const items = mealItems(meal);
