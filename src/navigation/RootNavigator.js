@@ -160,6 +160,20 @@ const GatedCoachingReminders = withProGuard(CoachingRemindersScreen, 'Coaching r
 const GatedDiary            = withProGuard(DiaryScreen, 'Food diary');
 const GatedLogCardio        = withProGuard(LogCardioScreen, 'Cardio');
 const GatedCardioHistory    = withProGuard(CardioHistoryScreen, 'Cardio');
+// Defence-in-depth (food review U-M1): the Diary tab root is gated and these
+// sub-screens are only reached from it today, but a stray deep-link, push
+// notification route, or a second registration elsewhere would otherwise expose
+// a Pro feature with no paywall. Guard each directly too; withProGuard is a
+// no-op for Pro users, so this only ever protects, never blocks.
+const GatedMealPlan         = withProGuard(MealPlanScreen, 'Meal plan');
+const GatedFoodSearch       = withProGuard(FoodSearchScreen, 'Food diary');
+const GatedAddCustomFood    = withProGuard(AddCustomFoodScreen, 'Food diary');
+const GatedScanBarcode      = withProGuard(ScanBarcodeScreen, 'Barcode scanning');
+const GatedScanLabel        = withProGuard(ScanLabelScreen, 'Label scanning');
+const GatedFoodInsights     = withProGuard(FoodInsightsScreen, 'Food insights');
+const GatedMyRecipes        = withProGuard(MyRecipesScreen, 'Recipes');
+const GatedMyMeals          = withProGuard(MyMealsScreen, 'Saved meals');
+const GatedRecipeBuilder    = withProGuard(RecipeBuilderScreen, 'Recipes');
 
 const stackOptions = {
   headerStyle: { backgroundColor: colors.surface, borderBottomColor: colors.border },
@@ -225,27 +239,27 @@ function DiaryStack({ navigation }) {
       <Stack.Screen name="Diary" component={GatedDiary} options={{ headerShown: false }} />
       <Stack.Screen
         name="MealPlan"
-        component={MealPlanScreen}
+        component={GatedMealPlan}
         options={{ headerShown: false }}
       />
       <Stack.Screen
         name="FoodSearch"
-        component={FoodSearchScreen}
+        component={GatedFoodSearch}
         options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen
         name="AddCustomFood"
-        component={AddCustomFoodScreen}
+        component={GatedAddCustomFood}
         options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen
         name="ScanBarcode"
-        component={ScanBarcodeScreen}
+        component={GatedScanBarcode}
         options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen
         name="ScanLabel"
-        component={ScanLabelScreen}
+        component={GatedScanLabel}
         options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen
@@ -260,22 +274,22 @@ function DiaryStack({ navigation }) {
       />
       <Stack.Screen
         name="FoodInsights"
-        component={FoodInsightsScreen}
+        component={GatedFoodInsights}
         options={{ headerShown: false }}
       />
       <Stack.Screen
         name="MyRecipes"
-        component={MyRecipesScreen}
+        component={GatedMyRecipes}
         options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen
         name="MyMeals"
-        component={MyMealsScreen}
+        component={GatedMyMeals}
         options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen
         name="RecipeBuilder"
-        component={RecipeBuilderScreen}
+        component={GatedRecipeBuilder}
         options={{ headerShown: false, presentation: 'modal' }}
       />
     </Stack.Navigator>
