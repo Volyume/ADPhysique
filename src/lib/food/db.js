@@ -1363,12 +1363,18 @@ export async function applyFavouriteFromCloud(userId, row) {
   // outside the validated set so a malformed row can't poison local
   // state.
   const kind = row.kind === 'dislike' ? 'dislike' : 'fav';
+  // LWW on BOTH columns (food review D-M2): the previous applier took MAX on
+  // last_used_at but overwrote `kind` unconditionally, so a stale cloud row
+  // could re-assert an old like/dislike over a newer local change. Gate the
+  // whole update on the cloud row being newer-or-equal, mirroring the water
+  // applier, so a newer local kind is never clobbered by an older cloud row.
   await d.runAsync(
     `INSERT INTO food_favourites (user_id, food_ref, last_used_at, kind)
      VALUES (?, ?, ?, ?)
      ON CONFLICT(user_id, food_ref) DO UPDATE SET
-       last_used_at = MAX(food_favourites.last_used_at, excluded.last_used_at),
-       kind = excluded.kind`,
+       last_used_at = excluded.last_used_at,
+       kind = excluded.kind
+     WHERE excluded.last_used_at >= food_favourites.last_used_at`,
     [userId, row.food_ref, lastUsedAt, kind]
   );
 }
