@@ -26,7 +26,8 @@
 
 import { resolveComponent } from './curatedFoods';
 import { mealTotals } from './curatedMeals';
-import { roleOf, gramRangeOf } from './foodRoles';
+import { roleOf } from './foodRoles';
+import { solveGramsForKcal } from './gramSolve';
 
 const r0 = (n) => Math.round(n);
 const r1 = (n) => Math.round(n * 10) / 10;
@@ -136,10 +137,8 @@ export function applyMacroDeltaToPlan({ plan, adjustmentKcal = 0, floorKcal = 0 
       const item = resolveComponent(st.food, st.g);
       const per100Kcal = st.g > 0 ? (item.kcal / st.g) * 100 : 0;
       if (per100Kcal <= 0) continue;
-      const [lo, hi] = gramRangeOf(st.food);
-      // grams needed to realise the remaining kcal on this food
-      const gIdeal = st.g + (remaining / per100Kcal) * 100;
-      const gNew = Math.round(Math.min(Math.max(gIdeal, lo), hi) / 5) * 5;
+      // grams needed to realise the remaining kcal on this food (shared solver)
+      const gNew = solveGramsForKcal({ currentG: st.g, per100Kcal, kcalResidual: remaining, foodKey: st.food });
       if (gNew === st.g) continue;
       const itemNew = resolveComponent(st.food, gNew);
       const kcalDelta = itemNew.kcal - item.kcal;

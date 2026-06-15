@@ -25,7 +25,8 @@
 import { CURATED_MEALS, mealItems, mealTotals } from './curatedMeals';
 import { fitScore, perMealMacros, slotMatches } from './mealSuggest';
 import { normalisePreferences, filterMealsByPreferences } from './planPreferences';
-import { roleOf, gramRangeOf } from './foodRoles';
+import { roleOf } from './foodRoles';
+import { solveGramsForKcal } from './gramSolve';
 
 const KCAL_C = 4;
 const KCAL_F = 9;
@@ -429,10 +430,8 @@ export function assembleDayPlan({
       };
       if (per100.kcal <= 0) continue;
       const kcalResidual = want.kcal - consumed.kcal;
-      let gDelta = (kcalResidual / per100.kcal) * 100;
-      const [lo, hi] = gramRangeOf(c.food);
-      const newG = Math.round(Math.min(Math.max(c.g + gDelta, lo), hi) / 5) * 5;
-      gDelta = newG - c.g;
+      const newG = solveGramsForKcal({ currentG: c.g, per100Kcal: per100.kcal, kcalResidual, foodKey: c.food });
+      const gDelta = newG - c.g;
       if (gDelta === 0) continue; // at its clamp: try the next staple
       const f = gDelta / 100;
       consumed = {

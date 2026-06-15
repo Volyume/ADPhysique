@@ -31,9 +31,9 @@ import {
   roleMacroGrams,
   swapAlternativesOf,
   keysForRole,
-  gramRangeOf,
   stateOf,
 } from './foodRoles';
+import { clampRoundGrams } from './gramSolve';
 
 const ROLE_DISTANCE_FAT_WEIGHT = 2;
 
@@ -153,8 +153,7 @@ export function solveSwapGrams(foodOut, gramsOut, foodIn) {
   const per100 = role === 'protein' ? fIn.protein : role === 'fat' ? fIn.fat : fIn.carbs;
   if (per100 <= 0) return null;
   const exact = (targetMacroG / per100) * 100;
-  const [lo, hi] = gramRangeOf(foodIn);
-  const grams = Math.round(Math.min(Math.max(exact, lo), hi) / 5) * 5;
+  const grams = clampRoundGrams(exact, foodIn);
   const roleMacroG = roleMacroGrams(foodIn, grams);
   return {
     grams,
