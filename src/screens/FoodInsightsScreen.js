@@ -32,6 +32,7 @@ import {
 import { localDayKey, parseLocalDay } from '../lib/dayKey';
 import { getNutritionTargets } from '../lib/database';
 import { exportDiaryCsv } from '../lib/food/csvExport';
+import { ADHERENCE_TOLERANCE, pctLabel, within } from '../lib/food/adherence';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -108,10 +109,10 @@ export default function FoodInsightsScreen({ navigation }) {
       const r = rollupByDate.get(d);
       if (!r || r.entries_count === 0) continue;
       logged++;
-      if (within(r.kcal_total, targets.targetKcal, 0.1)) kcalDays++;
-      if (within(r.protein_g, targets.proteinG, 0.1)) pDays++;
-      if (within(r.carbs_g, targets.carbsG, 0.15)) cDays++;
-      if (within(r.fat_g, targets.fatG, 0.15)) fDays++;
+      if (within(r.kcal_total, targets.targetKcal, ADHERENCE_TOLERANCE.kcal)) kcalDays++;
+      if (within(r.protein_g, targets.proteinG, ADHERENCE_TOLERANCE.protein)) pDays++;
+      if (within(r.carbs_g, targets.carbsG, ADHERENCE_TOLERANCE.carbs)) cDays++;
+      if (within(r.fat_g, targets.fatG, ADHERENCE_TOLERANCE.fat)) fDays++;
     }
     return { kcalDays, pDays, cDays, fDays, logged };
   }, [days, rollupByDate, targets]);
@@ -204,7 +205,7 @@ export default function FoodInsightsScreen({ navigation }) {
         <Card style={styles.card}>
           {chartBars.map((b) => {
             const pct = Math.min(1, b.kcal / maxKcal);
-            const targetMet = within(b.kcal, targets?.targetKcal, 0.1);
+            const targetMet = within(b.kcal, targets?.targetKcal, ADHERENCE_TOLERANCE.kcal);
             return (
               <View
                 key={b.key}
@@ -227,8 +228,8 @@ export default function FoodInsightsScreen({ navigation }) {
           {targets?.targetKcal ? (
             <Text style={styles.cardFootnote}>
               {isWeekly
-                ? `Target: ${targets.targetKcal} kcal/day. Each bar is a weekly average; within 10% turns green.`
-                : `Target: ${targets.targetKcal} kcal. Bars within 10% turn green.`}
+                ? `Target: ${targets.targetKcal} kcal/day. Each bar is a weekly average; within ${pctLabel(ADHERENCE_TOLERANCE.kcal)} turns green.`
+                : `Target: ${targets.targetKcal} kcal. Bars within ${pctLabel(ADHERENCE_TOLERANCE.kcal)} turn green.`}
             </Text>
           ) : (
             <Text style={styles.cardFootnote}>
@@ -293,11 +294,6 @@ export default function FoodInsightsScreen({ navigation }) {
       </ScrollView>
     </SafeAreaView>
   );
-}
-
-function within(value, target, tolerance) {
-  if (target == null || target === 0) return false;
-  return Math.abs(value - target) / target <= tolerance;
 }
 
 function AdherenceRow({ label, hit, total }) {
