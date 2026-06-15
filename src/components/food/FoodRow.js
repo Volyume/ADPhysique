@@ -43,10 +43,8 @@ export default function FoodRow({ food, isFav, preference, onPress, onLongPress,
       onPress={onPress}
       onLongPress={onLongPress}
       accessibilityRole="button"
-      accessibilityLabel={
-        `${food.name}, ${kcalPerServing ?? '?'} kcal per serving. ${a11yPref}`
-        + ' Long-press to cycle favourite, exclude, neutral.'
-      }
+      accessibilityLabel={`${food.name}, ${kcalPerServing ?? '?'} kcal per serving. ${a11yPref}`}
+      accessibilityHint={onLongPress ? 'Long-press to cycle favourite, exclude, neutral' : undefined}
     >
       <View style={{ flex: 1 }}>
         <Text
