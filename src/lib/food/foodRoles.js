@@ -122,18 +122,23 @@ export function proteinQualityOf(foodKey) {
  * Pure; grams come from the meal's components, per-100g protein from the
  * curated food table.
  */
-export function mealProteinAnchorQuality(meal) {
+export function mealProteinAnchor(meal) {
   const components = Array.isArray(meal?.components) ? meal.components : [];
-  let best = null;
+  let bestFood = null;
+  let bestCls = null;
   let bestG = 0;
   for (const c of components) {
     const cls = PROTEIN_QUALITY[c.food];
     if (!cls) continue;
     const food = CURATED_FOODS[c.food];
     const proteinG = food ? (Number(food.protein) || 0) * (Number(c.g) || 0) / 100 : 0;
-    if (proteinG > bestG) { best = cls; bestG = proteinG; }
+    if (proteinG > bestG) { bestFood = c.food; bestCls = cls; bestG = proteinG; }
   }
-  return best;
+  return bestFood ? { food: bestFood, cls: bestCls, role: ROLE[bestFood] ?? null } : null;
+}
+
+export function mealProteinAnchorQuality(meal) {
+  return mealProteinAnchor(meal)?.cls ?? null;
 }
 
 // ─── Weight state ───────────────────────────────────────────────────────

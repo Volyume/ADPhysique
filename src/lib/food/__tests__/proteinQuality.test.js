@@ -8,7 +8,7 @@
  *    threshold — the library itself must carry the uplift).
  * Asserted against the REAL curated library and the REAL assembler.
  */
-import { proteinQualityOf, mealProteinAnchorQuality } from '../foodRoles';
+import { proteinQualityOf, mealProteinAnchorQuality, mealProteinAnchor, roleOf } from '../foodRoles';
 import { CURATED_MEALS, mealItems, mealTotals } from '../curatedMeals';
 import { mealAllowed } from '../planPreferences';
 import { assembleDayPlan } from '../mealPlanAssembler';
@@ -55,6 +55,21 @@ describe('mealAllowed protein-anchor policy', () => {
     CURATED_MEALS.filter((m) => m.diet === 'vegan').forEach((m) => {
       expect(mealAllowed(m, { diet: 'vegan' })).toBe(true);
     });
+  });
+
+  // food review E-M3: a fat/carb-role food (cheese, milk) carries a 'high'
+  // protein class but is a vehicle, not a protein anchor. It must never satisfy
+  // the omnivore "real animal-protein anchor" gate.
+  test('omnivore: no fat/carb-role food is the accepted anchor of an allowed meal', () => {
+    const offenders = [];
+    CURATED_MEALS.forEach((m) => {
+      if (!mealAllowed(m, { diet: 'omnivore' })) return;
+      const anchor = mealProteinAnchor(m);
+      if (anchor && roleOf(anchor.food) !== 'protein') {
+        offenders.push(`${m.id}: anchored on ${anchor.food} (role ${roleOf(anchor.food)})`);
+      }
+    });
+    expect(offenders).toEqual([]);
   });
 });
 

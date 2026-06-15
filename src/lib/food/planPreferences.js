@@ -16,7 +16,7 @@
  */
 
 import { CURATED_MEALS, dietAllows } from './curatedMeals';
-import { tagsOf, mealProteinAnchorQuality } from './foodRoles';
+import { tagsOf, mealProteinAnchor } from './foodRoles';
 
 export const FAT_CONVENTIONS = Object.freeze(['equalised', 'higher_rest_day']);
 
@@ -93,10 +93,16 @@ export function mealAllowed(meal, prefs) {
   if (!meal) return false;
   const p = normalisePreferences(prefs);
   if (!dietAllows(p.diet, meal.diet)) return false;
-  const anchor = mealProteinAnchorQuality(meal);
+  const anchor = mealProteinAnchor(meal);
   if (anchor) {
-    if (p.diet === 'omnivore' && anchor !== 'high') return false;
-    if (p.diet === 'vegetarian' && anchor === 'carb_protein') return false;
+    if (p.diet === 'omnivore') {
+      // Omnivore plans anchor on a REAL animal-protein source: high quality AND
+      // a protein-role food. Cheese (fat role) and milk (carb role) carry a
+      // 'high' class but are fat/carb vehicles, not protein anchors — they must
+      // not satisfy the gate (food review E-M3).
+      if (anchor.cls !== 'high' || anchor.role !== 'protein') return false;
+    }
+    if (p.diet === 'vegetarian' && anchor.cls === 'carb_protein') return false;
   }
   const components = Array.isArray(meal.components) ? meal.components : [];
   return components.every((c) => foodAllowed(c.food, p));
