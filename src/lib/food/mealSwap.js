@@ -37,6 +37,30 @@ import {
 
 const ROLE_DISTANCE_FAT_WEIGHT = 2;
 
+// An honest short name built from a meal's components, used after a food swap so
+// a plate never keeps a name that misrepresents its contents (e.g. a "Tuna ..."
+// meal whose tuna was swapped for cod keeping the tuna name — founder report
+// 2026-06-15). Protein anchor + main carb ("Cod & rice"); falls back to the
+// protein, then the first component, then a generic label. Pure.
+const shortFoodName = (key) => {
+  const n = CURATED_FOODS[key]?.name;
+  if (!n) return null;
+  return n.split('/')[0].replace(/\s*\(.*?\)\s*/g, ' ').trim();
+};
+
+export function mealNameFromComponents(components) {
+  const list = (Array.isArray(components) ? components : []).filter((c) => CURATED_FOODS[c?.food]);
+  if (!list.length) return 'Custom meal';
+  const proteinG = (c) => (CURATED_FOODS[c.food].protein || 0) * (Number(c.g) || 0);
+  const proteins = list.filter((c) => roleOf(c.food) === 'protein').sort((a, b) => proteinG(b) - proteinG(a));
+  const carbs = list.filter((c) => roleOf(c.food) === 'carb').sort((a, b) => (Number(b.g) || 0) - (Number(a.g) || 0));
+  const protein = proteins[0];
+  const carb = carbs[0];
+  if (protein && carb) return `${shortFoodName(protein.food)} & ${shortFoodName(carb.food).toLowerCase()}`;
+  if (protein) return shortFoodName(protein.food);
+  return shortFoodName(list[0].food) || 'Custom meal';
+}
+
 // ─── Style signature (rethink §3.3) ─────────────────────────────────────
 // A swap pool must spread across genuinely different plates, not macro
 // near-clones (founder directive 2026-06-12: "many swap options, not 2
@@ -172,6 +196,9 @@ export function swapFoodInMeal({ components, foodKeyOut, prefs, preferKey = null
       components: newComponents,
       items,
       totals,
+      // Refresh the name so a swapped plate never misrepresents its contents
+      // (a "Tuna ..." plate whose tuna became cod). Founder report 2026-06-15.
+      name: mealNameFromComponents(newComponents),
       swap: {
         foodOut: foodKeyOut,
         foodOutName: outItem ? outItem.name : foodKeyOut,

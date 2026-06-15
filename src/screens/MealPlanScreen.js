@@ -241,7 +241,7 @@ export default function MealPlanScreen({ navigation }) {
     }
     setBusy(true);
     try {
-      const newSlot = { ...slot, components: res.components, items: res.items, totals: res.totals };
+      const newSlot = { ...slot, name: res.name ?? slot.name, components: res.components, items: res.items, totals: res.totals };
       const newSlots = day.slots.map((s) => (s.slot === slotKey ? newSlot : s));
       const newDay = { ...day, slots: newSlots, totals: sumDayTotals(newSlots) };
       const days = plan.days.map((d, i) => (i === dayIndex ? newDay : d));
@@ -282,7 +282,7 @@ export default function MealPlanScreen({ navigation }) {
                 ? swapFoodInMeal({ components: slot.components, foodKeyOut: foodKey, prefs: mergedPrefs })
                 : null;
               if (res) {
-                const newSlot = { ...slot, components: res.components, items: res.items, totals: res.totals };
+                const newSlot = { ...slot, name: res.name ?? slot.name, components: res.components, items: res.items, totals: res.totals };
                 const newSlots = day.slots.map((s) => (s.slot === slotKey ? newSlot : s));
                 const newDay = { ...day, slots: newSlots, totals: sumDayTotals(newSlots) };
                 const days = plan.days.map((d, i) => (i === dayIndex ? newDay : d));

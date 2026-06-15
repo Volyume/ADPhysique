@@ -12,7 +12,34 @@ import {
   solveSwapGrams,
   swapFoodInMeal,
   swapMealInPlan,
+  mealNameFromComponents,
 } from '../mealSwap';
+
+describe('mealNameFromComponents (no stale/lying names after a swap)', () => {
+  test('builds an honest "protein & carb" name from components', () => {
+    expect(mealNameFromComponents([{ food: 'cod', g: 200 }, { food: 'pasta', g: 70 }, { food: 'salad', g: 80 }]))
+      .toBe('Cod & pasta');
+    expect(mealNameFromComponents([{ food: 'chicken_breast', g: 150 }, { food: 'white_rice', g: 200 }]))
+      .toBe('Chicken breast & white rice');
+  });
+  test('falls back to protein-only, then a generic label', () => {
+    expect(mealNameFromComponents([{ food: 'cod', g: 200 }, { food: 'salad', g: 80 }])).toBe('Cod');
+    expect(mealNameFromComponents([])).toBe('Custom meal');
+  });
+});
+
+describe('swapFoodInMeal refreshes the meal name (founder report 2026-06-15)', () => {
+  test('swapping tuna → cod renames the plate so it never reads "Tuna" with cod inside', () => {
+    const components = [{ food: 'tuna_water', g: 120 }, { food: 'pasta', g: 70 }, { food: 'salad', g: 80 }, { food: 'tomato_sauce', g: 60 }];
+    const res = swapFoodInMeal({ components, foodKeyOut: 'tuna_water', prefs: {}, preferKey: 'cod' });
+    expect(res).toBeTruthy();
+    expect(res.components.some((c) => c.food === 'cod')).toBe(true);
+    expect(res.components.some((c) => c.food === 'tuna_water')).toBe(false);
+    expect(res.name).toBeTruthy();
+    expect(res.name.toLowerCase()).not.toMatch(/tuna/);
+    expect(res.name.toLowerCase()).toMatch(/cod/);
+  });
+});
 
 describe('findRoleAlternatives', () => {
   test('returns same-role foods, curated switches first, never itself', () => {
