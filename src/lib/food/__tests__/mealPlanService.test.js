@@ -10,7 +10,7 @@ jest.mock('../db', () => ({
   updateMealPlan: jest.fn(),
   listSavedMeals: jest.fn(),
   logFoodEntry: jest.fn(() => Promise.resolve('id')),
-  getRollupForDay: jest.fn(),
+  getFoodEntriesForDay: jest.fn(() => Promise.resolve([])),
 }));
 
 import {
@@ -114,17 +114,18 @@ describe('applyPlanWeekToDiary (Feature B — schedule the week, non-destructive
   const itemDay = (ref) => ({ slots: [{ slot: 'meal_1', items: [{ foodRef: ref, quantityG: 100, kcal: 100, proteinG: 10, carbsG: 5, fatG: 2 }] }] });
   const plan = { days: [itemDay('curated:x'), itemDay('curated:y')] };
 
-  beforeEach(() => { jest.clearAllMocks(); db.logFoodEntry.mockResolvedValue('id'); });
+  beforeEach(() => { jest.clearAllMocks(); db.logFoodEntry.mockResolvedValue('id'); db.getFoodEntriesForDay.mockResolvedValue([]); });
 
-  test('logs empty days, leaves days that already have food untouched', async () => {
-    db.getRollupForDay
-      .mockResolvedValueOnce({ entries_count: 3 }) // day 0 already logged -> skip
-      .mockResolvedValueOnce({ entries_count: 0 }); // day 1 empty -> add
+  test('logs empty days, leaves days that already have entries untouched', async () => {
+    db.getFoodEntriesForDay
+      .mockResolvedValueOnce([{ id: 'e1' }]) // day 0 already has food -> skip
+      .mockResolvedValueOnce([]); // day 1 empty -> add
     const res = await applyPlanWeekToDiary('u1', plan, { startDate: '2026-06-15' });
     expect(res.skippedDays).toBe(1);
     expect(res.addedDays).toBe(1);
     expect(res.loggedItems).toBe(1);
     expect(db.logFoodEntry).toHaveBeenCalledTimes(1); // only the empty day was written
+    expect(db.logFoodEntry.mock.calls[0][1].isPlanned).toBe(true); // written as scaffolding
   });
 
   test('an empty plan does nothing', async () => {

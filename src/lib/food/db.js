@@ -47,17 +47,22 @@ export async function logFoodEntry(userId, entry) {
   // so logging never hard-fails; a stray entry is editable. fibre_g is
   // nullable, so it keeps its null.
   const finite = (v) => (Number.isFinite(v) ? v : 0);
+  // is_planned=1 marks a meal-plan entry as scaffolding: excluded from the
+  // rollup/adherence/FFM/sync until the user confirms they ate it (adherence
+  // model 2026-06-15). Defaults to an actual (0).
+  const isPlanned = entry.isPlanned ? 1 : 0;
   await d.runAsync(
     `INSERT INTO food_entries (
       id, user_id, entry_date, meal_slot, food_ref, quantity_g,
       kcal, protein_g, carbs_g, fat_g, fibre_g, logged_at,
-      created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      is_planned, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, userId, entry.entryDate, entry.mealSlot, entry.foodRef,
       finite(entry.quantityG), finite(entry.kcal), finite(entry.proteinG),
       finite(entry.carbsG), finite(entry.fatG),
-      Number.isFinite(entry.fibreG) ? entry.fibreG : null, now, now, now,
+      Number.isFinite(entry.fibreG) ? entry.fibreG : null, now,
+      isPlanned, now, now,
     ]
   );
   await recomputeRollup(userId, entry.entryDate);
@@ -136,6 +141,40 @@ export async function getFoodEntriesForDay(userId, entryDate) {
      ORDER BY meal_slot, logged_at`,
     [userId, entryDate]
   );
+}
+
+/**
+ * Confirm a day's planned meals as eaten (adherence model 2026-06-15): flips
+ * is_planned 1 -> 0 so they count toward the rollup/adherence/FFM and sync as
+ * normal actuals. Bumps logged_at + updated_at. Returns the number confirmed.
+ */
+export async function confirmPlannedDay(userId, entryDate) {
+  const d = await db();
+  const now = Date.now();
+  const res = await d.runAsync(
+    `UPDATE food_entries SET is_planned = 0, logged_at = ?, updated_at = ?
+     WHERE user_id = ? AND entry_date = ? AND is_planned = 1 AND deleted_at IS NULL`,
+    [now, now, userId, entryDate]
+  );
+  await recomputeRollup(userId, entryDate);
+  _scheduleSync();
+  return res?.changes ?? 0;
+}
+
+/**
+ * Discard a day's planned scaffolding without eating it (the "no" path).
+ * Planned rows are local-only and never synced, so a hard delete is safe;
+ * actuals on the day are untouched. Returns the number cleared.
+ */
+export async function clearPlannedDay(userId, entryDate) {
+  const d = await db();
+  const res = await d.runAsync(
+    `DELETE FROM food_entries
+     WHERE user_id = ? AND entry_date = ? AND is_planned = 1`,
+    [userId, entryDate]
+  );
+  await recomputeRollup(userId, entryDate);
+  return res?.changes ?? 0;
 }
 
 export async function getRecentFoodEntries(userId, limit = 25) {
@@ -283,7 +322,7 @@ export async function recomputeRollup(userId, entryDate) {
        COALESCE(SUM(fibre_g), 0) AS fibre_g,
        COUNT(*) AS entries_count
      FROM food_entries
-     WHERE user_id = ? AND entry_date = ? AND deleted_at IS NULL`,
+     WHERE user_id = ? AND entry_date = ? AND deleted_at IS NULL AND is_planned = 0`,
     [userId, entryDate]
   );
   const now = Date.now();
@@ -1182,8 +1221,10 @@ export async function getLoggedMealSlotsForDay(userId, entryDate) {
 
 export async function getAllFoodEntriesSince(userId, sinceMs = 0) {
   const d = await db();
+  // Planned scaffolding (is_planned=1) is local-only and never synced; it
+  // becomes a normal actual the moment the user confirms they ate it.
   return d.getAllAsync(
-    `SELECT * FROM food_entries WHERE user_id = ? AND updated_at > ?`,
+    `SELECT * FROM food_entries WHERE user_id = ? AND updated_at > ? AND is_planned = 0`,
     [userId, sinceMs]
   );
 }

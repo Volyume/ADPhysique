@@ -1345,6 +1345,17 @@ const SCHEMA_MIGRATIONS = [
     'ALTER TABLE cardio_log ADD COLUMN ext_id TEXT',
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_cardio_log_user_extid ON cardio_log(user_id, ext_id) WHERE ext_id IS NOT NULL',
   ],
+  // Plan-vs-eaten separation (adherence model 2026-06-15): meal-plan entries are
+  // written as scaffolding (is_planned=1) and EXCLUDED from the rollup,
+  // adherence, the FFM floor and sync until the user confirms they ate them
+  // (is_planned -> 0, which then syncs as a normal actual). Default 0 keeps every
+  // existing and manually logged entry an actual. Local-only: planned rows never
+  // leave the device, so no cloud migration is needed. Duplicate-column is
+  // tolerated by isBenignMigrationError.
+  [
+    'ALTER TABLE food_entries ADD COLUMN is_planned INTEGER NOT NULL DEFAULT 0',
+    'CREATE INDEX IF NOT EXISTS idx_food_entries_user_date_planned ON food_entries(user_id, entry_date, is_planned) WHERE deleted_at IS NULL',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on

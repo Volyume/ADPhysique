@@ -26,7 +26,7 @@ import {
   updateMealPlan,
   listSavedMeals,
   logFoodEntry,
-  getRollupForDay,
+  getFoodEntriesForDay,
 } from './db';
 import { assembleDayPlan, assembleWeekPlan, targetWasFloored } from './mealPlanAssembler';
 import { swapFoodInMeal, swapMealInPlan } from './mealSwap';
@@ -364,6 +364,9 @@ export async function applyPlanDayToDiary(userId, day, { entryDate } = {}) {
         proteinG: Number(it.proteinG) || 0,
         carbsG: Number(it.carbsG) || 0,
         fatG: Number(it.fatG) || 0,
+        // Written as planned scaffolding; the user confirms it as eaten on the
+        // diary (adherence model). Until then it doesn't count toward adherence.
+        isPlanned: true,
       });
       logged += 1;
     }
@@ -393,9 +396,11 @@ export async function applyPlanWeekToDiary(userId, plan, { startDate } = {}) {
     const d = new Date(startDateObj.getTime());
     d.setDate(d.getDate() + i);
     const date = localDayKey(d.getTime());
+    // Skip any day that already has entries — actual OR previously-planned —
+    // so re-running never overwrites real food or duplicates the scaffolding.
     // eslint-disable-next-line no-await-in-loop
-    const rollup = await getRollupForDay(userId, date);
-    if (rollup && Number(rollup.entries_count) > 0) { skippedDays += 1; continue; }
+    const existing = await getFoodEntriesForDay(userId, date);
+    if (Array.isArray(existing) && existing.length > 0) { skippedDays += 1; continue; }
     // eslint-disable-next-line no-await-in-loop
     const n = await applyPlanDayToDiary(userId, days[i], { entryDate: date });
     if (n > 0) { addedDays += 1; loggedItems += n; }
