@@ -31,8 +31,10 @@ import { todayLocalKey } from '../lib/dayKey';
 import {
   loadActiveMealPlan,
   generateAndSaveDayPlan,
+  generateAndSaveMealPlan,
   regenerateActiveMealPlan,
   applyPlanDayToDiary,
+  applyPlanWeekToDiary,
   answerTrainingTodayOnActivePlan,
   swapMealInPlan,
   swapFoodInMeal,
@@ -123,23 +125,28 @@ export default function MealPlanScreen({ navigation }) {
   const plan = record?.plan || null;
   const day = plan?.days?.[dayIndex] || null;
 
-  const handleGenerate = useCallback(async () => {
+  // One generator, two modes (Feature A day / Feature B week). Each replaces
+  // the active plan with the chosen kind; the user can switch any time.
+  const runGenerate = useCallback(async (genFn, okMsg) => {
     if (!user?.id || busy) return;
     setBusy(true);
     try {
-      const res = await generateAndSaveDayPlan(user.id, userProfile);
-      if (res.error === 'no_target') {
+      const res = await genFn(user.id, userProfile);
+      if (res?.error === 'no_target') {
         toast.show('Set your nutrition targets first, then your plan builds from them.', { variant: 'info' });
         return;
       }
       await load();
-      toast.show('Your day is ready.', { variant: 'success' });
+      toast.show(okMsg, { variant: 'success' });
     } catch (_) {
       toast.show("Couldn't build your plan. Try again.", { variant: 'error' });
     } finally {
       setBusy(false);
     }
   }, [user?.id, userProfile, busy, load, toast]);
+
+  const handleGenerateDay = useCallback(() => runGenerate(generateAndSaveDayPlan, 'Your day is ready.'), [runGenerate]);
+  const handleGenerateWeek = useCallback(() => runGenerate(generateAndSaveMealPlan, 'Your week is ready.'), [runGenerate]);
 
   const handleRegenerate = useCallback(async () => {
     if (!user?.id || busy) return;
@@ -167,6 +174,26 @@ export default function MealPlanScreen({ navigation }) {
       setBusy(false);
     }
   }, [user?.id, day, busy, toast]);
+
+  // Feature B: schedule the whole week into the diary (today onward), without
+  // overwriting any day that already has food logged.
+  const handleLogWeek = useCallback(async () => {
+    if (!user?.id || !plan || busy) return;
+    setBusy(true);
+    try {
+      const { addedDays, skippedDays } = await applyPlanWeekToDiary(user.id, plan, { startDate: todayLocalKey() });
+      if (addedDays === 0) {
+        toast.show('Those days already have food logged, so nothing changed.', { variant: 'info' });
+      } else {
+        const skipNote = skippedDays > 0 ? ` ${skippedDays} day${skippedDays === 1 ? '' : 's'} left as-is.` : '';
+        toast.show(`${addedDays} day${addedDays === 1 ? '' : 's'} added to your diary.${skipNote}`, { variant: 'success' });
+      }
+    } catch (_) {
+      toast.show("Couldn't schedule the week. Try again.", { variant: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  }, [user?.id, plan, busy, toast]);
 
   // "Training today?" on the day in view (rethink §3.2): the day's
   // training/rest variant follows the user's answer, never an asserted
@@ -340,7 +367,7 @@ export default function MealPlanScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <BackHeader title={isDayPlan || !plan ? 'Plan my day' : 'Meal plan'} onBack={() => navigation.goBack()} />
+      <BackHeader title={!plan ? 'Meal planning' : isDayPlan ? 'Plan my day' : 'Plan my week'} onBack={() => navigation.goBack()} />
       {loading ? (
         <View style={styles.centre}><ActivityIndicator color={colors.primary} /></View>
       ) : !plan ? (
@@ -348,10 +375,28 @@ export default function MealPlanScreen({ navigation }) {
           <Ionicons name="restaurant-outline" size={40} color={colors.textSecondary} />
           <Text style={styles.emptyTitle}>Your plate, sorted.</Text>
           <Text style={styles.emptyBody}>
-            A day of real food built to your calories and macros. Swap anything you
-            do not fancy. Your targets stay the coach's job.
+            Two ways to plan, both built to your calories and macros. Swap anything
+            you do not fancy. Your targets stay the coach&apos;s job, and you can switch any time.
           </Text>
-          <Button title="Plan my day" onPress={handleGenerate} loading={busy} fullWidth />
+
+          <View style={styles.planOption}>
+            <Text style={styles.planOptionTitle}>Plan my day</Text>
+            <Text style={styles.planOptionDesc}>
+              One day of meals for today. Tweak it, then add it straight to today&apos;s diary.
+              Best when you just want today sorted.
+            </Text>
+            <Button title="Plan my day" onPress={handleGenerateDay} loading={busy} fullWidth />
+          </View>
+
+          <View style={styles.planOption}>
+            <Text style={styles.planOptionTitle}>Plan my week</Text>
+            <Text style={styles.planOptionDesc}>
+              Seven days of meals plus a shopping list, so you can prep ahead. Add the
+              whole week to your diary in one go (days you&apos;ve already logged are left
+              untouched). Best for a weekly shop and meal prep.
+            </Text>
+            <Button title="Plan my week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
+          </View>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll}>
@@ -542,9 +587,21 @@ export default function MealPlanScreen({ navigation }) {
             </View>
           ) : null}
 
-          <Button title={isDayPlan ? 'Add to today' : 'Log this day'} onPress={handleLogDay} loading={busy} fullWidth />
+          {isDayPlan ? (
+            <Button title="Add to today" onPress={handleLogDay} loading={busy} fullWidth />
+          ) : (
+            <Button title="Add week to diary" onPress={handleLogWeek} loading={busy} fullWidth />
+          )}
           <Button title="New meals" variant="secondary" onPress={handleRegenerate} disabled={busy} fullWidth />
           <Button title="Shopping list" variant="secondary" onPress={() => setGrocerySheet(buildGroceryList(plan))} disabled={busy} fullWidth />
+          {/* Switch between the two clearly-separate modes at any time. */}
+          <Button
+            title={isDayPlan ? 'Plan a week instead' : 'Plan a day instead'}
+            variant="tertiary"
+            onPress={isDayPlan ? handleGenerateWeek : handleGenerateDay}
+            disabled={busy}
+            fullWidth
+          />
           <Text style={styles.footNote}>
             Built from your targets. Every plate can be swapped; the day stays on target.
           </Text>
@@ -654,6 +711,17 @@ const styles = StyleSheet.create({
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, gap: spacing.md },
   emptyTitle: { color: colors.textPrimary, fontSize: fontSize.xl, fontWeight: fontWeight.bold, textAlign: 'center' },
   emptyBody: { color: colors.textSecondary, fontSize: fontSize.md, textAlign: 'center', lineHeight: 21, marginBottom: spacing.md },
+  planOption: {
+    alignSelf: 'stretch',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  planOptionTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
+  planOptionDesc: { color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 19, marginBottom: spacing.xs },
   scroll: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
   dayRow: { flexDirection: 'row', justifyContent: 'space-between' },
   dayBtn: { alignItems: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.md, minWidth: 36 },

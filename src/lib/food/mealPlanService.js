@@ -26,11 +26,13 @@ import {
   updateMealPlan,
   listSavedMeals,
   logFoodEntry,
+  getRollupForDay,
 } from './db';
 import { assembleDayPlan, assembleWeekPlan, targetWasFloored } from './mealPlanAssembler';
 import { swapFoodInMeal, swapMealInPlan } from './mealSwap';
 import { applyMacroDeltaToPlan } from './planEdit';
 import { normalisePreferences } from './planPreferences';
+import { todayLocalKey, parseLocalDay, localDayKey } from '../dayKey';
 
 const PLAN_SCHEMA_VERSION = 1;
 
@@ -367,6 +369,38 @@ export async function applyPlanDayToDiary(userId, day, { entryDate } = {}) {
     }
   }
   return logged;
+}
+
+/**
+ * Schedule a whole week plan into the diary (Feature B — "Plan my week").
+ * Maps day i -> startDate + i (default: today) and logs that day's meals to its
+ * date. NON-DESTRUCTIVE: a date that already has any food logged is left
+ * untouched (we never clobber a day you've already eaten / logged), so this is
+ * safe to run again after adding more food. Returns a summary the UI narrates.
+ *
+ * (Follow-up, needs a cloud migration: an `is_planned` flag would let us mark
+ * planned meals distinctly and regenerate in place; this v1 fills empty days.)
+ */
+export async function applyPlanWeekToDiary(userId, plan, { startDate } = {}) {
+  const days = Array.isArray(plan?.days) ? plan.days : [];
+  if (!userId || days.length === 0) return { addedDays: 0, skippedDays: 0, loggedItems: 0 };
+  const start = startDate || todayLocalKey();
+  const startDateObj = parseLocalDay(start);
+  let addedDays = 0;
+  let skippedDays = 0;
+  let loggedItems = 0;
+  for (let i = 0; i < days.length; i += 1) {
+    const d = new Date(startDateObj.getTime());
+    d.setDate(d.getDate() + i);
+    const date = localDayKey(d.getTime());
+    // eslint-disable-next-line no-await-in-loop
+    const rollup = await getRollupForDay(userId, date);
+    if (rollup && Number(rollup.entries_count) > 0) { skippedDays += 1; continue; }
+    // eslint-disable-next-line no-await-in-loop
+    const n = await applyPlanDayToDiary(userId, days[i], { entryDate: date });
+    if (n > 0) { addedDays += 1; loggedItems += n; }
+  }
+  return { addedDays, skippedDays, loggedItems };
 }
 
 export { swapFoodInMeal, swapMealInPlan };

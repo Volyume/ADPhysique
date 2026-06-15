@@ -4,6 +4,15 @@
  * glue over already-tested engine + db modules; we test the pure core
  * that decides what the engine is fed.
  */
+jest.mock('../db', () => ({
+  getActiveMealPlan: jest.fn(),
+  saveActiveMealPlan: jest.fn(),
+  updateMealPlan: jest.fn(),
+  listSavedMeals: jest.fn(),
+  logFoodEntry: jest.fn(() => Promise.resolve('id')),
+  getRollupForDay: jest.fn(),
+}));
+
 import {
   storedTargetToEngineTarget,
   preferencesFromProfile,
@@ -11,6 +20,7 @@ import {
   buildPlanSnapshot,
   buildDayPlanSnapshot,
   answerDayTraining,
+  applyPlanWeekToDiary,
 } from '../mealPlanService';
 import { assembleWeekPlan } from '../mealPlanAssembler';
 
@@ -95,6 +105,31 @@ describe('buildPlanSnapshot', () => {
     expect(snap.prefs).toEqual(prefs);
     expect(snap.days).toBe(week.days);
     expect(snap.schemaVersion).toBe(1);
+  });
+});
+
+describe('applyPlanWeekToDiary (Feature B — schedule the week, non-destructive)', () => {
+  // eslint-disable-next-line global-require
+  const db = require('../db');
+  const itemDay = (ref) => ({ slots: [{ slot: 'meal_1', items: [{ foodRef: ref, quantityG: 100, kcal: 100, proteinG: 10, carbsG: 5, fatG: 2 }] }] });
+  const plan = { days: [itemDay('curated:x'), itemDay('curated:y')] };
+
+  beforeEach(() => { jest.clearAllMocks(); db.logFoodEntry.mockResolvedValue('id'); });
+
+  test('logs empty days, leaves days that already have food untouched', async () => {
+    db.getRollupForDay
+      .mockResolvedValueOnce({ entries_count: 3 }) // day 0 already logged -> skip
+      .mockResolvedValueOnce({ entries_count: 0 }); // day 1 empty -> add
+    const res = await applyPlanWeekToDiary('u1', plan, { startDate: '2026-06-15' });
+    expect(res.skippedDays).toBe(1);
+    expect(res.addedDays).toBe(1);
+    expect(res.loggedItems).toBe(1);
+    expect(db.logFoodEntry).toHaveBeenCalledTimes(1); // only the empty day was written
+  });
+
+  test('an empty plan does nothing', async () => {
+    expect(await applyPlanWeekToDiary('u1', { days: [] })).toEqual({ addedDays: 0, skippedDays: 0, loggedItems: 0 });
+    expect(db.logFoodEntry).not.toHaveBeenCalled();
   });
 });
 
