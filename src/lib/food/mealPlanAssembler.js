@@ -480,12 +480,14 @@ export function assembleDayPlan({
     carbs: r1(want.carbs - consumed.carbs),
     fat: r1(want.fat - consumed.fat),
   };
-  // A day with an unfilled slot is never "within tolerance" — it is an
-  // incomplete plan, regardless of where the partial macros happen to land.
-  const withinTolerance = unfilledSlots.length === 0
-    && consumed.kcal >= kcalMin
-    && consumed.kcal <= kcalMax
-    && consumed.protein >= want.protein * 0.85;
+  // Split the pass/fail signals (food review E-m1) so a caller can narrate the
+  // ACTUAL failure ("calories off" vs "protein short" vs "couldn't build the
+  // day") instead of inferring it from the residual. A day with an unfilled
+  // slot is never "within tolerance" — it is an incomplete plan, regardless of
+  // where the partial macros land.
+  const kcalWithinBand = consumed.kcal >= kcalMin && consumed.kcal <= kcalMax;
+  const proteinMet = consumed.protein >= want.protein * 0.85;
+  const withinTolerance = unfilledSlots.length === 0 && kcalWithinBand && proteinMet;
 
   return {
     variant,
@@ -499,6 +501,8 @@ export function assembleDayPlan({
     },
     residual,
     withinTolerance,
+    kcalWithinBand,
+    proteinMet,
     unfilledSlots,
     seed,
   };

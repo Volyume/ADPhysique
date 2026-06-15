@@ -204,6 +204,9 @@ describe('assembleDayPlan', () => {
 
   test('lands the day inside the engine band with protein delivered', () => {
     expect(day.withinTolerance).toBe(true);
+    // Split pass/fail flags (food review E-m1) agree with the overall verdict.
+    expect(day.kcalWithinBand).toBe(true);
+    expect(day.proteinMet).toBe(true);
     expect(day.totals.kcal).toBeGreaterThanOrEqual(BAND.kcalMin);
     expect(day.totals.kcal).toBeLessThanOrEqual(BAND.kcalMax);
     expect(day.totals.protein).toBeGreaterThanOrEqual(TARGET.proteinG * 0.85);

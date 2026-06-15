@@ -196,7 +196,7 @@ export async function generateAndSaveMealPlan(userId, profile, { schedule, seed 
     prefs,
     schedule: sched,
     seed,
-    savedMeals: savedMeals.map((m) => ({ id: m.id, name: m.name, slots: [], totals: m.totals })),
+    savedMeals: savedMeals.map((m) => ({ id: m.id, name: m.name, slots: Array.isArray(m.slots) ? m.slots : [], totals: m.totals })),
     allowDayCycling,
   });
   const plan = buildPlanSnapshot({ week, engineTarget, prefs, schedule: sched });
@@ -229,7 +229,7 @@ export async function answerTrainingTodayOnActivePlan(userId, { dayIndex, traini
     dayIndex,
     training,
     seed,
-    savedMeals: savedMeals.map((m) => ({ id: m.id, name: m.name, slots: [], totals: m.totals })),
+    savedMeals: savedMeals.map((m) => ({ id: m.id, name: m.name, slots: Array.isArray(m.slots) ? m.slots : [], totals: m.totals })),
   });
   if (!changed) return { plan: active.plan, changed: false };
   await updateMealPlan(userId, active.id, plan);
