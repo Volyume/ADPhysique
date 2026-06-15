@@ -615,7 +615,7 @@ export default function DiaryScreen({ navigation }) {
                     was logged the plan + swap became unreachable from Today. */}
                 <TouchableOpacity
                   style={styles.addMealRow}
-                  onPress={() => navigation.navigate('MealPlan')}
+                  onPress={() => { lightTap(); navigation.navigate('MealPlan'); }}
                   accessibilityRole="button"
                   accessibilityLabel="Open meal plan to swap meals"
                 >

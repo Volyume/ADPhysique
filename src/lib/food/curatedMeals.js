@@ -66,6 +66,7 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_om_salmon_sweetpot', 'Salmon, sweet potato & broccoli', 'omnivore', ['dinner'], [{ food: 'salmon', g: 150 }, { food: 'sweet_potato', g: 250 }, { food: 'broccoli', g: 120 }]),
   m('curated_om_cod_rice_peas', 'Cod, rice & peas', 'omnivore', ['lunch', 'dinner'], [{ food: 'cod', g: 200 }, { food: 'white_rice', g: 200 }, { food: 'peas', g: 100 }]),
   m('curated_om_chicken_potato_veg', 'Chicken, potatoes & veg', 'omnivore', ['lunch', 'dinner'], [{ food: 'chicken_breast', g: 150 }, { food: 'white_potato', g: 300 }, { food: 'mixed_veg', g: 120 }]),
+  m('curated_om_chicken_thigh_curry', 'Chicken thigh curry & rice', 'omnivore', ['lunch', 'dinner'], [{ food: 'chicken_thigh', g: 150 }, { food: 'white_rice', g: 200 }, { food: 'mixed_veg', g: 100 }]),
 
   // Snack / pre / post
   m('curated_om_sn_tuna_ricecakes', 'Tuna & rice cakes', 'omnivore', ['snack'], [{ food: 'tuna_water', g: 100 }, { food: 'rice_cakes', g: 30 }]),
@@ -87,7 +88,7 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_veg_quorn_pieces_curry', 'Quorn pieces curry & rice', 'vegetarian', ['lunch', 'dinner'], [{ food: 'quorn_pieces', g: 150 }, { food: 'white_rice', g: 180 }, { food: 'mixed_veg', g: 100 }]),
   m('curated_veg_halloumi_veg', 'Halloumi & roast veg', 'vegetarian', ['lunch', 'dinner'], [{ food: 'halloumi', g: 80 }, { food: 'white_potato', g: 200 }, { food: 'mixed_veg', g: 120 }]),
   m('curated_veg_egg_fried_rice_tofu', 'Egg-fried rice with tofu', 'vegetarian', ['lunch', 'dinner'], [{ food: 'eggs', g: 100 }, { food: 'tofu_firm', g: 100 }, { food: 'white_rice', g: 200 }, { food: 'peas', g: 100 }]),
-  m('curated_veg_jacket_cheese_beans', 'Jacket potato, cheese & beans', 'vegetarian', ['lunch', 'dinner'], [{ food: 'white_potato', g: 300 }, { food: 'cheddar_light', g: 30 }, { food: 'baked_beans', g: 120 }]),
+  m('curated_veg_jacket_cheese_beans', 'Jacket potato, cheese & beans', 'vegetarian', ['lunch', 'dinner'], [{ food: 'white_potato', g: 300 }, { food: 'cheddar_light', g: 40 }, { food: 'baked_beans', g: 200 }]),
 
   m('curated_veg_sn_yogurt_whey', 'Greek yogurt & whey', 'vegetarian', ['snack'], [{ food: 'greek_yogurt_0', g: 200 }, { food: 'whey', g: 15 }]),
   m('curated_veg_sn_cottage_pineapple', 'Cottage cheese & pineapple', 'vegetarian', ['snack'], [{ food: 'cottage_cheese', g: 200 }, { food: 'pineapple', g: 100 }]),

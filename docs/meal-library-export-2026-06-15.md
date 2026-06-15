@@ -2,7 +2,7 @@
 
 _Generated 2026-06-15 from `src/lib/food/`. REBUILT from the UK Bodybuilder Research Report (2026-06-15): every meal traces to the report; UK CoFID/own-label macros; breakfast slot = genuine UK breakfasts only. Macros computed by the app's own code._
 
-**Totals:** 62 curated meals · 81 staple foods · diets: omnivore, vegetarian, vegan.
+**Totals:** 63 curated meals · 81 staple foods · diets: omnivore, vegetarian, vegan.
 
 ## Staple food table (per 100 g)
 
@@ -114,7 +114,7 @@ _Generated 2026-06-15 from `src/lib/food/`. REBUILT from the UK Bodybuilder Rese
 
 ## Meal library (computed macros)
 
-### omnivore (24)
+### omnivore (25)
 
 
 #### omnivore · breakfast
@@ -249,6 +249,13 @@ _Generated 2026-06-15 from `src/lib/food/`. REBUILT from the UK Bodybuilder Rese
     - 150 g `chicken_breast` (Chicken breast fillet (cooked)) → 248 kcal · P 46.5 · C 0 · F 5.4
     - 300 g `white_potato` (Potato (boiled)) → 237 kcal · P 6 · C 51 · F 0.3
     - 120 g `mixed_veg` (Mixed veg) → 42 kcal · P 2.9 · C 7.2 · F 0.5
+- **Chicken thigh curry & rice**  `curated_om_chicken_thigh_curry`
+  - slots: lunch, dinner · protein anchor: high
+  - **totals: 609 kcal · P 46.8 g · C 62 g · F 17.5 g**
+  - components:
+    - 150 g `chicken_thigh` (Chicken thigh, skinless (cooked)) → 314 kcal · P 39 · C 0 · F 16.5
+    - 200 g `white_rice` (White rice (cooked)) → 260 kcal · P 5.4 · C 56 · F 0.6
+    - 100 g `mixed_veg` (Mixed veg) → 35 kcal · P 2.4 · C 6 · F 0.4
 
 #### omnivore · dinner
 
@@ -395,11 +402,11 @@ _Generated 2026-06-15 from `src/lib/food/`. REBUILT from the UK Bodybuilder Rese
     - 100 g `peas` (Garden peas) → 84 kcal · P 5.4 · C 14 · F 0.4
 - **Jacket potato, cheese & beans**  `curated_veg_jacket_cheese_beans`
   - slots: lunch, dinner · protein anchor: high
-  - **totals: 424 kcal · P 19.7 g · C 66.6 g · F 7.6 g**
+  - **totals: 517 kcal · P 26.2 g · C 77 g · F 10.3 g**
   - components:
     - 300 g `white_potato` (Potato (boiled)) → 237 kcal · P 6 · C 51 · F 0.3
-    - 30 g `cheddar_light` (Reduced-fat cheddar) → 93 kcal · P 8.1 · C 0 · F 6.6
-    - 120 g `baked_beans` (Baked beans) → 94 kcal · P 5.6 · C 15.6 · F 0.7
+    - 40 g `cheddar_light` (Reduced-fat cheddar) → 124 kcal · P 10.8 · C 0 · F 8.8
+    - 200 g `baked_beans` (Baked beans) → 156 kcal · P 9.4 · C 26 · F 1.2
 
 #### vegetarian · dinner
 
