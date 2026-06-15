@@ -229,6 +229,21 @@ export async function generateAndSaveMealPlan(userId, profile, { schedule, seed 
   return { id, plan };
 }
 
+/**
+ * Set up next week's meal plan, the seamless post-check-in / onboarding action
+ * (founder 2026-06-15). `repeat:true` reuses last week's meals when an active
+ * WEEK plan exists (re-schedulable to the new dates as-is); otherwise it
+ * generates a fresh week. Returns { id, plan, repeated } or { error }.
+ */
+export async function planNextWeek(userId, profile, { repeat = false } = {}) {
+  if (repeat) {
+    const active = await getActiveMealPlan(userId);
+    if (active?.plan?.kind === 'week') return { id: active.id, plan: active.plan, repeated: true };
+  }
+  const res = await generateAndSaveMealPlan(userId, profile);
+  return res?.error ? res : { ...res, repeated: false };
+}
+
 /** Regenerate the active plan with a new seed (same targets + prefs). */
 export async function regenerateActiveMealPlan(userId, profile, { seed = Date.now() % 100000 } = {}) {
   const existing = await getActiveMealPlan(userId);

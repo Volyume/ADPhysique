@@ -41,7 +41,7 @@ import { usePlayPrices } from '../lib/payments/usePlayPrices';
 import { SkeletonCard } from '../components/Skeleton';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
 import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, computeDietBreakTargets, computeMacroCycle, computeRefeedDay, markApplied, isApplied } from '../lib/coachApply';
-import { applyCoachAdjustmentToActivePlan } from '../lib/food/mealPlanService';
+import { applyCoachAdjustmentToActivePlan, planNextWeek } from '../lib/food/mealPlanService';
 import { buildPlanEditNarration } from '../lib/food/planExplain';
 import { buildRegisteredCoachResponse, resolveRegister } from '../lib/coachRegister';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
@@ -756,6 +756,8 @@ export default function CoachOutputScreen({ navigation, route }) {
   // Food-level receipt after a calorie apply edits an active meal plan
   // ({ headline, body, deepLink, floorNote } from planExplain, or null).
   const [planEditNote, setPlanEditNote] = useState(null);
+  // Seamless next-week meal setup from the check-in (founder 2026-06-15).
+  const [planningWeek, setPlanningWeek] = useState(false);
   // Next mesocycle week that a training-volume apply would write to.
   // Loaded once on mount; null when there's no active block or the
   // current week is the last one (nothing to push volume into).
@@ -1603,6 +1605,23 @@ export default function CoachOutputScreen({ navigation, route }) {
     : (zones.heroKind ? CARD_BY_KIND[zones.heroKind] : null);
   const secondaryEls = zones.secondaryKinds.map(k => CARD_BY_KIND[k]).filter(Boolean);
 
+  const handlePlanNextWeek = async (repeat) => {
+    if (!user?.id || planningWeek) return;
+    setPlanningWeek(true);
+    try {
+      const res = await planNextWeek(user.id, userProfile, { repeat });
+      if (res?.error === 'no_target') {
+        setPlanningWeek(false);
+        navigation.navigate('NutritionTargets');
+        return;
+      }
+      // Land on the week plan to swap, get the shopping list, and add the week.
+      navigation.navigate('DiaryTab', { screen: 'MealPlan' });
+    } catch (_) {
+      setPlanningWeek(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['left', 'right']}>
       <ScrollView
@@ -1740,6 +1759,39 @@ export default function CoachOutputScreen({ navigation, route }) {
           </View>
         ) : null}
 
+        {/* Seamless next-week meal setup (founder 2026-06-15): build or repeat
+            next week's meals straight from the check-in, then land on the plan
+            to swap and get the shopping list. */}
+        <View style={styles.planEditCard}>
+          <Text style={styles.planEditHead}>Plan next week&apos;s meals</Text>
+          <Text style={styles.planEditBody}>
+            A full week built to next week&apos;s targets, with a shopping list.
+            Swap anything, then add it to your diary.
+          </Text>
+          <View style={styles.nextWeekRow}>
+            <TouchableOpacity
+              style={styles.planEditLink}
+              onPress={() => handlePlanNextWeek(false)}
+              disabled={planningWeek}
+              accessibilityRole="button"
+              accessibilityLabel="Plan a fresh week of meals"
+            >
+              <Ionicons name="sparkles-outline" size={14} color={colors.primary} />
+              <Text style={styles.planEditLinkText}>{planningWeek ? 'Building' : 'Fresh week'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.planEditLink}
+              onPress={() => handlePlanNextWeek(true)}
+              disabled={planningWeek}
+              accessibilityRole="button"
+              accessibilityLabel="Repeat last week's meals"
+            >
+              <Ionicons name="repeat-outline" size={14} color={colors.primary} />
+              <Text style={styles.planEditLinkText}>Repeat last week</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* P3: cardio recovery caution (one line, advisory, no Apply). */}
         {cardioFlag ? (
           <View style={styles.cardioNoteRow}>
@@ -1861,6 +1913,7 @@ const styles = StyleSheet.create({
   planEditBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
   planEditLink: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, marginTop: spacing.xs },
   planEditLinkText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  nextWeekRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl },
   safe: {
     flex: 1,
     backgroundColor: colors.background,

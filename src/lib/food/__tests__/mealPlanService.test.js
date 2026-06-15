@@ -21,6 +21,7 @@ import {
   buildDayPlanSnapshot,
   answerDayTraining,
   applyPlanWeekToDiary,
+  planNextWeek,
 } from '../mealPlanService';
 import { assembleWeekPlan } from '../mealPlanAssembler';
 
@@ -131,6 +132,20 @@ describe('applyPlanWeekToDiary (Feature B — schedule the week, non-destructive
   test('an empty plan does nothing', async () => {
     expect(await applyPlanWeekToDiary('u1', { days: [] })).toEqual({ addedDays: 0, skippedDays: 0, loggedItems: 0 });
     expect(db.logFoodEntry).not.toHaveBeenCalled();
+  });
+});
+
+describe('planNextWeek (seamless post-check-in setup)', () => {
+  // eslint-disable-next-line global-require
+  const db = require('../db');
+  beforeEach(() => { jest.clearAllMocks(); });
+
+  test('repeat reuses an existing week plan without regenerating', async () => {
+    db.getActiveMealPlan.mockResolvedValue({ id: 'p1', plan: { kind: 'week', days: [] } });
+    const res = await planNextWeek('u1', {}, { repeat: true });
+    expect(res.repeated).toBe(true);
+    expect(res.id).toBe('p1');
+    expect(db.saveActiveMealPlan).not.toHaveBeenCalled(); // no regeneration
   });
 });
 
