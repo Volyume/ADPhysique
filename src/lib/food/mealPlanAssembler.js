@@ -303,6 +303,10 @@ export function assembleDayPlan({
     };
   });
 
+  // Slots the greedy fill could not fill at all (character pool AND relaxed
+  // pool both empty — e.g. a diet + exclusion combo with too few meals). A day
+  // with a hole must be surfaced, not returned looking like an ordinary miss.
+  const unfilledSlots = [];
   slots.forEach((slot, idx) => {
     if (pinnedTaken.has(slot.key)) return; // already filled by a pin
     const slotsLeft = slots.length - idx;
@@ -368,6 +372,8 @@ export function assembleDayPlan({
         carbs: consumed.carbs + best.totals.carbs,
         fat: consumed.fat + best.totals.fat,
       };
+    } else {
+      unfilledSlots.push(slot.key);
     }
   });
 
@@ -465,7 +471,10 @@ export function assembleDayPlan({
     carbs: r1(want.carbs - consumed.carbs),
     fat: r1(want.fat - consumed.fat),
   };
-  const withinTolerance = consumed.kcal >= kcalMin
+  // A day with an unfilled slot is never "within tolerance" — it is an
+  // incomplete plan, regardless of where the partial macros happen to land.
+  const withinTolerance = unfilledSlots.length === 0
+    && consumed.kcal >= kcalMin
     && consumed.kcal <= kcalMax
     && consumed.protein >= want.protein * 0.85;
 
@@ -481,6 +490,7 @@ export function assembleDayPlan({
     },
     residual,
     withinTolerance,
+    unfilledSlots,
     seed,
   };
 }

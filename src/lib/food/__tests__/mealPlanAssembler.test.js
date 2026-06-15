@@ -175,6 +175,21 @@ describe('assembleDayPlan', () => {
     expect(day.slots.length).toBe(4);
     const ids = day.slots.map((s) => s.mealId);
     expect(new Set(ids).size).toBe(ids.length);
+    expect(day.unfilledSlots).toEqual([]); // no holes at a reachable target
+  });
+
+  test('a crushed pool surfaces unfilled slots and is never "within tolerance" (food review E-M1)', () => {
+    // Vegan + no soya + no gluten leaves only 2 vegan meals (lentil chilli,
+    // chickpea & lentil curry); 4 meals/day cannot be filled. The day must
+    // REPORT the holes rather than silently return a short plan that looks
+    // like an ordinary off-target day.
+    const holey = assembleDayPlan({
+      target: dayTarget(), band: BAND, seed: 9,
+      prefs: { mealsPerDay: 4, diet: 'vegan', excludeTags: ['soya', 'cereals_gluten'] },
+    });
+    expect(holey.unfilledSlots.length).toBeGreaterThan(0);
+    expect(holey.slots.length).toBe(4 - holey.unfilledSlots.length);
+    expect(holey.withinTolerance).toBe(false);
   });
 
   test('lands the day inside the engine band with protein delivered', () => {
