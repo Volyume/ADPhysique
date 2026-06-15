@@ -600,15 +600,29 @@ export default function DiaryScreen({ navigation }) {
               </AnimatedEntrance>
             ))}
             {!selectionMode ? (
-              <TouchableOpacity
-                style={styles.addMealRow}
-                onPress={() => { lightTap(); setAddedMeals((n) => n + 1); }}
-                accessibilityRole="button"
-                accessibilityLabel="Add another meal"
-              >
-                <Ionicons name="add" size={18} color={colors.textSecondary} />
-                <Text style={styles.addMealLabel}>Add meal</Text>
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity
+                  style={styles.addMealRow}
+                  onPress={() => { lightTap(); setAddedMeals((n) => n + 1); }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add another meal"
+                >
+                  <Ionicons name="add" size={18} color={colors.textSecondary} />
+                  <Text style={styles.addMealLabel}>Add meal</Text>
+                </TouchableOpacity>
+                {/* Persistent route to the meal plan (and its swap) — previously
+                    only reachable from the empty-diary state, so once anything
+                    was logged the plan + swap became unreachable from Today. */}
+                <TouchableOpacity
+                  style={styles.addMealRow}
+                  onPress={() => navigation.navigate('MealPlan')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open meal plan to swap meals"
+                >
+                  <Ionicons name="restaurant-outline" size={18} color={colors.textSecondary} />
+                  <Text style={styles.addMealLabel}>Meal plan & swaps</Text>
+                </TouchableOpacity>
+              </>
             ) : null}
           </>
         )}
