@@ -30,7 +30,7 @@ import { mealSlotLabel } from '../lib/food/mealSlots';
 import { todayLocalKey } from '../lib/dayKey';
 import {
   loadActiveMealPlan,
-  generateAndSaveMealPlan,
+  generateAndSaveDayPlan,
   regenerateActiveMealPlan,
   applyPlanDayToDiary,
   answerTrainingTodayOnActivePlan,
@@ -127,13 +127,13 @@ export default function MealPlanScreen({ navigation }) {
     if (!user?.id || busy) return;
     setBusy(true);
     try {
-      const res = await generateAndSaveMealPlan(user.id, userProfile);
+      const res = await generateAndSaveDayPlan(user.id, userProfile);
       if (res.error === 'no_target') {
         toast.show('Set your nutrition targets first, then your plan builds from them.', { variant: 'info' });
         return;
       }
       await load();
-      toast.show('Your plan is ready.', { variant: 'success' });
+      toast.show('Your day is ready.', { variant: 'success' });
     } catch (_) {
       toast.show("Couldn't build your plan. Try again.", { variant: 'error' });
     } finally {
@@ -329,6 +329,9 @@ export default function MealPlanScreen({ navigation }) {
   const dayTypeLabel = day?.variant === 'training' ? 'Training day' : 'Rest day';
   const target = plan?.targetSnapshot;
   const cycleOn = (plan?.cycleDeltaKcal || 0) > 0;
+  // Feature A "Plan my day": a single-day plan renders without the week picker
+  // and adds to today rather than logging an abstract "Day N".
+  const isDayPlan = plan?.kind === 'day' || (plan?.days?.length === 1);
 
   const honestyLine = useMemo(() => {
     if (!day || day.withinTolerance) return null;
@@ -337,7 +340,7 @@ export default function MealPlanScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <BackHeader title="Meal plan" onBack={() => navigation.goBack()} />
+      <BackHeader title={isDayPlan || !plan ? 'Plan my day' : 'Meal plan'} onBack={() => navigation.goBack()} />
       {loading ? (
         <View style={styles.centre}><ActivityIndicator color={colors.primary} /></View>
       ) : !plan ? (
@@ -348,11 +351,13 @@ export default function MealPlanScreen({ navigation }) {
             A day of real food built to your calories and macros. Swap anything you
             do not fancy. Your targets stay the coach's job.
           </Text>
-          <Button title="Plan my week" onPress={handleGenerate} loading={busy} fullWidth />
+          <Button title="Plan my day" onPress={handleGenerate} loading={busy} fullWidth />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll}>
-          {/* Day picker */}
+          {/* Day picker — only for a multi-day (week) plan; a "Plan my day"
+              plan is a single day with no picker. */}
+          {!isDayPlan ? (
           <View style={styles.dayRow} accessibilityRole="tablist">
             {plan.schedule.map((variant, i) => {
               const selected = i === dayIndex;
@@ -372,6 +377,7 @@ export default function MealPlanScreen({ navigation }) {
               );
             })}
           </View>
+          ) : null}
 
           {/* Day header: type chip + totals. The training/rest chip only
               means something when calories cycle; on a flat plan (everyone bar
@@ -536,7 +542,7 @@ export default function MealPlanScreen({ navigation }) {
             </View>
           ) : null}
 
-          <Button title="Log this day" onPress={handleLogDay} loading={busy} fullWidth />
+          <Button title={isDayPlan ? 'Add to today' : 'Log this day'} onPress={handleLogDay} loading={busy} fullWidth />
           <Button title="New meals" variant="secondary" onPress={handleRegenerate} disabled={busy} fullWidth />
           <Button title="Shopping list" variant="secondary" onPress={() => setGrocerySheet(buildGroceryList(plan))} disabled={busy} fullWidth />
           <Text style={styles.footNote}>
@@ -608,7 +614,9 @@ export default function MealPlanScreen({ navigation }) {
             ) : (
               <>
                 <Text style={styles.swapSheetSub}>
-                  Totals for the whole week across {grocerySheet.dayCount} {grocerySheet.dayCount === 1 ? 'day' : 'days'}.
+                  {grocerySheet.dayCount === 1
+                    ? "Everything in today's plan."
+                    : `Totals for the whole week across ${grocerySheet.dayCount} days.`}
                 </Text>
                 <ScrollView
                   style={styles.swapList}

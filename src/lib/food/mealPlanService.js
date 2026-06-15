@@ -96,6 +96,29 @@ export function defaultSchedule(daysPerWeek = 4) {
 }
 
 /**
+ * Wrap a single assembled day into the stored plan object (Feature A — "Plan
+ * my day"). kind:'day' with a one-entry days[] so the screen renders one day,
+ * no picker, no week shopping list. Calorie cycling is a weekly construct and
+ * belongs to "Plan my week" (Feature B), so a day plan uses the flat daily
+ * target. Pure.
+ */
+export function buildDayPlanSnapshot({ day, engineTarget, prefs }) {
+  return {
+    schemaVersion: PLAN_SCHEMA_VERSION,
+    createdAtMs: Date.now(),
+    kind: 'day',
+    days: [day],
+    schedule: [day.variant ?? 'rest'],
+    variants: null,
+    cycleDeltaKcal: 0,
+    withinTolerance: day.withinTolerance,
+    seed: day.seed,
+    prefs,
+    targetSnapshot: engineTarget,
+  };
+}
+
+/**
  * Wrap an assembled week + the snapshots needed to re-solve later (swaps,
  * coach edits) into the stored plan object. Pure.
  */
@@ -207,8 +230,42 @@ export async function generateAndSaveMealPlan(userId, profile, { schedule, seed 
 /** Regenerate the active plan with a new seed (same targets + prefs). */
 export async function regenerateActiveMealPlan(userId, profile, { seed = Date.now() % 100000 } = {}) {
   const existing = await getActiveMealPlan(userId);
+  // A day plan regenerates a day; a week plan regenerates a week (same kind).
+  if (existing?.plan?.kind === 'day') return generateAndSaveDayPlan(userId, profile, { seed });
   const schedule = existing?.plan?.schedule;
   return generateAndSaveMealPlan(userId, profile, { schedule, seed });
+}
+
+/**
+ * Generate + persist a single-day plan (Feature A — "Plan my day"): one day of
+ * real food built to the flat daily target, honouring diet/exclusion prefs and
+ * saved meals, ready to swap and add to today. Persisted as the active plan
+ * with kind:'day'.
+ */
+export async function generateAndSaveDayPlan(userId, profile, { seed = Date.now() % 100000 } = {}) {
+  const [row, savedMeals] = await Promise.all([
+    getNutritionTargets(userId),
+    listSavedMeals(userId).catch(() => []),
+  ]);
+  const engineTarget = storedTargetToEngineTarget(row);
+  if (!engineTarget) return { error: 'no_target' };
+
+  const prefs = preferencesFromProfile(profile);
+  const day = assembleDayPlan({
+    target: {
+      kcal: engineTarget.targetKcal,
+      proteinG: engineTarget.proteinG,
+      carbsG: engineTarget.carbsG,
+      fatG: engineTarget.fatG,
+    },
+    band: { kcalMin: engineTarget.kcalMin, kcalMax: engineTarget.kcalMax },
+    prefs,
+    seed,
+    savedMeals: savedMeals.map((m) => ({ id: m.id, name: m.name, slots: Array.isArray(m.slots) ? m.slots : [], totals: m.totals })),
+  });
+  const plan = buildDayPlanSnapshot({ day, engineTarget, prefs });
+  const id = await saveActiveMealPlan(userId, plan);
+  return { id, plan };
 }
 
 /** Load the active plan (parsed) or null. */

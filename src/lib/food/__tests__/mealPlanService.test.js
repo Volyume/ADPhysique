@@ -9,6 +9,7 @@ import {
   preferencesFromProfile,
   defaultSchedule,
   buildPlanSnapshot,
+  buildDayPlanSnapshot,
   answerDayTraining,
 } from '../mealPlanService';
 import { assembleWeekPlan } from '../mealPlanAssembler';
@@ -94,6 +95,20 @@ describe('buildPlanSnapshot', () => {
     expect(snap.prefs).toEqual(prefs);
     expect(snap.days).toBe(week.days);
     expect(snap.schemaVersion).toBe(1);
+  });
+});
+
+describe('buildDayPlanSnapshot (Feature A — Plan my day)', () => {
+  test('wraps a single day as a kind:day plan with no cycling', () => {
+    const day = { variant: 'rest', withinTolerance: true, seed: 5, slots: [], totals: { kcal: 2600 } };
+    const engineTarget = { targetKcal: 2600, kcalMin: 2340, kcalMax: 2860, proteinG: 180 };
+    const snap = buildDayPlanSnapshot({ day, engineTarget, prefs: { diet: 'omnivore' } });
+    expect(snap.kind).toBe('day');
+    expect(snap.days).toEqual([day]);
+    expect(snap.days.length).toBe(1);
+    expect(snap.cycleDeltaKcal).toBe(0);
+    expect(snap.variants).toBeNull();
+    expect(snap.targetSnapshot).toEqual(engineTarget);
   });
 });
 

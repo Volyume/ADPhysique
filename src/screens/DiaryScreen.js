@@ -642,10 +642,10 @@ export default function DiaryScreen({ navigation }) {
                   style={styles.addMealRow}
                   onPress={() => { lightTap(); navigation.navigate('MealPlan'); }}
                   accessibilityRole="button"
-                  accessibilityLabel="Open meal plan to swap meals"
+                  accessibilityLabel="Plan my day: a day of meals built to your targets, with swaps"
                 >
                   <Ionicons name="restaurant-outline" size={18} color={colors.textSecondary} />
-                  <Text style={styles.addMealLabel}>Meal plan & swaps</Text>
+                  <Text style={styles.addMealLabel}>Plan my day</Text>
                 </TouchableOpacity>
               </>
             ) : null}
