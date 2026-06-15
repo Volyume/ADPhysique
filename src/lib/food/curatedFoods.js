@@ -12,8 +12,9 @@
  * UK shelf names, explicit weight state (state lives in foodRoles.js). Notable
  * corrections from that report: whole egg 131 kcal (CoFID 2021, not USDA 143);
  * FAGE Total 0%/2% Greek yogurt + skyr to UK label; baked sweet potato (CoFID
- * ~115); cooked cod loin. New staples: chicken thigh, mackerel, back-bacon
- * medallions, white sourdough, Quorn chicken-style pieces.
+ * ~115); cooked cod fillet. New staples: back-bacon medallions, white sourdough,
+ * Quorn chicken-style pieces. (Founder override 2026-06-15: chicken thigh,
+ * mackerel and the "cod loin" name from the report are dropped — not wanted.)
  *
  * Each entry: key -> { name, kcal, protein, carbs, fat } per 100 g.
  */
@@ -62,16 +63,14 @@ export const CURATED_FOODS = Object.freeze({
 
   // Omnivore proteins
   chicken_breast:  F('Chicken breast fillet (cooked)', 165, 31, 0, 3.6),
-  chicken_thigh:   F('Chicken thigh, skinless (cooked)', 209, 26, 0, 11),
   turkey_breast:   F('Turkey breast (cooked)', 140, 30, 0, 2),
   turkey_mince:    F('Turkey breast mince (cooked)', 136, 22, 0, 5),
   beef_mince_5:    F('Beef mince 5% (cooked)', 168, 25, 0, 7),
   steak_lean:      F('Lean steak (cooked)', 200, 34, 0, 7),
-  cod:             F('Cod loin (cooked)', 100, 22, 0, 1),
+  cod:             F('Cod fillet (cooked)', 100, 22, 0, 1),
   salmon:          F('Salmon fillet (cooked)', 208, 24, 0, 13),
   smoked_salmon:   F('Smoked salmon', 146, 25, 0, 4.5),
   tuna_water:      F('Tuna chunks in spring water (drained)', 100, 25, 0, 1),
-  mackerel:        F('Mackerel fillets in brine (drained)', 187, 22, 0, 11),
   prawns:          F('King prawns, cooked & peeled', 85, 20, 0, 0.7),
   eggs:            F('Whole eggs (medium/large)', 131, 12.5, 0.8, 9),
   egg_whites:      F('Egg whites', 52, 11, 0.7, 0.2),

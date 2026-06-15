@@ -1,8 +1,8 @@
 # Volyume — Curated meal & food library (export)
 
-_Generated 2026-06-15 from `src/lib/food/`. REBUILT from the UK Bodybuilder Research Report (2026-06-15): every meal traces to the report; UK CoFID/own-label macros; breakfast slot = genuine UK breakfasts only. Macros computed by the app's own code._
+_Generated 2026-06-15 from `src/lib/food/`. Built from the UK Bodybuilder Research Report (2026-06-15) with founder overrides (chicken thigh, mackerel and the "cod loin" name dropped). UK CoFID/own-label macros; breakfast slot = genuine UK breakfasts only. Macros computed by the app's own code._
 
-**Totals:** 63 curated meals · 81 staple foods · diets: omnivore, vegetarian, vegan.
+**Totals:** 61 curated meals · 79 staple foods · diets: omnivore, vegetarian, vegan.
 
 ## Staple food table (per 100 g)
 
@@ -11,16 +11,14 @@ _Generated 2026-06-15 from `src/lib/food/`. REBUILT from the UK Bodybuilder Rese
 | key | name | kcal | P | C | F | role | protein-class | state | allergens | portion g |
 |---|---|--:|--:|--:|--:|---|---|---|---|---|
 | `chicken_breast` | Chicken breast fillet (cooked) | 165 | 31 | 0 | 3.6 | protein | high | ready | — | 50–350 |
-| `chicken_thigh` | Chicken thigh, skinless (cooked) | 209 | 26 | 0 | 11 | protein | high | ready | — | 50–350 |
 | `turkey_breast` | Turkey breast (cooked) | 140 | 30 | 0 | 2 | protein | high | ready | — | 50–350 |
 | `turkey_mince` | Turkey breast mince (cooked) | 136 | 22 | 0 | 5 | protein | high | ready | — | 50–350 |
 | `beef_mince_5` | Beef mince 5% (cooked) | 168 | 25 | 0 | 7 | protein | high | ready | — | 50–350 |
 | `steak_lean` | Lean steak (cooked) | 200 | 34 | 0 | 7 | protein | high | ready | — | 50–350 |
-| `cod` | Cod loin (cooked) | 100 | 22 | 0 | 1 | protein | high | ready | fish | 50–350 |
+| `cod` | Cod fillet (cooked) | 100 | 22 | 0 | 1 | protein | high | ready | fish | 50–350 |
 | `salmon` | Salmon fillet (cooked) | 208 | 24 | 0 | 13 | protein | high | ready | fish | 50–350 |
 | `smoked_salmon` | Smoked salmon | 146 | 25 | 0 | 4.5 | protein | high | ready | fish | 50–350 |
 | `tuna_water` | Tuna chunks in spring water (drained) | 100 | 25 | 0 | 1 | protein | high | ready | fish | 50–350 |
-| `mackerel` | Mackerel fillets in brine (drained) | 187 | 22 | 0 | 11 | protein | high | ready | fish | 50–350 |
 | `prawns` | King prawns, cooked & peeled | 85 | 20 | 0 | 0.7 | protein | high | ready | crustaceans | 50–350 |
 | `eggs` | Whole eggs (medium/large) | 131 | 12.5 | 0.8 | 9 | protein | high | ready | eggs | 50–250 |
 | `egg_whites` | Egg whites | 52 | 11 | 0.7 | 0.2 | protein | high | ready | eggs | 60–400 |
@@ -35,7 +33,7 @@ _Generated 2026-06-15 from `src/lib/food/`. REBUILT from the UK Bodybuilder Rese
 | `seitan` | Seitan | 150 | 25 | 4 | 1 | protein | moderate | ready | cereals_gluten | 50–350 |
 | `tvp_dry` | Soya mince (dry) | 327 | 52 | 30 | 1 | protein | moderate | dry | soya | 50–350 |
 | `quorn_mince` | Quorn mince | 103 | 16 | 5 | 2 | protein | moderate | ready | eggs, cereals_gluten | 50–350 |
-| `quorn_pieces` | Quorn chicken-style pieces | 98 | 13 | 4.5 | 1.7 | protein | moderate | ready | eggs | 50–350 |
+| `quorn_pieces` | Quorn chicken-style pieces | 98 | 13 | 4.5 | 1.7 | protein | moderate | ready | eggs, cereals_gluten | 50–350 |
 | `edamame` | Edamame | 121 | 12 | 9 | 5 | protein | moderate | ready | soya | 50–350 |
 | `soy_protein` | Soya protein | 360 | 80 | 5 | 3 | protein | moderate | dry | soya | 15–60 |
 | `pea_protein` | Pea protein | 375 | 80 | 5 | 7 | protein | moderate | dry | — | 15–60 |
@@ -114,7 +112,7 @@ _Generated 2026-06-15 from `src/lib/food/`. REBUILT from the UK Bodybuilder Rese
 
 ## Meal library (computed macros)
 
-### omnivore (25)
+### omnivore (23)
 
 
 #### omnivore · breakfast
@@ -175,7 +173,7 @@ _Generated 2026-06-15 from `src/lib/food/`. REBUILT from the UK Bodybuilder Rese
   - slots: lunch, dinner · protein anchor: high
   - **totals: 476 kcal · P 55.8 g · C 42.5 g · F 7.8 g**
   - components:
-    - 200 g `cod` (Cod loin (cooked)) → 200 kcal · P 44 · C 0 · F 2
+    - 200 g `cod` (Cod fillet (cooked)) → 200 kcal · P 44 · C 0 · F 2
     - 250 g `white_potato` (Potato (boiled)) → 198 kcal · P 5 · C 42.5 · F 0.3
     - 25 g `cheddar_light` (Reduced-fat cheddar) → 78 kcal · P 6.8 · C 0 · F 5.5
 - **Chicken, sweet potato & greens**  `curated_om_chicken_sweetpot_greens`
@@ -206,13 +204,6 @@ _Generated 2026-06-15 from `src/lib/food/`. REBUILT from the UK Bodybuilder Rese
     - 150 g `prawns` (King prawns, cooked & peeled) → 128 kcal · P 30 · C 0 · F 1
     - 180 g `white_rice` (White rice (cooked)) → 234 kcal · P 4.9 · C 50.4 · F 0.5
     - 120 g `stirfry_veg` (Stir-fry veg) → 48 kcal · P 2.5 · C 9 · F 0.6
-- **Mackerel, rice & greens**  `curated_om_mackerel_rice_greens`
-  - slots: lunch, dinner · protein anchor: high
-  - **totals: 495 kcal · P 33.5 g · C 58.8 g · F 13.9 g**
-  - components:
-    - 120 g `mackerel` (Mackerel fillets in brine (drained)) → 224 kcal · P 26.4 · C 0 · F 13.2
-    - 180 g `white_rice` (White rice (cooked)) → 234 kcal · P 4.9 · C 50.4 · F 0.5
-    - 120 g `green_beans` (Green beans) → 37 kcal · P 2.2 · C 8.4 · F 0.2
 - **Chicken & tomato pasta**  `curated_om_chicken_pasta`
   - slots: lunch, dinner · protein anchor: high
   - **totals: 612 kcal · P 61.2 g · C 72.6 g · F 8.7 g**
@@ -239,7 +230,7 @@ _Generated 2026-06-15 from `src/lib/food/`. REBUILT from the UK Bodybuilder Rese
   - slots: lunch, dinner · protein anchor: high
   - **totals: 544 kcal · P 54.8 g · C 70 g · F 3 g**
   - components:
-    - 200 g `cod` (Cod loin (cooked)) → 200 kcal · P 44 · C 0 · F 2
+    - 200 g `cod` (Cod fillet (cooked)) → 200 kcal · P 44 · C 0 · F 2
     - 200 g `white_rice` (White rice (cooked)) → 260 kcal · P 5.4 · C 56 · F 0.6
     - 100 g `peas` (Garden peas) → 84 kcal · P 5.4 · C 14 · F 0.4
 - **Chicken, potatoes & veg**  `curated_om_chicken_potato_veg`
@@ -249,13 +240,6 @@ _Generated 2026-06-15 from `src/lib/food/`. REBUILT from the UK Bodybuilder Rese
     - 150 g `chicken_breast` (Chicken breast fillet (cooked)) → 248 kcal · P 46.5 · C 0 · F 5.4
     - 300 g `white_potato` (Potato (boiled)) → 237 kcal · P 6 · C 51 · F 0.3
     - 120 g `mixed_veg` (Mixed veg) → 42 kcal · P 2.9 · C 7.2 · F 0.5
-- **Chicken thigh curry & rice**  `curated_om_chicken_thigh_curry`
-  - slots: lunch, dinner · protein anchor: high
-  - **totals: 609 kcal · P 46.8 g · C 62 g · F 17.5 g**
-  - components:
-    - 150 g `chicken_thigh` (Chicken thigh, skinless (cooked)) → 314 kcal · P 39 · C 0 · F 16.5
-    - 200 g `white_rice` (White rice (cooked)) → 260 kcal · P 5.4 · C 56 · F 0.6
-    - 100 g `mixed_veg` (Mixed veg) → 35 kcal · P 2.4 · C 6 · F 0.4
 
 #### omnivore · dinner
 

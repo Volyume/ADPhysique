@@ -61,11 +61,11 @@ const ROLE = Object.freeze({
   salsa: 'free',
 
   // Proteins
-  chicken_breast: 'protein', chicken_thigh: 'protein',
+  chicken_breast: 'protein',
   turkey_breast: 'protein', turkey_mince: 'protein',
   beef_mince_5: 'protein', steak_lean: 'protein', cod: 'protein',
   salmon: 'protein', smoked_salmon: 'protein', tuna_water: 'protein',
-  mackerel: 'protein', bacon_medallions: 'protein',
+  bacon_medallions: 'protein',
   prawns: 'protein', eggs: 'protein', egg_whites: 'protein',
   greek_yogurt_0: 'protein', greek_yogurt_2: 'protein', skyr: 'protein',
   cottage_cheese: 'protein', whey: 'protein',
@@ -92,10 +92,10 @@ const ROLE = Object.freeze({
 // Evidence: bp-meal-plan-RETHINK-2026-06-12.md §2.4.
 const PROTEIN_QUALITY = Object.freeze({
   // high
-  chicken_breast: 'high', chicken_thigh: 'high', cheddar_light: 'high',
+  chicken_breast: 'high', cheddar_light: 'high',
   turkey_breast: 'high', turkey_mince: 'high', bacon_medallions: 'high',
   beef_mince_5: 'high', steak_lean: 'high', cod: 'high', salmon: 'high',
-  smoked_salmon: 'high', tuna_water: 'high', mackerel: 'high', prawns: 'high', eggs: 'high',
+  smoked_salmon: 'high', tuna_water: 'high', prawns: 'high', eggs: 'high',
   egg_whites: 'high', greek_yogurt_0: 'high', greek_yogurt_2: 'high',
   skyr: 'high', cottage_cheese: 'high', whey: 'high', milk_skimmed: 'high',
   halloumi: 'high', paneer: 'high',
@@ -168,7 +168,7 @@ const TAGS = Object.freeze({
   cottage_cheese: ['milk'], halloumi: ['milk'], paneer: ['milk'],
   milk_skimmed: ['milk'], whey: ['milk'],
   cod: ['fish'], salmon: ['fish'], smoked_salmon: ['fish'],
-  tuna_water: ['fish'], mackerel: ['fish'], prawns: ['crustaceans'],
+  tuna_water: ['fish'], prawns: ['crustaceans'],
   tofu_firm: ['soya'], tempeh: ['soya'], tvp_dry: ['soya'],
   edamame: ['soya'], soy_protein: ['soya'], soy_milk: ['soya'],
   soy_yogurt_hp: ['soya'],

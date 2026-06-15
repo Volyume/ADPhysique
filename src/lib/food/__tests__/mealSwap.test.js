@@ -18,12 +18,12 @@ import {
 describe('mealNameFromComponents (no stale/lying names after a swap)', () => {
   test('builds an honest "protein & carb" name from components', () => {
     expect(mealNameFromComponents([{ food: 'cod', g: 200 }, { food: 'pasta', g: 70 }, { food: 'salad', g: 80 }]))
-      .toBe('Cod loin & pasta');
+      .toBe('Cod fillet & pasta');
     expect(mealNameFromComponents([{ food: 'chicken_breast', g: 150 }, { food: 'white_rice', g: 200 }]))
       .toBe('Chicken breast fillet & white rice');
   });
   test('falls back to protein-only, then a generic label', () => {
-    expect(mealNameFromComponents([{ food: 'cod', g: 200 }, { food: 'salad', g: 80 }])).toBe('Cod loin');
+    expect(mealNameFromComponents([{ food: 'cod', g: 200 }, { food: 'salad', g: 80 }])).toBe('Cod fillet');
     expect(mealNameFromComponents([])).toBe('Custom meal');
   });
 });

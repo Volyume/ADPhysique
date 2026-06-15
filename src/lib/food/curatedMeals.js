@@ -59,14 +59,12 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_om_jacket_tuna', 'Jacket potato & tuna', 'omnivore', ['lunch', 'dinner'], [{ food: 'white_potato', g: 300 }, { food: 'tuna_water', g: 120 }, { food: 'salad', g: 60 }]),
   m('curated_om_steak_potatoes', 'Steak & potatoes', 'omnivore', ['dinner'], [{ food: 'steak_lean', g: 150 }, { food: 'white_potato', g: 250 }, { food: 'salad', g: 100 }]),
   m('curated_om_prawn_stirfry', 'King prawn stir-fry & rice', 'omnivore', ['lunch', 'dinner'], [{ food: 'prawns', g: 150 }, { food: 'white_rice', g: 180 }, { food: 'stirfry_veg', g: 120 }]),
-  m('curated_om_mackerel_rice_greens', 'Mackerel, rice & greens', 'omnivore', ['lunch', 'dinner'], [{ food: 'mackerel', g: 120 }, { food: 'white_rice', g: 180 }, { food: 'green_beans', g: 120 }]),
   m('curated_om_chicken_pasta', 'Chicken & tomato pasta', 'omnivore', ['lunch', 'dinner'], [{ food: 'chicken_breast', g: 150 }, { food: 'pasta', g: 80 }, { food: 'tomato_sauce', g: 100 }, { food: 'broccoli', g: 100 }]),
   m('curated_om_beef_rice_greens', 'Beef mince, rice & greens', 'omnivore', ['lunch', 'dinner'], [{ food: 'beef_mince_5', g: 150 }, { food: 'white_rice', g: 200 }, { food: 'green_beans', g: 100 }]),
   m('curated_om_turkey_potato_greens', 'Turkey mince, potato & greens', 'omnivore', ['lunch', 'dinner'], [{ food: 'turkey_mince', g: 150 }, { food: 'white_potato', g: 300 }, { food: 'green_beans', g: 120 }]),
   m('curated_om_salmon_sweetpot', 'Salmon, sweet potato & broccoli', 'omnivore', ['dinner'], [{ food: 'salmon', g: 150 }, { food: 'sweet_potato', g: 250 }, { food: 'broccoli', g: 120 }]),
   m('curated_om_cod_rice_peas', 'Cod, rice & peas', 'omnivore', ['lunch', 'dinner'], [{ food: 'cod', g: 200 }, { food: 'white_rice', g: 200 }, { food: 'peas', g: 100 }]),
   m('curated_om_chicken_potato_veg', 'Chicken, potatoes & veg', 'omnivore', ['lunch', 'dinner'], [{ food: 'chicken_breast', g: 150 }, { food: 'white_potato', g: 300 }, { food: 'mixed_veg', g: 120 }]),
-  m('curated_om_chicken_thigh_curry', 'Chicken thigh curry & rice', 'omnivore', ['lunch', 'dinner'], [{ food: 'chicken_thigh', g: 150 }, { food: 'white_rice', g: 200 }, { food: 'mixed_veg', g: 100 }]),
 
   // Snack / pre / post
   m('curated_om_sn_tuna_ricecakes', 'Tuna & rice cakes', 'omnivore', ['snack'], [{ food: 'tuna_water', g: 100 }, { food: 'rice_cakes', g: 30 }]),
