@@ -344,6 +344,20 @@ describe('assembleWeekPlan', () => {
     expect(all.size).toBeGreaterThan(4);
   });
 
+  test('variety 1 never repeats a meal on consecutive days (food review E-M4)', () => {
+    // With the variety dial maxed and a comfortably reachable target there are
+    // plenty of in-band omnivore meals; the anti-repetition penalty must be
+    // strong enough that no plate carries over from one day to the next.
+    [2, 11, 23, 37].forEach((seed) => {
+      const week = assembleWeekPlan({ engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 1 }, schedule, seed });
+      for (let i = 1; i < week.days.length; i++) {
+        const prev = new Set(week.days[i - 1].slots.map((s) => s.mealId));
+        const dupes = week.days[i].slots.map((s) => s.mealId).filter((id) => prev.has(id));
+        expect(dupes).toEqual([]);
+      }
+    });
+  });
+
   test('the weekly calorie average tracks the engine target', () => {
     const week = assembleWeekPlan({ engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 0.5 }, schedule, seed: 6 });
     const avg = week.days.reduce((a, d) => a + d.totals.kcal, 0) / 7;
