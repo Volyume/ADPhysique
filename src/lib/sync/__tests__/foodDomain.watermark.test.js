@@ -57,8 +57,21 @@ test('advances the watermark to the max local updated_at, not the server timesta
 
   expect(res.count).toBe(2);
   const stored = await AsyncStorage.getItem(KEY);
-  expect(stored).toBe('1500'); // newest pushed local updated_at
+  // D-M1: watermark is maxPushed - 1 so a same-ms concurrent edit is never
+  // skipped by the strict `updated_at > sinceMs` change query next cycle.
+  expect(stored).toBe('1499'); // newest pushed local updated_at, minus 1 ms
   expect(stored).not.toBe(String(Date.parse(serverTs))); // not the server clock
+});
+
+test('a row written in the same ms as the watermark is not skipped next cycle (food review D-M1)', async () => {
+  // First cycle pushes a row at t=1500; watermark becomes 1499.
+  food.getAllFoodEntriesSince.mockResolvedValue([entry('fe2', 1500)]);
+  const sb = { rpc: jest.fn(async () => ({ data: { timestamp: new Date('3000-01-01').toISOString() }, error: null })) };
+  await foodPushFor('food_entries')(sb, { userId: 'u1', localUserId: 'u1' });
+  const stored = Number(await AsyncStorage.getItem(KEY));
+  // A concurrent edit landed at the same ms (1500). The strict change query
+  // `updated_at > sinceMs` must still see it, i.e. 1500 > 1499.
+  expect(1500 > stored).toBe(true);
 });
 
 test('does not advance the watermark when a table push fails', async () => {
@@ -79,10 +92,12 @@ test('does not advance the watermark when nothing changed', async () => {
   expect(await AsyncStorage.getItem(KEY)).toBeNull();
 });
 
-test('a favourites-only push advances the watermark (no per-cycle re-push)', async () => {
-  // food_favourites has no updated_at; its change time is last_used_at. If the
-  // watermark does not advance on a favourites-only cycle, the same rows
-  // re-push every sync. The fav coordinator pushes 'food_favourites' as its key.
+test('a favourites-only push advances the watermark to the newest local change, not the server clock', async () => {
+  // food_favourites has no updated_at; its change time is last_used_at. The
+  // watermark must advance roughly to the newest last_used_at (so the whole
+  // set does not re-push every sync), and never to the server clock. With the
+  // D-M1 same-ms safety margin it lands at maxPushed - 1; only the single
+  // boundary row re-pushes next cycle (idempotent via the RPC's ON CONFLICT).
   food.getAllFavouritesSince.mockResolvedValue([
     { user_id: 'u1', food_ref: 'off:1', last_used_at: 1700 },
     { user_id: 'u1', food_ref: 'off:2', last_used_at: 1900 },
@@ -91,5 +106,5 @@ test('a favourites-only push advances the watermark (no per-cycle re-push)', asy
 
   await foodPushFor('food_favourites')(sb, { userId: 'u1', localUserId: 'u1' });
 
-  expect(await AsyncStorage.getItem(KEY)).toBe('1900'); // newest last_used_at, not server clock
+  expect(await AsyncStorage.getItem(KEY)).toBe('1899'); // newest last_used_at - 1ms, not server clock
 });

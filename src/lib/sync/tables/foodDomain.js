@@ -304,7 +304,13 @@ async function _doPushAll(sb, { userId, localUserId }) {
   // succeed re-push next cycle (idempotent via the RPC's ON CONFLICT)
   // and nothing is skipped past the watermark while one table is broken.
   if (pushedAny && !anyError && latestTsMs !== null) {
-    try { await AsyncStorage.setItem(key, String(latestTsMs)); } catch (_) { /* tolerate */ }
+    // D-M1: store maxPushed - 1, not maxPushed. The change query is strict
+    // (updated_at > sinceMs), so storing maxPushed would skip a row written in
+    // the SAME millisecond as the newest pushed row (a concurrent edit during
+    // the RPC round-trip, or coarse-clock same-ms writes). Backing the
+    // watermark off by 1 ms re-includes any same-ms row next cycle; the
+    // boundary rows that re-push are idempotent via the RPC's ON CONFLICT.
+    try { await AsyncStorage.setItem(key, String(latestTsMs - 1)); } catch (_) { /* tolerate */ }
   }
 
   return { counts, errorsByTable, errors: anyError ? 1 : 0 };
