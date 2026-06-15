@@ -158,7 +158,7 @@ const TAGS = Object.freeze({
   pasta: ['cereals_gluten'], noodles: ['cereals_gluten', 'eggs'],
   granola: ['cereals_gluten', 'nuts'], seitan: ['cereals_gluten'],
   eggs: ['eggs'], egg_whites: ['eggs'],
-  quorn_mince: ['eggs', 'cereals_gluten'], quorn_pieces: ['eggs'],
+  quorn_mince: ['eggs', 'cereals_gluten'], quorn_pieces: ['eggs', 'cereals_gluten'],
   greek_yogurt_0: ['milk'], greek_yogurt_2: ['milk'], skyr: ['milk'],
   cottage_cheese: ['milk'], halloumi: ['milk'], paneer: ['milk'],
   milk_skimmed: ['milk'], whey: ['milk'],
