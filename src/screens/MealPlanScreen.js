@@ -380,7 +380,7 @@ export default function MealPlanScreen({ navigation }) {
             {day ? (
               <Text style={styles.dayKcal}>
                 {day.totals.kcal} kcal
-                {target ? <Text style={styles.dayKcalTarget}>{`  of ${day.target?.kcal || target.targetKcal}`}</Text> : null}
+                {target ? <Text style={styles.dayKcalTarget}>{`  of ${day.target?.kcal ?? plan.variants?.[day.variant]?.kcal ?? target.targetKcal}`}</Text> : null}
               </Text>
             ) : null}
           </View>
