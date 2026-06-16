@@ -103,6 +103,10 @@ export const CURATED_FOODS = Object.freeze({
   baked_beans:     F('Baked beans', 78, 4.7, 13, 0.6),
   soy_protein:     F('Soya protein', 360, 80, 5, 3),
   pea_protein:     F('Pea protein', 375, 80, 5, 7),
+  // Report §A staple: "Vegan protein powder (pea/soy blend)" — the complete-amino
+  // option the report mandates over single-source pea (line 153). Macros per the
+  // report's own row (line 69): ~360 kcal, ~78 P, 5 C, 6 F per 100g.
+  vegan_protein_blend: F('Vegan protein powder', 360, 78, 5, 6),
   soy_yogurt_hp:   F('High-protein soya yogurt', 70, 6, 5, 3),
   soy_milk:        F('Soya milk', 33, 3.3, 1.2, 1.8),
 

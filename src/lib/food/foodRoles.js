@@ -71,7 +71,7 @@ const ROLE = Object.freeze({
   cottage_cheese: 'protein', whey: 'protein',
   tofu_firm: 'protein', tempeh: 'protein', seitan: 'protein',
   tvp_dry: 'protein', quorn_mince: 'protein', quorn_pieces: 'protein', edamame: 'protein',
-  soy_protein: 'protein', pea_protein: 'protein', soy_yogurt_hp: 'protein',
+  soy_protein: 'protein', pea_protein: 'protein', vegan_protein_blend: 'protein', soy_yogurt_hp: 'protein',
 
   // Fats
   olive_oil: 'fat', almonds: 'fat', peanut_butter: 'fat',
@@ -102,7 +102,7 @@ const PROTEIN_QUALITY = Object.freeze({
   // moderate (plant anchors)
   tofu_firm: 'moderate', tempeh: 'moderate', seitan: 'moderate',
   tvp_dry: 'moderate', quorn_mince: 'moderate', quorn_pieces: 'moderate', edamame: 'moderate',
-  soy_protein: 'moderate', pea_protein: 'moderate', soy_yogurt_hp: 'moderate',
+  soy_protein: 'moderate', pea_protein: 'moderate', vegan_protein_blend: 'moderate', soy_yogurt_hp: 'moderate',
   soy_milk: 'moderate',
   // carb_protein (legumes / grain proteins)
   lentils: 'carb_protein', lentil_dahl: 'carb_protein', chickpeas: 'carb_protein',
@@ -148,7 +148,7 @@ export function mealProteinAnchorQuality(meal) {
 const STATE = Object.freeze({
   oats: 'dry', pasta: 'dry', lentil_pasta: 'dry', tvp_dry: 'dry',
   rice_cakes: 'dry', granola: 'dry', whey: 'dry', soy_protein: 'dry',
-  pea_protein: 'dry', mixed_seeds: 'dry',
+  pea_protein: 'dry', vegan_protein_blend: 'dry', mixed_seeds: 'dry',
   white_rice: 'cooked', brown_rice: 'cooked', quinoa: 'cooked',
   noodles: 'cooked', white_potato: 'cooked', lentils: 'cooked',
   chickpeas: 'cooked', kidney_beans: 'cooked', black_beans: 'cooked',
@@ -170,7 +170,7 @@ const TAGS = Object.freeze({
   cod: ['fish'], salmon: ['fish'], smoked_salmon: ['fish'],
   tuna_water: ['fish'], prawns: ['crustaceans'],
   tofu_firm: ['soya'], tempeh: ['soya'], tvp_dry: ['soya'],
-  edamame: ['soya'], soy_protein: ['soya'], soy_milk: ['soya'],
+  edamame: ['soya'], soy_protein: ['soya'], vegan_protein_blend: ['soya'], soy_milk: ['soya'],
   soy_yogurt_hp: ['soya'],
   almonds: ['nuts'], peanut_butter: ['peanuts'],
   mixed_seeds: ['sesame'], tahini: ['sesame'],
@@ -190,7 +190,7 @@ const ROLE_GRAM_RANGE = Object.freeze({
 
 const GRAM_RANGE_OVERRIDES = Object.freeze({
   olive_oil: [5, 30],
-  whey: [15, 60], soy_protein: [15, 60], pea_protein: [15, 60],
+  whey: [15, 60], soy_protein: [15, 60], pea_protein: [15, 60], vegan_protein_blend: [15, 60],
   honey: [5, 40],
   avocado: [30, 150],
   white_potato: [80, 500], sweet_potato: [80, 500], potato_wedges: [80, 400],
@@ -231,9 +231,9 @@ const SWAP_ALTERNATIVES = Object.freeze({
   skyr: ['greek_yogurt_0', 'cottage_cheese', 'soy_yogurt_hp'],
   tofu_firm: ['tempeh', 'seitan', 'quorn_mince'],
   tempeh: ['tofu_firm', 'seitan', 'edamame'],
-  seitan: ['tofu_firm', 'tempeh', 'tvp_dry'],
-  quorn_mince: ['tvp_dry', 'tofu_firm', 'tempeh'],
-  whey: ['soy_protein', 'pea_protein', 'skyr'],
+  seitan: ['tofu_firm', 'tempeh'],
+  quorn_mince: ['tofu_firm', 'tempeh'],
+  whey: ['vegan_protein_blend', 'soy_protein', 'skyr'],
 
   almonds: ['mixed_seeds', 'peanut_butter', 'avocado'],
   peanut_butter: ['almonds', 'tahini', 'mixed_seeds'],
