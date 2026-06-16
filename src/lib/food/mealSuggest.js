@@ -95,6 +95,16 @@ export function remainingMacros(targets, consumed) {
  * filling the remaining protein (0..1), penalise overshooting the
  * remaining calories. Higher is better; can go negative on a big
  * overshoot so calorie-bombs sink below modest protein hits.
+ *
+ * Fat alignment (C/F split, report-grounded 2026-06-16): the curated library
+ * carries a deliberate lean→balanced fat spread (per the UK bodybuilder research
+ * report: "cuts lean on cod/white fish/chicken breast"; the macro skeleton keeps
+ * a "small fat" that changes by composition). Selection previously ignored fat
+ * entirely, so a day could stack lean meals and drift well under the engine's
+ * fat target. We now nudge toward a candidate whose fat sits near this slot's
+ * fat share. Bidirectional (both under- and over-fat are penalised), capped, and
+ * weighted BELOW protein and overshoot so protein-first and the calorie band
+ * stay dominant — no meal data and no target maths change.
  */
 export function fitScore(remaining, macros) {
   const proteinTarget = Math.max(num(remaining.protein), 1);
@@ -102,7 +112,9 @@ export function fitScore(remaining, macros) {
   const kcalBudget = Math.max(num(remaining.kcal), 1);
   const kcalOver = Math.max(0, num(macros.kcal) - num(remaining.kcal));
   const overshoot = kcalOver / kcalBudget;
-  return proteinFill - 0.6 * overshoot;
+  const fatShare = Math.max(num(remaining.fat), 1);
+  const fatMiss = Math.min(Math.abs(num(macros.fat) - num(remaining.fat)) / fatShare, 2);
+  return proteinFill - 0.6 * overshoot - 0.30 * fatMiss;
 }
 
 /**

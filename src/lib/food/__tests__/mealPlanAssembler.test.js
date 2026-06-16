@@ -212,6 +212,21 @@ describe('assembleDayPlan', () => {
     expect(day.totals.protein).toBeGreaterThanOrEqual(TARGET.proteinG * 0.85);
   });
 
+  // C/F split (2026-06-16): selection is now fat-aware, so the assembled day
+  // tracks the engine's fat target via the library's lean→balanced spread —
+  // WITHOUT ever breaking the hard invariant (calories in band, protein met).
+  // This pins both: the invariant on every day, and a bounded mean fat miss so
+  // the split can't silently drift back to ignoring fat.
+  test('the week tracks the fat target while keeping calories + protein hard', () => {
+    const wk = assembleWeekPlan({ engineTarget: { ...TARGET, ...BAND }, prefs: { mealsPerDay: 4 }, schedule: Array(7).fill('rest'), seed: 42 });
+    wk.days.forEach((d) => {
+      expect(d.kcalWithinBand).toBe(true); // invariant: calories stay in band
+      expect(d.proteinMet).toBe(true);     // invariant: protein delivered
+    });
+    const meanFatMiss = wk.days.reduce((a, d) => a + Math.abs(d.totals.fat - d.target.fat), 0) / wk.days.length;
+    expect(meanFatMiss).toBeLessThanOrEqual(25);
+  });
+
   test('is deterministic for the same seed and a regenerate reshuffles', () => {
     const again = assembleDayPlan({ target: dayTarget(), band: BAND, prefs: { mealsPerDay: 4 }, seed: 42 });
     expect(again).toEqual(day);
