@@ -43,9 +43,16 @@ async function _promoteToLocal(row) {
   const sourceId = (row.food_ref || '').split(':')[1] || null;
   if (!sourceId) return row;
 
+  // Canonicalise the live-OFF source label to the bundled snapshot's 'off' so
+  // the (source, source_id) unique index collapses a live hit onto its already
+  // bundled row instead of creating a duplicate (food audit D-3). It also fixes
+  // display: SOURCE_LABEL maps 'off' but not 'off_live', so live rows otherwise
+  // showed no source chip.
+  const source = row.source === 'off_live' ? 'off' : row.source;
+
   const existing = await d.getFirstAsync(
     'SELECT id FROM foods WHERE source = ? AND source_id = ? LIMIT 1',
-    [row.source, sourceId]
+    [source, sourceId]
   );
   if (existing?.id) {
     return { ...row, food_ref: `global:${existing.id}` };
@@ -62,7 +69,7 @@ async function _promoteToLocal(row) {
          verified, fetched_at, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
       [
-        id, row.source, sourceId, row.barcode_ean ?? null,
+        id, source, sourceId, row.barcode_ean ?? null,
         row.name ?? 'Unknown', row.brand ?? null,
         row.serving_g ?? 100, row.serving_label ?? null,
         row.kcal_100g, row.protein_100g, row.carbs_100g, row.fat_100g,
@@ -78,7 +85,7 @@ async function _promoteToLocal(row) {
     // Race on uq_foods_source_source_id: re-read and use the existing row.
     const again = await d.getFirstAsync(
       'SELECT id FROM foods WHERE source = ? AND source_id = ? LIMIT 1',
-      [row.source, sourceId]
+      [source, sourceId]
     );
     if (again?.id) return { ...row, food_ref: `global:${again.id}` };
     // Not a race: the food shows but never caches, so every lookup re-hits the

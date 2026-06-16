@@ -172,6 +172,11 @@ describe('resolveBarcode (barcode lookup waterfall)', () => {
       expect.objectContaining({ source: 'off_live' }));
     const insertWrite = mockDbWrites.find(w => /INSERT INTO foods/i.test(w.sql));
     expect(insertWrite).toBeTruthy();
+    // D-3: the live-OFF hit is stored under the canonical 'off' source (not
+    // 'off_live'), so it dedupes against the bundled snapshot row + shows the
+    // OFF source chip. params: [id, source, source_id, ...].
+    expect(insertWrite.params[1]).toBe('off');
+    expect(insertWrite.params[2]).toBe('5009999999999');
   });
 
   test('local + OFF miss, USDA hit promotes and emits usda telemetry', async () => {
