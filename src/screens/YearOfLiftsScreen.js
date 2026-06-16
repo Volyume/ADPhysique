@@ -18,7 +18,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, Pressable, TouchableOpacity, Dimensions, StatusBar,
+  View, Text, StyleSheet, FlatList, Pressable, TouchableOpacity, Dimensions, StatusBar, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,8 +28,11 @@ import { getYearOfLiftsData, getRecapData, getBlockReflectionData, getOpenEdPatt
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 import { track } from '../lib/engineTelemetry';
 import GradientCard from '../components/GradientCard';
+import { VolyumeMark } from '../components/BrandMark';
 
 const { width: SCREEN_W } = Dimensions.get('window');
+// How long each story card holds before auto-advancing (Instagram-story feel).
+const STORY_MS = 5000;
 
 const MONTH_NAMES = [
   'January','February','March','April','May','June',
@@ -450,6 +453,24 @@ export default function YearOfLiftsScreen({ navigation, route }) {
     goTo(index - 1);
   }
 
+  // Instagram-style auto-advance: each card holds for STORY_MS while its pip
+  // fills, then the deck moves on by itself (founder 2026-06-16: lapse in time
+  // and move on, not a manual swipe). Tap/swipe still work and reset the timer
+  // (the effect re-runs on index change). The last card closes the deck.
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (loading || cards.length === 0) return undefined;
+    progressAnim.setValue(0);
+    const anim = Animated.timing(progressAnim, {
+      toValue: 1,
+      duration: STORY_MS,
+      useNativeDriver: false, // animating width %
+    });
+    anim.start(({ finished }) => { if (finished) advance(); });
+    return () => anim.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, cards.length, loading]);
+
   // Share the year as a single milestone card. Factual stats only, no
   // bodyweight or private data, same fields the deck already shows.
   function handleShareYear() {
@@ -504,17 +525,26 @@ export default function YearOfLiftsScreen({ navigation, route }) {
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
 
-      {/* Progress pips at the top, one per card */}
+      {/* Brand mark at the very top, like a story's account row. */}
+      <View style={styles.brandRow}>
+        <VolyumeMark size={18} />
+      </View>
+
+      {/* Progress pips at the top, one per card. The current card's pip fills
+          over its on-screen time (Instagram-story timer). */}
       <View style={styles.pipsRow}>
         {cards.map((_, i) => (
-          <View
-            key={i}
-            style={[
-              styles.pip,
-              i < index && styles.pipDone,
-              i === index && styles.pipCurrent,
-            ]}
-          />
+          <View key={i} style={styles.pip}>
+            {i < index ? <View style={styles.pipFillFull} /> : null}
+            {i === index ? (
+              <Animated.View
+                style={[
+                  styles.pipFill,
+                  { width: progressAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) },
+                ]}
+              />
+            ) : null}
+          </View>
         ))}
         {!loading && cards.length > 0 && (
           <TouchableOpacity
@@ -610,12 +640,14 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
   },
+  brandRow: { alignItems: 'center', paddingTop: spacing.xs },
   pip: {
     flex: 1, height: 3, borderRadius: 2,
     backgroundColor: colors.border,
+    overflow: 'hidden',
   },
-  pipDone: { backgroundColor: colors.textSecondary },
-  pipCurrent: { backgroundColor: colors.primary },
+  pipFill: { height: '100%', borderRadius: 2, backgroundColor: colors.primary },
+  pipFillFull: { height: '100%', width: '100%', borderRadius: 2, backgroundColor: colors.textSecondary },
   shareBtn: {
     marginLeft: spacing.sm,
     width: 30, height: 30,
