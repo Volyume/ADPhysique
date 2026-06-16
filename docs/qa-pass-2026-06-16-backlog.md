@@ -11,6 +11,11 @@ full test + (for features) fresh-eyes review, per CLAUDE.md.
 4. Diary planned banner counts MEALS not food items ("5", not "20"). `2b5ce43`
 5. Remove duplicate Training-partner card from Consistency. `4225eb8`
 6. Toast: guarantee a dismissed toast leaves the screen (delete-undo bug). `c086008`
+7. Meal-plan UX cluster: variety default→Repeat, remove rest-day-fat from prefs,
+   prominent Preferences, real weekday picker, button→"Build a meal plan" (D1–D5). `38204ef`
+8. Home strip: remove weight sparkline squiggle + move strip above the workout (U1). `270fe06`
+9. Training partner: deep research (matches/beats the standard), human British copy
+   rewrite, recreated the missing `bp-partner-system-rebuild.md` blueprint. `620f4df`
 
 ## DECIDED — queued (smaller)
 - D1 Meal variety default → **Repeat**; "Mixed/variety" opt-in in Preferences.
@@ -46,14 +51,15 @@ full test + (for features) fresh-eyes review, per CLAUDE.md.
   `src/lib/food/db.js:191 confirmPlannedDay`, `src/screens/DiaryScreen.js:750`.
 
 ## COPY / VOICE — app-wide
-- C1 Rewrite the clipped, fragment "AI slop" microcopy in **human British English**
-  across (at least): recaps (`YearOfLiftsScreen.js` buildMonth/Year/Block cards —
+- Voice agreed with founder 2026-06-16 (full human British sentences, no clipped
+  fragments, no em dashes) and applied to the Training partner surfaces (shipped #9).
+- C1 REMAINING: recap copy (`YearOfLiftsScreen.js` buildMonth/Year/Block cards —
   "Same bar, new numbers to chase.", "That's consistency.", "Every set, stacked end
-  to end.", "They count.", "{label}, lifted."), Training partner
-  (`src/screens/PartnerScreen.js`), and a sweep for the same cadence elsewhere.
-  Update `src/screens/__tests__/recapCards.test.js` assertions.
-  NEEDS: agree a short voice direction + before/after examples with founder first
-  (3 rejections so far), then apply in one pass.
+  to end.", "They count.", "{label}, lifted.") + `recapCards.test.js`. Folded into
+  the F2 recap-as-stories workstream (same surface — do copy + restyle + auto-advance
+  together). Must preserve the delta-caption SAFETY rules (never negative-framed,
+  neutral under calm/ED, no fabricated comparison).
+- C1 SWEEP: still to audit other screens for the same cadence.
 
 ## BUGS — remaining
 - B1 Confirm calorie-banking target actually shifts on device + add a regression
