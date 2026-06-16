@@ -42,8 +42,6 @@ import { SkeletonRow } from '../components/Skeleton';
 import MealSection from '../components/food/MealSection';
 import { friendlyFoodName } from '../components/food/EntryRow';
 import ScreenHeader from '../components/ScreenHeader';
-import WeightTrendCard from '../components/WeightTrendCard';
-import useWeightTrend from '../hooks/useWeightTrend';
 import { useToast } from '../components/Toast';
 import { deleteEntries, restoreEntries, moveEntriesToSlot, copyEntriesToDate } from '../lib/food/bulkEntryOps';
 import { shouldShowOffConsentCard, dismissOffConsentCard } from '../lib/food/writeback';
@@ -97,14 +95,12 @@ export default function DiaryScreen({ navigation }) {
   })));
   const setCalorieBank = useAppStore((s) => s.setCalorieBank);
   const userId = user?.id;
-  const bodyWeightUnits = useAppStore((s) => s.bodyWeightUnits);
   const toast = useToast();
 
-  // COMP-004 "Your trend" (founder "both surfaces" decision): the same calm
-  // weight-trend read that hosts on Progress also appears here, on today's
-  // Diary, below the macro summary. Diary is a Pro domain, so the card is
-  // already Pro-gated by the navigator; it self-hides until there is data.
-  const weightTrend = useWeightTrend(userId);
+  // COMP-004's "Your trend" card was removed from the Diary (founder decision
+  // 2026-06-16: a weight trend has nothing to do with the food diary). The
+  // card still hosts on Progress/Analytics and the Home strip tap-through;
+  // only the Diary mount is gone.
 
   const [selectedDate, setSelectedDate] = useState(() => isoDate(new Date()));
   const [entries, setEntries] = useState([]);
@@ -716,14 +712,6 @@ export default function DiaryScreen({ navigation }) {
           </TouchableOpacity>
         ) : null}
 
-        {/* COMP-004 "Your trend" (both surfaces). Only on today's view, below
-            the macro summary so food stays the Diary's primary task. */}
-        {selectedDate === isoDate(new Date()) && weightTrend.render ? (
-          <View style={styles.trendWrap}>
-            <WeightTrendCard vm={weightTrend} bodyWeightUnits={bodyWeightUnits || 'st'} />
-          </View>
-        ) : null}
-
         {showOffCard && selectedDate === isoDate(new Date()) ? (
           <View style={styles.offCard}>
             <Text style={styles.offCardText}>
@@ -1135,7 +1123,6 @@ const styles = StyleSheet.create({
     gap: spacing.xs, paddingVertical: spacing.sm, marginTop: -spacing.sm, marginBottom: spacing.md,
   },
   bankRowText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
-  trendWrap: { marginBottom: spacing.lg },
   offCard: {
     gap: spacing.sm,
     backgroundColor: colors.surface,
