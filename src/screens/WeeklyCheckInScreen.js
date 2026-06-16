@@ -1395,7 +1395,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
           {!fastEligible && step === 0 && (
             <View style={styles.ritualIntro}>
               <Text style={styles.ritualIntroTitle}>{checkinDayLabel}</Text>
-              <Text style={styles.ritualIntroSub}>Four questions. Your coach reads them every week.</Text>
+              <Text style={styles.ritualIntroSub}>Just four questions, and your coach reads them every week.</Text>
             </View>
           )}
 

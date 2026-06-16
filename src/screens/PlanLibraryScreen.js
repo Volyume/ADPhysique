@@ -660,7 +660,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
               // No result
               <>
                 <Text style={styles.quizResultTitle}>No exact match found</Text>
-                <Text style={styles.quizResultDesc}>Browse all plans below. Something will fit.</Text>
+                <Text style={styles.quizResultDesc}>Browse all the plans below to find one that suits you.</Text>
                 <TouchableOpacity style={styles.quizStartBtn} onPress={handleQuizBrowse} activeOpacity={0.88} accessibilityRole="button">
                   <Text style={styles.quizStartText}>Browse all plans</Text>
                 </TouchableOpacity>

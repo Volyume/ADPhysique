@@ -195,7 +195,7 @@ export default function PlansScreen({ navigation }) {
     if (!activePlan) return;
     appAlert(
       'Restart this plan?',
-      'A new training block starts today with the same workouts. Try to beat your numbers from last time.',
+      "A new training block starts today with the same workouts. Aim to match or improve on last time's weights.",
       [
         { text: 'Cancel', style: 'cancel' },
         {

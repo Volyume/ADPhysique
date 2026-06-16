@@ -46,7 +46,7 @@ export default function FirstRunScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Almost there.</Text>
+        <Text style={styles.title}>You&apos;re almost set up.</Text>
         <Text style={styles.subtitle}>
           Just your name, then a few quick questions to get you set up.
         </Text>

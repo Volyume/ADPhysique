@@ -369,11 +369,11 @@ function drawMotivation(ctx, W, y, tier, prCount) {
   if (tier === 'solid' && prCount === 0) return y; // skip, don't be loud about an average day
   var line;
   if (prCount > 0) {
-    line = prCount === 1 ? 'New PR. Banked.' : prCount + ' PRs. Levelled up.';
+    line = prCount === 1 ? 'A new personal best.' : prCount + ' personal bests today.';
   } else if (tier === 'epic') {
-    line = 'Earned. Every rep.';
+    line = 'You earned every rep.';
   } else {
-    line = 'Solid work. Recovery starts now.';
+    line = 'Solid session. Rest up now.';
   }
   ctx.fillStyle = B.accent;
   ctx.font = '700 italic 32px Arial,sans-serif';

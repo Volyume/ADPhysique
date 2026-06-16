@@ -389,7 +389,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
 
       // COMP-013: first completed session ever → the calibrated acknowledgement.
       if (totalCompleted === 1) {
-        setFirstSessionLine(suppressed ? null : 'First session done. That is the hard part.');
+        setFirstSessionLine(suppressed ? null : "Your first session is done, and that's the hard part over.");
       }
 
       // D1: claim the early-win milestone for this session. Skipped on the very
@@ -971,7 +971,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               accessibilityLabel="Watch your block story"
             >
               <Ionicons name="sparkles" size={16} color={colors.primary} />
-              <Text style={styles.blockRecapText}>Block complete. Watch your block story.</Text>
+              <Text style={styles.blockRecapText}>You&apos;ve finished this block. Have a look back at how it went.</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.primary} />
             </TouchableOpacity>
           </RevealSection>

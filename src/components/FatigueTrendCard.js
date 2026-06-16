@@ -15,10 +15,10 @@ function coachingLine(sessions) {
   if (!sessions || sessions.length < 2) return '';
   const last2 = sessions.slice(0, 2).map(s => s.fatigueLevel ?? s.fatigue_level ?? 0);
   const avg = (last2[0] + last2[1]) / 2;
-  if (avg <= 1.5) return 'Fresh. Push your next session.';
-  if (avg <= 2.5) return 'Moderate fatigue. Standard work.';
-  if (avg <= 3.5) return 'Elevated fatigue. Hold weights, focus on form.';
-  return 'High fatigue. Consider a lighter day.';
+  if (avg <= 1.5) return "You're fresh, so push your next session.";
+  if (avg <= 2.5) return 'Fatigue is moderate, so train as normal.';
+  if (avg <= 3.5) return 'Fatigue is building, so hold your weights and focus on form.';
+  return 'Fatigue is high, so consider a lighter day.';
 }
 
 /**

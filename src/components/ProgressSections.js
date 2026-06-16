@@ -146,11 +146,11 @@ export function SessionDurationChart({ bars }) {
 
   // Coaching line: compare last 3 bars with a recorded avg
   const recent = bars.filter(b => b.avgMin > 0);
-  let coachingLine = 'Consistent session lengths.';
+  let coachingLine = 'Your session lengths are steady.';
   if (recent.length >= 3) {
     const last = recent.slice(-3).map(b => b.avgMin);
     const isDown = last[2] < last[0] - 5;
-    if (isDown) coachingLine = 'Sessions getting shorter. Might be fatigue.';
+    if (isDown) coachingLine = 'Your sessions are getting shorter, which might mean fatigue.';
   }
 
   function barColor(avgMin) {

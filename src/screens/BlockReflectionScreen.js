@@ -196,7 +196,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
             <View style={styles.nextSection}>
               <Text style={styles.nextTitle} accessibilityRole="header">What's next</Text>
               <Text style={styles.nextBody}>
-                Take a few days of lighter activity to recover, then start your next block. The rest is when the gains settle in.
+                Take a few days of lighter activity to recover, then start your next block. That recovery is when your progress takes hold.
               </Text>
               <TouchableOpacity
                 style={styles.newBlockBtn}

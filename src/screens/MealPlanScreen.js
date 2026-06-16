@@ -290,8 +290,8 @@ export default function MealPlanScreen({ navigation }) {
       // successful write and surface a false "couldn't swap" error (food review U-M10).
       const { swap } = res;
       toast.show(
-        swap ? `${swap.gramsIn} g ${swap.foodInName} for ${swap.foodOutName}. Macros held.`
-          : 'Food swapped. Macros held.',
+        swap ? `Swapped in ${swap.gramsIn} g ${swap.foodInName} for ${swap.foodOutName}, and your macros held.`
+          : 'Food swapped, and your macros held.',
         { variant: 'success' },
       );
     } catch (_) {

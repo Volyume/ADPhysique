@@ -70,19 +70,19 @@ export function computeRecoveryTrendInsight(checkins) {
   const lowSleepWeeks = recentSleep.filter(s => s <= 2).length;
 
   if (lowEnergyWeeks >= 3) {
-    return { type: 'warning', text: `Energy has been low for ${lowEnergyWeeks} check-ins in a row. That's worth paying attention to.` };
+    return { type: 'warning', text: `Energy has been low for ${lowEnergyWeeks} check-ins in a row, which is worth paying attention to.` };
   }
   if (highSorenessWeeks >= 3) {
-    return { type: 'warning', text: `High soreness has been reported ${highSorenessWeeks} weeks running. Recovery may need more attention.` };
+    return { type: 'warning', text: `High soreness has been reported ${highSorenessWeeks} weeks running, so your recovery may need more attention.` };
   }
   // A run of poor nights is the clearest recovery signal there is. Surface
   // it in the same insight slot rather than on a card of its own, so the
   // leaned Consistency surface doesn't grow another chart.
   if (lowSleepWeeks >= 3) {
-    return { type: 'warning', text: `Sleep has been rated low for ${lowSleepWeeks} check-ins in a row. Worth paying attention to.` };
+    return { type: 'warning', text: `Sleep has been rated low for ${lowSleepWeeks} check-ins in a row, which is worth paying attention to.` };
   }
   if (highEnergyWeeks >= 3) {
-    return { type: 'good', text: `Energy has been consistently high across the last ${highEnergyWeeks} check-ins. Good sign.` };
+    return { type: 'good', text: `Energy has been consistently high across the last ${highEnergyWeeks} check-ins, which is a good sign.` };
   }
   if (energies.length >= 4) {
     const older = energies.slice(2, 4);
