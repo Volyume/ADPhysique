@@ -25,6 +25,8 @@
  * Determinism: same inputs in, same delta map out.
  */
 
+import { applyMacroDeltaToPlan } from './planEdit';
+
 // A bump below this is presentation noise, not a banked day — refuse rather than
 // show a fake "bigger day" (mirrors MIN_MEANINGFUL_CYCLE_KCAL in the assembler).
 export const MIN_BANK_DELTA_KCAL = 50;
@@ -135,6 +137,42 @@ export function safeDayFloorKcal({ sex, ffmFloorKcal = null } = {}) {
  */
 export function displayBankedDelta({ bankingAvailable, calorieBank, dayKey }) {
   return bankingAvailable ? bankedDeltaForDay(calorieBank, dayKey) : 0;
+}
+
+/**
+ * CB-1b: bring each planned day's FOOD in line with its banked target, not just
+ * the target number (founder 2026-06-16). For each plan day whose date carries a
+ * non-zero banked delta, route that delta through the coach's food-level editor
+ * (applyMacroDeltaToPlan: carbs-first lever, protein protected, double
+ * floor-clamp) so the meals on a lower-calorie day are trimmed and a
+ * higher-calorie day is topped up, holding the weekly total.
+ *
+ * Pure: the caller supplies the parallel `dayKeys` (the calendar date each plan
+ * day is scheduled to, e.g. today + i) so no date library is needed here, and
+ * the floor it must never breach. Returns one entry per ADJUSTED day:
+ *   { dayIndex, dayKey, editedDay, change }
+ * where `change` is the planEdit record the UI narrates per day. Days with no
+ * banked delta are left untouched and omitted (no food change, target-only).
+ *
+ * @param {Array}  planDays         assembled plan days (slots/items/totals)
+ * @param {Array<string>} dayKeys   date key for each planDays[i] (same length/order)
+ * @param {Object} perDayDeltaKcal  bank delta map keyed by date
+ * @param {number} floorKcal        the hard per-day floor (max sex/FFM floor)
+ */
+export function bankedPlanDayEdits({ planDays = [], dayKeys = [], perDayDeltaKcal = {}, floorKcal = 0 } = {}) {
+  const out = [];
+  if (!Array.isArray(planDays) || !Array.isArray(dayKeys)) return out;
+  const n = Math.min(planDays.length, dayKeys.length);
+  for (let i = 0; i < n; i += 1) {
+    const dayKey = dayKeys[i];
+    const delta = Number(perDayDeltaKcal?.[dayKey]) || 0;
+    if (!delta) continue;
+    const { plan: editedDay, change } = applyMacroDeltaToPlan({
+      plan: planDays[i], adjustmentKcal: delta, floorKcal,
+    });
+    out.push({ dayIndex: i, dayKey, editedDay, change });
+  }
+  return out;
 }
 
 /**
