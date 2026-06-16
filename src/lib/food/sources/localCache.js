@@ -79,6 +79,10 @@ export async function findLocalByBarcode(ean, userId = null) {
     if (customRow) return customRow;
   }
 
+  // When several library rows share a barcode (e.g. the bundled snapshot plus a
+  // promoted live hit, or an OFF + CoFID duplicate), prefer a verified row, then
+  // the most macro-complete one, then a stable id tiebreak — instead of the old
+  // nondeterministic LIMIT 1 that could surface a half-empty row (food audit D-2).
   const row = await d.getFirstAsync(
     `SELECT
        'global:' || id AS food_ref, source, name, brand,
@@ -86,6 +90,9 @@ export async function findLocalByBarcode(ean, userId = null) {
        kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g
      FROM foods
      WHERE barcode_ean = ?
+     ORDER BY verified DESC,
+       (protein_100g IS NOT NULL) + (carbs_100g IS NOT NULL) + (fat_100g IS NOT NULL) DESC,
+       id ASC
      LIMIT 1`,
     [ean]
   );
