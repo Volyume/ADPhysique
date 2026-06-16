@@ -24,6 +24,9 @@ full test + (for features) fresh-eyes review, per CLAUDE.md.
 12. C1 — recap copy rewritten to human British English (month/year/block). `d66ba8f`
 13. F2 — recaps as Instagram-style stories: auto-advance with animated progress
     pips + Volyume logo. `06e242b`
+14. F3 — planned-meal "ate as planned" reminder push: spec `cc329cd`, registration
+    + copy + route `a9f1ecb`, scheduler + Coaching-reminders toggle `914dac0`.
+    Pro-only, 20:00 local, today-only, ED-suppressed, budgeted, self-suppressing.
 
 ## DECIDED — queued (smaller)
 - D1 Meal variety default → **Repeat**; "Mixed/variety" opt-in in Preferences.
