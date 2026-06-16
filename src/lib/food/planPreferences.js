@@ -26,7 +26,7 @@ export const DEFAULT_PLAN_PREFERENCES = Object.freeze({
   excludeTags: [],             // FSA allergen tags, hard excludes
   mealsPerDay: 4,              // physique norm 4-6; beginners often 3-4
   periWorkoutSlots: false,     // pre/post-workout slots on training days
-  variety: 0.5,                // 0 = repeat (meal-prep), 1 = maximise rotation
+  variety: 0,                  // 0 = repeat (meal-prep, the default — varied is opt-in), 1 = maximise rotation
   rotationPool: null,          // optional 3-3-3 pool: { protein:[], carb:[], fat:[] }
   fatConvention: 'equalised',  // rest-day fat handling (round-2 item 1)
   pinnedMealIds: [],           // "always keep my oats breakfast"
@@ -58,7 +58,7 @@ export function normalisePreferences(prefs) {
     excludeTags: dedupe(p.excludeTags),
     mealsPerDay: clamp(Math.round(Number(p.mealsPerDay) || 4), 3, 6),
     periWorkoutSlots: !!p.periWorkoutSlots,
-    variety: clamp(Number.isFinite(Number(p.variety)) ? Number(p.variety) : 0.5, 0, 1),
+    variety: clamp(Number.isFinite(Number(p.variety)) ? Number(p.variety) : 0, 0, 1),
     rotationPool: pool && (pool.protein.length || pool.carb.length || pool.fat.length) ? pool : null,
     fatConvention,
     pinnedMealIds: dedupe(p.pinnedMealIds),

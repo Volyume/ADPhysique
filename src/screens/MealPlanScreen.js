@@ -27,7 +27,7 @@ import { appAlert } from '../components/AppAlert';
 import useAppStore from '../store/useAppStore';
 import { colors, fontSize, fontWeight, spacing, radius, hitSlop } from '../styles/theme';
 import { mealSlotLabel } from '../lib/food/mealSlots';
-import { todayLocalKey } from '../lib/dayKey';
+import { todayLocalKey, parseLocalDay } from '../lib/dayKey';
 import {
   loadActiveMealPlan,
   generateAndSaveDayPlan,
@@ -42,9 +42,18 @@ import {
 import { updateMealPlan } from '../lib/food/db';
 import { buildGroceryList } from '../lib/food/groceryList';
 
-// The week plan is an abstract Day 1..7 (training/rest spread), NOT calendar-
-// anchored, so label the picker by day number rather than implying weekdays.
-const DAY_LABELS = ['1', '2', '3', '4', '5', '6', '7'];
+// The week is scheduled onto real dates when added to the diary (day i ->
+// today + i, see applyPlanWeekToDiary), so the picker labels each day with its
+// actual weekday rather than an abstract "1..7" (founder 2026-06-16).
+const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+function next7WeekdayLabels() {
+  const start = parseLocalDay(todayLocalKey());
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(start.getTime());
+    d.setDate(d.getDate() + i);
+    return WEEKDAY_SHORT[d.getDay()];
+  });
+}
 
 function planSlotLabel(slotKey) {
   if (slotKey === 'pre_workout') return 'Pre-workout';
@@ -124,6 +133,8 @@ export default function MealPlanScreen({ navigation }) {
 
   const plan = record?.plan || null;
   const day = plan?.days?.[dayIndex] || null;
+  // Real weekday labels for the week picker (day i is scheduled to today + i).
+  const dayLabels = useMemo(() => next7WeekdayLabels(), []);
 
   // One generator, two modes (Feature A day / Feature B week). Each replaces
   // the active plan with the chosen kind; the user can switch any time.
@@ -414,9 +425,9 @@ export default function MealPlanScreen({ navigation }) {
                   hitSlop={hitSlop}
                   accessibilityRole="tab"
                   accessibilityState={{ selected }}
-                  accessibilityLabel={cycleOn ? `Day ${i + 1}, ${variant === 'training' ? 'training day' : 'rest day'}` : `Day ${i + 1}`}
+                  accessibilityLabel={cycleOn ? `${dayLabels[i]}, ${variant === 'training' ? 'training day' : 'rest day'}` : dayLabels[i]}
                 >
-                  <Text style={[styles.dayLetter, selected && styles.dayLetterOn]}>{DAY_LABELS[i]}</Text>
+                  <Text style={[styles.dayLetter, selected && styles.dayLetterOn]}>{dayLabels[i]}</Text>
                   <View style={[styles.dayDot, variant === 'training' && cycleOn && styles.dayDotTrain]} />
                 </TouchableOpacity>
               );
@@ -540,9 +551,9 @@ export default function MealPlanScreen({ navigation }) {
             accessibilityState={{ expanded: prefsOpen }}
             accessibilityLabel="Plan preferences"
           >
-            <Ionicons name="options-outline" size={16} color={colors.textSecondary} />
+            <Ionicons name="options-outline" size={18} color={colors.primary} />
             <Text style={styles.prefsToggleText}>Preferences</Text>
-            <Ionicons name={prefsOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSecondary} />
+            <Ionicons name={prefsOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.primary} />
           </TouchableOpacity>
           {prefsOpen ? (
             <View style={styles.prefsPanel}>
@@ -560,18 +571,8 @@ export default function MealPlanScreen({ navigation }) {
                   { value: 0.5, label: 'Mixed' },
                   { value: 1, label: 'Varied' },
                 ]}
-                value={prefs.variety ?? 0.5}
+                value={prefs.variety ?? 0}
                 onSelect={(v) => handleSetPref({ mealPlanVariety: v })}
-                busy={busy}
-              />
-              <PrefRow
-                label="Rest-day fat"
-                options={[
-                  { value: 'equalised', label: 'Even' },
-                  { value: 'higher_rest_day', label: 'Higher' },
-                ]}
-                value={prefs.fatConvention ?? 'equalised'}
-                onSelect={(v) => handleSetPref({ mealPlanFatConvention: v })}
                 busy={busy}
               />
               <PrefRow
@@ -752,8 +753,16 @@ const styles = StyleSheet.create({
   totalsLabel: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   totalsText: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
   footNote: { color: colors.textSecondary, fontSize: fontSize.xs, textAlign: 'center', lineHeight: 17 },
-  prefsToggle: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, minHeight: 44 },
-  prefsToggleText: { flex: 1, color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  // Prominent so people find it: a bordered card with a primary accent, not a
+  // faint text row (founder 2026-06-16: the prefs were too hidden, people miss them).
+  prefsToggle: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingVertical: spacing.md, paddingHorizontal: spacing.lg,
+    minHeight: 48, marginVertical: spacing.sm,
+    backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.primary, borderRadius: radius.md,
+  },
+  prefsToggleText: { flex: 1, color: colors.primary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
   prefsPanel: { gap: spacing.md, paddingBottom: spacing.sm },
   prefRow: { gap: spacing.xs },
   prefLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0.4 },

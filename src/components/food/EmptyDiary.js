@@ -24,10 +24,10 @@ export default function EmptyDiary({ onAdd, onCopyYesterday, onPlanDay }) {
           style={[styles.btn, styles.btnPlan]}
           onPress={onPlanDay}
           accessibilityRole="button"
-          accessibilityLabel="Plan my day: a day of meals built to your targets"
+          accessibilityLabel="Build a meal plan: a day or week of meals built to your targets"
         >
           <Ionicons name="sparkles-outline" size={16} color={colors.primary} />
-          <Text style={[styles.btnText, styles.btnTextPlan]}>Plan my day</Text>
+          <Text style={[styles.btnText, styles.btnTextPlan]}>Build a meal plan</Text>
         </TouchableOpacity>
       ) : null}
       <View style={styles.actions}>
