@@ -6,6 +6,7 @@ import {
   checkKcalPlausible,
   checkMacroMass,
   checkKcalMatchesMacros,
+  checkFibrePlausible,
   checkFoodSanity,
 } from '../food/sanityChecks';
 
@@ -75,6 +76,34 @@ describe('checkKcalMatchesMacros', () => {
     // 30p, 10c, 5f = 4*30+4*10+9*5 = 205 kcal expected
     // Labelled 230 -> 12% drift -> accept
     expect(checkKcalMatchesMacros(230, 30, 10, 5).valid).toBe(true);
+  });
+});
+
+describe('checkFibrePlausible (food audit D-1)', () => {
+  test('absent fibre is fine (optional field)', () => {
+    expect(checkFibrePlausible(null).valid).toBe(true);
+    expect(checkFibrePlausible(undefined).valid).toBe(true);
+  });
+  test('rejects NaN (e.g. typed garbage in the custom-food form)', () => {
+    expect(checkFibrePlausible(NaN).valid).toBe(false);
+  });
+  test('rejects negative', () => {
+    expect(checkFibrePlausible(-2).valid).toBe(false);
+  });
+  test('rejects over 100g per 100g', () => {
+    expect(checkFibrePlausible(120).valid).toBe(false);
+  });
+  test('accepts realistic fibre, including high-fibre UK foods where fibre can exceed carbs', () => {
+    expect(checkFibrePlausible(0).valid).toBe(true);
+    expect(checkFibrePlausible(6).valid).toBe(true);   // wholemeal bread
+    expect(checkFibrePlausible(43).valid).toBe(true);  // wheat bran (CoFID: carbs ~22, fibre ~43)
+  });
+  test('high-fibre EU food (fibre > carbs) still passes the combined gate', () => {
+    const bran = {
+      name: 'Wheat bran', servingG: 100,
+      kcal100g: 206, protein100g: 16, carbs100g: 22, fat100g: 5, fibre100g: 43,
+    };
+    expect(checkFoodSanity(bran).valid).toBe(true);
   });
 });
 

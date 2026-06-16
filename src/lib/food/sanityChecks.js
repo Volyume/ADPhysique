@@ -78,6 +78,41 @@ export function checkKcalMatchesMacros(kcal100g, protein100g, carbs100g, fat100g
 }
 
 /**
+ * Fibre plausibility (food audit D-1, 2026-06-16). Fibre is OPTIONAL: a
+ * food may legitimately have none declared (null). But when a value is
+ * present it must be a real, non-negative number no greater than 100g per
+ * 100g — the custom-food form passes the typed fibre straight through
+ * (AddCustomFoodScreen passes Number(fibre), so "abc" arrives as NaN), and
+ * nothing else validated it, so garbage previously polluted the diary's
+ * fibre total unchecked.
+ *
+ * Deliberately NOT enforced (would be wrong, not stronger):
+ *   - "fibre <= carbs": under EU/UK labelling carbohydrate EXCLUDES fibre
+ *     (declared separately), so high-fibre UK foods legitimately have
+ *     fibre > carbs. Our data also mixes USDA (carbs INCLUDE fibre) with
+ *     OFF/CoFID (EU), so no single fibre-vs-carbs rule is correct.
+ *   - tightening the kcal/macro drift band or adding fibre energy: the same
+ *     mixed convention means a tighter band would false-reject high-fibre
+ *     EU foods. The energy-coherence check already catches gross ratio
+ *     errors (e.g. protein at the wrong kcal/g).
+ *   - sodium/sugar bounds: those fields are not part of the food model the
+ *     sanity gate receives.
+ */
+export function checkFibrePlausible(fibre100g) {
+  if (fibre100g == null) return { valid: true };
+  if (typeof fibre100g !== 'number' || !isFinite(fibre100g)) {
+    return { valid: false, reason: 'Fibre per 100g is missing or not a number.' };
+  }
+  if (fibre100g < 0) {
+    return { valid: false, reason: 'Fibre per 100g is negative.' };
+  }
+  if (fibre100g > 100) {
+    return { valid: false, reason: 'Fibre per 100g is over 100g. Check the label again.' };
+  }
+  return { valid: true };
+}
+
+/**
  * Run every sanity check against a food. Returns the first failure
  * if any, otherwise valid. Used to gate insert into custom_foods.
  */
@@ -86,6 +121,7 @@ export function checkFoodSanity(food) {
     checkKcalPlausible(food.kcal100g),
     checkMacroMass(food.protein100g, food.carbs100g, food.fat100g),
     checkKcalMatchesMacros(food.kcal100g, food.protein100g, food.carbs100g, food.fat100g),
+    checkFibrePlausible(food.fibre100g),
   ];
   const failure = checks.find(c => !c.valid);
   return failure ?? { valid: true };

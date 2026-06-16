@@ -74,7 +74,9 @@ Everything in §1–§3 below was re-read in the code and the line references ar
 
 | # | Finding | Evidence | Status | Impact |
 |---|---------|----------|--------|--------|
-| D-1 | **Sanity checks are thin.** Only 3: kcal 0–900, P+C+F ≤ 110 g, kcal-vs-macro drift ≤ 20%. No `fibre ≤ carbs`, no implausible-ratio check, no sodium/sugar bounds. A 20% drift tolerance lets real label typos through. | `sanityChecks.js:18-92` (read in full) | **Verified** | Medium / **low effort** |
+| D-1 | **Sanity checks are thin.** Only 3: kcal 0–900, P+C+F ≤ 110 g, kcal-vs-macro drift ≤ 20%. Fibre passes through **unvalidated** (NaN from the custom-food form pollutes the diary total). | `sanityChecks.js:18-92` (read in full) | **BUILT 2026-06-16** | Medium / low effort |
+
+> **D-1 build outcome (correction):** on building, the audit's other suggestions were found **unsafe** and deliberately dropped: `fibre ≤ carbs` is wrong under EU/UK labelling (carbohydrate *excludes* fibre; our data also mixes USDA where it's *included*), tightening the drift band would false-reject high-fibre EU foods, and sodium/sugar aren't in the food model the gate receives. What shipped: `checkFibrePlausible` (finite, 0–100 g, optional) wired into `checkFoodSanity` — the genuine, convention-independent hole.
 | D-2 | **Barcode hits aren't disambiguated by variant/quality.** First match wins; multi-size or reused codes can log the wrong product. | `waterfall.js`, `usda.js` | [flagged] | Medium–High |
 | D-3 | **No cross-source dedupe.** Same food from OFF + USDA + cache are separate rows; user can log near-duplicates. | `waterfall.js`, `localCache.js` | [flagged] | Medium |
 | D-4 | **Bundled snapshot goes stale and there's no "refresh library now".** Delta pull is throttled; seed-import failures are near-silent. | `seed.js`, `libraryDelta.js` | [flagged] | Medium |
