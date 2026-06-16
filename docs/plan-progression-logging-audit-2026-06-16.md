@@ -89,7 +89,13 @@ With min 3 + max 4 + ≤2 exercises, a session target of **5** can't split clean
 - **LOG-2** Add in-session **delete + undo a logged set** (E2): new `deleteWorkoutSet` (soft-delete + undo toast, mirroring the food F-1 pattern). High value.
 
 **Tier B — quality, medium effort, needs a founder decision**
-- **PLAN-1 (the 4-set split)** Cap per-exercise sets and spread to more exercises. **DECISION NEEDED:** (a) per-exercise max = 4 or 5? (b) allow up to 3 exercises/muscle/session? (c) how to handle the awkward target of 5 (round, or allow a single 5-set exercise)? Then build with the weekly-volume invariant tested (delivered per-muscle unchanged; no 2-set fragments; ≤ time budget).
+- **PLAN-1 (the 4-set split)** Cap per-exercise sets and spread to more exercises.
+  **FOUNDER DECISION (2026-06-16): per-exercise max = 5, keep ≤2 exercises/muscle/session.**
+  So: lower `MAX_SETS_PER_ENTRY` 6→**5** (`planEngine.js:1059`); leave `numExHint`'s 2-exercise
+  ceiling (`:900`); a weak-point session target of 12 → **5/5** (+ frequency carries the rest); a
+  target of 5 may sit as a single 5-set exercise (no awkward fragment). Build with the weekly-volume
+  invariant tested (delivered per-muscle unchanged vs today within rounding; no 2-set fragments;
+  ≤ time budget) + fresh-eyes review. **Status: NOT STARTED — founder put builds on hold (audit only).**
 - **LOG-3** Wire the existing **plate calculator** into the weight row (P2).
 - **LOG-4** Wire or remove **unilateral** logging (U1).
 
@@ -100,6 +106,10 @@ With min 3 + max 4 + ≤2 exercises, a session target of **5** can't split clean
 **Flagging, not fixing:** `mesocycle.js` dead code; `planEngine.js:1880` copy vs `database.js:2933` math mismatch.
 
 ---
+
+> **STATUS (2026-06-16):** founder reviewed the audit and chose **audit only — no builds yet**.
+> PLAN-1 cap rule pre-decided (max 5, keep 2 exercises). PROG-1 / LOG-1 / LOG-2 remain recommended
+> and unbuilt, awaiting a go.
 
 ## §5 — Recommended first move
 1. **PROG-1** (the only genuine safety hole — null-MRV → uncapped) — tiny, do first.
