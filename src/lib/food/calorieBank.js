@@ -96,3 +96,30 @@ export function planCalorieBank({
 export function deltaSum(perDayDeltaKcal = {}) {
   return Object.values(perDayDeltaKcal).reduce((a, n) => a + (Number(n) || 0), 0);
 }
+
+// kcal per gram of carbohydrate. Banking moves its delta through CARBS — the
+// lever — holding protein and fat, mirroring the engine's protein-protected
+// day cycle (dayVariantTargets).
+const KCAL_PER_G_CARB = 4;
+
+/** The banked kcal delta for one day key (0 when no bank applies to it). */
+export function bankedDeltaForDay(calorieBank, dayKey) {
+  const map = calorieBank && calorieBank.perDayDeltaKcal;
+  if (!map || !(dayKey in map)) return 0;
+  const v = Number(map[dayKey]);
+  return isFinite(v) ? v : 0;
+}
+
+/**
+ * Apply a banked kcal delta to a day's target for DISPLAY: shift kcal and carry
+ * the change in carbs; protein and fat are untouched. Returns the target
+ * unchanged when there is no delta.
+ */
+export function applyBankToTarget(targets, deltaKcal) {
+  if (!targets || !deltaKcal) return targets;
+  return {
+    ...targets,
+    targetKcal: Math.round((Number(targets.targetKcal) || 0) + deltaKcal),
+    carbsG: Math.max(0, Math.round((Number(targets.carbsG) || 0) + deltaKcal / KCAL_PER_G_CARB)),
+  };
+}

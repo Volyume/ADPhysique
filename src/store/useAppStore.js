@@ -1448,6 +1448,21 @@ const useAppStore = create((set, get) => ({
     set({ userProfile: updated });
   },
 
+  // Calorie banking (CB-1, "Plan a bigger day"): a local profile field like the
+  // meal-plan prefs (plan/banking are local-only). `bank` is the
+  // { weekStartKey, bigDayKey, perDayDeltaKcal, appliedAt } record, or null to
+  // clear. The diary reads it to show each day's banked target. The safe
+  // redistribution + floor checks happen in food/calorieBank before this is
+  // ever called; this only persists the result.
+  setCalorieBank: async (bank) => {
+    const { user, userProfile } = get();
+    if (!user?.id) return;
+    const updated = { ...(userProfile || {}), calorieBank: bank ?? null };
+    const key = PROFILE_KEY_PFX + user.id;
+    try { await AsyncStorage.setItem(key, JSON.stringify(updated)); } catch (_) {}
+    set({ userProfile: updated });
+  },
+
   // Bar weight for plate calculator, persisted alongside units
   barWeight: 20,
   setBarWeight: async (w) => {

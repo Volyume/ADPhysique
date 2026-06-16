@@ -1,0 +1,214 @@
+/**
+ * CalorieBankSheet — "Plan a bigger day" (CB-1).
+ * Source: docs/ultimate-audit-2026-06-13/pass4-blueprint-calorie-banking.md.
+ *
+ * Pick a day in the week and how much to bump it; the rest of the week gives up
+ * an equal share so the WEEKLY TOTAL stays the same. All the safety maths
+ * (floors, band cap, refusal) live in lib/food/calorieBank — this sheet only
+ * previews the result and hands a valid plan back to the caller to persist. The
+ * caller is responsible for only opening this when banking is allowed (no carb
+ * cycle / refeed / floored target / open ED-pattern flag).
+ *
+ * Voice: British English, plain, no "cheat day"/"binge"/"save up" language.
+ */
+import { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import BottomSheet from '../BottomSheet';
+import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
+import { planCalorieBank, MAX_BANK_DELTA_KCAL } from '../../lib/food/calorieBank';
+
+const BUMP_STEP = 50;
+const DEFAULT_BUMP = 150;
+
+const ERROR_COPY = {
+  floor: "That would take one of your days below your safe minimum, so we can't shift that much. Try a smaller amount.",
+  no_room: "This day is already at the top of its range, so there's nothing extra to add.",
+  too_small: 'Pick a little more to plan a bigger day.',
+  invalid_input: "We couldn't plan that. Try a different day.",
+};
+
+export default function CalorieBankSheet({
+  visible,
+  onClose,
+  weekDates = [],
+  defaultBigDay,
+  baseTargetKcal,
+  floorKcal,
+  bandMaxKcal,
+  existingBank = null,
+  onApply,
+  onClear,
+  dayLabel = (d) => d,
+}) {
+  const [bigDay, setBigDay] = useState(defaultBigDay);
+  const [requestedBump, setRequestedBump] = useState(DEFAULT_BUMP);
+
+  // Reset the controls each time the sheet opens for a day.
+  useEffect(() => {
+    if (visible) {
+      setBigDay(defaultBigDay);
+      setRequestedBump(DEFAULT_BUMP);
+    }
+  }, [visible, defaultBigDay]);
+
+  const perDayBaseKcal = useMemo(() => {
+    const m = {};
+    weekDates.forEach((d) => { m[d] = baseTargetKcal; });
+    return m;
+  }, [weekDates, baseTargetKcal]);
+
+  const plan = useMemo(() => planCalorieBank({
+    perDayBaseKcal, bigDayKey: bigDay, requestedBumpKcal: requestedBump, floorKcal, bandMaxKcal,
+  }), [perDayBaseKcal, bigDay, requestedBump, floorKcal, bandMaxKcal]);
+
+  const others = Math.max(1, weekDates.length - 1);
+  const bigNewKcal = (baseTargetKcal || 0) + (plan.ok ? plan.appliedBumpKcal : 0);
+  const perOther = plan.ok ? Math.round(plan.appliedBumpKcal / others) : 0;
+
+  const step = (delta) => setRequestedBump((b) => Math.min(MAX_BANK_DELTA_KCAL, Math.max(BUMP_STEP, b + delta)));
+
+  const apply = () => {
+    if (!plan.ok) return;
+    onApply?.({
+      weekStartKey: weekDates[0] ?? bigDay,
+      bigDayKey: bigDay,
+      perDayDeltaKcal: plan.perDayDeltaKcal,
+      appliedAt: Date.now(),
+    });
+  };
+
+  return (
+    <BottomSheet visible={visible} onClose={onClose} accessibilityLabel="Plan a bigger day">
+      <Text style={styles.title}>Plan a bigger day</Text>
+      <Text style={styles.intro}>
+        Pick a day and we will shift some calories onto it from the rest of the week. Your weekly total stays the same.
+      </Text>
+
+      {existingBank ? (
+        <View style={styles.activeRow}>
+          <Text style={styles.activeText} numberOfLines={2}>
+            A bigger day is planned for {dayLabel(existingBank.bigDayKey)}.
+          </Text>
+          <TouchableOpacity onPress={onClear} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear the planned bigger day">
+            <Text style={styles.clearText}>Clear</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
+      <Text style={styles.sectionLabel}>Bigger day</Text>
+      <View style={styles.dayChips}>
+        {weekDates.map((d) => {
+          const active = d === bigDay;
+          return (
+            <Pressable
+              key={d}
+              onPress={() => setBigDay(d)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={dayLabel(d)}
+              style={[styles.dayChip, active && styles.dayChipActive]}
+            >
+              <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>{dayLabel(d)}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <Text style={styles.sectionLabel}>How much extra</Text>
+      <View style={styles.stepper}>
+        <TouchableOpacity
+          onPress={() => step(-BUMP_STEP)}
+          disabled={requestedBump <= BUMP_STEP}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Less"
+          style={[styles.stepBtn, requestedBump <= BUMP_STEP && styles.stepBtnDisabled]}
+        >
+          <Ionicons name="remove" size={24} color={requestedBump <= BUMP_STEP ? colors.textMuted : colors.primary} />
+        </TouchableOpacity>
+        <Text style={styles.stepValue} accessibilityLabel={`${requestedBump} kcal`}>+{requestedBump}</Text>
+        <TouchableOpacity
+          onPress={() => step(BUMP_STEP)}
+          disabled={requestedBump >= MAX_BANK_DELTA_KCAL}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="More"
+          style={[styles.stepBtn, requestedBump >= MAX_BANK_DELTA_KCAL && styles.stepBtnDisabled]}
+        >
+          <Ionicons name="add" size={24} color={requestedBump >= MAX_BANK_DELTA_KCAL ? colors.textMuted : colors.primary} />
+        </TouchableOpacity>
+      </View>
+
+      {plan.ok ? (
+        <Text style={styles.preview}>
+          {dayLabel(bigDay)}: {bigNewKcal} kcal. The other {others} days drop by about {perOther} kcal each. Your weekly total stays the same.
+        </Text>
+      ) : (
+        <Text style={styles.error}>{ERROR_COPY[plan.reason] ?? ERROR_COPY.invalid_input}</Text>
+      )}
+
+      <TouchableOpacity
+        style={[styles.applyBtn, !plan.ok && styles.applyBtnDisabled]}
+        onPress={apply}
+        disabled={!plan.ok}
+        accessibilityRole="button"
+        accessibilityLabel="Apply the bigger day"
+      >
+        <Text style={styles.applyText}>Plan it</Text>
+      </TouchableOpacity>
+    </BottomSheet>
+  );
+}
+
+const styles = StyleSheet.create({
+  title: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
+  intro: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: spacing.xs, lineHeight: 19 },
+  activeRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: colors.surface2, borderRadius: radius.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    marginTop: spacing.md, gap: spacing.sm,
+  },
+  activeText: { flex: 1, color: colors.textSecondary, fontSize: fontSize.sm },
+  clearText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.bold },
+  sectionLabel: {
+    color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold,
+    letterSpacing: 0.6, textTransform: 'uppercase',
+    marginTop: spacing.lg, marginBottom: spacing.sm,
+  },
+  dayChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  dayChip: {
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    borderRadius: radius.full, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  dayChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  dayChipText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
+  dayChipTextActive: { color: colors.onPrimary, fontWeight: fontWeight.bold },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl, alignSelf: 'center' },
+  stepBtn: {
+    width: 48, height: 48, borderRadius: 24,
+    borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  stepBtnDisabled: { opacity: 0.5 },
+  stepValue: {
+    color: colors.textPrimary, fontSize: fontSize.xl, fontWeight: fontWeight.bold,
+    minWidth: 88, textAlign: 'center', fontVariant: ['tabular-nums'],
+  },
+  preview: {
+    color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 20,
+    marginTop: spacing.lg, textAlign: 'center',
+  },
+  error: {
+    color: colors.warning, fontSize: fontSize.sm, lineHeight: 20,
+    marginTop: spacing.lg, textAlign: 'center',
+  },
+  applyBtn: {
+    marginTop: spacing.lg, minHeight: 48, borderRadius: radius.md,
+    backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
+  },
+  applyBtnDisabled: { opacity: 0.5 },
+  applyText: { color: colors.onPrimary, fontSize: fontSize.md, fontWeight: fontWeight.bold },
+});

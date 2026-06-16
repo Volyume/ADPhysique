@@ -5,7 +5,8 @@
  *  refuses below the meaningful minimum; deterministic).
  */
 import {
-  planCalorieBank, deltaSum, MIN_BANK_DELTA_KCAL, MAX_BANK_DELTA_KCAL,
+  planCalorieBank, deltaSum, bankedDeltaForDay, applyBankToTarget,
+  MIN_BANK_DELTA_KCAL, MAX_BANK_DELTA_KCAL,
 } from '../calorieBank';
 
 const week = (kcal) => ({
@@ -147,6 +148,31 @@ describe('planCalorieBank — fuzz the safety invariants', () => {
       expect(r.appliedBumpKcal).toBeLessThanOrEqual(MAX_BANK_DELTA_KCAL);
     }
     expect(okCount).toBeGreaterThan(0); // the fuzzer actually exercises the success path
+  });
+});
+
+describe('bankedDeltaForDay / applyBankToTarget (display helpers)', () => {
+  const bank = { perDayDeltaKcal: { '2026-06-20': 240, '2026-06-19': -40 } };
+  test('reads the delta for a day, 0 when absent or no bank', () => {
+    expect(bankedDeltaForDay(bank, '2026-06-20')).toBe(240);
+    expect(bankedDeltaForDay(bank, '2026-06-19')).toBe(-40);
+    expect(bankedDeltaForDay(bank, '2026-06-18')).toBe(0);
+    expect(bankedDeltaForDay(null, '2026-06-20')).toBe(0);
+  });
+  test('applies a delta to kcal + carbs only (protein/fat held)', () => {
+    const t = { targetKcal: 2600, proteinG: 180, carbsG: 290, fatG: 75 };
+    const up = applyBankToTarget(t, 240);
+    expect(up.targetKcal).toBe(2840);
+    expect(up.carbsG).toBe(290 + 60); // 240/4
+    expect(up.proteinG).toBe(180);
+    expect(up.fatG).toBe(75);
+    const down = applyBankToTarget(t, -40);
+    expect(down.targetKcal).toBe(2560);
+    expect(down.carbsG).toBe(290 - 10);
+  });
+  test('no delta returns the target unchanged', () => {
+    const t = { targetKcal: 2600, carbsG: 290 };
+    expect(applyBankToTarget(t, 0)).toBe(t);
   });
 });
 

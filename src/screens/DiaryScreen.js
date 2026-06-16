@@ -25,7 +25,10 @@ import {
 } from '../lib/food/db';
 import { localDayKey, parseLocalDay } from '../lib/dayKey';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
-import { getNutritionTargets, hasWorkoutOnDate, getFirstWorkoutDateOnOrAfter } from '../lib/database';
+import { getNutritionTargets, hasWorkoutOnDate, getFirstWorkoutDateOnOrAfter, getOpenEdPatternFlag } from '../lib/database';
+import { targetWasFloored } from '../lib/food/mealPlanAssembler';
+import { bankedDeltaForDay, applyBankToTarget } from '../lib/food/calorieBank';
+import CalorieBankSheet from '../components/food/CalorieBankSheet';
 import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -60,6 +63,18 @@ function shiftDate(isoStr, days) {
   return isoDate(d);
 }
 
+// The 7 local dates Mon..Sun of the week containing `iso` (calorie banking).
+function weekDatesMon(iso) {
+  const dow = parseLocalDay(iso).getDay(); // 0 Sun .. 6 Sat
+  const monday = shiftDate(iso, -((dow + 6) % 7));
+  return Array.from({ length: 7 }, (_, i) => shiftDate(monday, i));
+}
+
+const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+function weekdayShort(iso) {
+  return WEEKDAY_SHORT[parseLocalDay(iso).getDay()];
+}
+
 function friendlyDate(isoStr) {
   const today = isoDate(new Date());
   const yesterday = shiftDate(today, -1);
@@ -72,11 +87,14 @@ function friendlyDate(isoStr) {
 }
 
 export default function DiaryScreen({ navigation }) {
-  const { user, macroCycle, refeed } = useAppStore(useShallow((s) => ({
+  const { user, macroCycle, refeed, calorieBank, sex } = useAppStore(useShallow((s) => ({
     user: s.user,
     macroCycle: s.userProfile?.macroCycle ?? null,
     refeed: s.userProfile?.refeed ?? null,
+    calorieBank: s.userProfile?.calorieBank ?? null,
+    sex: s.userProfile?.sex ?? null,
   })));
+  const setCalorieBank = useAppStore((s) => s.setCalorieBank);
   const userId = user?.id;
   const bodyWeightUnits = useAppStore((s) => s.bodyWeightUnits);
   const toast = useToast();
@@ -103,16 +121,20 @@ export default function DiaryScreen({ navigation }) {
   // The resolved refeed day (row 7): the first training day on or after
   // the refeed was confirmed. Null when no refeed is scheduled.
   const [refeedDate, setRefeedDate] = useState(null);
+  // Open ED-pattern flag disables calorie banking (CB-1 safety carve-out).
+  const [edFlagOpen, setEdFlagOpen] = useState(false);
+  const [bankSheetVisible, setBankSheetVisible] = useState(false);
 
   const load = useCallback(async () => {
     if (!userId) return;
-    const [es, r, w, t, trainingDay, resolvedRefeedDate] = await Promise.all([
+    const [es, r, w, t, trainingDay, resolvedRefeedDate, edFlag] = await Promise.all([
       getFoodEntriesForDay(userId, selectedDate),
       getRollupForDay(userId, selectedDate),
       getWater(userId, selectedDate),
       getNutritionTargets(userId),
       macroCycle ? hasWorkoutOnDate(userId, selectedDate) : Promise.resolve(false),
       refeed?.appliedAt ? getFirstWorkoutDateOnOrAfter(userId, refeed.appliedAt) : Promise.resolve(null),
+      getOpenEdPatternFlag(userId).catch(() => null),
     ]);
     // Resolve each entry's actual food name + brand from the foods /
     // custom_foods tables. food_entries denormalises macros at log
@@ -137,6 +159,7 @@ export default function DiaryScreen({ navigation }) {
     setTargets(t);
     setIsTrainingDay(trainingDay);
     setRefeedDate(resolvedRefeedDate);
+    setEdFlagOpen(!!edFlag);
     setLoaded(true);
   }, [userId, selectedDate, macroCycle, refeed]);
 
@@ -171,11 +194,20 @@ export default function DiaryScreen({ navigation }) {
 
   const isRefeedDay = !!refeed && !!refeedDate && refeedDate === selectedDate;
 
+  // Calorie banking (CB-1). v1 yields entirely to a carb cycle / refeed: a
+  // banked delta only applies on a plain day, so two redistribution schemes can
+  // never stack a day below its floor.
+  const bankedDelta = useMemo(
+    () => (isRefeedDay || macroCycle ? 0 : bankedDeltaForDay(calorieBank, selectedDate)),
+    [calorieBank, selectedDate, isRefeedDay, macroCycle],
+  );
+
   // The effective macro target for the day. With nothing applied this is
   // the stored nutrition target. A refeed day (row 7) takes top
-  // precedence and shows the maintenance / high-carb target; otherwise a
-  // carb cycle (row 6) swaps in the training-day or rest-day split. kcal
-  // maps to targetKcal so MacroRings reads it like the flat target.
+  // precedence and shows the maintenance / high-carb target; a carb cycle
+  // (row 6) swaps in the training-day or rest-day split; otherwise a banked
+  // day shifts kcal via carbs. kcal maps to targetKcal so MacroRings reads it
+  // like the flat target.
   const effectiveTargets = useMemo(() => {
     if (!targets) return targets;
     const day = isRefeedDay
@@ -183,7 +215,7 @@ export default function DiaryScreen({ navigation }) {
       : macroCycle
       ? (isTrainingDay ? macroCycle.trainingDay : macroCycle.restDay)
       : null;
-    if (!day) return targets;
+    if (!day) return bankedDelta ? applyBankToTarget(targets, bankedDelta) : targets;
     return {
       ...targets,
       targetKcal: day.kcal ?? targets.targetKcal,
@@ -191,13 +223,37 @@ export default function DiaryScreen({ navigation }) {
       carbsG: day.carbsG ?? targets.carbsG,
       fatG: day.fatG ?? targets.fatG,
     };
-  }, [macroCycle, refeed, isRefeedDay, targets, isTrainingDay]);
+  }, [macroCycle, refeed, isRefeedDay, targets, isTrainingDay, bankedDelta]);
 
   const dayTypeLabel = isRefeedDay
     ? 'Refeed day'
     : macroCycle
     ? (isTrainingDay ? 'Training day' : 'Rest day')
+    : bankedDelta > 0
+    ? 'Bigger day'
+    : bankedDelta < 0
+    ? 'Lighter day'
     : null;
+
+  // Banking availability + handlers (CB-1). Disabled when the target was
+  // floored/compressed, a carb cycle or refeed is active, or an ED-pattern flag
+  // is open. The safe redistribution maths live in food/calorieBank.
+  const bankingAvailable = !!targets && !targetWasFloored(targets)
+    && !macroCycle && !refeed && !edFlagOpen;
+  const weekDates = useMemo(() => weekDatesMon(selectedDate), [selectedDate]);
+  const bankActiveThisWeek = !!calorieBank && weekDates.includes(calorieBank.bigDayKey);
+
+  const applyBank = useCallback(async (bank) => {
+    await setCalorieBank(bank);
+    setBankSheetVisible(false);
+    toast.show('Bigger day planned. Your weekly total stays the same.', { variant: 'success' });
+  }, [setCalorieBank, toast]);
+
+  const clearBank = useCallback(async () => {
+    await setCalorieBank(null);
+    setBankSheetVisible(false);
+    toast.show('Bigger day cleared.', { variant: 'info' });
+  }, [setCalorieBank, toast]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
   useEffect(() => { load(); }, [load]);
@@ -608,6 +664,22 @@ export default function DiaryScreen({ navigation }) {
           />
         </View>
 
+        {/* "Plan a bigger day" (calorie banking, CB-1). Only when banking is
+            allowed (not floored / cycling / refeed / ED flag). */}
+        {bankingAvailable && !selectionMode ? (
+          <TouchableOpacity
+            style={styles.bankRow}
+            onPress={() => setBankSheetVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel={bankActiveThisWeek ? 'Adjust your bigger day' : 'Plan a bigger day'}
+          >
+            <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
+            <Text style={styles.bankRowText}>
+              {bankActiveThisWeek ? 'Adjust your bigger day' : 'Plan a bigger day'}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+
         {/* COMP-004 "Your trend" (both surfaces). Only on today's view, below
             the macro summary so food stays the Diary's primary task. */}
         {selectedDate === isoDate(new Date()) && weightTrend.render ? (
@@ -877,6 +949,19 @@ export default function DiaryScreen({ navigation }) {
           </Pressable>
         </Pressable>
       </Modal>
+      <CalorieBankSheet
+        visible={bankSheetVisible}
+        onClose={() => setBankSheetVisible(false)}
+        weekDates={weekDates}
+        defaultBigDay={selectedDate}
+        baseTargetKcal={targets?.targetKcal ?? 0}
+        floorKcal={sex === 'male' ? 1500 : 1200}
+        bandMaxKcal={Math.round((targets?.targetKcal ?? 0) * 1.1)}
+        existingBank={bankActiveThisWeek ? calorieBank : null}
+        onApply={applyBank}
+        onClear={clearBank}
+        dayLabel={weekdayShort}
+      />
     </SafeAreaView>
   );
 }
@@ -1003,6 +1088,11 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   macroRingsWrap: { marginBottom: spacing.lg },
+  bankRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.xs, paddingVertical: spacing.sm, marginTop: -spacing.sm, marginBottom: spacing.md,
+  },
+  bankRowText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   trendWrap: { marginBottom: spacing.lg },
   offCard: {
     gap: spacing.sm,
