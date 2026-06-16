@@ -36,6 +36,7 @@ export const CATEGORY = Object.freeze({
   WINBACK: 'winback', // COMP-025-A
   PARTNER_CHEER: 'partner_cheer', // NEW-002
   CHECKIN_MISSED: 'checkin_missed', // OPP-C03 ghost prevention
+  PLANNED_MEAL_CONFIRM: 'planned_meal_confirm', // F3: confirm planned meals
 });
 
 /**
@@ -77,6 +78,10 @@ export const CATEGORY_CHANNELS = Object.freeze({
   // suppression and the never-shame copy rule live in the scheduler
   // (scheduleMissedCheckinFollowups) and handler.
   [CATEGORY.CHECKIN_MISSED]: [CHANNEL.PUSH],
+  // F3: a gentle evening nudge to confirm planned meals the user logged but
+  // never marked eaten. Push only; Pro-gated, ED-flag suppressed and budgeted
+  // in the scheduler, exactly like CHECKIN_MISSED.
+  [CATEGORY.PLANNED_MEAL_CONFIRM]: [CHANNEL.PUSH],
 });
 
 /**
@@ -107,6 +112,7 @@ export function categoryForDataType(type) {
     case 'winback': return CATEGORY.WINBACK;
     case 'partner_cheer': return CATEGORY.PARTNER_CHEER;
     case 'checkin_missed': return CATEGORY.CHECKIN_MISSED;
+    case 'planned_meal_confirm': return CATEGORY.PLANNED_MEAL_CONFIRM;
     case 'subscription_payment_failure': return CATEGORY.SUBSCRIPTION_PAYMENT_FAILURE;
     case 'subscription_expiring': return CATEGORY.SUBSCRIPTION_EXPIRING;
     case 'weekly_coach_ready': return CATEGORY.WEEKLY_COACH_READY;

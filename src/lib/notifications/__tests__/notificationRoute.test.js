@@ -66,6 +66,12 @@ describe('routeForNotificationType', () => {
     });
   });
 
+  test('F3: the planned-meal confirm nudge opens the Diary', () => {
+    expect(routeForNotificationType('planned_meal_confirm')).toEqual({
+      tab: 'DiaryTab', screen: 'Diary',
+    });
+  });
+
   test('OPP-C03: the same-evening missed check-in nudge opens the check-in wizard', () => {
     expect(routeForNotificationType('checkin_missed', { slot: 'evening' })).toEqual({
       tab: 'ProfileTab', screen: 'WeeklyCheckIn',

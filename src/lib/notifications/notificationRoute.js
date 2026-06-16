@@ -55,6 +55,10 @@ export function routeForNotificationType(type, data = {}) {
       return data?.slot === 'followup'
         ? { tab: 'ProgressTab', screen: 'Analytics' }
         : { tab: 'ProfileTab', screen: 'WeeklyCheckIn' };
+    case 'planned_meal_confirm':
+      // F3: tap lands on the Diary, where the "Ate as planned" banner and the
+      // per-meal confirm live for the day with unconfirmed planned meals.
+      return { tab: 'DiaryTab', screen: 'Diary' };
     case 'trial_day3':
       // COMP-023 day-3 value moment. S1/S2 land on the check-in gate screen
       // (which shows the countdown made visible); S3 (no sessions yet) lands on
