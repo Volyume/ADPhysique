@@ -94,6 +94,10 @@ export const CURATED_FOODS = Object.freeze({
   tvp_dry:         F('Soya mince (dry)', 327, 52, 30, 1),
   quorn_mince:     F('Quorn mince', 103, 16, 5, 2),
   quorn_pieces:    F('Quorn chicken-style pieces', 98, 13, 4.5, 1.7),
+  // Report directs "use the Quorn Vegan range for vegan meals" (line 72/201) but
+  // §A doesn't tabulate it; macros confirmed against the official Quorn UK label
+  // (quorn.co.uk vegan chicken-style pieces): 94 kcal, 15 P, 2.1 C, 1.4 F per 100g.
+  quorn_vegan_pieces: F('Quorn vegan pieces', 94, 15, 2.1, 1.4),
   edamame:         F('Edamame', 121, 12, 9, 5),
   lentils:         F('Lentils (cooked)', 116, 9, 20, 0.4),
   lentil_dahl:     F('Red lentil dahl', 116, 7, 18, 1.2),

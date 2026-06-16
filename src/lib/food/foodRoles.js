@@ -70,7 +70,7 @@ const ROLE = Object.freeze({
   greek_yogurt_0: 'protein', greek_yogurt_2: 'protein', skyr: 'protein',
   cottage_cheese: 'protein', whey: 'protein',
   tofu_firm: 'protein', tempeh: 'protein', seitan: 'protein',
-  tvp_dry: 'protein', quorn_mince: 'protein', quorn_pieces: 'protein', edamame: 'protein',
+  tvp_dry: 'protein', quorn_mince: 'protein', quorn_pieces: 'protein', quorn_vegan_pieces: 'protein', edamame: 'protein',
   soy_protein: 'protein', pea_protein: 'protein', vegan_protein_blend: 'protein', soy_yogurt_hp: 'protein',
 
   // Fats
@@ -101,7 +101,7 @@ const PROTEIN_QUALITY = Object.freeze({
   halloumi: 'high', paneer: 'high',
   // moderate (plant anchors)
   tofu_firm: 'moderate', tempeh: 'moderate', seitan: 'moderate',
-  tvp_dry: 'moderate', quorn_mince: 'moderate', quorn_pieces: 'moderate', edamame: 'moderate',
+  tvp_dry: 'moderate', quorn_mince: 'moderate', quorn_pieces: 'moderate', quorn_vegan_pieces: 'moderate', edamame: 'moderate',
   soy_protein: 'moderate', pea_protein: 'moderate', vegan_protein_blend: 'moderate', soy_yogurt_hp: 'moderate',
   soy_milk: 'moderate',
   // carb_protein (legumes / grain proteins)
@@ -163,7 +163,7 @@ const TAGS = Object.freeze({
   pasta: ['cereals_gluten'], noodles: ['cereals_gluten', 'eggs'],
   granola: ['cereals_gluten', 'nuts'], seitan: ['cereals_gluten'],
   eggs: ['eggs'], egg_whites: ['eggs'],
-  quorn_mince: ['eggs', 'cereals_gluten'], quorn_pieces: ['eggs', 'cereals_gluten'],
+  quorn_mince: ['eggs', 'cereals_gluten'], quorn_pieces: ['eggs', 'cereals_gluten'], quorn_vegan_pieces: ['cereals_gluten'],
   greek_yogurt_0: ['milk'], greek_yogurt_2: ['milk'], skyr: ['milk'],
   cottage_cheese: ['milk'], halloumi: ['milk'], paneer: ['milk'],
   milk_skimmed: ['milk'], whey: ['milk'],

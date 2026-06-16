@@ -105,6 +105,10 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_vg_tempeh_sweetpot', 'Tempeh & sweet potato bowl', 'vegan', ['lunch', 'dinner'], [{ food: 'tempeh', g: 120 }, { food: 'sweet_potato', g: 200 }, { food: 'broccoli', g: 100 }]),
   m('curated_vg_lentil_chilli', 'Lentil & bean chilli & rice', 'vegan', ['lunch', 'dinner'], [{ food: 'lentils', g: 200 }, { food: 'kidney_beans', g: 120 }, { food: 'white_rice', g: 150 }, { food: 'tomato_sauce', g: 80 }, { food: 'olive_oil', g: 10 }]),
   m('curated_vg_chickpea_lentil_curry', 'Chickpea & lentil curry', 'vegan', ['lunch', 'dinner'], [{ food: 'chickpeas', g: 200 }, { food: 'lentils', g: 100 }, { food: 'white_rice', g: 150 }, { food: 'spinach', g: 60 }, { food: 'olive_oil', g: 10 }]),
+  // Report §B vegan L/D: "Quorn Vegan pieces curry" (was missing). Uses the
+  // Quorn vegan staple the report directs (line 72/201). Rice portion sized so
+  // the day clears the vegan leucine-matched protein bar.
+  m('curated_vg_quorn_curry', 'Quorn vegan curry & rice', 'vegan', ['lunch', 'dinner'], [{ food: 'quorn_vegan_pieces', g: 150 }, { food: 'white_rice', g: 200 }, { food: 'mixed_veg', g: 100 }, { food: 'olive_oil', g: 10 }]),
   m('curated_vg_seitan_potato_greens', 'Seitan, potatoes & greens', 'vegan', ['lunch', 'dinner'], [{ food: 'seitan', g: 130 }, { food: 'white_potato', g: 250 }, { food: 'green_beans', g: 100 }, { food: 'olive_oil', g: 10 }]),
   m('curated_vg_seitan_noodles', 'Seitan & noodles', 'vegan', ['lunch', 'dinner'], [{ food: 'seitan', g: 130 }, { food: 'noodles', g: 200 }, { food: 'stirfry_veg', g: 120 }, { food: 'olive_oil', g: 10 }]),
   m('curated_vg_tofu_sweetpot', 'Tofu & sweet potato bowl', 'vegan', ['lunch', 'dinner'], [{ food: 'tofu_firm', g: 200 }, { food: 'sweet_potato', g: 200 }, { food: 'broccoli', g: 100 }]),
