@@ -11,7 +11,7 @@
  * so a partial patch would null out the macros. entryToPatch always
  * sends the whole row and changes only what the caller overrides.
  */
-import { logFoodEntry, updateFoodEntry, deleteFoodEntry } from './db';
+import { logFoodEntry, updateFoodEntry, deleteFoodEntry, restoreFoodEntry } from './db';
 
 export function entryToPatch(entry, overrides = {}) {
   return {
@@ -31,6 +31,13 @@ export function entryToPatch(entry, overrides = {}) {
 export async function deleteEntries(userId, entries) {
   for (const e of entries) {
     await deleteFoodEntry(e.id, userId);
+  }
+}
+
+// Undo a bulk delete (food audit F-1): restore each soft-deleted row by id.
+export async function restoreEntries(userId, entries) {
+  for (const e of entries) {
+    await restoreFoodEntry(e.id, userId);
   }
 }
 

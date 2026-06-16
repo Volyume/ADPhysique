@@ -2,11 +2,12 @@ jest.mock('../db', () => ({
   logFoodEntry: jest.fn(() => Promise.resolve('new-id')),
   updateFoodEntry: jest.fn(() => Promise.resolve(true)),
   deleteFoodEntry: jest.fn(() => Promise.resolve(true)),
+  restoreFoodEntry: jest.fn(() => Promise.resolve(true)),
 }));
 
-import { logFoodEntry, updateFoodEntry, deleteFoodEntry } from '../db';
+import { logFoodEntry, updateFoodEntry, deleteFoodEntry, restoreFoodEntry } from '../db';
 import {
-  entryToPatch, deleteEntries, moveEntriesToSlot, copyEntriesToDate,
+  entryToPatch, deleteEntries, restoreEntries, moveEntriesToSlot, copyEntriesToDate,
 } from '../bulkEntryOps';
 
 const entry = (over = {}) => ({
@@ -56,6 +57,15 @@ describe('deleteEntries', () => {
     expect(deleteFoodEntry).toHaveBeenCalledTimes(2);
     expect(deleteFoodEntry).toHaveBeenCalledWith('a', 'u1');
     expect(deleteFoodEntry).toHaveBeenCalledWith('b', 'u1');
+  });
+});
+
+describe('restoreEntries (food audit F-1 undo)', () => {
+  test('restores each soft-deleted entry by id for the user', async () => {
+    await restoreEntries('u1', [entry({ id: 'a' }), entry({ id: 'b' })]);
+    expect(restoreFoodEntry).toHaveBeenCalledTimes(2);
+    expect(restoreFoodEntry).toHaveBeenCalledWith('a', 'u1');
+    expect(restoreFoodEntry).toHaveBeenCalledWith('b', 'u1');
   });
 });
 

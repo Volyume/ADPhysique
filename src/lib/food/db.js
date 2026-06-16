@@ -133,6 +133,27 @@ export async function deleteFoodEntry(id, userId) {
   return true;
 }
 
+// Reverse a soft-delete (food audit F-1: the Undo affordance). Clears
+// deleted_at so the row is active again, bumps updated_at so the change is the
+// latest write (last-write-wins sync resurrects it on every device), recomputes
+// the day rollup and re-queues sync — the exact mirror of deleteFoodEntry.
+export async function restoreFoodEntry(id, userId) {
+  const d = await db();
+  const now = Date.now();
+  const existing = await d.getFirstAsync(
+    `SELECT entry_date FROM food_entries WHERE id = ? AND user_id = ?`,
+    [id, userId]
+  );
+  if (!existing) return false;
+  await d.runAsync(
+    `UPDATE food_entries SET deleted_at = NULL, updated_at = ? WHERE id = ? AND user_id = ?`,
+    [now, id, userId]
+  );
+  await recomputeRollup(userId, existing.entry_date);
+  _scheduleSync();
+  return true;
+}
+
 export async function getFoodEntriesForDay(userId, entryDate) {
   const d = await db();
   return d.getAllAsync(

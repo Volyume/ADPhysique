@@ -20,7 +20,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type } from '../styles/theme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
-  getFoodEntriesForDay, deleteFoodEntry, updateFoodEntry, getRollupForDay,
+  getFoodEntriesForDay, deleteFoodEntry, restoreFoodEntry, updateFoodEntry, getRollupForDay,
   setWater, getWater, createSavedMeal, confirmPlannedDay, clearPlannedDay,
 } from '../lib/food/db';
 import { localDayKey, parseLocalDay } from '../lib/dayKey';
@@ -41,7 +41,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import WeightTrendCard from '../components/WeightTrendCard';
 import useWeightTrend from '../hooks/useWeightTrend';
 import { useToast } from '../components/Toast';
-import { deleteEntries, moveEntriesToSlot, copyEntriesToDate } from '../lib/food/bulkEntryOps';
+import { deleteEntries, restoreEntries, moveEntriesToSlot, copyEntriesToDate } from '../lib/food/bulkEntryOps';
 import { shouldShowOffConsentCard, dismissOffConsentCard } from '../lib/food/writeback';
 import { buildMealSlots, highestLoggedMeal, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
 import { scaleMacros } from '../lib/food/macros';
@@ -333,27 +333,23 @@ export default function DiaryScreen({ navigation }) {
     [entries, selectedIds],
   );
 
-  const doDeleteSelected = useCallback(() => {
+  // Optimistic delete + Undo (food audit F-1). Rows are soft-deleted, so the
+  // toast's Undo restores them; no confirm dialog (Toast reserves Alert for
+  // account-level destructive actions). If the toast times out the rows simply
+  // stay deleted — the commit already happened.
+  const doDeleteSelected = useCallback(async () => {
     const sel = selectedEntries();
     if (sel.length === 0) return;
-    appAlert(
-      `Delete ${sel.length} ${sel.length === 1 ? 'entry' : 'entries'}?`,
-      undefined,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            audit('food.delete', { mealSlot: 'multi', count: sel.length });
-            await deleteEntries(userId, sel);
-            exitSelection();
-            await load();
-          },
-        },
-      ],
-    );
-  }, [selectedEntries, userId, exitSelection, load]);
+    const n = sel.length;
+    audit('food.delete', { mealSlot: 'multi', count: n });
+    await deleteEntries(userId, sel);
+    exitSelection();
+    await load();
+    toast.show(`${n} ${n === 1 ? 'entry' : 'entries'} deleted.`, {
+      variant: 'undo',
+      action: { label: 'Undo', onPress: async () => { await restoreEntries(userId, sel); await load(); } },
+    });
+  }, [selectedEntries, userId, exitSelection, load, toast]);
 
   const doCopySelectedToToday = useCallback(async () => {
     const sel = selectedEntries();
@@ -443,8 +439,13 @@ export default function DiaryScreen({ navigation }) {
 
   async function deleteFromEditSheet() {
     if (!editSheet?.entry) return;
-    await deleteFoodEntry(editSheet.entry.id, userId);
+    const removed = editSheet.entry;
+    await deleteFoodEntry(removed.id, userId);
     await load();
+    toast.show(`${friendlyFoodName(removed)} deleted.`, {
+      variant: 'undo',
+      action: { label: 'Undo', onPress: async () => { await restoreFoodEntry(removed.id, userId); await load(); } },
+    });
   }
 
   function lightTap() {
@@ -458,31 +459,22 @@ export default function DiaryScreen({ navigation }) {
     setWaterMl(next);
   }
 
-  // Swipe-to-delete handler used by EntryRow. Confirms before
-  // destroying the row; the swipeable's ref is closed if the user
-  // cancels so the row snaps back.
-  const requestDelete = useCallback((entry, closeSwipe) => {
-    appAlert(
-      'Delete entry?',
-      `${friendlyFoodName(entry)} (${Math.round(entry.kcal ?? 0)} kcal)`,
-      [
-        { text: 'Cancel', style: 'cancel', onPress: () => closeSwipe?.() },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            audit('food.delete', { mealSlot: entry?.mealSlot ?? 'unknown' });
-            try {
-              await deleteFoodEntry(entry.id, userId);
-              await load();
-            } catch (_) {
-              closeSwipe?.();
-            }
-          },
-        },
-      ],
-    );
-  }, [userId, load]);
+  // Swipe-to-delete handler used by EntryRow. Optimistic delete + Undo toast
+  // (food audit F-1): a swipe removes the row immediately and the toast offers
+  // an 8s window to restore it, rather than a confirm dialog on every swipe.
+  const requestDelete = useCallback(async (entry, closeSwipe) => {
+    audit('food.delete', { mealSlot: entry?.mealSlot ?? 'unknown' });
+    try {
+      await deleteFoodEntry(entry.id, userId);
+      await load();
+      toast.show(`${friendlyFoodName(entry)} deleted.`, {
+        variant: 'undo',
+        action: { label: 'Undo', onPress: async () => { await restoreFoodEntry(entry.id, userId); await load(); } },
+      });
+    } catch (_) {
+      closeSwipe?.();
+    }
+  }, [userId, load, toast]);
 
   // "Copy yesterday" FAB: replays yesterday's entries into today.
   // Re-uses logFoodEntry under the hood (via the food-domain layer)
