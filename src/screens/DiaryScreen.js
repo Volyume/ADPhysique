@@ -262,9 +262,9 @@ export default function DiaryScreen({ navigation }) {
     : macroCycle
     ? (isTrainingDay ? 'Training day' : 'Rest day')
     : bankedDelta > 0
-    ? 'Bigger day'
+    ? 'Higher-calorie day'
     : bankedDelta < 0
-    ? 'Lighter day'
+    ? 'Lower-calorie day'
     : null;
 
   // Banking handlers (CB-1). bankingAvailable is computed above (governs the
@@ -275,13 +275,13 @@ export default function DiaryScreen({ navigation }) {
   const applyBank = useCallback(async (bank) => {
     await setCalorieBank(bank);
     setBankSheetVisible(false);
-    toast.show('Bigger day planned. Your weekly total stays the same.', { variant: 'success' });
+    toast.show('Higher-calorie day planned. Your weekly total stays the same.', { variant: 'success' });
   }, [setCalorieBank, toast]);
 
   const clearBank = useCallback(async () => {
     await setCalorieBank(null);
     setBankSheetVisible(false);
-    toast.show('Bigger day cleared.', { variant: 'info' });
+    toast.show('Higher-calorie day cleared.', { variant: 'info' });
   }, [setCalorieBank, toast]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -703,18 +703,18 @@ export default function DiaryScreen({ navigation }) {
           />
         </View>
 
-        {/* "Plan a bigger day" (calorie banking, CB-1). Only when banking is
-            allowed (not floored / cycling / refeed / ED flag). */}
+        {/* "Plan a higher-calorie day" (calorie banking, CB-1). Only when banking
+            is allowed (not floored / cycling / refeed / ED flag). */}
         {bankingAvailable && !selectionMode ? (
           <TouchableOpacity
             style={styles.bankRow}
             onPress={() => setBankSheetVisible(true)}
             accessibilityRole="button"
-            accessibilityLabel={bankActiveThisWeek ? 'Adjust your bigger day' : 'Plan a bigger day'}
+            accessibilityLabel={bankActiveThisWeek ? 'Adjust your higher-calorie day' : 'Plan a higher-calorie day'}
           >
             <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
             <Text style={styles.bankRowText}>
-              {bankActiveThisWeek ? 'Adjust your bigger day' : 'Plan a bigger day'}
+              {bankActiveThisWeek ? 'Adjust your higher-calorie day' : 'Plan a higher-calorie day'}
             </Text>
           </TouchableOpacity>
         ) : null}

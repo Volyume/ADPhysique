@@ -1,5 +1,5 @@
 /**
- * CalorieBankSheet — "Plan a bigger day" (CB-1).
+ * CalorieBankSheet — "Plan a higher-calorie day" (CB-1).
  * Source: docs/ultimate-audit-2026-06-13/pass4-blueprint-calorie-banking.md.
  *
  * Pick a day in the week and how much to bump it; the rest of the week gives up
@@ -24,7 +24,7 @@ const DEFAULT_BUMP = 150;
 const ERROR_COPY = {
   floor: "That would take one of your days below your safe minimum, so we can't shift that much. Try a smaller amount.",
   no_room: "This day is already at the top of its range, so there's nothing extra to add.",
-  too_small: 'Pick a little more to plan a bigger day.',
+  too_small: 'Pick a little more to plan a higher-calorie day.',
   invalid_input: "We couldn't plan that. Try a different day.",
 };
 
@@ -79,24 +79,28 @@ export default function CalorieBankSheet({
   };
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} accessibilityLabel="Plan a bigger day">
-      <Text style={styles.title}>Plan a bigger day</Text>
+    <BottomSheet visible={visible} onClose={onClose} accessibilityLabel="Plan a higher-calorie day">
+      <Text style={styles.title}>Plan a higher-calorie day</Text>
       <Text style={styles.intro}>
-        Pick a day and we will shift some calories onto it from the rest of the week. Your weekly total stays the same.
+        Got a meal out or an occasion coming up? Pick that day and we will move some
+        calories onto it from the rest of the week, so you eat a little less on the
+        other days to make room. Your weekly total does not change, and that is what
+        matters: your coach looks at the whole week, not any single day, so one
+        higher day balanced by slightly lighter ones keeps you right on plan.
       </Text>
 
       {existingBank ? (
         <View style={styles.activeRow}>
           <Text style={styles.activeText} numberOfLines={2}>
-            A bigger day is planned for {dayLabel(existingBank.bigDayKey)}.
+            A higher-calorie day is planned for {dayLabel(existingBank.bigDayKey)}.
           </Text>
-          <TouchableOpacity onPress={onClear} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear the planned bigger day">
+          <TouchableOpacity onPress={onClear} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear the planned higher-calorie day">
             <Text style={styles.clearText}>Clear</Text>
           </TouchableOpacity>
         </View>
       ) : null}
 
-      <Text style={styles.sectionLabel}>Bigger day</Text>
+      <Text style={styles.sectionLabel}>Higher-calorie day</Text>
       <View style={styles.dayChips}>
         {weekDates.map((d) => {
           const active = d === bigDay;
@@ -153,7 +157,7 @@ export default function CalorieBankSheet({
         onPress={apply}
         disabled={!plan.ok}
         accessibilityRole="button"
-        accessibilityLabel="Apply the bigger day"
+        accessibilityLabel="Apply the higher-calorie day"
       >
         <Text style={styles.applyText}>Plan it</Text>
       </TouchableOpacity>
