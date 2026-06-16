@@ -32,20 +32,20 @@ describe('buildMonthCards', () => {
   test('full month: intro + content + outro, positive deltas surfaced', () => {
     const cards = buildMonthCards(fullMonth(), 'kg', { label: 'June' });
     expect(cards[0].type).toBe('intro');
-    expect(cards[0].headline).toBe('June, lifted.');
+    expect(cards[0].headline).toBe('June, in numbers.');
     expect(cards[cards.length - 1].type).toBe('outro');
     const sessions = find(cards, c => c.unit && c.unit.includes('session'));
-    expect(sessions.caption).toBe('2 more than the month before.');
+    expect(sessions.caption).toBe("That's 2 more than the month before.");
     const volume = find(cards, c => c.unit === 'kg moved');
-    expect(volume.caption).toBe('Up 12% on the month before.');
+    expect(volume.caption).toBe("That's 12% more than the month before.");
   });
 
   test('neutral (calm/ED): deltas go factual, no month-vs-month comparison', () => {
     const cards = buildMonthCards(fullMonth(), 'kg', { label: 'June', neutral: true });
     const sessions = find(cards, c => c.unit && c.unit.includes('session'));
-    expect(sessions.caption).toMatch(/Roughly 3\.2 a week/);
+    expect(sessions.caption).toMatch(/roughly 3\.2 sessions a week/);
     const volume = find(cards, c => c.unit === 'kg moved');
-    expect(volume.caption).toBe('Every set, stacked end to end.');
+    expect(volume.caption).toBe("That's every set you logged, added together.");
   });
 
   test('down month is never negative-framed', () => {
@@ -53,7 +53,7 @@ describe('buildMonthCards', () => {
     const sessions = find(cards, c => c.unit && c.unit.includes('session'));
     expect(sessions.caption).not.toMatch(/fewer|less|down/i);
     const volume = find(cards, c => c.unit === 'kg moved');
-    expect(volume.caption).toBe('Every set, stacked end to end.'); // no "down X%"
+    expect(volume.caption).toBe("That's every set you logged, added together."); // no "down X%"
   });
 
   test('minimum-content rule: < 3 content cards → intro + sessions + outro, softened', () => {
@@ -63,7 +63,7 @@ describe('buildMonthCards', () => {
     };
     const cards = buildMonthCards(thin, 'kg', { label: 'June' });
     expect(typesOf(cards)).toEqual(['intro', 'stat', 'outro']);
-    expect(find(cards, c => c.unit && c.unit.includes('session')).caption).toBe('2 sessions logged. They count.');
+    expect(find(cards, c => c.unit && c.unit.includes('session')).caption).toBe('2 sessions logged this month, and every one counts.');
   });
 
   test('null data → empty deck', () => {
@@ -90,30 +90,30 @@ describe('buildCards (Year of Lifts) — tonnage year-over-year anchor (ULTIMATE
   test('an up year surfaces a factual relative %', () => {
     const v = volumeOf(buildCards(fullYear(), 'kg'));
     expect(v.value).toBe('48,000'); // raw number stays the hero, numbers-first
-    expect(v.caption).toBe('Up 20% on the year before.');
+    expect(v.caption).toBe("That's 20% more than the year before.");
   });
 
   test('a sub-1% increase falls back to the generic line (never "Up 0%")', () => {
     // 48000 vs 47800 = +0.42% → rounds to 0; must not render "Up 0% on the year before."
     const v = volumeOf(buildCards(fullYear({ tonnage: 48000, previous: { totalSessions: 110, tonnage: 47800 } }), 'kg'));
-    expect(v.caption).toBe('Every set you logged, stacked end to end.');
+    expect(v.caption).toBe("That's every set you logged this year, added together.");
     expect(v.caption).not.toMatch(/Up 0%/);
   });
 
   test('a down year is never negative-framed (falls back to the generic line)', () => {
     const v = volumeOf(buildCards(fullYear({ tonnage: 38000, previous: { totalSessions: 110, tonnage: 40000 } }), 'kg'));
-    expect(v.caption).toBe('Every set you logged, stacked end to end.');
+    expect(v.caption).toBe("That's every set you logged this year, added together.");
     expect(v.caption).not.toMatch(/down|less|fewer|-/i);
   });
 
   test('neutral (calm / ED flag) suppresses the comparison', () => {
     const v = volumeOf(buildCards(fullYear(), 'kg', { neutral: true }));
-    expect(v.caption).toBe('Every set you logged, stacked end to end.');
+    expect(v.caption).toBe("That's every set you logged this year, added together.");
   });
 
   test('no previous window → generic caption, never a fabricated comparison', () => {
     const v = volumeOf(buildCards(fullYear({ previous: null }), 'kg'));
-    expect(v.caption).toBe('Every set you logged, stacked end to end.');
+    expect(v.caption).toBe("That's every set you logged this year, added together.");
   });
 
   test('null data → empty deck', () => {
@@ -153,6 +153,6 @@ describe('buildBlockCards', () => {
     const cards = buildBlockCards(block, 'kg');
     expect(cards[0].headline).toBe('Hypertrophy Block One');
     expect(cards[0].subline).toMatch(/6 weeks/);
-    expect(cards[cards.length - 1].headline).toMatch(/Block banked/);
+    expect(cards[cards.length - 1].headline).toMatch(/block is done/);
   });
 });

@@ -69,8 +69,8 @@ export function buildCards(data, units, { neutral = false } = {}) {
       value: data.totalSessions.toLocaleString('en-GB'),
       unit: data.totalSessions === 1 ? 'session' : 'sessions',
       caption: data.avgSessionsPerWeek >= 3
-        ? `Roughly ${data.avgSessionsPerWeek} a week. That's consistency.`
-        : `Roughly ${data.avgSessionsPerWeek} a week.`,
+        ? `That's roughly ${data.avgSessionsPerWeek} sessions a week, week in and week out.`
+        : `That's roughly ${data.avgSessionsPerWeek} sessions a week.`,
     });
   }
 
@@ -89,8 +89,8 @@ export function buildCards(data, units, { neutral = false } = {}) {
       ? Math.round(((data.tonnage - prev.tonnage) / prev.tonnage) * 100)
       : 0;
     const caption = pct >= 1
-      ? `Up ${pct}% on the year before.`
-      : 'Every set you logged, stacked end to end.';
+      ? `That's ${pct}% more than the year before.`
+      : 'That\'s every set you logged this year, added together.';
     cards.push({
       type: 'stat',
       icon: 'trending-up',
@@ -111,7 +111,7 @@ export function buildCards(data, units, { neutral = false } = {}) {
       unit: data.totalSets === 1 ? 'set' : 'sets',
       caption: data.uniqueExercises > 0
         ? `Across ${data.uniqueExercises} different exercises.`
-        : 'Logged, rep by rep.',
+        : 'You logged every one, rep by rep.',
     });
   }
 
@@ -123,7 +123,7 @@ export function buildCards(data, units, { neutral = false } = {}) {
       tone: 'primary',
       value: data.topMonth,
       unit: 'busiest month',
-      caption: 'Your highest training density of the year.',
+      caption: 'The month you put in the most work.',
     });
   }
 
@@ -163,7 +163,7 @@ export function buildCards(data, units, { neutral = false } = {}) {
     icon: 'checkmark-circle',
     tone: 'gold',
     headline: 'Here\'s to the year ahead.',
-    subline: 'Same hands, same bar, new numbers to chase.',
+    subline: 'Keep turning up, keep adding a little, and the rest takes care of itself.',
   });
 
   return cards;
@@ -185,7 +185,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
   const cards = [];
   cards.push({
     type: 'intro', icon: 'sparkles', tone: 'gold',
-    headline: `${label}, lifted.`,
+    headline: `${label}, in numbers.`,
     subline: `${fmtDate(data.startMs)} to ${fmtDate(data.endMs - 86400000)}`,
   });
 
@@ -196,11 +196,11 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
     let caption;
     if (!neutral && prev && prev.totalSessions > 0 && data.totalSessions > prev.totalSessions) {
       const diff = data.totalSessions - prev.totalSessions;
-      caption = `${diff} more than the month before.`;
+      caption = `That's ${diff} more than the month before.`;
     } else {
       caption = data.avgSessionsPerWeek >= 3
-        ? `Roughly ${data.avgSessionsPerWeek} a week. That's consistency.`
-        : `Roughly ${data.avgSessionsPerWeek} a week.`;
+        ? `That's roughly ${data.avgSessionsPerWeek} sessions a week, week in and week out.`
+        : `That's roughly ${data.avgSessionsPerWeek} sessions a week.`;
     }
     content.push({
       type: 'stat', icon: 'barbell', tone: 'primary',
@@ -211,9 +211,9 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
   }
 
   if (data.tonnage > 0) {
-    let caption = 'Every set, stacked end to end.';
+    let caption = 'That\'s every set you logged, added together.';
     if (!neutral && prev && prev.tonnage > 0 && data.tonnage > prev.tonnage) {
-      caption = `Up ${Math.round(((data.tonnage - prev.tonnage) / prev.tonnage) * 100)}% on the month before.`;
+      caption = `That's ${Math.round(((data.tonnage - prev.tonnage) / prev.tonnage) * 100)}% more than the month before.`;
     }
     content.push({
       type: 'stat', icon: 'trending-up', tone: 'success',
@@ -241,7 +241,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
     content.push({
       type: 'stat', icon: 'flash', tone: 'primary',
       value: data.bestSession.tonnage.toLocaleString('en-GB'), unit: 'kg, best session',
-      caption: `Your biggest session: ${fmtDate(data.bestSession.startedAt)}.`,
+      caption: `Your biggest session was on ${fmtDate(data.bestSession.startedAt)}.`,
     });
   }
 
@@ -250,7 +250,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
   if (content.length < 3) {
     const sessions = content.find(c => typeof c.unit === 'string' && c.unit.includes('session'));
     if (sessions) {
-      if (data.totalSessions <= 2) sessions.caption = `${data.totalSessions} ${data.totalSessions === 1 ? 'session' : 'sessions'} logged. They count.`;
+      if (data.totalSessions <= 2) sessions.caption = `${data.totalSessions} ${data.totalSessions === 1 ? 'session' : 'sessions'} logged this month, and every one counts.`;
       cards.push(sessions);
     }
   } else {
@@ -259,7 +259,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
 
   cards.push({
     type: 'outro', icon: 'checkmark-circle', tone: 'gold',
-    headline: 'Next month is open.', subline: 'Same bar, new numbers to chase.',
+    headline: 'A fresh month ahead.', subline: 'Keep turning up and the numbers will follow.',
   });
   return cards;
 }
@@ -283,7 +283,7 @@ export function buildBlockCards(data, units) {
     cards.push({
       type: 'stat', icon: 'trending-up', tone: 'success',
       value: `${up ? '+' : ''}${data.tonnageDelta}%`, unit: 'weekly volume',
-      caption: up ? 'First week to last. That climb is the block working.' : 'Final week was lighter. That\'s the plan working.',
+      caption: up ? 'From the first week to the last, that climb is the block working.' : 'Your final week was lighter, and that\'s the plan working.',
     });
   }
 
@@ -304,7 +304,7 @@ export function buildBlockCards(data, units) {
 
   cards.push({
     type: 'outro', icon: 'checkmark-circle', tone: 'gold',
-    headline: 'Block banked. Recover, then go again.', subline: 'Full block summary inside.',
+    headline: 'That block is done. Recover well, then go again.', subline: 'Your full block summary is inside.',
   });
   return cards;
 }
