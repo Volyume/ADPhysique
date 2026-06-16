@@ -25,9 +25,10 @@ import {
 } from '../lib/food/db';
 import { localDayKey, parseLocalDay } from '../lib/dayKey';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
-import { getNutritionTargets, hasWorkoutOnDate, getFirstWorkoutDateOnOrAfter, getOpenEdPatternFlag } from '../lib/database';
+import { getNutritionTargets, hasWorkoutOnDate, getFirstWorkoutDateOnOrAfter, getOpenEdPatternFlag, getLatestBodyWeight, getLatestBodyComposition } from '../lib/database';
+import { computeFFMFloor } from '../lib/nutritionEngine';
 import { targetWasFloored } from '../lib/food/mealPlanAssembler';
-import { bankedDeltaForDay, applyBankToTarget } from '../lib/food/calorieBank';
+import { applyBankToTarget, safeDayFloorKcal, displayBankedDelta } from '../lib/food/calorieBank';
 import CalorieBankSheet from '../components/food/CalorieBankSheet';
 import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
@@ -124,10 +125,13 @@ export default function DiaryScreen({ navigation }) {
   // Open ED-pattern flag disables calorie banking (CB-1 safety carve-out).
   const [edFlagOpen, setEdFlagOpen] = useState(false);
   const [bankSheetVisible, setBankSheetVisible] = useState(false);
+  // The safe per-day floor banking must never breach: max(sex floor, FFM floor)
+  // (CB-1 blueprint line 90). Computed on load from latest weight + body comp.
+  const [floorKcal, setFloorKcal] = useState(() => safeDayFloorKcal({ sex }));
 
   const load = useCallback(async () => {
     if (!userId) return;
-    const [es, r, w, t, trainingDay, resolvedRefeedDate, edFlag] = await Promise.all([
+    const [es, r, w, t, trainingDay, resolvedRefeedDate, edFlag, bodyWeight, bodyComp] = await Promise.all([
       getFoodEntriesForDay(userId, selectedDate),
       getRollupForDay(userId, selectedDate),
       getWater(userId, selectedDate),
@@ -135,7 +139,24 @@ export default function DiaryScreen({ navigation }) {
       macroCycle ? hasWorkoutOnDate(userId, selectedDate) : Promise.resolve(false),
       refeed?.appliedAt ? getFirstWorkoutDateOnOrAfter(userId, refeed.appliedAt) : Promise.resolve(null),
       getOpenEdPatternFlag(userId).catch(() => null),
+      getLatestBodyWeight(userId).catch(() => null),
+      getLatestBodyComposition(userId).catch(() => null),
     ]);
+    // Safe banking floor = max(sex floor, FFM floor). FFM floor needs a body
+    // weight; when present we use the engine's own computeFFMFloor (with body
+    // fat if logged, else its sex-based fallback), matching the coach's RED-S
+    // floor. No weight -> sex floor alone.
+    let floor = safeDayFloorKcal({ sex });
+    if (bodyWeight?.weightKg > 0) {
+      try {
+        const ffm = computeFFMFloor(bodyWeight.weightKg, {
+          bodyFatPercent: bodyComp?.body_fat_percent ?? null,
+          bodyFatSource: bodyComp?.body_fat_source ?? null,
+          sex,
+        });
+        floor = safeDayFloorKcal({ sex, ffmFloorKcal: ffm?.floorKcal });
+      } catch (_) { /* keep sex floor */ }
+    }
     // Resolve each entry's actual food name + brand from the foods /
     // custom_foods tables. food_entries denormalises macros at log
     // time but NOT the name, so without this enrichment the row
@@ -160,8 +181,9 @@ export default function DiaryScreen({ navigation }) {
     setIsTrainingDay(trainingDay);
     setRefeedDate(resolvedRefeedDate);
     setEdFlagOpen(!!edFlag);
+    setFloorKcal(floor);
     setLoaded(true);
-  }, [userId, selectedDate, macroCycle, refeed]);
+  }, [userId, selectedDate, macroCycle, refeed, sex]);
 
   // Planned scaffolding from a meal plan (adherence model): shown with a
   // confirm banner so it counts toward adherence only once the user says they
@@ -194,12 +216,19 @@ export default function DiaryScreen({ navigation }) {
 
   const isRefeedDay = !!refeed && !!refeedDate && refeedDate === selectedDate;
 
-  // Calorie banking (CB-1). v1 yields entirely to a carb cycle / refeed: a
-  // banked delta only applies on a plain day, so two redistribution schemes can
-  // never stack a day below its floor.
+  // Calorie banking (CB-1) availability: disabled when the target was
+  // floored/compressed, a carb cycle or refeed is active, or an ED-pattern flag
+  // is open. This single gate governs BOTH whether the control appears AND
+  // whether a persisted bank is allowed to display, so a stale bank can never
+  // apply once a carve-out closes banking (review fix #2).
+  const bankingAvailable = !!targets && !targetWasFloored(targets)
+    && !macroCycle && !refeed && !edFlagOpen;
+
+  // The banked delta to show for the day in view. Zero unless banking is
+  // currently allowed, even if a bank is still persisted.
   const bankedDelta = useMemo(
-    () => (isRefeedDay || macroCycle ? 0 : bankedDeltaForDay(calorieBank, selectedDate)),
-    [calorieBank, selectedDate, isRefeedDay, macroCycle],
+    () => displayBankedDelta({ bankingAvailable, calorieBank, dayKey: selectedDate }),
+    [bankingAvailable, calorieBank, selectedDate],
   );
 
   // The effective macro target for the day. With nothing applied this is
@@ -235,11 +264,8 @@ export default function DiaryScreen({ navigation }) {
     ? 'Lighter day'
     : null;
 
-  // Banking availability + handlers (CB-1). Disabled when the target was
-  // floored/compressed, a carb cycle or refeed is active, or an ED-pattern flag
-  // is open. The safe redistribution maths live in food/calorieBank.
-  const bankingAvailable = !!targets && !targetWasFloored(targets)
-    && !macroCycle && !refeed && !edFlagOpen;
+  // Banking handlers (CB-1). bankingAvailable is computed above (governs the
+  // control AND any persisted bank's display).
   const weekDates = useMemo(() => weekDatesMon(selectedDate), [selectedDate]);
   const bankActiveThisWeek = !!calorieBank && weekDates.includes(calorieBank.bigDayKey);
 
@@ -955,7 +981,7 @@ export default function DiaryScreen({ navigation }) {
         weekDates={weekDates}
         defaultBigDay={selectedDate}
         baseTargetKcal={targets?.targetKcal ?? 0}
-        floorKcal={sex === 'male' ? 1500 : 1200}
+        floorKcal={floorKcal}
         bandMaxKcal={Math.round((targets?.targetKcal ?? 0) * 1.1)}
         existingBank={bankActiveThisWeek ? calorieBank : null}
         onApply={applyBank}

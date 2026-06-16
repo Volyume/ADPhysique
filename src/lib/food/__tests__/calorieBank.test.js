@@ -6,6 +6,7 @@
  */
 import {
   planCalorieBank, deltaSum, bankedDeltaForDay, applyBankToTarget,
+  sexFloorKcal, safeDayFloorKcal, displayBankedDelta,
   MIN_BANK_DELTA_KCAL, MAX_BANK_DELTA_KCAL,
 } from '../calorieBank';
 
@@ -173,6 +174,36 @@ describe('bankedDeltaForDay / applyBankToTarget (display helpers)', () => {
   test('no delta returns the target unchanged', () => {
     const t = { targetKcal: 2600, carbsG: 290 };
     expect(applyBankToTarget(t, 0)).toBe(t);
+  });
+});
+
+describe('safeDayFloorKcal (FFM floor must bind when higher — review fix #1)', () => {
+  test('sex floor is the baseline', () => {
+    expect(sexFloorKcal('male')).toBe(1500);
+    expect(sexFloorKcal('female')).toBe(1200);
+    expect(sexFloorKcal(null)).toBe(1200);
+  });
+  test('uses the FFM floor when it exceeds the sex floor (heavy/lean user)', () => {
+    // 100kg male @15% BF -> ~85kg FFM -> well above 1500.
+    expect(safeDayFloorKcal({ sex: 'male', ffmFloorKcal: 2550 })).toBe(2550);
+  });
+  test('falls back to the sex floor when FFM is unknown or lower', () => {
+    expect(safeDayFloorKcal({ sex: 'male', ffmFloorKcal: null })).toBe(1500);
+    expect(safeDayFloorKcal({ sex: 'male', ffmFloorKcal: 1400 })).toBe(1500);
+    expect(safeDayFloorKcal({ sex: 'female' })).toBe(1200);
+  });
+});
+
+describe('displayBankedDelta (stale bank suppressed by carve-outs — review fix #2)', () => {
+  const bank = { perDayDeltaKcal: { '2026-06-20': 240, '2026-06-19': -40 } };
+  test('applies only when banking is currently available', () => {
+    expect(displayBankedDelta({ bankingAvailable: true, calorieBank: bank, dayKey: '2026-06-20' })).toBe(240);
+    expect(displayBankedDelta({ bankingAvailable: true, calorieBank: bank, dayKey: '2026-06-19' })).toBe(-40);
+  });
+  test('a persisted bank is IGNORED once a carve-out closes banking', () => {
+    // e.g. an ED-pattern flag opened, or the target became floored, or a cycle started.
+    expect(displayBankedDelta({ bankingAvailable: false, calorieBank: bank, dayKey: '2026-06-20' })).toBe(0);
+    expect(displayBankedDelta({ bankingAvailable: false, calorieBank: bank, dayKey: '2026-06-19' })).toBe(0);
   });
 });
 

@@ -110,6 +110,33 @@ export function bankedDeltaForDay(calorieBank, dayKey) {
   return isFinite(v) ? v : 0;
 }
 
+/** The per-day sex floor: 1500 kcal male, 1200 otherwise (nutritionEngine.js:792). */
+export function sexFloorKcal(sex) {
+  return sex === 'male' ? 1500 : 1200;
+}
+
+/**
+ * The safe per-day floor banking must never breach: max(sex floor, FFM floor)
+ * per the blueprint (line 90). The caller computes the FFM floor kcal via the
+ * engine's computeFFMFloor and passes it in; when it is unknown we fall back to
+ * the sex floor alone.
+ */
+export function safeDayFloorKcal({ sex, ffmFloorKcal = null } = {}) {
+  const sf = sexFloorKcal(sex);
+  const ffm = Number(ffmFloorKcal);
+  return isFinite(ffm) && ffm > sf ? Math.round(ffm) : sf;
+}
+
+/**
+ * The banked delta to actually DISPLAY for a day: zero unless banking is
+ * currently allowed (every safety carve-out clear), EVEN IF a bank is still
+ * persisted. This stops a stale bank from applying after a carb cycle / refeed
+ * starts, the target gets floored, or an ED-pattern flag opens.
+ */
+export function displayBankedDelta({ bankingAvailable, calorieBank, dayKey }) {
+  return bankingAvailable ? bankedDeltaForDay(calorieBank, dayKey) : 0;
+}
+
 /**
  * Apply a banked kcal delta to a day's target for DISPLAY: shift kcal and carry
  * the change in carbs; protein and fat are untouched. Returns the target
