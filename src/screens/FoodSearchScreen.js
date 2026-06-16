@@ -229,10 +229,16 @@ export default function FoodSearchScreen({ navigation, route }) {
     setPicker({ food });
   }
 
-  // Add one default serving of a food to the plate (no sheet). Tapping the
-  // row still opens the detail sheet for a custom quantity.
+  // Add one serving of a food to the plate (no sheet). Tapping the row still
+  // opens the detail sheet for a custom quantity. Food audit F-2: prefer the
+  // user's LAST logged portion for this slot+food when the row carries one (the
+  // "Add again" recents list does), so one-tap re-add uses the remembered
+  // portion — matching the prefill the detail sheet already shows — instead of a
+  // generic serving. Falls back to the default serving, then 100 g.
   function addToPlate(food) {
-    const servingG = food?.serving_g && food.serving_g > 0 ? food.serving_g : 100;
+    const servingG = food?.last_quantity_g && food.last_quantity_g > 0
+      ? food.last_quantity_g
+      : (food?.serving_g && food.serving_g > 0 ? food.serving_g : 100);
     const factor = servingG / 100;
     const item = {
       key: `${food.food_ref}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
