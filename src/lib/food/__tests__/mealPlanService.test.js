@@ -11,6 +11,7 @@ jest.mock('../db', () => ({
   listSavedMeals: jest.fn(),
   logFoodEntry: jest.fn(() => Promise.resolve('id')),
   getFoodEntriesForDay: jest.fn(() => Promise.resolve([])),
+  clearPlannedDay: jest.fn(() => Promise.resolve()),
 }));
 
 import {
@@ -22,8 +23,24 @@ import {
   answerDayTraining,
   applyPlanWeekToDiary,
   planNextWeek,
+  resyncBankedPlannedFood,
 } from '../mealPlanService';
 import { assembleWeekPlan } from '../mealPlanAssembler';
+import { resolveComponent } from '../curatedFoods';
+import { mealTotals } from '../curatedMeals';
+
+function _meal(slot, components) {
+  const items = components.map((c) => resolveComponent(c.food, c.g));
+  return { slot, mealId: slot, name: slot, components, items, totals: mealTotals(items) };
+}
+function _day() {
+  return {
+    slots: [
+      _meal('meal_1', [{ food: 'oats', g: 80 }, { food: 'whey', g: 40 }, { food: 'banana', g: 120 }]),
+      _meal('meal_2', [{ food: 'chicken_breast', g: 180 }, { food: 'white_rice', g: 200 }, { food: 'broccoli', g: 100 }]),
+    ],
+  };
+}
 
 describe('storedTargetToEngineTarget', () => {
   test('maps a stored row to the engine shape with a ±10% band', () => {
@@ -132,6 +149,39 @@ describe('applyPlanWeekToDiary (Feature B — schedule the week, non-destructive
   test('an empty plan does nothing', async () => {
     expect(await applyPlanWeekToDiary('u1', { days: [] })).toEqual({ addedDays: 0, skippedDays: 0, loggedItems: 0 });
     expect(db.logFoodEntry).not.toHaveBeenCalled();
+  });
+});
+
+describe('resyncBankedPlannedFood (CB-1b — banking moves planned food)', () => {
+  // eslint-disable-next-line global-require
+  const db = require('../db');
+  beforeEach(() => {
+    jest.clearAllMocks();
+    db.logFoodEntry.mockResolvedValue('id');
+    db.clearPlannedDay.mockResolvedValue();
+    db.getActiveMealPlan.mockResolvedValue({ id: 'p1', plan: { kind: 'week', days: [_day(), _day()] } });
+  });
+
+  test('adjusts only the banked days that already have planned food', async () => {
+    // 16th has planned food (adjust); 17th has none (skip, target-only).
+    db.getFoodEntriesForDay.mockImplementation((_u, date) =>
+      Promise.resolve(date === '2026-06-16' ? [{ is_planned: 1 }] : []));
+    const res = await resyncBankedPlannedFood('u1', {
+      perDayDeltaKcal: { '2026-06-16': 200, '2026-06-17': -200 },
+      floorKcal: 1200,
+      startDate: '2026-06-16',
+    });
+    expect(db.clearPlannedDay).toHaveBeenCalledTimes(1);
+    expect(db.clearPlannedDay).toHaveBeenCalledWith('u1', '2026-06-16');
+    expect(db.logFoodEntry).toHaveBeenCalled(); // rewrote the adjusted day
+    expect(res.perDayChanges.map((c) => c.dayKey)).toEqual(['2026-06-16']);
+  });
+
+  test('no active plan → no-op', async () => {
+    db.getActiveMealPlan.mockResolvedValue(null);
+    const res = await resyncBankedPlannedFood('u1', { perDayDeltaKcal: { '2026-06-16': 200 }, floorKcal: 1200, startDate: '2026-06-16' });
+    expect(res.perDayChanges).toEqual([]);
+    expect(db.clearPlannedDay).not.toHaveBeenCalled();
   });
 });
 

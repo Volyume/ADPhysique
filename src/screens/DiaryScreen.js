@@ -29,6 +29,8 @@ import { getNutritionTargets, hasWorkoutOnDate, getFirstWorkoutDateOnOrAfter, ge
 import { computeFFMFloor } from '../lib/nutritionEngine';
 import { targetWasFloored } from '../lib/food/mealPlanAssembler';
 import { applyBankToTarget, safeDayFloorKcal, displayBankedDelta } from '../lib/food/calorieBank';
+import { resyncBankedPlannedFood, restoreUnbankedPlannedFood } from '../lib/food/mealPlanService';
+import { buildPlanEditNarration } from '../lib/food/planExplain';
 import CalorieBankSheet from '../components/food/CalorieBankSheet';
 import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
@@ -275,14 +277,44 @@ export default function DiaryScreen({ navigation }) {
   const applyBank = useCallback(async (bank) => {
     await setCalorieBank(bank);
     setBankSheetVisible(false);
-    toast.show('Higher-calorie day planned. Your weekly total stays the same.', { variant: 'success' });
-  }, [setCalorieBank, toast]);
+    // CB-1b: move the planned FOOD to match the new per-day targets, not just the
+    // target number, and tell the user exactly what changed (per day).
+    let perDayChanges = [];
+    try {
+      const res = await resyncBankedPlannedFood(userId, {
+        perDayDeltaKcal: bank?.perDayDeltaKcal, floorKcal, startDate: isoDate(new Date()),
+      });
+      perDayChanges = res.perDayChanges || [];
+    } catch (_) { /* tolerate: the target shift already applied */ }
+    await load();
+    if (perDayChanges.length > 0) {
+      const lines = perDayChanges.map(({ dayKey, change }) => {
+        const n = buildPlanEditNarration(change, { register: 'supportive' });
+        const detail = (n.edits && n.edits.length) ? n.edits.join(' ') : (n.body || '');
+        return `${friendlyDate(dayKey)}: ${detail}`.trim();
+      });
+      appAlert(
+        'Your week, adjusted',
+        `${lines.join('\n\n')}\n\nYour weekly total stays the same. Change anything you like.`,
+        [{ text: 'OK' }],
+      );
+    } else {
+      toast.show('Higher-calorie day planned. Your weekly total stays the same.', { variant: 'success' });
+    }
+  }, [setCalorieBank, toast, userId, floorKcal, load]);
 
   const clearBank = useCallback(async () => {
+    // Restore the original (un-banked) planned food before clearing the bank.
+    try {
+      await restoreUnbankedPlannedFood(userId, {
+        perDayDeltaKcal: calorieBank?.perDayDeltaKcal, startDate: isoDate(new Date()),
+      });
+    } catch (_) { /* tolerate */ }
     await setCalorieBank(null);
     setBankSheetVisible(false);
+    await load();
     toast.show('Higher-calorie day cleared.', { variant: 'info' });
-  }, [setCalorieBank, toast]);
+  }, [setCalorieBank, toast, userId, calorieBank, load]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
   useEffect(() => { load(); }, [load]);

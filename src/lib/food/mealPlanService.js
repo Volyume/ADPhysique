@@ -27,10 +27,12 @@ import {
   listSavedMeals,
   logFoodEntry,
   getFoodEntriesForDay,
+  clearPlannedDay,
 } from './db';
 import { assembleDayPlanBestOf, assembleWeekPlan, targetWasFloored } from './mealPlanAssembler';
 import { swapFoodInMeal, swapMealInPlan } from './mealSwap';
 import { applyMacroDeltaToPlan } from './planEdit';
+import { bankedPlanDayEdits } from './calorieBank';
 import { normalisePreferences } from './planPreferences';
 import { todayLocalKey, parseLocalDay, localDayKey } from '../dayKey';
 import { track } from '../engineTelemetry';
@@ -443,6 +445,77 @@ export async function applyPlanWeekToDiary(userId, plan, { startDate } = {}) {
     if (n > 0) { addedDays += 1; loggedItems += n; }
   }
   return { addedDays, skippedDays, loggedItems };
+}
+
+/**
+ * CB-1b: re-sync the diary's PLANNED food so each planned day matches its banked
+ * target, not just the target number (founder 2026-06-16). For every plan day
+ * mapped to a date that carries a non-zero banked delta AND already has planned
+ * food in the diary, route that delta through the food-level editor (carbs lever,
+ * floor-safe) and rewrite that day's planned entries. Days with no banked delta,
+ * or no planned food yet, are left untouched (target-only, the prior behaviour).
+ *
+ * The stored meal plan is the UN-banked source of truth and is never mutated
+ * here, so clearing the bank can restore the original food (see restore below).
+ * Returns the per-day changes for the notice: { perDayChanges: [{ dayKey, change }] }.
+ */
+export async function resyncBankedPlannedFood(userId, { perDayDeltaKcal, floorKcal, startDate } = {}) {
+  if (!userId || !perDayDeltaKcal) return { perDayChanges: [] };
+  const active = await getActiveMealPlan(userId);
+  const days = Array.isArray(active?.plan?.days) ? active.plan.days : [];
+  if (days.length === 0) return { perDayChanges: [] };
+  const startObj = parseLocalDay(startDate || todayLocalKey());
+  const dayKeys = days.map((_, i) => {
+    const d = new Date(startObj.getTime());
+    d.setDate(d.getDate() + i);
+    return localDayKey(d.getTime());
+  });
+  const edits = bankedPlanDayEdits({ planDays: days, dayKeys, perDayDeltaKcal, floorKcal });
+  const perDayChanges = [];
+  for (const e of edits) {
+    // Only adjust a day that already has planned food in the diary (decision
+    // D-cb1b-3): otherwise banking stays target-only for that day.
+    // eslint-disable-next-line no-await-in-loop
+    const existing = await getFoodEntriesForDay(userId, e.dayKey);
+    const hasPlanned = Array.isArray(existing) && existing.some((row) => row.is_planned);
+    if (!hasPlanned) continue;
+    // eslint-disable-next-line no-await-in-loop
+    await clearPlannedDay(userId, e.dayKey);
+    // eslint-disable-next-line no-await-in-loop
+    await applyPlanDayToDiary(userId, e.editedDay, { entryDate: e.dayKey });
+    if (e.change && ((e.change.edits && e.change.edits.length > 0) || e.change.floorHeld)) {
+      perDayChanges.push({ dayKey: e.dayKey, change: e.change });
+    }
+  }
+  return { perDayChanges };
+}
+
+/**
+ * CB-1b: restore the original (un-banked) planned food for the dates a bank
+ * touched (used when the higher-calorie day is cleared). The stored plan is never
+ * banked, so we just rewrite each affected planned day from it. Only dates that
+ * currently hold planned food are rewritten.
+ */
+export async function restoreUnbankedPlannedFood(userId, { perDayDeltaKcal, startDate } = {}) {
+  if (!userId || !perDayDeltaKcal) return;
+  const active = await getActiveMealPlan(userId);
+  const days = Array.isArray(active?.plan?.days) ? active.plan.days : [];
+  if (days.length === 0) return;
+  const startObj = parseLocalDay(startDate || todayLocalKey());
+  for (let i = 0; i < days.length; i += 1) {
+    const d = new Date(startObj.getTime());
+    d.setDate(d.getDate() + i);
+    const dayKey = localDayKey(d.getTime());
+    if (!(Number(perDayDeltaKcal[dayKey]) || 0)) continue; // only dates the bank changed
+    // eslint-disable-next-line no-await-in-loop
+    const existing = await getFoodEntriesForDay(userId, dayKey);
+    const hasPlanned = Array.isArray(existing) && existing.some((row) => row.is_planned);
+    if (!hasPlanned) continue;
+    // eslint-disable-next-line no-await-in-loop
+    await clearPlannedDay(userId, dayKey);
+    // eslint-disable-next-line no-await-in-loop
+    await applyPlanDayToDiary(userId, days[i], { entryDate: dayKey });
+  }
 }
 
 export { swapFoodInMeal, swapMealInPlan };
