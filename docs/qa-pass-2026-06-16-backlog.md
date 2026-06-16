@@ -21,6 +21,9 @@ full test + (for features) fresh-eyes review, per CLAUDE.md.
 11. F1 — calorie banking MOVES PLANNED FOOD (CB-1b): engine spine `1dfad1c`,
     orchestration + per-day notice + restore-on-clear `bc6746e`. Spec `df76614`.
     Under fresh-eyes safety review.
+12. C1 — recap copy rewritten to human British English (month/year/block). `d66ba8f`
+13. F2 — recaps as Instagram-style stories: auto-advance with animated progress
+    pips + Volyume logo. `06e242b`
 
 ## DECIDED — queued (smaller)
 - D1 Meal variety default → **Repeat**; "Mixed/variety" opt-in in Preferences.
