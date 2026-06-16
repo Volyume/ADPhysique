@@ -148,6 +148,10 @@ export default function MacroRings({ rollup, targets, dayTypeLabel, onPress }) {
       accessible
       accessibilityRole={onPress ? 'button' : 'summary'}
       accessibilityLabel={a11yLabel}
+      // Food audit F-7: the label carries the live kcal + macro totals (the real
+      // values, not the ring animation), so a polite live region re-announces
+      // the new numbers to a screen reader when the day's intake changes.
+      accessibilityLiveRegion="polite"
     >
       {dayTypeLabel ? (
         <View style={styles.dayTypeChip}>

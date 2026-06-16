@@ -66,4 +66,12 @@ describe('MacroRings accessibility summary', () => {
     expect(label).toContain('1840 calories');
     expect(label).not.toContain('of 2100');
   });
+
+  // Food audit F-7: the summary is a polite live region so a screen reader
+  // re-announces the new totals when intake changes.
+  test('is a polite live region for live total updates', () => {
+    const tree = create(<MacroRings rollup={rollup} targets={targets} />);
+    const node = tree.root.findByProps({ accessible: true });
+    expect(node.props.accessibilityLiveRegion).toBe('polite');
+  });
 });
