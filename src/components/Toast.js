@@ -55,6 +55,10 @@ export function ToastProvider({ children }) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(reduceMotion ? 0 : 40)).current;
   const dismissTimer = useRef(null);
+  // Belt-and-braces removal timer: guarantees a dismissed toast leaves the
+  // screen even if the out-animation's completion callback never fires (see
+  // dismiss()).
+  const clearFallback = useRef(null);
 
   const show = useCallback((message, options = {}) => {
     if (!message) return;
@@ -111,6 +115,8 @@ export function ToastProvider({ children }) {
 
     if (dismissTimer.current) clearTimeout(dismissTimer.current);
     dismissTimer.current = setTimeout(() => dismiss(), current.duration);
+    // A fresh toast supersedes any pending fallback from the previous one.
+    if (clearFallback.current) { clearTimeout(clearFallback.current); clearFallback.current = null; }
     return () => {
       if (dismissTimer.current) {
         clearTimeout(dismissTimer.current);
@@ -131,6 +137,9 @@ export function ToastProvider({ children }) {
     if (current?.onTimeout && !opts.skipTimeout) {
       try { current.onTimeout(); } catch (_) {}
     }
+    // Clear by id so a late fallback can never wipe a newer toast.
+    const dismissingId = current?.id;
+    const finish = () => setCurrent((c) => (c && c.id === dismissingId ? null : c));
     Animated.parallel([
       Animated.timing(opacity, {
         toValue: 0,
@@ -144,9 +153,14 @@ export function ToastProvider({ children }) {
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),
-    ]).start(() => {
-      setCurrent(null);
-    });
+    ]).start(finish);
+    // A native-driven animation whose completion callback never fires (e.g.
+    // interrupted by a tab navigation) used to leave a dismissed toast pinned
+    // on screen until tapped (founder QA 2026-06-16). Guarantee removal just
+    // after the animation's nominal duration; finish() is id-guarded and
+    // idempotent, so running it twice is harmless.
+    if (clearFallback.current) clearTimeout(clearFallback.current);
+    clearFallback.current = setTimeout(finish, reduceMotion ? 0 : 240);
   }
 
   return (
