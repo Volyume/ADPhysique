@@ -596,6 +596,53 @@ export function assembleDayPlan({
   };
 }
 
+// ─── Local search by restart (food audit P-3) ───────────────────────────
+//
+// The greedy fill never backtracks, so an early high-fat (or high-kcal) pick can
+// leave the late slots unable to land inside the band. assembleDayPlan is a PURE
+// function of its seed, so the safe, deterministic fix is: when the first build
+// misses tolerance, try a few more seeds and keep the BEST result. This can never
+// return a worse day than the first attempt — the first is always a candidate, a
+// within-tolerance day always wins the score, and ties keep the earlier day — and
+// every candidate is a full assembleDayPlan output, so all band / floor / protein
+// invariants are re-evaluated and preserved. The retries only run on a close-miss,
+// so the common (already-good) path pays nothing.
+const LOCAL_SEARCH_ATTEMPTS = 4;
+
+function dayBandMiss(day, band) {
+  const kcal = day?.totals?.kcal ?? 0;
+  const min = Number(band?.kcalMin);
+  const max = Number(band?.kcalMax);
+  if (isFinite(min) && kcal < min) return min - kcal;
+  if (isFinite(max) && kcal > max) return kcal - max;
+  return 0;
+}
+
+// Lower is better. within-tolerance dominates, then a complete day (no unfilled
+// slots), then protein met (the hard gate), then closeness to the kcal band, then
+// a tiny fat tiebreak.
+function dayScore(day, band) {
+  return (day.withinTolerance ? 0 : 1e9)
+    + (day.unfilledSlots?.length ?? 0) * 1e6
+    + (day.proteinMet ? 0 : 1e5)
+    + dayBandMiss(day, band)
+    + (day.fatWithinTolerance ? 0 : 1);
+}
+
+export function assembleDayPlanBestOf(args = {}, attempts = LOCAL_SEARCH_ATTEMPTS) {
+  const first = assembleDayPlan(args);
+  if (first.withinTolerance || attempts <= 1) return first;
+  let best = first;
+  let bestScore = dayScore(first, args.band);
+  const baseSeed = Number(args.seed) || 1;
+  for (let a = 1; a < attempts && !best.withinTolerance; a += 1) {
+    const cand = assembleDayPlan({ ...args, seed: baseSeed + a * 40503 });
+    const score = dayScore(cand, args.band);
+    if (score < bestScore) { best = cand; bestScore = score; }
+  }
+  return best;
+}
+
 // ─── The week assembler ─────────────────────────────────────────────────
 
 /**
@@ -628,7 +675,7 @@ export function assembleWeekPlan({ engineTarget, prefs: rawPrefs, schedule, seed
     // Meal-prep repeat: one assembled day per variant, reused.
     const byVariant = {};
     ['training', 'rest'].forEach((v, i) => {
-      byVariant[v] = assembleDayPlan({
+      byVariant[v] = assembleDayPlanBestOf({
         target: variants[v], band, prefs, variant: v, seed: seed + i, savedMeals,
       });
     });
@@ -636,7 +683,7 @@ export function assembleWeekPlan({ engineTarget, prefs: rawPrefs, schedule, seed
   } else {
     const recentlyUsed = new Map(); // mealId -> days since used
     week.forEach((v, i) => {
-      const day = assembleDayPlan({
+      const day = assembleDayPlanBestOf({
         target: variants[v], band, prefs, variant: v, seed: seed + i * 7919, recentlyUsed, savedMeals,
       });
       days.push(day);

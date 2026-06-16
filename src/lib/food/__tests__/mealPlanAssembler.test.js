@@ -10,6 +10,7 @@ import {
   targetWasFloored,
   buildSlotList,
   assembleDayPlan,
+  assembleDayPlanBestOf,
   assembleWeekPlan,
   diagnoseDayPlan,
 } from '../mealPlanAssembler';
@@ -26,6 +27,53 @@ const dayTarget = (t = TARGET) => ({
   kcal: t.targetKcal, proteinG: t.proteinG, carbsG: t.carbsG, fatG: t.fatG,
 });
 const BAND = { kcalMin: TARGET.kcalMin, kcalMax: TARGET.kcalMax };
+
+describe('assembleDayPlanBestOf — local search by restart (P-3)', () => {
+  const args = (over = {}) => ({
+    target: dayTarget(), band: BAND, prefs: { mealsPerDay: 4 }, variant: 'rest', seed: 1, ...over,
+  });
+
+  test('is deterministic for the same args', () => {
+    const a = assembleDayPlanBestOf(args());
+    const b = assembleDayPlanBestOf(args());
+    expect(a.totals).toEqual(b.totals);
+    expect(a.slots.map((s) => s.mealId)).toEqual(b.slots.map((s) => s.mealId));
+  });
+
+  test('never returns a worse day than the first single attempt', () => {
+    // Score the plain first attempt vs the best-of result; best must be <=.
+    const bandMiss = (day) => {
+      const k = day.totals.kcal;
+      return k < BAND.kcalMin ? BAND.kcalMin - k : k > BAND.kcalMax ? k - BAND.kcalMax : 0;
+    };
+    const score = (day) => (day.withinTolerance ? 0 : 1e9)
+      + (day.unfilledSlots?.length ?? 0) * 1e6
+      + (day.proteinMet ? 0 : 1e5)
+      + bandMiss(day)
+      + (day.fatWithinTolerance ? 0 : 1);
+    // Sample several seeds; for each, best-of must score no worse than attempt #1.
+    for (let s = 1; s <= 12; s += 1) {
+      const first = assembleDayPlan(args({ seed: s }));
+      const best = assembleDayPlanBestOf(args({ seed: s }));
+      expect(score(best)).toBeLessThanOrEqual(score(first));
+    }
+  });
+
+  test('a single attempt collapses to a plain assembleDayPlan', () => {
+    const one = assembleDayPlanBestOf(args(), 1);
+    const plain = assembleDayPlan(args());
+    expect(one.totals).toEqual(plain.totals);
+  });
+
+  test('an already-tolerant first build is returned unchanged (no needless work)', () => {
+    const first = assembleDayPlan(args());
+    const best = assembleDayPlanBestOf(args());
+    if (first.withinTolerance) {
+      expect(best.totals).toEqual(first.totals);
+      expect(best.slots.map((s) => s.mealId)).toEqual(first.slots.map((s) => s.mealId));
+    }
+  });
+});
 
 describe('dayVariantTargets', () => {
   test('protein is identical on both variants; carbs are the lever', () => {

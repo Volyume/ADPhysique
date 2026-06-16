@@ -28,7 +28,7 @@ import {
   logFoodEntry,
   getFoodEntriesForDay,
 } from './db';
-import { assembleDayPlan, assembleWeekPlan, targetWasFloored } from './mealPlanAssembler';
+import { assembleDayPlanBestOf, assembleWeekPlan, targetWasFloored } from './mealPlanAssembler';
 import { swapFoodInMeal, swapMealInPlan } from './mealSwap';
 import { applyMacroDeltaToPlan } from './planEdit';
 import { normalisePreferences } from './planPreferences';
@@ -189,7 +189,7 @@ export function answerDayTraining({ plan, dayIndex, training, seed = 1, savedMea
   if (!target) return { plan, changed: false };
   const snap = plan.targetSnapshot || {};
   const band = { kcalMin: snap.kcalMin, kcalMax: snap.kcalMax };
-  const day = assembleDayPlan({
+  const day = assembleDayPlanBestOf({
     target, band, prefs: plan.prefs, variant, seed, savedMeals,
   });
 
@@ -289,7 +289,7 @@ export async function generateAndSaveDayPlan(userId, profile, { seed = Date.now(
   if (!engineTarget) return { error: 'no_target' };
 
   const prefs = preferencesFromProfile(profile);
-  const day = assembleDayPlan({
+  const day = assembleDayPlanBestOf({
     target: {
       kcal: engineTarget.targetKcal,
       proteinG: engineTarget.proteinG,
