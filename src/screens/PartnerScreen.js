@@ -31,17 +31,17 @@ import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 
 const SEES = [
-  'Whether you trained this week. Ticks only, like 3 of 4.',
-  'Your shared streak, counted in weeks.',
-  'A recovery week or a break shows as "Resting". Never as a fail.',
-  'Cheers you send each other. One tap, once a day.',
+  'Whether each of you trained this week, shown as a simple count like three of four. Never the numbers behind it.',
+  'A shared streak that you build together, counted in weeks rather than days.',
+  'A rest week or a quiet week, which simply shows as "Resting". It never counts against either of you and it never breaks the streak.',
+  'A cheer you can send each other once a day, so a good week never goes unnoticed.',
 ];
 const NEVER_SEES = [
-  'Weights lifted, sets, reps or any session detail',
-  'Body weight, measurements or photos',
-  'Food, calories or anything from the diary',
-  'Check-ins or anything said to the coach',
-  'Location',
+  'The weights you lifted, your sets and reps, or anything else from a session.',
+  'Your body weight, your measurements, or any photos.',
+  'Your food, your calories, or anything you logged in the diary.',
+  'Your check-ins, or anything you told the coach.',
+  'Where you are. Your location is never shared.',
 ];
 
 export default function PartnerScreen() {
@@ -76,7 +76,7 @@ export default function PartnerScreen() {
   }
 
   function confirmUnpair() {
-    appAlert('End partnership?', 'Sharing stops straight away and what was shared is deleted.', [
+    appAlert('End partnership?', 'Sharing will stop right away and everything you shared will be deleted.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'End', style: 'destructive', onPress: () => p.unpair(p.partnership.id) },
     ]);
@@ -168,8 +168,10 @@ export default function PartnerScreen() {
               <Text style={styles.sectionLabel}>Train with a partner</Text>
               <View style={styles.card}>
                 <Text style={styles.pitch}>
-                  One person who sees you showed up, and cheers you on. No numbers, no
-                  comparison, no feed. Just two people keeping the week.
+                  Pick one person you trust and you will both see whether the other
+                  trained this week. There are no numbers to compare and there is no
+                  feed to scroll. It is just the two of you, quietly keeping each
+                  other going.
                 </Text>
               </View>
             </View>
@@ -190,8 +192,9 @@ export default function PartnerScreen() {
                   <View key={t} style={styles.bullet}><Text style={styles.no}>✕</Text><Text style={styles.bulletText}>{t}</Text></View>
                 ))}
                 <Text style={styles.fine}>
-                  Either of you can end this at any time. Sharing stops straight away and
-                  what was shared is deleted. The other person sees only &quot;Partnership ended&quot;.
+                  Either of you can end this whenever you want. The moment you do,
+                  sharing stops and everything that was shared between you is deleted.
+                  Your partner simply sees that the partnership has ended, and nothing more.
                 </Text>
               </View>
             </View>
@@ -208,7 +211,7 @@ export default function PartnerScreen() {
                 </View>
 
                 {!p.canAdd && (
-                  <Text style={styles.cap}>You can have one partner on Free. Go Pro for up to three.</Text>
+                  <Text style={styles.cap}>Free includes one training partner. With Pro you can train alongside up to three.</Text>
                 )}
 
                 <TouchableOpacity

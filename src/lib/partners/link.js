@@ -55,5 +55,5 @@ export function parseInviteCode(input) {
 
 /** The out-of-band invite message (house voice). */
 export function inviteShareMessage({ webLink } = {}) {
-  return `Be my training partner on Volyume. It shows whether I trained, and literally nothing else.\n\n${webLink}`;
+  return `Be my training partner on Volyume. It just shows whether I trained this week, and nothing else about it. No numbers, no feed.\n\n${webLink}`;
 }

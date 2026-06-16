@@ -136,15 +136,15 @@ describe('PartnerScreen (the first-class home)', () => {
     const text = allText(renderScreen());
     expect(text).toContain('What you each see');
     expect(text).toContain('What neither of you will ever see');
-    expect(text).toContain('Whether you trained this week. Ticks only, like 3 of 4.');
-    expect(text).toContain('Weights lifted, sets, reps or any session detail');
+    expect(text).toContain('Whether each of you trained this week, shown as a simple count like three of four. Never the numbers behind it.');
+    expect(text).toContain('The weights you lifted, your sets and reps, or anything else from a session.');
     expect(text).toContain('Create invite');
     expect(text).toContain("Or enter a partner's code");
   });
 
   test('free cap shows when another partner cannot be added', () => {
     mockHook.value = base({ rowState: 'empty', canAdd: false });
-    expect(allText(renderScreen())).toContain('You can have one partner on Free. Go Pro for up to three.');
+    expect(allText(renderScreen())).toContain('Free includes one training partner. With Pro you can train alongside up to three.');
   });
 
   test('ended state reads "Partnership ended." and offers re-pairing', () => {

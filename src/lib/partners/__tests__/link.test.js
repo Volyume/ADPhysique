@@ -44,6 +44,6 @@ describe('inviteShareMessage', () => {
   test('includes the web link and the tellable line', () => {
     const msg = inviteShareMessage({ webLink: 'https://volyume.app/partner/ABCD1234' });
     expect(msg).toContain('https://volyume.app/partner/ABCD1234');
-    expect(msg).toContain('literally nothing else');
+    expect(msg).toContain('No numbers, no feed');
   });
 });
