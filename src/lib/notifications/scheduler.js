@@ -44,6 +44,7 @@ import {
   trialDay3Push,
 } from '../trialActivation';
 import { missedCheckinFireDates, missedCheckinPush } from './missedCheckin';
+import { plannedMealConfirmPush, plannedConfirmSlot } from './plannedMealConfirm';
 
 const NOTIF_ID_MORNING = 'volyume_morning_weight';
 const NOTIF_ID_CHECKIN = 'volyume_weekly_checkin';
@@ -657,6 +658,90 @@ export async function scheduleMissedCheckinFollowups(userId) {
   }
 }
 
+// ─── F3: planned-meal confirm reminder ───────────────────────────────────────
+const NOTIF_ID_PLANNED_MEAL_CONFIRM = 'volyume_planned_meal_confirm';
+
+export async function cancelPlannedMealConfirm() {
+  try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_PLANNED_MEAL_CONFIRM); } catch {}
+}
+
+/**
+ * F3: lay a gentle 20:00 nudge to confirm today's planned meals, but only when
+ * the day actually has planned meals the user has not marked eaten. Pro-only,
+ * toggle-gated (plannedMealConfirmEnabled, default on), suppressed under an open
+ * ED/wellbeing flag, and quiet-hours-shifted + budgeted like every event push.
+ * Self-suppresses (cancels) when there is nothing to confirm.
+ * Spec: docs/f3-planned-meal-reminder-notification-spec-2026-06-16.md.
+ */
+export async function schedulePlannedMealConfirm(userId) {
+  if (Platform.OS === 'web') return;
+  try {
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../../store/useAppStore').default;
+    if (useAppStore.getState()?.tier !== 'pro') { await cancelPlannedMealConfirm(); return; }
+
+    let prefs = {};
+    try {
+      const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+      if (raw) prefs = JSON.parse(raw) ?? {};
+    } catch (_) { /* defaults below */ }
+    if (prefs.plannedMealConfirmEnabled === false) { await cancelPlannedMealConfirm(); return; }
+
+    const uid = userId ?? useAppStore.getState()?.user?.id ?? null;
+    if (!uid) { await cancelPlannedMealConfirm(); return; }
+
+    // Open ED/wellbeing flag → never lay (a food push at a flagged user is the
+    // harm pattern, exactly as CHECKIN_MISSED / ED_PATTERN_LOCKOUT).
+    // eslint-disable-next-line global-require
+    const db = require('../database');
+    const edFlag = await db.getOpenEdPatternFlag(uid).catch(() => null);
+    if (edFlag) { await cancelPlannedMealConfirm(); return; }
+
+    // Self-suppress: only nudge when TODAY has unconfirmed planned meals.
+    // eslint-disable-next-line global-require
+    const { getFoodEntriesForDay } = require('../food/db');
+    // eslint-disable-next-line global-require
+    const { todayLocalKey } = require('../dayKey');
+    const entries = await getFoodEntriesForDay(uid, todayLocalKey()).catch(() => []);
+    const hasUnconfirmed = Array.isArray(entries) && entries.some((e) => e.is_planned);
+    if (!hasUnconfirmed) { await cancelPlannedMealConfirm(); return; }
+
+    await cancelPlannedMealConfirm();
+    const when = plannedConfirmSlot(new Date());
+    if (!when || when.getTime() <= Date.now()) return; // past 20:00 today: no nudge
+
+    const quiet = await getQuietHours();
+    const { date: shifted } = shiftDateOutOfQuietHours(when, quiet);
+    const slotOk = await requestEventPushSlot({ category: CATEGORY.PLANNED_MEAL_CONFIRM, fireDate: shifted });
+    if (!slotOk.allowed) return;
+
+    const copy = plannedMealConfirmPush(greetName());
+    await Notifications.scheduleNotificationAsync({
+      identifier: NOTIF_ID_PLANNED_MEAL_CONFIRM,
+      content: {
+        title: copy.title,
+        body: copy.body,
+        data: { type: 'planned_meal_confirm' },
+        sound: false,
+      },
+      trigger: {
+        channelId: COACHING_REMINDERS_CHANNEL,
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: shifted,
+      },
+    });
+  } catch (e) {
+    trackNotificationFailed({
+      category: CATEGORY.PLANNED_MEAL_CONFIRM,
+      reason: 'schedule_threw',
+      payload: { message: e?.message ?? 'unknown' },
+    });
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      logWarn('notifications.schedulePlannedMealConfirm', e?.message);
+    }
+  }
+}
+
 // ─── Weekly coach output ready ───────────────────────────────────────────────────
 // NOTIFICATIONS_LOCKED.md "Timing": Monday 09:00 local, time-only
 // configurable. Coach output is computed client-side after the weekly
@@ -838,6 +923,14 @@ export async function restoreNotifications(prefs, userId = null) {
     const store = require('../../store/useAppStore').default;
     await scheduleMissedCheckinFollowups(userId ?? store.getState().user?.id ?? null);
   } catch (_) { /* follow-up re-lay is best-effort */ }
+
+  // F3: re-lay the planned-meal confirm nudge (self-guards: Pro-only, toggle,
+  // ED flag, only when today has unconfirmed planned meals, past slot skipped).
+  try {
+    // eslint-disable-next-line global-require
+    const store = require('../../store/useAppStore').default;
+    await schedulePlannedMealConfirm(userId ?? store.getState().user?.id ?? null);
+  } catch (_) { /* planned-meal nudge re-lay is best-effort */ }
 }
 
 // ─── Year of Lifts unlock ─────────────────────────────────────────────────────

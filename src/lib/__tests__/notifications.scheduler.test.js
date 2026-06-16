@@ -43,6 +43,11 @@ jest.mock('../engineTelemetry', () => ({
   track: (...args) => mockTrack(...args),
 }));
 
+const mockGetFoodEntries = jest.fn(() => Promise.resolve([]));
+jest.mock('../food/db', () => ({
+  getFoodEntriesForDay: (...args) => mockGetFoodEntries(...args),
+}));
+
 const mockGetState = jest.fn(() => ({ user: { id: 'user-1' } }));
 jest.mock('../../store/useAppStore', () => ({
   __esModule: true,
@@ -583,6 +588,55 @@ describe('scheduleMissedCheckinFollowups', () => {
 });
 
 // ─── rescheduleForTimezoneIfChanged (NOTIF-1) ──────────────────────
+describe('schedulePlannedMealConfirm (F3)', () => {
+  const ID = 'volyume_planned_meal_confirm';
+  const PREFS_KEY = '@volyume_notification_prefs';
+
+  async function setPro(extra = {}) {
+    mockGetState.mockImplementation(() => ({ user: { id: 'user-1' }, tier: 'pro' }));
+    await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(extra));
+  }
+
+  test('web: no-op', async () => {
+    mockPlatformOS = 'web';
+    await setPro();
+    await scheduler.schedulePlannedMealConfirm('user-1');
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+
+  test('free tier: cancels and never schedules (Pro-only)', async () => {
+    mockGetState.mockImplementation(() => ({ user: { id: 'user-1' }, tier: 'free' }));
+    await scheduler.schedulePlannedMealConfirm('user-1');
+    expect(mockCancelAsync).toHaveBeenCalledWith(ID);
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+
+  test('toggle off: cancels and never schedules', async () => {
+    await setPro({ plannedMealConfirmEnabled: false });
+    await scheduler.schedulePlannedMealConfirm('user-1');
+    expect(mockCancelAsync).toHaveBeenCalledWith(ID);
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+
+  test('open ED flag: suppressed (cancels, never schedules)', async () => {
+    await setPro();
+    mockGetOpenEdFlag.mockResolvedValue({ id: 'flag-1' });
+    await scheduler.schedulePlannedMealConfirm('user-1');
+    expect(mockCancelAsync).toHaveBeenCalledWith(ID);
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+
+  test('self-suppress: no unconfirmed planned meals today → cancels, never schedules', async () => {
+    await setPro();
+    mockGetFoodEntries.mockResolvedValue([{ is_planned: 0 }]); // nothing planned/unconfirmed
+    await scheduler.schedulePlannedMealConfirm('user-1');
+    expect(mockCancelAsync).toHaveBeenCalledWith(ID);
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+
+  afterEach(() => { mockGetFoodEntries.mockReset(); mockGetFoodEntries.mockResolvedValue([]); });
+});
+
 describe('rescheduleForTimezoneIfChanged', () => {
   const TZ_KEY = '@volyume_notif_tz_offset';
 

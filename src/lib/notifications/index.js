@@ -49,6 +49,8 @@ export {
   scheduleMissedCheckinFollowups,
   schedulePartnerBeats,
   cancelMissedCheckinFollowups,
+  schedulePlannedMealConfirm,
+  cancelPlannedMealConfirm,
   cancelMorningNotification,
   cancelCheckinNotification,
   cancelAllNotifications,

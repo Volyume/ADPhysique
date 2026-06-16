@@ -25,6 +25,8 @@ import {
   scheduleCheckinReminder,
   scheduleMissedCheckinFollowups,
   cancelMissedCheckinFollowups,
+  schedulePlannedMealConfirm,
+  cancelPlannedMealConfirm,
   cancelMorningNotification,
   cancelCheckinNotification,
   requestNotificationPermissions,
@@ -152,6 +154,7 @@ export default function CoachingRemindersScreen() {
   // OPP-C03: the missed-check-in follow-up pair. Optional (default on),
   // unlike the two coaching reminders above.
   const [missedEnabled, setMissedEnabled] = useState(true);
+  const [plannedConfirmEnabled, setPlannedConfirmEnabled] = useState(true);
   const [permissionStatus, setPermissionStatus] = useState(null);
   const [saved, setSaved] = useState(false);
   const debounceTimer = useRef(null);
@@ -170,6 +173,9 @@ export default function CoachingRemindersScreen() {
           if (prefs.checkinMinute !== undefined) setCheckinMinute(prefs.checkinMinute);
           if (prefs.missedCheckinEnabled !== undefined) {
             setMissedEnabled(prefs.missedCheckinEnabled !== false);
+          }
+          if (prefs.plannedMealConfirmEnabled !== undefined) {
+            setPlannedConfirmEnabled(prefs.plannedMealConfirmEnabled !== false);
           }
         }
       } catch (_) {}
@@ -249,6 +255,33 @@ export default function CoachingRemindersScreen() {
         await cancelMissedCheckinFollowups();
       }
       toast.show(value ? 'Check-in follow-up on' : 'Check-in follow-up off', { variant: 'success' });
+    } catch (_) {
+      toast.show('Could not save that change', { variant: 'error' });
+    }
+  }
+
+  async function handlePlannedConfirmToggle(value) {
+    setPlannedConfirmEnabled(value);
+    try {
+      let blob = {};
+      try {
+        const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+        if (raw) blob = JSON.parse(raw) ?? {};
+      } catch (_) {}
+      await AsyncStorage.setItem(
+        NOTIF_PREFS_KEY,
+        JSON.stringify({ ...blob, plannedMealConfirmEnabled: value }),
+      );
+      const userId = useAppStore.getState().user?.id;
+      if (userId) {
+        await setPrefRow(userId, 'planned_meal_confirm', { enabled: value, time_pref: null });
+      }
+      if (value) {
+        await schedulePlannedMealConfirm(userId ?? null);
+      } else {
+        await cancelPlannedMealConfirm();
+      }
+      toast.show(value ? 'Meal-plan reminder on' : 'Meal-plan reminder off', { variant: 'success' });
     } catch (_) {
       toast.show('Could not save that change', { variant: 'error' });
     }
@@ -357,6 +390,30 @@ export default function CoachingRemindersScreen() {
           <View style={styles.helperBlock}>
             <Text style={styles.helperText}>
               If a check-in day passes without one, you'll get a gentle nudge that evening and a look at your weekly trend two days later. Never more than that, and never a guilt trip.
+            </Text>
+          </View>
+        </View>
+
+        {/* F3: planned-meal confirm reminder. Optional, default on, Pro. */}
+        <Text style={styles.sectionLabel}>Meal-plan reminder</Text>
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.iconWrap}>
+              <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
+            </View>
+            <Text style={[styles.cardTitle, styles.toggleTitle]}>Remind me to confirm planned meals</Text>
+            <Switch
+              value={plannedConfirmEnabled}
+              onValueChange={handlePlannedConfirmToggle}
+              trackColor={{ false: colors.surface3, true: colors.primaryBg }}
+              thumbColor={colors.primary}
+              ios_backgroundColor={colors.surface3}
+              accessibilityLabel="Meal-plan reminder toggle"
+            />
+          </View>
+          <View style={styles.helperBlock}>
+            <Text style={styles.helperText}>
+              If you have planned meals you've not marked as eaten, we'll send one gentle nudge in the evening so you can confirm them and keep your coach accurate.
             </Text>
           </View>
         </View>
