@@ -557,6 +557,11 @@ export function assembleDayPlan({
   // give-and-take. This makes the C/F result observable to swaps/regenerate/UI
   // without destabilising plan acceptance.
   const fatWithinTolerance = within(consumed.fat, want.fat, ADHERENCE_TOLERANCE.fat);
+  // Protein has a downside-only hard gate (proteinMet >= 85%); also REPORT a
+  // symmetric in-band signal (food audit P-2) so an omnivore pool running well
+  // OVER target is observable, parallel to fatWithinTolerance. Not part of the
+  // hard verdict — protein overshoot is never a failure, just worth surfacing.
+  const proteinWithinTolerance = within(consumed.protein, want.protein, ADHERENCE_TOLERANCE.protein);
   const withinTolerance = unfilledSlots.length === 0 && kcalWithinBand && proteinMet;
   // Actionable diagnosis (food audit P-4/P-5/P-6): why it missed + how far + a
   // hint. Pinned meals alone exceeding the ceiling is called out specifically.
@@ -579,6 +584,7 @@ export function assembleDayPlan({
     withinTolerance,
     kcalWithinBand,
     proteinMet,
+    proteinWithinTolerance,
     fatWithinTolerance,
     diagnosis,
     unfilledSlots,

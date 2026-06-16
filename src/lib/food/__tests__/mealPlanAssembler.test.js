@@ -290,6 +290,16 @@ describe('assembleDayPlan', () => {
     });
   });
 
+  // Food audit P-2: protein gets a symmetric reported signal too, separate from
+  // the downside-only hard gate (proteinMet).
+  test('reports proteinWithinTolerance (symmetric 10% band) without changing the hard gate', () => {
+    expect(typeof day.proteinWithinTolerance).toBe('boolean');
+    const miss = Math.abs(day.totals.protein - day.target.protein) / day.target.protein;
+    expect(day.proteinWithinTolerance).toBe(miss <= 0.10);
+    // proteinMet (downside-only) and the symmetric signal are independent.
+    expect(typeof day.proteinMet).toBe('boolean');
+  });
+
   test('reports fatWithinTolerance as a separate signal (15% band), not part of the hard gate', () => {
     expect(typeof day.fatWithinTolerance).toBe('boolean');
     const fatMiss = Math.abs(day.totals.fat - day.target.fat) / day.target.fat;
