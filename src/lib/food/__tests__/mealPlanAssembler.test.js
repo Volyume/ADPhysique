@@ -224,7 +224,9 @@ describe('assembleDayPlan', () => {
       expect(d.proteinMet).toBe(true);     // invariant: protein delivered
     });
     const meanFatMiss = wk.days.reduce((a, d) => a + Math.abs(d.totals.fat - d.target.fat), 0) / wk.days.length;
-    expect(meanFatMiss).toBeLessThanOrEqual(25);
+    // With the report's small fat elements on lean meals + fat-aware selection,
+    // the week's mean fat miss sits ~8g; 15g is a guard with margin.
+    expect(meanFatMiss).toBeLessThanOrEqual(15);
   });
 
   test('is deterministic for the same seed and a regenerate reshuffles', () => {
