@@ -27,6 +27,7 @@ export default function SettingsDataScreen({ navigation }) {
   // syncingNow tracks the manual "tap to sync" so the row shows progress.
   const [syncSnapshot, setSyncSnapshot] = useState(null);
   const [syncingNow, setSyncingNow] = useState(false);
+  const [refreshingFood, setRefreshingFood] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -62,6 +63,32 @@ export default function SettingsDataScreen({ navigation }) {
       toast.show("Couldn't sync. It retries automatically.", { variant: 'error' });
     } finally {
       setSyncingNow(false);
+    }
+  }
+
+  // Manual "refresh food library" (food audit D-4). The bundled snapshot + the
+  // 6-hourly delta pull can leave data stale within the window; force a pull now.
+  async function handleRefreshFoodLibrary() {
+    if (refreshingFood) return;
+    haptics.selection();
+    setRefreshingFood(true);
+    try {
+      // eslint-disable-next-line global-require
+      const { pullFoodLibraryDelta } = require('../lib/food/libraryDelta');
+      const res = await pullFoodLibraryDelta({ force: true });
+      if (res?.ok) {
+        toast.show(
+          (res.pulledRows ?? 0) > 0 ? `Food library updated (${res.pulledRows} items).` : 'Food library is up to date.',
+          { variant: 'success' },
+        );
+      } else {
+        toast.show("Couldn't refresh the food library. Try again later.", { variant: 'error' });
+      }
+    } catch (e) {
+      logError('SettingsScreen.refreshFoodLibrary', e);
+      toast.show("Couldn't refresh the food library. Try again later.", { variant: 'error' });
+    } finally {
+      setRefreshingFood(false);
     }
   }
 
@@ -165,6 +192,13 @@ export default function SettingsDataScreen({ navigation }) {
           sub={syncingNow ? 'Checking for changes.' : formatLastSynced(syncSnapshot)}
           onPress={syncingNow ? null : handleSyncNow}
           showArrow={!syncingNow}
+        />
+        <SettingRow
+          icon="nutrition-outline"
+          label={refreshingFood ? 'Refreshing…' : 'Refresh food library'}
+          sub="Pull the latest food data now"
+          onPress={refreshingFood ? null : handleRefreshFoodLibrary}
+          showArrow={!refreshingFood}
         />
         <SettingRow
           icon="swap-horizontal-outline"

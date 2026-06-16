@@ -626,12 +626,17 @@ export default function RootNavigator() {
           // layer falls back to live OFF / USDA / manual.
           // eslint-disable-next-line global-require
           require('../lib/food/seed').importOffSnapshotIfNeeded()
+            // Surface a RESOLVED failure (asset missing, load_failed, etc.): it
+            // was previously ignored, so a non-importing snapshot was invisible
+            // (food audit D-4).
+            .then((res) => { if (res && res.ok === false) _bootLog('warn', 'RootNavigator.bootstrap.offSnapshot.failed', res.reason); })
             .catch((err) => _bootLog('warn', 'RootNavigator.bootstrap.offSnapshot', err));
           // CoFID UK generic foods (~3k rows). Static dataset, runs
           // once per snapshot version. Fills the gap OFF leaves on
           // raw/unbranded items (chicken breast raw, plain oats, etc.).
           // eslint-disable-next-line global-require
           require('../lib/food/seed').importCofidSnapshotIfNeeded()
+            .then((res) => { if (res && res.ok === false) _bootLog('warn', 'RootNavigator.bootstrap.cofidSnapshot.failed', res.reason); })
             .catch((err) => _bootLog('warn', 'RootNavigator.bootstrap.cofidSnapshot', err));
           // Food library delta pull (step 3): refresh local foods
           // cache against cloud foods that were updated since the
@@ -640,6 +645,7 @@ export default function RootNavigator() {
           // pattern as the snapshot import.
           // eslint-disable-next-line global-require
           require('../lib/food/libraryDelta').pullFoodLibraryDelta()
+            .then((res) => { if (res && res.ok === false) _bootLog('warn', 'RootNavigator.bootstrap.libraryDelta.failed', res.reason); })
             .catch((err) => _bootLog('warn', 'RootNavigator.bootstrap.libraryDelta', err));
         } catch (e) {
           // eslint-disable-next-line global-require
