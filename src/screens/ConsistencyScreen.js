@@ -14,7 +14,6 @@ import {
 } from '../components/ProgressSections';
 import useProgressData from '../hooks/useProgressData';
 import StreakWeeksSection from '../components/StreakWeeksSection';
-import PartnerRow from '../components/PartnerRow';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -45,10 +44,9 @@ export default function ConsistencyScreen({ navigation }) {
         {/* ── Your weeks (COMP-018 consistency streak) ── */}
         <StreakWeeksSection userId={user?.id} scoffScore={scoffScore} />
 
-        {/* ── Training partner (NEW-002 rebuild): a slim status row beneath
-            the streak card (Duolingo pattern: the friend streak lives at the
-            streak's own home), opening the partner's first-class screen. ── */}
-        <PartnerRow userId={user?.id} tier={tier} onOpen={() => navigation.navigate('Partner')} />
+        {/* Training partner deliberately NOT shown here: it lives in Progress
+            (Analytics hub -> Training partner). Removed from Consistency to
+            avoid a duplicate, easily-missed entry point (founder 2026-06-16). */}
 
         {/* ── Lighter week banner ── */}
         {deloadAlert && (
