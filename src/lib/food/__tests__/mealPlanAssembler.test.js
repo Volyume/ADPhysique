@@ -65,6 +65,35 @@ describe('assembleDayPlanBestOf — local search by restart (P-3)', () => {
     expect(one.totals).toEqual(plain.totals);
   });
 
+  test('rescues a close-miss: the restart loop actually runs, helps, and never worsens it', () => {
+    // A deliberately hard, dense target so attempt #1 misses tolerance — proving
+    // the loop BODY runs (the easy 2600-kcal target above never triggers it).
+    // 200g protein in a ~1400-kcal band is infeasible for the pool, so every
+    // first attempt misses; best-of still finds a closer day for some seeds.
+    const hard = { kcal: 1400, proteinG: 200, carbsG: 40, fatG: 30 };
+    const hardBand = { kcalMin: 1260, kcalMax: 1540 };
+    const mk = (seed) => ({ target: hard, band: hardBand, prefs: { mealsPerDay: 3 }, variant: 'rest', seed });
+    const bandMiss = (d) => {
+      const k = d.totals.kcal;
+      return k < hardBand.kcalMin ? hardBand.kcalMin - k : k > hardBand.kcalMax ? k - hardBand.kcalMax : 0;
+    };
+    const score = (d) => (d.withinTolerance ? 0 : 1e9)
+      + (d.unfilledSlots?.length ?? 0) * 1e6
+      + (d.proteinMet ? 0 : 1e5)
+      + bandMiss(d)
+      + (d.fatWithinTolerance ? 0 : 1);
+
+    let everImproved = false;
+    for (let s = 1; s <= 60; s += 1) {
+      const first = assembleDayPlan(mk(s));
+      expect(first.withinTolerance).toBe(false); // loop is reachable: attempt #1 misses
+      const best = assembleDayPlanBestOf(mk(s));
+      expect(score(best)).toBeLessThanOrEqual(score(first)); // never worse
+      if (score(best) < score(first)) everImproved = true;
+    }
+    expect(everImproved).toBe(true); // the restart genuinely rescues some close-miss days
+  });
+
   test('an already-tolerant first build is returned unchanged (no needless work)', () => {
     const first = assembleDayPlan(args());
     const best = assembleDayPlanBestOf(args());
