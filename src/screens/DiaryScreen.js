@@ -185,7 +185,14 @@ export default function DiaryScreen({ navigation }) {
   // confirm banner so it counts toward adherence only once the user says they
   // ate it. "Ate as planned" flips the day's planned meals to actuals; "Clear"
   // discards them. Future days only offer Clear (you can't have eaten yet).
-  const plannedCount = useMemo(() => entries.filter((e) => e.is_planned).length, [entries]);
+  // Count distinct planned MEALS (meal slots), not individual food items. A
+  // day plan is ~6 meals of several foods each, so counting entries made the
+  // banner read "20 planned meals" for a single planned day (QA 2026-06-16).
+  const plannedCount = useMemo(() => {
+    const slots = new Set();
+    for (const e of entries) if (e.is_planned) slots.add(e.meal_slot);
+    return slots.size;
+  }, [entries]);
   const isFutureDay = selectedDate > isoDate(new Date());
 
   const handleConfirmPlanned = useCallback(async () => {
