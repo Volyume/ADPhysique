@@ -98,22 +98,42 @@ These are the biggest "elevate it further" moves competitors use. Each collides 
 
 ---
 
-## §5a — BUILD LOG (2026-06-16)
+## §5a — BUILD LOG (2026-06-16) — BACKLOG COMPLETE
 
 Built on `claude/audit-work-quality-review-benrin`, one item per commit, lint + full
-suite green after each:
-- **P-1 DONE** — `fatWithinTolerance` reported on every day (`mealPlanAssembler.js`).
-- **D-1 DONE** — `checkFibrePlausible` in the sanity gate; audit's unsafe suggestions
-  (fibre≤carbs, tighter drift, sodium/sugar) deliberately dropped (see D-1 note).
-- **P-4/P-5/P-6 DONE** — `diagnoseDayPlan` → `day.diagnosis { ok, reason, severity, hint }`
-  (oversized-pin call-out, restricted-pool hint, severity tiers). No silent meal-count backoff.
-- **F-1 DONE** — Undo for delete/swipe/bulk via `restoreFoodEntry`/`restoreEntries` + Undo toast.
-- **F-4 DONE** — recipe servings stepper modal in `MyRecipesScreen` (was always 1 serving).
+suite green after each; CB-1 (calorie banking) + P-3 got Opus fresh-eyes reviews.
+**Every F/P/D item is now done.** The §4 strategic levers remain founder-decision items.
 
-**Deferred (not in the approved Tier-B option):** F-3 copy-from-any-date (no date-picker
-dependency exists and adding one needs founder sign-off; a list-of-recent-days picker is
-the recommended dependency-free build). **Parked by founder decision:** §4 photo/voice logging.
-Remaining backlog (Tier B/C below) is unbuilt.
+ENGINE: **P-1** `fatWithinTolerance` signal (`01f2020`) · **P-2** `proteinWithinTolerance`
+symmetric signal (`f9276e8`) · **P-3** local-search-by-restart `assembleDayPlanBestOf`,
+provably never-worse, Opus-reviewed (`60ccff6` + `b632692`) · **P-4/P-5/P-6** `diagnoseDayPlan`
+→ `day.diagnosis { ok, reason, severity, hint }` — oversized-pin call-out, restricted-pool
+hint, severity tiers; no silent meal-count backoff (`fa98dc2`) · **P-7** aggregate
+`meal_plan_assembled` telemetry + `closeOutIterations` (`ea427a1`; arity fixed in D-6).
+
+FLOW: **F-1** undo for delete/swipe/bulk (`33dd245`) · **F-2** one-tap "Add again" now uses
+the remembered portion `last_quantity_g` (recents were already the default tab; corrected
+the audit's premise) (`4f88b0c`) · **F-3** copy-from-any-date via a recent-days picker —
+no new date-picker dependency (`e131191`) · **F-4** recipe servings stepper (`02d29d9`) ·
+**F-5** already in place (`MealSection` header shows kcal + protein) · **F-6** breakdown
+row → jump to meal (`02aaa49`) · **F-7** macro a11y live-region (`121016d`).
+
+DATA: **D-1** `checkFibrePlausible` in the sanity gate — audit's unsafe suggestions
+(fibre≤carbs, tighter drift, sodium/sugar) deliberately dropped, see D-1 note (`c540754`) ·
+**D-2** deterministic completeness-ranked barcode lookup (`71d3864`) · **D-3** canonicalise
+`off_live`→`off` so live OFF dedupes against the snapshot + shows its chip (`7fb119c`) ·
+**D-4** manual "Refresh food library" in Settings + surfaced silent boot seed/delta failures
+(`406c089`) · **D-5** keep USDA ml serving sizes for beverages (`1aa82e0`) · **D-6** food
+data-quality telemetry (sanity-fail, OCR low-confidence) + fixed two long-broken track()
+calls (`food_promote_failed`, my own `meal_plan_assembled`); new events + `migrate_085`
+(`a9fa93e`).
+
+**Corrected on build (audit premise was wrong, recorded so it isn't carried as fact):**
+D-2 multi-candidate UI is a feature not a bugfix (OFF/USDA return one variant per code);
+D-5 is a serving-default fix, not a macro-density bug; F-2 recents were already the default
+surface. **Parked by founder decision:** §4 photo/voice logging; adaptive macros excluded
+by SACRED RULE. **FOUNDER ACTION:** apply `supabase/migrate_085_food_quality_telemetry.sql`
+to EU-Dublin before a build emitting the new events reaches production sync.
 
 ## §5 — Prioritised build backlog
 
