@@ -11,6 +11,7 @@ import {
   buildSlotList,
   assembleDayPlan,
   assembleWeekPlan,
+  diagnoseDayPlan,
 } from '../mealPlanAssembler';
 import { roleOf } from '../foodRoles';
 
@@ -232,6 +233,63 @@ describe('assembleDayPlan', () => {
   // Food audit P-1 (2026-06-16): fat now has a reported tolerance signal so the
   // C/F result is observable. It mirrors the diary's 15% fat band and is a
   // SEPARATE flag — never part of the hard withinTolerance gate.
+  // Food audit P-4/P-5/P-6 (2026-06-16): a missed day says why + how far + a hint.
+  describe('diagnoseDayPlan (actionable diagnosis)', () => {
+    const base = { want: { kcal: 2600, protein: 180 }, kcalMin: 2340, kcalMax: 2860 };
+    test('within tolerance => ok, no hint', () => {
+      const d = diagnoseDayPlan({
+        ...base, consumed: { kcal: 2600, protein: 185 },
+        residual: { kcal: 0, protein: -5 }, unfilledSlots: [], proteinMet: true,
+      });
+      expect(d).toEqual({ ok: true, reason: 'within_tolerance', severity: 'none', hint: null });
+    });
+    test('unfilled slots is the top-priority reason and always major', () => {
+      const d = diagnoseDayPlan({
+        ...base, consumed: { kcal: 1900, protein: 120 },
+        residual: { kcal: 700, protein: 60 }, unfilledSlots: ['meal_4'], proteinMet: false,
+      });
+      expect(d.reason).toBe('unfilled_slots');
+      expect(d.severity).toBe('major');
+      expect(d.hint).toMatch(/relax a food exclusion|fewer meals/i);
+    });
+    test('oversized pins are called out specifically', () => {
+      const d = diagnoseDayPlan({
+        ...base, consumed: { kcal: 3000, protein: 200 },
+        residual: { kcal: -400, protein: -20 }, unfilledSlots: [], proteinMet: true,
+        pinnedKcal: 3000,
+      });
+      expect(d.reason).toBe('pins_exceed_budget');
+      expect(d.hint).toMatch(/pinned meals/i);
+    });
+    test('calorie miss is reported low/high and (being outside a 10% band) is major', () => {
+      const low = diagnoseDayPlan({
+        ...base, consumed: { kcal: 2000, protein: 185 },
+        residual: { kcal: 600, protein: -5 }, proteinMet: true,
+      });
+      expect(low.reason).toBe('calories_low');
+      expect(low.severity).toBe('major'); // 600/2600 = 23% > 8%
+      expect(low.hint).toMatch(/under target/i);
+      const high = diagnoseDayPlan({
+        ...base, consumed: { kcal: 3200, protein: 185 },
+        residual: { kcal: -340, protein: -5 }, proteinMet: true,
+      });
+      expect(high.reason).toBe('calories_high');
+      expect(high.hint).toMatch(/over target/i);
+    });
+    test('protein short only when calories are in band; severity tracks the protein gap', () => {
+      const d = diagnoseDayPlan({
+        ...base, consumed: { kcal: 2600, protein: 140 },
+        residual: { kcal: 0, protein: 40 }, proteinMet: false,
+      });
+      expect(d.reason).toBe('protein_short');
+      expect(d.severity).toBe('major'); // 40/180 = 22% > 8%
+      expect(d.hint).toMatch(/protein is about 40 g short/i);
+    });
+    test('the assembled day carries a diagnosis consistent with its verdict', () => {
+      expect(day.diagnosis.ok).toBe(day.withinTolerance);
+    });
+  });
+
   test('reports fatWithinTolerance as a separate signal (15% band), not part of the hard gate', () => {
     expect(typeof day.fatWithinTolerance).toBe('boolean');
     const fatMiss = Math.abs(day.totals.fat - day.target.fat) / day.target.fat;

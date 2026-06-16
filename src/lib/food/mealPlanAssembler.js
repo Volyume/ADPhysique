@@ -238,6 +238,68 @@ export function slotCharacterFor(slotKey, mealsPerDay) {
   return ['lunch', 'dinner', 'snack'];
 }
 
+// ─── Day diagnosis (food audit P-4/P-5/P-6) ─────────────────────────────
+
+/**
+ * Turn a day's raw pass/fail signals into ONE actionable diagnosis: the
+ * primary reason it missed (if it did), how badly, and a plain-English hint
+ * the UI can show. Replaces the old "single boolean" so the user learns
+ * whether the plan was a near miss or genuinely unbuildable, and what to do.
+ *
+ * Reason priority (worst first): an incomplete day (unfilled slots) beats an
+ * over-large pin, which beats a calorie miss, which beats a protein shortfall.
+ * Severity is the calorie residual as a fraction of target (minor <=3%,
+ * moderate <=8%, else major); structural problems (holes, oversized pins) are
+ * always major. British English; no silent changes to the user's structure.
+ */
+export function diagnoseDayPlan({
+  want, consumed, kcalMin, kcalMax, residual,
+  unfilledSlots = [], proteinMet = true, pinnedKcal = 0,
+} = {}) {
+  const kcalWithinBand = consumed.kcal >= kcalMin && consumed.kcal <= kcalMax;
+  const ok = unfilledSlots.length === 0 && kcalWithinBand && proteinMet;
+  if (ok) {
+    return { ok: true, reason: 'within_tolerance', severity: 'none', hint: null };
+  }
+  if (unfilledSlots.length > 0) {
+    const n = unfilledSlots.length;
+    return {
+      ok: false, reason: 'unfilled_slots', severity: 'major',
+      hint: `We could not fill ${n} ${n === 1 ? 'meal' : 'meals'} from your current choices. Try fewer meals a day, or relax a food exclusion.`,
+    };
+  }
+  if (pinnedKcal > kcalMax) {
+    return {
+      ok: false, reason: 'pins_exceed_budget', severity: 'major',
+      hint: `Your pinned meals alone come to ${Math.round(pinnedKcal)} kcal, above this day's ${Math.round(kcalMax)} kcal ceiling. Unpin one, or raise your target.`,
+    };
+  }
+  // Severity from the residual that actually drives the miss, as a fraction of
+  // its target (minor <=3%, moderate <=8%, else major). Given the hard gate is
+  // a ±10% calorie band / -15% protein floor, a flagged miss is usually already
+  // "major"; the tiers stay meaningful if those thresholds ever soften.
+  const sevFrom = (absResidual, t) => {
+    const frac = t > 0 ? absResidual / t : 0;
+    return frac <= 0.03 ? 'minor' : frac <= 0.08 ? 'moderate' : 'major';
+  };
+  if (!kcalWithinBand) {
+    const under = consumed.kcal < kcalMin;
+    const off = Math.abs(Math.round(residual.kcal));
+    const severity = sevFrom(Math.abs(residual.kcal), want.kcal);
+    const widen = severity === 'major' ? ' Widening your food preferences would help.' : '';
+    return {
+      ok: false, reason: under ? 'calories_low' : 'calories_high', severity,
+      hint: `This day lands about ${off} kcal ${under ? 'under' : 'over'} target. Regenerate to try a different mix.${widen}`,
+    };
+  }
+  // calories in band but protein short
+  const pShort = Math.abs(Math.round(residual.protein));
+  return {
+    ok: false, reason: 'protein_short', severity: sevFrom(Math.abs(residual.protein), want.protein),
+    hint: `Protein is about ${pShort} g short. Regenerate, or add a higher-protein meal.`,
+  };
+}
+
 // ─── The day assembler ──────────────────────────────────────────────────
 
 /**
@@ -496,6 +558,12 @@ export function assembleDayPlan({
   // without destabilising plan acceptance.
   const fatWithinTolerance = within(consumed.fat, want.fat, ADHERENCE_TOLERANCE.fat);
   const withinTolerance = unfilledSlots.length === 0 && kcalWithinBand && proteinMet;
+  // Actionable diagnosis (food audit P-4/P-5/P-6): why it missed + how far + a
+  // hint. Pinned meals alone exceeding the ceiling is called out specifically.
+  const pinnedKcal = placed.reduce((a, p) => a + (p.pinned ? p.totals.kcal : 0), 0);
+  const diagnosis = diagnoseDayPlan({
+    want, consumed, kcalMin, kcalMax, residual, unfilledSlots, proteinMet, pinnedKcal,
+  });
 
   return {
     variant,
@@ -512,6 +580,7 @@ export function assembleDayPlan({
     kcalWithinBand,
     proteinMet,
     fatWithinTolerance,
+    diagnosis,
     unfilledSlots,
     seed,
   };
