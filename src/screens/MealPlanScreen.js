@@ -373,7 +373,7 @@ export default function MealPlanScreen({ navigation }) {
       ) : !plan ? (
         <View style={styles.emptyWrap}>
           <Ionicons name="restaurant-outline" size={40} color={colors.textSecondary} />
-          <Text style={styles.emptyTitle}>Your plate, sorted.</Text>
+          <Text style={styles.emptyTitle}>Your meals, sorted.</Text>
           <Text style={styles.emptyBody}>
             Two ways to plan, both built to your calories and macros. Swap anything
             you do not fancy. Your targets stay the coach&apos;s job, and you can switch any time.
@@ -603,7 +603,7 @@ export default function MealPlanScreen({ navigation }) {
             fullWidth
           />
           <Text style={styles.footNote}>
-            Built from your targets. Every plate can be swapped; the day stays on target.
+            Built from your calories and macros. Swap any meal you like, and the day still hits your target.
           </Text>
         </ScrollView>
       )}
