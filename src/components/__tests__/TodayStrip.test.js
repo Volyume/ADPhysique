@@ -49,16 +49,13 @@ afterEach(() => {
 });
 
 describe('weight cell', () => {
-  test('logged: shows the value, the confirmation tick and the sparkline', async () => {
-    const tree = await render({ todayWeight: 82.4, recentWeights: [80, 81, 82, 82.4], cardioEnabled: false });
+  test('logged: shows the value and the confirmation tick, no sparkline', async () => {
+    // The weight-cell sparkline was removed (founder QA 2026-06-16: the squiggle
+    // bled into the steps cell).
+    const tree = await render({ todayWeight: 82.4, cardioEnabled: false });
     expect(json(tree)).toContain('WEIGHT');
-    expect(json(tree)).toContain('Sparkline');
-    expect(tree.root.findAll(n => n.props.accessibilityLabel?.startsWith('Weight ')).length).toBeGreaterThan(0);
-  });
-
-  test('logged under an ED flag: value only, no sparkline', async () => {
-    const tree = await render({ todayWeight: 82.4, recentWeights: [80, 81, 82, 82.4], edFlagOpen: true, cardioEnabled: false });
     expect(json(tree)).not.toContain('Sparkline');
+    expect(tree.root.findAll(n => n.props.accessibilityLabel?.startsWith('Weight ')).length).toBeGreaterThan(0);
   });
 
   // COMP-004 door: with onOpenTrend, tapping the logged cell opens the trend

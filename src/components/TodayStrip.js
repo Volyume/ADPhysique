@@ -19,8 +19,8 @@
  *
  * Colour rule (Part A grammar, Class B): the only state colour in the strip is
  * the logged tick — a confirmation, never a judgement of the number. No red on
- * weight ever; the sparkline is identity amber, not a state colour. Under an
- * open ED/wellbeing flag the weight cell shows the value only (no sparkline).
+ * weight ever. (The weight-cell sparkline was removed 2026-06-16: it bled into
+ * the steps cell; the trend lives on Progress and via the COMP-004 door.)
  *
  * Voice rules: CLAUDE.md. British English, no em dashes.
  */
@@ -32,7 +32,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
-import Sparkline from './Sparkline';
 import { getDailyStepsToday, getCardioLogForDate } from '../lib/database';
 import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
 import {
@@ -53,12 +52,10 @@ export default function TodayStrip({
   userId,
   bwu = 'st',
   todayWeight = null,
-  recentWeights = [],
   lastWeightKg = null,
   savingWeight = false,
   onLogWeight,
   hasActiveWorkout = false,
-  edFlagOpen = false,
   stepsEnabled = true,
   stepsTarget = null,
   cardioEnabled = true,
@@ -252,9 +249,6 @@ export default function TodayStrip({
         <View style={styles.loggedRow}>
           <Text style={styles.cellValue}>{formatBodyWeightShort(todayWeight, bwu)}</Text>
           <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-          {!edFlagOpen && recentWeights.length >= 3 ? (
-            <Sparkline data={recentWeights} width={48} height={16} color={colors.primary} />
-          ) : null}
         </View>
       </TouchableOpacity>
     );

@@ -1142,6 +1142,29 @@ export default function HomeScreen({ navigation }) {
             Home, the direction COMP-027 demands: hero first, fewer stacked
             utilities). The dismissal key and gating are reused there. */}
 
+        {/* ── Today strip (COMP-027 Part B) ── */}
+        {/* Sits ABOVE the workout hero (founder 2026-06-16: the weight/steps/
+            cardio card belongs above the session, not below it). Pro only;
+            free tier shows the upgrade teaser below instead. */}
+        {tier === 'pro' && user?.id && (
+          <TodayStrip
+            userId={user.id}
+            bwu={bwu}
+            todayWeight={todayWeight}
+            recentWeights={recentWeights}
+            lastWeightKg={recentWeights.length ? recentWeights[recentWeights.length - 1] : (userProfile?.weightKg ?? null)}
+            savingWeight={savingWeight}
+            onLogWeight={handleLogWeight}
+            hasActiveWorkout={hasActiveWorkout}
+            edFlagOpen={edFlagOpen}
+            stepsEnabled={userProfile?.stepsEnabled !== false}
+            stepsTarget={userProfile?.stepsTarget}
+            cardioEnabled={userProfile?.cardioEnabled !== false}
+            onCardioPress={() => navigation.navigate('LogCardio')}
+            onOpenTrend={() => navigation.getParent()?.navigate('ProgressTab', { screen: 'Analytics', params: { focusWeightTrend: true } })}
+          />
+        )}
+
         {/* ── Primary workout area ── */}
         {hasActiveWorkout ? (
           <PressableCard
@@ -1413,29 +1436,6 @@ export default function HomeScreen({ navigation }) {
               </TouchableOpacity>
             )}
           </View>
-        )}
-
-        {/* ── Today strip (COMP-027 Part B) ── */}
-        {/* The glance row sits directly under the hero, replacing the three
-            stacked utility cards that used to push the hero down. Pro only;
-            free tier shows the upgrade teaser below instead. */}
-        {tier === 'pro' && user?.id && (
-          <TodayStrip
-            userId={user.id}
-            bwu={bwu}
-            todayWeight={todayWeight}
-            recentWeights={recentWeights}
-            lastWeightKg={recentWeights.length ? recentWeights[recentWeights.length - 1] : (userProfile?.weightKg ?? null)}
-            savingWeight={savingWeight}
-            onLogWeight={handleLogWeight}
-            hasActiveWorkout={hasActiveWorkout}
-            edFlagOpen={edFlagOpen}
-            stepsEnabled={userProfile?.stepsEnabled !== false}
-            stepsTarget={userProfile?.stepsTarget}
-            cardioEnabled={userProfile?.cardioEnabled !== false}
-            onCardioPress={() => navigation.navigate('LogCardio')}
-            onOpenTrend={() => navigation.getParent()?.navigate('ProgressTab', { screen: 'Analytics', params: { focusWeightTrend: true } })}
-          />
         )}
 
         {/* ── Pro teaser (free tier only, after 3+ sessions) ── now below the
