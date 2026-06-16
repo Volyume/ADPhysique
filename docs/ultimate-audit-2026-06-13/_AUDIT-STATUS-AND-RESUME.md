@@ -258,15 +258,41 @@ file at the end of every working session.
     Android imported `distance` stays null until the separate HC Distance record read is wired (documented in code).
   - ✅ **TIER-2 UNBLOCKED ITEMS COMPLETE (7-10).** All built on `claude/audit-work-quality-review-benrin`, each with
     invariant tests + lint + full test + fresh-eyes review.
-  - ▶ **NEXT — remaining work is BLOCKED or decision-gated; bring to founder before building:**
-    Per `pass4-master-priority.md`: Tier-2 (11) Named autonomy modes [BLOCKED NA-coaching-10 safety: auto-apply
-    during a hold], (12) Raw/cooked toggle [BLOCKED NA-nutrition-1: no conversion factor exists in code — needs a
-    sourced factor], (14) Core-Haptics [BLOCKED NA-cux-19: NEW dependency → founder approval]. (13) Mid-session swap
-    "keeps volume tracking" clause [NA-wr-3] is a COPY/clause item — confirm the exact wording with the founder, then
-    it's a small build. Tier-3 (15 timeline food logging, 16 micronutrients [BLOCKED Q1 schema authority — would be
-    migrate_088+ since 087 is now cardio], 17 calorie banking [safety-adjacent, own blueprint + invariant tests]) are
-    large/careful, sequence ALONE after their decisions clear. **A resuming session: do NOT start a BLOCKED item; ask
-    the founder the structured decision first, or build (13) after wording is confirmed.**
+  - ✅ **TIER-3 (17) Calorie banking — DONE (built 2026-06-16, OUT OF LOCKED ORDER — founder aware).** Source:
+    `pass4-blueprint-calorie-banking.md` (read in full; line 90 floor rule quoted). Commits `5836e78` (pure spine
+    `src/lib/food/calorieBank.js` — safe per-day redistribution, weekly total preserved, floors/band cap, deterministic),
+    `3fcd977` (persistence `useAppStore.setCalorieBank` local-profile field; diary surface + display in `DiaryScreen.js`;
+    `CalorieBankSheet.js` "Plan a bigger day"), `2ebd60f` (two safety fixes from the Opus fresh-eyes review).
+    **NA-cb decisions taken:** NA-cb-3 = diary day-header surface (founder choice); NA-cb-5 = local profile field
+    (mirrors meal-plan prefs); NA-cb-2 = NO coach change needed (weekly total preserved → 7-day average unchanged).
+    **Carve-outs:** banking disabled when target floored (`targetWasFloored`), carb cycle/refeed active, or an open
+    ED-pattern flag (`getOpenEdPatternFlag`). **Floor = max(sex floor 1500/1200, FFM floor via `computeFFMFloor`)** per
+    blueprint line 90 (review caught it was initially sex-floor only). **Stale-bank guard:** a persisted bank only
+    displays when banking is currently allowed (review caught it). Invariant + fuzz tests in
+    `src/lib/food/__tests__/calorieBank.test.js`; lint + full suite green; Opus review PASS after the two fixes.
+    **⚠ Open:** `MAX_BANK_DELTA_KCAL = 500` is tagged [INFERENCE] — founder to confirm the cap value.
+
+  - ✅ **FOOD-FUNCTION AUDIT (SEPARATE doc, not part of this ultimate audit) — COMPLETE 2026-06-16.** Source:
+    `docs/food-function-audit-2026-06-16.md` (own researched backlog; F=flow, P=plan-engine, D=data). All built on
+    `claude/audit-work-quality-review-benrin`, each verify→build→test→commit; P-3 + CB-1 got Opus fresh-eyes reviews.
+    Flow: F-1 undo (`33dd245`), F-3 copy-any-day (`e131191`), F-4 recipe servings (`02d29d9`), F-6 breakdown→meal jump
+    (`02aaa49`), F-7 macro a11y live-region (`121016d`). Engine: P-1 fat signal (`01f2020`), P-2 protein signal
+    (`f9276e8`), P-3 local-search-by-restart (`60ccff6`+`b632692`), P-4/5/6 diagnosis (`fa98dc2`), P-7 assembly
+    telemetry (`ea427a1`). Data: D-1 fibre sanity (`c540754`), D-2 barcode ordering (`71d3864`), D-3 OFF dedupe
+    (`7fb119c`), D-4 manual refresh + boot-failure surfacing (`406c089`), D-5 USDA ml serving (`1aa82e0`), D-6
+    food data-quality telemetry + fixed two broken track() calls (`a9fa93e`). Final: 271 suites green.
+    **⚠ FOUNDER ACTION:** apply `supabase/migrate_085_food_quality_telemetry.sql` to EU-Dublin before a build emitting
+    the new events reaches production sync (additive; NOT run from app).
+
+  - ▶ **NEXT — Ultimate-Audit remaining work, all BLOCKED or decision-gated; bring to founder before building**
+    (per `pass4-master-priority.md` TIER 2/3). BUILDABLE once a decision lands: **(13)** mid-session swap "keeps volume
+    tracking" clause [NA-wr-3 — confirm exact wording, then small build]; **(15)** timeline food logging [NA-cux-13
+    time-of-day field?, NA-cux-15 replace-vs-toggle — then large/careful]. BLOCKED on a founder decision: **(11)**
+    named autonomy modes [NA-coaching-10 safety: auto-apply during a hold]; **(12)** raw/cooked toggle [NA-nutrition-1:
+    NO conversion factor in code — needs a SOURCED factor, do not invent]; **(14)** Core-Haptics [NA-cux-19: NEW
+    dependency approval]; **(16)** micronutrients/NRV [Q1 schema authority marked RESOLVED at line 141 → would be
+    migrate_088+; confirm before the schema build]. **A resuming session: do NOT start a BLOCKED item; get the
+    structured decision first, or build (13) after wording is confirmed.**
 - **OPEN BEFORE CODING:** branch policy conflict — session brief says develop on
   `claude/audit-work-quality-review-benrin` (an audit/docs branch); CLAUDE.md says app code goes on
   phase2/development or feature/*. Founder to confirm the build branch before any production code is written.
