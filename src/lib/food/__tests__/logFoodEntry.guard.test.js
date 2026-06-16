@@ -86,3 +86,23 @@ describe('logFoodEntry numeric coercion', () => {
     expect(p[10]).toBe(7.2);
   });
 });
+
+// is_planned is param index 12 (after logged_at at 11). Plan scaffolding is
+// written planned; everything else (manual logging) defaults to an actual.
+describe('logFoodEntry is_planned flag (adherence model)', () => {
+  test('defaults to 0 (an actual) when isPlanned is not passed', async () => {
+    await food.logFoodEntry('u1', {
+      entryDate: '2026-06-07', mealSlot: 'lunch', foodRef: 'custom:x',
+      quantityG: 100, kcal: 200, proteinG: 20, carbsG: 10, fatG: 5,
+    });
+    expect(insertParams()[12]).toBe(0);
+  });
+
+  test('writes 1 (planned scaffolding) when isPlanned is true', async () => {
+    await food.logFoodEntry('u1', {
+      entryDate: '2026-06-07', mealSlot: 'lunch', foodRef: 'custom:x',
+      quantityG: 100, kcal: 200, proteinG: 20, carbsG: 10, fatG: 5, isPlanned: true,
+    });
+    expect(insertParams()[12]).toBe(1);
+  });
+});

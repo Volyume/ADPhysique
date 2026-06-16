@@ -24,7 +24,7 @@ import {
 import { localDayKey, todayLocalKey, localWeekStartMs } from '../lib/dayKey';
 import { summariseWeekSteps } from '../lib/stepsSummary';
 import { summariseWeekCardio, cardioComplianceFromLog } from '../lib/cardio/cardioEngine';
-import { getRollupsForRange } from '../lib/food/db';
+import { getRollupsForRange, getPlannedDaysInRange, confirmPlannedDay } from '../lib/food/db';
 import { getCycleTracking, shouldShowCycleQuestion } from '../lib/cyclePrefs';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder, scheduleWeeklyCoachReady, scheduleMissedCheckinFollowups } from '../lib/notifications';
@@ -301,6 +301,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   // Step 2, This week
   const [calsAdherence, setCalsAdherence] = useState(null);
+  // Days in the review week that still hold unconfirmed planned meals, so the
+  // user can retroactively confirm "I ate as planned" (adherence backstop).
+  const [unconfirmedPlannedDays, setUnconfirmedPlannedDays] = useState([]);
+  const [confirmingPlanned, setConfirmingPlanned] = useState(false);
   const [stepsAdherence] = useState(null); // legacy field, no longer collected; steps_avg replaces it
   const [cardioAdherence, setCardioAdherence] = useState(null);
   // Steps: the week's auto summary (null until loaded). When 4+ days are
@@ -398,10 +402,12 @@ export default function WeeklyCheckInScreen({ navigation }) {
           getNutritionTargets(user.id).catch(() => null),
         ]);
         let rollups = [];
+        let plannedDays = [];
         if (targets?.targetKcal) {
           const startIso = localDayKey(weekStartMs); // local-day bounds match the rollup keys
           const endIso = localDayKey(weekStartMs + 6 * 86400000);
           rollups = await getRollupsForRange(user.id, startIso, endIso).catch(() => []);
+          plannedDays = await getPlannedDaysInRange(user.id, startIso, endIso).catch(() => []);
         }
         // Week-over-week working-set volume, so the verdict reflects whether
         // training is improving, holding or falling away, not just whether
@@ -447,6 +453,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         const loggedRollups = rollups.filter(r => Number.isFinite(r.kcal_total) && r.kcal_total > 0);
 
         if (!cancelled) {
+          setUnconfirmedPlannedDays(plannedDays);
           setAutoDerived({
             trainingPerformance: trainingPerf,
             trainingMeta: { completed: sessions?.completed ?? 0, planned: sessions?.planned ?? 0, prs: prCount ?? 0, volDeltaPct, volThisWeek, volLastWeek },
@@ -565,6 +572,39 @@ export default function WeeklyCheckInScreen({ navigation }) {
     if (s === 3) return trainingPerformance !== null;
     return false;
   }
+
+  // Adherence backstop: the user confirms they ate the plan on days they never
+  // confirmed in the diary. Flips those days' planned meals to actuals, then
+  // re-derives calorie adherence so it reflects the now-counted intake.
+  const handleConfirmPlannedWeek = useCallback(async () => {
+    if (!user?.id || confirmingPlanned || unconfirmedPlannedDays.length === 0) return;
+    setConfirmingPlanned(true);
+    try {
+      for (const day of unconfirmedPlannedDays) {
+        // eslint-disable-next-line no-await-in-loop
+        await confirmPlannedDay(user.id, day);
+      }
+      const weekStartMs = localWeekStartMs();
+      const startIso = localDayKey(weekStartMs);
+      const endIso = localDayKey(weekStartMs + 6 * 86400000);
+      const rollups = await getRollupsForRange(user.id, startIso, endIso).catch(() => []);
+      const targetKcal = autoDerived.calsMeta?.target ?? null;
+      const calsAdh = deriveCalsAdherence({ rollups, targetKcal });
+      const loggedRollups = rollups.filter((r) => Number.isFinite(r.kcal_total) && r.kcal_total > 0);
+      if (calsAdh) setCalsAdherence(calsAdh);
+      setAutoDerived((prev) => ({
+        ...prev,
+        calsAdherence: calsAdh,
+        calsMeta: prev.calsMeta ? {
+          ...prev.calsMeta,
+          daysLogged: loggedRollups.length,
+          avgKcal: loggedRollups.length ? Math.round(loggedRollups.reduce((a, r) => a + r.kcal_total, 0) / loggedRollups.length) : 0,
+        } : prev.calsMeta,
+      }));
+      setUnconfirmedPlannedDays([]);
+    } catch (_) { /* leave the prompt up so it can be retried */ }
+    setConfirmingPlanned(false);
+  }, [user?.id, confirmingPlanned, unconfirmedPlannedDays, autoDerived.calsMeta]);
 
   const handleSubmit = useCallback(async () => {
     if (busy) return;
@@ -804,6 +844,24 @@ export default function WeeklyCheckInScreen({ navigation }) {
                   No food logged in your diary this week. If you tracked elsewhere, set it below.
                 </Text>
               )
+            ) : null}
+            {unconfirmedPlannedDays.length > 0 ? (
+              <View style={styles.plannedBackstop}>
+                <Text style={styles.plannedBackstopText}>
+                  You had a meal plan on {unconfirmedPlannedDays.length} {unconfirmedPlannedDays.length === 1 ? 'day' : 'days'} this
+                  week but didn&apos;t confirm eating {unconfirmedPlannedDays.length === 1 ? 'it' : 'them'}, so {unconfirmedPlannedDays.length === 1 ? "it isn't" : "they aren't"} counted
+                  above. If you stuck to your plan, confirm so it counts.
+                </Text>
+                <TouchableOpacity
+                  style={styles.plannedBackstopBtn}
+                  onPress={handleConfirmPlannedWeek}
+                  disabled={confirmingPlanned}
+                  accessibilityRole="button"
+                  accessibilityLabel="Confirm I ate as planned on those days"
+                >
+                  <Text style={styles.plannedBackstopBtnText}>{confirmingPlanned ? 'Confirming' : 'I ate as planned'}</Text>
+                </TouchableOpacity>
+              </View>
             ) : null}
             <OptionRow
               options={[
@@ -1631,6 +1689,22 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     fontStyle: 'italic',
   },
+  plannedBackstop: {
+    backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.primary,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  plannedBackstopText: { ...type.caption, color: colors.textPrimary },
+  plannedBackstopBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primary, borderRadius: radius.md,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, minHeight: 40,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  plannedBackstopBtnText: { color: colors.onPrimary, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
 
   shortInput: {
     backgroundColor: colors.surface2, borderRadius: radius.md,

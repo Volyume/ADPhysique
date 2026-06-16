@@ -12,6 +12,7 @@ import useAppStore from '../store/useAppStore';
 import { GOAL_LABELS, PHASE_LABELS, isCompetitionGoal } from '../lib/coachingGoals';
 import { getSplitRationale, getSetupReceiptLine } from '../lib/whyThisTemplates';
 import { getActivePlan, getRoutinesForPlan } from '../lib/database';
+import { planNextWeek } from '../lib/food/mealPlanService';
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
 
 // Order the rationale reads top-to-bottom: how the week is structured,
@@ -32,6 +33,21 @@ export default function ProSetupCompleteScreen({ navigation }) {
   // named sessions behind a tap would mute the moment.
   const [planOpen, setPlanOpen] = useState(true);
   const [whyThis, setWhyThis] = useState(null);
+  // Optional head start: build the first week of meals from the targets shown
+  // above (founder 2026-06-15). It persists, so it's waiting in Meal planning
+  // when the user enters the app.
+  const [buildingMeals, setBuildingMeals] = useState(false);
+  const [mealsBuilt, setMealsBuilt] = useState(false);
+
+  const handleBuildMeals = async () => {
+    if (!user?.id || buildingMeals || mealsBuilt) return;
+    setBuildingMeals(true);
+    try {
+      const res = await planNextWeek(user.id, userProfile, { repeat: false });
+      setMealsBuilt(!res?.error);
+    } catch (_) { /* leave the affordance so they can retry */ }
+    setBuildingMeals(false);
+  };
 
   const opacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
   const slideY  = useRef(new Animated.Value(reduceMotion ? 0 : 20)).current;
@@ -225,6 +241,31 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 </Text>
                 <Ionicons name="chevron-forward" size={14} color={colors.primary} />
               </TouchableOpacity>
+              {/* Optional head start: a full week of meals built to these
+                  targets, with a shopping list, waiting in Meal planning. */}
+              {mealsBuilt ? (
+                <View style={styles.eduLearnRow}>
+                  <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                  <Text style={[styles.eduLearnText, { color: colors.textSecondary }]}>
+                    First week of meals ready in Diary, Plan my week
+                  </Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.eduLearnRow}
+                  onPress={handleBuildMeals}
+                  disabled={buildingMeals}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Build my first week of meals to these targets"
+                >
+                  <Ionicons name="restaurant-outline" size={14} color={colors.primary} />
+                  <Text style={styles.eduLearnText}>
+                    {buildingMeals ? 'Building your week' : 'Build my first week of meals'}
+                  </Text>
+                  {!buildingMeals ? <Ionicons name="chevron-forward" size={14} color={colors.primary} /> : null}
+                </TouchableOpacity>
+              )}
             </View>
           ) : null}
 

@@ -162,6 +162,23 @@ export async function confirmPlannedDay(userId, entryDate) {
 }
 
 /**
+ * Distinct days in [startIso, endIso] that still hold unconfirmed planned meals
+ * (is_planned=1). Used by the weekly check-in to offer a retroactive "I ate as
+ * planned" backstop for days the user never confirmed in the diary.
+ */
+export async function getPlannedDaysInRange(userId, startIso, endIso) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT DISTINCT entry_date FROM food_entries
+     WHERE user_id = ? AND entry_date >= ? AND entry_date <= ?
+       AND is_planned = 1 AND deleted_at IS NULL
+     ORDER BY entry_date`,
+    [userId, startIso, endIso]
+  );
+  return rows.map((r) => r.entry_date);
+}
+
+/**
  * Discard a day's planned scaffolding without eating it (the "no" path).
  * Planned rows are local-only and never synced, so a hard delete is safe;
  * actuals on the day are untouched. Returns the number cleared.
