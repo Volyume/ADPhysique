@@ -27,6 +27,7 @@ import { fitScore, perMealMacros, slotMatches } from './mealSuggest';
 import { normalisePreferences, filterMealsByPreferences } from './planPreferences';
 import { roleOf } from './foodRoles';
 import { solveGramsForKcal } from './gramSolve';
+import { within, ADHERENCE_TOLERANCE } from './adherence';
 
 const KCAL_C = 4;
 const KCAL_F = 9;
@@ -486,6 +487,14 @@ export function assembleDayPlan({
   // where the partial macros land.
   const kcalWithinBand = consumed.kcal >= kcalMin && consumed.kcal <= kcalMax;
   const proteinMet = consumed.protein >= want.protein * 0.85;
+  // Fat-tolerance signal (food audit P-1, 2026-06-16): the C/F split made the
+  // assembler fat-aware, but fat was the one macro with no measured outcome.
+  // Report whether fat landed within its adherence band (same 15% the diary
+  // uses) as a SEPARATE signal — deliberately NOT folded into withinTolerance,
+  // because calories + protein remain the hard gate and fat is hit by portion
+  // give-and-take. This makes the C/F result observable to swaps/regenerate/UI
+  // without destabilising plan acceptance.
+  const fatWithinTolerance = within(consumed.fat, want.fat, ADHERENCE_TOLERANCE.fat);
   const withinTolerance = unfilledSlots.length === 0 && kcalWithinBand && proteinMet;
 
   return {
@@ -502,6 +511,7 @@ export function assembleDayPlan({
     withinTolerance,
     kcalWithinBand,
     proteinMet,
+    fatWithinTolerance,
     unfilledSlots,
     seed,
   };

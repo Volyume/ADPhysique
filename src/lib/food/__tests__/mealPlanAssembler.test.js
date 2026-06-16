@@ -229,6 +229,20 @@ describe('assembleDayPlan', () => {
     expect(meanFatMiss).toBeLessThanOrEqual(15);
   });
 
+  // Food audit P-1 (2026-06-16): fat now has a reported tolerance signal so the
+  // C/F result is observable. It mirrors the diary's 15% fat band and is a
+  // SEPARATE flag — never part of the hard withinTolerance gate.
+  test('reports fatWithinTolerance as a separate signal (15% band), not part of the hard gate', () => {
+    expect(typeof day.fatWithinTolerance).toBe('boolean');
+    const fatMiss = Math.abs(day.totals.fat - day.target.fat) / day.target.fat;
+    expect(day.fatWithinTolerance).toBe(fatMiss <= 0.15);
+    // The hard verdict must not depend on fat: a within-tolerance day stays so
+    // regardless of whether fat happened to land in its band.
+    if (day.withinTolerance) {
+      expect(day.kcalWithinBand && day.proteinMet && day.unfilledSlots.length === 0).toBe(true);
+    }
+  });
+
   test('is deterministic for the same seed and a regenerate reshuffles', () => {
     const again = assembleDayPlan({ target: dayTarget(), band: BAND, prefs: { mealsPerDay: 4 }, seed: 42 });
     expect(again).toEqual(day);
