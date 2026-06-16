@@ -57,7 +57,7 @@ function MacroLine({ kcal, protein, carbs, fat }) {
  * breakdown for the day on view. Read-only; tap a meal slot to do
  * anything with it is handled back on the diary itself.
  */
-export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClose }) {
+export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClose, onSelectMeal }) {
   const { rows, total } = mealBreakdown(entries);
 
   return (
@@ -72,10 +72,19 @@ export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClo
       ) : (
         <View>
           {rows.map((r) => (
-            <View key={r.key} style={styles.row}>
+            // F-6: tap a meal to jump to its card on the diary (no longer a
+            // read-only dead-end). Falls back to a plain row when no handler.
+            <Pressable
+              key={r.key}
+              style={styles.row}
+              onPress={onSelectMeal ? () => onSelectMeal(r.key) : undefined}
+              disabled={!onSelectMeal}
+              accessibilityRole={onSelectMeal ? 'button' : undefined}
+              accessibilityLabel={onSelectMeal ? `Go to ${r.label}` : undefined}
+            >
               <Text style={styles.rowLabel}>{r.label}</Text>
               <MacroLine kcal={r.kcal} protein={r.protein} carbs={r.carbs} fat={r.fat} />
-            </View>
+            </Pressable>
           ))}
           <View style={[styles.row, styles.totalRow]}>
             <Text style={styles.totalLabel}>Total</Text>

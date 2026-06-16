@@ -9,7 +9,7 @@
  * barcode scan, swipe-delete, multi-select bulk tools, copy yesterday, and a
  * designed empty state (diary-tab redesign 2026-06-01).
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, Pressable, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -380,6 +380,15 @@ export default function DiaryScreen({ navigation }) {
   const [saveMealItems, setSaveMealItems] = useState(null); // captured items | null
   const [saveMealName, setSaveMealName] = useState('');
   const [breakdownVisible, setBreakdownVisible] = useState(false);
+  // F-6: jump from the macro breakdown sheet to a meal card. We capture each
+  // meal section's y in the scroll content and scrollTo it.
+  const scrollRef = useRef(null);
+  const mealLayoutY = useRef({});
+  const jumpToMeal = useCallback((slotKey) => {
+    setBreakdownVisible(false);
+    const y = mealLayoutY.current[slotKey];
+    if (Number.isFinite(y)) scrollRef.current?.scrollTo({ y: Math.max(0, y - 8), animated: true });
+  }, []);
   const [copyDays, setCopyDays] = useState(null); // recent logged days | null (picker hidden)
 
   // Leaving the day, or deselecting the last row, drops selection mode
@@ -634,6 +643,7 @@ export default function DiaryScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
@@ -773,20 +783,25 @@ export default function DiaryScreen({ navigation }) {
               </View>
             ) : null}
             {mealSlots.map((slot, i) => (
-              <AnimatedEntrance key={slot.key} index={i}>
-                <MealSection
-                  slot={slot}
-                  entries={entriesBySlot[slot.key] ?? []}
-                  onAdd={() => addFood(slot.key)}
-                  onQuickAdd={() => setQuickAddSlot(slot.key)}
-                  onEdit={openEditSheet}
-                  onDelete={requestDelete}
-                  selectionMode={selectionMode}
-                  selectedIds={selectedIds}
-                  onLongPressEntry={enterSelection}
-                  onToggleSelect={toggleSelect}
-                />
-              </AnimatedEntrance>
+              <View
+                key={slot.key}
+                onLayout={(e) => { mealLayoutY.current[slot.key] = e.nativeEvent.layout.y; }}
+              >
+                <AnimatedEntrance index={i}>
+                  <MealSection
+                    slot={slot}
+                    entries={entriesBySlot[slot.key] ?? []}
+                    onAdd={() => addFood(slot.key)}
+                    onQuickAdd={() => setQuickAddSlot(slot.key)}
+                    onEdit={openEditSheet}
+                    onDelete={requestDelete}
+                    selectionMode={selectionMode}
+                    selectedIds={selectedIds}
+                    onLongPressEntry={enterSelection}
+                    onToggleSelect={toggleSelect}
+                  />
+                </AnimatedEntrance>
+              </View>
             ))}
             {!selectionMode ? (
               <>
@@ -843,6 +858,7 @@ export default function DiaryScreen({ navigation }) {
         entries={entries}
         dateLabel={friendlyDate(selectedDate)}
         onClose={() => setBreakdownVisible(false)}
+        onSelectMeal={jumpToMeal}
       />
 
       {/* FABs hide while selecting so the bottom toolbar owns the
