@@ -40,6 +40,35 @@ describe('normaliseUsdaFood', () => {
     });
   });
 
+  test('keeps a millilitre serving size for beverages (D-5), instead of dropping to 100', () => {
+    const r = normaliseUsdaFood({
+      fdcId: 7, description: 'Cola',
+      servingSize: 330, servingSizeUnit: 'ml',
+      foodNutrients: [
+        { nutrientNumber: '208', value: 42 },
+        { nutrientNumber: '203', value: 0 },
+        { nutrientNumber: '205', value: 10.6 },
+        { nutrientNumber: '204', value: 0 },
+      ],
+    });
+    expect(r.serving_g).toBe(330); // was 100 before the fix
+    expect(r.kcal_100g).toBe(42);  // per-100g density untouched
+  });
+
+  test('still falls back to 100 for a non-mass serving unit (e.g. "cup")', () => {
+    const r = normaliseUsdaFood({
+      fdcId: 8, description: 'Soup',
+      servingSize: 1, servingSizeUnit: 'cup',
+      foodNutrients: [
+        { nutrientNumber: '208', value: 50 },
+        { nutrientNumber: '203', value: 2 },
+        { nutrientNumber: '205', value: 6 },
+        { nutrientNumber: '204', value: 1 },
+      ],
+    });
+    expect(r.serving_g).toBe(100);
+  });
+
   test('normalises a Branded food via nutrientNumber', () => {
     const r = normaliseUsdaFood({
       fdcId: 99,

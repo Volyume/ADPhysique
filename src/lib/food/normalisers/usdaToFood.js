@@ -46,7 +46,15 @@ export function normaliseUsdaFood(food) {
   }
   const name = food.description || food.lowercaseDescription || 'Unknown';
   const brand = food.brandOwner || food.brandName || null;
-  const servingG = Number.isFinite(food.servingSize) && food.servingSizeUnit === 'g'
+  // Serving size: accept grams AND millilitres (food audit D-5). USDA reports
+  // beverage servings with unit 'ml'/'MLT'; the old guard only accepted 'g', so
+  // every USDA drink silently fell back to a 100 g default, discarding the real
+  // serving (e.g. a 330 ml can -> 100). Treat 1 ml ~= 1 g (the same density
+  // approximation the OFF path already relies on); macros stay per-100g, so this
+  // only fixes the displayed/pre-filled serving, not the nutrition density.
+  const servingUnit = String(food.servingSizeUnit || '').toLowerCase();
+  const servingG = Number.isFinite(food.servingSize)
+    && (servingUnit === 'g' || servingUnit === 'ml' || servingUnit === 'mlt')
     ? food.servingSize : 100;
   return {
     food_ref: `usda:${food.fdcId}`,
