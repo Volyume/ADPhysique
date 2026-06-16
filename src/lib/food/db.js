@@ -165,6 +165,25 @@ export async function getFoodEntriesForDay(userId, entryDate) {
 }
 
 /**
+ * Recent days (before asOfDate) that have live food logged, for the "copy a
+ * previous day" picker (food audit F-3). Returns the most recent `limit` days,
+ * each with how many items and the day's calories so the user can recognise it.
+ */
+export async function getRecentLoggedDays(userId, asOfDate, limit = 14) {
+  if (!userId || !asOfDate) return [];
+  const d = await db();
+  return d.getAllAsync(
+    `SELECT entry_date, COUNT(*) AS count, SUM(kcal) AS kcal
+     FROM food_entries
+     WHERE user_id = ? AND deleted_at IS NULL AND entry_date < ?
+     GROUP BY entry_date
+     ORDER BY entry_date DESC
+     LIMIT ?`,
+    [userId, asOfDate, limit]
+  );
+}
+
+/**
  * Confirm a day's planned meals as eaten (adherence model 2026-06-15): flips
  * is_planned 1 -> 0 so they count toward the rollup/adherence/FFM and sync as
  * normal actuals. Bumps logged_at + updated_at. Returns the number confirmed.

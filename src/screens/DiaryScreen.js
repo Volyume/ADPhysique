@@ -20,7 +20,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type } from '../styles/theme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
-  getFoodEntriesForDay, deleteFoodEntry, restoreFoodEntry, updateFoodEntry, getRollupForDay,
+  getFoodEntriesForDay, getRecentLoggedDays, deleteFoodEntry, restoreFoodEntry, updateFoodEntry, getRollupForDay,
   setWater, getWater, createSavedMeal, confirmPlannedDay, clearPlannedDay,
 } from '../lib/food/db';
 import { localDayKey, parseLocalDay } from '../lib/dayKey';
@@ -298,6 +298,7 @@ export default function DiaryScreen({ navigation }) {
   const [saveMealItems, setSaveMealItems] = useState(null); // captured items | null
   const [saveMealName, setSaveMealName] = useState('');
   const [breakdownVisible, setBreakdownVisible] = useState(false);
+  const [copyDays, setCopyDays] = useState(null); // recent logged days | null (picker hidden)
 
   // Leaving the day, or deselecting the last row, drops selection mode
   // so the toolbar never lingers empty.
@@ -476,9 +477,52 @@ export default function DiaryScreen({ navigation }) {
     }
   }, [userId, load, toast]);
 
-  // "Copy yesterday" FAB: replays yesterday's entries into today.
-  // Re-uses logFoodEntry under the hood (via the food-domain layer)
-  // so the rollup trigger and sync queue stay consistent.
+  // Shared copy core: replay a source day's entries into the day in view.
+  // Re-uses logFoodEntry (via the food-domain layer) so the rollup trigger and
+  // sync queue stay consistent, and surfaces partial failures rather than
+  // swallowing them (food review U-M6). Used by both "Copy yesterday" and the
+  // "copy a previous day" picker (food audit F-3).
+  const copyFromDate = useCallback(async (sourceDate) => {
+    if (!userId || !sourceDate) return;
+    const srcEntries = await getFoodEntriesForDay(userId, sourceDate).catch(() => []);
+    if (!srcEntries || srcEntries.length === 0) {
+      toast.show('Nothing logged that day to copy.', { variant: 'info' });
+      return;
+    }
+    // eslint-disable-next-line global-require
+    const { logFoodEntry } = require('../lib/food/db');
+    let ok = 0;
+    let failed = 0;
+    for (const e of srcEntries) {
+      try {
+        await logFoodEntry(userId, {
+          entryDate: selectedDate,
+          mealSlot: e.meal_slot,
+          foodRef: e.food_ref,
+          quantityG: e.quantity_g,
+          kcal: e.kcal,
+          proteinG: e.protein_g,
+          carbsG: e.carbs_g,
+          fatG: e.fat_g,
+          fibreG: e.fibre_g ?? null,
+        });
+        ok++;
+      } catch (_) {
+        failed++;
+      }
+    }
+    await load();
+    if (failed > 0) {
+      toast.show(
+        ok > 0 ? `Copied ${ok}; ${failed} couldn't be added.` : "Couldn't copy. Try again.",
+        { variant: ok > 0 ? 'info' : 'error' },
+      );
+    } else {
+      toast.show(`Copied ${ok} ${ok === 1 ? 'item' : 'items'}.`, { variant: 'success' });
+    }
+  }, [userId, selectedDate, load, toast]);
+
+  // "Copy yesterday" quick action (empty-state CTA): confirm, then copy.
   const copyYesterday = useCallback(async () => {
     if (!userId) return;
     const yesterday = shiftDate(selectedDate, -1);
@@ -489,51 +533,21 @@ export default function DiaryScreen({ navigation }) {
     }
     appAlert(
       `Copy ${yEntries.length} ${yEntries.length === 1 ? 'entry' : 'entries'} from yesterday?`,
-      'They\'ll land in today\'s diary at the same meal slots.',
+      'They\'ll land in this day\'s diary at the same meal slots.',
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Copy',
-          onPress: async () => {
-            // eslint-disable-next-line global-require
-            const { logFoodEntry } = require('../lib/food/db');
-            let ok = 0;
-            let failed = 0;
-            for (const e of yEntries) {
-              try {
-                await logFoodEntry(userId, {
-                  entryDate: selectedDate,
-                  mealSlot: e.meal_slot,
-                  foodRef: e.food_ref,
-                  quantityG: e.quantity_g,
-                  kcal: e.kcal,
-                  proteinG: e.protein_g,
-                  carbsG: e.carbs_g,
-                  fatG: e.fat_g,
-                  fibreG: e.fibre_g ?? null,
-                });
-                ok++;
-              } catch (_) {
-                failed++;
-              }
-            }
-            await load();
-            // Surface the outcome instead of silently swallowing failures
-            // (food review U-M6), mirroring the FoodSearch logPlate behaviour.
-            if (failed > 0) {
-              toast.show(
-                ok > 0 ? `Copied ${ok}; ${failed} couldn't be added.` : "Couldn't copy yesterday. Try again.",
-                { variant: ok > 0 ? 'info' : 'error' },
-              );
-            } else {
-              toast.show(`Copied ${ok} ${ok === 1 ? 'item' : 'items'} from yesterday.`, { variant: 'success' });
-            }
-          },
-        },
+        { text: 'Copy', onPress: () => copyFromDate(yesterday) },
       ],
     );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, selectedDate, load]);
+  }, [userId, selectedDate, copyFromDate, toast]);
+
+  // "Copy a previous day" picker (food audit F-3): open a list of recent days
+  // with food logged, before the day in view; tapping one copies it in.
+  const openCopyPicker = useCallback(async () => {
+    if (!userId) return;
+    const days = await getRecentLoggedDays(userId, selectedDate, 14).catch(() => []);
+    setCopyDays(days || []);
+  }, [userId, selectedDate]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -566,6 +580,14 @@ export default function DiaryScreen({ navigation }) {
             </TouchableOpacity>
           </View>
           <View style={[styles.dayPagerSide, styles.dayPagerSideRight]}>
+            <TouchableOpacity
+              onPress={openCopyPicker}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Copy a previous day into this day"
+            >
+              <Ionicons name="copy-outline" size={22} color={colors.textPrimary} />
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => navigation.navigate('FoodInsights')}
               hitSlop={12}
@@ -824,6 +846,37 @@ export default function DiaryScreen({ navigation }) {
           </Pressable>
         </Pressable>
       </Modal>
+
+      <Modal
+        visible={copyDays != null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCopyDays(null)}
+      >
+        <Pressable style={styles.moveBackdrop} onPress={() => setCopyDays(null)}>
+          <Pressable style={styles.moveCard} onPress={() => {}}>
+            <Text style={styles.moveTitle}>Copy a previous day</Text>
+            {copyDays && copyDays.length === 0 ? (
+              <Text style={styles.saveMealHint}>No earlier days with food logged yet.</Text>
+            ) : (
+              (copyDays || []).map((d) => (
+                <TouchableOpacity
+                  key={d.entry_date}
+                  style={styles.moveOption}
+                  onPress={() => { setCopyDays(null); copyFromDate(d.entry_date); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Copy ${friendlyDate(d.entry_date)}, ${d.count} ${d.count === 1 ? 'item' : 'items'}`}
+                >
+                  <Text style={styles.moveOptionText}>{friendlyDate(d.entry_date)}</Text>
+                  <Text style={styles.copyRowMeta}>
+                    {d.count} {d.count === 1 ? 'item' : 'items'} · {Math.round(d.kcal ?? 0)} kcal
+                  </Text>
+                </TouchableOpacity>
+              ))
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -910,6 +963,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm, borderRadius: radius.md,
   },
   moveOptionText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
+  copyRowMeta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: 2 },
   saveMealHint: {
     color: colors.textMuted, fontSize: fontSize.sm,
     paddingHorizontal: spacing.sm, paddingBottom: spacing.md,
