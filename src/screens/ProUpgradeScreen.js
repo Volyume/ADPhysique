@@ -336,7 +336,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
           </View>
           <Text style={styles.title}>Go Pro</Text>
           <Text style={styles.subtitle}>
-            Free is the logbook a coach would write in. Pro is the coach who writes back.
+            Free keeps your training log. Pro reads it like a coach and adjusts your plan as you go.
           </Text>
 
           <View style={styles.perks}>

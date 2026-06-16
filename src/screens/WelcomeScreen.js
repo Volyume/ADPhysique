@@ -91,7 +91,7 @@ export default function WelcomeScreen({ navigation }) {
                     <Text style={styles.betaBadgeText}>Free for 14 days</Text>
                   </View>
                 </View>
-                <Text style={styles.proSubtitle}>The coach who writes back.</Text>
+                <Text style={styles.proSubtitle}>A coach that reads your training and adjusts your plan.</Text>
               </View>
             </View>
 
@@ -131,7 +131,7 @@ export default function WelcomeScreen({ navigation }) {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.freeTitle}>Free</Text>
-                <Text style={styles.freeSubtitle}>The logbook a coach would write in.</Text>
+                <Text style={styles.freeSubtitle}>Everything you need to log your training.</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </View>
