@@ -30,7 +30,7 @@
 export const MIN_BANK_DELTA_KCAL = 50;
 // Hard ceiling on how much a single day can be bumped, regardless of room. The
 // band-max cap usually binds first; this is a belt-and-braces upper bound.
-// [INFERENCE — founder to confirm value.]
+// Founder-confirmed value (2026-06-16).
 export const MAX_BANK_DELTA_KCAL = 500;
 
 const isNum = (n) => typeof n === 'number' && isFinite(n);
