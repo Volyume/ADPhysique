@@ -588,6 +588,10 @@ export function assembleDayPlan({
     fatWithinTolerance,
     diagnosis,
     unfilledSlots,
+    // Observability (food audit P-7): how many gram-solve close-out passes this
+    // day needed (0-20). A high count means the day only just fit; the service
+    // emits it so slow-converging profiles are visible in production.
+    closeOutIterations: guard,
     seed,
   };
 }

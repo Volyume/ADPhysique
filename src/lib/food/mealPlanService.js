@@ -33,6 +33,25 @@ import { swapFoodInMeal, swapMealInPlan } from './mealSwap';
 import { applyMacroDeltaToPlan } from './planEdit';
 import { normalisePreferences } from './planPreferences';
 import { todayLocalKey, parseLocalDay, localDayKey } from '../dayKey';
+import { track } from '../engineTelemetry';
+
+// Observability for plan assembly (food audit P-7). Best-effort, aggregate-only
+// (counts + kind, never food or user data), never blocks a plan. Surfaces days
+// that only just fit (high close-out iterations) or could not be filled.
+function emitPlanMetrics(kind, days) {
+  try {
+    const ds = Array.isArray(days) ? days.filter(Boolean) : [];
+    if (ds.length === 0) return;
+    track('meal_plan_assembled', {
+      kind,
+      dayCount: ds.length,
+      withinTolerance: ds.filter((d) => d.withinTolerance).length,
+      unfilledDays: ds.filter((d) => (d.unfilledSlots?.length ?? 0) > 0).length,
+      fatInBand: ds.filter((d) => d.fatWithinTolerance).length,
+      maxCloseOutIterations: ds.reduce((m, d) => Math.max(m, d.closeOutIterations ?? 0), 0),
+    });
+  } catch (_) { /* telemetry must never break plan generation */ }
+}
 
 const PLAN_SCHEMA_VERSION = 1;
 
@@ -224,6 +243,7 @@ export async function generateAndSaveMealPlan(userId, profile, { schedule, seed 
     savedMeals: savedMeals.map((m) => ({ id: m.id, name: m.name, slots: Array.isArray(m.slots) ? m.slots : [], totals: m.totals })),
     allowDayCycling,
   });
+  emitPlanMetrics('week', week.days);
   const plan = buildPlanSnapshot({ week, engineTarget, prefs, schedule: sched });
   const id = await saveActiveMealPlan(userId, plan);
   return { id, plan };
@@ -280,6 +300,7 @@ export async function generateAndSaveDayPlan(userId, profile, { seed = Date.now(
     seed,
     savedMeals: savedMeals.map((m) => ({ id: m.id, name: m.name, slots: Array.isArray(m.slots) ? m.slots : [], totals: m.totals })),
   });
+  emitPlanMetrics('day', [day]);
   const plan = buildDayPlanSnapshot({ day, engineTarget, prefs });
   const id = await saveActiveMealPlan(userId, plan);
   return { id, plan };
