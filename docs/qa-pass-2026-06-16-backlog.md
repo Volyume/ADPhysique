@@ -16,6 +16,11 @@ full test + (for features) fresh-eyes review, per CLAUDE.md.
 8. Home strip: remove weight sparkline squiggle + move strip above the workout (U1). `270fe06`
 9. Training partner: deep research (matches/beats the standard), human British copy
    rewrite, recreated the missing `bp-partner-system-rebuild.md` blueprint. `620f4df`
+10. H1 — rename "Plan a bigger day" → "Plan a higher-calorie day" everywhere, plus a
+    plain explanation of the feature on the sheet. `2406b5a`
+11. F1 — calorie banking MOVES PLANNED FOOD (CB-1b): engine spine `1dfad1c`,
+    orchestration + per-day notice + restore-on-clear `bc6746e`. Spec `df76614`.
+    Under fresh-eyes safety review.
 
 ## DECIDED — queued (smaller)
 - D1 Meal variety default → **Repeat**; "Mixed/variety" opt-in in Preferences.
