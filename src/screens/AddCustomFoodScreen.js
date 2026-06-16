@@ -114,6 +114,17 @@ export default function AddCustomFoodScreen({ navigation, route }) {
             { cancelable: false }
           );
         });
+        // Food audit D-6: surface that the sanity gate tripped + the user's
+        // choice. Coded reason + action only, never the typed values.
+        if (userId) {
+          try {
+            // eslint-disable-next-line global-require
+            require('../lib/engineTelemetry').track(userId, 'food_sanity_check_failed', {
+              reason_code: sanity.code ?? 'other',
+              action: confirmed ? 'override' : 'edit',
+            }).catch(() => {});
+          } catch (_) {}
+        }
         if (!confirmed) { setSaving(false); return; }
       }
 
@@ -135,6 +146,22 @@ export default function AddCustomFoodScreen({ navigation, route }) {
             has_fibre: food.fibre100g != null,
           }).catch(() => {});
         } catch (_) {}
+      }
+      // Food audit D-6: when an OCR-prefilled food is saved with fields still
+      // holding their low-confidence read (the user didn't correct them), record
+      // how many — count only, no values — so OCR accuracy is measurable.
+      if (userId && prefillConfidence) {
+        const vals = { kcal, protein, carbs, fat, fibre };
+        const flagged = Object.keys(vals).filter((k) => _unsure(k, vals[k])).length;
+        if (flagged > 0) {
+          try {
+            // eslint-disable-next-line global-require
+            require('../lib/engineTelemetry').track(userId, 'ocr_low_confidence_saved', {
+              fields_flagged: flagged,
+              from: route?.params?.from ?? 'scan',
+            }).catch(() => {});
+          } catch (_) {}
+        }
       }
       const qty = Number(quantityG) || food.servingG;
       // Macros for the logged entry are scaled from per-100g to the actual

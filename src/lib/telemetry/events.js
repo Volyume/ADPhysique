@@ -36,6 +36,19 @@ export const TELEMETRY_EVENTS = Object.freeze([
   { name: 'food_logged',                     deferred: false, panel: 3 },
   { name: 'food_search_attempt',             deferred: false, panel: 3 },
   { name: 'custom_food_created',             deferred: false, panel: 3 },
+  // Food audit D-6 + P-7: data-quality + assembly observability. Counts/flags +
+  // coded reasons only, never food names or values.
+  //   meal_plan_assembled       per-generate: kind, dayCount, withinTolerance,
+  //                             unfilledDays, fatInBand, maxCloseOutIterations
+  //   food_promote_failed       a network food never cached (source only)
+  //   ocr_low_confidence_saved  a custom food saved with low-confidence OCR
+  //                             fields (count of flagged fields only)
+  //   food_sanity_check_failed  sanity gate tripped (coded reason + edit/override)
+  // Server allow-list: supabase/migrate_085_food_quality_telemetry.sql.
+  { name: 'meal_plan_assembled',             deferred: false, panel: 3 },
+  { name: 'food_promote_failed',             deferred: false, panel: 3 },
+  { name: 'ocr_low_confidence_saved',        deferred: false, panel: 3 },
+  { name: 'food_sanity_check_failed',        deferred: false, panel: 3 },
 
   // Panel 4: sync health
   { name: 'sync_run',                        deferred: false, panel: 4 },

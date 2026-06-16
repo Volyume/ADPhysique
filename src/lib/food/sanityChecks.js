@@ -115,14 +115,16 @@ export function checkFibrePlausible(fibre100g) {
 /**
  * Run every sanity check against a food. Returns the first failure
  * if any, otherwise valid. Used to gate insert into custom_foods.
+ * The failure carries a coded `code` (alongside the plain `reason`)
+ * for telemetry — counts/codes only, never the typed values (food audit D-6).
  */
 export function checkFoodSanity(food) {
   const checks = [
-    checkKcalPlausible(food.kcal100g),
-    checkMacroMass(food.protein100g, food.carbs100g, food.fat100g),
-    checkKcalMatchesMacros(food.kcal100g, food.protein100g, food.carbs100g, food.fat100g),
-    checkFibrePlausible(food.fibre100g),
+    { code: 'kcal', result: checkKcalPlausible(food.kcal100g) },
+    { code: 'macro_mass', result: checkMacroMass(food.protein100g, food.carbs100g, food.fat100g) },
+    { code: 'kcal_macro_mismatch', result: checkKcalMatchesMacros(food.kcal100g, food.protein100g, food.carbs100g, food.fat100g) },
+    { code: 'fibre', result: checkFibrePlausible(food.fibre100g) },
   ];
-  const failure = checks.find(c => !c.valid);
-  return failure ?? { valid: true };
+  const failure = checks.find(c => !c.result.valid);
+  return failure ? { ...failure.result, code: failure.code } : { valid: true };
 }

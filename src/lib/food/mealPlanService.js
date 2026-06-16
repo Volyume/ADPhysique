@@ -38,11 +38,12 @@ import { track } from '../engineTelemetry';
 // Observability for plan assembly (food audit P-7). Best-effort, aggregate-only
 // (counts + kind, never food or user data), never blocks a plan. Surfaces days
 // that only just fit (high close-out iterations) or could not be filled.
-function emitPlanMetrics(kind, days) {
+function emitPlanMetrics(userId, kind, days) {
   try {
+    if (!userId) return;
     const ds = Array.isArray(days) ? days.filter(Boolean) : [];
     if (ds.length === 0) return;
-    track('meal_plan_assembled', {
+    track(userId, 'meal_plan_assembled', {
       kind,
       dayCount: ds.length,
       withinTolerance: ds.filter((d) => d.withinTolerance).length,
@@ -243,7 +244,7 @@ export async function generateAndSaveMealPlan(userId, profile, { schedule, seed 
     savedMeals: savedMeals.map((m) => ({ id: m.id, name: m.name, slots: Array.isArray(m.slots) ? m.slots : [], totals: m.totals })),
     allowDayCycling,
   });
-  emitPlanMetrics('week', week.days);
+  emitPlanMetrics(userId, 'week', week.days);
   const plan = buildPlanSnapshot({ week, engineTarget, prefs, schedule: sched });
   const id = await saveActiveMealPlan(userId, plan);
   return { id, plan };
@@ -300,7 +301,7 @@ export async function generateAndSaveDayPlan(userId, profile, { seed = Date.now(
     seed,
     savedMeals: savedMeals.map((m) => ({ id: m.id, name: m.name, slots: Array.isArray(m.slots) ? m.slots : [], totals: m.totals })),
   });
-  emitPlanMetrics('day', [day]);
+  emitPlanMetrics(userId, 'day', [day]);
   const plan = buildDayPlanSnapshot({ day, engineTarget, prefs });
   const id = await saveActiveMealPlan(userId, plan);
   return { id, plan };

@@ -37,7 +37,7 @@ const NETWORK_SEARCH_FANOUT_LIMIT = 10;
  * Returns the local food_ref (`global:<uuid>`) replacing the
  * source-prefixed ref so downstream callers store a stable id.
  */
-async function _promoteToLocal(row) {
+async function _promoteToLocal(row, userId = null) {
   if (!row?.source) return row;
   const d = await db();
   const sourceId = (row.food_ref || '').split(':')[1] || null;
@@ -89,15 +89,20 @@ async function _promoteToLocal(row) {
     );
     if (again?.id) return { ...row, food_ref: `global:${again.id}` };
     // Not a race: the food shows but never caches, so every lookup re-hits the
-    // network. Surface it (source only, no PII) so it's diagnosable (D-n4).
-    try { trackEvent('food.promote.failed', { source: row.source }); } catch (_) { /* tolerate */ }
+    // network. Surface it (source only, no PII) so it's diagnosable. Fixes the
+    // long-broken call here (food audit D-6): it passed the event name as the
+    // userId arg and used an unlisted event, so it never recorded — now the
+    // correct (userId, event, payload) arity + an allow-listed name.
+    if (userId) {
+      try { trackEvent(userId, 'food_promote_failed', { source }); } catch (_) { /* tolerate */ }
+    }
     return row;
   }
 }
 
-async function _promoteAll(rows) {
+async function _promoteAll(rows, userId = null) {
   const out = [];
-  for (const r of rows) out.push(await _promoteToLocal(r));
+  for (const r of rows) out.push(await _promoteToLocal(r, userId));
   return out;
 }
 
@@ -128,7 +133,7 @@ export async function searchFoods(userId, query, { limit = 25 } = {}) {
   // the source modules so this never blocks the UI for long.
   const off = await searchOff(q, NETWORK_SEARCH_FANOUT_LIMIT);
   if (off.length > 0) {
-    const promoted = await _promoteAll(off);
+    const promoted = await _promoteAll(off, userId);
     if (userId) trackEvent(userId, 'food_search_attempt', {
       source_hit: 'off_live', query_len: q.length, ms: Date.now() - t0,
     });
@@ -136,7 +141,7 @@ export async function searchFoods(userId, query, { limit = 25 } = {}) {
   }
   const usda = await searchUsda(q, NETWORK_SEARCH_FANOUT_LIMIT);
   if (usda.length > 0) {
-    const promoted = await _promoteAll(usda);
+    const promoted = await _promoteAll(usda, userId);
     if (userId) trackEvent(userId, 'food_search_attempt', {
       source_hit: 'usda', query_len: q.length, ms: Date.now() - t0,
     });
@@ -168,14 +173,14 @@ export async function resolveBarcode(ean, userId = null) {
 
   const off = await lookupBarcodeOff(ean);
   if (off) {
-    const promoted = await _promoteToLocal(off);
+    const promoted = await _promoteToLocal(off, userId);
     if (userId) trackEvent(userId, 'food_lookup_barcode', { source: 'off_live', ms: Date.now() - t0 });
     return promoted;
   }
 
   const usda = await lookupBarcodeUsda(ean);
   if (usda) {
-    const promoted = await _promoteToLocal(usda);
+    const promoted = await _promoteToLocal(usda, userId);
     if (userId) trackEvent(userId, 'food_lookup_barcode', { source: 'usda', ms: Date.now() - t0 });
     return promoted;
   }
