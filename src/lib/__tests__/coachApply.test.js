@@ -9,6 +9,7 @@ import {
   markApplied,
   isApplied,
   computeVolumeApply,
+  ABSOLUTE_WEEKLY_SET_CEILING,
 } from '../coachApply';
 
 describe('computeCalorieTargets', () => {
@@ -216,6 +217,27 @@ describe('computeVolumeApply', () => {
     const out = computeVolumeApply(rows, 1);
     const chest = out.find(c => c.muscle === 'chest');
     expect(chest).toMatchObject({ muscle: 'chest', plannedSets: 13, mev: 6, mav: 14, mrv: 22 });
+  });
+
+  // PROG-1 (audit §2): a row with a null mrv must NOT let a push run away to
+  // +Infinity. It must fall back to mav, then to the absolute backstop.
+  test('PROG-1: null mrv falls back to mav as the push ceiling', () => {
+    const out = computeVolumeApply([{ muscle: 'chest', planned_sets: 13, mev: 6, mav: 14, mrv: null }], 5);
+    // 13 + 5 = 18 → clamped to mav 14, never uncapped
+    expect(out[0].plannedSets).toBe(14);
+  });
+
+  test('PROG-1: null mrv AND null mav falls back to the absolute ceiling, never +Infinity', () => {
+    const out = computeVolumeApply([{ muscle: 'chest', planned_sets: 28, mev: 6, mav: null, mrv: null }], 10);
+    // 28 + 10 = 38 → clamped to ABSOLUTE_WEEKLY_SET_CEILING (30), finite
+    expect(out[0].plannedSets).toBe(ABSOLUTE_WEEKLY_SET_CEILING);
+    expect(Number.isFinite(out[0].plannedSets)).toBe(true);
+  });
+
+  test('PROG-1: a present mrv still binds even when below mav (mrv wins)', () => {
+    // mrv must take precedence over the mav fallback when it is present.
+    const out = computeVolumeApply([{ muscle: 'chest', planned_sets: 10, mev: 6, mav: 20, mrv: 12 }], 5);
+    expect(out[0].plannedSets).toBe(12);
   });
 });
 

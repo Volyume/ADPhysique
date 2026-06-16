@@ -21,6 +21,16 @@
 
 export const KCAL_FLOOR = 1200;
 
+// Absolute weekly per-muscle set ceiling used as a last-resort backstop in
+// computeVolumeApply when a planned_muscle_volume row carries neither mrv nor
+// mav (degenerate/partially-synced data). Without it the apply path fell back
+// to +Infinity, leaving that muscle's volume progression uncapped — the one
+// line that could let progression run away (plan-progression-logging audit
+// 2026-06-16, §2 "ONE residual risk"; PROG-1). Set above any legitimate
+// division-scaled MRV (Bikini glutes top out near 30) so it never clips real
+// data; it only bites genuinely malformed rows.
+export const ABSOLUTE_WEEKLY_SET_CEILING = 30;
+
 /**
  * Compute new nutrition targets for a calorie adjustment.
  *
@@ -242,7 +252,10 @@ export function computeVolumeApply(plannedRows, volumeDelta) {
   const changes = [];
   for (const row of plannedRows) {
     const mev = row.mev ?? 0;
-    const mrv = row.mrv ?? Number.POSITIVE_INFINITY;
+    // Hard ceiling for the push. Prefer mrv; fall back to mav, then to the
+    // absolute backstop — never +Infinity, so a null-mrv row cannot uncap
+    // progression (PROG-1, audit §2).
+    const mrv = row.mrv ?? row.mav ?? ABSOLUTE_WEEKLY_SET_CEILING;
     const current = row.planned_sets ?? 0;
     let next = current + volumeDelta;
     if (next < mev) next = mev;
