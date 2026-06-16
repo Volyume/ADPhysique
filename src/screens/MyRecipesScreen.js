@@ -16,7 +16,7 @@
 import { todayLocalKey } from '../lib/dayKey';
 import { appAlert } from '../components/AppAlert';
 import { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -41,6 +41,10 @@ export default function MyRecipesScreen({ navigation, route }) {
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loggingId, setLoggingId] = useState(null);
+  // Servings picker (food audit F-4): tapping a recipe opens this prompt so the
+  // user logs the portion they actually ate, instead of always one serving.
+  const [servePrompt, setServePrompt] = useState(null); // the recipe being logged
+  const [servings, setServings] = useState(1);
 
   const reload = useCallback(async () => {
     if (!userId) return;
@@ -65,22 +69,41 @@ export default function MyRecipesScreen({ navigation, route }) {
     navigation.navigate('RecipeBuilder', { recipeId: recipe.id, mealSlot, entryDate });
   }
 
-  // Tap a recipe to log one serving to the slot the user came from, then
-  // drop back to where they were. Returns null when the recipe has no
-  // resolvable ingredients yet, so we tell them to add one.
-  async function onLog(recipe) {
+  // Tap a recipe to choose how many servings, then log to the slot the user
+  // came from and drop back to where they were.
+  function onLog(recipe) {
     if (loggingId) return;
+    setServings(1);
+    setServePrompt(recipe);
+  }
+
+  const stepServings = (delta) => {
+    setServings((s) => {
+      const next = Math.round((s + delta) * 2) / 2; // 0.5 steps, no float drift
+      return Math.min(20, Math.max(0.5, next));
+    });
+  };
+  const fmtServings = (s) => (Number.isInteger(s) ? String(s) : s.toFixed(1));
+
+  // Commit the log with the chosen servings. applyRecipeToDiary returns null
+  // when the recipe has no resolvable ingredients yet, so we tell them to add one.
+  async function confirmLog() {
+    const recipe = servePrompt;
+    if (!recipe || loggingId) return;
     setLoggingId(recipe.id);
     try {
-      const id = await applyRecipeToDiary(userId, recipe.id, { mealSlot, entryDate, servings: 1 });
+      const id = await applyRecipeToDiary(userId, recipe.id, { mealSlot, entryDate, servings });
       if (id) {
+        setServePrompt(null);
         navigation.goBack();
         return;
       }
       setLoggingId(null);
+      setServePrompt(null);
       toast.show('Add at least one ingredient first.', { variant: 'info' });
     } catch (_) {
       setLoggingId(null);
+      setServePrompt(null);
       toast.show('Couldn\'t log.', { variant: 'error' });
     }
   }
@@ -174,6 +197,56 @@ export default function MyRecipesScreen({ navigation, route }) {
           contentContainerStyle={{ paddingBottom: spacing.xxl }}
         />
       )}
+
+      <Modal
+        visible={!!servePrompt}
+        transparent
+        animationType="fade"
+        onRequestClose={() => { if (!loggingId) setServePrompt(null); }}
+      >
+        <Pressable style={styles.backdrop} onPress={() => { if (!loggingId) setServePrompt(null); }}>
+          <Pressable style={styles.sheet} onPress={() => {}}>
+            <Text style={styles.sheetTitle} numberOfLines={1}>{servePrompt?.name}</Text>
+            <Text style={styles.sheetSub}>How many servings?</Text>
+            <View style={styles.stepper}>
+              <TouchableOpacity
+                onPress={() => stepServings(-0.5)}
+                disabled={servings <= 0.5}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Fewer servings"
+                style={[styles.stepBtn, servings <= 0.5 && styles.stepBtnDisabled]}
+              >
+                <Ionicons name="remove" size={24} color={servings <= 0.5 ? colors.textMuted : colors.primary} />
+              </TouchableOpacity>
+              <Text style={styles.stepValue} accessibilityLabel={`${fmtServings(servings)} servings`}>
+                {fmtServings(servings)}
+              </Text>
+              <TouchableOpacity
+                onPress={() => stepServings(0.5)}
+                disabled={servings >= 20}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="More servings"
+                style={[styles.stepBtn, servings >= 20 && styles.stepBtnDisabled]}
+              >
+                <Ionicons name="add" size={24} color={servings >= 20 ? colors.textMuted : colors.primary} />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={styles.logBtn}
+              onPress={confirmLog}
+              disabled={!!loggingId}
+              accessibilityRole="button"
+              accessibilityLabel={`Log ${fmtServings(servings)} ${servings === 1 ? 'serving' : 'servings'}`}
+            >
+              {loggingId
+                ? <ActivityIndicator color={colors.onPrimary} />
+                : <Text style={styles.logBtnText}>Log {fmtServings(servings)} {servings === 1 ? 'serving' : 'servings'}</Text>}
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -204,4 +277,33 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: radius.md,
   },
   emptyCtaText: { ...type.bodyStrong, color: colors.onPrimary },
+  // Servings picker modal (food audit F-4)
+  backdrop: {
+    flex: 1, backgroundColor: colors.scrim,
+    justifyContent: 'center', alignItems: 'center', padding: spacing.lg,
+  },
+  sheet: {
+    width: '100%', maxWidth: 360,
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    padding: spacing.lg, gap: spacing.md, alignItems: 'center',
+  },
+  sheetTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
+  sheetSub: { color: colors.textMuted, fontSize: fontSize.sm },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl },
+  stepBtn: {
+    width: 48, height: 48, borderRadius: 24,
+    borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  stepBtnDisabled: { opacity: 0.5 },
+  stepValue: {
+    ...type.title, color: colors.textPrimary, minWidth: 56, textAlign: 'center',
+    fontVariant: ['tabular-nums'],
+  },
+  logBtn: {
+    alignSelf: 'stretch', alignItems: 'center',
+    paddingVertical: spacing.md, borderRadius: radius.md,
+    backgroundColor: colors.primary, minHeight: 48, justifyContent: 'center',
+  },
+  logBtnText: { ...type.bodyStrong, color: colors.onPrimary },
 });

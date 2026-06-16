@@ -98,6 +98,23 @@ These are the biggest "elevate it further" moves competitors use. Each collides 
 
 ---
 
+## §5a — BUILD LOG (2026-06-16)
+
+Built on `claude/audit-work-quality-review-benrin`, one item per commit, lint + full
+suite green after each:
+- **P-1 DONE** — `fatWithinTolerance` reported on every day (`mealPlanAssembler.js`).
+- **D-1 DONE** — `checkFibrePlausible` in the sanity gate; audit's unsafe suggestions
+  (fibre≤carbs, tighter drift, sodium/sugar) deliberately dropped (see D-1 note).
+- **P-4/P-5/P-6 DONE** — `diagnoseDayPlan` → `day.diagnosis { ok, reason, severity, hint }`
+  (oversized-pin call-out, restricted-pool hint, severity tiers). No silent meal-count backoff.
+- **F-1 DONE** — Undo for delete/swipe/bulk via `restoreFoodEntry`/`restoreEntries` + Undo toast.
+- **F-4 DONE** — recipe servings stepper modal in `MyRecipesScreen` (was always 1 serving).
+
+**Deferred (not in the approved Tier-B option):** F-3 copy-from-any-date (no date-picker
+dependency exists and adding one needs founder sign-off; a list-of-recent-days picker is
+the recommended dependency-free build). **Parked by founder decision:** §4 photo/voice logging.
+Remaining backlog (Tier B/C below) is unbuilt.
+
 ## §5 — Prioritised build backlog
 
 Ranked by value ÷ effort, with rule-flags. **None started.**
