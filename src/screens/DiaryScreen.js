@@ -680,17 +680,21 @@ export default function DiaryScreen({ navigation }) {
         </View>
 
         {/* "Plan a higher-calorie day" (calorie banking, CB-1). Only when banking
-            is allowed (not floored / cycling / refeed / ED flag). */}
+            is allowed (not floored / cycling / refeed / ED flag). The label is
+            constant and matches the sheet title: on a compensating lower day
+            "Adjust your higher-calorie day" read as a contradiction next to the
+            "Lower-calorie day" chip. The active bank is still surfaced by the day
+            chip and the sheet's "planned for …/Clear" row. */}
         {bankingAvailable && !selectionMode ? (
           <TouchableOpacity
             style={styles.bankRow}
             onPress={() => setBankSheetVisible(true)}
             accessibilityRole="button"
-            accessibilityLabel={bankActiveThisWeek ? 'Adjust your higher-calorie day' : 'Plan a higher-calorie day'}
+            accessibilityLabel="Plan a higher-calorie day"
           >
             <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
             <Text style={styles.bankRowText}>
-              {bankActiveThisWeek ? 'Adjust your higher-calorie day' : 'Plan a higher-calorie day'}
+              Plan a higher-calorie day
             </Text>
           </TouchableOpacity>
         ) : null}
