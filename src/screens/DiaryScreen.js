@@ -28,7 +28,8 @@ import { resolveFoodRef } from '../lib/food/sources/localCache';
 import { getNutritionTargets, hasWorkoutOnDate, getFirstWorkoutDateOnOrAfter, getOpenEdPatternFlag, getLatestBodyWeight, getLatestBodyComposition } from '../lib/database';
 import { computeFFMFloor } from '../lib/nutritionEngine';
 import { targetWasFloored } from '../lib/food/mealPlanAssembler';
-import { applyBankToTarget, safeDayFloorKcal, displayBankedDelta } from '../lib/food/calorieBank';
+import { safeDayFloorKcal, displayBankedDelta } from '../lib/food/calorieBank';
+import { resolveEffectiveTargets, dayTypeLabel } from '../lib/food/effectiveTargets';
 import { resyncBankedPlannedFood, restoreUnbankedPlannedFood } from '../lib/food/mealPlanService';
 import { buildPlanEditNarration } from '../lib/food/planExplain';
 import CalorieBankSheet from '../components/food/CalorieBankSheet';
@@ -205,32 +206,12 @@ export default function DiaryScreen({ navigation }) {
   // (row 6) swaps in the training-day or rest-day split; otherwise a banked
   // day shifts kcal via carbs. kcal maps to targetKcal so MacroRings reads it
   // like the flat target.
-  const effectiveTargets = useMemo(() => {
-    if (!targets) return targets;
-    const day = isRefeedDay
-      ? refeed
-      : macroCycle
-      ? (isTrainingDay ? macroCycle.trainingDay : macroCycle.restDay)
-      : null;
-    if (!day) return bankedDelta ? applyBankToTarget(targets, bankedDelta) : targets;
-    return {
-      ...targets,
-      targetKcal: day.kcal ?? targets.targetKcal,
-      proteinG: day.proteinG ?? targets.proteinG,
-      carbsG: day.carbsG ?? targets.carbsG,
-      fatG: day.fatG ?? targets.fatG,
-    };
-  }, [macroCycle, refeed, isRefeedDay, targets, isTrainingDay, bankedDelta]);
+  const effectiveTargets = useMemo(
+    () => resolveEffectiveTargets(targets, { isRefeedDay, refeed, macroCycle, isTrainingDay, bankedDelta }),
+    [macroCycle, refeed, isRefeedDay, targets, isTrainingDay, bankedDelta],
+  );
 
-  const dayTypeLabel = isRefeedDay
-    ? 'Refeed day'
-    : macroCycle
-    ? (isTrainingDay ? 'Training day' : 'Rest day')
-    : bankedDelta > 0
-    ? 'Higher-calorie day'
-    : bankedDelta < 0
-    ? 'Lower-calorie day'
-    : null;
+  const dayTypeChip = dayTypeLabel({ isRefeedDay, macroCycle, isTrainingDay, bankedDelta });
 
   // Banking handlers (CB-1). bankingAvailable is computed above (governs the
   // control AND any persisted bank's display).
@@ -693,7 +674,7 @@ export default function DiaryScreen({ navigation }) {
           <MacroRings
             rollup={rollup}
             targets={effectiveTargets}
-            dayTypeLabel={dayTypeLabel}
+            dayTypeLabel={dayTypeChip}
             onPress={entries.length ? () => setBreakdownVisible(true) : undefined}
           />
         </View>
