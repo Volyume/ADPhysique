@@ -22,6 +22,7 @@ import usePartners from '../hooks/usePartners';
 import { ticksLabel } from '../lib/partners/signals';
 import { calculateWeeklyVolume, getVolumeStatus, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine } from '../lib/algorithms';
 import { getVolumeInsight, getVolumeWhy } from '../lib/volumeInsightCopy';
+import { topSetFromExerciseData, intensityTier, shareSessionName } from '../lib/sessionShareData';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
 import { syncWorkout } from '../lib/sync';
@@ -572,33 +573,17 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   function handleShareCard() {
     // Top set across the whole session, heaviest non-warmup set drives the
     // "best lift" highlight on the share card.
-    let topSet = null;
-    let topWeight = 0;
-    for (const ex of exerciseData || []) {
-      for (const s of ex.loggedSets || []) {
-        if (s.setType === 'warmup') continue;
-        const w = parseFloat(s.weight) || 0;
-        if (w > topWeight) {
-          topWeight = w;
-          topSet = { weight: w, reps: s.reps || 0, exerciseName: ex.name };
-        }
-      }
-    }
+    const topSet = topSetFromExerciseData(exerciseData);
 
     // Intensity tier, drives the badge on the share card. Heuristic, but
     // gives a "great workout" flavour without needing a full grading system.
     const sets = workingSetCount ?? setCount ?? 0;
     const ton = tonnage || 0;
-    let intensityTier = 'solid';
-    if (detectedPRs.length >= 2 || ton > 8000 || sets >= 25) intensityTier = 'epic';
-    else if (detectedPRs.length >= 1 || ton > 4000 || sets >= 18) intensityTier = 'tough';
+    const tier = intensityTier(detectedPRs.length, ton, sets);
 
     // Title with the real day name (e.g. "Back + Delts (Width)") when we have
     // it. Fall back to a join of the first exercises, then a generic label.
-    const sessionName = (routineName && routineName.trim())
-      || (exerciseNames.length > 0
-        ? exerciseNames.slice(0, 2).join(' & ') + (exerciseNames.length > 2 ? ' +more' : '')
-        : 'Session Complete');
+    const sessionName = shareSessionName(routineName, exerciseNames);
     const sessionData = {
       sessionName,
       duration: durationMinutes || 0,
@@ -608,7 +593,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       exercises: exerciseNames,
       prCount: detectedPRs.length,
       topSet,
-      intensityTier,
+      intensityTier: tier,
     };
     const prData = detectedPRs.length > 0 ? detectedPRs[0] : null;
     navigation.navigate('ShareCard', { sessionData, prData });
