@@ -99,6 +99,39 @@ export function deltaSum(perDayDeltaKcal = {}) {
   return Object.values(perDayDeltaKcal).reduce((a, n) => a + (Number(n) || 0), 0);
 }
 
+/**
+ * The largest bump (kcal) that planCalorieBank would actually apply for this
+ * big day — i.e. the same cap it computes internally, exposed so the UI can size
+ * its "how much extra" control to the real headroom instead of offering dead
+ * range above the cap. Read-only: this changes no safety behaviour; the clamp
+ * itself still happens inside planCalorieBank.
+ *
+ * Returns 0 when no meaningful bump is possible (the plan would refuse), so the
+ * caller can fall back to the minimum step and surface the refusal copy.
+ */
+export function maxApplicableBumpKcal({
+  perDayBaseKcal,
+  bigDayKey,
+  floorKcal,
+  bandMaxKcal,
+  maxBankDelta = MAX_BANK_DELTA_KCAL,
+} = {}) {
+  if (!perDayBaseKcal || typeof perDayBaseKcal !== 'object') return 0;
+  const keys = Object.keys(perDayBaseKcal);
+  if (keys.length < 2 || !keys.includes(bigDayKey)) return 0;
+  if (!isNum(floorKcal) || !isNum(bandMaxKcal) || !isNum(maxBankDelta)) return 0;
+  if (keys.some((k) => !isNum(perDayBaseKcal[k]))) return 0;
+
+  const others = keys.filter((k) => k !== bigDayKey);
+  const n = others.length;
+  const roomUp = bandMaxKcal - perDayBaseKcal[bigDayKey];
+  const roomDownMin = Math.min(...others.map((k) => perDayBaseKcal[k] - floorKcal));
+  const maxSpread = roomDownMin * n;
+
+  const cap = Math.floor(Math.min(maxBankDelta, roomUp, maxSpread));
+  return cap >= MIN_BANK_DELTA_KCAL ? cap : 0;
+}
+
 // kcal per gram of carbohydrate. Banking moves its delta through CARBS — the
 // lever — holding protein and fat, mirroring the engine's protein-protected
 // day cycle (dayVariantTargets).

@@ -6,7 +6,7 @@
  */
 import {
   planCalorieBank, deltaSum, bankedDeltaForDay, applyBankToTarget,
-  sexFloorKcal, safeDayFloorKcal, displayBankedDelta,
+  sexFloorKcal, safeDayFloorKcal, displayBankedDelta, maxApplicableBumpKcal,
   MIN_BANK_DELTA_KCAL, MAX_BANK_DELTA_KCAL,
 } from '../calorieBank';
 
@@ -64,6 +64,40 @@ describe('planCalorieBank — caps to the band max', () => {
     });
     expect(r.ok).toBe(true);
     expect(r.appliedBumpKcal).toBe(MAX_BANK_DELTA_KCAL);
+  });
+});
+
+describe('maxApplicableBumpKcal — the UI ceiling matches what plan applies', () => {
+  test('equals the bump planCalorieBank applies for an over-large request (band binds)', () => {
+    const args = { perDayBaseKcal: week(2600), bigDayKey: 'sat', floorKcal: 1500, bandMaxKcal: 2860 };
+    expect(maxApplicableBumpKcal(args)).toBe(260); // room up = 2860 - 2600
+    const r = planCalorieBank({ ...args, requestedBumpKcal: 100000 });
+    expect(maxApplicableBumpKcal(args)).toBe(r.appliedBumpKcal);
+  });
+
+  test('binds to MAX_BANK_DELTA_KCAL when there is huge room', () => {
+    expect(maxApplicableBumpKcal({
+      perDayBaseKcal: week(4000), bigDayKey: 'sat', floorKcal: 1500, bandMaxKcal: 9000,
+    })).toBe(MAX_BANK_DELTA_KCAL);
+  });
+
+  test('binds to the floor spread when that is the tightest constraint', () => {
+    // others have only 20 kcal of room each -> 6 * 20 = 120 total spread.
+    expect(maxApplicableBumpKcal({
+      perDayBaseKcal: week(1520), bigDayKey: 'sat', floorKcal: 1500, bandMaxKcal: 9000,
+    })).toBe(120);
+  });
+
+  test('returns 0 when no meaningful bump is possible (plan would refuse)', () => {
+    // room up = 2630 - 2600 = 30, below MIN_BANK_DELTA_KCAL.
+    expect(maxApplicableBumpKcal({
+      perDayBaseKcal: week(2600), bigDayKey: 'sat', floorKcal: 1500, bandMaxKcal: 2630,
+    })).toBe(0);
+  });
+
+  test('returns 0 on invalid input rather than throwing', () => {
+    expect(maxApplicableBumpKcal({})).toBe(0);
+    expect(maxApplicableBumpKcal({ perDayBaseKcal: week(2600), bigDayKey: 'nope', floorKcal: 1500, bandMaxKcal: 2860 })).toBe(0);
   });
 });
 

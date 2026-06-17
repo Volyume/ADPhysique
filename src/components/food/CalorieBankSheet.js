@@ -16,7 +16,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-nativ
 import { Ionicons } from '@expo/vector-icons';
 import BottomSheet from '../BottomSheet';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
-import { planCalorieBank, MAX_BANK_DELTA_KCAL } from '../../lib/food/calorieBank';
+import { planCalorieBank, maxApplicableBumpKcal } from '../../lib/food/calorieBank';
 
 const BUMP_STEP = 50;
 const DEFAULT_BUMP = 150;
@@ -62,11 +62,26 @@ export default function CalorieBankSheet({
     perDayBaseKcal, bigDayKey: bigDay, requestedBumpKcal: requestedBump, floorKcal, bandMaxKcal,
   }), [perDayBaseKcal, bigDay, requestedBump, floorKcal, bandMaxKcal]);
 
+  // The day's real headroom: the most planCalorieBank could apply. The stepper
+  // ceiling is the largest round step at or below it, so every increment changes
+  // the plan and the preview never freezes above an invisible cap. Falls back to
+  // one step when there is no room (the plan then shows its refusal copy).
+  const maxBump = useMemo(() => maxApplicableBumpKcal({
+    perDayBaseKcal, bigDayKey: bigDay, floorKcal, bandMaxKcal,
+  }), [perDayBaseKcal, bigDay, floorKcal, bandMaxKcal]);
+  const stepMax = Math.max(BUMP_STEP, Math.floor(maxBump / BUMP_STEP) * BUMP_STEP);
+
+  // Keep the chosen amount within the current day's ceiling (it can shrink when
+  // the big day changes). Only ever lowers the value.
+  useEffect(() => {
+    setRequestedBump((b) => Math.min(b, stepMax));
+  }, [stepMax]);
+
   const others = Math.max(1, weekDates.length - 1);
   const bigNewKcal = (baseTargetKcal || 0) + (plan.ok ? plan.appliedBumpKcal : 0);
   const perOther = plan.ok ? Math.round(plan.appliedBumpKcal / others) : 0;
 
-  const step = (delta) => setRequestedBump((b) => Math.min(MAX_BANK_DELTA_KCAL, Math.max(BUMP_STEP, b + delta)));
+  const step = (delta) => setRequestedBump((b) => Math.min(stepMax, Math.max(BUMP_STEP, b + delta)));
 
   const apply = () => {
     if (!plan.ok) return;
@@ -134,13 +149,13 @@ export default function CalorieBankSheet({
         <Text style={styles.stepValue} accessibilityLabel={`${requestedBump} kcal`}>+{requestedBump}</Text>
         <TouchableOpacity
           onPress={() => step(BUMP_STEP)}
-          disabled={requestedBump >= MAX_BANK_DELTA_KCAL}
+          disabled={requestedBump >= stepMax}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="More"
-          style={[styles.stepBtn, requestedBump >= MAX_BANK_DELTA_KCAL && styles.stepBtnDisabled]}
+          style={[styles.stepBtn, requestedBump >= stepMax && styles.stepBtnDisabled]}
         >
-          <Ionicons name="add" size={24} color={requestedBump >= MAX_BANK_DELTA_KCAL ? colors.textMuted : colors.primary} />
+          <Ionicons name="add" size={24} color={requestedBump >= stepMax ? colors.textMuted : colors.primary} />
         </TouchableOpacity>
       </View>
 
