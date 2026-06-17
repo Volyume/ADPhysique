@@ -29,6 +29,7 @@ import { sharedStreakLabel } from '../lib/partners/sharedStreak';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
+import { logError } from '../lib/errorLog';
 
 const SEES = [
   'Whether each of you trained this week, shown as a simple count like three of four. Never the numbers behind it.',
@@ -56,7 +57,14 @@ export default function PartnerScreen() {
     setBusy(true);
     const r = await p.invite({ streakEnabled: streakOn });
     setBusy(false);
-    if (!r.ok) { toast.show('Could not create an invite. Check your connection and try again.', { variant: 'error' }); return; }
+    if (!r.ok) {
+      // Capture the real cause (server RPC error vs offline vs auth) — the toast
+      // is deliberately generic, but a discarded error makes the failure
+      // impossible to diagnose from the field.
+      logError('PartnerScreen.handleCreate', new Error(r.error || 'unknown'), { userId: user?.id });
+      toast.show('Could not create an invite. Check your connection and try again.', { variant: 'error' });
+      return;
+    }
     try { await Share.share({ message: r.data.shareMessage }); } catch (_) { /* user dismissed */ }
     p.reload();
   }
