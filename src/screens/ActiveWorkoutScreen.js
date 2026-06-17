@@ -26,7 +26,7 @@ import {
 } from '../lib/algorithms';
 import { rankSwaps } from '../lib/swapEngine';
 import { isClusterType, clusterLabel, summariseCluster, mergeClusterNote } from '../lib/clusterSet';
-import { countProgressSets } from '../lib/workoutHelpers';
+import { countProgressSets, setNumberForKind, getBestAnchorSet, prefillRepsForTarget, isLoggableWeight } from '../lib/workoutHelpers';
 import { formatPerSide, loadUnilateralExercises } from '../lib/unilateral';
 import { FORM_TIPS } from '../lib/formTips';
 import { applyTimeCrunch } from '../lib/mesocycle';
@@ -48,17 +48,9 @@ const SET_TYPE_OPTIONS = [
 // Returns the set to use as the rep-progression anchor.
 // If the same-indexed set was lighter than the session best, anchor to the best set
 // so the pre-fill targets beating the overall high-water mark, not just that slot's history.
-function getBestAnchorSet(sets, workingIdx) {
-  if (!sets || sets.length === 0) return null;
-  const working = sets.filter(s => (s.setType ?? s.set_type ?? 'straight') !== 'warmup');
-  const indexed = working[workingIdx] ?? null;
-  const best = working.reduce((b, s) => (!b || (s.weight || 0) > (b.weight || 0)) ? s : b, null);
-  if (!indexed || !best || (indexed.weight || 0) >= (best.weight || 0)) return indexed ?? best;
-  return best;
-}
-
-// countProgressSets moved to src/lib/workoutHelpers.js (COMP-001) so the
-// Live Activity fix and watch companion share the same counting rule.
+// getBestAnchorSet + countProgressSets live in src/lib/workoutHelpers.js
+// (COMP-001) so the screen, Live Activity and watch companion share the same
+// counting + anchoring rules, and the rules are unit-tested off the screen.
 
 /**
  * One already-logged set in the "This workout" list. Display only, no inputs.
@@ -761,8 +753,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // non-numeric field means the user hasn't entered a load yet, block
     // rather than silently saving a 0 kg set.
     const isBodyweight = /body\s*weight/i.test(exercise.equipment || '');
-    const weightNum = parseFloat(currentSet.weight);
-    if (!isBodyweight && (currentSet.weight === '' || currentSet.weight == null || isNaN(weightNum) || weightNum <= 0)) {
+    if (!isLoggableWeight(currentSet.weight, isBodyweight)) {
       appAlert('Enter weight', `Enter the weight used (in ${units}) before completing this set.`);
       return;
     }
@@ -776,9 +767,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // counted warm-ups, so the first working set after a warm-up was "2").
       // Warm-ups get their own 1,2 sequence; set_type distinguishes them.
       const isWarmupSet = (currentSet.setType ?? 'straight') === 'warmup';
-      const setNumber = loggedSets.filter(s =>
-        ((s.setType ?? s.set_type ?? 'straight') === 'warmup') === isWarmupSet
-      ).length + 1;
+      const setNumber = setNumberForKind(loggedSets, isWarmupSet);
 
       const savedSet = await createWorkoutSet({
         userId: user.id,
@@ -856,10 +845,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         const nextTarget = setTargets[nextWorkingCount];
         if (nextTarget) {
           const prevSetForNext = getBestAnchorSet(prevSets, nextWorkingCount);
-          const beatRep = prevSetForNext ? prevSetForNext.actualReps + 1 : null;
-          const prefillReps = (beatRep && beatRep >= nextTarget.repsMin && beatRep <= nextTarget.repsMax)
-            ? beatRep
-            : nextTarget.repsMin;
+          const prefillReps = prefillRepsForTarget(prevSetForNext, nextTarget);
           setCurrentSet(cs => ({ ...cs, weight: nextTarget.weight, reps: prefillReps }));
         }
       }
@@ -911,10 +897,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         const firstTarget = setTargets[0];
         if (firstTarget) {
           const anchorSet0 = getBestAnchorSet(prevSets, 0);
-          const beatRep = anchorSet0 ? anchorSet0.actualReps + 1 : null;
-          const prefillReps = (beatRep && beatRep >= firstTarget.repsMin && beatRep <= firstTarget.repsMax)
-            ? beatRep
-            : firstTarget.repsMin;
+          const prefillReps = prefillRepsForTarget(anchorSet0, firstTarget);
           setCurrentSet(cs => ({
             ...cs,
             setType: 'straight',
