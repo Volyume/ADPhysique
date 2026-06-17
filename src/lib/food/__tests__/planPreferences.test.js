@@ -18,6 +18,11 @@ describe('normalisePreferences', () => {
   test('empty input yields the defaults', () => {
     expect(normalisePreferences()).toEqual({ ...DEFAULT_PLAN_PREFERENCES });
   });
+  test('the default variety is Repeat (0), not Mixed — varied is opt-in (founder 2026-06-16)', () => {
+    expect(DEFAULT_PLAN_PREFERENCES.variety).toBe(0);
+    expect(normalisePreferences().variety).toBe(0);
+    expect(normalisePreferences({ mealsPerDay: 5 }).variety).toBe(0); // unrelated field set, variety still defaults to Repeat
+  });
   test('clamps meals per day to 3..6 and variety to 0..1', () => {
     expect(normalisePreferences({ mealsPerDay: 12 }).mealsPerDay).toBe(6);
     expect(normalisePreferences({ mealsPerDay: 1 }).mealsPerDay).toBe(3);
