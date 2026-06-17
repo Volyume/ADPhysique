@@ -14,6 +14,7 @@ import { useToast } from '../components/Toast';
 import { calculateNutritionTargets, PROTEIN_APPROACHES } from '../lib/nutritionEngine';
 import { saveNutritionTargets, getNutritionTargets, logBodyMetric, getUserBodyProfile, getLatestBodyWeight, getLatestBodyComposition } from '../lib/database';
 import { daysToActivityLevel } from '../lib/coachingGoals';
+import { hydrateLoadedTargets, getRecommendedMeals } from '../lib/nutritionTargetsView';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
@@ -21,45 +22,6 @@ import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = '@volyume_nutrition_targets';
-
-// A targets record loaded from the database only carries the persisted columns
-// (bmr, tdee, target_kcal, protein_g, ... ), not the richer field names and
-// derived values the "How was this calculated?" breakdown reads. Without this
-// hydration the breakdown showed blanks: "Resting calorie burn" with no number,
-// "n/a g/kg bodyweight", and an empty "kg/week". Backfill the renamed and
-// derived fields from what is stored, using the latest bodyweight for the
-// protein-per-kg ratio. A freshly computed record already has every field, so
-// the nullish guards make this a no-op for that path.
-const KCAL_PER_KG_TISSUE = 7700;
-function hydrateLoadedTargets(raw, weightKg) {
-  if (!raw) return raw;
-  const targetKcal = Number(raw.targetKcal) || 0;
-  const maintenanceKcal = raw.maintenanceKcal ?? raw.tdee ?? (targetKcal || null);
-  const bmrKcal = raw.bmrKcal ?? raw.bmr ?? null;
-  const bmrFormula = raw.bmrFormula
-    ?? (raw.bmrMethod === 'katch' || raw.bmrMethod === 'lbm'
-      ? 'Lean mass-adjusted formula'
-      : raw.bmrMethod
-        ? 'Standard calorie formula'
-        : null);
-  let targetRateKgPerWeek = raw.targetRateKgPerWeek;
-  if (targetRateKgPerWeek == null && targetKcal > 0 && maintenanceKcal > 0) {
-    targetRateKgPerWeek = Math.round(((targetKcal - maintenanceKcal) * 7 / KCAL_PER_KG_TISSUE) * 100) / 100;
-  }
-  let proteinGPerKg = raw.proteinGPerKg;
-  if (proteinGPerKg == null && Number(raw.proteinG) > 0 && Number(weightKg) > 0) {
-    proteinGPerKg = Math.round((raw.proteinG / weightKg) * 100) / 100;
-  }
-  return {
-    ...raw,
-    bmrKcal,
-    maintenanceKcal,
-    bmrFormula,
-    targetRateKgPerWeek,
-    proteinGPerKg,
-    proteinBasis: raw.proteinBasis ?? 'bodyweight',
-  };
-}
 
 const ACTIVITY_OPTIONS = [
   { key: 'sedentary',    label: 'Sedentary' },
@@ -220,14 +182,9 @@ export default function NutritionTargetsScreen({ navigation }) {
     setMealsPerDay(n);
     AsyncStorage.setItem('@volyume_meals_per_day', String(n)).catch(() => {});
   }
-  // Recommended meal count: smallest count keeping per-meal protein ≤ 0.55 g/kg.
-  // Falls back to 4 when bodyweight isn't available.
-  function getRecommendedMeals(proteinG, weightKg) {
-    if (!proteinG || !weightKg) return 4;
-    const upperPerMeal = weightKg * 0.55;
-    const minCount = Math.ceil(proteinG / upperPerMeal);
-    return Math.max(3, Math.min(6, minCount));
-  }
+  // Recommended meal count (getRecommendedMeals): smallest count keeping
+  // per-meal protein ≤ 0.55 g/kg, falling back to 4 without bodyweight. Lives
+  // in lib/nutritionTargetsView so the rule is locked with tests.
 
   // ── Load saved targets on mount, SQLite primary, AsyncStorage fallback ────────────
   useEffect(() => {
