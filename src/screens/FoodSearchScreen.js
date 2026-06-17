@@ -49,6 +49,7 @@ import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import QuickAddSheet from '../components/food/QuickAddSheet';
 import FoodRow from '../components/food/FoodRow';
 import { mealSlotLabel } from '../lib/food/mealSlots';
+import { scaleMacros, resolveServingG } from '../lib/food/macros';
 
 const EMPTY_COPY = {
   recents: 'Nothing logged here yet. Add a food to get started.',
@@ -236,19 +237,13 @@ export default function FoodSearchScreen({ navigation, route }) {
   // portion — matching the prefill the detail sheet already shows — instead of a
   // generic serving. Falls back to the default serving, then 100 g.
   function addToPlate(food) {
-    const servingG = food?.last_quantity_g && food.last_quantity_g > 0
-      ? food.last_quantity_g
-      : (food?.serving_g && food.serving_g > 0 ? food.serving_g : 100);
-    const factor = servingG / 100;
+    const servingG = resolveServingG(food);
+    const macros = scaleMacros(food, servingG); // { kcal, proteinG, carbsG, fatG, fibreG }
     const item = {
       key: `${food.food_ref}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       food,
       quantityG: servingG,
-      kcal: Math.round((food.kcal_100g ?? 0) * factor),
-      proteinG: Math.round((food.protein_100g ?? 0) * factor * 10) / 10,
-      carbsG: Math.round((food.carbs_100g ?? 0) * factor * 10) / 10,
-      fatG: Math.round((food.fat_100g ?? 0) * factor * 10) / 10,
-      fibreG: food.fibre_100g != null ? Math.round((food.fibre_100g) * factor * 10) / 10 : null,
+      ...macros,
     };
     setPlate((p) => [...p, item]);
   }
@@ -360,17 +355,13 @@ export default function FoodSearchScreen({ navigation, route }) {
       mealSlot: chosenSlot,
       fromScan: !!scannedFood,
     });
-    const factor = quantityG / 100;
+    const macros = scaleMacros(food, quantityG); // { kcal, proteinG, carbsG, fatG, fibreG }
     await logFoodEntry(userId, {
       entryDate: chosenDate,
       mealSlot: chosenSlot,
       foodRef: food.food_ref,
       quantityG,
-      kcal:      Math.round((food.kcal_100g    ?? 0) * factor),
-      proteinG:  Math.round((food.protein_100g ?? 0) * factor * 10) / 10,
-      carbsG:    Math.round((food.carbs_100g   ?? 0) * factor * 10) / 10,
-      fatG:      Math.round((food.fat_100g     ?? 0) * factor * 10) / 10,
-      fibreG:    food.fibre_100g != null ? Math.round(food.fibre_100g * factor * 10) / 10 : null,
+      ...macros,
     });
     await upsertSlotRecent(userId, {
       mealSlot: chosenSlot,

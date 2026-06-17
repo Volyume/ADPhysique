@@ -1,7 +1,7 @@
 /**
  * macros.test.js — the single per-100g -> portion scaler (food review U-M2).
  */
-import { scaleMacros } from '../macros';
+import { scaleMacros, resolveServingG } from '../macros';
 
 describe('scaleMacros', () => {
   test('scales the resolved/diary shape (kcal_100g ...) by grams', () => {
@@ -29,5 +29,23 @@ describe('scaleMacros', () => {
     expect(m.kcal).toBe(123);
     expect(m.proteinG).toBe(10);
     expect(m.carbsG).toBe(1.2);
+  });
+});
+
+describe('resolveServingG', () => {
+  test('prefers the last logged portion when present and positive', () => {
+    expect(resolveServingG({ last_quantity_g: 150, serving_g: 30 })).toBe(150);
+  });
+
+  test('falls back to the default serving when there is no last portion', () => {
+    expect(resolveServingG({ serving_g: 30 })).toBe(30);
+    expect(resolveServingG({ last_quantity_g: 0, serving_g: 30 })).toBe(30);
+  });
+
+  test('falls back to 100 g when neither is a positive value', () => {
+    expect(resolveServingG({})).toBe(100);
+    expect(resolveServingG({ last_quantity_g: 0, serving_g: 0 })).toBe(100);
+    expect(resolveServingG(null)).toBe(100);
+    expect(resolveServingG(undefined)).toBe(100);
   });
 });

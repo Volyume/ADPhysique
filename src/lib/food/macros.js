@@ -36,3 +36,19 @@ export function scaleMacros(per100, grams) {
     fibreG: fibre != null ? r1(fibre * k) : null,
   };
 }
+
+/**
+ * The serving size (g) to use for a one-tap add of a food. Food audit F-2:
+ * prefer the user's LAST logged portion when the row carries one (the "Add
+ * again" recents list does), so a one-tap re-add reuses the remembered portion;
+ * otherwise the food's default serving; otherwise 100 g. Non-positive or
+ * missing values are skipped at each step.
+ *
+ * @param food  a food row, optionally carrying `last_quantity_g` and `serving_g`
+ * @returns {number} grams to log
+ */
+export function resolveServingG(food) {
+  if (food?.last_quantity_g > 0) return food.last_quantity_g;
+  if (food?.serving_g > 0) return food.serving_g;
+  return 100;
+}
