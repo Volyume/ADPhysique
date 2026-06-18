@@ -319,9 +319,31 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   function handleConfirmSwap(newExercise) {
     const store = useAppStore.getState();
     const updatedExercises = [...workoutExercises];
+    // The slot's routineExercise carries the OLD exercise's planned load and
+    // rep band. Left attached, a swapped-in move (e.g. a lateral raise) with no
+    // history of its own prefills the previous exercise's startingWeight and
+    // rep range. Rebuild it from the new exercise: clear the carried-over
+    // weight and take the rep band from the new exercise's own defaults. The
+    // planned set count is the user's choice for the slot, so keep it.
+    const prevRoutineEx = updatedExercises[currentExerciseIndex]?.routineExercise;
+    const newRepMin = newExercise.defaultRepMin ?? newExercise.default_rep_min
+      ?? prevRoutineEx?.recommendedRepsMin ?? 6;
+    const newRepMax = newExercise.defaultRepMax ?? newExercise.default_rep_max
+      ?? prevRoutineEx?.recommendedRepsMax ?? 12;
+    const rebuiltRoutineEx = prevRoutineEx
+      ? {
+          ...prevRoutineEx,
+          exerciseId: newExercise.id,
+          exerciseName: newExercise.name,
+          recommendedRepsMin: newRepMin,
+          recommendedRepsMax: newRepMax,
+          startingWeight: null,
+        }
+      : null;
     updatedExercises[currentExerciseIndex] = {
       ...updatedExercises[currentExerciseIndex],
       exercise: newExercise,
+      routineExercise: rebuiltRoutineEx,
       sets: [],
     };
     store.setWorkoutExercises(updatedExercises);
