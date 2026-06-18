@@ -144,7 +144,10 @@ export default function MealPlanScreen({ navigation }) {
     try {
       const res = await genFn(user.id, userProfile);
       if (res?.error === 'no_target') {
+        // Don't dead-end: explain why, then take them straight to the screen
+        // that fixes it rather than leaving them to find it.
         toast.show('Set your nutrition targets first, then your plan builds from them.', { variant: 'info' });
+        navigation.navigate('NutritionTargets');
         return;
       }
       await load();
@@ -154,7 +157,7 @@ export default function MealPlanScreen({ navigation }) {
     } finally {
       setBusy(false);
     }
-  }, [user?.id, userProfile, busy, load, toast]);
+  }, [user?.id, userProfile, busy, load, toast, navigation]);
 
   const handleGenerateDay = useCallback(() => runGenerate(generateAndSaveDayPlan, 'Your day is ready.'), [runGenerate]);
   const handleGenerateWeek = useCallback(() => runGenerate(generateAndSaveMealPlan, 'Your week is ready.'), [runGenerate]);

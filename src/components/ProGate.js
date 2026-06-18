@@ -118,7 +118,16 @@ export function ProLocked({ feature = 'This' }) {
           <Ionicons name="sparkles" size={16} color={colors.onPrimary} />
           <Text style={styles.lockedBtnText}>Upgrade to Pro</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.lockedBack} onPress={() => navigation.goBack()}>
+        <TouchableOpacity
+          style={styles.lockedBack}
+          onPress={() => {
+            // "Not now" must always lead somewhere. If the user deep-linked
+            // straight onto a locked tab root there's no back entry, so fall
+            // back to the Home tab rather than leaving them stranded.
+            if (navigation.canGoBack()) navigation.goBack();
+            else navigation.navigate('HomeTab');
+          }}
+        >
           <Text style={styles.lockedBackText}>Not now</Text>
         </TouchableOpacity>
       </ScrollView>

@@ -18,7 +18,7 @@
  */
 import { useState, useCallback } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, fontWeight, radius, hitSlop, type } from '../styles/theme';
@@ -163,13 +163,15 @@ export default function PaywallScreen({ navigation, route }) {
   // how to cancel must be on the purchase surface itself. Until the store
   // price loads we state the renewal cadence without a figure rather than a
   // hardcoded price (PLAY-002); the figure appears the moment Play responds.
+  // Subscriptions are managed in the platform's own store.
+  const storeManage = Platform.OS === 'ios' ? 'the App Store' : 'Google Play';
   const termsText = ctaMode === 'try_pro_14d'
     ? (priceText
-        ? `Free for 7 days, then ${priceText}. Renews ${renewCadence} until you cancel. Manage or cancel anytime in Google Play.`
-        : `Free for 7 days, then it renews ${renewCadence} until you cancel. Manage or cancel anytime in Google Play.`)
+        ? `Free for 7 days, then ${priceText}. Renews ${renewCadence} until you cancel. Manage or cancel anytime in ${storeManage}.`
+        : `Free for 7 days, then it renews ${renewCadence} until you cancel. Manage or cancel anytime in ${storeManage}.`)
     : (priceText
-        ? `${priceText}, renewing ${renewCadence} until you cancel. Manage or cancel anytime in Google Play.`
-        : `Renews ${renewCadence} until you cancel. Manage or cancel anytime in Google Play.`);
+        ? `${priceText}, renewing ${renewCadence} until you cancel. Manage or cancel anytime in ${storeManage}.`
+        : `Renews ${renewCadence} until you cancel. Manage or cancel anytime in ${storeManage}.`);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
