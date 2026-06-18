@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
+import { storeName } from '../lib/storeName';
 import useAppStore from '../store/useAppStore';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
 import { ONBOARDING_QUIZ_FIRST } from '../lib/onboarding/quizFlow';
@@ -113,8 +114,8 @@ export default function WelcomeScreen({ navigation }) {
 
             <Text style={styles.trialNote}>
               {monthlyPrice
-                ? `Plus a free week on Google Play when you subscribe. Then ${monthlyPrice} a month.`
-                : 'Plus a free week on Google Play when you subscribe. Then a monthly subscription.'}
+                ? `Plus a free week on ${storeName()} when you subscribe. Then ${monthlyPrice} a month.`
+                : `Plus a free week on ${storeName()} when you subscribe. Then a monthly subscription.`}
             </Text>
 
             <View style={styles.proCtaRow}>

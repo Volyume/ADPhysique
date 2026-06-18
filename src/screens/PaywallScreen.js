@@ -18,7 +18,8 @@
  */
 import { useState, useCallback } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking } from 'react-native';
+import { storeName } from '../lib/storeName';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, fontWeight, radius, hitSlop, type } from '../styles/theme';
@@ -164,7 +165,7 @@ export default function PaywallScreen({ navigation, route }) {
   // price loads we state the renewal cadence without a figure rather than a
   // hardcoded price (PLAY-002); the figure appears the moment Play responds.
   // Subscriptions are managed in the platform's own store.
-  const storeManage = Platform.OS === 'ios' ? 'the App Store' : 'Google Play';
+  const storeManage = storeName();
   const termsText = ctaMode === 'try_pro_14d'
     ? (priceText
         ? `Free for 7 days, then ${priceText}. Renews ${renewCadence} until you cancel. Manage or cancel anytime in ${storeManage}.`

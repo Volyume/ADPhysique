@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import Button from '../components/Button';
+import { storeName } from '../lib/storeName';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
 import { signUpWithEmail, signInWithEmail, signInWithGoogle, signInWithApple, getSupabaseClient } from '../lib/supabase';
@@ -374,8 +375,8 @@ export default function ProUpgradeScreen({ navigation, route }) {
                   ? 'Your account is ready. Activate Pro to switch on the coaching features.'
                   : canTrial
                     ? (monthlyPrice
-                        ? `You're in. Pro's free for the next 14 days, and Google Play adds another week free when you subscribe. After that, ${monthlyPrice} a month.`
-                        : "You're in. Pro's free for the next 14 days, and Google Play adds another week free when you subscribe. After that, a monthly subscription.")
+                        ? `You're in. Pro's free for the next 14 days, and ${storeName()} adds another week free when you subscribe. After that, ${monthlyPrice} a month.`
+                        : `You're in. Pro's free for the next 14 days, and ${storeName()} adds another week free when you subscribe. After that, a monthly subscription.`)
                     : 'Your account is ready. Subscribe to switch the coaching features on.'}
               </Text>
               {!PRO_BETA_ACTIVE && !canTrial ? (
