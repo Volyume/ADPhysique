@@ -11,6 +11,7 @@ import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
 import { ensureNotifChannels } from './src/lib/notifications/channels';
 import { installGlobalHandlers, logError } from './src/lib/errorLog';
+import { parseInviteCode } from './src/lib/partners/link';
 
 // Install verbose error logging — ring buffer in AsyncStorage, viewable from
 // Settings → Debug logs. Catches uncaught exceptions and unhandled promise
@@ -150,6 +151,31 @@ function notifyAuthLinkFailed() {
 
 // Handles volyume:// and https://volyume.app deep links from Supabase auth emails.
 // Supports both PKCE (code=xxx) and implicit (access_token in fragment) flows.
+// Partner invite links — volyume://partner/<CODE> and
+// https://volyume.app/partner/<CODE> — route to the Partner screen with the
+// code so it can be redeemed, instead of landing nowhere. Returns true when
+// the URL was an invite link (so auth handling is skipped). navigationRef is
+// lazy-required to preserve App.js's deliberate lazy load of RootNavigator
+// (eager import would freeze styles before accessibility prefs apply).
+function handlePartnerDeepLink(url) {
+  const code = parseInviteCode(url);
+  if (!code) return false;
+  let navigationRef;
+  try { navigationRef = require('./src/navigation/RootNavigator').navigationRef; } catch (_) { return true; }
+  const go = () => { try { if (navigationRef.isReady()) navigationRef.navigate('Partner', { code }); } catch (_) { /* route not in current (e.g. signed-out) stack */ } };
+  // On a cold start the navigator may not be mounted yet when getInitialURL resolves.
+  if (navigationRef.isReady()) go();
+  else setTimeout(go, 800);
+  return true;
+}
+
+// Single entry point for incoming links: invite links first, then auth links.
+function handleIncomingDeepLink(url) {
+  if (!url) return;
+  if (handlePartnerDeepLink(url)) return;
+  handleAuthDeepLink(url);
+}
+
 async function handleAuthDeepLink(url) {
   if (!url) return;
   if (!url.startsWith('volyume://') && !url.startsWith('https://volyume.app')) return;
@@ -409,12 +435,13 @@ export default function App() {
     } catch (_) { /* module not bundled on this platform */ }
   }, []);
 
-  // Deep link handler — processes volyume:// auth callbacks from confirmation emails.
-  // RootNavigator's onAuthStateChange listener picks up the resulting session
+  // Deep link handler — processes volyume:// auth callbacks from confirmation
+  // emails AND partner invite links (volyume://partner/<CODE> etc.).
+  // RootNavigator's onAuthStateChange listener picks up any resulting session
   // automatically and re-routes the user without any extra navigation calls.
   useEffect(() => {
-    Linking.getInitialURL().then(url => { if (url) handleAuthDeepLink(url); }).catch(() => {});
-    const sub = Linking.addEventListener('url', ({ url }) => handleAuthDeepLink(url));
+    Linking.getInitialURL().then(url => { if (url) handleIncomingDeepLink(url); }).catch(() => {});
+    const sub = Linking.addEventListener('url', ({ url }) => handleIncomingDeepLink(url));
     return () => sub.remove();
   }, []);
 

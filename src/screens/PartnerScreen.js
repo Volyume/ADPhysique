@@ -14,7 +14,7 @@
  * what was shared is deleted, free 1 partner / Pro up to 3. Resting NEVER
  * reads as a fail. House style throughout (docs/rules/styling.md).
  */
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
   Share, Switch, ActivityIndicator,
@@ -24,6 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { appAlert } from '../components/AppAlert';
 import { colors, spacing, radius, fontSize, fontWeight, type, withAlpha } from '../styles/theme';
 import usePartners from '../hooks/usePartners';
+import { parseInviteCode } from '../lib/partners/link';
 import { ticksLabel } from '../lib/partners/signals';
 import { sharedStreakLabel } from '../lib/partners/sharedStreak';
 import useAppStore from '../store/useAppStore';
@@ -45,13 +46,30 @@ const NEVER_SEES = [
   'Where you are. Your location is never shared.',
 ];
 
-export default function PartnerScreen() {
+export default function PartnerScreen({ route }) {
   const { user, tier } = useAppStore(useShallow(s => ({ user: s.user, tier: s.tier })));
   const toast = useToast();
   const p = usePartners(user?.id, tier);
   const [streakOn, setStreakOn] = useState(true);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
+
+  // A partner invite link (volyume://partner/<CODE> or
+  // https://volyume.app/partner/<CODE>) routes here with the code in params.
+  // Prefill it and auto-redeem once the partner data has loaded — opening an
+  // invite link is explicit intent to accept — unless already paired. Guarded
+  // by a ref so it fires once per distinct code.
+  const incomingCode = route?.params?.code ? parseInviteCode(route.params.code) : null;
+  const handledCodeRef = useRef(null);
+  useEffect(() => {
+    if (!incomingCode || p.loading) return;
+    if (handledCodeRef.current === incomingCode) return;
+    handledCodeRef.current = incomingCode;
+    setCode(incomingCode);
+    const alreadyPaired = p.rowState === 'active' || p.rowState === 'resting';
+    if (!alreadyPaired) handleRedeem(incomingCode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incomingCode, p.loading, p.rowState]);
 
   async function handleCreate() {
     setBusy(true);
@@ -69,10 +87,13 @@ export default function PartnerScreen() {
     p.reload();
   }
 
-  async function handleRedeem() {
-    if (!code.trim()) return;
+  async function handleRedeem(incoming) {
+    // Accept an explicit code (deep link) or fall back to the typed field.
+    // Guards against being passed a press event object.
+    const toRedeem = (typeof incoming === 'string' ? incoming : code).trim();
+    if (!toRedeem) return;
     setBusy(true);
-    const r = await p.redeem(code.trim());
+    const r = await p.redeem(toRedeem);
     setBusy(false);
     if (!r.ok) { toast.show('That invite did not work. It may have expired or already been used.', { variant: 'error' }); return; }
     setCode('');
@@ -90,7 +111,13 @@ export default function PartnerScreen() {
     ]);
   }
 
-  if (p.loading) return <SafeAreaView style={styles.safe} edges={['bottom']} />;
+  if (p.loading) return (
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <View style={styles.loadingWrap}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    </SafeAreaView>
+  );
 
   const partnerName = p.partnership?.partnerFirstName || 'Your partner';
   const paired = p.rowState === 'active' || p.rowState === 'resting';
@@ -255,6 +282,7 @@ export default function PartnerScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxxl },
   section: { gap: spacing.md },
   sectionLabel: { ...type.label, color: colors.textSecondary },
