@@ -12,6 +12,11 @@ on:
       - 'LICENSE'
       - '.ci-status/**'
   workflow_dispatch:
+    inputs:
+      architectures:
+        description: 'ABIs to build (Play release needs armeabi-v7a,arm64-v8a)'
+        default: 'armeabi-v7a,arm64-v8a'
+        required: false
 
 # One Android build per branch at a time. A new push cancels an
 # in-flight run on the same ref, so a stuck or superseded build does
@@ -30,6 +35,9 @@ permissions:
 # CI proves Node 24 compatibility on our schedule, not on the forced flag day.
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  # main (the release line) and manual runs build the full Play-ready ABI set;
+  # claude/** branch pushes stay on a single fast ABI for the compile-check.
+  REACT_NATIVE_ARCHITECTURES: ${{ github.event.inputs.architectures || (github.ref == 'refs/heads/main' && 'armeabi-v7a,arm64-v8a' || 'arm64-v8a') }}
 
 jobs:
   build:
@@ -295,18 +303,16 @@ jobs:
       # assembleRelease produces an APK (for sideload), bundleRelease
       # produces an AAB (the format Play Store wants). Signing credentials
       # are passed via -P so they never have to be written to disk.
-      # Single ABI (arm64-v8a) for this CI compile-check. The default RN
-      # template builds all four ABIs (armeabi-v7a, arm64-v8a, x86, x86_64).
-      # Under the New Architecture each ABI compiles a large amount of C++
-      # (Fabric, TurboModule codegen, nitro, reanimated worklets), so four
-      # ABIs took ~60+ min and risked OOM thrash on the runner, against
-      # ~15 min for the old-architecture SDK 51 build. arm64-v8a covers every
-      # modern device and is all we need to prove the native side compiles.
-      #
-      # IMPORTANT: this makes the AAB arm64-only. It is fine for the free
-      # compile-validation we run here and for sideload onto a 64-bit device,
-      # but it is NOT a Play-production bundle. Before any real Play release,
-      # widen reactNativeArchitectures back to at least armeabi-v7a,arm64-v8a.
+      # ABI set comes from REACT_NATIVE_ARCHITECTURES (top-level env): main and
+      # manual runs build the Play-ready armeabi-v7a,arm64-v8a; claude/** branch
+      # pushes build a single fast arm64-v8a compile-check. The default RN
+      # template builds all four ABIs (armeabi-v7a, arm64-v8a, x86, x86_64), but
+      # under the New Architecture each ABI compiles a large amount of C++
+      # (Fabric, TurboModule codegen, nitro, reanimated worklets); four ABIs took
+      # ~60+ min and risked OOM thrash on the runner, so we ship the two ABIs
+      # real devices need (32- and 64-bit ARM) and skip the x86 emulator ABIs.
+      # The branch compile-check stays single-ABI purely to prove the native
+      # side compiles fast.
       - name: Build Release APK + AAB
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
@@ -331,7 +337,7 @@ jobs:
           # the unqualified task name across every module.
           cd android && ./gradlew assembleRelease bundleRelease \
             --no-daemon --no-configuration-cache \
-            -PreactNativeArchitectures=arm64-v8a \
+            -PreactNativeArchitectures="$REACT_NATIVE_ARCHITECTURES" \
             -x lintVitalRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease \
             -PVOLYUME_UPLOAD_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD" \
             -PVOLYUME_UPLOAD_KEY_ALIAS="$ANDROID_KEY_ALIAS" \
