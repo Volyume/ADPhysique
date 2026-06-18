@@ -11,7 +11,7 @@
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
     "release:check": "npm ci --legacy-peer-deps --ignore-scripts && npx tsc --noEmit --strict && npm run lint && npm test -- --runInBand && npm run release:audit",
-    "release:audit": "npm audit --production --audit-level=high || echo '[release:audit] DEP-001 advisories are build-host-only Expo tooling (@xmldom/xmldom, postcss, uuid), not shipped runtime. Formally excepted per docs/audit/npm-audit-survey-2026-06-01.md; not blocking the release. Re-evaluate on the next Expo SDK bump.'"
+    "release:audit": "npm audit --omit=dev --audit-level=high"
   },
   "jest": {
     "testEnvironment": "node",
@@ -97,7 +97,7 @@
     "zustand": "^4.5.7"
   },
   "devDependencies": {
-    "@babel/core": "^7.29.0",
+    "@babel/core": "^7.29.7",
     "@babel/eslint-parser": "^7.29.7",
     "babel-jest": "^29.7.0",
     "babel-plugin-transform-remove-console": "^6.9.4",
@@ -112,6 +112,8 @@
   },
   "overrides": {
     "@babel/runtime": "^7.29.7",
+    "@xmldom/xmldom": "^0.8.13",
+    "ws": "^8.21.0",
     "react-native-health": {
       "@expo/fingerprint": "0.15.5"
     }
