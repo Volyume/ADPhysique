@@ -12,9 +12,20 @@
 import { GOAL_LABELS, PHASE_LABELS } from '../coachingGoals';
 
 // Split shape by training days — the same logic the builder uses, surfaced early.
-function splitForDays(days) {
+// At 3 days the builder (selectSplit) gives advanced/competitive lifters outside
+// the lower-focus divisions a push/pull/legs split rather than full body, so the
+// preview must branch on experience too or it mislabels that segment.
+function splitForDays(days, experience, goal) {
   const d = Math.max(2, Math.min(7, Number(days) || 3));
-  if (d <= 3) return { name: 'Full body', detail: `${d} full-body days a week` };
+  const g = String(goal || '').toLowerCase();
+  const lowerFocus = g.includes('bikini') || g.includes('wellness');
+  const advanced = experience === 'advanced' || experience === 'competitive';
+  if (d <= 3) {
+    if (d === 3 && advanced && !lowerFocus) {
+      return { name: 'Push / Pull / Legs', detail: 'A 3-day push, pull and legs split' };
+    }
+    return { name: 'Full body', detail: `${d} full-body days a week` };
+  }
   if (d === 4) return { name: 'Upper / Lower', detail: 'Two upper and two lower days' };
   if (d === 5) return { name: 'Push / Pull / Legs +', detail: 'A 5-day push, pull and legs rotation' };
   return { name: 'Push / Pull / Legs', detail: `A ${d}-day push, pull and legs split` };
@@ -47,7 +58,7 @@ function phaseLine(phase) {
  * @param {object} quiz { daysPerWeek, sessionLengthMinutes, experience, trainingGoal, trainingPhase, weakPoints[] }
  */
 export function buildPlanPreview(quiz = {}) {
-  const split = splitForDays(quiz.daysPerWeek);
+  const split = splitForDays(quiz.daysPerWeek, quiz.experience, quiz.trainingGoal);
   const goalLabel = GOAL_LABELS?.[quiz.trainingGoal] || 'your goal';
   const bias = biasForGoal(quiz.trainingGoal);
   const phase = quiz.trainingPhase ? (PHASE_LABELS?.[quiz.trainingPhase] || null) : null;

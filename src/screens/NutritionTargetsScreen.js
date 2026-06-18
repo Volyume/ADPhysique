@@ -40,8 +40,8 @@ const BF_SOURCES = [
 ];
 
 const GOALS = [
-  { key: 'lean_gain',        label: 'Build muscle (slow)',   detail: '+10% surplus' },
-  { key: 'build',            label: 'Build muscle (fast)',   detail: '+17% surplus' },
+  { key: 'lean_gain',        label: 'Build muscle (slow)',   detail: '~+10% surplus' },
+  { key: 'build',            label: 'Build muscle (fast)',   detail: '~+17% surplus' },
   { key: 'maintain',         label: 'Maintain weight',       detail: '0%' },
   { key: 'recomp',           label: 'Hold muscle, lose fat',  detail: '−5%' },
   { key: 'mild_cut',         label: 'Lose weight (steady)',  detail: '−13%' },
@@ -434,10 +434,10 @@ export default function NutritionTargetsScreen({ navigation }) {
                 'How calories are calculated:\n' +
                 '• Calorie baseline: a standard formula using your sex, age, height, and weight to estimate how many calories you burn at rest. If you enter a measured body fat percentage (from a scan or caliper test), we use a more accurate formula that accounts for your actual muscle mass.\n' +
                 '• Maintenance: your baseline × an activity multiplier based on how much you move each day.\n' +
-                '• Target: your maintenance adjusted for your goal (e.g. +10% for slow muscle building, -13% for steady fat loss).\n\n' +
+                '• Target: your maintenance adjusted for your goal (e.g. around +10% for slow muscle building, -13% for steady fat loss). Surplus amounts are scaled to your training experience.\n\n' +
                 'How your targets are calculated:\n' +
                 '• Protein: varies by your chosen approach (1.2 to 3.3 g/kg). Rates rise in deeper deficits to protect muscle. Select your approach in the Protein Target section.\n' +
-                '• Fat: set by phase (0.7–1.0 g/kg bodyweight). Surplus phases use a lower fat target so carbs stay high for training performance. Deficit phases hold fat constant while carbs reduce first. Minimum 0.5 g/kg for hormonal health.\n' +
+                '• Fat: set by phase (0.7–1.0 g/kg bodyweight). Surplus phases use a lower fat target so carbs stay high for training performance. Deficit phases hold fat constant while carbs reduce first. Minimum 0.5 g/kg (never below 40 g) for hormonal health.\n' +
                 '• Carbs: all remaining calories after protein and fat are set.\n\n' +
                 'These are estimates. Adjust based on real-world progress over 2 to 4 weeks.'
               }
@@ -793,7 +793,8 @@ export default function NutritionTargetsScreen({ navigation }) {
               "• 1.2 to 1.5 g/kg: general athletic guidelines. Adequate for muscle growth and easy to hit day-to-day.\n\n" +
               "• 1.6 to 2.2 g/kg: the range most commonly recommended for building muscle. Research suggests gains plateau around 1.62 g/kg bodyweight; the upper end gives a comfortable buffer without being excessive.\n\n" +
               "• 2.2 to 3.3 g/kg: the upper end, used by serious athletes and people cutting aggressively. Effective at preserving muscle, but harder to sustain day-to-day.\n\n" +
-              "There is no single right answer. The level you can consistently hit every day will produce better results than an aggressive target you miss half the time."
+              "There is no single right answer. The level you can consistently hit every day will produce better results than an aggressive target you miss half the time.\n\n" +
+              "The approaches below are the specific targets Volyume uses; they sit toward the higher end of these ranges, where muscle retention is strongest."
             } />
             <Text style={styles.approachNoteText}>Different guidelines use different targets. Pick the level you can consistently sustain.</Text>
           </View>
@@ -1068,7 +1069,10 @@ export default function NutritionTargetsScreen({ navigation }) {
                 const absPct = maintenanceKcal > 0 ? Math.round(Math.abs(surplusDelta / maintenanceKcal) * 100) : 0;
                 const rateAbs = Math.abs(results.targetRateKgPerWeek);
                 const rateDir = results.targetRateKgPerWeek >= 0 ? 'gain' : 'lose';
-                const fatFloorG = weightKg ? Math.round(Math.max(0.5 * weightKg, 30)) : 30;
+                // Mirror the engine's fat floor exactly (nutritionEngine.js:
+                // fatFloor = max(0.5 * weight, 40)). Showing 30 here understated
+                // the real floor the engine enforces for sub-80 kg users.
+                const fatFloorG = weightKg ? Math.round(Math.max(0.5 * weightKg, 40)) : 40;
                 const carbKcal = results.carbsG * 4;
 
                 // Goal-aware text helpers. Maintain (0% deficit) and

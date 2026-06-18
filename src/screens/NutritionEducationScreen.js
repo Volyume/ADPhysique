@@ -89,7 +89,7 @@ export default function NutritionEducationScreen() {
             Volyume calculates a starting point for you from your goal, age,
             weight and activity. The rough idea:
           </Body>
-          <PhaseLine name="Cut" rate="lose 0.5–1% bodyweight per week" gist="calories down, protein up to protect muscle" />
+          <PhaseLine name="Cut" rate="lose 0.5–0.8% bodyweight per week" gist="calories down, protein up to protect muscle" />
           <PhaseLine name="Maintain" rate="weight steady" gist="calories at maintenance, protein moderate" />
           <PhaseLine name="Lean gain" rate="gain 0.25–0.5% per week" gist="small surplus, slow tissue gain, minimal fat" />
           <PhaseLine name="Bulk" rate="gain 0.5–1% per week" gist="larger surplus, faster growth, some fat comes with it" />

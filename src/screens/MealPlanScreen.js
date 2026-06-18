@@ -604,7 +604,7 @@ export default function MealPlanScreen({ navigation }) {
             fullWidth
           />
           <Text style={styles.footNote}>
-            Built from your calories and macros. Swap any meal you like, and the day still hits your target.
+            Built from your calories and macros. Swap any meal you like, and the day stays close to your target.
           </Text>
         </ScrollView>
       )}
@@ -621,7 +621,7 @@ export default function MealPlanScreen({ navigation }) {
           <>
             <Text style={styles.swapSheetTitle}>Swap this meal</Text>
             <Text style={styles.swapSheetSub}>
-              Pick any one. Each keeps the day on target; the first is the closest match.
+              Pick any one. Each keeps the day close to your target; the first is the closest match.
             </Text>
             <ScrollView
               style={styles.swapList}

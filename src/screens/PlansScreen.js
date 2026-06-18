@@ -64,7 +64,7 @@ const ACTION_CARDS_PRO_SWITCH = [
     id: 'library',
     icon: 'library-outline',
     title: 'Pick from the Plan Library',
-    description: "Ready-made plans by other coaches. Precision Coaching keeps adjusting whichever plan you're on.",
+    description: "Ready-made expert plans. Precision Coaching keeps adjusting whichever plan you're on.",
     screen: 'PlanLibrary',
   },
   {

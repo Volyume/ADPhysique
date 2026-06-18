@@ -11,6 +11,16 @@ describe('buildPlanPreview', () => {
     expect(p.structure).toContain('45 minutes');
   });
 
+  test('3 days, advanced lifter -> PPL (mirrors selectSplit; preview must not mislabel as full body)', () => {
+    const p = buildPlanPreview({ daysPerWeek: 3, experience: 'advanced', trainingGoal: 'bodybuilding' });
+    expect(p.splitName).toBe('Push / Pull / Legs');
+  });
+
+  test('3 days, advanced but lower-focus division -> still full body (legs every session)', () => {
+    const p = buildPlanPreview({ daysPerWeek: 3, experience: 'competitive', trainingGoal: 'bikini' });
+    expect(p.splitName).toBe('Full body');
+  });
+
   test('4 days -> upper/lower', () => {
     expect(buildPlanPreview({ daysPerWeek: 4 }).splitName).toBe('Upper / Lower');
   });

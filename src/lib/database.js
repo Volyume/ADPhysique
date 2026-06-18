@@ -2460,6 +2460,15 @@ export async function getAllRoutineExerciseCounts() {
   return Object.fromEntries(rows.map(r => [r.routine_id, r.cnt]));
 }
 
+// Sum of the actual prescribed working sets per routine (recommended_sets,
+// which defaults to 3 where unset). Used for an honest "sets/week" estimate
+// rather than assuming a flat 3 sets per exercise.
+export async function getAllRoutineSetCounts() {
+  const d = await db();
+  const rows = await d.getAllAsync('SELECT routine_id, SUM(COALESCE(recommended_sets, 3)) as total FROM routine_exercises GROUP BY routine_id');
+  return Object.fromEntries(rows.map(r => [r.routine_id, r.total]));
+}
+
 export async function updateRoutineName(id, name) {
   const d = await db();
   await d.runAsync('UPDATE routines SET name = ?, updated_at = ? WHERE id = ?', [name, Date.now(), id]);

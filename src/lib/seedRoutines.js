@@ -525,7 +525,7 @@ const LIBRARY_PLANS = [
   // ── 12. Leg Development Priority ─────────────────────────────────────────
   {
     name: 'Leg Development Priority',
-    description: 'For lifters whose legs are noticeably behind their upper body. Quad and hamstring sessions are increased above what a balanced programme provides; upper body is maintained at a lower frequency. Three leg sessions per week (two quad-focused, one glute and hamstring-focused) produce consistent lower-body growth. Run for 8–12 weeks, then reassess. Add reps each session, then add weight when you reach the top of the range. Push leg compound movements close to failure. Leave 2 reps in the tank on isolation exercises.',
+    description: 'For lifters whose legs are noticeably behind their upper body. Quad and hamstring sessions are increased above what a balanced programme provides; upper body is maintained at a lower frequency. Two leg sessions per week (one quad-focused, one glute and hamstring-focused), plus an upper-body maintenance day, produce consistent lower-body growth. Run for 8–12 weeks, then reassess. Add reps each session, then add weight when you reach the top of the range. Push leg compound movements close to failure. Leave 2 reps in the tank on isolation exercises.',
     tags: 'weak_point legs quads hamstrings gender:all goal:build_muscle days:2',
     difficulty: 1,
     workouts: [
@@ -736,8 +736,8 @@ const LIBRARY_PLANS = [
   // ── 18. Female Bodybuilding Foundation ───────────────────────────────────
   {
     name: 'Female Bodybuilding Foundation',
-    description: 'A physique-focused programme structured around the muscle groups most impactful for female bodybuilding and fitness: glutes, hamstrings, upper-body detail, and shoulder width. Three lower-body sessions per week give glutes and hamstrings the frequency needed for visible development; two upper sessions balance the physique. Add reps session by session, then add weight when you reach the top of the rep range. Stop 1 to 2 reps before failure on each set. Suitable for female lifters with 6 months or more of consistent resistance training.',
-    tags: 'bodybuilding glutes hamstrings gender:women goal:build_muscle days:5 intermediate',
+    description: 'A physique-focused programme structured around the muscle groups most impactful for female bodybuilding and fitness: glutes, hamstrings, upper-body detail, and shoulder width. Two lower-body sessions per week give glutes and hamstrings the frequency needed for visible development; an upper-body session balances the physique. Add reps session by session, then add weight when you reach the top of the rep range. Stop 1 to 2 reps before failure on each set. Suitable for female lifters with 6 months or more of consistent resistance training.',
+    tags: 'bodybuilding glutes hamstrings gender:women goal:build_muscle days:3 intermediate',
     difficulty: 1,
     workouts: [
       {

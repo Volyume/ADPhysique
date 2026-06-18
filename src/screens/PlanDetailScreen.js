@@ -11,7 +11,7 @@ import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
   getProgrammeById, getRoutinesForPlan, getAllRoutineExerciseCounts,
   activatePlanWithBlock, archivePlan, duplicatePlan, copyPlanFromLibrary,
-  createWorkout, getRoutineExercisesWithDetails, getActivePlan,
+  createWorkout, getRoutineExercisesWithDetails, getActivePlan, getAllRoutineSetCounts,
 } from '../lib/database';
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
 import Button from '../components/Button';
@@ -33,6 +33,7 @@ export default function PlanDetailScreen({ navigation, route }) {
   const [plan, setPlan] = useState(null);
   const [workouts, setWorkouts] = useState([]);
   const [exerciseCounts, setExerciseCounts] = useState({});
+  const [setCounts, setSetCounts] = useState({});
   const [activePlan, setActivePlanData] = useState(null);
   const [whyThis, setWhyThis] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -45,15 +46,17 @@ export default function PlanDetailScreen({ navigation, route }) {
   async function loadData() {
     if (!planId) return;
     try {
-      const [p, routines, counts, active] = await Promise.all([
+      const [p, routines, counts, sets, active] = await Promise.all([
         getProgrammeById(planId),
         getRoutinesForPlan(planId),
         getAllRoutineExerciseCounts(),
+        getAllRoutineSetCounts(),
         user?.id ? getActivePlan(user.id) : Promise.resolve(null),
       ]);
       setPlan(p);
       setWorkouts(routines);
       setExerciseCounts(counts);
+      setSetCounts(sets);
       setActivePlanData(active);
       // The rationale cache is per-user and always tracks the active
       // auto-generated plan (every reroll archives the others), so it's
@@ -177,8 +180,11 @@ export default function PlanDetailScreen({ navigation, route }) {
   }
 
   const isActive = activePlan?.id === planId;
+  // Sum the actual prescribed sets per workout (falling back to 3 per exercise
+  // only if a routine has no set-count data), so the estimate reflects the real
+  // programme rather than assuming a flat 3 sets per exercise.
   const totalWorkingSets = workouts.reduce(
-    (sum, w) => sum + (exerciseCounts[w.id] || 0) * 3,
+    (sum, w) => sum + (setCounts[w.id] || (exerciseCounts[w.id] || 0) * 3),
     0,
   );
 
