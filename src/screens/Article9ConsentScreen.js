@@ -74,6 +74,21 @@ export default function Article9ConsentScreen({ navigation }) {
       // both available; until then the local flag governs gating.
       if (error) {
         logError('Article9.consent.cloudFailed', error, { uid: user?.id });
+        // Don't lose the audit evidence: queue the consent so the next sync
+        // retries record_health_consent once the RPC + connectivity are both
+        // available (founder decision 2026-06-18). The local flag below still
+        // lets the user proceed now.
+        try {
+          // eslint-disable-next-line global-require
+          const { queuePendingConsent } = require('../lib/consent/pendingConsent');
+          queuePendingConsent({
+            userId: user?.id ?? null,
+            granted: true,
+            appVersion: Application.nativeApplicationVersion ?? null,
+            platform: Platform.OS,
+            consentVersion: CONSENT_VERSION,
+          }).catch(() => {});
+        } catch (_) { /* tolerate */ }
       }
       if (user?.id) {
         await AsyncStorage.setItem(`${CONSENT_KEY_PFX}${user.id}`, 'true');

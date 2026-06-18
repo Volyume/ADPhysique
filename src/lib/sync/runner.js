@@ -105,6 +105,14 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
     if (!userId) {
       status = 'success';
     } else {
+      // Best-effort retry of any health-consent record the Article 9 screen
+      // couldn't push at the time (Art 9 audit evidence). Independent of the
+      // table sync; never blocks or fails the run. Lazy-required so the runner
+      // stays isolated in tests.
+      try {
+        // eslint-disable-next-line global-require
+        require('../consent/pendingConsent').flushPendingConsent().catch(() => {});
+      } catch (_) { /* tolerate */ }
       // Two-track push/pull. The registry-driven transport.js owns
       // every table listed in MIGRATED_TABLES; everything else still
       // lives inside bulkUploadLocalData / pullFromCloud in
