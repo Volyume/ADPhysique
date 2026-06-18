@@ -29,6 +29,7 @@
       "bundleIdentifier": "app.volyume",
       "buildNumber": "7",
       "requireFullScreen": true,
+      "associatedDomains": ["applinks:volyume.app"],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Volyume uses the camera to scan barcodes, read nutrition labels, and take progress photos.",

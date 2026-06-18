@@ -89,6 +89,34 @@ jobs:
               print("::warning::No assetlinks fingerprints available. Set PLAY_APP_SIGNING_SHA256 (and the keystore secrets) so https://volyume.app App Links verify.")
           PY
 
+      # Inject the Apple Team ID into the AASA at deploy time so the served file
+      # at volyume.app/.well-known/apple-app-site-association carries the real
+      # appID, while the committed file stays a placeholder template (mirrors the
+      # assetlinks injection above). Set the APPLE_TEAM_ID repo secret to your
+      # 10-character Apple Developer Team ID. With it unset, the placeholder is
+      # left as-is and a warning is logged.
+      - name: Inject Apple Team ID into AASA
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -e
+          python3 - public/.well-known/apple-app-site-association "$APPLE_TEAM_ID" <<'PY'
+          import json, sys
+          path, team = sys.argv[1], sys.argv[2].strip()
+          data = json.load(open(path))
+          if not team:
+              print("::warning::APPLE_TEAM_ID not set; iOS Universal Links will not verify until volyume.app/.well-known/apple-app-site-association carries a real appID.")
+              sys.exit(0)
+          changed = False
+          for d in data["applinks"]["details"]:
+              if d.get("appID", "").startswith("REPLACE_WITH_APPLE_TEAM_ID"):
+                  d["appID"] = d["appID"].replace("REPLACE_WITH_APPLE_TEAM_ID", team)
+                  changed = True
+          if changed:
+              json.dump(data, open(path, "w"), indent=2)
+              print("AASA appID injected for team", team)
+          PY
+
       - name: Upload public/ as artifact
         uses: actions/upload-pages-artifact@v3
         with:
