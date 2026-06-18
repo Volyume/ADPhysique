@@ -162,10 +162,17 @@ function handlePartnerDeepLink(url) {
   if (!code) return false;
   let navigationRef;
   try { navigationRef = require('./src/navigation/RootNavigator').navigationRef; } catch (_) { return true; }
-  const go = () => { try { if (navigationRef.isReady()) navigationRef.navigate('Partner', { code }); } catch (_) { /* route not in current (e.g. signed-out) stack */ } };
-  // On a cold start the navigator may not be mounted yet when getInitialURL resolves.
-  if (navigationRef.isReady()) go();
-  else setTimeout(go, 800);
+  // On a cold start the navigator may not be mounted yet when getInitialURL
+  // resolves, so poll a few times before giving up rather than a single shot
+  // (a slow device could miss an 800ms one-off and lose the invite).
+  let attempts = 0;
+  const go = () => {
+    try {
+      if (navigationRef.isReady()) { navigationRef.navigate('Partner', { code }); return; }
+    } catch (_) { return; /* route not in current (e.g. signed-out) stack */ }
+    if (++attempts < 12) setTimeout(go, 500); // ~6s of cold-start grace
+  };
+  go();
   return true;
 }
 

@@ -38,6 +38,13 @@ describe('parseInviteCode', () => {
   test('rejects an unrelated link', () =>
     expect(parseInviteCode('https://example.com/x')).toBeNull());
   test('rejects empty', () => expect(parseInviteCode('')).toBeNull());
+  // Load-bearing: OAuth callback links must NOT be parsed as invite codes, or
+  // App.js would misroute auth deep links to the Partner screen instead of the
+  // session exchange (handlePartnerDeepLink runs before handleAuthDeepLink).
+  test('rejects the OAuth PKCE callback link', () =>
+    expect(parseInviteCode('volyume://?code=abc123def456')).toBeNull());
+  test('rejects the OAuth implicit-token callback link', () =>
+    expect(parseInviteCode('volyume://#access_token=abc123def456&refresh_token=x')).toBeNull());
 });
 
 describe('inviteShareMessage', () => {

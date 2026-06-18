@@ -112,8 +112,10 @@
   },
   "overrides": {
     "@babel/runtime": "^7.29.7",
-    "@xmldom/xmldom": "^0.8.13",
     "ws": "^8.21.0",
+    "@expo/plist": {
+      "@xmldom/xmldom": "^0.8.13"
+    },
     "react-native-health": {
       "@expo/fingerprint": "0.15.5"
     }
