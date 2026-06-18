@@ -3,7 +3,7 @@ import 'react-native-url-polyfill/auto';
 import React, { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
@@ -815,7 +815,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <SafeAreaProvider>
+        <SafeAreaProvider initialWindowMetrics={initialWindowMetrics}>
           <StatusBar
             style={resolvedTheme === 'light' ? 'dark' : 'light'}
             backgroundColor={resolvedTheme === 'light' ? '#FAFAF7' : '#0D0D0D'}

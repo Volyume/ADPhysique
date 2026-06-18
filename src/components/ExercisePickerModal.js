@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, Modal, FlatList, KeyboardAvoidingView,
   Platform, TextInput, TouchableOpacity, ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
@@ -92,6 +92,12 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={showCreate ? () => setShowCreate(false) : onClose}>
+      {/* A core RN <Modal> presents in its own window on iOS and does not
+          inherit the root SafeAreaProvider's measured frame, so a bare
+          SafeAreaView inside reads top:0 and the search field jams against the
+          status bar / Dynamic Island. A nested provider makes the modal
+          measure its own insets. */}
+      <SafeAreaProvider>
       <SafeAreaView style={styles.pickerSafe} edges={['top', 'bottom']}>
         {showCreate ? (
           <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -223,6 +229,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
           </>
         )}
       </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform, FlatList, BackHandler, AppState, Animated } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as hapticsVocab from '../lib/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -2308,6 +2308,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
         {/* Exercise Swap Modal */}
         <Modal visible={showSwapModal} animationType="slide" onRequestClose={() => setShowSwapModal(false)}>
+          {/* Nested provider: a core RN <Modal> presents in its own window on
+              iOS and would otherwise read top:0, jamming the swap list against
+              the status bar / Dynamic Island. */}
+          <SafeAreaProvider>
           <SafeAreaView style={styles.swapSafe} edges={['top', 'bottom']}>
             <View style={styles.swapHeader}>
               <Text style={styles.swapTitle}>Swap Exercise</Text>
@@ -2358,6 +2362,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               }
             />
           </SafeAreaView>
+          </SafeAreaProvider>
         </Modal>
         {/* Discard Workout Modal */}
         <Modal visible={showDiscardModal} transparent animationType="fade" onRequestClose={() => setShowDiscardModal(false)}>
