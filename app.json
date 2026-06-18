@@ -172,7 +172,6 @@
       ],
       "react-native-health-connect",
       "./plugins/withHealthConnectPermissionDelegate",
-      "./plugins/withEdgeToEdgeOptOut",
       "@bacons/apple-targets",
       [
         "react-native-android-widget",
