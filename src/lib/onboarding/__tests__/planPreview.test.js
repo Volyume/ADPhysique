@@ -11,14 +11,16 @@ describe('buildPlanPreview', () => {
     expect(p.structure).toContain('45 minutes');
   });
 
-  test('3 days, advanced lifter -> PPL (mirrors selectSplit; preview must not mislabel as full body)', () => {
+  test('3 days, advanced non-division goal -> PPL (mirrors selectSplit; not full body)', () => {
     const p = buildPlanPreview({ daysPerWeek: 3, experience: 'advanced', trainingGoal: 'bodybuilding' });
     expect(p.splitName).toBe('Push / Pull / Legs');
   });
 
-  test('3 days, advanced but lower-focus division -> still full body (legs every session)', () => {
-    const p = buildPlanPreview({ daysPerWeek: 3, experience: 'competitive', trainingGoal: 'bikini' });
-    expect(p.splitName).toBe('Full body');
+  test('division goals take their split name from the division matrix, not the day-count selector', () => {
+    // bikini is "Glute Focus" at 3 days (division-first), never "Full body".
+    expect(buildPlanPreview({ daysPerWeek: 3, trainingGoal: 'bikini' }).splitName).toBe('Glute Focus');
+    expect(buildPlanPreview({ daysPerWeek: 4, trainingGoal: 'mens_physique' }).splitName).toBe('V-Taper');
+    expect(buildPlanPreview({ daysPerWeek: 3, trainingGoal: 'wellness' }).splitName).toBe('Lower Focus');
   });
 
   test('4 days -> upper/lower', () => {

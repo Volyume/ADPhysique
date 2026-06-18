@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList,
   Modal, TextInput,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
@@ -354,7 +354,11 @@ export default function BuildWorkoutScreen({ navigation }) {
       </Modal>
 
       <Modal visible={showPicker} animationType="slide" onRequestClose={() => setShowPicker(false)}>
-        <SafeAreaView style={styles.pickerSafe}>
+        {/* Nested provider: a core RN <Modal> presents in its own window on iOS
+            and would otherwise read top:0, jamming the search field against the
+            status bar / Dynamic Island. */}
+        <SafeAreaProvider>
+        <SafeAreaView style={styles.pickerSafe} edges={['top', 'bottom']}>
           <View style={styles.pickerHeader}>
             <TextInput
               style={styles.pickerSearch}
@@ -386,6 +390,7 @@ export default function BuildWorkoutScreen({ navigation }) {
             ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: colors.border }} />}
           />
         </SafeAreaView>
+        </SafeAreaProvider>
       </Modal>
     </SafeAreaView>
   );

@@ -10,18 +10,26 @@
  */
 
 import { GOAL_LABELS, PHASE_LABELS } from '../coachingGoals';
+import { DIVISION_MATRIX } from '../planEngine';
 
 // Split shape by training days — the same logic the builder uses, surfaced early.
-// At 3 days the builder (selectSplit) gives advanced/competitive lifters outside
-// the lower-focus divisions a push/pull/legs split rather than full body, so the
-// preview must branch on experience too or it mislabels that segment.
 function splitForDays(days, experience, goal) {
   const d = Math.max(2, Math.min(7, Number(days) || 3));
-  const g = String(goal || '').toLowerCase();
-  const lowerFocus = g.includes('bikini') || g.includes('wellness');
+  // Division-first, exactly like the builder: the six specialised divisions take
+  // their split name straight from the division matrix regardless of day count
+  // or experience (planEngine selectSplit is only used for the non-division
+  // goals). Mirroring it here keeps the teaser honest for division users —
+  // bikini is "Glute Focus", not "Full body".
+  const division = DIVISION_MATRIX[goal];
+  if (division) {
+    return { name: division.label, detail: `A ${d}-day ${division.label} split` };
+  }
+  // Non-division goals (general, bodybuilding, women's bodybuilding, strength…)
+  // use the day-count selector. At 3 days the builder gives advanced/competitive
+  // lifters a push/pull/legs split rather than full body.
   const advanced = experience === 'advanced' || experience === 'competitive';
   if (d <= 3) {
-    if (d === 3 && advanced && !lowerFocus) {
+    if (d === 3 && advanced) {
       return { name: 'Push / Pull / Legs', detail: 'A 3-day push, pull and legs split' };
     }
     return { name: 'Full body', detail: `${d} full-body days a week` };

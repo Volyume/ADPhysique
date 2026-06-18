@@ -54,7 +54,10 @@ describe('PlanPreviewScreen', () => {
     let tree;
     act(() => { tree = create(<PlanPreviewScreen navigation={nav} />); });
     const t = texts(tree).join(' ');
-    expect(t).toContain('Upper / Lower');
+    // classic_physique is a specialised division: the preview names its split
+    // from the division matrix (X-Frame), mirroring the builder — not the
+    // generic day-count "Upper / Lower".
+    expect(t).toContain('X-Frame');
     expect(t).toContain('they need your weight');
     expect(t).toContain('Create an account to keep it');
   });
