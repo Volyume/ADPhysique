@@ -509,11 +509,16 @@ describe('assembleWeekPlan', () => {
     expect(again).toEqual(week);
   });
 
-  test('variety 0 repeats one day per variant (meal-prep mode)', () => {
+  test('variety 0 is a PRECISE repeat: ALL seven days identical, same meals in the same order', () => {
+    // The schedule alternates training/rest, but Repeat/meal-prep is flat — so
+    // every day must be byte-for-byte the same plate in the same slot order.
+    // (Regression: the old code assembled training and rest separately, so the
+    // same meals came out in a different order on alternating days.)
     const week = assembleWeekPlan({ engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 0 }, schedule, seed: 2 });
-    const trainingDays = week.days.filter((d) => d.variant === 'training');
-    trainingDays.forEach((d) => expect(d.slots.map((s) => s.mealId))
-      .toEqual(trainingDays[0].slots.map((s) => s.mealId)));
+    const firstOrder = week.days[0].slots.map((s) => s.mealId);
+    week.days.forEach((d) => expect(d.slots.map((s) => s.mealId)).toEqual(firstOrder));
+    // And a meal-prep repeat never calorie-cycles, so no training/rest split shows.
+    expect(week.cycleDeltaKcal).toBe(0);
   });
 
   test('variety 1 rotates: the week uses more distinct meals than one day', () => {

@@ -574,7 +574,7 @@ export default function MealPlanScreen({ navigation }) {
                   { value: 0.5, label: 'Mixed' },
                   { value: 1, label: 'Varied' },
                 ]}
-                value={prefs.variety ?? 0}
+                value={userProfile?.mealPlanVariety ?? 0}
                 onSelect={(v) => handleSetPref({ mealPlanVariety: v })}
                 busy={busy}
               />

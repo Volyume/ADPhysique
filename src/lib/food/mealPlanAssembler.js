@@ -666,20 +666,24 @@ export function assembleWeekPlan({ engineTarget, prefs: rawPrefs, schedule, seed
     trainingDays,
     restDays,
     fatConvention: prefs.fatConvention,
-    allowCycling: allowDayCycling,
+    // A meal-prep repeat (variety 0) is always a flat daily target: choosing
+    // "Repeat" means eating the same food every day, so training/rest calorie
+    // cycling does not apply.
+    allowCycling: allowDayCycling && prefs.variety !== 0,
   });
   const band = { kcalMin: engineTarget?.kcalMin, kcalMax: engineTarget?.kcalMax };
 
   const days = [];
   if (prefs.variety === 0) {
-    // Meal-prep repeat: one assembled day per variant, reused.
-    const byVariant = {};
-    ['training', 'rest'].forEach((v, i) => {
-      byVariant[v] = assembleDayPlanBestOf({
-        target: variants[v], band, prefs, variant: v, seed: seed + i, savedMeals,
-      });
+    // Repeat / meal-prep: a PRECISE repeat — assemble ONE day on the flat daily
+    // target (variants is flat for variety 0, see above) and eat it every day.
+    // The previous code assembled separate training and rest days with
+    // different seeds, so identical-calorie days came out with the SAME meals
+    // in a DIFFERENT ORDER — confusing, and not a repeat.
+    const oneDay = assembleDayPlanBestOf({
+      target: variants.rest, band, prefs, variant: 'rest', seed, savedMeals,
     });
-    week.forEach((v) => days.push(byVariant[v]));
+    week.forEach(() => days.push(oneDay));
   } else {
     const recentlyUsed = new Map(); // mealId -> days since used
     week.forEach((v, i) => {
