@@ -107,6 +107,15 @@
       } else {
         document.getElementById('open').style.display = 'none';
       }
+
+      // Store link: send iOS users to the App Store, everyone else to Google
+      // Play (the default href in the markup).
+      if (/iPad|iPhone|iPod/i.test(navigator.userAgent)) {
+        // iOS LAUNCH: replace REPLACE_WITH_APP_STORE_ID with the numeric App
+        // Store ID once Volyume is published on iOS (not yet live).
+        document.getElementById('store')
+          .setAttribute('href', 'https://apps.apple.com/app/idREPLACE_WITH_APP_STORE_ID');
+      }
     })();
   </script>
 </body>
