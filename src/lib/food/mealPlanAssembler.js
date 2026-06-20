@@ -26,7 +26,7 @@ import { CURATED_MEALS, mealItems, mealTotals } from './curatedMeals';
 import { fitScore, perMealMacros, slotMatches } from './mealSuggest';
 import { normalisePreferences, filterMealsByPreferences } from './planPreferences';
 import { roleOf } from './foodRoles';
-import { solveGramsForKcal } from './gramSolve';
+import { solveGramsForKcal, clampRoundGrams } from './gramSolve';
 import { within, ADHERENCE_TOLERANCE } from './adherence';
 
 const KCAL_C = 4;
@@ -531,19 +531,108 @@ export function assembleDayPlan({
   // is >= floor; a floored target IS the floor), and per-food clamps cap portion
   // sizes so a single staple can't balloon.
   const EXACT_TOL_KCAL = Math.max(10, Math.round(want.kcal * 0.005));
-  const touched = new Set();
-  let guard = 0;
-  while (Math.abs(consumed.kcal - want.kcal) > EXACT_TOL_KCAL && guard < 20) {
-    guard += 1;
-    if (rescaleOne('carb', touched)) continue;
-    if (rescaleOne('fat', touched)) continue;
-    // Protein staples grow only while UNDER target and protein itself is short —
-    // a portion size decision, never a way to pad calories with protein.
-    if (consumed.kcal < want.kcal
-      && consumed.protein < want.protein
-      && rescaleOne('protein', touched)) continue;
-    break;
+  const closeKcal = () => {
+    const touched = new Set();
+    let g = 0;
+    while (Math.abs(consumed.kcal - want.kcal) > EXACT_TOL_KCAL && g < 20) {
+      g += 1;
+      if (rescaleOne('carb', touched)) continue;
+      if (rescaleOne('fat', touched)) continue;
+      // Protein staples grow only while UNDER target and protein itself is short
+      // — a portion size decision, never a way to pad calories with protein.
+      if (consumed.kcal < want.kcal
+        && consumed.protein < want.protein
+        && rescaleOne('protein', touched)) continue;
+      break;
+    }
+    return g;
+  };
+  let guard = closeKcal();
+
+  // ── Macro balance (founder 2026-06-20): the kcal close-out fixes calories
+  // only, and the greedy fitScore MAXIMISES protein while ignoring carbs, so days
+  // land protein-heavy and carb-light at the right calories (measured: +38g P /
+  // -41g C on a 227/321 day). Trade protein-staple grams DOWN for carb-staple
+  // grams UP, holding kcal roughly constant, while protein is well over target
+  // AND carbs well under. Per-food clamps cap it; saved meals (no components) are
+  // fixed blocks and untouched; a final closeKcal re-tightens any kcal drift.
+  const staplesOfRole = (role) => {
+    const list = [];
+    placed.forEach((p, pi) => {
+      if (!p.components) return;
+      p.components.forEach((c, ci) => { if (roleOf(c.food) === role) list.push({ pi, ci, c }); });
+    });
+    return list.sort((a, b) => b.c.g - a.c.g);
+  };
+  const setStapleGrams = (pi, ci, newG) => {
+    const p = placed[pi];
+    const item = p.items[ci];
+    const g0 = p.components[ci].g;
+    if (newG === g0 || g0 <= 0) return false;
+    const per100 = {
+      kcal: (item.kcal / g0) * 100, protein: (item.proteinG / g0) * 100,
+      carbs: (item.carbsG / g0) * 100, fat: (item.fatG / g0) * 100,
+    };
+    const f = (newG - g0) / 100;
+    consumed = {
+      kcal: r0(consumed.kcal + per100.kcal * f),
+      protein: r1(consumed.protein + per100.protein * f),
+      carbs: r1(consumed.carbs + per100.carbs * f),
+      fat: r1(consumed.fat + per100.fat * f),
+    };
+    const newItems = p.items.map((it, i) => (i === ci ? {
+      ...it, quantityG: newG,
+      kcal: r0(per100.kcal * (newG / 100)), proteinG: r1(per100.protein * (newG / 100)),
+      carbsG: r1(per100.carbs * (newG / 100)), fatG: r1(per100.fat * (newG / 100)),
+    } : it));
+    placed[pi] = {
+      ...p, items: newItems,
+      components: p.components.map((cc, i) => (i === ci ? { ...cc, g: newG } : cc)),
+      totals: mealTotals(newItems),
+    };
+    return true;
+  };
+  const PROT_OVER_TOL = 5;
+  const CARB_UNDER_TOL = 5;
+  const FAT_UNDER_TOL = 3;
+  const canGrow = (role) => !!staplesOfRole(role).find(({ c }) => clampRoundGrams(c.g + 5, c.food) > c.g);
+  const growRoleByKcal = (role, kcalAdd) => {
+    if (kcalAdd <= 0) return;
+    const s = staplesOfRole(role).find(({ c }) => clampRoundGrams(c.g + 5, c.food) > c.g);
+    if (!s) return;
+    const item = placed[s.pi].items[s.ci];
+    const per100Kcal = (item.kcal / s.c.g) * 100;
+    if (per100Kcal > 0) setStapleGrams(s.pi, s.ci, clampRoundGrams(s.c.g + (kcalAdd / per100Kcal) * 100, s.c.food));
+  };
+  let bguard = 0;
+  while (consumed.protein > want.protein + PROT_OVER_TOL
+    && (consumed.carbs < want.carbs - CARB_UNDER_TOL || consumed.fat < want.fat - FAT_UNDER_TOL)
+    && bguard < 40) {
+    bguard += 1;
+    // Largest reducible protein staple; abort if the freed kcal has nowhere to
+    // go (no carb/fat headroom) so the trade can never drop kcal below target.
+    const pc = staplesOfRole('protein').find(({ c }) => clampRoundGrams(c.g - 5, c.food) < c.g);
+    if (!pc || (!canGrow('carb') && !canGrow('fat'))) break;
+    const pItem = placed[pc.pi].items[pc.ci];
+    const pPer100Prot = (pItem.proteinG / pc.c.g) * 100;
+    const pPer100Kcal = (pItem.kcal / pc.c.g) * 100;
+    if (!(pPer100Prot > 0)) break;
+    const newProtG = clampRoundGrams(pc.c.g - ((consumed.protein - want.protein) / pPer100Prot) * 100, pc.c.food);
+    if (newProtG >= pc.c.g) break;
+    const kcalFreed = ((pc.c.g - newProtG) / 100) * pPer100Kcal;
+    setStapleGrams(pc.pi, pc.ci, newProtG);
+    // Refill the freed kcal into whichever macros are still under target (carbs
+    // and/or fat, split by deficit), so trimming protein tops them up rather
+    // than starving fat.
+    const carbNeedK = Math.max(0, want.carbs - consumed.carbs) * KCAL_C;
+    const fatNeedK = Math.max(0, want.fat - consumed.fat) * KCAL_F;
+    const totalNeed = carbNeedK + fatNeedK;
+    if (totalNeed <= 0) { growRoleByKcal('carb', kcalFreed); continue; }
+    growRoleByKcal('carb', kcalFreed * (carbNeedK / totalNeed));
+    growRoleByKcal('fat', kcalFreed * (fatNeedK / totalNeed));
   }
+  // Re-tighten calories after the protein/carb/fat trade.
+  guard += closeKcal();
 
   const residual = {
     kcal: r0(want.kcal - consumed.kcal),

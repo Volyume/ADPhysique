@@ -715,3 +715,35 @@ describe('exact-fill close-out lands the day ON target, not just in band', () =>
     }
   }
 });
+
+// MACRO-BALANCE INVARIANT (founder 2026-06-20): the greedy fitScore maximises
+// protein and ignores carbs, so days used to land badly protein-heavy and
+// carb-light at the right calories (measured +38g P / -41g C on a 227/321 day).
+// The close-out's macro-balance pass trades protein grams for carb/fat grams, so
+// every macro lands near target — not just calories. Protein is only reduced
+// TOWARD target, never below it.
+describe('macro-balance close-out lands protein/carbs/fat near target, not just kcal', () => {
+  const targets = [
+    { targetKcal: 2857, kcalMin: 2571, kcalMax: 3143, proteinG: 227, carbsG: 321, fatG: 74, warnings: [] },
+    { targetKcal: 2200, kcalMin: 1980, kcalMax: 2420, proteinG: 165, carbsG: 230, fatG: 65, warnings: [] },
+    { targetKcal: 3300, kcalMin: 2970, kcalMax: 3630, proteinG: 210, carbsG: 430, fatG: 88, warnings: [] },
+  ];
+  for (const t of targets) {
+    for (const seed of [1, 7, 19, 33]) {
+      test(`target ${t.targetKcal}, seed ${seed}: every macro within tolerance`, () => {
+        const day = assembleDayPlanBestOf({
+          target: { kcal: t.targetKcal, proteinG: t.proteinG, carbsG: t.carbsG, fatG: t.fatG },
+          band: { kcalMin: t.kcalMin, kcalMax: t.kcalMax },
+          prefs: { mealsPerDay: 5 }, variant: 'rest', seed,
+        });
+        if (day.unfilledSlots.length > 0) return;
+        // Far tighter than the pre-fix ~18% protein / ~13% carb miss.
+        expect(Math.abs(day.totals.protein - t.proteinG)).toBeLessThanOrEqual(Math.max(18, t.proteinG * 0.09));
+        expect(Math.abs(day.totals.carbs - t.carbsG)).toBeLessThanOrEqual(Math.max(18, t.carbsG * 0.08));
+        expect(Math.abs(day.totals.fat - t.fatG)).toBeLessThanOrEqual(Math.max(10, t.fatG * 0.14));
+        // Protein is trimmed only toward target, never pushed below it.
+        expect(day.totals.protein).toBeGreaterThanOrEqual(t.proteinG - 18);
+      });
+    }
+  }
+});
