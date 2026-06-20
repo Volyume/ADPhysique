@@ -27,6 +27,7 @@ import { useToast } from '../components/Toast';
 import { listRecipes, deleteRecipe, applyRecipeToDiary } from '../lib/food/db';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import { logError } from '../lib/errorLog';
 
 export default function MyRecipesScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
@@ -118,7 +119,13 @@ export default function MyRecipesScreen({ navigation, route }) {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            try { await deleteRecipe(userId, recipe.id); } catch (_) {}
+            try {
+              await deleteRecipe(userId, recipe.id);
+            } catch (e) {
+              logError('MyRecipes.deleteRecipe', e, { hasId: !!recipe.id });
+              toast.show('Couldn\'t delete that recipe.', { variant: 'error' });
+              return;
+            }
             reload();
           },
         },

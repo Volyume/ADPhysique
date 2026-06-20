@@ -2,6 +2,9 @@
   "name": "volyume",
   "version": "1.2.0",
   "main": "index.js",
+  "engines": {
+    "node": ">=20.19.4"
+  },
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
@@ -113,6 +116,7 @@
   "overrides": {
     "@babel/runtime": "^7.29.7",
     "ws": "^8.21.0",
+    "undici": "^6.27.0",
     "@expo/plist": {
       "@xmldom/xmldom": "^0.8.13"
     },

@@ -8,6 +8,7 @@ import { colors, fontSize, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
 import { saveUserBodyProfile } from '../lib/database';
+import { logError } from '../lib/errorLog';
 
 const SCOFF_QUESTIONS = [
   'Have you ever made yourself sick after eating because you felt uncomfortably full?',
@@ -51,7 +52,12 @@ export default function WellbeingCheckScreen({ navigation }) {
       await AsyncStorage.setItem(ANSWERS_KEY, JSON.stringify(answers));
       if (user?.id) {
         await saveLocalProfile(user.id, { ...(userProfile || {}), scoffScore: score });
-        await saveUserBodyProfile(user.id, { scoffScore: score }).catch(() => {});
+        // SCOFF is a safety signal: the local profile write above is authoritative
+        // for gating, but a swallowed cloud write left no trail (audit F-007). Log
+        // the failure so a split-brain (UI says "noted" but the body-profile write
+        // failed) is diagnosable. Still non-blocking: the local write governs.
+        await saveUserBodyProfile(user.id, { scoffScore: score })
+          .catch(e => logError('WellbeingCheck.saveScoffScore', e, { uid: user?.id }));
       }
       if (score >= 2) {
         appAlert(

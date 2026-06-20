@@ -27,12 +27,17 @@ export function scaleMacros(per100, grams) {
   }
   const k = g / 100;
   const pick = (a, b) => (per100[a] != null ? per100[a] : per100[b]);
-  const fibre = pick('fibre_100g', 'fibre100g');
+  // Coerce per-100g inputs to a finite number (audit F-006): a non-finite stored
+  // macro (e.g. Infinity from a bad import) must never scale to Infinity and then
+  // be silently logged as 0 downstream. Non-finite reads as 0 here.
+  const num = (a, b) => { const v = Number(pick(a, b)); return Number.isFinite(v) ? v : 0; };
+  const fibreRaw = pick('fibre_100g', 'fibre100g');
+  const fibre = (fibreRaw != null && Number.isFinite(Number(fibreRaw))) ? Number(fibreRaw) : null;
   return {
-    kcal: Math.round((pick('kcal_100g', 'kcal100g') ?? 0) * k),
-    proteinG: r1((pick('protein_100g', 'protein100g') ?? 0) * k),
-    carbsG: r1((pick('carbs_100g', 'carbs100g') ?? 0) * k),
-    fatG: r1((pick('fat_100g', 'fat100g') ?? 0) * k),
+    kcal: Math.round(num('kcal_100g', 'kcal100g') * k),
+    proteinG: r1(num('protein_100g', 'protein100g') * k),
+    carbsG: r1(num('carbs_100g', 'carbs100g') * k),
+    fatG: r1(num('fat_100g', 'fat100g') * k),
     fibreG: fibre != null ? r1(fibre * k) : null,
   };
 }

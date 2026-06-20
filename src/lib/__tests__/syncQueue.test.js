@@ -69,8 +69,25 @@ describe('drainSyncQueue body_metric fallback (B2)', () => {
 
     const res = await drainSyncQueue(CLIENT, UID);
 
-    expect(mockSync.syncBodyMetric).toHaveBeenCalledWith(UID, { weightKg: 80 });
+    // rethrow:true so a real cloud failure throws to the queue (F-003) rather
+    // than the helper re-enqueuing and the drain reporting a false success.
+    expect(mockSync.syncBodyMetric).toHaveBeenCalledWith(UID, { weightKg: 80 }, { rethrow: true });
     expect(mockSync.bulkUploadLocalData).not.toHaveBeenCalled();
     expect(res).toMatchObject({ drained: 1 });
+  });
+
+  test('a real cloud failure is counted failed and the row is kept, not a false drain (F-003)', async () => {
+    mockDb.getAllAsync.mockResolvedValueOnce([bodyMetricRow()]);
+    // With rethrow:true the helper throws on a cloud failure instead of
+    // re-enqueuing; the queue must record a failure, not delete the op.
+    mockSync.syncBodyMetric = jest.fn(async () => { throw new Error('rls denied'); });
+
+    const res = await drainSyncQueue(CLIENT, UID);
+
+    expect(res).toMatchObject({ drained: 0, failed: 1 });
+    expect(mockDb.runAsync).not.toHaveBeenCalledWith(
+      expect.stringMatching(/DELETE FROM pending_sync_ops/),
+      ['q1'],
+    );
   });
 });

@@ -21,12 +21,18 @@ const BACKUP_FORMAT_VERSION = 1;
 // transient diagnostics and is deliberately excluded from backups.
 const PREF_PREFIX = '@volyume_';
 const PREF_EXCLUDE = new Set(['@volyume_crash_log']);
+// Entitlement / trial / payment state is authoritative from the cloud ONLY.
+// It must never travel in a backup or be written by a restore: a crafted backup
+// could otherwise flip the local tier to 'pro' and unlock Pro UI before cloud
+// reconciliation (audit F-002). Matched against the @volyume_ key name.
+const SENSITIVE_PREF = /(tier|trial|paid|entitle|subscrip|purchase|billing|verified_at)/i;
+function isRestorablePref(k) {
+  return k.startsWith(PREF_PREFIX) && !PREF_EXCLUDE.has(k) && !SENSITIVE_PREF.test(k);
+}
 
 async function dumpPrefs() {
   const allKeys = await AsyncStorage.getAllKeys();
-  const keys = allKeys.filter(
-    k => k.startsWith(PREF_PREFIX) && !PREF_EXCLUDE.has(k),
-  );
+  const keys = allKeys.filter(isRestorablePref);
   const pairs = await AsyncStorage.multiGet(keys);
   const prefs = {};
   for (const [k, v] of pairs) prefs[k] = v;
@@ -36,7 +42,7 @@ async function dumpPrefs() {
 async function restorePrefs(prefs) {
   if (!prefs || typeof prefs !== 'object') return;
   const entries = Object.entries(prefs)
-    .filter(([k]) => k.startsWith(PREF_PREFIX) && !PREF_EXCLUDE.has(k))
+    .filter(([k]) => isRestorablePref(k))
     .map(([k, v]) => [k, v == null ? '' : String(v)]);
   if (entries.length) await AsyncStorage.multiSet(entries);
 }

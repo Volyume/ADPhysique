@@ -3753,9 +3753,15 @@ export async function restoreAllTables(dump) {
     for (const t of BACKUP_TABLES) {
       const rows = tables[t];
       if (!Array.isArray(rows)) continue;
+      // Allowlist columns from the LIVE schema so a crafted backup can't inject
+      // arbitrary identifiers into the INSERT column list (audit F-005). t is a
+      // fixed BACKUP_TABLES name; only real columns survive the filter.
+      const info = await d.getAllAsync(`PRAGMA table_info(${t})`);
+      const allowed = new Set((info || []).map(c => c.name));
+      if (allowed.size === 0) continue;
       await d.runAsync(`DELETE FROM ${t}`);
       for (const row of rows) {
-        const cols = Object.keys(row);
+        const cols = Object.keys(row).filter(c => allowed.has(c));
         if (cols.length === 0) continue;
         const placeholders = cols.map(() => '?').join(', ');
         const values = cols.map(c => row[c]);

@@ -663,7 +663,10 @@ export default function ProOnboardingScreen({ navigation }) {
         // day. Without this, a user who enrols on their chosen check-in
         // day and tries to check in is told "0 readings this week" even
         // though they just typed a weight two screens ago.
-        await logMorningWeight(user.id, { weightKg: bwKg, loggedAt: Date.now() }).catch(() => {});
+        await logMorningWeight(user.id, { weightKg: bwKg, loggedAt: Date.now() }).catch((e) => {
+          // eslint-disable-next-line global-require
+          try { require('../lib/errorLog').logError('ProOnboarding.logMorningWeight', e, { uid: user?.id }); } catch (_) {}
+        });
       }
 
       if (user?.id && (sex || hcm || ageNum)) {
@@ -672,7 +675,10 @@ export default function ProOnboardingScreen({ navigation }) {
           heightCm: hcm,
           dateOfBirth: ageNum ? new Date(new Date().getFullYear() - ageNum, 6, 1).toISOString().slice(0, 10) : null,
           primaryGoal: trainingGoal,
-        }).catch(() => {});
+        }).catch((e) => {
+          // eslint-disable-next-line global-require
+          try { require('../lib/errorLog').logError('ProOnboarding.saveUserBodyProfile', e, { uid: user?.id }); } catch (_) {}
+        });
       }
 
       const nutritionData = {
@@ -687,7 +693,10 @@ export default function ProOnboardingScreen({ navigation }) {
       // silently dropped. Targets stay usable from AsyncStorage and sync retries
       // the cloud write, so onboarding still completes (founder decision
       // 2026-06-08: complete + retry from Home).
-      await AsyncStorage.setItem('@volyume_nutrition_targets', JSON.stringify(nutritionData)).catch(() => {});
+      await AsyncStorage.setItem('@volyume_nutrition_targets', JSON.stringify(nutritionData)).catch((e) => {
+        // eslint-disable-next-line global-require
+        try { require('../lib/errorLog').logError('ProOnboarding.nutritionTargetsAsyncStorage', e, { uid: user?.id }); } catch (_) {}
+      });
       if (user?.id) {
         try {
           await saveNutritionTargets(user.id, nutritionData);

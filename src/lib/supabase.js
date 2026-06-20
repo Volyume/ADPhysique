@@ -7,13 +7,27 @@ import * as SecureStore from 'expo-secure-store';
 // Falls back silently so the app still launches if SecureStore is unavailable (e.g. emulator).
 const secureAuthStorage = {
   getItem: async (key) => {
-    try { return await SecureStore.getItemAsync(key); } catch (_) { return null; }
+    try { return await SecureStore.getItemAsync(key); }
+    catch (e) {
+      // Lazy-require errorLog to avoid any import cycle with this module.
+      // eslint-disable-next-line global-require
+      try { require('./errorLog').logError('supabase.secureStore.getItem', e); } catch (_) {}
+      return null;
+    }
   },
   setItem: async (key, value) => {
-    try { await SecureStore.setItemAsync(key, value); } catch (_) {}
+    try { await SecureStore.setItemAsync(key, value); }
+    catch (e) {
+      // eslint-disable-next-line global-require
+      try { require('./errorLog').logError('supabase.secureStore.setItem', e); } catch (_) {}
+    }
   },
   removeItem: async (key) => {
-    try { await SecureStore.deleteItemAsync(key); } catch (_) {}
+    try { await SecureStore.deleteItemAsync(key); }
+    catch (e) {
+      // eslint-disable-next-line global-require
+      try { require('./errorLog').logError('supabase.secureStore.removeItem', e); } catch (_) {}
+    }
   },
 };
 

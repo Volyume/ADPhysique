@@ -148,7 +148,10 @@ async function _runOp(supabaseClient, row) {
   }
   switch (row.op_type) {
     case 'workout':
-      await safeCall(sync.syncWorkout, row.user_id, row.entity_id);
+      // rethrow:true so a failed cloud write THROWS here and the queue records a
+      // real retry/failure, instead of the helper re-enqueuing and the drain
+      // reporting a false success with a reset retry counter (audit F-003).
+      await safeCall(sync.syncWorkout, row.user_id, row.entity_id, { rethrow: true });
       return true;
     case 'workout_delete': {
       // Cloud-side removal of a locally deleted workout. Unlike the upsert
@@ -164,9 +167,9 @@ async function _runOp(supabaseClient, row) {
       // Fall back to the bulk push when the dedicated sync fn is missing,
       // matching morning_weight / check_in below, so a renamed or removed
       // syncBodyMetric can't silently drop the op (audit B2).
-      const r = safeCall(sync.syncBodyMetric, row.user_id, payload);
+      const r = safeCall(sync.syncBodyMetric, row.user_id, payload, { rethrow: true });
       if (r === null) await safeCall(sync.bulkUploadLocalData, row.user_id, row.user_id);
-      else await r;
+      else await r; // throws on a real failure -> queue retries (F-003)
       return true;
     }
     case 'morning_weight': {
@@ -175,9 +178,9 @@ async function _runOp(supabaseClient, row) {
       // bulkUploadLocalData is the canonical path for morning weights;
       // a queued row falls back to that so a missing dedicated sync
       // function doesn't strand the row forever.
-      const r = safeCall(sync.syncMorningWeight, row.user_id, payload);
+      const r = safeCall(sync.syncMorningWeight, row.user_id, payload, { rethrow: true });
       if (r === null) await safeCall(sync.bulkUploadLocalData, row.user_id, row.user_id);
-      else await r;
+      else await r; // throws on a real failure -> queue retries (F-003)
       return true;
     }
     case 'check_in': {

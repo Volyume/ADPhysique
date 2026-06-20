@@ -32,6 +32,7 @@ import {
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { mealSlotLabel } from '../lib/food/mealSlots';
+import { logError } from '../lib/errorLog';
 
 export default function MyMealsScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
@@ -102,7 +103,13 @@ export default function MyMealsScreen({ navigation, route }) {
                 text: 'Delete',
                 style: 'destructive',
                 onPress: async () => {
-                  try { await deleteSavedMeal(userId, meal.id); } catch (_) {}
+                  try {
+                    await deleteSavedMeal(userId, meal.id);
+                  } catch (e) {
+                    logError('MyMeals.deleteSavedMeal', e, { hasId: !!meal.id });
+                    toast.show('Couldn\'t delete that meal.', { variant: 'error' });
+                    return;
+                  }
                   reload();
                 },
               },
@@ -119,7 +126,13 @@ export default function MyMealsScreen({ navigation, route }) {
     const target = renaming;
     setRenaming(null);
     if (!target || !name) return;
-    try { await renameSavedMeal(userId, target.id, name); } catch (_) {}
+    try {
+      await renameSavedMeal(userId, target.id, name);
+    } catch (e) {
+      logError('MyMeals.renameSavedMeal', e, { hasId: !!target.id });
+      toast.show('Couldn\'t rename that meal.', { variant: 'error' });
+      return;
+    }
     reload();
   }
 

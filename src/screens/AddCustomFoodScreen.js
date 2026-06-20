@@ -95,7 +95,18 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     barcodeEan: prefillBarcode || null,
   }), [name, brand, servingG, kcal, protein, carbs, fat, fibre, prefillBarcode]);
 
-  const canSave = name.trim().length > 0 && Number(kcal) >= 0 && Number(servingG) > 0;
+  // Hard-block non-finite / negative numbers here (audit F-006): an entry like
+  // 1e400 parses to Infinity, which is >= 0, and would scale to Infinity then be
+  // coerced to a silent 0-calorie diary entry downstream. "Save anyway" is only
+  // for finite-but-unusual values (handled by checkFoodSanity in onSave).
+  const fin = (s) => Number.isFinite(Number(s));
+  const canSave = name.trim().length > 0
+    && fin(kcal) && Number(kcal) >= 0
+    && fin(servingG) && Number(servingG) > 0
+    && fin(protein) && Number(protein) >= 0
+    && fin(carbs) && Number(carbs) >= 0
+    && fin(fat) && Number(fat) >= 0
+    && (!fibre.trim() || (fin(fibre) && Number(fibre) >= 0));
 
   async function onSave() {
     if (!canSave || saving) return;

@@ -278,7 +278,7 @@ export const syncCustomExercises = syncExercises;
  * Push one completed workout + its sets to Supabase.
  * Call this immediately after updateWorkout({ isCompleted: true }).
  */
-export async function syncWorkout(supabaseUserId, workoutId) {
+export async function syncWorkout(supabaseUserId, workoutId, { rethrow = false } = {}) {
   const sb = getClient();
   if (!sb || !supabaseUserId || !workoutId) return;
   try {
@@ -289,7 +289,11 @@ export async function syncWorkout(supabaseUserId, workoutId) {
     await _upsertSets(sb, supabaseUserId, sets);
   } catch (e) {
     logWarn('sync.syncWorkout', e?.message, { workoutId });
-    // Enqueue for retry on next foreground / connection return.
+    // When the queue drains this op (rethrow), THROW so the queue owns retry /
+    // backoff / last_error. Re-enqueuing from inside a drain made a failed write
+    // look drained and reset the retry counter (audit F-003).
+    if (rethrow) throw e;
+    // Direct caller: enqueue for retry on next foreground / connection return.
     // Without this, a dropped sync was silent data loss until the
     // user's next sign-in cycle triggered bulkUploadLocalData.
     try {
@@ -482,7 +486,7 @@ export function cancelScheduledSync() {
   }
 }
 
-export async function syncMorningWeight(supabaseUserId, entry) {
+export async function syncMorningWeight(supabaseUserId, entry, { rethrow = false } = {}) {
   const sb = getClient();
   if (!sb || !supabaseUserId || !entry) return;
   try {
@@ -497,6 +501,7 @@ export async function syncMorningWeight(supabaseUserId, entry) {
     if (error) { logPgErr('sync.syncMorningWeight', error); throw error; }
   } catch (e) {
     logWarn('sync.syncMorningWeight', e?.message, { id: entry?.id });
+    if (rethrow) throw e; // queue-driven: let the queue own retry accounting (F-003)
     try {
       // eslint-disable-next-line global-require
       const { enqueueSyncOp } = require('./syncQueue');
@@ -543,7 +548,7 @@ export async function syncWeeklyCheckin(supabaseUserId, checkin) {
   }
 }
 
-export async function syncBodyMetric(supabaseUserId, metric) {
+export async function syncBodyMetric(supabaseUserId, metric, { rethrow = false } = {}) {
   const sb = getClient();
   if (!sb || !supabaseUserId || !metric) return;
   try {
@@ -579,6 +584,7 @@ export async function syncBodyMetric(supabaseUserId, metric) {
     }
   } catch (e) {
     logWarn('sync.syncBodyMetric', e?.message, { metricId: metric?.id });
+    if (rethrow) throw e; // queue-driven: let the queue own retry accounting (F-003)
     try {
       // eslint-disable-next-line global-require
       const { enqueueSyncOp } = require('./syncQueue');
