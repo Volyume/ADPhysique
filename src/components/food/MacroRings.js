@@ -31,13 +31,19 @@ function arcPath(cx, cy, r, startDeg, sweepDeg) {
   return p;
 }
 
-function Ring({ size, stroke, progress, tint, track }) {
+// `plannedProgress` is the COMBINED eaten+planned fraction; it draws a faded
+// arc behind the solid eaten arc so planned-but-unconfirmed food is visible
+// without being mistaken for eaten. When the user confirms a day, planned
+// flips to eaten and the faded extension becomes solid.
+function Ring({ size, stroke, progress, plannedProgress = 0, tint, track }) {
   const r = (size - stroke) / 2;
   const cx = size / 2;
   const cy = size / 2;
   const trackPath = useMemo(() => arcPath(cx, cy, r, 0, 360), [cx, cy, r]);
   const sweep = Math.max(0, Math.min(1, progress)) * 360;
+  const plannedSweep = Math.max(0, Math.min(1, plannedProgress)) * 360;
   const fillPath = useMemo(() => arcPath(cx, cy, r, -90, sweep), [cx, cy, r, sweep]);
+  const plannedPath = useMemo(() => arcPath(cx, cy, r, -90, plannedSweep), [cx, cy, r, plannedSweep]);
   return (
     <Canvas style={{ width: size, height: size }}>
       <Path
@@ -47,6 +53,16 @@ function Ring({ size, stroke, progress, tint, track }) {
         strokeWidth={stroke}
         strokeCap="round"
       />
+      {plannedSweep > sweep && (
+        <Path
+          path={plannedPath}
+          color={tint}
+          opacity={0.32}
+          style="stroke"
+          strokeWidth={stroke}
+          strokeCap="round"
+        />
+      )}
       {sweep > 0 && (
         <Path
           path={fillPath}
@@ -66,33 +82,50 @@ function Ring({ size, stroke, progress, tint, track }) {
 // is the primary bar (the number this user defends): it carries the only
 // weight emphasis, never a different colour, since the fill stays the
 // adherence-neutral amber for every macro.
-function MacroBar({ label, value, target, primary }) {
+// `planned` is the planned-but-unconfirmed grams for this macro. It draws a
+// faded fill to the combined (eaten+planned) width behind the solid eaten
+// fill, matching the ring, and is shown in the value text as "+Ng planned".
+function MacroBar({ label, value, target, planned = 0, primary }) {
   const progress = target && target > 0 ? Math.max(0, Math.min(1, value / target)) : 0;
+  const plannedProgress = target && target > 0 ? Math.max(0, Math.min(1, (value + planned) / target)) : 0;
   return (
     <View style={styles.macroBar}>
       <View style={styles.macroBarTop}>
         <Text style={[styles.macroBarLabel, primary && styles.macroBarLabelPrimary]}>{label}</Text>
         <Text style={[styles.macroBarValue, primary && styles.macroBarValuePrimary]}>
           {value}{target != null ? ` / ${target}` : ''}g
+          {planned > 0 ? <Text style={styles.macroBarPlanned}>{`  +${Math.round(planned)} planned`}</Text> : null}
         </Text>
       </View>
       <View style={styles.macroTrack}>
+        {plannedProgress > progress ? (
+          <View style={[styles.macroFillPlanned, { width: `${Math.round(plannedProgress * 100)}%` }]} />
+        ) : null}
         <View style={[styles.macroFill, { width: `${Math.round(progress * 100)}%` }]} />
       </View>
     </View>
   );
 }
 
-export default function MacroRings({ rollup, targets, dayTypeLabel, onPress }) {
+export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onPress }) {
   const kcal = Math.round(rollup?.kcal_total ?? 0);
   const p = Math.round(rollup?.protein_g ?? 0);
   const c = Math.round(rollup?.carbs_g ?? 0);
   const f = Math.round(rollup?.fat_g ?? 0);
+  // Planned-but-unconfirmed food (is_planned=1). Shown distinctly so a planned
+  // day doesn't read as empty, but never folded into the eaten totals the coach
+  // and adherence use — those stay on `rollup` (eaten only).
+  const plannedKcal = Math.round(planned?.kcal ?? 0);
+  const plannedP = Math.round(planned?.protein_g ?? 0);
+  const plannedC = Math.round(planned?.carbs_g ?? 0);
+  const plannedF = Math.round(planned?.fat_g ?? 0);
+  const hasPlanned = plannedKcal > 0 || plannedP > 0 || plannedC > 0 || plannedF > 0;
   const kcalTarget = targets?.targetKcal ?? null;
   const pTarget = targets?.proteinG ?? null;
   const cTarget = targets?.carbsG ?? null;
   const fTarget = targets?.fatG ?? null;
   const kcalProgress = kcalTarget && kcalTarget > 0 ? kcal / kcalTarget : 0;
+  const kcalPlannedProgress = kcalTarget && kcalTarget > 0 ? (kcal + plannedKcal) / kcalTarget : 0;
   const kcalRemaining = kcalTarget != null ? kcalTarget - kcal : null;
   const kcalOver = kcalRemaining != null && kcalRemaining < 0;
   const kcalTint = bandColour();
@@ -136,7 +169,8 @@ export default function MacroRings({ rollup, targets, dayTypeLabel, onPress }) {
     macroPart('protein', p, pTarget),
     macroPart('carbs', c, cTarget),
     macroPart('fat', f, fTarget),
-  ].join(', ');
+    hasPlanned ? `${plannedKcal} calories planned but not yet confirmed eaten` : null,
+  ].filter(Boolean).join(', ');
   const a11yLabel = onPress ? `${a11ySummary}. Tap for the breakdown by meal.` : a11ySummary;
 
   return (
@@ -164,6 +198,7 @@ export default function MacroRings({ rollup, targets, dayTypeLabel, onPress }) {
             size={KCAL_SIZE}
             stroke={KCAL_STROKE}
             progress={disp.progress}
+            plannedProgress={kcalPlannedProgress}
             tint={kcalTint}
             track={colors.surface2}
           />
@@ -174,6 +209,9 @@ export default function MacroRings({ rollup, targets, dayTypeLabel, onPress }) {
             ) : (
               <Text style={styles.kcalSubLabel}>kcal</Text>
             )}
+            {hasPlanned ? (
+              <Text style={styles.kcalPlanned}>{`+${plannedKcal} planned`}</Text>
+            ) : null}
           </View>
         </View>
         {kcalRemaining != null ? (
@@ -188,9 +226,9 @@ export default function MacroRings({ rollup, targets, dayTypeLabel, onPress }) {
         ) : null}
       </View>
       <View style={styles.macroRow}>
-        <MacroBar label="Protein" value={p} target={pTarget} primary />
-        <MacroBar label="Carbs"   value={c} target={cTarget} />
-        <MacroBar label="Fat"     value={f} target={fTarget} />
+        <MacroBar label="Protein" value={p} target={pTarget} planned={plannedP} primary />
+        <MacroBar label="Carbs"   value={c} target={cTarget} planned={plannedC} />
+        <MacroBar label="Fat"     value={f} target={fTarget} planned={plannedF} />
       </View>
     </TouchableOpacity>
   );
@@ -226,6 +264,12 @@ const styles = StyleSheet.create({
   kcalSubLabel: {
     color: colors.textMuted,
     fontSize: fontSize.xs,
+    marginTop: spacing.xxs,
+  },
+  kcalPlanned: {
+    color: colors.primary,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.medium,
     marginTop: spacing.xxs,
   },
   kcalRemainingWrap: {
@@ -285,10 +329,24 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     backgroundColor: colors.surface2,
     overflow: 'hidden',
+    position: 'relative',
   },
   macroFill: {
+    position: 'absolute', left: 0, top: 0,
     height: '100%',
     borderRadius: radius.full,
     backgroundColor: colors.primary,
+  },
+  macroFillPlanned: {
+    position: 'absolute', left: 0, top: 0,
+    height: '100%',
+    borderRadius: radius.full,
+    backgroundColor: colors.primary,
+    opacity: 0.32,
+  },
+  macroBarPlanned: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.medium,
   },
 });

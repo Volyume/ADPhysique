@@ -159,6 +159,21 @@ export default function DiaryScreen({ navigation }) {
     for (const e of entries) if (e.is_planned) slots.add(e.meal_slot);
     return slots.size;
   }, [entries]);
+  // Planned-but-unconfirmed totals for the ring/macro overlay (shown distinctly,
+  // never folded into the eaten rollup the coach uses). Null when nothing planned.
+  const plannedTotals = useMemo(() => {
+    let kcal = 0, protein = 0, carbs = 0, fat = 0;
+    for (const e of entries) {
+      if (!e.is_planned) continue;
+      kcal += Number(e.kcal) || 0;
+      protein += Number(e.protein_g) || 0;
+      carbs += Number(e.carbs_g) || 0;
+      fat += Number(e.fat_g) || 0;
+    }
+    return (kcal || protein || carbs || fat)
+      ? { kcal, protein_g: protein, carbs_g: carbs, fat_g: fat }
+      : null;
+  }, [entries]);
   const isFutureDay = selectedDate > isoDate(new Date());
 
   const handleConfirmPlanned = useCallback(async () => {
@@ -674,6 +689,7 @@ export default function DiaryScreen({ navigation }) {
           <MacroRings
             rollup={rollup}
             targets={effectiveTargets}
+            planned={plannedTotals}
             dayTypeLabel={dayTypeChip}
             onPress={entries.length ? () => setBreakdownVisible(true) : undefined}
           />
