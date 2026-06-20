@@ -695,26 +695,6 @@ export default function DiaryScreen({ navigation }) {
           />
         </View>
 
-        {/* "Plan a higher-calorie day" (calorie banking, CB-1). Only when banking
-            is allowed (not floored / cycling / refeed / ED flag). The label is
-            constant and matches the sheet title: on a compensating lower day
-            "Adjust your higher-calorie day" read as a contradiction next to the
-            "Lower-calorie day" chip. The active bank is still surfaced by the day
-            chip and the sheet's "planned for …/Clear" row. */}
-        {bankingAvailable && !selectionMode ? (
-          <TouchableOpacity
-            style={styles.bankRow}
-            onPress={() => setBankSheetVisible(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Plan a higher-calorie day"
-          >
-            <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
-            <Text style={styles.bankRowText}>
-              Plan a higher-calorie day
-            </Text>
-          </TouchableOpacity>
-        ) : null}
-
         {showOffCard && selectedDate === isoDate(new Date()) ? (
           <View style={styles.offCard}>
             <Text style={styles.offCardText}>
@@ -821,6 +801,25 @@ export default function DiaryScreen({ navigation }) {
             ) : null}
           </>
         )}
+
+        {/* "Plan a higher-calorie day" (calorie banking, CB-1). Moved down here —
+            below the meals / build-a-plan actions and just above water — so it
+            sits with the day's other food actions instead of competing with the
+            ring at the top (founder 2026-06-20). Only when banking is allowed
+            (not floored / cycling / refeed / ED flag). */}
+        {bankingAvailable && !selectionMode ? (
+          <TouchableOpacity
+            style={styles.bankRow}
+            onPress={() => setBankSheetVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Plan a higher-calorie day"
+          >
+            <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
+            <Text style={styles.bankRowText}>
+              Plan a higher-calorie day
+            </Text>
+          </TouchableOpacity>
+        ) : null}
 
         <WaterRow ml={waterMl} onAdd={() => logWaterDelta(250)} onSub={() => logWaterDelta(-250)} />
       </ScrollView>
