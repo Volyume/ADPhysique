@@ -39,7 +39,7 @@ import {
   swapMealInPlan,
   swapFoodInMeal,
 } from '../lib/food/mealPlanService';
-import { updateMealPlan } from '../lib/food/db';
+import { updateMealPlan, getFoodEntriesForDay, clearPlannedDay } from '../lib/food/db';
 import { buildGroceryList } from '../lib/food/groceryList';
 
 // The week is scheduled onto real dates when added to the diary (day i ->
@@ -179,18 +179,62 @@ export default function MealPlanScreen({ navigation }) {
     }
   }, [user?.id, userProfile, busy, load, toast]);
 
-  const handleLogDay = useCallback(async () => {
-    if (!user?.id || !day || busy) return;
+  // Write the plan day to today. `clearPlannedFirst` discards any existing
+  // planned scaffolding for the day first, so a re-plan REPLACES the old plan
+  // instead of appending a second copy (the doubling bug). Real eaten food is
+  // never touched by clearPlannedDay (it only clears is_planned=1 rows).
+  const writeLogDay = useCallback(async (clearPlannedFirst) => {
+    if (!user?.id || !day) return;
     setBusy(true);
     try {
+      if (clearPlannedFirst) await clearPlannedDay(user.id, todayLocalKey());
       const n = await applyPlanDayToDiary(user.id, day, { entryDate: todayLocalKey() });
-      toast.show(n > 0 ? `${n} foods logged to today.` : 'Nothing to log on this day.', { variant: n > 0 ? 'success' : 'info' });
+      const verb = clearPlannedFirst ? "replaced today's plan" : 'logged to today';
+      toast.show(n > 0 ? `${n} foods ${verb}.` : 'Nothing to log on this day.', { variant: n > 0 ? 'success' : 'info' });
     } catch (_) {
       toast.show("Couldn't log the day. Try again.", { variant: 'error' });
     } finally {
       setBusy(false);
     }
-  }, [user?.id, day, busy, toast]);
+  }, [user?.id, day, toast]);
+
+  const handleLogDay = useCallback(async () => {
+    if (!user?.id || !day || busy) return;
+    const today = todayLocalKey();
+    let existing = [];
+    try { existing = (await getFoodEntriesForDay(user.id, today)) || []; } catch (_) { existing = []; }
+    const plannedCount = existing.filter((e) => e.is_planned).length;
+    const eatenCount = existing.length - plannedCount;
+
+    // Already planned today, nothing eaten yet: never silently double the plan —
+    // warn and REPLACE the existing plan (founder 2026-06-20).
+    if (plannedCount > 0 && eatenCount === 0) {
+      appAlert(
+        "Replace today's planned day?",
+        'Today already has a planned day. Replacing clears it and adds this one.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Replace', style: 'destructive', onPress: () => writeLogDay(true) },
+        ],
+      );
+      return;
+    }
+    // Real eaten food is present: never delete it. Add the plan alongside,
+    // clearing only stale planned scaffolding so the plan can't double up.
+    if (eatenCount > 0) {
+      appAlert(
+        'Food already logged today',
+        `You've already logged ${eatenCount} ${eatenCount === 1 ? 'food' : 'foods'} as eaten today. This won't remove it — the planned meals are added alongside.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Add plan', onPress: () => writeLogDay(plannedCount > 0) },
+        ],
+      );
+      return;
+    }
+    // Clean day: just log it.
+    await writeLogDay(false);
+  }, [user?.id, day, busy, writeLogDay]);
 
   // Feature B: schedule the whole week into the diary (today onward), without
   // overwriting any day that already has food logged.
