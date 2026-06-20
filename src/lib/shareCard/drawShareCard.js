@@ -193,13 +193,16 @@ function drawStatBoxes(canvas, Skia, W, pad, y, stats, isSquare, s, font) {
 
 function drawExerciseChips(canvas, Skia, W, pad, y, exercises, s, font) {
   if (!exercises || !exercises.length) return y;
+  // Entries may be plain names or { name } objects — coerce to a label.
+  const names = exercises.map((ex) => (typeof ex === 'string' ? ex : (ex && ex.name) || '')).filter(Boolean);
+  if (!names.length) return y;
   const f = font(22, 'regular');
   const rowH = Math.round(48 * s);
   const chipH = rowH - Math.round(8 * s);
   const gap = Math.round(10 * s);
   let x = pad;
   let drew = 0;
-  exercises.slice(0, 6).forEach((name) => {
+  names.slice(0, 6).forEach((name) => {
     const tw = measure(f, name);
     const chipW = tw + Math.round(36 * s);
     if (x + chipW > W - pad) return;
@@ -209,8 +212,8 @@ function drawExerciseChips(canvas, Skia, W, pad, y, exercises, s, font) {
     x += chipW + gap;
     drew += 1;
   });
-  if (exercises.length > drew) {
-    const more = `+${exercises.length - drew} more`;
+  if (names.length > drew) {
+    const more = `+${names.length - drew} more`;
     if (x + measure(f, more) < W - pad) text(canvas, Skia, more, x, y + chipH * 0.66, f, PALETTE.textMuted, 'left');
   }
   return y + rowH + Math.round(16 * s);
