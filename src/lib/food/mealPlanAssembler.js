@@ -522,15 +522,24 @@ export function assembleDayPlan({
     return false;
   };
 
+  // Drive the day to the TARGET, not merely into the ±10% band. rescaleOne
+  // already solves each staple toward want.kcal; the loop must keep going until
+  // the day is within a few kcal of target (or no staple can move), otherwise it
+  // stops at the band edge and leaves the day up to ~10% under the user's
+  // calories — meals that visibly don't fill the target (founder 2026-06-20).
+  // Floor-safe: raising toward target never drops a day below the floor (target
+  // is >= floor; a floored target IS the floor), and per-food clamps cap portion
+  // sizes so a single staple can't balloon.
+  const EXACT_TOL_KCAL = Math.max(10, Math.round(want.kcal * 0.005));
   const touched = new Set();
   let guard = 0;
-  while ((consumed.kcal < kcalMin || consumed.kcal > kcalMax) && guard < 20) {
+  while (Math.abs(consumed.kcal - want.kcal) > EXACT_TOL_KCAL && guard < 20) {
     guard += 1;
     if (rescaleOne('carb', touched)) continue;
     if (rescaleOne('fat', touched)) continue;
-    // Protein staples grow only while protein itself is short — a portion
-    // size decision, never a way to pad calories with protein.
-    if (consumed.kcal < kcalMin
+    // Protein staples grow only while UNDER target and protein itself is short —
+    // a portion size decision, never a way to pad calories with protein.
+    if (consumed.kcal < want.kcal
       && consumed.protein < want.protein
       && rescaleOne('protein', touched)) continue;
     break;

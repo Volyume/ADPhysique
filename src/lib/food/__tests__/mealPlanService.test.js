@@ -230,14 +230,17 @@ describe('answerDayTraining (rethink §3.2 — per-day "Training today?")', () =
 
   test('flips a rest day to training: day re-assembled on the TRAINING variant, schedule updated', () => {
     const plan = makePlan();
-    const restKcal = plan.days[1].totals.kcal;
     const { plan: next, changed } = answerDayTraining({ plan, dayIndex: 1, training: true, seed: 11 });
     expect(changed).toBe(true);
     expect(next.schedule[1]).toBe('training');
     expect(next.days[1].variant).toBe('training');
-    // The day now targets the stored TRAINING variant, not the rest one.
+    // The day now targets the stored TRAINING variant. With exact-fill the
+    // close-out drives each day onto its target rather than just into the ±10%
+    // band, so assert the re-assembled day lands within tolerance of the
+    // training target (was: strictly closer than the rest day + 1 kcal, which
+    // is too tight now both days land on-target within a few kcal).
     expect(Math.abs(next.days[1].totals.kcal - plan.variants.training.kcal))
-      .toBeLessThan(Math.abs(restKcal - plan.variants.training.kcal) + 1);
+      .toBeLessThanOrEqual(Math.round(plan.variants.training.kcal * 0.02) + 1);
     expect(next.lastEditType).toBe('day_training_answer');
   });
 

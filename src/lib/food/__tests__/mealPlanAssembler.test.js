@@ -686,3 +686,32 @@ describe('SLOT-CHARACTER INVARIANT against the real library', () => {
     expect(firsts.size).toBeLessThanOrEqual(lasts.size);
   });
 });
+
+// EXACT-FILL INVARIANT (founder 2026-06-20): the close-out must drive a day to
+// its TARGET, not merely into the ±10% band. Before this, a day could be
+// declared "done" up to ~10% under the user's calories — visibly not filling
+// the target. These pin that an assembled day lands ON target (within a few
+// percent), across a range of realistic targets and seeds.
+describe('exact-fill close-out lands the day ON target, not just in band', () => {
+  const targets = [
+    { targetKcal: 2400, kcalMin: 2160, kcalMax: 2640, proteinG: 180, carbsG: 250, fatG: 70, warnings: [] },
+    { targetKcal: 2800, kcalMin: 2520, kcalMax: 3080, proteinG: 200, carbsG: 320, fatG: 78, warnings: [] },
+    { targetKcal: 3100, kcalMin: 2790, kcalMax: 3410, proteinG: 210, carbsG: 380, fatG: 80, warnings: [] },
+  ];
+  for (const t of targets) {
+    for (const seed of [1, 7, 23]) {
+      test(`target ${t.targetKcal} kcal, seed ${seed}: day kcal within 4% of target`, () => {
+        const day = assembleDayPlanBestOf({
+          target: { kcal: t.targetKcal, proteinG: t.proteinG, carbsG: t.carbsG, fatG: t.fatG },
+          band: { kcalMin: t.kcalMin, kcalMax: t.kcalMax },
+          prefs: { mealsPerDay: 5 }, variant: 'rest', seed,
+        });
+        if (day.unfilledSlots.length > 0) return; // an unfillable pool is a separate failure mode
+        const offByFraction = Math.abs(day.totals.kcal - t.targetKcal) / t.targetKcal;
+        // Comfortably inside the old ±10% band — proves the close-out no longer
+        // stops at the band edge but pulls the day onto the target.
+        expect(offByFraction).toBeLessThanOrEqual(0.04);
+      });
+    }
+  }
+});
