@@ -112,7 +112,10 @@ export default function MealPlanScreen({ navigation }) {
   // The schedule is an abstract Day 1..7 (not calendar-anchored), so start
   // on Day 1 rather than implying "today" maps to a slot it doesn't own.
   const [dayIndex, setDayIndex] = useState(0);
-  const [expanded, setExpanded] = useState({}); // slotKey -> bool
+  // slotKey -> bool. Default OPEN: the ingredient breakdown (per-food swap +
+  // macros) is the plan's most useful surface, so every meal shows it unless the
+  // user collapses it. Absent key === open; only an explicit false collapses.
+  const [expanded, setExpanded] = useState({});
   const [prefsOpen, setPrefsOpen] = useState(false);
   // The meal-swap sheet: a generous, style-diverse list of alternatives for
   // one slot (rethink §3.3). { slotKey, replacement, alternatives } when open.
@@ -480,7 +483,7 @@ export default function MealPlanScreen({ navigation }) {
 
           {/* Plates */}
           {(day?.slots || []).map((slot) => {
-            const open = !!expanded[slot.slot];
+            const open = expanded[slot.slot] !== false;
             return (
               <View key={slot.slot} style={styles.mealCard}>
                 <TouchableOpacity

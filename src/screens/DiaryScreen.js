@@ -852,10 +852,12 @@ export default function DiaryScreen({ navigation }) {
 
       {selectionMode ? (
         <View style={styles.selectionBar}>
-          <TouchableOpacity onPress={exitSelection} hitSlop={10} style={styles.selCancel} accessibilityRole="button" accessibilityLabel="Cancel selection">
-            <Ionicons name="close" size={22} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.selCount}>{selectedIds.size} selected</Text>
+          <View style={styles.selTopRow}>
+            <TouchableOpacity onPress={exitSelection} hitSlop={10} style={styles.selCancel} accessibilityRole="button" accessibilityLabel="Cancel selection">
+              <Ionicons name="close" size={22} color={colors.textPrimary} />
+            </TouchableOpacity>
+            <Text style={styles.selCount}>{selectedIds.size} selected</Text>
+          </View>
           <View style={styles.selActions}>
             <TouchableOpacity onPress={() => setMovePickerVisible(true)} style={styles.selAction} accessibilityRole="button" accessibilityLabel="Move to a meal slot">
               <Ionicons name="swap-vertical" size={20} color={colors.textPrimary} />
@@ -1029,9 +1031,11 @@ const styles = StyleSheet.create({
     ...shadow.lg,
   },
   safe: { flex: 1, backgroundColor: colors.background },
+  // Two rows so a wide selection ("5 selected") and four labelled actions never
+  // collide on a narrow screen the way a single row did: count + cancel on top,
+  // the action set spread evenly beneath.
   selectionBar: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
-    flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.xl,
@@ -1039,10 +1043,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: colors.border,
     gap: spacing.md,
   },
+  selTopRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   selCancel: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   selCount: { ...type.bodyStrong, color: colors.textPrimary },
-  selActions: { flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.lg },
-  selAction: { alignItems: 'center', minWidth: 48, gap: spacing.xxs },
+  selActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  selAction: { flex: 1, alignItems: 'center', gap: spacing.xxs },
   selActionLabel: { color: colors.textPrimary, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
   moveBackdrop: {
     flex: 1, backgroundColor: colors.scrim,
