@@ -750,29 +750,40 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exercise?.id, currentExerciseIndex]);
 
-  // Persist the in-progress set draft (debounced) so backgrounding or a cold
-  // relaunch mid-set doesn't wipe what the user typed. Keyed per workout +
-  // exercise and tagged with the working-set index so it only restores onto the
-  // same set (see loadHistory). Cleared implicitly: an empty weight removes it.
+  // Persist the in-progress set draft so leaving the app mid-set doesn't wipe
+  // what was typed. iOS routinely terminates a memory-heavy app's JS process
+  // while you're in another app, then remounts this screen on return (looks
+  // like "I just switched apps") — the in-memory entry would otherwise be lost.
+  // Keyed per workout + exercise, tagged with the working-set index so it only
+  // restores onto the same set (see loadHistory). An empty weight clears it.
   const draftSaveTimer = useRef(null);
+  const draftRef = useRef(null);
   useEffect(() => {
-    if (!activeWorkout?.id || !exercise?.id) return undefined;
+    if (!activeWorkout?.id || !exercise?.id) { draftRef.current = null; return undefined; }
     const key = `@volyume_setdraft_${activeWorkout.id}_${exercise.id}`;
     const workingCount = countProgressSets(loggedSets);
+    const w = currentSet?.weight;
+    const payload = (w === '' || w == null) ? null
+      : { workingCount, weight: currentSet.weight, reps: currentSet.reps, rir: currentSet.rir, setType: currentSet.setType };
+    draftRef.current = { key, payload }; // mirror for the immediate background flush
     if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current);
     draftSaveTimer.current = setTimeout(() => {
-      const w = currentSet?.weight;
-      if (w === '' || w == null) { AsyncStorage.removeItem(key).catch(() => {}); return; }
-      AsyncStorage.setItem(key, JSON.stringify({
-        workingCount,
-        weight: currentSet.weight,
-        reps: currentSet.reps,
-        rir: currentSet.rir,
-        setType: currentSet.setType,
-      })).catch(() => {});
-    }, 300);
+      if (payload) AsyncStorage.setItem(key, JSON.stringify(payload)).catch(() => {});
+      else AsyncStorage.removeItem(key).catch(() => {});
+    }, 250);
     return () => { if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current); };
   }, [currentSet, loggedSets, activeWorkout?.id, exercise?.id]);
+
+  // Flush the draft the INSTANT the app backgrounds, so a quick type-then-switch
+  // (faster than the debounce above) still persists before iOS may kill the JS.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => {
+      if ((s === 'background' || s === 'inactive') && draftRef.current?.payload) {
+        AsyncStorage.setItem(draftRef.current.key, JSON.stringify(draftRef.current.payload)).catch(() => {});
+      }
+    });
+    return () => { try { sub?.remove(); } catch (_) {} };
+  }, []);
 
   // COMP-001 measurement: the logged list renders above the action row now;
   // emit the count as it grows so the fold maths can be validated in
