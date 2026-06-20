@@ -595,8 +595,12 @@ export default function App() {
           // weekly coach average stay current with no visible step card.
           // Silent: no-op if the user has not granted the steps permission.
           // eslint-disable-next-line global-require
-          const { recordTodaySteps } = require('./src/lib/activitySteps');
+          const { recordTodaySteps, backfillDailySteps } = require('./src/lib/activitySteps');
           recordTodaySteps(localUserId).catch(() => {});
+          // Backfill complete daily totals (last ~14 days) once per launch so the
+          // weekly coach average reflects real end-of-day steps, not the partial
+          // foreground snapshots recordTodaySteps leaves on past days.
+          backfillDailySteps(localUserId).catch(() => {});
         }
 
         // Flush any feedback rows that were captured offline (the user

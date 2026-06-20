@@ -143,6 +143,43 @@ export async function recordTodaySteps(userId) {
 }
 
 /**
+ * Backfill COMPLETE daily step totals for the last `days` days into daily_steps.
+ *
+ * recordTodaySteps only ever writes a partial "steps so far" snapshot whenever
+ * the app is foregrounded, so past days are left under-counted and the weekly
+ * coach average reads far too low. This pulls each day's real end-of-day total
+ * from the health aggregator and writes it. It NEVER overwrites a manual entry
+ * (a user override always wins). Best-effort, guarded, never throws. Returns the
+ * number of days written.
+ */
+export async function backfillDailySteps(userId, days = 14) {
+  if (!userId) return 0;
+  try {
+    const status = await getStepPermissionStatus();
+    if (status !== 'granted') return 0;
+    const health = getHealth();
+    if (!health?.readDailyStepTotals) return 0;
+    const sinceMs = Date.now() - days * 86400000;
+    const totals = await health.readDailyStepTotals(sinceMs);
+    if (!Array.isArray(totals) || !totals.length) return 0;
+    // eslint-disable-next-line global-require
+    const { setDailySteps, getDailyStepsRange, activityDayKey } = require('./database');
+    const existing = await getDailyStepsRange(userId, activityDayKey(sinceMs), activityDayKey()).catch(() => []);
+    const manualDays = new Set((existing || []).filter((r) => r.source === 'manual').map((r) => r.entryDate));
+    let written = 0;
+    for (const { entryDate, steps } of totals) {
+      if (!entryDate || !(steps > 0) || manualDays.has(entryDate)) continue;
+      // eslint-disable-next-line no-await-in-loop
+      await setDailySteps(userId, { entryDate, steps, source: 'auto' });
+      written += 1;
+    }
+    return written;
+  } catch (_) {
+    return 0;
+  }
+}
+
+/**
  * The single "connect your health data" ask used by the launch prompt and Pro
  * enrolment. Requests steps AND weight together in one system sheet, and on a
  * grant kicks the immediate reads so the user sees both straight away: today's
@@ -165,6 +202,8 @@ export async function connectHealthStepsAndWeight(userId) {
   }
   if (status === 'granted') {
     try { await recordTodaySteps(userId); } catch (_) { /* steps best effort */ }
+    // Backfill complete history so past days aren't stuck at partial snapshots.
+    try { await backfillDailySteps(userId); } catch (_) { /* best effort */ }
     try {
       // importNewWeights self-gates on the weight permission and only reads
       // since the last import, so it is cheap and safe to fire here.

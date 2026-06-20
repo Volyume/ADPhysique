@@ -495,6 +495,63 @@ export async function readStepsToday() {
   return 0;
 }
 
+/**
+ * Complete per-day step totals from `sinceMs` until now, as
+ * [{ entryDate, steps }] keyed by the device's local day. Unlike readStepsToday
+ * (a single live partial), this returns each day's FULL total so historical
+ * daily_steps can be backfilled — the foreground snapshot writer otherwise
+ * leaves every past day stuck at whatever it was when the app was last opened,
+ * making the weekly average read far too low. Returns [] when unavailable or
+ * not permitted. Never throws.
+ */
+export async function readDailyStepTotals(sinceMs) {
+  if (!isHealthAvailable()) return [];
+  // eslint-disable-next-line global-require
+  const { localDayKey } = require('./dayKey');
+  const start = new Date(sinceMs);
+  start.setHours(0, 0, 0, 0);
+  const startISO = start.toISOString();
+  const endISO = new Date().toISOString();
+
+  if (Platform.OS === 'ios') {
+    const HK = getIosModule();
+    if (!HK) return [];
+    if (!(await _ensureIosReadyForRead(['steps']))) return [];
+    return new Promise(resolve => {
+      // period:1440 => one bucket per DAY (the default bucket is hourly).
+      HK.getDailyStepCountSamples({ startDate: startISO, endDate: endISO, period: 1440, includeManuallyAdded: true }, (err, results) => {
+        if (err || !Array.isArray(results)) { resolve([]); return; }
+        const byDay = new Map();
+        results.forEach(r => {
+          if (!r || typeof r.value !== 'number') return;
+          const key = localDayKey(new Date(r.startDate).getTime());
+          byDay.set(key, (byDay.get(key) || 0) + r.value);
+        });
+        resolve([...byDay.entries()].map(([entryDate, steps]) => ({ entryDate, steps: Math.round(steps) })));
+      });
+    });
+  }
+
+  if (Platform.OS === 'android') {
+    const HC = getAndroidModule();
+    if (!HC) return [];
+    try {
+      const groups = await HC.aggregateGroupByPeriod({
+        recordType: 'Steps',
+        timeRangeFilter: { operator: 'between', startTime: startISO, endTime: endISO },
+        timeRangeSlicer: { period: 'DAYS', length: 1 },
+      });
+      return (groups || [])
+        .map(g => ({ entryDate: localDayKey(new Date(g.startTime).getTime()), steps: Math.round(g?.result?.COUNT_TOTAL ?? 0) }))
+        .filter(d => d.entryDate);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  return [];
+}
+
 // ─── Workout write ────────────────────────────────────────────────────
 
 /**
