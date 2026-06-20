@@ -119,6 +119,12 @@
     },
     "plugins": [
       "expo-secure-store",
+      [
+        "expo-sqlite",
+        {
+          "useSQLCipher": true
+        }
+      ],
       "expo-apple-authentication",
       "@react-native-google-signin/google-signin",
       [

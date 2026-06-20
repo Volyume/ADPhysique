@@ -13,4 +13,9 @@ function getRandomBytes(count) {
   return getRandomValues(new Uint8Array(count));
 }
 
-module.exports = { getRandomValues, getRandomBytes };
+// Async CSPRNG used by dbCrypto.getOrCreateDbKey for the SQLCipher key.
+async function getRandomBytesAsync(count) {
+  return getRandomValues(new Uint8Array(count));
+}
+
+module.exports = { getRandomValues, getRandomBytes, getRandomBytesAsync };

@@ -3,6 +3,7 @@ import { generateInsights } from './insightsEngine';
 import { calculate1RM, allocateExerciseVolume } from './algorithms';
 import { logError, logWarn } from './errorLog';
 import { localDayKey, localWeekStartMs } from './dayKey';
+import { openEncryptedDb } from './dbCrypto';
 
 let _db = null;
 let _initPromise = null;
@@ -72,7 +73,13 @@ export function initDatabase() {
 }
 
 async function _doInit() {
-  _db = await SQLite.openDatabaseAsync('volyume.db');
+  // F-004: open the DB SQLCipher-encrypted, migrating an existing plaintext DB
+  // in place on first run. openEncryptedDb sets `PRAGMA key` as the first
+  // statement and falls back to a working plaintext handle if encryption fails,
+  // so the app never bricks or loses data. `PRAGMA key` MUST precede any other
+  // statement, so this runs before `PRAGMA journal_mode`.
+  const { db: opened } = await openEncryptedDb(SQLite);
+  _db = opened;
   await _db.execAsync('PRAGMA journal_mode = WAL;');
   await _db.execAsync(`
     CREATE TABLE IF NOT EXISTS exercises (
