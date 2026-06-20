@@ -642,28 +642,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       setSetTargets(computed);
       setTargetReason(computedReason);
 
-      // Pre-fill: use target for the current working set position.
-      // Reps: prefer (prev session reps + 1) when it sits inside the target range
-      // so the input starts at the beat-chip suggestion, not the range floor.
+      // Pre-fill from what was ACTUALLY lifted last time for this set position
+      // (Strong / Hevy behaviour), NOT the computed progression target — the
+      // target felt random to users (e.g. 9.5kg prefilled after a 30kg set).
+      // The target still shows as the suggestion chip (setTargets), so the
+      // coaching cue is kept; it just no longer overrides the input.
       const currentWorkingCount = allLoggedForExercise.filter(s => s.setType !== 'warmup').length;
-      const currentTarget = computed[currentWorkingCount];
-      if (currentTarget) {
-        const prevSet = getBestAnchorSet(prev, currentWorkingCount);
-        const beatRep = prevSet ? prevSet.actualReps + 1 : null;
-        const prefillReps = (beatRep && beatRep >= currentTarget.repsMin && beatRep <= currentTarget.repsMax)
-          ? beatRep
-          : currentTarget.repsMin;
+      const lastActual = getBestAnchorSet(prev, currentWorkingCount) || prev[prev.length - 1] || null;
+      if (lastActual && (lastActual.weight ?? 0) > 0) {
         setCurrentSet({
           ...DEFAULT_SET,
-          weight: currentTarget.weight,
-          reps: prefillReps,
-        });
-      } else if (prev.length > 0) {
-        const lastSet = prev[prev.length - 1];
-        setCurrentSet({
-          ...DEFAULT_SET,
-          weight: lastSet.weight != null ? lastSet.weight : '',
-          reps: lastSet.actualReps || DEFAULT_SET.reps,
+          weight: lastActual.weight,
+          reps: lastActual.actualReps ?? lastActual.actual_reps ?? DEFAULT_SET.reps,
         });
       } else {
         setCurrentSet({
@@ -732,12 +722,57 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           }
         }
       } catch (_e) {}
+
+      // Restore an in-progress draft (typed but not yet logged) so backgrounding
+      // or a cold relaunch mid-set doesn't wipe what the user just entered. Only
+      // restores when it belongs to THIS set position, so it never lands a stale
+      // value on the wrong set.
+      try {
+        const raw = await AsyncStorage.getItem(`@volyume_setdraft_${activeWorkout.id}_${exercise.id}`);
+        if (!cancelled && raw) {
+          const draft = JSON.parse(raw);
+          const nextCount = (workoutExercises[currentExerciseIndex]?.sets || []).filter(s => s.setType !== 'warmup').length;
+          if (draft && draft.workingCount === nextCount && draft.weight !== '' && draft.weight != null) {
+            setCurrentSet(cs => ({
+              ...cs,
+              weight: draft.weight,
+              reps: draft.reps ?? cs.reps,
+              rir: draft.rir ?? cs.rir,
+              setType: draft.setType || cs.setType,
+            }));
+          }
+        }
+      } catch (_) { /* draft restore is best-effort */ }
     }
 
     loadHistory();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exercise?.id, currentExerciseIndex]);
+
+  // Persist the in-progress set draft (debounced) so backgrounding or a cold
+  // relaunch mid-set doesn't wipe what the user typed. Keyed per workout +
+  // exercise and tagged with the working-set index so it only restores onto the
+  // same set (see loadHistory). Cleared implicitly: an empty weight removes it.
+  const draftSaveTimer = useRef(null);
+  useEffect(() => {
+    if (!activeWorkout?.id || !exercise?.id) return undefined;
+    const key = `@volyume_setdraft_${activeWorkout.id}_${exercise.id}`;
+    const workingCount = countProgressSets(loggedSets);
+    if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current);
+    draftSaveTimer.current = setTimeout(() => {
+      const w = currentSet?.weight;
+      if (w === '' || w == null) { AsyncStorage.removeItem(key).catch(() => {}); return; }
+      AsyncStorage.setItem(key, JSON.stringify({
+        workingCount,
+        weight: currentSet.weight,
+        reps: currentSet.reps,
+        rir: currentSet.rir,
+        setType: currentSet.setType,
+      })).catch(() => {});
+    }, 300);
+    return () => { if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current); };
+  }, [currentSet, loggedSets, activeWorkout?.id, exercise?.id]);
 
   // COMP-001 measurement: the logged list renders above the action row now;
   // emit the count as it grows so the fold maths can be validated in
@@ -861,15 +896,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         ]));
       }
 
-      // Pre-fill next set from per-set targets (same beat-rep logic as initial load)
+      // Carry forward what was just lifted (Strong / Hevy): the next set defaults
+      // to the SAME weight and reps you just did, not a stale previous-session
+      // target. The target chip still shows the progression suggestion.
       if (currentSet.setType !== 'warmup') {
-        const nextWorkingCount = countProgressSets(newLoggedSets);
-        const nextTarget = setTargets[nextWorkingCount];
-        if (nextTarget) {
-          const prevSetForNext = getBestAnchorSet(prevSets, nextWorkingCount);
-          const prefillReps = prefillRepsForTarget(prevSetForNext, nextTarget);
-          setCurrentSet(cs => ({ ...cs, weight: nextTarget.weight, reps: prefillReps }));
-        }
+        setCurrentSet(cs => ({ ...cs, weight: setData.weight, reps: setData.actualReps }));
       }
 
       // Update last activity timestamp
