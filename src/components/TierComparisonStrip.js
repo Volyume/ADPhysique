@@ -17,11 +17,14 @@ import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
 
 // Three-row content for the 2-tier model. Free on the left (the lesser
-// tier), Pro on the right (the fuller, paid tier).
+// tier), Pro on the right (the fuller, paid tier). Each row names a real,
+// shipped, Pro-gated differentiator (audit 2026-06-21: the previous rows
+// promised "Peak Week and block planning" and "Photos and coach handover",
+// neither of which exists, plus an unverified "90 days history" gate).
 const COMPARISON_ROWS = [
-  { free: '90 days of history',  pro: 'Unlimited history' },
-  { free: 'Current block only',  pro: 'Peak Week and block planning' },
-  { free: 'CSV export',          pro: 'Photos and coach handover' },
+  { free: 'Workout logging',      pro: 'Food diary, macros & barcode' },
+  { free: 'Build your own plans', pro: 'Division-specific plans' },
+  { free: 'Progress stats',       pro: 'Weekly Precision Coaching™' },
 ];
 
 export default function TierComparisonStrip({

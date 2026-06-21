@@ -613,6 +613,7 @@ export function getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matr
       wellness:         'Recovery dipped. Pull lower-body volume back a little this week before adding again.',
       figure:           'Recovery dipped. Ease back on shoulder and back volume this week and keep quality high.',
       womens_physique:  'Recovery dipped. Trim volume across the groups this week and let recovery catch up.',
+      womens_bodybuilding: 'Recovery dipped. Trim a set or two across every group this week and let recovery catch up.',
     };
     return reduceNotes[trainingGoal] ?? reduceNotes.general;
   }
@@ -627,6 +628,7 @@ export function getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matr
       wellness:         'Keep lower body volume steady. Recovery needs more time before adding.',
       figure:           'Hold current plan. Keep shoulder and back sessions consistent.',
       womens_physique:  'Maintain current volume. Performance is stable across all groups.',
+      womens_bodybuilding: 'No changes needed. Hold your current volume across every group.',
     };
     return holdNotes[trainingGoal] ?? holdNotes.general;
   }
@@ -641,6 +643,7 @@ export function getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matr
       wellness:         'Energy and recovery are good. Add effort to lower body, especially glutes and quads.',
       figure:           'Great recovery window. Shoulders, back and glutes should get the extra effort this week.',
       womens_physique:  'Recovery is solid. Push across all groups with a focus on back and shoulder development.',
+      womens_bodybuilding: 'Everything is looking good. Push volume across every group while recovery supports it.',
     };
     return pushHighNotes[trainingGoal] ?? pushHighNotes.general;
   }
@@ -655,6 +658,7 @@ export function getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matr
     wellness:         'Recovery is solid. Keep lower body sessions consistent and precise.',
     figure:           'Recovery is solid. Keep shoulder, back and glute sessions on track.',
     womens_physique:  'Recovery is solid. Keep all groups consistent with quality focus.',
+    womens_bodybuilding: 'Recovery is solid. Consistent effort across every group this week.',
   };
   return pushNotes[trainingGoal] ?? pushNotes.general;
 }
