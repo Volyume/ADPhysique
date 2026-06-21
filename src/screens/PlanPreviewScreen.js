@@ -9,6 +9,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
+import Card from '../components/Card';
 import useAppStore from '../store/useAppStore';
 import { buildPlanPreview } from '../lib/onboarding/planPreview';
 
@@ -27,11 +28,11 @@ export default function PlanPreviewScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.kicker}>YOUR PLAN</Text>
         <Text style={styles.h1}>{p.headline}</Text>
-        <View style={styles.card}>
+        <Card style={styles.card}>
           <Text style={styles.splitName}>{p.splitName}</Text>
           <Text style={styles.structure}>{p.structure}</Text>
           {p.phaseLabel ? <Text style={styles.phase}>{`Built ${p.phaseLine}.`}</Text> : null}
-        </View>
+        </Card>
         <Text style={styles.note}>{p.nutritionNote}</Text>
       </ScrollView>
 
@@ -51,7 +52,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },
   kicker: { color: colors.textSecondary, fontSize: fontSize.sm, letterSpacing: 1, fontWeight: fontWeight.semibold },
   h1: { color: colors.textPrimary, fontSize: fontSize.xxl, fontWeight: fontWeight.black, marginTop: spacing.xs, marginBottom: spacing.lg },
-  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.sm },
+  card: { gap: spacing.sm },
   splitName: { color: colors.primary, fontSize: fontSize.xl, fontWeight: fontWeight.heavy },
   structure: { color: colors.textPrimary, fontSize: fontSize.md },
   phase: { color: colors.textSecondary, fontSize: fontSize.md },

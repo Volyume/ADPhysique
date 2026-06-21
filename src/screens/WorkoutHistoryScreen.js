@@ -606,7 +606,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
 
       {/* Calendar grid */}
       {viewMode === 'calendar' && (
-        <View style={styles.calendarCard}>
+        <Card padding="md" style={styles.calendarCard}>
           {renderCalendarHeader()}
           {/* Day-of-week headers */}
           <View style={styles.calendarRow}>
@@ -622,7 +622,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
               <Text style={styles.clearDayText}>Show all this month</Text>
             </TouchableOpacity>
           )}
-        </View>
+        </Card>
       )}
     </View>
   );
@@ -729,11 +729,6 @@ const styles = StyleSheet.create({
 
   // ── Calendar ───────────────────────────────────────────────────────────────
   calendarCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
     gap: spacing.xs,
   },
   calendarHeader: {

@@ -23,6 +23,7 @@ import {
   migrateFromLegacyBlob,
 } from '../lib/notifications/preferences';
 import useAppStore from '../store/useAppStore';
+import Card from '../components/Card';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
@@ -484,7 +485,7 @@ export default function NotificationSettingsScreen({ navigation }) {
 
         {/* Section 3, Training reminders (available to all tiers) */}
         <Text style={styles.sectionLabel}>Training reminders</Text>
-        <View style={styles.card}>
+        <Card style={styles.card}>
           {/* Toggle row */}
           <View style={styles.toggleRow}>
             <View style={styles.toggleIconWrap}>
@@ -526,7 +527,7 @@ export default function NotificationSettingsScreen({ navigation }) {
               Pick a time and the days you want the nudge. Plans don't have fixed weekdays in Volyume, so reminders fire on the days you choose.
             </Text>
           </View>
-        </View>
+        </Card>
 
         {/* Bottom note */}
         <View style={styles.bottomNote}>
@@ -599,13 +600,12 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
 
-  // Card
+  // Card: the shared Card supplies surface, radius.lg and the 1px border.
+  // This card's rows own their own padding, so cancel Card's default padding
+  // and keep overflow hidden (the divider + rounded corners depend on it).
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     overflow: 'hidden',
+    padding: 0,
   },
 
   // Toggle row

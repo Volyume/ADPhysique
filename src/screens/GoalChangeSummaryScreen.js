@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Card from '../components/Card';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { PROTEIN_APPROACHES } from '../lib/nutritionEngine';
@@ -172,7 +172,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.heroCard}>
+        <Card tone="success" style={styles.heroCard}>
           <Ionicons name="checkmark-circle" size={28} color={colors.success} />
           <View style={{ flex: 1 }}>
             <Text style={styles.heroTitle}>Goals updated</Text>
@@ -182,7 +182,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
                 : `Nothing meaningful changed. Your plan and nutrition stay as they were.`}
             </Text>
           </View>
-        </View>
+        </Card>
 
         {(goalChanged || phaseChanged) && (
           <>
@@ -250,7 +250,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
         )}
 
         <Text style={styles.sectionLabel}>What happens next</Text>
-        <View style={styles.nextCard}>
+        <Card style={styles.nextCard}>
           <View style={styles.nextRow}>
             <Ionicons name="ellipse" size={6} color={colors.primary} style={styles.bullet} />
             <Text style={styles.nextText}>
@@ -273,7 +273,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
               </Text>
             </View>
           )}
-        </View>
+        </Card>
 
         <TouchableOpacity style={styles.doneBtn} onPress={handleDone} activeOpacity={0.85} accessibilityRole="button">
           <Text style={styles.doneBtnText}>Got it</Text>
@@ -296,8 +296,6 @@ const styles = StyleSheet.create({
 
   heroCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: withAlpha(colors.success, 0.251),
   },
   heroTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.xs },
   heroBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
@@ -338,8 +336,8 @@ const styles = StyleSheet.create({
   macroDeltaDown: { color: colors.warning },
 
   nextCard: {
-    backgroundColor: colors.surface2, borderRadius: radius.lg, padding: spacing.lg,
-    gap: spacing.sm, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    gap: spacing.sm,
   },
   nextRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   bullet: { marginTop: 7 },

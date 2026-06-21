@@ -9,6 +9,7 @@ import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NA
 import { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
 import Button from '../components/Button';
+import Card from '../components/Card';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -168,10 +169,6 @@ function buildRecommendations({ volumeByMuscle, deloadResult, checkins, laggingM
 
 function SectionHeading({ title }) {
   return <Text style={styles.sectionHeading}>{title}</Text>;
-}
-
-function Card({ children, style }) {
-  return <View style={[styles.card, style]}>{children}</View>;
 }
 
 function VolumeRow({ muscle, data }) {
@@ -646,13 +643,6 @@ const styles = StyleSheet.create({
   },
 
   // Cards
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-  },
   cardNoPad: {
     padding: 0,
     overflow: 'hidden',

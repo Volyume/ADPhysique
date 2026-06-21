@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
+import Card from '../components/Card';
 import ExercisePickerModal from '../components/ExercisePickerModal';
 
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
@@ -86,7 +87,7 @@ function PlanBalanceCard({ days }) {
   const overloaded = rows.filter(r => r.status === 'over');
 
   return (
-    <View style={balanceStyles.card}>
+    <Card style={balanceStyles.card}>
       <View style={balanceStyles.header}>
         <Ionicons name="pie-chart-outline" size={16} color={colors.textSecondary} />
         <Text style={balanceStyles.title}>Plan Balance</Text>
@@ -137,7 +138,7 @@ function PlanBalanceCard({ days }) {
           ))}
         </View>
       )}
-    </View>
+    </Card>
   );
 }
 
@@ -432,7 +433,7 @@ export default function ManualBuilderScreen({ navigation }) {
 
         {/* Day cards */}
         {days.map((day, dayIdx) => (
-          <View key={day.localId} style={styles.dayCard}>
+          <Card key={day.localId} style={styles.dayCard}>
             {/* Day header */}
             <View style={styles.dayHeader}>
               <Text style={styles.dayNumber}>Day {dayIdx + 1}</Text>
@@ -476,7 +477,7 @@ export default function ManualBuilderScreen({ navigation }) {
               <Ionicons name="add" size={16} color={colors.primary} />
               <Text style={styles.addExText}>Add Exercise</Text>
             </TouchableOpacity>
-          </View>
+          </Card>
         ))}
 
         {/* Add day */}
@@ -647,10 +648,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   dayCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    padding: 0,
     overflow: 'hidden',
   },
   dayHeader: {
@@ -835,11 +833,6 @@ const styles = StyleSheet.create({
 
 const balanceStyles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
     gap: spacing.md,
   },
   header: {

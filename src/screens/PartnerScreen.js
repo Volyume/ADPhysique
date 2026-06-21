@@ -23,6 +23,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { appAlert } from '../components/AppAlert';
 import { colors, spacing, radius, fontSize, fontWeight, type, withAlpha } from '../styles/theme';
+import Card from '../components/Card';
 import usePartners from '../hooks/usePartners';
 import { parseInviteCode } from '../lib/partners/link';
 import { ticksLabel } from '../lib/partners/signals';
@@ -201,28 +202,28 @@ export default function PartnerScreen({ route }) {
 
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Train with a partner</Text>
-              <View style={styles.card}>
+              <Card style={styles.card}>
                 <Text style={styles.pitch}>
                   Pick one person you trust and you will both see whether the other
                   trained this week. There are no numbers to compare and there is no
                   feed to scroll. It is just the two of you, quietly keeping each
                   other going.
                 </Text>
-              </View>
+              </Card>
             </View>
 
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>What you each see</Text>
-              <View style={styles.card}>
+              <Card style={styles.card}>
                 {SEES.map((t) => (
                   <View key={t} style={styles.bullet}><Text style={styles.yes}>✓</Text><Text style={styles.bulletText}>{t}</Text></View>
                 ))}
-              </View>
+              </Card>
             </View>
 
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>What neither of you will ever see</Text>
-              <View style={styles.card}>
+              <Card style={styles.card}>
                 {NEVER_SEES.map((t) => (
                   <View key={t} style={styles.bullet}><Text style={styles.no}>✕</Text><Text style={styles.bulletText}>{t}</Text></View>
                 ))}
@@ -231,11 +232,11 @@ export default function PartnerScreen({ route }) {
                   sharing stops and everything that was shared between you is deleted.
                   Your partner simply sees that the partnership has ended, and nothing more.
                 </Text>
-              </View>
+              </Card>
             </View>
 
             <View style={styles.section}>
-              <View style={styles.card}>
+              <Card style={styles.card}>
                 <View style={styles.toggleRow}>
                   <Text style={styles.toggleLabel}>Share a consistency streak</Text>
                   <Switch
@@ -271,7 +272,7 @@ export default function PartnerScreen({ route }) {
                     <Text style={styles.codeBtnText}>Join</Text>
                   </TouchableOpacity>
                 </View>
-              </View>
+              </Card>
             </View>
           </>
         )}
@@ -286,10 +287,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxxl },
   section: { gap: spacing.md },
   sectionLabel: { ...type.label, color: colors.textSecondary },
-  card: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border, padding: spacing.lg, gap: spacing.sm,
-  },
+  card: { gap: spacing.sm },
   pitch: { ...type.body, color: colors.textPrimary, lineHeight: 22 },
 
   // Paired live card

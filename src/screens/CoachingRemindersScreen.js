@@ -31,6 +31,7 @@ import {
   cancelCheckinNotification,
   requestNotificationPermissions,
 } from '../lib/notifications';
+import Card from '../components/Card';
 import { setPreference as setPrefRow } from '../lib/notifications/preferences';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
@@ -310,7 +311,7 @@ export default function CoachingRemindersScreen() {
 
         {/* Morning weight */}
         <Text style={styles.sectionLabel}>Morning weight</Text>
-        <View style={styles.card}>
+        <Card style={styles.card} padding="md">
           <View style={styles.cardHeader}>
             <View style={styles.iconWrap}>
               <Ionicons name="scale-outline" size={18} color={colors.primary} />
@@ -331,11 +332,11 @@ export default function CoachingRemindersScreen() {
               Body weight shifts naturally each day with fluid, food, and hormones. Logging every other day (at minimum) lets the trend math smooth out that noise. Three or more readings per week unlocks the weekly check-in.
             </Text>
           </View>
-        </View>
+        </Card>
 
         {/* Weekly check-in */}
         <Text style={styles.sectionLabel}>Weekly check-in</Text>
-        <View style={styles.card}>
+        <Card style={styles.card} padding="md">
           <View style={styles.cardHeader}>
             <View style={styles.iconWrap}>
               <Ionicons name="pulse-outline" size={18} color={colors.primary} />
@@ -368,11 +369,11 @@ export default function CoachingRemindersScreen() {
               You can change the day any time. The next reminder will be at least 7 days after your last check-in so the trend math has enough data to mean something.
             </Text>
           </View>
-        </View>
+        </Card>
 
         {/* Missed check-in follow-up (OPP-C03). Optional, default on. */}
         <Text style={styles.sectionLabel}>Check-in follow-up</Text>
-        <View style={styles.card}>
+        <Card style={styles.card} padding="md">
           <View style={styles.cardHeader}>
             <View style={styles.iconWrap}>
               <Ionicons name="hand-left-outline" size={18} color={colors.primary} />
@@ -392,11 +393,11 @@ export default function CoachingRemindersScreen() {
               If a check-in day passes without one, you'll get a gentle nudge that evening and a look at your weekly trend two days later. Never more than that, and never a guilt trip.
             </Text>
           </View>
-        </View>
+        </Card>
 
         {/* F3: planned-meal confirm reminder. Optional, default on, Pro. */}
         <Text style={styles.sectionLabel}>Meal-plan reminder</Text>
-        <View style={styles.card}>
+        <Card style={styles.card} padding="md">
           <View style={styles.cardHeader}>
             <View style={styles.iconWrap}>
               <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
@@ -416,7 +417,7 @@ export default function CoachingRemindersScreen() {
               If you have planned meals you've not marked as eaten, we'll send one gentle nudge in the evening so you can confirm them and keep your coach accurate.
             </Text>
           </View>
-        </View>
+        </Card>
 
         {saved && <Text style={styles.savedText}>Saved</Text>}
       </ScrollView>
@@ -439,9 +440,14 @@ const styles = StyleSheet.create({
     color: colors.textMuted, letterSpacing: 0.6, textTransform: 'uppercase',
     marginTop: spacing.md, marginBottom: -spacing.xs,
   },
+  // Intentional settings/list-style card: secondary surface (surface2),
+  // vertical-only padding (children own their horizontal padding) and the
+  // tighter radius.md corner. Card supplies the surface base, border and
+  // vertical padding (padding="md"); these props keep the list-style look.
   card: {
-    backgroundColor: colors.surface2, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border, paddingVertical: spacing.md,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    paddingHorizontal: 0,
   },
   cardHeader: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,

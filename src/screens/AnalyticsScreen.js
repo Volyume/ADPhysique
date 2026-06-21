@@ -8,6 +8,7 @@ import { useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius, volumeColors, type } from '../styles/theme';
+import Card from '../components/Card';
 import ScreenHeader from '../components/ScreenHeader';
 import { EmptyChartIllustration } from '../components/Illustrations';
 import InfoTooltip from '../components/InfoTooltip';
@@ -432,15 +433,13 @@ function VolumeSummaryStrip({ volume, onPress }) {
   const trained = MUSCLES.filter(m => (volume[m]?.workingSets ?? 0) > 0);
   if (trained.length === 0) {
     return (
-      <TouchableOpacity
-        style={styles.card}
+      <Card
         onPress={onPress}
-        activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel="This week's volume. Open the heatmap."
       >
         <Text style={styles.volEmptyText}>Nothing logged this week yet.</Text>
-      </TouchableOpacity>
+      </Card>
     );
   }
   let below = 0;
@@ -456,10 +455,9 @@ function VolumeSummaryStrip({ volume, onPress }) {
   if (below > 0) flags.push({ key: 'below', n: below, label: 'below target', color: volumeColors.below });
   if (over > 0) flags.push({ key: 'over', n: over, label: 'over max', color: volumeColors.overMrv });
   return (
-    <TouchableOpacity
-      style={[styles.card, styles.volSummary]}
+    <Card
+      style={styles.volSummary}
       onPress={onPress}
-      activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityLabel="This week's volume. Open the heatmap."
     >
@@ -480,7 +478,7 @@ function VolumeSummaryStrip({ volume, onPress }) {
         ))}
       </View>
       <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-    </TouchableOpacity>
+    </Card>
   );
 }
 
@@ -601,14 +599,6 @@ const styles = StyleSheet.create({
   },
   rowBetween:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   seeAll:      { ...type.label, color: colors.primary },
-
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
 
   // ── Insight rows ──
   recapCard: {
