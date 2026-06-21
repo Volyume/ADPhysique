@@ -34,7 +34,7 @@ file:line both sides → tick the checklist → commit.
 Status: `[ ]` not started · `[~]` in progress · `[x]` done.
 
 ### Engine / calc modules — `src/lib`
-- [~] nutritionEngine.js   (science citations verified; core target fns pending)
+- [~] nutritionEngine.js   (SCIENCE axis read-in-full + verified: F-S1..S7; says-vs-does of nutrition copy still owed)
 - [ ] weeklyCoach.js
 - [ ] algorithms.js
 - [ ] planEngine.js
@@ -137,11 +137,48 @@ branches + in-app references. Founder ruling needed.
 
 ---
 
-## STILL TO VERIFY (citations queued for web check)
-- Mifflin-St Jeor & Katch-McArdle BMR formulas (constants vs published).
-- MATADOR 2017 diet-break (Int J Obesity) — real + 2-week/8-12wk claim.
-- Pontzer 2016 (Current Biology 26:410-417) & Davy 2025 (PNAS) — the
-  constrained-TDEE citations behind the downward-tuned activity multipliers.
-- Epley / Brzycki 1RM formulas (algorithms.js).
-- The activity-multiplier downward tuning ("coaching observation", −200-400 kcal)
-  is explicitly UNSOURCED in code — flag.
+### F-S4 — Mifflin-St Jeor & Katch-McArdle BMR — EXACT
+**Verdict: SCIENCE-OK.**
+- `nutritionEngine.js:569-572` male `10W+6.25H-5A+5`, female `...-161` — exact
+  published Mifflin-St Jeor. `:566` `370 + 21.6*LBM` — exact Katch-McArdle.
+  Katch used only with a credible (non-visual) BF% (`:560-566`), else Mifflin.
+
+### F-S5 — Protein / FFM-floor target functions — SOUND
+**Verdict: MATCHES.**
+- `computeFFMFloor` (`:597-627`): credible BF% -> FFM=W*(1-BF/100); else sex-aware
+  conservative fraction (male 0.78 / female 0.72) erring to a higher (safer) FFM;
+  floor = FFM*30. `calcProtein` (`:637-682`): lbm-vs-bw tables, custom clamped to
+  PROTEIN_CUSTOM_MAX_GKGBW=3.5, floor enforced. Read in full; sound.
+
+### F-S6 — MATADOR / Pontzer citations — REAL (one year nuance)
+**Verdict: SCIENCE-OK with a minor precision flag.**
+- `:107` "MATADOR trial (2017, Int J Obesity)" — the MATADOR intermittent-energy-
+  restriction trial (Byrne et al.) is real; commonly dated **2018** (Int J Obes
+  42:129-138). Year likely off by one. The 2-week-break/metabolic-rate finding is
+  accurately represented; DIET_BREAK_THRESHOLD = 8 weeks (`:109`) matches.
+- `:16` Pontzer et al. 2016 Current Biology 26:410-417 (constrained TDEE) — real;
+  used only to motivate the activity-multiplier tuning (see F-S7).
+
+### F-S7 — Activity-multiplier downward tuning — UNSOURCED (self-declared)
+**Verdict: UNCERTAIN / disclosed.** Severity: LOW.
+- `:12-18` multipliers cut from standard 1.725/1.9 to 1.65/1.725 "based on coaching
+  observation that standard multipliers overestimate gym-only TDEE by 200-400
+  kcal/day." Explicit non-literature adjustment. Not a hallucination (disclosed),
+  but a judgement call; the adaptive-TDEE loop (F-S3) corrects it over time.
+
+### F-S8 — Davy 2025 PNAS citation — REAL
+**Verdict: SCIENCE-OK.** DOI `10.1073/pnas.2519626122` resolves to the actual PNAS
+2025 paper "Physical activity is directly associated with total energy expenditure
+without evidence of constraint or compensation." Code at `:17` accurately
+characterises it as contesting Pontzer's constrained-TDEE. Real, not hallucinated.
+
+**nutritionEngine.js SCIENCE AXIS: COMPLETE — every cited study verified real and
+accurately implemented (Morton 2018, Mountjoy RED-S, Mifflin-St Jeor, Katch-McArdle,
+MATADOR, Pontzer 2016, Davy 2025). No hallucinated science.** Remaining nuances:
+F-S2 (intake vs availability), F-S6 (MATADOR year 2017 vs 2018), F-S7 (multiplier
+tuning unsourced-by-design).
+
+## STILL TO VERIFY (later modules)
+- Epley / Brzycki 1RM formulas — when algorithms.js is audited.
+- NutritionTargetsScreen full says-vs-does trace (protein label brackets vs delivery;
+  the 2.2 cap path divergence already noted in prior pass) — still owed.
