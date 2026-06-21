@@ -13,7 +13,7 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
+import { colors, spacing, radius, fontSize, fontWeight, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { PHYSIQUE_GOALS, GOAL_LABELS, TRAINING_PHASES, PHASE_LABELS } from '../lib/coachingGoals';
 import { PHASE_PRE_ACCOUNT } from '../lib/onboarding/quizFlow';
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },
   h1: { color: colors.textPrimary, fontSize: fontSize.xxl, fontWeight: fontWeight.black },
-  lede: { color: colors.textSecondary, fontSize: fontSize.md, marginTop: spacing.xs, marginBottom: spacing.lg },
+  lede: { ...type.body, color: colors.textSecondary, marginTop: spacing.xs, marginBottom: spacing.lg },
   section: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold, marginTop: spacing.lg, marginBottom: spacing.sm },
   q: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.md, marginBottom: spacing.xs },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },

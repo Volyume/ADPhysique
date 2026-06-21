@@ -25,7 +25,7 @@ import Button from '../components/Button';
 import { useToast } from '../components/Toast';
 import { appAlert } from '../components/AppAlert';
 import useAppStore from '../store/useAppStore';
-import { colors, fontSize, fontWeight, spacing, radius, hitSlop } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, hitSlop, type } from '../styles/theme';
 import { mealSlotLabel } from '../lib/food/mealSlots';
 import { todayLocalKey, parseLocalDay } from '../lib/dayKey';
 import {
@@ -761,7 +761,7 @@ const styles = StyleSheet.create({
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, gap: spacing.md },
   emptyTitle: { color: colors.textPrimary, fontSize: fontSize.xl, fontWeight: fontWeight.bold, textAlign: 'center' },
-  emptyBody: { color: colors.textSecondary, fontSize: fontSize.md, textAlign: 'center', lineHeight: 21, marginBottom: spacing.md },
+  emptyBody: { ...type.body, color: colors.textSecondary, textAlign: 'center', lineHeight: 21, marginBottom: spacing.md },
   planOption: {
     alignSelf: 'stretch',
     backgroundColor: colors.surface,
@@ -792,7 +792,7 @@ const styles = StyleSheet.create({
   mealHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   mealSlot: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0.4 },
   mealKcal: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
-  mealName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  mealName: { ...type.bodyStrong, color: colors.textPrimary },
   mealDetail: { gap: 2, paddingTop: spacing.xs },
   itemRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 28, gap: spacing.sm },
   itemLine: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'], flex: 1 },
@@ -802,7 +802,7 @@ const styles = StyleSheet.create({
   totalsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.xs },
   totalsLabel: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   totalsText: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
-  footNote: { color: colors.textSecondary, fontSize: fontSize.xs, textAlign: 'center', lineHeight: 17 },
+  footNote: { ...type.caption, color: colors.textSecondary, textAlign: 'center', lineHeight: 17 },
   // Prominent so people find it: a bordered card with a primary accent, not a
   // faint text row (founder 2026-06-16: the prefs were too hidden, people miss them).
   prefsToggle: {
@@ -812,7 +812,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
     borderWidth: 1, borderColor: colors.primary, borderRadius: radius.md,
   },
-  prefsToggleText: { flex: 1, color: colors.primary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  prefsToggleText: { ...type.bodyStrong, flex: 1, color: colors.primary },
   prefsPanel: { gap: spacing.md, paddingBottom: spacing.sm },
   prefRow: { gap: spacing.xs },
   prefLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0.4 },
@@ -834,7 +834,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border, gap: spacing.md,
   },
-  groceryName: { color: colors.textPrimary, fontSize: fontSize.md, flexShrink: 1 },
+  groceryName: { ...type.body, color: colors.textPrimary, flexShrink: 1 },
   groceryQty: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   swapOption: {
     backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
@@ -842,7 +842,7 @@ const styles = StyleSheet.create({
   },
   swapOptionOn: { borderColor: colors.primary },
   swapOptionMain: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
-  swapOptionName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold, flex: 1 },
+  swapOptionName: { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
   swapOptionTag: { color: colors.primary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
   swapOptionMacros: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
 });

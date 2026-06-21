@@ -4,7 +4,7 @@ import { View, Text, Switch, TouchableOpacity, StyleSheet } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 import * as Updates from 'expo-updates';
 import useAppStore from '../store/useAppStore';
-import { colors, withAlpha, spacing, radius, fontSize, fontWeight } from '../styles/theme';
+import { colors, withAlpha, spacing, radius, fontSize, fontWeight, type } from '../styles/theme';
 import { SettingsPage, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
 
 // COMP-029: appearance is a FREE display setting (never Pro-gated). Default
@@ -173,7 +173,7 @@ export default function SettingsDisplayScreen() {
 }
 
 const local = StyleSheet.create({
-  title: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold, marginBottom: spacing.xs },
+  title: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.xs },
   sub: { color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 18, marginBottom: spacing.md },
   segment: {
     flexDirection: 'row',
@@ -184,6 +184,6 @@ const local = StyleSheet.create({
   },
   segBtn: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm },
   segBtnActive: { backgroundColor: colors.primaryFill },
-  segText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
+  segText: { ...type.label, color: colors.textSecondary },
   segTextActive: { color: colors.onPrimary, fontWeight: fontWeight.semibold },
 });

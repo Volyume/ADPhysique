@@ -12,7 +12,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { appAlert } from '../components/AppAlert';
 import { SettingsPage, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
-import { colors, fontSize, spacing } from '../styles/theme';
+import { colors, fontSize, spacing, type } from '../styles/theme';
 import { listSnapshots, restoreSnapshot } from '../lib/dbSnapshot';
 import { closeDatabase } from '../lib/database';
 import { logError } from '../lib/errorLog';
@@ -94,5 +94,5 @@ export default function SnapshotsScreen() {
 
 const localStyles = StyleSheet.create({
   note: { fontSize: fontSize.sm, color: colors.textMuted, padding: spacing.lg, lineHeight: 20 },
-  footer: { fontSize: fontSize.xs, color: colors.textMuted, paddingHorizontal: spacing.lg, paddingTop: spacing.md, lineHeight: 18 },
+  footer: { ...type.caption, color: colors.textMuted, paddingHorizontal: spacing.lg, paddingTop: spacing.md, lineHeight: 18 },
 });

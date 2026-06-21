@@ -21,7 +21,7 @@
 import { useState, useEffect } from 'react';
 import { Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, fontSize, spacing } from '../styles/theme';
+import { colors, spacing, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { track } from '../lib/engineTelemetry';
 import CollapsibleSection from '../components/CollapsibleSection';
@@ -140,9 +140,9 @@ export default function MethodologyScreen({ route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxxl },
-  intro: { fontSize: fontSize.md, color: colors.textPrimary, lineHeight: 24, marginBottom: spacing.sm },
+  intro: { ...type.body, color: colors.textPrimary, lineHeight: 24, marginBottom: spacing.sm },
   credentialNote: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     lineHeight: 18,
     textAlign: 'center',

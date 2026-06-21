@@ -47,8 +47,9 @@ import { buildRegisteredCoachResponse, resolveRegister } from '../lib/coachRegis
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 import { logError, logWarn } from '../lib/errorLog';
 import CollapsibleSection from '../components/CollapsibleSection';
+import Card from '../components/Card';
 import { selectCoachOutputZones } from '../lib/coachOutputZones';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, stateColors } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, stateColors, type } from '../styles/theme';
 import {
   ED_PATTERN_LOCKOUT_COPY,
   ED_PATTERN_CLEARED_COPY,
@@ -236,7 +237,7 @@ function NextWeekCard({ adjustments, onApplyCalories, onApplySteps, onApplyCardi
   const caloriesApplyable = calories !== null && calories.change !== 0 && !calories.applied;
 
   return (
-    <View style={styles.card}>
+    <Card style={styles.card}>
       <SectionHeader title="Nutrition next week" />
       {calories !== null ? (
         <AdjustmentRow
@@ -274,7 +275,7 @@ function NextWeekCard({ adjustments, onApplyCalories, onApplySteps, onApplyCardi
           applying={applyingKey === 'cardio'}
         />
       )}
-    </View>
+    </Card>
   );
 }
 
@@ -305,7 +306,7 @@ function TrainingNextWeekCard({
   const deloadApplied = isApplied(output, 'deload');
 
   return (
-    <View style={styles.card}>
+    <Card style={styles.card}>
       <SectionHeader title="Training next week" />
       {deloadSuggested ? (
         <>
@@ -346,7 +347,7 @@ function TrainingNextWeekCard({
           </View>
         </>
       )}
-    </View>
+    </Card>
   );
 }
 
@@ -388,7 +389,7 @@ function RapidLossAlert() {
 
 function DietBreakCard({ weeksInDeficit, applied, onApply, applying }) {
   return (
-    <View style={styles.dietBreakCard}>
+    <Card style={styles.dietBreakCard}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
         <Text style={styles.dietBreakTitle}>Diet break worth considering</Text>
         {applied && (
@@ -418,7 +419,7 @@ function DietBreakCard({ weeksInDeficit, applied, onApply, applying }) {
           <Text style={styles.applyBtnText}>{applying ? 'Applying' : 'Set maintenance week'}</Text>
         </TouchableOpacity>
       )}
-    </View>
+    </Card>
   );
 }
 
@@ -431,7 +432,7 @@ function DietBreakCard({ weeksInDeficit, applied, onApply, applying }) {
 function MacroCycleCard({ macroCycle, applied, onApply, applying }) {
   const { trainingDay, restDay } = macroCycle;
   return (
-    <View style={styles.card}>
+    <Card style={styles.card}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
         <SectionHeader title="Carbs by day" />
         {applied && (
@@ -465,7 +466,7 @@ function MacroCycleCard({ macroCycle, applied, onApply, applying }) {
           <Text style={styles.applyBtnText}>{applying ? 'Applying' : 'Use this split'}</Text>
         </TouchableOpacity>
       )}
-    </View>
+    </Card>
   );
 }
 
@@ -476,7 +477,7 @@ function MacroCycleCard({ macroCycle, applied, onApply, applying }) {
 // day via userProfile.refeed, which the Diary reads.
 function RefeedCard({ refeed, applied, onApply, applying }) {
   return (
-    <View style={styles.card}>
+    <Card style={styles.card}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
         <SectionHeader title="Refeed day" />
         {applied && (
@@ -505,7 +506,7 @@ function RefeedCard({ refeed, applied, onApply, applying }) {
           <Text style={styles.applyBtnText}>{applying ? 'Applying' : 'Schedule refeed'}</Text>
         </TouchableOpacity>
       )}
-    </View>
+    </Card>
   );
 }
 
@@ -527,7 +528,7 @@ function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore }) {
          d.type !== 'rapid_loss_corrected',
   );
   return (
-    <View style={styles.heldCard}>
+    <Card style={styles.heldCard}>
       {edLockout ? <EdPatternLockoutBlock decision={edLockout} /> : null}
       {edCleared ? <EdPatternClearedBlock /> : null}
       {rapidLossCorrected ? <RapidLossCorrectedBlock decision={rapidLossCorrected} /> : null}
@@ -591,7 +592,7 @@ function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore }) {
           <Ionicons name="chevron-forward" size={15} color={colors.primary} />
         </TouchableOpacity>
       ) : null}
-    </View>
+    </Card>
   );
 }
 
@@ -684,7 +685,7 @@ function LoadingView() {
 function InsufficientDataView({ dataNote, onClose }) {
   return (
     <ScrollView contentContainerStyle={styles.content}>
-      <View style={styles.card}>
+      <Card style={styles.card}>
         <View style={styles.insufficientIconRow}>
           <Ionicons name="time-outline" size={32} color={colors.primary} />
         </View>
@@ -693,7 +694,7 @@ function InsufficientDataView({ dataNote, onClose }) {
           {dataNote ??
             'Precision Coaching reads your training and weight from day one. It holds calorie and volume changes until it has about two weeks of weigh-ins plus a check-in, so it moves on a real trend rather than one noisy week. Keep logging sessions, your morning weight, and your weekly check-in. The first adjustment lands once the trend is clear.'}
         </Text>
-      </View>
+      </Card>
       <TouchableOpacity style={styles.doneBtn} onPress={onClose} activeOpacity={0.8} accessibilityRole="button">
         <Text style={styles.doneBtnText}>Got it</Text>
       </TouchableOpacity>
@@ -707,7 +708,7 @@ function InsufficientDataView({ dataNote, onClose }) {
 function LoadErrorView({ onRetry, onClose }) {
   return (
     <ScrollView contentContainerStyle={styles.content}>
-      <View style={styles.card}>
+      <Card style={styles.card}>
         <View style={styles.insufficientIconRow}>
           <Ionicons name="cloud-offline-outline" size={32} color={colors.textMuted} />
         </View>
@@ -716,7 +717,7 @@ function LoadErrorView({ onRetry, onClose }) {
           Something went wrong fetching this week&apos;s data, usually a
           dropped connection. Your logs are safe. Try again in a moment.
         </Text>
-      </View>
+      </Card>
       <TouchableOpacity style={styles.doneBtn} onPress={onRetry} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Try again">
         <Text style={styles.doneBtnText}>Try again</Text>
       </TouchableOpacity>
@@ -1941,9 +1942,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   shareWeekText: {
-    fontSize: fontSize.sm,
+    ...type.label,
     color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
   },
   insufficientTitle: {
     fontSize: fontSize.xl,
@@ -1953,9 +1953,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   insufficientBody: {
-    fontSize: fontSize.md,
+    ...type.body,
     color: colors.textSecondary,
-    lineHeight: 24,
     textAlign: 'center',
   },
 
@@ -2001,13 +2000,9 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 
-  // Generic card
+  // Generic card: box (surface, radius, border, padding) now comes from
+  // the <Card> primitive; only the non-box gap remains as a local extra.
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
     gap: spacing.md,
   },
 
@@ -2064,13 +2059,12 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   coachLeadAck: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textPrimary,
     lineHeight: 22,
   },
   coachLeadInterpretation: {
-    fontSize: fontSize.md,
+    ...type.body,
     color: colors.textSecondary,
     lineHeight: 22,
   },
@@ -2096,8 +2090,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   focusText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textPrimary,
     lineHeight: 22,
   },
@@ -2113,8 +2106,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxs,
   },
   bulletText: {
+    ...type.body,
     flex: 1,
-    fontSize: fontSize.md,
     color: colors.textPrimary,
     lineHeight: 22,
   },
@@ -2140,8 +2133,7 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
   },
   adjustmentLabel: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textPrimary,
   },
   appliedChip: {
@@ -2215,7 +2207,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: colors.border,
   },
   planNoteText: {
-    flex: 1, fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17,
+    ...type.caption, flex: 1, color: colors.textMuted, lineHeight: 17,
   },
   whyBlock: {
     flexDirection: 'column',
@@ -2235,7 +2227,7 @@ const styles = StyleSheet.create({
   },
   // COMP-006 methodology links (secondary, muted, no affordance beyond text)
   whyLearnMore: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     marginTop: spacing.sm,
     textDecorationLine: 'underline',
@@ -2244,19 +2236,14 @@ const styles = StyleSheet.create({
   link44: { minHeight: 44, justifyContent: 'center' },
   heldLearnMore: { marginTop: spacing.sm, minHeight: 44, justifyContent: 'center' },
   heldLearnMoreText: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     textDecorationLine: 'underline',
   },
 
 
-  // Diet break card
+  // Diet break card (box from <Card>; only the gap is a local extra)
   dietBreakCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
     gap: spacing.sm,
   },
   dietBreakTitle: {
@@ -2271,7 +2258,7 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   dietBreakFootnote: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     lineHeight: 18,
   },
@@ -2298,12 +2285,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   secondaryBtnText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textMuted,
   },
   credentialNote: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     lineHeight: 17,
     textAlign: 'center',
@@ -2337,13 +2323,8 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
 
-  // Held decisions transparency card
+  // Held decisions transparency card (box from <Card>; gap is the local extra)
   heldCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
     gap: spacing.sm,
   },
   edLockoutCard: {
@@ -2475,10 +2456,10 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     gap: spacing.xs,
   },
-  heldHistoryDate: { fontSize: fontSize.xs, color: colors.textMuted },
+  heldHistoryDate: { ...type.caption, color: colors.textMuted },
   heldHistoryText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
   heldHistoryEmptyText: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     fontStyle: 'italic',
     lineHeight: 18,

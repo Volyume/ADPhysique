@@ -8,7 +8,7 @@
  */
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
+import { colors, spacing, radius, fontSize, fontWeight, type } from '../styles/theme';
 import Card from '../components/Card';
 import useAppStore from '../store/useAppStore';
 import { buildPlanPreview } from '../lib/onboarding/planPreview';
@@ -54,8 +54,8 @@ const styles = StyleSheet.create({
   h1: { color: colors.textPrimary, fontSize: fontSize.xxl, fontWeight: fontWeight.black, marginTop: spacing.xs, marginBottom: spacing.lg },
   card: { gap: spacing.sm },
   splitName: { color: colors.primary, fontSize: fontSize.xl, fontWeight: fontWeight.heavy },
-  structure: { color: colors.textPrimary, fontSize: fontSize.md },
-  phase: { color: colors.textSecondary, fontSize: fontSize.md },
+  structure: { ...type.body, color: colors.textPrimary },
+  phase: { ...type.body, color: colors.textSecondary },
   note: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.lg },
   footer: { padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
   cta: { backgroundColor: colors.primary, borderRadius: radius.lg, alignItems: 'center', paddingVertical: spacing.md, minHeight: 50, justifyContent: 'center' },
