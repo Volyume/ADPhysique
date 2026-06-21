@@ -522,15 +522,24 @@ describe('getPlanNutritionContext', () => {
   });
 
   test('proteinG is capped at PROTEIN_MAX_GKGBW × bodyweightKg when body fat is unknown', () => {
-    // 200g protein for 80kg with no BF% → cap is 2.2 × 80 = 176g
-    const result = getPlanNutritionContext(
-      { ...baseTargets, proteinG: 200 },
-      { bodyweightKg: 80, bodyFatPercent: null },
-    );
-    expect(result).toBeDefined(); // function should not throw
-    // The cap logic lives inside getPlanNutritionContext but the field isn't returned;
-    // we verify the function runs without error and returns expected shape.
-    expect(result).toHaveProperty('phaseType');
+    // The capped protein is not returned directly, but a contest_prep refeed
+    // derives its carbs from it (refeedCarbsKcal = maintenance - proteinG*4 -
+    // fatG*9), so the cap IS observable via refeedRecommendation.refeedCarbsG.
+    // Cap = 2.2 × 80 = 176 g. We prove the clamp behaviourally, not by shape.
+    const opts = { bodyweightKg: 80, bodyFatPercent: null };
+    const atCap    = { targetKcal: 2000, maintenanceKcal: 2300, goal: 'contest_prep', proteinG: 176, fatG: 70 };
+    const overCap  = { ...atCap, proteinG: 240 }; // 240 > 176 → must clamp to 176
+    const underCap = { ...atCap, proteinG: 150 }; // below cap → left as-is
+
+    const atCapCarbs    = getPlanNutritionContext(atCap, opts).refeedRecommendation.refeedCarbsG;
+    const overCapCarbs  = getPlanNutritionContext(overCap, opts).refeedRecommendation.refeedCarbsG;
+    const underCapCarbs = getPlanNutritionContext(underCap, opts).refeedRecommendation.refeedCarbsG;
+
+    // 240 g clamps to the 176 g cap → identical refeed carbs to the at-cap case.
+    expect(overCapCarbs).toBe(atCapCarbs);
+    // 150 g is below the cap → not clamped → different refeed carbs. (Guards
+    // against the assertion passing vacuously if the cap were removed.)
+    expect(underCapCarbs).not.toBe(atCapCarbs);
   });
 
   test('returns deloadFrequencyWeeks as a positive integer', () => {

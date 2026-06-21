@@ -79,22 +79,24 @@ describe('weeklyCoach WHY_LIBRARY strings (voice-locked)', () => {
     }
   });
 
-  test('Precision Coaching named when an action is being attributed', () => {
-    // When the engine takes a specific action (raises calories, holds
-    // due to recovery, schedules a deload), the output should name
-    // Precision Coaching as the actor.
+  test('the why-this-week body explains the action WITHOUT naming Precision Coaching (header carries branding)', () => {
+    // Locked voice spec (docs/COACHING_VOICE_SYNTHESIS_LOCKED.md, founder
+    // 2026-06-03 — see whyThisTemplates.js:6-9 and weeklyCoach.js:249):
+    // engine-action messages state the call plainly and do NOT name "Precision
+    // Coaching" in the body; the screen header carries the brand.
+    //
+    // The previous version of this test asserted the OPPOSITE (body must match
+    // /Precision Coaching/) inside an `if (calorie change)` that never fired for
+    // this scenario, so it passed vacuously while encoding a requirement that
+    // contradicts the spec. Now it asserts the real contract, unconditionally.
     const out = runFromScenario({
       consecutiveOffTargetWeeks: 3,
       lastCalAdjustmentWeeksAgo: 4,
       morningWeights: trendDown(85, 0.015),
       checkin: basicCheckin({ calsAdherence: 'hit' }),
     });
-    // If the engine produced an adjustment, the reason should name Precision Coaching.
-    if (out.adjustments?.calories?.change > 0 || out.adjustments?.calories?.change < 0) {
-      expect(out.whyThisWeek).toMatch(/Precision Coaching/);
-    }
-    // Otherwise, the string is still in voice (just no action attributed).
     expect(out.whyThisWeek.length).toBeGreaterThan(10);
+    expect(out.whyThisWeek).not.toMatch(/Precision Coaching/);
   });
 
   test('low-data scenarios are data-aware, not blaming', () => {

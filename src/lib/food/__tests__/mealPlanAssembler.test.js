@@ -706,7 +706,9 @@ describe('exact-fill close-out lands the day ON target, not just in band', () =>
           band: { kcalMin: t.kcalMin, kcalMax: t.kcalMax },
           prefs: { mealsPerDay: 5 }, variant: 'rest', seed,
         });
-        if (day.unfilledSlots.length > 0) return; // an unfillable pool is a separate failure mode
+        // These targets must fill from the standard pool; assert it rather than
+        // silently skipping, so an unfilled-slots regression can't pass vacuously.
+        expect(day.unfilledSlots).toEqual([]);
         const offByFraction = Math.abs(day.totals.kcal - t.targetKcal) / t.targetKcal;
         // Comfortably inside the old ±10% band — proves the close-out no longer
         // stops at the band edge but pulls the day onto the target.
@@ -736,7 +738,8 @@ describe('macro-balance close-out lands protein/carbs/fat near target, not just 
           band: { kcalMin: t.kcalMin, kcalMax: t.kcalMax },
           prefs: { mealsPerDay: 5 }, variant: 'rest', seed,
         });
-        if (day.unfilledSlots.length > 0) return;
+        // Must fill from the standard pool; assert rather than skip silently.
+        expect(day.unfilledSlots).toEqual([]);
         // Far tighter than the pre-fix ~18% protein / ~13% carb miss.
         expect(Math.abs(day.totals.protein - t.proteinG)).toBeLessThanOrEqual(Math.max(18, t.proteinG * 0.09));
         expect(Math.abs(day.totals.carbs - t.carbsG)).toBeLessThanOrEqual(Math.max(18, t.carbsG * 0.08));
