@@ -1570,13 +1570,14 @@ async function _pullAdaptationEvents(sb, supabaseUserId) {
 }
 
 /**
- * notification_preferences pull.
+ * user_prefs pull.
  *
- * Reads every row owned by the user from the cloud
- * `notification_preferences` table (migration 044) and applies it
- * to the local SQLite mirror via applyPreferenceFromPull. Last-
- * write-wins resolution only applies the cloud row when its
- * updated_at is strictly newer than the local row.
+ * Reads every key/value row the user owns from the cloud `user_prefs` table and
+ * mirrors them into local AsyncStorage via multiSet (cloud value wins
+ * unconditionally — there is no per-key updated_at comparison here). Returns the
+ * number of keys written. (Audit 2026-06-21: this docstring previously described
+ * a notification_preferences / applyPreferenceFromPull / last-write-wins path
+ * that this function does not implement.)
  */
 async function _pullUserPrefs(sb, supabaseUserId) {
   try {

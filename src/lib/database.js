@@ -1801,7 +1801,9 @@ export async function getWorkoutSetsForWorkoutIds(workoutIds) {
 
 // Returns an array of `weeksBack` entries, ordered oldest → newest.
 // Each entry: { weekLabel: 'W1'|...'W4', weekStart: ms, weekEnd: ms, volumeByMuscle: { chest: 8, ... } }
-// Only working sets (set_type != 'warmup') are counted. Uses the exercise's primary_muscle field.
+// Only working sets (set_type != 'warmup') are counted. Volume is allocated via
+// allocateExerciseVolume across the exercise's PRIMARY and SECONDARY muscles
+// (primary 1.0, each secondary 0.5), not primary_muscle alone.
 // ALGO-001: pure trailing-week window builder, exported so the boundary math is
 // unit-tested directly (the SQL fetch around it runs on device). Returns
 // `weeksBack` windows ending at `anchorMs`, oldest first: window i spans
@@ -3227,7 +3229,7 @@ export async function getBodyMetricLog(userId, limitRows = 90) {
 
 export async function getLatestBodyWeight(userId) {
   const d = await db();
-  const [bodyRow, morningRow, profileRow] = await Promise.all([
+  const [bodyRow, morningRow] = await Promise.all([
     d.getFirstAsync(
       `SELECT weight_kg, logged_at FROM body_metric_log
        WHERE user_id = ? AND weight_kg IS NOT NULL
@@ -3240,15 +3242,6 @@ export async function getLatestBodyWeight(userId) {
        ORDER BY logged_at DESC LIMIT 1`,
       [userId],
     ),
-    // Fall back to the body weight the user entered during onboarding
-    // (saved to user_body_profile). Without this, a user who's done
-    // onboarding but hasn't logged a separate weigh-in shows up as
-    // "no body weight" everywhere, Relative Strength, share cards etc.
-    d.getFirstAsync(
-      `SELECT weight_kg FROM user_body_profile
-       WHERE user_id = ? AND weight_kg IS NOT NULL LIMIT 1`,
-      [userId],
-    ).catch(() => null),
   ]);
   const bodyTs   = bodyRow?.logged_at ?? 0;
   const morningTs = morningRow?.logged_at ?? 0;
@@ -3256,12 +3249,14 @@ export async function getLatestBodyWeight(userId) {
   if (winner && winner.weight_kg != null) {
     return { weightKg: winner.weight_kg, loggedAt: winner.logged_at };
   }
-  // No weigh-in logged, use the onboarding bodyweight as the baseline so
-  // features that need a number still work. Marked with loggedAt=0 so
-  // callers can tell it's a stale fallback if they care.
-  if (profileRow?.weight_kg != null) {
-    return { weightKg: profileRow.weight_kg, loggedAt: 0 };
-  }
+  // No logged weigh-in. The onboarding bodyweight is NOT in the database — it
+  // lives in userProfile.weightKg (AsyncStorage, via saveLocalProfile) — so it
+  // cannot be read here; callers needing an onboarding-only baseline read
+  // userProfile.weightKg directly. A prior version queried
+  // `user_body_profile.weight_kg`, a column that does not exist, and swallowed
+  // the error with .catch — so that "fallback" never actually ran (audit
+  // 2026-06-21). If a DB-level fallback is wanted, onboarding must first persist
+  // the weight to a real table (e.g. morning_weights) or this fn must receive it.
   return null;
 }
 
@@ -3701,11 +3696,17 @@ export async function wipeAllUserData(userId) {
 
 // ─── Full local backup / restore ────────────────────────────────────────────
 //
-// Every user-owned table. exercises is intentionally excluded: it is seed
-// data, not user data, and is re-seeded on launch, dumping ~150 canonical
-// rows would only bloat the backup. Custom exercises are preserved because
-// they're referenced by workout_sets via exercise_id; if a restore lands on
-// a fresh install the seed covers the canonical set.
+// Every user-owned table. The `exercises` table is intentionally excluded: its
+// canonical rows are seed data, re-seeded on launch, so dumping ~150 of them
+// would only bloat the backup.
+// CAVEAT (audit 2026-06-21): this local backup does NOT include custom exercises
+// — neither `exercises` rows with is_custom=1 nor the `custom_exercises` table is
+// listed — so a LOCAL-only restore onto a fresh install will not recreate a
+// user's custom exercise definitions (workout_sets that reference them would be
+// left pointing at unknown ids). Custom exercises ARE preserved across devices
+// via cloud sync (custom_exercises is in the sync table set), which is the path
+// most restores take. Add `custom_exercises` here if local backup must be
+// self-contained.
 export const BACKUP_TABLES = [
   'workouts',
   'workout_sets',
