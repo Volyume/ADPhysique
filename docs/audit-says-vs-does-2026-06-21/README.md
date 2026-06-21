@@ -272,8 +272,65 @@ constants (1.5% gate). All MATCHES.
   planPreferences, sanityChecks, foodRoles, curatedMeals, curatedFoods
 - [x] In-app: Paywall/ProUpgrade/ProOnboarding, whyThisTemplates, coachGlossary,
   CoachOutput, ActiveWorkout(claims), NutritionTargets
-- [ ] remaining lib: insightsEngine, volumeInsightCopy, coachingGoals, planAutoGen,
+- [x] remaining lib: insightsEngine, volumeInsightCopy, coachingGoals, planAutoGen,
   planDiff, planSwitch, swapEngine, cyclePrefs, activitySteps, stepsSummary,
-  stepsLaunchPrompt, nutritionTargetsView  (agent in progress)
+  stepsLaunchPrompt, nutritionTargetsView
+
+---
+
+## BATCH 3 FINDINGS — remaining lib (read in full)
+
+### F-A10 — swapEngine joint-discomfort auto-swap is DEAD, but its copy promises an action (MED)
+**Verdict: DEAD / CONTRADICTS.**
+- `detectJointDiscomfortPattern` (`swapEngine.js:252`) + `autoSwapForJointDiscomfort`
+  (`:293`) have NO production caller (grep: only the file + its test). The
+  joint_discomfort rating IS collected, but the detector never runs.
+- Yet the strings promise action: `:267` "It has been flagged for a swap in your
+  next plan"; `:275` "the exercise will be swapped out automatically." These never
+  fire. (Note: `rankSwaps`/`buildSwapReason` in the same file ARE live — file is
+  half-wired.)
+
+### F-A11 — getTrainingNote omits womens_bodybuilding → generic notes for that division (MED)
+**Verdict: PARTIAL.**
+- `getTrainingNote` note maps (`coachingGoals.js:597-660`) key general, mens_physique,
+  classic_physique, bodybuilding, bikini, wellness, figure, womens_physique — but
+  NOT `womens_bodybuilding`, a first-class selectable PHYSIQUE_GOAL (`:104`) that
+  gets a division plan overlay (`:557`). So a Women's Bodybuilding competitor gets a
+  division-specific plan but generic ("general") weekly coaching notes — asymmetric
+  with the male `bodybuilding` branch which IS keyed. Test loops only the 8 keyed
+  goals so never catches it.
+
+### CONFIRMED MATCHES / SCIENCE-OK (batch 3)
+- insightsEngine: all 6 insight rules' copy matches the computed condition AND every
+  input (soreness 1-3, rir, fatigue 1-5) is genuinely UI-written; div-by-zero guarded.
+- volumeInsightCopy: direction contract holds (over/near MRV never says "add"; below
+  never says "drop"); statuses align exactly with getVolumeStatus.
+- nutritionTargetsView (7700 kcal/kg, 0.55 g/kg meal ceiling), stepsSummary,
+  daysToActivityLevel, cyclePrefs (fully wired, coach reads cycle_override),
+  planAutoGen/planDiff/planSwitch (dry-run == commit), activitySteps — all MATCHES.
+
+---
+
+## AUDIT COMPLETE — verdict
+
+**Maths & science: SOUND and REAL.** No hallucinated science anywhere. Every
+verifiable citation (Mifflin, Katch, Epley, Brzycki, Morton 2018, Mountjoy RED-S,
+MATADOR, Pontzer 2016, Davy 2025, Robinson 2024, Coleman 2024, Maeo/Pedrosa) is a
+real study, accurately represented, correctly implemented. No wrong formula, no
+div-by-zero, no double-count, no unmeetable gate found across the engine.
+
+**The real problem class is REACHABILITY / says-vs-does, not arithmetic:** features
+and branches built + tested but with no UI to trigger them, and a few copy claims
+ahead of behaviour. Tests mask several by setting values directly. Ranked:
+1. F-A3/F-A4 (HIGH, paywall) — Pro differentiators "Peak Week and block planning"
+   and "Photos and coach handover" have no implemented feature.
+2. F-A1 (HIGH) — contest_prep unreachable; F-A5 — agg_cut/mod_cut/recomp coaching
+   phases unreachable (fast-cut user under-coached; aggressive refeed dead).
+3. F-A10 — dead joint-discomfort auto-swap promises an action it never performs.
+4. F-A11 — womens_bodybuilding gets generic coaching notes.
+5. F-A6 — "your macros held" swap copy overclaims. F-A7 — dead plan prefs
+   (fatConvention/pinnedMeals/rotationPool). F-A2 — aggressive_cut reachable in
+   NutritionTargets but not onboarding phases.
+6. F-S2 — RED-S floor applied to intake not availability (precision nuance).
 - NutritionTargetsScreen full says-vs-does trace (protein label brackets vs delivery;
   the 2.2 cap path divergence already noted in prior pass) — still owed.
