@@ -927,7 +927,14 @@ export default function HomeScreen({ navigation }) {
   // review outranks a suggested recovery week, which outranks the nutrition-
   // phase nudge. Lower-priority banners still surface on a later load once the
   // one above is dismissed, so nothing is lost, just sequenced.
-  const showCoachBanner = tier === 'pro' && !!latestCoachOutput && !coachBannerDismissed
+  // Only surface the "this week's review" banner when the coach actually has a
+  // review — i.e. it had enough data to assess the week. During the baseline
+  // weeks the output is hasEnoughData:false ("Building your baseline,
+  // adjustments start after week 2"), and advertising it as a ready review with
+  // "what changed and why" was telling users coaching was live when it wasn't
+  // (founder 2026-06-21).
+  const showCoachBanner = tier === 'pro' && !!latestCoachOutput && latestCoachOutput.hasEnoughData
+    && !coachBannerDismissed
     && (Date.now() - (latestCoachOutput.weekStart ?? 0) < 7 * 86400000);
   // COMP-023 trial value banner: second priority, below a fresh coach review and
   // suppressed by the day-of coaching nudge so two voices never say the same
