@@ -27,7 +27,7 @@ describe('FF-003: partial-plan note (behavioural)', () => {
 });
 
 describe('FF-002: plan rebuild is a transaction', () => {
-  test('PlanUpdate rebuilds before committing the profile and bails on failure', () => {
+  test('source guard: PlanUpdate rebuilds before committing the profile and bails on failure', () => {
     const rebuildIdx = PLAN_UPDATE.indexOf('generateAndSavePlan(user.id, updatedProfile)');
     const saveIdx = PLAN_UPDATE.indexOf('saveLocalProfile(user.id, updatedProfile)');
     expect(rebuildIdx).toBeGreaterThan(-1);
@@ -41,7 +41,7 @@ describe('FF-002: plan rebuild is a transaction', () => {
 });
 
 describe('FF-004: plan library distinguishes error from empty', () => {
-  test('tracks a load error and offers a retry', () => {
+  test('source guard: tracks a load error and offers a retry', () => {
     expect(LIBRARY).toMatch(/setLoadError\(true\)/);
     expect(LIBRARY).toMatch(/loadError \?/);
     expect(LIBRARY).toMatch(/Couldn't load plans/);
@@ -50,19 +50,19 @@ describe('FF-004: plan library distinguishes error from empty', () => {
 });
 
 describe('FF-005: nutrition target DB save is awaited and surfaced', () => {
-  test('manual screen awaits and warns on failure', () => {
+  test('source guard: manual screen awaits and warns on failure', () => {
     expect(NUTRITION).toMatch(/await saveNutritionTargets\(user\.id/);
     expect(NUTRITION).not.toMatch(/saveNutritionTargets\(user\.id, \{ \.\.\.targets, gdprConsented: true \}\)\.catch\(\(\) => \{\}\)/);
     expect(NUTRITION).toMatch(/Recalculate to retry/);
   });
-  test('onboarding awaits the save instead of fire-and-forget', () => {
+  test('source guard: onboarding awaits the save instead of fire-and-forget', () => {
     expect(ONBOARD).toMatch(/await saveNutritionTargets\(user\.id, nutritionData\)/);
     expect(ONBOARD).not.toMatch(/saveNutritionTargets\(user\.id, nutritionData\)\.catch\(\(\) => \{\}\)/);
   });
 });
 
 describe('FF-006: workout summary attributes recovery to the workout week', () => {
-  test('uses localWeekStartMs(workoutDayMs(...)) and drops the now-based helper', () => {
+  test('source guard: uses localWeekStartMs(workoutDayMs(...)) and drops the now-based helper', () => {
     expect(SUMMARY).toMatch(/weekStart: localWeekStartMs\(workoutDayMs\(\{ startedAt, endedAt \}\)\)/);
     expect(SUMMARY).not.toMatch(/function getWeekStart\(/);
     expect(SUMMARY).not.toMatch(/weekStart: getWeekStart\(\)/);
@@ -70,7 +70,7 @@ describe('FF-006: workout summary attributes recovery to the workout week', () =
 });
 
 describe('FF-007: food logging surfaces failures', () => {
-  test('plate reports partial progress; curated meal warns on failure', () => {
+  test('source guard: plate reports partial progress; curated meal warns on failure', () => {
     expect(FOOD).toMatch(/Logged \$\{logged\} of \$\{total\}/);
     expect(FOOD).toMatch(/Couldn't add that meal, try again/);
   });

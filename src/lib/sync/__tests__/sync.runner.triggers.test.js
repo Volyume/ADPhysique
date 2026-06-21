@@ -95,23 +95,23 @@ describe('App.js wires the three non-write triggers', () => {
   const path = require('path');
   const APP = fs.readFileSync(path.resolve(__dirname, '../../../../App.js'), 'utf8');
 
-  test('foreground trigger calls callSyncAll', () => {
+  test('source guard: foreground trigger calls callSyncAll', () => {
     expect(APP).toMatch(/callSyncAll\(\s*['"]foreground['"]\s*\)/);
   });
 
-  test('network reconnect trigger calls callSyncAll', () => {
+  test('source guard: network reconnect trigger calls callSyncAll', () => {
     expect(APP).toMatch(/callSyncAll\(\s*['"]network['"]\s*\)/);
   });
 
-  test('periodic trigger calls callSyncAll', () => {
+  test('source guard: periodic trigger calls callSyncAll', () => {
     expect(APP).toMatch(/callSyncAll\(\s*['"]periodic['"]\s*\)/);
   });
 
-  test('NetInfo addEventListener wired', () => {
+  test('source guard: NetInfo addEventListener wired', () => {
     expect(APP).toMatch(/NetInfo\.addEventListener/);
   });
 
-  test('15-minute periodic interval', () => {
+  test('source guard: 15-minute periodic interval', () => {
     expect(APP).toMatch(/setInterval\([^,]+,\s*15\s*\*\s*60\s*\*\s*1000\s*\)/);
   });
 });
@@ -128,12 +128,12 @@ describe('A2-001 foreground catch-up routes through syncAll', () => {
   const callSyncAllStart = APP.indexOf('async function callSyncAll');
   const maybeSyncBody = APP.slice(maybeStart, callSyncAllStart);
 
-  test('maybeSync block is found and precedes the callSyncAll effect', () => {
+  test('source guard: maybeSync block is found and precedes the callSyncAll effect', () => {
     expect(maybeStart).toBeGreaterThan(-1);
     expect(callSyncAllStart).toBeGreaterThan(maybeStart);
   });
 
-  test('maybeSync no longer calls bulkUploadLocalData directly', () => {
+  test('source guard: maybeSync no longer calls bulkUploadLocalData directly', () => {
     // Match an actual call/destructure, not the word in an explanatory
     // comment: `bulkUploadLocalData(` (invocation) or `{ bulkUploadLocalData }`
     // (require destructure). The fix routes through syncAll instead.
@@ -141,7 +141,7 @@ describe('A2-001 foreground catch-up routes through syncAll', () => {
     expect(maybeSyncBody).not.toMatch(/\{\s*bulkUploadLocalData\s*\}/);
   });
 
-  test('maybeSync routes its catch-up through syncAll with a background trigger', () => {
+  test('source guard: maybeSync routes its catch-up through syncAll with a background trigger', () => {
     expect(maybeSyncBody).toMatch(/syncAll\(\s*\{[^}]*triggeredBy:\s*['"]background['"]/);
   });
 });
@@ -163,16 +163,16 @@ describe('A2-005 bodyweight import is deduped to the maybeSync effect', () => {
   const maybeSyncBody = APP.slice(maybeStart, callSyncAllStart);
   const callSyncAllBody = APP.slice(callSyncAllStart, triggersStart);
 
-  test('callSyncAll body is found between maybeSync and the trigger wiring', () => {
+  test('source guard: callSyncAll body is found between maybeSync and the trigger wiring', () => {
     expect(callSyncAllStart).toBeGreaterThan(maybeStart);
     expect(triggersStart).toBeGreaterThan(callSyncAllStart);
   });
 
-  test('maybeSync still imports new bodyweight (the single canonical site)', () => {
+  test('source guard: maybeSync still imports new bodyweight (the single canonical site)', () => {
     expect(maybeSyncBody).toMatch(/importNewWeights\s*\(/);
   });
 
-  test('callSyncAll no longer imports bodyweight (dedup, no double read)', () => {
+  test('source guard: callSyncAll no longer imports bodyweight (dedup, no double read)', () => {
     expect(callSyncAllBody).not.toMatch(/importNewWeights\s*\(/);
     expect(callSyncAllBody).not.toMatch(/\{\s*importNewWeights\s*\}/);
   });

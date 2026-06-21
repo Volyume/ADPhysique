@@ -50,7 +50,7 @@ describe('ALGO-001: weekly volume anchors to the check-in week', () => {
   });
   // Contract: getWeeklyVolumeByMuscle uses the helper and the check-in passes
   // the week-end anchor.
-  test('getWeeklyVolumeByMuscle uses the helper; the check-in passes the week end', () => {
+  test('source guard: getWeeklyVolumeByMuscle uses the helper; the check-in passes the week end', () => {
     const body = fnBody(DB, 'export async function getWeeklyVolumeByMuscle');
     expect(body).toMatch(/weekWindowsEndingAt\(now, weeksBack\)/);
     expect(CHECKIN).toMatch(/getWeeklyVolumeByMuscle\(user\.id, 2, weekStartMs \+ 7 \* 86400000\)/);
@@ -59,7 +59,7 @@ describe('ALGO-001: weekly volume anchors to the check-in week', () => {
 
 describe('ALGO-002: planned sessions come from the active plan', () => {
   const body = fnBody(DB, 'export async function getWeeklySessionStats');
-  test('reads the active plan routine count, falls back to the average', () => {
+  test('source guard: reads the active plan routine count, falls back to the average', () => {
     expect(body).toMatch(/getActivePlan\(userId\)/);
     expect(body).toMatch(/getRoutinesForPlan\(plan\.id\)/);
     expect(body).toMatch(/plannedFromPlan/);
@@ -70,7 +70,7 @@ describe('ALGO-002: planned sessions come from the active plan', () => {
 
 describe('ALGO-003: PR detection uses estimated 1RM', () => {
   const body = fnBody(DB, 'export async function getWeeklyPRCount');
-  test('compares Epley e1RM, not just heavier load', () => {
+  test('source guard: compares Epley e1RM, not just heavier load', () => {
     expect(body).toMatch(/wk_e1rm/);
     // Epley: weight * (1 + reps/30), using actual_reps.
     expect(body).toMatch(/actual_reps/);
@@ -81,19 +81,19 @@ describe('ALGO-003: PR detection uses estimated 1RM', () => {
 });
 
 describe('ALGO-005: real elapsed weeks since the last calorie change', () => {
-  test('computes weeks from the carried week-start, not a binary 1/99', () => {
+  test('source guard: computes weeks from the carried week-start, not a binary 1/99', () => {
     expect(COACH).toMatch(/prevCalAdjustmentWeekStart = lastOutput\?\.lastCalAdjustmentWeekStart/);
     expect(COACH).toMatch(/Math\.round\(\(weekStart - prevCalAdjustmentWeekStart\) \/ \(7 \* 86400000\)\)/);
     expect(COACH).not.toMatch(/lastCalAdjustmentWeeksAgo = lastCalAdjustmentDirection \? 1 : 99/);
   });
-  test('carries lastCalAdjustmentWeekStart into the saved output', () => {
+  test('source guard: carries lastCalAdjustmentWeekStart into the saved output', () => {
     expect(COACH).toMatch(/const lastCalAdjustmentWeekStart = result\.adjustments\?\.calories\?\.change/);
     expect(COACH).toMatch(/saveCoachOutput\(user\.id, \{ weekStart, \.\.\.result, lastCalAdjustmentWeekStart \}\)/);
   });
 });
 
 describe('PIPE-005: historical calorie adherence keeps its direction', () => {
-  test('reads each past week own intake average and maps with it', () => {
+  test('source guard: reads each past week own intake average and maps with it', () => {
     expect(COACH).toMatch(/localDayKey\(ci\.weekStart \+ 6 \* 86400000\)/);
     expect(COACH).toMatch(/getRecentIntakeSummary\(user\.id, weekEndKey\)/);
     expect(COACH).toMatch(/adherence: mapCals\(ci\.calsAdherence, weekAvg\)/);
@@ -101,12 +101,12 @@ describe('PIPE-005: historical calorie adherence keeps its direction', () => {
 });
 
 describe('PIPE-006: the check-in loader does not fail open', () => {
-  test('a load failure routes to a recoverable error, not the form', () => {
+  test('source guard: a load failure routes to a recoverable error, not the form', () => {
     expect(CHECKIN).toMatch(/setGateState\('load_error'\)/);
     // The old unconditional fail-open must be gone.
     expect(CHECKIN).not.toMatch(/fail open so users aren't permanently blocked/);
   });
-  test('the load_error state is recoverable via a retry', () => {
+  test('source guard: the load_error state is recoverable via a retry', () => {
     expect(CHECKIN).toMatch(/gateState === 'load_error'/);
     expect(CHECKIN).toMatch(/setReloadKey\(k => k \+ 1\)/);
   });

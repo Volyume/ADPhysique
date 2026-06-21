@@ -25,17 +25,17 @@ function pullCustomBody() {
 }
 
 describe('custom-exercise cloud restore lands in the exercises table', () => {
-  test('_pullCustomExercises restores via insertOrUpdateExerciseFromCloud with is_custom', () => {
+  test('source guard: _pullCustomExercises restores via insertOrUpdateExerciseFromCloud with is_custom', () => {
     const body = pullCustomBody();
     expect(body).toMatch(/insertOrUpdateExerciseFromCloud\(\s*\{\s*\.\.\.row,\s*is_custom:\s*1\s*\}/);
   });
 
-  test('it does NOT restore into the orphaned local custom_exercises mirror', () => {
+  test('source guard: it does NOT restore into the orphaned local custom_exercises mirror', () => {
     const body = pullCustomBody();
     expect(body).not.toMatch(/insertOrUpdateCustomExerciseFromCloud/);
   });
 
-  test('it skips soft-deleted custom exercises so they do not reappear', () => {
+  test('source guard: it skips soft-deleted custom exercises so they do not reappear', () => {
     const body = pullCustomBody();
     expect(body).toMatch(/row\?\.deleted_at\)\s*continue/);
   });
