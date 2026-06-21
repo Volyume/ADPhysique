@@ -179,6 +179,101 @@ F-S2 (intake vs availability), F-S6 (MATADOR year 2017 vs 2018), F-S7 (multiplie
 tuning unsourced-by-design).
 
 ## STILL TO VERIFY (later modules)
-- Epley / Brzycki 1RM formulas — when algorithms.js is audited.
+- Epley / Brzycki 1RM formulas — VERIFIED in F-S9 below.
+
+---
+
+## BATCH 2 FINDINGS — training engine, food engine, in-app surfaces (read in full)
+
+### F-A3 — PAYWALL claims "Peak Week and block planning" (Pro) — NO user feature (HIGH)
+**Verdict: CONTRADICTS / UNREACHABLE.** Purchase surface.
+- Copy: `src/components/TierComparisonStrip.js:23` Pro = "Peak Week and block planning"
+  (rendered on `PaywallScreen.js:209`).
+- A `peak_week_plans` table + sync exist (`database.js:5171,5861`, `sync.js:1039`),
+  but **no screen references peak_week** (grep: zero UI). No "block planning"
+  feature exists. The only "peak week" a user sees is the standard mesocycle label
+  (`mesocycle.js:20,29`), which ships FREE to everyone. So this Pro differentiator
+  has no reachable feature behind it.
+
+### F-A4 — PAYWALL claims "Photos and coach handover" (Pro) — NO feature (HIGH)
+**Verdict: CONTRADICTS.** Purchase surface.
+- Copy: `TierComparisonStrip.js:24` Pro = "Photos and coach handover".
+- "coach handover" appears nowhere in `src/` except this line. No progress-photo
+  Pro feature located. (Free side "CSV export" is real: `food/csvExport.js`.)
+
+### F-A5 — Coaching phases agg_cut / mod_cut / recomp are UNREACHABLE (MED)
+**Verdict: UNREACHABLE / CONTRADICTS.**
+- `weeklyCoach.js:196-204` PHASE_CONFIG defines agg_cut(-1.0%), mod_cut(-0.625%),
+  recomp(-0.125%). `PHASE_ALIASES = { bulk: 'mod_bulk' }` (`:223`). Upstream
+  `TRAINING_PHASES.coachingPhaseKey` (`coachingGoals.js:220-288`) only ever yields
+  mild_bulk/bulk/mild_cut/maint. So agg_cut, mod_cut and recomp's rate are never
+  reached: a "Lose weight (fast)" (nutrition aggressive_cut) user is coached at
+  mild_cut's -0.375%/wk, and recomp is coached at maint 0%.
+- Consequence: the aggressive-cut refeed is dead — `weeklyCoach.js:1047`
+  `refeedEligible = phase.isCut && (goalPhase === 'agg_cut' || isCompetitionGoal)`;
+  the agg_cut disjunct can never be true.
+- Tests pass `goalPhase:'mod_cut'` directly, masking the gap. (Safety unaffected:
+  rapid-loss / FFM-floor use raw actual rate, verified.)
+
+### F-A6 — Food-swap copy "your macros held" overclaims (MED)
+**Verdict: CONTRADICTS (copy).**
+- `MealPlanScreen.js:343-344` toast "…and your macros held" (plural). `swapFoodInMeal`
+  → `solveSwapGrams` (`mealSwap.js:148-163`) holds only the role-dominant macro
+  within 5 g; kcal + the other two macros drift (the receipt carries
+  `kcalDriftKcal`, `mealSwap.js:210`). Honest claim: "your <that macro> held".
+
+### F-A7 — Unreachable food-plan subsystems keyed on unsettable prefs (LOW-MED)
+**Verdict: UNREACHABLE.** Built + tested, no UI writes the input:
+- `fatConvention:'higher_rest_day'` rest-day path (`mealPlanAssembler.js:119-126`) —
+  no UI sets `mealPlanFatConvention`; defaults 'equalised'.
+- `pinnedMealIds` pin placement (`mealPlanAssembler.js:359-377`) + pins-exceed-budget
+  diagnosis — no UI sets `mealPlanPinnedMeals`.
+- `rotationPool` 3-3-3 affinity (`mealPlanAssembler.js:175-186,417`) — `mealPlanRotationPool`
+  not even in the store's allowed-write list (`useAppStore.js:1440`); always null.
+
+### F-A8 — Protein tooltip research bands vs delivered tiers (LOW)
+**Verdict: PARTIAL/MINOR.** `NutritionTargetsScreen.js:792-797` tooltip lists generic
+research bands (1.2-1.5/1.6-2.2/2.2-3.3) below the tiers' delivered values
+(Standard 2.0-2.7 etc.), BUT explicitly closes "the approaches below are the
+specific targets Volyume uses; they sit toward the higher end." Per-tier card
+ranges (`:820`) are correct. Educational context, hedged — not a real contradiction.
+
+### F-A9 — "90 days history" (Free) vs "Unlimited" (Pro) — gate not confirmed (UNCERTAIN)
+- `TierComparisonStrip.js:22`. A 90-day notion exists across sync/db/import but a
+  live read-path truncating Free history at 90 days was not confirmed. Needs trace.
+
+### F-S9 — Training-engine science — all verifiable citations REAL & correct
+**Verdict: SCIENCE-OK.** Web-verified: Epley `w*(1+r/30)` and Brzycki
+`w/(1.0278-0.0278r)` exact (`algorithms.js:96-97`, rep-clamp 20 sound); Robinson
+2024 (Sports Med 54:2209) RIR curve; Coleman 2024 (PeerJ) deload; Maeo 2023 /
+Pedrosa 2022 lengthened-partials; Mountjoy RED-S 30 kcal/kg FFM. No hallucinated
+citations. UNCERTAIN-but-plausible (not confirmed, not "fake"): Wolf 2023, Kreher
+& Schwartz 2012, Meeusen 2013, Hayes 2023, Helms (name-drop), Brigatto/Nippard.
+
+### F-S10 — Food-engine maths — SOUND
+**Verdict: SCIENCE-OK.** calorieBank sum-of-deltas==0 + floor + band-max by
+construction (`calorieBank.js:52-95`); 4/4/9 + carb:fat 2.25 consistent;
+macro-balance pass genuinely hits macros within tolerance; gramSolve div-by-zero
+guarded. No double-counting / unmeetable gates.
+
+### CONFIRMED MATCHES (honest says-vs-does)
+Weekly coach adjusts calories+training & explains every decision + held decisions
+(`CoachOutputScreen`); coachGlossary/whyThisTemplates plain-language and jargon-
+guarded; 14-day cardless + Play trial copy real (`cascade.startCascade`); food
+diary / barcode / steps-wearables real; ActiveWorkout deload + stalled-advice from
+real data; ED-pattern / rapid-loss / Beat signposting copy matches engine
+constants (1.5% gate). All MATCHES.
+
+### CHECKLIST UPDATE
+- [x] weeklyCoach.js, algorithms.js, planEngine.js, blockAdvisor.js, mesocycle.js,
+  liftProgress.js, coachApply.js, coachOutputZones.js, coachResponse.js, coachRegister.js
+- [x] food engine: mealPlanAssembler, mealPlanService, calorieBank, adherence,
+  effectiveTargets, macros, gramSolve, mealSuggest, mealSwap, planEdit, planExplain,
+  planPreferences, sanityChecks, foodRoles, curatedMeals, curatedFoods
+- [x] In-app: Paywall/ProUpgrade/ProOnboarding, whyThisTemplates, coachGlossary,
+  CoachOutput, ActiveWorkout(claims), NutritionTargets
+- [ ] remaining lib: insightsEngine, volumeInsightCopy, coachingGoals, planAutoGen,
+  planDiff, planSwitch, swapEngine, cyclePrefs, activitySteps, stepsSummary,
+  stepsLaunchPrompt, nutritionTargetsView  (agent in progress)
 - NutritionTargetsScreen full says-vs-does trace (protein label brackets vs delivery;
   the 2.2 cap path divergence already noted in prior pass) — still owed.
