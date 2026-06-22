@@ -5,7 +5,9 @@ import {
   recordHighWater,
   longestRun,
   pendingMilestone,
+  pendingPerfectMonth,
 } from '../streakState';
+import { computeStreak } from '../streak';
 
 const WEEKS = ['2026-03-30', '2026-04-06', '2026-04-13', '2026-04-20', '2026-04-27'];
 
@@ -81,5 +83,29 @@ describe('streakState: pendingMilestone', () => {
   });
   test('thresholds are 4/12/26/52', () => {
     expect(MILESTONES).toEqual([4, 12, 26, 52]);
+  });
+});
+
+describe('streakState: pendingPerfectMonth', () => {
+  // Build labelled weeks via the real engine.
+  const kept = (k, target = 4) => ({ weekKey: k, completed: target, target, isDeload: false, paused: false });
+  const current = (k, c, target = 4) => ({ weekKey: k, completed: c, target, isDeload: false, paused: false, isCurrent: true });
+  const perfectWeeks = () => computeStreak({
+    weeks: [kept('w1'), kept('w2'), kept('w3'), kept('w4'), current('w5', 1)],
+  }).weeks;
+
+  test('fires for a completed perfect month not yet seen', () => {
+    const pm = pendingPerfectMonth(perfectWeeks(), []);
+    expect(pm).not.toBeNull();
+    expect(pm.lastWeekKey).toBe('w4');
+  });
+
+  test('returns null once that month has been seen (fires once)', () => {
+    expect(pendingPerfectMonth(perfectWeeks(), ['w4'])).toBeNull();
+  });
+
+  test('null when there is no perfect month', () => {
+    const weeks = computeStreak({ weeks: [kept('w1'), current('w2', 1)] }).weeks;
+    expect(pendingPerfectMonth(weeks, [])).toBeNull();
   });
 });

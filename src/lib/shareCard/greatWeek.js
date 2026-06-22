@@ -8,15 +8,21 @@
  *
  * Founder decisions 2026-06-22:
  *  - warm "Textbook Week" coach voice;
- *  - weight celebrated QUALITATIVELY only (never a raw kg/rate number on the
- *    shared card); the raw number stays private/in-app;
  *  - Pro-gated (enforced at the screen, not here).
  *
- * SAFETY: a week is never "great"/shareable while any ED-safety signal is open,
- * and when `suppress` is set (ED-pattern flag OR calm mode) the card carries no
- * weight/progress language at all — only the controllable, self-referential
- * wins (sessions, PRs, recovery). Self-referential only: never a comparison to
- * other users.
+ * Founder correction 2026-06-22 (SUPERSEDES the earlier "qualitative-only
+ * weight" call): the card MUST celebrate the real achievement — the actual
+ * weight lost/gained and the PRs — because that is what the user is proud of and
+ * what makes the card worth sharing. A tick celebrates nothing. The real number
+ * is shown because the card only ever fires on a verified-SAFE, on-target week
+ * (isGreatWeek already gates rapid-loss / FFM-floor / ED-flag), so we only put a
+ * number on the card when the progress has been confirmed safe and on target.
+ *
+ * SAFETY (unchanged): a week is never "great"/shareable while any ED-safety
+ * signal is open, and when `suppress` is set (ED-pattern flag OR calm mode) the
+ * card carries no weight/progress language at all — only the controllable,
+ * self-referential wins (sessions, PRs, recovery). Never a comparison to others;
+ * never reward overshoot (off-target weeks don't qualify in the first place).
  */
 
 const HEADLINE = 'Textbook Week';
@@ -58,47 +64,59 @@ export function isGreatWeek(output) {
   return { great, reasons };
 }
 
+// Format a signed weekly weight change as the card's hero value, e.g. "-0.7 kg"
+// / "+0.4 kg". ASCII hyphen (not a typographic minus) so it can never render as
+// a missing-glyph box on a system font.
+function formatDelta(delta, u) {
+  const a = Math.round(Math.abs(delta) * 10) / 10;
+  if (delta > 0.01) return `+${a} ${u}`;
+  if (delta < -0.01) return `-${a} ${u}`;
+  return `0 ${u}`;
+}
+
 /**
- * Build the params the weekly-recap card renderer consumes. ED-safe by
- * construction: qualitative-only weight, dropped entirely under `suppress`.
+ * Build the params the weekly-recap card renderer consumes.
+ *
+ * The hero is the user's real goal achievement — the actual weight lost/gained
+ * this week — shown because the card only fires on a safe, on-target week. Under
+ * `suppress` every number/progress surface is dropped to the bare wins.
  *
  * @param {object} output  the coach output
  * @param {object} opts
- * @param {boolean} opts.suppress   ED-pattern flag OR calm mode active. ED-safe
- *   by construction: this drops the on-target stat, the best-lift hero AND all
- *   weight/progress language, regardless of the toggles below.
- * @param {boolean} opts.includeOnTarget  user toggle (default true). When false,
- *   the qualitative on-target stat and the progress coach-line are dropped — but
- *   the best-lift hero is NOT (the two are independent surfaces).
+ * @param {boolean} opts.suppress   ED-pattern flag OR calm mode active. Drops the
+ *   weight progress hero, the best-lift hero AND all weight/progress language.
+ * @param {boolean} opts.includeProgress  user toggle (default true). When false,
+ *   the weight progress hero + progress coach-line are dropped — the best-lift
+ *   hero is NOT (independent surfaces).
+ * @param {string}  opts.units      'kg' | 'lbs' (gym/body unit label)
  * @param {boolean} opts.isSquare   1:1 (true) vs 9:16 story (false)
- * @param {string}  opts.weekLabel  e.g. "Week 4"
+ * @param {string}  opts.weekLabel  e.g. "Week 4 · Moderate cut"
  * @param {string}  opts.dateFormatted
- * @param {object}  opts.bestLift   { exerciseName, weight, reps, isNewBest, gainKg }
- *   the week's standout lift (see src/lib/bestLift.js), or null. Featured as the
- *   card hero — a competence win, not a bodyweight number — but a lift weight is
- *   still a number, so it is dropped entirely under `suppress`.
+ * @param {object}  opts.bestLift   { exerciseName, weight, reps, isNewBest } or null.
  */
-export function buildWeeklyRecapParams(output, { suppress = false, includeOnTarget = true, isSquare = true, weekLabel = '', dateFormatted = '', bestLift = null } = {}) {
+export function buildWeeklyRecapParams(output, { suppress = false, includeProgress = true, units = 'kg', isSquare = true, weekLabel = '', dateFormatted = '', bestLift = null } = {}) {
   const o = output || {};
   const planned = Number(o.sessionsPlanned) || 0;
   const completed = Number(o.sessionsCompleted) || 0;
   const prs = Number(o.prsThisWeek) || 0;
   const recoveryGood = o.recoveryFlag === 'normal';
   const onTarget = o.trend?.onTarget === true;
+  const delta = Number(o.trend?.delta);
+  const hasWeight = o.trend?.delta != null && Number.isFinite(delta);
+  const u = units === 'lbs' ? 'lbs' : 'kg';
 
-  // The on-target stat shows only when on target, not safety-suppressed, and not
-  // toggled off. No-progress coach line whenever progress is hidden for any of
-  // those reasons.
-  const showOnTarget = onTarget && !suppress && includeOnTarget;
-  const noProgressLanguage = suppress || !includeOnTarget;
+  // The real weight achievement is the hero — shown when on target, not
+  // safety-suppressed, and not toggled off. (The card only fires on-target, so
+  // this never celebrates overshoot.) Progress language follows the same gate.
+  const showProgress = hasWeight && onTarget && !suppress && includeProgress;
+  const progress = showProgress
+    ? { value: formatDelta(delta, u), label: 'this week · on target' }
+    : null;
 
   const stats = [];
   if (prs > 0) stats.push({ label: prs === 1 ? 'PR' : 'PRs', value: String(prs) });
   if (planned > 0) stats.push({ label: 'Sessions', value: `${completed}/${planned}` });
   if (recoveryGood) stats.push({ label: 'Recovery', value: 'Strong' });
-  // Qualitative on-target progress — NEVER a number. A short check-glyph value
-  // keeps it inside the stat box (values aren't shrunk).
-  if (showOnTarget) stats.push({ label: 'On target', value: '✓' });
 
   return {
     cardType: 'weekly',
@@ -106,19 +124,24 @@ export function buildWeeklyRecapParams(output, { suppress = false, includeOnTarg
     tierLabel: HEADLINE,
     weekLabel,
     dateFormatted,
+    // The headline achievement: real weight change toward the goal.
+    progress,
     // A lift weight is a number; under safety suppress (calm mode / ED flag) the
     // hero is stripped so the card carries only bare wins.
     bestLift: suppress ? null : (bestLift || null),
     stats: stats.slice(0, 4),
-    coachLine: buildCoachLine({ completed, planned, prs, onTarget, recoveryGood, suppress: noProgressLanguage }),
+    // Name the weight only when the hero shows it (on target, safe, not toggled
+    // off) — never on an off-target week.
+    coachLine: buildCoachLine({ completed, planned, prs, recoveryGood, delta, u, showWeight: showProgress }),
   };
 }
 
 // The coach voice: plain second-person British declaratives, numbers before
 // narrative, no jargon — matching weeklyCoach.js's "what's working" lines
-// ("You hit all 4 of your sessions", "You set 2 new PRs this week"). The tier
-// headline already says "Textbook Week", so the line doesn't repeat it.
-function buildCoachLine({ completed, planned, prs, onTarget, recoveryGood, suppress }) {
+// ("You hit all 4 of your sessions", "You set 2 new PRs this week"). Names the
+// real weight change. The tier headline already says "Textbook Week", so the
+// line doesn't repeat it.
+function buildCoachLine({ completed, planned, prs, recoveryGood, delta, u, showWeight }) {
   const clauses = [];
   clauses.push(
     planned > 0 && completed >= planned
@@ -126,8 +149,12 @@ function buildCoachLine({ completed, planned, prs, onTarget, recoveryGood, suppr
       : `You hit ${completed} of your ${planned} sessions`,
   );
   if (prs > 0) clauses.push(`set ${prs} new PR${prs === 1 ? '' : 's'}`);
-  // No weight/progress language under calm mode / ED flag.
-  if (onTarget && !suppress) clauses.push('your weight stayed on target');
+  // The real weight change — only when the hero shows it (on target, safe, not
+  // suppressed); never on an off-target week or under calm mode / an ED flag.
+  if (showWeight) {
+    const a = Math.round(Math.abs(delta) * 10) / 10;
+    clauses.push(delta < -0.01 ? `lost ${a} ${u}` : delta > 0.01 ? `gained ${a} ${u}` : 'held steady');
+  }
   if (recoveryGood) clauses.push('recovery was strong');
 
   // Join British-style: "a, b, c and d." (no Oxford comma).

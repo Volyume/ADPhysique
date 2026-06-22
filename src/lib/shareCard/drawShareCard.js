@@ -176,15 +176,31 @@ function drawIntensityBadge(canvas, Skia, W, y, tier, s, font) {
   return y + bh + Math.round(28 * s);
 }
 
-// A vector tick (no font glyph) so an "on target" stat renders identically on
-// every device — the ✓ glyph is missing from some system fonts (renders as a
-// tofu box). Amber, not green: the adherence-neutral rule avoids success colour.
-function drawCheck(canvas, Skia, cx, cy, size, colorStr) {
+// A soft radial glow behind a focal point — the premium-landmark lift (Phase 2).
+function drawGlow(canvas, Skia, cx, cy, radius, colorStr) {
+  const shader = Skia.Shader.MakeRadialGradient(
+    { x: cx, y: cy }, radius,
+    [Skia.Color(rgba(colorStr, 0.22)), Skia.Color(rgba(colorStr, 0))],
+    [0, 1], CLAMP,
+  );
+  const p = Skia.Paint();
+  p.setShader(shader);
+  canvas.drawCircle(cx, cy, radius, p);
+}
+
+// A filled five-point star (vector, no glyph) for the premium-landmark emblem.
+function drawStar(canvas, Skia, cx, cy, rOuter, colorStr) {
   const p = Skia.Path.Make();
-  p.moveTo(cx - size * 0.45, cy + size * 0.02);
-  p.lineTo(cx - size * 0.08, cy + size * 0.4);
-  p.lineTo(cx + size * 0.5, cy - size * 0.42);
-  canvas.drawPath(p, paintFor(Skia, colorStr, STROKE, Math.max(2, size * 0.16)));
+  const rInner = rOuter * 0.42;
+  for (let i = 0; i < 10; i += 1) {
+    const r = i % 2 === 0 ? rOuter : rInner;
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const x = cx + r * Math.cos(a);
+    const yy = cy + r * Math.sin(a);
+    if (i === 0) p.moveTo(x, yy); else p.lineTo(x, yy);
+  }
+  p.close();
+  canvas.drawPath(p, paintFor(Skia, colorStr, FILL));
 }
 
 function drawStatBoxes(canvas, Skia, W, pad, y, stats, isSquare, s, font) {
@@ -196,11 +212,7 @@ function drawStatBoxes(canvas, Skia, W, pad, y, stats, isSquare, s, font) {
     const bx = pad + i * (boxW + gap);
     fillRRect(canvas, Skia, bx, y, boxW, statBoxH, Math.round(16 * s), PALETTE.surface);
     strokeRRect(canvas, Skia, bx, y, boxW, statBoxH, Math.round(16 * s), PALETTE.border, Math.max(1, 1.2 * s));
-    if (st.value === '✓') {
-      drawCheck(canvas, Skia, bx + boxW / 2, y + statBoxH * 0.42, Math.round((isSquare ? 34 : 42) * s), PALETTE.accent);
-    } else {
-      text(canvas, Skia, st.value, bx + boxW / 2, y + statBoxH * 0.5, font(isSquare ? 42 : 52), PALETTE.text, 'center');
-    }
+    text(canvas, Skia, st.value, bx + boxW / 2, y + statBoxH * 0.5, font(isSquare ? 42 : 52), PALETTE.text, 'center');
     text(canvas, Skia, st.label.toUpperCase(), bx + boxW / 2, y + statBoxH - Math.round(18 * s), font(16), PALETTE.textMuted, 'center');
   });
   return y + statBoxH + Math.round(24 * s);
@@ -346,15 +358,30 @@ function drawPR(canvas, Skia, W, H, p, s, font, wordmark) {
 
 function drawMilestone(canvas, Skia, W, H, p, s, font, wordmark) {
   const pad = Math.round(W * 0.074);
+  // Premium landmark treatment (Phase 2): gold accents, a star emblem and a soft
+  // glow behind the hero, reserved for landmark cards (perfect month, streak,
+  // lifetime tonnage). Plain milestone callers leave `premium` unset.
+  const premium = !!p.premium;
+  const accent = premium ? PALETTE.gold : PALETTE.accent;
   drawBackground(canvas, Skia, W, H);
   drawAccentBar(canvas, Skia, W, s);
+  if (premium) {
+    drawGlow(canvas, Skia, W / 2, Math.round(H * (p.isSquare ? 0.46 : 0.42)), Math.round((p.isSquare ? 420 : 520) * s), PALETTE.gold);
+  }
 
   let y = pad + Math.round(60 * s);
   if (p.showDate && p.date) text(canvas, Skia, p.date, W - pad, y, font(22, 'regular'), PALETTE.textMuted, 'right');
   y += Math.round(70 * s);
 
+  // Premium emblem: a gold star above the eyebrow, left-aligned with the title.
+  if (premium) {
+    const r = Math.round((p.isSquare ? 26 : 32) * s);
+    drawStar(canvas, Skia, pad + r, y + r * 0.2, r, PALETTE.gold);
+    y += Math.round((p.isSquare ? 56 : 68) * s);
+  }
+
   if (p.eyebrow) {
-    text(canvas, Skia, String(p.eyebrow).toUpperCase(), pad, y, font(22), PALETTE.accent, 'left');
+    text(canvas, Skia, String(p.eyebrow).toUpperCase(), pad, y, font(22), accent, 'left');
     y += Math.round(36 * s);
   }
   const titleFont = font(p.isSquare ? 60 : 74);
@@ -367,7 +394,7 @@ function drawMilestone(canvas, Skia, W, H, p, s, font, wordmark) {
   const heroValue = String(p.heroValue != null ? p.heroValue : '');
   const heroNum = fitFont(null, heroValue, W - pad * 2, p.isSquare ? 140 : 220, (px) => font(px));
   const heroY = p.isSquare ? y + heroNum.getSize() : Math.round(H * 0.42);
-  text(canvas, Skia, heroValue, W / 2, heroY, heroNum, PALETTE.accent, 'center');
+  text(canvas, Skia, heroValue, W / 2, heroY, heroNum, accent, 'center');
   if (p.heroUnit) text(canvas, Skia, String(p.heroUnit).toUpperCase(), W / 2, heroY + Math.round((p.isSquare ? 30 : 50) * s), font(p.isSquare ? 18 : 24), PALETTE.textSecondary, 'center');
   y = heroY + Math.round((p.isSquare ? 64 : 100) * s);
 
@@ -385,65 +412,75 @@ function drawMilestone(canvas, Skia, W, H, p, s, font, wordmark) {
   drawFooter(canvas, Skia, W, H, pad, p.isSquare, s, font, wordmark);
 }
 
-// Weekly Precision Coaching recap (blueprint 2026-06-22). Eyebrow week label →
-// the "Textbook Week" tier headline → a warm coach line → the self-referential
-// stat boxes (PRs / sessions / recovery / on-target ✓). ED-safety lives in the
-// param builder (greatWeek.js): under calm mode / an ED flag the on-target stat
-// and all weight language are already stripped before they reach here.
+// Weekly Precision Coaching recap. Leads with the user's real goal achievement
+// — the actual weight lost/gained this week — as a big gold hero, then the best
+// lift, the real stat wins (PRs / sessions / recovery) and a coach line that
+// names the numbers. ED-safety lives in the param builder (greatWeek.js): under
+// calm mode / an ED flag the progress hero, the lift hero and all weight
+// language are already stripped before they reach here, and the card only ever
+// renders for a verified-safe, on-target week.
 function drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark) {
   const pad = Math.round(W * 0.074);
   drawBackground(canvas, Skia, W, H);
   drawAccentBar(canvas, Skia, W, s);
 
-  let y = pad + Math.round(60 * s);
+  let y = pad + Math.round(56 * s);
   if (p.showDate && p.dateFormatted) {
     text(canvas, Skia, p.dateFormatted, W - pad, y, font(22, 'regular'), PALETTE.textMuted, 'right');
   }
-  y += Math.round(70 * s);
+  y += Math.round(64 * s);
 
+  // Eyebrow: week + goal phase, e.g. "WEEK 4 · MODERATE CUT".
   if (p.weekLabel) {
     text(canvas, Skia, String(p.weekLabel).toUpperCase(), pad, y, font(22), PALETTE.accent, 'left');
-    y += Math.round(40 * s);
+    y += Math.round(38 * s);
   }
 
-  const titleFont = font(p.isSquare ? 72 : 92);
-  wrapText(titleFont, p.tierLabel || 'Great Week', W - pad * 2).slice(0, 2).forEach((l) => {
-    text(canvas, Skia, l, pad, y + Math.round((p.isSquare ? 72 : 92) * 0.82 * s), titleFont, PALETTE.text, 'left');
-    y += Math.round((p.isSquare ? 72 : 92) * 1.05 * s);
+  // Tier headline.
+  const titleFont = font(p.isSquare ? 56 : 70);
+  wrapText(titleFont, p.tierLabel || 'Great Week', W - pad * 2).slice(0, 1).forEach((l) => {
+    text(canvas, Skia, l, pad, y + Math.round((p.isSquare ? 56 : 70) * 0.82 * s), titleFont, PALETTE.text, 'left');
+    y += Math.round((p.isSquare ? 56 : 70) * 1.02 * s);
   });
-  y += Math.round(28 * s);
+  y += Math.round(20 * s);
 
-  if (p.coachLine) {
-    const capFont = font(p.isSquare ? 26 : 32, 'regular');
-    wrapText(capFont, String(p.coachLine), W - pad * 2).slice(0, 3).forEach((l) => {
-      text(canvas, Skia, l, pad, y + Math.round((p.isSquare ? 26 : 32) * 0.9 * s), capFont, PALETTE.textSecondary, 'left');
-      y += Math.round((p.isSquare ? 40 : 50) * s);
-    });
-    y += Math.round(28 * s);
+  // HERO: the real weight achievement, big and gold, with a soft glow.
+  if (p.progress && p.progress.value) {
+    const phFont = fitFont(null, p.progress.value, W - pad * 2, p.isSquare ? 150 : 190, (px) => font(px));
+    const heroBaseline = y + phFont.getSize();
+    drawGlow(canvas, Skia, W / 2, y + phFont.getSize() * 0.5, Math.round((p.isSquare ? 380 : 460) * s), PALETTE.gold);
+    text(canvas, Skia, p.progress.value, W / 2, heroBaseline, phFont, PALETTE.gold, 'center');
+    y = heroBaseline + Math.round((p.isSquare ? 50 : 64) * s);
+    if (p.progress.label) {
+      text(canvas, Skia, String(p.progress.label).toUpperCase(), W / 2, y, font(p.isSquare ? 20 : 26), PALETTE.textSecondary, 'center');
+      y += Math.round((p.isSquare ? 50 : 64) * s);
+    }
   }
 
-  // Best-lift hero (founder decision 2026-06-22): a self-referenced "your
-  // strongest set this week" block — competence, never a ranking. Drawn only
-  // when present (greatWeek.js drops it under suppress). It is the focal element
-  // that earns the tall format's space.
+  // Best-lift feature: the standout set, a competence win, never a ranking.
   if (p.bestLift && p.bestLift.weight) {
     const bl = p.bestLift;
     text(canvas, Skia, 'BEST LIFT', pad, y, font(p.isSquare ? 18 : 22), PALETTE.textMuted, 'left');
+    if (bl.isNewBest) text(canvas, Skia, 'NEW PB', W - pad, y, font(p.isSquare ? 18 : 22), PALETTE.gold, 'right');
     y += Math.round((p.isSquare ? 40 : 52) * s);
     const liftStr = `${bl.exerciseName} · ${bl.weight} ${bl.units || 'kg'} × ${bl.reps}`;
-    const startPx = p.isSquare ? 50 : 64;
-    const blFont = fitFont(null, liftStr, W - pad * 2, startPx, (px) => font(px));
+    const blFont = fitFont(null, liftStr, W - pad * 2, p.isSquare ? 42 : 54, (px) => font(px));
     text(canvas, Skia, liftStr, pad, y + blFont.getSize(), blFont, PALETTE.accent, 'left');
-    y += Math.round(blFont.getSize() + (p.isSquare ? 16 : 22) * s);
-    if (bl.isNewBest) {
-      text(canvas, Skia, 'New personal best', pad, y + Math.round((p.isSquare ? 20 : 26) * s), font(p.isSquare ? 20 : 26, 'regular'), PALETTE.gold, 'left');
-      y += Math.round((p.isSquare ? 40 : 52) * s);
-    }
-    y += Math.round((p.isSquare ? 24 : 36) * s);
+    y += Math.round(blFont.getSize() + (p.isSquare ? 30 : 38) * s);
   }
 
   const stats = (p.stats || []).slice(0, 4).map((st) => ({ label: String(st.label || ''), value: String(st.value != null ? st.value : '') }));
   if (stats.length) y = drawStatBoxes(canvas, Skia, W, pad, y, stats, p.isSquare, s, font);
+
+  // Coach line — names the real numbers, sits as a caption above the footer.
+  if (p.coachLine) {
+    const capFont = font(p.isSquare ? 24 : 30, 'regular');
+    y += Math.round(8 * s);
+    wrapText(capFont, String(p.coachLine), W - pad * 2).slice(0, 3).forEach((l) => {
+      text(canvas, Skia, l, pad, y + Math.round((p.isSquare ? 24 : 30) * 0.9 * s), capFont, PALETTE.textSecondary, 'left');
+      y += Math.round((p.isSquare ? 38 : 46) * s);
+    });
+  }
 
   drawFooter(canvas, Skia, W, H, pad, p.isSquare, s, font, wordmark);
 }

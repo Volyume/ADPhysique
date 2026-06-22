@@ -19,7 +19,7 @@ import useWeightTrend from '../hooks/useWeightTrend';
 import WeightTrendCard from '../components/WeightTrendCard';
 import useWeeklyStreak from '../hooks/useWeeklyStreak';
 import WeeklyStreakStrip from '../components/WeeklyStreakStrip';
-import { markMilestoneSeen } from '../lib/streakState';
+import { markMilestoneSeen, markPerfectMonthSeen } from '../lib/streakState';
 import { track } from '../lib/engineTelemetry';
 import { VOLUME_LANDMARKS } from '../lib/algorithms';
 
@@ -95,15 +95,46 @@ export default function AnalyticsScreen({ navigation, route }) {
     }
   }, [pendingMilestone, streakRenders, user?.id]);
 
+  // Phase-2 landmark: a perfect month (4 weeks all on target). Fires once per
+  // month (keyed off the month's last week), in-app only, never under ED/calm
+  // suppression (the hook already returns null then).
+  const perfectMonth = weeklyStreak.pendingPerfectMonth;
+  useEffect(() => {
+    if (perfectMonth && streakRenders && user?.id) {
+      markPerfectMonthSeen(user.id, perfectMonth.lastWeekKey).catch(() => {});
+      try { track(user.id, 'perfect_month_reached', { sessions: perfectMonth.sessions })?.catch?.(() => {}); } catch (_) {}
+    }
+  }, [perfectMonth, streakRenders, user?.id]);
+
   function makeStreakCard(m) {
     navigation.navigate('ShareCard', {
       milestoneData: {
+        premium: true,
         eyebrow: 'Weeks running',
         heroValue: String(m),
         heroUnit: m === 1 ? 'week' : 'weeks',
         title: STREAK_MILESTONE_COPY[m] || `${m} weeks of showing up.`,
         caption: '',
         stats: [],
+      },
+    });
+  }
+
+  function makePerfectMonthCard() {
+    if (!perfectMonth) return;
+    navigation.navigate('ShareCard', {
+      milestoneData: {
+        premium: true,
+        eyebrow: 'Month complete',
+        title: 'Textbook Month',
+        heroValue: String(perfectMonth.weeks),
+        heroUnit: 'weeks on target',
+        caption: `${perfectMonth.sessions} sessions over four weeks, every target met.`,
+        date: Date.now(),
+        stats: [
+          { label: 'Weeks', value: String(perfectMonth.weeks) },
+          { label: 'Sessions', value: String(perfectMonth.sessions) },
+        ],
       },
     });
   }
@@ -192,6 +223,20 @@ export default function AnalyticsScreen({ navigation, route }) {
                     <Text style={styles.milestoneCta}>Make a card</Text>
                   </TouchableOpacity>
                 ) : null}
+              </View>
+            ) : null}
+            {perfectMonth ? (
+              <View style={styles.milestoneRow}>
+                <Ionicons name="ribbon-outline" size={16} color={colors.primary} />
+                <Text style={styles.milestoneText}>A perfect month. Four weeks, every target met.</Text>
+                <TouchableOpacity
+                  onPress={makePerfectMonthCard}
+                  accessibilityRole="button"
+                  accessibilityLabel="Make a card"
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.milestoneCta}>Make a card</Text>
+                </TouchableOpacity>
               </View>
             ) : null}
           </View>

@@ -45,9 +45,11 @@ export default function ShareCardScreen({ route }) {
     prData = null,
     milestoneData = null,
     weeklyRecapData = null,
-    // The week's standout lift (src/lib/bestLift.js), or null. Featured as the
-    // recap card hero.
+    // The week's standout lift (src/lib/bestLift.js), or null. Featured on the
+    // recap card.
     bestLift = null,
+    // Gym/body weight unit label ('kg'|'lbs') for the weekly progress hero.
+    units = 'kg',
     // Set by CoachOutputScreen when an ED-pattern flag is open OR calm mode is
     // active: all weight/progress language is stripped from the recap card.
     suppress = false,
@@ -72,10 +74,10 @@ export default function ShareCardScreen({ route }) {
   const [showExercises, setShowExercises] = useState(true);
   const [showPRWeight, setShowPRWeight] = useState(true);
   const [showPrevBest, setShowPrevBest] = useState(true);
-  // Weekly recap: the qualitative on-target tick is opt-in. It is force-stripped
-  // (and the toggle hidden) under `suppress` so no progress language can leak.
-  const [showOnTarget, setShowOnTarget] = useState(true);
-  // The best-lift hero is opt-in too (also force-stripped under suppress).
+  // Weekly recap: the real weight-progress hero is opt-in. It is force-stripped
+  // (and the toggle hidden) under `suppress` so no progress number can leak.
+  const [showProgress, setShowProgress] = useState(true);
+  // The best-lift feature is opt-in too (also force-stripped under suppress).
   const [showBestLift, setShowBestLift] = useState(true);
 
   const isSession = cardType === 'session';
@@ -126,15 +128,14 @@ export default function ShareCardScreen({ route }) {
   const buildParams = useCallback(() => {
     if (isWeekly) {
       const o = weeklyRecapData || {};
-      // ED-safe by construction (greatWeek.js): qualitative-only weight, and the
-      // on-target stat + all progress language are dropped when suppressed (ED
-      // flag / calm mode) OR when the user toggles it off.
-      // The week is identified by its label (e.g. "Week 4"); the recap is shared
-      // straight after the check-in, so the date stamp is simply today's share
-      // date. (The coach output carries no own timestamp.)
+      // The hero is the real weight progress (greatWeek.js); it + all progress
+      // language are dropped when suppressed (ED flag / calm mode) OR toggled off.
+      // The recap is shared straight after the check-in, so the date stamp is
+      // simply today's share date. (The coach output carries no own timestamp.)
       const recap = buildWeeklyRecapParams(o, {
         suppress,
-        includeOnTarget: showOnTarget,
+        includeProgress: showProgress,
+        units,
         isSquare,
         weekLabel: o.weekLabel || '',
         dateFormatted: showDate ? formatLongDate() : '',
@@ -148,6 +149,7 @@ export default function ShareCardScreen({ route }) {
       const m = milestoneData || {};
       return {
         cardType: 'milestone', isSquare, showDate,
+        premium: !!m.premium,
         date: (showDate && m.date) ? formatLongDate(m.date) : '',
         eyebrow: m.eyebrow || '',
         title: m.title || '',
@@ -185,7 +187,7 @@ export default function ShareCardScreen({ route }) {
       previousBest: p.previousBest || '',
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMilestone, isSession, isWeekly, isSquare, showDate, showVolume, showPlanName, showExercises, showPRWeight, showPrevBest, showOnTarget, showBestLift, suppress, sessionData, prData, milestoneData, weeklyRecapData, bestLift]);
+  }, [isMilestone, isSession, isWeekly, isSquare, showDate, showVolume, showPlanName, showExercises, showPRWeight, showPrevBest, showProgress, showBestLift, suppress, units, sessionData, prData, milestoneData, weeklyRecapData, bestLift]);
 
   // ── ONE renderer for preview + export ──────────────────────────────────────
   const renderCardBase64 = useCallback((width) => {
@@ -265,13 +267,16 @@ export default function ShareCardScreen({ route }) {
         ${p.caption ? `<p class="prs">${esc(p.caption)}</p>` : ''}`;
     } else if (p.cardType === 'weekly') {
       const rows = (p.stats || []).map((s) => stat(s.label, s.value)).join('');
+      const prog = p.progress && p.progress.value
+        ? stat(p.progress.label || 'this week', p.progress.value)
+        : '';
       const bl = p.bestLift;
       const liftLine = (bl && bl.weight)
         ? `<p class="prs">Best lift: ${esc(bl.exerciseName)} ${esc(bl.weight)} ${esc(bl.units || 'kg')} × ${esc(bl.reps)}${bl.isNewBest ? ' (new personal best)' : ''}</p>`
         : '';
       body = `
+        <div class="statRow">${prog}${rows}</div>
         ${liftLine}
-        <div class="statRow">${rows}</div>
         ${p.coachLine ? `<p class="prs">${esc(p.coachLine)}</p>` : ''}`;
     } else {
       body = `
@@ -415,16 +420,16 @@ export default function ShareCardScreen({ route }) {
             )}
             {isWeekly && !suppress && (
               <>
+                <ToggleRow label="Weight progress" value={showProgress} onChange={setShowProgress} />
                 {bestLift ? (
-                  <ToggleRow label="Best lift of the week" value={showBestLift} onChange={setShowBestLift} />
+                  <ToggleRow label="Best lift of the week" value={showBestLift} onChange={setShowBestLift} last />
                 ) : null}
-                <ToggleRow label="On-target progress" value={showOnTarget} onChange={setShowOnTarget} last />
               </>
             )}
           </View>
           <Text style={styles.privacyNote}>
             {isWeekly
-              ? 'Your bodyweight, measurements and private notes are never shown. Weight progress appears only as an on-target tick, never a number.'
+              ? 'Only this week’s progress, lifts and sessions are shown. Your measurements and private notes are never included.'
               : 'Name, bodyweight, measurements and private notes are never included.'}
           </Text>
         </View>

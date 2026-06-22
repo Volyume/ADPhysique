@@ -1,11 +1,11 @@
 import { isGreatWeek, buildWeeklyRecapParams, GREAT_WEEK_HEADLINE } from '../greatWeek';
 
-// A baseline "great" coach output: on target, hit sessions, a PR, clean recovery,
-// no deload, no safety flags.
+// A baseline "great" coach output: on target, lost 0.7kg, hit sessions, a PR,
+// clean recovery, no deload, no safety flags.
 function out(over = {}) {
   return {
     hasEnoughData: true,
-    trend: { onTarget: true },
+    trend: { onTarget: true, delta: -0.7, deltaLabel: '-0.7kg this week', rateLabel: 'losing 0.7kg/wk' },
     sessionsPlanned: 4,
     sessionsCompleted: 4,
     prsThisWeek: 2,
@@ -68,39 +68,50 @@ describe('buildWeeklyRecapParams — ED-safe by construction', () => {
     expect(p.weekLabel).toBe('Week 4');
   });
 
-  test('weight progress is QUALITATIVE only — never a number', () => {
-    const p = buildWeeklyRecapParams(out({ trend: { onTarget: true, rateLabel: 'losing 0.8 kg/wk', delta: -0.8 } }));
-    const progress = p.stats.find((s) => s.label === 'On target');
-    expect(progress).toEqual({ label: 'On target', value: '✓' });
-    // No stat value anywhere contains a kg figure or a rate.
-    const blob = JSON.stringify(p.stats) + p.coachLine;
-    expect(blob).not.toMatch(/kg|\/wk|\d+(\.\d+)?\s*(kg|lb)/i);
+  test('the hero is the REAL weight change when safe + on target (founder correction)', () => {
+    const p = buildWeeklyRecapParams(out({ trend: { onTarget: true, delta: -0.8 } }));
+    expect(p.progress).toEqual({ value: '-0.8 kg', label: 'this week · on target' });
+    // The coach line names the real number too.
+    expect(p.coachLine).toMatch(/lost 0\.8 kg/);
   });
 
-  test('under suppress (calm mode / ED flag) NO weight/progress language appears', () => {
+  test('a gain shows with a + sign; the unit follows the user (lbs)', () => {
+    const gain = buildWeeklyRecapParams(out({ trend: { onTarget: true, delta: 0.4 } }), { units: 'lbs' });
+    expect(gain.progress.value).toBe('+0.4 lbs');
+    expect(gain.coachLine).toMatch(/gained 0\.4 lbs/);
+  });
+
+  test('off-target never reaches the card (no progress hero)', () => {
+    const p = buildWeeklyRecapParams(out({ trend: { onTarget: false, delta: -0.8 } }));
+    expect(p.progress).toBeNull();
+    expect(p.coachLine).not.toMatch(/lost|gained/);
+  });
+
+  test('under suppress (calm mode / ED flag) NO weight number or progress language appears', () => {
     const p = buildWeeklyRecapParams(out(), { suppress: true });
-    expect(p.stats.find((s) => s.label === 'On target')).toBeUndefined();
-    expect(p.coachLine).not.toMatch(/target|kg|\/wk/i);
+    expect(p.progress).toBeNull();
+    expect(p.coachLine).not.toMatch(/kg|\/wk|lost|gained|target/i);
     // Still celebrates the controllable, self-referential wins.
     expect(p.coachLine).toMatch(/you hit/i);
     expect(p.stats.some((s) => s.label === 'Sessions')).toBe(true);
   });
 
-  test('caps at 4 stats and stays self-referential (no comparison language)', () => {
+  test('stays self-referential (no comparison language)', () => {
     const p = buildWeeklyRecapParams(out());
     expect(p.stats.length).toBeLessThanOrEqual(4);
-    expect(p.coachLine).not.toMatch(/than|others|rank|best|most|fastest/i);
+    expect(p.coachLine).not.toMatch(/than|others|rank|fastest/i);
   });
 
-  test('coach line names the real numbers (sessions, PRs) — numbers before narrative', () => {
-    const p = buildWeeklyRecapParams(out({ sessionsPlanned: 6, sessionsCompleted: 5, prsThisWeek: 1 }));
+  test('coach line names the real numbers (sessions, PRs, weight) — numbers before narrative', () => {
+    const p = buildWeeklyRecapParams(out({ sessionsPlanned: 6, sessionsCompleted: 5, prsThisWeek: 1, trend: { onTarget: true, delta: -0.5 } }));
     expect(p.coachLine).toMatch(/5 of your 6 sessions/);
     expect(p.coachLine).toMatch(/1 new PR\b/);
+    expect(p.coachLine).toMatch(/lost 0\.5 kg/);
   });
 });
 
-describe('buildWeeklyRecapParams — best-lift hero', () => {
-  const lift = { exerciseName: 'Bench Press', weight: 100, reps: 5, isNewBest: true, gainKg: 2.5 };
+describe('buildWeeklyRecapParams — best-lift feature', () => {
+  const lift = { exerciseName: 'Bench Press', weight: 100, reps: 5, isNewBest: true, units: 'kg' };
 
   test('passes the best lift through when present and not suppressed', () => {
     const p = buildWeeklyRecapParams(out(), { bestLift: lift });
@@ -112,11 +123,11 @@ describe('buildWeeklyRecapParams — best-lift hero', () => {
     expect(p.bestLift).toBeNull();
   });
 
-  test('includeOnTarget=false drops the on-target stat + progress language but KEEPS the lift', () => {
-    const p = buildWeeklyRecapParams(out(), { bestLift: lift, includeOnTarget: false });
-    expect(p.bestLift).toEqual(lift); // independent of the on-target toggle
-    expect(p.stats.find((s) => s.label === 'On target')).toBeUndefined();
-    expect(p.coachLine).not.toMatch(/target/i);
+  test('includeProgress=false drops the weight hero + progress language but KEEPS the lift', () => {
+    const p = buildWeeklyRecapParams(out(), { bestLift: lift, includeProgress: false });
+    expect(p.bestLift).toEqual(lift); // independent of the progress toggle
+    expect(p.progress).toBeNull();
+    expect(p.coachLine).not.toMatch(/lost|gained|kg/);
   });
 
   test('null/missing lift yields null, never undefined', () => {

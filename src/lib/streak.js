@@ -92,6 +92,31 @@ export function computeWeekState({
 }
 
 /**
+ * detectPerfectMonth — a "perfect month" landmark (Phase 2 premium card).
+ *
+ * The four most-recent FINISHED weeks all kept the run (kept/resting/paused/
+ * repaired — a deload or wellbeing rest counts as kept, so recovery never breaks
+ * it). Requires at least one genuinely target-meeting week and some real
+ * sessions, so an all-rest stretch never reads as a training month.
+ *
+ * @param {Array} weeks  the labelled weeks from computeStreak (oldest-first)
+ * @returns {{ weeks: number, sessions: number, lastWeekKey: string }|null}
+ */
+export function detectPerfectMonth(weeks = []) {
+  // A bridged miss ('repaired') keeps a streak but is NOT a perfect month, so
+  // it's excluded here; recovery ('resting'/'paused') still counts as kept.
+  const PERFECT = new Set(['kept', 'resting', 'paused']);
+  const finished = (Array.isArray(weeks) ? weeks : []).filter((w) => w && w.state !== 'in-progress');
+  if (finished.length < 4) return null;
+  const last4 = finished.slice(-4);
+  if (!last4.every((w) => PERFECT.has(w.state))) return null;
+  if (!last4.some((w) => w.state === 'kept')) return null;
+  const sessions = last4.reduce((t, w) => t + Math.max(0, Math.round(Number(w.completed) || 0)), 0);
+  if (sessions <= 0) return null;
+  return { weeks: 4, sessions, lastWeekKey: last4[last4.length - 1].weekKey };
+}
+
+/**
  * @param {object} input
  * @param {Array}  input.weeks  oldest-first, each { weekKey, completed, target, isDeload, paused, isCurrent }
  * @param {boolean} input.edSuppressed  open ED/wellbeing flag

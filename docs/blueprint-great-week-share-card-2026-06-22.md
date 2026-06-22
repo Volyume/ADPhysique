@@ -84,20 +84,40 @@ greatWeek =
 Tiers (for the headline label + milestone treatment) can layer on top: a normal great week gets the
 clean card; first-PR / streak-milestone / "perfect month" gets the premium card.
 
-## 6. The qualitative-weight rule (the key ED-safe decision)
+## 6. The weight-progress rule (the key ED-safe decision)
+
+> **FOUNDER CORRECTION 2026-06-22 — SUPERSEDES the earlier "qualitative-only" call below.**
+> A qualitative tick celebrates nothing the user can see, and "nobody is going to want to share"
+> a card with no achievement on it. The card MUST show the **real** weight lost/gained and the PRs —
+> that is the achievement the user is proud of and the reason to share. It is shown as the **hero**
+> (big, gold). This is safe because the card only ever fires on a verified-SAFE, on-target week
+> (§5 gates rapid-loss / FFM-floor / ED-flag), so a number only ever appears once the progress has
+> been confirmed safe and on target.
+>
+> The guardrails that remain (implemented in `greatWeek.js` / `drawShareCard.js`):
+> - **Only on a safe, on-target week.** `isGreatWeek` already requires `onTarget` and clears the
+>   three hard safety flags, so the card never celebrates overshoot or an unsafe rate.
+> - **Suppress strips every number.** Under an open ED-pattern flag OR calm mode (`suppress`), the
+>   weight hero, the best-lift hero and all weight language are dropped to the bare consistency wins
+>   (sessions / PRs / recovery) — unchanged from before.
+> - **Bodyweight itself is never shown** — only the *change* (e.g. "−0.7 kg this week · on target").
+> - **Self-referential only**; never a comparison to other users.
+
+---
+
+*Superseded original (kept for the record):*
 
 Founder intent (2026-06-22): healthy, on-target weight progress IS worth celebrating and is honest
 marketing ("members achieve sustainable, healthy progress"). The evidence refines *how*:
 
-- **Celebrate on-target progress QUALITATIVELY, not numerically.** The shareable card shows the
-  healthy *state* — "You hit your sustainable target ✓ / on-track pace" — and keeps the raw number
-  (e.g. "−0.8 kg/wk") **private / in-app, opt-in only**, OFF the public image **by default**.
+- ~~**Celebrate on-target progress QUALITATIVELY, not numerically.**~~ (Superseded — see correction
+  above. The qualitative-only execution produced a card with no visible achievement.)
 - Rationale (cited §10): content-type research shows weight-*number* and weight-loss content
-  specifically drive social-comparison and ED harm; the qualitative "on-target/sustainable" framing
-  delivers the celebration and the marketing message without putting a scale number on a public post.
-- **Never reward overshoot.** Faster-than-target is a *miss*, framed neutrally / "ease back", never a
-  bigger win (matches our 1.5%/wk rapid-loss ceiling and the 0.5–1%/wk guideline).
-- Weight is **one item among several**, never the headline or largest element.
+  specifically drive social-comparison and ED harm. Mitigation retained: the number appears only on a
+  confirmed-safe, on-target week, only as the *change* (never the scale weight), and is fully
+  suppressed under any open safety flag.
+- **Never reward overshoot.** Faster-than-target is a *miss*; off-target weeks never qualify for the
+  card at all (matches our 1.5%/wk rapid-loss ceiling and the 0.5–1%/wk guideline).
 
 ## 7. Technical implementation path (plugs into what we already have)
 

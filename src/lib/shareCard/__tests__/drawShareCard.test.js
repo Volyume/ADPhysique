@@ -60,26 +60,27 @@ describe('drawShareCard renders to a non-blank PNG (CanvasKit)', () => {
     exerciseName: 'Barbell Bench Press', weight: 120, reps: 5, units: 'kg', previousBest: 115,
     eyebrow: 'Year of Lifts', title: '2026 in the gym', heroValue: '1,240,000', heroUnit: 'total kg lifted',
     caption: 'Across 186 sessions this year.', stats: [{ label: 'Sessions', value: '186' }],
-    tierLabel: 'Textbook Week', weekLabel: 'Week 4', dateFormatted: 'Sun · 22 Jun 2026',
-    coachLine: 'You showed up 4 times, set 2 PRs and held your target, and recovered well. Textbook week.',
-    // include an 'On target' ✓ stat so the vector drawCheck() path is exercised.
-    weeklyStats: [{ label: 'PRs', value: '2' }, { label: 'Sessions', value: '4/4' }, { label: 'Recovery', value: 'Strong' }, { label: 'On target', value: '✓' }],
-    bestLift: { exerciseName: 'Bench Press', weight: 100, reps: 5, isNewBest: true, gainKg: 2.5 },
+    tierLabel: 'Textbook Week', weekLabel: 'Week 4 · Moderate cut', dateFormatted: 'Sun · 22 Jun 2026',
+    coachLine: 'You hit all 4 sessions, set 2 new PRs, lost 0.7 kg and recovery was strong.',
+    progress: { value: '-0.7 kg', label: 'this week · on target' },
+    weeklyStats: [{ label: 'PRs', value: '2' }, { label: 'Sessions', value: '4/4' }, { label: 'Recovery', value: 'Strong' }],
+    bestLift: { exerciseName: 'Bench Press', weight: 100, reps: 5, isNewBest: true, units: 'kg' },
   };
 
   test.each([
-    ['session', true], ['session', false],
-    ['pr', true], ['pr', false],
-    ['milestone', true], ['milestone', false],
-    ['weekly', true], ['weekly', false],
-  ])('%s card (square=%s)', (cardType, isSquare) => {
+    ['session', true, false], ['session', false, false],
+    ['pr', true, false], ['pr', false, false],
+    ['milestone', true, false], ['milestone', false, false],
+    ['milestone', true, true], ['milestone', false, true], // premium landmark (glow + star)
+    ['weekly', true, false], ['weekly', false, false],
+  ])('%s card (square=%s, premium=%s)', (cardType, isSquare, premium) => {
     if (!env) return; // CanvasKit/fonts unavailable here — skip without failing
     const width = 540;
     const H = cardHeight(width, isSquare);
     const surface = env.Skia.Surface.MakeOffscreen(width, H);
     // weekly uses the recap stats (incl. the 'On target' ✓ that drives drawCheck).
     const stats = cardType === 'weekly' ? PARAMS.weeklyStats : PARAMS.stats;
-    drawShareCard(surface.getCanvas(), { Skia: env.Skia, width, params: { ...PARAMS, stats, cardType, isSquare }, typefaces: env.typefaces, wordmark: env.wordmark });
+    drawShareCard(surface.getCanvas(), { Skia: env.Skia, width, params: { ...PARAMS, stats, cardType, isSquare, premium }, typefaces: env.typefaces, wordmark: env.wordmark });
     surface.flush();
     const bytes = surface.makeImageSnapshot().encodeToBytes();
     expect(bytes.length).toBeGreaterThan(1000); // a real, non-empty PNG

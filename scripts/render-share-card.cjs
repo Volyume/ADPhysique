@@ -50,11 +50,12 @@ async function main() {
   const pr = { cardType: 'pr', exerciseName: 'Barbell Bench Press', date: 'Sat · 20 Jun 2026', showDate: true, showPRWeight: true, showPrevBest: true, weight: 120, reps: 5, units: 'kg', previousBest: 115 };
   const milestone = { cardType: 'milestone', eyebrow: 'Year of Lifts', title: '2026 in the gym', showDate: false, heroValue: '1,240,000', heroUnit: 'total kg lifted', caption: 'Across 186 sessions this year.', stats: [{ label: 'Sessions', value: '186' }, { label: 'PRs', value: '42' }, { label: 'Hours', value: '210' }] };
   const weekly = {
-    cardType: 'weekly', weekLabel: 'Week 4', dateFormatted: 'Sun · 22 Jun 2026', showDate: true,
+    cardType: 'weekly', weekLabel: 'Week 4 · Moderate cut', dateFormatted: 'Sun · 22 Jun 2026', showDate: true,
     tierLabel: 'Textbook Week',
-    coachLine: 'You hit all 4 sessions, set 2 new PRs, your weight stayed on target and recovery was strong.',
-    bestLift: { exerciseName: 'Barbell Bench Press', weight: 100, reps: 5, isNewBest: true, gainKg: 2.5, units: 'kg' },
-    stats: [{ label: 'PRs', value: '2' }, { label: 'Sessions', value: '4/4' }, { label: 'Recovery', value: 'Strong' }, { label: 'On target', value: '✓' }],
+    progress: { value: '-0.7 kg', label: 'this week · on target' },
+    coachLine: 'You hit all 4 sessions, set 2 new PRs, lost 0.7 kg and recovery was strong.',
+    bestLift: { exerciseName: 'Barbell Bench Press', weight: 100, reps: 5, isNewBest: true, units: 'kg' },
+    stats: [{ label: 'PRs', value: '2' }, { label: 'Sessions', value: '4/4' }, { label: 'Recovery', value: 'Strong' }],
   };
 
   const render = (params, width, name) => {
@@ -66,7 +67,9 @@ async function main() {
     console.log(`${name}  ${width}x${H}`);
   };
 
-  [['session', session], ['pr', pr], ['milestone', milestone], ['weekly', weekly]].forEach(([n, p]) => {
+  const premiumMilestone = { cardType: 'milestone', premium: true, eyebrow: 'Perfect month', title: 'A perfect month', showDate: true, date: 'Sun · 22 Jun 2026', heroValue: '4', heroUnit: 'weeks on target', caption: 'Four weeks running, every session and target met.', stats: [{ label: 'Weeks', value: '4' }, { label: 'Sessions', value: '16' }] };
+
+  [['session', session], ['pr', pr], ['milestone', milestone], ['weekly', weekly], ['premium', premiumMilestone]].forEach(([n, p]) => {
     render({ ...p, isSquare: true }, 1080, `card_${n}_square`);
     render({ ...p, isSquare: false }, 1080, `card_${n}_story`);
   });

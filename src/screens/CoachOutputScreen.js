@@ -1526,11 +1526,12 @@ export default function CoachOutputScreen({ navigation, route }) {
   // any ED-safety signal is open. The CTA below is gated on this.
   const greatWeek = isGreatWeek(output).great;
 
-  // Share the week as the ED-safe Precision Coaching recap card. The card params
-  // are built in ShareCardScreen via greatWeek.js: weight is qualitative-only
-  // (an on-target tick, never a number), and under `suppress` (open ED flag or
-  // calm mode) all progress language is stripped. No bodyweight figure or
-  // private data leaves the device.
+  // Share the week as the Precision Coaching recap card. The card leads with the
+  // real achievement — the weight lost/gained this week and the PRs — built in
+  // ShareCardScreen via greatWeek.js. The card only fires on a safe, on-target
+  // week, and under `suppress` (open ED flag or calm mode) every number is
+  // stripped to the bare consistency wins. Only what the user chooses to share
+  // leaves the device.
   async function handleShareWeek() {
     // The standout lift of the week (biggest e1RM gain, else heaviest set) is
     // the card hero. Fetched on demand; a failure just omits the hero.
@@ -1546,6 +1547,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     navigation.navigate('ShareCard', {
       weeklyRecapData: output,
       bestLift,
+      units: units || 'kg',
       suppress: edPatternOpen || calmMode,
     });
   }

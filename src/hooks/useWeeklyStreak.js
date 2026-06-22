@@ -18,7 +18,7 @@ import {
 import { localWeekStartMs } from '../lib/dayKey';
 import { computeStreak } from '../lib/streak';
 import {
-  loadStreakState, pausedWeekKeys, persistHighWater, longestRun, pendingMilestone,
+  loadStreakState, pausedWeekKeys, persistHighWater, longestRun, pendingMilestone, pendingPerfectMonth,
 } from '../lib/streakState';
 import { track } from '../lib/engineTelemetry';
 
@@ -41,7 +41,7 @@ function runBucket(n) {
 const EMPTY = {
   loading: true, render: false, runLength: null, current: null, suppressed: false,
   hasTarget: false, weeks: [], longestRun: 0, manualGoal: null, pendingMilestone: null,
-  currentWeekKey: null, sessionsThisWeek: 0, target: null, reload: () => {},
+  pendingPerfectMonth: null, currentWeekKey: null, sessionsThisWeek: 0, target: null, reload: () => {},
 };
 
 export default function useWeeklyStreak(userId, scoffScore = 0) {
@@ -114,6 +114,7 @@ export default function useWeeklyStreak(userId, scoffScore = 0) {
       }
       const longest = longestRun(streakState.highWater, runLength ?? 0);
       const milestone = edSuppressed ? null : pendingMilestone(runLength, streakState.milestonesSeen);
+      const perfectMonth = edSuppressed ? null : pendingPerfectMonth(streak.weeks, streakState.perfectMonthsSeen);
 
       // Telemetry: one resolution per (week, state) per run; only for a real
       // target (a streak to measure), never under suppression. Derived only.
@@ -147,6 +148,7 @@ export default function useWeeklyStreak(userId, scoffScore = 0) {
         longestRun: longest,
         manualGoal: streakState.manualGoal,
         pendingMilestone: milestone,
+        pendingPerfectMonth: perfectMonth,
         currentWeekKey,
         reload: load,
       });

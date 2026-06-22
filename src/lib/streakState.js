@@ -20,11 +20,12 @@
  *     milestonesSeen:number[] }
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { detectPerfectMonth } from './streak';
 
 export const MILESTONES = Object.freeze([4, 12, 26, 52]);
 const KEY = (userId) => `@volyume_streak_v1_${userId}`;
 
-const EMPTY = Object.freeze({ v: 1, manualGoal: null, pauses: [], highWater: {}, milestonesSeen: [] });
+const EMPTY = Object.freeze({ v: 1, manualGoal: null, pauses: [], highWater: {}, milestonesSeen: [], perfectMonthsSeen: [] });
 
 function normalise(raw) {
   if (!raw || typeof raw !== 'object') return { ...EMPTY };
@@ -34,6 +35,8 @@ function normalise(raw) {
     pauses: Array.isArray(raw.pauses) ? raw.pauses.filter(p => p && p.startKey) : [],
     highWater: (raw.highWater && typeof raw.highWater === 'object') ? raw.highWater : {},
     milestonesSeen: Array.isArray(raw.milestonesSeen) ? raw.milestonesSeen.filter(Number.isFinite) : [],
+    // The lastWeekKey of each perfect month already celebrated, so it fires once.
+    perfectMonthsSeen: Array.isArray(raw.perfectMonthsSeen) ? raw.perfectMonthsSeen.filter(k => typeof k === 'string') : [],
   };
 }
 
@@ -87,6 +90,16 @@ export function pendingMilestone(runLength, seen = []) {
   return reached.length ? Math.max(...reached) : null;
 }
 
+/**
+ * A newly-completed perfect month not yet celebrated, or null. Keyed off the
+ * month's last week so it fires once and can recur next month.
+ */
+export function pendingPerfectMonth(weeks, seen = []) {
+  const pm = detectPerfectMonth(weeks);
+  if (!pm) return null;
+  return (seen || []).includes(pm.lastWeekKey) ? null : pm;
+}
+
 // ── I/O wrappers ────────────────────────────────────────────────────────────
 
 export async function loadStreakState(userId) {
@@ -132,6 +145,15 @@ export async function markMilestoneSeen(userId, milestone) {
   const state = await loadStreakState(userId);
   if (!state.milestonesSeen.includes(milestone)) {
     state.milestonesSeen = [...state.milestonesSeen, milestone];
+    await saveStreakState(userId, state);
+  }
+  return state;
+}
+
+export async function markPerfectMonthSeen(userId, weekKey) {
+  const state = await loadStreakState(userId);
+  if (weekKey && !state.perfectMonthsSeen.includes(weekKey)) {
+    state.perfectMonthsSeen = [...state.perfectMonthsSeen, weekKey];
     await saveStreakState(userId, state);
   }
   return state;

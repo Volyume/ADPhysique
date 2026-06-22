@@ -6,7 +6,7 @@
  * judged, an open ED flag freezes the run and suppresses the number, and a
  * missing target drops to session-count mode.
  */
-import { computeStreak, computeWeekState } from '../streak';
+import { computeStreak, computeWeekState, detectPerfectMonth } from '../streak';
 
 // Convenience week builders (oldest-first).
 const kept = (k, target = 4) => ({ weekKey: k, completed: target, target, isDeload: false, paused: false });
@@ -92,6 +92,49 @@ describe('computeStreak', () => {
     const r = computeStreak({ weeks: [kept('w1'), paused, kept('w3'), current('w4', 1)] });
     expect(r.weeks[1].state).toBe('paused');
     expect(r.runLength).toBe(3);
+  });
+});
+
+describe('detectPerfectMonth', () => {
+  // Run through computeStreak so the weeks carry real `state` labels.
+  const labelled = (weeks) => computeStreak({ weeks }).weeks;
+
+  test('four kept finished weeks is a perfect month', () => {
+    const pm = detectPerfectMonth(labelled([kept('w1'), kept('w2'), kept('w3'), kept('w4'), current('w5', 1)]));
+    expect(pm).toEqual({ weeks: 4, sessions: 16, lastWeekKey: 'w4' });
+  });
+
+  test('a deload week inside the four does NOT break it (recovery is compliance)', () => {
+    const pm = detectPerfectMonth(labelled([kept('w1'), deload('w2'), kept('w3'), kept('w4'), current('w5', 1)]));
+    expect(pm).not.toBeNull();
+    expect(pm.weeks).toBe(4);
+    expect(pm.sessions).toBe(12); // deload contributes 0 sessions
+  });
+
+  test('a missed week in the last four breaks it', () => {
+    expect(detectPerfectMonth(labelled([kept('w1'), missed('w2'), kept('w3'), kept('w4'), current('w5', 1)]))).toBeNull();
+  });
+
+  test('fewer than four finished weeks is not a month', () => {
+    expect(detectPerfectMonth(labelled([kept('w1'), kept('w2'), current('w3', 1)]))).toBeNull();
+  });
+
+  test('an all-rest stretch (no genuine target-meeting week) is not celebrated', () => {
+    const pm = detectPerfectMonth(labelled([deload('w1'), deload('w2'), deload('w3'), deload('w4'), current('w5', 0)]));
+    expect(pm).toBeNull();
+  });
+
+  test('reads the most-recent four when more are present', () => {
+    const pm = detectPerfectMonth(labelled([
+      missed('w0'), kept('w1'), kept('w2'), kept('w3'), kept('w4'), current('w5', 1),
+    ]));
+    // w0 is older than the window; the last four finished (w1-w4) are all kept.
+    expect(pm).toEqual({ weeks: 4, sessions: 16, lastWeekKey: 'w4' });
+  });
+
+  test('empty/short input is safe', () => {
+    expect(detectPerfectMonth([])).toBeNull();
+    expect(detectPerfectMonth(null)).toBeNull();
   });
 });
 
