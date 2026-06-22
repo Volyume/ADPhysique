@@ -49,6 +49,7 @@ import { logError, logWarn } from '../lib/errorLog';
 import CollapsibleSection from '../components/CollapsibleSection';
 import Card from '../components/Card';
 import { selectCoachOutputZones } from '../lib/coachOutputZones';
+import { isGreatWeek } from '../lib/shareCard/greatWeek';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, stateColors, type } from '../styles/theme';
 import {
   ED_PATTERN_LOCKOUT_COPY,
@@ -1519,25 +1520,20 @@ export default function CoachOutputScreen({ navigation, route }) {
     trainingAgeYears: userProfile?.trainingAgeYears ?? null,
   });
 
-  // Share the week as a single milestone card. Facts only (sessions, weight
-  // trend, PRs); no bodyweight figure or private data leaves the device.
+  // A "great week" (blueprint docs/blueprint-great-week-share-card-2026-06-22.md
+  // §5) is the only time we offer the celebratory recap share — and never while
+  // any ED-safety signal is open. The CTA below is gated on this.
+  const greatWeek = isGreatWeek(output).great;
+
+  // Share the week as the ED-safe Precision Coaching recap card. The card params
+  // are built in ShareCardScreen via greatWeek.js: weight is qualitative-only
+  // (an on-target tick, never a number), and under `suppress` (open ED flag or
+  // calm mode) all progress language is stripped. No bodyweight figure or
+  // private data leaves the device.
   function handleShareWeek() {
-    const stats = [];
-    if (prsThisWeek > 0) {
-      stats.push({ value: String(prsThisWeek), label: prsThisWeek === 1 ? 'new PR' : 'new PRs' });
-    }
-    if (trend.delta !== null && weightChipValue && weightChipValue !== 'No weights logged') {
-      stats.push({ value: weightChipValue, label: 'weight trend' });
-    }
     navigation.navigate('ShareCard', {
-      milestoneData: {
-        eyebrow: 'This week',
-        title: weekLabel || 'This week',
-        heroValue: sessionsPlanned > 0 ? `${sessionsCompleted}/${sessionsPlanned}` : String(sessionsCompleted),
-        heroUnit: 'sessions',
-        caption: '',
-        stats,
-      },
+      weeklyRecapData: output,
+      suppress: edPatternOpen || calmMode,
     });
   }
 
@@ -1682,16 +1678,19 @@ export default function CoachOutputScreen({ navigation, route }) {
           )}
         </View>
 
-        {/* Share the week as a milestone card */}
-        <TouchableOpacity
-          style={styles.shareWeekBtn}
-          onPress={handleShareWeek}
-          accessibilityRole="button"
-          accessibilityLabel="Share this week"
-        >
-          <Ionicons name="share-outline" size={15} color={colors.textSecondary} />
-          <Text style={styles.shareWeekText}>Share this week</Text>
-        </TouchableOpacity>
+        {/* Opt-in "share your week" — only on a genuinely great, ED-safe week
+            (blueprint §5/§7). Routes through the qualitative, ED-safe recap card. */}
+        {greatWeek && (
+          <TouchableOpacity
+            style={styles.shareWeekBtn}
+            onPress={handleShareWeek}
+            accessibilityRole="button"
+            accessibilityLabel="Share your week"
+          >
+            <Ionicons name="share-outline" size={15} color={colors.textSecondary} />
+            <Text style={styles.shareWeekText}>Share your week</Text>
+          </TouchableOpacity>
+        )}
 
         {/* 3. What went well */}
         {whatWorking && whatWorking.length > 0 && (

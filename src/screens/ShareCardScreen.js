@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
 import { useToast } from '../components/Toast';
 import { drawShareCard, cardHeight } from '../lib/shareCard/drawShareCard';
+import { buildWeeklyRecapParams } from '../lib/shareCard/greatWeek';
 
 // Optional native modules — guarded so the screen still mounts (e.g. in tests
 // or before a rebuild) without them; the card just can't render/share until the
@@ -43,13 +44,18 @@ export default function ShareCardScreen({ route }) {
     sessionData = null,
     prData = null,
     milestoneData = null,
+    weeklyRecapData = null,
+    // Set by CoachOutputScreen when an ED-pattern flag is open OR calm mode is
+    // active: all weight/progress language is stripped from the recap card.
+    suppress = false,
   } = route.params || {};
 
   // Session leads whenever session data is present (a workout share opens as the
   // session card even when it also carries a PR). A standalone "Share this PR"
-  // passes prData only and opens as a PR card.
+  // passes prData only and opens as a PR card. The weekly recap is its own
+  // entry point (the "great week" CTA on the coach screen).
   const [cardType, setCardType] = useState(
-    sessionData ? 'session' : prData ? 'pr' : milestoneData ? 'milestone' : 'session',
+    sessionData ? 'session' : prData ? 'pr' : milestoneData ? 'milestone' : weeklyRecapData ? 'weekly' : 'session',
   );
   // Square 1:1 by default (founder direction): posts cleanly to a feed and crops
   // predictably. Story 9:16 stays available as the taller option.
@@ -63,10 +69,14 @@ export default function ShareCardScreen({ route }) {
   const [showExercises, setShowExercises] = useState(true);
   const [showPRWeight, setShowPRWeight] = useState(true);
   const [showPrevBest, setShowPrevBest] = useState(true);
+  // Weekly recap: the qualitative on-target tick is opt-in. It is force-stripped
+  // (and the toggle hidden) under `suppress` so no progress language can leak.
+  const [showOnTarget, setShowOnTarget] = useState(true);
 
   const isSquare = format === 'square';
   const isSession = cardType === 'session';
   const isMilestone = cardType === 'milestone';
+  const isWeekly = cardType === 'weekly';
 
   // System typefaces (regular + bold) for the Skia renderer. getTypeface() gives
   // a typeface we can resize at any point in the draw.
@@ -107,6 +117,20 @@ export default function ShareCardScreen({ route }) {
   }
 
   const buildParams = useCallback(() => {
+    if (isWeekly) {
+      const o = weeklyRecapData || {};
+      // ED-safe by construction (greatWeek.js): qualitative-only weight, and the
+      // on-target stat + all progress language are dropped when suppressed (ED
+      // flag / calm mode) OR when the user toggles it off.
+      const recap = buildWeeklyRecapParams(o, {
+        suppress: suppress || !showOnTarget,
+        isSquare,
+        weekLabel: o.weekLabel || '',
+        dateFormatted: showDate ? formatLongDate(o.generatedAt || o.date) : '',
+      });
+      // `date` mirrors dateFormatted so the PDF summary (which reads p.date) works.
+      return { ...recap, showDate, date: recap.dateFormatted };
+    }
     if (isMilestone) {
       const m = milestoneData || {};
       return {
@@ -148,7 +172,7 @@ export default function ShareCardScreen({ route }) {
       previousBest: p.previousBest || '',
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMilestone, isSession, isSquare, showDate, showVolume, showPlanName, showExercises, showPRWeight, showPrevBest, sessionData, prData, milestoneData]);
+  }, [isMilestone, isSession, isWeekly, isSquare, showDate, showVolume, showPlanName, showExercises, showPRWeight, showPrevBest, showOnTarget, suppress, sessionData, prData, milestoneData, weeklyRecapData]);
 
   // ── ONE renderer for preview + export ──────────────────────────────────────
   const renderCardBase64 = useCallback((width) => {
@@ -189,7 +213,9 @@ export default function ShareCardScreen({ route }) {
       if (!canShare) { toast.show('Sharing not available on this device', { variant: 'warning' }); return; }
       await Sharing.shareAsync(uri, {
         mimeType: 'image/png', UTI: 'public.png',
-        dialogTitle: cardType === 'session' ? 'Share Session Card' : cardType === 'pr' ? 'Share PR Card' : 'Share Card',
+        dialogTitle: cardType === 'session' ? 'Share Session Card'
+          : cardType === 'pr' ? 'Share PR Card'
+            : cardType === 'weekly' ? 'Share Your Week' : 'Share Card',
       });
     } catch (_e) {
       toast.show("Couldn't generate card, try again", { variant: 'error' });
@@ -224,6 +250,11 @@ export default function ShareCardScreen({ route }) {
           ${rows}
         </div>
         ${p.caption ? `<p class="prs">${esc(p.caption)}</p>` : ''}`;
+    } else if (p.cardType === 'weekly') {
+      const rows = (p.stats || []).map((s) => stat(s.label, s.value)).join('');
+      body = `
+        <div class="statRow">${rows}</div>
+        ${p.coachLine ? `<p class="prs">${esc(p.coachLine)}</p>` : ''}`;
     } else {
       body = `
         <div class="statRow">
@@ -235,7 +266,8 @@ export default function ShareCardScreen({ route }) {
     }
     const title = p.cardType === 'session' ? esc(p.sessionName)
       : p.cardType === 'milestone' ? esc(p.title || 'Milestone')
-        : `${esc(p.exerciseName)} PR`;
+        : p.cardType === 'weekly' ? esc(p.tierLabel || 'Your week')
+          : `${esc(p.exerciseName)} PR`;
     return `<!DOCTYPE html><html><head><meta charset="utf-8" />
       <style>
         * { box-sizing: border-box; }
@@ -301,6 +333,9 @@ export default function ShareCardScreen({ route }) {
           {milestoneData && (
             <SegmentBtn label="Milestone" active={cardType === 'milestone'} onPress={() => setCardType('milestone')} />
           )}
+          {weeklyRecapData && (
+            <SegmentBtn label="Weekly" active={cardType === 'weekly'} onPress={() => setCardType('weekly')} />
+          )}
         </View>
 
         {/* Format */}
@@ -358,9 +393,14 @@ export default function ShareCardScreen({ route }) {
                 <ToggleRow label="Previous best" value={showPrevBest} onChange={setShowPrevBest} last />
               </>
             )}
+            {isWeekly && !suppress && (
+              <ToggleRow label="On-target progress" value={showOnTarget} onChange={setShowOnTarget} last />
+            )}
           </View>
           <Text style={styles.privacyNote}>
-            Name, bodyweight, measurements and private notes are never included.
+            {isWeekly
+              ? 'Your weight figure is never shown. Progress appears only as an on-target tick. Name, measurements and private notes are never included.'
+              : 'Name, bodyweight, measurements and private notes are never included.'}
           </Text>
         </View>
 
@@ -376,7 +416,9 @@ export default function ShareCardScreen({ route }) {
             <>
               <Ionicons name="share-outline" size={20} color={colors.onPrimary} />
               <Text style={styles.shareBtnText}>
-                {cardType === 'session' ? 'Share Session Card' : cardType === 'pr' ? 'Share PR Card' : 'Share Card'}
+                {cardType === 'session' ? 'Share Session Card'
+                  : cardType === 'pr' ? 'Share PR Card'
+                    : cardType === 'weekly' ? 'Share Your Week' : 'Share Card'}
               </Text>
             </>
           )}
