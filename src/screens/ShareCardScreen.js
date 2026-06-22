@@ -122,11 +122,14 @@ export default function ShareCardScreen({ route }) {
       // ED-safe by construction (greatWeek.js): qualitative-only weight, and the
       // on-target stat + all progress language are dropped when suppressed (ED
       // flag / calm mode) OR when the user toggles it off.
+      // The week is identified by its label (e.g. "Week 4"); the recap is shared
+      // straight after the check-in, so the date stamp is simply today's share
+      // date. (The coach output carries no own timestamp.)
       const recap = buildWeeklyRecapParams(o, {
         suppress: suppress || !showOnTarget,
         isSquare,
         weekLabel: o.weekLabel || '',
-        dateFormatted: showDate ? formatLongDate(o.generatedAt || o.date) : '',
+        dateFormatted: showDate ? formatLongDate() : '',
       });
       // `date` mirrors dateFormatted so the PDF summary (which reads p.date) works.
       return { ...recap, showDate, date: recap.dateFormatted };
