@@ -43,6 +43,10 @@ export const PALETTE = {
   textMuted: '#9B9B9B',       // colors.textMuted
 };
 
+// Optional user gym photo (SkImage) used as the card background. Set per-render
+// at the top of drawShareCard; single-threaded so a module-level handle is safe.
+let BG = null;
+
 // amber/gold at an alpha, as an rgba() string Skia.Color parses on both runtimes.
 function rgba(hex, a) {
   const h = hex.replace('#', '');
@@ -131,9 +135,27 @@ function fitFont(font, str, maxW, startPx, makeAt, minPx = 24) {
 
 // ── shared blocks ───────────────────────────────────────────────────────────
 
+// Draw an image scaled to COVER w×h (centre-crop), like CSS object-fit: cover.
+function drawImageCover(canvas, Skia, img, W, H) {
+  const iw = img.width(); const ih = img.height();
+  if (!iw || !ih) return;
+  const scale = Math.max(W / iw, H / ih);
+  const dw = iw * scale; const dh = ih * scale;
+  const p = Skia.Paint(); p.setAntiAlias(true);
+  canvas.drawImageRect(img, Skia.XYWHRect(0, 0, iw, ih), Skia.XYWHRect((W - dw) / 2, (H - dh) / 2, dw, dh), p);
+}
+
 function drawBackground(canvas, Skia, W, H) {
-  // Solid screen colour — the app uses no gradients (styling.md).
-  fillRect(canvas, Skia, 0, 0, W, H, PALETTE.bg);
+  if (BG && BG.width && BG.width() && BG.height()) {
+    // Gym photo background: cover-fit the photo, then a brand-colour scrim so the
+    // white/amber text stays legible over any image (the scrim is the screen
+    // colour at alpha — keeps the dark look, no gradient).
+    drawImageCover(canvas, Skia, BG, W, H);
+    fillRect(canvas, Skia, 0, 0, W, H, rgba(PALETTE.bg, 0.62));
+  } else {
+    // Solid screen colour — the app uses no gradients (styling.md).
+    fillRect(canvas, Skia, 0, 0, W, H, PALETTE.bg);
+  }
 }
 
 function drawAccentBar(canvas, Skia, W, s) {
@@ -471,7 +493,8 @@ export function cardHeight(width, isSquare) {
  * @param deps.typefaces { regular, bold } SkTypeface
  * @param deps.wordmark SkImage logo, or null
  */
-export function drawShareCard(canvas, { Skia, width, params, typefaces, wordmark }) {
+export function drawShareCard(canvas, { Skia, width, params, typefaces, wordmark, bgPhoto = null }) {
+  BG = bgPhoto || null; // optional gym photo background (all card types)
   const isSquare = !!params.isSquare;
   const W = width;
   const H = cardHeight(width, isSquare);

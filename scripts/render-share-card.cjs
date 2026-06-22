@@ -82,6 +82,24 @@ async function main() {
     render({ ...p, isSquare: true }, 1080, `card_${n}_square`);
     render({ ...p, isSquare: false }, 1080, `card_${n}_story`);
   });
+
+  // Gym-photo background: a synthetic bright/varied "photo" to check the scrim +
+  // cover-fit keep white/amber text legible over a real image.
+  const ps = Skia.Surface.MakeOffscreen(600, 600); const pc = ps.getCanvas();
+  const block = (x, y, w, h, hex) => { const pt = Skia.Paint(); pt.setColor(Skia.Color(hex)); pc.drawRect(Skia.XYWHRect(x, y, w, h), pt); };
+  block(0, 0, 600, 600, '#d8d2c4'); block(0, 0, 300, 600, '#b9a886'); block(150, 350, 450, 250, '#5a4a2e'); block(380, 60, 220, 220, '#e9e4d6');
+  ps.flush(); const photo = ps.makeImageSnapshot();
+  const renderPhoto = (params, name) => {
+    const H = cardHeight(1080, params.isSquare);
+    const surf = Skia.Surface.MakeOffscreen(1080, H);
+    drawShareCard(surf.getCanvas(), { Skia, width: 1080, params, typefaces, wordmark, bgPhoto: photo });
+    surf.flush();
+    fs.writeFileSync(path.join(OUT, `${name}.png`), Buffer.from(surf.makeImageSnapshot().encodeToBytes()));
+    console.log(`${name}  1080x${H}`);
+  };
+  renderPhoto({ ...weekly, isSquare: true }, 'photo_weekly');
+  renderPhoto({ ...session, isSquare: true }, 'photo_session');
+  renderPhoto({ ...pr, isSquare: true }, 'photo_pr');
   console.log(`\nWrote PNGs to ${OUT}`);
 }
 

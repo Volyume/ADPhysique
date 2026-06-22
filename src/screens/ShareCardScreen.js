@@ -24,11 +24,12 @@ import { buildWeeklyRecapParams } from '../lib/shareCard/greatWeek';
 // Optional native modules — guarded so the screen still mounts (e.g. in tests
 // or before a rebuild) without them; the card just can't render/share until the
 // real build provides Skia + the sharing packages.
-let FileSystem; let Sharing; let Print; let Asset; let Skia; let matchFont;
+let FileSystem; let Sharing; let Print; let Asset; let Skia; let matchFont; let ImagePicker;
 try { FileSystem = require('expo-file-system/legacy'); } catch (_) { /* optional */ }
 try { Sharing = require('expo-sharing'); } catch (_) { /* optional */ }
 try { Print = require('expo-print'); } catch (_) { /* optional */ }
 try { Asset = require('expo-asset').Asset; } catch (_) { /* optional */ }
+try { ImagePicker = require('expo-image-picker'); } catch (_) { /* optional */ }
 try { const S = require('@shopify/react-native-skia'); Skia = S.Skia; matchFont = S.matchFont; } catch (_) { /* optional */ }
 
 const WORDMARK = require('../../assets/volyume-wordmark.png');
@@ -79,6 +80,8 @@ export default function ShareCardScreen({ route }) {
   const [showProgress, setShowProgress] = useState(true);
   // The best-lift feature is opt-in too (also force-stripped under suppress).
   const [showBestLift, setShowBestLift] = useState(true);
+  // Optional gym photo background (SkImage), available on every card type.
+  const [bgPhoto, setBgPhoto] = useState(null);
 
   const isSession = cardType === 'session';
   const isMilestone = cardType === 'milestone';
@@ -195,11 +198,31 @@ export default function ShareCardScreen({ route }) {
     const H = cardHeight(width, params.isSquare);
     const surface = Skia.Surface.MakeOffscreen(width, H);
     if (!surface) return null;
-    drawShareCard(surface.getCanvas(), { Skia, width, params, typefaces, wordmark });
+    drawShareCard(surface.getCanvas(), { Skia, width, params, typefaces, wordmark, bgPhoto });
     surface.flush();
     const image = surface.makeImageSnapshot();
     return image ? image.encodeToBase64() : null;
-  }, [typefaces, wordmark, buildParams]);
+  }, [typefaces, wordmark, buildParams, bgPhoto]);
+
+  // Pick a gym photo from the library to use as the card background (all cards).
+  const pickGymPhoto = useCallback(async () => {
+    if (!ImagePicker || !Skia || !FileSystem) {
+      toast.show('Photo backgrounds need a rebuild with the image-picker package', { variant: 'error', duration: 5000 });
+      return;
+    }
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) { toast.show('Photo access is needed to add a background', { variant: 'warning' }); return; }
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9 });
+      if (res.canceled || !res.assets?.[0]?.uri) return;
+      const b64 = await FileSystem.readAsStringAsync(res.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 });
+      const img = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBase64(b64));
+      if (img) setBgPhoto(img);
+      else toast.show("Couldn't load that photo, try another", { variant: 'error' });
+    } catch (_) {
+      toast.show("Couldn't load that photo, try another", { variant: 'error' });
+    }
+  }, [toast]);
 
   // Live preview: re-render whenever anything that changes the card changes.
   const [previewB64, setPreviewB64] = useState(null);
@@ -380,6 +403,28 @@ export default function ShareCardScreen({ route }) {
           </View>
         </View>
         )}
+
+        {/* Background — optional gym photo behind any card (kept legible by a
+            brand-colour scrim in the renderer). */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Background</Text>
+          <View style={styles.segmentRow}>
+            <SegmentBtn
+              label={bgPhoto ? 'Change photo' : 'Add gym photo'}
+              active={!!bgPhoto}
+              onPress={pickGymPhoto}
+              icon={<Ionicons name="image-outline" size={15} color={bgPhoto ? colors.primary : colors.textMuted} />}
+            />
+            {bgPhoto ? (
+              <SegmentBtn
+                label="Remove"
+                active={false}
+                onPress={() => setBgPhoto(null)}
+                icon={<Ionicons name="close-outline" size={15} color={colors.textMuted} />}
+              />
+            ) : null}
+          </View>
+        </View>
 
         {/* Preview — the exact image that gets shared, scaled down */}
         <View style={styles.section}>

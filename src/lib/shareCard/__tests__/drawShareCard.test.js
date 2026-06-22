@@ -83,4 +83,20 @@ describe('drawShareCard renders to a non-blank PNG (CanvasKit)', () => {
     const bytes = surface.makeImageSnapshot().encodeToBytes();
     expect(bytes.length).toBeGreaterThan(1000); // a real, non-empty PNG
   });
+
+  test('renders with a gym-photo background (cover-fit + scrim path)', () => {
+    if (!env) return;
+    const width = 540;
+    const H = cardHeight(width, true);
+    // A small synthetic image stands in for the user's gym photo.
+    const ps = env.Skia.Surface.MakeOffscreen(64, 64);
+    const pt = env.Skia.Paint(); pt.setColor(env.Skia.Color('#c9c2b0'));
+    ps.getCanvas().drawRect(env.Skia.XYWHRect(0, 0, 64, 64), pt);
+    ps.flush();
+    const bgPhoto = ps.makeImageSnapshot();
+    const surface = env.Skia.Surface.MakeOffscreen(width, H);
+    drawShareCard(surface.getCanvas(), { Skia: env.Skia, width, params: { ...PARAMS, cardType: 'weekly', stats: PARAMS.weeklyStats, isSquare: true }, typefaces: env.typefaces, wordmark: env.wordmark, bgPhoto });
+    surface.flush();
+    expect(surface.makeImageSnapshot().encodeToBytes().length).toBeGreaterThan(1000);
+  });
 });
