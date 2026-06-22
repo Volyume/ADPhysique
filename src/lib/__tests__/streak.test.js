@@ -115,6 +115,12 @@ describe('detectPerfectMonth', () => {
     expect(detectPerfectMonth(labelled([kept('w1'), missed('w2'), kept('w3'), kept('w4'), current('w5', 1)]))).toBeNull();
   });
 
+  test('a bridged miss (repaired week) keeps the streak but is NOT a perfect month', () => {
+    const weeks = labelled([kept('w1'), missed('w2'), kept('w3'), kept('w4'), current('w5', 1)]);
+    expect(weeks[1].state).toBe('repaired'); // the lone miss was bridged
+    expect(detectPerfectMonth(weeks)).toBeNull(); // ...but the month is not "perfect"
+  });
+
   test('fewer than four finished weeks is not a month', () => {
     expect(detectPerfectMonth(labelled([kept('w1'), kept('w2'), current('w3', 1)]))).toBeNull();
   });

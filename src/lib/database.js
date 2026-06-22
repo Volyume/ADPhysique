@@ -4775,7 +4775,7 @@ export async function getLifetimeTonnage(userId) {
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
      WHERE ws.user_id = ? AND w.is_completed = 1
-       AND ws.set_type != 'warmup' AND ws.actual_reps > 0 AND ws.weight > 0`,
+       AND (ws.set_type IS NULL OR ws.set_type != 'warmup') AND ws.actual_reps > 0 AND ws.weight > 0`,
     [userId],
   );
   return Math.round(row?.tonnage ?? 0);

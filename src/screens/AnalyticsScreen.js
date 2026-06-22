@@ -98,14 +98,23 @@ export default function AnalyticsScreen({ navigation, route }) {
     }
   }, [pendingMilestone, streakRenders, user?.id]);
 
-  // Phase-2 landmark: a perfect month (4 weeks all on target). Fires once per
-  // month (keyed off the month's last week), in-app only, never under ED/calm
-  // suppression (the hook already returns null then).
+  // Landmark telemetry fires once per landmark per app run (a render-time event,
+  // deduped here); the "seen" record is written only when the user actually taps
+  // "Make a card", so a share CTA never vanishes before it can be used.
+  const firedLandmarks = useRef(new Set());
+  function fireLandmarkOnce(key, userId, event, payload) {
+    if (!userId || firedLandmarks.current.has(key)) return;
+    firedLandmarks.current.add(key);
+    try { track(userId, event, payload)?.catch?.(() => {}); } catch (_) {}
+  }
+
+  // Phase-2 landmark: a perfect month (4 weeks all on target). Keyed off the
+  // month's last week, in-app only, never under ED/calm suppression (the hook
+  // already returns null then).
   const perfectMonth = weeklyStreak.pendingPerfectMonth;
   useEffect(() => {
     if (perfectMonth && streakRenders && user?.id) {
-      markPerfectMonthSeen(user.id, perfectMonth.lastWeekKey).catch(() => {});
-      try { track(user.id, 'perfect_month_reached', { sessions: perfectMonth.sessions })?.catch?.(() => {}); } catch (_) {}
+      fireLandmarkOnce(`pm:${perfectMonth.lastWeekKey}`, user.id, 'perfect_month_reached', { sessions: perfectMonth.sessions });
     }
   }, [perfectMonth, streakRenders, user?.id]);
 
@@ -125,6 +134,7 @@ export default function AnalyticsScreen({ navigation, route }) {
 
   function makePerfectMonthCard() {
     if (!perfectMonth) return;
+    if (user?.id) markPerfectMonthSeen(user.id, perfectMonth.lastWeekKey).catch(() => {});
     navigation.navigate('ShareCard', {
       milestoneData: {
         premium: true,
@@ -149,6 +159,7 @@ export default function AnalyticsScreen({ navigation, route }) {
 
   function makeTonnageCard() {
     if (!tonnageLandmark) return;
+    if (user?.id) markTonnageMilestoneSeen(user.id, tonnageLandmark).catch(() => {});
     const u = units === 'lbs' ? 'lbs' : 'kg';
     navigation.navigate('ShareCard', {
       milestoneData: {
@@ -212,8 +223,9 @@ export default function AnalyticsScreen({ navigation, route }) {
   };
 
   // Re-check the lifetime-tonnage landmark whenever the workout count changes
-  // (tonnage only grows when a session is logged). Marks the crossed threshold
-  // seen as soon as it is offered, so it fires once.
+  // (tonnage only grows when a session is logged). The CTA persists until the
+  // user taps "Make a card" (markTonnageMilestoneSeen on tap), so it never
+  // vanishes before it can be used; telemetry fires once per app run.
   useEffect(() => {
     let cancelled = false;
     if (!user?.id || completedWorkoutCount < 1) { setTonnageLandmark(null); return undefined; }
@@ -223,10 +235,7 @@ export default function AnalyticsScreen({ navigation, route }) {
         const pending = pendingTonnageMilestone(tonnage, seen);
         if (cancelled) return;
         setTonnageLandmark(pending);
-        if (pending) {
-          markTonnageMilestoneSeen(user.id, pending).catch(() => {});
-          try { track(user.id, 'tonnage_milestone_reached', { milestone: pending })?.catch?.(() => {}); } catch (_) {}
-        }
+        if (pending) fireLandmarkOnce(`tn:${pending}`, user.id, 'tonnage_milestone_reached', { milestone: pending });
       } catch (_) { if (!cancelled) setTonnageLandmark(null); }
     })();
     return () => { cancelled = true; };
