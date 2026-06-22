@@ -688,7 +688,7 @@ describe('12-week coaching simulation', () => {
   });
 
   test('plan generation handles every supported training phase', () => {
-    const phases = ['maintain', 'cut', 'lean_gain', 'bulk', 'recomp', 'mild_cut', 'aggressive_cut', 'contest_prep'];
+    const phases = ['maintain', 'cut', 'lean_gain', 'bulk', 'recomp', 'mild_cut', 'aggressive_cut'];
     for (const phase of phases) {
       const profile = {
         experience: 'intermediate', daysPerWeek: 4, sessionLengthMinutes: 60,

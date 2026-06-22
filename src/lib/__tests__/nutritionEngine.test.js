@@ -511,23 +511,13 @@ describe('getPlanNutritionContext', () => {
     expect(result.refeedRecommendation).toBeNull();
   });
 
-  test('dietBreakRecommendation is set for contest_prep', () => {
-    const result = getPlanNutritionContext({
-      ...baseTargets,
-      targetKcal: 1600,
-      maintenanceKcal: 2500,
-      goal: 'contest_prep',
-    });
-    expect(result.dietBreakRecommendation).not.toBeNull();
-  });
-
   test('proteinG is capped at PROTEIN_MAX_GKGBW × bodyweightKg when body fat is unknown', () => {
-    // The capped protein is not returned directly, but a contest_prep refeed
+    // The capped protein is not returned directly, but an aggressive_cut refeed
     // derives its carbs from it (refeedCarbsKcal = maintenance - proteinG*4 -
     // fatG*9), so the cap IS observable via refeedRecommendation.refeedCarbsG.
     // Cap = 2.2 × 80 = 176 g. We prove the clamp behaviourally, not by shape.
     const opts = { bodyweightKg: 80, bodyFatPercent: null };
-    const atCap    = { targetKcal: 2000, maintenanceKcal: 2300, goal: 'contest_prep', proteinG: 176, fatG: 70 };
+    const atCap    = { targetKcal: 2000, maintenanceKcal: 2300, goal: 'aggressive_cut', proteinG: 176, fatG: 70 };
     const overCap  = { ...atCap, proteinG: 240 }; // 240 > 176 → must clamp to 176
     const underCap = { ...atCap, proteinG: 150 }; // below cap → left as-is
 

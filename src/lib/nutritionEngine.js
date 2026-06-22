@@ -31,7 +31,6 @@ const PHASE_ADJUSTMENTS = {
   recomp: -0.05,
   mild_cut: -0.13,
   aggressive_cut: -0.22,
-  contest_prep: -0.28,
 };
 
 const PHASE_LABELS = {
@@ -41,7 +40,6 @@ const PHASE_LABELS = {
   recomp: 'Hold muscle, lose fat',
   mild_cut: 'Lose weight (steady)',
   aggressive_cut: 'Lose weight (fast)',
-  contest_prep: 'Contest preparation',
 };
 
 // Three protein approaches, user selects which fits their preference.
@@ -67,24 +65,24 @@ export const PROTEIN_APPROACHES = {
     label: 'Standard',
     range: '2.0–2.7 g/kg',
     description: 'A solid target for consistent gym training. Enough to support muscle growth and recovery without being excessive.',
-    lbm: { lean_gain: 2.5, build: 2.5, maintain: 2.3, recomp: 2.6, mild_cut: 2.8, aggressive_cut: 3.0, contest_prep: 3.1 },
-    bw:  { lean_gain: 2.2, build: 2.2, maintain: 2.0, recomp: 2.2, mild_cut: 2.5, aggressive_cut: 2.7, contest_prep: 2.9 },
+    lbm: { lean_gain: 2.5, build: 2.5, maintain: 2.3, recomp: 2.6, mild_cut: 2.8, aggressive_cut: 3.0 },
+    bw:  { lean_gain: 2.2, build: 2.2, maintain: 2.0, recomp: 2.2, mild_cut: 2.5, aggressive_cut: 2.7 },
     floor: 2.0,
   },
   optimised: {
     label: 'Optimised',
     range: '2.2–3.0 g/kg',
     description: 'The real target if you are serious about building muscle. Comfortably above the minimum, with headroom to spare.',
-    lbm: { lean_gain: 2.8, build: 2.8, maintain: 2.6, recomp: 2.9, mild_cut: 3.1, aggressive_cut: 3.2, contest_prep: 3.3 },
-    bw:  { lean_gain: 2.5, build: 2.5, maintain: 2.2, recomp: 2.6, mild_cut: 2.8, aggressive_cut: 3.0, contest_prep: 3.2 },
+    lbm: { lean_gain: 2.8, build: 2.8, maintain: 2.6, recomp: 2.9, mild_cut: 3.1, aggressive_cut: 3.2 },
+    bw:  { lean_gain: 2.5, build: 2.5, maintain: 2.2, recomp: 2.6, mild_cut: 2.8, aggressive_cut: 3.0 },
     floor: 2.2,
   },
   advanced: {
     label: 'Advanced',
     range: '2.5–3.2 g/kg',
     description: 'Upper-end protocol for competitive athletes and hard cuts. Pushes protein as high as practical to protect every gram of muscle.',
-    lbm: { lean_gain: 3.0, build: 3.0, maintain: 2.8, recomp: 3.1, mild_cut: 3.2, aggressive_cut: 3.3, contest_prep: 3.3 },
-    bw:  { lean_gain: 2.8, build: 2.8, maintain: 2.5, recomp: 2.8, mild_cut: 3.0, aggressive_cut: 3.2, contest_prep: 3.3 },
+    lbm: { lean_gain: 3.0, build: 3.0, maintain: 2.8, recomp: 3.1, mild_cut: 3.2, aggressive_cut: 3.3 },
+    bw:  { lean_gain: 2.8, build: 2.8, maintain: 2.5, recomp: 2.8, mild_cut: 3.0, aggressive_cut: 3.2 },
     floor: 2.5,
   },
   custom: {
@@ -148,7 +146,6 @@ const FAT_TARGETS_GKG = {
   recomp:          0.85,
   mild_cut:        0.8,
   aggressive_cut:  0.75,
-  contest_prep:    0.7,
 };
 
 // ---------------------------------------------------------------------------
@@ -823,12 +820,6 @@ export function calculateNutritionTargets(inputs) {
     }
   }
 
-  if (goal === 'contest_prep') {
-    warnings.push(
-      'Contest Prep is an extreme protocol. Consult a qualified sports dietitian before proceeding.',
-    );
-  }
-
   // --- Macros ---
   const { proteinG: proteinRaw, basis: proteinBasis, proteinRateUsed } =
     calcProtein(goal, safeWeight, lbm, bodyFatSource, proteinApproach, customProteinGPerKg);
@@ -858,7 +849,7 @@ export function calculateNutritionTargets(inputs) {
   // Research: 3-5 protein meals per day, each crossing the ~25-40g leucine threshold,
   // produces ~25% greater 24-hour MPS than the same total in 1-2 large meals.
   // Source: Mamerow et al. (2014), J Nutrition; Frontiers Nutrition (2024).
-  const mealFrequency = (goal === 'aggressive_cut' || goal === 'contest_prep') ? 5 : 4;
+  const mealFrequency = (goal === 'aggressive_cut') ? 5 : 4;
   const perMealProteinG = Math.round(proteinG / mealFrequency);
 
   // --- Weekly gain/loss rate targets ---
@@ -995,7 +986,7 @@ export function getPlanNutritionContext(targets, { bodyMetricsData = [], adheren
 
   // Failure exposure: how often to train to true failure
   let failureExposureLevel;
-  if (phaseType === 'deficit' && (goal === 'aggressive_cut' || goal === 'contest_prep')) {
+  if (phaseType === 'deficit' && goal === 'aggressive_cut') {
     failureExposureLevel = 'low';
   } else if (phaseType === 'surplus') {
     failureExposureLevel = 'high';
@@ -1027,8 +1018,6 @@ export function getPlanNutritionContext(targets, { bodyMetricsData = [], adheren
       'A gentle deficit keeps your strength up. Training eases off a little to match lower recovery.',
     aggressive_cut:
       'A big deficit makes recovery harder, so training drops back and you stop short of failure to keep muscle.',
-    contest_prep:
-      'A very hard deficit. Training stays light and well short of failure to protect your muscle.',
   };
   const explanation = explanations[goal] ?? 'Set up for your current phase.';
 
@@ -1038,13 +1027,13 @@ export function getPlanNutritionContext(targets, { bodyMetricsData = [], adheren
   // maintenance via carbs) partially restore leptin and preserve RMR.
   // Source: PMC7739314 (2020); multiple RCTs on intermittent energy restriction.
   let refeedRecommendation = null;
-  if (goal === 'aggressive_cut' || goal === 'contest_prep') {
+  if (goal === 'aggressive_cut') {
     const refeedProteinKcal = (proteinG ?? 0) * 4;
     const refeedFatKcal     = (targets.fatG ?? 0) * 9;
     const refeedCarbsKcal   = Math.max(0, maintenanceKcal - refeedProteinKcal - refeedFatKcal);
     refeedRecommendation = {
       type: 'refeed',
-      frequencyWeeks: goal === 'contest_prep' ? 1 : 2,
+      frequencyWeeks: 2,
       durationDays: 2,
       caloricTargetKcal: maintenanceKcal,
       refeedCarbsG: Math.round(refeedCarbsKcal / 4),
@@ -1052,15 +1041,10 @@ export function getPlanNutritionContext(targets, { bodyMetricsData = [], adheren
     };
   }
 
+  // Diet-break recommendations for the contest-prep phase were removed with that
+  // (unreachable) phase; the live diet-break path is shouldSuggestDietBreak +
+  // getPlanNutritionContext (audit 2026-06-21).
   let dietBreakRecommendation = null;
-  if (goal === 'contest_prep') {
-    dietBreakRecommendation = {
-      frequencyWeeks: 8,
-      durationWeeks: 1,
-      caloricTargetKcal: maintenanceKcal,
-      notes: '1 week at maintenance every 8 weeks of prep. Best used when more than 10 weeks out from competition. Metabolic rate and hormonal environment partially restore during the break.',
-    };
-  }
 
   // --- Adaptive TDEE from body weight trend ---
   // bodyMetricsData items are { weightKg, recorded_at }; sort oldest-first before processing.

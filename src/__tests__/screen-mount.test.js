@@ -976,7 +976,6 @@ describe('Screens with route.params', () => {
 describe('NutritionTargets: every userProfile.goal value', () => {
   const goalValues = [
     'lean_gain', 'build', 'maintain', 'recomp', 'mild_cut', 'aggressive_cut',
-    'contest_prep', // valid but only set via ProGoalSetup
     null, undefined, '', 'unknown_value', 'cut', 'bulk',
     123, true, { wrong: 'shape' }, ['array'],
   ];

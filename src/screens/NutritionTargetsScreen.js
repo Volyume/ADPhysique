@@ -55,7 +55,6 @@ const PHASE_DESCRIPTIONS = {
   recomp:          'A slight calorie reduction with high protein allows for gradual fat loss while holding muscle.',
   mild_cut:        'A moderate calorie reduction that preserves strength and muscle while steadily losing fat.',
   aggressive_cut:  'A significant calorie reduction for faster fat loss. Protein is raised to protect muscle during the deficit.',
-  contest_prep:    'A steep calorie reduction for the run-in to a stage. Short-term by design. Protein is pushed hard to defend every kg of muscle.',
 };
 
 const CONFIDENCE_LABELS = {
@@ -202,7 +201,7 @@ export default function NutritionTargetsScreen({ navigation }) {
     // saved, so the form can't show a different goal (e.g. "Build muscle (slow)")
     // than the calories were built from. Without this the form fell back to its
     // hardcoded defaults and read as inconsistent with the saved targets.
-    const VALID_SYNC_GOALS = ['lean_gain', 'build', 'maintain', 'recomp', 'mild_cut', 'aggressive_cut', 'contest_prep'];
+    const VALID_SYNC_GOALS = ['lean_gain', 'build', 'maintain', 'recomp', 'mild_cut', 'aggressive_cut'];
     function syncFormFromTargets(t) {
       // Prefer the goal key; the DB record only persists the phase label, so
       // fall back to inverting the label when the key is absent.
@@ -1081,7 +1080,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 // recomp template which rendered "A slight 0% deficit"
                 //, nonsense.
                 const isGain     = ['lean_gain', 'build'].includes(results.goal);
-                const isCut      = ['mild_cut', 'aggressive_cut', 'contest_prep'].includes(results.goal);
+                const isCut      = ['mild_cut', 'aggressive_cut'].includes(results.goal);
                 const isRecomp   = results.goal === 'recomp';
                 const isMaintain = results.goal === 'maintain';
 

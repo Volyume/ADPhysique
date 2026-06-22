@@ -86,7 +86,6 @@ const NUT_MULT = {
   recomp:         { MEV: 1.00, MRV: 1.00 },
   mild_cut:       { MEV: 1.00, MRV: 0.90 },
   aggressive_cut: { MEV: 1.05, MRV: 0.80 },
-  contest_prep:   { MEV: 1.10, MRV: 0.70 },
 };
 
 function ageMultipliers(age) {
@@ -685,7 +684,7 @@ function makeEx(name, paramKey, sets, experience, nutritionPhase, goal = null, n
   const rest = isStrength ? (STRENGTH_REST[paramKey] ?? REST_SEC[paramKey] ?? 75)
                           : (REST_SEC[paramKey] ?? 75);
   let rir = baseRir(experience);
-  const cutPhases = ['mild_cut', 'aggressive_cut', 'contest_prep'];
+  const cutPhases = ['mild_cut', 'aggressive_cut'];
   if (cutPhases.includes(nutritionPhase)) rir = Math.min(rir + 1, 4);
 
   const minSets = (paramKey === 'heavy_compound' || paramKey === 'mod_compound') ? 3 : 2;
@@ -1792,7 +1791,6 @@ const NUTRITION_PHASE_LABELS = {
   recomp:         'Hold muscle, lose fat',
   mild_cut:       'Lose weight steadily',
   aggressive_cut: 'Lose weight fast',
-  contest_prep:   'Contest preparation',
 };
 
 function buildPersonalisationSummary(inputs, effectiveDays, splitType, weakPointUILabels) {
@@ -1898,7 +1896,6 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
       build:          `${phaseLabel}: eating more supports higher training volumes. This plan uses more weekly sets than it would at maintenance, because your body can recover from more. Keep protein high to direct those extra calories toward muscle rather than fat.`,
       mild_cut:       `${phaseLabel}: eating less slows recovery slightly. Volume is modest and you should stop a rep or two further from failure than usual. This preserves muscle and keeps recovery manageable while in a deficit.`,
       aggressive_cut: `${phaseLabel}: a significant calorie cut reduces how much your body can recover from. Volume is reduced. Keep protein at or above 2 g per kg of bodyweight and focus on your main compound lifts to protect muscle.`,
-      contest_prep:   `Contest prep: your recovery is severely limited. Volume is at the lower end and caution is warranted. Prioritise sleep, protein intake, and managing life stress outside the gym.`,
       recomp:         `Hold muscle, lose fat: training volume is kept at a level your body can handle while eating at a slight deficit. The goal is doing enough to hold on to your muscle while your nutrition gradually shifts your body composition.`,
     };
     result.nutrition = nutMap[nutPhase] ?? `${phaseLabel} phase influences how much volume the plan uses.`;
@@ -1930,7 +1927,7 @@ function buildWarnings(inputs, effectiveDays, weakPointUILabels) {
       'Poor recovery combined with 5 or more training days significantly increases injury and burnout risk. Consider reducing to 4 days per week and prioritising 7–9 hours of sleep.',
     );
   }
-  if ((nutritionPhase === 'aggressive_cut' || nutritionPhase === 'contest_prep') && effectiveDays >= 5) {
+  if (nutritionPhase === 'aggressive_cut' && effectiveDays >= 5) {
     warnings.push(
       'Training 5 or more days on a significant calorie cut is hard on the body. Volume has been reduced, but consider dropping to 4 days to match your lower recovery capacity.',
     );
