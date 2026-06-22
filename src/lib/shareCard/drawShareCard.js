@@ -306,7 +306,9 @@ function drawPR(canvas, Skia, W, H, p, s, font, wordmark) {
   if (p.showDate && p.date) text(canvas, Skia, p.date, W - pad, brandY, font(22, 'regular'), PALETTE.textMuted, 'right');
 
   const badgeY = Math.round(H * 0.22);
-  const label = '★  PERSONAL RECORD  ★';
+  // Plain text in the pill (matches the intensity badge). No decorative glyphs:
+  // the star (U+2605) is missing from some system fonts and renders as tofu.
+  const label = 'PERSONAL RECORD';
   const f = font(24);
   const bw = measure(f, label) + 60 * s; const bh = Math.round(56 * s);
   fillRRect(canvas, Skia, (W - bw) / 2, badgeY, bw, bh, bh / 2, rgba(PALETTE.gold, 0.15));
