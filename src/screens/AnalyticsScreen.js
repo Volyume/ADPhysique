@@ -20,6 +20,8 @@ import WeightTrendCard from '../components/WeightTrendCard';
 import useWeeklyStreak from '../hooks/useWeeklyStreak';
 import WeeklyStreakStrip from '../components/WeeklyStreakStrip';
 import { markMilestoneSeen, markPerfectMonthSeen } from '../lib/streakState';
+import { getLifetimeTonnage } from '../lib/database';
+import { pendingTonnageMilestone, loadSeenTonnage, markTonnageMilestoneSeen, formatTonnage } from '../lib/tonnageMilestone';
 import { track } from '../lib/engineTelemetry';
 import { VOLUME_LANDMARKS } from '../lib/algorithms';
 
@@ -70,6 +72,7 @@ export default function AnalyticsScreen({ navigation, route }) {
   const userProfile = useAppStore(s => s.userProfile);
   const tier = useAppStore(s => s.tier);
   const bodyWeightUnits = useAppStore(s => s.bodyWeightUnits);
+  const units = useAppStore(s => s.units);
 
   // COMP-004 "Your trend": Pro-only weight-trend read (morning weighing is a
   // Pro feature, so the card never appears for free users). The hook always
@@ -139,6 +142,28 @@ export default function AnalyticsScreen({ navigation, route }) {
     });
   }
 
+  // Phase-2 landmark: lifetime tonnage (total weight lifted all-time). A pure
+  // training-volume win, so it is never ED-gated. Re-checked whenever the
+  // completed-workout count changes; fires once per threshold.
+  const [tonnageLandmark, setTonnageLandmark] = useState(null);
+
+  function makeTonnageCard() {
+    if (!tonnageLandmark) return;
+    const u = units === 'lbs' ? 'lbs' : 'kg';
+    navigation.navigate('ShareCard', {
+      milestoneData: {
+        premium: true,
+        eyebrow: 'Lifetime total',
+        title: 'Total weight lifted',
+        heroValue: formatTonnage(tonnageLandmark),
+        heroUnit: `${u} lifted`,
+        caption: 'Every working set you have ever logged, added up.',
+        date: Date.now(),
+        stats: [],
+      },
+    });
+  }
+
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
 
@@ -185,6 +210,27 @@ export default function AnalyticsScreen({ navigation, route }) {
     setRecapCardHidden(true);
     AsyncStorage.setItem(`@volyume_recap_card_${recapMonthKey}`, 'dismissed').catch(() => {});
   };
+
+  // Re-check the lifetime-tonnage landmark whenever the workout count changes
+  // (tonnage only grows when a session is logged). Marks the crossed threshold
+  // seen as soon as it is offered, so it fires once.
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id || completedWorkoutCount < 1) { setTonnageLandmark(null); return undefined; }
+    (async () => {
+      try {
+        const [tonnage, seen] = await Promise.all([getLifetimeTonnage(user.id), loadSeenTonnage(user.id)]);
+        const pending = pendingTonnageMilestone(tonnage, seen);
+        if (cancelled) return;
+        setTonnageLandmark(pending);
+        if (pending) {
+          markTonnageMilestoneSeen(user.id, pending).catch(() => {});
+          try { track(user.id, 'tonnage_milestone_reached', { milestone: pending })?.catch?.(() => {}); } catch (_) {}
+        }
+      } catch (_) { if (!cancelled) setTonnageLandmark(null); }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id, completedWorkoutCount]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -241,6 +287,26 @@ export default function AnalyticsScreen({ navigation, route }) {
             ) : null}
           </View>
         )}
+
+        {/* Phase-2 lifetime-tonnage landmark — independent of the streak strip. */}
+        {tonnageLandmark ? (
+          <View style={styles.section}>
+            <View style={styles.milestoneRow}>
+              <Ionicons name="barbell-outline" size={16} color={colors.primary} />
+              <Text style={styles.milestoneText}>
+                {formatTonnage(tonnageLandmark)} {units === 'lbs' ? 'lbs' : 'kg'} lifted all-time. A landmark.
+              </Text>
+              <TouchableOpacity
+                onPress={makeTonnageCard}
+                accessibilityRole="button"
+                accessibilityLabel="Make a card"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.milestoneCta}>Make a card</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : null}
 
         {/* ── Empty state (U-D-4: encouragement-framed, matching BodyMetrics) ── */}
         {!loading && allSets.length === 0 && (

@@ -76,8 +76,9 @@ async function main() {
   };
 
   const premiumMilestone = { cardType: 'milestone', premium: true, eyebrow: 'Perfect month', title: 'A perfect month', showDate: true, date: 'Sun · 22 Jun 2026', heroValue: '4', heroUnit: 'weeks on target', caption: 'Four weeks running, every session and target met.', stats: [{ label: 'Weeks', value: '4' }, { label: 'Sessions', value: '16' }] };
+  const tonnage = { cardType: 'milestone', premium: true, eyebrow: 'Lifetime total', title: 'Total weight lifted', showDate: true, date: 'Sun · 22 Jun 2026', heroValue: '1,000,000', heroUnit: 'kg lifted', caption: 'Every working set you have ever logged, added up.', stats: [] };
 
-  [['session', session], ['pr', pr], ['milestone', milestone], ['weekly', weekly], ['weeklyLift', weeklyLift], ['premium', premiumMilestone]].forEach(([n, p]) => {
+  [['session', session], ['pr', pr], ['milestone', milestone], ['weekly', weekly], ['weeklyLift', weeklyLift], ['premium', premiumMilestone], ['tonnage', tonnage]].forEach(([n, p]) => {
     render({ ...p, isSquare: true }, 1080, `card_${n}_square`);
     render({ ...p, isSquare: false }, 1080, `card_${n}_story`);
   });

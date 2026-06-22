@@ -4762,6 +4762,25 @@ export async function getBestLiftThisWeek(userId, weekStart) {
   return pickBestLift(weekSets, priorByEx);
 }
 
+/**
+ * Total weight lifted across the user's whole history (Phase 2 lifetime-tonnage
+ * landmark): SUM(weight × reps) over every completed, non-warmup working set, in
+ * the user's gym unit. No date window — this is the all-time figure. Returns a
+ * rounded number (0 when there is nothing logged).
+ */
+export async function getLifetimeTonnage(userId) {
+  const d = await db();
+  const row = await d.getFirstAsync(
+    `SELECT COALESCE(SUM(ws.weight * ws.actual_reps), 0) AS tonnage
+     FROM workout_sets ws
+     JOIN workouts w ON ws.workout_id = w.id
+     WHERE ws.user_id = ? AND w.is_completed = 1
+       AND ws.set_type != 'warmup' AND ws.actual_reps > 0 AND ws.weight > 0`,
+    [userId],
+  );
+  return Math.round(row?.tonnage ?? 0);
+}
+
 export async function getYearOfLiftsData(userId, yearMs = null) {
   const d = await db();
   const now = Date.now();
