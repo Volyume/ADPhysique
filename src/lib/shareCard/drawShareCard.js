@@ -430,7 +430,7 @@ function drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark) {
     const bl = p.bestLift;
     text(canvas, Skia, 'BEST LIFT', pad, y, font(p.isSquare ? 18 : 22), PALETTE.textMuted, 'left');
     y += Math.round((p.isSquare ? 40 : 52) * s);
-    const liftStr = `${bl.exerciseName} · ${bl.weight} kg × ${bl.reps}`;
+    const liftStr = `${bl.exerciseName} · ${bl.weight} ${bl.units || 'kg'} × ${bl.reps}`;
     const startPx = p.isSquare ? 50 : 64;
     const blFont = fitFont(null, liftStr, W - pad * 2, startPx, (px) => font(px));
     text(canvas, Skia, liftStr, pad, y + blFont.getSize(), blFont, PALETTE.accent, 'left');

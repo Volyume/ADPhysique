@@ -267,7 +267,7 @@ export default function ShareCardScreen({ route }) {
       const rows = (p.stats || []).map((s) => stat(s.label, s.value)).join('');
       const bl = p.bestLift;
       const liftLine = (bl && bl.weight)
-        ? `<p class="prs">Best lift: ${esc(bl.exerciseName)} ${esc(bl.weight)} kg × ${esc(bl.reps)}${bl.isNewBest ? ' (new personal best)' : ''}</p>`
+        ? `<p class="prs">Best lift: ${esc(bl.exerciseName)} ${esc(bl.weight)} ${esc(bl.units || 'kg')} × ${esc(bl.reps)}${bl.isNewBest ? ' (new personal best)' : ''}</p>`
         : '';
       body = `
         ${liftLine}

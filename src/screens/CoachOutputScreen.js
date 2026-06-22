@@ -1537,6 +1537,9 @@ export default function CoachOutputScreen({ navigation, route }) {
     let bestLift = null;
     try {
       bestLift = await getBestLiftThisWeek(user.id, weekStart);
+      // Gym weights are stored in the user's chosen unit (kg|lbs); carry the
+      // label so the card shows the right one.
+      if (bestLift) bestLift = { ...bestLift, units: units || 'kg' };
     } catch (e) {
       logError('CoachOutputScreen.handleShareWeek', e, { userId: user?.id });
     }
