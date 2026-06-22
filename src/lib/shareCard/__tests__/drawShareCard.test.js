@@ -68,19 +68,17 @@ describe('drawShareCard renders to a non-blank PNG (CanvasKit)', () => {
   };
 
   test.each([
-    ['session', true, false], ['session', false, false],
-    ['pr', true, false], ['pr', false, false],
-    ['milestone', true, false], ['milestone', false, false],
-    ['milestone', true, true], ['milestone', false, true], // premium landmark (glow + star)
-    ['weekly', true, false], ['weekly', false, false],
-  ])('%s card (square=%s, premium=%s)', (cardType, isSquare, premium) => {
+    ['session', true], ['session', false],
+    ['pr', true], ['pr', false],
+    ['milestone', true], ['milestone', false],
+    ['weekly', true], ['weekly', false],
+  ])('%s card (square=%s)', (cardType, isSquare) => {
     if (!env) return; // CanvasKit/fonts unavailable here — skip without failing
     const width = 540;
     const H = cardHeight(width, isSquare);
     const surface = env.Skia.Surface.MakeOffscreen(width, H);
-    // weekly uses the recap stats (incl. the 'On target' ✓ that drives drawCheck).
     const stats = cardType === 'weekly' ? PARAMS.weeklyStats : PARAMS.stats;
-    drawShareCard(surface.getCanvas(), { Skia: env.Skia, width, params: { ...PARAMS, stats, cardType, isSquare, premium }, typefaces: env.typefaces, wordmark: env.wordmark });
+    drawShareCard(surface.getCanvas(), { Skia: env.Skia, width, params: { ...PARAMS, stats, cardType, isSquare }, typefaces: env.typefaces, wordmark: env.wordmark });
     surface.flush();
     const bytes = surface.makeImageSnapshot().encodeToBytes();
     expect(bytes.length).toBeGreaterThan(1000); // a real, non-empty PNG

@@ -21,7 +21,7 @@ const FONT_REG = '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.tt
 
 function loadDrawModule() {
   const src = fs.readFileSync(path.join(__dirname, '../src/lib/shareCard/drawShareCard.js'), 'utf8')
-    .replace(/export\s+function/g, 'function');
+    .replace(/export\s+(function|const|let|class)/g, '$1');
   const m = { exports: {} };
   // eslint-disable-next-line no-new-func
   new Function('module', 'exports', `${src}\nmodule.exports={drawShareCard,cardHeight};`)(m, m.exports);

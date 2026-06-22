@@ -149,7 +149,6 @@ export default function ShareCardScreen({ route }) {
       const m = milestoneData || {};
       return {
         cardType: 'milestone', isSquare, showDate,
-        premium: !!m.premium,
         date: (showDate && m.date) ? formatLongDate(m.date) : '',
         eyebrow: m.eyebrow || '',
         title: m.title || '',

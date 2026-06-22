@@ -22,14 +22,25 @@
 // here so the module needs no RN-only imports (keeps it Node-runnable).
 const FILL = 0;
 const STROKE = 1;
-const CLAMP = 0;
 
-const PALETTE = {
-  bg0: '#0D0D0D', bg1: '#141413', bg2: '#191917',
-  surface: '#222220', surface2: '#2A2A27',
-  border: '#343431', divider: 'rgba(255,255,255,0.06)',
-  accent: '#F5A623', gold: '#FFD700',
-  text: '#FFFFFF', textSecondary: '#9E9E9E', textMuted: '#9B9B9B',
+// Mirrors src/styles/theme.js `colors` VERBATIM so the share card is the SAME
+// visual language as every screen — not a second per-component palette. The
+// renderer is import-free (the Node harness evaluates it directly), so the values
+// are mirrored here and locked to theme.js by __tests__/palette.theme.test.js,
+// which fails if either side drifts. No gradients (styling.md): the background is
+// the solid screen colour.
+export const PALETTE = {
+  bg: '#0D0D0D',              // colors.background
+  surface: '#191917',         // colors.surface
+  surfaceElevated: '#222220', // colors.surfaceElevated (stat boxes / nested)
+  surface2: '#2A2A27',        // colors.surface2 (chips)
+  border: '#6E6E6E',          // colors.border
+  borderSubtle: '#2E2E2C',    // colors.borderSubtle (hairlines inside a card)
+  accent: '#F5A623',          // colors.primary (amber — key data values, marks)
+  gold: '#FFD700',            // colors.gold (trophy tier only)
+  text: '#FFFFFF',            // colors.textPrimary
+  textSecondary: '#9E9E9E',   // colors.textSecondary
+  textMuted: '#9B9B9B',       // colors.textMuted
 };
 
 // amber/gold at an alpha, as an rgba() string Skia.Color parses on both runtimes.
@@ -120,14 +131,8 @@ function fitFont(font, str, maxW, startPx, makeAt) {
 // ── shared blocks ───────────────────────────────────────────────────────────
 
 function drawBackground(canvas, Skia, W, H) {
-  const shader = Skia.Shader.MakeLinearGradient(
-    { x: W / 2, y: 0 }, { x: W / 2, y: H },
-    [Skia.Color(PALETTE.bg1), Skia.Color(PALETTE.bg0), Skia.Color(PALETTE.bg2)],
-    [0, 0.5, 1], CLAMP,
-  );
-  const p = Skia.Paint();
-  p.setShader(shader);
-  canvas.drawRect(Skia.XYWHRect(0, 0, W, H), p);
+  // Solid screen colour — the app uses no gradients (styling.md).
+  fillRect(canvas, Skia, 0, 0, W, H, PALETTE.bg);
 }
 
 function drawAccentBar(canvas, Skia, W, s) {
@@ -140,7 +145,7 @@ function drawFooter(canvas, Skia, W, H, pad, isSquare, s, font, wordmark) {
   // logo (wordmark ~23% of the card width), aligned with the rest of the card.
   const footerH = Math.round((isSquare ? 162 : 250) * s);
   const fy = H - footerH;
-  fillRect(canvas, Skia, pad, fy, W - pad * 2, Math.max(1, Math.round(1 * s)), PALETTE.divider);
+  fillRect(canvas, Skia, pad, fy, W - pad * 2, Math.max(1, Math.round(1 * s)), PALETTE.borderSubtle);
 
   const markH = Math.round((isSquare ? 66 : 90) * s);
   const markY = fy + Math.round((isSquare ? 26 : 36) * s);
@@ -176,33 +181,6 @@ function drawIntensityBadge(canvas, Skia, W, y, tier, s, font) {
   return y + bh + Math.round(28 * s);
 }
 
-// A soft radial glow behind a focal point — the premium-landmark lift (Phase 2).
-function drawGlow(canvas, Skia, cx, cy, radius, colorStr) {
-  const shader = Skia.Shader.MakeRadialGradient(
-    { x: cx, y: cy }, radius,
-    [Skia.Color(rgba(colorStr, 0.22)), Skia.Color(rgba(colorStr, 0))],
-    [0, 1], CLAMP,
-  );
-  const p = Skia.Paint();
-  p.setShader(shader);
-  canvas.drawCircle(cx, cy, radius, p);
-}
-
-// A filled five-point star (vector, no glyph) for the premium-landmark emblem.
-function drawStar(canvas, Skia, cx, cy, rOuter, colorStr) {
-  const p = Skia.Path.Make();
-  const rInner = rOuter * 0.42;
-  for (let i = 0; i < 10; i += 1) {
-    const r = i % 2 === 0 ? rOuter : rInner;
-    const a = -Math.PI / 2 + (i * Math.PI) / 5;
-    const x = cx + r * Math.cos(a);
-    const yy = cy + r * Math.sin(a);
-    if (i === 0) p.moveTo(x, yy); else p.lineTo(x, yy);
-  }
-  p.close();
-  canvas.drawPath(p, paintFor(Skia, colorStr, FILL));
-}
-
 function drawStatBoxes(canvas, Skia, W, pad, y, stats, isSquare, s, font) {
   if (!stats.length) return y;
   const statBoxH = Math.round((isSquare ? 100 : 130) * s);
@@ -210,8 +188,8 @@ function drawStatBoxes(canvas, Skia, W, pad, y, stats, isSquare, s, font) {
   const boxW = Math.floor((W - pad * 2 - gap * (stats.length - 1)) / stats.length);
   stats.forEach((st, i) => {
     const bx = pad + i * (boxW + gap);
-    fillRRect(canvas, Skia, bx, y, boxW, statBoxH, Math.round(16 * s), PALETTE.surface);
-    strokeRRect(canvas, Skia, bx, y, boxW, statBoxH, Math.round(16 * s), PALETTE.border, Math.max(1, 1.2 * s));
+    fillRRect(canvas, Skia, bx, y, boxW, statBoxH, Math.round(14 * s), PALETTE.surfaceElevated);
+    strokeRRect(canvas, Skia, bx, y, boxW, statBoxH, Math.round(14 * s), PALETTE.borderSubtle, Math.max(1, 1 * s));
     text(canvas, Skia, st.value, bx + boxW / 2, y + statBoxH * 0.5, font(isSquare ? 42 : 52), PALETTE.text, 'center');
     text(canvas, Skia, st.label.toUpperCase(), bx + boxW / 2, y + statBoxH - Math.round(18 * s), font(16), PALETTE.textMuted, 'center');
   });
@@ -234,7 +212,7 @@ function drawExerciseChips(canvas, Skia, W, pad, y, exercises, s, font) {
     const chipW = tw + Math.round(36 * s);
     if (x + chipW > W - pad) return;
     fillRRect(canvas, Skia, x, y, chipW, chipH, chipH / 2, PALETTE.surface2);
-    strokeRRect(canvas, Skia, x, y, chipW, chipH, chipH / 2, PALETTE.border, Math.max(1, 1 * s));
+    strokeRRect(canvas, Skia, x, y, chipW, chipH, chipH / 2, PALETTE.borderSubtle, Math.max(1, 1 * s));
     text(canvas, Skia, name, x + chipW / 2, y + chipH * 0.66, f, PALETTE.textSecondary, 'center');
     x += chipW + gap;
     drew += 1;
@@ -358,30 +336,15 @@ function drawPR(canvas, Skia, W, H, p, s, font, wordmark) {
 
 function drawMilestone(canvas, Skia, W, H, p, s, font, wordmark) {
   const pad = Math.round(W * 0.074);
-  // Premium landmark treatment (Phase 2): gold accents, a star emblem and a soft
-  // glow behind the hero, reserved for landmark cards (perfect month, streak,
-  // lifetime tonnage). Plain milestone callers leave `premium` unset.
-  const premium = !!p.premium;
-  const accent = premium ? PALETTE.gold : PALETTE.accent;
   drawBackground(canvas, Skia, W, H);
   drawAccentBar(canvas, Skia, W, s);
-  if (premium) {
-    drawGlow(canvas, Skia, W / 2, Math.round(H * (p.isSquare ? 0.46 : 0.42)), Math.round((p.isSquare ? 420 : 520) * s), PALETTE.gold);
-  }
 
   let y = pad + Math.round(60 * s);
   if (p.showDate && p.date) text(canvas, Skia, p.date, W - pad, y, font(22, 'regular'), PALETTE.textMuted, 'right');
   y += Math.round(70 * s);
 
-  // Premium emblem: a gold star above the eyebrow, left-aligned with the title.
-  if (premium) {
-    const r = Math.round((p.isSquare ? 26 : 32) * s);
-    drawStar(canvas, Skia, pad + r, y + r * 0.2, r, PALETTE.gold);
-    y += Math.round((p.isSquare ? 56 : 68) * s);
-  }
-
   if (p.eyebrow) {
-    text(canvas, Skia, String(p.eyebrow).toUpperCase(), pad, y, font(22), accent, 'left');
+    text(canvas, Skia, String(p.eyebrow).toUpperCase(), pad, y, font(22), PALETTE.accent, 'left');
     y += Math.round(36 * s);
   }
   const titleFont = font(p.isSquare ? 60 : 74);
@@ -394,7 +357,7 @@ function drawMilestone(canvas, Skia, W, H, p, s, font, wordmark) {
   const heroValue = String(p.heroValue != null ? p.heroValue : '');
   const heroNum = fitFont(null, heroValue, W - pad * 2, p.isSquare ? 140 : 220, (px) => font(px));
   const heroY = p.isSquare ? y + heroNum.getSize() : Math.round(H * 0.42);
-  text(canvas, Skia, heroValue, W / 2, heroY, heroNum, accent, 'center');
+  text(canvas, Skia, heroValue, W / 2, heroY, heroNum, PALETTE.accent, 'center');
   if (p.heroUnit) text(canvas, Skia, String(p.heroUnit).toUpperCase(), W / 2, heroY + Math.round((p.isSquare ? 30 : 50) * s), font(p.isSquare ? 18 : 24), PALETTE.textSecondary, 'center');
   y = heroY + Math.round((p.isSquare ? 64 : 100) * s);
 
@@ -413,9 +376,9 @@ function drawMilestone(canvas, Skia, W, H, p, s, font, wordmark) {
 }
 
 // Weekly Precision Coaching recap. Leads with the user's real goal achievement
-// — the actual weight lost/gained this week — as a big gold hero, then the best
-// lift, the real stat wins (PRs / sessions / recovery) and a coach line that
-// names the numbers. ED-safety lives in the param builder (greatWeek.js): under
+// — the actual weight lost/gained this week — as the big amber data hero, then
+// the best lift, the real stat wins (PRs / sessions / recovery) and a coach line
+// that names the numbers. ED-safety lives in the param builder (greatWeek.js): under
 // calm mode / an ED flag the progress hero, the lift hero and all weight
 // language are already stripped before they reach here, and the card only ever
 // renders for a verified-safe, on-target week.
@@ -445,21 +408,17 @@ function drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark) {
   y += Math.round(20 * s);
 
   // HERO: the single biggest win (cut weight loss, else best lift, else PRs) —
-  // an explicit heading so the number is never bare, the big gold value, then the
-  // status/context. greatWeek.js drops it under suppress.
+  // the big amber data numeral with ONE uppercase label beneath, exactly like the
+  // session card's hero. greatWeek.js drops it under suppress.
   if (p.hero && p.hero.value) {
-    if (p.hero.heading) {
-      text(canvas, Skia, String(p.hero.heading).toUpperCase(), W / 2, y + Math.round((p.isSquare ? 22 : 28) * s), font(p.isSquare ? 22 : 28), PALETTE.textSecondary, 'center');
-      y += Math.round((p.isSquare ? 46 : 58) * s);
-    }
     const phFont = fitFont(null, p.hero.value, W - pad * 2, p.isSquare ? 140 : 180, (px) => font(px));
     const heroBaseline = y + phFont.getSize();
-    drawGlow(canvas, Skia, W / 2, y + phFont.getSize() * 0.5, Math.round((p.isSquare ? 380 : 460) * s), PALETTE.gold);
-    text(canvas, Skia, p.hero.value, W / 2, heroBaseline, phFont, PALETTE.gold, 'center');
-    // Clear the glyph descenders (scales with the hero size) before the context.
-    y = heroBaseline + Math.round(phFont.getSize() * 0.30) + Math.round((p.isSquare ? 18 : 24) * s);
-    if (p.hero.context) {
-      text(canvas, Skia, String(p.hero.context).toUpperCase(), W / 2, y, font(p.isSquare ? 22 : 28), PALETTE.gold, 'center');
+    text(canvas, Skia, p.hero.value, W / 2, heroBaseline, phFont, PALETTE.accent, 'center');
+    // Clear the numeral's descenders (e.g. the "g" in "kg") before the label.
+    y = heroBaseline + Math.round(phFont.getSize() * 0.24) + Math.round((p.isSquare ? 16 : 22) * s);
+    const heroLabel = [p.hero.heading, p.hero.context].filter(Boolean).join(' · ');
+    if (heroLabel) {
+      text(canvas, Skia, heroLabel.toUpperCase(), W / 2, y, font(p.isSquare ? 18 : 24), PALETTE.textSecondary, 'center');
       y += Math.round((p.isSquare ? 50 : 62) * s);
     }
   }

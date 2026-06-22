@@ -121,7 +121,6 @@ export default function AnalyticsScreen({ navigation, route }) {
   function makeStreakCard(m) {
     navigation.navigate('ShareCard', {
       milestoneData: {
-        premium: true,
         eyebrow: 'Weeks running',
         heroValue: String(m),
         heroUnit: m === 1 ? 'week' : 'weeks',
@@ -137,7 +136,6 @@ export default function AnalyticsScreen({ navigation, route }) {
     if (user?.id) markPerfectMonthSeen(user.id, perfectMonth.lastWeekKey).catch(() => {});
     navigation.navigate('ShareCard', {
       milestoneData: {
-        premium: true,
         eyebrow: 'Month complete',
         title: 'Textbook Month',
         heroValue: String(perfectMonth.weeks),
@@ -163,7 +161,6 @@ export default function AnalyticsScreen({ navigation, route }) {
     const u = units === 'lbs' ? 'lbs' : 'kg';
     navigation.navigate('ShareCard', {
       milestoneData: {
-        premium: true,
         eyebrow: 'Lifetime total',
         title: 'Total weight lifted',
         heroValue: formatTonnage(tonnageLandmark),
