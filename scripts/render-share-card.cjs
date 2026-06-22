@@ -49,6 +49,12 @@ async function main() {
   };
   const pr = { cardType: 'pr', exerciseName: 'Barbell Bench Press', date: 'Sat · 20 Jun 2026', showDate: true, showPRWeight: true, showPrevBest: true, weight: 120, reps: 5, units: 'kg', previousBest: 115 };
   const milestone = { cardType: 'milestone', eyebrow: 'Year of Lifts', title: '2026 in the gym', showDate: false, heroValue: '1,240,000', heroUnit: 'total kg lifted', caption: 'Across 186 sessions this year.', stats: [{ label: 'Sessions', value: '186' }, { label: 'PRs', value: '42' }, { label: 'Hours', value: '210' }] };
+  const weekly = {
+    cardType: 'weekly', weekLabel: 'Week 4', dateFormatted: 'Sun · 22 Jun 2026', showDate: true,
+    tierLabel: 'Textbook Week',
+    coachLine: 'You showed up 4 times, set 2 PRs and held your target, and recovered well. Textbook week.',
+    stats: [{ label: 'PRs', value: '2' }, { label: 'Sessions', value: '4/4' }, { label: 'Recovery', value: 'Strong' }, { label: 'On target', value: '✓' }],
+  };
 
   const render = (params, width, name) => {
     const H = cardHeight(width, params.isSquare);
@@ -59,7 +65,7 @@ async function main() {
     console.log(`${name}  ${width}x${H}`);
   };
 
-  [['session', session], ['pr', pr], ['milestone', milestone]].forEach(([n, p]) => {
+  [['session', session], ['pr', pr], ['milestone', milestone], ['weekly', weekly]].forEach(([n, p]) => {
     render({ ...p, isSquare: true }, 1080, `card_${n}_square`);
     render({ ...p, isSquare: false }, 1080, `card_${n}_story`);
   });

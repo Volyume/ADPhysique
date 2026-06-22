@@ -70,8 +70,8 @@ describe('buildWeeklyRecapParams — ED-safe by construction', () => {
 
   test('weight progress is QUALITATIVE only — never a number', () => {
     const p = buildWeeklyRecapParams(out({ trend: { onTarget: true, rateLabel: 'losing 0.8 kg/wk', delta: -0.8 } }));
-    const progress = p.stats.find((s) => s.label === 'Progress');
-    expect(progress).toEqual({ label: 'Progress', value: 'On target' });
+    const progress = p.stats.find((s) => s.label === 'On target');
+    expect(progress).toEqual({ label: 'On target', value: '✓' });
     // No stat value anywhere contains a kg figure or a rate.
     const blob = JSON.stringify(p.stats) + p.coachLine;
     expect(blob).not.toMatch(/kg|\/wk|\d+(\.\d+)?\s*(kg|lb)/i);
@@ -79,7 +79,7 @@ describe('buildWeeklyRecapParams — ED-safe by construction', () => {
 
   test('under suppress (calm mode / ED flag) NO weight/progress language appears', () => {
     const p = buildWeeklyRecapParams(out(), { suppress: true });
-    expect(p.stats.find((s) => s.label === 'Progress')).toBeUndefined();
+    expect(p.stats.find((s) => s.label === 'On target')).toBeUndefined();
     expect(p.coachLine).not.toMatch(/target|kg|\/wk/i);
     // Still celebrates the controllable, self-referential wins.
     expect(p.coachLine).toMatch(/showed up/i);

@@ -176,6 +176,17 @@ function drawIntensityBadge(canvas, Skia, W, y, tier, s, font) {
   return y + bh + Math.round(28 * s);
 }
 
+// A vector tick (no font glyph) so an "on target" stat renders identically on
+// every device — the ✓ glyph is missing from some system fonts (renders as a
+// tofu box). Amber, not green: the adherence-neutral rule avoids success colour.
+function drawCheck(canvas, Skia, cx, cy, size, colorStr) {
+  const p = Skia.Path.Make();
+  p.moveTo(cx - size * 0.45, cy + size * 0.02);
+  p.lineTo(cx - size * 0.08, cy + size * 0.4);
+  p.lineTo(cx + size * 0.5, cy - size * 0.42);
+  canvas.drawPath(p, paintFor(Skia, colorStr, STROKE, Math.max(2, size * 0.16)));
+}
+
 function drawStatBoxes(canvas, Skia, W, pad, y, stats, isSquare, s, font) {
   if (!stats.length) return y;
   const statBoxH = Math.round((isSquare ? 100 : 130) * s);
@@ -185,7 +196,11 @@ function drawStatBoxes(canvas, Skia, W, pad, y, stats, isSquare, s, font) {
     const bx = pad + i * (boxW + gap);
     fillRRect(canvas, Skia, bx, y, boxW, statBoxH, Math.round(16 * s), PALETTE.surface);
     strokeRRect(canvas, Skia, bx, y, boxW, statBoxH, Math.round(16 * s), PALETTE.border, Math.max(1, 1.2 * s));
-    text(canvas, Skia, st.value, bx + boxW / 2, y + statBoxH * 0.5, font(isSquare ? 42 : 52), PALETTE.text, 'center');
+    if (st.value === '✓') {
+      drawCheck(canvas, Skia, bx + boxW / 2, y + statBoxH * 0.42, Math.round((isSquare ? 34 : 42) * s), PALETTE.accent);
+    } else {
+      text(canvas, Skia, st.value, bx + boxW / 2, y + statBoxH * 0.5, font(isSquare ? 42 : 52), PALETTE.text, 'center');
+    }
     text(canvas, Skia, st.label.toUpperCase(), bx + boxW / 2, y + statBoxH - Math.round(18 * s), font(16), PALETTE.textMuted, 'center');
   });
   return y + statBoxH + Math.round(24 * s);
@@ -370,6 +385,49 @@ function drawMilestone(canvas, Skia, W, H, p, s, font, wordmark) {
   drawFooter(canvas, Skia, W, H, pad, p.isSquare, s, font, wordmark);
 }
 
+// Weekly Precision Coaching recap (blueprint 2026-06-22). Eyebrow week label →
+// the "Textbook Week" tier headline → a warm coach line → the self-referential
+// stat boxes (PRs / sessions / recovery / on-target ✓). ED-safety lives in the
+// param builder (greatWeek.js): under calm mode / an ED flag the on-target stat
+// and all weight language are already stripped before they reach here.
+function drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark) {
+  const pad = Math.round(W * 0.074);
+  drawBackground(canvas, Skia, W, H);
+  drawAccentBar(canvas, Skia, W, s);
+
+  let y = pad + Math.round(60 * s);
+  if (p.showDate && p.dateFormatted) {
+    text(canvas, Skia, p.dateFormatted, W - pad, y, font(22, 'regular'), PALETTE.textMuted, 'right');
+  }
+  y += Math.round(70 * s);
+
+  if (p.weekLabel) {
+    text(canvas, Skia, String(p.weekLabel).toUpperCase(), pad, y, font(22), PALETTE.accent, 'left');
+    y += Math.round(40 * s);
+  }
+
+  const titleFont = font(p.isSquare ? 72 : 92);
+  wrapText(titleFont, p.tierLabel || 'Great Week', W - pad * 2).slice(0, 2).forEach((l) => {
+    text(canvas, Skia, l, pad, y + Math.round((p.isSquare ? 72 : 92) * 0.82 * s), titleFont, PALETTE.text, 'left');
+    y += Math.round((p.isSquare ? 72 : 92) * 1.05 * s);
+  });
+  y += Math.round(28 * s);
+
+  if (p.coachLine) {
+    const capFont = font(p.isSquare ? 26 : 32, 'regular');
+    wrapText(capFont, String(p.coachLine), W - pad * 2).slice(0, 3).forEach((l) => {
+      text(canvas, Skia, l, pad, y + Math.round((p.isSquare ? 26 : 32) * 0.9 * s), capFont, PALETTE.textSecondary, 'left');
+      y += Math.round((p.isSquare ? 40 : 50) * s);
+    });
+    y += Math.round(28 * s);
+  }
+
+  const stats = (p.stats || []).slice(0, 4).map((st) => ({ label: String(st.label || ''), value: String(st.value != null ? st.value : '') }));
+  if (stats.length) y = drawStatBoxes(canvas, Skia, W, pad, y, stats, p.isSquare, s, font);
+
+  drawFooter(canvas, Skia, W, H, pad, p.isSquare, s, font, wordmark);
+}
+
 /** The card pixel height for a given width + format. */
 export function cardHeight(width, isSquare) {
   return isSquare ? width : Math.round((width * 16) / 9);
@@ -393,6 +451,7 @@ export function drawShareCard(canvas, { Skia, width, params, typefaces, wordmark
   const p = { ...params, isSquare };
   if (params.cardType === 'pr') drawPR(canvas, Skia, W, H, p, s, font, wordmark);
   else if (params.cardType === 'milestone') drawMilestone(canvas, Skia, W, H, p, s, font, wordmark);
+  else if (params.cardType === 'weekly') drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark);
   else drawSession(canvas, Skia, W, H, p, s, font, wordmark);
   return { width: W, height: H };
 }

@@ -82,8 +82,9 @@ export function buildWeeklyRecapParams(output, { suppress = false, isSquare = tr
   if (planned > 0) stats.push({ label: 'Sessions', value: `${completed}/${planned}` });
   if (recoveryGood) stats.push({ label: 'Recovery', value: 'Strong' });
   // Qualitative on-target progress — NEVER a number, and dropped under suppress
-  // (calm mode / ED flag) so no weight/progress language reaches the card.
-  if (onTarget && !suppress) stats.push({ label: 'Progress', value: 'On target' });
+  // (calm mode / ED flag) so no weight/progress language reaches the card. A
+  // short check-glyph value keeps it inside the stat box (values aren't shrunk).
+  if (onTarget && !suppress) stats.push({ label: 'On target', value: '✓' });
 
   return {
     cardType: 'weekly',
