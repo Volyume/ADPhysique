@@ -108,9 +108,27 @@ export function buildWeeklyRecapParams(output, { suppress = false, includeProgre
   const lostWeight = delta < -0.01;
   const showProgress = hasWeight && onTarget && isCut && lostWeight && !suppress && includeProgress;
   const abs = Math.round(Math.abs(delta) * 10) / 10;
-  const progress = showProgress
-    ? { heading: 'weight lost this week', value: `${abs} ${u}`, context: 'right on target' }
-    : null;
+
+  // The hero is the single biggest win, always with an explicit heading so the
+  // number is never bare. Priority: the cut weight loss (the goal) → otherwise
+  // the best lift → otherwise the PRs. The best lift is force-stripped under
+  // suppress (a lift weight is a number).
+  let bestLiftBlock = suppress ? null : (bestLift || null);
+  let hero = null;
+  if (showProgress) {
+    hero = { heading: 'weight lost this week', value: `${abs} ${u}`, context: 'right on target' };
+  } else if (bestLiftBlock && bestLiftBlock.weight) {
+    // Promote the best lift to the hero on non-cut weeks; don't also render it as
+    // the feature block below.
+    hero = {
+      heading: String(bestLiftBlock.exerciseName || 'best lift'),
+      value: `${bestLiftBlock.weight} ${bestLiftBlock.units || 'kg'} × ${bestLiftBlock.reps}`,
+      context: bestLiftBlock.isNewBest ? 'new personal best' : 'your best set this week',
+    };
+    bestLiftBlock = null;
+  } else if (prs > 0) {
+    hero = { heading: prs === 1 ? 'personal record' : 'personal records', value: String(prs), context: 'set this week' };
+  }
 
   const stats = [];
   if (prs > 0) stats.push({ label: prs === 1 ? 'PR' : 'PRs', value: String(prs) });
@@ -123,11 +141,10 @@ export function buildWeeklyRecapParams(output, { suppress = false, includeProgre
     tierLabel: HEADLINE,
     weekLabel,
     dateFormatted,
-    // The headline achievement: real weight change toward the goal.
-    progress,
-    // A lift weight is a number; under safety suppress (calm mode / ED flag) the
-    // hero is stripped so the card carries only bare wins.
-    bestLift: suppress ? null : (bestLift || null),
+    // The headline achievement: cut weight loss, else best lift, else PRs.
+    hero,
+    // The best lift as a secondary feature block — only when it isn't the hero.
+    bestLift: bestLiftBlock,
     stats: stats.slice(0, 4),
     // Name the weight only when the hero shows it (on target, safe, not toggled
     // off) — never on an off-target week.

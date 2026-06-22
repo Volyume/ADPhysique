@@ -267,8 +267,8 @@ export default function ShareCardScreen({ route }) {
         ${p.caption ? `<p class="prs">${esc(p.caption)}</p>` : ''}`;
     } else if (p.cardType === 'weekly') {
       const rows = (p.stats || []).map((s) => stat(s.label, s.value)).join('');
-      const prog = p.progress && p.progress.value
-        ? stat(p.progress.heading || 'weight lost this week', p.progress.value)
+      const prog = p.hero && p.hero.value
+        ? stat(p.hero.heading || 'this week', p.hero.value)
         : '';
       const bl = p.bestLift;
       const liftLine = (bl && bl.weight)

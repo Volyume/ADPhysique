@@ -444,21 +444,22 @@ function drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark) {
   });
   y += Math.round(20 * s);
 
-  // HERO: the real weight achievement — an explicit heading so the number is
-  // never bare, then the big gold magnitude, then the goal status. Cut-only;
-  // greatWeek.js drops it for every other goal and under suppress.
-  if (p.progress && p.progress.value) {
-    if (p.progress.heading) {
-      text(canvas, Skia, String(p.progress.heading).toUpperCase(), W / 2, y + Math.round((p.isSquare ? 22 : 28) * s), font(p.isSquare ? 22 : 28), PALETTE.textSecondary, 'center');
+  // HERO: the single biggest win (cut weight loss, else best lift, else PRs) —
+  // an explicit heading so the number is never bare, the big gold value, then the
+  // status/context. greatWeek.js drops it under suppress.
+  if (p.hero && p.hero.value) {
+    if (p.hero.heading) {
+      text(canvas, Skia, String(p.hero.heading).toUpperCase(), W / 2, y + Math.round((p.isSquare ? 22 : 28) * s), font(p.isSquare ? 22 : 28), PALETTE.textSecondary, 'center');
       y += Math.round((p.isSquare ? 46 : 58) * s);
     }
-    const phFont = fitFont(null, p.progress.value, W - pad * 2, p.isSquare ? 140 : 180, (px) => font(px));
+    const phFont = fitFont(null, p.hero.value, W - pad * 2, p.isSquare ? 140 : 180, (px) => font(px));
     const heroBaseline = y + phFont.getSize();
     drawGlow(canvas, Skia, W / 2, y + phFont.getSize() * 0.5, Math.round((p.isSquare ? 380 : 460) * s), PALETTE.gold);
-    text(canvas, Skia, p.progress.value, W / 2, heroBaseline, phFont, PALETTE.gold, 'center');
-    y = heroBaseline + Math.round((p.isSquare ? 36 : 46) * s);
-    if (p.progress.context) {
-      text(canvas, Skia, String(p.progress.context).toUpperCase(), W / 2, y, font(p.isSquare ? 22 : 28), PALETTE.gold, 'center');
+    text(canvas, Skia, p.hero.value, W / 2, heroBaseline, phFont, PALETTE.gold, 'center');
+    // Clear the glyph descenders (scales with the hero size) before the context.
+    y = heroBaseline + Math.round(phFont.getSize() * 0.30) + Math.round((p.isSquare ? 18 : 24) * s);
+    if (p.hero.context) {
+      text(canvas, Skia, String(p.hero.context).toUpperCase(), W / 2, y, font(p.isSquare ? 22 : 28), PALETTE.gold, 'center');
       y += Math.round((p.isSquare ? 50 : 62) * s);
     }
   }

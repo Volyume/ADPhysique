@@ -62,7 +62,7 @@ describe('drawShareCard renders to a non-blank PNG (CanvasKit)', () => {
     caption: 'Across 186 sessions this year.', stats: [{ label: 'Sessions', value: '186' }],
     tierLabel: 'Textbook Week', weekLabel: 'Week 4 · Moderate cut', dateFormatted: 'Sun · 22 Jun 2026',
     coachLine: 'You hit all 4 sessions, set 2 new PRs, lost 0.7 kg and recovery was strong.',
-    progress: { heading: 'weight lost this week', value: '0.7 kg', context: 'right on target' },
+    hero: { heading: 'weight lost this week', value: '0.7 kg', context: 'right on target' },
     weeklyStats: [{ label: 'PRs', value: '2' }, { label: 'Sessions', value: '4/4' }, { label: 'Recovery', value: 'Strong' }],
     bestLift: { exerciseName: 'Bench Press', weight: 100, reps: 5, isNewBest: true, units: 'kg' },
   };

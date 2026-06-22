@@ -72,37 +72,49 @@ describe('buildWeeklyRecapParams — ED-safe by construction', () => {
   test('a cut that lost weight on target shows the labelled hero (heading + magnitude + status)', () => {
     const p = buildWeeklyRecapParams(out({ goalPhase: 'mod_cut', trend: { onTarget: true, delta: -0.8 } }));
     // Magnitude only (no bare sign), with an explicit heading so it is never ambiguous.
-    expect(p.progress).toEqual({ heading: 'weight lost this week', value: '0.8 kg', context: 'right on target' });
+    expect(p.hero).toEqual({ heading: 'weight lost this week', value: '0.8 kg', context: 'right on target' });
     expect(p.coachLine).toMatch(/lost 0\.8 kg/);
   });
 
   test('the unit follows the user (lbs)', () => {
     const p = buildWeeklyRecapParams(out({ goalPhase: 'mild_cut', trend: { onTarget: true, delta: -0.7 } }), { units: 'lbs' });
-    expect(p.progress.value).toBe('0.7 lbs');
+    expect(p.hero.value).toBe('0.7 lbs');
     expect(p.coachLine).toMatch(/lost 0\.7 lbs/);
   });
 
   test('weight is shown ONLY for a cut goal — a bulk never puts a scale number on the card', () => {
     const bulk = buildWeeklyRecapParams(out({ goalPhase: 'mod_bulk', trend: { onTarget: true, delta: 0.4 } }));
-    expect(bulk.progress).toBeNull();
+    expect(bulk.hero.heading).not.toBe('weight lost this week');
+    expect(JSON.stringify(bulk.hero)).not.toMatch(/\bkg\b|\blbs\b|weight/i);
     expect(bulk.coachLine).not.toMatch(/lost|gained|kg/);
-    const maint = buildWeeklyRecapParams(out({ goalPhase: 'maint', trend: { onTarget: true, delta: 0 } }));
-    expect(maint.progress).toBeNull();
   });
 
-  test('off-target never reaches the card (no progress hero)', () => {
+  test('off-target never puts a weight number on the card', () => {
     const p = buildWeeklyRecapParams(out({ trend: { onTarget: false, delta: -0.8 } }));
-    expect(p.progress).toBeNull();
+    expect(p.hero && p.hero.heading).not.toBe('weight lost this week');
     expect(p.coachLine).not.toMatch(/lost|gained/);
   });
 
   test('under suppress (calm mode / ED flag) NO weight number or progress language appears', () => {
     const p = buildWeeklyRecapParams(out(), { suppress: true });
-    expect(p.progress).toBeNull();
+    expect(p.hero && p.hero.heading).not.toBe('weight lost this week');
+    expect(p.bestLift).toBeNull(); // a lift weight is a number — stripped too
     expect(p.coachLine).not.toMatch(/kg|\/wk|lost|gained|target/i);
     // Still celebrates the controllable, self-referential wins.
     expect(p.coachLine).toMatch(/you hit/i);
     expect(p.stats.some((s) => s.label === 'Sessions')).toBe(true);
+  });
+
+  test('non-cut week leads with the best lift as the hero', () => {
+    const lift = { exerciseName: 'Squat', weight: 140, reps: 3, isNewBest: true, units: 'kg' };
+    const p = buildWeeklyRecapParams(out({ goalPhase: 'mod_bulk', trend: { onTarget: true, delta: 0.3 } }), { bestLift: lift });
+    expect(p.hero).toEqual({ heading: 'Squat', value: '140 kg × 3', context: 'new personal best' });
+    expect(p.bestLift).toBeNull(); // promoted to hero, not duplicated below
+  });
+
+  test('non-cut week with no best lift falls back to PRs as the hero', () => {
+    const p = buildWeeklyRecapParams(out({ goalPhase: 'maint', prsThisWeek: 3, trend: { onTarget: true, delta: 0 } }));
+    expect(p.hero).toEqual({ heading: 'personal records', value: '3', context: 'set this week' });
   });
 
   test('stays self-referential (no comparison language)', () => {
@@ -132,11 +144,11 @@ describe('buildWeeklyRecapParams — best-lift feature', () => {
     expect(p.bestLift).toBeNull();
   });
 
-  test('includeProgress=false drops the weight hero + progress language but KEEPS the lift', () => {
+  test('includeProgress=false drops the weight hero; the lift becomes the hero instead', () => {
     const p = buildWeeklyRecapParams(out(), { bestLift: lift, includeProgress: false });
-    expect(p.bestLift).toEqual(lift); // independent of the progress toggle
-    expect(p.progress).toBeNull();
-    expect(p.coachLine).not.toMatch(/lost|gained|kg/);
+    expect(p.hero.value).toBe('100 kg × 5'); // lift promoted to hero
+    expect(p.bestLift).toBeNull();
+    expect(p.coachLine).not.toMatch(/lost|gained/);
   });
 
   test('null/missing lift yields null, never undefined', () => {

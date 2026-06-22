@@ -52,9 +52,17 @@ async function main() {
   const weekly = {
     cardType: 'weekly', weekLabel: 'Week 4 · Moderate cut', dateFormatted: 'Sun · 22 Jun 2026', showDate: true,
     tierLabel: 'Textbook Week',
-    progress: { heading: 'weight lost this week', value: '0.7 kg', context: 'right on target' },
+    hero: { heading: 'weight lost this week', value: '0.7 kg', context: 'right on target' },
     coachLine: 'You hit all 4 sessions, set 2 new PRs, lost 0.7 kg and recovery was strong.',
     bestLift: { exerciseName: 'Barbell Bench Press', weight: 100, reps: 5, isNewBest: true, units: 'kg' },
+    stats: [{ label: 'PRs', value: '2' }, { label: 'Sessions', value: '4/4' }, { label: 'Recovery', value: 'Strong' }],
+  };
+  const weeklyLift = {
+    cardType: 'weekly', weekLabel: 'Week 6 · Lean bulk', dateFormatted: 'Sun · 22 Jun 2026', showDate: true,
+    tierLabel: 'Textbook Week',
+    hero: { heading: 'Barbell Bench Press', value: '100 kg × 5', context: 'new personal best' },
+    coachLine: 'You hit all 4 sessions, set 2 new PRs and recovery was strong.',
+    bestLift: null,
     stats: [{ label: 'PRs', value: '2' }, { label: 'Sessions', value: '4/4' }, { label: 'Recovery', value: 'Strong' }],
   };
 
@@ -69,7 +77,7 @@ async function main() {
 
   const premiumMilestone = { cardType: 'milestone', premium: true, eyebrow: 'Perfect month', title: 'A perfect month', showDate: true, date: 'Sun · 22 Jun 2026', heroValue: '4', heroUnit: 'weeks on target', caption: 'Four weeks running, every session and target met.', stats: [{ label: 'Weeks', value: '4' }, { label: 'Sessions', value: '16' }] };
 
-  [['session', session], ['pr', pr], ['milestone', milestone], ['weekly', weekly], ['premium', premiumMilestone]].forEach(([n, p]) => {
+  [['session', session], ['pr', pr], ['milestone', milestone], ['weekly', weekly], ['weeklyLift', weeklyLift], ['premium', premiumMilestone]].forEach(([n, p]) => {
     render({ ...p, isSquare: true }, 1080, `card_${n}_square`);
     render({ ...p, isSquare: false }, 1080, `card_${n}_story`);
   });
