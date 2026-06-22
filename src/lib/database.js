@@ -1,6 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 import { generateInsights } from './insightsEngine';
 import { calculate1RM, allocateExerciseVolume } from './algorithms';
+import { pickBestLift } from './bestLift';
 import { logError, logWarn } from './errorLog';
 import { localDayKey, localWeekStartMs } from './dayKey';
 import { openEncryptedDb } from './dbCrypto';
@@ -4716,6 +4717,46 @@ export async function getWeeklyPRCount(userId, weekStart) {
     [userId, weekStartMs, weekEnd, userId, weekStartMs],
   );
   return row?.pr_count ?? 0;
+}
+
+// The standout lift of a given week, for the "Great Week" recap share card.
+// Pulls this week's working sets + each exercise's prior best e1RM and defers
+// the choice to the pure pickBestLift() (biggest e1RM gain, else heaviest set;
+// see src/lib/bestLift.js). e1RM here is plain Epley to match getWeeklyPRCount,
+// so the featured lift is consistent with the PR count on the same card.
+export async function getBestLiftThisWeek(userId, weekStart) {
+  const weekStartMs = coerceWeekStartMs(weekStart, 'getBestLiftThisWeek');
+  const d = await db();
+  const weekEnd = weekStartMs + 7 * 86400000;
+
+  const weekSets = await d.getAllAsync(
+    `SELECT ws.exercise_id AS exerciseId, ex.name AS exerciseName,
+            ws.weight AS weight, ws.actual_reps AS reps
+     FROM workout_sets ws
+     JOIN workouts w ON ws.workout_id = w.id
+     LEFT JOIN exercises ex ON ex.id = ws.exercise_id
+     WHERE ws.user_id = ? AND w.is_completed = 1
+       AND w.started_at >= ? AND w.started_at < ?
+       AND ws.weight IS NOT NULL AND ws.weight > 0
+       AND (ws.set_type IS NULL OR ws.set_type != 'warmup')`,
+    [userId, weekStartMs, weekEnd],
+  );
+  if (!weekSets.length) return null;
+
+  const priorRows = await d.getAllAsync(
+    `SELECT ws.exercise_id AS exerciseId,
+            MAX(ws.weight * (1.0 + COALESCE(ws.actual_reps, 1) / 30.0)) AS priorE1rm
+     FROM workout_sets ws
+     JOIN workouts w ON ws.workout_id = w.id
+     WHERE ws.user_id = ? AND w.is_completed = 1
+       AND w.started_at < ?
+       AND ws.weight IS NOT NULL AND ws.weight > 0
+       AND (ws.set_type IS NULL OR ws.set_type != 'warmup')
+     GROUP BY ws.exercise_id`,
+    [userId, weekStartMs],
+  );
+  const priorByEx = new Map(priorRows.map((r) => [r.exerciseId, r.priorE1rm]));
+  return pickBestLift(weekSets, priorByEx);
 }
 
 export async function getYearOfLiftsData(userId, yearMs = null) {

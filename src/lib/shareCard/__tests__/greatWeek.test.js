@@ -82,7 +82,7 @@ describe('buildWeeklyRecapParams — ED-safe by construction', () => {
     expect(p.stats.find((s) => s.label === 'On target')).toBeUndefined();
     expect(p.coachLine).not.toMatch(/target|kg|\/wk/i);
     // Still celebrates the controllable, self-referential wins.
-    expect(p.coachLine).toMatch(/showed up/i);
+    expect(p.coachLine).toMatch(/you hit/i);
     expect(p.stats.some((s) => s.label === 'Sessions')).toBe(true);
   });
 
@@ -93,8 +93,34 @@ describe('buildWeeklyRecapParams — ED-safe by construction', () => {
   });
 
   test('coach line names the real numbers (sessions, PRs) — numbers before narrative', () => {
-    const p = buildWeeklyRecapParams(out({ sessionsCompleted: 5, prsThisWeek: 1 }));
-    expect(p.coachLine).toMatch(/5/);
-    expect(p.coachLine).toMatch(/1 PR\b/);
+    const p = buildWeeklyRecapParams(out({ sessionsPlanned: 6, sessionsCompleted: 5, prsThisWeek: 1 }));
+    expect(p.coachLine).toMatch(/5 of your 6 sessions/);
+    expect(p.coachLine).toMatch(/1 new PR\b/);
+  });
+});
+
+describe('buildWeeklyRecapParams — best-lift hero', () => {
+  const lift = { exerciseName: 'Bench Press', weight: 100, reps: 5, isNewBest: true, gainKg: 2.5 };
+
+  test('passes the best lift through when present and not suppressed', () => {
+    const p = buildWeeklyRecapParams(out(), { bestLift: lift });
+    expect(p.bestLift).toEqual(lift);
+  });
+
+  test('drops the best lift entirely under suppress (a lift weight is a number)', () => {
+    const p = buildWeeklyRecapParams(out(), { bestLift: lift, suppress: true });
+    expect(p.bestLift).toBeNull();
+  });
+
+  test('includeOnTarget=false drops the on-target stat + progress language but KEEPS the lift', () => {
+    const p = buildWeeklyRecapParams(out(), { bestLift: lift, includeOnTarget: false });
+    expect(p.bestLift).toEqual(lift); // independent of the on-target toggle
+    expect(p.stats.find((s) => s.label === 'On target')).toBeUndefined();
+    expect(p.coachLine).not.toMatch(/target/i);
+  });
+
+  test('null/missing lift yields null, never undefined', () => {
+    expect(buildWeeklyRecapParams(out()).bestLift).toBeNull();
+    expect(buildWeeklyRecapParams(out(), { bestLift: null }).bestLift).toBeNull();
   });
 });

@@ -13,6 +13,7 @@ import {
   getMorningWeights,
   getWeeklySessionStats,
   getWeeklyPRCount,
+  getBestLiftThisWeek,
   getNutritionTargets,
   saveNutritionTargets,
   getUserBodyProfile,
@@ -1530,9 +1531,18 @@ export default function CoachOutputScreen({ navigation, route }) {
   // (an on-target tick, never a number), and under `suppress` (open ED flag or
   // calm mode) all progress language is stripped. No bodyweight figure or
   // private data leaves the device.
-  function handleShareWeek() {
+  async function handleShareWeek() {
+    // The standout lift of the week (biggest e1RM gain, else heaviest set) is
+    // the card hero. Fetched on demand; a failure just omits the hero.
+    let bestLift = null;
+    try {
+      bestLift = await getBestLiftThisWeek(user.id, weekStart);
+    } catch (e) {
+      logError('CoachOutputScreen.handleShareWeek', e, { userId: user?.id });
+    }
     navigation.navigate('ShareCard', {
       weeklyRecapData: output,
+      bestLift,
       suppress: edPatternOpen || calmMode,
     });
   }

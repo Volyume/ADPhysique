@@ -422,6 +422,26 @@ function drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark) {
     y += Math.round(28 * s);
   }
 
+  // Best-lift hero (founder decision 2026-06-22): a self-referenced "your
+  // strongest set this week" block — competence, never a ranking. Drawn only
+  // when present (greatWeek.js drops it under suppress). It is the focal element
+  // that earns the tall format's space.
+  if (p.bestLift && p.bestLift.weight) {
+    const bl = p.bestLift;
+    text(canvas, Skia, 'BEST LIFT', pad, y, font(p.isSquare ? 18 : 22), PALETTE.textMuted, 'left');
+    y += Math.round((p.isSquare ? 40 : 52) * s);
+    const liftStr = `${bl.exerciseName} · ${bl.weight} kg × ${bl.reps}`;
+    const startPx = p.isSquare ? 50 : 64;
+    const blFont = fitFont(null, liftStr, W - pad * 2, startPx, (px) => font(px));
+    text(canvas, Skia, liftStr, pad, y + blFont.getSize(), blFont, PALETTE.accent, 'left');
+    y += Math.round(blFont.getSize() + (p.isSquare ? 16 : 22) * s);
+    if (bl.isNewBest) {
+      text(canvas, Skia, 'New personal best', pad, y + Math.round((p.isSquare ? 20 : 26) * s), font(p.isSquare ? 20 : 26, 'regular'), PALETTE.gold, 'left');
+      y += Math.round((p.isSquare ? 40 : 52) * s);
+    }
+    y += Math.round((p.isSquare ? 24 : 36) * s);
+  }
+
   const stats = (p.stats || []).slice(0, 4).map((st) => ({ label: String(st.label || ''), value: String(st.value != null ? st.value : '') }));
   if (stats.length) y = drawStatBoxes(canvas, Skia, W, pad, y, stats, p.isSquare, s, font);
 

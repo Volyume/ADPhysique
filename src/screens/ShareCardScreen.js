@@ -45,6 +45,9 @@ export default function ShareCardScreen({ route }) {
     prData = null,
     milestoneData = null,
     weeklyRecapData = null,
+    // The week's standout lift (src/lib/bestLift.js), or null. Featured as the
+    // recap card hero.
+    bestLift = null,
     // Set by CoachOutputScreen when an ED-pattern flag is open OR calm mode is
     // active: all weight/progress language is stripped from the recap card.
     suppress = false,
@@ -72,11 +75,15 @@ export default function ShareCardScreen({ route }) {
   // Weekly recap: the qualitative on-target tick is opt-in. It is force-stripped
   // (and the toggle hidden) under `suppress` so no progress language can leak.
   const [showOnTarget, setShowOnTarget] = useState(true);
+  // The best-lift hero is opt-in too (also force-stripped under suppress).
+  const [showBestLift, setShowBestLift] = useState(true);
 
-  const isSquare = format === 'square';
   const isSession = cardType === 'session';
   const isMilestone = cardType === 'milestone';
   const isWeekly = cardType === 'weekly';
+  // The weekly recap is square-only: the 9:16 story leaves the tall canvas mostly
+  // empty, so it ships as a clean 1:1 card.
+  const isSquare = isWeekly ? true : format === 'square';
 
   // System typefaces (regular + bold) for the Skia renderer. getTypeface() gives
   // a typeface we can resize at any point in the draw.
@@ -126,10 +133,13 @@ export default function ShareCardScreen({ route }) {
       // straight after the check-in, so the date stamp is simply today's share
       // date. (The coach output carries no own timestamp.)
       const recap = buildWeeklyRecapParams(o, {
-        suppress: suppress || !showOnTarget,
+        suppress,
+        includeOnTarget: showOnTarget,
         isSquare,
         weekLabel: o.weekLabel || '',
         dateFormatted: showDate ? formatLongDate() : '',
+        // The lift hero is independently toggleable; suppress strips it regardless.
+        bestLift: showBestLift ? bestLift : null,
       });
       // `date` mirrors dateFormatted so the PDF summary (which reads p.date) works.
       return { ...recap, showDate, date: recap.dateFormatted };
@@ -175,7 +185,7 @@ export default function ShareCardScreen({ route }) {
       previousBest: p.previousBest || '',
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMilestone, isSession, isWeekly, isSquare, showDate, showVolume, showPlanName, showExercises, showPRWeight, showPrevBest, showOnTarget, suppress, sessionData, prData, milestoneData, weeklyRecapData]);
+  }, [isMilestone, isSession, isWeekly, isSquare, showDate, showVolume, showPlanName, showExercises, showPRWeight, showPrevBest, showOnTarget, showBestLift, suppress, sessionData, prData, milestoneData, weeklyRecapData, bestLift]);
 
   // ── ONE renderer for preview + export ──────────────────────────────────────
   const renderCardBase64 = useCallback((width) => {
@@ -255,7 +265,12 @@ export default function ShareCardScreen({ route }) {
         ${p.caption ? `<p class="prs">${esc(p.caption)}</p>` : ''}`;
     } else if (p.cardType === 'weekly') {
       const rows = (p.stats || []).map((s) => stat(s.label, s.value)).join('');
+      const bl = p.bestLift;
+      const liftLine = (bl && bl.weight)
+        ? `<p class="prs">Best lift: ${esc(bl.exerciseName)} ${esc(bl.weight)} kg × ${esc(bl.reps)}${bl.isNewBest ? ' (new personal best)' : ''}</p>`
+        : '';
       body = `
+        ${liftLine}
         <div class="statRow">${rows}</div>
         ${p.coachLine ? `<p class="prs">${esc(p.coachLine)}</p>` : ''}`;
     } else {
@@ -341,7 +356,8 @@ export default function ShareCardScreen({ route }) {
           )}
         </View>
 
-        {/* Format */}
+        {/* Format — the weekly recap is square-only, so the toggle is hidden. */}
+        {!isWeekly && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Format</Text>
           <View style={styles.segmentRow}>
@@ -359,6 +375,7 @@ export default function ShareCardScreen({ route }) {
             />
           </View>
         </View>
+        )}
 
         {/* Preview — the exact image that gets shared, scaled down */}
         <View style={styles.section}>
@@ -397,12 +414,17 @@ export default function ShareCardScreen({ route }) {
               </>
             )}
             {isWeekly && !suppress && (
-              <ToggleRow label="On-target progress" value={showOnTarget} onChange={setShowOnTarget} last />
+              <>
+                {bestLift ? (
+                  <ToggleRow label="Best lift of the week" value={showBestLift} onChange={setShowBestLift} />
+                ) : null}
+                <ToggleRow label="On-target progress" value={showOnTarget} onChange={setShowOnTarget} last />
+              </>
             )}
           </View>
           <Text style={styles.privacyNote}>
             {isWeekly
-              ? 'Your weight figure is never shown. Progress appears only as an on-target tick. Name, measurements and private notes are never included.'
+              ? 'Your bodyweight, measurements and private notes are never shown. Weight progress appears only as an on-target tick, never a number.'
               : 'Name, bodyweight, measurements and private notes are never included.'}
           </Text>
         </View>

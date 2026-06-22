@@ -64,6 +64,7 @@ describe('drawShareCard renders to a non-blank PNG (CanvasKit)', () => {
     coachLine: 'You showed up 4 times, set 2 PRs and held your target, and recovered well. Textbook week.',
     // include an 'On target' ✓ stat so the vector drawCheck() path is exercised.
     weeklyStats: [{ label: 'PRs', value: '2' }, { label: 'Sessions', value: '4/4' }, { label: 'Recovery', value: 'Strong' }, { label: 'On target', value: '✓' }],
+    bestLift: { exerciseName: 'Bench Press', weight: 100, reps: 5, isNewBest: true, gainKg: 2.5 },
   };
 
   test.each([

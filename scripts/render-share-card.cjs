@@ -52,7 +52,8 @@ async function main() {
   const weekly = {
     cardType: 'weekly', weekLabel: 'Week 4', dateFormatted: 'Sun · 22 Jun 2026', showDate: true,
     tierLabel: 'Textbook Week',
-    coachLine: 'You showed up 4 times, set 2 PRs and held your target, and recovered well. Textbook week.',
+    coachLine: 'You hit all 4 sessions, set 2 new PRs, your weight stayed on target and recovery was strong.',
+    bestLift: { exerciseName: 'Barbell Bench Press', weight: 100, reps: 5, isNewBest: true, gainKg: 2.5 },
     stats: [{ label: 'PRs', value: '2' }, { label: 'Sessions', value: '4/4' }, { label: 'Recovery', value: 'Strong' }, { label: 'On target', value: '✓' }],
   };
 
