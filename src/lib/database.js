@@ -4744,8 +4744,11 @@ export async function getBestLiftThisWeek(userId, weekStart) {
   if (!weekSets.length) return null;
 
   const priorRows = await d.getAllAsync(
+    // NULLIF(...,0) so a 0-rep set floors to 1 rep, matching pickBestLift's
+    // JS e1RM on the week side — otherwise the same set scores ~3% higher this
+    // week than as a prior best and falsely reads as a new best.
     `SELECT ws.exercise_id AS exerciseId,
-            MAX(ws.weight * (1.0 + COALESCE(ws.actual_reps, 1) / 30.0)) AS priorE1rm
+            MAX(ws.weight * (1.0 + COALESCE(NULLIF(ws.actual_reps, 0), 1) / 30.0)) AS priorE1rm
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
      WHERE ws.user_id = ? AND w.is_completed = 1
