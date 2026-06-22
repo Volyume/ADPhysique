@@ -120,11 +120,12 @@ function makeFonts(Skia, typefaces, s) {
   };
 }
 
-// Shrink a heavy font until `str` fits `maxW` (for the big hero numbers).
-function fitFont(font, str, maxW, startPx, makeAt) {
+// Shrink a font until `str` fits `maxW`. `minPx` floors the shrink (default 24,
+// suited to the big hero numbers; pass a lower floor for small labels).
+function fitFont(font, str, maxW, startPx, makeAt, minPx = 24) {
   let px = startPx;
   let f = makeAt(px);
-  while (measure(f, str) > maxW && px > 24) { px -= 6; f = makeAt(px); }
+  while (measure(f, str) > maxW && px > minPx) { px -= 6; f = makeAt(px); }
   return f;
 }
 
@@ -418,9 +419,12 @@ function drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark) {
     text(canvas, Skia, p.hero.value, W / 2, heroBaseline, phFont, PALETTE.accent, 'center');
     // Clear the numeral's descenders (e.g. the "g" in "kg") before the label.
     y = heroBaseline + Math.round(phFont.getSize() * 0.24) + Math.round((p.isSquare ? 16 : 22) * s);
-    const heroLabel = [p.hero.heading, p.hero.context].filter(Boolean).join(' · ');
+    const heroLabel = [p.hero.heading, p.hero.context].filter(Boolean).join(' · ').toUpperCase();
     if (heroLabel) {
-      text(canvas, Skia, heroLabel.toUpperCase(), W / 2, y, font(p.isSquare ? 18 : 24), PALETTE.textSecondary, 'center');
+      // Fit to width: the heading can be an arbitrary exercise name (best-lift
+      // hero), so shrink before it would overflow.
+      const lblFont = fitFont(null, heroLabel, W - pad * 2, p.isSquare ? 18 : 24, (px) => font(px), 12);
+      text(canvas, Skia, heroLabel, W / 2, y, lblFont, PALETTE.textSecondary, 'center');
       y += Math.round((p.isSquare ? 50 : 62) * s);
     }
   }
