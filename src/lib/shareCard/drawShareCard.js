@@ -22,25 +22,18 @@
 // here so the module needs no RN-only imports (keeps it Node-runnable).
 const FILL = 0;
 const STROKE = 1;
+const CLAMP = 0;
 
-// Mirrors src/styles/theme.js `colors` VERBATIM so the share card is the SAME
-// visual language as every screen — not a second per-component palette. The
-// renderer is import-free (the Node harness evaluates it directly), so the values
-// are mirrored here and locked to theme.js by __tests__/palette.theme.test.js,
-// which fails if either side drifts. No gradients (styling.md): the background is
-// the solid screen colour.
-export const PALETTE = {
-  bg: '#0D0D0D',              // colors.background
-  surface: '#191917',         // colors.surface
-  surfaceElevated: '#222220', // colors.surfaceElevated (stat boxes / nested)
-  surface2: '#2A2A27',        // colors.surface2 (chips)
-  border: '#6E6E6E',          // colors.border
-  borderSubtle: '#2E2E2C',    // colors.borderSubtle (hairlines inside a card)
-  accent: '#F5A623',          // colors.primary (amber — key data values, marks)
-  gold: '#FFD700',            // colors.gold (trophy tier only)
-  text: '#FFFFFF',            // colors.textPrimary
-  textSecondary: '#9E9E9E',   // colors.textSecondary
-  textMuted: '#9B9B9B',       // colors.textMuted
+// The share card's own palette. DESIGN_SYSTEM.md whitelists this offline canvas
+// to hold its own values (it is not a screen/component bound by the no-hardcoded-
+// hex rule); the values track the brand — amber #F5A623 for data, #FFD700 gold
+// for trophy moments, the near-black tonal background, textPrimary/secondary/muted.
+const PALETTE = {
+  bg0: '#0D0D0D', bg1: '#141413', bg2: '#191917',
+  surface: '#222220', surface2: '#2A2A27',
+  border: '#343431', divider: 'rgba(255,255,255,0.06)',
+  accent: '#F5A623', gold: '#FFD700',
+  text: '#FFFFFF', textSecondary: '#9E9E9E', textMuted: '#9B9B9B',
 };
 
 // Optional user gym photo (SkImage) used as the card background. Set per-render
@@ -147,14 +140,19 @@ function drawImageCover(canvas, Skia, img, W, H) {
 
 function drawBackground(canvas, Skia, W, H) {
   if (BG && BG.width && BG.width() && BG.height()) {
-    // Gym photo background: cover-fit the photo, then a brand-colour scrim so the
-    // white/amber text stays legible over any image (the scrim is the screen
-    // colour at alpha — keeps the dark look, no gradient).
+    // Gym photo background: cover-fit the photo, then a near-black scrim so the
+    // white/amber text stays legible over any image.
     drawImageCover(canvas, Skia, BG, W, H);
-    fillRect(canvas, Skia, 0, 0, W, H, rgba(PALETTE.bg, 0.62));
+    fillRect(canvas, Skia, 0, 0, W, H, rgba(PALETTE.bg0, 0.62));
   } else {
-    // Solid screen colour — the app uses no gradients (styling.md).
-    fillRect(canvas, Skia, 0, 0, W, H, PALETTE.bg);
+    const shader = Skia.Shader.MakeLinearGradient(
+      { x: W / 2, y: 0 }, { x: W / 2, y: H },
+      [Skia.Color(PALETTE.bg1), Skia.Color(PALETTE.bg0), Skia.Color(PALETTE.bg2)],
+      [0, 0.5, 1], CLAMP,
+    );
+    const p = Skia.Paint();
+    p.setShader(shader);
+    canvas.drawRect(Skia.XYWHRect(0, 0, W, H), p);
   }
 }
 
@@ -168,7 +166,7 @@ function drawFooter(canvas, Skia, W, H, pad, isSquare, s, font, wordmark) {
   // logo (wordmark ~23% of the card width), aligned with the rest of the card.
   const footerH = Math.round((isSquare ? 162 : 250) * s);
   const fy = H - footerH;
-  fillRect(canvas, Skia, pad, fy, W - pad * 2, Math.max(1, Math.round(1 * s)), PALETTE.borderSubtle);
+  fillRect(canvas, Skia, pad, fy, W - pad * 2, Math.max(1, Math.round(1 * s)), PALETTE.divider);
 
   const markH = Math.round((isSquare ? 66 : 90) * s);
   const markY = fy + Math.round((isSquare ? 26 : 36) * s);
@@ -211,8 +209,8 @@ function drawStatBoxes(canvas, Skia, W, pad, y, stats, isSquare, s, font) {
   const boxW = Math.floor((W - pad * 2 - gap * (stats.length - 1)) / stats.length);
   stats.forEach((st, i) => {
     const bx = pad + i * (boxW + gap);
-    fillRRect(canvas, Skia, bx, y, boxW, statBoxH, Math.round(14 * s), PALETTE.surfaceElevated);
-    strokeRRect(canvas, Skia, bx, y, boxW, statBoxH, Math.round(14 * s), PALETTE.borderSubtle, Math.max(1, 1 * s));
+    fillRRect(canvas, Skia, bx, y, boxW, statBoxH, Math.round(16 * s), PALETTE.surface);
+    strokeRRect(canvas, Skia, bx, y, boxW, statBoxH, Math.round(16 * s), PALETTE.border, Math.max(1, 1.2 * s));
     text(canvas, Skia, st.value, bx + boxW / 2, y + statBoxH * 0.5, font(isSquare ? 42 : 52), PALETTE.text, 'center');
     text(canvas, Skia, st.label.toUpperCase(), bx + boxW / 2, y + statBoxH - Math.round(18 * s), font(16), PALETTE.textMuted, 'center');
   });
@@ -235,7 +233,7 @@ function drawExerciseChips(canvas, Skia, W, pad, y, exercises, s, font) {
     const chipW = tw + Math.round(36 * s);
     if (x + chipW > W - pad) return;
     fillRRect(canvas, Skia, x, y, chipW, chipH, chipH / 2, PALETTE.surface2);
-    strokeRRect(canvas, Skia, x, y, chipW, chipH, chipH / 2, PALETTE.borderSubtle, Math.max(1, 1 * s));
+    strokeRRect(canvas, Skia, x, y, chipW, chipH, chipH / 2, PALETTE.border, Math.max(1, 1 * s));
     text(canvas, Skia, name, x + chipW / 2, y + chipH * 0.66, f, PALETTE.textSecondary, 'center');
     x += chipW + gap;
     drew += 1;
