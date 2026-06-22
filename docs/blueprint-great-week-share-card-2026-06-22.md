@@ -1,6 +1,6 @@
 # BLUEPRINT — "Great Week" Precision Coaching recap → share card
 
-**Date:** 2026-06-22 · **Status:** RESEARCH + DESIGN (not built) · **Branch:** `claude/audit-work-quality-review-benrin`
+**Date:** 2026-06-22 · **Status:** BUILT (Phase 1 + Phase 2 + gym-photo) — see §12 BUILD STATUS & RECONCILIATION · **Branch:** `claude/audit-work-quality-review-benrin`
 **Origin:** founder request 2026-06-22 — "when a user has a great weekly check-in (PRs, on-target
 progress, good feedback), give them a shareable moment to celebrate and advertise the app."
 
@@ -200,3 +200,49 @@ shareable card leads with process/competence wins, frames weight qualitatively a
 on-target" (numbers private by default), is strictly self-referential, never rewards overshoot, and
 makes sharing a low-pressure, autonomous choice — and it plugs into the share-card renderer we
 already have.
+
+---
+
+## 12. BUILD STATUS & RECONCILIATION (2026-06-22)
+
+Reconciliation of what was actually built today against this blueprint. All on
+`claude/audit-work-quality-review-benrin`; `npm run lint && npm test` green (288 suites / ~4446 tests).
+This is the TODAY (22/06/2026) Great Week share-card task — unrelated to the 06-21 says-vs-does audit
+or the ultimate audit.
+
+### DONE — Phase 1 (weekly recap)
+- Blueprint (`3e6697e`). Trigger `isGreatWeek` + ED-safe param builder `src/lib/shareCard/greatWeek.js`
+  (`872cc3e`). Screens wired: opt-in "Share your week" CTA on `CoachOutputScreen` → `ShareCardScreen`
+  → `'weekly'` branch in `drawShareCard.js` (`cfdf575`, `35c3427`). Best-lift hero, app voice,
+  square-only, user-unit (`ebc1f83`, `5548a99`, `1b1b2ec`).
+- **DECISION CHANGE (founder, mid-build) — supersedes §6's qualitative-only rule:** the card LEADS
+  WITH THE REAL ACHIEVEMENT, not a tick. Cut goals → weight lost as the hero, explicitly labelled
+  ("WEIGHT LOST THIS WEEK · RIGHT ON TARGET"); non-cut goals → best lift / PRs as the hero. Still gated
+  to a safe, on-target week and fully stripped under an ED-flag / calm mode (`596e460`, `27318e3`,
+  `6328f7c`).
+
+### DONE — Phase 2 (premium milestones)
+- Perfect-month detector + card, lifetime-tonnage landmark, premium-streak card; CTAs on
+  `AnalyticsScreen`; fire-once seen-records (`c8aa972`, `527cc1c`). Fixes: tonnage NULL guard,
+  persist-until-tapped CTAs, PR-badge tofu glyph, hero-label overflow fit (`527cc1c`, `2254e1a`,
+  `d5fcdb7`).
+
+### DONE — Phase 3 (variety, partial)
+- Gym-photo background for ALL card types (cover-fit + brand scrim); picker wired into the screen
+  (`094ccfb`). Light/multi themes NOT built — they violate the dark-only design standard
+  (`DESIGN_SYSTEM.md`); deliberately rejected.
+
+### CORRECTED (overhaul/thrash that was reverted)
+- A mid-session "conform to theme.js" pass wrongly stripped the SHIPPED baseline card design (the
+  tonal gradient background, the card palette) and added then removed an AI-looking glow + star.
+  Reverted to the shipped baseline (`4c77353`); only the genuine new work (weekly recap, milestones,
+  gym photo) was kept. The existing session/PR/milestone cards are back to their pre-today shipped look.
+
+### WHAT REMAINS (not built — needs founder input or a device)
+- **Open product decisions (§10):** tier label wording (currently "Textbook Week" / "Textbook Month"),
+  weekly cadence/ritual, and Pro-gating confirmation.
+- **Device-walk only:** the gym-photo picker uses `expo-image-picker` (a native module) — it runs only
+  in a real build; the render path is verified via `scripts/render-share-card.cjs`.
+- **Founder review + merge:** all work sits on the audit branch; not merged.
+
+### STATUS: BUILT + TESTED. Awaiting founder review, the open §10 decisions, and a device-walk.
