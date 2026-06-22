@@ -268,7 +268,7 @@ export default function ShareCardScreen({ route }) {
     } else if (p.cardType === 'weekly') {
       const rows = (p.stats || []).map((s) => stat(s.label, s.value)).join('');
       const prog = p.progress && p.progress.value
-        ? stat(p.progress.label || 'this week', p.progress.value)
+        ? stat(p.progress.heading || 'weight lost this week', p.progress.value)
         : '';
       const bl = p.bestLift;
       const liftLine = (bl && bl.weight)

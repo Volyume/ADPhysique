@@ -5,6 +5,7 @@ import { isGreatWeek, buildWeeklyRecapParams, GREAT_WEEK_HEADLINE } from '../gre
 function out(over = {}) {
   return {
     hasEnoughData: true,
+    goalPhase: 'mod_cut',
     trend: { onTarget: true, delta: -0.7, deltaLabel: '-0.7kg this week', rateLabel: 'losing 0.7kg/wk' },
     sessionsPlanned: 4,
     sessionsCompleted: 4,
@@ -68,17 +69,25 @@ describe('buildWeeklyRecapParams — ED-safe by construction', () => {
     expect(p.weekLabel).toBe('Week 4');
   });
 
-  test('the hero is the REAL weight change when safe + on target (founder correction)', () => {
-    const p = buildWeeklyRecapParams(out({ trend: { onTarget: true, delta: -0.8 } }));
-    expect(p.progress).toEqual({ value: '-0.8 kg', label: 'this week · on target' });
-    // The coach line names the real number too.
+  test('a cut that lost weight on target shows the labelled hero (heading + magnitude + status)', () => {
+    const p = buildWeeklyRecapParams(out({ goalPhase: 'mod_cut', trend: { onTarget: true, delta: -0.8 } }));
+    // Magnitude only (no bare sign), with an explicit heading so it is never ambiguous.
+    expect(p.progress).toEqual({ heading: 'weight lost this week', value: '0.8 kg', context: 'right on target' });
     expect(p.coachLine).toMatch(/lost 0\.8 kg/);
   });
 
-  test('a gain shows with a + sign; the unit follows the user (lbs)', () => {
-    const gain = buildWeeklyRecapParams(out({ trend: { onTarget: true, delta: 0.4 } }), { units: 'lbs' });
-    expect(gain.progress.value).toBe('+0.4 lbs');
-    expect(gain.coachLine).toMatch(/gained 0\.4 lbs/);
+  test('the unit follows the user (lbs)', () => {
+    const p = buildWeeklyRecapParams(out({ goalPhase: 'mild_cut', trend: { onTarget: true, delta: -0.7 } }), { units: 'lbs' });
+    expect(p.progress.value).toBe('0.7 lbs');
+    expect(p.coachLine).toMatch(/lost 0\.7 lbs/);
+  });
+
+  test('weight is shown ONLY for a cut goal — a bulk never puts a scale number on the card', () => {
+    const bulk = buildWeeklyRecapParams(out({ goalPhase: 'mod_bulk', trend: { onTarget: true, delta: 0.4 } }));
+    expect(bulk.progress).toBeNull();
+    expect(bulk.coachLine).not.toMatch(/lost|gained|kg/);
+    const maint = buildWeeklyRecapParams(out({ goalPhase: 'maint', trend: { onTarget: true, delta: 0 } }));
+    expect(maint.progress).toBeNull();
   });
 
   test('off-target never reaches the card (no progress hero)', () => {

@@ -64,16 +64,6 @@ export function isGreatWeek(output) {
   return { great, reasons };
 }
 
-// Format a signed weekly weight change as the card's hero value, e.g. "-0.7 kg"
-// / "+0.4 kg". ASCII hyphen (not a typographic minus) so it can never render as
-// a missing-glyph box on a system font.
-function formatDelta(delta, u) {
-  const a = Math.round(Math.abs(delta) * 10) / 10;
-  if (delta > 0.01) return `+${a} ${u}`;
-  if (delta < -0.01) return `-${a} ${u}`;
-  return `0 ${u}`;
-}
-
 /**
  * Build the params the weekly-recap card renderer consumes.
  *
@@ -108,9 +98,18 @@ export function buildWeeklyRecapParams(output, { suppress = false, includeProgre
   // The real weight achievement is the hero — shown when on target, not
   // safety-suppressed, and not toggled off. (The card only fires on-target, so
   // this never celebrates overshoot.) Progress language follows the same gate.
-  const showProgress = hasWeight && onTarget && !suppress && includeProgress;
+  // Weight is celebrated ONLY when the goal is a cut and the week actually lost
+  // weight on target (founder 2026-06-22): a number with no heading is
+  // meaningless, and a cut is the only goal where the scale moving down IS the
+  // win. So the hero gets an explicit heading ("weight lost this week") + the
+  // magnitude ("0.7 kg") + the goal status ("right on target"). Bulk/recomp/
+  // maintenance never put a scale number on the card.
+  const isCut = /cut/i.test(String(o.goalPhase || ''));
+  const lostWeight = delta < -0.01;
+  const showProgress = hasWeight && onTarget && isCut && lostWeight && !suppress && includeProgress;
+  const abs = Math.round(Math.abs(delta) * 10) / 10;
   const progress = showProgress
-    ? { value: formatDelta(delta, u), label: 'this week · on target' }
+    ? { heading: 'weight lost this week', value: `${abs} ${u}`, context: 'right on target' }
     : null;
 
   const stats = [];

@@ -444,16 +444,22 @@ function drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark) {
   });
   y += Math.round(20 * s);
 
-  // HERO: the real weight achievement, big and gold, with a soft glow.
+  // HERO: the real weight achievement — an explicit heading so the number is
+  // never bare, then the big gold magnitude, then the goal status. Cut-only;
+  // greatWeek.js drops it for every other goal and under suppress.
   if (p.progress && p.progress.value) {
-    const phFont = fitFont(null, p.progress.value, W - pad * 2, p.isSquare ? 150 : 190, (px) => font(px));
+    if (p.progress.heading) {
+      text(canvas, Skia, String(p.progress.heading).toUpperCase(), W / 2, y + Math.round((p.isSquare ? 22 : 28) * s), font(p.isSquare ? 22 : 28), PALETTE.textSecondary, 'center');
+      y += Math.round((p.isSquare ? 46 : 58) * s);
+    }
+    const phFont = fitFont(null, p.progress.value, W - pad * 2, p.isSquare ? 140 : 180, (px) => font(px));
     const heroBaseline = y + phFont.getSize();
     drawGlow(canvas, Skia, W / 2, y + phFont.getSize() * 0.5, Math.round((p.isSquare ? 380 : 460) * s), PALETTE.gold);
     text(canvas, Skia, p.progress.value, W / 2, heroBaseline, phFont, PALETTE.gold, 'center');
-    y = heroBaseline + Math.round((p.isSquare ? 50 : 64) * s);
-    if (p.progress.label) {
-      text(canvas, Skia, String(p.progress.label).toUpperCase(), W / 2, y, font(p.isSquare ? 20 : 26), PALETTE.textSecondary, 'center');
-      y += Math.round((p.isSquare ? 50 : 64) * s);
+    y = heroBaseline + Math.round((p.isSquare ? 36 : 46) * s);
+    if (p.progress.context) {
+      text(canvas, Skia, String(p.progress.context).toUpperCase(), W / 2, y, font(p.isSquare ? 22 : 28), PALETTE.gold, 'center');
+      y += Math.round((p.isSquare ? 50 : 62) * s);
     }
   }
 
