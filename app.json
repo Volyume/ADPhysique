@@ -33,20 +33,15 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Volyume uses the camera to scan barcodes, read nutrition labels, and take progress photos.",
-        "NSPhotoLibraryUsageDescription": "Used to select and save progress photos",
-        "NSPhotoLibraryAddUsageDescription": "Used to save shared workout cards to your photo library",
         "NSHealthShareUsageDescription": "Volyume reads your weight, daily steps, and completed cardio sessions including heart rate from Apple Health so your logs and trends stay in sync with your watch, scale, or other apps. Read only.",
         "NSHealthUpdateUsageDescription": "Volyume writes completed workouts to Apple Health so your weekly activity stays accurate across your other apps.",
         "NSMotionUsageDescription": "Volyume uses motion sensing for the shake-to-send-feedback gesture. Steps now come from Apple Health, not the phone's motion sensor.",
-        "NSLocationWhenInUseUsageDescription": "Volyume does not track your location. This entry is required by a bundled camera library and the permission is never requested.",
         "NSMicrophoneUsageDescription": "Volyume does not record audio. This entry is required by a bundled media library used for timer sounds and the permission is never requested.",
         "NSFaceIDUsageDescription": "Volyume does not use Face ID. This entry is required by the secure storage library that keeps your sign-in safe on this device.",
         "UIBackgroundModes": [
           "fetch",
           "remote-notification"
-        ],
-        "NSSupportsLiveActivities": true,
-        "NSSupportsLiveActivitiesFrequentUpdates": true
+        ]
       },
       "privacyManifests": {
         "NSPrivacyAccessedAPITypes": [
@@ -63,7 +58,7 @@
         "backgroundColor": "#0D0D0D"
       },
       "package": "app.volyume",
-      "versionCode": 13,
+      "versionCode": 14,
       "allowBackup": false,
       "permissions": [
         "android.permission.CAMERA",
