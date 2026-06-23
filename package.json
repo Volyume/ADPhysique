@@ -127,6 +127,13 @@
     }
   },
   "expo": {
+    "autolinking": {
+      "apple": {
+        "exclude": [
+          "@react-native-google-signin/google-signin"
+        ]
+      }
+    },
     "install": {
       "exclude": [
         "@sentry/react-native"
