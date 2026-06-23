@@ -13,6 +13,7 @@ import {
   assembleDayPlanBestOf,
   assembleWeekPlan,
   diagnoseDayPlan,
+  dayScore,
 } from '../mealPlanAssembler';
 import { roleOf } from '../foodRoles';
 
@@ -73,33 +74,27 @@ describe('assembleDayPlanBestOf — local search by restart (P-3)', () => {
     const hard = { kcal: 1400, proteinG: 200, carbsG: 40, fatG: 30 };
     const hardBand = { kcalMin: 1260, kcalMax: 1540 };
     const mk = (seed) => ({ target: hard, band: hardBand, prefs: { mealsPerDay: 3 }, variant: 'rest', seed });
-    const bandMiss = (d) => {
-      const k = d.totals.kcal;
-      return k < hardBand.kcalMin ? hardBand.kcalMin - k : k > hardBand.kcalMax ? k - hardBand.kcalMax : 0;
-    };
-    const score = (d) => (d.withinTolerance ? 0 : 1e9)
-      + (d.unfilledSlots?.length ?? 0) * 1e6
-      + (d.proteinMet ? 0 : 1e5)
-      + bandMiss(d)
-      + (d.fatWithinTolerance ? 0 : 1);
 
     let everImproved = false;
     for (let s = 1; s <= 60; s += 1) {
       const first = assembleDayPlan(mk(s));
-      expect(first.withinTolerance).toBe(false); // loop is reachable: attempt #1 misses
       const best = assembleDayPlanBestOf(mk(s));
-      expect(score(best)).toBeLessThanOrEqual(score(first)); // never worse
-      if (score(best) < score(first)) everImproved = true;
+      // best-of minimises dayScore (structure, then macro tightness), so the
+      // chosen day is never worse than attempt #1 by that contract.
+      expect(dayScore(best, hardBand)).toBeLessThanOrEqual(dayScore(first, hardBand) + 1e-9);
+      if (dayScore(best, hardBand) < dayScore(first, hardBand) - 1e-9) everImproved = true;
     }
     expect(everImproved).toBe(true); // the restart genuinely rescues some close-miss days
   });
 
-  test('an already-tolerant first build is returned unchanged (no needless work)', () => {
-    const first = assembleDayPlan(args());
-    const best = assembleDayPlanBestOf(args());
-    if (first.withinTolerance) {
-      expect(best.totals).toEqual(first.totals);
-      expect(best.slots.map((s) => s.mealId)).toEqual(first.slots.map((s) => s.mealId));
+  test('best-of is never worse than the first attempt by macro tightness', () => {
+    // Best-of now keeps searching for the macro-tightest day rather than stopping
+    // at the first that scrapes the band — so it may differ from attempt #1, but
+    // it can never score worse (dayScore = structure, then summed macro deviation).
+    for (let s = 1; s <= 12; s += 1) {
+      const first = assembleDayPlan(args({ seed: s }));
+      const best = assembleDayPlanBestOf(args({ seed: s }));
+      expect(dayScore(best, BAND)).toBeLessThanOrEqual(dayScore(first, BAND) + 1e-9);
     }
   });
 });

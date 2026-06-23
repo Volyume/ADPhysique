@@ -25,8 +25,8 @@
 import { CURATED_MEALS, mealItems, mealTotals } from './curatedMeals';
 import { fitScore, perMealMacros, slotMatches } from './mealSuggest';
 import { normalisePreferences, filterMealsByPreferences } from './planPreferences';
-import { roleOf } from './foodRoles';
-import { solveGramsForKcal, clampRoundGrams } from './gramSolve';
+import { roleOf, gramRangeOf } from './foodRoles';
+import { solveGramsForKcal } from './gramSolve';
 import { within, ADHERENCE_TOLERANCE } from './adherence';
 
 const KCAL_C = 4;
@@ -547,92 +547,87 @@ export function assembleDayPlan({
     }
     return g;
   };
-  let guard = closeKcal();
+  // Initial calorie close-out (a warm start before the precision solver).
+  const guard = closeKcal();
 
-  // ── Macro balance (founder 2026-06-20): the kcal close-out fixes calories
-  // only, and the greedy fitScore MAXIMISES protein while ignoring carbs, so days
-  // land protein-heavy and carb-light at the right calories (measured: +38g P /
-  // -41g C on a 227/321 day). Trade protein-staple grams DOWN for carb-staple
-  // grams UP, holding kcal roughly constant, while protein is well over target
-  // AND carbs well under. Per-food clamps cap it; saved meals (no components) are
-  // fixed blocks and untouched; a final closeKcal re-tightens any kcal drift.
-  const staplesOfRole = (role) => {
-    const list = [];
-    placed.forEach((p, pi) => {
-      if (!p.components) return;
-      p.components.forEach((c, ci) => { if (roleOf(c.food) === role) list.push({ pi, ci, c }); });
+  // ── Macro precision solver (founder 2026-06-23: hold all macros to ~1%) ─────
+  // Replaces the old coarse 5 g protein↔carb trade (which left days protein-heavy
+  // / carb-light). Each free staple's grams is a variable; we minimise the summed
+  // squared %-deviation across kcal/protein/carbs/fat. The objective is a convex
+  // quadratic (sum of squares of linear terms), so an analytic per-variable 1-D
+  // minimum, swept a few times at 1 g resolution and clamped to each food's sane
+  // range, converges to the tightest split the fixed food pool allows. Saved
+  // meals (no components) and pins are untouched. NB fat can remain >1% when 1%
+  // is sub-gram for the chosen foods — that is whole-food granularity, not the
+  // solver.
+  const solveStaples = [];
+  placed.forEach((p, pi) => {
+    if (!p.components) return;
+    p.components.forEach((c, ci) => {
+      const item = p.items[ci];
+      if (!(item.kcal > 0) || c.g <= 0) return;
+      const per = { // per-GRAM macros
+        kcal: item.kcal / c.g, protein: item.proteinG / c.g,
+        carbs: item.carbsG / c.g, fat: item.fatG / c.g,
+      };
+      const [lo, hi] = gramRangeOf(c.food);
+      solveStaples.push({ pi, ci, per, lo, hi, g: c.g });
     });
-    return list.sort((a, b) => b.c.g - a.c.g);
-  };
-  const setStapleGrams = (pi, ci, newG) => {
-    const p = placed[pi];
-    const item = p.items[ci];
-    const g0 = p.components[ci].g;
-    if (newG === g0 || g0 <= 0) return false;
-    const per100 = {
-      kcal: (item.kcal / g0) * 100, protein: (item.proteinG / g0) * 100,
-      carbs: (item.carbsG / g0) * 100, fat: (item.fatG / g0) * 100,
-    };
-    const f = (newG - g0) / 100;
-    consumed = {
-      kcal: r0(consumed.kcal + per100.kcal * f),
-      protein: r1(consumed.protein + per100.protein * f),
-      carbs: r1(consumed.carbs + per100.carbs * f),
-      fat: r1(consumed.fat + per100.fat * f),
-    };
-    const newItems = p.items.map((it, i) => (i === ci ? {
-      ...it, quantityG: newG,
-      kcal: r0(per100.kcal * (newG / 100)), proteinG: r1(per100.protein * (newG / 100)),
-      carbsG: r1(per100.carbs * (newG / 100)), fatG: r1(per100.fat * (newG / 100)),
-    } : it));
-    placed[pi] = {
-      ...p, items: newItems,
-      components: p.components.map((cc, i) => (i === ci ? { ...cc, g: newG } : cc)),
-      totals: mealTotals(newItems),
-    };
-    return true;
-  };
-  const PROT_OVER_TOL = 5;
-  const CARB_UNDER_TOL = 5;
-  const FAT_UNDER_TOL = 3;
-  const canGrow = (role) => !!staplesOfRole(role).find(({ c }) => clampRoundGrams(c.g + 5, c.food) > c.g);
-  const growRoleByKcal = (role, kcalAdd) => {
-    if (kcalAdd <= 0) return;
-    const s = staplesOfRole(role).find(({ c }) => clampRoundGrams(c.g + 5, c.food) > c.g);
-    if (!s) return;
-    const item = placed[s.pi].items[s.ci];
-    const per100Kcal = (item.kcal / s.c.g) * 100;
-    if (per100Kcal > 0) setStapleGrams(s.pi, s.ci, clampRoundGrams(s.c.g + (kcalAdd / per100Kcal) * 100, s.c.food));
-  };
-  let bguard = 0;
-  while (consumed.protein > want.protein + PROT_OVER_TOL
-    && (consumed.carbs < want.carbs - CARB_UNDER_TOL || consumed.fat < want.fat - FAT_UNDER_TOL)
-    && bguard < 40) {
-    bguard += 1;
-    // Largest reducible protein staple; abort if the freed kcal has nowhere to
-    // go (no carb/fat headroom) so the trade can never drop kcal below target.
-    const pc = staplesOfRole('protein').find(({ c }) => clampRoundGrams(c.g - 5, c.food) < c.g);
-    if (!pc || (!canGrow('carb') && !canGrow('fat'))) break;
-    const pItem = placed[pc.pi].items[pc.ci];
-    const pPer100Prot = (pItem.proteinG / pc.c.g) * 100;
-    const pPer100Kcal = (pItem.kcal / pc.c.g) * 100;
-    if (!(pPer100Prot > 0)) break;
-    const newProtG = clampRoundGrams(pc.c.g - ((consumed.protein - want.protein) / pPer100Prot) * 100, pc.c.food);
-    if (newProtG >= pc.c.g) break;
-    const kcalFreed = ((pc.c.g - newProtG) / 100) * pPer100Kcal;
-    setStapleGrams(pc.pi, pc.ci, newProtG);
-    // Refill the freed kcal into whichever macros are still under target (carbs
-    // and/or fat, split by deficit), so trimming protein tops them up rather
-    // than starving fat.
-    const carbNeedK = Math.max(0, want.carbs - consumed.carbs) * KCAL_C;
-    const fatNeedK = Math.max(0, want.fat - consumed.fat) * KCAL_F;
-    const totalNeed = carbNeedK + fatNeedK;
-    if (totalNeed <= 0) { growRoleByKcal('carb', kcalFreed); continue; }
-    growRoleByKcal('carb', kcalFreed * (carbNeedK / totalNeed));
-    growRoleByKcal('fat', kcalFreed * (fatNeedK / totalNeed));
+  });
+  if (solveStaples.length) {
+    // kcal + protein are the hard gates, so weight them a touch higher.
+    const terms = [
+      { key: 'kcal', want: want.kcal, w: 2 },
+      { key: 'protein', want: want.protein, w: 1.5 },
+      { key: 'carbs', want: want.carbs, w: 1.2 },
+      { key: 'fat', want: want.fat, w: 1 },
+    ].filter((t) => t.want > 0);
+    const cur = { kcal: consumed.kcal, protein: consumed.protein, carbs: consumed.carbs, fat: consumed.fat };
+    for (let sweep = 0; sweep < 16; sweep += 1) {
+      let moved = false;
+      for (const st of solveStaples) {
+        // total_m(x) = base_m + per_m·x, base_m = cur_m − per_m·g.
+        // minimise Σ w·((base+per·x − want)/want)²  →  x* = −Σ[coef·(base−want)] / Σ[coef·per]
+        // with coef = w·per/want².
+        let num = 0; let den = 0;
+        for (const t of terms) {
+          const base = cur[t.key] - st.per[t.key] * st.g;
+          const coef = (t.w * st.per[t.key]) / (t.want * t.want);
+          num += coef * (base - t.want);
+          den += coef * st.per[t.key];
+        }
+        if (!(den > 0)) continue;
+        let x = Math.round(-num / den);
+        if (x < st.lo) x = st.lo; else if (x > st.hi) x = st.hi;
+        if (x !== st.g) {
+          for (const t of terms) cur[t.key] += st.per[t.key] * (x - st.g);
+          st.g = x;
+          moved = true;
+        }
+      }
+      if (!moved) break;
+    }
+    // Write solved grams back; recompute consumed from the actual placed totals
+    // (the source of truth, including any fixed saved-meal blocks).
+    solveStaples.forEach((st) => {
+      const p = placed[st.pi];
+      const g = st.g;
+      const newItems = p.items.map((it, i) => (i === st.ci ? {
+        ...it, quantityG: g,
+        kcal: r0(st.per.kcal * g), proteinG: r1(st.per.protein * g),
+        carbsG: r1(st.per.carbs * g), fatG: r1(st.per.fat * g),
+      } : it));
+      placed[st.pi] = {
+        ...p, items: newItems,
+        components: p.components.map((cc, i) => (i === st.ci ? { ...cc, g } : cc)),
+        totals: mealTotals(newItems),
+      };
+    });
+    consumed = placed.reduce((acc, p) => ({
+      kcal: r0(acc.kcal + p.totals.kcal), protein: r1(acc.protein + p.totals.protein),
+      carbs: r1(acc.carbs + p.totals.carbs), fat: r1(acc.fat + p.totals.fat),
+    }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
   }
-  // Re-tighten calories after the protein/carb/fat trade.
-  guard += closeKcal();
 
   const residual = {
     kcal: r0(want.kcal - consumed.kcal),
@@ -705,7 +700,7 @@ export function assembleDayPlan({
 // every candidate is a full assembleDayPlan output, so all band / floor / protein
 // invariants are re-evaluated and preserved. The retries only run on a close-miss,
 // so the common (already-good) path pays nothing.
-const LOCAL_SEARCH_ATTEMPTS = 4;
+const LOCAL_SEARCH_ATTEMPTS = 12;
 
 function dayBandMiss(day, band) {
   const kcal = day?.totals?.kcal ?? 0;
@@ -719,21 +714,33 @@ function dayBandMiss(day, band) {
 // Lower is better. within-tolerance dominates, then a complete day (no unfilled
 // slots), then protein met (the hard gate), then closeness to the kcal band, then
 // a tiny fat tiebreak.
-function dayScore(day, band) {
-  return (day.withinTolerance ? 0 : 1e9)
-    + (day.unfilledSlots?.length ?? 0) * 1e6
-    + (day.proteinMet ? 0 : 1e5)
-    + dayBandMiss(day, band)
-    + (day.fatWithinTolerance ? 0 : 1);
+export function dayScore(day, band) {
+  // Lower is better. Structural failures dominate (an unfilled slot, then a
+  // protein shortfall); below that the ranker is MACRO TIGHTNESS — the summed
+  // |residual|/target across all four macros — so best-of returns the day whose
+  // macros land closest to target (founder 2026-06-23), not merely one that
+  // scraped into the ±10% band.
+  const r = day.residual || {};
+  const t = day.totals || {};
+  const wantOf = (k) => (t[k] || 0) + (r[k] || 0);
+  const devSum = ['kcal', 'protein', 'carbs', 'fat'].reduce((s, k) => {
+    const w = wantOf(k);
+    return s + (w > 0 ? Math.abs(r[k] || 0) / w : 0);
+  }, 0);
+  return (day.unfilledSlots?.length ?? 0) * 1e6
+    + (day.proteinMet ? 0 : 1e3)
+    + dayBandMiss(day, band) * 10
+    + devSum;
 }
 
 export function assembleDayPlanBestOf(args = {}, attempts = LOCAL_SEARCH_ATTEMPTS) {
-  const first = assembleDayPlan(args);
-  if (first.withinTolerance || attempts <= 1) return first;
-  let best = first;
-  let bestScore = dayScore(first, args.band);
+  let best = assembleDayPlan(args);
+  if (attempts <= 1) return best;
+  let bestScore = dayScore(best, args.band);
   const baseSeed = Number(args.seed) || 1;
-  for (let a = 1; a < attempts && !best.withinTolerance; a += 1) {
+  // Always run every restart and keep the macro-tightest (per dayScore), rather
+  // than stopping at the first day that merely scrapes the ±10% band.
+  for (let a = 1; a < attempts; a += 1) {
     const cand = assembleDayPlan({ ...args, seed: baseSeed + a * 40503 });
     const score = dayScore(cand, args.band);
     if (score < bestScore) { best = cand; bestScore = score; }
