@@ -405,7 +405,9 @@ export default function ShareCardScreen({ route }) {
         )}
 
         {/* Background — optional gym photo behind any card (kept legible by a
-            brand-colour scrim in the renderer). */}
+            brand-colour scrim in the renderer). Only shown when the native image
+            picker is available in the build. */}
+        {ImagePicker ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Background</Text>
           <View style={styles.segmentRow}>
@@ -425,6 +427,7 @@ export default function ShareCardScreen({ route }) {
             ) : null}
           </View>
         </View>
+        ) : null}
 
         {/* Preview — the exact image that gets shared, scaled down */}
         <View style={styles.section}>
