@@ -204,23 +204,25 @@ export default function ShareCardScreen({ route }) {
     return image ? image.encodeToBase64() : null;
   }, [typefaces, wordmark, buildParams, bgPhoto]);
 
-  // Pick a gym photo from the library to use as the card background (all cards).
-  const pickGymPhoto = useCallback(async () => {
+  // Take a gym photo with the camera to use as the card background (all cards).
+  // Camera capture only — uses the CAMERA permission (same as barcode scanning),
+  // so no photo-library permission is needed.
+  const takeGymPhoto = useCallback(async () => {
     if (!ImagePicker || !Skia || !FileSystem) {
       toast.show('Photo backgrounds need a rebuild with the image-picker package', { variant: 'error', duration: 5000 });
       return;
     }
     try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) { toast.show('Photo access is needed to add a background', { variant: 'warning' }); return; }
-      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9 });
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) { toast.show('Camera access is needed to add a background', { variant: 'warning' }); return; }
+      const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.9 });
       if (res.canceled || !res.assets?.[0]?.uri) return;
       const b64 = await FileSystem.readAsStringAsync(res.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 });
       const img = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBase64(b64));
       if (img) setBgPhoto(img);
-      else toast.show("Couldn't load that photo, try another", { variant: 'error' });
+      else toast.show("Couldn't load that photo, try again", { variant: 'error' });
     } catch (_) {
-      toast.show("Couldn't load that photo, try another", { variant: 'error' });
+      toast.show("Couldn't take that photo, try again", { variant: 'error' });
     }
   }, [toast]);
 
@@ -412,10 +414,10 @@ export default function ShareCardScreen({ route }) {
           <Text style={styles.sectionTitle}>Background</Text>
           <View style={styles.segmentRow}>
             <SegmentBtn
-              label={bgPhoto ? 'Change photo' : 'Add gym photo'}
+              label={bgPhoto ? 'Retake photo' : 'Take gym photo'}
               active={!!bgPhoto}
-              onPress={pickGymPhoto}
-              icon={<Ionicons name="image-outline" size={15} color={bgPhoto ? colors.primary : colors.textMuted} />}
+              onPress={takeGymPhoto}
+              icon={<Ionicons name="camera-outline" size={15} color={bgPhoto ? colors.primary : colors.textMuted} />}
             />
             {bgPhoto ? (
               <SegmentBtn

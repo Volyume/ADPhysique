@@ -107,8 +107,8 @@ jest.mock('expo-document-picker', () => ({
 }), { virtual: true });
 
 jest.mock('expo-image-picker', () => ({
-  launchImageLibraryAsync: jest.fn(() => Promise.resolve({ canceled: true })),
-  requestMediaLibraryPermissionsAsync: jest.fn(() => Promise.resolve({ granted: true })),
+  launchCameraAsync: jest.fn(() => Promise.resolve({ canceled: true })),
+  requestCameraPermissionsAsync: jest.fn(() => Promise.resolve({ granted: true })),
   MediaTypeOptions: { Images: 'Images' },
 }), { virtual: true });
 

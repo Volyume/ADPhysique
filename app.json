@@ -63,7 +63,7 @@
         "backgroundColor": "#0D0D0D"
       },
       "package": "app.volyume",
-      "versionCode": 12,
+      "versionCode": 13,
       "allowBackup": false,
       "permissions": [
         "android.permission.CAMERA",
@@ -75,8 +75,6 @@
         "android.permission.health.READ_WEIGHT",
         "android.permission.health.READ_EXERCISE",
         "android.permission.health.READ_HEART_RATE",
-        "android.permission.health.READ_DISTANCE",
-        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
         "android.permission.health.WRITE_EXERCISE",
         "android.permission.health.WRITE_ACTIVE_CALORIES_BURNED",
         "android.permission.ACTIVITY_RECOGNITION"

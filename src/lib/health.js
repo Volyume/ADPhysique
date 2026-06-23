@@ -204,12 +204,13 @@ export async function requestHealthPermissions(scopes = ['weight']) {
         recordTypes.push({ accessType: 'write', recordType: 'ActiveCaloriesBurned' });
       }
       // Passive cardio import (ULTIMATE-CUX-PCI): READ exercise sessions + the
-      // heart rate / distance / energy attached to them.
+      // average heart rate attached to them. Distance and active-calories are NOT
+      // requested: the Android reader leaves them null (Health Connect exposes
+      // them as separate record types we don't yet consume), so requesting them
+      // would be an unjustified permission under Google Play's health policy.
       if (scopes.includes('cardio')) {
         recordTypes.push({ accessType: 'read', recordType: 'ExerciseSession' });
         recordTypes.push({ accessType: 'read', recordType: 'HeartRate' });
-        recordTypes.push({ accessType: 'read', recordType: 'Distance' });
-        recordTypes.push({ accessType: 'read', recordType: 'ActiveCaloriesBurned' });
       }
       const granted = await HC.requestPermission(recordTypes);
       const grantedCount = Array.isArray(granted) ? granted.length : -1;
