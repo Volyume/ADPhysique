@@ -34,15 +34,8 @@ name: Build iOS (EAS)
 # skip the TestFlight submit. The concurrency guard cancels an in-flight build
 # when a newer push lands, so a superseded commit doesn't sit on a paid runner.
 on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
-      - '.gitignore'
-      - 'LICENSE'
-      - '.ci-status/**'
+  # Manual only: each EAS iOS build costs build credits, so this never auto-runs
+  # on a push. Run it from the Actions tab -> "Build iOS (EAS)" -> Run workflow.
   workflow_dispatch:
     inputs:
       submit:
