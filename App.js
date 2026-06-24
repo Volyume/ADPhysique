@@ -415,15 +415,6 @@ export default function App() {
     if (!privacyLoaded) loadPrivacyPrefs();
   }, [privacyLoaded, loadPrivacyPrefs]);
 
-  // COMP-020: start the Apple Watch bridge (mirrors the active session to the
-  // wrist, applies durable set-events back). No-ops without a paired watch.
-  useEffect(() => {
-    // eslint-disable-next-line global-require
-    const { startWatchBridge, stopWatchBridge } = require('./src/lib/watch/bridge');
-    startWatchBridge();
-    return () => stopWatchBridge();
-  }, []);
-
   useEffect(() => {
     if (prCelebration) getWellbeingMode().then(m => setCalm(isCalm(m)));
   }, [prCelebration]);
