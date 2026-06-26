@@ -286,11 +286,13 @@ Why this is compliant with the four locked decisions:
 ## COMP-030 addendum (2026-06-12) — quiz-first onboarding, behind a flag
 
 Variant B of COMP-030 (quiz-first onboarding) ships behind a local config flag
-`ONBOARDING_QUIZ_FIRST` (`src/lib/onboarding/quizFlow.js`). **FLIPPED ON
-2026-06-12 by explicit founder decision** (deep-audit decisions doc
-`docs/deep-audit-2026-06-12/_FOUNDER-DECISIONS-2026-06-12.md` #3: "flip fully
-on", including the pre-account phase question). The flag remains as the
-rollback switch; the account-first flow is intact behind it.
+`ONBOARDING_QUIZ_FIRST` (`src/lib/onboarding/quizFlow.js`). **TURNED OFF
+2026-06-26 by explicit founder decision** — "Go Pro" must route straight to
+sign-up, not the 8-question quiz + thin plan preview, which undersold Pro and
+broke the Pro flow. The account-first flow is the live path. Was flipped ON
+2026-06-12 (deep-audit decisions doc
+`docs/deep-audit-2026-06-12/_FOUNDER-DECISIONS-2026-06-12.md` #3); the flag and
+screens remain as the rollback switch (set back to `true` to restore).
 
 Reconciliation with decision 1 (no anonymous identity): the flag, when on,
 inserts a pre-account quiz before the account wall, but it creates **no

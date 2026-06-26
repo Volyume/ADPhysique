@@ -16,10 +16,12 @@
  * so it is not special-category data.
  */
 
-// Quiz-first front door is LIVE (founder decision 2026-06-12, deep-audit
-// decisions doc #3: "flip fully on", incl. the pre-account phase question).
-// Reversible: the account-first flow remains fully intact behind this flag.
-export const ONBOARDING_QUIZ_FIRST = true;
+// Quiz-first front door turned OFF (founder decision 2026-06-26): selecting
+// "Go Pro" must go straight to sign-up, not the 8-question pre-account quiz —
+// showing a free-style quiz on the Pro CTA broke the Pro flow. The account-first
+// flow is the live path. Was flipped ON 2026-06-12 (deep-audit decisions doc #3);
+// reversible — set `ONBOARDING_QUIZ_FIRST = true` to restore.
+export const ONBOARDING_QUIZ_FIRST = false;
 
 // The pre-account quiz questions, in order. Options reuse the same source of
 // truth the post-account wizard uses (coachingGoals.js / the equipment list),

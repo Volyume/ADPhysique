@@ -195,6 +195,14 @@ src/navigation/OnboardingNavigator.js (extended with new screens)
 
 ## COMP-030 addendum (2026-06-12) — quiz-first variant, flag-gated
 
+> **REVERSED 2026-06-26 by explicit founder decision: `ONBOARDING_QUIZ_FIRST` is
+> now OFF.** Selecting "Go Pro" must route straight to sign-up/checkout, not the
+> 8-question pre-account quiz — surfacing a free-style quiz on the Pro CTA was
+> illogical and broke the Pro flow. The quiz-first front door is removed from the
+> live flow (the account-first flow is the live path). The flag and screens remain
+> in code as the rollback switch; set `ONBOARDING_QUIZ_FIRST = true` to restore.
+> The 2026-06-12 "flip on" decision below is superseded by this note.
+
 A quiz-first front door (COMP-030 Variant B) is available behind the local flag
 `ONBOARDING_QUIZ_FIRST`. **FLIPPED ON 2026-06-12 by explicit founder decision**
 (`docs/deep-audit-2026-06-12/_FOUNDER-DECISIONS-2026-06-12.md` #3 — "flip fully
