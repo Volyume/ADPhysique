@@ -34,3 +34,13 @@ docs/rules/           Detailed patterns loaded when working in specific areas.
 docs/hooks/           Protection scripts that enforce rules automatically.
   branch-guard.sh     Blocks git operations on main branch.
   billing-guard.sh    Blocks billing file edits without prior confirmation.
+
+## PROJECT REFERENCE DOCS
+
+This README only covers the Claude Code config. For the app itself:
+
+  INFRASTRUCTURE.md       Runtime config, schema, billing, security, build/CI.
+  ARCHITECTURE.md         Deep technical map (data model, business logic, screens).
+  APPMAP.md               Navigation tree + screen inventory (5 tabs, 77 screens).
+  VOLYUME_DEEPMAP.md      Feature inventory.
+  docs/CURRENT_STATUS.md  Current build/feature status.

@@ -1,5 +1,24 @@
 # Volyume current status
 
+> ## ⚠ STALE — predates the June 2026 sprint (banner added 2026-06-26)
+> This doc was verified on **2026-05-29** and has NOT been rewritten since. The
+> app has shipped a large amount of work since then; the body below is a
+> historical snapshot. **For the current state, read the root reference docs,
+> which were reconciled against `main` on 2026-06-26:** `INFRASTRUCTURE.md`
+> (runtime/schema/billing/CI), `ARCHITECTURE.md` (deep technical map),
+> `APPMAP.md` (nav + 77-screen inventory), `VOLYUME_DEEPMAP.md` (feature
+> inventory), and `docs/ultimate-audit-2026-06-13/_AUDIT-STATUS-AND-RESUME.md`
+> (audit/build status).
+>
+> **Headline changes shipped since 2026-05-29:** the full food/diary domain
+> (meal planning with the precision macro solver, barcode + label OCR scanning,
+> recipes, food insights), calorie banking + grocery list, the entire Ultimate
+> Audit Tier-1/2/3 builds + food-function audit, cardio log + passive Apple
+> Health / Health Connect import, training partners, Year-of-Lifts recap +
+> Great-Week share card, native store IAP (Play Billing + StoreKit2 — beta over,
+> `PRO_BETA_ACTIVE = false`), SQLCipher DB encryption, and ~30 more Supabase
+> migrations (now ~088). App is v1.2.0 / iOS build 7 / Android versionCode 14.
+
 Verified against code in `src/` and `supabase/` on 2026-05-29. Supersedes `HANDOFF.md`. This doc is the single trusted reference for what is shipped, what is in progress, and what comes next.
 
 **Update protocol.** Rewritten end-to-end at the end of any session that materially changes shipped state, not appended to. The previous edit cycle broke that rule and the doc developed internal contradictions; this version restarts the discipline.

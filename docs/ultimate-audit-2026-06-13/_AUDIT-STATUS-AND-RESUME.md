@@ -4,6 +4,41 @@ Maintained per CLAUDE.md handover rule. Points to SOURCE files by path; states t
 position against the spec's output structure; records every decision with its rationale. Update this
 file at the end of every working session.
 
+> ## ⚠ STATUS UPDATE (2026-06-26) — read before the rest of this file
+> The Tier-1/2/3 build work below has **shipped to `main`**. The feature branch
+> `claude/audit-work-quality-review-benrin` was **squash-merged and deleted**, so
+> **every commit SHA referenced in this file no longer exists in history** — the
+> shipped state is verified by FILE + WIRING, not by SHA. Verified present and
+> wired in `main`: Tier-1 items **1–6**, unblocked Tier-2 items **7–10**, Tier-3
+> **calorie banking (17)**, and the entire separate **food-function audit
+> (F-1…F-7, P-1…P-7, D-1…D-6)**. No false "DONE" claims were found.
+>
+> **The ONLY remaining Ultimate-Audit work is blocked/decision-gated** (do NOT
+> start without the structured founder decision): items **11–16** — (11) named
+> autonomy modes [NA-coaching-10 safety], (12) raw/cooked toggle [no conversion
+> factor in code — needs a sourced factor], (13) mid-session-swap wording
+> [NA-wr-3, small build after wording], (14) Core-Haptics [NEW dependency], (15)
+> timeline food logging [NA-cux-13/15] — and **(16) micronutrients/NRV** (Q1
+> schema authority RESOLVED at line ~141: migrations canonical → this would be
+> `migrate_088+`; the existing `migrate_088` is `drop_debug_log_open_insert`,
+> unrelated).
+>
+> **Q1 schema authority = RESOLVED** (migrations canonical). The earlier "open"
+> framing near the top of the PASS-1 block is superseded by line ~141.
+>
+> **Branch-policy open item is MOOT** — the `benrin` build branch is squash-merged
+> and gone.
+>
+> **Outstanding founder migration actions (both files present in `supabase/`):**
+> `migrate_087_cardio_log_ext_id.sql` is **pending manual founder apply** to
+> EU-Dublin (never run from the app). `migrate_085_food_quality_telemetry.sql` is
+> on the auto-deploy path (`deploy-migrations.yml`). Incidental cleanup flag: two
+> `migrate_085_*` files exist (number collision) — surface, do not fix unilaterally.
+>
+> The detailed per-session history below is retained verbatim as the record. Its
+> "NEXT" / "BUILD MODE" / "IN PROGRESS" markers are historical; the authoritative
+> current position is THIS banner.
+
 ## SOURCE OF TRUTH
 - Spec (verbatim orchestrator): **`_AUDIT-SPEC.md`** — work from it, never from a summary. Its
   "OUTPUT STRUCTURE" block (lines ~283-300) is the definitive file checklist for every pass.
@@ -306,11 +341,11 @@ file at the end of every working session.
 6. (VOID) photos D1=local-only/D2=Pro — elicited by a forbidden question; not load-bearing.
 
 ## NEXT CORRECT ACTION (do exactly this, from source)
-- Pass 1 ✅, Pass 2 findings-index ✅, Pass 3 ✅ (awaiting founder certification of the Pass-3 gate via
-  `pass3-reconciliation.md`).
-- NEXT: **Pass 4** strictly to `_AUDIT-SPEC.md:206-280` — every Pass-3 gap-id → blueprint / `pass4-deferred.md`
-  / `pass4-no-action.md`; source-tagged; missing facts → `pass4-needs-answer-register.md` (resolve from
-  codebase, NOT by guessing or asking the founder to pick build options); then the Pass-4 exit gate +
-  `pass4-master-priority.md` + `pass4-executive-summary.md`.
-- Carry: Q15 medical-device + barcode pricing = founder-gate deferrals; Pass-1 Q1 schema authority still
-  open (resolve before any data-model blueprint).
+> **Superseded 2026-06-26 — see the STATUS UPDATE banner at the top of this file.**
+> Passes 1–4 are COMPLETE and the Tier-1/2/3 + food-function builds have shipped to
+> `main`. There is no "next pass" and no in-progress build. The only remaining
+> Ultimate-Audit work is the blocked/decision-gated items 11–16 + micronutrients (16);
+> do NOT start any of them without the structured founder decision first. Work the
+> blueprints (source) under `docs/ultimate-audit-2026-06-13/pass4-*.md`, never a summary.
+- Carry: Q15 medical-device + barcode pricing = founder-gate deferrals. Pass-1 Q1
+  schema authority is **RESOLVED** (migrations canonical).

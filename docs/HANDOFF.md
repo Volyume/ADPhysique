@@ -1,5 +1,14 @@
 # Volyume: session handoff (deep reference)
 
+> ## ⚠ STALE (2026-05-27 snapshot) — banner added 2026-06-26
+> Predates the entire June 2026 sprint (food domain, Ultimate-Audit Tier-1/2/3
+> builds, cardio/Health import, partners, recap/share cards, native IAP,
+> SQLCipher). For the current state read the root reference docs reconciled
+> against `main` on 2026-06-26: `INFRASTRUCTURE.md`, `ARCHITECTURE.md`,
+> `APPMAP.md`, `VOLYUME_DEEPMAP.md`, and
+> `docs/ultimate-audit-2026-06-13/_AUDIT-STATUS-AND-RESUME.md`. Treat everything
+> below as a historical record.
+
 Verified against code in `src/` and `supabase/` on 2026-05-27. This is the deep reference for a new session reading in cold. For day-to-day status read `docs/CURRENT_STATUS.md` first; for evidence at the file:line level read `docs/CODE_TRUTH_SURVEY.md`.
 
 > **Stale-snapshot note (2026-05-28):** this doc predates the 2026-05-28 sessions (coach confirm-then-apply rows 3-7, then UI surfaces rows 8/15/26/27/28 + the Frequents pipeline). Anything below described as "planned" or "not built" for those rows is now shipped. `docs/CURRENT_STATUS.md` § 0.A and § 0.B are authoritative; trust them over this doc where they disagree.

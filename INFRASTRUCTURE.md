@@ -1,23 +1,21 @@
 # Volyume — Infrastructure & Current State
 
 Source of truth for the runtime configuration, schema, security posture,
-and recent flow changes. Last updated 2026-05-22 on the (now-retired)
-`claude/fix-session-api-errors-PqkZo` branch. As of 2026-05-26 the
-canonical branch is `main` and that is also the GitHub default branch.
+and recent flow changes. **Reconciled against `main` on 2026-06-26**
+(app version 1.2.0, iOS build 7, Android versionCode 14). `main` is the
+canonical branch and the GitHub default branch.
 
-> **⚠ Partially stale as of 2026-05-25.** This file predates Move #1
-> (food layer), Move #2 (ED-pattern detection), Move #3 (upward gate
-> compression), Move #4 (differential paywall), Move #5 (cascade /
-> Play Billing), the 2-tier consolidation (founder override 2026-05-25
-> dropped Complete tier), and the comprehensive telemetry pass.
-> **For current state read `docs/CURRENT_STATUS.md` and `docs/HANDOFF.md`
-> first.** Where this file disagrees with `CURRENT_STATUS.md` or a
-> `*_LOCKED.md` spec, the newer doc wins.
+> This file now reflects the post-beta production state: the food/diary
+> layer, ED-pattern detection, differential paywall, day-21 trial cascade,
+> **native store IAP (Play Billing + App Store StoreKit2 — no Stripe)**,
+> the 2-tier (Free / Pro) model, SQLCipher-encrypted local DB, the
+> `src/lib/sync/` registry sync layer, Apple Health / Health Connect
+> integration, and the Ultimate-Audit Tier-1/2/3 builds are all live and
+> merged. **`PRO_BETA_ACTIVE` is now `false`** — entitlement is real.
+> Where a `*_LOCKED.md` spec disagrees with this file, the LOCKED spec wins.
 
 If anything in `ARCHITECTURE.md` / `APPMAP.md` / `VOLYUME_DEEPMAP.md`
-conflicts with this file, this file wins. If anything in this file
-conflicts with `docs/CURRENT_STATUS.md` or `docs/HANDOFF.md`, those
-files win.
+conflicts with this file, this file wins.
 
 ## Release surface
 
@@ -33,13 +31,19 @@ files win.
 
 | Surface | Tech | Notes |
 |---|---|---|
-| Mobile app | React Native + Expo SDK ~51 | Hermes JS engine; OTA via `expo-updates` |
-| Local DB | `expo-sqlite` | Migration runner in `src/lib/database.js` |
-| State | Zustand | Single store at `src/store/useAppStore.js`, AsyncStorage persistence |
-| Backend | Supabase | Postgres + Auth + Edge Functions (Deno) |
-| Auth | Supabase email/password + Google OAuth + Apple OAuth | Deep link `volyume://` |
-| Notifications | `expo-notifications` | Local schedule; no FCM/APNs server push yet |
-| Audio | `expo-av` | Synthesised WAV beeps for rest-timer countdown |
+| Mobile app | React Native 0.81.5 + React 19.1.0 + Expo SDK ~54 | Hermes; New Architecture enabled; OTA via `expo-updates` |
+| Local DB | `expo-sqlite` (SQLCipher, `useSQLCipher: true`) | Encrypted at rest; 256-bit per-device key in `expo-secure-store` (`src/lib/dbCrypto.js`); migration runner in `src/lib/database.js` (v23) |
+| State | Zustand ^4.5 | Single store at `src/store/useAppStore.js`; manual AsyncStorage persistence |
+| Backend | Supabase (EU Dublin) | Postgres + Auth + Edge Functions (Deno) |
+| Sync | `src/lib/sync/` | Registry-driven, two-track (migrated + legacy), watermark incremental pull, conflict strategies |
+| Auth | Supabase email/password + Google OAuth + Apple OAuth | Real account required (no anonymous mode); deep link `volyume://` |
+| Notifications | `expo-notifications` + `send-push` Edge Function | Local schedule + server push tokens (`device_push_tokens`) |
+| Billing | `react-native-iap` (Play Billing + StoreKit2) | Server verify via Edge Functions; products `pro_monthly` / `pro_annual` |
+| Health | `react-native-health` (iOS) / `react-native-health-connect` (Android) | Read weight/steps/cardio/HR; write workouts |
+| Scanning | `react-native-vision-camera` + `@react-native-ml-kit/text-recognition` | Barcode + nutrition-label OCR |
+| Graphics | `@shopify/react-native-skia`, `react-native-reanimated` ~4 | Share cards, charts, animations |
+| Audio | `expo-av` | Rest-timer countdown sound (installed 2026-06-06) |
+| Crash/telemetry | `@sentry/react-native` | PII-scrubbed; EU project |
 | Bundler | Metro (Expo default) | |
 
 ---
@@ -64,11 +68,13 @@ Two tiers — **Free** and **Pro**.
 | Morning weight log | ❌ | ✅ |
 | Pro-only routes (gated in `src/lib/proGate.js`) | locked | accessible |
 
-**Beta override:** `PRO_BETA_ACTIVE = true` in `src/lib/proGate.js` forces
-every cloud-authenticated user to Pro. Cloud `users_profile.tier` is
-unwritable from the client (RLS + trigger) so this constant is the
-authoritative answer during beta. Set to `false` and re-enable cloud
-writes to flip to paid mode.
+**Beta override (now OFF):** `PRO_BETA_ACTIVE = false` in
+`src/lib/proGate.js` (`:28`). The closed-test override that forced every
+authenticated user to Pro is disabled — entitlement is now the real
+`store.tier === 'pro'`, driven by native store purchases verified
+server-side. Cloud `users_profile.tier` remains unwritable from the client
+(RLS + trigger); tier is promoted only by the service-role billing
+webhooks (`play-billing-rtdn`, `app-store-verify` Edge Functions).
 
 ---
 
@@ -150,28 +156,37 @@ writes to flip to paid mode.
 | exercise_user_notes | per-exercise notes | ✅ own-row (migrate_007) | (user_id, exercise_id) |
 | debug_log_uploads | beta diagnostics ring-buffer dump | ✅ insert-anywhere | (user_id, ts DESC) |
 
-### Migrations applied
+### Migrations
 
-| File | Purpose |
-|---|---|
-| `schema.sql` | initial table set |
-| `setup_complete.sql` | canonical "fresh deploy" combined script (kept in sync with migrations) |
-| `migrate_001_profile_columns.sql` | profile fields |
-| `migrate_002_beta_tester.sql` | beta flag |
-| `migrate_003_delete_rpc.sql` | initial delete RPC (v1) |
-| `migrate_004_schema_improvements.sql` | schema tweaks |
-| `migrate_005_rls_hardening.sql` | RLS hardening + tier trigger (UPDATE only) |
-| `migrate_006_delete_rpc_v2.sql` | delete RPC v2 — wipes 9 additional tables to fix auth deletion FK violations |
-| `migrate_007_pro_rls_hardening.sql` | RLS on 6 Pro sync tables (programmes / morning_weights / coach_outputs / user_body_profile / exercise_user_notes / weekly_checkins_v2), tier trigger extended to INSERT |
-| `migrate_008_delete_rpc_tolerant.sql` | delete RPC tolerates partial-state accounts |
-| `migrate_009_nutrition_targets.sql` | nutrition_targets table + RLS |
-| `migrate_010_sync_completeness.sql` | round-trip parity for the remaining Pro tables |
-| `migrate_012_complete_sync.sql` | last sync gaps |
-| `migrate_013_user_feedback.sql` | `user_feedback` table + insert-only RLS; weekly digest and error-correlation views (locked down in 014) |
-| `migrate_014_feedback_view_hardening.sql` | **applied 2026-05-22.** Sets `security_invoker = true` on both feedback views, REVOKEs anon/authenticated, GRANTs SELECT to service_role only. Without this any authenticated client could read every user's feedback messages via the views. |
+`supabase/` holds **~88 numbered migrations** (`migrate_001` … `migrate_088`,
+with a few gaps and one `085` number collision), plus baselines `schema.sql`
+and `setup_complete.sql` (the canonical fresh-deploy combined script).
+Highest = **088** (`drop_debug_log_open_insert`). The full ordered list is in
+the codebase; recent/notable ones:
 
-Migrations are applied via Supabase Dashboard → SQL Editor. There's no
-automated runner — each new migration must be pasted and executed manually.
+- `001`–`014` — early profile/RLS/delete-RPC/sync/feedback hardening
+  (014 locked the feedback views with `security_invoker`).
+- `033` two-tier consolidation · `042`/`067`/`068` tier-promotion controls ·
+  `049` drop `peak_week_plans` (HELD) · `053` `device_push_tokens` ·
+  `056` `daily_steps` · `064` `cardio_log` · `065` 14-day trial ·
+  `071` trial ledger · `081` training partners (4 tables, EU Dublin, RLS) ·
+  `086` `meal_plans` · `087` `cardio_log.ext_id` (passive cardio dedupe) ·
+  `088` drop debug-log open insert.
+- A long telemetry series (allow-listed, coded-enum / counts only — no PII):
+  e.g. `032` paywall, `035`–`041` auth/consent/funnel/lifecycle, `073`–`080`
+  session-adjustment/methodology/recap/streak/step-TDEE, `084` watch,
+  `085` food-quality.
+
+**Automated deploy (new since this doc's old version):**
+`.github/workflows/deploy-migrations.yml` applies `migrate_*.sql` on push to
+`main`, tracked in `claude_schema_migrations` (baseline ≤058 pre-seeded; a
+HELD list `049`, `059` ships with the app build instead). The old
+"paste each migration into the SQL Editor manually" workflow is retired.
+
+**Outstanding founder-action migration (apply manually to EU-Dublin, never
+from the app):** `migrate_087_cardio_log_ext_id.sql` (header marks it
+"pending founder apply"). `migrate_085_food_quality_telemetry.sql` is on the
+auto-deploy path.
 
 ### Local SQLite migration runner
 
@@ -192,19 +207,26 @@ non-null (i.e. a normal client call, not service role):
 - On INSERT: forces `tier := 'free'`
 - On UPDATE: reverts any `tier` change back to OLD.tier
 
-Service-role calls (`auth.uid() = NULL`) bypass this — used by Stripe
-webhooks and Edge Functions for legitimate upgrades. Post-beta, paid
-sign-ups will flow through a service-role webhook that flips tier.
+Service-role calls (`auth.uid() = NULL`) bypass this — used by the native
+store billing webhooks and Edge Functions for legitimate upgrades. Paid
+sign-ups flow through the service-role billing webhooks
+(`play-billing-rtdn` for Google Play RTDN, `app-store-verify` /
+`app-store-notifications` for StoreKit2) which flip `users_profile.tier`.
 
-### Edge Functions
+### Edge Functions (`supabase/functions/`)
 
-| Function | Purpose | Auth |
-|---|---|---|
-| `delete-account` | full account wipe (public.* via RPC + auth.users via admin client) | JWT verified via anon client, then service-role for admin.deleteUser |
+| Function | Purpose |
+|---|---|
+| `delete-account` | Full account wipe (public.* via RPC + auth.users via admin client). JWT verified, then service-role for `admin.deleteUser`. |
+| `play-billing-rtdn` | Google Play Real-Time Developer Notifications → verify + set tier. |
+| `app-store-verify` | App Store StoreKit2 receipt verification → set tier. |
+| `app-store-notifications` | App Store server-to-server subscription notifications. |
+| `partner-cheer` | Training-partner cheer relay (partners system). |
+| `send-push` | Server push to `device_push_tokens`. |
+| `_shared` | Shared helpers (CORS, auth, clients). |
 
-Edge Function logs use `console.log` / `console.error` at each phase
-(invoke start, user verified, public data wiped, auth user deleted, per
-failure branch) so the Supabase dashboard shows the exact failure point.
+Edge Function logs use `console.log` / `console.error` at each phase so the
+Supabase dashboard shows the exact failure point.
 
 ---
 
@@ -339,10 +361,23 @@ From the multi-agent audit (2026-05-21):
 
 ## 10. Build + CI
 
-### GitHub Actions workflow (`.github/workflows/build-android.yml`)
+### Workflows (`.github/workflows/`)
 
-Triggers on every push to `main` and `claude/**`. Produces two
-artifacts per build:
+- **`build-android.yml`** — free GitHub-runner build (no EAS credits) on
+  push to `main` / `claude/**` (docs/markdown paths ignored). Artifacts below.
+- **`build-ios.yml`** — **manual only** (`workflow_dispatch`; each EAS iOS
+  build costs credits). Builds via EAS cloud → submits to TestFlight.
+- **`main-ci.yml`** — jest + eslint + Expo Doctor on push to `main` /
+  `claude/**` and PRs to `main`.
+- **`deploy-migrations.yml`** — auto-applies `supabase/migrate_*.sql` on push
+  to `main` (see §4).
+- **`deploy-functions.yml`** — deploys Edge Functions.
+- Plus `deploy-pages`, `identity-invariant`, `print-signing-sha`,
+  `refresh-off-snapshot`.
+
+### Android build artifacts
+
+`build-android.yml` produces two artifacts per build:
 
 - `volyume-release-apk-<run>` — for sideload testing (debug-signed
   when the upload-keystore secrets aren't set, upload-signed when
@@ -388,10 +423,11 @@ All three live as GitHub repo secrets.
 `App.js` checks for updates on every cold launch in production and
 prompts "Restart now" when one is available. `runtimeVersion.policy`
 is `appVersion` so JS-only updates only reach clients on the same
-binary `version`. The update server isn't configured yet: `app.json
-extra.eas.projectId` is still the placeholder `"your-eas-project-id"`
-and there's no `updates.url`. Setup with `eas init` + `eas update:configure`
-when you're ready to push JS-only patches between Play releases.
+binary `version`. EAS is now configured: `app.json extra.eas.projectId`
+is the real `2f60a6ed-8b37-4cd6-8057-60ee04e39ea8` (owner/slug `volyume`),
+and `eas.json` defines `development` / `preview` / `production` build
+profiles plus a Play `internal`-track submit profile
+(`appVersionSource: remote`, production `autoIncrement`).
 
 ---
 
@@ -401,21 +437,26 @@ when you're ready to push JS-only patches between Play releases.
 
 1. ☑ Upload keystore generated, base64 + password stored in GitHub secrets
 2. ☑ Sentry DSN secret wired through CI to both prebuild and assemble steps
-3. ☑ `migrate_001`–`014` applied to Supabase production
+3. ☑ Migrations auto-deploy via `deploy-migrations.yml` (baseline through 088;
+   `migrate_087` is a manual founder-apply, see §4)
 4. ☑ `volyume.app` domain owned + universal links wired
-5. ☐ Google Cloud OAuth client created with the Play App Signing SHA-1 (after first Play upload Google will provide it via Play Console → Setup → App integrity)
-6. ☐ Play Console listing complete — see `docs/PLAY_STORE_LISTING.md`
-7. ☐ First AAB manually uploaded to Internal Testing track
-8. ☐ Testers added to the Internal Testing group
-9. ☐ Privacy policy hosted at `volyume.app/privacy` (markdown source in `public/privacy-policy.md`)
+5. ☑ Play Console listing — see `docs/PLAY_STORE_LISTING.md` and the
+   `docs/playstore-readiness-2026-06-06/` set
+6. ☑ Privacy policy hosted at `volyume.app/privacy` (source `public/privacy-policy.md`)
+7. ☐ Google Cloud OAuth client with the Play App Signing SHA-1 (verify current)
 
-### Public launch (later — flipping `PRO_BETA_ACTIVE` to `false`)
+### Paid mode (now LIVE — `PRO_BETA_ACTIVE = false`)
 
-1. ☐ Stripe webhook hooked up to flip `users_profile.tier` server-side
-2. ☐ Service-role function for "your trial expired" downgrades
-3. ☐ `users_profile` UPDATE trigger updated to allow service-role tier promotion
-4. ☐ `VERBOSE_LOGGING` set to `false` in `src/lib/errorLog.js`
-5. ☐ Push notification setup (FCM + APNs) — currently local-only
+1. ☑ Native store IAP via `react-native-iap` (Play Billing + StoreKit2);
+   products `pro_monthly` / `pro_annual`
+2. ☑ Service-role billing webhooks flip `users_profile.tier`
+   (`play-billing-rtdn`, `app-store-verify`, `app-store-notifications`)
+3. ☑ Day-21 trial cascade + differential paywall live
+4. ☐ `VERBOSE_LOGGING` is still `true` in `src/lib/errorLog.js` — set to
+   `false` before broad public launch to silence info noise (warnings/errors
+   stay on)
+5. ☐ Server push is wired (`send-push` + `device_push_tokens`); confirm
+   FCM/APNs credentials per environment
 
 ---
 

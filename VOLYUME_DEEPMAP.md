@@ -1,24 +1,40 @@
 # Volyume — Full Architectural Map & Feature Inventory
-> Branch: `main` (default branch as of 2026-05-26; this map was
-> originally generated against `claude/build-volyume-app-srY9C` which
-> has since been retired).
-> Last updated: 2026-05-19
-> Purpose: Deep-research reference. Everything that exists, how it
-> connects, and what is planned next.
+> **Reconciled against `main` on 2026-06-26** (app version 1.2.0, iOS build 7,
+> Android versionCode 14). Purpose: deep-research feature inventory.
 
-> **⚠ Stale as of 2026-05-21 and heavily superseded 2026-05-25.** This
-> file references screens and flows that have since been removed or
-> restructured, and predates the entire Volyume Complete food layer.
-> **Canonical current-state references:**
-> - `docs/CURRENT_STATUS.md` (latest shipped state, rewritten end-to-end on every material change)
-> - `docs/HANDOFF.md` (full architectural reference, 56-screen inventory, all migrations, all telemetry events)
-> - `INFRASTRUCTURE.md` at the repo root (legacy current-state reference, last updated 2026-05-22; partially stale itself)
->
-> Treat any reference here to "CoachBuilder", "OnboardingQuiz",
-> "FirstRunScreen branch mode", `PRO_BETA_ACTIVE`, three-tier
-> Free/Pro/Complete model, or 28-day cascade as historical, not
-> current. The shipped product is 2-tier (Free + Pro) with a 21-day
-> Pro trial, per founder override 2026-05-25.
+## 0. Current State (2026-06-26) — read this first
+
+This map originally described a 26-screen, 4-tab, single-user hypertrophy
+logbook. The shipped product is much larger. Authoritative current facts
+(the deep sections below are kept for still-valid feature detail; where they
+disagree with this block, `APPMAP.md` / `ARCHITECTURE.md` / `INFRASTRUCTURE.md`
+win):
+
+- **5 tabs (Train · Plans · Diary · Progress · You), 77 screens.** The Diary
+  (food) tab and most coaching/nutrition surfaces are **Pro-gated**. See
+  `APPMAP.md` for the full inventory.
+- **Two tiers, Free / Pro** (`src/lib/proGate.js`, `PRO_BETA_ACTIVE = false`),
+  21-day Pro trial + day-21 cascade, differential paywall. Billing is native
+  store IAP (`react-native-iap`: Play Billing + StoreKit2), products
+  `pro_monthly` / `pro_annual`.
+- **Real Supabase account required** (no anonymous/local-user mode).
+- **Full food domain is built and live** (was "pending"): diary, meal
+  planning (precision macro solver), barcode + nutrition-label OCR scanning,
+  saved meals/recipes, calorie banking, grocery list, food insights.
+- **Precision Coaching engine + ED safety are built and live** in `src/lib/`
+  (deterministic, no LLM, tier-blind safety). The **Weekly Coach / Pro tier
+  in §16 below is no longer "pending" — it shipped.**
+- **Cardio** (log + passive Apple Health / Health Connect import), **training
+  partners**, **Year-of-Lifts recap**, **Great-Week share card**, encrypted
+  SQLite (SQLCipher), and the `src/lib/sync/` sync layer (~88 Supabase
+  migrations, EU Dublin) are all live.
+- **`MethodologyScreen` exists and is routed** ("How Precision Coaching
+  works") — the old "no methodology screen, removed entirely" claim is false.
+- **Removed (do not reference):** `CoachBuilderScreen`, `OnboardingQuizScreen`,
+  `FirstRunScreen` branch mode, `PRWallScreen` (→ `LiftProgressScreen`),
+  `ExerciseLibraryScreen` (→ `ExerciseDetailScreen`), `AthleteHubScreen`
+  (→ `YouScreen`), `PeakWeekScreen`, the three-tier model, and the splash
+  "min 3.8s" (now `SPLASH_MIN_MS = 1600`).
 
 ---
 
@@ -49,13 +65,13 @@
 **Volyume** is an intelligent, private hypertrophy logbook. It is not a clone of any existing product. All training intelligence is Volyume's own.
 
 ### Core Principles
-- **Private by design** — all data lives on device (SQLite). No cloud required to use the app. Supabase is optional (future sync).
-- **Offline-first** — expo-sqlite, no network dependency for core features.
-- **Hypertrophy-intelligent** — auto-regulation, volume landmarks, PR detection, progression suggestions are native to the logging experience, not buried in settings.
-- **Dark mode only** — no light mode. Consistent dark aesthetic.
-- **No jargon / no brand references** — researcher names, organisation acronyms, and competitor brand names are banned from all user-facing text (see Section 14).
-- **Education-first UI** — InfoTooltips explain the "why" contextually. The methodology is not disclosed as a document.
-- **No methodology screen** — removed entirely. Education stays in contextual tooltips only.
+- **Private by design** — all data lives on device in **encrypted** SQLite (SQLCipher). Components read local only; Supabase (EU Dublin) is the sync target, reached only through the `src/lib/sync/` layer. No PII to third parties.
+- **Offline-first** — every core feature works with no connection; a real account is required to sign in, but the app then runs fully offline.
+- **Hypertrophy-intelligent + deterministic coaching** — auto-regulation, volume landmarks, PR detection, and the Precision Coaching weekly loop are native and fully deterministic (no LLM, no `Math.random` in any decision path).
+- **Always-on, tier-blind ED safety** — calorie floors, FFM floor, rapid-loss gate, ED-pattern detection, and Beat UK signposting (`src/lib/`).
+- **Dark mode only** — consistent dark aesthetic.
+- **No jargon / no brand references** — researcher names, organisation acronyms, and competitor brand names are banned from user-facing text (see Section 14).
+- **Education-first UI** — contextual "why" explanations, plus a routed `MethodologyScreen` ("How Precision Coaching works").
 
 ### App Identity
 - Name: **Volyume**
@@ -67,32 +83,34 @@
 
 ## 2. Tech Stack
 
+> Current versions — see `INFRASTRUCTURE.md` §1 / `package.json` for the
+> authoritative list (~58 runtime deps). Key entries:
+
 | Layer | Choice | Notes |
 |---|---|---|
-| Framework | React Native + Expo SDK 51 | `expo: ~51.0.0` |
-| Language | JavaScript ES6+ | All `.js` files |
-| Local Database | expo-sqlite `~14.0.4` | SQLite, fully offline |
-| Cloud (optional) | Supabase `@supabase/supabase-js ^2.43.4` | Auth + future sync |
-| State | Zustand `^4.5.2` | Lightweight, no boilerplate |
-| Navigation | React Navigation v6 | Bottom tabs + stack |
-| Charts | react-native-gifted-charts `^1.4.41`, victory-native `^41.12.0` | Bars, lines, PRs |
-| 2D Graphics | @shopify/react-native-skia `^1.2.3` | Volume heatmap |
-| Haptics | expo-haptics `~13.0.1` | Set complete, PR celebration |
-| Sharing | expo-sharing `~12.0.0`, expo-print `~13.0.0` | Share card, coach export |
-| Secure storage | expo-secure-store `~13.0.1` | Future auth tokens |
-| File system | expo-file-system `~17.0.1`, expo-document-picker `~12.0.2` | Backup/restore |
-| Animations | react-native-reanimated `~3.10.1` | Splash, celebrations |
-| Gestures | react-native-gesture-handler `~2.16.1` | Swipe interactions |
-| Calendar | react-native-calendar-heatmap `^0.2.4` | Workout history |
-| Linear gradient | expo-linear-gradient `~13.0.2` | Cards and headers |
-| Storage | @react-native-async-storage/async-storage `1.23.1` | Prefs, profile |
-| SVG | react-native-svg `15.2.0` | Charts, coach export |
-| WebView | react-native-webview `13.8.6` | Coach HTML export |
-| Icons | @expo/vector-icons `^14.0.2` | Ionicons throughout |
+| Framework | React Native 0.81.5 + React 19.1.0 + Expo SDK ~54 | Managed; New Architecture on |
+| Local Database | expo-sqlite (SQLCipher-encrypted) | Key in expo-secure-store; v23 |
+| Cloud + sync | Supabase `@supabase/supabase-js ^2.43` (EU Dublin) | `src/lib/sync/` registry layer |
+| State | Zustand `^4.5` | Manual AsyncStorage persistence |
+| Navigation | React Navigation v6 | 5 bottom tabs + stacks |
+| Billing | react-native-iap | Play Billing + StoreKit2 |
+| Health | react-native-health / react-native-health-connect | Apple Health / Health Connect |
+| Scanning | react-native-vision-camera + @react-native-ml-kit/text-recognition | Barcode + label OCR |
+| Graphics | @shopify/react-native-skia, react-native-reanimated ~4, react-native-svg | Share cards, charts, heatmap |
+| Audio | expo-av | Rest-timer sound |
+| Crash/telemetry | @sentry/react-native | PII-scrubbed |
+| Storage | @react-native-async-storage/async-storage | Prefs, profile |
+| Icons | @expo/vector-icons | Ionicons throughout |
 
 ---
 
 ## 3. Navigation Structure
+
+> **⚠ Superseded.** The tree below is the old 4-tab / CoachBuilder / local-user
+> structure. The current navigator is **5 tabs (Train · Plans · Diary ·
+> Progress · You), 77 screens, real-account gating, `SPLASH_MIN_MS = 1600`**.
+> See `APPMAP.md` for the authoritative nav tree, screen inventory, and
+> Pro-gating list. The historical tree is retained below for reference only.
 
 ```
 App.js (ErrorBoundary)
@@ -150,10 +168,18 @@ App.js (ErrorBoundary)
 AuthStack (LoginScreen → OnboardingScreen) is defined but currently bypassed.
 The app auto-creates a local UUID user — no login required.
 ```
+> **⚠ The two lines above are now FALSE.** A real Supabase account is
+> required; the local-UUID bypass is removed (`RootNavigator.js` forbids
+> LOCAL_USER restore per `IDENTITY_AND_OWNERSHIP_LOCKED.md`).
 
 ---
 
 ## 4. Screen Inventory
+
+> **⚠ Superseded — see `APPMAP.md` for the authoritative 77-screen inventory.**
+> The list below covers ~26 screens and predates the food, cardio, coaching,
+> billing, partners, and settings-split screens. Per-screen detail is kept for
+> screens that still exist; ignore the removed ones listed in §0.
 
 ### 4.1 Auth / Onboarding
 
@@ -876,96 +902,66 @@ Volume is tracked per muscle group per week as **hard sets** (RIR ≤2 or RPE �
 
 ## 15. Current App State — What is Built
 
-### Fully functional
-- [x] App launch + animated splash (3.8s minimum)
-- [x] Local user creation (no login required)
-- [x] First-run path choice (Coach / Library / Manual)
-- [x] Coach Builder — 7-step wizard → generates personalised plan
-- [x] Plan Library — pre-built plans, activate with one tap
-- [x] Manual Builder — drag-and-drop plan creation
-- [x] Active workout logging — full feature set (weight/reps/RIR/RPE/set type)
-- [x] Default RIR = 2 (effort 3) for every new set
-- [x] Rest timer with haptics
-- [x] Plate calculator inline
-- [x] Progression suggestions inline
-- [x] PR detection + celebration overlay
-- [x] Deload week detection + gentle prompt
-- [x] Post-workout summary with volume status + auto-reg
-- [x] Workout history — calendar + session list
-- [x] Analytics dashboard — trends, insights, volume, PRs
-- [x] Volume heatmap — per-muscle MEV/MAV/MRV
-- [x] PR Wall — lifetime bests + strength standards
-- [x] Exercise library — search + filter
-- [x] Exercise detail — history graph, PRs, substitutes, form tips
-- [x] Body metrics — weight log, measurements, body fat
-- [x] Nutrition targets — full macro calculator with protein approach selector
-- [x] "Why these numbers?" education card
-- [x] AthleteHub — profile, stats, session milestone, engine log
-- [x] Settings — units, bar weight, wellbeing mode, backup/restore
-- [x] Peak week planner — 7-day competition protocol
-- [x] Mesocycle builder — training blocks with progression
-- [x] Share card — social media session card
-- [x] Coach export — HTML/PDF 4-week report
-- [x] Travel mode — hotel workout plan generator
-- [x] Phase engine — competition phase modifiers
-- [x] Jargon enforcement via blocklist in whyThisTemplates.js
-- [x] All methodology references removed (legal clean)
+> Rewritten 2026-06-26. The original list described the pre-Pro logbook and
+> marked auth/sync as "not active" — all of that is now shipped.
 
-### Wired but not active
-- [ ] Supabase auth (UI exists in LoginScreen, bypassed by local user)
-- [ ] Cloud sync (Supabase client exists, not connected to data flow)
-- [ ] Apple/Google OAuth (buttons in LoginScreen, need OAuth config)
+### Free (no Pro guard)
+- [x] Real-account sign-in (email/password, Apple, Google OAuth) + sync
+- [x] Plan Library, Manual Builder, Mesocycle Builder
+- [x] Active workout logging (weight/reps/RIR/RPE/set type), keyboard-completes-the-set
+- [x] Rest timer (sound + haptics), plate calculator, progression suggestions
+- [x] PR detection + celebration, deload detection, post-workout summary
+- [x] Workout history, Analytics dashboard, Volume heatmap
+- [x] Lift Progress (strength standing + est-1RM trajectory — replaced PR Wall)
+- [x] Consistency view, Year-of-Lifts recap, share cards (incl. Great-Week)
+- [x] Exercise detail (history, substitutes, form tips), free appearance settings
+- [x] Methodology screen ("How Precision Coaching works")
+
+### Pro (entitlement via `proGate.js`, real billing)
+- [x] Food diary + meal planning (precision macro solver), saved meals/recipes
+- [x] Barcode + nutrition-label OCR scanning, food insights (7/14/30/90d, protein consistency)
+- [x] Calorie banking, auto grocery list, nutrition targets + education
+- [x] Weekly check-in + Precision Coaching weekly output (deterministic adaptive loop)
+- [x] Body metrics + recomp-reframe card, cardio log + done-vs-planned trend
+- [x] Passive cardio import (Apple Health / Health Connect), coaching reminders
+- [x] Plan update with dry-run diff/preview, division-specific plans
+- [x] Training partners, day-21 trial cascade + differential paywall
+
+### Always-on (tier-blind)
+- [x] ED safety: calorie floors, FFM floor, rapid-loss gate, ED-pattern detector, Beat UK signposting
 
 ---
 
-## 16. Pending Work — Weekly Coach / Pro Tier
+## 16. Weekly Coach / Pro Tier — SHIPPED
 
-**STATUS: Not built. Awaiting user research + architectural decision.**
+> **STATUS: BUILT and live.** This section originally described the Weekly
+> Coach as future work; it shipped. Real files:
 
-### What the user described
-A once-a-week coaching moment that ties together all app data streams:
-1. **Weight entry** — morning weigh-in or weekly check-in
-2. **Recovery input** — how did training feel this week (soreness, energy, adherence)
-3. **Coaching output** — unified card:
-   - Weight trend (rolling 7-day average, requires ≥2 weeks)
-   - Training adjustments (volume up/down by muscle, deload signal)
-   - Calorie/macro adjustments (based on weight delta vs target)
-   - **Steps target** (primary NEAT intervention before formal cardio)
-   - Cardio prescription (conditional: walking → LISS → HIIT escalation)
-4. **Social share card** — privacy-first (weight hidden by default), session highlights
-5. **Pro notifications** — `expo-notifications` morning prompt (Pro users only)
-
-### Files that will be needed
-| File | Purpose |
+| File | Role |
 |---|---|
-| `src/screens/WeeklyCheckInScreen.js` | Weekly check-in UI: weight, recovery sliders |
-| `src/screens/CoachWeeklyOutputScreen.js` | Coaching output display: plan adjustments, macros, steps, cardio |
-| `src/lib/weeklyCoach.js` | Coaching logic: weight trend analysis, calorie adjustment algo, cardio prescription |
-| `src/components/CheckInShareCard.js` | Social share card for weekly check-in |
-| `src/lib/stepsEngine.js` | Steps targets by phase and NEAT calculation |
+| `src/screens/WeeklyCheckInScreen.js` | Weekly check-in (weight + recovery) |
+| `src/screens/CoachOutputScreen.js` | Precision Coaching weekly output card |
+| `src/lib/weeklyCoach.js` | Pure deterministic coaching loop (`runWeeklyCoach`) |
+| `src/lib/coachApply.js` | Confirm-then-apply calorie/macro/volume math |
+| `src/lib/cardio/cardioEngine.js` | Cardio target + compliance + weekly trend |
+| `src/screens/ShareCardScreen.js` + `src/lib/shareCard/` | ED-safe share cards |
 
-### Key algorithm requirements
-- Rolling 7-day weight average (needs ≥14 days of data before confident calorie advice)
-- Weight delta vs expected rate → calorie surplus/deficit adjustment
-- Steps as primary intervention (phase-appropriate targets: cut → higher; bulk → moderate)
-- Cardio escalation: only prescribed if steps target not meeting energy goals
-- NEAT first, LISS second, HIIT only if sustained cut stall
-
-### Pro tier decision (pending)
-**Option A**: First choice in Coach Builder (Pro / Standard path before step 1)
-**Option B**: Separate component at first launch / Plans screen
-**Pending decision**: Where does the Pro/Standard gate surface?
-
-### Pro tier features (proposed)
-- Weekly check-in system
-- Morning weight notification
-- Coaching output card (steps, cardio, macro adjustments)
-- Enhanced analytics (7-day rolling averages, trend forecasting)
-- Social share cards
+The shipped loop unifies weight trend (dual EWMA), training autoregulation,
+calorie/macro adjustment (gated + capped), steps (primary NEAT lever), and
+conditional cardio escalation — all behind the Pro gate, with structured
+holds (ED lockout → FFM floor → rapid-loss → generic). See `ARCHITECTURE.md`
+§8 for the engine detail.
 
 ---
 
 ## 17. File Size Reference
+
+> **⚠ Historical snapshot (2026-05-19).** Line counts are stale and several
+> files listed were removed (`CoachBuilderScreen.js`, `ExerciseLibraryScreen.js`,
+> `PRWallScreen.js`, `PeakWeekScreen.js`, `OnboardingScreen.js`,
+> `AthleteHubScreen.js`). The codebase is now ~625 source `.js` files; 77 are
+> `*Screen.js` screens (84 `.js` files total under `src/screens/`, incl.
+> helpers). Run `wc -l` against `src/` for current sizes.
 
 | File | Lines | Complexity |
 |---|---|---|

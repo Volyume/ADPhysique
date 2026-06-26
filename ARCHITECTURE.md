@@ -1,32 +1,45 @@
 # Volyume — Complete Technical Architecture Map
 
-> Version 2.0.0 (versionCode 3) · Generated from source · 2026-05-18
->
-> This document is self-contained. It describes the entire Volyume React Native app so that an AI assistant can understand the full architecture, data model, business logic, and screen inventory without seeing any source code. It supersedes v1.1.0.
+> **Reconciled against `main` on 2026-06-26** · app version 1.2.0 (iOS build 7,
+> Android versionCode 14). This document describes the Volyume React Native
+> (Expo) app so an AI assistant can understand its architecture, data model,
+> business logic, and screens. The front matter and structural sections below
+> are current; some deep algorithm/column detail in the later numbered
+> sections predates the June sprint — where it disagrees with §0 (Current
+> State) or `INFRASTRUCTURE.md`, those win.
 
-> **⚠ Updates since 2026-05-21 (beta polish pass) — see `INFRASTRUCTURE.md` for the live state.**
->
-> Key changes not yet reflected in the sections below:
-> - `CoachBuilderScreen` (the 8-step plan-builder wizard) has been
->   deleted. Pro users now run the 4-step `ProOnboardingScreen` via the
->   Pro upgrade success CTA. Free users build via Plan Library or
->   Manual Builder.
-> - `OnboardingQuizScreen` (template recommender) has been deleted.
-> - `FirstRunScreen` branch mode (Pro path-picker UI) has been deleted.
->   Free users see name + units only.
-> - Pro upgrade now triggers `resetFirstRun()` which re-mounts
->   `ProOnboardingStack` so the user goes through profile + training +
->   recovery + plan/nutrition generation.
-> - Section 12 ("Plan Generation — CoachBuilder / planEngine") is
->   stale w.r.t. the CoachBuilder entry point but the planEngine
->   internals and goal-merge model are current.
-> - Six Pro sync tables (programmes, morning_weights, coach_outputs,
->   user_body_profile, exercise_user_notes, weekly_checkins_v2) had
->   missing RLS policies — fixed in `supabase/migrate_007_pro_rls_hardening.sql`.
-> - `delete_user_data` RPC was wiping only 11 of 20 user-keyed tables —
->   fixed in `supabase/migrate_006_delete_rpc_v2.sql` (was causing
->   `auth.admin.deleteUser` to fail with FK violation).
-> - Tier-lockdown trigger now covers `INSERT` as well as `UPDATE`.
+## 0. Current State (2026-06-26) — read this first
+
+The app has grown well beyond the original "hypertrophy logbook". The major
+facts that supersede older detail in the numbered sections:
+
+- **5 bottom tabs, 77 screens** (not 4 tabs / ~26 screens). Tabs:
+  **Train · Plans · Diary · Progress · You**. The **Diary** tab and most
+  coaching/nutrition surfaces are **Pro-gated** via `withProGuard`. See
+  `APPMAP.md` for the authoritative nav tree + screen inventory.
+- **Real Supabase account required** — the anonymous/local-UUID user mode is
+  removed (`RootNavigator.js` forbids LOCAL_USER restore per
+  `IDENTITY_AND_OWNERSHIP_LOCKED.md`).
+- **Two tiers, Free / Pro**, source of truth `src/lib/proGate.js`
+  (`PRO_BETA_ACTIVE = false` — entitlement is real, driven by native store
+  purchases). Billing is `react-native-iap` (Play Billing + StoreKit2);
+  products `pro_monthly` / `pro_annual`.
+- **Local DB is SQLCipher-encrypted** `expo-sqlite` (key in
+  `expo-secure-store`, `src/lib/dbCrypto.js`), ~47 tables, schema v23.
+- **Sync layer `src/lib/sync/`** (registry-driven, watermark incremental
+  pull, conflict strategies) syncs to Supabase (EU Dublin), ~88 migrations.
+- **Precision Coaching engine + ED safety live in `src/lib/`** (NOT
+  `src/coaching/` — that directory does not exist). Deterministic, no LLM,
+  no `Math.random` in any decision path. Safety is **tier-blind**.
+- **New domains since v2.0.0:** food diary + meal planning + barcode/label
+  scanning, cardio (log + passive Health import), Apple Health / Health
+  Connect, training partners, Year-of-Lifts recap, Great-Week share card,
+  differential paywall + day-21 trial cascade.
+- **Removed screens** (do not reference): `CoachBuilderScreen`,
+  `OnboardingQuizScreen`/`OnboardingScreen`, `PRWallScreen`
+  (→ `LiftProgressScreen`), `ExerciseLibraryScreen` (→ `ExerciseDetailScreen`
+  only), `AthleteHubScreen` (→ `YouScreen`), `PeakWeekScreen` (peak-week
+  engine removed; `migrate_049` dropped `peak_week_plans`).
 
 ---
 
@@ -43,7 +56,7 @@
 9. [Volume Landmarks System](#9-volume-landmarks-system)
 10. [Exercise Data Model](#10-exercise-data-model)
 11. [Workout Session Flow](#11-workout-session-flow)
-12. [Plan Generation (CoachBuilder / planEngine)](#12-plan-generation-coachbuilder--planengine)
+12. [Plan Generation (planEngine / planAutoGen)](#12-plan-generation-planengine--planautogen)
 13. [Theme and Design System](#13-theme-and-design-system)
 14. [Authentication and User Flow](#14-authentication-and-user-flow)
 15. [Data Flows Between Screens](#15-data-flows-between-screens)
@@ -56,128 +69,126 @@
 
 **App name:** Volyume
 **Slug:** volyume
-**Version:** 2.0.0 (versionCode 3)
+**Version:** 1.2.0 (iOS build 7, Android versionCode 14)
 **Bundle IDs:** app.volyume (iOS and Android)
-**Tagline:** "Intelligent Hypertrophy Logbook"
+**EAS project:** `2f60a6ed-8b37-4cd6-8057-60ee04e39ea8` (owner/slug `volyume`)
 
-### Tech Stack
+### Tech Stack (current — see `INFRASTRUCTURE.md` §1 for the authoritative table)
 
 | Layer | Technology |
 |---|---|
-| Framework | React Native 0.74.5 with Expo ~51.0.0 (managed workflow) |
-| State management | Zustand ^4.5.2 (no persist middleware — manual AsyncStorage) |
-| Local database | expo-sqlite ~14.0.4 (WAL journal mode, single file) |
-| Cloud backend | Supabase @supabase/supabase-js ^2.43.4 (lazy init, optional) |
+| Framework | React Native 0.81.5 + React 19.1.0 with Expo SDK ~54 (managed; New Architecture on) |
+| State management | Zustand ^4.5 (manual AsyncStorage persistence) |
+| Local database | expo-sqlite (SQLCipher-encrypted, `useSQLCipher`), WAL, single file; v23 |
+| DB key | expo-secure-store (256-bit per-device key, `src/lib/dbCrypto.js`) |
+| Cloud backend | Supabase @supabase/supabase-js ^2.43 (EU Dublin; lazy init) |
+| Sync | `src/lib/sync/` registry-driven layer |
 | Navigation | React Navigation v6: bottom tabs + stack navigators |
-| Date utilities | date-fns ^3.6.0 |
-| Charts (bars/lines) | react-native-gifted-charts ^1.4.41 — BarChart, LineChart |
-| Charts (cartesian) | victory-native ^41.12.0 + @shopify/react-native-skia ^1.2.3 — CartesianChart |
-| Calendar heatmap | react-native-calendar-heatmap |
-| Vector graphics | react-native-svg 15.2.0 |
-| Animations | react-native-reanimated ~3.10.1 |
-| Haptics | expo-haptics ~13.0.1 |
+| Billing | react-native-iap (Play Billing + StoreKit2) |
+| Health | react-native-health (iOS) / react-native-health-connect (Android) |
+| Scanning | react-native-vision-camera + @react-native-ml-kit/text-recognition |
+| Graphics | @shopify/react-native-skia, react-native-reanimated ~4, react-native-svg |
+| Audio | expo-av (rest-timer sound) |
+| Crash/telemetry | @sentry/react-native (PII-scrubbed) |
 | Icons | @expo/vector-icons (Ionicons) |
-| Secure storage | expo-secure-store |
-| Safe areas | react-native-safe-area-context |
-| Share cards | expo-file-system, expo-sharing, react-native-webview |
-| Photos | expo-image-picker (permissions declared) |
 | Async storage | @react-native-async-storage/async-storage |
 
 ### Core Architecture Principles
 
-- **Local-first, offline-capable.** All data is stored in SQLite on-device. Supabase is optional and absent when env vars are missing; `isSupabaseConfigured()` returns false and the app functions fully without it.
-- **UUID-based local user.** A UUID is generated on first launch and stored at AsyncStorage key `@volyume_local_user_id`. The user object is `{ id, isLocal: true }`.
-- **Auth gate bypassed.** The login/signup flow exists but the auth gate in RootNavigator is disabled for the local-first phase. The app goes straight to the main tabs.
+- **Offline-first, local source of truth.** All data is stored in encrypted SQLite on-device. Components read from local storage / the store, never from Supabase directly. Supabase is the sync target; the app functions fully offline (`isSupabaseConfigured()` gate, lazy client).
+- **Real account required.** A real Supabase account is required to use the app; the old anonymous local-UUID mode is removed (`RootNavigator.js` forbids LOCAL_USER restore per `IDENTITY_AND_OWNERSHIP_LOCKED.md`).
+- **Deterministic coaching, no AI.** The Precision Coaching engine (`src/lib/weeklyCoach.js`, `coachApply.js`, `nutritionEngine.js`, …) and plan generation (`planEngine.js`/`planAutoGen.js`) are fully deterministic — no LLM, no `Math.random` in any decision path.
+- **ED safety is always-on and tier-blind.** Calorie floors (1500 male / 1200 female), FFM energy floor (30 kcal/kg FFM), rapid-loss gate (-1.5%/week), ED-pattern detector, and Beat UK signposting live in `src/lib/` and never consult tier (`proGate.js` mandate). Do not modify.
 - **Dark mode only.** `userInterfaceStyle: "dark"`, background `#0D0D0D`.
-- **UK English conventions.** Number formatting uses `en-GB` locale (e.g., `toLocaleString('en-GB')`).
-- **No Math.random() in plan generation.** `planEngine.js` is fully deterministic.
-- **GDPR consent gate** for body/nutrition data (checkboxes in relevant screens).
-- **Jargon-free UI.** MEV/MAV/MRV never appear in the user interface — shown as Min/Target/Max. "Deload" is "Lighter week". No internal terminology exposed.
-- **Only completed sessions count.** All analytics, volume stats, PR detection, and streak calculations use `getCompletedWorkoutSets()` (which JOINs on `workouts.is_completed = 1`), never `getAllWorkoutSets()`.
+- **British English** in user-facing strings; `en-GB` number formatting.
+- **EU data residency** — all user data stays in Supabase EU Dublin; no PII to third parties (telemetry is allow-listed coded enums/counts only).
+- **Jargon-free UI.** MEV/MAV/MRV never appear in the UI — shown as Min/Target/Max. "Deload" is "Lighter week".
+- **Only completed sessions count.** Analytics, volume, PR detection, and streaks use `getCompletedWorkoutSets()` (JOIN on `workouts.is_completed = 1`), never `getAllWorkoutSets()`.
 
 ### Entry Point
 
-`App.js` wraps the app in:
-1. `ErrorBoundary` (class component) — global crash handler writes to `AsyncStorage` key `@volyume_crash_log`
-2. `GestureHandlerRootView`
-3. `SafeAreaProvider`
-4. `PRCelebration` overlay (reads `prCelebration` from Zustand store, renders globally)
-5. `StatusBar style="light" backgroundColor="#0D0D0D"`
+`App.js` wraps the app in `ErrorBoundary` (global crash handler) + Sentry,
+`GestureHandlerRootView`, `SafeAreaProvider`, the global `PRCelebration`
+overlay, and a light `StatusBar`. It also initialises billing
+(`react-native-iap`, no-ops cleanly if the native module isn't linked) and
+checks for OTA updates (`expo-updates`) on cold launch.
 
 ---
 
 ## 2. Navigation Structure
 
-**File:** `src/navigation/RootNavigator.js`
+**File:** `src/navigation/RootNavigator.js` (single navigator file). For the
+full nav tree, screen inventory, and Pro-gating list, see `APPMAP.md` — the
+authoritative source. Summary here:
 
-### Tab Navigator (4 tabs)
+### Tab Navigator (5 tabs)
 
-| Tab label | Stack name | Root screen | Icon |
+| Tab key | Title | Stack | Root screen |
 |---|---|---|---|
-| Train | HomeStack | HomeScreen | `home` / `home-outline` |
-| Plans | PlansStack | PlansScreen | `grid` / `grid-outline` |
-| Progress | ProgressStack | AnalyticsScreen | `bar-chart` / `bar-chart-outline` |
-| You | ProfileStack | AthleteHubScreen | `person-circle` / `person-circle-outline` |
+| HomeTab | "Train" | HomeStack | HomeScreen |
+| PlansTab | "Plans" | PlansStack | PlansScreen |
+| DiaryTab | "Diary" | DiaryStack | DiaryScreen (**entire stack Pro-gated**) |
+| ProgressTab | "Progress" | ProgressStack | AnalyticsScreen |
+| ProfileTab | "You" | ProfileStack | YouScreen |
 
-Tab bar: background `#111111`, border `#222222`, active tint `primary (#00E5FF)`, inactive tint `textMuted (#616161)`.
+### Root gating (`renderNavigator`)
 
-### Stack Definitions
-
-**HomeStack (Train tab)**
 ```
-Home → BuildWorkout → ActiveWorkout → WorkoutSummary → ShareCard
-```
-
-**PlansStack (Plans tab)**
-```
-Plans → PlanDetail → RoutineDetail → ExerciseLibrary → ExerciseDetail
-     → ManualBuilder → CoachBuilder → PlanLibrary
+SplashScreen                          while auth/consent in flight
+!user                                 → WelcomeStack (real account required)
+signed-in, no health consent          → Article9ConsentStack
+!firstRunComplete & tier==='pro'      → ProOnboardingStack
+!firstRunComplete & tier!=='pro'      → FirstRunStack
+onboarded                             → MainTabs
 ```
 
-**ProgressStack (Progress tab)**
-```
-Analytics → WorkoutHistory → WorkoutSummary → VolumeHeatmap → PRWall → BodyMetrics
-```
+Pre-auth/onboarding stacks: **WelcomeStack** (Welcome · Quiz · PlanPreview ·
+Login), **FirstRunStack** (free: FirstRun · FreeStarter · PlanLibrary ·
+PlanDetail · ActiveWorkout), **Article9ConsentStack** (health-data consent),
+**ProOnboardingStack** (Pro guided setup → plan + nutrition).
 
-**ProfileStack (You tab)**
-```
-AthleteHub → Settings → NutritionTargets → BodyMetrics → MesocycleBuilder
-```
+**Pro-guarded routes** (`withProGuard`): the Diary tab root + all food
+sub-screens, MealPlan, WeeklyCheckIn, NutritionTargets, BodyMetrics,
+CoachOutput, ProGoalSetup, PlanUpdate, CoachingReminders, LogCardio,
+CardioHistory. Food sub-screens are gated individually **and** via the Diary
+tab root (defence-in-depth).
 
-**AuthStack (not active in current phase)**
-```
-Login → Onboarding
-```
+### Bootstrap Sequence
 
-**FirstRunStack (first-time users)**
-```
-FirstRunBranch → CoachBuilder
-```
-
-### Bootstrap Sequence (RootNavigator)
-
-1. `initDatabase()` — creates/migrates all SQLite tables (idempotent via try/catch ALTER TABLE)
-2. `seedExercisesIfNeeded()` — seeds 200+ exercises if AsyncStorage key `@volyume_exercises_seeded_v3` absent
-3. `seedRoutinesIfNeeded()` — seeds 18 library plan templates if AsyncStorage key `@volyume_routines_seeded_v4` absent
-4. Supabase session check — `getCurrentUser()` (returns null if unconfigured)
-5. `initLocalUser()` — reads or creates UUID at `@volyume_local_user_id`
-6. Checks `firstRunComplete` flag → routes to `FirstRunStack` or `MainTabs`
+`initDatabase()` (encrypted SQLite, migrate to v23) → seed exercises/routines
+if needed → Supabase session check → **require a real account** (no
+`initLocalUser`) → health-consent gate → `firstRunComplete` routes to the Pro
+or Free onboarding stack or `MainTabs`.
 
 ### Splash Screen
 
-Duration: 2000ms minimum. Animation sequence:
-1. VolyumeMark (SVG V logo): scale + fade in
-2. Wordmark "VOLYUME": slide + fade in
-3. Tagline "Intelligent Hypertrophy Logbook": fade in
+`SPLASH_MIN_MS = 1600` (1.6s minimum). VolyumeMark logo + wordmark animation.
 
 ---
 
 ## 3. Database Schema
 
 **File:** `src/lib/database.js`
-**Engine:** expo-sqlite (WAL journal mode, single file)
-**Helper:** `rowToCamel()` — converts snake_case columns to camelCase, parses `secondary_muscles` JSON
-**ID helper:** `uid()` = `Date.now().toString(36)` + random base36
+**Engine:** expo-sqlite, **SQLCipher-encrypted** (`useSQLCipher: true`; 256-bit per-device key in expo-secure-store via `src/lib/dbCrypto.js`), WAL, single file
+**Schema version:** `PRAGMA user_version` against an ordered `SCHEMA_MIGRATIONS` array — currently **v23**
+**Helper:** `rowToCamel()` — snake_case → camelCase, parses JSON columns
+
+> **⚠ Current state:** the local DB now has **~47 tables**, far more than the
+> dozen documented below. The schemas below for `exercises`, `workouts`,
+> `workout_sets`, `routines`, `routine_exercises`, `programmes`,
+> `mesocycles`, `body_metric_log`, etc. remain broadly accurate, but the
+> following **table groups are NOT documented here** (read `database.js` for
+> their columns): nutrition/food (`foods`, `custom_foods`, `food_entries`,
+> `daily_intake_rollups`, `saved_meals`, `recipes`, `recipe_ingredients`,
+> `meal_plans`, favourites/frequents/recents, `daily_water`), activity
+> (`daily_steps`, `cardio_log` incl. `ext_id`), coaching/check-in
+> (`weekly_checkins`, `coach_outputs`, `morning_weights`, `adaptation_events`,
+> `planned_muscle_volume`), partners (`partnerships`, `partner_week_signals`,
+> `partner_cheers`), and safety/tier/telemetry/sync plumbing
+> (`ed_pattern_flags`, `tier_history`, `engine_telemetry`,
+> `pending_sync_ops`, `sync_meta`). `peak_week_plans` was removed
+> (`migrate_049`). The cloud schema is ~88 migrations; see `INFRASTRUCTURE.md`
+> §4 and the `src/lib/sync/` registry for what syncs and how.
 
 ### Tables
 
@@ -477,13 +488,20 @@ Applied via `ALTER TABLE ... ADD COLUMN` with try/catch (idempotent):
 **File:** `src/store/useAppStore.js`
 No persist middleware — persistence is manual via AsyncStorage where needed.
 
+> **⚠ Current state:** auth is **real-account only** — there is no
+> `initLocalUser`/`isLocal` offline-UUID path any more. The store also holds
+> **`tier`** (`'free'|'pro'`, source of truth via `src/lib/proGate.js`) and a
+> local calorie-bank profile field, among other preferences. The shape below
+> documents the workout/timer/PR core, which is still accurate.
+
 ### State Shape
 
 ```javascript
-// Auth
-user: null | { id: string, email?: string, isLocal: boolean }
+// Auth (real Supabase account required)
+user: null | { id: string, email?: string }
 session: null | SupabaseSession
 userProfile: null | object
+tier: 'free' | 'pro' | null
 isAuthLoading: boolean  (default: true)
 firstRunComplete: boolean  (default: false)
 
@@ -527,12 +545,22 @@ barWeight: number  (default: 20)
 | `setUser(user)` | Sets `user` |
 | `setSession(session)` | Sets `session` |
 | `setUserProfile(profile)` | Sets `userProfile` |
-| `initLocalUser()` | Reads/creates UUID at `@volyume_local_user_id`, sets `user.isLocal=true` |
-| `completeFirstRun()` | Sets `firstRunComplete=true`, persists flag |
+| `setTier(tier)` / `refreshTierFromCloud()` | Set / refresh Pro entitlement (cloud `users_profile.tier`) |
+| `completeFirstRun()` / `resetFirstRun()` | Set / reset the onboarding gate |
+
+(The old `initLocalUser()` action is removed — accounts are real-only.)
 
 ---
 
 ## 5. Screen Inventory
+
+> **⚠ This section is organised by the old 4-tab structure and predates the
+> food/cardio/coaching/billing screens. For the authoritative current
+> inventory — 5 tabs, 77 screens, with Pro-gating — see `APPMAP.md`. The
+> per-screen deep-dives below remain useful for the screens that still
+> exist; ignore `CoachBuilderScreen`, `OnboardingScreen`, `PRWallScreen`,
+> `ExerciseLibraryScreen`, `AthleteHubScreen`, and `PeakWeekScreen` (all
+> removed).**
 
 ### Train Tab
 
@@ -1345,6 +1373,81 @@ Returns `{ ratio: "X.Yx", label, color }`. Colors: Beginner→textMuted, Novice�
 
 ## 8. Intelligence Engines
 
+> The hypertrophy/recovery engines below are the original set and remain
+> current. The **Precision Coaching engine, ED safety system, and the
+> food/cardio engines** were added later and are the most important pieces;
+> they are documented here at the top. All are deterministic — **no LLM, no
+> `Math.random` in any decision path** (verified by grep across the modules).
+
+### Precision Coaching engine (`src/lib/weeklyCoach.js` + `coachApply.js`)
+
+`runWeeklyCoach(inputs)` is a pure function (no I/O, no DB) — it reads the
+weekly check-in, 14-day morning weights, sessions completed vs planned, PRs,
+goal phase, and current cal/steps/cardio targets, and returns adjustments
+that are applied **only after the user taps Apply** (`coachApply.js`).
+
+- **Weight trend:** dual EWMA — safety reads a plain ~10-day EWMA; the
+  off-target decision reads a cycle-robust Holt's trend (`robustTrend.js`).
+  Rapid-loss / ED / floor logic stay on the plain trend, never the robust one.
+- **Data-confidence gate:** <3 weigh-ins → `data_hold` (plan held).
+- **Volume/training:** recovery(1–4)×performance(1–4) autoregulation matrix →
+  volumeDelta −2..+3; joint pain / illness / injury notes block any push.
+- **Calories:** off-target gate (2 high-confidence / 3 low weeks) + 2-week
+  cooldown + ±5% cap; fixed step nudges right-sized by adaptive TDEE.
+- **Steps** (lowest-fatigue lever) and **cardio** (cut + off-target + steps
+  maxed) escalate in order; both pause on poor recovery.
+- **Holds** have strict precedence: ED lockout → FFM floor → rapid-loss →
+  generic, surfaced as structured `heldDecisions[]`.
+
+Key modules: `weeklyCoach.js`, `coachApply.js` (`computeCalorieTargets`,
+`computeMacroCycle`, `computeRefeedDay`, `computeVolumeApply`),
+`coachingGoals.js` (incl. `dayCalorieCyclingAllowed`), `robustTrend.js`,
+`differentialPaywall.js`, `whyThisTemplates.js` (coach-voice narration).
+
+### ED safety system (`src/lib/` — woven into the nutrition/coach modules)
+
+**Tier-blind by design** — `proGate.js` mandates that guardrails never consult
+tier, and no safety module reads it. **Do not modify.**
+
+| Guarantee | Value | Where |
+|---|---|---|
+| Sex calorie floors | 1500 male / 1200 female | `nutritionEngine.js:789`, `coachApply.js` |
+| FFM energy floor | 30 kcal/kg fat-free mass (IOC RED-S) | `computeFFMFloor` `nutritionEngine.js:594` |
+| FFM enforcement | blocks cuts only, never raises; ≥5/7 days logged | `weeklyCoach.js:826` |
+| Rapid-loss hard gate | −1.5% bodyweight/week (upward-only correction) | `nutritionEngine.js:805`, `weeklyCoach.js:677` |
+| Max-safe-loss warning | 0.8% BW/week | `nutritionEngine.js:815` |
+| ED-pattern detector | 4 signals; fires ≥2; clears after 2 clean weeks | `edPatternDetector.js` |
+| Beat UK signposting | Beat Eating Disorders UK 0808 801 0677 | `wellbeing.js`, `HeldDecisionCard.js` |
+| Calm/wellbeing mode | softens UX, gates deficit suggestions | `wellbeing.js` |
+
+### Food / nutrition engines (`src/lib/food/**` + `nutritionEngine.js`)
+
+- **Targets:** `calculateNutritionTargets` (Mifflin/Katch-McArdle → activity
+  TDEE → phase adjustment → safety floors); adaptive TDEE
+  (`computeAdaptiveTDEEAdjustment`, damped, FFM-clamped).
+- **Precision macro solver** (founder 2026-06-23): `mealPlanAssembler.js`
+  minimises summed squared %-deviation across kcal/protein/carbs/fat — holds
+  all macros to ~1%. Deterministic (seeded mulberry32, not `Math.random`).
+- **Calorie banking** (`calorieBank.js`): pure per-day redistribution, weekly
+  total held constant, MIN 50 / MAX 500 kcal bump, no day below the safe
+  floor (max of sex floor and FFM floor).
+- **Grocery list** (`groceryList.js`): `buildGroceryList(plan)` aggregates
+  weekly grams per ingredient, sections by macro role.
+- **Food DB waterfall** (`waterfall.js`): local SQLite cache → bundled
+  OpenFoodFacts snapshot → bundled CoFID → live OpenFoodFacts API → USDA
+  FoodData Central; network hits promoted back into local `foods`.
+- No reverse-diet feature; the maintenance-restore mechanism is the **diet
+  break** (`shouldSuggestDietBreak`, MATADOR-based).
+
+### Cardio engine (`src/lib/cardio/**`)
+
+`cardioEngine.js` (`cutCardioTarget`, `nextCardioTarget` capped at
+`MAX_CARDIO_SESSIONS = 5`, `cardioComplianceFromLog`, **`summariseCardioByWeek`**
+trend view), `cardioMath.js` (MET-based `estimateCardioKcal` — **feedback only,
+never moves the calorie target**), `cardioActivities.js` (37 frozen activities,
+2024 Compendium METs). Passive import via `health.js`
+(`readCardioSessionsSince`, Pro-gated, de-dups on `ext_id`).
+
 ### recoveryEMA (`src/lib/recoveryEMA.js`)
 
 `computeRecoveryEMAs(completedWorkouts)`:
@@ -1672,9 +1775,17 @@ stopRestTimer() OR new set logged → clear interval + stop animation
 
 ---
 
-## 12. Plan Generation (CoachBuilder / planEngine)
+## 12. Plan Generation (planEngine / planAutoGen)
 
-**File:** `src/lib/planEngine.js`
+**File:** `src/lib/planEngine.js` (pure engine) + `src/lib/planAutoGen.js`
+(orchestration + persistence).
+
+> **⚠ The `CoachBuilderScreen` entry point is removed.** Plans are now
+> generated through `ProOnboardingScreen` / `ProGoalSetupScreen` (Pro) and
+> the Free `FreeStarter` / Plan Library / Manual Builder paths. The
+> `planEngine` internals below are current. `planAutoGen.js` also exposes
+> **`generatePlanDryRun`** — a read-only twin used by `PlanUpdateScreen` to
+> show a before/after diff (`src/lib/planDiff.js`) before committing a rebuild.
 
 ### `generatePlan(inputs)`
 
@@ -1910,20 +2021,25 @@ upsertUserProfile(userId, profile)  → users_profile table (Supabase cloud)
 getUserProfile(userId)
 ```
 
-### Local User Flow (current active path)
+### User Flow (current active path)
 
-1. `initLocalUser()` in Zustand store:
-   - Reads `@volyume_local_user_id` from AsyncStorage
-   - If absent: generates UUID, writes to AsyncStorage
-   - Sets `user = { id: uuid, isLocal: true }`
-2. All DB operations use this `user.id` as `user_id` in SQLite.
-3. Auth gate bypassed — users go directly to main tabs.
+**Real Supabase account required** — the anonymous local-UUID path
+(`initLocalUser`) is removed. `RootNavigator.js` explicitly refuses LOCAL_USER
+restore (per `IDENTITY_AND_OWNERSHIP_LOCKED.md`).
+
+1. `WelcomeStack` → `LoginScreen` (email/password, Apple, or Google OAuth).
+2. `supabase.auth.onAuthStateChange` `SIGNED_IN` → restore session + profile
+   + `firstRunComplete` from the cloud row; resolve `tier` from
+   `users_profile.tier` (`refreshTierFromCloud`).
+3. Health-consent gate (Article 9) → onboarding (Pro or Free) → `MainTabs`.
+4. All DB operations use the authenticated `user.id` as `user_id` in SQLite;
+   the `src/lib/sync/` layer syncs to Supabase.
 
 ### Sign-out Flow
 
-1. `AsyncStorage.removeItem('@volyume_local_user_id')`
-2. `signOut()` (no-op if Supabase not configured)
-3. `setUser(null)` + `setSession(null)` in Zustand
+`clearAuthStateForSignOut()` wipes user/session/tier/profile/firstRun, with a
+sync wipe-guard (`signOutGuard.js`) ensuring any in-flight sync writes land
+first; back to `WelcomeStack`.
 
 ### Delete Account Flow
 

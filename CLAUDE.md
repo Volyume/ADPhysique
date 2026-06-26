@@ -3,12 +3,20 @@
 This is a live production app on Google Play. Real users are paying.
 Every change you make affects them. Work accordingly.
 
-> **ACTIVE WORK (2026-06-13):** the Ultimate Audit is COMPLETE and its Tier-1 build
-> phase is underway. A resuming session reads
-> `docs/ultimate-audit-2026-06-13/_AUDIT-STATUS-AND-RESUME.md` FIRST, then builds the
-> next item in the LOCKED order (next: ULTIMATE-003) via the edit-gate — one item at a
-> time, lint + full test, commit. Do not reorder, pick, or free-flow. Work from the
+> **ACTIVE WORK (updated 2026-06-26):** the Ultimate Audit is COMPLETE and its
+> build phase is largely DONE. Tier-1 (items 1–6), the unblocked Tier-2 (7–10),
+> Tier-3 calorie banking (17), and the separate food-function audit (F/P/D) are
+> all built and merged to `main` (the original feature branch was squash-merged,
+> so the commit SHAs in the status file are historical — work is verified by
+> file + wiring, not SHA). The ONLY remaining Ultimate-Audit work is
+> blocked/decision-gated: items 11–16 (named autonomy modes, raw/cooked toggle,
+> mid-session-swap wording, Core-Haptics dependency, timeline food logging) and
+> micronutrients/NRV (16). A resuming session MUST NOT start any of these without
+> the structured founder decision first. Read
+> `docs/ultimate-audit-2026-06-13/_AUDIT-STATUS-AND-RESUME.md` and work from the
 > proposal blueprints (source), never a summary.
+> **Outstanding founder actions:** apply `supabase/migrate_087_cardio_log_ext_id.sql`
+> to EU-Dublin (manual; never from app); confirm Google Play OAuth SHA-1.
 
 ---
 
@@ -153,7 +161,13 @@ When in doubt: ask.
 
 ## SAFETY SYSTEM — DO NOT TOUCH
 
-The ED safety system is in src/coaching/safety/.
+The ED safety system lives in `src/lib/` (there is no `src/coaching/`
+directory). It is woven into the nutrition/coaching modules, not a standalone
+folder: `nutritionEngine.js` (sex calorie floors 1500/1200, FFM energy floor
+via `computeFFMFloor`, rapid-loss/max-safe-loss gates), `edPatternDetector.js`
+(ED-pattern signals), `wellbeing.js` (Beat UK signposting + calm mode), and
+the enforcement points in `weeklyCoach.js` / `coachApply.js`. The guardrails
+are tier-blind by design (`proGate.js` mandate) — they never consult tier.
 
 Never modify, disable, or work around it.
 Never lower calorie floors (1,200 kcal women, 1,500 kcal men).

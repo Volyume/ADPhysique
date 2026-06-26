@@ -1,482 +1,282 @@
 # Volyume — Complete App Map
 
-> Auto-generated reference. Last updated: 2026-05-18.
-> Branch: `main` (default branch as of 2026-05-26; this file was
-> originally generated against `claude/build-volyume-app-srY9C` which
-> has since been retired).
+> Regenerated from source against `main` on 2026-06-26 (app version 1.2.0,
+> iOS build 7, Android versionCode 14). Supersedes the 2026-05-18 map, which
+> described a 4-tab, ~26-screen, local-user, pre-food app that no longer
+> exists. This map is generated from `src/navigation/RootNavigator.js`,
+> `src/screens/`, `src/lib/`, `src/store/`, and `supabase/`.
 
-> **⚠ Stale as of 2026-05-21 and superseded 2026-05-25.** Many screens
-> listed below have since been removed (CoachBuilderScreen,
-> OnboardingQuizScreen) and the auth / onboarding / Pro upgrade flows
-> have been reworked. The Move #1 food layer, Move #2 ED-pattern
-> detection, Move #3 upward-gate compression, Move #4 differential
-> paywall, and Move #5 cascade/payments work all postdate this map.
-> **For the canonical current-state reference, read
-> `docs/CURRENT_STATUS.md` first, then `docs/PRODUCTION_ROADMAP_2026-06-09.md`
-> (the four-pass verified app map / store-readiness / infra / improvement
-> synthesis; the current app is 71 screens across 5 tabs).** This file is
-> kept for the screen deep-dives that haven't changed; treat anything to do
-> with plan creation flow, first-run paths, tier structure, or the build
-> trigger as historical, not current.
+The app is **5 bottom tabs, 77 screens**, real-Supabase-account-only (no
+anonymous/local-user mode), with the full food, cardio, coaching, and
+billing domains live. The Diary (food) tab and most coaching/nutrition
+surfaces are **Pro-gated** via `withProGuard`.
 
 ---
 
 ## Navigation Tree
 
+Single navigator file: `src/navigation/RootNavigator.js`. Root gating
+(`renderNavigator`):
+
 ```
-App.js (ErrorBoundary)
-└── RootNavigator (React Navigation v6)
-    │
-    ├── AuthStack  (shown when firstRunComplete === false)
-    │   ├── FirstRunBranch   → FirstRunScreen
-    │   ├── CoachBuilder     → CoachBuilderScreen
-    │   ├── PlanLibrary      → PlanLibraryScreen
-    │   └── PlanDetail       → PlanDetailScreen
-    │
-    └── MainTabs  (BottomTabNavigator — shown when firstRunComplete === true)
-        ├── HomeTab      → HomeStack
-        │   ├── Home             → HomeScreen          (default)
-        │   ├── BuildWorkout     → BuildWorkoutScreen
-        │   ├── ActiveWorkout    → ActiveWorkoutScreen
-        │   ├── WorkoutSummary   → WorkoutSummaryScreen
-        │   └── ShareCard        → ShareCardScreen
-        │
-        ├── PlansTab     → PlansStack
-        │   ├── Plans            → PlansScreen          (default)
-        │   ├── PlanDetail       → PlanDetailScreen
-        │   ├── RoutineDetail    → RoutineDetailScreen
-        │   ├── ExerciseLibrary  → ExerciseLibraryScreen
-        │   ├── ExerciseDetail   → ExerciseDetailScreen
-        │   ├── ManualBuilder    → ManualBuilderScreen
-        │   ├── CoachBuilder     → CoachBuilderScreen
-        │   └── PlanLibrary      → PlanLibraryScreen
-        │
-        ├── ProgressTab  → ProgressStack
-        │   ├── Analytics        → AnalyticsScreen      (default)
-        │   ├── WorkoutHistory   → WorkoutHistoryScreen
-        │   ├── WorkoutSummary   → WorkoutSummaryScreen
-        │   ├── VolumeHeatmap    → VolumeHeatmapScreen
-        │   ├── PRWall           → PRWallScreen
-        │   ├── BodyMetrics      → BodyMetricsScreen
-        │   ├── ExerciseLibrary  → ExerciseLibraryScreen  (title: "Lift Progress")
-        │   ├── ExerciseDetail   → ExerciseDetailScreen
-        │   └── ShareCard        → ShareCardScreen
-        │
-        └── ProfileTab   → ProfileStack
-            ├── AthleteHub       → AthleteHubScreen     (default)
-            ├── Settings         → SettingsScreen
-            ├── NutritionTargets → NutritionTargetsScreen
-            ├── BodyMetrics      → BodyMetricsScreen
-            ├── PRWall           → PRWallScreen
-            ├── ExerciseLibrary  → ExerciseLibraryScreen
-            ├── ExerciseDetail   → ExerciseDetailScreen
-            ├── MesocycleBuilder → MesocycleBuilderScreen
-            └── PeakWeek         → PeakWeekScreen
+App.js (ErrorBoundary, Sentry)
+└── RootNavigator (Stack + BottomTab)
+    ├── SplashScreen              while auth/consent in flight
+    ├── !user                     → WelcomeStack       (real account required)
+    ├── signed-in, no health consent → Article9ConsentStack
+    ├── !firstRunComplete & Pro   → ProOnboardingStack
+    ├── !firstRunComplete & free  → FirstRunStack
+    └── onboarded                 → MainTabs
+
+WelcomeStack         Welcome · QuizTraining(Quiz) · PlanPreview · Login
+FirstRunStack        FirstRunBranch(FirstRun) · FreeStarter · PlanLibrary · PlanDetail · ActiveWorkout
+Article9ConsentStack Article9Consent · PrivacyPolicy
+ProOnboardingStack   ProOnboarding · PlanLibrary · PlanDetail · ActiveWorkout · ProSetupComplete · NutritionEducation · GoalLockConsent
+
+MainTabs (5 tabs)
+├── HomeTab   "Train"    → HomeStack
+│   Home · BuildWorkout · ActiveWorkout · WorkoutSummary · WorkoutHistory
+│   VolumeHeatmap · ShareCard · CoachReview · LogCardio[Pro,modal] · ProUpgrade[modal] · FreeStarter
+│
+├── PlansTab  "Plans"    → PlansStack
+│   Plans · PlanUpdate[Pro] · PlanDetail · RoutineDetail · ExerciseDetail
+│   ManualBuilder · PlanLibrary · MesocycleBuilder · ProUpgrade[modal] · FreeStarter
+│
+├── DiaryTab  "Diary"    → DiaryStack            ← ENTIRE STACK Pro-gated
+│   Diary · MealPlan · FoodSearch[modal] · AddCustomFood[modal] · ScanBarcode[modal]
+│   ScanLabel[modal] · LogCardio[modal] · CardioHistory · FoodInsights
+│   MyRecipes[modal] · MyMeals[modal] · RecipeBuilder[modal]
+│
+├── ProgressTab "Progress" → ProgressStack
+│   Analytics · WorkoutHistory · WorkoutSummary · VolumeHeatmap · CoachReview
+│   BodyMetrics[Pro] · LiftProgress · Consistency · Partner · ExerciseDetail
+│   YearOfLifts · RecapStory(=YearOfLifts) · ShareCard · LogCardio[Pro,modal] · CardioHistory[Pro] · ProUpgrade[modal]
+│
+└── ProfileTab "You"     → ProfileStack
+    You · Settings · SettingsAccount · SettingsProfile · SettingsCoaching
+    SettingsNotifications · SettingsDisplay · SettingsHealth · SettingsData
+    Snapshots · SettingsPrivacy · SettingsAbout · NutritionTargets[Pro] · NutritionEducation
+    BodyMetrics[Pro] · WeeklyCheckIn[Pro] · CoachOutput[Pro] · Methodology · ShareCard
+    CoachHeldHistory · BlockReflection · ProGoalSetup[Pro] · GoalChangeSummary · GoalLockConsent
+    NotificationSettings · Import · CoachingReminders[Pro] · WellbeingCheck · PrivacyPolicy
+    DebugLog · SubscriptionPolicy · Subscription · CascadeGate[modal] · Paywall[modal] · Credits · ProUpgrade[modal]
 ```
 
-### Cross-tab navigation (uses `navigation.getParent()?.navigate`)
-| From screen | Target | Code |
-|---|---|---|
-| AnalyticsScreen | PlansTab → CoachBuilder | `getParent()?.navigate('PlansTab', { screen: 'CoachBuilder' })` |
-| AnalyticsScreen | PlansTab (plan active) | `getParent()?.navigate('PlansTab')` |
-| AnalyticsScreen | ProfileTab → MesocycleBuilder | `getParent()?.navigate('ProfileTab', { screen: 'MesocycleBuilder' })` |
-| HomeScreen | PlansTab → CoachBuilder | `navigate('PlansTab', { screen: 'CoachBuilder' })` |
-| HomeScreen | PlansTab → PlanLibrary | `navigate('PlansTab', { screen: 'PlanLibrary' })` |
-| HomeScreen | PlansTab → ManualBuilder | `navigate('PlansTab', { screen: 'ManualBuilder' })` |
-| PRWallScreen | ProfileTab → BodyMetrics | `navigate('ProfileTab', { screen: 'BodyMetrics' })` |
-| BodyMetricsScreen | ProfileTab → NutritionTargets | `navigate('ProfileTab', { screen: 'NutritionTargets' })` |
+**Pro-guarded routes** (`withProGuard`, declared in `RootNavigator.js`):
+WeeklyCheckIn, NutritionTargets, BodyMetrics, CoachOutput, ProGoalSetup,
+PlanUpdate, CoachingReminders, the Diary tab root, LogCardio, CardioHistory,
+MealPlan, FoodSearch, AddCustomFood, ScanBarcode, ScanLabel, FoodInsights,
+MyRecipes, MyMeals, RecipeBuilder. Food sub-screens are gated individually
+**and** via the Diary tab root (defence-in-depth).
+
+**No anonymous mode.** `RootNavigator.js` explicitly forbids LOCAL_USER
+restore (per `IDENTITY_AND_OWNERSHIP_LOCKED.md`); a real Supabase account is
+required. Splash minimum is `SPLASH_MIN_MS = 1600` (1.6s).
 
 ---
 
-## Screens
+## Screen Inventory (77 screens)
 
-### Authentication / First-Run
+### Auth / Onboarding (12)
+| Screen | Purpose |
+|---|---|
+| `WelcomeScreen` | Tier-selection landing for unauthenticated users |
+| `LoginScreen` | Email/password + Apple/Google OAuth sign-in |
+| `QuizScreen` | Pre-account training quiz (COMP-030, Variant B) |
+| `PlanPreviewScreen` | Pre-account "built for me" plan preview (COMP-030) |
+| `FirstRunScreen` | Free-tier first run (name + units → FreeStarter) |
+| `FreeStarterScreen` | Free guided 3-question on-ramp; installs a beginner library plan |
+| `ProOnboardingScreen` | Pro guided setup wizard (profile → training → recovery → plan + nutrition) |
+| `ProSetupCompleteScreen` | Pro onboarding hand-off / plan rationale |
+| `ProGoalSetupScreen` | Re-run of Pro goal/training setup |
+| `Article9ConsentScreen` | GDPR Article 9 health-data consent gate |
+| `GoalLockConsentScreen` | Consent gate for competition-tier goals |
+| `GoalChangeSummaryScreen` | Summary shown when a physique goal changes |
 
-#### `FirstRunScreen`
-- **Purpose:** Gateway screen shown on fresh install. Three paths: Coach Builder, Manual Builder, Plan Library.
-- **Navigates to:** `CoachBuilder`, `ManualBuilder` (via PlansTab cross-tab), `PlanLibrary`
-- **Store reads:** `user`, `completeFirstRun`
+### Training / Workout (12)
+| Screen | Purpose |
+|---|---|
+| `HomeScreen` | Train-tab dashboard (next session, streak, last session) |
+| `BuildWorkoutScreen` | Pre-session exercise picker |
+| `ActiveWorkoutScreen` | Live set-by-set logger (core experience; Live Activity / widget sync) |
+| `WorkoutSummaryScreen` | Post-session review + feedback ratings |
+| `WorkoutHistoryScreen` | Calendar + session list |
+| `PlansScreen` | My Plans dashboard |
+| `PlanDetailScreen` | Plan view/rationale, set active, start |
+| `PlanLibraryScreen` | Curated library plans by division/collection |
+| `PlanUpdateScreen` | Re-run plan generation with dry-run diff/preview [Pro] |
+| `RoutineDetailScreen` | Edit a single workout day (muscle-coverage chips) |
+| `ManualBuilderScreen` | Full manual plan builder |
+| `MesocycleBuilderScreen` | Named training blocks |
+| `ExerciseDetailScreen` | Per-exercise history graph + substitutes + form tips |
 
-#### `LoginScreen`
-- **Purpose:** Email/password sign-in; also restores crash log from AsyncStorage on mount.
-- **Displays:** Crash log from previous session (dismissable red banner).
-- **Navigates to:** `Onboarding` (replace), `MainTabs` (replace via store auth)
+### Nutrition / Food (12) — all Pro
+| Screen | Purpose |
+|---|---|
+| `DiaryScreen` | Food diary entry point; calorie-banking surface |
+| `FoodSearchScreen` | Food picker / waterfall lookup |
+| `AddCustomFoodScreen` | Manual custom-food entry |
+| `ScanBarcodeScreen` | Live camera barcode scan (vision-camera) |
+| `ScanLabelScreen` | Two-step front-of-pack + nutrition-panel OCR capture |
+| `MealPlanScreen` | Generated meal plan + shopping list |
+| `MyMealsScreen` | Saved meal templates |
+| `MyRecipesScreen` | User recipes list |
+| `RecipeBuilderScreen` | Create/edit a recipe |
+| `FoodInsightsScreen` | Food adherence over a 7/14/30/90-day window; protein-consistency headline |
+| `NutritionTargetsScreen` | Macro calculator (BMR/TDEE/protein approaches) |
+| `NutritionEducationScreen` | Beginner calories/macros explainer |
 
-#### `OnboardingScreen`
-- **Purpose:** 4-step profile setup (training focus, experience, equipment, units).
-- **Writes:** `userProfile` to store + AsyncStorage via `saveLocalProfile`
+### Cardio (2) — Pro
+| Screen | Purpose |
+|---|---|
+| `LogCardioScreen` | User-led cardio logging |
+| `CardioHistoryScreen` | Cardio log + done-vs-planned weekly trend |
 
----
+### Progress / Analytics (8)
+| Screen | Purpose |
+|---|---|
+| `AnalyticsScreen` | Progress-tab hub |
+| `VolumeHeatmapScreen` | Per-muscle MEV/MAV/MRV heatmap |
+| `LiftProgressScreen` | Strength standing + per-lift est-1RM trajectory (replaced PRWall) |
+| `ConsistencyScreen` | Training block / recovery / load / 12-week calendar |
+| `BodyMetricsScreen` | Bodyweight + measurements; recomp-reframe card [Pro] |
+| `YearOfLiftsScreen` | Swipeable "Year of Lifts" recap (also routed as RecapStory) |
+| `PartnerScreen` | Training-partner home (NEW-002) |
+| `ShareCardScreen` | Skia-rendered workout / PR / milestone / Great-Week share card |
 
-### Home Tab
+### Coaching (8) — mostly Pro
+| Screen | Purpose |
+|---|---|
+| `WeeklyCheckInScreen` | Weekly check-in (weight + recovery) [Pro] |
+| `CoachOutputScreen` | Precision Coaching weekly output card [Pro] |
+| `CoachReviewScreen` | Weekly review (progressive-overload wins) |
+| `CoachHeldHistoryScreen` | History of held coaching adjustments |
+| `CoachingRemindersScreen` | Pro coaching reminder settings [Pro] |
+| `BlockReflectionScreen` | End-of-block reflection |
+| `MethodologyScreen` | "How Precision Coaching works" (COMP-006, static) |
+| `WellbeingCheckScreen` | Wellbeing check-in |
 
-#### `HomeScreen`
-- **Purpose:** Daily dashboard. Shows week stats, streak, next planned workout, last session.
-- **Key data:** `getAllWorkouts`, `getCompletedWorkoutSets`, `getActivePlan`, `getRoutinesForPlan`, `getAllRoutineExerciseCounts`
-- **Key actions:** Start next workout, Repeat last session (now pre-populates exercises), change workout
-- **Navigates to:** `ActiveWorkout`, `BuildWorkout`, `PlansTab/*`
+### Settings (12)
+`SettingsScreen` (landing) · `SettingsAccountScreen` · `SettingsProfileScreen`
+· `SettingsCoachingScreen` · `SettingsNotificationsScreen` ·
+`SettingsDisplayScreen` (free appearance, COMP-029) · `SettingsHealthScreen`
+(Apple Health / Health Connect scopes) · `SettingsDataScreen` ·
+`SettingsPrivacyScreen` · `SettingsAboutScreen` · `NotificationSettingsScreen`
+(morning weight / check-in reminders) · `SnapshotsScreen` (restore DB
+snapshots, COMP-009).
 
-#### `BuildWorkoutScreen`
-- **Purpose:** Pre-workout builder — pick exercises before starting.
-- **Navigates to:** `ActiveWorkout` (replace)
+### Subscription / Billing (5)
+`SubscriptionScreen` (tier + cascade stage + locked price + manage) ·
+`SubscriptionPolicyScreen` · `CascadeGateScreen` (day-21 trial-cascade
+decision modal) · `PaywallScreen` (differential paywall, Move #4) ·
+`ProUpgradeScreen` (generic upgrade-to-Pro modal).
 
-#### `ActiveWorkoutScreen` ⭐ CRITICAL (1,342 lines)
-- **Purpose:** Live workout logger. Exercise-by-exercise, set-by-set.
-- **Store reads/writes:** `activeWorkout`, `workoutExercises`, `currentExerciseIndex`, `addSetToCurrentExercise`, `startRestTimer`, `showPRCelebration`, `endWorkout`
-- **Key algorithms:** `getProgressionSuggestion`, `detectPR`, `calculate1RM`
-- **Components used:** `SetEntry`, `RestTimer`, `PlateCalculator`
-- **Key features:**
-  - Previous performance inline
-  - Rest timer auto-starts on set complete (haptics)
-  - PR detection on every set → `PRCelebration` overlay
-  - Auto-advance to next exercise after target sets
-  - Time Crunch mode (cuts rest + drops exercises to fit a target duration)
-  - Exercise swap (ranked substitutes)
-  - Set type picker (straight, warmup, dropset, superset, myo-reps, AMRAP, rest-pause)
-- **Navigates to:** `WorkoutSummary` (replace on finish)
+### Profile / misc (6)
+`YouScreen` (You-tab root) · `ImportScreen` (CSV import from Hevy/Strong) ·
+`CreditsScreen` (food-data licence attribution: OFF / CoFID) ·
+`PrivacyPolicyScreen` · `DebugLogScreen` (on-device error buffer, 200 events).
 
-#### `WorkoutSummaryScreen`
-- **Purpose:** Post-workout review. Auto-saves feedback with 1s debounce. Shows volume status, auto-reg advice, deload prediction.
-- **Params:** `workoutId`, `durationMinutes`, `exerciseCount`, `setCount`, `workingSetCount`, `tonnage`, `exerciseNames`, `readOnly`, `routineId`, `detectedPRs`, `exerciseData`
-- **Key algorithms:** `calculateWeeklyVolume`, `getVolumeStatus`, `getAutoRegSuggestion`, `evaluateAutoReg`, `predictDeloadWeek`
-- **Navigates to:** `ShareCard`, back/popToTop on Close
-
-#### `ShareCardScreen`
-- **Purpose:** Generate a shareable workout summary card (PNG export).
-
----
-
-### Plans Tab
-
-#### `PlansScreen`
-- **Purpose:** Lists user's plans (active + archived) and library plans.
-- **Navigates to:** `PlanDetail`, `ManualBuilder`, `CoachBuilder`, `PlanLibrary`
-
-#### `PlanDetailScreen`
-- **Purpose:** View/manage a single plan. Start a workout from it, set as active, duplicate, archive.
-- **Params:** `planId`, `isLibrary`
-- **Key actions:** Add to My Plans (library copy), Set Active, Start Workout, archive/duplicate
-
-#### `PlanLibraryScreen`
-- **Purpose:** Browse curated plans filtered by split type.
-- **Params:** `fromFirstRun` — if true, calls `completeFirstRun()` after selecting
-- **Navigates to:** `PlanDetail`
-
-#### `RoutineDetailScreen`
-- **Purpose:** Edit a single workout day within a plan (exercises, sets, reps, rest).
-- **Navigates to:** `ExerciseLibrary` (to add exercises), `ExerciseDetail`
-
-#### `ExerciseLibraryScreen`
-- **Purpose:** Search/filter exercise database (~150 exercises). Used for both browsing and adding to routines.
-- **Navigates to:** `ExerciseDetail`
-
-#### `ExerciseDetailScreen`
-- **Purpose:** Exercise history chart (est. 1RM over 8 sessions), substitutes list.
-- **Params:** `exerciseId`
-- **Key algorithms:** `calculate1RM`, `getExerciseSubstitutes`
-
-#### `ManualBuilderScreen` (1,266 lines)
-- **Purpose:** Full plan builder from scratch — name, split, add workout days, add exercises.
-
-#### `CoachBuilderScreen` (935 lines)
-- **Purpose:** Deterministic guided plan creation (NOT AI/LLM — same inputs always produce the same plan). Asks about goals, experience, equipment, frequency → generates a full plan and saves to `programmes` table.
-
----
-
-### Progress Tab
-
-#### `AnalyticsScreen`
-- **Purpose:** Dashboard showing active plan pulse, volume trends, deload alert, training calendar, PR sparkline, navigation tiles.
-- **Key data:** `getAllWorkouts`, `getCompletedWorkoutSets`, `getAllExercises`, `getActivePlan`
-- **Algorithms:** `calculateWeeklyVolume`, `shouldDeload`, `computePRsPerWeek`
-- **Navigates to:** `WorkoutHistory`, `VolumeHeatmap`, `PRWall`, `BodyMetrics`, `ExerciseLibrary`, `ProfileTab→MesocycleBuilder`
-
-#### `WorkoutHistoryScreen`
-- **Purpose:** Calendar month view + session list. Tap a session to open read-only WorkoutSummary. Repeat a session.
-- **Navigates to:** `WorkoutSummary` (read-only), `ActiveWorkout` (repeat)
-
-#### `VolumeHeatmapScreen`
-- **Purpose:** Per-muscle weekly volume heatmap with MEV/MAV/MRV colour bands.
-- **Algorithms:** `calculateWeeklyVolume`, `getVolumeStatus`, `VOLUME_LANDMARKS`
-
-#### `PRWallScreen`
-- **Purpose:** All-time personal records per exercise. Lifetime bests, strength standards vs bodyweight.
-- **Navigates to:** `ProfileTab→BodyMetrics`
-
-#### `BodyMetricsScreen`
-- **Purpose:** Log + trend bodyweight and measurements. Weight chart, delta badges.
-- **Navigates to:** `ProfileTab→NutritionTargets`
-
----
-
-### Profile Tab
-
-#### `AthleteHubScreen`
-- **Purpose:** Profile hub. Shows milestones, streak, recovery status, quick stats, nav rows to all profile features.
-- **Nav rows:** Nutrition Targets, Body Metrics, Training Blocks, Peak Week, Send Report to Coach, Personal Records, Settings
-- **Key data:** `getAllWorkouts`, `getCompletedWorkoutSets`, `getBodyMetricLog`, `getNutritionTargets`
-- **Algorithms:** `computeRecoveryEMAs`
-
-#### `SettingsScreen`
-- **Purpose:** Units, wellbeing mode, exercise library, data management, account.
-- **Data actions:** Back up everything (JSON), Restore from backup, Export workout log (CSV), Clear workout history
-- **Account:** Sign out, Delete account
-
-#### `NutritionTargetsScreen`
-- **Purpose:** Calculate and display daily calorie + macro targets (protein, carbs, fat).
-- **Engine:** `nutritionEngine.js` — bodybuilding-level protein targets (2.2g/kg+ lean gain)
-
-#### `MesocycleBuilderScreen`
-- **Purpose:** Create and manage named training blocks (mesocycles) with start date, duration, experience level.
-
-#### `PeakWeekScreen`
-- **Purpose:** 7-day contest prep protocol (carb deplete → load → water/sodium taper).
-- **Federations:** BPA, 2BROS, FitX, FMX, IBFA, NABBA, NPC, PCA, UKBFF (default: BPA)
-- **Engine:** `peakWeekEngine.js`
-
----
-
-## Components
-
-| Component | Purpose | Props |
-|---|---|---|
-| `SetEntry` | Weight/reps/set-type input row | `value`, `onChange`, `units`, `onOpenSetTypePicker` |
-| `RestTimer` | Countdown timer with animated progress bar, haptics, +/− adjustments | (reads from store directly) |
-| `PlateCalculator` | Inline plate math for any weight | `weight`, `units`, `barWeight` |
-| `VolumeBars` | MEV/MAV/MRV coloured volume bars | `muscle`, `sets`, `landmarks` |
-| `PRCelebration` | Full-screen confetti + haptic overlay on new PR | `pr`, `onDismiss`, `subdued` |
-| `ExerciseCard` | Search result row in exercise library | `exercise`, `onPress` |
-| `BrandMark` / `BrandTag` | "Volyume" logo lockup | `size`, `color` |
-| `EmptyState` | Generic empty-state placeholder | `icon`, `title`, `subtitle`, `action` |
+> Screens removed since the May map (do not reference): `CoachBuilderScreen`,
+> `OnboardingScreen`, `PRWallScreen` (→ `LiftProgressScreen`),
+> `ExerciseLibraryScreen` (only `ExerciseDetailScreen` survives),
+> `AthleteHubScreen` (→ `YouScreen`), `PeakWeekScreen` (peak-week engine
+> removed; `migrate_049` dropped `peak_week_plans`).
 
 ---
 
 ## Library Modules (`src/lib/`)
 
-### `database.js` — SQLite layer
-- Opens `volyume.db` with WAL mode via `openDatabaseAsync`
-- Versioned migrations via `PRAGMA user_version` (currently at v2)
-- All rows snake_case → camelCase via `rowToCamel`
-- **Key exports:** `initDatabase`, `getAllWorkouts`, `getCompletedWorkoutSets`, `getAllWorkoutSets`, `createWorkout`, `updateWorkout`, `createWorkoutSet`, `getWorkoutSetsForWorkout`, `getPreviousWorkoutSets`, `getAllExercises`, `getExerciseById`, `getAllRoutines`, `createRoutine`, `getRoutineExercisesWithDetails`, `addExerciseToRoutine`, `getActivePlan`, `setActivePlan`, `getRoutinesForPlan`, `getProgrammeById`, `advancePlanNextWorkout`, `copyPlanFromLibrary`, `getAllPlansForUser`, `getLibraryPlans`, `saveNutritionTargets`, `getNutritionTargets`, `savePeakWeekPlan`, `getActivePeakWeekPlan`, `logBodyMetric`, `getBodyMetricLog`, `getLatestBodyWeight`, `buildWorkoutCSV`, `clearWorkoutHistory`, `dumpAllTables`, `restoreAllTables`, `BACKUP_TABLES`
+The lib layer has grown well beyond the original hypertrophy helpers. Key
+groupings (representative, not exhaustive):
 
-### `algorithms.js` — Hypertrophy intelligence
-Ten pure functions, no side-effects:
-
-| Function | Purpose |
-|---|---|
-| `calculateWeeklyVolume(sets, exerciseMap)` | Hard sets per muscle (RIR ≤2 or RPE ≥7 only) |
-| `getProgressionSuggestion(currentSets, prevSets, repsMin, repsMax, units)` | Double-progression suggestion |
-| `detectPR(newSet, historicalSets, exercise, units)` | Returns PR type array; triggers celebration |
-| `calculate1RM(weight, reps)` | Ensemble Epley/Brzycki with rep-range weighting |
-| `getVolumeStatus(weeklyVolume, muscle)` | below / optimal / over using VOLUME_LANDMARKS |
-| `getAutoRegSuggestion(feedback, weeklyVolumes)` | Volume adjustment advice |
-| `shouldDeload(last4Weeks)` | Multi-signal deload detection |
-| `getExerciseSubstitutes(exercise, allExercises, equipment)` | SFR-ranked substitutes |
-| `calculateTonnage(sets)` | sum(weight × reps) for hard sets |
-| `getProgressionPath(thisWeek, lastWeek)` | Next block suggestion |
-
-**VOLUME_LANDMARKS** (MEV / MAV / MRV per muscle group):
-```
-chest: 6/14/22  back: 10/18/25  front_delts: 0/6/12  side_delts: 8/16/26
-rear_delts: 4/16/22  biceps: 8/16/26  triceps: 6/12/18  quads: 8/14/20
-hamstrings: 6/12/20  glutes: 4/10/16  calves: 8/14/20  abs: 0/18/25  traps: 6/12/20
-```
-
-### `nutritionEngine.js` — Macro calculator
-Bodybuilding-level targets. Protein per kg by goal:
-- `lean_gain`: 2.2g/kg | `build`: 2.0g/kg | `maintain`: 2.0g/kg
-- `recomp`: 2.5g/kg | `mild_cut`: 2.5g/kg | `aggressive_cut`: 2.7g/kg | `contest_prep`: 2.7g/kg
-
-### `mesocycle.js` — Block periodisation
-- `getMesoSchedule(experience)` → 5-week standard or 6-week advanced schedule
-- `getCurrentMesoWeek(startDateMs, experience)` → 1-based week number
-- `evaluateAutoReg(feedbackWindow)` → action + sets adjustment
-- `predictDeloadWeek(feedbackWindow, mesoWeek, experience)` → weeks until deload
-
-### `peakWeekEngine.js` — Contest prep
-- `FEDERATIONS`: `['BPA', '2BROS', 'FitX', 'FMX', 'IBFA', 'NABBA', 'NPC', 'PCA', 'UKBFF']`
-- `buildPeakWeek(inputs)` → 7-day deterministic protocol (carb/fat/water/sodium per day)
-- Protocol: 3-day depletion → 2-day load → 1-day taper → show day
-
-### `dataBackup.js` — Local backup / restore
-- `exportBackup()` → dumps all SQLite tables + AsyncStorage prefs to JSON → native share sheet
-- `importBackup()` → file picker → validates → restores inside a single transaction
-
-### `planEngine.js` — Plan generation
-- Generates workout splits from CoachBuilder inputs (frequency, focus, experience, equipment)
-
-### `insightsEngine.js` — Automated coaching insights
-- Analyses workout history → surfaces actionable recommendations (volume, recovery, progression)
-
-### `recoveryEMA.js` — Recovery tracking
-- Exponential moving averages on soreness/fatigue/pump feedback
-
-### `coachExport.js` — PDF report
-- Builds "Last 4 weeks" report (volume, PRs, bodyweight) for sending to a coach
-
-### `swapEngine.js` — Exercise substitution
-- `rankSwaps(exercise, allExercises, options)` → sorted substitute list by SFR + equipment match
-
-### `wellbeing.js` — Wellbeing mode
-- `getWellbeingMode()` / `setWellbeingMode()` → calm mode toggles certain UI effects off
-
-### `phaseEngine.js` — Phase detection
-- Detects current training phase (bulk/cut/recomp/maintain) from bodyweight trend + nutrition goal
-
-### `setTypeEngine.js` — Set type logic
-- Validation and display helpers for straight / warmup / dropset / superset / myo-reps / AMRAP / rest-pause
-
-### `travelMode.js` — Travel/minimal equipment
-- Adapts exercise selection to available equipment
-
-### `supabase.js` — Auth client
-- Supabase client init (reads `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY`)
-- `signOut()`, `getSupabaseClient()`
-
-### `seedExercises.js` / `seedRoutines.js`
-- One-time seeding of ~150 canonical exercises and starter routines into SQLite on first launch
+- **Training / hypertrophy:** `algorithms.js` (weekly volume, PR detection,
+  1RM, volume status, auto-reg, deload), `swapEngine.js`, `setTypeEngine.js`,
+  `mesocycle.js`, `phaseEngine.js`, `planEngine.js` / `planAutoGen.js`
+  (deterministic plan generation; `generatePlanDryRun` for plan diff/preview),
+  `planDiff.js`.
+- **Precision Coaching engine:** `src/coaching/**` — deterministic weekly loop
+  (`weeklyCoach.js`, `coachingGoals.js` incl. `dayCalorieCyclingAllowed`),
+  plus the **ED safety system in `src/coaching/safety/**`** (calorie floors,
+  FFM floor, rapid-loss threshold, ED-pattern flags, Beat UK signposting) —
+  **do not modify**.
+- **Nutrition / food:** `src/lib/food/**` — meal-plan assembler/solver
+  (precision macro solver, holds macros to ~1%), `calorieBank.js`,
+  `groceryList.js`, `db.js` (food DB, OpenFoodFacts / USDA / CoFID waterfall),
+  sanity checks, telemetry.
+- **Cardio:** `src/lib/cardio/cardioEngine.js` (`summariseCardioByWeek`,
+  compliance) + passive Health import.
+- **Progress / recap:** `recompReframe.js`, recap-card builders
+  (`YearOfLiftsScreen`/`ShareCardScreen`).
+- **Data / sync:** `database.js` (encrypted SQLite), `dbCrypto.js`,
+  `supabase.js`, and the `src/lib/sync/**` registry-driven sync layer.
+- **Payments:** `src/lib/payments/**` (`playBilling.js`, `cascade.js`,
+  `catalogue.js`).
+- **Platform:** `health.js` / `activitySteps.js` (Apple Health / Health
+  Connect), notifications, error logging (PII-scrubbed), seeds
+  (`seedExercises.js`, `seedRoutines.js`).
 
 ---
 
-## Zustand Store (`useAppStore`)
+## State (`src/store/useAppStore.js`)
 
-```
-── Auth ─────────────────────────────────────────────────
-user            { id, email, isLocal? }   null when logged out
-session         Supabase session object
-userProfile     { trainingFocus, trainingAgeYears, primaryEquipment, units, ... }
-isAuthLoading   bool
-
-setUser / setSession / setUserProfile / setAuthLoading
-initLocalUser()     → creates UUID user stored in AsyncStorage (offline mode)
-saveLocalProfile()  → persists profile to AsyncStorage
-clearLocalUser()    → wipes local user
-
-── First-run ─────────────────────────────────────────────
-firstRunComplete    bool (default true to avoid flash)
-firstRunChecked     bool
-checkFirstRun()     → reads AsyncStorage, sets flags
-completeFirstRun()  → writes AsyncStorage, sets true
-
-── Active Workout ────────────────────────────────────────
-activeWorkout           { id, routineId, ... }
-workoutExercises        [{ exercise, routineExercise, sets: [setData] }]
-currentExerciseIndex    int
-workoutStartTime        epoch ms
-lastActivityAt          epoch ms
-
-startWorkout(workout, initialExercises)
-endWorkout()
-setWorkoutExercises(arrayOrFn)   ← supports functional updater
-addExerciseToWorkout(exercise, routineExercise)
-addSetToCurrentExercise(setData)
-setCurrentExerciseIndex(i)
-updateLastActivity()
-
-── Rest Timer ────────────────────────────────────────────
-restTimerActive     bool
-restTimerDuration   seconds
-restTimerRemaining  seconds
-
-startRestTimer(duration)
-stopRestTimer()
-addRestTime(seconds)
-tickRestTimer()     ← called by setInterval in RestTimer component
-
-── PR Celebration ────────────────────────────────────────
-prCelebration    { type, value, label, ... } | null
-showPRCelebration(pr)
-hidePRCelebration()
-
-── Units ────────────────────────────────────────────────
-units       'kg' | 'lb'
-setUnits(u)
-
-── Bar weight ───────────────────────────────────────────
-barWeight   kg (default 20)
-setBarWeight(w)
-```
+Zustand store. Auth is **real-account only** — there is no `initLocalUser`
+offline UUID path any more. The store still holds active-workout state, rest
+timer, PR celebration, units/bar weight, tier/entitlement, and various
+preferences (incl. the local calorie-bank profile field). Components read
+from the local SQLite database and the store, never from Supabase directly.
 
 ---
 
-## SQLite Database (`volyume.db`)
+## Local Database (`volyume.db`)
 
-Schema version tracked via `PRAGMA user_version` (currently v2).
-
-| Table | Purpose | Key columns |
-|---|---|---|
-| `exercises` | Canonical + custom exercises | `id`, `name`, `primary_muscle`, `secondary_muscles`, `equipment`, `compound_isolation`, `sfr` |
-| `workouts` | Workout sessions | `id`, `user_id`, `routine_id`, `started_at`, `ended_at`, `is_completed`, `session_difficulty`, `fatigue_level`, `soreness_24h_before`, `overall_pump`, `name`, `set_count`, `total_volume` |
-| `workout_sets` | Individual logged sets | `id`, `workout_id`, `exercise_id`, `user_id`, `set_number`, `set_type`, `actual_reps`, `weight`, `rir`, `rpe`, `failed`, `missed_reps` |
-| `routines` | Workout templates (days within a plan) | `id`, `user_id`, `programme_id`, `name`, `is_template`, `is_library` |
-| `routine_exercises` | Exercises within a routine | `id`, `routine_id`, `exercise_id`, `order`, `recommended_sets`, `recommended_reps_min`, `recommended_reps_max`, `starting_weight`, `rest_seconds` |
-| `programmes` | Training plans (CoachBuilder / ManualBuilder output) | `id`, `user_id`, `name`, `is_active`, `next_workout_index`, `split_type`, `tags`, `is_archived` |
-| `mesocycles` | Named training blocks | `id`, `user_id`, `name`, `start_date`, `duration_weeks`, `experience_level` |
-| `nutrition_targets` | Daily macro targets | `id`, `user_id`, `goal`, `calories`, `protein_g`, `carbs_g`, `fat_g` |
-| `peak_week_plans` | Contest prep protocols | `id`, `user_id`, `show_date`, `federation`, `current_bodyweight`, `lean_estimate`, `plan_json` |
-| `body_metric_log` | Weight + measurements over time | `id`, `user_id`, `logged_at`, `body_weight`, `waist_cm`, `chest_cm`, `arms_cm`, `legs_cm`, `shoulders_cm`, `forearm_cm`, `ham_cm`, `calf_cm` |
-| `user_insights` | Automated coaching insights | `id`, `user_id`, `type`, `message`, `dismissed_at` |
-| `user_body_profile` | Physical stats (height, age, sex) | `id`, `user_id`, `height_cm`, `age`, `sex`, `training_age_years` |
-
-**Backup tables** (exported by `dumpAllTables`): all except `exercises` (re-seeded on launch).
+- **Engine:** `expo-sqlite` (SQLCipher-encrypted at rest; 256-bit per-device
+  key in `expo-secure-store`), WAL mode, single file.
+- **Schema version:** `PRAGMA user_version` against an ordered
+  `SCHEMA_MIGRATIONS` array — currently **v23**.
+- **~47 local tables**, grouped: training (`exercises`, `workouts`,
+  `workout_sets`, `routines`, `routine_exercises`, `programmes`, notes),
+  periodisation/coaching (`mesocycles`, `planned_muscle_volume`,
+  `adaptation_events`, `coach_outputs`, `user_body_profile`), body/check-in
+  (`body_metric_log`, `morning_weights`, `weekly_checkins`), nutrition/food
+  (`nutrition_targets`, `foods`, `custom_foods`, `food_entries`,
+  `daily_intake_rollups`, `saved_meals`, `recipes`, `recipe_ingredients`,
+  `meal_plans`, favourites/frequents/recents, `daily_water`), activity
+  (`daily_steps`, `cardio_log` incl. `ext_id`), partners (`partnerships`,
+  `partner_week_signals`, `partner_cheers`), and safety/tier/telemetry/sync
+  plumbing (`ed_pattern_flags`, `tier_history`, `engine_telemetry`,
+  `pending_sync_ops`, `sync_meta`).
 
 ---
 
-## AsyncStorage Keys
+## Supabase (sync target — EU Dublin)
 
-| Key | Purpose |
-|---|---|
-| `@volyume_local_user_id` | Offline user UUID |
-| `@volyume_first_run_complete` | Onboarding gate |
-| `@volyume_user_profile_<userId>` | Onboarding selections |
-| `@volyume_wellbeing_mode` | Calm mode preference |
-| `@volyume_physique_tracking_enabled` | Body metrics section toggle in AthleteHub |
-| `@volyume_exercises_seeded_v<n>` | Exercise seed version guard |
-| `@volyume_routines_seeded_v<n>` | Routine seed version guard |
-| `@volyume_nutrition_targets` | Legacy cache (real data in SQLite `nutrition_targets`) |
-| `@volyume_landmarks_<userId>` | Custom MEV/MAV/MRV overrides per user |
-| `@volyume_crash_log` | Last crash message (surfaced on LoginScreen; excluded from backup) |
-
----
-
-## APK Build
-
-Trigger: push to `main` or any `claude/**` branch → GitHub Actions (`build-android.yml`). (Historically the trigger pointed at `claude/build-volyume-app-srY9C`; that branch has been retired and `main` is now the canonical build source.)
-
-```
-npx expo prebuild --platform android --clean
-cd android && ./gradlew assembleRelease --no-daemon
-```
-
-**IMPORTANT: always `assembleRelease`, never `assembleDebug`.**
-Release APK embeds the JS bundle. Debug APK requires a Metro server and crashes with "Unable to load script" when run standalone.
-
-Artifact: uploaded as `app-release.apk` in the Actions run.
+- **~88 migrations** in `supabase/` (`migrate_001`…`migrate_088`, with a few
+  gaps and one `085` number collision). Baselines: `schema.sql`,
+  `setup_complete.sql` (canonical fresh-deploy).
+- **Auto-deploy:** `.github/workflows/deploy-migrations.yml` applies
+  `migrate_*.sql` on push to `main` (tracked in `claude_schema_migrations`).
+  A small HELD list (049, 059) and explicitly founder-pending migrations are
+  excluded from auto-apply.
+- **Outstanding manual founder migrations:**
+  `migrate_087_cardio_log_ext_id.sql` (apply via Dashboard, never from app).
+- **Sync layer (`src/lib/sync/`):** registry-driven, two-track (migrated
+  per-table handlers + legacy bulk), incremental pull via per-(user,table)
+  watermarks, conflict strategies (last-write-wins / server-wins / per-column
+  merge for profiles), soft-delete propagation, sign-out wipe guard.
 
 ---
 
-## Bug Fixes Applied (This Branch)
+## Build
 
-| Fix | File | Description |
-|---|---|---|
-| setWorkoutExercises functional updater | `store/useAppStore.js` | Now accepts `fn(prev)` or plain array; Time Crunch was passing a function, corrupting the exercise array |
-| addSetToCurrentExercise index guard | `store/useAppStore.js` | Bails if `currentExerciseIndex` is out of range instead of crashing on `.sets` |
-| ExerciseDetailScreen null exercise | `screens/ExerciseDetailScreen.js` | Returns early if `getExerciseById` returns null; no more `.name` crash |
-| ExerciseDetailScreen Math.max empty | `screens/ExerciseDetailScreen.js` | Guards empty `sessionSets` array before `Math.max(...)` spread |
-| AnalyticsScreen MesocycleBuilder nav | `screens/AnalyticsScreen.js` | Uses `getParent()?.navigate('ProfileTab', { screen: 'MesocycleBuilder' })` — was navigating within ProgressStack which has no MesocycleBuilder |
-| ShareCard missing from ProgressStack | `navigation/RootNavigator.js` | Added ShareCard to ProgressStack so WorkoutSummary → Share works from history view |
-| BodyMetrics date crash | `screens/BodyMetricsScreen.js` | Guards `latest?.metric_date` before formatting |
-| SetEntry limits undefined | `components/SetEntry.js` | Falls back to `[0, 9999]` if field not in limits map |
-| Glutes MEV 0→4 | `lib/algorithms.js` | Secondary sets from squats no longer instantly green-signal glutes |
-| Protein targets (bodybuilding) | `lib/nutritionEngine.js` | Raised to 2.2g/kg lean gain (was 1.8g/kg) |
-| Repeat last session blank | `screens/HomeScreen.js` | Loads previous session exercises and pre-populates new workout |
-| Custom calendar grid | `screens/AnalyticsScreen.js` | Replaced unreliable library with custom 12×7 View grid |
-| PR bars zero-height | `screens/AnalyticsScreen.js` | Custom View bars with minimum heights replace collapsing BarChart |
-| Duplicate Settings icon | `screens/AthleteHubScreen.js` | Removed gear from header; Settings nav row is sufficient |
-| Personal Records → Body Metrics | `screens/AthleteHubScreen.js` | Fixed navigate target to `PRWall` |
-| Body metrics race condition | `screens/AthleteHubScreen.js` | Added `useEffect([user?.id])` alongside `useFocusEffect` |
-| Lift Progress unresponsive | `navigation/RootNavigator.js` | Added ExerciseLibrary + ExerciseDetail to ProgressStack |
-| UK Federations (Peak Week) | `lib/peakWeekEngine.js` | BPA, 2BROS, FitX, FMX, IBFA, NABBA, NPC, PCA, UKBFF |
-| Crash report always visible | `App.js` | Error message in fixed red box above scroll, selectable |
-| Versioned DB migrations | `lib/database.js` | `PRAGMA user_version` runner replaces swallow-all loop |
-| JSON backup/restore | `lib/dataBackup.js` | Full export + import via share sheet / document picker |
+- **Expo managed** (never eject); native modules via Expo config plugins only.
+- **Version:** 1.2.0 · iOS build 7 · Android versionCode 14 · ids `app.volyume`.
+- **Android build:** `.github/workflows/build-android.yml` (free GitHub
+  runner → APK sideload + AAB for Play). Triggers on push to `main` /
+  `claude/**` (docs paths ignored).
+- **iOS build:** `.github/workflows/build-ios.yml` — **manual only**
+  (`workflow_dispatch`; each EAS iOS build costs credits), builds via EAS
+  cloud → TestFlight.
+- **CI:** `main-ci.yml` (jest + eslint + Expo Doctor).
+
+See `INFRASTRUCTURE.md` for full runtime/config detail, `ARCHITECTURE.md` for
+the deep technical map, and `VOLYUME_DEEPMAP.md` for the feature inventory.
