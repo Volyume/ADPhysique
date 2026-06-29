@@ -6,12 +6,7 @@ import { appStore, activityUsesGps } from '../state/appStore';
 import { Card, Screen, SectionLabel } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
-
-const WORKOUTS = [
-  'Running', 'Cycling', 'Walking', 'Strength Training', 'HIIT', 'Rowing',
-  'Swimming', 'Yoga', 'Hiking', 'Elliptical', 'Spin', 'Boxing',
-  'Football', 'Tennis', 'Functional Fitness', 'Other',
-];
+import { ACTIVITY_CATALOGUE, ACTIVITY_CATEGORIES } from '../data/activities';
 
 export function StartScreen({ nav }: { nav: Nav }) {
   const [picking, setPicking] = useState(false);
@@ -30,15 +25,21 @@ export function StartScreen({ nav }: { nav: Nav }) {
   if (picking) {
     return (
       <Screen title="Select activity" onBack={() => setPicking(false)} tint={colors.strainBlue}>
-        <Card>
-          <View style={styles.chips}>
-            {WORKOUTS.map((w) => (
-              <Pressable key={w} onPress={() => startWorkout(w)} style={styles.chip}>
-                <Text style={styles.chipText}>{w}</Text>
-              </Pressable>
-            ))}
+        {ACTIVITY_CATEGORIES.map((cat) => (
+          <View key={cat}>
+            <SectionLabel>{cat}</SectionLabel>
+            <Card>
+              <View style={styles.chips}>
+                {ACTIVITY_CATALOGUE.filter((a) => a.category === cat).map((a) => (
+                  <Pressable key={a.name} onPress={() => startWorkout(a.name)} style={styles.chip}>
+                    <Ionicons name={a.icon} size={14} color={colors.textSecondary} style={{ marginRight: 6 }} />
+                    <Text style={styles.chipText}>{a.name}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </Card>
           </View>
-        </Card>
+        ))}
       </Screen>
     );
   }
@@ -81,6 +82,6 @@ const styles = StyleSheet.create({
   bigTitle: { color: colors.text, fontSize: 16, fontFamily: fonts.textBold },
   bigSub: { color: colors.textSecondary, fontSize: 12, marginTop: 2, fontFamily: fonts.text },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 11, borderRadius: 999, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  chip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 11, borderRadius: 999, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   chipText: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold },
 });

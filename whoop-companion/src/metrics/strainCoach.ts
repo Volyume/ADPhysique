@@ -8,17 +8,13 @@
  *   - noncardio → notes high strain is hard to reach with limited cardio effort
  */
 
-export type StrainCategory = 'cardio' | 'muscular' | 'noncardio';
+import { activityStrainCategory, StrainCategory } from '../data/activities';
 
-// Map our activity labels to WHOOP's sport categories.
-const MUSCULAR = ['strength', 'lift', 'weight', 'functional', 'crossfit', 'powerlif'];
-const NONCARDIO = ['yoga', 'pilates', 'stretch', 'mobility', 'meditation', 'walk'];
+export type { StrainCategory };
 
+// Sport → category comes from the unified activity catalogue.
 export function strainCategory(label: string): StrainCategory {
-  const l = label.toLowerCase();
-  if (MUSCULAR.some((k) => l.includes(k))) return 'muscular';
-  if (NONCARDIO.some((k) => l.includes(k))) return 'noncardio';
-  return 'cardio';
+  return activityStrainCategory(label);
 }
 
 /** WHOOP's five strain bands (minimal → all out). */

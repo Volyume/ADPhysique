@@ -5,12 +5,7 @@ import { appStore } from '../state/appStore';
 import { Card, PrimaryButton, Screen, SectionLabel } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
-
-const ACTIVITIES = [
-  'Running', 'Cycling', 'Weightlifting', 'Strength Training', 'Walking', 'Swimming',
-  'HIIT', 'Yoga', 'Pilates', 'Rowing', 'Football', 'Boxing', 'Tennis', 'Hiking',
-  'Functional Fitness', 'Spin', 'Elliptical', 'Stairmaster', 'Basketball', 'Other',
-];
+import { ACTIVITY_CATALOGUE, ACTIVITY_CATEGORIES } from '../data/activities';
 
 const DURATIONS = [15, 30, 45, 60, 90, 120];
 
@@ -37,19 +32,22 @@ export function LogActivityScreen({ nav }: { nav: Nav }) {
   return (
     <Screen title="Add Activity" onBack={nav.back} tint={colors.strainBlue}>
       <SectionLabel>Select your activity</SectionLabel>
-      <Card>
-        <View style={styles.chips}>
-          {ACTIVITIES.map((a) => (
-            <Pressable
-              key={a}
-              onPress={() => setActivity(a)}
-              style={[styles.chip, activity === a && styles.chipActive]}
-            >
-              <Text style={[styles.chipText, activity === a && styles.chipTextActive]}>{a}</Text>
-            </Pressable>
-          ))}
-        </View>
-      </Card>
+      {ACTIVITY_CATEGORIES.map((cat) => (
+        <Card key={cat} style={{ marginBottom: 8 }}>
+          <Text style={styles.catLabel}>{cat}</Text>
+          <View style={styles.chips}>
+            {ACTIVITY_CATALOGUE.filter((a) => a.category === cat).map((a) => (
+              <Pressable
+                key={a.name}
+                onPress={() => setActivity(a.name)}
+                style={[styles.chip, activity === a.name && styles.chipActive]}
+              >
+                <Text style={[styles.chipText, activity === a.name && styles.chipTextActive]}>{a.name}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </Card>
+      ))}
 
       <SectionLabel>Duration</SectionLabel>
       <Card>
@@ -92,6 +90,7 @@ export function LogActivityScreen({ nav }: { nav: Nav }) {
 }
 
 const styles = StyleSheet.create({
+  catLabel: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.textBold, letterSpacing: 0.6, marginBottom: 8 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   chipActive: { backgroundColor: colors.white, borderColor: colors.white },

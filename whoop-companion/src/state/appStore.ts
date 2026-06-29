@@ -90,13 +90,9 @@ export type SessionStats = {
   beats: number;
 };
 
-// Distance-based outdoor sports get phone GPS, mirroring WHOOP's per-sport
-// SportDto.has_gps flag (court/indoor sports record HR only, no route/distance).
-const GPS_SPORTS = ['run', 'walk', 'cycl', 'bike', 'hik', 'ruck'];
-export function activityUsesGps(label: string): boolean {
-  const l = label.toLowerCase();
-  return GPS_SPORTS.some((k) => l.includes(k));
-}
+// Phone-GPS gating per activity comes from the unified activity catalogue
+// (mirrors WHOOP's per-sport SportDto.has_gps).
+export { activityGps as activityUsesGps } from '../data/activities';
 
 export type AppState = {
   ready: boolean;
