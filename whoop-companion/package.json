@@ -28,5 +28,13 @@
   "devDependencies": {
     "@types/react": "~19.1.0",
     "typescript": "^5.9.3"
+  },
+  "expo": {
+    "autolinking": {
+      "searchPaths": [
+        "./node_modules"
+      ],
+      "nativeModulesDir": "./node_modules"
+    }
   }
 }
