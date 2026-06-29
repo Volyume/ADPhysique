@@ -119,3 +119,59 @@ describe('navigation integrity', () => {
     expect(badCase).toEqual([]);
   });
 });
+
+/**
+ * Deep-linking config integrity (U3 R5). The `linking` object on the
+ * NavigationContainer maps `volyume://` paths to a tab + nested screen. If a
+ * path points at a screen/tab that isn't actually registered, the link
+ * dead-ends silently. These static checks (same text-parse approach as above,
+ * no RN runtime needed) keep the config honest as routes are renamed.
+ */
+describe('deep-link linking config', () => {
+  const text = fs.readFileSync(NAV_PATH, 'utf-8');
+  const registered = collectRegisteredScreens();
+
+  // Pull the `const linking = { ... };` block out of the source. Brace-match
+  // from the first `{` after the declaration so nested objects are captured.
+  function extractLinkingBlock() {
+    const start = text.indexOf('const linking = {');
+    expect(start).toBeGreaterThanOrEqual(0);
+    const braceStart = text.indexOf('{', start);
+    let depth = 0;
+    let end = braceStart;
+    for (let i = braceStart; i < text.length; i += 1) {
+      if (text[i] === '{') depth += 1;
+      else if (text[i] === '}') {
+        depth -= 1;
+        if (depth === 0) { end = i + 1; break; }
+      }
+    }
+    return text.slice(braceStart, end);
+  }
+
+  const block = extractLinkingBlock();
+
+  test('the volyume:// scheme is a declared prefix', () => {
+    expect(block).toMatch(/prefixes:\s*\[[^\]]*['"]volyume:\/\/['"]/);
+  });
+
+  test('every tab key in linking is a registered Tab.Screen', () => {
+    // Tab keys are the immediate children of `screens:` at the top level —
+    // capture identifiers that are followed by `: {` and contain a nested
+    // `screens:` block (i.e. they map a tab to its stack).
+    const tabKeys = [...block.matchAll(/(\w+Tab):\s*\{\s*screens:/g)].map(m => m[1]);
+    expect(tabKeys.length).toBeGreaterThan(0);
+    for (const tab of tabKeys) {
+      expect(registered.has(tab)).toBe(true);
+    }
+  });
+
+  test('every nested screen mapped to a path is a registered Stack.Screen', () => {
+    // Match `ScreenName: 'some/path'` pairs inside the nested screens objects.
+    const pairs = [...block.matchAll(/(\w+):\s*['"][\w:/-]+['"]/g)].map(m => m[1]);
+    expect(pairs.length).toBeGreaterThan(0);
+    for (const screen of pairs) {
+      expect(registered.has(screen)).toBe(true);
+    }
+  });
+});

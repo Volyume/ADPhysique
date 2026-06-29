@@ -529,6 +529,59 @@ function ProOnboardingStack() {
   );
 }
 
+// Deep-linking (U3 R5 / 09-navigation-ia.md). React Navigation's BUILT-IN
+// `linking` config — no new dependency. Maps a few `volyume://` paths to
+// existing routes inside the signed-in MainTabs tree. The scheme `volyume`
+// is already registered in app.json (android.intentFilters + ios scheme).
+//
+// Auth gating is implicit and safe: this config only names screens that live
+// inside MainTabs. When the user is signed out (WelcomeStack mounted) or
+// mid-onboarding (FirstRun/ProOnboarding/Article9 stacks mounted), none of
+// these routes exist in the active navigator, so React Navigation can't
+// resolve the URL and simply leaves the user on whatever stack is mounted
+// (Welcome) instead of crashing. Once signed in and on MainTabs, the same
+// link resolves to the right tab + screen. Pro-gated destinations (Diary)
+// still render their withProGuard upgrade prompt for free users, exactly as
+// when reached by tab press — the link only navigates, it never bypasses a
+// gate.
+//
+// Notification-tap routing (navigationRef.navigate in the onTap effect above)
+// is a SEPARATE mechanism and is untouched by this config.
+const linking = {
+  prefixes: ['volyume://', 'https://volyume.app'],
+  config: {
+    screens: {
+      // Bottom-tab → stack-screen tree. Keys are the tab route names in
+      // MainTabs; nested `screens` are the screens registered in each tab's
+      // stack navigator (verified against the *Stack functions above).
+      HomeTab: {
+        screens: {
+          // volyume://workout/start → Train tab → blank/build workout screen.
+          BuildWorkout: 'workout/start',
+        },
+      },
+      DiaryTab: {
+        screens: {
+          // volyume://diary → Diary tab root (Pro-gated screen).
+          Diary: 'diary',
+        },
+      },
+      PlansTab: {
+        screens: {
+          // volyume://routine/:id → Plans tab → PlanDetail for that plan.
+          PlanDetail: 'routine/:id',
+        },
+      },
+      ProgressTab: {
+        screens: {
+          // volyume://progress → Progress tab root (Analytics screen).
+          Analytics: 'progress',
+        },
+      },
+    },
+  },
+};
+
 const SPLASH_MIN_MS = 1600;
 
 // CODE-001: route bootstrap fire-and-forget rejections through the error log,
@@ -1163,6 +1216,7 @@ export default function RootNavigator() {
   return (
     <NavigationContainer
       ref={navigationRef}
+      linking={linking}
       onReady={() => {
         // Wire the observability layer's screen-tracking. Emits a
         // breadcrumb on every navigation so any error fired later
