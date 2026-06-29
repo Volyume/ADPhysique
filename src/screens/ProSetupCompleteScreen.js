@@ -9,6 +9,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '
 import { VolyumeIcon } from '../components/BrandMark';
 import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
+import { toEnergy, energyUnitLabel } from '../lib/format';
 import { GOAL_LABELS, PHASE_LABELS, isCompetitionGoal } from '../lib/coachingGoals';
 import { getSplitRationale, getSetupReceiptLine } from '../lib/whyThisTemplates';
 import { getActivePlan, getRoutinesForPlan } from '../lib/database';
@@ -23,6 +24,7 @@ const WHY_ORDER = ['schedule', 'goal', 'experience', 'progression', 'equipment',
 export default function ProSetupCompleteScreen({ navigation }) {
   const { user, userProfile, completeFirstRun } = useAppStore();
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  const energyUnit = useAppStore(s => s.accessibility?.energyUnit ?? 'kcal');
   const firstName = userProfile?.firstName || 'there';
 
   const [nutritionSummary, setNutritionSummary] = useState(null);
@@ -187,8 +189,8 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   yet. No "remaining" readout, that belongs in the diary. */}
               <View style={styles.ringWrap}>
                 <View style={styles.ring}>
-                  <Text style={styles.ringValue}>{nutritionSummary.targetKcal}</Text>
-                  <Text style={styles.ringSub}>kcal per day</Text>
+                  <Text style={styles.ringValue}>{toEnergy(nutritionSummary.targetKcal, energyUnit)}</Text>
+                  <Text style={styles.ringSub}>{energyUnitLabel(energyUnit)} per day</Text>
                 </View>
               </View>
               {/* Same horizontal macro bars the Diary tab uses. */}

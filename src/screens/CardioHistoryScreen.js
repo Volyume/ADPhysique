@@ -18,6 +18,7 @@ import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
 import EmptyState from '../components/EmptyState';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import { toEnergy, energyUnitLabel } from '../lib/format';
 import { getRecentCardioLog, deleteCardioLog, getCardioLogRange, activityDayKey } from '../lib/database';
 import { summariseCardioByWeek, cardioVerdictLabel } from '../lib/cardio/cardioEngine';
 import { parseLocalDay } from '../lib/dayKey';
@@ -104,7 +105,9 @@ function CardioTrend({ weeks, goal }) {
 }
 
 export default function CardioHistoryScreen({ navigation }) {
-  const { user, userProfile } = useAppStore(useShallow((s) => ({ user: s.user, userProfile: s.userProfile })));
+  const { user, userProfile, energyUnit } = useAppStore(useShallow((s) => ({
+    user: s.user, userProfile: s.userProfile, energyUnit: s.accessibility?.energyUnit ?? 'kcal',
+  })));
   const userId = user?.id;
   const goal = userProfile?.cardioTarget?.sessionsPerWeek ?? 0;
   const [sections, setSections] = useState([]);
@@ -183,7 +186,7 @@ export default function CardioHistoryScreen({ navigation }) {
                 <Text style={styles.activity}>{item.activityName}</Text>
                 <Text style={styles.meta}>
                   {item.durationMin} min · {INTENSITY_LABEL[item.intensity] || item.intensity}
-                  {item.estKcal != null ? ` · ~${item.estKcal} kcal` : ''}
+                  {item.estKcal != null ? ` · ~${toEnergy(item.estKcal, energyUnit)} ${energyUnitLabel(energyUnit)}` : ''}
                 </Text>
                 {cardioSourceLabel(item.source) ? (
                   <Text style={styles.sourceTag}>from {cardioSourceLabel(item.source)}</Text>

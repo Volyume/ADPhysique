@@ -44,6 +44,7 @@ import { computeEWMA, ewmaValues, computeWeeklyWeightChange, computeAdaptiveTDEE
 import { robustValues } from '../lib/robustTrend';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import { toEnergy, energyUnitLabel } from '../lib/format';
 import { formatBodyWeight, formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg } from '../lib/units';
 import { getWellbeingMode, isCalm, WELLBEING_HELPLINE } from '../lib/wellbeing';
 
@@ -396,6 +397,9 @@ export default function BodyMetricsScreen() {
     tier: s.tier,
     userProfile: s.userProfile,
   })));
+  // Energy DISPLAY unit (kcal | kj) for the average-intake readout below.
+  // Display-only: recentIntake.avgKcal stays kcal for the adherence ratio maths.
+  const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   // Onboarding weight, surfaced in the empty state so a user who just
   // completed Pro onboarding doesn't see a misleading "No entries yet"
   // when they did, in fact, give us a starting bodyweight.
@@ -826,7 +830,7 @@ export default function BodyMetricsScreen() {
                   </Text>
                   {recentIntake?.daysLogged > 0 && (
                     <Text style={styles.ewmaIntake}>
-                      Average intake {recentIntake.avgKcal} kcal over the last {recentIntake.daysLogged} {recentIntake.daysLogged === 1 ? 'day' : 'days'}.
+                      Average intake {toEnergy(recentIntake.avgKcal, energyUnit)} {energyUnitLabel(energyUnit)} over the last {recentIntake.daysLogged} {recentIntake.daysLogged === 1 ? 'day' : 'days'}.
                     </Text>
                   )}
                 </>
