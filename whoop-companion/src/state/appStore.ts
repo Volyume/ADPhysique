@@ -327,6 +327,21 @@ class AppStore extends Store<AppState> {
     const perMin = perMinuteHr(dayHr).map((p) => ({ hr: p.hr, minutes: 1 }));
     return hrZones(perMin, profile);
   };
+
+  /** Cumulative strain over today, for the WHOOP-style strain curve. */
+  todayStrainCurve = async (): Promise<Array<{ tsMs: number; strain: number }>> => {
+    const profile = this.getState().profile;
+    const sod = startOfDayMs(Date.now());
+    const dayHr = await getHrSamplesBetween(sod, Date.now());
+    const perMin = perMinuteHr(dayHr);
+    const out: Array<{ tsMs: number; strain: number }> = [];
+    let cumulativeTrimp = 0;
+    for (const p of perMin) {
+      cumulativeTrimp += totalTrimp([{ hr: p.hr, minutes: 1 }], profile);
+      out.push({ tsMs: p.tsMs, strain: trimpToStrain(cumulativeTrimp) });
+    }
+    return out;
+  };
 }
 
 function perMinuteHr(samples: { ts: number; bpm: number }[]): { tsMs: number; hr: number }[] {

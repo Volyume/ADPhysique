@@ -29,6 +29,8 @@ export type SleepResult = {
   asleepMin: number;
   efficiency: number; // 0..1
   stages: Record<SleepStage, number>; // minutes
+  /** Ordered stage segments across the night, for the hypnogram. */
+  hypnogram: Array<{ stage: SleepStage; minutes: number }>;
   performance: number | null; // asleepMin / neededMin
   neededMin: number;
 };
@@ -92,6 +94,7 @@ export function computeSleep(samples: SleepMinute[], neededMin = BASE_NEED_MIN):
   const meanRmssd = rmssds.length ? rmssds.reduce((a, b) => a + b, 0) / rmssds.length : 0;
 
   const stages: Record<SleepStage, number> = { awake: 0, light: 0, deep: 0, rem: 0 };
+  const timeline: SleepStage[] = [];
   for (const s of window) {
     const motion = s.motion ?? 0;
     const hr = s.hr ?? meanHr;
@@ -102,6 +105,15 @@ export function computeSleep(samples: SleepMinute[], neededMin = BASE_NEED_MIN):
     else if (hr > meanHr * 1.03 && motion < 0.2) stage = 'rem';
     else stage = 'light';
     stages[stage] += 1;
+    timeline.push(stage);
+  }
+
+  // Compress the per-minute timeline into stage segments for the hypnogram.
+  const hypnogram: Array<{ stage: SleepStage; minutes: number }> = [];
+  for (const stage of timeline) {
+    const last = hypnogram[hypnogram.length - 1];
+    if (last && last.stage === stage) last.minutes += 1;
+    else hypnogram.push({ stage, minutes: 1 });
   }
 
   const inBedMin = window.length;
@@ -117,6 +129,7 @@ export function computeSleep(samples: SleepMinute[], neededMin = BASE_NEED_MIN):
     asleepMin,
     efficiency: Math.round(efficiency * 100) / 100,
     stages,
+    hypnogram,
     performance: neededMin > 0 ? Math.min(1, asleepMin / neededMin) : null,
     neededMin,
   };

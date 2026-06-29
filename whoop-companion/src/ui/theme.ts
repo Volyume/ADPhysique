@@ -1,36 +1,42 @@
 /**
- * Crossover theme: VOLYUME's dark surfaces, spacing and typography (docs/rules/
- * styling.md) + WHOOP's data colour language (recovery green/yellow/red, strain
- * blue, sleep teal). VOLYUME amber stays as the interactive accent.
+ * Crossover theme: WHOOP's data colour language + screen structure, on VOLYUME's
+ * dark surfaces, spacing and typography (docs/rules/styling.md). VOLYUME amber is
+ * the "twist" — the interactive accent + brand mark, a colour WHOOP never uses.
+ *
+ * Recovery/strain/sleep hexes are WHOOP's official brand values (WHOOP Brand &
+ * Design Guidelines): recovery green/yellow/red, strain blue, sleep slate.
  */
 
 export const colors = {
-  // VOLYUME surfaces
+  // VOLYUME surfaces (WHOOP's canvas is "almost entirely black" — matches)
   bg: '#0D0D0D',
   card: '#1A1A1A',
   surface: '#262626',
   border: '#2D2D2D',
   inputBorder: '#374151',
+  // WHOOP's dark blue-grey backdrop pair, for the overview header wash.
+  washTop: '#283339',
+  washBottom: '#101518',
 
   // Text
   text: '#FFFFFF',
   textSecondary: '#9CA3AF',
   textTertiary: '#6B7280',
 
-  // VOLYUME accent (interactive)
+  // VOLYUME accent (interactive + brand) — the twist
   amber: '#F59E0B',
   amberDark: '#D97706',
 
-  // WHOOP data language
-  recoveryGreen: '#16C47F',
-  recoveryYellow: '#FFB020',
-  recoveryRed: '#FF4D4D',
-  strainBlue: '#2BB3FF',
-  sleepTeal: '#4FD1C5',
+  // WHOOP official data language
+  recoveryGreen: '#16EC06',
+  recoveryYellow: '#FFDE00',
+  recoveryRed: '#FF0026',
+  strainBlue: '#0093E7',
+  sleepTeal: '#7BA1BB', // WHOOP sleep slate (key name kept for compatibility)
 
   // Functional
-  success: '#10B981',
-  danger: '#EF4444',
+  success: '#16EC06',
+  danger: '#FF0026',
 };
 
 export const spacing = {
