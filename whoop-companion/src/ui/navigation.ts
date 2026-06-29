@@ -43,6 +43,7 @@ export type Route =
   | { name: 'logActivity' }
   | { name: 'editSleep' }
   | { name: 'sleepTrends' }
+  | { name: 'training' }
   | { name: 'startMenu' }
   | { name: 'liveSession' }
   | { name: 'resilience' }

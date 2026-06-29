@@ -11,6 +11,7 @@ import { Nav } from '../ui/navigation';
 import { formatDistance, formatPace } from '../sensors/location';
 import { formatClock, formatDuration } from '../util/time';
 import type { HrZone } from '../metrics/strain';
+import { recoveryTimeHours, trainingEffect } from '../metrics/training';
 
 export function ActivityDetailScreen({ nav, id }: { nav: Nav; id: string }) {
   const cardio = useStoreSelector(appStore, (s) => s.cardio);
@@ -33,6 +34,8 @@ export function ActivityDetailScreen({ nav, id }: { nav: Nav; id: string }) {
   const durMin = Math.round((activity.endTs - activity.startTs) / 60000);
   const elapsedSec = Math.round((activity.endTs - activity.startTs) / 1000);
   const zoneMax = Math.max(1, ...zones.map((z) => z.minutes));
+  const te = zones.some((z) => z.minutes > 0) ? trainingEffect(zones) : null;
+  const recoveryHrs = te ? recoveryTimeHours(te) : null;
   const date = new Date(activity.startTs).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
 
   const remove = () =>
@@ -76,6 +79,23 @@ export function ActivityDetailScreen({ nav, id }: { nav: Nav; id: string }) {
           <SectionLabel>Route</SectionLabel>
           <Card style={{ alignItems: 'center' }}>
             <RouteTrace route={activity.route} />
+          </Card>
+        </>
+      ) : null}
+
+      {te ? (
+        <>
+          <SectionLabel>Training effect</SectionLabel>
+          <Card>
+            <View style={styles.statRow}>
+              <Stat label={`Aerobic · ${te.aerobicLabel}`} value={te.aerobic.toFixed(1)} color={colors.strainBlue} />
+              <Stat label={`Anaerobic · ${te.anaerobicLabel}`} value={te.anaerobic.toFixed(1)} color={colors.recoveryRed} />
+              <Stat label="Recovery time" value={recoveryHrs != null ? `${recoveryHrs}h` : '—'} color={colors.recoveryYellow} />
+            </View>
+            <Text style={styles.teNote}>
+              Training Effect (0–5) and recovery time are estimated from your heart-rate response —
+              a faithful approximation of Garmin/Firstbeat's model.
+            </Text>
           </Card>
         </>
       ) : null}
@@ -136,4 +156,5 @@ const styles = StyleSheet.create({
   statRow: { flexDirection: 'row', justifyContent: 'space-between' },
   grid: { flexDirection: 'row', gap: 12 },
   half: { flex: 1 },
+  teNote: { color: colors.textTertiary, fontSize: 11, lineHeight: 16, marginTop: 12, fontFamily: fonts.text },
 });

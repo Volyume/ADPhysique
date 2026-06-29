@@ -9,6 +9,7 @@ import {
   Card,
   Empty,
   MetricRow,
+  NavRow,
   PrimaryButton,
   Ring,
   Screen,
@@ -90,6 +91,10 @@ export function StrainScreen({ nav }: { nav: Nav }) {
           centerMain={strain != null ? strain.toFixed(1) : '—'}
           centerSub="0–21"
         />
+      </Card>
+
+      <Card style={{ paddingVertical: 2 }}>
+        <NavRow label="Training Status" icon="fitness" iconColor={colors.strainBlue} value="VO₂max · load · effect" onPress={() => nav.navigate({ name: 'training' })} last />
       </Card>
 
       <Card>
