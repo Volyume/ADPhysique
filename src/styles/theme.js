@@ -275,7 +275,7 @@ export const radius = {
   xs: 4,     // chart dots, tiny chips, micro-UI (replaces hand-rolled 2-4px)
   sm: 6,
   md: 10,
-  lg: 14,
+  lg: 16,    // card radius (MFP-parity premium-feel bump 14 -> 16, 2026-06-29)
   xl: 20,
   full: 999,
 };
