@@ -230,7 +230,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         ? { kcal: rollup.kcal_total, protein: rollup.protein_g, carbs: rollup.carbs_g, fat: rollup.fat_g }
         : { kcal: 0, protein: 0, carbs: 0, fat: 0 };
       const parsedMeals = parseInt(mealsPerRaw, 10);
-      const mealsPerDay = (parsedMeals >= 3 && parsedMeals <= 6) ? parsedMeals : 4;
+      const mealsPerDay = (parsedMeals >= 3 && parsedMeals <= 8) ? parsedMeals : 4;
       const mealsLeft = mealsLeftToday(mealsPerDay, loggedSlots);
       const candidates = getCuratedCandidates({ diet, slot: mealSlot });
       const { suggestions: ranked, remaining, perMeal } = rankSuggestions({

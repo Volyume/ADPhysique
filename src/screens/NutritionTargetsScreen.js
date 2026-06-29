@@ -180,7 +180,7 @@ export default function NutritionTargetsScreen({ navigation }) {
   const [mealsPerDay,     setMealsPerDay]     = useState(null);  // null = use recommended
   useEffect(() => {
     AsyncStorage.getItem('@volyume_meals_per_day')
-      .then(v => { const n = parseInt(v, 10); if (n >= 3 && n <= 6) setMealsPerDay(n); })
+      .then(v => { const n = parseInt(v, 10); if (n >= 3 && n <= 8) setMealsPerDay(n); })
       .catch(() => {});
   }, []);
   function changeMealsPerDay(n) {
@@ -1022,7 +1022,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                     <View style={styles.mealCountRow}>
                       <Text style={styles.mealCountLabel}>Across</Text>
                       <View style={styles.mealCountChips}>
-                        {[3, 4, 5, 6].map(n => {
+                        {[3, 4, 5, 6, 7, 8].map(n => {
                           const active = effectiveMeals === n;
                           const isRecommended = recommended === n;
                           return (
@@ -1645,6 +1645,8 @@ const styles = StyleSheet.create({
   mealCountChips: {
     flexDirection: 'row',
     gap: spacing.xs,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
   },
   mealCountChip: {
     width: 44,

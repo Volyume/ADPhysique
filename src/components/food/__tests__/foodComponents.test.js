@@ -170,9 +170,16 @@ describe('EntryRow', () => {
     const tree = create(<EntryRow entry={baseEntry} onEdit={() => {}} />).toJSON();
     const txt = JSON.stringify(tree);
     expect(txt).toContain('"143"');
-    expect(txt).toContain('"170"');
+    expect(txt).toContain('170g'); // quantity is shown in the meta line ("170g", + a logged time when present)
     expect(txt).toContain('"10"');
     expect(txt).toContain('"4"');
+  });
+
+  test('shows the logged time in the meta line when logged_at is present', () => {
+    const tree = create(<EntryRow entry={{ ...baseEntry, logged_at: new Date('2026-06-29T13:42:00').getTime() }} onEdit={() => {}} />).toJSON();
+    const txt = JSON.stringify(tree);
+    expect(txt).toContain('13:42');
+    expect(txt).toContain('170g');
   });
 
   test('renders resolved name and brand', () => {

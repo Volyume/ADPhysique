@@ -27,6 +27,13 @@ export function EntryRow({
   const brand = entry?._brand ?? null;
   // Quick-add entries carry macros directly with no meaningful gram weight.
   const isQuick = (entry?.food_ref ?? '').startsWith('quick:');
+  // Logged time (gap #3): every entry stores logged_at; show it as a quiet 24h
+  // HH:mm so the user can see WHEN they ate, like MFP/Cronometer. Display-only.
+  const loggedTime = Number.isFinite(entry?.logged_at)
+    ? new Date(entry.logged_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    : null;
+  const metaLine = [isQuick ? null : `${Math.round(entry.quantity_g)}g`, loggedTime]
+    .filter(Boolean).join('  ·  ');
   return (
     <TouchableOpacity
       style={[styles.entryRow, selected && styles.entryRowSelected]}
@@ -47,7 +54,7 @@ export function EntryRow({
       <View style={styles.entryMain}>
         <Text style={styles.entryName} numberOfLines={1}>{name}</Text>
         {brand ? <Text style={styles.entryBrand} numberOfLines={1}>{brand}</Text> : null}
-        {!isQuick ? <Text style={styles.entryQuantity}>{Math.round(entry.quantity_g)}g</Text> : null}
+        {metaLine ? <Text style={styles.entryQuantity}>{metaLine}</Text> : null}
       </View>
       <View style={styles.entryMacros}>
         <Text style={styles.entryKcal}>{toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>

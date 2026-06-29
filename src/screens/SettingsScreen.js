@@ -82,6 +82,14 @@ export default function SettingsScreen({ navigation }) {
           sub="Calmer mode, steps, cardio"
           onPress={() => navigation.navigate('SettingsCoaching')}
         />
+        {tier === 'pro' ? (
+          <SettingRow
+            icon="nutrition-outline"
+            label="Nutrition targets"
+            sub="Your calorie and macro goals"
+            onPress={() => navigation.navigate('NutritionTargets')}
+          />
+        ) : null}
         <SettingRow
           icon="notifications-outline"
           label="Notifications"
