@@ -1,52 +1,50 @@
 /**
  * BLE UUIDs for the WHOOP strap.
  *
- * Two groups:
- *  1. STANDARD Bluetooth SIG services the strap exposes. The WHOOP 5.0 streams
- *     live heart rate on the standard Heart Rate Service (0x2A37) — "the same
- *     source the official app uses on its live HR screen" — and battery on
- *     0x2A19. These are fully documented by the Bluetooth SIG, so decoding them
- *     is reliable and not WHOOP-specific. This is the backbone of the live data.
- *  2. PROPRIETARY WHOOP characteristics (fd4b000x). These carry commands,
- *     events and the historical/realtime data stream using WHOOP's "Maverick"
- *     framing (see ../whoop/maverick.ts). A fresh client only gets live HR over
- *     the standard service until the deep streams are unlocked (see
- *     ../whoop/commands.ts cmdEnableDeepStreams).
+ * These are VERIFIED against the official WHOOP Android app v5.444.1
+ * (com.whoop.android, decompiled) — exact 128-bit UUIDs, not guesses.
  *
- * Protocol facts sourced from the whoop-vault reverse-engineering project and
- * NOOP (WHOOP 5.0, firmware r52 "Maverick"), not guessed. The full 128-bit base
- * for the fd4b characteristics is captured live from the device during service
- * discovery rather than hard-coded, because only the 32-bit prefix is published.
+ * Three groups:
+ *  1. STANDARD Bluetooth SIG services. The WHOOP 5.0 streams live heart rate on
+ *     the standard Heart Rate Service (0x2A37) and battery on 0x2A19. Reliable,
+ *     non-proprietary.
+ *  2. PROPRIETARY WHOOP 5.0 ("Maverick"/"Puffin") service fd4b0001-cce1-…, with
+ *     command/response/event/data/log characteristics. Carries the Maverick
+ *     framing (see ../whoop/maverick.ts).
+ *  3. LEGACY WHOOP 4.0 service 61080001-8d6d-… (this app still supports it). Kept
+ *     so the app also works with a 4.0 strap.
  */
 
-// Standard GATT Heart Rate Service.
+// Standard GATT.
 export const HEART_RATE_SERVICE = '0000180d-0000-1000-8000-00805f9b34fb';
 export const HEART_RATE_MEASUREMENT = '00002a37-0000-1000-8000-00805f9b34fb';
-
-// Standard GATT Battery Service.
 export const BATTERY_SERVICE = '0000180f-0000-1000-8000-00805f9b34fb';
 export const BATTERY_LEVEL = '00002a19-0000-1000-8000-00805f9b34fb';
 
-/**
- * Prefix shared by every proprietary WHOOP characteristic (fd4b0002..fd4b0007).
- * We match characteristics by this prefix at runtime instead of hard-coding the
- * full UUIDs, so service discovery works regardless of the exact 128-bit base.
- */
-export const WHOOP_CHAR_PREFIX = 'fd4b';
+// Proprietary WHOOP 5.0 service + characteristics (exact, from WHOOP 5.444.1).
+export const WHOOP5_SERVICE = 'fd4b0001-cce1-4033-93ce-002d5875f58a';
+export const WHOOP5_CMD_WRITE = 'fd4b0002-cce1-4033-93ce-002d5875f58a';
+export const WHOOP5_CMD_NOTIFY = 'fd4b0003-cce1-4033-93ce-002d5875f58a';
+export const WHOOP5_EVENT_NOTIFY = 'fd4b0004-cce1-4033-93ce-002d5875f58a';
+export const WHOOP5_DATA_NOTIFY = 'fd4b0005-cce1-4033-93ce-002d5875f58a';
+export const WHOOP5_LOG_NOTIFY = 'fd4b0007-cce1-4033-93ce-002d5875f58a';
+
+// Legacy WHOOP 4.0 service + characteristics.
+export const WHOOP4_SERVICE = '61080001-8d6d-82b8-614a-1c8cb0f8dcc6';
+export const WHOOP4_CMD_WRITE = '61080002-8d6d-82b8-614a-1c8cb0f8dcc6';
+export const WHOOP4_CMD_NOTIFY = '61080003-8d6d-82b8-614a-1c8cb0f8dcc6';
+export const WHOOP4_EVENT_NOTIFY = '61080004-8d6d-82b8-614a-1c8cb0f8dcc6';
+export const WHOOP4_DATA_NOTIFY = '61080005-8d6d-82b8-614a-1c8cb0f8dcc6';
 
 /**
- * Known proprietary characteristics, by their 32-bit prefix (from whoop-vault):
- *   fd4b0002 — write   (commands to strap)
- *   fd4b0003 — notify  (command responses)
- *   fd4b0004 — notify  (events)
- *   fd4b0005 — notify  (historical + realtime data)
- *   fd4b0007 — notify  (logs / Memfault)
+ * Prefixes used to match proprietary characteristics at runtime regardless of
+ * firmware/generation: any characteristic starting fd4b00 (5.0) or 61080000
+ * (4.0). The command-write char is fd4b0002 / 61080002.
  */
+export const WHOOP_CHAR_PREFIX = 'fd4b';
+export const WHOOP_CHAR_PREFIX_4 = '6108';
 export const WHOOP_CMD_WRITE_PREFIX = 'fd4b0002';
-export const WHOOP_CMD_NOTIFY_PREFIX = 'fd4b0003';
-export const WHOOP_EVENT_NOTIFY_PREFIX = 'fd4b0004';
-export const WHOOP_DATA_NOTIFY_PREFIX = 'fd4b0005';
-export const WHOOP_LOG_NOTIFY_PREFIX = 'fd4b0007';
+export const WHOOP_CMD_WRITE_PREFIX_4 = '61080002';
 
 // Strap advertises with a name beginning "WHOOP".
 export const WHOOP_NAME_PREFIX = 'WHOOP';

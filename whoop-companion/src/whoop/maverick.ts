@@ -31,11 +31,18 @@ import { crc16modbus, crc32 } from './crc';
 
 export const FRAME_START = 0xaa;
 
+// Packet types — VERIFIED against WHOOP 5.444.1 (im0.c.a enum).
 export enum PacketType {
   COMMAND = 35,
+  COMMAND_RESPONSE = 36,
+  PUFFIN_COMMAND = 37, // WHOOP 5.0 ("Puffin") command variant
+  REALTIME_DATA = 40, // live data (incl. HR) over the proprietary stream
+  REALTIME_RAW_DATA = 43,
   HISTORICAL_DATA = 47,
   EVENT = 48,
   METADATA = 49,
+  REALTIME_IMU_DATA_STREAM = 51,
+  HISTORICAL_IMU_DATA_STREAM = 52,
 }
 
 export type MaverickFrame = {
