@@ -1,13 +1,13 @@
-name: Build Whoop Android APK
+name: Build VOLYUME Pulse Android APK
 
-# Builds a directly-installable Android APK for the private Whoop Companion app
+# Builds a directly-installable Android APK for the private VOLYUME Pulse app
 # (whoop-companion/) with ZERO account setup — no Expo login, no eas init, no
 # Apple, no Play Store. It runs `expo prebuild` then Gradle `assembleRelease`
 # (Expo's template signs release with the debug keystore, so the APK installs on
 # any device for personal use), and uploads the APK as a workflow artifact.
 #
-# To get the APK: Actions tab → "Build Whoop Android APK" → Run workflow → open
-# the finished run → Artifacts → download "whoop-companion-apk" → install on your
+# To get the APK: Actions tab → "Build VOLYUME Pulse Android APK" → Run workflow →
+# open the finished run → Artifacts → download "volyume-pulse-apk" → install on your
 # phone (you'll need to allow "install unknown apps" for your browser/files app).
 #
 # Free GitHub-hosted runner; no repo secrets required.
@@ -61,6 +61,6 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: whoop-companion-apk
+          name: volyume-pulse-apk
           path: whoop-companion/android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error

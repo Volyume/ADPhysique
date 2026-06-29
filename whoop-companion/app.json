@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "Whoop Companion",
-    "slug": "whoop-companion",
+    "name": "VOLYUME Pulse",
+    "slug": "volyume-pulse",
     "owner": "volyume",
-    "scheme": "whoopcompanion",
+    "scheme": "volyumepulse",
     "version": "0.1.0",
     "runtimeVersion": {
       "policy": "appVersion"
@@ -12,10 +12,10 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "backgroundColor": "#0D0D0D",
-    "primaryColor": "#00E0A4",
+    "primaryColor": "#F59E0B",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.volyume.whoopcompanion",
+      "bundleIdentifier": "app.volyume.pulse",
       "buildNumber": "1",
       "requireFullScreen": true,
       "infoPlist": {
@@ -26,7 +26,7 @@
       }
     },
     "android": {
-      "package": "app.volyume.whoopcompanion",
+      "package": "app.volyume.pulse",
       "versionCode": 1,
       "permissions": [
         "android.permission.BLUETOOTH_SCAN",
@@ -42,7 +42,7 @@
           "modes": [
             "central"
           ],
-          "bluetoothAlwaysPermission": "Whoop Companion connects to your WHOOP strap over Bluetooth to read your heart rate, recovery, sleep and activity data directly from the band. Nothing leaves your device."
+          "bluetoothAlwaysPermission": "VOLYUME Pulse connects to your WHOOP strap over Bluetooth to read your heart rate, recovery, sleep and activity data directly from the band. Nothing leaves your device."
         }
       ],
       [

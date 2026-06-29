@@ -1,4 +1,4 @@
-# Whoop Companion (private)
+# VOLYUME Pulse (private)
 
 A private, standalone **iOS + Android** app that talks to your **WHOOP 5.0** strap
 directly over Bluetooth and tracks recovery, sleep, strain, steps and cardio
@@ -28,8 +28,8 @@ GitHub Actions → EAS → TestFlight build pipeline.
 This is the quickest way to try it — no Expo account, no Apple, no Play Store,
 no secrets:
 
-1. GitHub → **Actions** tab → **Build Whoop Android APK** → **Run workflow**.
-2. When it finishes, open the run → **Artifacts** → download **whoop-companion-apk**.
+1. GitHub → **Actions** tab → **Build VOLYUME Pulse Android APK** → **Run workflow**.
+2. When it finishes, open the run → **Artifacts** → download **volyume-pulse-apk**.
 3. Copy the APK to your Android phone and tap it to install (allow "install
    unknown apps" for your browser/files app when prompted).
 4. Open the app → **Device** tab → close the official WHOOP app, put the strap in
@@ -53,14 +53,14 @@ build costs credits).
    `whoop-companion/` folder, this is `eas init` (run once, against the `volyume`
    Expo account). It writes `extra.eas.projectId` into `app.json`.
 2. **Create the App Store Connect app record** for bundle id
-   `app.volyume.whoopcompanion` (App Store Connect → Apps → +). TestFlight needs a
+   `app.volyume.pulse` (App Store Connect → Apps → +). TestFlight needs a
    record to receive builds.
 3. The build reuses the **same repo secrets** VOLYUME already has: `EXPO_TOKEN`,
    `ASC_API_KEY_P8`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `APPLE_TEAM_ID`. No new secrets
    are required (this app has no Supabase/Sentry config).
 
 ### Each build
-- GitHub → **Actions** tab → **Build Whoop iOS (EAS)** → **Run workflow**. It
+- GitHub → **Actions** tab → **Build VOLYUME Pulse iOS (EAS)** → **Run workflow**. It
   builds on EAS and submits to your TestFlight automatically.
 
 ### On your iPhone (the only physical steps)
@@ -68,7 +68,7 @@ build costs credits).
 2. **Close the official WHOOP app** (the strap allows only one Bluetooth
    connection at a time).
 3. Put the strap in **pairing mode** (tap it repeatedly until the LED flashes).
-4. Open Whoop Companion → **Scan & connect**.
+4. Open VOLYUME Pulse → **Scan & connect**.
 
 ## What's in here
 - `App.tsx` — tab navigation (Today · Recovery · Sleep · Strain · Journal · Device).

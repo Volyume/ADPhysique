@@ -1,6 +1,6 @@
-name: Build Whoop iOS (EAS)
+name: Build VOLYUME Pulse iOS (EAS)
 
-# Builds the private Whoop Companion app (whoop-companion/) entirely in CI — no
+# Builds the private VOLYUME Pulse app (whoop-companion/) entirely in CI — no
 # Mac, no local terminal. EAS (Expo's cloud) does the Xcode compile + Apple
 # signing, then submits to TestFlight. Mirrors build-ios.yml (VOLYUME) and reuses
 # the SAME repo secrets:
@@ -13,7 +13,7 @@ name: Build Whoop iOS (EAS)
 # One-time prerequisites (use the existing volyume Apple/Expo accounts):
 #   1. cd whoop-companion && eas init   (creates the EAS project + writes
 #      extra.eas.projectId into whoop-companion/app.json — commit that change)
-#   2. Create the App Store Connect app record for bundle app.volyume.whoopcompanion
+#   2. Create the App Store Connect app record for bundle app.volyume.pulse
 #      (App Store Connect → Apps → +). TestFlight needs the record to accept a build.
 
 on:
@@ -134,7 +134,7 @@ jobs:
           ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          IOS_BUNDLE_ID: app.volyume.whoopcompanion
+          IOS_BUNDLE_ID: app.volyume.pulse
           EAS_JSON_PATH: whoop-companion/eas.json
         run: node scripts/ci/resolve-asc-app-id.mjs
 
