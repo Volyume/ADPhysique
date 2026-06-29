@@ -35,6 +35,7 @@ import { localDayKey, parseLocalDay } from '../lib/dayKey';
 import { getNutritionTargets } from '../lib/database';
 import { exportDiaryCsv, exportDiaryPdf } from '../lib/food/csvExport';
 import { ADHERENCE_TOLERANCE, pctLabel, within } from '../lib/food/adherence';
+import { summariseNutrients, NUTRIENT_ROWS } from '../lib/food/nutrientSummary';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -132,6 +133,16 @@ export default function FoodInsightsScreen({ navigation }) {
     }
     return { kcalDays, pDays, cDays, fDays, fibreDays, logged };
   }, [days, rollupByDate, targets]);
+
+  // Nutrient averages (build gap #18): factual mean grams/day of each tracked
+  // macro over the window's LOGGED days. Adherence-neutral — no target, no
+  // colour, no streak. Aggregates the rollups the screen already loaded for the
+  // window (no extra query); macro-level only (the rollup carries no
+  // sodium/sugar, and micronutrients are decision-gated).
+  const nutrientAverages = useMemo(() => {
+    const windowRollups = days.map((d) => rollupByDate.get(d)).filter(Boolean);
+    return summariseNutrients(windowRollups);
+  }, [days, rollupByDate]);
 
   // Calories chart rows. 7/14-day windows render one bar per day; 30/90-day
   // windows aggregate into weekly bars (avg kcal/day of the LOGGED days that
@@ -480,6 +491,36 @@ export default function FoodInsightsScreen({ navigation }) {
           )}
         </Card>
 
+        {/* Nutrient averages (build gap #18): plain mean grams/day per macro
+            over the window. Adherence-NEUTRAL by design — value in textPrimary,
+            label in textMuted, no good/bad colour, no target, no streak. Macro-
+            level only (no sodium/sugar on the rollup; micronutrients gated). */}
+        <Text style={styles.sectionLabel}>NUTRIENT AVERAGES</Text>
+        <Card style={styles.card}>
+          {nutrientAverages.days > 0 ? (
+            <>
+              {NUTRIENT_ROWS.map((row) => (
+                <View
+                  key={row.key}
+                  style={styles.nutrientRow}
+                  accessible
+                  accessibilityLabel={`${row.label}, ${nutrientAverages.avg[row.key]} grams a day on average`}
+                >
+                  <Text style={styles.nutrientLabel}>{row.label}</Text>
+                  <Text style={styles.nutrientValue}>{nutrientAverages.avg[row.key]} g/day</Text>
+                </View>
+              ))}
+              <Text style={styles.cardFootnote}>
+                Average over {nutrientAverages.days} {nutrientAverages.days === 1 ? 'day' : 'days'} logged.
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.emptyText}>
+              Log a few days to see your nutrient averages.
+            </Text>
+          )}
+        </Card>
+
         <TouchableOpacity
           style={styles.exportBtn}
           onPress={() => onExport('csv')}
@@ -585,6 +626,16 @@ const styles = StyleSheet.create({
   },
   adherenceFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 4 },
   adherenceValue: { color: colors.textPrimary, fontSize: fontSize.sm, width: 44, textAlign: 'right' },
+
+  // Nutrient averages (build gap #18): a plain two-column factual row, "Protein
+  // … 146 g/day". Label textMuted, value textPrimary — deliberately NO valence
+  // colour, no bar, no target (adherence-neutral, ED-safety requirement).
+  nutrientRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  nutrientLabel: { color: colors.textMuted, fontSize: fontSize.sm },
+  nutrientValue: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
 
   exportBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
