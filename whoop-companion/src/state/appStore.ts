@@ -26,6 +26,7 @@ import {
 import {
   CardioRow,
   DailyMetricRow,
+  SleepDetail,
   getHrSamplesBetween,
   getRecentDailyMetrics,
   insertCardio,
@@ -50,6 +51,10 @@ import { computeRecovery } from '../metrics/recovery';
 import { computeSleep, computeSleepNeed, SleepMinute, SleepNeed, SleepResult } from '../metrics/sleep';
 import { computeSleepScore, SleepScore } from '../metrics/sleepScore';
 import { sleepRegularity, SleepRegularity } from '../metrics/sleepRegularity';
+import { sleepConsistency, SleepConsistency } from '../metrics/sleepConsistency';
+import { sleepDebt } from '../metrics/sleepDebt';
+import { computeSleepStress, SleepStress, StressEpoch } from '../metrics/sleepStress';
+import { computeSleepPerformance, SleepPerformance } from '../metrics/sleepPerformance';
 import { edwardsTrimp, hrZones, strainFromLoad, totalTrimp, UserProfile } from '../metrics/strain';
 import { kcalPerMinute } from '../metrics/calories';
 import { respiratoryRate } from '../metrics/respiratory';
@@ -111,6 +116,9 @@ export type AppState = {
   sleepNeed: SleepNeed | null;
   sleepScore: SleepScore | null;
   sleepReg: SleepRegularity | null;
+  sleepConsistency: SleepConsistency | null;
+  sleepStress: SleepStress | null; // last night's 0-3 stress breakdown
+  sleepPerformance: SleepPerformance | null; // composite ring + 4 contributors
   sleepGoal: number; // target fraction of sleep need: 0.7 / 0.85 / 1.0
   // Oura-style derived insights (all HR/R-R only):
   recoveryParts: { hrvSub: number; rhrSub: number; sleepSub: number } | null;
@@ -147,6 +155,9 @@ const initialState: AppState = {
   sleepNeed: null,
   sleepScore: null,
   sleepReg: null,
+  sleepConsistency: null,
+  sleepStress: null,
+  sleepPerformance: null,
   sleepGoal: 0.85,
   recoveryParts: null,
   hrvBal: null,
@@ -586,6 +597,9 @@ class AppStore extends Store<AppState> {
         endTs: manual.endTs,
         inBedMin,
         asleepMin,
+        restorativeMin: 0,
+        latencyMin: 0,
+        wakeEvents: 0,
         efficiency: 0.9,
         stages: { awake: inBedMin - asleepMin, light: asleepMin, deep: 0, rem: 0 },
         hypnogram: [{ stage: 'light', minutes: asleepMin }],
@@ -610,12 +624,14 @@ class AppStore extends Store<AppState> {
     // Baselines from prior days (exclude today).
     const recent = (await getRecentDailyMetrics(30)).filter((d) => d.day !== today);
 
-    // Dynamic Sleep Need: baseline + recent strain + accrued debt − naps.
-    const recentNights = recent.filter((d) => d.sleepMin != null).slice(0, 3);
-    const accruedDebtMin = recentNights.reduce(
-      (a, d) => a + Math.max(0, 480 - (d.sleepMin as number)),
-      0,
-    );
+    // Sleep Debt: rolling deficit over the trailing nights (needed − asleep),
+    // using each night's stored Sleep Need where available, else the baseline.
+    const debtNights = recent
+      .filter((d) => d.sleepMin != null)
+      .slice(0, 14)
+      .reverse() // oldest → newest for the rolling carry
+      .map((d) => ({ neededMin: d.sleepDetail?.needMin ?? 480, asleepMin: d.sleepMin as number }));
+    const accruedDebtMin = sleepDebt(debtNights);
     const napMin = (await listCardio())
       .filter((c) => c.source === 'nap' && c.startTs >= sod)
       .reduce((a, c) => a + Math.round((c.endTs - c.startTs) / 60000), 0);
@@ -626,12 +642,70 @@ class AppStore extends Store<AppState> {
     }
     const sleepScoreResult = sleep ? computeSleepScore(sleep) : null;
 
-    // Sleep regularity over stored windows (prior nights + tonight).
+    // Sleep regularity / consistency over stored windows (prior nights + tonight).
     const priorWindows = recent
       .filter((d) => d.sleepStart != null && d.sleepEnd != null)
       .map((d) => ({ startTs: d.sleepStart as number, endTs: d.sleepEnd as number }));
     if (sleep) priorWindows.push({ startTs: sleep.startTs, endTs: sleep.endTs });
     const sleepReg = sleepRegularity(priorWindows);
+    const consistency = sleepConsistency(priorWindows);
+
+    // ---- WHOOP-style Sleep Stress (0-3) over time-in-bed, from R-R + HR ----
+    let sleepStressResult: SleepStress | null = null;
+    if (sleep) {
+      const winSamples = nightHr.filter((s) => s.ts >= sleep.startTs && s.ts <= sleep.endTs);
+      const byMin = new Map<number, { hrs: number[]; rr: number[] }>();
+      for (const s of winSamples) {
+        const m = Math.floor(s.ts / 60000);
+        const b = byMin.get(m) ?? { hrs: [], rr: [] };
+        b.hrs.push(s.bpm);
+        b.rr.push(...s.rr);
+        byMin.set(m, b);
+      }
+      const epochs: StressEpoch[] = [...byMin.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([, v]) => ({
+          hr: v.hrs.reduce((a, b) => a + b, 0) / v.hrs.length,
+          rmssd: computeHrv(v.rr)?.rmssd ?? null,
+        }));
+      sleepStressResult = computeSleepStress(epochs);
+    }
+
+    // ---- WHOOP-style Sleep Performance composite + 4 contributors ----
+    let sleepPerformanceResult: SleepPerformance | null = null;
+    let sleepDetail: SleepDetail | null = null;
+    if (sleep) {
+      const hoursVsNeededPct = Math.round((sleep.asleepMin / need.neededMin) * 100);
+      const efficiencyPct = Math.round(sleep.efficiency * 100);
+      const restorativePct =
+        sleep.asleepMin > 0 ? Math.round((sleep.restorativeMin / sleep.asleepMin) * 100) : 0;
+      const highStressPct = sleepStressResult?.highPct ?? 0;
+      sleepPerformanceResult = computeSleepPerformance({
+        hoursVsNeededPct,
+        efficiencyPct,
+        consistencyPct: consistency?.score ?? null,
+        highStressPct,
+      });
+      sleepDetail = {
+        performance: sleepPerformanceResult.score,
+        hoursVsNeeded: hoursVsNeededPct,
+        needMin: need.neededMin,
+        baselineMin: need.baselineMin,
+        napMin: need.napMin,
+        strainMin: need.strainMin,
+        debtMin: need.debtMin,
+        efficiency: efficiencyPct,
+        consistency: consistency?.score ?? null,
+        restorativeMin: sleep.restorativeMin,
+        restorativePct,
+        latencyMin: sleep.latencyMin,
+        wakeEvents: sleep.wakeEvents,
+        inBedMin: sleep.inBedMin,
+        stressHigh: sleepStressResult?.highPct ?? null,
+        stressMed: sleepStressResult?.medPct ?? null,
+        stressLow: sleepStressResult?.lowPct ?? null,
+      };
+    }
     const toDayValues = (pick: (d: DailyMetricRow) => number | null) =>
       recent
         .filter((d) => pick(d) != null)
@@ -692,6 +766,7 @@ class AppStore extends Store<AppState> {
       remMin: sleep?.stages.rem ?? null,
       lightMin: sleep?.stages.light ?? null,
       awakeMin: sleep?.stages.awake ?? null,
+      sleepDetail,
       updatedAt: now,
     };
     await upsertDailyMetric(row);
@@ -701,6 +776,9 @@ class AppStore extends Store<AppState> {
       sleepNeed: need,
       sleepScore: sleepScoreResult,
       sleepReg,
+      sleepConsistency: consistency,
+      sleepStress: sleepStressResult,
+      sleepPerformance: sleepPerformanceResult,
       recoveryParts,
       hrvBal,
       illness,

@@ -25,9 +25,12 @@ export type SleepStage = 'awake' | 'light' | 'deep' | 'rem';
 export type SleepResult = {
   startTs: number;
   endTs: number;
-  inBedMin: number;
-  asleepMin: number;
-  efficiency: number; // 0..1
+  inBedMin: number; // time in bed (TIB): onset window incl. awakenings
+  asleepMin: number; // LIGHT + SWS(deep) + REM
+  restorativeMin: number; // SWS(deep) + REM
+  latencyMin: number; // leading awake before first sustained sleep
+  wakeEvents: number; // distinct awake episodes after sleep onset
+  efficiency: number; // 0..1  (asleep / TIB)
   stages: Record<SleepStage, number>; // minutes
   /** Ordered stage segments across the night, for the hypnogram. */
   hypnogram: Array<{ stage: SleepStage; minutes: number }>;
@@ -51,8 +54,14 @@ export type SleepNeed = {
   neededMin: number;
 };
 
-const MAX_STRAIN_BONUS_MIN = 90; // a maximal-strain day adds up to ~1.5 h
-const MAX_DEBT_REPAY_MIN = 120; // repay at most ~2 h of accrued debt per night
+// WHOOP's per-term coefficients are computed server-side and are NOT in the APK;
+// these reproduce the confirmed breakdown STRUCTURE (baseline − naps + strain +
+// debt) and are tuned to the founder's screenshot. Treat the strain/debt slopes
+// as approximations, clearly the parts WHOOP keeps proprietary.
+const STRAIN_NEED_THRESHOLD = 10; // strain below this adds ~no extra need
+const STRAIN_NEED_SLOPE_MIN = 6; // minutes of need per strain-point above threshold
+const MAX_DEBT_REPAY_MIN = 120; // fold at most ~2 h of accrued debt into one night
+const SLEEP_NEED_FLOOR_MIN = 300; // never recommend below 5 h (wellbeing floor)
 
 export function computeSleepNeed(input: {
   baselineMin?: number;
@@ -61,13 +70,18 @@ export function computeSleepNeed(input: {
   napMin?: number;
 }): SleepNeed {
   const baselineMin = input.baselineMin ?? BASE_NEED_MIN;
+  // Strain only adds meaningful need above a moderate threshold (matches WHOOP's
+  // near-zero strain term on easy days, e.g. +0:02).
   const strainMin =
     input.recentStrain != null
-      ? Math.round((Math.max(0, Math.min(21, input.recentStrain)) / 21) * MAX_STRAIN_BONUS_MIN)
+      ? Math.round(
+          Math.max(0, Math.min(11, input.recentStrain - STRAIN_NEED_THRESHOLD)) *
+            STRAIN_NEED_SLOPE_MIN,
+        )
       : 0;
   const debtMin = Math.round(Math.max(0, Math.min(MAX_DEBT_REPAY_MIN, input.accruedDebtMin)));
   const napMin = Math.round(Math.max(0, input.napMin ?? 0));
-  const neededMin = Math.max(BASE_NEED_MIN * 0.6, baselineMin + strainMin + debtMin - napMin);
+  const neededMin = Math.max(SLEEP_NEED_FLOOR_MIN, baselineMin - napMin + strainMin + debtMin);
   return { baselineMin, strainMin, debtMin, napMin, neededMin: Math.round(neededMin) };
 }
 
@@ -159,15 +173,42 @@ export function computeSleep(
 
   const inBedMin = window.length;
   const asleepMin = inBedMin - stages.awake;
+  const restorativeMin = stages.deep + stages.rem;
   const efficiency = inBedMin > 0 ? asleepMin / inBedMin : 0;
   const startTs = window[0]?.ts ?? 0;
   const endTs = window[window.length - 1]?.ts ?? startTs;
+
+  // Sleep latency = leading awake before the first sustained sleep segment.
+  let latencyMin = 0;
+  for (const seg of hypnogram) {
+    if (seg.stage === 'awake') latencyMin += seg.minutes;
+    else break;
+  }
+  // Wake events = distinct awake episodes occurring after sleep onset and before
+  // the final wake (mid-sleep disturbances), each merged run counting once.
+  const firstSleep = hypnogram.findIndex((s) => s.stage !== 'awake');
+  let lastSleep = -1;
+  for (let i = hypnogram.length - 1; i >= 0; i -= 1) {
+    if (hypnogram[i]!.stage !== 'awake') {
+      lastSleep = i;
+      break;
+    }
+  }
+  let wakeEvents = 0;
+  if (firstSleep >= 0 && lastSleep > firstSleep) {
+    for (let i = firstSleep + 1; i < lastSleep; i += 1) {
+      if (hypnogram[i]!.stage === 'awake') wakeEvents += 1;
+    }
+  }
 
   return {
     startTs,
     endTs,
     inBedMin,
     asleepMin,
+    restorativeMin,
+    latencyMin,
+    wakeEvents,
     efficiency: Math.round(efficiency * 100) / 100,
     stages,
     hypnogram,

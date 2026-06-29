@@ -15,6 +15,30 @@
 import * as SQLite from 'expo-sqlite';
 
 export type HrSampleRow = { ts: number; bpm: number; rr: number[] };
+/**
+ * Full WHOOP-style sleep breakdown for one night, stored as JSON so the many
+ * sub-metrics (Sleep Need breakdown, the four Sleep Performance contributors,
+ * stress bands, latency, wake events) travel as one column instead of ~15.
+ */
+export type SleepDetail = {
+  performance: number | null; // composite Sleep Performance % (estimate)
+  hoursVsNeeded: number | null; // %
+  needMin: number | null; // Sleep Need total
+  baselineMin: number | null;
+  napMin: number | null;
+  strainMin: number | null;
+  debtMin: number | null;
+  efficiency: number | null; // %
+  consistency: number | null; // % (null = calibrating)
+  restorativeMin: number | null;
+  restorativePct: number | null; // % of asleep
+  latencyMin: number | null;
+  wakeEvents: number | null;
+  inBedMin: number | null; // time in bed
+  stressHigh: number | null; // % of TIB in HIGH stress
+  stressMed: number | null;
+  stressLow: number | null;
+};
 export type DailyMetricRow = {
   day: string; // YYYY-MM-DD (local)
   recovery: number | null;
@@ -32,6 +56,7 @@ export type DailyMetricRow = {
   remMin: number | null;
   lightMin: number | null;
   awakeMin: number | null;
+  sleepDetail: SleepDetail | null; // full WHOOP-style breakdown (JSON column)
   updatedAt: number;
 };
 export type CardioRow = {
@@ -74,6 +99,7 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
           sleep_min INTEGER, sleep_perf REAL, strain REAL, steps INTEGER,
           sleep_start INTEGER, sleep_end INTEGER,
           deep_min INTEGER, rem_min INTEGER, light_min INTEGER, awake_min INTEGER,
+          sleep_json TEXT,
           updated_at INTEGER NOT NULL
         );
         CREATE TABLE IF NOT EXISTS cardio (
@@ -109,6 +135,7 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
         'rem_min INTEGER',
         'light_min INTEGER',
         'awake_min INTEGER',
+        'sleep_json TEXT',
       ]) {
         try {
           await db.execAsync(`ALTER TABLE daily_metrics ADD COLUMN ${col}`);
@@ -159,8 +186,8 @@ export async function upsertDailyMetric(m: DailyMetricRow): Promise<void> {
   const db = await getDb();
   await db.runAsync(
     `INSERT INTO daily_metrics (day, recovery, rmssd, rhr, resp, sleep_min, sleep_perf, strain, steps,
-       sleep_start, sleep_end, deep_min, rem_min, light_min, awake_min, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       sleep_start, sleep_end, deep_min, rem_min, light_min, awake_min, sleep_json, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(day) DO UPDATE SET
        recovery=excluded.recovery, rmssd=excluded.rmssd, rhr=excluded.rhr, resp=excluded.resp,
        sleep_min=excluded.sleep_min, sleep_perf=excluded.sleep_perf,
@@ -168,6 +195,7 @@ export async function upsertDailyMetric(m: DailyMetricRow): Promise<void> {
        sleep_start=excluded.sleep_start, sleep_end=excluded.sleep_end,
        deep_min=excluded.deep_min, rem_min=excluded.rem_min,
        light_min=excluded.light_min, awake_min=excluded.awake_min,
+       sleep_json=excluded.sleep_json,
        updated_at=excluded.updated_at`,
     m.day,
     m.recovery,
@@ -184,6 +212,7 @@ export async function upsertDailyMetric(m: DailyMetricRow): Promise<void> {
     m.remMin,
     m.lightMin,
     m.awakeMin,
+    m.sleepDetail ? JSON.stringify(m.sleepDetail) : null,
     m.updatedAt,
   );
 }
@@ -204,8 +233,17 @@ function mapDaily(r: {
   rem_min: number | null;
   light_min: number | null;
   awake_min: number | null;
+  sleep_json: string | null;
   updated_at: number;
 }): DailyMetricRow {
+  let sleepDetail: SleepDetail | null = null;
+  if (r.sleep_json) {
+    try {
+      sleepDetail = JSON.parse(r.sleep_json) as SleepDetail;
+    } catch {
+      sleepDetail = null;
+    }
+  }
   return {
     day: r.day,
     recovery: r.recovery,
@@ -222,6 +260,7 @@ function mapDaily(r: {
     remMin: r.rem_min ?? null,
     lightMin: r.light_min ?? null,
     awakeMin: r.awake_min ?? null,
+    sleepDetail,
     updatedAt: r.updated_at,
   };
 }
