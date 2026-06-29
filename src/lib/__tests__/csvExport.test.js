@@ -9,7 +9,7 @@ jest.mock('expo-file-system/legacy', () => ({ cacheDirectory: '/tmp/', writeAsSt
 jest.mock('expo-sharing', () => ({ isAvailableAsync: async () => false, shareAsync: jest.fn() }));
 jest.mock('../food/sources/localCache', () => ({ resolveFoodRef: async () => null }));
 
-import { buildDiaryCsv } from '../food/csvExport';
+import { buildDiaryCsv, buildDiaryHtml } from '../food/csvExport';
 
 describe('buildDiaryCsv', () => {
   test('emits the header row first', () => {
@@ -69,6 +69,45 @@ describe('buildDiaryCsv', () => {
     const csv = buildDiaryCsv(entries, new Map());
     const lastCell = csv.split('\n')[1].split(',').pop();
     expect(lastCell).toBe('');
+  });
+
+  describe('buildDiaryHtml (PDF report, gap #6)', () => {
+    const lookup = new Map([
+      ['global:abc', { name: 'Chicken breast', brand: 'Tesco' }],
+      ['global:def', { name: 'Rice', brand: '' }],
+    ]);
+    const entries = [
+      { entry_date: '2026-05-23', meal_slot: 'lunch', food_ref: 'global:abc', quantity_g: 150, kcal: 248, protein_g: 46, carbs_g: 0, fat_g: 5.4, fibre_g: 0 },
+      { entry_date: '2026-05-23', meal_slot: 'lunch', food_ref: 'global:def', quantity_g: 200, kcal: 260, protein_g: 5, carbs_g: 57, fat_g: 1, fibre_g: 1 },
+    ];
+
+    test('renders a valid HTML doc with the foods and a day total', () => {
+      const html = buildDiaryHtml(entries, lookup, { startDate: '2026-05-23', endDate: '2026-05-23' });
+      expect(html.startsWith('<!DOCTYPE html>')).toBe(true);
+      expect(html).toContain('Chicken breast');
+      expect(html).toContain('Rice');
+      expect(html).toContain('2026-05-23 to 2026-05-23');
+      // Day total: 248 + 260 = 508 kcal; protein 46 + 5 = 51
+      expect(html).toContain('508');
+      expect(html).toContain('Day total');
+      expect(html).toContain('Energy in kcal');
+    });
+
+    test('HTML-escapes food names (no injection of raw tags)', () => {
+      const evil = new Map([['global:x', { name: '<script>x</script>', brand: '"&y' }]]);
+      const html = buildDiaryHtml([
+        { entry_date: '2026-05-23', meal_slot: 'snack', food_ref: 'global:x', quantity_g: 10, kcal: 5, protein_g: 0, carbs_g: 1, fat_g: 0, fibre_g: 0 },
+      ], evil, {});
+      expect(html).not.toContain('<script>x</script>');
+      expect(html).toContain('&lt;script&gt;');
+      expect(html).toContain('&amp;y');
+    });
+
+    test('empty entry list still returns a document shell', () => {
+      const html = buildDiaryHtml([], new Map(), {});
+      expect(html.startsWith('<!DOCTYPE html>')).toBe(true);
+      expect(html).toContain('Food diary');
+    });
   });
 
   describe('formula-injection hardening (A2-060)', () => {

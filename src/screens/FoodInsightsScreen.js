@@ -33,7 +33,7 @@ import {
 } from '../lib/food/db';
 import { localDayKey, parseLocalDay } from '../lib/dayKey';
 import { getNutritionTargets } from '../lib/database';
-import { exportDiaryCsv } from '../lib/food/csvExport';
+import { exportDiaryCsv, exportDiaryPdf } from '../lib/food/csvExport';
 import { ADHERENCE_TOLERANCE, pctLabel, within } from '../lib/food/adherence';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -231,7 +231,7 @@ export default function FoodInsightsScreen({ navigation }) {
     return { thisWeek, lastWeek, delta };
   }, [rollupByDate]);
 
-  async function onExport() {
+  async function onExport(kind = 'csv') {
     if (!userId || exporting) return;
     setExporting(true);
     try {
@@ -240,9 +240,15 @@ export default function FoodInsightsScreen({ navigation }) {
         toast.show(`No entries in the last ${windowDays} days.`, { variant: 'info' });
         return;
       }
-      const result = await exportDiaryCsv({ userId, entries, startDate, endDate });
+      const result = kind === 'pdf'
+        ? await exportDiaryPdf({ userId, entries, startDate, endDate })
+        : await exportDiaryCsv({ userId, entries, startDate, endDate });
+      if (result.unavailable) {
+        toast.show('PDF export is not available on this device.', { variant: 'warning' });
+        return;
+      }
       if (result.rowCount > 0) {
-        toast.show(`${result.rowCount} ${result.rowCount === 1 ? 'entry' : 'entries'} exported to CSV.`, { variant: 'success' });
+        toast.show(`${result.rowCount} ${result.rowCount === 1 ? 'entry' : 'entries'} exported to ${kind === 'pdf' ? 'PDF' : 'CSV'}.`, { variant: 'success' });
       }
     } catch (_e) {
       toast.show('Export failed. Try again.', { variant: 'error' });
@@ -476,7 +482,7 @@ export default function FoodInsightsScreen({ navigation }) {
 
         <TouchableOpacity
           style={styles.exportBtn}
-          onPress={onExport}
+          onPress={() => onExport('csv')}
           disabled={exporting}
           accessibilityRole="button"
           accessibilityState={{ disabled: exporting }}
@@ -490,6 +496,17 @@ export default function FoodInsightsScreen({ navigation }) {
               <Text style={styles.exportBtnText}>Export {windowDays} days as CSV</Text>
             </>
           )}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.exportBtnSecondary}
+          onPress={() => onExport('pdf')}
+          disabled={exporting}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: exporting }}
+          accessibilityLabel={`Export the last ${windowDays} days as a PDF report to share with a coach or GP`}
+        >
+          <Ionicons name="document-text-outline" size={18} color={colors.primary} />
+          <Text style={styles.exportBtnSecondaryText}>Export as PDF report</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -578,4 +595,15 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   exportBtnText: { ...type.bodyStrong, color: colors.onPrimary },
+  exportBtnSecondary: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: 'transparent',
+    borderWidth: 1, borderColor: colors.border,
+    paddingVertical: spacing.md, paddingHorizontal: spacing.xl,
+    borderRadius: radius.lg,
+    minHeight: 48,
+    marginTop: spacing.sm,
+  },
+  exportBtnSecondaryText: { ...type.bodyStrong, color: colors.primary },
 });
