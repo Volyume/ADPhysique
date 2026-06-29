@@ -22,12 +22,23 @@ import {
   setPreference as setPrefRow,
   migrateFromLegacyBlob,
 } from '../lib/notifications/preferences';
+import { scheduleMealReminders } from '../lib/notifications/scheduler';
 import useAppStore from '../store/useAppStore';
 import Card from '../components/Card';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
 const TRAINING_PRESET_TIMES = ['06:00', '07:00', '08:00', '09:00', '10:00', '17:00', '18:00', '19:00', '20:00'];
+
+// Opt-in meal-log reminders (gap #4). Default OFF, convenience-only. Times are
+// chosen from a preset list (same lightweight picker as training reminders).
+const MEAL_REMINDERS_KEY = '@volyume_meal_reminders';
+const MEAL_PRESET_TIMES = ['07:00', '08:00', '09:00', '12:00', '12:30', '13:00', '17:00', '18:00', '18:30', '19:00', '20:00', '21:00'];
+const DEFAULT_MEAL_REMINDERS = [
+  { id: 'breakfast', label: 'Breakfast', hour: 8, minute: 0, enabled: false },
+  { id: 'lunch', label: 'Lunch', hour: 12, minute: 30, enabled: false },
+  { id: 'dinner', label: 'Dinner', hour: 18, minute: 30, enabled: false },
+];
 
 
 
@@ -122,6 +133,7 @@ export default function NotificationSettingsScreen({ navigation }) {
   const [trainingEnabled, setTrainingEnabled] = useState(false);
   const [trainingHour, setTrainingHour] = useState(8);
   const [trainingMinute, setTrainingMinute] = useState(0);
+  const [mealReminders, setMealReminders] = useState(DEFAULT_MEAL_REMINDERS);
   const [permissionStatus, setPermissionStatus] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -429,6 +441,49 @@ export default function NotificationSettingsScreen({ navigation }) {
     );
   }
 
+  // Load saved meal reminders on mount (default OFF).
+  useEffect(() => {
+    AsyncStorage.getItem(MEAL_REMINDERS_KEY).then((raw) => {
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length) setMealReminders(parsed);
+      } catch (_) { /* keep defaults */ }
+    }).catch(() => {});
+  }, []);
+
+  async function persistMealReminders(next) {
+    setMealReminders(next);
+    try { await AsyncStorage.setItem(MEAL_REMINDERS_KEY, JSON.stringify(next)); } catch (_) {}
+    if (permissionStatus === 'granted') {
+      try { await scheduleMealReminders(next); } catch (_) {}
+    }
+  }
+
+  function toggleMealReminder(id, value) {
+    const next = mealReminders.map((r) => (r.id === id ? { ...r, enabled: value } : r));
+    if (value && permissionStatus !== 'granted') {
+      requestNotificationPermissions().then((status) => {
+        setPermissionStatus(status);
+        persistMealReminders(next);
+      }).catch(() => persistMealReminders(next));
+      return;
+    }
+    persistMealReminders(next);
+  }
+
+  function pickMealReminderTime(id) {
+    const r = mealReminders.find((x) => x.id === id);
+    const currentLabel = r ? `${String(r.hour).padStart(2, '0')}:${String(r.minute).padStart(2, '0')}` : '';
+    appAlert('Reminder time', `Current: ${currentLabel}`, MEAL_PRESET_TIMES.map((label) => ({
+      text: label,
+      onPress: () => {
+        const [h, m] = label.split(':').map(Number);
+        persistMealReminders(mealReminders.map((x) => (x.id === id ? { ...x, hour: h, minute: m } : x)));
+      },
+    })));
+  }
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       {/* Subtitle only, the stack header (set in RootNavigator with
@@ -525,6 +580,49 @@ export default function NotificationSettingsScreen({ navigation }) {
           <View style={styles.helperRow}>
             <Text style={styles.helperText}>
               Pick a time and the days you want the nudge. Plans don't have fixed weekdays in Volyume, so reminders fire on the days you choose.
+            </Text>
+          </View>
+        </Card>
+
+        {/* Meal-log reminders (opt-in, gap #4): convenience-only, never a streak. */}
+        <Text style={styles.sectionLabel}>Meal reminders</Text>
+        <Card style={styles.card}>
+          {mealReminders.map((r, i) => (
+            <View key={r.id}>
+              {i > 0 ? <View style={styles.divider} /> : null}
+              <View style={styles.toggleRow}>
+                <View style={styles.toggleIconWrap}>
+                  <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
+                </View>
+                <Text style={styles.toggleLabel}>{r.label}</Text>
+                <Switch
+                  value={r.enabled}
+                  onValueChange={(v) => toggleMealReminder(r.id, v)}
+                  trackColor={{ false: colors.surface2, true: colors.primaryDim }}
+                  thumbColor={colors.primary}
+                  ios_backgroundColor={colors.surface2}
+                  accessibilityLabel={`${r.label} reminder toggle`}
+                />
+              </View>
+              {r.enabled && (
+                <TouchableOpacity
+                  style={styles.timePickerRow}
+                  onPress={() => pickMealReminderTime(r.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Set ${r.label} reminder time`}
+                >
+                  <Text style={styles.timePickerLabel}>Reminder time</Text>
+                  <Text style={styles.timePickerValue}>
+                    {`${String(r.hour).padStart(2, '0')}:${String(r.minute).padStart(2, '0')}`}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
+          <View style={styles.helperRow}>
+            <Text style={styles.helperText}>
+              Optional, gentle nudges to log a meal. No streaks and no pressure. Turn any of them off whenever you like.
             </Text>
           </View>
         </Card>

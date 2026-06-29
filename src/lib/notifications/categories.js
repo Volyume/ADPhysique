@@ -38,6 +38,7 @@ export const CATEGORY = Object.freeze({
   CHECKIN_MISSED: 'checkin_missed', // OPP-C03 ghost prevention
   PLANNED_MEAL_CONFIRM: 'planned_meal_confirm', // F3: confirm planned meals
   REST_TIMER: 'rest_timer', // U1/F3: live lock-screen rest timer with actions
+  MEAL_LOG_REMINDER: 'meal_log_reminder', // gap #4: opt-in, convenience-only meal-log nudge
 });
 
 /**
@@ -102,6 +103,7 @@ export const CATEGORY_CHANNELS = Object.freeze({
   [CATEGORY.COACH_TRIAL_ENDING]: [CHANNEL.EMAIL],
   [CATEGORY.MORNING_WEIGHT]: [CHANNEL.PUSH],
   [CATEGORY.TRAINING_REMINDER]: [CHANNEL.PUSH],
+  [CATEGORY.MEAL_LOG_REMINDER]: [CHANNEL.PUSH],
   [CATEGORY.YEAR_OF_LIFTS_UNLOCK]: [CHANNEL.PUSH],
   [CATEGORY.MONTHLY_RECAP]: [CHANNEL.PUSH],
   [CATEGORY.TRIAL_DAY3]: [CHANNEL.PUSH, CHANNEL.IN_APP], // COMP-023

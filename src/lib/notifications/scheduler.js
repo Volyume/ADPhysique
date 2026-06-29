@@ -140,6 +140,63 @@ export async function scheduleMorningWeightNotification(hour = 7, minute = 0) {
   }
 }
 
+// ─── Meal-log reminders (gap #4) ───────────────────────────────────────────────
+// Opt-in, convenience-only daily nudges to log a meal. STRICTLY no guilt: no
+// "you haven't logged", no "you're behind", no streak. The body just offers a
+// gentle reminder. Default OFF; added in Notification settings. Quiet hours are
+// respected. Each reminder is { id, label, hour, minute, enabled }.
+const NOTIF_ID_MEAL_PREFIX = 'volyume_meal_reminder_';
+
+export async function cancelMealReminders() {
+  if (Platform.OS === 'web') return;
+  try {
+    const all = await Notifications.getAllScheduledNotificationsAsync().catch(() => []);
+    for (const n of all || []) {
+      if (typeof n?.identifier === 'string' && n.identifier.startsWith(NOTIF_ID_MEAL_PREFIX)) {
+        // eslint-disable-next-line no-await-in-loop
+        await Notifications.cancelScheduledNotificationAsync(n.identifier).catch(() => {});
+      }
+    }
+  } catch (_) { /* tolerate */ }
+}
+
+export async function scheduleMealReminders(reminders = []) {
+  if (Platform.OS === 'web') return;
+  try {
+    await cancelMealReminders();
+    const quiet = await getQuietHours();
+    for (const r of reminders) {
+      if (!r || r.enabled === false || r.id == null) continue;
+      const hr = Math.max(0, Math.min(23, r.hour | 0));
+      const mn = Math.max(0, Math.min(59, r.minute | 0));
+      const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hr, mn, quiet);
+      const label = (typeof r.label === 'string' && r.label.trim()) ? r.label.trim().slice(0, 24) : 'Meal';
+      // eslint-disable-next-line no-await-in-loop
+      await Notifications.scheduleNotificationAsync({
+        identifier: `${NOTIF_ID_MEAL_PREFIX}${r.id}`,
+        content: {
+          title: label,
+          body: 'A gentle reminder to log it if it helps. No pressure.',
+          data: { type: CATEGORY.MEAL_LOG_REMINDER },
+          sound: false,
+        },
+        trigger: {
+          channelId: COACHING_REMINDERS_CHANNEL,
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          hour: h,
+          minute: m,
+        },
+      });
+    }
+  } catch (e) {
+    trackNotificationFailed({
+      category: CATEGORY.MEAL_LOG_REMINDER,
+      reason: 'schedule_threw',
+      payload: { message: e?.message ?? 'unknown' },
+    });
+  }
+}
+
 // ─── Weekly check-in reminder ─────────────────────────────────────────────────
 
 function checkinCopy(name) {
