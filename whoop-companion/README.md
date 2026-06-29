@@ -28,8 +28,12 @@ GitHub Actions → EAS → TestFlight build pipeline.
 This is the quickest way to try it — no Expo account, no Apple, no Play Store,
 no secrets:
 
-1. GitHub → **Actions** tab → **Build VOLYUME Pulse Android APK** → **Run workflow**.
+1. The **Build VOLYUME Pulse Android APK** workflow runs automatically on every
+   push to this branch (no manual button — that needs the file on `main`, which we
+   never touch). GitHub → **Actions** → open the latest run of that workflow.
 2. When it finishes, open the run → **Artifacts** → download **volyume-pulse-apk**.
+   (Ignore the separate "Build Android (APK + AAB, signed)" runs — that's VOLYUME's
+   own app and won't install over your Play-Store VOLYUME.)
 3. Copy the APK to your Android phone and tap it to install (allow "install
    unknown apps" for your browser/files app when prompted).
 4. Open the app → **Device** tab → close the official WHOOP app, put the strap in

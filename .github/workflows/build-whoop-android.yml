@@ -6,13 +6,21 @@ name: Build VOLYUME Pulse Android APK
 # (Expo's template signs release with the debug keystore, so the APK installs on
 # any device for personal use), and uploads the APK as a workflow artifact.
 #
-# To get the APK: Actions tab → "Build VOLYUME Pulse Android APK" → Run workflow →
-# open the finished run → Artifacts → download "volyume-pulse-apk" → install on your
-# phone (you'll need to allow "install unknown apps" for your browser/files app).
+# Runs automatically on every push to this branch that touches the app (a manual
+# "Run workflow" button can't appear because that requires the file to be on the
+# default branch, and we never touch main). To get the APK: Actions tab → open the
+# latest "Build VOLYUME Pulse Android APK" run → Artifacts → download
+# "volyume-pulse-apk" → install on your phone (allow "install unknown apps").
 #
 # Free GitHub-hosted runner; no repo secrets required.
 
 on:
+  push:
+    branches:
+      - 'claude/**'
+    paths:
+      - 'whoop-companion/**'
+      - '.github/workflows/build-whoop-android.yml'
   workflow_dispatch:
 
 concurrency:
