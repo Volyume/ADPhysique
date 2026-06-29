@@ -3,6 +3,7 @@ import { Pressable, Text, TextInput, TouchableOpacity, View, StyleSheet } from '
 import { Ionicons } from '@expo/vector-icons';
 
 import { appStore } from '../state/appStore';
+import type { DetectedActivity } from '../metrics/autoDetect';
 import { useStoreSelector } from '../state/store';
 import {
   Bar,
@@ -44,6 +45,7 @@ export function StrainScreen({ nav }: { nav: Nav }) {
 
   const [zones, setZones] = useState<HrZone[]>([]);
   const [curve, setCurve] = useState<Array<{ tsMs: number; strain: number }>>([]);
+  const [suggested, setSuggested] = useState<DetectedActivity[]>([]);
   const [activity, setActivity] = useState('Run');
   const [duration, setDuration] = useState('30');
   const [avgHr, setAvgHr] = useState('');
@@ -51,7 +53,14 @@ export function StrainScreen({ nav }: { nav: Nav }) {
   useEffect(() => {
     void appStore.todayZones().then(setZones);
     void appStore.todayStrainCurve().then(setCurve);
-  }, [today]);
+    void appStore.suggestedActivities().then(setSuggested);
+  }, [today, cardio.length]);
+
+  const addSuggested = (d: DetectedActivity) => {
+    void appStore
+      .addCardio({ activity: 'Workout', startTs: d.startTs, endTs: d.endTs, avgHr: d.avgHr, source: 'auto' })
+      .then(() => appStore.suggestedActivities().then(setSuggested));
+  };
 
   const strain = today?.strain ?? null;
   const z13 = zones.filter((z) => z.zone <= 3).reduce((a, b) => a + b.minutes, 0);
@@ -121,6 +130,28 @@ export function StrainScreen({ nav }: { nav: Nav }) {
       <Card>
         <StrainCurve points={curve} />
       </Card>
+
+      {suggested.length > 0 ? (
+        <>
+          <SectionLabel>Detected activities</SectionLabel>
+          <Card>
+            {suggested.map((d) => (
+              <View key={d.startTs} style={styles.sessionRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sessionName}>Possible workout</Text>
+                  <Text style={styles.sessionMeta}>
+                    {formatDuration(Math.round((d.endTs - d.startTs) / 60000))} · {d.avgHr} bpm avg · auto-detected
+                  </Text>
+                </View>
+                <Pressable onPress={() => addSuggested(d)} style={styles.addBtn}>
+                  <Ionicons name="add" size={16} color="#000" />
+                  <Text style={styles.addText}>Add</Text>
+                </Pressable>
+              </View>
+            ))}
+          </Card>
+        </>
+      ) : null}
 
       <SectionLabel>Today's activities</SectionLabel>
       <Card>
@@ -209,4 +240,6 @@ const styles = StyleSheet.create({
   sessionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   sessionName: { color: colors.text, fontSize: 15, fontWeight: '600' },
   sessionMeta: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.white, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999 },
+  addText: { color: '#000', fontSize: 13, fontWeight: '700' },
 });

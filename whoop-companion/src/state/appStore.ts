@@ -67,6 +67,7 @@ import { illnessRisk, IllnessResult } from '../metrics/illness';
 import { resilience, Resilience } from '../metrics/resilience';
 import { cardioAge } from '../metrics/cardioAge';
 import { rhythmScreen, RhythmResult } from '../metrics/afib';
+import { detectActivities, DetectedActivity } from '../metrics/autoDetect';
 import { trainingLoad } from '../metrics/training';
 import { computeTrainingReadiness, Readiness } from '../metrics/readiness';
 import { activityGps } from '../data/activities';
@@ -898,6 +899,18 @@ class AppStore extends Store<AppState> {
     const dayHr = await getHrSamplesBetween(sod, Date.now());
     const perMin = perMinuteHr(dayHr).map((p) => ({ hr: p.hr, minutes: 1 }));
     return hrZones(perMin, profile);
+  };
+
+  /**
+   * Suggested (auto-detected) activities from today's HR that aren't already
+   * logged — the user confirms before they're saved (no false auto-logging).
+   */
+  suggestedActivities = async (): Promise<DetectedActivity[]> => {
+    const sod = startOfDayMs(Date.now());
+    const rows = await getHrSamplesBetween(sod, Date.now());
+    const perMin = perMinuteHr(rows).map((p) => ({ tsMs: p.tsMs, hr: p.hr }));
+    const existing = this.getState().cardio.filter((c) => c.startTs >= sod);
+    return detectActivities(perMin, this.getState().profile, existing);
   };
 
   /**
