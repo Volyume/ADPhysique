@@ -3,7 +3,18 @@ import { Text, TextInput, TouchableOpacity, View, StyleSheet } from 'react-nativ
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
-import { Bar, Card, Empty, PrimaryButton, Screen, SectionLabel, StrainCurve } from '../ui/components';
+import {
+  Bar,
+  Card,
+  Empty,
+  MetricRow,
+  PrimaryButton,
+  Ring,
+  Screen,
+  SectionLabel,
+  StrainCurve,
+  WeeklyBars,
+} from '../ui/components';
 import { colors, radius } from '../ui/theme';
 import { formatDuration } from '../util/time';
 import type { HrZone } from '../metrics/strain';
@@ -11,9 +22,20 @@ import type { HrZone } from '../metrics/strain';
 const ACTIVITIES = ['Run', 'Cycle', 'Walk', 'Strength', 'Row', 'HIIT', 'Swim', 'Other'];
 const ZONE_COLORS = ['#3B82F6', '#22D3EE', '#16C47F', '#FFB020', '#FF4D4D'];
 
+function hm(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = Math.round(min % 60);
+  return `${h}:${String(m).padStart(2, '0')}`;
+}
+
+function dow(day: string): string {
+  return new Date(`${day}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short' });
+}
+
 export function StrainScreen() {
   const today = useStoreSelector(appStore, (s) => s.today);
   const cardio = useStoreSelector(appStore, (s) => s.cardio);
+  const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
 
   const [zones, setZones] = useState<HrZone[]>([]);
   const [curve, setCurve] = useState<Array<{ tsMs: number; strain: number }>>([]);
@@ -26,20 +48,27 @@ export function StrainScreen() {
     void appStore.todayStrainCurve().then(setCurve);
   }, [today]);
 
+  const strain = today?.strain ?? null;
+  const z13 = zones.filter((z) => z.zone <= 3).reduce((a, b) => a + b.minutes, 0);
+  const z45 = zones.filter((z) => z.zone >= 4).reduce((a, b) => a + b.minutes, 0);
+  const sod = new Date().setHours(0, 0, 0, 0);
+  const todayCardio = cardio.filter((c) => c.startTs >= sod);
+  const strengthMin = todayCardio
+    .filter((c) => c.activity === 'Strength')
+    .reduce((a, c) => a + Math.round((c.endTs - c.startTs) / 60000), 0);
   const zoneMax = Math.max(1, ...zones.map((z) => z.minutes));
+  const week = recentDays.slice(0, 7).reverse();
+
+  const rec = today?.recovery ?? null;
+  const optimal =
+    rec == null ? '—' : rec >= 67 ? '10.0–14.0' : rec >= 34 ? '8.0–12.0' : '6.0–10.0';
 
   const logCardio = () => {
     const mins = parseInt(duration, 10);
     if (!mins || mins <= 0) return;
     const now = Date.now();
     void appStore
-      .addCardio({
-        activity,
-        startTs: now - mins * 60000,
-        endTs: now,
-        avgHr: avgHr ? parseInt(avgHr, 10) : null,
-        source: 'manual',
-      })
+      .addCardio({ activity, startTs: now - mins * 60000, endTs: now, avgHr: avgHr ? parseInt(avgHr, 10) : null, source: 'manual' })
       .then(() => {
         setDuration('30');
         setAvgHr('');
@@ -49,78 +78,42 @@ export function StrainScreen() {
 
   return (
     <Screen title="Strain">
-      <Card style={{ alignItems: 'center', paddingVertical: 18 }}>
-        <Text style={styles.bigStrain}>{today?.strain != null ? today.strain.toFixed(1) : '—'}</Text>
-        <Text style={styles.strainLabel}>day strain · 0–21</Text>
+      <Card style={{ alignItems: 'center', paddingVertical: 24 }}>
+        <Ring
+          value={strain != null ? strain / 21 : 0}
+          color={colors.strainBlue}
+          centerTop="Strain"
+          centerMain={strain != null ? strain.toFixed(1) : '—'}
+          centerSub="0–21"
+        />
       </Card>
+
+      <Card>
+        <MetricRow label="Heart rate zones 1–3" display={hm(z13)} current={z13} prior={null} />
+        <MetricRow label="Heart rate zones 4–5" display={hm(z45)} current={z45} prior={null} />
+        <MetricRow label="Strength activity time" display={hm(strengthMin)} current={strengthMin} prior={null} />
+        <MetricRow label="Steps" display="—" current={null} prior={null} />
+      </Card>
+
+      <Empty
+        text={
+          rec == null
+            ? 'Optimal strain target appears once recovery is available.'
+            : `Your body is ready for a day strain around ${optimal} today.`
+        }
+      />
 
       <SectionLabel>Strain through the day</SectionLabel>
       <Card>
         <StrainCurve points={curve} />
       </Card>
 
-      <SectionLabel>Time in heart-rate zones</SectionLabel>
+      <SectionLabel>Today's activities</SectionLabel>
       <Card>
-        {zones.length === 0 ? (
-          <Empty text="No heart-rate data logged today yet." />
+        {todayCardio.length === 0 ? (
+          <Empty text="No activities logged today." />
         ) : (
-          zones.map((z, i) => (
-            <Bar
-              key={z.zone}
-              label={`Z${z.zone}`}
-              value={z.minutes / zoneMax}
-              color={ZONE_COLORS[i] ?? colors.strainBlue}
-              right={formatDuration(z.minutes)}
-            />
-          ))
-        )}
-      </Card>
-
-      <SectionLabel>Log a session</SectionLabel>
-      <Card>
-        <View style={styles.chips}>
-          {ACTIVITIES.map((a) => (
-            <TouchableOpacity
-              key={a}
-              style={[styles.chip, activity === a && styles.chipActive]}
-              onPress={() => setActivity(a)}
-            >
-              <Text style={[styles.chipText, activity === a && styles.chipTextActive]}>{a}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.fieldLabel}>Duration (min)</Text>
-            <TextInput
-              style={styles.input}
-              value={duration}
-              onChangeText={setDuration}
-              keyboardType="number-pad"
-              placeholderTextColor={colors.textTertiary}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.fieldLabel}>Avg HR (optional)</Text>
-            <TextInput
-              style={styles.input}
-              value={avgHr}
-              onChangeText={setAvgHr}
-              keyboardType="number-pad"
-              placeholder="bpm"
-              placeholderTextColor={colors.textTertiary}
-            />
-          </View>
-        </View>
-        <PrimaryButton title="Add session" onPress={logCardio} />
-      </Card>
-
-      <SectionLabel>Recent sessions</SectionLabel>
-      <Card>
-        {cardio.length === 0 ? (
-          <Empty text="No sessions logged yet." />
-        ) : (
-          cardio.map((c) => (
+          todayCardio.map((c) => (
             <View key={c.id} style={styles.sessionRow}>
               <Text style={styles.sessionName}>{c.activity}</Text>
               <Text style={styles.sessionMeta}>
@@ -132,36 +125,68 @@ export function StrainScreen() {
           ))
         )}
       </Card>
+
+      <SectionLabel>Time in heart-rate zones</SectionLabel>
+      <Card>
+        {zones.length === 0 ? (
+          <Empty text="No heart-rate data logged today yet." />
+        ) : (
+          zones.map((z, i) => (
+            <Bar key={z.zone} label={`Z${z.zone}`} value={z.minutes / zoneMax} color={ZONE_COLORS[i] ?? colors.strainBlue} right={formatDuration(z.minutes)} />
+          ))
+        )}
+      </Card>
+
+      <SectionLabel>Weekly trends</SectionLabel>
+      <Card>
+        <SectionLabel>Strain</SectionLabel>
+        {week.length === 0 ? (
+          <Empty text="No history yet." />
+        ) : (
+          <WeeklyBars
+            data={week.map((d) => ({
+              label: dow(d.day),
+              value: d.strain,
+              display: d.strain != null ? d.strain.toFixed(1) : '',
+              color: colors.strainBlue,
+            }))}
+          />
+        )}
+      </Card>
+
+      <SectionLabel>Log a session</SectionLabel>
+      <Card>
+        <View style={styles.chips}>
+          {ACTIVITIES.map((a) => (
+            <TouchableOpacity key={a} style={[styles.chip, activity === a && styles.chipActive]} onPress={() => setActivity(a)}>
+              <Text style={[styles.chipText, activity === a && styles.chipTextActive]}>{a}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.fieldLabel}>Duration (min)</Text>
+            <TextInput style={styles.input} value={duration} onChangeText={setDuration} keyboardType="number-pad" placeholderTextColor={colors.textTertiary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.fieldLabel}>Avg HR (optional)</Text>
+            <TextInput style={styles.input} value={avgHr} onChangeText={setAvgHr} keyboardType="number-pad" placeholder="bpm" placeholderTextColor={colors.textTertiary} />
+          </View>
+        </View>
+        <PrimaryButton title="Add session" onPress={logCardio} />
+      </Card>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  bigStrain: { color: colors.strainBlue, fontSize: 56, fontWeight: '800' },
-  strainLabel: { color: colors.textSecondary, fontSize: 13, marginTop: 2 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
+  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   chipActive: { borderColor: colors.amber, backgroundColor: '#2A2412' },
   chipText: { color: colors.textSecondary, fontSize: 13 },
   chipTextActive: { color: colors.amber, fontWeight: '600' },
   fieldLabel: { color: colors.textSecondary, fontSize: 12, marginBottom: 4 },
-  input: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    borderRadius: radius.button,
-    color: colors.text,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-  },
+  input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.inputBorder, borderRadius: radius.button, color: colors.text, paddingHorizontal: 12, paddingVertical: 12, fontSize: 16 },
   sessionRow: { paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
   sessionName: { color: colors.text, fontSize: 15, fontWeight: '600' },
   sessionMeta: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },

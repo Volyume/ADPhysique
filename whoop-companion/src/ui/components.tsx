@@ -430,6 +430,96 @@ export function LineChart({
   );
 }
 
+/**
+ * WHOOP contributor row: label on the left; today's value with a coloured
+ * up/down arrow on the right; the 30-day comparison value beneath it.
+ * `betterWhenLower` flips the arrow colour (green = favourable).
+ */
+export function MetricRow({
+  label,
+  display,
+  current,
+  prior,
+  unit,
+  betterWhenLower = false,
+}: {
+  label: string;
+  display?: string;
+  current: number | null;
+  prior: number | null;
+  unit?: string;
+  betterWhenLower?: boolean;
+}) {
+  const dir = current != null && prior != null ? (current > prior ? 'up' : current < prior ? 'down' : 'flat') : null;
+  const favourable = dir == null || dir === 'flat' ? null : (dir === 'down') === betterWhenLower;
+  const arrowColor = favourable == null ? colors.textTertiary : favourable ? colors.recoveryGreen : colors.amber;
+  const arrow = dir === 'up' ? '▲' : dir === 'down' ? '▼' : '';
+  const u = unit ?? '';
+  return (
+    <View style={metricStyles.row}>
+      <Text style={metricStyles.label}>{label}</Text>
+      <View style={{ alignItems: 'flex-end' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={metricStyles.value}>{display ?? (current != null ? `${current}${u}` : '—')}</Text>
+          {arrow ? <Text style={[metricStyles.arrow, { color: arrowColor }]}> {arrow}</Text> : null}
+        </View>
+        {prior != null ? <Text style={metricStyles.prior}>{`${prior}${u}`}</Text> : null}
+      </View>
+    </View>
+  );
+}
+
+/** WHOOP weekly bar chart (e.g. recovery %, strain, steps) with value labels. */
+export function WeeklyBars({
+  data,
+  height = 170,
+}: {
+  data: Array<{ label: string; value: number | null; display?: string; color?: string }>;
+  height?: number;
+}) {
+  const max = Math.max(1, ...data.map((d) => d.value ?? 0));
+  const barArea = height - 44;
+  return (
+    <View style={[weeklyStyles.wrap, { height }]}>
+      {data.map((d, i) => (
+        <View key={i} style={weeklyStyles.col}>
+          <Text style={weeklyStyles.val}>{d.display ?? (d.value != null ? `${d.value}` : '')}</Text>
+          <View
+            style={[
+              weeklyStyles.bar,
+              { height: Math.max(2, ((d.value ?? 0) / max) * barArea), backgroundColor: d.color ?? colors.strainBlue },
+            ]}
+          />
+          <Text style={weeklyStyles.day}>{d.label}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+const metricStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  label: { color: colors.text, fontSize: 14, fontWeight: '600', letterSpacing: 0.5 },
+  value: { color: colors.text, fontSize: 20, fontWeight: '700' },
+  arrow: { fontSize: 12 },
+  prior: { color: colors.textTertiary, fontSize: 12, marginTop: 1 },
+});
+
+const weeklyStyles = StyleSheet.create({
+  wrap: { flexDirection: 'row', alignItems: 'flex-end' },
+  col: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
+  val: { color: colors.textSecondary, fontSize: 11, marginBottom: 4, fontWeight: '600' },
+  bar: { width: 16, borderRadius: 3 },
+  day: { color: colors.textTertiary, fontSize: 10, marginTop: 6 },
+});
+
 const contribStyles = StyleSheet.create({
   row: { marginVertical: 8 },
   head: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
