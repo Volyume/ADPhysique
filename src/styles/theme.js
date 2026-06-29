@@ -90,6 +90,20 @@ const baseColors = {
   chartLine: '#F59E0B',
   chartFill: 'rgba(245, 158, 11, 0.08)',
 
+  // Macro CATEGORY colours (the food macro bars). Founder decision 2026-06-29
+  // (MFP-style per-macro hue), superseding the 2026-05-29 mono-amber bars. These
+  // identify WHICH macro a bar is — they are NOT adherence colours and never
+  // change on hit/miss, so a coloured bar never reads as "good/bad" (the overall
+  // calorie RING stays adherence-neutral amber, see bandColour). Drawn from the
+  // Okabe-Ito CVD-safe family so they stay distinguishable under deuteranopia
+  // without a separate CVD table; none is the traffic-light green/red used by
+  // stateColors. Protein keeps the brand amber (it is the hero macro); fibre is
+  // a quiet neutral (the "bonus" macro, no upper-bound pressure).
+  macroProtein: '#F5A623', // amber (brand / primary)
+  macroCarb:    '#56B4E9', // Okabe-Ito sky blue
+  macroFat:     '#C792EA', // soft violet (distinct from the CVD error reddish-purple)
+  macroFibre:   '#9E9E9E', // neutral grey
+
   // One scrim for every dimmed surface (modal / sheet / menu backdrop) so
   // backdrop darkness is consistent app-wide. Replaces the ad-hoc
   // rgba(0,0,0,x) and '#000' literals that drifted between 0.4 and 0.65.
@@ -140,6 +154,13 @@ const lightColors = {
   bronze: '#8C5318',
   chartLine: '#B45309',        // clears the 3:1 non-text graphical bar
   chartFill: 'rgba(180, 83, 9, 0.10)',
+  // Macro CATEGORY colours, darkened for the light track (≥3:1 graphical on the
+  // light surface2). Same hue families as dark; pending the same light-theme
+  // brand sign-off as the rest of lightColors.
+  macroProtein: '#B45309', // amber ink (matches the light chart amber)
+  macroCarb:    '#1E78B4', // deeper blue
+  macroFat:     '#8E5BC7', // deeper violet
+  macroFibre:   '#6E6E6E', // neutral grey
   scrim: 'rgba(0, 0, 0, 0.45)',
 };
 

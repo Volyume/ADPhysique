@@ -34,6 +34,67 @@ describe('bandColour (adherence-neutral, founder decision 2026-05-29)', () => {
   });
 });
 
+// Per-macro CATEGORY colours (founder decision 2026-06-29). The bars are tinted
+// by WHICH macro they are, never by adherence; the safety line is that (a) a macro
+// tint is never a traffic-light state colour, and (b) the overall calorie ring
+// stays neutral amber (bandColour, above) so calorie hit/miss is never colour-judged.
+describe('per-macro category colours', () => {
+  const rollup = { kcal_total: 1840, protein_g: 120, carbs_g: 180, fat_g: 60, fibre_g: 12 };
+  const targets = { targetKcal: 2100, proteinG: 160, carbsG: 220, fatG: 70, fibreG: 30 };
+
+  // Collect every backgroundColor applied anywhere in the tree (bar fills carry
+  // an inline { backgroundColor: tint }).
+  function bgColours(tree) {
+    const out = [];
+    tree.root.findAll((n) => {
+      const s = n.props?.style;
+      const arr = Array.isArray(s) ? s : [s];
+      for (const o of arr) if (o && typeof o === 'object' && o.backgroundColor) out.push(o.backgroundColor);
+      return false;
+    });
+    return out;
+  }
+
+  test('carbs and fat bars use their distinct category hues, protein stays brand amber', () => {
+    const bg = bgColours(create(<MacroRings rollup={rollup} targets={targets} />));
+    expect(bg).toContain(colors.macroCarb);
+    expect(bg).toContain(colors.macroFat);
+    expect(bg).toContain(colors.macroProtein); // == colors.primary (brand amber)
+  });
+
+  test('no macro tint is a traffic-light state colour (never reads as good/bad)', () => {
+    for (const tint of [colors.macroProtein, colors.macroCarb, colors.macroFat, colors.macroFibre]) {
+      expect(tint).not.toBe(colors.success);
+      expect(tint).not.toBe(colors.warning);
+      expect(tint).not.toBe(colors.error);
+    }
+  });
+});
+
+describe('remaining-as-hero (founder decision 2026-06-29)', () => {
+  test('the ring centre shows calories LEFT, with eaten/target as the quiet reference', () => {
+    const rollup = { kcal_total: 1840, protein_g: 120, carbs_g: 180, fat_g: 60 };
+    const targets = { targetKcal: 2100, proteinG: 160, carbsG: 220, fatG: 70 };
+    const tree = create(<MacroRings rollup={rollup} targets={targets} />);
+    const texts = tree.root.findAll((n) => n.type === 'Text' && typeof n.props.children !== 'object')
+      .map((n) => n.props.children);
+    // 2100 - 1840 = 260 left
+    expect(texts).toContain(260);
+    expect(texts).toContain('left');
+    expect(texts).toContain('of 2100 eaten');
+  });
+
+  test('over target reads "over" with the magnitude, never a separate alarm', () => {
+    const rollup = { kcal_total: 2300, protein_g: 120, carbs_g: 180, fat_g: 60 };
+    const targets = { targetKcal: 2100, proteinG: 160, carbsG: 220, fatG: 70 };
+    const tree = create(<MacroRings rollup={rollup} targets={targets} />);
+    const texts = tree.root.findAll((n) => n.type === 'Text' && typeof n.props.children !== 'object')
+      .map((n) => n.props.children);
+    expect(texts).toContain(200); // |2100 - 2300|
+    expect(texts).toContain('over');
+  });
+});
+
 describe('MacroRings accessibility summary', () => {
   const rollup = { kcal_total: 1840, protein_g: 120, carbs_g: 180, fat_g: 60 };
   const targets = { targetKcal: 2100, proteinG: 160, carbsG: 220, fatG: 70 };

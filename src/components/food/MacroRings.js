@@ -79,9 +79,12 @@ function Ring({ size, stroke, progress, plannedProgress = 0, tint, track }) {
 // A macro reads as a horizontal bar, not a small ring (diary-tab redesign
 // 2026-06-01). A training user tracks four numbers, and bars read all four
 // against target at a glance where competing small rings read slower. Protein
-// is the primary bar (the number this user defends): it carries the only
-// weight emphasis, never a different colour, since the fill stays the
-// adherence-neutral amber for every macro.
+// is the primary bar (the number this user defends): it carries the weight
+// emphasis. Each bar's fill is its macro's CATEGORY colour (`tint`, founder
+// decision 2026-06-29) — a fixed hue that says WHICH macro it is, never an
+// adherence judgement: the hue does not change on under/over target, so a bar
+// is never coloured "good" or "bad" (the overall calorie ring stays neutral
+// amber). Protein's tint is the brand amber.
 // `planned` is the planned-but-unconfirmed grams for this macro. It draws a
 // faded fill to the combined (eaten+planned) width behind the solid eaten
 // fill, matching the ring, and is shown in the value text as "+Ng planned".
@@ -91,7 +94,7 @@ function Ring({ size, stroke, progress, plannedProgress = 0, tint, track }) {
 // `moreIsFine` marks a macro with no upper-bound shame (fibre): it shows a
 // "Ng to go" remaining hint while under target but NEVER an "over" readout,
 // since more fibre is not a deviation to flag.
-function MacroBar({ label, value, target, planned = 0, primary, sub = null, moreIsFine = false }) {
+function MacroBar({ label, value, target, planned = 0, primary, sub = null, moreIsFine = false, tint = colors.primary }) {
   const progress = target && target > 0 ? Math.max(0, Math.min(1, value / target)) : 0;
   const plannedProgress = target && target > 0 ? Math.max(0, Math.min(1, (value + planned) / target)) : 0;
   // Remaining framing (factual value/target, no colour judgement — matches the
@@ -114,9 +117,9 @@ function MacroBar({ label, value, target, planned = 0, primary, sub = null, more
       </View>
       <View style={styles.macroTrack}>
         {plannedProgress > progress ? (
-          <View style={[styles.macroFillPlanned, { width: `${Math.round(plannedProgress * 100)}%` }]} />
+          <View style={[styles.macroFillPlanned, { width: `${Math.round(plannedProgress * 100)}%`, backgroundColor: tint }]} />
         ) : null}
-        <View style={[styles.macroFill, { width: `${Math.round(progress * 100)}%` }]} />
+        <View style={[styles.macroFill, { width: `${Math.round(progress * 100)}%`, backgroundColor: tint }]} />
       </View>
       {(sub || remainingText) ? (
         <View style={styles.macroBarSubRow}>
@@ -147,8 +150,8 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
   const fTarget = targets?.fatG ?? null;
   const kcalProgress = kcalTarget && kcalTarget > 0 ? kcal / kcalTarget : 0;
   const kcalPlannedProgress = kcalTarget && kcalTarget > 0 ? (kcal + plannedKcal) / kcalTarget : 0;
-  const kcalRemaining = kcalTarget != null ? kcalTarget - kcal : null;
-  const kcalOver = kcalRemaining != null && kcalRemaining < 0;
+  // Remaining (the hero) is derived from the animated eaten total at render time
+  // (dispRemaining), so the non-animated kcalRemaining is no longer needed here.
   const kcalTint = bandColour();
 
   // Descriptive macro %-of-calories split (Cronometer-style). Purely factual:
@@ -214,6 +217,15 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
     return () => animValue.removeListener(id);
   }, [kcal, kcalProgress, reduceMotion, animValue]);
 
+  // Remaining is the hero number (founder decision 2026-06-29, MFP-style): the
+  // ring centre counts DOWN the calories left, with eaten/target shown as the
+  // quiet reference beside it. Derived from the animated eaten total so it counts
+  // as food lands. Stays adherence-NEUTRAL: "over" is shown factually in the same
+  // neutral ink as "left" — never a red/alarm colour (the ring colour is likewise
+  // neutral amber, see bandColour).
+  const dispRemaining = kcalTarget != null ? Math.round(kcalTarget - disp.kcal) : null;
+  const dispOver = dispRemaining != null && dispRemaining < 0;
+
   // The rings are decorative (Skia canvas); the numbers are the data. Build
   // one spoken summary of kcal + macros so a screen reader conveys the same
   // information the rings show, and hide the inner content from a11y so the
@@ -259,25 +271,26 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
             track={colors.surface2}
           />
           <View style={styles.kcalCentre} pointerEvents="none">
-            <Text style={styles.kcalValue}>{disp.kcal}</Text>
             {kcalTarget != null ? (
-              <Text style={styles.kcalSubLabel}>of {kcalTarget}</Text>
+              <>
+                <Text style={styles.kcalValue}>{dispOver ? Math.abs(dispRemaining) : dispRemaining}</Text>
+                <Text style={styles.kcalSubLabel}>{dispOver ? 'over' : 'left'}</Text>
+              </>
             ) : (
-              <Text style={styles.kcalSubLabel}>kcal</Text>
+              <>
+                <Text style={styles.kcalValue}>{disp.kcal}</Text>
+                <Text style={styles.kcalSubLabel}>kcal</Text>
+              </>
             )}
             {hasPlanned ? (
               <Text style={styles.kcalPlanned}>{`+${plannedKcal} planned`}</Text>
             ) : null}
           </View>
         </View>
-        {kcalRemaining != null ? (
-          <View style={styles.kcalRemainingWrap}>
-            <Text style={styles.kcalRemainingValue}>
-              {kcalOver ? Math.abs(kcalRemaining) : kcalRemaining}
-            </Text>
-            <Text style={styles.kcalRemainingLabel}>
-              {kcalOver ? 'over' : 'remaining'}
-            </Text>
+        {kcalTarget != null ? (
+          <View style={styles.kcalEatenWrap}>
+            <Text style={styles.kcalEatenValue}>{disp.kcal}</Text>
+            <Text style={styles.kcalEatenLabel}>{`of ${kcalTarget} eaten`}</Text>
           </View>
         ) : null}
       </View>
@@ -288,12 +301,13 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
           target={pTarget}
           planned={plannedP}
           primary
+          tint={colors.macroProtein}
           sub={proteinPerKgToday != null ? `${proteinPerKgToday} g/kg today` : null}
         />
-        <MacroBar label="Carbs"   value={c} target={cTarget} planned={plannedC} />
-        <MacroBar label="Fat"     value={f} target={fTarget} planned={plannedF} />
+        <MacroBar label="Carbs"   value={c} target={cTarget} planned={plannedC} tint={colors.macroCarb} />
+        <MacroBar label="Fat"     value={f} target={fTarget} planned={plannedF} tint={colors.macroFat} />
         {showFibre ? (
-          <MacroBar label="Fibre" value={fibre} target={fibreTarget} moreIsFine />
+          <MacroBar label="Fibre" value={fibre} target={fibreTarget} moreIsFine tint={colors.macroFibre} />
         ) : null}
       </View>
       {macroSplit ? (
@@ -327,10 +341,11 @@ const styles = StyleSheet.create({
   },
   kcalValue: {
     color: colors.textPrimary,
-    // eslint-disable-next-line no-restricted-syntax -- macro ring centre is a hero numeral
-    fontSize: 34,
+    // Hero numeral. Token-based so it scales with the Larger-Text accessibility
+    // setting (MFP-parity audit #21) instead of the old fixed 34.
+    fontSize: fontSize.xxxl,
     fontWeight: fontWeight.bold,
-    lineHeight: 36,
+    lineHeight: Math.round(fontSize.xxxl * 1.1),
     fontVariant: ['tabular-nums'],
   },
   kcalSubLabel: {
@@ -344,16 +359,18 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
     marginTop: spacing.xxs,
   },
-  kcalRemainingWrap: {
+  // The eaten total is now the quiet reference beside the remaining hero
+  // (founder decision 2026-06-29): secondary weight/colour, not a second hero.
+  kcalEatenWrap: {
     alignItems: 'flex-end',
   },
-  kcalRemainingValue: {
-    color: colors.textPrimary,
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.bold,
+  kcalEatenValue: {
+    color: colors.textSecondary,
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.semibold,
     fontVariant: ['tabular-nums'],
   },
-  kcalRemainingLabel: {
+  kcalEatenLabel: {
     color: colors.textMuted,
     fontSize: fontSize.xs,
     marginTop: spacing.xxs,

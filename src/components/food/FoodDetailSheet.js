@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     alignItems: 'center', justifyContent: 'center', minHeight: 44,
   },
-  unitBtnActive: { borderColor: colors.primary, backgroundColor: colors.surface },
+  unitBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
   unitBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
   unitBtnTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     alignItems: 'center',
   },
-  mealBtnActive: { borderColor: colors.primary, backgroundColor: colors.surface },
+  mealBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
   mealBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
   mealBtnTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
   actions: {
