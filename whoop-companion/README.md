@@ -85,8 +85,10 @@ build costs credits).
   zone bars, dark theme).
 
 ## Protocol notes (sourced, not guessed)
-WHOOP 5.0 (firmware r52 "Maverick"), from the whoop-vault reverse-engineering
-project:
+WHOOP 5.0, **target firmware 50.40.1.0** (this device) — same r52 "Maverick"
+generation as the 50.38.1.0 validated by the whoop-vault reverse-engineering
+project (one minor revision lower), so framing/commands should match; the
+per-second record layout is confirmed against frames captured from this firmware:
 - **Live HR** on standard GATT Heart Rate Service `0x2A37`; **battery** on `0x2A19`.
 - Proprietary characteristics `fd4b0002` (write/commands), `fd4b0003` (command
   responses), `fd4b0004` (events), `fd4b0005` (historical + realtime data),

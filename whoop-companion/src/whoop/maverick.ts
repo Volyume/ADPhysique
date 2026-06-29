@@ -2,6 +2,12 @@
  * WHOOP "Maverick" BLE frame codec (WHOOP 5.0, firmware r52), ported from the
  * whoop-vault reverse-engineering project.
  *
+ * TARGET FIRMWARE: 50.40.1.0 (this device). whoop-vault validated 50.38.1.0 —
+ * one minor revision lower, same r52 generation, so the framing/commands below
+ * are expected to match. The per-second history record layout (historicalParse.ts)
+ * is the part most likely to differ between point releases and must be confirmed
+ * against frames captured from THIS firmware (Device screen → capture/export).
+ *
  * Wire format (whoop-vault maverick.py):
  *   AA | version(1) | length_u16_LE | role_a(1) | role_b(1) | crc16(header)
  *      | inner_buffer[length, 4-byte aligned, 0x00 padded]
