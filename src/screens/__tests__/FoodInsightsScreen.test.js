@@ -14,6 +14,9 @@ jest.mock('zustand/react/shallow', () => ({ useShallow: (fn) => fn }));
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: ({ children }) => children }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
 jest.mock('../../components/Card', () => ({ children }) => children);
+// VolyumeChart pulls in react-native-svg / gesture-handler (native-only), so
+// stub it to a host string like the other screen tests do (ExerciseDetail).
+jest.mock('../../components/VolyumeChart', () => 'VolyumeChart');
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: jest.fn() }) }));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (cb) => { const React = require('react'); React.useEffect(() => cb(), [cb]); },

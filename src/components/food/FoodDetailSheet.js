@@ -37,31 +37,74 @@ export default function FoodDetailSheet({
   onSave, onDelete, onClose,
 }) {
   const toast = useToast();
-  const defaultQty = useMemo(() => {
-    if (initialQuantityG != null && initialQuantityG > 0) return String(Math.round(initialQuantityG));
-    if (food?.serving_g) return String(Math.round(food.serving_g));
-    return '100';
-  }, [initialQuantityG, food?.serving_g]);
+  // Serving model (food ease, MFP/Cronometer parity): prefer the food's own
+  // household serving (e.g. "1 cup", "1 slice") so the common case is RECOGNITION,
+  // not gram arithmetic — the list row already shows serving_label, we keep it
+  // here instead of throwing it away and demanding grams. Grams remain the
+  // storage contract (scaleMacros(food, grams)); the unit only changes how the
+  // amount is entered. Falls back to grams when a food has no named serving.
+  const servingG = Number(food?.serving_g) || 0;
+  const units = useMemo(() => {
+    const list = [];
+    if (servingG > 0) list.push({ key: 'serving', label: food?.serving_label || 'serving', grams: servingG });
+    list.push({ key: 'g', label: 'g', grams: 1 });
+    return list;
+  }, [servingG, food?.serving_label]);
 
-  const [quantityG, setQuantityG] = useState(defaultQty);
+  const initial = useMemo(() => {
+    // On edit, preserve the exact grams the entry was logged at (show grams).
+    if (mode === 'edit' && initialQuantityG != null && initialQuantityG > 0) {
+      return { unitKey: 'g', amount: String(Math.round(initialQuantityG)) };
+    }
+    // On add, default to one household serving (zero keystrokes), else 100 g.
+    if (servingG > 0) return { unitKey: 'serving', amount: '1' };
+    return { unitKey: 'g', amount: '100' };
+  }, [mode, initialQuantityG, servingG]);
+
+  const [unitKey, setUnitKey] = useState(initial.unitKey);
+  const [amount, setAmount] = useState(initial.amount);
   const [mealSlot, setMealSlot] = useState(initialMealSlot);
   const [submitting, setSubmitting] = useState(false);
 
+  const unit = units.find(u => u.key === unitKey) || units[units.length - 1];
+  const quantityG = (Number(amount) || 0) * unit.grams;
+
   useEffect(() => {
     if (!visible) return;
-    setQuantityG(defaultQty);
+    setUnitKey(initial.unitKey);
+    setAmount(initial.amount);
     setMealSlot(initialMealSlot);
     setSubmitting(false);
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Switching unit keeps the gram total roughly constant (so the macros don't
+  // jump), just re-expressed in the new unit.
+  function selectUnit(key) {
+    if (key === unitKey) return;
+    const u = units.find(x => x.key === key);
+    if (!u) return;
+    const g = quantityG;
+    setUnitKey(key);
+    setAmount(key === 'serving'
+      ? String(Math.round((g / u.grams) * 10) / 10)
+      : String(Math.round(g)));
+  }
+
+  function adjustAmount(dir) {
+    const step = unitKey === 'serving' ? 0.5 : 10;
+    const cur = Number(amount) || 0;
+    const next = Math.max(0, Math.round((cur + dir * step) * 10) / 10);
+    setAmount(String(next));
+  }
 
   function handleClose() {
     onClose?.();
   }
 
   async function handleSave() {
-    const qty = Number(quantityG);
+    const qty = Math.round(quantityG);
     if (!qty || qty <= 0 || qty > 5000) {
-      toast.show('Enter a quantity between 1 and 5000 g.', { variant: 'warning' });
+      toast.show('Enter an amount that works out between 1 and 5000 g.', { variant: 'warning' });
       return;
     }
     setSubmitting(true);
@@ -92,7 +135,7 @@ export default function FoodDetailSheet({
     );
   }
 
-  const macros = macrosFor(food, Number(quantityG));
+  const macros = macrosFor(food, quantityG);
 
   if (!food) return null;
 
@@ -106,17 +149,56 @@ export default function FoodDetailSheet({
             </View>
           ) : null}
 
-          <Text style={styles.fieldLabel}>Quantity (g)</Text>
-          <TextInput
-            style={styles.input}
-            value={quantityG}
-            onChangeText={setQuantityG}
-            keyboardType="decimal-pad"
-            selectTextOnFocus
-            autoFocus={mode === 'add'}
-            returnKeyType="done"
-            onSubmitEditing={() => Keyboard.dismiss()}
-          />
+          <Text style={styles.fieldLabel}>Amount</Text>
+          {units.length > 1 ? (
+            <View style={styles.unitRow}>
+              {units.map(u => (
+                <Pressable
+                  key={u.key}
+                  onPress={() => selectUnit(u.key)}
+                  style={[styles.unitBtn, unitKey === u.key && styles.unitBtnActive]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: unitKey === u.key }}
+                  accessibilityLabel={u.key === 'serving' ? `Per ${u.label}` : 'Grams'}
+                >
+                  <Text style={[styles.unitBtnText, unitKey === u.key && styles.unitBtnTextActive]} numberOfLines={1}>
+                    {u.key === 'serving' ? `${u.label} (${Math.round(u.grams)} g)` : 'Grams'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+          <View style={styles.stepper}>
+            <Pressable
+              onPress={() => adjustAmount(-1)}
+              style={styles.stepBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Decrease amount"
+            >
+              <Ionicons name="remove" size={22} color={colors.textPrimary} />
+            </Pressable>
+            <TextInput
+              style={styles.stepInput}
+              value={amount}
+              onChangeText={t => setAmount(t.replace(/[^0-9.]/g, ''))}
+              keyboardType="decimal-pad"
+              selectTextOnFocus
+              returnKeyType="done"
+              onSubmitEditing={() => Keyboard.dismiss()}
+              accessibilityLabel="Amount"
+            />
+            <Pressable
+              onPress={() => adjustAmount(1)}
+              style={styles.stepBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Increase amount"
+            >
+              <Ionicons name="add" size={22} color={colors.textPrimary} />
+            </Pressable>
+          </View>
+          {unitKey === 'serving' ? (
+            <Text style={styles.gramHint}>= {Math.round(quantityG)} g</Text>
+          ) : null}
 
           <View
             style={styles.macroSummary}
@@ -206,6 +288,41 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md,
     color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold,
+  },
+  // Unit selector (household serving vs grams) + amount stepper. The common
+  // case — one named serving — needs zero keystrokes: tap +/− or just Add.
+  unitRow: { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm },
+  unitBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center', minHeight: 44,
+  },
+  unitBtnActive: { borderColor: colors.primary, backgroundColor: colors.surface },
+  unitBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
+  unitBtnTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  stepBtn: {
+    width: 48, height: 48,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  stepInput: {
+    flex: 1,
+    backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold,
+    textAlign: 'center',
+  },
+  gramHint: {
+    fontSize: fontSize.sm, color: colors.textMuted,
+    textAlign: 'center', marginTop: spacing.xs,
   },
   macroSummary: {
     flexDirection: 'row', gap: spacing.sm,

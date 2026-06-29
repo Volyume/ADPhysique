@@ -18,13 +18,14 @@
  */
 import { useState, useCallback, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import Card from '../components/Card';
+import VolyumeChart from '../components/VolyumeChart';
 import { useToast } from '../components/Toast';
 import {
   getRollupsForRange, getFoodEntriesForRange,
@@ -56,6 +57,16 @@ function lastNDayIsoList(n) {
 // (NA-nutrition-9, founder decision 2026-06-14: weekly-aggregated bars).
 const WINDOWS = [7, 14, 30, 90];
 const WEEKLY_THRESHOLD = 14; // windows beyond this aggregate into weekly bars
+
+// Fibre has no per-user target in nutrition_targets (kcal/P/C/F only), so we
+// anchor adherence to the UK public reference: NHS Eatwell advises aiming for
+// 30 g of fibre a day. Fibre is a "more is fine" nutrient — a day counts when
+// it lands AT OR ABOVE this aim, never an upper bound (no over-target shame).
+const FIBRE_AIM_G = 30;
+
+// Charts are drawn at the ScrollView content width (screen minus the lg padding
+// on each side and the Card's lg padding on each side), mirroring BodyMetrics.
+const CHART_WIDTH = Dimensions.get('window').width - spacing.lg * 2 - spacing.lg * 2;
 
 function dayLabel(iso) {
   const d = parseLocalDay(iso); // TZ-1: parse the key as local, not UTC
@@ -104,7 +115,7 @@ export default function FoodInsightsScreen({ navigation }) {
 
   const adherence = useMemo(() => {
     if (!targets) return null;
-    let kcalDays = 0, pDays = 0, cDays = 0, fDays = 0, logged = 0;
+    let kcalDays = 0, pDays = 0, cDays = 0, fDays = 0, fibreDays = 0, logged = 0;
     for (const d of days) {
       const r = rollupByDate.get(d);
       if (!r || r.entries_count === 0) continue;
@@ -113,8 +124,10 @@ export default function FoodInsightsScreen({ navigation }) {
       if (within(r.protein_g, targets.proteinG, ADHERENCE_TOLERANCE.protein)) pDays++;
       if (within(r.carbs_g, targets.carbsG, ADHERENCE_TOLERANCE.carbs)) cDays++;
       if (within(r.fat_g, targets.fatG, ADHERENCE_TOLERANCE.fat)) fDays++;
+      // Fibre is "more is fine": a day counts at or above the aim, no ceiling.
+      if ((r.fibre_g ?? 0) >= FIBRE_AIM_G) fibreDays++;
     }
-    return { kcalDays, pDays, cDays, fDays, logged };
+    return { kcalDays, pDays, cDays, fDays, fibreDays, logged };
   }, [days, rollupByDate, targets]);
 
   // Calories chart rows. 7/14-day windows render one bar per day; 30/90-day
@@ -139,6 +152,81 @@ export default function FoodInsightsScreen({ navigation }) {
     }
     return weeks;
   }, [days, rollupByDate, isWeekly]);
+
+  // Calorie line trend (COMP-019 / VolyumeChart): one point per day across the
+  // whole window. Unlike the per-day bar list (which has to aggregate weekly
+  // past 14 days to stay readable), the line x-compresses, so it stays legible
+  // at 30/90 days. Only LOGGED days carry a value; unlogged days drop out so the
+  // line never dips to a false zero. First/last day labelled, like BodyMetrics.
+  const calorieLine = useMemo(() => {
+    return days
+      .map((d, i) => {
+        const r = rollupByDate.get(d);
+        const logged = r && r.entries_count > 0;
+        return logged
+          ? {
+            value: Math.round(r.kcal_total ?? 0),
+            label: i === 0 || i === days.length - 1 ? weekLabel(d) : '',
+            iso: d,
+          }
+          : null;
+      })
+      .filter(Boolean);
+  }, [days, rollupByDate]);
+
+  // Flat target rule drawn as a faint secondary series behind the calorie line,
+  // so "vs target" reads at a glance without a valence colour (data2 convention).
+  const calorieTargetRule = useMemo(() => {
+    const t = targets?.targetKcal;
+    if (!t || calorieLine.length < 2) return null;
+    return calorieLine.map(() => ({ value: t }));
+  }, [calorieLine, targets]);
+
+  // Protein-grams-over-time line (same pattern, reusing the chart). Logged days
+  // only; faint flat rule at the protein target.
+  const proteinLine = useMemo(() => {
+    return days
+      .map((d, i) => {
+        const r = rollupByDate.get(d);
+        const logged = r && r.entries_count > 0;
+        return logged
+          ? {
+            value: Math.round(r.protein_g ?? 0),
+            label: i === 0 || i === days.length - 1 ? weekLabel(d) : '',
+            iso: d,
+          }
+          : null;
+      })
+      .filter(Boolean);
+  }, [days, rollupByDate]);
+
+  const proteinTargetRule = useMemo(() => {
+    const t = targets?.proteinG;
+    if (!t || proteinLine.length < 2) return null;
+    return proteinLine.map(() => ({ value: t }));
+  }, [proteinLine, targets]);
+
+  // Weekly-average summary: avg kcal/day over the last 7 logged days vs the 7
+  // before that. Factual, no valence colour — just "this week / last week / the
+  // change", so a quieter or busier week reads neutrally (locked coaching voice).
+  const weeklyAvg = useMemo(() => {
+    const avgOf = (isoList) => {
+      let sum = 0, n = 0;
+      for (const iso of isoList) {
+        const r = rollupByDate.get(iso);
+        if (r && r.entries_count > 0) { sum += r.kcal_total ?? 0; n++; }
+      }
+      return n > 0 ? { avg: Math.round(sum / n), n } : null;
+    };
+    // Build the last 14 calendar days independently of the selected window so
+    // the "this week / last week" read is stable across 7/14/30/90.
+    const last14 = lastNDayIsoList(14);
+    const thisWeek = avgOf(last14.slice(7));   // most recent 7 days
+    const lastWeek = avgOf(last14.slice(0, 7)); // the 7 before that
+    if (!thisWeek) return null;
+    const delta = lastWeek ? thisWeek.avg - lastWeek.avg : null;
+    return { thisWeek, lastWeek, delta };
+  }, [rollupByDate]);
 
   async function onExport() {
     if (!userId || exporting) return;
@@ -201,6 +289,78 @@ export default function FoodInsightsScreen({ navigation }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Weekly-average summary: avg kcal/day this week + a neutral, factual
+            "vs last week" delta (no good/bad colour). Above the chart so the
+            headline number reads first. */}
+        {weeklyAvg ? (
+          <>
+            <Text style={styles.sectionLabel}>THIS WEEK</Text>
+            <Card style={styles.card}>
+              <Text
+                style={styles.summaryValue}
+                accessibilityLabel={`Averaging ${weeklyAvg.thisWeek.avg} calories a day this week`}
+              >
+                {weeklyAvg.thisWeek.avg.toLocaleString('en-GB')} kcal/day
+              </Text>
+              <Text style={styles.summaryCaption}>
+                Average over {weeklyAvg.thisWeek.n} {weeklyAvg.thisWeek.n === 1 ? 'day' : 'days'} logged this week.
+              </Text>
+              {weeklyAvg.delta != null ? (
+                <Text style={styles.summaryDelta}>
+                  {weeklyAvg.delta === 0
+                    ? 'Same as last week.'
+                    : `${weeklyAvg.delta > 0 ? '+' : '−'}${Math.abs(weeklyAvg.delta).toLocaleString('en-GB')} kcal/day vs last week.`}
+                </Text>
+              ) : (
+                <Text style={styles.summaryDelta}>No logged days last week to compare.</Text>
+              )}
+            </Card>
+          </>
+        ) : null}
+
+        <Text style={styles.sectionLabel}>LAST {windowDays} DAYS · CALORIE TREND</Text>
+        <Card style={styles.card}>
+          {calorieLine.length >= 2 ? (
+            <>
+              <VolyumeChart
+                data={calorieLine}
+                data2={calorieTargetRule}
+                width={CHART_WIDTH}
+                height={140}
+                color={colors.primary}
+                color2={withAlpha(colors.textMuted, 0.5)}
+                thickness={2}
+                thickness2={1}
+                curved
+                showDots={calorieLine.length <= 6}
+                dotRadius={3}
+                sections={3}
+                yAxisSuffix=""
+                backgroundColor={colors.surface}
+                interactive
+                accessibilityLabel="Daily calories trend"
+                formatTooltip={(i) => {
+                  const p = calorieLine[i];
+                  if (!p) return null;
+                  return {
+                    title: `${p.value.toLocaleString('en-GB')} kcal`,
+                    sub: weekLabel(p.iso),
+                  };
+                }}
+              />
+              <Text style={styles.cardFootnote}>
+                {targets?.targetKcal
+                  ? `Each point is a logged day. Faint line is your ${targets.targetKcal.toLocaleString('en-GB')} kcal target.`
+                  : 'Each point is a logged day. Set a calorie target in Precision Coaching to see the target line.'}
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.emptyText}>
+              Log a couple of days to see your calorie trend.
+            </Text>
+          )}
+        </Card>
+
         <Text style={styles.sectionLabel}>LAST {windowDays} DAYS · CALORIES</Text>
         <Card style={styles.card}>
           {chartBars.map((b) => {
@@ -250,7 +410,40 @@ export default function FoodInsightsScreen({ navigation }) {
               <Text style={styles.proteinHeadline}>
                 You hit your protein on {adherence.pDays} of {adherence.logged} {adherence.logged === 1 ? 'day' : 'days'} you logged.
               </Text>
-              <Text style={styles.cardFootnote}>Hit = within target range.</Text>
+              {/* Protein grams over time (reuses the calorie-trend chart pattern):
+                  one point per logged day, faint flat rule at the protein target. */}
+              {proteinLine.length >= 2 ? (
+                <View style={styles.proteinChartWrap}>
+                  <VolyumeChart
+                    data={proteinLine}
+                    data2={proteinTargetRule}
+                    width={CHART_WIDTH}
+                    height={120}
+                    color={colors.primary}
+                    color2={withAlpha(colors.textMuted, 0.5)}
+                    thickness={2}
+                    thickness2={1}
+                    curved
+                    showDots={proteinLine.length <= 6}
+                    dotRadius={3}
+                    sections={3}
+                    yAxisSuffix=""
+                    backgroundColor={colors.surface}
+                    interactive
+                    accessibilityLabel="Daily protein trend in grams"
+                    formatTooltip={(i) => {
+                      const p = proteinLine[i];
+                      if (!p) return null;
+                      return { title: `${p.value} g protein`, sub: weekLabel(p.iso) };
+                    }}
+                  />
+                </View>
+              ) : null}
+              <Text style={styles.cardFootnote}>
+                {targets?.proteinG
+                  ? `Hit = within target range. Faint line is your ${targets.proteinG} g target.`
+                  : 'Hit = within target range.'}
+              </Text>
             </Card>
           </>
         ) : null}
@@ -259,12 +452,16 @@ export default function FoodInsightsScreen({ navigation }) {
         <Card style={styles.card}>
           {adherence && adherence.logged > 0 ? (
             <>
-              <AdherenceRow label="Calories" hit={adherence.kcalDays} total={adherence.logged} />
-              <AdherenceRow label="Protein"  hit={adherence.pDays}    total={adherence.logged} />
-              <AdherenceRow label="Carbs"    hit={adherence.cDays}    total={adherence.logged} />
-              <AdherenceRow label="Fat"      hit={adherence.fDays}    total={adherence.logged} />
+              <AdherenceRow label="Calories" hit={adherence.kcalDays}  total={adherence.logged} />
+              <AdherenceRow label="Protein"  hit={adherence.pDays}     total={adherence.logged} />
+              <AdherenceRow label="Carbs"    hit={adherence.cDays}     total={adherence.logged} />
+              <AdherenceRow label="Fat"      hit={adherence.fDays}     total={adherence.logged} />
+              <AdherenceRow label="Fibre"    hit={adherence.fibreDays} total={adherence.logged} />
               <Text style={styles.cardFootnote}>
                 Out of {adherence.logged} {adherence.logged === 1 ? 'day' : 'days'} logged. Hit = within target range.
+              </Text>
+              <Text style={styles.cardFootnote}>
+                Fibre counts on days you reached {FIBRE_AIM_G} g or more. More is fine.
               </Text>
             </>
           ) : (
@@ -338,7 +535,14 @@ const styles = StyleSheet.create({
   },
   cardFootnote: { ...type.caption, color: colors.textMuted, marginTop: spacing.md },
   proteinHeadline: { ...type.title, color: colors.textPrimary },
+  proteinChartWrap: { marginTop: spacing.md },
   emptyText: { color: colors.textMuted, fontSize: fontSize.sm, textAlign: 'center', paddingVertical: spacing.lg },
+
+  // Weekly-average summary: headline numeral always textPrimary, delta neutral
+  // (textSecondary) — never a good/bad valence colour (locked coaching voice).
+  summaryValue: { ...type.title, color: colors.textPrimary },
+  summaryCaption: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
+  summaryDelta: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.semibold, marginTop: spacing.sm },
 
   barRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
   barDay: { color: colors.textSecondary, fontSize: fontSize.sm, width: 48 }, // fits weekly date labels (e.g. "30 Jun")

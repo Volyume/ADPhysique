@@ -66,7 +66,10 @@ export default function FoodSearchScreen({ navigation, route }) {
   const entryDate = route?.params?.entryDate ?? todayLocalKey();
 
   const [query, setQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('recents');
+  // Open straight on a chosen tab when routed in with one (the empty-diary
+  // "What should I eat?" CTA and the diary macro-finish strip pass
+  // initialTab: 'suggested' to land on the deterministic suggestion list).
+  const [activeTab, setActiveTab] = useState(route?.params?.initialTab ?? 'recents');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const quickSavedRef = useRef(false);
   // Multi-add plate: tap a row's + to drop a default serving here, then
@@ -149,10 +152,42 @@ export default function FoodSearchScreen({ navigation, route }) {
     } catch (_) { /* tolerate */ }
   }, [userId]);
 
-  // Curated meal suggestions, sized to one meal's share of what's left
-  // today. Pulls the day's targets + intake, works out how many meals
-  // remain, filters the curated library to the user's diet + this slot,
-  // then ranks. Lazy: only runs when the Suggested tab is open.
+  // The user's own foods (favourites, frequents, this slot's "add again"
+  // recents) normalised into the ranker's single-food candidate shape, so the
+  // Suggested tab can offer a single-food top-up ("Add 150g chicken breast")
+  // beside the curated meals — not meals alone. De-duped by food_ref (a food
+  // can appear in more than one list) and with disliked + quick-add refs
+  // dropped (a long-pressed "hidden" food must not resurface as a suggestion).
+  // Pure mapping of already-loaded rows; no extra fetch, fully deterministic.
+  const suggestFoodCandidates = useMemo(() => {
+    const seen = new Set();
+    const out = [];
+    for (const f of [...favouriteRows, ...frequentRows, ...recents, ...customRows]) {
+      const ref = f?.food_ref;
+      if (!ref || seen.has(ref)) continue;
+      if (dislikeRefs.has(ref)) continue;
+      if (typeof ref === 'string' && ref.startsWith('quick:')) continue; // quick-add has no real macros
+      seen.add(ref);
+      out.push({
+        foodRef: ref,
+        name: f.name,
+        kcal100: f.kcal_100g,
+        protein100: f.protein_100g,
+        carbs100: f.carbs_100g,
+        fat100: f.fat_100g,
+        // carried through for the one-tap log of a suggested food
+        fibre100: f.fibre_100g ?? null,
+        source: f.source ?? null,
+      });
+    }
+    return out;
+  }, [favouriteRows, frequentRows, recents, customRows, dislikeRefs]);
+
+  // Curated meal suggestions + single-food top-ups, sized to one meal's share
+  // of what's left today. Pulls the day's targets + intake, works out how many
+  // meals remain, filters the curated library to the user's diet + this slot,
+  // then ranks the curated meals AND the user's own foods together. Lazy: only
+  // runs when the Suggested tab is open.
   const loadSuggested = useCallback(async () => {
     if (!userId) return;
     setSuggestLoading(true);
@@ -183,7 +218,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       const mealsLeft = mealsLeftToday(mealsPerDay, loggedSlots);
       const candidates = getCuratedCandidates({ diet, slot: mealSlot });
       const { suggestions: ranked, remaining, perMeal } = rankSuggestions({
-        targets, consumed, savedMeals: candidates, foods: [], slot: mealSlot, mealsLeft, limit: 12,
+        targets, consumed, savedMeals: candidates, foods: suggestFoodCandidates, slot: mealSlot, mealsLeft, limit: 12,
       });
       setSuggestions(ranked);
       setSuggestMeta({ hasTargets: true, remaining, perMeal });
@@ -193,7 +228,7 @@ export default function FoodSearchScreen({ navigation, route }) {
     } finally {
       setSuggestLoading(false);
     }
-  }, [userId, userProfile, entryDate, mealSlot]);
+  }, [userId, userProfile, entryDate, mealSlot, suggestFoodCandidates]);
 
   useFocusEffect(useCallback(() => { loadBrowse(); }, [loadBrowse]));
   useEffect(() => { if (activeTab === 'frequents') loadFrequents(); }, [activeTab, loadFrequents]);
@@ -390,6 +425,46 @@ export default function FoodSearchScreen({ navigation, route }) {
     }
   }
 
+  // Log a single suggested food at the quantity the ranker chose to fill the
+  // gap (e.g. "Add 150g chicken breast"). Re-scales from the original per-100g
+  // candidate so the logged macros match the diary's own scaling exactly, then
+  // closes back to the diary. Same write + slot-recent path as a normal add.
+  async function logSuggestedFood(s) {
+    if (!userId || !s?.foodRef || loggingMealId) return;
+    const cand = suggestFoodCandidates.find((c) => c.foodRef === s.foodRef);
+    if (!cand) return;
+    setLoggingMealId(s.foodRef);
+    try {
+      const per100 = {
+        kcal_100g: cand.kcal100,
+        protein_100g: cand.protein100,
+        carbs_100g: cand.carbs100,
+        fat_100g: cand.fat100,
+        fibre_100g: cand.fibre100,
+      };
+      const macros = scaleMacros(per100, s.quantityG); // { kcal, proteinG, carbsG, fatG, fibreG }
+      audit('food.suggestFood', { source: cand.source ?? 'unknown', mealSlot, quantityG: s.quantityG });
+      await logFoodEntry(userId, {
+        entryDate,
+        mealSlot,
+        foodRef: s.foodRef,
+        quantityG: s.quantityG,
+        ...macros,
+      });
+      await upsertSlotRecent(userId, {
+        mealSlot,
+        foodRef: s.foodRef,
+        quantityG: s.quantityG,
+      }).catch(() => {}); // derived memory only; never fail the log
+      navigation.goBack();
+    } catch (e) {
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logError('FoodSearch.logSuggestedFood', e, { foodRef: s.foodRef }); } catch (_) {}
+      toast.show("Couldn't add that food, try again.", { variant: 'error', duration: 4000 });
+      setLoggingMealId(null);
+    }
+  }
+
   async function onLongPress(food) {
     try {
       const next = await cycleFoodPreference(userId, food.food_ref);
@@ -534,7 +609,9 @@ export default function FoodSearchScreen({ navigation, route }) {
     return (
       <FlatList
         data={suggestions}
-        keyExtractor={(s) => s.id}
+        // Food and meal suggestions share one list, so the key must cover both
+        // kinds: a food carries foodRef (no id), a meal carries id.
+        keyExtractor={(s) => (s.kind === 'food' ? `food:${s.foodRef}` : `meal:${s.id}`)}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: spacing.xxxl }}
         ListHeaderComponent={
@@ -544,25 +621,31 @@ export default function FoodSearchScreen({ navigation, route }) {
             </Text>
           ) : null
         }
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.suggestCard}
-            onPress={() => logCuratedMeal(item)}
-            disabled={!!loggingMealId}
-            accessibilityRole="button"
-            accessibilityLabel={`Log ${item.name}`}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.suggestName}>{item.name}</Text>
-              <Text style={styles.suggestMacros}>
-                {item.macros.kcal} kcal · {item.macros.protein}g protein · {item.macros.carbs}g carbs · {item.macros.fat}g fat
-              </Text>
-            </View>
-            {loggingMealId === item.id
-              ? <ActivityIndicator size="small" color={colors.primary} />
-              : <Ionicons name="add-circle" size={26} color={colors.primary} />}
-          </TouchableOpacity>
-        )}
+        renderItem={({ item }) => {
+          const isFood = item.kind === 'food';
+          const busyKey = isFood ? item.foodRef : item.id;
+          return (
+            <TouchableOpacity
+              style={styles.suggestCard}
+              onPress={() => (isFood ? logSuggestedFood(item) : logCuratedMeal(item))}
+              disabled={!!loggingMealId}
+              accessibilityRole="button"
+              accessibilityLabel={isFood ? `Add ${item.quantityG}g ${item.name}` : `Log ${item.name}`}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.suggestName}>
+                  {isFood ? `${item.name} · ${item.quantityG}g` : item.name}
+                </Text>
+                <Text style={styles.suggestMacros}>
+                  {item.macros.kcal} kcal · {item.macros.protein}g protein · {item.macros.carbs}g carbs · {item.macros.fat}g fat
+                </Text>
+              </View>
+              {loggingMealId === busyKey
+                ? <ActivityIndicator size="small" color={colors.primary} />
+                : <Ionicons name="add-circle" size={26} color={colors.primary} />}
+            </TouchableOpacity>
+          );
+        }}
       />
     );
   }

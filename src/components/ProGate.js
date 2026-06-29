@@ -7,6 +7,43 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import TodaysPlateTeaser from './food/TodaysPlateTeaser';
+import TierComparisonStrip from './TierComparisonStrip';
+import { restorePurchases } from '../lib/payments/restore';
+import { appAlert } from './AppAlert';
+
+// COMP-CLARITY: one benefit line per gated feature, so the lock copy matches
+// what the user actually tapped instead of the old one-size pitch (every route
+// previously got the same "weekly coaching, the food diary, and your body
+// metrics" line). Keys are the exact `feature` labels passed by withProGuard in
+// RootNavigator.js. This is presentational copy only: it never consults or
+// moves the free/Pro line, which stays enforced entirely by the tier check.
+const FEATURE_BENEFIT = {
+  'Food diary': 'Log meals against your own calorie and macro targets, with barcode and saved meals built in.',
+  'Food search': 'Search a full food database and log straight to your day against your targets.',
+  'Barcode scanning': 'Scan a barcode to log a food in seconds, with its macros filled in for you.',
+  'Label scanning': 'Snap a nutrition label to capture its macros without typing them in.',
+  'Meal plan': 'Get a day of real food built around your own calories and macros, swap anything you like.',
+  'Food insights': 'See how your eating tracks against your targets over the week, not just day by day.',
+  Recipes: 'Save your own recipes and meals so logging the foods you eat often takes one tap.',
+  'Saved meals': 'Save your own recipes and meals so logging the foods you eat often takes one tap.',
+  Cardio: 'Log cardio so your sessions and the energy they burn feed into your weekly plan.',
+  'Body metrics': 'Track your weight and measurements so coaching can read the trend and adjust your plan.',
+  'Nutrition targets': 'Get calorie and macro targets set for your goal, division, and the week ahead.',
+  'Weekly check-in': 'Run a weekly check-in so your plan and targets adjust to how the week actually went.',
+  'Your week': 'See your week read together: training, weight, and food, with a written reason for every change.',
+  'Coaching reminders': 'Set reminders for your check-ins so the weekly coaching loop never slips.',
+  'Pro goal setup': 'Set a division-specific goal so your plan and targets are built around it.',
+  'Update training': 'Let coaching update your training each week from how your sessions and weight are going.',
+};
+
+// Sensible default for any unmapped feature: the coaching-layer pitch the lock
+// used to show everyone. Used by both the inline sheet and the full-screen lock.
+const DEFAULT_BENEFIT =
+  'Pro is the coaching layer: weekly check-ins, nutrition targets, the food diary, and your body metrics.';
+
+function benefitFor(feature) {
+  return FEATURE_BENEFIT[feature] ?? DEFAULT_BENEFIT;
+}
 
 /**
  * ProGate wraps any content that requires a Pro tier.
@@ -65,9 +102,9 @@ export default function ProGate({ children, feature = 'This feature', style }) {
             </View>
 
             <Text style={styles.sheetTitle}>{feature}</Text>
-            <Text style={styles.sheetBody}>
-              This is part of Pro: weekly coaching, the food diary, and your body metrics.
-            </Text>
+            {/* COMP-CLARITY: per-feature line so the inline sheet matches what
+                the user tapped, falling back to the coaching-layer pitch. */}
+            <Text style={styles.sheetBody}>{benefitFor(feature)}</Text>
 
             <TouchableOpacity style={styles.upgradeBtn} onPress={upgrade} activeOpacity={0.88}>
               <Ionicons name="sparkles" size={16} color={colors.onPrimary} />
@@ -90,10 +127,35 @@ export default function ProGate({ children, feature = 'This feature', style }) {
  */
 export function ProLocked({ feature = 'This' }) {
   const navigation = useNavigation();
+  const [restoring, setRestoring] = useState(false);
   // Show-then-sell: on the food-diary lock, free users get a read-only
   // example day above the upgrade ask (founder decision #6). It exposes no
   // Pro action, only the value. Other Pro locks keep the plain held-seat.
   const showPlateTeaser = feature === 'Food diary';
+
+  // Restore is a read of an existing entitlement, not a purchase: a paid user
+  // on a reinstall or new device must recover Pro here without going through
+  // the buy flow. Routes through the same shared restore module PaywallScreen
+  // uses; it re-reads the active subscription from the store and never charges.
+  async function handleRestore() {
+    if (restoring) return;
+    setRestoring(true);
+    try {
+      const result = await restorePurchases();
+      if (!result.ok) {
+        appAlert('Could not restore', 'Try again in a moment.');
+      } else if (result.tier === 'pro') {
+        appAlert('Pro restored', 'Your subscription is active again.');
+      } else {
+        appAlert('Nothing to restore', 'We could not find an active subscription on this Google account.');
+      }
+    } catch {
+      appAlert('Could not restore', 'Try again in a moment.');
+    } finally {
+      setRestoring(false);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.lockedSafe}>
       <ScrollView contentContainerStyle={styles.lockedScroll} showsVerticalScrollIndicator={false}>
@@ -102,14 +164,19 @@ export function ProLocked({ feature = 'This' }) {
           <Ionicons name="lock-closed" size={28} color={colors.primary} />
         </View>
         <Text style={styles.lockedTitle}>{feature} is part of Pro</Text>
-        <Text style={styles.lockedBody}>
-          Pro is the coaching layer: weekly check-ins, nutrition targets, the food diary, and your body metrics.
-        </Text>
+        {/* COMP-CLARITY: per-feature benefit line so each Pro route explains
+            why it is Pro, instead of the same coaching pitch on every lock. */}
+        <Text style={styles.lockedBody}>{benefitFor(feature)}</Text>
         {/* COMP-025-A §4b: a held seat, not a wall. Reassures lapsed users
             their data is intact and untouched. */}
         <Text style={styles.lockedHeldSeat}>
           Everything you logged is saved, and will be exactly as you left it if you come back.
         </Text>
+        {/* COMP-CLARITY: the Free-vs-Pro side-by-side at the decision point.
+            Self-contained and store-priced; renders no billing action here. */}
+        <View style={styles.lockedStrip}>
+          <TierComparisonStrip pricingWindow="annual" highlighted="pro" />
+        </View>
         <TouchableOpacity
           style={styles.lockedBtn}
           onPress={() => navigation.navigate('ProUpgrade')}
@@ -129,6 +196,20 @@ export function ProLocked({ feature = 'This' }) {
           }}
         >
           <Text style={styles.lockedBackText}>Not now</Text>
+        </TouchableOpacity>
+        {/* COMP-CLARITY: Play-required restore, so a reinstalled paid user can
+            recover Pro from the lock without buying again. Same read-only
+            entitlement path as PaywallScreen; no purchase is made here. */}
+        <TouchableOpacity
+          style={styles.lockedRestore}
+          onPress={handleRestore}
+          disabled={restoring}
+          accessibilityRole="button"
+          accessibilityLabel="Restore purchases"
+        >
+          <Text style={styles.lockedRestoreText}>
+            {restoring ? 'Restoring…' : 'Restore purchases'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -241,6 +322,9 @@ const styles = StyleSheet.create({
   lockedBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
   lockedBack: { paddingVertical: spacing.sm },
   lockedBackText: { fontSize: fontSize.sm, color: colors.textMuted },
+  lockedStrip: { alignSelf: 'stretch', marginBottom: spacing.sm },
+  lockedRestore: { paddingVertical: spacing.sm },
+  lockedRestoreText: { fontSize: fontSize.xs, color: colors.textSecondary, textDecorationLine: 'underline' },
 
   badge: {
     flexDirection: 'row', alignItems: 'center', gap: 3,

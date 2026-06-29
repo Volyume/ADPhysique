@@ -228,6 +228,29 @@ export default function DiaryScreen({ navigation }) {
 
   const dayTypeChip = dayTypeLabel({ isRefeedDay, macroCycle, isTrainingDay, bankedDelta });
 
+  // "Foods to finish your protein": a calm, late-day nudge to the deterministic
+  // Suggested tab when protein still has a clear way to go. Deliberately
+  // protein-only and framed as finishing, never as falling short — it appears
+  // only when there's a meaningful amount left to eat, only on today, and only
+  // later in the day, so it reads as a helpful top-up, not a scold.
+  //
+  // ED-SAFE: suppressed entirely when an ED-pattern flag is open (same
+  // conservative carve-out as calorie banking). Voice is "to finish", never
+  // "you're behind" / "you failed". No calorie or weight framing.
+  const proteinToFinishG = useMemo(() => {
+    if (edFlagOpen) return 0;                       // safety: no nudging during an open ED flag
+    if (selectedDate !== isoDate(new Date())) return 0; // today only
+    if (new Date().getHours() < 16) return 0;       // late-day only; no early-day nagging
+    const target = Number(effectiveTargets?.proteinG) || 0;
+    const eaten = Number(rollup?.protein_g) || 0;
+    if (target <= 0) return 0;
+    const left = target - eaten;
+    // Only when a clear, non-trivial amount is still to come (≥25g and ≥15% of
+    // target): a few grams shy never triggers it, and an already-met day never does.
+    if (left < 25 || left < target * 0.15) return 0;
+    return Math.round(left);
+  }, [edFlagOpen, selectedDate, effectiveTargets, rollup]);
+
   // Banking handlers (CB-1). bankingAvailable is computed above (governs the
   // control AND any persisted bank's display).
   const weekDates = useMemo(() => weekDatesMon(selectedDate), [selectedDate]);
@@ -695,6 +718,25 @@ export default function DiaryScreen({ navigation }) {
           />
         </View>
 
+        {/* Late-day protein top-up: routes to the deterministic Suggested tab,
+            pre-opened, so the foods/meals ranked to fill the remaining protein
+            are one tap away. ED-safe — "to finish", calm, only when there's a
+            clear amount left (see proteinToFinishG). */}
+        {proteinToFinishG > 0 && !selectionMode ? (
+          <TouchableOpacity
+            style={styles.finishProteinRow}
+            onPress={() => navigation.navigate('FoodSearch', { mealSlot: 'meal_1', entryDate: selectedDate, initialTab: 'suggested' })}
+            accessibilityRole="button"
+            accessibilityLabel={`Foods to finish your protein, about ${proteinToFinishG} grams to go`}
+          >
+            <Ionicons name="bulb-outline" size={16} color={colors.primary} />
+            <Text style={styles.finishProteinText}>
+              Foods to finish your protein: about {proteinToFinishG}g to go
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+          </TouchableOpacity>
+        ) : null}
+
         {showOffCard && selectedDate === isoDate(new Date()) ? (
           <View style={styles.offCard}>
             <Text style={styles.offCardText}>
@@ -727,6 +769,7 @@ export default function DiaryScreen({ navigation }) {
             onAdd={() => addFood('meal_1')}
             onCopyYesterday={copyYesterday}
             onPlanDay={() => navigation.navigate('MealPlan')}
+            onSuggest={() => navigation.navigate('FoodSearch', { mealSlot: 'meal_1', entryDate: selectedDate, initialTab: 'suggested' })}
           />
         ) : (
           <>
@@ -1130,6 +1173,16 @@ const styles = StyleSheet.create({
     gap: spacing.xs, paddingVertical: spacing.sm, marginTop: -spacing.sm, marginBottom: spacing.md,
   },
   bankRowText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  finishProteinRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: colors.border,
+    borderLeftWidth: 3, borderLeftColor: colors.primary,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  finishProteinText: { flex: 1, color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
   offCard: {
     gap: spacing.sm,
     backgroundColor: colors.surface,

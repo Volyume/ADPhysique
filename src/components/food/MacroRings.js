@@ -85,9 +85,24 @@ function Ring({ size, stroke, progress, plannedProgress = 0, tint, track }) {
 // `planned` is the planned-but-unconfirmed grams for this macro. It draws a
 // faded fill to the combined (eaten+planned) width behind the solid eaten
 // fill, matching the ring, and is shown in the value text as "+Ng planned".
-function MacroBar({ label, value, target, planned = 0, primary }) {
+// `sub` is an optional quiet descriptive line under the bar (e.g. protein
+// g/kg today) — purely factual, never a target judgement.
+//
+// `moreIsFine` marks a macro with no upper-bound shame (fibre): it shows a
+// "Ng to go" remaining hint while under target but NEVER an "over" readout,
+// since more fibre is not a deviation to flag.
+function MacroBar({ label, value, target, planned = 0, primary, sub = null, moreIsFine = false }) {
   const progress = target && target > 0 ? Math.max(0, Math.min(1, value / target)) : 0;
   const plannedProgress = target && target > 0 ? Math.max(0, Math.min(1, (value + planned) / target)) : 0;
+  // Remaining framing (factual value/target, no colour judgement — matches the
+  // adherence-neutral kcal ring). "Ng to go" while under, "Ng over" while over,
+  // and nothing exactly on target. A more-is-fine macro never shows "over".
+  const remaining = target != null && target > 0 ? target - value : null;
+  let remainingText = null;
+  if (remaining != null) {
+    if (remaining > 0) remainingText = `${Math.round(remaining)}g to go`;
+    else if (remaining < 0 && !moreIsFine) remainingText = `${Math.round(Math.abs(remaining))}g over`;
+  }
   return (
     <View style={styles.macroBar}>
       <View style={styles.macroBarTop}>
@@ -103,6 +118,12 @@ function MacroBar({ label, value, target, planned = 0, primary }) {
         ) : null}
         <View style={[styles.macroFill, { width: `${Math.round(progress * 100)}%` }]} />
       </View>
+      {(sub || remainingText) ? (
+        <View style={styles.macroBarSubRow}>
+          <Text style={styles.macroBarSub}>{sub ?? ''}</Text>
+          {remainingText ? <Text style={styles.macroBarRemaining}>{remainingText}</Text> : null}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -129,6 +150,41 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
   const kcalRemaining = kcalTarget != null ? kcalTarget - kcal : null;
   const kcalOver = kcalRemaining != null && kcalRemaining < 0;
   const kcalTint = bandColour();
+
+  // Descriptive macro %-of-calories split (Cronometer-style). Purely factual:
+  // what was eaten, computed from grams using the Atwater factors (protein 4,
+  // carbs 4, fat 9 kcal/g). This is NOT a target judgement and carries no
+  // colour — it just explains how today's energy breaks down by macro.
+  const pKcal = p * 4;
+  const cKcal = c * 4;
+  const fKcal = f * 9;
+  const macroKcal = pKcal + cKcal + fKcal;
+  const macroSplit = macroKcal > 0
+    ? {
+        p: Math.round((pKcal / macroKcal) * 100),
+        c: Math.round((cKcal / macroKcal) * 100),
+        f: Math.round((fKcal / macroKcal) * 100),
+      }
+    : null;
+
+  // Protein g/kg eaten today, shown by the protein bar. Derived from the eaten
+  // protein and bodyweight; bodyweight is back-calculated from the target's own
+  // proteinGPerKg ratio (the same derivation the Nutrition Targets screen uses)
+  // so MacroRings needs no extra prop. Renders only when that ratio is present
+  // (a freshly hydrated target carries it); otherwise the line is simply hidden.
+  const proteinGPerKgTarget = targets?.proteinGPerKg;
+  const weightKg = proteinGPerKgTarget > 0 && pTarget > 0
+    ? pTarget / proteinGPerKgTarget
+    : null;
+  const proteinPerKgToday = weightKg > 0 ? Math.round((p / weightKg) * 10) / 10 : null;
+
+  // Fibre is an optional, more-is-fine bar (no upper-bound shame): only shown
+  // when there's a fibre datum to show (a target or some logged fibre). The
+  // eaten fibre comes from the rollup; the target, when present, comes from the
+  // nutrition target.
+  const fibre = Math.round(rollup?.fibre_g ?? 0);
+  const fibreTarget = targets?.fibreG ?? null;
+  const showFibre = fibreTarget != null || fibre > 0;
 
   // Count the calorie number up and sweep the ring when the total changes, so
   // the headline reads as alive when a food lands. Animates ON CHANGE only (no
@@ -226,10 +282,26 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
         ) : null}
       </View>
       <View style={styles.macroRow}>
-        <MacroBar label="Protein" value={p} target={pTarget} planned={plannedP} primary />
+        <MacroBar
+          label="Protein"
+          value={p}
+          target={pTarget}
+          planned={plannedP}
+          primary
+          sub={proteinPerKgToday != null ? `${proteinPerKgToday} g/kg today` : null}
+        />
         <MacroBar label="Carbs"   value={c} target={cTarget} planned={plannedC} />
         <MacroBar label="Fat"     value={f} target={fTarget} planned={plannedF} />
+        {showFibre ? (
+          <MacroBar label="Fibre" value={fibre} target={fibreTarget} moreIsFine />
+        ) : null}
       </View>
+      {macroSplit ? (
+        <Text style={styles.macroSplit}>
+          {`P ${macroSplit.p}% · C ${macroSplit.c}% · F ${macroSplit.f}%`}
+          <Text style={styles.macroSplitCaption}> of calories</Text>
+        </Text>
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -348,5 +420,33 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: fontSize.xs,
     fontWeight: fontWeight.medium,
+  },
+  // Quiet descriptive sub-row under a bar: protein g/kg on the left, the
+  // factual remaining ("Ng to go" / "Ng over") on the right. Both adherence-
+  // neutral (textMuted), never a colour judgement.
+  macroBarSubRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginTop: spacing.xxs,
+  },
+  macroBarSub: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    fontVariant: ['tabular-nums'],
+  },
+  macroBarRemaining: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    fontVariant: ['tabular-nums'],
+  },
+  // Descriptive %-of-calories split. Factual readout, neutral colour.
+  macroSplit: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontVariant: ['tabular-nums'],
+    textAlign: 'center',
+  },
+  macroSplitCaption: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
   },
 });

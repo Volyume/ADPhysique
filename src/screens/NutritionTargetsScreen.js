@@ -96,7 +96,7 @@ function PillGroup({ options, selected, onSelect, keyExtractor, labelExtractor }
   );
 }
 
-function MacroCard({ label, grams, perKg, perKgLbm, basis }) {
+function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent }) {
   const ratioText =
     basis === 'lbm' && perKgLbm != null
       ? `${perKgLbm} g/kg lean`
@@ -109,6 +109,11 @@ function MacroCard({ label, grams, perKg, perKgLbm, basis }) {
       <Text style={styles.macroLabel}>{label}</Text>
       {ratioText ? (
         <Text style={styles.macroPerKg}>{ratioText}</Text>
+      ) : null}
+      {/* Descriptive %-of-calories this macro contributes (grams × its Atwater
+          factor ÷ target kcal). Factual readout, not a judgement. */}
+      {kcalPercent != null ? (
+        <Text style={styles.macroPercent}>{`~${kcalPercent}% of kcal`}</Text>
       ) : null}
     </View>
   );
@@ -939,18 +944,27 @@ export default function NutritionTargetsScreen({ navigation }) {
                 );
               })()}
 
-              {/* Macro cards */}
-              <View style={styles.macroRow}>
-                <MacroCard
-                  label="Protein"
-                  grams={results.proteinG}
-                  perKg={results.proteinGPerKg}
-                  perKgLbm={results.proteinGPerKgLbm}
-                  basis={results.proteinBasis}
-                />
-                <MacroCard label="Carbs" grams={results.carbsG} />
-                <MacroCard label="Fat"   grams={results.fatG}   />
-              </View>
+              {/* Macro cards. The %-of-kcal subline is descriptive: each macro's
+                  grams × its Atwater factor (P/C 4, F 9) ÷ the target kcal. */}
+              {(() => {
+                const tk = Math.round(Number(results.targetKcal) || 0);
+                const pct = (grams, factor) =>
+                  tk > 0 && grams > 0 ? Math.round(((grams * factor) / tk) * 100) : null;
+                return (
+                  <View style={styles.macroRow}>
+                    <MacroCard
+                      label="Protein"
+                      grams={results.proteinG}
+                      perKg={results.proteinGPerKg}
+                      perKgLbm={results.proteinGPerKgLbm}
+                      basis={results.proteinBasis}
+                      kcalPercent={pct(results.proteinG, 4)}
+                    />
+                    <MacroCard label="Carbs" grams={results.carbsG} kcalPercent={pct(results.carbsG, 4)} />
+                    <MacroCard label="Fat"   grams={results.fatG}   kcalPercent={pct(results.fatG, 9)} />
+                  </View>
+                );
+              })()}
 
               {/* ── Per-meal protein distribution ───────────────────
                   Guidance only, daily total unchanged. Splits the
@@ -1556,6 +1570,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   macroPerKg: {
+    ...type.caption,
+    color: colors.textMuted,
+    marginTop: spacing.xxs,
+  },
+  macroPercent: {
     ...type.caption,
     color: colors.textMuted,
     marginTop: spacing.xxs,

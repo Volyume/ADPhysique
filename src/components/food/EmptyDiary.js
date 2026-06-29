@@ -14,11 +14,22 @@ import { colors, fontSize, fontWeight, spacing, radius, type } from '../../style
 
 export const EMPTY_DIARY_COPY = 'Nothing logged yet today. Add a meal whenever you\'re ready.';
 
-export default function EmptyDiary({ onAdd, onCopyYesterday, onPlanDay }) {
+export default function EmptyDiary({ onAdd, onCopyYesterday, onPlanDay, onSuggest }) {
   return (
     <View style={styles.card} accessibilityRole="summary">
       <Ionicons name="restaurant-outline" size={28} color={colors.textMuted} />
       <Text style={styles.body}>{EMPTY_DIARY_COPY}</Text>
+      {onSuggest ? (
+        <TouchableOpacity
+          style={[styles.btn, styles.btnSuggest]}
+          onPress={onSuggest}
+          accessibilityRole="button"
+          accessibilityLabel="See what to eat: foods and meals picked to fit your remaining targets"
+        >
+          <Ionicons name="bulb-outline" size={16} color={colors.primary} />
+          <Text style={[styles.btnText, styles.btnTextSuggest]}>What should I eat?</Text>
+        </TouchableOpacity>
+      ) : null}
       {onPlanDay ? (
         <TouchableOpacity
           style={[styles.btn, styles.btnPlan]}
@@ -83,6 +94,8 @@ const styles = StyleSheet.create({
   btnSecondary: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
   btnPlan: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.primary, alignSelf: 'stretch', justifyContent: 'center' },
   btnTextPlan: { color: colors.primary },
+  btnSuggest: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.primary, alignSelf: 'stretch', justifyContent: 'center' },
+  btnTextSuggest: { color: colors.primary },
   btnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   btnTextPrimary: { color: colors.onPrimary, fontWeight: fontWeight.bold },
 });

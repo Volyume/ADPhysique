@@ -44,11 +44,27 @@ function round(s) {
   };
 }
 
+// Atwater factors (kcal per gram): protein 4, carbs 4, fat 9. Used to
+// self-explain the energy total and the descriptive %-of-calories split. This
+// is purely DESCRIPTIVE of what was eaten — no target, no colour judgement.
 function MacroLine({ kcal, protein, carbs, fat }) {
+  const pKcal = protein * 4;
+  const cKcal = carbs * 4;
+  const fKcal = fat * 9;
+  const macroKcal = pKcal + cKcal + fKcal;
+  const split = macroKcal > 0
+    ? `P ${Math.round((pKcal / macroKcal) * 100)}% · C ${Math.round((cKcal / macroKcal) * 100)}% · F ${Math.round((fKcal / macroKcal) * 100)}%`
+    : null;
   return (
-    <Text style={styles.rowMacros}>
-      {kcal} kcal · {protein}P {carbs}C {fat}F
-    </Text>
+    <View style={styles.macroCell}>
+      <Text style={styles.rowMacros}>
+        {kcal} kcal · {protein}P {carbs}C {fat}F
+      </Text>
+      <Text style={styles.rowMacroKcal}>
+        {protein}×4 + {carbs}×4 + {fat}×9 = {macroKcal} kcal
+      </Text>
+      {split ? <Text style={styles.rowMacroSplit}>{split} of calories</Text> : null}
+    </View>
   );
 }
 
@@ -110,7 +126,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   rowLabel: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
+  macroCell: { alignItems: 'flex-end' },
   rowMacros: { color: colors.textMuted, fontSize: fontSize.sm },
+  // Descriptive sub-lines: the per-macro kcal breakdown (so the energy total
+  // self-explains) and the %-of-calories split. Both factual, neutral colour.
+  rowMacroKcal: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xxs },
+  rowMacroSplit: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xxs, fontVariant: ['tabular-nums'] },
   totalRow: { borderBottomWidth: 0, marginTop: spacing.xs },
   totalLabel: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.bold },
   empty: { color: colors.textSecondary, fontSize: fontSize.sm, paddingVertical: spacing.lg, textAlign: 'center' },
