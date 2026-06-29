@@ -412,6 +412,7 @@ export default function AnalyticsScreen({ navigation, route }) {
           </View>
           <VolumeSummaryStrip
             volume={weeklyVolume}
+            loading={loading}
             onPress={() => navigation.navigate('VolumeHeatmap')}
           />
         </View>
@@ -527,7 +528,7 @@ function InsightRow({ insight, onDismiss }) {
   return (
     <View style={[styles.insightRow, { borderLeftColor: sev.color }]}>
       <Ionicons name={sev.icon} size={18} color={sev.color} style={{ marginTop: 1 }} />
-      <Text style={styles.insightCopy} numberOfLines={3}>{insight.copy}</Text>
+      <Text style={styles.insightCopy} numberOfLines={5}>{insight.copy}</Text>
       <TouchableOpacity
         onPress={onDismiss}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -546,9 +547,12 @@ const MUSCLES = Object.keys(VOLUME_LANDMARKS);
 // Compact landing read for weekly volume. The full per-muscle picture lives on
 // the heatmap (the one volume home); this is a glanceable summary that drills
 // in: how many muscles were trained, and how many sit outside their target.
-function VolumeSummaryStrip({ volume, onPress }) {
+function VolumeSummaryStrip({ volume, loading, onPress }) {
   const trained = MUSCLES.filter(m => (volume[m]?.workingSets ?? 0) > 0);
   if (trained.length === 0) {
+    // Don't flash "Nothing logged" while the underlying data is still
+    // resolving; only show the empty state once the load has finished.
+    if (loading) return null;
     return (
       <Card
         onPress={onPress}
@@ -757,7 +761,7 @@ const styles = StyleSheet.create({
   prWrap:    { gap: spacing.sm },
   prTotal:   { ...type.num('caption'), color: colors.textMuted },
   prBarsRow: {
-    flexDirection: 'row', alignItems: 'flex-end', gap: spacing.xs, height: 60,
+    flexDirection: 'row', alignItems: 'flex-end', gap: spacing.xs, minHeight: 60,
   },
   prBarCol:  { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
   prBar:     { width: '100%', borderRadius: 2 },

@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
@@ -83,6 +83,7 @@ const READINESS_ROWS = [
 
 export default function HomeScreen({ navigation }) {
   const toast = useToast();
+  const insets = useSafeAreaInsets();
   const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments } = useAppStore(
     useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce, setSessionAdjustments: s.setSessionAdjustments }))
   );
@@ -1592,7 +1593,7 @@ export default function HomeScreen({ navigation }) {
           activeOpacity={1}
           onPress={() => setShowBlockShape(false)}
         />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: spacing.xxxl + insets.bottom }]}>
           <View style={styles.sheetHandle} />
           <Text style={styles.sheetTitle}>Your block</Text>
           {currentMesoWeek?.mesoName ? <Text style={styles.sheetSub}>{currentMesoWeek.mesoName}</Text> : null}
@@ -1624,7 +1625,7 @@ export default function HomeScreen({ navigation }) {
           activeOpacity={1}
           onPress={() => setShowChangeWorkout(false)}
         />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: spacing.xxxl + insets.bottom }]}>
           <View style={styles.sheetHandle} />
           <Text style={styles.sheetTitle}>Choose Workout</Text>
           {activePlan && <Text style={styles.sheetSub}>{activePlan.name}</Text>}
@@ -1681,7 +1682,7 @@ export default function HomeScreen({ navigation }) {
         onRequestClose={() => { setShowIntentPrompt(false); pendingStartRef.current = null; }}
       >
         <View style={styles.intentOverlay}>
-          <View style={styles.intentSheet}>
+          <View style={[styles.intentSheet, { paddingBottom: spacing.xxxl + insets.bottom }]}>
             <Text style={styles.intentTitle}>How are you feeling today?</Text>
             <Text style={styles.intentSub}>Takes a second. Helps us read your sessions better over time.</Text>
             {[

@@ -52,11 +52,12 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
             accessibilityRole="button"
             accessibilityLabel="Decrease weight"
           >
-            <Text style={styles.stepBtnText}>−</Text>
+            <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>−</Text>
           </TouchableOpacity>
           <TextInput
             testID="volyume-weight-input"
             style={[styles.valueInput, isGhost && styles.valueInputGhost]}
+            maxFontSizeMultiplier={1.3}
             // Render 0 as "0" not "" (was `String(weight || '')`, which hid
             // a legitimate zero-weight bodyweight set).
             value={weight == null || weight === '' ? '' : String(weight)}
@@ -85,7 +86,7 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
             accessibilityRole="button"
             accessibilityLabel="Increase weight"
           >
-            <Text style={styles.stepBtnText}>+</Text>
+            <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>+</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -109,12 +110,13 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
             accessibilityRole="button"
             accessibilityLabel="Decrease reps"
           >
-            <Text style={styles.stepBtnText}>−</Text>
+            <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>−</Text>
           </TouchableOpacity>
           <TextInput
             testID="volyume-reps-input"
             ref={repsRef}
             style={[styles.valueInput, isGhost && styles.valueInputGhost]}
+            maxFontSizeMultiplier={1.3}
             value={reps == null || reps === '' ? '' : String(reps)}
             onChangeText={v => {
               const n = parseInt(v, 10);
@@ -137,7 +139,7 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
             accessibilityRole="button"
             accessibilityLabel="Increase reps"
           >
-            <Text style={styles.stepBtnText}>+</Text>
+            <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>+</Text>
           </TouchableOpacity>
         </View>
       </View>

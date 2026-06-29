@@ -215,9 +215,14 @@ export function bankedPlanDayEdits({ planDays = [], dayKeys = [], perDayDeltaKca
  */
 export function applyBankToTarget(targets, deltaKcal) {
   if (!targets || !deltaKcal) return targets;
+  const baseCarbsG = Number(targets.carbsG) || 0;
+  const clampedCarbsG = Math.max(0, Math.round(baseCarbsG + deltaKcal / KCAL_PER_G_CARB));
+  // Shift kcal only by what carbs actually absorbed, so the displayed kcal
+  // stays consistent with protein·4 + carbs·4 + fat·9 when carbs clamp at 0.
+  const effectiveDeltaKcal = (clampedCarbsG - baseCarbsG) * KCAL_PER_G_CARB;
   return {
     ...targets,
-    targetKcal: Math.round((Number(targets.targetKcal) || 0) + deltaKcal),
-    carbsG: Math.max(0, Math.round((Number(targets.carbsG) || 0) + deltaKcal / KCAL_PER_G_CARB)),
+    targetKcal: Math.round((Number(targets.targetKcal) || 0) + effectiveDeltaKcal),
+    carbsG: clampedCarbsG,
   };
 }

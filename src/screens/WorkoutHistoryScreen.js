@@ -353,7 +353,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
               </View>
               {tonnage > 0 && (
                 <View style={styles.statChip}>
-                  <Text style={styles.statChipText}>{Math.round(tonnage).toLocaleString()}kg lifted</Text>
+                  <Text style={styles.statChipText}>{Math.round(tonnage).toLocaleString('en-GB')}kg lifted</Text>
                 </View>
               )}
             </View>

@@ -276,7 +276,7 @@ export default function ShareCardScreen({ route }) {
         <div class="statRow">
           ${stat('Working sets', p.workingSets)}
           ${stat('Minutes', p.duration)}
-          ${stat('Volume', `${p.tonnage} ${p.units || 'kg'}`)}
+          ${stat('Volume', `${Math.round(Number(p.tonnage) || 0).toLocaleString('en-GB')} ${p.units || 'kg'}`)}
           ${stat('Exercises', p.exerciseCount)}
         </div>
         ${p.prCount ? `<p class="prs">${p.prCount} new ${p.prCount === 1 ? 'PR' : 'PRs'} this session</p>` : ''}
@@ -306,9 +306,9 @@ export default function ShareCardScreen({ route }) {
       body = `
         <div class="statRow">
           ${stat('Lift', p.exerciseName)}
-          ${stat('Weight', `${p.weight} ${p.units || 'kg'}`)}
+          ${stat('Weight', `${Math.round(Number(p.weight) || 0).toLocaleString('en-GB')} ${p.units || 'kg'}`)}
           ${stat('Reps', p.reps)}
-          ${p.previousBest ? stat('Previous best', `${p.previousBest} ${p.units || 'kg'}`) : ''}
+          ${p.previousBest ? stat('Previous best', `${Math.round(Number(p.previousBest) || 0).toLocaleString('en-GB')} ${p.units || 'kg'}`) : ''}
         </div>`;
     }
     const title = p.cardType === 'session' ? esc(p.sessionName)

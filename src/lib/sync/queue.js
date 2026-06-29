@@ -104,6 +104,15 @@ export async function listPending({ limit = 200 } = {}) {
     [limit],
   );
   const now = Date.now();
+  // D1-#12 (FOUNDER DECISION NEEDED — documented, not fixed): backoff is
+  // measured from `queued_at` (row birth), not the last attempt. Because the
+  // backoff caps at 5 min, a permanently-failing row older than that is
+  // eligible on EVERY cycle regardless of attempt_count — true exponential
+  // backoff only holds for the row's first ~5 min of life. This is LATENT
+  // today (sync_queue has no drainer, so nothing consumes these rows). The
+  // correct fix is to add a `last_attempt_at` column, set it in markFailed,
+  // and measure backoff from it here. That needs a schema column, so it is
+  // flagged for founder and NOT changed now.
   return rows.filter(r => {
     if ((r.attempt_count ?? 0) === 0) return true;
     const queuedMs = Date.parse(r.queued_at) || 0;

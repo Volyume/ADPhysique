@@ -23,14 +23,12 @@ const NUTRIENT_IDS = {
 function _pickNutrient(food, [id, number]) {
   const list = Array.isArray(food?.foodNutrients) ? food.foodNutrients : [];
   for (const n of list) {
-    if (n?.nutrientId === id || n?.nutrient?.id === id) {
-      const v = n.value ?? n.amount;
-      return Number.isFinite(v) ? v : null;
-    }
-    if (String(n?.nutrientNumber ?? n?.nutrient?.number ?? '') === number) {
-      const v = n.value ?? n.amount;
-      return Number.isFinite(v) ? v : null;
-    }
+    const matches = (n?.nutrientId === id || n?.nutrient?.id === id)
+      || String(n?.nutrientNumber ?? n?.nutrient?.number ?? '') === number;
+    if (!matches) continue;
+    const v = n.value ?? n.amount;
+    // Keep scanning: a later duplicate row may carry the real (finite) value.
+    if (Number.isFinite(v)) return v;
   }
   return null;
 }

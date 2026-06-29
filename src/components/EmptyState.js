@@ -63,7 +63,13 @@ export default function EmptyState({
       {(actionLabel || secondaryLabel) && (
         <View style={styles.actions}>
           {actionLabel && onAction && (
-            <TouchableOpacity style={styles.primaryBtn} onPress={onAction} activeOpacity={0.85}>
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={onAction}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel={actionLabel}
+            >
               <Text style={styles.primaryBtnText}>{actionLabel}</Text>
             </TouchableOpacity>
           )}

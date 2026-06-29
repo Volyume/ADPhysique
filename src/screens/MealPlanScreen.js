@@ -41,6 +41,7 @@ import {
 } from '../lib/food/mealPlanService';
 import { updateMealPlan, getFoodEntriesForDay, clearPlannedDay } from '../lib/food/db';
 import { buildGroceryList } from '../lib/food/groceryList';
+import { formatNumber } from '../lib/format';
 
 // The week is scheduled onto real dates when added to the diary (day i ->
 // today + i, see applyPlanWeekToDiary), so the picker labels each day with its
@@ -82,7 +83,7 @@ function PrefRow({ label, options, value, onSelect, busy }) {
           return (
             <TouchableOpacity
               key={String(opt.value)}
-              style={[styles.prefOpt, selected && styles.prefOptOn]}
+              style={[styles.prefOpt, selected && styles.prefOptOn, busy && !selected && styles.prefOptDisabled]}
               onPress={() => !selected && onSelect(opt.value)}
               disabled={busy || selected}
               hitSlop={hitSlop}
@@ -430,7 +431,7 @@ export default function MealPlanScreen({ navigation }) {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <BackHeader title={!plan ? 'Meal planning' : isDayPlan ? 'Plan my day' : 'Plan my week'} onBack={() => navigation.goBack()} />
       {loading ? (
-        <View style={styles.centre}><ActivityIndicator color={colors.primary} /></View>
+        <View style={styles.centre}><ActivityIndicator color={colors.primary} accessibilityLabel="Loading meal plan" /></View>
       ) : !plan ? (
         <View style={styles.emptyWrap}>
           <Ionicons name="restaurant-outline" size={40} color={colors.textSecondary} />
@@ -496,9 +497,9 @@ export default function MealPlanScreen({ navigation }) {
               </View>
             ) : null}
             {day ? (
-              <Text style={styles.dayKcal}>
-                {day.totals.kcal} kcal
-                {target ? <Text style={styles.dayKcalTarget}>{`  of ${day.target?.kcal ?? plan.variants?.[day.variant]?.kcal ?? target.targetKcal}`}</Text> : null}
+              <Text style={styles.dayKcal} maxFontSizeMultiplier={1.3}>
+                {formatNumber(day.totals.kcal)} kcal
+                {target ? <Text style={styles.dayKcalTarget}>{`  of ${formatNumber(day.target?.kcal ?? plan.variants?.[day.variant]?.kcal ?? target.targetKcal)}`}</Text> : null}
               </Text>
             ) : null}
           </View>
@@ -537,10 +538,10 @@ export default function MealPlanScreen({ navigation }) {
                   accessibilityLabel={`${planSlotLabel(slot.slot)}: ${slot.name}, ${slot.totals.kcal} calories. Tap for details.`}
                 >
                   <View style={styles.mealHead}>
-                    <Text style={styles.mealSlot}>{planSlotLabel(slot.slot)}</Text>
-                    <Text style={styles.mealKcal}>{slot.totals.kcal} kcal</Text>
+                    <Text style={styles.mealSlot} numberOfLines={1} ellipsizeMode="tail">{planSlotLabel(slot.slot)}</Text>
+                    <Text style={styles.mealKcal}>{formatNumber(slot.totals.kcal)} kcal</Text>
                   </View>
-                  <Text style={styles.mealName}>{slot.name}</Text>
+                  <Text style={styles.mealName} numberOfLines={2} ellipsizeMode="tail">{slot.name}</Text>
                 </TouchableOpacity>
                 {open ? (
                   <View style={styles.mealDetail}>
@@ -550,7 +551,7 @@ export default function MealPlanScreen({ navigation }) {
                       return (
                         <TouchableOpacity
                           key={`${it.foodRef}-${i}`}
-                          style={styles.itemRow}
+                          style={[styles.itemRow, (!canSwap || busy) && styles.itemRowDisabled]}
                           disabled={!canSwap || busy}
                           onPress={() => handleSwapFood(slot.slot, foodKey)}
                           onLongPress={() => canSwap && handleFlagFood(slot.slot, foodKey, it.name)}
@@ -558,13 +559,13 @@ export default function MealPlanScreen({ navigation }) {
                           accessibilityRole={canSwap ? 'button' : 'text'}
                           accessibilityLabel={canSwap ? `${it.quantityG} grams ${it.name}. Tap to swap, long press to leave it out for good.` : `${it.quantityG} grams ${it.name}`}
                         >
-                          <Text style={styles.itemLine}>{`${it.quantityG} g ${it.name}`}</Text>
+                          <Text style={styles.itemLine} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={1.3}>{`${formatNumber(it.quantityG)} g ${it.name}`}</Text>
                           {canSwap ? <Ionicons name="swap-horizontal-outline" size={13} color={colors.textSecondary} /> : null}
                         </TouchableOpacity>
                       );
                     })}
-                    <Text style={styles.macroLine}>
-                      {`P ${slot.totals.protein} g · C ${slot.totals.carbs} g · F ${slot.totals.fat} g`}
+                    <Text style={styles.macroLine} numberOfLines={1} ellipsizeMode="tail">
+                      {`P ${formatNumber(slot.totals.protein)} g · C ${formatNumber(slot.totals.carbs)} g · F ${formatNumber(slot.totals.fat)} g`}
                     </Text>
                   </View>
                 ) : null}
@@ -588,7 +589,7 @@ export default function MealPlanScreen({ navigation }) {
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>Day</Text>
               <Text style={styles.totalsText}>
-                {`${day.totals.kcal} kcal · P ${day.totals.protein} · C ${day.totals.carbs} · F ${day.totals.fat}`}
+                {`${formatNumber(day.totals.kcal)} kcal · P ${formatNumber(day.totals.protein)} · C ${formatNumber(day.totals.carbs)} · F ${formatNumber(day.totals.fat)}`}
               </Text>
             </View>
           ) : null}
@@ -740,7 +741,7 @@ export default function MealPlanScreen({ navigation }) {
                             {item.name}{item.count ? ` ×${item.count}` : ''}
                           </Text>
                           {item.grams != null ? (
-                            <Text style={styles.groceryQty}>{item.grams} g</Text>
+                            <Text style={styles.groceryQty}>{formatNumber(item.grams)} g</Text>
                           ) : null}
                         </View>
                       ))}
@@ -795,6 +796,7 @@ const styles = StyleSheet.create({
   mealName: { ...type.bodyStrong, color: colors.textPrimary },
   mealDetail: { gap: 2, paddingTop: spacing.xs },
   itemRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 28, gap: spacing.sm },
+  itemRowDisabled: { opacity: 0.6 },
   itemLine: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'], flex: 1 },
   macroLine: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.xs, fontVariant: ['tabular-nums'] },
   swapBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingVertical: spacing.sm, minHeight: 44 },
@@ -819,10 +821,14 @@ const styles = StyleSheet.create({
   prefOpts: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   prefOpt: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, minHeight: 40, justifyContent: 'center' },
   prefOptOn: { borderColor: colors.primary, backgroundColor: colors.surface2 },
+  prefOptDisabled: { opacity: 0.6 },
   prefOptText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   prefOptTextOn: { color: colors.primary },
   swapSheetTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
   swapSheetSub: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: -spacing.xs, lineHeight: 19 },
+  // TODO (D2 #15): cap to Math.min(360, Dimensions.get('window').height * 0.6)
+  // so many swap alternatives don't clip on small screens. Skipped here to avoid
+  // adding a Dimensions import per the fix-sketch constraint.
   swapList: { maxHeight: 360 },
   swapListContent: { gap: spacing.sm, paddingVertical: spacing.xs },
   grocerySection: { marginTop: spacing.sm },

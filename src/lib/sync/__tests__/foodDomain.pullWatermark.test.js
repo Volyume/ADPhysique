@@ -48,7 +48,10 @@ test('advances the watermark and reports no errors when every row applies', asyn
   const res = await foodPullFor('food_entries')(sb, { userId: 'u1' });
 
   expect(res.errors).toBe(0);
-  expect(await AsyncStorage.getItem(KEY)).toBe(String(Date.parse(SERVER_TS)));
+  // The pull watermark is stored backed off by 1 ms (mirroring the push side),
+  // so a cross-device row stamped at exactly the server cursor is re-pulled
+  // next cycle instead of being skipped at the strict `>` boundary (D1 #1).
+  expect(await AsyncStorage.getItem(KEY)).toBe(String(Date.parse(SERVER_TS) - 1));
 });
 
 test('does NOT advance the watermark and reports errors when a row fails to apply', async () => {

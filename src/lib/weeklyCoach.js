@@ -85,9 +85,13 @@ export function getEwmaSevenDaysAgo(weights, alpha = 0.1) {
   const series = computeEWMA(weights, alpha);
   if (series.length < 2) return null;
   const cutoff = Date.now() - 7 * 86400000;
-  // Find the closest entry at or before 7 days ago
+  // Find the most recent entry at or before 7 days ago. If none precedes the
+  // cutoff the 7-day trend is NOT yet computable — return null rather than
+  // falling back to the earliest recent reading (which would treat a sub-7-day
+  // span as a full weekly rate and ~2x-overstate loss/gain, feeding a wrong
+  // on/off-target verdict and calorie adjustment). D1 #3.
   const older = [...series].reverse().find(e => e.loggedAt <= cutoff);
-  return older?.ewmaKg ?? series[0].ewmaKg;
+  return older?.ewmaKg ?? null;
 }
 
 // ─── Data confidence assessment ──────────────────────────────────────────────
@@ -574,8 +578,16 @@ export function runWeeklyCoach(inputs) {
   // Fall back to the plain rate when there isn't enough data for the robust read.
   const decisionRatePct = robustRatePct != null ? robustRatePct : actualRatePct;
 
+  // On-target band: proportional to the goal rate, but never tighter than
+  // 0.15 %/week — real morning-weigh-in noise. Without the floor, maintenance
+  // (goalRatePct 0) collapsed to a ±0.05 %/week band and judged normal noise as
+  // off-target (wrong verdict/copy). The floor only WIDENS the band for low-goal
+  // phases; cut/bulk bands are unchanged, and it never makes the coach more
+  // eager to declare off-target. Rapid-loss safety reads the plain trend
+  // separately and is unaffected. D1 #6.
+  const onTargetBand = Math.max(0.2 * Math.abs(phase.goalRatePct) + 0.05, 0.15);
   const onTarget = (decisionRatePct != null)
-    ? Math.abs(decisionRatePct - phase.goalRatePct) <= 0.2 * Math.abs(phase.goalRatePct) + 0.05
+    ? Math.abs(decisionRatePct - phase.goalRatePct) <= onTargetBand
     : null;
 
   const offTargetDirection = (decisionRatePct != null)

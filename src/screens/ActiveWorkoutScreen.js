@@ -69,7 +69,7 @@ const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum 
         <Ionicons name="flame" size={14} color={colors.warning} style={{ width: 22, textAlign: 'center' }} />
       ) : (
         <View style={styles.setNumBadge}>
-          <Text style={styles.setNumText}>{progressNum}</Text>
+          <Text style={styles.setNumText} maxFontSizeMultiplier={1.3}>{progressNum}</Text>
         </View>
       )}
       <Text style={[styles.loggedSetText, isWarmup && styles.loggedSetTextWarmup]}>
@@ -1474,12 +1474,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Text
                   style={[styles.navTabText, i === currentExerciseIndex && styles.navTabTextActive]}
                   numberOfLines={1}
+                  ellipsizeMode="tail"
                 >
-                  {entry.exercise?.name?.split(' ').slice(0, 2).join(' ')}
+                  {entry.exercise?.name}
                 </Text>
                 {entry.sets?.length > 0 && (
                   <View style={styles.navTabBadge}>
-                    <Text style={styles.navTabBadgeText}>{entry.sets.length}</Text>
+                    <Text style={styles.navTabBadgeText} maxFontSizeMultiplier={1.3}>{entry.sets.length}</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -1699,7 +1700,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 the Hevy tap-previous-to-fill mechanic. */}
             {currentSet.setType !== 'warmup' && (() => {
               const target = setTargets[workingLogged];
-              const prev = prevSets[workingLogged];
+              // prevSets is the raw previous-session array (warm-ups included),
+              // but warm-ups and working sets number their set_number
+              // independently, so a logged warm-up can sort to prevSets[0] and
+              // shift the working-set mapping. Filter warm-ups out BEFORE
+              // indexing by workingLogged so both the "Last:" line and the
+              // tap-to-fill below read the correct working set. (D1 #2)
+              const prevWorking = prevSets.filter(
+                s => (s.setType ?? s.set_type ?? 'straight') !== 'warmup',
+              );
+              const prev = prevWorking[workingLogged];
               if (target?.isDeload) {
                 return (
                   <TouchableOpacity
@@ -2460,10 +2470,10 @@ function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, workoutExercise
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.exerciseNav} contentContainerStyle={styles.exerciseNavContent}>
           {workoutExercises.map((entry, i) => (
             <TouchableOpacity key={i} style={[styles.navTab, i === currentExerciseIndex && styles.navTabActive]} onPress={() => setCurrentExerciseIndex(i)} accessibilityRole="button" accessibilityState={{ selected: i === currentExerciseIndex }} accessibilityLabel={entry.exercise?.name || `Exercise ${i + 1}`}>
-              <Text style={[styles.navTabText, i === currentExerciseIndex && styles.navTabTextActive]} numberOfLines={1}>
-                {entry.exercise?.name?.split(' ').slice(0, 2).join(' ')}
+              <Text style={[styles.navTabText, i === currentExerciseIndex && styles.navTabTextActive]} numberOfLines={1} ellipsizeMode="tail">
+                {entry.exercise?.name}
               </Text>
-              {entry.sets?.length > 0 && <View style={styles.navTabBadge}><Text style={styles.navTabBadgeText}>{entry.sets.length}</Text></View>}
+              {entry.sets?.length > 0 && <View style={styles.navTabBadge}><Text style={styles.navTabBadgeText} maxFontSizeMultiplier={1.3}>{entry.sets.length}</Text></View>}
             </TouchableOpacity>
           ))}
         </ScrollView>

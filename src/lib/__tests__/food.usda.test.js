@@ -69,6 +69,22 @@ describe('normaliseUsdaFood', () => {
     expect(r.serving_g).toBe(100);
   });
 
+  test('scans past a non-finite duplicate row to the row carrying the real value (D1 #4)', () => {
+    const r = normaliseUsdaFood({
+      fdcId: 1010,
+      description: 'Branded item with duplicate kcal rows',
+      foodNutrients: [
+        { nutrientNumber: '208' },              // kcal row with no value (non-finite)
+        { nutrientNumber: '208', value: 250 },  // duplicate kcal row carrying the real value
+        { nutrientNumber: '203', value: 8 },
+        { nutrientNumber: '205', value: 30 },
+        { nutrientNumber: '204', value: 5 },
+      ],
+    });
+    expect(r).not.toBeNull();
+    expect(r.kcal_100g).toBe(250);
+  });
+
   test('normalises a Branded food via nutrientNumber', () => {
     const r = normaliseUsdaFood({
       fdcId: 99,

@@ -18,6 +18,17 @@
 
 import { logSyncError } from '../telemetry';
 
+// D1-#11: updated_at may arrive as an epoch-ms number OR an ISO timestamptz
+// string depending on the cloud column type. Number(isoString) is NaN, and
+// NaN > NaN is always false, so a raw Number() comparison would silently keep
+// the first-seen row instead of the most recent. Normalise both shapes to ms;
+// returns NaN only when truly unparseable (treated as "not newer").
+function _toMs(v) {
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string') return Date.parse(v);
+  return NaN;
+}
+
 export async function pushMealPlans(sb, { userId, localUserId } = {}) {
   if (!sb || !userId) return { count: 0, errors: 0 };
   try {
@@ -65,7 +76,7 @@ export async function pullMealPlans(sb, { userId, localUserId } = {}) {
       return { count: 0, errors: 1 };
     }
     const data = (rows || []).reduce(
-      (best, r) => (!best || Number(r.updated_at) > Number(best.updated_at) ? r : best),
+      (best, r) => (!best || _toMs(r.updated_at) > _toMs(best.updated_at) ? r : best),
       null,
     );
     if (!data) return { count: 0, errors: 0 };

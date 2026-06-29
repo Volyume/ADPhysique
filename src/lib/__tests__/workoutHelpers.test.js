@@ -81,6 +81,20 @@ describe('getBestAnchorSet', () => {
     const sets = [{ setType: 'straight', weight: 100 }];
     expect(getBestAnchorSet(sets, 5).weight).toBe(100);
   });
+
+  test('a logged warm-up does not shift the working-set mapping (D1 #2)', () => {
+    // set_number collides between warm-up and working (both start at 1), so a
+    // raw previous-session array sorted by set_number puts a warm-up at [0].
+    // Indexing working-set 0 must still land on the FIRST working set, never
+    // the warm-up that sorted ahead of it.
+    const prevSets = [
+      { setType: 'warmup', weight: 40, actualReps: 10 },
+      { setType: 'straight', weight: 100, actualReps: 8 },
+      { setType: 'straight', weight: 100, actualReps: 7 },
+    ];
+    expect(getBestAnchorSet(prevSets, 0).weight).toBe(100);
+    expect(getBestAnchorSet(prevSets, 0).actualReps).toBe(8);
+  });
 });
 
 describe('prefillRepsForTarget', () => {
@@ -101,6 +115,12 @@ describe('prefillRepsForTarget', () => {
   test('falls back to the minimum when beat would land below the range', () => {
     // anchor 6 -> beat 7, still below min 8 -> clamp to min.
     expect(prefillRepsForTarget({ actualReps: 6 }, target)).toBe(8);
+  });
+
+  test('reads snake_case actual_reps on DB-shaped anchors (D1 #9)', () => {
+    // Previously anchorSet.actualReps + 1 was NaN for a DB-shaped anchor,
+    // silently falling back to repsMin instead of beating last.
+    expect(prefillRepsForTarget({ actual_reps: 9 }, target)).toBe(10);
   });
 });
 

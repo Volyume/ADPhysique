@@ -65,7 +65,7 @@ export function getBestAnchorSet(sets, workingIdx) {
  * @returns {number} the prefill rep count
  */
 export function prefillRepsForTarget(anchorSet, target) {
-  const beatRep = anchorSet ? anchorSet.actualReps + 1 : null;
+  const beatRep = anchorSet ? (anchorSet.actualReps ?? anchorSet.actual_reps) + 1 : null;
   return (beatRep && beatRep >= target.repsMin && beatRep <= target.repsMax)
     ? beatRep
     : target.repsMin;

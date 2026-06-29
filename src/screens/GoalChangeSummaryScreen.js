@@ -216,8 +216,8 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
               <ChangeCard
                 icon="flame-outline"
                 title="Daily calories"
-                prev={`${prevKcal.toLocaleString()} kcal`}
-                next={`${nextKcal.toLocaleString()} kcal`}
+                prev={`${prevKcal.toLocaleString('en-GB')} kcal`}
+                next={`${nextKcal.toLocaleString('en-GB')} kcal`}
                 reason={kcalReason}
               />
             )}

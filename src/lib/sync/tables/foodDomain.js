@@ -259,6 +259,14 @@ async function _doPushAll(sb, { userId, localUserId }) {
   // rest (see the resilience note in the file header).
   // Third tuple element is the SOURCE rows (not just a count) so the
   // watermark can advance to their newest local updated_at (see SYNC-5 below).
+  // D1-#8 (FOUNDER DECISION NEEDED — documented, not fixed): food_favourites
+  // and daily_water force every fetched row into `updated` with deleted: [],
+  // and neither cloud table has a tombstone column. These deletes are
+  // therefore CURRENTLY DEVICE-LOCAL: removing a favourite/water row on one
+  // device never reaches the cloud, so it re-pulls back from another device.
+  // Making cross-device delete-sync work would need a tombstone column on
+  // these tables + a real `deleted` slice here (and a delete-aware apply on
+  // pull) — a schema + behaviour change. Flagged for founder; left unchanged.
   const slices = [
     ['food_entries',    bucket(entries, _foodEntryToCloud),  entries],
     ['custom_foods',    bucket(customs, _customFoodToCloud),  customs],
@@ -391,10 +399,22 @@ async function _doPullAll(sb, { userId }) {
   // INSERT OR REPLACE under the F1 last-write-wins gate, so re-pulling already
   // applied rows is idempotent.
   if (!anyFailed) {
-    const ts = data?.timestamp ?? new Date().toISOString();
-    const tsMs = Date.parse(ts);
+    // D1-#7: this cursor is compared next cycle against the server-clock
+    // `updated_at` inside food_sync_pull, so it MUST stay on server time.
+    // Never fall back to `new Date().toISOString()` (the device clock): a
+    // fast local clock would write a future watermark and stall all food
+    // pulls until server time caught up. If the RPC omits/garbles
+    // `timestamp`, leave the watermark unchanged so the same window re-pulls
+    // next cycle (idempotent under the per-row LWW apply gate).
+    const tsMs = Date.parse(data?.timestamp);
     if (Number.isFinite(tsMs)) {
-      try { await AsyncStorage.setItem(key, String(tsMs)); } catch (_) { /* tolerate */ }
+      // D1-#1: store tsMs - 1, mirroring the push side (latestTsMs - 1 above).
+      // The next pull filters server-side `updated_at > stored_ts` strictly,
+      // and this cursor is the same server clock that stamped the rows, so a
+      // cross-device row written in the SAME millisecond as the cursor would
+      // be skipped permanently. Backing off by 1 ms re-includes boundary rows;
+      // re-pulling them is idempotent under the per-row LWW apply gate.
+      try { await AsyncStorage.setItem(key, String(tsMs - 1)); } catch (_) { /* tolerate */ }
     }
   }
   return { counts, errorsByTable, errors: anyFailed ? 1 : 0 };

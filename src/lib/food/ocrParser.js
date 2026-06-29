@@ -61,7 +61,7 @@ function _matchValue(text, keyword) {
   // per-100g column first, in which case the gap has no such qualifier and the
   // first number is taken as-is.
   if (/per\s*serving|per\s*portion|\bserving\b|\bportion\b/i.test(m[1] || '')) {
-    const after = text.slice(text.indexOf(m[0]) + m[0].length);
+    const after = text.slice(m.index + m[0].length);
     const nm = after.match(/(\d{1,4}(?:\.\d{1,2})?)\s*(kcal|kj|g|mg)?/i);
     if (nm) {
       const v2 = parseFloat(nm[1]);

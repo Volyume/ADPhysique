@@ -82,8 +82,10 @@ function formatDayFull(ms) {
 
 /** "19 May to 25 May 2026" */
 function weekRangeLabel(weekStartMs) {
-  const start = new Date(weekStartMs);
-  const end = new Date(weekStartMs + 6 * 24 * 60 * 60 * 1000);
+  const startMs = Number(weekStartMs);
+  if (!Number.isFinite(startMs)) return 'Week dates unavailable';
+  const start = new Date(startMs);
+  const end = new Date(startMs + 6 * 24 * 60 * 60 * 1000);
   const startStr = formatDay(start);
   const endStr = formatDayFull(end);
   return `${startStr} to ${endStr}`;
@@ -244,7 +246,7 @@ function NextWeekCard({ adjustments, onApplyCalories, onApplySteps, onApplyCardi
       {calories !== null ? (
         <AdjustmentRow
           iconName="flame-outline"
-          label={calories.applied && calories.newKcal ? `${calLabel} → ${calories.newKcal} kcal/day` : calLabel}
+          label={calories.applied && calories.newKcal ? `${calLabel} → ${calories.newKcal.toLocaleString('en-GB')} kcal/day` : calLabel}
           note={calories.note}
           applied={!!calories.applied}
           onApply={caloriesApplyable ? onApplyCalories : undefined}
@@ -447,12 +449,12 @@ function MacroCycleCard({ macroCycle, applied, onApply, applying }) {
       <View style={styles.macroCycleRow}>
         <View style={styles.macroCycleCol}>
           <Text style={styles.macroCycleColLabel}>Training days</Text>
-          <Text style={styles.macroCycleColKcal}>{trainingDay.kcal} kcal</Text>
+          <Text style={styles.macroCycleColKcal}>{trainingDay.kcal.toLocaleString('en-GB')} kcal</Text>
           <Text style={styles.macroCycleColCarbs}>{trainingDay.carbsG}g carbs</Text>
         </View>
         <View style={styles.macroCycleCol}>
           <Text style={styles.macroCycleColLabel}>Rest days</Text>
-          <Text style={styles.macroCycleColKcal}>{restDay.kcal} kcal</Text>
+          <Text style={styles.macroCycleColKcal}>{restDay.kcal.toLocaleString('en-GB')} kcal</Text>
           <Text style={styles.macroCycleColCarbs}>{restDay.carbsG}g carbs</Text>
         </View>
       </View>
@@ -492,7 +494,7 @@ function RefeedCard({ refeed, applied, onApply, applying }) {
       <View style={styles.macroCycleRow}>
         <View style={styles.macroCycleCol}>
           <Text style={styles.macroCycleColLabel}>Refeed target</Text>
-          <Text style={styles.macroCycleColKcal}>{refeed.kcal} kcal</Text>
+          <Text style={styles.macroCycleColKcal}>{refeed.kcal.toLocaleString('en-GB')} kcal</Text>
           <Text style={styles.macroCycleColCarbs}>{refeed.carbsG}g carbs</Text>
         </View>
       </View>
@@ -1431,7 +1433,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe} edges={['left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
         <LoadingView />
       </SafeAreaView>
     );
@@ -1440,7 +1442,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // ── Load error state (retryable) ───────────────────────────────────────────
   if (loadError) {
     return (
-      <SafeAreaView style={styles.safe} edges={['left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
         <LoadErrorView onRetry={() => setReloadKey(k => k + 1)} onClose={handleClose} />
       </SafeAreaView>
     );
@@ -1449,7 +1451,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // ── Insufficient data state ────────────────────────────────────────────────
   if (!output || !output.hasEnoughData) {
     return (
-      <SafeAreaView style={styles.safe} edges={['left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
         <InsufficientDataView dataNote={output?.dataNote} onClose={handleClose} />
       </SafeAreaView>
     );
@@ -1635,7 +1637,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['left', 'right']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -2149,6 +2151,7 @@ const styles = StyleSheet.create({
   adjustmentLabel: {
     ...type.bodyStrong,
     color: colors.textPrimary,
+    flexShrink: 1,
   },
   appliedChip: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
@@ -2471,7 +2474,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   heldHistoryDate: { ...type.caption, color: colors.textMuted },
-  heldHistoryText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  heldHistoryText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
   heldHistoryEmptyText: {
     ...type.caption,
     color: colors.textMuted,
