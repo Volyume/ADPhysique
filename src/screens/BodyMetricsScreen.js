@@ -21,7 +21,7 @@ function safeFormatDate(value, fmt) {
     return '';
   }
 }
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import VolyumeChart from '../components/VolyumeChart';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
@@ -389,6 +389,7 @@ function PhysiqueOptIn({ onEnable }) {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function BodyMetricsScreen() {
+  const navigation = useNavigation();
   const { user, session, units, bodyWeightUnits, tier, userProfile } = useAppStore(useShallow(s => ({
     user: s.user,
     session: s.session,
@@ -764,6 +765,18 @@ export default function BodyMetricsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
+
+        {/* Progress photos (gap #9): private, device-local only. */}
+        <TouchableOpacity
+          style={styles.photosRow}
+          onPress={() => navigation.navigate('ProgressPhotos')}
+          accessibilityRole="button"
+          accessibilityLabel="Progress photos, private to this device"
+        >
+          <Ionicons name="camera-outline" size={20} color={colors.primary} />
+          <Text style={styles.photosRowText}>Progress photos</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
+        </TouchableOpacity>
 
         {/* Body Metrics is for body weight + measurements only. Nutrition
             Targets have their own dedicated screen reachable from
@@ -1202,6 +1215,13 @@ function DeltaBadge({ delta, units, small }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
+  photosRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+  },
+  photosRowText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
   optInContent: { padding: spacing.lg, paddingTop: spacing.xxl },
   sectionTitle: {
     ...type.label, color: colors.textSecondary,

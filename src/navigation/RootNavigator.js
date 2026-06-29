@@ -41,6 +41,7 @@ import ExerciseDetailScreen from '../screens/ExerciseDetailScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
 import VolumeHeatmapScreen from '../screens/VolumeHeatmapScreen';
 import BodyMetricsScreen from '../screens/BodyMetricsScreen';
+import ProgressPhotosScreen from '../screens/ProgressPhotosScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import SettingsAccountScreen from '../screens/SettingsAccountScreen';
 import SettingsProfileScreen from '../screens/SettingsProfileScreen';
@@ -151,6 +152,7 @@ const GatedWeeklyCheckIn    = withProGuard(WeeklyCheckInScreen, 'Weekly check-in
 const GatedNutritionTargets = withProGuard(NutritionTargetsScreen, 'Nutrition targets');
 const GatedMealNames = withProGuard(MealNamesScreen, 'Meal names');
 const GatedBodyMetrics      = withProGuard(BodyMetricsScreen, 'Body metrics');
+const GatedProgressPhotos   = withProGuard(ProgressPhotosScreen, 'Progress photos');
 const GatedCoachOutput      = withProGuard(CoachOutputScreen, 'Your week');
 const GatedProGoalSetup     = withProGuard(ProGoalSetupScreen, 'Pro goal setup');
 const GatedPlanUpdate       = withProGuard(PlanUpdateScreen, 'Update training');
@@ -361,6 +363,7 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ title: 'Volume Heatmap' }} />
       <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ title: 'Weekly Review' }} />
       <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ title: 'Body Metrics' }} />
+      <Stack.Screen name="ProgressPhotos" component={GatedProgressPhotos} options={{ headerShown: false }} />
       <Stack.Screen name="LiftProgress" component={LiftProgressScreen} options={{ title: 'Lifts' }} />
       <Stack.Screen name="Consistency" component={ConsistencyScreen} options={{ title: 'Consistency' }} />
       <Stack.Screen name="Partner" component={PartnerScreen} options={{ title: 'Training partner' }} />
@@ -401,6 +404,7 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="MealNames" component={GatedMealNames} options={{ title: 'Meal names' }} />
       <Stack.Screen name="NutritionEducation" component={NutritionEducationScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ title: 'Body Metrics' }} />
+      <Stack.Screen name="ProgressPhotos" component={GatedProgressPhotos} options={{ headerShown: false }} />
       <Stack.Screen name="WeeklyCheckIn" component={GatedWeeklyCheckIn} options={{ headerShown: false }} />
       <Stack.Screen name="CoachOutput" component={GatedCoachOutput} options={{ title: 'Precision Coaching™' }} />
       <Stack.Screen name="Methodology" component={MethodologyScreen} options={{ title: 'How Precision Coaching works' }} />
