@@ -152,9 +152,17 @@ export default function BuildWorkoutScreen({ navigation }) {
     setExercises(newItems);
   }
 
-  const filtered = query.trim()
+  // Filtering (not truncation) decides what shows: search the whole library so
+  // no exercise is silently hidden. A render cap stays only as a FlatList perf
+  // guard, and it now applies AFTER the search filter (not before it), with a
+  // visible "refine your search" hint when it bites, so the user is never left
+  // wondering where an exercise went.
+  const PICKER_RENDER_CAP = 80;
+  const matches = query.trim()
     ? allExercises.filter(e => e.name.toLowerCase().includes(query.toLowerCase()))
-    : allExercises.slice(0, 50);
+    : allExercises;
+  const filtered = matches.slice(0, PICKER_RENDER_CAP);
+  const filteredTruncated = matches.length > PICKER_RENDER_CAP;
 
   function formatRest(secs) {
     if (secs < 60) return `${secs}s`;
@@ -395,6 +403,12 @@ export default function BuildWorkoutScreen({ navigation }) {
               </TouchableOpacity>
             )}
             ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: colors.border }} />}
+            ListFooterComponent={filteredTruncated ? (
+              <View style={styles.pickerHint}>
+                <Ionicons name="search-outline" size={16} color={colors.textMuted} />
+                <Text style={styles.pickerHintText}>Showing the first {PICKER_RENDER_CAP}. Refine your search to see more.</Text>
+              </View>
+            ) : null}
           />
         </SafeAreaView>
         </SafeAreaProvider>
@@ -591,6 +605,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxs,
   },
   pickerItemMuscle: { fontSize: fontSize.sm, color: colors.textSecondary },
+  pickerHint: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+  },
+  pickerHintText: { fontSize: fontSize.sm, color: colors.textMuted, flex: 1 },
 
   // Travel mode chip + modal
   travelChip: {

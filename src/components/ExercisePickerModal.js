@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getAllExercises, insertExercise } from '../lib/database';
+import { matchesEquipmentFilter, matchesMuscleFilter } from '../lib/exerciseDisplay';
 import { useToast } from './Toast';
 
 // Shared exercise picker: search the library and, when the exercise you want
@@ -27,6 +28,8 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
   const toast = useToast();
   const buttonLabel = saveLabel || actionLabel || 'Add exercise';
   const [query, setQuery] = useState('');
+  const [muscleFilter, setMuscleFilter] = useState('');
+  const [equipmentFilter, setEquipmentFilter] = useState('');
   const [allExercises, setAll] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
@@ -38,6 +41,8 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
   useEffect(() => {
     if (!visible) return;
     setQuery('');
+    setMuscleFilter('');
+    setEquipmentFilter('');
     setShowCreate(false);
     getAllExercises().then(exs => {
       setAll(exs);
@@ -46,13 +51,13 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
   }, [visible]);
 
   useEffect(() => {
-    if (!query.trim()) {
-      setFiltered(allExercises);
-    } else {
-      const q = query.toLowerCase();
-      setFiltered(allExercises.filter(e => e.name.toLowerCase().includes(q)));
-    }
-  }, [query, allExercises]);
+    const q = query.trim().toLowerCase();
+    setFiltered(allExercises.filter(e =>
+      (!q || e.name.toLowerCase().includes(q)) &&
+      matchesMuscleFilter(e, muscleFilter) &&
+      matchesEquipmentFilter(e, equipmentFilter),
+    ));
+  }, [query, muscleFilter, equipmentFilter, allExercises]);
 
   async function handleCreate() {
     if (!createName.trim()) {
@@ -65,6 +70,11 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
         name: createName.trim(),
         primaryMuscle: createMuscle || null,
         equipment: createEquipment || null,
+        // SFR is left null/unknown, never a guessed midpoint: the swap and plan
+        // engines treat a missing stimulus-to-fatigue ratio as "no data" and
+        // skip the SFR scoring term. A hard-coded value (e.g. 3) would make a
+        // brand-new custom move falsely read as a real, ranked candidate.
+        stimulusToFatigueRatio: null,
         isCustom: 1,
       });
       const all = await getAllExercises();
@@ -186,6 +196,51 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               </TouchableOpacity>
             </View>
 
+            {/* Browse filters: tap a muscle and/or equipment chip to narrow the
+                448-exercise library without typing. Each row is single-select
+                and toggles off on a second tap; the two compose with the search
+                box (see the filter effect above). */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.filterRow}
+            >
+              {PICKER_MUSCLES.map(m => (
+                <TouchableOpacity
+                  key={m}
+                  style={[styles.chip, muscleFilter === m && styles.chipActive]}
+                  onPress={() => setMuscleFilter(prev => (prev === m ? '' : m))}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: muscleFilter === m }}
+                  accessibilityLabel={`Filter by ${MUSCLE_DISPLAY_NAMES[m]}`}
+                >
+                  <Text style={[styles.chipText, muscleFilter === m && styles.chipTextActive]}>
+                    {MUSCLE_DISPLAY_NAMES[m]}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.filterRow}
+            >
+              {PICKER_EQUIPMENT.map(eq => (
+                <TouchableOpacity
+                  key={eq}
+                  style={[styles.chip, equipmentFilter === eq && styles.chipActive]}
+                  onPress={() => setEquipmentFilter(prev => (prev === eq ? '' : eq))}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: equipmentFilter === eq }}
+                  accessibilityLabel={`Filter by ${eq}`}
+                >
+                  <Text style={[styles.chipText, equipmentFilter === eq && styles.chipTextActive]}>{eq}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
             <FlatList
               data={filtered}
               keyExtractor={e => String(e.id)}
@@ -271,6 +326,10 @@ const styles = StyleSheet.create({
   },
   createLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textMuted, letterSpacing: 0.3 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  filterRow: {
+    flexDirection: 'row', gap: spacing.sm, flexGrow: 0,
+    paddingHorizontal: spacing.lg, paddingTop: spacing.md,
+  },
   chip: {
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full,
     backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,

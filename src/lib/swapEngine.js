@@ -73,8 +73,12 @@ function scoreCandidate(original, candidate) {
   }
 
   if (
-    candidate.stimulusToFatigueRatio !== undefined &&
-    original.stimulusToFatigueRatio !== undefined &&
+    // `!= null` (not `!== undefined`) so an unknown SFR — a custom exercise now
+    // stores null rather than a guessed midpoint — genuinely SKIPS this term
+    // instead of coercing null to 0 in the subtraction and mis-ranking as a
+    // very-low-SFR match.
+    candidate.stimulusToFatigueRatio != null &&
+    original.stimulusToFatigueRatio != null &&
     Math.abs(candidate.stimulusToFatigueRatio - original.stimulusToFatigueRatio) <= SIMILAR_WITHIN
   ) {
     score += SCORE_SIMILAR_SFR;
@@ -107,8 +111,8 @@ export function buildSwapReason(original, candidate) {
     original.fatigueCost !== undefined &&
     Math.abs(candidate.fatigueCost - original.fatigueCost) <= SIMILAR_WITHIN;
   const similarSFR =
-    candidate.stimulusToFatigueRatio !== undefined &&
-    original.stimulusToFatigueRatio !== undefined &&
+    candidate.stimulusToFatigueRatio != null &&
+    original.stimulusToFatigueRatio != null &&
     Math.abs(candidate.stimulusToFatigueRatio - original.stimulusToFatigueRatio) <= SIMILAR_WITHIN;
 
   const sameSubregion =

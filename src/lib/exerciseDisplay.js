@@ -72,6 +72,20 @@ export function matchesEquipmentFilter(exercise, filterLabel) {
 }
 
 /**
+ * Does an exercise match a muscle-group filter chip? Matches the exercise's
+ * primary_muscle against a muscle KEY (the vocab used across the engine, e.g.
+ * 'chest', 'front_delts'). Comparison is case-insensitive on the raw key so a
+ * custom exercise that stored a tidied label still matches. Returns true when
+ * no filter is set, mirroring matchesEquipmentFilter so the two compose.
+ */
+export function matchesMuscleFilter(exercise, muscleKey) {
+  if (!muscleKey) return true;
+  const want = String(muscleKey).toLowerCase().trim();
+  const have = String(exercise?.primaryMuscle || '').toLowerCase().trim();
+  return have === want;
+}
+
+/**
  * Friendly equipment label for an exercise, preferring the derived category
  * (so a plate-loaded machine reads as such) and falling back to a tidied
  * version of the raw equipment string. Returns null when nothing is known.

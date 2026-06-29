@@ -227,7 +227,7 @@
               "label": "Weekly consistency",
               "minWidth": "110dp",
               "minHeight": "110dp",
-              "description": "Sessions done this week and your streak.",
+              "description": "Sessions done this week and weeks running.",
               "previewImage": "./assets/notification-icon.png",
               "targetCellWidth": 2,
               "targetCellHeight": 1,

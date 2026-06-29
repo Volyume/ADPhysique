@@ -978,6 +978,56 @@ export default function HomeScreen({ navigation }) {
           </Text>
         )}
 
+        {/* ── Compact top start CTA (above-the-fold) ── */}
+        {/* Promotes the primary start-action to the very top so a returning
+            user starts without scrolling (Hevy pattern). Pure ordering/layout:
+            it reuses the existing handlers and derived booleans — resume the
+            live session, else start the next planned session — and always
+            offers a first-class "Start empty workout" via startBlankSession.
+            The full hero (with its coach brief, meso chip, change/view actions)
+            stays below unchanged. Hidden during cold-load so it never
+            duplicates the skeleton. */}
+        {!initialLoading && (
+          <View style={styles.topStartRow}>
+            {hasActiveWorkout ? (
+              <TouchableOpacity
+                style={[styles.primaryBtn, styles.startBtnSplit]}
+                onPress={() => navigation.navigate('ActiveWorkout')}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Resume session in progress"
+              >
+                <Ionicons name="play" size={16} color={colors.onPrimary} />
+                <Text style={styles.primaryBtnText}>Resume session</Text>
+              </TouchableOpacity>
+            ) : (activePlan && nextWorkout) ? (
+              <TouchableOpacity
+                style={[styles.primaryBtn, styles.startBtnSplit, isStartingWorkout && { opacity: 0.6 }]}
+                onPress={() => handleStartNextWorkout(false)}
+                disabled={isStartingWorkout}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel={isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`}
+              >
+                <Ionicons name="play" size={16} color={colors.onPrimary} />
+                <Text style={styles.primaryBtnText}>
+                  {isStartingWorkout ? 'Starting…' : 'Start workout'}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity
+              style={styles.topEmptyBtn}
+              onPress={() => startBlankSession()}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Start empty workout"
+            >
+              <Ionicons name="add-circle-outline" size={15} color={colors.textSecondary} />
+              <Text style={styles.topEmptyBtnText}>Start empty workout</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Cloud restore banner removed, the typical pull completes
             in under a second on a healthy connection so the banner
             flashed and vanished. Pull-to-refresh on Home still shows
@@ -2019,6 +2069,32 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   heroSecondaryBtnText: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.semibold,
+  },
+
+  // Compact above-the-fold start row: primary start/resume + an always-on
+  // "Start empty workout" secondary, mirroring the startWorkoutRow split and
+  // the surface2 pill style used for the hero's secondary affordances.
+  topStartRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'stretch',
+  },
+  topEmptyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  topEmptyBtnText: {
     fontSize: fontSize.xs,
     color: colors.textSecondary,
     fontWeight: fontWeight.semibold,

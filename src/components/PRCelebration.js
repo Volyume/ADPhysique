@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+import useAppStore from '../store/useAppStore';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -31,12 +32,18 @@ function createParticle(index) {
 }
 
 export default function PRCelebration({ pr, onDismiss, subdued = false }) {
+  // Honour reduce-motion: a user who asked for calmer motion gets the subdued
+  // toast (no confetti burst, no heavy haptic ladder) even when the parent
+  // didn't pass subdued. This keeps the app's reduce-motion discipline intact
+  // at a flagship moment rather than breaking it here.
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  const subduedMode = subdued || !!reduceMotion;
   // Allocate particles only when we'll render them, subdued mode skips
   // particles entirely. Each particle's pre-translated offsets are baked
   // into translate constants instead of allocating new Animated.Values
   // every render (was a slow memory leak on long PR streaks).
   const particles = useRef(
-    subdued ? [] : Array.from({ length: NUM_PARTICLES }, (_, i) => createParticle(i)),
+    subduedMode ? [] : Array.from({ length: NUM_PARTICLES }, (_, i) => createParticle(i)),
   ).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const cardScale = useRef(new Animated.Value(0.5)).current;
@@ -44,7 +51,7 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
 
   useEffect(() => {
     const timers = [];
-    if (subdued) {
+    if (subduedMode) {
       Haptics.selectionAsync().catch(() => {});
       Animated.timing(cardOpacity, { toValue: 1, duration: 220, useNativeDriver: true }).start();
       timers.push(setTimeout(onDismiss, 2200));
@@ -103,7 +110,7 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
   const prLabel = pr.type === '1rm_estimate' ? 'New estimated max lift' :
     pr.type === 'heaviest_weight' ? 'New heaviest weight' : 'Most reps at weight';
 
-  if (subdued) {
+  if (subduedMode) {
     return (
       <TouchableOpacity
         style={styles.toastWrap}

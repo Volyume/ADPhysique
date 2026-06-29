@@ -23,6 +23,7 @@ import {
   getExerciseGoal, saveExerciseGoal, markGoalAchieved, deleteExerciseGoal,
 } from '../lib/database';
 import { calculate1RM, MUSCLE_DISPLAY_NAMES, detectPlateau } from '../lib/algorithms';
+import { buildExerciseMetricSeries } from '../lib/liftProgress';
 import { equipmentDisplayLabel, difficultyDisplayLabel, subregionDisplayLabel } from '../lib/exerciseDisplay';
 import { rankSwaps } from '../lib/swapEngine';
 import useAppStore from '../store/useAppStore';
@@ -63,6 +64,94 @@ function parseLooseDate(str) {
 
 const SCREEN_W = Dimensions.get('window').width;
 
+// The five lenses the detail chart can draw. Mirrors LiftProgressScreen's
+// metric switcher (best set / heaviest / total reps / volume) and adds best-set
+// volume — the heaviest single working set's load × its reps that session, a
+// cheap derive from the already-grouped sets. 'heaviest' is the historic
+// default ("Max weight"); 'e1rm' is the estimated max. Values come from
+// buildExerciseMetricSeries so distance/duration exercises (which reuse the
+// weight column) plot nothing rather than nonsense.
+const CHART_METRICS = [
+  { key: 'e1rm', label: 'Est. max' },
+  { key: 'heaviest', label: 'Max weight' },
+  { key: 'reps', label: 'Total reps' },
+  { key: 'volume', label: 'Volume' },
+  { key: 'bestSetVolume', label: 'Best-set vol' },
+];
+
+// Whether a metric's values are a weight in the display unit (so the tooltip
+// and takeaway append kg/lbs) or a bare count (reps) / derived load.
+const WEIGHT_METRICS = new Set(['e1rm', 'heaviest']);
+
+// Build one dated chart point per session for every lens, oldest -> newest,
+// reusing buildExerciseMetricSeries for the e1rm/heaviest/reps/volume arrays so
+// distance/duration exercises are skipped exactly as the list sparkline skips
+// them. Pure and exported for unit testing. allSessions is the screen's
+// per-workout set groups (each an array of sets). bestSetVolume is computed
+// here from the same working-set grouping (heaviest working set's load × reps).
+export function buildDetailMetricPoints(allSessions, exerciseId, exerciseTypeById) {
+  const flatSets = (allSessions || []).flat();
+  const series = buildExerciseMetricSeries(flatSets, exerciseTypeById)?.get(exerciseId);
+  if (!series) return [];
+
+  // Session dates + best-set volume, grouped with the SAME rules
+  // buildExerciseMetricSeries uses (non-warmup working sets), so the arrays
+  // line up by index with the series it returns.
+  const bySession = new Map();
+  for (const s of flatSets) {
+    if (!s) continue;
+    if ((s.setType ?? s.set_type) === 'warmup') continue;
+    const exId = s.exerciseId ?? s.exercise_id;
+    if (exId !== exerciseId) continue;
+    const weight = Number(s.weight) || 0;
+    const reps = Number(s.actualReps ?? s.actual_reps) || 0;
+    if (weight <= 0 || reps <= 0) continue;
+    const at = Number(s.createdAt ?? s.created_at) || 0;
+    const sessionId = s.workoutId ?? s.workout_id ?? `t:${at}`;
+    if (!bySession.has(sessionId)) bySession.set(sessionId, { at: 0, topWeight: 0, topReps: 0 });
+    const sess = bySession.get(sessionId);
+    sess.at = Math.max(sess.at, at);
+    if (weight > sess.topWeight) { sess.topWeight = weight; sess.topReps = reps; }
+  }
+  const ordered = [...bySession.values()].sort((a, b) => a.at - b.at);
+
+  return ordered.map((sess, i) => ({
+    date: sess.at,
+    e1rm: series.e1rm[i] ?? 0,
+    heaviest: series.heaviest[i] ?? 0,
+    reps: series.reps[i] ?? 0,
+    volume: series.volume[i] ?? 0,
+    bestSetVolume: Math.round(sess.topWeight * sess.topReps),
+  }));
+}
+
+// Split form-tip / notes prose into ordered steps for numbered rendering.
+// FORM_TIPS entries are 3–4 instruction sentences; rendering them as numbered
+// steps (Hevy-style) reads as a how-to rather than a wall of text. Pure and
+// exported for testing. Splits on explicit newlines first; otherwise on
+// sentence boundaries (". " before a capital / digit), which leaves decimal
+// ranges (written with en-dashes, e.g. "30–45°", "2–10") untouched. Returns
+// the trimmed steps; a caller showing fewer than 2 should fall back to the
+// paragraph, since one "step" is just the original text.
+export function splitInstructionSteps(text) {
+  if (!text || typeof text !== 'string') return [];
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+
+  // Explicit line breaks win — already author-segmented.
+  const lines = trimmed.split(/\r?\n+/).map(l => l.trim()).filter(Boolean);
+  if (lines.length > 1) return lines;
+
+  // Otherwise split into sentences. Keep the terminating punctuation; only
+  // break when the next sentence starts with a capital letter or digit, so an
+  // abbreviation mid-sentence does not split a step.
+  const sentences = trimmed
+    .split(/(?<=[.!?])\s+(?=[A-Z0-9])/)
+    .map(s => s.trim())
+    .filter(Boolean);
+  return sentences;
+}
+
 export default function ExerciseDetailScreen({ navigation, route }) {
   const { exerciseId } = route.params || {};
   const { user, units } = useAppStore();
@@ -76,7 +165,10 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   const [prs, setPRs] = useState([]);
   const [substitutes, setSubstitutes] = useState([]);
   const [plateau, setPlateau] = useState(null);
-  const [chartMode, setChartMode] = useState('weight'); // 'weight' | 'e1rm'
+  // Detail-chart lens. Defaults to 'heaviest' to preserve the historic "Max
+  // weight" default; persisted so the choice survives a reopen (mirrors how the
+  // window key is persisted). The other lenses recompute from the same sets.
+  const [chartMetric, setChartMetric] = useState('heaviest');
 
   // Goal state
   const [goal, setGoal] = useState(null);
@@ -106,6 +198,18 @@ export default function ExerciseDetailScreen({ navigation, route }) {
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allSessions.length]);
+
+  // Restore the persisted chart lens, if any (mirrors the window-key restore).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const v = await AsyncStorage.getItem('@volyume_chart_metric_detail');
+        if (!cancelled && v && CHART_METRICS.some(m => m.key === v)) setChartMetric(v);
+      } catch (_) {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   async function loadData() {
     try {
@@ -269,24 +373,20 @@ export default function ExerciseDetailScreen({ navigation, route }) {
 
   // COMP-019: one chart point per session, oldest → newest, each carrying its
   // session date so the window chips slice by date (not by count). Built from
-  // ALL sessions; the window controls what's shown.
-  const allChartPoints = allSessions
-    .map((sessionSets) => {
-      const workingSets = sessionSets.filter(s => (s.weight || 0) > 0 && (s.actualReps || 0) > 0);
-      const topSet = workingSets.reduce((best, s) => (!best || (s.weight || 0) > (best.weight || 0)) ? s : best, null);
-      const maxWeight = topSet ? (topSet.weight || 0) : 0;
-      const e1rmVal = topSet ? calculate1RM(topSet.weight || 0, topSet.actualReps || 0) : 0;
-      return { date: sessionSets[0]?.createdAt ?? 0, weight: maxWeight, est1rm: e1rmVal };
-    })
-    .filter(p => p.weight > 0)
-    .sort((a, b) => a.date - b.date);
+  // ALL sessions; the window controls what's shown. Each point now carries
+  // every lens (e1rm / heaviest / total reps / volume / best-set volume) so the
+  // metric switcher redraws without reloading. Built via the shared
+  // buildExerciseMetricSeries, so a distance/duration exercise yields no points.
+  const exerciseTypeById = new Map([[exerciseId, exercise.exerciseType ?? 'weight_reps']]);
+  const allChartPoints = buildDetailMetricPoints(allSessions, exerciseId, exerciseTypeById);
 
   const e1rmDateOf = (p) => p.date;
   const chartWin = windowByKey(TREND_WINDOWS, chartWindowKey) ?? windowByKey(TREND_WINDOWS, DEFAULT_WINDOW_KEY);
   const windowedPoints = filterByWindow(allChartPoints, e1rmDateOf, chartWin.days);
   const chartCoversAll = windowedPoints.length === allChartPoints.length;
-  const activeYKey = chartMode === 'e1rm' ? 'est1rm' : 'weight';
-  const chartTakeaway = windowedPoints.length >= 2
+  const activeYKey = chartMetric;
+  const activeMetricIsWeight = WEIGHT_METRICS.has(chartMetric);
+  const chartTakeaway = (windowedPoints.length >= 2 && activeMetricIsWeight)
     ? e1rmTakeaway({
         windowKey: chartWindowKey, coversAll: chartCoversAll, points: windowedPoints,
         dateOf: e1rmDateOf, values: windowedPoints.map(p => p[activeYKey]), unit: units,
@@ -297,6 +397,12 @@ export default function ExerciseDetailScreen({ navigation, route }) {
     setChartWindowKey(key);
     AsyncStorage.setItem('@volyume_chart_window_e1rm', key).catch(() => {});
     try { track(user?.id, 'chart_window_changed', { chart_id: 'e1rm', window: key })?.catch?.(() => {}); } catch (_) {}
+  }
+
+  function selectChartMetric(key) {
+    setChartMetric(key);
+    AsyncStorage.setItem('@volyume_chart_metric_detail', key).catch(() => {});
+    try { track(user?.id, 'chart_metric_changed', { chart_id: 'exercise_detail', metric: key })?.catch?.(() => {}); } catch (_) {}
   }
 
   return (
@@ -333,13 +439,16 @@ export default function ExerciseDetailScreen({ navigation, route }) {
 
           {secondaryMuscles.length > 0 && (
             <View style={styles.secMuscles}>
-              <Text style={styles.secMuscleLabel}>Also works: </Text>
-              <Text style={styles.secMuscleText}>
-                {secondaryMuscles.map(m => {
-                  const key = m.muscle || m;
-                  return MUSCLE_DISPLAY_NAMES[key] || key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
-                }).join(', ')}
-              </Text>
+              <Text style={styles.secMuscleLabel}>Also works</Text>
+              {secondaryMuscles.map((m, i) => {
+                const key = m.muscle || m;
+                const label = MUSCLE_DISPLAY_NAMES[key] || key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+                return (
+                  <View key={i} style={[styles.tag, styles.tagSecondary]}>
+                    <Text style={[styles.tagText, styles.tagTextSecondary]}>{label}</Text>
+                  </View>
+                );
+              })}
             </View>
           )}
 
@@ -501,28 +610,20 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               accessibilityPrefix="strength trend window" />
             {!!chartTakeaway && <Text style={styles.chartTakeaway}>{chartTakeaway}</Text>}
             <View style={styles.chartToggle}>
-              <TouchableOpacity
-                style={[styles.chartToggleBtn, chartMode === 'weight' && styles.chartToggleBtnActive]}
-                onPress={() => setChartMode('weight')}
-                accessibilityRole="button"
-                accessibilityLabel="Max weight"
-                accessibilityState={{ selected: chartMode === 'weight' }}
-              >
-                <Text style={[styles.chartToggleBtnText, chartMode === 'weight' && styles.chartToggleBtnTextActive]}>
-                  Max weight
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.chartToggleBtn, chartMode === 'e1rm' && styles.chartToggleBtnActive]}
-                onPress={() => setChartMode('e1rm')}
-                accessibilityRole="button"
-                accessibilityLabel="Est. max"
-                accessibilityState={{ selected: chartMode === 'e1rm' }}
-              >
-                <Text style={[styles.chartToggleBtnText, chartMode === 'e1rm' && styles.chartToggleBtnTextActive]}>
-                  Est. max
-                </Text>
-              </TouchableOpacity>
+              {CHART_METRICS.map(m => (
+                <TouchableOpacity
+                  key={m.key}
+                  style={[styles.chartToggleBtn, chartMetric === m.key && styles.chartToggleBtnActive]}
+                  onPress={() => selectChartMetric(m.key)}
+                  accessibilityRole="button"
+                  accessibilityLabel={m.label}
+                  accessibilityState={{ selected: chartMetric === m.key }}
+                >
+                  <Text style={[styles.chartToggleBtnText, chartMetric === m.key && styles.chartToggleBtnTextActive]}>
+                    {m.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
             {windowedPoints.length >= 2 ? (
               <View style={styles.chartContainer}>
@@ -537,12 +638,14 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                   areaBottomColor={colors.chartFill}
                   curved
                   interactive
-                  accessibilityLabel={chartMode === 'e1rm' ? 'Estimated max trend chart' : 'Max weight trend chart'}
+                  accessibilityLabel={`${CHART_METRICS.find(m => m.key === chartMetric)?.label ?? 'Strength'} trend chart`}
                   formatTooltip={(i) => {
                     const p = windowedPoints[i];
                     if (!p) return null;
                     return {
-                      title: `${Math.round(p[activeYKey])} ${units}`,
+                      title: activeMetricIsWeight
+                        ? `${Math.round(p[activeYKey])} ${units}`
+                        : `${Math.round(p[activeYKey])}`,
                       sub: p.date ? format(new Date(p.date), 'MMM d') : '',
                     };
                   }}
@@ -551,7 +654,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             ) : (
               <Text style={styles.chartEmptyHint}>Not enough data in this window yet.</Text>
             )}
-            {chartMode === 'e1rm' && (
+            {chartMetric === 'e1rm' && (
               <Text style={styles.e1rmNote}>
                 Estimated from top set using the Epley formula. Best for rep ranges 2–10.
               </Text>
@@ -669,14 +772,29 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           </View>
         )}
 
-        {(formTip || exercise.notes) && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>How to do it</Text>
-            <View style={styles.notesCard}>
-              <Text style={styles.notesText}>{formTip ?? exercise.notes}</Text>
+        {(formTip || exercise.notes) && (() => {
+          const instructionText = formTip ?? exercise.notes;
+          const steps = splitInstructionSteps(instructionText);
+          return (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>How to do it</Text>
+              <View style={styles.notesCard}>
+                {steps.length >= 2 ? (
+                  steps.map((step, i) => (
+                    <View key={i} style={[styles.stepRow, i > 0 && styles.stepRowSpaced]}>
+                      <View style={styles.stepNumber}>
+                        <Text style={styles.stepNumberText}>{i + 1}</Text>
+                      </View>
+                      <Text style={styles.stepText}>{step}</Text>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.notesText}>{instructionText}</Text>
+                )}
+              </View>
             </View>
-          </View>
-        )}
+          );
+        })()}
       </ScrollView>
 
       {/* Goal-setting bottom sheet */}
@@ -769,9 +887,8 @@ const styles = StyleSheet.create({
   tagText: { ...type.label, color: colors.primary },
   tagSecondary: { backgroundColor: colors.surface2 },
   tagTextSecondary: { color: colors.textSecondary },
-  secMuscles: { flexDirection: 'row', alignItems: 'center' },
+  secMuscles: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs },
   secMuscleLabel: { ...type.label, color: colors.textMuted },
-  secMuscleText: { fontSize: fontSize.sm, color: colors.textSecondary },
   est1RM: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -802,7 +919,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     letterSpacing: 0.5,
   },
-  chartToggle: { flexDirection: 'row', gap: spacing.xs, alignSelf: 'flex-start' },
+  chartToggle: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, alignSelf: 'flex-start' },
   chartToggleBtn: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
@@ -949,6 +1066,19 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   notesText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  stepRowSpaced: { marginTop: spacing.md },
+  stepNumber: {
+    width: 22,
+    height: 22,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  stepNumberText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.primary },
+  stepText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
   cueCard: {
     flexDirection: 'row',
     alignItems: 'center',

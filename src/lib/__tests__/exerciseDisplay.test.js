@@ -1,5 +1,6 @@
 import {
   matchesEquipmentFilter,
+  matchesMuscleFilter,
   equipmentDisplayLabel,
   difficultyDisplayLabel,
   subregionDisplayLabel,
@@ -56,6 +57,58 @@ describe('matchesEquipmentFilter', () => {
   test('falls back to the raw string when no category is present', () => {
     expect(matchesEquipmentFilter({ equipment: 'Dumbbell' }, 'Dumbbell')).toBe(true);
     expect(matchesEquipmentFilter({ equipment: 'Cable' }, 'Barbell')).toBe(false);
+  });
+});
+
+describe('matchesMuscleFilter', () => {
+  test('no filter matches everything', () => {
+    expect(matchesMuscleFilter({ primaryMuscle: 'chest' }, null)).toBe(true);
+    expect(matchesMuscleFilter({ primaryMuscle: 'chest' }, '')).toBe(true);
+  });
+
+  test('matches the primary muscle key exactly', () => {
+    expect(matchesMuscleFilter({ primaryMuscle: 'chest' }, 'chest')).toBe(true);
+    expect(matchesMuscleFilter({ primaryMuscle: 'front_delts' }, 'front_delts')).toBe(true);
+    expect(matchesMuscleFilter({ primaryMuscle: 'chest' }, 'back')).toBe(false);
+  });
+
+  test('is case-insensitive on the raw key', () => {
+    expect(matchesMuscleFilter({ primaryMuscle: 'Chest' }, 'chest')).toBe(true);
+    expect(matchesMuscleFilter({ primaryMuscle: 'chest' }, 'CHEST')).toBe(true);
+  });
+
+  test('a missing primary muscle never matches a set filter', () => {
+    expect(matchesMuscleFilter({}, 'chest')).toBe(false);
+    expect(matchesMuscleFilter({ primaryMuscle: null }, 'chest')).toBe(false);
+  });
+});
+
+// The picker composes both filters with AND, so verify they intersect the way
+// the modal's filter effect relies on (search + muscle + equipment all true).
+describe('muscle + equipment filters compose', () => {
+  const library = [
+    { name: 'Barbell Bench Press', primaryMuscle: 'chest', equipment: 'barbell', equipmentCategory: 'barbell' },
+    { name: 'Dumbbell Bench Press', primaryMuscle: 'chest', equipment: 'dumbbell', equipmentCategory: 'dumbbell' },
+    { name: 'Barbell Row', primaryMuscle: 'back', equipment: 'barbell', equipmentCategory: 'barbell' },
+  ];
+
+  const apply = (muscle, equipment) =>
+    library.filter(e => matchesMuscleFilter(e, muscle) && matchesEquipmentFilter(e, equipment));
+
+  test('muscle filter alone narrows to that muscle', () => {
+    expect(apply('chest', '').map(e => e.name)).toEqual(['Barbell Bench Press', 'Dumbbell Bench Press']);
+  });
+
+  test('equipment filter alone narrows to that equipment', () => {
+    expect(apply('', 'Barbell').map(e => e.name)).toEqual(['Barbell Bench Press', 'Barbell Row']);
+  });
+
+  test('both filters intersect (chest AND barbell)', () => {
+    expect(apply('chest', 'Barbell').map(e => e.name)).toEqual(['Barbell Bench Press']);
+  });
+
+  test('no filters returns the whole library', () => {
+    expect(apply('', '')).toHaveLength(3);
   });
 });
 
