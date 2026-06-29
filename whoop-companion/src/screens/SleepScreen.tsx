@@ -26,6 +26,7 @@ const HEALTHY_MIN = 480; // 8h baseline ("Healthy Minimum")
 export function SleepScreen({ nav }: { nav: Nav }) {
   const sleep = useStoreSelector(appStore, (s) => s.lastSleep);
   const sleepScore = useStoreSelector(appStore, (s) => s.sleepScore);
+  const sleepReg = useStoreSelector(appStore, (s) => s.sleepReg);
   const [nightHr, setNightHr] = useState<number[]>([]);
 
   useEffect(() => {
@@ -73,7 +74,12 @@ export function SleepScreen({ nav }: { nav: Nav }) {
       <Card>
         <ContributorRow label="Hours vs. needed" percent={hoursNeededPct} onPress={() => nav.navigate({ name: 'sleepCoach' })} />
         <ContributorRow label="Sleep efficiency" percent={effPct} />
-        <ContributorRow label="Sleep consistency" percent={null} value="needs nights" />
+        <ContributorRow
+          label="Sleep regularity"
+          percent={sleepReg?.score ?? null}
+          value={sleepReg ? `${fourTier(sleepReg.score).label} · ±${sleepReg.bedSdMin}m bed` : 'needs ~5 nights'}
+          color={sleepReg ? fourTier(sleepReg.score).color : undefined}
+        />
         <BandLegend />
       </Card>
 

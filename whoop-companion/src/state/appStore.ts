@@ -45,6 +45,7 @@ import { emaBaseline, stdev } from '../metrics/ema';
 import { computeRecovery } from '../metrics/recovery';
 import { computeSleep, computeSleepNeed, SleepMinute, SleepNeed, SleepResult } from '../metrics/sleep';
 import { computeSleepScore, SleepScore } from '../metrics/sleepScore';
+import { sleepRegularity, SleepRegularity } from '../metrics/sleepRegularity';
 import { edwardsTrimp, hrZones, strainFromLoad, totalTrimp, UserProfile } from '../metrics/strain';
 import { respiratoryRate } from '../metrics/respiratory';
 import { computeStress } from '../metrics/stress';
@@ -73,6 +74,7 @@ export type AppState = {
   lastSleep: SleepResult | null;
   sleepNeed: SleepNeed | null;
   sleepScore: SleepScore | null;
+  sleepReg: SleepRegularity | null;
   sleepGoal: number; // target fraction of sleep need: 0.7 / 0.85 / 1.0
   // Oura-style derived insights (all HR/R-R only):
   recoveryParts: { hrvSub: number; rhrSub: number; sleepSub: number } | null;
@@ -103,6 +105,7 @@ const initialState: AppState = {
   lastSleep: null,
   sleepNeed: null,
   sleepScore: null,
+  sleepReg: null,
   sleepGoal: 0.85,
   recoveryParts: null,
   hrvBal: null,
@@ -344,6 +347,13 @@ class AppStore extends Store<AppState> {
       sleep.performance = Math.min(1, sleep.asleepMin / need.neededMin);
     }
     const sleepScoreResult = sleep ? computeSleepScore(sleep) : null;
+
+    // Sleep regularity over stored windows (prior nights + tonight).
+    const priorWindows = recent
+      .filter((d) => d.sleepStart != null && d.sleepEnd != null)
+      .map((d) => ({ startTs: d.sleepStart as number, endTs: d.sleepEnd as number }));
+    if (sleep) priorWindows.push({ startTs: sleep.startTs, endTs: sleep.endTs });
+    const sleepReg = sleepRegularity(priorWindows);
     const toDayValues = (pick: (d: DailyMetricRow) => number | null) =>
       recent
         .filter((d) => pick(d) != null)
@@ -398,6 +408,12 @@ class AppStore extends Store<AppState> {
       sleepPerf: sleep?.performance ?? null,
       strain,
       steps: null, // from band IMU — pending history decode (see historicalParse.ts)
+      sleepStart: sleep?.startTs ?? null,
+      sleepEnd: sleep?.endTs ?? null,
+      deepMin: sleep?.stages.deep ?? null,
+      remMin: sleep?.stages.rem ?? null,
+      lightMin: sleep?.stages.light ?? null,
+      awakeMin: sleep?.stages.awake ?? null,
       updatedAt: now,
     };
     await upsertDailyMetric(row);
@@ -406,6 +422,7 @@ class AppStore extends Store<AppState> {
       lastSleep: sleep,
       sleepNeed: need,
       sleepScore: sleepScoreResult,
+      sleepReg,
       recoveryParts,
       hrvBal,
       illness,

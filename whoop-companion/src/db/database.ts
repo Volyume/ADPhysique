@@ -25,6 +25,13 @@ export type DailyMetricRow = {
   sleepPerf: number | null;
   strain: number | null;
   steps: number | null;
+  // Per-night sleep window + stage minutes (for regularity / timing trends).
+  sleepStart: number | null;
+  sleepEnd: number | null;
+  deepMin: number | null;
+  remMin: number | null;
+  lightMin: number | null;
+  awakeMin: number | null;
   updatedAt: number;
 };
 export type CardioRow = {
@@ -64,6 +71,8 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
           day TEXT PRIMARY KEY,
           recovery INTEGER, rmssd REAL, rhr INTEGER, resp REAL,
           sleep_min INTEGER, sleep_perf REAL, strain REAL, steps INTEGER,
+          sleep_start INTEGER, sleep_end INTEGER,
+          deep_min INTEGER, rem_min INTEGER, light_min INTEGER, awake_min INTEGER,
           updated_at INTEGER NOT NULL
         );
         CREATE TABLE IF NOT EXISTS cardio (
@@ -83,11 +92,22 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
         CREATE INDEX IF NOT EXISTS idx_cardio_start ON cardio(start_ts);
         CREATE INDEX IF NOT EXISTS idx_journal_day ON journal(day);
       `);
-      // Migration: add resp column for DBs created before respiratory tracking.
-      try {
-        await db.execAsync('ALTER TABLE daily_metrics ADD COLUMN resp REAL');
-      } catch {
-        // Column already exists — nothing to do.
+      // Migrations: add columns for DBs created before these features. Each
+      // ALTER is independent so a partial upgrade still completes.
+      for (const col of [
+        'resp REAL',
+        'sleep_start INTEGER',
+        'sleep_end INTEGER',
+        'deep_min INTEGER',
+        'rem_min INTEGER',
+        'light_min INTEGER',
+        'awake_min INTEGER',
+      ]) {
+        try {
+          await db.execAsync(`ALTER TABLE daily_metrics ADD COLUMN ${col}`);
+        } catch {
+          // Column already exists — nothing to do.
+        }
       }
       return db;
     })();
@@ -126,12 +146,17 @@ export async function pruneHrSamples(olderThanTs: number): Promise<void> {
 export async function upsertDailyMetric(m: DailyMetricRow): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    `INSERT INTO daily_metrics (day, recovery, rmssd, rhr, resp, sleep_min, sleep_perf, strain, steps, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO daily_metrics (day, recovery, rmssd, rhr, resp, sleep_min, sleep_perf, strain, steps,
+       sleep_start, sleep_end, deep_min, rem_min, light_min, awake_min, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(day) DO UPDATE SET
        recovery=excluded.recovery, rmssd=excluded.rmssd, rhr=excluded.rhr, resp=excluded.resp,
        sleep_min=excluded.sleep_min, sleep_perf=excluded.sleep_perf,
-       strain=excluded.strain, steps=excluded.steps, updated_at=excluded.updated_at`,
+       strain=excluded.strain, steps=excluded.steps,
+       sleep_start=excluded.sleep_start, sleep_end=excluded.sleep_end,
+       deep_min=excluded.deep_min, rem_min=excluded.rem_min,
+       light_min=excluded.light_min, awake_min=excluded.awake_min,
+       updated_at=excluded.updated_at`,
     m.day,
     m.recovery,
     m.rmssd,
@@ -141,6 +166,12 @@ export async function upsertDailyMetric(m: DailyMetricRow): Promise<void> {
     m.sleepPerf,
     m.strain,
     m.steps,
+    m.sleepStart,
+    m.sleepEnd,
+    m.deepMin,
+    m.remMin,
+    m.lightMin,
+    m.awakeMin,
     m.updatedAt,
   );
 }
@@ -155,6 +186,12 @@ function mapDaily(r: {
   sleep_perf: number | null;
   strain: number | null;
   steps: number | null;
+  sleep_start: number | null;
+  sleep_end: number | null;
+  deep_min: number | null;
+  rem_min: number | null;
+  light_min: number | null;
+  awake_min: number | null;
   updated_at: number;
 }): DailyMetricRow {
   return {
@@ -167,6 +204,12 @@ function mapDaily(r: {
     sleepPerf: r.sleep_perf,
     strain: r.strain,
     steps: r.steps,
+    sleepStart: r.sleep_start ?? null,
+    sleepEnd: r.sleep_end ?? null,
+    deepMin: r.deep_min ?? null,
+    remMin: r.rem_min ?? null,
+    lightMin: r.light_min ?? null,
+    awakeMin: r.awake_min ?? null,
     updatedAt: r.updated_at,
   };
 }
