@@ -7,10 +7,13 @@
  * three cells. It keeps a working one-tap weigh-in in the strip so the collapse
  * costs zero function (the morning ritual the coach depends on).
  *
- * Cells (degradation ladder 3 → 2 → 1): WEIGHT (load-bearing, keeps logging),
+ * Cells (degradation ladder 4 → 3 → 2 → 1): WEIGHT (load-bearing, keeps
+ * logging), FOOD (today's remaining energy + a diary entry point, GAP #1),
  * STEPS (glance-only, self-hides without data), CARDIO ("+ Log" entry point,
  * hidden when cardio is off). Free tier renders no strip at all (the parent
- * only mounts this for Pro) — gating unchanged, no Pro exposure to free.
+ * only mounts this for Pro) — gating unchanged, no Pro exposure to free. The row
+ * stacks to one-cell-per-line sooner now four cells can co-occur, so nothing
+ * crowds at normal text sizes.
  *
  * Weight data + persistence stay owned by HomeScreen (it reloads on focus and
  * feeds the coach); this component owns only the draft input, parsing, and the
@@ -45,9 +48,13 @@ import {
 // notification ritual (scheduler NOTIF_ID_MORNING).
 const MORNING_WINDOW_END_HOUR = 11;
 
-// Larger-text mode: stack the cells (weight full-width, steps+cardio below)
-// rather than truncate three cells into a narrow row.
-const STACK_FONT_SCALE = 1.3;
+// Larger-text mode: stack the cells (weight full-width, the rest below) rather
+// than truncate a narrow row. Lowered from 1.3 once a fourth (FOOD) cell could
+// co-occur, so the row stacks before four cells start to crowd/wrap.
+const STACK_FONT_SCALE = 1.15;
+// Above this many cells, stack regardless of font scale: four data cells in one
+// 360dp row leaves too little width for a five-digit value without wrapping.
+const STACK_CELL_COUNT = 4;
 
 export default function TodayStrip({
   userId,
@@ -180,7 +187,12 @@ export default function TodayStrip({
   const showSteps = stepsEnabled && steps != null;
   const showCardio = !!cardioEnabled;
   const showFood = typeof onFoodPress === 'function';
-  const stacked = PixelRatio.getFontScale() >= STACK_FONT_SCALE;
+  // Weight is always present; the other three are conditional.
+  const cellCount = 1 + (showSteps ? 1 : 0) + (showCardio ? 1 : 0) + (showFood ? 1 : 0);
+  // Large text → one cell per line (nothing truncates). At normal text, four
+  // cells go to a 2×2 grid instead of a cramped four-across row.
+  const stackedByFont = PixelRatio.getFontScale() >= STACK_FONT_SCALE;
+  const gridLayout = !stackedByFont && cellCount >= STACK_CELL_COUNT;
 
   const didCardio = cardio && cardio.sessions > 0;
 
@@ -378,11 +390,28 @@ export default function TodayStrip({
   if (showCardio) compactCells.push(<CardioCell key="c" />);
   if (showFood) compactCells.push(<FoodCell key="f" />);
 
-  if (stacked) {
+  if (stackedByFont) {
     return (
       <View style={styles.card}>
         {compactCells.map((c, i) => (
           <View key={i} style={[i > 0 && styles.stackDivider]}>{c}</View>
+        ))}
+      </View>
+    );
+  }
+
+  // Four cells: a 2×2 grid (weight + steps over cardio + food) reads cleaner than
+  // a cramped four-across row at normal text sizes.
+  if (gridLayout) {
+    const gridRows = [compactCells.slice(0, 2), compactCells.slice(2)];
+    return (
+      <View style={styles.card}>
+        {gridRows.map((rowCells, ri) => (
+          <View key={ri} style={[styles.row, ri > 0 && styles.stackDivider]}>
+            {rowCells.map((c, i) => (
+              <View key={i} style={[styles.cell, i > 0 && styles.cellDivider]}>{c}</View>
+            ))}
+          </View>
         ))}
       </View>
     );
