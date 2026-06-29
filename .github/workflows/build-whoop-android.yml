@@ -52,6 +52,24 @@ jobs:
       - name: Expo prebuild (generate android/)
         run: npx expo prebuild --platform android --no-install
 
+      # Independence guard: the generated app MUST be VOLYUME Pulse, never the
+      # VOLYUME app. If autolinking/config ever cross-links the parent project,
+      # the applicationId would be app.volyume and the APK would clash with the
+      # VOLYUME already on the phone (signature mismatch -> install fails). Fail
+      # the build here instead of shipping a broken APK.
+      - name: Confirm app identity
+        working-directory: whoop-companion/android
+        run: |
+          APPID=$(grep -m1 'applicationId' app/build.gradle | sed -E "s/.*['\"]([^'\"]+)['\"].*/\1/")
+          NAME=$(grep -m1 'app_name' app/src/main/res/values/strings.xml | sed -E 's/.*>([^<]*)<.*/\1/')
+          echo "applicationId: $APPID"
+          echo "app_name:      $NAME"
+          if [ "$APPID" != "app.volyume.pulse" ]; then
+            echo "::error::Built applicationId is '$APPID', expected 'app.volyume.pulse'. Refusing to build the wrong app (would clash with VOLYUME)."
+            exit 1
+          fi
+          echo "✓ Independent build confirmed: VOLYUME Pulse (app.volyume.pulse)"
+
       - name: Gradle assembleRelease
         working-directory: whoop-companion/android
         run: |
