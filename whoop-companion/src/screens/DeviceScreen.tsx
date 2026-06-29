@@ -33,8 +33,13 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const draining = useStoreSelector(appStore, (s) => s.draining);
   const error = useStoreSelector(appStore, (s) => s.error);
   const profile = useStoreSelector(appStore, (s) => s.profile);
+  const bufferedRecords = useStoreSelector(appStore, (s) => s.bufferedRecords);
+  const lastSyncTs = useStoreSelector(appStore, (s) => s.lastSyncTs);
 
   const connected = status === 'connected';
+  const lastSyncText = lastSyncTs
+    ? new Date(lastSyncTs).toLocaleString()
+    : 'Not yet — connect to sync';
 
   const exportFrames = async () => {
     const frames = await getAllRawFrames();
@@ -78,6 +83,22 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           </View>
         </Card>
       ) : null}
+
+      <SectionLabel>Sync</SectionLabel>
+      <Card>
+        <Text style={styles.diagText}>Last sync: {lastSyncText}</Text>
+        <Text style={styles.diagText}>Buffered records pulled: {bufferedRecords}</Text>
+        <SecondaryButton
+          title={draining ? 'Syncing…' : 'Sync now'}
+          onPress={() => void appStore.runHistoryDrain()}
+          disabled={!connected || draining}
+        />
+        <Text style={styles.hint}>
+          The strap records to its own memory continuously. On every connect the app automatically drains that
+          buffer, so days and nights you weren't connected still fill in. Live data is captured continuously while
+          connected (including in the background).
+        </Text>
+      </Card>
 
       <SectionLabel>Profile (for strain &amp; zones)</SectionLabel>
       <ProfileEditor profile={profile} />

@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Polyline } from 'react-native-svg';
 
 import { appStore, SessionStats } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
 import { Bar, PrimaryButton, SecondaryButton, Stat } from '../ui/components';
 import { colors, fonts, strainZoneColors } from '../ui/theme';
 import { Nav } from '../ui/navigation';
+import { formatDistance, formatPace } from '../sensors/location';
 
 function fmt(sec: number): string {
   const h = Math.floor(sec / 3600);
@@ -83,6 +85,23 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
               <Stat label="Laps" value={session.laps.length} />
             </View>
 
+            {session.hasGps ? (
+              <>
+                <View style={styles.statRow}>
+                  <Stat label="Distance" value={formatDistance(session.distanceM)} color={colors.recoveryGreen} />
+                  <Stat label="Pace" value={formatPace(session.distanceM ?? 0, elapsed)} />
+                </View>
+                <Text style={styles.sectionLabel}>ROUTE</Text>
+                <View style={styles.mapBox}>
+                  {session.route.length >= 2 ? (
+                    <RouteTrace route={session.route} />
+                  ) : (
+                    <Text style={styles.mapHint}>Acquiring GPS… your route will draw here.</Text>
+                  )}
+                </View>
+              </>
+            ) : null}
+
             <Text style={styles.sectionLabel}>HEART-RATE ZONES</Text>
             <View style={styles.zones}>
               {(stats?.zones ?? []).map((z, i) => (
@@ -108,6 +127,35 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
   );
 }
 
+/** A self-scaling polyline of the GPS route (no map tiles / API key needed). */
+function RouteTrace({ route }: { route: Array<{ lat: number; lng: number }> }) {
+  const W = 320;
+  const H = 150;
+  const pad = 12;
+  const lats = route.map((p) => p.lat);
+  const lngs = route.map((p) => p.lng);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs);
+  const maxLng = Math.max(...lngs);
+  const spanLat = Math.max(1e-6, maxLat - minLat);
+  const spanLng = Math.max(1e-6, maxLng - minLng);
+  // Preserve aspect: use the larger span so the trace isn't stretched.
+  const span = Math.max(spanLat, spanLng);
+  const pts = route
+    .map((p) => {
+      const x = pad + ((p.lng - minLng) / span) * (W - 2 * pad);
+      const y = H - pad - ((p.lat - minLat) / span) * (H - 2 * pad);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+  return (
+    <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`}>
+      <Polyline points={pts} fill="none" stroke={colors.recoveryGreen} strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   body: { flex: 1, padding: 20 },
@@ -118,6 +166,8 @@ const styles = StyleSheet.create({
   statRow: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 16, marginTop: 12 },
   sectionLabel: { color: colors.textSecondary, fontSize: 12, letterSpacing: 1.4, fontFamily: fonts.textBold, marginTop: 24, marginBottom: 4 },
   zones: { backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 16 },
+  mapBox: { backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 8, minHeight: 120, alignItems: 'center', justifyContent: 'center' },
+  mapHint: { color: colors.textTertiary, fontSize: 13, textAlign: 'center', paddingVertical: 36, fontFamily: fonts.text },
   hint: { color: colors.textSecondary, fontSize: 14, lineHeight: 21, marginTop: 24, fontFamily: fonts.text },
   controls: { padding: 16, gap: 4 },
 });

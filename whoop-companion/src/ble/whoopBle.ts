@@ -40,6 +40,8 @@ import {
   cmdLinkValid,
   cmdSetClock,
   cmdToggleRealtimeHr,
+  cmdToggleImuMode,
+  cmdStartRawData,
 } from '../whoop/commands';
 
 export type WhoopStatus =
@@ -245,6 +247,8 @@ export class WhoopBle {
       await this.writeCommand(cmdSetClock()); // SET_CLOCK (10)
       await this.writeCommand(cmdEnableHrBroadcast(true)); // 14 -> standard 0x2A37
       await this.writeCommand(cmdToggleRealtimeHr(true)); // 3 -> proprietary HR
+      await this.writeCommand(cmdToggleImuMode(true)); // 106 -> IMU/accel stream (band steps)
+      await this.writeCommand(cmdStartRawData()); // 81 -> raw accel (fallback motion source)
     } catch {
       // best-effort; live HR may still arrive once the keepalive holds the link
     }

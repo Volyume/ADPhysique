@@ -10,11 +10,11 @@
  * record decode is still experimental (see historicalParse.ts).
  */
 
-import { Share } from 'react-native';
+import { AppState as RNAppState, AppStateStatus, Share } from 'react-native';
 
 import { Store } from './store';
 import { WhoopBle, WhoopStatus, RawFrame } from '../ble/whoopBle';
-import { hexToBytes } from '../ble/bytes';
+import { bytesToHex, hexToBytes } from '../ble/bytes';
 import { FrameAssembler, PacketType } from '../whoop/maverick';
 import {
   cmdEnableDeepStreams,
@@ -32,6 +32,8 @@ import {
   insertHrSample,
   insertJournal,
   insertRawFrame,
+  insertHistoryRecord,
+  countHistoryRecords,
   kvGet,
   kvSet,
   listCardio,
@@ -40,6 +42,7 @@ import {
   pruneHrSamples,
   upsertDailyMetric,
 } from '../db/database';
+import { LocationTracker } from '../sensors/location';
 import { DEFAULT_PROFILE, loadProfile, saveProfile } from '../db/profile';
 import { computeHrv } from '../metrics/hrv';
 import { emaBaseline, stdev } from '../metrics/ema';
@@ -51,6 +54,8 @@ import { edwardsTrimp, hrZones, strainFromLoad, totalTrimp, UserProfile } from '
 import { respiratoryRate } from '../metrics/respiratory';
 import { computeStress } from '../metrics/stress';
 import { computeHealthMonitor, HealthMonitorResult } from '../metrics/healthMonitor';
+import { decodeAccel, decodeHeartbeatSteps, isAccelFrame } from '../whoop/strapEvents';
+import { StepCounter } from '../metrics/stepDetect';
 import { hrvBalance, HrvBalance } from '../metrics/hrvBalance';
 import { illnessRisk, IllnessResult } from '../metrics/illness';
 import { resilience, Resilience } from '../metrics/resilience';
@@ -64,6 +69,10 @@ export type LiveSession = {
   startTs: number;
   laps: number[];
   maxHr: number | null;
+  hasGps: boolean; // mirrors WHOOP's SportDto.has_gps — phone GPS for this sport
+  distanceM: number | null; // live GPS distance (metres)
+  speedMps: number | null; // latest GPS speed (m/s)
+  route: Array<{ lat: number; lng: number }>; // live route trace
 };
 export type SessionStats = {
   elapsedSec: number;
@@ -73,6 +82,14 @@ export type SessionStats = {
   zones: ReturnType<typeof hrZones>;
   beats: number;
 };
+
+// Distance-based outdoor sports get phone GPS, mirroring WHOOP's per-sport
+// SportDto.has_gps flag (court/indoor sports record HR only, no route/distance).
+const GPS_SPORTS = ['run', 'walk', 'cycl', 'bike', 'hik', 'ruck'];
+export function activityUsesGps(label: string): boolean {
+  const l = label.toLowerCase();
+  return GPS_SPORTS.some((k) => l.includes(k));
+}
 
 export type AppState = {
   ready: boolean;
@@ -102,6 +119,10 @@ export type AppState = {
   cardioAge: number | null;
   cardio: CardioRow[];
   session: LiveSession | null;
+  bandSteps: number | null; // steps counted from the strap accelerometer (beta)
+  hbStepRaw: number | null; // candidate heartbeat step byte (diagnostic, unconfirmed)
+  bufferedRecords: number; // raw history records drained from the strap buffer
+  lastSyncTs: number | null; // last time the strap buffer was drained
   profile: UserProfile;
   error: string | null;
 };
@@ -133,12 +154,19 @@ const initialState: AppState = {
   cardioAge: null,
   cardio: [],
   session: null,
+  bandSteps: null,
+  hbStepRaw: null,
+  bufferedRecords: 0,
+  lastSyncTs: null,
   profile: DEFAULT_PROFILE,
   error: null,
 };
 
 const HR_RETENTION_DAYS = 21;
 const ROLLING_RR_WINDOW = 120; // keep last ~120 R-R intervals for live HRV
+// How often to recompute + persist derived metrics from the stored stream while
+// the app is alive, so every screen reflects ongoing data without being opened.
+const RECOMPUTE_INTERVAL_MS = 60 * 1000;
 
 class AppStore extends Store<AppState> {
   private ble: WhoopBle | null = null;
@@ -146,6 +174,14 @@ class AppStore extends Store<AppState> {
   private rollingRr: number[] = [];
   private lastPersistTs = 0;
   private historyRecords: Uint8Array[] = [];
+  private eventAssemblers = new Map<string, FrameAssembler>();
+  private locTracker: LocationTracker | null = null;
+  private recomputeTimer: ReturnType<typeof setInterval> | null = null;
+  private appStateSub: { remove: () => void } | null = null;
+  private autoDrainedFor = ''; // device id we've already auto-drained this connection
+  private lastStatus: WhoopStatus = 'idle';
+  private stepCounter = new StepCounter();
+  private stepDay = '';
 
   constructor() {
     super(initialState);
@@ -157,7 +193,7 @@ class AppStore extends Store<AppState> {
     const sleepGoal = goalRaw ? Number(goalRaw) : 0.85;
     this.setState({ profile, sleepGoal: Number.isFinite(sleepGoal) ? sleepGoal : 0.85 });
     this.ble = new WhoopBle({
-      onStatus: (status, detail) => this.setState({ status, statusDetail: detail ?? '' }),
+      onStatus: (status, detail) => this.onStatus(status, detail),
       onDevice: (device) => this.setState({ device }),
       onBattery: (battery) => this.setState({ battery }),
       onError: (error) => this.setState({ error }),
@@ -166,7 +202,42 @@ class AppStore extends Store<AppState> {
     });
     await this.refreshDerived();
     await pruneHrSamples(addDays(Date.now(), -HR_RETENTION_DAYS));
+    this.setState({ bufferedRecords: await countHistoryRecords() });
+
+    // Keep every metric area current without needing its screen opened: recompute
+    // + persist on a steady cadence while the app is alive, and again whenever the
+    // app returns to the foreground (so re-opening shows complete, fresh graphs).
+    this.startBackgroundRecompute();
+    this.appStateSub = RNAppState.addEventListener('change', (s) => this.onAppState(s));
+
     this.setState({ ready: true });
+  }
+
+  /** Connection-status transitions. On a fresh connect, auto-drain the strap's
+   *  on-device buffer so anything recorded while we were away is pulled in. */
+  private onStatus(status: WhoopStatus, detail?: string): void {
+    this.setState({ status, statusDetail: detail ?? '' });
+    const device = this.getState().device;
+    if (status === 'connected' && device && this.autoDrainedFor !== device.id) {
+      this.autoDrainedFor = device.id;
+      // Give the link a moment to settle, then backfill from the strap buffer.
+      setTimeout(() => void this.runHistoryDrain().catch(() => {}), 1500);
+    }
+    if (status === 'disconnected' || status === 'idle') {
+      this.autoDrainedFor = '';
+    }
+    this.lastStatus = status;
+  }
+
+  private startBackgroundRecompute(): void {
+    if (this.recomputeTimer) return;
+    this.recomputeTimer = setInterval(() => {
+      void this.refreshDerived().catch(() => {});
+    }, RECOMPUTE_INTERVAL_MS);
+  }
+
+  private onAppState(s: AppStateStatus): void {
+    if (s === 'active') void this.refreshDerived().catch(() => {});
   }
 
   connect = (): void => {
@@ -220,18 +291,52 @@ class AppStore extends Store<AppState> {
       void insertRawFrame(f.ts, f.source, f.hex);
     }
 
+    // Always parse proprietary frames for steps + status (band step counting).
+    if (f.source.startsWith('fd4b')) {
+      let asm = this.eventAssemblers.get(f.source);
+      if (!asm) {
+        asm = new FrameAssembler();
+        this.eventAssemblers.set(f.source, asm);
+      }
+      try {
+        for (const frame of asm.push(hexToBytes(f.hex))) {
+          const hb = decodeHeartbeatSteps(frame);
+          if (hb != null) this.setState({ hbStepRaw: hb });
+          if (isAccelFrame(frame)) {
+            const day = dayKey(Date.now());
+            if (day !== this.stepDay) {
+              this.stepCounter.reset();
+              this.stepDay = day;
+            }
+            const t = Date.now();
+            for (const a of decodeAccel(frame)) this.stepCounter.add(a.x, a.y, a.z, t);
+            this.setState({ bandSteps: this.stepCounter.count });
+          }
+        }
+      } catch {
+        // Malformed frame — ignore.
+      }
+    }
+
     // Feed the data channel into the Maverick assembler for the history drain.
     if (f.source === 'fd4b0005' && this.getState().draining) {
       const frames = this.assembler.push(hexToBytes(f.hex));
       for (const frame of frames) {
         if (frame.packetType === PacketType.HISTORICAL_DATA) {
           this.historyRecords.push(frame.payload);
+          // Persist the raw buffered record LOSSLESSLY so nothing recorded by the
+          // strap while we were away is ever discarded — even before the
+          // per-second byte layout is confirmed, these can be re-decoded later.
+          void insertHistoryRecord(Date.now(), bytesToHex(frame.payload));
+          this.setState((s) => ({ bufferedRecords: s.bufferedRecords + 1 }));
         } else if (frame.packetType === PacketType.METADATA) {
           const end = parseHistoryEnd(frame.inner.subarray(2));
           if (end && this.ble) {
             void this.ble.writeCommand(cmdHistoricalDataResult(end.startId, end.endId));
             // History segment complete.
-            this.setState({ draining: false });
+            this.setState({ draining: false, lastSyncTs: Date.now() });
+            // Re-derive every metric now that the buffer has been folded in.
+            void this.refreshDerived().catch(() => {});
           }
         }
       }
@@ -287,6 +392,7 @@ class AppStore extends Store<AppState> {
     startTs: number;
     endTs: number;
     avgHr: number | null;
+    distanceM?: number | null;
     notes?: string;
     source?: string;
   }): Promise<void> => {
@@ -303,6 +409,7 @@ class AppStore extends Store<AppState> {
       trimp: load !== null ? Math.round(load) : null,
       strain,
       kcal: null,
+      distanceM: input.distanceM ?? null,
       source: input.source ?? 'manual',
       notes: input.notes ?? null,
     };
@@ -329,9 +436,53 @@ class AppStore extends Store<AppState> {
   };
 
   // ---- live session (start / track / log) ----
-  startSession = (kind: SessionKind, label: string): void => {
-    this.setState({ session: { kind, label, startTs: Date.now(), laps: [], maxHr: null } });
+  startSession = (kind: SessionKind, label: string, hasGps = false): void => {
+    this.setState({
+      session: {
+        kind,
+        label,
+        startTs: Date.now(),
+        laps: [],
+        maxHr: null,
+        hasGps,
+        distanceM: hasGps ? 0 : null,
+        speedMps: null,
+        route: [],
+      },
+    });
+    if (hasGps) void this.startGps();
   };
+
+  /** Begin phone-GPS tracking for the active session (WHOOP uses the phone, not
+   *  the strap, for GPS). Distance/pace/route stream into the session state. */
+  private async startGps(): Promise<void> {
+    this.locTracker?.stop();
+    this.locTracker = new LocationTracker();
+    const ok = await this.locTracker.start((u) => {
+      const s = this.getState().session;
+      if (!s) return;
+      this.setState({
+        session: {
+          ...s,
+          distanceM: u.distanceM,
+          speedMps: u.speedMps,
+          route: [...s.route, { lat: u.point.lat, lng: u.point.lng }],
+        },
+      });
+    });
+    if (!ok) {
+      // Permission denied / GPS unavailable — keep recording HR, just no distance.
+      const s = this.getState().session;
+      if (s) this.setState({ session: { ...s, hasGps: false, distanceM: null } });
+    }
+  }
+
+  private stopGps(): number | null {
+    if (!this.locTracker) return null;
+    const { distanceM } = this.locTracker.stop();
+    this.locTracker = null;
+    return distanceM > 0 ? distanceM : null;
+  }
 
   addLap = (): void => {
     const s = this.getState().session;
@@ -339,6 +490,7 @@ class AppStore extends Store<AppState> {
   };
 
   discardSession = (): void => {
+    this.stopGps();
     this.setState({ session: null });
   };
 
@@ -365,6 +517,7 @@ class AppStore extends Store<AppState> {
     const endTs = Date.now();
     // Capture stats while the session is still active, then clear it.
     const stats = save ? await this.sessionStats().catch(() => null) : null;
+    const gpsDistance = this.stopGps() ?? s.distanceM;
     this.setState({ session: null });
     if (!save) return;
     if (s.kind === 'sleep') {
@@ -376,6 +529,7 @@ class AppStore extends Store<AppState> {
       startTs: s.startTs,
       endTs,
       avgHr: stats?.avgHr ?? s.maxHr ?? null,
+      distanceM: gpsDistance,
       source: s.kind === 'nap' ? 'nap' : 'live',
     });
   };
@@ -526,7 +680,7 @@ class AppStore extends Store<AppState> {
       sleepMin: sleep?.asleepMin ?? null,
       sleepPerf: sleep?.performance ?? null,
       strain,
-      steps: null, // from band IMU — pending history decode (see historicalParse.ts)
+      steps: this.getState().bandSteps, // counted from the strap accelerometer (beta)
       sleepStart: sleep?.startTs ?? null,
       sleepEnd: sleep?.endTs ?? null,
       deepMin: sleep?.stages.deep ?? null,

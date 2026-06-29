@@ -31,8 +31,25 @@ export enum Command {
   GET_HELLO_HARVARD = 35, // session hello
   ENTER_HIGH_FREQ_SYNC = 96,
   EXIT_HIGH_FREQ_SYNC = 97,
+  START_RAW_DATA = 81, // accel raw (~1 Hz) via REALTIME_RAW_DATA
+  TOGGLE_IMU_MODE = 106, // IMU realtime (accel+gyro) via REALTIME_IMU_DATA_STREAM (51)
   SET_FF_VALUE = 0x78, // 120 — write a persistent feature-flag value (deep streams)
   GET_HELLO = 145, // alternate hello
+}
+
+/**
+ * Enable the strap's onboard IMU realtime stream (accelerometer + gyro). Payload
+ * is [REVISION_1=0x01, on] per the WHOOP 5.0 APK (xg0/d1.java) — confirmed in the
+ * community RE. Turning this on makes the band emit motion data we can count
+ * steps from, and (per RE) periodic status heartbeats carrying a step field.
+ */
+export function cmdToggleImuMode(on = true): Uint8Array {
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.TOGGLE_IMU_MODE, new Uint8Array([0x01, on ? 1 : 0])));
+}
+
+/** Start the low-rate raw accelerometer stream (alternative motion source). */
+export function cmdStartRawData(): Uint8Array {
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.START_RAW_DATA, new Uint8Array([0x01])));
 }
 
 /** SET_CLOCK (10): epoch seconds u32 LE + tz byte (0 = UTC). Part of bring-up. */

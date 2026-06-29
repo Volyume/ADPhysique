@@ -43,7 +43,8 @@ export type CardioRow = {
   trimp: number | null;
   strain: number | null;
   kcal: number | null;
-  source: string; // 'manual' | 'auto'
+  distanceM: number | null; // GPS distance (metres), outdoor workouts
+  source: string; // 'manual' | 'auto' | 'live' | 'nap'
   notes: string | null;
 };
 export type JournalRow = {
@@ -79,7 +80,7 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
           id TEXT PRIMARY KEY,
           start_ts INTEGER NOT NULL, end_ts INTEGER NOT NULL,
           activity TEXT NOT NULL, avg_hr INTEGER, trimp REAL, strain REAL,
-          kcal INTEGER, source TEXT NOT NULL, notes TEXT
+          kcal INTEGER, distance_m REAL, source TEXT NOT NULL, notes TEXT
         );
         CREATE TABLE IF NOT EXISTS journal (
           id TEXT PRIMARY KEY, day TEXT NOT NULL, behaviour TEXT NOT NULL,
@@ -87,6 +88,12 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
         );
         CREATE TABLE IF NOT EXISTS raw_frames (
           ts INTEGER NOT NULL, source TEXT NOT NULL, hex TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS history_records (
+          ts INTEGER NOT NULL,
+          start_id INTEGER, end_id INTEGER,
+          hex TEXT NOT NULL,
+          decoded INTEGER NOT NULL DEFAULT 0
         );
         CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS idx_cardio_start ON cardio(start_ts);
@@ -108,6 +115,11 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
         } catch {
           // Column already exists — nothing to do.
         }
+      }
+      try {
+        await db.execAsync('ALTER TABLE cardio ADD COLUMN distance_m REAL');
+      } catch {
+        // Column already exists.
       }
       return db;
     })();
@@ -236,8 +248,8 @@ export async function getRecentDailyMetrics(limit = 30): Promise<DailyMetricRow[
 export async function insertCardio(c: CardioRow): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    `INSERT OR REPLACE INTO cardio (id, start_ts, end_ts, activity, avg_hr, trimp, strain, kcal, source, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT OR REPLACE INTO cardio (id, start_ts, end_ts, activity, avg_hr, trimp, strain, kcal, distance_m, source, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     c.id,
     c.startTs,
     c.endTs,
@@ -246,6 +258,7 @@ export async function insertCardio(c: CardioRow): Promise<void> {
     c.trimp,
     c.strain,
     c.kcal,
+    c.distanceM,
     c.source,
     c.notes,
   );
@@ -267,6 +280,7 @@ export async function listCardio(limit = 50): Promise<CardioRow[]> {
     trimp: number | null;
     strain: number | null;
     kcal: number | null;
+    distance_m: number | null;
     source: string;
     notes: string | null;
   }>('SELECT * FROM cardio ORDER BY start_ts DESC LIMIT ?', limit);
@@ -279,6 +293,7 @@ export async function listCardio(limit = 50): Promise<CardioRow[]> {
     trimp: r.trimp,
     strain: r.strain,
     kcal: r.kcal,
+    distanceM: r.distance_m ?? null,
     source: r.source,
     notes: r.notes,
   }));
@@ -338,6 +353,40 @@ export async function getAllRawFrames(limit = 20000): Promise<Array<{ ts: number
 export async function clearRawFrames(): Promise<void> {
   const db = await getDb();
   await db.runAsync('DELETE FROM raw_frames');
+}
+
+// ---- History records (strap on-device buffer, drained on reconnect) ----
+// The strap records biometrics to its own flash continuously; on every connect
+// we drain that buffer so data isn't lost while the app was closed. We persist
+// the raw records LOSSLESSLY here so nothing is thrown away — even before the
+// per-second byte layout is confirmed from real captures, these can be decoded
+// (or re-decoded) offline and back-filled into hr_samples/daily_metrics.
+export async function insertHistoryRecord(
+  ts: number,
+  hex: string,
+  startId: number | null = null,
+  endId: number | null = null,
+): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    'INSERT INTO history_records (ts, start_id, end_id, hex, decoded) VALUES (?, ?, ?, ?, 0)',
+    ts,
+    startId,
+    endId,
+    hex,
+  );
+}
+
+export async function countHistoryRecords(): Promise<number> {
+  const db = await getDb();
+  const r = await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) AS n FROM history_records');
+  return r?.n ?? 0;
+}
+
+export async function lastHistoryRecordTs(): Promise<number | null> {
+  const db = await getDb();
+  const r = await db.getFirstAsync<{ ts: number }>('SELECT MAX(ts) AS ts FROM history_records');
+  return r?.ts ?? null;
 }
 
 // ---- KV (profile / settings) ----

@@ -20,6 +20,8 @@
       "requireFullScreen": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "VOLYUME Pulse uses your location while you record a workout to measure distance, pace and your route. Location is only used during an activity and stays on your device.",
+        "NSMotionUsageDescription": "VOLYUME Pulse uses motion data to count your steps. Nothing leaves your device.",
         "UIBackgroundModes": [
           "bluetooth-central"
         ]
@@ -31,7 +33,9 @@
       "permissions": [
         "android.permission.BLUETOOTH_SCAN",
         "android.permission.BLUETOOTH_CONNECT",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACTIVITY_RECOGNITION"
       ]
     },
     "plugins": [
@@ -58,7 +62,19 @@
           }
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "VOLYUME Pulse uses your location while you record a workout to measure distance, pace and your route."
+        }
+      ],
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "VOLYUME Pulse uses motion data to count your steps."
+        }
+      ]
     ]
   }
 }

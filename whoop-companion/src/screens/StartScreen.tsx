@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { appStore } from '../state/appStore';
+import { appStore, activityUsesGps } from '../state/appStore';
 import { Card, Screen, SectionLabel } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
@@ -17,7 +17,7 @@ export function StartScreen({ nav }: { nav: Nav }) {
   const [picking, setPicking] = useState(false);
 
   const startWorkout = (label: string) => {
-    appStore.startSession('workout', label);
+    appStore.startSession('workout', label, activityUsesGps(label));
     nav.back(); // pop the start menu
     nav.navigate({ name: 'liveSession' });
   };

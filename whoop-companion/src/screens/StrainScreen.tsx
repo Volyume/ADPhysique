@@ -19,6 +19,7 @@ import {
 import { colors, radius, strainZoneColors } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { formatDuration } from '../util/time';
+import { formatDistance } from '../sensors/location';
 import type { HrZone } from '../metrics/strain';
 
 const ACTIVITIES = ['Run', 'Cycle', 'Walk', 'Strength', 'Row', 'HIIT', 'Swim', 'Other'];
@@ -38,6 +39,7 @@ export function StrainScreen({ nav }: { nav: Nav }) {
   const today = useStoreSelector(appStore, (s) => s.today);
   const cardio = useStoreSelector(appStore, (s) => s.cardio);
   const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
+  const bandSteps = useStoreSelector(appStore, (s) => s.bandSteps);
 
   const [zones, setZones] = useState<HrZone[]>([]);
   const [curve, setCurve] = useState<Array<{ tsMs: number; strain: number }>>([]);
@@ -94,7 +96,12 @@ export function StrainScreen({ nav }: { nav: Nav }) {
         <MetricRow label="Heart rate zones 0–3" display={hm(z13)} current={z13} prior={null} />
         <MetricRow label="Heart rate zones 4–5" display={hm(z45)} current={z45} prior={null} />
         <MetricRow label="Strength activity time" display={hm(strengthMin)} current={strengthMin} prior={null} />
-        <MetricRow label="Steps" display="—" current={null} prior={null} />
+        <MetricRow
+          label="Steps (band · beta)"
+          display={bandSteps != null ? `${bandSteps}` : '—'}
+          current={bandSteps}
+          prior={null}
+        />
       </Card>
 
       <Empty
@@ -121,6 +128,7 @@ export function StrainScreen({ nav }: { nav: Nav }) {
                 <Text style={styles.sessionName}>{c.activity}</Text>
                 <Text style={styles.sessionMeta}>
                   {formatDuration(Math.round((c.endTs - c.startTs) / 60000))}
+                  {c.distanceM != null ? ` · ${formatDistance(c.distanceM)}` : ''}
                   {c.avgHr ? ` · ${c.avgHr} bpm` : ''}
                   {c.strain != null ? ` · strain ${c.strain.toFixed(1)}` : ''}
                 </Text>
