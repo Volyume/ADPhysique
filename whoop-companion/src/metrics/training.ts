@@ -76,6 +76,39 @@ export function recoveryTimeHours(te: TrainingEffect): number {
   return Math.max(3, Math.min(96, hours));
 }
 
+/**
+ * Race-time predictor from VO₂max. Velocity at VO₂max via the ACSM running
+ * equation (VO₂ = 0.2·v + 3.5, v in m/min), then each race is run at a
+ * sustainable fraction of that velocity (5K ~95% … marathon ~78%). Estimates.
+ */
+export type RacePrediction = { label: string; meters: number; seconds: number };
+const RACES: Array<{ label: string; meters: number; frac: number }> = [
+  { label: '5K', meters: 5000, frac: 0.95 },
+  { label: '10K', meters: 10000, frac: 0.9 },
+  { label: 'Half', meters: 21097, frac: 0.84 },
+  { label: 'Marathon', meters: 42195, frac: 0.78 },
+];
+
+export function racePredictions(vo2max: number | null): RacePrediction[] | null {
+  if (vo2max == null || vo2max <= 3.5) return null;
+  const vMax = (vo2max - 3.5) / 0.2; // m/min at VO₂max
+  if (vMax <= 0) return null;
+  return RACES.map((r) => ({
+    label: r.label,
+    meters: r.meters,
+    seconds: Math.round((r.meters / (vMax * r.frac)) * 60),
+  }));
+}
+
+/** Format seconds as H:MM:SS or M:SS. */
+export function formatRaceTime(sec: number): string {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.round(sec % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
 export type TrainingLoad = {
   acute: number; // 7-day TRIMP sum
   chronic: number; // 28-day TRIMP, expressed as a weekly average

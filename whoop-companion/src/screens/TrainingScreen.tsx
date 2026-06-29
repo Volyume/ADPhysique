@@ -8,7 +8,7 @@ import { Card, Empty, Screen, SectionLabel, Stat, WeeklyBars } from '../ui/compo
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { hrMaxFor } from '../metrics/strain';
-import { trainingLoad, vo2maxEstimate, vo2maxLabel } from '../metrics/training';
+import { formatRaceTime, racePredictions, trainingLoad, vo2maxEstimate, vo2maxLabel } from '../metrics/training';
 import { formatDistance, formatPace } from '../sensors/location';
 import { formatDuration } from '../util/time';
 
@@ -32,6 +32,7 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
   const restingHr = profile.restingHr || today?.rhr || 60;
   const vo2 = vo2maxEstimate(hrMaxFor(profile), restingHr);
   const vo2Lbl = vo2 != null ? vo2maxLabel(vo2, profile.ageYears, profile.sex) : null;
+  const races = racePredictions(vo2);
 
   const trimps = cardio
     .filter((c) => c.trimp != null)
@@ -86,6 +87,26 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
           and weight on the Device screen to improve it.
         </Text>
       </Card>
+
+      {races ? (
+        <>
+          <SectionLabel>Race predictor</SectionLabel>
+          <Card>
+            <View style={styles.statRow}>
+              {races.map((r) => (
+                <View key={r.label} style={{ alignItems: 'center', flex: 1 }}>
+                  <Text style={styles.raceTime}>{formatRaceTime(r.seconds)}</Text>
+                  <Text style={styles.raceLabel}>{r.label}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={styles.note}>
+              Estimated finish times from your VO₂max (ACSM velocity model). They improve as your
+              fitness estimate sharpens with an accurate max/resting HR.
+            </Text>
+          </Card>
+        </>
+      ) : null}
 
       <SectionLabel>Training load</SectionLabel>
       <Card>
@@ -193,6 +214,8 @@ const styles = StyleSheet.create({
   actName: { color: colors.text, fontSize: 15, fontFamily: fonts.textSemibold },
   actMeta: { color: colors.textSecondary, fontSize: 12, marginTop: 2, fontFamily: fonts.text },
   disclaimer: { color: colors.textTertiary, fontSize: 11, lineHeight: 16, marginTop: 16, fontFamily: fonts.text },
+  raceTime: { color: colors.text, fontSize: 18, fontFamily: fonts.black },
+  raceLabel: { color: colors.textSecondary, fontSize: 11, marginTop: 3, fontFamily: fonts.textBold },
   imTrack: { height: 10, backgroundColor: colors.surface, borderRadius: 5, overflow: 'hidden', marginTop: 12 },
   imFill: { height: 10, borderRadius: 5, backgroundColor: colors.recoveryGreen },
   prRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
