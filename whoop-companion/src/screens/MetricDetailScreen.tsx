@@ -94,10 +94,11 @@ const DEFS: Record<string, Def> = {
     title: 'Sleep Performance',
     unit: '%',
     color: () => colors.sleepTeal,
-    pick: (d) => (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null),
+    pick: (d) =>
+      d.sleepDetail?.performance ?? (d.sleepPerf != null ? Math.round(d.sleepPerf * 100) : null),
     measured: true,
     blurb:
-      'Sleep performance is the sleep you got versus the sleep you needed. Sleep need is personalised from your baseline, recent strain, naps and accrued sleep debt.',
+      'Sleep Performance is a composite of four contributors — Hours vs Needed, Sleep Consistency, Sleep Efficiency and Sleep Stress. Sleep need is personalised from your baseline, recent strain, naps and accrued sleep debt.',
   },
 };
 

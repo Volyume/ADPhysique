@@ -26,7 +26,12 @@ export function HomeScreen({ nav }: { nav: Nav }) {
 
   const recovery = today?.recovery ?? null;
   const strain = today?.strain ?? null;
-  const sleepPerf = today?.sleepPerf ?? null;
+  // Composite Sleep Performance (WHOOP's headline) when available, else the
+  // hours-vs-needed ratio as a fallback for older rows.
+  const sleepPerf =
+    today?.sleepDetail?.performance != null
+      ? today.sleepDetail.performance / 100
+      : today?.sleepPerf ?? null;
 
   const hm = useMemo(() => appStore.healthMonitor(), [today, recentDays]);
 
