@@ -1,0 +1,143 @@
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { appStore } from '../state/appStore';
+import { useStoreSelector } from '../state/store';
+import { Card, Screen, SectionLabel } from '../ui/components';
+import { colors, fonts } from '../ui/theme';
+import { Nav } from '../ui/navigation';
+import { formatDuration } from '../util/time';
+
+const MODES: Array<{ key: number; name: string; pct: string; desc: string }> = [
+  { key: 0.7, name: 'Get By', pct: '70%', desc: 'Minimum to function' },
+  { key: 0.85, name: 'Perform', pct: '85%', desc: 'Balance sleep with performance' },
+  { key: 1.0, name: 'Peak', pct: '100%', desc: 'Fully optimise recovery' },
+];
+
+export function SleepCoachScreen({ nav }: { nav: Nav }) {
+  const need = useStoreSelector(appStore, (s) => s.sleepNeed);
+  const goal = useStoreSelector(appStore, (s) => s.sleepGoal);
+  const lastSleep = useStoreSelector(appStore, (s) => s.lastSleep);
+
+  const neededMin = need?.neededMin ?? 480;
+  const targetMin = Math.round(neededMin * goal);
+
+  const rows = need
+    ? [
+        { label: 'Baseline', min: need.baselineMin, color: colors.sleepTeal },
+        { label: 'Recent Strain', min: need.strainMin, color: colors.strainBlue },
+        { label: 'Sleep Debt', min: need.debtMin, color: colors.recoveryYellow },
+        { label: 'Recent Naps', min: -need.napMin, color: colors.textTertiary },
+      ]
+    : [];
+
+  return (
+    <Screen title="Sleep Coach" onBack={nav.back} tint={colors.sleepTeal}>
+      <Card>
+        <Text style={styles.bigLabel}>SLEEP NEEDED</Text>
+        <Text style={styles.bigValue}>{formatDuration(neededMin)}</Text>
+        <Text style={styles.bigSub}>
+          Recommended for your goal: {formatDuration(targetMin)} ({MODES.find((m) => m.key === goal)?.pct})
+        </Text>
+      </Card>
+
+      <SectionLabel>Choose your sleep goal</SectionLabel>
+      <Card style={{ paddingVertical: 4 }}>
+        {MODES.map((m, i) => (
+          <Pressable
+            key={m.key}
+            onPress={() => void appStore.setSleepGoal(m.key)}
+            style={[styles.modeRow, i < MODES.length - 1 && styles.modeBorder]}
+          >
+            <View style={[styles.radio, goal === m.key && styles.radioOn]}>
+              {goal === m.key ? <View style={styles.radioDot} /> : null}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.modeName}>
+                {m.pct} · {m.name}
+              </Text>
+              <Text style={styles.modeDesc}>{m.desc}</Text>
+            </View>
+            <Text style={styles.modeHours}>{formatDuration(Math.round(neededMin * m.key))}</Text>
+          </Pressable>
+        ))}
+      </Card>
+
+      <SectionLabel>How sleep need is calculated</SectionLabel>
+      <Card>
+        {need ? (
+          <>
+            {rows.map((r) => (
+              <View key={r.label} style={styles.breakRow}>
+                <View style={[styles.swatch, { backgroundColor: r.color }]} />
+                <Text style={styles.breakLabel}>{r.label}</Text>
+                <Text style={styles.breakVal}>
+                  {r.min >= 0 ? '+' : '−'}
+                  {formatDuration(Math.abs(r.min))}
+                </Text>
+              </View>
+            ))}
+            <View style={[styles.breakRow, styles.totalRow]}>
+              <Text style={styles.totalLabel}>Sleep Needed</Text>
+              <Text style={styles.totalVal}>{formatDuration(neededMin)}</Text>
+            </View>
+          </>
+        ) : (
+          <Text style={styles.blurb}>
+            Your sleep need starts from a personal baseline (~8 h), then adds time for recent strain
+            and accrued sleep debt, minus credit for naps. Wear the strap overnight to populate it.
+          </Text>
+        )}
+      </Card>
+
+      {lastSleep ? (
+        <>
+          <SectionLabel>Last night</SectionLabel>
+          <Card>
+            <View style={styles.breakRow}>
+              <Text style={styles.breakLabel}>Asleep</Text>
+              <Text style={styles.breakVal}>{formatDuration(lastSleep.asleepMin)}</Text>
+            </View>
+            <View style={styles.breakRow}>
+              <Text style={styles.breakLabel}>Sleep performance</Text>
+              <Text style={styles.breakVal}>
+                {lastSleep.performance != null ? `${Math.round(lastSleep.performance * 100)}%` : '—'}
+              </Text>
+            </View>
+            <View style={styles.breakRow}>
+              <Text style={styles.breakLabel}>Efficiency</Text>
+              <Text style={styles.breakVal}>{Math.round(lastSleep.efficiency * 100)}%</Text>
+            </View>
+          </Card>
+        </>
+      ) : null}
+
+      <Text style={styles.alarmNote}>
+        WHOOP’s silent haptic alarm requires writing alarm settings to the strap. That command isn’t
+        validated for this firmware yet, so smart-alarm scheduling is not enabled in this build.
+      </Text>
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  bigLabel: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.textBold, letterSpacing: 1.4 },
+  bigValue: { color: colors.sleepTeal, fontSize: 44, fontFamily: fonts.black, marginTop: 6 },
+  bigSub: { color: colors.textTertiary, fontSize: 13, marginTop: 2, fontFamily: fonts.text },
+  modeRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
+  modeBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.textTertiary, marginRight: 14, alignItems: 'center', justifyContent: 'center' },
+  radioOn: { borderColor: colors.sleepTeal },
+  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.sleepTeal },
+  modeName: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold },
+  modeDesc: { color: colors.textTertiary, fontSize: 12, marginTop: 2, fontFamily: fonts.text },
+  modeHours: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.bold },
+  breakRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 9 },
+  swatch: { width: 10, height: 10, borderRadius: 3, marginRight: 10 },
+  breakLabel: { color: colors.textSecondary, fontSize: 14, flex: 1, fontFamily: fonts.text },
+  breakVal: { color: colors.text, fontSize: 14, fontFamily: fonts.bold },
+  totalRow: { borderTopWidth: 1, borderTopColor: colors.border, marginTop: 4, paddingTop: 12 },
+  totalLabel: { color: colors.text, fontSize: 15, flex: 1, fontFamily: fonts.textBold },
+  totalVal: { color: colors.sleepTeal, fontSize: 16, fontFamily: fonts.black },
+  blurb: { color: colors.textSecondary, fontSize: 14, lineHeight: 21, fontFamily: fonts.text },
+  alarmNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 18, marginTop: 16, fontFamily: fonts.text },
+});

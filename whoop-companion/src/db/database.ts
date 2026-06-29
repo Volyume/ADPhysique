@@ -20,6 +20,7 @@ export type DailyMetricRow = {
   recovery: number | null;
   rmssd: number | null;
   rhr: number | null;
+  resp: number | null; // respiratory rate (brpm), overnight
   sleepMin: number | null;
   sleepPerf: number | null;
   strain: number | null;
@@ -61,7 +62,7 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
         );
         CREATE TABLE IF NOT EXISTS daily_metrics (
           day TEXT PRIMARY KEY,
-          recovery INTEGER, rmssd REAL, rhr INTEGER,
+          recovery INTEGER, rmssd REAL, rhr INTEGER, resp REAL,
           sleep_min INTEGER, sleep_perf REAL, strain REAL, steps INTEGER,
           updated_at INTEGER NOT NULL
         );
@@ -82,6 +83,12 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
         CREATE INDEX IF NOT EXISTS idx_cardio_start ON cardio(start_ts);
         CREATE INDEX IF NOT EXISTS idx_journal_day ON journal(day);
       `);
+      // Migration: add resp column for DBs created before respiratory tracking.
+      try {
+        await db.execAsync('ALTER TABLE daily_metrics ADD COLUMN resp REAL');
+      } catch {
+        // Column already exists — nothing to do.
+      }
       return db;
     })();
   }
@@ -119,16 +126,17 @@ export async function pruneHrSamples(olderThanTs: number): Promise<void> {
 export async function upsertDailyMetric(m: DailyMetricRow): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    `INSERT INTO daily_metrics (day, recovery, rmssd, rhr, sleep_min, sleep_perf, strain, steps, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO daily_metrics (day, recovery, rmssd, rhr, resp, sleep_min, sleep_perf, strain, steps, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(day) DO UPDATE SET
-       recovery=excluded.recovery, rmssd=excluded.rmssd, rhr=excluded.rhr,
+       recovery=excluded.recovery, rmssd=excluded.rmssd, rhr=excluded.rhr, resp=excluded.resp,
        sleep_min=excluded.sleep_min, sleep_perf=excluded.sleep_perf,
        strain=excluded.strain, steps=excluded.steps, updated_at=excluded.updated_at`,
     m.day,
     m.recovery,
     m.rmssd,
     m.rhr,
+    m.resp,
     m.sleepMin,
     m.sleepPerf,
     m.strain,
@@ -142,6 +150,7 @@ function mapDaily(r: {
   recovery: number | null;
   rmssd: number | null;
   rhr: number | null;
+  resp: number | null;
   sleep_min: number | null;
   sleep_perf: number | null;
   strain: number | null;
@@ -153,6 +162,7 @@ function mapDaily(r: {
     recovery: r.recovery,
     rmssd: r.rmssd,
     rhr: r.rhr,
+    resp: r.resp ?? null,
     sleepMin: r.sleep_min,
     sleepPerf: r.sleep_perf,
     strain: r.strain,

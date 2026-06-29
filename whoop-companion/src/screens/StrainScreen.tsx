@@ -15,12 +15,13 @@ import {
   StrainCurve,
   WeeklyBars,
 } from '../ui/components';
-import { colors, radius } from '../ui/theme';
+import { colors, radius, strainZoneColors } from '../ui/theme';
+import { Nav } from '../ui/navigation';
 import { formatDuration } from '../util/time';
 import type { HrZone } from '../metrics/strain';
 
 const ACTIVITIES = ['Run', 'Cycle', 'Walk', 'Strength', 'Row', 'HIIT', 'Swim', 'Other'];
-const ZONE_COLORS = ['#3B82F6', '#22D3EE', '#16C47F', '#FFB020', '#FF4D4D'];
+const ZONE_COLORS = strainZoneColors;
 
 function hm(min: number): string {
   const h = Math.floor(min / 60);
@@ -32,7 +33,7 @@ function dow(day: string): string {
   return new Date(`${day}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short' });
 }
 
-export function StrainScreen() {
+export function StrainScreen({ nav }: { nav: Nav }) {
   const today = useStoreSelector(appStore, (s) => s.today);
   const cardio = useStoreSelector(appStore, (s) => s.cardio);
   const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
@@ -77,19 +78,19 @@ export function StrainScreen() {
   };
 
   return (
-    <Screen title="Strain">
+    <Screen title="Strain" onBack={nav.canBack ? nav.back : undefined} tint={colors.strainBlue}>
       <Card style={{ alignItems: 'center', paddingVertical: 24 }}>
         <Ring
           value={strain != null ? strain / 21 : 0}
           color={colors.strainBlue}
-          centerTop="Strain"
+          centerTop="Day Strain"
           centerMain={strain != null ? strain.toFixed(1) : '—'}
           centerSub="0–21"
         />
       </Card>
 
       <Card>
-        <MetricRow label="Heart rate zones 1–3" display={hm(z13)} current={z13} prior={null} />
+        <MetricRow label="Heart rate zones 0–3" display={hm(z13)} current={z13} prior={null} />
         <MetricRow label="Heart rate zones 4–5" display={hm(z45)} current={z45} prior={null} />
         <MetricRow label="Strength activity time" display={hm(strengthMin)} current={strengthMin} prior={null} />
         <MetricRow label="Steps" display="—" current={null} prior={null} />
@@ -182,9 +183,9 @@ export function StrainScreen() {
 const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  chipActive: { borderColor: colors.amber, backgroundColor: '#2A2412' },
+  chipActive: { borderColor: colors.white, backgroundColor: colors.white },
   chipText: { color: colors.textSecondary, fontSize: 13 },
-  chipTextActive: { color: colors.amber, fontWeight: '600' },
+  chipTextActive: { color: '#000', fontWeight: '600' },
   fieldLabel: { color: colors.textSecondary, fontSize: 12, marginBottom: 4 },
   input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.inputBorder, borderRadius: radius.button, color: colors.text, paddingHorizontal: 12, paddingVertical: 12, fontSize: 16 },
   sessionRow: { paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border },

@@ -32,7 +32,10 @@ import {
   insertHrSample,
   insertJournal,
   insertRawFrame,
+  kvGet,
+  kvSet,
   listCardio,
+  listJournal,
   pruneHrSamples,
   upsertDailyMetric,
 } from '../db/database';
@@ -40,8 +43,11 @@ import { DEFAULT_PROFILE, loadProfile, saveProfile } from '../db/profile';
 import { computeHrv } from '../metrics/hrv';
 import { emaBaseline, stdev } from '../metrics/ema';
 import { computeRecovery } from '../metrics/recovery';
-import { computeSleep, SleepMinute, SleepResult } from '../metrics/sleep';
+import { computeSleep, computeSleepNeed, SleepMinute, SleepNeed, SleepResult } from '../metrics/sleep';
 import { edwardsTrimp, hrZones, strainFromLoad, totalTrimp, UserProfile } from '../metrics/strain';
+import { respiratoryRate } from '../metrics/respiratory';
+import { computeStress } from '../metrics/stress';
+import { computeHealthMonitor, HealthMonitorResult } from '../metrics/healthMonitor';
 import { addDays, dayKey, epochDay, startOfDayMs } from '../util/time';
 
 export type AppState = {
@@ -53,12 +59,15 @@ export type AppState = {
   liveHr: number | null;
   liveRr: number[];
   liveRmssd: number | null;
+  liveStress: number | null; // 0..3 (Baevsky), from the rolling R-R window
   frameCount: number;
   capturing: boolean;
   draining: boolean;
   today: DailyMetricRow | null;
   recentDays: DailyMetricRow[];
   lastSleep: SleepResult | null;
+  sleepNeed: SleepNeed | null;
+  sleepGoal: number; // target fraction of sleep need: 0.7 / 0.85 / 1.0
   cardio: CardioRow[];
   profile: UserProfile;
   error: string | null;
@@ -73,12 +82,15 @@ const initialState: AppState = {
   liveHr: null,
   liveRr: [],
   liveRmssd: null,
+  liveStress: null,
   frameCount: 0,
   capturing: false,
   draining: false,
   today: null,
   recentDays: [],
   lastSleep: null,
+  sleepNeed: null,
+  sleepGoal: 0.85,
   cardio: [],
   profile: DEFAULT_PROFILE,
   error: null,
@@ -100,7 +112,9 @@ class AppStore extends Store<AppState> {
 
   async init(): Promise<void> {
     const profile = await loadProfile();
-    this.setState({ profile });
+    const goalRaw = await kvGet('sleepGoal');
+    const sleepGoal = goalRaw ? Number(goalRaw) : 0.85;
+    this.setState({ profile, sleepGoal: Number.isFinite(sleepGoal) ? sleepGoal : 0.85 });
     this.ble = new WhoopBle({
       onStatus: (status, detail) => this.setState({ status, statusDetail: detail ?? '' }),
       onDevice: (device) => this.setState({ device }),
@@ -131,7 +145,13 @@ class AppStore extends Store<AppState> {
       this.rollingRr.splice(0, this.rollingRr.length - ROLLING_RR_WINDOW);
     }
     const hrv = computeHrv(this.rollingRr);
-    this.setState({ liveHr: bpm, liveRr: rr, liveRmssd: hrv?.rmssd ?? null });
+    const stress = computeStress(this.rollingRr);
+    this.setState({
+      liveHr: bpm,
+      liveRr: rr,
+      liveRmssd: hrv?.rmssd ?? null,
+      liveStress: stress?.score ?? null,
+    });
 
     // Persist at most one row per second.
     const now = Date.now();
@@ -246,7 +266,9 @@ class AppStore extends Store<AppState> {
   // ---- journal ----
   addJournal = async (behaviour: string, value: string): Promise<void> => {
     const now = Date.now();
-    await insertJournal({ id: `j_${now}`, day: dayKey(now), behaviour, value, createdAt: now });
+    const day = dayKey(now);
+    // Deterministic id per behaviour per day → re-answering updates in place.
+    await insertJournal({ id: `j_${day}_${behaviour}`, day, behaviour, value, createdAt: now });
   };
 
   // ---- derived metrics ----
@@ -276,19 +298,33 @@ class AppStore extends Store<AppState> {
     const sleepInput: SleepMinute[] = nightPerMin.map((p) => ({ ts: p.tsMs, hr: p.hr, motion: null }));
     const sleep = computeSleep(sleepInput);
 
-    // Overnight RMSSD + RHR within the detected sleep window.
+    // Overnight RMSSD + RHR + respiratory rate within the detected sleep window.
     let rmssd: number | null = null;
     let rhr: number | null = null;
+    let resp: number | null = null;
     if (sleep) {
       const inWindow = nightHr.filter((s) => s.ts >= sleep.startTs && s.ts <= sleep.endTs);
       const rr = inWindow.flatMap((s) => s.rr);
       rmssd = computeHrv(rr)?.rmssd ?? null;
+      resp = respiratoryRate(rr);
       const windowMin = perMinuteHr(inWindow);
       rhr = windowMin.length ? Math.round(Math.min(...windowMin.map((p) => p.hr))) : null;
     }
 
     // Baselines from prior days (exclude today).
     const recent = (await getRecentDailyMetrics(30)).filter((d) => d.day !== today);
+
+    // Dynamic Sleep Need: baseline + recent strain + accrued debt − naps.
+    const recentNights = recent.filter((d) => d.sleepMin != null).slice(0, 3);
+    const accruedDebtMin = recentNights.reduce(
+      (a, d) => a + Math.max(0, 480 - (d.sleepMin as number)),
+      0,
+    );
+    const need = computeSleepNeed({ recentStrain: strain, accruedDebtMin });
+    if (sleep) {
+      sleep.neededMin = need.neededMin;
+      sleep.performance = Math.min(1, sleep.asleepMin / need.neededMin);
+    }
     const rmssdSamples = recent
       .filter((d) => d.rmssd != null)
       .map((d) => ({ day: epochDay(Date.parse(`${d.day}T00:00:00`)), value: d.rmssd as number }));
@@ -315,6 +351,7 @@ class AppStore extends Store<AppState> {
       recovery,
       rmssd,
       rhr,
+      resp,
       sleepMin: sleep?.asleepMin ?? null,
       sleepPerf: sleep?.performance ?? null,
       strain,
@@ -322,8 +359,67 @@ class AppStore extends Store<AppState> {
       updatedAt: now,
     };
     await upsertDailyMetric(row);
-    this.setState({ today: row, lastSleep: sleep, recentDays: await getRecentDailyMetrics(30) });
+    this.setState({
+      today: row,
+      lastSleep: sleep,
+      sleepNeed: need,
+      recentDays: await getRecentDailyMetrics(30),
+    });
   };
+
+  // ---- Health Monitor ----
+  /** WHOOP-style five-vital health monitor (today's values vs personal ranges). */
+  healthMonitor = (): HealthMonitorResult => {
+    const today = this.getState().today;
+    const recent = this.getState().recentDays.filter((d) => d.day !== today?.day);
+    const hist = (pick: (d: DailyMetricRow) => number | null): number[] =>
+      recent.map(pick).filter((v): v is number => v != null);
+    return computeHealthMonitor({
+      rhr: { value: today?.rhr ?? null, history: hist((d) => d.rhr) },
+      hrv: { value: today?.rmssd ?? null, history: hist((d) => d.rmssd) },
+      respiratory: { value: today?.resp ?? null, history: hist((d) => d.resp) },
+    });
+  };
+
+  // ---- Stress Monitor ----
+  /**
+   * Daytime stress over today, sampled in ~5-minute windows from the stored R-R
+   * stream (Baevsky SI → 0–3). Mirrors WHOOP's day-stress trend graph.
+   */
+  stressSeries = async (): Promise<Array<{ tsMs: number; score: number }>> => {
+    const sod = startOfDayMs(Date.now());
+    const rows = await getHrSamplesBetween(sod, Date.now());
+    const WIN_MS = 5 * 60 * 1000;
+    const buckets = new Map<number, number[]>();
+    for (const r of rows) {
+      const b = Math.floor(r.ts / WIN_MS);
+      const arr = buckets.get(b) ?? [];
+      arr.push(...r.rr);
+      buckets.set(b, arr);
+    }
+    const out: Array<{ tsMs: number; score: number }> = [];
+    for (const [b, rr] of [...buckets.entries()].sort((a, c) => a[0] - c[0])) {
+      const s = computeStress(rr);
+      if (s) out.push({ tsMs: b * WIN_MS, score: s.score });
+    }
+    return out;
+  };
+
+  // ---- Trends / history ----
+  /** Load up to `days` of daily metrics (oldest→newest) for the Trends screen. */
+  loadHistory = async (days: number): Promise<DailyMetricRow[]> => {
+    const rows = await getRecentDailyMetrics(days);
+    return rows.slice().reverse(); // chronological
+  };
+
+  // ---- Sleep goal (Get By / Perform / Peak) ----
+  setSleepGoal = async (goal: number): Promise<void> => {
+    await kvSet('sleepGoal', String(goal));
+    this.setState({ sleepGoal: goal });
+  };
+
+  // ---- Journal ----
+  journalForDay = async (day: string) => listJournal(day);
 
   /** Today's HR-zone breakdown for the Strain screen. */
   todayZones = async () => {

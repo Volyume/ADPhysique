@@ -1,34 +1,100 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import {
+  Animated,
+  Easing,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextStyle,
   TouchableOpacity,
   View,
   ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Line, Polyline, Rect } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import Svg, { Circle, Line, Polyline, Rect, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 
-import { colors, radius, spacing, type } from './theme';
+import { colors, radius, spacing, type, fonts, sleepStageColors, tintedWash } from './theme';
 
-export function Screen({ title, children }: { title: string; children: ReactNode }) {
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+/**
+ * Page chrome. With `onBack` a back chevron + inline title is shown (detail
+ * screens); otherwise the large screen title. `tint` paints a subtle WHOOP-style
+ * gradient wash behind the header in the metric's colour.
+ */
+export function Screen({
+  title,
+  children,
+  onBack,
+  tint,
+  right,
+}: {
+  title: string;
+  children: ReactNode;
+  onBack?: () => void;
+  tint?: string;
+  right?: ReactNode;
+}) {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
+      {tint ? (
+        <LinearGradient colors={tintedWash(tint)} style={styles.wash} pointerEvents="none" />
+      ) : null}
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={[type.screenTitle, styles.title]}>{title}</Text>
+        {onBack ? (
+          <View style={styles.headerRow}>
+            <TouchableOpacity onPress={onBack} hitSlop={12} style={styles.backBtn}>
+              <Ionicons name="chevron-back" size={26} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {title}
+            </Text>
+            <View style={styles.headerRight}>{right}</View>
+          </View>
+        ) : (
+          <View style={styles.titleRow}>
+            <Text style={[type.screenTitle, styles.title]}>{title}</Text>
+            {right}
+          </View>
+        )}
         {children}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-export function Card({ children, style }: { children: ReactNode; style?: ViewStyle }) {
+export function Card({
+  children,
+  style,
+  onPress,
+}: {
+  children: ReactNode;
+  style?: ViewStyle;
+  onPress?: () => void;
+}) {
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [styles.card, style, pressed && styles.pressed]}
+      >
+        {children}
+      </Pressable>
+    );
+  }
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-export function SectionLabel({ children }: { children: ReactNode }) {
-  return <Text style={[type.sectionLabel, styles.sectionLabel]}>{children}</Text>;
+export function SectionLabel({ children, right }: { children: ReactNode; right?: ReactNode }) {
+  return (
+    <View style={styles.sectionLabelRow}>
+      <Text style={[type.sectionLabel, styles.sectionLabel]}>{children}</Text>
+      {right}
+    </View>
+  );
 }
 
 export function Stat({
@@ -45,7 +111,7 @@ export function Stat({
   return (
     <View style={styles.stat}>
       <Text style={styles.statValue} numberOfLines={1}>
-        <Text style={{ color: color ?? colors.text }}>{value}</Text>
+        <Text style={{ color: color ?? colors.text, fontFamily: fonts.bold }}>{value}</Text>
         {unit ? <Text style={styles.statUnit}> {unit}</Text> : null}
       </Text>
       <Text style={styles.statLabel}>{label}</Text>
@@ -67,6 +133,7 @@ export function PrimaryButton({
       style={[styles.primaryBtn, disabled && styles.btnDisabled]}
       onPress={onPress}
       disabled={disabled}
+      activeOpacity={0.85}
     >
       <Text style={styles.primaryBtnText}>{title}</Text>
     </TouchableOpacity>
@@ -87,21 +154,26 @@ export function SecondaryButton({
       style={[styles.secondaryBtn, disabled && styles.btnDisabled]}
       onPress={onPress}
       disabled={disabled}
+      activeOpacity={0.85}
     >
       <Text style={styles.secondaryBtnText}>{title}</Text>
     </TouchableOpacity>
   );
 }
 
-/** WHOOP-style progress ring. value 0..1. */
+/**
+ * WHOOP-style progress ring that animates its fill on mount (ease-out ~1s),
+ * with a soft gradient stroke. value 0..1.
+ */
 export function Ring({
   value,
-  size = 180,
-  stroke = 14,
+  size = 200,
+  stroke = 16,
   color,
   centerTop,
   centerMain,
   centerSub,
+  animate = true,
 }: {
   value: number;
   size?: number;
@@ -110,24 +182,44 @@ export function Ring({
   centerTop?: string;
   centerMain?: string;
   centerSub?: string;
+  animate?: boolean;
 }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const clamped = Math.max(0, Math.min(1, value));
-  const dash = c * clamped;
+  const progress = useRef(new Animated.Value(animate ? 0 : clamped)).current;
+
+  useEffect(() => {
+    Animated.timing(progress, {
+      toValue: clamped,
+      duration: 1000,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [clamped, progress]);
+
+  const dashoffset = progress.interpolate({ inputRange: [0, 1], outputRange: [c, c - c] });
+
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <Svg width={size} height={size}>
+        <Defs>
+          <SvgGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+            <Stop offset="0" stopColor={color} stopOpacity="0.65" />
+            <Stop offset="1" stopColor={color} stopOpacity="1" />
+          </SvgGradient>
+        </Defs>
         <Circle cx={size / 2} cy={size / 2} r={r} stroke={colors.surface} strokeWidth={stroke} fill="none" />
-        <Circle
+        <AnimatedCircle
           cx={size / 2}
           cy={size / 2}
           r={r}
-          stroke={color}
+          stroke="url(#ringGrad)"
           strokeWidth={stroke}
           fill="none"
           strokeLinecap="round"
-          strokeDasharray={`${dash} ${c - dash}`}
+          strokeDasharray={c}
+          strokeDashoffset={dashoffset as unknown as number}
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       </Svg>
@@ -138,6 +230,33 @@ export function Ring({
       </View>
     </View>
   );
+}
+
+/** A number that counts up from 0 on mount — WHOOP's metric reveal. */
+export function AnimatedNumber({
+  value,
+  decimals = 0,
+  style,
+  suffix = '',
+}: {
+  value: number;
+  decimals?: number;
+  style?: TextStyle;
+  suffix?: string;
+}) {
+  const anim = useRef(new Animated.Value(0)).current;
+  const [shown, setShown] = useState('0');
+  useEffect(() => {
+    const id = anim.addListener(({ value: v }) => setShown(v.toFixed(decimals)));
+    Animated.timing(anim, {
+      toValue: value,
+      duration: 900,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+    return () => anim.removeListener(id);
+  }, [value, decimals, anim]);
+  return <Text style={style}>{shown}{suffix}</Text>;
 }
 
 /** Horizontal bar (e.g. HR zones). value 0..1. */
@@ -157,56 +276,6 @@ export function Empty({ text }: { text: string }) {
   return <Text style={styles.empty}>{text}</Text>;
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  scroll: { padding: spacing.screen, paddingBottom: 40 },
-  title: { marginBottom: spacing.item },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.card,
-    marginTop: spacing.item,
-  },
-  sectionLabel: { marginTop: spacing.section, marginBottom: spacing.sm },
-  stat: { flex: 1 },
-  statValue: { fontSize: 22, fontWeight: '700', color: colors.text },
-  statUnit: { fontSize: 12, color: colors.textSecondary, fontWeight: '400' },
-  statLabel: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
-  primaryBtn: {
-    backgroundColor: colors.amber,
-    borderRadius: radius.button,
-    minHeight: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.item,
-  },
-  primaryBtnText: { color: '#000000', fontSize: 15, fontWeight: '600' },
-  secondaryBtn: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.button,
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    minHeight: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.item,
-  },
-  secondaryBtnText: { color: colors.text, fontSize: 15, fontWeight: '500' },
-  btnDisabled: { opacity: 0.4 },
-  ringCenter: { position: 'absolute', alignItems: 'center' },
-  ringTop: { color: colors.textSecondary, fontSize: 12, letterSpacing: 1.2, textTransform: 'uppercase' },
-  ringMain: { fontSize: 48, fontWeight: '800' },
-  ringSub: { color: colors.textSecondary, fontSize: 13, marginTop: 2 },
-  barRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm },
-  barLabel: { color: colors.textSecondary, fontSize: 12, width: 56 },
-  barTrack: { flex: 1, height: 10, backgroundColor: colors.surface, borderRadius: 5, overflow: 'hidden' },
-  barFill: { height: 10, borderRadius: 5 },
-  barRight: { color: colors.textSecondary, fontSize: 12, width: 52, textAlign: 'right' },
-  empty: { color: colors.textTertiary, fontSize: 13, marginTop: spacing.item, lineHeight: 18 },
-});
-
 /** A tappable WHOOP-style metric dial for the overview — a doorway to detail. */
 export function Dial({
   label,
@@ -225,17 +294,26 @@ export function Dial({
   onPress?: () => void;
   size?: number;
 }) {
-  const stroke = 9;
+  const stroke = 10;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const clamped = Math.max(0, Math.min(1, fraction));
-  const dash = c * clamped;
+  const progress = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(progress, {
+      toValue: clamped,
+      duration: 1000,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [clamped, progress]);
+  const dashoffset = progress.interpolate({ inputRange: [0, 1], outputRange: [c, c - c] });
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={dialStyles.wrap}>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={dialStyles.wrap}>
       <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
         <Svg width={size} height={size}>
           <Circle cx={size / 2} cy={size / 2} r={r} stroke={colors.surface} strokeWidth={stroke} fill="none" />
-          <Circle
+          <AnimatedCircle
             cx={size / 2}
             cy={size / 2}
             r={r}
@@ -243,7 +321,8 @@ export function Dial({
             strokeWidth={stroke}
             fill="none"
             strokeLinecap="round"
-            strokeDasharray={`${dash} ${c - dash}`}
+            strokeDasharray={c}
+            strokeDashoffset={dashoffset as unknown as number}
             transform={`rotate(-90 ${size / 2} ${size / 2})`}
           />
         </Svg>
@@ -258,10 +337,10 @@ export function Dial({
 }
 
 const STAGE_COLOR: Record<string, string> = {
-  awake: colors.textTertiary,
-  rem: '#6D28D9',
-  light: colors.sleepTeal,
-  deep: '#1E40AF',
+  awake: sleepStageColors.awake,
+  rem: sleepStageColors.rem,
+  light: sleepStageColors.light,
+  deep: sleepStageColors.deep,
 };
 const STAGE_LANE: Record<string, number> = { awake: 0, rem: 1, light: 2, deep: 3 };
 
@@ -286,7 +365,7 @@ export function Hypnogram({ segments }: { segments: Array<{ stage: string; minut
         width={Math.max(1, w)}
         height={laneH}
         rx={3}
-        fill={STAGE_COLOR[s.stage] ?? colors.sleepTeal}
+        fill={STAGE_COLOR[s.stage] ?? sleepStageColors.light}
       />
     );
   });
@@ -324,20 +403,12 @@ export function StrainCurve({
   );
 }
 
-const dialStyles = StyleSheet.create({
-  wrap: { flex: 1, alignItems: 'center' },
-  center: { position: 'absolute', alignItems: 'center' },
-  main: { fontSize: 22, fontWeight: '800' },
-  label: { color: colors.textSecondary, fontSize: 12, marginTop: 6, fontWeight: '600' },
-  sub: { color: colors.textTertiary, fontSize: 11, marginTop: 1 },
-});
-
 /** WHOOP Poor / Sufficient / Optimal band for a 0–100 contributor. */
 export function band(percent: number | null): string {
   if (percent == null) return colors.textTertiary;
   if (percent >= 85) return colors.recoveryGreen; // Optimal
-  if (percent >= 50) return colors.textSecondary; // Sufficient
-  return colors.amber; // Poor
+  if (percent >= 50) return colors.recoveryYellow; // Sufficient
+  return colors.recoveryRed; // Poor
 }
 
 /** A WHOOP-style contributor row: label, progress bar (banded), right value. */
@@ -345,19 +416,24 @@ export function ContributorRow({
   label,
   percent,
   value,
+  onPress,
 }: {
   label: string;
   percent: number | null;
   value?: string;
+  onPress?: () => void;
 }) {
   const c = band(percent);
-  return (
+  const body = (
     <View style={contribStyles.row}>
       <View style={contribStyles.head}>
         <Text style={contribStyles.label}>{label}</Text>
-        <Text style={[contribStyles.value, { color: c }]}>
-          {value ?? (percent != null ? `${Math.round(percent)}%` : '—')}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={[contribStyles.value, { color: c }]}>
+            {value ?? (percent != null ? `${Math.round(percent)}%` : '—')}
+          </Text>
+          {onPress ? <Ionicons name="chevron-forward" size={15} color={colors.textTertiary} style={{ marginLeft: 4 }} /> : null}
+        </View>
       </View>
       <View style={contribStyles.track}>
         <View
@@ -369,13 +445,20 @@ export function ContributorRow({
       </View>
     </View>
   );
+  return onPress ? (
+    <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
+      {body}
+    </Pressable>
+  ) : (
+    body
+  );
 }
 
 export function BandLegend() {
   return (
     <View style={contribStyles.legend}>
-      <LegendDot color={colors.amber} label="Poor" />
-      <LegendDot color={colors.textSecondary} label="Sufficient" />
+      <LegendDot color={colors.recoveryRed} label="Poor" />
+      <LegendDot color={colors.recoveryYellow} label="Sufficient" />
       <LegendDot color={colors.recoveryGreen} label="Optimal" />
     </View>
   );
@@ -397,12 +480,14 @@ export function LineChart({
   height = 120,
   leftLabel,
   rightLabel,
+  fill = false,
 }: {
   values: number[];
   color?: string;
   height?: number;
   leftLabel?: string;
   rightLabel?: string;
+  fill?: boolean;
 }) {
   if (values.length < 2) {
     return <Empty text="No overnight signal recorded for this window." />;
@@ -415,9 +500,17 @@ export function LineChart({
   const pts = values
     .map((v, i) => `${(i / (values.length - 1)) * W},${H - ((v - min) / range) * H}`)
     .join(' ');
+  const area = `0,${H} ${pts} ${W},${H}`;
   return (
     <View>
       <Svg width="100%" height={height} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+        <Defs>
+          <SvgGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={color} stopOpacity="0.35" />
+            <Stop offset="1" stopColor={color} stopOpacity="0" />
+          </SvgGradient>
+        </Defs>
+        {fill ? <Polyline points={area} fill="url(#areaGrad)" stroke="none" /> : null}
         <Polyline points={pts} fill="none" stroke={color} strokeWidth={4} strokeLinejoin="round" />
       </Svg>
       {leftLabel || rightLabel ? (
@@ -433,7 +526,6 @@ export function LineChart({
 /**
  * WHOOP contributor row: label on the left; today's value with a coloured
  * up/down arrow on the right; the 30-day comparison value beneath it.
- * `betterWhenLower` flips the arrow colour (green = favourable).
  */
 export function MetricRow({
   label,
@@ -442,6 +534,7 @@ export function MetricRow({
   prior,
   unit,
   betterWhenLower = false,
+  onPress,
 }: {
   label: string;
   display?: string;
@@ -449,27 +542,38 @@ export function MetricRow({
   prior: number | null;
   unit?: string;
   betterWhenLower?: boolean;
+  onPress?: () => void;
 }) {
   const dir = current != null && prior != null ? (current > prior ? 'up' : current < prior ? 'down' : 'flat') : null;
   const favourable = dir == null || dir === 'flat' ? null : (dir === 'down') === betterWhenLower;
-  const arrowColor = favourable == null ? colors.textTertiary : favourable ? colors.recoveryGreen : colors.amber;
+  const arrowColor = favourable == null ? colors.textTertiary : favourable ? colors.recoveryGreen : colors.recoveryRed;
   const arrow = dir === 'up' ? '▲' : dir === 'down' ? '▼' : '';
   const u = unit ?? '';
-  return (
+  const body = (
     <View style={metricStyles.row}>
       <Text style={metricStyles.label}>{label}</Text>
-      <View style={{ alignItems: 'flex-end' }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={metricStyles.value}>{display ?? (current != null ? `${current}${u}` : '—')}</Text>
-          {arrow ? <Text style={[metricStyles.arrow, { color: arrowColor }]}> {arrow}</Text> : null}
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ alignItems: 'flex-end' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={metricStyles.value}>{display ?? (current != null ? `${current}${u}` : '—')}</Text>
+            {arrow ? <Text style={[metricStyles.arrow, { color: arrowColor }]}> {arrow}</Text> : null}
+          </View>
+          {prior != null ? <Text style={metricStyles.prior}>{`${prior}${u}`}</Text> : null}
         </View>
-        {prior != null ? <Text style={metricStyles.prior}>{`${prior}${u}`}</Text> : null}
+        {onPress ? <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} style={{ marginLeft: 8 }} /> : null}
       </View>
     </View>
   );
+  return onPress ? (
+    <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
+      {body}
+    </Pressable>
+  ) : (
+    body
+  );
 }
 
-/** WHOOP weekly bar chart (e.g. recovery %, strain, steps) with value labels. */
+/** WHOOP weekly bar chart with value labels. */
 export function WeeklyBars({
   data,
   height = 170,
@@ -497,6 +601,151 @@ export function WeeklyBars({
   );
 }
 
+/** A tappable navigation row: icon + label, optional value, chevron. */
+export function NavRow({
+  label,
+  value,
+  icon,
+  iconColor,
+  onPress,
+  last,
+}: {
+  label: string;
+  value?: string;
+  icon?: string;
+  iconColor?: string;
+  onPress: () => void;
+  last?: boolean;
+}) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [navRowStyles.row, last && navRowStyles.last, pressed && styles.pressed]}>
+      {icon ? (
+        <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={20} color={iconColor ?? colors.textSecondary} style={navRowStyles.icon} />
+      ) : null}
+      <Text style={navRowStyles.label}>{label}</Text>
+      <View style={{ flex: 1 }} />
+      {value ? <Text style={navRowStyles.value}>{value}</Text> : null}
+      <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} style={{ marginLeft: 6 }} />
+    </Pressable>
+  );
+}
+
+/** A tappable summary tile (icon, title, big value, chevron) for the home grid. */
+export function Tile({
+  title,
+  value,
+  sub,
+  icon,
+  color,
+  onPress,
+  style,
+}: {
+  title: string;
+  value: string;
+  sub?: string;
+  icon?: string;
+  color?: string;
+  onPress: () => void;
+  style?: ViewStyle;
+}) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.card, tileStyles.tile, style, pressed && styles.pressed]}>
+      <View style={tileStyles.head}>
+        {icon ? <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={16} color={color ?? colors.textSecondary} /> : null}
+        <Text style={tileStyles.title}>{title}</Text>
+        <View style={{ flex: 1 }} />
+        <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+      </View>
+      <Text style={[tileStyles.value, { color: color ?? colors.text }]}>{value}</Text>
+      {sub ? <Text style={tileStyles.sub}>{sub}</Text> : null}
+    </Pressable>
+  );
+}
+
+/** Floating action button — WHOOP's "+" for logging. */
+export function FAB({ onPress, icon = 'add' }: { onPress: () => void; icon?: string }) {
+  return (
+    <TouchableOpacity style={fabStyles.fab} onPress={onPress} activeOpacity={0.85}>
+      <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={30} color="#000" />
+    </TouchableOpacity>
+  );
+}
+
+/** Small coloured pill / chip. */
+export function Pill({ text, color = colors.surface, textColor = colors.text }: { text: string; color?: string; textColor?: string }) {
+  return (
+    <View style={[pillStyles.pill, { backgroundColor: color }]}>
+      <Text style={[pillStyles.text, { color: textColor }]}>{text}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.bg },
+  wash: { position: 'absolute', top: 0, left: 0, right: 0, height: 320 },
+  scroll: { padding: spacing.screen, paddingBottom: 48 },
+  title: { marginBottom: spacing.item },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.item, minHeight: 32 },
+  backBtn: { marginLeft: -6, marginRight: 2 },
+  headerTitle: { flex: 1, color: colors.text, fontSize: 18, fontFamily: fonts.textBold },
+  headerRight: { minWidth: 24, alignItems: 'flex-end' },
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.card,
+    marginTop: spacing.item,
+  },
+  pressed: { opacity: 0.6 },
+  sectionLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.section, marginBottom: spacing.sm },
+  sectionLabel: {},
+  stat: { flex: 1 },
+  statValue: { fontSize: 24, color: colors.text },
+  statUnit: { fontSize: 12, color: colors.textSecondary, fontFamily: fonts.text },
+  statLabel: { fontSize: 12, color: colors.textSecondary, marginTop: 2, fontFamily: fonts.text },
+  primaryBtn: {
+    backgroundColor: colors.white,
+    borderRadius: radius.button,
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.item,
+  },
+  primaryBtnText: { color: '#000000', fontSize: 14, fontFamily: fonts.textBold, letterSpacing: 0.5, textTransform: 'uppercase' },
+  secondaryBtn: {
+    backgroundColor: 'transparent',
+    borderRadius: radius.button,
+    borderWidth: 1,
+    borderColor: colors.inputBorder,
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.item,
+  },
+  secondaryBtnText: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold, letterSpacing: 0.5, textTransform: 'uppercase' },
+  btnDisabled: { opacity: 0.4 },
+  ringCenter: { position: 'absolute', alignItems: 'center' },
+  ringTop: { color: colors.textSecondary, fontSize: 12, letterSpacing: 1.4, textTransform: 'uppercase', fontFamily: fonts.textBold },
+  ringMain: { fontSize: 54, fontFamily: fonts.black },
+  ringSub: { color: colors.textSecondary, fontSize: 13, marginTop: 2, fontFamily: fonts.text },
+  barRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm },
+  barLabel: { color: colors.textSecondary, fontSize: 12, width: 56, fontFamily: fonts.text },
+  barTrack: { flex: 1, height: 10, backgroundColor: colors.surface, borderRadius: 5, overflow: 'hidden' },
+  barFill: { height: 10, borderRadius: 5 },
+  barRight: { color: colors.textSecondary, fontSize: 12, width: 60, textAlign: 'right', fontFamily: fonts.text },
+  empty: { color: colors.textTertiary, fontSize: 13, marginTop: spacing.item, lineHeight: 18, fontFamily: fonts.text },
+});
+
+const dialStyles = StyleSheet.create({
+  wrap: { flex: 1, alignItems: 'center' },
+  center: { position: 'absolute', alignItems: 'center' },
+  main: { fontSize: 22, fontFamily: fonts.black },
+  label: { color: colors.textSecondary, fontSize: 12, marginTop: 6, fontFamily: fonts.textBold },
+  sub: { color: colors.textTertiary, fontSize: 11, marginTop: 1, fontFamily: fonts.text },
+});
+
 const metricStyles = StyleSheet.create({
   row: {
     flexDirection: 'row',
@@ -506,31 +755,77 @@ const metricStyles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  label: { color: colors.text, fontSize: 14, fontWeight: '600', letterSpacing: 0.5 },
-  value: { color: colors.text, fontSize: 20, fontWeight: '700' },
+  label: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold, letterSpacing: 0.3 },
+  value: { color: colors.text, fontSize: 20, fontFamily: fonts.bold },
   arrow: { fontSize: 12 },
-  prior: { color: colors.textTertiary, fontSize: 12, marginTop: 1 },
+  prior: { color: colors.textTertiary, fontSize: 12, marginTop: 1, fontFamily: fonts.text },
 });
 
 const weeklyStyles = StyleSheet.create({
   wrap: { flexDirection: 'row', alignItems: 'flex-end' },
   col: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
-  val: { color: colors.textSecondary, fontSize: 11, marginBottom: 4, fontWeight: '600' },
-  bar: { width: 16, borderRadius: 3 },
-  day: { color: colors.textTertiary, fontSize: 10, marginTop: 6 },
+  val: { color: colors.textSecondary, fontSize: 11, marginBottom: 4, fontFamily: fonts.medium },
+  bar: { width: 18, borderRadius: 4 },
+  day: { color: colors.textTertiary, fontSize: 10, marginTop: 6, fontFamily: fonts.text },
 });
 
 const contribStyles = StyleSheet.create({
   row: { marginVertical: 8 },
-  head: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  label: { color: colors.text, fontSize: 14, fontWeight: '600' },
-  value: { fontSize: 16, fontWeight: '700' },
+  head: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, alignItems: 'center' },
+  label: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold },
+  value: { fontSize: 16, fontFamily: fonts.bold },
   track: { height: 8, backgroundColor: colors.surface, borderRadius: 4, overflow: 'hidden' },
   fill: { height: 8, borderRadius: 4 },
   legend: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 12 },
   legendItem: { flexDirection: 'row', alignItems: 'center' },
   legendDot: { width: 8, height: 8, borderRadius: 4, marginRight: 5 },
-  legendLabel: { color: colors.textSecondary, fontSize: 11 },
+  legendLabel: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.text },
   axis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
-  axisLabel: { color: colors.textTertiary, fontSize: 11 },
+  axisLabel: { color: colors.textTertiary, fontSize: 11, fontFamily: fonts.text },
+});
+
+const navRowStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  last: { borderBottomWidth: 0 },
+  icon: { marginRight: 12, width: 22, textAlign: 'center' },
+  label: { color: colors.text, fontSize: 15, fontFamily: fonts.textSemibold },
+  value: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.text },
+});
+
+const tileStyles = StyleSheet.create({
+  tile: { flex: 1 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  title: { color: colors.textSecondary, fontSize: 11, fontFamily: fonts.textBold, letterSpacing: 1, textTransform: 'uppercase' },
+  value: { fontSize: 22, fontFamily: fonts.bold, marginTop: 10 },
+  sub: { color: colors.textTertiary, fontSize: 12, marginTop: 2, fontFamily: fonts.text },
+});
+
+const fabStyles = StyleSheet.create({
+  fab: {
+    position: 'absolute',
+    right: 18,
+    bottom: 18,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 6,
+  },
+});
+
+const pillStyles = StyleSheet.create({
+  pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, alignSelf: 'flex-start' },
+  text: { fontSize: 11, fontFamily: fonts.textBold, letterSpacing: 0.5 },
 });

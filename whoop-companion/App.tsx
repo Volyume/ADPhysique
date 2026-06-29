@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 import { appStore } from './src/state/appStore';
 import { useStoreSelector } from './src/state/store';
@@ -11,57 +12,121 @@ import { SleepScreen } from './src/screens/SleepScreen';
 import { StrainScreen } from './src/screens/StrainScreen';
 import { JournalScreen } from './src/screens/JournalScreen';
 import { DeviceScreen } from './src/screens/DeviceScreen';
+import { HealthScreen } from './src/screens/HealthScreen';
+import { StressScreen } from './src/screens/StressScreen';
+import { TrendsScreen } from './src/screens/TrendsScreen';
+import { MoreScreen } from './src/screens/MoreScreen';
+import { SettingsScreen } from './src/screens/SettingsScreen';
+import { SleepCoachScreen } from './src/screens/SleepCoachScreen';
+import { MetricDetailScreen } from './src/screens/MetricDetailScreen';
+import { LogActivityScreen } from './src/screens/LogActivityScreen';
 import { colors } from './src/ui/theme';
+import { fonts, useWhoopFonts } from './src/ui/fonts';
+import { Nav, Route, TabKey, TABS } from './src/ui/navigation';
 
-type TabKey = 'today' | 'recovery' | 'sleep' | 'strain' | 'journal' | 'device';
-
-const TABS: Array<{ key: TabKey; label: string }> = [
-  { key: 'today', label: 'Today' },
-  { key: 'recovery', label: 'Recover' },
-  { key: 'sleep', label: 'Sleep' },
-  { key: 'strain', label: 'Strain' },
-  { key: 'journal', label: 'Journal' },
-  { key: 'device', label: 'Device' },
-];
+// Apply WHOOP's Proxima Nova as the base font for all text.
+const ThemedText = Text as unknown as { defaultProps?: { style?: unknown } };
+ThemedText.defaultProps = ThemedText.defaultProps ?? {};
+ThemedText.defaultProps.style = { fontFamily: fonts.text, color: colors.text };
 
 export default function App() {
-  const [tab, setTab] = useState<TabKey>('today');
+  const [tab, setTabState] = useState<TabKey>('today');
+  const [stack, setStack] = useState<Route[]>([{ name: 'today' }]);
   const ready = useStoreSelector(appStore, (s) => s.ready);
+  const fontsLoaded = useWhoopFonts();
 
   useEffect(() => {
     void appStore.init();
   }, []);
 
+  const nav: Nav = useMemo(
+    () => ({
+      navigate: (route: Route) => setStack((s) => [...s, route]),
+      back: () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s)),
+      setTab: (t: TabKey) => {
+        setTabState(t);
+        setStack([{ name: t }]);
+      },
+      get canBack() {
+        return stack.length > 1;
+      },
+      tab,
+    }),
+    [stack.length, tab],
+  );
+
+  const current = stack[stack.length - 1] as Route;
+
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
       <View style={styles.root}>
-        {!ready ? (
+        {!ready || !fontsLoaded ? (
           <View style={styles.loading}>
-            <ActivityIndicator color={colors.amber} />
+            <ActivityIndicator color={colors.recoveryGreen} />
             <Text style={styles.loadingText}>Loading…</Text>
           </View>
         ) : (
           <View style={{ flex: 1 }}>
-            {tab === 'today' && <HomeScreen onNavigate={(t) => setTab(t)} />}
-            {tab === 'recovery' && <RecoveryScreen />}
-            {tab === 'sleep' && <SleepScreen />}
-            {tab === 'strain' && <StrainScreen />}
-            {tab === 'journal' && <JournalScreen />}
-            {tab === 'device' && <DeviceScreen />}
+            <Router route={current} nav={nav} />
           </View>
         )}
 
         <SafeAreaView edges={['bottom']} style={styles.tabBar}>
-          {TABS.map((t) => (
-            <TouchableOpacity key={t.key} style={styles.tab} onPress={() => setTab(t.key)}>
-              <Text style={[styles.tabLabel, tab === t.key && styles.tabLabelActive]}>{t.label}</Text>
-            </TouchableOpacity>
-          ))}
+          {TABS.map((t) => {
+            const active = tab === t.key;
+            return (
+              <TouchableOpacity key={t.key} style={styles.tab} onPress={() => nav.setTab(t.key)}>
+                <Ionicons
+                  name={(active ? t.icon : `${t.icon}-outline`) as keyof typeof Ionicons.glyphMap}
+                  size={22}
+                  color={active ? colors.text : colors.textTertiary}
+                />
+                <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{t.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </SafeAreaView>
       </View>
     </SafeAreaProvider>
   );
+}
+
+function Router({ route, nav }: { route: Route; nav: Nav }) {
+  switch (route.name) {
+    case 'today':
+      return <HomeScreen nav={nav} />;
+    case 'recovery':
+      return <RecoveryScreen nav={nav} />;
+    case 'sleep':
+      return <SleepScreen nav={nav} />;
+    case 'strain':
+      return <StrainScreen nav={nav} />;
+    case 'more':
+      return <MoreScreen nav={nav} />;
+    case 'health':
+      return <HealthScreen nav={nav} />;
+    case 'stress':
+      return <StressScreen nav={nav} />;
+    case 'trends':
+      return <TrendsScreen nav={nav} />;
+    case 'journal':
+      return <JournalScreen nav={nav} />;
+    case 'device':
+      return <DeviceScreen nav={nav} />;
+    case 'settings':
+      return <SettingsScreen nav={nav} />;
+    case 'sleepCoach':
+      return <SleepCoachScreen nav={nav} />;
+    case 'logActivity':
+      return <LogActivityScreen nav={nav} />;
+    case 'metric':
+      return <MetricDetailScreen nav={nav} metricKey={route.key} />;
+    case 'activity':
+      return <StrainScreen nav={nav} />;
+    default:
+      return <HomeScreen nav={nav} />;
+  }
 }
 
 const styles = StyleSheet.create({
@@ -74,7 +139,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  tab: { flex: 1, alignItems: 'center', paddingVertical: 10 },
-  tabLabel: { color: colors.textTertiary, fontSize: 11, fontWeight: '600' },
-  tabLabelActive: { color: colors.amber },
+  tab: { flex: 1, alignItems: 'center', paddingVertical: 8, gap: 2 },
+  tabLabel: { color: colors.textTertiary, fontSize: 10, fontFamily: fonts.textSemibold },
+  tabLabelActive: { color: colors.text },
 });

@@ -10,17 +10,19 @@ import {
   Empty,
   Hypnogram,
   LineChart,
+  NavRow,
   Ring,
   Screen,
   SectionLabel,
   Stat,
 } from '../ui/components';
-import { colors } from '../ui/theme';
+import { colors, sleepStageColors } from '../ui/theme';
+import { Nav } from '../ui/navigation';
 import { formatClock, formatDuration } from '../util/time';
 
 const HEALTHY_MIN = 480; // 8h baseline ("Healthy Minimum")
 
-export function SleepScreen() {
+export function SleepScreen({ nav }: { nav: Nav }) {
   const sleep = useStoreSelector(appStore, (s) => s.lastSleep);
   const [nightHr, setNightHr] = useState<number[]>([]);
 
@@ -30,9 +32,12 @@ export function SleepScreen() {
 
   if (!sleep) {
     return (
-      <Screen title="Sleep">
+      <Screen title="Sleep" onBack={nav.canBack ? nav.back : undefined} tint={colors.sleepTeal}>
         <Card style={{ alignItems: 'center', paddingVertical: 28 }}>
           <Ring value={0} color={colors.sleepTeal} centerTop="Sleep performance" centerMain="—" centerSub="no sleep yet" />
+        </Card>
+        <Card style={{ paddingVertical: 2 }}>
+          <NavRow label="Sleep Coach" icon="moon" iconColor={colors.sleepTeal} onPress={() => nav.navigate({ name: 'sleepCoach' })} last />
         </Card>
         <Card>
           <Empty text="No sleep detected yet. Wear the strap overnight with the app connected, then recalculate from the Today tab. The full breakdown appears once a night is recorded." />
@@ -50,9 +55,9 @@ export function SleepScreen() {
   const debtMin = Math.max(0, sleep.neededMin - sleep.asleepMin);
 
   return (
-    <Screen title="Sleep">
+    <Screen title="Sleep" onBack={nav.canBack ? nav.back : undefined} tint={colors.sleepTeal}>
       {/* Performance ring */}
-      <Card style={{ alignItems: 'center', paddingVertical: 24 }}>
+      <Card style={{ alignItems: 'center', paddingVertical: 24 }} onPress={() => nav.navigate({ name: 'metric', key: 'sleep_performance' })}>
         <Ring
           value={sleep.performance ?? 0}
           color={colors.sleepTeal}
@@ -64,10 +69,14 @@ export function SleepScreen() {
 
       {/* Contributors */}
       <Card>
-        <ContributorRow label="Hours vs. needed" percent={hoursNeededPct} />
+        <ContributorRow label="Hours vs. needed" percent={hoursNeededPct} onPress={() => nav.navigate({ name: 'sleepCoach' })} />
         <ContributorRow label="Sleep efficiency" percent={effPct} />
         <ContributorRow label="Sleep consistency" percent={null} value="needs nights" />
         <BandLegend />
+      </Card>
+
+      <Card style={{ paddingVertical: 2 }}>
+        <NavRow label="Sleep Coach &amp; sleep need" icon="moon" iconColor={colors.sleepTeal} onPress={() => nav.navigate({ name: 'sleepCoach' })} last />
       </Card>
 
       {/* Last night's sleep — overnight HR + window */}
@@ -90,17 +99,17 @@ export function SleepScreen() {
       <Card>
         <Hypnogram segments={sleep.hypnogram} />
         <View style={{ marginTop: 12 }}>
-          <StageRow name="SWS (Deep)" color="#EC4899" minutes={sleep.stages.deep} total={total} />
-          <StageRow name="REM" color="#A855F7" minutes={sleep.stages.rem} total={total} />
-          <StageRow name="Light" color={colors.sleepTeal} minutes={sleep.stages.light} total={total} />
-          <StageRow name="Awake" color={colors.textTertiary} minutes={sleep.stages.awake} total={total} />
+          <StageRow name="SWS (Deep)" color={sleepStageColors.deep} minutes={sleep.stages.deep} total={total} />
+          <StageRow name="REM" color={sleepStageColors.rem} minutes={sleep.stages.rem} total={total} />
+          <StageRow name="Light" color={sleepStageColors.light} minutes={sleep.stages.light} total={total} />
+          <StageRow name="Awake" color={sleepStageColors.awake} minutes={sleep.stages.awake} total={total} />
         </View>
       </Card>
 
       {/* Restorative + efficiency */}
       <View style={styles.grid}>
         <Card style={styles.half}>
-          <Stat label="Restorative (deep+REM)" value={formatDuration(restorativeMin)} color="#A855F7" />
+          <Stat label="Restorative (deep+REM)" value={formatDuration(restorativeMin)} color={sleepStageColors.rem} />
         </Card>
         <Card style={styles.half}>
           <Stat label="Wake events" value={wakeEvents} />

@@ -84,7 +84,7 @@ export function cmdSetConfig(flag: string, value = 1): Uint8Array {
   const body = new Uint8Array(40);
   for (let i = 0; i < flag.length && i < 32; i += 1) body[i] = flag.charCodeAt(i) & 0x7f;
   body[32] = value & 0xff;
-  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.SET_CONFIG, body));
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.SET_FF_VALUE, body));
 }
 
 /** The "most load-bearing" flag — opens the deep optical/PPG + history streams. */

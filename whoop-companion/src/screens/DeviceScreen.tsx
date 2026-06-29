@@ -5,6 +5,7 @@ import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
 import { Card, Empty, PrimaryButton, Screen, SecondaryButton, SectionLabel, Stat } from '../ui/components';
 import { colors, radius } from '../ui/theme';
+import { Nav } from '../ui/navigation';
 import { getAllRawFrames, clearRawFrames } from '../db/database';
 import type { UserProfile } from '../metrics/strain';
 
@@ -20,7 +21,7 @@ const STATUS_TEXT: Record<string, string> = {
   error: 'Error',
 };
 
-export function DeviceScreen() {
+export function DeviceScreen({ nav }: { nav: Nav }) {
   const status = useStoreSelector(appStore, (s) => s.status);
   const detail = useStoreSelector(appStore, (s) => s.statusDetail);
   const device = useStoreSelector(appStore, (s) => s.device);
@@ -43,7 +44,7 @@ export function DeviceScreen() {
   };
 
   return (
-    <Screen title="Device">
+    <Screen title="Device" onBack={nav.canBack ? nav.back : undefined}>
       <Card>
         <View style={styles.statusRow}>
           <View
@@ -194,7 +195,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  sexChipOn: { borderColor: colors.amber, backgroundColor: '#2A2412' },
+  sexChipOn: { borderColor: colors.white, backgroundColor: colors.white },
   chipText: { color: colors.textSecondary, fontSize: 13 },
-  chipTextOn: { color: colors.amber, fontWeight: '600' },
+  chipTextOn: { color: '#000', fontWeight: '600' },
 });

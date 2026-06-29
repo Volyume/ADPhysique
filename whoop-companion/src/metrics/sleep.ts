@@ -37,6 +37,40 @@ export type SleepResult = {
 
 const BASE_NEED_MIN = 480; // 8h baseline sleep need
 
+/**
+ * WHOOP-style Sleep Need breakdown (HOW SLEEP NEED IS CALCULATED): a personal
+ * baseline, plus extra need from recent day Strain, plus a portion of accrued
+ * Sleep Debt, minus credit for recent naps. Each term is reported in minutes so
+ * the UI can mirror WHOOP's stacked breakdown.
+ */
+export type SleepNeed = {
+  baselineMin: number;
+  strainMin: number;
+  debtMin: number;
+  napMin: number;
+  neededMin: number;
+};
+
+const MAX_STRAIN_BONUS_MIN = 90; // a maximal-strain day adds up to ~1.5 h
+const MAX_DEBT_REPAY_MIN = 120; // repay at most ~2 h of accrued debt per night
+
+export function computeSleepNeed(input: {
+  baselineMin?: number;
+  recentStrain: number | null; // 0..21
+  accruedDebtMin: number; // total positive shortfall over recent nights
+  napMin?: number;
+}): SleepNeed {
+  const baselineMin = input.baselineMin ?? BASE_NEED_MIN;
+  const strainMin =
+    input.recentStrain != null
+      ? Math.round((Math.max(0, Math.min(21, input.recentStrain)) / 21) * MAX_STRAIN_BONUS_MIN)
+      : 0;
+  const debtMin = Math.round(Math.max(0, Math.min(MAX_DEBT_REPAY_MIN, input.accruedDebtMin)));
+  const napMin = Math.round(Math.max(0, input.napMin ?? 0));
+  const neededMin = Math.max(BASE_NEED_MIN * 0.6, baselineMin + strainMin + debtMin - napMin);
+  return { baselineMin, strainMin, debtMin, napMin, neededMin: Math.round(neededMin) };
+}
+
 /** Find the main sleep window: the longest low-motion, low-HR stretch. */
 function findSleepWindow(samples: SleepMinute[]): { start: number; end: number } | null {
   if (samples.length < 30) return null;

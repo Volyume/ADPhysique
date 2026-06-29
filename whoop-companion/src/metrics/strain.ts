@@ -65,10 +65,10 @@ export function trimpToStrain(trimp: number): number {
 }
 
 /**
- * Edwards zone-weighted TRIMP: minutes in each Karvonen zone × zone weight
- * (1–5). Time BELOW ~50% HRR contributes nothing, so a resting/sedentary day
- * scores ~0 — matching how WHOOP strain barely moves at rest (the Banister
- * version above wrongly accumulated load from every above-resting minute).
+ * Edwards zone-weighted TRIMP using WHOOP's six heart-rate zones (0–5 by % max
+ * HR). Weight = the zone number (0–5), so Zone 0 (below 50% max HR — i.e. rest)
+ * contributes nothing and a sedentary day scores ~0, matching WHOOP. Higher
+ * zones count progressively more.
  */
 export function edwardsTrimp(
   samples: Array<{ hr: number; minutes: number }>,
@@ -76,7 +76,7 @@ export function edwardsTrimp(
 ): number {
   const zones = hrZones(samples, profile);
   let load = 0;
-  for (const z of zones) load += z.minutes * z.zone; // zone weight = 1..5
+  for (const z of zones) load += z.minutes * z.zone; // zone weight = 0..5
   return load;
 }
 
@@ -92,26 +92,35 @@ export function strainFromLoad(load: number): number {
   return Math.round(Math.min(21, strain) * 10) / 10;
 }
 
-export type HrZone = { zone: number; label: string; minutes: number };
+export type HrZone = { zone: number; label: string; range: string; minutes: number };
 
-const ZONE_EDGES = [0.5, 0.6, 0.7, 0.8, 0.9]; // %HRR boundaries
-const ZONE_LABELS = ['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5'];
+// WHOOP heart-rate zones are bands of % MAX HR (not heart-rate reserve):
+// Zone 0 <50%, 1 50–60%, 2 60–70%, 3 70–80%, 4 80–90%, 5 90–100%.
+const ZONE_MAX_EDGES = [0.5, 0.6, 0.7, 0.8, 0.9];
+const ZONE_LABELS = ['Zone 0', 'Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5'];
+const ZONE_RANGES = ['<50%', '50–60%', '60–70%', '70–80%', '80–90%', '90–100%'];
 
-/** Minutes spent in each Karvonen %HRR zone. */
+/** Minutes spent in each WHOOP heart-rate zone (0–5 by % max HR). */
 export function hrZones(
   samples: Array<{ hr: number; minutes: number }>,
   profile: UserProfile,
 ): HrZone[] {
-  const minutes = [0, 0, 0, 0, 0];
+  const max = hrMaxFor(profile);
+  const minutes = [0, 0, 0, 0, 0, 0];
   for (const s of samples) {
-    const hrr = hrReserveFraction(s.hr, profile);
+    const frac = max > 0 ? s.hr / max : 0;
     let z = 0;
-    for (let i = 0; i < ZONE_EDGES.length; i += 1) {
-      if (hrr >= (ZONE_EDGES[i] as number)) z = i;
+    for (let i = 0; i < ZONE_MAX_EDGES.length; i += 1) {
+      if (frac >= (ZONE_MAX_EDGES[i] as number)) z = i + 1;
     }
     minutes[z] = (minutes[z] as number) + s.minutes;
   }
-  return ZONE_LABELS.map((label, i) => ({ zone: i + 1, label, minutes: Math.round(minutes[i] as number) }));
+  return ZONE_LABELS.map((label, i) => ({
+    zone: i, // weight 0..5
+    label,
+    range: ZONE_RANGES[i] as string,
+    minutes: Math.round(minutes[i] as number),
+  }));
 }
 
 function clamp01(x: number): number {
