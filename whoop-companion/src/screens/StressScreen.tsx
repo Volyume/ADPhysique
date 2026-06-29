@@ -62,19 +62,25 @@ export function StressScreen({ nav }: { nav: Nav }) {
               <Text style={styles.axisLabel}>{formatClock(series[0]!.tsMs)}</Text>
               <Text style={styles.axisLabel}>{formatClock(series[series.length - 1]!.tsMs)}</Text>
             </View>
+            <Text style={styles.coverage}>
+              {series.length} five-minute window{series.length === 1 ? '' : 's'} had enough R-R to score
+              today. Gaps are where the strap wasn’t sending enough beat-to-beat data — so this curve is
+              patchy, not a continuous reading like WHOOP’s.
+            </Text>
           </>
         ) : (
-          <Empty text="No stress data yet today. Stress is computed from your R-R intervals while the strap is connected." />
+          <Empty text="Not enough R-R captured to chart stress yet. Each point needs ~20 clean beat-to-beat intervals in a 5-minute window; the strap’s R-R currently arrives in sparse bursts, so this fills in slowly." />
         )}
       </Card>
 
       <SectionLabel>How it works</SectionLabel>
       <Card>
         <Text style={styles.blurb}>
-          Your stress score (0–3) is computed continuously from heart rate and heart-rate variability
-          using the Baevsky Stress Index — a published measure of autonomic balance. Low HRV with an
-          elevated heart rate pushes the score up. Higher values mean more sympathetic (“fight or
-          flight”) activation.
+          Your stress score (0–3) is computed from heart rate and heart-rate variability using the
+          Baevsky Stress Index — a published measure of autonomic balance. Low HRV with an elevated
+          heart rate pushes the score up. It needs clean, continuous R-R to be a smooth curve; ours
+          depends on how steadily the strap streams R-R, which is currently intermittent — so expect
+          gaps until the R-R feed is improved.
         </Text>
       </Card>
     </Screen>
@@ -99,5 +105,6 @@ const styles = StyleSheet.create({
   legendLabel: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.text },
   axis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
   axisLabel: { color: colors.textTertiary, fontSize: 11, fontFamily: fonts.text },
+  coverage: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 10, fontFamily: fonts.text },
   blurb: { color: colors.textSecondary, fontSize: 14, lineHeight: 21, fontFamily: fonts.text },
 });

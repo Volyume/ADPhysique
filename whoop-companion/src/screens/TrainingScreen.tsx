@@ -7,7 +7,6 @@ import { useStoreSelector } from '../state/store';
 import { Card, Empty, Screen, SectionLabel, Stat, WeeklyBars } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
-import { hrMaxFor } from '../metrics/strain';
 import { formatRaceTime, racePredictions, trainingLoad, vo2maxEstimate, vo2maxLabel } from '../metrics/training';
 import { formatDistance, formatPace } from '../sensors/location';
 import { formatDuration } from '../util/time';
@@ -29,8 +28,13 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
   const today = useStoreSelector(appStore, (s) => s.today);
 
   const now = Date.now();
-  const restingHr = profile.restingHr || today?.rhr || 60;
-  const vo2 = vo2maxEstimate(hrMaxFor(profile), restingHr);
+  // VO2max only when we have REAL inputs: an explicitly-set max HR (we can't
+  // measure true max at rest) and a measured resting HR from your sleep. Never
+  // estimate it from default/placeholder profile values — that produced a
+  // meaningless number. Even then it's a rough HR-ratio proxy (best for runners).
+  const measuredResting = today?.rhr ?? null;
+  const hasFitnessInputs = profile.maxHr != null && measuredResting != null;
+  const vo2 = hasFitnessInputs ? vo2maxEstimate(profile.maxHr as number, measuredResting as number) : null;
   const vo2Lbl = vo2 != null ? vo2maxLabel(vo2, profile.ageYears, profile.sex) : null;
   const races = racePredictions(vo2);
 
@@ -83,8 +87,9 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
           <Stat label={vo2Lbl ? `VO₂max · ${vo2Lbl}` : 'VO₂max'} value={vo2 ?? '—'} unit={vo2 != null ? 'ml/kg/min' : undefined} color={colors.recoveryGreen} />
         </View>
         <Text style={styles.note}>
-          Estimated from your max and resting heart rate (Uth 2004). Set an accurate resting/max HR
-          and weight on the Device screen to improve it.
+          {vo2 == null
+            ? 'Not estimated yet — set your true max HR on the Device screen, and wear the strap overnight so a resting HR is measured. (We won’t guess it from default values.)'
+            : 'Rough estimate from your max:resting HR ratio (Uth 2004) — most accurate for endurance athletes; treat with caution if you mainly train strength. A proper VO₂max needs paced outdoor runs.'}
         </Text>
       </Card>
 

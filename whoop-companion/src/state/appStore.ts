@@ -320,25 +320,14 @@ class AppStore extends Store<AppState> {
         for (const frame of asm.push(hexToBytes(f.hex))) {
           const hb = decodeHeartbeatSteps(frame);
           if (hb != null) this.setState({ hbStepRaw: hb });
-          if (isAccelFrame(frame)) {
-            const now = Date.now();
-            const day = dayKey(now);
-            if (day !== this.stepDay) {
-              this.stepCounter.reset();
-              this.stepDay = day;
-            }
-            const samples = decodeAccel(frame);
-            if (samples.length > 0) {
-              // Spread real per-sample timestamps across the gap since the last
-              // accel frame, so the step cadence gate isn't fed identical times
-              // (which previously let one false peak per frame slip through).
-              const prev = this.lastAccelTs || now - samples.length * 20;
-              const dt = Math.min(40, Math.max(4, (now - prev) / samples.length));
-              samples.forEach((a, i) => this.stepCounter.add(a.x, a.y, a.z, prev + (i + 1) * dt));
-              this.lastAccelTs = now;
-              this.setState({ bandSteps: this.stepCounter.count });
-            }
-          }
+          // Band step counting is DISABLED pending on-strap calibration. The
+          // accelerometer byte layout is reverse-engineered and unconfirmed, and
+          // on this firmware it decodes to noise even at rest — which produced a
+          // false climbing step count. We won't show a number we can't trust;
+          // bandSteps stays null until a capture confirms the format. Raw frames
+          // are still captured above for that calibration.
+          void isAccelFrame;
+          void decodeAccel;
         }
       } catch {
         // Malformed frame — ignore.

@@ -111,8 +111,8 @@ export function StrainScreen({ nav }: { nav: Nav }) {
         <MetricRow label="Heart rate zones 4–5" display={hm(z45)} current={z45} prior={null} />
         <MetricRow label="Strength activity time" display={hm(strengthMin)} current={strengthMin} prior={null} />
         <MetricRow
-          label="Steps (band · beta)"
-          display={bandSteps != null ? `${bandSteps}` : '—'}
+          label="Steps (band)"
+          display={bandSteps != null ? `${bandSteps}` : 'Needs calibration'}
           current={bandSteps}
           prior={null}
         />
