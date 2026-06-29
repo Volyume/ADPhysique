@@ -26,6 +26,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
 
   const recovery = today?.recovery ?? null;
   const strain = today?.strain ?? null;
+  const readiness = useStoreSelector(appStore, (s) => s.trainingReadiness);
   // Composite Sleep Performance (WHOOP's headline) when available, else the
   // hours-vs-needed ratio as a fallback for older rows.
   const sleepPerf =
@@ -142,6 +143,35 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             value={cardioAge != null ? `${cardioAge}` : '—'}
             sub="cardiovascular est."
             onPress={() => nav.navigate({ name: 'metric', key: 'cardio_age' })}
+            style={styles.half}
+          />
+        </View>
+
+        <View style={styles.grid}>
+          <Tile
+            title="Readiness"
+            icon="speedometer"
+            color={
+              readiness == null
+                ? colors.textSecondary
+                : readiness.score >= 70
+                ? colors.recoveryGreen
+                : readiness.score >= 50
+                ? colors.recoveryYellow
+                : colors.recoveryRed
+            }
+            value={readiness ? `${readiness.score}` : '—'}
+            sub={readiness ? readiness.label : 'needs recovery'}
+            onPress={() => nav.navigate({ name: 'readiness' })}
+            style={styles.half}
+          />
+          <Tile
+            title="Training Status"
+            icon="fitness"
+            color={colors.strainBlue}
+            value=""
+            sub="VO₂max · load"
+            onPress={() => nav.navigate({ name: 'training' })}
             style={styles.half}
           />
         </View>

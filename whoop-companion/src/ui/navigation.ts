@@ -44,6 +44,7 @@ export type Route =
   | { name: 'editSleep' }
   | { name: 'sleepTrends' }
   | { name: 'training' }
+  | { name: 'readiness' }
   | { name: 'startMenu' }
   | { name: 'liveSession' }
   | { name: 'resilience' }

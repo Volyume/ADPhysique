@@ -26,6 +26,7 @@ import { EditSleepScreen } from './src/screens/EditSleepScreen';
 import { SleepTrendsScreen } from './src/screens/SleepTrendsScreen';
 import { ActivityDetailScreen } from './src/screens/ActivityDetailScreen';
 import { TrainingScreen } from './src/screens/TrainingScreen';
+import { ReadinessScreen } from './src/screens/ReadinessScreen';
 import { StartScreen } from './src/screens/StartScreen';
 import { LiveSessionScreen } from './src/screens/LiveSessionScreen';
 import { colors } from './src/ui/theme';
@@ -138,6 +139,8 @@ function Router({ route, nav }: { route: Route; nav: Nav }) {
       return <SleepTrendsScreen nav={nav} />;
     case 'training':
       return <TrainingScreen nav={nav} />;
+    case 'readiness':
+      return <ReadinessScreen nav={nav} />;
     case 'startMenu':
       return <StartScreen nav={nav} />;
     case 'liveSession':

@@ -67,6 +67,8 @@ import { illnessRisk, IllnessResult } from '../metrics/illness';
 import { resilience, Resilience } from '../metrics/resilience';
 import { cardioAge } from '../metrics/cardioAge';
 import { rhythmScreen, RhythmResult } from '../metrics/afib';
+import { trainingLoad } from '../metrics/training';
+import { computeTrainingReadiness, Readiness } from '../metrics/readiness';
 import { addDays, dayKey, epochDay, startOfDayMs } from '../util/time';
 
 export type SessionKind = 'workout' | 'sleep' | 'nap';
@@ -116,6 +118,7 @@ export type AppState = {
   sleepConsistency: SleepConsistency | null;
   sleepStress: SleepStress | null; // last night's 0-3 stress breakdown
   sleepPerformance: SleepPerformance | null; // composite ring + 4 contributors
+  trainingReadiness: Readiness | null; // Garmin-style readiness, built on Recovery
   sleepGoal: number; // target fraction of sleep need: 0.7 / 0.85 / 1.0
   // Oura-style derived insights (all HR/R-R only):
   recoveryParts: { hrvSub: number; rhrSub: number; sleepSub: number } | null;
@@ -155,6 +158,7 @@ const initialState: AppState = {
   sleepConsistency: null,
   sleepStress: null,
   sleepPerformance: null,
+  trainingReadiness: null,
   sleepGoal: 0.85,
   recoveryParts: null,
   hrvBal: null,
@@ -751,6 +755,18 @@ class AppStore extends Store<AppState> {
     const resilienceResult = resilience(recoveryHistory);
     const cardioAgeResult = cardioAge({ age: profile.ageYears, rhr, rmssd });
 
+    // ---- Garmin-style synthesis: Training Readiness + Body Battery ----
+    const sleepPerfPct = sleepPerformanceResult?.score ?? null;
+    const trimps = this.getState().cardio.filter((c) => c.trimp != null).map((c) => ({ ts: c.startTs, trimp: c.trimp as number }));
+    const loadStatus = trainingLoad(trimps, now);
+    const trainingReadiness = computeTrainingReadiness({
+      recovery,
+      sleepPerformance: sleepPerfPct,
+      sleepDebtMin: need.debtMin,
+      hrvBalance: hrvBal?.score ?? null,
+      acwr: loadStatus.acwr,
+    });
+
     const row: DailyMetricRow = {
       day: today,
       recovery,
@@ -780,6 +796,7 @@ class AppStore extends Store<AppState> {
       sleepConsistency: consistency,
       sleepStress: sleepStressResult,
       sleepPerformance: sleepPerformanceResult,
+      trainingReadiness,
       recoveryParts,
       hrvBal,
       illness,
