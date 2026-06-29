@@ -38,6 +38,7 @@ import {
   cmdEnableHrBroadcast,
   cmdGetHello,
   cmdLinkValid,
+  cmdSetClock,
   cmdToggleRealtimeHr,
 } from '../whoop/commands';
 
@@ -84,6 +85,7 @@ export class WhoopBle {
   private writeService: string | null = null;
   private writeChar: string | null = null;
   private keepalive: ReturnType<typeof setInterval> | null = null;
+  private reArm: ReturnType<typeof setInterval> | null = null;
 
   constructor(events: WhoopEvents) {
     this.manager = new BleManager();
@@ -190,19 +192,22 @@ export class WhoopBle {
 
       this.setStatus('discovering');
       await connected.discoverAllServicesAndCharacteristics();
-
-      // Find the command-write characteristic, then tell the strap to start
-      // streaming HR itself (no official WHOOP app needed) and keep the link
-      // alive — without a LINK_VALID every ~10s the strap drops the connection.
       await this.locateWriteChar(connected);
+
+      // Subscribe to the proprietary notify characteristics BEFORE writing any
+      // command (the strap needs CCCD enabled first, and we must catch the
+      // command responses + data). Order verified against whoop-vault.
+      await this.subscribeAll(connected);
+
+      // Bring-up: hello -> set clock -> enable live HR (standard 0x2A37 +
+      // proprietary) -> LINK_VALID keepalive every ~2s. No WHOOP app needed.
       await this.startStreaming();
 
-      // Re-discover so the now-enabled standard HR service (0x2A37) is present
-      // in the GATT table before we subscribe to it.
-      await delay(800);
+      // The standard HR service only begins after TOGGLE_GENERIC_HR_PROFILE, so
+      // re-discover and subscribe 0x2A37 now that it's broadcasting.
+      await delay(900);
       await connected.discoverAllServicesAndCharacteristics();
-
-      await this.subscribeAll(connected);
+      this.subscribeStandardHr(connected);
       this.setStatus('connected', connected.name ?? connected.id);
     } catch (e) {
       this.fail(`Connect failed: ${String(e)}`);
@@ -236,22 +241,40 @@ export class WhoopBle {
   private async startStreaming(): Promise<void> {
     if (!this.canSendCommands) return;
     try {
-      await this.writeCommand(cmdGetHello());
-      await this.writeCommand(cmdEnableHrBroadcast(true));
-      await this.writeCommand(cmdToggleRealtimeHr(true));
+      await this.writeCommand(cmdGetHello()); // GET_HELLO_HARVARD (35)
+      await this.writeCommand(cmdSetClock()); // SET_CLOCK (10)
+      await this.writeCommand(cmdEnableHrBroadcast(true)); // 14 -> standard 0x2A37
+      await this.writeCommand(cmdToggleRealtimeHr(true)); // 3 -> proprietary HR
     } catch {
       // best-effort; live HR may still arrive once the keepalive holds the link
     }
     this.clearKeepalive();
+    // LINK_VALID keepalive every 2s — the strap drops the link without it
+    // (whoop-vault LINK_VALID_INTERVAL_S = 2.0).
     this.keepalive = setInterval(() => {
       this.writeCommand(cmdLinkValid()).catch(() => {});
-    }, 10000);
+    }, 2000);
+    // Re-arm the realtime HR stream periodically to sustain proprietary samples.
+    this.reArm = setInterval(() => {
+      this.writeCommand(cmdToggleRealtimeHr(true)).catch(() => {});
+    }, 6000);
+  }
+
+  private subscribeStandardHr(device: Device): void {
+    this.trySubscribe(device, HEART_RATE_SERVICE, HEART_RATE_MEASUREMENT, (bytes) => {
+      const sample = decodeHeartRate(bytes);
+      if (sample) this.events.onHeartRate?.(sample);
+    });
   }
 
   private clearKeepalive(): void {
     if (this.keepalive) {
       clearInterval(this.keepalive);
       this.keepalive = null;
+    }
+    if (this.reArm) {
+      clearInterval(this.reArm);
+      this.reArm = null;
     }
   }
 
@@ -272,13 +295,10 @@ export class WhoopBle {
     }
     this.events.onDiscovered?.(discovered);
 
-    // 1) Standard live heart rate (reliable, non-proprietary).
-    this.trySubscribe(device, HEART_RATE_SERVICE, HEART_RATE_MEASUREMENT, (bytes) => {
-      const sample = decodeHeartRate(bytes);
-      if (sample) this.events.onHeartRate?.(sample);
-    });
+    // Standard HR (0x2A37) is subscribed AFTER the HR-broadcast is enabled
+    // (see subscribeStandardHr), since it isn't notifying yet at this point.
 
-    // 2) Standard battery level.
+    // Standard battery level.
     this.tryReadBattery(device);
     this.trySubscribe(device, BATTERY_SERVICE, BATTERY_LEVEL, (bytes) => {
       if (bytes.length >= 1) this.events.onBattery?.(bytes[0] as number);

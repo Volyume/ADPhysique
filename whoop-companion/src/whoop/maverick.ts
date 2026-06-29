@@ -75,12 +75,15 @@ export function encodeFrame(
   inner: Uint8Array,
   opts: { version?: number; roleA?: number; roleB?: number } = {},
 ): Uint8Array {
-  const version = opts.version ?? 0x00;
+  // Header bytes VERIFIED against whoop-vault (hardware-validated r52): the
+  // outer frame is AA 01 | len_u16_LE | 00 01 | crc16(header) | inner | crc32,
+  // where len = padded-inner length + 4 (it counts the trailing CRC32).
+  const version = opts.version ?? 0x01;
   const roleA = opts.roleA ?? 0x00;
-  const roleB = opts.roleB ?? 0x00;
+  const roleB = opts.roleB ?? 0x01;
 
   const alignedInner = pad4(inner);
-  const length = alignedInner.length;
+  const length = alignedInner.length + 4;
 
   const header = new Uint8Array(6);
   header[0] = FRAME_START;
@@ -154,9 +157,11 @@ export class FrameAssembler {
       while (this.buf.length > 0 && this.buf[0] !== FRAME_START) this.buf.shift();
       if (this.buf.length < 8) break; // need header(6) + crc16(2)
 
+      // length field = padded-inner length + 4 (includes the trailing CRC32).
       const length = (this.buf[2] as number) | ((this.buf[3] as number) << 8);
-      const total = 6 + 2 + length + 4; // header + crc16 + inner + crc32
-      if (length <= 0 || length > 4096) {
+      const innerLen = length - 4;
+      const total = 8 + length; // header(6) + crc16(2) + innerLen + crc32(4)
+      if (innerLen <= 0 || innerLen > 4096) {
         // Implausible length — drop the start byte and resync.
         this.buf.shift();
         continue;
@@ -166,7 +171,7 @@ export class FrameAssembler {
       const version = this.buf[1] as number;
       const roleA = this.buf[4] as number;
       const roleB = this.buf[5] as number;
-      const inner = new Uint8Array(this.buf.slice(8, 8 + length));
+      const inner = new Uint8Array(this.buf.slice(8, 8 + innerLen));
       frames.push({ version, roleA, roleB, ...parseInner(inner) });
 
       this.buf.splice(0, total);

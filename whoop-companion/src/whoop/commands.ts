@@ -22,15 +22,29 @@
 import { buildInner, encodeFrame, PacketType } from './maverick';
 
 export enum Command {
-  LINK_VALID = 1, // keepalive — strap drops the link without one every ~10 s
-  TOGGLE_REALTIME_HR = 3, // realtime HR over proprietary fd4b0003
+  LINK_VALID = 1, // keepalive — strap drops the link without one (send every ~2 s)
+  TOGGLE_REALTIME_HR = 3, // realtime HR over proprietary fd4b stream
+  SET_CLOCK = 10, // epoch_u32_LE + tz byte (0=UTC); part of bring-up
   TOGGLE_GENERIC_HR_PROFILE = 14, // makes the strap broadcast standard GATT 0x2A37
   SEND_HISTORICAL_DATA = 22,
   HISTORICAL_DATA_RESULT = 23,
   GET_HELLO_HARVARD = 35, // session hello
   ENTER_HIGH_FREQ_SYNC = 96,
-  SET_CONFIG = 0x78, // 120 — write a persistent feature-flag config value
+  EXIT_HIGH_FREQ_SYNC = 97,
+  SET_FF_VALUE = 0x78, // 120 — write a persistent feature-flag value (deep streams)
   GET_HELLO = 145, // alternate hello
+}
+
+/** SET_CLOCK (10): epoch seconds u32 LE + tz byte (0 = UTC). Part of bring-up. */
+export function cmdSetClock(): Uint8Array {
+  const epoch = Math.floor(Date.now() / 1000);
+  const payload = new Uint8Array(5);
+  payload[0] = epoch & 0xff;
+  payload[1] = (epoch >> 8) & 0xff;
+  payload[2] = (epoch >> 16) & 0xff;
+  payload[3] = (epoch >> 24) & 0xff;
+  payload[4] = 0; // UTC
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.SET_CLOCK, payload));
 }
 
 /** Keepalive — must be sent ~every 10 s or the strap disconnects. */
