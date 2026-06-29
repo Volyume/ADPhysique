@@ -3,7 +3,7 @@ import { Text, TextInput, TouchableOpacity, View, StyleSheet } from 'react-nativ
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
-import { Bar, Card, Empty, PrimaryButton, Screen, SectionLabel, Stat } from '../ui/components';
+import { Bar, Card, Empty, PrimaryButton, Screen, SectionLabel, StrainCurve } from '../ui/components';
 import { colors, radius } from '../ui/theme';
 import { formatDuration } from '../util/time';
 import type { HrZone } from '../metrics/strain';
@@ -16,12 +16,14 @@ export function StrainScreen() {
   const cardio = useStoreSelector(appStore, (s) => s.cardio);
 
   const [zones, setZones] = useState<HrZone[]>([]);
+  const [curve, setCurve] = useState<Array<{ tsMs: number; strain: number }>>([]);
   const [activity, setActivity] = useState('Run');
   const [duration, setDuration] = useState('30');
   const [avgHr, setAvgHr] = useState('');
 
   useEffect(() => {
     void appStore.todayZones().then(setZones);
+    void appStore.todayStrainCurve().then(setCurve);
   }, [today]);
 
   const zoneMax = Math.max(1, ...zones.map((z) => z.minutes));
@@ -41,14 +43,20 @@ export function StrainScreen() {
       .then(() => {
         setDuration('30');
         setAvgHr('');
+        void appStore.todayStrainCurve().then(setCurve);
       });
   };
 
   return (
     <Screen title="Strain">
-      <Card style={{ alignItems: 'center', paddingVertical: 20 }}>
+      <Card style={{ alignItems: 'center', paddingVertical: 18 }}>
         <Text style={styles.bigStrain}>{today?.strain != null ? today.strain.toFixed(1) : '—'}</Text>
         <Text style={styles.strainLabel}>day strain · 0–21</Text>
+      </Card>
+
+      <SectionLabel>Strain through the day</SectionLabel>
+      <Card>
+        <StrainCurve points={curve} />
       </Card>
 
       <SectionLabel>Time in heart-rate zones</SectionLabel>

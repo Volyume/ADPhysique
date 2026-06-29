@@ -8,7 +8,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Line, Polyline, Rect } from 'react-native-svg';
 
 import { colors, radius, spacing, type } from './theme';
 
@@ -205,4 +205,129 @@ const styles = StyleSheet.create({
   barFill: { height: 10, borderRadius: 5 },
   barRight: { color: colors.textSecondary, fontSize: 12, width: 52, textAlign: 'right' },
   empty: { color: colors.textTertiary, fontSize: 13, marginTop: spacing.item, lineHeight: 18 },
+});
+
+/** A tappable WHOOP-style metric dial for the overview — a doorway to detail. */
+export function Dial({
+  label,
+  main,
+  sub,
+  color,
+  fraction,
+  onPress,
+  size = 104,
+}: {
+  label: string;
+  main: string;
+  sub?: string;
+  color: string;
+  fraction: number;
+  onPress?: () => void;
+  size?: number;
+}) {
+  const stroke = 9;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(1, fraction));
+  const dash = c * clamped;
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={dialStyles.wrap}>
+      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+        <Svg width={size} height={size}>
+          <Circle cx={size / 2} cy={size / 2} r={r} stroke={colors.surface} strokeWidth={stroke} fill="none" />
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            stroke={color}
+            strokeWidth={stroke}
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray={`${dash} ${c - dash}`}
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          />
+        </Svg>
+        <View style={dialStyles.center}>
+          <Text style={[dialStyles.main, { color }]}>{main}</Text>
+        </View>
+      </View>
+      <Text style={dialStyles.label}>{label}</Text>
+      {sub ? <Text style={dialStyles.sub}>{sub}</Text> : null}
+    </TouchableOpacity>
+  );
+}
+
+const STAGE_COLOR: Record<string, string> = {
+  awake: colors.textTertiary,
+  rem: '#6D28D9',
+  light: colors.sleepTeal,
+  deep: '#1E40AF',
+};
+const STAGE_LANE: Record<string, number> = { awake: 0, rem: 1, light: 2, deep: 3 };
+
+/** WHOOP-style sleep hypnogram: stage segments across the night, by lane. */
+export function Hypnogram({ segments }: { segments: Array<{ stage: string; minutes: number }> }) {
+  const total = segments.reduce((a, b) => a + b.minutes, 0) || 1;
+  const W = 1000;
+  const laneH = 18;
+  const gap = 5;
+  const H = 4 * laneH + 3 * gap;
+  let x = 0;
+  const rects = segments.map((s, i) => {
+    const w = (s.minutes / total) * W;
+    const lane = STAGE_LANE[s.stage] ?? 2;
+    const rx = x;
+    x += w;
+    return (
+      <Rect
+        key={i}
+        x={rx}
+        y={lane * (laneH + gap)}
+        width={Math.max(1, w)}
+        height={laneH}
+        rx={3}
+        fill={STAGE_COLOR[s.stage] ?? colors.sleepTeal}
+      />
+    );
+  });
+  return (
+    <View>
+      <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+        {rects}
+      </Svg>
+    </View>
+  );
+}
+
+/** WHOOP-style strain curve building over the day (0–21). */
+export function StrainCurve({
+  points,
+  color = colors.strainBlue,
+}: {
+  points: Array<{ tsMs: number; strain: number }>;
+  color?: string;
+}) {
+  if (points.length < 2) {
+    return <Empty text="No strain yet today — it builds as your heart rate rises through the day." />;
+  }
+  const W = 1000;
+  const H = 200;
+  const n = points.length;
+  const pts = points
+    .map((p, i) => `${(i / (n - 1)) * W},${H - (Math.min(21, p.strain) / 21) * H}`)
+    .join(' ');
+  return (
+    <Svg width="100%" height={130} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+      <Line x1={0} y1={H - 1} x2={W} y2={H - 1} stroke={colors.border} strokeWidth={2} />
+      <Polyline points={pts} fill="none" stroke={color} strokeWidth={6} strokeLinejoin="round" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+const dialStyles = StyleSheet.create({
+  wrap: { flex: 1, alignItems: 'center' },
+  center: { position: 'absolute', alignItems: 'center' },
+  main: { fontSize: 22, fontWeight: '800' },
+  label: { color: colors.textSecondary, fontSize: 12, marginTop: 6, fontWeight: '600' },
+  sub: { color: colors.textTertiary, fontSize: 11, marginTop: 1 },
 });

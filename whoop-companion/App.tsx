@@ -43,7 +43,7 @@ export default function App() {
           </View>
         ) : (
           <View style={{ flex: 1 }}>
-            {tab === 'today' && <HomeScreen />}
+            {tab === 'today' && <HomeScreen onNavigate={(t) => setTab(t)} />}
             {tab === 'recovery' && <RecoveryScreen />}
             {tab === 'sleep' && <SleepScreen />}
             {tab === 'strain' && <StrainScreen />}
