@@ -27,3 +27,6 @@ expo-env.d.ts
 *.mobileprovision
 google-services.json
 GoogleService-Info.plist
+
+# lockfile omitted: CI uses npm install --legacy-peer-deps; committing it nests transitive deps
+package-lock.json
