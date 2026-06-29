@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, Vibration, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 
@@ -11,6 +11,7 @@ import { Nav } from '../ui/navigation';
 import { formatDistance, formatPace } from '../sensors/location';
 import { strainCategory, strainCoachText } from '../metrics/strainCoach';
 import { kcalPerMinute } from '../metrics/calories';
+import { STEP_META, stepAt, totalDurationSec } from '../data/structuredWorkouts';
 
 function fmt(sec: number): string {
   const h = Math.floor(sec / 3600);
@@ -29,12 +30,23 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
   const [now, setNow] = useState(Date.now());
   const [stats, setStats] = useState<SessionStats | null>(null);
   const ticked = useRef(0);
+  const lastStepIdx = useRef(-1);
 
   useEffect(() => {
     const id = setInterval(() => {
       setNow(Date.now());
       ticked.current += 1;
       if (ticked.current % 5 === 0) void appStore.sessionStats().then(setStats);
+      // Buzz on each structured-workout step change (and on completion).
+      const s = appStore.getState().session;
+      if (s?.plan) {
+        const st = stepAt(s.plan, Math.round((Date.now() - s.startTs) / 1000));
+        if (lastStepIdx.current === -1) lastStepIdx.current = st.index;
+        else if (st.index !== lastStepIdx.current) {
+          lastStepIdx.current = st.index;
+          Vibration.vibrate(st.done ? [0, 300, 150, 300] : 250);
+        }
+      }
     }, 1000);
     void appStore.sessionStats().then(setStats);
     return () => clearInterval(id);
@@ -54,6 +66,8 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
 
   const elapsed = Math.round((now - session.startTs) / 1000);
   const isWorkout = session.kind === 'workout';
+  const plan = session.plan;
+  const planState = plan ? stepAt(plan, elapsed) : null;
   const tint = session.kind === 'sleep' ? colors.sleepTeal : session.kind === 'nap' ? colors.recoveryYellow : colors.strainBlue;
   const zoneMax = Math.max(1, ...(stats?.zones.map((z) => z.minutes) ?? [1]));
 
@@ -74,6 +88,26 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
         <Text style={[styles.kind, { color: tint }]}>{session.label.toUpperCase()}</Text>
         <Text style={styles.timer}>{fmt(elapsed)}</Text>
         <Text style={styles.conn}>{status === 'connected' ? 'strap connected' : 'strap not connected'}</Text>
+
+        {plan && planState ? (
+          planState.done ? (
+            <View style={[styles.stepBanner, { borderColor: colors.recoveryGreen }]}>
+              <Text style={[styles.stepKind, { color: colors.recoveryGreen }]}>WORKOUT COMPLETE</Text>
+              <Text style={styles.stepHint}>All {plan.steps.length} steps done — tap “Finish & save”.</Text>
+            </View>
+          ) : (
+            <View style={[styles.stepBanner, { borderColor: STEP_META[planState.step!.kind].color }]}>
+              <Text style={[styles.stepKind, { color: STEP_META[planState.step!.kind].color }]}>
+                {STEP_META[planState.step!.kind].label.toUpperCase()} · STEP {planState.index + 1}/{plan.steps.length}
+              </Text>
+              <Text style={styles.stepTime}>{fmt(Math.ceil(planState.stepRemaining))}</Text>
+              <Text style={styles.stepHint}>
+                {planState.step!.targetZone ? `Target zone ${planState.step!.targetZone}` : 'No HR target'} ·{' '}
+                {fmt(Math.round(totalDurationSec(plan) - elapsed))} left of plan
+              </Text>
+            </View>
+          )
+        ) : null}
 
         <View style={styles.statRow}>
           <Stat label="Heart rate" value={liveHr ?? '—'} unit={liveHr != null ? 'bpm' : undefined} color={colors.recoveryRed} />
@@ -182,5 +216,9 @@ const styles = StyleSheet.create({
   mapHint: { color: colors.textTertiary, fontSize: 13, textAlign: 'center', paddingVertical: 36, fontFamily: fonts.text },
   hint: { color: colors.textSecondary, fontSize: 14, lineHeight: 21, marginTop: 24, fontFamily: fonts.text },
   coach: { color: colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 12, fontFamily: fonts.text },
+  stepBanner: { borderWidth: 1.5, borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 4, backgroundColor: colors.card },
+  stepKind: { fontSize: 13, letterSpacing: 1.2, fontFamily: fonts.textBold },
+  stepTime: { color: colors.text, fontSize: 44, fontFamily: fonts.black, marginTop: 4 },
+  stepHint: { color: colors.textSecondary, fontSize: 12, marginTop: 4, fontFamily: fonts.text },
   controls: { padding: 16, gap: 4 },
 });

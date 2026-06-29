@@ -69,6 +69,8 @@ import { cardioAge } from '../metrics/cardioAge';
 import { rhythmScreen, RhythmResult } from '../metrics/afib';
 import { trainingLoad } from '../metrics/training';
 import { computeTrainingReadiness, Readiness } from '../metrics/readiness';
+import { activityGps } from '../data/activities';
+import { StructuredWorkout } from '../data/structuredWorkouts';
 import { addDays, dayKey, epochDay, startOfDayMs } from '../util/time';
 
 export type SessionKind = 'workout' | 'sleep' | 'nap';
@@ -82,6 +84,7 @@ export type LiveSession = {
   distanceM: number | null; // live GPS distance (metres)
   speedMps: number | null; // latest GPS speed (m/s)
   route: Array<{ lat: number; lng: number }>; // live route trace
+  plan: StructuredWorkout | null; // optional structured/interval workout to follow
 };
 export type SessionStats = {
   elapsedSec: number;
@@ -453,7 +456,7 @@ class AppStore extends Store<AppState> {
   };
 
   // ---- live session (start / track / log) ----
-  startSession = (kind: SessionKind, label: string, hasGps = false): void => {
+  startSession = (kind: SessionKind, label: string, hasGps = false, plan: StructuredWorkout | null = null): void => {
     this.setState({
       session: {
         kind,
@@ -465,9 +468,37 @@ class AppStore extends Store<AppState> {
         distanceM: hasGps ? 0 : null,
         speedMps: null,
         route: [],
+        plan,
       },
     });
     if (hasGps) void this.startGps();
+  };
+
+  /** Start a live workout that follows a structured/interval plan. */
+  startPlannedSession = (workout: StructuredWorkout): void => {
+    this.startSession('workout', workout.name, activityGps(workout.activity), workout);
+  };
+
+  // ---- structured workout templates (persisted) ----
+  listWorkoutTemplates = async (): Promise<StructuredWorkout[]> => {
+    const raw = await kvGet('workoutTemplates');
+    if (!raw) return [];
+    try {
+      return JSON.parse(raw) as StructuredWorkout[];
+    } catch {
+      return [];
+    }
+  };
+
+  saveWorkoutTemplate = async (w: StructuredWorkout): Promise<void> => {
+    const list = await this.listWorkoutTemplates();
+    const next = [w, ...list.filter((t) => t.id !== w.id)];
+    await kvSet('workoutTemplates', JSON.stringify(next));
+  };
+
+  deleteWorkoutTemplate = async (id: string): Promise<void> => {
+    const list = await this.listWorkoutTemplates();
+    await kvSet('workoutTemplates', JSON.stringify(list.filter((t) => t.id !== id)));
   };
 
   /** Begin phone-GPS tracking for the active session (WHOOP uses the phone, not

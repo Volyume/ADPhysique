@@ -48,6 +48,7 @@ export function StartScreen({ nav }: { nav: Nav }) {
     <Screen title="Start" onBack={nav.back}>
       <SectionLabel>Track in real time</SectionLabel>
       <Big icon="flash" color={colors.strainBlue} title="Start Workout" sub="Live HR, strain, zones & laps" onPress={() => setPicking(true)} />
+      <Big icon="repeat" color={colors.strainBlue} title="Structured Workout" sub="Interval & tempo plans, step-by-step" onPress={() => { nav.back(); nav.navigate({ name: 'workouts' }); }} />
       <Big icon="moon" color={colors.sleepTeal} title="Start Sleep" sub="Track until you wake — scores from your HR" onPress={() => startKind('sleep', 'Sleep')} />
       <Big icon="cafe" color={colors.recoveryYellow} title="Start Nap" sub="Counts toward today’s sleep need" onPress={() => startKind('nap', 'Nap')} />
 

@@ -45,6 +45,7 @@ export type Route =
   | { name: 'sleepTrends' }
   | { name: 'training' }
   | { name: 'readiness' }
+  | { name: 'workouts' }
   | { name: 'startMenu' }
   | { name: 'liveSession' }
   | { name: 'resilience' }
