@@ -199,6 +199,7 @@ class AppStore extends Store<AppState> {
   private lastStatus: WhoopStatus = 'idle';
   private stepCounter = new StepCounter();
   private stepDay = '';
+  private lastAccelTs = 0;
 
   constructor() {
     super(initialState);
@@ -320,14 +321,23 @@ class AppStore extends Store<AppState> {
           const hb = decodeHeartbeatSteps(frame);
           if (hb != null) this.setState({ hbStepRaw: hb });
           if (isAccelFrame(frame)) {
-            const day = dayKey(Date.now());
+            const now = Date.now();
+            const day = dayKey(now);
             if (day !== this.stepDay) {
               this.stepCounter.reset();
               this.stepDay = day;
             }
-            const t = Date.now();
-            for (const a of decodeAccel(frame)) this.stepCounter.add(a.x, a.y, a.z, t);
-            this.setState({ bandSteps: this.stepCounter.count });
+            const samples = decodeAccel(frame);
+            if (samples.length > 0) {
+              // Spread real per-sample timestamps across the gap since the last
+              // accel frame, so the step cadence gate isn't fed identical times
+              // (which previously let one false peak per frame slip through).
+              const prev = this.lastAccelTs || now - samples.length * 20;
+              const dt = Math.min(40, Math.max(4, (now - prev) / samples.length));
+              samples.forEach((a, i) => this.stepCounter.add(a.x, a.y, a.z, prev + (i + 1) * dt));
+              this.lastAccelTs = now;
+              this.setState({ bandSteps: this.stepCounter.count });
+            }
           }
         }
       } catch {
