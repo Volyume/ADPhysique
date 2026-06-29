@@ -63,6 +63,7 @@ import MesocycleBuilderScreen from '../screens/MesocycleBuilderScreen';
 import ShareCardScreen from '../screens/ShareCardScreen';
 import ManualBuilderScreen from '../screens/ManualBuilderScreen';
 import NutritionTargetsScreen from '../screens/NutritionTargetsScreen';
+import MealNamesScreen from '../screens/MealNamesScreen';
 import PlanLibraryScreen from '../screens/PlanLibraryScreen';
 import FirstRunScreen from '../screens/FirstRunScreen';
 import FreeStarterScreen from '../screens/FreeStarterScreen';
@@ -148,6 +149,7 @@ function _reconcilePaidEntitlement(userId = null) {
 // enforcing Pro access no matter how the route is reached.
 const GatedWeeklyCheckIn    = withProGuard(WeeklyCheckInScreen, 'Weekly check-in');
 const GatedNutritionTargets = withProGuard(NutritionTargetsScreen, 'Nutrition targets');
+const GatedMealNames = withProGuard(MealNamesScreen, 'Meal names');
 const GatedBodyMetrics      = withProGuard(BodyMetricsScreen, 'Body metrics');
 const GatedCoachOutput      = withProGuard(CoachOutputScreen, 'Your week');
 const GatedProGoalSetup     = withProGuard(ProGoalSetupScreen, 'Pro goal setup');
@@ -396,6 +398,7 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="SettingsPrivacy" component={SettingsPrivacyScreen} options={{ title: 'Privacy & legal' }} />
       <Stack.Screen name="SettingsAbout" component={SettingsAboutScreen} options={{ title: 'Help & about' }} />
       <Stack.Screen name="NutritionTargets" component={GatedNutritionTargets} options={{ title: 'Nutrition Targets' }} />
+      <Stack.Screen name="MealNames" component={GatedMealNames} options={{ title: 'Meal names' }} />
       <Stack.Screen name="NutritionEducation" component={NutritionEducationScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ title: 'Body Metrics' }} />
       <Stack.Screen name="WeeklyCheckIn" component={GatedWeeklyCheckIn} options={{ headerShown: false }} />

@@ -20,6 +20,63 @@
 
 export const DEFAULT_MEALS_PER_DAY = 4;
 
+// ─── Custom meal names (gap #1) ─────────────────────────────────────────────
+// Slot KEYS never change (meal_1, preworkout, ...); only the human label can be
+// overridden per user. The overrides live in a module-level cache that
+// mealSlotLabel reads, so the ~10 components that render labels need no change
+// and stay consistent. The cache defaults EMPTY — identical to the old fixed
+// labels until a user sets one. Persistence is device-local (cosmetic); reload
+// the cache at app boot and after an edit. Reactivity is focus-bound: renaming
+// happens on its own settings screen, so returning to the diary re-renders with
+// the new label.
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+export const MEAL_LABELS_KEY = '@volyume_meal_labels';
+
+let _labelOverrides = {};
+
+// Sanitise to a flat { slotKey: trimmedName } map of non-empty strings.
+function _sanitiseOverrides(map) {
+  const out = {};
+  if (map && typeof map === 'object') {
+    for (const [k, v] of Object.entries(map)) {
+      if (typeof v === 'string' && v.trim()) out[k] = v.trim().slice(0, 24);
+    }
+  }
+  return out;
+}
+
+// Replace the in-memory overrides (e.g. after a load or an edit). Exposed for
+// tests and for the boot loader.
+export function setMealLabelOverrides(map) {
+  _labelOverrides = _sanitiseOverrides(map);
+  return _labelOverrides;
+}
+
+export function getMealLabelOverrides() {
+  return { ..._labelOverrides };
+}
+
+// Load the saved overrides into the cache. Tolerant of missing/corrupt data.
+export async function loadMealLabelOverrides() {
+  try {
+    const raw = await AsyncStorage.getItem(MEAL_LABELS_KEY);
+    setMealLabelOverrides(raw ? JSON.parse(raw) : {});
+  } catch (_) { setMealLabelOverrides({}); }
+  return _labelOverrides;
+}
+
+// Set or clear (empty name) a single slot's custom label, persisting + updating
+// the cache. Returns the new overrides map.
+export async function setMealLabel(slotKey, name) {
+  const next = { ..._labelOverrides };
+  if (typeof name === 'string' && name.trim()) next[slotKey] = name.trim().slice(0, 24);
+  else delete next[slotKey];
+  setMealLabelOverrides(next);
+  try { await AsyncStorage.setItem(MEAL_LABELS_KEY, JSON.stringify(_labelOverrides)); } catch (_) {}
+  return _labelOverrides;
+}
+
 const LEGACY_LABELS = {
   breakfast: 'Breakfast',
   lunch: 'Lunch',
@@ -34,6 +91,17 @@ const NUMBERED = /^meal_(\d+)$/;
 // Human label for any slot key: the legacy names, "Meal N" for numbered keys,
 // and a safe fallback for anything unexpected.
 export function mealSlotLabel(key) {
+  const custom = _labelOverrides[key];
+  if (custom) return custom; // user's own name wins (already trimmed/bounded)
+  if (LEGACY_LABELS[key]) return LEGACY_LABELS[key];
+  const m = NUMBERED.exec(key || '');
+  if (m) return `Meal ${m[1]}`;
+  return 'Meal';
+}
+
+// The DEFAULT label for a key, ignoring any custom override — for the rename UI,
+// which shows the override as an editable value over its default placeholder.
+export function defaultMealSlotLabel(key) {
   if (LEGACY_LABELS[key]) return LEGACY_LABELS[key];
   const m = NUMBERED.exec(key || '');
   if (m) return `Meal ${m[1]}`;

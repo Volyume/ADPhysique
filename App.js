@@ -12,6 +12,7 @@ import * as BackgroundFetch from 'expo-background-fetch';
 import { ensureNotifChannels } from './src/lib/notifications/channels';
 import { installGlobalHandlers, logError } from './src/lib/errorLog';
 import { parseInviteCode } from './src/lib/partners/link';
+import { loadMealLabelOverrides } from './src/lib/food/mealSlots';
 
 // Install verbose error logging — ring buffer in AsyncStorage, viewable from
 // Settings → Debug logs. Catches uncaught exceptions and unhandled promise
@@ -450,6 +451,11 @@ export default function App() {
   useEffect(() => {
     if (!privacyLoaded) loadPrivacyPrefs();
   }, [privacyLoaded, loadPrivacyPrefs]);
+
+  // Hydrate any custom meal-slot names (gap #1) into the module cache that
+  // mealSlotLabel reads, before the diary renders its meal headers. Device-local
+  // + cosmetic; empty by default so existing users see the standard labels.
+  useEffect(() => { loadMealLabelOverrides(); }, []);
 
   useEffect(() => {
     if (prCelebration) getWellbeingMode().then(m => setCalm(isCalm(m)));

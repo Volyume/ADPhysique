@@ -1,9 +1,45 @@
 import {
   mealSlotLabel, slotOrder, buildMealSlots, highestLoggedMeal, pickerMealSlots,
   DEFAULT_MEALS_PER_DAY,
+  defaultMealSlotLabel, setMealLabelOverrides, getMealLabelOverrides,
 } from '../mealSlots';
 
 const ent = (slot) => ({ meal_slot: slot });
+
+describe('custom meal-name overrides (gap #1)', () => {
+  afterEach(() => setMealLabelOverrides({})); // isolate: clear the module cache
+
+  test('a custom name wins over the default, and buildMealSlots/pickers pick it up', () => {
+    setMealLabelOverrides({ meal_1: 'Breakfast', preworkout: 'Intra' });
+    expect(mealSlotLabel('meal_1')).toBe('Breakfast');
+    expect(mealSlotLabel('preworkout')).toBe('Intra');
+    expect(mealSlotLabel('meal_2')).toBe('Meal 2'); // untouched key keeps the default
+    const slots = buildMealSlots([], 2);
+    expect(slots.find((s) => s.key === 'meal_1').label).toBe('Breakfast');
+    const picker = pickerMealSlots('meal_1', 2);
+    expect(picker.find((s) => s.key === 'meal_1').label).toBe('Breakfast');
+  });
+
+  test('defaultMealSlotLabel ignores the override (for the rename UI)', () => {
+    setMealLabelOverrides({ meal_1: 'Breakfast' });
+    expect(defaultMealSlotLabel('meal_1')).toBe('Meal 1');
+  });
+
+  test('overrides are sanitised: blanks dropped, trimmed, length-capped, non-strings dropped', () => {
+    setMealLabelOverrides({ meal_1: '  ', meal_2: '  Lunch  ', meal_3: 'x'.repeat(40), meal_4: 5 });
+    const o = getMealLabelOverrides();
+    expect(o.meal_1).toBeUndefined();
+    expect(o.meal_2).toBe('Lunch');
+    expect(o.meal_3).toHaveLength(24);
+    expect(o.meal_4).toBeUndefined();
+  });
+
+  test('empty cache leaves every default unchanged (back-compat)', () => {
+    setMealLabelOverrides({});
+    expect(mealSlotLabel('meal_1')).toBe('Meal 1');
+    expect(mealSlotLabel('breakfast')).toBe('Breakfast');
+  });
+});
 
 describe('mealSlotLabel', () => {
   test('labels numbered, legacy and peri-workout keys', () => {

@@ -90,6 +90,14 @@ export default function SettingsScreen({ navigation }) {
             onPress={() => navigation.navigate('NutritionTargets')}
           />
         ) : null}
+        {tier === 'pro' ? (
+          <SettingRow
+            icon="restaurant-outline"
+            label="Meal names"
+            sub="Rename your meals"
+            onPress={() => navigation.navigate('MealNames')}
+          />
+        ) : null}
         <SettingRow
           icon="notifications-outline"
           label="Notifications"
