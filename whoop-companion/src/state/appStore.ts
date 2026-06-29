@@ -48,6 +48,10 @@ import { edwardsTrimp, hrZones, strainFromLoad, totalTrimp, UserProfile } from '
 import { respiratoryRate } from '../metrics/respiratory';
 import { computeStress } from '../metrics/stress';
 import { computeHealthMonitor, HealthMonitorResult } from '../metrics/healthMonitor';
+import { hrvBalance, HrvBalance } from '../metrics/hrvBalance';
+import { illnessRisk, IllnessResult } from '../metrics/illness';
+import { resilience, Resilience } from '../metrics/resilience';
+import { cardioAge } from '../metrics/cardioAge';
 import { addDays, dayKey, epochDay, startOfDayMs } from '../util/time';
 
 export type AppState = {
@@ -68,6 +72,12 @@ export type AppState = {
   lastSleep: SleepResult | null;
   sleepNeed: SleepNeed | null;
   sleepGoal: number; // target fraction of sleep need: 0.7 / 0.85 / 1.0
+  // Oura-style derived insights (all HR/R-R only):
+  recoveryParts: { hrvSub: number; rhrSub: number; sleepSub: number } | null;
+  hrvBal: HrvBalance | null;
+  illness: IllnessResult | null;
+  resilience: Resilience | null;
+  cardioAge: number | null;
   cardio: CardioRow[];
   profile: UserProfile;
   error: string | null;
@@ -91,6 +101,11 @@ const initialState: AppState = {
   lastSleep: null,
   sleepNeed: null,
   sleepGoal: 0.85,
+  recoveryParts: null,
+  hrvBal: null,
+  illness: null,
+  resilience: null,
+  cardioAge: null,
   cardio: [],
   profile: DEFAULT_PROFILE,
   error: null,
@@ -325,26 +340,49 @@ class AppStore extends Store<AppState> {
       sleep.neededMin = need.neededMin;
       sleep.performance = Math.min(1, sleep.asleepMin / need.neededMin);
     }
-    const rmssdSamples = recent
-      .filter((d) => d.rmssd != null)
-      .map((d) => ({ day: epochDay(Date.parse(`${d.day}T00:00:00`)), value: d.rmssd as number }));
-    const rhrSamples = recent
-      .filter((d) => d.rhr != null)
-      .map((d) => ({ day: epochDay(Date.parse(`${d.day}T00:00:00`)), value: d.rhr as number }));
+    const toDayValues = (pick: (d: DailyMetricRow) => number | null) =>
+      recent
+        .filter((d) => pick(d) != null)
+        .map((d) => ({ day: epochDay(Date.parse(`${d.day}T00:00:00`)), value: pick(d) as number }));
+    const rmssdSamples = toDayValues((d) => d.rmssd);
+    const rhrSamples = toDayValues((d) => d.rhr);
+    const respSamples = toDayValues((d) => d.resp);
+
+    const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+    const rmssdBaseline = emaBaseline(rmssdSamples) ?? null;
+    const rhrBaseline = emaBaseline(rhrSamples) ?? null;
+    const respBaseline = mean(respSamples.map((s) => s.value));
+    const rmssdSd = stdev(rmssdSamples.map((s) => s.value)) || 1;
+    const rhrSd = stdev(rhrSamples.map((s) => s.value)) || 1;
+    const respSd = stdev(respSamples.map((s) => s.value)) || 1;
 
     let recovery: number | null = null;
+    let recoveryParts: AppState['recoveryParts'] = null;
     if (rmssd != null && rhr != null && rmssdSamples.length >= 2 && rhrSamples.length >= 2) {
       const r = computeRecovery({
         rmssd,
-        rmssdBaseline: emaBaseline(rmssdSamples) ?? rmssd,
-        rmssdSd: stdev(rmssdSamples.map((s) => s.value)) || 1,
+        rmssdBaseline: rmssdBaseline ?? rmssd,
+        rmssdSd,
         restingHr: rhr,
-        rhrBaseline: emaBaseline(rhrSamples) ?? rhr,
-        rhrSd: stdev(rhrSamples.map((s) => s.value)) || 1,
+        rhrBaseline: rhrBaseline ?? rhr,
+        rhrSd,
         sleepPerformance: sleep?.performance ?? null,
       });
       recovery = r.score;
+      recoveryParts = { hrvSub: r.hrvSub, rhrSub: r.rhrSub, sleepSub: r.sleepSub };
     }
+
+    // ---- Oura-style insights (HR/R-R only) ----
+    const hrvBal = hrvBalance(rmssdSamples);
+    const illness = illnessRisk({
+      rhr: { value: rhr, baseline: rhrBaseline, sd: rhrSd },
+      hrv: { value: rmssd, baseline: rmssdBaseline, sd: rmssdSd },
+      respiratory: { value: resp, baseline: respBaseline, sd: respSd },
+    });
+    const recoveryHistory = [...recent].reverse().map((d) => d.recovery).filter((v): v is number => v != null);
+    if (recovery != null) recoveryHistory.push(recovery);
+    const resilienceResult = resilience(recoveryHistory);
+    const cardioAgeResult = cardioAge({ age: profile.ageYears, rhr, rmssd });
 
     const row: DailyMetricRow = {
       day: today,
@@ -363,6 +401,11 @@ class AppStore extends Store<AppState> {
       today: row,
       lastSleep: sleep,
       sleepNeed: need,
+      recoveryParts,
+      hrvBal,
+      illness,
+      resilience: resilienceResult,
+      cardioAge: cardioAgeResult,
       recentDays: await getRecentDailyMetrics(30),
     });
   };

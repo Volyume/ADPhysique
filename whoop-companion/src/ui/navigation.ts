@@ -23,7 +23,9 @@ export type MetricKey =
   | 'sleep_efficiency'
   | 'calories'
   | 'avg_hr'
-  | 'max_hr';
+  | 'max_hr'
+  | 'hrv_balance'
+  | 'cardio_age';
 
 export type Route =
   | { name: 'today' }
@@ -39,6 +41,8 @@ export type Route =
   | { name: 'settings' }
   | { name: 'sleepCoach' }
   | { name: 'logActivity' }
+  | { name: 'resilience' }
+  | { name: 'illness' }
   | { name: 'metric'; key: MetricKey }
   | { name: 'activity'; id: string };
 

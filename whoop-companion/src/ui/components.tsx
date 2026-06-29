@@ -417,13 +417,15 @@ export function ContributorRow({
   percent,
   value,
   onPress,
+  color,
 }: {
   label: string;
   percent: number | null;
   value?: string;
   onPress?: () => void;
+  color?: string;
 }) {
-  const c = band(percent);
+  const c = color ?? band(percent);
   const body = (
     <View style={contribStyles.row}>
       <View style={contribStyles.head}>
@@ -519,6 +521,55 @@ export function LineChart({
           <Text style={contribStyles.axisLabel}>{rightLabel}</Text>
         </View>
       ) : null}
+    </View>
+  );
+}
+
+/**
+ * Oura-style deviation chart: values plotted against a shaded "typical range"
+ * band (baseline ± sd) with a grey baseline line, so you read deviation from
+ * normal rather than absolute numbers. Last point is marked.
+ */
+export function BaselineChart({
+  values,
+  baseline,
+  sd,
+  color = colors.recoveryGreen,
+  height = 140,
+}: {
+  values: number[];
+  baseline: number;
+  sd: number;
+  color?: string;
+  height?: number;
+}) {
+  if (values.length < 2) {
+    return <Empty text="Not enough history yet for a baseline trend." />;
+  }
+  const W = 1000;
+  const H = 200;
+  const all = [...values, baseline - sd, baseline + sd];
+  const min = Math.min(...all);
+  const max = Math.max(...all);
+  const range = max - min || 1;
+  const y = (v: number) => H - ((v - min) / range) * H;
+  const pts = values.map((v, i) => `${(i / (values.length - 1)) * W},${y(v)}`).join(' ');
+  const bandTop = y(baseline + sd);
+  const bandH = Math.max(2, y(baseline - sd) - y(baseline + sd));
+  const lastX = W;
+  const lastY = y(values[values.length - 1] as number);
+  return (
+    <View>
+      <Svg width="100%" height={height} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+        <Rect x={0} y={bandTop} width={W} height={bandH} fill="#9aa6ad" fillOpacity={0.12} />
+        <Line x1={0} y1={y(baseline)} x2={W} y2={y(baseline)} stroke="#727778" strokeWidth={2} strokeDasharray="8 8" />
+        <Polyline points={pts} fill="none" stroke={color} strokeWidth={4} strokeLinejoin="round" />
+        <Circle cx={lastX} cy={lastY} r={9} fill={color} />
+      </Svg>
+      <View style={contribStyles.axis}>
+        <Text style={contribStyles.axisLabel}>typical range shaded · baseline dashed</Text>
+        <Text style={contribStyles.axisLabel}>now</Text>
+      </View>
     </View>
   );
 }

@@ -20,6 +20,8 @@ import { SettingsScreen } from './src/screens/SettingsScreen';
 import { SleepCoachScreen } from './src/screens/SleepCoachScreen';
 import { MetricDetailScreen } from './src/screens/MetricDetailScreen';
 import { LogActivityScreen } from './src/screens/LogActivityScreen';
+import { ResilienceScreen } from './src/screens/ResilienceScreen';
+import { IllnessScreen } from './src/screens/IllnessScreen';
 import { colors } from './src/ui/theme';
 import { fonts, useWhoopFonts } from './src/ui/fonts';
 import { Nav, Route, TabKey, TABS } from './src/ui/navigation';
@@ -120,6 +122,10 @@ function Router({ route, nav }: { route: Route; nav: Nav }) {
       return <SleepCoachScreen nav={nav} />;
     case 'logActivity':
       return <LogActivityScreen nav={nav} />;
+    case 'resilience':
+      return <ResilienceScreen nav={nav} />;
+    case 'illness':
+      return <IllnessScreen nav={nav} />;
     case 'metric':
       return <MetricDetailScreen nav={nav} metricKey={route.key} />;
     case 'activity':

@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
-import { Text, View, StyleSheet } from 'react-native';
+import { Pressable, Text, View, StyleSheet } from 'react-native';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
 import { Card, Dial, Empty, FAB, Screen, SectionLabel, Stat, Tile } from '../ui/components';
-import { colors, recoveryColor } from '../ui/theme';
+import { colors, fonts, recoveryColor } from '../ui/theme';
 import { Nav } from '../ui/navigation';
+import { illnessTint } from './IllnessScreen';
 import { formatClock, formatDuration } from '../util/time';
 
 export function HomeScreen({ nav }: { nav: Nav }) {
@@ -18,6 +19,9 @@ export function HomeScreen({ nav }: { nav: Nav }) {
   const battery = useStoreSelector(appStore, (s) => s.battery);
   const cardio = useStoreSelector(appStore, (s) => s.cardio);
   const sleep = useStoreSelector(appStore, (s) => s.lastSleep);
+  const illness = useStoreSelector(appStore, (s) => s.illness);
+  const resilience = useStoreSelector(appStore, (s) => s.resilience);
+  const cardioAge = useStoreSelector(appStore, (s) => s.cardioAge);
 
   const recovery = today?.recovery ?? null;
   const strain = today?.strain ?? null;
@@ -67,6 +71,23 @@ export function HomeScreen({ nav }: { nav: Nav }) {
           </View>
         </Card>
 
+        {/* Illness early-warning banner */}
+        {illness && illness.level !== 'none' ? (
+          <Pressable onPress={() => nav.navigate({ name: 'illness' })} style={({ pressed }) => pressed && { opacity: 0.6 }}>
+            <Card style={{ borderColor: illnessTint(illness.level), marginTop: 12 }}>
+              <View style={styles.illnessHead}>
+                <View style={[styles.illnessDot, { backgroundColor: illnessTint(illness.level) }]} />
+                <Text style={styles.illnessTitle}>
+                  {illness.level === 'major' ? 'Signs you may be getting sick' : 'Minor signs to watch'}
+                </Text>
+              </View>
+              <Text style={styles.illnessSub}>
+                {illness.flaggedCount} overnight vital{illness.flaggedCount > 1 ? 's' : ''} outside your typical range — tap for details.
+              </Text>
+            </Card>
+          </Pressable>
+        ) : null}
+
         {/* Health + Stress monitors — both tappable */}
         <View style={styles.grid}>
           <Tile
@@ -85,6 +106,27 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             value={liveStress != null ? liveStress.toFixed(1) : '—'}
             sub={status === 'connected' ? `${stressLabel} · live` : 'not connected'}
             onPress={() => nav.navigate({ name: 'stress' })}
+            style={styles.half}
+          />
+        </View>
+
+        <View style={styles.grid}>
+          <Tile
+            title="Resilience"
+            icon="shield-half"
+            color={colors.recoveryGreen}
+            value={resilience ? resilience.tier : '—'}
+            sub={resilience ? `${resilience.days}-day trend` : 'needs ~1 week'}
+            onPress={() => nav.navigate({ name: 'resilience' })}
+            style={styles.half}
+          />
+          <Tile
+            title="Heart Age"
+            icon="heart"
+            color={colors.strainBlue}
+            value={cardioAge != null ? `${cardioAge}` : '—'}
+            sub="cardiovascular est."
+            onPress={() => nav.navigate({ name: 'metric', key: 'cardio_age' })}
             style={styles.half}
           />
         </View>
@@ -144,4 +186,8 @@ const styles = StyleSheet.create({
   actRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: colors.border },
   actName: { color: colors.text, fontSize: 15, fontWeight: '600' },
   actMeta: { color: colors.textSecondary, fontSize: 12 },
+  illnessHead: { flexDirection: 'row', alignItems: 'center' },
+  illnessDot: { width: 9, height: 9, borderRadius: 5, marginRight: 8 },
+  illnessTitle: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold },
+  illnessSub: { color: colors.textSecondary, fontSize: 13, marginTop: 6, lineHeight: 18, fontFamily: fonts.text },
 });

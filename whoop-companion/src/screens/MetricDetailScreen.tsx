@@ -4,7 +4,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
 import { DailyMetricRow } from '../db/database';
-import { Card, Empty, LineChart, Ring, Screen, SectionLabel, WeeklyBars } from '../ui/components';
+import { BaselineChart, Card, Empty, Ring, Screen, SectionLabel, WeeklyBars } from '../ui/components';
+import { stdev } from '../metrics/ema';
 import { colors, fonts, recoveryColor } from '../ui/theme';
 import { MetricKey, Nav } from '../ui/navigation';
 import { formatDuration } from '../util/time';
@@ -102,12 +103,68 @@ const DEFS: Record<string, Def> = {
 
 export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: MetricKey }) {
   const today = useStoreSelector(appStore, (s) => s.today);
-  const def: Def = DEFS[metricKey] ?? (DEFS.hrv as Def);
+  const hrvBal = useStoreSelector(appStore, (s) => s.hrvBal);
+  const cardioAge = useStoreSelector(appStore, (s) => s.cardioAge);
+  const ageYears = useStoreSelector(appStore, (s) => s.profile.ageYears);
   const [history, setHistory] = useState<DailyMetricRow[]>([]);
 
   useEffect(() => {
     void appStore.loadHistory(30).then(setHistory);
   }, []);
+
+  if (metricKey === 'hrv_balance') {
+    return (
+      <Screen title="HRV Balance" onBack={nav.back} tint={colors.recoveryGreen}>
+        <View style={styles.hero}>
+          <Ring
+            value={hrvBal ? hrvBal.score / 100 : 0}
+            size={196}
+            color={colors.recoveryGreen}
+            centerTop="HRV BALANCE"
+            centerMain={hrvBal ? `${hrvBal.ratio}×` : '—'}
+            centerSub={hrvBal ? `${hrvBal.shortMean} vs ${hrvBal.longMean} ms` : 'needs ~1 week'}
+          />
+        </View>
+        <Card>
+          <Text style={styles.blurb}>
+            HRV Balance compares your recent (≈2-week) HRV trend to your longer (≈3-month) average. On
+            par with or above your average is a sign your nervous system is keeping up with the load on
+            it; a sustained drop can mean accumulated stress, under-recovery or oncoming illness.
+          </Text>
+        </Card>
+      </Screen>
+    );
+  }
+
+  if (metricKey === 'cardio_age') {
+    const delta = cardioAge != null ? cardioAge - ageYears : null;
+    return (
+      <Screen title="Cardiovascular Age" onBack={nav.back} tint={colors.strainBlue}>
+        <View style={styles.hero}>
+          <Ring
+            value={cardioAge != null ? Math.max(0, Math.min(1, 1 - (cardioAge - 20) / 80)) : 0}
+            size={196}
+            color={colors.strainBlue}
+            centerTop="HEART AGE"
+            centerMain={cardioAge != null ? `${cardioAge}` : '—'}
+            centerSub={delta != null ? (delta <= 0 ? `${-delta}y younger` : `${delta}y older`) : 'estimate'}
+          />
+        </View>
+        <Card>
+          <Text style={styles.blurb}>
+            An estimate of your heart’s fitness age from your resting heart rate and overnight HRV
+            versus what’s typical for your age. A lower number than your real age is good.
+          </Text>
+          <Text style={styles.unavail2}>
+            This is a wellness estimate, not Oura’s pulse-wave-velocity Cardiovascular Age — that needs
+            the ring’s raw optical waveform, which WHOOP doesn’t expose over Bluetooth.
+          </Text>
+        </Card>
+      </Screen>
+    );
+  }
+
+  const def: Def = DEFS[metricKey] ?? (DEFS.hrv as Def);
 
   const current = today ? def.pick(today) : null;
   const series = history.map(def.pick).filter((v): v is number => v != null);
@@ -173,12 +230,12 @@ export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: Me
             )}
           </Card>
 
-          <SectionLabel>30-day trend</SectionLabel>
+          <SectionLabel>30-day trend vs baseline</SectionLabel>
           <Card>
-            {series.length >= 2 ? (
-              <LineChart values={series} color={tint} fill height={140} />
+            {series.length >= 2 && baseline != null ? (
+              <BaselineChart values={series} baseline={baseline} sd={stdev(series) || 1} color={tint} height={150} />
             ) : (
-              <Empty text="Not enough data yet for a trend line." />
+              <Empty text="Not enough data yet for a baseline trend." />
             )}
           </Card>
         </>
@@ -215,6 +272,7 @@ function ringFraction(key: MetricKey, value: number | null): number {
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', marginVertical: 12 },
   unavail: { color: colors.textSecondary, fontFamily: fonts.textBold, fontSize: 15, marginBottom: 4 },
+  unavail2: { color: colors.textTertiary, fontSize: 12, lineHeight: 18, marginTop: 12, fontFamily: fonts.text },
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 },
   k: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.text },
   v: { color: colors.text, fontSize: 15, fontFamily: fonts.bold },
