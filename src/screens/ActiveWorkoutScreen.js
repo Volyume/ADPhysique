@@ -595,6 +595,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // so a stale tap is ignored. handleCompleteSetPressRef keeps the latest
   // closure without re-installing the listener every render.
   const handleCompleteSetPressRef = useRef(null);
+  // Tracks whether the current set is still an unconfirmed ghost prefill, so the
+  // lock-screen "Complete set" action below can refuse to log values the user
+  // hasn't actually entered.
+  const currentSetGhostRef = useRef(false);
   useEffect(() => {
     // eslint-disable-next-line global-require
     const Notifications = require('expo-notifications');
@@ -605,6 +609,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // Active-rest guard: only act on a live, running rest.
       const st = useAppStore.getState();
       if (!st.activeWorkout?.id || !st.restTimerActive) return;
+      // Don't blind-log from the lock screen. If the current set is still a
+      // ghost (the suggested next-set prefill the user hasn't confirmed),
+      // tapping "Complete set" would log a set they may not have performed —
+      // so just let opensAppToForeground bring them in to confirm. When they've
+      // entered real values (not a ghost), complete it one-tap as before.
+      if (currentSetGhostRef.current) return;
       try { handleCompleteSetPressRef.current?.(); } catch (_) { /* never crash on a tap */ }
     });
     return () => { try { sub?.remove(); } catch (_) {} };
@@ -1100,6 +1110,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // Keep the ref pointed at the latest closure so the rest-notification
   // "Complete set" action listener (installed once) always calls current state.
   handleCompleteSetPressRef.current = handleCompleteSetPress;
+  // Mirror the current set's ghost flag for that same listener's guard.
+  currentSetGhostRef.current = !!currentSet?.isGhost;
 
   function addMiniSet() {
     const n = parseInt(clusterReps, 10);

@@ -88,12 +88,14 @@ by repo convention, so they were additionally reviewed by a fresh-eyes SQL agent
   `stateColors.act` (red, read as a warning) to `stateColors.neutral` (calm
   "resting"); dot + legend both follow `FRESHNESS_META`, a11y label unchanged.
 
-### C. Still OPEN — awaiting founder decision (product judgement)
-- `src/screens/ActiveWorkoutScreen.js` (`handleCompleteSetPress` via the
-  notification listener) — notification "Complete set" logs the current input
-  fields; it opens the app to foreground (mirrors the in-app button) but the
-  user can't preview the values from the lock screen. Left as-is pending a
-  product call on whether to log-on-tap or open-and-confirm.
+### C. Notification "Complete set" — FIXED (open-and-confirm for ghosts)
+- `src/screens/ActiveWorkoutScreen.js` — the lock-screen "Complete set" action
+  no longer blind-logs. It now refuses to log when the current set is still an
+  unconfirmed ghost prefill (`currentSetGhostRef`), letting
+  `opensAppToForeground` bring the user in to confirm; when they've entered real
+  values it completes one-tap as before. `handleCompleteSet`'s existing weight/
+  reps validation already blocked garbage; this closes the "logged the next
+  set's suggested prefill prematurely" gap. The in-app Log button is unchanged.
 
 ### C. Decision-gated (unchanged — do NOT start without the founder decision)
 Per CLAUDE.md ACTIVE WORK: Ultimate-Audit items 11–16 and the deferred Hevy
