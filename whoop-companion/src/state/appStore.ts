@@ -44,6 +44,7 @@ import { computeHrv } from '../metrics/hrv';
 import { emaBaseline, stdev } from '../metrics/ema';
 import { computeRecovery } from '../metrics/recovery';
 import { computeSleep, computeSleepNeed, SleepMinute, SleepNeed, SleepResult } from '../metrics/sleep';
+import { computeSleepScore, SleepScore } from '../metrics/sleepScore';
 import { edwardsTrimp, hrZones, strainFromLoad, totalTrimp, UserProfile } from '../metrics/strain';
 import { respiratoryRate } from '../metrics/respiratory';
 import { computeStress } from '../metrics/stress';
@@ -71,6 +72,7 @@ export type AppState = {
   recentDays: DailyMetricRow[];
   lastSleep: SleepResult | null;
   sleepNeed: SleepNeed | null;
+  sleepScore: SleepScore | null;
   sleepGoal: number; // target fraction of sleep need: 0.7 / 0.85 / 1.0
   // Oura-style derived insights (all HR/R-R only):
   recoveryParts: { hrvSub: number; rhrSub: number; sleepSub: number } | null;
@@ -100,6 +102,7 @@ const initialState: AppState = {
   recentDays: [],
   lastSleep: null,
   sleepNeed: null,
+  sleepScore: null,
   sleepGoal: 0.85,
   recoveryParts: null,
   hrvBal: null,
@@ -340,6 +343,7 @@ class AppStore extends Store<AppState> {
       sleep.neededMin = need.neededMin;
       sleep.performance = Math.min(1, sleep.asleepMin / need.neededMin);
     }
+    const sleepScoreResult = sleep ? computeSleepScore(sleep) : null;
     const toDayValues = (pick: (d: DailyMetricRow) => number | null) =>
       recent
         .filter((d) => pick(d) != null)
@@ -401,6 +405,7 @@ class AppStore extends Store<AppState> {
       today: row,
       lastSleep: sleep,
       sleepNeed: need,
+      sleepScore: sleepScoreResult,
       recoveryParts,
       hrvBal,
       illness,

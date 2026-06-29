@@ -18,12 +18,14 @@ import {
 } from '../ui/components';
 import { colors, sleepStageColors } from '../ui/theme';
 import { Nav } from '../ui/navigation';
+import { fourTier } from '../metrics/bands';
 import { formatClock, formatDuration } from '../util/time';
 
 const HEALTHY_MIN = 480; // 8h baseline ("Healthy Minimum")
 
 export function SleepScreen({ nav }: { nav: Nav }) {
   const sleep = useStoreSelector(appStore, (s) => s.lastSleep);
+  const sleepScore = useStoreSelector(appStore, (s) => s.sleepScore);
   const [nightHr, setNightHr] = useState<number[]>([]);
 
   useEffect(() => {
@@ -78,6 +80,20 @@ export function SleepScreen({ nav }: { nav: Nav }) {
       <Card style={{ paddingVertical: 2 }}>
         <NavRow label="Sleep Coach &amp; sleep need" icon="moon" iconColor={colors.sleepTeal} onPress={() => nav.navigate({ name: 'sleepCoach' })} last />
       </Card>
+
+      {/* Oura-style Sleep Score with banded contributors */}
+      {sleepScore ? (
+        <>
+          <SectionLabel right={<Text style={styles.scoreWord}>{fourTier(sleepScore.score).label}</Text>}>
+            Sleep Score · {sleepScore.score}
+          </SectionLabel>
+          <Card>
+            {sleepScore.contributors.map((c) => (
+              <ContributorRow key={c.key} label={c.label} percent={c.score} value={`${fourTier(c.score).label} · ${c.detail}`} color={fourTier(c.score).color} />
+            ))}
+          </Card>
+        </>
+      ) : null}
 
       {/* Last night's sleep — overnight HR + window */}
       <SectionLabel>Last night's sleep</SectionLabel>
@@ -182,4 +198,5 @@ const styles = StyleSheet.create({
   needValue: { color: colors.text, fontSize: 14 },
   needStrong: { color: colors.text, fontWeight: '700' },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 6 },
+  scoreWord: { color: colors.textSecondary, fontSize: 12, fontWeight: '700' },
 });
