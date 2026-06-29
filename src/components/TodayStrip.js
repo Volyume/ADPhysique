@@ -35,7 +35,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
-import { toEnergy, energyUnitLabel } from '../lib/format';
+import { toEnergy, formatEnergy, energyUnitLabel } from '../lib/format';
 import { getDailyStepsToday, getCardioLogForDate } from '../lib/database';
 import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
 import {
@@ -339,7 +339,7 @@ export default function TodayStrip({
         <Text style={styles.cellLabel}>FOOD</Text>
         {hasGlance ? (
           <>
-            <Text style={styles.cellValue}>{toEnergy(Math.abs(foodGlance.remaining), energyUnit)}</Text>
+            <Text style={styles.cellValue}>{formatEnergy(Math.abs(foodGlance.remaining), energyUnit)}</Text>
             <Text style={styles.cellCaption}>{foodGlance.over ? 'over' : 'left'}</Text>
           </>
         ) : (
