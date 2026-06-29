@@ -613,7 +613,8 @@ class AppStore extends Store<AppState> {
     let rhr: number | null = null;
     let resp: number | null = null;
     if (sleep) {
-      const inWindow = nightHr.filter((s) => s.ts >= sleep.startTs && s.ts <= sleep.endTs);
+      // +60s so the final minute-bucketed sample isn't truncated off the window.
+      const inWindow = nightHr.filter((s) => s.ts >= sleep.startTs && s.ts < sleep.endTs + 60000);
       const rr = inWindow.flatMap((s) => s.rr);
       rmssd = computeHrv(rr)?.rmssd ?? null;
       resp = respiratoryRate(rr);
@@ -653,7 +654,7 @@ class AppStore extends Store<AppState> {
     // ---- WHOOP-style Sleep Stress (0-3) over time-in-bed, from R-R + HR ----
     let sleepStressResult: SleepStress | null = null;
     if (sleep) {
-      const winSamples = nightHr.filter((s) => s.ts >= sleep.startTs && s.ts <= sleep.endTs);
+      const winSamples = nightHr.filter((s) => s.ts >= sleep.startTs && s.ts < sleep.endTs + 60000);
       const byMin = new Map<number, { hrs: number[]; rr: number[] }>();
       for (const s of winSamples) {
         const m = Math.floor(s.ts / 60000);

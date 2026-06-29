@@ -16,7 +16,7 @@ import {
 } from '../ui/components';
 import { colors, fonts, sleepStageColors } from '../ui/theme';
 import { Nav } from '../ui/navigation';
-import { Band, BAND_LABEL, bandColors } from '../metrics/sleepBands';
+import { Band, BAND_LABEL, bandColors, consistencyBand } from '../metrics/sleepBands';
 import { formatClock, formatDuration } from '../util/time';
 
 const BASE_NEED_MIN = 480;
@@ -172,7 +172,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
           <>
             <View style={styles.headRow}>
               <Text style={styles.bigHours}>{consistency.score}%</Text>
-              <Text style={[styles.headSub, { color: bandColors[consistencyBandOf(consistency.score)] }]}>{BAND_LABEL[consistencyBandOf(consistency.score)]}</Text>
+              <Text style={[styles.headSub, { color: bandColors[consistencyBand(consistency.score)] }]}>{BAND_LABEL[consistencyBand(consistency.score)]}</Text>
             </View>
             <Text style={styles.consSub}>
               Typical bed {fmtMin(consistency.bedMedianMin)} · wake {fmtMin(consistency.wakeMedianMin)} over {consistency.nights} nights
@@ -218,12 +218,6 @@ function stageTypicals(days: { deepMin: number | null; remMin: number | null; li
   }
   const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
   return { awake: avg(acc.awake), light: avg(acc.light), deep: avg(acc.deep), rem: avg(acc.rem) };
-}
-
-function consistencyBandOf(pct: number): Band {
-  if (pct >= 80) return 'optimal';
-  if (pct >= 70) return 'sufficient';
-  return 'poor';
 }
 
 function ContribBand({ label, value, band, suffix }: { label: string; value: number | null; band: Band | null; suffix: string }) {

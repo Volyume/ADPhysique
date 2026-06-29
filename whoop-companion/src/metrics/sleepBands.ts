@@ -30,35 +30,38 @@ export const BAND_LABEL: Record<Band, string> = {
   poor: 'Poor',
 };
 
-/** Higher-is-better metric → band by two cutoffs (optimalMin inclusive lower edge). */
-function bandHigherBetter(value: number, sufficientMin: number, optimalMin: number): Band {
-  if (value >= optimalMin) return 'optimal';
-  if (value >= sufficientMin) return 'sufficient';
+export function performanceBand(pct: number): Band {
+  // Optimal >85, Sufficient 70–85, Poor <70.
+  if (pct > 85) return 'optimal';
+  if (pct >= 70) return 'sufficient';
   return 'poor';
 }
 
-export function performanceBand(pct: number): Band {
-  // Optimal >85, Sufficient 70-85, Poor <70.
-  return bandHigherBetter(pct, 70, 85.0001);
-}
-
 export function hoursVsNeededBand(pct: number): Band {
-  return bandHigherBetter(pct, 70, 85.0001);
+  if (pct > 85) return 'optimal';
+  if (pct >= 70) return 'sufficient';
+  return 'poor';
 }
 
 export function consistencyBand(pct: number): Band {
-  // Optimal 80+, Sufficient 70-79, Poor <70.
-  return bandHigherBetter(pct, 70, 80);
+  // Optimal 80+, Sufficient 70–79, Poor <70.
+  if (pct >= 80) return 'optimal';
+  if (pct >= 70) return 'sufficient';
+  return 'poor';
 }
 
 export function efficiencyBand(pct: number): Band {
-  // Optimal 90+, Sufficient 80-89, Poor <80.
-  return bandHigherBetter(pct, 80, 90);
+  // Optimal 90+, Sufficient 80–89, Poor <80.
+  if (pct >= 90) return 'optimal';
+  if (pct >= 80) return 'sufficient';
+  return 'poor';
 }
 
 export function restorativeBand(pct: number): Band {
-  // High >45 (optimal), Sufficient 30-45, Low <30 (poor).
-  return bandHigherBetter(pct, 30, 45.0001);
+  // High >45 (optimal), Sufficient 30–45, Low <30 (poor).
+  if (pct > 45) return 'optimal';
+  if (pct >= 30) return 'sufficient';
+  return 'poor';
 }
 
 /** Sleep debt (minutes) — LOWER is better. High >45, Moderate 30-45, Low <30. */

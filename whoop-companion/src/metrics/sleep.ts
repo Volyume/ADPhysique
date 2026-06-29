@@ -151,13 +151,18 @@ export function computeSleep(
   const stages: Record<SleepStage, number> = { awake: 0, light: 0, deep: 0, rem: 0 };
   const timeline: SleepStage[] = [];
   for (const s of window) {
+    const hasMotion = s.motion != null;
     const motion = s.motion ?? 0;
     const hr = s.hr ?? meanHr;
     const rmssd = s.rmssd ?? meanRmssd;
     let stage: SleepStage;
-    if (motion > 0.4) stage = 'awake';
-    else if (hr < meanHr * 0.97 && (meanRmssd === 0 || rmssd >= meanRmssd)) stage = 'deep';
-    else if (hr > meanHr * 1.03 && motion < 0.2) stage = 'rem';
+    // Cardiac-first staging: the overnight stream is HR/HRV (no motion channel
+    // over BLE), so awake/REM are detected from heart-rate arousal relative to
+    // the night's sleeping mean, with motion used as an extra signal when present.
+    if ((hasMotion && motion > 0.4) || hr >= meanHr * 1.08) stage = 'awake';
+    else if (hr <= meanHr * 0.95 && (meanRmssd === 0 || rmssd >= meanRmssd)) stage = 'deep';
+    else if (hr >= meanHr * 1.0 && (meanRmssd === 0 || rmssd < meanRmssd) && (!hasMotion || motion < 0.2))
+      stage = 'rem';
     else stage = 'light';
     stages[stage] += 1;
     timeline.push(stage);
