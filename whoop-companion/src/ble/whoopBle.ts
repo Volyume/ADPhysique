@@ -34,6 +34,12 @@ import {
 } from './constants';
 import { base64ToBytes, bytesToBase64, bytesToHex } from './bytes';
 import { decodeHeartRate, HeartRateSample } from './heartRate';
+import {
+  cmdEnableHrBroadcast,
+  cmdGetHello,
+  cmdLinkValid,
+  cmdToggleRealtimeHr,
+} from '../whoop/commands';
 
 export type WhoopStatus =
   | 'idle'
@@ -77,6 +83,7 @@ export class WhoopBle {
   private scanning = false;
   private writeService: string | null = null;
   private writeChar: string | null = null;
+  private keepalive: ReturnType<typeof setInterval> | null = null;
 
   constructor(events: WhoopEvents) {
     this.manager = new BleManager();
@@ -177,16 +184,74 @@ export class WhoopBle {
       this.device = connected;
 
       connected.onDisconnected(() => {
+        this.clearKeepalive();
         this.setStatus('disconnected');
       });
 
       this.setStatus('discovering');
       await connected.discoverAllServicesAndCharacteristics();
 
+      // Find the command-write characteristic, then tell the strap to start
+      // streaming HR itself (no official WHOOP app needed) and keep the link
+      // alive — without a LINK_VALID every ~10s the strap drops the connection.
+      await this.locateWriteChar(connected);
+      await this.startStreaming();
+
+      // Re-discover so the now-enabled standard HR service (0x2A37) is present
+      // in the GATT table before we subscribe to it.
+      await delay(800);
+      await connected.discoverAllServicesAndCharacteristics();
+
       await this.subscribeAll(connected);
       this.setStatus('connected', connected.name ?? connected.id);
     } catch (e) {
       this.fail(`Connect failed: ${String(e)}`);
+    }
+  }
+
+  /** Scan the GATT table for the proprietary command-write characteristic. */
+  private async locateWriteChar(device: Device): Promise<void> {
+    const services = await device.services();
+    for (const service of services) {
+      const chars = await service.characteristics();
+      for (const ch of chars) {
+        const lc = ch.uuid.toLowerCase();
+        if (
+          (ch.isWritableWithResponse || ch.isWritableWithoutResponse) &&
+          lc.startsWith(WHOOP_CMD_WRITE_PREFIX)
+        ) {
+          this.writeService = service.uuid;
+          this.writeChar = ch.uuid;
+          return;
+        }
+      }
+    }
+  }
+
+  /**
+   * Self-start the live HR stream (no official WHOOP app): say hello, enable the
+   * standard 0x2A37 HR broadcast + proprietary realtime HR, then keep the link
+   * alive with LINK_VALID every 10 s.
+   */
+  private async startStreaming(): Promise<void> {
+    if (!this.canSendCommands) return;
+    try {
+      await this.writeCommand(cmdGetHello());
+      await this.writeCommand(cmdEnableHrBroadcast(true));
+      await this.writeCommand(cmdToggleRealtimeHr(true));
+    } catch {
+      // best-effort; live HR may still arrive once the keepalive holds the link
+    }
+    this.clearKeepalive();
+    this.keepalive = setInterval(() => {
+      this.writeCommand(cmdLinkValid()).catch(() => {});
+    }, 10000);
+  }
+
+  private clearKeepalive(): void {
+    if (this.keepalive) {
+      clearInterval(this.keepalive);
+      this.keepalive = null;
     }
   }
 
@@ -298,6 +363,7 @@ export class WhoopBle {
 
   /** Tear down subscriptions, disconnect, and release the manager. */
   async stop(): Promise<void> {
+    this.clearKeepalive();
     for (const sub of this.subscriptions) {
       try {
         sub.remove();
@@ -325,4 +391,8 @@ export class WhoopBle {
     void this.stop();
     this.manager.destroy();
   }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

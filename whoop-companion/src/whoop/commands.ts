@@ -22,11 +22,42 @@
 import { buildInner, encodeFrame, PacketType } from './maverick';
 
 export enum Command {
-  LINK_VALID = 1,
+  LINK_VALID = 1, // keepalive — strap drops the link without one every ~10 s
+  TOGGLE_REALTIME_HR = 3, // realtime HR over proprietary fd4b0003
+  TOGGLE_GENERIC_HR_PROFILE = 14, // makes the strap broadcast standard GATT 0x2A37
   SEND_HISTORICAL_DATA = 22,
   HISTORICAL_DATA_RESULT = 23,
+  GET_HELLO_HARVARD = 35, // session hello
   ENTER_HIGH_FREQ_SYNC = 96,
   SET_CONFIG = 0x78, // 120 — write a persistent feature-flag config value
+  GET_HELLO = 145, // alternate hello
+}
+
+/** Keepalive — must be sent ~every 10 s or the strap disconnects. */
+export function cmdLinkValid(): Uint8Array {
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.LINK_VALID));
+}
+
+/** Session hello sent right after connecting. */
+export function cmdGetHello(): Uint8Array {
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.GET_HELLO_HARVARD));
+}
+
+/**
+ * Tell the strap to broadcast live HR on the STANDARD GATT Heart Rate Service
+ * (0x2A37) over our connection — i.e. we enable "Broadcast Heart Rate"
+ * ourselves, with no official WHOOP app. Our existing 0x2A37 decoder then works.
+ * (whoop-vault: TOGGLE_GENERIC_HR_PROFILE opcode 14.)
+ */
+export function cmdEnableHrBroadcast(on = true): Uint8Array {
+  const payload = new Uint8Array([on ? 1 : 0]);
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.TOGGLE_GENERIC_HR_PROFILE, payload));
+}
+
+/** Enable realtime HR over the proprietary channel (fd4b0003). */
+export function cmdToggleRealtimeHr(on = true): Uint8Array {
+  const payload = new Uint8Array([on ? 1 : 0]);
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.TOGGLE_REALTIME_HR, payload));
 }
 
 /**
