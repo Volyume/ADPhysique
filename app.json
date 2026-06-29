@@ -114,6 +114,31 @@
     "plugins": [
       "expo-secure-store",
       [
+        "expo-quick-actions",
+        {
+          "iosActions": [
+            {
+              "id": "workout",
+              "title": "Start workout",
+              "subtitle": "Build today's session",
+              "icon": "symbol:dumbbell.fill",
+              "params": {
+                "href": "volyume://workout/start"
+              }
+            },
+            {
+              "id": "diary",
+              "title": "Log food",
+              "subtitle": "Open your food diary",
+              "icon": "symbol:fork.knife",
+              "params": {
+                "href": "volyume://diary"
+              }
+            }
+          ]
+        }
+      ],
+      [
         "expo-sqlite",
         {
           "useSQLCipher": true

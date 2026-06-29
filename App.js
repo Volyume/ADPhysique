@@ -176,6 +176,42 @@ function handlePartnerDeepLink(url) {
   return true;
 }
 
+// Launcher app-shortcut routing (long-press the home-screen icon → "Start
+// workout" / "Log food"). Maps a quick-action id to the tab + screen it should
+// open. The same targets the existing `linking` config resolves for the
+// volyume://workout/start and volyume://diary deep links — kept in lock-step
+// here so a shortcut lands exactly where the equivalent deep link would.
+// 'diary' is Pro-gated by withProGuard on the Diary screen; we just navigate
+// and let that guard render the upgrade prompt for free users (no special case).
+const QUICK_ACTION_ROUTES = {
+  workout: { tab: 'HomeTab', screen: 'BuildWorkout' },
+  diary: { tab: 'DiaryTab', screen: 'Diary' },
+};
+
+// Navigate for a launched quick action. navigationRef is lazy-required to
+// preserve App.js's deliberate lazy load of RootNavigator (an eager import
+// would freeze styles before accessibility prefs apply). On a cold start the
+// navigator may not be mounted yet when the initial action resolves, so poll
+// until navigationRef.isReady() before navigating — same pattern as the
+// notification-tap routing in RootNavigator.
+function handleQuickAction(action) {
+  const target = QUICK_ACTION_ROUTES[action?.id];
+  if (!target) return;
+  let navigationRef;
+  try { navigationRef = require('./src/navigation/RootNavigator').navigationRef; } catch (_) { return; }
+  let attempts = 0;
+  const go = () => {
+    try {
+      if (navigationRef.isReady()) {
+        navigationRef.navigate(target.tab, { screen: target.screen });
+        return;
+      }
+    } catch (_) { return; /* route not in current (e.g. signed-out) stack */ }
+    if (++attempts < 20) setTimeout(go, 150); // ~3s of cold-start grace
+  };
+  go();
+}
+
 // Single entry point for incoming links: invite links first, then auth links.
 function handleIncomingDeepLink(url) {
   if (!url) return;
@@ -441,6 +477,43 @@ export default function App() {
     Linking.getInitialURL().then(url => { if (url) handleIncomingDeepLink(url); }).catch(() => {});
     const sub = Linking.addEventListener('url', ({ url }) => handleIncomingDeepLink(url));
     return () => sub.remove();
+  }, []);
+
+  // Launcher app-shortcuts (long-press the home-screen icon). Wrapped in
+  // try/catch so a build without the native expo-quick-actions module simply
+  // no-ops — same guard pattern as the optional billing / live-activity
+  // modules above. The config-plugin registers the iOS static actions at build
+  // time; Android static actions are NOT supported by the plugin, so we set
+  // both shortcuts at runtime via setItems() (which also harmlessly re-asserts
+  // them on iOS). Cold launch is covered by QuickActions.initial (the action
+  // that opened the app); the warm case by addListener.
+  useEffect(() => {
+    let subscription;
+    try {
+      // eslint-disable-next-line global-require
+      const QuickActions = require('expo-quick-actions');
+      QuickActions.setItems?.([
+        {
+          id: 'workout',
+          title: 'Start workout',
+          subtitle: "Build today's session",
+          icon: 'symbol:dumbbell.fill',
+          params: { href: 'volyume://workout/start' },
+        },
+        {
+          id: 'diary',
+          title: 'Log food',
+          subtitle: 'Open your food diary',
+          icon: 'symbol:fork.knife',
+          params: { href: 'volyume://diary' },
+        },
+      ])?.catch?.(() => {});
+      // Cold-launch: the app was opened by tapping a shortcut.
+      if (QuickActions.initial) handleQuickAction(QuickActions.initial);
+      // Warm case: a shortcut tapped while the app is already running.
+      subscription = QuickActions.addListener?.(handleQuickAction);
+    } catch (_) { /* native module not in this build — feature absent, no crash */ }
+    return () => { try { subscription?.remove?.(); } catch (_) {} };
   }, []);
 
   // OTA update check — runs once on mount, production builds only.
