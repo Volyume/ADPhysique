@@ -331,3 +331,116 @@ const dialStyles = StyleSheet.create({
   label: { color: colors.textSecondary, fontSize: 12, marginTop: 6, fontWeight: '600' },
   sub: { color: colors.textTertiary, fontSize: 11, marginTop: 1 },
 });
+
+/** WHOOP Poor / Sufficient / Optimal band for a 0–100 contributor. */
+export function band(percent: number | null): string {
+  if (percent == null) return colors.textTertiary;
+  if (percent >= 85) return colors.recoveryGreen; // Optimal
+  if (percent >= 50) return colors.textSecondary; // Sufficient
+  return colors.amber; // Poor
+}
+
+/** A WHOOP-style contributor row: label, progress bar (banded), right value. */
+export function ContributorRow({
+  label,
+  percent,
+  value,
+}: {
+  label: string;
+  percent: number | null;
+  value?: string;
+}) {
+  const c = band(percent);
+  return (
+    <View style={contribStyles.row}>
+      <View style={contribStyles.head}>
+        <Text style={contribStyles.label}>{label}</Text>
+        <Text style={[contribStyles.value, { color: c }]}>
+          {value ?? (percent != null ? `${Math.round(percent)}%` : '—')}
+        </Text>
+      </View>
+      <View style={contribStyles.track}>
+        <View
+          style={[
+            contribStyles.fill,
+            { width: `${Math.max(0, Math.min(100, percent ?? 0))}%`, backgroundColor: c },
+          ]}
+        />
+      </View>
+    </View>
+  );
+}
+
+export function BandLegend() {
+  return (
+    <View style={contribStyles.legend}>
+      <LegendDot color={colors.amber} label="Poor" />
+      <LegendDot color={colors.textSecondary} label="Sufficient" />
+      <LegendDot color={colors.recoveryGreen} label="Optimal" />
+    </View>
+  );
+}
+
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <View style={contribStyles.legendItem}>
+      <View style={[contribStyles.legendDot, { backgroundColor: color }]} />
+      <Text style={contribStyles.legendLabel}>{label}</Text>
+    </View>
+  );
+}
+
+/** Generic overnight line chart (e.g. heart rate across the night). */
+export function LineChart({
+  values,
+  color = colors.sleepTeal,
+  height = 120,
+  leftLabel,
+  rightLabel,
+}: {
+  values: number[];
+  color?: string;
+  height?: number;
+  leftLabel?: string;
+  rightLabel?: string;
+}) {
+  if (values.length < 2) {
+    return <Empty text="No overnight signal recorded for this window." />;
+  }
+  const W = 1000;
+  const H = 200;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const pts = values
+    .map((v, i) => `${(i / (values.length - 1)) * W},${H - ((v - min) / range) * H}`)
+    .join(' ');
+  return (
+    <View>
+      <Svg width="100%" height={height} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+        <Polyline points={pts} fill="none" stroke={color} strokeWidth={4} strokeLinejoin="round" />
+      </Svg>
+      {leftLabel || rightLabel ? (
+        <View style={contribStyles.axis}>
+          <Text style={contribStyles.axisLabel}>{leftLabel}</Text>
+          <Text style={contribStyles.axisLabel}>{rightLabel}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+const contribStyles = StyleSheet.create({
+  row: { marginVertical: 8 },
+  head: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  label: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  value: { fontSize: 16, fontWeight: '700' },
+  track: { height: 8, backgroundColor: colors.surface, borderRadius: 4, overflow: 'hidden' },
+  fill: { height: 8, borderRadius: 4 },
+  legend: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 12 },
+  legendItem: { flexDirection: 'row', alignItems: 'center' },
+  legendDot: { width: 8, height: 8, borderRadius: 4, marginRight: 5 },
+  legendLabel: { color: colors.textSecondary, fontSize: 11 },
+  axis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
+  axisLabel: { color: colors.textTertiary, fontSize: 11 },
+});

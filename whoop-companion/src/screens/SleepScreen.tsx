@@ -1,22 +1,41 @@
+import { useEffect, useState } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
-import { Bar, Card, Empty, Hypnogram, Ring, Screen, SectionLabel, Stat } from '../ui/components';
+import {
+  BandLegend,
+  Card,
+  ContributorRow,
+  Empty,
+  Hypnogram,
+  LineChart,
+  Ring,
+  Screen,
+  SectionLabel,
+  Stat,
+} from '../ui/components';
 import { colors } from '../ui/theme';
 import { formatClock, formatDuration } from '../util/time';
 
+const HEALTHY_MIN = 480; // 8h baseline ("Healthy Minimum")
+
 export function SleepScreen() {
   const sleep = useStoreSelector(appStore, (s) => s.lastSleep);
+  const [nightHr, setNightHr] = useState<number[]>([]);
+
+  useEffect(() => {
+    void appStore.lastNightHr().then(setNightHr);
+  }, [sleep]);
 
   if (!sleep) {
     return (
       <Screen title="Sleep">
         <Card style={{ alignItems: 'center', paddingVertical: 28 }}>
-          <Ring value={0} color={colors.sleepTeal} centerTop="Sleep" centerMain="—" centerSub="no sleep yet" />
+          <Ring value={0} color={colors.sleepTeal} centerTop="Sleep performance" centerMain="—" centerSub="no sleep yet" />
         </Card>
         <Card>
-          <Empty text="No sleep detected yet. Wear the strap overnight with the app connected (it keeps a background Bluetooth link), then recalculate from the Today tab." />
+          <Empty text="No sleep detected yet. Wear the strap overnight with the app connected, then recalculate from the Today tab. The full breakdown appears once a night is recorded." />
         </Card>
       </Screen>
     );
@@ -24,10 +43,15 @@ export function SleepScreen() {
 
   const total = sleep.inBedMin || 1;
   const perfPct = sleep.performance != null ? Math.round(sleep.performance * 100) : null;
+  const hoursNeededPct = sleep.neededMin > 0 ? (sleep.asleepMin / sleep.neededMin) * 100 : null;
+  const effPct = Math.round(sleep.efficiency * 100);
+  const wakeEvents = sleep.hypnogram.filter((s) => s.stage === 'awake').length;
+  const restorativeMin = sleep.stages.deep + sleep.stages.rem;
   const debtMin = Math.max(0, sleep.neededMin - sleep.asleepMin);
 
   return (
     <Screen title="Sleep">
+      {/* Performance ring */}
       <Card style={{ alignItems: 'center', paddingVertical: 24 }}>
         <Ring
           value={sleep.performance ?? 0}
@@ -38,71 +62,115 @@ export function SleepScreen() {
         />
       </Card>
 
-      <SectionLabel>Last night</SectionLabel>
+      {/* Contributors */}
       <Card>
-        <Hypnogram segments={sleep.hypnogram} />
-        <View style={styles.legend}>
-          <Legend color="#1E40AF" label="Deep" />
-          <Legend color="#6D28D9" label="REM" />
-          <Legend color={colors.sleepTeal} label="Light" />
-          <Legend color={colors.textTertiary} label="Awake" />
-        </View>
+        <ContributorRow label="Hours vs. needed" percent={hoursNeededPct} />
+        <ContributorRow label="Sleep efficiency" percent={effPct} />
+        <ContributorRow label="Sleep consistency" percent={null} value="needs nights" />
+        <BandLegend />
       </Card>
 
+      {/* Last night's sleep — overnight HR + window */}
+      <SectionLabel>Last night's sleep</SectionLabel>
       <Card>
-        <View style={styles.row}>
-          <Stat label="Lights out" value={formatClock(sleep.startTs)} />
-          <Stat label="Woke" value={formatClock(sleep.endTs)} />
-          <Stat label="Efficiency" value={`${Math.round(sleep.efficiency * 100)}`} unit="%" />
+        <View style={styles.headRow}>
+          <Text style={styles.bigHours}>{formatDuration(sleep.asleepMin)}</Text>
+          <Text style={styles.headSub}>asleep · {formatDuration(sleep.inBedMin)} in bed</Text>
         </View>
+        <LineChart
+          values={nightHr}
+          color={colors.sleepTeal}
+          leftLabel={formatClock(sleep.startTs)}
+          rightLabel={formatClock(sleep.endTs)}
+        />
       </Card>
 
+      {/* Stages */}
       <SectionLabel>Stages</SectionLabel>
       <Card>
-        <Bar label="Deep" value={sleep.stages.deep / total} color="#1E40AF" right={formatDuration(sleep.stages.deep)} />
-        <Bar label="REM" value={sleep.stages.rem / total} color="#6D28D9" right={formatDuration(sleep.stages.rem)} />
-        <Bar label="Light" value={sleep.stages.light / total} color={colors.sleepTeal} right={formatDuration(sleep.stages.light)} />
-        <Bar label="Awake" value={sleep.stages.awake / total} color={colors.textTertiary} right={formatDuration(sleep.stages.awake)} />
+        <Hypnogram segments={sleep.hypnogram} />
+        <View style={{ marginTop: 12 }}>
+          <StageRow name="SWS (Deep)" color="#EC4899" minutes={sleep.stages.deep} total={total} />
+          <StageRow name="REM" color="#A855F7" minutes={sleep.stages.rem} total={total} />
+          <StageRow name="Light" color={colors.sleepTeal} minutes={sleep.stages.light} total={total} />
+          <StageRow name="Awake" color={colors.textTertiary} minutes={sleep.stages.awake} total={total} />
+        </View>
       </Card>
 
-      <SectionLabel>Need &amp; debt</SectionLabel>
+      {/* Restorative + efficiency */}
       <View style={styles.grid}>
         <Card style={styles.half}>
-          <Stat label="Sleep need" value={formatDuration(sleep.neededMin)} color={colors.sleepTeal} />
+          <Stat label="Restorative (deep+REM)" value={formatDuration(restorativeMin)} color="#A855F7" />
         </Card>
         <Card style={styles.half}>
-          <Stat label="Sleep debt" value={formatDuration(debtMin)} color={debtMin > 60 ? colors.recoveryYellow : colors.text} />
+          <Stat label="Wake events" value={wakeEvents} />
         </Card>
       </View>
       <View style={styles.grid}>
         <Card style={styles.half}>
-          <Stat label="Time asleep" value={formatDuration(sleep.asleepMin)} />
+          <Stat label="Efficiency" value={effPct} unit="%" color={colors.sleepTeal} />
         </Card>
         <Card style={styles.half}>
-          <Stat label="Time in bed" value={formatDuration(sleep.inBedMin)} />
+          <Stat label="Lights out → woke" value={`${formatClock(sleep.startTs)}–${formatClock(sleep.endTs)}`} />
         </Card>
       </View>
 
-      <Empty text="Stages are inferred from overnight heart rate + movement (approximate, not WHOOP's proprietary staging). Sleep need = an 8h baseline adjusted by debt; this refines as more nights are recorded." />
+      {/* Sleep need breakdown */}
+      <SectionLabel>Hours vs. needed</SectionLabel>
+      <Card>
+        <NeedRow label="Healthy minimum" value={formatDuration(HEALTHY_MIN)} />
+        <NeedRow label="Sleep debt" value={`+${formatDuration(debtMin)}`} />
+        <View style={styles.divider} />
+        <NeedRow label="Sleep needed" value={formatDuration(sleep.neededMin)} strong />
+        <NeedRow label="Hours of sleep" value={formatDuration(sleep.asleepMin)} strong />
+      </Card>
+
+      <Empty text="Stages are inferred from overnight heart rate + movement (approximate, not WHOOP's proprietary staging). Sleep consistency needs several nights of bed/wake times to populate." />
     </Screen>
   );
 }
 
-function Legend({ color, label }: { color: string; label: string }) {
+function StageRow({ name, color, minutes, total }: { name: string; color: string; minutes: number; total: number }) {
+  const pct = Math.round((minutes / total) * 100);
   return (
-    <View style={styles.legendItem}>
-      <View style={[styles.dot, { backgroundColor: color }]} />
-      <Text style={styles.legendLabel}>{label}</Text>
+    <View style={styles.stage}>
+      <View style={styles.stageHead}>
+        <Text style={styles.stageName}>
+          {name} <Text style={{ color }}>{pct}%</Text>
+        </Text>
+        <Text style={styles.stageDur}>{formatDuration(minutes)}</Text>
+      </View>
+      <View style={styles.stageTrack}>
+        <View style={[styles.stageFill, { width: `${Math.max(2, pct)}%`, backgroundColor: color }]} />
+      </View>
+    </View>
+  );
+}
+
+function NeedRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <View style={styles.needRow}>
+      <Text style={[styles.needLabel, strong && styles.needStrong]}>{label}</Text>
+      <Text style={[styles.needValue, strong && styles.needStrong]}>{value}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', justifyContent: 'space-between' },
   grid: { flexDirection: 'row', gap: 12 },
   half: { flex: 1 },
-  legend: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
-  legendItem: { flexDirection: 'row', alignItems: 'center' },
-  dot: { width: 8, height: 8, borderRadius: 4, marginRight: 5 },
-  legendLabel: { color: colors.textSecondary, fontSize: 11 },
+  headRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 },
+  bigHours: { color: colors.text, fontSize: 32, fontWeight: '800' },
+  headSub: { color: colors.textSecondary, fontSize: 13 },
+  stage: { marginVertical: 6 },
+  stageHead: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  stageName: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  stageDur: { color: colors.text, fontSize: 14, fontWeight: '700' },
+  stageTrack: { height: 8, backgroundColor: colors.surface, borderRadius: 4, overflow: 'hidden' },
+  stageFill: { height: 8, borderRadius: 4 },
+  needRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 7 },
+  needLabel: { color: colors.textSecondary, fontSize: 14 },
+  needValue: { color: colors.text, fontSize: 14 },
+  needStrong: { color: colors.text, fontWeight: '700' },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: 6 },
 });

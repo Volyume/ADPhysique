@@ -53,13 +53,42 @@ export function totalTrimp(
 }
 
 /**
- * Map a TRIMP load to a 0–21 strain scale with a log curve. TRIMP_REF is the
- * load that maps to ~18 ("strenuous day"); tuned to feel WHOOP-like, adjustable.
+ * Map a Banister TRIMP load to a 0–21 strain scale with a log curve. Retained
+ * for reference; day strain now uses Edwards zone TRIMP (see below), which does
+ * not accumulate at rest.
  */
 const TRIMP_REF = 300;
 export function trimpToStrain(trimp: number): number {
   if (trimp <= 0) return 0;
   const strain = 21 * (Math.log1p(trimp) / Math.log1p(TRIMP_REF));
+  return Math.round(Math.min(21, strain) * 10) / 10;
+}
+
+/**
+ * Edwards zone-weighted TRIMP: minutes in each Karvonen zone × zone weight
+ * (1–5). Time BELOW ~50% HRR contributes nothing, so a resting/sedentary day
+ * scores ~0 — matching how WHOOP strain barely moves at rest (the Banister
+ * version above wrongly accumulated load from every above-resting minute).
+ */
+export function edwardsTrimp(
+  samples: Array<{ hr: number; minutes: number }>,
+  profile: UserProfile,
+): number {
+  const zones = hrZones(samples, profile);
+  let load = 0;
+  for (const z of zones) load += z.minutes * z.zone; // zone weight = 1..5
+  return load;
+}
+
+/**
+ * Map an Edwards load to WHOOP's 0–21 strain scale. Saturating exponential:
+ * 0 at rest, ~18 for a hard day (~350 load), approaching 21 for very hard days.
+ * EDWARDS_REF is the calibration constant.
+ */
+const EDWARDS_REF = 180;
+export function strainFromLoad(load: number): number {
+  if (load <= 0) return 0;
+  const strain = 21 * (1 - Math.exp(-load / EDWARDS_REF));
   return Math.round(Math.min(21, strain) * 10) / 10;
 }
 

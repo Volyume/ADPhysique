@@ -41,7 +41,7 @@ import { computeHrv } from '../metrics/hrv';
 import { emaBaseline, stdev } from '../metrics/ema';
 import { computeRecovery } from '../metrics/recovery';
 import { computeSleep, SleepMinute, SleepResult } from '../metrics/sleep';
-import { hrZones, totalTrimp, trimpToStrain, UserProfile } from '../metrics/strain';
+import { edwardsTrimp, hrZones, strainFromLoad, totalTrimp, UserProfile } from '../metrics/strain';
 import { addDays, dayKey, epochDay, startOfDayMs } from '../util/time';
 
 export type AppState = {
@@ -225,15 +225,15 @@ class AppStore extends Store<AppState> {
   }): Promise<void> => {
     const profile = this.getState().profile;
     const minutes = Math.max(1, Math.round((input.endTs - input.startTs) / 60000));
-    const trimp = input.avgHr ? totalTrimp([{ hr: input.avgHr, minutes }], profile) : null;
-    const strain = trimp !== null ? trimpToStrain(trimp) : null;
+    const load = input.avgHr ? edwardsTrimp([{ hr: input.avgHr, minutes }], profile) : null;
+    const strain = load !== null ? strainFromLoad(load) : null;
     const row: CardioRow = {
       id: `c_${input.startTs}`,
       startTs: input.startTs,
       endTs: input.endTs,
       activity: input.activity,
       avgHr: input.avgHr,
-      trimp: trimp !== null ? Math.round(trimp) : null,
+      trimp: load !== null ? Math.round(load) : null,
       strain,
       kcal: null,
       source: input.source ?? 'manual',
@@ -265,8 +265,8 @@ class AppStore extends Store<AppState> {
     const dayHr = await getHrSamplesBetween(sod, now);
     const perMin = perMinuteHr(dayHr);
     const strainSamples = perMin.map((p) => ({ hr: p.hr, minutes: 1 }));
-    const trimp = totalTrimp(strainSamples, profile);
-    const strain = strainSamples.length ? trimpToStrain(trimp) : null;
+    const load = edwardsTrimp(strainSamples, profile);
+    const strain = strainSamples.length ? strainFromLoad(load) : null;
 
     // Last night's window: 20:00 previous day -> noon today (clamped to now).
     const nightStart = sod - 4 * 3600 * 1000;
@@ -341,12 +341,20 @@ class AppStore extends Store<AppState> {
     const dayHr = await getHrSamplesBetween(sod, Date.now());
     const perMin = perMinuteHr(dayHr);
     const out: Array<{ tsMs: number; strain: number }> = [];
-    let cumulativeTrimp = 0;
+    let cumLoad = 0;
     for (const p of perMin) {
-      cumulativeTrimp += totalTrimp([{ hr: p.hr, minutes: 1 }], profile);
-      out.push({ tsMs: p.tsMs, strain: trimpToStrain(cumulativeTrimp) });
+      cumLoad += edwardsTrimp([{ hr: p.hr, minutes: 1 }], profile);
+      out.push({ tsMs: p.tsMs, strain: strainFromLoad(cumLoad) });
     }
     return out;
+  };
+
+  /** Per-minute HR across last night's detected sleep window, for the graph. */
+  lastNightHr = async (): Promise<number[]> => {
+    const sleep = this.getState().lastSleep;
+    if (!sleep) return [];
+    const rows = await getHrSamplesBetween(sleep.startTs, sleep.endTs);
+    return perMinuteHr(rows).map((p) => Math.round(p.hr));
   };
 }
 
