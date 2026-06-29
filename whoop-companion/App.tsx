@@ -23,6 +23,7 @@ import { LogActivityScreen } from './src/screens/LogActivityScreen';
 import { ResilienceScreen } from './src/screens/ResilienceScreen';
 import { IllnessScreen } from './src/screens/IllnessScreen';
 import { EditSleepScreen } from './src/screens/EditSleepScreen';
+import { SleepTrendsScreen } from './src/screens/SleepTrendsScreen';
 import { StartScreen } from './src/screens/StartScreen';
 import { LiveSessionScreen } from './src/screens/LiveSessionScreen';
 import { colors } from './src/ui/theme';
@@ -131,6 +132,8 @@ function Router({ route, nav }: { route: Route; nav: Nav }) {
       return <IllnessScreen nav={nav} />;
     case 'editSleep':
       return <EditSleepScreen nav={nav} />;
+    case 'sleepTrends':
+      return <SleepTrendsScreen nav={nav} />;
     case 'startMenu':
       return <StartScreen nav={nav} />;
     case 'liveSession':

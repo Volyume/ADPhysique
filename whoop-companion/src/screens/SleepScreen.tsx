@@ -183,9 +183,9 @@ export function SleepScreen({ nav }: { nav: Nav }) {
         )}
       </Card>
 
-      {/* Recent sleep */}
-      <SectionLabel>Recent sleep</SectionLabel>
-      <Card>
+      {/* Recent sleep → full Trend View */}
+      <SectionLabel right={<Text style={styles.trendLink}>Trends ›</Text>}>Recent sleep</SectionLabel>
+      <Card onPress={() => nav.navigate({ name: 'sleepTrends' })}>
         {week.some((d) => d.sleepMin != null) ? (
           <WeeklyBars
             data={week.map((d) => ({
@@ -300,6 +300,7 @@ function fmtMin(minOfDay: number): string {
 
 const styles = StyleSheet.create({
   estimate: { color: colors.textTertiary, fontSize: 11, marginTop: 8, fontFamily: fonts.text },
+  trendLink: { color: colors.sleepTeal, fontSize: 12, fontFamily: fonts.textBold },
   grid: { flexDirection: 'row', gap: 12 },
   half: { flex: 1 },
   contribRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: colors.border },
