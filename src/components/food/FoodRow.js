@@ -27,7 +27,7 @@ export function kcalForServing(food) {
 // signal "you've said you don't eat this". Tapping still works
 // (the user can deliberately log a disliked food); it only
 // affects coach suggestions and the Favourites surface.
-export default function FoodRow({ food, isFav, preference, onPress, onLongPress, onAdd }) {
+export default function FoodRow({ food, isFav, preference, onPress, onLongPress, onAdd, longPressHint }) {
   const sourceTag = SOURCE_LABEL[food.source] ?? null;
   const kcalPerServing = kcalForServing(food);
   // Back-compat: callers that still pass `isFav` get the legacy
@@ -44,7 +44,7 @@ export default function FoodRow({ food, isFav, preference, onPress, onLongPress,
       onLongPress={onLongPress}
       accessibilityRole="button"
       accessibilityLabel={`${food.name}, ${kcalPerServing ?? '?'} kcal per serving. ${a11yPref}`}
-      accessibilityHint={onLongPress ? 'Long-press to cycle favourite, exclude, neutral' : undefined}
+      accessibilityHint={onLongPress ? (longPressHint ?? 'Long-press to cycle favourite, exclude, neutral') : undefined}
     >
       <View style={{ flex: 1 }}>
         <Text

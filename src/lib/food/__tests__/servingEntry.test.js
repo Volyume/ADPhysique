@@ -34,6 +34,11 @@ describe('initialServingState', () => {
   test('add with no serving defaults to 100 g', () => {
     expect(initialServingState(noServing, 'add')).toEqual({ unitKey: 'g', amount: '100' });
   });
+  test('add-again with a remembered portion opens at those grams (so long-press matches the one-tap re-log)', () => {
+    expect(initialServingState(slice, 'add', 150)).toEqual({ unitKey: 'g', amount: '150' });
+    // rounds a fractional REAL, like edit
+    expect(initialServingState(slice, 'add', 150.5)).toEqual({ unitKey: 'g', amount: '151' });
+  });
   test('edit preserves the exact logged grams (in grams)', () => {
     expect(initialServingState(slice, 'edit', 150)).toEqual({ unitKey: 'g', amount: '150' });
   });

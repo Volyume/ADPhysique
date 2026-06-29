@@ -22,12 +22,17 @@ export function buildServingUnits(food) {
   return list;
 }
 
-// The unit + amount the sheet opens with. Edit preserves the exact logged grams
-// (shown in grams). Add defaults to ONE named serving (zero keystrokes) when the
-// food has one, else 100 g.
+// The unit + amount the sheet opens with. A KNOWN prior portion opens in grams
+// at that exact (rounded) amount — for edit that is this entry's logged grams,
+// and for an "add again" off the recents list it is the remembered last portion
+// passed as initialQuantityG. This keeps the long-press-to-adjust sheet showing
+// the SAME portion a one-tap re-log would write (food review: the two must not
+// diverge). With no prior portion, add defaults to ONE named serving (zero
+// keystrokes) when the food has one, else 100 g. `mode` is retained in the
+// signature for call-site clarity but no longer gates the prior-portion branch.
 export function initialServingState(food, mode, initialQuantityG) {
   const servingG = Number(food?.serving_g) || 0;
-  if (mode === 'edit' && initialQuantityG != null && initialQuantityG > 0) {
+  if (initialQuantityG != null && initialQuantityG > 0) {
     return { unitKey: 'g', amount: String(Math.round(initialQuantityG)) };
   }
   if (servingG > 0) return { unitKey: 'serving', amount: '1' };

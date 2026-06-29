@@ -29,7 +29,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import { SkeletonRow } from '../components/Skeleton';
 import {
-  logFoodEntry, getFavourites,
+  logFoodEntry, deleteFoodEntry, getFavourites,
   getDislikes, cycleFoodPreference, getAllCustomFoods, getFoodFrequents,
   getRollupForDay, getLoggedMealSlotsForDay, applyCuratedMealToDiary,
   upsertSlotRecent, getSlotRecents,
@@ -50,12 +50,20 @@ import QuickAddSheet from '../components/food/QuickAddSheet';
 import FoodRow from '../components/food/FoodRow';
 import { mealSlotLabel } from '../lib/food/mealSlots';
 import { scaleMacros, resolveServingG } from '../lib/food/macros';
+import { isValidEntryGrams } from '../lib/food/servingEntry';
 
 const EMPTY_COPY = {
   recents: 'Nothing logged here yet. Add a food to get started.',
   favourites: 'No favourites yet. Long-press a food to star it.',
   frequents: 'Nothing logged often enough yet.',
 };
+
+// The "Add again" re-log tabs (Move #1): a row tap here logs the food in one
+// tap at its remembered portion, the way MFP/Cronometer re-log a recent. The
+// live-search-results list (any 2+ char query) is NOT a re-log surface — a
+// never-logged food has no remembered portion, so it still opens the sheet.
+// Suggested + Custom are handled elsewhere and are not in this set.
+const RELOG_TABS = new Set(['recents', 'favourites', 'frequents']);
 
 export default function FoodSearchScreen({ navigation, route }) {
   const { user, userProfile } = useAppStore(useShallow((s) => ({ user: s.user, userProfile: s.userProfile })));
@@ -77,6 +85,7 @@ export default function FoodSearchScreen({ navigation, route }) {
   // returns a single ingredient). Mirrors MacroFactor's fastest workflow.
   const [plate, setPlate] = useState([]);
   const loggingPlateRef = useRef(false); // CALC-3: prevents double-tap double-log
+  const loggingQuickRef = useRef(false); // one-tap re-log: blocks a double-tap double-log
   const [showPlate, setShowPlate] = useState(false);
   const isRecipePick = route?.params?.pickMode === 'recipe';
   const [results, setResults] = useState([]);
@@ -287,6 +296,61 @@ export default function FoodSearchScreen({ navigation, route }) {
     setPlate((p) => p.filter((it) => it.key !== key));
   }
 
+  // One-tap re-log (Move #1): on the "Add again" tabs a row tap logs the food
+  // immediately — no sheet — to the slot the search was opened for, at the
+  // remembered portion (last_quantity_g -> serving_g -> 100 g, via
+  // resolveServingG), ROUNDED to whole grams exactly as the detail sheet does.
+  // Same write mechanics as the sheet's onSave (confirmLog): scaleMacros from
+  // per-100g at the resolved grams, logFoodEntry, then the derived slot-recent;
+  // and the long-press sheet now opens at this same remembered portion
+  // (initialServingState honours initialQuantityG), so tap and long-press agree.
+  // The 1–5000 g safety bound the sheet enforces (isValidEntryGrams) binds here
+  // too: a remembered portion outside it can't be silently logged — we open the
+  // sheet instead so the user corrects it. An Undo toast (8s) deletes exactly
+  // the entry just created — the safety net for an accidental tap.
+  async function quickLogRelog(food) {
+    if (!userId || !food?.food_ref) return;
+    // Round to whole grams (the sheet rounds; last_quantity_g is a REAL and can
+    // be fractional) and bind the same 1–5000 g safety bound the sheet enforces.
+    // Out of bounds -> fall back to the sheet rather than write a value the sheet
+    // would refuse; this is the one path that logs without the sheet's gate.
+    const servingG = Math.round(resolveServingG(food));
+    if (!isValidEntryGrams(servingG)) { openPicker(food); return; }
+    // In-flight guard: a fast double-tap must not mint two entries (each
+    // logFoodEntry returns a fresh id, so duplicates can't be deduped). Mirrors
+    // logPlate's loggingPlateRef.
+    if (loggingQuickRef.current) return;
+    loggingQuickRef.current = true;
+    try {
+      const macros = scaleMacros(food, servingG); // { kcal, proteinG, carbsG, fatG, fibreG }
+      audit('food.add', { source: food.source ?? 'unknown', mealSlot, fromScan: false, surface: 'relog' });
+      const entryId = await logFoodEntry(userId, {
+        entryDate,
+        mealSlot,
+        foodRef: food.food_ref,
+        quantityG: servingG,
+        ...macros,
+      });
+      await upsertSlotRecent(userId, {
+        mealSlot,
+        foodRef: food.food_ref,
+        quantityG: servingG,
+      }).catch(() => {}); // derived memory only; never fail the log
+      // Mandatory Undo: the action deletes the exact entry just created. Matches
+      // the diary's soft-delete + Undo pattern (DiaryScreen requestDelete).
+      toast.show(`Added ${food.name}.`, {
+        variant: 'undo',
+        action: { label: 'Undo', onPress: async () => { await deleteFoodEntry(entryId, userId); } },
+      });
+    } catch (e) {
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logError('FoodSearch.quickLogRelog', e, { foodRef: food.food_ref }); } catch (_) {}
+      toast.show("Couldn't add that food, try again.", { variant: 'error', duration: 4000 });
+    } finally {
+      loggingQuickRef.current = false;
+    }
+  }
+
   const plateKcal = useMemo(() => plate.reduce((s, it) => s + (it.kcal || 0), 0), [plate]);
 
   // Log every plate item to the meal, then return to the diary.
@@ -389,6 +453,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       source: food.source ?? 'unknown',
       mealSlot: chosenSlot,
       fromScan: !!scannedFood,
+      surface: 'sheet',
     });
     const macros = scaleMacros(food, quantityG); // { kcal, proteinG, carbsG, fatG, fibreG }
     await logFoodEntry(userId, {
@@ -543,12 +608,21 @@ export default function FoodSearchScreen({ navigation, route }) {
     const preference = favouriteRefs.has(food.food_ref) ? 'fav'
       : dislikeRefs.has(food.food_ref) ? 'dislike'
       : null;
+    // Move #1: on the "Add again" re-log tabs (recents/favourites/frequents),
+    // with no active search, a tap one-tap-logs at the remembered portion and a
+    // long-press opens the sheet to adjust it. A live search (2+ chars) replaces
+    // the list with results regardless of tab, so those rows are NOT re-log rows
+    // and keep the original behaviour (tap = sheet, long-press = preference
+    // cycle). Recipe pick mode must always open the sheet to set a quantity, so
+    // it is excluded from one-tap re-log.
+    const isRelogRow = !isRecipePick && RELOG_TABS.has(activeTab) && query.trim().length < 2;
     return (
       <FoodRow
         food={food}
         preference={preference}
-        onPress={() => openPicker(food)}
-        onLongPress={() => onLongPress(food)}
+        onPress={isRelogRow ? () => quickLogRelog(food) : () => openPicker(food)}
+        onLongPress={isRelogRow ? () => openPicker(food) : () => onLongPress(food)}
+        longPressHint={isRelogRow ? 'Long-press to change the portion' : undefined}
         onAdd={isRecipePick ? undefined : () => addToPlate(food)}
       />
     );
