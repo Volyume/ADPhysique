@@ -106,7 +106,8 @@ const BY_NAME = new Map(ACTIVITY_CATALOGUE.map((a) => [a.name.toLowerCase(), a])
 const KEYWORDS: Array<[string[], Pick<ActivityType, 'gps' | 'strain'>]> = [
   [['run', 'jog'], { gps: true, strain: 'cardio' }],
   [['cycl', 'bike', 'spin'], { gps: true, strain: 'cardio' }],
-  [['walk', 'ruck'], { gps: true, strain: 'noncardio' }],
+  [['ruck'], { gps: true, strain: 'cardio' }],
+  [['walk'], { gps: true, strain: 'noncardio' }],
   [['hik'], { gps: true, strain: 'cardio' }],
   [['strength', 'lift', 'weight', 'crossfit', 'functional', 'powerlif'], { gps: false, strain: 'muscular' }],
   [['yoga', 'pilates', 'stretch', 'meditat', 'breath'], { gps: false, strain: 'noncardio' }],

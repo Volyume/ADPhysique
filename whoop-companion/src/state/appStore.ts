@@ -786,7 +786,7 @@ class AppStore extends Store<AppState> {
     const resilienceResult = resilience(recoveryHistory);
     const cardioAgeResult = cardioAge({ age: profile.ageYears, rhr, rmssd });
 
-    // ---- Garmin-style synthesis: Training Readiness + Body Battery ----
+    // ---- Garmin-style synthesis: Training Readiness (built on Recovery) ----
     const sleepPerfPct = sleepPerformanceResult?.score ?? null;
     const trimps = this.getState().cardio.filter((c) => c.trimp != null).map((c) => ({ ts: c.startTs, trimp: c.trimp as number }));
     const loadStatus = trainingLoad(trimps, now);

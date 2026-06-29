@@ -60,7 +60,7 @@ export function trainingEffect(zones: HrZone[]): TrainingEffect {
   let aer = 0;
   let ana = 0;
   for (const z of zones) {
-    aer += z.minutes * Math.exp(0.55 * z.zone); // grows with intensity
+    if (z.zone >= 1) aer += z.minutes * Math.exp(0.55 * z.zone); // zones 1+ (zone 0 = rest, excluded)
     if (z.zone >= 4) ana += z.minutes * Math.exp(1.1 * (z.zone - 3));
   }
   const sat = (x: number, ref: number) => Math.max(0, Math.min(5, 5 * (1 - Math.exp(-x / ref))));
