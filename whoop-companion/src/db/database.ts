@@ -69,6 +69,7 @@ export type CardioRow = {
   strain: number | null;
   kcal: number | null;
   distanceM: number | null; // GPS distance (metres), outdoor workouts
+  route: Array<{ lat: number; lng: number }> | null; // GPS route trace
   source: string; // 'manual' | 'auto' | 'live' | 'nap'
   notes: string | null;
 };
@@ -106,7 +107,7 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
           id TEXT PRIMARY KEY,
           start_ts INTEGER NOT NULL, end_ts INTEGER NOT NULL,
           activity TEXT NOT NULL, avg_hr INTEGER, trimp REAL, strain REAL,
-          kcal INTEGER, distance_m REAL, source TEXT NOT NULL, notes TEXT
+          kcal INTEGER, distance_m REAL, route TEXT, source TEXT NOT NULL, notes TEXT
         );
         CREATE TABLE IF NOT EXISTS journal (
           id TEXT PRIMARY KEY, day TEXT NOT NULL, behaviour TEXT NOT NULL,
@@ -143,10 +144,12 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
           // Column already exists — nothing to do.
         }
       }
-      try {
-        await db.execAsync('ALTER TABLE cardio ADD COLUMN distance_m REAL');
-      } catch {
-        // Column already exists.
+      for (const col of ['distance_m REAL', 'route TEXT']) {
+        try {
+          await db.execAsync(`ALTER TABLE cardio ADD COLUMN ${col}`);
+        } catch {
+          // Column already exists.
+        }
       }
       return db;
     })();
@@ -287,8 +290,8 @@ export async function getRecentDailyMetrics(limit = 30): Promise<DailyMetricRow[
 export async function insertCardio(c: CardioRow): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    `INSERT OR REPLACE INTO cardio (id, start_ts, end_ts, activity, avg_hr, trimp, strain, kcal, distance_m, source, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT OR REPLACE INTO cardio (id, start_ts, end_ts, activity, avg_hr, trimp, strain, kcal, distance_m, route, source, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     c.id,
     c.startTs,
     c.endTs,
@@ -298,6 +301,7 @@ export async function insertCardio(c: CardioRow): Promise<void> {
     c.strain,
     c.kcal,
     c.distanceM,
+    c.route && c.route.length ? JSON.stringify(c.route) : null,
     c.source,
     c.notes,
   );
@@ -320,22 +324,34 @@ export async function listCardio(limit = 50): Promise<CardioRow[]> {
     strain: number | null;
     kcal: number | null;
     distance_m: number | null;
+    route: string | null;
     source: string;
     notes: string | null;
   }>('SELECT * FROM cardio ORDER BY start_ts DESC LIMIT ?', limit);
-  return rows.map((r) => ({
-    id: r.id,
-    startTs: r.start_ts,
-    endTs: r.end_ts,
-    activity: r.activity,
-    avgHr: r.avg_hr,
-    trimp: r.trimp,
-    strain: r.strain,
-    kcal: r.kcal,
-    distanceM: r.distance_m ?? null,
-    source: r.source,
-    notes: r.notes,
-  }));
+  return rows.map((r) => {
+    let route: Array<{ lat: number; lng: number }> | null = null;
+    if (r.route) {
+      try {
+        route = JSON.parse(r.route) as Array<{ lat: number; lng: number }>;
+      } catch {
+        route = null;
+      }
+    }
+    return {
+      id: r.id,
+      startTs: r.start_ts,
+      endTs: r.end_ts,
+      activity: r.activity,
+      avgHr: r.avg_hr,
+      trimp: r.trimp,
+      strain: r.strain,
+      kcal: r.kcal,
+      distanceM: r.distance_m ?? null,
+      route,
+      source: r.source,
+      notes: r.notes,
+    };
+  });
 }
 
 // ---- Journal ----

@@ -405,6 +405,7 @@ class AppStore extends Store<AppState> {
     endTs: number;
     avgHr: number | null;
     distanceM?: number | null;
+    route?: Array<{ lat: number; lng: number }> | null;
     notes?: string;
     source?: string;
   }): Promise<void> => {
@@ -424,6 +425,7 @@ class AppStore extends Store<AppState> {
       strain,
       kcal,
       distanceM: input.distanceM ?? null,
+      route: input.route ?? null,
       source: input.source ?? 'manual',
       notes: input.notes ?? null,
     };
@@ -546,6 +548,7 @@ class AppStore extends Store<AppState> {
       endTs,
       avgHr: stats?.avgHr ?? s.maxHr ?? null,
       distanceM: gpsDistance,
+      route: s.route.length ? s.route : null,
       source: s.kind === 'nap' ? 'nap' : 'live',
     });
   };
@@ -850,6 +853,18 @@ class AppStore extends Store<AppState> {
     const dayHr = await getHrSamplesBetween(sod, Date.now());
     const perMin = perMinuteHr(dayHr).map((p) => ({ hr: p.hr, minutes: 1 }));
     return hrZones(perMin, profile);
+  };
+
+  /** HR-zone breakdown + per-minute HR for one logged activity (detail screen). */
+  activityDetail = async (
+    startTs: number,
+    endTs: number,
+  ): Promise<{ zones: ReturnType<typeof hrZones>; hr: number[] }> => {
+    const profile = this.getState().profile;
+    const rows = await getHrSamplesBetween(startTs, endTs);
+    const perMin = perMinuteHr(rows);
+    const zones = hrZones(perMin.map((p) => ({ hr: p.hr, minutes: 1 })), profile);
+    return { zones, hr: perMin.map((p) => Math.round(p.hr)) };
   };
 
   /** Cumulative strain over today, for the WHOOP-style strain curve. */

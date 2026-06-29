@@ -24,6 +24,7 @@ import { ResilienceScreen } from './src/screens/ResilienceScreen';
 import { IllnessScreen } from './src/screens/IllnessScreen';
 import { EditSleepScreen } from './src/screens/EditSleepScreen';
 import { SleepTrendsScreen } from './src/screens/SleepTrendsScreen';
+import { ActivityDetailScreen } from './src/screens/ActivityDetailScreen';
 import { StartScreen } from './src/screens/StartScreen';
 import { LiveSessionScreen } from './src/screens/LiveSessionScreen';
 import { colors } from './src/ui/theme';
@@ -141,7 +142,7 @@ function Router({ route, nav }: { route: Route; nav: Nav }) {
     case 'metric':
       return <MetricDetailScreen nav={nav} metricKey={route.key} />;
     case 'activity':
-      return <StrainScreen nav={nav} />;
+      return <ActivityDetailScreen nav={nav} id={route.id} />;
     default:
       return <HomeScreen nav={nav} />;
   }

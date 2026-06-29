@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, Text, TextInput, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { Pressable, Text, TextInput, TouchableOpacity, View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { appStore } from '../state/appStore';
@@ -123,7 +123,7 @@ export function StrainScreen({ nav }: { nav: Nav }) {
           <Empty text="No activities logged today." />
         ) : (
           todayCardio.map((c) => (
-            <View key={c.id} style={styles.sessionRow}>
+            <Pressable key={c.id} style={styles.sessionRow} onPress={() => nav.navigate({ name: 'activity', id: c.id })}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.sessionName}>{c.activity}</Text>
                 <Text style={styles.sessionMeta}>
@@ -134,18 +134,8 @@ export function StrainScreen({ nav }: { nav: Nav }) {
                   {c.strain != null ? ` · strain ${c.strain.toFixed(1)}` : ''}
                 </Text>
               </View>
-              <Pressable
-                hitSlop={10}
-                onPress={() =>
-                  Alert.alert('Delete activity', `Remove this ${c.activity} activity?`, [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Delete', style: 'destructive', onPress: () => void appStore.removeCardio(c.id) },
-                  ])
-                }
-              >
-                <Ionicons name="trash-outline" size={18} color={colors.textTertiary} />
-              </Pressable>
-            </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+            </Pressable>
           ))
         )}
       </Card>
