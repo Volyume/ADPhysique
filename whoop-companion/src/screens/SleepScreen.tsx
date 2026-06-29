@@ -15,65 +15,84 @@ import {
   Screen,
   SectionLabel,
   Stat,
+  WeeklyBars,
 } from '../ui/components';
-import { colors, sleepStageColors } from '../ui/theme';
+import { colors, fonts, sleepStageColors } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { fourTier } from '../metrics/bands';
 import { formatClock, formatDuration } from '../util/time';
 
-const HEALTHY_MIN = 480; // 8h baseline ("Healthy Minimum")
+const BASE_NEED_MIN = 480; // 8h baseline
+
+const STAGE_EDU = [
+  { name: 'Awake', color: sleepStageColors.awake, desc: 'Brief wake-ups in the night. A few are normal; many fragment recovery.' },
+  { name: 'Light', color: sleepStageColors.light, desc: 'The bridge between wake and deep — usually the largest share of the night.' },
+  { name: 'REM', color: sleepStageColors.rem, desc: 'Dreaming sleep. Consolidates memory, learning and mood. Restorative.' },
+  { name: 'SWS (Deep)', color: sleepStageColors.deep, desc: 'Slow-wave sleep. Physical repair, growth hormone, immune function. Restorative.' },
+];
 
 export function SleepScreen({ nav }: { nav: Nav }) {
   const sleep = useStoreSelector(appStore, (s) => s.lastSleep);
   const sleepScore = useStoreSelector(appStore, (s) => s.sleepScore);
   const sleepReg = useStoreSelector(appStore, (s) => s.sleepReg);
+  const sleepNeed = useStoreSelector(appStore, (s) => s.sleepNeed);
+  const sleepGoal = useStoreSelector(appStore, (s) => s.sleepGoal);
+  const today = useStoreSelector(appStore, (s) => s.today);
+  const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
   const [nightHr, setNightHr] = useState<number[]>([]);
 
   useEffect(() => {
     void appStore.lastNightHr().then(setNightHr);
   }, [sleep]);
 
-  if (!sleep) {
-    return (
-      <Screen title="Sleep" onBack={nav.canBack ? nav.back : undefined} tint={colors.sleepTeal}>
-        <Card style={{ alignItems: 'center', paddingVertical: 28 }}>
-          <Ring value={0} color={colors.sleepTeal} centerTop="Sleep performance" centerMain="—" centerSub="no sleep yet" />
-        </Card>
-        <Card style={{ paddingVertical: 2 }}>
-          <NavRow label="Sleep Coach" icon="moon" iconColor={colors.sleepTeal} onPress={() => nav.navigate({ name: 'sleepCoach' })} last />
-        </Card>
-        <Card>
-          <Empty text="No sleep detected yet. Wear the strap overnight with the app connected, then recalculate from the Today tab. The full breakdown appears once a night is recorded." />
-        </Card>
-      </Screen>
-    );
-  }
-
-  const total = sleep.inBedMin || 1;
-  const perfPct = sleep.performance != null ? Math.round(sleep.performance * 100) : null;
-  const hoursNeededPct = sleep.neededMin > 0 ? (sleep.asleepMin / sleep.neededMin) * 100 : null;
-  const effPct = Math.round(sleep.efficiency * 100);
-  const wakeEvents = sleep.hypnogram.filter((s) => s.stage === 'awake').length;
-  const restorativeMin = sleep.stages.deep + sleep.stages.rem;
-  const debtMin = Math.max(0, sleep.neededMin - sleep.asleepMin);
+  const total = sleep?.inBedMin || 1;
+  const perfPct = sleep?.performance != null ? Math.round(sleep.performance * 100) : null;
+  const hoursNeededPct = sleep && sleep.neededMin > 0 ? (sleep.asleepMin / sleep.neededMin) * 100 : null;
+  const effPct = sleep ? Math.round(sleep.efficiency * 100) : null;
+  const wakeEvents = sleep ? sleep.hypnogram.filter((s) => s.stage === 'awake').length : null;
+  const restorativeMin = sleep ? sleep.stages.deep + sleep.stages.rem : null;
+  const neededMin = sleepNeed?.neededMin ?? BASE_NEED_MIN;
+  const week = recentDays.slice(0, 7).reverse();
 
   return (
     <Screen title="Sleep" onBack={nav.canBack ? nav.back : undefined} tint={colors.sleepTeal}>
       {/* Performance ring */}
       <Card style={{ alignItems: 'center', paddingVertical: 24 }} onPress={() => nav.navigate({ name: 'metric', key: 'sleep_performance' })}>
         <Ring
-          value={sleep.performance ?? 0}
+          value={sleep?.performance ?? 0}
           color={colors.sleepTeal}
-          centerTop="Sleep performance"
+          centerTop="Sleep Performance"
           centerMain={perfPct != null ? `${perfPct}%` : '—'}
-          centerSub={formatDuration(sleep.asleepMin)}
+          centerSub={sleep ? formatDuration(sleep.asleepMin) : 'awaiting last night'}
         />
       </Card>
 
-      {/* Contributors */}
+      {/* Quick actions — always present */}
+      <Card style={{ paddingVertical: 2 }}>
+        <NavRow label="Sleep Coach" icon="moon" iconColor={colors.sleepTeal} value={`${Math.round((neededMin * sleepGoal) / 60 * 10) / 10} h goal`} onPress={() => nav.navigate({ name: 'sleepCoach' })} />
+        <NavRow label="Sleep need" icon="bed" iconColor={colors.sleepTeal} value={formatDuration(neededMin)} onPress={() => nav.navigate({ name: 'sleepCoach' })} />
+        <NavRow label="Log / adjust sleep" icon="create" onPress={() => nav.navigate({ name: 'editSleep' })} last />
+      </Card>
+
+      {/* Sleep Score */}
+      <SectionLabel right={sleepScore ? <Text style={styles.scoreWord}>{fourTier(sleepScore.score).label}</Text> : undefined}>
+        {sleepScore ? `Sleep Score · ${sleepScore.score}` : 'Sleep Score'}
+      </SectionLabel>
       <Card>
-        <ContributorRow label="Hours vs. needed" percent={hoursNeededPct} onPress={() => nav.navigate({ name: 'sleepCoach' })} />
-        <ContributorRow label="Sleep efficiency" percent={effPct} />
+        {sleepScore ? (
+          sleepScore.contributors.map((c) => (
+            <ContributorRow key={c.key} label={c.label} percent={c.score} value={`${fourTier(c.score).label} · ${c.detail}`} color={fourTier(c.score).color} />
+          ))
+        ) : (
+          <Empty text="Your Sleep Score appears after a night with the strap. It blends total sleep vs need, efficiency, REM, deep (SWS) and restfulness into one 0–100 figure." />
+        )}
+      </Card>
+
+      {/* Contributors */}
+      <SectionLabel>Sleep contributors</SectionLabel>
+      <Card>
+        <ContributorRow label="Hours vs. needed" percent={hoursNeededPct} value={hoursNeededPct == null ? 'awaiting data' : undefined} onPress={() => nav.navigate({ name: 'sleepCoach' })} />
+        <ContributorRow label="Sleep efficiency" percent={effPct} value={effPct == null ? 'awaiting data' : undefined} />
         <ContributorRow
           label="Sleep regularity"
           percent={sleepReg?.score ?? null}
@@ -83,80 +102,106 @@ export function SleepScreen({ nav }: { nav: Nav }) {
         <BandLegend />
       </Card>
 
-      <Card style={{ paddingVertical: 2 }}>
-        <NavRow label="Sleep Coach &amp; sleep need" icon="moon" iconColor={colors.sleepTeal} onPress={() => nav.navigate({ name: 'sleepCoach' })} last />
-      </Card>
-
-      {/* Oura-style Sleep Score with banded contributors */}
-      {sleepScore ? (
-        <>
-          <SectionLabel right={<Text style={styles.scoreWord}>{fourTier(sleepScore.score).label}</Text>}>
-            Sleep Score · {sleepScore.score}
-          </SectionLabel>
-          <Card>
-            {sleepScore.contributors.map((c) => (
-              <ContributorRow key={c.key} label={c.label} percent={c.score} value={`${fourTier(c.score).label} · ${c.detail}`} color={fourTier(c.score).color} />
-            ))}
-          </Card>
-        </>
-      ) : null}
-
-      {/* Last night's sleep — overnight HR + window */}
+      {/* Last night */}
       <SectionLabel>Last night's sleep</SectionLabel>
       <Card>
-        <View style={styles.headRow}>
-          <Text style={styles.bigHours}>{formatDuration(sleep.asleepMin)}</Text>
-          <Text style={styles.headSub}>asleep · {formatDuration(sleep.inBedMin)} in bed</Text>
-        </View>
-        <LineChart
-          values={nightHr}
-          color={colors.sleepTeal}
-          leftLabel={formatClock(sleep.startTs)}
-          rightLabel={formatClock(sleep.endTs)}
-        />
+        {sleep ? (
+          <>
+            <View style={styles.headRow}>
+              <Text style={styles.bigHours}>{formatDuration(sleep.asleepMin)}</Text>
+              <Text style={styles.headSub}>asleep · {formatDuration(sleep.inBedMin)} in bed</Text>
+            </View>
+            <LineChart values={nightHr} color={colors.sleepTeal} leftLabel={formatClock(sleep.startTs)} rightLabel={formatClock(sleep.endTs)} />
+          </>
+        ) : (
+          <Empty text="No sleep recorded last night. Wear the strap to bed with the app connected, then tap ‘Recalculate today’ on Home. Detected automatically from your overnight heart rate." />
+        )}
       </Card>
 
-      {/* Stages */}
-      <SectionLabel>Stages</SectionLabel>
+      {/* Stages — data (if any) + always-on education */}
+      <SectionLabel>Sleep stages</SectionLabel>
       <Card>
-        <Hypnogram segments={sleep.hypnogram} />
-        <View style={{ marginTop: 12 }}>
-          <StageRow name="SWS (Deep)" color={sleepStageColors.deep} minutes={sleep.stages.deep} total={total} />
-          <StageRow name="REM" color={sleepStageColors.rem} minutes={sleep.stages.rem} total={total} />
-          <StageRow name="Light" color={sleepStageColors.light} minutes={sleep.stages.light} total={total} />
-          <StageRow name="Awake" color={sleepStageColors.awake} minutes={sleep.stages.awake} total={total} />
-        </View>
+        {sleep ? (
+          <>
+            <Hypnogram segments={sleep.hypnogram} />
+            <View style={{ marginTop: 12 }}>
+              <StageRow name="SWS (Deep)" color={sleepStageColors.deep} minutes={sleep.stages.deep} total={total} />
+              <StageRow name="REM" color={sleepStageColors.rem} minutes={sleep.stages.rem} total={total} />
+              <StageRow name="Light" color={sleepStageColors.light} minutes={sleep.stages.light} total={total} />
+              <StageRow name="Awake" color={sleepStageColors.awake} minutes={sleep.stages.awake} total={total} />
+            </View>
+          </>
+        ) : (
+          <Empty text="Once a night is recorded you’ll see a full hypnogram and time in each stage here." />
+        )}
+      </Card>
+      <Card>
+        {STAGE_EDU.map((s) => (
+          <View key={s.name} style={styles.eduRow}>
+            <View style={[styles.eduDot, { backgroundColor: s.color }]} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.eduName}>{s.name}</Text>
+              <Text style={styles.eduDesc}>{s.desc}</Text>
+            </View>
+          </View>
+        ))}
       </Card>
 
-      {/* Restorative + efficiency */}
+      {/* Key metrics */}
+      <SectionLabel>Key metrics</SectionLabel>
       <View style={styles.grid}>
         <Card style={styles.half}>
-          <Stat label="Restorative (deep+REM)" value={formatDuration(restorativeMin)} color={sleepStageColors.rem} />
+          <Stat label="Restorative (deep+REM)" value={restorativeMin != null ? formatDuration(restorativeMin) : '—'} color={sleepStageColors.rem} />
         </Card>
         <Card style={styles.half}>
-          <Stat label="Wake events" value={wakeEvents} />
+          <Stat label="Wake events" value={wakeEvents ?? '—'} />
         </Card>
       </View>
       <View style={styles.grid}>
         <Card style={styles.half}>
-          <Stat label="Efficiency" value={effPct} unit="%" color={colors.sleepTeal} />
+          <Stat label="Efficiency" value={effPct ?? '—'} unit={effPct != null ? '%' : undefined} color={colors.sleepTeal} />
         </Card>
         <Card style={styles.half}>
-          <Stat label="Lights out → woke" value={`${formatClock(sleep.startTs)}–${formatClock(sleep.endTs)}`} />
+          <Stat label="Respiratory rate" value={today?.resp != null ? Math.round(today.resp * 10) / 10 : '—'} unit={today?.resp != null ? 'rpm' : undefined} />
         </Card>
       </View>
 
-      {/* Sleep need breakdown */}
-      <SectionLabel>Hours vs. needed</SectionLabel>
+      {/* Sleep need breakdown — always */}
+      <SectionLabel>How sleep need is calculated</SectionLabel>
       <Card>
-        <NeedRow label="Healthy minimum" value={formatDuration(HEALTHY_MIN)} />
-        <NeedRow label="Sleep debt" value={`+${formatDuration(debtMin)}`} />
+        <NeedRow label="Baseline" value={formatDuration(sleepNeed?.baselineMin ?? BASE_NEED_MIN)} />
+        <NeedRow label="Recent strain" value={`+${formatDuration(sleepNeed?.strainMin ?? 0)}`} />
+        <NeedRow label="Sleep debt" value={`+${formatDuration(sleepNeed?.debtMin ?? 0)}`} />
+        <NeedRow label="Recent naps" value={`−${formatDuration(sleepNeed?.napMin ?? 0)}`} />
         <View style={styles.divider} />
-        <NeedRow label="Sleep needed" value={formatDuration(sleep.neededMin)} strong />
-        <NeedRow label="Hours of sleep" value={formatDuration(sleep.asleepMin)} strong />
+        <NeedRow label="Sleep needed" value={formatDuration(neededMin)} strong />
+        {sleep ? <NeedRow label="Hours of sleep" value={formatDuration(sleep.asleepMin)} strong /> : null}
       </Card>
 
-      <Empty text="Stages are inferred from overnight heart rate + movement (approximate, not WHOOP's proprietary staging). Sleep consistency needs several nights of bed/wake times to populate." />
+      {/* Recent sleep */}
+      <SectionLabel>Recent sleep</SectionLabel>
+      <Card>
+        {week.some((d) => d.sleepMin != null) ? (
+          <WeeklyBars
+            data={week.map((d) => ({
+              label: new Date(`${d.day}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short' }),
+              value: d.sleepMin,
+              display: d.sleepMin != null ? `${Math.round((d.sleepMin / 60) * 10) / 10}` : '',
+              color: colors.sleepTeal,
+            }))}
+          />
+        ) : (
+          <Empty text="Your last 7 nights will chart here as you wear the strap overnight." />
+        )}
+      </Card>
+
+      {/* Naps */}
+      <SectionLabel>Naps</SectionLabel>
+      <Card>
+        <Empty text="No naps logged today. A nap reduces tonight’s sleep need — tap ‘Log a sleep or nap’ above to record one." />
+      </Card>
+
+      <Empty text="Sleep stages are inferred from overnight heart rate (approximate — WHOOP’s staging also uses motion and raw optical data, which aren’t available over Bluetooth)." />
     </Screen>
   );
 }
@@ -191,18 +236,22 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', gap: 12 },
   half: { flex: 1 },
   headRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 },
-  bigHours: { color: colors.text, fontSize: 32, fontWeight: '800' },
-  headSub: { color: colors.textSecondary, fontSize: 13 },
+  bigHours: { color: colors.text, fontSize: 32, fontFamily: fonts.black },
+  headSub: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.text },
   stage: { marginVertical: 6 },
   stageHead: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  stageName: { color: colors.text, fontSize: 14, fontWeight: '600' },
-  stageDur: { color: colors.text, fontSize: 14, fontWeight: '700' },
+  stageName: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold },
+  stageDur: { color: colors.text, fontSize: 14, fontFamily: fonts.bold },
   stageTrack: { height: 8, backgroundColor: colors.surface, borderRadius: 4, overflow: 'hidden' },
   stageFill: { height: 8, borderRadius: 4 },
+  eduRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 9 },
+  eduDot: { width: 10, height: 10, borderRadius: 3, marginRight: 10, marginTop: 4 },
+  eduName: { color: colors.text, fontSize: 14, fontFamily: fonts.textBold },
+  eduDesc: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 1, fontFamily: fonts.text },
   needRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 7 },
-  needLabel: { color: colors.textSecondary, fontSize: 14 },
-  needValue: { color: colors.text, fontSize: 14 },
-  needStrong: { color: colors.text, fontWeight: '700' },
+  needLabel: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.text },
+  needValue: { color: colors.text, fontSize: 14, fontFamily: fonts.text },
+  needStrong: { color: colors.text, fontFamily: fonts.bold },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 6 },
-  scoreWord: { color: colors.textSecondary, fontSize: 12, fontWeight: '700' },
+  scoreWord: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.textBold },
 });

@@ -108,11 +108,12 @@ export function Stat({
   unit?: string;
   color?: string;
 }) {
+  const empty = value === '—' || value === '' || value == null;
   return (
     <View style={styles.stat}>
       <Text style={styles.statValue} numberOfLines={1}>
-        <Text style={{ color: color ?? colors.text, fontFamily: fonts.bold }}>{value}</Text>
-        {unit ? <Text style={styles.statUnit}> {unit}</Text> : null}
+        <Text style={{ color: empty ? colors.textTertiary : color ?? colors.text, fontFamily: fonts.bold }}>{empty ? '—' : value}</Text>
+        {unit && !empty ? <Text style={styles.statUnit}> {unit}</Text> : null}
       </Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
@@ -223,10 +224,10 @@ export function Ring({
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       </Svg>
-      <View style={styles.ringCenter}>
-        {centerTop ? <Text style={styles.ringTop}>{centerTop}</Text> : null}
-        {centerMain ? <Text style={[styles.ringMain, { color }]}>{centerMain}</Text> : null}
-        {centerSub ? <Text style={styles.ringSub}>{centerSub}</Text> : null}
+      <View style={[styles.ringCenter, { maxWidth: size - stroke * 2 - 16 }]}>
+        {centerTop ? <Text style={styles.ringTop} numberOfLines={2}>{centerTop}</Text> : null}
+        {centerMain ? <Text style={[styles.ringMain, { color: centerMain === '—' ? colors.textTertiary : color }]}>{centerMain}</Text> : null}
+        {centerSub ? <Text style={styles.ringSub} numberOfLines={1}>{centerSub}</Text> : null}
       </View>
     </View>
   );
@@ -327,7 +328,7 @@ export function Dial({
           />
         </Svg>
         <View style={dialStyles.center}>
-          <Text style={[dialStyles.main, { color }]}>{main}</Text>
+          <Text style={[dialStyles.main, { color: main === '—' ? colors.textTertiary : color }]}>{main}</Text>
         </View>
       </View>
       <Text style={dialStyles.label}>{label}</Text>
@@ -707,7 +708,7 @@ export function Tile({
         <View style={{ flex: 1 }} />
         <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
       </View>
-      <Text style={[tileStyles.value, { color: color ?? colors.text }]}>{value}</Text>
+      <Text style={[tileStyles.value, { color: value === '—' ? colors.textTertiary : color ?? colors.text }]}>{value}</Text>
       {sub ? <Text style={tileStyles.sub}>{sub}</Text> : null}
     </Pressable>
   );

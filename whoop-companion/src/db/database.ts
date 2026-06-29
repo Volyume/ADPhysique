@@ -251,6 +251,11 @@ export async function insertCardio(c: CardioRow): Promise<void> {
   );
 }
 
+export async function deleteCardio(id: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('DELETE FROM cardio WHERE id = ?', id);
+}
+
 export async function listCardio(limit = 50): Promise<CardioRow[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<{

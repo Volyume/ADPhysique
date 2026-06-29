@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Text, TextInput, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { Alert, Pressable, Text, TextInput, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
@@ -116,12 +117,25 @@ export function StrainScreen({ nav }: { nav: Nav }) {
         ) : (
           todayCardio.map((c) => (
             <View key={c.id} style={styles.sessionRow}>
-              <Text style={styles.sessionName}>{c.activity}</Text>
-              <Text style={styles.sessionMeta}>
-                {formatDuration(Math.round((c.endTs - c.startTs) / 60000))}
-                {c.avgHr ? ` · ${c.avgHr} bpm` : ''}
-                {c.strain != null ? ` · strain ${c.strain.toFixed(1)}` : ''}
-              </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sessionName}>{c.activity}</Text>
+                <Text style={styles.sessionMeta}>
+                  {formatDuration(Math.round((c.endTs - c.startTs) / 60000))}
+                  {c.avgHr ? ` · ${c.avgHr} bpm` : ''}
+                  {c.strain != null ? ` · strain ${c.strain.toFixed(1)}` : ''}
+                </Text>
+              </View>
+              <Pressable
+                hitSlop={10}
+                onPress={() =>
+                  Alert.alert('Delete activity', `Remove this ${c.activity} activity?`, [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Delete', style: 'destructive', onPress: () => void appStore.removeCardio(c.id) },
+                  ])
+                }
+              >
+                <Ionicons name="trash-outline" size={18} color={colors.textTertiary} />
+              </Pressable>
             </View>
           ))
         )}
@@ -188,7 +202,7 @@ const styles = StyleSheet.create({
   chipTextActive: { color: '#000', fontWeight: '600' },
   fieldLabel: { color: colors.textSecondary, fontSize: 12, marginBottom: 4 },
   input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.inputBorder, borderRadius: radius.button, color: colors.text, paddingHorizontal: 12, paddingVertical: 12, fontSize: 16 },
-  sessionRow: { paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
+  sessionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   sessionName: { color: colors.text, fontSize: 15, fontWeight: '600' },
   sessionMeta: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
 });

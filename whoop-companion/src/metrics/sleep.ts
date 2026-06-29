@@ -117,9 +117,16 @@ function findSleepWindow(samples: SleepMinute[]): { start: number; end: number }
   return { start: bestStart, end: bestStart + bestLen };
 }
 
-export function computeSleep(samples: SleepMinute[], neededMin = BASE_NEED_MIN): SleepResult | null {
-  const win = findSleepWindow(samples);
-  if (!win) return null;
+export function computeSleep(
+  samples: SleepMinute[],
+  neededMin = BASE_NEED_MIN,
+  opts: { forceWindow?: boolean } = {},
+): SleepResult | null {
+  // forceWindow: treat the WHOLE input as the sleep window (used when the user
+  // has manually logged or adjusted the sleep period, so we score exactly those
+  // bounds instead of auto-detecting within them).
+  const win = opts.forceWindow ? { start: 0, end: samples.length } : findSleepWindow(samples);
+  if (!win || win.end - win.start < 1) return null;
 
   const window = samples.slice(win.start, win.end);
   const hrs = window.map((s) => s.hr).filter((v): v is number => v != null);

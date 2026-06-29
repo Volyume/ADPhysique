@@ -41,6 +41,7 @@ export type Route =
   | { name: 'settings' }
   | { name: 'sleepCoach' }
   | { name: 'logActivity' }
+  | { name: 'editSleep' }
   | { name: 'resilience' }
   | { name: 'illness' }
   | { name: 'metric'; key: MetricKey }

@@ -170,6 +170,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             ))
           )}
         </Card>
+        <View style={{ height: 76 }} />
       </Screen>
       <FAB onPress={() => nav.navigate({ name: 'logActivity' })} />
     </View>

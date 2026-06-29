@@ -36,6 +36,7 @@ import {
   kvSet,
   listCardio,
   listJournal,
+  deleteCardio,
   pruneHrSamples,
   upsertDailyMetric,
 } from '../db/database';
@@ -282,6 +283,24 @@ class AppStore extends Store<AppState> {
     };
     await insertCardio(row);
     this.setState({ cardio: await listCardio() });
+    await this.recomputeToday();
+  };
+
+  removeCardio = async (id: string): Promise<void> => {
+    await deleteCardio(id);
+    this.setState({ cardio: await listCardio() });
+    await this.recomputeToday();
+  };
+
+  // ---- manual / adjusted sleep window ----
+  setManualSleep = async (startTs: number, endTs: number): Promise<void> => {
+    await kvSet(`manualSleep:${dayKey(Date.now())}`, JSON.stringify({ startTs, endTs }));
+    await this.recomputeToday();
+  };
+
+  clearManualSleep = async (): Promise<void> => {
+    await kvSet(`manualSleep:${dayKey(Date.now())}`, '');
+    await this.recomputeToday();
   };
 
   // ---- journal ----
@@ -311,13 +330,33 @@ class AppStore extends Store<AppState> {
     const load = edwardsTrimp(strainSamples, profile);
     const strain = strainSamples.length ? strainFromLoad(load) : null;
 
-    // Last night's window: 20:00 previous day -> noon today (clamped to now).
-    const nightStart = sod - 4 * 3600 * 1000;
-    const nightEnd = Math.min(sod + 12 * 3600 * 1000, now);
-    const nightHr = await getHrSamplesBetween(nightStart, nightEnd);
+    // Last night's window. A manual override (logged/adjusted by the user) takes
+    // precedence and is scored over exactly those bounds; otherwise auto-detect
+    // within 20:00 previous day -> noon today.
+    const manualRaw = await kvGet(`manualSleep:${today}`);
+    const manual = manualRaw ? (JSON.parse(manualRaw) as { startTs: number; endTs: number }) : null;
+    const winStart = manual ? manual.startTs : sod - 4 * 3600 * 1000;
+    const winEnd = manual ? manual.endTs : Math.min(sod + 12 * 3600 * 1000, now);
+    const nightHr = await getHrSamplesBetween(winStart, winEnd);
     const nightPerMin = perMinuteHr(nightHr);
     const sleepInput: SleepMinute[] = nightPerMin.map((p) => ({ ts: p.tsMs, hr: p.hr, motion: null }));
-    const sleep = computeSleep(sleepInput);
+    let sleep = computeSleep(sleepInput, undefined, { forceWindow: !!manual });
+    if (manual && !sleep) {
+      // Manual window with no strap data: record the duration only (no stages).
+      const inBedMin = Math.max(1, Math.round((manual.endTs - manual.startTs) / 60000));
+      const asleepMin = Math.round(inBedMin * 0.9);
+      sleep = {
+        startTs: manual.startTs,
+        endTs: manual.endTs,
+        inBedMin,
+        asleepMin,
+        efficiency: 0.9,
+        stages: { awake: inBedMin - asleepMin, light: asleepMin, deep: 0, rem: 0 },
+        hypnogram: [{ stage: 'light', minutes: asleepMin }],
+        performance: null,
+        neededMin: 480,
+      };
+    }
 
     // Overnight RMSSD + RHR + respiratory rate within the detected sleep window.
     let rmssd: number | null = null;
@@ -341,7 +380,10 @@ class AppStore extends Store<AppState> {
       (a, d) => a + Math.max(0, 480 - (d.sleepMin as number)),
       0,
     );
-    const need = computeSleepNeed({ recentStrain: strain, accruedDebtMin });
+    const napMin = (await listCardio())
+      .filter((c) => c.source === 'nap' && c.startTs >= sod)
+      .reduce((a, c) => a + Math.round((c.endTs - c.startTs) / 60000), 0);
+    const need = computeSleepNeed({ recentStrain: strain, accruedDebtMin, napMin });
     if (sleep) {
       sleep.neededMin = need.neededMin;
       sleep.performance = Math.min(1, sleep.asleepMin / need.neededMin);

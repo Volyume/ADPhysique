@@ -185,11 +185,10 @@ export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: Me
         {def.measured ? (
           <Ring
             value={ringFraction(metricKey, current)}
-            size={196}
+            size={176}
             color={tint}
             centerMain={current != null ? `${current.toFixed(def.decimals ?? 0)}` : '—'}
-            centerSub={def.unit || undefined}
-            centerTop={def.title.toUpperCase()}
+            centerSub={current != null ? def.unit || undefined : 'awaiting data'}
           />
         ) : (
           <Card style={{ width: '100%' }}>
