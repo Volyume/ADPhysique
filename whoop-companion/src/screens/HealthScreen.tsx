@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -8,12 +8,30 @@ import { Card, Screen, SectionLabel } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { MetricKey, Nav } from '../ui/navigation';
 import { Vital } from '../metrics/healthMonitor';
+import { RhythmResult } from '../metrics/afib';
+
+const RHYTHM_COLOR: Record<string, string> = {
+  regular: colors.recoveryGreen,
+  monitor: colors.recoveryYellow,
+  irregular: colors.recoveryRed,
+  insufficient: colors.textTertiary,
+};
+const RHYTHM_LABEL: Record<string, string> = {
+  regular: 'Regular',
+  monitor: 'Monitor',
+  irregular: 'Irregular beats',
+  insufficient: 'Calibrating',
+};
 
 export function HealthScreen({ nav }: { nav: Nav }) {
   // Recompute reactively when today's metrics change.
   const today = useStoreSelector(appStore, (s) => s.today);
   const recent = useStoreSelector(appStore, (s) => s.recentDays);
   const hm = useMemo(() => appStore.healthMonitor(), [today, recent]);
+  const [rhythm, setRhythm] = useState<RhythmResult | null>(null);
+  useEffect(() => {
+    void appStore.rhythmScreen().then(setRhythm);
+  }, [today]);
 
   const tint =
     hm.measuredCount === 0
@@ -48,9 +66,23 @@ export function HealthScreen({ nav }: { nav: Nav }) {
         ))}
       </Card>
 
+      <SectionLabel>Heart rhythm screen</SectionLabel>
+      <Card>
+        <View style={styles.rhythmHead}>
+          <View style={[styles.dot, { backgroundColor: RHYTHM_COLOR[rhythm?.status ?? 'insufficient'] }]} />
+          <Text style={[styles.rhythmStatus, { color: RHYTHM_COLOR[rhythm?.status ?? 'insufficient'] }]}>
+            {RHYTHM_LABEL[rhythm?.status ?? 'insufficient']}
+          </Text>
+        </View>
+        <Text style={styles.rhythmNote}>
+          {rhythm?.note ?? 'Screening your resting heart-beat timing for irregular rhythm.'}
+        </Text>
+      </Card>
+
       <Text style={styles.footnote}>
         Blood Oxygen and Skin Temperature need the strap’s raw optical/thermistor stream, which this
-        build can’t yet decode over Bluetooth — they’re shown for parity but not measured.
+        build can’t yet decode over Bluetooth — they’re shown for parity but not measured. The heart
+        rhythm screen is a wellness feature, not an ECG or a medical diagnosis.
       </Text>
     </Screen>
   );
@@ -98,4 +130,7 @@ const styles = StyleSheet.create({
   vValue: { fontSize: 20, fontFamily: fonts.bold },
   vUnit: { fontSize: 12, color: colors.textSecondary, fontFamily: fonts.text },
   footnote: { color: colors.textTertiary, fontSize: 12, lineHeight: 18, marginTop: 16, fontFamily: fonts.text },
+  rhythmHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  rhythmStatus: { fontSize: 20, fontFamily: fonts.black },
+  rhythmNote: { color: colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 8, fontFamily: fonts.text },
 });

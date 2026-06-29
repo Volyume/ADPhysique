@@ -66,6 +66,7 @@ import { hrvBalance, HrvBalance } from '../metrics/hrvBalance';
 import { illnessRisk, IllnessResult } from '../metrics/illness';
 import { resilience, Resilience } from '../metrics/resilience';
 import { cardioAge } from '../metrics/cardioAge';
+import { rhythmScreen, RhythmResult } from '../metrics/afib';
 import { addDays, dayKey, epochDay, startOfDayMs } from '../util/time';
 
 export type SessionKind = 'workout' | 'sleep' | 'nap';
@@ -880,6 +881,16 @@ class AppStore extends Store<AppState> {
       out.push({ tsMs: p.tsMs, strain: strainFromLoad(cumLoad) });
     }
     return out;
+  };
+
+  /** Irregular-rhythm (AFib) screen from last night's resting R-R intervals. */
+  rhythmScreen = async (): Promise<RhythmResult> => {
+    const sleep = this.getState().lastSleep;
+    const now = Date.now();
+    const from = sleep ? sleep.startTs : startOfDayMs(now) - 4 * 3600 * 1000;
+    const to = sleep ? sleep.endTs + 60000 : now;
+    const rows = await getHrSamplesBetween(from, to);
+    return rhythmScreen(rows.flatMap((r) => r.rr));
   };
 
   /** Per-minute HR across last night's detected sleep window, for the graph. */
