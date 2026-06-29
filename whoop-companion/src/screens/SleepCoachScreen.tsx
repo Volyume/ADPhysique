@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { appStore } from '../state/appStore';
@@ -6,6 +7,17 @@ import { Card, Screen, SectionLabel } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { formatDuration } from '../util/time';
+import { kvGet, kvSet } from '../db/database';
+
+function fmtClock(minOfDay: number): string {
+  const m = ((minOfDay % 1440) + 1440) % 1440;
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+}
+function median(xs: number[]): number | null {
+  if (!xs.length) return null;
+  const s = [...xs].sort((a, b) => a - b);
+  return s[Math.floor(s.length / 2)] ?? null;
+}
 
 const MODES: Array<{ key: number; name: string; pct: string; desc: string }> = [
   { key: 0.7, name: 'Get By', pct: '70%', desc: 'Minimum to function' },
@@ -17,9 +29,32 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   const need = useStoreSelector(appStore, (s) => s.sleepNeed);
   const goal = useStoreSelector(appStore, (s) => s.sleepGoal);
   const lastSleep = useStoreSelector(appStore, (s) => s.lastSleep);
+  const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
 
   const neededMin = need?.neededMin ?? 480;
   const targetMin = Math.round(neededMin * goal);
+
+  // Sleep Planner (per WHOOP's published model): the recommended TIME IN BED to
+  // hit your goal accounts for your typical sleep efficiency; the suggested
+  // bedtime is your wake time minus that. Wake time is user-set and persisted.
+  const [wakeMin, setWakeMin] = useState(7 * 60); // default 07:00
+  useEffect(() => {
+    void kvGet('wakeTime').then((v) => {
+      const n = v ? Number(v) : NaN;
+      if (Number.isFinite(n)) setWakeMin(n);
+    });
+  }, []);
+  const setWake = (m: number) => {
+    const next = ((m % 1440) + 1440) % 1440;
+    setWakeMin(next);
+    void kvSet('wakeTime', String(next));
+  };
+  const effSamples = recentDays
+    .map((d) => d.sleepDetail?.efficiency)
+    .filter((v): v is number => v != null && v > 0);
+  const expectedEff = (median(effSamples) ?? 85) / 100; // fraction, fallback 85%
+  const tibNeededMin = Math.round(targetMin / Math.max(0.5, expectedEff));
+  const bedMin = wakeMin - tibNeededMin;
 
   const rows = need
     ? [
@@ -60,6 +95,36 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
             <Text style={styles.modeHours}>{formatDuration(Math.round(neededMin * m.key))}</Text>
           </Pressable>
         ))}
+      </Card>
+
+      <SectionLabel>Sleep planner</SectionLabel>
+      <Card>
+        <View style={styles.planRow}>
+          <View style={styles.planCell}>
+            <Text style={styles.planValue}>{fmtClock(bedMin)}</Text>
+            <Text style={styles.planLabel}>SUGGESTED TIME TO BED</Text>
+          </View>
+          <View style={styles.planCell}>
+            <Text style={styles.planValue}>{formatDuration(tibNeededMin)}</Text>
+            <Text style={styles.planLabel}>RECOMMENDED TIME IN BED</Text>
+          </View>
+        </View>
+        <View style={styles.wakeRow}>
+          <Text style={styles.wakeLabel}>Wake-up time</Text>
+          <View style={styles.stepper}>
+            <Pressable hitSlop={10} onPress={() => setWake(wakeMin - 15)} style={styles.stepBtn}>
+              <Text style={styles.stepTxt}>−</Text>
+            </Pressable>
+            <Text style={styles.wakeValue}>{fmtClock(wakeMin)}</Text>
+            <Pressable hitSlop={10} onPress={() => setWake(wakeMin + 15)} style={styles.stepBtn}>
+              <Text style={styles.stepTxt}>+</Text>
+            </Pressable>
+          </View>
+        </View>
+        <Text style={styles.planNote}>
+          To reach {MODES.find((m) => m.key === goal)?.pct} of your sleep need ({formatDuration(targetMin)} asleep),
+          allowing for your typical {Math.round(expectedEff * 100)}% efficiency.
+        </Text>
       </Card>
 
       <SectionLabel>How sleep need is calculated</SectionLabel>
@@ -140,4 +205,15 @@ const styles = StyleSheet.create({
   totalVal: { color: colors.sleepTeal, fontSize: 16, fontFamily: fonts.black },
   blurb: { color: colors.textSecondary, fontSize: 14, lineHeight: 21, fontFamily: fonts.text },
   alarmNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 18, marginTop: 16, fontFamily: fonts.text },
+  planRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  planCell: { flex: 1, alignItems: 'center' },
+  planValue: { color: colors.sleepTeal, fontSize: 28, fontFamily: fonts.black },
+  planLabel: { color: colors.textTertiary, fontSize: 10, fontFamily: fonts.textBold, letterSpacing: 1, marginTop: 4, textAlign: 'center' },
+  wakeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.border },
+  wakeLabel: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.text },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  stepBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
+  stepTxt: { color: colors.text, fontSize: 20, fontFamily: fonts.bold },
+  wakeValue: { color: colors.text, fontSize: 18, fontFamily: fonts.bold, minWidth: 56, textAlign: 'center' },
+  planNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 18, marginTop: 12, fontFamily: fonts.text },
 });
