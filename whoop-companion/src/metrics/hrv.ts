@@ -1,73 +1,83 @@
 /**
- * Heart-rate variability from R-R intervals, using the Task Force (1996)
- * time-domain definitions. These are the same metrics WHOOP's recovery leans on
- * (RMSSD in particular). Inputs are R-R intervals in milliseconds.
+ * Heart-rate variability from R-R intervals (Task Force 1996 time-domain).
  *
- * Artefact handling: ectopic beats / dropped beats produce wild R-R values, so
- * we filter to a physiological window and drop intervals that differ from the
- * previous accepted one by more than 20% (a standard, simple cleaner).
+ * IMPORTANT about magnitude: optical (PPG) R-R — what the strap broadcasts — is
+ * noisy. A single missed/extra beat creates a huge successive difference that
+ * massively inflates RMSSD. So we reject artifacts robustly (physiological range
+ * + deviation from a local median) and, critically, only difference beats that
+ * are ADJACENT in the original sequence and both clean — never across a removed
+ * interval (doing so re-introduces a false spike and over-reports HRV).
+ *
+ * Also note WHOOP reports HRV measured during SLEEP (slow-wave sleep), a stable
+ * resting value; an instantaneous awake reading is a different, higher/noisier
+ * thing and should be labelled as such.
  */
 
 export type HrvResult = {
-  /** Root mean square of successive differences (ms) — the key recovery signal. */
-  rmssd: number;
-  /** Standard deviation of NN intervals (ms). */
-  sdnn: number;
-  /** Proportion of successive NN pairs differing by > 50 ms (%). */
-  pnn50: number;
-  /** Mean heart rate implied by the accepted intervals (bpm). */
-  meanHr: number;
-  /** Count of accepted intervals used. */
-  count: number;
+  rmssd: number; // ms — the recovery-relevant metric
+  sdnn: number; // ms
+  pnn50: number; // %
+  meanHr: number; // bpm
+  count: number; // accepted intervals
 };
 
 const RR_MIN_MS = 300; // 200 bpm
 const RR_MAX_MS = 2000; // 30 bpm
+const MEDIAN_TOL = 0.25; // reject intervals >25% from the local median
 
-/** Filter R-R intervals to physiological range + reject >20% jumps. */
-export function cleanRr(rr: number[]): number[] {
-  const out: number[] = [];
-  let prev: number | null = null;
-  for (const v of rr) {
-    if (v < RR_MIN_MS || v > RR_MAX_MS) continue;
-    if (prev !== null && Math.abs(v - prev) > 0.2 * prev) {
-      // Likely ectopic/artefact; skip but don't reset the reference.
-      continue;
-    }
-    out.push(v);
-    prev = v;
-  }
-  return out;
+function median(xs: number[]): number {
+  if (xs.length === 0) return 0;
+  const s = [...xs].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? (s[mid] as number) : ((s[mid - 1] as number) + (s[mid] as number)) / 2;
 }
 
-export function computeHrv(rrRaw: number[]): HrvResult | null {
-  const rr = cleanRr(rrRaw);
-  if (rr.length < 2) return null;
+/**
+ * Validity mask over the raw R-R sequence: in physiological range AND within
+ * MEDIAN_TOL of the overall median. Returns same-length boolean array.
+ */
+function validityMask(rr: number[]): boolean[] {
+  const inRange = rr.filter((v) => v >= RR_MIN_MS && v <= RR_MAX_MS);
+  const med = median(inRange) || 0;
+  return rr.map((v) => {
+    if (v < RR_MIN_MS || v > RR_MAX_MS) return false;
+    if (med > 0 && Math.abs(v - med) > MEDIAN_TOL * med) return false;
+    return true;
+  });
+}
 
-  const n = rr.length;
-  const mean = rr.reduce((a, b) => a + b, 0) / n;
+export function computeHrv(rr: number[]): HrvResult | null {
+  if (rr.length < 3) return null;
+  const valid = validityMask(rr);
+  const accepted = rr.filter((_, i) => valid[i]);
+  if (accepted.length < 3) return null;
 
-  let sumSqDiff = 0; // for RMSSD
+  const n = accepted.length;
+  const mean = accepted.reduce((a, b) => a + b, 0) / n;
+
+  // RMSSD: only over consecutive ORIGINAL pairs where both beats are valid.
+  let sumSqDiff = 0;
+  let pairs = 0;
   let nn50 = 0;
-  for (let i = 1; i < n; i += 1) {
+  for (let i = 1; i < rr.length; i += 1) {
+    if (!valid[i] || !valid[i - 1]) continue;
     const d = (rr[i] as number) - (rr[i - 1] as number);
     sumSqDiff += d * d;
     if (Math.abs(d) > 50) nn50 += 1;
+    pairs += 1;
   }
-  const rmssd = Math.sqrt(sumSqDiff / (n - 1));
+  if (pairs < 2) return null;
+  const rmssd = Math.sqrt(sumSqDiff / pairs);
 
-  let sumVar = 0; // for SDNN
-  for (const v of rr) sumVar += (v - mean) * (v - mean);
+  let sumVar = 0;
+  for (const v of accepted) sumVar += (v - mean) * (v - mean);
   const sdnn = Math.sqrt(sumVar / n);
-
-  const pnn50 = (nn50 / (n - 1)) * 100;
-  const meanHr = 60000 / mean;
 
   return {
     rmssd: round1(rmssd),
     sdnn: round1(sdnn),
-    pnn50: round1(pnn50),
-    meanHr: round1(meanHr),
+    pnn50: round1((nn50 / pairs) * 100),
+    meanHr: round1(60000 / mean),
     count: n,
   };
 }

@@ -85,7 +85,7 @@ export function HomeScreen({ onNavigate }: { onNavigate?: (tab: HomeTab) => void
         {status === 'connected' ? (
           <View style={styles.liveRow}>
             <Stat label="Heart rate" value={liveHr ?? '—'} unit="bpm" color={colors.recoveryRed} />
-            <Stat label="Live HRV" value={liveRmssd != null ? Math.round(liveRmssd) : '—'} unit="ms" />
+            <Stat label="HRV (awake)" value={liveRmssd != null ? Math.round(liveRmssd) : '—'} unit="ms" />
             <Stat label="Battery" value={battery ?? '—'} unit="%" />
           </View>
         ) : (
