@@ -2191,6 +2191,61 @@ export async function updateWorkoutSetPostRating(setId, pump, muscleConnection) 
   );
 }
 
+// Edit an already-logged set in place (Hevy-parity: fix a mistyped set without
+// leaving the session). Only the fields actually passed are written, each is
+// mapped to its column; updated_at is bumped so the per-set upsert ships the
+// correction on the next push. No-op when nothing editable was supplied.
+const _SET_EDIT_COLUMNS = {
+  weight: 'weight',
+  actualReps: 'actual_reps',
+  rir: 'rir',
+  rpe: 'rpe',
+  setType: 'set_type',
+  notes: 'notes',
+  failed: 'failed',
+  leftReps: 'left_reps',
+  rightReps: 'right_reps',
+};
+export async function updateWorkoutSet(setId, fields = {}) {
+  if (!setId) return;
+  const sets = [];
+  const vals = [];
+  for (const [key, col] of Object.entries(_SET_EDIT_COLUMNS)) {
+    if (fields[key] === undefined) continue;
+    let v = fields[key];
+    if (key === 'failed') v = v ? 1 : 0;
+    else if (key === 'weight' || key === 'actualReps') v = v ?? 0;
+    else v = v ?? null;
+    sets.push(`${col} = ?`);
+    vals.push(v);
+  }
+  if (!sets.length) return;
+  sets.push('updated_at = ?');
+  vals.push(Date.now());
+  vals.push(setId);
+  const d = await db();
+  await d.runAsync(`UPDATE workout_sets SET ${sets.join(', ')} WHERE id = ?`, vals);
+}
+
+// Hard-delete a single logged set (Hevy-parity: remove a fat-fingered set
+// mid-session). Mirrors deleteWorkoutAndSets: local row goes immediately and
+// every derived surface (tonnage, PRs, lift progress) recomputes from local
+// rows. Scoped to the owning user as a stale-id / shared-device guard. The
+// CLOUD copy is removed by sync.deleteWorkoutSetFromCloud — the caller pairs the
+// two and enqueues a 'workout_set_delete' op on failure so a restore pull cannot
+// resurrect the set. workout_sets is hard-deleted (not tombstoned) exactly like
+// whole-workout deletes, so the deleted_at column stays unused for these rows.
+export async function deleteWorkoutSet(userId, setId) {
+  if (!userId || !setId) return false;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT id FROM workout_sets WHERE id = ? AND user_id = ?', [setId, userId],
+  );
+  if (!row) return false;
+  await d.runAsync('DELETE FROM workout_sets WHERE id = ? AND user_id = ?', [setId, userId]);
+  return true;
+}
+
 // Returns the most recent post-set pump and connection scores grouped by primary muscle,
 // using only the last logged set per exercise in a given workout.
 export async function getExerciseStimulusRatings(workoutId) {

@@ -12,7 +12,8 @@ import RestTimer from '../components/RestTimer';
 import ExercisePickerModal from '../components/ExercisePickerModal';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout } from '../lib/database';
+import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet } from '../lib/database';
+import { enqueueSyncOp } from '../lib/syncQueue';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import {
@@ -59,7 +60,7 @@ const SET_TYPE_OPTIONS = [
  * with stable props React.memo skips them. `progressNum` is the set's position
  * among counting (non-warm-up, non-dropset) sets, computed by the caller.
  */
-const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum, exerciseType = 'weight_reps' }) {
+const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum, exerciseType = 'weight_reps', onEdit }) {
   const isWarmup = set.setType === 'warmup';
   // Exercise-type aware: a distance/duration/reps_only set must not print
   // "{weight}kg × {reps}" (the weight column holds metres/0 for those) nor an
@@ -68,7 +69,13 @@ const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum,
   const est1RM = (!isWarmup && fmt.showE1RM) ? calculate1RM(set.weight, set.actualReps) : null;
   const perSide = formatPerSide(set.leftReps, set.rightReps);
   return (
-    <View style={[styles.loggedSetRow, isWarmup && styles.loggedSetRowWarmup]}>
+    <TouchableOpacity
+      style={[styles.loggedSetRow, isWarmup && styles.loggedSetRowWarmup]}
+      onPress={onEdit}
+      accessibilityRole="button"
+      accessibilityLabel={`Edit set ${progressNum}`}
+      accessibilityHint="Opens a sheet to change or delete this logged set"
+    >
       {isWarmup ? (
         <Ionicons name="flame" size={14} color={colors.warning} style={{ width: 22, textAlign: 'center' }} />
       ) : (
@@ -85,7 +92,7 @@ const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum,
         <Text style={styles.loggedEst1RM}>Est. max ≈{est1RM.toFixed(0)}{units}</Text>
       )}
       <Ionicons name="checkmark-circle" size={16} color={isWarmup ? colors.warning : colors.success} />
-    </View>
+    </TouchableOpacity>
   );
 });
 
@@ -108,6 +115,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setWorkoutExercises: s.setWorkoutExercises,
     addExerciseToWorkout: s.addExerciseToWorkout,
     addSetToCurrentExercise: s.addSetToCurrentExercise,
+    updateSetInCurrentExercise: s.updateSetInCurrentExercise,
+    removeSetFromCurrentExercise: s.removeSetFromCurrentExercise,
+    session: s.session,
     startRestTimer: s.startRestTimer,
     defaultRestSeconds: s.defaultRestSeconds,
     autoStartRestTimer: s.autoStartRestTimer,
@@ -125,6 +135,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const {
     user, units, activeWorkout, workoutExercises, currentExerciseIndex,
     setCurrentExerciseIndex, addExerciseToWorkout, addSetToCurrentExercise,
+    updateSetInCurrentExercise, removeSetFromCurrentExercise, session,
     startRestTimer, defaultRestSeconds, autoStartRestTimer, workoutPrefsLoaded, loadWorkoutPrefs,
     showPRCelebration, endWorkout, workoutStartTime,
     lastActivityAt, updateLastActivity, sessionAdjustments, revertSessionAdjustment, tier,
@@ -139,6 +150,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [prevSets, setPrevSets] = useState([]);
   const [allTimeSets, setAllTimeSets] = useState([]);
   const [loggedSets, setLoggedSets] = useState([]);
+  // Edit/delete an already-logged set mid-session (Hevy parity). `editingSet`
+  // is the logged-set object being edited (null when the sheet is closed);
+  // `editValue` is the SetEntry value object the sheet binds to.
+  const [editingSet, setEditingSet] = useState(null);
+  const [editValue, setEditValue] = useState(null);
   // Flashes the SetEntry card border amber for ~700ms after a successful
   // Log set, so the tap is acknowledged visibly. Resets via a tracked
   // timeout so cycling exercises mid-flash doesn't leave it stuck on.
@@ -1066,6 +1082,128 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     } finally {
       setSaving(false);
     }
+  }
+
+  // ─── Edit / delete an already-logged set (Hevy parity) ──────────────
+  // Tapping a row in the "This workout" receipt opens a sheet pre-filled with
+  // the set's values via the same SetEntry component used to log it, so every
+  // exercise type gets the correct inputs for free. Save writes the local row,
+  // the store's current-exercise sets array, and the on-screen receipt; the
+  // cloud copy ships on the next per-set push (updated_at is bumped by
+  // updateWorkoutSet). PR detection is a log-time concern and is NOT re-run on
+  // an edit/delete — derived analytics recompute from the DB on next view.
+
+  function openEditSet(set) {
+    setEditingSet(set);
+    setEditValue({
+      weight: set.weight,
+      reps: set.actualReps ?? set.reps,
+      setType: set.setType,
+      isGhost: false,
+    });
+  }
+
+  async function handleSaveEditedSet() {
+    if (saving || !editingSet || !editValue) return;
+    // Validate exactly as the normal log path does (handleCompleteSet): reps/
+    // time >= 1, and weight required unless reps_only/duration/bodyweight.
+    const exType = exercise?.exerciseType || 'weight_reps';
+    const isTimed = exType === 'duration' || exType === 'distance';
+    const actualReps = parseInt(editValue.reps, 10);
+    if (!Number.isFinite(actualReps) || actualReps < 1) {
+      appAlert(
+        isTimed ? 'Enter time' : 'Enter reps',
+        isTimed
+          ? 'Please enter the duration for this set.'
+          : 'Please enter the number of reps completed.',
+      );
+      return;
+    }
+    const isBodyweight = /body\s*weight/i.test(exercise?.equipment || '');
+    const skipWeightCheck = exType === 'reps_only' || exType === 'duration';
+    if (!skipWeightCheck && !isLoggableWeight(editValue.weight, isBodyweight)) {
+      appAlert('Enter weight', `Enter the weight used (in ${units}) before saving this set.`);
+      return;
+    }
+    // For timed/distance the value columns are weight=distance/0 and
+    // actualReps=seconds; SetEntry already stores those numbers, so parse
+    // exactly as the log path does (parseFloat(weight) || 0, parseInt(reps)).
+    const weight = parseFloat(editValue.weight) || 0;
+
+    setSaving(true);
+    try {
+      await updateWorkoutSet(editingSet.id, { weight, actualReps });
+      updateSetInCurrentExercise(editingSet.id, { weight, actualReps });
+      setLoggedSets(prev => prev.map(s => (s.id === editingSet.id ? { ...s, weight, actualReps } : s)));
+      setEditingSet(null);
+      setEditValue(null);
+      updateLastActivity();
+      // Visual + tactile ack consistent with the log-set flash.
+      hapticsVocab.setLogged();
+      if (logFlashTimeoutRef.current) clearTimeout(logFlashTimeoutRef.current);
+      setLogFlash(true);
+      logFlashTimeoutRef.current = setTimeout(() => setLogFlash(false), 700);
+    } catch (e) {
+      logError('ActiveWorkoutScreen.handleSaveEditedSet', e, {
+        userId: user?.id,
+        workoutId: activeWorkout?.id,
+        setId: editingSet?.id,
+      });
+      appAlert(
+        'Couldn\'t save changes',
+        'Your edit wasn\'t saved. Tap Save to retry. Tell me if this keeps happening: ' + (e?.message ?? 'unknown error'),
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleDeleteEditedSet() {
+    if (!editingSet) return;
+    appAlert(
+      'Delete set?',
+      'This set is removed and your session totals update. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const target = editingSet;
+            try {
+              const ok = await deleteWorkoutSet(user.id, target.id);
+              if (!ok) {
+                appAlert('Couldn\'t delete set', 'That set couldn\'t be removed. Please try again.');
+                return;
+              }
+              // Pair the cloud delete exactly like WorkoutHistoryScreen: remove
+              // the cloud row, queueing a retry op on failure so a restore
+              // cannot resurrect it.
+              const supabaseUserId = session?.user?.id;
+              if (supabaseUserId) {
+                // eslint-disable-next-line global-require
+                const { deleteWorkoutSetFromCloud } = require('../lib/sync');
+                deleteWorkoutSetFromCloud(supabaseUserId, target.id)
+                  .then((cloudOk) => { if (!cloudOk) return enqueueSyncOp('workout_set_delete', target.id, supabaseUserId); })
+                  .catch(() => enqueueSyncOp('workout_set_delete', target.id, supabaseUserId));
+              }
+              removeSetFromCurrentExercise(target.id);
+              setLoggedSets(prev => prev.filter(s => s.id !== target.id));
+              setEditingSet(null);
+              setEditValue(null);
+              updateLastActivity();
+            } catch (e) {
+              logError('ActiveWorkoutScreen.handleDeleteEditedSet', e, {
+                userId: user?.id,
+                workoutId: activeWorkout?.id,
+                setId: target?.id,
+              });
+              appAlert('Couldn\'t delete set', 'That set couldn\'t be removed. Please try again.');
+            }
+          },
+        },
+      ],
+    );
   }
 
   // ─── Cluster sets (myo-reps / rest-pause) ───────────────────────────
@@ -2046,6 +2184,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   units={units}
                   progressNum={countProgressSets(loggedSets.slice(0, i + 1))}
                   exerciseType={exercise?.exerciseType || 'weight_reps'}
+                  onEdit={() => openEditSet(s)}
                 />
               ))}
             </View>
@@ -2530,6 +2669,60 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           </View>
         </Modal>
 
+        {/* Edit / delete logged set sheet. Mirrors the discard/stale modal
+            chrome (transparent fade overlay + centred sheet). Hosts the same
+            SetEntry component used to log the set, so every exercise type
+            (weight_reps / weighted_bodyweight / reps_only / duration /
+            distance) renders the correct inputs. */}
+        <Modal
+          visible={editingSet != null}
+          transparent
+          animationType="fade"
+          onRequestClose={() => { setEditingSet(null); setEditValue(null); }}
+        >
+          <View style={styles.editSetOverlay}>
+            <View style={styles.editSetSheet}>
+              <Text style={styles.editSetTitle}>Edit set</Text>
+              {editValue && (
+                <SetEntry
+                  value={editValue}
+                  onChange={setEditValue}
+                  units={units}
+                  isWarmup={editValue.setType === 'warmup'}
+                  exerciseType={exercise?.exerciseType || 'weight_reps'}
+                />
+              )}
+              <TouchableOpacity
+                style={[styles.editSetSaveBtn, saving && styles.btnDisabled]}
+                onPress={handleSaveEditedSet}
+                disabled={saving}
+                accessibilityRole="button"
+                accessibilityLabel="Save set changes"
+              >
+                <Text style={styles.editSetSaveText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.editSetCancelBtn}
+                onPress={() => { setEditingSet(null); setEditValue(null); }}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel editing set"
+              >
+                <Text style={styles.editSetCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <View style={styles.editSetDivider} />
+              <TouchableOpacity
+                style={styles.editSetDeleteBtn}
+                onPress={handleDeleteEditedSet}
+                accessibilityRole="button"
+                accessibilityLabel="Delete set"
+              >
+                <Ionicons name="trash-outline" size={16} color={colors.error} />
+                <Text style={styles.editSetDeleteText}>Delete set</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
 
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -2791,6 +2984,16 @@ const styles = StyleSheet.create({
   keepTrainingBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
   discardConfirmBtn: { alignItems: 'center', paddingVertical: spacing.md },
   discardConfirmBtnText: { ...type.label, color: colors.error },
+  editSetOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
+  editSetSheet: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.xl, width: '100%', gap: spacing.md, borderWidth: 1, borderColor: colors.border },
+  editSetTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
+  editSetSaveBtn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md + 2, alignItems: 'center' },
+  editSetSaveText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
+  editSetCancelBtn: { alignItems: 'center', paddingVertical: spacing.md },
+  editSetCancelText: { fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textSecondary },
+  editSetDivider: { height: 1, backgroundColor: colors.border },
+  editSetDeleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md },
+  editSetDeleteText: { ...type.label, color: colors.error },
   nextTimeBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     backgroundColor: colors.primaryBg,

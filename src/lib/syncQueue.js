@@ -35,7 +35,7 @@ function uid() {
  * Enqueue an op for cloud sync. Caller has already written to local
  * SQLite, this is the retry-on-failure fallback for the cloud push.
  *
- * @param {string} opType    one of 'workout' | 'workout_delete' | 'body_metric' | 'morning_weight' | 'check_in'
+ * @param {string} opType    one of 'workout' | 'workout_delete' | 'workout_set_delete' | 'body_metric' | 'morning_weight' | 'check_in'
  * @param {string} entityId  the local SQLite row id we want to ship
  * @param {string} userId    supabase user.id
  * @param {object} payload   optional, extra data the worker needs (most ops
@@ -159,6 +159,13 @@ async function _runOp(supabaseClient, row) {
       // retry (returning true would strand the cloud copy, and a later
       // restore pull would resurrect the session the user deleted).
       const ok = await safeCall(sync.deleteWorkoutFromCloud, row.user_id, row.entity_id);
+      return ok === true;
+    }
+    case 'workout_set_delete': {
+      // Cloud-side removal of a single locally deleted set (in-session set
+      // delete). Same contract as workout_delete: a failed delete MUST retry,
+      // or a restore pull would resurrect the set the user removed.
+      const ok = await safeCall(sync.deleteWorkoutSetFromCloud, row.user_id, row.entity_id);
       return ok === true;
     }
     case 'body_metric': {

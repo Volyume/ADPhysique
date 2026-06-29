@@ -1135,6 +1135,41 @@ const useAppStore = create((set, get) => ({
     _persistActiveWorkout(get());
   },
 
+  // Edit an already-logged set in the current exercise in place (the screen
+  // pairs this with database.updateWorkoutSet). Merges camelCase `fields` onto
+  // the set with the matching id; bumps lastSetLoggedAt so live aggregates
+  // refresh. No-op if the id isn't found.
+  updateSetInCurrentExercise: (setId, fields) => {
+    set((state) => {
+      const entry = state.workoutExercises[state.currentExerciseIndex];
+      if (!entry || !setId) return { lastSetLoggedAt: Date.now() };
+      const updated = state.workoutExercises.slice();
+      updated[state.currentExerciseIndex] = {
+        ...entry,
+        sets: (entry.sets || []).map((s) => (s.id === setId ? { ...s, ...fields } : s)),
+      };
+      return { workoutExercises: updated, lastSetLoggedAt: Date.now() };
+    });
+    _persistActiveWorkout(get());
+  },
+
+  // Remove a logged set from the current exercise (paired with
+  // database.deleteWorkoutSet). Filters by id; bumps lastSetLoggedAt so the
+  // session receipt + live aggregates recompute. No-op if the id isn't found.
+  removeSetFromCurrentExercise: (setId) => {
+    set((state) => {
+      const entry = state.workoutExercises[state.currentExerciseIndex];
+      if (!entry || !setId) return { lastSetLoggedAt: Date.now() };
+      const updated = state.workoutExercises.slice();
+      updated[state.currentExerciseIndex] = {
+        ...entry,
+        sets: (entry.sets || []).filter((s) => s.id !== setId),
+      };
+      return { workoutExercises: updated, lastSetLoggedAt: Date.now() };
+    });
+    _persistActiveWorkout(get());
+  },
+
   // COMP-020: the headless, idempotent set-commit path the watch bridge calls.
   // Reuses the same primitives as the screen (createWorkoutSet +
   // addSetToCurrentExercise + startRestTimer) but does NOT run PR

@@ -334,6 +334,27 @@ export async function deleteWorkoutFromCloud(supabaseUserId, workoutId) {
   }
 }
 
+/**
+ * Remove a single hard-deleted set from the cloud so a later restore pull
+ * cannot resurrect it. The local row is already gone (database.deleteWorkoutSet);
+ * this is the cloud half. Returns true on success; on failure the caller
+ * enqueues a 'workout_set_delete' op so the drainer retries with backoff.
+ * Scoped to the owning user. Mirrors deleteWorkoutFromCloud for one set.
+ */
+export async function deleteWorkoutSetFromCloud(supabaseUserId, setId) {
+  const sb = getClient();
+  if (!sb || !supabaseUserId || !setId) return false;
+  try {
+    const { error } = await sb.from('workout_sets')
+      .delete().eq('user_id', supabaseUserId).eq('id', setId);
+    if (error) { logPgErr('sync.deleteWorkoutSetFromCloud', error); return false; }
+    return true;
+  } catch (e) {
+    logWarn('sync.deleteWorkoutSetFromCloud', e?.message, { setId });
+    return false;
+  }
+}
+
 async function _upsertWorkout(sb, supabaseUserId, w) {
   // Columns: every user-entered + computed field on a workout row.
   // The previous payload omitted name / pre_workout_intent /
