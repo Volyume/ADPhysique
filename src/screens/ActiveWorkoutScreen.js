@@ -105,6 +105,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     addExerciseToWorkout: s.addExerciseToWorkout,
     addSetToCurrentExercise: s.addSetToCurrentExercise,
     startRestTimer: s.startRestTimer,
+    defaultRestSeconds: s.defaultRestSeconds,
+    autoStartRestTimer: s.autoStartRestTimer,
+    workoutPrefsLoaded: s.workoutPrefsLoaded,
+    loadWorkoutPrefs: s.loadWorkoutPrefs,
     showPRCelebration: s.showPRCelebration,
     endWorkout: s.endWorkout,
     workoutStartTime: s.workoutStartTime,
@@ -117,7 +121,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const {
     user, units, activeWorkout, workoutExercises, currentExerciseIndex,
     setCurrentExerciseIndex, addExerciseToWorkout, addSetToCurrentExercise,
-    startRestTimer, showPRCelebration, endWorkout, workoutStartTime,
+    startRestTimer, defaultRestSeconds, autoStartRestTimer, workoutPrefsLoaded, loadWorkoutPrefs,
+    showPRCelebration, endWorkout, workoutStartTime,
     lastActivityAt, updateLastActivity, sessionAdjustments, revertSessionAdjustment, tier,
   } = store;
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
@@ -220,6 +225,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // COMP-015: coverage telemetry — fire once per exercise when its adjustment
   // line first becomes visible. muscle + direction + reasonCode only, no PII.
   const shownAdjRef = useRef(new Set());
+  // Hydrate the device-local workout prefs (default rest, auto-start) once so a
+  // session uses the user's saved default even if App.js bootstrap didn't run
+  // them. Defaults (90s, auto-start on) preserve prior behaviour until loaded.
+  useEffect(() => {
+    if (!workoutPrefsLoaded) loadWorkoutPrefs();
+  }, [workoutPrefsLoaded, loadWorkoutPrefs]);
+
   useEffect(() => {
     if (!sessionAdjustment?.show || !exercise?.id) return;
     if (shownAdjRef.current.has(exercise.id)) return;
@@ -936,8 +948,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         }
       }
 
-      // Start rest timer with per-exercise duration
-      startRestTimer(routineExercise?.restSeconds || 90);
+      // Start rest timer with per-exercise duration, falling back to the user's
+      // global default rest (Hevy teardown R1). Honour the auto-start pref: when
+      // off, logging a set no longer kicks off the countdown automatically.
+      if (autoStartRestTimer) {
+        startRestTimer(routineExercise?.restSeconds || defaultRestSeconds || 90);
+      }
 
       // Auto-advance to next exercise when target sets just completed
       const newWorkingCount = countProgressSets(newLoggedSets);

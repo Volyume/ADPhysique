@@ -182,20 +182,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  plateBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.xxs,
-    paddingHorizontal: spacing.xs,
-    backgroundColor: colors.primaryBg,
-    borderRadius: radius.sm,
-  },
-  plateBtnText: {
-    fontSize: fontSize.xs,
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
-  },
   e1rmRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   e1rmHint: {
     fontSize: fontSize.xs,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList,
   Modal, TextInput,
@@ -16,11 +16,18 @@ import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
 
 const DEFAULT_SETS = 3;
+// Fallback rest used only if the user's stored global default is unavailable.
+// The live default comes from the store (defaultRestSeconds, Hevy teardown R1).
 const DEFAULT_REST = 90;
 
 export default function BuildWorkoutScreen({ navigation }) {
   const toast = useToast();
-  const { user, startWorkout, units } = useAppStore();
+  const { user, startWorkout, units, defaultRestSeconds, workoutPrefsLoaded, loadWorkoutPrefs } = useAppStore();
+  // Hydrate the device-local workout prefs so a cold build started before
+  // visiting Settings/ActiveWorkout still picks up the user's saved default rest.
+  useEffect(() => {
+    if (!workoutPrefsLoaded) loadWorkoutPrefs();
+  }, [workoutPrefsLoaded, loadWorkoutPrefs]);
   const [exercises, setExercises] = useState([]);
   const [showPicker, setShowPicker] = useState(false);
   const [query, setQuery] = useState('');
@@ -45,7 +52,7 @@ export default function BuildWorkoutScreen({ navigation }) {
       sets: DEFAULT_SETS,
       repsMin: exercise.defaultRepMin || 8,
       repsMax: exercise.defaultRepMax || 12,
-      restSeconds: DEFAULT_REST,
+      restSeconds: defaultRestSeconds || DEFAULT_REST,
       startingWeight: 0,
     }]);
     setShowPicker(false);

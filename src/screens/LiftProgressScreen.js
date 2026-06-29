@@ -14,7 +14,7 @@ import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
 import { buildLiftProgressRows } from '../lib/liftProgress';
-import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
+import { MUSCLE_DISPLAY_NAMES, calculate1RM } from '../lib/algorithms';
 import { getStrengthLevel, summariseStrengthStanding } from '../lib/strengthStandards';
 import { kgToLbs } from '../lib/units';
 import Sparkline from '../components/Sparkline';
@@ -44,6 +44,63 @@ function isRecentBest(row) {
     && row.latestE1rm >= row.bestE1rm - 0.05;
 }
 
+// R1 (per-exercise metric switcher): the lenses the sparkline can draw, beyond
+// the default best-set estimated-1RM trend. Each maps one logged set to a
+// number; the session value is the max of its sets (best effort that session),
+// except totalReps/volume which sum the session. Mirrors Hevy's bestSet /
+// heaviestWeight / totalReps / bestSetVolume enum, framed as the user's own
+// progress (no comparison, no rank). Reuses already-loaded sets — no new query.
+const METRICS = [
+  { key: 'e1rm', label: 'Best set' },
+  { key: 'heaviest', label: 'Heaviest' },
+  { key: 'reps', label: 'Total reps' },
+  { key: 'volume', label: 'Volume' },
+];
+
+// Build per-exercise, per-metric session series from the already-loaded set
+// list. Pure and side-effect free. Grouping mirrors buildLiftProgressRows:
+// working sets only, one point per session (workout), oldest -> newest.
+// Returns Map<exerciseId, { e1rm:number[], heaviest:number[], reps:number[],
+// volume:number[] }>.
+export function buildExerciseMetricSeries(sets) {
+  const byExercise = new Map();
+  for (const s of sets || []) {
+    if (!s) continue;
+    if (s.setType === 'warmup') continue;
+    const exerciseId = s.exerciseId ?? s.exercise_id;
+    if (exerciseId == null) continue;
+    const weight = Number(s.weight) || 0;
+    const reps = Number(s.actualReps ?? s.actual_reps) || 0;
+    if (weight <= 0 || reps <= 0) continue;
+    const at = Number(s.createdAt ?? s.created_at) || 0;
+    const sessionId = s.workoutId ?? s.workout_id ?? `t:${at}`;
+
+    if (!byExercise.has(exerciseId)) byExercise.set(exerciseId, new Map());
+    const sessions = byExercise.get(exerciseId);
+    if (!sessions.has(sessionId)) {
+      sessions.set(sessionId, { at: 0, e1rm: 0, heaviest: 0, reps: 0, volume: 0 });
+    }
+    const sess = sessions.get(sessionId);
+    sess.at = Math.max(sess.at, at);
+    sess.e1rm = Math.max(sess.e1rm, calculate1RM(weight, reps));
+    sess.heaviest = Math.max(sess.heaviest, weight);
+    sess.reps += reps;
+    sess.volume += weight * reps;
+  }
+
+  const out = new Map();
+  for (const [exerciseId, sessionMap] of byExercise) {
+    const ordered = [...sessionMap.values()].sort((a, b) => a.at - b.at);
+    out.set(exerciseId, {
+      e1rm: ordered.map(s => Math.round(s.e1rm * 10) / 10),
+      heaviest: ordered.map(s => Math.round(s.heaviest * 10) / 10),
+      reps: ordered.map(s => s.reps),
+      volume: ordered.map(s => Math.round(s.volume)),
+    });
+  }
+  return out;
+}
+
 export default function LiftProgressScreen({ navigation }) {
   const { user, units } = useAppStore();
   const [rows, setRows] = useState([]);
@@ -52,6 +109,11 @@ export default function LiftProgressScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('all'); // 'all' | 'best'
+  // R1 per-exercise metric switcher: which lens the row sparklines draw.
+  // 'e1rm' is the default (matches the est-max headline). The other lenses
+  // recompute from the same loaded sets, no new data source.
+  const [metric, setMetric] = useState('e1rm');
+  const [metricSeries, setMetricSeries] = useState(() => new Map());
   const peekRef = useRef(null);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -67,6 +129,9 @@ export default function LiftProgressScreen({ navigation }) {
       ]);
       const builtRows = buildLiftProgressRows(sets, exercises);
       setRows(builtRows);
+      // Recompute the alternate metric series from the same sets, so the
+      // metric switcher has every lens ready without a reload.
+      setMetricSeries(buildExerciseMetricSeries(sets));
 
       if (bw?.weightKg) {
         // Bodyweight is canonical kg; estimated maxes come from logged gym
@@ -229,6 +294,29 @@ export default function LiftProgressScreen({ navigation }) {
           ))}
         </View>
       )}
+
+      {/* R1 per-exercise metric switcher: changes the lens every row's
+          sparkline draws (best set / heaviest / total reps / volume),
+          recomputed from the loaded sets. Your own trend only — no rank. */}
+      {rows.length > 0 && (
+        <View style={styles.metricRow}>
+          {METRICS.map(m => (
+            <TouchableOpacity
+              key={m.key}
+              style={[styles.metricChip, metric === m.key && styles.metricChipActive]}
+              onPress={() => setMetric(m.key)}
+              hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+              accessibilityRole="button"
+              accessibilityState={{ selected: metric === m.key }}
+              accessibilityLabel={`Show ${m.label} trend`}
+            >
+              <Text style={[styles.metricChipText, metric === m.key && styles.metricChipTextActive]}>
+                {m.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
     </View>
   );
 
@@ -247,6 +335,13 @@ export default function LiftProgressScreen({ navigation }) {
             ? (MUSCLE_DISPLAY_NAMES[item.primaryMuscle] || item.primaryMuscle)
             : null;
           const best = isRecentBest(item);
+          // The sparkline series for the selected metric. 'e1rm' is the
+          // default best-set trend already on the row; the other lenses come
+          // from the recomputed per-exercise series. Falls back to the row's
+          // own trend so a row never renders blank.
+          const series = metric === 'e1rm'
+            ? item.trend
+            : (metricSeries.get(item.exerciseId)?.[metric] ?? item.trend);
           return (
             <AnimatedEntrance index={index}>
             <PressableCard
@@ -291,8 +386,8 @@ export default function LiftProgressScreen({ navigation }) {
                 {/* U-D-4: with only 1–2 points a sparkline reads as a near-flat
                     line; show an encouragement "building" hint instead until a
                     real trend exists (3+ points). */}
-                {(item.trend?.length ?? 0) > 2 ? (
-                  <Sparkline data={item.trend} width={84} height={34} color={trendColor(item.deltaPct)} />
+                {(series?.length ?? 0) > 2 ? (
+                  <Sparkline data={series} width={84} height={34} color={trendColor(item.deltaPct)} />
                 ) : (
                   <Text style={styles.trendBuilding}>Building</Text>
                 )}
@@ -397,6 +492,20 @@ const styles = StyleSheet.create({
   filterTabActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
   filterTabText: { ...type.label, color: colors.textSecondary },
   filterTabTextActive: { color: colors.primary },
+
+  // ── Metric switcher (R1) ──
+  metricRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md },
+  metricChip: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  metricChipActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
+  metricChipText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textSecondary },
+  metricChipTextActive: { color: colors.primary },
 
   // ── Lift row ──
   card: {

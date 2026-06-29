@@ -272,6 +272,15 @@ export default function RoutineDetailScreen({ navigation, route }) {
 
   if (!routine) return null;
 
+  // Stable A/B/C labels for superset groups, in first-appearance order.
+  // Read-only here: supersets are created/edited in the plan builder
+  // (which owns the write path); this surface only displays them.
+  const supersetGroupOrder = [];
+  for (const { routineExercise } of exercises) {
+    const gid = routineExercise?.supersetGroupId;
+    if (gid && !supersetGroupOrder.includes(gid)) supersetGroupOrder.push(gid);
+  }
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <FlatList
@@ -332,6 +341,19 @@ export default function RoutineDetailScreen({ navigation, route }) {
                     <Text style={styles.relinkChipText}>Tap to re-link</Text>
                   </View>
                 )}
+                {(() => {
+                  const gid = routineExercise?.supersetGroupId;
+                  const gIdx = gid ? supersetGroupOrder.indexOf(gid) : -1;
+                  if (gIdx < 0) return null;
+                  return (
+                    <View style={styles.supersetChip}>
+                      <Ionicons name="link" size={11} color={colors.primary} />
+                      <Text style={styles.supersetChipText}>
+                        Superset {String.fromCharCode(65 + gIdx)}
+                      </Text>
+                    </View>
+                  );
+                })()}
               </View>
               <Text style={styles.exerciseMeta}>
                 {routineExercise.recommendedSets} sets ·{' '}
@@ -652,6 +674,20 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.warning,
+  },
+  supersetChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primaryBg,
+  },
+  supersetChipText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
   },
   exerciseMeta: { fontSize: fontSize.sm, color: colors.primary },
   exerciseMuscle: { ...type.caption, color: colors.textMuted },

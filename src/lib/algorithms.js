@@ -830,38 +830,6 @@ function buildSubstituteReason(sub, target, targetStretch = 'medium') {
   return 'Same muscles, different movement. Good for mixing things up over a training block.';
 }
 
-// Standard plate denominations and bar weights per display unit. Gym weight is
-// stored in the display unit, so the plate maths must use that unit's real
-// plates, not kg plates with an lbs label. (A2-043.)
-export const PLATE_SETS = Object.freeze({
-  kg:  [25, 20, 15, 10, 5, 2.5, 1.25],
-  lbs: [45, 35, 25, 10, 5, 2.5],
-});
-export const DEFAULT_BAR_WEIGHT = Object.freeze({ kg: 20, lbs: 45 });
-
-// Plate calculator utility
-export function calculatePlates(targetWeight, barWeight = 20, availablePlates = [25, 20, 15, 10, 5, 2.5, 1.25]) {
-  const sideWeight = (targetWeight - barWeight) / 2;
-  if (sideWeight <= 0) return { plates: [], totalWeight: barWeight };
-
-  const plates = [];
-  let remaining = sideWeight;
-
-  for (const plate of availablePlates) {
-    // CALC-7: a non-positive plate denomination makes `remaining >= plate-0.001`
-    // permanently true -> infinite loop. Skip them.
-    if (!(plate > 0)) continue;
-    while (remaining >= plate - 0.001) {
-      plates.push(plate);
-      remaining -= plate;
-      remaining = Math.round(remaining * 100) / 100;
-    }
-  }
-
-  const totalWeight = barWeight + plates.reduce((s, p) => s + p, 0) * 2;
-  return { plates, totalWeight, sideWeight: plates.reduce((s, p) => s + p, 0) };
-}
-
 // RP-style soreness × performance → volume decision
 // Inputs use numeric scales:
 //   soreness:    1=none  2=healed_early  3=healed_on_time  4=still_sore

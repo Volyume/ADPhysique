@@ -37,6 +37,15 @@ const PAID_VERIFIED_AT_KEY = '@volyume_paid_verified_at';
 // slice here on each mutation and rehydrate it on launch (WK-1).
 const ACTIVE_WORKOUT_KEY = '@volyume_active_workout';
 
+// Workout preferences (Hevy teardown 2026-06-29, R1): the global default rest
+// timer and whether the rest timer auto-starts when a set is logged. Both are
+// device-local prefs (like accessibility), persisted to AsyncStorage and
+// hydrated via loadWorkoutPrefs on first mount of the screens that read them
+// (BuildWorkout, ActiveWorkout, Settings). They replace the hardcoded 90s
+// default and the unconditional auto-start. Defaults preserve prior behaviour:
+// 90s, auto-start on.
+const WORKOUT_PREFS_KEY = '@volyume_workout_prefs';
+
 // users_profile columns that are user-editable + tracked for the
 // per-column merge conflict strategy (migration 045 +
 // src/lib/sync/tables/profiles.js). camelCase here to match the
@@ -1339,6 +1348,52 @@ const useAppStore = create((set, get) => ({
         ? { restTimerActive: false, restTimerRemaining: 0, restTimerEndsAt: null }
         : { restTimerRemaining: remaining };
     });
+  },
+
+  // Workout prefs (Hevy teardown R1). Device-local, AsyncStorage-backed.
+  // defaultRestSeconds is the global fallback rest used when a routine
+  // exercise has no per-exercise rest set; autoStartRestTimer gates whether
+  // logging a set kicks off the rest countdown automatically. Defaults match
+  // the previous hardcoded behaviour (90s, auto-start on).
+  defaultRestSeconds: 90,
+  autoStartRestTimer: true,
+  workoutPrefsLoaded: false,
+  loadWorkoutPrefs: async () => {
+    try {
+      const raw = await AsyncStorage.getItem(WORKOUT_PREFS_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (parsed && typeof parsed === 'object') {
+        const next = {};
+        if (Number.isFinite(parsed.defaultRestSeconds)) next.defaultRestSeconds = parsed.defaultRestSeconds;
+        if (typeof parsed.autoStartRestTimer === 'boolean') next.autoStartRestTimer = parsed.autoStartRestTimer;
+        set({ ...next, workoutPrefsLoaded: true });
+      } else {
+        set({ workoutPrefsLoaded: true });
+      }
+    } catch (_) {
+      set({ workoutPrefsLoaded: true });
+    }
+  },
+  setDefaultRestSeconds: async (seconds) => {
+    // Clamp to the same 30–600s band the routine builder uses.
+    const n = Math.max(30, Math.min(600, Math.round(Number(seconds) || 90)));
+    set({ defaultRestSeconds: n });
+    try {
+      await AsyncStorage.setItem(WORKOUT_PREFS_KEY, JSON.stringify({
+        defaultRestSeconds: n,
+        autoStartRestTimer: get().autoStartRestTimer,
+      }));
+    } catch (_) { /* offline-friendly: tolerate */ }
+  },
+  setAutoStartRestTimer: async (value) => {
+    const v = !!value;
+    set({ autoStartRestTimer: v });
+    try {
+      await AsyncStorage.setItem(WORKOUT_PREFS_KEY, JSON.stringify({
+        defaultRestSeconds: get().defaultRestSeconds,
+        autoStartRestTimer: v,
+      }));
+    } catch (_) { /* offline-friendly: tolerate */ }
   },
 
   // PR celebration queue. The user might hit two PRs on the same set

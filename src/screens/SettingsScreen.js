@@ -1,15 +1,65 @@
-import { View } from 'react-native';
+import { useEffect } from 'react';
+import { View, Text, Switch, TouchableOpacity, StyleSheet } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
+import { Ionicons } from '@expo/vector-icons';
 import useAppStore from '../store/useAppStore';
 import { isHealthAvailable, getHealthProviderLabel } from '../lib/health';
 import { SettingsPage, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
+import { colors, withAlpha, spacing, radius, fontSize, fontWeight, type } from '../styles/theme';
+
+// Body-weight unit options. Gym weights stay kg-only by design (UK); this
+// only controls how a user's own body weight is shown/entered.
+const BODY_WEIGHT_UNIT_OPTIONS = [
+  { value: 'st', label: 'Stone' },
+  { value: 'kg', label: 'Kg' },
+  { value: 'lbs', label: 'Lbs' },
+];
 
 // Settings landing. A short list of categories, each opening its own
 // focused sub-page. The old single 1,500-line screen put every toggle on
 // one wall; this is the tidy entry point into them.
+//
+// The "Workout & units" block is rendered inline here (Hevy teardown
+// 2026-06-29, R1/R2): body-weight unit, barbell weight, global default rest
+// timer, and auto-start rest. These wire over existing/new store setters so a
+// user who picked the wrong unit in onboarding — or wants a non-90s default
+// rest — is no longer stuck.
 export default function SettingsScreen({ navigation }) {
-  const { user, tier } = useAppStore(useShallow(s => ({ user: s.user, tier: s.tier })));
+  const {
+    user, tier,
+    bodyWeightUnits, setBodyWeightUnits,
+    defaultRestSeconds, setDefaultRestSeconds,
+    autoStartRestTimer, setAutoStartRestTimer,
+    workoutPrefsLoaded, loadWorkoutPrefs,
+  } = useAppStore(useShallow(s => ({
+    user: s.user,
+    tier: s.tier,
+    bodyWeightUnits: s.bodyWeightUnits,
+    setBodyWeightUnits: s.setBodyWeightUnits,
+    defaultRestSeconds: s.defaultRestSeconds,
+    setDefaultRestSeconds: s.setDefaultRestSeconds,
+    autoStartRestTimer: s.autoStartRestTimer,
+    setAutoStartRestTimer: s.setAutoStartRestTimer,
+    workoutPrefsLoaded: s.workoutPrefsLoaded,
+    loadWorkoutPrefs: s.loadWorkoutPrefs,
+  })));
   const healthOn = isHealthAvailable();
+
+  // Hydrate the device-local workout prefs once so the rest-timer rows reflect
+  // the saved values rather than reading as the defaults until touched.
+  useEffect(() => {
+    if (!workoutPrefsLoaded) loadWorkoutPrefs();
+  }, [workoutPrefsLoaded, loadWorkoutPrefs]);
+
+  function adjustRest(delta) {
+    setDefaultRestSeconds((Number(defaultRestSeconds) || 90) + delta);
+  }
+  const restLabel = (() => {
+    const s = Number(defaultRestSeconds) || 90;
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return m > 0 ? `${m}:${String(r).padStart(2, '0')}` : `${s}s`;
+  })();
 
   return (
     <SettingsPage>
@@ -71,6 +121,131 @@ export default function SettingsScreen({ navigation }) {
           onPress={() => navigation.navigate('SettingsAbout')}
         />
       </View>
+
+      {/* Workout & units (Hevy teardown R1/R2). Inline editable rows over the
+          store setters: body-weight unit, barbell weight, default rest, and
+          auto-start rest. Gym weights remain kg-only by design. */}
+      <Text style={styles.sectionHeader}>WORKOUT &amp; UNITS</Text>
+      <View style={styles.section}>
+        <View style={styles.settingRow}>
+          <View style={styles.settingIcon}>
+            <Ionicons name="body-outline" size={18} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.settingLabel}>Body-weight unit</Text>
+            <Text style={styles.settingSub}>
+              How your own body weight is shown. Gym weights stay in kg.
+            </Text>
+            <View style={local.segment} accessibilityRole="radiogroup">
+              {BODY_WEIGHT_UNIT_OPTIONS.map((opt) => {
+                const active = (bodyWeightUnits ?? 'st') === opt.value;
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[local.segBtn, active && local.segBtnActive]}
+                    onPress={() => { if (!active) setBodyWeightUnits(opt.value); }}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={opt.label}
+                  >
+                    <Text style={[local.segText, active && local.segTextActive]}>{opt.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+
+        <Stepper
+          icon="timer-outline"
+          label="Default rest timer"
+          sub="Used for new exercises and any set with no per-exercise rest set."
+          value={restLabel}
+          onMinus={() => adjustRest(-15)}
+          onPlus={() => adjustRest(15)}
+        />
+
+        <SettingRow
+          icon="play-outline"
+          label="Auto-start rest timer"
+          sub="Start the rest countdown automatically when you log a set."
+          showArrow={false}
+          rightElement={
+            <Switch
+              value={!!autoStartRestTimer}
+              onValueChange={v => setAutoStartRestTimer(v)}
+              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
+              thumbColor={autoStartRestTimer ? colors.primary : colors.textMuted}
+            />
+          }
+        />
+      </View>
     </SettingsPage>
   );
 }
+
+// A label + sub row with a [- value +] stepper on the right. Mirrors the
+// SettingRow chrome so the Workout block reads as one coherent section.
+function Stepper({ icon, label, sub, value, onMinus, onPlus }) {
+  return (
+    <View style={styles.settingRow}>
+      <View style={styles.settingIcon}>
+        <Ionicons name={icon} size={18} color={colors.primary} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.settingLabel}>{label}</Text>
+        {sub ? <Text style={styles.settingSub}>{sub}</Text> : null}
+      </View>
+      <View style={local.stepper}>
+        <TouchableOpacity
+          style={local.stepBtn}
+          onPress={onMinus}
+          accessibilityRole="button"
+          accessibilityLabel={`Decrease ${label}`}
+        >
+          <Ionicons name="remove" size={18} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={local.stepValue}>{value}</Text>
+        <TouchableOpacity
+          style={local.stepBtn}
+          onPress={onPlus}
+          accessibilityRole="button"
+          accessibilityLabel={`Increase ${label}`}
+        >
+          <Ionicons name="add" size={18} color={colors.textPrimary} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const local = StyleSheet.create({
+  segment: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    padding: spacing.xxs,
+    gap: spacing.xxs,
+    marginTop: spacing.sm,
+  },
+  segBtn: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm },
+  segBtnActive: { backgroundColor: colors.primaryFill },
+  segText: { ...type.label, color: colors.textSecondary },
+  segTextActive: { color: colors.onPrimary, fontWeight: fontWeight.semibold },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  stepBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 9,
+    backgroundColor: colors.surface2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepValue: {
+    ...type.body,
+    color: colors.textPrimary,
+    minWidth: 52,
+    textAlign: 'center',
+    fontSize: fontSize.sm,
+  },
+});

@@ -28,6 +28,10 @@ const GOALS = [
   { key: 'recomp',      label: 'Lose Fat, Keep Muscle' },
 ];
 
+// Selectable training-days-per-week. Default stays 4 (the prior hardcoded
+// value) so existing behaviour is unchanged for users who don't touch it.
+const DAY_COUNT_OPTIONS = [2, 3, 4, 5, 6];
+
 // ─── Plan Balance Helpers ─────────────────────────────────────────────────────
 
 const PRIORITY_MUSCLES = ['chest', 'back', 'shoulders', 'quads', 'hamstrings', 'biceps', 'triceps', 'glutes'];
@@ -152,7 +156,7 @@ export default function ManualBuilderScreen({ navigation }) {
   const [page, setPage]               = useState(1);
   const [planName, setPlanName]       = useState('');
   const [selectedGoal, setGoal]       = useState('hypertrophy');
-  const daysPerWeek                   = 4;
+  const [daysPerWeek, setDaysPerWeek] = useState(4);
   const [creating, setCreating]       = useState(false);
 
   // Page 2 state
@@ -265,8 +269,87 @@ export default function ManualBuilderScreen({ navigation }) {
     ]);
   }
 
+  function handleRemoveDay(dayIndex) {
+    // Same Undo pattern as exercise removal: remove immediately, no
+    // confirm Alert, an Undo toast restores the whole day (incl. its
+    // exercises) at its original position.
+    let removed = null;
+    setDayList(prev => {
+      if (dayIndex < 0 || dayIndex >= prev.length) return prev;
+      removed = prev[dayIndex];
+      return prev.filter((_, i) => i !== dayIndex);
+    });
+    if (!removed) return;
+    toast.show(`Removed ${removed.name}`, {
+      variant: 'undo',
+      action: {
+        label: 'Undo',
+        onPress: () => {
+          setDayList(prev => {
+            const next = prev.slice();
+            next.splice(dayIndex, 0, removed);
+            return next;
+          });
+        },
+      },
+    });
+  }
+
   function updateDayName(dayIndex, newName) {
     setDayList(prev => prev.map((d, i) => i === dayIndex ? { ...d, name: newName } : d));
+  }
+
+  // ── Supersets ─────────────────────────────────────────────────────────────
+  // Exercises in a day that share the same supersetGroupId are one superset.
+  // The user multi-selects rows (per day) then groups them; the engine and
+  // ActiveWorkout already understand a shared supersetGroupId. We only write
+  // the existing field — no schema or write-path change.
+
+  // { [dayIdx]: Set<exLocalId> } of rows currently selected for grouping.
+  const [supersetSelection, setSupersetSelection] = useState({});
+
+  function toggleSupersetSelect(dayIndex, exLocalId) {
+    setSupersetSelection(prev => {
+      const cur = new Set(prev[dayIndex] || []);
+      if (cur.has(exLocalId)) cur.delete(exLocalId);
+      else cur.add(exLocalId);
+      return { ...prev, [dayIndex]: cur };
+    });
+  }
+
+  function clearSupersetSelection(dayIndex) {
+    setSupersetSelection(prev => ({ ...prev, [dayIndex]: new Set() }));
+  }
+
+  function handleGroupSuperset(dayIndex) {
+    const selected = supersetSelection[dayIndex];
+    if (!selected || selected.size < 2) {
+      toast.show('Select at least two exercises to superset', { variant: 'warning' });
+      return;
+    }
+    const groupId = `ss-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setDayList(prev => prev.map((d, i) => {
+      if (i !== dayIndex) return d;
+      return {
+        ...d,
+        exercises: d.exercises.map(ex =>
+          selected.has(ex.localId) ? { ...ex, supersetGroupId: groupId } : ex,
+        ),
+      };
+    }));
+    clearSupersetSelection(dayIndex);
+  }
+
+  function handleUngroupSuperset(dayIndex, groupId) {
+    setDayList(prev => prev.map((d, i) => {
+      if (i !== dayIndex) return d;
+      return {
+        ...d,
+        exercises: d.exercises.map(ex =>
+          ex.supersetGroupId === groupId ? { ...ex, supersetGroupId: null } : ex,
+        ),
+      };
+    }));
   }
 
   // ── Validation & persistence ──────────────────────────────────────────────
@@ -301,7 +384,10 @@ export default function ManualBuilderScreen({ navigation }) {
       );
       for (let j = 0; j < day.exercises.length; j++) {
         const ex = day.exercises[j];
-        await addExerciseToRoutine(routine.id, ex.id, j, ex.repsMin, ex.repsMax, null, ex.sets);
+        await addExerciseToRoutine(
+          routine.id, ex.id, j, ex.repsMin, ex.repsMax, null, ex.sets,
+          null, null, ex.supersetGroupId ?? null,
+        );
       }
     }
   }
@@ -387,6 +473,30 @@ export default function ManualBuilderScreen({ navigation }) {
               </View>
             </View>
 
+            {/* Days per week */}
+            <View style={styles.section}>
+              <Text style={styles.label}>Training days per week</Text>
+              <View style={styles.pillWrap}>
+                {DAY_COUNT_OPTIONS.map(n => (
+                  <TouchableOpacity
+                    key={n}
+                    style={[styles.dayCountPill, daysPerWeek === n && styles.pillActive]}
+                    onPress={() => setDaysPerWeek(n)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${n} training days per week`}
+                    accessibilityState={{ selected: daysPerWeek === n }}
+                  >
+                    <Text style={[styles.pillText, daysPerWeek === n && styles.pillTextActive]}>
+                      {n}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={styles.hintText}>
+                We&apos;ll create {daysPerWeek} empty days. You can add or remove days later.
+              </Text>
+            </View>
+
             <TouchableOpacity
               style={[styles.primaryBtn, creating && styles.btnDisabled]}
               onPress={handleCreatePlan}
@@ -444,33 +554,95 @@ export default function ManualBuilderScreen({ navigation }) {
                 placeholder="Day name"
                 placeholderTextColor={colors.textMuted}
               />
+              <TouchableOpacity
+                onPress={() => handleRemoveDay(dayIdx)}
+                hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Remove ${day.name}`}
+              >
+                <Ionicons name="trash-outline" size={18} color={colors.error} />
+              </TouchableOpacity>
             </View>
 
             {/* Exercise list */}
-            {day.exercises.length > 0 && (
-              <View style={styles.exList}>
-                {day.exercises.map(ex => (
-                  <TouchableOpacity
-                    key={ex.localId}
-                    style={styles.exRow}
-                    onLongPress={() => handleLongPressExercise(dayIdx, ex.localId, ex.name)}
-                    delayLongPress={400}
-                    activeOpacity={0.7}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${ex.name}, ${ex.sets} sets`}
-                    accessibilityHint="Hold to remove"
-                  >
-                    <View style={styles.exRowLeft}>
-                      <Text style={styles.exName}>{ex.name}</Text>
-                      <Text style={styles.exMeta}>
-                        {ex.sets} sets × {ex.repsMin}–{ex.repsMax} reps
+            {day.exercises.length > 0 && (() => {
+              const selected = supersetSelection[dayIdx] || new Set();
+              // Order in which group ids first appear, for stable A/B/C labels.
+              const groupOrder = [];
+              for (const ex of day.exercises) {
+                if (ex.supersetGroupId && !groupOrder.includes(ex.supersetGroupId)) {
+                  groupOrder.push(ex.supersetGroupId);
+                }
+              }
+              return (
+                <View style={styles.exList}>
+                  {day.exercises.map(ex => {
+                    const isSelected = selected.has(ex.localId);
+                    const groupIdx = ex.supersetGroupId ? groupOrder.indexOf(ex.supersetGroupId) : -1;
+                    return (
+                      <TouchableOpacity
+                        key={ex.localId}
+                        style={[styles.exRow, isSelected && styles.exRowSelected]}
+                        onPress={() => toggleSupersetSelect(dayIdx, ex.localId)}
+                        onLongPress={() => handleLongPressExercise(dayIdx, ex.localId, ex.name)}
+                        delayLongPress={400}
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${ex.name}, ${ex.sets} sets`}
+                        accessibilityHint="Tap to select for a superset, hold to remove"
+                        accessibilityState={{ selected: isSelected }}
+                      >
+                        <Ionicons
+                          name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+                          size={18}
+                          color={isSelected ? colors.primary : colors.textMuted}
+                        />
+                        <View style={styles.exRowLeft}>
+                          <View style={styles.exNameRow}>
+                            <Text style={styles.exName}>{ex.name}</Text>
+                            {groupIdx >= 0 && (
+                              <View style={styles.ssChip}>
+                                <Ionicons name="link" size={11} color={colors.primary} />
+                                <Text style={styles.ssChipText}>
+                                  Superset {String.fromCharCode(65 + groupIdx)}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                          <Text style={styles.exMeta}>
+                            {ex.sets} sets × {ex.repsMin}–{ex.repsMax} reps
+                          </Text>
+                        </View>
+                        {groupIdx >= 0 && (
+                          <TouchableOpacity
+                            onPress={() => handleUngroupSuperset(dayIdx, ex.supersetGroupId)}
+                            hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Ungroup superset ${String.fromCharCode(65 + groupIdx)}`}
+                          >
+                            <Ionicons name="close-circle-outline" size={16} color={colors.textMuted} />
+                          </TouchableOpacity>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+
+                  {selected.size >= 2 && (
+                    <TouchableOpacity
+                      style={styles.groupBtn}
+                      onPress={() => handleGroupSuperset(dayIdx)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Group ${selected.size} exercises into a superset`}
+                    >
+                      <Ionicons name="link" size={16} color={colors.primary} />
+                      <Text style={styles.groupBtnText}>
+                        Group {selected.size} into superset
                       </Text>
-                    </View>
-                    <Ionicons name="ellipsis-horizontal" size={16} color={colors.textMuted} />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })()}
 
             {/* Add exercise button */}
             <TouchableOpacity style={styles.addExBtn} onPress={() => openPicker(dayIdx)} accessibilityRole="button" accessibilityLabel="Add exercise">
@@ -614,6 +786,21 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: fontWeight.semibold,
   },
+  dayCountPill: {
+    minWidth: 48,
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  hintText: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    lineHeight: 16,
+  },
   primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -683,14 +870,50 @@ const styles = StyleSheet.create({
   exRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: spacing.sm,
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.surface3,
   },
+  exRowSelected: {
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.sm,
+  },
   exRowLeft: {
     flex: 1,
     gap: spacing.xxs,
+  },
+  exNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  ssChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primaryBg,
+  },
+  ssChipText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
+  },
+  groupBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  groupBtnText: {
+    ...type.label,
+    color: colors.primary,
   },
   exName: {
     fontSize: fontSize.md,

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
@@ -22,6 +22,7 @@ import WeeklyStreakStrip from '../components/WeeklyStreakStrip';
 import { markMilestoneSeen, markPerfectMonthSeen } from '../lib/streakState';
 import { getLifetimeTonnage } from '../lib/database';
 import { pendingTonnageMilestone, loadSeenTonnage, markTonnageMilestoneSeen, formatTonnage } from '../lib/tonnageMilestone';
+import { formatNumber } from '../lib/format';
 import { track } from '../lib/engineTelemetry';
 import { VOLUME_LANDMARKS } from '../lib/algorithms';
 
@@ -154,6 +155,10 @@ export default function AnalyticsScreen({ navigation, route }) {
   // training-volume win, so it is never ED-gated. Re-checked whenever the
   // completed-workout count changes; fires once per threshold.
   const [tonnageLandmark, setTonnageLandmark] = useState(null);
+  // R3 lifetime-stats panel: the all-time tonnage total (not just a pending
+  // milestone threshold). Read from the same getLifetimeTonnage query as the
+  // landmark below, so the panel and the share card never disagree.
+  const [lifetimeTonnage, setLifetimeTonnage] = useState(null);
 
   function makeTonnageCard() {
     if (!tonnageLandmark) return;
@@ -203,6 +208,22 @@ export default function AnalyticsScreen({ navigation, route }) {
     handleDismiss, handlePrWindowToggle, handleRefresh,
   } = useProgressData();
 
+  // R3 lifetime-stats panel: total reps performed across every working set
+  // ever logged. Derived from the already-loaded set list (no new query),
+  // using the same filter as getLifetimeTonnage — warmups excluded, only
+  // sets with a positive weight and reps — so reps and tonnage describe the
+  // same body of work.
+  const lifetimeReps = useMemo(() => {
+    let total = 0;
+    for (const s of allSets) {
+      if (s.setType === 'warmup') continue;
+      const reps = s.actualReps ?? s.actual_reps ?? 0;
+      const weight = s.weight ?? 0;
+      if (reps > 0 && weight > 0) total += reps;
+    }
+    return total;
+  }, [allSets]);
+
   // COMP-005: ephemeral recap card — for the first 7 days of the month, once
   // the user has unlocked recaps, a one-line nudge at the top of the insight
   // stack. Dismissable; gone after first open or day 7 (per-month key).
@@ -225,15 +246,16 @@ export default function AnalyticsScreen({ navigation, route }) {
   // vanishes before it can be used; telemetry fires once per app run.
   useEffect(() => {
     let cancelled = false;
-    if (!user?.id || completedWorkoutCount < 1) { setTonnageLandmark(null); return undefined; }
+    if (!user?.id || completedWorkoutCount < 1) { setTonnageLandmark(null); setLifetimeTonnage(null); return undefined; }
     (async () => {
       try {
         const [tonnage, seen] = await Promise.all([getLifetimeTonnage(user.id), loadSeenTonnage(user.id)]);
         const pending = pendingTonnageMilestone(tonnage, seen);
         if (cancelled) return;
+        setLifetimeTonnage(tonnage);
         setTonnageLandmark(pending);
         if (pending) fireLandmarkOnce(`tn:${pending}`, user.id, 'tonnage_milestone_reached', { milestone: pending });
-      } catch (_) { if (!cancelled) setTonnageLandmark(null); }
+      } catch (_) { if (!cancelled) { setTonnageLandmark(null); setLifetimeTonnage(null); } }
     })();
     return () => { cancelled = true; };
   }, [user?.id, completedWorkoutCount]);
@@ -451,6 +473,38 @@ export default function AnalyticsScreen({ navigation, route }) {
           </View>
           <PRSparkline bars={prBars} windowDays={prWindow} />
         </View>
+        )}
+
+        {/* ── Lifetime totals (R3): a standing read-only panel of all-time
+            numbers — sessions, total weight lifted, total reps. No
+            comparison, no rank; just your own running totals. Self-hides
+            until there is something logged. ── */}
+        {hasData && completedWorkoutCount > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Lifetime totals</Text>
+            <View style={styles.lifetimePanel}>
+              <View style={styles.lifetimeCell}>
+                <Text style={styles.lifetimeValue}>{formatNumber(completedWorkoutCount)}</Text>
+                <Text style={styles.lifetimeLabel}>
+                  {completedWorkoutCount === 1 ? 'session' : 'sessions'}
+                </Text>
+              </View>
+              <View style={styles.lifetimeDivider} />
+              <View style={styles.lifetimeCell}>
+                <Text style={styles.lifetimeValue}>
+                  {formatNumber(lifetimeTonnage)}
+                </Text>
+                <Text style={styles.lifetimeLabel}>{units === 'lbs' ? 'lbs lifted' : 'kg lifted'}</Text>
+              </View>
+              <View style={styles.lifetimeDivider} />
+              <View style={styles.lifetimeCell}>
+                <Text style={styles.lifetimeValue}>{formatNumber(lifetimeReps)}</Text>
+                <Text style={styles.lifetimeLabel}>
+                  {lifetimeReps === 1 ? 'rep' : 'reps'}
+                </Text>
+              </View>
+            </View>
+          </View>
         )}
 
         {/* ── Quick nav tiles ────────────────────────────────── */}
@@ -771,6 +825,21 @@ const styles = StyleSheet.create({
     padding: spacing.lg, borderWidth: 1, borderColor: colors.border,
   },
   prEmptyText: { fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 18 },
+
+  // ── Lifetime totals panel ──
+  lifetimePanel: {
+    flexDirection: 'row', alignItems: 'stretch',
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
+    paddingVertical: spacing.lg, paddingHorizontal: spacing.md,
+  },
+  lifetimeCell: { flex: 1, alignItems: 'center', gap: spacing.xxs },
+  lifetimeValue: {
+    fontSize: fontSize.xl, fontWeight: fontWeight.bold,
+    color: colors.textPrimary, fontVariant: ['tabular-nums'],
+  },
+  lifetimeLabel: { fontSize: fontSize.micro, color: colors.textSecondary, textAlign: 'center' },
+  lifetimeDivider: { width: 1, backgroundColor: colors.border, marginVertical: spacing.xxs },
 
   // ── Recent sessions ──
   sessionCard: {

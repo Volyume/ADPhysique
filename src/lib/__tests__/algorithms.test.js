@@ -7,9 +7,6 @@ import {
   defaultIncrement,
   getProgressionSuggestion,
   computeSetTargets,
-  calculatePlates,
-  PLATE_SETS,
-  DEFAULT_BAR_WEIGHT,
   calculate1RM,
   bestPRPerExercise,
 } from '../algorithms';
@@ -383,30 +380,6 @@ describe('computeSetTargets, unit-aware increments (A2-043)', () => {
   });
 });
 
-describe('plate sets and bar weights (A2-043)', () => {
-  test('lbs plate set uses real lb denominations, kg uses kg', () => {
-    expect(PLATE_SETS.lbs).toEqual([45, 35, 25, 10, 5, 2.5]);
-    expect(PLATE_SETS.kg).toEqual([25, 20, 15, 10, 5, 2.5, 1.25]);
-  });
-
-  test('default bars are 20kg and 45lb', () => {
-    expect(DEFAULT_BAR_WEIGHT.kg).toBe(20);
-    expect(DEFAULT_BAR_WEIGHT.lbs).toBe(45);
-  });
-
-  test('225lb on a 45lb bar is 45+45 each side', () => {
-    const { plates, totalWeight } = calculatePlates(225, 45, PLATE_SETS.lbs);
-    expect(plates).toEqual([45, 45]);
-    expect(totalWeight).toBe(225);
-  });
-
-  test('100kg on a 20kg bar is 25+15 each side', () => {
-    const { plates, totalWeight } = calculatePlates(100, 20, PLATE_SETS.kg);
-    expect(plates).toEqual([25, 15]);
-    expect(totalWeight).toBe(100);
-  });
-});
-
 describe('calculate1RM, high-rep guard (A2-040)', () => {
   test('1-20 reps behaviour is unchanged', () => {
     // Single rep returns the weight; low reps use the Epley/Brzycki blend.
@@ -488,7 +461,7 @@ describe('summariseWorkoutSets', () => {
 describe('numeric edge cases (CALC-2/4/5/6/7)', () => {
   const {
     calculate1RM, getVolumeStatus, getProgressionSuggestion,
-    generateDeloadPrescription, calculatePlates,
+    generateDeloadPrescription,
   } = require('../algorithms');
 
   test('CALC-2: calculate1RM is finite for non-numeric reps and weight', () => {
@@ -519,11 +492,6 @@ describe('numeric edge cases (CALC-2/4/5/6/7)', () => {
   test('CALC-6: generateDeloadPrescription never prescribes a negative load', () => {
     const out = generateDeloadPrescription([{ weight: -50, actualReps: 5, setType: 'straight' }], false);
     expect(out[0].weight).toBeGreaterThanOrEqual(0);
-  });
-
-  test('CALC-7: calculatePlates terminates when availablePlates contains 0', () => {
-    const res = calculatePlates(100, 20, [25, 0, 5]);
-    expect(Array.isArray(res.plates)).toBe(true); // returned, did not hang
   });
 });
 

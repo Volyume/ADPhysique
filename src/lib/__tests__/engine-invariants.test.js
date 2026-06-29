@@ -24,7 +24,6 @@ import {
   calculateEffectiveSets,
   getSetEffectivenessWeight,
   detectLaggingMuscles,
-  calculatePlates,
   computeSessionAdjustments,
 } from '../algorithms';
 import { SESSION_REASON_CODES } from '../whyThisTemplates';
@@ -426,17 +425,6 @@ describe('algorithms: fuzz invariants', () => {
       }];
       const out = calculateEffectiveSets(sets, exerciseMap);
       assertNoBadNumbers(`fuzz ${i}`, out);
-    }
-  });
-
-  test('calculatePlates: never crashes; total >= bar', () => {
-    for (let i = 0; i < 200; i++) {
-      const target = rfloat(0, 300);
-      const bar = pick([15, 20, 25]);
-      const { plates, totalWeight } = calculatePlates(target, bar);
-      expect(Array.isArray(plates)).toBe(true);
-      expect(typeof totalWeight).toBe('number');
-      expect(totalWeight).toBeGreaterThanOrEqual(bar - 1e-6);
     }
   });
 
