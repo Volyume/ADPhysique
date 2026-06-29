@@ -8,11 +8,18 @@ This is a **separate app** from VOLYUME. It only reuses VOLYUME's toolchain
 (Expo SDK 54 / React Native 0.81 / React 19) and the same no-Mac
 GitHub Actions → EAS → TestFlight build pipeline.
 
-> **Status: Phase 1 (the proof gate).** Right now the app proves it can read your
-> strap over Bluetooth: live heart rate + R-R intervals (via the standard GATT
-> Heart Rate Service, the same source the official app uses), battery, and a raw
-> capture of WHOOP's proprietary `fd4b…` frames for building the full decoder
-> (history → sleep/recovery) in Phase 2. See the build plan for the roadmap.
+> **Status: full app built, pending first on-device run.** The app reads the
+> strap over Bluetooth (live heart rate + R-R via the standard GATT Heart Rate
+> Service — the same source the official app uses — plus battery), logs the
+> stream to a local database, and derives WHOOP-style metrics on device:
+> recovery, sleep (duration/stages/performance), strain (0–21) with heart-rate
+> zones, HRV (RMSSD/SDNN/pNN50) and resting HR. It also supports cardio/activity
+> logging and a behaviour journal. The proprietary history-drain + per-second
+> record decode (for backfill, steps and richer sleep) is wired but EXPERIMENTAL
+> — it needs a few real captured frames to finalise, which the Device screen can
+> capture and export. **None of this has been compiled or run on a device yet**
+> (no Mac/iOS toolchain in the build environment); first real validation is the
+> TestFlight build on your iPhone.
 
 ## How it reaches your iPhone (no Mac, no commands from you)
 
@@ -44,13 +51,19 @@ build costs credits).
 3. Put the strap in **pairing mode** (tap it repeatedly until the LED flashes).
 4. Open Whoop Companion → **Scan & connect**.
 
-## What's in here (Phase 1)
-- `App.tsx` — proof UI: live HR/R-R, battery, discovered services, raw-frame log + Share.
-- `src/ble/whoopBle.ts` — scan/connect/discover; subscribes to standard HR + battery
-  and captures proprietary `fd4b…` frames.
-- `src/ble/heartRate.ts` — standard GATT Heart Rate Measurement (0x2A37) decoder.
-- `src/ble/constants.ts` — service/characteristic UUIDs (standard + WHOOP proprietary).
-- `src/ble/bytes.ts` — base64/hex helpers (BLE values arrive base64-encoded).
+## What's in here
+- `App.tsx` — tab navigation (Today · Recovery · Sleep · Strain · Journal · Device).
+- `src/ble/` — Bluetooth: scan/connect/discover, standard HR (0x2A37) + battery
+  decode, command writes, proprietary `fd4b…` frame capture, base64/hex helpers.
+- `src/whoop/` — the "Maverick" protocol: CRC, frame codec + reassembler,
+  command encoders, history-drain handshake, (experimental) record parsing.
+- `src/metrics/` — pure scoring: HRV (Task Force 1996), strain (Banister TRIMP /
+  Karvonen / Tanaka), recovery, sleep staging, steps, EMA baseline.
+- `src/db/` — offline-first SQLite (HR stream, daily metrics, cardio, journal,
+  raw frames, profile).
+- `src/state/` — observable store + the sync orchestrator wiring it together.
+- `src/screens/` + `src/ui/` — the WHOOP/VOLYUME crossover UI (recovery ring,
+  zone bars, dark theme).
 
 ## Protocol notes (sourced, not guessed)
 WHOOP 5.0 (firmware r52 "Maverick"), from the whoop-vault reverse-engineering

@@ -29,9 +29,10 @@ import {
   HEART_RATE_MEASUREMENT,
   HEART_RATE_SERVICE,
   WHOOP_CHAR_PREFIX,
+  WHOOP_CMD_WRITE_PREFIX,
   WHOOP_NAME_PREFIX,
 } from './constants';
-import { base64ToBytes, bytesToHex } from './bytes';
+import { base64ToBytes, bytesToBase64, bytesToHex } from './bytes';
 import { decodeHeartRate, HeartRateSample } from './heartRate';
 
 export type WhoopStatus =
@@ -74,6 +75,8 @@ export class WhoopBle {
   private device: Device | null = null;
   private subscriptions: Subscription[] = [];
   private scanning = false;
+  private writeService: string | null = null;
+  private writeChar: string | null = null;
 
   constructor(events: WhoopEvents) {
     this.manager = new BleManager();
@@ -218,13 +221,41 @@ export class WhoopBle {
 
     // 3) Proprietary fd4b notify characteristics -> capture raw frames.
     for (const dc of discovered) {
-      if (dc.notifiable && dc.characteristic.toLowerCase().startsWith(WHOOP_CHAR_PREFIX)) {
-        const label = dc.characteristic.toLowerCase().slice(0, 8);
+      const lc = dc.characteristic.toLowerCase();
+      if (dc.notifiable && lc.startsWith(WHOOP_CHAR_PREFIX)) {
+        const label = lc.slice(0, 8);
         this.trySubscribe(device, dc.service, dc.characteristic, (bytes) => {
           this.events.onRawFrame?.({ ts: Date.now(), source: label, hex: bytesToHex(bytes) });
         });
       }
+      // Remember the command-write characteristic (fd4b0002) for the drain.
+      if (dc.writable && lc.startsWith(WHOOP_CMD_WRITE_PREFIX)) {
+        this.writeService = dc.service;
+        this.writeChar = dc.characteristic;
+      }
     }
+  }
+
+  /** True once connected and discovery has finished. */
+  get isConnected(): boolean {
+    return this.device !== null;
+  }
+
+  /** True if the proprietary command-write characteristic was found. */
+  get canSendCommands(): boolean {
+    return this.device !== null && this.writeChar !== null && this.writeService !== null;
+  }
+
+  /** Write a framed Maverick command to fd4b0002. */
+  async writeCommand(bytes: Uint8Array): Promise<void> {
+    if (!this.device || !this.writeService || !this.writeChar) {
+      throw new Error('Command-write characteristic not available');
+    }
+    await this.device.writeCharacteristicWithResponseForService(
+      this.writeService,
+      this.writeChar,
+      bytesToBase64(bytes),
+    );
   }
 
   private trySubscribe(

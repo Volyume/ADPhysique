@@ -51,3 +51,37 @@ export function bytesToHex(bytes: Uint8Array): string {
   }
   return hex;
 }
+
+/** Parse a lowercase/uppercase hex string back to bytes. */
+export function hexToBytes(hex: string): Uint8Array {
+  const clean = hex.replace(/[^0-9a-fA-F]/g, '');
+  const len = Math.floor(clean.length / 2);
+  const out = new Uint8Array(len);
+  for (let i = 0; i < len; i += 1) {
+    out[i] = parseInt(clean.substr(i * 2, 2), 16);
+  }
+  return out;
+}
+
+/** Encode bytes to base64 — react-native-ble-plx writes expect base64 strings. */
+export function bytesToBase64(bytes: Uint8Array): string {
+  let out = '';
+  let i = 0;
+  for (; i + 2 < bytes.length; i += 3) {
+    const n = ((bytes[i] as number) << 16) | ((bytes[i + 1] as number) << 8) | (bytes[i + 2] as number);
+    out +=
+      B64_ALPHABET[(n >> 18) & 63] +
+      B64_ALPHABET[(n >> 12) & 63] +
+      B64_ALPHABET[(n >> 6) & 63] +
+      B64_ALPHABET[n & 63];
+  }
+  const rem = bytes.length - i;
+  if (rem === 1) {
+    const n = (bytes[i] as number) << 16;
+    out += B64_ALPHABET[(n >> 18) & 63] + B64_ALPHABET[(n >> 12) & 63] + '==';
+  } else if (rem === 2) {
+    const n = ((bytes[i] as number) << 16) | ((bytes[i + 1] as number) << 8);
+    out += B64_ALPHABET[(n >> 18) & 63] + B64_ALPHABET[(n >> 12) & 63] + B64_ALPHABET[(n >> 6) & 63] + '=';
+  }
+  return out;
+}
