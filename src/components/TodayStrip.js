@@ -32,6 +32,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
+import { toEnergy, energyUnitLabel } from '../lib/format';
 import { getDailyStepsToday, getCardioLogForDate } from '../lib/database';
 import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
 import {
@@ -60,6 +61,13 @@ export default function TodayStrip({
   stepsTarget = null,
   cardioEnabled = true,
   onCardioPress,
+  // FOOD cell (GAP #1): today's remaining energy on the landing screen, tapping
+  // through to the diary. `foodGlance` is { remaining, over } | null (null hides
+  // the value and shows a Log prompt). Adherence-neutral: "over" is factual, the
+  // same neutral ink as "left", never a red judgement. Energy respects the unit.
+  foodGlance = null,
+  energyUnit = 'kcal',
+  onFoodPress,
   // COMP-004 door: when provided, tapping the LOGGED weight cell opens the
   // "Your trend" card on Progress (the morning-ritual tap-through). Correcting
   // a weigh-in moves to a long-press so the door is the primary action. When
@@ -171,6 +179,7 @@ export default function TodayStrip({
   // ── Which cells show ──
   const showSteps = stepsEnabled && steps != null;
   const showCardio = !!cardioEnabled;
+  const showFood = typeof onFoodPress === 'function';
   const stacked = PixelRatio.getFontScale() >= STACK_FONT_SCALE;
 
   const didCardio = cardio && cardio.sessions > 0;
@@ -304,11 +313,39 @@ export default function TodayStrip({
     );
   }
 
-  // The secondary cells (steps + cardio) as a divided row.
+  function FoodCell() {
+    const hasGlance = foodGlance != null && foodGlance.remaining != null;
+    return (
+      <TouchableOpacity
+        style={styles.cellInner}
+        onPress={onFoodPress}
+        accessibilityRole="button"
+        accessibilityLabel={hasGlance
+          ? `${toEnergy(Math.abs(foodGlance.remaining), energyUnit)} ${energyUnitLabel(energyUnit)} ${foodGlance.over ? 'over' : 'left'} today. Tap to open your food diary.`
+          : 'Log food. Tap to open your food diary.'}
+      >
+        <Text style={styles.cellLabel}>FOOD</Text>
+        {hasGlance ? (
+          <>
+            <Text style={styles.cellValue}>{toEnergy(Math.abs(foodGlance.remaining), energyUnit)}</Text>
+            <Text style={styles.cellCaption}>{foodGlance.over ? 'over' : 'left'}</Text>
+          </>
+        ) : (
+          <View style={styles.loggedRow}>
+            <Ionicons name="restaurant-outline" size={15} color={colors.primary} />
+            <Text style={styles.logPrompt}>Log</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  }
+
+  // The secondary cells (steps + cardio + food) as a divided row.
   function SecondaryRow() {
     const cells = [];
     if (showSteps) cells.push(<StepsCell key="steps" />);
     if (showCardio) cells.push(<CardioCell key="cardio" />);
+    if (showFood) cells.push(<FoodCell key="food" />);
     if (cells.length === 0) return null;
     return (
       <View style={styles.row}>
@@ -339,6 +376,7 @@ export default function TodayStrip({
   ];
   if (showSteps) compactCells.push(<StepsCell key="s" />);
   if (showCardio) compactCells.push(<CardioCell key="c" />);
+  if (showFood) compactCells.push(<FoodCell key="f" />);
 
   if (stacked) {
     return (

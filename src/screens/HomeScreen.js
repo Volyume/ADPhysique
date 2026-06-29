@@ -23,8 +23,9 @@ import {
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getAllExercises,
   getMorningWeightToday, getMorningWeights, logMorningWeight, getProgressionTeaser,
   getRecentWorkoutFeedback, getLatestCoachOutput,
-  getMorningWeightsLast14Days, getOpenEdPatternFlag,
+  getMorningWeightsLast14Days, getOpenEdPatternFlag, getNutritionTargets,
 } from '../lib/database';
+import { getRollupForDay } from '../lib/food/db';
 import { stageOf } from '../lib/payments/cascade';
 import {
   trialStartFromEndsAt,
@@ -36,7 +37,7 @@ import {
 import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
 import { buildFreeCoachLine } from '../lib/coachResponse';
 import { GLOSSARY } from '../lib/coachGlossary';
-import { localWeekStartMs } from '../lib/dayKey';
+import { localWeekStartMs, todayLocalKey } from '../lib/dayKey';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 import { logError, logWarn } from '../lib/errorLog';
@@ -139,8 +140,10 @@ export default function HomeScreen({ navigation }) {
   // re-runs loadData so the empty state swaps for real data without
   // the user navigating away and back.
   const cloudSyncVersion = useAppStore(s => s.cloudSyncVersion);
+  const energyUnit = useAppStore(s => s.accessibility?.energyUnit ?? 'kcal');
   const bwu = bodyWeightUnits || 'st';
 
+  const [foodGlance, setFoodGlance] = useState(null); // Pro nutrition glance: { remaining, over } | null
   const [weekStats, setWeekStats] = useState({ sessions: 0, sets: 0, volume: 0 });
   const [activePlan, setActivePlanData] = useState(null);
   const [nextWorkout, setNextWorkout] = useState(null);
@@ -285,12 +288,31 @@ export default function HomeScreen({ navigation }) {
         loadFatigueTrend(),
         loadScheduleContext(),
         loadBriefDismissal(),
-        ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadFirstRunCue(), loadTrialBanner()] : []),
+        ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadFirstRunCue(), loadTrialBanner(), loadNutritionGlance()] : []),
         ...(tier === 'free' ? [loadFreeCoachLine()] : []),
       ]);
     } finally {
       setInitialLoading(false);
     }
+  }
+
+  // Pro nutrition glance for the Home strip (GAP #1): today's remaining energy,
+  // so the food-log action sits on the landing screen instead of a tab away.
+  // Adherence-neutral: we carry the signed remaining + an `over` flag, never a
+  // colour judgement. Display-only; the stored rollup/targets stay in kcal.
+  async function loadNutritionGlance() {
+    try {
+      const today = todayLocalKey();
+      const [rollup, targetsRow] = await Promise.all([
+        getRollupForDay(user.id, today),
+        getNutritionTargets(user.id),
+      ]);
+      const targetKcal = targetsRow?.targetKcal ?? null;
+      if (targetKcal == null) { setFoodGlance(null); return; }
+      const eaten = Math.round(rollup?.kcal_total ?? 0);
+      const remaining = Math.round(targetKcal - eaten);
+      setFoodGlance({ remaining, over: remaining < 0 });
+    } catch (_) { setFoodGlance(null); }
   }
 
   async function loadLatestCoachOutput() {
@@ -1220,6 +1242,9 @@ export default function HomeScreen({ navigation }) {
             cardioEnabled={userProfile?.cardioEnabled !== false}
             onCardioPress={() => navigation.navigate('LogCardio')}
             onOpenTrend={() => navigation.getParent()?.navigate('ProgressTab', { screen: 'Analytics', params: { focusWeightTrend: true } })}
+            foodGlance={foodGlance}
+            energyUnit={energyUnit}
+            onFoodPress={() => navigation.getParent()?.navigate('DiaryTab', { screen: 'Diary' })}
           />
         )}
 
