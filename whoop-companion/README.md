@@ -1,8 +1,10 @@
 # Whoop Companion (private)
 
-A private, standalone iOS app that talks to your **WHOOP 5.0** strap directly over
-Bluetooth and tracks recovery, sleep, strain, steps and cardio **without a WHOOP
-membership**. All data stays on your iPhone — no WHOOP account, no cloud.
+A private, standalone **iOS + Android** app that talks to your **WHOOP 5.0** strap
+directly over Bluetooth and tracks recovery, sleep, strain, steps and cardio
+**without a WHOOP membership**. All data stays on your phone — no WHOOP account,
+no cloud. Android can be sideloaded as an APK with zero account setup (see below);
+iOS goes via TestFlight.
 
 This is a **separate app** from VOLYUME. It only reuses VOLYUME's toolchain
 (Expo SDK 54 / React Native 0.81 / React 19) and the same no-Mac
@@ -20,6 +22,23 @@ GitHub Actions → EAS → TestFlight build pipeline.
 > capture and export. **None of this has been compiled or run on a device yet**
 > (no Mac/iOS toolchain in the build environment); first real validation is the
 > TestFlight build on your iPhone.
+
+## Android: an APK you can sideload (easiest first test, zero setup)
+
+This is the quickest way to try it — no Expo account, no Apple, no Play Store,
+no secrets:
+
+1. GitHub → **Actions** tab → **Build Whoop Android APK** → **Run workflow**.
+2. When it finishes, open the run → **Artifacts** → download **whoop-companion-apk**.
+3. Copy the APK to your Android phone and tap it to install (allow "install
+   unknown apps" for your browser/files app when prompted).
+4. Open the app → **Device** tab → close the official WHOOP app, put the strap in
+   pairing mode, then **Scan & connect**.
+
+The workflow runs `expo prebuild` + Gradle `assembleRelease` on a free GitHub
+runner; Expo's template signs the release APK with the debug keystore so it
+installs for personal use. (For a Play Store build later, EAS uses the
+`preview`/`production` Android profiles in `eas.json`.)
 
 ## How it reaches your iPhone (no Mac, no commands from you)
 
