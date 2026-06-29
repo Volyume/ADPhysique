@@ -41,6 +41,7 @@ import {
   trackNotificationSent,
   trackNotificationTapped,
 } from './telemetry';
+import { handleRestTimerAction } from './restTimerActions';
 
 /**
  * Install the process-lifetime notification listeners.
@@ -65,6 +66,20 @@ export function installNotificationListeners({ onTap } = {}) {
         payload: { data_type: type ?? 'unknown' },
       });
     } catch (_) { /* telemetry must never break the tap handler */ }
+
+    // Rest-timer action buttons (Complete set / ±15s / Skip rest) are
+    // handled here, not via onTap's navigation routing: the response
+    // carries an actionIdentifier for the button pressed. The handler is
+    // a no-op unless there's a live workout + running rest, so a stale
+    // tap on a lingering notification does nothing. A plain body tap
+    // (DEFAULT_ACTION_IDENTIFIER) falls through to onTap to open the app.
+    if (type === 'rest_timer') {
+      const actionId = response?.actionIdentifier;
+      if (actionId && actionId !== Notifications.DEFAULT_ACTION_IDENTIFIER) {
+        try { handleRestTimerAction(actionId); } catch (_) { /* never crash on a tap */ }
+        return;
+      }
+    }
 
     if (typeof onTap === 'function') {
       try { onTap(response); } catch (_) { /* swallow caller errors */ }

@@ -50,6 +50,9 @@ jest.mock('../../database', () => ({
   getCardioLogForPush: jest.fn().mockResolvedValue([]),
   insertCardioLogFromCloud: jest.fn().mockResolvedValue(undefined),
   getCardioLogUpdatedAt: jest.fn().mockResolvedValue(null),
+  getPlanFoldersForPush: jest.fn().mockResolvedValue([]),
+  insertPlanFolderFromCloud: jest.fn().mockResolvedValue(undefined),
+  getPlanFolderUpdatedAt: jest.fn().mockResolvedValue(0),
   // NEW-002 partner mirror.
   getPartnershipsLocal: jest.fn().mockResolvedValue([]),
   getPartnerWeekSignal: jest.fn().mockResolvedValue(null),

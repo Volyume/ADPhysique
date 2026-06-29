@@ -101,13 +101,35 @@ export function calculate1RM(weight, reps) {
 }
 
 // Algorithm 9: Tonnage
-export function calculateTonnage(sets) {
+//
+// `exerciseTypeById` (optional) maps exerciseId -> exercise_type. The new
+// exercise_type axis lets 'distance'/'duration' sets reuse the weight column
+// to store metres (and reps for seconds), so weight × reps for those is NOT
+// kilograms of load — counting it would inflate tonnage with garbage. When the
+// map is supplied we exclude 'distance' and 'duration' sets; 'weight_reps' and
+// 'weighted_bodyweight' are real load and counted, 'reps_only' carries weight 0
+// so contributes 0 anyway. The map is optional and the default for an unknown /
+// absent type is 'weight_reps' (counted), so existing callers that pass no map
+// keep byte-identical behaviour.
+const NON_LOAD_EXERCISE_TYPES = new Set(['distance', 'duration']);
+
+export function calculateTonnage(sets, exerciseTypeById = null) {
   return sets.reduce((total, s) => {
-    if (isHardSet(s)) {
+    if (isHardSet(s) && isLoadBearingSet(s, exerciseTypeById)) {
       total += (s.weight || 0) * (s.actualReps || s.actual_reps || 0);
     }
     return total;
   }, 0);
+}
+
+// True unless the set's exercise is a non-load (distance/duration) type, which
+// repurposes the weight/reps columns for metres/seconds. Unknown or absent type
+// defaults to load-bearing (weight_reps) so behaviour is unchanged without a map.
+function isLoadBearingSet(set, exerciseTypeById) {
+  if (!exerciseTypeById) return true;
+  const id = set.exerciseId ?? set.exercise_id;
+  const type = exerciseTypeById[id];
+  return !NON_LOAD_EXERCISE_TYPES.has(type);
 }
 
 // Summarise a finished workout's logged sets. totalSets counts every set

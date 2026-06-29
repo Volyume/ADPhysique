@@ -26,7 +26,7 @@ import {
 } from '../lib/algorithms';
 import { rankSwaps } from '../lib/swapEngine';
 import { isClusterType, clusterLabel, summariseCluster, mergeClusterNote } from '../lib/clusterSet';
-import { countProgressSets, setNumberForKind, getBestAnchorSet, prefillRepsForTarget, isLoggableWeight } from '../lib/workoutHelpers';
+import { countProgressSets, setNumberForKind, getBestAnchorSet, prefillRepsForTarget, isLoggableWeight, formatLoggedSet } from '../lib/workoutHelpers';
 import { formatPerSide, loadUnilateralExercises } from '../lib/unilateral';
 import { FORM_TIPS } from '../lib/formTips';
 import { applyTimeCrunch } from '../lib/mesocycle';
@@ -59,9 +59,13 @@ const SET_TYPE_OPTIONS = [
  * with stable props React.memo skips them. `progressNum` is the set's position
  * among counting (non-warm-up, non-dropset) sets, computed by the caller.
  */
-const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum }) {
+const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum, exerciseType = 'weight_reps' }) {
   const isWarmup = set.setType === 'warmup';
-  const est1RM = isWarmup ? null : calculate1RM(set.weight, set.actualReps);
+  // Exercise-type aware: a distance/duration/reps_only set must not print
+  // "{weight}kg × {reps}" (the weight column holds metres/0 for those) nor an
+  // Est. max computed off a non-load value.
+  const fmt = formatLoggedSet(set, units, exerciseType);
+  const est1RM = (!isWarmup && fmt.showE1RM) ? calculate1RM(set.weight, set.actualReps) : null;
   const perSide = formatPerSide(set.leftReps, set.rightReps);
   return (
     <View style={[styles.loggedSetRow, isWarmup && styles.loggedSetRowWarmup]}>
@@ -73,7 +77,7 @@ const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum 
         </View>
       )}
       <Text style={[styles.loggedSetText, isWarmup && styles.loggedSetTextWarmup]}>
-        {set.weight}{units} × {set.actualReps}
+        {fmt.text}
         {perSide ? ` · ${perSide}` : ''}
         {isWarmup ? ' · Warm-up' : ''}
       </Text>
@@ -582,6 +586,30 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     dismissActiveWorkoutNotification().catch(() => {});
   }, []);
 
+  // Lock-screen rest-timer "Complete set" action. The ±15s / Skip-rest
+  // buttons are handled in the notifications listener (they only touch the
+  // store), but completing a set runs through the shared in-app path
+  // (cluster vs normal handling), so it must fire here on the screen. The
+  // action opens the app to the foreground; this listener picks it up and
+  // runs handleCompleteSetPress — but ONLY when a rest is actually running,
+  // so a stale tap is ignored. handleCompleteSetPressRef keeps the latest
+  // closure without re-installing the listener every render.
+  const handleCompleteSetPressRef = useRef(null);
+  useEffect(() => {
+    // eslint-disable-next-line global-require
+    const Notifications = require('expo-notifications');
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response?.notification?.request?.content?.data;
+      if (data?.type !== 'rest_timer') return;
+      if (response?.actionIdentifier !== 'complete_set') return;
+      // Active-rest guard: only act on a live, running rest.
+      const st = useAppStore.getState();
+      if (!st.activeWorkout?.id || !st.restTimerActive) return;
+      try { handleCompleteSetPressRef.current?.(); } catch (_) { /* never crash on a tap */ }
+    });
+    return () => { try { sub?.remove(); } catch (_) {} };
+  }, []);
+
   // Load previous performance and set defaults when exercise changes
   useEffect(() => {
     if (!exercise || !activeWorkout) return;
@@ -817,11 +845,26 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // (`currentSet.reps < 1`) was a string comparison, so a pasted or
     // non-numeric value ("abc") gave NaN < 1 === false and slipped through,
     // logging a NaN-rep set that then poisoned tonnage, PRs and the summary.
+    // Exercise TYPE axis (Hevy teardown 03-exercise-library.md, R3). For
+    // weight_reps (and weighted_bodyweight) the validation/storage/PR path is
+    // unchanged. duration/distance store seconds in the reps field; reps_only
+    // and duration carry no load, so the weight check is skipped for them.
+    const exType = exercise?.exerciseType || 'weight_reps';
+    const isWeightReps = exType === 'weight_reps' || exType === 'weighted_bodyweight';
+    const isTimed = exType === 'duration' || exType === 'distance';
+
     const repsNum = overrides.actualReps != null
       ? overrides.actualReps
       : parseInt(currentSet.reps, 10);
+    // For timed schemas the "reps" field holds total seconds; require a
+    // positive value but allow the larger range. Otherwise require >= 1 rep.
     if (!Number.isFinite(repsNum) || repsNum < 1) {
-      appAlert('Enter reps', 'Please enter the number of reps completed.');
+      appAlert(
+        isTimed ? 'Enter time' : 'Enter reps',
+        isTimed
+          ? 'Please enter the duration for this set.'
+          : 'Please enter the number of reps completed.',
+      );
       return;
     }
     // Cluster sets (myo-reps / rest-pause) commit the whole cluster as one
@@ -831,9 +874,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const effectiveNotes = overrides.notes ?? (noteText || null);
     // Weight is required unless this is a bodyweight movement. A blank or
     // non-numeric field means the user hasn't entered a load yet, block
-    // rather than silently saving a 0 kg set.
+    // rather than silently saving a 0 kg set. reps_only and duration carry no
+    // load at all, so the weight check is skipped for them; distance reuses the
+    // weight field for the distance value, which isLoggableWeight accepts as a
+    // positive number.
     const isBodyweight = /body\s*weight/i.test(exercise.equipment || '');
-    if (!isLoggableWeight(currentSet.weight, isBodyweight)) {
+    const skipWeightCheck = exType === 'reps_only' || exType === 'duration';
+    if (!skipWeightCheck && !isLoggableWeight(currentSet.weight, isBodyweight)) {
       appAlert('Enter weight', `Enter the weight used (in ${units}) before completing this set.`);
       return;
     }
@@ -907,7 +954,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         ...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id),
       ];
       sessionSetsRef.current = [...sessionSetsRef.current, setData];
-      const prs = detectPR(setData, prHistory, exercise, units);
+      // PR detection runs ONLY for weight-based schemas. duration/distance
+      // reuse the weight field for time/distance, so running the weight x reps
+      // 1RM/heaviest detector over them would report meaningless "PRs".
+      const prs = isWeightReps ? detectPR(setData, prHistory, exercise, units) : [];
       if (prs.length > 0) {
         showPRCelebration({ ...prs[0], exerciseName: exercise.name });
         // Keep one PR per exercise (the most significant), so a multi-set,
@@ -1047,6 +1097,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (isClusterType(currentSet.setType) && !uni) return startCluster();
     return handleCompleteSet();
   }
+  // Keep the ref pointed at the latest closure so the rest-notification
+  // "Complete set" action listener (installed once) always calls current state.
+  handleCompleteSetPressRef.current = handleCompleteSetPress;
 
   function addMiniSet() {
     const n = parseInt(clusterReps, 10);
@@ -1846,6 +1899,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               units={units}
               isWarmup={currentSet.setType === 'warmup'}
               onSubmitComplete={handleCompleteSetPress}
+              exerciseType={exercise?.exerciseType || 'weight_reps'}
             />
 
             {showNoteInput ? (
@@ -1979,6 +2033,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   set={s}
                   units={units}
                   progressNum={countProgressSets(loggedSets.slice(0, i + 1))}
+                  exerciseType={exercise?.exerciseType || 'weight_reps'}
                 />
               ))}
             </View>

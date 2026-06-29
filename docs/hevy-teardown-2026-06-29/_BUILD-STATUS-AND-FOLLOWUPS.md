@@ -1,0 +1,99 @@
+# Hevy-teardown build wave — status, review sign-offs & follow-ups
+
+_Last updated: 2026-06-29. Work from the SOURCE files named below, never this summary._
+
+This records the P1 build wave that lands six features from the Hevy teardown,
+the adversarial-review sign-offs, the fixes applied after review, and the
+items deliberately DEFERRED (with the exact code locations to work from).
+
+## Features built (all on `claude/codebase-audit-docs-pv6mjd`, merged to main)
+
+1. **Plan folders** — `supabase/migrate_089_plan_folders.sql`,
+   `src/lib/sync/tables/planFolders.js`, `src/screens/PlansScreen.js`,
+   `database.js` (`getPlanFolders`/`setPlanFolder`/`deletePlanFolder`, v48 migration).
+   FREE feature (plan library is free). Folder delete unfiles plans (FK
+   `ON DELETE SET NULL`), never deletes them.
+2. **Food-delete tombstones** — `supabase/migrate_090_food_delete_tombstones.sql`,
+   `src/lib/sync/tables/foodDomain.js`, `src/lib/food/db.js` (v49). Cross-device
+   delete sync for `food_favourites` + `daily_water`.
+3. **exercise_type axis** — `supabase/migrate_091_exercise_type.sql`,
+   `src/components/SetEntry.js`, `src/screens/ActiveWorkoutScreen.js`,
+   `src/lib/seedExercises.js`, `database.js` (v50). Types: weight_reps,
+   weighted_bodyweight, reps_only, duration, distance.
+4. **Recovery heatmap** — `src/lib/muscleRecovery.js`, `src/screens/VolumeHeatmapScreen.js`.
+   Pure/deterministic freshness band over days-since-trained. CVD-safe palette.
+5. **Save-to-gallery / Share-to-Stories** — `src/screens/ShareCardScreen.js`,
+   `app.json` (expo-media-library plugin). Share to Stories uses the OS share
+   sheet (a bare `instagram-stories://` openURL can't carry the image).
+6. **Rest-timer notification actions** — `src/lib/notifications/restTimerActions.js`,
+   `categories.js`, `channels.js`, `listeners.js`, `activeWorkout.js`,
+   `src/components/RestTimer.js`. Android-only; needs a fresh native build
+   (registering a notification category does not take effect over OTA).
+
+## Adversarial review (7 fresh-eyes agents, no authorship bias) — 2026-06-29
+
+- **Migrations 089/090/091:** APPROVED FOR LIVE DEPLOY by two independent
+  reviewers. Additive, idempotent, RLS-correct, CHECK-safe. The 480-line 090 is
+  legitimate (plpgsql `CREATE OR REPLACE` restates whole RPC bodies; only the
+  two intended branches changed vs migrate_016 pull / migrate_023 push).
+- **Sync layer:** SOUND. plan_folders wired in registry + transport
+  MIGRATED_TABLES; tombstones round-trip; pull watermark holds at `server_ts−1ms`.
+- **Sacred rules:** NO VIOLATIONS (billing, AI boundary, ED-safety floors,
+  free/Pro gating, kg-only gym weights, British English, deps). One new
+  founder-approved dependency: `expo-media-library` (MIT).
+- **weight_reps byte-identical:** confirmed; PR detection gated to
+  weight_reps/weighted_bodyweight only.
+
+### Fixes applied after review (this wave)
+- **exercise_type read-back leak (HIGH, was reachable via duration/reps_only):**
+  `LoggedSetRow` + SetEntry live e1RM are now exercise_type aware via the new
+  pure `formatLoggedSet`/`formatSeconds` in `src/lib/workoutHelpers.js`
+  (tested in `workoutHelpers.test.js`). A logged run no longer prints
+  "400kg × 90" + a bogus "Est. max".
+- **IG empty-Story:** `handleShareToStories` now goes straight to the OS share
+  sheet (deep link removed).
+- **restTimerActions defensive guard:** store read/dispatch wrapped so a stale
+  notification tap against a torn-down store can never crash.
+- **migrate_089 header:** corrected the misleading "STAGING" note — it
+  auto-deploys to the LIVE EU-Dublin project.
+
+## DEFERRED — work from these exact locations when picked up
+
+### A. DORMANT load-sum landmine (distance pollution) — NOT fixed by design
+`distance` reuses the `weight` column for metres and `reps` for seconds. The
+tonnage fix covered only `calculateTonnage` (`src/lib/algorithms.js`) and
+`getLifetimeTonnage` (`src/lib/database.js`). These **six** load/e1RM sums still
+sum `weight*reps` / `MAX(weight)` with only a `weight > 0` guard:
+- `src/lib/database.js` → `getAcuteChronicWorkload` (**SAFETY-ADJACENT**: ACWR
+  injury-load monitoring — a change here needs the founder's nod per CLAUDE.md)
+- `src/lib/database.js` → `getYearOfLiftsData`
+- `src/lib/database.js` → `getWeeklyPRCount` and `getBestLiftThisWeek`
+- `src/lib/database.js` → `getRecapData`
+- `src/lib/database.js` → `getBlockReflectionData`
+- `src/screens/LiftProgressScreen.js` → `buildExerciseMetricSeries`
+
+**Safe TODAY** because `distance` is unreachable (no seed row is tagged
+`distance`; the custom-exercise screens do not expose `exercise_type`, so every
+custom exercise defaults to `weight_reps`) and `duration`/`reps_only` are
+weight-0 (already dropped by `weight > 0`). **The moment any `distance`
+exercise becomes creatable, these become real bugs.** Fix = extend the same
+`COALESCE(ce.exercise_type, e.exercise_type, 'weight_reps') NOT IN
+('distance','duration')` exclusion (with the LEFT JOIN onto `exercises` +
+`custom_exercises` keyed on `(id, user_id)`) to each site, with tests, BEFORE
+shipping any creatable distance exercise.
+
+### B. UX paper-cuts (reviewer-flagged, non-blocking)
+- `src/screens/PlansScreen.js:781` — the "New folder" entry point is hidden when
+  the user's only plan is the active one (gated on `myPlans.length > 0`).
+- `src/screens/PlansScreen.js` `handleSaveFolder` — no duplicate-folder-name guard.
+- `src/screens/VolumeHeatmapScreen.js` — red = "Recently trained" collides with
+  red = "Too much volume"; soften the recovery hue.
+- `src/screens/ActiveWorkoutScreen.js` (`handleCompleteSetPress` via the
+  notification listener) — notification "Complete set" logs the current input
+  fields; it opens the app to foreground (mirrors the in-app button) but the
+  user can't preview the values from the lock screen. Design decision.
+
+### C. Decision-gated (unchanged — do NOT start without the founder decision)
+Per CLAUDE.md ACTIVE WORK: Ultimate-Audit items 11–16 and the deferred Hevy
+items (social feed, watch app, defer-paywall, referral, progress photos,
+sex-aware strength standards, per-exercise demo media, drag-to-reorder).

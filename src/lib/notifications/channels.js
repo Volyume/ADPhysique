@@ -1,5 +1,7 @@
 import * as Notifications from 'expo-notifications';
 
+import { registerRestTimerCategory } from './categories';
+
 const TRAINING_REMINDERS_CHANNEL = 'training-reminders';
 const REST_TIMER_CHANNEL = 'rest-timer';
 // Coaching reminders (morning weight, weekly check-in, weekly coach, trial
@@ -49,5 +51,10 @@ export async function ensureNotifChannels() {
       enableVibrate: false,
       showBadge: false,
     });
+    // Register the rest-timer notification CATEGORY + its four action
+    // buttons here too, so the live rest notification's Complete set /
+    // ±15s / Skip rest buttons are available. Requires a fresh native
+    // build to take effect (categories are not OTA-updatable).
+    await registerRestTimerCategory();
   } catch {}
 }

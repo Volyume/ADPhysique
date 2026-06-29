@@ -85,3 +85,46 @@ export function isLoggableWeight(weightRaw, isBodyweight) {
   const weightNum = parseFloat(weightRaw);
   return !(weightRaw === '' || weightRaw == null || isNaN(weightNum) || weightNum <= 0);
 }
+
+// Format an integer number of seconds as mm:ss for the duration / distance
+// schemas (a logged set stores its seconds in the reps column). Pure; mirrors
+// SetEntry's own formatSeconds so the live field and the logged row read alike.
+export function formatSeconds(total) {
+  const n = typeof total === 'number' ? total : (parseInt(total, 10) || 0);
+  const safe = Number.isFinite(n) && n > 0 ? n : 0;
+  const mm = Math.floor(safe / 60);
+  const ss = safe % 60;
+  return `${mm}:${String(ss).padStart(2, '0')}`;
+}
+
+/**
+ * The display string + Est-1RM eligibility for one already-logged set, made
+ * exercise_type aware. distance reuses the `weight` column for its value
+ * (metres/yards) and the reps column for seconds; duration reuses reps for
+ * seconds; reps_only carries no load. Without this, a logged run printed
+ * "400kg × 90" with a bogus "Est. max ≈…kg" (the weight column held metres).
+ * weight_reps / weighted_bodyweight (and any unknown type, for safety) keep the
+ * original "{weight}{units} × {reps}" with the 1RM estimate shown.
+ *
+ * @param {object} set            logged set ({ weight, actualReps|reps })
+ * @param {string} units          the user's gym unit label (kg)
+ * @param {string} exerciseType   the parent exercise's type
+ * @returns {{ text: string, showE1RM: boolean }}
+ */
+export function formatLoggedSet(set, units, exerciseType = 'weight_reps') {
+  const type = exerciseType || 'weight_reps';
+  const reps = set.actualReps ?? set.actual_reps ?? set.reps ?? 0;
+  if (type === 'reps_only') {
+    return { text: `${reps} reps`, showE1RM: false };
+  }
+  if (type === 'duration') {
+    return { text: formatSeconds(reps), showE1RM: false };
+  }
+  if (type === 'distance') {
+    // Distance unit mirrors SetEntry: metric users get metres, others yards.
+    const distUnit = units === 'kg' ? 'm' : 'yd';
+    const dist = set.weight ?? 0;
+    return { text: `${dist}${distUnit} · ${formatSeconds(reps)}`, showE1RM: false };
+  }
+  return { text: `${set.weight}${units} × ${reps}`, showE1RM: true };
+}

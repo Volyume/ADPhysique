@@ -905,6 +905,48 @@ const RAW = [
   ['Assisted Dip Machine',          'triceps', ['chest', 'front_delts'],   'machine',      'push',      true,  8, 15,  2, 4],
 ];
 
+// Exercise TYPE axis (Hevy teardown 03-exercise-library.md, R3). Drives which
+// set-input fields render: weight_reps (the default for every other row) shows
+// weight + reps EXACTLY as before; duration shows a mm:ss time field;
+// weighted_bodyweight shows weight (added load, default 0) + reps and renders
+// identically to weight_reps. CONSERVATIVE by design: only rows whose schema is
+// unambiguous are tagged here. Everything not listed stays 'weight_reps'.
+//   - duration: timed isometric holds + stationary-cardio "for time" work.
+//   - weighted_bodyweight: bodyweight rep movements that are commonly loaded
+//     (pull-ups/dips/push-ups); the weight field stays, defaulted to 0, so the
+//     existing weight x reps logging path is unchanged.
+// NOTE: loaded carries (Farmer's Walk etc.) stay weight_reps on purpose — the
+// load is the point and reusing the weight field keeps PR/tonnage meaningful.
+// No row is tagged 'distance': the library has no clean treadmill/rower
+// distance entry, so per the spec we default to weight_reps when unsure.
+const EXERCISE_TYPE_MAP = {
+  // Timed holds / isometrics -> duration (mm:ss).
+  'Plank':              'duration',
+  'Side Plank':         'duration',
+  'Hollow Body Hold':   'duration',
+  'L-Sit Hold':         'duration',
+  'Copenhagen Plank':   'duration',
+  'Wall Sit':           'duration',
+  'Dead Hang':          'duration',
+  'Glute Squeeze Hold': 'duration',
+  // Stationary cardio logged for time -> duration.
+  'Cycling (Stationary)': 'duration',
+  'Assault Bike':         'duration',
+  'Battle Ropes':         'duration',
+  'Jump Rope':            'duration',
+  // Commonly-loaded bodyweight rep movements -> weighted_bodyweight (renders
+  // exactly like weight_reps: weight field + reps field, weight defaults to 0).
+  'Pull-Up':            'weighted_bodyweight',
+  'Chin-Up':            'weighted_bodyweight',
+  'Neutral Grip Pull-Up': 'weighted_bodyweight',
+  'Weighted Pull-Up':   'weighted_bodyweight',
+  'Push-Up':            'weighted_bodyweight',
+  'Wide-Grip Push-Up':  'weighted_bodyweight',
+  'Decline Push-Up':    'weighted_bodyweight',
+  'Ring Push-Up':       'weighted_bodyweight',
+  'Weighted Dips (Chest)': 'weighted_bodyweight',
+};
+
 // Build the full insert payload for one RAW row: the base fields the seed
 // has always written, plus the derived metadata. Pure; shared by the seed
 // and the top-up so a row inserted by either path is identical.
@@ -922,6 +964,7 @@ function rowToExercise(row) {
     fatigueCost: fatigue,
     stimulusToFatigueRatio: sfr,
     subregion: SUBREGION_MAP[name] ?? null,
+    exerciseType: EXERCISE_TYPE_MAP[name] ?? 'weight_reps',
     isCustom: false,
   };
   return { ...base, ...deriveExerciseMetadata(base) };

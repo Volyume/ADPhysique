@@ -33,6 +33,7 @@ const EXPECTED_TABLES = [
   'notification_preferences',
   'partner_signals', // NEW-002 pair-scoped shape (cloud migration 081)
   'meal_plans', // Theme G active-plan mirror (cloud migration 086)
+  'plan_folders', // Hevy teardown R1 plan-folder organisation (cloud migration 089)
 ];
 
 describe('SYNC_REGISTRY shape', () => {

@@ -1,6 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
+  Modal, Pressable, TextInput, KeyboardAvoidingView, Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
@@ -18,6 +21,7 @@ import {
   getWorkoutTemplates, getPlanWorkoutCounts, getAllRoutineExerciseCounts,
   activatePlanWithBlock, getRoutinesForPlan, createWorkout, getRoutineExercisesWithDetails,
   archivePlan, unarchivePlan, duplicatePlan, softDeleteRoutine, getActiveBlock,
+  getPlanFolders, createPlanFolder, renamePlanFolder, deletePlanFolder, setPlanFolder,
 } from '../lib/database';
 import { getBlockAdvice } from '../lib/blockAdvisor';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
@@ -101,6 +105,13 @@ export default function PlansScreen({ navigation }) {
   })));
   const [activePlan, setActivePlanData] = useState(null);
   const [myPlans, setMyPlans] = useState([]);
+  // Plan folders (Hevy teardown R1): organise the My plans list. FREE, no Pro gate.
+  const [folders, setFolders] = useState([]);
+  const [collapsedFolders, setCollapsedFolders] = useState({});
+  // Name prompt drives both create and rename. { mode: 'create' | 'rename', folder }.
+  const [folderPrompt, setFolderPrompt] = useState(null);
+  const [folderName, setFolderName] = useState('');
+  const [savingFolder, setSavingFolder] = useState(false);
   const [archivedPlans, setArchivedPlans] = useState([]);
   const [archivedExpanded, setArchivedExpanded] = useState(false);
   const [templates, setTemplates] = useState([]);
@@ -142,7 +153,7 @@ export default function PlansScreen({ navigation }) {
   async function loadData() {
     if (!user?.id) return;
     try {
-      const [active, all, archived, tmpl, pwc, exc, block] = await Promise.all([
+      const [active, all, archived, tmpl, pwc, exc, block, folderRows] = await Promise.all([
         getActivePlan(user.id),
         getAllPlansForUser(user.id),
         getArchivedPlansForUser(user.id),
@@ -150,9 +161,11 @@ export default function PlansScreen({ navigation }) {
         getPlanWorkoutCounts(),
         getAllRoutineExerciseCounts(),
         getActiveBlock(user.id),
+        getPlanFolders(user.id),
       ]);
       setActivePlanData(active || null);
       setMyPlans(all.filter(p => !active || p.id !== active.id));
+      setFolders(folderRows || []);
       setArchivedPlans(archived || []);
       setTemplates(tmpl);
       setPlanWorkoutCounts(pwc);
@@ -256,6 +269,103 @@ export default function PlansScreen({ navigation }) {
     }
   }
 
+  function toggleFolder(folderId) {
+    setCollapsedFolders(prev => ({ ...prev, [folderId]: !prev[folderId] }));
+  }
+
+  function openCreateFolder() {
+    setFolderName('');
+    setFolderPrompt({ mode: 'create', folder: null });
+  }
+
+  function openRenameFolder(folder) {
+    setFolderName(folder.name);
+    setFolderPrompt({ mode: 'rename', folder });
+  }
+
+  async function handleSaveFolder() {
+    const name = folderName.trim();
+    if (!name || savingFolder) return;
+    setSavingFolder(true);
+    try {
+      if (folderPrompt?.mode === 'rename' && folderPrompt.folder) {
+        await renamePlanFolder(folderPrompt.folder.id, name);
+      } else {
+        await createPlanFolder(user.id, name);
+      }
+      setFolderPrompt(null);
+      setFolderName('');
+      await loadData();
+    } catch (e) {
+      logError('PlansScreen.handleSaveFolder', e, { userId: user?.id });
+      toast.show("Couldn't save folder, try again", { variant: 'error' });
+    } finally {
+      setSavingFolder(false);
+    }
+  }
+
+  function handleDeleteFolder(folder) {
+    appAlert(
+      'Delete folder?',
+      `"${folder.name}" will be removed. Its plans are kept and moved back to My plans.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete folder',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deletePlanFolder(folder.id);
+              await loadData();
+            } catch (e) {
+              logError('PlansScreen.handleDeleteFolder', e, { userId: user?.id, folderId: folder?.id });
+              toast.show("Couldn't delete folder, try again", { variant: 'error' });
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  function handleFolderOptions(folder) {
+    peekRef.current?.open({
+      title: folder.name,
+      items: [
+        { icon: 'create-outline', label: 'Rename folder', onPress: () => openRenameFolder(folder) },
+        {
+          icon: 'trash-outline', label: 'Delete folder', destructive: true,
+          onPress: () => handleDeleteFolder(folder),
+        },
+      ],
+    });
+  }
+
+  async function handleMovePlanToFolder(plan, folderId) {
+    try {
+      await setPlanFolder(plan.id, folderId);
+      await loadData();
+    } catch (e) {
+      logError('PlansScreen.handleMovePlanToFolder', e, { userId: user?.id, planId: plan?.id });
+      toast.show("Couldn't move plan, try again", { variant: 'error' });
+    }
+  }
+
+  // "Move to folder" peek: lists every folder plus "No folder" to unfile.
+  function handleMovePlanOptions(plan) {
+    const items = folders.map(f => ({
+      icon: plan.folderId === f.id ? 'checkmark-circle-outline' : 'folder-outline',
+      label: f.name,
+      onPress: () => handleMovePlanToFolder(plan, f.id),
+    }));
+    items.push({
+      icon: plan.folderId == null ? 'checkmark-circle-outline' : 'remove-circle-outline',
+      label: 'No folder',
+      onPress: () => handleMovePlanToFolder(plan, null),
+    });
+    items.push({ icon: 'add-outline', label: 'New folder…', onPress: openCreateFolder });
+    peekRef.current?.open({ title: `Move ${plan.name}`, items });
+  }
+
   async function handlePlanOptions(plan) {
     const isActiveForUser = activePlan?.id === plan.id;
     // Pro users keep an always-active plan as part of Precision Coaching,
@@ -271,6 +381,11 @@ export default function PlansScreen({ navigation }) {
         icon: 'play-circle-outline',
         label: 'Set active',
         onPress: () => handleSetActive(plan),
+      },
+      {
+        icon: 'folder-outline',
+        label: plan.folderId ? 'Move to another folder' : 'Move to folder',
+        onPress: () => handleMovePlanOptions(plan),
       },
     ];
     if (tier !== 'pro') {
@@ -373,6 +488,73 @@ export default function PlansScreen({ navigation }) {
   // through to the Free default set and had no way to reach the coach builder
   // from the Plans tab (onboarding audit, C8).
   const actionCards = tier === 'pro' ? ACTION_CARDS_PRO_SWITCH : ACTION_CARDS_DEFAULT;
+
+  // Group the non-active plans by folder. Plans whose folder_id is null (or
+  // points at a now-deleted folder) fall through to the unfiled "My plans"
+  // list, so a plan can never become unreachable.
+  const folderIds = new Set(folders.map(f => f.id));
+  const plansByFolder = {};
+  const unfiledPlans = [];
+  for (const plan of myPlans) {
+    if (plan.folderId && folderIds.has(plan.folderId)) {
+      (plansByFolder[plan.folderId] = plansByFolder[plan.folderId] || []).push(plan);
+    } else {
+      unfiledPlans.push(plan);
+    }
+  }
+
+  // One plan card, shared by the folder sections and the unfiled list so the
+  // card, its options menu and footer stay identical wherever a plan lives.
+  function renderPlanCard(plan, i) {
+    return (
+      <AnimatedEntrance key={plan.id} index={i}>
+      <View style={styles.planCard}>
+        <PressableCard
+          style={styles.planCardBody}
+          onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
+          onLongPress={() => handlePlanOptions(plan)}
+          accessibilityLabel={plan.name}
+        >
+          <View style={styles.planCardMetaRow}>
+            {planWorkoutCounts[plan.id] ? (
+              <Text style={styles.planCardMeta}>
+                {planWorkoutCounts[plan.id]} workout{planWorkoutCounts[plan.id] !== 1 ? 's' : ''}
+              </Text>
+            ) : <View />}
+            <TouchableOpacity
+              style={styles.moreBtn}
+              onPress={() => handlePlanOptions(plan)}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel="Plan options"
+            >
+              <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.planCardName} numberOfLines={2}>{plan.name}</Text>
+        </PressableCard>
+        <View style={styles.planCardFooter}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={`View ${plan.name}`}
+          >
+            <Text style={styles.planCardFooterGhost}>View plan</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => handleSetActive(plan)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={`Set ${plan.name} as active plan`}
+          >
+            <Text style={styles.planCardFooterPrimary}>Set as active</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      </AnimatedEntrance>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -591,58 +773,77 @@ export default function PlansScreen({ navigation }) {
           </View>
         )}
 
-        {/* My Plans */}
-        {myPlans.length > 0 && (
+        {/* Folders (Hevy teardown R1). Collapsible sections atop the plans
+            list, each holding its filed plans. FREE feature, no Pro gate.
+            Deleting a folder unfiles its plans (they reappear under My plans);
+            it never deletes a plan. Shown whenever there are plans to organise
+            or folders already exist. */}
+        {(myPlans.length > 0 || folders.length > 0) && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>My plans</Text>
-            {myPlans.map((plan, i) => (
-              <AnimatedEntrance key={plan.id} index={i}>
-              <View style={styles.planCard}>
-                <PressableCard
-                  style={styles.planCardBody}
-                  onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
-                  onLongPress={() => handlePlanOptions(plan)}
-                  accessibilityLabel={plan.name}
-                >
-                  <View style={styles.planCardMetaRow}>
-                    {planWorkoutCounts[plan.id] ? (
-                      <Text style={styles.planCardMeta}>
-                        {planWorkoutCounts[plan.id]} workout{planWorkoutCounts[plan.id] !== 1 ? 's' : ''}
-                      </Text>
-                    ) : <View />}
+            <View style={styles.foldersHeaderRow}>
+              <Text style={styles.sectionTitle}>Folders</Text>
+              <TouchableOpacity
+                onPress={openCreateFolder}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="New folder"
+              >
+                <Text style={styles.foldersNewLink}>New folder</Text>
+              </TouchableOpacity>
+            </View>
+            {folders.length === 0 ? (
+              <Text style={styles.sectionSubtitle}>
+                Group your plans into folders to keep the list tidy.
+              </Text>
+            ) : null}
+            {folders.map(folder => {
+              const filed = plansByFolder[folder.id] || [];
+              const collapsed = !!collapsedFolders[folder.id];
+              return (
+                <View key={folder.id} style={styles.folderBlock}>
+                  <TouchableOpacity
+                    style={styles.folderHeader}
+                    onPress={() => toggleFolder(folder.id)}
+                    onLongPress={() => handleFolderOptions(folder)}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: !collapsed }}
+                    accessibilityLabel={`${folder.name}, ${filed.length} plan${filed.length !== 1 ? 's' : ''}`}
+                  >
+                    <Ionicons
+                      name={collapsed ? 'chevron-forward' : 'chevron-down'}
+                      size={16}
+                      color={colors.textSecondary}
+                    />
+                    <Ionicons name="folder-outline" size={16} color={colors.textSecondary} />
+                    <Text style={styles.folderName} numberOfLines={1}>{folder.name}</Text>
+                    <Text style={styles.folderCount}>{filed.length}</Text>
                     <TouchableOpacity
                       style={styles.moreBtn}
-                      onPress={() => handlePlanOptions(plan)}
+                      onPress={() => handleFolderOptions(folder)}
                       hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                       accessibilityRole="button"
-                      accessibilityLabel="Plan options"
+                      accessibilityLabel={`${folder.name} folder options`}
                     >
                       <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
                     </TouchableOpacity>
-                  </View>
-                  <Text style={styles.planCardName} numberOfLines={2}>{plan.name}</Text>
-                </PressableCard>
-                <View style={styles.planCardFooter}>
-                  <TouchableOpacity
-                    onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`View ${plan.name}`}
-                  >
-                    <Text style={styles.planCardFooterGhost}>View plan</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => handleSetActive(plan)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Set ${plan.name} as active plan`}
-                  >
-                    <Text style={styles.planCardFooterPrimary}>Set as active</Text>
-                  </TouchableOpacity>
+                  {!collapsed && (
+                    filed.length > 0
+                      ? <View style={styles.folderBody}>{filed.map((plan, i) => renderPlanCard(plan, i))}</View>
+                      : <Text style={styles.folderEmpty}>No plans in here yet. Use a plan&apos;s options to move it in.</Text>
+                  )}
                 </View>
-              </View>
-              </AnimatedEntrance>
-            ))}
+              );
+            })}
+          </View>
+        )}
+
+        {/* My Plans (unfiled). Plans not in any folder, or whose folder was
+            deleted, always live here so a plan is never hidden. */}
+        {unfiledPlans.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>My plans</Text>
+            {unfiledPlans.map((plan, i) => renderPlanCard(plan, i))}
           </View>
         )}
 
@@ -815,6 +1016,63 @@ export default function PlansScreen({ navigation }) {
             it is a tracking surface, not a plan. */}
       </ScrollView>
       <PeekMenu ref={peekRef} />
+
+      {/* Folder name prompt, shared by create + rename. */}
+      <Modal
+        visible={!!folderPrompt}
+        transparent
+        animationType="fade"
+        onRequestClose={() => { if (!savingFolder) setFolderPrompt(null); }}
+      >
+        <KeyboardAvoidingView
+          style={styles.folderModalFill}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <Pressable style={styles.backdrop} onPress={() => { if (!savingFolder) setFolderPrompt(null); }}>
+            <Pressable style={styles.folderSheet} onPress={() => {}}>
+              <Text style={styles.folderSheetTitle}>
+                {folderPrompt?.mode === 'rename' ? 'Rename folder' : 'New folder'}
+              </Text>
+              <TextInput
+                style={styles.folderInput}
+                value={folderName}
+                onChangeText={setFolderName}
+                placeholder="Folder name"
+                placeholderTextColor={colors.textMuted}
+                autoFocus
+                maxLength={60}
+                returnKeyType="done"
+                onSubmitEditing={handleSaveFolder}
+                accessibilityLabel="Folder name"
+              />
+              <View style={styles.folderSheetActions}>
+                <TouchableOpacity
+                  onPress={() => { if (!savingFolder) setFolderPrompt(null); }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel"
+                >
+                  <Text style={styles.folderSheetCancel}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleSaveFolder}
+                  disabled={!folderName.trim() || savingFolder}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={folderPrompt?.mode === 'rename' ? 'Save folder name' : 'Create folder'}
+                >
+                  <Text style={[
+                    styles.folderSheetSave,
+                    (!folderName.trim() || savingFolder) && styles.folderSheetSaveDisabled,
+                  ]}>
+                    {folderPrompt?.mode === 'rename' ? 'Save' : 'Create'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -826,6 +1084,55 @@ const styles = StyleSheet.create({
   section: { gap: spacing.md },
   sectionTitle: { ...type.label, color: colors.textSecondary },
   sectionSubtitle: { ...type.caption, color: colors.textMuted, marginTop: -spacing.sm },
+
+  // Folders (Hevy teardown R1)
+  foldersHeaderRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
+  foldersNewLink: { ...type.label, color: colors.primary },
+  folderBlock: {
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
+    backgroundColor: colors.surface, overflow: 'hidden',
+  },
+  folderHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
+  },
+  folderName: { flex: 1, ...type.bodyStrong, color: colors.textPrimary },
+  folderCount: { ...type.num('caption'), color: colors.textMuted },
+  folderBody: {
+    gap: spacing.md, padding: spacing.md,
+    borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  folderEmpty: {
+    ...type.caption, color: colors.textMuted,
+    paddingHorizontal: spacing.md, paddingBottom: spacing.md,
+  },
+
+  // Folder name prompt
+  folderModalFill: { flex: 1 },
+  backdrop: {
+    flex: 1, backgroundColor: withAlpha(colors.background, 0.7),
+    justifyContent: 'center', alignItems: 'center', padding: spacing.lg,
+  },
+  folderSheet: {
+    width: '100%', maxWidth: 420, gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  folderSheetTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  folderInput: {
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
+    color: colors.textPrimary, fontSize: fontSize.md,
+    backgroundColor: colors.surface2,
+  },
+  folderSheetActions: {
+    flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: spacing.lg,
+  },
+  folderSheetCancel: { ...type.label, color: colors.textSecondary },
+  folderSheetSave: { ...type.label, color: colors.primary },
+  folderSheetSaveDisabled: { color: colors.textMuted },
 
   trainingBlocksRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,

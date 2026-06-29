@@ -37,7 +37,44 @@ export const CATEGORY = Object.freeze({
   PARTNER_CHEER: 'partner_cheer', // NEW-002
   CHECKIN_MISSED: 'checkin_missed', // OPP-C03 ghost prevention
   PLANNED_MEAL_CONFIRM: 'planned_meal_confirm', // F3: confirm planned meals
+  REST_TIMER: 'rest_timer', // U1/F3: live lock-screen rest timer with actions
 });
+
+/**
+ * The expo-notifications notification CATEGORY identifier for the live
+ * rest-timer notification. This is the value passed as
+ * content.categoryIdentifier when the notification is presented, and the
+ * id registered via Notifications.setNotificationCategoryAsync. Keeping it
+ * equal to the data.type tag keeps the two in step.
+ */
+export const REST_TIMER_CATEGORY_ID = 'rest_timer';
+
+/**
+ * The four action-button identifiers on the rest-timer notification.
+ * These are matched on response.actionIdentifier in the response handler
+ * (restTimerActions.js) and mapped to the store rest-timer actions.
+ * British-English titles; functional, no shame, no loss framing.
+ */
+export const REST_TIMER_ACTION = Object.freeze({
+  COMPLETE_SET: 'complete_set',
+  PLUS_15: 'rest_plus_15',
+  MINUS_15: 'rest_minus_15',
+  SKIP: 'rest_skip',
+});
+
+/**
+ * Action descriptors for setNotificationCategoryAsync. Exported so the
+ * test can assert exactly four actions with the right ids without
+ * reaching into expo. opensAppToForeground:false on ±15/skip lets the
+ * user adjust without yanking the app open; complete-set opens the app
+ * because logging a set runs through the in-app completion path.
+ */
+export const REST_TIMER_ACTIONS = Object.freeze([
+  { identifier: REST_TIMER_ACTION.COMPLETE_SET, buttonTitle: 'Complete set', options: { opensAppToForeground: true } },
+  { identifier: REST_TIMER_ACTION.PLUS_15, buttonTitle: '+15s', options: { opensAppToForeground: false } },
+  { identifier: REST_TIMER_ACTION.MINUS_15, buttonTitle: '−15s', options: { opensAppToForeground: false } },
+  { identifier: REST_TIMER_ACTION.SKIP, buttonTitle: 'Skip rest', options: { opensAppToForeground: false } },
+]);
 
 /**
  * Channel routing per category. "push" means the OS delivers it;
@@ -82,7 +119,36 @@ export const CATEGORY_CHANNELS = Object.freeze({
   // never marked eaten. Push only; Pro-gated, ED-flag suppressed and budgeted
   // in the scheduler, exactly like CHECKIN_MISSED.
   [CATEGORY.PLANNED_MEAL_CONFIRM]: [CHANNEL.PUSH],
+  // U1/F3: the live rest-timer notification. It surfaces as an OS push
+  // (a silent, ongoing local notification on its own channel) but is
+  // presented directly via presentRestTimerNotification, never through
+  // the scheduler — this entry exists only so tap telemetry can resolve
+  // a channel and to satisfy the "every category has channels" invariant.
+  [CATEGORY.REST_TIMER]: [CHANNEL.PUSH],
 });
+
+/**
+ * Register the rest-timer notification category with its four action
+ * buttons. Must run before the first rest-timer notification is
+ * presented (the OS attaches the buttons by category id). Idempotent —
+ * re-registering simply replaces the definition. Call once at app boot.
+ *
+ * NOTE: registering a notification category requires a fresh native
+ * build; it does not take effect over an OTA/JS-only update.
+ */
+export async function registerRestTimerCategory() {
+  try {
+    // Lazily required so this module stays import-light: the category
+    // enums above are imported by telemetry/test code that does not mock
+    // expo-notifications, and a top-level import would drag the native
+    // module into those contexts.
+    const Notifications = require('expo-notifications');
+    await Notifications.setNotificationCategoryAsync(
+      REST_TIMER_CATEGORY_ID,
+      REST_TIMER_ACTIONS,
+    );
+  } catch (_) { /* never break boot on a notification-setup failure */ }
+}
 
 /**
  * Whether a category may surface as a push at all. Used by the
@@ -113,6 +179,7 @@ export function categoryForDataType(type) {
     case 'partner_cheer': return CATEGORY.PARTNER_CHEER;
     case 'checkin_missed': return CATEGORY.CHECKIN_MISSED;
     case 'planned_meal_confirm': return CATEGORY.PLANNED_MEAL_CONFIRM;
+    case 'rest_timer': return CATEGORY.REST_TIMER;
     case 'subscription_payment_failure': return CATEGORY.SUBSCRIPTION_PAYMENT_FAILURE;
     case 'subscription_expiring': return CATEGORY.SUBSCRIPTION_EXPIRING;
     case 'weekly_coach_ready': return CATEGORY.WEEKLY_COACH_READY;

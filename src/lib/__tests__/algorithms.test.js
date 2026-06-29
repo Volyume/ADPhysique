@@ -9,6 +9,7 @@ import {
   computeSetTargets,
   calculate1RM,
   bestPRPerExercise,
+  calculateTonnage,
 } from '../algorithms';
 
 // ─── VOLUME_LANDMARKS shape ────────────────────────────────────────────────────
@@ -454,6 +455,56 @@ describe('summariseWorkoutSets', () => {
   test('empty or non-array input yields zeros', () => {
     expect(summariseWorkoutSets([])).toEqual({ totalSets: 0, workingSetCount: 0, tonnage: 0 });
     expect(summariseWorkoutSets(null)).toEqual({ totalSets: 0, workingSetCount: 0, tonnage: 0 });
+  });
+});
+
+// ─── calculateTonnage: exercise_type exclusions ────────────────────────────────
+//
+// 'distance'/'duration' sets reuse the weight column for metres/seconds, so
+// weight × reps for those is NOT load. With an exerciseTypeById map they must be
+// excluded; without a map, behaviour is byte-identical (everything counts).
+
+describe('calculateTonnage excludes non-load exercise types', () => {
+  test('a distance set (metres in weight) does NOT inflate tonnage', () => {
+    const sets = [
+      { exerciseId: 'bench', weight: 100, actualReps: 8 },   // 800 real load
+      { exerciseId: 'run',   weight: 5000, actualReps: 1200 }, // 5000 m × 1200 s = garbage
+    ];
+    const typeMap = { bench: 'weight_reps', run: 'distance' };
+    // Distance set dropped; only the bench press counts.
+    expect(calculateTonnage(sets, typeMap)).toBe(800);
+  });
+
+  test('a duration set (seconds in reps) does NOT inflate tonnage', () => {
+    const sets = [
+      { exerciseId: 'squat', weight: 120, actualReps: 5 }, // 600 real load
+      { exerciseId: 'plank', weight: 0, actualReps: 90 },  // duration: 90 s, weight 0
+      { exerciseId: 'wallsit', weight: 30, actualReps: 60 }, // duration w/ stray weight → must drop
+    ];
+    const typeMap = { squat: 'weight_reps', plank: 'duration', wallsit: 'duration' };
+    expect(calculateTonnage(sets, typeMap)).toBe(600);
+  });
+
+  test('weight_reps and weighted_bodyweight count; reps_only contributes 0', () => {
+    const sets = [
+      { exerciseId: 'row',    weight: 80, actualReps: 10 }, // 800
+      { exerciseId: 'wpullup', weight: 20, actualReps: 6 }, // weighted_bodyweight → 120
+      { exerciseId: 'pushup', weight: 0, actualReps: 25 },  // reps_only → 0
+    ];
+    const typeMap = { row: 'weight_reps', wpullup: 'weighted_bodyweight', pushup: 'reps_only' };
+    expect(calculateTonnage(sets, typeMap)).toBe(920);
+  });
+
+  test('weight_reps behaviour is unchanged: no map, or unknown type, still counts', () => {
+    const sets = [
+      { setType: 'warmup', weight: 40, actualReps: 10 }, // excluded (warm-up)
+      { exerciseId: 'bench', weight: 100, actualReps: 8 }, // 800
+      { weight: 50, actual_reps: 12 },                     // snake_case, no id → 600
+    ];
+    // No map → identical to legacy behaviour.
+    expect(calculateTonnage(sets)).toBe(1400);
+    // Map with no matching ids → unknown defaults to weight_reps (counted).
+    expect(calculateTonnage(sets, { somethingElse: 'distance' })).toBe(1400);
   });
 });
 

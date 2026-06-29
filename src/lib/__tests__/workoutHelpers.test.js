@@ -10,6 +10,8 @@ import {
   getBestAnchorSet,
   prefillRepsForTarget,
   isLoggableWeight,
+  formatLoggedSet,
+  formatSeconds,
 } from '../workoutHelpers';
 
 describe('countProgressSets', () => {
@@ -139,5 +141,60 @@ describe('isLoggableWeight', () => {
     expect(isLoggableWeight('abc', false)).toBe(false);
     expect(isLoggableWeight('60', false)).toBe(true);
     expect(isLoggableWeight('62.5', false)).toBe(true);
+  });
+});
+
+describe('formatSeconds', () => {
+  test('formats seconds as mm:ss with zero-padding', () => {
+    expect(formatSeconds(0)).toBe('0:00');
+    expect(formatSeconds(9)).toBe('0:09');
+    expect(formatSeconds(90)).toBe('1:30');
+    expect(formatSeconds(3599)).toBe('59:59');
+  });
+  test('non-finite / negative coerce to 0:00', () => {
+    expect(formatSeconds(NaN)).toBe('0:00');
+    expect(formatSeconds(-5)).toBe('0:00');
+    expect(formatSeconds('90')).toBe('1:30');
+  });
+});
+
+describe('formatLoggedSet — exercise_type aware read-back', () => {
+  // The bug this locks off: distance reuses the weight column for metres and
+  // reps for seconds; a logged run must NOT render "400kg × 90" + a bogus
+  // "Est. max" (which a weight×reps formatter and 1RM estimate produced).
+  test('weight_reps renders weight × reps and is e1RM-eligible (unchanged)', () => {
+    expect(formatLoggedSet({ weight: 100, actualReps: 5 }, 'kg', 'weight_reps'))
+      .toEqual({ text: '100kg × 5', showE1RM: true });
+  });
+  test('an unknown / missing type defaults to the weight_reps layout', () => {
+    expect(formatLoggedSet({ weight: 60, actualReps: 8 }, 'kg'))
+      .toEqual({ text: '60kg × 8', showE1RM: true });
+    expect(formatLoggedSet({ weight: 60, actualReps: 8 }, 'kg', 'nonsense'))
+      .toEqual({ text: '60kg × 8', showE1RM: true });
+  });
+  test('weighted_bodyweight keeps weight × reps and the e1RM estimate', () => {
+    expect(formatLoggedSet({ weight: 20, actualReps: 6 }, 'kg', 'weighted_bodyweight'))
+      .toEqual({ text: '20kg × 6', showE1RM: true });
+  });
+  test('reps_only shows reps with no load and no e1RM', () => {
+    expect(formatLoggedSet({ weight: 0, actualReps: 12 }, 'kg', 'reps_only'))
+      .toEqual({ text: '12 reps', showE1RM: false });
+  });
+  test('duration renders mm:ss (seconds live in the reps column), no e1RM', () => {
+    expect(formatLoggedSet({ weight: 0, actualReps: 90 }, 'kg', 'duration'))
+      .toEqual({ text: '1:30', showE1RM: false });
+  });
+  test('distance renders value+unit · time, never kg, never an e1RM', () => {
+    // 400 m in 1:30 — weight column holds metres, reps column holds seconds.
+    expect(formatLoggedSet({ weight: 400, actualReps: 90 }, 'kg', 'distance'))
+      .toEqual({ text: '400m · 1:30', showE1RM: false });
+  });
+  test('distance uses yards for a non-metric unit', () => {
+    expect(formatLoggedSet({ weight: 400, actualReps: 90 }, 'lbs', 'distance'))
+      .toEqual({ text: '400yd · 1:30', showE1RM: false });
+  });
+  test('snake_case actual_reps is read when actualReps is absent', () => {
+    expect(formatLoggedSet({ weight: 80, actual_reps: 10 }, 'kg', 'weight_reps'))
+      .toEqual({ text: '80kg × 10', showE1RM: true });
   });
 });

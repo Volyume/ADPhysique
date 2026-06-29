@@ -65,6 +65,9 @@ jest.mock('../../database', () => ({
   getAllRecipeIngredientsForUser: jest.fn(),
   upsertRecipeIngredientFromCloud: jest.fn(),
   getRecipeIngredientUpdatedAt: jest.fn(),
+  getPlanFoldersForPush: jest.fn(),
+  insertPlanFolderFromCloud: jest.fn(),
+  getPlanFolderUpdatedAt: jest.fn(),
 }));
 
 jest.mock('../../food/db', () => ({
@@ -209,6 +212,10 @@ describe('Matrix coverage', () => {
       // tombstone, LWW pull via applyMealPlanRowFromCloud - covered in the
       // dedicated sync.mealPlans.test.js.
       'meal_plans',
+      // plan_folders (Hevy teardown R1 plan-folder organisation): push all
+      // rows incl. tombstones on id, LWW pull via insertPlanFolderFromCloud —
+      // covered by the plan_folders describe block below.
+      'plan_folders',
       // Pull-only handlers:
       'ed_pattern_flags', 'tier_history', 'daily_intake_rollups',
       // Aliased no-op handler:
@@ -602,6 +609,92 @@ describe('recipe_ingredients', () => {
     getSupabaseClient.mockReturnValue(sb);
     const result = await pushTable('recipe_ingredients', { userId: 'u1', localUserId: 'u1' });
     expect(result.errors).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// plan_folders (bidirectional, LWW, softDelete:true, PK=id)
+// ---------------------------------------------------------------------------
+
+describe('plan_folders', () => {
+  test('T1 insert push: row upserts on id with name + sort_order', async () => {
+    db.getPlanFoldersForPush.mockResolvedValue([
+      { id: 'pf-1', name: 'Pushes', sortOrder: 0, createdAt: 1, updatedAt: 1, deletedAt: null },
+    ]);
+    const sb = makeUpsertSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pushTable('plan_folders', { userId: 'u1', localUserId: 'u1' });
+
+    expect(result.count).toBe(1);
+    expect(sb._calls.from).toContain('plan_folders');
+    expect(sb._calls.upserts[0].opts).toEqual({ onConflict: 'id' });
+    expect(sb._calls.upserts[0].rows[0]).toMatchObject({ id: 'pf-1', user_id: 'u1', name: 'Pushes' });
+  });
+
+  test('T2 update push: new field values land in the upsert row', async () => {
+    db.getPlanFoldersForPush.mockResolvedValue([
+      { id: 'pf-1', name: 'Renamed', sortOrder: 3, createdAt: 1, updatedAt: 9, deletedAt: null },
+    ]);
+    const sb = makeUpsertSb();
+    getSupabaseClient.mockReturnValue(sb);
+    await pushTable('plan_folders', { userId: 'u1', localUserId: 'u1' });
+    expect(sb._calls.upserts[0].rows[0]).toMatchObject({ name: 'Renamed', sort_order: 3 });
+  });
+
+  test('T3 soft-delete push: tombstone row carries deleted_at ISO string', async () => {
+    db.getPlanFoldersForPush.mockResolvedValue([
+      { id: 'pf-tomb', name: 'Gone', sortOrder: 0, createdAt: 1, updatedAt: 9, deletedAt: 9 },
+    ]);
+    const sb = makeUpsertSb();
+    getSupabaseClient.mockReturnValue(sb);
+    await pushTable('plan_folders', { userId: 'u1', localUserId: 'u1' });
+    expect(sb._calls.upserts[0].rows[0].deleted_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  test('T4 remote insert pull: cloud row → insertPlanFolderFromCloud called', async () => {
+    const sb = makePullSb({
+      data: [{ id: 'pf-cloud', name: 'Cloud', sort_order: 0, updated_at: new Date(1).toISOString() }],
+    });
+    getSupabaseClient.mockReturnValue(sb);
+    db.getPlanFolderUpdatedAt.mockResolvedValue(0);
+    db.insertPlanFolderFromCloud.mockResolvedValue(undefined);
+
+    const result = await pullTable('plan_folders', { userId: 'u1' });
+
+    expect(result.count).toBe(1);
+    expect(db.insertPlanFolderFromCloud).toHaveBeenCalledWith('u1', expect.objectContaining({ id: 'pf-cloud' }));
+  });
+
+  test('T5 conflict (LWW): pull skips cloud row older than local updated_at', async () => {
+    const sb = makePullSb({
+      data: [
+        { id: 'pf-stale', name: 'Stale', updated_at: new Date(100).toISOString() },
+        { id: 'pf-fresh', name: 'Fresh', updated_at: new Date(99999).toISOString() },
+      ],
+    });
+    getSupabaseClient.mockReturnValue(sb);
+    db.getPlanFolderUpdatedAt.mockImplementation(async (_u, id) =>
+      id === 'pf-stale' ? 999999 : 0
+    );
+    db.insertPlanFolderFromCloud.mockResolvedValue(undefined);
+
+    const result = await pullTable('plan_folders', { userId: 'u1' });
+
+    expect(result.count).toBe(1);
+    expect(result.skipped).toBe(1);
+    expect(db.insertPlanFolderFromCloud).toHaveBeenCalledTimes(1);
+  });
+
+  test('T6 push error: batch upsert fails → errors:1, count:0', async () => {
+    db.getPlanFoldersForPush.mockResolvedValue([
+      { id: 'pf-1', name: 'Pushes', sortOrder: 0, createdAt: 1, updatedAt: 1, deletedAt: null },
+    ]);
+    const sb = makeUpsertSb({ upsertError: new Error('rls') });
+    getSupabaseClient.mockReturnValue(sb);
+    const result = await pushTable('plan_folders', { userId: 'u1', localUserId: 'u1' });
+    expect(result.errors).toBe(1);
+    expect(result.count).toBe(0);
   });
 });
 

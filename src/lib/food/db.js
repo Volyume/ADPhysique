@@ -537,19 +537,27 @@ export async function setFoodPreference(userId, foodRef, kind) {
   }
   const d = await db();
   if (kind === null) {
+    // D1-#8: SOFT-delete, not a hard DELETE. Set deleted_at + bump last_used_at
+    // so the tombstone out-clocks an older edit and propagates cross-device via
+    // the food sync `deleted` slice; a hard delete left no trace to sync, so the
+    // row re-pulled back from another device.
     await d.runAsync(
-      `DELETE FROM food_favourites WHERE user_id = ? AND food_ref = ?`,
-      [userId, foodRef]
+      `UPDATE food_favourites
+       SET deleted_at = ?, last_used_at = ?
+       WHERE user_id = ? AND food_ref = ?`,
+      [Date.now(), Date.now(), userId, foodRef]
     );
     _scheduleSync();
     return null;
   }
+  // Re-favouriting a previously deleted food clears its tombstone.
   await d.runAsync(
-    `INSERT INTO food_favourites (user_id, food_ref, last_used_at, kind)
-     VALUES (?, ?, ?, ?)
+    `INSERT INTO food_favourites (user_id, food_ref, last_used_at, kind, deleted_at)
+     VALUES (?, ?, ?, ?, NULL)
      ON CONFLICT(user_id, food_ref) DO UPDATE SET
        kind = excluded.kind,
-       last_used_at = excluded.last_used_at`,
+       last_used_at = excluded.last_used_at,
+       deleted_at = NULL`,
     [userId, foodRef, Date.now(), kind]
   );
   _scheduleSync();
@@ -562,7 +570,7 @@ export async function setFoodPreference(userId, foodRef, kind) {
 export async function getFoodPreference(userId, foodRef) {
   const d = await db();
   const row = await d.getFirstAsync(
-    `SELECT kind FROM food_favourites WHERE user_id = ? AND food_ref = ?`,
+    `SELECT kind FROM food_favourites WHERE user_id = ? AND food_ref = ? AND deleted_at IS NULL`,
     [userId, foodRef]
   );
   return row?.kind ?? null;
@@ -603,7 +611,7 @@ export async function getFavourites(userId) {
   const d = await db();
   return d.getAllAsync(
     `SELECT food_ref, last_used_at FROM food_favourites
-     WHERE user_id = ? AND kind = 'fav'
+     WHERE user_id = ? AND kind = 'fav' AND deleted_at IS NULL
      ORDER BY last_used_at DESC`,
     [userId]
   );
@@ -613,7 +621,7 @@ export async function getDislikes(userId) {
   const d = await db();
   return d.getAllAsync(
     `SELECT food_ref, last_used_at FROM food_favourites
-     WHERE user_id = ? AND kind = 'dislike'
+     WHERE user_id = ? AND kind = 'dislike' AND deleted_at IS NULL
      ORDER BY last_used_at DESC`,
     [userId]
   );
@@ -624,10 +632,27 @@ export async function getDislikes(userId) {
 export async function setWater(userId, entryDate, ml) {
   const d = await db();
   const now = Date.now();
+  // Setting water clears any prior tombstone (D1-#8): re-logging water on a
+  // previously deleted day brings the row back to life.
   await d.runAsync(
-    `INSERT INTO daily_water (user_id, entry_date, ml, updated_at) VALUES (?, ?, ?, ?)
-     ON CONFLICT(user_id, entry_date) DO UPDATE SET ml = excluded.ml, updated_at = excluded.updated_at`,
+    `INSERT INTO daily_water (user_id, entry_date, ml, updated_at, deleted_at) VALUES (?, ?, ?, ?, NULL)
+     ON CONFLICT(user_id, entry_date) DO UPDATE SET ml = excluded.ml, updated_at = excluded.updated_at, deleted_at = NULL`,
     [userId, entryDate, Math.max(0, ml), now]
+  );
+  _scheduleSync();
+}
+
+// D1-#8: SOFT-delete a day's water so the deletion propagates cross-device via
+// the food sync `deleted` slice. Set deleted_at + bump updated_at so the
+// tombstone out-clocks an older edit on the other device.
+export async function deleteWater(userId, entryDate) {
+  const d = await db();
+  const now = Date.now();
+  await d.runAsync(
+    `UPDATE daily_water
+     SET deleted_at = ?, updated_at = ?
+     WHERE user_id = ? AND entry_date = ?`,
+    [now, now, userId, entryDate]
   );
   _scheduleSync();
 }
@@ -635,7 +660,7 @@ export async function setWater(userId, entryDate, ml) {
 export async function getWater(userId, entryDate) {
   const d = await db();
   const row = await d.getFirstAsync(
-    `SELECT ml FROM daily_water WHERE user_id = ? AND entry_date = ?`,
+    `SELECT ml FROM daily_water WHERE user_id = ? AND entry_date = ? AND deleted_at IS NULL`,
     [userId, entryDate]
   );
   return row?.ml ?? 0;
@@ -1464,6 +1489,10 @@ export async function applyFavouriteFromCloud(userId, row) {
   if (!row?.food_ref) return;
   const d = await db();
   const lastUsedAt = _isoToMs(row.last_used_at) ?? Date.now();
+  // D1-#8: carry the tombstone so a remote delete reaches this device. Under the
+  // same last_used_at LWW gate below, a newer cloud row with deleted_at set
+  // tombstones the local row (and a newer cloud un-delete revives it).
+  const deletedAt = _isoToMs(row.deleted_at);
   // Cloud rows that pre-date mig 048 don't have `kind`; default to
   // 'fav' so they keep behaving exactly as before. Reject anything
   // outside the validated set so a malformed row can't poison local
@@ -1475,13 +1504,14 @@ export async function applyFavouriteFromCloud(userId, row) {
   // whole update on the cloud row being newer-or-equal, mirroring the water
   // applier, so a newer local kind is never clobbered by an older cloud row.
   await d.runAsync(
-    `INSERT INTO food_favourites (user_id, food_ref, last_used_at, kind)
-     VALUES (?, ?, ?, ?)
+    `INSERT INTO food_favourites (user_id, food_ref, last_used_at, kind, deleted_at)
+     VALUES (?, ?, ?, ?, ?)
      ON CONFLICT(user_id, food_ref) DO UPDATE SET
        last_used_at = excluded.last_used_at,
-       kind = excluded.kind
+       kind = excluded.kind,
+       deleted_at = excluded.deleted_at
      WHERE excluded.last_used_at >= food_favourites.last_used_at`,
-    [userId, row.food_ref, lastUsedAt, kind]
+    [userId, row.food_ref, lastUsedAt, kind, deletedAt]
   );
 }
 
@@ -1489,14 +1519,18 @@ export async function applyWaterFromCloud(userId, row) {
   if (!row?.entry_date) return;
   const d = await db();
   const updatedAt = _isoToMs(row.updated_at) ?? Date.now();
+  // D1-#8: carry the tombstone so a remote delete reaches this device, gated by
+  // the same updated_at LWW comparison.
+  const deletedAt = _isoToMs(row.deleted_at);
   await d.runAsync(
-    `INSERT INTO daily_water (user_id, entry_date, ml, updated_at)
-     VALUES (?, ?, ?, ?)
+    `INSERT INTO daily_water (user_id, entry_date, ml, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?)
      ON CONFLICT(user_id, entry_date) DO UPDATE SET
        ml = excluded.ml,
-       updated_at = excluded.updated_at
+       updated_at = excluded.updated_at,
+       deleted_at = excluded.deleted_at
      WHERE excluded.updated_at >= daily_water.updated_at`,
-    [userId, row.entry_date, Math.max(0, row.ml ?? 0), updatedAt]
+    [userId, row.entry_date, Math.max(0, row.ml ?? 0), updatedAt, deletedAt]
   );
 }
 

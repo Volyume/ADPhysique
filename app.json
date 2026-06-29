@@ -114,6 +114,14 @@
     "plugins": [
       "expo-secure-store",
       [
+        "expo-media-library",
+        {
+          "photosPermission": "Volyume accesses your photos so you can save your workout share cards to your gallery.",
+          "savePhotosPermission": "Volyume saves your workout share cards to your gallery.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      [
         "expo-quick-actions",
         {
           "iosActions": [

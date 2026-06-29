@@ -98,6 +98,7 @@ async function _doInit() {
       subregion TEXT,
       is_custom INTEGER DEFAULT 0,
       notes TEXT,
+      exercise_type TEXT DEFAULT 'weight_reps',
       created_at INTEGER,
       updated_at INTEGER
     );
@@ -1025,6 +1026,7 @@ const SCHEMA_MIGRATIONS = [
       exercise_category TEXT,
       increment_kg REAL,
       notes TEXT,
+      exercise_type TEXT DEFAULT 'weight_reps',
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       deleted_at INTEGER,
@@ -1364,6 +1366,55 @@ const SCHEMA_MIGRATIONS = [
     'ALTER TABLE food_entries ADD COLUMN is_planned INTEGER NOT NULL DEFAULT 0',
     'CREATE INDEX IF NOT EXISTS idx_food_entries_user_date_planned ON food_entries(user_id, entry_date, is_planned) WHERE deleted_at IS NULL',
   ],
+  // Plan folders (Hevy teardown 02-routines-programs.md, R1 "Routine/plan
+  // folders", P1). Organise the My Plans list (= programmes) into collapsible
+  // folders. FREE feature, no Pro gate. Cloud parity:
+  // supabase/migrate_089_plan_folders.sql. Timestamps are epoch ms (INTEGER) to
+  // match the LWW sync contract; deleted_at carries a soft-delete tombstone for
+  // sync parity. programmes.folder_id is nullable: deleting a folder UNFILES its
+  // plans (folder_id -> NULL) and NEVER deletes a plan.
+  [
+    `CREATE TABLE IF NOT EXISTS plan_folders (
+      id          TEXT PRIMARY KEY NOT NULL,
+      user_id     TEXT NOT NULL,
+      name        TEXT NOT NULL,
+      sort_order  INTEGER NOT NULL DEFAULT 0,
+      deleted_at  INTEGER,
+      created_at  INTEGER NOT NULL,
+      updated_at  INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_plan_folders_user ON plan_folders(user_id, sort_order) WHERE deleted_at IS NULL',
+    'ALTER TABLE programmes ADD COLUMN folder_id TEXT',
+  ],
+  // Food delete tombstones (Hevy teardown D1 #8). food_favourites and
+  // daily_water had no deleted_at, so their deletes were device-local: removing
+  // a favourite/water row never reached the cloud and re-pulled back from
+  // another device. Add a soft-delete tombstone to both, matching the cloud
+  // counterpart in supabase/migrate_090_food_delete_tombstones.sql. Deletes now
+  // set deleted_at (see setFoodPreference / setWater) and normal reads exclude
+  // tombstoned rows; the food sync slices carry a real `deleted` slice and apply
+  // remote tombstones on pull. Additive + nullable: the frozen old AAB never
+  // writes the column and reads as before. Duplicate-column is tolerated by
+  // isBenignMigrationError.
+  [
+    'ALTER TABLE food_favourites ADD COLUMN deleted_at INTEGER',
+    'ALTER TABLE daily_water ADD COLUMN deleted_at INTEGER',
+  ],
+  // Exercise TYPE axis (Hevy teardown 03-exercise-library.md, R3 "exerciseType",
+  // P2). One logger handles reps-only / duration / distance / weighted-bodyweight
+  // exercises, not only weight x reps. exercise_type drives which set-input
+  // fields render; it does NOT change how a weight_reps row is stored or scored.
+  // Default 'weight_reps' for every existing and new row keeps the weight x reps
+  // path byte-identical. No new workout_sets columns: duration seconds reuse the
+  // reps field and distance metres reuse the weight field (see SetEntry /
+  // ActiveWorkoutScreen). Cloud parity: supabase/migrate_091_exercise_type.sql.
+  // Additive + idempotent; duplicate-column is tolerated by isBenignMigrationError.
+  [
+    `ALTER TABLE exercises ADD COLUMN exercise_type TEXT DEFAULT 'weight_reps'`,
+    `ALTER TABLE custom_exercises ADD COLUMN exercise_type TEXT DEFAULT 'weight_reps'`,
+    `UPDATE exercises SET exercise_type = 'weight_reps' WHERE exercise_type IS NULL`,
+    `UPDATE custom_exercises SET exercise_type = 'weight_reps' WHERE exercise_type IS NULL`,
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -1521,9 +1572,9 @@ export async function insertExerciseWithId(id, data) {
        stimulus_to_fatigue_ratio, subregion, is_custom, notes, created_at, updated_at,
        exercise_category, increment_kg,
        equipment_category, machine_type, force, laterality, difficulty,
-       machine_ok, home_ok, cue, equipment_profiles)
+       machine_ok, home_ok, cue, equipment_profiles, exercise_type)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-             ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.name,
@@ -1552,6 +1603,7 @@ export async function insertExerciseWithId(id, data) {
       data.homeOk ? 1 : 0,
       data.cue ?? null,
       data.equipmentProfiles ? JSON.stringify(data.equipmentProfiles) : null,
+      data.exerciseType ?? 'weight_reps',
     ],
   );
   _invalidateExercisesCache();
@@ -2337,6 +2389,120 @@ export async function copyRoutineFromLibrary(routineId, userId) {
     [routineId, newRoutine.id],
   );
   return { ...newRoutine, sourceRoutineId: routineId, isLibrary: 0 };
+}
+
+// ─── Plan Folders ─────────────────────────────────────────────────────────────────────────────────────────
+// Organise the My Plans list (= programmes) into collapsible folders. FREE
+// feature (organisation of a free feature), NO Pro gate. Cloud parity:
+// supabase/migrate_089_plan_folders.sql. A folder NEVER owns a plan's
+// lifecycle: deleting a folder UNFILES its plans (folder_id -> null) and never
+// deletes a plan.
+
+export async function getPlanFolders(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT * FROM plan_folders
+     WHERE user_id = ? AND deleted_at IS NULL
+     ORDER BY sort_order ASC, created_at ASC`,
+    [userId],
+  );
+  return rows.map(rowToCamel);
+}
+
+export async function createPlanFolder(userId, name) {
+  const d = await db();
+  const id = uid();
+  const now = Date.now();
+  // New folders sort after existing ones for this user.
+  const maxRow = await d.getFirstAsync(
+    'SELECT MAX(sort_order) AS maxSort FROM plan_folders WHERE user_id = ? AND deleted_at IS NULL',
+    [userId],
+  );
+  const sortOrder = (maxRow?.maxSort ?? -1) + 1;
+  await d.runAsync(
+    `INSERT INTO plan_folders (id, user_id, name, sort_order, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [id, userId, name, sortOrder, now, now],
+  );
+  _scheduleSync();
+  return { id, userId, name, sortOrder, createdAt: now, updatedAt: now };
+}
+
+export async function renamePlanFolder(folderId, name) {
+  const d = await db();
+  await d.runAsync(
+    'UPDATE plan_folders SET name = ?, updated_at = ? WHERE id = ?',
+    [name, Date.now(), folderId],
+  );
+  _scheduleSync();
+}
+
+// Deleting a folder UNFILES its plans (programmes.folder_id -> NULL) and tombstones
+// the folder. The plans themselves are NEVER touched beyond clearing folder_id.
+export async function deletePlanFolder(folderId) {
+  const d = await db();
+  const now = Date.now();
+  await runInTransaction(d, async () => {
+    await d.runAsync(
+      'UPDATE programmes SET folder_id = NULL, updated_at = ? WHERE folder_id = ?',
+      [now, folderId],
+    );
+    await d.runAsync(
+      'UPDATE plan_folders SET deleted_at = ?, updated_at = ? WHERE id = ?',
+      [now, now, folderId],
+    );
+  });
+  _scheduleSync();
+}
+
+// Move a plan into a folder, or out of any folder when folderId is null.
+export async function setPlanFolder(planId, folderId) {
+  const d = await db();
+  await d.runAsync(
+    'UPDATE programmes SET folder_id = ?, updated_at = ? WHERE id = ?',
+    [folderId ?? null, Date.now(), planId],
+  );
+  _scheduleSync();
+}
+
+// Sync helpers (mirror the cardio_log contract). Push window keeps the batch
+// small; soft-deleted rows are included so a folder deletion propagates.
+export async function getPlanFoldersForPush(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM plan_folders WHERE user_id = ?',
+    [userId],
+  );
+  return rows.map(rowToCamel);
+}
+
+export async function getPlanFolderUpdatedAt(userId, id) {
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT updated_at FROM plan_folders WHERE user_id = ? AND id = ?',
+    [userId, id],
+  );
+  return row?.updated_at ?? 0;
+}
+
+export async function insertPlanFolderFromCloud(userId, f) {
+  const d = await db();
+  const toMs = (t) => (typeof t === 'string' ? new Date(t).getTime() : (t ?? null));
+  await d.runAsync(
+    `INSERT INTO plan_folders (id, user_id, name, sort_order, deleted_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       name = excluded.name,
+       sort_order = excluded.sort_order,
+       deleted_at = excluded.deleted_at,
+       updated_at = excluded.updated_at`,
+    [
+      f.id, userId, f.name, f.sort_order ?? 0,
+      toMs(f.deleted_at),
+      toMs(f.created_at) ?? Date.now(),
+      toMs(f.updated_at) ?? Date.now(),
+    ],
+  );
 }
 
 // ─── Routine Exercises ────────────────────────────────────────────────────────────────────────────────────
@@ -4770,12 +4936,21 @@ export async function getBestLiftThisWeek(userId, weekStart) {
  */
 export async function getLifetimeTonnage(userId) {
   const d = await db();
+  // Exclude 'distance'/'duration' exercises: those repurpose the weight column
+  // to store metres (and reps for seconds), so weight × reps is not load and
+  // would inflate tonnage with garbage. The exercise_type lives on `exercises`
+  // (library) or `custom_exercises` (per-user, composite PK user_id+id); we LEFT
+  // JOIN both so an unknown / unmatched exercise defaults to load-bearing
+  // (weight_reps) and the figure is byte-identical for normal lifting sets.
   const row = await d.getFirstAsync(
     `SELECT COALESCE(SUM(ws.weight * ws.actual_reps), 0) AS tonnage
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
+     LEFT JOIN exercises e ON e.id = ws.exercise_id
+     LEFT JOIN custom_exercises ce ON ce.id = ws.exercise_id AND ce.user_id = ws.user_id
      WHERE ws.user_id = ? AND w.is_completed = 1
-       AND (ws.set_type IS NULL OR ws.set_type != 'warmup') AND ws.actual_reps > 0 AND ws.weight > 0`,
+       AND (ws.set_type IS NULL OR ws.set_type != 'warmup') AND ws.actual_reps > 0 AND ws.weight > 0
+       AND COALESCE(ce.exercise_type, e.exercise_type, 'weight_reps') NOT IN ('distance', 'duration')`,
     [userId],
   );
   return Math.round(row?.tonnage ?? 0);

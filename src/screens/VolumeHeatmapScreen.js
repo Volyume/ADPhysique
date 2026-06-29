@@ -3,7 +3,7 @@ import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, stateColors } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import InfoTooltip from '../components/InfoTooltip';
 import BodyDiagramHeatmap from '../components/BodyDiagramHeatmap';
@@ -20,6 +20,18 @@ import WindowChips from '../components/WindowChips';
 import VolyumeChart from '../components/VolyumeChart';
 import { VOLUME_WINDOWS, windowByKey, volumeTakeaway } from '../lib/chartWindows';
 import { track } from '../lib/engineTelemetry';
+import { freshnessBand } from '../lib/muscleRecovery';
+
+// Freshness band -> CVD-safe semantic colour + plain-English label. Reuses the
+// shared stateColors grammar (success/warning/error tokens, which carry the
+// colour-blind-safe Okabe-Ito swaps) so the recovery layer never invents a new
+// hue that fails CVD. Recently trained reads as 'act'/error, mid-recovery as
+// 'watch'/warning, fully recovered as 'onTrack'/success.
+const FRESHNESS_META = {
+  fresh: { get color() { return stateColors.onTrack; }, label: 'Fresh' },
+  recovering: { get color() { return stateColors.watch; }, label: 'Recovering' },
+  fatigued: { get color() { return stateColors.act; }, label: 'Recently trained' },
+};
 
 const WINDOW_OPTIONS = [
   { weeks: 1, label: '1 week' },
@@ -287,6 +299,22 @@ export default function VolumeHeatmapScreen() {
           } />
         </View>
 
+        {/* Recovery / freshness legend. A distinct layer from the volume bands
+            above: this reads "how recently was each muscle trained", not "is it
+            at target". Numbers/labels first, calm — a small dot per band. */}
+        <View style={styles.legendRow}>
+          <LegendItem color={FRESHNESS_META.fresh.color} label="Fresh" />
+          <LegendItem color={FRESHNESS_META.recovering.color} label="Recovering" />
+          <LegendItem color={FRESHNESS_META.fatigued.color} label="Recently trained" />
+          <InfoTooltip size={11} text={
+            'A second, separate view: how recently each muscle was trained.\n\n' +
+            '  Fresh: recovered and ready\n' +
+            '  Recovering: part-way through its recovery window\n' +
+            '  Recently trained: trained today\n\n' +
+            'Each muscle has a sensible recovery window, so larger muscles take longer to read as fresh. The dot beside each bar shows its current state.'
+          } />
+        </View>
+
         {/* Muscle Rows */}
         <View
           ref={heatmapCardRef}
@@ -338,14 +366,31 @@ export default function VolumeHeatmapScreen() {
                 </View>
                 <Text style={[styles.setsCount, { color }]}>{sets}</Text>
                 <Text style={styles.mrvLabel}>/{mrv}</Text>
-                {lastTrainedMap[muscle] != null && (
-                  <Text style={[
-                    styles.lastTrainedChip,
-                    lastTrainedMap[muscle].daysAgo <= 1 && styles.lastTrainedRecent,
-                  ]}>
-                    {formatLastTrained(lastTrainedMap[muscle].daysAgo)}
-                  </Text>
-                )}
+                {lastTrainedMap[muscle] != null && (() => {
+                  // Reuse the already-computed days-since-trained as the
+                  // freshness input. The dot is the recovery layer; the text is
+                  // the existing "last trained" recency. Null band (no data)
+                  // renders no dot, matching the chip's null-safety.
+                  const band = freshnessBand(lastTrainedMap[muscle].daysAgo, muscle);
+                  const meta = band && FRESHNESS_META[band];
+                  return (
+                    <View style={styles.freshnessGroup}>
+                      {meta && (
+                        <View
+                          style={[styles.freshnessDot, { backgroundColor: meta.color }]}
+                          accessibilityRole="image"
+                          accessibilityLabel={`${MUSCLE_DISPLAY_NAMES[muscle]} ${meta.label}`}
+                        />
+                      )}
+                      <Text style={[
+                        styles.lastTrainedChip,
+                        lastTrainedMap[muscle].daysAgo <= 1 && styles.lastTrainedRecent,
+                      ]}>
+                        {formatLastTrained(lastTrainedMap[muscle].daysAgo)}
+                      </Text>
+                    </View>
+                  );
+                })()}
               </View>
             );
           })}
@@ -602,6 +647,16 @@ const styles = StyleSheet.create({
     ...type.num('caption'),
     color: colors.textMuted,
     width: 24,
+  },
+  freshnessGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  freshnessDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   lastTrainedChip: {
     fontSize: fontSize.xs,

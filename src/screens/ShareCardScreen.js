@@ -24,13 +24,21 @@ import { buildWeeklyRecapParams } from '../lib/shareCard/greatWeek';
 // Optional native modules — guarded so the screen still mounts (e.g. in tests
 // or before a rebuild) without them; the card just can't render/share until the
 // real build provides Skia + the sharing packages.
-let FileSystem; let Sharing; let Print; let Asset; let Skia; let matchFont; let ImagePicker;
+let FileSystem; let Sharing; let Print; let Asset; let Skia; let matchFont; let ImagePicker; let MediaLibrary;
 try { FileSystem = require('expo-file-system/legacy'); } catch (_) { /* optional */ }
 try { Sharing = require('expo-sharing'); } catch (_) { /* optional */ }
 try { Print = require('expo-print'); } catch (_) { /* optional */ }
 try { Asset = require('expo-asset').Asset; } catch (_) { /* optional */ }
 try { ImagePicker = require('expo-image-picker'); } catch (_) { /* optional */ }
+try { MediaLibrary = require('expo-media-library'); } catch (_) { /* optional */ }
 try { const S = require('@shopify/react-native-skia'); Skia = S.Skia; matchFont = S.matchFont; } catch (_) { /* optional */ }
+
+// "Share to Stories" goes straight to the OS share sheet. The Instagram
+// Stories deep link (instagram-stories://share) cannot carry the rendered
+// image via a bare Linking.openURL — the full background+sticker handoff needs
+// the pasteboard (iOS) / intent extras (Android) per Instagram's Stories API —
+// so a deep link would open an EMPTY composer. The share sheet reliably hands
+// the PNG to Instagram (or any target the user picks), which is what we want.
 
 const WORDMARK = require('../../assets/volyume-wordmark.png');
 // System typeface family per platform; the card measures text with the active
@@ -68,6 +76,8 @@ export default function ShareCardScreen({ route }) {
   const [format, setFormat] = useState('square');
   const [sharing, setSharing] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [savingToGallery, setSavingToGallery] = useState(false);
+  const [sharingToStories, setSharingToStories] = useState(false);
 
   const [showVolume, setShowVolume] = useState(true);
   const [showDate, setShowDate] = useState(true);
@@ -232,6 +242,19 @@ export default function ShareCardScreen({ route }) {
     setPreviewB64(renderCardBase64(PREVIEW_RENDER_W));
   }, [renderCardBase64]);
 
+  // Render the export-resolution PNG and write it to a cache file, returning the
+  // file URI. Shared by the OS share sheet, Save to gallery and Instagram
+  // Stories so all three export exactly the same image. Returns null if the
+  // card can't be generated.
+  const renderCardToFile = useCallback(async () => {
+    const b64 = renderCardBase64(1080);
+    if (!b64) return null;
+    const filename = `volyume-${cardType}-card-${isSquare ? 'square' : 'story'}.png`;
+    const uri = (FileSystem.cacheDirectory || '') + filename;
+    await FileSystem.writeAsStringAsync(uri, b64, { encoding: FileSystem.EncodingType.Base64 });
+    return uri;
+  }, [renderCardBase64, cardType, isSquare]);
+
   async function handleShare() {
     if (!Skia || !FileSystem || !Sharing) {
       toast.show('Sharing needs a rebuild with the Skia + sharing packages installed', { variant: 'error', duration: 5000 });
@@ -243,11 +266,8 @@ export default function ShareCardScreen({ route }) {
     }
     setSharing(true);
     try {
-      const b64 = renderCardBase64(1080);
-      if (!b64) { toast.show("Couldn't generate card, try again", { variant: 'error' }); return; }
-      const filename = `volyume-${cardType}-card-${isSquare ? 'square' : 'story'}.png`;
-      const uri = (FileSystem.cacheDirectory || '') + filename;
-      await FileSystem.writeAsStringAsync(uri, b64, { encoding: FileSystem.EncodingType.Base64 });
+      const uri = await renderCardToFile();
+      if (!uri) { toast.show("Couldn't generate card, try again", { variant: 'error' }); return; }
       const canShare = await Sharing.isAvailableAsync();
       if (!canShare) { toast.show('Sharing not available on this device', { variant: 'warning' }); return; }
       await Sharing.shareAsync(uri, {
@@ -260,6 +280,65 @@ export default function ShareCardScreen({ route }) {
       toast.show("Couldn't generate card, try again", { variant: 'error' });
     } finally {
       setSharing(false);
+    }
+  }
+
+  // Save the rendered card straight to the device gallery (expo-media-library).
+  // Asks for the add-photos permission; a denial is handled with a calm message,
+  // never a crash.
+  async function handleSaveToGallery() {
+    if (!Skia || !FileSystem || !MediaLibrary) {
+      toast.show('Saving to your gallery needs a rebuild with the media-library package', { variant: 'error', duration: 5000 });
+      return;
+    }
+    if (!typefaces) {
+      toast.show('Not ready yet, wait a moment and try again', { variant: 'info' });
+      return;
+    }
+    setSavingToGallery(true);
+    try {
+      const perm = await MediaLibrary.requestPermissionsAsync();
+      if (!perm.granted) {
+        toast.show('Gallery access is needed to save the card. You can still use Share.', { variant: 'warning', duration: 5000 });
+        return;
+      }
+      const uri = await renderCardToFile();
+      if (!uri) { toast.show("Couldn't generate card, try again", { variant: 'error' }); return; }
+      await MediaLibrary.saveToLibraryAsync(uri);
+      toast.show('Saved to your gallery', { variant: 'success' });
+    } catch (_e) {
+      toast.show("Couldn't save the card, try again", { variant: 'error' });
+    } finally {
+      setSavingToGallery(false);
+    }
+  }
+
+  // Share to Stories. Renders the PNG and opens the OS share sheet, which
+  // carries the image to Instagram (or any target). We deliberately do NOT use
+  // the instagram-stories:// deep link: a bare openURL can't attach the image,
+  // so it would land the user in an empty Story composer.
+  async function handleShareToStories() {
+    if (!Skia || !FileSystem || !Sharing) {
+      toast.show('Sharing needs a rebuild with the Skia + sharing packages installed', { variant: 'error', duration: 5000 });
+      return;
+    }
+    if (!typefaces) {
+      toast.show('Not ready yet, wait a moment and try again', { variant: 'info' });
+      return;
+    }
+    setSharingToStories(true);
+    try {
+      let uri = await renderCardToFile();
+      if (!uri) { toast.show("Couldn't generate card, try again", { variant: 'error' }); return; }
+      const canShare = await Sharing.isAvailableAsync();
+      if (!canShare) { toast.show('Sharing is not available on this device', { variant: 'warning', duration: 5000 }); return; }
+      await Sharing.shareAsync(uri, {
+        mimeType: 'image/png', UTI: 'public.png', dialogTitle: 'Share to Stories',
+      });
+    } catch (_e) {
+      toast.show("Couldn't open the share sheet, try again", { variant: 'error' });
+    } finally {
+      setSharingToStories(false);
     }
   }
 
@@ -503,6 +582,47 @@ export default function ShareCardScreen({ route }) {
           )}
         </TouchableOpacity>
 
+        {/* Share to Instagram Stories: deep-links to the Stories composer with
+            the rendered PNG, falling back to the OS share sheet if Instagram
+            isn't installed. */}
+        <TouchableOpacity
+          style={[styles.secondaryBtn, (sharing || sharingToStories) && styles.btnDisabled]}
+          onPress={handleShareToStories}
+          disabled={sharing || sharingToStories}
+          accessibilityRole="button"
+          accessibilityLabel="Share to Instagram Stories"
+        >
+          {sharingToStories ? (
+            <ActivityIndicator color={colors.primary} size="small" />
+          ) : (
+            <>
+              <Ionicons name="logo-instagram" size={20} color={colors.primary} />
+              <Text style={styles.secondaryBtnText}>Share to Instagram Stories</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        {/* Save to gallery: writes the rendered card straight to the device
+            gallery. Only shown when the media-library package is in the build. */}
+        {MediaLibrary ? (
+        <TouchableOpacity
+          style={[styles.secondaryBtn, (sharing || savingToGallery) && styles.btnDisabled]}
+          onPress={handleSaveToGallery}
+          disabled={sharing || savingToGallery}
+          accessibilityRole="button"
+          accessibilityLabel="Save to gallery"
+        >
+          {savingToGallery ? (
+            <ActivityIndicator color={colors.primary} size="small" />
+          ) : (
+            <>
+              <Ionicons name="download-outline" size={20} color={colors.primary} />
+              <Text style={styles.secondaryBtnText}>Save to gallery</Text>
+            </>
+          )}
+        </TouchableOpacity>
+        ) : null}
+
         {/* Save as PDF: a clean one-page summary for a print/share pack. */}
         <TouchableOpacity
           style={[styles.pdfBtn, (sharing || exportingPdf) && styles.btnDisabled]}
@@ -603,4 +723,10 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: colors.primary, marginTop: spacing.md,
   },
   pdfBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.primary },
+  secondaryBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.sm, borderRadius: radius.lg, paddingVertical: spacing.lg,
+    borderWidth: 1.5, borderColor: colors.primary, marginTop: spacing.md,
+  },
+  secondaryBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.primary },
 });

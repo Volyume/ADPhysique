@@ -21,8 +21,17 @@
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 
+import { REST_TIMER_CATEGORY_ID } from './categories';
+
 const NOTIF_ID = 'volyume_active_workout';
 const CHANNEL_ID = 'volyume_active_workout';
+
+// The live rest-timer notification (U1 / 13-engagement-notifications R3).
+// Separate id + the silent 'rest-timer' channel (channels.js) so updating
+// the countdown body every tick never buzzes the phone. categoryIdentifier
+// attaches the four action buttons registered via registerRestTimerCategory().
+const REST_NOTIF_ID = 'volyume_rest_timer';
+const REST_CHANNEL_ID = 'rest-timer';
 
 // Feature flag for the foreground-service-backed notification path.
 // When false, we use the standard expo-notifications sticky path
@@ -194,4 +203,82 @@ function formatElapsed(seconds) {
   const m = Math.floor(s / 60);
   const r = s % 60;
   return `${m}:${String(r).padStart(2, '0')}`;
+}
+
+function formatRest(seconds) {
+  const s = Math.max(0, Math.floor(seconds));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return m > 0 ? `${m}:${String(r).padStart(2, '0')}` : `${r}s`;
+}
+
+let restChannelEnsured = false;
+async function ensureRestChannel() {
+  if (restChannelEnsured || Platform.OS !== 'android') return;
+  try {
+    await Notifications.setNotificationChannelAsync(REST_CHANNEL_ID, {
+      name: 'Rest timer',
+      importance: Notifications.AndroidImportance.LOW,
+      sound: null,
+      vibrationPattern: [0],
+      enableVibrate: false,
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      bypassDnd: false,
+      showBadge: false,
+    });
+    restChannelEnsured = true;
+  } catch (_) { /* notif call will surface any failure */ }
+}
+
+/**
+ * Present (or update) the live rest-timer notification with the four
+ * action buttons. Re-calling with the same id REPLACES the notification,
+ * so this is the update path too — call it on each tick. Silent channel,
+ * no sound/vibration, so a per-second body update never buzzes the phone.
+ *
+ *   restRemainingSec   countdown shown in the body
+ *   workoutName        title context, optional
+ *   exerciseName       appended to the body, optional
+ *
+ * Android-only (iOS ongoing notifications need Live Activities). No-op
+ * when there's no time left — the caller dismisses on end instead.
+ */
+export async function presentRestTimerNotification({
+  restRemainingSec = 0, workoutName, exerciseName,
+} = {}) {
+  if (Platform.OS !== 'android') return;
+  if (!(restRemainingSec > 0)) return;
+  try {
+    await ensureRestChannel();
+    const title = workoutName ? `Resting · ${workoutName}` : 'Resting';
+    const body = exerciseName
+      ? `${formatRest(restRemainingSec)}  ·  ${exerciseName}`
+      : formatRest(restRemainingSec);
+    await Notifications.scheduleNotificationAsync({
+      identifier: REST_NOTIF_ID,
+      content: {
+        title,
+        body,
+        data: { type: 'rest_timer' },
+        categoryIdentifier: REST_TIMER_CATEGORY_ID,
+        sticky: true,
+        autoDismiss: false,
+        priority: Notifications.AndroidNotificationPriority.LOW,
+        sound: null,
+      },
+      trigger: null, // immediate; re-calling replaces the existing one
+    });
+  } catch (_) { /* never break the rest flow on a notif failure */ }
+}
+
+/**
+ * Dismiss the live rest-timer notification. Call when the rest ends, is
+ * skipped, or the workout stops. Safe to call when nothing is showing.
+ */
+export async function dismissRestTimerNotification() {
+  if (Platform.OS !== 'android') return;
+  try {
+    await Notifications.dismissNotificationAsync(REST_NOTIF_ID);
+    await Notifications.cancelScheduledNotificationAsync(REST_NOTIF_ID).catch(() => {});
+  } catch (_) { /* tolerate */ }
 }

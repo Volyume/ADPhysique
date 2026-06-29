@@ -203,6 +203,8 @@ function _favouriteToCloud(row, userId) {
     food_ref: row.food_ref,
     last_used_at: _msToISOorNull(row.last_used_at),
     kind: row.kind ?? 'fav',
+    // D1-#8: carry the tombstone so a delete propagates (cloud migration 090).
+    deleted_at: _msToISOorNull(row.deleted_at),
   };
 }
 
@@ -212,7 +214,19 @@ function _waterToCloud(row, userId) {
     entry_date: row.entry_date,
     ml: row.ml,
     updated_at: _msToISOorNull(row.updated_at),
+    // D1-#8: carry the tombstone so a delete propagates (cloud migration 090).
+    deleted_at: _msToISOorNull(row.deleted_at),
   };
+}
+
+// food_favourites + daily_water have no created/updated split in the food
+// RPC (pull always returns created:[]); a row is either live (updated) or
+// tombstoned (deleted). Split on deleted_at rather than the created_at ===
+// updated_at heuristic used by _bucketFoodRow (these tables lack that pair).
+function _bucketTombstone(rows, mapper, userId) {
+  const out = { created: [], updated: [], deleted: [] };
+  for (const r of rows) out[r.deleted_at ? 'deleted' : 'updated'].push(mapper(r, userId));
+  return out;
 }
 
 // Local updated_at of a source row in ms. Rows come straight from the
@@ -259,21 +273,18 @@ async function _doPushAll(sb, { userId, localUserId }) {
   // rest (see the resilience note in the file header).
   // Third tuple element is the SOURCE rows (not just a count) so the
   // watermark can advance to their newest local updated_at (see SYNC-5 below).
-  // D1-#8 (FOUNDER DECISION NEEDED — documented, not fixed): food_favourites
-  // and daily_water force every fetched row into `updated` with deleted: [],
-  // and neither cloud table has a tombstone column. These deletes are
-  // therefore CURRENTLY DEVICE-LOCAL: removing a favourite/water row on one
-  // device never reaches the cloud, so it re-pulls back from another device.
-  // Making cross-device delete-sync work would need a tombstone column on
-  // these tables + a real `deleted` slice here (and a delete-aware apply on
-  // pull) — a schema + behaviour change. Flagged for founder; left unchanged.
+  // D1-#8 (FIXED, cloud migration 090): food_favourites and daily_water now
+  // carry a deleted_at tombstone, so a delete on this device is split into the
+  // `deleted` slice (via _bucketTombstone) and propagates to the cloud + other
+  // devices instead of being device-local. The change query already returns
+  // tombstoned rows because deleting bumps last_used_at / updated_at.
   const slices = [
     ['food_entries',    bucket(entries, _foodEntryToCloud),  entries],
     ['custom_foods',    bucket(customs, _customFoodToCloud),  customs],
     ['saved_meals',     bucket(meals, _savedMealToCloud),     meals],
     ['recipes',         bucket(recipesRows, _recipeToCloud),  recipesRows],
-    ['food_favourites', { created: [], updated: favs.map((f) => _favouriteToCloud(f, userId)), deleted: [] }, favs],
-    ['daily_water',     { created: [], updated: water.map((w) => _waterToCloud(w, userId)), deleted: [] }, water],
+    ['food_favourites', _bucketTombstone(favs, _favouriteToCloud, userId), favs],
+    ['daily_water',     _bucketTombstone(water, _waterToCloud, userId), water],
   ];
 
   const counts = { ...EMPTY_COUNTS };

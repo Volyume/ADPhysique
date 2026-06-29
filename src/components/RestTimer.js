@@ -5,11 +5,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useShallow } from 'zustand/react/shallow';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
-// Rest-timer notifications removed, see comment in the timer
-// useEffect below. Keep the file in tree because the timer
-// component still uses imports from theme + store + haptics.
 import { playRestBeep, preloadRestBeeps } from '../lib/restSound';
 import { clampRestDelta } from '../lib/restTimerMath';
+// Live lock-screen rest-timer notification (U1 / 13-engagement R3). The old
+// "Set N of M" bug that disabled the workout notification is solved by
+// countProgressSets (workoutHelpers); this surface shows only the rest
+// countdown + the four action buttons, no set numbering, so it can't recur.
+import {
+  presentRestTimerNotification,
+  dismissRestTimerNotification,
+} from '../lib/notifications/activeWorkout';
 
 // Compact variant on short screens (COMP-001 step 6): smaller numeral and a
 // 56pt row so the timer never pushes the set inputs below the fold. U-A-1:
@@ -51,17 +56,32 @@ export default function RestTimer() {
     if (restTimerActive) {
       setShowDone(false);
       intervalRef.current = setInterval(() => { tickRestTimer(); }, 1000);
-      // Lock-screen / Live Activity notification disabled. The
-      // notification path reported the wrong "Set N of M" label
-      // (showed N=current+1 against M=target, which read as "Set 3
-      // of 2" mid-set) and added more friction than it removed,
-      // per user feedback during beta-prep. The in-app countdown
-      // card with Skip / ±15 stays.
     } else {
       clearInterval(intervalRef.current);
+      // Rest ended / skipped / stopped: tear down the lock-screen notification.
+      dismissRestTimerNotification().catch(() => {});
     }
     return () => clearInterval(intervalRef.current);
   }, [restTimerActive, tickRestTimer]);
+
+  // Live lock-screen notification with action buttons. Present/update on
+  // each tick (re-presenting the same id replaces the body, silent channel
+  // so it never buzzes); dismiss the moment the timer is no longer active.
+  // The actions (Complete set / ±15s / Skip rest) are handled in the
+  // notifications listener and only act while a workout + rest are live.
+  useEffect(() => {
+    if (!restTimerActive || restTimerRemaining <= 0) {
+      dismissRestTimerNotification().catch(() => {});
+      return;
+    }
+    const s = useAppStore.getState();
+    const ex = s.workoutExercises?.[s.currentExerciseIndex];
+    presentRestTimerNotification({
+      restRemainingSec: restTimerRemaining,
+      workoutName: s.activeWorkout?.name,
+      exerciseName: ex?.exercise?.name ?? ex?.name,
+    }).catch(() => {});
+  }, [restTimerActive, restTimerRemaining]);
 
   // Foreground re-sync: JS timers are suspended while the app is backgrounded,
   // so the interval above stops ticking. tickRestTimer now recomputes the
@@ -126,6 +146,9 @@ export default function RestTimer() {
     timeoutsRef.current.forEach(clearTimeout);
     timeoutsRef.current = [];
     clearInterval(intervalRef.current);
+    // Clear the lock-screen notification too, so a sign-out / navigation
+    // mid-rest doesn't leave a phantom rest notification on the lock screen.
+    dismissRestTimerNotification().catch(() => {});
   }, []);
 
   function handleAdjust(delta) {

@@ -38,6 +38,7 @@ import {
   // Cloud restore helpers
   insertRoutineFromCloud,
   insertProgrammeFromCloud,
+  setPlanFolder,
   insertRoutineExerciseFromCloud,
   insertMorningWeightFromCloud,
   insertCoachOutputFromCloud,
@@ -742,6 +743,10 @@ async function _pushProgrammes(sb, supabaseUserId, localUserId) {
       name: p.name, description: p.description ?? null,
       is_library: !!p.isLibrary, is_active: !!p.isActive,
       source_programme_id: p.sourceProgrammeId ?? null,
+      // folder_id (plan_folders, migration 089): carry the plan's folder so the
+      // My Plans organisation survives a device change. Nullable; an unfiled
+      // plan ships NULL.
+      folder_id: p.folderId ?? null,
       updated_at: new Date().toISOString(),
     }));
     const { error } = await sb.from('programmes').upsert(rows, { onConflict: 'user_id,id' });
@@ -1610,7 +1615,17 @@ async function _pullProgrammes(sb, supabaseUserId) {
     let failures = 0;
     let firstErr = null;
     for (const p of data ?? []) {
-      try { await insertProgrammeFromCloud(supabaseUserId, p); n++; }
+      try {
+        await insertProgrammeFromCloud(supabaseUserId, p);
+        // folder_id (plan_folders, migration 089): insertProgrammeFromCloud is
+        // INSERT OR IGNORE and does not carry folder_id, so file the plan into
+        // its folder explicitly. setPlanFolder reuses the same UPDATE the My
+        // Plans UI uses; null/undefined leaves the plan unfiled.
+        if (Object.prototype.hasOwnProperty.call(p, 'folder_id')) {
+          await setPlanFolder(p.id, p.folder_id ?? null);
+        }
+        n++;
+      }
       catch (e) { failures++; if (!firstErr) firstErr = e?.message; }
     }
     if (failures > 0) {

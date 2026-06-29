@@ -276,10 +276,13 @@ describe('food preference cycle (migration 048)', () => {
     expect(writes[0].params[3]).toBe('dislike');
   });
 
-  test('setFoodPreference(null) deletes the row', async () => {
+  test('setFoodPreference(null) soft-deletes the row (D1-#8 tombstone)', async () => {
     const { setFoodPreference } = require('../food/db');
     await setFoodPreference(UID, 'off:789', null);
-    expect(writes[0].sql).toMatch(/^DELETE FROM food_favourites/);
+    // D1-#8: clearing a preference now sets deleted_at instead of a hard DELETE,
+    // so the deletion propagates cross-device via the food sync `deleted` slice.
+    expect(writes[0].sql).toMatch(/^UPDATE food_favourites/);
+    expect(writes[0].sql).toMatch(/deleted_at = \?/);
   });
 
   test('setFoodPreference rejects an unknown kind', async () => {
@@ -304,12 +307,14 @@ describe('food preference cycle (migration 048)', () => {
     expect(writes.at(-1).params[3]).toBe('dislike');
   });
 
-  test('cycleFoodPreference: dislike -> none (deletes the row)', async () => {
+  test('cycleFoodPreference: dislike -> none (soft-deletes the row)', async () => {
     mockGetFirstAsync.mockResolvedValueOnce({ kind: 'dislike' });
     const { cycleFoodPreference } = require('../food/db');
     const next = await cycleFoodPreference(UID, 'off:33');
     expect(next).toBe(null);
-    expect(writes.at(-1).sql).toMatch(/^DELETE FROM food_favourites/);
+    // D1-#8: soft-delete (set deleted_at), not a hard DELETE.
+    expect(writes.at(-1).sql).toMatch(/^UPDATE food_favourites/);
+    expect(writes.at(-1).sql).toMatch(/deleted_at = \?/);
   });
 
   test('toggleFavourite back-compat: dislike flips straight to fav', async () => {
@@ -320,12 +325,14 @@ describe('food preference cycle (migration 048)', () => {
     expect(writes.at(-1).params[3]).toBe('fav');
   });
 
-  test('toggleFavourite back-compat: fav clears (delete)', async () => {
+  test('toggleFavourite back-compat: fav clears (soft-delete)', async () => {
     mockGetFirstAsync.mockResolvedValueOnce({ kind: 'fav' });
     const { toggleFavourite } = require('../food/db');
     const nowFav = await toggleFavourite(UID, 'off:55');
     expect(nowFav).toBe(false);
-    expect(writes.at(-1).sql).toMatch(/^DELETE FROM food_favourites/);
+    // D1-#8: soft-delete (set deleted_at), not a hard DELETE.
+    expect(writes.at(-1).sql).toMatch(/^UPDATE food_favourites/);
+    expect(writes.at(-1).sql).toMatch(/deleted_at = \?/);
   });
 
   test('getFavourites filters to kind=fav only', async () => {

@@ -6,9 +6,40 @@ import { calculate1RM } from '../lib/algorithms';
 import InfoTooltip from './InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 
-export default function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitComplete }) {
+// Format an integer number of seconds as mm:ss for the duration / distance-time
+// fields. Pure; never used on the weight_reps path.
+function formatSeconds(total) {
+  const n = typeof total === 'number' ? total : (parseInt(total, 10) || 0);
+  const safe = Number.isFinite(n) && n > 0 ? n : 0;
+  const mm = Math.floor(safe / 60);
+  const ss = safe % 60;
+  return `${mm}:${String(ss).padStart(2, '0')}`;
+}
+
+// Parse a free-typed mm:ss (or plain seconds) string into total seconds.
+// "1:30" -> 90, "90" -> 90, "" -> '' (kept blank so the field can be cleared).
+function parseTimeToSeconds(text) {
+  if (text == null || text === '') return '';
+  const t = String(text).trim();
+  if (t.includes(':')) {
+    const [m, s] = t.split(':');
+    const mm = parseInt(m, 10);
+    const ss = parseInt(s, 10);
+    if (Number.isNaN(mm) && Number.isNaN(ss)) return '';
+    return (Number.isNaN(mm) ? 0 : mm) * 60 + (Number.isNaN(ss) ? 0 : ss);
+  }
+  const n = parseInt(t, 10);
+  return Number.isNaN(n) ? '' : n;
+}
+
+export default function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitComplete, exerciseType = 'weight_reps' }) {
   const { weight, reps, isGhost } = value;
   const repsRef = useRef(null);
+  // weighted_bodyweight renders byte-identically to weight_reps (weight field
+  // + reps field, weight defaulting to 0). reps_only hides the weight field;
+  // duration / distance swap in time/distance fields. Anything unrecognised
+  // falls back to the safe weight_reps layout.
+  const showWeightReps = exerciseType === 'weight_reps' || exerciseType === 'weighted_bodyweight';
 
   function adjust(field, delta) {
     Haptics.selectionAsync().catch(() => {});
@@ -32,15 +63,30 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
     onChange({ ...value, [field]: val, isGhost: false });
   }
 
+  // Time stepper for the duration / distance schemas. Steps the seconds count
+  // (stored in value.reps) by `delta` seconds, clamped to [0, 5999] (99:59).
+  function adjustSeconds(delta) {
+    Haptics.selectionAsync().catch(() => {});
+    const raw = value.reps;
+    const current = typeof raw === 'number' ? raw : (parseInt(raw, 10) || 0);
+    const next = Math.min(Math.max(current + delta, 0), 5999);
+    onChange({ ...value, reps: next, isGhost: false });
+  }
+
   const liveWeight = parseFloat(value.weight);
   const liveReps = parseInt(value.actualReps || value.reps, 10);
-  const live1RM = (liveWeight > 0 && liveReps > 0 && !isWarmup)
+  // Only weight_reps / weighted_bodyweight have a meaningful Est. 1RM. A
+  // reps_only set carrying a stray weight (e.g. left over from a mid-session
+  // type change) must not surface a bogus estimate.
+  const live1RM = (showWeightReps && liveWeight > 0 && liveReps > 0 && !isWarmup)
     ? calculate1RM(liveWeight, liveReps)
     : null;
 
   return (
     <View style={styles.container}>
-      {/* Weight Row */}
+      {/* Weight Row — rendered for weight_reps and weighted_bodyweight only.
+          This branch is BYTE-IDENTICAL to the original single-schema layout. */}
+      {showWeightReps && (
       <View style={styles.inputRow}>
         <View style={styles.fieldLabelWrap}>
           <Text style={styles.fieldLabel}>Weight ({units})</Text>
@@ -90,8 +136,133 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
           </TouchableOpacity>
         </View>
       </View>
+      )}
 
-      {/* Reps */}
+      {/* Duration — a mm:ss time field. Total seconds are stored in value.reps
+          (reused as the seconds field), so the screen's existing reps->actual_reps
+          write path persists the metric with no new set column. */}
+      {exerciseType === 'duration' && (
+      <View style={styles.inputRow}>
+        <View style={styles.fieldLabelWrap}>
+          <Text style={styles.fieldLabel}>Time (mm:ss)</Text>
+        </View>
+        <View style={styles.stepper}>
+          <TouchableOpacity
+            style={styles.stepBtn}
+            onPress={() => adjustSeconds(-5)}
+            accessibilityRole="button"
+            accessibilityLabel="Decrease time"
+          >
+            <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>−</Text>
+          </TouchableOpacity>
+          <TextInput
+            testID="volyume-duration-input"
+            style={[styles.valueInput, isGhost && styles.valueInputGhost]}
+            maxFontSizeMultiplier={1.3}
+            value={reps == null || reps === '' ? '' : formatSeconds(reps)}
+            onChangeText={v => setField('reps', parseTimeToSeconds(v))}
+            keyboardType="numbers-and-punctuation"
+            returnKeyType="done"
+            onSubmitEditing={() => (onSubmitComplete ? onSubmitComplete() : Keyboard.dismiss())}
+            selectTextOnFocus
+            accessibilityLabel="Duration in minutes and seconds"
+          />
+          <TouchableOpacity
+            style={styles.stepBtn}
+            onPress={() => adjustSeconds(5)}
+            accessibilityRole="button"
+            accessibilityLabel="Increase time"
+          >
+            <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>+</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      )}
+
+      {/* Distance — distance (in the user's units) + a mm:ss time field.
+          Distance is stored in value.weight (reused) and seconds in value.reps,
+          so both metrics persist through the screen's existing weight/reps
+          write path with no new set column. */}
+      {exerciseType === 'distance' && (
+      <>
+      <View style={styles.inputRow}>
+        <View style={styles.fieldLabelWrap}>
+          <Text style={styles.fieldLabel}>Distance ({units === 'kg' ? 'm' : 'yd'})</Text>
+        </View>
+        <View style={styles.stepper}>
+          <TouchableOpacity
+            style={styles.stepBtn}
+            onPress={() => adjust('weight', -1)}
+            accessibilityRole="button"
+            accessibilityLabel="Decrease distance"
+          >
+            <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>−</Text>
+          </TouchableOpacity>
+          <TextInput
+            testID="volyume-distance-input"
+            style={[styles.valueInput, isGhost && styles.valueInputGhost]}
+            maxFontSizeMultiplier={1.3}
+            value={weight == null || weight === '' ? '' : String(weight)}
+            onChangeText={v => {
+              if (v === '' || /^\d{0,5}\.?\d{0,2}$/.test(v)) setField('weight', v);
+            }}
+            keyboardType="decimal-pad"
+            returnKeyType="next"
+            selectTextOnFocus
+            accessibilityLabel="Distance"
+          />
+          <TouchableOpacity
+            style={styles.stepBtn}
+            onPress={() => adjust('weight', 1)}
+            accessibilityRole="button"
+            accessibilityLabel="Increase distance"
+          >
+            <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>+</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      <View style={styles.inputRow}>
+        <View style={styles.fieldLabelWrap}>
+          <Text style={styles.fieldLabel}>Time (mm:ss)</Text>
+        </View>
+        <View style={styles.stepper}>
+          <TouchableOpacity
+            style={styles.stepBtn}
+            onPress={() => adjustSeconds(-5)}
+            accessibilityRole="button"
+            accessibilityLabel="Decrease time"
+          >
+            <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>−</Text>
+          </TouchableOpacity>
+          <TextInput
+            testID="volyume-distance-time-input"
+            style={[styles.valueInput, isGhost && styles.valueInputGhost]}
+            maxFontSizeMultiplier={1.3}
+            value={reps == null || reps === '' ? '' : formatSeconds(reps)}
+            onChangeText={v => setField('reps', parseTimeToSeconds(v))}
+            keyboardType="numbers-and-punctuation"
+            returnKeyType="done"
+            onSubmitEditing={() => (onSubmitComplete ? onSubmitComplete() : Keyboard.dismiss())}
+            selectTextOnFocus
+            accessibilityLabel="Duration in minutes and seconds"
+          />
+          <TouchableOpacity
+            style={styles.stepBtn}
+            onPress={() => adjustSeconds(5)}
+            accessibilityRole="button"
+            accessibilityLabel="Increase time"
+          >
+            <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>+</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      </>
+      )}
+
+      {/* Reps — rendered for weight_reps, weighted_bodyweight and reps_only.
+          reps_only hides only the Weight Row above; the reps field itself is
+          unchanged. */}
+      {(showWeightReps || exerciseType === 'reps_only') && (
       <View style={styles.inputRow}>
         <View style={styles.fieldLabelWrap}>
           <Text style={styles.fieldLabel}>Reps</Text>
@@ -143,6 +314,7 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
           </TouchableOpacity>
         </View>
       </View>
+      )}
 
       {/* Effort picker removed, was rarely used in practice. RIR still
           gets recorded internally (defaulted in DEFAULT_SET) so the

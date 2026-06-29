@@ -81,7 +81,9 @@ export const SYNC_REGISTRY = [
     pk: ['user_id', 'food_ref'],
     conflictStrategy: 'last_write_wins',
     serverAuthoritative: false,
-    softDelete: false,
+    // D1-#8: deleted_at tombstone added (local mig + cloud migration 090) so
+    // favourite deletes propagate cross-device instead of re-pulling back.
+    softDelete: true,
     direction: 'bidirectional',
   },
   {
@@ -89,7 +91,9 @@ export const SYNC_REGISTRY = [
     pk: ['user_id', 'entry_date'],
     conflictStrategy: 'last_write_wins',
     serverAuthoritative: false,
-    softDelete: false,
+    // D1-#8: deleted_at tombstone added (local mig + cloud migration 090) so
+    // water deletes propagate cross-device instead of re-pulling back.
+    softDelete: true,
     direction: 'bidirectional',
   },
   {
@@ -202,6 +206,19 @@ export const SYNC_REGISTRY = [
     // deletes propagate as tombstones. Cloud migration 086. Handler:
     // src/lib/sync/tables/mealPlans.js.
     table: 'meal_plans',
+    pk: 'id',
+    conflictStrategy: 'last_write_wins',
+    serverAuthoritative: false,
+    softDelete: true,
+    direction: 'bidirectional',
+  },
+  {
+    // Plan folders (Hevy teardown R1). User-owned organisation of the My Plans
+    // list (= programmes); FREE feature, no Pro gate. One row per folder, own-row
+    // RLS. Bidirectional LWW on epoch-ms updated_at, soft-delete tombstones
+    // propagate (deleting a folder unfiles its plans and tombstones the folder).
+    // Cloud migration 089. Handler: src/lib/sync/tables/planFolders.js.
+    table: 'plan_folders',
     pk: 'id',
     conflictStrategy: 'last_write_wins',
     serverAuthoritative: false,
