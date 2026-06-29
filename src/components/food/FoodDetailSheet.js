@@ -7,6 +7,7 @@ import BottomSheet from '../BottomSheet';
 import { useToast } from '../Toast';
 import { pickerMealSlots } from '../../lib/food/mealSlots';
 import { scaleMacros } from '../../lib/food/macros';
+import { buildServingUnits, initialServingState, resolveGrams, isValidEntryGrams } from '../../lib/food/servingEntry';
 
 // Display-shaped wrapper over the shared scaling helper (food review U-M2):
 // the preview render reads .protein/.carbs/.fat, the engine returns .*G.
@@ -43,23 +44,12 @@ export default function FoodDetailSheet({
   // here instead of throwing it away and demanding grams. Grams remain the
   // storage contract (scaleMacros(food, grams)); the unit only changes how the
   // amount is entered. Falls back to grams when a food has no named serving.
-  const servingG = Number(food?.serving_g) || 0;
-  const units = useMemo(() => {
-    const list = [];
-    if (servingG > 0) list.push({ key: 'serving', label: food?.serving_label || 'serving', grams: servingG });
-    list.push({ key: 'g', label: 'g', grams: 1 });
-    return list;
-  }, [servingG, food?.serving_label]);
-
-  const initial = useMemo(() => {
-    // On edit, preserve the exact grams the entry was logged at (show grams).
-    if (mode === 'edit' && initialQuantityG != null && initialQuantityG > 0) {
-      return { unitKey: 'g', amount: String(Math.round(initialQuantityG)) };
-    }
-    // On add, default to one household serving (zero keystrokes), else 100 g.
-    if (servingG > 0) return { unitKey: 'serving', amount: '1' };
-    return { unitKey: 'g', amount: '100' };
-  }, [mode, initialQuantityG, servingG]);
+  // Primitive deps (not the `food` object identity) so these don't re-memo on
+  // every parent render; the helpers only read serving_g/serving_label.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const units = useMemo(() => buildServingUnits(food), [food?.serving_g, food?.serving_label]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const initial = useMemo(() => initialServingState(food, mode, initialQuantityG), [mode, initialQuantityG, food?.serving_g]);
 
   const [unitKey, setUnitKey] = useState(initial.unitKey);
   const [amount, setAmount] = useState(initial.amount);
@@ -67,7 +57,7 @@ export default function FoodDetailSheet({
   const [submitting, setSubmitting] = useState(false);
 
   const unit = units.find(u => u.key === unitKey) || units[units.length - 1];
-  const quantityG = (Number(amount) || 0) * unit.grams;
+  const quantityG = resolveGrams(amount, unit);
 
   useEffect(() => {
     if (!visible) return;
@@ -103,7 +93,7 @@ export default function FoodDetailSheet({
 
   async function handleSave() {
     const qty = Math.round(quantityG);
-    if (!qty || qty <= 0 || qty > 5000) {
+    if (!isValidEntryGrams(qty)) {
       toast.show('Enter an amount that works out between 1 and 5000 g.', { variant: 'warning' });
       return;
     }
