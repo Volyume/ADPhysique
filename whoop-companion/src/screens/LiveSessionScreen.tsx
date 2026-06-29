@@ -9,6 +9,8 @@ import { Bar, PrimaryButton, SecondaryButton, Stat } from '../ui/components';
 import { colors, fonts, strainZoneColors } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { formatDistance, formatPace } from '../sensors/location';
+import { strainCategory, strainCoachText } from '../metrics/strainCoach';
+import { kcalPerMinute } from '../metrics/calories';
 
 function fmt(sec: number): string {
   const h = Math.floor(sec / 3600);
@@ -23,6 +25,7 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
   const session = useStoreSelector(appStore, (s) => s.session);
   const liveHr = useStoreSelector(appStore, (s) => s.liveHr);
   const status = useStoreSelector(appStore, (s) => s.status);
+  const profile = useStoreSelector(appStore, (s) => s.profile);
   const [now, setNow] = useState(Date.now());
   const [stats, setStats] = useState<SessionStats | null>(null);
   const ticked = useRef(0);
@@ -82,8 +85,17 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
           <>
             <View style={styles.statRow}>
               <Stat label="Activity strain" value={stats?.strain != null ? stats.strain.toFixed(1) : '—'} color={colors.strainBlue} />
+              <Stat
+                label="Calories"
+                value={stats?.avgHr != null ? Math.round(kcalPerMinute(stats.avgHr, profile) * (elapsed / 60)) : '—'}
+                color={colors.recoveryYellow}
+              />
               <Stat label="Laps" value={session.laps.length} />
             </View>
+
+            {stats?.strain != null ? (
+              <Text style={styles.coach}>{strainCoachText(stats.strain, strainCategory(session.label))}</Text>
+            ) : null}
 
             {session.hasGps ? (
               <>
@@ -169,5 +181,6 @@ const styles = StyleSheet.create({
   mapBox: { backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 8, minHeight: 120, alignItems: 'center', justifyContent: 'center' },
   mapHint: { color: colors.textTertiary, fontSize: 13, textAlign: 'center', paddingVertical: 36, fontFamily: fonts.text },
   hint: { color: colors.textSecondary, fontSize: 14, lineHeight: 21, marginTop: 24, fontFamily: fonts.text },
+  coach: { color: colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 12, fontFamily: fonts.text },
   controls: { padding: 16, gap: 4 },
 });

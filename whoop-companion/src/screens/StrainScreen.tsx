@@ -130,6 +130,7 @@ export function StrainScreen({ nav }: { nav: Nav }) {
                   {formatDuration(Math.round((c.endTs - c.startTs) / 60000))}
                   {c.distanceM != null ? ` · ${formatDistance(c.distanceM)}` : ''}
                   {c.avgHr ? ` · ${c.avgHr} bpm` : ''}
+                  {c.kcal != null ? ` · ${c.kcal} cal` : ''}
                   {c.strain != null ? ` · strain ${c.strain.toFixed(1)}` : ''}
                 </Text>
               </View>

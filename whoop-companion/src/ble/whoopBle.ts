@@ -90,7 +90,20 @@ export class WhoopBle {
   private reArm: ReturnType<typeof setInterval> | null = null;
 
   constructor(events: WhoopEvents) {
-    this.manager = new BleManager();
+    // restoreStateIdentifier enables iOS CoreBluetooth State Preservation &
+    // Restoration: with the `bluetooth-central` background mode, iOS relaunches
+    // the app in the background when the strap has data, so overnight HR keeps
+    // logging without the app open. Ignored on Android.
+    this.manager = new BleManager({
+      restoreStateIdentifier: 'volyume-pulse-ble',
+      restoreStateFunction: (restored) => {
+        const peripherals = restored?.connectedPeripherals ?? [];
+        if (peripherals.length > 0) {
+          this.device = peripherals[0] ?? null;
+          this.setStatus('connected', this.device?.name ?? this.device?.id);
+        }
+      },
+    });
     this.events = events;
   }
 

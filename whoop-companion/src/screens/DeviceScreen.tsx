@@ -137,12 +137,14 @@ function ProfileEditor({ profile }: { profile: UserProfile }) {
   const [sex, setSex] = useState<UserProfile['sex']>(profile.sex);
   const [rhr, setRhr] = useState(String(profile.restingHr));
   const [maxHr, setMaxHr] = useState(profile.maxHr ? String(profile.maxHr) : '');
+  const [weight, setWeight] = useState(profile.weightKg ? String(profile.weightKg) : '');
 
   useEffect(() => {
     setAge(String(profile.ageYears));
     setSex(profile.sex);
     setRhr(String(profile.restingHr));
     setMaxHr(profile.maxHr ? String(profile.maxHr) : '');
+    setWeight(profile.weightKg ? String(profile.weightKg) : '');
   }, [profile]);
 
   const save = () => {
@@ -153,6 +155,8 @@ function ProfileEditor({ profile }: { profile: UserProfile }) {
     };
     const mh = parseInt(maxHr, 10);
     if (mh) next.maxHr = mh;
+    const wt = parseInt(weight, 10);
+    if (wt) next.weightKg = wt;
     void appStore.updateProfile(next);
   };
 
@@ -162,6 +166,10 @@ function ProfileEditor({ profile }: { profile: UserProfile }) {
         <Field label="Age" value={age} onChange={setAge} />
         <Field label="Resting HR" value={rhr} onChange={setRhr} />
         <Field label="Max HR (opt)" value={maxHr} onChange={setMaxHr} />
+      </View>
+      <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+        <Field label="Weight (kg)" value={weight} onChange={setWeight} />
+        <View style={{ flex: 2 }} />
       </View>
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
         {(['male', 'female'] as const).map((s) => (

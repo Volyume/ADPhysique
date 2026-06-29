@@ -42,7 +42,7 @@ import {
   pruneHrSamples,
   upsertDailyMetric,
 } from '../db/database';
-import { LocationTracker } from '../sensors/location';
+import { startBgLocation, stopBgLocation } from '../sensors/bgLocation';
 import { DEFAULT_PROFILE, loadProfile, saveProfile } from '../db/profile';
 import { computeHrv } from '../metrics/hrv';
 import { emaBaseline, stdev } from '../metrics/ema';
@@ -51,6 +51,7 @@ import { computeSleep, computeSleepNeed, SleepMinute, SleepNeed, SleepResult } f
 import { computeSleepScore, SleepScore } from '../metrics/sleepScore';
 import { sleepRegularity, SleepRegularity } from '../metrics/sleepRegularity';
 import { edwardsTrimp, hrZones, strainFromLoad, totalTrimp, UserProfile } from '../metrics/strain';
+import { kcalPerMinute } from '../metrics/calories';
 import { respiratoryRate } from '../metrics/respiratory';
 import { computeStress } from '../metrics/stress';
 import { computeHealthMonitor, HealthMonitorResult } from '../metrics/healthMonitor';
@@ -175,7 +176,7 @@ class AppStore extends Store<AppState> {
   private lastPersistTs = 0;
   private historyRecords: Uint8Array[] = [];
   private eventAssemblers = new Map<string, FrameAssembler>();
-  private locTracker: LocationTracker | null = null;
+  private gpsActive = false;
   private recomputeTimer: ReturnType<typeof setInterval> | null = null;
   private appStateSub: { remove: () => void } | null = null;
   private autoDrainedFor = ''; // device id we've already auto-drained this connection
@@ -400,6 +401,8 @@ class AppStore extends Store<AppState> {
     const minutes = Math.max(1, Math.round((input.endTs - input.startTs) / 60000));
     const load = input.avgHr ? edwardsTrimp([{ hr: input.avgHr, minutes }], profile) : null;
     const strain = load !== null ? strainFromLoad(load) : null;
+    // Calories from HR (Keytel) — the WHOOP-style HR-driven energy estimate.
+    const kcal = input.avgHr ? Math.round(kcalPerMinute(input.avgHr, profile) * minutes) : null;
     const row: CardioRow = {
       id: `c_${input.startTs}`,
       startTs: input.startTs,
@@ -408,7 +411,7 @@ class AppStore extends Store<AppState> {
       avgHr: input.avgHr,
       trimp: load !== null ? Math.round(load) : null,
       strain,
-      kcal: null,
+      kcal,
       distanceM: input.distanceM ?? null,
       source: input.source ?? 'manual',
       notes: input.notes ?? null,
@@ -454,11 +457,11 @@ class AppStore extends Store<AppState> {
   };
 
   /** Begin phone-GPS tracking for the active session (WHOOP uses the phone, not
-   *  the strap, for GPS). Distance/pace/route stream into the session state. */
+   *  the strap, for GPS). Runs as a foreground service so distance/pace/route
+   *  keep streaming with the phone pocketed and the screen off. */
   private async startGps(): Promise<void> {
-    this.locTracker?.stop();
-    this.locTracker = new LocationTracker();
-    const ok = await this.locTracker.start((u) => {
+    this.gpsActive = false;
+    const ok = await startBgLocation((u) => {
       const s = this.getState().session;
       if (!s) return;
       this.setState({
@@ -470,17 +473,19 @@ class AppStore extends Store<AppState> {
         },
       });
     });
-    if (!ok) {
+    if (ok) {
+      this.gpsActive = true;
+    } else {
       // Permission denied / GPS unavailable — keep recording HR, just no distance.
       const s = this.getState().session;
       if (s) this.setState({ session: { ...s, hasGps: false, distanceM: null } });
     }
   }
 
-  private stopGps(): number | null {
-    if (!this.locTracker) return null;
-    const { distanceM } = this.locTracker.stop();
-    this.locTracker = null;
+  private async stopGps(): Promise<number | null> {
+    if (!this.gpsActive) return null;
+    this.gpsActive = false;
+    const { distanceM } = await stopBgLocation();
     return distanceM > 0 ? distanceM : null;
   }
 
@@ -490,7 +495,7 @@ class AppStore extends Store<AppState> {
   };
 
   discardSession = (): void => {
-    this.stopGps();
+    void this.stopGps();
     this.setState({ session: null });
   };
 
@@ -517,7 +522,7 @@ class AppStore extends Store<AppState> {
     const endTs = Date.now();
     // Capture stats while the session is still active, then clear it.
     const stats = save ? await this.sessionStats().catch(() => null) : null;
-    const gpsDistance = this.stopGps() ?? s.distanceM;
+    const gpsDistance = (await this.stopGps()) ?? s.distanceM;
     this.setState({ session: null });
     if (!save) return;
     if (s.kind === 'sleep') {

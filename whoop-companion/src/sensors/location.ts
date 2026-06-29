@@ -12,7 +12,7 @@ export type LocUpdate = { distanceM: number; speedMps: number | null; point: Geo
 const EARTH_R = 6371000;
 const MAX_JUMP_M = 250; // ignore GPS teleports between fixes
 
-function haversine(a: GeoPoint, b: GeoPoint): number {
+export function haversine(a: GeoPoint, b: GeoPoint): number {
   const dLat = ((b.lat - a.lat) * Math.PI) / 180;
   const dLng = ((b.lng - a.lng) * Math.PI) / 180;
   const la1 = (a.lat * Math.PI) / 180;

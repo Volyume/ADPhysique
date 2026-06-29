@@ -13,6 +13,7 @@ export type UserProfile = {
   sex: 'male' | 'female';
   restingHr: number; // bpm
   maxHr?: number; // bpm; if absent, Tanaka estimate is used
+  weightKg?: number; // body mass; used for HR-based calorie estimation
 };
 
 /** Tanaka et al. (2001): HRmax = 208 − 0.7 × age. */

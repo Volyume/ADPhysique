@@ -9,6 +9,7 @@ export const DEFAULT_PROFILE: UserProfile = {
   ageYears: 35,
   sex: 'male',
   restingHr: 55,
+  weightKg: 75,
 };
 
 export async function loadProfile(): Promise<UserProfile> {
