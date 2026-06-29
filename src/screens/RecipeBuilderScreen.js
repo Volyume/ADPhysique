@@ -32,6 +32,8 @@ import {
   setRecipeIngredients, computeRecipeMacros,
 } from '../lib/food/db';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
+import { importRecipeFromUrl } from '../lib/food/recipeImport';
+import { searchFoods } from '../lib/food/waterfall';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import useAppStore from '../store/useAppStore';
@@ -55,6 +57,8 @@ export default function RecipeBuilderScreen({ navigation, route }) {
   const [ingredients, setIngredients] = useState([]);
   const [loading, setLoading] = useState(!!recipeId);
   const [saving, setSaving] = useState(false);
+  const [importUrl, setImportUrl] = useState('');
+  const [importing, setImporting] = useState(false);
   const loadedRef = useRef(false);
 
   // Initial load for edit mode.
@@ -125,6 +129,57 @@ export default function RecipeBuilderScreen({ navigation, route }) {
     });
   }
 
+  // Best-effort import from a web URL. Reads a schema.org Recipe out
+  // of the page's JSON-LD, sets the name, and matches each ingredient
+  // string to the top food-search hit. The user reviews every amount,
+  // so a rough top-hit match is fine. Never blocks the manual builder.
+  async function onImportFromWeb() {
+    const url = importUrl.trim();
+    if (!url || importing) return;
+    setImporting(true);
+    try {
+      const parsed = await importRecipeFromUrl(url);
+      if (!parsed) {
+        toast.show("Couldn't read a recipe from that link.", { variant: 'warning' });
+        return;
+      }
+      if (typeof parsed.name === 'string' && parsed.name.trim()) {
+        setName(parsed.name.trim().slice(0, 80));
+      }
+      if (parsed.servings && Number(parsed.servings) > 0) {
+        setTotalServings(String(parsed.servings));
+      }
+      const lines = parsed.ingredients || [];
+      const matched = [];
+      for (const line of lines) {
+        try {
+          const hits = await searchFoods(userId, line, { limit: 1 });
+          const food = hits && hits[0];
+          if (!food) continue;
+          matched.push({
+            food_ref: food.food_ref,
+            quantity_g: Number(food.serving_g) > 0 ? Number(food.serving_g) : 100,
+            food,
+          });
+        } catch (_e) {
+          // One bad lookup shouldn't sink the whole import.
+        }
+      }
+      if (matched.length > 0) {
+        setIngredients((prev) => [...prev, ...matched]);
+      }
+      setImportUrl('');
+      toast.show(
+        `Imported ${matched.length} of ${lines.length} ingredients. Check the amounts.`,
+        { variant: matched.length > 0 ? 'success' : 'warning' },
+      );
+    } catch (_e) {
+      toast.show("Couldn't read a recipe from that link.", { variant: 'warning' });
+    } finally {
+      setImporting(false);
+    }
+  }
+
   function onRemove(i) {
     setIngredients((prev) => prev.filter((_, idx) => idx !== i));
   }
@@ -191,6 +246,41 @@ export default function RecipeBuilderScreen({ navigation, route }) {
         </View>
       ) : (
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+        <View style={styles.section}>
+          <Text style={styles.label}>Import from web</Text>
+          <View style={styles.importRow}>
+            <TextInput
+              style={[styles.input, { flex: 1 }]}
+              value={importUrl}
+              onChangeText={setImportUrl}
+              placeholder="Paste a recipe link"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              editable={!importing}
+              accessibilityLabel="Recipe web address"
+            />
+            <TouchableOpacity
+              onPress={onImportFromWeb}
+              disabled={importing || importUrl.trim().length === 0}
+              hitSlop={8}
+              style={[
+                styles.importBtn,
+                (importing || importUrl.trim().length === 0) && styles.importBtnDisabled,
+              ]}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: importing || importUrl.trim().length === 0 }}
+              accessibilityLabel="Import from web"
+            >
+              <Text style={styles.importBtnText}>{importing ? 'Importing…' : 'Import'}</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.importHint}>
+            We match each ingredient to a food and add a rough amount. Check the amounts after importing.
+          </Text>
+        </View>
+
         <View style={styles.section}>
           <Text style={styles.label}>Name</Text>
           <TextInput
@@ -316,6 +406,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md,
   },
+
+  importRow: { flexDirection: 'row', alignItems: 'center' },
+  importBtn: {
+    marginLeft: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.md,
+    backgroundColor: colors.primary, borderRadius: radius.md,
+  },
+  importBtnDisabled: { opacity: 0.5 },
+  importBtnText: { color: colors.background, fontSize: fontSize.sm, fontWeight: fontWeight.bold },
+  importHint: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xs },
 
   ingHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
