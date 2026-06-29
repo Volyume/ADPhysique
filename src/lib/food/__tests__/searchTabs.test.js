@@ -1,4 +1,4 @@
-import { SEARCH_TABS, selectTabRows } from '../searchTabs';
+import { SEARCH_TABS, selectTabRows, rankByPersonalHistory } from '../searchTabs';
 
 const F = (name, ref) => ({ name, food_ref: ref });
 
@@ -40,5 +40,57 @@ describe('selectTabRows', () => {
 
   test('missing list for a tab yields an empty array', () => {
     expect(selectTabRows({ activeTab: 'frequents', query: '', lists: {} })).toEqual([]);
+  });
+});
+
+describe('rankByPersonalHistory — the user\'s own foods lead a typed search', () => {
+  // A typed-query result set: a generic DB match, a favourite, a recent, a
+  // frequent, a never-logged custom, in deliberately "wrong" order.
+  const results = [
+    F('Beef mince generic', 'g:db1'),     // 0 — generic database
+    F('Chicken breast', 'g:fav'),          // 3 — favourited
+    F('Porridge oats', 'g:rec'),           // 2 — recent in this slot
+    F('Greek yoghurt', 'g:freq'),          // 2 — logged often
+    F('My protein shake', 'custom:1'),     // 1 — own custom food
+    F('Beef steak generic', 'g:db2'),      // 0 — generic database
+  ];
+  const sets = {
+    favouriteRefs: new Set(['g:fav']),
+    recentRefs: new Set(['g:rec']),
+    frequentRefs: new Set(['g:freq']),
+  };
+
+  test('favourite first, then recent/frequent (stable), then custom, then generic in original order', () => {
+    const out = rankByPersonalHistory(results, sets).map((f) => f.food_ref);
+    expect(out).toEqual(['g:fav', 'g:rec', 'g:freq', 'custom:1', 'g:db1', 'g:db2']);
+  });
+
+  test('is stable: equal-weight rows keep the waterfall\'s relevance order', () => {
+    // Two recents in input order rec1 before rec2 must stay rec1, rec2.
+    const r = [F('a', 'g:db'), F('b', 'rec2'), F('c', 'rec1')];
+    const out = rankByPersonalHistory(r, { recentRefs: new Set(['rec1', 'rec2']) }).map((f) => f.food_ref);
+    expect(out).toEqual(['rec2', 'rec1', 'g:db']);
+  });
+
+  test('with no fav/recent/frequent sets, the user\'s own custom food still leads (it is personal)', () => {
+    const expected = ['custom:1', 'g:db1', 'g:fav', 'g:rec', 'g:freq', 'g:db2'];
+    expect(rankByPersonalHistory(results, {}).map((f) => f.food_ref)).toEqual(expected);
+    expect(rankByPersonalHistory(results).map((f) => f.food_ref)).toEqual(expected);
+  });
+
+  test('a result set with no personal signal at all keeps the waterfall order untouched', () => {
+    const generic = [F('a', 'g:1'), F('b', 'g:2'), F('c', 'g:3')];
+    expect(rankByPersonalHistory(generic, sets).map((f) => f.food_ref)).toEqual(['g:1', 'g:2', 'g:3']);
+  });
+
+  test('tolerates empty / single / missing input without throwing', () => {
+    expect(rankByPersonalHistory([], sets)).toEqual([]);
+    expect(rankByPersonalHistory([F('only', 'g:fav')], sets)).toEqual([F('only', 'g:fav')]);
+    expect(rankByPersonalHistory(undefined, sets)).toEqual([]);
+  });
+
+  test('accepts array refs as well as Sets (defensive)', () => {
+    const out = rankByPersonalHistory(results, { favouriteRefs: ['g:fav'] }).map((f) => f.food_ref);
+    expect(out[0]).toBe('g:fav');
   });
 });

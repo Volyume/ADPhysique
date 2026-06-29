@@ -38,7 +38,7 @@ import { getNutritionTargets } from '../lib/database';
 import { getCuratedCandidates } from '../lib/food/curatedMeals';
 import { rankSuggestions, mealsLeftToday } from '../lib/food/mealSuggest';
 import { refreshFrequentsIfStale } from '../lib/food/frequents';
-import { SEARCH_TABS, selectTabRows } from '../lib/food/searchTabs';
+import { SEARCH_TABS, selectTabRows, rankByPersonalHistory } from '../lib/food/searchTabs';
 import { searchFoods } from '../lib/food/waterfall';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
 import { audit } from '../lib/observability';
@@ -565,12 +565,24 @@ export default function FoodSearchScreen({ navigation, route }) {
     navigation.navigate('AddCustomFood', { mealSlot, entryDate });
   }
 
+  // Lift the user's own foods (favourited / logged here recently / logged often)
+  // above the generic database matches for a typed query, so "search" surfaces
+  // what they actually eat first (MFP/Cronometer parity). Pure re-rank over the
+  // already-loaded personal sets — no extra fetch. recents/frequents are resolved
+  // food rows; map them to their refs for the membership test.
+  const recentRefs = useMemo(() => new Set(recents.map((r) => r.food_ref)), [recents]);
+  const frequentRefs = useMemo(() => new Set(frequentRows.map((f) => f.food_ref)), [frequentRows]);
+  const rankedResults = useMemo(
+    () => rankByPersonalHistory(results, { favouriteRefs, recentRefs, frequentRefs }),
+    [results, favouriteRefs, recentRefs, frequentRefs],
+  );
+
   const tabRows = useMemo(() => selectTabRows({
     activeTab,
     query,
     lists: { recents, favourites: favouriteRows, frequents: frequentRows, custom: customRows },
-    results,
-  }), [activeTab, query, recents, favouriteRows, frequentRows, customRows, results]);
+    results: rankedResults,
+  }), [activeTab, query, recents, favouriteRows, frequentRows, customRows, rankedResults]);
 
   const listData = useMemo(() => {
     const out = [];
