@@ -242,6 +242,24 @@ describe('COMP-029 light theme', () => {
     expect(ratio(colors.chartLine, '#FFFFFF')).toBeGreaterThanOrEqual(3);
   });
 
+  // Macro CATEGORY bar tints (founder decision 2026-06-29). The bars are a
+  // graphical element, so each tint must clear the 3:1 non-text bar against the
+  // bar track (surface2) in BOTH themes, and none may be a traffic-light state
+  // colour (a macro bar must never read as adherence good/bad). This is the
+  // executable contract behind the comment in theme.js.
+  test('macro category tints clear 3:1 on the bar track and are never a state colour', () => {
+    const macros = ['macroProtein', 'macroCarb', 'macroFat', 'macroFibre'];
+    applyAccessibility({ theme: 'light' });
+    for (const m of macros) expect(ratio(colors[m], colors.surface2)).toBeGreaterThanOrEqual(3);
+    applyAccessibility({});
+    for (const m of macros) expect(ratio(colors[m], colors.surface2)).toBeGreaterThanOrEqual(3);
+    for (const m of macros) {
+      expect(colors[m]).not.toBe(colors.success);
+      expect(colors[m]).not.toBe(colors.warning);
+      expect(colors[m]).not.toBe(colors.error);
+    }
+  });
+
   test('light + higher-contrast lifts text further (composition order)', () => {
     applyAccessibility({ theme: 'light', higherContrast: true });
     expect(colors.background).toBe('#FAFAF7'); // theme landed first

@@ -99,6 +99,10 @@ const baseColors = {
   // without a separate CVD table; none is the traffic-light green/red used by
   // stateColors. Protein keeps the brand amber (it is the hero macro); fibre is
   // a quiet neutral (the "bonus" macro, no upper-bound pressure).
+  // Note: macroCarb is value-identical to the CVD-palette `success` token
+  // (darkCVD.success #56B4E9). That is benign — the macro tints deliberately
+  // sit outside the CVD modifier tables, and no success/state mark co-renders in
+  // the food macro card, so a carbs bar and an on-track mark never appear together.
   macroProtein: '#F5A623', // amber (brand / primary)
   macroCarb:    '#56B4E9', // Okabe-Ito sky blue
   macroFat:     '#C792EA', // soft violet (distinct from the CVD error reddish-purple)
