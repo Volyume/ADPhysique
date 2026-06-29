@@ -1,6 +1,8 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing } from '../../styles/theme';
+import { toEnergy, energyUnitLabel } from '../../lib/format';
+import useAppStore from '../../store/useAppStore';
 
 export const SOURCE_LABEL = {
   off: 'OFF',
@@ -29,6 +31,11 @@ export function kcalForServing(food) {
 // affects coach suggestions and the Favourites surface.
 export default function FoodRow({ food, isFav, preference, onPress, onLongPress, onAdd, longPressHint }) {
   const sourceTag = SOURCE_LABEL[food.source] ?? null;
+  // kcalForServing stays in kcal (other callers/tests depend on the numeric
+  // helper). Energy DISPLAY unit (kcal | kj) is applied here, at the render
+  // sites only, leaving the helper's kcal return untouched.
+  const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
+  const energyWord = energyUnit === 'kj' ? 'kilojoules' : 'calories';
   const kcalPerServing = kcalForServing(food);
   // Back-compat: callers that still pass `isFav` get the legacy
   // star-only behaviour. New callers pass `preference`.
@@ -43,7 +50,7 @@ export default function FoodRow({ food, isFav, preference, onPress, onLongPress,
       onPress={onPress}
       onLongPress={onLongPress}
       accessibilityRole="button"
-      accessibilityLabel={`${food.name}, ${kcalPerServing ?? '?'} kcal per serving. ${a11yPref}`}
+      accessibilityLabel={`${food.name}, ${kcalPerServing != null ? toEnergy(kcalPerServing, energyUnit) : '?'} ${energyWord} per serving. ${a11yPref}`}
       accessibilityHint={onLongPress ? (longPressHint ?? 'Long-press to cycle favourite, exclude, neutral') : undefined}
     >
       <View style={{ flex: 1 }}>
@@ -60,7 +67,7 @@ export default function FoodRow({ food, isFav, preference, onPress, onLongPress,
         >
           {food.brand ? `${food.brand} · ` : ''}
           {food.serving_label || `${servingGrams(food)}g`}
-          {kcalPerServing != null ? ` · ${kcalPerServing} kcal` : ''}
+          {kcalPerServing != null ? ` · ${toEnergy(kcalPerServing, energyUnit)} ${energyUnitLabel(energyUnit)}` : ''}
           {sourceTag ? `  ${sourceTag}` : ''}
         </Text>
       </View>

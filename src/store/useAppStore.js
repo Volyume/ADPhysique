@@ -1582,6 +1582,8 @@ const useAppStore = create((set, get) => ({
     colorBlindSafe: false, // swaps red/green success/error to blue/orange
     reduceMotion: false,   // skips PRCelebration particles, RestTimer pulse, big spring anims
     theme: 'dark',         // COMP-029: 'dark' | 'light' | 'system'. Default dark, no existing user changes
+    energyUnit: 'kcal',    // food-UI energy DISPLAY unit: 'kcal' | 'kj'. Display-only (read reactively,
+                           // no reload); stored values, targets + the coaching engine stay in kcal.
   },
   accessibilityLoaded: false,
   loadAccessibility: async () => {

@@ -23,6 +23,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { toEnergy, energyUnitLabel } from '../lib/format';
 import BackHeader from '../components/BackHeader';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
@@ -36,6 +37,7 @@ import { logError } from '../lib/errorLog';
 
 export default function MyMealsScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
+  const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const userId = user?.id;
   const toast = useToast();
 
@@ -149,7 +151,7 @@ export default function MyMealsScreen({ navigation, route }) {
         <View style={{ flex: 1 }}>
           <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
           <Text style={styles.meta}>
-            {item.itemCount} {item.itemCount === 1 ? 'food' : 'foods'} · {item.totals.kcal} kcal · {item.totals.protein}g protein
+            {item.itemCount} {item.itemCount === 1 ? 'food' : 'foods'} · {toEnergy(item.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)} · {item.totals.protein}g protein
           </Text>
         </View>
         <Ionicons name="add-circle-outline" size={22} color={colors.primary} />

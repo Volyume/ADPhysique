@@ -78,10 +78,10 @@ describe('remaining-as-hero (founder decision 2026-06-29)', () => {
     const tree = create(<MacroRings rollup={rollup} targets={targets} />);
     const texts = tree.root.findAll((n) => n.type === 'Text' && typeof n.props.children !== 'object')
       .map((n) => n.props.children);
-    // 2100 - 1840 = 260 left
+    // 2100 - 1840 = 260 left; eaten reference shows "1840" + "of 2100 kcal"
     expect(texts).toContain(260);
     expect(texts).toContain('left');
-    expect(texts).toContain('of 2100 eaten');
+    expect(texts).toContain('of 2100 kcal');
   });
 
   test('over target reads "over" with the magnitude, never a separate alarm', () => {

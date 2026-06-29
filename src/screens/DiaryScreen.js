@@ -50,14 +50,16 @@ import { deleteEntries, restoreEntries, moveEntriesToSlot, copyEntriesToDate } f
 import { shouldShowOffConsentCard, dismissOffConsentCard } from '../lib/food/writeback';
 import { buildMealSlots, highestLoggedMeal, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
 import { scaleMacros } from '../lib/food/macros';
+import { toEnergy, energyUnitLabel } from '../lib/format';
 
 export default function DiaryScreen({ navigation }) {
-  const { user, macroCycle, refeed, calorieBank, sex } = useAppStore(useShallow((s) => ({
+  const { user, macroCycle, refeed, calorieBank, sex, energyUnit } = useAppStore(useShallow((s) => ({
     user: s.user,
     macroCycle: s.userProfile?.macroCycle ?? null,
     refeed: s.userProfile?.refeed ?? null,
     calorieBank: s.userProfile?.calorieBank ?? null,
     sex: s.userProfile?.sex ?? null,
+    energyUnit: s.accessibility?.energyUnit ?? 'kcal',
   })));
   const setCalorieBank = useAppStore((s) => s.setCalorieBank);
   const userId = user?.id;
@@ -1018,7 +1020,7 @@ export default function DiaryScreen({ navigation }) {
                 >
                   <Text style={styles.moveOptionText}>{friendlyDate(d.entry_date)}</Text>
                   <Text style={styles.copyRowMeta}>
-                    {d.count} {d.count === 1 ? 'item' : 'items'} · {Math.round(d.kcal ?? 0)} kcal
+                    {d.count} {d.count === 1 ? 'item' : 'items'} · {toEnergy(Math.round(d.kcal ?? 0), energyUnit)} {energyUnitLabel(energyUnit)}
                   </Text>
                 </TouchableOpacity>
               ))

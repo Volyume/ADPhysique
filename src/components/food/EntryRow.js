@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
+import { toEnergy, energyUnitLabel } from '../../lib/format';
+import useAppStore from '../../store/useAppStore';
 
 export function friendlyFoodName(entry) {
   if (entry?._name && typeof entry._name === 'string') return entry._name;
@@ -16,6 +18,7 @@ export function EntryRow({
   entry, onEdit,
   selectionMode = false, selected = false, onLongPress, onToggleSelect,
 }) {
+  const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const kcal = Math.round(entry.kcal ?? 0);
   const p = Math.round(entry.protein_g ?? 0);
   const c = Math.round(entry.carbs_g ?? 0);
@@ -32,8 +35,8 @@ export function EntryRow({
       delayLongPress={300}
       accessibilityLabel={
         selectionMode
-          ? `${name}, ${kcal} kcal. ${selected ? 'Selected' : 'Not selected'}. Tap to toggle.`
-          : `${name}, ${kcal} kcal. Tap to edit.`
+          ? `${name}, ${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}. ${selected ? 'Selected' : 'Not selected'}. Tap to toggle.`
+          : `${name}, ${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}. Tap to edit.`
       }
     >
       {selectionMode ? (
@@ -47,7 +50,7 @@ export function EntryRow({
         {!isQuick ? <Text style={styles.entryQuantity}>{Math.round(entry.quantity_g)}g</Text> : null}
       </View>
       <View style={styles.entryMacros}>
-        <Text style={styles.entryKcal}>{kcal} kcal</Text>
+        <Text style={styles.entryKcal}>{toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
         <Text style={styles.entryMacroLine}>{p}P {c}C {f}F</Text>
       </View>
     </TouchableOpacity>

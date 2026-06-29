@@ -3,6 +3,8 @@ import { appAlert } from '../AppAlert';
 import { View, Text, StyleSheet, Pressable, TextInput, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
+import { toEnergy, energyUnitLabel } from '../../lib/format';
+import useAppStore from '../../store/useAppStore';
 import BottomSheet from '../BottomSheet';
 import { useToast } from '../Toast';
 import { pickerMealSlots } from '../../lib/food/mealSlots';
@@ -38,6 +40,11 @@ export default function FoodDetailSheet({
   onSave, onDelete, onClose,
 }) {
   const toast = useToast();
+  // Energy DISPLAY unit (kcal | kj). Display-only: macros.kcal stays kcal (the
+  // stored/scaled value scaleMacros returns); only the rendered energy number +
+  // label convert at the point of display.
+  const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
+  const energyWord = energyUnit === 'kj' ? 'kilojoules' : 'calories';
   // Serving model (food ease, MFP/Cronometer parity): prefer the food's own
   // household serving (e.g. "1 cup", "1 slice") so the common case is RECOGNITION,
   // not gram arithmetic — the list row already shows serving_label, we keep it
@@ -194,9 +201,9 @@ export default function FoodDetailSheet({
             style={styles.macroSummary}
             accessible
             accessibilityLiveRegion="polite"
-            accessibilityLabel={`${macros.kcal} calories, protein ${macros.protein} grams, carbs ${macros.carbs} grams, fat ${macros.fat} grams`}
+            accessibilityLabel={`${toEnergy(macros.kcal, energyUnit)} ${energyWord}, protein ${macros.protein} grams, carbs ${macros.carbs} grams, fat ${macros.fat} grams`}
           >
-            <MacroPill label="kcal" value={macros.kcal} />
+            <MacroPill label={energyUnitLabel(energyUnit)} value={toEnergy(macros.kcal, energyUnit)} />
             <MacroPill label="P"    value={`${macros.protein}g`} />
             <MacroPill label="C"    value={`${macros.carbs}g`} />
             <MacroPill label="F"    value={`${macros.fat}g`} />

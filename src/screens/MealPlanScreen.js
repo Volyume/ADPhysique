@@ -41,7 +41,7 @@ import {
 } from '../lib/food/mealPlanService';
 import { updateMealPlan, getFoodEntriesForDay, clearPlannedDay } from '../lib/food/db';
 import { buildGroceryList } from '../lib/food/groceryList';
-import { formatNumber } from '../lib/format';
+import { formatNumber, formatEnergy, energyUnitLabel } from '../lib/format';
 
 // The week is scheduled onto real dates when added to the diary (day i ->
 // today + i, see applyPlanWeekToDiary), so the picker labels each day with its
@@ -103,6 +103,7 @@ function PrefRow({ label, options, value, onSelect, busy }) {
 export default function MealPlanScreen({ navigation }) {
   const user = useAppStore((s) => s.user);
   const userProfile = useAppStore((s) => s.userProfile);
+  const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const addMealPlanExcludedFood = useAppStore((s) => s.addMealPlanExcludedFood);
   const setMealPlanPrefs = useAppStore((s) => s.setMealPlanPrefs);
   const toast = useToast();
@@ -414,6 +415,10 @@ export default function MealPlanScreen({ navigation }) {
     }
   }, [user?.id, userProfile, busy, setMealPlanPrefs, load, toast]);
 
+  // Energy DISPLAY unit (kcal | kj): display-only. All `totals.kcal` values stay
+  // kcal (the engine/stored unit); only the rendered energy number + label and
+  // the spoken a11y word convert (energyWord) at the point of display.
+  const energyWord = energyUnit === 'kj' ? 'kilojoules' : 'calories';
   const prefs = plan?.prefs || {};
   const dayTypeLabel = day?.variant === 'training' ? 'Training day' : 'Rest day';
   const target = plan?.targetSnapshot;
@@ -498,8 +503,8 @@ export default function MealPlanScreen({ navigation }) {
             ) : null}
             {day ? (
               <Text style={styles.dayKcal} maxFontSizeMultiplier={1.3}>
-                {formatNumber(day.totals.kcal)} kcal
-                {target ? <Text style={styles.dayKcalTarget}>{`  of ${formatNumber(day.target?.kcal ?? plan.variants?.[day.variant]?.kcal ?? target.targetKcal)}`}</Text> : null}
+                {formatEnergy(day.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)}
+                {target ? <Text style={styles.dayKcalTarget}>{`  of ${formatEnergy(day.target?.kcal ?? plan.variants?.[day.variant]?.kcal ?? target.targetKcal, energyUnit)}`}</Text> : null}
               </Text>
             ) : null}
           </View>
@@ -535,11 +540,11 @@ export default function MealPlanScreen({ navigation }) {
                   onPress={() => setExpanded((e) => ({ ...e, [slot.slot]: !open }))}
                   accessibilityRole="button"
                   accessibilityState={{ expanded: open }}
-                  accessibilityLabel={`${planSlotLabel(slot.slot)}: ${slot.name}, ${slot.totals.kcal} calories. Tap for details.`}
+                  accessibilityLabel={`${planSlotLabel(slot.slot)}: ${slot.name}, ${formatEnergy(slot.totals.kcal, energyUnit)} ${energyWord}. Tap for details.`}
                 >
                   <View style={styles.mealHead}>
                     <Text style={styles.mealSlot} numberOfLines={1} ellipsizeMode="tail">{planSlotLabel(slot.slot)}</Text>
-                    <Text style={styles.mealKcal}>{formatNumber(slot.totals.kcal)} kcal</Text>
+                    <Text style={styles.mealKcal}>{formatEnergy(slot.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
                   </View>
                   <Text style={styles.mealName} numberOfLines={2} ellipsizeMode="tail">{slot.name}</Text>
                 </TouchableOpacity>
@@ -589,7 +594,7 @@ export default function MealPlanScreen({ navigation }) {
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>Day</Text>
               <Text style={styles.totalsText}>
-                {`${formatNumber(day.totals.kcal)} kcal · P ${formatNumber(day.totals.protein)} · C ${formatNumber(day.totals.carbs)} · F ${formatNumber(day.totals.fat)}`}
+                {`${formatEnergy(day.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} · P ${formatNumber(day.totals.protein)} · C ${formatNumber(day.totals.carbs)} · F ${formatNumber(day.totals.fat)}`}
               </Text>
             </View>
           ) : null}
@@ -689,14 +694,14 @@ export default function MealPlanScreen({ navigation }) {
                   onPress={() => applyMealChoice(swapSheet.slotKey, meal)}
                   disabled={busy}
                   accessibilityRole="button"
-                  accessibilityLabel={`${meal.name}, ${meal.totals.kcal} calories, ${meal.totals.protein} grams protein${recommended ? '. Closest match.' : ''}`}
+                  accessibilityLabel={`${meal.name}, ${formatEnergy(meal.totals.kcal, energyUnit)} ${energyWord}, ${meal.totals.protein} grams protein${recommended ? '. Closest match.' : ''}`}
                 >
                   <View style={styles.swapOptionMain}>
                     <Text style={styles.swapOptionName}>{meal.name}</Text>
                     {recommended ? <Text style={styles.swapOptionTag}>Closest match</Text> : null}
                   </View>
                   <Text style={styles.swapOptionMacros}>
-                    {`${meal.totals.kcal} kcal · P ${meal.totals.protein} g`}
+                    {`${formatEnergy(meal.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} · P ${meal.totals.protein} g`}
                   </Text>
                 </TouchableOpacity>
               ))}

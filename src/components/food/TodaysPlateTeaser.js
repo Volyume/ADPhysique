@@ -15,6 +15,8 @@
 import { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
+import { toEnergy, energyUnitLabel } from '../../lib/format';
+import useAppStore from '../../store/useAppStore';
 import { assembleDayPlan } from '../../lib/food/mealPlanAssembler';
 import { mealSlotLabel } from '../../lib/food/mealSlots';
 
@@ -24,6 +26,10 @@ const SAMPLE_TARGET = Object.freeze({ kcal: 2200, proteinG: 165, carbsG: 230, fa
 const SAMPLE_BAND = Object.freeze({ kcalMin: 1980, kcalMax: 2420 });
 
 export default function TodaysPlateTeaser() {
+  // Energy DISPLAY unit (kcal | kj). Display-only: SAMPLE_TARGET and the
+  // assembled plan totals stay kcal (the engine works in kcal); only the
+  // rendered energy number + label convert.
+  const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const day = useMemo(() => assembleDayPlan({
     target: SAMPLE_TARGET,
     band: SAMPLE_BAND,
@@ -47,14 +53,14 @@ export default function TodaysPlateTeaser() {
           <View key={slot.slot} style={styles.plate}>
             <View style={styles.plateHead}>
               <Text style={styles.plateSlot}>{mealSlotLabel(slot.slot)}</Text>
-              <Text style={styles.plateKcal}>{slot.totals.kcal} kcal</Text>
+              <Text style={styles.plateKcal}>{toEnergy(slot.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
             </View>
             <Text style={styles.plateName} numberOfLines={1}>{slot.name}</Text>
           </View>
         ))}
         <View style={styles.totalRow}>
           <Text style={styles.totalText}>
-            {`${day.totals.kcal} kcal · P ${day.totals.protein} · C ${day.totals.carbs} · F ${day.totals.fat}`}
+            {`${toEnergy(day.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} · P ${day.totals.protein} · C ${day.totals.carbs} · F ${day.totals.fat}`}
           </Text>
         </View>
       </View>

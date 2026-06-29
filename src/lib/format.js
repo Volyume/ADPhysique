@@ -41,3 +41,34 @@ export function formatDecimal(n, dp = 0, opts = {}) {
     maximumFractionDigits: dp,
   });
 }
+
+// ─── Energy unit (kcal ⇄ kJ) ───────────────────────────────────────────────
+// A UK/EU audience reads packaged-food energy in kilojoules (EU food-labelling
+// law gives kJ first). The toggle is a DISPLAY-ONLY preference (store key
+// accessibility.energyUnit: 'kcal' | 'kj', default 'kcal'): every stored value,
+// every nutrition target, and the entire deterministic coaching engine keep
+// working in kcal — these helpers only change how an energy number is *shown*.
+// 1 kcal = 4.184 kJ (the thermochemical factor EU labelling uses).
+export const KJ_PER_KCAL = 4.184;
+
+// Convert a kcal value to the chosen display unit, rounded to a whole number.
+// Non-finite input → 0 (a label never prints NaN). kcal rounds to whole too, so
+// callers can pass a raw total without pre-rounding.
+export function toEnergy(kcal, unit = 'kcal') {
+  const k = Number(kcal);
+  if (!Number.isFinite(k)) return 0;
+  return unit === 'kj' ? Math.round(k * KJ_PER_KCAL) : Math.round(k);
+}
+
+// The unit's display label.
+export function energyUnitLabel(unit = 'kcal') {
+  return unit === 'kj' ? 'kJ' : 'kcal';
+}
+
+// Format a kcal value for display in the chosen unit with en-GB grouping.
+// `opts.withUnit` appends the unit label ("7,029 kJ"); otherwise returns the
+// grouped number only so a caller can render the unit in its own styled node.
+export function formatEnergy(kcal, unit = 'kcal', opts = {}) {
+  const num = formatNumber(toEnergy(kcal, unit), opts);
+  return opts.withUnit ? `${num} ${energyUnitLabel(unit)}` : num;
+}

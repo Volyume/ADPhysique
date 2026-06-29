@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
+import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 
 const KCAL_SIZE = 132;
@@ -194,6 +195,12 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
   // replay on every mount), and is skipped entirely under reduce-motion. The
   // accessibility label and the macro numbers stay on the real values.
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
+  // Energy DISPLAY unit (kcal | kj). Display-only: every value above stays in
+  // kcal (the stored/coaching unit); only the rendered energy number + label
+  // convert. `kcal`/`kcalTarget`/`disp.kcal`/`plannedKcal`/`dispRemaining` are
+  // all kcal and are wrapped in toEnergy() at the point of display.
+  const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
+  const energyWord = energyUnit === 'kj' ? 'kilojoules' : 'calories';
   const animValue = useRef(new Animated.Value(1)).current;
   const fromRef = useRef({ kcal, progress: kcalProgress });
   const [disp, setDisp] = useState({ kcal, progress: kcalProgress });
@@ -233,11 +240,13 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
   const macroPart = (label, value, target) =>
     `${label} ${value}${target != null ? ` of ${target}` : ''} grams`;
   const a11ySummary = [
-    kcalTarget != null ? `${kcal} of ${kcalTarget} calories` : `${kcal} calories`,
+    kcalTarget != null
+      ? `${toEnergy(kcal, energyUnit)} of ${toEnergy(kcalTarget, energyUnit)} ${energyWord}`
+      : `${toEnergy(kcal, energyUnit)} ${energyWord}`,
     macroPart('protein', p, pTarget),
     macroPart('carbs', c, cTarget),
     macroPart('fat', f, fTarget),
-    hasPlanned ? `${plannedKcal} calories planned but not yet confirmed eaten` : null,
+    hasPlanned ? `${toEnergy(plannedKcal, energyUnit)} ${energyWord} planned but not yet confirmed eaten` : null,
   ].filter(Boolean).join(', ');
   const a11yLabel = onPress ? `${a11ySummary}. Tap for the breakdown by meal.` : a11ySummary;
 
@@ -273,24 +282,24 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
           <View style={styles.kcalCentre} pointerEvents="none">
             {kcalTarget != null ? (
               <>
-                <Text style={styles.kcalValue}>{dispOver ? Math.abs(dispRemaining) : dispRemaining}</Text>
+                <Text style={styles.kcalValue}>{toEnergy(dispOver ? Math.abs(dispRemaining) : dispRemaining, energyUnit)}</Text>
                 <Text style={styles.kcalSubLabel}>{dispOver ? 'over' : 'left'}</Text>
               </>
             ) : (
               <>
-                <Text style={styles.kcalValue}>{disp.kcal}</Text>
-                <Text style={styles.kcalSubLabel}>kcal</Text>
+                <Text style={styles.kcalValue}>{toEnergy(disp.kcal, energyUnit)}</Text>
+                <Text style={styles.kcalSubLabel}>{energyUnitLabel(energyUnit)}</Text>
               </>
             )}
             {hasPlanned ? (
-              <Text style={styles.kcalPlanned}>{`+${plannedKcal} planned`}</Text>
+              <Text style={styles.kcalPlanned}>{`+${toEnergy(plannedKcal, energyUnit)} planned`}</Text>
             ) : null}
           </View>
         </View>
         {kcalTarget != null ? (
           <View style={styles.kcalEatenWrap}>
-            <Text style={styles.kcalEatenValue}>{disp.kcal}</Text>
-            <Text style={styles.kcalEatenLabel}>{`of ${kcalTarget} eaten`}</Text>
+            <Text style={styles.kcalEatenValue}>{toEnergy(disp.kcal, energyUnit)}</Text>
+            <Text style={styles.kcalEatenLabel}>{`of ${toEnergy(kcalTarget, energyUnit)} ${energyUnitLabel(energyUnit)}`}</Text>
           </View>
         ) : null}
       </View>

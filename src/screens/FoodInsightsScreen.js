@@ -24,6 +24,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { toEnergy, energyUnitLabel, formatEnergy } from '../lib/format';
 import Card from '../components/Card';
 import VolyumeChart from '../components/VolyumeChart';
 import { useToast } from '../components/Toast';
@@ -81,6 +82,8 @@ function weekLabel(iso) {
 
 export default function FoodInsightsScreen({ navigation }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
+  const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
+  const energyWord = energyUnit === 'kj' ? 'kilojoules' : 'calories';
   const userId = user?.id;
   const toast = useToast();
 
@@ -298,9 +301,9 @@ export default function FoodInsightsScreen({ navigation }) {
             <Card style={styles.card}>
               <Text
                 style={styles.summaryValue}
-                accessibilityLabel={`Averaging ${weeklyAvg.thisWeek.avg} calories a day this week`}
+                accessibilityLabel={`Averaging ${toEnergy(weeklyAvg.thisWeek.avg, energyUnit)} ${energyWord} a day this week`}
               >
-                {weeklyAvg.thisWeek.avg.toLocaleString('en-GB')} kcal/day
+                {formatEnergy(weeklyAvg.thisWeek.avg, energyUnit)} {energyUnitLabel(energyUnit)}/day
               </Text>
               <Text style={styles.summaryCaption}>
                 Average over {weeklyAvg.thisWeek.n} {weeklyAvg.thisWeek.n === 1 ? 'day' : 'days'} logged this week.
@@ -309,7 +312,7 @@ export default function FoodInsightsScreen({ navigation }) {
                 <Text style={styles.summaryDelta}>
                   {weeklyAvg.delta === 0
                     ? 'Same as last week.'
-                    : `${weeklyAvg.delta > 0 ? '+' : '−'}${Math.abs(weeklyAvg.delta).toLocaleString('en-GB')} kcal/day vs last week.`}
+                    : `${weeklyAvg.delta > 0 ? '+' : '−'}${formatEnergy(Math.abs(weeklyAvg.delta), energyUnit)} ${energyUnitLabel(energyUnit)}/day vs last week.`}
                 </Text>
               ) : (
                 <Text style={styles.summaryDelta}>No logged days last week to compare.</Text>
@@ -343,14 +346,14 @@ export default function FoodInsightsScreen({ navigation }) {
                   const p = calorieLine[i];
                   if (!p) return null;
                   return {
-                    title: `${p.value.toLocaleString('en-GB')} kcal`,
+                    title: `${formatEnergy(p.value, energyUnit)} ${energyUnitLabel(energyUnit)}`,
                     sub: weekLabel(p.iso),
                   };
                 }}
               />
               <Text style={styles.cardFootnote}>
                 {targets?.targetKcal
-                  ? `Each point is a logged day. Faint line is your ${targets.targetKcal.toLocaleString('en-GB')} kcal target.`
+                  ? `Each point is a logged day. Faint line is your ${formatEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)} target.`
                   : 'Each point is a logged day. Set a calorie target in Precision Coaching to see the target line.'}
               </Text>
             </>
@@ -371,7 +374,7 @@ export default function FoodInsightsScreen({ navigation }) {
                 key={b.key}
                 style={styles.barRow}
                 accessible
-                accessibilityLabel={`${b.label}, ${b.kcal} kcal${isWeekly ? ' average' : ''}${targetMet ? ', on target' : ''}`}
+                accessibilityLabel={`${b.label}, ${toEnergy(b.kcal, energyUnit)} ${energyUnitLabel(energyUnit)}${isWeekly ? ' average' : ''}${targetMet ? ', on target' : ''}`}
               >
                 <Text style={styles.barDay}>{b.label}</Text>
                 <View style={styles.barTrack}>
@@ -381,15 +384,15 @@ export default function FoodInsightsScreen({ navigation }) {
                     targetMet && { backgroundColor: colors.success },
                   ]} />
                 </View>
-                <Text style={styles.barValue}>{b.kcal}</Text>
+                <Text style={styles.barValue}>{toEnergy(b.kcal, energyUnit)}</Text>
               </View>
             );
           })}
           {targets?.targetKcal ? (
             <Text style={styles.cardFootnote}>
               {isWeekly
-                ? `Target: ${targets.targetKcal} kcal/day. Each bar is a weekly average; within ${pctLabel(ADHERENCE_TOLERANCE.kcal)} turns green.`
-                : `Target: ${targets.targetKcal} kcal. Bars within ${pctLabel(ADHERENCE_TOLERANCE.kcal)} turn green.`}
+                ? `Target: ${toEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}/day. Each bar is a weekly average; within ${pctLabel(ADHERENCE_TOLERANCE.kcal)} turns green.`
+                : `Target: ${toEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}. Bars within ${pctLabel(ADHERENCE_TOLERANCE.kcal)} turn green.`}
             </Text>
           ) : (
             <Text style={styles.cardFootnote}>

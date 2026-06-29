@@ -26,6 +26,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { toEnergy, energyUnitLabel } from '../lib/format';
 import {
   createRecipe, updateRecipe, getRecipeWithIngredients,
   setRecipeIngredients, computeRecipeMacros,
@@ -38,6 +39,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 export default function RecipeBuilderScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
+  const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const userId = user?.id;
   const toast = useToast();
 
@@ -271,13 +273,13 @@ export default function RecipeBuilderScreen({ navigation, route }) {
         <View style={styles.macros}>
           <Text style={styles.macrosTitle}>Per serving</Text>
           <View style={styles.macrosRow}>
-            <MacroPill label="kcal" value={macros.perServing.kcal} />
+            <MacroPill label={energyUnitLabel(energyUnit)} value={toEnergy(macros.perServing.kcal, energyUnit)} />
             <MacroPill label="P" value={`${macros.perServing.protein}g`} />
             <MacroPill label="C" value={`${macros.perServing.carbs}g`} />
             <MacroPill label="F" value={`${macros.perServing.fat}g`} />
           </View>
           <Text style={styles.macrosSub}>
-            Whole recipe: {macros.total.kcal} kcal · P {macros.total.protein}g · C {macros.total.carbs}g · F {macros.total.fat}g
+            Whole recipe: {toEnergy(macros.total.kcal, energyUnit)} {energyUnitLabel(energyUnit)} · P {macros.total.protein}g · C {macros.total.carbs}g · F {macros.total.fat}g
           </Text>
         </View>
       </ScrollView>

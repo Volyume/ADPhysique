@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { formatEnergy, energyUnitLabel } from '../lib/format';
 import InfoTooltip from '../components/InfoTooltip';
 import { useToast } from '../components/Toast';
 import { calculateNutritionTargets, PROTEIN_APPROACHES } from '../lib/nutritionEngine';
@@ -145,7 +146,7 @@ export default function NutritionTargetsScreen({ navigation }) {
   // mutation (rest timer ticks, sync events, etc.) re-renders this
   // huge screen. Selecting just the two fields we read means we only
   // re-render when those change.
-  const { user, userProfile } = useAppStore(useShallow(s => ({ user: s.user, userProfile: s.userProfile })));
+  const { user, userProfile, energyUnit } = useAppStore(useShallow(s => ({ user: s.user, userProfile: s.userProfile, energyUnit: s.accessibility?.energyUnit ?? 'kcal' })));
 
   // ── Form state ────────────────────────────────────────────────────────────────
   const [sex,            setSex]            = useState('male');
@@ -935,10 +936,10 @@ export default function NutritionTargetsScreen({ navigation }) {
                   <View style={styles.heroCard}>
                     <Text style={styles.heroLabel}>Daily Energy Target</Text>
                     <Text style={styles.heroKcal}>
-                      {tk.toLocaleString('en-GB')} kcal
+                      {formatEnergy(tk, energyUnit)} {energyUnitLabel(energyUnit)}
                     </Text>
                     <Text style={styles.heroRange}>
-                      Estimated range: {kMin.toLocaleString('en-GB')} – {kMax.toLocaleString('en-GB')} kcal
+                      Estimated range: {formatEnergy(kMin, energyUnit)} – {formatEnergy(kMax, energyUnit)} {energyUnitLabel(energyUnit)}
                     </Text>
                   </View>
                 );

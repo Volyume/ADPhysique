@@ -44,6 +44,7 @@ import { resolveFoodRef } from '../lib/food/sources/localCache';
 import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import { toEnergy, energyUnitLabel } from '../lib/format';
 import { useToast } from '../components/Toast';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import QuickAddSheet from '../components/food/QuickAddSheet';
@@ -66,8 +67,14 @@ const EMPTY_COPY = {
 const RELOG_TABS = new Set(['recents', 'favourites', 'frequents']);
 
 export default function FoodSearchScreen({ navigation, route }) {
-  const { user, userProfile } = useAppStore(useShallow((s) => ({ user: s.user, userProfile: s.userProfile })));
+  const { user, userProfile, energyUnit } = useAppStore(useShallow((s) => ({
+    user: s.user,
+    userProfile: s.userProfile,
+    energyUnit: s.accessibility?.energyUnit ?? 'kcal',
+  })));
   const userId = user?.id;
+  // Energy DISPLAY unit (kcal | kj): display-only, applied at the render sites
+  // below. plateKcal and every macros.kcal stay kcal for the maths/log writes.
   const toast = useToast();
 
   const mealSlot = route?.params?.mealSlot ?? 'snack';
@@ -703,7 +710,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         ListHeaderComponent={
           suggestMeta?.perMeal ? (
             <Text style={styles.suggestHint}>
-              Sized for this meal: around {Math.round(suggestMeta.perMeal.protein)}g protein, {Math.round(suggestMeta.perMeal.kcal)} kcal.
+              Sized for this meal: around {Math.round(suggestMeta.perMeal.protein)}g protein, {toEnergy(suggestMeta.perMeal.kcal, energyUnit)} {energyUnitLabel(energyUnit)}.
             </Text>
           ) : null
         }
@@ -723,7 +730,7 @@ export default function FoodSearchScreen({ navigation, route }) {
                   {isFood ? `${item.name} · ${item.quantityG}g` : item.name}
                 </Text>
                 <Text style={styles.suggestMacros}>
-                  {item.macros.kcal} kcal · {item.macros.protein}g protein · {item.macros.carbs}g carbs · {item.macros.fat}g fat
+                  {toEnergy(item.macros.kcal, energyUnit)} {energyUnitLabel(energyUnit)} · {item.macros.protein}g protein · {item.macros.carbs}g carbs · {item.macros.fat}g fat
                 </Text>
               </View>
               {loggingMealId === busyKey
@@ -839,7 +846,7 @@ export default function FoodSearchScreen({ navigation, route }) {
             accessibilityLabel="Review the plate"
           >
             <Text style={styles.plateCount}>{plate.length} on the plate</Text>
-            <Text style={styles.plateKcalLine}>~{plateKcal} kcal · tap to review</Text>
+            <Text style={styles.plateKcalLine}>~{toEnergy(plateKcal, energyUnit)} {energyUnitLabel(energyUnit)} · tap to review</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.plateLogBtn}
@@ -866,7 +873,7 @@ export default function FoodSearchScreen({ navigation, route }) {
                 <View key={it.key} style={styles.plateItem}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.plateItemName} numberOfLines={1}>{it.food.name}</Text>
-                    <Text style={styles.plateItemMeta}>{Math.round(it.quantityG)}g · {it.kcal} kcal</Text>
+                    <Text style={styles.plateItemMeta}>{Math.round(it.quantityG)}g · {toEnergy(it.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
                   </View>
                   <TouchableOpacity onPress={() => removeFromPlate(it.key)} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${it.food.name}`}>
                     <Ionicons name="close-circle" size={22} color={colors.textMuted} />

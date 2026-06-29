@@ -1,5 +1,7 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
+import { toEnergy, energyUnitLabel } from '../../lib/format';
+import useAppStore from '../../store/useAppStore';
 import BottomSheet from '../BottomSheet';
 import { mealSlotLabel, slotOrder } from '../../lib/food/mealSlots';
 
@@ -47,7 +49,7 @@ function round(s) {
 // Atwater factors (kcal per gram): protein 4, carbs 4, fat 9. Used to
 // self-explain the energy total and the descriptive %-of-calories split. This
 // is purely DESCRIPTIVE of what was eaten — no target, no colour judgement.
-function MacroLine({ kcal, protein, carbs, fat }) {
+function MacroLine({ kcal, protein, carbs, fat, energyUnit }) {
   const pKcal = protein * 4;
   const cKcal = carbs * 4;
   const fKcal = fat * 9;
@@ -58,7 +60,7 @@ function MacroLine({ kcal, protein, carbs, fat }) {
   return (
     <View style={styles.macroCell}>
       <Text style={styles.rowMacros}>
-        {kcal} kcal · {protein}P {carbs}C {fat}F
+        {toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)} · {protein}P {carbs}C {fat}F
       </Text>
       <Text style={styles.rowMacroKcal}>
         {protein}×4 + {carbs}×4 + {fat}×9 = {macroKcal} kcal
@@ -75,6 +77,9 @@ function MacroLine({ kcal, protein, carbs, fat }) {
  */
 export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClose, onSelectMeal }) {
   const { rows, total } = mealBreakdown(entries);
+  // Energy DISPLAY unit (kcal | kj). Display-only: the rollup kcal values stay
+  // kcal; only the rendered energy number + label convert.
+  const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
 
   return (
     <BottomSheet visible={visible} onClose={onClose} accessibilityLabel="Macro breakdown by meal">
@@ -99,12 +104,12 @@ export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClo
               accessibilityLabel={onSelectMeal ? `Go to ${r.label}` : undefined}
             >
               <Text style={styles.rowLabel}>{r.label}</Text>
-              <MacroLine kcal={r.kcal} protein={r.protein} carbs={r.carbs} fat={r.fat} />
+              <MacroLine kcal={r.kcal} protein={r.protein} carbs={r.carbs} fat={r.fat} energyUnit={energyUnit} />
             </Pressable>
           ))}
           <View style={[styles.row, styles.totalRow]}>
             <Text style={styles.totalLabel}>Total</Text>
-            <MacroLine kcal={total.kcal} protein={total.protein} carbs={total.carbs} fat={total.fat} />
+            <MacroLine kcal={total.kcal} protein={total.protein} carbs={total.carbs} fat={total.fat} energyUnit={energyUnit} />
           </View>
         </View>
       )}

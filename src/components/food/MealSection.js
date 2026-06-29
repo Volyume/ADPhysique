@@ -1,6 +1,8 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, spacing, radius, type } from '../../styles/theme';
+import { toEnergy, energyUnitLabel } from '../../lib/format';
+import useAppStore from '../../store/useAppStore';
 import { SwipeableEntryRow } from './EntryRow';
 
 // One meal as a single contained card (diary-tab redesign 2026-06-01). Replaces
@@ -13,6 +15,7 @@ export default function MealSection({
   slot, entries, onAdd, onQuickAdd, onEdit, onDelete,
   selectionMode = false, selectedIds, onLongPressEntry, onToggleSelect,
 }) {
+  const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const hasEntries = entries.length > 0;
   const slotKcal = Math.round(entries.reduce((a, e) => a + (e.kcal ?? 0), 0));
   const slotProtein = Math.round(entries.reduce((a, e) => a + (e.protein_g ?? 0), 0));
@@ -21,7 +24,7 @@ export default function MealSection({
       <View style={styles.header}>
         <Text style={styles.mealName}>{slot.label}</Text>
         {hasEntries ? (
-          <Text style={styles.subtotal}>{slotKcal} kcal · {slotProtein}g P</Text>
+          <Text style={styles.subtotal}>{toEnergy(slotKcal, energyUnit)} {energyUnitLabel(energyUnit)} · {slotProtein}g P</Text>
         ) : null}
       </View>
       {entries.map((e) => (

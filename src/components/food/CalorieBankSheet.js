@@ -16,6 +16,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-nativ
 import { Ionicons } from '@expo/vector-icons';
 import BottomSheet from '../BottomSheet';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
+import { toEnergy, energyUnitLabel } from '../../lib/format';
+import useAppStore from '../../store/useAppStore';
 import { planCalorieBank, maxApplicableBumpKcal } from '../../lib/food/calorieBank';
 
 const BUMP_STEP = 50;
@@ -43,6 +45,13 @@ export default function CalorieBankSheet({
 }) {
   const [bigDay, setBigDay] = useState(defaultBigDay);
   const [requestedBump, setRequestedBump] = useState(DEFAULT_BUMP);
+
+  // Energy DISPLAY unit (kcal | kj). Display-only: every kcal value here (bump,
+  // step, floors, band, plan deltas) stays kcal and is fed to the engine in
+  // kcal; only read-only PREVIEW energy numbers convert. The "+extra" stepper
+  // control itself stays kcal (it is the user's chosen kcal bump, persisted as
+  // perDayDeltaKcal), like the QuickAdd kcal input.
+  const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
 
   // Reset the controls each time the sheet opens for a day.
   useEffect(() => {
@@ -161,7 +170,7 @@ export default function CalorieBankSheet({
 
       {plan.ok ? (
         <Text style={styles.preview}>
-          {dayLabel(bigDay)}: {bigNewKcal} kcal. The other {others} days drop by about {perOther} kcal each. Your weekly total stays the same.
+          {dayLabel(bigDay)}: {toEnergy(bigNewKcal, energyUnit)} {energyUnitLabel(energyUnit)}. The other {others} days drop by about {toEnergy(perOther, energyUnit)} {energyUnitLabel(energyUnit)} each. Your weekly total stays the same.
         </Text>
       ) : (
         <Text style={styles.error}>{ERROR_COPY[plan.reason] ?? ERROR_COPY.invalid_input}</Text>

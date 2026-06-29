@@ -15,6 +15,15 @@ const THEME_OPTIONS = [
   { value: 'system', label: 'Match phone' },
 ];
 
+// Food-energy display unit. kcal is the default; kJ matches EU food labelling
+// (which gives kilojoules first). Display-only — it never changes a stored
+// value, a nutrition target, or anything the coaching engine computes, so it
+// takes effect immediately with no reload.
+const ENERGY_OPTIONS = [
+  { value: 'kcal', label: 'kcal' },
+  { value: 'kj', label: 'kJ' },
+];
+
 // Larger Text / Higher Contrast / Colour-Blind Safe mutate theme tokens
 // that StyleSheet.create has already baked at module-evaluation time, so
 // they only take effect after the app is re-launched and bootstrapAccessibility
@@ -62,6 +71,7 @@ export default function SettingsDisplayScreen() {
   }, [accessibilityLoaded, loadAccessibility]);
 
   const currentTheme = accessibility.theme ?? 'dark';
+  const currentEnergy = accessibility.energyUnit ?? 'kcal';
 
   return (
     <SettingsPage>
@@ -87,6 +97,31 @@ export default function SettingsDisplayScreen() {
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={opt.label}
+              >
+                <Text style={[local.segText, active && local.segTextActive]}>{opt.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={local.title}>Energy units</Text>
+        <Text style={local.sub}>
+          How food energy is shown. kJ (kilojoules) matches the energy on EU food labels. This changes the
+          display only. Your targets and coaching stay the same.
+        </Text>
+        <View style={local.segment} accessibilityRole="radiogroup">
+          {ENERGY_OPTIONS.map((opt) => {
+            const active = currentEnergy === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                style={[local.segBtn, active && local.segBtnActive]}
+                onPress={() => { if (!active) setAccessibilityPref('energyUnit', opt.value); }}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={opt.value === 'kj' ? 'Kilojoules' : 'Kilocalories'}
               >
                 <Text style={[local.segText, active && local.segTextActive]}>{opt.label}</Text>
               </TouchableOpacity>
