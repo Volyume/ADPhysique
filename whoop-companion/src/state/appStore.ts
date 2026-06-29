@@ -57,6 +57,23 @@ import { resilience, Resilience } from '../metrics/resilience';
 import { cardioAge } from '../metrics/cardioAge';
 import { addDays, dayKey, epochDay, startOfDayMs } from '../util/time';
 
+export type SessionKind = 'workout' | 'sleep' | 'nap';
+export type LiveSession = {
+  kind: SessionKind;
+  label: string;
+  startTs: number;
+  laps: number[];
+  maxHr: number | null;
+};
+export type SessionStats = {
+  elapsedSec: number;
+  avgHr: number | null;
+  maxHr: number | null;
+  strain: number | null;
+  zones: ReturnType<typeof hrZones>;
+  beats: number;
+};
+
 export type AppState = {
   ready: boolean;
   status: WhoopStatus;
@@ -84,6 +101,7 @@ export type AppState = {
   resilience: Resilience | null;
   cardioAge: number | null;
   cardio: CardioRow[];
+  session: LiveSession | null;
   profile: UserProfile;
   error: string | null;
 };
@@ -114,6 +132,7 @@ const initialState: AppState = {
   resilience: null,
   cardioAge: null,
   cardio: [],
+  session: null,
   profile: DEFAULT_PROFILE,
   error: null,
 };
@@ -174,6 +193,12 @@ class AppStore extends Store<AppState> {
       liveRmssd: hrv?.rmssd ?? null,
       liveStress: stress?.score ?? null,
     });
+
+    // Track peak HR during a live session.
+    const sess = this.getState().session;
+    if (sess && (sess.maxHr == null || bpm > sess.maxHr)) {
+      this.setState({ session: { ...sess, maxHr: bpm } });
+    }
 
     // Persist at most one row per second.
     const now = Date.now();
@@ -301,6 +326,58 @@ class AppStore extends Store<AppState> {
   clearManualSleep = async (): Promise<void> => {
     await kvSet(`manualSleep:${dayKey(Date.now())}`, '');
     await this.recomputeToday();
+  };
+
+  // ---- live session (start / track / log) ----
+  startSession = (kind: SessionKind, label: string): void => {
+    this.setState({ session: { kind, label, startTs: Date.now(), laps: [], maxHr: null } });
+  };
+
+  addLap = (): void => {
+    const s = this.getState().session;
+    if (s) this.setState({ session: { ...s, laps: [...s.laps, Date.now()] } });
+  };
+
+  discardSession = (): void => {
+    this.setState({ session: null });
+  };
+
+  /** Live stats for the active session, derived from the persisted HR stream. */
+  sessionStats = async (): Promise<SessionStats | null> => {
+    const s = this.getState().session;
+    if (!s) return null;
+    const now = Date.now();
+    const rows = await getHrSamplesBetween(s.startTs, now);
+    const perMin = perMinuteHr(rows);
+    const bpms = rows.map((r) => r.bpm);
+    const avgHr = bpms.length ? Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length) : null;
+    const maxHr = bpms.length ? Math.max(...bpms) : s.maxHr;
+    const zones = hrZones(perMin.map((p) => ({ hr: p.hr, minutes: 1 })), this.getState().profile);
+    const load = edwardsTrimp(perMin.map((p) => ({ hr: p.hr, minutes: 1 })), this.getState().profile);
+    const strain = perMin.length ? strainFromLoad(load) : null;
+    return { elapsedSec: Math.round((now - s.startTs) / 1000), avgHr, maxHr, strain, zones, beats: rows.length };
+  };
+
+  /** Stop the session and (optionally) save it: workout/nap → cardio, sleep → manual window. */
+  stopSession = async (save = true): Promise<void> => {
+    const s = this.getState().session;
+    if (!s) return;
+    const endTs = Date.now();
+    // Capture stats while the session is still active, then clear it.
+    const stats = save ? await this.sessionStats().catch(() => null) : null;
+    this.setState({ session: null });
+    if (!save) return;
+    if (s.kind === 'sleep') {
+      await this.setManualSleep(s.startTs, endTs);
+      return;
+    }
+    await this.addCardio({
+      activity: s.label,
+      startTs: s.startTs,
+      endTs,
+      avgHr: stats?.avgHr ?? s.maxHr ?? null,
+      source: s.kind === 'nap' ? 'nap' : 'live',
+    });
   };
 
   // ---- journal ----

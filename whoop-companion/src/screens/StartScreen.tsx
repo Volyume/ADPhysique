@@ -1,0 +1,86 @@
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+
+import { appStore } from '../state/appStore';
+import { Card, Screen, SectionLabel } from '../ui/components';
+import { colors, fonts } from '../ui/theme';
+import { Nav } from '../ui/navigation';
+
+const WORKOUTS = [
+  'Running', 'Cycling', 'Walking', 'Strength Training', 'HIIT', 'Rowing',
+  'Swimming', 'Yoga', 'Hiking', 'Elliptical', 'Spin', 'Boxing',
+  'Football', 'Tennis', 'Functional Fitness', 'Other',
+];
+
+export function StartScreen({ nav }: { nav: Nav }) {
+  const [picking, setPicking] = useState(false);
+
+  const startWorkout = (label: string) => {
+    appStore.startSession('workout', label);
+    nav.back(); // pop the start menu
+    nav.navigate({ name: 'liveSession' });
+  };
+  const startKind = (kind: 'sleep' | 'nap', label: string) => {
+    appStore.startSession(kind, label);
+    nav.back();
+    nav.navigate({ name: 'liveSession' });
+  };
+
+  if (picking) {
+    return (
+      <Screen title="Select activity" onBack={() => setPicking(false)} tint={colors.strainBlue}>
+        <Card>
+          <View style={styles.chips}>
+            {WORKOUTS.map((w) => (
+              <Pressable key={w} onPress={() => startWorkout(w)} style={styles.chip}>
+                <Text style={styles.chipText}>{w}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </Card>
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen title="Start" onBack={nav.back}>
+      <SectionLabel>Track in real time</SectionLabel>
+      <Big icon="flash" color={colors.strainBlue} title="Start Workout" sub="Live HR, strain, zones & laps" onPress={() => setPicking(true)} />
+      <Big icon="moon" color={colors.sleepTeal} title="Start Sleep" sub="Track until you wake — scores from your HR" onPress={() => startKind('sleep', 'Sleep')} />
+      <Big icon="cafe" color={colors.recoveryYellow} title="Start Nap" sub="Counts toward today’s sleep need" onPress={() => startKind('nap', 'Nap')} />
+
+      <SectionLabel>Log after the fact</SectionLabel>
+      <Big icon="add-circle" color={colors.textSecondary} title="Add past activity" sub="Enter a workout you’ve already done" onPress={() => { nav.back(); nav.navigate({ name: 'logActivity' }); }} />
+      <Big icon="bed" color={colors.sleepTeal} title="Log / adjust sleep" sub="Set or correct last night’s bed & wake times" onPress={() => { nav.back(); nav.navigate({ name: 'editSleep' }); }} />
+      <Big icon="book" color={colors.recoveryYellow} title="Journal" sub="Log today’s behaviours" onPress={() => { nav.back(); nav.navigate({ name: 'journal' }); }} />
+    </Screen>
+  );
+}
+
+function Big({ icon, color, title, sub, onPress }: { icon: string; color: string; title: string; sub: string; onPress: () => void }) {
+  return (
+    <Card onPress={onPress}>
+      <View style={styles.bigRow}>
+        <View style={[styles.iconWrap, { backgroundColor: `${color}22` }]}>
+          <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={24} color={color} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.bigTitle}>{title}</Text>
+          <Text style={styles.bigSub}>{sub}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+      </View>
+    </Card>
+  );
+}
+
+const styles = StyleSheet.create({
+  bigRow: { flexDirection: 'row', alignItems: 'center' },
+  iconWrap: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginRight: 14 },
+  bigTitle: { color: colors.text, fontSize: 16, fontFamily: fonts.textBold },
+  bigSub: { color: colors.textSecondary, fontSize: 12, marginTop: 2, fontFamily: fonts.text },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { paddingHorizontal: 14, paddingVertical: 11, borderRadius: 999, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  chipText: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold },
+});

@@ -23,6 +23,8 @@ import { LogActivityScreen } from './src/screens/LogActivityScreen';
 import { ResilienceScreen } from './src/screens/ResilienceScreen';
 import { IllnessScreen } from './src/screens/IllnessScreen';
 import { EditSleepScreen } from './src/screens/EditSleepScreen';
+import { StartScreen } from './src/screens/StartScreen';
+import { LiveSessionScreen } from './src/screens/LiveSessionScreen';
 import { colors } from './src/ui/theme';
 import { fonts, useWhoopFonts } from './src/ui/fonts';
 import { Nav, Route, TabKey, TABS } from './src/ui/navigation';
@@ -129,6 +131,10 @@ function Router({ route, nav }: { route: Route; nav: Nav }) {
       return <IllnessScreen nav={nav} />;
     case 'editSleep':
       return <EditSleepScreen nav={nav} />;
+    case 'startMenu':
+      return <StartScreen nav={nav} />;
+    case 'liveSession':
+      return <LiveSessionScreen nav={nav} />;
     case 'metric':
       return <MetricDetailScreen nav={nav} metricKey={route.key} />;
     case 'activity':

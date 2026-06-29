@@ -22,6 +22,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
   const illness = useStoreSelector(appStore, (s) => s.illness);
   const resilience = useStoreSelector(appStore, (s) => s.resilience);
   const cardioAge = useStoreSelector(appStore, (s) => s.cardioAge);
+  const session = useStoreSelector(appStore, (s) => s.session);
 
   const recovery = today?.recovery ?? null;
   const strain = today?.strain ?? null;
@@ -43,6 +44,15 @@ export function HomeScreen({ nav }: { nav: Nav }) {
     <View style={{ flex: 1 }}>
       <Screen title="VOLYUME Pulse">
         <Text style={styles.date}>{dateLabel}</Text>
+
+        {session ? (
+          <Pressable onPress={() => nav.navigate({ name: 'liveSession' })} style={({ pressed }) => pressed && { opacity: 0.7 }}>
+            <Card style={{ borderColor: colors.recoveryRed, flexDirection: 'row', alignItems: 'center' }}>
+              <View style={styles.recDot} />
+              <Text style={styles.recText}>Recording {session.label} — tap to resume</Text>
+            </Card>
+          </Pressable>
+        ) : null}
 
         {/* Three WHOOP dials: Sleep · Recovery · Strain */}
         <Card style={styles.dialCard}>
@@ -172,7 +182,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
         </Card>
         <View style={{ height: 76 }} />
       </Screen>
-      <FAB onPress={() => nav.navigate({ name: 'logActivity' })} />
+      <FAB onPress={() => nav.navigate({ name: 'startMenu' })} />
     </View>
   );
 }
@@ -191,4 +201,7 @@ const styles = StyleSheet.create({
   illnessDot: { width: 9, height: 9, borderRadius: 5, marginRight: 8 },
   illnessTitle: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold },
   illnessSub: { color: colors.textSecondary, fontSize: 13, marginTop: 6, lineHeight: 18, fontFamily: fonts.text },
+  recDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.recoveryRed, marginRight: 10 },
+  recText: { color: colors.text, fontSize: 14, fontFamily: fonts.textBold },
 });
+
