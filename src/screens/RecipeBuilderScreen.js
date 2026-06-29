@@ -149,7 +149,13 @@ export default function RecipeBuilderScreen({ navigation, route }) {
       if (parsed.servings && Number(parsed.servings) > 0) {
         setTotalServings(String(parsed.servings));
       }
-      const lines = parsed.ingredients || [];
+      const allLines = parsed.ingredients || [];
+      // Cap the per-ingredient lookups: each falls through to two live food APIs
+      // on a cache miss, and an untrusted page could list 150+ ingredients. 30 is
+      // far above any real recipe; the rest are noted so nothing is silently lost.
+      const MAX_IMPORT_INGREDIENTS = 30;
+      const lines = allLines.slice(0, MAX_IMPORT_INGREDIENTS);
+      const overflow = allLines.length - lines.length;
       const matched = [];
       for (const line of lines) {
         try {
@@ -170,7 +176,8 @@ export default function RecipeBuilderScreen({ navigation, route }) {
       }
       setImportUrl('');
       toast.show(
-        `Imported ${matched.length} of ${lines.length} ingredients. Check the amounts.`,
+        `Imported ${matched.length} of ${lines.length} ingredients. Check the amounts.`
+        + (overflow > 0 ? ` (${overflow} more not imported.)` : ''),
         { variant: matched.length > 0 ? 'success' : 'warning' },
       );
     } catch (_e) {
