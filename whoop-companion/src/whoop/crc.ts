@@ -3,12 +3,11 @@
  *
  * The frame carries a CRC16 over the header and a CRC32 over the inner buffer
  * (per whoop-vault: maverick.py computes both). CRC32 is the standard IEEE
- * (zlib) variant. The exact CRC16 variant used by the strap is not published;
- * CRC-16/CCITT (poly 0x1021) is the common choice and is used here, but it MUST
- * be confirmed against a real captured frame before trusting *outgoing*
- * commands (the strap silently drops a frame whose CRC it dislikes). Parsing
- * *incoming* frames does not depend on CRC being correct — we read the length
- * field and skip validation.
+ * (zlib) variant. The CRC16 is CRC-16/MODBUS (poly 0x8005 reflected = 0xA001,
+ * init 0xFFFF) — confirmed by deep research: NOOP's Framing.puffinCommandFrame
+ * uses crc16Modbus on the header and whoop-vault converges on the same framing.
+ * Parsing *incoming* frames does not depend on CRC being correct — we read the
+ * length field and skip validation.
  */
 
 // Standard IEEE CRC-32 (zlib / PNG / Ethernet). Reflected, init 0xFFFFFFFF,
@@ -34,16 +33,15 @@ export function crc32(bytes: Uint8Array): number {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
-// CRC-16/CCITT (poly 0x1021, init 0xFFFF, non-reflected). UNCONFIRMED variant —
-// see file header. Provided so the command encoder is complete and easy to
-// correct once a real frame's header CRC is captured.
-export function crc16ccitt(bytes: Uint8Array): number {
+// CRC-16/MODBUS (poly 0xA001 = reflected 0x8005, init 0xFFFF, refin/refout
+// true, xorout 0x0000). This is the variant the WHOOP strap expects on the
+// frame header (per NOOP's crc16Modbus, corroborated by whoop-vault).
+export function crc16modbus(bytes: Uint8Array): number {
   let crc = 0xffff;
   for (let i = 0; i < bytes.length; i += 1) {
-    crc ^= (bytes[i] as number) << 8;
+    crc ^= bytes[i] as number;
     for (let b = 0; b < 8; b += 1) {
-      crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1;
-      crc &= 0xffff;
+      crc = crc & 1 ? (crc >>> 1) ^ 0xa001 : crc >>> 1;
     }
   }
   return crc & 0xffff;

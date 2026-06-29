@@ -17,6 +17,7 @@ import { WhoopBle, WhoopStatus, RawFrame } from '../ble/whoopBle';
 import { hexToBytes } from '../ble/bytes';
 import { FrameAssembler, PacketType } from '../whoop/maverick';
 import {
+  cmdEnableDeepStreams,
   cmdEnterHighFreqSync,
   cmdHistoricalDataResult,
   cmdSendHistoricalData,
@@ -187,6 +188,11 @@ class AppStore extends Store<AppState> {
     this.historyRecords = [];
     this.setState({ draining: true, capturing: true, error: null });
     try {
+      // Unlock the deep optical/PPG + history streams first (see commands.ts);
+      // without this a fresh client only gets live HR. Hello-handshake bytes
+      // still need on-hardware validation, so this is best-effort.
+      await this.ble.writeCommand(cmdEnableDeepStreams());
+      await delay(300);
       await this.ble.writeCommand(cmdEnterHighFreqSync());
       await delay(500);
       await this.ble.writeCommand(cmdSendHistoricalData());

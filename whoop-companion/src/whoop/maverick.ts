@@ -27,7 +27,7 @@
  * FrameAssembler that reassembles complete frames using the length field.
  */
 
-import { crc16ccitt, crc32 } from './crc';
+import { crc16modbus, crc32 } from './crc';
 
 export const FRAME_START = 0xaa;
 
@@ -82,7 +82,7 @@ export function encodeFrame(
   header[3] = (length >> 8) & 0xff;
   header[4] = roleA & 0xff;
   header[5] = roleB & 0xff;
-  const headerCrc = crc16ccitt(header);
+  const headerCrc = crc16modbus(header);
 
   const innerCrc = crc32(alignedInner);
 

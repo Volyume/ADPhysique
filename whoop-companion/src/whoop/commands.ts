@@ -3,12 +3,20 @@
  * builder). Each returns a fully framed Maverick packet ready to write to the
  * proprietary command characteristic (fd4b0002).
  *
- * Historical-data handshake (whoop-vault historical_v2.py):
- *   1. ENTER_HIGH_FREQ_SYNC (96)
- *   2. wait ~0.5 s
- *   3. SEND_HISTORICAL_DATA (22)
- *   4. for each HISTORICAL_DATA chunk, ACK with HISTORICAL_DATA_RESULT (23),
+ * IMPORTANT (deep research finding): a freshly-connected client gets ONLY live
+ * HR over the standard 0x2A37 service. The "deep" streams — skin temperature,
+ * motion/IMU and per-second history — stay off until they are UNLOCKED. The
+ * full sequence (per NOOP WHOOP5_DEEP_DATA.md + whoop-vault + my-whoop) is:
+ *   1. BLE bond + CLIENT_HELLO handshake   (exact hello bytes vary by project;
+ *      capture from this firmware or port from NOOP/my-whoop — NOT yet encoded
+ *      here, flagged below)
+ *   2. SET_CONFIG enable_r22_packets        (turns on the deep optical/PPG stream)
+ *   3. ENTER_HIGH_FREQ_SYNC (96) → wait ~0.5 s → SEND_HISTORICAL_DATA (22)
+ *   4. ACK each HISTORICAL_DATA chunk with HISTORICAL_DATA_RESULT (23),
  *      payload [SUCCESS=1, start_id u32 LE, end_id u32 LE] = 9 bytes, padded to 12.
+ *
+ * Until step 1/2 are validated on real 50.40.1.0 frames, the historical drain
+ * may return little/nothing; live HR (standard GATT) is unaffected.
  */
 
 import { buildInner, encodeFrame, PacketType } from './maverick';
@@ -18,6 +26,25 @@ export enum Command {
   SEND_HISTORICAL_DATA = 22,
   HISTORICAL_DATA_RESULT = 23,
   ENTER_HIGH_FREQ_SYNC = 96,
+  SET_CONFIG = 0x78, // 120 — write a persistent feature-flag config value
+}
+
+/**
+ * SET_CONFIG body (per NOOP WHOOP5_DEEP_DATA.md): 40 bytes — flag name in ASCII
+ * NUL-padded to 32 bytes, the value byte at offset 32, remainder zero.
+ * Offsets beyond the flag name are NOOP's interpretation and should be
+ * validated against captured frames.
+ */
+export function cmdSetConfig(flag: string, value = 1): Uint8Array {
+  const body = new Uint8Array(40);
+  for (let i = 0; i < flag.length && i < 32; i += 1) body[i] = flag.charCodeAt(i) & 0x7f;
+  body[32] = value & 0xff;
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.SET_CONFIG, body));
+}
+
+/** The "most load-bearing" flag — opens the deep optical/PPG + history streams. */
+export function cmdEnableDeepStreams(): Uint8Array {
+  return cmdSetConfig('enable_r22_packets', 1);
 }
 
 let seq = 0;
