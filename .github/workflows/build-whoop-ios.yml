@@ -1,0 +1,148 @@
+name: Build Whoop iOS (EAS)
+
+# Builds the private Whoop Companion app (whoop-companion/) entirely in CI — no
+# Mac, no local terminal. EAS (Expo's cloud) does the Xcode compile + Apple
+# signing, then submits to TestFlight. Mirrors build-ios.yml (VOLYUME) and reuses
+# the SAME repo secrets:
+#   EXPO_TOKEN, ASC_API_KEY_P8, ASC_KEY_ID, ASC_ISSUER_ID, APPLE_TEAM_ID
+# (set in Settings → Secrets and variables → Actions).
+#
+# Manual only: each EAS iOS build costs build credits, so this never auto-runs on
+# a push. Run it from the Actions tab → "Build Whoop iOS (EAS)" → Run workflow.
+#
+# One-time prerequisites (use the existing volyume Apple/Expo accounts):
+#   1. cd whoop-companion && eas init   (creates the EAS project + writes
+#      extra.eas.projectId into whoop-companion/app.json — commit that change)
+#   2. Create the App Store Connect app record for bundle app.volyume.whoopcompanion
+#      (App Store Connect → Apps → +). TestFlight needs the record to accept a build.
+
+on:
+  workflow_dispatch:
+    inputs:
+      submit:
+        description: 'Submit to TestFlight after the build finishes'
+        type: boolean
+        default: true
+      skip_build:
+        description: 'Skip the EAS build and submit the latest existing build (no build credit spent)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: whoop-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+defaults:
+  run:
+    working-directory: whoop-companion
+
+jobs:
+  build:
+    name: EAS iOS build + submit (Whoop Companion)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.4
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Check required secrets are set
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          missing=0
+          for v in EXPO_TOKEN ASC_API_KEY_P8 ASC_KEY_ID ASC_ISSUER_ID APPLE_TEAM_ID; do
+            if [ -z "${!v}" ]; then echo "::error::Missing repo secret: $v"; missing=1; fi
+          done
+          [ "$missing" = "0" ] || { echo "::error::Add the missing secrets in Settings → Secrets and variables → Actions, then re-run."; exit 1; }
+          echo "✓ All required secrets present"
+
+      - name: Check EAS project id is set
+        run: |
+          if ! grep -q '"projectId"' app.json; then
+            echo "::error::whoop-companion/app.json has no extra.eas.projectId. Run 'cd whoop-companion && eas init' once (volyume Expo account), commit the change, then re-run."
+            exit 1
+          fi
+          echo "✓ EAS project id present"
+
+      - name: Write App Store Connect API key to a file
+        env:
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          printf '%s' "$ASC_API_KEY_P8" > "$RUNNER_TEMP/asc-api-key.p8"
+          test -s "$RUNNER_TEMP/asc-api-key.p8" && echo "✓ ASC API key written ($(wc -c < "$RUNNER_TEMP/asc-api-key.p8") bytes)"
+
+      # First-time iOS credential creation cannot run with --non-interactive: EAS
+      # refuses to mint the first Distribution Certificate without a terminal even
+      # with the ASC env vars set. Drive the prompts with expect: Apple Team Type =
+      # Individual (two downs), Push Notifications setup = No (one down). The Apple
+      # ID matcher fails fast if EAS ever drops to an interactive login. (Same
+      # approach, and same hard-won reasoning, as build-ios.yml.)
+      - name: Build iOS (EAS, waits for completion)
+        if: ${{ !inputs.skip_build }}
+        env:
+          EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
+          EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          EXPO_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CI: "false"
+        run: |
+          sudo apt-get install -y expect -qq 2>/dev/null
+          expect <<'EOF'
+          set timeout 6600
+          spawn eas build --platform ios --profile production --wait
+          expect {
+            -re {Select your Apple Team Type}     { send -- "\033\[B\033\[B\r"; exp_continue }
+            -re {set up Push Notifications}        { send -- "\033\[B\r";        exp_continue }
+            -re {Apple ID:}                        { puts "\n::error::EAS dropped to an interactive Apple ID login. Set up credentials once on expo.dev or add EXPO_APPLE_ID + EXPO_APPLE_APP_SPECIFIC_PASSWORD secrets."; exit 3 }
+            -re {\(Y/n\)}                          { send -- "\r";              exp_continue }
+            -re {\(y/N\)}                          { send -- "y\r";             exp_continue }
+            timeout { puts "\n::error::Stuck with no progress, aborting."; exit 2 }
+            eof
+          }
+          catch wait result
+          exit [lindex $result 3]
+          EOF
+
+      # Resolve the App Store Connect numeric app id from the same ASC API key and
+      # patch whoop-companion/eas.json's submit profile, so eas submit can upload
+      # non-interactively. Reuses VOLYUME's resolver (repo root); runs from repo root.
+      - name: Resolve App Store Connect app id
+        if: ${{ inputs.submit }}
+        working-directory: .
+        env:
+          ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          IOS_BUNDLE_ID: app.volyume.whoopcompanion
+          EAS_JSON_PATH: whoop-companion/eas.json
+        run: node scripts/ci/resolve-asc-app-id.mjs
+
+      - name: Submit to TestFlight
+        if: ${{ inputs.submit }}
+        env:
+          EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
+          EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          EXPO_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: eas submit --platform ios --latest --non-interactive
