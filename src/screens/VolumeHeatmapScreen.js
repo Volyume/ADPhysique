@@ -23,14 +23,17 @@ import { track } from '../lib/engineTelemetry';
 import { freshnessBand } from '../lib/muscleRecovery';
 
 // Freshness band -> CVD-safe semantic colour + plain-English label. Reuses the
-// shared stateColors grammar (success/warning/error tokens, which carry the
-// colour-blind-safe Okabe-Ito swaps) so the recovery layer never invents a new
-// hue that fails CVD. Recently trained reads as 'act'/error, mid-recovery as
-// 'watch'/warning, fully recovered as 'onTrack'/success.
+// shared stateColors grammar (the colour-blind-safe Okabe-Ito tokens) so the
+// recovery layer never invents a new hue that fails CVD. Fully recovered reads
+// as 'onTrack'/success (green = ready to train), mid-recovery as 'watch'/warning.
+// "Recently trained" is the resting state — deliberately 'neutral'/muted, NOT
+// 'act'/error: training a muscle today is normal and expected, so a red dot
+// there wrongly read as a warning and collided with red = "too much volume" on
+// the volume bar. Muted reads as "worked, now resting", with no false alarm.
 const FRESHNESS_META = {
   fresh: { get color() { return stateColors.onTrack; }, label: 'Fresh' },
   recovering: { get color() { return stateColors.watch; }, label: 'Recovering' },
-  fatigued: { get color() { return stateColors.act; }, label: 'Recently trained' },
+  fatigued: { get color() { return stateColors.neutral; }, label: 'Recently trained' },
 };
 
 const WINDOW_OPTIONS = [

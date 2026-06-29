@@ -1973,18 +1973,25 @@ export async function getAcuteChronicWorkload(userId) {
   const now = Date.now();
   const MS_DAY = 86400000;
 
-  // Fetch hard sets from last 5 weeks
+  // Fetch hard sets from last 5 weeks.
+  // distance/duration exercises reuse the weight column (metres) / reps column
+  // (seconds); they must never enter a load (weight*reps) sum or they pollute
+  // the ACWR. LEFT JOINs keep unknown/unmatched exercises as weight_reps so
+  // ordinary lifting tonnage is unchanged.
   const fiveWeeksAgo = now - 35 * MS_DAY;
   const rows = await d.getAllAsync(`
     SELECT s.weight, s.actual_reps AS reps, w.started_at
     FROM workout_sets s
     JOIN workouts w ON w.id = s.workout_id
+    LEFT JOIN exercises e ON e.id = s.exercise_id
+    LEFT JOIN custom_exercises ce ON ce.id = s.exercise_id AND ce.user_id = s.user_id
     WHERE w.user_id = ?
       AND w.is_completed = 1
       AND s.set_type != 'warmup'
       AND s.weight > 0
       AND s.actual_reps > 0
       AND w.started_at >= ?
+      AND COALESCE(ce.exercise_type, e.exercise_type, 'weight_reps') NOT IN ('distance', 'duration')
     ORDER BY w.started_at ASC
   `, [userId, fiveWeeksAgo]);
 
@@ -4858,27 +4865,36 @@ export async function getWeeklyPRCount(userId, weekStart) {
   // weight * (1 + reps/30) credits a same-weight higher-rep set and a pure rep
   // PR, both of which a weight-only comparison missed. Warm-up sets excluded.
   const row = await d.getFirstAsync(
+    // distance/duration reuse the weight column, so they must never enter an
+    // e1RM (weight-based) comparison or they manufacture phantom PRs. LEFT JOIN
+    // keeps unknown/unmatched exercises as weight_reps (counted) on both sides.
     `SELECT COUNT(*) AS pr_count FROM (
        SELECT ws.exercise_id,
               MAX(ws.weight * (1.0 + COALESCE(ws.actual_reps, 1) / 30.0)) AS wk_e1rm
        FROM workout_sets ws
        JOIN workouts w ON ws.workout_id = w.id
+       LEFT JOIN exercises e ON e.id = ws.exercise_id
+       LEFT JOIN custom_exercises ce ON ce.id = ws.exercise_id AND ce.user_id = ws.user_id
        WHERE ws.user_id = ? AND w.is_completed = 1
          AND w.started_at >= ? AND w.started_at < ?
          AND ws.weight IS NOT NULL AND ws.weight > 0
          AND (ws.set_type IS NULL OR ws.set_type != 'warmup')
+         AND COALESCE(ce.exercise_type, e.exercise_type, 'weight_reps') NOT IN ('distance', 'duration')
        GROUP BY ws.exercise_id
      ) cur
      WHERE cur.wk_e1rm > COALESCE((
        SELECT MAX(ws2.weight * (1.0 + COALESCE(ws2.actual_reps, 1) / 30.0))
        FROM workout_sets ws2
        JOIN workouts w2 ON ws2.workout_id = w2.id
+       LEFT JOIN exercises e2 ON e2.id = ws2.exercise_id
+       LEFT JOIN custom_exercises ce2 ON ce2.id = ws2.exercise_id AND ce2.user_id = ws2.user_id
        WHERE ws2.exercise_id = cur.exercise_id
          AND ws2.user_id = ?
          AND w2.is_completed = 1
          AND w2.started_at < ?
          AND ws2.weight IS NOT NULL AND ws2.weight > 0
          AND (ws2.set_type IS NULL OR ws2.set_type != 'warmup')
+         AND COALESCE(ce2.exercise_type, e2.exercise_type, 'weight_reps') NOT IN ('distance', 'duration')
      ), 0)`,
     [userId, weekStartMs, weekEnd, userId, weekStartMs],
   );
@@ -4901,10 +4917,12 @@ export async function getBestLiftThisWeek(userId, weekStart) {
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
      LEFT JOIN exercises ex ON ex.id = ws.exercise_id
+     LEFT JOIN custom_exercises ce ON ce.id = ws.exercise_id AND ce.user_id = ws.user_id
      WHERE ws.user_id = ? AND w.is_completed = 1
        AND w.started_at >= ? AND w.started_at < ?
        AND ws.weight IS NOT NULL AND ws.weight > 0
-       AND (ws.set_type IS NULL OR ws.set_type != 'warmup')`,
+       AND (ws.set_type IS NULL OR ws.set_type != 'warmup')
+       AND COALESCE(ce.exercise_type, ex.exercise_type, 'weight_reps') NOT IN ('distance', 'duration')`,
     [userId, weekStartMs, weekEnd],
   );
   if (!weekSets.length) return null;
@@ -4913,13 +4931,17 @@ export async function getBestLiftThisWeek(userId, weekStart) {
     // NULLIF(...,0) so a 0-rep set floors to 1 rep, matching pickBestLift's
     // JS e1RM on the week side — otherwise the same set scores ~3% higher this
     // week than as a prior best and falsely reads as a new best.
+    // distance/duration excluded so a cardio set can't pose as a prior best.
     `SELECT ws.exercise_id AS exerciseId,
             MAX(ws.weight * (1.0 + COALESCE(NULLIF(ws.actual_reps, 0), 1) / 30.0)) AS priorE1rm
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
+     LEFT JOIN exercises e ON e.id = ws.exercise_id
+     LEFT JOIN custom_exercises ce ON ce.id = ws.exercise_id AND ce.user_id = ws.user_id
      WHERE ws.user_id = ? AND w.is_completed = 1
        AND w.started_at < ?
        AND ws.weight IS NOT NULL AND ws.weight > 0
+       AND COALESCE(ce.exercise_type, e.exercise_type, 'weight_reps') NOT IN ('distance', 'duration')
        AND (ws.set_type IS NULL OR ws.set_type != 'warmup')
      GROUP BY ws.exercise_id`,
     [userId, weekStartMs],
@@ -4970,13 +4992,18 @@ export async function getYearOfLiftsData(userId, yearMs = null) {
   );
 
   const sets = await d.getAllAsync(
+    // distance/duration reuse the weight column; exclude them so the Year of
+    // Lifts tonnage and e1RM PRs aren't polluted by metres/seconds. LEFT JOINs
+    // keep unknown/unmatched exercises as weight_reps (counted).
     `SELECT ws.weight, ws.actual_reps, ws.exercise_id, ex.name AS exercise_name,
             ex.primary_muscle AS muscle
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
      LEFT JOIN exercises ex ON ex.id = ws.exercise_id
+     LEFT JOIN custom_exercises ce ON ce.id = ws.exercise_id AND ce.user_id = ws.user_id
      WHERE ws.user_id = ? AND w.is_completed = 1 AND w.started_at >= ?
-       AND ws.set_type != 'warmup' AND ws.actual_reps > 0 AND ws.weight > 0`,
+       AND ws.set_type != 'warmup' AND ws.actual_reps > 0 AND ws.weight > 0
+       AND COALESCE(ce.exercise_type, ex.exercise_type, 'weight_reps') NOT IN ('distance', 'duration')`,
     [userId, yearStart],
   );
 
@@ -5072,12 +5099,17 @@ export async function getRecapData(userId, { startMs, endMs = Date.now(), compar
       [userId, s, e],
     );
     const sets = await d.getAllAsync(
+      // distance/duration reuse the weight column; exclude them so recap
+      // tonnage, best-session and e1RM PRs aren't polluted. LEFT JOINs keep
+      // unknown/unmatched exercises as weight_reps (counted).
       `SELECT ws.workout_id, ws.weight, ws.actual_reps, ws.exercise_id, ex.name AS exercise_name
        FROM workout_sets ws
        JOIN workouts w ON ws.workout_id = w.id
        LEFT JOIN exercises ex ON ex.id = ws.exercise_id
+       LEFT JOIN custom_exercises ce ON ce.id = ws.exercise_id AND ce.user_id = ws.user_id
        WHERE ws.user_id = ? AND w.is_completed = 1 AND w.started_at >= ? AND w.started_at < ?
-         AND ws.set_type != 'warmup' AND ws.actual_reps > 0 AND ws.weight > 0`,
+         AND ws.set_type != 'warmup' AND ws.actual_reps > 0 AND ws.weight > 0
+         AND COALESCE(ce.exercise_type, ex.exercise_type, 'weight_reps') NOT IN ('distance', 'duration')`,
       [userId, s, e],
     );
     return { workouts, sets };
@@ -5161,12 +5193,17 @@ export async function getBlockReflectionData(userId, mesocycleId) {
     // was undefined, both week buckets were always empty, and tonnageDelta
     // (the block story's "climb" slide + BlockReflectionScreen's progress
     // figure) always computed as null.
+    // distance/duration reuse the weight column; exclude them so the block's
+    // first/last-week tonnage and tonnageDelta aren't polluted. LEFT JOINs keep
+    // unknown/unmatched exercises as weight_reps (counted).
     `SELECT ws.workout_id, ws.weight, ws.actual_reps, ws.set_type, ws.exercise_id, ex.name AS exercise_name
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
      LEFT JOIN exercises ex ON ex.id = ws.exercise_id
+     LEFT JOIN custom_exercises ce ON ce.id = ws.exercise_id AND ce.user_id = ws.user_id
      WHERE ws.user_id = ? AND w.mesocycle_id = ? AND w.is_completed = 1
-       AND ws.set_type != 'warmup' AND ws.actual_reps > 0 AND ws.weight > 0`,
+       AND ws.set_type != 'warmup' AND ws.actual_reps > 0 AND ws.weight > 0
+       AND COALESCE(ce.exercise_type, ex.exercise_type, 'weight_reps') NOT IN ('distance', 'duration')`,
     [userId, mesocycleId],
   );
   const totalSessions = workouts.length;

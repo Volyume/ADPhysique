@@ -13,8 +13,8 @@ import PeekMenu from '../components/PeekMenu';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
-import { buildLiftProgressRows } from '../lib/liftProgress';
-import { MUSCLE_DISPLAY_NAMES, calculate1RM } from '../lib/algorithms';
+import { buildLiftProgressRows, buildExerciseMetricSeries } from '../lib/liftProgress';
+import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getStrengthLevel, summariseStrengthStanding } from '../lib/strengthStandards';
 import { kgToLbs } from '../lib/units';
 import Sparkline from '../components/Sparkline';
@@ -57,50 +57,6 @@ const METRICS = [
   { key: 'volume', label: 'Volume' },
 ];
 
-// Build per-exercise, per-metric session series from the already-loaded set
-// list. Pure and side-effect free. Grouping mirrors buildLiftProgressRows:
-// working sets only, one point per session (workout), oldest -> newest.
-// Returns Map<exerciseId, { e1rm:number[], heaviest:number[], reps:number[],
-// volume:number[] }>.
-export function buildExerciseMetricSeries(sets) {
-  const byExercise = new Map();
-  for (const s of sets || []) {
-    if (!s) continue;
-    if (s.setType === 'warmup') continue;
-    const exerciseId = s.exerciseId ?? s.exercise_id;
-    if (exerciseId == null) continue;
-    const weight = Number(s.weight) || 0;
-    const reps = Number(s.actualReps ?? s.actual_reps) || 0;
-    if (weight <= 0 || reps <= 0) continue;
-    const at = Number(s.createdAt ?? s.created_at) || 0;
-    const sessionId = s.workoutId ?? s.workout_id ?? `t:${at}`;
-
-    if (!byExercise.has(exerciseId)) byExercise.set(exerciseId, new Map());
-    const sessions = byExercise.get(exerciseId);
-    if (!sessions.has(sessionId)) {
-      sessions.set(sessionId, { at: 0, e1rm: 0, heaviest: 0, reps: 0, volume: 0 });
-    }
-    const sess = sessions.get(sessionId);
-    sess.at = Math.max(sess.at, at);
-    sess.e1rm = Math.max(sess.e1rm, calculate1RM(weight, reps));
-    sess.heaviest = Math.max(sess.heaviest, weight);
-    sess.reps += reps;
-    sess.volume += weight * reps;
-  }
-
-  const out = new Map();
-  for (const [exerciseId, sessionMap] of byExercise) {
-    const ordered = [...sessionMap.values()].sort((a, b) => a.at - b.at);
-    out.set(exerciseId, {
-      e1rm: ordered.map(s => Math.round(s.e1rm * 10) / 10),
-      heaviest: ordered.map(s => Math.round(s.heaviest * 10) / 10),
-      reps: ordered.map(s => s.reps),
-      volume: ordered.map(s => Math.round(s.volume)),
-    });
-  }
-  return out;
-}
-
 export default function LiftProgressScreen({ navigation }) {
   const { user, units } = useAppStore();
   const [rows, setRows] = useState([]);
@@ -130,8 +86,13 @@ export default function LiftProgressScreen({ navigation }) {
       const builtRows = buildLiftProgressRows(sets, exercises);
       setRows(builtRows);
       // Recompute the alternate metric series from the same sets, so the
-      // metric switcher has every lens ready without a reload.
-      setMetricSeries(buildExerciseMetricSeries(sets));
+      // metric switcher has every lens ready without a reload. Pass an
+      // exercise-type map so distance/duration exercises (which reuse the
+      // weight column) don't plot nonsense volume/heaviest series.
+      const typeById = new Map(
+        (exercises || []).map(e => [e.id, e.exercise_type ?? e.exerciseType ?? 'weight_reps']),
+      );
+      setMetricSeries(buildExerciseMetricSeries(sets, typeById));
 
       if (bw?.weightKg) {
         // Bodyweight is canonical kg; estimated maxes come from logged gym

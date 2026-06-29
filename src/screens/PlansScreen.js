@@ -286,6 +286,16 @@ export default function PlansScreen({ navigation }) {
   async function handleSaveFolder() {
     const name = folderName.trim();
     if (!name || savingFolder) return;
+    // Block a duplicate name (case-insensitive). On rename the folder may keep
+    // its own name; only a *different* folder sharing the name is a clash.
+    const editingId = folderPrompt?.mode === 'rename' ? folderPrompt.folder?.id : null;
+    const clash = folders.some(
+      f => f.id !== editingId && (f.name || '').trim().toLowerCase() === name.toLowerCase(),
+    );
+    if (clash) {
+      toast.show('A folder with that name already exists', { variant: 'warning' });
+      return;
+    }
     setSavingFolder(true);
     try {
       if (folderPrompt?.mode === 'rename' && folderPrompt.folder) {
@@ -776,9 +786,11 @@ export default function PlansScreen({ navigation }) {
         {/* Folders (Hevy teardown R1). Collapsible sections atop the plans
             list, each holding its filed plans. FREE feature, no Pro gate.
             Deleting a folder unfiles its plans (they reappear under My plans);
-            it never deletes a plan. Shown whenever there are plans to organise
-            or folders already exist. */}
-        {(myPlans.length > 0 || folders.length > 0) && (
+            it never deletes a plan. Shown whenever the user has any plan at all
+            (incl. the active one, which My plans filters out) or folders already
+            exist — so the "New folder" entry point never vanishes for someone
+            who wants to start organising. */}
+        {(myPlans.length > 0 || folders.length > 0 || !!activePlan) && (
           <View style={styles.section}>
             <View style={styles.foldersHeaderRow}>
               <Text style={styles.sectionTitle}>Folders</Text>

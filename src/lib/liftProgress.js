@@ -96,3 +96,56 @@ export function buildLiftProgressRows(sets, exercises) {
   rows.sort((a, b) => b.lastTrainedAt - a.lastTrainedAt);
   return rows;
 }
+
+// Build per-exercise, per-metric session series from the already-loaded set
+// list. Pure and side-effect free. Grouping mirrors buildLiftProgressRows:
+// working sets only, one point per session (workout), oldest -> newest.
+// Returns Map<exerciseId, { e1rm:number[], heaviest:number[], reps:number[],
+// volume:number[] }>.
+//
+// exerciseTypeById (optional Map<exerciseId, exercise_type>): distance/duration
+// exercises reuse the weight column for metres / reps for seconds, so summing
+// weight*reps or MAX(weight) for them would plot nonsense ("heaviest" metres,
+// "volume" = metres*seconds). Their sets are skipped entirely. Anything not in
+// the map defaults to weight_reps and is plotted as before.
+export function buildExerciseMetricSeries(sets, exerciseTypeById = null) {
+  const NON_LOAD = new Set(['distance', 'duration']);
+  const byExercise = new Map();
+  for (const s of sets || []) {
+    if (!s) continue;
+    if (s.setType === 'warmup') continue;
+    const exerciseId = s.exerciseId ?? s.exercise_id;
+    if (exerciseId == null) continue;
+    const type = exerciseTypeById ? exerciseTypeById.get(exerciseId) : null;
+    if (type && NON_LOAD.has(type)) continue;
+    const weight = Number(s.weight) || 0;
+    const reps = Number(s.actualReps ?? s.actual_reps) || 0;
+    if (weight <= 0 || reps <= 0) continue;
+    const at = Number(s.createdAt ?? s.created_at) || 0;
+    const sessionId = s.workoutId ?? s.workout_id ?? `t:${at}`;
+
+    if (!byExercise.has(exerciseId)) byExercise.set(exerciseId, new Map());
+    const sessions = byExercise.get(exerciseId);
+    if (!sessions.has(sessionId)) {
+      sessions.set(sessionId, { at: 0, e1rm: 0, heaviest: 0, reps: 0, volume: 0 });
+    }
+    const sess = sessions.get(sessionId);
+    sess.at = Math.max(sess.at, at);
+    sess.e1rm = Math.max(sess.e1rm, calculate1RM(weight, reps));
+    sess.heaviest = Math.max(sess.heaviest, weight);
+    sess.reps += reps;
+    sess.volume += weight * reps;
+  }
+
+  const out = new Map();
+  for (const [exerciseId, sessionMap] of byExercise) {
+    const ordered = [...sessionMap.values()].sort((a, b) => a.at - b.at);
+    out.set(exerciseId, {
+      e1rm: ordered.map(s => Math.round(s.e1rm * 10) / 10),
+      heaviest: ordered.map(s => Math.round(s.heaviest * 10) / 10),
+      reps: ordered.map(s => s.reps),
+      volume: ordered.map(s => Math.round(s.volume)),
+    });
+  }
+  return out;
+}
