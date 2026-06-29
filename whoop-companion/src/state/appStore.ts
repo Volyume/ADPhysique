@@ -869,6 +869,22 @@ class AppStore extends Store<AppState> {
     return hrZones(perMin, profile);
   };
 
+  /**
+   * Weekly Intensity Minutes (WHO guideline): minutes of moderate (HR zones 2–3)
+   * and vigorous (zones 4–5) activity over the last 7 days, from the stored HR
+   * stream. Vigorous counts double toward the goal (Garmin/WHO convention).
+   */
+  weeklyIntensity = async (): Promise<{ moderate: number; vigorous: number; total: number; goal: number }> => {
+    const profile = this.getState().profile;
+    const now = Date.now();
+    const rows = await getHrSamplesBetween(now - 7 * 86400000, now);
+    const perMin = perMinuteHr(rows).map((p) => ({ hr: p.hr, minutes: 1 }));
+    const zones = hrZones(perMin, profile);
+    const moderate = zones.filter((z) => z.zone >= 2 && z.zone <= 3).reduce((a, z) => a + z.minutes, 0);
+    const vigorous = zones.filter((z) => z.zone >= 4).reduce((a, z) => a + z.minutes, 0);
+    return { moderate, vigorous, total: moderate + vigorous * 2, goal: 150 };
+  };
+
   /** HR-zone breakdown + per-minute HR for one logged activity (detail screen). */
   activityDetail = async (
     startTs: number,
