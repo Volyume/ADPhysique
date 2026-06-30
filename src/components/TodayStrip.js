@@ -2,28 +2,26 @@
  * TodayStrip — COMP-027 Part B
  *
  * The "one big thing" Home hierarchy puts the session hero first; this strip is
- * the glanceable row that sits directly under it, replacing the three stacked
- * utility cards (morning weight, steps, cardio) with one ~64pt card of up to
- * three cells. It keeps a working one-tap weigh-in in the strip so the collapse
- * costs zero function (the morning ritual the coach depends on).
+ * the glanceable row that sits directly under it, replacing the stacked utility
+ * cards (morning weight, cardio) with one ~64pt card. It keeps a working one-tap
+ * weigh-in in the strip so the collapse costs zero function (the morning ritual
+ * the coach depends on).
  *
- * Cells (degradation ladder 4 → 3 → 2 → 1): WEIGHT (load-bearing, keeps
- * logging), FOOD (today's remaining energy + a diary entry point, GAP #1),
- * STEPS (glance-only, self-hides without data), CARDIO ("+ Log" entry point,
- * hidden when cardio is off). Free tier renders no strip at all (the parent
- * only mounts this for Pro) — gating unchanged, no Pro exposure to free. The row
- * stacks to one-cell-per-line sooner now four cells can co-occur, so nothing
- * crowds at normal text sizes.
+ * Cells: WEIGHT (load-bearing, keeps logging) and CARDIO ("+ Log" entry point,
+ * hidden when cardio is off). Free tier renders no strip at all (the parent only
+ * mounts this for Pro) — gating unchanged, no Pro exposure to free. The Home food
+ * cell and the steps cell were both removed (founder review 2026-06-30; steps was
+ * retired entirely for Google Play policy reasons).
  *
  * Weight data + persistence stay owned by HomeScreen (it reloads on focus and
  * feeds the coach); this component owns only the draft input, parsing, and the
- * cell's visual states. Steps + cardio loaders are absorbed from the retired
- * StepsCard / CardioCard verbatim (same queries, same focus/foreground/poll).
+ * cell's visual states. The cardio loader is absorbed from the retired CardioCard
+ * verbatim (same query, same focus/foreground).
  *
  * Colour rule (Part A grammar, Class B): the only state colour in the strip is
  * the logged tick — a confirmation, never a judgement of the number. No red on
- * weight ever. (The weight-cell sparkline was removed 2026-06-16: it bled into
- * the steps cell; the trend lives on Progress and via the COMP-004 door.)
+ * weight ever. (The weight-cell sparkline was removed 2026-06-16; the trend lives
+ * on Progress and via the COMP-004 door.)
  *
  * Voice rules: CLAUDE.md. British English, no em dashes.
  */
@@ -35,7 +33,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
-import { getDailyStepsToday, getCardioLogForDate } from '../lib/database';
+import { getCardioLogForDate } from '../lib/database';
 import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
 import {
   stoneLbsToKg, parseBodyWeightToKg, kgToStoneLbsStrings, kgToLbs, formatBodyWeightShort,
@@ -63,13 +61,8 @@ export default function TodayStrip({
   savingWeight = false,
   onLogWeight,
   hasActiveWorkout = false,
-  stepsEnabled = true,
-  stepsTarget = null,
   cardioEnabled = true,
   onCardioPress,
-  // Connect handler for the steps cell when no automatic figure is available
-  // yet (taps through to the health-connect flow). Optional.
-  onStepsConnect,
   // COMP-004 door: when provided, tapping the LOGGED weight cell opens the
   // "Your trend" card on Progress (the morning-ritual tap-through). Correcting
   // a weigh-in moves to a long-press so the door is the primary action. When
@@ -134,23 +127,8 @@ export default function TodayStrip({
 
   const startEdit = useCallback(() => setEditing(true), []);
 
-  // ── Steps (absorbed from StepsCard) ──
-  const [steps, setSteps] = useState(null);
   const mountedRef = useRef(true);
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
-
-  const loadSteps = useCallback(async () => {
-    if (!userId || !stepsEnabled) return;
-    try {
-      // eslint-disable-next-line global-require
-      const { recordTodaySteps } = require('../lib/activitySteps');
-      await recordTodaySteps(userId);
-    } catch (_) { /* best effort */ }
-    try {
-      const t = await getDailyStepsToday(userId);
-      if (mountedRef.current) setSteps(t?.steps ?? null);
-    } catch (_) { /* keep last */ }
-  }, [userId, stepsEnabled]);
 
   // ── Cardio (absorbed from CardioCard) ──
   const [cardio, setCardio] = useState(null);
@@ -163,31 +141,21 @@ export default function TodayStrip({
   }, [userId, cardioEnabled]);
 
   useFocusEffect(useCallback(() => {
-    loadSteps();
     loadCardio();
-    const id = setInterval(() => {
-      if (AppState.currentState === 'active') loadSteps();
-    }, 30_000);
-    return () => clearInterval(id);
-  }, [loadSteps, loadCardio]));
+  }, [loadCardio]));
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (s) => {
-      if (s === 'active') { loadSteps(); loadCardio(); }
+      if (s === 'active') loadCardio();
     });
     return () => sub.remove();
-  }, [loadSteps, loadCardio]);
+  }, [loadCardio]);
 
   // ── Which cells show ──
-  // Steps stays visible whenever steps tracking is enabled, even before any
-  // auto figure has arrived (founder 2026-06-30: the old self-hide made the cell
-  // vanish, so a user couldn't tell steps tracking existed or connect it). The
-  // cell shows a "Connect" prompt until Health Connect / HealthKit feeds a count.
-  const showSteps = !!stepsEnabled;
+  // Weight is always present; cardio is conditional. (The Home food cell and the
+  // steps cell were both removed per founder review 2026-06-30.)
   const showCardio = !!cardioEnabled;
-  // Weight is always present; steps + cardio are conditional. (The Home food cell
-  // was removed per founder review 2026-06-30.)
-  const cellCount = 1 + (showSteps ? 1 : 0) + (showCardio ? 1 : 0);
+  const cellCount = 1 + (showCardio ? 1 : 0);
   // Large text → one cell per line (nothing truncates). At normal text, four
   // cells go to a 2×2 grid instead of a cramped four-across row.
   const stackedByFont = PixelRatio.getFontScale() >= STACK_FONT_SCALE;
@@ -291,37 +259,6 @@ export default function TodayStrip({
     );
   }
 
-  function StepsCell() {
-    // No automatic figure yet: show a Connect prompt (like Cardio's "+ Log")
-    // rather than hiding the cell, so steps are always discoverable.
-    if (steps == null) {
-      return (
-        <TouchableOpacity
-          style={styles.cellInner}
-          onPress={onStepsConnect}
-          disabled={typeof onStepsConnect !== 'function'}
-          accessibilityRole={typeof onStepsConnect === 'function' ? 'button' : undefined}
-          accessibilityLabel={typeof onStepsConnect === 'function' ? 'Connect steps' : 'Steps'}
-        >
-          <Text style={styles.cellLabel}>STEPS</Text>
-          <View style={styles.loggedRow}>
-            <Ionicons name="footsteps-outline" size={15} color={colors.primary} />
-            <Text style={styles.logPrompt}>{typeof onStepsConnect === 'function' ? 'Connect' : '-'}</Text>
-          </View>
-        </TouchableOpacity>
-      );
-    }
-    return (
-      <View style={styles.cellInner} accessibilityLabel={`${steps.toLocaleString('en-GB')} steps today`}>
-        <Text style={styles.cellLabel}>STEPS</Text>
-        <Text style={styles.cellValue}>{steps.toLocaleString('en-GB')}</Text>
-        {stepsTarget ? (
-          <Text style={styles.cellCaption}>of {stepsTarget.toLocaleString('en-GB')}</Text>
-        ) : null}
-      </View>
-    );
-  }
-
   function CardioCell() {
     return (
       <TouchableOpacity
@@ -343,10 +280,9 @@ export default function TodayStrip({
     );
   }
 
-  // The secondary cells (steps + cardio) as a divided row.
+  // The secondary cell (cardio) as a divided row.
   function SecondaryRow() {
     const cells = [];
-    if (showSteps) cells.push(<StepsCell key="steps" />);
     if (showCardio) cells.push(<CardioCell key="cardio" />);
     if (cells.length === 0) return null;
     return (
@@ -358,13 +294,13 @@ export default function TodayStrip({
     );
   }
 
-  // Expanded layout: the input takes a full row, steps + cardio sit below.
+  // Expanded layout: the input takes a full row, cardio sits below.
   if (inputOpen) {
     return (
       <View style={styles.card}>
         <Text style={styles.cellLabel}>MORNING WEIGHT</Text>
         <WeightInputRow />
-        {(showSteps || showCardio) ? (
+        {showCardio ? (
           <View style={styles.secondaryWrap}><SecondaryRow /></View>
         ) : null}
       </View>
@@ -376,7 +312,6 @@ export default function TodayStrip({
   const compactCells = [
     todayWeight != null ? <WeightLogged key="w" /> : <WeightCompactEmpty key="w" />,
   ];
-  if (showSteps) compactCells.push(<StepsCell key="s" />);
   if (showCardio) compactCells.push(<CardioCell key="c" />);
 
   if (stackedByFont) {

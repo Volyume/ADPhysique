@@ -37,7 +37,6 @@ import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
 import { buildFreeCoachLine } from '../lib/coachResponse';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { localWeekStartMs } from '../lib/dayKey';
-import { connectHealthStepsAndWeight } from '../lib/activitySteps';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 import { logError, logWarn } from '../lib/errorLog';
@@ -570,29 +569,6 @@ export default function HomeScreen({ navigation }) {
     setSavingWeight(false);
   }
 
-  // Steps Connect prompt from the TodayStrip steps cell (founder 2026-06-30: the
-  // cell now stays visible with a "Connect" call-to-action instead of self-hiding
-  // when no automatic figure has arrived). One sheet asks for steps + weight; on a
-  // grant connectHealthStepsAndWeight records today's steps and backfills, so the
-  // TodayStrip's own focus/30s refresh picks up the figure.
-  const handleConnectSteps = useCallback(async () => {
-    if (!user?.id) return;
-    try {
-      const status = await connectHealthStepsAndWeight(user.id);
-      if (status === 'granted') {
-        toast.show('Steps connected', { variant: 'success' });
-      } else if (status === 'sdk_unavailable') {
-        // eslint-disable-next-line global-require
-        const { openHealthConnectInstall } = require('../lib/health');
-        toast.show('Health Connect is needed to read your steps', { variant: 'error', duration: 4000 });
-        try { openHealthConnectInstall(); } catch (_) { /* best effort */ }
-      }
-      // 'denied' / 'unavailable': stay quiet; the user can retry from Settings.
-    } catch (e) {
-      logWarn('HomeScreen.handleConnectSteps', e, { userId: user?.id });
-    }
-  }, [user?.id, toast]);
-
   async function loadWeekStats() {
     try {
       const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -977,54 +953,10 @@ export default function HomeScreen({ navigation }) {
         )}
 
         {/* ── Compact top start CTA (above-the-fold) ── */}
-        {/* Promotes the primary start-action to the very top so a returning
-            user starts without scrolling (Hevy pattern). Pure ordering/layout:
-            it reuses the existing handlers and derived booleans — resume the
-            live session, else start the next planned session — and always
-            offers a first-class "Start empty workout" via startBlankSession.
-            The full hero (with its coach brief, meso chip, change/view actions)
-            stays below unchanged. Hidden during cold-load so it never
-            duplicates the skeleton. */}
-        {!initialLoading && (
-          <View style={styles.topStartRow}>
-            {hasActiveWorkout ? (
-              <TouchableOpacity
-                style={[styles.primaryBtn, styles.startBtnSplit]}
-                onPress={() => navigation.navigate('ActiveWorkout')}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel="Resume session in progress"
-              >
-                <Ionicons name="play" size={16} color={colors.onPrimary} />
-                <Text style={styles.primaryBtnText}>Resume session</Text>
-              </TouchableOpacity>
-            ) : (activePlan && nextWorkout) ? (
-              <TouchableOpacity
-                style={[styles.primaryBtn, styles.startBtnSplit, isStartingWorkout && { opacity: 0.6 }]}
-                onPress={() => handleStartNextWorkout(false)}
-                disabled={isStartingWorkout}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel={isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`}
-              >
-                <Ionicons name="play" size={16} color={colors.onPrimary} />
-                <Text style={styles.primaryBtnText}>
-                  {isStartingWorkout ? 'Starting…' : 'Start workout'}
-                </Text>
-              </TouchableOpacity>
-            ) : null}
-            <TouchableOpacity
-              style={styles.topEmptyBtn}
-              onPress={() => startBlankSession()}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityLabel="Start empty workout"
-            >
-              <Ionicons name="add-circle-outline" size={15} color={colors.textSecondary} />
-              <Text style={styles.topEmptyBtnText}>Start empty workout</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* The single start surface is the hero card below (Start workout / View
+            / Change workout / Blank session). The old top "Start workout + Start
+            empty workout" row duplicated it one-for-one, so it's gone (founder
+            2026-06-30). */}
 
         {/* Cloud restore banner removed, the typical pull completes
             in under a second on a healthy connection so the banner
@@ -1213,12 +1145,9 @@ export default function HomeScreen({ navigation }) {
             onLogWeight={handleLogWeight}
             hasActiveWorkout={hasActiveWorkout}
             edFlagOpen={edFlagOpen}
-            stepsEnabled={userProfile?.stepsEnabled !== false}
-            stepsTarget={userProfile?.stepsTarget}
             cardioEnabled={userProfile?.cardioEnabled !== false}
             onCardioPress={() => navigation.navigate('LogCardio')}
             onOpenTrend={() => navigation.getParent()?.navigate('ProgressTab', { screen: 'Analytics', params: { focusWeightTrend: true } })}
-            onStepsConnect={handleConnectSteps}
           />
         )}
 
@@ -2028,32 +1957,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   heroSecondaryBtnText: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-    fontWeight: fontWeight.semibold,
-  },
-
-  // Compact above-the-fold start row: primary start/resume + an always-on
-  // "Start empty workout" secondary, mirroring the startWorkoutRow split and
-  // the surface2 pill style used for the hero's secondary affordances.
-  topStartRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    alignItems: 'stretch',
-  },
-  topEmptyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  topEmptyBtnText: {
     fontSize: fontSize.xs,
     color: colors.textSecondary,
     fontWeight: fontWeight.semibold,

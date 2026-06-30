@@ -110,32 +110,13 @@ describe('weight cell', () => {
   });
 });
 
-describe('steps + cardio cells', () => {
-  // Founder 2026-06-30: the steps cell must STAY visible when tracking is on,
-  // even before any auto figure arrives, so steps are always discoverable. The
-  // old self-hide made the cell vanish and steps looked unsupported.
-  test('steps cell stays visible with a Connect prompt when there is no figure', async () => {
-    mockGetSteps.mockResolvedValue(null);
-    const onStepsConnect = jest.fn();
-    const tree = await render({ todayWeight: 80, cardioEnabled: false, onStepsConnect });
-    expect(json(tree)).toContain('STEPS');
-    const connect = findByLabel(tree, 'Connect steps');
-    expect(connect).toBeTruthy();
-    act(() => connect.props.onPress());
-    expect(onStepsConnect).toHaveBeenCalled();
-  });
-
-  test('steps cell shows a dash (not hidden) when there is no figure and no connect handler', async () => {
-    mockGetSteps.mockResolvedValue(null);
-    const tree = await render({ todayWeight: 80, cardioEnabled: false });
-    expect(json(tree)).toContain('STEPS');
-  });
-
-  test('steps cell shows the formatted figure when present', async () => {
-    mockGetSteps.mockResolvedValue({ steps: 6214 });
-    const tree = await render({ todayWeight: 80, cardioEnabled: false });
-    expect(json(tree)).toContain('STEPS');
-    expect(json(tree)).toContain('6,214');
+describe('cardio cell', () => {
+  // The steps cell was removed entirely (founder 2026-06-30: Health Connect /
+  // step tracking retired for Google Play policy reasons), so the strip is now
+  // weight + cardio only.
+  test('no STEPS cell is rendered', async () => {
+    const tree = await render({ todayWeight: 80, cardioEnabled: true });
+    expect(json(tree)).not.toContain('STEPS');
   });
 
   test('cardio cell shows + Log and routes on tap when nothing logged', async () => {
