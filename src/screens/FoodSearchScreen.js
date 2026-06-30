@@ -48,6 +48,7 @@ import { toEnergy, energyUnitLabel } from '../lib/format';
 import { useToast } from '../components/Toast';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import QuickAddSheet from '../components/food/QuickAddSheet';
+import CuratedMealSheet from '../components/food/CuratedMealSheet';
 import FoodRow from '../components/food/FoodRow';
 import { mealSlotLabel } from '../lib/food/mealSlots';
 import { scaleMacros, resolveServingG } from '../lib/food/macros';
@@ -108,6 +109,10 @@ export default function FoodSearchScreen({ navigation, route }) {
   const [suggestLoading, setSuggestLoading] = useState(false);
   const [suggestMeta, setSuggestMeta] = useState(null);
   const [loggingMealId, setLoggingMealId] = useState(null);
+  // The suggested curated meal opened in the detail sheet (its items + the free
+  // "add to taste" suggestions). Tapping a meal opens this rather than logging
+  // instantly, so the user can see what's in it and what they can add.
+  const [mealSheet, setMealSheet] = useState(null);
 
   const debounceRef = useRef(null);
 
@@ -487,6 +492,7 @@ export default function FoodSearchScreen({ navigation, route }) {
     try {
       audit('food.suggestMeal', { mealId: s.id, mealSlot, itemCount: s.itemCount });
       await applyCuratedMealToDiary(userId, s.id, { mealSlot, entryDate });
+      setMealSheet(null);
       navigation.goBack();
     } catch (e) {
       // FF-007: surface the failure instead of only resetting the spinner.
@@ -734,10 +740,10 @@ export default function FoodSearchScreen({ navigation, route }) {
           return (
             <TouchableOpacity
               style={styles.suggestCard}
-              onPress={() => (isFood ? logSuggestedFood(item) : logCuratedMeal(item))}
+              onPress={() => (isFood ? logSuggestedFood(item) : setMealSheet(item))}
               disabled={!!loggingMealId}
               accessibilityRole="button"
-              accessibilityLabel={isFood ? `Add ${item.quantityG}g ${item.name}` : `Log ${item.name}`}
+              accessibilityLabel={isFood ? `Add ${item.quantityG}g ${item.name}` : `Open ${item.name}`}
             >
               <View style={{ flex: 1 }}>
                 <Text style={styles.suggestName}>
@@ -749,7 +755,7 @@ export default function FoodSearchScreen({ navigation, route }) {
               </View>
               {loggingMealId === busyKey
                 ? <ActivityIndicator size="small" color={colors.primary} />
-                : <Ionicons name="add-circle" size={26} color={colors.primary} />}
+                : <Ionicons name={isFood ? 'add-circle' : 'chevron-forward'} size={isFood ? 26 : 22} color={colors.primary} />}
             </TouchableOpacity>
           );
         }}
@@ -936,6 +942,16 @@ export default function FoodSearchScreen({ navigation, route }) {
           setShowQuickAdd(false);
           if (quickSavedRef.current) { quickSavedRef.current = false; navigation.goBack(); }
         }}
+      />
+
+      <CuratedMealSheet
+        visible={!!mealSheet}
+        meal={mealSheet}
+        slotLabel={mealSlotLabel(mealSlot)}
+        logging={!!mealSheet && loggingMealId === mealSheet.id}
+        energyUnit={energyUnit}
+        onLog={() => mealSheet && logCuratedMeal(mealSheet)}
+        onClose={() => setMealSheet(null)}
       />
     </SafeAreaView>
   );
