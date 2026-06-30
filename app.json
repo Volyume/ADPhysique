@@ -58,7 +58,7 @@
         "backgroundColor": "#0D0D0D"
       },
       "package": "app.volyume",
-      "versionCode": 20,
+      "versionCode": 21,
       "allowBackup": false,
       "permissions": [
         "android.permission.CAMERA",
@@ -206,7 +206,6 @@
       ],
       "react-native-health-connect",
       "./plugins/withHealthConnectPermissionDelegate",
-      "./plugins/withAndroidxActivityPin",
       [
         "react-native-android-widget",
         {
