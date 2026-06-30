@@ -98,6 +98,14 @@ export default function SettingsScreen({ navigation }) {
             onPress={() => navigation.navigate('MealNames')}
           />
         ) : null}
+        {tier === 'pro' ? (
+          <SettingRow
+            icon="calendar-outline"
+            label="Per-day targets"
+            sub="Plan a different calorie target for each weekday"
+            onPress={() => navigation.navigate('PerDayTargets')}
+          />
+        ) : null}
         <SettingRow
           icon="notifications-outline"
           label="Notifications"

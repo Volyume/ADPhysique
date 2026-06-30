@@ -65,6 +65,7 @@ import ShareCardScreen from '../screens/ShareCardScreen';
 import ManualBuilderScreen from '../screens/ManualBuilderScreen';
 import NutritionTargetsScreen from '../screens/NutritionTargetsScreen';
 import MealNamesScreen from '../screens/MealNamesScreen';
+import PerDayTargetsScreen from '../screens/PerDayTargetsScreen';
 import PlanLibraryScreen from '../screens/PlanLibraryScreen';
 import FirstRunScreen from '../screens/FirstRunScreen';
 import FreeStarterScreen from '../screens/FreeStarterScreen';
@@ -151,6 +152,7 @@ function _reconcilePaidEntitlement(userId = null) {
 const GatedWeeklyCheckIn    = withProGuard(WeeklyCheckInScreen, 'Weekly check-in');
 const GatedNutritionTargets = withProGuard(NutritionTargetsScreen, 'Nutrition targets');
 const GatedMealNames = withProGuard(MealNamesScreen, 'Meal names');
+const GatedPerDayTargets = withProGuard(PerDayTargetsScreen, 'Per-day targets');
 const GatedBodyMetrics      = withProGuard(BodyMetricsScreen, 'Body metrics');
 const GatedProgressPhotos   = withProGuard(ProgressPhotosScreen, 'Progress photos');
 const GatedCoachOutput      = withProGuard(CoachOutputScreen, 'Your week');
@@ -402,6 +404,7 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="SettingsAbout" component={SettingsAboutScreen} options={{ title: 'Help & about' }} />
       <Stack.Screen name="NutritionTargets" component={GatedNutritionTargets} options={{ title: 'Nutrition Targets' }} />
       <Stack.Screen name="MealNames" component={GatedMealNames} options={{ title: 'Meal names' }} />
+      <Stack.Screen name="PerDayTargets" component={GatedPerDayTargets} options={{ title: 'Per-day targets' }} />
       <Stack.Screen name="NutritionEducation" component={NutritionEducationScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ title: 'Body Metrics' }} />
       <Stack.Screen name="ProgressPhotos" component={GatedProgressPhotos} options={{ headerShown: false }} />

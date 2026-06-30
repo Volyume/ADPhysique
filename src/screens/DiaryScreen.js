@@ -31,6 +31,7 @@ import { computeFFMFloor } from '../lib/nutritionEngine';
 import { targetWasFloored } from '../lib/food/mealPlanAssembler';
 import { safeDayFloorKcal, displayBankedDelta } from '../lib/food/calorieBank';
 import { resolveEffectiveTargets, dayTypeLabel } from '../lib/food/effectiveTargets';
+import { loadPerDayOffsets, offsetForDate, DEFAULT_PERDAY_OFFSETS } from '../lib/food/perDayTargets';
 import { resyncBankedPlannedFood, restoreUnbankedPlannedFood } from '../lib/food/mealPlanService';
 import { buildPlanEditNarration } from '../lib/food/planExplain';
 import CalorieBankSheet from '../components/food/CalorieBankSheet';
@@ -212,6 +213,22 @@ export default function DiaryScreen({ navigation }) {
   const bankingAvailable = !!targets && !targetWasFloored(targets)
     && !macroCycle && !refeed && !edFlagOpen;
 
+  // Per-day-of-week planning offsets (gap #13). Device-local; re-read on focus so
+  // an edit in the Per-day targets screen is reflected when the diary regains
+  // focus. The offset is applied only on an otherwise-plain day and is
+  // floor-clamped inside resolveEffectiveTargets (declared before effectiveTargets
+  // so it is in scope when that memo runs).
+  const [perDayOffsets, setPerDayOffsets] = useState(DEFAULT_PERDAY_OFFSETS);
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    loadPerDayOffsets().then((o) => { if (active) setPerDayOffsets(o); }).catch(() => {});
+    return () => { active = false; };
+  }, []));
+  const perDayOffsetKcal = useMemo(
+    () => offsetForDate(perDayOffsets, selectedDate),
+    [perDayOffsets, selectedDate],
+  );
+
   // The banked delta to show for the day in view. Zero unless banking is
   // currently allowed, even if a bank is still persisted.
   const bankedDelta = useMemo(
@@ -226,8 +243,8 @@ export default function DiaryScreen({ navigation }) {
   // day shifts kcal via carbs. kcal maps to targetKcal so MacroRings reads it
   // like the flat target.
   const effectiveTargets = useMemo(
-    () => resolveEffectiveTargets(targets, { isRefeedDay, refeed, macroCycle, isTrainingDay, bankedDelta }),
-    [macroCycle, refeed, isRefeedDay, targets, isTrainingDay, bankedDelta],
+    () => resolveEffectiveTargets(targets, { isRefeedDay, refeed, macroCycle, isTrainingDay, bankedDelta, perDayOffsetKcal, floorKcal }),
+    [macroCycle, refeed, isRefeedDay, targets, isTrainingDay, bankedDelta, perDayOffsetKcal, floorKcal],
   );
 
   const dayTypeChip = dayTypeLabel({ isRefeedDay, macroCycle, isTrainingDay, bankedDelta });
@@ -355,6 +372,7 @@ export default function DiaryScreen({ navigation }) {
     }).catch(() => {});
     return () => { active = false; };
   }, []));
+
   const mealsPerDay = Math.max(prefMeals + addedMeals, highestLoggedMeal(entries));
   const mealSlots = useMemo(() => buildMealSlots(entries, mealsPerDay), [entries, mealsPerDay]);
 
