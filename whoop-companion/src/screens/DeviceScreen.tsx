@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Share, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
@@ -42,10 +44,30 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
     : 'Not yet — connect to sync';
 
   const exportFrames = async () => {
-    const frames = await getAllRawFrames();
-    const header = `# WHOOP raw frames: ${frames.length}\n# epoch_ms\tsource\thex\n`;
-    const body = frames.map((f) => `${f.ts}\t${f.source}\t${f.hex}`).join('\n');
-    await Share.share({ message: header + body });
+    try {
+      const frames = await getAllRawFrames();
+      if (frames.length === 0) {
+        Alert.alert(
+          'No frames captured',
+          'Turn on “Start capture” first, do the activity (or wear it a while), then come back and export.',
+        );
+        return;
+      }
+      const header = `# VOLYUME Pulse raw frames: ${frames.length}\n# epoch_ms\tsource\thex\n`;
+      const body = frames.map((f) => `${f.ts}\t${f.source}\t${f.hex}`).join('\n');
+      const uri = `${FileSystem.cacheDirectory}pulse-frames-${frames.length}.tsv`;
+      await FileSystem.writeAsStringAsync(uri, header + body);
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'text/tab-separated-values',
+          dialogTitle: `Export ${frames.length} captured frames`,
+        });
+      } else {
+        Alert.alert('Saved', `Saved ${frames.length} frames to:\n${uri}`);
+      }
+    } catch (e) {
+      Alert.alert('Export failed', String(e));
+    }
   };
 
   return (

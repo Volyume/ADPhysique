@@ -397,7 +397,7 @@ export async function countRawFrames(): Promise<number> {
   return r?.n ?? 0;
 }
 
-export async function getAllRawFrames(limit = 20000): Promise<Array<{ ts: number; source: string; hex: string }>> {
+export async function getAllRawFrames(limit = 200000): Promise<Array<{ ts: number; source: string; hex: string }>> {
   const db = await getDb();
   return db.getAllAsync<{ ts: number; source: string; hex: string }>(
     'SELECT ts, source, hex FROM raw_frames ORDER BY ts ASC LIMIT ?',

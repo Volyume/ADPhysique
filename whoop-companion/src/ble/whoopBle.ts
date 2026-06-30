@@ -88,6 +88,9 @@ export class WhoopBle {
   private writeChar: string | null = null;
   private keepalive: ReturnType<typeof setInterval> | null = null;
   private reArm: ReturnType<typeof setInterval> | null = null;
+  private wantConnected = false; // user wants a connection → auto-reconnect on drop
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private reconnectAttempts = 0;
 
   constructor(events: WhoopEvents) {
     // restoreStateIdentifier enables iOS CoreBluetooth State Preservation &
@@ -141,6 +144,7 @@ export class WhoopBle {
 
   /** Full flow: permissions -> wait for BT on -> scan -> connect -> subscribe. */
   async start(): Promise<void> {
+    this.wantConnected = true;
     const ok = await this.ensurePermissions();
     if (!ok) {
       this.setStatus('unauthorized', 'Bluetooth permission denied');
@@ -187,7 +191,12 @@ export class WhoopBle {
       if (this.scanning) {
         this.manager.stopDeviceScan();
         this.scanning = false;
-        this.fail('No WHOOP strap found. Is it in pairing mode and disconnected from the official app?');
+        if (this.wantConnected) {
+          // Keep trying rather than giving up — the strap may be out of range or
+          // not yet in pairing mode. Backoff between sweeps.
+          this.setStatus('disconnected', 'No strap found — retrying…');
+          this.scheduleReconnect();
+        }
       }
     }, 30000);
   }
@@ -196,37 +205,62 @@ export class WhoopBle {
     try {
       this.setStatus('connecting', device.name ?? device.id);
       this.events.onDevice?.({ id: device.id, name: device.name ?? device.localName ?? 'WHOOP' });
-
       const connected = await device.connect({ requestMTU: 247 });
-      this.device = connected;
-
-      connected.onDisconnected(() => {
-        this.clearKeepalive();
-        this.setStatus('disconnected');
-      });
-
-      this.setStatus('discovering');
-      await connected.discoverAllServicesAndCharacteristics();
-      await this.locateWriteChar(connected);
-
-      // Subscribe to the proprietary notify characteristics BEFORE writing any
-      // command (the strap needs CCCD enabled first, and we must catch the
-      // command responses + data). Order verified against whoop-vault.
-      await this.subscribeAll(connected);
-
-      // Bring-up: hello -> set clock -> enable live HR (standard 0x2A37 +
-      // proprietary) -> LINK_VALID keepalive every ~2s. No WHOOP app needed.
-      await this.startStreaming();
-
-      // The standard HR service only begins after TOGGLE_GENERIC_HR_PROFILE, so
-      // re-discover and subscribe 0x2A37 now that it's broadcasting.
-      await delay(900);
-      await connected.discoverAllServicesAndCharacteristics();
-      this.subscribeStandardHr(connected);
-      this.setStatus('connected', connected.name ?? connected.id);
+      await this.afterConnect(connected);
     } catch (e) {
-      this.fail(`Connect failed: ${String(e)}`);
+      this.setStatus('disconnected', `Connect failed: ${String(e)}`);
+      if (this.wantConnected) this.scheduleReconnect();
     }
+  }
+
+  /** Post-connect bring-up — shared by first connect and auto-reconnect. */
+  private async afterConnect(connected: Device): Promise<void> {
+    this.device = connected;
+    connected.onDisconnected(() => {
+      this.clearKeepalive();
+      this.setStatus('disconnected');
+      // Auto-reconnect: the whole point of "catch up after a drop". When we
+      // reconnect, the store re-runs the history drain (see onStatus 'connected').
+      if (this.wantConnected) this.scheduleReconnect();
+    });
+
+    this.setStatus('discovering');
+    await connected.discoverAllServicesAndCharacteristics();
+    await this.locateWriteChar(connected);
+    await this.subscribeAll(connected);
+    await this.startStreaming();
+    await delay(900);
+    await connected.discoverAllServicesAndCharacteristics();
+    this.subscribeStandardHr(connected);
+    this.reconnectAttempts = 0; // healthy connection — reset backoff
+    this.setStatus('connected', connected.name ?? connected.id);
+  }
+
+  /** Schedule a reconnect attempt with exponential backoff (2s → 60s cap). */
+  private scheduleReconnect(): void {
+    if (!this.wantConnected || this.reconnectTimer) return;
+    const delayMs = Math.min(60000, 2000 * 2 ** Math.min(this.reconnectAttempts, 5));
+    this.reconnectAttempts += 1;
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      void this.attemptReconnect();
+    }, delayMs);
+  }
+
+  private async attemptReconnect(): Promise<void> {
+    if (!this.wantConnected) return;
+    // Fast path: reconnect to the known device by id; fall back to a fresh scan.
+    if (this.device) {
+      try {
+        this.setStatus('connecting', 'reconnecting…');
+        const reconnected = await this.manager.connectToDevice(this.device.id, { requestMTU: 247 });
+        await this.afterConnect(reconnected);
+        return;
+      } catch {
+        // fall through to scan
+      }
+    }
+    if (this.wantConnected) await this.scan();
   }
 
   /** Scan the GATT table for the proprietary command-write characteristic. */
@@ -400,6 +434,12 @@ export class WhoopBle {
 
   /** Tear down subscriptions, disconnect, and release the manager. */
   async stop(): Promise<void> {
+    this.wantConnected = false; // user asked to disconnect → stop auto-reconnect
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    this.reconnectAttempts = 0;
     this.clearKeepalive();
     for (const sub of this.subscriptions) {
       try {
