@@ -146,10 +146,13 @@ beforeEach(() => {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('ShareCardScreen — share-target buttons render', () => {
-  test('Save to gallery + Instagram Stories present; Save as PDF removed (founder 2026-06-30)', async () => {
+  test('Save to gallery + Share to Story present; Save as PDF removed (founder 2026-06-30)', async () => {
     const tree = await mount(SESSION);
     expect(findByA11yLabel(tree, 'Save to gallery').length).toBeGreaterThan(0);
-    expect(findByA11yLabel(tree, 'Share to Instagram Stories').length).toBeGreaterThan(0);
+    // Founder 2026-06-30: the single Instagram-Stories button became a Story
+    // share covering Instagram + Facebook via the system share sheet.
+    expect(findByA11yLabel(tree, 'Share to Instagram or Facebook Story').length).toBeGreaterThan(0);
+    expect(findByA11yLabel(tree, 'Share to Instagram Stories').length).toBe(0);
     // 'Save as PDF' was removed (unused).
     expect(findByA11yLabel(tree, 'Save as PDF').length).toBe(0);
   });

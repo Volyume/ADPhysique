@@ -311,13 +311,14 @@ export default function ShareCardScreen({ route }) {
     }
   }
 
-  // Share to Instagram Stories. Renders the PNG and opens the OS share sheet,
-  // which carries the image to Instagram (or any target). NOTE (founder
-  // 2026-06-30): wanted to open Instagram DIRECTLY (and add Facebook), not the
-  // generic chooser. That needs a native Android Stories intent
-  // (com.instagram.share.ADD_TO_STORY / com.facebook.stories.ADD_TO_STORY with
-  // setPackage) and device testing, so it is a tracked follow-up; this keeps the
-  // working share-sheet version in the meantime.
+  // Share to Story (Instagram / Facebook). Renders the PNG and opens the OS share
+  // sheet, which carries the image to Instagram or Facebook (or any target the
+  // user picks) where they can post it to a Story. Founder decision 2026-06-30:
+  // a direct-composer intent (com.instagram.share.ADD_TO_STORY /
+  // com.facebook.stories.ADD_TO_STORY with setPackage) would need a new native
+  // dependency AND a registered Facebook App ID (mandatory since Jan 2023), so we
+  // deliberately keep the zero-dependency share-sheet route and just present it
+  // as a Story share with both app icons.
   async function handleShareToStories() {
     if (!Skia || !FileSystem || !Sharing) {
       toast.show('Sharing needs a rebuild with the Skia + sharing packages installed', { variant: 'error', duration: 5000 });
@@ -483,21 +484,26 @@ export default function ShareCardScreen({ route }) {
           )}
         </TouchableOpacity>
 
-        {/* Share to Instagram Stories. (Founder wants this to open Instagram
-            directly + a Facebook equivalent: tracked as native-intent follow-up.) */}
+        {/* Share to Story — Instagram + Facebook icons, opens the system share
+            sheet with the rendered PNG (founder 2026-06-30: present it as a Story
+            share for Instagram/Facebook, but route through the normal share
+            screen rather than a direct-composer intent, so no extra dependency or
+            Facebook App ID is needed). The user picks Instagram or Facebook from
+            the sheet; both let you post the image to a Story. */}
         <TouchableOpacity
           style={[styles.secondaryBtn, (sharing || sharingToStories) && styles.btnDisabled]}
           onPress={handleShareToStories}
           disabled={sharing || sharingToStories}
           accessibilityRole="button"
-          accessibilityLabel="Share to Instagram Stories"
+          accessibilityLabel="Share to Instagram or Facebook Story"
         >
           {sharingToStories ? (
             <ActivityIndicator color={colors.primary} size="small" />
           ) : (
             <>
               <Ionicons name="logo-instagram" size={20} color={colors.primary} />
-              <Text style={styles.secondaryBtnText}>Share to Instagram Stories</Text>
+              <Ionicons name="logo-facebook" size={20} color={colors.primary} />
+              <Text style={styles.secondaryBtnText}>Share to Story</Text>
             </>
           )}
         </TouchableOpacity>
