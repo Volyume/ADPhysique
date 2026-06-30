@@ -85,6 +85,13 @@ const ShareCardScreen = require('../ShareCardScreen').default;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+async function flush() {
+  await TestRenderer.act(async () => {
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+    await new Promise((r) => setImmediate(r));
+  });
+}
+
 async function mount(params = {}) {
   let tree = null;
   await TestRenderer.act(async () => {
@@ -92,10 +99,15 @@ async function mount(params = {}) {
       React.createElement(ShareCardScreen, { route: { params, name: 'ShareCard' } }),
     );
   });
-  await TestRenderer.act(async () => {
-    for (let i = 0; i < 15; i++) await Promise.resolve();
-    await new Promise((r) => setImmediate(r));
-  });
+  // The share-target buttons render only after the card preview finishes its
+  // async render. Poll until they appear (bounded) instead of waiting a fixed
+  // number of ticks: on a slower CI event loop the fixed wait raced the async
+  // render and the buttons were absent, failing the assertions nondeterministically.
+  for (let round = 0; round < 40; round++) {
+    if (findByA11yLabel(tree, 'Save to gallery').length > 0) break;
+    // eslint-disable-next-line no-await-in-loop
+    await flush();
+  }
   return tree;
 }
 
