@@ -58,7 +58,7 @@
         "backgroundColor": "#0D0D0D"
       },
       "package": "app.volyume",
-      "versionCode": 21,
+      "versionCode": 22,
       "allowBackup": false,
       "permissions": [
         "android.permission.CAMERA",
@@ -180,7 +180,12 @@
             "buildToolsVersion": "35.0.0",
             "usesCleartextTraffic": false,
             "manifestQueries": {
-              "package": ["com.google.android.apps.healthdata"]
+              "package": ["com.google.android.apps.healthdata", "com.whatsapp"],
+              "intent": [
+                { "action": "android.intent.action.SENDTO", "data": { "scheme": "smsto" } },
+                { "action": "android.intent.action.SENDTO", "data": { "scheme": "mailto" } },
+                { "action": "android.intent.action.VIEW", "data": { "scheme": "sms" } }
+              ]
             }
           },
           "ios": {

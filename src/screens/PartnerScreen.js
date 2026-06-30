@@ -17,7 +17,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
-  Share, Switch, ActivityIndicator,
+  Share, Switch, ActivityIndicator, Linking, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -88,6 +88,49 @@ export default function PartnerScreen({ route }) {
     p.reload();
   }
 
+  // Send the invite straight into a specific app (founder 2026-06-30: text,
+  // WhatsApp and email as separate buttons that open the respective app rather
+  // than the generic OS share sheet). Each tap creates a fresh invite, then
+  // deep-links into the target with the share message prefilled. If the target
+  // isn't installed (or the deep link fails), we fall back to the OS share sheet
+  // so the invite is never stranded.
+  async function inviteVia(target) {
+    if (busy || !p.canAdd) return;
+    setBusy(true);
+    const r = await p.invite({ streakEnabled: streakOn });
+    setBusy(false);
+    if (!r.ok) {
+      logError('PartnerScreen.inviteVia', new Error(r.error || 'unknown'), { userId: user?.id, target });
+      toast.show('Could not create an invite. Check your connection and try again.', { variant: 'error' });
+      return;
+    }
+    const message = r.data.shareMessage;
+    const body = encodeURIComponent(message);
+    let url;
+    if (target === 'sms') {
+      // iOS wants sms:&body=, Android wants sms:?body=.
+      url = Platform.OS === 'ios' ? `sms:&body=${body}` : `sms:?body=${body}`;
+    } else if (target === 'whatsapp') {
+      url = `whatsapp://send?text=${body}`;
+    } else {
+      const subject = encodeURIComponent('Train with me on Volyume');
+      url = `mailto:?subject=${subject}&body=${body}`;
+    }
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        // Target app/handler unavailable: hand off to the OS share sheet.
+        await Share.share({ message });
+      }
+    } catch (e) {
+      logError('PartnerScreen.inviteVia.open', e, { userId: user?.id, target });
+      try { await Share.share({ message }); } catch (_) { /* user dismissed */ }
+    }
+    p.reload();
+  }
+
   async function handleRedeem(incoming) {
     // Accept an explicit code (deep link) or fall back to the typed field.
     // Guards against being passed a press event object.
@@ -105,10 +148,38 @@ export default function PartnerScreen({ route }) {
     await p.cheer(p.partnership.id, !!reciprocal);
   }
 
+  // Used by both "End partnership" (active) and the pending-invite "Cancel".
+  // Awaits the result and surfaces it: the unpair RPC can fail (e.g. offline, or
+  // before the server migration is applied), and a silent failure left the user
+  // tapping Cancel with nothing happening (founder 2026-06-30). The wording
+  // adapts so cancelling a pending invite never reads as "ending" a partnership.
   function confirmUnpair() {
-    appAlert('End partnership?', 'Sharing will stop right away and everything you shared will be deleted.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'End', style: 'destructive', onPress: () => p.unpair(p.partnership.id) },
+    const pending = p.rowState === 'pending';
+    const title = pending ? 'Cancel invitation?' : 'End partnership?';
+    const message = pending
+      ? 'Your invitation will be withdrawn. You can send a new one any time.'
+      : 'Sharing will stop right away and everything you shared will be deleted.';
+    const confirmLabel = pending ? 'Cancel invitation' : 'End';
+    appAlert(title, message, [
+      { text: pending ? 'Keep waiting' : 'Cancel', style: 'cancel' },
+      {
+        text: confirmLabel,
+        style: 'destructive',
+        onPress: async () => {
+          const r = await p.unpair(p.partnership.id);
+          if (r?.ok) {
+            toast.show(pending ? 'Invitation cancelled' : 'Partnership ended', { variant: 'success' });
+          } else {
+            logError('PartnerScreen.confirmUnpair', new Error(r?.error || 'unknown'), { userId: user?.id, pending });
+            toast.show(
+              pending
+                ? 'Could not cancel the invitation. Check your connection and try again.'
+                : 'Could not end the partnership. Check your connection and try again.',
+              { variant: 'error' },
+            );
+          }
+        },
+      },
     ]);
   }
 
@@ -258,6 +329,35 @@ export default function PartnerScreen({ route }) {
                   {busy ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.primaryText}>Create invite</Text>}
                 </TouchableOpacity>
 
+                {/* Send the invite straight into a specific app. */}
+                <Text style={styles.orLabel}>Or send it directly</Text>
+                <View style={styles.sendRow}>
+                  <TouchableOpacity
+                    style={[styles.sendBtn, (busy || !p.canAdd) && styles.primaryDisabled]}
+                    onPress={() => inviteVia('sms')} disabled={busy || !p.canAdd}
+                    accessibilityRole="button" accessibilityLabel="Invite by text message"
+                  >
+                    <Ionicons name="chatbubble-outline" size={18} color={colors.primary} />
+                    <Text style={styles.sendBtnText}>Text</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.sendBtn, (busy || !p.canAdd) && styles.primaryDisabled]}
+                    onPress={() => inviteVia('whatsapp')} disabled={busy || !p.canAdd}
+                    accessibilityRole="button" accessibilityLabel="Invite by WhatsApp"
+                  >
+                    <Ionicons name="logo-whatsapp" size={18} color={colors.primary} />
+                    <Text style={styles.sendBtnText}>WhatsApp</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.sendBtn, (busy || !p.canAdd) && styles.primaryDisabled]}
+                    onPress={() => inviteVia('email')} disabled={busy || !p.canAdd}
+                    accessibilityRole="button" accessibilityLabel="Invite by email"
+                  >
+                    <Ionicons name="mail-outline" size={18} color={colors.primary} />
+                    <Text style={styles.sendBtnText}>Email</Text>
+                  </TouchableOpacity>
+                </View>
+
                 <Text style={styles.orLabel}>Or enter a partner&apos;s code</Text>
                 <View style={styles.codeRow}>
                   <TextInput
@@ -352,6 +452,13 @@ const styles = StyleSheet.create({
   primaryDisabled: { opacity: 0.5 },
   primaryText: { ...type.label, color: colors.onPrimary, fontSize: fontSize.md },
   orLabel: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.sm },
+  sendRow: { flexDirection: 'row', gap: spacing.sm },
+  sendBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    borderWidth: 1, borderColor: colors.primary, borderRadius: radius.md,
+    paddingVertical: spacing.sm, minHeight: 44,
+  },
+  sendBtnText: { ...type.label, color: colors.primary, fontSize: fontSize.sm },
   codeRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
   codeInput: {
     flex: 1, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
