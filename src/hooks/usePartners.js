@@ -13,6 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import {
   getPartnershipsLocal, getActivePartnerCount, getPartnerWeekSignal,
   getPairWeekSignals, getLastCheerSentOn, getLastCheerReceived,
+  deleteLocalPairSharedData,
 } from '../lib/database';
 import { todayLocalKey } from '../lib/dayKey';
 import { partnerRowState, cheerAllowed, canAddPartner } from '../lib/partners/signals';
@@ -109,6 +110,10 @@ export default function usePartners(userId, tier) {
 
   const unpair = useCallback(async (pairId) => {
     const r = await unpairPartner(userId, pairId);
+    // Honour the deletion promise on THIS device immediately: the RPC purged the
+    // pair's signals + cheers server-side; clear the local mirror now rather than
+    // waiting for the next pull, so nothing shared lingers after "End".
+    if (r.ok) { try { await deleteLocalPairSharedData(pairId); } catch (_) { /* best-effort */ } }
     await load();
     return r;
   }, [userId, load]);

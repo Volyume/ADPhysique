@@ -87,9 +87,23 @@ describe('blockPartner', () => {
 });
 
 describe('unpairPartner', () => {
-  test('marks the partnership ended', async () => {
+  test('goes through the end_partnership RPC (which purges signals + cheers), not a bare status update', async () => {
+    const client = fakeClient();
+    _setClientForTests(client);
     const r = await unpairPartner('u1', 'p1');
     expect(r.ok).toBe(true);
+    // INVARIANT (deletion promise, blueprint §5): unpair MUST route through the
+    // server-side purge RPC, never a status-only UPDATE that leaves shared data
+    // behind. Guards the exact defect this fix closes.
+    expect(client.rpc).toHaveBeenCalledWith('end_partnership', { _pair_id: 'p1' });
+  });
+
+  test('surfaces an RPC failure instead of reporting a false success', async () => {
+    _setClientForTests(fakeClient({
+      rpc: jest.fn(() => Promise.resolve({ data: null, error: { message: 'not_a_member' } })),
+    }));
+    const r = await unpairPartner('u1', 'p1');
+    expect(r.ok).toBe(false);
   });
 });
 

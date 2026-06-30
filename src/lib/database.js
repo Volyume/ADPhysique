@@ -4652,6 +4652,20 @@ export async function getLocalPartnershipIds(userId) {
   return rows.map((r) => r.id);
 }
 
+/**
+ * Purge the local mirror of one pair's SHARED data (its week signals + cheers),
+ * leaving the partnership tombstone in place. Honours the unpair deletion promise
+ * (blueprint §5) on-device: called both on the unpairing user's own device (for
+ * immediate effect) and during the pull for any pair the cloud now reports as
+ * ended, so the OTHER member's device clears the shared rows too.
+ */
+export async function deleteLocalPairSharedData(pairId) {
+  if (!pairId) return;
+  const d = await db();
+  await d.runAsync('DELETE FROM partner_cheers WHERE pair_id = ?', [pairId]);
+  await d.runAsync('DELETE FROM partner_week_signals WHERE pair_id = ?', [pairId]);
+}
+
 /** Wipe all local partner data (sign-out guard). */
 export async function clearLocalPartners() {
   const d = await db();

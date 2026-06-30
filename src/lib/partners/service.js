@@ -108,16 +108,17 @@ export async function blockPartner(userId, blockedId) {
 
 /**
  * End a partnership. Silent and immediate: the other side sees only
- * "Partnership ended" (no reason). The partner-cheer/delete cascade hard-deletes
- * the pair's signals + cheers server-side; here we mark the row ended.
+ * "Partnership ended" (no reason). Honours the in-app deletion promise (blueprint
+ * §5): the end_partnership RPC (migration 092) DELETES the pair's week signals
+ * and cheers server-side and marks the partnership 'ended' (the tombstone stays
+ * so the other person sees only that it ended). A bare UPDATE never fired the
+ * ON DELETE CASCADE — the RPC is what actually purges the shared data.
  */
 export async function unpairPartner(userId, pairId) {
   const c = getSupabaseClient();
   if (!c || !userId || !pairId) return fail('offline');
   try {
-    const { error } = await c.from('partnerships')
-      .update({ status: 'ended', ended_at: new Date().toISOString() })
-      .eq('id', pairId);
+    const { error } = await c.rpc('end_partnership', { _pair_id: pairId });
     if (error) return fail(error);
     return { ok: true };
   } catch (e) {

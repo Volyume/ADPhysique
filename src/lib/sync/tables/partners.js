@@ -101,15 +101,26 @@ export async function pullPartners(sb, { userId } = {}) {
       try { await db.upsertPartnershipFromCloud(row); applied += 1; } catch (e) {
         errors += 1; logSyncError('sync.tables.partners.upsertPartnership', e);
       }
+      // Deletion promise (blueprint §5), other member's side: once the cloud
+      // reports a pair as ended, the end_partnership RPC has already purged its
+      // signals + cheers server-side. Clear the local mirror of those shared rows
+      // here so they do not linger on this device after the other person ended it.
+      if (row.status === 'ended') {
+        try { await db.deleteLocalPairSharedData(row.id); } catch (_) { /* best-effort */ }
+      }
     }
 
     // Prune local partnerships the cloud no longer returns as mine (hard-removed
     // server-side, e.g. both members deleted). 'ended' rows stay (cloud returns
-    // them) so the tombstone is shown; only truly vanished rows are pruned.
+    // them) so the tombstone is shown; only truly vanished rows are pruned. A
+    // vanished pair also has its shared rows purged locally (same promise).
     try {
       const localIds = await db.getLocalPartnershipIds(userId);
       const gone = localIds.filter((id) => !cloudIds.has(id));
-      for (const id of gone) await db.upsertPartnershipFromCloud({ id, status: 'ended', updated_at: new Date().toISOString() });
+      for (const id of gone) {
+        await db.upsertPartnershipFromCloud({ id, status: 'ended', updated_at: new Date().toISOString() });
+        try { await db.deleteLocalPairSharedData(id); } catch (_) { /* best-effort */ }
+      }
     } catch (_) { /* prune is best-effort */ }
 
     const activePairIds = (partnerships || []).filter((p) => p.status === 'active').map((p) => p.id);
