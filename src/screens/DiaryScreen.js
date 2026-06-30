@@ -22,6 +22,7 @@ import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
   getFoodEntriesForDay, getRecentLoggedDays, deleteFoodEntry, restoreFoodEntry, updateFoodEntry, getRollupForDay,
   setWater, getWater, createSavedMeal, confirmPlannedDay, clearPlannedDay,
+  getSlotRecents, logFoodEntry, upsertSlotRecent,
 } from '../lib/food/db';
 import { isoDate, shiftDate, weekDatesMon, weekdayShort, friendlyDate } from '../lib/food/diaryDates';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
@@ -49,7 +50,8 @@ import { useToast } from '../components/Toast';
 import { deleteEntries, restoreEntries, moveEntriesToSlot, copyEntriesToDate } from '../lib/food/bulkEntryOps';
 import { shouldShowOffConsentCard, dismissOffConsentCard } from '../lib/food/writeback';
 import { buildMealSlots, highestLoggedMeal, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
-import { scaleMacros } from '../lib/food/macros';
+import { scaleMacros, resolveServingG } from '../lib/food/macros';
+import { isValidEntryGrams } from '../lib/food/servingEntry';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 
 export default function DiaryScreen({ navigation }) {
@@ -355,6 +357,76 @@ export default function DiaryScreen({ navigation }) {
   }, []));
   const mealsPerDay = Math.max(prefMeals + addedMeals, highestLoggedMeal(entries));
   const mealSlots = useMemo(() => buildMealSlots(entries, mealsPerDay), [entries, mealsPerDay]);
+
+  // GAP #5: one-tap "usuals" for empty meal slots. Each slot offers up to three
+  // of the foods most logged into THAT slot (the same `food_slot_recents`
+  // ranking the "Add again" list uses), resolved to current food records, so a
+  // regular breakfast is a single tap rather than a search. Only ever shown on a
+  // slot with no entries yet, so it reads as a prompt, never as clutter over
+  // food already logged. Keyed on the memoised mealSlots so it reloads after a
+  // log (recents shift) or a date change, and never on every render.
+  const [slotUsuals, setSlotUsuals] = useState({});
+  useEffect(() => {
+    if (!userId) { setSlotUsuals({}); return; }
+    let active = true;
+    (async () => {
+      const next = {};
+      await Promise.all(mealSlots.map(async (slot) => {
+        try {
+          const rows = await getSlotRecents(userId, slot.key, 3);
+          const foods = await Promise.all((rows ?? []).map(async (row) => {
+            try {
+              const food = await resolveFoodRef(userId, row.food_ref);
+              if (!food) return null;
+              // Carry the remembered portion so resolveServingG reuses the
+              // user's last logged weight for this food, not a generic 100 g.
+              return { ...food, food_ref: row.food_ref, last_quantity_g: row.last_quantity_g };
+            } catch (_) { return null; }
+          }));
+          const valid = foods.filter(Boolean);
+          if (valid.length) next[slot.key] = valid;
+        } catch (_) { /* slot has no recents */ }
+      }));
+      if (active) setSlotUsuals(next);
+    })();
+    return () => { active = false; };
+  }, [userId, selectedDate, mealSlots]);
+
+  // One-tap log of a usual. Same write path, rollup trigger and sync as a
+  // search-result add, with an Undo. Guards a double tap (loggingUsualRef) and
+  // an invalid remembered portion (logs nothing rather than a junk weight).
+  const loggingUsualRef = useRef(false);
+  const onLogUsual = useCallback(async (food, slotKey) => {
+    if (!userId || !food || loggingUsualRef.current) return;
+    const grams = Math.round(resolveServingG(food));
+    if (!isValidEntryGrams(grams)) return;
+    loggingUsualRef.current = true;
+    audit('food.relog', { surface: 'diary_usual', mealSlot: slotKey });
+    try {
+      const m = scaleMacros(food, grams);
+      const id = await logFoodEntry(userId, {
+        entryDate: selectedDate,
+        mealSlot: slotKey,
+        foodRef: food.food_ref,
+        quantityG: grams,
+        kcal: m.kcal,
+        proteinG: m.proteinG,
+        carbsG: m.carbsG,
+        fatG: m.fatG,
+        fibreG: m.fibreG,
+      });
+      await upsertSlotRecent(userId, { mealSlot: slotKey, foodRef: food.food_ref, quantityG: grams });
+      await load();
+      toast.show(`${food.name ?? 'Food'} added.`, {
+        variant: 'undo',
+        action: { label: 'Undo', onPress: async () => { try { await deleteFoodEntry(id, userId); await load(); } catch (_) { /* already gone */ } } },
+      });
+    } catch (_) {
+      toast.show("Couldn't add that. Try again.", { variant: 'error' });
+    } finally {
+      loggingUsualRef.current = false;
+    }
+  }, [userId, selectedDate, load, toast]);
 
   function gotoYesterday() { setSelectedDate(shiftDate(selectedDate, -1)); }
   function gotoTomorrow()  { setSelectedDate(shiftDate(selectedDate, 1)); }
@@ -807,6 +879,8 @@ export default function DiaryScreen({ navigation }) {
                   <MealSection
                     slot={slot}
                     entries={entriesBySlot[slot.key] ?? []}
+                    usuals={(entriesBySlot[slot.key]?.length) ? null : (slotUsuals[slot.key] ?? null)}
+                    onLogUsual={(food) => onLogUsual(food, slot.key)}
                     onAdd={() => addFood(slot.key)}
                     onQuickAdd={() => setQuickAddSlot(slot.key)}
                     onEdit={openEditSheet}

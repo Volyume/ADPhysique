@@ -13,12 +13,16 @@ import { SwipeableEntryRow } from './EntryRow';
 // row, not a dashed placeholder box.
 export default function MealSection({
   slot, entries, onAdd, onQuickAdd, onEdit, onDelete,
+  usuals = null, onLogUsual,
   selectionMode = false, selectedIds, onLongPressEntry, onToggleSelect,
 }) {
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const hasEntries = entries.length > 0;
   const slotKcal = Math.round(entries.reduce((a, e) => a + (e.kcal ?? 0), 0));
   const slotProtein = Math.round(entries.reduce((a, e) => a + (e.protein_g ?? 0), 0));
+  // GAP #5: one-tap "usuals". Only on an empty slot (a slot with food doesn't
+  // need the prompt) and never in selection mode (the card is a target then).
+  const showUsuals = !hasEntries && !selectionMode && Array.isArray(usuals) && usuals.length > 0;
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -27,6 +31,22 @@ export default function MealSection({
           <Text style={styles.subtotal}>{toEnergy(slotKcal, energyUnit)} {energyUnitLabel(energyUnit)} · {slotProtein}g P</Text>
         ) : null}
       </View>
+      {showUsuals ? (
+        <View style={styles.usuals}>
+          {usuals.map((food) => (
+            <TouchableOpacity
+              key={food.food_ref}
+              style={styles.usualChip}
+              onPress={() => onLogUsual?.(food)}
+              accessibilityRole="button"
+              accessibilityLabel={`Add ${food.name ?? 'food'} to ${slot.label}`}
+            >
+              <Ionicons name="add" size={14} color={colors.primary} />
+              <Text style={styles.usualChipText} numberOfLines={1}>{food.name ?? 'Food'}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : null}
       {entries.map((e) => (
         <SwipeableEntryRow
           key={e.id}
@@ -78,6 +98,19 @@ const styles = StyleSheet.create({
   },
   mealName: { ...type.bodyStrong, color: colors.textPrimary },
   subtotal: { color: colors.textMuted, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
+  // One-tap "usuals" chips: a quiet wrap of the foods most logged into this
+  // slot, sitting between the header and the Add row on an empty card.
+  usuals: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs,
+    paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, paddingTop: spacing.xxs,
+  },
+  usualChip: {
+    flexDirection: 'row', alignItems: 'center', maxWidth: '100%',
+    paddingVertical: spacing.xs, paddingHorizontal: spacing.sm,
+    borderRadius: radius.full,
+    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface2,
+  },
+  usualChipText: { ...type.label, color: colors.textPrimary, marginLeft: 4, flexShrink: 1 },
   addRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
