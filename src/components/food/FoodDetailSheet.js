@@ -8,7 +8,7 @@ import useAppStore from '../../store/useAppStore';
 import BottomSheet from '../BottomSheet';
 import { useToast } from '../Toast';
 import { pickerMealSlots } from '../../lib/food/mealSlots';
-import { scaleMacros } from '../../lib/food/macros';
+import { scaleMacros, scaleSugarG } from '../../lib/food/macros';
 import { buildServingUnits, initialServingState, resolveGrams, isValidEntryGrams } from '../../lib/food/servingEntry';
 
 // Display-shaped wrapper over the shared scaling helper (food review U-M2):
@@ -45,6 +45,10 @@ export default function FoodDetailSheet({
   // label convert at the point of display.
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const energyWord = energyUnit === 'kj' ? 'kilojoules' : 'calories';
+  // gap #16: which extra per-food nutrients to surface under the macro summary.
+  // Both default on; both are grams and display-only (never a target or total).
+  const showFibre = useAppStore((s) => s.accessibility?.showFibre !== false);
+  const showSugar = useAppStore((s) => s.accessibility?.showSugar !== false);
   // Serving model (food ease, MFP/Cronometer parity): prefer the food's own
   // household serving (e.g. "1 cup", "1 slice") so the common case is RECOGNITION,
   // not gram arithmetic — the list row already shows serving_label, we keep it
@@ -133,6 +137,14 @@ export default function FoodDetailSheet({
   }
 
   const macros = macrosFor(food, quantityG);
+  // Extra per-food nutrients (gap #16): shown only when the food actually
+  // carries the datum (null = "no data", never a fake 0) and the user keeps the
+  // toggle on. Display-only — not logged, not totalled, not scored.
+  const sugarG = showSugar ? scaleSugarG(food, quantityG) : null;
+  const extraNutrients = [
+    showFibre && macros.fibre != null ? { key: 'fibre', label: 'Fibre', value: `${macros.fibre}g` } : null,
+    sugarG != null ? { key: 'sugar', label: 'Sugars', value: `${sugarG}g` } : null,
+  ].filter(Boolean);
 
   if (!food) return null;
 
@@ -208,6 +220,16 @@ export default function FoodDetailSheet({
             <MacroPill label="C"    value={`${macros.carbs}g`} />
             <MacroPill label="F"    value={`${macros.fat}g`} />
           </View>
+
+          {extraNutrients.length ? (
+            <View style={styles.extraRow}>
+              {extraNutrients.map((n) => (
+                <Text key={n.key} style={styles.extraText}>
+                  <Text style={styles.extraLabel}>{n.label} </Text>{n.value}
+                </Text>
+              ))}
+            </View>
+          ) : null}
 
           <Text style={styles.fieldLabel}>Meal</Text>
           <View style={styles.mealRow}>
@@ -333,6 +355,11 @@ const styles = StyleSheet.create({
   },
   macroPillValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
   macroPillLabel: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
+  // gap #16: a quiet secondary line for extra per-food nutrients, below the
+  // primary kcal/P/C/F pills so it never competes with the macros that matter.
+  extraRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.sm, paddingHorizontal: spacing.xxs },
+  extraText: { fontSize: fontSize.sm, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
+  extraLabel: { color: colors.textMuted },
   mealRow: { flexDirection: 'row', gap: spacing.xs },
   mealBtn: {
     flex: 1,

@@ -1,7 +1,7 @@
 /**
  * macros.test.js — the single per-100g -> portion scaler (food review U-M2).
  */
-import { scaleMacros, resolveServingG } from '../macros';
+import { scaleMacros, resolveServingG, scaleSugarG } from '../macros';
 
 describe('scaleMacros', () => {
   test('scales the resolved/diary shape (kcal_100g ...) by grams', () => {
@@ -47,5 +47,31 @@ describe('resolveServingG', () => {
     expect(resolveServingG({ last_quantity_g: 0, serving_g: 0 })).toBe(100);
     expect(resolveServingG(null)).toBe(100);
     expect(resolveServingG(undefined)).toBe(100);
+  });
+});
+
+describe('scaleSugarG', () => {
+  test('scales the resolved/diary shape (sugar_100g) by grams', () => {
+    expect(scaleSugarG({ sugar_100g: 10 }, 200)).toBe(20);
+  });
+
+  test('tolerates the custom-food draft shape (sugar100g)', () => {
+    expect(scaleSugarG({ sugar100g: 5 }, 50)).toBe(2.5);
+  });
+
+  test('returns null (no data, never a fake 0) when the food carries no sugar', () => {
+    expect(scaleSugarG({}, 100)).toBeNull();
+    expect(scaleSugarG({ sugar_100g: null }, 100)).toBeNull();
+    expect(scaleSugarG({ sugar_100g: 'x' }, 100)).toBeNull();
+  });
+
+  test('returns null for a non-positive or missing quantity', () => {
+    expect(scaleSugarG({ sugar_100g: 10 }, 0)).toBeNull();
+    expect(scaleSugarG({ sugar_100g: 10 }, -5)).toBeNull();
+    expect(scaleSugarG(null, 100)).toBeNull();
+  });
+
+  test('a real 0 g sugar stays 0, not null', () => {
+    expect(scaleSugarG({ sugar_100g: 0 }, 100)).toBe(0);
   });
 });

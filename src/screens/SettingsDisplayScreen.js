@@ -149,6 +149,41 @@ export default function SettingsDisplayScreen() {
       </View>
 
       <View style={styles.section}>
+        <Text style={local.title}>Nutrients shown</Text>
+        <Text style={local.sub}>
+          Which extra nutrients appear under a food's calories and macros, when the food carries them. Shown for that food only. This never changes your targets or daily totals.
+        </Text>
+        <SettingRow
+          icon="leaf-outline"
+          label="Fibre"
+          sub="Show grams of fibre on a food's detail."
+          showArrow={false}
+          rightElement={
+            <Switch
+              value={accessibility.showFibre !== false}
+              onValueChange={(v) => setAccessibilityPref('showFibre', v)}
+              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
+              thumbColor={(accessibility.showFibre !== false) ? colors.primary : colors.textMuted}
+            />
+          }
+        />
+        <SettingRow
+          icon="cube-outline"
+          label="Sugars"
+          sub="Show grams of sugars on a food's detail."
+          showArrow={false}
+          rightElement={
+            <Switch
+              value={accessibility.showSugar !== false}
+              onValueChange={(v) => setAccessibilityPref('showSugar', v)}
+              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
+              thumbColor={(accessibility.showSugar !== false) ? colors.primary : colors.textMuted}
+            />
+          }
+        />
+      </View>
+
+      <View style={styles.section}>
         <SettingRow
           icon="text-outline"
           label="Larger text"

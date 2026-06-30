@@ -43,6 +43,27 @@ export function scaleMacros(per100, grams) {
 }
 
 /**
+ * Scale a food's per-100g sugar to an eaten quantity, for the food-detail
+ * display only (gap #16). Mirrors scaleMacros' tolerant field-shape handling and
+ * its "no datum stays null" rule, so a food with no sugar value reads as "no
+ * data", never a fake 0 g. Display-only: sugar is not tracked in food_entries,
+ * the rollup, or any coaching input.
+ *
+ * @param per100  a food row carrying per-100g sugar (sugar_100g | sugar100g)
+ * @param grams   the eaten quantity in grams
+ * @returns {number|null} grams of sugar, or null when the food carries no datum
+ */
+export function scaleSugarG(per100, grams) {
+  const g = Number(grams) || 0;
+  if (!per100 || g <= 0 || !Number.isFinite(g)) return null;
+  const raw = per100.sugar_100g != null ? per100.sugar_100g : per100.sugar100g;
+  if (raw == null) return null;
+  const v = Number(raw);
+  if (!Number.isFinite(v)) return null;
+  return r1(v * (g / 100));
+}
+
+/**
  * The serving size (g) to use for a one-tap add of a food. Food audit F-2:
  * prefer the user's LAST logged portion when the row carries one (the "Add
  * again" recents list does), so a one-tap re-add reuses the remembered portion;

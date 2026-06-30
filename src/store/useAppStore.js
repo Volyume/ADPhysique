@@ -1585,6 +1585,14 @@ const useAppStore = create((set, get) => ({
     energyUnit: 'kcal',    // food-UI energy DISPLAY unit: 'kcal' | 'kj'. Display-only (read reactively,
                            // no reload); stored values, targets + the coaching engine stay in kcal.
     showHomeNutrition: true, // gap #17: show the nutrition glance + food entry on the Home strip
+    // gap #16: choose-which-nutrients-shown on a food's detail. Fibre and sugar
+    // are carried per-food (per-100g, grams) by the resolve path when the source
+    // has them; these toggles decide which appear under the kcal/P/C/F summary.
+    // Per-food display only — never a daily total, never a target, never scored.
+    // (Sodium is deliberately NOT surfaced: its stored unit is undetermined and
+    // no ingestion path populates it, so showing it would be fabricated data.)
+    showFibre: true,
+    showSugar: true,
   },
   accessibilityLoaded: false,
   loadAccessibility: async () => {
