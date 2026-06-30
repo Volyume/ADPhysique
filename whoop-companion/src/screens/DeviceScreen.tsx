@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
@@ -8,7 +8,7 @@ import { useStoreSelector } from '../state/store';
 import { Card, Empty, PrimaryButton, Screen, SecondaryButton, SectionLabel, Stat } from '../ui/components';
 import { colors, radius } from '../ui/theme';
 import { Nav } from '../ui/navigation';
-import { getAllRawFrames, clearRawFrames } from '../db/database';
+import { getAllRawFrames, clearRawFrames, countRawFrames } from '../db/database';
 import type { UserProfile } from '../metrics/strain';
 
 const STATUS_TEXT: Record<string, string> = {
@@ -37,6 +37,25 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const profile = useStoreSelector(appStore, (s) => s.profile);
   const bufferedRecords = useStoreSelector(appStore, (s) => s.bufferedRecords);
   const lastSyncTs = useStoreSelector(appStore, (s) => s.lastSyncTs);
+  const keepAlive = useStoreSelector(appStore, (s) => s.backgroundKeepAlive);
+
+  // Frames actually written to the database (what export reads), polled so we can
+  // see whether persistence is keeping up with the live (in-memory) counter.
+  const [savedFrames, setSavedFrames] = useState<number | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const tick = () => {
+      void countRawFrames().then((n) => {
+        if (alive) setSavedFrames(n);
+      });
+    };
+    tick();
+    const id = setInterval(tick, 3000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, []);
 
   const connected = status === 'connected';
   const lastSyncText = lastSyncTs
@@ -48,22 +67,43 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
       const frames = await getAllRawFrames();
       if (frames.length === 0) {
         Alert.alert(
-          'No frames captured',
-          'Turn on “Start capture” first, do the activity (or wear it a while), then come back and export.',
+          'Nothing to export yet',
+          'No frames are saved in the database. The on-screen “Captured frames” counter climbs for every frame received, but frames are only written to the database while “Start capture” is ON. Make sure capture is on and the strap is connected, wear it a while, then export.',
         );
         return;
       }
       const header = `# VOLYUME Pulse raw frames: ${frames.length}\n# epoch_ms\tsource\thex\n`;
       const body = frames.map((f) => `${f.ts}\t${f.source}\t${f.hex}`).join('\n');
-      const uri = `${FileSystem.cacheDirectory}pulse-frames-${frames.length}.tsv`;
+      // Plain text with a .txt extension is the most widely accepted across
+      // Android share targets (Gmail, Drive, Files, messaging). The earlier
+      // text/tab-separated-values + .tsv combo gave many phones an empty share
+      // sheet — which looked like the button "did nothing".
+      const uri = `${FileSystem.cacheDirectory}pulse-frames-${frames.length}.txt`;
       await FileSystem.writeAsStringAsync(uri, header + body);
-      if (await Sharing.isAvailableAsync()) {
+
+      // Confirm the file genuinely landed on disk before we claim success.
+      const info = await FileSystem.getInfoAsync(uri);
+      if (!info.exists) {
+        Alert.alert('Export failed', 'The frames file could not be written to disk.');
+        return;
+      }
+      const sizeKb = 'size' in info && info.size ? Math.round(info.size / 1024) : 0;
+
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
         await Sharing.shareAsync(uri, {
-          mimeType: 'text/tab-separated-values',
+          mimeType: 'text/plain',
+          UTI: 'public.plain-text',
           dialogTitle: `Export ${frames.length} captured frames`,
         });
+        // Always confirm afterwards so there's visible feedback even if the share
+        // sheet is dismissed or offers no target.
+        Alert.alert(
+          'Frames exported',
+          `${frames.length} frames (${sizeKb} KB) written to:\n${uri}\n\nIf the share sheet had no usable app, the file is still saved at that path — you can reach it via a file manager.`,
+        );
       } else {
-        Alert.alert('Saved', `Saved ${frames.length} frames to:\n${uri}`);
+        Alert.alert('Saved', `${frames.length} frames (${sizeKb} KB) saved to:\n${uri}`);
       }
     } catch (e) {
       Alert.alert('Export failed', String(e));
@@ -125,9 +165,34 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
       <SectionLabel>Profile (for strain &amp; zones)</SectionLabel>
       <ProfileEditor profile={profile} />
 
+      <SectionLabel>Overnight</SectionLabel>
+      <Card>
+        <View style={styles.toggleRow}>
+          <Text style={styles.toggleLabel}>Keep strap connected overnight</Text>
+          <Switch
+            value={keepAlive}
+            onValueChange={(v) => void appStore.setBackgroundKeepAlive(v)}
+            trackColor={{ true: colors.recoveryGreen, false: colors.border }}
+          />
+        </View>
+        <Text style={styles.hint}>
+          Runs a foreground service so Android doesn’t suspend the app and drop the Bluetooth link while
+          you sleep. This adds a permanent “Keeping your WHOOP strap connected” notification, needs the
+          “Allow all the time” location permission, and uses a little extra battery. It mirrors how WHOOP’s
+          own app stays alive. This is the mechanism that should let overnight HR / HRV / sleep record —
+          verify it actually survives a full night before trusting it.
+        </Text>
+      </Card>
+
       <SectionLabel>Diagnostics</SectionLabel>
       <Card>
-        <Text style={styles.diagText}>Captured frames: {frameCount}</Text>
+        <Text style={styles.diagText}>Captured frames (this session): {frameCount}</Text>
+        <Text style={styles.diagText}>
+          Frames saved to database: {savedFrames == null ? '…' : savedFrames}
+          {savedFrames != null && capturing && savedFrames === 0 && frameCount > 0
+            ? '  ⚠ frames arriving but not saving'
+            : ''}
+        </Text>
         <View style={{ flexDirection: 'row', gap: 12 }}>
           <View style={{ flex: 1 }}>
             <SecondaryButton
@@ -226,6 +291,8 @@ const styles = StyleSheet.create({
   error: { color: colors.danger, fontSize: 13, marginTop: 6 },
   hint: { color: colors.textTertiary, fontSize: 12, marginTop: 10, lineHeight: 17 },
   diagText: { color: colors.text, fontSize: 14, marginBottom: 8 },
+  toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  toggleLabel: { color: colors.text, fontSize: 15, fontWeight: '600', flex: 1, marginRight: 12 },
   fieldLabel: { color: colors.textSecondary, fontSize: 12, marginBottom: 4 },
   input: {
     backgroundColor: colors.surface,

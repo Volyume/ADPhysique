@@ -44,6 +44,7 @@ import {
   upsertDailyMetric,
 } from '../db/database';
 import { startBgLocation, stopBgLocation } from '../sensors/bgLocation';
+import { startKeepAlive, stopKeepAlive } from '../sensors/keepAlive';
 import { DEFAULT_PROFILE, loadProfile, saveProfile } from '../db/profile';
 import { computeHrv } from '../metrics/hrv';
 import { emaBaseline, stdev } from '../metrics/ema';
@@ -113,6 +114,7 @@ export type AppState = {
   frameCount: number;
   capturing: boolean;
   draining: boolean;
+  backgroundKeepAlive: boolean; // opt-in foreground service to survive Doze overnight
   today: DailyMetricRow | null;
   recentDays: DailyMetricRow[];
   lastSleep: SleepResult | null;
@@ -153,6 +155,7 @@ const initialState: AppState = {
   frameCount: 0,
   capturing: false,
   draining: false,
+  backgroundKeepAlive: false,
   today: null,
   recentDays: [],
   lastSleep: null,
@@ -209,7 +212,12 @@ class AppStore extends Store<AppState> {
     const profile = await loadProfile();
     const goalRaw = await kvGet('sleepGoal');
     const sleepGoal = goalRaw ? Number(goalRaw) : 0.85;
-    this.setState({ profile, sleepGoal: Number.isFinite(sleepGoal) ? sleepGoal : 0.85 });
+    const keepAlive = (await kvGet('backgroundKeepAlive')) === '1';
+    this.setState({
+      profile,
+      sleepGoal: Number.isFinite(sleepGoal) ? sleepGoal : 0.85,
+      backgroundKeepAlive: keepAlive,
+    });
     this.ble = new WhoopBle({
       onStatus: (status, detail) => this.onStatus(status, detail),
       onDevice: (device) => this.setState({ device }),
@@ -241,6 +249,11 @@ class AppStore extends Store<AppState> {
       // Give the link a moment to settle, then backfill from the strap buffer.
       setTimeout(() => void this.runHistoryDrain().catch(() => {}), 1500);
     }
+    // Start the keep-alive foreground service once we have a live link, if opted in,
+    // so the connection (and overnight logging) survives Android Doze.
+    if (status === 'connected' && this.getState().backgroundKeepAlive) {
+      void startKeepAlive();
+    }
     if (status === 'disconnected' || status === 'idle') {
       this.autoDrainedFor = '';
     }
@@ -265,7 +278,30 @@ class AppStore extends Store<AppState> {
 
   disconnect = (): void => {
     void this.ble?.stop();
+    // User asked to disconnect → tear down the keep-alive service too (it only
+    // exists to hold the connection open; auto-reconnect keeps it during drops).
+    void stopKeepAlive();
     this.setState({ liveHr: null, liveRr: [] });
+  };
+
+  /** Opt in/out of the overnight keep-alive foreground service. When turned on
+   *  while already connected, start it immediately; when turned off, stop it. */
+  setBackgroundKeepAlive = async (on: boolean): Promise<void> => {
+    this.setState({ backgroundKeepAlive: on });
+    await kvSet('backgroundKeepAlive', on ? '1' : '0');
+    if (on) {
+      if (this.getState().status === 'connected') {
+        const ok = await startKeepAlive();
+        if (!ok) {
+          this.setState({
+            error:
+              'Keep-alive needs the “Allow all the time” location permission. Grant it in Settings, then toggle again.',
+          });
+        }
+      }
+    } else {
+      await stopKeepAlive();
+    }
   };
 
   private async onHeartRate(bpm: number, rr: number[]): Promise<void> {
