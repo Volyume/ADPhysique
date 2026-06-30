@@ -176,6 +176,10 @@ export default function HomeScreen({ navigation }) {
   const [todayWeight, setTodayWeight] = useState(null);       // logged weight for today
   const [recentWeights, setRecentWeights] = useState([]);     // last 14 entries for sparkline
   const [savingWeight, setSavingWeight] = useState(false);
+  // First-launch welcome guide. Defaults to hidden so it never flashes before the
+  // saved flag is read; the loader reveals it for a brand-new user (no sessions
+  // logged) who hasn't dismissed it. Auto-clears once totalSessions > 0.
+  const [welcomeDismissed, setWelcomeDismissed] = useState(true);
   // COMP-027 Part B: open ED/wellbeing flag → the strip's weight cell drops the
   // sparkline (value only), consistent with COMP-004's hide-the-rate rule.
   const [edFlagOpen, setEdFlagOpen] = useState(false);
@@ -280,6 +284,7 @@ export default function HomeScreen({ navigation }) {
         loadFatigueTrend(),
         loadScheduleContext(),
         loadBriefDismissal(),
+        loadWelcome(),
         ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadTrialBanner()] : []),
         ...(tier === 'free' ? [loadFreeCoachLine()] : []),
       ]);
@@ -436,6 +441,24 @@ export default function HomeScreen({ navigation }) {
       const todayStr = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
       await AsyncStorage.setItem('@volyume_brief_dismissed_date', todayStr);
     } catch (_) {}
+  }
+
+  const welcomeKey = user?.id ? `@volyume_home_welcome_${user.id}` : null;
+
+  async function loadWelcome() {
+    if (!welcomeKey) return;
+    try {
+      const v = await AsyncStorage.getItem(welcomeKey);
+      // Absent flag (a brand-new user) -> show; 'true' -> already dismissed.
+      setWelcomeDismissed(v === 'true');
+    } catch (_) {
+      setWelcomeDismissed(true);
+    }
+  }
+
+  function dismissWelcome() {
+    setWelcomeDismissed(true);
+    if (welcomeKey) AsyncStorage.setItem(welcomeKey, 'true').catch(() => {});
   }
 
   async function loadScheduleContext() {
@@ -1149,6 +1172,44 @@ export default function HomeScreen({ navigation }) {
             onCardioPress={() => navigation.navigate('LogCardio')}
             onOpenTrend={() => navigation.getParent()?.navigate('ProgressTab', { screen: 'Analytics', params: { focusWeightTrend: true } })}
           />
+        )}
+
+        {/* First-launch orientation (founder 2026-06-30): a calm welcome for a
+            brand-new user, shown only until the first session is logged
+            (totalSessions === 0) and dismissible. The two steps are INSTRUCTION
+            that points at the start action below, never duplicate buttons, so it
+            orients without competing with the hero / starter cards. Research:
+            docs competitive-mastery (Cronometer drip-one-pointer) + NN/G empty
+            states. No weight/calorie line here (ED-safety). */}
+        {!initialLoading && totalSessions === 0 && !welcomeDismissed && (
+          <View style={styles.welcomeCard}>
+            <View style={styles.welcomeHead}>
+              <Text style={styles.welcomeTitle}>Welcome to Volyume</Text>
+              <TouchableOpacity
+                onPress={dismissWelcome}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss the welcome guide"
+              >
+                <Ionicons name="close" size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.welcomeSub}>This guide disappears once you log your first session.</Text>
+            <View style={styles.welcomeStep}>
+              <View style={styles.welcomeStepNum}><Text style={styles.welcomeStepNumText}>1</Text></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.welcomeStepTitle}>Start a session below</Text>
+                <Text style={styles.welcomeStepBody}>Begin from your plan, or just log freely. Tap Start workout and log each set as you go.</Text>
+              </View>
+            </View>
+            <View style={styles.welcomeStep}>
+              <View style={styles.welcomeStepNum}><Text style={styles.welcomeStepNumText}>2</Text></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.welcomeStepTitle}>Your coach learns as you train</Text>
+                <Text style={styles.welcomeStepBody}>Every session you log sharpens your plan. There is nothing to set up.</Text>
+              </View>
+            </View>
+          </View>
         )}
 
         {/* ── Primary workout area ── */}
@@ -1963,6 +2024,61 @@ const styles = StyleSheet.create({
   },
 
   // No plan, plan-first section
+  // First-launch welcome guide
+  welcomeCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  welcomeHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  welcomeTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+  },
+  welcomeSub: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    marginTop: -spacing.xs,
+  },
+  welcomeStep: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  welcomeStepNum: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: withAlpha(colors.primary, 0.15),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  welcomeStepNumText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+  },
+  welcomeStepTitle: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  welcomeStepBody: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    marginTop: 2,
+    lineHeight: fontSize.sm + 5,
+  },
+
   noPlanSection: { gap: spacing.md },
   proRecoverBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
