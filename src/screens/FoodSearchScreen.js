@@ -708,11 +708,25 @@ export default function FoodSearchScreen({ navigation, route }) {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: spacing.xxxl }}
         ListHeaderComponent={
-          suggestMeta?.perMeal ? (
-            <Text style={styles.suggestHint}>
-              Sized for this meal: around {Math.round(suggestMeta.perMeal.protein)}g protein, {toEnergy(suggestMeta.perMeal.kcal, energyUnit)} {energyUnitLabel(energyUnit)}.
-            </Text>
-          ) : null
+          <View>
+            {suggestMeta?.perMeal ? (
+              <Text style={styles.suggestHint}>
+                Sized for this meal: around {Math.round(suggestMeta.perMeal.protein)}g protein, {toEnergy(suggestMeta.perMeal.kcal, energyUnit)} {energyUnitLabel(energyUnit)}.
+              </Text>
+            ) : null}
+            {/* Founder 2026-06-30: novices don't realise a suggested meal is a
+                base they can build on (season it, add veg, add basically-free
+                extras), not a fixed prescription. A quiet, pro-food note —
+                framed around flavour/enjoyment, never diet-culture restriction —
+                and honest ("most", "basically") since sugar alcohols and trace
+                seasoning calories aren't literally zero. */}
+            <View style={styles.suggestNoteRow}>
+              <Ionicons name="leaf-outline" size={13} color={colors.textMuted} style={{ marginTop: 1 }} />
+              <Text style={styles.suggestNote}>
+                A starting point, not a rule. Season and tweak to taste: herbs, spices and most sugar-free sweeteners are basically free.
+              </Text>
+            </View>
+          </View>
         }
         renderItem={({ item }) => {
           const isFood = item.kind === 'food';
@@ -992,6 +1006,13 @@ const styles = StyleSheet.create({
   suggestHint: {
     ...type.caption, color: colors.textMuted,
     paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm,
+  },
+  suggestNoteRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
+    paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.sm,
+  },
+  suggestNote: {
+    ...type.caption, color: colors.textMuted, flex: 1, lineHeight: fontSize.sm + 5,
   },
   suggestCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
