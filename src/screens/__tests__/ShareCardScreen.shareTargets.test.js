@@ -56,22 +56,27 @@ jest.mock('@shopify/react-native-skia', () => {
   };
 }, { virtual: true });
 
-// The renderer itself is mocked so we don't pull real Skia draw code.
+// The renderer itself is mocked so we don't pull real Skia draw code. These are
+// REAL modules on disk, so the mock must NOT be virtual: a virtual mock on a
+// resolvable module intercepts only nondeterministically across Jest workers,
+// which let the real drawShareCard run in CI and crash on the minimal Skia mock
+// (it has no Shader). A plain (non-virtual) mock intercepts by resolved path
+// every time.
 jest.mock('../../lib/shareCard/drawShareCard', () => ({
   drawShareCard: jest.fn(),
   cardHeight: () => 1080,
-}), { virtual: true });
+}));
 
 jest.mock('../../lib/shareCard/greatWeek', () => ({
   buildWeeklyRecapParams: () => ({}),
-}), { virtual: true });
+}));
 
 // Toast: capture the messages so we can assert calm-handling without a crash.
 const mockToastShow = jest.fn();
 jest.mock('../../components/Toast', () => ({
   useToast: () => ({ show: mockToastShow, hide: jest.fn() }),
   ToastProvider: ({ children }) => children,
-}), { virtual: true });
+}));
 
 // react-native Linking is steered per test.
 const { Linking } = require('react-native');
