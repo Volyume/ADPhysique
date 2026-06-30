@@ -2790,7 +2790,7 @@ const styles = StyleSheet.create({
   starterBannerAction: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   exerciseNav: { borderBottomWidth: 1, borderBottomColor: colors.border, maxHeight: 48 },
   exerciseNavContent: { paddingHorizontal: spacing.lg, gap: spacing.sm, alignItems: 'center' },
-  navTab: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.md, borderRadius: radius.full, backgroundColor: colors.surface2, maxWidth: 140 },
+  navTab: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.md, borderRadius: radius.full, backgroundColor: colors.surface2 },
   navTabActive: { backgroundColor: colors.primaryBg },
   navTabText: { ...type.label, color: colors.textSecondary },
   navTabTextActive: { color: colors.primary },
