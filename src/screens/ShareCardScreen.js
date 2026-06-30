@@ -24,10 +24,9 @@ import { buildWeeklyRecapParams } from '../lib/shareCard/greatWeek';
 // Optional native modules — guarded so the screen still mounts (e.g. in tests
 // or before a rebuild) without them; the card just can't render/share until the
 // real build provides Skia + the sharing packages.
-let FileSystem; let Sharing; let Print; let Asset; let Skia; let matchFont; let ImagePicker; let MediaLibrary;
+let FileSystem; let Sharing; let Asset; let Skia; let matchFont; let ImagePicker; let MediaLibrary;
 try { FileSystem = require('expo-file-system/legacy'); } catch (_) { /* optional */ }
 try { Sharing = require('expo-sharing'); } catch (_) { /* optional */ }
-try { Print = require('expo-print'); } catch (_) { /* optional */ }
 try { Asset = require('expo-asset').Asset; } catch (_) { /* optional */ }
 try { ImagePicker = require('expo-image-picker'); } catch (_) { /* optional */ }
 try { MediaLibrary = require('expo-media-library'); } catch (_) { /* optional */ }
@@ -75,7 +74,6 @@ export default function ShareCardScreen({ route }) {
   // predictably. Story 9:16 stays available as the taller option.
   const [format, setFormat] = useState('square');
   const [sharing, setSharing] = useState(false);
-  const [exportingPdf, setExportingPdf] = useState(false);
   const [savingToGallery, setSavingToGallery] = useState(false);
   const [sharingToStories, setSharingToStories] = useState(false);
 
@@ -313,10 +311,13 @@ export default function ShareCardScreen({ route }) {
     }
   }
 
-  // Share to Stories. Renders the PNG and opens the OS share sheet, which
-  // carries the image to Instagram (or any target). We deliberately do NOT use
-  // the instagram-stories:// deep link: a bare openURL can't attach the image,
-  // so it would land the user in an empty Story composer.
+  // Share to Instagram Stories. Renders the PNG and opens the OS share sheet,
+  // which carries the image to Instagram (or any target). NOTE (founder
+  // 2026-06-30): wanted to open Instagram DIRECTLY (and add Facebook), not the
+  // generic chooser. That needs a native Android Stories intent
+  // (com.instagram.share.ADD_TO_STORY / com.facebook.stories.ADD_TO_STORY with
+  // setPackage) and device testing, so it is a tracked follow-up; this keeps the
+  // working share-sheet version in the meantime.
   async function handleShareToStories() {
     if (!Skia || !FileSystem || !Sharing) {
       toast.show('Sharing needs a rebuild with the Skia + sharing packages installed', { variant: 'error', duration: 5000 });
@@ -328,7 +329,7 @@ export default function ShareCardScreen({ route }) {
     }
     setSharingToStories(true);
     try {
-      let uri = await renderCardToFile();
+      const uri = await renderCardToFile();
       if (!uri) { toast.show("Couldn't generate card, try again", { variant: 'error' }); return; }
       const canShare = await Sharing.isAvailableAsync();
       if (!canShare) { toast.show('Sharing is not available on this device', { variant: 'warning', duration: 5000 }); return; }
@@ -339,106 +340,6 @@ export default function ShareCardScreen({ route }) {
       toast.show("Couldn't open the share sheet, try again", { variant: 'error' });
     } finally {
       setSharingToStories(false);
-    }
-  }
-
-  function buildPdfHtml(p) {
-    const esc = (s) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-    const stat = (label, value) => `
-      <div class="stat"><div class="statValue">${esc(value)}</div><div class="statLabel">${esc(label)}</div></div>`;
-    let body;
-    if (p.cardType === 'session') {
-      const rows = (p.exercises || [])
-        .map((e) => `<tr><td>${esc(e.name ?? e)}</td><td>${esc(e.sets ?? '')}</td></tr>`)
-        .join('');
-      body = `
-        <div class="statRow">
-          ${stat('Working sets', p.workingSets)}
-          ${stat('Minutes', p.duration)}
-          ${stat('Volume', `${Math.round(Number(p.tonnage) || 0).toLocaleString('en-GB')} ${p.units || 'kg'}`)}
-          ${stat('Exercises', p.exerciseCount)}
-        </div>
-        ${p.prCount ? `<p class="prs">${p.prCount} new ${p.prCount === 1 ? 'PR' : 'PRs'} this session</p>` : ''}
-        ${rows ? `<table><thead><tr><th>Exercise</th><th>Sets</th></tr></thead><tbody>${rows}</tbody></table>` : ''}`;
-    } else if (p.cardType === 'milestone') {
-      const rows = (p.stats || []).map((s) => stat(s.label, s.value)).join('');
-      body = `
-        <div class="statRow">
-          ${(p.heroValue !== '' && p.heroValue != null) ? stat(p.heroUnit || '', p.heroValue) : ''}
-          ${rows}
-        </div>
-        ${p.caption ? `<p class="prs">${esc(p.caption)}</p>` : ''}`;
-    } else if (p.cardType === 'weekly') {
-      const rows = (p.stats || []).map((s) => stat(s.label, s.value)).join('');
-      const prog = p.hero && p.hero.value
-        ? stat(p.hero.heading || 'this week', p.hero.value)
-        : '';
-      const bl = p.bestLift;
-      const liftLine = (bl && bl.weight)
-        ? `<p class="prs">Best lift: ${esc(bl.exerciseName)} ${esc(bl.weight)} ${esc(bl.units || 'kg')} × ${esc(bl.reps)}${bl.isNewBest ? ' (new personal best)' : ''}</p>`
-        : '';
-      body = `
-        <div class="statRow">${prog}${rows}</div>
-        ${liftLine}
-        ${p.coachLine ? `<p class="prs">${esc(p.coachLine)}</p>` : ''}`;
-    } else {
-      body = `
-        <div class="statRow">
-          ${stat('Lift', p.exerciseName)}
-          ${stat('Weight', `${Math.round(Number(p.weight) || 0).toLocaleString('en-GB')} ${p.units || 'kg'}`)}
-          ${stat('Reps', p.reps)}
-          ${p.previousBest ? stat('Previous best', `${Math.round(Number(p.previousBest) || 0).toLocaleString('en-GB')} ${p.units || 'kg'}`) : ''}
-        </div>`;
-    }
-    const title = p.cardType === 'session' ? esc(p.sessionName)
-      : p.cardType === 'milestone' ? esc(p.title || 'Milestone')
-        : p.cardType === 'weekly' ? esc(p.tierLabel || 'Your week')
-          : `${esc(p.exerciseName)} PR`;
-    return `<!DOCTYPE html><html><head><meta charset="utf-8" />
-      <style>
-        * { box-sizing: border-box; }
-        body { margin: 0; background: #0D0D0D; color: #FFFFFF; font-family: -apple-system, Roboto, Helvetica, sans-serif; padding: 40px; }
-        .brand { color: #F5A623; font-size: 14px; letter-spacing: 3px; text-transform: uppercase; font-weight: 700; }
-        h1 { font-size: 34px; margin: 8px 0 2px; }
-        .date { color: #9B9B9B; font-size: 14px; margin-bottom: 28px; }
-        .statRow { display: flex; flex-wrap: wrap; gap: 16px; }
-        .stat { background: #1A1A1A; border-radius: 14px; padding: 18px 22px; min-width: 130px; }
-        .statValue { font-size: 26px; font-weight: 700; color: #F5A623; }
-        .statLabel { font-size: 12px; color: #9B9B9B; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
-        .prs { color: #F5A623; font-weight: 700; margin: 24px 0 0; }
-        table { width: 100%; border-collapse: collapse; margin-top: 28px; }
-        th { text-align: left; color: #9B9B9B; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #2A2A2A; padding: 8px 0; }
-        td { padding: 10px 0; border-bottom: 1px solid #1A1A1A; font-size: 15px; }
-        .foot { color: #6E6E6E; font-size: 11px; margin-top: 40px; }
-      </style></head>
-      <body>
-        <div class="brand">Volyume</div>
-        <h1>${title}</h1>
-        ${p.date ? `<div class="date">${esc(p.date)}</div>` : '<div class="date"></div>'}
-        ${body}
-        <div class="foot">Generated by Volyume</div>
-      </body></html>`;
-  }
-
-  async function handleExportPdf() {
-    if (!Print || !Sharing) {
-      toast.show('PDF export needs a rebuild with the print package installed', { variant: 'error', duration: 5000 });
-      return;
-    }
-    setExportingPdf(true);
-    try {
-      const html = buildPdfHtml(buildParams());
-      const { uri } = await Print.printToFileAsync({ html });
-      const canShare = await Sharing.isAvailableAsync();
-      if (!canShare) { toast.show('Sharing not available on this device', { variant: 'warning' }); return; }
-      await Sharing.shareAsync(uri, {
-        mimeType: 'application/pdf', UTI: 'com.adobe.pdf',
-        dialogTitle: cardType === 'session' ? 'Share session summary' : cardType === 'pr' ? 'Share PR summary' : 'Share summary',
-      });
-    } catch (_e) {
-      toast.show("Couldn't make the PDF, try again", { variant: 'error' });
-    } finally {
-      setExportingPdf(false);
     }
   }
 
@@ -582,9 +483,8 @@ export default function ShareCardScreen({ route }) {
           )}
         </TouchableOpacity>
 
-        {/* Share to Instagram Stories: deep-links to the Stories composer with
-            the rendered PNG, falling back to the OS share sheet if Instagram
-            isn't installed. */}
+        {/* Share to Instagram Stories. (Founder wants this to open Instagram
+            directly + a Facebook equivalent: tracked as native-intent follow-up.) */}
         <TouchableOpacity
           style={[styles.secondaryBtn, (sharing || sharingToStories) && styles.btnDisabled]}
           onPress={handleShareToStories}
@@ -622,24 +522,6 @@ export default function ShareCardScreen({ route }) {
           )}
         </TouchableOpacity>
         ) : null}
-
-        {/* Save as PDF: a clean one-page summary for a print/share pack. */}
-        <TouchableOpacity
-          style={[styles.pdfBtn, (sharing || exportingPdf) && styles.btnDisabled]}
-          onPress={handleExportPdf}
-          disabled={sharing || exportingPdf}
-          accessibilityRole="button"
-          accessibilityLabel="Save as PDF"
-        >
-          {exportingPdf ? (
-            <ActivityIndicator color={colors.primary} size="small" />
-          ) : (
-            <>
-              <Ionicons name="document-text-outline" size={20} color={colors.primary} />
-              <Text style={styles.pdfBtnText}>Save as PDF</Text>
-            </>
-          )}
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );

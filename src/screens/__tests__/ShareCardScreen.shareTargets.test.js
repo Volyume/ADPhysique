@@ -145,13 +145,13 @@ beforeEach(() => {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe('ShareCardScreen — new share-target buttons render', () => {
-  test('Save to gallery and Instagram Stories buttons are present', async () => {
+describe('ShareCardScreen — share-target buttons render', () => {
+  test('Save to gallery + Instagram Stories present; Save as PDF removed (founder 2026-06-30)', async () => {
     const tree = await mount(SESSION);
     expect(findByA11yLabel(tree, 'Save to gallery').length).toBeGreaterThan(0);
     expect(findByA11yLabel(tree, 'Share to Instagram Stories').length).toBeGreaterThan(0);
-    // The original share + PDF affordances are intact.
-    expect(findByA11yLabel(tree, 'Save as PDF').length).toBeGreaterThan(0);
+    // 'Save as PDF' was removed (unused).
+    expect(findByA11yLabel(tree, 'Save as PDF').length).toBe(0);
   });
 });
 
