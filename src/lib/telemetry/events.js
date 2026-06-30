@@ -135,7 +135,10 @@ export const TELEMETRY_EVENTS = Object.freeze([
   // COMP-013: first-session activation choice on the Home hero first-run
   // variant. choice param only (short / full); no PII.
   // Server allow-list: supabase/migrate_076_first_session_choice_telemetry.sql.
-  { name: 'first_session_choice',            deferred: false, panel: 1 },
+  // Deferred (founder 2026-06-30): the Home first-run hero variant was retired
+  // — the full session is now the single primary action — so this event has no
+  // emitter. Catalogue entry kept so the server allow-list/dashboard is intact.
+  { name: 'first_session_choice',            deferred: true, panel: 1, deferralReason: 'Home first-run hero variant retired 2026-06-30; no emitter' },
 
   // COMP-019: chart window changed (interactive charts). chart_id + window
   // labels only (e.g. weight/e1rm/volume, 3M); no PII, no values.

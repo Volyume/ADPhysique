@@ -23,9 +23,8 @@ import {
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getAllExercises,
   getMorningWeightToday, getMorningWeights, logMorningWeight, getProgressionTeaser,
   getRecentWorkoutFeedback, getLatestCoachOutput,
-  getMorningWeightsLast14Days, getOpenEdPatternFlag, getNutritionTargets,
+  getMorningWeightsLast14Days, getOpenEdPatternFlag,
 } from '../lib/database';
-import { getRollupForDay } from '../lib/food/db';
 import { stageOf } from '../lib/payments/cascade';
 import {
   trialStartFromEndsAt,
@@ -37,7 +36,8 @@ import {
 import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
 import { buildFreeCoachLine } from '../lib/coachResponse';
 import { GLOSSARY } from '../lib/coachGlossary';
-import { localWeekStartMs, todayLocalKey } from '../lib/dayKey';
+import { localWeekStartMs } from '../lib/dayKey';
+import { connectHealthStepsAndWeight } from '../lib/activitySteps';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 import { logError, logWarn } from '../lib/errorLog';
@@ -140,11 +140,8 @@ export default function HomeScreen({ navigation }) {
   // re-runs loadData so the empty state swaps for real data without
   // the user navigating away and back.
   const cloudSyncVersion = useAppStore(s => s.cloudSyncVersion);
-  const energyUnit = useAppStore(s => s.accessibility?.energyUnit ?? 'kcal');
-  const showHomeNutrition = useAppStore(s => s.accessibility?.showHomeNutrition !== false);
   const bwu = bodyWeightUnits || 'st';
 
-  const [foodGlance, setFoodGlance] = useState(null); // Pro nutrition glance: { remaining, over } | null
   const [weekStats, setWeekStats] = useState({ sessions: 0, sets: 0, volume: 0 });
   const [activePlan, setActivePlanData] = useState(null);
   const [nextWorkout, setNextWorkout] = useState(null);
@@ -206,11 +203,6 @@ export default function HomeScreen({ navigation }) {
   // Phase sync banner
   const [phaseMismatch, setPhaseMismatch] = useState(null); // { currentPhase, targetPhase } | null
   const [phaseBannerDismissed, setPhaseBannerDismissed] = useState(false);
-
-  // First-run cue: a single line pointing a brand-new Pro user at their first
-  // session. Defaults to hidden so it never flashes before we've read the saved
-  // flag; the loader below reveals it only when it hasn't been dismissed.
-  const [firstRunCueDismissed, setFirstRunCueDismissed] = useState(true);
 
   // Training schedule context
   const [scheduleContext, setScheduleContext] = useState(null); // null | { daysUntil, dayName }
@@ -289,31 +281,12 @@ export default function HomeScreen({ navigation }) {
         loadFatigueTrend(),
         loadScheduleContext(),
         loadBriefDismissal(),
-        ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadFirstRunCue(), loadTrialBanner(), loadNutritionGlance()] : []),
+        ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadTrialBanner()] : []),
         ...(tier === 'free' ? [loadFreeCoachLine()] : []),
       ]);
     } finally {
       setInitialLoading(false);
     }
-  }
-
-  // Pro nutrition glance for the Home strip (GAP #1): today's remaining energy,
-  // so the food-log action sits on the landing screen instead of a tab away.
-  // Adherence-neutral: we carry the signed remaining + an `over` flag, never a
-  // colour judgement. Display-only; the stored rollup/targets stay in kcal.
-  async function loadNutritionGlance() {
-    try {
-      const today = todayLocalKey();
-      const [rollup, targetsRow] = await Promise.all([
-        getRollupForDay(user.id, today),
-        getNutritionTargets(user.id),
-      ]);
-      const targetKcal = targetsRow?.targetKcal ?? null;
-      if (targetKcal == null) { setFoodGlance(null); return; }
-      const eaten = Math.round(rollup?.kcal_total ?? 0);
-      const remaining = Math.round(targetKcal - eaten);
-      setFoodGlance({ remaining, over: remaining < 0 });
-    } catch (_) { setFoodGlance(null); }
   }
 
   async function loadLatestCoachOutput() {
@@ -466,23 +439,6 @@ export default function HomeScreen({ navigation }) {
     } catch (_) {}
   }
 
-  const firstRunCueKey = user?.id ? `@volyume_home_firstrun_cue_${user.id}` : null;
-
-  async function loadFirstRunCue() {
-    if (!firstRunCueKey) return;
-    try {
-      const v = await AsyncStorage.getItem(firstRunCueKey);
-      setFirstRunCueDismissed(v === 'true');
-    } catch (_) {
-      setFirstRunCueDismissed(true);
-    }
-  }
-
-  function dismissFirstRunCue() {
-    setFirstRunCueDismissed(true);
-    if (firstRunCueKey) AsyncStorage.setItem(firstRunCueKey, 'true').catch(() => {});
-  }
-
   async function loadScheduleContext() {
     try {
       const raw = await AsyncStorage.getItem('@volyume_schedule_v1');
@@ -613,6 +569,29 @@ export default function HomeScreen({ navigation }) {
     }
     setSavingWeight(false);
   }
+
+  // Steps Connect prompt from the TodayStrip steps cell (founder 2026-06-30: the
+  // cell now stays visible with a "Connect" call-to-action instead of self-hiding
+  // when no automatic figure has arrived). One sheet asks for steps + weight; on a
+  // grant connectHealthStepsAndWeight records today's steps and backfills, so the
+  // TodayStrip's own focus/30s refresh picks up the figure.
+  const handleConnectSteps = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const status = await connectHealthStepsAndWeight(user.id);
+      if (status === 'granted') {
+        toast.show('Steps connected', { variant: 'success' });
+      } else if (status === 'sdk_unavailable') {
+        // eslint-disable-next-line global-require
+        const { openHealthConnectInstall } = require('../lib/health');
+        toast.show('Health Connect is needed to read your steps', { variant: 'error', duration: 4000 });
+        try { openHealthConnectInstall(); } catch (_) { /* best effort */ }
+      }
+      // 'denied' / 'unavailable': stay quiet; the user can retry from Settings.
+    } catch (e) {
+      logWarn('HomeScreen.handleConnectSteps', e, { userId: user?.id });
+    }
+  }, [user?.id, toast]);
 
   async function loadWeekStats() {
     try {
@@ -793,16 +772,6 @@ export default function HomeScreen({ navigation }) {
     setRefreshing(false);
   }
 
-  // COMP-013: a brand-new Pro user can start a 15-minute starter (a true subset
-  // of Day 1) from the hero first-run variant. The starter flag rides through
-  // the intent prompt into confirmStart, which passes it to ActiveWorkout.
-  function trackFirstSessionChoice(choice) {
-    try {
-      // eslint-disable-next-line global-require
-      require('../lib/engineTelemetry').track(user?.id, 'first_session_choice', { choice })?.catch?.(() => {});
-    } catch (_) { /* telemetry best-effort */ }
-  }
-
   async function handleStartNextWorkout(starter = false) {
     const target = selectedWorkoutOverride || nextWorkout;
     if (!target?.routine) return;
@@ -936,7 +905,7 @@ export default function HomeScreen({ navigation }) {
 
   // Compute pre-workout coaching brief (shown only when plan active + not trained today + not dismissed)
   const showCoachBrief = !!activePlan && !hasActiveWorkout && lastWorkoutDaysAgo !== 0 && !briefDismissed;
-  const coachBrief = showCoachBrief
+  const rawCoachBrief = showCoachBrief
     ? buildCoachBrief({
         fatigueHistory: fatigueSessions,
         weeklyVolume: weekStats,
@@ -944,6 +913,12 @@ export default function HomeScreen({ navigation }) {
         lastWorkoutDaysAgo,
         blockProgress,
       })
+    : null;
+  // Suppress the default "Ready when you are" filler (founder 2026-06-30: it
+  // rendered the same line as headline AND body, a content-free card under the
+  // hero). Only show the brief when it carries a real coaching signal.
+  const coachBrief = rawCoachBrief && rawCoachBrief.headline !== 'Ready when you are'
+    ? rawCoachBrief
     : null;
 
   // Banner priority: keep the primary "Start" action prominent by showing at
@@ -1243,9 +1218,7 @@ export default function HomeScreen({ navigation }) {
             cardioEnabled={userProfile?.cardioEnabled !== false}
             onCardioPress={() => navigation.navigate('LogCardio')}
             onOpenTrend={() => navigation.getParent()?.navigate('ProgressTab', { screen: 'Analytics', params: { focusWeightTrend: true } })}
-            foodGlance={showHomeNutrition ? foodGlance : null}
-            energyUnit={energyUnit}
-            onFoodPress={showHomeNutrition ? (() => navigation.getParent()?.navigate('DiaryTab', { screen: 'Diary' })) : undefined}
+            onStepsConnect={handleConnectSteps}
           />
         )}
 
@@ -1311,79 +1284,39 @@ export default function HomeScreen({ navigation }) {
             {coachBrief && (
               <CoachBriefCard brief={coachBrief} onDismiss={dismissBrief} />
             )}
-            {/* COMP-013: hero first-run variant for a brand-new Pro user with a
-                plan and no sessions yet — the smart-first-step short session,
-                with the full session one tap away and a dismiss back to the
-                standard hero. Gated identically to the retired cue row. */}
-            {tier === 'pro' && !initialLoading && totalSessions === 0 && !firstRunCueDismissed ? (
-              <View style={styles.firstRunHero}>
-                <Text style={styles.firstRunHeroLine}>
-                  First session: a short one to learn the ropes. About 15 minutes.
+            {/* The full planned session is the primary action for everyone
+                (founder 2026-06-30: the old first-run variant highlighted a
+                cut-down "short session" with the full one demoted below, which
+                read as the wrong default — start the actual session). */}
+            <View style={styles.startWorkoutRow}>
+              <TouchableOpacity
+                style={[styles.primaryBtn, styles.startBtnSplit, isStartingWorkout && { opacity: 0.6 }]}
+                onPress={() => handleStartNextWorkout(false)}
+                disabled={isStartingWorkout}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel={isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`}
+              >
+                <Ionicons name="play" size={16} color={colors.onPrimary} />
+                <Text style={styles.primaryBtnText}>
+                  {isStartingWorkout ? 'Starting…' : 'Start workout'}
                 </Text>
-                <View style={styles.startWorkoutRow}>
-                  <TouchableOpacity
-                    style={[styles.primaryBtn, styles.startBtnSplit, isStartingWorkout && { opacity: 0.6 }]}
-                    onPress={() => { trackFirstSessionChoice('short'); handleStartNextWorkout(true); }}
-                    disabled={isStartingWorkout}
-                    activeOpacity={0.85}
-                    accessibilityRole="button"
-                    accessibilityLabel={isStartingWorkout ? 'Starting workout' : 'Start short session, about 15 minutes'}
-                  >
-                    <Ionicons name="flash" size={16} color={colors.onPrimary} />
-                    <Text style={styles.primaryBtnText}>
-                      {isStartingWorkout ? 'Starting…' : 'Start short session'}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.viewWorkoutBtn}
-                    onPress={dismissFirstRunCue}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityRole="button"
-                    accessibilityLabel="Dismiss the short first session"
-                  >
-                    <Ionicons name="close" size={16} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                </View>
+              </TouchableOpacity>
+              {displayWorkout?.routine?.id ? (
                 <TouchableOpacity
-                  onPress={() => { trackFirstSessionChoice('full'); handleStartNextWorkout(false); }}
-                  disabled={isStartingWorkout}
-                  accessibilityRole="button"
-                  accessibilityLabel="Start the full session instead"
-                >
-                  <Text style={styles.firstRunHeroFull}>or start the full session</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.startWorkoutRow}>
-                <TouchableOpacity
-                  style={[styles.primaryBtn, styles.startBtnSplit, isStartingWorkout && { opacity: 0.6 }]}
-                  onPress={() => handleStartNextWorkout(false)}
-                  disabled={isStartingWorkout}
+                  style={styles.viewWorkoutBtn}
+                  onPress={() => navigation.navigate('PlansTab', {
+                    screen: 'RoutineDetail',
+                    params: { routineId: displayWorkout.routine.id },
+                  })}
                   activeOpacity={0.85}
                   accessibilityRole="button"
-                  accessibilityLabel={isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`}
+                  accessibilityLabel={`View ${displayWorkout?.routine?.name || 'workout'} before starting`}
                 >
-                  <Ionicons name="play" size={16} color={colors.onPrimary} />
-                  <Text style={styles.primaryBtnText}>
-                    {isStartingWorkout ? 'Starting…' : 'Start workout'}
-                  </Text>
+                  <Text style={styles.viewWorkoutBtnText}>View</Text>
                 </TouchableOpacity>
-                {displayWorkout?.routine?.id ? (
-                  <TouchableOpacity
-                    style={styles.viewWorkoutBtn}
-                    onPress={() => navigation.navigate('PlansTab', {
-                      screen: 'RoutineDetail',
-                      params: { routineId: displayWorkout.routine.id },
-                    })}
-                    activeOpacity={0.85}
-                    accessibilityRole="button"
-                    accessibilityLabel={`View ${displayWorkout?.routine?.name || 'workout'} before starting`}
-                  >
-                    <Text style={styles.viewWorkoutBtnText}>View</Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            )}
+              ) : null}
+            </View>
             <View style={styles.heroSecondaryRow}>
               <TouchableOpacity
                 style={styles.heroSecondaryBtn}
@@ -2525,25 +2458,6 @@ const styles = StyleSheet.create({
   },
   phaseBannerArrow: {
     paddingLeft: spacing.xs,
-  },
-
-  // COMP-013: hero first-run variant. The short-session line + the "or start
-  // the full session" link sit inside the hero card, replacing the retired
-  // standalone first-run cue row.
-  firstRunHero: {
-    gap: spacing.sm,
-  },
-  firstRunHeroLine: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
-  firstRunHeroFull: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.primary,
-    textAlign: 'center',
-    paddingVertical: spacing.xs,
   },
 
   // Pre-workout coaching brief card

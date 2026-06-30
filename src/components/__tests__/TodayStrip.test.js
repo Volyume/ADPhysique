@@ -111,10 +111,24 @@ describe('weight cell', () => {
 });
 
 describe('steps + cardio cells', () => {
-  test('steps cell hides when there is no figure', async () => {
+  // Founder 2026-06-30: the steps cell must STAY visible when tracking is on,
+  // even before any auto figure arrives, so steps are always discoverable. The
+  // old self-hide made the cell vanish and steps looked unsupported.
+  test('steps cell stays visible with a Connect prompt when there is no figure', async () => {
+    mockGetSteps.mockResolvedValue(null);
+    const onStepsConnect = jest.fn();
+    const tree = await render({ todayWeight: 80, cardioEnabled: false, onStepsConnect });
+    expect(json(tree)).toContain('STEPS');
+    const connect = findByLabel(tree, 'Connect steps');
+    expect(connect).toBeTruthy();
+    act(() => connect.props.onPress());
+    expect(onStepsConnect).toHaveBeenCalled();
+  });
+
+  test('steps cell shows a dash (not hidden) when there is no figure and no connect handler', async () => {
     mockGetSteps.mockResolvedValue(null);
     const tree = await render({ todayWeight: 80, cardioEnabled: false });
-    expect(json(tree)).not.toContain('STEPS');
+    expect(json(tree)).toContain('STEPS');
   });
 
   test('steps cell shows the formatted figure when present', async () => {

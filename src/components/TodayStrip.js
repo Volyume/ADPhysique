@@ -35,7 +35,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
-import { toEnergy, formatEnergy, energyUnitLabel } from '../lib/format';
 import { getDailyStepsToday, getCardioLogForDate } from '../lib/database';
 import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
 import {
@@ -68,13 +67,9 @@ export default function TodayStrip({
   stepsTarget = null,
   cardioEnabled = true,
   onCardioPress,
-  // FOOD cell (GAP #1): today's remaining energy on the landing screen, tapping
-  // through to the diary. `foodGlance` is { remaining, over } | null (null hides
-  // the value and shows a Log prompt). Adherence-neutral: "over" is factual, the
-  // same neutral ink as "left", never a red judgement. Energy respects the unit.
-  foodGlance = null,
-  energyUnit = 'kcal',
-  onFoodPress,
+  // Connect handler for the steps cell when no automatic figure is available
+  // yet (taps through to the health-connect flow). Optional.
+  onStepsConnect,
   // COMP-004 door: when provided, tapping the LOGGED weight cell opens the
   // "Your trend" card on Progress (the morning-ritual tap-through). Correcting
   // a weigh-in moves to a long-press so the door is the primary action. When
@@ -184,11 +179,15 @@ export default function TodayStrip({
   }, [loadSteps, loadCardio]);
 
   // ── Which cells show ──
-  const showSteps = stepsEnabled && steps != null;
+  // Steps stays visible whenever steps tracking is enabled, even before any
+  // auto figure has arrived (founder 2026-06-30: the old self-hide made the cell
+  // vanish, so a user couldn't tell steps tracking existed or connect it). The
+  // cell shows a "Connect" prompt until Health Connect / HealthKit feeds a count.
+  const showSteps = !!stepsEnabled;
   const showCardio = !!cardioEnabled;
-  const showFood = typeof onFoodPress === 'function';
-  // Weight is always present; the other three are conditional.
-  const cellCount = 1 + (showSteps ? 1 : 0) + (showCardio ? 1 : 0) + (showFood ? 1 : 0);
+  // Weight is always present; steps + cardio are conditional. (The Home food cell
+  // was removed per founder review 2026-06-30.)
+  const cellCount = 1 + (showSteps ? 1 : 0) + (showCardio ? 1 : 0);
   // Large text → one cell per line (nothing truncates). At normal text, four
   // cells go to a 2×2 grid instead of a cramped four-across row.
   const stackedByFont = PixelRatio.getFontScale() >= STACK_FONT_SCALE;
@@ -293,6 +292,25 @@ export default function TodayStrip({
   }
 
   function StepsCell() {
+    // No automatic figure yet: show a Connect prompt (like Cardio's "+ Log")
+    // rather than hiding the cell, so steps are always discoverable.
+    if (steps == null) {
+      return (
+        <TouchableOpacity
+          style={styles.cellInner}
+          onPress={onStepsConnect}
+          disabled={typeof onStepsConnect !== 'function'}
+          accessibilityRole={typeof onStepsConnect === 'function' ? 'button' : undefined}
+          accessibilityLabel={typeof onStepsConnect === 'function' ? 'Connect steps' : 'Steps'}
+        >
+          <Text style={styles.cellLabel}>STEPS</Text>
+          <View style={styles.loggedRow}>
+            <Ionicons name="footsteps-outline" size={15} color={colors.primary} />
+            <Text style={styles.logPrompt}>{typeof onStepsConnect === 'function' ? 'Connect' : '-'}</Text>
+          </View>
+        </TouchableOpacity>
+      );
+    }
     return (
       <View style={styles.cellInner} accessibilityLabel={`${steps.toLocaleString('en-GB')} steps today`}>
         <Text style={styles.cellLabel}>STEPS</Text>
@@ -325,39 +343,11 @@ export default function TodayStrip({
     );
   }
 
-  function FoodCell() {
-    const hasGlance = foodGlance != null && foodGlance.remaining != null;
-    return (
-      <TouchableOpacity
-        style={styles.cellInner}
-        onPress={onFoodPress}
-        accessibilityRole="button"
-        accessibilityLabel={hasGlance
-          ? `${toEnergy(Math.abs(foodGlance.remaining), energyUnit)} ${energyUnitLabel(energyUnit)} ${foodGlance.over ? 'over' : 'left'} today. Tap to open your food diary.`
-          : 'Log food. Tap to open your food diary.'}
-      >
-        <Text style={styles.cellLabel}>FOOD</Text>
-        {hasGlance ? (
-          <>
-            <Text style={styles.cellValue}>{formatEnergy(Math.abs(foodGlance.remaining), energyUnit)}</Text>
-            <Text style={styles.cellCaption}>{foodGlance.over ? 'over' : 'left'}</Text>
-          </>
-        ) : (
-          <View style={styles.loggedRow}>
-            <Ionicons name="restaurant-outline" size={15} color={colors.primary} />
-            <Text style={styles.logPrompt}>Log</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-  }
-
-  // The secondary cells (steps + cardio + food) as a divided row.
+  // The secondary cells (steps + cardio) as a divided row.
   function SecondaryRow() {
     const cells = [];
     if (showSteps) cells.push(<StepsCell key="steps" />);
     if (showCardio) cells.push(<CardioCell key="cardio" />);
-    if (showFood) cells.push(<FoodCell key="food" />);
     if (cells.length === 0) return null;
     return (
       <View style={styles.row}>
@@ -388,7 +378,6 @@ export default function TodayStrip({
   ];
   if (showSteps) compactCells.push(<StepsCell key="s" />);
   if (showCardio) compactCells.push(<CardioCell key="c" />);
-  if (showFood) compactCells.push(<FoodCell key="f" />);
 
   if (stackedByFont) {
     return (
