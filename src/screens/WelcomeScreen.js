@@ -72,9 +72,6 @@ export default function WelcomeScreen({ navigation }) {
         <Animated.View style={[styles.hero, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
           <Image source={HERO} style={styles.logoImg} resizeMode="contain" />
           <Text style={styles.tagline}>Less thinking. More lifting.</Text>
-          {/* COMP-006: the methodology promise, a claim no competitor makes.
-              Reads as a secondary caption beneath the brand tagline. */}
-          <Text style={styles.identityLine}>Every change has a reason. Every non-change has a reason too.</Text>
         </Animated.View>
 
         <Animated.View style={[styles.cards, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
@@ -199,7 +196,6 @@ const styles = StyleSheet.create({
     letterSpacing: 5, marginTop: spacing.xs,
   },
   tagline: { fontSize: fontSize.sm, color: colors.textMuted, letterSpacing: 0.3 },
-  identityLine: { fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'center', lineHeight: 16, paddingHorizontal: spacing.lg },
 
   cards: { gap: spacing.md },
 
