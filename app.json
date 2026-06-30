@@ -27,7 +27,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.volyume",
-      "buildNumber": "7",
+      "buildNumber": "8",
       "requireFullScreen": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -41,6 +41,11 @@
         "UIBackgroundModes": [
           "fetch",
           "remote-notification"
+        ],
+        "LSApplicationQueriesSchemes": [
+          "whatsapp",
+          "sms",
+          "mailto"
         ]
       },
       "privacyManifests": {
