@@ -62,10 +62,6 @@ export default function YouScreen({ navigation }) {
     || user?.email?.split('@')[0]?.replace(/[^a-zA-Z]/g, ' ').trim()
     || 'You';
 
-  const trainingAge = userProfile?.trainingAgeYears
-    ? `${Math.floor(userProfile.trainingAgeYears)} yr${Math.floor(userProfile.trainingAgeYears) !== 1 ? 's' : ''} training`
-    : null;
-
   const isPro = tier === 'pro';
 
   // App version for the About footer. Helps a user quote their build when they
@@ -92,7 +88,6 @@ export default function YouScreen({ navigation }) {
               <Text style={styles.profileName}>{displayName}</Text>
               {isPro && <ProBadge size="sm" />}
             </View>
-            {trainingAge ? <Text style={styles.profileMeta}>{trainingAge}</Text> : null}
             {sessions != null ? (
               <Text style={styles.profileStat}>{sessions} session{sessions !== 1 ? 's' : ''}</Text>
             ) : null}
@@ -212,7 +207,6 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.primary },
   profileInfo: { flex: 1, gap: 3 },
   profileName: { ...type.title, color: colors.textPrimary },
-  profileMeta: { ...type.caption, color: colors.textMuted },
   profileStat: { ...type.num('caption'), color: colors.textSecondary },
 
   section: { gap: spacing.md },
