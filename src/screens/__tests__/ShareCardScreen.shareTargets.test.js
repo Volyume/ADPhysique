@@ -20,13 +20,18 @@ const mockMedia = {
   requestPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
   saveToLibraryAsync: jest.fn().mockResolvedValue(undefined),
 };
-jest.mock('expo-media-library', () => mockMedia, { virtual: true });
+// NOT virtual: expo-media-library is an installed, resolvable module, so a
+// virtual mock intercepts only nondeterministically across Jest workers. When it
+// missed in CI, the screen's real require threw, MediaLibrary stayed undefined,
+// and the "Save to gallery" button (gated on MediaLibrary) never rendered —
+// failing these tests. A plain mock intercepts by resolved path every time.
+jest.mock('expo-media-library', () => mockMedia);
 
 const mockSharing = {
   isAvailableAsync: jest.fn().mockResolvedValue(true),
   shareAsync: jest.fn().mockResolvedValue(undefined),
 };
-jest.mock('expo-sharing', () => mockSharing, { virtual: true });
+jest.mock('expo-sharing', () => mockSharing); // installed module: non-virtual (see above)
 
 // expo-file-system/legacy is already mapped to a stub via jest config, but the
 // screen needs writeAsStringAsync + a cacheDirectory + EncodingType, so make
@@ -54,7 +59,7 @@ jest.mock('@shopify/react-native-skia', () => {
     },
     matchFont: () => ({ getTypeface: () => ({}) }),
   };
-}, { virtual: true });
+}); // installed module: non-virtual (see expo-media-library note above)
 
 // The renderer itself is mocked so we don't pull real Skia draw code. These are
 // REAL modules on disk, so the mock must NOT be virtual: a virtual mock on a
