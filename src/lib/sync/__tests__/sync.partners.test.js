@@ -19,6 +19,7 @@ jest.mock('../../database', () => ({
   upsertPartnershipFromCloud: jest.fn(),
   upsertPartnerWeekSignalFromCloud: jest.fn(),
   upsertPartnerCheerFromCloud: jest.fn(),
+  deleteLocalPairSharedData: jest.fn(),
 }));
 
 const dbMock = require('../../database');
@@ -30,6 +31,7 @@ beforeEach(() => {
   dbMock.upsertPartnershipFromCloud.mockResolvedValue(undefined);
   dbMock.upsertPartnerWeekSignalFromCloud.mockResolvedValue(undefined);
   dbMock.upsertPartnerCheerFromCloud.mockResolvedValue(undefined);
+  dbMock.deleteLocalPairSharedData.mockResolvedValue(undefined);
 });
 
 describe('pushPartners', () => {
@@ -106,7 +108,7 @@ describe('pullPartners', () => {
     expect(dbMock.upsertPartnerCheerFromCloud).toHaveBeenCalledTimes(1);
   });
 
-  test('INVARIANT unpair-while-offline: a vanished local pair is forced ended', async () => {
+  test('INVARIANT unpair-while-offline: a vanished local pair is forced ended AND its shared rows purged', async () => {
     // Cloud no longer returns pair1 as mine (the other side ended + both gone),
     // but it is still in my local mirror.
     dbMock.getLocalPartnershipIds.mockResolvedValue(['pair1']);
@@ -115,6 +117,33 @@ describe('pullPartners', () => {
     expect(dbMock.upsertPartnershipFromCloud).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'pair1', status: 'ended' }),
     );
+    // Deletion promise (blueprint §5), other member's side: the vanished pair's
+    // shared signals + cheers are purged from the local mirror.
+    expect(dbMock.deleteLocalPairSharedData).toHaveBeenCalledWith('pair1');
+  });
+
+  test('INVARIANT: an ended pair returned by the cloud purges its local shared rows and keeps no signals', async () => {
+    const sb = makeSb({
+      partnerships: [{ id: 'pair1', member_a: 'me', member_b: 'sam', status: 'ended' }],
+      // Even if the cloud somehow still returned signals, an ended pair is not in
+      // activePairIds, so none are pulled; and the local copy is purged.
+      signals: [],
+      cheers: [],
+    });
+    await pullPartners(sb, { userId: 'me' });
+    expect(dbMock.deleteLocalPairSharedData).toHaveBeenCalledWith('pair1');
+    expect(dbMock.upsertPartnerWeekSignalFromCloud).not.toHaveBeenCalled();
+    expect(dbMock.upsertPartnerCheerFromCloud).not.toHaveBeenCalled();
+  });
+
+  test('an ACTIVE pair is never purged (shared data flows normally)', async () => {
+    const sb = makeSb({
+      partnerships: [{ id: 'pair1', member_a: 'me', member_b: 'sam', status: 'active' }],
+      signals: [{ pair_id: 'pair1', user_id: 'me', week_start: '1', planned_count: 4, done_count: 4, week_met: true, state: 'training' }],
+    });
+    await pullPartners(sb, { userId: 'me' });
+    expect(dbMock.deleteLocalPairSharedData).not.toHaveBeenCalled();
+    expect(dbMock.upsertPartnerWeekSignalFromCloud).toHaveBeenCalledTimes(1);
   });
 
   test('a missing cloud partnerships table is a benign skip', async () => {
