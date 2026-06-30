@@ -155,6 +155,10 @@ const GatedMealNames = withProGuard(MealNamesScreen, 'Meal names');
 const GatedPerDayTargets = withProGuard(PerDayTargetsScreen, 'Per-day targets');
 const GatedBodyMetrics      = withProGuard(BodyMetricsScreen, 'Body metrics');
 const GatedProgressPhotos   = withProGuard(ProgressPhotosScreen, 'Progress photos');
+// NEW-002 partner is a PRO domain (blueprint §5 gating: free sees the upgrade
+// path, never the live feature). The guard is the upgrade path, matching how
+// BodyMetrics / ProgressPhotos gate while leaving their Progress NavTile visible.
+const GatedPartner          = withProGuard(PartnerScreen, 'Training partner');
 const GatedCoachOutput      = withProGuard(CoachOutputScreen, 'Your week');
 const GatedProGoalSetup     = withProGuard(ProGoalSetupScreen, 'Pro goal setup');
 const GatedPlanUpdate       = withProGuard(PlanUpdateScreen, 'Update training');
@@ -368,7 +372,7 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="ProgressPhotos" component={GatedProgressPhotos} options={{ headerShown: false }} />
       <Stack.Screen name="LiftProgress" component={LiftProgressScreen} options={{ title: 'Lifts' }} />
       <Stack.Screen name="Consistency" component={ConsistencyScreen} options={{ title: 'Consistency' }} />
-      <Stack.Screen name="Partner" component={PartnerScreen} options={{ title: 'Training partner' }} />
+      <Stack.Screen name="Partner" component={GatedPartner} options={{ title: 'Training partner' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
       <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="RecapStory" component={YearOfLiftsScreen} options={{ headerShown: false }} />

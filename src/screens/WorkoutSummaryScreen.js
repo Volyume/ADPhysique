@@ -781,7 +781,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             most natural (you just trained; here is where your partner stands).
             Paired + live path only; inherits calm/ED suppression; a resting
             partner never reads as a fail. */}
-        {!readOnly && !calmSuppressed
+        {!readOnly && !calmSuppressed && tier === 'pro'
           && (partners.rowState === 'active' || partners.rowState === 'resting') && (
           <RevealSection delay={1130}>
             <View style={styles.partnerBeatRow}>
