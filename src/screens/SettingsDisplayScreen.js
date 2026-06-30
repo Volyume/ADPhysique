@@ -131,6 +131,24 @@ export default function SettingsDisplayScreen() {
       </View>
 
       <View style={styles.section}>
+        <Text style={local.title}>Home</Text>
+        <SettingRow
+          icon="restaurant-outline"
+          label="Show nutrition on Home"
+          sub="A remaining-calories glance and a quick way into your diary, on the Train tab."
+          showArrow={false}
+          rightElement={
+            <Switch
+              value={accessibility.showHomeNutrition !== false}
+              onValueChange={(v) => setAccessibilityPref('showHomeNutrition', v)}
+              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
+              thumbColor={(accessibility.showHomeNutrition !== false) ? colors.primary : colors.textMuted}
+            />
+          }
+        />
+      </View>
+
+      <View style={styles.section}>
         <SettingRow
           icon="text-outline"
           label="Larger text"

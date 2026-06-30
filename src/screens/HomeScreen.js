@@ -141,6 +141,7 @@ export default function HomeScreen({ navigation }) {
   // the user navigating away and back.
   const cloudSyncVersion = useAppStore(s => s.cloudSyncVersion);
   const energyUnit = useAppStore(s => s.accessibility?.energyUnit ?? 'kcal');
+  const showHomeNutrition = useAppStore(s => s.accessibility?.showHomeNutrition !== false);
   const bwu = bodyWeightUnits || 'st';
 
   const [foodGlance, setFoodGlance] = useState(null); // Pro nutrition glance: { remaining, over } | null
@@ -1242,9 +1243,9 @@ export default function HomeScreen({ navigation }) {
             cardioEnabled={userProfile?.cardioEnabled !== false}
             onCardioPress={() => navigation.navigate('LogCardio')}
             onOpenTrend={() => navigation.getParent()?.navigate('ProgressTab', { screen: 'Analytics', params: { focusWeightTrend: true } })}
-            foodGlance={foodGlance}
+            foodGlance={showHomeNutrition ? foodGlance : null}
             energyUnit={energyUnit}
-            onFoodPress={() => navigation.getParent()?.navigate('DiaryTab', { screen: 'Diary' })}
+            onFoodPress={showHomeNutrition ? (() => navigation.getParent()?.navigate('DiaryTab', { screen: 'Diary' })) : undefined}
           />
         )}
 

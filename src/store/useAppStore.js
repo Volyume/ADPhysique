@@ -1584,6 +1584,7 @@ const useAppStore = create((set, get) => ({
     theme: 'dark',         // COMP-029: 'dark' | 'light' | 'system'. Default dark, no existing user changes
     energyUnit: 'kcal',    // food-UI energy DISPLAY unit: 'kcal' | 'kj'. Display-only (read reactively,
                            // no reload); stored values, targets + the coaching engine stay in kcal.
+    showHomeNutrition: true, // gap #17: show the nutrition glance + food entry on the Home strip
   },
   accessibilityLoaded: false,
   loadAccessibility: async () => {
