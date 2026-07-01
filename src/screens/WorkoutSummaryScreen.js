@@ -596,7 +596,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       intensityTier: tier,
     };
     const prData = detectedPRs.length > 0 ? detectedPRs[0] : null;
-    navigation.navigate('ShareCard', { sessionData, prData });
+    // Pass every PR from the session so the share card can let the user choose
+    // which one to feature (a session can set several); prData stays as the
+    // first for back-compat.
+    navigation.navigate('ShareCard', { sessionData, prData, prList: detectedPRs });
   }
 
   // D2 (decision 4b: share artefacts are FREE): a 2-tap share of the early-win

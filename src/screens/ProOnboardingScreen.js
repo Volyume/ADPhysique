@@ -784,6 +784,21 @@ export default function ProOnboardingScreen({ navigation }) {
   // ── Step 2, Profile ─────────────────────────────────────────────────────────
 
   if (step === 2) {
+    // Gate the Continue button on every required field (same pattern as steps
+    // 3-5), so the step visibly REFUSES to advance until they are all valid.
+    // Biological sex is the critical one: it must be an explicit male/female
+    // choice — a null must never progress (and must never be silently defaulted
+    // downstream). Body weight and age are validated to their real ranges here
+    // so the button matches advanceFrom2 exactly (no enabled-but-then-alert gap).
+    const step2BwKg = localBWUnits === 'st'
+      ? stoneLbsToKg(bodyWeightSt, bodyWeightStLbs || '0')
+      : parseBodyWeightToKg(bodyWeight, localBWUnits);
+    const step2Age = parseInt(age, 10);
+    const canContinue =
+      !!firstName.trim()
+      && (sex === 'male' || sex === 'female')
+      && !!step2BwKg && !Number.isNaN(step2BwKg) && step2BwKg >= 30 && step2BwKg <= 300
+      && !Number.isNaN(step2Age) && step2Age >= 13 && step2Age <= 100;
     return (
       <SafeAreaView key="step-2" style={styles.safe}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
@@ -997,7 +1012,12 @@ export default function ProOnboardingScreen({ navigation }) {
               ) : null}
             </View>
 
-            <TouchableOpacity style={styles.primaryBtn} onPress={advanceFrom2} activeOpacity={0.88}>
+            <TouchableOpacity
+              style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
+              onPress={canContinue ? advanceFrom2 : undefined}
+              disabled={!canContinue}
+              activeOpacity={canContinue ? 0.88 : 1}
+            >
               <Text style={styles.primaryBtnText}>Continue</Text>
               <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
             </TouchableOpacity>
