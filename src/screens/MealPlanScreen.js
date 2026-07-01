@@ -41,6 +41,7 @@ import {
 } from '../lib/food/mealPlanService';
 import { updateMealPlan, getFoodEntriesForDay, clearPlannedDay } from '../lib/food/db';
 import { buildGroceryList } from '../lib/food/groceryList';
+import { getMealAdditions, ADDITIONS_INTRO } from '../lib/food/mealAdditions';
 import { formatNumber, formatEnergy, energyUnitLabel } from '../lib/format';
 
 // The week is scheduled onto real dates when added to the diary (day i ->
@@ -531,7 +532,12 @@ export default function MealPlanScreen({ navigation }) {
           ) : null}
           {honestyLine ? <Text style={styles.honesty}>{honestyLine}</Text> : null}
 
-          {/* Plates */}
+          {/* Season-to-taste intro, shown once above the meals (founder 2026-07-01:
+              novices don't realise a suggested meal is a base they can season and
+              build on). British English, flavour-first, honest ("basically free"). */}
+          <Text style={styles.seasonIntro}>{ADDITIONS_INTRO}</Text>
+
+          {/* Meals */}
           {(day?.slots || []).map((slot) => {
             const open = expanded[slot.slot] !== false;
             return (
@@ -572,6 +578,24 @@ export default function MealPlanScreen({ navigation }) {
                     <Text style={styles.macroLine} numberOfLines={1} ellipsizeMode="tail">
                       {`P ${formatNumber(slot.totals.protein)} g · C ${formatNumber(slot.totals.carbs)} g · F ${formatNumber(slot.totals.fat)} g`}
                     </Text>
+                    {/* Season to taste: the free additions that suit this meal
+                        (e.g. saffron on chicken & rice). Maps by the meal's
+                        curated id; falls back to generic savoury/sweet. */}
+                    {(() => {
+                      const adds = getMealAdditions({ id: slot.mealId, name: slot.name });
+                      if (!adds || !adds.length) return null;
+                      return (
+                        <View style={styles.seasonWrap}>
+                          <Text style={styles.seasonLabel}>SEASON TO TASTE</Text>
+                          {adds.map((a) => (
+                            <Text key={a.name} style={styles.seasonLine}>
+                              <Text style={styles.seasonName}>{a.name}. </Text>
+                              {a.why}
+                            </Text>
+                          ))}
+                        </View>
+                      );
+                    })()}
                   </View>
                 ) : null}
                 <TouchableOpacity
@@ -804,6 +828,14 @@ const styles = StyleSheet.create({
   itemRowDisabled: { opacity: 0.6 },
   itemLine: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'], flex: 1 },
   macroLine: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.xs, fontVariant: ['tabular-nums'] },
+  seasonIntro: { color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 19, marginBottom: spacing.sm },
+  seasonWrap: {
+    marginTop: spacing.sm, paddingTop: spacing.sm,
+    borderTopWidth: 1, borderTopColor: colors.border, gap: 3,
+  },
+  seasonLabel: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.bold, letterSpacing: 0.5, marginBottom: 2 },
+  seasonLine: { color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 19 },
+  seasonName: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
   swapBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingVertical: spacing.sm, minHeight: 44 },
   swapText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   totalsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.xs },
