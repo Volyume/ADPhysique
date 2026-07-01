@@ -141,9 +141,21 @@ export async function openEncryptedDb(SQLite) {
   try {
     const bak = await FileSystem.getInfoAsync(backup);
     if (bak.exists) {
-      let probe = await keyed(SQLite, key);
-      const live = (await readable(probe)) || await (async () => { try { await probe.closeAsync(); } catch (_) {} const p = await SQLite.openDatabaseAsync(DB_NAME); const r = await readable(p); try { await p.closeAsync(); } catch (_) {} return r; })();
-      try { await probe.closeAsync(); } catch (_) {}
+      // CRITICAL (audit 2026-07-01): determine whether the LIVE db file actually
+      // exists BEFORE probing it. keyed()/openDatabaseAsync CREATES an empty db
+      // when the file is absent, and an empty keyed db reads as 'readable' — so
+      // probing first would report live=true after an interrupted swap (where
+      // volyume.db was moved to the backup and never replaced), and we would
+      // then DELETE the backup: the user's only copy of their data. Gate on the
+      // real file existing; if volyume.db is gone, the swap was interrupted and
+      // the backup IS the live data — restore it, never fabricate over it.
+      const liveInfo = await FileSystem.getInfoAsync(path(DB_NAME));
+      let live = false;
+      if (liveInfo.exists) {
+        let probe = await keyed(SQLite, key);
+        live = (await readable(probe)) || await (async () => { try { await probe.closeAsync(); } catch (_) {} const p = await SQLite.openDatabaseAsync(DB_NAME); const r = await readable(p); try { await p.closeAsync(); } catch (_) {} return r; })();
+        try { await probe.closeAsync(); } catch (_) {}
+      }
       if (!live) {
         for (const s of ['', '-wal', '-shm']) { try { await FileSystem.deleteAsync(`${path(DB_NAME)}${s}`, { idempotent: true }); } catch (_) {} }
         await FileSystem.moveAsync({ from: backup, to: path(DB_NAME) });

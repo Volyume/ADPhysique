@@ -128,4 +128,12 @@ export async function listSnapshots() {
 // open SQLite file risks corruption. Throws on failure so the UI can report it.
 export async function restoreSnapshot(uri) {
   await FileSystem.copyAsync({ from: uri, to: DB_PATH });
+  // Drop the WAL/SHM sidecars of the OLD database (audit 2026-07-01): WAL mode
+  // is on, so leaving volyume.db-wal / -shm in place means the reopened DB
+  // replays the old, pre-restore commits over the file we just restored,
+  // silently undoing the restore. Mirrors the ['','-wal','-shm'] cleanup
+  // dbCrypto.js does at its swap points. Best-effort; a missing sidecar is fine.
+  for (const s of ['-wal', '-shm']) {
+    try { await FileSystem.deleteAsync(`${DB_PATH}${s}`, { idempotent: true }); } catch (_) { /* best-effort */ }
+  }
 }
