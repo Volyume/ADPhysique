@@ -14,7 +14,7 @@ import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, Pressable, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Haptics from 'expo-haptics';
+import * as haptics from '../lib/haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type } from '../styles/theme';
@@ -627,7 +627,8 @@ export default function DiaryScreen({ navigation }) {
   }
 
   function lightTap() {
-    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); } catch (_) {}
+    // D2: routed through the vocabulary so reduce-motion silences it too.
+    haptics.press();
   }
 
   async function logWaterDelta(deltaMl) {
@@ -643,11 +644,14 @@ export default function DiaryScreen({ navigation }) {
   const requestDelete = useCallback(async (entry, closeSwipe) => {
     audit('food.delete', { mealSlot: entry?.mealSlot ?? 'unknown' });
     try {
+      // D2: a delete is a commit beat; the Undo restores with a light
+      // selection tick. Both gate on reduce-motion via the vocabulary.
+      haptics.commit();
       await deleteFoodEntry(entry.id, userId);
       await load();
       toast.show(`${friendlyFoodName(entry)} deleted.`, {
         variant: 'undo',
-        action: { label: 'Undo', onPress: async () => { await restoreFoodEntry(entry.id, userId); await load(); } },
+        action: { label: 'Undo', onPress: async () => { haptics.selection(); await restoreFoodEntry(entry.id, userId); await load(); } },
       });
     } catch (_) {
       closeSwipe?.();

@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
+import AnimatedRow from '../components/AnimatedRow';
 import ExercisePickerModal from '../components/ExercisePickerModal';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -943,7 +944,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     }
 
     setSaving(true);
-    hapticsVocab.setLogged();
+    // D2: warm-ups get the softer tick, working sets the standard beat.
+    if ((currentSet.setType ?? 'straight') === 'warmup') hapticsVocab.warmupLogged();
+    else hapticsVocab.setLogged();
 
     try {
       // WK-3: number sets within their own kind so working sets read 1,2,3
@@ -2175,15 +2178,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {loggedSets.length > 0 && (
             <View style={styles.loggedSection}>
               <Text style={styles.loggedTitle}>This workout</Text>
+              {/* D2: rows keyed by the set's stable id (was the array index,
+                  which made every delete re-key the rows below it) and wrapped
+                  so a logged set arrives, an unlogged one leaves, and siblings
+                  glide rather than jump-cut. */}
               {loggedSets.map((s, i) => (
-                <LoggedSetRow
-                  key={i}
-                  set={s}
-                  units={units}
-                  progressNum={countProgressSets(loggedSets.slice(0, i + 1))}
-                  exerciseType={exercise?.exerciseType || 'weight_reps'}
-                  onEdit={() => openEditSet(s)}
-                />
+                <AnimatedRow key={s.id ?? `row-${i}`}>
+                  <LoggedSetRow
+                    set={s}
+                    units={units}
+                    progressNum={countProgressSets(loggedSets.slice(0, i + 1))}
+                    exerciseType={exercise?.exerciseType || 'weight_reps'}
+                    onEdit={() => openEditSet(s)}
+                  />
+                </AnimatedRow>
               ))}
             </View>
           )}

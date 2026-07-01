@@ -5,6 +5,7 @@ import { toEnergy, energyUnitLabel } from '../../lib/format';
 import { getMealAdditionsForEntries } from '../../lib/food/mealAdditions';
 import useAppStore from '../../store/useAppStore';
 import { SwipeableEntryRow } from './EntryRow';
+import AnimatedRow from '../AnimatedRow';
 
 // One meal as a single contained card (diary-tab redesign 2026-06-01). Replaces
 // the old containerless section (a bare uppercase label over a dashed "Add
@@ -52,17 +53,21 @@ export default function MealSection({
           ))}
         </View>
       ) : null}
+      {/* D2: rows animate in/out and siblings glide into freed space, so a
+          delete or add is no longer a jump-cut. Keys are entry ids (stable),
+          which AnimatedRow requires. */}
       {entries.map((e) => (
-        <SwipeableEntryRow
-          key={e.id}
-          entry={e}
-          onEdit={() => onEdit(e)}
-          onDelete={onDelete}
-          selectionMode={selectionMode}
-          selected={!!selectedIds?.has(e.id)}
-          onLongPress={() => onLongPressEntry?.(e)}
-          onToggleSelect={() => onToggleSelect?.(e)}
-        />
+        <AnimatedRow key={e.id}>
+          <SwipeableEntryRow
+            entry={e}
+            onEdit={() => onEdit(e)}
+            onDelete={onDelete}
+            selectionMode={selectionMode}
+            selected={!!selectedIds?.has(e.id)}
+            onLongPress={() => onLongPressEntry?.(e)}
+            onToggleSelect={() => onToggleSelect?.(e)}
+          />
+        </AnimatedRow>
       ))}
       {seasonAdds ? (
         <View style={styles.seasonRow}>

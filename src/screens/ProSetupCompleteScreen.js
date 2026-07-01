@@ -17,6 +17,7 @@ import { firstReviewUnlockDate } from '../lib/trialActivation';
 import { formatUnlockDate } from '../lib/coachLedger';
 import { planNextWeek } from '../lib/food/mealPlanService';
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
+import { planReady } from '../lib/haptics';
 
 // Order the rationale reads top-to-bottom: how the week is structured,
 // then why the volume and progression, then exercise selection and the
@@ -86,6 +87,9 @@ export default function ProSetupCompleteScreen({ navigation }) {
   const slideY  = useRef(new Animated.Value(reduceMotion ? 0 : 20)).current;
 
   useEffect(() => {
+    // D2: the plan reveal is the Pro funnel's peak; a single success note
+    // marks it (the vocabulary no-ops under reduce-motion).
+    planReady();
     if (reduceMotion) return;
     Animated.parallel([
       Animated.timing(opacity, {

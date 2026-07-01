@@ -17,7 +17,8 @@ import {
 } from '../lib/database';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 import { claimMilestones } from '../lib/milestones';
-import { selection as hapticSelection } from '../lib/haptics';
+import { selection as hapticSelection, prAchieved as hapticMilestone } from '../lib/haptics';
+import { MilestoneBurst } from '../components/PRCelebration';
 import usePartners from '../hooks/usePartners';
 import { ticksLabel } from '../lib/partners/signals';
 import { calculateWeeklyVolume, getVolumeStatus, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine } from '../lib/algorithms';
@@ -124,6 +125,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // suppression as firstSessionLine. PRs are owned by PRCelebration and the
   // first session by COMP-013, so neither double-celebrates here.
   const [milestone, setMilestone] = useState(null);
+  // D2: the gold particle burst for the big rungs (50/100 sessions).
+  const [milestoneBurst, setMilestoneBurst] = useState(false);
   // D2: calm-mode / open-ED suppression flag for the peak-surface celebratory
   // cards (the programme-arc strip + the phase-completion card). Set once from
   // the shared wellbeing read in loadVolumeAndHistory.
@@ -410,7 +413,17 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           });
           if (shown) {
             setMilestone(shown);
-            hapticSelection();
+            // D2 (design audit 03 win #4): scale the payoff to the rung. The
+            // big rungs (50/100 sessions) earn the gold particle burst and the
+            // celebration haptic ladder; the earlier rungs keep the quiet
+            // tick. Same calm/ED suppression as the card (this branch), and
+            // the burst itself renders nothing under reduce-motion.
+            if (shown.key === 'sessions_50' || shown.key === 'sessions_100') {
+              setMilestoneBurst(true);
+              hapticMilestone();
+            } else {
+              hapticSelection();
+            }
           }
         } catch (_) {}
       }
@@ -1176,6 +1189,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      {/* D2: gold burst over the summary for the 50/100-session rungs. Set
+          only inside the calm/ED-suppressed-free branch; renders nothing
+          under reduce-motion; never blocks taps. */}
+      {milestoneBurst ? <MilestoneBurst onDone={() => setMilestoneBurst(false)} /> : null}
     </SafeAreaView>
   );
 }

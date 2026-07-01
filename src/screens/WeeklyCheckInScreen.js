@@ -27,6 +27,7 @@ import {
   deriveTrainingPerformance, deriveCalsAdherence, stripAutoNotes, PERF_VERDICT_TEXT,
 } from '../lib/checkinDerive';
 import { summariseWeekSteps } from '../lib/stepsSummary';
+import * as haptics from '../lib/haptics';
 import { summariseWeekCardio, cardioComplianceFromLog } from '../lib/cardio/cardioEngine';
 import { getRollupsForRange, getPlannedDaysInRange, confirmPlannedDay } from '../lib/food/db';
 import { getCycleTracking, shouldShowCycleQuestion } from '../lib/cyclePrefs';
@@ -551,6 +552,9 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const handleSubmit = useCallback(async () => {
     if (busy) return;
     audit('checkin.weekly.submit');
+    // D2: the week's one deliberate commitment gets the commit beat
+    // (reduce-motion gated inside the vocabulary).
+    haptics.commit();
     setBusy(true);
     try {
       const userId = user?.id;

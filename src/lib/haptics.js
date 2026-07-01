@@ -44,10 +44,13 @@ export function setLogged() { return _impact(Haptics.ImpactFeedbackStyle.Light);
 /** Logging a warm-up set. Even softer than a working set. */
 export function warmupLogged() { return _selection(); }
 
-/** Personal record. Success notification + a beat of heavy impact. */
+/** Personal record: the celebration ladder. Success note plus two heavy
+ *  beats — the exact signature PRCelebration shipped inline (D2 moved it
+ *  here so the vocabulary is the single tuning point). */
 export async function prAchieved() {
   await _notify(Haptics.NotificationFeedbackType.Success);
-  setTimeout(() => _impact(Haptics.ImpactFeedbackStyle.Heavy), 120);
+  setTimeout(() => _impact(Haptics.ImpactFeedbackStyle.Heavy), 150);
+  setTimeout(() => _impact(Haptics.ImpactFeedbackStyle.Heavy), 300);
 }
 
 /** Rest timer finished: the GO beat. Success note plus two heavy pulses —

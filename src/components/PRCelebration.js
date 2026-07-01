@@ -7,7 +7,7 @@ import {
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import * as haptics from '../lib/haptics';
 import { Ionicons } from '@expo/vector-icons';
 import useAppStore from '../store/useAppStore';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
@@ -15,7 +15,13 @@ import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../sty
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const NUM_PARTICLES = 40;
 
-function createParticle(index) {
+// Decorative confetti palette: brand tokens plus the two festive accents,
+// tokenised in D0 (design audit 03) so no raw hex remains here. The gold-only
+// variant dresses the big milestone rungs (D2).
+const PR_PALETTE = [colors.primary, colors.gold, colors.success, colors.celebrationEmber, colors.celebrationViolet];
+const GOLD_PALETTE = [colors.gold, colors.celebrationEmber, colors.gold];
+
+function createParticle(index, palette = PR_PALETTE) {
   return {
     x: new Animated.Value(SCREEN_WIDTH / 2),
     y: new Animated.Value(SCREEN_HEIGHT / 2),
@@ -23,11 +29,81 @@ function createParticle(index) {
     scale: new Animated.Value(0),
     angle: (index / NUM_PARTICLES) * Math.PI * 2,
     distance: 80 + Math.random() * 180,
-    // Decorative confetti palette: brand tokens plus the two festive accents,
-    // tokenised in D0 (design audit 03) so no raw hex remains here.
-    color: [colors.primary, colors.gold, colors.success, colors.celebrationEmber, colors.celebrationViolet][index % 5],
+    color: palette[index % palette.length],
     size: 6 + Math.random() * 8,
   };
+}
+
+/**
+ * MilestoneBurst (D2, design audit 03 win #4): the PR particle burst in an
+ * all-gold dress for the big session rungs (50/100). No overlay card — the
+ * summary's milestone card carries the copy; this is pure celebration on top.
+ * Renders nothing under reduce-motion (callers already gate on calm/ED).
+ * Non-blocking: pointerEvents none, self-dismisses via onDone.
+ */
+export function MilestoneBurst({ onDone }) {
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  const particles = useRef(
+    reduceMotion ? [] : Array.from({ length: NUM_PARTICLES }, (_, i) => createParticle(i, GOLD_PALETTE)),
+  ).current;
+
+  useEffect(() => {
+    if (reduceMotion) { onDone?.(); return undefined; }
+    const anims = particles.map((p, i) => {
+      const targetX = SCREEN_WIDTH / 2 + Math.cos(p.angle) * p.distance;
+      const targetY = SCREEN_HEIGHT / 2 + Math.sin(p.angle) * p.distance;
+      return Animated.sequence([
+        Animated.delay(i * 20),
+        Animated.parallel([
+          Animated.spring(p.x, { toValue: targetX, tension: 80, friction: 6, useNativeDriver: true }),
+          Animated.spring(p.y, { toValue: targetY, tension: 80, friction: 6, useNativeDriver: true }),
+          Animated.spring(p.scale, { toValue: 1, tension: 100, friction: 7, useNativeDriver: true }),
+          Animated.sequence([
+            Animated.delay(500),
+            Animated.timing(p.opacity, { toValue: 0, duration: 600, useNativeDriver: true }),
+          ]),
+        ]),
+      ]);
+    });
+    const staggered = Animated.stagger(8, anims);
+    staggered.start();
+    const t = setTimeout(() => onDone?.(), 2400);
+    return () => {
+      clearTimeout(t);
+      try { staggered.stop(); } catch (_) {}
+    };
+    // Runs once per mount; the parent keys/mounts it per milestone.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (reduceMotion || particles.length === 0) return null;
+
+  return (
+    <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+      {particles.map((p, i) => (
+        <Animated.View
+          key={i}
+          style={[
+            styles.particle,
+            {
+              backgroundColor: p.color,
+              width: p.size,
+              height: p.size,
+              borderRadius: p.size / 2,
+              transform: [
+                { translateX: p.x },
+                { translateY: p.y },
+                { translateX: -p.size / 2 },
+                { translateY: -p.size / 2 },
+                { scale: p.scale },
+              ],
+              opacity: p.opacity,
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
 }
 
 export default function PRCelebration({ pr, onDismiss, subdued = false }) {
@@ -51,15 +127,16 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
   useEffect(() => {
     const timers = [];
     if (subduedMode) {
-      Haptics.selectionAsync().catch(() => {});
+      // D2: the vocabulary call replaces raw expo-haptics, so the
+      // reduce-motion gate covers this flagship moment too.
+      haptics.selection();
       Animated.timing(cardOpacity, { toValue: 1, duration: 220, useNativeDriver: true }).start();
       timers.push(setTimeout(onDismiss, 2200));
       return () => timers.forEach(clearTimeout);
     }
 
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    timers.push(setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 150));
-    timers.push(setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 300));
+    // The PR ladder (Success + two heavy beats) lives in the vocabulary now.
+    haptics.prAchieved();
 
     const overlay = Animated.parallel([
       Animated.timing(overlayOpacity, { toValue: 0.85, duration: 200, useNativeDriver: true }),
