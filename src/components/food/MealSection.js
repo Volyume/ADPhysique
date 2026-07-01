@@ -1,7 +1,8 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, spacing, radius, type } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
+import { getMealAdditionsForEntries } from '../../lib/food/mealAdditions';
 import useAppStore from '../../store/useAppStore';
 import { SwipeableEntryRow } from './EntryRow';
 
@@ -23,6 +24,10 @@ export default function MealSection({
   // GAP #5: one-tap "usuals". Only on an empty slot (a slot with food doesn't
   // need the prompt) and never in selection mode (the card is a target then).
   const showUsuals = !hasEntries && !selectionMode && Array.isArray(usuals) && usuals.length > 0;
+  // Season to taste (founder 2026-07-01): once a curated / meal-plan meal is on
+  // the day, carry its free additions into the diary too. Only shows when the
+  // slot's foods resolve to a real curated meal; null (hidden) otherwise.
+  const seasonAdds = hasEntries && !selectionMode ? getMealAdditionsForEntries(entries) : null;
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -59,6 +64,14 @@ export default function MealSection({
           onToggleSelect={() => onToggleSelect?.(e)}
         />
       ))}
+      {seasonAdds ? (
+        <View style={styles.seasonRow}>
+          <Text style={styles.seasonText}>
+            <Text style={styles.seasonLabel}>Season to taste: </Text>
+            {seasonAdds.map((a) => a.name).join(', ')}.
+          </Text>
+        </View>
+      ) : null}
       <TouchableOpacity
         style={[styles.addRow, hasEntries && styles.addRowDivided]}
         onPress={onAdd}
@@ -120,6 +133,12 @@ const styles = StyleSheet.create({
   // divider. On an empty section it sits directly under the header with no
   // divider, so the card reads as one clean block, not a placeholder.
   addRowDivided: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+  seasonRow: {
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
+  },
+  seasonText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
+  seasonLabel: { color: colors.textMuted, fontWeight: fontWeight.bold },
   addLabel: { ...type.body, color: colors.primary, marginLeft: spacing.xs },
   quickAddLabel: { ...type.body, fontSize: fontSize.sm, color: colors.textSecondary, marginLeft: spacing.xs },
 });

@@ -12,7 +12,7 @@
  *   - The generic fallback only fires for an unknown meal, and is itself clean.
  */
 import { CURATED_MEALS } from '../curatedMeals';
-import { getMealAdditions, MEAL_ADDITIONS, ADDITIONS_INTRO, ADDITIONS_FOOTNOTE } from '../mealAdditions';
+import { getMealAdditions, getMealAdditionsForEntries, MEAL_ADDITIONS, ADDITIONS_INTRO, ADDITIONS_FOOTNOTE } from '../mealAdditions';
 
 // Calorie-bearing ingredients that must NEVER appear as a "free" addition. These
 // belong in a meal's own components, not the seasoning list. "sugar-free" is fine
@@ -100,5 +100,36 @@ describe('per-meal free additions', () => {
   test('null meal returns a clean fallback rather than throwing', () => {
     expect(() => getMealAdditions(null)).not.toThrow();
     expect(getMealAdditions(null).length).toBeGreaterThanOrEqual(3);
+  });
+
+  describe('getMealAdditionsForEntries (diary meals)', () => {
+    // A diary meal keeps its applied foods as curated:<foodKey> refs, so the
+    // matcher resolves the meal from its components and shows the right seasonings.
+    test('matches a chicken & rice meal from its food refs', () => {
+      const entries = [
+        { food_ref: 'curated:chicken_breast' },
+        { food_ref: 'curated:white_rice' },
+        { food_ref: 'curated:broccoli' },
+        { food_ref: 'curated:olive_oil' },
+      ];
+      const got = getMealAdditionsForEntries(entries);
+      expect(got).toBe(MEAL_ADDITIONS.curated_om_chicken_rice);
+      expect(got.some((a) => /saffron|turmeric/i.test(a.name))).toBe(true);
+    });
+
+    test('returns null for a lone item (not a recognisable meal)', () => {
+      expect(getMealAdditionsForEntries([{ food_ref: 'curated:white_rice' }])).toBeNull();
+    });
+
+    test('returns null for arbitrary manual foods (no curated refs)', () => {
+      expect(getMealAdditionsForEntries([
+        { food_ref: 'global:12345' }, { food_ref: 'custom:abc' },
+      ])).toBeNull();
+    });
+
+    test('tolerates empty / null input without throwing', () => {
+      expect(getMealAdditionsForEntries([])).toBeNull();
+      expect(() => getMealAdditionsForEntries(null)).not.toThrow();
+    });
   });
 });

@@ -21,6 +21,8 @@
  * any meal not explicitly listed (and any future meal) so the sheet never blanks.
  */
 
+import { CURATED_MEALS } from './curatedMeals';
+
 // A short, honest, pro-food intro shown above the additions in the sheet.
 export const ADDITIONS_INTRO =
   'A starting point, not a rule. Add any of these to taste, in a normal sprinkle they bring flavour, not calories.';
@@ -419,6 +421,34 @@ export function getMealAdditions(meal) {
   const byId = MEAL_ADDITIONS[meal.id];
   if (byId && byId.length) return byId;
   return SWEET_HINT.test(meal.name || '') ? SWEET_FALLBACK : SAVOURY_FALLBACK;
+}
+
+/**
+ * Additions for a DIARY meal, inferred from its logged foods. Applied meal-plan /
+ * curated meals keep their `curated:<foodKey>` refs, so we match a slot's food set
+ * against the curated meals by component overlap and return the best match's
+ * additions. Returns null when the slot isn't a recognisable curated meal (a lone
+ * item, or a mix of manual foods), so the diary only shows this on real meals and
+ * stays uncluttered.
+ */
+export function getMealAdditionsForEntries(entries) {
+  const keys = new Set();
+  for (const e of entries || []) {
+    const ref = e?.food_ref;
+    if (typeof ref === 'string' && ref.startsWith('curated:')) keys.add(ref.slice(8));
+  }
+  if (keys.size < 2) return null;
+  let best = null;
+  let bestScore = 0;
+  for (const meal of CURATED_MEALS) {
+    const comps = meal.components.map((c) => c.food);
+    if (!comps.length) continue;
+    const overlap = comps.filter((f) => keys.has(f)).length;
+    const score = overlap / comps.length;
+    if (overlap >= 2 && score > bestScore) { bestScore = score; best = meal; }
+  }
+  if (!best || bestScore < 0.6) return null;
+  return getMealAdditions(best);
 }
 
 export { MEAL_ADDITIONS };
