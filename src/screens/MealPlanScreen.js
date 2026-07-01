@@ -153,7 +153,10 @@ export default function MealPlanScreen({ navigation }) {
         // Don't dead-end: explain why, then take them straight to the screen
         // that fixes it rather than leaving them to find it.
         toast.show('Set your nutrition targets first, then your plan builds from them.', { variant: 'info' });
-        navigation.navigate('NutritionTargets');
+        // F4 (audit NAV-2): NutritionTargets lives in ProfileStack; a bare
+        // navigate from DiaryStack is a silent no-op, so the toast promised a
+        // redirect that never happened.
+        navigation.getParent()?.navigate('ProfileTab', { screen: 'NutritionTargets' });
         return;
       }
       await load();

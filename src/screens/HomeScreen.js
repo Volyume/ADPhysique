@@ -1017,7 +1017,11 @@ export default function HomeScreen({ navigation }) {
         {showCoachBanner && (
           <TouchableOpacity
             style={styles.coachBanner}
-            onPress={() => navigation.navigate('CoachOutput', { weekStart: latestCoachOutput.weekStart })}
+            // F4 (audit NAV-1): CoachOutput is registered in ProfileStack only.
+            // A bare navigate from HomeStack is silently dropped in production,
+            // making the flagship banner a dead tap; route via the parent tab
+            // navigator like the phase banner above.
+            onPress={() => navigation.getParent()?.navigate('ProfileTab', { screen: 'CoachOutput', params: { weekStart: latestCoachOutput.weekStart } })}
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel="This week's coaching review. Tap to open."

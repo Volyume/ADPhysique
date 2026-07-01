@@ -797,7 +797,14 @@ export default function DiaryScreen({ navigation }) {
                 <Text style={styles.offCardDismiss}>Not now</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => { onDismissOffCard(); navigation.navigate('SettingsPrivacy'); }}
+                // F4 (audit NAV-3): SettingsPrivacy lives in ProfileStack; the
+                // old bare navigate silently no-opped AFTER dismissing the
+                // card, destroying the affordance. Navigate first (cross-tab),
+                // and only dismiss once the navigation has been issued.
+                onPress={() => {
+                  navigation.getParent()?.navigate('ProfileTab', { screen: 'SettingsPrivacy' });
+                  onDismissOffCard();
+                }}
                 hitSlop={8}
                 accessibilityRole="button"
                 accessibilityLabel="Open sharing settings"

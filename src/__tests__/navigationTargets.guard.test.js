@@ -1,0 +1,64 @@
+/**
+ * F4 (audit NAV-1/2/3): React Navigation silently DROPS a navigate() whose
+ * target route is not registered in the caller's own stack — no error, no
+ * navigation, a dead control in production. All three audited dead ends were
+ * this one bug class: a bare navigate('X') from Train/Diary stacks to a route
+ * that lives only in ProfileStack. The correct form is
+ * navigation.getParent()?.navigate('ProfileTab', { screen: 'X', params }).
+ *
+ * These source guards pin the three fixed sites and canary the bug class for
+ * the ProfileStack-only routes most likely to be linked from other tabs.
+ */
+import fs from 'fs';
+import path from 'path';
+
+function read(rel) {
+  return fs.readFileSync(path.resolve(__dirname, '../..', rel), 'utf8');
+}
+
+// Routes registered ONLY in ProfileStack (see RootNavigator ProfileStack) that
+// other tabs are known to want to link to. A bare navigate to any of these
+// from a non-Profile screen is the silent-no-op bug.
+const PROFILE_ONLY_ROUTES = ['CoachOutput', 'NutritionTargets', 'SettingsPrivacy', 'WeeklyCheckIn'];
+
+// Screens that live OUTSIDE ProfileStack but carry cross-tab links to it.
+const NON_PROFILE_SCREENS = [
+  'src/screens/HomeScreen.js',
+  'src/screens/DiaryScreen.js',
+  'src/screens/MealPlanScreen.js',
+  'src/screens/AnalyticsScreen.js',
+  'src/screens/PlansScreen.js',
+];
+
+describe('cross-stack navigation guard (F4 / NAV-1/2/3)', () => {
+  test.each(NON_PROFILE_SCREENS)('%s has no bare navigate() to a ProfileStack-only route', (file) => {
+    const src = read(file);
+    for (const route of PROFILE_ONLY_ROUTES) {
+      // Bare form: navigation.navigate('Route'  — silently dropped in prod.
+      // Allowed form: getParent()?.navigate('ProfileTab', { screen: 'Route' }).
+      const bare = new RegExp(`navigation\\.navigate\\(\\s*['"]${route}['"]`);
+      expect(src).not.toMatch(bare);
+    }
+  });
+
+  test('the three audited dead ends now use the parent-tab form', () => {
+    expect(read('src/screens/HomeScreen.js'))
+      .toMatch(/getParent\(\)\?\.navigate\(\s*'ProfileTab',\s*\{\s*screen:\s*'CoachOutput'/);
+    expect(read('src/screens/MealPlanScreen.js'))
+      .toMatch(/getParent\(\)\?\.navigate\(\s*'ProfileTab',\s*\{\s*screen:\s*'NutritionTargets'/);
+    expect(read('src/screens/DiaryScreen.js'))
+      .toMatch(/getParent\(\)\?\.navigate\(\s*'ProfileTab',\s*\{\s*screen:\s*'SettingsPrivacy'/);
+  });
+
+  test('the Diary OFF-sharing prompt navigates BEFORE it dismisses itself', () => {
+    const src = read('src/screens/DiaryScreen.js');
+    const site = src.indexOf("screen: 'SettingsPrivacy'");
+    expect(site).toBeGreaterThan(-1);
+    // Within the same handler, dismissal must come after the navigation call.
+    const window = src.slice(Math.max(0, site - 300), site + 300);
+    const navIdx = window.indexOf('getParent');
+    const dismissIdx = window.indexOf('onDismissOffCard()');
+    expect(navIdx).toBeGreaterThan(-1);
+    expect(dismissIdx).toBeGreaterThan(navIdx);
+  });
+});
