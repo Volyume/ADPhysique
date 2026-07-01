@@ -42,7 +42,7 @@ export default function TodaysPlateTeaser() {
   return (
     <View style={styles.card} accessibilityRole="summary" accessibilityLabel="Example meal plan day. Pro builds this around your own targets.">
       <Text style={styles.eyebrow}>A DAY ON PRO</Text>
-      <Text style={styles.title}>Your plate, sorted.</Text>
+      <Text style={styles.title}>Your meals, sorted.</Text>
       <Text style={styles.sub}>
         Pro builds a day of real food to your own calories and macros, and lets
         you swap anything and log it in a tap. Here is what a day looks like.

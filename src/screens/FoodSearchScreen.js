@@ -408,7 +408,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       toast.show(
         logged > 0
           ? `Logged ${logged} of ${total}. The rest didn't save, try again.`
-          : "Couldn't log your plate, try again.",
+          : "Couldn't log those foods, try again.",
         { variant: 'error', duration: 5000 },
       );
       if (logged > 0) setPlate((p) => p.slice(logged));
@@ -863,9 +863,9 @@ export default function FoodSearchScreen({ navigation, route }) {
             style={styles.plateInfo}
             onPress={() => setShowPlate(true)}
             accessibilityRole="button"
-            accessibilityLabel="Review the plate"
+            accessibilityLabel="Review selected foods"
           >
-            <Text style={styles.plateCount}>{plate.length} on the plate</Text>
+            <Text style={styles.plateCount}>{plate.length} selected</Text>
             <Text style={styles.plateKcalLine}>~{toEnergy(plateKcal, energyUnit)} {energyUnitLabel(energyUnit)} · tap to review</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -883,7 +883,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         <View style={styles.plateModalBackdrop}>
           <View style={styles.plateModalSheet}>
             <View style={styles.plateModalHeader}>
-              <Text style={styles.plateModalTitle}>Plate ({plate.length})</Text>
+              <Text style={styles.plateModalTitle}>Selected ({plate.length})</Text>
               <TouchableOpacity onPress={() => setShowPlate(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
                 <Ionicons name="close" size={22} color={colors.textPrimary} />
               </TouchableOpacity>
@@ -906,7 +906,7 @@ export default function FoodSearchScreen({ navigation, route }) {
                 style={styles.plateClearBtn}
                 onPress={() => { setPlate([]); setShowPlate(false); }}
                 accessibilityRole="button"
-                accessibilityLabel="Clear the plate"
+                accessibilityLabel="Clear selected foods"
               >
                 <Text style={styles.plateClearText}>Clear</Text>
               </TouchableOpacity>

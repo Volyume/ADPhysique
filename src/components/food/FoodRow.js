@@ -79,7 +79,7 @@ export default function FoodRow({ food, isFav, preference, onPress, onLongPress,
           onPress={onAdd}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           accessibilityRole="button"
-          accessibilityLabel={`Add ${food.name} to the plate`}
+          accessibilityLabel={`Add ${food.name}`}
         >
           <Ionicons name="add-circle" size={26} color={colors.primary} />
         </TouchableOpacity>
