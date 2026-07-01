@@ -496,7 +496,16 @@ export function instrumentSupabase(client) {
       // separate Sentry issue. The bigger picture (which table failed,
       // what error code, how long the call took) is what we want on
       // the trail to the NEXT real error.
-      track.warn(`db.${op}.failed`, `supabase.${table}`, extra);
+      //
+      // Sentry groups a captured message by the message string, so a bare
+      // `db.${op}.failed` collapsed every table+code into ONE giant issue that
+      // hid the root cause (audit S-012, Sentry VOLYUME-S). Fold the table and
+      // the PostgREST code into the message so distinct causes group distinctly
+      // — e.g. `db.upsert.failed supabase.meal_plans PGRST205`. This does not
+      // change event volume (grouping only), and the code/message/duration stay
+      // in extra for the detail view.
+      const codeSuffix = extra.errorCode ? ` ${extra.errorCode}` : '';
+      track.warn(`db.${op}.failed supabase.${table}${codeSuffix}`, `supabase.${table}`, extra);
       return;
     }
     // Happy path: cheap breadcrumb only. Include row count when the
