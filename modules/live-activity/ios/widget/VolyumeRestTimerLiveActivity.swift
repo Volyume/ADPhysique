@@ -2,6 +2,16 @@ import ActivityKit
 import SwiftUI
 import WidgetKit
 
+// A rest-timer range that can never trap. SwiftUI's ClosedRange traps at runtime
+// (EXC_BREAKPOINT — Sentry VOLYUME-1K) when lowerBound > upperBound, which is
+// exactly what `Date()...endTime` produces once the timer has expired
+// (endTime <= now). Clamp so lower <= upper; an already-expired timer then
+// renders a static 0:00 instead of crashing the Live Activity / widget process.
+private func volyumeSafeRestRange(_ endTime: Date) -> ClosedRange<Date> {
+  let now = Date()
+  return min(now, endTime)...max(now, endTime)
+}
+
 /**
  * VolyumeRestTimerLiveActivity
  *
@@ -49,7 +59,7 @@ public struct VolyumeRestTimerLiveActivity: Widget {
           }
         }
 
-        Text(timerInterval: Date()...context.state.endTime, countsDown: true)
+        Text(timerInterval: volyumeSafeRestRange(context.state.endTime), countsDown: true)
           .font(.system(size: 44, weight: .bold, design: .rounded))
           .foregroundColor(Color(red: 245/255, green: 158/255, blue: 11/255)) // Volyume amber
           .monospacedDigit()
@@ -88,7 +98,7 @@ public struct VolyumeRestTimerLiveActivity: Widget {
           }
         }
         DynamicIslandExpandedRegion(.trailing) {
-          Text(timerInterval: Date()...context.state.endTime, countsDown: true)
+          Text(timerInterval: volyumeSafeRestRange(context.state.endTime), countsDown: true)
             .font(.system(size: 32, weight: .bold, design: .rounded))
             .foregroundColor(Color(red: 245/255, green: 158/255, blue: 11/255))
             .monospacedDigit()
@@ -109,7 +119,7 @@ public struct VolyumeRestTimerLiveActivity: Widget {
           .foregroundColor(Color(red: 245/255, green: 158/255, blue: 11/255))
       } compactTrailing: {
         // Compact right slot — the live countdown.
-        Text(timerInterval: Date()...context.state.endTime, countsDown: true)
+        Text(timerInterval: volyumeSafeRestRange(context.state.endTime), countsDown: true)
           .font(.caption2.monospacedDigit())
           .foregroundColor(Color(red: 245/255, green: 158/255, blue: 11/255))
           .frame(maxWidth: 56)
