@@ -1,0 +1,67 @@
+/**
+ * A3 (Wave 1) wiring guards: week-one proof surfaces.
+ *
+ * The ledger maths is behaviourally tested in coachLedger.test.js; these
+ * scoped source guards pin the four screen integrations (device-walked, not
+ * jest-mounted, per the repo convention). Each fails if its wiring is
+ * reverted.
+ */
+const fs = require('fs');
+const path = require('path');
+
+const read = (p) => fs.readFileSync(path.resolve(__dirname, p), 'utf8');
+const HOME = read('../../screens/HomeScreen.js');
+const COACH = read('../../screens/CoachOutputScreen.js');
+const REVEAL = read('../../screens/ProSetupCompleteScreen.js');
+const ONBOARD = read('../../screens/ProOnboardingScreen.js');
+
+describe('A3: Home coach ledger (day 0, pre-first-review)', () => {
+  test('the trial banner builds and carries the ledger', () => {
+    expect(HOME).toMatch(/buildCoachLedger\(\{/);
+    expect(HOME).toMatch(/setTrialBanner\(\{ line, variant, ledger \}\)/);
+  });
+  test('the window runs from day 0 to trial end, not day 2 to 7', () => {
+    expect(HOME).toMatch(/trialDay < 0 \|\| trialDay > TRIAL_LENGTH_DAYS/);
+    expect(HOME).not.toMatch(/trialDay < 2 \|\| trialDay > 7/);
+  });
+  test('ledger rows render with done/open marks', () => {
+    expect(HOME).toMatch(/trialBanner\.ledger\?\.rows\?\.length/);
+    expect(HOME).toMatch(/row\.done \? 'checkmark-circle' : 'ellipse-outline'/);
+  });
+});
+
+describe('A3: CoachOutput hold renders as a full receipt', () => {
+  test('the receipt is built when the coach lacks data, cleared otherwise', () => {
+    expect(COACH).toMatch(/if \(!result\.hasEnoughData\) \{/);
+    expect(COACH).toMatch(/setHoldReceipt\(buildHoldReceipt\(\{/);
+    expect(COACH).toMatch(/\} else \{\n        setHoldReceipt\(null\);/);
+  });
+  test('InsufficientDataView receives and renders the receipt', () => {
+    expect(COACH).toMatch(/receipt=\{holdReceipt\}/);
+    expect(COACH).toMatch(/receipt\?\.ledger\?\.rows\?\.length/);
+    expect(COACH).toMatch(/receipt\?\.unlockLine/);
+    // The engine's own hold message stays the rule when present.
+    expect(COACH).toMatch(/receipt\?\.rule \?\? dataNote/);
+  });
+});
+
+describe('A3: plan reveal names the actual first-review date (OB-4)', () => {
+  test('computes the date with the gate-honoured helper', () => {
+    expect(REVEAL).toMatch(/firstReviewUnlockDate\(firstWeightAt, checkinDay\)/);
+    expect(REVEAL).toMatch(/formatUnlockDate/);
+  });
+  test('the named date leads the check-in card copy, generic line as fallback', () => {
+    expect(REVEAL).toMatch(/your first review lands on \$\{firstReviewLabel\}/);
+    expect(REVEAL).toMatch(/End of your training week, two minutes/);
+  });
+});
+
+describe('A3: wizard step 4 shows the provisional energy target', () => {
+  test('pure engine call, no persistence', () => {
+    expect(ONBOARD).toMatch(/let provisionalKcal = null;/);
+    expect(ONBOARD).toMatch(/provisionalKcal = t\?\.targetKcal \?\? null;/);
+  });
+  test('renders as a provisional line under the focus dropdown', () => {
+    expect(ONBOARD).toMatch(/Provisionally about \{provisionalKcal\.toLocaleString\('en-GB'\)\} kcal a day/);
+  });
+});

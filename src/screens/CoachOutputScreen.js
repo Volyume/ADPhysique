@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import useAppStore from '../store/useAppStore';
 import { runWeeklyCoach, mapCalsAdherence } from '../lib/weeklyCoach';
+import { buildHoldReceipt } from '../lib/coachLedger';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getLatestCheckin,
@@ -703,7 +704,7 @@ function LoadingView() {
   );
 }
 
-function InsufficientDataView({ dataNote, onClose }) {
+function InsufficientDataView({ dataNote, receipt, onClose }) {
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <Card style={styles.card}>
@@ -711,10 +712,32 @@ function InsufficientDataView({ dataNote, onClose }) {
           <Ionicons name="time-outline" size={32} color={colors.primary} />
         </View>
         <Text style={styles.insufficientTitle}>Building your baseline.</Text>
+        {/* A3 (audit 04 §4): the hold is a decision, so it renders as a full
+            receipt — what the coach read, the rule it applied, and the named
+            unlock date — not a bare "come back later" panel. The neutral
+            (ED-flag) receipt has no rows by construction. */}
+        {receipt?.ledger?.rows?.length ? (
+          <View style={styles.receiptRows}>
+            <Text style={styles.receiptLabel}>{receipt.ledger.title}</Text>
+            {receipt.ledger.rows.map((row) => (
+              <View key={row.key} style={styles.receiptRow}>
+                <Ionicons
+                  name={row.done ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={14}
+                  color={row.done ? colors.success : colors.textMuted}
+                />
+                <Text style={styles.receiptRowText}>{row.label}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
         <Text style={styles.insufficientBody}>
-          {dataNote ??
+          {receipt?.rule ?? dataNote ??
             'Precision Coaching reads your training and weight from day one. It holds calorie and volume changes until it has about two weeks of weigh-ins plus a check-in, so it moves on a real trend rather than one noisy week. Keep logging sessions, your morning weight, and your weekly check-in. The first adjustment lands once the trend is clear.'}
         </Text>
+        {receipt?.unlockLine ? (
+          <Text style={styles.receiptUnlock}>{receipt.unlockLine}</Text>
+        ) : null}
       </Card>
       <TouchableOpacity style={styles.doneBtn} onPress={onClose} activeOpacity={0.8} accessibilityRole="button">
         <Text style={styles.doneBtnText}>Got it</Text>
@@ -789,6 +812,9 @@ export default function CoachOutputScreen({ navigation, route }) {
   // for the forward-pull anchor. All best-effort; the response renders
   // fewer parts when any are missing.
   const [weighInsThisWeek, setWeighInsThisWeek] = useState(null);
+  // A3: the held-decision receipt for the insufficient-data view (null when
+  // the coach has enough data).
+  const [holdReceipt, setHoldReceipt] = useState(null);
   const [calmMode, setCalmMode] = useState(false);
   const [checkinDayName, setCheckinDayName] = useState(null);
   // U-B-1 §3: the "More adjustments" secondary zone is collapsed by default.
@@ -1100,12 +1126,15 @@ export default function CoachOutputScreen({ navigation, route }) {
       // (no rate language, no weigh-in counts), per the COMP-004 rules.
       try { setCalmMode(isCalm(await getWellbeingMode())); } catch (_) { setCalmMode(false); }
       // Check-in day for the forward-pull anchor; same preference read as
-      // HomeScreen. Falls back to "the next check-in" when unset.
+      // HomeScreen. Falls back to "the next check-in" when unset. The numeric
+      // day also feeds the A3 hold receipt's unlock date below.
+      let checkinDayNum = 0;
       try {
         const rawPrefs = await AsyncStorage.getItem('@volyume_notification_prefs');
         if (rawPrefs) {
           const prefs = JSON.parse(rawPrefs);
           if (Number.isFinite(prefs?.checkinDay)) {
+            checkinDayNum = prefs.checkinDay;
             setCheckinDayName(DAY_NAMES_FULL[prefs.checkinDay] ?? null);
           }
         }
@@ -1398,6 +1427,28 @@ export default function CoachOutputScreen({ navigation, route }) {
 
       setOutput(result);
 
+      // A3 (audit 04 §4): when the coach holds for thin data, build the full
+      // held-decision receipt — the live counts vs the published thresholds,
+      // the rule (the engine's own hold message), and the named unlock date.
+      // Neutral (no weigh-in counts) under an open ED flag.
+      if (!result.hasEnoughData) {
+        try {
+          const weekAgoMs = Date.now() - 7 * 86400000;
+          const weighIns7d = weights.filter(w => (w.loggedAt ?? 0) >= weekAgoMs).length;
+          const earliest = weights.length ? Math.min(...weights.map(w => w.loggedAt ?? Infinity)) : null;
+          setHoldReceipt(buildHoldReceipt({
+            dataNote: result.dataNote ?? null,
+            weighIns7d,
+            completedSessions: sessionStats.completed ?? 0,
+            firstWeightAt: Number.isFinite(earliest) ? earliest : null,
+            checkinDay: checkinDayNum,
+            edFlagOpen: edPatternOpen,
+          }));
+        } catch (_) { setHoldReceipt(null); }
+      } else {
+        setHoldReceipt(null);
+      }
+
       // Resolve the week a training-volume apply would write to: the
       // week after the current one in the active mesocycle. Null when
       // there's no active block or the current week is the last (no
@@ -1501,7 +1552,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   if (!output || !output.hasEnoughData) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-        <InsufficientDataView dataNote={output?.dataNote} onClose={handleClose} />
+        <InsufficientDataView dataNote={output?.dataNote} receipt={holdReceipt} onClose={handleClose} />
       </SafeAreaView>
     );
   }
@@ -2038,6 +2089,30 @@ const styles = StyleSheet.create({
     ...type.body,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  // A3 held-decision receipt inside the insufficient-data card.
+  receiptRows: {
+    alignSelf: 'stretch',
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  receiptLabel: {
+    ...type.caption,
+    color: colors.textMuted,
+    marginBottom: spacing.xxs,
+  },
+  receiptRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+  },
+  receiptRowText: {
+    fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18,
+  },
+  receiptUnlock: {
+    ...type.caption,
+    color: colors.textPrimary,
+    fontWeight: fontWeight.semibold,
+    textAlign: 'center',
+    marginTop: spacing.sm,
   },
 
   // Week header

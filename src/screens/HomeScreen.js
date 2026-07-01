@@ -32,7 +32,9 @@ import {
   firstReviewUnlockDate,
   dayName,
   trialBannerLine,
+  TRIAL_LENGTH_DAYS,
 } from '../lib/trialActivation';
+import { buildCoachLedger } from '../lib/coachLedger';
 import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
 import { buildFreeCoachLine } from '../lib/coachResponse';
 import { GLOSSARY } from '../lib/coachGlossary';
@@ -327,8 +329,11 @@ export default function HomeScreen({ navigation }) {
       const endsAt = userProfile?.proTrialEndsAt ?? userProfile?.pro_trial_ends_at ?? null;
       const trialStart = trialStartFromEndsAt(endsAt);
       if (trialStart == null) { setTrialBanner(null); return; }
+      // A3 (audit OB-4): the ledger runs from day 0, not day 2 — week one is
+      // exactly when the paid promise is otherwise invisible. It retires when
+      // the first review lands (coachOut below) or the trial ends.
       const trialDay = Math.floor((Date.now() - trialStart) / 86400000);
-      if (trialDay < 2 || trialDay > 7) { setTrialBanner(null); return; }
+      if (trialDay < 0 || trialDay > TRIAL_LENGTH_DAYS) { setTrialBanner(null); return; }
 
       // A coach output existing means the first review already happened — the
       // value moment is past, so the banner retires permanently.
@@ -357,13 +362,20 @@ export default function HomeScreen({ navigation }) {
         variant, completedSessions, weighIns7d,
         unlockDayName: dayName(unlock), trialDay, edFlagOpen: !!edFlag,
       });
+      // A3: the "what your coach is reading" ledger — live counts vs the
+      // published thresholds, from the same inputs as the banner line. Under
+      // an open ED flag it is the neutral variant with no weigh-in counts.
+      const ledger = buildCoachLedger({
+        weighIns7d, completedSessions, firstWeightAt, checkinDay,
+        edFlagOpen: !!edFlag,
+      });
 
       // Read the per-trial dismissal BEFORE revealing the banner so a banner the
       // user already dismissed can't flash for a frame while the read resolves.
       const dKey = `@volyume_trial_value_banner_dismissed_${user.id}`;
       const dv = await AsyncStorage.getItem(dKey).catch(() => null);
       setTrialBannerDismissed(dv === 'true');
-      setTrialBanner({ line, variant });
+      setTrialBanner({ line, variant, ledger });
     } catch (_) {
       setTrialBanner(null);
     }
@@ -1051,7 +1063,10 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
-        {/* ── COMP-023 trial value countdown banner (second priority) ── */}
+        {/* ── COMP-023 / A3 trial coach ledger (second priority). The one-line
+            value banner grew the "what your coach is reading" rows: live
+            counts vs the published first-review thresholds, visible from day
+            0. The neutral (ED-flag) variant has no rows by construction. ── */}
         {showTrialCountdownBanner && (
           <TouchableOpacity
             style={styles.trialBanner}
@@ -1066,17 +1081,36 @@ export default function HomeScreen({ navigation }) {
             accessibilityRole="button"
             accessibilityLabel={trialBanner.line}
           >
-            <Ionicons name="sparkles" size={18} color={colors.primary} />
-            <Text style={styles.trialBannerText} numberOfLines={2}>{trialBanner.line}</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
-            <TouchableOpacity
-              onPress={dismissTrialBanner}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="Dismiss trial banner"
-            >
-              <Ionicons name="close" size={15} color={colors.textMuted} />
-            </TouchableOpacity>
+            <View style={styles.trialBannerTopRow}>
+              <Ionicons name="sparkles" size={18} color={colors.primary} />
+              <Text style={styles.trialBannerText} numberOfLines={2}>{trialBanner.line}</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+              <TouchableOpacity
+                onPress={dismissTrialBanner}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss trial banner"
+              >
+                <Ionicons name="close" size={15} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            {trialBanner.ledger?.rows?.length ? (
+              <View style={styles.trialLedger}>
+                <Text style={styles.trialLedgerTitle}>{trialBanner.ledger.title}</Text>
+                {trialBanner.ledger.rows.map((row) => (
+                  <View key={row.key} style={styles.trialLedgerRow}>
+                    <Ionicons
+                      name={row.done ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={14}
+                      color={row.done ? colors.success : colors.textMuted}
+                    />
+                    <Text style={[styles.trialLedgerRowText, row.done && styles.trialLedgerRowTextDone]}>
+                      {row.label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
           </TouchableOpacity>
         )}
 
@@ -2414,16 +2448,34 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
     padding: 14, marginBottom: spacing.md, gap: spacing.md,
   },
-  // COMP-023 trial value banner — one line, matches the coach banner system.
+  // COMP-023 trial value banner, grown into the A3 coach ledger card —
+  // headline row plus the live threshold rows; matches the banner system.
   trialBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     backgroundColor: colors.primaryBg, borderRadius: radius.lg,
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginBottom: spacing.md,
   },
+  trialBannerTopRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+  },
   trialBannerText: {
     flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
     color: colors.textPrimary, lineHeight: 18,
+  },
+  trialLedger: {
+    marginTop: spacing.sm, gap: spacing.xs,
+  },
+  trialLedgerTitle: {
+    ...type.caption, color: colors.textMuted,
+  },
+  trialLedgerRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+  },
+  trialLedgerRowText: {
+    fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18,
+  },
+  trialLedgerRowTextDone: {
+    color: colors.textPrimary,
   },
   coachBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
   coachBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },

@@ -12,7 +12,9 @@ import useAppStore from '../store/useAppStore';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import { GOAL_LABELS, PHASE_LABELS, isCompetitionGoal } from '../lib/coachingGoals';
 import { getSplitRationale, getSetupReceiptLine } from '../lib/whyThisTemplates';
-import { getActivePlan, getRoutinesForPlan } from '../lib/database';
+import { getActivePlan, getRoutinesForPlan, getMorningWeightsLast14Days } from '../lib/database';
+import { firstReviewUnlockDate } from '../lib/trialActivation';
+import { formatUnlockDate } from '../lib/coachLedger';
 import { planNextWeek } from '../lib/food/mealPlanService';
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
 
@@ -40,6 +42,35 @@ export default function ProSetupCompleteScreen({ navigation }) {
   // when the user enters the app.
   const [buildingMeals, setBuildingMeals] = useState(false);
   const [mealsBuilt, setMealsBuilt] = useState(false);
+  // A3 (audit OB-4): the first review is 5–11 days away and this reveal used
+  // to say only "end of your training week". Name the actual date, computed
+  // with the same helper the check-in gate honours (kept-promise rule).
+  const [firstReviewLabel, setFirstReviewLabel] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        let checkinDay = 0;
+        const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
+        if (raw) {
+          const p = JSON.parse(raw);
+          if (Number.isFinite(p?.checkinDay)) checkinDay = p.checkinDay;
+        }
+        // Enrolment seeds a morning weight, so the earliest reading (or now,
+        // for safety) anchors the FIRST_CHECKIN_MIN_DAYS clock.
+        let firstWeightAt = Date.now();
+        try {
+          const weights = await getMorningWeightsLast14Days(user?.id);
+          const earliest = weights?.length ? Math.min(...weights.map(w => w.loggedAt ?? Infinity)) : null;
+          if (Number.isFinite(earliest)) firstWeightAt = earliest;
+        } catch (_) {}
+        const label = formatUnlockDate(firstReviewUnlockDate(firstWeightAt, checkinDay));
+        if (!cancelled && label) setFirstReviewLabel(label);
+      } catch (_) { /* copy falls back to the generic line */ }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   const handleBuildMeals = async () => {
     if (!user?.id || buildingMeals || mealsBuilt) return;
@@ -343,7 +374,9 @@ export default function ProSetupCompleteScreen({ navigation }) {
               <View style={{ flex: 1 }}>
                 <Text style={styles.routineTitle}>4 · Check in once a week</Text>
                 <Text style={styles.routineBody}>
-                  End of your training week, two minutes to review how it went. Precision Coaching adjusts your calories from your check-in data, automatically, with a written rationale.
+                  {firstReviewLabel
+                    ? `Keep logging your morning weight and your first review lands on ${firstReviewLabel}. Two minutes to review how the week went. Precision Coaching adjusts your calories from your check-in data, automatically, with a written rationale.`
+                    : 'End of your training week, two minutes to review how it went. Precision Coaching adjusts your calories from your check-in data, automatically, with a written rationale.'}
                 </Text>
               </View>
             </View>

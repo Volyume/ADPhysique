@@ -1111,6 +1111,41 @@ export default function ProOnboardingScreen({ navigation }) {
     const goalOptions = PHYSIQUE_GOALS.map(g => ({ value: g.value, label: g.label, sub: g.subtitle }));
     const canContinue = !!trainingGoal && !!trainingPhase;
 
+    // A3 (audit 04 §4): the moment a focus is chosen, show the provisional
+    // energy target from the SAME pure engine call the final plan uses.
+    // Display only — nothing persists until the wizard completes; the copy
+    // says "provisionally" because steps 5's inputs can still move it.
+    let provisionalKcal = null;
+    if (trainingPhase && sex) {
+      try {
+        const bwKg = localBWUnits === 'st'
+          ? stoneLbsToKg(bodyWeightSt, bodyWeightStLbs)
+          : parseBodyWeightToKg(bodyWeight, localBWUnits);
+        const hcm = localHeightUnits === 'imperial'
+          ? (!isNaN(parseInt(heightFt, 10)) ? ftInToCm(heightFt, heightIn) : null)
+          : (parseFloat(heightCm) || null);
+        const ageNum = parseInt(age, 10) || null;
+        if (!isNaN(bwKg) && bwKg > 0 && hcm && ageNum) {
+          const bfParsed = parseFloat(bodyFat);
+          const bfNum = bodyFat.trim() && Number.isFinite(bfParsed) && bfParsed > 0 && bfParsed < 60 ? bfParsed : null;
+          const t = calculateNutritionTargets(buildNutritionEngineInputs({
+            sex,
+            age: ageNum,
+            heightCm: hcm,
+            weightKg: bwKg,
+            bodyFatPct: bfNum,
+            bodyFatSource: bfNum != null ? bfSource : null,
+            daysPerWeek,
+            trainingPhase,
+            trainingGoal,
+            proteinApproach,
+            experience,
+          }));
+          provisionalKcal = t?.targetKcal ?? null;
+        }
+      } catch (_) { provisionalKcal = null; }
+    }
+
     return (
       <SafeAreaView key="step-4-goal" style={styles.safe}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
@@ -1134,6 +1169,11 @@ export default function ProOnboardingScreen({ navigation }) {
                 onChange={setTrainingPhase}
                 placeholder="Choose your focus"
               />
+              {provisionalKcal ? (
+                <Text style={styles.provisionalKcal}>
+                  Provisionally about {provisionalKcal.toLocaleString('en-GB')} kcal a day for this focus. Your exact targets are set when your plan is built.
+                </Text>
+              ) : null}
             </View>
 
             {/* Secondary, optional, only matters for competitive lifters
@@ -1532,6 +1572,10 @@ const styles = StyleSheet.create({
     color: colors.textMuted, letterSpacing: 0.3, marginBottom: spacing.sm,
   },
   fieldHint: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginBottom: spacing.sm },
+  // A3: provisional energy line under the focus dropdown (step 4).
+  provisionalKcal: {
+    fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18, marginTop: spacing.xs,
+  },
   measuredRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   // Protein target collapsible (step 3). Collapsed by default, the header
   // shows the chosen tier; expanding reveals the three tiers to pick from.
