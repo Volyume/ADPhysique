@@ -50,7 +50,21 @@ describe('ONB-001/002 consent resolves before an onboarding branch is chosen', (
   });
 
   test('the Article 9 consent gate is still present after the resolver', () => {
-    expect(fnBody).toMatch(/healthConsentChecked\s*&&\s*healthConsent === false/);
+    expect(fnBody).toMatch(/healthConsentChecked\s*&&\s*\(healthConsent === false/);
     expect(fnBody).toMatch(/Article9ConsentStack/);
+  });
+
+  // audit 2026-07-01 #7/#12: a NEW user (onboarding unfinished) whose consent is
+  // UNRESOLVED (null, after a transient consent-read failure) must ALSO route to
+  // the Article 9 gate, not fall through to onboarding — otherwise health data
+  // is processed with no recorded consent and a Pro-intent signup lands in the
+  // free flow (the cascade that sets tier='pro' only fires once consent is
+  // granted at the gate).
+  test('a new user with unresolved (null) consent is routed to the gate', () => {
+    expect(fnBody).toMatch(/healthConsent == null\s*&&\s*!firstRunComplete/);
+    const unresolvedIdx = fnBody.indexOf('consentUnresolvedForNewUser');
+    const gateIdx = fnBody.indexOf('Article9ConsentStack');
+    expect(unresolvedIdx).toBeGreaterThan(-1);
+    expect(unresolvedIdx).toBeLessThan(gateIdx);
   });
 });
