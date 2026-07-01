@@ -102,6 +102,10 @@ export async function scheduleMorningWeightNotification(hour = 7, minute = 0) {
   if (Platform.OS === 'web') return;
   try {
     await cancelMorningNotification();
+    // ED-flag schedule gate (Q1): now that the morning nudge fires with sound,
+    // it is also withheld while an ED flag is open, matching the evening
+    // backstop. cancelMorningNotification above already cleared both prompts.
+    if (await weighInEdFlagOpen()) return;
     const quiet = await getQuietHours();
     const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hour, minute, quiet);
     const name = greetName();
@@ -159,7 +163,7 @@ function eveningCopies(name) {
   return [
     { title: `Evening${name}`, body: 'If you haven\'t caught today\'s weight yet, there\'s still time. No worries either way.' },
     { title: `Before the day\'s out${name}`, body: 'A gentle nudge to log today\'s weight if you haven\'t already.' },
-    { title: `Quick one${name}`, body: 'Not logged your weight today? Whenever suits, it keeps your coaching on track.' },
+    { title: `Quick one${name}`, body: 'If you haven\'t weighed in yet today, whenever suits keeps your coaching on track.' },
     { title: `Evening${name}`, body: 'Still time to pop on the scales today if you fancy it. That\'s all for now.' },
   ];
 }
@@ -169,7 +173,14 @@ function pickEveningCopy(dayOfWeek, name = '') {
   return copies[dayOfWeek % copies.length];
 }
 
-async function eveningEdFlagOpen() {
+// Shared ED-flag schedule gate for BOTH weigh-in prompts. A loud/repeated
+// weight prompt at a flagged user is the harm pattern, so neither the morning
+// nudge nor the evening backstop is laid while a flag is open. Because the OS
+// delivers already-laid triggers in the background (where no handler runs),
+// CoachOutputScreen also cancels these prompts the instant it raises a flag —
+// this gate then stops restoreNotifications (which cancels-all, then re-lays)
+// from putting them back while the flag stays open.
+async function weighInEdFlagOpen() {
   try {
     // eslint-disable-next-line global-require
     const useAppStore = require('../../store/useAppStore').default;
@@ -202,10 +213,10 @@ export async function scheduleEveningWeightReminder(hour = 19, minute = 30) {
   if (Platform.OS === 'web') return;
   try {
     await cancelEveningWeightReminder();
-    // ED-flag schedule gate: never lay a second daily weight prompt while a
-    // flag is open. restoreNotifications re-lays this, so it returns the moment
-    // the flag clears.
-    if (await eveningEdFlagOpen()) return;
+    // ED-flag schedule gate: never lay a second daily weight prompt while a flag
+    // is open. Re-laid by restoreNotifications on the next launch/foreground
+    // after the flag clears (and by clearEdPatternFlag's caller at clear time).
+    if (await weighInEdFlagOpen()) return;
     const quiet = await getQuietHours();
     const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hour, minute, quiet);
     const name = greetName();

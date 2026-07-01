@@ -153,6 +153,15 @@ describe('scheduleMorningWeightNotification', () => {
     expect(args.length).toBe(7);
     args.forEach((a) => expect(a.content.sound).toBe(true));
   });
+
+  test('Q1: open ED flag -> morning nudge withheld (cancelled, not re-laid)', async () => {
+    mockGetOpenEdFlag.mockResolvedValue({ id: 'flag-1', status: 'open' });
+    await scheduler.scheduleMorningWeightNotification(7, 0);
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+    // It still cancels both prompts first (morning + evening ids).
+    expect(mockCancelAsync).toHaveBeenCalledWith('volyume_morning_weight_1');
+    expect(mockCancelAsync).toHaveBeenCalledWith('volyume_evening_weight_1');
+  });
 });
 
 // ─── scheduleEveningWeightReminder (Q1) ─────────────────────────────

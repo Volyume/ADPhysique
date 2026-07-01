@@ -46,6 +46,11 @@ import { applyCoachAdjustmentToActivePlan, planNextWeek } from '../lib/food/meal
 import { buildPlanEditNarration } from '../lib/food/planExplain';
 import { buildRegisteredCoachResponse, resolveRegister } from '../lib/coachRegister';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
+import {
+  cancelMorningNotification,
+  scheduleMorningWeightNotification,
+  scheduleEveningWeightReminder,
+} from '../lib/notifications';
 import { logError, logWarn } from '../lib/errorLog';
 import CollapsibleSection from '../components/CollapsibleSection';
 import Card from '../components/Card';
@@ -1273,12 +1278,28 @@ export default function CoachOutputScreen({ navigation, route }) {
             reason: 'multi-signal harm check',
             signals: result.edPatternSignals,
           });
+          // Q1 ED-safety: the flag is raised here in the foreground, so cancel
+          // the (now audible) weigh-in prompts immediately. Their weekly
+          // triggers are otherwise laid days ahead and would fire in the
+          // background — where no delivery handler runs — under the open flag.
+          // The schedule gate keeps restoreNotifications from re-laying them.
+          try { await cancelMorningNotification(); } catch (_) {}
           await trackEngineEvent(user.id, 'ed_pattern_flag_fired', {
             signals: result.edPatternSignals,
             goalLockAdvanced,
           });
         } else if (result.edPatternClearedThisWeek && edPatternOpen) {
           await clearEdPatternFlag(user.id);
+          // Re-lay the weigh-in prompts now the flag has cleared (per the saved
+          // morning toggle; both helpers self-guard and self-cancel).
+          try {
+            const rawPrefs = await AsyncStorage.getItem('@volyume_notification_prefs');
+            const prefs = rawPrefs ? JSON.parse(rawPrefs) : null;
+            if (prefs?.morningEnabled) {
+              await scheduleMorningWeightNotification(prefs.morningHour ?? 7, prefs.morningMinute ?? 0);
+              await scheduleEveningWeightReminder(prefs.eveningHour ?? 19, prefs.eveningMinute ?? 30);
+            }
+          } catch (_) { /* best-effort re-lay */ }
           await trackEngineEvent(user.id, 'ed_pattern_flag_cleared', null);
         }
       } catch (e) {
