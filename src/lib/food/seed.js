@@ -41,6 +41,30 @@ import { logInfo, logWarn, logError } from '../errorLog';
 
 const CHUNK_SIZE = 200;
 
+// ── Snapshot versions (startup fast path) ──────────────────────────
+// The authoritative version of each snapshot is `_meta.generatedAt`
+// inside the .dat file itself — but reading + JSON.parsing a 6.3 MB
+// asset on EVERY launch just to discover "already imported" is a
+// multi-hundred-ms JS block. These constants mirror the current
+// assets' `_meta.generatedAt` so the version flag can be checked with
+// a single AsyncStorage read BEFORE any file I/O.
+//
+// !! THESE MUST BE BUMPED WHENEVER THE SNAPSHOT ASSETS ARE REGENERATED !!
+//   - assets/seed/off_uk_snapshot.dat is rebuilt by
+//     scripts/seed/buildOffSnapshot.js (run weekly by
+//     .github/workflows/refresh-off-snapshot.yml, which commits the
+//     new .dat — the new `_meta.generatedAt` must be copied here).
+//   - assets/seed/cofid_uk.dat is rebuilt by
+//     scripts/seed/buildCofidSnapshot.js (static dataset, rare).
+//
+// A stale constant is safe but slow: the post-parse check below
+// (step 2) still compares against the REAL `_meta.generatedAt`, so a
+// forgotten bump can never import twice or skip a needed import — it
+// only forfeits the fast path until the constant is corrected.
+// Exported for the fast-path regression test (seed.versionSkip.test.js).
+export const OFF_SNAPSHOT_VERSION = '2026-05-25T07:06:03.496Z';
+export const COFID_SNAPSHOT_VERSION = '2026-05-25T06:02:02.491Z';
+
 const _inFlight = new Map();
 
 // SQLite gives us one connection shared across the app. Two importers
@@ -63,6 +87,7 @@ export function importOffSnapshotIfNeeded() {
   return _importIfNeeded({
     scopeKey: 'off',
     flagKey: '@volyume_off_snapshot_loaded_v1',
+    expectedVersion: OFF_SNAPSHOT_VERSION,
     sourceLabel: 'off',
     loadModule: () => require('../../../assets/seed/off_uk_snapshot.dat'),
   });
@@ -75,6 +100,7 @@ export function importCofidSnapshotIfNeeded() {
   return _importIfNeeded({
     scopeKey: 'cofid',
     flagKey: '@volyume_cofid_snapshot_loaded_v1',
+    expectedVersion: COFID_SNAPSHOT_VERSION,
     sourceLabel: 'cofid',
     loadModule: () => require('../../../assets/seed/cofid_uk.dat'),
   });
@@ -87,10 +113,24 @@ function _importIfNeeded(spec) {
   return p;
 }
 
-async function _run({ scopeKey, flagKey, sourceLabel, loadModule }) {
+async function _run({ scopeKey, flagKey, expectedVersion, sourceLabel, loadModule }) {
   const t0 = Date.now();
   let meta = null;
   let rows = null;
+
+  // ── 0. Fast-path version check ────────────────────────────────────
+  // One AsyncStorage read BEFORE any file I/O. On every launch after a
+  // successful import this is the only work done — the 6.3 MB read +
+  // JSON.parse below never runs. If the constant is stale (asset
+  // regenerated without a bump) this check simply misses and the
+  // authoritative post-parse check in step 2 takes over.
+  try {
+    const lastImportedFast = await AsyncStorage.getItem(flagKey);
+    if (lastImportedFast != null && lastImportedFast === expectedVersion) {
+      logInfo(`food.seed.${scopeKey}.skip`, `snapshot version ${expectedVersion} already imported`);
+      return { ok: true, reason: 'already_loaded', importedRows: 0 };
+    }
+  } catch (_) { /* tolerate -- fall through to the full path */ }
 
   // ── 1. Load the bundled asset ─────────────────────────────────────
   try {

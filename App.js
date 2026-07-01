@@ -395,8 +395,14 @@ export default function App() {
   // therefore every screen's StyleSheet.create) is required. Without this
   // gate, the user toggles Higher Contrast in Settings, restarts, and sees
   // no change because the StyleSheets were baked with the default palette.
+  // themeReady is the single gate for the entire UI: if it never flips, the
+  // user gets a permanent black screen. So it is set exactly once, in
+  // finally, regardless of whether the bootstrap resolved or rejected —
+  // a failed pref read just means the default palette renders.
   useEffect(() => {
-    bootstrapAccessibility().then(() => setThemeReady(true));
+    bootstrapAccessibility()
+      .catch(() => {})
+      .finally(() => setThemeReady(true));
   }, []);
 
   // Boot the observability layer — session id, build identity, crash

@@ -200,7 +200,10 @@ const stackOptions = {
 // Hero-zoom transition for screens that "expand" out of a card on the
 // previous screen (ActiveWorkout opening from the Continue / Next
 // Session hero on Home, WorkoutSummary appearing after a finished
-// session). The destination fades in while scaling from 0.92 to 1.0
+// session, and the PlanDetail / RoutineDetail / ExerciseDetail screens
+// opening from their list cards — design audit D2, applied to every
+// registration of those screens across the stacks below).
+// The destination fades in while scaling from 0.92 to 1.0
 // so it reads as the source card growing into a full screen rather
 // than a flat slide. Matches the Whoop / Apple Health pattern of
 // "tap a card → it expands".
@@ -342,9 +345,9 @@ function PlansStack({ navigation }) {
     <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Plans" component={PlansScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlanUpdate" component={GatedPlanUpdate} options={{ headerShown: false }} />
-      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ title: 'Plan' }} />
-      <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ title: 'Edit Workout' }} />
-      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
+      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ title: 'Plan', ...heroZoomTransition }} />
+      <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ title: 'Edit Workout', ...heroZoomTransition }} />
+      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise', ...heroZoomTransition }} />
       <Stack.Screen name="ManualBuilder" component={ManualBuilderScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ title: 'Plan Library' }} />
       <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ title: 'Training Blocks' }} />
@@ -373,7 +376,7 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="LiftProgress" component={LiftProgressScreen} options={{ title: 'Lifts' }} />
       <Stack.Screen name="Consistency" component={ConsistencyScreen} options={{ title: 'Consistency' }} />
       <Stack.Screen name="Partner" component={GatedPartner} options={{ title: 'Training partner' }} />
-      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
+      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise', ...heroZoomTransition }} />
       <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="RecapStory" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ title: 'Share Card' }} />
@@ -502,7 +505,7 @@ function FirstRunStack() {
           session already answered. Skipping completes first run as before. */}
       <Stack.Screen name="FreeStarter" component={FreeStarterScreen} />
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: true, title: 'Plan Library' }} />
-      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: true, title: 'Plan' }} />
+      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: true, title: 'Plan', ...heroZoomTransition }} />
       <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={heroZoomTransition} />
     </Stack.Navigator>
   );
@@ -529,7 +532,7 @@ function ProOnboardingStack() {
     <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="ProOnboarding" component={ProOnboardingScreen} />
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: true, title: 'Plan Library' }} />
-      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: true, title: 'Plan' }} />
+      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: true, title: 'Plan', ...heroZoomTransition }} />
       <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={heroZoomTransition} />
       <Stack.Screen name="ProSetupComplete" component={ProSetupCompleteScreen} />
       {/* Registered here too so the onboarding hand-off screen can link
@@ -696,9 +699,19 @@ export default function RootNavigator() {
   useEffect(() => {
     async function bootstrap() {
       try {
-        // Await the SQLite init so subsequent reads (checkFirstRun,
-        // checkTier, getSession-driven hydrators) can't race against a
-        // half-open database. Failure here is rare but catastrophic, so
+        // checkFirstRun / checkTier are AsyncStorage-only (see
+        // useAppStore) — they never touch SQLite — so start them BEFORE
+        // the database init rather than serially after it. Previously
+        // the splash waited on DB open + migrations for two flags that
+        // need none of it (audit PR-4). The catch handlers are attached
+        // immediately so a rejection during initDatabase can't surface
+        // as unhandled.
+        checkFirstRun().catch((e) => _bootLog('warn', 'RootNavigator.bootstrap.checkFirstRun', e));
+        const tierPromise = checkTier().catch((e) => _bootLog('warn', 'RootNavigator.bootstrap.checkTier', e));
+
+        // Await the SQLite init so subsequent reads (the getSession-
+        // driven hydrators below) can't race against a half-open
+        // database. Failure here is rare but catastrophic, so
         // surface it via the log layer.
         try {
           await initDatabase();
@@ -740,14 +753,15 @@ export default function RootNavigator() {
           try { require('../lib/errorLog').logError('RootNavigator.bootstrap.initDb', e); } catch (_) {}
         }
 
-        checkFirstRun().catch((e) => _bootLog('warn', 'RootNavigator.bootstrap.checkFirstRun', e));
         // AWAIT checkTier so the local 'pro' value is in the store before
         // refreshTierFromCloud (below) reads it for the beta-demotion
         // guard. Without this they raced: the cloud refresh would see
         // tier=null, fail the "currentTier === 'pro'" check, and accept
         // the cloud's spurious 'free' value. Result was Pro users being
-        // silently demoted to Free on every app launch.
-        await checkTier().catch((e) => _bootLog('warn', 'RootNavigator.bootstrap.checkTier', e));
+        // silently demoted to Free on every app launch. (checkFirstRun
+        // stays fire-and-forget, exactly as before — only its start
+        // moved earlier.)
+        await tierPromise;
 
         try {
           const client = getSupabaseClient();
