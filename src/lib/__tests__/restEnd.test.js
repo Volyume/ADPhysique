@@ -19,12 +19,21 @@ jest.mock('expo-notifications', () => ({
   SchedulableTriggerInputTypes: { DATE: 'date' },
 }));
 
+// The in-app off switch (founder decision 2026-07-01) lives in the store's
+// device-local workout prefs; default on.
+let mockRestEndAlertEnabled = true;
+jest.mock('../../store/useAppStore', () => ({
+  __esModule: true,
+  default: { getState: () => ({ restEndAlertEnabled: mockRestEndAlertEnabled }) },
+}));
+
 const { scheduleRestEndNotification, cancelRestEndNotification } = require('../notifications/restEnd');
 
 beforeEach(() => {
   mockSchedule.mockClear();
   mockCancel.mockClear();
   mockPlatformOS = 'android';
+  mockRestEndAlertEnabled = true;
 });
 
 describe('scheduleRestEndNotification (A2)', () => {
@@ -60,6 +69,18 @@ describe('scheduleRestEndNotification (A2)', () => {
     mockPlatformOS = 'web';
     await scheduleRestEndNotification(Date.now() + 60_000);
     expect(mockSchedule).not.toHaveBeenCalled();
+  });
+
+  test('in-app off switch: disabled pref schedules nothing', async () => {
+    mockRestEndAlertEnabled = false;
+    await scheduleRestEndNotification(Date.now() + 60_000);
+    expect(mockSchedule).not.toHaveBeenCalled();
+  });
+
+  test('an unknown pref state keeps the default-on behaviour', async () => {
+    mockRestEndAlertEnabled = undefined;
+    await scheduleRestEndNotification(Date.now() + 60_000);
+    expect(mockSchedule).toHaveBeenCalledTimes(1);
   });
 
   test('cancel never throws', async () => {

@@ -1472,10 +1472,13 @@ const useAppStore = create((set, get) => ({
   // Workout prefs (Hevy teardown R1). Device-local, AsyncStorage-backed.
   // defaultRestSeconds is the global fallback rest used when a routine
   // exercise has no per-exercise rest set; autoStartRestTimer gates whether
-  // logging a set kicks off the rest countdown automatically. Defaults match
-  // the previous hardcoded behaviour (90s, auto-start on).
+  // logging a set kicks off the rest countdown automatically; and
+  // restEndAlertEnabled gates the A2 end-of-rest lock-screen alert (founder
+  // decision 2026-07-01: the alert ships with an in-app off switch). Defaults
+  // match the previous hardcoded behaviour (90s, auto-start on, alert on).
   defaultRestSeconds: 90,
   autoStartRestTimer: true,
+  restEndAlertEnabled: true,
   workoutPrefsLoaded: false,
   loadWorkoutPrefs: async () => {
     try {
@@ -1485,6 +1488,7 @@ const useAppStore = create((set, get) => ({
         const next = {};
         if (Number.isFinite(parsed.defaultRestSeconds)) next.defaultRestSeconds = parsed.defaultRestSeconds;
         if (typeof parsed.autoStartRestTimer === 'boolean') next.autoStartRestTimer = parsed.autoStartRestTimer;
+        if (typeof parsed.restEndAlertEnabled === 'boolean') next.restEndAlertEnabled = parsed.restEndAlertEnabled;
         set({ ...next, workoutPrefsLoaded: true });
       } else {
         set({ workoutPrefsLoaded: true });
@@ -1493,26 +1497,43 @@ const useAppStore = create((set, get) => ({
       set({ workoutPrefsLoaded: true });
     }
   },
+  _persistWorkoutPrefs: async () => {
+    try {
+      await AsyncStorage.setItem(WORKOUT_PREFS_KEY, JSON.stringify({
+        defaultRestSeconds: get().defaultRestSeconds,
+        autoStartRestTimer: get().autoStartRestTimer,
+        restEndAlertEnabled: get().restEndAlertEnabled,
+      }));
+    } catch (_) { /* offline-friendly: tolerate */ }
+  },
   setDefaultRestSeconds: async (seconds) => {
     // Clamp to the same 30–600s band the routine builder uses.
     const n = Math.max(30, Math.min(600, Math.round(Number(seconds) || 90)));
     set({ defaultRestSeconds: n });
-    try {
-      await AsyncStorage.setItem(WORKOUT_PREFS_KEY, JSON.stringify({
-        defaultRestSeconds: n,
-        autoStartRestTimer: get().autoStartRestTimer,
-      }));
-    } catch (_) { /* offline-friendly: tolerate */ }
+    await get()._persistWorkoutPrefs();
   },
   setAutoStartRestTimer: async (value) => {
+    set({ autoStartRestTimer: !!value });
+    await get()._persistWorkoutPrefs();
+  },
+  setRestEndAlertEnabled: async (value) => {
     const v = !!value;
-    set({ autoStartRestTimer: v });
+    set({ restEndAlertEnabled: v });
+    // Take effect mid-rest immediately: off cancels the pending alert; on
+    // (re)schedules for the remaining rest, if one is running.
     try {
-      await AsyncStorage.setItem(WORKOUT_PREFS_KEY, JSON.stringify({
-        defaultRestSeconds: get().defaultRestSeconds,
-        autoStartRestTimer: v,
-      }));
-    } catch (_) { /* offline-friendly: tolerate */ }
+      // eslint-disable-next-line global-require
+      const restEnd = require('../lib/notifications/restEnd');
+      if (!v) {
+        restEnd.cancelRestEndNotification();
+      } else {
+        const { restTimerActive, restTimerEndsAt } = get();
+        if (restTimerActive && Number(restTimerEndsAt) > Date.now()) {
+          restEnd.scheduleRestEndNotification(restTimerEndsAt);
+        }
+      }
+    } catch (_) {}
+    await get()._persistWorkoutPrefs();
   },
 
   // PR celebration queue. The user might hit two PRs on the same set

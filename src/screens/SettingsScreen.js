@@ -30,6 +30,7 @@ export default function SettingsScreen({ navigation }) {
     bodyWeightUnits, setBodyWeightUnits,
     defaultRestSeconds, setDefaultRestSeconds,
     autoStartRestTimer, setAutoStartRestTimer,
+    restEndAlertEnabled, setRestEndAlertEnabled,
     workoutPrefsLoaded, loadWorkoutPrefs,
   } = useAppStore(useShallow(s => ({
     user: s.user,
@@ -40,6 +41,8 @@ export default function SettingsScreen({ navigation }) {
     setDefaultRestSeconds: s.setDefaultRestSeconds,
     autoStartRestTimer: s.autoStartRestTimer,
     setAutoStartRestTimer: s.setAutoStartRestTimer,
+    restEndAlertEnabled: s.restEndAlertEnabled,
+    setRestEndAlertEnabled: s.setRestEndAlertEnabled,
     workoutPrefsLoaded: s.workoutPrefsLoaded,
     loadWorkoutPrefs: s.loadWorkoutPrefs,
   })));
@@ -200,6 +203,24 @@ export default function SettingsScreen({ navigation }) {
               onValueChange={v => setAutoStartRestTimer(v)}
               trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
               thumbColor={autoStartRestTimer ? colors.primary : colors.textMuted}
+            />
+          }
+        />
+
+        {/* A2 rest-end alert off switch (founder decision 2026-07-01): the
+            lock-screen "Rest done" alert is loud by design, so it carries its
+            own in-app disable rather than relying on OS channel settings. */}
+        <SettingRow
+          icon="notifications-outline"
+          label="Rest finished alert"
+          sub="Sound and vibrate when your rest ends, even with the phone locked. In-app cues are unaffected."
+          showArrow={false}
+          rightElement={
+            <Switch
+              value={!!restEndAlertEnabled}
+              onValueChange={v => setRestEndAlertEnabled(v)}
+              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
+              thumbColor={restEndAlertEnabled ? colors.primary : colors.textMuted}
             />
           }
         />

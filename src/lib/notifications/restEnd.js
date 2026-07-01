@@ -39,6 +39,15 @@ export async function cancelRestEndNotification() {
  */
 export async function scheduleRestEndNotification(endsAtMs) {
   if (Platform.OS === 'web') return;
+  // Founder decision 2026-07-01: the alert has an in-app off switch
+  // (Settings → Workout & units). The pref is device-local workout prefs
+  // state, hydrated by ActiveWorkoutScreen before any rest can start; the
+  // lazy require avoids an import cycle (store → this module → store).
+  try {
+    // eslint-disable-next-line global-require
+    const enabled = require('../../store/useAppStore').default.getState()?.restEndAlertEnabled;
+    if (enabled === false) return;
+  } catch (_) { /* unknown pref state: keep the default-on behaviour */ }
   try {
     await cancelRestEndNotification();
     const ms = Number(endsAtMs) - Date.now();

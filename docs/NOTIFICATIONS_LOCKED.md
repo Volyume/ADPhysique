@@ -284,3 +284,28 @@ Body:  Your check-in data is ready to review. It takes about two
 Title: Your weekly trend is ready{, First}
 Body:  Tap to see how the week compares, whenever suits you.
 ```
+
+## Addendum: rest-finished alert (founder decision 2026-07-01, Wave 1 A2)
+
+A new local notification, `rest_end`, fires once when an active rest timer
+reaches zero (`src/lib/notifications/restEnd.js`, channel `rest-alerts`,
+HIGH + sound on Android; a plain scheduled alert on iOS).
+
+Recorded deviations from the rules above, accepted by the founder:
+
+- **Quiet hours do not apply.** The user started this rest seconds earlier,
+  mid-session; shifting or dropping the alert would recreate the silent-rest
+  bug it exists to fix. It can only ever fire within a couple of minutes of a
+  deliberate user action.
+- **The push budget does not apply**, for the same reason: it is session
+  feedback, not outreach, and cannot fire outside an active workout.
+
+Rules that DO apply, unchanged:
+
+- Clear disable path: an in-app toggle in Settings → Workout & units
+  ("Rest finished alert", default on, takes effect immediately, including
+  mid-rest). The Android channel toggle also works.
+- Weight-free, calm copy; nothing ED-adjacent rides this surface, so the
+  ED-flag suppression rules are not implicated.
+- Foreground delivery is suppressed (the in-app timer owns the moment); the
+  alert is cancelled on skip, adjust, session end and sign-out.
