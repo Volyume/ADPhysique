@@ -189,6 +189,11 @@ export async function syncProfile(supabaseUserId, userProfile, _tier, { isBetaTe
       primary_equipment: userProfile?.primaryEquipment ?? null,
       bar_weight: userProfile?.barWeight ?? 20,
       diet_preference: userProfile?.dietPreference ?? 'omnivore',
+      // Biological sex (U2, migrate_094): mirror it onto the main profile row so
+      // it survives a fresh-install cloud pull even if the user_body_profile row
+      // is missing. Only 'male'/'female' reach here (enforced at onboarding);
+      // null for any legacy row without one. Requires migrate_094 applied.
+      sex: userProfile?.sex === 'male' || userProfile?.sex === 'female' ? userProfile.sex : null,
       updated_at: new Date().toISOString(),
     };
     // Beta-tester flag is still client-writable during the beta window
