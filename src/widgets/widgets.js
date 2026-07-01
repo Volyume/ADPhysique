@@ -14,7 +14,11 @@
  */
 import { FlexWidget, TextWidget } from 'react-native-android-widget';
 
-const AMBER = '#F59E0B';      // matches theme.js primary
+// Widgets render outside the app's theme pipeline (RemoteViews), so these are
+// literal copies of theme.js values. D0 fix (design audit 03): this previously
+// said #F59E0B while claiming to match the brand primary, an 8-point drift —
+// the real theme.js primary is #F5A623.
+const AMBER = '#F5A623';      // matches theme.js primary (keep in step manually)
 const INK = '#0D0D0D';
 const SURFACE = '#191917';
 const TEXT = '#FFFFFF';

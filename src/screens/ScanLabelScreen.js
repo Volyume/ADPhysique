@@ -299,8 +299,7 @@ export default function ScanLabelScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel={onFront ? 'Capture front of pack' : 'Capture nutrition panel'}
               >
-                {/* eslint-disable-next-line no-restricted-syntax -- spinner sits on the white camera capture button */}
-                {busy ? <ActivityIndicator color="#000" /> : <View style={styles.captureInner} />}
+                {busy ? <ActivityIndicator color={colors.camera} /> : <View style={styles.captureInner} />}
               </TouchableOpacity>
               {onFront && !busy ? (
                 <TouchableOpacity onPress={skipName} hitSlop={12} style={styles.skipBtn} accessibilityRole="button" accessibilityLabel="Skip name">
@@ -361,8 +360,7 @@ const styles = StyleSheet.create({
   },
   choiceTitle: { ...type.title, color: colors.textPrimary },
   choiceBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
-  // eslint-disable-next-line no-restricted-syntax -- camera viewport is true black behind the live preview
-  cameraWrap: { flex: 1, backgroundColor: '#000' },
+  cameraWrap: { flex: 1, backgroundColor: colors.camera },
   overlay: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   frame: {
     width: 280, height: 360, borderWidth: 2, borderColor: colors.primary,
@@ -399,8 +397,7 @@ const styles = StyleSheet.create({
   captureBtnDisabled: { opacity: 0.6 },
   skipBtn: { marginTop: spacing.md, paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
   skipText: { ...type.body, color: colors.textPrimary, backgroundColor: colors.scrim, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.sm },
-  // eslint-disable-next-line no-restricted-syntax -- camera capture-button inner dot, black-on-white is the shutter convention
-  captureInner: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#000' },
+  captureInner: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.camera },
   fallbackWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl },
   fallbackTitle: {
     ...type.title, color: colors.textPrimary,

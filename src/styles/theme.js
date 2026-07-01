@@ -86,6 +86,18 @@ const baseColors = {
   appleBtnBg: '#000000',
   appleBtnText: '#FFFFFF',
 
+  // Camera chrome (viewfinder surround). True black is correct behind a live
+  // camera preview in BOTH themes, so like appleBtnBg it is deliberately not
+  // overridden by the light palette. Tokenised (design audit 03, D0) so the
+  // "no hardcoded hex" rule stays absolute in the scanner screens.
+  camera: '#000000',
+
+  // Celebration particle colours (PRCelebration confetti). Fixed festive hues
+  // on the dark celebration scrim in both themes; never used as semantic
+  // status. Tokenised from the two remaining raw hexes (design audit 03, D0).
+  celebrationEmber: '#FF6B35',
+  celebrationViolet: '#9C27B0',
+
   // Chart tokens
   chartLine: '#F59E0B',
   chartFill: 'rgba(245, 158, 11, 0.08)',
@@ -272,6 +284,7 @@ export const spacing = {
 };
 
 export const radius = {
+  hair: 2,   // progress-bar caps and 2-3px pills, where 4px visibly rounds a thin bar
   xs: 4,     // chart dots, tiny chips, micro-UI (replaces hand-rolled 2-4px)
   sm: 6,
   md: 10,
@@ -440,6 +453,20 @@ export const type = {
     return { fontSize: fontSize.xs, fontWeight: fontWeight.regular,
       lineHeight: Math.round(fontSize.xs * lineHeight.snug), letterSpacing: letterSpacing.caption };
   },
+  // Small body copy: 13px with a body-comfort line height (13 × 1.5 ≈ 20).
+  // Design audit 03 (D0): the app's dominant hand-rolled combination is
+  // fontSize.sm + lineHeight 18-20 (~177 sites) because no token carried it —
+  // `label` is too tight (18) for multi-line copy. Adopt in later sweeps.
+  get bodySm() {
+    return { fontSize: fontSize.sm, fontWeight: fontWeight.regular,
+      lineHeight: Math.round(fontSize.sm * lineHeight.normal), letterSpacing: letterSpacing.body };
+  },
+  // Caption with a slightly roomier line (11 × 1.45 ≈ 16) for two-line
+  // caption copy; absorbs the hand-rolled xs + lineHeight 16/17 sites (D0).
+  get captionTight() {
+    return { fontSize: fontSize.xs, fontWeight: fontWeight.regular,
+      lineHeight: Math.round(fontSize.xs * 1.45), letterSpacing: letterSpacing.caption };
+  },
 };
 
 // Numerals are the hero. Any text node rendering a number the user reads as
@@ -454,6 +481,29 @@ export function num(roleName = 'body') {
 type.num = num;
 
 export const hitSlop = { top: 12, bottom: 12, left: 12, right: 12 };
+
+// Named alpha stops for withAlpha() tints (design audit 03, D0). The codebase
+// had drifted to 29 ad-hoc alpha values, many of them mechanical hex-suffix
+// conversions (0.251 = 0x40/255, 0.314 = 0x50/255) that are visually identical
+// to their round neighbours. New code uses these seven stops; existing call
+// sites migrate in later mechanical sweeps (maximum delta 0.033 on an
+// already-translucent tint, imperceptible).
+//   ghost  — barest wash (chart fills, faint rows)
+//   tint   — the primaryBg-strength tint (0.12)
+//   soft   — soft fills behind content
+//   edge   — tinted borders on quiet cards
+//   mid    — accent borders (the Card tone border)
+//   strong — heavy tinted borders / focus edges
+//   half   — 50% (scrims layered on colour)
+export const alpha = Object.freeze({
+  ghost: 0.08,
+  tint: 0.12,
+  soft: 0.19,
+  edge: 0.25,
+  mid: 0.33,
+  strong: 0.4,
+  half: 0.5,
+});
 
 export const shadow = {
   sm: {
@@ -554,6 +604,7 @@ export const motion = {
   enter: 320,   // sheets, cards, screen content entering
   exit: 220,    // leaving
   hero: 440,    // the one "important moment" per screen
+  sheet: 260,   // bottom-sheet open (BottomSheet's historical timing, tokenised in D0)
 
   // easing control points [x1, y1, x2, y2]
   easeStandard: [0.2, 0, 0, 1],

@@ -23,10 +23,9 @@ function createParticle(index) {
     scale: new Animated.Value(0),
     angle: (index / NUM_PARTICLES) * Math.PI * 2,
     distance: 80 + Math.random() * 180,
-    // Decorative confetti palette: brand tokens plus two festive accents
-    // that intentionally sit outside the UI palette for a one-off burst.
-    /* eslint-disable-next-line no-restricted-syntax */
-    color: [colors.primary, colors.gold, colors.success, '#FF6B35', '#9C27B0'][index % 5],
+    // Decorative confetti palette: brand tokens plus the two festive accents,
+    // tokenised in D0 (design audit 03) so no raw hex remains here.
+    color: [colors.primary, colors.gold, colors.success, colors.celebrationEmber, colors.celebrationViolet][index % 5],
     size: 6 + Math.random() * 8,
   };
 }
