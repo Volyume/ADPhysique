@@ -38,6 +38,8 @@ export { routeForNotificationType } from './notificationRoute';
 
 export {
   scheduleMorningWeightNotification,
+  scheduleEveningWeightReminder,
+  cancelEveningWeightReminder,
   scheduleCheckinReminder,
   scheduleNextCheckinReminder,
   scheduleCascadeGateNotifications,

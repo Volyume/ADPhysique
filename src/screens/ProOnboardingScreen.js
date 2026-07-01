@@ -22,6 +22,7 @@ import { generateAndSavePlan, planShortfallNote } from '../lib/planAutoGen';
 import {
   requestNotificationPermissions,
   scheduleMorningWeightNotification,
+  scheduleEveningWeightReminder,
   scheduleCheckinReminder,
 } from '../lib/notifications';
 import {
@@ -473,6 +474,8 @@ export default function ProOnboardingScreen({ navigation }) {
           };
           if (morningEnabled) {
             await scheduleMorningWeightNotification(morningHour, 0);
+            // Q1: evening weigh-in backstop rides the same toggle (self-gates on ED flag).
+            await scheduleEveningWeightReminder();
           }
           if (checkinEnabled) {
             await scheduleCheckinReminder(checkinDay, 12, 0);

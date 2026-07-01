@@ -29,6 +29,7 @@ export const CATEGORY = Object.freeze({
   // so historical scheduling code can map onto a category value
   // without lying about its intent.
   MORNING_WEIGHT: 'morning_weight',
+  EVENING_WEIGHT: 'evening_weight', // Q1: end-of-day backstop weigh-in nudge
   TRAINING_REMINDER: 'training_reminder',
   YEAR_OF_LIFTS_UNLOCK: 'year_of_lifts_unlock',
   MONTHLY_RECAP: 'monthly_recap', // COMP-005
@@ -102,6 +103,9 @@ export const CATEGORY_CHANNELS = Object.freeze({
   [CATEGORY.WEEKLY_COACH_READY]: [CHANNEL.PUSH],
   [CATEGORY.COACH_TRIAL_ENDING]: [CHANNEL.EMAIL],
   [CATEGORY.MORNING_WEIGHT]: [CHANNEL.PUSH],
+  // Q1: the evening weigh-in backstop. Push only; delivery-suppressed once the
+  // weight is logged and under an open ED flag (handler), scheduled ED-gated.
+  [CATEGORY.EVENING_WEIGHT]: [CHANNEL.PUSH],
   [CATEGORY.TRAINING_REMINDER]: [CHANNEL.PUSH],
   [CATEGORY.MEAL_LOG_REMINDER]: [CHANNEL.PUSH],
   [CATEGORY.YEAR_OF_LIFTS_UNLOCK]: [CHANNEL.PUSH],
@@ -171,6 +175,7 @@ export function isPushCategory(category) {
 export function categoryForDataType(type) {
   switch (type) {
     case 'morning_weight': return CATEGORY.MORNING_WEIGHT;
+    case 'evening_weight': return CATEGORY.EVENING_WEIGHT;
     case 'weekly_checkin': return CATEGORY.WEEKLY_CHECKIN_REMINDER;
     case 'training_reminder': return CATEGORY.TRAINING_REMINDER;
     case 'year_of_lifts_unlock': return CATEGORY.YEAR_OF_LIFTS_UNLOCK;

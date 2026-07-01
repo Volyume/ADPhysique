@@ -22,6 +22,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import {
   scheduleMorningWeightNotification,
+  scheduleEveningWeightReminder,
   scheduleCheckinReminder,
   scheduleMissedCheckinFollowups,
   cancelMissedCheckinFollowups,
@@ -91,6 +92,8 @@ async function applyScheduled(prefs, permissionStatus) {
   await cancelCheckinNotification();
   if (permissionStatus === 'granted') {
     await scheduleMorningWeightNotification(prefs.morningHour, prefs.morningMinute);
+    // Q1: evening weigh-in backstop rides the same toggle (self-gates on ED flag).
+    await scheduleEveningWeightReminder();
     await scheduleCheckinReminder(
       prefs.checkinDay, prefs.checkinHour, prefs.checkinMinute,
       { lastCheckinMs: prefs.lastCheckinMs ?? 0, minGapDays: 7 },

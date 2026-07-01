@@ -146,6 +146,84 @@ describe('scheduleMorningWeightNotification', () => {
     expect(mockScheduleAsync).not.toHaveBeenCalled();
     expect(mockCancelAsync).not.toHaveBeenCalled();
   });
+
+  test('Q1: morning nudge now fires with sound on (was silent)', async () => {
+    await scheduler.scheduleMorningWeightNotification(7, 0);
+    const args = mockScheduleAsync.mock.calls.map((c) => c[0]);
+    expect(args.length).toBe(7);
+    args.forEach((a) => expect(a.content.sound).toBe(true));
+  });
+});
+
+// ─── scheduleEveningWeightReminder (Q1) ─────────────────────────────
+
+describe('scheduleEveningWeightReminder', () => {
+  test('default lays a WEEKLY evening trigger per weekday, sound on, type evening_weight', async () => {
+    await scheduler.scheduleEveningWeightReminder(); // defaults 19:30
+    // 7 weekly triggers, one per weekday.
+    expect(mockScheduleAsync).toHaveBeenCalledTimes(7);
+    const args = mockScheduleAsync.mock.calls.map((c) => c[0]);
+    expect(args.map((a) => a.identifier).sort()).toEqual([
+      'volyume_evening_weight_1', 'volyume_evening_weight_2', 'volyume_evening_weight_3',
+      'volyume_evening_weight_4', 'volyume_evening_weight_5', 'volyume_evening_weight_6',
+      'volyume_evening_weight_7',
+    ]);
+    args.forEach((a, i) => {
+      expect(a.content.data).toEqual({ type: 'evening_weight' });
+      expect(a.content.sound).toBe(true);
+      expect(a.trigger).toEqual({
+        channelId: 'coaching-reminders',
+        type: SCHEDULE_INPUT_TYPES.WEEKLY,
+        weekday: i + 1,
+        hour: 19,
+        minute: 30,
+      });
+    });
+  });
+
+  test('cancels its 7 ids before re-laying', async () => {
+    await scheduler.scheduleEveningWeightReminder();
+    for (let w = 1; w <= 7; w += 1) {
+      expect(mockCancelAsync).toHaveBeenCalledWith(`volyume_evening_weight_${w}`);
+    }
+  });
+
+  test('open ED flag -> does NOT lay a second daily weight prompt', async () => {
+    mockGetOpenEdFlag.mockResolvedValue({ id: 'flag-1', status: 'open' });
+    await scheduler.scheduleEveningWeightReminder();
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+
+  test('19:30 outside the default quiet window passes through unshifted', async () => {
+    await scheduler.scheduleEveningWeightReminder(19, 30);
+    expect(mockScheduleAsync.mock.calls[0][0].trigger.hour).toBe(19);
+    expect(mockScheduleAsync.mock.calls[0][0].trigger.minute).toBe(30);
+  });
+
+  test('a time inside quiet hours is shifted out', async () => {
+    await AsyncStorage.setItem(
+      '@volyume_quiet_hours_v1',
+      JSON.stringify({ enabled: true, startHour: 19, startMinute: 0, endHour: 21, endMinute: 0 }),
+    );
+    await scheduler.scheduleEveningWeightReminder(19, 30);
+    expect(mockScheduleAsync.mock.calls[0][0].trigger.hour).toBe(21);
+  });
+
+  test('web platform: no-op', async () => {
+    mockPlatformOS = 'web';
+    await scheduler.scheduleEveningWeightReminder();
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+
+  test('failure -> notification_failed telemetry fires with evening_weight category', async () => {
+    mockScheduleAsync.mockRejectedValue(new Error('os refused'));
+    await scheduler.scheduleEveningWeightReminder();
+    expect(mockTrack).toHaveBeenCalledWith(
+      'user-1',
+      'notification_failed',
+      expect.objectContaining({ category: 'evening_weight', reason: 'schedule_threw' }),
+    );
+  });
 });
 
 // ─── scheduleCheckinReminder ───────────────────────────────────────

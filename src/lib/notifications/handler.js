@@ -19,7 +19,13 @@ export function configureNotificationHandler() {
     handleNotification: async (notification) => {
       const dataType = notification?.request?.content?.data?.type;
       try {
-        if (dataType === 'morning_weight' && await _alreadyLoggedWeightToday()) {
+        // morning_weight now fires with sound (Q1), and the evening backstop is
+        // a second daily weight prompt — so both stand down once the weight is
+        // logged AND under an open ED flag (a loud/repeated weigh-in prompt at a
+        // flagged user is the harm pattern; suppression here is protection, it
+        // never weakens a floor or threshold).
+        if ((dataType === 'morning_weight' || dataType === 'evening_weight')
+            && (await _alreadyLoggedWeightToday() || await _edFlagOpen())) {
           return { shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false };
         }
         if (dataType === 'weekly_checkin' && await _alreadyCheckedInThisWeek()) {

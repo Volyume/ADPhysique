@@ -47,6 +47,7 @@ import { missedCheckinFireDates, missedCheckinPush } from './missedCheckin';
 import { plannedMealConfirmPush, plannedConfirmSlot } from './plannedMealConfirm';
 
 const NOTIF_ID_MORNING = 'volyume_morning_weight';
+const NOTIF_ID_EVENING = 'volyume_evening_weight';
 const NOTIF_ID_CHECKIN = 'volyume_weekly_checkin';
 const NOTIF_ID_TRIAL_DAY3 = 'volyume_trial_day3';
 const NOTIF_ID_WINBACK = 'volyume_winback';
@@ -117,7 +118,11 @@ export async function scheduleMorningWeightNotification(hour = 7, minute = 0) {
           title: copy.title,
           body: copy.body,
           data: { type: 'morning_weight' },
-          sound: false,
+          // Q1: sound ON so a locked-phone morning nudge is actually noticed
+          // (was silent). The handler still stands this down once the weight is
+          // logged, and now also under an open ED flag (louder => must go quiet
+          // when a flag is open).
+          sound: true,
         },
         trigger: {
           channelId: COACHING_REMINDERS_CHANNEL,
@@ -136,6 +141,102 @@ export async function scheduleMorningWeightNotification(hour = 7, minute = 0) {
     });
     if (typeof __DEV__ !== 'undefined' && __DEV__) {
       logWarn('notifications.scheduleMorningWeight', e?.message);
+    }
+  }
+}
+
+// ─── Evening weigh-in backstop (Q1) ───────────────────────────────────────────
+// A gentle end-of-day second chance to log today's weight, laid alongside the
+// morning nudge and governed by the SAME morningEnabled toggle. Copy is neutral
+// ("if you haven't yet") so it never accuses a user who already logged, and the
+// handler stands it down at delivery once the weight is logged or an ED flag is
+// open. Additionally ED-gated at SCHEDULE time here: while a flag is open we do
+// not lay it at all (a second daily weight prompt at a flagged user is the harm
+// pattern). Re-laid on every launch (restoreNotifications), so it comes back the
+// moment a flag clears.
+
+function eveningCopies(name) {
+  return [
+    { title: `Evening${name}`, body: 'If you haven\'t caught today\'s weight yet, there\'s still time. No worries either way.' },
+    { title: `Before the day\'s out${name}`, body: 'A gentle nudge to log today\'s weight if you haven\'t already.' },
+    { title: `Quick one${name}`, body: 'Not logged your weight today? Whenever suits, it keeps your coaching on track.' },
+    { title: `Evening${name}`, body: 'Still time to pop on the scales today if you fancy it. That\'s all for now.' },
+  ];
+}
+
+function pickEveningCopy(dayOfWeek, name = '') {
+  const copies = eveningCopies(name);
+  return copies[dayOfWeek % copies.length];
+}
+
+async function eveningEdFlagOpen() {
+  try {
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../../store/useAppStore').default;
+    const uid = useAppStore.getState()?.user?.id;
+    if (!uid) return false;
+    // eslint-disable-next-line global-require
+    const { getOpenEdPatternFlag } = require('../database');
+    return !!(await getOpenEdPatternFlag(uid));
+  } catch (_) {
+    return false;
+  }
+}
+
+export async function cancelEveningWeightReminder() {
+  for (let w = 1; w <= 7; w += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    try { await Notifications.cancelScheduledNotificationAsync(`${NOTIF_ID_EVENING}_${w}`); } catch {}
+  }
+}
+
+/**
+ * Evening weigh-in backstop. Lays one WEEKLY trigger per weekday (rotating copy,
+ * like the morning nudge). Suppressed at schedule time under an open ED flag,
+ * and again at delivery (handler) once the weight is logged / the flag is open.
+ *
+ * @param {number} hour    0-23, default 19 (19:30 local)
+ * @param {number} minute  0-59, default 30
+ */
+export async function scheduleEveningWeightReminder(hour = 19, minute = 30) {
+  if (Platform.OS === 'web') return;
+  try {
+    await cancelEveningWeightReminder();
+    // ED-flag schedule gate: never lay a second daily weight prompt while a
+    // flag is open. restoreNotifications re-lays this, so it returns the moment
+    // the flag clears.
+    if (await eveningEdFlagOpen()) return;
+    const quiet = await getQuietHours();
+    const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hour, minute, quiet);
+    const name = greetName();
+    for (let expoWeekday = 1; expoWeekday <= 7; expoWeekday += 1) {
+      const copy = pickEveningCopy(expoWeekday - 1, name);
+      // eslint-disable-next-line no-await-in-loop
+      await Notifications.scheduleNotificationAsync({
+        identifier: `${NOTIF_ID_EVENING}_${expoWeekday}`,
+        content: {
+          title: copy.title,
+          body: copy.body,
+          data: { type: 'evening_weight' },
+          sound: true,
+        },
+        trigger: {
+          channelId: COACHING_REMINDERS_CHANNEL,
+          type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+          weekday: expoWeekday,
+          hour: h,
+          minute: m,
+        },
+      });
+    }
+  } catch (e) {
+    trackNotificationFailed({
+      category: CATEGORY.EVENING_WEIGHT,
+      reason: 'schedule_threw',
+      payload: { message: e?.message ?? 'unknown' },
+    });
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      logWarn('notifications.scheduleEveningWeight', e?.message);
     }
   }
 }
@@ -878,6 +979,9 @@ export async function cancelMorningNotification() {
   for (let w = 1; w <= 7; w += 1) {
     try { await Notifications.cancelScheduledNotificationAsync(`${NOTIF_ID_MORNING}_${w}`); } catch {}
   }
+  // Q1: the evening backstop rides the same morningEnabled toggle, so turning
+  // the morning nudge off clears it too.
+  await cancelEveningWeightReminder();
 }
 
 export async function cancelCheckinNotification() {
@@ -932,6 +1036,11 @@ export async function restoreNotifications(prefs, userId = null) {
 
   if (prefs.morningEnabled) {
     await scheduleMorningWeightNotification(prefs.morningHour ?? 7, prefs.morningMinute ?? 0);
+    // Q1: the evening backstop rides the same toggle. Fixed 19:30 default; the
+    // helper self-gates under an open ED flag.
+    await scheduleEveningWeightReminder(prefs.eveningHour ?? 19, prefs.eveningMinute ?? 30);
+  } else {
+    await cancelEveningWeightReminder();
   }
   if (prefs.checkinEnabled) {
     await scheduleNextCheckinReminder(
