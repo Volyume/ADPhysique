@@ -32,8 +32,6 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Volyume uses the camera to scan barcodes, read nutrition labels, and take progress photos.",
-        "NSHealthShareUsageDescription": "Volyume reads your weight and completed cardio sessions including heart rate from Apple Health so your logs and trends stay in sync with your watch, scale, or other apps. Read only.",
-        "NSHealthUpdateUsageDescription": "Volyume writes completed workouts to Apple Health so your weekly activity stays accurate across your other apps.",
         "NSMotionUsageDescription": "Volyume uses motion sensing for the shake-to-send-feedback gesture.",
         "NSLocationWhenInUseUsageDescription": "Volyume does not track your location. This entry is required by a bundled camera library and the permission is never requested.",
         "NSMicrophoneUsageDescription": "Volyume does not record audio. This entry is required by a bundled media library used for timer sounds and the permission is never requested.",
@@ -63,19 +61,14 @@
         "backgroundColor": "#0D0D0D"
       },
       "package": "app.volyume",
-      "versionCode": 22,
+      "versionCode": 23,
       "allowBackup": false,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.VIBRATE",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.FOREGROUND_SERVICE",
-        "android.permission.WAKE_LOCK",
-        "android.permission.health.READ_WEIGHT",
-        "android.permission.health.READ_EXERCISE",
-        "android.permission.health.READ_HEART_RATE",
-        "android.permission.health.WRITE_EXERCISE",
-        "android.permission.health.WRITE_ACTIVE_CALORIES_BURNED"
+        "android.permission.WAKE_LOCK"
       ],
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO",
@@ -183,7 +176,7 @@
             "buildToolsVersion": "35.0.0",
             "usesCleartextTraffic": false,
             "manifestQueries": {
-              "package": ["com.google.android.apps.healthdata", "com.whatsapp"],
+              "package": ["com.whatsapp"],
               "intent": [
                 { "action": "android.intent.action.SENDTO", "data": { "scheme": "smsto" } },
                 { "action": "android.intent.action.SENDTO", "data": { "scheme": "mailto" } },
@@ -204,16 +197,6 @@
           "url": "https://sentry.io/"
         }
       ],
-      [
-        "react-native-health",
-        {
-          "isClinicalDataEnabled": false,
-          "healthSharePermission": "Volyume reads your weight and completed cardio sessions including heart rate from Apple Health so your logs and trends stay in sync with your watch, scale, or other apps. Read only.",
-          "healthUpdatePermission": "Volyume writes completed workouts to Apple Health so your weekly activity stays accurate across your other apps."
-        }
-      ],
-      "react-native-health-connect",
-      "./plugins/withHealthConnectPermissionDelegate",
       [
         "react-native-android-widget",
         {

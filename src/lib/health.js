@@ -97,23 +97,16 @@ async function _ensureIosReadyForRead(scopes) {
   return _ensureIosInited(_iosPermsForScopes(asked));
 }
 
-function getIosModule() {
-  if (_iosModule || Platform.OS !== 'ios') return _iosModule;
-  try {
-    // eslint-disable-next-line global-require, import/no-unresolved
-    _iosModule = require('react-native-health').default;
-  } catch (_) { _iosModule = null; }
-  return _iosModule;
-}
-
-function getAndroidModule() {
-  if (_androidModule || Platform.OS !== 'android') return _androidModule;
-  try {
-    // eslint-disable-next-line global-require, import/no-unresolved
-    _androidModule = require('react-native-health-connect');
-  } catch (_) { _androidModule = null; }
-  return _androidModule;
-}
+// Health Connect (Android) and Apple HealthKit (iOS) were removed entirely
+// (founder 2026-06-30: the health-platform permissions were a Google Play
+// review liability and the integration is not wanted). These getters now always
+// return null, so isHealthAvailable() is false and every function below no-ops
+// gracefully. Removing the native require() strings is what lets the
+// react-native-health / react-native-health-connect dependencies be dropped
+// without a Metro resolution error. Manual weight + cardio logging are entirely
+// separate (morning_weights / cardio_log) and are unaffected.
+function getIosModule() { return null; }
+function getAndroidModule() { return null; }
 
 /**
  * True when the native module is loadable on the current device.

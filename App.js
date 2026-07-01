@@ -386,36 +386,8 @@ export default function App() {
   const [calm, setCalm] = useState(false);
   const [themeReady, setThemeReady] = useState(false);
 
-  // Daily-steps launch prompt. We ask once per install, the first time a
-  // settled user opens the app without steps connected, so they don't have
-  // to find the Settings toggle to discover the feature. The decision and
-  // the prompt itself live in stepsLaunchPrompt; this just feeds it the
-  // store state once first-run has been resolved.
-  const stepsPromptUser = useAppStore(s => s.user?.id ?? null);
-  const stepsPromptFirstRunChecked = useAppStore(s => s.firstRunChecked);
-  const stepsPromptFirstRunComplete = useAppStore(s => s.firstRunComplete);
-  const stepsPromptEnabled = useAppStore(s => s.userProfile?.stepsEnabled !== false);
-  const stepsPromptFiredRef = useRef(false);
-  useEffect(() => {
-    if (stepsPromptFiredRef.current) return;
-    // Wait until first-run state is actually known (avoids prompting over the
-    // onboarding flow) and a user is resolved.
-    if (!stepsPromptFirstRunChecked || !stepsPromptFirstRunComplete) return;
-    if (!stepsPromptUser) return;
-    stepsPromptFiredRef.current = true;
-    // Small delay so the prompt lands after the first screen settles rather
-    // than racing the splash-to-home transition.
-    const t = setTimeout(() => {
-      // eslint-disable-next-line global-require
-      const { maybePromptStepsConnect } = require('./src/lib/stepsLaunchPrompt');
-      maybePromptStepsConnect({
-        userId: stepsPromptUser,
-        firstRunComplete: stepsPromptFirstRunComplete,
-        stepsEnabled: stepsPromptEnabled,
-      }).catch(() => {});
-    }, 1200);
-    return () => clearTimeout(t);
-  }, [stepsPromptUser, stepsPromptFirstRunChecked, stepsPromptFirstRunComplete, stepsPromptEnabled]);
+  // (The daily-steps launch prompt was removed with the Health Connect / Apple
+  // Health integration, founder 2026-06-30.)
 
   const [priorCrash, setPriorCrash] = useState(false);
 

@@ -233,9 +233,6 @@ export default function ProOnboardingScreen({ navigation }) {
   const [morningHour, setMorningHour] = useState(7);
   const [checkinEnabled, setCheckinEnabled] = useState(true);
   const [checkinDay, setCheckinDay] = useState(0);
-  // Daily step target. On by default: the coach uses steps as its first,
-  // gentlest lever. The user can opt out here or later in Settings.
-  const [stepsTargetOn, setStepsTargetOn] = useState(true);
   // Cardio available by default. On means the cardio library + logging are
   // available to the user; it does NOT allocate cardio. The coach only ever
   // brings cardio in as a lever when it is genuinely needed (a stalling cut),
@@ -612,8 +609,6 @@ export default function ProOnboardingScreen({ navigation }) {
         goalPhase,
         phaseStartedAt: Date.now(),
         goalStartDate: isDeficit ? new Date().toISOString() : null,
-        stepsTarget: (userProfile || {}).stepsTarget ?? 8000,
-        stepsEnabled: stepsTargetOn,
         cardioEnabled: cardioOn,
         trainingFreq: trainingFreqBucket,
         trainingFreqBucket,
@@ -638,18 +633,8 @@ export default function ProOnboardingScreen({ navigation }) {
 
       if (user?.id) await saveLocalProfile(user.id, merged);
 
-      // Opting into step targets is the moment to ask for health access. We
-      // request steps and weight together in one sheet, so the foreground
-      // auto-read can populate daily_steps and any scale or wearable weight
-      // flows into the morning-weight log the check-in reads. Fire-and-forget:
-      // declining is fine, the check-in falls back to a manual average.
-      if (stepsTargetOn) {
-        try {
-          // eslint-disable-next-line global-require
-          const { connectHealthStepsAndWeight } = require('../lib/activitySteps');
-          connectHealthStepsAndWeight(user?.id).catch(() => {});
-        } catch (_) { /* activitySteps unavailable */ }
-      }
+      // (Health Connect / Apple Health connect-on-enrolment was removed with the
+      // step-target feature, founder 2026-06-30.)
 
       if (user?.id && !isNaN(bwKg) && bwKg > 0) {
         await logBodyMetric(user.id, {
@@ -1504,34 +1489,11 @@ export default function ProOnboardingScreen({ navigation }) {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.fieldLabel}>Daily movement</Text>
-            <Text style={styles.fieldHint}>How much you walk each day. Steps are the first thing the coach leans on when progress slows, before it touches your food.</Text>
+            <Text style={styles.fieldLabel}>Cardio</Text>
+            <Text style={styles.fieldHint}>Optional cardio logging. The coach only leans on cardio if a cut stalls, never before.</Text>
 
             <View style={styles.notifSection}>
               <View style={styles.notifHeader}>
-                <View style={styles.notifIconWrap}>
-                  <Ionicons name="footsteps-outline" size={18} color={colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.notifTitle}>Daily step target</Text>
-                  <Text style={styles.notifSub}>
-                    {stepsTargetOn
-                      ? 'Starts at 8,000 a day, the same every day. Your phone fills the number in for you. Adjust it any time in Settings.'
-                      : 'Off. The coach will lean on your food, and later on cardio, instead of steps. Turn this back on any time in Settings.'}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={[styles.toggle, stepsTargetOn && styles.toggleOn]}
-                  onPress={() => setStepsTargetOn(v => !v)}
-                  accessibilityRole="switch"
-                  accessibilityState={{ checked: stepsTargetOn }}
-                  accessibilityLabel="Keep a daily step target"
-                >
-                  <View style={[styles.toggleThumb, stepsTargetOn && styles.toggleThumbOn]} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={[styles.notifHeader, { marginTop: spacing.md }]}>
                 <View style={styles.notifIconWrap}>
                   <Ionicons name="heart-outline" size={18} color={colors.primary} />
                 </View>
