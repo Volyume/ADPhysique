@@ -38,12 +38,12 @@ const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 
 
 
 const SET_TYPE_OPTIONS = [
-  { value: 'straight', label: 'Working', description: 'Counts toward your weekly totals and progress tracking.' },
+  { value: 'straight', label: 'Working', description: 'Counts towards your weekly totals and progress tracking.' },
   { value: 'warmup', label: 'Warm-up', description: 'Lighter sets before your main work. Not counted in your weekly totals.' },
-  { value: 'dropset', label: 'Drop set', description: 'Reduce the weight at failure and keep going. Counts toward weekly volume, not the set-target counter.' },
-  { value: 'myo_reps', label: 'Myo-reps', description: 'A heavy activation set, then short mini-sets with a few breaths between. Counts toward volume and progress.' },
-  { value: 'rest_pause', label: 'Rest-pause', description: 'Hit failure, rest 10 to 20 seconds, then squeeze out more reps. Counts toward volume and progress.' },
-  { value: 'amrap', label: 'AMRAP', description: 'As many reps as possible, usually the last set. Counts toward volume and progress.' },
+  { value: 'dropset', label: 'Drop set', description: 'Reduce the weight at failure and keep going. Counts towards weekly volume, not the set-target counter.' },
+  { value: 'myo_reps', label: 'Myo-reps', description: 'A heavy activation set, then short mini-sets with a few breaths between. Counts towards volume and progress.' },
+  { value: 'rest_pause', label: 'Rest-pause', description: 'Hit failure, rest 10 to 20 seconds, then squeeze out more reps. Counts towards volume and progress.' },
+  { value: 'amrap', label: 'AMRAP', description: 'As many reps as possible, usually the last set. Counts towards volume and progress.' },
 ];
 
 // Returns the set to use as the rep-progression anchor.
@@ -557,7 +557,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     showActiveWorkoutNotification({
       workoutName: activeWorkout?.name,
       elapsedSeconds,
-      // Count only WORKING sets toward the index. Including warm-ups
+      // Count only WORKING sets towards the index. Including warm-ups
       // produced "Set 3 of 2" on the lock-screen / persistent
       // notification when the user logged a warm-up before the first
       // working set. totalSetsForExercise is the *working* target.
@@ -582,7 +582,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     showActiveWorkoutNotification({
       workoutName: activeWorkout?.name,
       elapsedSeconds,
-      // Count only WORKING sets toward the index. Including warm-ups
+      // Count only WORKING sets towards the index. Including warm-ups
       // produced "Set 3 of 2" on the lock-screen / persistent
       // notification when the user logged a warm-up before the first
       // working set. totalSetsForExercise is the *working* target.
@@ -1429,7 +1429,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             async function doFinish() {
               // WK-2: count from the DB, not the in-memory exercise list, so
               // sets logged on an exercise later swapped out or removed still
-              // count toward the workout total. Those rows stay in the DB and
+              // count towards the workout total. Those rows stay in the DB and
               // in history/volume aggregates; snapshotExercises drops them,
               // which under-reported the finished workout. Fall back to memory
               // if the read fails.
@@ -2387,7 +2387,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>Set type</Text>
             <Text style={styles.sheetExplainer}>
-              Pick how this set was done. Working and the intensity techniques all count toward your weekly totals; warm-ups don't. The label tells the coach how you trained.
+              Pick how this set was done. Working and the intensity techniques all count towards your weekly totals; warm-ups don't. The label tells the coach how you trained.
             </Text>
             {SET_TYPE_OPTIONS.map(opt => (
               <TouchableOpacity

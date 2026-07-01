@@ -799,7 +799,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               "• 1.6 to 2.2 g/kg: the range most commonly recommended for building muscle. Research suggests gains plateau around 1.62 g/kg bodyweight; the upper end gives a comfortable buffer without being excessive.\n\n" +
               "• 2.2 to 3.3 g/kg: the upper end, used by serious athletes and people cutting aggressively. Effective at preserving muscle, but harder to sustain day-to-day.\n\n" +
               "There is no single right answer. The level you can consistently hit every day will produce better results than an aggressive target you miss half the time.\n\n" +
-              "The approaches below are the specific targets Volyume uses; they sit toward the higher end of these ranges, where muscle retention is strongest."
+              "The approaches below are the specific targets Volyume uses; they sit towards the higher end of these ranges, where muscle retention is strongest."
             } />
             <Text style={styles.approachNoteText}>Different guidelines use different targets. Pick the level you can consistently sustain.</Text>
           </View>

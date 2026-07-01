@@ -2082,7 +2082,7 @@ export async function getWorkoutSetsForWorkout(workoutId) {
  * recent moving average (and rank it within the window).
  *
  * Aggregates in SQL so we don't pay an N+1 trip per workout. Excludes
- * warm-up sets, they don't count toward "working tonnage" and including
+ * warm-up sets, they don't count towards "working tonnage" and including
  * them would inflate the average vs the headline tonnage shown on the
  * summary screen.
  */

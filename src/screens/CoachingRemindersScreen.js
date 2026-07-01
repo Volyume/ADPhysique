@@ -329,7 +329,7 @@ export default function CoachingRemindersScreen() {
           <Text style={styles.scheduleText}>Notification at {formatHour(morningHour)}</Text>
           <View style={styles.helperBlock}>
             <Text style={styles.helperText}>
-              Body weight shifts naturally each day with fluid, food, and hormones. Logging every other day (at minimum) lets the trend math smooth out that noise. Three or more readings per week unlocks the weekly check-in.
+              Body weight shifts naturally each day with fluid, food, and hormones. Logging every other day (at minimum) lets the trend math smooth out that noise. Three or more readings per week opens up the weekly check-in.
             </Text>
           </View>
         </Card>

@@ -839,7 +839,7 @@ export default function BodyMetricsScreen() {
                     );
                   })()}
                   <Text style={styles.ewmaMuted}>
-                    Smoothed across daily fluctuations. More reliable than a single weigh-in.
+                    Smoothed out across day-to-day ups and downs, so it's more reliable than a single weigh-in.
                   </Text>
                   {recentIntake?.daysLogged > 0 && (
                     <Text style={styles.ewmaIntake}>

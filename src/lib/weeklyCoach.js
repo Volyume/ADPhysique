@@ -151,7 +151,7 @@ function getRecoveryScore(energyScore, sorenessScore, stressScore = null) {
   else score = 2;
   // PIPE-001 / ALGO-006: high life stress impairs recovery. Stress runs 1 (low)
   // to 5 (very high) on the check-in. A high-stress week can only worsen the
-  // read toward a hold, never improve it, so the matrix won't push more volume
+  // read towards a hold, never improve it, so the matrix won't push more volume
   // onto someone who is frazzled outside the gym. Below 4 (high) it's left to
   // energy and soreness as before, so existing behaviour is unchanged.
   const st = stressScore ?? null;

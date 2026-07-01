@@ -11,7 +11,7 @@ import InfoTooltip from './InfoTooltip';
 // options: [{ value, label, sub? }]. onChange receives the chosen value.
 // tip: optional plain-English gloss (U-E-1) rendered as an InfoTooltip beside the
 // label; omitted by default so existing usages are unchanged.
-export default function Dropdown({ label, hint, value, options, onChange, placeholder = 'Select...', tip }) {
+export default function Dropdown({ label, hint, value, options, onChange, placeholder = 'Choose…', tip }) {
   const [open, setOpen] = useState(false);
   const selected = options.find(o => o.value === value);
   return (

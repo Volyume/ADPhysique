@@ -796,7 +796,7 @@ const LIBRARY_PLANS = [
           { name: 'Leg Press', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Higher foot placement for more glute and hamstring. Full range.' },
           { name: 'Lying Leg Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Curl towards glutes. Hold a second at top.' },
           { name: 'Incline Dumbbell Press', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Slight incline. Upper chest emphasis. Control down.' },
-          { name: 'Lat Pulldown (Wide Grip)', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Pull elbows down to sides. Arch chest toward bar.' },
+          { name: 'Lat Pulldown (Wide Grip)', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Pull elbows down to sides. Arch chest towards bar.' },
           { name: 'Dumbbell Lateral Raise', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Light weight. Raise to shoulder height. Slow and controlled.' },
         ],
       },

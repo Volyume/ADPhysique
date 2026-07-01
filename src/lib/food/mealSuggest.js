@@ -101,7 +101,7 @@ export function remainingMacros(targets, consumed) {
  * report: "cuts lean on cod/white fish/chicken breast"; the macro skeleton keeps
  * a "small fat" that changes by composition). Selection previously ignored fat
  * entirely, so a day could stack lean meals and drift well under the engine's
- * fat target. We now nudge toward a candidate whose fat sits near this slot's
+ * fat target. We now nudge towards a candidate whose fat sits near this slot's
  * fat share. Bidirectional (both under- and over-fat are penalised), capped, and
  * weighted BELOW protein and overshoot so protein-first and the calorie band
  * stay dominant — no meal data and no target maths change.

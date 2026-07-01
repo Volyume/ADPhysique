@@ -9,7 +9,7 @@
  * derivation makes that defect class unrepresentable.
  */
 
-// Drop sets count for weekly volume but NOT toward the set-target progress.
+// Drop sets count for weekly volume but NOT towards the set-target progress.
 // Only straight, amrap, myo-reps, rest-pause and superset sets tick the
 // target counter.
 export function countProgressSets(sets) {

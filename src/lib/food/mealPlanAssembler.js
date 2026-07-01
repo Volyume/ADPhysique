@@ -413,7 +413,7 @@ export function assembleDayPlan({
         if (lastUsed !== undefined && prefs.variety > 0) {
           score -= varietyScale * prefs.variety * (0.6 / Math.max(1, lastUsed));
         }
-        // 3-3-3 rotation pool: a soft pull toward the user's chosen staples.
+        // 3-3-3 rotation pool: a soft pull towards the user's chosen staples.
         score += 0.15 * poolAffinity(cand, prefs.rotationPool);
         // Peri-workout slot character: low fat going in; protein + carbs out.
         if (slot.kind === 'pre_workout') score -= (cand.totals.fat / 100);
@@ -523,11 +523,11 @@ export function assembleDayPlan({
   };
 
   // Drive the day to the TARGET, not merely into the ±10% band. rescaleOne
-  // already solves each staple toward want.kcal; the loop must keep going until
+  // already solves each staple towards want.kcal; the loop must keep going until
   // the day is within a few kcal of target (or no staple can move), otherwise it
   // stops at the band edge and leaves the day up to ~10% under the user's
   // calories — meals that visibly don't fill the target (founder 2026-06-20).
-  // Floor-safe: raising toward target never drops a day below the floor (target
+  // Floor-safe: raising towards target never drops a day below the floor (target
   // is >= floor; a floored target IS the floor), and per-food clamps cap portion
   // sizes so a single staple can't balloon.
   const EXACT_TOL_KCAL = Math.max(10, Math.round(want.kcal * 0.005));

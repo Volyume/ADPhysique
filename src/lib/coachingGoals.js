@@ -433,7 +433,7 @@ export function migrateProfileGoals(profile) {
 // classic_physique: All groups judged. Calves specifically called out.
 //                   Shoulder-to-waist ratio critical. Waist control via reduced abs.
 //
-// bodybuilding:    Maximum development everywhere. Everything pushed toward MRV.
+// bodybuilding:    Maximum development everywhere. Everything pushed towards MRV.
 //
 // bikini:          Glutes and hamstrings are the primary judging criterion.
 //                  Upper body stays lean and proportional. Waist stays small.

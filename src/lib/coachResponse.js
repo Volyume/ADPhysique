@@ -102,7 +102,7 @@ function buildAcknowledgement({ sessionsCompleted, sessionsPlanned, prsThisWeek,
   }
 
   if (!suppress && weighIns != null && weighIns >= 3) {
-    return clean(`${plural(weighIns, 'weigh-in')} logged this week. That is enough data to read the trend.`);
+    return clean(`${plural(weighIns, 'weigh-in')} logged this week. Enough to read the trend from.`);
   }
 
   if (checkin) {
