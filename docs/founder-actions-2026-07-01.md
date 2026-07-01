@@ -10,24 +10,48 @@ end for what is deliberately NOT built and why.
 
 ---
 
-## 1. Database migrations — nothing manual, just confirm CI is green
+## 1. Database migrations — ACTION NEEDED: the migration CI is failing
 
-You do not paste any SQL. Per your own rule ("I do not deploy anything"),
-`.github/workflows/deploy-migrations.yml` applies every `supabase/migrate_*.sql`
-to the cloud DB automatically **on merge to `main`**, recording each one in a
-tracking table (`claude_schema_migrations`) so it runs at most once. Re-running
-is a no-op.
+The design is that `.github/workflows/deploy-migrations.yml` applies every
+`supabase/migrate_*.sql` to the cloud DB automatically **on merge to `main`**,
+recording each one in a tracking table (`claude_schema_migrations`) so it runs at
+most once. You paste no SQL.
 
-- The only schema change in recent work is **`migrate_094_users_profile_sex.sql`**
-  (adds the nullable `sex` column to `users_profile` for U2). It is additive and
-  idempotent.
-- **Action:** after this branch merges to `main`, open the **Actions** tab and
-  confirm the **"Apply Supabase migrations"** run went green. That is the whole
-  job.
-- U4, U6, and the Q1 weigh-in work add **no** migration.
+**But it is currently broken.** The workflow has failed on every recent run
+(2026-06-29, 06-30, and the 07-01 merge of this work) at its first step with:
 
-If the workflow ever fails, it fails loudly and rolls back (single transaction,
-`ON_ERROR_STOP`) — it never half-applies. If that happens, send me the run log.
+```
+SUPABASE_DB_URL is empty. Add it in repo Settings -> Secrets and variables -> Actions
+```
+
+The required secret **`SUPABASE_DB_URL` is missing/empty**, so the job exits
+before touching the database. The workflow header claims this secret was
+configured on 2026-06-06, so it has since been removed, renamed, or rotated.
+
+**Consequence:** these migrations have NOT been applied to EU-Dublin:
+- `migrate_092_partner_end_purge`
+- `migrate_093_landmark_telemetry`
+- `migrate_094_users_profile_sex` (this session's U2 `sex` column)
+
+Production is not broken by this: U2 was written to tolerate the `sex` column
+being absent (the client write is skipped/ignored and the read falls back to a
+sex-less select), and U4/U6/Q1 add no migration. Sex simply keeps living in
+`user_body_profile` until the column exists. But the last three migrations are
+silently un-applied and will bite when the app depends on one of those columns.
+
+**Action (about 2 minutes):**
+1. Repo **Settings → Secrets and variables → Actions** → add secret
+   **`SUPABASE_DB_URL`** = your Supabase Postgres connection string (Supabase
+   dashboard → Project Settings → Database → Connection string, **URI** form,
+   including the password). If the secret exists under a different name, either
+   rename it to `SUPABASE_DB_URL` or tell me and I will point the workflow at it.
+2. Re-run: **Actions → "Apply Supabase migrations" → Run workflow**. It is
+   idempotent and tracks what is applied, so it applies 092/093/094 and skips the
+   rest.
+
+Each file runs in a single transaction with `ON_ERROR_STOP`, so a real SQL
+failure rolls back loudly rather than half-applying. Send me the run log if the
+re-run fails for any reason other than the missing secret.
 
 ---
 
