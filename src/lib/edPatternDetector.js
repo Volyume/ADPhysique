@@ -41,8 +41,10 @@ const WEIGHT_ONLY_WINDOW = 3;
  *   trailing weekly trend, signed. -1.5 means dropping 1.5% of body
  *   weight per week. Null when there aren't enough readings.
  * @param {Array<Object>} weeklyHistory
- *   most-recent-first. Each entry: { energy, adherence, hasFoodData }.
- *   adherence is 'under' | 'hit' | 'over' | null.
+ *   most-recent-first. Each entry: { energy, adherence, hasCheckin, hasFoodData }.
+ *   adherence is 'under' | 'hit' | 'over' | null. hasCheckin marks that a
+ *   check-in happened that week (the s4 weight-only signal needs it); hasFoodData
+ *   marks that food was logged that week.
  * @param {boolean} goalLockAdvanced
  * @returns {{
  *   fired: boolean,
@@ -88,10 +90,19 @@ export function hasEdPatternCleared(userState, weeklyHistory) {
   // not rapid AND last 2 weeks both have energy > threshold AND
   // adherence in {hit, over} AND food data present, the flag clears.
   const recentTwo = history.slice(0, 2);
-  const energyOk = recentTwo.every(w => (w?.energy ?? null) == null || w.energy > LOW_ENERGY_THRESHOLD);
+  // Clearance requires POSITIVE evidence the danger signals have abated, never
+  // the mere ABSENCE of data (audit 2026-07-01 HIGH): a protective hold must
+  // NOT lift just because an at-risk user stopped logging. So a null energy or
+  // a null weight trend counts as "not cleared", not "cleared".
+  //   - energy must be RECORDED and above the low-energy threshold for both
+  //     weeks (mirrors isLowEnergySustained, which also demands energy != null);
+  //   - the weight trend must be a real, finite reading confirmed non-rapid
+  //     (isRapidLoss(null) is false, so a null trend would otherwise pass).
+  const trend = userState?.weightTrendPctPerWeek;
+  const energyOk = recentTwo.every(w => w?.energy != null && w.energy > LOW_ENERGY_THRESHOLD);
   const adherenceOk = recentTwo.every(w => (w?.adherence ?? null) !== 'under');
   const foodOk = recentTwo.every(w => w?.hasFoodData === true);
-  const lossOk = !isRapidLoss(userState?.weightTrendPctPerWeek);
+  const lossOk = trend != null && Number.isFinite(trend) && !isRapidLoss(trend);
   return energyOk && adherenceOk && foodOk && lossOk;
 }
 

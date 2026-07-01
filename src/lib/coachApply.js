@@ -19,7 +19,21 @@
  * pieces. No I/O here.
  */
 
+// Sex-aware ED calorie floors. These MUST match nutritionEngine.js
+// (sex === 'male' ? 1500 : 1200) — the coach Apply path is an enforcement
+// point of the same safety invariant, so applying a calorie adjustment must
+// never write a male target below 1500 or a female/unknown target below 1200
+// (audit 2026-07-01 CRITICAL: the Apply path floored everyone at 1200, so a
+// male cut suggestion could be written below the 1500 male floor). KCAL_FLOOR
+// stays the female/default (unknown-sex) floor for backwards compatibility.
 export const KCAL_FLOOR = 1200;
+export const KCAL_FLOOR_MALE = 1500;
+
+// The sex-aware floor for a calorie target. Unknown sex falls to 1200 to match
+// nutritionEngine.js exactly (never assume male, but never write below 1200).
+export function kcalFloorForSex(sex) {
+  return sex === 'male' ? KCAL_FLOOR_MALE : KCAL_FLOOR;
+}
 
 // Absolute weekly per-muscle set ceiling used as a last-resort backstop in
 // computeVolumeApply when a planned_muscle_volume row carries neither mrv nor
@@ -36,17 +50,21 @@ export const ABSOLUTE_WEEKLY_SET_CEILING = 30;
  *
  * Protein is the priority macro and is held constant. Fat and carbs
  * scale with the kcal change so the deficit/surplus split holds. The
- * floor stops a cut suggestion ever pushing the target below 1200.
+ * sex-aware floor stops a cut suggestion ever pushing the target below the
+ * user's ED safety floor (1500 male, 1200 female/unknown).
  *
+ * @param {object} nutrition current targets row (must carry targetKcal)
+ * @param {number} change    kcal delta to apply
+ * @param {string} [sex]     'male' raises the floor to 1500; anything else 1200
  * @returns {null | { newKcal: number, targets: object }}
  *   null when there is nothing to apply: no change, no current target
  *   to scale from, or the floor clamps the result back to the current
  *   value (so applying would be a no-op).
  */
-export function computeCalorieTargets(nutrition, change) {
+export function computeCalorieTargets(nutrition, change, sex) {
   const current = nutrition?.targetKcal;
   if (!change || !current) return null;
-  const newKcal = Math.max(KCAL_FLOOR, current + change);
+  const newKcal = Math.max(kcalFloorForSex(sex), current + change);
   if (newKcal === current) return null;
   const ratio = newKcal / current;
   // Spread the existing row first so untouched fields survive the save.
@@ -76,12 +94,12 @@ export function computeCalorieTargets(nutrition, change) {
  *   null when there is nothing to apply: no current target, no
  *   maintenance figure to raise to, or already at/above maintenance.
  */
-export function computeDietBreakTargets(nutrition) {
+export function computeDietBreakTargets(nutrition, sex) {
   const current = nutrition?.targetKcal;
   const maintenance = nutrition?.tdee;
   if (!current || !maintenance) return null;
   if (maintenance <= current) return null;
-  return computeCalorieTargets(nutrition, Math.round(maintenance - current));
+  return computeCalorieTargets(nutrition, Math.round(maintenance - current), sex);
 }
 
 // Fraction of baseline carbs pulled off each rest day. The freed carbs
