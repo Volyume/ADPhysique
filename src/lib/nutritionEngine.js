@@ -633,6 +633,51 @@ export function computeFFMFloor(weightKg, { bodyFatPercent = null, bodyFatSource
   };
 }
 
+// Preventive low-energy-availability caution lines (U3, founder 2026-07-01).
+// Sex-aware and set ABOVE the 30 kcal/kg FFM hard floor so the warning fires
+// BEFORE a user is prescribed an under-fuelling cut, not after. Proxy EA uses
+// the same simplified intake/FFM model as computeFFMFloor (it does not subtract
+// exercise expenditure, which the app does not track reliably).
+export const EA_CAUTION_KCAL_PER_KG = { male: 35, female: 40 };
+
+/**
+ * Preventive energy-availability caution for a PLANNED calorie target (U3).
+ *
+ * Returns null when there is nothing to warn about (not a deficit, EA at/above
+ * the sex-aware caution line, or inputs unusable). Otherwise returns the proxy
+ * EA, the caution line, and a suggested EASED target that lifts EA back to the
+ * line — capped at maintenance and never below the sex calorie floor, so the
+ * nudge can only ever RAISE calories, never push below a safety floor.
+ *
+ * @param {number} targetKcal        the planned daily target
+ * @param {number} maintenanceKcal   the user's maintenance (TDEE)
+ * @param {object} body              { weightKg, bodyFatPercent, bodyFatSource, sex }
+ */
+export function energyAvailabilityCaution(targetKcal, maintenanceKcal, { weightKg, bodyFatPercent = null, bodyFatSource = null, sex = null } = {}) {
+  if (!isFinite(targetKcal) || !isFinite(maintenanceKcal) || !isFinite(weightKg) || weightKg <= 0) return null;
+  // Only relevant when a cut is being prescribed; low EA at maintenance is a
+  // separate, rarer concern and would false-alarm here.
+  if (!(targetKcal < maintenanceKcal)) return null;
+  const { ffmKg } = computeFFMFloor(weightKg, { bodyFatPercent, bodyFatSource, sex });
+  if (!isFinite(ffmKg) || ffmKg <= 0) return null;
+  const proxyEA = targetKcal / ffmKg;
+  const line = sex === 'female' ? EA_CAUTION_KCAL_PER_KG.female : EA_CAUTION_KCAL_PER_KG.male;
+  if (proxyEA >= line) return null;
+  const sexFloor = sex === 'male' ? 1500 : 1200;
+  // Ease the deficit up to the caution line, but never above maintenance and
+  // never below the sex floor. Since proxyEA < line implies targetKcal <
+  // line * ffmKg, this is always >= targetKcal (in a deficit), so it only raises.
+  let suggestedKcal = Math.round(line * ffmKg);
+  suggestedKcal = Math.min(suggestedKcal, Math.round(maintenanceKcal));
+  suggestedKcal = Math.max(suggestedKcal, sexFloor);
+  return {
+    proxyEA: Math.round(proxyEA * 10) / 10,
+    cautionKcalPerKg: line,
+    ffmKg: Math.round(ffmKg * 10) / 10,
+    suggestedKcal: suggestedKcal > targetKcal ? suggestedKcal : null,
+  };
+}
+
 function calcConfidence(bodyFatSource) {
   if (bodyFatSource === 'dexa' || bodyFatSource === 'caliper') return 'high';
   if (bodyFatSource === 'bia') return 'medium';
@@ -830,6 +875,23 @@ export function calculateNutritionTargets(inputs) {
     }
   }
 
+  // --- U3: preventive low-energy-availability caution on the FINAL target ---
+  // The 30 kcal/kg FFM hard floor still enforces downstream; this only warns
+  // EARLIER, when the prescribed deficit lands below the sex-aware caution line
+  // (men 35 / women 40 kcal/kg FFM), and offers an eased target the UI can
+  // surface as a one-tap nudge. Never lowers the target or a safety floor.
+  const eaCaution = energyAvailabilityCaution(targetKcal, maintenanceKcal, {
+    weightKg: safeWeight, bodyFatPercent, bodyFatSource, sex,
+  });
+  if (eaCaution) {
+    const easeLine = eaCaution.suggestedKcal
+      ? ` Easing to about ${eaCaution.suggestedKcal} kcal would keep more energy available for training and recovery.`
+      : ' Easing the deficit a little would keep more energy available for training and recovery.';
+    warnings.push(
+      `This target is low on energy availability (about ${eaCaution.proxyEA} kcal per kg of lean mass, under the ${eaCaution.cautionKcalPerKg} guideline).${easeLine}`,
+    );
+  }
+
   // --- Macros ---
   const { proteinG: proteinRaw, basis: proteinBasis, proteinRateUsed } =
     calcProtein(goal, safeWeight, lbm, bodyFatSource, proteinApproach, customProteinGPerKg);
@@ -892,6 +954,7 @@ export function calculateNutritionTargets(inputs) {
     formulaUsed: formula,
     warnings,
     floorApplied,    // structured: a safety system raised this target
+    eaCaution,       // U3: { proxyEA, cautionKcalPerKg, ffmKg, suggestedKcal } or null
     isConsentRequired: true,
   };
 }

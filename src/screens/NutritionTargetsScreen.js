@@ -315,8 +315,9 @@ export default function NutritionTargetsScreen({ navigation }) {
     sex && age.trim() && heightFt.trim() && weight.trim() && consent;
 
   // ── Calculate ──────────────────────────────────────────────────────────────
-  async function handleCalculate() {
+  async function handleCalculate(goalOverride) {
     if (!formComplete) return;
+    const goalToUse = (typeof goalOverride === 'string') ? goalOverride : goal;
 
     const ageNum    = parseInt(age, 10);
     const weightNum = parseFloat(weight);
@@ -355,7 +356,7 @@ export default function NutritionTargetsScreen({ navigation }) {
         bodyFatPercent:     bfNum,
         bodyFatSource:      bfNum != null ? bfSource : null,
         activityLevel:      activity,
-        goal,
+        goal: goalToUse,
         // Scale the surplus by training experience, matching onboarding and the
         // plan-update flow. Sourced from the profile since this form has no
         // experience field of its own.
@@ -1215,6 +1216,26 @@ export default function NutritionTargetsScreen({ navigation }) {
                 </View>
               ))}
 
+              {/* U3: one-tap nudge to ease the deficit when energy availability is
+                  low. Steps the goal down one notch and recalculates. Only ever
+                  RAISES calories; the hard floors are unchanged either way. */}
+              {results.eaCaution?.suggestedKcal ? (() => {
+                const easedGoal = { aggressive_cut: 'mild_cut', mild_cut: 'recomp', recomp: 'maintain' }[results.goal];
+                if (!easedGoal) return null;
+                return (
+                  <TouchableOpacity
+                    style={styles.easeNudge}
+                    onPress={() => { setGoal(easedGoal); handleCalculate(easedGoal); }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Ease this cut to about ${results.eaCaution.suggestedKcal} kilocalories`}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="trending-up-outline" size={16} color={colors.primary} />
+                    <Text style={styles.easeNudgeText}>Ease this cut to about {results.eaCaution.suggestedKcal} kcal</Text>
+                  </TouchableOpacity>
+                );
+              })() : null}
+
               {/* How calculated (expandable) */}
               <TouchableOpacity
                 style={styles.expandHeader}
@@ -1754,6 +1775,24 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.warning,
     lineHeight: 18,
+  },
+
+  easeNudge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, 0.4),
+    backgroundColor: colors.primaryBg,
+  },
+  easeNudgeText: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
   },
 
   expandHeader: {
