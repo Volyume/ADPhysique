@@ -39,12 +39,6 @@ import {
   stoneLbsToKg, parseBodyWeightToKg, kgToStoneLbsStrings, kgToLbs, formatBodyWeightShort,
 } from '../lib/units';
 
-// The morning weigh-in window: before this hour, with no log yet and no active
-// session, the weight cell renders expanded with its input open (the morning
-// ritual gets a stronger answer than mere position). Matches the morning
-// notification ritual (scheduler NOTIF_ID_MORNING).
-const MORNING_WINDOW_END_HOUR = 11;
-
 // Larger-text mode: stack the cells (weight full-width, the rest below) rather
 // than truncate a narrow row. Lowered from 1.3 once a fourth (FOOD) cell could
 // co-occur, so the row stacks before four cells start to crowd/wrap.
@@ -60,7 +54,6 @@ export default function TodayStrip({
   lastWeightKg = null,
   savingWeight = false,
   onLogWeight,
-  hasActiveWorkout = false,
   cardioEnabled = true,
   onCardioPress,
   // COMP-004 door: when provided, tapping the LOGGED weight cell opens the
@@ -90,12 +83,12 @@ export default function TodayStrip({
 
   const hasDraft = !!(weightInput || weightInputSt);
 
-  // The weight cell wants its input open when: a morning window with no log and
-  // no active session, OR the user tapped to log/edit. Prefill the draft from
-  // the last known weight (morning) or the value being edited.
-  const now = new Date();
-  const morningWindow = todayWeight == null && now.getHours() < MORNING_WINDOW_END_HOUR && !hasActiveWorkout;
-  const inputOpen = editing || (todayWeight == null && morningWindow);
+  // The weight input opens only when the user taps the WEIGHT cell to log/edit
+  // (founder 2026-07-01: the old morning auto-expand left the strip's weight
+  // input open full-width with a lone Cardio cell stranded below it, which read
+  // as messy once steps was removed). Resting, the strip is a clean one-line
+  // WEIGHT | CARDIO row; tapping WEIGHT opens the input.
+  const inputOpen = editing;
 
   // Prefill once when the input first opens with an empty draft.
   const prefilledRef = useRef(false);

@@ -80,29 +80,29 @@ describe('weight cell', () => {
     expect(json(tree)).toContain('MORNING WEIGHT');
   });
 
-  test('after the morning window with no log: compact Log prompt (not expanded)', async () => {
+  // Founder 2026-07-01: the morning auto-expand was removed (it left a full-width
+  // weight input with a lone Cardio cell stranded below, which read as messy once
+  // steps was gone). The strip is now a compact WEIGHT | CARDIO row at any hour
+  // until the user taps WEIGHT to open the input.
+  test('no log, afternoon: compact Log prompt (not expanded)', async () => {
     hoursSpy = jest.spyOn(Date.prototype, 'getHours').mockReturnValue(15);
     const tree = await render({ todayWeight: null, cardioEnabled: false });
     expect(json(tree)).not.toContain('MORNING WEIGHT');
     expect(findByLabel(tree, 'Log morning weight')).toBeTruthy();
   });
 
-  test('inside the morning window with no log: expanded input row', async () => {
+  test('no log, morning: still compact (no auto-expand)', async () => {
     hoursSpy = jest.spyOn(Date.prototype, 'getHours').mockReturnValue(8);
     const tree = await render({ todayWeight: null, lastWeightKg: 80, cardioEnabled: false });
-    expect(json(tree)).toContain('MORNING WEIGHT');
-  });
-
-  test('an active session suppresses the morning expansion', async () => {
-    hoursSpy = jest.spyOn(Date.prototype, 'getHours').mockReturnValue(8);
-    const tree = await render({ todayWeight: null, hasActiveWorkout: true, cardioEnabled: false });
     expect(json(tree)).not.toContain('MORNING WEIGHT');
+    expect(findByLabel(tree, 'Log morning weight')).toBeTruthy();
   });
 
-  test('submitting the input calls onLogWeight with the parsed kg', async () => {
-    hoursSpy = jest.spyOn(Date.prototype, 'getHours').mockReturnValue(8);
+  test('tapping WEIGHT opens the input; submitting calls onLogWeight with the parsed kg', async () => {
     const onLogWeight = jest.fn();
     const tree = await render({ todayWeight: null, onLogWeight, cardioEnabled: false });
+    // Open the editor by tapping the compact WEIGHT cell.
+    act(() => findByLabel(tree, 'Log morning weight').props.onPress());
     const input = tree.root.findAll(n => n.props.placeholder === 'kg' && typeof n.props.onChangeText === 'function')[0];
     act(() => input.props.onChangeText('80'));
     act(() => findByLabel(tree, 'Log morning weight').props.onPress());
