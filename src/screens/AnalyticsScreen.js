@@ -10,6 +10,8 @@ import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius, volumeColors, type } from '../styles/theme';
 import Card from '../components/Card';
 import ScreenHeader from '../components/ScreenHeader';
+import { SkeletonCard } from '../components/Skeleton';
+import { ProBadge } from '../components/ProGate';
 import { EmptyChartIllustration } from '../components/Illustrations';
 import InfoTooltip from '../components/InfoTooltip';
 import CardioPlanCard from '../components/CardioPlanCard';
@@ -336,6 +338,19 @@ export default function AnalyticsScreen({ navigation, route }) {
           </View>
         ) : null}
 
+        {/* Skeleton placeholders during the initial cold-load, in the same
+            layout slots the loaded content fills (insight rows, recent
+            sessions, the volume summary) so the dashboard doesn't pop in
+            with a layout shift once the SQLite reads finish. Mirrors the
+            HomeScreen cold-load pattern. */}
+        {loading && (
+          <View style={styles.section}>
+            <SkeletonCard height={64} />
+            <SkeletonCard height={64} />
+            <SkeletonCard height={92} />
+          </View>
+        )}
+
         {/* ── Empty state (U-D-4: encouragement-framed, matching BodyMetrics) ── */}
         {!loading && allSets.length === 0 && (
           <View style={styles.emptyState}>
@@ -519,11 +534,11 @@ export default function AnalyticsScreen({ navigation, route }) {
                 progress chart and landed on a logging form). The IA pass will
                 lead that screen with the trend; the label stops over-promising
                 now. */}
-            <NavTile icon="body" color={colors.warning} label="Body Metrics" onPress={() => navigation.navigate('BodyMetrics')} />
+            <NavTile icon="body" color={colors.warning} label="Body Metrics" pro={tier !== 'pro'} onPress={() => navigation.navigate('BodyMetrics')} />
             {/* NEW-002 rebuild: the partner's first-class destination (Apple
                 Fitness pattern: minimal-signal sharing still gets a proper
                 named home, never a buried row). */}
-            <NavTile icon="people" color={colors.primary} label="Partner" onPress={() => navigation.navigate('Partner')} />
+            <NavTile icon="people" color={colors.primary} label="Partner" pro={tier !== 'pro'} onPress={() => navigation.navigate('Partner')} />
             <NavTile icon="time" color={colors.textSecondary} label="Full History" onPress={() => navigation.navigate('WorkoutHistory')} />
             {(() => {
               // COMP-005: Recaps replaces the year-long locked Year-of-Lifts
@@ -720,17 +735,19 @@ function SessionCard({ workout }) {
   );
 }
 
-function NavTile({ icon, color, label, onPress, locked, lockedSub }) {
+function NavTile({ icon, color, label, onPress, locked, lockedSub, pro }) {
   // When locked, the tile is dimmed and onPress fires an inline
   // explanation rather than navigating. Used for features that need
   // accumulated training data (e.g. Year of Lifts needs a year).
+  // `pro` marks a tile whose destination is Pro-gated, shown to free
+  // users only, so the lock screen behind it is never a surprise.
   return (
     <TouchableOpacity
       style={[styles.navTile, locked && styles.navTileLocked]}
       onPress={onPress}
       activeOpacity={0.75}
       accessibilityRole="button"
-      accessibilityLabel={locked ? `${label}. Locked. ${lockedSub ?? ''}` : label}
+      accessibilityLabel={locked ? `${label}. Locked. ${lockedSub ?? ''}` : pro ? `${label}. Part of Pro.` : label}
       accessibilityState={{ disabled: !!locked }}
     >
       <Ionicons
@@ -738,7 +755,10 @@ function NavTile({ icon, color, label, onPress, locked, lockedSub }) {
         size={22}
         color={locked ? colors.textMuted : color}
       />
-      <Text style={[styles.navTileLabel, locked && styles.navTileLabelLocked]}>{label}</Text>
+      <View style={styles.navTileLabelRow}>
+        <Text style={[styles.navTileLabel, locked && styles.navTileLabelLocked]}>{label}</Text>
+        {pro ? <ProBadge size="sm" /> : null}
+      </View>
       {locked && lockedSub ? (
         <Text style={styles.navTileSub} numberOfLines={1}>{lockedSub}</Text>
       ) : null}
@@ -862,6 +882,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg, alignItems: 'center', gap: spacing.sm,
     borderWidth: 1, borderColor: colors.border,
   },
+  navTileLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   navTileLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
     color: colors.textSecondary, textAlign: 'center',

@@ -19,6 +19,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/t
 import ScreenHeader from '../components/ScreenHeader';
 import PressableCard from '../components/PressableCard';
 import { ProBadge } from '../components/ProGate';
+import { Skeleton } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getAllWorkouts } from '../lib/database';
@@ -90,6 +91,11 @@ export default function YouScreen({ navigation }) {
             </View>
             {sessions != null ? (
               <Text style={styles.profileStat}>{sessions} session{sessions !== 1 ? 's' : ''}</Text>
+            ) : user?.id ? (
+              // Cold-start skeleton in the same slot the session count fills,
+              // so the stat fades in instead of popping the layout (Skeleton.js
+              // doctrine). Sized to the caption line it replaces.
+              <Skeleton width={88} height={12} />
             ) : null}
           </View>
         </View>

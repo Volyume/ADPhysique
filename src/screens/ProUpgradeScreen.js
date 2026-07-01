@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import Button from '../components/Button';
+import TierComparisonStrip from '../components/TierComparisonStrip';
 import { storeName } from '../lib/storeName';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
@@ -20,6 +21,33 @@ const PRO_PERKS = [
   { icon: 'calendar-outline', text: 'Precision Coaching™ that adjusts your training and nutrition as your body responds' },
   { icon: 'nutrition-outline', text: 'Personalised calorie and protein targets, updated as your goals change' },
   { icon: 'eye-outline', text: 'After every check-in, your coach explains every decision. What changed, what was left alone, and why.' },
+];
+
+// Wave-1 A8: the honest answers a buyer weighs up at the decision point.
+// Copy only. The behaviour each answer describes is owned elsewhere
+// (billing in src/lib/payments/, the held-seat rule on SubscriptionPolicy);
+// nothing here reads or changes billing state.
+const FAQ_ITEMS = [
+  {
+    q: 'What happens to my logged data if I go back to Free?',
+    a: 'Everything you logged is saved, and will be exactly as you left it if you come back. Your training log, plans and personal bests stay fully usable on Free.',
+  },
+  {
+    q: 'How do I cancel?',
+    a: `Through ${storeName()}, any time. You keep Pro until the end of the period you have already paid for.`,
+  },
+  {
+    q: 'What stays free forever?',
+    a: 'Workout logging, building your own plans, the exercise library, personal bests and your progress stats. None of it is ever taken away.',
+  },
+  {
+    q: 'How does the 14-day trial work?',
+    a: 'No card needed. You get full Pro for 14 days, and if you decide not to subscribe it winds down gently and nothing you logged is lost.',
+  },
+  {
+    q: 'I subscribed before. How do I get Pro back?',
+    a: `Tap Restore purchases on any Pro lock screen and your subscription is read back from ${storeName()}. Restoring never charges you.`,
+  },
 ];
 
 export default function ProUpgradeScreen({ navigation, route }) {
@@ -311,18 +339,13 @@ export default function ProUpgradeScreen({ navigation, route }) {
             Precision Coaching™ is built from training research, your recovery, your food, and your progress.
           </Text>
 
-          <TouchableOpacity
-            style={styles.policyLink}
-            onPress={() => navigation.navigate('SubscriptionPolicy')}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            accessibilityRole="button"
-            accessibilityLabel="Subscription terms"
-          >
-            <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
-            <Text style={styles.policyLinkText}>
-              What stays if you switch back to Free later
-            </Text>
-          </TouchableOpacity>
+          {/* Wave-1 A8: the same store-priced Free-vs-Pro strip the Pro locks
+              use, so the decision point carries the honest side-by-side.
+              Prices come from Google Play via usePlayPrices inside the strip;
+              nothing is hardcoded. Follows the billing period picked below. */}
+          <View style={styles.compareWrap}>
+            <TierComparisonStrip pricingWindow={period} highlighted="pro" />
+          </View>
 
           {hasAccount ? (
             <>
@@ -411,6 +434,32 @@ export default function ProUpgradeScreen({ navigation, route }) {
             </>
           )}
 
+          {/* Wave-1 A8: common questions, below the comparison and above the
+              legal links. Plain headings (this screen has no collapse
+              pattern); each answer is one or two calm, honest sentences. */}
+          <View style={styles.faqWrap}>
+            <Text style={styles.faqTitle}>Common questions</Text>
+            {FAQ_ITEMS.map(item => (
+              <View key={item.q} style={styles.faqItem}>
+                <Text style={styles.faqQ}>{item.q}</Text>
+                <Text style={styles.faqA}>{item.a}</Text>
+              </View>
+            ))}
+          </View>
+
+          <TouchableOpacity
+            style={styles.policyLink}
+            onPress={() => navigation.navigate('SubscriptionPolicy')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel="Subscription terms"
+          >
+            <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.policyLinkText}>
+              What stays if you switch back to Free later
+            </Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.laterBtn} onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Maybe later">
             <Text style={styles.laterText}>Maybe later</Text>
           </TouchableOpacity>
@@ -456,6 +505,15 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17,
     marginTop: spacing.md, paddingHorizontal: spacing.xs,
   },
+
+  compareWrap: { marginTop: spacing.lg, marginBottom: spacing.xl },
+
+  // Wave-1 A8 FAQ
+  faqWrap: { gap: spacing.md, marginTop: spacing.xl },
+  faqTitle: { ...type.label, color: colors.textSecondary },
+  faqItem: { gap: spacing.xxs },
+  faqQ: { ...type.bodyStrong, color: colors.textPrimary },
+  faqA: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
 
   accountNote: {
     fontSize: fontSize.sm, color: colors.textMuted,
