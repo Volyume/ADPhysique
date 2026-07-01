@@ -131,6 +131,22 @@ export default function Article9ConsentScreen({ navigation }) {
         logError('Article9.consent.startCascade.require', e);
       }
       healthConsentGranted?.();
+      // F2 (audit SC-1): the sign-in cloud restore is consent-gated
+      // (fail closed), so for a user who granted consent on THIS screen it
+      // never ran. Kick one now that the store carries consent === true;
+      // the runner's lock makes any overlapping trigger a harmless skip.
+      if (user?.id) {
+        try {
+          // eslint-disable-next-line global-require
+          const { syncAll } = require('../lib/sync');
+          // eslint-disable-next-line global-require
+          const store = require('../store/useAppStore').default;
+          store.getState().markCloudSyncing?.();
+          syncAll({ userId: user.id, localUserId: user.id, triggeredBy: 'manual' })
+            .then(() => store.getState().markCloudSyncComplete?.())
+            .catch((e2) => store.getState().markCloudSyncError?.(e2?.message));
+        } catch (_) { /* the next foreground sync covers it */ }
+      }
     } catch (e) {
       logError('Article9.consent.failed', e, { uid: user?.id });
       appAlert(

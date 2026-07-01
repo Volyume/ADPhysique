@@ -92,6 +92,9 @@ jest.mock('../../../store/useAppStore', () => ({
       userProfile: { firstName: 'Test', units: 'kg', barWeight: 20 },
       userProfileFieldUpdatedAt: { firstName: 1, units: 1, barWeight: 1 },
       setUserProfile: jest.fn(),
+      // F2: syncAll is Article 9 fail-closed; the integration runs model a
+      // consented user.
+      healthConsent: true,
     }),
   },
 }));

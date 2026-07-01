@@ -76,6 +76,24 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
   if (isSignOutWiping()) {
     return { status: 'skipped', reason: 'sign_out_wiping' };
   }
+  // F2 (audit SC-1): Article 9 fail-closed gate. Health-domain tables must
+  // never move for a session whose consent is unresolved (null) or denied
+  // (false). Every consented user carries healthConsent === true (local
+  // cache or cloud read) before any lifecycle trigger fires, so a skip here
+  // is always the gate doing its job, and granting consent on the Article 9
+  // screen kicks a fresh sync immediately. The store read is lazy so the
+  // runner stays isolated in tests; ANY read failure counts as unresolved
+  // (closed), never as consent.
+  if (userId) {
+    let healthConsent = null;
+    try {
+      // eslint-disable-next-line global-require
+      healthConsent = require('../../store/useAppStore').default.getState()?.healthConsent;
+    } catch (_) { healthConsent = null; }
+    if (healthConsent !== true) {
+      return { status: 'skipped', reason: 'health_consent_unresolved' };
+    }
+  }
   if (_runLock) {
     return { status: 'skipped', reason: 'already_running' };
   }

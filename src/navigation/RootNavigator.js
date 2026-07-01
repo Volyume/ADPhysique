@@ -1022,8 +1022,11 @@ export default function RootNavigator() {
             //      a new device pulled an empty cloud and the screens
             //      showed the "No active plan" empty state.
             // Both run fire-and-forget; failures fall through to the
-            // sync queue's retry pass on next foreground.
-            (async () => {
+            // sync queue's retry pass on next foreground. F2: the prep
+            // promise is captured so the cloud restore below can chain
+            // BEHIND the cross-user wipe and the Article 9 consent
+            // resolution instead of racing them.
+            const signInPrep = (async () => {
               try {
                 // eslint-disable-next-line global-require
                 const log = require('../lib/errorLog');
@@ -1136,13 +1139,35 @@ export default function RootNavigator() {
             // everything. Returning users on a new device see their data
             // populate empty states as inserts complete; status drives
             // the "Restoring your data" banner.
+            // F2 (audit SC-1): this restore previously fired IN PARALLEL with
+            // the consent read inside signInPrep, so health-domain tables
+            // could push/pull before Article 9 consent resolved (or when it
+            // resolved false/null). Chain it behind the prep (which also
+            // covers the cross-user wipe) and gate it on an affirmative
+            // consent; the runner enforces the same gate fail-closed as
+            // defence-in-depth. When consent is not yet true the restore is
+            // skipped and logged: granting consent on the Article 9 screen
+            // kicks a sync immediately, and the foreground/periodic triggers
+            // cover every later session once consent is cached true.
             // eslint-disable-next-line global-require
             const { syncAll } = require('../lib/sync');
-            const store = useAppStore.getState();
-            store.markCloudSyncing();
-            syncAll({ userId: session.user.id, localUserId: session.user.id, triggeredBy: 'sign_in' })
-              .then(() => useAppStore.getState().markCloudSyncComplete())
-              .catch((err) => useAppStore.getState().markCloudSyncError(err?.message));
+            signInPrep.then(() => {
+              if (useAppStore.getState().healthConsent !== true) {
+                try {
+                  // eslint-disable-next-line global-require
+                  require('../lib/errorLog').logInfo(
+                    'SignIn.restoreDeferred',
+                    'cloud restore held: Article 9 consent not yet affirmative',
+                  );
+                } catch (_) {}
+                return;
+              }
+              const store = useAppStore.getState();
+              store.markCloudSyncing();
+              return syncAll({ userId: session.user.id, localUserId: session.user.id, triggeredBy: 'sign_in' })
+                .then(() => useAppStore.getState().markCloudSyncComplete())
+                .catch((err) => useAppStore.getState().markCloudSyncError(err?.message));
+            }).catch(() => {});
 
             // Register this device for remote push (subscription
             // payment-failure pushes, fired by the Play Billing RTDN

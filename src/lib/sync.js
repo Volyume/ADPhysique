@@ -1188,6 +1188,24 @@ const PREF_EXCLUDE_PATTERNS = [
   // training_reminders_config below), only the token/subscription
   // mapping is device-bound.
   /^@volyume_expo_push_token/,
+  // F1 (audit SD-1, CRITICAL): sync cursors and watermarks are DEVICE state.
+  // They rode this prefs sync keyed by the Supabase uid, so two devices on
+  // one account overwrote each other's cursors ("cloud value wins"); an
+  // imported fresher push watermark defeats the advance-only-on-clean-push
+  // hold-back, silently skipping rows that failed to push — which the
+  // sign-out wipe then destroys. Imported pull watermarks likewise create
+  // silent pull gaps. Never sync any cursor/watermark key.
+  /^@volyume_pull_wm_/,
+  /^@volyume_push_wm_/,
+  /^@volyume_food_last_pushed_/,
+  /^@volyume_food_last_pulled_/,
+  // The in-progress workout crash snapshot is a per-device recovery
+  // artefact (multi-KB, mutates on every set edit); syncing it ping-pongs
+  // another device's live session onto this one.
+  /^@volyume_active_workout/,
+  // Baseline timezone offset for the notification re-lay check: strictly
+  // this device's timezone, meaningless on any other.
+  /^@volyume_notif_tz_offset/,
 ];
 
 export function shouldSyncPref(key) {
@@ -1244,6 +1262,22 @@ async function _pushAllUserPrefs(sb, supabaseUserId) {
 export async function pullFromCloud(supabaseUserId) {
   const sb = getClient();
   if (!sb || !supabaseUserId) return 0;
+  // F1 (audit SD-2): the sign-out wipe waits for sync idle with a 5s TIMEOUT.
+  // If this pull is still mid-flight when that timeout expires, its inserts
+  // would repopulate the DB being wiped and its watermark writes would land
+  // after AsyncStorage.clear() — zombie rows for the old uid plus stale
+  // cursors that make the same user's next sign-in skip their history. The
+  // runner already re-checks the guard between migrated-table pulls; this
+  // threads the same check through the legacy pull: bail between stages,
+  // and never advance a cursor while a wipe is in progress.
+  // eslint-disable-next-line global-require
+  const { isSignOutWiping } = require('./sync/signOutGuard');
+  const bailForWipe = (stage) => {
+    if (!isSignOutWiping()) return false;
+    logWarn('sync.pullFromCloud', `aborted at ${stage}: sign-out wipe in progress`, { supabaseUserId });
+    return true;
+  };
+  if (bailForWipe('start')) return 0;
   // Pull every Pro-state table independently so a user with plans
   // but no workouts (or vice versa) still gets everything that IS
   // in the cloud restored locally. Earlier versions early-returned
@@ -1264,6 +1298,7 @@ export async function pullFromCloud(supabaseUserId) {
     // mismatched canonical IDs to the local deterministic one so old
     // cloud rows that pre-date deterministic IDs heal automatically.
     const exerciseCount = await _pullExercises(sb, supabaseUserId);
+    if (bailForWipe('workouts')) return 0;
 
     // Incremental delta pull (GAP row 12b). On a warm cursor we ask the
     // cloud only for workouts changed since the last pull, instead of
@@ -1294,6 +1329,7 @@ export async function pullFromCloud(supabaseUserId) {
         catch (e) { workoutFailures++; logWarn('sync.pullFromCloud', 'workout insert failed', { workoutId: w?.id, error: e?.message }); }
       }
       // Second pass: one chunked query per ~200 workouts for their sets.
+      if (bailForWipe('workout_sets')) return 0;
       const workoutIds = cloudWorkouts.map(w => w.id);
       const allSets = await fetchByIdsChunked(
         'sync.pullFromCloud.sets', 'workout_sets', 'workout_id', workoutIds,
@@ -1316,18 +1352,23 @@ export async function pullFromCloud(supabaseUserId) {
     // idempotent) delta and retries rather than skipping the row for
     // good. nextWatermark never moves backwards, so an empty delta is a
     // no-op. Sign-out clears the cursor, so sign-in always full-pulls.
-    if (workoutFailures === 0 && setFailures === 0) {
+    if (workoutFailures === 0 && setFailures === 0 && !isSignOutWiping()) {
       await setPullWatermark(supabaseUserId, 'workouts', nextWatermark(wmWorkouts, cloudWorkouts));
     }
 
     // Pro-state tables. Each runs independently regardless of whether
     // workouts came back; one missing table doesn't break the others.
+    // The wipe guard is re-checked between helpers (each is bounded, so
+    // per-helper granularity closes the realistic race window).
+    if (bailForWipe('pro_state')) return workoutCount;
     const programmeCount = await _pullProgrammes(sb, supabaseUserId);
     const routineCount = await _pullRoutinesAndExercises(sb, supabaseUserId);
+    if (bailForWipe('mesocycles')) return workoutCount;
     const mesoCount = await _pullMesocycles(sb, supabaseUserId);
     const weightCount = await _pullMorningWeights(sb, supabaseUserId);
     // weekly_checkins_v2 moved to src/lib/sync/transport.js
     // (registry-driven per-table pull). See MIGRATED_TABLES.
+    if (bailForWipe('coach_outputs')) return workoutCount;
     const coachCount = await _pullCoachOutputs(sb, supabaseUserId);
     // nutrition_targets moved to src/lib/sync/transport.js
     // (registry-driven per-table pull). See MIGRATED_TABLES.
@@ -1338,6 +1379,7 @@ export async function pullFromCloud(supabaseUserId) {
     // logs and returns 0 rather than crashing the whole pull.
     const bodyProfileFound = await _pullUserBodyProfile(sb, supabaseUserId);
     const insightCount = await _pullUserInsights(sb, supabaseUserId);
+    if (bailForWipe('notes_goals')) return workoutCount;
     const exerciseNoteCount = await _pullExerciseUserNotes(sb, supabaseUserId);
     const workoutNoteCount = await _pullWorkoutNotes(sb, supabaseUserId);
     const goalCount = await _pullExerciseGoals(sb, supabaseUserId);
@@ -1345,6 +1387,9 @@ export async function pullFromCloud(supabaseUserId) {
     const plannedVolCount = await _pullPlannedMuscleVolume(sb, supabaseUserId);
     const adaptCount = await _pullAdaptationEvents(sb, supabaseUserId);
     const customExerciseCount = await _pullCustomExercises(sb, supabaseUserId);
+    // Prefs write straight into AsyncStorage — the exact store the wipe is
+    // about to clear — so this is the most important late check.
+    if (bailForWipe('user_prefs')) return workoutCount;
     const prefCount = await _pullUserPrefs(sb, supabaseUserId);
     // notification_preferences moved to src/lib/sync/transport.js
     // (registry-driven per-table pull). The runner now calls

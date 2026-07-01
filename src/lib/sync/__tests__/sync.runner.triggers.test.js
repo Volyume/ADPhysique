@@ -24,6 +24,13 @@ jest.mock('../../sync', () => ({
   pullFromCloud: jest.fn(async () => ({})),
 }));
 
+// F2: syncAll is Article 9 fail-closed (skips unless the store carries
+// healthConsent === true). These trigger tests model a consented user.
+jest.mock('../../../store/useAppStore', () => ({
+  __esModule: true,
+  default: { getState: () => ({ healthConsent: true }) },
+}));
+
 import { syncAll, _resetRunnerForTests } from '../runner';
 import { trackSyncRun } from '../telemetry';
 import { bulkUploadLocalData, pullFromCloud } from '../../sync';
