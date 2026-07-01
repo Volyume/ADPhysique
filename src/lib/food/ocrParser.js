@@ -20,7 +20,13 @@
 // engine.
 function _normalise(raw) {
   return String(raw || '')
-    .replace(/(\d)\s*[,]\s*(\d)/g, (_, a, b) => `${a}.${b}`)
+    // A comma between digits is EITHER a decimal ("12,5" g) OR a thousands
+    // separator ("2,000" kJ). Treating every comma as a decimal turned kJ-only
+    // labels' energy into ~3x under-reads ("2,000 kJ" -> "2.000" -> 2 kJ, audit
+    // 2026-07-01). Disambiguate by the digit count AFTER the comma: exactly 3
+    // (and no more) is a thousands group -> join; 1-2 is a decimal -> dot.
+    .replace(/(\d)\s*,\s*(\d{3})(?!\d)/g, '$1$2')
+    .replace(/(\d)\s*,\s*(\d{1,2})(?!\d)/g, '$1.$2')
     .replace(/[–—]/g, '-')
     .replace(/ /g, ' ')
     .replace(/\s+/g, ' ')

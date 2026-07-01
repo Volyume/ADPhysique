@@ -16,8 +16,13 @@ export function stoneLbsToKg(stone, lbs = 0) {
 
 export function kgToStoneLbs(kg) {
   const totalLbs = kg / 0.453592;
-  const stone = Math.floor(totalLbs / 14);
-  const lbs   = Math.round((totalLbs % 14) * 2) / 2; // round to nearest 0.5 lb
+  let stone = Math.floor(totalLbs / 14);
+  let lbs   = Math.round((totalLbs % 14) * 2) / 2; // round to nearest 0.5 lb
+  // Carry when rounding pushes the remainder up to a full stone (audit
+  // 2026-07-01): e.g. 13.8 lb rounds to 14.0, which must read as the next
+  // stone + 0 lb, not "N st 14 lb". Without this the st/lb display and the
+  // st/lb round-trip on edit both corrupt near every stone boundary.
+  if (lbs >= 14) { stone += 1; lbs = 0; }
   return { stone, lbs };
 }
 

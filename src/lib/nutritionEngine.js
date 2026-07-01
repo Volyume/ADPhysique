@@ -342,10 +342,20 @@ export function computeAdaptiveTDEEAdjustment({
   const absAdj = Math.abs(adjustmentKcal);
   if (absAdj < 50) {
     insight = `Your weight is tracking exactly as planned. No change needed.`;
-  } else if (adjustmentKcal < 0) {
-    insight = `Your weight has risen ${Math.abs(actualKgPerWeek).toFixed(2)} kg/week, slightly faster than planned. Trimming ${absAdj} kcal/day to keep pace on track.`;
   } else {
-    insight = `Your weight has moved ${Math.abs(actualKgPerWeek).toFixed(2)} kg/week, slower than planned. Adding ${absAdj} kcal/day to match your true energy needs.`;
+    // State the ACTUAL direction of the weight move from the sign of
+    // actualKgPerWeek, not from the sign of the adjustment (audit 2026-07-01):
+    // a positive adjustment (adding kcal) fires when a dieter is losing FASTER
+    // than planned, so the old "slower than planned" copy told a fast-losing
+    // user the opposite of reality — misleading, and mildly harmful in an
+    // ED-sensitive app. Describe fact + action, no faster/slower judgement.
+    const rate = Math.abs(actualKgPerWeek).toFixed(2);
+    const dir = actualKgPerWeek > 0 ? 'risen' : actualKgPerWeek < 0 ? 'fallen' : 'held steady';
+    const move = actualKgPerWeek === 0 ? 'Your weight has held steady' : `Your weight has ${dir} ${rate} kg/week`;
+    const action = adjustmentKcal < 0
+      ? `Trimming ${absAdj} kcal/day to match your true energy needs.`
+      : `Adding ${absAdj} kcal/day to match your true energy needs.`;
+    insight = `${move}. ${action}`;
   }
 
   // FFM-floor safety check. Runs only when the caller supplied an

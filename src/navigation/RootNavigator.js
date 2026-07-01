@@ -582,8 +582,12 @@ const linking = {
       },
       PlansTab: {
         screens: {
-          // volyume://routine/:id → Plans tab → PlanDetail for that plan.
-          PlanDetail: 'routine/:id',
+          // volyume://routine/:planId → Plans tab → PlanDetail for that plan.
+          // The path param MUST be named planId: PlanDetailScreen reads
+          // route.params.planId, so the old ':id' arrived as `id` and left
+          // planId undefined, dead-ending on a permanently blank screen
+          // (audit 2026-07-01).
+          PlanDetail: 'routine/:planId',
         },
       },
       ProgressTab: {
