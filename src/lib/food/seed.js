@@ -52,15 +52,21 @@ const CHUNK_SIZE = 200;
 // !! THESE MUST BE BUMPED WHENEVER THE SNAPSHOT ASSETS ARE REGENERATED !!
 //   - assets/seed/off_uk_snapshot.dat is rebuilt by
 //     scripts/seed/buildOffSnapshot.js (run weekly by
-//     .github/workflows/refresh-off-snapshot.yml, which commits the
-//     new .dat — the new `_meta.generatedAt` must be copied here).
+//     .github/workflows/refresh-off-snapshot.yml, which bumps
+//     OFF_SNAPSHOT_VERSION from the new `_meta.generatedAt` in the
+//     same commit).
 //   - assets/seed/cofid_uk.dat is rebuilt by
 //     scripts/seed/buildCofidSnapshot.js (static dataset, rare).
 //
-// A stale constant is safe but slow: the post-parse check below
-// (step 2) still compares against the REAL `_meta.generatedAt`, so a
-// forgotten bump can never import twice or skip a needed import — it
-// only forfeits the fast path until the constant is corrected.
+// A stale constant is NOT harmless (hostile review, Wave 1): a user
+// whose stored flag equals the stale constant takes the fast path and
+// the authoritative post-parse check never runs, so a regenerated
+// asset is silently never imported for existing users. The workflow
+// bump above plus the constant-vs-asset drift guard in
+// seed.versionSkip.test.js (red in CI on divergence) are what keep
+// this safe. A stale constant only degrades to safe-but-slow for
+// users whose stored flag differs from it (fresh installs re-import
+// correctly either way).
 // Exported for the fast-path regression test (seed.versionSkip.test.js).
 export const OFF_SNAPSHOT_VERSION = '2026-05-25T07:06:03.496Z';
 export const COFID_SNAPSHOT_VERSION = '2026-05-25T06:02:02.491Z';

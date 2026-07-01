@@ -56,3 +56,32 @@ describe('shouldSyncPref excludes device-bound keys (F1 / SD-1)', () => {
     for (const key of shapes) expect(shouldSyncPref(key)).toBe(false);
   });
 });
+
+describe('the PULL side applies the same exclusions (F1, hostile-review blocker)', () => {
+  // Excluding keys from push alone is not enough: older builds already pushed
+  // the device-bound rows to the cloud, and with the push no longer refreshing
+  // them they sit frozen-stale. _pullUserPrefs runs LAST in pullFromCloud, so
+  // an unfiltered multiSet would overwrite the watermarks the pull just set
+  // (silently skipping locally-unpushed rows) and could resurrect another
+  // device's dead active-workout snapshot. Source guard in the repo's scoped
+  // style (_pullUserPrefs is not exported).
+  const fs = require('fs');
+  const path = require('path');
+  const SYNC = fs.readFileSync(path.resolve(__dirname, '../sync.js'), 'utf8');
+
+  function fnBody(decl) {
+    const start = SYNC.indexOf(decl);
+    expect(start).toBeGreaterThan(-1);
+    const next = SYNC.indexOf('\nasync function ', start + decl.length);
+    return SYNC.slice(start, next === -1 ? undefined : next);
+  }
+
+  test('_pullUserPrefs filters cloud rows through shouldSyncPref before multiSet', () => {
+    const body = fnBody('async function _pullUserPrefs');
+    expect(body).toMatch(/\.filter\(r => shouldSyncPref\(r\?\.key \?\? ''\)\)/);
+    const filterIdx = body.indexOf(".filter(r => shouldSyncPref(r?.key ?? ''))");
+    const writeIdx = body.indexOf('AsyncStorage.multiSet(');
+    expect(filterIdx).toBeGreaterThan(-1);
+    expect(writeIdx).toBeGreaterThan(filterIdx);
+  });
+});

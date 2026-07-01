@@ -118,9 +118,13 @@ export function buildHoldReceipt({ dataNote = null, ...ledgerArgs } = {}) {
   const ledger = buildCoachLedger(ledgerArgs);
   const rule = dataNote
     || `Your coach needs at least ${MIN_WEIGH_INS} morning weigh-ins and ${FIRST_CHECKIN_MIN_DAYS} days of data before the first review. Adjustments start from week 2; the first review sets your baseline.`;
+  // The named date is future-conditional on data the gate still requires, so
+  // every framing stays soft. The neutral (ED-flag) variant cannot mention
+  // the weigh-in requirement, so it says "around" rather than promising a
+  // date the gate could hold.
   const unlockLine = ledger.unlockLabel
     ? (ledger.variant === 'neutral'
-      ? `Your first coaching review unlocks on ${ledger.unlockLabel}.`
+      ? `Your first coaching review unlocks around ${ledger.unlockLabel}.`
       : `Keep logging and your first coaching review unlocks on ${ledger.unlockLabel}.`)
     : 'Log your first morning weight and your first review date is set.';
   return { ledger, rule, unlockLine };

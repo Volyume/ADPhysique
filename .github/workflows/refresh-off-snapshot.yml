@@ -64,11 +64,34 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: node scripts/seed/uploadOffToSupabase.js
 
+      # F6a: the app's startup fast path compares a stored flag against
+      # OFF_SNAPSHOT_VERSION in seed.js. If the asset is regenerated WITHOUT
+      # bumping that constant, users who already imported the old snapshot
+      # never import the new one (the fast path reports already_loaded before
+      # the authoritative in-file check can run). Bump the constant from the
+      # new asset's _meta.generatedAt in the SAME commit; the drift-guard test
+      # (seed.versionSkip.test.js) fails CI if the two ever diverge.
+      - name: Sync OFF_SNAPSHOT_VERSION constant to the new asset
+        run: |
+          node -e '
+            const fs = require("fs");
+            const meta = JSON.parse(fs.readFileSync("assets/seed/off_uk_snapshot.dat", "utf8"))._meta;
+            if (!meta || !meta.generatedAt) throw new Error("snapshot has no _meta.generatedAt");
+            const seedPath = "src/lib/food/seed.js";
+            const src = fs.readFileSync(seedPath, "utf8");
+            const next = src.replace(
+              /export const OFF_SNAPSHOT_VERSION = .*;/,
+              `export const OFF_SNAPSHOT_VERSION = ${JSON.stringify(meta.generatedAt)};`,
+            );
+            if (next === src) { console.log("constant already current"); }
+            else { fs.writeFileSync(seedPath, next); console.log("bumped to", meta.generatedAt); }
+          '
+
       - name: Commit refreshed snapshot back to branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/seed/off_uk_snapshot.dat
+          git add assets/seed/off_uk_snapshot.dat src/lib/food/seed.js
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0

@@ -1678,7 +1678,18 @@ async function _pullUserPrefs(sb, supabaseUserId) {
     if (!data?.length) return 0;
     // eslint-disable-next-line global-require
     const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-    const entries = data.map(r => [r.key, r.value == null ? '' : String(r.value)]);
+    // F1 (audit SD-1): the pull applies the SAME exclusion filter as the push.
+    // Device-bound keys (sync cursors/watermarks, the active-workout crash
+    // snapshot, the timezone baseline) were pushed by older builds and still
+    // exist as rows in the cloud for live users; with the push side no longer
+    // refreshing them they are frozen-stale, and _pullUserPrefs runs LAST in
+    // pullFromCloud — an unfiltered multiSet would overwrite the watermarks
+    // the pull just set (silently skipping unpushed rows) and could resurrect
+    // another device's dead workout snapshot.
+    const entries = data
+      .filter(r => shouldSyncPref(r?.key ?? ''))
+      .map(r => [r.key, r.value == null ? '' : String(r.value)]);
+    if (!entries.length) return 0;
     try { await AsyncStorage.multiSet(entries); } catch (_) {}
     return entries.length;
   } catch (e) { logWarn('sync._pullUserPrefs', e?.message); return 0; }

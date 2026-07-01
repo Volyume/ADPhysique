@@ -173,9 +173,12 @@ export default function WeeklyCheckInScreen({ navigation }) {
     getNutritionTargets(user.id).then(t => setNutritionTargets(t ?? null)).catch(() => {});
     getUserBodyProfile(user.id).then(p => setBioSex(p?.sex ?? null)).catch(() => {});
     getCycleTracking().then(setCycleEnabled).catch(() => {});
-    // The week's registered steps: the trailing seven days up to today.
-    const toDate = activityDayKey();
-    const fromDate = activityDayKey(Date.now() - 6 * 24 * 60 * 60 * 1000);
+    // The week's registered steps: the trailing seven days up to the review
+    // anchor (today normally; yesterday when a day late per OB-7, so the
+    // counts describe the week actually being reviewed — the effect re-runs
+    // when load() shifts the anchor).
+    const toDate = activityDayKey(weekAnchorMs);
+    const fromDate = activityDayKey(weekAnchorMs - 6 * 24 * 60 * 60 * 1000);
     getDailyStepsRange(user.id, fromDate, toDate)
       .then(rows => setStepsSummary(summariseWeekSteps(rows)))
       .catch(() => setStepsSummary(null));
@@ -203,7 +206,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         .catch(() => {});
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [user?.id, weekAnchorMs]);
 
   // OB-7: anchored, so a day-late check-in saves against (and labels) the
   // week it reviews, not a week that started this morning.

@@ -644,10 +644,11 @@ export default function DiaryScreen({ navigation }) {
   const requestDelete = useCallback(async (entry, closeSwipe) => {
     audit('food.delete', { mealSlot: entry?.mealSlot ?? 'unknown' });
     try {
-      // D2: a delete is a commit beat; the Undo restores with a light
-      // selection tick. Both gate on reduce-motion via the vocabulary.
-      haptics.commit();
       await deleteFoodEntry(entry.id, userId);
+      // D2: a delete is a commit beat; the Undo restores with a light
+      // selection tick. Fires AFTER the delete succeeds so a thrown delete
+      // never gives a felt commit with nothing deleted (hostile review).
+      haptics.commit();
       await load();
       toast.show(`${friendlyFoodName(entry)} deleted.`, {
         variant: 'undo',

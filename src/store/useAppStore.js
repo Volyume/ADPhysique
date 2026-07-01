@@ -482,6 +482,12 @@ const useAppStore = create((set, get) => ({
       prCelebration: null,
       prCelebrationQueue: [],
     });
+    // A2 (hostile review): signing out mid-rest must retire the scheduled
+    // end-of-rest alert too, or "Rest done" sounds on a signed-out device.
+    try {
+      // eslint-disable-next-line global-require
+      require('../lib/notifications/restEnd').cancelRestEndNotification();
+    } catch (_) {}
     return { ok: true };
   },
 

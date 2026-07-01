@@ -6,6 +6,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/them
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 import BottomSheet from '../BottomSheet';
+import SourceChip from './SourceChip';
 import { useToast } from '../Toast';
 import { pickerMealSlots } from '../../lib/food/mealSlots';
 import { scaleMacros, scaleSugarG } from '../../lib/food/macros';
@@ -152,11 +153,10 @@ export default function FoodDetailSheet({
     <BottomSheet visible={visible} onClose={handleClose} keyboardAvoiding accessibilityLabel={food.name}>
           <Text style={styles.title} numberOfLines={2}>{food.name}</Text>
           {food.brand ? <Text style={styles.subtitle}>{food.brand}</Text> : null}
-          {food.source ? (
-            <View style={styles.sourceChip}>
-              <Text style={styles.sourceChipText}>{food.source.toUpperCase()}</Text>
-            </View>
-          ) : null}
+          {/* A6: the shared SourceChip replaces the inline uppercase text so
+              CoFID rows carry their verified treatment + "what is CoFID?"
+              gloss at the point of use. */}
+          {food.source ? <SourceChip source={food.source} /> : null}
 
           <Text style={styles.fieldLabel}>Amount</Text>
           {units.length > 1 ? (
@@ -287,15 +287,6 @@ function MacroPill({ label, value }) {
 const styles = StyleSheet.create({
   title: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
   subtitle: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: -spacing.xs },
-  sourceChip: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderRadius: radius.full,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  sourceChipText: {
-    fontSize: fontSize.micro, color: colors.textMuted, fontWeight: fontWeight.semibold, letterSpacing: 0.4,
-  },
   fieldLabel: {
     fontSize: fontSize.xs, color: colors.textSecondary,
     textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: fontWeight.semibold,

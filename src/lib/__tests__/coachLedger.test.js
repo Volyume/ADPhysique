@@ -125,9 +125,10 @@ describe('buildHoldReceipt', () => {
     expect(r.unlockLine).toMatch(/^Keep logging and your first coaching review unlocks on /);
   });
 
-  test('neutral variant drops the keep-logging weight ask', () => {
+  test('neutral variant drops the weight ask AND softens the date (no promise the gate can break)', () => {
     const r = buildHoldReceipt({ firstWeightAt: WED - DAY, checkinDay: 0, edFlagOpen: true, now: WED });
-    expect(r.unlockLine).toMatch(/^Your first coaching review unlocks on /);
+    expect(r.unlockLine).toMatch(/^Your first coaching review unlocks around /);
+    expect(r.unlockLine).not.toMatch(/unlocks on /);
     expect(r.ledger.rows).toHaveLength(0);
   });
 

@@ -12,7 +12,7 @@ import useAppStore from '../store/useAppStore';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import { GOAL_LABELS, PHASE_LABELS, isCompetitionGoal } from '../lib/coachingGoals';
 import { getSplitRationale, getSetupReceiptLine } from '../lib/whyThisTemplates';
-import { getActivePlan, getRoutinesForPlan, getMorningWeightsLast14Days } from '../lib/database';
+import { getActivePlan, getRoutinesForPlan, getMorningWeightsLast14Days, getOpenEdPatternFlag } from '../lib/database';
 import { firstReviewUnlockDate } from '../lib/trialActivation';
 import { formatUnlockDate } from '../lib/coachLedger';
 import { planNextWeek } from '../lib/food/mealPlanService';
@@ -52,6 +52,15 @@ export default function ProSetupCompleteScreen({ navigation }) {
     let cancelled = false;
     (async () => {
       try {
+        // ED-safety (hostile review): the dated line carries a "keep logging
+        // your morning weight" ask, so under an open ED-pattern flag this
+        // surface stays on the generic weight-free copy like Home's ledger
+        // and CoachOutput's receipt. (Re-onboarding can reach this screen
+        // with a flag already open.)
+        try {
+          const flag = user?.id ? await getOpenEdPatternFlag(user.id) : null;
+          if (flag) return;
+        } catch (_) { return; /* unknown flag state: keep the neutral copy */ }
         let checkinDay = 0;
         const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
         if (raw) {
