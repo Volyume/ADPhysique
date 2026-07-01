@@ -67,7 +67,7 @@ export function formatBodyWeight(kg, bodyWeightUnits = 'st') {
   if (kg == null || isNaN(kg)) return '';
   if (bodyWeightUnits === 'st') {
     const { stone, lbs } = kgToStoneLbs(kg);
-    return lbs > 0 ? `${stone} st ${lbs} lbs` : `${stone} st`;
+    return lbs > 0 ? `${stone} st ${lbs} ${lbs === 1 ? 'lb' : 'lbs'}` : `${stone} st`;
   }
   if (bodyWeightUnits === 'lbs') {
     return `${Math.round(kgToLbs(kg))} lbs`;
