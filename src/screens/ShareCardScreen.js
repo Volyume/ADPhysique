@@ -51,6 +51,10 @@ export default function ShareCardScreen({ route }) {
   const {
     sessionData = null,
     prData = null,
+    // Optional list of PRs from the same session so the user can pick WHICH one
+    // to feature on the card (a session can set several). Falls back to the
+    // single prData when a caller only has one.
+    prList = null,
     milestoneData = null,
     weeklyRecapData = null,
     // The week's standout lift (src/lib/bestLift.js), or null. Featured on the
@@ -73,7 +77,6 @@ export default function ShareCardScreen({ route }) {
   // Square 1:1 by default (founder direction): posts cleanly to a feed and crops
   // predictably. Story 9:16 stays available as the taller option.
   const [format, setFormat] = useState('square');
-  const [sharing, setSharing] = useState(false);
   const [savingToGallery, setSavingToGallery] = useState(false);
   const [sharingToStories, setSharingToStories] = useState(false);
 
@@ -90,6 +93,16 @@ export default function ShareCardScreen({ route }) {
   const [showBestLift, setShowBestLift] = useState(true);
   // Optional gym photo background (SkImage), available on every card type.
   const [bgPhoto, setBgPhoto] = useState(null);
+
+  // The PRs available to feature on a PR card. A caller can pass a whole
+  // session's PRs (prList) so the user picks which one; otherwise it is just the
+  // single prData. selectedPrIndex drives which PR the card renders.
+  const prs = useMemo(() => {
+    const list = Array.isArray(prList) ? prList.filter(Boolean) : [];
+    if (list.length) return list;
+    return prData ? [prData] : [];
+  }, [prList, prData]);
+  const [selectedPrIndex, setSelectedPrIndex] = useState(0);
 
   const isSession = cardType === 'session';
   const isMilestone = cardType === 'milestone';
@@ -186,7 +199,7 @@ export default function ShareCardScreen({ route }) {
         intensityTier: s.intensityTier || 'solid',
       };
     }
-    const p = prData || {};
+    const p = prs[Math.min(selectedPrIndex, Math.max(0, prs.length - 1))] || prData || {};
     return {
       cardType: 'pr', isSquare, showDate, showPRWeight, showPrevBest,
       date: showDate ? formatLongDate(p.date) : '',
@@ -197,7 +210,7 @@ export default function ShareCardScreen({ route }) {
       previousBest: p.previousBest || '',
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMilestone, isSession, isWeekly, isSquare, showDate, showVolume, showPlanName, showExercises, showPRWeight, showPrevBest, showProgress, showBestLift, suppress, units, sessionData, prData, milestoneData, weeklyRecapData, bestLift]);
+  }, [isMilestone, isSession, isWeekly, isSquare, showDate, showVolume, showPlanName, showExercises, showPRWeight, showPrevBest, showProgress, showBestLift, suppress, units, sessionData, prData, prs, selectedPrIndex, milestoneData, weeklyRecapData, bestLift]);
 
   // ── ONE renderer for preview + export ──────────────────────────────────────
   const renderCardBase64 = useCallback((width) => {
@@ -252,34 +265,6 @@ export default function ShareCardScreen({ route }) {
     await FileSystem.writeAsStringAsync(uri, b64, { encoding: FileSystem.EncodingType.Base64 });
     return uri;
   }, [renderCardBase64, cardType, isSquare]);
-
-  async function handleShare() {
-    if (!Skia || !FileSystem || !Sharing) {
-      toast.show('Sharing needs a rebuild with the Skia + sharing packages installed', { variant: 'error', duration: 5000 });
-      return;
-    }
-    if (!typefaces) {
-      toast.show('Not ready yet, wait a moment and try again', { variant: 'info' });
-      return;
-    }
-    setSharing(true);
-    try {
-      const uri = await renderCardToFile();
-      if (!uri) { toast.show("Couldn't generate card, try again", { variant: 'error' }); return; }
-      const canShare = await Sharing.isAvailableAsync();
-      if (!canShare) { toast.show('Sharing not available on this device', { variant: 'warning' }); return; }
-      await Sharing.shareAsync(uri, {
-        mimeType: 'image/png', UTI: 'public.png',
-        dialogTitle: cardType === 'session' ? 'Share Session Card'
-          : cardType === 'pr' ? 'Share PR Card'
-            : cardType === 'weekly' ? 'Share Your Week' : 'Share Card',
-      });
-    } catch (_e) {
-      toast.show("Couldn't generate card, try again", { variant: 'error' });
-    } finally {
-      setSharing(false);
-    }
-  }
 
   // Save the rendered card straight to the device gallery (expo-media-library).
   // Asks for the add-photos permission; a denial is handled with a calm message,
@@ -432,6 +417,37 @@ export default function ShareCardScreen({ route }) {
 
         {/* What to include */}
         <View style={styles.section}>
+          {cardType === 'pr' && prs.length > 1 ? (
+            <>
+              <Text style={styles.sectionTitle}>Which PR</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.prPickerRow}
+              >
+                {prs.map((pr, i) => {
+                  const active = i === selectedPrIndex;
+                  const name = pr.exerciseName || pr.exercise || 'Exercise';
+                  const detail = pr.weight
+                    ? `${pr.weight}${pr.units || 'kg'}${pr.reps ? ` × ${pr.reps}` : ''}`
+                    : '';
+                  return (
+                    <TouchableOpacity
+                      key={`${name}-${i}`}
+                      style={[styles.prChip, active && styles.prChipActive]}
+                      onPress={() => setSelectedPrIndex(i)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={`Feature ${name}`}
+                    >
+                      <Text style={[styles.prChipText, active && styles.prChipTextActive]} numberOfLines={1}>{name}</Text>
+                      {detail ? <Text style={[styles.prChipSub, active && styles.prChipSubActive]}>{detail}</Text> : null}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </>
+          ) : null}
           <Text style={styles.sectionTitle}>What to include</Text>
           <View style={styles.togglesCard}>
             <ToggleRow label="Date" value={showDate} onChange={setShowDate} />
@@ -464,26 +480,6 @@ export default function ShareCardScreen({ route }) {
           </Text>
         </View>
 
-        {/* Share */}
-        <TouchableOpacity
-          style={[styles.shareBtn, sharing && styles.btnDisabled]}
-          onPress={handleShare}
-          disabled={sharing}
-        >
-          {sharing ? (
-            <ActivityIndicator color={colors.onPrimary} size="small" />
-          ) : (
-            <>
-              <Ionicons name="share-outline" size={20} color={colors.onPrimary} />
-              <Text style={styles.shareBtnText}>
-                {cardType === 'session' ? 'Share Session Card'
-                  : cardType === 'pr' ? 'Share PR Card'
-                    : cardType === 'weekly' ? 'Share Your Week' : 'Share Card'}
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
-
         {/* Share to Story — Instagram + Facebook icons, opens the system share
             sheet with the rendered PNG (founder 2026-06-30: present it as a Story
             share for Instagram/Facebook, but route through the normal share
@@ -491,9 +487,9 @@ export default function ShareCardScreen({ route }) {
             Facebook App ID is needed). The user picks Instagram or Facebook from
             the sheet; both let you post the image to a Story. */}
         <TouchableOpacity
-          style={[styles.secondaryBtn, (sharing || sharingToStories) && styles.btnDisabled]}
+          style={[styles.secondaryBtn, sharingToStories && styles.btnDisabled]}
           onPress={handleShareToStories}
-          disabled={sharing || sharingToStories}
+          disabled={sharingToStories}
           accessibilityRole="button"
           accessibilityLabel="Share to Instagram or Facebook Story"
         >
@@ -512,9 +508,9 @@ export default function ShareCardScreen({ route }) {
             gallery. Only shown when the media-library package is in the build. */}
         {MediaLibrary ? (
         <TouchableOpacity
-          style={[styles.secondaryBtn, (sharing || savingToGallery) && styles.btnDisabled]}
+          style={[styles.secondaryBtn, savingToGallery && styles.btnDisabled]}
           onPress={handleSaveToGallery}
-          disabled={sharing || savingToGallery}
+          disabled={savingToGallery}
           accessibilityRole="button"
           accessibilityLabel="Save to gallery"
         >
@@ -598,6 +594,18 @@ const styles = StyleSheet.create({
   toggleRowLast: { borderBottomWidth: 0 },
   toggleLabel: { fontSize: fontSize.sm, color: colors.textPrimary },
   privacyNote: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
+  // "Which PR" selector chips (shown only when a session set more than one PR).
+  prPickerRow: { gap: spacing.sm, paddingVertical: spacing.xs, paddingRight: spacing.lg },
+  prChip: {
+    minWidth: 92, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, gap: 2,
+  },
+  prChipActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
+  prChipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.semibold },
+  prChipTextActive: { color: colors.primary },
+  prChipSub: { fontSize: fontSize.xs, color: colors.textMuted },
+  prChipSubActive: { color: colors.primary },
   shareBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.sm, backgroundColor: colors.primary, borderRadius: radius.lg,

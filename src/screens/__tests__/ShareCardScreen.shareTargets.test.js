@@ -158,6 +158,29 @@ describe('ShareCardScreen — share-target buttons render', () => {
   });
 });
 
+describe('ShareCardScreen — PR selector (founder 2026-07-01)', () => {
+  const TWO_PRS = {
+    prData: { exerciseName: 'Bench Press', weight: '100', reps: '1', units: 'kg' },
+    prList: [
+      { exerciseName: 'Bench Press', weight: '100', reps: '1', units: 'kg' },
+      { exerciseName: 'Back Squat', weight: '140', reps: '1', units: 'kg' },
+    ],
+  };
+
+  test('multiple PRs render a selectable chip per PR', async () => {
+    const tree = await mount(TWO_PRS);
+    expect(findByA11yLabel(tree, 'Feature Bench Press').length).toBeGreaterThan(0);
+    expect(findByA11yLabel(tree, 'Feature Back Squat').length).toBeGreaterThan(0);
+  });
+
+  test('a single PR shows NO selector (nothing to choose)', async () => {
+    const tree = await mount({
+      prData: { exerciseName: 'Bench Press', weight: '100', reps: '1', units: 'kg' },
+    });
+    expect(findByA11yLabel(tree, 'Feature Bench Press').length).toBe(0);
+  });
+});
+
 // QUARANTINED (2026-06-30): these press-interaction tests are flaky in CI only.
 // They drive the screen's async handlers (permission -> Skia render -> file write
 // -> save/share) through the mocked react-test-renderer and assert side effects.

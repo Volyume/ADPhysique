@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, spacing } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import OAuthButtons from '../components/auth/OAuthButtons';
 import { signInWithGoogle, signInWithApple } from '../lib/supabase';
@@ -69,17 +68,6 @@ export default function LoginScreen() {
           {/* Thin divider below brand */}
           <View style={styles.brandDivider} />
 
-          {/* ── Heading ── */}
-          <View style={styles.headingBlock}>
-            <Text style={styles.formTitle}>Create your account or sign in</Text>
-            <View style={styles.backupPrompt}>
-              <Ionicons name="shield-checkmark-outline" size={16} color={colors.primary} />
-              <Text style={styles.backupPromptText}>
-                A free account keeps your training and progress backed up and synced. Change or lose your phone and everything restores instantly.
-              </Text>
-            </View>
-          </View>
-
           {/* ── OAuth sign-in ──
               Apple on iOS, Google on Android (see OAuthButtons for the
               platform split). This is the only way into the app. */}
@@ -133,22 +121,5 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
     marginBottom: spacing.xxl,
-  },
-
-  // Heading
-  headingBlock: { gap: spacing.lg, marginBottom: spacing.xl },
-  formTitle: {
-    ...type.title,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-
-  backupPrompt: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
-    backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    padding: spacing.md, borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
-  },
-  backupPromptText: {
-    fontSize: fontSize.sm, color: colors.textSecondary, flex: 1, lineHeight: 20,
   },
 });
