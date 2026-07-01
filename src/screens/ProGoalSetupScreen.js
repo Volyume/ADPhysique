@@ -75,7 +75,7 @@ export default function ProGoalSetupScreen({ navigation }) {
     userProfile?.proteinApproach
     ?? (ADVANCED_PROTEIN_GOALS.includes(userProfile?.trainingGoal) ? 'advanced' : 'optimised')
   );
-  // Weak points, only meaningful for goals that bias volume toward priority
+  // Weak points, only meaningful for goals that bias volume towards priority
   // muscles. Hidden in the UI otherwise but the value is preserved across edits.
   const [planWeakPoints, setPlanWeakPoints] = useState(userProfile?.planWeakPoints ?? []);
   // Training setup, prefilled from the user's existing profile so they
@@ -158,7 +158,7 @@ export default function ProGoalSetupScreen({ navigation }) {
 
     // Only keep weak points if the new goal supports them, switching to a
     // non-applicable goal clears them so the plan generator doesn't keep
-    // biasing toward muscles the user no longer wants prioritised.
+    // biasing towards muscles the user no longer wants prioritised.
     const nextWeakPoints = GOALS_WITH_WEAK_POINTS.includes(selectedGoal)
       ? planWeakPoints
       : [];
@@ -334,11 +334,11 @@ export default function ProGoalSetupScreen({ navigation }) {
       >
         {/* ── Physique category (optional) ──
             Most users leave this on "Not competing, General". Competitive
-            lifters pick their division so volume gets biased toward the
+            lifters pick their division so volume gets biased towards the
             muscles their category is judged on. */}
         <Text style={styles.sectionLabel}>Competing in a category? (optional)</Text>
         <Text style={styles.sectionSub}>
-          Only matters if you're chasing a competitive physique. It biases your plan toward the muscles that category is judged on.
+          Only matters if you're chasing a competitive physique. It biases your plan towards the muscles that category is judged on.
         </Text>
 
         <Dropdown

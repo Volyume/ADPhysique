@@ -185,7 +185,7 @@ export default function ProOnboardingScreen({ navigation }) {
   const [trainingPhase, setTrainingPhase] = useState('lean_gain');
   // Weak points the user wants to bring up (UI labels, max 3). Division-scoped:
   // the options shown depend on trainingGoal. Passed into plan generation, which
-  // biases volume toward these muscles within the recovery envelope.
+  // biases volume towards these muscles within the recovery envelope.
   const [planWeakPoints, setPlanWeakPoints] = useState([]);
 
   // Protein target. Left null, the engine picks the right approach for the
@@ -1114,7 +1114,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 (balanced volume) for everyone else. */}
             <Dropdown
               label="Competing in a category? (optional)"
-              hint="Only if you're chasing a competitive physique. It biases your plan toward the muscles that category is judged on."
+              hint="Only if you're chasing a competitive physique. It biases your plan towards the muscles that category is judged on."
               tip={GLOSSARY.division}
               value={trainingGoal}
               options={goalOptions}

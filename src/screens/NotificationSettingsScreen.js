@@ -635,7 +635,7 @@ export default function NotificationSettingsScreen({ navigation }) {
         </View>
 
         {/* Save status */}
-        {saving && <Text style={styles.savingText}>Saving...</Text>}
+        {saving && <Text style={styles.savingText}>Saving…</Text>}
         {!saving && saved && <Text style={styles.savedText}>Saved</Text>}
       </ScrollView>
     </SafeAreaView>

@@ -82,7 +82,7 @@ function clean(str) {
 
 const EXERCISE_WHY_TEMPLATES = {
   // Back subregions
-  vertical_pull:    (name) => `${name} pulls the elbows down toward your hips, which is the best position for back width and shoulder-blade retraction.`,
+  vertical_pull:    (name) => `${name} pulls the elbows down towards your hips, which is the best position for back width and shoulder-blade retraction.`,
   horizontal_row:   (name) => `${name} pulls the elbows back along your body. This angle is where your mid-back and rear shoulders work hardest.`,
   lower_lat:        (name) => `${name} emphasises the lower portion of the back that creates the V-shape taper from shoulders to waist.`,
 

@@ -329,7 +329,7 @@ export default function LiftProgressScreen({ navigation }) {
                   )}
                 </View>
                 <Text style={styles.meta}>
-                  {muscle ? `${muscle} · ` : ''}{item.sessions} {item.sessions === 1 ? 'session' : 'sessions'} · last {format(new Date(item.lastTrainedAt), 'MMM d')}
+                  {muscle ? `${muscle} · ` : ''}{item.sessions} {item.sessions === 1 ? 'session' : 'sessions'} · last {format(new Date(item.lastTrainedAt), 'd MMM')}
                 </Text>
                 <View style={styles.statRow}>
                   <Text style={styles.statValue}>{item.bestE1rm}{units}</Text>
