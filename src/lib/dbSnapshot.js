@@ -58,6 +58,17 @@ export function sortSnapshotNames(names) {
 
 async function copySnapshot(name) {
   await FileSystem.makeDirectoryAsync(SNAP_DIR, { intermediates: true }).catch(() => {});
+  // Flush the WAL into the main DB file first, or the byte-for-byte copy can miss
+  // recent commits still sitting in volyume.db-wal (WAL mode is on). This is the
+  // single choke point for BOTH snapshot callers, so the account-switch path is
+  // covered too, not just migrations (audit F-003). Best-effort: a checkpoint
+  // failure must never block a snapshot. Lazy require avoids a static import
+  // cycle with database.js.
+  try {
+    // eslint-disable-next-line global-require
+    const { checkpointWal } = require('./database');
+    await checkpointWal();
+  } catch (_) { /* checkpoint best-effort */ }
   const dest = `${SNAP_DIR}${name}`;
   await FileSystem.copyAsync({ from: DB_PATH, to: dest });
   await pruneSnapshots(KEEP);

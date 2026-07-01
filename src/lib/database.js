@@ -8,6 +8,27 @@ import { openEncryptedDb } from './dbCrypto';
 
 let _db = null;
 let _initPromise = null;
+// Whether the local DB is actually SQLCipher-encrypted. null = not yet opened,
+// false = opened on the safe plaintext fallback (audit F-002: surface this so it
+// isn't invisible while the consent screen claims encrypted local storage).
+let _dbEncrypted = null;
+
+/** Current local DB encryption state: true (encrypted), false (plaintext
+ *  fallback), or null (DB not opened yet). Read by privacy/consent surfaces. */
+export function isLocalDbEncrypted() {
+  return _dbEncrypted;
+}
+
+/**
+ * Flush the WAL into the main DB file so a byte-for-byte file copy (a snapshot)
+ * is complete. In WAL mode recent commits can sit in volyume.db-wal until
+ * checkpointed (audit F-003). Best-effort and never throws; a no-op if the DB
+ * isn't open yet.
+ */
+export async function checkpointWal() {
+  if (!_db) return;
+  try { await _db.execAsync('PRAGMA wal_checkpoint(FULL);'); } catch (_) { /* best-effort */ }
+}
 
 // Fire a debounced full cloud sync after a local write. Lazy-required
 // to avoid the circular import (sync.js → database.js → sync.js).
@@ -79,8 +100,17 @@ async function _doInit() {
   // statement and falls back to a working plaintext handle if encryption fails,
   // so the app never bricks or loses data. `PRAGMA key` MUST precede any other
   // statement, so this runs before `PRAGMA journal_mode`.
-  const { db: opened } = await openEncryptedDb(SQLite);
+  const { db: opened, encrypted } = await openEncryptedDb(SQLite);
   _db = opened;
+  _dbEncrypted = !!encrypted;
+  // F-002: a plaintext fallback is a real availability decision, but it must not
+  // be silent — the consent screen tells users their data is in encrypted local
+  // storage. Log it (non-sensitive) so the field state is visible; a surface can
+  // read isLocalDbEncrypted() to keep privacy copy honest.
+  if (!encrypted) {
+    // eslint-disable-next-line global-require
+    try { require('./errorLog').logWarn('database.plaintextFallback', 'local DB opened UNENCRYPTED (SQLCipher unavailable / migration fallback)', {}); } catch (_) {}
+  }
   await _db.execAsync('PRAGMA journal_mode = WAL;');
   await _db.execAsync(`
     CREATE TABLE IF NOT EXISTS exercises (
