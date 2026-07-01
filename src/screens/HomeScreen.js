@@ -1194,7 +1194,6 @@ export default function HomeScreen({ navigation }) {
                 <Ionicons name="close" size={18} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.welcomeSub}>This guide disappears once you log your first session.</Text>
             <View style={styles.welcomeStep}>
               <View style={styles.welcomeStepNum}><Text style={styles.welcomeStepNumText}>1</Text></View>
               <View style={{ flex: 1 }}>
@@ -2042,11 +2041,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
-  },
-  welcomeSub: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: -spacing.xs,
   },
   welcomeStep: {
     flexDirection: 'row',
