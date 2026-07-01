@@ -833,6 +833,15 @@ export default function FoodSearchScreen({ navigation, route }) {
         {searching ? <ActivityIndicator size="small" color={colors.textMuted} /> : null}
       </View>
 
+      {/* Wave-1 A6: name the UK data moat on the pre-typing state. Hidden the
+          moment a live query (2+ chars) takes over, so it never competes with
+          results. */}
+      {query.trim().length < 2 ? (
+        <Text style={styles.provenanceNote}>
+          UK food database on your device. gov.uk CoFID generics plus UK branded products. Works offline.
+        </Text>
+      ) : null}
+
       <FlatList
         data={listData}
         keyExtractor={(i) => i.key}
@@ -1007,6 +1016,10 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1, color: colors.textPrimary, fontSize: fontSize.md,
     paddingVertical: spacing.md,
+  },
+  provenanceNote: {
+    ...type.captionTight, color: colors.textMuted,
+    paddingHorizontal: spacing.lg, paddingBottom: spacing.sm,
   },
 
   ctaRow: {
