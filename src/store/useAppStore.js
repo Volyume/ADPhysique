@@ -103,6 +103,10 @@ function _persistActiveWorkout(state) {
       // background-relaunch stays idempotent (never double-logs a set).
       appliedRemoteEventIds: Array.isArray(state.appliedRemoteEventIds)
         ? state.appliedRemoteEventIds.slice(-500) : [],
+      // A2: persist the rest anchor so a process kill mid-rest restores a
+      // truthful countdown (or a clean expired state) instead of no timer.
+      restTimerEndsAt: state.restTimerActive ? state.restTimerEndsAt : null,
+      restTimerDuration: state.restTimerDuration ?? null,
       savedAt: Date.now(),
     };
     AsyncStorage.setItem(ACTIVE_WORKOUT_KEY, JSON.stringify(snapshot)).catch(() => {});
@@ -1318,6 +1322,17 @@ const useAppStore = create((set, get) => ({
         // on restore (that would re-log duplicate adaptation_events).
         sessionAdjustments: Array.isArray(snap.sessionAdjustments) ? snap.sessionAdjustments : [],
         appliedRemoteEventIds: Array.isArray(snap.appliedRemoteEventIds) ? snap.appliedRemoteEventIds : [],
+        // A2: resume a rest that is still in the future; an elapsed one stays
+        // stopped (its OS alert already fired — scheduled notifications
+        // survive process death, which is exactly the backstop working).
+        ...(Number(snap.restTimerEndsAt) > Date.now()
+          ? {
+            restTimerActive: true,
+            restTimerDuration: Number(snap.restTimerDuration) > 0 ? Number(snap.restTimerDuration) : 90,
+            restTimerRemaining: Math.max(0, Math.round((Number(snap.restTimerEndsAt) - Date.now()) / 1000)),
+            restTimerEndsAt: Number(snap.restTimerEndsAt),
+          }
+          : {}),
       });
       return true;
     } catch (_) {
@@ -1356,9 +1371,15 @@ const useAppStore = create((set, get) => ({
       currentExerciseIndex: 0,
       workoutStartTime: null,
       restTimerActive: false,
+      restTimerEndsAt: null,
       lastActivityAt: null,
       sessionAdjustments: [], // COMP-015
     });
+    // A2: a session ending mid-rest must retire its end-of-rest alert.
+    try {
+      // eslint-disable-next-line global-require
+      require('../lib/notifications/restEnd').cancelRestEndNotification();
+    } catch (_) {}
     // Clear the crash-recovery snapshot so a finished/cancelled session
     // can't be resurrected on next launch (activeWorkout is now null).
     _persistActiveWorkout(get());
@@ -1375,24 +1396,50 @@ const useAppStore = create((set, get) => ({
   restTimerRemaining: 90,
   restTimerEndsAt: null,
 
-  startRestTimer: (duration = 90) => set({
-    restTimerActive: true,
-    restTimerDuration: duration,
-    restTimerRemaining: duration,
-    restTimerEndsAt: Date.now() + duration * 1000,
-  }),
-  stopRestTimer: () => set({ restTimerActive: false, restTimerRemaining: 0, restTimerEndsAt: null }),
+  startRestTimer: (duration = 90) => {
+    const endsAt = Date.now() + duration * 1000;
+    set({
+      restTimerActive: true,
+      restTimerDuration: duration,
+      restTimerRemaining: duration,
+      restTimerEndsAt: endsAt,
+    });
+    // A2: OS-scheduled end-of-rest alert so a locked/pocketed phone still
+    // hears rest end (foreground delivery is suppressed in handler.js).
+    // Lazy-required, best-effort: the in-app timer never depends on it.
+    try {
+      // eslint-disable-next-line global-require
+      require('../lib/notifications/restEnd').scheduleRestEndNotification(endsAt);
+    } catch (_) {}
+  },
+  stopRestTimer: () => {
+    set({ restTimerActive: false, restTimerRemaining: 0, restTimerEndsAt: null });
+    try {
+      // eslint-disable-next-line global-require
+      require('../lib/notifications/restEnd').cancelRestEndNotification();
+    } catch (_) {}
+  },
   addRestTime: (seconds = 30) => {
+    let nextEndsAt = null;
     set((state) => {
       if (!state.restTimerActive) return {};
       const endsAt = (state.restTimerEndsAt ?? Date.now()) + seconds * 1000;
+      nextEndsAt = endsAt;
       return {
         restTimerEndsAt: endsAt,
         restTimerRemaining: Math.max(0, Math.round((endsAt - Date.now()) / 1000)),
       };
     });
+    // A2: keep the OS alert in step with the adjusted end time.
+    if (nextEndsAt != null) {
+      try {
+        // eslint-disable-next-line global-require
+        require('../lib/notifications/restEnd').scheduleRestEndNotification(nextEndsAt);
+      } catch (_) {}
+    }
   },
   tickRestTimer: () => {
+    let expired = false;
     set((state) => {
       if (!state.restTimerActive) return {};
       // Wall-clock derived: recompute from the end timestamp rather than
@@ -1400,10 +1447,20 @@ const useAppStore = create((set, get) => ({
       const remaining = state.restTimerEndsAt != null
         ? Math.max(0, Math.round((state.restTimerEndsAt - Date.now()) / 1000))
         : Math.max(0, state.restTimerRemaining - 1);
+      if (remaining <= 0) expired = true;
       return remaining <= 0
         ? { restTimerActive: false, restTimerRemaining: 0, restTimerEndsAt: null }
         : { restTimerRemaining: remaining };
     });
+    // A2: on natural expiry the scheduled alert has fired (or is due within
+    // the same second); cancelling here is a harmless no-op then, and stops a
+    // late duplicate if the tick caught up ahead of the OS clock.
+    if (expired) {
+      try {
+        // eslint-disable-next-line global-require
+        require('../lib/notifications/restEnd').cancelRestEndNotification();
+      } catch (_) {}
+    }
   },
 
   // Workout prefs (Hevy teardown R1). Device-local, AsyncStorage-backed.

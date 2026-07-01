@@ -50,14 +50,32 @@ export async function prAchieved() {
   setTimeout(() => _impact(Haptics.ImpactFeedbackStyle.Heavy), 120);
 }
 
-/** Rest timer finished. Medium impact, then a heavier one. */
+/** Rest timer finished: the GO beat. Success note plus two heavy pulses —
+ *  the exact signature RestTimer shipped inline (D2 moved it here so the
+ *  reduce-motion gate finally covers it). */
 export async function restDone() {
-  await _impact(Haptics.ImpactFeedbackStyle.Medium);
+  await _notify(Haptics.NotificationFeedbackType.Success);
   setTimeout(() => _impact(Haptics.ImpactFeedbackStyle.Heavy), 200);
+  setTimeout(() => _impact(Haptics.ImpactFeedbackStyle.Heavy), 400);
 }
 
 /** Rest timer about to end (3s warning). */
 export function restAlmostDone() { return _impact(Haptics.ImpactFeedbackStyle.Light); }
+
+/** Rest countdown tick. Escalates 3 -> 2 -> 1 so the user can feel which
+ *  tick they're on without looking (RestTimer's shipped ladder, centralised
+ *  so reduce-motion silences it). */
+export function restCountdown(stage) {
+  if (stage === 3) return _impact(Haptics.ImpactFeedbackStyle.Medium);
+  if (stage === 2) return _impact(Haptics.ImpactFeedbackStyle.Heavy);
+  return Promise.all([
+    _impact(Haptics.ImpactFeedbackStyle.Heavy),
+    _notify(Haptics.NotificationFeedbackType.Warning),
+  ]);
+}
+
+/** Plan generated / setup complete. Single success note (D2). */
+export function planReady() { return _notify(Haptics.NotificationFeedbackType.Success); }
 
 /** A small UI selection: picker change, toggle, tap-to-confirm. */
 export function selection() { return _selection(); }

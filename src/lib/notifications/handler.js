@@ -19,6 +19,12 @@ export function configureNotificationHandler() {
     handleNotification: async (notification) => {
       const dataType = notification?.request?.content?.data?.type;
       try {
+        // A2: the end-of-rest alert exists for the LOCKED/backgrounded phone.
+        // In the foreground the in-app timer row, beeps and haptics already
+        // carry the moment, so showing it again would double-fire.
+        if (dataType === 'rest_end') {
+          return { shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false };
+        }
         // morning_weight now fires with sound (Q1), and the evening backstop is
         // a second daily weight prompt — so both stand down once the weight is
         // logged AND under an open ED flag (a loud/repeated weigh-in prompt at a

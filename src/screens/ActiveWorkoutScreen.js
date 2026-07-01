@@ -96,6 +96,30 @@ const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum,
   );
 });
 
+// A2 (audit CL-5): the rest countdown scrolls away with the timer row, so the
+// one number the user needs mid-scroll used to vanish. This chip mirrors it in
+// the fixed header. Self-subscribing so the per-second tick re-renders ONLY
+// this chip — the screen deliberately never subscribes to the tick (see the
+// selector comment below).
+function HeaderRestChip() {
+  const { active, remaining } = useAppStore(useShallow(s => ({
+    active: s.restTimerActive,
+    remaining: s.restTimerRemaining,
+  })));
+  if (!active || remaining <= 0) return null;
+  const mins = Math.floor(remaining / 60);
+  const secs = remaining % 60;
+  return (
+    <View
+      style={styles.headerRestChip}
+      accessibilityLabel={`Rest, ${mins} minute${mins === 1 ? '' : 's'} ${secs} second${secs === 1 ? '' : 's'} remaining`}
+    >
+      <Ionicons name="timer-outline" size={12} color={colors.primary} />
+      <Text style={styles.headerRestChipText}>{`${mins}:${String(secs).padStart(2, '0')}`}</Text>
+    </View>
+  );
+}
+
 export default function ActiveWorkoutScreen({ navigation, route }) {
   // Use a shallow selector so every store mutation (rest timer ticks,
   // PR celebration flag flips, accessibility toggles) doesn't re-render
@@ -863,6 +887,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   async function handleCompleteSet(overrides = {}) {
     if (!exercise || !activeWorkout) return;
+    // A2 (audit CL-3): logging ANOTHER set cancels any pending auto-advance.
+    // Previously "Log another set" within the 1.8s window still yanked the
+    // screen to the next exercise, stranding the extra set's context.
+    if (autoAdvanceRef.current) {
+      clearTimeout(autoAdvanceRef.current);
+      autoAdvanceRef.current = null;
+    }
     // Reps required (a cluster override carries its own total). A per-side
     // (unilateral) exercise logs one reps value, done on both sides at the
     // same weight, so it validates and stores like any other set: one
@@ -1501,6 +1532,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 .filter(a => a.setDelta !== 0 && !a.reverted)
                 .map(a => ({ muscle: a.muscle, setDelta: a.setDelta }));
               endWorkout();
+              // D2: the whole-workout completion beat (the vocabulary event
+              // existed but was never called anywhere).
+              hapticsVocab.workoutComplete();
               // eslint-disable-next-line global-require
               try { require('../lib/notifications/activeWorkout').dismissActiveWorkoutNotification(); } catch (_) {}
               navigation.replace('WorkoutSummary', {
@@ -1655,6 +1689,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 accessibilityLabel="Time crunch active"
               />
             )}
+            <HeaderRestChip />
           </View>
           <View style={styles.headerSideRight}>
             <TouchableOpacity
@@ -2115,61 +2150,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           ) : null}
 
           {/* Action Buttons */}
+          {/* A2 (audit CL-4): the PRIMARY action moved to the bottom-pinned
+              bar (thumb zone, stable position). In the scroll, only the
+              "Log another set" affordance remains — promoted to a full-size
+              outline button in the exact pixels the primary used to occupy,
+              so the muscle-memory tap logs a set instead of navigating. */}
           {cluster ? null : targetComplete ? (
-            <>
-              {isLastExercise ? (
-                <TouchableOpacity
-                  testID="volyume-btn-finish-primary"
-                  style={styles.completeBtn}
-                  onPress={handleFinishWorkout}
-                  accessibilityRole="button"
-                  accessibilityLabel="Finish workout"
-                >
-                  <Ionicons name="checkmark-done" size={20} color={colors.success} />
-                  <Text style={styles.completeBtnText}>Finish workout</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  testID="volyume-btn-next-exercise"
-                  style={styles.completeBtn}
-                  onPress={handleNextExercise}
-                  accessibilityRole="button"
-                  accessibilityLabel="Move to next exercise"
-                >
-                  <Ionicons name="arrow-forward-circle" size={20} color={colors.primary} />
-                  <Text style={styles.completeBtnText}>Next exercise</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                testID="volyume-btn-extra-set"
-                style={[styles.extraSetBtn, saving && styles.btnDisabled]}
-                onPress={handleCompleteSet}
-                disabled={saving}
-                accessibilityRole="button"
-                accessibilityLabel="Log another set"
-              >
-                <Text style={styles.extraSetBtnText}>Log another set</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
             <TouchableOpacity
-              testID="volyume-btn-complete-set"
-              style={[styles.completeBtn, saving && styles.btnDisabled, currentSet.setType === 'warmup' && styles.completeBtnWarmup]}
-              onPress={handleCompleteSetPress}
+              testID="volyume-btn-extra-set"
+              style={[styles.extraSetBtnPromoted, saving && styles.btnDisabled]}
+              onPress={handleCompleteSet}
               disabled={saving}
               accessibilityRole="button"
-              accessibilityLabel={
-                currentSet.setType === 'warmup' ? 'Done with warm-up'
-                : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Complete set'
-              }
+              accessibilityLabel="Log another set"
             >
-              <Ionicons name="checkmark-circle" size={20} color={currentSet.setType === 'warmup' ? colors.warning : colors.primary} />
-              <Text style={[styles.completeBtnText, currentSet.setType === 'warmup' && styles.completeBtnTextWarmup]}>
-                {currentSet.setType === 'warmup' ? 'Done'
-                  : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Log set'}
-              </Text>
+              <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+              <Text style={styles.extraSetBtnPromotedText}>Log another set</Text>
             </TouchableOpacity>
-          )}
+          ) : null}
 
           {/* Logged sets sit ABOVE the action row (COMP-001): the session
               receipt builds above the fold, so each logged set is visible
@@ -2222,6 +2220,58 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
           <View style={{ height: Math.max(spacing.xxl, insets.bottom + spacing.lg) }} />
         </ScrollView>
+
+        {/* A2 (audit CL-4): the primary action lives in a bottom-pinned bar —
+            the one-handed thumb zone, at a stable position — instead of
+            floating mid-scroll and swapping identity in the same pixels.
+            Cluster flows keep their own in-card controls, so no bar then. */}
+        {cluster ? null : (
+          <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+            {targetComplete ? (
+              isLastExercise ? (
+                <TouchableOpacity
+                  testID="volyume-btn-finish-primary"
+                  style={styles.completeBtn}
+                  onPress={handleFinishWorkout}
+                  accessibilityRole="button"
+                  accessibilityLabel="Finish workout"
+                >
+                  <Ionicons name="checkmark-done" size={20} color={colors.onPrimary} />
+                  <Text style={styles.completeBtnText}>Finish workout</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  testID="volyume-btn-next-exercise"
+                  style={styles.completeBtn}
+                  onPress={handleNextExercise}
+                  accessibilityRole="button"
+                  accessibilityLabel="Move to next exercise"
+                >
+                  <Ionicons name="arrow-forward-circle" size={20} color={colors.onPrimary} />
+                  <Text style={styles.completeBtnText}>Next exercise</Text>
+                </TouchableOpacity>
+              )
+            ) : (
+              <TouchableOpacity
+                testID="volyume-btn-complete-set"
+                style={[styles.completeBtn, saving && styles.btnDisabled, currentSet.setType === 'warmup' && styles.completeBtnWarmup]}
+                onPress={handleCompleteSetPress}
+                disabled={saving}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  currentSet.setType === 'warmup' ? 'Done with warm-up'
+                  : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Complete set'
+                }
+              >
+                <Ionicons name="checkmark-circle" size={20} color={currentSet.setType === 'warmup' ? colors.warning : colors.onPrimary} />
+                <Text style={[styles.completeBtnText, currentSet.setType === 'warmup' && styles.completeBtnTextWarmup]}>
+                  {currentSet.setType === 'warmup' ? 'Done'
+                    : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Log set'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         {/* Exercise Picker Modal, shared by Add and Swap (see pickerMode) */}
         <ExercisePickerModal
@@ -2861,6 +2911,35 @@ const styles = StyleSheet.create({
   // Text button below the primary CTA (COMP-001): quiet, 44pt target.
   extraSetBtn: { alignItems: 'center', justifyContent: 'center', minHeight: 44 },
   extraSetBtnText: { ...type.label, color: colors.textSecondary },
+  // A2: "Log another set" promoted into the old primary slot as an OUTLINE
+  // button — full-size so the muscle-memory tap logs a set, but not filled,
+  // keeping the bottom bar's CTA the single filled-amber object on screen.
+  extraSetBtnPromoted: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.sm, borderRadius: radius.lg, paddingVertical: spacing.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.4),
+    backgroundColor: colors.primaryBg,
+  },
+  extraSetBtnPromotedText: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.primary, letterSpacing: 0.6 },
+  // A2: the pinned action bar. Sits above the home indicator; the scroll's
+  // bottom spacer keeps content clear of it.
+  bottomBar: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSubtle,
+  },
+  headerRestChip: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xxs,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
+    borderRadius: radius.full, backgroundColor: colors.primaryBg,
+  },
+  headerRestChipText: {
+    ...type.num('caption'),
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+  },
   clusterBanner: {
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.502), borderRadius: radius.lg,
     backgroundColor: colors.primaryBg, padding: spacing.md, gap: spacing.sm, marginBottom: spacing.sm,

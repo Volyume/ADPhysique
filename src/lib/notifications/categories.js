@@ -187,6 +187,8 @@ export function categoryForDataType(type) {
     case 'checkin_missed': return CATEGORY.CHECKIN_MISSED;
     case 'planned_meal_confirm': return CATEGORY.PLANNED_MEAL_CONFIRM;
     case 'rest_timer': return CATEGORY.REST_TIMER;
+    case 'rest_end': return CATEGORY.REST_TIMER; // A2: the end-of-rest alert
+
     case 'subscription_payment_failure': return CATEGORY.SUBSCRIPTION_PAYMENT_FAILURE;
     case 'subscription_expiring': return CATEGORY.SUBSCRIPTION_EXPIRING;
     case 'weekly_coach_ready': return CATEGORY.WEEKLY_COACH_READY;

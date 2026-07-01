@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, AppState, useWindowDimensions } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { View, Text, StyleSheet, TouchableOpacity, AppState, useWindowDimensions, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useShallow } from 'zustand/react/shallow';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
+// D2: all haptics ride the named vocabulary so the reduce-motion setting
+// silences them (the old raw expo-haptics calls bypassed it).
+import { restCountdown, restDone, selection as hapticSelection } from '../lib/haptics';
 import { playRestBeep, preloadRestBeeps } from '../lib/restSound';
 import { clampRestDelta } from '../lib/restTimerMath';
 // Live lock-screen rest-timer notification (U1 / 13-engagement R3). The old
@@ -36,14 +38,16 @@ export default function RestTimer() {
   // mutation (PR celebrations, set saves, profile updates, etc.) which
   // ran through every second of every workout.
   const {
-    restTimerActive, restTimerRemaining,
-    stopRestTimer, tickRestTimer, addRestTime,
+    restTimerActive, restTimerRemaining, restTimerDuration,
+    stopRestTimer, tickRestTimer, addRestTime, reduceMotion,
   } = useAppStore(useShallow(s => ({
     restTimerActive: s.restTimerActive,
     restTimerRemaining: s.restTimerRemaining,
+    restTimerDuration: s.restTimerDuration,
     stopRestTimer: s.stopRestTimer,
     tickRestTimer: s.tickRestTimer,
     addRestTime: s.addRestTime,
+    reduceMotion: s.accessibility?.reduceMotion,
   })));
 
   const intervalRef = useRef(null);
@@ -90,7 +94,20 @@ export default function RestTimer() {
   // (it may have already finished while away) instead of resuming frozen.
   useEffect(() => {
     const sub = AppState.addEventListener('change', nextState => {
-      if (nextState === 'active' && restTimerActive) tickRestTimer();
+      if (nextState !== 'active' || !restTimerActive) return;
+      // A2: if rest ELAPSED while backgrounded, the catch-up tick jumps
+      // straight to inactive and every end cue used to be skipped. Detect the
+      // elapsed case before ticking and fire the GO beat once on return.
+      const endsAt = useAppStore.getState().restTimerEndsAt;
+      const elapsedWhileAway = endsAt != null && endsAt <= Date.now();
+      tickRestTimer();
+      if (elapsedWhileAway) {
+        playRestBeep('go');
+        restDone();
+        setShowDone(true);
+        const t = setTimeout(() => setShowDone(false), 3000);
+        timeoutsRef.current.push(t);
+      }
     });
     return () => { try { sub?.remove(); } catch (_) {} };
   }, [restTimerActive, tickRestTimer]);
@@ -113,22 +130,21 @@ export default function RestTimer() {
     if (!restTimerActive) return;
     if (restTimerRemaining === 3) {
       playRestBeep('three');
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      restCountdown(3);
     } else if (restTimerRemaining === 2) {
       playRestBeep('two');
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+      restCountdown(2);
     } else if (restTimerRemaining === 1) {
       playRestBeep('one');
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      restCountdown(1);
     } else if (restTimerRemaining === 0) {
       playRestBeep('go');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      const t1 = setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 200);
-      const t2 = setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 400);
+      // D2: the GO haptic signature now lives in the vocabulary (restDone),
+      // so reduce-motion silences it like every other haptic.
+      restDone();
       setShowDone(true);
       const t3 = setTimeout(() => setShowDone(false), 3000);
-      timeoutsRef.current.push(t1, t2, t3);
+      timeoutsRef.current.push(t3);
     }
     // Intentionally keyed on restTimerRemaining only: this fires once per
     // tick and is guarded by the restTimerActive check above, so adding
@@ -152,7 +168,7 @@ export default function RestTimer() {
   }, []);
 
   function handleAdjust(delta) {
-    Haptics.selectionAsync();
+    hapticSelection();
     // Read remaining straight off the store: during a long-press repeat this
     // runs inside a setInterval whose closure would otherwise clamp against
     // the remaining value captured at press time.
@@ -175,6 +191,31 @@ export default function RestTimer() {
     repeatRef.current = setInterval(() => handleAdjust(delta), 200);
   }
   useEffect(() => () => stopRepeat(), []);
+
+  // D2: a thin draining fill under the row so remaining rest reads at a
+  // glance without parsing the numeral. UI-thread scaleX (native driver);
+  // under reduce-motion the fill steps statically instead of animating.
+  const drain = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!restTimerActive) return;
+    const total = Math.max(1, Number(restTimerDuration) || 90);
+    const frac = Math.max(0, Math.min(1, restTimerRemaining / total));
+    if (reduceMotion) {
+      drain.setValue(frac);
+      return;
+    }
+    // Animate towards where the bar should be one second from now, so the
+    // drain is continuous rather than stepping on each tick; ±15 adjustments
+    // glide to their new position over the same second.
+    Animated.timing(drain, {
+      toValue: Math.max(0, Math.min(1, (restTimerRemaining - 1) / total)),
+      duration: 1000,
+      easing: Easing.linear,
+      useNativeDriver: true,
+    }).start();
+    // drain is a stable ref; keying on the tick + settings is deliberate.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restTimerRemaining, restTimerActive, restTimerDuration, reduceMotion]);
 
   const { height: windowHeight } = useWindowDimensions();
   const compact = windowHeight < COMPACT_HEIGHT;
@@ -245,6 +286,21 @@ export default function RestTimer() {
         >
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
+      </View>
+      {/* D2: the draining remaining-rest fill. Decorative (the live region
+          above carries the accessible announcement), so hidden from AT. */}
+      <View
+        style={styles.drainTrack}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        <Animated.View
+          style={[
+            styles.drainFill,
+            { transform: [{ scaleX: drain }] },
+            isAlmostDone && styles.drainFillWarm,
+          ]}
+        />
       </View>
     </View>
   );
@@ -325,6 +381,19 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   adjBtnTextNeg: { color: colors.textSecondary },
+  drainTrack: {
+    height: 3,
+    backgroundColor: colors.surface3,
+    borderBottomLeftRadius: radius.md,
+    borderBottomRightRadius: radius.md,
+    overflow: 'hidden',
+  },
+  drainFill: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    transformOrigin: 'left',
+  },
+  drainFillWarm: { backgroundColor: colors.warning },
   doneContainer: {
     flexDirection: 'row',
     alignItems: 'center',

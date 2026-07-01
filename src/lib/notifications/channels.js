@@ -4,6 +4,10 @@ import { registerRestTimerCategory } from './categories';
 
 const TRAINING_REMINDERS_CHANNEL = 'training-reminders';
 const REST_TIMER_CHANNEL = 'rest-timer';
+// A2: the end-of-rest alert. Separate from the silent live-countdown channel
+// because this one MUST sound/vibrate on a locked phone — that is its entire
+// job (UX audit CL-1). Users can still silence it independently in OS settings.
+export const REST_ALERTS_CHANNEL = 'rest-alerts';
 // Coaching reminders (morning weight, weekly check-in, weekly coach, trial
 // gates). On Android 8+ every notification MUST target a channel or it is
 // dropped/buried; these used to post with no channel and never appeared.
@@ -49,6 +53,14 @@ export async function ensureNotifChannels() {
       importance: Notifications.AndroidImportance.LOW,
       sound: null,
       enableVibrate: false,
+      showBadge: false,
+    });
+    await Notifications.setNotificationChannelAsync(REST_ALERTS_CHANNEL, {
+      name: 'Rest finished',
+      description: 'A single alert when your rest between sets ends',
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: 'default',
+      enableVibrate: true,
       showBadge: false,
     });
     // Register the rest-timer notification CATEGORY + its four action

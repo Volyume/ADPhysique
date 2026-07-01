@@ -130,6 +130,15 @@ describe('handleNotification, morning_weight', () => {
   });
 });
 
+describe('handleNotification, rest_end (A2)', () => {
+  test('foreground delivery is always suppressed (the in-app timer owns the moment)', async () => {
+    const h = captureHandler();
+    expect(await h(notif('rest_end'))).toEqual(SUPPRESS);
+    // No DB read needed to make the call.
+    expect(mockGetMorningWeightToday).not.toHaveBeenCalled();
+  });
+});
+
 describe('handleNotification, evening_weight (Q1)', () => {
   test('weight already logged today -> suppress', async () => {
     mockGetMorningWeightToday.mockResolvedValue({ weightKg: 80 });
