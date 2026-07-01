@@ -1472,6 +1472,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     adjustments,
     cardioFlag,
     cardioAcknowledgement,
+    cyclePhaseNote,
     whyThisWeek,
     deloadSuggested,
     deloadNote,
@@ -1828,6 +1829,15 @@ export default function CoachOutputScreen({ navigation, route }) {
           <View style={styles.cardioNoteRow}>
             <Ionicons name="heart-outline" size={14} color={colors.primary} />
             <Text style={styles.cardioNoteText}>{cardioAcknowledgement}</Text>
+          </View>
+        ) : null}
+        {/* U4: cycle-phase reassurance for a small period-week water rise
+            (advisory, no Apply; only present for a female user who flagged
+            their period and shows a water-plausible rise). */}
+        {cyclePhaseNote?.note ? (
+          <View style={styles.cardioNoteRow}>
+            <Ionicons name="water-outline" size={14} color={colors.primary} />
+            <Text style={styles.cardioNoteText}>{cyclePhaseNote.note}</Text>
           </View>
         ) : null}
 

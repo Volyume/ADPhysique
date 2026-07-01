@@ -22,6 +22,7 @@ import { robustTrackingLatest, robustTrackingSevenDaysAgo } from './robustTrend'
 import { computeMacroCycle, computeRefeedDay } from './coachApply';
 import { detectEdPatternFlag, hasEdPatternCleared } from './edPatternDetector';
 import { detectDifferentialTrigger } from './differentialPaywall';
+import { cycleTrendAnnotation } from './cyclePhase';
 
 // ─── EWMA ────────────────────────────────────────────────────────────────────
 
@@ -1287,6 +1288,15 @@ export function runWeeklyCoach(inputs) {
   });
 
   // ── ASSEMBLE OUTPUT ───────────────────────────────────────────────────────
+  // U4 (additive, no maths changed): a reassuring note when a female user who
+  // flagged their period this week shows a small water-plausible rise. Never
+  // fires on a loss, never alters a target/floor/threshold — annotation only.
+  const cyclePhaseNote = cycleTrendAnnotation({
+    sex,
+    menstrual: noteFlags?.menstrual,
+    trendPctPerWeek: computeWeeklyTrendPct(morningWeights, bodyweightKg),
+  });
+
   return {
     hasEnoughData: true,
     dataNote: null,
@@ -1299,6 +1309,8 @@ export function runWeeklyCoach(inputs) {
       deltaLabel,
       rateLabel,
     },
+    // U4: cycle-phase water-rise reassurance (or null). Additive; see cyclePhase.js.
+    cyclePhaseNote,
     whatWorking,
     adjustments: {
       training: { signal: trainingSignal, note: trainingNote },
