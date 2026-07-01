@@ -125,6 +125,10 @@ function buildOffItems(output, checkin) {
     items.push('You came in under your calorie target.');
   } else if (checkin?.calsAdherence === 'over') {
     items.push('You went over your calorie target.');
+  } else if (checkin?.calsAdherence === 'no') {
+    // Off target but no food-diary data to say which way (mapCalsAdherence
+    // leaves a plain 'no' when it can't split under/over).
+    items.push('You were off your calorie target.');
   }
   return items;
 }
@@ -152,12 +156,20 @@ function buildFocus(output, checkin) {
   if (checkin?.calsAdherence === 'untracked') {
     return 'Track your calories this week. Without that, the calorie target cannot be adjusted reliably.';
   }
-  if (checkin?.calsAdherence === 'over') {
+  if (checkin?.calsAdherence === 'over' || checkin?.calsAdherence === 'no') {
     return 'Stay inside the calorie target.';
   }
   // On track default
   return 'Keep doing what you did this week.';
 }
+
+// NU-8: one-line captions for the engine's data-confidence grade
+// ('data_hold' never reaches the main card; it renders InsufficientDataView).
+const CONFIDENCE_CAPTIONS = {
+  high: 'Confidence: high. A full week of data sits behind this decision.',
+  medium: 'Confidence: medium. Some data was thin this week, so changes are sized cautiously.',
+  low: 'Confidence: low. The trend is still building, so this week stays conservative.',
+};
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -1070,7 +1082,6 @@ export default function CoachOutputScreen({ navigation, route }) {
   useEffect(() => {
     async function load() {
       const checkin = await getLatestCheckin(user.id, weekStart);
-      setCheckin(checkin);
       // COMP-026 (A): the adaptive-TDEE resize needs ~4+ weeks of weight to
       // reach 'high' confidence and size the calorie change from real energy
       // balance instead of the blunt fixed step. A 14-day window capped
@@ -1124,6 +1135,12 @@ export default function CoachOutputScreen({ navigation, route }) {
       const engineCheckin = checkin
         ? { ...checkin, calsAdherence: mapCals(checkin.calsAdherence, intake.avgKcal) }
         : checkin;
+      // NU-1: the narration layer (buildOffItems/buildFocus and the registered
+      // coach response) speaks the same engine vocabulary
+      // (hit/under/over/untracked), so the MAPPED check-in is what goes into
+      // state. Storing the raw 'yes'/'no' row left every calorie branch of the
+      // narration dead: "Off target" never appeared in "what was off".
+      setCheckin(engineCheckin);
 
       // Compute weeksInPhase from stored start timestamp
       const phaseStartedAt = userProfile?.phaseStartedAt ?? null;
@@ -1507,6 +1524,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     refeed,
     heldDecisions,
     rapidWeightLossFlag,
+    confidence,
     prsThisWeek,
     sessionsCompleted,
     sessionsPlanned,
@@ -1871,6 +1889,12 @@ export default function CoachOutputScreen({ navigation, route }) {
 
         {/* 6. Why */}
         {whyThisWeek ? <WhyBlock text={whyThisWeek} onLearnMore={() => navigation.navigate('Methodology', { source: 'why_block' })} /> : null}
+        {/* NU-8: the engine grades every weekly decision's data confidence
+            (assessDataConfidence) and persists it, but it was never surfaced.
+            One calm line so the user knows how solid this week's read was. */}
+        {CONFIDENCE_CAPTIONS[confidence] ? (
+          <Text style={styles.confidenceCaption}>{CONFIDENCE_CAPTIONS[confidence]}</Text>
+        ) : null}
 
         {/* 7. One focus for next week. Coach response part 4 (the single
             tactical cue, deterministic priority, ED/calm aware) feeds this
@@ -2283,6 +2307,12 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 21,
     fontStyle: 'italic',
+  },
+  // NU-8: quiet data-confidence line under the Why block.
+  confidenceCaption: {
+    ...type.caption,
+    color: colors.textMuted,
+    paddingHorizontal: spacing.xs,
   },
   // COMP-006 methodology links (secondary, muted, no affordance beyond text)
   whyLearnMore: {

@@ -456,22 +456,27 @@ export default function ProOnboardingScreen({ navigation }) {
     let planFailed = false;
     try {
       if (morningEnabled || checkinEnabled) {
+        // Flat schema: CoachingReminders, WeeklyCheckIn and the You tab
+        // all read these top-level keys. An earlier nested shape
+        // (prefs.checkin.weekday, prefs.morning.hour) was silently
+        // dropped by every reader, defaulting every enrolled user to
+        // a Sunday check-in regardless of the day they picked here.
+        const prefs = {
+          morningEnabled,
+          checkinEnabled,
+          morningHour,
+          morningMinute: 0,
+          checkinDay,
+          checkinHour: 12,
+          checkinMinute: 0,
+        };
+        // OB-2: the chosen check-in day is a preference, not a notification,
+        // so it persists whatever the permission dialog returns. Denying the
+        // permission used to silently discard the day picked here, then the
+        // check-in gate told the user to come back on the default Sunday.
+        await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs)).catch(() => {});
         const status = await requestNotificationPermissions();
         if (status === 'granted') {
-          // Flat schema: CoachingReminders, WeeklyCheckIn and the You tab
-          // all read these top-level keys. An earlier nested shape
-          // (prefs.checkin.weekday, prefs.morning.hour) was silently
-          // dropped by every reader, defaulting every enrolled user to
-          // a Sunday check-in regardless of the day they picked here.
-          const prefs = {
-            morningEnabled,
-            checkinEnabled,
-            morningHour,
-            morningMinute: 0,
-            checkinDay,
-            checkinHour: 12,
-            checkinMinute: 0,
-          };
           if (morningEnabled) {
             await scheduleMorningWeightNotification(morningHour, 0);
             // Q1: evening weigh-in backstop rides the same toggle (self-gates on ED flag).
@@ -480,7 +485,6 @@ export default function ProOnboardingScreen({ navigation }) {
           if (checkinEnabled) {
             await scheduleCheckinReminder(checkinDay, 12, 0);
           }
-          await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs)).catch(() => {});
           // OPP-C03: pre-lay the missed check-in follow-up pair for the
           // first check-in cycle (reads the prefs blob just saved; the
           // helper self-guards on tier, toggle and ED flag).

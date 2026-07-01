@@ -23,7 +23,7 @@ import {
 } from '../lib/database';
 import { localDayKey, localWeekStartMs } from '../lib/dayKey';
 import {
-  getCurrentWeekStart, formatWeekRange, hasLoggedToday, earliestWeightTs,
+  formatWeekRange, hasLoggedToday, earliestWeightTs,
   deriveTrainingPerformance, deriveCalsAdherence, stripAutoNotes, PERF_VERDICT_TEXT,
 } from '../lib/checkinDerive';
 import { summariseWeekSteps } from '../lib/stepsSummary';
@@ -141,8 +141,13 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const [forceFullWizard, setForceFullWizard] = useState(false);
 
   // ─── Gate state ──────────────────────────────────────────────────────────────
-  // 'loading' | 'wrong_day' | 'too_soon' | 'need_weights' | 'open' | 'load_error'
+  // 'loading' | 'wrong_day' | 'day_late' | 'too_soon' | 'need_weights' | 'open' | 'load_error'
   const [gateState, setGateState] = useState('loading');
+  // OB-7: when the user is exactly one day past their scheduled day, every
+  // week window anchors to yesterday so the check-in reviews the week they
+  // missed (matters when the scheduled day is Sunday, where "today" would
+  // otherwise start a fresh Monday-anchored week).
+  const [weekAnchorMs, setWeekAnchorMs] = useState(() => Date.now());
   // PIPE-006: bump to re-run the loader after a load failure, so the error
   // state is recoverable rather than failing open into the form.
   const [reloadKey, setReloadKey] = useState(0);
@@ -181,18 +186,27 @@ export default function WeeklyCheckInScreen({ navigation }) {
       getCardioLogRange(user.id, fromDate, toDate)
         .then(rows => {
           const s = summariseWeekCardio(rows);
-          const derived = cardioComplianceFromLog(s.sessions, cardioTarget || { sessionsPerWeek: 3 });
+          const target = cardioTarget || { sessionsPerWeek: 3 };
+          const derived = cardioComplianceFromLog(s.sessions, target);
           // Only fill when nothing is set yet, so this log-derived prefill can't
           // race with (and clobber) a saved override loaded by the re-entry
           // prefill in load(). Functional setter avoids a stale-closure read.
           setCardioAdherence(prev => prev ?? derived);
+          // A7 provenance: keep the counts so the question can say which log
+          // the pre-selected answer came from (mirrors the diary/training notes).
+          setCardioMeta({
+            sessions: s.sessions,
+            targetSessions: Number(target?.sessionsPerWeek) || 0,
+          });
         })
         .catch(() => {});
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  const weekStart = getCurrentWeekStart();
+  // OB-7: anchored, so a day-late check-in saves against (and labels) the
+  // week it reviews, not a week that started this morning.
+  const weekStart = new Date(localWeekStartMs(weekAnchorMs));
   const weekLabel = formatWeekRange(weekStart);
   const bwu = bodyWeightUnits || 'st';
 
@@ -219,6 +233,9 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const [confirmingPlanned, setConfirmingPlanned] = useState(false);
   const [stepsAdherence] = useState(null); // legacy field, no longer collected; steps_avg replaces it
   const [cardioAdherence, setCardioAdherence] = useState(null);
+  // A7 provenance for the cardio prefill: { sessions, targetSessions } from
+  // the week's cardio log, so the pre-selected answer names its source.
+  const [cardioMeta, setCardioMeta] = useState(null);
   // Steps: the week's auto summary (null until loaded). When 4+ days are
   // registered the check-in shows the average and offers a tap-to-override,
   // for users whose real count lives on a watch or another app; otherwise the
@@ -269,12 +286,21 @@ export default function WeeklyCheckInScreen({ navigation }) {
         // Today's day of week (0=Sunday)
         const todayDay = new Date().getDay();
 
+        // OB-7: exactly one day past the scheduled day still reviews the same
+        // coaching week, so travel or illness doesn't cost a whole cycle. Any
+        // later and the user waits for the next cycle as before. When a day
+        // late, every week window below anchors to yesterday so the review
+        // covers the week that was missed.
+        const dayLate = (todayDay - scheduledDay + 7) % 7 === 1;
+        const anchorMs = dayLate ? Date.now() - 86400000 : Date.now();
+        if (dayLate && !cancelled) setWeekAnchorMs(anchorMs);
+
         // Wrong-day gate resolved FIRST, before any throwable data load.
         // The day check needs no data, so settling it up front means a
         // later read that throws (e.g. the morning-weights query) can't
         // skip to the catch below and fail OPEN, which previously let a
         // user check in on a day that wasn't their scheduled one.
-        if (todayDay !== scheduledDay) {
+        if (todayDay !== scheduledDay && !dayLate) {
           if (!cancelled) setGateState('wrong_day');
           return;
         }
@@ -282,7 +308,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         const weights = await getMorningWeightsLast14Days(user.id);
         if (cancelled) return;
         setAlreadyLoggedToday(hasLoggedToday(weights));
-        const weekAgo = Date.now() - 7 * 86400000;
+        const weekAgo = anchorMs - 7 * 86400000;
         const thisWeek = weights.filter(w => (w.loggedAt ?? 0) >= weekAgo);
         setWeekWeights(thisWeek);
         setWeighInsThisWeek(thisWeek.length);
@@ -307,7 +333,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         // localDayKey fall back to now, collapsing the week window to today,
         // so sessions read 0 and the rollup range covered a single day and
         // nothing was ever derived: the form showed only blind buttons.
-        const weekStartMs = localWeekStartMs();
+        const weekStartMs = localWeekStartMs(anchorMs);
         const [sessions, prCount, targets] = await Promise.all([
           getWeeklySessionStats(user.id, weekStartMs).catch(() => ({ completed: 0, planned: 0 })),
           getWeeklyPRCount(user.id, weekStartMs).catch(() => 0),
@@ -421,7 +447,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         // and need_weights because a brand-new user without any
         // weights still satisfies "today is chosen day" but hasn't
         // earned enough rhythm to check in yet.
-        if (todayDay !== scheduledDay) {
+        if (todayDay !== scheduledDay && !dayLate) {
           setGateState('wrong_day');
         } else if (daysToWait > 0) {
           const nextDate = new Date(Date.now() + daysToWait * 86400000);
@@ -433,6 +459,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
           setGateState('too_soon');
         } else if (thisWeek.length < MIN_WEIGH_INS) {
           setGateState('need_weights');
+        } else if (dayLate) {
+          // OB-7: the stricter data gates above still win; a day-late user
+          // with enough data must still explicitly choose "Check in anyway".
+          setGateState('day_late');
         } else {
           setGateState('open');
         }
@@ -496,7 +526,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         // eslint-disable-next-line no-await-in-loop
         await confirmPlannedDay(user.id, day);
       }
-      const weekStartMs = localWeekStartMs();
+      const weekStartMs = localWeekStartMs(weekAnchorMs);
       const startIso = localDayKey(weekStartMs);
       const endIso = localDayKey(weekStartMs + 6 * 86400000);
       const rollups = await getRollupsForRange(user.id, startIso, endIso).catch(() => []);
@@ -516,7 +546,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
       setUnconfirmedPlannedDays([]);
     } catch (_) { /* leave the prompt up so it can be retried */ }
     setConfirmingPlanned(false);
-  }, [user?.id, confirmingPlanned, unconfirmedPlannedDays, autoDerived.calsMeta]);
+  }, [user?.id, confirmingPlanned, unconfirmedPlannedDays, autoDerived.calsMeta, weekAnchorMs]);
 
   const handleSubmit = useCallback(async () => {
     if (busy) return;
@@ -864,6 +894,17 @@ export default function WeeklyCheckInScreen({ navigation }) {
         {hasCardioPrescription && (
           <View style={styles.section}>
             <SectionLabel>Prescribed cardio</SectionLabel>
+            {/* A7 provenance: the pre-selected answer names its source, matching
+                the diary and logged-sessions notes above. */}
+            {cardioMeta ? (
+              <Text style={styles.autoDerivedNote}>
+                {cardioMeta.sessions > 0 && cardioMeta.targetSessions > 0
+                  ? `From your cardio log: ${cardioMeta.sessions} of ${cardioMeta.targetSessions} prescribed session${cardioMeta.targetSessions === 1 ? '' : 's'} this week. Adjust below only if you did cardio that isn't logged here.`
+                  : cardioMeta.sessions > 0
+                    ? `From your cardio log: ${cardioMeta.sessions} session${cardioMeta.sessions === 1 ? '' : 's'} this week. Adjust below only if you did cardio that isn't logged here.`
+                    : "No cardio logged this week. If you did yours elsewhere, set it below."}
+              </Text>
+            ) : null}
             <OptionRow
               options={[
                 { value: 'hit', label: 'Did it' },
@@ -1165,6 +1206,42 @@ export default function WeeklyCheckInScreen({ navigation }) {
           </View>
           <TouchableOpacity style={styles.gateBtn} onPress={() => navigation.goBack()} activeOpacity={0.85} accessibilityRole="button">
             <Text style={styles.gateBtnText}>Got it</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // OB-7: exactly one day late. The same week is still reviewable, so offer
+  // the override with the same softer-accuracy framing the weights gate uses,
+  // rather than costing the user a whole coaching cycle.
+  if (gateState === 'day_late') {
+    const dayName = DAYS_FULL[checkinDayNum];
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.gateHeader}>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close">
+            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.gateHeaderTitle}>Weekly check-in</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <ScrollView contentContainerStyle={styles.gateScroll}>
+          <View style={styles.gateCard}>
+            <Ionicons name="calendar-outline" size={40} color={colors.surface3} />
+            <Text style={styles.gateTitle}>Your check-in day was {dayName}</Text>
+            <Text style={styles.gateBody}>
+              You&apos;re one day late, so the week you missed can still be reviewed. If travel or illness pushed you off your day, check in now rather than lose the week.
+            </Text>
+            <Text style={styles.gateBody}>
+              A day&apos;s delay makes the read slightly less accurate than checking in on {dayName}. Your next check-in lands back on {dayName} as normal.
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.gateBtn} onPress={() => setGateState('open')} activeOpacity={0.85} accessibilityRole="button">
+            <Text style={styles.gateBtnText}>Check in anyway</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.gateDeferBtn} onPress={() => navigation.goBack()} activeOpacity={0.75} accessibilityRole="button">
+            <Text style={styles.gateDeferBtnText}>Wait for {dayName}</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
