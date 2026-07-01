@@ -31,6 +31,8 @@ export const KCAL_FLOOR_MALE = 1500;
 
 // The sex-aware floor for a calorie target. Unknown sex falls to 1200 to match
 // nutritionEngine.js exactly (never assume male, but never write below 1200).
+// Sex is enforced present at onboarding (founder 2026-07-01), so 'male' is the
+// only path to the 1500 floor and a null never legitimately reaches here.
 export function kcalFloorForSex(sex) {
   return sex === 'male' ? KCAL_FLOOR_MALE : KCAL_FLOOR;
 }

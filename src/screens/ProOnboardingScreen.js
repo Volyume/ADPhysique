@@ -160,7 +160,12 @@ export default function ProOnboardingScreen({ navigation }) {
   const [bodyFat, setBodyFat] = useState('');
   const [bfSource, setBfSource] = useState('visual');
   const [localHeightUnits, setLocalHeightUnits] = useState('imperial');
-  const [sex, setSex] = useState('male');
+  // Biological sex has NO default (founder 2026-07-01): it drives the ED
+  // calorie floor (1500 male / 1200 female) and BMR, so a silent 'male' default
+  // could mis-floor a female. advanceFrom2 requires an explicit choice before
+  // the profile step can complete, so sex is never unknown by the time targets
+  // are computed.
+  const [sex, setSex] = useState(null);
   const [age, setAge] = useState('30');
   const [heightCm, setHeightCm] = useState('175');
   const [heightFt, setHeightFt] = useState('5');
@@ -330,6 +335,12 @@ export default function ProOnboardingScreen({ navigation }) {
   function advanceFrom2() {
     if (!firstName.trim()) {
       appAlert('Your name', 'Please enter your first name to continue.');
+      return;
+    }
+    // Biological sex is REQUIRED (founder 2026-07-01): it sets the ED calorie
+    // floor and BMR, and must never be left to a silent default.
+    if (sex !== 'male' && sex !== 'female') {
+      appAlert('Biological sex', 'Please choose your biological sex. It sets your calorie and nutrition targets.');
       return;
     }
     // Validate body weight, used downstream to compute calorie / protein

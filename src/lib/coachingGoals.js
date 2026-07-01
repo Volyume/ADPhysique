@@ -355,6 +355,18 @@ export function buildNutritionEngineInputs({
   // source is only meaningful when a usable percentage came with it.
   const bf = Number(bodyFatPct);
   const safeBf = Number.isFinite(bf) && bf > 0 && bf < 60 ? bf : null;
+  // Sex is REQUIRED at onboarding (founder 2026-07-01) and drives the SACRED ED
+  // calorie floor. This is the single choke point where sex enters the nutrition
+  // engine, so guard it: a missing/invalid value here means enforcement was
+  // bypassed somewhere upstream — surface it loudly (Sentry) rather than let it
+  // pass silently. We do NOT invent a sex (the engine keeps 1500 male / 1200
+  // female by real value); the guard exists so any enforcement gap is caught.
+  if (sex !== 'male' && sex !== 'female') {
+    try {
+      // eslint-disable-next-line global-require
+      require('./errorLog').logError('nutrition.sexMissing', new Error('nutrition engine input has no valid biological sex'), { sex: sex ?? null });
+    } catch (_) { /* logging is best-effort */ }
+  }
   return {
     sex,
     ageYears: age,
