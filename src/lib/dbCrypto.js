@@ -25,6 +25,19 @@ import { logError, logInfo } from './errorLog';
 const KEY_ID = 'volyume_db_key_v1';
 const DB_NAME = 'volyume.db';
 
+// The DB key must be reachable whenever the app runs, including a background
+// launch while the device is still locked (background fetch, a notification tap
+// that boots the app locked). SecureStore's default accessibility is
+// WHEN_UNLOCKED, so a locked-device read throws `User interaction is not
+// allowed` (Sentry VOLYUME-1N, audit S-002 pt2). AFTER_FIRST_UNLOCK keeps the
+// item readable once the device has been unlocked at least once since boot —
+// the standard choice for a service credential the app needs unattended. The
+// attribute is applied on WRITE; existing keys keep their prior accessibility
+// until next rewritten, and the F-001 guards mean any residual locked-read
+// failure is a recoverable blocked-start, never a key rotation. iOS-only
+// semantics; the option is a documented no-op on the Android keystore.
+const KEY_OPTS = { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK };
+
 function toHex(bytes) {
   let s = '';
   for (let i = 0; i < bytes.length; i += 1) s += bytes[i].toString(16).padStart(2, '0');
@@ -40,7 +53,7 @@ async function readStoredKey(attempts = 3) {
   for (let i = 0; i < attempts; i += 1) {
     try {
       // eslint-disable-next-line no-await-in-loop
-      return { value: await SecureStore.getItemAsync(KEY_ID), failed: false };
+      return { value: await SecureStore.getItemAsync(KEY_ID, KEY_OPTS), failed: false };
     } catch (e) {
       logError('dbCrypto.getKey', e, { attempt: i });
       // eslint-disable-next-line no-await-in-loop
@@ -71,7 +84,7 @@ export async function getOrCreateDbKey() {
   // it actually persisted. An unpersisted key must never encrypt data.
   const fresh = toHex(await Crypto.getRandomBytesAsync(32));
   try {
-    await SecureStore.setItemAsync(KEY_ID, fresh);
+    await SecureStore.setItemAsync(KEY_ID, fresh, KEY_OPTS);
   } catch (e) {
     logError('dbCrypto.setKey', e, {});
     return { key: null, status: 'unavailable' };

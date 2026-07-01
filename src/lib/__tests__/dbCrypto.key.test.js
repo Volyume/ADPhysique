@@ -24,7 +24,12 @@
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(),
   setItemAsync: jest.fn(),
+  AFTER_FIRST_UNLOCK: 'AFTER_FIRST_UNLOCK',
 }));
+
+// The key is written with AFTER_FIRST_UNLOCK accessibility so a locked-device
+// background launch can still read it (audit S-002 pt2, Sentry VOLYUME-1N).
+const KEY_OPTS = { keychainAccessible: 'AFTER_FIRST_UNLOCK' };
 jest.mock('expo-crypto', () => ({
   getRandomBytesAsync: jest.fn(),
 }));
@@ -67,7 +72,7 @@ describe('getOrCreateDbKey', () => {
     expect(res).toEqual({ key: SEQ_HEX, status: 'created' });
     expect(res.key).toMatch(/^[0-9a-f]{64}$/);
     expect(Crypto.getRandomBytesAsync).toHaveBeenCalledWith(32);
-    expect(SecureStore.setItemAsync).toHaveBeenCalledWith('volyume_db_key_v1', SEQ_HEX);
+    expect(SecureStore.setItemAsync).toHaveBeenCalledWith('volyume_db_key_v1', SEQ_HEX, KEY_OPTS);
   });
 
   test('replaces a malformed stored value rather than returning it', async () => {
@@ -76,7 +81,14 @@ describe('getOrCreateDbKey', () => {
     const res = await getOrCreateDbKey();
 
     expect(res).toEqual({ key: SEQ_HEX, status: 'created' });
-    expect(SecureStore.setItemAsync).toHaveBeenCalledWith('volyume_db_key_v1', SEQ_HEX);
+    expect(SecureStore.setItemAsync).toHaveBeenCalledWith('volyume_db_key_v1', SEQ_HEX, KEY_OPTS);
+  });
+
+  test('reads + writes the key with AFTER_FIRST_UNLOCK accessibility (S-002 pt2)', async () => {
+    await getOrCreateDbKey();
+
+    expect(SecureStore.getItemAsync).toHaveBeenCalledWith('volyume_db_key_v1', KEY_OPTS);
+    expect(SecureStore.setItemAsync).toHaveBeenCalledWith('volyume_db_key_v1', SEQ_HEX, KEY_OPTS);
   });
 
   // F-001: a transient read failure must self-heal via retry, NOT mint a key.

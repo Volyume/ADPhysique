@@ -64,6 +64,17 @@ describe('pushMealPlans', () => {
     expect(await pushMealPlans(sb, { userId: 'u', localUserId: 'l' })).toEqual({ count: 0, errors: 0 });
     expect(upsert).not.toHaveBeenCalled();
   });
+
+  // S-004: a client ahead of migration 086 sees no cloud table. That is a
+  // benign skip (errors:0), not a sync failure, so it can't block sign-out.
+  test('missing cloud table → benign skip, not an error', async () => {
+    getLatestMealPlanRowForSync.mockResolvedValue({
+      id: 'p1', plan_json: JSON.stringify(PLAN), is_active: 1, deleted_at: null, created_at: 1, updated_at: 2,
+    });
+    const upsert = jest.fn(async () => ({ error: { code: 'PGRST205', message: "Could not find the table 'public.meal_plans' in the schema cache" } }));
+    const sb = { from: jest.fn(() => ({ upsert })) };
+    expect(await pushMealPlans(sb, { userId: 'u', localUserId: 'l' })).toEqual({ count: 0, errors: 0, skipped: 'cloud_table_missing' });
+  });
 });
 
 describe('pullMealPlans', () => {
@@ -90,6 +101,19 @@ describe('pullMealPlans', () => {
   test('empty cloud → clean no-op', async () => {
     const sb = sbForPull([]);
     expect(await pullMealPlans(sb, { userId: 'u', localUserId: 'l' })).toEqual({ count: 0, errors: 0 });
+    expect(applyMealPlanRowFromCloud).not.toHaveBeenCalled();
+  });
+
+  // S-004: pull side of the missing-table benign skip.
+  test('missing cloud table → benign skip, not an error', async () => {
+    const sb = {
+      from: jest.fn(() => ({
+        select: jest.fn(() => ({
+          eq: jest.fn(async () => ({ data: null, error: { code: 'PGRST205', message: "Could not find the table 'public.meal_plans' in the schema cache" } })),
+        })),
+      })),
+    };
+    expect(await pullMealPlans(sb, { userId: 'u', localUserId: 'l' })).toEqual({ count: 0, errors: 0, skipped: 'cloud_table_missing' });
     expect(applyMealPlanRowFromCloud).not.toHaveBeenCalled();
   });
 });

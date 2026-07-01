@@ -612,8 +612,15 @@ const useAppStore = create((set, get) => ({
             .slice(2, 6)
             .join(' | ');
         }
+        // Diagnostic trail only. Every tier transition is expected lifecycle
+        // (new-account cascade grant, cascade advance, paywall downgrade) and
+        // is already captured for analysis by the tier_changed engine event
+        // below, so a warning-level Sentry event per transition was pure noise
+        // and quota burn (audit S-010, Sentry VOLYUME-12). logInfo attaches a
+        // breadcrumb — visible in the run-up to any later error, no standalone
+        // event — while keeping the caller trace for "who changed the tier".
         // eslint-disable-next-line global-require
-        require('../lib/errorLog').logWarn('useAppStore.setTier', `tier ${prev} → ${tier}`, { prev, next: tier, caller: trace });
+        require('../lib/errorLog').logInfo('useAppStore.setTier', `tier ${prev} → ${tier}`, { prev, next: tier, caller: trace });
         // Engine telemetry (Move #3). Tier transition is one of the
         // six events that feed the cohort dashboard. A downgrade at
         // a paywall is also tracked separately as churn_at_gate, so

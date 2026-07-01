@@ -858,7 +858,16 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
         }));
       const orphanCount = routineExs.length - rows.length;
       if (orphanCount > 0) {
-        logWarn('sync._pushRoutinesAndExercises', 'orphan routine_exercises skipped', { orphanCount });
+        // cleanupOrphanRoutineExercises() above already deletes children whose
+        // parent routine is gone, so any orphan reaching here has a parent that
+        // exists locally but was filtered out of the pushable set (inactive /
+        // library). That is expected, not a fault, and the count is diagnostic
+        // only — a warning-level Sentry event per push cycle was quota noise
+        // (audit S-009, Sentry VOLYUME-8). logInfo keeps it in the breadcrumb
+        // trail so it still enriches any later sync error, without a standalone
+        // event. If orphanCount is ever seen to be non-trivial, revisit the
+        // parent/child selection rather than re-promoting the log.
+        logInfo('sync._pushRoutinesAndExercises', 'orphan routine_exercises skipped', { orphanCount });
       }
       for (let i = 0; i < rows.length; i += 200) {
         const { error: reErr } = await sb.from('routine_exercises').upsert(
