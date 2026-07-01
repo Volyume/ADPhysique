@@ -47,6 +47,13 @@ describe('wipeAllUserData direct-table set (A4)', () => {
     for (const t of rest) expect(WIPE_DIRECT_TABLES).toContain(t);
   });
 
+  // audit 2026-07-01: both carry a user_id column locally and were missing, so
+  // they survived sign-out / account-delete / cross-user switch. Pinned.
+  test('includes plan_folders + food_slot_recents (audit 2026-07-01)', () => {
+    expect(WIPE_DIRECT_TABLES).toContain('plan_folders');
+    expect(WIPE_DIRECT_TABLES).toContain('food_slot_recents');
+  });
+
   test('has no duplicate entries', () => {
     expect(new Set(WIPE_DIRECT_TABLES).size).toBe(WIPE_DIRECT_TABLES.length);
   });

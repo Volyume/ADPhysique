@@ -80,8 +80,12 @@ export async function closeDatabase() {
 }
 
 export function initDatabase() {
-  if (_db) return Promise.resolve(_db);
+  // Gate on the in-flight init FIRST (audit 2026-07-01 race): _db is now only
+  // set once _doInit has finished all schema + migrations, so while init is
+  // running _db is still null and _initPromise is the only handle — returning it
+  // makes concurrent callers await a fully-ready DB instead of a half-open one.
   if (_initPromise) return _initPromise;
+  if (_db) return Promise.resolve(_db);
   _initPromise = _doInit().catch(e => {
     // Clear state so a retry attempt re-runs init instead of returning
     // a half-open handle. SQLite.openDatabaseAsync sets _db before
@@ -101,7 +105,12 @@ async function _doInit() {
   // so the app never bricks or loses data. `PRAGMA key` MUST precede any other
   // statement, so this runs before `PRAGMA journal_mode`.
   const { db: opened, encrypted } = await openEncryptedDb(SQLite);
-  _db = opened;
+  // Do NOT publish `_db` yet (audit 2026-07-01 race): all schema + migration
+  // work below runs on the local `opened` handle, and `_db` is assigned only
+  // AFTER everything completes (bottom of this function). Publishing early let a
+  // concurrent db() caller receive a handle whose tables did not exist yet.
+  // db()/initDatabase() gate on `_initPromise` so concurrent callers await this
+  // whole function rather than reading a half-initialised `_db`.
   _dbEncrypted = !!encrypted;
   // F-002: a plaintext fallback is a real availability decision, but it must not
   // be silent — the consent screen tells users their data is in encrypted local
@@ -111,8 +120,8 @@ async function _doInit() {
     // eslint-disable-next-line global-require
     try { require('./errorLog').logWarn('database.plaintextFallback', 'local DB opened UNENCRYPTED (SQLCipher unavailable / migration fallback)', {}); } catch (_) {}
   }
-  await _db.execAsync('PRAGMA journal_mode = WAL;');
-  await _db.execAsync(`
+  await opened.execAsync('PRAGMA journal_mode = WAL;');
+  await opened.execAsync(`
     CREATE TABLE IF NOT EXISTS exercises (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -231,7 +240,7 @@ async function _doInit() {
   `);
 
   // Nutrition & body data tables (idempotent)
-  await _db.execAsync(`
+  await opened.execAsync(`
     CREATE TABLE IF NOT EXISTS nutrition_targets (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
@@ -312,7 +321,10 @@ async function _doInit() {
     CREATE INDEX IF NOT EXISTS idx_insights_user ON user_insights(user_id, dismissed_at, type);
   `);
 
-  await runMigrations(_db);
+  await runMigrations(opened);
+  // Schema + migrations are complete: NOW publish the handle. A concurrent
+  // db()/initDatabase() awaiting _initPromise resolves to a fully-ready DB.
+  _db = opened;
   return _db;
 }
 
@@ -1516,6 +1528,10 @@ export async function runMigrations(d) {
 // threw "undefined is not a function" on entry, the bug that made
 // every drainSyncQueue invocation fail before processing any row.
 export async function db() {
+  // Gate on the in-flight init first (audit 2026-07-01 race): while _doInit runs,
+  // _db is null and _initPromise resolves only once schema + migrations finish,
+  // so awaiting it hands back a fully-ready handle rather than a half-open one.
+  if (_initPromise) return _initPromise;
   return _db || initDatabase();
 }
 
@@ -3847,6 +3863,12 @@ export const WIPE_DIRECT_TABLES = [
   // state and engine_telemetry leftover rows could ship under the next
   // account, so the omission was a real ownership leak, not cosmetic.
   'cardio_log', 'ed_pattern_flags', 'tier_history', 'engine_telemetry',
+  // audit 2026-07-01: both carry a user_id column locally and were missing, so
+  // they survived sign-out / account-delete / the cross-user switch — the next
+  // account on a shared device inherited the prior user's plan folders and
+  // per-slot food-logging memory. plan_folders (migration 089) and
+  // food_slot_recents (client-only) both DELETE cleanly by user_id.
+  'plan_folders', 'food_slot_recents',
 ];
 
 export async function wipeAllUserData(userId) {

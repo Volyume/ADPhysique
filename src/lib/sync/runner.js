@@ -193,7 +193,7 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
         }
         // 3. Per-table pull for migrated tables.
         for (const tableName of MIGRATED_TABLES) {
-          const result = await pullTable(tableName, { userId }).catch((e) => {
+          const result = await pullTable(tableName, { userId, localUserId }).catch((e) => {
             erroredCount += 1;
             syncCrumb(`sync.pull.${tableName}`, `sync.pull.${tableName}.threw`, {
               error: String(e?.message ?? e).slice(0, 200),

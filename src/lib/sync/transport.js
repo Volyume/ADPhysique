@@ -176,7 +176,7 @@ export async function pushTable(tableName, { userId, localUserId } = {}) {
  * { count, errors }. Pull is supported for both bidirectional and
  * pull_only tables (anything in the registry).
  */
-export async function pullTable(tableName, { userId } = {}) {
+export async function pullTable(tableName, { userId, localUserId } = {}) {
   const entry = getRegistryEntry(tableName);
   if (!entry) {
     return { count: 0, errors: 1, reason: 'unknown_table' };
@@ -189,5 +189,9 @@ export async function pullTable(tableName, { userId } = {}) {
   if (!sb) {
     return { count: 0, errors: 0, skipped: 'no_client' };
   }
-  return handler(sb, { userId });
+  // Forward localUserId too (audit 2026-07-01): pull handlers that write to the
+  // local mirror keyed by the LOCAL user id — e.g. pullMealPlans →
+  // applyMealPlanRowFromCloud(localUserId, …) — got undefined here, so cloud
+  // meal plans never restored on a new device. Push already threaded it.
+  return handler(sb, { userId, localUserId });
 }

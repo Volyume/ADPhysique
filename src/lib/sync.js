@@ -196,7 +196,13 @@ export async function syncProfile(supabaseUserId, userProfile, _tier, { isBetaTe
     // protect this column, only `tier`). Server enforces tier strictly,
     // beta-tester is a soft tag for the future Pro extension.
     if (isBetaTester) payload.is_beta_tester = true;
-    await sb.from('users_profile').upsert(payload, { onConflict: 'id' });
+    // Capture the PostgREST {error} (audit 2026-07-01): supabase-js RESOLVES
+    // with { error } on a failed upsert rather than throwing, so the previous
+    // fire-and-forget await swallowed every profile-sync failure — never logged,
+    // never retried. Throw it so the catch logs it and the caller can react,
+    // matching the sibling sync functions.
+    const { error } = await sb.from('users_profile').upsert(payload, { onConflict: 'id' });
+    if (error) throw error;
   } catch (e) {
     logError('sync.syncProfile', e, { supabaseUserId });
   }
