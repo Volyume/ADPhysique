@@ -19,6 +19,7 @@ import { hydrateLoadedTargets, getRecommendedMeals } from '../lib/nutritionTarge
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
+import { femaleNutritionAwareness } from '../lib/femaleNutritionAwareness';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -1236,6 +1237,31 @@ export default function NutritionTargetsScreen({ navigation }) {
                 );
               })() : null}
 
+              {/* U6: iron / micronutrient awareness for female athletes.
+                  Awareness only (no tracking, no schema); female-only via the
+                  helper, which returns null for everyone else. */}
+              {(() => {
+                const awareness = femaleNutritionAwareness(sex);
+                if (!awareness) return null;
+                return (
+                  <View style={styles.awarenessCard}>
+                    <View style={styles.awarenessHeader}>
+                      <Ionicons name="nutrition-outline" size={16} color={colors.primary} />
+                      <Text style={styles.awarenessTitle}>{awareness.title}</Text>
+                    </View>
+                    <Text style={styles.awarenessIntro}>{awareness.intro}</Text>
+                    {awareness.nutrients.map(n => (
+                      <View key={n.key} style={styles.awarenessNutrient}>
+                        <Text style={styles.awarenessNutrientName}>{n.name}</Text>
+                        <Text style={styles.awarenessNutrientBody}>{n.why}</Text>
+                        <Text style={styles.awarenessNutrientFoods}>{n.foods}</Text>
+                      </View>
+                    ))}
+                    <Text style={styles.awarenessFootnote}>{awareness.footnote}</Text>
+                  </View>
+                );
+              })()}
+
               {/* How calculated (expandable) */}
               <TouchableOpacity
                 style={styles.expandHeader}
@@ -1793,6 +1819,58 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.primary,
     fontWeight: fontWeight.semibold,
+  },
+
+  // U6: female iron/micronutrient awareness card.
+  awarenessCard: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, 0.25),
+    backgroundColor: colors.primaryBg,
+    gap: spacing.sm,
+  },
+  awarenessHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  awarenessTitle: {
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+    fontWeight: fontWeight.semibold,
+  },
+  awarenessIntro: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 19,
+  },
+  awarenessNutrient: {
+    gap: 2,
+    marginTop: spacing.xs,
+  },
+  awarenessNutrientName: {
+    fontSize: fontSize.sm,
+    color: colors.textPrimary,
+    fontWeight: fontWeight.semibold,
+  },
+  awarenessNutrientBody: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 19,
+  },
+  awarenessNutrientFoods: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 19,
+    fontStyle: 'italic',
+  },
+  awarenessFootnote: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    lineHeight: 17,
+    marginTop: spacing.xs,
   },
 
   expandHeader: {
