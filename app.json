@@ -27,7 +27,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.volyume",
-      "buildNumber": "8",
+      "buildNumber": "9",
       "requireFullScreen": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -61,7 +61,7 @@
         "backgroundColor": "#0D0D0D"
       },
       "package": "app.volyume",
-      "versionCode": 26,
+      "versionCode": 27,
       "allowBackup": false,
       "permissions": [
         "android.permission.CAMERA",
