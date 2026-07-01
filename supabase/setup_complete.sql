@@ -416,12 +416,14 @@ CREATE INDEX IF NOT EXISTS idx_debug_log_uploads_level    ON debug_log_uploads(l
 -- ENABLE is idempotent; safe to re-run.
 
 ALTER TABLE debug_log_uploads ENABLE ROW LEVEL SECURITY;
--- Anyone (anon + authenticated) can INSERT. Reads are service-role only,
--- so the dashboard query works but clients can't peek at other users'
--- logs. SELECT not permitted at all from the client side.
+-- No client INSERT policy: RLS enabled with no policy = default-deny for anon +
+-- authenticated. service_role bypasses RLS, so the dashboard/diagnostic path
+-- still works and clients can't peek at other users' logs. The old open
+-- "Anyone can insert debug logs" policy (FOR INSERT WITH CHECK (true)) was an
+-- abuse surface — an unauthenticated caller could spam rows — so it is NOT
+-- recreated here; migration 088 drops it in existing databases (audit F-006).
+-- The client no longer writes this table (src/lib/errorLog.js).
 DROP POLICY IF EXISTS "Anyone can insert debug logs" ON debug_log_uploads;
-CREATE POLICY "Anyone can insert debug logs" ON debug_log_uploads
-  FOR INSERT WITH CHECK (true);
 
 ALTER TABLE users_profile ENABLE ROW LEVEL SECURITY;
 ALTER TABLE exercises ENABLE ROW LEVEL SECURITY;

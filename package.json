@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit",
     "check:imports": "node scripts/check-imports.cjs",
     "release:check": "npm ci --legacy-peer-deps --ignore-scripts && npx tsc --noEmit --strict && npm run lint && npm run check:imports && npm test -- --runInBand && npm run release:audit",
-    "release:audit": "npm audit --omit=dev --audit-level=high || echo '[release:audit] Advisories reported above — NOT blocking the build. A newly published CVE must never break a build that compiles; these are reviewed and patched/overridden separately (build-host tooling advisories, e.g. expo CLI deps, are expected). Do not silence a shipped-runtime high here.'"
+    "release:audit": "npm audit --omit=dev --audit-level=high"
   },
   "jest": {
     "testEnvironment": "node",
