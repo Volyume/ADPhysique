@@ -883,13 +883,13 @@ export default function DiaryScreen({ navigation }) {
                     only reachable from the empty-diary state, so once anything
                     was logged the plan + swap became unreachable from Today. */}
                 <TouchableOpacity
-                  style={styles.addMealRow}
+                  style={styles.buildPlanBtn}
                   onPress={() => { lightTap(); navigation.navigate('MealPlan'); }}
                   accessibilityRole="button"
                   accessibilityLabel="Build a meal plan: a day or week of meals built to your targets, with swaps"
                 >
-                  <Ionicons name="restaurant-outline" size={18} color={colors.textSecondary} />
-                  <Text style={styles.addMealLabel}>Build a meal plan</Text>
+                  <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
+                  <Text style={styles.buildPlanLabel}>Build a meal plan</Text>
                 </TouchableOpacity>
               </>
             ) : null}
@@ -1221,7 +1221,9 @@ const styles = StyleSheet.create({
   macroRingsWrap: { marginBottom: spacing.lg },
   bankRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, paddingVertical: spacing.sm, marginTop: -spacing.sm, marginBottom: spacing.md,
+    gap: spacing.xs, minHeight: 48,
+    borderWidth: 1, borderColor: colors.primary, borderRadius: radius.md,
+    marginBottom: spacing.md,
   },
   bankRowText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   offCard: {
@@ -1237,10 +1239,20 @@ const styles = StyleSheet.create({
   offCardCta: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   addMealRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, minHeight: 44,
-    marginTop: -spacing.sm, marginBottom: spacing.lg,
+    gap: spacing.xs, minHeight: 48,
+    backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    marginBottom: spacing.sm,
   },
-  addMealLabel: { ...type.label, color: colors.textSecondary },
+  addMealLabel: { ...type.label, color: colors.textPrimary },
+  buildPlanBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.xs, minHeight: 48,
+    backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: colors.primary, borderRadius: radius.md,
+    marginBottom: spacing.lg,
+  },
+  buildPlanLabel: { ...type.label, color: colors.primary },
   plannedBanner: {
     backgroundColor: colors.surface2,
     borderWidth: 1, borderColor: colors.primary,
