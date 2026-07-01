@@ -25,7 +25,11 @@ if (Platform.OS === 'ios') {
 // requires Apple's own button). If the native component is unavailable (e.g.
 // an older build before the module landed), it degrades to a HIG-styled custom
 // button so the screen still works.
-export default function OAuthButtons({ onApple, onGoogle, disabled, dividerLabel = 'or with email' }) {
+// dividerLabel defaults to null: the email/password sign-in was removed (email
+// verification proved too flaky), so no screen shows an "or with email" section
+// any more and the divider would dangle under the OAuth buttons. Pass a label
+// only if a future screen reintroduces an alternative below the buttons.
+export default function OAuthButtons({ onApple, onGoogle, disabled, dividerLabel = null }) {
   const AppleButton = AppleAuthentication?.AppleAuthenticationButton;
   return (
     <View style={styles.block}>
@@ -72,11 +76,13 @@ export default function OAuthButtons({ onApple, onGoogle, disabled, dividerLabel
           <Text style={styles.btnText}>Continue with Google</Text>
         </TouchableOpacity>
       )}
-      <View style={styles.divider}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>{dividerLabel}</Text>
-        <View style={styles.dividerLine} />
-      </View>
+      {dividerLabel ? (
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>{dividerLabel}</Text>
+          <View style={styles.dividerLine} />
+        </View>
+      ) : null}
     </View>
   );
 }
