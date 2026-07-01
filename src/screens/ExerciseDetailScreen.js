@@ -27,6 +27,7 @@ import { buildExerciseMetricSeries } from '../lib/liftProgress';
 import { equipmentDisplayLabel, difficultyDisplayLabel, subregionDisplayLabel } from '../lib/exerciseDisplay';
 import { rankSwaps } from '../lib/swapEngine';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
 import { FORM_TIPS } from '../lib/formTips';
 import InfoTooltip from '../components/InfoTooltip';
@@ -154,7 +155,11 @@ export function splitInstructionSteps(text) {
 
 export default function ExerciseDetailScreen({ navigation, route }) {
   const { exerciseId } = route.params || {};
-  const { user, units } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user, units } = useAppStore(useShallow(s => ({
+    user: s.user,
+    units: s.units,
+  })));
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const [exercise, setExercise] = useState(null);
   const [history, setHistory] = useState([]);

@@ -16,6 +16,7 @@ import {
 } from '../lib/algorithms';
 import { useFocusEffect } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import WindowChips from '../components/WindowChips';
 import VolyumeChart from '../components/VolyumeChart';
 import { VOLUME_WINDOWS, windowByKey, volumeTakeaway } from '../lib/chartWindows';
@@ -43,7 +44,10 @@ const WINDOW_OPTIONS = [
 ];
 
 export default function VolumeHeatmapScreen() {
-  const { user } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user } = useAppStore(useShallow(s => ({
+    user: s.user,
+  })));
   const toast = useToast();
   const [weeklyVolume, setWeeklyVolume] = useState({});
   const [previousVolume, setPreviousVolume] = useState({});

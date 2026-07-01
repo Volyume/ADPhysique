@@ -8,6 +8,7 @@ import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentChec
 import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles } from '../lib/algorithms';
 import { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import Button from '../components/Button';
 import Card from '../components/Card';
 
@@ -216,7 +217,10 @@ function RecommendationRow({ index, text }) {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function CoachReviewScreen() {
-  const { user } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user } = useAppStore(useShallow(s => ({
+    user: s.user,
+  })));
 
   const [loading, setLoading] = useState(true);
   const [weeklyWorkouts, setWeeklyWorkouts] = useState([]);

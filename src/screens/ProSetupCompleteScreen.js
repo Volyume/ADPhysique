@@ -9,6 +9,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '
 import { VolyumeIcon } from '../components/BrandMark';
 import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import { GOAL_LABELS, PHASE_LABELS, isCompetitionGoal } from '../lib/coachingGoals';
 import { getSplitRationale, getSetupReceiptLine } from '../lib/whyThisTemplates';
@@ -25,7 +26,12 @@ import { planReady } from '../lib/haptics';
 const WHY_ORDER = ['schedule', 'goal', 'experience', 'progression', 'equipment', 'recovery', 'nutrition', 'weakPoints'];
 
 export default function ProSetupCompleteScreen({ navigation }) {
-  const { user, userProfile, completeFirstRun } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user, userProfile, completeFirstRun } = useAppStore(useShallow(s => ({
+    user: s.user,
+    userProfile: s.userProfile,
+    completeFirstRun: s.completeFirstRun,
+  })));
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const energyUnit = useAppStore(s => s.accessibility?.energyUnit ?? 'kcal');
   const firstName = userProfile?.firstName || 'there';

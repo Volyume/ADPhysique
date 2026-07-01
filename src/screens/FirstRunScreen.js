@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 
 // First-run for Free users only. Pro signups go through ProOnboardingStack
 // (profile → training → recovery → plan + nutrition generation). Free gets
@@ -13,7 +14,14 @@ import useAppStore from '../store/useAppStore';
 // three plain questions that install a beginner plan from the library, with
 // a visible skip for anyone who'd rather choose their own.
 export default function FirstRunScreen({ navigation }) {
-  const { user, units: _units, setUnits, userProfile, saveLocalProfile } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user, units: _units, setUnits, userProfile, saveLocalProfile } = useAppStore(useShallow(s => ({
+    user: s.user,
+    units: s.units,
+    setUnits: s.setUnits,
+    userProfile: s.userProfile,
+    saveLocalProfile: s.saveLocalProfile,
+  })));
   // Gym weights are kg-only (UK). No unit choice.
   const localUnits = 'kg';
   const [firstName, setFirstName] = useState('');

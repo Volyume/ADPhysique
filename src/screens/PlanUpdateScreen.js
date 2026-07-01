@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Dropdown from '../components/Dropdown';
 import SegmentedControl from '../components/SegmentedControl';
@@ -59,7 +60,12 @@ const RECOVERY_OPTIONS = [
 // goal drive the calorie maths.
 export default function PlanUpdateScreen({ navigation }) {
   const toast = useToast();
-  const { user, userProfile, saveLocalProfile } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user, userProfile, saveLocalProfile } = useAppStore(useShallow(s => ({
+    user: s.user,
+    userProfile: s.userProfile,
+    saveLocalProfile: s.saveLocalProfile,
+  })));
 
   const [selectedGoal, setSelectedGoal] = useState(userProfile?.trainingGoal ?? null);
   const [planWeakPoints, setPlanWeakPoints] = useState(userProfile?.planWeakPoints ?? []);

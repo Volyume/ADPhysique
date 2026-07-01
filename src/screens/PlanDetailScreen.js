@@ -17,6 +17,7 @@ import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
 import Button from '../components/Button';
 import { Skeleton, SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
 import { useToast } from '../components/Toast';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
@@ -28,7 +29,12 @@ const WHY_ORDER = ['schedule', 'goal', 'experience', 'progression', 'equipment',
 
 export default function PlanDetailScreen({ navigation, route }) {
   const { planId, isLibrary = false } = route.params || {};
-  const { user, startWorkout, tier } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user, startWorkout, tier } = useAppStore(useShallow(s => ({
+    user: s.user,
+    startWorkout: s.startWorkout,
+    tier: s.tier,
+  })));
   const toast = useToast();
   const [plan, setPlan] = useState(null);
   const [workouts, setWorkouts] = useState([]);

@@ -24,6 +24,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { getYearOfLiftsData, getRecapData, getBlockReflectionData, getOpenEdPatternFlag } from '../lib/database';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 import { track } from '../lib/engineTelemetry';
@@ -374,7 +375,11 @@ export default function YearOfLiftsScreen({ navigation, route }) {
     startMs, endMs, monthLabel,
     mesocycleId, blockName,
   } = route.params ?? {};
-  const { user, units } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user, units } = useAppStore(useShallow(s => ({
+    user: s.user,
+    units: s.units,
+  })));
   const [data, setData] = useState(null);
   const [neutral, setNeutral] = useState(false);
   const [loading, setLoading] = useState(true);

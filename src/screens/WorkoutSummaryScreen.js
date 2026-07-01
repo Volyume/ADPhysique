@@ -25,6 +25,7 @@ import { calculateWeeklyVolume, getVolumeStatus, MUSCLE_DISPLAY_NAMES, runAdapti
 import { getVolumeInsight, getVolumeWhy } from '../lib/volumeInsightCopy';
 import { topSetFromExerciseData, intensityTier, shareSessionName } from '../lib/sessionShareData';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 import { syncWorkout } from '../lib/sync';
 import { incrementSessionCount, shouldPromptReview, requestReview } from '../lib/storeReview';
@@ -79,7 +80,14 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     // ([{ muscle, setDelta }]). Live path only; history (readOnly) has none.
     sessionAdjustments = [],
   } = route.params || {};
-  const { user, units, userProfile, session, tier } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user, units, userProfile, session, tier } = useAppStore(useShallow(s => ({
+    user: s.user,
+    units: s.units,
+    userProfile: s.userProfile,
+    session: s.session,
+    tier: s.tier,
+  })));
   const toast = useToast();
   // NEW-002 rebuild: the post-workout partner beat (Duolingo's post-lesson
   // nudge is the highest-value re-engagement moment). Renders only when

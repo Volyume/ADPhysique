@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { saveUserBodyProfile } from '../lib/database';
 import { logError } from '../lib/errorLog';
 
@@ -21,7 +22,12 @@ const SCOFF_QUESTIONS = [
 const ANSWERS_KEY = '@volyume_scoff_answers';
 
 export default function WellbeingCheckScreen({ navigation }) {
-  const { user, userProfile, saveLocalProfile } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user, userProfile, saveLocalProfile } = useAppStore(useShallow(s => ({
+    user: s.user,
+    userProfile: s.userProfile,
+    saveLocalProfile: s.saveLocalProfile,
+  })));
   const [answers, setAnswers] = useState([null, null, null, null, null]);
   const [saving, setSaving] = useState(false);
 

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import Dropdown from '../components/Dropdown';
 import SegmentedControl from '../components/SegmentedControl';
@@ -67,7 +68,12 @@ const NUTRITION_KEY = '@volyume_nutrition_targets';
 
 export default function ProGoalSetupScreen({ navigation }) {
   const toast = useToast();
-  const { user, userProfile, saveLocalProfile } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user, userProfile, saveLocalProfile } = useAppStore(useShallow(s => ({
+    user: s.user,
+    userProfile: s.userProfile,
+    saveLocalProfile: s.saveLocalProfile,
+  })));
 
   const [selectedGoal, setSelectedGoal] = useState(userProfile?.trainingGoal ?? null);
   const [selectedPhase, setSelectedPhase] = useState(userProfile?.trainingPhase ?? 'lean_gain');

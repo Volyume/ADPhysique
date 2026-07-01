@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { formatBodyWeightShort } from '../lib/units';
 import { computeEWMA } from '../lib/weeklyCoach';
 import {
@@ -130,7 +131,12 @@ const TOTAL_STEPS = 4;
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function WeeklyCheckInScreen({ navigation }) {
-  const { user, userProfile, bodyWeightUnits } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user, userProfile, bodyWeightUnits } = useAppStore(useShallow(s => ({
+    user: s.user,
+    userProfile: s.userProfile,
+    bodyWeightUnits: s.bodyWeightUnits,
+  })));
   const [nutritionTargets, setNutritionTargets] = useState(null);
   const [bioSex, setBioSex] = useState(null);          // 'male' | 'female' | null
   const [cycleEnabled, setCycleEnabled] = useState(false);

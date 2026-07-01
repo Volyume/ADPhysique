@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { getBlockReflectionData } from '../lib/database';
 import { SkeletonCard } from '../components/Skeleton';
 
@@ -76,7 +77,11 @@ const PR_TYPE_LABELS = {
 
 export default function BlockReflectionScreen({ navigation, route }) {
   const { mesocycleId } = route.params ?? {};
-  const { user, units } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user, units } = useAppStore(useShallow(s => ({
+    user: s.user,
+    units: s.units,
+  })));
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 

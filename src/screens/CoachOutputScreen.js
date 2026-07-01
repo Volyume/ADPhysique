@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { runWeeklyCoach, mapCalsAdherence } from '../lib/weeklyCoach';
 import { buildHoldReceipt } from '../lib/coachLedger';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -782,7 +783,14 @@ export default function CoachOutputScreen({ navigation, route }) {
   // fall through to the baseline view, the "building baseline" screen the user
   // saw on tapping the notification.
   const weekStart = route.params?.weekStart ?? localWeekStartMs();
-  const { user, userProfile, units, saveLocalProfile, tier: storeTier } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user, userProfile, units, saveLocalProfile, tier: storeTier } = useAppStore(useShallow(s => ({
+    user: s.user,
+    userProfile: s.userProfile,
+    units: s.units,
+    saveLocalProfile: s.saveLocalProfile,
+    tier: s.tier,
+  })));
   // PLAY-002: the differential buy CTA shows Google Play's localised price, or
   // a price-free "Get Pro" until it loads. Never a hardcoded fallback.
   const priceFor = usePlayPrices();

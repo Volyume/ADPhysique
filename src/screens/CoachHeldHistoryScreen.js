@@ -6,6 +6,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/t
 import BackHeader from '../components/BackHeader';
 import EngineLog from '../components/EngineLog';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { getCoachOutputHistory } from '../lib/database';
 import { SkeletonCard } from '../components/Skeleton';
 
@@ -76,7 +77,10 @@ function buildDecisionRows(week) {
 }
 
 export default function CoachHeldHistoryScreen() {
-  const { user } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user } = useAppStore(useShallow(s => ({
+    user: s.user,
+  })));
   const [weeks, setWeeks] = useState([]);
   const [loading, setLoading] = useState(true);
 

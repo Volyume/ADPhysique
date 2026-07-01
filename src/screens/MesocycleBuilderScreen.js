@@ -20,11 +20,15 @@ import { calculateTonnage } from '../lib/algorithms';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
 import { predictDeloadWeek, evaluateAutoReg } from '../lib/mesocycle';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export default function MesocycleBuilderScreen({ navigation }) {
-  const { user } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user } = useAppStore(useShallow(s => ({
+    user: s.user,
+  })));
   const [mesocycles, setMesocycles] = useState([]);
   const [activePlan, setActivePlanData] = useState(null);  // coach/manual-built plan
   const [activeStats, setActiveStats] = useState(null);   // { tonnageBars, recovery, deload }

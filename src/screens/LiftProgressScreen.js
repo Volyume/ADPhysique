@@ -19,6 +19,7 @@ import { getStrengthLevel, summariseStrengthStanding } from '../lib/strengthStan
 import { kgToLbs } from '../lib/units';
 import Sparkline from '../components/Sparkline';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
 
 // Lifts, the single home for "am I getting stronger". It leads with where you
@@ -58,7 +59,11 @@ const METRICS = [
 ];
 
 export default function LiftProgressScreen({ navigation }) {
-  const { user, units } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user, units } = useAppStore(useShallow(s => ({
+    user: s.user,
+    units: s.units,
+  })));
   const [rows, setRows] = useState([]);
   const [bodyWeight, setBodyWeight] = useState(null);
   const [strengthLevels, setStrengthLevels] = useState({});

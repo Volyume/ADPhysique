@@ -12,6 +12,7 @@ import { getAllExercises, createWorkout } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { generateTravelPlan } from '../lib/travelMode';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
 
@@ -22,7 +23,15 @@ const DEFAULT_REST = 90;
 
 export default function BuildWorkoutScreen({ navigation }) {
   const toast = useToast();
-  const { user, startWorkout, units, defaultRestSeconds, workoutPrefsLoaded, loadWorkoutPrefs } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user, startWorkout, units, defaultRestSeconds, workoutPrefsLoaded, loadWorkoutPrefs } = useAppStore(useShallow(s => ({
+    user: s.user,
+    startWorkout: s.startWorkout,
+    units: s.units,
+    defaultRestSeconds: s.defaultRestSeconds,
+    workoutPrefsLoaded: s.workoutPrefsLoaded,
+    loadWorkoutPrefs: s.loadWorkoutPrefs,
+  })));
   // Hydrate the device-local workout prefs so a cold build started before
   // visiting Settings/ActiveWorkout still picks up the user's saved default rest.
   useEffect(() => {

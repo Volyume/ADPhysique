@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { setGoalLockAdvanced, getGoalLockAdvanced, recordEngineTelemetry } from '../lib/database';
 
 /**
@@ -30,7 +31,10 @@ import { setGoalLockAdvanced, getGoalLockAdvanced, recordEngineTelemetry } from 
  * - Used from You tab: shows a "Save" button that pops back.
  */
 export default function GoalLockConsentScreen({ navigation, route }) {
-  const { user } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user } = useAppStore(useShallow(s => ({
+    user: s.user,
+  })));
   const onContinue = route?.params?.onContinue;
   const editMode = route?.params?.editMode === true;
   const [choice, setChoice] = useState(null);

@@ -16,6 +16,7 @@ import {
 } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -149,7 +150,10 @@ function PlanBalanceCard({ days }) {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function ManualBuilderScreen({ navigation }) {
-  const { user } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user } = useAppStore(useShallow(s => ({
+    user: s.user,
+  })));
   const toast = useToast();
 
   // Page 1 state

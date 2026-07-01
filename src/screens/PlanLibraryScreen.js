@@ -12,6 +12,7 @@ import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import { SkeletonCard } from '../components/Skeleton';
 import SearchBar from '../components/SearchBar';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 
 // ─── Collections ─────────────────────────────────────────────────────────────
@@ -219,7 +220,10 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
 
 export default function PlanLibraryScreen({ navigation, route }) {
   const toast = useToast();
-  const { user } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user } = useAppStore(useShallow(s => ({
+    user: s.user,
+  })));
   const fromFirstRun = route?.params?.fromFirstRun ?? false;
 
   const [plans, setPlans] = useState([]);

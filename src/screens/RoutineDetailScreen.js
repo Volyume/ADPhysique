@@ -16,6 +16,7 @@ import { rankSwaps } from '../lib/swapEngine';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 import ExercisePickerModal from '../components/ExercisePickerModal';
 
@@ -82,7 +83,11 @@ function MuscleTagRow({ exercises }) {
 export default function RoutineDetailScreen({ navigation, route }) {
   const toast = useToast();
   const { routineId } = route.params || {};
-  const { user, startWorkout } = useAppStore();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
+  const { user, startWorkout } = useAppStore(useShallow(s => ({
+    user: s.user,
+    startWorkout: s.startWorkout,
+  })));
   const [routine, setRoutine] = useState(null);
   const [exercises, setExercises] = useState([]);
   const [showAddExercise, setShowAddExercise] = useState(false);

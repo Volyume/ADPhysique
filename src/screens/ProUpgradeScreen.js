@@ -7,6 +7,7 @@ import Button from '../components/Button';
 import TierComparisonStrip from '../components/TierComparisonStrip';
 import { storeName } from '../lib/storeName';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 import { signInWithGoogle, signInWithApple, getSupabaseClient } from '../lib/supabase';
 import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
@@ -52,9 +53,19 @@ const FAQ_ITEMS = [
 
 export default function ProUpgradeScreen({ navigation, route }) {
   const toast = useToast();
+  // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
   const {
     user, session, userProfile, tier, setTier, refreshTierFromCloud, resetFirstRun, firstRunComplete,
-  } = useAppStore();
+  } = useAppStore(useShallow(s => ({
+    user: s.user,
+    session: s.session,
+    userProfile: s.userProfile,
+    tier: s.tier,
+    setTier: s.setTier,
+    refreshTierFromCloud: s.refreshTierFromCloud,
+    resetFirstRun: s.resetFirstRun,
+    firstRunComplete: s.firstRunComplete,
+  })));
 
   const hasAccount = Boolean(session?.user?.id) && !user?.isLocal;
   const canTrial = cascade.canStillTrial(userProfile);
