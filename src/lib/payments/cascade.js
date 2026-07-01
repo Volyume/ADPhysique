@@ -281,6 +281,14 @@ export async function reconcilePaidEntitlement(profile) {
     const lastVerified = await store.readPaidEntitlementVerifiedAt?.();
     const staleBeyondGrace = typeof lastVerified === 'number'
       && (Date.now() - lastVerified > PAID_ENTITLEMENT_OFFLINE_GRACE_MS);
+    // True only when Play CONFIRMED this entitlement active recently. Used to
+    // protect a real payer from a single transient inactive read (audit
+    // 2026-07-01): we defer a downgrade only when there is a recent verified-
+    // active stamp within grace. A never-verified paid_pro (lastVerified not a
+    // number) is NOT within grace, so a confirmed-inactive read still downgrades
+    // it authoritatively.
+    const recentlyVerifiedWithinGrace = typeof lastVerified === 'number'
+      && (Date.now() - lastVerified <= PAID_ENTITLEMENT_OFFLINE_GRACE_MS);
 
     // eslint-disable-next-line global-require
     const playBilling = require('./playBilling');
@@ -319,8 +327,22 @@ export async function reconcilePaidEntitlement(profile) {
       await store.markPaidEntitlementVerified?.();
       return { ok: true, checked: true, active: true };
     }
+    // A SUCCESSFUL read that reports no active entitlement is stronger evidence
+    // than a failed read, but it can still be a transient Play blip (an empty or
+    // incomplete entitlement list right after purchase, or a store-cache lag).
+    // Apply the SAME offline grace the read-failure branch uses (audit
+    // 2026-07-01): never server-downgrade a paying customer on a single
+    // within-grace inactive read — defer and re-check. Only revoke once past
+    // grace, when the last verified-active time is genuinely stale; a real lapse
+    // then downgrades on the next cycle, while a blip self-heals via a later
+    // active read that re-stamps the verified clock.
+    if (recentlyVerifiedWithinGrace) {
+      logWarn('payments.cascade.reconcile.inactiveWithinGrace',
+        'paid_pro read returned inactive but Play confirmed active within grace; deferring', {});
+      return { ok: true, checked: true, active: false, deferred: true };
+    }
     logWarn('payments.cascade.reconcile.lapsed',
-      'paid_pro with no active Play entitlement; downgrading to free', {});
+      'paid_pro with no active Play entitlement past offline grace; downgrading to free', {});
     const r = await cancel('client_reconcile');
     return { ok: r.ok, checked: true, active: false, downgraded: !!r.ok };
   } catch (e) {

@@ -87,6 +87,26 @@ describe('reconcilePaidEntitlement (C-2 safety net)', () => {
     await reconcilePaidEntitlement({ trial_state: 'paid_pro' });
     expect(mockRpc).toHaveBeenCalledWith('upgrade_tier', REVOKE_PAYLOAD);
   });
+
+  // audit 2026-07-01: a SUCCESSFUL read can be transiently empty (Play cache lag
+  // right after purchase). Do not revoke a payer Play confirmed active within
+  // grace on a single such read — defer and re-check.
+  test('defers (does NOT downgrade) an inactive read when Play confirmed active within grace', async () => {
+    mockLastVerified = within(); // verified active 12h ago
+    mockGetCustomerInfo.mockResolvedValue({ activeEntitlements: [] });
+    const r = await reconcilePaidEntitlement({ trialState: 'paid_pro' });
+    expect(r).toMatchObject({ checked: true, active: false, deferred: true });
+    expect(mockRpc).not.toHaveBeenCalled();
+    expect(mockLockStale).not.toHaveBeenCalled();
+  });
+
+  test('downgrades an inactive read when the last active verification is PAST grace', async () => {
+    mockLastVerified = stale(); // verified active 48h ago
+    mockGetCustomerInfo.mockResolvedValue({ activeEntitlements: [] });
+    const r = await reconcilePaidEntitlement({ trialState: 'paid_pro' });
+    expect(r).toMatchObject({ checked: true, active: false, downgraded: true });
+    expect(mockRpc).toHaveBeenCalledWith('upgrade_tier', REVOKE_PAYLOAD);
+  });
 });
 
 describe('reconcilePaidEntitlement offline grace (SUB-002)', () => {
