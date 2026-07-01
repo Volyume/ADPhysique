@@ -19,9 +19,9 @@ const { ensureNotifChannels } = require('../notifications/channels');
 beforeEach(() => jest.clearAllMocks());
 
 describe('ensureNotifChannels (D4)', () => {
-  test('registers training-reminders + coaching-reminders (HIGH, sound) and rest-timer (LOW, silent)', async () => {
+  test('registers training/coaching/rest-alerts (HIGH, sound) and rest-timer (LOW, silent)', async () => {
     await ensureNotifChannels();
-    expect(mockSetChannel).toHaveBeenCalledTimes(3);
+    expect(mockSetChannel).toHaveBeenCalledTimes(4);
     const byId = Object.fromEntries(mockSetChannel.mock.calls.map(([id, cfg]) => [id, cfg]));
     expect(byId['training-reminders']).toMatchObject({
       importance: 4, sound: 'default', enableVibrate: true, showBadge: false,
@@ -31,6 +31,11 @@ describe('ensureNotifChannels (D4)', () => {
     });
     expect(byId['rest-timer']).toMatchObject({
       importance: 2, sound: null, enableVibrate: false, showBadge: false,
+    });
+    // A2: the end-of-rest alert must be able to sound through a locked
+    // phone — that is its entire job. Separate from the silent countdown.
+    expect(byId['rest-alerts']).toMatchObject({
+      importance: 4, sound: 'default', enableVibrate: true, showBadge: false,
     });
   });
 
