@@ -790,7 +790,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             <SectionLabel>Calorie target</SectionLabel>
             <TouchableOpacity onPress={() => navigation.navigate('NutritionTargets')} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Set up nutrition targets">
               <Text style={styles.skipNoteTappable}>
-                Nutrition targets not set. Tap to set them up and unlock calorie coaching.
+                Nutrition targets not set. Tap to set them up and turn on calorie coaching.
               </Text>
             </TouchableOpacity>
           </View>
@@ -953,7 +953,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             onChangeText={setNotes}
             multiline
             accessibilityLabel="Anything else to flag?"
-            placeholder="Anything Volyume should factor in this week…"
+            placeholder="Anything Volyume should take into account this week…"
             placeholderTextColor={colors.textMuted}
             maxLength={280}
             textAlignVertical="top"

@@ -207,7 +207,7 @@ export default function PlanUpdateScreen({ navigation }) {
         {/* ── Physique category (optional) ── */}
         <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Competing in a category? (optional)</Text>
         <Text style={styles.sectionSub}>
-          Only matters if you're chasing a competitive physique. It biases your plan toward the muscles that category is judged on.
+          Only matters if you're chasing a competitive physique. It biases your plan towards the muscles that category is judged on.
         </Text>
 
         <Dropdown

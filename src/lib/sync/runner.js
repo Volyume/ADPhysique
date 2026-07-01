@@ -193,7 +193,15 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
         }
         // 3. Per-table pull for migrated tables.
         for (const tableName of MIGRATED_TABLES) {
-          const result = await pullTable(tableName, { userId }).catch((e) => {
+          // Abort the pull track the moment a sign-out wipe is committing (audit
+          // 2026-07-01): the run-start guard (line ~76) only stops a NEW run;
+          // a run already in flight when clearAuthStateForSignOut raises the flag
+          // would otherwise keep pulling cloud rows straight back into the DB
+          // being wiped (whenSyncIdle then times out and the wipe races them).
+          // Re-checking here lets the in-flight run drain quickly and cleanly so
+          // whenSyncIdle resolves before the wipe touches the DB.
+          if (isSignOutWiping()) break;
+          const result = await pullTable(tableName, { userId, localUserId }).catch((e) => {
             erroredCount += 1;
             syncCrumb(`sync.pull.${tableName}`, `sync.pull.${tableName}.threw`, {
               error: String(e?.message ?? e).slice(0, 200),
@@ -210,8 +218,9 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
             });
           }
         }
-        // 4. Legacy bulk pull for everything else.
-        if (typeof sync.pullFromCloud === 'function') {
+        // 4. Legacy bulk pull for everything else. Skip entirely if a sign-out
+        // wipe is committing — pulling here would repopulate the DB being wiped.
+        if (!isSignOutWiping() && typeof sync.pullFromCloud === 'function') {
           const pull = await sync.pullFromCloud(userId).catch(e => {
             erroredCount += 1;
             syncCrumb('sync.pull.legacy', 'sync.pull.legacy.threw', {

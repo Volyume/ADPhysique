@@ -33,7 +33,7 @@ const BAND_RE = /\bband(ed)?\b/i;
 const PLATE_LOADED_RE = /hammer strength|plate-loaded|iso-lateral|\bhs\b/i;
 
 // Conditioning / strongman implements the seed lumps under `machine` but
-// which are not resistance machines and should not count toward the
+// which are not resistance machines and should not count towards the
 // machine-only pathway.
 const CONDITIONING_RE = /sled|prowler|battle rope|assault bike|cycling|tyre flip|rower|ski erg|treadmill|elliptical/i;
 

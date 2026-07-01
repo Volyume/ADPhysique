@@ -58,6 +58,31 @@ describe('computeCalorieTargets', () => {
     expect(result.newKcal).toBe(KCAL_FLOOR); // 1300 - 400 = 900 → clamped to 1200
   });
 
+  // audit 2026-07-01 CRITICAL: the Apply path must enforce the SEX-AWARE ED
+  // floor (1500 male / 1200 female), matching nutritionEngine. Previously it
+  // floored everyone at 1200, so a male cut could be written below 1500.
+  test('floors a male target at 1500, never below', () => {
+    const male = { targetKcal: 1700, proteinG: 170, fatG: 50, carbsG: 120 };
+    // A 300 cut would land at 1400 (below the male floor) → clamp to 1500.
+    const result = computeCalorieTargets(male, -300, 'male');
+    expect(result.newKcal).toBe(1500);
+    // A cut from exactly the male floor is a no-op (cannot go lower).
+    expect(computeCalorieTargets({ targetKcal: 1500, proteinG: 170 }, -200, 'male')).toBeNull();
+  });
+
+  test('female / unknown sex keeps the 1200 floor', () => {
+    expect(computeCalorieTargets({ targetKcal: 1300, proteinG: 150 }, -400, 'female').newKcal).toBe(1200);
+    expect(computeCalorieTargets({ targetKcal: 1300, proteinG: 150 }, -400).newKcal).toBe(1200);
+  });
+
+  test('diet break also respects the sex-aware floor', () => {
+    // Raising a male deficit to maintenance is always >= floor, but a broken
+    // maintenance below 1500 must still not write a male target under 1500.
+    const male = { targetKcal: 1400, tdee: 1450, proteinG: 170 };
+    const result = computeDietBreakTargets(male, 'male');
+    expect(result.newKcal).toBeGreaterThanOrEqual(1500);
+  });
+
   test('tolerates missing macro fields', () => {
     const result = computeCalorieTargets({ targetKcal: 2000 }, -200);
     expect(result.newKcal).toBe(1800);

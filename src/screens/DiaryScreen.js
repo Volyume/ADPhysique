@@ -153,7 +153,7 @@ export default function DiaryScreen({ navigation }) {
   }, [userId, selectedDate, macroCycle, refeed, sex]);
 
   // Planned scaffolding from a meal plan (adherence model): shown with a
-  // confirm banner so it counts toward adherence only once the user says they
+  // confirm banner so it counts towards adherence only once the user says they
   // ate it. "Ate as planned" flips the day's planned meals to actuals; "Clear"
   // discards them. Future days only offer Clear (you can't have eaten yet).
   // Count distinct planned MEALS (meal slots), not individual food items. A

@@ -404,7 +404,7 @@ export async function applyPlanDayToDiary(userId, day, { entryDate } = {}) {
         carbsG: Number(it.carbsG) || 0,
         fatG: Number(it.fatG) || 0,
         // Written as planned scaffolding; the user confirms it as eaten on the
-        // diary (adherence model). Until then it doesn't count toward adherence.
+        // diary (adherence model). Until then it doesn't count towards adherence.
         isPlanned: true,
       });
       logged += 1;

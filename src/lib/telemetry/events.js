@@ -153,6 +153,17 @@ export const TELEMETRY_EVENTS = Object.freeze([
   { name: 'streak_milestone_reached',        deferred: false, panel: 1 },
   { name: 'streak_paused',                   deferred: false, panel: 1 },
 
+  // Share-card landmarks (audit S-011, Sentry VOLYUME-1P). Emitted via
+  // fireLandmarkOnce → track() on the Analytics screen; both gate a "Make a
+  // card" share CTA. They were wired in the client but never catalogued, so the
+  // allow-list dropped them with an "unknown event" warning once per app run.
+  //   tonnage_milestone_reached  payload: { milestone } — lifetime-tonnage band
+  //   perfect_month_reached      payload: { sessions }  — a month all on target
+  // Counts/enums only, never training or body data. Suppressed under ED/calm.
+  // Server allow-list: supabase/migrate_093_landmark_telemetry.sql.
+  { name: 'tonnage_milestone_reached',       deferred: false, panel: 1 },
+  { name: 'perfect_month_reached',           deferred: false, panel: 1 },
+
   // COMP-026 (B): step-trend TDEE modifier evaluated on a coach run. Counts and
   // flags only (active/direction/gain bucket, agreement, logged-day counts,
   // adjustment magnitudes at 0.50 vs the applied gain); no PII, no step counts,

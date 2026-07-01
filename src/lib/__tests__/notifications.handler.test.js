@@ -24,10 +24,12 @@ jest.mock('expo-notifications', () => ({
 const mockGetMorningWeightToday = jest.fn();
 const mockGetLatestCheckin = jest.fn();
 const mockGetAllWorkouts = jest.fn();
+const mockGetOpenEdFlag = jest.fn();
 jest.mock('../database', () => ({
   getMorningWeightToday: (...args) => mockGetMorningWeightToday(...args),
   getLatestCheckin: (...args) => mockGetLatestCheckin(...args),
   getAllWorkouts: (...args) => mockGetAllWorkouts(...args),
+  getOpenEdPatternFlag: (...args) => mockGetOpenEdFlag(...args),
 }));
 
 const mockGetState = jest.fn();
@@ -56,6 +58,8 @@ beforeEach(() => {
   mockGetMorningWeightToday.mockReset();
   mockGetLatestCheckin.mockReset();
   mockGetAllWorkouts.mockReset();
+  mockGetOpenEdFlag.mockReset();
+  mockGetOpenEdFlag.mockResolvedValue(null);
   mockGetState.mockReset();
   mockGetState.mockReturnValue({ user: { id: 'user-1' } });
 });
@@ -116,6 +120,40 @@ describe('handleNotification, morning_weight', () => {
     const h = captureHandler();
     expect(await h(notif('morning_weight'))).toEqual(SHOW);
     expect(mockGetMorningWeightToday).not.toHaveBeenCalled();
+  });
+
+  test('Q1: open ED flag -> suppress even when weight NOT logged', async () => {
+    mockGetMorningWeightToday.mockResolvedValue(null);
+    mockGetOpenEdFlag.mockResolvedValue({ id: 'flag-1', status: 'open' });
+    const h = captureHandler();
+    expect(await h(notif('morning_weight'))).toEqual(SUPPRESS);
+  });
+});
+
+describe('handleNotification, evening_weight (Q1)', () => {
+  test('weight already logged today -> suppress', async () => {
+    mockGetMorningWeightToday.mockResolvedValue({ weightKg: 80 });
+    const h = captureHandler();
+    expect(await h(notif('evening_weight'))).toEqual(SUPPRESS);
+  });
+
+  test('not logged and no ED flag -> show', async () => {
+    mockGetMorningWeightToday.mockResolvedValue(null);
+    const h = captureHandler();
+    expect(await h(notif('evening_weight'))).toEqual(SHOW);
+  });
+
+  test('open ED flag -> suppress even when not logged', async () => {
+    mockGetMorningWeightToday.mockResolvedValue(null);
+    mockGetOpenEdFlag.mockResolvedValue({ id: 'flag-1', status: 'open' });
+    const h = captureHandler();
+    expect(await h(notif('evening_weight'))).toEqual(SUPPRESS);
+  });
+
+  test('DB throw -> show (never silently suppress on error)', async () => {
+    mockGetMorningWeightToday.mockRejectedValue(new Error('sqlite locked'));
+    const h = captureHandler();
+    expect(await h(notif('evening_weight'))).toEqual(SHOW);
   });
 });
 

@@ -11,19 +11,18 @@ import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import Dropdown from '../components/Dropdown';
 import OAuthButtons from '../components/auth/OAuthButtons';
-import EmailPasswordFields from '../components/auth/EmailPasswordFields';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
   logBodyMetric, logMorningWeight, saveNutritionTargets, saveUserBodyProfile,
 } from '../lib/database';
 import { stoneLbsToKg, ftInToCm, parseBodyWeightToKg } from '../lib/units';
-import { signUpWithEmail, signInWithEmail, signInWithGoogle, signInWithApple } from '../lib/supabase';
-import { bulkUploadLocalData, syncProfile, pullFromCloud } from '../lib/sync';
+import { signInWithGoogle, signInWithApple } from '../lib/supabase';
 import { generateAndSavePlan, planShortfallNote } from '../lib/planAutoGen';
 import {
   requestNotificationPermissions,
   scheduleMorningWeightNotification,
+  scheduleEveningWeightReminder,
   scheduleCheckinReminder,
 } from '../lib/notifications';
 import {
@@ -162,7 +161,12 @@ export default function ProOnboardingScreen({ navigation }) {
   const [bodyFat, setBodyFat] = useState('');
   const [bfSource, setBfSource] = useState('visual');
   const [localHeightUnits, setLocalHeightUnits] = useState('imperial');
-  const [sex, setSex] = useState('male');
+  // Biological sex has NO default (founder 2026-07-01): it drives the ED
+  // calorie floor (1500 male / 1200 female) and BMR, so a silent 'male' default
+  // could mis-floor a female. advanceFrom2 requires an explicit choice before
+  // the profile step can complete, so sex is never unknown by the time targets
+  // are computed.
+  const [sex, setSex] = useState(null);
   const [age, setAge] = useState('30');
   const [heightCm, setHeightCm] = useState('175');
   const [heightFt, setHeightFt] = useState('5');
@@ -182,7 +186,7 @@ export default function ProOnboardingScreen({ navigation }) {
   const [trainingPhase, setTrainingPhase] = useState('lean_gain');
   // Weak points the user wants to bring up (UI labels, max 3). Division-scoped:
   // the options shown depend on trainingGoal. Passed into plan generation, which
-  // biases volume toward these muscles within the recovery envelope.
+  // biases volume towards these muscles within the recovery envelope.
   const [planWeakPoints, setPlanWeakPoints] = useState([]);
 
   // Protein target. Left null, the engine picks the right approach for the
@@ -239,11 +243,10 @@ export default function ProOnboardingScreen({ navigation }) {
   // never as a scheduled session. The user chooses what they do.
   const [cardioOn, setCardioOn] = useState(true);
 
-  // Step 1, account
-  const [authMode, setAuthMode] = useState('signup'); // 'signup' | 'signin'
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  // Step 1, account. OAuth only (Apple/Google) — the email + password path was
+  // removed (founder 2026-07-01) because email confirmation was flaky. OAuth
+  // completes the account inside handleOAuthOnboarding, which sets
+  // accountCreated and advances to step 2; there is no signup/signin mode.
   const [accountCreated, setAccountCreated] = useState(false);
 
   const [busy, setBusy] = useState(false);
@@ -329,76 +332,16 @@ export default function ProOnboardingScreen({ navigation }) {
     }
   }
 
-  async function advanceFrom1() {
-    if (accountCreated) { setStep(2); return; }
-    if (!email.trim() || !password.trim()) {
-      appAlert('Missing fields', 'Enter your email and a password to continue.');
-      return;
-    }
-    if (authMode === 'signup' && password.length < 8) {
-      appAlert('Password too short', 'Use at least 8 characters.');
-      return;
-    }
-    setBusy(true);
-    try {
-      const fn = authMode === 'signup' ? signUpWithEmail : signInWithEmail;
-      const { data, error } = await fn(email.trim(), password);
-      if (error) {
-        appAlert(authMode === 'signup' ? 'Sign-up error' : 'Sign-in error', error.message);
-        setBusy(false);
-        return;
-      }
-      if (authMode === 'signup' && data.user && !data.session) {
-        // Seed the per-uid first-run flag so the eventual sign-in routes to
-        // the wizard, not MainTabs, no matter how long email confirmation
-        // takes (A2-021).
-        useAppStore.getState().noteSignupPendingOnboarding(data.user.id);
-        appAlert(
-          'Check your email',
-          'We sent a confirmation link. Confirm it, sign in here, then continue.',
-        );
-        setAuthMode('signin');
-        setBusy(false);
-        return;
-      }
-      if (data.session) {
-        const supabaseUserId = data.session.user.id;
-        const localUserId = user?.id;
-        const { logError } = require('../lib/errorLog');
-        // No anonymous-to-account migration: per
-        // IDENTITY_AND_OWNERSHIP_LOCKED.md rule 5 the function is
-        // deleted. Anonymous mode entry point is removed (rule 1
-        // + anti-patterns) so by spec there is no anonymous local
-        // row set to re-key here.
-        syncProfile(supabaseUserId, userProfile, 'pro', { isBetaTester: true })
-          .catch(e => logError('ProOnboarding.syncProfile', e, { supabaseUserId }));
-        if (authMode === 'signup') {
-          // New account: push local pre-signup history up.
-          bulkUploadLocalData(supabaseUserId, localUserId)
-            .catch(e => logError('ProOnboarding.bulkUploadLocalData.signup', e, { supabaseUserId }));
-        } else {
-          // Existing account signing in via Pro onboarding: pull cloud
-          // state down. Local pre-signin data stays untouched (the
-          // sign-out wipe + cross-user safety net already guarantee
-          // it belongs to this account).
-          pullFromCloud(supabaseUserId)
-            .catch(e => logError('ProOnboarding.pullFromCloud', e, { supabaseUserId }));
-        }
-        setProOnboardingAccountCreated(true);
-        setAccountCreated(true);
-        setBusy(false);
-        setStep(2);
-        return;
-      }
-    } catch (_) {
-      appAlert('Something went wrong', 'Try again.');
-    }
-    setBusy(false);
-  }
 
   function advanceFrom2() {
     if (!firstName.trim()) {
       appAlert('Your name', 'Please enter your first name to continue.');
+      return;
+    }
+    // Biological sex is REQUIRED (founder 2026-07-01): it sets the ED calorie
+    // floor and BMR, and must never be left to a silent default.
+    if (sex !== 'male' && sex !== 'female') {
+      appAlert('Biological sex', 'Please choose your biological sex. It sets your calorie and nutrition targets.');
       return;
     }
     // Validate body weight, used downstream to compute calorie / protein
@@ -531,6 +474,8 @@ export default function ProOnboardingScreen({ navigation }) {
           };
           if (morningEnabled) {
             await scheduleMorningWeightNotification(morningHour, 0);
+            // Q1: evening weigh-in backstop rides the same toggle (self-gates on ED flag).
+            await scheduleEveningWeightReminder();
           }
           if (checkinEnabled) {
             await scheduleCheckinReminder(checkinDay, 12, 0);
@@ -810,60 +755,26 @@ export default function ProOnboardingScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <Header
-              title={authMode === 'signup' ? 'Create your account.' : 'Sign in to continue.'}
+              title="Create your account or sign in."
               sub="Pro needs an account so your plan, weight history, and coaching adjustments are backed up and sync across devices."
             />
 
-            {/* Account fields, shared with the LoginScreen so the two auth
-                surfaces stay identical. The post-auth logic (advanceFrom1,
-                handleOAuthOnboarding) is onboarding-specific and stays here. */}
+            {/* OAuth only (Apple on iOS, Google on Android). The email +
+                password path was removed (founder 2026-07-01); OAuth needs no
+                verification round-trip and either creates the account or signs
+                into the existing one. handleOAuthOnboarding advances to step 2
+                on success. */}
             <OAuthButtons
               onApple={() => handleOAuthOnboarding('apple')}
               onGoogle={() => handleOAuthOnboarding('google')}
               disabled={busy}
             />
 
-            <View style={styles.section}>
-              <EmailPasswordFields
-                mode={authMode}
-                email={email}
-                onEmailChange={setEmail}
-                password={password}
-                onPasswordChange={setPassword}
-                showPassword={showPassword}
-                onToggleShowPassword={() => setShowPassword(v => !v)}
-              />
-            </View>
-
-            <TouchableOpacity
-              style={[styles.primaryBtn, busy && styles.primaryBtnDisabled]}
-              onPress={busy ? undefined : advanceFrom1}
-              disabled={busy}
-              activeOpacity={busy ? 1 : 0.88}
-            >
-              {busy ? (
-                <ActivityIndicator color={colors.onPrimary} />
-              ) : (
-                <>
-                  <Text style={styles.primaryBtnText}>
-                    {authMode === 'signup' ? 'Create account and continue' : 'Sign in and continue'}
-                  </Text>
-                  <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
-                </>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.switchAuthBtn}
-              onPress={() => setAuthMode(m => (m === 'signup' ? 'signin' : 'signup'))}
-            >
-              <Text style={styles.switchAuthText}>
-                {authMode === 'signup' ? 'Already have an account? ' : "Don't have an account? "}
-                <Text style={styles.switchAuthAction}>
-                  {authMode === 'signup' ? 'Sign in' : 'Create one'}
-                </Text>
-              </Text>
-            </TouchableOpacity>
+            {busy ? (
+              <View style={styles.oauthBusy}>
+                <ActivityIndicator color={colors.primary} />
+              </View>
+            ) : null}
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -1206,7 +1117,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 (balanced volume) for everyone else. */}
             <Dropdown
               label="Competing in a category? (optional)"
-              hint="Only if you're chasing a competitive physique. It biases your plan toward the muscles that category is judged on."
+              hint="Only if you're chasing a competitive physique. It biases your plan towards the muscles that category is judged on."
               tip={GLOSSARY.division}
               value={trainingGoal}
               options={goalOptions}
@@ -1753,9 +1664,7 @@ const styles = StyleSheet.create({
   },
   primaryBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.onPrimary },
   primaryBtnDisabled: { opacity: 0.4 },
-  switchAuthBtn: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.sm },
-  switchAuthText: { fontSize: fontSize.sm, color: colors.textMuted },
-  switchAuthAction: { color: colors.primary, fontWeight: fontWeight.semibold },
+  oauthBusy: { alignItems: 'center', paddingVertical: spacing.lg },
   skipBtn: { alignItems: 'center', paddingVertical: spacing.md },
   skipBtnText: { fontSize: fontSize.sm, color: colors.textMuted },
   skipNote: {

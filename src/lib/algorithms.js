@@ -44,7 +44,7 @@ export const VOLUME_LANDMARKS = {
   // Adductors (inner thigh) are a distinct target (founder decision,
   // docs/audit/volyume-exercise-audit-2026-05-30). mev is 0 so a user who
   // never directly trains them is not flagged as having a lagging muscle;
-  // direct adductor work counts toward mav/mrv once it is logged.
+  // direct adductor work counts towards mav/mrv once it is logged.
   adductors:   { mv: 0,  mev: 0,  mav: 10, mrv: 14 },
   calves:      { mv: 6,  mev: 8,  mav: 14, mrv: 20 },
   abs:         { mv: 0,  mev: 4,  mav: 16, mrv: 25 },
@@ -87,7 +87,7 @@ export function calculate1RM(weight, reps) {
   if (reps0 === 1) return w;
 
   // 1RM estimators lose validity past ~12-15 reps, and Brzycki's denominator
-  // runs toward its pole as reps climb, so a 25-30 rep set used to return a
+  // runs towards its pole as reps climb, so a 25-30 rep set used to return a
   // wildly inflated estimate (≈5x the weight at 30 reps) that fired spurious
   // 1RM PRs. Clamp the rep count the formula sees at 20: above that we plateau
   // at the 20-rep estimate rather than extrapolate into nonsense. Behaviour for
@@ -140,7 +140,7 @@ function isLoadBearingSet(set, exerciseTypeById) {
 // documents the current behaviour rather than the earlier comment which
 // wrongly claimed dropsets were excluded.) The finish flow feeds this the
 // actual workout_sets from the DB, so sets logged on an exercise later
-// swapped out or removed still count toward the total (WK-2), instead of the
+// swapped out or removed still count towards the total (WK-2), instead of the
 // in-memory exercise list which drops them. Tolerant of camelCase (in-memory)
 // and snake_case (DB row) set_type.
 export function summariseWorkoutSets(sets) {
@@ -307,7 +307,7 @@ export function getProgressionSuggestion(currentSets, prevWorkoutSets, targetRep
   const prevAvgWeight =
     prevWorkoutSets.reduce((sum, s) => sum + (s.weight || 0), 0) / prevWorkoutSets.length;
 
-  // Only sets that actually logged RIR count toward headroom. No logged RIR =>
+  // Only sets that actually logged RIR count towards headroom. No logged RIR =>
   // unknown headroom => hold (never optimistically add load).
   const ratedSets = prevWorkoutSets.filter(s => s.rir != null);
   const rirLogged = ratedSets.length > 0;

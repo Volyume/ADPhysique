@@ -582,8 +582,12 @@ const linking = {
       },
       PlansTab: {
         screens: {
-          // volyume://routine/:id → Plans tab → PlanDetail for that plan.
-          PlanDetail: 'routine/:id',
+          // volyume://routine/:planId → Plans tab → PlanDetail for that plan.
+          // The path param MUST be named planId: PlanDetailScreen reads
+          // route.params.planId, so the old ':id' arrived as `id` and left
+          // planId undefined, dead-ending on a permanently blank screen
+          // (audit 2026-07-01).
+          PlanDetail: 'routine/:planId',
         },
       },
       ProgressTab: {
@@ -1235,7 +1239,20 @@ export default function RootNavigator() {
     if (user && !user.isLocal && !firstRunComplete && !healthConsentChecked) {
       return <SplashScreen />;
     }
-    if (user && !user.isLocal && healthConsentChecked && healthConsent === false) {
+    // Article 9 gate. Show it when consent was explicitly not granted
+    // (healthConsent === false), AND — audit 2026-07-01 #7/#12 — when a NEW user
+    // (onboarding not finished) has UNRESOLVED consent (null) after a transient
+    // consent-read failure. Previously the gate only fired on === false, so a
+    // null (the value both consent-read error paths set) fell straight through
+    // to onboarding: the user processed health data with no recorded consent AND
+    // a Pro-intent signup landed in the free FirstRunStack because the cascade
+    // (which sets tier='pro') only fires once consent is granted here. Routing an
+    // unresolved-consent new user to the gate is safe and recoverable: the
+    // consent RPC writes independently of the failed read, and start_cascade is
+    // server-idempotent. A RETURNING user (firstRunComplete) with a null
+    // consent read is NOT re-prompted — they fall through as before.
+    const consentUnresolvedForNewUser = healthConsent == null && !firstRunComplete;
+    if (user && !user.isLocal && healthConsentChecked && (healthConsent === false || consentUnresolvedForNewUser)) {
       return <Article9ConsentStack />;
     }
     if (!firstRunComplete) {

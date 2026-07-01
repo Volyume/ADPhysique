@@ -189,6 +189,11 @@ export async function syncProfile(supabaseUserId, userProfile, _tier, { isBetaTe
       primary_equipment: userProfile?.primaryEquipment ?? null,
       bar_weight: userProfile?.barWeight ?? 20,
       diet_preference: userProfile?.dietPreference ?? 'omnivore',
+      // Biological sex (U2, migrate_094): mirror it onto the main profile row so
+      // it survives a fresh-install cloud pull even if the user_body_profile row
+      // is missing. Only 'male'/'female' reach here (enforced at onboarding);
+      // null for any legacy row without one. Requires migrate_094 applied.
+      sex: userProfile?.sex === 'male' || userProfile?.sex === 'female' ? userProfile.sex : null,
       updated_at: new Date().toISOString(),
     };
     // Beta-tester flag is still client-writable during the beta window
@@ -196,7 +201,13 @@ export async function syncProfile(supabaseUserId, userProfile, _tier, { isBetaTe
     // protect this column, only `tier`). Server enforces tier strictly,
     // beta-tester is a soft tag for the future Pro extension.
     if (isBetaTester) payload.is_beta_tester = true;
-    await sb.from('users_profile').upsert(payload, { onConflict: 'id' });
+    // Capture the PostgREST {error} (audit 2026-07-01): supabase-js RESOLVES
+    // with { error } on a failed upsert rather than throwing, so the previous
+    // fire-and-forget await swallowed every profile-sync failure — never logged,
+    // never retried. Throw it so the catch logs it and the caller can react,
+    // matching the sibling sync functions.
+    const { error } = await sb.from('users_profile').upsert(payload, { onConflict: 'id' });
+    if (error) throw error;
   } catch (e) {
     logError('sync.syncProfile', e, { supabaseUserId });
   }
@@ -858,7 +869,16 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
         }));
       const orphanCount = routineExs.length - rows.length;
       if (orphanCount > 0) {
-        logWarn('sync._pushRoutinesAndExercises', 'orphan routine_exercises skipped', { orphanCount });
+        // cleanupOrphanRoutineExercises() above already deletes children whose
+        // parent routine is gone, so any orphan reaching here has a parent that
+        // exists locally but was filtered out of the pushable set (inactive /
+        // library). That is expected, not a fault, and the count is diagnostic
+        // only — a warning-level Sentry event per push cycle was quota noise
+        // (audit S-009, Sentry VOLYUME-8). logInfo keeps it in the breadcrumb
+        // trail so it still enriches any later sync error, without a standalone
+        // event. If orphanCount is ever seen to be non-trivial, revisit the
+        // parent/child selection rather than re-promoting the log.
+        logInfo('sync._pushRoutinesAndExercises', 'orphan routine_exercises skipped', { orphanCount });
       }
       for (let i = 0; i < rows.length; i += 200) {
         const { error: reErr } = await sb.from('routine_exercises').upsert(

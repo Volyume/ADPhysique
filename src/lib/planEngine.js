@@ -129,7 +129,7 @@ function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase, 
   const overlay = GOAL_OVERLAYS[goal] ?? {};
 
   // 1. Physique-category overlay (mens_physique, bikini, etc.). Bias volume
-  //    toward the muscles that drive that category's judging. Priority muscles
+  //    towards the muscles that drive that category's judging. Priority muscles
   //    (multiplier > 1.0) are placed INSIDE their working (MAV-MRV) band,
   //    scaled by how strong the priority is, rather than multiplied up from
   //    MEV. Anchoring at MEV was why lower-body emphasis never reached the
@@ -166,7 +166,7 @@ function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase, 
   //    dropped every non-weak-point muscle to maintenance and discarded the
   //    division emphasis. Now each weak-point muscle gets a capped bonus
   //    (closes ~40% of the gap to its MRV), and the added volume is offset by
-  //    trimming the lowest-priority, non-weak-point muscles toward MV so total
+  //    trimming the lowest-priority, non-weak-point muscles towards MV so total
   //    systemic stress is held. Division priorities and the recovery envelope
   //    (MRV clamp + systemic cap below) are preserved.
   if (phase === 'weak_point' && weakPointKeys.length) {
@@ -178,7 +178,7 @@ function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase, 
       // already trains hard (e.g. Bikini glutes near 30) raises it rather than
       // clamping to the generic MRV. Never reduces the muscle.
       const mrvCap = divisionMRV(m, goal, lm);
-      // Specialisation pushes the lagging muscle hard toward its MRV (Helms):
+      // Specialisation pushes the lagging muscle hard towards its MRV (Helms):
       // close ~70% of the gap, not a token bump. Bounded by MRV and by the
       // systemic-offset trim below so the recovery envelope is held.
       const bonus = Math.max(2, Math.round((mrvCap - t[m]) * 0.7));
@@ -1709,7 +1709,7 @@ function buildVolumeSummary(workouts, weeklyTargets, weakPointKeys) {
     calves: 'calves', abs: 'abs', traps: 'traps', forearms: null,
   };
 
-  // Direct sets (the working sets of an exercise count fully toward its primary
+  // Direct sets (the working sets of an exercise count fully towards its primary
   // muscle) and indirect sets (each synergist gets a fractional set, spec phase
   // 3e / RP convention of 0.5 set per secondary muscle).
   const actualSets = {};
@@ -1855,12 +1855,12 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
     strength_hypertrophy:  `Muscle growth is still the goal, but your main compound lifts are loaded heavier and in a lower rep range. Building strength lets you use more weight over time, and more weight applied correctly means more muscle.`,
     mens_physique:         `Upper-body width and a sharp V-shape. Shoulder and lat development drive the look. More sets are placed on side delts, back width, and rear delts than a general plan would assign.`,
     classic_physique:      `Proportional symmetry and balanced mass. Calves, shoulders, and waist definition are all judged. Sets are spread to build a complete physique with particular attention to the landmark muscles of the division.`,
-    bodybuilding:          `Maximum development across every muscle group. Sets are pushed toward the upper range of what your body can recover from, aiming for full, complete development with nothing left undertrained.`,
+    bodybuilding:          `Maximum development across every muscle group. Sets are pushed towards the upper range of what your body can recover from, aiming for full, complete development with nothing left undertrained.`,
     bikini:                `Glutes and hamstrings are the primary judging criterion for this division. Lower-body sets are elevated well above a general plan, while upper-body volume stays proportional and lean.`,
     wellness:              `Like bikini but with heavier lower-body emphasis overall. Quads as well as glutes and hamstrings are prioritised. Upper body is maintained with moderate volume to stay proportional.`,
     figure:                `Balanced upper and lower development with particular attention to shoulder width and back detail. A full, muscular look with symmetry across the entire physique.`,
     womens_physique:       `Greater overall muscle development than figure, with conditioning a key criterion. Sets are pushed higher across the board, with attention to the detail muscles that show best on stage.`,
-    womens_bodybuilding:   `Maximum female muscular development and conditioning, the most muscular division. Sets are pushed toward the upper range of what your body can recover from, with full development across every group and particular attention to back, shoulders and legs.`,
+    womens_bodybuilding:   `Maximum female muscular development and conditioning, the most muscular division. Sets are pushed towards the upper range of what your body can recover from, with full development across every group and particular attention to back, shoulders and legs.`,
   };
   result.goal = goalMap[internalGoal] ?? goalMap[goal] ?? `Goal: ${GOAL_LABELS[goal] ?? goal}.`;
 
@@ -1893,7 +1893,7 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
     const phaseLabel = NUTRITION_PHASE_LABELS[nutPhase] ?? nutPhase;
     const nutMap = {
       lean_gain:      `${phaseLabel}: you have extra calories to work with. Volume is slightly higher because extra food speeds up recovery and lets you get more out of your training. Keep the intensity up and you'll make the most of it.`,
-      build:          `${phaseLabel}: eating more supports higher training volumes. This plan uses more weekly sets than it would at maintenance, because your body can recover from more. Keep protein high to direct those extra calories toward muscle rather than fat.`,
+      build:          `${phaseLabel}: eating more supports higher training volumes. This plan uses more weekly sets than it would at maintenance, because your body can recover from more. Keep protein high to direct those extra calories towards muscle rather than fat.`,
       mild_cut:       `${phaseLabel}: eating less slows recovery slightly. Volume is modest and you should stop a rep or two further from failure than usual. This preserves muscle and keeps recovery manageable while in a deficit.`,
       aggressive_cut: `${phaseLabel}: a significant calorie cut reduces how much your body can recover from. Volume is reduced. Keep protein at or above 2 g per kg of bodyweight and focus on your main compound lifts to protect muscle.`,
       recomp:         `Hold muscle, lose fat: training volume is kept at a level your body can handle while eating at a slight deficit. The goal is doing enough to hold on to your muscle while your nutrition gradually shifts your body composition.`,

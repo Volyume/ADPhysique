@@ -46,6 +46,11 @@ import { applyCoachAdjustmentToActivePlan, planNextWeek } from '../lib/food/meal
 import { buildPlanEditNarration } from '../lib/food/planExplain';
 import { buildRegisteredCoachResponse, resolveRegister } from '../lib/coachRegister';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
+import {
+  cancelMorningNotification,
+  scheduleMorningWeightNotification,
+  scheduleEveningWeightReminder,
+} from '../lib/notifications';
 import { logError, logWarn } from '../lib/errorLog';
 import CollapsibleSection from '../components/CollapsibleSection';
 import Card from '../components/Card';
@@ -790,7 +795,12 @@ export default function CoachOutputScreen({ navigation, route }) {
     try {
       const current = await getNutritionTargets(user.id);
       const change = output.adjustments?.calories?.change ?? 0;
-      const computed = computeCalorieTargets(current, change);
+      // Sex feeds the ED calorie floor (1500 male / 1200 female) in the Apply
+      // path, mirroring nutritionEngine. Read the body profile (source of sex);
+      // fall back to userProfile.
+      const bodyProfile = await getUserBodyProfile(user.id).catch(() => null);
+      const sex = bodyProfile?.sex ?? userProfile?.sex ?? null;
+      const computed = computeCalorieTargets(current, change, sex);
       if (!computed) return;
       await saveNutritionTargets(user.id, computed.targets);
       await AsyncStorage.setItem(
@@ -969,7 +979,9 @@ export default function CoachOutputScreen({ navigation, route }) {
     setApplyingKey('dietBreak');
     try {
       const current = await getNutritionTargets(user.id);
-      const computed = computeDietBreakTargets(current);
+      const bodyProfile = await getUserBodyProfile(user.id).catch(() => null);
+      const sex = bodyProfile?.sex ?? userProfile?.sex ?? null;
+      const computed = computeDietBreakTargets(current, sex);
       if (!computed) return;
       await saveNutritionTargets(user.id, computed.targets);
       await AsyncStorage.setItem(
@@ -1266,12 +1278,28 @@ export default function CoachOutputScreen({ navigation, route }) {
             reason: 'multi-signal harm check',
             signals: result.edPatternSignals,
           });
+          // Q1 ED-safety: the flag is raised here in the foreground, so cancel
+          // the (now audible) weigh-in prompts immediately. Their weekly
+          // triggers are otherwise laid days ahead and would fire in the
+          // background — where no delivery handler runs — under the open flag.
+          // The schedule gate keeps restoreNotifications from re-laying them.
+          try { await cancelMorningNotification(); } catch (_) {}
           await trackEngineEvent(user.id, 'ed_pattern_flag_fired', {
             signals: result.edPatternSignals,
             goalLockAdvanced,
           });
         } else if (result.edPatternClearedThisWeek && edPatternOpen) {
           await clearEdPatternFlag(user.id);
+          // Re-lay the weigh-in prompts now the flag has cleared (per the saved
+          // morning toggle; both helpers self-guard and self-cancel).
+          try {
+            const rawPrefs = await AsyncStorage.getItem('@volyume_notification_prefs');
+            const prefs = rawPrefs ? JSON.parse(rawPrefs) : null;
+            if (prefs?.morningEnabled) {
+              await scheduleMorningWeightNotification(prefs.morningHour ?? 7, prefs.morningMinute ?? 0);
+              await scheduleEveningWeightReminder(prefs.eveningHour ?? 19, prefs.eveningMinute ?? 30);
+            }
+          } catch (_) { /* best-effort re-lay */ }
           await trackEngineEvent(user.id, 'ed_pattern_flag_cleared', null);
         }
       } catch (e) {
@@ -1465,6 +1493,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     adjustments,
     cardioFlag,
     cardioAcknowledgement,
+    cyclePhaseNote,
     whyThisWeek,
     deloadSuggested,
     deloadNote,
@@ -1821,6 +1850,15 @@ export default function CoachOutputScreen({ navigation, route }) {
           <View style={styles.cardioNoteRow}>
             <Ionicons name="heart-outline" size={14} color={colors.primary} />
             <Text style={styles.cardioNoteText}>{cardioAcknowledgement}</Text>
+          </View>
+        ) : null}
+        {/* U4: cycle-phase reassurance for a small period-week water rise
+            (advisory, no Apply; only present for a female user who flagged
+            their period and shows a water-plausible rise). */}
+        {cyclePhaseNote?.note ? (
+          <View style={styles.cardioNoteRow}>
+            <Ionicons name="water-outline" size={14} color={colors.primary} />
+            <Text style={styles.cardioNoteText}>{cyclePhaseNote.note}</Text>
           </View>
         ) : null}
 

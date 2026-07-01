@@ -22,6 +22,7 @@ import { robustTrackingLatest, robustTrackingSevenDaysAgo } from './robustTrend'
 import { computeMacroCycle, computeRefeedDay } from './coachApply';
 import { detectEdPatternFlag, hasEdPatternCleared } from './edPatternDetector';
 import { detectDifferentialTrigger } from './differentialPaywall';
+import { cycleTrendAnnotation } from './cyclePhase';
 
 // ─── EWMA ────────────────────────────────────────────────────────────────────
 
@@ -151,7 +152,7 @@ function getRecoveryScore(energyScore, sorenessScore, stressScore = null) {
   else score = 2;
   // PIPE-001 / ALGO-006: high life stress impairs recovery. Stress runs 1 (low)
   // to 5 (very high) on the check-in. A high-stress week can only worsen the
-  // read toward a hold, never improve it, so the matrix won't push more volume
+  // read towards a hold, never improve it, so the matrix won't push more volume
   // onto someone who is frazzled outside the gym. Below 4 (high) it's left to
   // energy and soreness as before, so existing behaviour is unchanged.
   const st = stressScore ?? null;
@@ -1287,6 +1288,15 @@ export function runWeeklyCoach(inputs) {
   });
 
   // ── ASSEMBLE OUTPUT ───────────────────────────────────────────────────────
+  // U4 (additive, no maths changed): a reassuring note when a female user who
+  // flagged their period this week shows a small water-plausible rise. Never
+  // fires on a loss, never alters a target/floor/threshold — annotation only.
+  const cyclePhaseNote = cycleTrendAnnotation({
+    sex,
+    menstrual: noteFlags?.menstrual,
+    trendPctPerWeek: computeWeeklyTrendPct(morningWeights, bodyweightKg),
+  });
+
   return {
     hasEnoughData: true,
     dataNote: null,
@@ -1299,6 +1309,8 @@ export function runWeeklyCoach(inputs) {
       deltaLabel,
       rateLabel,
     },
+    // U4: cycle-phase water-rise reassurance (or null). Additive; see cyclePhase.js.
+    cyclePhaseNote,
     whatWorking,
     adjustments: {
       training: { signal: trainingSignal, note: trainingNote },

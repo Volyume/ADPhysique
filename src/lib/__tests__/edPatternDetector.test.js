@@ -132,6 +132,19 @@ describe('hasEdPatternCleared', () => {
   test('does not clear when fewer than two weeks of history', () => {
     expect(hasEdPatternCleared(lossOk, [wkNormal()])).toBe(false);
   });
+
+  // audit 2026-07-01 HIGH: absence of data must NOT read as recovery. A hold
+  // must not lift just because an at-risk user stopped logging.
+  test('does not clear when energy is missing (null) — absence is not recovery', () => {
+    const wkNoEnergy = { energy: null, adherence: 'hit', hasCheckin: true, hasFoodData: true };
+    expect(hasEdPatternCleared(lossOk, [wkNoEnergy, wkNormal()])).toBe(false);
+    expect(hasEdPatternCleared(lossOk, [wkNoEnergy, wkNoEnergy])).toBe(false);
+  });
+
+  test('does not clear when weight trend is null — no evidence rapid loss stopped', () => {
+    expect(hasEdPatternCleared({ weightTrendPctPerWeek: null }, [wkNormal(), wkNormal()])).toBe(false);
+    expect(hasEdPatternCleared({}, [wkNormal(), wkNormal()])).toBe(false);
+  });
 });
 
 describe('detectEdPatternFlag, property checks (locked acceptance)', () => {

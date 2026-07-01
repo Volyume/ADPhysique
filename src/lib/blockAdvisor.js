@@ -252,7 +252,7 @@ export async function getBlockAdvice(userId, activeBlock, userProfile) {
         ? `Recovery week passed ${overdueWeeks} week${overdueWeeks > 1 ? 's' : ''} ago`
         : 'Block complete',
       body: overdueWeeks > 0
-        ? `Your recovery week has come and gone. The sooner you start the next block, the better. Your body is ready.`
+        ? `Your recovery week has been and gone. The sooner you start the next block the better. Your body's ready.`
         : `You've finished this block. Take your recovery week, then pick up the plan again.`,
       signals,
       nextBlock,
@@ -355,7 +355,7 @@ function buildEarlyDeloadBody(signals, latestCheckin, blockStatus) {
     ? `You're in week ${weeksIn}. `
     : '';
 
-  return `${signalText}${timing}dropping your sets roughly in half this week while keeping the same exercises lets fatigue clear without losing any of the progress you've built. Think of it as reloading the gun.`;
+  return `${signalText}${timing}dropping your sets roughly in half this week while keeping the same exercises lets fatigue clear without losing any of the progress you've built. Think of it as loading the spring for the next push.`;
 }
 
 function buildHeadsUpBody(signals, blockStatus) {

@@ -58,6 +58,17 @@ export function sortSnapshotNames(names) {
 
 async function copySnapshot(name) {
   await FileSystem.makeDirectoryAsync(SNAP_DIR, { intermediates: true }).catch(() => {});
+  // Flush the WAL into the main DB file first, or the byte-for-byte copy can miss
+  // recent commits still sitting in volyume.db-wal (WAL mode is on). This is the
+  // single choke point for BOTH snapshot callers, so the account-switch path is
+  // covered too, not just migrations (audit F-003). Best-effort: a checkpoint
+  // failure must never block a snapshot. Lazy require avoids a static import
+  // cycle with database.js.
+  try {
+    // eslint-disable-next-line global-require
+    const { checkpointWal } = require('./database');
+    await checkpointWal();
+  } catch (_) { /* checkpoint best-effort */ }
   const dest = `${SNAP_DIR}${name}`;
   await FileSystem.copyAsync({ from: DB_PATH, to: dest });
   await pruneSnapshots(KEEP);
@@ -117,4 +128,12 @@ export async function listSnapshots() {
 // open SQLite file risks corruption. Throws on failure so the UI can report it.
 export async function restoreSnapshot(uri) {
   await FileSystem.copyAsync({ from: uri, to: DB_PATH });
+  // Drop the WAL/SHM sidecars of the OLD database (audit 2026-07-01): WAL mode
+  // is on, so leaving volyume.db-wal / -shm in place means the reopened DB
+  // replays the old, pre-restore commits over the file we just restored,
+  // silently undoing the restore. Mirrors the ['','-wal','-shm'] cleanup
+  // dbCrypto.js does at its swap points. Best-effort; a missing sidecar is fine.
+  for (const s of ['-wal', '-shm']) {
+    try { await FileSystem.deleteAsync(`${DB_PATH}${s}`, { idempotent: true }); } catch (_) { /* best-effort */ }
+  }
 }

@@ -5,11 +5,18 @@ import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import { colors, spacing, radius, type, fontWeight } from '../styles/theme';
 import { SettingsPage, settingsStyles } from '../components/SettingsPrimitives';
+import { getUserBodyProfile, saveUserBodyProfile } from '../lib/database';
+import { logError } from '../lib/errorLog';
 
 const DIET_OPTIONS = [
   { value: 'omnivore', label: 'Omnivore' },
   { value: 'vegetarian', label: 'Vegetarian' },
   { value: 'vegan', label: 'Vegan' },
+];
+
+const SEX_OPTIONS = [
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
 ];
 
 // Profile: the handful of things the user types or picks about themselves.
@@ -24,6 +31,24 @@ export default function SettingsProfileScreen() {
   );
   const [editName, setEditName] = useState(userProfile?.firstName ?? '');
   const [diet, setDiet] = useState(userProfile?.dietPreference ?? 'omnivore');
+  const [sex, setSex] = useState(userProfile?.sex ?? null);
+
+  // Changing sex moves the ED calorie floor + BMR. Persist to BOTH the profile
+  // (for sync via users_profile) and the body profile (the engine's source),
+  // merging into the existing body-profile row so height/DOB are preserved
+  // (saveUserBodyProfile writes the whole row). Targets are not recomputed here:
+  // per founder direction the next weekly coach run picks up the new sex.
+  async function changeSex(value) {
+    if (!user?.id || (value !== 'male' && value !== 'female')) return;
+    setSex(value);
+    try {
+      await saveLocalProfile(user.id, { ...(userProfile || {}), sex: value });
+      const existing = await getUserBodyProfile(user.id).catch(() => null);
+      await saveUserBodyProfile(user.id, { ...(existing || {}), sex: value });
+    } catch (e) {
+      logError('SettingsProfile.changeSex', e, {});
+    }
+  }
 
   return (
     <SettingsPage>
@@ -53,6 +78,34 @@ export default function SettingsProfileScreen() {
             body weight units come from onboarding (the morning-weight
             setup screen). The store still holds these values; they
             just aren't user-editable from Settings any more. */}
+        <View style={styles.dietBlock}>
+          <View style={styles.dietHeader}>
+            <View style={settingsStyles.settingIcon}>
+              <Ionicons name="male-female-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={settingsStyles.settingLabel}>Biological sex</Text>
+              <Text style={settingsStyles.settingSub}>Sets your calorie and nutrition targets. Updates on your next weekly coach run.</Text>
+            </View>
+          </View>
+          <View style={styles.dietChips}>
+            {SEX_OPTIONS.map(opt => {
+              const active = sex === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.dietChip, active && styles.dietChipActive]}
+                  onPress={() => changeSex(opt.value)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={`Biological sex ${opt.label}`}
+                >
+                  <Text style={[styles.dietChipText, active && styles.dietChipTextActive]}>{opt.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
         <View style={styles.dietBlock}>
           <View style={styles.dietHeader}>
             <View style={settingsStyles.settingIcon}>

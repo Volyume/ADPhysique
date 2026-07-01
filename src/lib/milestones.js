@@ -63,7 +63,7 @@ export const MILESTONES = Object.freeze([
   Object.freeze({
     key: 'sessions_10', kind: 'sessions', threshold: 10, icon: 'flame-outline',
     title: 'Ten sessions',
-    body: 'Ten in the book. You are not trying the gym any more — you train.',
+    body: "Ten in the book. You're not just trying the gym any more, you train.",
     heroValue: '10', heroUnit: 'sessions logged',
   }),
   Object.freeze({
@@ -81,7 +81,7 @@ export const MILESTONES = Object.freeze([
   Object.freeze({
     key: 'sessions_100', kind: 'sessions', threshold: 100, icon: 'medal-outline',
     title: 'One hundred sessions',
-    body: 'One hundred sessions logged. You have built something most people only talk about.',
+    body: "One hundred sessions logged. You've built something most people only talk about.",
     heroValue: '100', heroUnit: 'sessions logged',
   }),
   Object.freeze({

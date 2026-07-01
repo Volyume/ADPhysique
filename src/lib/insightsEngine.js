@@ -202,7 +202,7 @@ export function generateInsights(rawArgs = {}) {
   if (overMrvWeeks >= 2 || (fatigue != null && fatigue >= 4.3)) {
     insights.push(mkInsight(
       'deload_due', 2,
-      `Your training load and fatigue are both running high. A lighter week soon will let you come back stronger. Not a setback, just part of the plan.`,
+      `Your training load and fatigue are both running high. A lighter week soon will help you come back fresh. It's not a setback, it's part of the plan.`,
       'deload_due',
       { overMrvWeeks, fatigue: fatigue != null ? Math.round(fatigue * 10) / 10 : null },
     ));

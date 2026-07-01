@@ -612,8 +612,15 @@ const useAppStore = create((set, get) => ({
             .slice(2, 6)
             .join(' | ');
         }
+        // Diagnostic trail only. Every tier transition is expected lifecycle
+        // (new-account cascade grant, cascade advance, paywall downgrade) and
+        // is already captured for analysis by the tier_changed engine event
+        // below, so a warning-level Sentry event per transition was pure noise
+        // and quota burn (audit S-010, Sentry VOLYUME-12). logInfo attaches a
+        // breadcrumb — visible in the run-up to any later error, no standalone
+        // event — while keeping the caller trace for "who changed the tier".
         // eslint-disable-next-line global-require
-        require('../lib/errorLog').logWarn('useAppStore.setTier', `tier ${prev} → ${tier}`, { prev, next: tier, caller: trace });
+        require('../lib/errorLog').logInfo('useAppStore.setTier', `tier ${prev} → ${tier}`, { prev, next: tier, caller: trace });
         // Engine telemetry (Move #3). Tier transition is one of the
         // six events that feed the cohort dashboard. A downgrade at
         // a paywall is also tracked separately as churn_at_gate, so
@@ -744,18 +751,28 @@ const useAppStore = create((set, get) => ({
       const sb = getSupabaseClient();
       if (!sb) return;
       const READ_TIMEOUT_MS = 10_000;
-      const readPromise = sb
-        .from('users_profile')
-        .select('first_name, training_focus, training_age, primary_equipment, units, bar_weight, tier, trial_state, pro_trial_ends_at, first_run_complete')
-        .eq('id', supabaseUserId)
-        .maybeSingle();
+      // U2 (migrate_094): read `sex` from the profile row too, but tolerate the
+      // column being absent on a not-yet-migrated project. A missing column
+      // comes back as a PostgREST { error } (not a throw), and this critical
+      // path treats a null row as "no profile" → re-routes to onboarding, so a
+      // naive add would strand every user until the migration lands. Try WITH
+      // sex; on ANY read error fall back to the exact prior sex-less select so
+      // restore/routing is never coupled to the migration.
+      const BASE_COLS = 'first_name, training_focus, training_age, primary_equipment, units, bar_weight, tier, trial_state, pro_trial_ends_at, first_run_complete';
+      const runRead = (cols) => sb.from('users_profile').select(cols).eq('id', supabaseUserId).maybeSingle();
       let readTimeoutId;
       const timeoutPromise = new Promise((_, reject) => {
         readTimeoutId = setTimeout(() => reject(new Error('cloud-read-timeout')), READ_TIMEOUT_MS);
       });
       try {
-        const { data } = await Promise.race([readPromise, timeoutPromise]);
-        cloudData = data;
+        const { data, error } = await Promise.race([runRead(`${BASE_COLS}, sex`), timeoutPromise]);
+        if (error) {
+          // Column missing / any read error: retry the proven sex-less select.
+          const retry = await runRead(BASE_COLS);
+          cloudData = retry.data;
+        } else {
+          cloudData = data;
+        }
       } finally {
         // Clear the loser timer so a fast read doesn't leave a 10s timer armed.
         clearTimeout(readTimeoutId);
@@ -810,6 +827,10 @@ const useAppStore = create((set, get) => ({
         // every signed-in user reads back as 'free' / unstarted.
         trialState: cloudData.trial_state ?? null,
         proTrialEndsAt: cloudData.pro_trial_ends_at ?? null,
+        // U2: restore biological sex from the profile row (present only after
+        // migrate_094). Redundant with the user_body_profile pull, so sex
+        // survives even if that row is missing. Only accept the enforced values.
+        ...(cloudData.sex === 'male' || cloudData.sex === 'female' ? { sex: cloudData.sex } : {}),
       };
       try { await AsyncStorage.setItem(PROFILE_KEY_PFX + supabaseUserId, JSON.stringify(profile)); } catch (_) {}
       const hydratedTimestamps = await _hydrateProfileTimestamps(supabaseUserId);

@@ -22,6 +22,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import {
   scheduleMorningWeightNotification,
+  scheduleEveningWeightReminder,
   scheduleCheckinReminder,
   scheduleMissedCheckinFollowups,
   cancelMissedCheckinFollowups,
@@ -91,6 +92,8 @@ async function applyScheduled(prefs, permissionStatus) {
   await cancelCheckinNotification();
   if (permissionStatus === 'granted') {
     await scheduleMorningWeightNotification(prefs.morningHour, prefs.morningMinute);
+    // Q1: evening weigh-in backstop rides the same toggle (self-gates on ED flag).
+    await scheduleEveningWeightReminder();
     await scheduleCheckinReminder(
       prefs.checkinDay, prefs.checkinHour, prefs.checkinMinute,
       { lastCheckinMs: prefs.lastCheckinMs ?? 0, minGapDays: 7 },
@@ -329,7 +332,7 @@ export default function CoachingRemindersScreen() {
           <Text style={styles.scheduleText}>Notification at {formatHour(morningHour)}</Text>
           <View style={styles.helperBlock}>
             <Text style={styles.helperText}>
-              Body weight shifts naturally each day with fluid, food, and hormones. Logging every other day (at minimum) lets the trend math smooth out that noise. Three or more readings per week unlocks the weekly check-in.
+              Body weight shifts naturally each day with fluid, food, and hormones. Logging every other day (at minimum) lets the trend math smooth out that noise. Three or more readings per week opens up the weekly check-in.
             </Text>
           </View>
         </Card>

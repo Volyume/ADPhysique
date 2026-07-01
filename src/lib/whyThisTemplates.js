@@ -82,12 +82,12 @@ function clean(str) {
 
 const EXERCISE_WHY_TEMPLATES = {
   // Back subregions
-  vertical_pull:    (name) => `${name} pulls the elbows down toward your hips, which is the best position for back width and shoulder-blade retraction.`,
+  vertical_pull:    (name) => `${name} pulls the elbows down towards your hips, which is the best position for back width and shoulder-blade retraction.`,
   horizontal_row:   (name) => `${name} pulls the elbows back along your body. This angle is where your mid-back and rear shoulders work hardest.`,
   lower_lat:        (name) => `${name} emphasises the lower portion of the back that creates the V-shape taper from shoulders to waist.`,
 
   // Chest subregions
-  incline:          (name) => `${name} works your upper chest: the part most people under-train, and the one that gives the chest a full, 3-D look.`,
+  incline:          (name) => `${name} works your upper chest: the part most people under-train, and the one that gives the chest a full, 3D look.`,
   flat:             (name) => `${name} spreads load across the whole chest and is the most efficient mass-builder for this group.`,
   decline:          (name) => `${name} targets the lower chest with reduced shoulder stress, useful for fuller lower-pec development.`,
 
@@ -119,7 +119,7 @@ const EXERCISE_WHY_TEMPLATES = {
   neutral_curl:     (name) => `${name} curls with a neutral palm. This reduces elbow stress and shifts some load to the brachialis for arm thickness.`,
 
   // Generic fallback
-  default:          (name) => `${name} was selected as the best match for your equipment, muscle group, and available time this session.`,
+  default:          (name) => `${name} is the best fit for your kit, the muscle you're training and the time you've got this session.`,
 };
 
 /**
@@ -219,7 +219,7 @@ export function getWeekPhaseDescription(phase, week) {
     intro:    `Week ${week}: Settle in. Focus on technique and finding the right weights. Don't push to your limit yet. The real work starts next week.`,
     build:    `Week ${week}: Time to push. You should finish most sets feeling like you could do 1–2 more reps but chose not to. That's the zone.`,
     peak:     `Week ${week}: Best effort. Give every set your full attention. This is the week where the most progress happens before the recovery week.`,
-    recovery: `Week ${week}: Lighter week. Cut sets roughly in half, keep the same exercises and weights. Your muscles are rebuilding. Trust the process.`,
+    recovery: `Week ${week}: Lighter week. Cut sets roughly in half, keep the same exercises and weights. Your muscles are rebuilding. Ease off and let them.`,
   };
   return clean(descriptions[phase] ?? `Week ${week}: Continue your training block.`);
 }

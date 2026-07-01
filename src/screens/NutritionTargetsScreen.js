@@ -19,6 +19,7 @@ import { hydrateLoadedTargets, getRecommendedMeals } from '../lib/nutritionTarge
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
+import { femaleNutritionAwareness } from '../lib/femaleNutritionAwareness';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -315,8 +316,9 @@ export default function NutritionTargetsScreen({ navigation }) {
     sex && age.trim() && heightFt.trim() && weight.trim() && consent;
 
   // ── Calculate ──────────────────────────────────────────────────────────────
-  async function handleCalculate() {
+  async function handleCalculate(goalOverride) {
     if (!formComplete) return;
+    const goalToUse = (typeof goalOverride === 'string') ? goalOverride : goal;
 
     const ageNum    = parseInt(age, 10);
     const weightNum = parseFloat(weight);
@@ -355,7 +357,7 @@ export default function NutritionTargetsScreen({ navigation }) {
         bodyFatPercent:     bfNum,
         bodyFatSource:      bfNum != null ? bfSource : null,
         activityLevel:      activity,
-        goal,
+        goal: goalToUse,
         // Scale the surplus by training experience, matching onboarding and the
         // plan-update flow. Sourced from the profile since this form has no
         // experience field of its own.
@@ -799,7 +801,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               "• 1.6 to 2.2 g/kg: the range most commonly recommended for building muscle. Research suggests gains plateau around 1.62 g/kg bodyweight; the upper end gives a comfortable buffer without being excessive.\n\n" +
               "• 2.2 to 3.3 g/kg: the upper end, used by serious athletes and people cutting aggressively. Effective at preserving muscle, but harder to sustain day-to-day.\n\n" +
               "There is no single right answer. The level you can consistently hit every day will produce better results than an aggressive target you miss half the time.\n\n" +
-              "The approaches below are the specific targets Volyume uses; they sit toward the higher end of these ranges, where muscle retention is strongest."
+              "The approaches below are the specific targets Volyume uses; they sit towards the higher end of these ranges, where muscle retention is strongest."
             } />
             <Text style={styles.approachNoteText}>Different guidelines use different targets. Pick the level you can consistently sustain.</Text>
           </View>
@@ -1214,6 +1216,51 @@ export default function NutritionTargetsScreen({ navigation }) {
                   <Text style={styles.warningText}>{w}</Text>
                 </View>
               ))}
+
+              {/* U3: one-tap nudge to ease the deficit when energy availability is
+                  low. Steps the goal down one notch and recalculates. Only ever
+                  RAISES calories; the hard floors are unchanged either way. */}
+              {results.eaCaution?.suggestedKcal ? (() => {
+                const easedGoal = { aggressive_cut: 'mild_cut', mild_cut: 'recomp', recomp: 'maintain' }[results.goal];
+                if (!easedGoal) return null;
+                return (
+                  <TouchableOpacity
+                    style={styles.easeNudge}
+                    onPress={() => { setGoal(easedGoal); handleCalculate(easedGoal); }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Ease this cut to about ${results.eaCaution.suggestedKcal} kilocalories`}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="trending-up-outline" size={16} color={colors.primary} />
+                    <Text style={styles.easeNudgeText}>Ease this cut to about {results.eaCaution.suggestedKcal} kcal</Text>
+                  </TouchableOpacity>
+                );
+              })() : null}
+
+              {/* U6: iron / micronutrient awareness for female athletes.
+                  Awareness only (no tracking, no schema); female-only via the
+                  helper, which returns null for everyone else. */}
+              {(() => {
+                const awareness = femaleNutritionAwareness(sex);
+                if (!awareness) return null;
+                return (
+                  <View style={styles.awarenessCard}>
+                    <View style={styles.awarenessHeader}>
+                      <Ionicons name="nutrition-outline" size={16} color={colors.primary} />
+                      <Text style={styles.awarenessTitle}>{awareness.title}</Text>
+                    </View>
+                    <Text style={styles.awarenessIntro}>{awareness.intro}</Text>
+                    {awareness.nutrients.map(n => (
+                      <View key={n.key} style={styles.awarenessNutrient}>
+                        <Text style={styles.awarenessNutrientName}>{n.name}</Text>
+                        <Text style={styles.awarenessNutrientBody}>{n.why}</Text>
+                        <Text style={styles.awarenessNutrientFoods}>{n.foods}</Text>
+                      </View>
+                    ))}
+                    <Text style={styles.awarenessFootnote}>{awareness.footnote}</Text>
+                  </View>
+                );
+              })()}
 
               {/* How calculated (expandable) */}
               <TouchableOpacity
@@ -1754,6 +1801,76 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.warning,
     lineHeight: 18,
+  },
+
+  easeNudge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, 0.4),
+    backgroundColor: colors.primaryBg,
+  },
+  easeNudgeText: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+  },
+
+  // U6: female iron/micronutrient awareness card.
+  awarenessCard: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, 0.25),
+    backgroundColor: colors.primaryBg,
+    gap: spacing.sm,
+  },
+  awarenessHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  awarenessTitle: {
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+    fontWeight: fontWeight.semibold,
+  },
+  awarenessIntro: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 19,
+  },
+  awarenessNutrient: {
+    gap: 2,
+    marginTop: spacing.xs,
+  },
+  awarenessNutrientName: {
+    fontSize: fontSize.sm,
+    color: colors.textPrimary,
+    fontWeight: fontWeight.semibold,
+  },
+  awarenessNutrientBody: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 19,
+  },
+  awarenessNutrientFoods: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 19,
+    fontStyle: 'italic',
+  },
+  awarenessFootnote: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    lineHeight: 17,
+    marginTop: spacing.xs,
   },
 
   expandHeader: {

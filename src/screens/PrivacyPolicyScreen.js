@@ -88,7 +88,7 @@ export default function PrivacyPolicyScreen() {
         <Section title="Changes to this policy">
           <Body>
             We may update this policy from time to time. We will notify you of significant changes within the
-            app. Continued use of Volyume after changes take effect constitutes your acceptance of the updated policy.
+            app. If you carry on using Volyume after the changes take effect, that counts as accepting the updated policy.
           </Body>
         </Section>
 

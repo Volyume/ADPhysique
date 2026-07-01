@@ -137,7 +137,7 @@ export function robustSevenDaysAgo(weights, opts = {}) {
 //
 // The display smoother above (robustEwma / robustValues) clamps innovations
 // against the LEVEL, so a sustained gain/loss produces a run of same-signed
-// innovations whose robust scale (MAD) collapses toward zero, tightening the
+// innovations whose robust scale (MAD) collapses towards zero, tightening the
 // knee and damping the very trend we want to keep. That over-damping of
 // SUSTAINED moves is why promoting it to the coaching DECISIONS regressed the
 // bulk_aggressive simulator (a fast bulk stopped triggering the downward pull),
@@ -183,7 +183,7 @@ export function robustTrackingEwma(weights, opts = {}) {
     const e = x - pred;
     // Scale = typical residual MAGNITUDE (median |residual|), NOT MAD. MAD
     // measures spread around the median, so a run of consistent trend-residuals
-    // collapses it toward zero and tightens the knee onto the very trend we want
+    // collapses it towards zero and tightens the knee onto the very trend we want
     // to keep (the held-promotion bug). Median |residual| stays ~the residual's
     // own size during a sustained move, so a consistent trend passes (e < ~1.5·s)
     // while a lone outlier (e >> the typical residual) is still clamped.

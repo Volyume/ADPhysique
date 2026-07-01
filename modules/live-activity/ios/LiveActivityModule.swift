@@ -43,7 +43,13 @@ public class LiveActivityModule: Module {
         let setNumber = options["setNumber"] as? Int
         let totalSets = options["totalSets"] as? Int
         guard let endMs = (options["endTimeMs"] as? NSNumber)?.doubleValue else { return nil }
+        // Reject a non-finite or already-past end time (audit 2026-07-01):
+        // seeding a ContentState whose endTime <= now makes the widget build a
+        // Date()...endTime range with lowerBound > upperBound, which traps
+        // (EXC_BREAKPOINT, Sentry VOLYUME-1K). Mirror the Android guard.
+        guard endMs.isFinite, endMs > 0 else { return nil }
         let endDate = Date(timeIntervalSince1970: endMs / 1000.0)
+        guard endDate > Date() else { return nil }
 
         let attributes = VolyumeRestTimerAttributes(
           exerciseName: exerciseName,

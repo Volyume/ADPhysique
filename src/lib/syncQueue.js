@@ -193,7 +193,12 @@ async function _runOp(supabaseClient, row) {
     case 'check_in': {
       const payload = row.payload ? JSON.parse(row.payload) : null;
       if (!payload) return true;
-      const r = safeCall(sync.syncCheckin, row.user_id, payload);
+      // The real function is syncWeeklyCheckin; the old name sync.syncCheckin
+      // never existed, so safeCall always returned null and EVERY drained
+      // check-in silently fell back to a full-account re-upload (audit
+      // 2026-07-01). Match the morning_weight pattern with rethrow so a genuine
+      // failure retries via the queue instead of masquerading as success.
+      const r = safeCall(sync.syncWeeklyCheckin, row.user_id, payload, { rethrow: true });
       if (r === null) await safeCall(sync.bulkUploadLocalData, row.user_id, row.user_id);
       else await r;
       return true;

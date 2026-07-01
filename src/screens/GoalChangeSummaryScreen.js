@@ -36,7 +36,7 @@ function buildGoalReason(prevGoal, nextGoal) {
   // The legacy general_hypertrophy / strength_hypertrophy / weak_point_spec
   // values are migrated away (coachingGoals.migrateProfileGoals) before they
   // reach this screen, so only physique categories land here.
-  return `Your plan re-weights weekly volume toward the muscles judged in this category.`;
+  return `Your plan re-weights weekly volume towards the muscles judged in this category.`;
 }
 
 function buildKcalReason(prevKcal, nextKcal, nextPhase) {

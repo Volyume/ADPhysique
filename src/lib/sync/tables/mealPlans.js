@@ -17,6 +17,17 @@
  */
 
 import { logSyncError } from '../telemetry';
+import { isMissingTableError } from './_missingTable';
+
+// meal_plans is a cloud migration (086). If a client is ever ahead of the
+// applied migrations the table is absent, and PostgREST answers PGRST205 /
+// 42P01. That is the expected pre-migration state, not a sync failure — there
+// is no cloud target yet, so no unsynced data can be lost. Treat it as a benign
+// skip (errors:0) so it can't trip the push-first sign-out guard, exactly like
+// planFolders.js (audit S-004, Sentry VOLYUME-1D/-1E/-1G). A missing COLUMN is
+// deliberately NOT matched by the shared helper, so real schema drift still
+// surfaces as an error.
+const _isMissingTableError = (error) => isMissingTableError(error, 'meal_plans');
 
 // D1-#11: updated_at may arrive as an epoch-ms number OR an ISO timestamptz
 // string depending on the cloud column type. Number(isoString) is NaN, and
@@ -51,6 +62,9 @@ export async function pushMealPlans(sb, { userId, localUserId } = {}) {
       updated_at: row.updated_at,
     }, { onConflict: 'id' });
     if (error) {
+      if (_isMissingTableError(error)) {
+        return { count: 0, errors: 0, skipped: 'cloud_table_missing' };
+      }
       logSyncError('sync.tables.mealPlans.pushUpsert', error);
       return { count: 0, errors: 1 };
     }
@@ -72,6 +86,9 @@ export async function pullMealPlans(sb, { userId, localUserId } = {}) {
       .select('*')
       .eq('user_id', userId);
     if (error) {
+      if (_isMissingTableError(error)) {
+        return { count: 0, errors: 0, skipped: 'cloud_table_missing' };
+      }
       logSyncError('sync.tables.mealPlans.pull', error);
       return { count: 0, errors: 1 };
     }

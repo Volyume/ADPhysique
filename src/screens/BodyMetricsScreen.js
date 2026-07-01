@@ -205,7 +205,7 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
           <VolyumeChart
             data={windowed.map((e, i) => ({
               value: e.body_weight,
-              label: i === 0 || i === windowed.length - 1 ? safeFormatDate(e.metric_date, 'MMM d') : '',
+              label: i === 0 || i === windowed.length - 1 ? safeFormatDate(e.metric_date, 'd MMM') : '',
             }))}
             width={chartWidth}
             height={120}
@@ -229,7 +229,7 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
               const trend = smoothed[i];
               return {
                 title: `${e.body_weight} ${unit}`,
-                sub: `${safeFormatDate(e.metric_date, 'MMM d')}${trend != null ? ` · trend ${trend.toFixed(1)} ${unit}` : ''}`,
+                sub: `${safeFormatDate(e.metric_date, 'd MMM')}${trend != null ? ` · trend ${trend.toFixed(1)} ${unit}` : ''}`,
               };
             }}
           />
@@ -271,7 +271,7 @@ function BodyFatTrendChart({ entries }) {
   const data = withData.map((e, i) => ({
     value: smoothed[i],
     label: i === 0 || i === withData.length - 1
-      ? safeFormatDate(e.metric_date, 'MMM d')
+      ? safeFormatDate(e.metric_date, 'd MMM')
       : '',
   }));
   const rawData = values.map(v => ({ value: v }));
@@ -331,7 +331,7 @@ function MeasurementTrendChart({ entries, measureKey, label }) {
   const data = withData.map((e, i) => ({
     value: e[measureKey],
     label: i === 0 || i === withData.length - 1
-      ? safeFormatDate(e.metric_date, 'MMM d')
+      ? safeFormatDate(e.metric_date, 'd MMM')
       : '',
   }));
 
@@ -788,7 +788,7 @@ export default function BodyMetricsScreen() {
             {/* Header row with phase chip */}
             <View style={styles.snapshotHeader}>
               <Text style={styles.sectionTitle}>
-                Weight · {safeFormatDate(latest?.metric_date, 'MMM d, yyyy') || 'Today'}
+                Weight · {safeFormatDate(latest?.metric_date, 'd MMM yyyy') || 'Today'}
               </Text>
               {phase && (
                 <View style={[styles.phaseChip, { borderColor: phase.color }]}>
@@ -839,7 +839,7 @@ export default function BodyMetricsScreen() {
                     );
                   })()}
                   <Text style={styles.ewmaMuted}>
-                    Smoothed across daily fluctuations. More reliable than a single weigh-in.
+                    Smoothed out across day-to-day ups and downs, so it's more reliable than a single weigh-in.
                   </Text>
                   {recentIntake?.daysLogged > 0 && (
                     <Text style={styles.ewmaIntake}>
@@ -1135,7 +1135,7 @@ export default function BodyMetricsScreen() {
               const measuredKeys = MEASUREMENTS.filter(m => entry[m.key] != null);
               return (
                 <View key={entry.id} style={styles.historyRow}>
-                  <Text style={styles.historyDate}>{safeFormatDate(entry.metric_date, 'MMM d, yyyy') || '-'}</Text>
+                  <Text style={styles.historyDate}>{safeFormatDate(entry.metric_date, 'd MMM yyyy') || '-'}</Text>
                   <View style={styles.historyValues}>
                     {entry.body_weight ? (
                       <Text style={styles.historyWeight}>{formatBodyWeightShort(entry.body_weight, bwu)}</Text>

@@ -108,9 +108,9 @@ export default function CalorieBankSheet({
       <Text style={styles.intro}>
         Got a meal out or an occasion coming up? Pick that day and we will move some
         calories onto it from the rest of the week, so you eat a little less on the
-        other days to make room. Your weekly total does not change, and that is what
-        matters: your coach looks at the whole week, not any single day, so one
-        higher day balanced by slightly lighter ones keeps you right on plan.
+        other days to make room. Your weekly total stays the same, and that's what
+        counts. Your coach looks at the whole week, not any single day, so one
+        bigger day balanced by slightly lighter ones keeps you on plan.
       </Text>
 
       {existingBank ? (

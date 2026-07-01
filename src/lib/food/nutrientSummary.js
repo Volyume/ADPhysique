@@ -40,7 +40,7 @@ function finite(v) {
  * A "logged day" is a rollup with entries_count > 0 (the same convention the
  * insights screen uses everywhere). Days with no data, or rollups with no
  * entries, are skipped entirely — they neither contribute to the sum nor count
- * toward the divisor, so an unlogged day never drags an average toward a false
+ * towards the divisor, so an unlogged day never drags an average towards a false
  * zero. The divisor is therefore the number of logged days, not the window
  * length.
  *
@@ -63,7 +63,7 @@ export function summariseNutrients(rollups) {
 
   for (const r of list) {
     if (!r || typeof r !== 'object') continue;
-    // Only days the user actually logged count toward the average.
+    // Only days the user actually logged count towards the average.
     if (!(Number(r.entries_count) > 0)) continue;
     days += 1;
     for (const f of NUTRIENT_FIELDS) {

@@ -8,6 +8,27 @@ import { openEncryptedDb } from './dbCrypto';
 
 let _db = null;
 let _initPromise = null;
+// Whether the local DB is actually SQLCipher-encrypted. null = not yet opened,
+// false = opened on the safe plaintext fallback (audit F-002: surface this so it
+// isn't invisible while the consent screen claims encrypted local storage).
+let _dbEncrypted = null;
+
+/** Current local DB encryption state: true (encrypted), false (plaintext
+ *  fallback), or null (DB not opened yet). Read by privacy/consent surfaces. */
+export function isLocalDbEncrypted() {
+  return _dbEncrypted;
+}
+
+/**
+ * Flush the WAL into the main DB file so a byte-for-byte file copy (a snapshot)
+ * is complete. In WAL mode recent commits can sit in volyume.db-wal until
+ * checkpointed (audit F-003). Best-effort and never throws; a no-op if the DB
+ * isn't open yet.
+ */
+export async function checkpointWal() {
+  if (!_db) return;
+  try { await _db.execAsync('PRAGMA wal_checkpoint(FULL);'); } catch (_) { /* best-effort */ }
+}
 
 // Fire a debounced full cloud sync after a local write. Lazy-required
 // to avoid the circular import (sync.js → database.js → sync.js).
@@ -59,8 +80,12 @@ export async function closeDatabase() {
 }
 
 export function initDatabase() {
-  if (_db) return Promise.resolve(_db);
+  // Gate on the in-flight init FIRST (audit 2026-07-01 race): _db is now only
+  // set once _doInit has finished all schema + migrations, so while init is
+  // running _db is still null and _initPromise is the only handle — returning it
+  // makes concurrent callers await a fully-ready DB instead of a half-open one.
   if (_initPromise) return _initPromise;
+  if (_db) return Promise.resolve(_db);
   _initPromise = _doInit().catch(e => {
     // Clear state so a retry attempt re-runs init instead of returning
     // a half-open handle. SQLite.openDatabaseAsync sets _db before
@@ -79,10 +104,24 @@ async function _doInit() {
   // statement and falls back to a working plaintext handle if encryption fails,
   // so the app never bricks or loses data. `PRAGMA key` MUST precede any other
   // statement, so this runs before `PRAGMA journal_mode`.
-  const { db: opened } = await openEncryptedDb(SQLite);
-  _db = opened;
-  await _db.execAsync('PRAGMA journal_mode = WAL;');
-  await _db.execAsync(`
+  const { db: opened, encrypted } = await openEncryptedDb(SQLite);
+  // Do NOT publish `_db` yet (audit 2026-07-01 race): all schema + migration
+  // work below runs on the local `opened` handle, and `_db` is assigned only
+  // AFTER everything completes (bottom of this function). Publishing early let a
+  // concurrent db() caller receive a handle whose tables did not exist yet.
+  // db()/initDatabase() gate on `_initPromise` so concurrent callers await this
+  // whole function rather than reading a half-initialised `_db`.
+  _dbEncrypted = !!encrypted;
+  // F-002: a plaintext fallback is a real availability decision, but it must not
+  // be silent — the consent screen tells users their data is in encrypted local
+  // storage. Log it (non-sensitive) so the field state is visible; a surface can
+  // read isLocalDbEncrypted() to keep privacy copy honest.
+  if (!encrypted) {
+    // eslint-disable-next-line global-require
+    try { require('./errorLog').logWarn('database.plaintextFallback', 'local DB opened UNENCRYPTED (SQLCipher unavailable / migration fallback)', {}); } catch (_) {}
+  }
+  await opened.execAsync('PRAGMA journal_mode = WAL;');
+  await opened.execAsync(`
     CREATE TABLE IF NOT EXISTS exercises (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -201,7 +240,7 @@ async function _doInit() {
   `);
 
   // Nutrition & body data tables (idempotent)
-  await _db.execAsync(`
+  await opened.execAsync(`
     CREATE TABLE IF NOT EXISTS nutrition_targets (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
@@ -282,7 +321,10 @@ async function _doInit() {
     CREATE INDEX IF NOT EXISTS idx_insights_user ON user_insights(user_id, dismissed_at, type);
   `);
 
-  await runMigrations(_db);
+  await runMigrations(opened);
+  // Schema + migrations are complete: NOW publish the handle. A concurrent
+  // db()/initDatabase() awaiting _initPromise resolves to a fully-ready DB.
+  _db = opened;
   return _db;
 }
 
@@ -1486,6 +1528,10 @@ export async function runMigrations(d) {
 // threw "undefined is not a function" on entry, the bug that made
 // every drainSyncQueue invocation fail before processing any row.
 export async function db() {
+  // Gate on the in-flight init first (audit 2026-07-01 race): while _doInit runs,
+  // _db is null and _initPromise resolves only once schema + migrations finish,
+  // so awaiting it hands back a fully-ready handle rather than a half-open one.
+  if (_initPromise) return _initPromise;
   return _db || initDatabase();
 }
 
@@ -2036,7 +2082,7 @@ export async function getWorkoutSetsForWorkout(workoutId) {
  * recent moving average (and rank it within the window).
  *
  * Aggregates in SQL so we don't pay an N+1 trip per workout. Excludes
- * warm-up sets, they don't count toward "working tonnage" and including
+ * warm-up sets, they don't count towards "working tonnage" and including
  * them would inflate the average vs the headline tonnage shown on the
  * summary screen.
  */
@@ -3817,6 +3863,12 @@ export const WIPE_DIRECT_TABLES = [
   // state and engine_telemetry leftover rows could ship under the next
   // account, so the omission was a real ownership leak, not cosmetic.
   'cardio_log', 'ed_pattern_flags', 'tier_history', 'engine_telemetry',
+  // audit 2026-07-01: both carry a user_id column locally and were missing, so
+  // they survived sign-out / account-delete / the cross-user switch — the next
+  // account on a shared device inherited the prior user's plan folders and
+  // per-slot food-logging memory. plan_folders (migration 089) and
+  // food_slot_recents (client-only) both DELETE cleanly by user_id.
+  'plan_folders', 'food_slot_recents',
 ];
 
 export async function wipeAllUserData(userId) {

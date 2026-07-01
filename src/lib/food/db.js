@@ -185,7 +185,7 @@ export async function getRecentLoggedDays(userId, asOfDate, limit = 14) {
 
 /**
  * Confirm a day's planned meals as eaten (adherence model 2026-06-15): flips
- * is_planned 1 -> 0 so they count toward the rollup/adherence/FFM and sync as
+ * is_planned 1 -> 0 so they count towards the rollup/adherence/FFM and sync as
  * normal actuals. Bumps logged_at + updated_at. Returns the number confirmed.
  */
 export async function confirmPlannedDay(userId, entryDate) {

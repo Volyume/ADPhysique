@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
@@ -8,7 +7,7 @@ import Button from '../components/Button';
 import { storeName } from '../lib/storeName';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
-import { signUpWithEmail, signInWithEmail, signInWithGoogle, signInWithApple, getSupabaseClient } from '../lib/supabase';
+import { signInWithGoogle, signInWithApple, getSupabaseClient } from '../lib/supabase';
 import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 import { PRO_BETA_ACTIVE } from '../lib/proGate';
 import * as cascade from '../lib/payments/cascade';
@@ -40,12 +39,9 @@ export default function ProUpgradeScreen({ navigation, route }) {
   const annualPrice = priceFor('pro', 'annual');
   const PRICE_LOADING = '…';
 
-  const [mode, setMode] = useState('signup'); // 'signup' | 'signin'
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [emailFocused, setEmailFocused] = useState(false);
-  const [passwordFocused, setPasswordFocused] = useState(false);
+  // OAuth only (Apple/Google). The email + password upgrade path was removed
+  // (founder 2026-07-01); email confirmation was flaky. handleOAuth polls for
+  // the session and calls completeUpgrade itself.
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   // COMP-007: annual is the default (H&F is annual-dominant ~60-68%; the saving
@@ -207,46 +203,6 @@ export default function ProUpgradeScreen({ navigation, route }) {
     } finally {
       setBusy(false);
     }
-  }
-
-  async function handleAuth() {
-    if (!email.trim() || !password.trim()) {
-      toast.show('Enter your email and a password to continue', { variant: 'warning' });
-      return;
-    }
-    if (mode === 'signup' && password.length < 8) {
-      toast.show('Use at least 8 characters', { variant: 'warning' });
-      return;
-    }
-    setBusy(true);
-    try {
-      const fn = mode === 'signup' ? signUpWithEmail : signInWithEmail;
-      const { data, error } = await fn(email.trim(), password);
-      if (error) {
-        toast.show(error.message || 'Authentication error', { variant: 'error' });
-        setBusy(false);
-        return;
-      }
-      if (mode === 'signup' && data.user && !data.session) {
-        // Seed the per-uid first-run flag so the eventual sign-in routes to
-        // the wizard, not MainTabs, no matter how long email confirmation
-        // takes (A2-021).
-        useAppStore.getState().noteSignupPendingOnboarding(data.user.id);
-        appAlert(
-          'Check your email',
-          'We sent a confirmation link. Confirm it, sign in here, and your Pro access activates.',
-        );
-        setMode('signin');
-        setBusy(false);
-        return;
-      }
-      if (data.session) {
-        await completeUpgrade(data.session.user.id, { isNew: mode === 'signup' });
-      }
-    } catch (_) {
-      toast.show('Something went wrong, try again', { variant: 'error' });
-    }
-    setBusy(false);
   }
 
   // ── Success state ────────────────────────────────────────────────────────────
@@ -451,90 +407,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
                   <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
                   <Text style={styles.oauthBtnText}>Continue with Google</Text>
                 </TouchableOpacity>
-                <View style={styles.oauthDivider}>
-                  <View style={styles.oauthDividerLine} />
-                  <Text style={styles.oauthDividerText}>or with email</Text>
-                  <View style={styles.oauthDividerLine} />
-                </View>
               </View>
-
-              <View style={styles.section}>
-                <Text style={styles.fieldLabel}>Email</Text>
-                <View style={[styles.fieldWrap, emailFocused && styles.fieldWrapFocused]}>
-                  <TextInput
-                    style={styles.fieldInput}
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="you@example.com"
-                    placeholderTextColor={colors.textDisabled}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    autoComplete="email"
-                    onFocus={() => setEmailFocused(true)}
-                    onBlur={() => setEmailFocused(false)}
-                    accessibilityLabel="Email"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.section}>
-                <Text style={styles.fieldLabel}>Password</Text>
-                <View style={[styles.fieldWrap, passwordFocused && styles.fieldWrapFocused]}>
-                  <TextInput
-                    style={[styles.fieldInput, { paddingRight: spacing.xxxl }]}
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder={mode === 'signup' ? 'Min 8 characters' : 'Your password'}
-                    placeholderTextColor={colors.textDisabled}
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    autoComplete={mode === 'signup' ? 'new-password' : 'password'}
-                    onFocus={() => setPasswordFocused(true)}
-                    onBlur={() => setPasswordFocused(false)}
-                    accessibilityLabel="Password"
-                  />
-                  <TouchableOpacity
-                    style={styles.eyeBtn}
-                    onPress={() => setShowPassword(v => !v)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: showPassword }}
-                    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    <Ionicons
-                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                      size={19}
-                      color={colors.textMuted}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <Button
-                title={mode === 'signup' ? 'Create account and go Pro' : 'Sign in and go Pro'}
-                icon="sparkles"
-                size="lg"
-                loading={busy}
-                onPress={handleAuth}
-              />
-
-              <TouchableOpacity
-                style={styles.switchBtn}
-                onPress={() => setMode(m => (m === 'signup' ? 'signin' : 'signup'))}
-                accessibilityRole="button"
-                accessibilityLabel={mode === 'signup' ? 'Already have an account? Sign in' : "Don't have an account? Create one"}
-              >
-                <Text style={styles.switchText}>
-                  {mode === 'signup'
-                    ? 'Already have an account? '
-                    : "Don't have an account? "}
-                  <Text style={styles.switchAction}>
-                    {mode === 'signup' ? 'Sign in' : 'Create one'}
-                  </Text>
-                </Text>
-              </TouchableOpacity>
             </>
           )}
 

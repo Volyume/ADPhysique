@@ -136,7 +136,7 @@ describe('part 1: specific data-referenced acknowledgement', () => {
       output: fakeOutput({ sessionsCompleted: 0, sessionsPlanned: 3 }),
       weighInsThisWeek: 5,
     });
-    expect(r.acknowledgement).toBe('5 weigh-ins logged this week. That is enough data to read the trend.');
+    expect(r.acknowledgement).toBe('5 weigh-ins logged this week. Enough to read the trend from.');
   });
 
   test('no training, thin weigh-ins: the answered check-in is named', () => {

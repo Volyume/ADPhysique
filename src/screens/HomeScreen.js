@@ -1807,7 +1807,7 @@ function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutDaysAgo,
       const muscleName = belowMev[0].label;
       return {
         headline: 'Muscle groups need attention',
-        body: `Several muscle groups are below their weekly minimum. Today's a good day to prioritise ${muscleName}.`,
+        body: `A few muscle groups haven't had much work this week. Today's a good day to give ${muscleName} some attention.`,
         type: 'go',
       };
     }
