@@ -1011,7 +1011,11 @@ export default function CoachOutputScreen({ navigation, route }) {
     setApplyingKey('macroCycle');
     try {
       const current = await getNutritionTargets(user.id);
-      const split = computeMacroCycle(current, trainingDays);
+      // F3 (EN-2): sex drives the per-day floor inside computeMacroCycle, the
+      // same read the calorie Apply uses (body profile first, profile fallback).
+      const bodyProfile = await getUserBodyProfile(user.id).catch(() => null);
+      const sex = bodyProfile?.sex ?? userProfile?.sex ?? null;
+      const split = computeMacroCycle(current, trainingDays, { sex });
       if (!split) return;
       await saveLocalProfile(user.id, {
         ...(userProfile || {}),

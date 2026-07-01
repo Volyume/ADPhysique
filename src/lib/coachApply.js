@@ -123,13 +123,14 @@ export const MACRO_CYCLE_REST_DAY_CARB_CUT = 0.25;
  *
  * @param {object} nutrition  current targets (targetKcal, proteinG, carbsG, fatG)
  * @param {number} trainingDaysPerWeek  clamped to 1..6
+ * @param {object} [opts]     { sex } — drives the sacred per-day calorie floor
  * @returns {null | { trainingDaysPerWeek, trainingDay, restDay }}
  *   null when there is nothing to cycle: no current target or carbs to
  *   split, fewer than 1 or more than 6 training days (no rest day to
- *   pull from, or no training day to push to), or the split rounds to a
- *   no-op.
+ *   pull from, or no training day to push to), the split rounds to a
+ *   no-op, or a cycled day would land below the sex calorie floor.
  */
-export function computeMacroCycle(nutrition, trainingDaysPerWeek) {
+export function computeMacroCycle(nutrition, trainingDaysPerWeek, { sex = null } = {}) {
   const targetKcal = nutrition?.targetKcal;
   const baselineCarbs = nutrition?.carbsG;
   if (!targetKcal || !baselineCarbs) return null;
@@ -144,17 +145,29 @@ export function computeMacroCycle(nutrition, trainingDaysPerWeek) {
 
   const proteinG = nutrition.proteinG ?? null;
   const fatG = nutrition.fatG ?? null;
+  const restDayKcal = Math.round(targetKcal + (restDayCarbs - baselineCarbs) * 4);
+  const trainingDayKcal = Math.round(targetKcal + (trainingDayCarbs - baselineCarbs) * 4);
+
+  // F3 (audit EN-2): the sacred sex calorie floor applies to EVERY SERVED
+  // DAY, not just the weekly average. A target at or near the floor cannot
+  // fund a rest-day carb cut — the meal-plan path already refuses to cycle a
+  // floored target (mealPlanAssembler returns flat) and this path must agree
+  // with it. No cycle is proposed rather than serving a sub-floor day;
+  // clamping the day up instead would silently break the "weekly average
+  // preserved" contract the note copy promises.
+  const floorKcal = kcalFloorForSex(sex);
+  if (restDayKcal < floorKcal || trainingDayKcal < floorKcal) return null;
 
   return {
     trainingDaysPerWeek: T,
     trainingDay: {
-      kcal: Math.round(targetKcal + (trainingDayCarbs - baselineCarbs) * 4),
+      kcal: trainingDayKcal,
       proteinG,
       carbsG: trainingDayCarbs,
       fatG,
     },
     restDay: {
-      kcal: Math.round(targetKcal + (restDayCarbs - baselineCarbs) * 4),
+      kcal: restDayKcal,
       proteinG,
       carbsG: restDayCarbs,
       fatG,

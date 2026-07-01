@@ -661,7 +661,11 @@ export function energyAvailabilityCaution(targetKcal, maintenanceKcal, { weightK
   const { ffmKg } = computeFFMFloor(weightKg, { bodyFatPercent, bodyFatSource, sex });
   if (!isFinite(ffmKg) || ffmKg <= 0) return null;
   const proxyEA = targetKcal / ffmKg;
-  const line = sex === 'female' ? EA_CAUTION_KCAL_PER_KG.female : EA_CAUTION_KCAL_PER_KG.male;
+  // F3 (audit EN-7): unknown sex takes the FEMALE 40 kcal/kg line — the more
+  // cautious of the two — matching the err-safer rule the FFM fallback
+  // documents. Previously unknown fell to the male 35 line, so a female
+  // profile with missing sex was warned about under-fuelling ~12% later.
+  const line = sex === 'male' ? EA_CAUTION_KCAL_PER_KG.male : EA_CAUTION_KCAL_PER_KG.female;
   if (proxyEA >= line) return null;
   const sexFloor = sex === 'male' ? 1500 : 1200;
   // Ease the deficit up to the caution line, but never above maintenance and

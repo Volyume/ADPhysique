@@ -64,8 +64,11 @@ export function robustEwma(weights, opts = {}) {
   const { alpha, k, madWindow, scaleFloor, downwardKnee } = { ...ROBUST_DEFAULTS, ...opts };
   if (!Array.isArray(weights)) return [];
   // Same malformed-row filtering as the plain EWMA: one corrupt weigh-in must
-  // never poison the trend with NaN.
-  const clean = weights.filter((w) => w && Number.isFinite(Number(w.weightKg)));
+  // never poison the trend with NaN. F3 (EN-6): non-positive weights are
+  // corrupt rows too (import/sync artefacts) — a single 0 kg entry drags the
+  // trend hard enough to fake a rapid-loss signal, so they are dropped here
+  // exactly as in weeklyCoach.computeEWMA.
+  const clean = weights.filter((w) => w && Number.isFinite(Number(w.weightKg)) && Number(w.weightKg) > 0);
   if (clean.length === 0) return [];
   const sorted = [...clean].sort((a, b) => a.loggedAt - b.loggedAt);
 
@@ -129,7 +132,12 @@ export function robustSevenDaysAgo(weights, opts = {}) {
   if (series.length < 2) return null;
   const cutoff = Date.now() - 7 * 86400000;
   const older = [...series].reverse().find((e) => e.loggedAt <= cutoff);
-  return older?.ewmaKg ?? series[0].ewmaKg;
+  // F3 (EN-1, the D1 #3 bug in the robust twin): when no weigh-in is at least
+  // 7 days old there is NO weekly rate to read. Falling back to the earliest
+  // reading scaled a 2-4 day span as a full week (~2x overstated) and could
+  // drive an off-target verdict and a cut. Null, exactly like the plain twin
+  // (weeklyCoach.getEwmaSevenDaysAgo).
+  return older?.ewmaKg ?? null;
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -168,7 +176,8 @@ export const ROBUST_TRACKING_DEFAULTS = Object.freeze({
 export function robustTrackingEwma(weights, opts = {}) {
   const { alpha, beta, k, madWindow, scaleFloor, downwardKnee } = { ...ROBUST_TRACKING_DEFAULTS, ...opts };
   if (!Array.isArray(weights)) return [];
-  const clean = weights.filter((w) => w && Number.isFinite(Number(w.weightKg)));
+  // F3 (EN-6): drop non-positive weights, matching computeEWMA/robustEwma.
+  const clean = weights.filter((w) => w && Number.isFinite(Number(w.weightKg)) && Number(w.weightKg) > 0);
   if (clean.length === 0) return [];
   const sorted = [...clean].sort((a, b) => a.loggedAt - b.loggedAt);
 
@@ -212,5 +221,9 @@ export function robustTrackingSevenDaysAgo(weights, opts = {}) {
   if (series.length < 2) return null;
   const cutoff = Date.now() - 7 * 86400000;
   const older = [...series].reverse().find((e) => e.loggedAt <= cutoff);
-  return older?.ewmaKg ?? series[0].ewmaKg;
+  // F3 (EN-1): null on sub-week data — never scale a 2-4 day span as a weekly
+  // rate. This is the DECISION read (weeklyCoach decisionRatePct), so the old
+  // earliest-reading fallback could manufacture an on/off-target verdict the
+  // safety read (plain EWMA, already fixed) correctly refused to give.
+  return older?.ewmaKg ?? null;
 }

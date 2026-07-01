@@ -41,8 +41,10 @@ export function computeEWMA(weights, alpha = 0.1) {
   if (!Array.isArray(weights)) return [];
   // Drop malformed rows (null entries, missing or non-numeric weightKg) before
   // smoothing so one corrupt weigh-in cannot crash the coach or poison the
-  // trend with NaN.
-  const clean = weights.filter((w) => w && Number.isFinite(Number(w.weightKg)));
+  // trend with NaN. F3 (EN-6): non-positive weights are corrupt rows too — a
+  // single 0 kg import/sync artefact drags the EWMA hard enough to fire a fake
+  // rapid-loss/ED signal from noise.
+  const clean = weights.filter((w) => w && Number.isFinite(Number(w.weightKg)) && Number(w.weightKg) > 0);
   if (clean.length === 0) return [];
   const sorted = [...clean].sort((a, b) => a.loggedAt - b.loggedAt);
   const result = [];
@@ -726,14 +728,22 @@ export function runWeeklyCoach(inputs) {
       : calsAdherence === 'over' ? 1.1
       : 1.0; // 'hit'
     const series = morningWeights
-      .filter(w => w && w.weightKg != null && w.loggedAt != null)
+      // F3 (EN-6): > 0, matching computeEWMA — a corrupt 0 kg row here fed
+      // computeFFMFloor (which throws on non-positive weight) with no
+      // try/catch above it, so one bad row could abort the whole coach run.
+      .filter(w => w && Number.isFinite(Number(w.weightKg)) && Number(w.weightKg) > 0 && w.loggedAt != null)
       .slice()
       .sort((a, b) => a.loggedAt - b.loggedAt)
       .map(w => ({ weightKg: w.weightKg, date: new Date(w.loggedAt).toISOString() }));
     const ewmaData = nutritionComputeEWMA(series);
-    const ffmFloorContext = (recentIntakeAvgKcal != null && recentIntakeDaysLogged >= 5)
+    // F3 (EN-6): the FFM-floor context only forms around a genuinely positive
+    // weight; otherwise it is omitted (the floor simply doesn't evaluate,
+    // which holds the status quo rather than throwing).
+    const ffmWeightKg = (Number(bodyweightKg) > 0 ? Number(bodyweightKg) : null)
+      ?? (Number(series[series.length - 1]?.weightKg) > 0 ? Number(series[series.length - 1].weightKg) : null);
+    const ffmFloorContext = (recentIntakeAvgKcal != null && recentIntakeDaysLogged >= 5 && ffmWeightKg != null)
       ? {
-        weightKg: bodyweightKg ?? series[series.length - 1]?.weightKg ?? null,
+        weightKg: ffmWeightKg,
         recentIntakeAvgKcal, recentIntakeDaysLogged, bodyFatPercent, bodyFatSource, sex,
       }
       : null;
@@ -972,9 +982,13 @@ export function runWeeklyCoach(inputs) {
     : null;
 
   // ── RAPID WEIGHT LOSS SAFETY FLAG ────────────────────────────────────────
+  // F3 (EN-9): `<=` so this flag agrees with the correction gate above
+  // (rapidLossOverride) and the ED detector (isRapidLoss) at exactly -1.5%.
+  // Previously the correction fired at the boundary while this flag reported
+  // false — two consumers of the same sacred threshold disagreeing.
   const rapidWeightLossFlag = !!(
     actualRatePct !== null &&
-    actualRatePct < -1.5 &&
+    actualRatePct <= -1.5 &&
     energyScore !== null && energyScore <= 2 &&
     !cycleOverride
   );
@@ -1035,9 +1049,12 @@ export function runWeeklyCoach(inputs) {
   // can never disagree on who gets train/rest cycling.
   if (dayCalorieCyclingAllowed({ goalPhase, goalLockAdvanced, trainingGoal })) {
     const trainingDays = Math.max(1, Math.min(6, Math.round(sessionsPlanned)));
+    // F3 (EN-2): sex threads the per-day ED floor through computeMacroCycle so
+    // a floored target can never be offered a sub-floor rest day.
     const split = computeMacroCycle(
       { targetKcal: currentCalTarget, proteinG: currentProteinG, carbsG: currentCarbsG, fatG: currentFatG },
       trainingDays,
+      { sex },
     );
     if (split) {
       const dayWord = trainingDays === 1 ? 'day' : 'days';
@@ -1118,7 +1135,8 @@ export function runWeeklyCoach(inputs) {
   // locked-copy variant rather than the plain reason string. Same
   // shape as the FFM floor: a downward calorie suggestion is wiped
   // so the engine never pushes a deeper deficit while the flag is up.
-  if (edPatternResult?.fired || edPatternOpen) {
+  const edPatternHeld = !!(edPatternResult?.fired || edPatternOpen);
+  if (edPatternHeld) {
     if (calorieAdjustment && calorieAdjustment.change < 0) {
       calorieAdjustment = null;
     }
@@ -1161,7 +1179,10 @@ export function runWeeklyCoach(inputs) {
     });
   }
 
-  if ((phase.isCut || phase.isBulk) && currentCalTarget !== null && calorieAdjustment === null && !ffmFloorHeld) {
+  // F3 (EN-10): never stack a generic "calories held" reason under the ED
+  // lockout — two different explanations for the same held decision dilute
+  // the safety message the lockout card is meant to lead with.
+  if ((phase.isCut || phase.isBulk) && currentCalTarget !== null && calorieAdjustment === null && !ffmFloorHeld && !edPatternHeld) {
     if (scoffPositive) {
       heldDecisions.push({ type: 'calories', reason: "Calories held. Wellbeing screen flagged restriction concerns." });
     } else if (cycleOverride) {

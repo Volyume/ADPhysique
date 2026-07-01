@@ -58,6 +58,25 @@ export function resolveEffectiveTargets(targets, { isRefeedDay, refeed, macroCyc
     }
     return targets;
   }
+  // F3 (audit EN-2, defence-in-depth): a macro-cycle day PERSISTED before the
+  // computeMacroCycle floor gate existed can carry a sub-floor rest day.
+  // Never serve it: lift the day to the floor, routing the lift through carbs
+  // (4 kcal/g) so the displayed kcal and macros stay self-consistent, exactly
+  // how banking/offsets move energy. Refeed days always sit at/above target
+  // and training days above rest days, so in practice this only bites legacy
+  // rest days.
+  const dayKcal = Number(day.kcal);
+  const floor = Number(floorKcal);
+  if (Number.isFinite(floor) && Number.isFinite(dayKcal) && dayKcal < floor) {
+    const liftG = Math.ceil((floor - dayKcal) / 4);
+    return {
+      ...targets,
+      targetKcal: dayKcal + liftG * 4,
+      proteinG: day.proteinG ?? targets.proteinG,
+      carbsG: (day.carbsG ?? targets.carbsG ?? 0) + liftG,
+      fatG: day.fatG ?? targets.fatG,
+    };
+  }
   return {
     ...targets,
     targetKcal: day.kcal ?? targets.targetKcal,
