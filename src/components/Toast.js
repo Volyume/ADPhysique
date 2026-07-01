@@ -24,7 +24,7 @@
 //   - Auto-dismiss default 2.5s; errors get 4s (more important to
 //     read).
 
-import { createContext, useContext, useRef, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, shadow } from '../styles/theme';
@@ -163,8 +163,13 @@ export function ToastProvider({ children }) {
     clearFallback.current = setTimeout(finish, reduceMotion ? 0 : 240);
   }
 
+  // F7 (audit UI): a fresh `{ show }` object every provider render re-rendered
+  // EVERY useToast consumer on each toast show/dismiss/animation tick. `show`
+  // is stable (useCallback []), so this value never changes for the app's life.
+  const contextValue = useMemo(() => ({ show }), [show]);
+
   return (
-    <ToastContext.Provider value={{ show }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       {current && (
         <Animated.View

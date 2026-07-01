@@ -72,7 +72,9 @@ const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum,
   return (
     <TouchableOpacity
       style={[styles.loggedSetRow, isWarmup && styles.loggedSetRowWarmup]}
-      onPress={onEdit}
+      // F7: the row binds its own set so the parent can pass ONE stable
+      // handler; an inline closure per row was defeating this memo.
+      onPress={() => onEdit(set)}
       accessibilityRole="button"
       accessibilityLabel={`Edit set ${progressNum}`}
       accessibilityHint="Opens a sheet to change or delete this logged set"
@@ -1127,7 +1129,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // updateWorkoutSet). PR detection is a log-time concern and is NOT re-run on
   // an edit/delete — derived analytics recompute from the DB on next view.
 
-  function openEditSet(set) {
+  // F7 (audit UI): stable identity so the memoised LoggedSetRow actually
+  // skips on the per-second timer tick — the previous inline `() =>
+  // openEditSet(s)` closure was a fresh prop every render, defeating the memo.
+  const openEditSet = React.useCallback((set) => {
     setEditingSet(set);
     setEditValue({
       weight: set.weight,
@@ -1135,7 +1140,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       setType: set.setType,
       isGhost: false,
     });
-  }
+  }, []);
 
   async function handleSaveEditedSet() {
     if (saving || !editingSet || !editValue) return;
@@ -2189,7 +2194,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     units={units}
                     progressNum={countProgressSets(loggedSets.slice(0, i + 1))}
                     exerciseType={exercise?.exerciseType || 'weight_reps'}
-                    onEdit={() => openEditSet(s)}
+                    onEdit={openEditSet}
                   />
                 </AnimatedRow>
               ))}
