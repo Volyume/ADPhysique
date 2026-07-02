@@ -39,11 +39,25 @@ import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
 import { getRecentIntakeSummary } from '../lib/food/db';
 import { localWeekStartMs, localDayKey } from '../lib/dayKey';
 import { track as trackEngineEvent } from '../lib/engineTelemetry';
-import DifferentialBadge from '../components/DifferentialBadge';
-import { usePlayPrices } from '../lib/payments/usePlayPrices';
+// NAV-4 (founder decision): the differential paywall no longer renders here.
+// Its only audience is the free tier, which withProGuard keeps out of this
+// screen, so the render was dead. It now lives in HomeScreen's banner stack.
 import { SkeletonCard } from '../components/Skeleton';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
 import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, computeDietBreakTargets, computeMacroCycle, computeRefeedDay, markApplied, isApplied } from '../lib/coachApply';
+// A1 (NU-3/4/6): pure display classifiers + row strings for honest Apply rows.
+// They only CALL coachApply's real policy functions; nothing is recomputed.
+import {
+  classifyCalorieApply,
+  classifyMacroCycleApply,
+  floorHoldLine,
+  floorClampLine,
+  preTapTargetLine,
+  signedEnergyChange,
+} from '../lib/coachApplyView';
+// NU-6: every energy figure this screen renders honours the kJ display
+// preference, as the food domain already does. Engine values stay kcal.
+import { formatEnergy, energyUnitLabel } from '../lib/format';
 import { applyCoachAdjustmentToActivePlan, planNextWeek } from '../lib/food/mealPlanService';
 import { buildPlanEditNarration } from '../lib/food/planExplain';
 import { buildRegisteredCoachResponse, resolveRegister } from '../lib/coachRegister';
@@ -193,25 +207,51 @@ function StatChip({ icon, iconColor, label, value, valueColor }) {
   );
 }
 
-function WhatsWorkingCard({ bullets }) {
-  if (!bullets || bullets.length === 0) return null;
+// A1 (03 gap #1): the working/off ledger. One object, two groups; the exact
+// content the separate "What's working" card and "What was off" block carried.
+function LedgerCard({ working, off }) {
+  const hasWorking = working && working.length > 0;
+  const hasOff = off && off.length > 0;
+  if (!hasWorking && !hasOff) return null;
   return (
-    <View style={styles.whatsWorkingCard}>
-      <SectionHeader title="What's working" />
-      <View style={styles.bulletList}>
-        {bullets.map((item, i) => (
-          <View key={i} style={styles.bulletRow}>
-            <Ionicons name="checkmark" size={15} color={colors.success} style={styles.bulletIcon} />
-            <Text style={styles.bulletText}>{item}</Text>
+    <Card style={styles.card}>
+      {hasWorking ? (
+        <View>
+          <SectionHeader title="What worked" />
+          <View style={styles.bulletList}>
+            {working.map((item, i) => (
+              <View key={i} style={styles.bulletRow}>
+                <Ionicons name="checkmark" size={15} color={colors.success} style={styles.bulletIcon} />
+                <Text style={styles.bulletText}>{item}</Text>
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
-    </View>
+        </View>
+      ) : null}
+      {hasOff ? (
+        <View>
+          <SectionHeader title="What was off" />
+          <View style={styles.bulletList}>
+            {off.map((item, i) => (
+              <View key={i} style={styles.bulletRow}>
+                <Ionicons name="remove" size={15} color={colors.warning} style={styles.bulletIcon} />
+                <Text style={styles.bulletText}>{item}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+    </Card>
   );
 }
 
-function AdjustmentRow({ iconName, label, note, applied, onApply, applying }) {
-  const showApply = !!onApply && !applied;
+// A1 one-amber rule: `emphasis` marks the hero decision row (verdict-size
+// label + the screen's ONE amber-filled Apply); every other row's Apply is
+// the quiet outline variant. `detail` is the NU-4 pre-tap absolute/duration
+// line; `holdNote` (NU-3) renders INSTEAD of the button when the computation
+// would write nothing, so an Apply can never end in silence.
+function AdjustmentRow({ iconName, label, note, detail, holdNote, applied, onApply, applying, emphasis }) {
+  const showApply = !!onApply && !applied && !holdNote;
   return (
     <View style={styles.adjustmentRow}>
       <View style={styles.adjustmentIconWrap}>
@@ -219,7 +259,7 @@ function AdjustmentRow({ iconName, label, note, applied, onApply, applying }) {
       </View>
       <View style={styles.adjustmentContent}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
-          <Text style={styles.adjustmentLabel}>{label}</Text>
+          <Text style={emphasis ? styles.adjustmentLabelHero : styles.adjustmentLabel}>{label}</Text>
           {applied && (
             <View style={styles.appliedChip}>
               <Ionicons name="checkmark" size={10} color={colors.success} />
@@ -228,23 +268,31 @@ function AdjustmentRow({ iconName, label, note, applied, onApply, applying }) {
           )}
         </View>
         {note ? <Text style={styles.adjustmentNote}>{note}</Text> : null}
+        {detail ? <Text style={styles.adjustmentDetail}>{detail}</Text> : null}
+        {holdNote && !applied ? <Text style={styles.adjustmentHold}>{holdNote}</Text> : null}
       </View>
       {showApply && (
         <TouchableOpacity
-          style={[styles.applyBtn, applying && styles.applyBtnBusy]}
+          style={[emphasis ? styles.applyBtn : styles.applyBtnQuiet, applying && styles.applyBtnBusy]}
           onPress={onApply}
           disabled={applying}
           accessibilityRole="button"
           accessibilityLabel={`Apply: ${label}`}
         >
-          <Text style={styles.applyBtnText}>{applying ? 'Applying' : 'Apply'}</Text>
+          <Text style={emphasis ? styles.applyBtnText : styles.applyBtnQuietText}>{applying ? 'Applying' : 'Apply'}</Text>
         </TouchableOpacity>
       )}
     </View>
   );
 }
 
-function NextWeekCard({ adjustments, onApplyCalories, onApplySteps, onApplyCardio, applyingKey }) {
+// NU-4: the header drops the old "next week" claim (the write is indefinite);
+// the calorie row states the post-tap absolute and honest duration BEFORE the
+// tap. NU-3: a floor-held computation renders its reason instead of a button.
+function NextWeekCard({
+  adjustments, onApplyCalories, onApplySteps, onApplyCardio, applyingKey,
+  energyUnit, caloriePreview, calorieNotice, hero, heroRow,
+}) {
   const { calories, steps, cardio } = adjustments;
 
   const calLabel =
@@ -252,24 +300,42 @@ function NextWeekCard({ adjustments, onApplyCalories, onApplySteps, onApplyCardi
       ? null
       : calories.change === 0
       ? 'Hold at current target'
-      : `${calories.change > 0 ? '+' : ''}${calories.change} kcal`;
+      : signedEnergyChange(calories.change, energyUnit);
 
   const stepsLabel = steps !== null ? `${steps.target.toLocaleString('en-GB')}/day target` : null;
+  // NU-3: the floor hold (pre-tap classification) or a tap-time notice
+  // replaces the button; the row explains itself instead of no-opping.
+  const calorieHold = caloriePreview?.kind === 'floor_hold'
+    ? floorHoldLine(caloriePreview.floorKcal, energyUnit)
+    : (calorieNotice ?? null);
+  // NU-4: the pre-tap absolute + duration; on a partial clamp the figure is
+  // the clamped one, named as the safe minimum. After a clamped apply the
+  // row keeps saying what actually landed (NU-3 partial-clamp wording).
+  const calorieDetail = calories?.applied
+    ? (calories.clampedToFloor && calories.newKcal ? floorClampLine(calories.newKcal, energyUnit) : null)
+    : ((caloriePreview?.kind === 'ok' || caloriePreview?.kind === 'floor_clamp')
+        ? preTapTargetLine(caloriePreview.newKcal, energyUnit, { clampedToFloor: caloriePreview.kind === 'floor_clamp' })
+        : null);
   // Only an actual change is applyable. "Hold at current target"
   // (change === 0) has nothing to write, so no button.
-  const caloriesApplyable = calories !== null && calories.change !== 0 && !calories.applied;
+  const caloriesApplyable = calories !== null && calories.change !== 0 && !calories.applied && !calorieHold;
 
   return (
-    <Card style={styles.card}>
-      <SectionHeader title="Nutrition next week" />
+    <Card style={styles.card} elevated={hero} tone={hero ? 'primary' : undefined}>
+      <SectionHeader title="Nutrition" />
       {calories !== null ? (
         <AdjustmentRow
           iconName="flame-outline"
-          label={calories.applied && calories.newKcal ? `${calLabel} → ${calories.newKcal.toLocaleString('en-GB')} kcal/day` : calLabel}
+          label={calories.applied && calories.newKcal
+            ? `${calLabel} → ${formatEnergy(calories.newKcal, energyUnit)} ${energyUnitLabel(energyUnit)}/day`
+            : calLabel}
           note={calories.note}
+          detail={calorieDetail}
+          holdNote={calorieHold}
           applied={!!calories.applied}
           onApply={caloriesApplyable ? onApplyCalories : undefined}
           applying={applyingKey === 'calories'}
+          emphasis={hero && heroRow === 'calories'}
         />
       ) : (
         <AdjustmentRow
@@ -286,6 +352,7 @@ function NextWeekCard({ adjustments, onApplyCalories, onApplySteps, onApplyCardi
           applied={!!steps.applied}
           onApply={steps.target && !steps.applied ? onApplySteps : undefined}
           applying={applyingKey === 'steps'}
+          emphasis={hero && heroRow === 'steps'}
         />
       )}
       {cardio !== null && (
@@ -310,7 +377,7 @@ function NextWeekCard({ adjustments, onApplyCalories, onApplySteps, onApplyCardi
 // no button.
 function TrainingNextWeekCard({
   output, onApply, applying, canApply,
-  deloadSuggested, deloadNote, onApplyDeload, applyingDeload,
+  deloadSuggested, deloadNote, onApplyDeload, applyingDeload, hero,
 }) {
   const signal = output.volumeSignal ?? 0;
   const applied = isApplied(output, 'training');
@@ -329,7 +396,7 @@ function TrainingNextWeekCard({
   const deloadApplied = isApplied(output, 'deload');
 
   return (
-    <Card style={styles.card}>
+    <Card style={styles.card} elevated={hero} tone={hero ? 'primary' : undefined}>
       <SectionHeader title="Training next week" />
       {deloadSuggested ? (
         <>
@@ -340,6 +407,7 @@ function TrainingNextWeekCard({
             applied={deloadApplied}
             onApply={canApply && !deloadApplied ? onApplyDeload : undefined}
             applying={applyingDeload}
+            emphasis={hero}
           />
           {!canApply && !deloadApplied && (
             <View style={styles.planNote}>
@@ -361,6 +429,7 @@ function TrainingNextWeekCard({
             applied={applied}
             onApply={applyable ? onApply : undefined}
             applying={applying}
+            emphasis={hero}
           />
           <View style={styles.planNote}>
             <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
@@ -410,11 +479,14 @@ function RapidLossAlert() {
   );
 }
 
-function DietBreakCard({ weeksInDeficit, applied, onApply, applying }) {
+// NU-4: the button drops the old "week" claim (the write has no expiry) and
+// the card states the post-tap absolute + honest duration before the tap.
+// NU-3: a tap-time null renders its reason (notice) instead of silence.
+function DietBreakCard({ weeksInDeficit, applied, onApply, applying, energyUnit, previewKcal, notice, hero }) {
   return (
-    <Card style={styles.dietBreakCard}>
+    <Card style={styles.dietBreakCard} elevated={hero} tone={hero ? 'primary' : undefined}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
-        <Text style={styles.dietBreakTitle}>Diet break worth considering</Text>
+        <Text style={hero ? styles.dietBreakTitleHero : styles.dietBreakTitle}>Diet break worth considering</Text>
         {applied && (
           <View style={styles.appliedChip}>
             <Ionicons name="checkmark" size={10} color={colors.success} />
@@ -431,15 +503,21 @@ function DietBreakCard({ weeksInDeficit, applied, onApply, applying }) {
       <Text style={styles.dietBreakFootnote}>
         Based on the MATADOR trial (2017). This is a suggestion, not a requirement.
       </Text>
-      {!applied && onApply && (
+      {!applied && previewKcal != null ? (
+        <Text style={styles.adjustmentDetail}>{preTapTargetLine(previewKcal, energyUnit)}</Text>
+      ) : null}
+      {!applied && notice ? (
+        <Text style={styles.adjustmentHold}>{notice}</Text>
+      ) : null}
+      {!applied && onApply && !notice && (
         <TouchableOpacity
-          style={[styles.applyBtn, styles.dietBreakApplyBtn, applying && styles.applyBtnBusy]}
+          style={[hero ? styles.applyBtn : styles.applyBtnQuiet, styles.dietBreakApplyBtn, applying && styles.applyBtnBusy]}
           onPress={onApply}
           disabled={applying}
           accessibilityRole="button"
           accessibilityLabel="Set maintenance calories for a diet break"
         >
-          <Text style={styles.applyBtnText}>{applying ? 'Applying' : 'Set maintenance week'}</Text>
+          <Text style={hero ? styles.applyBtnText : styles.applyBtnQuietText}>{applying ? 'Applying' : 'Set maintenance calories'}</Text>
         </TouchableOpacity>
       )}
     </Card>
@@ -452,8 +530,9 @@ function DietBreakCard({ weeksInDeficit, applied, onApply, applying }) {
 // physique competitors (the coach gates it). Applying writes the split
 // to userProfile.macroCycle, which the Diary reads to show the right
 // target for the day.
-function MacroCycleCard({ macroCycle, applied, onApply, applying }) {
+function MacroCycleCard({ macroCycle, applied, onApply, applying, energyUnit, holdNote }) {
   const { trainingDay, restDay } = macroCycle;
+  const unitLabel = energyUnitLabel(energyUnit);
   return (
     <Card style={styles.card}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
@@ -468,25 +547,28 @@ function MacroCycleCard({ macroCycle, applied, onApply, applying }) {
       <View style={styles.macroCycleRow}>
         <View style={styles.macroCycleCol}>
           <Text style={styles.macroCycleColLabel}>Training days</Text>
-          <Text style={styles.macroCycleColKcal}>{trainingDay.kcal.toLocaleString('en-GB')} kcal</Text>
+          <Text style={styles.macroCycleColKcal}>{formatEnergy(trainingDay.kcal, energyUnit)} {unitLabel}</Text>
           <Text style={styles.macroCycleColCarbs}>{trainingDay.carbsG}g carbs</Text>
         </View>
         <View style={styles.macroCycleCol}>
           <Text style={styles.macroCycleColLabel}>Rest days</Text>
-          <Text style={styles.macroCycleColKcal}>{restDay.kcal.toLocaleString('en-GB')} kcal</Text>
+          <Text style={styles.macroCycleColKcal}>{formatEnergy(restDay.kcal, energyUnit)} {unitLabel}</Text>
           <Text style={styles.macroCycleColCarbs}>{restDay.carbsG}g carbs</Text>
         </View>
       </View>
       <Text style={styles.adjustmentNote}>{macroCycle.note}</Text>
-      {!applied && onApply && (
+      {!applied && holdNote ? (
+        <Text style={styles.adjustmentHold}>{holdNote}</Text>
+      ) : null}
+      {!applied && onApply && !holdNote && (
         <TouchableOpacity
-          style={[styles.applyBtn, styles.dietBreakApplyBtn, applying && styles.applyBtnBusy]}
+          style={[styles.applyBtnQuiet, styles.dietBreakApplyBtn, applying && styles.applyBtnBusy]}
           onPress={onApply}
           disabled={applying}
           accessibilityRole="button"
           accessibilityLabel="Use this training-day and rest-day carb split"
         >
-          <Text style={styles.applyBtnText}>{applying ? 'Applying' : 'Use this split'}</Text>
+          <Text style={styles.applyBtnQuietText}>{applying ? 'Applying' : 'Use this split'}</Text>
         </TouchableOpacity>
       )}
     </Card>
@@ -498,7 +580,7 @@ function MacroCycleCard({ macroCycle, applied, onApply, applying }) {
 // one Apply. Only rendered for aggressive cuts and physique competitors
 // on the coach's cadence. Applying schedules it onto the next training
 // day via userProfile.refeed, which the Diary reads.
-function RefeedCard({ refeed, applied, onApply, applying }) {
+function RefeedCard({ refeed, applied, onApply, applying, energyUnit, holdNote }) {
   return (
     <Card style={styles.card}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
@@ -513,27 +595,35 @@ function RefeedCard({ refeed, applied, onApply, applying }) {
       <View style={styles.macroCycleRow}>
         <View style={styles.macroCycleCol}>
           <Text style={styles.macroCycleColLabel}>Refeed target</Text>
-          <Text style={styles.macroCycleColKcal}>{refeed.kcal.toLocaleString('en-GB')} kcal</Text>
+          <Text style={styles.macroCycleColKcal}>{formatEnergy(refeed.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
           <Text style={styles.macroCycleColCarbs}>{refeed.carbsG}g carbs</Text>
         </View>
       </View>
       <Text style={styles.adjustmentNote}>{refeed.note}</Text>
-      {!applied && onApply && (
+      {/* NU-4: this write is genuinely one day (the Diary resolves it onto the
+          single next training day), so the duration says exactly that. */}
+      {!applied ? (
+        <Text style={styles.adjustmentDetail}>Applies to your next training day only.</Text>
+      ) : null}
+      {!applied && holdNote ? (
+        <Text style={styles.adjustmentHold}>{holdNote}</Text>
+      ) : null}
+      {!applied && onApply && !holdNote && (
         <TouchableOpacity
-          style={[styles.applyBtn, styles.dietBreakApplyBtn, applying && styles.applyBtnBusy]}
+          style={[styles.applyBtnQuiet, styles.dietBreakApplyBtn, applying && styles.applyBtnBusy]}
           onPress={onApply}
           disabled={applying}
           accessibilityRole="button"
           accessibilityLabel="Schedule a refeed on the next training day"
         >
-          <Text style={styles.applyBtnText}>{applying ? 'Applying' : 'Schedule refeed'}</Text>
+          <Text style={styles.applyBtnQuietText}>{applying ? 'Applying' : 'Schedule refeed'}</Text>
         </TouchableOpacity>
       )}
     </Card>
   );
 }
 
-function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore }) {
+function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore, energyUnit }) {
   if (!decisions || decisions.length === 0) return null;
   const edLockout = decisions.find(d => d.type === 'ed_pattern_lockout');
   const edCleared = decisions.find(d => d.type === 'ed_pattern_cleared');
@@ -554,7 +644,7 @@ function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore }) {
     <Card style={styles.heldCard}>
       {edLockout ? <EdPatternLockoutBlock decision={edLockout} /> : null}
       {edCleared ? <EdPatternClearedBlock /> : null}
-      {rapidLossCorrected ? <RapidLossCorrectedBlock decision={rapidLossCorrected} /> : null}
+      {rapidLossCorrected ? <RapidLossCorrectedBlock decision={rapidLossCorrected} energyUnit={energyUnit} /> : null}
       {standardDecisions.length > 0 ? (
         <>
           <SectionHeader title="What we held this week" />
@@ -678,15 +768,16 @@ function EdPatternClearedBlock() {
 // the user to do anything. The kcal delta on the row makes the
 // magnitude explicit so the user sees the size of the change, not
 // just that "something happened".
-function RapidLossCorrectedBlock({ decision }) {
+function RapidLossCorrectedBlock({ decision, energyUnit }) {
   const delta = decision?.kcalDelta;
   return (
     <View style={styles.edClearedCard}>
       <Text style={styles.edClearedHeader}>{RAPID_LOSS_CORRECTED_COPY.header}</Text>
       <Text style={styles.edClearedTitle}>{RAPID_LOSS_CORRECTED_COPY.title}</Text>
       <Text style={styles.edClearedBody}>{RAPID_LOSS_CORRECTED_COPY.body}</Text>
+      {/* NU-6: the figure (not the locked copy) honours the kJ preference. */}
       {typeof delta === 'number' && delta > 0 ? (
-        <Text style={styles.edClearedBody}>{`Daily target raised by +${delta} kcal.`}</Text>
+        <Text style={styles.edClearedBody}>{`Daily target raised by ${signedEnergyChange(delta, energyUnit)}.`}</Text>
       ) : null}
     </View>
   );
@@ -784,16 +875,15 @@ export default function CoachOutputScreen({ navigation, route }) {
   // saw on tapping the notification.
   const weekStart = route.params?.weekStart ?? localWeekStartMs();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, userProfile, units, saveLocalProfile, tier: storeTier } = useAppStore(useShallow(s => ({
+  const { user, userProfile, units, saveLocalProfile, tier: storeTier, energyUnit } = useAppStore(useShallow(s => ({
     user: s.user,
     userProfile: s.userProfile,
     units: s.units,
     saveLocalProfile: s.saveLocalProfile,
     tier: s.tier,
+    // NU-6: kJ display preference, same read as the food domain screens.
+    energyUnit: s.accessibility?.energyUnit ?? 'kcal',
   })));
-  // PLAY-002: the differential buy CTA shows Google Play's localised price, or
-  // a price-free "Get Pro" until it loads. Never a hardcoded fallback.
-  const priceFor = usePlayPrices();
 
   const [output, setOutput] = useState(null);
   const [checkin, setCheckin] = useState(null);
@@ -827,6 +917,16 @@ export default function CoachOutputScreen({ navigation, route }) {
   const [checkinDayName, setCheckinDayName] = useState(null);
   // U-B-1 §3: the "More adjustments" secondary zone is collapsed by default.
   const [moreOpen, setMoreOpen] = useState(false);
+  // A1 (NU-3/NU-4): the current nutrition targets + sex, captured at load so
+  // the Apply rows can say BEFORE the tap what the tap would write, and when
+  // the ED floor holds or clamps it. Refreshed after any apply that writes
+  // nutrition_targets so the other rows re-classify against reality. Display
+  // classification only; the tap path still re-reads at tap time.
+  const [currentTargets, setCurrentTargets] = useState(null);
+  const [profileSex, setProfileSex] = useState(null);
+  // NU-3: tap-time explanation when a compute nulls (a stale-suggestion
+  // race); keyed by adjustment. An Apply must never end in silence.
+  const [applyNotice, setApplyNotice] = useState({});
 
   // Confirm-then-apply: write the suggested calorie change to
   // nutrition_targets only when the user taps Apply, then record it on
@@ -846,15 +946,32 @@ export default function CoachOutputScreen({ navigation, route }) {
       // fall back to userProfile.
       const bodyProfile = await getUserBodyProfile(user.id).catch(() => null);
       const sex = bodyProfile?.sex ?? userProfile?.sex ?? null;
+      // NU-3: classify against the just-read targets so a null can never end
+      // the spinner silently. The floor hold is named as the floor; anything
+      // else gets a plain reason. The clamp flag rides into the applied row
+      // so a partial write says what actually landed.
+      const check = classifyCalorieApply(current, change, sex);
       const computed = computeCalorieTargets(current, change, sex);
-      if (!computed) return;
+      if (!computed) {
+        setApplyNotice(n => ({
+          ...n,
+          calories: check.kind === 'floor_hold'
+            ? floorHoldLine(check.floorKcal, energyUnit)
+            : 'Nothing to apply right now. Your targets have changed since this was suggested.',
+        }));
+        return;
+      }
       await saveNutritionTargets(user.id, computed.targets);
       await AsyncStorage.setItem(
         '@volyume_nutrition_targets', JSON.stringify(computed.targets),
       ).catch(() => {});
-      const updated = markApplied(output, 'calories', { newKcal: computed.newKcal });
+      const updated = markApplied(output, 'calories', {
+        newKcal: computed.newKcal,
+        ...(check.kind === 'floor_clamp' ? { clampedToFloor: true } : {}),
+      });
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
+      setCurrentTargets(computed.targets);
 
       // If the user is on a generated meal plan, pull the same calorie
       // change THROUGH the plan at the food level and show the coach
@@ -1028,7 +1145,15 @@ export default function CoachOutputScreen({ navigation, route }) {
       const bodyProfile = await getUserBodyProfile(user.id).catch(() => null);
       const sex = bodyProfile?.sex ?? userProfile?.sex ?? null;
       const computed = computeDietBreakTargets(current, sex);
-      if (!computed) return;
+      if (!computed) {
+        // NU-3: never a silent no-op. A diet-break null means there is no
+        // deficit left to raise (the floor cannot block an increase).
+        setApplyNotice(n => ({
+          ...n,
+          dietBreak: 'Nothing to raise. Your target already sits at or above maintenance.',
+        }));
+        return;
+      }
       await saveNutritionTargets(user.id, computed.targets);
       await AsyncStorage.setItem(
         '@volyume_nutrition_targets', JSON.stringify(computed.targets),
@@ -1036,6 +1161,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       const updated = markApplied(output, 'dietBreak', { newKcal: computed.newKcal });
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
+      setCurrentTargets(computed.targets);
     } catch (e) {
       logError('CoachOutputScreen.handleApplyDietBreak', e, { userId: user?.id });
     } finally {
@@ -1062,7 +1188,17 @@ export default function CoachOutputScreen({ navigation, route }) {
       const bodyProfile = await getUserBodyProfile(user.id).catch(() => null);
       const sex = bodyProfile?.sex ?? userProfile?.sex ?? null;
       const split = computeMacroCycle(current, trainingDays, { sex });
-      if (!split) return;
+      if (!split) {
+        // NU-3: name the floor when the floor is what refused the split.
+        const check = classifyMacroCycleApply(current, trainingDays, sex);
+        setApplyNotice(n => ({
+          ...n,
+          macroCycle: check.kind === 'floor_hold'
+            ? floorHoldLine(check.floorKcal, energyUnit)
+            : 'This split no longer fits your current targets.',
+        }));
+        return;
+      }
       await saveLocalProfile(user.id, {
         ...(userProfile || {}),
         macroCycle: { ...split, appliedAt: Date.now() },
@@ -1094,7 +1230,14 @@ export default function CoachOutputScreen({ navigation, route }) {
     try {
       const current = await getNutritionTargets(user.id);
       const target = computeRefeedDay(current);
-      if (!target) return;
+      if (!target) {
+        // NU-3: a refeed null means no deficit to refeed up to. Never silent.
+        setApplyNotice(n => ({
+          ...n,
+          refeed: 'Nothing to schedule. Your target already sits at or above maintenance.',
+        }));
+        return;
+      }
       await saveLocalProfile(user.id, {
         ...(userProfile || {}),
         refeed: {
@@ -1158,6 +1301,12 @@ export default function CoachOutputScreen({ navigation, route }) {
       const bodyProfile = await getUserBodyProfile(user.id).catch(() => null);
       const latestBf = (await getBodyMetricLog(user.id, 60).catch(() => []))
         .find(m => m.bodyFatPercent != null) ?? null;
+
+      // A1 (NU-3/NU-4): keep the just-read targets + sex for the pre-tap
+      // Apply-row classification, and clear any stale tap-time notices.
+      setCurrentTargets(nutrition ?? null);
+      setProfileSex(bodyProfile?.sex ?? userProfile?.sex ?? null);
+      setApplyNotice({});
 
       // ALGO-004: map the check-in's stored calorie answer
       // ('yes'/'no'/'untracked') onto the engine vocabulary via the single
@@ -1612,8 +1761,13 @@ export default function CoachOutputScreen({ navigation, route }) {
       : trend.delta < -0.01 ? 'arrow-down-outline' : 'remove-outline';
   }
 
+  // NU-5: the chip's caption names the number a "7-day trend" (the check-in's
+  // vocabulary), so the old "this week" suffix comes off the value here.
+  // Display-only; the engine label is untouched.
   const weightChipValue =
-    trend.deltaLabel && trend.delta !== null ? trend.deltaLabel : 'No weights logged';
+    trend.deltaLabel && trend.delta !== null
+      ? trend.deltaLabel.replace(/ this week$/, '')
+      : 'No weights logged';
 
   // Five-part coach response (Theme A, OPP-C01/C02/C06), rendered in the
   // user's register (C1, founder decision #2): tone preference wins, else
@@ -1673,6 +1827,22 @@ export default function CoachOutputScreen({ navigation, route }) {
     hasMacro: !!macroCycle,
     hasRefeed: !!refeed,
   });
+
+  // A1 (NU-3/NU-4): pre-tap classification of each nutrition apply against
+  // the CURRENT targets, so a row the floor would hold explains itself
+  // instead of offering a dead button, and every applyable calorie row
+  // states the post-tap absolute + duration before the tap. Display only;
+  // every tap still re-reads and re-computes via coachApply.
+  const caloriePreview = adjustments?.calories && !isApplied(output, 'calories')
+    ? classifyCalorieApply(currentTargets, adjustments.calories.change ?? 0, profileSex)
+    : null;
+  const dietBreakPreviewKcal = dietBreakSuggested && !isApplied(output, 'dietBreak') && currentTargets
+    ? (computeDietBreakTargets(currentTargets, profileSex)?.newKcal ?? null)
+    : null;
+  const macroCyclePreview = macroCycle && !isApplied(output, 'macroCycle')
+    ? classifyMacroCycleApply(currentTargets, macroCycle.trainingDaysPerWeek, profileSex)
+    : null;
+
   const trainingCardEl = (
     <TrainingNextWeekCard
       output={output}
@@ -1683,6 +1853,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       deloadNote={deloadNote}
       onApplyDeload={handleApplyDeload}
       applyingDeload={applyingKey === 'deload'}
+      hero={zones.heroKind === 'training'}
     />
   );
   const nutritionCardEl = (
@@ -1692,6 +1863,11 @@ export default function CoachOutputScreen({ navigation, route }) {
       onApplySteps={handleApplySteps}
       onApplyCardio={handleApplyCardio}
       applyingKey={applyingKey}
+      energyUnit={energyUnit}
+      caloriePreview={caloriePreview}
+      calorieNotice={applyNotice.calories ?? null}
+      hero={zones.heroKind === 'nutrition'}
+      heroRow={output.primary?.domain === 'steps' ? 'steps' : 'calories'}
     />
   );
   const macroCardEl = macroCycle ? (
@@ -1700,6 +1876,12 @@ export default function CoachOutputScreen({ navigation, route }) {
       applied={isApplied(output, 'macroCycle') || !!userProfile?.macroCycle}
       onApply={handleApplyMacroCycle}
       applying={applyingKey === 'macroCycle'}
+      energyUnit={energyUnit}
+      holdNote={
+        macroCyclePreview?.kind === 'floor_hold'
+          ? floorHoldLine(macroCyclePreview.floorKcal, energyUnit)
+          : (applyNotice.macroCycle ?? null)
+      }
     />
   ) : null;
   const refeedCardEl = refeed ? (
@@ -1708,6 +1890,8 @@ export default function CoachOutputScreen({ navigation, route }) {
       applied={isApplied(output, 'refeed')}
       onApply={handleApplyRefeed}
       applying={applyingKey === 'refeed'}
+      energyUnit={energyUnit}
+      holdNote={applyNotice.refeed ?? null}
     />
   ) : null;
   const dietBreakCardEl = dietBreakSuggested ? (
@@ -1716,6 +1900,10 @@ export default function CoachOutputScreen({ navigation, route }) {
       applied={isApplied(output, 'dietBreak')}
       onApply={handleApplyDietBreak}
       applying={applyingKey === 'dietBreak'}
+      energyUnit={energyUnit}
+      previewKcal={dietBreakPreviewKcal}
+      notice={applyNotice.dietBreak ?? null}
+      hero={zones.heroKind === 'dietBreak'}
     />
   ) : null;
   const CARD_BY_KIND = {
@@ -1779,12 +1967,28 @@ export default function CoachOutputScreen({ navigation, route }) {
           </View>
         ) : null}
 
-        {/* 2. Trend chips */}
+        {/* 2. The VERDICT — hero zone (U-B-1 §3 / A1 03 gap #1): the engine's
+            single top move (output.primary via the zones), promoted to the top
+            of the screen directly after the coach lead. The card renders on
+            surfaceElevated with the decision statement at verdict size and the
+            screen's ONE amber-filled Apply. When primary.domain is null
+            (on-target/holding), no hero shows. */}
+        {heroCardEl ? (
+          <View style={styles.heroZone}>
+            <Text style={styles.heroLabel}>This week&apos;s main move</Text>
+            {heroCardEl}
+          </View>
+        ) : null}
+
+        {/* 3. Trend chips */}
         <View style={styles.chipsRow}>
           <StatChip
             icon={trendIcon}
             iconColor={trendColor}
             value={weightChipValue}
+            // NU-5: the number is a 7-day smoothed trend, the same vocabulary
+            // the check-in uses. Never labelled as a plain weekly change.
+            label={trend.delta !== null ? '7-day trend' : null}
             // Class B: no colour on a body-weight numeral, ever.
             valueColor={colors.textPrimary}
           />
@@ -1819,39 +2023,10 @@ export default function CoachOutputScreen({ navigation, route }) {
           </TouchableOpacity>
         )}
 
-        {/* 3. What went well */}
-        {whatWorking && whatWorking.length > 0 && (
-          <WhatsWorkingCard bullets={whatWorking} />
-        )}
-
-        {/* 4. What was off */}
-        {(() => {
-          const offItems = buildOffItems(output, checkin);
-          if (offItems.length === 0) return null;
-          return (
-            <View style={styles.whatsOffCard}>
-              <SectionHeader title="What was off" />
-              <View style={styles.bulletList}>
-                {offItems.map((item, i) => (
-                  <View key={i} style={styles.bulletRow}>
-                    <Ionicons name="remove" size={15} color={colors.warning} style={styles.bulletIcon} />
-                    <Text style={styles.bulletText}>{item}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          );
-        })()}
-
-        {/* 5. The decision — HERO zone (U-B-1 §3): the engine's single top move,
-            promoted to the top with emphasis. The coach lead above carries the
-            "why". When primary.domain is null (on-target/holding), no hero shows. */}
-        {heroCardEl ? (
-          <View style={styles.heroZone}>
-            <Text style={styles.heroLabel}>This week&apos;s main move</Text>
-            {heroCardEl}
-          </View>
-        ) : null}
+        {/* 4. The working/off ledger (A1 03 gap #1): the old What's-working
+            card and What-was-off block merged into one two-group object.
+            Same bullets, same builders, one card. */}
+        <LedgerCard working={whatWorking} off={buildOffItems(output, checkin)} />
 
         {/* SECONDARY zone (U-B-1 §3): the remaining adjustments, collapsed under
             a "More adjustments (N)" expander. Each card keeps its own Apply +
@@ -1978,6 +2153,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           <HeldDecisionsCard
             decisions={heldDecisions}
             history={coachHistory}
+            energyUnit={energyUnit}
             onSeeAll={() => navigation.navigate('CoachHeldHistory')}
             onLearnMore={() => navigation.navigate('Methodology', { source: 'held_decisions' })}
           />
@@ -1989,40 +2165,14 @@ export default function CoachOutputScreen({ navigation, route }) {
           <Text style={styles.forwardLine}>{coachResponse.forward}</Text>
         ) : null}
 
-        {/* Move #4 differential paywall, only renders for free-tier
-            users where 2-of-3 adherence is off-target AND one of the
-            six locked triggers fires. Paid users never see it. */}
-        {output?.differential_output?.shown && (
-          <DifferentialBadge
-            differential={output.differential_output}
-            pricingWindow={userProfile?.lockedInPriceTier ?? 'open_beta'}
-            pricingPriceText={priceFor('pro', 'monthly')}
-            onTapCta={(action) => {
-              if (action === 'shown') {
-                trackEngineEvent(user?.id, 'paywall_shown', {
-                  surface: `differential_${output.differential_output.trigger}`,
-                  trigger: output.differential_output.trigger,
-                  user_pricing_window: userProfile?.lockedInPriceTier ?? 'open_beta',
-                }).catch(() => {});
-              } else if (action === 'pay') {
-                navigation.navigate('Paywall', {
-                  trigger: output.differential_output.trigger,
-                  ctaMode: output.differential_output.paywall_cta,
-                  pricingWindow: userProfile?.lockedInPriceTier ?? 'open_beta',
-                });
-              } else if (action === 'dismiss') {
-                trackEngineEvent(user?.id, 'paywall_tapped_cta', {
-                  surface: `differential_${output.differential_output.trigger}`,
-                  cta: 'dismiss',
-                }).catch(() => {});
-              }
-            }}
-          />
-        )}
+        {/* NAV-4 (founder decision): the Move #4 differential paywall used to
+            render here, unreachable by its free-tier audience behind
+            withProGuard. It now lives in HomeScreen's banner stack. */}
 
-        {/* Done button */}
-        <TouchableOpacity style={styles.doneBtn} onPress={handleClose} activeOpacity={0.8} accessibilityRole="button">
-          <Text style={styles.doneBtnText}>Done</Text>
+        {/* Done: a quiet text action (A1 one-amber rule). The hero Apply is
+            the screen's only amber fill. */}
+        <TouchableOpacity style={styles.doneQuietBtn} onPress={handleClose} activeOpacity={0.8} accessibilityRole="button">
+          <Text style={styles.doneQuietText}>Done</Text>
         </TouchableOpacity>
 
         <Text style={styles.credentialNote}>
@@ -2045,10 +2195,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
   cardioNoteText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
+  // A1 one-amber rule (03 gap #1 named this card): a static utility card no
+  // longer wears the hero's amber border; plain outline, links keep the tint.
   planEditCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.primary,
+    borderWidth: 1, borderColor: colors.border,
     padding: spacing.md, marginTop: spacing.sm, gap: spacing.xs,
   },
   planEditHead: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
@@ -2180,13 +2332,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
 
-  // U-B-1 §3: hero zone — the engine's top move, emphasised at the top.
+  // A1 verdict (U-B-1 §3 / 03 gap #1): the hero zone is a plain wrapper; the
+  // verdict card itself is the elevated object (Card elevated + primary
+  // outline). The zone no longer carries an amber tint of its own, so the
+  // hero Apply stays the screen's only amber fill.
   heroZone: {
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: radius.lg,
-    backgroundColor: colors.primaryBg,
-    padding: spacing.sm,
     gap: spacing.xs,
   },
   heroLabel: {
@@ -2196,22 +2346,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: colors.primary,
     paddingHorizontal: spacing.xs,
-  },
-  whatsWorkingCard: {
-    backgroundColor: colors.successBg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.success, 0.251),
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  whatsOffCard: {
-    backgroundColor: colors.warningBg ?? colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.warning, 0.251),
-    padding: spacing.lg,
-    gap: spacing.sm,
   },
   // Five-part coach response: parts 1+2 lead card and the part 5
   // forward-pull line. Same tokens as the surrounding cards.
@@ -2301,6 +2435,14 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     flexShrink: 1,
   },
+  // A1 verdict: the hero decision statement reads at heading size with
+  // tabular numerals (03 gap #1 elite description).
+  adjustmentLabelHero: {
+    ...type.h3,
+    color: colors.textPrimary,
+    flexShrink: 1,
+    fontVariant: ['tabular-nums'],
+  },
   appliedChip: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
     backgroundColor: colors.successBg ?? colors.surface2,
@@ -2316,9 +2458,36 @@ const styles = StyleSheet.create({
     ...type.bodySm,
     color: colors.textSecondary,
   },
+  // NU-4: the pre-tap absolute + duration line (and the applied clamp line).
+  adjustmentDetail: {
+    ...type.bodySm,
+    color: colors.textPrimary,
+    fontWeight: fontWeight.semibold,
+    fontVariant: ['tabular-nums'],
+  },
+  // NU-3: the floor/hold explanation that renders instead of the button.
+  adjustmentHold: {
+    ...type.bodySm,
+    color: colors.textPrimary,
+    fontWeight: fontWeight.semibold,
+  },
   applyBtn: {
     alignSelf: 'center',
     backgroundColor: colors.primary,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    minWidth: 84,
+    minHeight: 44, // U-B-1 §5: WCAG/iOS touch target
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // A1 one-amber rule: every non-hero Apply demotes to the outline variant.
+  applyBtnQuiet: {
+    alignSelf: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.primary,
     borderRadius: radius.full,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
@@ -2332,6 +2501,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
     color: colors.onPrimary,
+  },
+  applyBtnQuietText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
   },
   dietBreakApplyBtn: { alignSelf: 'flex-start', marginTop: spacing.md },
 
@@ -2422,6 +2596,11 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     letterSpacing: 0.2,
   },
+  // A1 verdict: heading-size title when the diet break IS the decision.
+  dietBreakTitleHero: {
+    ...type.h3,
+    color: colors.textPrimary,
+  },
   dietBreakBody: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
@@ -2446,6 +2625,21 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
     color: colors.onPrimary,
+  },
+  // A1 one-amber rule: Done on the main card is a quiet text action (03 gap
+  // #1). The solid doneBtn above stays for the insufficient-data and error
+  // views, where it is the only action on screen.
+  doneQuietBtn: {
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.sm,
+    minHeight: 44, // U-B-1 §5
+  },
+  doneQuietText: {
+    ...type.bodyStrong,
+    color: colors.textSecondary,
   },
   secondaryBtn: {
     borderRadius: radius.lg,

@@ -8,7 +8,9 @@
  *
  * Layout per UI_FLOWS_LOCKED.md (lines 248-269 of HeldDecisionCard
  * variant, adapted for the paywall context). Amber affordance is the
- * brand cue; no marketing chrome.
+ * brand cue; no marketing chrome. NAV-4/D3: it now renders in HomeScreen's
+ * banner stack, where Start is the sole filled-amber element, so the CTA is
+ * the outline variant (amber border + text, no fill).
  */
 import { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
@@ -99,13 +101,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   ctaBtn: {
-    backgroundColor: colors.primary,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.primary,
     paddingVertical: spacing.md,
     borderRadius: radius.md,
     alignItems: 'center',
   },
   ctaText: {
-    color: colors.onPrimary,
+    color: colors.primary,
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
   },

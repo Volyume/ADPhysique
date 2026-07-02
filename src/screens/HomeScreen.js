@@ -24,8 +24,9 @@ import {
   getMorningWeightToday, getMorningWeights, logMorningWeight, getProgressionTeaser,
   getRecentWorkoutFeedback, getLatestCoachOutput,
   getMorningWeightsLast14Days, getOpenEdPatternFlag,
+  getRecentCheckins, getNutritionTargets,
 } from '../lib/database';
-import { stageOf } from '../lib/payments/cascade';
+import { stageOf, canStillTrial } from '../lib/payments/cascade';
 import {
   trialStartFromEndsAt,
   selectTrialVariant,
@@ -38,8 +39,17 @@ import { buildCoachLedger } from '../lib/coachLedger';
 import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
 import { buildFreeCoachLine } from '../lib/coachResponse';
 import { GLOSSARY } from '../lib/coachGlossary';
-import { localWeekStartMs } from '../lib/dayKey';
+import { localWeekStartMs, localDayKey } from '../lib/dayKey';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
+// NAV-4 (founder decision): the differential paywall re-homed here from the
+// Pro-guarded CoachOutput, where its only audience (free tier) could never
+// see it. Pure detection (the locked Move #4 detector) fed from data Home
+// already loads; the badge only navigates to ProUpgrade.
+import DifferentialBadge from '../components/DifferentialBadge';
+import { detectDifferentialTrigger } from '../lib/differentialPaywall';
+import { mapCalsAdherence } from '../lib/weeklyCoach';
+import { getRecentIntakeSummary } from '../lib/food/db';
+import { track as trackEngineEvent } from '../lib/engineTelemetry';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 import { logError, logWarn } from '../lib/errorLog';
 import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, VOLUME_LANDMARKS } from '../lib/algorithms';
@@ -209,6 +219,13 @@ export default function HomeScreen({ navigation, route }) {
   const [plateauBanner, setPlateauBanner] = useState(null);
   const [plateauBannerDismissed, setPlateauBannerDismissed] = useState(true);
 
+  // NAV-4: differential paywall banner (free tier only). The detector result
+  // ({ shown, trigger, with_food_data_message, paywall_cta }) or null.
+  // Defaults dismissed so it never flashes before the stored per-week
+  // dismissal has been read (the plateau/free-coach-line pattern).
+  const [differentialBanner, setDifferentialBanner] = useState(null);
+  const [differentialDismissed, setDifferentialDismissed] = useState(true);
+
   // Pre-workout coaching brief
   const [briefDismissed, setBriefDismissed] = useState(false);
 
@@ -284,7 +301,10 @@ export default function HomeScreen({ navigation, route }) {
     // their own errors, but Promise.all rejects on the first unhandled
     // throw and would otherwise skip setInitialLoading(false).
     try {
-      await Promise.all([
+      // Positions 0 and 5 are read below by the differential loader (NAV-4):
+      // loadWeekStats returns { deloadSuggested }, loadPlateauBanner returns
+      // the picked plateau ({ exerciseId, weeks } | null). Keep them in place.
+      const [weekSignals, , , , , plateauPick] = await Promise.all([
         loadWeekStats(),
         loadNextWorkout(),
         loadExerciseCounts(),
@@ -298,6 +318,14 @@ export default function HomeScreen({ navigation, route }) {
         ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadTrialBanner()] : []),
         ...(tier === 'free' ? [loadFreeCoachLine()] : []),
       ]);
+      // NAV-4: the differential paywall's deload and stalled-lift contexts
+      // come from what the loaders above computed, so it runs after them.
+      if (tier === 'free') {
+        await loadDifferentialBanner({
+          deloadSuggested: !!weekSignals?.deloadSuggested,
+          weeksLiftStalled: plateauPick?.weeks ?? null,
+        });
+      }
     } finally {
       setInitialLoading(false);
     }
@@ -567,15 +595,15 @@ export default function HomeScreen({ navigation, route }) {
   // content). Errors swallow to null like the other banner loaders.
   async function loadPlateauBanner() {
     try {
-      if (!user?.id) { setPlateauBanner(null); return; }
+      if (!user?.id) { setPlateauBanner(null); return null; }
       // Eight weeks covers detectPlateau's four-session window for a weekly
       // lift without loading every set ever logged (LB-7 pattern).
       const eightWeeksAgo = Date.now() - 8 * 7 * 24 * 60 * 60 * 1000;
       const recentSets = await getWorkoutSetsSince(user.id, eightWeeksAgo);
       const picked = selectPlateauForBanner(recentSets);
-      if (!picked) { setPlateauBanner(null); return; }
+      if (!picked) { setPlateauBanner(null); return null; }
       const ex = await getExerciseById(picked.exerciseId);
-      if (!ex?.name) { setPlateauBanner(null); return; }
+      if (!ex?.name) { setPlateauBanner(null); return picked; }
       // Dismissible per detected plateau: keyed by exercise + local week.
       // Read the dismissal BEFORE revealing the banner so a banner the user
       // already dismissed can't flash for a frame (trial-banner pattern).
@@ -586,8 +614,12 @@ export default function HomeScreen({ navigation, route }) {
         exerciseId: picked.exerciseId,
         line: plateauBannerLine(ex.name, picked.weeks),
       });
+      // NAV-4: the picked plateau ({ exerciseId, weeks }) doubles as the
+      // stalled-lift context for the differential loader.
+      return picked;
     } catch (_) {
       setPlateauBanner(null);
+      return null;
     }
   }
 
@@ -596,6 +628,70 @@ export default function HomeScreen({ navigation, route }) {
     if (user?.id && plateauBanner) {
       AsyncStorage.setItem(
         `@volyume_plateau_banner_dismissed_${user.id}_${plateauBanner.exerciseId}_${localWeekStartMs()}`,
+        'true',
+      ).catch(() => {});
+    }
+  }
+
+  // NAV-4 (founder decision): the differential paywall, re-homed from the
+  // Pro-guarded CoachOutput to the one surface its free-tier audience can
+  // see. One honest pure evaluation of the locked Move #4 detector: the
+  // stored check-in answers are mapped onto the engine vocabulary with each
+  // week's own logged intake (the CoachOutput PIPE-005 read), and the deload
+  // and stalled-lift contexts come from what Home's loaders already
+  // computed. missing_tdee and block_summary need an engine run Home cannot
+  // do, so they simply never fire here (the detector treats them as absent).
+  // ED-safety: the trigger keys off adherence gaps, so any open ED flag or
+  // calm mode suppresses it entirely (COMP-004 scope). Dismissible per week;
+  // lowest slot in the banner stack, so the one-banner invariant holds.
+  async function loadDifferentialBanner({ deloadSuggested = false, weeksLiftStalled = null } = {}) {
+    try {
+      if (!user?.id || tier !== 'free') { setDifferentialBanner(null); return; }
+      const [edFlag, wellbeing] = await Promise.all([
+        getOpenEdPatternFlag(user.id).catch(() => null),
+        getWellbeingMode().catch(() => 'unspecified'),
+      ]);
+      if (edFlag || isCalm(wellbeing)) { setDifferentialBanner(null); return; }
+      const [checkins, targets] = await Promise.all([
+        getRecentCheckins(user.id, 3).catch(() => []),
+        getNutritionTargets(user.id).catch(() => null),
+      ]);
+      if (!checkins.length) { setDifferentialBanner(null); return; }
+      const mapped = await Promise.all(checkins.map(async (ci) => {
+        let weekAvg = null;
+        if (ci.weekStart) {
+          try {
+            const weekEndKey = localDayKey(ci.weekStart + 6 * 86400000);
+            weekAvg = (await getRecentIntakeSummary(user.id, weekEndKey))?.avgKcal ?? null;
+          } catch (_) { /* leave null; a plain 'no' stays a neutral off-target */ }
+        }
+        return mapCalsAdherence(ci.calsAdherence, weekAvg, targets?.targetKcal);
+      }));
+      const diff = detectDifferentialTrigger({
+        userTier: tier,
+        hasUsedTrial: !canStillTrial(userProfile),
+        calsAdherence: mapped[0] ?? null,
+        recentWeeklyHistory: mapped.slice(1).map(a => ({ adherence: a })),
+        deloadSuggested,
+        weeksLiftStalled,
+      });
+      if (!diff?.shown) { setDifferentialBanner(null); return; }
+      // Read the per-week dismissal BEFORE revealing the banner so a badge
+      // the user already dismissed can't flash for a frame (plateau pattern).
+      const dKey = `@volyume_differential_banner_dismissed_${user.id}_${localWeekStartMs()}`;
+      const dv = await AsyncStorage.getItem(dKey).catch(() => null);
+      setDifferentialDismissed(dv === 'true');
+      setDifferentialBanner(diff);
+    } catch (_) {
+      setDifferentialBanner(null);
+    }
+  }
+
+  function dismissDifferentialBanner() {
+    setDifferentialDismissed(true);
+    if (user?.id) {
+      AsyncStorage.setItem(
+        `@volyume_differential_banner_dismissed_${user.id}_${localWeekStartMs()}`,
         'true',
       ).catch(() => {});
     }
@@ -740,10 +836,14 @@ export default function HomeScreen({ navigation, route }) {
         }).reverse(); // oldest first, as shouldDeload expects
         const result = shouldDeload(last4Weeks);
         setDeloadSuggestion(result.deload ? result : null);
+        // NAV-4: the differential loader reads this signal after the parallel
+        // pass (state set above is not yet readable in the same pass).
+        return { deloadSuggested: !!result.deload };
       } catch (_) {
         setDeloadSuggestion(null);
       }
     } catch (_e) {}
+    return { deloadSuggested: false };
   }
 
   async function loadExerciseCounts() {
@@ -1015,6 +1115,12 @@ export default function HomeScreen({ navigation, route }) {
   const showFreeCoachLine = tier === 'free' && !!freeCoachLine && !freeCoachLineDismissed
     && !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner && !showPhaseBanner
     && !showPlateauBanner;
+  // NAV-4 differential paywall badge: free tier only, the LOWEST priority in
+  // the stack (below the free coach line), dismissible per week. The
+  // one-banner invariant holds.
+  const showDifferentialBadge = tier === 'free' && !!differentialBanner?.shown && !differentialDismissed
+    && !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner && !showPhaseBanner
+    && !showPlateauBanner && !showFreeCoachLine;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -1252,6 +1358,33 @@ export default function HomeScreen({ navigation, route }) {
               <Text style={styles.freeCoachFooter}>Pro reads the full story</Text>
             </TouchableOpacity>
           </View>
+        )}
+
+        {/* ── NAV-4 differential paywall badge (lowest banner priority).
+            Locked Move #4 copy + CTA; 'Not now' dismisses for the week. No
+            billing logic here: the CTA only navigates to ProUpgrade, which is
+            registered in this stack. ── */}
+        {showDifferentialBadge && (
+          <DifferentialBadge
+            differential={differentialBanner}
+            onTapCta={(action) => {
+              if (action === 'shown') {
+                trackEngineEvent(user?.id, 'paywall_shown', {
+                  surface: `differential_${differentialBanner.trigger}`,
+                  trigger: differentialBanner.trigger,
+                  user_pricing_window: userProfile?.lockedInPriceTier ?? 'open_beta',
+                }).catch(() => {});
+              } else if (action === 'pay') {
+                navigation.navigate('ProUpgrade');
+              } else if (action === 'dismiss') {
+                trackEngineEvent(user?.id, 'paywall_tapped_cta', {
+                  surface: `differential_${differentialBanner.trigger}`,
+                  cta: 'dismiss',
+                }).catch(() => {});
+                dismissDifferentialBanner();
+              }
+            }}
+          />
         )}
 
         {/* Skeleton placeholders shown during initial cold-load. As
