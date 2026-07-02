@@ -1001,6 +1001,18 @@ export default function RootNavigator() {
             }
             _lastAuthEnter = { uid: _enterUid, at: _enterNow };
 
+            // SC-2: if a previous delete-account run wiped the data via the
+            // delete_user_data RPC fallback but could not reach the Edge
+            // Function to remove the auth.users row, finish the job now.
+            // The marker is keyed by uid so it only ever fires for the
+            // account that requested deletion. Fire-and-forget: this must
+            // never block boot or sign-in.
+            try {
+              // eslint-disable-next-line global-require
+              const { retryPendingAuthDeletion } = require('../lib/deletionRetry');
+              retryPendingAuthDeletion(session.user.id).catch(() => {});
+            } catch (_) { /* best-effort */ }
+
             // COMP-009: a cross-account sign-in is gated behind an explicit
             // choice BEFORE any restore / sync / wipe side-effect runs, so the
             // whole sign-in body below is wrapped in this async IIFE. "Keep this

@@ -118,16 +118,31 @@ export function extractRecipeJsonLd(html) {
 }
 
 /**
+ * PURE. Only https URLs may be fetched (audit SC-8). The URL is
+ * user-supplied, so without this the importer would happily follow
+ * http:, file:, content:, javascript: or any other scheme fetch
+ * understands. Scheme check only; the host stays the user's choice.
+ *
+ * @param {string} url
+ * @returns {boolean}
+ */
+export function isAllowedRecipeUrl(url) {
+  return typeof url === 'string' && /^https:\/\//i.test(url.trim());
+}
+
+/**
  * Fetch a page and extract its Recipe. Returns the parsed object or
- * null on any network or parse failure. Not unit-tested beyond the
- * pure extractor.
+ * null on any network or parse failure (the caller shows the same calm
+ * "couldn't read a recipe" toast either way). https only. Not
+ * unit-tested beyond the pure extractor and the scheme gate.
  *
  * @param {string} url
  * @returns {Promise<{ name: any, ingredients: string[], servings: number|null }|null>}
  */
 export async function importRecipeFromUrl(url) {
+  if (!isAllowedRecipeUrl(url)) return null;
   try {
-    const response = await fetch(url);
+    const response = await fetch(url.trim());
     const html = await response.text();
     return extractRecipeJsonLd(html);
   } catch (_e) {

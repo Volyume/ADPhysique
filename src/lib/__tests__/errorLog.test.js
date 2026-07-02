@@ -149,19 +149,27 @@ describe('errorLog robustness', () => {
     }
   });
 
-  test('logInfo persists in production too (verbose mode for beta)', async () => {
-    // Previously logInfo was DEV-only. During beta we ship info-level
-    // events to the on-device buffer (and via flushDebugLogs to the
-    // cloud) so beta testers' auth transitions, plan generation, etc.
-    // are diagnosable. This test pins the new behaviour.
+  test('VERBOSE_LOGGING follows the build channel (SC-6)', () => {
+    // The beta-era always-on verbose flag shipped info noise in the live
+    // production build. It is now gated on __DEV__ at module load: dev
+    // builds keep the trail, production builds run quiet (logInfo still
+    // feeds Sentry breadcrumbs; warnings + errors stay on either way).
+    // jest.setup.js sets __DEV__=true, so the already-imported module is
+    // the dev shape; the production shape is checked on a fresh module
+    // evaluated under __DEV__=false.
+    // eslint-disable-next-line global-require
+    expect(require('../errorLog').VERBOSE_LOGGING).toBe(true);
     const wasDev = global.__DEV__;
     global.__DEV__ = false;
     try {
-      logInfo('Prod', 'should persist now');
-      await flushWrites();
-      const list = await getRecentErrors();
-      expect(list.length).toBeGreaterThan(0);
-      expect(list[0].level).toBe('info');
+      let prod;
+      jest.isolateModules(() => {
+        // eslint-disable-next-line global-require
+        prod = require('../errorLog');
+      });
+      expect(prod.VERBOSE_LOGGING).toBe(false);
+      // Quiet mode: logInfo returns null and writes nothing to the buffer.
+      expect(prod.logInfo('Prod', 'must not persist')).toBeNull();
     } finally {
       global.__DEV__ = wasDev;
     }
@@ -179,6 +187,58 @@ describe('errorLog robustness', () => {
     } finally {
       global.__DEV__ = wasDev;
     }
+  });
+});
+
+describe('SC-7: ring-buffer redaction reuses the sentryScrub patterns', () => {
+  // The exact-key PII list missed variants like kcalTarget / protein_g /
+  // weight_kg_avg that the locked Sentry scrub regexes catch on the wire.
+  // The buffer is user-exportable (Settings, Debug logs, Share), so the
+  // local redaction must be at least as wide as the outbound one. These
+  // tests fail if redactPII stops consulting sentryScrub.isSensitiveKey.
+  test('pattern-variant keys are redacted, safe keys survive', async () => {
+    logError('Coach', new Error('boom'), {
+      kcalTarget: 1850,
+      protein_g: 160,
+      weight_kg_avg: 82.4,
+      carbs: 300,
+      fibreTotal: 32,
+      attempt: 2,
+      table: 'workouts',
+    });
+    await flushWrites();
+    const [entry] = await getRecentErrors();
+    expect(entry.context).not.toContain('1850');
+    expect(entry.context).not.toContain('160');
+    expect(entry.context).not.toContain('82.4');
+    expect(entry.context).not.toContain('300');
+    expect(entry.context).not.toContain('32');
+    expect(entry.context).toContain('[redacted]');
+    // Non-sensitive context keeps flowing so the log stays diagnosable.
+    expect(entry.context).toContain('"attempt":2');
+    expect(entry.context).toContain('workouts');
+  });
+
+  test('the original exact-key list still applies (secrets, free text)', async () => {
+    logError('Auth', new Error('boom'), {
+      refresh_token: 'rt-secret-1',
+      notes: 'private note text',
+    });
+    await flushWrites();
+    const [entry] = await getRecentErrors();
+    expect(entry.context).not.toContain('rt-secret-1');
+    expect(entry.context).not.toContain('private note text');
+  });
+
+  test('nested objects are scrubbed too', async () => {
+    logWarn('Sync', 'row rejected', {
+      row: { id: 'abc', kcal_100g: 244, weightKg: 91 },
+    });
+    await flushWrites();
+    const [entry] = await getRecentErrors();
+    expect(entry.context).not.toContain('244');
+    expect(entry.context).not.toContain('91');
+    expect(entry.context).toContain('abc');
   });
 });
 

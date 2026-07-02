@@ -9,6 +9,7 @@ import useAppStore from '../store/useAppStore';
 import { getSupabaseClient, signOut } from '../lib/supabase';
 import { wipeAllUserData } from '../lib/database';
 import { logError } from '../lib/errorLog';
+import { markAuthDeletionPending } from '../lib/deletionRetry';
 import { audit } from '../lib/observability';
 
 // The account-level destructive flows (sign-out, delete account, withdraw
@@ -165,6 +166,12 @@ export default function useAccountActions() {
     setDeletingAccount(true);
     const userId = user.id;
     let cloudOk = true;
+    // SC-2: true when the data wipe succeeded via the delete_user_data RPC
+    // fallback only. The RPC cannot reach auth.users, so the sign-in
+    // credentials survive until the Edge Function is reachable again; the
+    // user is told honestly and a device-local marker drives an automatic
+    // retry on the next launch (src/lib/deletionRetry.js).
+    let authRemovalPending = false;
     try {
       if (!user?.isLocal) {
         // Server-side wipe via the delete-account Edge Function. The
@@ -226,6 +233,11 @@ export default function useAccountActions() {
             if (rpcErr) {
               cloudOk = false;
               logError('SettingsScreen.deleteAccount.rpc', rpcErr, { userId });
+            } else {
+              // The RPC wiped the data rows but the auth.users row is
+              // still there. Not full success: mark it pending so the
+              // Edge Function is retried automatically next launch.
+              authRemovalPending = true;
             }
           }
         }
@@ -268,6 +280,15 @@ export default function useAccountActions() {
         await AsyncStorage.clear();
       } catch (e) { logError('SettingsScreen.deleteAccount.wipeAsyncStorage', e); }
 
+      // SC-2: persist the pending-auth-removal marker AFTER the
+      // AsyncStorage.clear() above so it survives to the next launch.
+      // RootNavigator's auth listener retries the Edge Function once
+      // when it sees the marker for this uid. Best-effort.
+      if (authRemovalPending) {
+        try { await markAuthDeletionPending(userId); }
+        catch (e) { logError('SettingsScreen.deleteAccount.markAuthPending', e, { userId }); }
+      }
+
       // Belt-and-braces SecureStore wipe. signOut() above should have
       // cleared the supabase-js auth tokens, but if the network call
       // failed the tokens can persist and restoreSessionFromCloud will
@@ -284,6 +305,21 @@ export default function useAccountActions() {
         // Older supabase-js versions used this key.
         await SecureStore.deleteItemAsync('supabase.auth.token').catch(() => {});
       } catch (e) { logError('SettingsScreen.deleteAccount.wipeSecureStore', e); }
+
+      // SC-2: honest partial-success message. The data is gone but the
+      // sign-in credentials could not be removed yet (Edge Function
+      // unreachable); say so plainly instead of reporting full success.
+      // The reload waits for the acknowledgement so the alert is read.
+      if (authRemovalPending) {
+        await new Promise((resolve) => {
+          appAlert(
+            'Account data deleted',
+            'All your data has been deleted. Removing your sign-in details is still pending and completes automatically the next time the app starts. Nothing more is needed from you.',
+            [{ text: 'OK', onPress: resolve }],
+            { cancelable: false },
+          );
+        });
+      }
       // Reload the JS bundle so any installed-but-not-yet-loaded APK
       // update takes effect on the next launch back to Welcome. Without
       // this, an install-on-top of a newer APK keeps the OLD bundle

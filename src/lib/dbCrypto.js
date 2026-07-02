@@ -44,6 +44,18 @@ function toHex(bytes) {
   return s;
 }
 
+// Monitoring signal for the fail-open path (audit SC-5): the DB opened
+// PLAINTEXT instead of encrypted. This runs mid-DB-open with no user id
+// and no usable SQLite handle, so engineTelemetry (which persists to the
+// local engine_telemetry table and needs a uid) cannot carry it; logError
+// with this distinctive scope is the seam — it reaches the on-device ring
+// buffer AND Sentry, where the scope is alertable. `stage` only; no PII.
+function emitPlaintextFallback(stage) {
+  try {
+    logError('dbCrypto.plaintextFallback', new Error(`db opened plaintext (${stage})`), { stage });
+  } catch (_) { /* monitoring must never break the open */ }
+}
+
 // Read the stored key with a few retries. SecureStore can fail transiently
 // right after boot (the OS keystore isn't ready yet); a read FAILURE must never
 // be treated as "no key", because that would mint a replacement and orphan an
@@ -122,7 +134,10 @@ export async function openEncryptedDb(SQLite) {
   // with SecureStore back, opens it normally.
   if (status === 'unavailable' || !key) {
     const fb = await SQLite.openDatabaseAsync(DB_NAME);
-    if (await readable(fb)) return { db: fb, encrypted: false };
+    if (await readable(fb)) {
+      emitPlaintextFallback('key_unavailable');
+      return { db: fb, encrypted: false };
+    }
     try { await fb.closeAsync(); } catch (_) {}
     const err = new Error('SQLCipher key unavailable and existing DB is not plaintext-readable');
     logError('dbCrypto.keyUnavailable', err, {});
@@ -197,6 +212,7 @@ export async function openEncryptedDb(SQLite) {
     // Fall back to a working plaintext handle rather than return a broken one.
     try { await db.closeAsync(); } catch (_) {}
     const fb = await SQLite.openDatabaseAsync(DB_NAME);
+    emitPlaintextFallback('sqlcipher_unavailable');
     return { db: fb, encrypted: false };
   }
 
@@ -238,7 +254,11 @@ export async function openEncryptedDb(SQLite) {
   } catch (e) {
     logError('dbCrypto.migrate', e, {});
     // Fallback: open plaintext so the app works (unencrypted) — never brick.
-    try { const fb = await SQLite.openDatabaseAsync(DB_NAME); return { db: fb, encrypted: false }; }
+    try {
+      const fb = await SQLite.openDatabaseAsync(DB_NAME);
+      emitPlaintextFallback('migrate_failed');
+      return { db: fb, encrypted: false };
+    }
     catch (e2) { logError('dbCrypto.fallbackOpen', e2, {}); throw e2; }
   }
 }

@@ -5,7 +5,7 @@
  * array ingredients, messy recipeYield) plus the failure modes
  * (malformed block, no recipe at all).
  */
-import { extractRecipeJsonLd } from '../recipeImport';
+import { extractRecipeJsonLd, isAllowedRecipeUrl, importRecipeFromUrl } from '../recipeImport';
 
 function ldScript(json) {
   return `<script type="application/ld+json">${JSON.stringify(json)}</script>`;
@@ -144,5 +144,67 @@ describe('extractRecipeJsonLd', () => {
     expect(extractRecipeJsonLd(undefined)).toBeNull();
     expect(extractRecipeJsonLd('')).toBeNull();
     expect(extractRecipeJsonLd(12345)).toBeNull();
+  });
+});
+
+// SC-8: the import URL is user-supplied, so the importer must never
+// follow anything but https. These tests fail if the scheme gate is
+// removed or loosened: a non-https URL must yield the same calm null
+// (the screen's existing "couldn't read a recipe" toast) WITHOUT any
+// fetch being issued.
+describe('SC-8: https-only scheme gate', () => {
+  const rejected = [
+    'http://example.com/recipe',
+    'file:///etc/passwd',
+    'content://com.android.providers/media/1',
+    'javascript:alert(1)',
+    'ftp://example.com/recipe',
+    'HTTP://EXAMPLE.COM/recipe',
+    'https//missing-colon.com',
+    '//example.com/protocol-relative',
+    'example.com/no-scheme',
+    '',
+    '   ',
+  ];
+
+  test.each(rejected)('rejects %s', (url) => {
+    expect(isAllowedRecipeUrl(url)).toBe(false);
+  });
+
+  test('rejects non-string input', () => {
+    expect(isAllowedRecipeUrl(null)).toBe(false);
+    expect(isAllowedRecipeUrl(undefined)).toBe(false);
+    expect(isAllowedRecipeUrl(42)).toBe(false);
+  });
+
+  test('accepts https (any case, surrounding whitespace tolerated)', () => {
+    expect(isAllowedRecipeUrl('https://example.com/recipe')).toBe(true);
+    expect(isAllowedRecipeUrl('HTTPS://example.com/recipe')).toBe(true);
+    expect(isAllowedRecipeUrl('  https://example.com/recipe  ')).toBe(true);
+  });
+
+  describe('importRecipeFromUrl honours the gate', () => {
+    const realFetch = global.fetch;
+    afterEach(() => { global.fetch = realFetch; });
+
+    test('a non-https URL returns null and never fetches', async () => {
+      global.fetch = jest.fn();
+      await expect(importRecipeFromUrl('http://example.com/recipe')).resolves.toBeNull();
+      await expect(importRecipeFromUrl('file:///etc/passwd')).resolves.toBeNull();
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    test('an https URL is fetched and parsed', async () => {
+      const html = `<script type="application/ld+json">${JSON.stringify({
+        '@type': 'Recipe',
+        name: 'Gate pass',
+        recipeIngredient: ['1 egg'],
+        recipeYield: '1',
+      })}</script>`;
+      global.fetch = jest.fn(async () => ({ text: async () => html }));
+      const parsed = await importRecipeFromUrl(' https://example.com/recipe ');
+      expect(global.fetch).toHaveBeenCalledWith('https://example.com/recipe');
+      expect(parsed?.name).toBe('Gate pass');
+    });
   });
 });

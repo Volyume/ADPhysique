@@ -17,10 +17,12 @@
  * LoginScreen banner continues to work.
  */
 
-// Master verbose toggle. True during beta so info-level events ship to
-// the on-device buffer and via flushDebugLogs to the cloud. Set to false
-// before public release to drop the info noise; warnings + errors stay on.
-export const VERBOSE_LOGGING = true;
+// Master verbose toggle (audit SC-6). Gated on the build channel: dev
+// builds keep the info-level trail in the on-device buffer; production
+// builds drop the info noise (warnings + errors stay on, and logInfo
+// still feeds Sentry breadcrumbs either way). Jest sets __DEV__=true in
+// jest.setup.js, so tests exercise the verbose path.
+export const VERBOSE_LOGGING = typeof __DEV__ !== 'undefined' && !!__DEV__;
 
 // Under Jest, async logError/logWarn/logInfo paths that resolve AFTER
 // their test has ended hit a torn-down console wrapper and emit a
@@ -35,6 +37,11 @@ const IS_JEST = typeof process !== 'undefined'
   && !!process.env.JEST_WORKER_ID;
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+// SC-7: the ring buffer reuses the LOCKED sentryScrub key patterns so the
+// on-device redaction is at least as wide as the wire-to-Sentry scrub
+// (kcal*/protein*/weight* etc. variants the exact-key list below misses).
+// One source of truth; never duplicate the patterns here.
+import { isSensitiveKey } from './observability/sentryScrub';
 
 const LOG_KEY = '@volyume_error_log_v1';
 const CRASH_LOG_KEY = '@volyume_crash_log';
@@ -78,7 +85,10 @@ function redactPII(value, depth = 0) {
   if (Array.isArray(value)) return value.map(v => redactPII(v, depth + 1));
   const out = {};
   for (const [k, v] of Object.entries(value)) {
-    if (PII_KEYS.has(k)) out[k] = v == null ? null : '[redacted]';
+    // Exact-key list (auth secrets, free text) PLUS the locked sentryScrub
+    // regexes (SC-7) so key VARIANTS (kcalTarget, protein_g, weight_kg_avg,
+    // …) are caught here exactly as they are on the wire to Sentry.
+    if (PII_KEYS.has(k) || isSensitiveKey(k)) out[k] = v == null ? null : '[redacted]';
     else out[k] = redactPII(v, depth + 1);
   }
   return out;
