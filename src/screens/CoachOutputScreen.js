@@ -74,9 +74,14 @@ import {
 import { logError, logWarn } from '../lib/errorLog';
 import CollapsibleSection from '../components/CollapsibleSection';
 import Card from '../components/Card';
+// M4 (audit 03b §3.3b): the Apply rows ride the Button primitive's
+// idle → loading → success morph; the settle wrappers below animate the
+// swap into the settled row state (Applied chip, or the NU-3 hold line).
+import Button from '../components/Button';
+import Reanimated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { selectCoachOutputZones } from '../lib/coachOutputZones';
 import { isGreatWeek } from '../lib/shareCard/greatWeek';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, stateColors, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, stateColors, type, motion } from '../styles/theme';
 import {
   ED_PATTERN_LOCKOUT_COPY,
   ED_PATTERN_CLEARED_COPY,
@@ -249,13 +254,56 @@ function LedgerCard({ working, off }) {
   );
 }
 
+// M4 settle wrappers (audit 03b §3.3b). ApplyExit fades the Apply button
+// out when it unmounts (to the Applied chip, or to a hold line) and never
+// animates on mount, so screen load stays still. HoldEnter fades the NU-3
+// hold line in ONLY when it arrives from a tap (`live`); a pre-tap hold
+// rendered at load is static. Both self-gate on reduce motion and fall back
+// to a plain View if the builders are unavailable (AnimatedRow's defensive
+// shape), so they can never break the screen.
+function ApplyExit({ children, style }) {
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  if (reduceMotion) return <View style={style}>{children}</View>;
+  try {
+    return (
+      <Reanimated.View exiting={FadeOut.duration(motion.exit)} style={style}>
+        {children}
+      </Reanimated.View>
+    );
+  } catch (_) {
+    return <View style={style}>{children}</View>;
+  }
+}
+
+function HoldEnter({ live, children }) {
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  if (reduceMotion || !live) return <View>{children}</View>;
+  try {
+    return (
+      <Reanimated.View entering={FadeIn.duration(motion.enter)}>
+        {children}
+      </Reanimated.View>
+    );
+  } catch (_) {
+    return <View>{children}</View>;
+  }
+}
+
 // A1 one-amber rule: `emphasis` marks the hero decision row (verdict-size
 // label + the screen's ONE amber-filled Apply); every other row's Apply is
 // the quiet outline variant. `detail` is the NU-4 pre-tap absolute/duration
 // line; `holdNote` (NU-3) renders INSTEAD of the button when the computation
-// would write nothing, so an Apply can never end in silence.
-function AdjustmentRow({ iconName, label, note, detail, holdNote, applied, onApply, applying, emphasis }) {
-  const showApply = !!onApply && !applied && !holdNote;
+// would write nothing, so an Apply can never end in silence — `holdArrived`
+// marks a tap-time hold so only that settle animates. `applyState` drives
+// the Button morph; while it is 'success' the button stays mounted through
+// its checkmark beat (the row is already applied underneath, so the chip
+// waits for onApplySettled to avoid saying "Applied" twice at once).
+function AdjustmentRow({
+  iconName, label, note, detail, holdNote, holdArrived, applied,
+  onApply, applyState = 'idle', onApplySettled, emphasis,
+}) {
+  const settling = applyState === 'success';
+  const showApply = (!!onApply && !applied && !holdNote) || settling;
   return (
     <View style={styles.adjustmentRow}>
       <View style={styles.adjustmentIconWrap}>
@@ -264,7 +312,7 @@ function AdjustmentRow({ iconName, label, note, detail, holdNote, applied, onApp
       <View style={styles.adjustmentContent}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
           <Text style={emphasis ? styles.adjustmentLabelHero : styles.adjustmentLabel}>{label}</Text>
-          {applied && (
+          {applied && !settling && (
             <View style={styles.appliedChip}>
               <Ionicons name="checkmark" size={10} color={colors.success} />
               <Text style={styles.appliedChipText}>Applied</Text>
@@ -273,18 +321,26 @@ function AdjustmentRow({ iconName, label, note, detail, holdNote, applied, onApp
         </View>
         {note ? <Text style={styles.adjustmentNote}>{note}</Text> : null}
         {detail ? <Text style={styles.adjustmentDetail}>{detail}</Text> : null}
-        {holdNote && !applied ? <Text style={styles.adjustmentHold}>{holdNote}</Text> : null}
+        {holdNote && !applied ? (
+          <HoldEnter live={holdArrived}>
+            <Text style={styles.adjustmentHold}>{holdNote}</Text>
+          </HoldEnter>
+        ) : null}
       </View>
       {showApply && (
-        <TouchableOpacity
-          style={[emphasis ? styles.applyBtn : styles.applyBtnQuiet, applying && styles.applyBtnBusy]}
-          onPress={onApply}
-          disabled={applying}
-          accessibilityRole="button"
-          accessibilityLabel={`Apply: ${label}`}
-        >
-          <Text style={emphasis ? styles.applyBtnText : styles.applyBtnQuietText}>{applying ? 'Applying' : 'Apply'}</Text>
-        </TouchableOpacity>
+        <ApplyExit style={styles.applySlot}>
+          <Button
+            title="Apply"
+            variant={emphasis ? 'primary' : 'outline'}
+            size="sm"
+            fullWidth={false}
+            state={applyState}
+            onSettled={onApplySettled}
+            onPress={onApply}
+            style={styles.applyPill}
+            accessibilityLabel={`Apply: ${label}`}
+          />
+        </ApplyExit>
       )}
     </View>
   );
@@ -294,7 +350,8 @@ function AdjustmentRow({ iconName, label, note, detail, holdNote, applied, onApp
 // the calorie row states the post-tap absolute and honest duration BEFORE the
 // tap. NU-3: a floor-held computation renders its reason instead of a button.
 function NextWeekCard({
-  adjustments, onApplyCalories, onApplySteps, onApplyCardio, applyingKey,
+  adjustments, onApplyCalories, onApplySteps, onApplyCardio,
+  applyStateFor, onApplySettled,
   energyUnit, caloriePreview, calorieNotice, hero, heroRow,
 }) {
   const { calories, steps, cardio } = adjustments;
@@ -336,9 +393,11 @@ function NextWeekCard({
           note={calories.note}
           detail={calorieDetail}
           holdNote={calorieHold}
+          holdArrived={!!calorieNotice}
           applied={!!calories.applied}
           onApply={caloriesApplyable ? onApplyCalories : undefined}
-          applying={applyingKey === 'calories'}
+          applyState={applyStateFor('calories')}
+          onApplySettled={() => onApplySettled('calories')}
           emphasis={hero && heroRow === 'calories'}
         />
       ) : (
@@ -355,7 +414,8 @@ function NextWeekCard({
           note={steps.note}
           applied={!!steps.applied}
           onApply={steps.target && !steps.applied ? onApplySteps : undefined}
-          applying={applyingKey === 'steps'}
+          applyState={applyStateFor('steps')}
+          onApplySettled={() => onApplySettled('steps')}
           emphasis={hero && heroRow === 'steps'}
         />
       )}
@@ -366,7 +426,8 @@ function NextWeekCard({
           note={cardio.note}
           applied={!!cardio.applied}
           onApply={!cardio.applied ? onApplyCardio : undefined}
-          applying={applyingKey === 'cardio'}
+          applyState={applyStateFor('cardio')}
+          onApplySettled={() => onApplySettled('cardio')}
         />
       )}
     </Card>
@@ -380,8 +441,8 @@ function NextWeekCard({
 // no upcoming week to write to (canApply false) shows the guidance but
 // no button.
 function TrainingNextWeekCard({
-  output, onApply, applying, canApply,
-  deloadSuggested, deloadNote, onApplyDeload, applyingDeload, hero,
+  output, onApply, canApply, applyStateFor, onApplySettled,
+  deloadSuggested, deloadNote, onApplyDeload, hero,
 }) {
   const signal = output.volumeSignal ?? 0;
   const applied = isApplied(output, 'training');
@@ -410,7 +471,8 @@ function TrainingNextWeekCard({
             note={deloadNote}
             applied={deloadApplied}
             onApply={canApply && !deloadApplied ? onApplyDeload : undefined}
-            applying={applyingDeload}
+            applyState={applyStateFor('deload')}
+            onApplySettled={() => onApplySettled('deload')}
             emphasis={hero}
           />
           {!canApply && !deloadApplied && (
@@ -432,7 +494,8 @@ function TrainingNextWeekCard({
             note={note}
             applied={applied}
             onApply={applyable ? onApply : undefined}
-            applying={applying}
+            applyState={applyStateFor('training')}
+            onApplySettled={() => onApplySettled('training')}
             emphasis={hero}
           />
           <View style={styles.planNote}>
@@ -486,12 +549,13 @@ function RapidLossAlert() {
 // NU-4: the button drops the old "week" claim (the write has no expiry) and
 // the card states the post-tap absolute + honest duration before the tap.
 // NU-3: a tap-time null renders its reason (notice) instead of silence.
-function DietBreakCard({ weeksInDeficit, applied, onApply, applying, energyUnit, previewKcal, notice, hero }) {
+function DietBreakCard({ weeksInDeficit, applied, onApply, applyState, onApplySettled, energyUnit, previewKcal, notice, hero }) {
+  const settling = applyState === 'success';
   return (
     <Card style={styles.dietBreakCard} elevated={hero} tone={hero ? 'primary' : undefined}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
         <Text style={hero ? styles.dietBreakTitleHero : styles.dietBreakTitle}>Diet break worth considering</Text>
-        {applied && (
+        {applied && !settling && (
           <View style={styles.appliedChip}>
             <Ionicons name="checkmark" size={10} color={colors.success} />
             <Text style={styles.appliedChipText}>Applied</Text>
@@ -511,18 +575,24 @@ function DietBreakCard({ weeksInDeficit, applied, onApply, applying, energyUnit,
         <Text style={styles.adjustmentDetail}>{preTapTargetLine(previewKcal, energyUnit)}</Text>
       ) : null}
       {!applied && notice ? (
-        <Text style={styles.adjustmentHold}>{notice}</Text>
+        <HoldEnter live>
+          <Text style={styles.adjustmentHold}>{notice}</Text>
+        </HoldEnter>
       ) : null}
-      {!applied && onApply && !notice && (
-        <TouchableOpacity
-          style={[hero ? styles.applyBtn : styles.applyBtnQuiet, styles.dietBreakApplyBtn, applying && styles.applyBtnBusy]}
-          onPress={onApply}
-          disabled={applying}
-          accessibilityRole="button"
-          accessibilityLabel="Set maintenance calories for a diet break"
-        >
-          <Text style={hero ? styles.applyBtnText : styles.applyBtnQuietText}>{applying ? 'Applying' : 'Set maintenance calories'}</Text>
-        </TouchableOpacity>
+      {((!applied && onApply && !notice) || settling) && (
+        <ApplyExit style={styles.applySlotStart}>
+          <Button
+            title="Set maintenance calories"
+            variant={hero ? 'primary' : 'outline'}
+            size="sm"
+            fullWidth={false}
+            state={applyState}
+            onSettled={onApplySettled}
+            onPress={onApply}
+            style={styles.applyPill}
+            accessibilityLabel="Set maintenance calories for a diet break"
+          />
+        </ApplyExit>
       )}
     </Card>
   );
@@ -534,14 +604,15 @@ function DietBreakCard({ weeksInDeficit, applied, onApply, applying, energyUnit,
 // physique competitors (the coach gates it). Applying writes the split
 // to userProfile.macroCycle, which the Diary reads to show the right
 // target for the day.
-function MacroCycleCard({ macroCycle, applied, onApply, applying, energyUnit, holdNote }) {
+function MacroCycleCard({ macroCycle, applied, onApply, applyState, onApplySettled, energyUnit, holdNote, holdArrived }) {
   const { trainingDay, restDay } = macroCycle;
   const unitLabel = energyUnitLabel(energyUnit);
+  const settling = applyState === 'success';
   return (
     <Card style={styles.card}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
         <SectionHeader title="Carbs by day" />
-        {applied && (
+        {applied && !settling && (
           <View style={[styles.appliedChip, { marginBottom: spacing.xs }]}>
             <Ionicons name="checkmark" size={10} color={colors.success} />
             <Text style={styles.appliedChipText}>Applied</Text>
@@ -562,18 +633,24 @@ function MacroCycleCard({ macroCycle, applied, onApply, applying, energyUnit, ho
       </View>
       <Text style={styles.adjustmentNote}>{macroCycle.note}</Text>
       {!applied && holdNote ? (
-        <Text style={styles.adjustmentHold}>{holdNote}</Text>
+        <HoldEnter live={holdArrived}>
+          <Text style={styles.adjustmentHold}>{holdNote}</Text>
+        </HoldEnter>
       ) : null}
-      {!applied && onApply && !holdNote && (
-        <TouchableOpacity
-          style={[styles.applyBtnQuiet, styles.dietBreakApplyBtn, applying && styles.applyBtnBusy]}
-          onPress={onApply}
-          disabled={applying}
-          accessibilityRole="button"
-          accessibilityLabel="Use this training-day and rest-day carb split"
-        >
-          <Text style={styles.applyBtnQuietText}>{applying ? 'Applying' : 'Use this split'}</Text>
-        </TouchableOpacity>
+      {((!applied && onApply && !holdNote) || settling) && (
+        <ApplyExit style={styles.applySlotStart}>
+          <Button
+            title="Use this split"
+            variant="outline"
+            size="sm"
+            fullWidth={false}
+            state={applyState}
+            onSettled={onApplySettled}
+            onPress={onApply}
+            style={styles.applyPill}
+            accessibilityLabel="Use this training-day and rest-day carb split"
+          />
+        </ApplyExit>
       )}
     </Card>
   );
@@ -584,12 +661,13 @@ function MacroCycleCard({ macroCycle, applied, onApply, applying, energyUnit, ho
 // one Apply. Only rendered for aggressive cuts and physique competitors
 // on the coach's cadence. Applying schedules it onto the next training
 // day via userProfile.refeed, which the Diary reads.
-function RefeedCard({ refeed, applied, onApply, applying, energyUnit, holdNote }) {
+function RefeedCard({ refeed, applied, onApply, applyState, onApplySettled, energyUnit, holdNote }) {
+  const settling = applyState === 'success';
   return (
     <Card style={styles.card}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
         <SectionHeader title="Refeed day" />
-        {applied && (
+        {applied && !settling && (
           <View style={[styles.appliedChip, { marginBottom: spacing.xs }]}>
             <Ionicons name="checkmark" size={10} color={colors.success} />
             <Text style={styles.appliedChipText}>Applied</Text>
@@ -612,18 +690,24 @@ function RefeedCard({ refeed, applied, onApply, applying, energyUnit, holdNote }
         <Text style={styles.adjustmentDetail}>Applies to your next training day only.</Text>
       ) : null}
       {!applied && holdNote ? (
-        <Text style={styles.adjustmentHold}>{holdNote}</Text>
+        <HoldEnter live>
+          <Text style={styles.adjustmentHold}>{holdNote}</Text>
+        </HoldEnter>
       ) : null}
-      {!applied && onApply && !holdNote && (
-        <TouchableOpacity
-          style={[styles.applyBtnQuiet, styles.dietBreakApplyBtn, applying && styles.applyBtnBusy]}
-          onPress={onApply}
-          disabled={applying}
-          accessibilityRole="button"
-          accessibilityLabel="Schedule a refeed on the next training day"
-        >
-          <Text style={styles.applyBtnQuietText}>{applying ? 'Applying' : 'Schedule refeed'}</Text>
-        </TouchableOpacity>
+      {((!applied && onApply && !holdNote) || settling) && (
+        <ApplyExit style={styles.applySlotStart}>
+          <Button
+            title="Schedule refeed"
+            variant="outline"
+            size="sm"
+            fullWidth={false}
+            state={applyState}
+            onSettled={onApplySettled}
+            onPress={onApply}
+            style={styles.applyPill}
+            accessibilityLabel="Schedule a refeed on the next training day"
+          />
+        </ApplyExit>
       )}
     </Card>
   );
@@ -933,6 +1017,25 @@ export default function CoachOutputScreen({ navigation, route }) {
   // NU-3: tap-time explanation when a compute nulls (a stale-suggestion
   // race); keyed by adjustment. An Apply must never end in silence.
   const [applyNotice, setApplyNotice] = useState({});
+  // M4 (audit 03b §3.3b): presentational success-beat markers, keyed by
+  // adjustment. The DATA truth (markApplied → setOutput) lands immediately —
+  // the double-apply guards never wait on animation (fit rule 5); this only
+  // keeps the Button mounted through its checkmark beat, after which
+  // onSettled clears the key and the row swaps to its Applied chip. A floor
+  // hold never sets a marker: holds settle into the NU-3 line, never a
+  // success beat, and never a haptic (03b §3.3f: a safety hold is calm
+  // information, not an error buzz — this screen fires no haptics at all).
+  const [applySettling, setApplySettling] = useState({});
+  const applyStateFor = (key) => (
+    applyingKey === key ? 'loading' : (applySettling[key] ? 'success' : 'idle')
+  );
+  const onApplySettled = (key) => {
+    setApplySettling(s => {
+      const next = { ...s };
+      delete next[key];
+      return next;
+    });
+  };
   // B4: contest countdown state. Visibility rules live in the pure lib
   // (docs/b4-contest-countdown-ed-review): any truthy wellbeing flag,
   // including a 'read_failed' sentinel from a failed read, hides it
@@ -1011,6 +1114,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
       setCurrentTargets(computed.targets);
+      setApplySettling(s => ({ ...s, calories: true }));
 
       // If the user is on a generated meal plan, pull the same calorie
       // change THROUGH the plan at the food level and show the coach
@@ -1069,6 +1173,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       });
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
+      setApplySettling(s => ({ ...s, training: true }));
     } catch (e) {
       logError('CoachOutputScreen.handleApplyTraining', e, { userId: user?.id });
     } finally {
@@ -1092,6 +1197,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       const updated = markApplied(output, 'steps', { target });
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
+      setApplySettling(s => ({ ...s, steps: true }));
     } catch (e) {
       logError('CoachOutputScreen.handleApplySteps', e, { userId: user?.id });
     } finally {
@@ -1123,6 +1229,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       const updated = markApplied(output, 'cardio', {});
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
+      setApplySettling(s => ({ ...s, cardio: true }));
     } catch (e) {
       logError('CoachOutputScreen.handleApplyCardio', e, { userId: user?.id });
     } finally {
@@ -1162,6 +1269,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       });
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
+      setApplySettling(s => ({ ...s, deload: true }));
     } catch (e) {
       logError('CoachOutputScreen.handleApplyDeload', e, { userId: user?.id });
     } finally {
@@ -1201,6 +1309,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
       setCurrentTargets(computed.targets);
+      setApplySettling(s => ({ ...s, dietBreak: true }));
     } catch (e) {
       logError('CoachOutputScreen.handleApplyDietBreak', e, { userId: user?.id });
     } finally {
@@ -1248,6 +1357,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       });
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
+      setApplySettling(s => ({ ...s, macroCycle: true }));
     } catch (e) {
       logError('CoachOutputScreen.handleApplyMacroCycle', e, { userId: user?.id });
     } finally {
@@ -1288,6 +1398,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       const updated = markApplied(output, 'refeed', { kcal: target.kcal, carbsG: target.carbsG });
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
+      setApplySettling(s => ({ ...s, refeed: true }));
     } catch (e) {
       logError('CoachOutputScreen.handleApplyRefeed', e, { userId: user?.id });
     } finally {
@@ -1890,12 +2001,12 @@ export default function CoachOutputScreen({ navigation, route }) {
     <TrainingNextWeekCard
       output={output}
       onApply={handleApplyTraining}
-      applying={applyingKey === 'training'}
       canApply={!!nextTrainingWeekId}
+      applyStateFor={applyStateFor}
+      onApplySettled={onApplySettled}
       deloadSuggested={deloadSuggested}
       deloadNote={deloadNote}
       onApplyDeload={handleApplyDeload}
-      applyingDeload={applyingKey === 'deload'}
       hero={zones.heroKind === 'training'}
     />
   );
@@ -1905,7 +2016,8 @@ export default function CoachOutputScreen({ navigation, route }) {
       onApplyCalories={handleApplyCalories}
       onApplySteps={handleApplySteps}
       onApplyCardio={handleApplyCardio}
-      applyingKey={applyingKey}
+      applyStateFor={applyStateFor}
+      onApplySettled={onApplySettled}
       energyUnit={energyUnit}
       caloriePreview={caloriePreview}
       calorieNotice={applyNotice.calories ?? null}
@@ -1918,13 +2030,15 @@ export default function CoachOutputScreen({ navigation, route }) {
       macroCycle={macroCycle}
       applied={isApplied(output, 'macroCycle') || !!userProfile?.macroCycle}
       onApply={handleApplyMacroCycle}
-      applying={applyingKey === 'macroCycle'}
+      applyState={applyStateFor('macroCycle')}
+      onApplySettled={() => onApplySettled('macroCycle')}
       energyUnit={energyUnit}
       holdNote={
         macroCyclePreview?.kind === 'floor_hold'
           ? macroCycleHoldLine(macroCyclePreview.floorKcal, energyUnit)
           : (applyNotice.macroCycle ?? null)
       }
+      holdArrived={!!applyNotice.macroCycle}
     />
   ) : null;
   const refeedCardEl = refeed ? (
@@ -1932,7 +2046,8 @@ export default function CoachOutputScreen({ navigation, route }) {
       refeed={refeed}
       applied={isApplied(output, 'refeed')}
       onApply={handleApplyRefeed}
-      applying={applyingKey === 'refeed'}
+      applyState={applyStateFor('refeed')}
+      onApplySettled={() => onApplySettled('refeed')}
       energyUnit={energyUnit}
       holdNote={applyNotice.refeed ?? null}
     />
@@ -1942,7 +2057,8 @@ export default function CoachOutputScreen({ navigation, route }) {
       weeksInDeficit={dietBreakWeeksInDeficit}
       applied={isApplied(output, 'dietBreak')}
       onApply={handleApplyDietBreak}
-      applying={applyingKey === 'dietBreak'}
+      applyState={applyStateFor('dietBreak')}
+      onApplySettled={() => onApplySettled('dietBreak')}
       energyUnit={energyUnit}
       previewKcal={dietBreakPreviewKcal}
       notice={applyNotice.dietBreak ?? null}
@@ -2537,43 +2653,17 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: fontWeight.semibold,
   },
-  applyBtn: {
-    alignSelf: 'center',
-    backgroundColor: colors.primary,
+  // M4: the Apply buttons ride the Button primitive (primary = the A1
+  // one-amber hero, outline = every quiet Apply); this override keeps the
+  // shipped pill geometry on top of the primitive's chrome.
+  applyPill: {
     borderRadius: radius.full,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
     minWidth: 84,
     minHeight: 44, // U-B-1 §5: WCAG/iOS touch target
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  // A1 one-amber rule: every non-hero Apply demotes to the outline variant.
-  applyBtnQuiet: {
-    alignSelf: 'center',
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    minWidth: 84,
-    minHeight: 44, // U-B-1 §5: WCAG/iOS touch target
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  applyBtnBusy: { opacity: 0.6 },
-  applyBtnText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
-    color: colors.onPrimary,
-  },
-  applyBtnQuietText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
-    color: colors.primary,
-  },
-  dietBreakApplyBtn: { alignSelf: 'flex-start', marginTop: spacing.md },
+  applySlot: { alignSelf: 'center' },
+  applySlotStart: { alignSelf: 'flex-start', marginTop: spacing.md },
 
   // Carb cycle (row 6): training-day vs rest-day targets side by side
   macroCycleRow: {
