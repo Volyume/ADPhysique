@@ -19,7 +19,7 @@ import { usePlayPrices } from '../lib/payments/usePlayPrices';
 
 const PRO_PERKS = [
   { icon: 'sparkles', text: 'A plan built around your schedule, goals, and experience level' },
-  { icon: 'calendar-outline', text: 'Precision Coaching™ that adjusts your training and nutrition as your body responds' },
+  { icon: 'calendar-outline', text: 'Your training and nutrition adjust as your body responds' },
   { icon: 'nutrition-outline', text: 'Personalised calorie and protein targets, updated as your goals change' },
   { icon: 'eye-outline', text: 'After every check-in, your coach explains every decision. What changed, what was left alone, and why.' },
 ];
