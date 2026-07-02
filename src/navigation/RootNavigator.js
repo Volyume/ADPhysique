@@ -5,7 +5,6 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { StackActions } from '@react-navigation/native';
 export const navigationRef = createNavigationContainerRef();
 import { View, Image, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 const SPLASH_HERO = require('../../assets/volyume-wordmark.png');
@@ -119,6 +118,7 @@ const NutritionEducationScreen = lazyScreen(() => require('../screens/NutritionE
 const SubscriptionPolicyScreen = lazyScreen(() => require('../screens/SubscriptionPolicyScreen').default);
 import { withProGuard, withReadOnlyProGuard } from '../components/ProGate';
 import { withScreenBoundaries } from '../components/ScreenBoundary';
+import VolyumeTabBar from '../components/VolyumeTabBar';
 
 // F8 (audit PR-7): per-screen error boundaries. The installed React
 // Navigation v6 (@react-navigation/native 6.1.18) has no `screenLayout`
@@ -498,10 +498,8 @@ function ProfileStack({ navigation }) {
 }
 
 function MainTabs() {
-  // Android 15 (targetSdk 35) and iOS both draw the app edge-to-edge under
-  // the system nav / home indicator. Pad the tab bar by the bottom inset so
-  // the icons and labels don't collide with the OS chrome.
-  const insets = useSafeAreaInsets();
+  // Edge-to-edge inset padding moved into VolyumeTabBar (it reads the safe
+  // area itself, exactly as the stock tabBarStyle here used to).
   return (
     <Tab.Navigator
       // F6b (audit PR-2/UI-7): tabs are default-LAZY — each non-initial tab
@@ -524,19 +522,16 @@ function MainTabs() {
           haptics.selection();
         },
       })}
+      // E15 (greenlit 2026-07-02): the custom bottom band — sliding-pill tab
+      // bar + the active-session mini-bar docked above it. VolyumeTabBar
+      // emits tabPress exactly like the stock bar, so the M1 haptic above
+      // and each stack's NAV-5 re-tap-to-root listener keep working. The
+      // stock tabBarStyle/tint/label options are gone with the stock bar;
+      // tabBarIcon stays the single source for icons (the custom bar calls
+      // it via descriptors).
+      tabBar={(props) => <VolyumeTabBar {...props} />}
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: colors.tabBar,
-          borderTopColor: colors.tabBarBorder,
-          paddingBottom: 4 + insets.bottom,
-          height: 60 + insets.bottom,
-        },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
-        // Tokenised so the labels scale with the larger-text accessibility
-        // setting (read at render time, after applyAccessibility).
-        tabBarLabelStyle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
         tabBarIcon: ({ focused, color }) => {
           const icons = {
             HomeTab: focused ? 'home' : 'home-outline',

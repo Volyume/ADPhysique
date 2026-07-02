@@ -68,6 +68,8 @@ const reanimated = {
 
   // Layout animation builders used for entrances / list stagger.
   FadeIn: layoutBuilder(),
+  SlideInDown: layoutBuilder(),
+  SlideOutDown: layoutBuilder(),
   FadeOut: layoutBuilder(),
   FadeInDown: layoutBuilder(),
   FadeInUp: layoutBuilder(),
