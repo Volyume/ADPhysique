@@ -1,7 +1,8 @@
-import { useRef, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Animated, Easing, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView,
 } from 'react-native';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -98,26 +99,19 @@ export default function ProSetupCompleteScreen({ navigation }) {
     setBuildingMeals(false);
   };
 
-  const opacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
-  const slideY  = useRef(new Animated.Value(reduceMotion ? 0 : 20)).current;
-
   useEffect(() => {
     // D2: the plan reveal is the Pro funnel's peak; a single success note
     // marks it (the vocabulary no-ops under reduce-motion).
     planReady();
-    if (reduceMotion) return;
-    Animated.parallel([
-      Animated.timing(opacity, {
-        toValue: 1, duration: motion.hero,
-        easing: Easing.out(Easing.cubic), useNativeDriver: true,
-      }),
-      Animated.timing(slideY, {
-        toValue: 0, duration: motion.hero,
-        easing: Easing.out(Easing.cubic), useNativeDriver: true,
-      }),
-    ]).start();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // E9: the reveal is staged, not a single fade. Each block lands in
+  // sequence on the UI thread (Reanimated entering); the step is the micro
+  // token so the whole page settles inside ~a second. Under Reduce Motion
+  // every block renders in place immediately.
+  const stage = (i, duration = motion.enter) =>
+    reduceMotion ? undefined : FadeInDown.duration(duration).delay(i * motion.micro);
 
   useEffect(() => {
     AsyncStorage.getItem('@volyume_nutrition_targets')
@@ -181,13 +175,14 @@ export default function ProSetupCompleteScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Animated.View style={[styles.mainBlock, { opacity, transform: [{ translateY: slideY }] }]}>
+        <View style={styles.mainBlock}>
           {/* Same header furniture as the wizard steps, so this reads as the
               last beat of that flow rather than a different screen: brand row,
               the progress bar drawn full, then the title and sub. The
               completion signal is the full amber bar and the eyebrow, not a
               glowing orb. The bar matches the wizard's continuous track so the
               two screens share one system. */}
+          <Animated.View entering={stage(0, motion.hero)}>
           <View style={styles.brandRow}>
             <VolyumeIcon size={22} />
             <View style={styles.proBadge}>
@@ -205,9 +200,10 @@ export default function ProSetupCompleteScreen({ navigation }) {
 
           <Text style={styles.headline}>You're all set, {firstName}.</Text>
           <Text style={styles.sub}>{receiptLine || "Here's your daily routine."}</Text>
+          </Animated.View>
 
           {/* 1. Log your weight, first thing each morning */}
-          <View style={styles.routineCard}>
+          <Animated.View entering={stage(1)} style={styles.routineCard}>
             <View style={styles.routineHeader}>
               <View style={styles.routineIconWrap}>
                 <Ionicons name="scale-outline" size={18} color={colors.primary} />
@@ -219,11 +215,11 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 </Text>
               </View>
             </View>
-          </View>
+          </Animated.View>
 
           {/* 2. Hit your calorie + macro targets */}
           {nutritionSummary?.targetKcal ? (
-            <View style={styles.routineCard}>
+            <Animated.View entering={stage(2)} style={styles.routineCard}>
               <View style={styles.routineHeader}>
                 <View style={styles.routineIconWrap}>
                   <Ionicons name="flame-outline" size={18} color={colors.primary} />
@@ -318,10 +314,11 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   {!buildingMeals ? <Ionicons name="chevron-forward" size={14} color={colors.primary} /> : null}
                 </TouchableOpacity>
               )}
-            </View>
+            </Animated.View>
           ) : null}
 
           {/* 3. Training split, collapsible */}
+          <Animated.View entering={stage(3)}>
           <TouchableOpacity
             style={[styles.routineCard, planOpen && styles.routineCardOpen]}
             onPress={() => setPlanOpen(v => !v)}
@@ -383,9 +380,10 @@ export default function ProSetupCompleteScreen({ navigation }) {
               </View>
             )}
           </TouchableOpacity>
+          </Animated.View>
 
           {/* 4. Check in once a week */}
-          <View style={styles.routineCard}>
+          <Animated.View entering={stage(4)} style={styles.routineCard}>
             <View style={styles.routineHeader}>
               <View style={styles.routineIconWrap}>
                 <Ionicons name="calendar-outline" size={18} color={colors.primary} />
@@ -399,11 +397,11 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 </Text>
               </View>
             </View>
-          </View>
+          </Animated.View>
 
-        </Animated.View>
+        </View>
 
-        <Animated.View style={{ opacity }}>
+        <Animated.View entering={reduceMotion ? undefined : FadeInUp.duration(motion.enter).delay(5 * motion.micro)}>
           <Button
             title="Start training"
             trailingIcon="arrow-forward"
