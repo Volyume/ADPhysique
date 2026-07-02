@@ -608,10 +608,6 @@ function ProOnboardingStack() {
       {/* Registered here too so the onboarding hand-off screen can link
           straight into the nutrition guide without leaving the flow. */}
       <Stack.Screen name="NutritionEducation" component={NutritionEducationScreen} />
-      {/* Goal lock consent gate -- fires from ProOnboardingScreen
-          step 3 when the user picks a competition-tier goal. The
-          onContinue route param chains back into the step machine. */}
-      <Stack.Screen name="GoalLockConsent" component={GoalLockConsentScreen} options={{ headerShown: true, title: 'Goal lock' }} />
     </Stack.Navigator>
   );
 }

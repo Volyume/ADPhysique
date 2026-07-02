@@ -11,12 +11,13 @@
  * a measured before/after instead of being done blind against 87KB of seed
  * data. It asserts the structural invariants already won in Phases 1-2 STILL
  * hold on the library path (no drift, no zeros, no over-MRV, no fragments), and
- * it RECORDS the Bikini-vs-MP exercise overlap that 3c must drive under 30%.
+ * it RECORDS the Bikini-vs-MP exercise overlap that 3c was to reduce.
  *
- * The < 30% overlap gate itself is NOT asserted here yet: it is the 3c
- * deliverable (division-specific pools). It lives as test.skip in the Phase 2
- * benchmark and gets un-skipped when 3c lands. This file measures the starting
- * overlap so the gap to close is on the record.
+ * The overlap gate is asserted live in the Phase 2 benchmark at < 50%
+ * (founder-set; see planengineRebuildPhase2.test.js:36-53) -- 3c has landed and
+ * the literal < 30% target was superseded by a recorded founder decision.
+ * Nothing is skipped. This file remains as the historical starting-overlap
+ * record.
  */
 import {
   DIVISIONS, EXPERIENCE_LEVELS, loadSeedLibrary, genLib,
@@ -98,13 +99,13 @@ describe('Phase 3 increment 0: division character survives the library path', ()
   });
 });
 
-// The overlap number 3c must reduce. Recorded, not gated, here.
-test('record the starting Bikini-vs-MP exercise overlap (3c gate target < 30%)', () => {
+// The overlap number 3c reduced. Recorded, not gated, here.
+test('record the starting Bikini-vs-MP exercise overlap (historical record)', () => {
   const bikLib = genLib('bikini', { days: 4 });
   const mpLib = genLib('mens_physique', { days: 4 });
   const libOverlap = overlapPct(bikLib, mpLib);
-  // Sanity only: it is some fraction in [0, 1]. The < 30% target is asserted in
-  // the Phase 2 benchmark (un-skipped) once 3c division pools land.
+  // Sanity only: it is some fraction in [0, 1]. The live gate is < 50% in the
+  // Phase 2 benchmark (founder-set; planengineRebuildPhase2.test.js:36-53).
   expect(libOverlap).toBeGreaterThanOrEqual(0);
   expect(libOverlap).toBeLessThanOrEqual(1);
 });

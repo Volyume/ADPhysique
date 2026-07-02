@@ -2,7 +2,8 @@
  * ScanBarcodeScreen (Move #1.5 phase 2, vision-camera build).
  *
  * Live camera barcode scan -> waterfall lookup -> route to detail
- * sheet (hit) or AddCustomFood (miss). Uses react-native-vision-camera,
+ * sheet (hit) or ScanLabel with the barcode prefilled (miss). Uses
+ * react-native-vision-camera,
  * the same library family MFP and Cronometer use. Better detection
  * quality + integrated torch + future-proofs the MLKit OCR path as
  * a frame processor.

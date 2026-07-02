@@ -1091,9 +1091,10 @@ export async function applyCuratedMealToDiary(userId, mealId, { mealSlot, entryD
 // Generated meal plan (deep-audit Theme G). One active plan per user,
 // stored whole as JSON (the assembled day/week + the prefs and engine-
 // target snapshot it was built from, so swaps and coach edits can
-// re-solve). LOCAL-ONLY for now: no sync serialiser exists yet (the
-// soft-delete shape is sync-ready for when one ships); a new device
-// regenerates the plan from the synced target + prefs instead.
+// re-solve). Synced bidirectionally via the registry (handler
+// src/lib/sync/tables/mealPlans.js, cloud migration 086): the latest row
+// per user moves, last-write-wins on epoch-ms updated_at, and soft-delete
+// tombstones propagate.
 // ───────────────────────────────────────────────────────────────────────
 
 /**
@@ -1148,8 +1149,8 @@ export async function getActiveMealPlan(userId) {
 
 /**
  * Persist an in-place change to the active plan (a swap or a coach edit).
- * Replaces the stored JSON and bumps updated_at (local-only for now).
- * No-ops when the id is missing or already tombstoned.
+ * Replaces the stored JSON and bumps updated_at; _scheduleSync then pushes
+ * it through the registry. No-ops when the id is missing or already tombstoned.
  */
 export async function updateMealPlan(userId, id, plan) {
   if (!plan || typeof plan !== 'object') throw new Error('updateMealPlan: plan is required');
@@ -1164,8 +1165,8 @@ export async function updateMealPlan(userId, id, plan) {
 }
 
 /**
- * Soft-delete a meal plan (tombstone shape is sync-ready; local-only
- * for now).
+ * Soft-delete a meal plan; the tombstone propagates through the registry
+ * sync handler (migration 086).
  */
 export async function deleteMealPlan(userId, id) {
   const d = await db();
