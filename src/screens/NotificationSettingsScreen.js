@@ -24,6 +24,12 @@ import {
   migrateFromLegacyBlob,
 } from '../lib/notifications/preferences';
 import { scheduleMealReminders } from '../lib/notifications/scheduler';
+import { restoreNotifications } from '../lib/notifications';
+import {
+  getQuietHours,
+  setQuietHours,
+  DEFAULT_QUIET_HOURS,
+} from '../lib/notifications/quietHours';
 import useAppStore from '../store/useAppStore';
 import Card from '../components/Card';
 
@@ -40,6 +46,12 @@ const DEFAULT_MEAL_REMINDERS = [
   { id: 'lunch', label: 'Lunch', hour: 12, minute: 30, enabled: false },
   { id: 'dinner', label: 'Dinner', hour: 18, minute: 30, enabled: false },
 ];
+
+// E2.2 (dossier C18): quiet hours had a setter but no settings UI. Same
+// lightweight preset picker as the reminder times above; the window itself is
+// enforced by every scheduler helper via quietHours.js.
+const QUIET_START_PRESETS = ['20:00', '21:00', '21:30', '22:00', '22:30', '23:00', '00:00'];
+const QUIET_END_PRESETS = ['05:00', '06:00', '06:30', '07:00', '07:30', '08:00', '09:00'];
 
 
 
@@ -455,6 +467,53 @@ export default function NotificationSettingsScreen({ navigation }) {
     }).catch(() => {});
   }, []);
 
+  // ── Quiet hours (E2.2) ──────────────────────────────────────────────────────
+  const [quietHours, setQuietHoursState] = useState(DEFAULT_QUIET_HOURS);
+  useEffect(() => {
+    getQuietHours().then(setQuietHoursState).catch(() => {});
+  }, []);
+
+  // Persist the window, then re-lay everything already scheduled so existing
+  // reminders are recomputed against the NEW window rather than the one they
+  // were laid under. restoreNotifications covers the scheduler-owned prompts
+  // (tier-gated inside, E10-F4); training and meal reminders re-lay through
+  // their own helpers. All best-effort: the saved window itself governs every
+  // future schedule regardless.
+  async function persistQuietHours(patch) {
+    const next = { ...quietHours, ...patch };
+    setQuietHoursState(next);
+    try { await setQuietHours(next); } catch (_) { return; }
+    try {
+      const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+      if (raw) {
+        const userId = useAppStore.getState().user?.id ?? null;
+        await restoreNotifications(JSON.parse(raw), userId);
+      }
+      if (trainingEnabled) await scheduleTrainingReminders();
+      if (mealReminders.some((r) => r.enabled)) await scheduleMealReminders(mealReminders);
+    } catch (_) { /* window applies to all future schedules regardless */ }
+  }
+
+  function pickQuietTime(edge) {
+    const isStart = edge === 'start';
+    const h = isStart ? quietHours.startHour : quietHours.endHour;
+    const m = isStart ? quietHours.startMinute : quietHours.endMinute;
+    const currentLabel = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    appAlert(
+      isStart ? 'Quiet hours start' : 'Quiet hours end',
+      `Current: ${currentLabel}`,
+      (isStart ? QUIET_START_PRESETS : QUIET_END_PRESETS).map((label) => ({
+        text: label,
+        onPress: () => {
+          const [nh, nm] = label.split(':').map(Number);
+          persistQuietHours(isStart
+            ? { startHour: nh, startMinute: nm }
+            : { endHour: nh, endMinute: nm });
+        },
+      })),
+    );
+  }
+
   async function persistMealReminders(next) {
     setMealReminders(next);
     try { await AsyncStorage.setItem(MEAL_REMINDERS_KEY, JSON.stringify(next)); } catch (_) {}
@@ -626,6 +685,58 @@ export default function NotificationSettingsScreen({ navigation }) {
           <View style={styles.helperRow}>
             <Text style={styles.helperText}>
               Optional, gentle nudges to log a meal. No streaks and no pressure. Turn any of them off whenever you like.
+            </Text>
+          </View>
+        </Card>
+
+        {/* Quiet hours (E2.2): the window every reminder respects. */}
+        <Text style={styles.sectionLabel}>Quiet hours</Text>
+        <Card style={styles.card}>
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleIconWrap}>
+              <Ionicons name="moon-outline" size={18} color={colors.primary} />
+            </View>
+            <Text style={styles.toggleLabel}>Quiet hours</Text>
+            <Switch
+              value={quietHours.enabled !== false}
+              onValueChange={(v) => persistQuietHours({ enabled: v })}
+              trackColor={{ false: colors.surface2, true: colors.primaryDim }}
+              thumbColor={colors.primary}
+              ios_backgroundColor={colors.surface2}
+              accessibilityLabel="Quiet hours toggle"
+            />
+          </View>
+          {quietHours.enabled !== false && (
+            <>
+              <TouchableOpacity
+                style={styles.timePickerRow}
+                onPress={() => pickQuietTime('start')}
+                accessibilityRole="button"
+                accessibilityLabel="Set quiet hours start time"
+              >
+                <Text style={styles.timePickerLabel}>Starts</Text>
+                <Text style={styles.timePickerValue}>
+                  {`${String(quietHours.startHour).padStart(2, '0')}:${String(quietHours.startMinute).padStart(2, '0')}`}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.timePickerRow}
+                onPress={() => pickQuietTime('end')}
+                accessibilityRole="button"
+                accessibilityLabel="Set quiet hours end time"
+              >
+                <Text style={styles.timePickerLabel}>Ends</Text>
+                <Text style={styles.timePickerValue}>
+                  {`${String(quietHours.endHour).padStart(2, '0')}:${String(quietHours.endMinute).padStart(2, '0')}`}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+            </>
+          )}
+          <View style={styles.helperRow}>
+            <Text style={styles.helperText}>
+              A reminder that would land inside this window waits until it ends. Applies to every reminder Volyume schedules.
             </Text>
           </View>
         </Card>
