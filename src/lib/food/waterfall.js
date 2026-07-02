@@ -2,7 +2,10 @@
  * Food lookup waterfall.
  *
  * Locked in FOOD_DATA_STRATEGY_LOCKED.md. Five sources, first hit
- * wins:
+ * wins — with one E3 refinement for free-text search: a WEAK local hit
+ * (few matches / no prefix match) no longer suppresses the live
+ * sources; the local rows render first and live matches merge in below
+ * them (see searchFoods). Barcode lookup stays strictly first-hit-wins:
  *   1. Local SQLite cache (custom_foods + foods)        <50ms
  *   2. Bundled OFF snapshot (already in `foods`)        <50ms
  *   3. Bundled CoFID (already in `foods`)               <50ms
@@ -23,6 +26,21 @@ import { track as trackEvent } from '../engineTelemetry';
 
 const MIN_QUERY_LEN = 2;
 const NETWORK_SEARCH_FANOUT_LIMIT = 10;
+
+// E3 defect fix (dossier C7): below this many local hits the local answer is
+// treated as weak and live results are MERGED IN below it, instead of any
+// single cached row suppressing every better OFF/USDA match.
+const WEAK_LOCAL_MIN_HITS = 3;
+
+/**
+ * Whether the local result set is confident enough to stand alone.
+ * Weak = few hits, or none of them is a prefix match (searchLocalByName's
+ * rank column: 0 = the name starts with the query, 1 = substring only).
+ * A weak set still renders first; live results append below it.
+ */
+function _localIsStrong(local) {
+  return local.length >= WEAK_LOCAL_MIN_HITS && local.some((r) => r.rank === 0);
+}
 
 /**
  * Cache promotion: write a network-sourced food row into the local
@@ -121,7 +139,12 @@ export async function searchFoods(userId, query, { limit = 25 } = {}) {
   const t0 = Date.now();
 
   const local = await searchLocalByName(userId, q, limit);
-  if (local.length > 0) {
+  // Local-first stays: a confident local answer returns immediately with no
+  // network touch. E3 defect fix: a WEAK local answer (few hits / no prefix
+  // match) no longer suppresses live results — it renders first and the live
+  // matches merge in below it. Offline is unaffected: the live sources
+  // timeout internally and return [], leaving the local rows standing.
+  if (local.length > 0 && _localIsStrong(local)) {
     if (userId) trackEvent(userId, 'food_search_attempt', {
       source_hit: 'local', query_len: q.length, ms: Date.now() - t0,
     });
@@ -131,22 +154,37 @@ export async function searchFoods(userId, query, { limit = 25 } = {}) {
   // Network fan-out: try OFF first (broader UK coverage). If empty,
   // fall through to USDA. Both are gated by request timeouts inside
   // the source modules so this never blocks the UI for long.
-  const off = await searchOff(q, NETWORK_SEARCH_FANOUT_LIMIT);
-  if (off.length > 0) {
-    const promoted = await _promoteAll(off, userId);
-    if (userId) trackEvent(userId, 'food_search_attempt', {
-      source_hit: 'off_live', query_len: q.length, ms: Date.now() - t0,
-    });
-    return promoted;
+  let live = await searchOff(q, NETWORK_SEARCH_FANOUT_LIMIT);
+  let liveSource = 'off_live';
+  if (live.length === 0) {
+    live = await searchUsda(q, NETWORK_SEARCH_FANOUT_LIMIT);
+    liveSource = 'usda';
   }
-  const usda = await searchUsda(q, NETWORK_SEARCH_FANOUT_LIMIT);
-  if (usda.length > 0) {
-    const promoted = await _promoteAll(usda, userId);
+
+  if (live.length > 0) {
+    // Cache promotion unchanged: every live row lands in `foods` so the next
+    // lookup is a step-1 hit. Promotion collapses a live hit onto its already
+    // cached row via the (source, source_id) index, so the food_ref dedup
+    // below removes the rows the user can already see in the local set.
+    const promoted = await _promoteAll(live, userId);
+    const seen = new Set(local.map((r) => r.food_ref));
+    const merged = [...local, ...promoted.filter((r) => !seen.has(r.food_ref))].slice(0, limit);
     if (userId) trackEvent(userId, 'food_search_attempt', {
-      source_hit: 'usda', query_len: q.length, ms: Date.now() - t0,
+      source_hit: local.length > 0 ? 'local_plus_live' : liveSource,
+      query_len: q.length, ms: Date.now() - t0,
     });
-    return promoted;
+    return merged;
   }
+
+  if (local.length > 0) {
+    // Weak local, and live produced nothing (offline or genuine miss): the
+    // local rows still stand, exactly as before this fix.
+    if (userId) trackEvent(userId, 'food_search_attempt', {
+      source_hit: 'local', query_len: q.length, ms: Date.now() - t0,
+    });
+    return local;
+  }
+
   if (userId) trackEvent(userId, 'food_search_attempt', {
     source_hit: 'miss', query_len: q.length, ms: Date.now() - t0,
   });

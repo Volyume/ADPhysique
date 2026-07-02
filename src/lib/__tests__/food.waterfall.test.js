@@ -66,15 +66,34 @@ describe('searchFoods (text search waterfall)', () => {
     expect(usda.searchUsda).not.toHaveBeenCalled();
   });
 
-  test('local hit short-circuits the waterfall: OFF and USDA not called', async () => {
+  // E3 defect fix (2026-07-02, founder-approved): the old rule "any local hit
+  // short-circuits" meant one poor cached match hid better OFF/USDA matches.
+  // Now only a STRONG local set (3+ hits including a prefix match, rank 0)
+  // short-circuits; a weak one renders first with live results merged below.
+  // Full merge behaviour is pinned in food/__tests__/waterfallSearchMerge.
+  test('a STRONG local set short-circuits the waterfall: OFF and USDA not called', async () => {
     localCache.searchLocalByName.mockResolvedValue([
-      { food_ref: 'global:local-1', source: 'off', name: 'Local Bread' },
+      { food_ref: 'global:local-1', source: 'off', name: 'Local Bread', rank: 0 },
+      { food_ref: 'global:local-2', source: 'off', name: 'Local Bread Rolls', rank: 0 },
+      { food_ref: 'global:local-3', source: 'cofid', name: 'Wholemeal bread', rank: 1 },
     ]);
     const r = await searchFoods(USER_ID, 'bread');
-    expect(r).toHaveLength(1);
+    expect(r).toHaveLength(3);
     expect(r[0].food_ref).toBe('global:local-1');
     expect(liveOff.searchOff).not.toHaveBeenCalled();
     expect(usda.searchUsda).not.toHaveBeenCalled();
+  });
+
+  test('a single weak local hit no longer suppresses live: it stays first, live merges below', async () => {
+    localCache.searchLocalByName.mockResolvedValue([
+      { food_ref: 'global:local-1', source: 'off', name: 'Local Bread', rank: 0 },
+    ]);
+    liveOff.searchOff.mockResolvedValue([
+      { food_ref: 'off:5001111111111', source: 'off_live', name: 'Live Bread', kcal_100g: 250, protein_100g: 9, carbs_100g: 45, fat_100g: 3 },
+    ]);
+    const r = await searchFoods(USER_ID, 'bread');
+    expect(r.map((row) => row.name)).toEqual(['Local Bread', 'Live Bread']);
+    expect(usda.searchUsda).not.toHaveBeenCalled(); // OFF answered, USDA untouched
   });
 
   test('local empty -> OFF hit returns OFF promoted to local', async () => {
