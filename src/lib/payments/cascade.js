@@ -123,7 +123,12 @@ export async function startCascade() {
       const nextTier = r.data?.tier ?? _resolveTier(ts, false);
       const st = useAppStore.getState();
       if (nextTier === 'pro') {
-        st.setTier?.('pro', 'cascade.startCascade').catch?.(() => {});
+        // AWAITED (founder repro 2026-07-02): RootNavigator routes onboarding
+        // on store.tier, and setTier persists to AsyncStorage BEFORE setting
+        // the in-memory tier. Fire-and-forget here let a caller reset
+        // first-run while tier still read 'free', mounting the free
+        // FirstRunStack instead of the Pro setup.
+        try { await st.setTier?.('pro', 'cascade.startCascade'); } catch (_) {}
       }
       useAppStore.setState((s) => (s.userProfile
         ? {

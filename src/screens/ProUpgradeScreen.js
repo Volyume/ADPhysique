@@ -165,16 +165,41 @@ export default function ProUpgradeScreen({ navigation, route }) {
       pullFromCloud(supabaseUserId).catch(() => {});
     }
     if (cascade.canStillTrial(userProfile)) {
-      // Entitled to the 14-day cardless trial. Start it here: a brand-new
-      // account starts the trial at the Article 9 consent step, but an
-      // existing user who already consented skips that gate, so without
-      // this their "Start your free trial" tap reset onboarding without
-      // ever starting the trial and, with the tier still 'free', dropped
-      // them on the free FirstRunStack name screen instead of the Pro
-      // setup. startCascade is idempotent (no-ops once started), sets the
-      // server tier='pro' + trial_state, and mirrors tier='pro' locally so
-      // resetFirstRun routes into ProOnboardingStack.
-      try { await cascade.startCascade(); } catch (_) {}
+      // The SERVER owns trial entitlement (users_profile.trial_state); the
+      // local read above can be stale — e.g. an account whose earlier
+      // deletion never cleared the server row still holds a consumed trial
+      // (founder repro 2026-07-02). So branch on what start_cascade actually
+      // returns instead of assuming it granted one. The old code swallowed
+      // the result and reset onboarding regardless, which dropped the user
+      // into the free FirstRunStack name screen with no trial and no error.
+      let trial = { ok: false, error: 'threw' };
+      try { trial = await cascade.startCascade(); } catch (_) {}
+      if (!trial.ok) {
+        // A genuine RPC failure: stay put rather than resetting onboarding
+        // with the tier still 'free'.
+        // eslint-disable-next-line global-require
+        require('../lib/errorLog').logError('ProUpgrade.startCascade', trial.error ?? 'unknown', {});
+        toast.show('Could not start your trial. Try again in a moment.', { variant: 'error' });
+        return;
+      }
+      const ts = trial.data?.trial_state ?? 'pro_trial_active';
+      const trialLive = ts === 'pro_trial_active' || ts === 'complete_trial_active';
+      if (!trialLive) {
+        // already_started with a consumed/expired state: this account cannot
+        // trial again. Fall through to the honest path, the Play purchase —
+        // Google's own intro-offer eligibility still gives an eligible buyer
+        // their free week. startCascade mirrored the true trial_state into
+        // the local profile, so canStillTrial and the CTA label correct
+        // themselves from here.
+        await subscribePro();
+        return;
+      }
+      // Trial granted (or already live). RootNavigator routes onboarding on
+      // store.tier; startCascade awaits the mirror, but belt-and-braces it
+      // before flipping first-run so the Pro setup is what mounts.
+      if (useAppStore.getState().tier !== 'pro') {
+        await setTier('pro', 'ProUpgrade.trialStart');
+      }
       try {
         const result = await resetFirstRun();
         if (result && result.ok === false && result.error === 'workout_in_progress') {
