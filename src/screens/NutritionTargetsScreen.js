@@ -94,7 +94,7 @@ function PillGroup({ options, selected, onSelect, keyExtractor, labelExtractor }
   );
 }
 
-function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent }) {
+function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent, barColor }) {
   const ratioText =
     basis === 'lbm' && perKgLbm != null
       ? `${perKgLbm} g/kg lean`
@@ -105,6 +105,19 @@ function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent }) {
     <View style={styles.macroCard}>
       <Text style={styles.macroGrams}>{grams}g</Text>
       <Text style={styles.macroLabel}>{label}</Text>
+      {/* D3 (design audit 03): a thin proportional bar in the macro's
+          category hue, sized by its share of the day's calories. Category
+          identity only, never adherence — it does not change on hit/miss. */}
+      {kcalPercent != null && barColor ? (
+        <View style={styles.macroBarTrack}>
+          <View
+            style={[
+              styles.macroBarFill,
+              { width: `${Math.min(100, Math.max(0, kcalPercent))}%`, backgroundColor: barColor },
+            ]}
+          />
+        </View>
+      ) : null}
       {ratioText ? (
         <Text style={styles.macroPerKg}>{ratioText}</Text>
       ) : null}
@@ -117,16 +130,27 @@ function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent }) {
   );
 }
 
+// D3 (design audit 03): each "why" compresses to its one bolded claim (the
+// title carries the number) with the full paragraph behind a disclosure.
 function WhySection({ icon, color, title, body }) {
+  const [open, setOpen] = useState(false);
   return (
     <View style={styles.whySection}>
-      <View style={styles.whySectionHeader}>
+      <TouchableOpacity
+        style={styles.whySectionHeader}
+        onPress={() => setOpen(v => !v)}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel={`${title}. ${open ? 'Hide' : 'Show'} the explanation`}
+      >
         <View style={[styles.whySectionIcon, { backgroundColor: withAlpha(color, 0.125) }]}>
           <Ionicons name={icon} size={14} color={color} />
         </View>
         <Text style={styles.whySectionTitle}>{title}</Text>
-      </View>
-      <Text style={styles.whySectionBody}>{body}</Text>
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textMuted} />
+      </TouchableOpacity>
+      {open ? <Text style={styles.whySectionBody}>{body}</Text> : null}
     </View>
   );
 }
@@ -958,9 +982,10 @@ export default function NutritionTargetsScreen({ navigation }) {
                       perKgLbm={results.proteinGPerKgLbm}
                       basis={results.proteinBasis}
                       kcalPercent={pct(results.proteinG, 4)}
+                      barColor={colors.macroProtein}
                     />
-                    <MacroCard label="Carbs" grams={results.carbsG} kcalPercent={pct(results.carbsG, 4)} />
-                    <MacroCard label="Fat"   grams={results.fatG}   kcalPercent={pct(results.fatG, 9)} />
+                    <MacroCard label="Carbs" grams={results.carbsG} kcalPercent={pct(results.carbsG, 4)} barColor={colors.macroCarb} />
+                    <MacroCard label="Fat"   grams={results.fatG}   kcalPercent={pct(results.fatG, 9)}   barColor={colors.macroFat} />
                   </View>
                 );
               })()}
@@ -1060,6 +1085,25 @@ export default function NutritionTargetsScreen({ navigation }) {
                 );
               })()}
 
+              {/* ── How we got here (D3, design audit 03): the rationale,
+                  phase and confidence merged into ONE card instead of three
+                  same-shape siblings. Every element is unchanged; only the
+                  grouping and header treatment moved. ── */}
+              <View style={styles.howCard}>
+              <Text style={styles.howCardTitle}>How we got here</Text>
+
+              {/* Phase, may be absent when loaded from DB */}
+              {(results.goal || results.phase) ? (
+                <View style={styles.howPhaseBlock}>
+                  <Text style={styles.phaseTitle}>
+                    {results.phase || GOALS.find(g => g.key === results.goal)?.label || ''}
+                  </Text>
+                  <Text style={styles.phaseDesc}>
+                    {PHASE_DESCRIPTIONS[results.goal] ?? ''}
+                  </Text>
+                </View>
+              ) : null}
+
               {/* ── Why these numbers for you? ─────────────────────── */}
               {(() => {
                 // Derive weight, form state is preferred; fall back to back-calculation
@@ -1155,14 +1199,17 @@ export default function NutritionTargetsScreen({ navigation }) {
                   : `Carbs fill the remaining ${carbKcal} kcal after protein and fat are set. When holding muscle while losing fat, carbs are kept moderate: enough to fuel your sessions and top up your energy stores, but not so many that they cancel the small deficit needed for fat loss. Eat most of your carbs around your training sessions. The rest of the day can be lower-carb without affecting performance.`;
 
                 return (
-                  <View style={styles.whyCard}>
+                  <View style={styles.whyGroup}>
                     <TouchableOpacity
                       style={styles.whyHeader}
                       onPress={() => setWhyExpanded(v => !v)}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityState={{ expanded: whyExpanded }}
+                      accessibilityLabel="Why these numbers for you?"
                     >
                       <View style={styles.whyHeaderLeft}>
-                        <Ionicons name="school-outline" size={18} color={colors.primary} />
+                        <Ionicons name="school-outline" size={18} color={colors.textSecondary} />
                         <Text style={styles.whyHeaderLabel}>Why these numbers for you?</Text>
                       </View>
                       <Ionicons name={whyExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
@@ -1179,21 +1226,11 @@ export default function NutritionTargetsScreen({ navigation }) {
                 );
               })()}
 
-              {/* Phase card, phase/goal may be absent when loaded from DB */}
-              {(results.goal || results.phase) ? (
-                <View style={styles.phaseCard}>
-                  <Text style={styles.phaseTitle}>
-                    {results.phase || GOALS.find(g => g.key === results.goal)?.label || ''}
-                  </Text>
-                  <Text style={styles.phaseDesc}>
-                    {PHASE_DESCRIPTIONS[results.goal] ?? ''}
-                  </Text>
-                </View>
-              ) : null}
-
-              {/* Confidence card, only shown when confidence is available */}
+              {/* Confidence, only shown when available. Keeps its status icon
+                  colour; the per-confidence tinted border retired with the
+                  card merge (D3). */}
               {results.confidence ? (
-                <View style={[styles.confidenceCard, { borderColor: withAlpha(CONFIDENCE_COLORS[results.confidence] ?? colors.border, 0.251) }]}>
+                <View style={styles.confidenceRow}>
                   <Ionicons
                     name={CONFIDENCE_ICONS[results.confidence] ?? 'information-circle'}
                     size={20}
@@ -1204,6 +1241,8 @@ export default function NutritionTargetsScreen({ navigation }) {
                   </Text>
                 </View>
               ) : null}
+
+              </View>
 
               {/* Warnings */}
               {results.warnings && results.warnings.length > 0 && results.warnings.map((w, i) => (
@@ -1359,7 +1398,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginTop: spacing.sm,
   },
-  eduCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, borderLeftWidth: 3, borderLeftColor: colors.primary, padding: spacing.md, marginTop: spacing.sm },
+  // D3: neutral edge — a static education row does not spend the amber.
+  eduCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, borderLeftWidth: 3, borderLeftColor: colors.border, padding: spacing.md, marginTop: spacing.sm },
   // U-C-1: "Set it for me" fast-path card.
   fastCard: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, marginTop: spacing.md, gap: spacing.md },
   fastTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
@@ -1377,9 +1417,11 @@ const styles = StyleSheet.create({
 
   // ── Section heading ───────────────────────────────────────────────────────────────────
 
+  // D3: real section headers (design audit 03 rule 3) — the D0 `title`
+  // role, not a body-sized label.
   sectionHeading: {
-    ...type.label,
-    color: colors.textSecondary,
+    ...type.title,
+    color: colors.textPrimary,
     marginTop: spacing.sm,
   },
 
@@ -1544,12 +1586,14 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
 
+  // D3: surfaceElevated ranks the hero (design audit 03 rule 4); the amber
+  // lives in the kcal numeral itself, so the border is neutral.
   heroCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
     borderRadius: radius.lg,
     padding: spacing.xl,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.251),
+    borderColor: colors.border,
     alignItems: 'center',
     gap: spacing.sm,
   },
@@ -1601,6 +1645,20 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginTop: spacing.xxs,
   },
+  // D3: thin proportional bar in the macro's category hue (identity, never
+  // adherence), sized by the macro's share of the day's calories.
+  macroBarTrack: {
+    alignSelf: 'stretch',
+    height: 4,
+    borderRadius: radius.hair,
+    backgroundColor: colors.surface3,
+    marginTop: spacing.xs,
+    overflow: 'hidden',
+  },
+  macroBarFill: {
+    height: '100%',
+    borderRadius: radius.hair,
+  },
 
   // Per-meal protein card, distribution guidance, daily total unchanged
   perMealCard: {
@@ -1631,7 +1689,9 @@ const styles = StyleSheet.create({
   perMealValue: {
     fontSize: fontSize.xxxl,
     fontWeight: fontWeight.black,
-    color: colors.primary,
+    // D3: neutral — the daily kcal numeral is this screen's one amber
+    // object; a second amber hero numeral competed with it.
+    color: colors.textPrimary,
     lineHeight: 38,
   },
   perMealUnit: {
@@ -1725,14 +1785,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 
-  phaseCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.xs,
-  },
   phaseTitle: {
     ...type.bodyStrong,
     color: colors.textPrimary,
@@ -1742,14 +1794,13 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 
-  confidenceCard: {
+  confidenceRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    borderWidth: 1,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSubtle,
+    paddingTop: spacing.md,
   },
   confidenceText: {
     ...type.bodySm,
@@ -1791,14 +1842,15 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
 
-  // U6: female iron/micronutrient awareness card.
+  // U6: female iron/micronutrient awareness card. D3: neutral surface —
+  // only warnings and the EA ease-nudge keep tint (design audit 03).
   awarenessCard: {
     marginTop: spacing.md,
     padding: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.edge),
-    backgroundColor: colors.primaryBg,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     gap: spacing.sm,
   },
   awarenessHeader: {
@@ -2022,20 +2074,33 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 
-  // ── Why these numbers ────────────────────────────────────────────────────────
+  // ── How we got here (D3: whys + phase + confidence in one card) ─────────────
 
-  whyCard: {
+  howCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    overflow: 'hidden',
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  howCardTitle: {
+    ...type.title,
+    color: colors.textPrimary,
+  },
+  howPhaseBlock: {
+    gap: spacing.xs,
+  },
+  whyGroup: {
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSubtle,
+    paddingTop: spacing.sm,
   },
   whyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: spacing.lg,
+    paddingVertical: spacing.sm,
   },
   whyHeaderLeft: {
     flexDirection: 'row',
@@ -2047,10 +2112,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   whyBody: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.lg,
+    paddingTop: spacing.xs,
+    gap: spacing.sm,
   },
   whySection: {
     gap: spacing.sm,
@@ -2059,6 +2122,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   whySectionIcon: {
     width: 24,
@@ -2068,6 +2132,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   whySectionTitle: {
+    flex: 1,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,

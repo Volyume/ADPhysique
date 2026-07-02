@@ -738,6 +738,59 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </RevealSection>
         ) : null}
 
+        {/* D3 (design audit 03): tonnage is THE headline. One elevated hero
+            card carrying the display-size animated counter, with the 4-week
+            comparison verdict fused into it; the remaining three stats step
+            down to a compact row below. The hero is the screen's single
+            amber object (the numeral); everything else is neutral or tint. */}
+        <View style={styles.heroCard}>
+          <StatBox
+            hero
+            value={`${Math.round(tonnage || 0).toLocaleString('en-GB')} kg`}
+            label="Total lifted"
+            tooltip={'Total weight moved this session: sets × reps × weight added together. A rough measure of how much work you did. More is not always better; quality of effort matters more than raw numbers.'}
+          />
+          {/* 4-week comparison verdict, fused into the hero so "your number"
+              and "how it compares" read as one statement. Only when we have
+              at least one prior session of this routine. */}
+          {comparison && comparison.priorCount > 0 && (() => {
+            const { verdict, pct, position, total, priorCount } = comparison;
+            let headline, sub, accent;
+            if (verdict === 'best') {
+              headline = `Strongest session in 4 weeks`;
+              sub = `Top of ${total} sessions logged for this routine.`;
+              accent = colors.gold;
+            } else if (verdict === 'up') {
+              headline = `${pct >= 0 ? '+' : ''}${pct}% vs your 4-week average`;
+              sub = `Position ${position} of ${total} sessions in the window.`;
+              accent = colors.success;
+            } else if (verdict === 'down') {
+              headline = `${pct}% vs your 4-week average`;
+              sub = `Sessions vary with recovery, sleep and stress. The 4-week trend carries more signal than any single session.`;
+              accent = colors.textSecondary;
+            } else {
+              headline = `On pace with your last ${priorCount} session${priorCount !== 1 ? 's' : ''}`;
+              sub = `Within ±10% of your 4-week average. Consistency is the goal.`;
+              // Neutral, not amber: the hero numeral is this screen's one
+              // amber object (design audit 03 amber-inflation rule).
+              accent = colors.textPrimary;
+            }
+            return (
+              <View style={styles.verdictRow}>
+                <Ionicons
+                  name={verdict === 'best' ? 'trophy-outline' : verdict === 'up' ? 'trending-up-outline' : verdict === 'down' ? 'trending-down-outline' : 'analytics-outline'}
+                  size={16}
+                  color={accent}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.verdictHeadline, { color: accent }]}>{headline}</Text>
+                  <Text style={styles.verdictSub}>{sub}</Text>
+                </View>
+              </View>
+            );
+          })()}
+        </View>
+
         <View style={styles.statsGrid}>
           <StatBox icon="barbell-outline" value={String(exerciseCount || 0)} label="Exercises" animateOrder={0} />
           <StatBox
@@ -748,58 +801,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             animateOrder={1}
           />
           <StatBox icon="time-outline" value={`${durationMinutes || 0}m`} label="Duration" animateOrder={2} />
-          <StatBox
-            icon="trending-up-outline"
-            value={`${Math.round(tonnage || 0).toLocaleString('en-GB')} kg`}
-            label="Total kg"
-            tooltip={'Total weight moved this session: sets × reps × weight added together. A rough measure of how much work you did. More is not always better; quality of effort matters more than raw numbers.'}
-            animateOrder={3}
-          />
         </View>
-
-        {/* 4-week comparison, only when we have at least one prior session
-            of this routine. Lives right under the stat row so the user
-            reads "your numbers" and then "how those numbers compare".
-            Wrapped in RevealSection so it fades in after the stat
-            counters have settled (~1100ms grid + 0ms own delay). */}
-        {comparison && comparison.priorCount > 0 && (
-          <RevealSection delay={1100}>{(() => {
-          const { verdict, pct, position, total, priorCount } = comparison;
-          let headline, sub, accent;
-          if (verdict === 'best') {
-            headline = `Strongest session in 4 weeks`;
-            sub = `Top of ${total} sessions logged for this routine.`;
-            accent = colors.gold;
-          } else if (verdict === 'up') {
-            headline = `${pct >= 0 ? '+' : ''}${pct}% vs your 4-week average`;
-            sub = `Position ${position} of ${total} sessions in the window.`;
-            accent = colors.success;
-          } else if (verdict === 'down') {
-            headline = `${pct}% vs your 4-week average`;
-            sub = `Sessions vary with recovery, sleep and stress. The 4-week trend carries more signal than any single session.`;
-            accent = colors.textSecondary;
-          } else {
-            headline = `On pace with your last ${priorCount} session${priorCount !== 1 ? 's' : ''}`;
-            sub = `Within ±10% of your 4-week average. Consistency is the goal.`;
-            accent = colors.primary;
-          }
-          return (
-            <View style={[styles.compareCard, { borderColor: withAlpha(accent, 0.251) }]}>
-              <View style={styles.compareIconWrap}>
-                <Ionicons
-                  name={verdict === 'best' ? 'trophy-outline' : verdict === 'up' ? 'trending-up-outline' : verdict === 'down' ? 'trending-down-outline' : 'analytics-outline'}
-                  size={18}
-                  color={accent}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.compareHeadline, { color: accent }]}>{headline}</Text>
-                <Text style={styles.compareSub}>{sub}</Text>
-              </View>
-            </View>
-          );
-        })()}</RevealSection>
-        )}
 
         {/* NEW-002 rebuild: the post-workout partner beat — where a cheer is
             most natural (you just trained; here is where your partner stands).
@@ -825,7 +827,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel={partners.cheerEnabled ? 'Send a cheer' : 'Cheer sent'}
               >
-                <Ionicons name="hand-left-outline" size={14} color={partners.cheerEnabled ? colors.onPrimary : colors.textSecondary} />
+                <Ionicons name="hand-left-outline" size={14} color={partners.cheerEnabled ? colors.primary : colors.textSecondary} />
                 <Text style={[styles.partnerCheerText, !partners.cheerEnabled && styles.partnerCheerTextDone]}>
                   {partners.cheerEnabled ? 'Cheer' : 'Sent'}
                 </Text>
@@ -917,7 +919,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 'These targets are personalised and adjust over time based on how your body responds.'
               } />
             </View>
-            {musclesWorked.map(muscle => {
+            {/* D3: one compressed card, hairline dividers between muscles,
+                instead of a stack of same-weight bordered cards. */}
+            <View style={styles.volumeCard}>
+            {musclesWorked.map((muscle, mi) => {
               const data = weeklyVolume[muscle];
               const { label, status } = getVolumeStatus(data.workingSets, muscle);
               const color = volumeStatusColor(status);
@@ -925,7 +930,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               const why = getVolumeWhy(muscle, data.workingSets, status);
               const isExpanded = expandedVolumeWhy === muscle;
               return (
-                <View key={muscle} style={styles.volumeRow}>
+                <View key={muscle} style={[styles.volumeRow, mi === musclesWorked.length - 1 && styles.volumeRowLast]}>
                   <View style={styles.volumeRowMain}>
                     <Text style={styles.muscleName}>{MUSCLE_DISPLAY_NAMES[muscle] || muscle}</Text>
                     <View style={[styles.statusBadge, { backgroundColor: withAlpha(color, 0.133) }]}>
@@ -965,6 +970,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 </View>
               );
             })}
+            </View>
           </View>
           </RevealSection>
         )}
@@ -1050,13 +1056,18 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </RevealSection>
         )}
 
+        {/* D3 (design audit 03): the "tell the coach" zone — the session's
+            inputs grouped into ONE distinct card at the end, separated from
+            the celebratory "what happened" zone above. Same controls, same
+            handlers; only the grouping and header treatment changed. */}
         {!readOnly && (
           <RevealSection delay={1580}>
-          <View style={styles.section}>
+          <View style={styles.coachZoneCard}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>How did it feel?</Text>
+              <Text style={styles.sectionTitle}>Tell your coach</Text>
               <Text style={styles.optionalLabel}>optional</Text>
             </View>
+            <Text style={styles.coachZoneSubHeading}>How did it feel?</Text>
             <TouchableOpacity
               style={styles.feedbackToggleBtn}
               onPress={() => setFeedbackExpanded(e => !e)}
@@ -1094,6 +1105,17 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 />
               </View>
             )}
+            <View style={styles.coachZoneDivider} />
+            <Text style={styles.coachZoneSubHeading}>Notes for next time</Text>
+            <TextInput
+              style={styles.nextTimeNoteInput}
+              value={nextTimeNote}
+              onChangeText={setNextTimeNote}
+              placeholder="Anything to remember for next session? e.g. try 85kg, wider grip, reduce volume…"
+              placeholderTextColor={colors.textMuted}
+              multiline
+              numberOfLines={3}
+            />
           </View>
           </RevealSection>
         )}
@@ -1105,26 +1127,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               <Ionicons name="bookmark-outline" size={18} color={colors.textSecondary} />
               <Text style={styles.templateBtnText}>Save as Workout Template</Text>
             </TouchableOpacity>
-          </View>
-          </RevealSection>
-        )}
-
-        {!readOnly && (
-          <RevealSection delay={1820}>
-          <View style={styles.section}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Notes for next time</Text>
-              <Text style={styles.optionalLabel}>optional</Text>
-            </View>
-            <TextInput
-              style={styles.nextTimeNoteInput}
-              value={nextTimeNote}
-              onChangeText={setNextTimeNote}
-              placeholder="Anything to remember for next session? e.g. try 85kg, wider grip, reduce volume…"
-              placeholderTextColor={colors.textMuted}
-              multiline
-              numberOfLines={3}
-            />
           </View>
           </RevealSection>
         )}
@@ -1144,7 +1146,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </TouchableOpacity>
           {!readOnly && (
             <TouchableOpacity style={styles.shareFooterBtn} onPress={handleShareCard} accessibilityRole="button" accessibilityLabel="Share session card">
-              <Ionicons name="share-social-outline" size={20} color={colors.onPrimary} />
+              <Ionicons name="share-social-outline" size={20} color={colors.primary} />
             </TouchableOpacity>
           )}
         </View>
@@ -1234,13 +1236,17 @@ function RevealSection({ delay = 0, children }) {
   );
 }
 
-// StatBox renders a single hero stat. When the value is a pure
+// StatBox renders a single stat. When the value is a pure
 // number-like string (no letters), the value animates from 0 up to
 // the target across ~900ms with an ease-out curve. The user sees
 // "Total kg: 4,000 → 8,432 → 12,800" tick by rather than the number
 // just appearing, gives the summary a cinematic beat. Reduce-motion
 // users get the final value immediately.
-function StatBox({ icon, value, label, tooltip, animateOrder = 0 }) {
+//
+// D3: `hero` renders the same animated counter at display size for the
+// screen's one headline number (tonnage), without the box chrome; the
+// three compact boxes below keep the original treatment.
+function StatBox({ icon, value, label, tooltip, animateOrder = 0, hero = false }) {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   // Parse the value to detect whether it's "10,432 kg" (number with
   // optional suffix) or "12m" (number + unit) or "8" (pure number).
@@ -1293,9 +1299,21 @@ function StatBox({ icon, value, label, tooltip, animateOrder = 0 }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
+  if (hero) {
+    return (
+      <Animated.View style={[styles.heroValueWrap, { opacity, transform: [{ translateY }] }]}>
+        <Text style={styles.heroValue}>{displayed}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
+          <Text style={styles.heroValueLabel}>{label}</Text>
+          {tooltip ? <InfoTooltip size={11} text={tooltip} /> : null}
+        </View>
+      </Animated.View>
+    );
+  }
+
   return (
     <Animated.View style={[styles.statBox, { opacity, transform: [{ translateY }] }]}>
-      <Ionicons name={icon} size={20} color={colors.primary} />
+      <Ionicons name={icon} size={20} color={colors.textSecondary} />
       <Text style={styles.statValue}>{displayed}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
         <Text style={styles.statLabel}>{label}</Text>
@@ -1362,13 +1380,19 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   partnerBeatText: { ...type.bodySm, flex: 1, color: colors.textPrimary },
+  // D3: amber tint, not a second amber fill — the hero numeral is this
+  // screen's one amber object.
   partnerCheerBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    backgroundColor: colors.primary, borderRadius: radius.full,
+    backgroundColor: colors.primaryBg, borderRadius: radius.full,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm, minHeight: 40,
   },
-  partnerCheerBtnDone: { backgroundColor: withAlpha(colors.border, alpha.edge) },
-  partnerCheerText: { ...type.label, color: colors.onPrimary, fontSize: fontSize.xs },
+  partnerCheerBtnDone: {
+    backgroundColor: withAlpha(colors.border, alpha.edge),
+    borderColor: colors.border,
+  },
+  partnerCheerText: { ...type.label, color: colors.primary, fontSize: fontSize.xs },
   partnerCheerTextDone: { color: colors.textSecondary },
   // D2 programme-arc strip wrapper — surface card matching the other summary
   // sections, holding the reused BlockShapeCard (dots + effort word).
@@ -1378,12 +1402,34 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   blockArcName: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
-  statBox: {
-    flex: 1, minWidth: '45%', backgroundColor: colors.surface, borderRadius: radius.md,
-    padding: spacing.lg, alignItems: 'center', gap: spacing.xs, borderWidth: 1, borderColor: colors.border,
+  // D3 hero: the one elevated object on the screen (surfaceElevated ranks
+  // the hero, design audit 03 rule 4), carrying the display-size tonnage.
+  heroCard: {
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border,
+    padding: spacing.xl,
+    gap: spacing.md,
+    alignItems: 'center',
   },
-  statValue: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary },
+  heroValueWrap: { alignItems: 'center', gap: spacing.xs },
+  heroValue: { ...type.num('display'), color: colors.primary },
+  heroValueLabel: { ...type.caption, color: colors.textSecondary },
+  verdictRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
+    alignSelf: 'stretch',
+    borderTopWidth: 1, borderTopColor: colors.borderSubtle,
+    paddingTop: spacing.md,
+  },
+  verdictHeadline: { ...type.bodyStrong },
+  verdictSub: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xxs },
+  // The three remaining stats step down to one compact row under the hero.
+  statsGrid: { flexDirection: 'row', gap: spacing.md },
+  statBox: {
+    flex: 1, backgroundColor: colors.surface, borderRadius: radius.md,
+    padding: spacing.md, alignItems: 'center', gap: spacing.xs, borderWidth: 1, borderColor: colors.border,
+  },
+  statValue: { ...type.num('h3'), color: colors.textPrimary },
   statLabel: { ...type.caption, color: colors.textSecondary },
   prRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
@@ -1394,13 +1440,22 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: colors.border },
   section: { gap: spacing.md },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  sectionTitle: { ...type.label, color: colors.textSecondary },
+  // D3: real section headers (design audit 03 rule 3) — the D0 `title` role,
+  // not a body-sized label.
+  sectionTitle: { ...type.title, color: colors.textPrimary },
   optionalLabel: { ...type.caption, color: colors.textMuted },
+  // D3: the weekly-volume rows live in ONE card with hairline dividers.
+  volumeCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border,
+    overflow: 'hidden',
+  },
   volumeRow: {
     flexDirection: 'column', gap: spacing.xs,
-    backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md,
-    borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
+  volumeRowLast: { borderBottomWidth: 0 },
   volumeRowMain: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
   },
@@ -1420,13 +1475,21 @@ const styles = StyleSheet.create({
   },
   statusBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.sm },
   statusText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
+  // D3 "tell the coach" zone: the session's inputs as one distinct card.
+  coachZoneCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border,
+    padding: spacing.lg, gap: spacing.md,
+  },
+  coachZoneSubHeading: { ...type.label, color: colors.textSecondary },
+  coachZoneDivider: { height: 1, backgroundColor: colors.borderSubtle },
   feedbackToggleBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg,
+    backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md,
     borderWidth: 1, borderColor: colors.border,
   },
   feedbackToggleBtnText: { fontSize: fontSize.md, color: colors.textSecondary, fontWeight: fontWeight.medium },
-  feedbackCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.lg, borderWidth: 1, borderColor: colors.border },
+  feedbackCard: { gap: spacing.lg, paddingTop: spacing.xs },
   // COMP-015 confirmation row
   adjustedSummaryRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
@@ -1439,7 +1502,8 @@ const styles = StyleSheet.create({
   blockRecapRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.primary,
+    // D3: tinted edge, not a solid amber border (amber-inflation rule).
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginBottom: spacing.md,
   },
   blockRecapText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
@@ -1451,13 +1515,15 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: radius.xl, backgroundColor: colors.surface2,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
   },
-  ratingBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  // D3: selected state uses the app-wide chip grammar (tint + amber edge,
+  // see components/Chip.js), not a full amber fill.
+  ratingBtnActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
   ratingBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textSecondary },
-  ratingBtnTextActive: { color: colors.onPrimary },
+  ratingBtnTextActive: { color: colors.primary },
   ratingValueLabel: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium },
   notesInput: {
     ...type.body,
-    backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg,
+    backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.lg,
     color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 80,
   },
   nextTimeNoteInput: {
@@ -1484,9 +1550,14 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     alignItems: 'center',
   },
+  // D3: quiet close — the summary's job is done, so leaving it is not the
+  // screen's hero. The tonnage numeral carries the one amber; the footer
+  // actions are neutral (Close) and amber-outline (share).
   doneBtn: {
     flex: 1,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: radius.lg,
     paddingVertical: spacing.lg,
     alignItems: 'center',
@@ -1495,13 +1566,15 @@ const styles = StyleSheet.create({
   btnDisabled: { opacity: 0.6 },
   doneBtnText: {
     ...type.title,
-    color: colors.onPrimary,
+    color: colors.textPrimary,
   },
   shareFooterBtn: {
     width: 52,
     height: 52,
     borderRadius: radius.lg,
-    backgroundColor: colors.primary,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, alpha.strong),
+    backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1575,21 +1648,4 @@ const styles = StyleSheet.create({
     borderRadius: radius.md, backgroundColor: colors.primary,
   },
   templateModalSaveText: { ...type.label, color: colors.onPrimary },
-
-  // 4-week comparison card, same surface treatment as other summary
-  // cards but borderColor is set inline per-verdict (gold for best, green
-  // for up, neutral for on-pace, muted for down).
-  compareCard: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1,
-    marginTop: spacing.md,
-  },
-  compareIconWrap: {
-    width: 36, height: 36, borderRadius: circle(36),
-    backgroundColor: colors.surface2,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  compareHeadline: { fontSize: fontSize.md, fontWeight: fontWeight.bold },
-  compareSub: { ...type.captionTight, color: colors.textMuted, marginTop: 3 },
 });

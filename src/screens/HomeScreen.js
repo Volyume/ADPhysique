@@ -1596,67 +1596,54 @@ export default function HomeScreen({ navigation, route }) {
           </TouchableOpacity>
         )}
 
-        {/* ── Last session ── */}
+        {/* ── Last session (D3, design audit 03): demoted to one slim row.
+            Same tap-through to history, same Repeat action, same stats —
+            compressed to a label line, a one-line name and an inline meta
+            line instead of a card-sized sibling to the hero. ── */}
         {lastSession && (
           <PressableCard
             style={styles.lastSessionCard}
             onPress={() => navigation.navigate('WorkoutHistory')}
             accessibilityLabel="Open workout history"
           >
-            <View style={styles.lastSessionTop}>
-              <View style={{ gap: spacing.xxs }}>
-                <Text style={styles.lastSessionLabel}>Last session</Text>
-                <Text style={styles.lastSessionRelDate}>{getRelativeDay(lastSession.startedAt)}</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.repeatBtn}
-                onPress={e => { e.stopPropagation(); handleRepeatLastSession(); }}
-                activeOpacity={0.75}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel="Repeat last session"
-              >
-                <Ionicons name="refresh-outline" size={13} color={colors.primary} />
-                <Text style={styles.repeatBtnText}>Repeat</Text>
-              </TouchableOpacity>
+            <View style={{ flex: 1, gap: spacing.xxs }}>
+              <Text style={styles.lastSessionLabel}>
+                Last session · {getRelativeDay(lastSession.startedAt)}
+              </Text>
+              <Text style={styles.lastSessionName} numberOfLines={1}>
+                {/* Prefer the plan-day name (routineName, e.g. "Day 2: Back Width
+                    & Thickness"). The workout's own `name` is overwritten at
+                    finish with an exercise-derived summary ("Cable & Iso-Lateral"),
+                    so it is only the right label for a blank session with no
+                    routine. */}
+                {lastSession.routineName || lastSession.name || 'Session'}
+              </Text>
+              {(() => {
+                const meta = [
+                  lastSession.durationMinutes ? `${lastSession.durationMinutes}m` : null,
+                  lastSession.setCount ? `${lastSession.setCount} sets` : null,
+                  lastSession.totalVolume
+                    ? `${Math.round(lastSession.totalVolume).toLocaleString('en-GB')} kg`
+                    : lastSessionTonnage
+                      ? `${Math.round(lastSessionTonnage).toLocaleString('en-GB')} kg`
+                      : null,
+                ].filter(Boolean).join(' · ');
+                return meta ? (
+                  <Text style={styles.lastSessionMeta} numberOfLines={1}>{meta}</Text>
+                ) : null;
+              })()}
             </View>
-            <Text style={styles.lastSessionName} numberOfLines={1}>
-              {/* Prefer the plan-day name (routineName, e.g. "Day 2: Back Width
-                  & Thickness"). The workout's own `name` is overwritten at
-                  finish with an exercise-derived summary ("Cable & Iso-Lateral"),
-                  so it is only the right label for a blank session with no
-                  routine. */}
-              {lastSession.routineName || lastSession.name || 'Session'}
-            </Text>
-            <View style={styles.lastSessionStatRow}>
-              {lastSession.durationMinutes ? (
-                <View style={styles.lastSessionStatPill}>
-                  <Ionicons name="time-outline" size={12} color={colors.textMuted} />
-                  <Text style={styles.lastSessionStatText}>{lastSession.durationMinutes}m</Text>
-                </View>
-              ) : null}
-              {lastSession.setCount ? (
-                <View style={styles.lastSessionStatPill}>
-                  <Ionicons name="repeat-outline" size={12} color={colors.textMuted} />
-                  <Text style={styles.lastSessionStatText}>{lastSession.setCount} sets</Text>
-                </View>
-              ) : null}
-              {lastSession.totalVolume ? (
-                <View style={styles.lastSessionStatPill}>
-                  <Ionicons name="barbell-outline" size={12} color={colors.textMuted} />
-                  <Text style={styles.lastSessionStatText}>
-                    {Math.round(lastSession.totalVolume).toLocaleString('en-GB')} kg
-                  </Text>
-                </View>
-              ) : lastSessionTonnage ? (
-                <View style={styles.lastSessionStatPill}>
-                  <Ionicons name="barbell-outline" size={12} color={colors.textMuted} />
-                  <Text style={styles.lastSessionStatText}>
-                    {Math.round(lastSessionTonnage).toLocaleString('en-GB')} kg
-                  </Text>
-                </View>
-              ) : null}
-            </View>
+            <TouchableOpacity
+              style={styles.repeatBtn}
+              onPress={e => { e.stopPropagation(); handleRepeatLastSession(); }}
+              activeOpacity={0.75}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Repeat last session"
+            >
+              <Ionicons name="refresh-outline" size={13} color={colors.primary} />
+              <Text style={styles.repeatBtnText}>Repeat</Text>
+            </TouchableOpacity>
           </PressableCard>
         )}
 
@@ -2049,12 +2036,13 @@ const styles = StyleSheet.create({
   continueTitle: { ...type.bodyStrong, color: colors.onPrimary },
   continueSub: { ...type.caption, color: withAlpha(colors.background, 0.8), marginTop: spacing.xxs },
 
-  // Hero plan card. Restrained: flat surface, one primary CTA, two
-  // discreet text links underneath. Stat goes in the eyebrow line so
-  // we don't waste a row on a coloured pill that fights the workout
-  // name for attention.
+  // Hero plan card. Restrained: one primary CTA, two discreet text links
+  // underneath. Stat goes in the eyebrow line so we don't waste a row on a
+  // coloured pill that fights the workout name for attention.
+  // D3 (design audit 03): the hero is the screen's ONLY elevated object —
+  // surfaceElevated ranks it above every flat surface card in the stack.
   heroCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
     borderRadius: radius.lg,
     padding: spacing.lg,
     borderWidth: 1,
@@ -2285,24 +2273,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
   },
 
-  // Last session
+  // Last session (D3: one slim row, not a card-sized sibling to the hero)
   lastSessionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
-    gap: spacing.sm,
-  },
-  lastSessionTop: {
-    flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between',
   },
   lastSessionLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
     color: colors.textMuted, letterSpacing: 0.2,
   },
-  lastSessionRelDate: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary,
+  lastSessionMeta: {
+    ...type.caption, color: colors.textMuted,
   },
   repeatBtn: {
     flexDirection: 'row',
@@ -2321,16 +2309,8 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   lastSessionName: {
-    ...type.title, color: colors.textPrimary,
+    ...type.label, color: colors.textPrimary,
   },
-  lastSessionStatRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs },
-  lastSessionStatPill: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    backgroundColor: colors.surface2, borderRadius: radius.full,
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  lastSessionStatText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
 
   // Change workout sheet
   sheetBackdrop: { flex: 1, backgroundColor: colors.scrim },
@@ -2525,19 +2505,21 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     flex: 1,
   },
-  // Recovery week banner
+  // Fresh coach review banner. D3 (design audit 03): banners are one slim
+  // line above the hero, not card-sized siblings — tighter padding, no
+  // extra bottom margin (the content gap carries the rhythm).
   coachBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.primaryBg, borderRadius: radius.lg,
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
-    padding: 14, marginBottom: spacing.md, gap: spacing.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.md,
   },
   // COMP-023 trial value banner, grown into the A3 coach ledger card —
   // headline row plus the live threshold rows; matches the banner system.
   trialBanner: {
-    backgroundColor: colors.primaryBg, borderRadius: radius.lg,
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginBottom: spacing.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
   trialBannerTopRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
@@ -2567,8 +2549,9 @@ const styles = StyleSheet.create({
   coachBannerBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 17 },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: withAlpha(colors.primary, alpha.tint), borderRadius: radius.md, padding: spacing.lg,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.35), marginBottom: spacing.md,
+    backgroundColor: withAlpha(colors.primary, alpha.tint), borderRadius: radius.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.35),
   },
   deloadBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
   deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
@@ -2578,10 +2561,10 @@ const styles = StyleSheet.create({
   // system's tokens (trial-banner top row shape).
   plateauBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.primaryBg, borderRadius: radius.lg,
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    marginBottom: spacing.md, gap: spacing.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    gap: spacing.md,
   },
   plateauBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
   plateauBannerText: {
@@ -2593,10 +2576,10 @@ const styles = StyleSheet.create({
   // Free-tier weekly one-liner (founder decision 4c). One line plus a
   // quiet Pro footer; matches the banner system's tokens.
   freeCoachCard: {
-    backgroundColor: colors.primaryBg, borderRadius: radius.lg,
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    marginBottom: spacing.md, gap: spacing.xs,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    gap: spacing.xs,
   },
   freeCoachTopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   freeCoachLineText: {
@@ -2658,7 +2641,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.primary,
+    // D3: tinted edge, not a solid amber border (amber-inflation rule) —
+    // "Build my plan" above is the no-plan state's one amber fill.
+    borderColor: withAlpha(colors.primary, alpha.edge),
     padding: spacing.lg,
     marginBottom: spacing.lg,
   },
