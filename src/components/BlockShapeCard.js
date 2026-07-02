@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type, withAlpha, circle } from '../styles/theme';
 
 /**
  * BlockShapeCard (COMP-010) — the shape of the training block as a row of
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
   dotsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   dotCol: { flex: 1, alignItems: 'center', gap: spacing.xs },
   dot: {
-    width: 14, height: 14, borderRadius: 7,
+    width: 14, height: 14, borderRadius: circle(14),
     backgroundColor: colors.surface3, borderWidth: 1, borderColor: colors.border,
   },
   // Past weeks: quietly done. Future: outlined. Current: filled amber with a
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
   dotFuture: { backgroundColor: 'transparent', borderColor: colors.border },
   dotCurrent: {
     backgroundColor: colors.primary, borderColor: colors.primary,
-    width: 16, height: 16, borderRadius: 8,
+    width: 16, height: 16, borderRadius: circle(16),
   },
   dotRecovery: { backgroundColor: withAlpha(colors.primary, 0.22), borderColor: withAlpha(colors.primary, 0.45) },
   dotLabel: { fontSize: fontSize.micro, color: colors.textMuted },

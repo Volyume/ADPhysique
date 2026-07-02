@@ -25,7 +25,7 @@ import Button from '../components/Button';
 import { useToast } from '../components/Toast';
 import { appAlert } from '../components/AppAlert';
 import useAppStore from '../store/useAppStore';
-import { colors, fontSize, fontWeight, spacing, radius, hitSlop, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, hitSlop, type, circle } from '../styles/theme';
 import { mealSlotLabel } from '../lib/food/mealSlots';
 import { todayLocalKey, parseLocalDay } from '../lib/dayKey';
 import {
@@ -812,7 +812,7 @@ const styles = StyleSheet.create({
   dayBtnOn: { backgroundColor: colors.surface },
   dayLetter: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   dayLetterOn: { color: colors.textPrimary },
-  dayDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.border, marginTop: 3 },
+  dayDot: { width: 5, height: 5, borderRadius: circle(5), backgroundColor: colors.border, marginTop: 3 },
   dayDotTrain: { backgroundColor: colors.primary },
   dayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   typeChip: { backgroundColor: colors.surface, borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: 4, borderWidth: 1, borderColor: colors.border },

@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
   },
   dropdownItemBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
   dropdownItemActive: { backgroundColor: colors.primaryBg },
-  dropdownItemLabel: { ...type.body, color: colors.textSecondary, marginBottom: 1 },
+  dropdownItemLabel: { ...type.body, color: colors.textSecondary, marginBottom: spacing.hair },
   dropdownItemLabelActive: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
   dropdownItemSub: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
 });

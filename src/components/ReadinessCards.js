@@ -14,7 +14,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle } from '../styles/theme';
 import AnimatedEntrance from './AnimatedEntrance';
 import InfoTooltip from './InfoTooltip';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
   mfSub: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16, marginTop: spacing.xxs },
   mfChipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   mfChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.full, borderWidth: 1 },
-  mfDot: { width: 6, height: 6, borderRadius: 3, flexShrink: 0 },
+  mfDot: { width: 6, height: 6, borderRadius: circle(6), flexShrink: 0 },
   mfChipName: { fontSize: fontSize.xs, fontWeight: fontWeight.medium },
   mfChipLabel: { fontSize: fontSize.micro, fontWeight: fontWeight.semibold },
 });

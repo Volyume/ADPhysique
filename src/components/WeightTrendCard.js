@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, radius, type, stateColors } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, stateColors, circle } from '../styles/theme';
 import VolyumeChart from './VolyumeChart';
 import { formatBodyWeight } from '../lib/units';
 
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   ewmaValue: { ...type.num('h3'), color: colors.textPrimary },
   rateValue: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.semibold, fontVariant: ['tabular-nums'] },
   insightRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs2 },
-  dot: { width: 6, height: 6, borderRadius: 3, marginTop: 6 },
+  dot: { width: 6, height: 6, borderRadius: circle(6), marginTop: 6 },
   insight: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
   maintenanceBlock: { gap: spacing.xxs },
   maintenanceValue: { fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },

@@ -20,7 +20,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, spacing, radius, type, circle } from '../styles/theme';
 import { SkeletonRow } from '../components/Skeleton';
 import BackHeader from '../components/BackHeader';
 import { useToast } from '../components/Toast';
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   sheetSub: { color: colors.textMuted, fontSize: fontSize.sm },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl },
   stepBtn: {
-    width: 48, height: 48, borderRadius: 24,
+    width: 48, height: 48, borderRadius: circle(48),
     borderWidth: 1, borderColor: colors.border,
     alignItems: 'center', justifyContent: 'center',
   },

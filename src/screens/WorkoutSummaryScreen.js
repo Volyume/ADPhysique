@@ -3,7 +3,7 @@ import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, KeyboardAvoidingView, Platform, Animated } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, withAlpha, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, withAlpha, alpha, circle } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
 import BlockShapeCard from '../components/BlockShapeCard';
 import { useFeedback } from '../components/FeedbackSheet';
@@ -1321,14 +1321,14 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: withAlpha(colors.gold, 0.376),
   },
   milestoneIconWrap: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 40, height: 40, borderRadius: circle(40),
     backgroundColor: withAlpha(colors.gold, 0.125),
     alignItems: 'center', justifyContent: 'center',
   },
   milestoneTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
   milestoneBody: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 3, lineHeight: 17 },
   milestoneShareBtn: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 36, height: 36, borderRadius: circle(36),
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: withAlpha(colors.gold, 0.125),
   },
@@ -1586,7 +1586,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   compareIconWrap: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 36, height: 36, borderRadius: circle(36),
     backgroundColor: colors.surface2,
     alignItems: 'center', justifyContent: 'center',
   },

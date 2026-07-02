@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { setGoalLockAdvanced, getGoalLockAdvanced, recordEngineTelemetry } from '../lib/database';
@@ -181,16 +181,16 @@ const styles = StyleSheet.create({
   },
   radio: {
     width: 22, height: 22,
-    borderRadius: 11,
+    borderRadius: circle(22),
     borderWidth: 2,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 1,
+    marginTop: spacing.hair,
   },
   radioActive: { borderColor: colors.primary },
   radioDot: {
-    width: 10, height: 10, borderRadius: 5,
+    width: 10, height: 10, borderRadius: circle(10),
     backgroundColor: colors.primary,
   },
   note: {

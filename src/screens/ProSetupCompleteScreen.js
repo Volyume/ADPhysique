@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
 import { VolyumeIcon } from '../components/BrandMark';
 import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
@@ -435,10 +435,10 @@ const styles = StyleSheet.create({
 
   // Matched to the wizard's continuous track, drawn full here (setup complete).
   progressTrack: {
-    height: 3, borderRadius: 2, backgroundColor: colors.border,
+    height: 3, borderRadius: radius.hair, backgroundColor: colors.border,
     overflow: 'hidden', marginBottom: spacing.sm,
   },
-  progressFill: { width: '100%', height: '100%', borderRadius: 2, backgroundColor: colors.primary },
+  progressFill: { width: '100%', height: '100%', borderRadius: radius.hair, backgroundColor: colors.primary },
   doneRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
   doneEyebrow: { ...type.num('caption'), color: colors.primary, fontWeight: fontWeight.semibold },
 
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
   // fill matches the Diary ring's track colour.
   ringWrap: { alignItems: 'center', marginTop: spacing.lg, marginBottom: spacing.md },
   ring: {
-    width: 128, height: 128, borderRadius: 64,
+    width: 128, height: 128, borderRadius: circle(128),
     borderWidth: 13, borderColor: colors.primary,
     backgroundColor: colors.surface2,
     alignItems: 'center', justifyContent: 'center',
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
   splitRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
   splitRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
   splitBadge: {
-    width: 24, height: 24, borderRadius: 12,
+    width: 24, height: 24, borderRadius: circle(24),
     backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: colors.border,
   },
@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
   whyPlanWrap: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md, gap: spacing.sm },
   whyPlanTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
   whyPlanItem: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
-  whyPlanBullet: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary, marginTop: 7 },
+  whyPlanBullet: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.primary, marginTop: 7 },
   whyPlanText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
 
   startBtn: { marginTop: spacing.md },

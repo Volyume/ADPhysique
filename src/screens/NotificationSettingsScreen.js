@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   bannerIcon: {
-    marginTop: 1,
+    marginTop: spacing.hair,
     flexShrink: 0,
   },
   bannerText: {

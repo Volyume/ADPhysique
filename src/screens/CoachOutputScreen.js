@@ -2291,7 +2291,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 1,
+    marginTop: spacing.hair,
   },
   adjustmentContent: {
     flex: 1,

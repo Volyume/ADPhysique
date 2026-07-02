@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
   },
   freeTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  freeSubtitle: { ...type.caption, color: colors.textMuted, marginTop: 1 },
+  freeSubtitle: { ...type.caption, color: colors.textMuted, marginTop: spacing.hair },
   freeBullets: { gap: spacing.xs, paddingLeft: spacing.xs },
   freeBulletText: { ...type.caption, color: colors.textMuted, flex: 1 },
 

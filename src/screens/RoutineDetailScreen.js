@@ -3,7 +3,7 @@ import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
 import Button from '../components/Button';
 import {
   getRoutineById, getRoutineExercisesWithDetails, getAllExercises,
@@ -648,7 +648,7 @@ const styles = StyleSheet.create({
   orderBadge: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: circle(32),
     backgroundColor: colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',

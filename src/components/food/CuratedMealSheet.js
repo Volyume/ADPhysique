@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: colors.border,
   },
   addName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  addWhy: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 1 },
+  addWhy: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: spacing.hair },
   footnote: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.sm, lineHeight: fontSize.xs + 4 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   cancelBtn: {

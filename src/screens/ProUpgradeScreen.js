@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
 import Button from '../components/Button';
 import TierComparisonStrip from '../components/TierComparisonStrip';
 import { storeName } from '../lib/storeName';
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
   closeBtn: { alignSelf: 'flex-end', padding: spacing.xs, marginBottom: spacing.sm },
 
   iconWrap: {
-    width: 64, height: 64, borderRadius: 32,
+    width: 64, height: 64, borderRadius: circle(64),
     backgroundColor: colors.primaryBg,
     alignItems: 'center', justifyContent: 'center',
     alignSelf: 'center', marginBottom: spacing.lg,
@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl, gap: spacing.lg,
   },
   successCircle: {
-    width: 80, height: 80, borderRadius: 40,
+    width: 80, height: 80, borderRadius: circle(80),
     backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
     shadowColor: colors.primary, shadowOpacity: 0.4,

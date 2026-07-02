@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getYearOfLiftsData, getRecapData, getBlockReflectionData, getOpenEdPatternFlag } from '../lib/database';
@@ -647,12 +647,12 @@ const styles = StyleSheet.create({
   },
   brandRow: { alignItems: 'center', paddingTop: spacing.xs },
   pip: {
-    flex: 1, height: 3, borderRadius: 2,
+    flex: 1, height: 3, borderRadius: radius.hair,
     backgroundColor: colors.border,
     overflow: 'hidden',
   },
-  pipFill: { height: '100%', borderRadius: 2, backgroundColor: colors.primary },
-  pipFillFull: { height: '100%', width: '100%', borderRadius: 2, backgroundColor: colors.textSecondary },
+  pipFill: { height: '100%', borderRadius: radius.hair, backgroundColor: colors.primary },
+  pipFillFull: { height: '100%', width: '100%', borderRadius: radius.hair, backgroundColor: colors.textSecondary },
   shareBtn: {
     marginLeft: spacing.sm,
     width: 30, height: 30,
@@ -689,7 +689,7 @@ const styles = StyleSheet.create({
   },
   iconWrap: {
     width: 64, height: 64,
-    borderRadius: 32,
+    borderRadius: circle(64),
     backgroundColor: colors.borderSubtle,
     alignItems: 'center', justifyContent: 'center',
     alignSelf: 'flex-start',

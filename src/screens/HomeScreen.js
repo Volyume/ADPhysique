@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import BlockShapeCard from '../components/BlockShapeCard';
 import Button from '../components/Button';
@@ -1002,7 +1002,7 @@ export default function HomeScreen({ navigation }) {
         {/* ── Nutrition phase sync banner ── */}
         {showPhaseBanner && (
           <View style={styles.phaseBanner}>
-            <Ionicons name="information-circle-outline" size={18} color={colors.primary} style={{ marginTop: 1 }} />
+            <Ionicons name="information-circle-outline" size={18} color={colors.primary} style={{ marginTop: spacing.hair }} />
             <Text style={styles.phaseBannerText} numberOfLines={3}>
               Your nutrition targets are set for {phaseMismatch.savedPhaseLabel}. Update them under You to reflect your current plan.
             </Text>
@@ -1149,7 +1149,7 @@ export default function HomeScreen({ navigation }) {
         {showFreeCoachLine && (
           <View style={styles.freeCoachCard}>
             <View style={styles.freeCoachTopRow}>
-              <Ionicons name="pulse-outline" size={16} color={colors.primary} style={{ marginTop: 1 }} />
+              <Ionicons name="pulse-outline" size={16} color={colors.primary} style={{ marginTop: spacing.hair }} />
               <Text style={styles.freeCoachLineText}>{freeCoachLine}</Text>
               <TouchableOpacity
                 onPress={dismissFreeCoachLine}
@@ -2088,11 +2088,11 @@ const styles = StyleSheet.create({
   welcomeStepNum: {
     width: 22,
     height: 22,
-    borderRadius: 11,
+    borderRadius: circle(22),
     backgroundColor: withAlpha(colors.primary, 0.15),
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 1,
+    marginTop: spacing.hair,
   },
   welcomeStepNumText: {
     fontSize: fontSize.xs,
@@ -2126,7 +2126,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   noPlanIconWrap: {
-    width: 56, height: 56, borderRadius: 28,
+    width: 56, height: 56, borderRadius: circle(56),
     backgroundColor: colors.primaryBg, borderWidth: 1.5, borderColor: withAlpha(colors.primary, 0.314),
     alignItems: 'center', justifyContent: 'center',
     marginBottom: spacing.xs,
@@ -2259,7 +2259,7 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
   },
   sheetHandle: {
-    width: 36, height: 4, borderRadius: 2,
+    width: 36, height: 4, borderRadius: radius.hair,
     backgroundColor: colors.border, alignSelf: 'center', marginBottom: spacing.lg,
   },
   sheetTitle: {

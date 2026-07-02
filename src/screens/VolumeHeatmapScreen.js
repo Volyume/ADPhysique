@@ -3,7 +3,7 @@ import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, stateColors } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, stateColors, circle } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import InfoTooltip from '../components/InfoTooltip';
 import BodyDiagramHeatmap from '../components/BodyDiagramHeatmap';
@@ -476,7 +476,7 @@ export default function VolumeHeatmapScreen() {
 function LegendItem({ color, label }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color }} />
+      <View style={{ width: 10, height: 10, borderRadius: circle(10), backgroundColor: color }} />
       <Text style={{ fontSize: fontSize.micro, color: colors.textMuted }}>{label}</Text>
     </View>
   );
@@ -663,7 +663,7 @@ const styles = StyleSheet.create({
   freshnessDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: circle(8),
   },
   lastTrainedChip: {
     fontSize: fontSize.xs,

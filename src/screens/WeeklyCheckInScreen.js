@@ -32,7 +32,7 @@ import * as haptics from '../lib/haptics';
 import { summariseWeekCardio, cardioComplianceFromLog } from '../lib/cardio/cardioEngine';
 import { getRollupsForRange, getPlannedDaysInRange, confirmPlannedDay } from '../lib/food/db';
 import { getCycleTracking, shouldShowCycleQuestion } from '../lib/cyclePrefs';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
 import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder, scheduleWeeklyCoachReady, scheduleMissedCheckinFollowups } from '../lib/notifications';
 import { logError, logWarn } from '../lib/errorLog';
 import { audit } from '../lib/observability';
@@ -1534,7 +1534,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xxl, gap: spacing.lg,
   },
   gateIconWrap: {
-    width: 72, height: 72, borderRadius: 36,
+    width: 72, height: 72, borderRadius: circle(72),
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm,
   },
@@ -1589,7 +1589,7 @@ const styles = StyleSheet.create({
 
   stepBar: { flexDirection: 'row', gap: spacing.xs },
   stepDot: {
-    width: 20, height: 4, borderRadius: 2,
+    width: 20, height: 4, borderRadius: radius.hair,
     backgroundColor: colors.surface3,
   },
   stepDotDone: { backgroundColor: withAlpha(colors.primary, 0.376) },

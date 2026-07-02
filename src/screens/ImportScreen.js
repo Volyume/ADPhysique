@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
 import PressableCard from '../components/PressableCard';
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textSecondary,
   },
-  dot: { width: 8, height: 8, borderRadius: 4 },
+  dot: { width: 8, height: 8, borderRadius: circle(8) },
 
   unmappedBlock: {
     marginTop: spacing.md,

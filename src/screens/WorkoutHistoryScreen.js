@@ -8,7 +8,7 @@ import {
   startOfMonth, getDaysInMonth, getDay,
   addMonths, subMonths, isSameDay,
 } from 'date-fns';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../styles/theme';
 import PressableCard from '../components/PressableCard';
 import Card from '../components/Card';
 import { EmptyWorkoutsIllustration } from '../components/Illustrations';
@@ -757,7 +757,7 @@ const styles = StyleSheet.create({
   dayCircle: {
     width: 30,
     height: 30,
-    borderRadius: 15,
+    borderRadius: circle(30),
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',

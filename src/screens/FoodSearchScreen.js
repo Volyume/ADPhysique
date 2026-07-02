@@ -727,7 +727,7 @@ export default function FoodSearchScreen({ navigation, route }) {
                 and honest ("most", "basically") since sugar alcohols and trace
                 seasoning calories aren't literally zero. */}
             <View style={styles.suggestNoteRow}>
-              <Ionicons name="leaf-outline" size={13} color={colors.textMuted} style={{ marginTop: 1 }} />
+              <Ionicons name="leaf-outline" size={13} color={colors.textMuted} style={{ marginTop: spacing.hair }} />
               <Text style={styles.suggestNote}>
                 A starting point, not a rule. Season and tweak to taste: herbs, spices and most sugar-free sweeteners are basically free.
               </Text>

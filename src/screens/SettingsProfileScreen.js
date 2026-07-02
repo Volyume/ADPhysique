@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     gap: spacing.md,
   },
-  nameIcon: { marginTop: 1 },
+  nameIcon: { marginTop: spacing.hair },
   nameInput: {
     ...type.body,
     flex: 1,

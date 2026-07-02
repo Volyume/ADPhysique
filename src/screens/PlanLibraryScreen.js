@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
 import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock } from '../lib/database';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
@@ -799,7 +799,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   sheetHandle: {
-    width: 36, height: 4, borderRadius: 2,
+    width: 36, height: 4, borderRadius: radius.hair,
     backgroundColor: colors.border, alignSelf: 'center', marginBottom: spacing.sm,
   },
   quizProgress: {
@@ -807,7 +807,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   quizDot: {
-    width: 8, height: 8, borderRadius: 4,
+    width: 8, height: 8, borderRadius: circle(8),
     backgroundColor: colors.border,
   },
   quizDotActive: { backgroundColor: colors.primary },

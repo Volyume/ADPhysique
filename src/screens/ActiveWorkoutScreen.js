@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as hapticsVocab from '../lib/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
 import AnimatedRow from '../components/AnimatedRow';
@@ -1832,7 +1832,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             nextTimeNotes.forEach(note => {
               notes.push(
                 <View key={`note-${note.id}`} style={styles.nextTimeBanner}>
-                  <Ionicons name="bulb-outline" size={16} color={colors.primary} style={{ marginTop: 1 }} />
+                  <Ionicons name="bulb-outline" size={16} color={colors.primary} style={{ marginTop: spacing.hair }} />
                   <Text style={styles.nextTimeBannerText} numberOfLines={4}>{note.note}</Text>
                   <TouchableOpacity
                     onPress={async () => {
@@ -2857,7 +2857,7 @@ const styles = StyleSheet.create({
   navTabActive: { backgroundColor: colors.primaryBg },
   navTabText: { ...type.label, color: colors.textSecondary },
   navTabTextActive: { color: colors.primary },
-  navTabBadge: { width: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  navTabBadge: { width: 16, height: 16, borderRadius: circle(16), backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   navTabBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary },
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.md, paddingTop: spacing.sm, gap: spacing.sm },
@@ -3003,7 +3003,7 @@ const styles = StyleSheet.create({
   addFirstBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.onPrimary },
   sheetOverlay: { flex: 1, backgroundColor: colors.scrim },
   sheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingHorizontal: spacing.xl, paddingTop: spacing.md },
-  sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: spacing.lg },
+  sheetHandle: { width: 36, height: 4, borderRadius: radius.hair, backgroundColor: colors.border, alignSelf: 'center', marginBottom: spacing.lg },
   sheetTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.sm },
   sheetExplainer: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.lg },
   sheetOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
@@ -3043,7 +3043,7 @@ const styles = StyleSheet.create({
   supSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
   supPairCard: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, borderLeftWidth: 3, borderLeftColor: colors.primary, gap: spacing.xs },
   supPairRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  supPairChip: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  supPairChip: { width: 22, height: 22, borderRadius: circle(22), backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   supPairChipText: { color: colors.onPrimary, fontSize: fontSize.xs, fontWeight: fontWeight.bold },
   supPairName: { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
   supPairConnector: { width: 2, height: 14, backgroundColor: colors.border, marginLeft: 10 },

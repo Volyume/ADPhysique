@@ -15,7 +15,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import BottomSheet from '../BottomSheet';
-import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, circle } from '../../styles/theme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 import { planCalorieBank, maxApplicableBumpKcal } from '../../lib/food/calorieBank';
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   dayChipTextActive: { color: colors.onPrimary, fontWeight: fontWeight.bold },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl, alignSelf: 'center' },
   stepBtn: {
-    width: 48, height: 48, borderRadius: 24,
+    width: 48, height: 48, borderRadius: circle(48),
     borderWidth: 1, borderColor: colors.border,
     alignItems: 'center', justifyContent: 'center',
   },

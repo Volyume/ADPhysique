@@ -6,7 +6,7 @@
  */
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, radius, fontSize, fontWeight, type } from '../styles/theme';
+import { colors, spacing, radius, fontSize, fontWeight, type, circle } from '../styles/theme';
 import usePartners from '../hooks/usePartners';
 import { ticksLabel } from '../lib/partners/signals';
 
@@ -51,9 +51,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md, minHeight: 56,
   },
   title: { ...type.label, color: colors.textSecondary },
-  line: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary, marginTop: 1 },
+  line: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary, marginTop: spacing.hair },
   cheerDot: {
-    width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
+    width: 24, height: 24, borderRadius: circle(24), alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.primaryBg,
   },
 });

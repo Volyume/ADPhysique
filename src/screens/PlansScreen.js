@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import { SkeletonCard } from '../components/Skeleton';
 import Button from '../components/Button';
@@ -1177,7 +1177,7 @@ const styles = StyleSheet.create({
   },
   noPlanCardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   noPlanCardIcon: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 36, height: 36, borderRadius: circle(36),
     backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
   },
@@ -1306,7 +1306,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
   },
   blockCardIconWrap: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 36, height: 36, borderRadius: circle(36),
     backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
   },

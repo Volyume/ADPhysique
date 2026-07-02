@@ -1536,10 +1536,10 @@ const styles = StyleSheet.create({
   },
 
   progressTrack: {
-    height: 3, borderRadius: 2, backgroundColor: colors.border,
+    height: 3, borderRadius: radius.hair, backgroundColor: colors.border,
     overflow: 'hidden', marginBottom: spacing.sm,
   },
-  progressFill: { height: '100%', borderRadius: 2, backgroundColor: colors.primary },
+  progressFill: { height: '100%', borderRadius: radius.hair, backgroundColor: colors.primary },
 
   stepCount: { ...type.num('caption'), color: colors.textMuted, marginBottom: spacing.xs },
   stepTitle: {

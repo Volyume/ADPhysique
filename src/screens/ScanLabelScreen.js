@@ -35,7 +35,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Camera, useCameraDevice } from 'react-native-vision-camera';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, spacing, radius, type, circle } from '../styles/theme';
 import Button from '../components/Button';
 import NetInfo from '@react-native-community/netinfo';
 import { isOcrConfigured, recogniseText, recogniseBlocks } from '../lib/food/ocr';
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   captureBtn: {
-    width: 72, height: 72, borderRadius: 36,
+    width: 72, height: 72, borderRadius: circle(72),
     backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
     // eslint-disable-next-line no-restricted-syntax -- white capture-ring is camera-UI convention, sits over the live preview
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
   captureBtnDisabled: { opacity: 0.6 },
   skipBtn: { marginTop: spacing.md, paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
   skipText: { ...type.body, color: colors.textPrimary, backgroundColor: colors.scrim, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.sm },
-  captureInner: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.camera },
+  captureInner: { width: 48, height: 48, borderRadius: circle(48), backgroundColor: colors.camera },
   fallbackWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl },
   fallbackTitle: {
     ...type.title, color: colors.textPrimary,

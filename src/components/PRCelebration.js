@@ -10,7 +10,7 @@ import {
 import * as haptics from '../lib/haptics';
 import { Ionicons } from '@expo/vector-icons';
 import useAppStore from '../store/useAppStore';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle } from '../styles/theme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const NUM_PARTICLES = 40;
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 88,
     height: 88,
-    borderRadius: 44,
+    borderRadius: circle(88),
     backgroundColor: withAlpha(colors.gold, 0.125),
     alignItems: 'center',
     justifyContent: 'center',
@@ -358,6 +358,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.textPrimary,
     fontWeight: fontWeight.bold,
-    marginTop: 1,
+    marginTop: spacing.hair,
   },
 });

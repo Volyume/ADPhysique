@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format } from 'date-fns';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle } from '../styles/theme';
 import { formatEnergy, energyUnitLabel } from '../lib/format';
 import InfoTooltip from '../components/InfoTooltip';
 import { useToast } from '../components/Toast';
@@ -1370,7 +1370,7 @@ const styles = StyleSheet.create({
   fastSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
   fineTuneLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, minHeight: 44 },
   fineTuneText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
-  eduIconWrap: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
+  eduIconWrap: { width: 32, height: 32, borderRadius: circle(32), backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
   eduTitle: { ...type.label, color: colors.textPrimary },
   eduBody: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: spacing.xxs, lineHeight: 17 },
   pageSubtitle: {
@@ -1674,7 +1674,7 @@ const styles = StyleSheet.create({
   mealDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: circle(8),
     backgroundColor: colors.primary,
     opacity: 0.7,
   },
@@ -1698,7 +1698,7 @@ const styles = StyleSheet.create({
   mealCountChip: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: circle(44),
     backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1723,7 +1723,7 @@ const styles = StyleSheet.create({
     right: 4,
     width: 6,
     height: 6,
-    borderRadius: 3,
+    borderRadius: circle(6),
     backgroundColor: colors.primary,
   },
   mealCountRecCaption: {

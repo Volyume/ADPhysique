@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   },
   entryMain: { flex: 1 },
   entryName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
-  entryBrand: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 1 },
+  entryBrand: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.hair },
   entryQuantity: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xxs },
   entryMacros: { alignItems: 'flex-end' },
   entryKcal: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },

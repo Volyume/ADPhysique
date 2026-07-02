@@ -11,7 +11,7 @@
  */
 
 import { View, Text, StyleSheet, Pressable, TextInput } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, radius } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, radius, circle } from '../styles/theme';
 import { selection as hapticSelection } from '../lib/haptics';
 import { CANCEL_REASONS, FREE_TEXT_REASONS, FREE_TEXT_PROMPT } from '../lib/cancelReason';
 
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
   radio: {
     width: 20,
     height: 20,
-    borderRadius: 10,
+    borderRadius: circle(20),
     borderWidth: 2,
     borderColor: colors.textMuted,
     alignItems: 'center',
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   radioDot: {
     width: 10,
     height: 10,
-    borderRadius: 5,
+    borderRadius: circle(10),
     backgroundColor: colors.primary,
   },
   rowText: {

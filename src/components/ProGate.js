@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, circle } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import TodaysPlateTeaser from './food/TodaysPlateTeaser';
 import TierComparisonStrip from './TierComparisonStrip';
@@ -268,11 +268,11 @@ const styles = StyleSheet.create({
     alignItems: 'center', gap: spacing.md,
   },
   sheetHandle: {
-    width: 36, height: 4, borderRadius: 2,
+    width: 36, height: 4, borderRadius: radius.hair,
     backgroundColor: colors.border, marginBottom: spacing.sm,
   },
   sheetIconWrap: {
-    width: 60, height: 60, borderRadius: 30,
+    width: 60, height: 60, borderRadius: circle(60),
     backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center',
   },
   sheetTitle: {
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl, gap: spacing.md,
   },
   lockedIcon: {
-    width: 64, height: 64, borderRadius: 32,
+    width: 64, height: 64, borderRadius: circle(64),
     backgroundColor: colors.primaryBg,
     alignItems: 'center', justifyContent: 'center',
     marginBottom: spacing.sm,

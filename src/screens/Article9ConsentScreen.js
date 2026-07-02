@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 1,
+    marginTop: spacing.hair,
   },
   checkboxChecked: {
     borderColor: colors.primary,

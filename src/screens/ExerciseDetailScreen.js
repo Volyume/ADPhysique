@@ -1080,7 +1080,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 1,
+    marginTop: spacing.hair,
   },
   stepNumberText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.primary },
   stepText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },

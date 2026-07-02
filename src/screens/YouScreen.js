@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Application from 'expo-application';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import PressableCard from '../components/PressableCard';
 import { ProBadge } from '../components/ProGate';
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg, borderWidth: 1, borderColor: colors.border,
   },
   avatar: {
-    width: 56, height: 56, borderRadius: 28,
+    width: 56, height: 56, borderRadius: circle(56),
     backgroundColor: colors.primaryBg, borderWidth: 2, borderColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
   },

@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 
-import { colors, fontSize, fontWeight, spacing, radius, volumeColors, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, volumeColors, type, circle } from '../styles/theme';
 import Card from '../components/Card';
 import ScreenHeader from '../components/ScreenHeader';
 import { SkeletonCard } from '../components/Skeleton';
@@ -596,7 +596,7 @@ function InsightRow({ insight, onDismiss }) {
   const sev = SEVERITY_STYLE[insight.severity ?? 0] ?? SEVERITY_STYLE[0];
   return (
     <View style={[styles.insightRow, { borderLeftColor: sev.color }]}>
-      <Ionicons name={sev.icon} size={18} color={sev.color} style={{ marginTop: 1 }} />
+      <Ionicons name={sev.icon} size={18} color={sev.color} style={{ marginTop: spacing.hair }} />
       <Text style={styles.insightCopy} numberOfLines={5}>{insight.copy}</Text>
       <TouchableOpacity
         onPress={onDismiss}
@@ -822,7 +822,7 @@ const styles = StyleSheet.create({
   volSummaryFlagText: { fontSize: fontSize.micro, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
   volSummaryClear: { fontSize: fontSize.micro, color: colors.textMuted },
   volLegendItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  volLegendDot: { width: 8, height: 8, borderRadius: 4 },
+  volLegendDot: { width: 8, height: 8, borderRadius: circle(8) },
 
   // ── PR Sparkline ──
   windowToggle: {
@@ -838,7 +838,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-end', gap: spacing.xs, minHeight: 60,
   },
   prBarCol:  { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
-  prBar:     { width: '100%', borderRadius: 2 },
+  prBar:     { width: '100%', borderRadius: radius.hair },
   prBarCount: { fontSize: fontSize.micro, color: colors.gold, marginTop: spacing.xxs, fontWeight: fontWeight.bold, fontVariant: ['tabular-nums'] },
   prEmpty:   {
     backgroundColor: colors.surface, borderRadius: radius.md,

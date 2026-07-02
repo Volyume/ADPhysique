@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   handle: {
     alignSelf: 'center',
     width: 36, height: 4,
-    borderRadius: 2,
+    borderRadius: radius.hair,
     backgroundColor: colors.border,
     marginBottom: spacing.md,
   },
