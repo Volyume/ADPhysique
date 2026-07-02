@@ -85,7 +85,7 @@ describe('fit rule 4: the JS-thread Animated API is a frozen allowlist', () => {
     'screens/ActiveWorkoutScreen.js',
     'screens/ExerciseDetailScreen.js',
     'screens/ProOnboardingScreen.js',
-    'screens/ProSetupCompleteScreen.js',
+    // ProSetupCompleteScreen left this list in E9 (staged Reanimated reveal).
     'screens/WelcomeScreen.js',
     'screens/WorkoutSummaryScreen.js',
     'screens/YearOfLiftsScreen.js',
