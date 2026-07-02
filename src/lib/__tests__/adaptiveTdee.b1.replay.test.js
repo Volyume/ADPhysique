@@ -137,6 +137,10 @@ describe('B1 replay corpus — runWeeklyCoach (integration seam)', () => {
     const out = runWeeklyCoach(baseCoachInputs({
       checkin: null,
       recentIntakeAvgKcal: 2350, recentIntakeDaysLogged: 6,
+      // Founder decision 2026-07-02: the stand-in needs a completed check-in
+      // within 14 days. R6 models ONE skipped week (last week's check-in
+      // exists), so the resize still fires and the snapshot is unchanged.
+      lastCheckinAt: NOW - 7 * DAY,
     }));
     expect({
       calories: out.adjustments?.calories ?? null,
@@ -163,5 +167,44 @@ describe('B1 replay corpus — runWeeklyCoach (integration seam)', () => {
     }));
     expect((out.adjustments?.calories?.change ?? 0) <= 0 ? (out.adjustments?.calories?.change ?? 0) === 0 : true).toBe(true);
     expect(out.adjustments?.calories?.change ?? 0).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('B1 stand-in window (Wave-3 review, founder decision 2026-07-02)', () => {
+  // The food-diary stand-in only unfreezes recalibration while a completed
+  // check-in exists within the last 14 days. One skipped week adjusts (R6);
+  // a user whose wellbeing capture has gone dark returns to the old freeze,
+  // because the cycle flag, energy score and most ED-detector signals only
+  // exist inside a check-in. Missing lastCheckinAt fails toward the freeze.
+  const skippedWithFood = (over = {}) => baseCoachInputs({
+    checkin: null,
+    recentIntakeAvgKcal: 2350, recentIntakeDaysLogged: 6,
+    ...over,
+  });
+
+  test('R10 check-in skipped and none completed within 14 days: FROZEN', () => {
+    const out = runWeeklyCoach(skippedWithFood({ lastCheckinAt: NOW - 20 * DAY }));
+    expect(out.adjustments?.calories ?? null).toBeNull();
+  });
+
+  test('no lastCheckinAt supplied at all: fails toward the freeze', () => {
+    const out = runWeeklyCoach(skippedWithFood());
+    expect(out.adjustments?.calories ?? null).toBeNull();
+  });
+
+  test('a check-in 13 days ago keeps the stand-in alive; 15 days ago does not', () => {
+    const alive = runWeeklyCoach(skippedWithFood({ lastCheckinAt: NOW - 13 * DAY }));
+    expect(alive.adjustments?.calories?.change ?? 0).toBeLessThan(0);
+    const dark = runWeeklyCoach(skippedWithFood({ lastCheckinAt: NOW - 15 * DAY }));
+    expect(dark.adjustments?.calories ?? null).toBeNull();
+  });
+
+  test("this week's own check-in bypasses the window (untracked cals + food diary still adjusts)", () => {
+    const out = runWeeklyCoach(baseCoachInputs({
+      checkin: { ...baseCoachInputs().checkin, calsAdherence: 'untracked' },
+      recentIntakeAvgKcal: 2350, recentIntakeDaysLogged: 6,
+      // No lastCheckinAt: the live check-in itself is the wellbeing capture.
+    }));
+    expect(out.adjustments?.calories?.change ?? 0).toBeLessThan(0);
   });
 });

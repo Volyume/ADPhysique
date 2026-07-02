@@ -436,6 +436,13 @@ export function runWeeklyCoach(inputs) {
     sex = null,
     recentIntakeAvgKcal = null,
     recentIntakeDaysLogged = 0,
+    // Wave-3 review + founder decision 2026-07-02: epoch ms of the most
+    // recently COMPLETED weekly check-in (the caller reads it from the
+    // check-in store). Gates B1's food-diary stand-in: a skipped week only
+    // adjusts while a completed check-in exists within the last 14 days,
+    // because the cycle flag, energy score and most ED-detector signals
+    // only exist inside a check-in. Missing/unknown fails toward the freeze.
+    lastCheckinAt = null,
     // ED-pattern detector context (Move #2). Optional: when not
     // supplied the detector is skipped. recentWeeklyHistory is
     // most-recent-first, each entry { energy, adherence, hasCheckin,
@@ -740,7 +747,15 @@ export function runWeeklyCoach(inputs) {
   // the check-in stays the wellbeing/safety capture and the moment the
   // adjustment is presented, but the maths refreshes weekly from weights +
   // rollups. Without food data the old rule stands: untracked never adjusts.
-  const foodDiaryStandsIn = recentIntakeDaysLogged >= 5 && Number(recentIntakeAvgKcal) > 0;
+  // Founder decision 2026-07-02 (Wave-3 review): the stand-in only unfreezes
+  // recalibration while the wellbeing capture has not gone dark. One skipped
+  // week still adjusts (B1's point); a user with no completed check-in in the
+  // last 14 days returns to the old freeze. This week's own check-in counts.
+  const checkinRecentEnough = !!checkin
+    || (Number.isFinite(lastCheckinAt) && (nowMs - lastCheckinAt) <= 14 * 86400000);
+  const foodDiaryStandsIn = recentIntakeDaysLogged >= 5
+    && Number(recentIntakeAvgKcal) > 0
+    && checkinRecentEnough;
   const canAdjustCals = (
     !cycleOverride &&
     !scoffPositive &&

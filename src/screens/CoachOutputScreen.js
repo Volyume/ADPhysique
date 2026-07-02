@@ -1497,6 +1497,10 @@ export default function CoachOutputScreen({ navigation, route }) {
         units,
         scoffPositive: (userProfile?.scoffScore ?? 0) >= 2,
         recentWeeklyHistory,
+        // Founder decision 2026-07-02 (Wave-3 review): the food-diary
+        // stand-in needs a completed check-in within 14 days. Most recent
+        // first from getRecentCheckins; created_at is the completion time.
+        lastCheckinAt: recentCheckins[0]?.createdAt ?? recentCheckins[0]?.weekStart ?? null,
         goalLockAdvanced,
         edPatternOpen,
         // Move #4 differential paywall inputs. Tier comes from
