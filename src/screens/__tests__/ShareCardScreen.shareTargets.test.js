@@ -120,13 +120,30 @@ function findByA11yLabel(tree, label) {
   return tree.root.findAll((n) => n.props && n.props.accessibilityLabel === label);
 }
 
-async function press(node) {
+// Deterministic wait-for-effect (the fix that un-quarantined the press
+// suites below): flush the event loop in bounded rounds until the observed
+// side effect appears, instead of awaiting a FIXED number of ticks. The
+// fixed-tick wait was the recorded CI flake — a slower event loop hadn't
+// settled the permission -> render -> write -> save/share chain when the
+// assertions ran. Polling on the effect itself is speed-independent; the
+// final expect fails loudly with the real condition if it never arrives.
+async function waitFor(predicate, rounds = 40) {
+  for (let i = 0; i < rounds; i++) {
+    if (predicate()) return;
+    // eslint-disable-next-line no-await-in-loop
+    await flush();
+  }
+  expect(predicate()).toBe(true);
+}
+
+async function pressAndWaitFor(node, predicate) {
   await TestRenderer.act(async () => {
     node.props.onPress();
-    for (let i = 0; i < 15; i++) await Promise.resolve();
-    await new Promise((r) => setImmediate(r));
   });
+  await waitFor(predicate);
 }
+
+const toastMessages = () => mockToastShow.mock.calls.map((c) => String(c[0]));
 
 const SESSION = {
   sessionData: {
@@ -181,58 +198,56 @@ describe('ShareCardScreen — PR selector (founder 2026-07-01)', () => {
   });
 });
 
-// QUARANTINED (2026-06-30): these press-interaction tests are flaky in CI only.
-// They drive the screen's async handlers (permission -> Skia render -> file write
-// -> save/share) through the mocked react-test-renderer and assert side effects.
-// CI's slower event loop does not settle that async chain within the test's
-// awaited ticks, so the assertions intermittently see no save/toast yet. The
-// "buttons render" test above is kept (it caught the real virtual-mock gap). The
-// ShareCard screen code is unchanged and is device-walked from green builds.
-// TODO: rework with a deterministic wait-for-effect helper, then un-skip.
-describe.skip('Save to gallery — permission paths', () => {
-  test('granted permission saves to the library without crashing', async () => {
+// Un-quarantined (2026-07-02): the 2026-06-30 CI flake was the fixed-tick
+// press() wait racing the async handler chain. Every press now waits on the
+// handler's own terminal side effect (mock call or toast) via the bounded
+// waitFor above, so the assertions are event-loop-speed independent. The
+// stale 'Share to Instagram Stories' label was also updated to the current
+// 'Share to Instagram or Facebook Story' (founder 2026-06-30 rename).
+describe('Save to gallery — permission paths', () => {
+  test('granted permission saves to the library and confirms with a toast', async () => {
     const tree = await mount(SESSION);
     const [btn] = findByA11yLabel(tree, 'Save to gallery');
-    await press(btn);
+    await pressAndWaitFor(btn, () =>
+      toastMessages().some((m) => /saved to your gallery/i.test(m)));
     expect(mockMedia.requestPermissionsAsync).toHaveBeenCalled();
     expect(mockMedia.saveToLibraryAsync).toHaveBeenCalled();
   });
 
-  test('denied permission shows a calm message and does NOT crash or save', async () => {
+  test('denied permission shows a calm message and does NOT save', async () => {
     mockMedia.requestPermissionsAsync.mockResolvedValue({ granted: false });
     const tree = await mount(SESSION);
     const [btn] = findByA11yLabel(tree, 'Save to gallery');
-    await expect(press(btn)).resolves.toBeUndefined();
+    // The denial toast is the handler's terminal effect; once it has shown,
+    // the negative assertion below observes the settled chain, not a race.
+    await pressAndWaitFor(btn, () =>
+      toastMessages().some((m) => /gallery access is needed/i.test(m)));
     expect(mockMedia.saveToLibraryAsync).not.toHaveBeenCalled();
-    const msgs = mockToastShow.mock.calls.map((c) => String(c[0]));
-    expect(msgs.some((m) => /gallery access is needed/i.test(m))).toBe(true);
   });
 });
 
-// QUARANTINED (2026-06-30): same CI-only async-timing flakiness as above.
-describe.skip('Share to Stories — goes straight to the OS share sheet', () => {
-  // The instagram-stories:// deep link can't carry the rendered image via a
-  // bare openURL (it would open an empty composer), so "Share to Stories" uses
-  // the OS share sheet, which reliably hands the PNG to Instagram or any target.
+describe('Share to Story — goes straight to the OS share sheet', () => {
+  // A direct composer intent needs a native dependency plus a Facebook App
+  // ID (see the founder-decision comment in handleShareToStories), so the
+  // Story share deliberately uses the OS share sheet, which reliably hands
+  // the PNG to Instagram, Facebook or any target — never a bare deep link
+  // that would open an empty composer.
   test('opens the OS share sheet with the rendered PNG, never a deep link', async () => {
     Linking.openURL = jest.fn();
     const tree = await mount(SESSION);
-    const [btn] = findByA11yLabel(tree, 'Share to Instagram Stories');
-    await press(btn);
-    expect(mockSharing.shareAsync).toHaveBeenCalled();
+    const [btn] = findByA11yLabel(tree, 'Share to Instagram or Facebook Story');
+    await pressAndWaitFor(btn, () => mockSharing.shareAsync.mock.calls.length > 0);
     const opts = mockSharing.shareAsync.mock.calls[0][1];
     expect(opts).toMatchObject({ mimeType: 'image/png' });
-    // No reliance on a deep link that would land the user in an empty Story.
     expect(Linking.openURL).not.toHaveBeenCalled();
   });
 
   test('sharing unavailable: shows a calm message and does not crash', async () => {
     mockSharing.isAvailableAsync.mockResolvedValue(false);
     const tree = await mount(SESSION);
-    const [btn] = findByA11yLabel(tree, 'Share to Instagram Stories');
-    await expect(press(btn)).resolves.toBeUndefined();
+    const [btn] = findByA11yLabel(tree, 'Share to Instagram or Facebook Story');
+    await pressAndWaitFor(btn, () =>
+      toastMessages().some((m) => /sharing is not available/i.test(m)));
     expect(mockSharing.shareAsync).not.toHaveBeenCalled();
-    const msgs = mockToastShow.mock.calls.map((c) => String(c[0]));
-    expect(msgs.some((m) => /sharing is not available/i.test(m))).toBe(true);
   });
 });
