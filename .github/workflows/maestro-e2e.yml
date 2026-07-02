@@ -1,0 +1,206 @@
+# E13: the two adopted Maestro end-to-end flows (founder decision 2026-07-02,
+# scope in docs/maestro-e2e-proposal-DRAFT.md section 8). Pre-release cadence:
+# manual dispatch only, never per-PR — an emulator boot + two flows costs
+# ~10-15 min of runner time and the flows guard release invariants (the
+# Article 9 gate, workout draft survival), not per-commit correctness.
+#
+# The APK comes from a "Build Android (APK + AAB, signed)" run — this
+# workflow never rebuilds the app. NOTE: the standard builds target ARM only
+# (claude/** = arm64-v8a, main = armeabi-v7a,arm64-v8a) while the GitHub
+# emulator is x86_64; ARM translation on API 30+ google_apis images usually
+# works but is slow and best-effort. For a reliable run, dispatch
+# build-android.yml first with architectures set to
+# "arm64-v8a,x86_64" and pass that run's id here. See .maestro/README.md
+# for the one-time test-user setup (secrets, consent reset, guardrails).
+name: Maestro E2E (pre-release)
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: 'build-android.yml run id to take the APK from (blank = latest successful on this branch)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: maestro-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Emulator + Maestro (2 flows)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check E2E secrets are configured
+        env:
+          E2E_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+          E2E_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
+        run: |
+          missing=""
+          for v in E2E_SUPABASE_URL E2E_SUPABASE_ANON_KEY E2E_USER_EMAIL E2E_USER_PASSWORD; do
+            [ -n "$(eval echo \$$v)" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing. See .maestro/README.md (one-time founder setup)."
+            exit 1
+          fi
+
+      # KVM lets the x86_64 emulator run hardware-accelerated on the
+      # GitHub-hosted runner; without it boot takes tens of minutes.
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Resolve the build run to take the APK from
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN_ID="${{ inputs.build_run_id }}"
+          if [ -z "$RUN_ID" ]; then
+            RUN_ID=$(gh run list -R "${{ github.repository }}" \
+              --workflow build-android.yml --branch "$GITHUB_REF_NAME" \
+              --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+          fi
+          if [ -z "$RUN_ID" ]; then
+            echo "::error::No successful build-android.yml run found on $GITHUB_REF_NAME. Dispatch that workflow first (architectures: arm64-v8a,x86_64) or pass build_run_id."
+            exit 1
+          fi
+          echo "Using build run $RUN_ID"
+          echo "BUILD_RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          pattern: volyume-release-apk-*
+          run-id: ${{ env.BUILD_RUN_ID }}
+          github-token: ${{ github.token }}
+          path: apk
+          merge-multiple: true
+
+      - name: Locate APK and check ABI coverage
+        run: |
+          APK=$(find apk -name '*.apk' | head -1)
+          if [ -z "$APK" ]; then
+            echo "::error::No APK found in the downloaded artifact."
+            exit 1
+          fi
+          echo "APK_PATH=$APK" >> "$GITHUB_ENV"
+          if ! unzip -l "$APK" | grep -q 'lib/x86_64/'; then
+            echo "::warning::APK carries no x86_64 native libs (an ARM-only build). The x86_64 emulator will rely on ARM translation, which is slow and can be flaky. For a reliable run, dispatch build-android.yml with architectures 'arm64-v8a,x86_64' and pass its run id."
+          fi
+
+      # A fresh session is minted per run: Supabase rotates refresh tokens on
+      # use, so static token secrets die after one run. The password grant
+      # stays server-side only — the app's UI remains Apple/Google OAuth only.
+      - name: Mint an E2E session (password grant)
+        env:
+          E2E_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+          E2E_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
+        run: |
+          RESP=$(curl -sS -X POST "$E2E_SUPABASE_URL/auth/v1/token?grant_type=password" \
+            -H "apikey: $E2E_SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg e "$E2E_USER_EMAIL" --arg p "$E2E_USER_PASSWORD" '{email: $e, password: $p}')")
+          ACCESS=$(echo "$RESP" | jq -r '.access_token // empty')
+          REFRESH=$(echo "$RESP" | jq -r '.refresh_token // empty')
+          if [ -z "$ACCESS" ] || [ -z "$REFRESH" ]; then
+            echo "::error::Could not mint a session for the E2E user (check the secrets, that the user exists, and that the email provider is enabled server-side). Response code/kind: $(echo "$RESP" | jq -r '.error_code // .error // "unknown"')"
+            exit 1
+          fi
+          echo "::add-mask::$ACCESS"
+          echo "::add-mask::$REFRESH"
+          echo "E2E_ACCESS_TOKEN=$ACCESS" >> "$GITHUB_ENV"
+          echo "E2E_REFRESH_TOKEN=$REFRESH" >> "$GITHUB_ENV"
+
+      # Flow 01 asserts the Article 9 gate, so the run starts from consent
+      # withdrawn. record_health_consent is the app's own user-scoped RPC
+      # (RLS-bound to the E2E user's JWT); it flips users_profile and appends
+      # the consent_log audit row exactly as the product does.
+      - name: Reset Article 9 consent for the E2E user
+        env:
+          E2E_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+          E2E_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
+        run: |
+          curl -sSf -X POST "$E2E_SUPABASE_URL/rest/v1/rpc/record_health_consent" \
+            -H "apikey: $E2E_SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $E2E_ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"_granted": false, "_app_version": "e2e-ci", "_platform": "android-emulator"}'
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Maestro
+        run: |
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      # AVD snapshot caching (the emulator-runner README pattern): first run
+      # boots cold and saves a snapshot; later runs restore it in seconds.
+      - name: Cache AVD snapshot
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-34-x86_64-google_apis
+
+      - name: Create AVD snapshot for caching
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "Generated AVD snapshot for caching."
+
+      - name: Run the Maestro flows
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot-save
+          disable-animations: true
+          script: |
+            adb install -r "$APK_PATH"
+            adb shell pm grant app.volyume android.permission.POST_NOTIFICATIONS || true
+            maestro test .maestro/flows \
+              -e E2E_ACCESS_TOKEN="$E2E_ACCESS_TOKEN" \
+              -e E2E_REFRESH_TOKEN="$E2E_REFRESH_TOKEN" \
+              --debug-output maestro-debug
+
+      - name: Upload Maestro debug output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-debug-${{ github.run_number }}
+          path: maestro-debug
+          retention-days: 14
+          if-no-files-found: ignore

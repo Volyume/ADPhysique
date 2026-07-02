@@ -1,0 +1,72 @@
+# E13 flow 1: the Article 9 consent gate (docs/maestro-e2e-proposal-DRAFT.md
+# section 5, adopted by the founder 2026-07-02).
+#
+# What this pins:
+#   1. after session injection with consent unresolved, the un-skippable gate
+#      appears BEFORE any app content;
+#   2. the gate does not advance while the checkbox is unticked (the CLAUDE.md
+#      section 2 invariant this flow exists to guard);
+#   3. ticking + Continue records consent and lands inside the app;
+#   4. the withdrawal surface is reachable exactly where the gate promises
+#      (You -> Settings -> Privacy and legal), shows Granted, and warns that
+#      withdrawal deletes the account. The flow CANCELS at that dialog: since
+#      PRIVACY_CONSENT_LOCKED.md wired withdrawal to full account deletion,
+#      completing it would destroy the dedicated test user on every run.
+#
+# Prerequisites (see .maestro/README.md): the runner has reset the test
+# user's health_data_consent to false via the record_health_consent RPC, and
+# passes E2E_ACCESS_TOKEN / E2E_REFRESH_TOKEN with `maestro test -e`.
+appId: app.volyume
+name: 01 Article 9 consent (gate blocks, grant, withdraw surface)
+tags:
+  - consent
+---
+- launchApp:
+    clearState: true
+    permissions:
+      notifications: allow
+
+# Wait for the signed-out entry point so the Linking listener is live, then
+# inject the test user's session through the documented deep-link seam
+# (App.js handleAuthUrl, implicit-flow fragment).
+- extendedWaitUntil:
+    visible: "Continue with Google"
+    timeout: 90000
+- openLink: "volyume://#access_token=${E2E_ACCESS_TOKEN}&refresh_token=${E2E_REFRESH_TOKEN}"
+
+# 1. The gate appears before any app content.
+- extendedWaitUntil:
+    visible: "I agree to Volyume using my health and nutrition data to coach me.*"
+    timeout: 60000
+
+# 2. Continue while unticked must not advance the gate.
+- tapOn: "Continue"
+- assertVisible: "I agree to Volyume using my health and nutrition data to coach me.*"
+
+# 3. Tick, continue, land inside the app (tab bar visible).
+- tapOn:
+    text: "I agree to Volyume using my health and nutrition data to coach me.*"
+    index: 0
+- tapOn: "Continue"
+- extendedWaitUntil:
+    visible: "You"
+    timeout: 90000
+
+# 4. Withdrawal surface: You -> Settings -> Privacy and legal.
+- tapOn: "You"
+- tapOn: "Settings.*"
+- tapOn: "Privacy and legal.*"
+- extendedWaitUntil:
+    visible: "Health-data consent.*"
+    timeout: 15000
+- assertVisible: ".*Granted.*"
+- tapOn: "Health-data consent.*"
+- extendedWaitUntil:
+    visible: 'Withdraw health-data consent\?'
+    timeout: 10000
+# The dialog must state the real consequence (account deletion, UK GDPR
+# lawful-basis withdrawal) before anything destructive can happen.
+- assertVisible: ".*account will be deleted.*"
+# Cancel: completing withdrawal deletes the test account. Never proceed here.
+- tapOn: "Cancel"
+- assertVisible: "Health-data consent.*"

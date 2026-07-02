@@ -1,0 +1,152 @@
+# E13 flow 2: complete a workout, with backgrounding + process death in the
+# middle (docs/maestro-e2e-proposal-DRAFT.md section 8 item 1(a), adopted by
+# the founder 2026-07-02).
+#
+# What this pins:
+#   1. a blank session can be started, an exercise added from the picker, and
+#      a set logged end-to-end;
+#   2. the logged set survives Home-press + process kill + cold relaunch (the
+#      crash-restore path: restoreActiveWorkout rebuilds the session and the
+#      E15 mini-bar surfaces it on Home);
+#   3. tapping the mini-bar returns to the live session with the set intact;
+#   4. Finish completes the workout through the confirm dialog to the
+#      Session Complete summary.
+#
+# Self-sufficient: injects the session itself and clears the Article 9 gate
+# if it appears (flow 01 normally leaves consent granted). Prerequisites in
+# .maestro/README.md.
+appId: app.volyume
+name: 02 Workout logging survives backgrounding and process death
+tags:
+  - workout
+---
+- launchApp:
+    clearState: true
+    permissions:
+      notifications: allow
+- extendedWaitUntil:
+    visible: "Continue with Google"
+    timeout: 90000
+- openLink: "volyume://#access_token=${E2E_ACCESS_TOKEN}&refresh_token=${E2E_REFRESH_TOKEN}"
+
+# Either the tab bar (consent already granted) or the Article 9 gate appears.
+- extendedWaitUntil:
+    visible: "Train|I agree to Volyume using my health and nutrition data to coach me.*"
+    timeout: 90000
+- runFlow:
+    when:
+      visible: "I agree to Volyume using my health and nutrition data to coach me.*"
+    commands:
+      - tapOn:
+          text: "I agree to Volyume using my health and nutrition data to coach me.*"
+          index: 0
+      - tapOn: "Continue"
+      - extendedWaitUntil:
+          visible: "Train"
+          timeout: 90000
+
+# Start a blank session. The test user keeps no active plan, so Home shows
+# either the Pro quick-start card or the free blank-session link; both call
+# startBlankSession(). (The "Start a blank workout instead" button is the
+# BuildWorkout route and is deliberately not used here.)
+- runFlow:
+    when:
+      visible: "Start your first session"
+    commands:
+      - tapOn: "Start your first session"
+- runFlow:
+    when:
+      visible: 'Just want to log\? Start a blank session'
+    commands:
+      - tapOn: 'Just want to log\? Start a blank session'
+
+# Empty session: add an exercise from the picker.
+- extendedWaitUntil:
+    visible: "Add exercise"
+    timeout: 30000
+- tapOn: "Add exercise"
+- tapOn: "Search exercises…"
+- inputText: "Barbell Bench"
+- extendedWaitUntil:
+    visible: "Barbell Bench Press"
+    timeout: 15000
+- tapOn: "Barbell Bench Press"
+
+# Log set 1.
+- extendedWaitUntil:
+    visible:
+      id: "volyume-weight-input"
+    timeout: 15000
+- tapOn:
+    id: "volyume-weight-input"
+- eraseText
+- inputText: "60"
+- tapOn:
+    id: "volyume-reps-input"
+- eraseText
+- inputText: "8"
+- hideKeyboard
+- tapOn:
+    id: "volyume-btn-complete-set"
+
+# E6A one-time exact-alarm prompt fires on the first rest; dismiss it the
+# calm way. Then skip the rest so the UI is stable before backgrounding.
+- runFlow:
+    when:
+      visible: "Exact rest alerts"
+    commands:
+      - tapOn: "Not now"
+- runFlow:
+    when:
+      visible: "Skip rest timer"
+    commands:
+      - tapOn: "Skip rest timer"
+- assertVisible: "Edit set 1"
+
+# Background, kill the process, cold relaunch (launchApp stops the app by
+# default; no clearState, so local SQLite + the session draft survive).
+- pressKey: Home
+- launchApp
+
+# The restored session surfaces on Home via the E15 mini-bar; tap it to
+# return to the live session with the logged set intact.
+- extendedWaitUntil:
+    visible: "Workout in progress.*"
+    timeout: 90000
+- tapOn: "Workout in progress.*"
+- extendedWaitUntil:
+    visible: "Finish workout"
+    timeout: 30000
+- assertVisible: "Edit set 1"
+
+# Log set 2 after the restore, then finish through the confirm dialog.
+- tapOn:
+    id: "volyume-weight-input"
+- eraseText
+- inputText: "60"
+- tapOn:
+    id: "volyume-reps-input"
+- eraseText
+- inputText: "8"
+- hideKeyboard
+- tapOn:
+    id: "volyume-btn-complete-set"
+- runFlow:
+    when:
+      visible: "Exact rest alerts"
+    commands:
+      - tapOn: "Not now"
+- runFlow:
+    when:
+      visible: "Skip rest timer"
+    commands:
+      - tapOn: "Skip rest timer"
+- assertVisible: "Edit set 2"
+- tapOn: "Finish workout"
+- extendedWaitUntil:
+    visible: 'Finish Workout\?'
+    timeout: 10000
+- tapOn: "Finish"
+- extendedWaitUntil:
+    visible: "Session Complete"
+    timeout: 45000
