@@ -7,3 +7,4 @@
 global.__DEV__ = true;
 // react-test-renderer / React 19 expects this flag set so act() warnings behave.
 global.IS_REACT_ACT_ENVIRONMENT = true;
+

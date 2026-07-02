@@ -152,6 +152,28 @@ const PULL_HANDLERS = {
  * registry entry, refuses pull-only tables, dispatches to the
  * per-table handler. Returns { count, errors, skipped? }.
  */
+// F5 Phase A (P2/P4 mitigations, docs/f5-legacy-sync-plan-2026-07-02.md §2):
+// the Article 9 fail-closed consent gate and the sign-out-wipe guard hold
+// PER CALL here, not only per runner cycle — on-save pushes invoke
+// pushTable directly, so without this a row could move before consent
+// resolved or race the sign-out wipe. Mirrors runner.syncAll exactly:
+// ANY read failure counts as unresolved (closed), never as consent.
+function _transportBlockedReason(userId) {
+  try {
+    // eslint-disable-next-line global-require
+    if (require('./signOutGuard').isSignOutWiping()) return 'sign_out_wiping';
+  } catch (_) { return 'sign_out_wiping'; }
+  if (userId) {
+    let healthConsent = null;
+    try {
+      // eslint-disable-next-line global-require
+      healthConsent = require('../../store/useAppStore').default.getState()?.healthConsent;
+    } catch (_) { healthConsent = null; }
+    if (healthConsent !== true) return 'health_consent_unresolved';
+  }
+  return null;
+}
+
 export async function pushTable(tableName, { userId, localUserId } = {}) {
   const entry = getRegistryEntry(tableName);
   if (!entry) {
@@ -159,6 +181,10 @@ export async function pushTable(tableName, { userId, localUserId } = {}) {
   }
   if (entry.direction === 'pull_only') {
     return { count: 0, errors: 0, skipped: 'pull_only' };
+  }
+  const blocked = _transportBlockedReason(userId);
+  if (blocked) {
+    return { count: 0, errors: 0, skipped: blocked };
   }
   const handler = PUSH_HANDLERS[tableName];
   if (!handler) {
@@ -180,6 +206,10 @@ export async function pullTable(tableName, { userId, localUserId } = {}) {
   const entry = getRegistryEntry(tableName);
   if (!entry) {
     return { count: 0, errors: 1, reason: 'unknown_table' };
+  }
+  const blocked = _transportBlockedReason(userId);
+  if (blocked) {
+    return { count: 0, errors: 0, skipped: blocked };
   }
   const handler = PULL_HANDLERS[tableName];
   if (!handler) {

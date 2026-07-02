@@ -26,6 +26,15 @@ const { pushTable, pullTable, MIGRATED_TABLES } = require('../transport');
 
 beforeEach(() => jest.clearAllMocks());
 
+// F5 Phase A: transport carries a per-call Article 9 fail-closed gate
+// (docs/f5-legacy-sync-plan-2026-07-02.md, P4). This suite exercises tables
+// through pushTable/pullTable, so it primes the consent every device run
+// guarantees (F2 hydration) before any call reaches the gate.
+beforeAll(() => {
+  // eslint-disable-next-line global-require
+  require('../../../store/useAppStore').default.setState({ healthConsent: true });
+});
+
 describe('daily_steps registration', () => {
   test('is a migrated table', () => {
     expect(MIGRATED_TABLES).toContain('daily_steps');

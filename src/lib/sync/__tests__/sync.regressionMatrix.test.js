@@ -92,9 +92,12 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }));
 
 const mockStoreRef = { state: null };
+// healthConsent defaults true here for the same reason as jest.setup.js:
+// transport's per-call Article 9 gate (F5 Phase A) would otherwise block
+// every matrix row. A test can still override it via setStore().
 jest.mock('../../../store/useAppStore', () => ({
   __esModule: true,
-  default: { getState: () => mockStoreRef.state },
+  default: { getState: () => ({ healthConsent: true, ...(mockStoreRef.state ?? {}) }) },
 }));
 
 jest.mock('../telemetry', () => ({
