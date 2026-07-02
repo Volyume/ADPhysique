@@ -1,7 +1,22 @@
-# Wave 7 — PROPOSAL (UX-audit residue) — FOR APPROVAL
+# Wave 7 — UX-audit residue — APPROVED 2026-07-02
 
-Not yet approved. This is the "present the UX stuff for approval" ask
-(founder 2026-07-02). Built from a code-truth verification of every
+**APPROVED (founder 2026-07-02):** all six buildable-now items, plus both
+decisions resolved:
+- **Scope = all six** (NU-7, NU-2, NU-6, CL-6.2, CL-6.3, NAV-8), NU-7 first.
+- **OB-1 = reframe Welcome as trial-first** (remove the dead Free/Pro toggle;
+  honest trial framing; downgrade-to-free path stays; no conflict with the
+  locked trial-at-Article-9 rule). Folded INTO Wave 7.
+- **CL-6.1 = prepare-not-commit** ("Log another set" opens the set for edit and
+  commits on confirm). Folded INTO Wave 7.
+- Held separately (unchanged): CL-2 (iOS Live Activity, item 14) and F5 Phase B.
+
+Final Wave 7 build list: NU-7 → NU-2 → NU-6 → OB-1 → CL-6.1 → CL-6.2 → CL-6.3
+→ NAV-8. Sequenced after the active Wave 5 build unless the founder resequences.
+
+---
+
+The original proposal (for the record). This was the "present the UX stuff for
+approval" ask (founder 2026-07-02). Built from a code-truth verification of every
 `audit/02-ux-audit.md` finding and every ranked `06-MASTER-PLAN` item against
 branch HEAD (five-agent fleet, 2026-07-02) — status is what the CODE shows,
 not what a commit message claims.
