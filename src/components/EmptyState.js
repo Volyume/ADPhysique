@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Button from './Button';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 
 /**
@@ -60,23 +61,16 @@ export default function EmptyState({
         <Text style={styles.text}>{text}</Text>
       )}
 
+      {/* D1 sweep (f): the CTAs are the shared Button primitive, so empty
+          states carry the app's one press model / disabled treatment instead
+          of the last two hand-rolled primaryBtn blocks. */}
       {(actionLabel || secondaryLabel) && (
         <View style={styles.actions}>
           {actionLabel && onAction && (
-            <TouchableOpacity
-              style={styles.primaryBtn}
-              onPress={onAction}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityLabel={actionLabel}
-            >
-              <Text style={styles.primaryBtnText}>{actionLabel}</Text>
-            </TouchableOpacity>
+            <Button title={actionLabel} onPress={onAction} size="md" fullWidth={false} />
           )}
           {secondaryLabel && onSecondary && (
-            <TouchableOpacity style={styles.secondaryBtn} onPress={onSecondary} activeOpacity={0.7}>
-              <Text style={styles.secondaryBtnText}>{secondaryLabel}</Text>
-            </TouchableOpacity>
+            <Button title={secondaryLabel} onPress={onSecondary} variant="secondary" size="md" fullWidth={false} />
           )}
         </View>
       )}
@@ -115,19 +109,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs, flexWrap: 'wrap', justifyContent: 'center' },
-  primaryBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  primaryBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
-  secondaryBtn: {
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  secondaryBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
 });
