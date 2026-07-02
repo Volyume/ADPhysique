@@ -111,6 +111,11 @@ describe('runWeeklyCoach: FFM-floor safety integration', () => {
     }));
     const out = runWeeklyCoach(baseInputs({
       checkin: null,                    // B1 stands-in path
+      // The stand-in window (founder decision 2026-07-02) is SENIOR to this
+      // scenario: without a recent check-in the resize freezes before the
+      // floor is needed. A last-week check-in opens the window on purpose,
+      // so this repro still proves the floor beneath it.
+      lastCheckinAt: Date.now() - 7 * 86400000,
       bodyweightKg: null,               // sync-degraded/legacy profile
       morningWeights: flat90,           // stalled cut: the engine wants a reduction
       currentCalTarget: 2000,
