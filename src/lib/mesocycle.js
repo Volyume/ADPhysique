@@ -441,7 +441,11 @@ export function applyTimeCrunch(exercises, targetMinutes, estimateFn, options = 
  *   overdue  , block finished 2+ weeks ago, strongly prompt transition
  */
 export function getBlockStatus(startDateMs, plannedWeeks = 5, nowMs = Date.now()) {
-  const start = typeof startDateMs === 'string' ? new Date(startDateMs).getTime() : (startDateMs ?? nowMs);
+  let start = typeof startDateMs === 'string' ? new Date(startDateMs).getTime() : (startDateMs ?? nowMs);
+  // Wave-3 review: mirror getCurrentMesoWeek's CALC-8 guard. An unparseable
+  // stored start date used to propagate NaN into currentWeek/weeksOverdue
+  // ('Week NaN' in any consumer). Treat it as a block starting now (week 1).
+  if (!Number.isFinite(start)) start = nowMs;
   // F10 (EN-11): count whole LOCAL calendar days via the same DST-safe
   // anchoring getCurrentMesoWeek uses (localDaysElapsed). The old raw-ms
   // floor lost an hour across a DST change, so the two functions could

@@ -1119,6 +1119,17 @@ const useAppStore = create((set, get) => ({
     } catch (_) {}
   },
 
+  // B2 (Wave-3 review): "Use planned targets instead" applies to the WHOLE
+  // session, so the dismissal lives on the active workout object and rides
+  // the WK-1 snapshot — a screen remount or crash restore keeps it dismissed
+  // instead of silently re-easing the targets mid-session.
+  dismissReadinessTweak: () => {
+    const w = get().activeWorkout;
+    if (!w || w.readinessDismissed) return;
+    set({ activeWorkout: { ...w, readinessDismissed: true } });
+    _persistActiveWorkout(get());
+  },
+
   setActiveWorkout: (workout) => set({ activeWorkout: workout }),
   setWorkoutExercises: (next) => {
     set((state) => ({

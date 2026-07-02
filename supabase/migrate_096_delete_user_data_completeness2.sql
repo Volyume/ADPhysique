@@ -11,6 +11,7 @@
 --   by the fallback, so a deletion that goes down the fallback path
 --   leaves rows behind (an incomplete Article 17 erasure):
 --
+--     cardio_log            (migration 064) -- FK cascade only
 --     meal_plans            (migration 086) -- FK cascade only
 --     plan_folders          (migration 089) -- FK cascade only
 --     partnerships          (migration 081) -- member FKs are SET NULL
@@ -59,8 +60,9 @@
 --                                   working and now wipe more on the
 --                                   fallback path.
 -- Depends on:                       062 (current delete_user_data body),
---                                   081 (partner tables), 086
---                                   (meal_plans), 089 (plan_folders),
+--                                   064 (cardio_log), 081 (partner
+--                                   tables), 086 (meal_plans), 089
+--                                   (plan_folders),
 --                                   092 (unpair deletion promise this
 --                                   section mirrors).
 -- ════════════════════════════════════════════════════════════════════
@@ -146,6 +148,10 @@ BEGIN
   BEGIN DELETE FROM daily_steps                 WHERE user_id = uid; EXCEPTION WHEN undefined_table THEN NULL; END;
 
   -- ─── Tables added since migration 062 (SC-2) ────────────────────────
+  -- cardio_log: migration 064's header explicitly asked for this line in
+  -- the next revision of this function; the Wave-3 review caught that this
+  -- revision had missed it (cardio history is special-category health data).
+  BEGIN DELETE FROM cardio_log                  WHERE user_id = uid; EXCEPTION WHEN undefined_table THEN NULL; END;
   BEGIN DELETE FROM meal_plans                  WHERE user_id = uid; EXCEPTION WHEN undefined_table THEN NULL; END;
   BEGIN DELETE FROM plan_folders                WHERE user_id = uid; EXCEPTION WHEN undefined_table THEN NULL; END;
 
@@ -202,7 +208,7 @@ GRANT EXECUTE ON FUNCTION delete_user_data() TO authenticated;
 --   1. Create meal plan, plan folder, and an active partnership with a
 --      second test account; log a cheer and a week signal each way.
 --   2. As the test user: SELECT delete_user_data();
---   3. Confirm: zero rows in meal_plans / plan_folders /
+--   3. Confirm: zero rows in cardio_log / meal_plans / plan_folders /
 --      partner_week_signals / partner_cheers / partner_blocks for either
 --      direction of the pair; partnerships row has status='ended',
 --      ended_at set, the deleted member's column NULL, invite_code_hash

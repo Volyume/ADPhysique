@@ -158,6 +158,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     updateLastActivity: s.updateLastActivity,
     sessionAdjustments: s.sessionAdjustments,
     revertSessionAdjustment: s.revertSessionAdjustment,
+    dismissReadinessTweak: s.dismissReadinessTweak,
     tier: s.tier,
   })));
   const {
@@ -166,7 +167,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     updateSetInCurrentExercise, removeSetFromCurrentExercise, session,
     startRestTimer, defaultRestSeconds, autoStartRestTimer, workoutPrefsLoaded, loadWorkoutPrefs,
     showPRCelebration, endWorkout, workoutStartTime,
-    lastActivityAt, updateLastActivity, sessionAdjustments, revertSessionAdjustment, tier,
+    lastActivityAt, updateLastActivity, sessionAdjustments, revertSessionAdjustment, dismissReadinessTweak, tier,
   } = store;
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   // Drop assisted machine regressions from swap suggestions for anyone past
@@ -230,9 +231,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const starterAppliedRef = useRef(false);
   const [isDeloadWeek, setIsDeloadWeek] = useState(false);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
-  // B2: session-wide dismissal of the readiness tweak ("Use planned targets
-  // instead" in the exercise info sheet). Display-only state; nothing stored.
-  const [readinessDismissed, setReadinessDismissed] = useState(false);
+  // B2 (Wave-3 review): the session-wide dismissal of the readiness tweak
+  // lives ON the active workout (store action dismissReadinessTweak) so it
+  // survives screen remounts and the WK-1 crash restore — the a11y copy
+  // promises "Applies to the whole session" and now means it.
+  const readinessDismissed = !!activeWorkout?.readinessDismissed;
   // Ghost pre-fill bookkeeping. The value itself is no longer rendered (the
   // ghost chip went in COMP-001; the muted input colour carries the state),
   // but the setter still arms/clears the pre-fill in loadHistory/onChange.
@@ -301,6 +304,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const displaySetTargets = readinessReduces
     ? applyReadinessToTargets(setTargets, readinessTweak)
     : setTargets;
+
+  // Wave-3 review: when the readiness trim sets a LOWER target than the
+  // COMP-015 line announces (the min() above discarded it), the readiness
+  // line must lead the in-session surface — a discarded "added a set" line
+  // fronting a reduced target read as a contradiction.
+  const readinessDrivesTarget = readinessReduces
+    && Number.isFinite(readinessSetCount)
+    && Number.isFinite(comp015SetCount)
+    && readinessSetCount < comp015SetCount;
+  // Honest restore copy: dismissing the easing returns to the coach's
+  // session target, which may include a COMP-015 change to the plan.
+  const readinessRestoreLabel = (Number.isFinite(comp015SetCount)
+    && Number.isFinite(routineExercise?.recommendedSets)
+    && comp015SetCount !== routineExercise.recommendedSets)
+    ? "Use your coach's targets instead"
+    : 'Use planned targets instead';
 
   // COMP-015: coverage telemetry — fire once per exercise when its adjustment
   // line first becomes visible. muscle + direction + reasonCode only, no PII.
@@ -2094,7 +2113,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 onPress={() => setShowExecution(true)}
                 hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
                 accessibilityRole="button"
-                accessibilityLabel={sessionAdjustment?.show
+                accessibilityLabel={(sessionAdjustment?.show && !readinessDrivesTarget)
                   ? `${sessionAdjustment.reasonText} Double-tap for details and to restore the plan.`
                   : readinessLine
                     ? `${readinessLine}${readinessReduces ? ' Double-tap for details and to use the planned targets instead.' : ''}`
@@ -2104,7 +2123,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               >
                 <Ionicons name="sparkles-outline" size={13} color={colors.primary} style={{ marginTop: spacing.xxs }} />
                 <Text style={styles.coachLineText} numberOfLines={2}>
-                  {sessionAdjustment?.show
+                  {(sessionAdjustment?.show && !readinessDrivesTarget)
                     ? sessionAdjustment.reasonText
                     : readinessLine
                       ? readinessLine
@@ -2703,12 +2722,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 ) : null}
                 <TouchableOpacity
                   style={styles.adjustedRevertBtn}
-                  onPress={() => { setReadinessDismissed(true); setShowExecution(false); }}
+                  onPress={() => { dismissReadinessTweak(); setShowExecution(false); }}
                   accessibilityRole="button"
-                  accessibilityLabel="Use planned targets instead. Applies to the whole session."
+                  accessibilityLabel={`${readinessRestoreLabel}. Applies to the whole session.`}
                 >
                   <Ionicons name="arrow-undo-outline" size={15} color={colors.primary} />
-                  <Text style={styles.adjustedRevertText}>Use planned targets instead</Text>
+                  <Text style={styles.adjustedRevertText}>{readinessRestoreLabel}</Text>
                 </TouchableOpacity>
               </View>
             ) : null}

@@ -236,6 +236,18 @@ describe('getBlockStatus', () => {
   test('null start date returns a sane shape', () => {
     expect(() => getBlockStatus(null, 5)).not.toThrow();
   });
+
+  test('unparseable string start date never yields Week NaN (Wave-3 review)', () => {
+    // Mirrors getCurrentMesoWeek's CALC-8 guard: a corrupt stored date is
+    // treated as a block starting now, week 1, instead of NaN everywhere.
+    for (const bad of ['', 'not-a-date', '2026-13-45T99:99:99Z']) {
+      const out = getBlockStatus(bad, 5);
+      expect(Number.isFinite(out.currentWeek)).toBe(true);
+      expect(out.currentWeek).toBe(1);
+      expect(Number.isFinite(out.weeksOverdue)).toBe(true);
+      expect(out.status).toBe('active');
+    }
+  });
 });
 
 // CALC-8: out-of-range / NaN week numbers must be handled, not silently swallowed.
