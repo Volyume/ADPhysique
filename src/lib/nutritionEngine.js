@@ -294,6 +294,14 @@ export function computeAdaptiveTDEEAdjustment({
   // of the adjustment value so a misconfigured caller can't push a
   // cut while the override is on.
   rapidLossOverride = false,
+  // B1 (founder-approved 2026-07-02, adherence-neutral mechanics): the user's
+  // ACTUAL 7-day logged intake average, when a real food diary exists. When
+  // finite and positive, it replaces the prescribedKcal x adherence-bucket
+  // guess in the energy-balance model — the model reads what was eaten, not
+  // what was promised. Absent/invalid keeps the bucket estimate, so
+  // behaviour for non-logging users is byte-identical (replay-pinned).
+  // Deterministic: a plain number in, no I/O, no learning.
+  actualIntakeKcal = null,
   // COMP-026 (B): the adaptive-update gain that damps the raw energy-balance
   // signal. Default 0.5 reproduces the original 50% damping byte-identically
   // for every existing caller/test. The step-trend modifier may raise it to at
@@ -313,8 +321,12 @@ export function computeAdaptiveTDEEAdjustment({
   const actualKgPerWeek = computeWeeklyWeightChange(ewmaData);
   if (actualKgPerWeek === null) return { adjustmentKcal: 0, confidence: 'insufficient_data', insight: null };
 
-  // Estimated actual intake, discounted by adherence
-  const estimatedActualKcal = prescribedKcal * adherenceFactor;
+  // B1: the logged truth beats the adherence-bucket guess. With a real food
+  // diary the model uses the actual 7-day average; without one it keeps the
+  // original prescribedKcal x adherenceFactor estimate unchanged.
+  const estimatedActualKcal = (Number.isFinite(actualIntakeKcal) && actualIntakeKcal > 0)
+    ? actualIntakeKcal
+    : prescribedKcal * adherenceFactor;
 
   // What weight change the prescribed intake SHOULD produce at the estimated TDEE
   const surplusOrDeficit = estimatedActualKcal - currentTDEEEstimate; // kcal/day

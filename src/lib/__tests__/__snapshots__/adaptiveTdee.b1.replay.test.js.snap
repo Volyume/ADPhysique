@@ -29,12 +29,12 @@ exports[`B1 replay corpus — computeAdaptiveTDEEAdjustment (unit seam) R2 [must
 exports[`B1 replay corpus — computeAdaptiveTDEEAdjustment (unit seam) R3 [expected to change in phase 2] stall WITH logged intake 2450 vs bucket estimate: R3 1`] = `
 {
   "actualKgPerWeek": 0,
-  "adjustedTDEE": 2400,
-  "adjustmentKcal": -200,
+  "adjustedTDEE": 2525,
+  "adjustmentKcal": -75,
   "confidence": "high",
-  "expectedKgPerWeek": -0.364,
+  "expectedKgPerWeek": -0.136,
   "floorHeld": false,
-  "insight": "Your weight has held steady. Trimming 200 kcal/day to match your true energy needs.",
+  "insight": "Your weight has held steady. Trimming 75 kcal/day to match your true energy needs.",
   "weeks": 4,
 }
 `;
@@ -53,10 +53,11 @@ exports[`B1 replay corpus — runWeeklyCoach (integration seam) R5 [must never d
 
 exports[`B1 replay corpus — runWeeklyCoach (integration seam) R6 [expected to change in phase 2] check-in SKIPPED but 6 days of food logged: today no resize fires: R6 1`] = `
 {
-  "calories": null,
+  "calories": {
+    "change": -33,
+    "note": "Weight is coming down slower than the target rate.",
+  },
   "confidence": "medium",
-  "held": [
-    "calories",
-  ],
+  "held": [],
 }
 `;

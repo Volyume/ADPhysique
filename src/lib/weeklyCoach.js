@@ -696,11 +696,17 @@ export function runWeeklyCoach(inputs) {
     energyScore !== null && energyScore <= 2
   );
 
+  // B1: a real food diary (>= 5 logged days this week) is an adherence record
+  // in its own right, so a SKIPPED check-in no longer freezes recalibration —
+  // the check-in stays the wellbeing/safety capture and the moment the
+  // adjustment is presented, but the maths refreshes weekly from weights +
+  // rollups. Without food data the old rule stands: untracked never adjusts.
+  const foodDiaryStandsIn = recentIntakeDaysLogged >= 5 && Number(recentIntakeAvgKcal) > 0;
   const canAdjustCals = (
     !cycleOverride &&
     !scoffPositive &&
     currentCalTarget != null &&
-    calsAdherence !== 'untracked' &&
+    (calsAdherence !== 'untracked' || foodDiaryStandsIn) &&
     (
       rapidLossOverride ||
       (
@@ -752,6 +758,13 @@ export function runWeeklyCoach(inputs) {
       prescribedKcal: currentCalTarget,
       currentTDEEEstimate: currentMaintenanceKcal,
       adherenceFactor,
+      // B1: with a real food diary (same >= 5-day evidentiary bar as the FFM
+      // floor context above) the model reads the ACTUAL 7-day intake average
+      // instead of the prescribed x bucket guess. Null keeps the old estimate
+      // byte-identically (replay-pinned).
+      actualIntakeKcal: (recentIntakeDaysLogged >= 5 && Number(recentIntakeAvgKcal) > 0)
+        ? Number(recentIntakeAvgKcal)
+        : null,
       ffmFloorContext,
       rapidLossOverride,
     };
