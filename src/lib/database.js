@@ -5572,6 +5572,44 @@ export async function getAllPeakWeekPlansForUser(userId) {
   } catch (_) { return []; }
 }
 
+// B4 contest countdown: the show date lives on the user's active
+// peak_week_plans row (the column has existed since the table was created;
+// these are its first readers/writer). Only show_date is ever written here.
+// The countdown does no prep maths (docs/b4-contest-countdown-ed-review).
+export async function getActivePeakWeekPlan(userId) {
+  const d = await db();
+  try {
+    const row = await d.getFirstAsync(
+      `SELECT * FROM peak_week_plans
+       WHERE user_id = ? AND status = 'active' AND deleted_at IS NULL
+       ORDER BY updated_at DESC LIMIT 1`,
+      [userId],
+    );
+    return row ? rowToCamel(row) : null;
+  } catch (_) { return null; }
+}
+
+export async function setPeakWeekShowDate(userId, showDate) {
+  const d = await db();
+  const existing = await getActivePeakWeekPlan(userId);
+  const now = Date.now();
+  if (existing) {
+    await d.runAsync(
+      'UPDATE peak_week_plans SET show_date = ?, updated_at = ? WHERE id = ?',
+      [showDate ?? null, now, existing.id],
+    );
+    return existing.id;
+  }
+  if (!showDate) return null; // nothing to clear
+  const id = uid();
+  await d.runAsync(
+    `INSERT INTO peak_week_plans (id, user_id, show_date, status, created_at, updated_at)
+     VALUES (?, ?, ?, 'active', ?, ?)`,
+    [id, userId, showDate, now, now],
+  );
+  return id;
+}
+
 export async function getAllPlannedMuscleVolumeForUser(userId) {
   const d = await db();
   try {

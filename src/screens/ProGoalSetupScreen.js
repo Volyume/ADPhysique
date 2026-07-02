@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,9 +18,14 @@ import {
   TRAINING_PHASES,
   GOALS_WITH_WEAK_POINTS, WEAK_POINT_MUSCLES,
   phaseToCoachingKey, phaseToNutritionKey, buildNutritionEngineInputs,
+  isCompetitionGoal,
 } from '../lib/coachingGoals';
+import { parseShowDate } from '../lib/contestCountdown';
 import { calculateNutritionTargets, PROTEIN_APPROACHES, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
-import { saveNutritionTargets, getMorningWeightsLast14Days, getLatestBodyComposition } from '../lib/database';
+import {
+  saveNutritionTargets, getMorningWeightsLast14Days, getLatestBodyComposition,
+  getActivePeakWeekPlan, setPeakWeekShowDate,
+} from '../lib/database';
 import { computeEWMA } from '../lib/weeklyCoach';
 import { formatBodyWeightShort } from '../lib/units';
 import { generateAndSavePlan } from '../lib/planAutoGen';
@@ -85,6 +90,10 @@ export default function ProGoalSetupScreen({ navigation }) {
   // Weak points, only meaningful for goals that bias volume towards priority
   // muscles. Hidden in the UI otherwise but the value is preserved across edits.
   const [planWeakPoints, setPlanWeakPoints] = useState(userProfile?.planWeakPoints ?? []);
+  // B4: optional show date for competition divisions, stored on the user's
+  // active peak_week_plans row (its only writer). Feeds the ED-gated
+  // countdown on CoachOutput (docs/b4-contest-countdown-ed-review).
+  const [showDateInput, setShowDateInput] = useState('');
   // Training setup, prefilled from the user's existing profile so they
   // can review and tweak. Changing any of these rerolls the plan around
   // the new values (different days, equipment, experience all affect
@@ -116,7 +125,19 @@ export default function ProGoalSetupScreen({ navigation }) {
 
   const suggestedApproach = ADVANCED_PROTEIN_GOALS.includes(selectedGoal) ? 'advanced' : 'optimised';
   const weakPointsApplicable = GOALS_WITH_WEAK_POINTS.includes(selectedGoal);
+  const showDateApplicable = isCompetitionGoal(selectedGoal);
   const canSave = selectedGoal !== null && selectedPhase !== null;
+
+  // Pre-fill the show date from the active peak-week plan, if one exists.
+  useEffect(() => {
+    if (!user?.id) return;
+    (async () => {
+      try {
+        const plan = await getActivePeakWeekPlan(user.id);
+        if (plan?.showDate) setShowDateInput(String(plan.showDate));
+      } catch (_) {} // best effort: an unreadable plan just leaves the field blank
+    })();
+  }, [user?.id]);
 
   function toggleWeakPoint(muscle) {
     setPlanWeakPoints(prev => {
@@ -134,6 +155,13 @@ export default function ProGoalSetupScreen({ navigation }) {
 
   async function handleSave() {
     if (!canSave) return;
+
+    // B4: validate the optional show date up front so nothing half-saves.
+    const trimmedShowDate = showDateInput.trim();
+    if (showDateApplicable && trimmedShowDate && parseShowDate(trimmedShowDate) === null) {
+      toast.show('Show date needs the format YYYY-MM-DD, for example 2026-09-19', { variant: 'warning' });
+      return;
+    }
 
     const goalPhase = phaseToCoachingKey(selectedPhase);
 
@@ -287,6 +315,16 @@ export default function ProGoalSetupScreen({ navigation }) {
 
     await saveLocalProfile(user.id, updatedProfile);
 
+    // B4: store or clear the show date on the active peak-week plan row.
+    // Best effort: the goal save must not fail on this.
+    if (user?.id && showDateApplicable) {
+      try {
+        await setPeakWeekShowDate(user.id, trimmedShowDate || null);
+      } catch (_) {
+        toast.show('Goal saved, but the show date could not be stored. Try again from this screen', { variant: 'warning' });
+      }
+    }
+
     // Pro users keep an always-active plan, a goal change resets the
     // mesocycle to week 1 of a freshly-generated plan that reflects the
     // new goal/phase. The previous plan is deactivated by
@@ -374,6 +412,32 @@ export default function ProGoalSetupScreen({ navigation }) {
                 />
               ))}
             </View>
+          </>
+        )}
+
+        {/* ── Show date (competition divisions only, optional) ──
+            B4: feeds the ED-gated countdown on CoachOutput. Process copy
+            only; safety holds always outrank the countdown. */}
+        {showDateApplicable && (
+          <>
+            <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>
+              Show date <Text style={styles.optionalTag}>(optional)</Text>
+            </Text>
+            <Text style={styles.sectionSub}>
+              Adds a quiet weeks-out line and a prep checklist to your weekly coaching. You can clear it any time.
+            </Text>
+            <TextInput
+              style={styles.showDateInput}
+              value={showDateInput}
+              onChangeText={setShowDateInput}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="numbers-and-punctuation"
+              maxLength={10}
+              accessibilityLabel="Show date, optional, format year month day"
+            />
           </>
         )}
 
@@ -541,6 +605,12 @@ const styles = StyleSheet.create({
   optionalTag: {
     ...type.caption,
     color: colors.textMuted,
+  },
+  showDateInput: {
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    borderWidth: 1.5, borderColor: colors.border,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md + 2,
+    fontSize: fontSize.md, color: colors.textPrimary,
   },
   weakPointGrid: {
     flexDirection: 'row',

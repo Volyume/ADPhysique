@@ -34,7 +34,10 @@ import {
   getCardioLogRange,
   getDailyStepsRange,
   activityDayKey,
+  getActivePeakWeekPlan,
 } from '../lib/database';
+import { isCompetitionGoal } from '../lib/coachingGoals';
+import { contestCountdown, parseShowDate } from '../lib/contestCountdown';
 import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
 import { getRecentIntakeSummary } from '../lib/food/db';
 import { localWeekStartMs, localDayKey } from '../lib/dayKey';
@@ -930,6 +933,39 @@ export default function CoachOutputScreen({ navigation, route }) {
   // NU-3: tap-time explanation when a compute nulls (a stale-suggestion
   // race); keyed by adjustment. An Apply must never end in silence.
   const [applyNotice, setApplyNotice] = useState({});
+  // B4: contest countdown state. Visibility rules live in the pure lib
+  // (docs/b4-contest-countdown-ed-review): any truthy wellbeing flag,
+  // including a 'read_failed' sentinel from a failed read, hides it
+  // entirely, so this surface fails CLOSED. Safety holds render above.
+  const [countdown, setCountdown] = useState(null);
+
+  useEffect(() => {
+    if (!user?.id || !isCompetitionGoal(userProfile?.trainingGoal)) {
+      setCountdown(null);
+      return undefined;
+    }
+    let cancelled = false;
+    (async () => {
+      const plan = await getActivePeakWeekPlan(user.id).catch(() => null);
+      const showDateMs = parseShowDate(plan?.showDate);
+      if (showDateMs === null) {
+        if (!cancelled) setCountdown(null);
+        return;
+      }
+      const openFlag = await getOpenEdPatternFlag(user.id).catch(() => 'read_failed');
+      let calm = 'read_failed'; // fail closed: unreadable wellbeing hides the countdown
+      try { calm = isCalm(await getWellbeingMode()); } catch (_) {}
+      const state = contestCountdown({
+        showDateMs,
+        nowMs: Date.now(),
+        edPatternOpen: openFlag,
+        calmMode: calm,
+        scoffPositive: (userProfile?.scoffScore ?? 0) >= 2,
+      });
+      if (!cancelled) setCountdown(state);
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id, userProfile?.trainingGoal, userProfile?.scoffScore]);
 
   // Confirm-then-apply: write the suggested calorie change to
   // nutrition_targets only when the user taps Apply, then record it on
@@ -2168,6 +2204,29 @@ export default function CoachOutputScreen({ navigation, route }) {
           <Text style={styles.forwardLine}>{coachResponse.forward}</Text>
         ) : null}
 
+        {/* B4: contest countdown. Deliberately BELOW the safety shelf (rule 1:
+            holds outrank the countdown, unchanged) and null under any open
+            wellbeing flag (rule 2/5, enforced in the pure lib). Neutral
+            styling: never amber (the hero Apply keeps the one-amber rule).
+            Process checkpoints only; peak week adds the standard medical
+            line (docs/b4-contest-countdown-ed-review-2026-07-02.md). */}
+        {countdown ? (
+          <View style={styles.countdownCard} accessibilityRole="summary">
+            <Text style={styles.countdownLine}>{countdown.line}</Text>
+            {countdown.checkpoint ? (
+              <>
+                <Text style={styles.countdownCheckpointTitle}>{countdown.checkpoint.title}</Text>
+                <Text style={styles.countdownCheckpointDetail}>{countdown.checkpoint.detail}</Text>
+              </>
+            ) : null}
+            {countdown.isPeakWeek ? (
+              <Text style={styles.countdownDisclaimer}>
+                Volyume provides estimates and guidance, not medical advice. Consult a qualified professional before making significant changes to your diet or training.
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+
         {/* NAV-4 (founder decision): the Move #4 differential paywall used to
             render here, unreachable by its free-tier audience behind
             withProGuard. It now lives in HomeScreen's banner stack. */}
@@ -2654,6 +2713,34 @@ const styles = StyleSheet.create({
   secondaryBtnText: {
     ...type.bodyStrong,
     color: colors.textMuted,
+  },
+  // B4 countdown: deliberately neutral (surface + border, no amber).
+  countdownCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    marginTop: spacing.md,
+  },
+  countdownLine: {
+    ...type.h3,
+    color: colors.textPrimary,
+  },
+  countdownCheckpointTitle: {
+    ...type.bodyStrong,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+  },
+  countdownCheckpointDetail: {
+    ...type.body,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  countdownDisclaimer: {
+    ...type.caption,
+    color: colors.textMuted,
+    marginTop: spacing.md,
   },
   credentialNote: {
     ...type.caption,
