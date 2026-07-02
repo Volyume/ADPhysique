@@ -5,8 +5,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Application from 'expo-application';
-import { colors, fontSize, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
+import useAccountActions from '../hooks/useAccountActions';
 import { getSupabaseClient } from '../lib/supabase';
 import { logError, logInfo } from '../lib/errorLog';
 import { audit } from '../lib/observability';
@@ -40,6 +41,11 @@ export default function Article9ConsentScreen({ navigation }) {
   }));
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
+  // OB-6 (audit 02): the quiet "What if I don't agree?" affordance below the
+  // actions. Purely additive: the consent copy above is compliance-locked and
+  // untouched, and the gate itself is not weakened, reordered or skippable.
+  const [declineInfoOpen, setDeclineInfoOpen] = useState(false);
+  const { signingOut, deletingAccount, handleSignOut, handleDeleteAccount } = useAccountActions();
 
   async function handleContinue() {
     if (!agreed || busy) return;
@@ -234,6 +240,50 @@ export default function Article9ConsentScreen({ navigation }) {
         <TouchableOpacity onPress={openPrivacyPolicy} style={styles.ctaGhost} accessibilityRole="link">
           <Text style={styles.ctaGhostText}>Read the full privacy policy</Text>
         </TouchableOpacity>
+
+        {/* OB-6: a factual exit affordance for a hesitant user, whose only
+            option used to be killing the app. One quiet line that expands a
+            short explanation with a sign-out (and delete) route. Additive
+            only: it sits BELOW the existing actions, rewords none of the
+            locked consent copy above, and the gate stays un-skippable. */}
+        <TouchableOpacity
+          onPress={() => {
+            if (!declineInfoOpen) audit('consent.article9.declineInfo.open');
+            setDeclineInfoOpen(v => !v);
+          }}
+          style={styles.declineLink}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: declineInfoOpen }}
+          accessibilityLabel="What if I don't agree?"
+        >
+          <Text style={styles.declineLinkText}>What if I don't agree?</Text>
+        </TouchableOpacity>
+
+        {declineInfoOpen ? (
+          <View style={styles.declineBox}>
+            <Text style={styles.declineBody}>
+              Without this consent, Volyume cannot process your health data, so the app cannot be used. Nothing is processed until you agree. Your options are to agree above, sign out and decide later, or delete your account and any data already stored.
+            </Text>
+            <TouchableOpacity
+              onPress={signingOut ? undefined : handleSignOut}
+              style={styles.declineAction}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: signingOut }}
+            >
+              <Ionicons name="log-out-outline" size={16} color={colors.textSecondary} />
+              <Text style={styles.declineActionText}>{signingOut ? 'Signing out…' : 'Sign out'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={deletingAccount ? undefined : handleDeleteAccount}
+              style={styles.declineAction}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: deletingAccount }}
+            >
+              <Ionicons name="trash-outline" size={16} color={colors.textSecondary} />
+              <Text style={styles.declineActionText}>{deletingAccount ? 'Deleting account…' : 'Delete my account'}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -338,5 +388,41 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: fontSize.sm,
     textDecorationLine: 'underline',
+  },
+  // OB-6 "What if I don't agree?" affordance. Deliberately quieter than the
+  // policy link so it reads as information, not a competing call to action.
+  declineLink: {
+    marginTop: spacing.xs,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  declineLinkText: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+    textDecorationLine: 'underline',
+  },
+  declineBox: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  declineBody: {
+    ...type.bodySm,
+    color: colors.textSecondary,
+  },
+  declineAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
+  },
+  declineActionText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
   },
 });

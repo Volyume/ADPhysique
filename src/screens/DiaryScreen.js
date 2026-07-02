@@ -350,6 +350,35 @@ export default function DiaryScreen({ navigation }) {
     return () => { active = false; };
   }, []));
 
+  // NU-9: per-user daily water target (device-local preference). Defaults to
+  // the old hardcoded 3.0 L; tapping the water value picks a new one. Purely
+  // a hydration nudge, so it stays well away from calorie/coaching targets.
+  const [waterTargetMl, setWaterTargetMl] = useState(WATER_TARGET_ML);
+  useEffect(() => {
+    let active = true;
+    AsyncStorage.getItem(WATER_TARGET_KEY).then((v) => {
+      const n = parseInt(v, 10);
+      if (active && Number.isFinite(n) && n >= 1000 && n <= 6000) setWaterTargetMl(n);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
+  const changeWaterTarget = useCallback(() => {
+    appAlert(
+      'Daily water target',
+      'Pick the daily amount you are aiming for.',
+      [
+        ...[2000, 2500, 3000, 3500, 4000].map((n) => ({
+          text: `${(n / 1000).toFixed(1)} L`,
+          onPress: () => {
+            setWaterTargetMl(n);
+            AsyncStorage.setItem(WATER_TARGET_KEY, String(n)).catch(() => {});
+          },
+        })),
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
+  }, []);
+
   const mealsPerDay = Math.max(prefMeals + addedMeals, highestLoggedMeal(entries));
   const mealSlots = useMemo(() => buildMealSlots(entries, mealsPerDay), [entries, mealsPerDay]);
 
@@ -927,7 +956,13 @@ export default function DiaryScreen({ navigation }) {
           </TouchableOpacity>
         ) : null}
 
-        <WaterRow ml={waterMl} onAdd={() => logWaterDelta(250)} onSub={() => logWaterDelta(-250)} />
+        <WaterRow
+          ml={waterMl}
+          targetMl={waterTargetMl}
+          onAdd={(amount) => logWaterDelta(amount)}
+          onSub={(amount) => logWaterDelta(-amount)}
+          onEditTarget={changeWaterTarget}
+        />
       </ScrollView>
 
       <FoodDetailSheet
@@ -1106,14 +1141,15 @@ export default function DiaryScreen({ navigation }) {
   );
 }
 
-// Default daily hydration target until a per-user water target setting lands
-// (diary-tab redesign 2026-06-01: flagged as a small follow-up preference).
+// Default daily hydration target; NU-9 made it a per-user preference (tap the
+// value to change it, stored device-locally) instead of a hardcoded 3.0 L.
 const WATER_TARGET_ML = 3000;
+const WATER_TARGET_KEY = '@volyume_water_target_ml';
 
-function WaterRow({ ml, onAdd, onSub }) {
+function WaterRow({ ml, targetMl = WATER_TARGET_ML, onAdd, onSub, onEditTarget }) {
   const litres = (ml / 1000).toFixed(1);
-  const targetL = (WATER_TARGET_ML / 1000).toFixed(1);
-  const progress = Math.max(0, Math.min(1, ml / WATER_TARGET_ML));
+  const targetL = (targetMl / 1000).toFixed(1);
+  const progress = Math.max(0, Math.min(1, ml / targetMl));
   return (
     <View style={styles.waterRow}>
       <View style={styles.waterHeader}>
@@ -1122,11 +1158,35 @@ function WaterRow({ ml, onAdd, onSub }) {
           <Text style={styles.waterLabel}>Water</Text>
         </View>
         <View style={styles.waterButtons}>
-          <Text style={styles.waterValue}>{litres} / {targetL} L</Text>
-          <TouchableOpacity style={styles.waterBtn} onPress={onSub} hitSlop={8} accessibilityRole="button" accessibilityLabel="Remove 250 millilitres of water">
+          {/* NU-9: the value doubles as the target editor. */}
+          <TouchableOpacity
+            onPress={onEditTarget}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Water ${litres} of ${targetL} litres. Tap to change your daily target.`}
+          >
+            <Text style={styles.waterValue}>{litres} / {targetL} L</Text>
+          </TouchableOpacity>
+          {/* NU-9: long-press moves a bottle (500 ml) at a time, so a full day
+              of water no longer needs 12 taps. */}
+          <TouchableOpacity
+            style={styles.waterBtn}
+            onPress={() => onSub(250)}
+            onLongPress={() => onSub(500)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Remove 250 millilitres of water. Long press to remove 500."
+          >
             <Ionicons name="remove" size={16} color={colors.textPrimary} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.waterBtn} onPress={onAdd} hitSlop={8} accessibilityRole="button" accessibilityLabel="Add 250 millilitres of water">
+          <TouchableOpacity
+            style={styles.waterBtn}
+            onPress={() => onAdd(250)}
+            onLongPress={() => onAdd(500)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Add 250 millilitres of water. Long press to add 500."
+          >
             <Ionicons name="add" size={16} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
@@ -1135,7 +1195,7 @@ function WaterRow({ ml, onAdd, onSub }) {
         style={styles.waterTrack}
         accessibilityRole="progressbar"
         accessibilityLabel="Water intake"
-        accessibilityValue={{ min: 0, max: WATER_TARGET_ML, now: Math.round(ml) }}
+        accessibilityValue={{ min: 0, max: targetMl, now: Math.round(ml) }}
       >
         <View style={[styles.waterFill, { width: `${Math.round(progress * 100)}%` }]} />
       </View>

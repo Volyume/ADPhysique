@@ -1310,7 +1310,18 @@ export default function WeeklyCheckInScreen({ navigation }) {
             {'\n\n'}
             Log {remaining} more {remaining === 1 ? 'reading' : 'readings'} from the Train tab and come back on {dayName}.
           </Text>
-          <TouchableOpacity style={styles.gateBtn} onPress={() => navigation.goBack()} activeOpacity={0.85} accessibilityRole="button">
+          {/* OB-8: the label promises an action, so perform it. Deep-link to
+              the Train tab's weight cell (TodayStrip) and pop its input open.
+              This screen lives in ProfileStack, so a bare navigate('Home')
+              would be silently dropped in production (the F4 bug class);
+              route via the parent tab navigator. The fresh param value means
+              a repeat visit re-opens the input. */}
+          <TouchableOpacity
+            style={styles.gateBtn}
+            onPress={() => navigation.getParent()?.navigate('HomeTab', { screen: 'Home', params: { openWeightLog: Date.now() } })}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+          >
             <Text style={styles.gateBtnText}>Log my weight first</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.gateDeferBtn} onPress={() => setGateState('open')} activeOpacity={0.75} accessibilityRole="button">

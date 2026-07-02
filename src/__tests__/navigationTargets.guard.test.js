@@ -50,6 +50,24 @@ describe('cross-stack navigation guard (F4 / NAV-1/2/3)', () => {
       .toMatch(/getParent\(\)\?\.navigate\(\s*'ProfileTab',\s*\{\s*screen:\s*'SettingsPrivacy'/);
   });
 
+  test("OB-8: the check-in's 'Log my weight first' CTA deep-links to the Train tab weight logger", () => {
+    const src = read('src/screens/WeeklyCheckInScreen.js');
+    // WeeklyCheckIn lives in ProfileStack; Home lives in HomeStack, so the
+    // deep-link must use the parent-tab form (a bare navigate('Home') is the
+    // silent-no-op bug class this file guards). The openWeightLog param is
+    // what pops the TodayStrip weight input open on arrival.
+    expect(src).toMatch(/getParent\(\)\?\.navigate\(\s*'HomeTab',\s*\{\s*screen:\s*'Home',\s*params:\s*\{\s*openWeightLog/);
+    // And no bare cross-stack navigate to Home sneaks back in.
+    expect(src).not.toMatch(/navigation\.navigate\(\s*['"]Home['"]/);
+    // The receiving end: Home forwards the param into TodayStrip, which opens
+    // its weight input on the signal. Without both, the deep-link lands on
+    // Home but the promised "log weight" action is still a hunt.
+    expect(read('src/screens/HomeScreen.js'))
+      .toMatch(/openWeightSignal=\{route\?\.params\?\.openWeightLog/);
+    expect(read('src/components/TodayStrip.js'))
+      .toMatch(/if\s*\(openWeightSignal\)\s*setEditing\(true\)/);
+  });
+
   test('the Diary OFF-sharing prompt navigates BEFORE it dismisses itself', () => {
     const src = read('src/screens/DiaryScreen.js');
     const site = src.indexOf("screen: 'SettingsPrivacy'");

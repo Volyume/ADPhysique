@@ -61,6 +61,10 @@ export default function TodayStrip({
   // a weigh-in moves to a long-press so the door is the primary action. When
   // absent, the logged cell falls back to tap-to-edit.
   onOpenTrend,
+  // OB-8: a changing truthy value (the check-in's "Log my weight first"
+  // deep-link passes a timestamp) opens the weight input, so the promised
+  // action is one tap away rather than a hunt for the right cell.
+  openWeightSignal = null,
 }) {
   // ── Weight draft (owned here; data owned by the parent) ──
   const [weightInput, setWeightInput] = useState('');
@@ -119,6 +123,11 @@ export default function TodayStrip({
   }, [bwu, weightInput, weightInputSt, weightInputStLbs, onLogWeight]);
 
   const startEdit = useCallback(() => setEditing(true), []);
+
+  // OB-8: open the weight input when the deep-link signal changes.
+  useEffect(() => {
+    if (openWeightSignal) setEditing(true);
+  }, [openWeightSignal]);
 
   const mountedRef = useRef(true);
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);

@@ -258,12 +258,12 @@ export default function FoodSearchScreen({ navigation, route }) {
   useEffect(() => { if (showPlate && plate.length === 0) setShowPlate(false); }, [showPlate, plate.length]);
 
   // Debounced waterfall search. The search box searches the food database
-  // from any browse tab (250ms debounce). Suggested has no search box, so
-  // it is skipped. With no query each tab shows its own browse list.
+  // from any browse tab (250ms debounce), Suggested included (NU-9: it was
+  // the one tab that hid the box). With no query each tab shows its own list.
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const q = query.trim();
-    if (activeTab === 'suggested' || q.length < 2) {
+    if (q.length < 2) {
       setResults([]);
       setSearching(false);
       return;
@@ -280,7 +280,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       }
     }, 250);
     return () => debounceRef.current && clearTimeout(debounceRef.current);
-  }, [query, userId, activeTab]);
+  }, [query, userId]);
 
   function openPicker(food) {
     setPicker({ food });
@@ -816,8 +816,11 @@ export default function FoodSearchScreen({ navigation, route }) {
         ))}
       </ScrollView>
 
-      {activeTab === 'suggested' ? renderSuggested() : (
-      <>
+      {/* NU-9: the search box renders on EVERY tab, including Suggested. The
+          locked design intent (searchTabs.js header) is a persistent search
+          bar over browse lists; Suggested was the one tab that hid it. A live
+          2+ char query is a database search from any tab (selectTabRows), so
+          typing here shows results and clearing returns to the suggestions. */}
       <View style={styles.searchWrap}>
         <Ionicons name="search" size={18} color={colors.textMuted} style={{ marginRight: spacing.sm }} />
         <TextInput
@@ -833,6 +836,8 @@ export default function FoodSearchScreen({ navigation, route }) {
         {searching ? <ActivityIndicator size="small" color={colors.textMuted} /> : null}
       </View>
 
+      {activeTab === 'suggested' && query.trim().length < 2 ? renderSuggested() : (
+      <>
       {/* Wave-1 A6: name the UK data moat on the pre-typing state. Hidden the
           moment a live query (2+ chars) takes over, so it never competes with
           results. */}

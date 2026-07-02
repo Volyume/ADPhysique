@@ -84,7 +84,7 @@ const READINESS_ROWS = [
   },
 ];
 
-export default function HomeScreen({ navigation }) {
+export default function HomeScreen({ navigation, route }) {
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments } = useAppStore(
@@ -1287,6 +1287,9 @@ export default function HomeScreen({ navigation }) {
             lastWeightKg={recentWeights.length ? recentWeights[recentWeights.length - 1] : (userProfile?.weightKg ?? null)}
             savingWeight={savingWeight}
             onLogWeight={handleLogWeight}
+            // OB-8: the weekly check-in's "Log my weight first" CTA deep-links
+            // here with a fresh timestamp; the strip opens its weight input.
+            openWeightSignal={route?.params?.openWeightLog ?? null}
             hasActiveWorkout={hasActiveWorkout}
             edFlagOpen={edFlagOpen}
             cardioEnabled={userProfile?.cardioEnabled !== false}

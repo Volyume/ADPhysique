@@ -261,9 +261,16 @@ export default function ProUpgradeScreen({ navigation, route }) {
         // Distinguishing cancel vs timeout reliably needs platform hooks
         // we don't have; both end up here. Log so we can spot patterns.
         logInfo('ProUpgrade.oauth.pollExhausted', `provider=${provider}, user cancelled or session never appeared`);
+        // NAV-7 (audit 02): this is the revenue moment, so never end it in
+        // silence. A cancel reads the toast as harmless; a genuine timeout
+        // finally learns the spinner didn't just die.
+        toast.show("Sign-in didn't finish. Try again when you're ready.", { variant: 'info' });
       }
     } catch (e) {
       logError('ProUpgrade.oauth.threw', e, { provider });
+      // NAV-7: same rule for a thrown failure, surface it at the moment it
+      // happened rather than leaving the button to quietly stop spinning.
+      toast.show('Sign-in did not complete, try again', { variant: 'error' });
     } finally {
       setBusy(false);
     }

@@ -9,6 +9,7 @@ import { getNutritionTargets, getLatestBodyWeight, getLatestBodyComposition } fr
 import { computeFFMFloor } from '../lib/nutritionEngine';
 import { safeDayFloorKcal } from '../lib/food/calorieBank';
 import { toEnergy, energyUnitLabel } from '../lib/format';
+import { useToast } from '../components/Toast';
 import {
   WEEKDAY_KEYS, WEEKDAY_LABELS, DEFAULT_PERDAY_OFFSETS, MAX_PERDAY_OFFSET_KCAL,
   loadPerDayOffsets, savePerDayOffsets, sanitiseOffset, hasAnyOffset,
@@ -29,6 +30,7 @@ export default function PerDayTargetsScreen() {
     sex: s.userProfile?.sex ?? null,
   })));
 
+  const toast = useToast();
   const [baseKcal, setBaseKcal] = useState(0);
   const [floorKcal, setFloorKcal] = useState(() => safeDayFloorKcal({ sex }));
   const [offsets, setOffsets] = useState(DEFAULT_PERDAY_OFFSETS);
@@ -62,20 +64,24 @@ export default function PerDayTargetsScreen() {
     return () => { active = false; };
   }, [userId, sex]);
 
-  const persist = useCallback((next) => {
+  // NAV-7 (audit 02): a failed save used to be swallowed (.catch(() => {})),
+  // leaving optimistic UI on screen that the diary would never actually use.
+  // Now the failure reverts to the last saved offsets and says so plainly.
+  const persist = useCallback((next, prev) => {
     setOffsets(next);
-    savePerDayOffsets(next).catch(() => {});
-  }, []);
+    savePerDayOffsets(next).catch(() => {
+      setOffsets(prev);
+      toast.show('Could not save that change, so it was undone. Try again.', { variant: 'error' });
+    });
+  }, [toast]);
 
   const adjust = useCallback((key, dir) => {
-    setOffsets((prev) => {
-      const next = { ...prev, [key]: sanitiseOffset((prev[key] || 0) + dir * STEP_KCAL) };
-      savePerDayOffsets(next).catch(() => {});
-      return next;
-    });
-  }, []);
+    const prev = offsets;
+    const next = { ...prev, [key]: sanitiseOffset((Number(prev[key]) || 0) + dir * STEP_KCAL) };
+    persist(next, prev);
+  }, [offsets, persist]);
 
-  const resetAll = useCallback(() => { persist({ ...DEFAULT_PERDAY_OFFSETS }); }, [persist]);
+  const resetAll = useCallback(() => { persist({ ...DEFAULT_PERDAY_OFFSETS }, offsets); }, [persist, offsets]);
 
   // The number the diary will actually display for a weekday: base + offset, but
   // never below the floor (matches resolveEffectiveTargets' clamp exactly).

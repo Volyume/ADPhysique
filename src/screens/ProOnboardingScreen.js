@@ -37,6 +37,7 @@ import {
   buildNutritionEngineInputs,
 } from '../lib/coachingGoals';
 import { calculateNutritionTargets, PROTEIN_APPROACHES, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
+import { saveDraft, loadDraft, clearDraft, DRAFT_DEBOUNCE_MS } from '../lib/proOnboardingDraft';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
@@ -145,14 +146,15 @@ export default function ProOnboardingScreen({ navigation }) {
   const [firstName, setFirstName] = useState(userProfile?.firstName || '');
   const localUnits = 'kg';
   const [localBWUnits, setLocalBWUnits] = useState(bodyWeightUnits || 'st');
-  // Sensible defaults so the field is never blank, leaving it empty
-  // previously let a user advance with no weight set, and the downstream
-  // safeWeightKg fallback (80kg) silently masked the omission. Other
-  // fields (heightFt=5, heightIn=9, sessionLengthMinutes=60, sex=male,
-  // trainingGoal=general) already prefill the same way.
-  const [bodyWeightSt, setBodyWeightSt] = useState('12');
-  const [bodyWeightStLbs, setBodyWeightStLbs] = useState('0');
-  const [bodyWeight, setBodyWeight] = useState('80');
+  // OB-5 (audit 02): body weight and age start EMPTY and join sex as
+  // explicit-entry fields. The old prefills (80 kg, age 30) were real editable
+  // values that validated untouched, so plausible-looking calorie targets
+  // could be computed on someone else's body. The example values now live in
+  // the placeholders, and the step-2 Continue stays disabled (canContinue)
+  // until both are genuinely entered.
+  const [bodyWeightSt, setBodyWeightSt] = useState('');
+  const [bodyWeightStLbs, setBodyWeightStLbs] = useState('');
+  const [bodyWeight, setBodyWeight] = useState('');
   // Optional body fat, mirrors NutritionTargetsScreen. When a measured value is
   // given (not visual) the engine uses the lean-mass BMR formula, the same as
   // Nutrition Targets, so onboarding and the targets screen compute the SAME
@@ -168,7 +170,8 @@ export default function ProOnboardingScreen({ navigation }) {
   // the profile step can complete, so sex is never unknown by the time targets
   // are computed.
   const [sex, setSex] = useState(null);
-  const [age, setAge] = useState('30');
+  // OB-5: age starts empty too (see the body-weight note above).
+  const [age, setAge] = useState('');
   const [heightCm, setHeightCm] = useState('175');
   const [heightFt, setHeightFt] = useState('5');
   const [heightIn, setHeightIn] = useState('9');
@@ -291,6 +294,90 @@ export default function ProOnboardingScreen({ navigation }) {
     }
   }, [step, user, userProfile, proOnboardingAccountCreated]);
 
+  // ── OB-3: draft persistence across process death ─────────────────────────────
+  // The wizard's answers live in screen-local state, so a process kill used to
+  // lose steps 2-5. A per-uid AsyncStorage draft (lib/proOnboardingDraft)
+  // restores { step, answers } on mount and is cleared when the wizard
+  // completes. Restoring NEVER weakens the sex gate: a draft saved with sex
+  // null restores sex null, so step 2's canContinue still blocks Continue.
+  const draftRestoredRef = useRef(false);
+  // Saving stays off until the restore read has settled, so a mount-time save
+  // of default answers can never overwrite a further-along draft mid-load.
+  const draftLoadedRef = useRef(false);
+  useEffect(() => {
+    if (draftRestoredRef.current) return;
+    if (!user?.id || user.isLocal) return;
+    draftRestoredRef.current = true;
+    loadDraft(user.id).then((draft) => {
+      draftLoadedRef.current = true;
+      if (!draft) return;
+      const a = draft.answers || {};
+      const str = (v, set) => { if (typeof v === 'string') set(v); };
+      const bool = (v, set) => { if (typeof v === 'boolean') set(v); };
+      const num = (v, set) => { if (Number.isFinite(v)) set(v); };
+      str(a.firstName, setFirstName);
+      if (a.localBWUnits === 'st' || a.localBWUnits === 'kg' || a.localBWUnits === 'lbs') setLocalBWUnits(a.localBWUnits);
+      str(a.bodyWeightSt, setBodyWeightSt);
+      str(a.bodyWeightStLbs, setBodyWeightStLbs);
+      str(a.bodyWeight, setBodyWeight);
+      str(a.bodyFat, setBodyFat);
+      str(a.bfSource, setBfSource);
+      if (a.localHeightUnits === 'imperial' || a.localHeightUnits === 'metric') setLocalHeightUnits(a.localHeightUnits);
+      // Sex only ever restores an explicit prior choice; anything else stays null.
+      if (a.sex === 'male' || a.sex === 'female') setSex(a.sex);
+      str(a.age, setAge);
+      str(a.heightCm, setHeightCm);
+      str(a.heightFt, setHeightFt);
+      str(a.heightIn, setHeightIn);
+      str(a.experience, setExperience);
+      num(a.sessionLengthMinutes, setSessionLengthMinutes);
+      num(a.daysPerWeek, setDaysPerWeek);
+      str(a.equipment, setEquipment);
+      str(a.trainingGoal, setTrainingGoal);
+      str(a.trainingPhase, setTrainingPhase);
+      if (Array.isArray(a.planWeakPoints)) setPlanWeakPoints(a.planWeakPoints.filter((m) => typeof m === 'string').slice(0, 3));
+      str(a.proteinOverride, setProteinOverride);
+      str(a.recoveryRating, setRecoveryRating);
+      bool(a.morningEnabled, setMorningEnabled);
+      num(a.morningHour, setMorningHour);
+      bool(a.checkinEnabled, setCheckinEnabled);
+      num(a.checkinDay, setCheckinDay);
+      bool(a.cardioOn, setCardioOn);
+      // The account step is behind a restored draft by definition.
+      setAccountCreated(true);
+      setStep((s) => Math.max(s, draft.step));
+    }).catch(() => { draftLoadedRef.current = true; /* fresh start, same as no draft */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Debounced draft save on any answer/step change while the wizard is live.
+  // Skips step 1 (auth-owned) and the final submission (advanceFrom5 clears
+  // the draft; a queued save after that would resurrect it).
+  const draftTimerRef = useRef(null);
+  useEffect(() => {
+    if (!user?.id || user.isLocal || step < 2) return undefined;
+    if (!draftLoadedRef.current || submittingRef.current) return undefined;
+    const answers = {
+      firstName, localBWUnits, bodyWeightSt, bodyWeightStLbs, bodyWeight,
+      bodyFat, bfSource, localHeightUnits, sex, age, heightCm, heightFt,
+      heightIn, experience, sessionLengthMinutes, daysPerWeek, equipment,
+      trainingGoal, trainingPhase, planWeakPoints, proteinOverride,
+      recoveryRating, morningEnabled, morningHour, checkinEnabled, checkinDay,
+      cardioOn,
+    };
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(() => {
+      saveDraft(user.id, step, answers);
+    }, DRAFT_DEBOUNCE_MS);
+    return () => { if (draftTimerRef.current) clearTimeout(draftTimerRef.current); };
+  }, [
+    user, step, firstName, localBWUnits, bodyWeightSt, bodyWeightStLbs,
+    bodyWeight, bodyFat, bfSource, localHeightUnits, sex, age, heightCm,
+    heightFt, heightIn, experience, sessionLengthMinutes, daysPerWeek,
+    equipment, trainingGoal, trainingPhase, planWeakPoints, proteinOverride,
+    recoveryRating, morningEnabled, morningHour, checkinEnabled, checkinDay,
+    cardioOn,
+  ]);
 
   // ── Step transition helpers ──────────────────────────────────────────────────
 
@@ -688,6 +775,11 @@ export default function ProOnboardingScreen({ navigation }) {
     // tick) and still go to the completion screen — which handles the no-plan
     // state and whose alert ("Open Home and tap Build my plan") then reads
     // correctly. Stranding the user on the step-5 form would not.
+    // OB-3: the wizard is complete either way from here, so drop the resume
+    // draft (and any queued save) before leaving the screen.
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    if (user?.id) clearDraft(user.id).catch(() => {});
+
     if (planFailed) {
       cancelSequenceTimers();
       setBusy(false);
@@ -848,7 +940,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 value={age}
                 onChangeText={setAge}
                 placeholder="e.g. 28"
-                placeholderTextColor={colors.textDisabled}
+                placeholderTextColor={colors.textMuted}
                 keyboardType="number-pad"
                 maxLength={3}
                 autoComplete="off"
@@ -859,12 +951,17 @@ export default function ProOnboardingScreen({ navigation }) {
             <View style={styles.section}>
               <View style={styles.fieldLabelRow}>
                 <Text style={[styles.fieldLabel, { marginBottom: 0 }]}>Height</Text>
-                <View style={styles.segmentRowSmall}>
+                {/* UI-3: single-select controls carry radio semantics, matching
+                    the shared SegmentedControl. */}
+                <View style={styles.segmentRowSmall} accessibilityRole="radiogroup" accessibilityLabel="Height units">
                   {[{ key: 'imperial', label: 'ft + in' }, { key: 'metric', label: 'cm' }].map(u => (
                     <TouchableOpacity
                       key={u.key}
                       style={[styles.segmentSmall, localHeightUnits === u.key && styles.segmentActive]}
                       onPress={() => setLocalHeightUnits(u.key)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: localHeightUnits === u.key }}
+                      accessibilityLabel={u.label}
                     >
                       <Text style={[styles.segmentTextSmall, localHeightUnits === u.key && styles.segmentTextActive]}>
                         {u.label}
@@ -942,8 +1039,8 @@ export default function ProOnboardingScreen({ navigation }) {
                       style={styles.input}
                       value={bodyWeightSt}
                       onChangeText={setBodyWeightSt}
-                      placeholder="12 st"
-                      placeholderTextColor={colors.textDisabled}
+                      placeholder="e.g. 12 st"
+                      placeholderTextColor={colors.textMuted}
                       keyboardType="number-pad"
                       maxLength={3}
                       autoComplete="off"
@@ -955,8 +1052,8 @@ export default function ProOnboardingScreen({ navigation }) {
                       style={styles.input}
                       value={bodyWeightStLbs}
                       onChangeText={setBodyWeightStLbs}
-                      placeholder="0 lbs"
-                      placeholderTextColor={colors.textDisabled}
+                      placeholder="e.g. 0 lbs"
+                      placeholderTextColor={colors.textMuted}
                       keyboardType="decimal-pad"
                       maxLength={4}
                       autoComplete="off"
@@ -970,7 +1067,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   value={bodyWeight}
                   onChangeText={setBodyWeight}
                   placeholder={localBWUnits === 'kg' ? 'e.g. 80 kg' : 'e.g. 176 lbs'}
-                  placeholderTextColor={colors.textDisabled}
+                  placeholderTextColor={colors.textMuted}
                   keyboardType="decimal-pad"
                   autoComplete="off"
                   textContentType="none"
@@ -1221,6 +1318,9 @@ export default function ProOnboardingScreen({ navigation }) {
                 style={styles.proteinHead}
                 onPress={() => setProteinOpen(v => !v)}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: proteinOpen }}
+                accessibilityLabel={`Protein target, ${PROTEIN_APPROACHES[proteinApproach]?.label}. Tap to change.`}
               >
                 <View style={{ flex: 1 }}>
                   <View style={styles.measuredRow}>
@@ -1236,7 +1336,7 @@ export default function ProOnboardingScreen({ navigation }) {
               </TouchableOpacity>
 
               {proteinOpen && (
-                <View style={styles.proteinOptions}>
+                <View style={styles.proteinOptions} accessibilityRole="radiogroup" accessibilityLabel="Protein target">
                   {['standard', 'optimised', 'advanced'].map(key => {
                     const opt = PROTEIN_APPROACHES[key];
                     const active = proteinApproach === key;
@@ -1247,6 +1347,9 @@ export default function ProOnboardingScreen({ navigation }) {
                         style={[styles.proteinOpt, active && styles.proteinOptActive]}
                         onPress={() => setProteinOverride(key)}
                         activeOpacity={0.85}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: active }}
+                        accessibilityLabel={`${opt.label}, ${opt.range}${recommended ? ', recommended' : ''}`}
                       >
                         <View style={{ flex: 1 }}>
                           <View style={styles.proteinOptTop}>
@@ -1398,6 +1501,9 @@ export default function ProOnboardingScreen({ navigation }) {
                         key={h}
                         style={[styles.hourChip, morningHour === h && styles.hourChipActive]}
                         onPress={() => setMorningHour(h)}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: morningHour === h }}
+                        accessibilityLabel={`Remind me at ${fmt12(h)}`}
                       >
                         <Text style={[styles.hourChipText, morningHour === h && styles.hourChipTextActive]}>
                           {fmt12(h)}
@@ -1445,6 +1551,9 @@ export default function ProOnboardingScreen({ navigation }) {
                         key={d}
                         style={[styles.hourChip, checkinDay === i && styles.hourChipActive]}
                         onPress={() => setCheckinDay(i)}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: checkinDay === i }}
+                        accessibilityLabel={`Check in on ${d}`}
                       >
                         <Text style={[styles.hourChipText, checkinDay === i && styles.hourChipTextActive]}>
                           {d.slice(0, 3)}

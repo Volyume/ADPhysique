@@ -260,7 +260,11 @@ function useStackMotionOverride() {
 
 function DiaryStack({ navigation }) {
   useEffect(() => {
+    // NAV-5: pop to the tab's root only when re-pressing the tab that is
+    // already focused (the standard re-tap-to-root pattern). Switching tabs
+    // must NOT pop, so the user's place in a stack survives a tab round-trip.
     return navigation.addListener('tabPress', () => {
+      if (!navigation.isFocused()) return;
       navigation.dispatch(StackActions.popToTop());
     });
   }, [navigation]);
@@ -328,7 +332,11 @@ function DiaryStack({ navigation }) {
 
 function HomeStack({ navigation }) {
   useEffect(() => {
+    // NAV-5: pop to the tab's root only when re-pressing the tab that is
+    // already focused (the standard re-tap-to-root pattern). Switching tabs
+    // must NOT pop, so the user's place in a stack survives a tab round-trip.
     return navigation.addListener('tabPress', () => {
+      if (!navigation.isFocused()) return;
       navigation.dispatch(StackActions.popToTop());
     });
   }, [navigation]);
@@ -354,7 +362,11 @@ function HomeStack({ navigation }) {
 
 function PlansStack({ navigation }) {
   useEffect(() => {
+    // NAV-5: pop to the tab's root only when re-pressing the tab that is
+    // already focused (the standard re-tap-to-root pattern). Switching tabs
+    // must NOT pop, so the user's place in a stack survives a tab round-trip.
     return navigation.addListener('tabPress', () => {
+      if (!navigation.isFocused()) return;
       navigation.dispatch(StackActions.popToTop());
     });
   }, [navigation]);
@@ -377,7 +389,11 @@ function PlansStack({ navigation }) {
 
 function ProgressStack({ navigation }) {
   useEffect(() => {
+    // NAV-5: pop to the tab's root only when re-pressing the tab that is
+    // already focused (the standard re-tap-to-root pattern). Switching tabs
+    // must NOT pop, so the user's place in a stack survives a tab round-trip.
     return navigation.addListener('tabPress', () => {
+      if (!navigation.isFocused()) return;
       navigation.dispatch(StackActions.popToTop());
     });
   }, [navigation]);
@@ -408,7 +424,11 @@ function ProgressStack({ navigation }) {
 
 function ProfileStack({ navigation }) {
   useEffect(() => {
+    // NAV-5: pop to the tab's root only when re-pressing the tab that is
+    // already focused (the standard re-tap-to-root pattern). Switching tabs
+    // must NOT pop, so the user's place in a stack survives a tab round-trip.
     return navigation.addListener('tabPress', () => {
+      if (!navigation.isFocused()) return;
       navigation.dispatch(StackActions.popToTop());
     });
   }, [navigation]);
