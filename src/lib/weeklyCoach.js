@@ -71,10 +71,10 @@ export function getLatestEwma(weights, alpha = 0.1) {
  *
  * Used by the ED-pattern detector for its rapid-loss signal.
  */
-export function computeWeeklyTrendPct(morningWeights, currentBodyweightKg = null) {
+export function computeWeeklyTrendPct(morningWeights, currentBodyweightKg = null, nowMs = Date.now()) {
   if (!morningWeights || morningWeights.length < 4) return null;
   const ewmaNow = getLatestEwma(morningWeights);
-  const ewmaPrior = getEwmaSevenDaysAgo(morningWeights);
+  const ewmaPrior = getEwmaSevenDaysAgo(morningWeights, 0.1, nowMs);
   if (ewmaNow == null || ewmaPrior == null) return null;
   const reference = currentBodyweightKg || ewmaNow;
   if (!reference) return null;
@@ -83,11 +83,15 @@ export function computeWeeklyTrendPct(morningWeights, currentBodyweightKg = null
 
 /**
  * Returns the EWMA from 7 days ago (approximate), or null.
+ * F10 (EN-5): `nowMs` is the injectable clock (defaults to Date.now() for
+ * existing callers) so identical inputs give identical outputs. Inside
+ * runWeeklyCoach the clock is read ONCE at the entry and threaded down;
+ * it is never re-read mid-run.
  */
-export function getEwmaSevenDaysAgo(weights, alpha = 0.1) {
+export function getEwmaSevenDaysAgo(weights, alpha = 0.1, nowMs = Date.now()) {
   const series = computeEWMA(weights, alpha);
   if (series.length < 2) return null;
-  const cutoff = Date.now() - 7 * 86400000;
+  const cutoff = nowMs - 7 * 86400000;
   // Find the most recent entry at or before 7 days ago. If none precedes the
   // cutoff the 7-day trend is NOT yet computable — return null rather than
   // falling back to the earliest recent reading (which would treat a sub-7-day
@@ -371,9 +375,17 @@ export function mapCalsAdherence(raw, avgKcal = null, targetKcal = null) {
  * @param {number|null}   inputs.bodyweightKg
  * @param {string}        inputs.units                      - 'kg'|'lbs'
  * @param {boolean}       inputs.scoffPositive              - wellbeing screen was positive; gates deficit suggestions
+ * @param {number}        [inputs.nowMs]                    - injectable clock (epoch ms); defaults to Date.now()
  */
 export function runWeeklyCoach(inputs) {
   const {
+    // F10 (EN-5): the engine's single clock read. Every time-anchored read in
+    // this run (7-day trend cutoff, steps today-key fallback, diet-break weeks,
+    // refeed cadence, ED-detector trend) uses this ONE value, so identical
+    // inputs + the same nowMs give byte-identical outputs. Defaulting here at
+    // the public entry keeps every existing caller unchanged; the clock is
+    // never read a second time inside the run.
+    nowMs = Date.now(),
     checkin,
     morningWeights = [],
     sessionsCompleted: _sessionsCompletedRaw = 0,
@@ -479,8 +491,32 @@ export function runWeeklyCoach(inputs) {
   const weeksInPhase = Number.isFinite(_weeksInPhaseRaw) ? Math.max(1, Math.round(_weeksInPhaseRaw)) : 1;
 
   // ── DATA CONFIDENCE ───────────────────────────────────────────────────────
+  // F10 (EN-8): "this week's weigh-ins" counts DISTINCT local calendar days,
+  // not raw rows. morningWeights spans ~14 days and can carry same-day
+  // duplicates (re-weighs, import/sync artefacts), so the raw row count let
+  // three weigh-ins on ONE day pass the 3-weigh-in gate as a week of data.
+  // Timestamped rows are deduped by localDayKey and windowed to the 7 days
+  // ending at the most recent weigh-in (data-anchored, not clock-anchored, so
+  // the read stays pure); rows without a usable timestamp cannot be deduped or
+  // windowed and keep counting one each, exactly as before. The result is
+  // always <= the old row count, so this gate can only ever HOLD more than
+  // before — never adjust more.
+  const weighInDayCount = (() => {
+    const rows = (Array.isArray(morningWeights) ? morningWeights : []).filter(Boolean);
+    const timed = rows.filter((w) => Number.isFinite(Number(w.loggedAt)));
+    const untimed = rows.length - timed.length;
+    if (!timed.length) return untimed;
+    const latestMs = Math.max(...timed.map((w) => Number(w.loggedAt)));
+    const weekWindowStartMs = latestMs - 7 * 86400000;
+    const distinctDays = new Set(
+      timed
+        .filter((w) => Number(w.loggedAt) >= weekWindowStartMs)
+        .map((w) => localDayKey(Number(w.loggedAt))),
+    );
+    return distinctDays.size + untimed;
+  })();
   const confidence = assessDataConfidence({
-    weigh_ins: morningWeights.length,
+    weigh_ins: weighInDayCount,
     adherenceKnown: checkin?.calsAdherence !== 'untracked' && checkin?.calsAdherence != null,
     weeksInPhase,
     hasUnusualEvent: !!(checkin?.notes?.trim()),
@@ -549,7 +585,7 @@ export function runWeeklyCoach(inputs) {
 
   // ── EWMA weight calculations ──────────────────────────────────────────────
   const ewma7Today   = morningWeights.length >= 3 ? getLatestEwma(morningWeights) : null;
-  const ewma7LastWk  = morningWeights.length >= 3 ? getEwmaSevenDaysAgo(morningWeights) : null;
+  const ewma7LastWk  = morningWeights.length >= 3 ? getEwmaSevenDaysAgo(morningWeights, 0.1, nowMs) : null;
   const bwRef        = bodyweightKg ?? ewma7Today ?? null;
 
   const weightDelta  = (ewma7Today != null && ewma7LastWk != null)
@@ -571,7 +607,7 @@ export function runWeeklyCoach(inputs) {
   // -1.5 below), the +calorie boost magnitude, and the ED detector
   // (computeWeeklyTrendPct) all read the plain trend, never this robust read.
   const robustNow = morningWeights.length >= 3 ? robustTrackingLatest(morningWeights) : null;
-  const robustPrior = morningWeights.length >= 3 ? robustTrackingSevenDaysAgo(morningWeights) : null;
+  const robustPrior = morningWeights.length >= 3 ? robustTrackingSevenDaysAgo(morningWeights, {}, nowMs) : null;
   const robustWeightDelta = (robustNow != null && robustPrior != null)
     ? Math.round((robustNow - robustPrior) * 100) / 100
     : null;
@@ -780,7 +816,7 @@ export function runWeeklyCoach(inputs) {
     if (Array.isArray(dailyStepsSeries) && dailyStepsSeries.length && !rapidLossOverride) {
       stepModifier = computeStepTrendModifier({
         stepRows: dailyStepsSeries,
-        todayKey: stepsTodayKey || localDayKey(Date.now()),
+        todayKey: stepsTodayKey || localDayKey(nowMs),
         adjustmentSign: Math.sign(adaptiveCal.adjustmentKcal),
       });
       if (stepModifier.active && stepModifier.gain !== 0.5) {
@@ -1031,7 +1067,9 @@ export function runWeeklyCoach(inputs) {
   // date rather than the approximate weeksInPhase counter.
   if (phase.isCut) {
     if (goalStartDate) {
-      const dietBreakResult = shouldSuggestDietBreak(goalStartDate);
+      // F10 (EN-5): pass the injected clock into shouldSuggestDietBreak's
+      // existing currentDate parameter (its default is new Date()).
+      const dietBreakResult = shouldSuggestDietBreak(goalStartDate, new Date(nowMs));
       if (dietBreakResult.suggest) {
         dietBreakSuggested = true;
         dietBreakWeeksInDeficit = dietBreakResult.weeksInDeficit;
@@ -1091,7 +1129,7 @@ export function runWeeklyCoach(inputs) {
   if (refeedEligible) {
     const frequencyWeeks = isCompetitionGoal(trainingGoal) ? 1 : 2;
     const weeksSinceRefeed = lastRefeedAt
-      ? Math.floor((Date.now() - lastRefeedAt) / (7 * 86400000))
+      ? Math.floor((nowMs - lastRefeedAt) / (7 * 86400000))
       : null;
     const due = weeksSinceRefeed === null || weeksSinceRefeed >= frequencyWeeks;
     if (due) {
@@ -1122,7 +1160,7 @@ export function runWeeklyCoach(inputs) {
   let edPatternResult = null;
   let edPatternClearedThisWeek = false;
   if (recentWeeklyHistory) {
-    const weightTrendPctPerWeek = computeWeeklyTrendPct(morningWeights, bodyweightKg);
+    const weightTrendPctPerWeek = computeWeeklyTrendPct(morningWeights, bodyweightKg, nowMs);
     if (edPatternOpen) {
       const cleared = hasEdPatternCleared({ weightTrendPctPerWeek }, recentWeeklyHistory);
       if (cleared) {
@@ -1328,7 +1366,7 @@ export function runWeeklyCoach(inputs) {
   const cyclePhaseNote = cycleTrendAnnotation({
     sex,
     menstrual: noteFlags?.menstrual,
-    trendPctPerWeek: computeWeeklyTrendPct(morningWeights, bodyweightKg),
+    trendPctPerWeek: computeWeeklyTrendPct(morningWeights, bodyweightKg, nowMs),
   });
 
   return {

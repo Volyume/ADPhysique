@@ -36,6 +36,29 @@ const MESO_SCHEDULE = {
 // ---------------------------------------------------------------------------
 
 /**
+ * Whole local calendar days from startMs to endMs, never negative.
+ *
+ * F10 (EN-11): the shared DST-safe day counter. Compare local calendar days
+ * rather than raw ms deltas so a DST jump during the block (spring-forward /
+ * fall-back) doesn't shift the user's week counter by a day. We anchor at
+ * local midnight on each side and count whole calendar days, which is what
+ * the user's calendar shows them anyway. Both getCurrentMesoWeek and
+ * getBlockStatus count days through here so they can never disagree about
+ * which week a date falls in.
+ *
+ * @param {number} startMs - epoch ms
+ * @param {number} endMs - epoch ms
+ * @returns {number} whole calendar days elapsed (>= 0)
+ */
+function localDaysElapsed(startMs, endMs) {
+  const startDayMs = (() => { const d = new Date(startMs); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); })();
+  const endDayMs   = (() => { const d = new Date(endMs); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); })();
+  // Math.round: local midnights across a DST boundary sit 23 or 25 raw hours
+  // apart, so rounding recovers the exact calendar-day count.
+  return Math.max(0, Math.round((endDayMs - startDayMs) / (1000 * 60 * 60 * 24)));
+}
+
+/**
  * Returns which week of the current mesocycle we are in (1-indexed).
  * Wraps back to 1 after the schedule length.
  *
@@ -51,14 +74,7 @@ export function getCurrentMesoWeek(startDateMs, experience = 'intermediate', now
   // CALC-8: an invalid start (NaN / undefined) used to propagate NaN out as the
   // week number. Fall back to week 1 instead.
   if (!Number.isFinite(start)) return 1;
-  // Compare local calendar days rather than raw ms deltas so a DST
-  // jump during the block (spring-forward / fall-back) doesn't shift
-  // the user's week counter by a day. We anchor at local midnight on
-  // each side and count whole calendar days, which is what the user's
-  // calendar shows them anyway.
-  const startDayMs = (() => { const d = new Date(start); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); })();
-  const nowDayMs   = (() => { const d = new Date(nowMs); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); })();
-  const daysElapsed = Math.max(0, Math.round((nowDayMs - startDayMs) / (1000 * 60 * 60 * 24)));
+  const daysElapsed = localDaysElapsed(start, nowMs);
   const weeksElapsed = Math.floor(daysElapsed / 7);
   return (weeksElapsed % schedule.length) + 1;
 }
@@ -426,7 +442,12 @@ export function applyTimeCrunch(exercises, targetMinutes, estimateFn, options = 
  */
 export function getBlockStatus(startDateMs, plannedWeeks = 5, nowMs = Date.now()) {
   const start = typeof startDateMs === 'string' ? new Date(startDateMs).getTime() : (startDateMs ?? nowMs);
-  const daysElapsed = Math.max(0, Math.floor((nowMs - start) / (1000 * 60 * 60 * 24)));
+  // F10 (EN-11): count whole LOCAL calendar days via the same DST-safe
+  // anchoring getCurrentMesoWeek uses (localDaysElapsed). The old raw-ms
+  // floor lost an hour across a DST change, so the two functions could
+  // disagree by a day — and therefore by a whole week at a week boundary —
+  // about where the block stands.
+  const daysElapsed = localDaysElapsed(start, nowMs);
   const currentWeek = Math.floor(daysElapsed / 7) + 1;
   const recoveryWeek = plannedWeeks; // last week is always recovery
 

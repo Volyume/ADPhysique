@@ -126,11 +126,16 @@ export function robustLatest(weights, opts = {}) {
   return series.length ? series[series.length - 1].ewmaKg : null;
 }
 
-/** Robust trend value ~7 days ago, or null. Mirrors getEwmaSevenDaysAgo. */
-export function robustSevenDaysAgo(weights, opts = {}) {
+/**
+ * Robust trend value ~7 days ago, or null. Mirrors getEwmaSevenDaysAgo.
+ * F10 (EN-5): `nowMs` is the injectable clock (defaults to Date.now() for
+ * existing callers) so identical inputs give identical outputs — read it ONCE
+ * at the public entry and thread it down, never re-read the clock mid-run.
+ */
+export function robustSevenDaysAgo(weights, opts = {}, nowMs = Date.now()) {
   const series = robustEwma(weights, opts);
   if (series.length < 2) return null;
-  const cutoff = Date.now() - 7 * 86400000;
+  const cutoff = nowMs - 7 * 86400000;
   const older = [...series].reverse().find((e) => e.loggedAt <= cutoff);
   // F3 (EN-1, the D1 #3 bug in the robust twin): when no weigh-in is at least
   // 7 days old there is NO weekly rate to read. Falling back to the earliest
@@ -163,7 +168,8 @@ export function robustSevenDaysAgo(weights, opts = {}) {
 // clamped away; a water-weight spike is a large residual against a small scale
 // and is clamped. Used ONLY for the off-target DECISION reads in weeklyCoach;
 // the rapid-loss / ED SAFETY reads keep the plain less-damped EWMA. Pure +
-// deterministic (the *SevenDaysAgo helper reads the clock, like its plain twin).
+// deterministic (the *SevenDaysAgo helper takes an injectable nowMs, F10/EN-5,
+// defaulting to Date.now() like its plain twin).
 export const ROBUST_TRACKING_DEFAULTS = Object.freeze({
   alpha: 0.1,        // level memory, identical to the plain slow EWMA
   beta: 0.05,        // trend memory: slow, so a brief run cannot manufacture a trend
@@ -215,11 +221,14 @@ export function robustTrackingLatest(weights, opts = {}) {
   return series.length ? series[series.length - 1].ewmaKg : null;
 }
 
-/** Trend-tracking value ~7 days ago, or null. Mirrors getEwmaSevenDaysAgo. */
-export function robustTrackingSevenDaysAgo(weights, opts = {}) {
+/**
+ * Trend-tracking value ~7 days ago, or null. Mirrors getEwmaSevenDaysAgo.
+ * F10 (EN-5): injectable `nowMs` (default Date.now()) — see robustSevenDaysAgo.
+ */
+export function robustTrackingSevenDaysAgo(weights, opts = {}, nowMs = Date.now()) {
   const series = robustTrackingEwma(weights, opts);
   if (series.length < 2) return null;
-  const cutoff = Date.now() - 7 * 86400000;
+  const cutoff = nowMs - 7 * 86400000;
   const older = [...series].reverse().find((e) => e.loggedAt <= cutoff);
   // F3 (EN-1): null on sub-week data — never scale a 2-4 day span as a weekly
   // rate. This is the DECISION read (weeklyCoach decisionRatePct), so the old
