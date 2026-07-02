@@ -2237,9 +2237,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         {/* A2 (audit CL-4): the primary action lives in a bottom-pinned bar —
             the one-handed thumb zone, at a stable position — instead of
             floating mid-scroll and swapping identity in the same pixels.
-            Cluster flows keep their own in-card controls, so no bar then. */}
+            Cluster flows keep their own in-card controls, so no bar then.
+            No insets.bottom here (founder 2026-07-02): this screen sits
+            inside the tab navigator, whose bar already absorbs the system
+            inset — adding it again painted a dead band between the CTA and
+            the tabs and squeezed the content. */}
         {cluster ? null : (
-          <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+          <View style={[styles.bottomBar, { paddingBottom: spacing.md }]}>
             {targetComplete ? (
               isLastExercise ? (
                 <TouchableOpacity
