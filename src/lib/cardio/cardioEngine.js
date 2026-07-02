@@ -24,24 +24,13 @@ const num = (n) => (Number.isFinite(Number(n)) ? Number(n) : 0);
 export const MAX_CARDIO_SESSIONS = 5;
 
 /**
- * The deficit-lever target for a cut. Base is 3 easy sessions; a long stall in
- * an aggressive cut adds an interval session on top (the existing "Cardio
- * boost" behaviour, now structured). Returns a target object.
+ * The deficit-lever target for a cut: 3 easy sessions. Returns a target
+ * object. (The agg_cut "long stall adds an interval session" boost was
+ * unreachable in production and died with the dead agg_cut vocabulary —
+ * EN-4, founder ruling 2026-07-02. Escalation now happens only through
+ * nextCardioTarget's logged-compliance path, capped as ever.)
  */
-export function cutCardioTarget(consecutiveOffTargetWeeks = 0, goalPhase = 'mod_cut') {
-  const longAggStall = num(consecutiveOffTargetWeeks) >= 4 && goalPhase === 'agg_cut';
-  if (longAggStall) {
-    return {
-      mode: 'deficit',
-      sessionsPerWeek: 3,
-      minMinutes: 20,
-      maxMinutes: 30,
-      intensity: 'low',
-      includesInterval: true,
-      paused: false,
-      note: 'Aim for 3 easy cardio sessions, 20 to 30 min, plus one short interval session (10 to 15 min). Your choice of activity.',
-    };
-  }
+export function cutCardioTarget() {
   return {
     mode: 'deficit',
     sessionsPerWeek: 3,

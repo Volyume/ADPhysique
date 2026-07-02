@@ -204,9 +204,14 @@ function autoregulationMatrix(recoveryScore, performanceScore) {
 
 // ─── Phase configuration ──────────────────────────────────────────────────────
 
+// EN-4 (founder rulings 2026-07-02): the dead agg_cut/mod_cut rows are gone —
+// coachingGoals.phaseToCoachingKey has never emitted them, so no stored user
+// can hold them (an unknown key falls back to maint below). recomp is LIVE:
+// the recomp phase maps here at -0.125 %/wk instead of aliasing to maint.
+// recomp is deliberately NOT a cut (isCut: false): it must never gain the cut
+// levers (calorie resize, refeed, diet break, macro cycling) — pinned by
+// phaseVocab.en4.replay.test.js V3.
 const PHASE_CONFIG = {
-  agg_cut:   { label: 'Aggressive cut',  goalRatePct: -1.00, isCut: true,  isBulk: false },
-  mod_cut:   { label: 'Moderate cut',    goalRatePct: -0.625, isCut: true, isBulk: false },
   mild_cut:  { label: 'Mild cut',        goalRatePct: -0.375, isCut: true, isBulk: false },
   recomp:    { label: 'Hold muscle, lose fat', goalRatePct: -0.125, isCut: false, isBulk: false },
   maint:     { label: 'Maintenance',     goalRatePct: 0,      isCut: false, isBulk: false },
@@ -216,8 +221,6 @@ const PHASE_CONFIG = {
 
 // Steps target bands by phase (lower, upper in steps/day)
 const STEPS_BANDS = {
-  agg_cut:   { lower: 12000, upper: 14000 },
-  mod_cut:   { lower: 10000, upper: 12000 },
   mild_cut:  { lower: 9000,  upper: 11000 },
   recomp:    { lower: 9000,  upper: 11000 },
   maint:     { lower: 8000,  upper: 10000 },
@@ -364,7 +367,7 @@ export function mapCalsAdherence(raw, avgKcal = null, targetKcal = null) {
  * @param {number}        inputs.sessionsCompleted
  * @param {number}        inputs.sessionsPlanned
  * @param {number}        inputs.prsThisWeek
- * @param {string}        inputs.goalPhase                  - 'agg_cut'|'mod_cut'|'mild_cut'|'recomp'|'maint'|'mild_bulk'|'mod_bulk'
+ * @param {string}        inputs.goalPhase                  - 'mild_cut'|'recomp'|'maint'|'mild_bulk'|'mod_bulk' (or the 'bulk' alias)
  * @param {number}        inputs.weeksInPhase               - weeks since phase was set
  * @param {number}        inputs.consecutiveOffTargetWeeks  - weeks trend has been off-target same direction
  * @param {number}        inputs.consecutivePoorRecoveryWeeks
@@ -967,7 +970,10 @@ export function runWeeklyCoach(inputs) {
         };
       }
     }
-  } else if (phase.isCut || phase.goalRatePct === 0) {
+  } else if (phase.isCut || (!phase.isBulk && phase.goalRatePct <= 0)) {
+    // Cuts, maintenance AND recomp get the explicit hold note; bulks set no
+    // step target at all. Written as a rate test (not a key test) so recomp's
+    // -0.125 %/wk mapping (EN-4) keeps the note maintenance gave it.
     stepsAdjustment = {
       target: currentStepsTarget,
       change: 0,
@@ -1006,7 +1012,7 @@ export function runWeeklyCoach(inputs) {
         poorRecovery: false,
         complianceOverride: cardioCompliance,
       })
-      : cutCardioTarget(consecutiveOffTargetWeeks, goalPhase);
+      : cutCardioTarget();
     cardioAdjustment = {
       prescribed: !target.paused,
       type: target.includesInterval ? 'Cardio boost' : 'Steady cardio',
@@ -1117,17 +1123,16 @@ export function runWeeklyCoach(inputs) {
   }
 
   // ── REFEED DAY (GAP row 7) ────────────────────────────────────────────────
-  // A single day raised to maintenance via carbs, for aggressive cuts
-  // and physique competitors only (matches the refeed entitlement in
-  // proGate). The coach proposes it on a cadence (weekly for
-  // competitors, every two weeks for an aggressive cut) and the user
+  // A single day raised to maintenance via carbs, for physique competitors
+  // on a cut only. The coach proposes it on a weekly cadence and the user
   // confirms before the swap. Applying schedules it onto the next
   // training day (CoachOutputScreen.handleApplyRefeed); nothing writes
-  // until then. Builds on row 6's day-level framing.
+  // until then. Builds on row 6's day-level framing. (The fortnightly
+  // agg_cut cadence died with the dead agg_cut vocabulary — EN-4.)
   let refeed = null;
-  const refeedEligible = phase.isCut && (goalPhase === 'agg_cut' || isCompetitionGoal(trainingGoal));
+  const refeedEligible = phase.isCut && isCompetitionGoal(trainingGoal);
   if (refeedEligible) {
-    const frequencyWeeks = isCompetitionGoal(trainingGoal) ? 1 : 2;
+    const frequencyWeeks = 1;
     const weeksSinceRefeed = lastRefeedAt
       ? Math.floor((nowMs - lastRefeedAt) / (7 * 86400000))
       : null;

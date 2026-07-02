@@ -66,8 +66,8 @@ describe('EN-5: injectable nowMs makes runWeeklyCoach deterministic', () => {
 
   test('two runs with the same fixed nowMs are JSON-identical on the refeed-eligible path too', () => {
     const inputs = () => baseInputs({
-      goalPhase: 'agg_cut',
-      lastRefeedAt: NOW - 8 * DAY,
+      trainingGoal: 'bodybuilding', // competition goal: the only refeed-eligible path since EN-4
+      lastRefeedAt: NOW - 5 * DAY,
       goalStartDate: NOW - 70 * DAY, // long cut: exercises the diet-break clock read
     });
     const a = runWeeklyCoach(inputs());
@@ -77,12 +77,12 @@ describe('EN-5: injectable nowMs makes runWeeklyCoach deterministic', () => {
 
   test('a different nowMs may change the output (refeed cadence flips from not-due to due)', () => {
     const inputs = (nowMs) => baseInputs({
-      goalPhase: 'agg_cut',
-      lastRefeedAt: NOW - 8 * DAY,
+      trainingGoal: 'bodybuilding',
+      lastRefeedAt: NOW - 5 * DAY,
       nowMs,
     });
-    // agg_cut (non-competition) refeed cadence is every 2 weeks. 8 days since
-    // the last refeed -> not due; a clock 7 days later (15 days since) -> due.
+    // Competition refeed cadence is weekly. 5 days since the last refeed ->
+    // not due; a clock 7 days later (12 days since) -> due.
     const notDue = runWeeklyCoach(inputs(NOW));
     const due = runWeeklyCoach(inputs(NOW + 7 * DAY));
     expect(notDue.refeed ?? null).toBeNull();

@@ -606,13 +606,15 @@ describe('refeed gating and cadence', () => {
   const DAY = 86_400_000;
   // Maintenance well above target so there is a deficit to refeed up to.
   const nut = { currentCalTarget: 2000, currentMaintenanceKcal: 2600, currentProteinG: 200, currentFatG: 60 };
-  const aggCut = { morningWeights: trend(85, -1.0), goalPhase: 'agg_cut' };
+  // EN-4: refeeds are competition-only now — the fortnightly agg_cut cadence
+  // died with the dead agg_cut vocabulary (it was unreachable in production).
+  const compCut = { morningWeights: trend(85, -1.0), goalPhase: 'mild_cut', trainingGoal: 'bikini' };
 
-  test('fires on an aggressive cut with no prior refeed', () => {
-    const out = runWeeklyCoach(baseInputs({ ...nut, ...aggCut, lastRefeedAt: null }));
+  test('fires for a physique competitor with no prior refeed, at maintenance kcal', () => {
+    const out = runWeeklyCoach(baseInputs({ ...nut, ...compCut, lastRefeedAt: null }));
     expect(out.refeed).not.toBeNull();
     expect(out.refeed.kcal).toBe(2600);
-    expect(out.refeed.frequencyWeeks).toBe(2); // aggressive cut cadence
+    expect(out.refeed.frequencyWeeks).toBe(1);
   });
 
   test('fires weekly for a physique competitor', () => {
@@ -651,10 +653,10 @@ describe('refeed gating and cadence', () => {
   });
 
   test('fires again once the cadence window has passed', () => {
-    // Aggressive cut: every two weeks. 15 days ago is due.
+    // Competitor: weekly. 8 days ago is due.
     const out = runWeeklyCoach(baseInputs({
-      ...nut, ...aggCut,
-      lastRefeedAt: Date.now() - 15 * DAY,
+      ...nut, ...compCut,
+      lastRefeedAt: Date.now() - 8 * DAY,
     }));
     expect(out.refeed).not.toBeNull();
   });
@@ -671,7 +673,7 @@ describe('refeed gating and cadence', () => {
   });
 
   test('note is in voice (no em dash, no AI tells)', () => {
-    const out = runWeeklyCoach(baseInputs({ ...nut, ...aggCut, lastRefeedAt: null }));
+    const out = runWeeklyCoach(baseInputs({ ...nut, ...compCut, lastRefeedAt: null }));
     expect(out.refeed.note).not.toMatch(/—/);
     expect(out.refeed.note).not.toMatch(/let me|I'll|ensure|leverage|seamless|utilise/i);
   });

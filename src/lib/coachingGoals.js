@@ -194,11 +194,14 @@ export function isCompetitionGoal(trainingGoal) {
   return !!trainingGoal && _GOAL_LOCK_COMPETITION_VALUES.has(trainingGoal);
 }
 
-// Phases that count as a cut, mirroring weeklyCoach PHASE_CONFIG.isCut
-// (agg_cut / mod_cut / mild_cut). The sole phase alias (bulk -> mod_bulk) is
-// not a cut, so a plain membership test is byte-identical to phaseConfig.isCut
-// for every goalPhase the coach passes.
-const _CUT_PHASE_KEYS = new Set(['agg_cut', 'mod_cut', 'mild_cut']);
+// Phases that count as a cut, mirroring weeklyCoach PHASE_CONFIG.isCut.
+// mild_cut is the ONLY cut key since EN-4 deleted the dead agg_cut/mod_cut
+// vocabulary (founder ruling 2026-07-02). recomp maps to its own -0.125 %/wk
+// config but is deliberately NOT a cut: it must never gain the cut levers
+// (macro cycling here, resize/refeed/diet break in weeklyCoach). The sole
+// phase alias (bulk -> mod_bulk) is not a cut, so a plain membership test is
+// byte-identical to phaseConfig.isCut for every goalPhase the coach passes.
+const _CUT_PHASE_KEYS = new Set(['mild_cut']);
 
 export function isCutPhase(goalPhase) {
   return _CUT_PHASE_KEYS.has(goalPhase);
@@ -270,7 +273,9 @@ export const TRAINING_PHASES = [
   {
     value: 'recomp',
     nutritionKey: 'recomp',
-    coachingPhaseKey: 'maint',
+    // EN-4 (founder ruling 2026-07-02): recomp is coached at its own
+    // -0.125 %/wk goal rate instead of aliasing to maintenance's 0 %/wk.
+    coachingPhaseKey: 'recomp',
     label: 'Recomp',
     icon: 'swap-horizontal-outline',
     subtitle: 'Improving your shape without a big change in weight.',

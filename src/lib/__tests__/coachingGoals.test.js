@@ -242,9 +242,9 @@ describe('migrateProfileGoals', () => {
 });
 
 describe('day-calorie-cycling gate (single source for coach + meal plan)', () => {
-  test('isCutPhase is true only for the three cut phases', () => {
-    ['agg_cut', 'mod_cut', 'mild_cut'].forEach((p) => expect(isCutPhase(p)).toBe(true));
-    ['recomp', 'maint', 'mild_bulk', 'mod_bulk', 'bulk', null, undefined, ''].forEach(
+  test('isCutPhase is true only for mild_cut (EN-4 deleted the dead cut keys)', () => {
+    expect(isCutPhase('mild_cut')).toBe(true);
+    ['agg_cut', 'mod_cut', 'recomp', 'maint', 'mild_bulk', 'mod_bulk', 'bulk', null, undefined, ''].forEach(
       (p) => expect(isCutPhase(p)).toBe(false),
     );
   });

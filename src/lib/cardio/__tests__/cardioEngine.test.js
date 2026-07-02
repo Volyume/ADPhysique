@@ -9,19 +9,16 @@ import {
 } from '../cardioEngine';
 
 describe('structured targets', () => {
-  test('cut target is the deficit lever, 3 easy sessions', () => {
-    const t = cutCardioTarget(0, 'mod_cut');
+  test('cut target is the deficit lever, 3 easy sessions, never an interval boost', () => {
+    // EN-4: the agg_cut "long stall" interval boost was unreachable in
+    // production and was deleted with the dead vocabulary; escalation happens
+    // only through nextCardioTarget's logged-compliance path.
+    const t = cutCardioTarget();
     expect(t.mode).toBe('deficit');
     expect(t.sessionsPerWeek).toBe(3);
     expect(t.intensity).toBe('low');
     expect(t.includesInterval).toBe(false);
     expect(t.note).toMatch(/your choice of activity/i);
-  });
-
-  test('long aggressive-cut stall adds an interval session', () => {
-    const t = cutCardioTarget(4, 'agg_cut');
-    expect(t.includesInterval).toBe(true);
-    expect(t.note).toMatch(/interval/i);
   });
 
   test('health target never escalates and is light', () => {
@@ -131,7 +128,7 @@ describe('cardio verdict label (NA-cux-11 voice)', () => {
 });
 
 describe('next-week adjustment', () => {
-  const cur = cutCardioTarget(0, 'mod_cut'); // 3 sessions deficit
+  const cur = cutCardioTarget(); // 3 sessions deficit
 
   test('poor recovery pauses regardless', () => {
     const t = nextCardioTarget({ currentTarget: cur, sessionsLogged: 3, stillOffTrendInCut: true, poorRecovery: true });

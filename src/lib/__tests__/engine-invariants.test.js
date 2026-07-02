@@ -83,7 +83,7 @@ function assertNoBadNumbers(label, obj, depth = 0) {
 // ── runWeeklyCoach ─────────────────────────────────────────────────────────
 
 describe('runWeeklyCoach: fuzz invariants', () => {
-  const phases = ['agg_cut', 'mod_cut', 'mild_cut', 'recomp', 'maint', 'mild_bulk', 'mod_bulk'];
+  const phases = ['mild_cut', 'recomp', 'maint', 'mild_bulk', 'mod_bulk', 'bulk'];
   const adherence = ['hit', 'under', 'over', 'untracked', null];
 
   test('never throws and never returns NaN/Infinity on 500 random inputs', () => {
@@ -521,7 +521,7 @@ describe('planEngine.generatePlan: invariants across goal/phase grid', () => {
   const experiences = ['beginner', 'intermediate', 'advanced'];
   const equipments = ['full_gym', 'home_gym', 'bodyweight'];
   const goals = ['build_muscle', 'physique', 'general_fitness', 'strength'];
-  const phases = ['mod_cut', 'mild_cut', 'recomp', 'maint', 'mild_bulk', 'mod_bulk'];
+  const phases = ['mild_cut', 'recomp', 'maint', 'mild_bulk', 'mod_bulk'];
   const recoveries = ['poor', 'average', 'good'];
 
   test('every combination produces a valid plan structure', () => {

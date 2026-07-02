@@ -2286,8 +2286,6 @@ function _generatePlanInner(inputs) {
     maintain:  'Maintain',
     // coachingPhaseKey variants, planEngine receives either form
     mild_cut:  'Cut',
-    mod_cut:   'Cut',
-    agg_cut:   'Aggressive Cut',
     mild_bulk: 'Lean Gain',
     mod_bulk:  'Bulk',
     maint:     'Maintain',

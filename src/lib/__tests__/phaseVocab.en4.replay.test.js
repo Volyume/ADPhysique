@@ -7,12 +7,11 @@
  *       (coachingPhaseKey has never emitted them — verified back to the
  *       first commit — so no stored user can hold them).
  *
- * PHASE 1 (this commit): every assertion pins the CURRENT engine — the
- * BEFORE baseline. PHASE 2 (the EN-4 implementation commit) updates ONLY
- * the lines marked [expected to change] / [removed in phase 2]; the diff
- * of that commit IS the founder's delta report. Lines marked
- * [must never drift] keep their values forever — if the implementation
- * moves one of those, EN-4 has leaked beyond the two rulings.
+ * PHASE 1 (commit aac0b0c) pinned the BEFORE engine. PHASE 2 (this commit)
+ * applied the two rulings and updated ONLY the lines that were marked
+ * [expected to change] / [removed in phase 2]; that diff IS the founder's
+ * delta report. Lines marked [must never drift] keep their values forever —
+ * if a later change moves one of those, the vocabulary work has leaked.
  *
  * The load-bearing safety pin is V3: recomp is NOT a cut, before or after
  * the mapping. It must never gain the cut levers (calorie resize, refeed,
@@ -60,7 +59,7 @@ const recompKey = () => phaseToCoachingKey('recomp');
 
 describe('EN-4 replay — the recomp mapping (founder ruling a)', () => {
   test('V14 phaseToCoachingKey: recomp [expected to change]; every other phase [must never drift]', () => {
-    expect(phaseToCoachingKey('recomp')).toBe('maint'); // [expected to change → 'recomp']
+    expect(phaseToCoachingKey('recomp')).toBe('recomp'); // [changed in phase 2, founder ruling a]
     expect(phaseToCoachingKey('cut')).toBe('mild_cut');          // [must never drift]
     expect(phaseToCoachingKey('maintain')).toBe('maint');        // [must never drift]
     expect(phaseToCoachingKey('lean_gain')).toBe('mild_bulk');   // [must never drift]
@@ -71,7 +70,7 @@ describe('EN-4 replay — the recomp mapping (founder ruling a)', () => {
 
   test('V1 recomp user holding steady: label [expected to change]; verdict, hold and steps note [must never drift]', () => {
     const out = runWeeklyCoach(coachInputs({ goalPhase: recompKey(), stepsEnabled: true }));
-    expect(out.weekLabel).toBe('Week 5 · Maintenance'); // [expected to change → 'Week 5 · Hold muscle, lose fat']
+    expect(out.weekLabel).toBe('Week 5 · Hold muscle, lose fat'); // [changed in phase 2: recomp users see their own phase]
     expect(out.trend.onTarget).toBe(true);              // [must never drift] flat is on-target for recomp (band floor covers −0.125)
     expect(out.adjustments.calories).toBeNull();        // [must never drift]
     expect(out.adjustments.steps).toEqual({             // [must never drift] the hold note survives the re-mapping
@@ -81,7 +80,7 @@ describe('EN-4 replay — the recomp mapping (founder ruling a)', () => {
 
   test('V2 recomp user losing ~0.24 %/wk: verdict [expected to change] off → on target; no resize either way', () => {
     const out = runWeeklyCoach(coachInputs({ goalPhase: recompKey(), morningWeights: series(0.029) }));
-    expect(out.trend.onTarget).toBe(false); // [expected to change → true] 0.24 %/wk sits inside the recomp band, outside maintenance's
+    expect(out.trend.onTarget).toBe(true); // [changed in phase 2] 0.24 %/wk sits inside the recomp band, outside maintenance's
     expect(out.adjustments.calories).toBeNull(); // [must never drift] recomp never resizes calories
   });
 
@@ -145,31 +144,33 @@ describe('EN-4 replay — live phases [must never drift]', () => {
   });
 });
 
-describe('EN-4 replay — dead vocabulary (founder ruling b) [removed in phase 2]', () => {
-  test('V10 direct agg_cut input: today a real config with a fortnightly refeed; after deletion it falls back to maintenance', () => {
+describe('EN-4 replay — dead vocabulary deleted (founder ruling b)', () => {
+  test('V10 direct agg_cut input: the deleted key falls back to maintenance with no refeed', () => {
     const out = runWeeklyCoach(coachInputs({
       goalPhase: 'agg_cut', morningWeights: series(0.12),
       currentCalTarget: 2000, currentMaintenanceKcal: 2600, currentProteinG: 170, currentFatG: 60,
       lastRefeedAt: null,
     }));
-    expect(out.weekLabel).toBe('Week 5 · Aggressive cut'); // [phase 2 → 'Week 5 · Maintenance' fallback]
-    expect(out.refeed?.frequencyWeeks).toBe(2);            // [phase 2 → refeed null: the non-competition refeed dies with agg_cut]
+    expect(out.weekLabel).toBe('Week 5 · Maintenance'); // [changed in phase 2: unknown key falls back to maintenance]
+    expect(out.refeed ?? null).toBeNull();              // [changed in phase 2: the non-competition refeed died with agg_cut]
   });
 
-  test('V11 direct mod_cut input: today a real config; after deletion it falls back to maintenance', () => {
+  test('V11 direct mod_cut input: the deleted key falls back to maintenance', () => {
     const out = runWeeklyCoach(coachInputs({ goalPhase: 'mod_cut', morningWeights: series(0.075) }));
-    expect(out.weekLabel).toBe('Week 5 · Moderate cut'); // [phase 2 → 'Week 5 · Maintenance' fallback]
+    expect(out.weekLabel).toBe('Week 5 · Maintenance'); // [changed in phase 2: unknown key falls back to maintenance]
   });
 
-  test('V12 cardio: the agg_cut interval boost exists today; the base dose never drifts', () => {
-    expect(cutCardioTarget(5, 'agg_cut').includesInterval).toBe(true); // [phase 2 → branch deleted with the vocabulary]
-    const base = cutCardioTarget(0, 'mild_cut'); // [phase 2 → cutCardioTarget(), same shape]
+  test('V12 cardio: the agg_cut interval boost is gone; the base dose never drifts', () => {
+    // [changed in phase 2] the unreachable agg_cut boost branch was deleted
+    // with the vocabulary; cutCardioTarget() now takes no arguments.
+    const base = cutCardioTarget();
     expect(base.includesInterval).toBe(false);   // [must never drift]
     expect(base.sessionsPerWeek).toBe(3);        // [must never drift]
   });
 
   test('V13 cut-phase truth table: mild_cut is a cut [must never drift]; recomp NEVER becomes one', () => {
-    expect(['agg_cut', 'mod_cut', 'mild_cut'].every(isCutPhase)).toBe(true); // [phase 2 → only mild_cut remains a cut]
+    expect(isCutPhase('mild_cut')).toBe(true);                          // [must never drift]
+    expect(['agg_cut', 'mod_cut'].some(isCutPhase)).toBe(false);        // [changed in phase 2: deleted keys are not cuts]
     expect(['recomp', 'maint', 'mild_bulk', 'mod_bulk', 'bulk'].some(isCutPhase)).toBe(false); // [must never drift]
     expect(dayCalorieCyclingAllowed({ goalPhase: 'mild_cut', goalLockAdvanced: true })).toBe(true); // [must never drift]
     expect(dayCalorieCyclingAllowed({ goalPhase: 'recomp', goalLockAdvanced: true, trainingGoal: 'mens_physique' })).toBe(false); // [must never drift]
