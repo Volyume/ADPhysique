@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, AppState, useWindowDimensions, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, AppState, Platform, useWindowDimensions, Animated, Easing } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { appAlert } from './AppAlert';
 import { Ionicons } from '@expo/vector-icons';
 import { useShallow } from 'zustand/react/shallow';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
@@ -17,6 +19,23 @@ import {
   presentRestTimerNotification,
   dismissRestTimerNotification,
 } from '../lib/notifications/activeWorkout';
+// E6A: shortService rest-window host. When a rest fits the ~3-minute
+// window on Android, the native chronometer notification (owned by the
+// foreground service) replaces the per-tick JS sticky: the lock-screen
+// countdown stays live while backgrounded and the process is protected for
+// the window. Longer rests keep the sticky path unchanged.
+import {
+  shouldUseRestForeground,
+  startRestForeground,
+  stopRestForeground,
+  canScheduleExactAlarms,
+  requestExactAlarmAccess,
+} from '../lib/notifications/restForeground';
+
+// E6A: the exact-alarm ask happens exactly once per install, in context (the
+// first rest), and never again after either answer — the permanent surface
+// is the Settings row. Keyed device-locally.
+const EXACT_ALARM_PROMPTED_KEY = '@volyume_exact_alarm_prompted';
 
 // Compact variant on short screens (COMP-001 step 6): smaller numeral and a
 // 56pt row so the timer never pushes the set inputs below the fold. U-A-1:
@@ -55,6 +74,10 @@ export default function RestTimer() {
   // Track all queued timeouts so we can cancel them on unmount (was
   // leaking three uncancelled setTimeouts per cycle, haptics + done-flag).
   const timeoutsRef = useRef([]);
+  // E6A: whether the current rest is riding the shortService chronometer
+  // host. While true, the per-tick JS sticky below stays silent so exactly
+  // ONE rest notification ever shows.
+  const fgsActiveRef = useRef(false);
 
   useEffect(() => {
     if (restTimerActive) {
@@ -62,22 +85,60 @@ export default function RestTimer() {
       intervalRef.current = setInterval(() => { tickRestTimer(); }, 1000);
     } else {
       clearInterval(intervalRef.current);
-      // Rest ended / skipped / stopped: tear down the lock-screen notification.
+      // Rest ended / skipped / stopped: tear down the lock-screen notification
+      // and the shortService host, whichever was carrying the countdown.
       dismissRestTimerNotification().catch(() => {});
+      if (fgsActiveRef.current) {
+        fgsActiveRef.current = false;
+        stopRestForeground().catch(() => {});
+      }
     }
     return () => clearInterval(intervalRef.current);
   }, [restTimerActive, tickRestTimer]);
+
+  // E6A: start (or re-anchor after a ±15 s adjust) the shortService
+  // chronometer for rests that fit the window. Keyed on the wall-clock end
+  // anchor, not the per-second remaining, so it runs once per rest/adjust.
+  // A rest that GROWS past the window mid-way keeps its running service
+  // (which self-stops inside the window) and the sticky path takes over on
+  // the next tick via the effect below.
+  const restTimerEndsAt = useAppStore(s => s.restTimerEndsAt);
+  useEffect(() => {
+    if (!restTimerActive || !restTimerEndsAt) return;
+    if (!shouldUseRestForeground(restTimerEndsAt)) {
+      // Window no longer fits (e.g. +15 s pushed it past the cap): hand the
+      // countdown back to the sticky path cleanly.
+      if (fgsActiveRef.current) {
+        fgsActiveRef.current = false;
+        stopRestForeground().catch(() => {});
+      }
+      return;
+    }
+    const s = useAppStore.getState();
+    const ex = s.workoutExercises?.[s.currentExerciseIndex];
+    startRestForeground({
+      endsAtMs: restTimerEndsAt,
+      exerciseName: ex?.exercise?.name ?? ex?.name,
+    }).then((ok) => {
+      fgsActiveRef.current = !!ok;
+      // The chronometer replaces the sticky; drop any sticky already posted
+      // for this rest so the shade never shows two countdowns.
+      if (ok) dismissRestTimerNotification().catch(() => {});
+    }).catch(() => { fgsActiveRef.current = false; });
+  }, [restTimerActive, restTimerEndsAt]);
 
   // Live lock-screen notification with action buttons. Present/update on
   // each tick (re-presenting the same id replaces the body, silent channel
   // so it never buzzes); dismiss the moment the timer is no longer active.
   // The actions (Complete set / ±15s / Skip rest) are handled in the
   // notifications listener and only act while a workout + rest are live.
+  // E6A: silent while the shortService chronometer is carrying the countdown.
   useEffect(() => {
     if (!restTimerActive || restTimerRemaining <= 0) {
       dismissRestTimerNotification().catch(() => {});
       return;
     }
+    if (fgsActiveRef.current) return; // chronometer host owns the shade
     const s = useAppStore.getState();
     const ex = s.workoutExercises?.[s.currentExerciseIndex];
     presentRestTimerNotification({
@@ -118,6 +179,32 @@ export default function RestTimer() {
   // installed yet (graceful fallback to haptics only).
   useEffect(() => {
     if (restTimerActive) preloadRestBeeps();
+  }, [restTimerActive]);
+
+  // E6A exact alarms, the one-time calm ask (memo: "a calm one-time grant
+  // prompt"). Android 12+ batches alarms, so the end-of-rest alert can land
+  // late; granting exact-alarm access makes it second-accurate with no other
+  // change (expo-notifications upgrades automatically). Asked once ever, in
+  // context, and only when the rest alert itself is on; either answer is
+  // final here — the Settings row remains for later.
+  useEffect(() => {
+    if (!restTimerActive || Platform.OS !== 'android') return;
+    if (!useAppStore.getState().restEndAlertEnabled) return;
+    (async () => {
+      try {
+        if (await AsyncStorage.getItem(EXACT_ALARM_PROMPTED_KEY)) return;
+        if (await canScheduleExactAlarms()) return;
+        await AsyncStorage.setItem(EXACT_ALARM_PROMPTED_KEY, '1');
+        appAlert(
+          'Exact rest alerts',
+          'Android can delay alerts a little to save battery, so the rest-finished alert may land a few seconds late. Allow exact alarms and it fires to the second. You can change this any time in Settings.',
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Allow exact alerts', onPress: () => { requestExactAlarmAccess().catch(() => {}); } },
+          ],
+        );
+      } catch (_) { /* never interrupt a rest over a prompt failure */ }
+    })();
   }, [restTimerActive]);
 
   // Countdown alerts. 3-2-1 escalates both haptic and audio pitch so the

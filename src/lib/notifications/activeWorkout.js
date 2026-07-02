@@ -33,26 +33,19 @@ const CHANNEL_ID = 'volyume_active_workout';
 const REST_NOTIF_ID = 'volyume_rest_timer';
 const REST_CHANNEL_ID = 'rest-timer';
 
-// Feature flag for the foreground-service-backed notification path.
-// When false, we use the standard expo-notifications sticky path
-// (works while the app is alive, dies on force-close). When true, we
-// drive the native foreground service in rest-timer-live which
-// survives force-close.
+// Feature flag for the foreground-service-backed WORKOUT notification path
+// (the whole-session notification, not the rest window). Stays false: the
+// session-length notification surface itself is disabled below (the "Set 3
+// of 2" founder decision), so there is nothing for a service to host.
 //
-// HELD OFF until the manifest declares a health-related runtime
-// permission. WorkoutForegroundService starts itself with
-// FOREGROUND_SERVICE_TYPE_HEALTH (the correct fit for a workout
-// tracker), and from Android 14 (API 34) the OS rejects that service
-// type with SecurityException unless the app also declares one of:
-//   - ACTIVITY_RECOGNITION
-//   - BODY_SENSORS
-//   - HIGH_SAMPLING_RATE_SENSORS
-// The current manifest only carries FOREGROUND_SERVICE and
-// FOREGROUND_SERVICE_HEALTH, so startForeground() throws a native
-// SecurityException → "Volyume keeps stopping" on workout start.
-// Re-enable only after wiring the manifest entry + a runtime grant
-// prompt; flipping this back on without that change reintroduces the
-// crash.
+// History: this was originally held off because WorkoutForegroundService
+// used FOREGROUND_SERVICE_TYPE_HEALTH, which from Android 14 throws
+// SecurityException without a health runtime permission. E6A (2026-07-02)
+// retyped the service to SHORT_SERVICE for the rest window — see
+// notifications/restForeground.js for the path that IS live — so the old
+// crash no longer exists, but a shortService (~3 min) cannot host a
+// session-length notification anyway. If the session surface is ever
+// revived, it needs its own service-type decision.
 const USE_FOREGROUND_SERVICE = false;
 
 // Lazy require of the native module. The require itself is cheap on

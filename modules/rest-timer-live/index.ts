@@ -15,11 +15,22 @@ type WorkoutForegroundOptions = {
   deepLink?: string;
 };
 
+type RestForegroundOptions = {
+  exerciseName?: string;
+  endTimeMs: number;
+  channelId?: string;
+  deepLink?: string;
+};
+
 type NativeModuleShape = {
   start(options: StartOptions): Promise<boolean>;
   cancel(): Promise<void>;
   startWorkoutForeground?(options: WorkoutForegroundOptions): Promise<boolean>;
   stopWorkoutForeground?(): Promise<void>;
+  startRestForeground?(options: RestForegroundOptions): Promise<boolean>;
+  stopRestForeground?(): Promise<void>;
+  canScheduleExactAlarms?(): Promise<boolean>;
+  requestExactAlarmAccess?(): Promise<boolean>;
 };
 
 let nativeModule: NativeModuleShape | null = null;
@@ -108,4 +119,65 @@ export async function stopWorkoutForeground(): Promise<void> {
   try {
     await nativeModule!.stopWorkoutForeground!();
   } catch (_e) { /* swallow */ }
+}
+
+/**
+ * E6A: whether the shortService rest-window host is available (Android with
+ * a native build carrying the new methods). Older installed builds return
+ * false and callers keep the plain sticky-notification path.
+ */
+export function isRestForegroundAvailable(): boolean {
+  return isAvailable() && typeof nativeModule?.startRestForeground === 'function';
+}
+
+/**
+ * Start (or update) the shortService rest-window foreground service: a
+ * native chronometer countdown that stays live while the app is
+ * backgrounded, and keeps the process alive for the rest window. The caller
+ * gates on the ~3-minute shortService window; the service self-stops at the
+ * rest end and on the OS timeout regardless.
+ */
+export async function startRestForeground(options: RestForegroundOptions): Promise<boolean> {
+  if (!isRestForegroundAvailable()) return false;
+  try {
+    return await nativeModule!.startRestForeground!(options);
+  } catch (_e) {
+    return false;
+  }
+}
+
+/** Stop the rest-window foreground service. Best-effort. */
+export async function stopRestForeground(): Promise<void> {
+  if (!isRestForegroundAvailable()) return;
+  try {
+    await nativeModule!.stopRestForeground!();
+  } catch (_e) { /* swallow */ }
+}
+
+/**
+ * E6A: whether the app currently holds the SCHEDULE_EXACT_ALARM special app
+ * access (Android 12+). True on iOS / older Android / missing module so
+ * callers never prompt where the concept does not exist.
+ */
+export async function canScheduleExactAlarms(): Promise<boolean> {
+  if (Platform.OS !== 'android' || typeof nativeModule?.canScheduleExactAlarms !== 'function') return true;
+  try {
+    return await nativeModule.canScheduleExactAlarms();
+  } catch (_e) {
+    return true;
+  }
+}
+
+/**
+ * Open the system grant screen for exact alarms. Resolves true if the
+ * screen was opened; the caller re-checks canScheduleExactAlarms() on
+ * return (there is no result callback from the settings surface).
+ */
+export async function requestExactAlarmAccess(): Promise<boolean> {
+  if (Platform.OS !== 'android' || typeof nativeModule?.requestExactAlarmAccess !== 'function') return false;
+  try {
+    return await nativeModule.requestExactAlarmAccess();
+  } catch (_e) {
+    return false;
+  }
 }

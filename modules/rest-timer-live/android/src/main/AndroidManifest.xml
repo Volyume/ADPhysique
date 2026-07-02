@@ -1,25 +1,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!--
-        The WorkoutForegroundService below is currently disabled at the JS
-        level (USE_FOREGROUND_SERVICE = false in
-        src/lib/activeWorkoutNotification.js) so the service is never
-        actually started. We keep the class compiled in case the feature
-        is revived later, but we do NOT declare the runtime permissions
-        or service registration: Play Console requires a FOREGROUND_SERVICE_HEALTH
-        justification with a demo video, which is pointless for a code
-        path we don't invoke. Revive the entries below this comment block
-        if the foreground service is ever turned back on.
+        E6A (approved 2026-07-02): WorkoutForegroundService is registered as a
+        SHORT_SERVICE foreground service hosting the rest-window chronometer
+        notification. shortService needs NO type-specific permission and NO
+        Play Console FGS declaration (policy-exempt), unlike the previous
+        commented-out "health" registration, which from Android 14 required a
+        health runtime permission and a Play declaration with a demo video.
+        FOREGROUND_SERVICE itself is declared at the app level (app.json).
+        The service self-stops at rest end and implements onTimeout(), so the
+        ~3-minute shortService deadline can never ANR the app. If the manifest
+        type here ever disagrees with the type passed to startForeground() in
+        WorkoutForegroundService.kt, the system throws at start.
     -->
-    <!--
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
-
     <application>
         <service
             android:name=".WorkoutForegroundService"
             android:exported="false"
-            android:foregroundServiceType="health" />
+            android:foregroundServiceType="shortService" />
     </application>
-    -->
 </manifest>
-

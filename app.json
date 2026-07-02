@@ -68,7 +68,8 @@
         "android.permission.VIBRATE",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.FOREGROUND_SERVICE",
-        "android.permission.WAKE_LOCK"
+        "android.permission.WAKE_LOCK",
+        "android.permission.SCHEDULE_EXACT_ALARM"
       ],
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO",

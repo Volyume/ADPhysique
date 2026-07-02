@@ -1,5 +1,6 @@
 package expo.modules.resttimerlive
 
+import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -7,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import expo.modules.kotlin.Promise
@@ -152,6 +154,100 @@ class RestTimerLiveModule : Module() {
         promise.resolve(null)
       } catch (_: Throwable) {
         promise.resolve(null)
+      }
+    }
+
+    // E6A: shortService rest-window host. Starts (or updates) the foreground
+    // service carrying the native chronometer countdown for the current rest.
+    // The JS side gates on the ~170 s window (see notifications/restForeground);
+    // the service self-stops at the rest end and on the OS shortService
+    // timeout, so a missed JS stop can never ANR.
+    AsyncFunction("startRestForeground") { options: Map<String, Any?>, promise: Promise ->
+      try {
+        val context = appContext.reactContext
+        if (context == null) {
+          promise.resolve(false)
+          return@AsyncFunction
+        }
+        val endTimeMs = (options["endTimeMs"] as? Number)?.toLong() ?: 0L
+        if (endTimeMs <= System.currentTimeMillis()) {
+          promise.resolve(false)
+          return@AsyncFunction
+        }
+        val intent = Intent(context, WorkoutForegroundService::class.java).apply {
+          action = WorkoutForegroundService.ACTION_START_REST
+          putExtra(WorkoutForegroundService.EXTRA_END_TIME_MS, endTimeMs)
+          putExtra(WorkoutForegroundService.EXTRA_TITLE,
+            (options["exerciseName"] as? String)?.takeIf { it.isNotBlank() } ?: "Rest timer")
+          putExtra(WorkoutForegroundService.EXTRA_CHANNEL_ID,
+            (options["channelId"] as? String)?.takeIf { it.isNotBlank() } ?: DEFAULT_CHANNEL_ID)
+          (options["deepLink"] as? String)?.let {
+            putExtra(WorkoutForegroundService.EXTRA_DEEP_LINK, it)
+          }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+          context.startForegroundService(intent)
+        } else {
+          context.startService(intent)
+        }
+        promise.resolve(true)
+      } catch (e: Throwable) {
+        promise.reject("ERR_REST_FOREGROUND_START", e.message ?: "Failed to start rest foreground service", e)
+      }
+    }
+
+    AsyncFunction("stopRestForeground") { promise: Promise ->
+      try {
+        val context = appContext.reactContext
+        if (context == null) {
+          promise.resolve(null)
+          return@AsyncFunction
+        }
+        val intent = Intent(context, WorkoutForegroundService::class.java).apply {
+          action = WorkoutForegroundService.ACTION_STOP
+        }
+        context.startService(intent)
+        promise.resolve(null)
+      } catch (_: Throwable) {
+        promise.resolve(null)
+      }
+    }
+
+    // E6A: exact-alarm special app access (Android 12+). expo-notifications
+    // auto-upgrades the end-of-rest alarm to setExactAndAllowWhileIdle the
+    // moment this returns true; below Android 12 alarms are always exact.
+    AsyncFunction("canScheduleExactAlarms") { promise: Promise ->
+      try {
+        val context = appContext.reactContext
+        if (context == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+          promise.resolve(true)
+          return@AsyncFunction
+        }
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        promise.resolve(alarmManager.canScheduleExactAlarms())
+      } catch (_: Throwable) {
+        promise.resolve(true) // never block a schedule on a read failure
+      }
+    }
+
+    // Opens the system grant screen for SCHEDULE_EXACT_ALARM (the user grants
+    // it there; there is no in-app dialog for special app accesses). Resolves
+    // true if the screen was opened.
+    AsyncFunction("requestExactAlarmAccess") { promise: Promise ->
+      try {
+        val context = appContext.reactContext
+        if (context == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+          promise.resolve(false)
+          return@AsyncFunction
+        }
+        val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+          data = Uri.parse("package:${context.packageName}")
+          flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
+        promise.resolve(true)
+      } catch (_: Throwable) {
+        promise.resolve(false)
       }
     }
   }

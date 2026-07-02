@@ -1,8 +1,10 @@
-import { useEffect } from 'react';
-import { View, Text, Switch, TouchableOpacity, StyleSheet } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { View, Text, Switch, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import { Ionicons } from '@expo/vector-icons';
 import useAppStore from '../store/useAppStore';
+import { canScheduleExactAlarms, requestExactAlarmAccess } from '../lib/notifications/restForeground';
 import { isHealthAvailable, getHealthProviderLabel } from '../lib/health';
 import { SettingsPage, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
 import { colors, withAlpha, spacing, radius, fontSize, fontWeight, type } from '../styles/theme';
@@ -47,6 +49,22 @@ export default function SettingsScreen({ navigation }) {
     loadWorkoutPrefs: s.loadWorkoutPrefs,
   })));
   const healthOn = isHealthAvailable();
+
+  // E6A exact alarms: Android 12+ batches alarms unless the user grants the
+  // exact-alarm special access, so the rest-finished alert can land late.
+  // Re-checked on focus because the grant happens on a SYSTEM screen and
+  // there is no result callback. Defaults granted (row hidden) so iOS and
+  // older Android never see it.
+  const [exactAlarmsGranted, setExactAlarmsGranted] = useState(true);
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    if (Platform.OS === 'android') {
+      canScheduleExactAlarms()
+        .then((v) => { if (active) setExactAlarmsGranted(!!v); })
+        .catch(() => {});
+    }
+    return () => { active = false; };
+  }, []));
 
   // Hydrate the device-local workout prefs once so the rest-timer rows reflect
   // the saved values rather than reading as the defaults until touched.
@@ -224,6 +242,18 @@ export default function SettingsScreen({ navigation }) {
             />
           }
         />
+
+        {/* E6A: exact-alarm access (Android 12+ only, hidden once granted or
+            when the rest alert itself is off). The grant lives on a system
+            screen; declining simply keeps today's near-time alerts. */}
+        {Platform.OS === 'android' && !!restEndAlertEnabled && !exactAlarmsGranted ? (
+          <SettingRow
+            icon="alarm-outline"
+            label="Make rest alerts exact"
+            sub="Android can delay alerts a little to save battery. Allow exact alarms and the rest alert fires to the second."
+            onPress={() => { requestExactAlarmAccess().catch(() => {}); }}
+          />
+        ) : null}
       </View>
     </SettingsPage>
   );
