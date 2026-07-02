@@ -16,7 +16,7 @@ const DAY = 86400000;
 function fakeOutput(overrides = {}) {
   return {
     hasEnoughData: true,
-    weekLabel: 'Week 5 · Moderate cut',
+    weekLabel: 'Week 5 · Mild cut',
     trend: { ewma7: 82.1, delta: -0.4, onTarget: true, deltaLabel: '-0.4kg this week', rateLabel: 'losing 0.4kg/wk' },
     whatWorking: [],
     adjustments: {
@@ -30,7 +30,7 @@ function fakeOutput(overrides = {}) {
     prsThisWeek: 0,
     sessionsCompleted: 4,
     sessionsPlanned: 4,
-    goalPhase: 'mod_cut',
+    goalPhase: 'mild_cut',
     ...overrides,
   };
 }

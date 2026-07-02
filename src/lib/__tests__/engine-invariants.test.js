@@ -170,7 +170,7 @@ describe('runWeeklyCoach: fuzz invariants', () => {
       checkin: { weekStart: now - 7 * DAY, energyScore: 2, sorenessScore: 3, sleepHours: 7, calsAdherence: 'hit', stepsAdherence: 'hit', trainingPerformance: 'hit', jointPain: false },
       morningWeights,
       sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 0,
-      goalPhase: 'mod_cut', weeksInPhase: 4,
+      goalPhase: 'mild_cut', weeksInPhase: 4,
       consecutiveOffTargetWeeks: 1, consecutivePoorRecoveryWeeks: 0,
       lastCalAdjustmentDirection: null, lastCalAdjustmentWeeksAgo: 99,
       currentCalTarget: 2400, currentStepsTarget: 8000,
@@ -192,7 +192,7 @@ describe('runWeeklyCoach: fuzz invariants', () => {
       checkin: { weekStart: NOW - 7 * DAY, energyScore: 3, sorenessScore: 3, sleepHours: 7, calsAdherence: 'hit', stepsAdherence: 'hit', trainingPerformance: 'hit', jointPain: false },
       morningWeights: Array.from({ length: 14 }, (_, i) => ({ loggedAt: NOW - (14 - i) * DAY, weightKg: 85 - i * 0.05 })),
       sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 1,
-      goalPhase: 'mod_cut', weeksInPhase: 4,
+      goalPhase: 'mild_cut', weeksInPhase: 4,
       consecutiveOffTargetWeeks: 1, consecutivePoorRecoveryWeeks: 0,
       lastCalAdjustmentDirection: null, lastCalAdjustmentWeeksAgo: 99,
       currentCalTarget: 2400, currentStepsTarget: 8000,
@@ -307,7 +307,7 @@ describe('COMP-026: runWeeklyCoach composition invariants (blocking)', () => {
     checkin: { energyScore: 4, recoveryScore: 4, calsAdherence: 'hit', cycleOverride: false },
     currentCalTarget: 2000, currentMaintenanceKcal: 2400, currentStepsTarget: 8000,
     sessionsCompleted: 4, sessionsPlanned: 4, morningWeights: risingWeights(),
-    goalPhase: 'mod_cut', weeksInPhase: 6, consecutiveOffTargetWeeks: 3, lastCalAdjustmentWeeksAgo: 4,
+    goalPhase: 'mild_cut', weeksInPhase: 6, consecutiveOffTargetWeeks: 3, lastCalAdjustmentWeeksAgo: 4,
     bodyweightKg: 80, stepsTodayKey: TODAY, ...over,
   });
 

@@ -5,7 +5,7 @@ import { isGreatWeek, buildWeeklyRecapParams, GREAT_WEEK_HEADLINE } from '../gre
 function out(over = {}) {
   return {
     hasEnoughData: true,
-    goalPhase: 'mod_cut',
+    goalPhase: 'mild_cut',
     trend: { onTarget: true, delta: -0.7, deltaLabel: '-0.7kg this week', rateLabel: 'losing 0.7kg/wk' },
     sessionsPlanned: 4,
     sessionsCompleted: 4,
@@ -70,7 +70,7 @@ describe('buildWeeklyRecapParams — ED-safe by construction', () => {
   });
 
   test('a cut that lost weight on target shows the labelled hero (heading + magnitude + status)', () => {
-    const p = buildWeeklyRecapParams(out({ goalPhase: 'mod_cut', trend: { onTarget: true, delta: -0.8 } }));
+    const p = buildWeeklyRecapParams(out({ goalPhase: 'mild_cut', trend: { onTarget: true, delta: -0.8 } }));
     // Magnitude only (no bare sign), with an explicit heading so it is never ambiguous.
     expect(p.hero).toEqual({ heading: 'weight lost this week', value: '0.8 kg', context: 'right on target' });
     expect(p.coachLine).toMatch(/lost 0\.8 kg/);

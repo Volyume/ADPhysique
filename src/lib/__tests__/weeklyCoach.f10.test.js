@@ -42,7 +42,7 @@ function baseInputs(over = {}) {
     },
     morningWeights: dailyWeights(),
     sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 1,
-    goalPhase: 'mod_cut', weeksInPhase: 5,
+    goalPhase: 'mild_cut', weeksInPhase: 5,
     consecutiveOffTargetWeeks: 3, consecutivePoorRecoveryWeeks: 0,
     lastCalAdjustmentDirection: null, lastCalAdjustmentWeeksAgo: 99,
     currentCalTarget: 2200, currentMaintenanceKcal: 2800,

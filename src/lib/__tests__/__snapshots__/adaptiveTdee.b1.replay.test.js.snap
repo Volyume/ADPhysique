@@ -42,7 +42,7 @@ exports[`B1 replay corpus — computeAdaptiveTDEEAdjustment (unit seam) R3 [expe
 exports[`B1 replay corpus — runWeeklyCoach (integration seam) R5 [must never drift] tracked check-in, no food diary: full output stable: R5 1`] = `
 {
   "calories": {
-    "change": -108,
+    "change": -98,
     "note": "Weight is coming down slower than the target rate.",
   },
   "confidence": "high",
@@ -54,7 +54,7 @@ exports[`B1 replay corpus — runWeeklyCoach (integration seam) R5 [must never d
 exports[`B1 replay corpus — runWeeklyCoach (integration seam) R6 [expected to change in phase 2] check-in SKIPPED but 6 days of food logged: today no resize fires: R6 1`] = `
 {
   "calories": {
-    "change": -33,
+    "change": -23,
     "note": "Weight is coming down slower than the target rate.",
   },
   "confidence": "medium",

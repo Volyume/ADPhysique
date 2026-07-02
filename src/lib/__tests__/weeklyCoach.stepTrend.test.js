@@ -48,7 +48,7 @@ function baseInputs(over = {}) {
     sessionsCompleted: 4,
     sessionsPlanned: 4,
     morningWeights: risingWeights(),
-    goalPhase: 'mod_cut',
+    goalPhase: 'mild_cut',
     weeksInPhase: 6,
     consecutiveOffTargetWeeks: 3,
     lastCalAdjustmentWeeksAgo: 4,

@@ -12,6 +12,16 @@
  * commit IS the founder's delta report. Scenarios explicitly marked
  * "must never drift" keep their values forever (no-food-data users, floors,
  * blockers) — if the implementation moves one of those, B1 has leaked.
+ *
+ * EN-4 re-key (2026-07-02, after the B1 delta was signed off): the
+ * integration fixture borrowed the DEAD 'mod_cut' vocabulary, which EN-4
+ * deletes on founder ruling. Re-pinned on the live 'mild_cut' key with a
+ * gentler slope so the SAME too-slow resize path fires, and the run clock
+ * pinned via nowMs (the fixture previously floated on Date.now(), so the
+ * snapshots were wall-clock-dependent). R1–R4 (the unit seam) and the
+ * weightsSteadyCut/weightsStalled series are byte-untouched; R5/R6
+ * snapshots were re-recorded in the SAME commit as this re-key, before the
+ * EN-4 engine change, so the EN-4 implementation commit must not move them.
  */
 import { computeAdaptiveTDEEAdjustment } from '../nutritionEngine';
 import { runWeeklyCoach } from '../weeklyCoach';
@@ -23,6 +33,15 @@ const NOW = new Date(2026, 5, 22, 8, 0, 0, 0).getTime(); // Mon 22 Jun 2026
 function weightsSteadyCut() {
   return Array.from({ length: 28 }, (_, i) => ({
     weightKg: +(84.0 - i * 0.05).toFixed(2),
+    loggedAt: NOW - (27 - i) * DAY,
+  }));
+}
+// 28 daily weights easing 83.5 -> 82.96 kg (~0.14 kg/wk, a too-slow cut for
+// the mild_cut -0.375 %/wk target: the integration scenarios need the
+// too-slow resize path to fire, exactly as it did under the old fixture).
+function weightsSlowCut() {
+  return Array.from({ length: 28 }, (_, i) => ({
+    weightKg: +(83.5 - i * 0.02).toFixed(2),
     loggedAt: NOW - (27 - i) * DAY,
   }));
 }
@@ -48,18 +67,22 @@ const baseCoachInputs = (over = {}) => ({
     calsAdherence: 'hit', stepsAdherence: 'hit', trainingPerformance: 'hit',
     jointPain: false, cycleOverride: false,
   },
-  morningWeights: weightsSteadyCut(),
+  morningWeights: weightsSlowCut(),
   sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 1,
-  goalPhase: 'mod_cut', weeksInPhase: 5,
+  goalPhase: 'mild_cut', weeksInPhase: 5,
   consecutiveOffTargetWeeks: 3, consecutivePoorRecoveryWeeks: 0,
   lastCalAdjustmentDirection: null, lastCalAdjustmentWeeksAgo: 99,
-  currentCalTarget: 2200, currentMaintenanceKcal: 2800,
+  // Maintenance chosen so the adaptive resize lands INSIDE the ±5 % cap:
+  // R5 (bucket-based) and R6 (intake-based) must stay numerically distinct,
+  // or the corpus can no longer show the intake seam doing the sizing.
+  currentCalTarget: 2200, currentMaintenanceKcal: 2550,
   currentProteinG: 170, currentCarbsG: 200, currentFatG: 70,
   currentStepsTarget: 8000, stepsEnabled: false,
   bodyweightKg: 83, units: 'kg', sex: 'male',
   scoffPositive: false, recentWeeklyHistory: [], goalLockAdvanced: false,
   edPatternOpen: false, userTier: 'pro', hasUsedTrial: true,
   recentIntakeAvgKcal: null, recentIntakeDaysLogged: 0,
+  nowMs: NOW,
   ...over,
 });
 

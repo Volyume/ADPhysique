@@ -37,7 +37,7 @@ function checkin(o = {}) {
   return { weekStart: Date.now() - 7 * DAY, energyScore: 4, sorenessScore: 2, stressScore: 2, sleepHours: 8, calsAdherence: 'hit', stepsAdherence: 'hit', trainingPerformance: 'hit', jointPain: false, soreMuscles: null, notes: null, ...o };
 }
 function baseInputs(o = {}) {
-  return { checkin: checkin(), morningWeights: [], sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 2, goalPhase: 'mod_cut', trainingGoal: 'build_muscle', weeksInPhase: 4, currentCalTarget: 2400, currentStepsTarget: 8000, bodyweightKg: 85, units: 'kg', ...o };
+  return { checkin: checkin(), morningWeights: [], sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 2, goalPhase: 'mild_cut', trainingGoal: 'build_muscle', weeksInPhase: 4, currentCalTarget: 2400, currentStepsTarget: 8000, bodyweightKg: 85, units: 'kg', ...o };
 }
 
 const LIFT = { exerciseName: 'Barbell Bench Press', weight: 100, reps: 5, isNewBest: true, units: 'kg' };
@@ -72,7 +72,7 @@ function renderToBytes(params) {
 
 describe('great-week pipeline — real engine → trigger → card → pixels', () => {
   test('an on-target cut week: trigger fires AND the card shows the ENGINE\'s exact numbers', () => {
-    const out = runWeeklyCoach(baseInputs({ goalPhase: 'mod_cut', morningWeights: trendSharp(85, -0.53), prsThisWeek: 2, sessionsCompleted: 4, sessionsPlanned: 4 }));
+    const out = runWeeklyCoach(baseInputs({ goalPhase: 'mild_cut', morningWeights: trendSharp(85, -0.32), prsThisWeek: 2, sessionsCompleted: 4, sessionsPlanned: 4 }));
 
     // The engine genuinely reads this as on-target and great.
     expect(out.trend.onTarget).toBe(true);
@@ -93,7 +93,7 @@ describe('great-week pipeline — real engine → trigger → card → pixels', 
   });
 
   test('SAFETY: each hard flag on the real output blocks the trigger', () => {
-    const out = runWeeklyCoach(baseInputs({ goalPhase: 'mod_cut', morningWeights: trendSharp(85, -0.53) }));
+    const out = runWeeklyCoach(baseInputs({ goalPhase: 'mild_cut', morningWeights: trendSharp(85, -0.32) }));
     expect(isGreatWeek(out).great).toBe(true);
     expect(isGreatWeek({ ...out, edPatternFired: true }).great).toBe(false);
     expect(isGreatWeek({ ...out, rapidWeightLossFlag: true }).great).toBe(false);
@@ -102,7 +102,7 @@ describe('great-week pipeline — real engine → trigger → card → pixels', 
   });
 
   test('SAFETY: suppress strips every number; the rendered card still produces a valid PNG', () => {
-    const out = runWeeklyCoach(baseInputs({ goalPhase: 'mod_cut', morningWeights: trendSharp(85, -0.53) }));
+    const out = runWeeklyCoach(baseInputs({ goalPhase: 'mild_cut', morningWeights: trendSharp(85, -0.32) }));
     const p = buildWeeklyRecapParams(out, { units: 'kg', bestLift: LIFT, suppress: true });
     expect(p.hero && p.hero.heading).not.toBe('weight lost this week');
     expect(p.bestLift).toBeNull();
@@ -112,7 +112,7 @@ describe('great-week pipeline — real engine → trigger → card → pixels', 
   });
 
   test('an off-target week does not fire (sessions still hit, so on-target is the discriminator)', () => {
-    const flat = runWeeklyCoach(baseInputs({ goalPhase: 'mod_cut', morningWeights: trendSharp(85, 0), sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 2 }));
+    const flat = runWeeklyCoach(baseInputs({ goalPhase: 'mild_cut', morningWeights: trendSharp(85, 0), sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 2 }));
     expect(flat.trend.onTarget).toBe(false);
     expect(isGreatWeek(flat).great).toBe(false);
   });

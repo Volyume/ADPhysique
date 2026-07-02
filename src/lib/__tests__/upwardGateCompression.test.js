@@ -65,7 +65,7 @@ function baseInputs(overrides = {}) {
     sessionsCompleted: 4,
     sessionsPlanned: 4,
     prsThisWeek: 0,
-    goalPhase: 'mod_cut',
+    goalPhase: 'mild_cut',
     trainingGoal: 'build_muscle',
     weeksInPhase: 4,
     consecutiveOffTargetWeeks: 0,
@@ -87,7 +87,7 @@ describe('Move #3 rapid-loss compression -- override fires', () => {
     const out = runWeeklyCoach(baseInputs({
       morningWeights: trend(85, -1.6),                  // ~ -1.9% /wk on 85 kg
       checkin: checkin({ energyScore: 2 }),
-      goalPhase: 'mod_cut',
+      goalPhase: 'mild_cut',
       weeksInPhase: 3,
       consecutiveOffTargetWeeks: 0,                     // would normally block
       lastCalAdjustmentWeeksAgo: 0,                     // would normally cooldown

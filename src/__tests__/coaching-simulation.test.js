@@ -224,7 +224,7 @@ describe('12-week coaching simulation', () => {
         sessionsCompleted: 4,
         sessionsPlanned: 4,
         prsThisWeek,
-        goalPhase: currentPhase === 'cut' ? 'mod_cut' : currentPhase === 'bulk' ? 'mod_bulk' : 'maint',
+        goalPhase: currentPhase === 'cut' ? 'mild_cut' : currentPhase === 'bulk' ? 'mod_bulk' : 'maint',
         trainingGoal: profile.trainingGoal,
         weeksInPhase,
         consecutiveOffTargetWeeks,
@@ -410,7 +410,7 @@ describe('12-week coaching simulation', () => {
     }
   });
 
-  // ─── Scenario: aggressive cut with poor recovery ───────────────────────
+  // ─── Scenario: hard cut with poor recovery ─────────────────────────────
   test('coach pulls back when recovery deteriorates 3 weeks running', () => {
     const checkin = {
       energyScore: 1, sorenessScore: 1, // both terrible
@@ -426,7 +426,7 @@ describe('12-week coaching simulation', () => {
       morningWeights,
       sessionsCompleted: 3, sessionsPlanned: 4,
       prsThisWeek: 0,
-      goalPhase: 'agg_cut',
+      goalPhase: 'mild_cut',
       weeksInPhase: 4,
       consecutiveOffTargetWeeks: 0,
       consecutivePoorRecoveryWeeks: 3,
@@ -479,7 +479,7 @@ describe('12-week coaching simulation', () => {
       checkin: { energyScore: 3, sorenessScore: 3, calsAdherence: 'in_range', stepsAdherence: 'mostly_hit', sleepHours: 7 },
       morningWeights,
       sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 0,
-      goalPhase: 'mod_cut',
+      goalPhase: 'mild_cut',
       weeksInPhase: 4,
       consecutiveOffTargetWeeks: 3,
       consecutivePoorRecoveryWeeks: 0,
@@ -511,7 +511,7 @@ describe('12-week coaching simulation', () => {
       checkin: { energyScore: 3, sorenessScore: 3, calsAdherence: 'in_range', stepsAdherence: 'mostly_hit', sleepHours: 7 },
       morningWeights,
       sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 1,
-      goalPhase: 'mod_cut',
+      goalPhase: 'mild_cut',
       weeksInPhase: 3,
       consecutiveOffTargetWeeks: 0,
       consecutivePoorRecoveryWeeks: 0,
@@ -584,7 +584,7 @@ describe('12-week coaching simulation', () => {
       checkin: { energyScore: 2, sorenessScore: 2, calsAdherence: 'in_range', stepsAdherence: 'mostly_hit', sleepHours: 6 },
       morningWeights,
       sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 0,
-      goalPhase: 'mod_cut',
+      goalPhase: 'mild_cut',
       weeksInPhase: 15,
       consecutiveOffTargetWeeks: 0, consecutivePoorRecoveryWeeks: 2,
       lastCalAdjustmentDirection: 'down', lastCalAdjustmentWeeksAgo: 6,
@@ -832,7 +832,7 @@ describe('12-week coaching simulation', () => {
       checkin: { energyScore: 3, sorenessScore: 3, calsAdherence: 'in_range', stepsAdherence: 'mostly_hit', sleepHours: 7 },
       morningWeights,
       sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 0,
-      goalPhase: 'mod_cut',
+      goalPhase: 'mild_cut',
       weeksInPhase: 4,
       consecutiveOffTargetWeeks: 1,
       consecutivePoorRecoveryWeeks: 0,

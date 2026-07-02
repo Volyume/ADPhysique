@@ -77,7 +77,7 @@ function baseInputs(overrides = {}) {
     sessionsCompleted: 4,
     sessionsPlanned: 4,
     prsThisWeek: 0,
-    goalPhase: 'mod_cut',
+    goalPhase: 'mild_cut',
     trainingGoal: 'build_muscle',
     weeksInPhase: 4,
     consecutiveOffTargetWeeks: 0,
@@ -238,10 +238,10 @@ describe('data-hold gate', () => {
 // ── On-target case (no action) ─────────────────────────────────────────────
 
 describe('on-target weeks', () => {
-  test('mod_cut, weights trending at target rate → calories held, on target', () => {
-    // moderate cut target is around -0.625%/wk for an 85kg lifter ≈ -0.53kg/wk
+  test('mild_cut, weights trending at target rate → calories held, on target', () => {
+    // mild cut target is -0.375%/wk, for an 85kg lifter ≈ -0.32kg/wk
     const out = runWeeklyCoach(baseInputs({
-      morningWeights: trend(85, -0.53),
+      morningWeights: trend(85, -0.32),
       weeksInPhase: 4,
       consecutiveOffTargetWeeks: 0,
     }));
@@ -554,7 +554,7 @@ describe('robustness to missing fields', () => {
 describe('macro cycle gating', () => {
   // Current daily macros, supplied by the caller from nutrition_targets.
   const macros = { currentCalTarget: 2400, currentProteinG: 200, currentCarbsG: 280, currentFatG: 70 };
-  const onCut = { morningWeights: trend(85, -0.5), goalPhase: 'mod_cut' };
+  const onCut = { morningWeights: trend(85, -0.35), goalPhase: 'mild_cut' };
 
   test('fires on an advanced cut', () => {
     const out = runWeeklyCoach(baseInputs({ ...macros, ...onCut, goalLockAdvanced: true }));
@@ -619,7 +619,7 @@ describe('refeed gating and cadence', () => {
     const out = runWeeklyCoach(baseInputs({
       ...nut,
       morningWeights: trend(85, -1.0),
-      goalPhase: 'mod_cut',
+      goalPhase: 'mild_cut',
       trainingGoal: 'bikini',
       lastRefeedAt: null,
     }));
@@ -643,7 +643,7 @@ describe('refeed gating and cadence', () => {
     const out = runWeeklyCoach(baseInputs({
       ...nut,
       morningWeights: trend(85, -1.0),
-      goalPhase: 'mod_cut',
+      goalPhase: 'mild_cut',
       trainingGoal: 'bikini',
       lastRefeedAt: Date.now() - 3 * DAY,
     }));
