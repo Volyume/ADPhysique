@@ -10,6 +10,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '
 import Button from '../components/Button';
 import { getAllExercises, createWorkout } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
+import { suggestRestSeconds } from '../lib/restSuggest';
 import { generateTravelPlan } from '../lib/travelMode';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -17,8 +18,10 @@ import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
 
 const DEFAULT_SETS = 3;
-// Fallback rest used only if the user's stored global default is unavailable.
-// The live default comes from the store (defaultRestSeconds, Hevy teardown R1).
+// The shipped global default rest (defaultRestSeconds starts at 90, Hevy
+// teardown R1). While the user has never changed it, newly added exercises
+// pre-fill from the B9 fixed suggestion table instead (restSuggest.js);
+// once they set their own default it is honoured verbatim.
 const DEFAULT_REST = 90;
 
 export default function BuildWorkoutScreen({ navigation }) {
@@ -55,13 +58,21 @@ export default function BuildWorkoutScreen({ navigation }) {
   }
 
   function addExercise(exercise) {
+    // B9 deterministic rest suggestion: when the user's global default rest
+    // is still the shipped 90s, pre-fill with the fixed-table suggestion for
+    // this exercise (compound 180s, isolation 90s) and label it "suggested".
+    // A user-set default (anything other than 90) always wins, so nobody who
+    // chose their own rest sees it change. Editable via the stepper as before.
+    const hasCustomDefault =
+      Number.isFinite(defaultRestSeconds) && defaultRestSeconds !== DEFAULT_REST;
     setExercises(prev => [...prev, {
       key: `${exercise.id}-${Date.now()}`,
       exercise,
       sets: DEFAULT_SETS,
       repsMin: exercise.defaultRepMin || 8,
       repsMax: exercise.defaultRepMax || 12,
-      restSeconds: defaultRestSeconds || DEFAULT_REST,
+      restSeconds: hasCustomDefault ? defaultRestSeconds : suggestRestSeconds({ exercise }),
+      restSuggested: !hasCustomDefault,
       startingWeight: 0,
     }]);
     setShowPicker(false);
@@ -87,7 +98,8 @@ export default function BuildWorkoutScreen({ navigation }) {
     setExercises(prev => prev.map(e => {
       if (e.key !== key) return e;
       const next = Math.max(30, Math.min(600, e.restSeconds + delta));
-      return { ...e, restSeconds: next };
+      // Once the user touches the stepper it is their number, not a suggestion.
+      return { ...e, restSeconds: next, restSuggested: false };
     }));
   }
 
@@ -278,7 +290,7 @@ export default function BuildWorkoutScreen({ navigation }) {
 
               {/* Rest */}
               <View style={styles.controlGroup}>
-                <Text style={styles.controlLabel}>Rest</Text>
+                <Text style={styles.controlLabel}>{item.restSuggested ? 'Rest (suggested)' : 'Rest'}</Text>
                 <View style={styles.stepper}>
                   <TouchableOpacity
                     style={styles.stepBtn}
