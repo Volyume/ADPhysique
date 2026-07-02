@@ -22,7 +22,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, circle, withAlpha } from '../styles/theme';
+// M4 (audit 03b §2.2 item 1): the story tap zones were the flagship dead
+// tap — no pressed state, no haptic. The tick goes through the self-gating
+// vocabulary (selection = story advance, same class as a scrub tick).
+import * as haptics from '../lib/haptics';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getYearOfLiftsData, getRecapData, getBlockReflectionData, getOpenEdPatternFlag } from '../lib/database';
@@ -633,8 +637,21 @@ export default function YearOfLiftsScreen({ navigation, route }) {
               tap-to-advance is still available via a narrow strip
               under the pips. */}
           <View style={styles.tapZones} pointerEvents="box-none">
-            <Pressable style={styles.tapLeft} onPress={rewind} accessibilityRole="button" accessibilityLabel="Previous card" />
-            <Pressable style={styles.tapRight} onPress={advance} accessibilityRole="button" accessibilityLabel="Next card" />
+            {/* M4: the zones are invisible, so the pressed wash is the only
+                visual acknowledgment a tap gets; the selection tick fires on
+                the TAP handlers only, never on the auto-advance timer. */}
+            <Pressable
+              style={({ pressed }) => [styles.tapLeft, pressed && styles.tapPressed]}
+              onPress={() => { haptics.selection(); rewind(); }}
+              accessibilityRole="button"
+              accessibilityLabel="Previous card"
+            />
+            <Pressable
+              style={({ pressed }) => [styles.tapRight, pressed && styles.tapPressed]}
+              onPress={() => { haptics.selection(); advance(); }}
+              accessibilityRole="button"
+              accessibilityLabel="Next card"
+            />
           </View>
         </>
       )}
@@ -784,6 +801,9 @@ const styles = StyleSheet.create({
   },
   tapLeft: { flex: 1 },
   tapRight: { flex: 2 },
+  // A faint light wash while pressed: enough to acknowledge the tap on an
+  // otherwise invisible zone without competing with the card artwork.
+  tapPressed: { backgroundColor: withAlpha(colors.textPrimary, 0.08), borderRadius: radius.md },
 
   doneBtn: {
     backgroundColor: colors.surface,

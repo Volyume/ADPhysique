@@ -1066,7 +1066,7 @@ export default function DiaryScreen({ navigation }) {
         onRequestClose={() => setSaveMealItems(null)}
       >
         <Pressable style={styles.moveBackdrop} onPress={() => setSaveMealItems(null)}>
-          <Pressable style={styles.moveCard} onPress={() => {}}>
+          <Pressable style={styles.moveCard} onPress={() => {}} accessible={false}>
             <Text style={styles.moveTitle}>Save as meal</Text>
             <Text style={styles.saveMealHint}>
               {saveMealItems?.length ?? 0} {(saveMealItems?.length ?? 0) === 1 ? 'food' : 'foods'} saved together. Name it.
@@ -1101,7 +1101,7 @@ export default function DiaryScreen({ navigation }) {
         onRequestClose={() => setCopyDays(null)}
       >
         <Pressable style={styles.moveBackdrop} onPress={() => setCopyDays(null)}>
-          <Pressable style={styles.moveCard} onPress={() => {}}>
+          <Pressable style={styles.moveCard} onPress={() => {}} accessible={false}>
             <Text style={styles.moveTitle}>Copy a previous day</Text>
             {copyDays && copyDays.length === 0 ? (
               <Text style={styles.saveMealHint}>No earlier days with food logged yet.</Text>

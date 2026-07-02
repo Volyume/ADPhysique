@@ -1041,7 +1041,7 @@ export default function PlansScreen({ navigation }) {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <Pressable style={styles.backdrop} onPress={() => { if (!savingFolder) setFolderPrompt(null); }}>
-            <Pressable style={styles.folderSheet} onPress={() => {}}>
+            <Pressable style={styles.folderSheet} onPress={() => {}} accessible={false}>
               <Text style={styles.folderSheetTitle}>
                 {folderPrompt?.mode === 'rename' ? 'Rename folder' : 'New folder'}
               </Text>

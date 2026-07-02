@@ -98,7 +98,7 @@ export default function ProGate({ children, feature = 'This feature', style }) {
         onRequestClose={() => setModalVisible(false)}
       >
         <Pressable style={styles.backdrop} onPress={() => setModalVisible(false)}>
-          <Pressable style={styles.sheet} onPress={() => {}}>
+          <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
             <View style={styles.sheetHandle} />
 
             <View style={styles.sheetIconWrap}>

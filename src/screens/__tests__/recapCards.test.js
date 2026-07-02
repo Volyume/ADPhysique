@@ -3,6 +3,19 @@
  * Pins the delta-caption rules (never negative-framed; neutral under calm/ED),
  * the minimum-content rule, and the block climb slide.
  */
+
+// expo-haptics can't construct its native EventEmitter in the bare test env;
+// mock it as the mount suites do. The screen module imports the vocabulary
+// for the story tap-zone tick (M4), which pulls expo-haptics in at import
+// time even though these tests only exercise the pure card builders.
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(() => Promise.resolve()),
+  notificationAsync: jest.fn(() => Promise.resolve()),
+  selectionAsync: jest.fn(() => Promise.resolve()),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}));
+
 import { buildMonthCards, buildBlockCards, buildCards } from '../YearOfLiftsScreen';
 
 const MS = Date.UTC(2026, 5, 1); // 1 Jun 2026

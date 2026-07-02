@@ -212,7 +212,7 @@ export default function MyRecipesScreen({ navigation, route }) {
         onRequestClose={() => { if (!loggingId) setServePrompt(null); }}
       >
         <Pressable style={styles.backdrop} onPress={() => { if (!loggingId) setServePrompt(null); }}>
-          <Pressable style={styles.sheet} onPress={() => {}}>
+          <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
             <Text style={styles.sheetTitle} numberOfLines={1}>{servePrompt?.name}</Text>
             <Text style={styles.sheetSub}>How many servings?</Text>
             <View style={styles.stepper}>

@@ -585,7 +585,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
         onRequestClose={dismissQuiz}
       >
         <Pressable style={styles.backdrop} onPress={dismissQuiz}>
-          <Pressable style={styles.quizSheet} onPress={() => {}}>
+          <Pressable style={styles.quizSheet} onPress={() => {}} accessible={false}>
             <View style={styles.sheetHandle} />
 
             {quizStep < QUIZ_STEPS.length ? (
