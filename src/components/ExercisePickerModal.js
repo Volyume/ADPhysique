@@ -9,6 +9,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/t
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getAllExercises, insertExercise } from '../lib/database';
 import { matchesEquipmentFilter, matchesMuscleFilter } from '../lib/exerciseDisplay';
+import Chip from './Chip';
 import { useToast } from './Toast';
 
 // Shared exercise picker: search the library and, when the exercise you want
@@ -141,27 +142,23 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               <Text style={styles.createLabel}>Muscle Group</Text>
               <View style={styles.chipRow}>
                 {PICKER_MUSCLES.map(m => (
-                  <TouchableOpacity
+                  <Chip
                     key={m}
-                    style={[styles.chip, createMuscle === m && styles.chipActive]}
+                    label={MUSCLE_DISPLAY_NAMES[m]}
+                    selected={createMuscle === m}
                     onPress={() => setCreateMuscle(prev => prev === m ? '' : m)}
-                  >
-                    <Text style={[styles.chipText, createMuscle === m && styles.chipTextActive]}>
-                      {MUSCLE_DISPLAY_NAMES[m]}
-                    </Text>
-                  </TouchableOpacity>
+                  />
                 ))}
               </View>
               <Text style={styles.createLabel}>Equipment</Text>
               <View style={styles.chipRow}>
                 {PICKER_EQUIPMENT.map(eq => (
-                  <TouchableOpacity
+                  <Chip
                     key={eq}
-                    style={[styles.chip, createEquipment === eq && styles.chipActive]}
+                    label={eq}
+                    selected={createEquipment === eq}
                     onPress={() => setCreateEquipment(prev => prev === eq ? '' : eq)}
-                  >
-                    <Text style={[styles.chipText, createEquipment === eq && styles.chipTextActive]}>{eq}</Text>
-                  </TouchableOpacity>
+                  />
                 ))}
               </View>
               <TouchableOpacity

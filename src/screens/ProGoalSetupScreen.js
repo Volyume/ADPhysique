@@ -11,6 +11,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '
 import Dropdown from '../components/Dropdown';
 import SegmentedControl from '../components/SegmentedControl';
 import BackHeader from '../components/BackHeader';
+import Chip from '../components/Chip';
 import { useToast } from '../components/Toast';
 import {
   PHYSIQUE_GOALS,
@@ -364,21 +365,14 @@ export default function ProGoalSetupScreen({ navigation }) {
               Muscles you want to bring up. Your plan puts extra work into them.
             </Text>
             <View style={styles.weakPointGrid}>
-              {WEAK_POINT_MUSCLES.map(muscle => {
-                const sel = planWeakPoints.includes(muscle);
-                return (
-                  <TouchableOpacity
-                    key={muscle}
-                    style={[styles.weakPointChip, sel && styles.weakPointChipSelected]}
-                    onPress={() => toggleWeakPoint(muscle)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.weakPointChipText, sel && styles.weakPointChipTextSelected]}>
-                      {muscle}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+              {WEAK_POINT_MUSCLES.map(muscle => (
+                <Chip
+                  key={muscle}
+                  label={muscle}
+                  selected={planWeakPoints.includes(muscle)}
+                  onPress={() => toggleWeakPoint(muscle)}
+                />
+              ))}
             </View>
           </>
         )}
@@ -554,28 +548,6 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     marginBottom: spacing.md,
   },
-  weakPointChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  weakPointChipSelected: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary,
-  },
-  weakPointChipText: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
-  },
-  weakPointChipTextSelected: {
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
-  },
-
   phaseCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
     backgroundColor: colors.surface, borderRadius: radius.lg,

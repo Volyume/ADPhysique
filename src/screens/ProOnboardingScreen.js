@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion } from '../styles/theme';
 import { VolyumeIcon } from '../components/BrandMark';
 import SegmentedControl from '../components/SegmentedControl';
+import Chip from '../components/Chip';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import Dropdown from '../components/Dropdown';
@@ -1203,21 +1204,14 @@ export default function ProOnboardingScreen({ navigation }) {
                   set this later.
                 </Text>
                 <View style={styles.wpGrid}>
-                  {weakPointSetForGoal(trainingGoal).map(muscle => {
-                    const sel = planWeakPoints.includes(muscle);
-                    return (
-                      <TouchableOpacity
-                        key={muscle}
-                        style={[styles.wpChip, sel && styles.wpChipSelected]}
-                        onPress={() => toggleWeakPoint(muscle)}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={[styles.wpChipText, sel && styles.wpChipTextSelected]}>
-                          {muscle}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+                  {weakPointSetForGoal(trainingGoal).map(muscle => (
+                    <Chip
+                      key={muscle}
+                      label={muscle}
+                      selected={planWeakPoints.includes(muscle)}
+                      onPress={() => toggleWeakPoint(muscle)}
+                    />
+                  ))}
                 </View>
               </View>
             )}
@@ -1607,14 +1601,6 @@ const styles = StyleSheet.create({
   wpOptional: { color: colors.textMuted, fontWeight: fontWeight.regular },
   wpHint: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginBottom: spacing.md },
   wpGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  wpChip: {
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    borderRadius: radius.full, backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  wpChipSelected: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
-  wpChipText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
-  wpChipTextSelected: { color: colors.primary, fontWeight: fontWeight.semibold },
   input: {
     backgroundColor: colors.surface, borderRadius: radius.md,
     borderWidth: 1.5, borderColor: colors.border,

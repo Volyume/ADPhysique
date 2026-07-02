@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle } from '../styles/theme';
 import { formatEnergy, energyUnitLabel } from '../lib/format';
 import InfoTooltip from '../components/InfoTooltip';
+import Chip from '../components/Chip';
 import { useToast } from '../components/Toast';
 import { calculateNutritionTargets, PROTEIN_APPROACHES } from '../lib/nutritionEngine';
 import { saveNutritionTargets, getNutritionTargets, logBodyMetric, getUserBodyProfile, getLatestBodyWeight, getLatestBodyComposition } from '../lib/database';
@@ -80,18 +81,13 @@ function PillGroup({ options, selected, onSelect, keyExtractor, labelExtractor }
       {options.map(opt => {
         const key   = keyExtractor ? keyExtractor(opt) : opt.key ?? opt;
         const label = labelExtractor ? labelExtractor(opt) : opt.label ?? String(opt);
-        const active = selected === key;
         return (
-          <TouchableOpacity
+          <Chip
             key={key}
-            style={[styles.pill, active && styles.pillActive]}
+            label={label}
+            selected={selected === key}
             onPress={() => onSelect(key)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: active }}
-            accessibilityLabel={typeof label === 'string' ? label : undefined}
-          >
-            <Text style={[styles.pillText, active && styles.pillTextActive]}>{label}</Text>
-          </TouchableOpacity>
+          />
         );
       })}
     </View>
@@ -1432,26 +1428,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-  },
-  pill: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  pillActive: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary,
-  },
-  pillText: {
-    ...type.label,
-    color: colors.textSecondary,
-  },
-  pillTextActive: {
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
   },
 
   // ── Goal grid ────────────────────────────────────────────────────────────────────
