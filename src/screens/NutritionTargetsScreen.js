@@ -963,6 +963,15 @@ export default function NutritionTargetsScreen({ navigation }) {
                     <Text style={styles.heroRange}>
                       Estimated range: {formatEnergy(kMin, energyUnit)} – {formatEnergy(kMax, energyUnit)} {energyUnitLabel(energyUnit)}
                     </Text>
+                    {/* NU-7: make the floor's action legible. floorApplied is the
+                        engine's structured signal that a safety system raised
+                        this target (sex floor or the 1.5% rate gate). */}
+                    {results.floorApplied ? (
+                      <View style={styles.heroFloorRow}>
+                        <Ionicons name="shield-checkmark-outline" size={14} color={colors.success} />
+                        <Text style={styles.heroFloorText}>Held at your safe minimum</Text>
+                      </View>
+                    ) : null}
                   </View>
                 );
               })()}
@@ -1244,13 +1253,37 @@ export default function NutritionTargetsScreen({ navigation }) {
 
               </View>
 
-              {/* Warnings */}
-              {results.warnings && results.warnings.length > 0 && results.warnings.map((w, i) => (
-                <View key={i} style={styles.warningBanner}>
-                  <Ionicons name="warning-outline" size={16} color={colors.warning} />
-                  <Text style={styles.warningText}>{w}</Text>
-                </View>
-              ))}
+              {/* Warnings. NU-7: when a floor raised the target, the technical
+                  floor lines collapse into one plain-register explanation (the
+                  phrase checks below are DISPLAY-ONLY routing; every structural
+                  decision still gates on results.floorApplied, the engine's
+                  contract). Remaining warnings de-duplicate before stacking. */}
+              {(() => {
+                const all = [...new Set(results.warnings ?? [])];
+                const isFloorLine = (w) =>
+                  w.includes('Raising to floor') || w.includes('hard gate');
+                const rest = results.floorApplied ? all.filter(w => !isFloorLine(w)) : all;
+                return (
+                  <>
+                    {results.floorApplied ? (
+                      <View style={styles.floorBanner}>
+                        <Ionicons name="shield-checkmark-outline" size={16} color={colors.success} />
+                        <Text style={styles.floorBannerText}>
+                          Your numbers came out below the minimum we hold targets at, so we
+                          raised them. The target above is your safe minimum. Eating below it
+                          would work against your training, recovery and health.
+                        </Text>
+                      </View>
+                    ) : null}
+                    {rest.map((w, i) => (
+                      <View key={i} style={styles.warningBanner}>
+                        <Ionicons name="warning-outline" size={16} color={colors.warning} />
+                        <Text style={styles.warningText}>{w}</Text>
+                      </View>
+                    ))}
+                  </>
+                );
+              })()}
 
               {/* U3: one-tap nudge to ease the deficit when energy availability is
                   low. Steps the goal down one notch and recalculates. Only ever
@@ -1822,6 +1855,32 @@ const styles = StyleSheet.create({
     ...type.bodySm,
     flex: 1,
     color: colors.warning,
+  },
+  // NU-7: the floor explanation reads as protection, not alarm.
+  floorBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: colors.successBg,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.success, 0.251),
+  },
+  floorBannerText: {
+    ...type.bodySm,
+    flex: 1,
+    color: colors.textSecondary,
+  },
+  heroFloorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    marginTop: spacing.xs,
+  },
+  heroFloorText: {
+    ...type.bodySm,
+    color: colors.success,
   },
 
   easeNudge: {
