@@ -14,6 +14,17 @@ jest.mock('../../lib/database', () => ({
   getRecentCheckins: jest.fn(() => Promise.resolve([])),
 }));
 
+// expo-haptics can't construct its native EventEmitter in the bare test env;
+// mock it as the mount suites do (screen-mount.test.js). The screen reaches
+// it through Button -> lib/haptics (audit 03b M1).
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(() => Promise.resolve()),
+  notificationAsync: jest.fn(() => Promise.resolve()),
+  selectionAsync: jest.fn(() => Promise.resolve()),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}));
+
 import CoachReviewScreen from '../CoachReviewScreen';
 import useAppStore from '../../store/useAppStore';
 import { getAllWorkouts } from '../../lib/database';

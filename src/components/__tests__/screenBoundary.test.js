@@ -17,6 +17,17 @@ jest.mock('../../lib/errorLog', () => ({
   logInfo: jest.fn(),
 }));
 
+// expo-haptics can't construct its native EventEmitter in the bare test env;
+// mock it as the mount suites do (screen-mount.test.js). The boundary's
+// fallback reaches it through Button -> lib/haptics (audit 03b M1).
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(() => Promise.resolve()),
+  notificationAsync: jest.fn(() => Promise.resolve()),
+  selectionAsync: jest.fn(() => Promise.resolve()),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}));
+
 
 import {
   BaseNavigationContainer,
