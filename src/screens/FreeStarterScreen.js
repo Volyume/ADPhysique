@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.xl, gap: spacing.lg, flexGrow: 1 },
   question: { ...type.h2, color: colors.textPrimary, marginTop: spacing.lg },
   questionSub: {
-    fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20,
+    ...type.bodySm, color: colors.textSecondary,
     marginTop: -spacing.sm,
   },
   options: { gap: spacing.sm },
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary, textAlign: 'center',
   },
   resultIntro: {
-    fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20,
+    ...type.bodySm, color: colors.textSecondary,
     textAlign: 'center', marginTop: -spacing.sm,
   },
   resultCard: {
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
   },
   resultBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.primary, letterSpacing: 0.5 },
   resultName: { ...type.bodyStrong, color: colors.textPrimary },
-  resultDesc: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  resultDesc: { ...type.bodySm, color: colors.textSecondary },
   resultMeta: { ...type.caption, color: colors.textMuted },
   resultFootnote: {
     ...type.caption, color: colors.textMuted, textAlign: 'center', lineHeight: 17,

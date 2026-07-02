@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
   },
   heroTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.xs },
-  heroBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  heroBody: { ...type.bodySm, color: colors.textSecondary },
 
   sectionLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   },
   nextRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   bullet: { marginTop: 7 },
-  nextText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  nextText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 
   doneBtn: {
     backgroundColor: colors.primary, borderRadius: radius.lg,

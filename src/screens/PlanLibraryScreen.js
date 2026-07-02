@@ -731,7 +731,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md, padding: spacing.md,
     borderWidth: 1, borderColor: colors.border,
   },
-  divisionDescText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  divisionDescText: { ...type.bodySm, color: colors.textSecondary },
 
   // Plan list
   listContent: { padding: spacing.lg, paddingBottom: spacing.xxl },
@@ -771,7 +771,7 @@ const styles = StyleSheet.create({
   badgeTextAmber: { color: colors.primary },
   workoutCount: { ...type.caption, color: colors.textMuted, marginLeft: spacing.sm },
   planName: { ...type.bodyStrong, color: colors.textPrimary },
-  planDesc: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  planDesc: { ...type.bodySm, color: colors.textSecondary },
   planCardFooter: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     borderTopWidth: 1, borderTopColor: colors.border,
@@ -839,7 +839,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg, gap: spacing.sm,
   },
   quizResultName: { ...type.bodyStrong, color: colors.textPrimary },
-  quizResultDesc: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  quizResultDesc: { ...type.bodySm, color: colors.textSecondary },
   quizResultMeta: { ...type.caption, color: colors.textMuted },
   quizStartBtn: {
     backgroundColor: colors.primary, borderRadius: radius.lg,

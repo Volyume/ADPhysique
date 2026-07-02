@@ -511,9 +511,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
     alignItems: 'center', justifyContent: 'center',
   },
-  perkText: { fontSize: fontSize.sm, color: colors.textSecondary, flex: 1, lineHeight: 19 },
+  perkText: { ...type.bodySm, color: colors.textSecondary, flex: 1 },
   credentialNote: {
-    fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17,
+    ...type.captionTight, color: colors.textMuted,
     marginTop: spacing.md, paddingHorizontal: spacing.xs,
   },
 
@@ -524,11 +524,10 @@ const styles = StyleSheet.create({
   faqTitle: { ...type.label, color: colors.textSecondary },
   faqItem: { gap: spacing.xxs },
   faqQ: { ...type.bodyStrong, color: colors.textPrimary },
-  faqA: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
+  faqA: { ...type.bodySm, color: colors.textSecondary },
 
   accountNote: {
-    fontSize: fontSize.sm, color: colors.textMuted,
-    lineHeight: 19, marginBottom: spacing.lg,
+    ...type.bodySm, color: colors.textMuted, marginBottom: spacing.lg,
   },
   periodRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg },
   periodBtn: {

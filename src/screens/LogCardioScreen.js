@@ -296,5 +296,5 @@ const styles = StyleSheet.create({
   stepValue: { flex: 1, textAlign: 'center', ...type.title, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   kcalRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.lg },
   kcalText: { fontSize: fontSize.sm, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
-  footnote: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xs, lineHeight: 16 },
+  footnote: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xs },
 });

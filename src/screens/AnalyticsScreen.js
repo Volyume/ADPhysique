@@ -809,7 +809,7 @@ const styles = StyleSheet.create({
     padding: spacing.md, borderWidth: 1, borderColor: colors.border,
     borderLeftWidth: 3,
   },
-  insightCopy:    { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  insightCopy:    { ...type.bodySm, flex: 1, color: colors.textSecondary },
   insightDismiss: { padding: spacing.xxs },
 
   // ── Volume snapshot ──
@@ -844,7 +844,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.md,
     padding: spacing.lg, borderWidth: 1, borderColor: colors.border,
   },
-  prEmptyText: { fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 18 },
+  prEmptyText: { ...type.bodySm, color: colors.textMuted },
 
   // ── Lifetime totals panel ──
   lifetimePanel: {

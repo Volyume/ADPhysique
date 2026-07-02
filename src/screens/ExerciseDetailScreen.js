@@ -916,7 +916,7 @@ const styles = StyleSheet.create({
   sfrLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   sfrDivider: { width: 1, height: 36, backgroundColor: colors.border },
   chartSection: { gap: spacing.sm },
-  chartTakeaway: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  chartTakeaway: { ...type.bodySm, color: colors.textSecondary },
   chartEmptyHint: { ...type.caption, color: colors.textMuted, fontStyle: 'italic', paddingVertical: spacing.md },
   chartLabel: {
     fontSize: fontSize.xs,
@@ -952,7 +952,8 @@ const styles = StyleSheet.create({
     padding: spacing.lg, borderWidth: 1, borderColor: colors.border,
   },
   historyEmptyText: {
-    flex: 1, fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 19,
+    ...type.bodySm,
+    flex: 1, color: colors.textMuted,
   },
   section: { gap: spacing.md },
   sectionTitle: {
@@ -1070,7 +1071,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  notesText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  notesText: { ...type.bodySm, color: colors.textSecondary },
   stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   stepRowSpaced: { marginTop: spacing.md },
   stepNumber: {
@@ -1083,7 +1084,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.hair,
   },
   stepNumberText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.primary },
-  stepText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  stepText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
   cueCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1094,7 +1095,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: withAlpha(colors.primary, 0.314),
   },
-  cueText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, lineHeight: 20 },
+  cueText: { ...type.bodySm, flex: 1, color: colors.textPrimary },
   plateauBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1113,9 +1114,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxs,
   },
   plateauBody: {
+    ...type.bodySm,
     color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    lineHeight: 18,
   },
   // Goal section
   goalSetLink: {
@@ -1234,9 +1234,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   modalSubtitle: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textMuted,
-    lineHeight: 19,
   },
   inputLabel: {
     ...type.label,

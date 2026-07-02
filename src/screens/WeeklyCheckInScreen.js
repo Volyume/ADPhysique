@@ -1552,7 +1552,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   gateBody: {
-    fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 20,
+    ...type.bodySm, color: colors.textMuted,
     textAlign: 'center',
   },
   gateBtn: {
@@ -1614,16 +1614,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     marginBottom: spacing.lg,
   },
-  alreadyInText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  alreadyInText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
   stepHeading: {
     ...type.h3,
     color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
   stepSubtitle: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
-    lineHeight: 20,
     marginBottom: spacing.xl,
   },
 
@@ -1674,10 +1673,10 @@ const styles = StyleSheet.create({
   weightSummaryMissed: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
 
   skipNote: {
-    fontSize: fontSize.sm, color: colors.textMuted, fontStyle: 'italic',
+    ...type.bodySm, color: colors.textMuted, fontStyle: 'italic',
     paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
     backgroundColor: colors.surface2, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border, lineHeight: 20,
+    borderWidth: 1, borderColor: colors.border,
   },
   skipNoteTappable: {
     fontSize: fontSize.sm, color: colors.primary,

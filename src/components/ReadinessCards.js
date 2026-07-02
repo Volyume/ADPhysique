@@ -14,7 +14,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle, type } from '../styles/theme';
 import AnimatedEntrance from './AnimatedEntrance';
 import InfoTooltip from './InfoTooltip';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm, paddingTop: spacing.sm,
     borderTopWidth: 1, borderTopColor: colors.border,
   },
-  cardioLoadText: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 16 },
+  cardioLoadText: { ...type.captionTight, flex: 1, color: colors.textSecondary },
 
   trendInsightCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
   },
   trendInsightGood: { backgroundColor: colors.successBg ?? colors.primaryBg, borderColor: withAlpha(colors.success, 0.251) },
   trendInsightWarn: { backgroundColor: colors.warningBg, borderColor: withAlpha(colors.warning, 0.251) },
-  trendInsightText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  trendInsightText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 
   mfCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
   mfHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   mfIconWrap: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   mfTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  mfSub: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16, marginTop: spacing.xxs },
+  mfSub: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xxs },
   mfChipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   mfChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.full, borderWidth: 1 },
   mfDot: { width: 6, height: 6, borderRadius: circle(6), flexShrink: 0 },

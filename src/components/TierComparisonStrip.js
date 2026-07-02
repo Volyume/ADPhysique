@@ -13,7 +13,7 @@
  * numbers always match the SKU the buy CTA will purchase.
  */
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
+import { colors, spacing, radius, fontSize, fontWeight, type } from '../styles/theme';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
 
 // Three-row content for the 2-tier model. Free on the left (the lesser
@@ -121,9 +121,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   rowText: {
+    ...type.bodySm,
     color: colors.textSecondary,
-    fontSize: fontSize.sm,
     marginBottom: spacing.sm,
-    lineHeight: 18,
   },
 });

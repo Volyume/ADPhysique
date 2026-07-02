@@ -1168,7 +1168,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md,
     borderWidth: 1, borderColor: colors.border,
   },
-  noActivePlanText: { flex: 1, fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 20 },
+  noActivePlanText: { ...type.bodySm, flex: 1, color: colors.textMuted },
 
   // B2: free no-plan card. The on-ramp sits where the active plan would be.
   noPlanCard: {
@@ -1182,7 +1182,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
   },
   noPlanCardTitle: { flex: 1, ...type.bodyStrong, color: colors.textPrimary },
-  noPlanCardBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  noPlanCardBody: { ...type.bodySm, color: colors.textSecondary },
   noPlanCardActions: { gap: spacing.sm },
 
   activePlanCard: {
@@ -1272,7 +1272,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
   },
   actionCardBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.primary, letterSpacing: 0.5 },
-  actionCardDesc: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
+  actionCardDesc: { ...type.captionTight, color: colors.textMuted },
   actionCardFeatured: {
     borderColor: withAlpha(colors.primary, 0.251),
     backgroundColor: colors.primaryBg,
@@ -1314,7 +1314,7 @@ const styles = StyleSheet.create({
     flex: 1, ...type.bodyStrong, color: colors.textPrimary,
   },
   blockCardBody: {
-    fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20,
+    ...type.bodySm, color: colors.textSecondary,
   },
 
   // Signal chips
@@ -1350,7 +1350,7 @@ const styles = StyleSheet.create({
     ...type.bodyStrong, color: colors.textPrimary,
   },
   nextBlockBody: {
-    fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20,
+    ...type.bodySm, color: colors.textSecondary,
   },
 
   // Block card action buttons

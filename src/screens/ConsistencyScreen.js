@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, radius, type, fontSize, withAlpha } from '../styles/theme';
+import { colors, spacing, radius, type, withAlpha } from '../styles/theme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import InfoTooltip from '../components/InfoTooltip';
 import FatigueTrendCard from '../components/FatigueTrendCard';
@@ -159,5 +159,5 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   deloadTitle: { ...type.bodyStrong, color: colors.warning, marginBottom: spacing.xxs },
-  deloadSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  deloadSub: { ...type.bodySm, color: colors.textSecondary },
 });

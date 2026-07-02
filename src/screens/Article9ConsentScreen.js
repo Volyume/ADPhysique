@@ -311,15 +311,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   consentText: {
+    ...type.bodySm,
     flex: 1,
-    fontSize: fontSize.sm,
     color: colors.textPrimary,
-    lineHeight: 20,
   },
   withdrawNote: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textMuted,
-    lineHeight: 20,
     marginTop: spacing.sm,
   },
   ctaPrimary: {

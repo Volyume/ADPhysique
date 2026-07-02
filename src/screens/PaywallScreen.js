@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl, gap: spacing.xs,
   },
   reviewStars: { flexDirection: 'row', gap: 2 },
-  reviewQuote: { color: colors.textPrimary, fontSize: fontSize.sm, lineHeight: 20, fontStyle: 'italic' },
+  reviewQuote: { ...type.bodySm, color: colors.textPrimary, fontStyle: 'italic' },
   reviewMeta: { color: colors.textMuted, fontSize: fontSize.xs },
   periodRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
   periodBtn: {
@@ -330,9 +330,8 @@ const styles = StyleSheet.create({
   saveBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0.3 },
   ctaStack: { gap: spacing.md },
   terms: {
+    ...type.captionTight,
     color: colors.textMuted,
-    fontSize: fontSize.xs,
-    lineHeight: 17,
     textAlign: 'center',
     marginTop: spacing.lg,
   },

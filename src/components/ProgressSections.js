@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   mesoCard:         { gap: spacing.md },
   mesoEmpty:        { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl },
   mesoEmptyTitle:   { ...type.bodyStrong, color: colors.textPrimary },
-  mesoEmptySub:     { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 19 },
+  mesoEmptySub:     { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
   mesoEmptyBtn:     {
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.xl, paddingVertical: spacing.sm,
@@ -352,8 +352,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.micro, color: colors.textMuted,
   },
   durationCoach: {
-    fontSize: fontSize.xs, color: colors.textSecondary,
-    lineHeight: 17, fontStyle: 'italic',
+    ...type.captionTight, color: colors.textSecondary, fontStyle: 'italic',
   },
 
   // ── Muscle Frequency Table ──
@@ -435,7 +434,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   workloadStatus: {
-    fontSize: fontSize.xs,
-    lineHeight: 17,
+    ...type.captionTight,
   },
 });

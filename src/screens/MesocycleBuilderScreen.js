@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
     padding: spacing.md, borderWidth: 1, borderColor: colors.warning,
   },
   deloadBannerUrgent: { backgroundColor: colors.errorBg, borderColor: colors.error },
-  deloadBannerText: { flex: 1, fontSize: fontSize.xs, color: colors.warning, lineHeight: 17 },
+  deloadBannerText: { ...type.captionTight, flex: 1, color: colors.warning },
 
   // Meso list cards
   mesoCard: {
@@ -471,8 +471,7 @@ const styles = StyleSheet.create({
   planCardName: { ...type.h3, color: colors.textPrimary },
   planCardMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
   planCardNote: {
-    fontSize: fontSize.sm, color: colors.textMuted,
-    lineHeight: 20, marginTop: spacing.sm,
+    ...type.bodySm, color: colors.textMuted, marginTop: spacing.sm,
   },
   weekProgress: { gap: spacing.sm },
   weekProgressHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

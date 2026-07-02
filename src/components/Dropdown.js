@@ -102,5 +102,5 @@ const styles = StyleSheet.create({
   dropdownItemActive: { backgroundColor: colors.primaryBg },
   dropdownItemLabel: { ...type.body, color: colors.textSecondary, marginBottom: spacing.hair },
   dropdownItemLabelActive: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
-  dropdownItemSub: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
+  dropdownItemSub: { ...type.captionTight, color: colors.textMuted },
 });

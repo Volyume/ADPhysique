@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl, alignItems: 'center', gap: spacing.md,
   },
   emptyTitle: { ...type.bodyStrong, color: colors.textPrimary },
-  emptyBody: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 20 },
+  emptyBody: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
 
   blockTitle: { gap: spacing.xs },
   blockName: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },

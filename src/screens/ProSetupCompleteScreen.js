@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary, marginBottom: spacing.sm,
   },
   sub: {
-    fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.xl,
+    ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.xl,
   },
 
   routineCard: {
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   routineTitle: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.xs },
-  routineBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
+  routineBody: { ...type.bodySm, color: colors.textSecondary },
 
   // Full amber ring drawn as a thick-bordered circle. At full progress a Skia
   // arc and a bordered circle are visually identical, and this keeps the native
@@ -502,10 +502,10 @@ const styles = StyleSheet.create({
   goalChipText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
   eduLearnRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
   eduLearnText: { color: colors.primary, ...type.label, flex: 1 },
-  targetsNote: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17, marginTop: spacing.sm },
+  targetsNote: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.sm },
 
   splitList: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm },
-  splitWhy: { fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 19, marginBottom: spacing.sm },
+  splitWhy: { ...type.bodySm, color: colors.textMuted, marginBottom: spacing.sm },
   splitRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
   splitRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
   splitBadge: {
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
   whyPlanTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
   whyPlanItem: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   whyPlanBullet: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.primary, marginTop: 7 },
-  whyPlanText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  whyPlanText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 
   startBtn: { marginTop: spacing.md },
 });

@@ -2044,7 +2044,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
-  cardioNoteText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  cardioNoteText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
   planEditCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -2052,7 +2052,7 @@ const styles = StyleSheet.create({
     padding: spacing.md, marginTop: spacing.sm, gap: spacing.xs,
   },
   planEditHead: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  planEditBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
+  planEditBody: { ...type.bodySm, color: colors.textSecondary },
   planEditLink: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, marginTop: spacing.xs },
   planEditLinkText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   nextWeekRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl },
@@ -2113,7 +2113,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
   },
   receiptRowText: {
-    fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18,
+    ...type.bodySm, color: colors.textSecondary,
   },
   receiptUnlock: {
     ...type.caption,
@@ -2234,9 +2234,8 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   forwardLine: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
-    lineHeight: 20,
     paddingHorizontal: spacing.xs,
   },
   focusCard: {
@@ -2314,9 +2313,8 @@ const styles = StyleSheet.create({
     color: colors.success ?? colors.primary, letterSpacing: 0.4,
   },
   adjustmentNote: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
-    lineHeight: 20,
   },
   applyBtn: {
     alignSelf: 'center',
@@ -2609,10 +2607,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxs,
   },
   heldText: {
+    ...type.bodySm,
     flex: 1,
-    fontSize: fontSize.sm,
     color: colors.textSecondary,
-    lineHeight: 20,
   },
   heldHistoryShelf: { marginTop: spacing.md },
   heldHistoryTitle: {
@@ -2629,7 +2626,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   heldHistoryDate: { ...type.caption, color: colors.textMuted },
-  heldHistoryText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  heldHistoryText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
   heldHistoryEmptyText: {
     ...type.caption,
     color: colors.textMuted,

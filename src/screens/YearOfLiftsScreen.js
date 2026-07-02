@@ -670,7 +670,7 @@ const styles = StyleSheet.create({
   },
   loadingText: { fontSize: fontSize.sm, color: colors.textMuted },
   emptyTitle: { ...type.bodyStrong, color: colors.textPrimary },
-  emptyBody: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 20 },
+  emptyBody: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
 
   // Cards
   cardWrap: {

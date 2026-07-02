@@ -306,10 +306,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   body: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
     marginBottom: spacing.xl,
-    lineHeight: 20,
   },
 
   sourcesBlock: { gap: spacing.md, marginBottom: spacing.xl },
@@ -331,9 +330,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   sourceText: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
-    lineHeight: 20,
   },
 
   primaryCta: {
@@ -365,10 +363,9 @@ const styles = StyleSheet.create({
   },
 
   errorText: {
+    ...type.bodySm,
     marginTop: spacing.lg,
     color: colors.error,
-    fontSize: fontSize.sm,
-    lineHeight: 20,
   },
 
   workingBlock: {
@@ -443,9 +440,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   unmappedText: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
-    lineHeight: 20,
   },
   unmappedHint: {
     ...type.caption,
@@ -468,9 +464,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   doneBody: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
   },
 });

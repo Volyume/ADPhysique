@@ -837,9 +837,8 @@ const styles = StyleSheet.create({
     color: colors.border,
   },
   exerciseList: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
-    lineHeight: 20,
   },
 
   // ── Expanded content ───────────────────────────────────────────────────────
@@ -898,10 +897,9 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   notesText: {
-    fontSize: fontSize.xs,
+    ...type.captionTight,
     color: colors.textSecondary,
     flex: 1,
-    lineHeight: 17,
   },
   fullSummaryBtn: {
     flexDirection: 'row',

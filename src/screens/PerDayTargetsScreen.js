@@ -160,8 +160,8 @@ export default function PerDayTargetsScreen() {
 
 const local = StyleSheet.create({
   section: { marginBottom: spacing.lg },
-  intro: { color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 18, marginBottom: spacing.sm },
-  baseLine: { color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 18 },
+  intro: { ...type.bodySm, color: colors.textMuted, marginBottom: spacing.sm },
+  baseLine: { ...type.bodySm, color: colors.textSecondary },
   row: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: spacing.sm,

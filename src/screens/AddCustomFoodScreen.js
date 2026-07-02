@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     padding: spacing.md, marginBottom: spacing.lg,
   },
-  dupeText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  dupeText: { ...type.bodySm, color: colors.textSecondary },
 
   sectionLabel: {
     color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold,

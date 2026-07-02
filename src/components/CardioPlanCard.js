@@ -69,12 +69,12 @@ const styles = StyleSheet.create({
   cardioHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   cardioTitle: { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
   cardioHistoryLink: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
-  cardioSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
+  cardioSub: { ...type.bodySm, color: colors.textSecondary },
   cardioBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs, alignSelf: 'flex-start',
     paddingVertical: spacing.xs, paddingHorizontal: spacing.md,
     backgroundColor: colors.primaryBg, borderRadius: radius.sm,
   },
   cardioBtnText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
-  cardioFootnote: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
+  cardioFootnote: { ...type.captionTight, color: colors.textMuted },
 });

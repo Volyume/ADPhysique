@@ -33,7 +33,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { submitFeedback, markPromptShown } from '../lib/feedback';
 
@@ -462,10 +462,9 @@ const styles = StyleSheet.create({
   },
 
   privacy: {
-    fontSize: fontSize.xs,
+    ...type.captionTight,
     color: colors.textMuted,
     textAlign: 'center',
-    lineHeight: 16,
   },
 
   doneBlock: {

@@ -696,9 +696,8 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   sectionSubtext: {
-    fontSize: fontSize.xs,
+    ...type.captionTight,
     color: colors.textMuted,
-    lineHeight: 17,
   },
 
   // Volume rows
@@ -759,15 +758,13 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
   },
   insightText: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     fontWeight: fontWeight.medium,
     color: colors.textPrimary,
-    lineHeight: 20,
   },
   insightSubtext: {
-    fontSize: fontSize.xs,
+    ...type.captionTight,
     color: colors.textSecondary,
-    lineHeight: 17,
   },
 
   // Recommendations
@@ -794,10 +791,9 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   recText: {
+    ...type.bodySm,
     flex: 1,
-    fontSize: fontSize.sm,
     color: colors.textSecondary,
-    lineHeight: 20,
   },
 
   // Empty states
@@ -808,8 +804,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   emptySubText: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textMuted,
-    lineHeight: 20,
   },
 });

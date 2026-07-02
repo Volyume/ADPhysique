@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
   },
-  seasonText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
+  seasonText: { ...type.bodySm, color: colors.textSecondary },
   seasonLabel: { color: colors.textMuted, fontWeight: fontWeight.bold },
   addLabel: { ...type.body, color: colors.primary, marginLeft: spacing.xs },
   quickAddLabel: { ...type.body, fontSize: fontSize.sm, color: colors.textSecondary, marginLeft: spacing.xs },

@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
   },
   featuredBadgeText: { fontSize: fontSize.xs, color: colors.onPrimary, fontWeight: fontWeight.bold },
   planName: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
-  planDesc: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  planDesc: { ...type.bodySm, color: colors.textSecondary },
   planStats: { flexDirection: 'row', gap: spacing.xl },
   planStat: { gap: spacing.xxs },
   planStatValue: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary },
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl,
     borderWidth: 1, borderColor: colors.border, alignItems: 'center',
   },
-  emptyCardText: { fontSize: fontSize.sm, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
+  emptyCardText: { ...type.bodySm, color: colors.textMuted, textAlign: 'center' },
   workoutCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
     borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: spacing.md,
@@ -442,5 +442,5 @@ const styles = StyleSheet.create({
   whyItem: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   whyItemGap: { marginBottom: spacing.xs },
   whyBullet: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.primary, marginTop: 7 },
-  whyText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  whyText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 });

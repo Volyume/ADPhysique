@@ -95,7 +95,7 @@ export const settingsStyles = StyleSheet.create({
   },
   settingIconDestructive: { backgroundColor: colors.errorBg },
   settingLabel: { ...type.body, color: colors.textPrimary },
-  settingSub: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs, lineHeight: 16 },
+  settingSub: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xxs },
   settingLabelDestructive: { color: colors.error },
   settingRight: {
     flexDirection: 'row',
@@ -104,19 +104,17 @@ export const settingsStyles = StyleSheet.create({
   },
   settingValue: { fontSize: fontSize.sm, color: colors.textSecondary },
   dataPrivacyNote: {
-    fontSize: fontSize.xs,
+    ...type.captionTight,
     color: colors.textMuted,
     paddingHorizontal: spacing.xs,
     paddingBottom: spacing.sm,
-    lineHeight: 16,
   },
   a11yNote: {
-    fontSize: fontSize.xs,
+    ...type.captionTight,
     color: colors.textMuted,
     fontStyle: 'italic',
     paddingHorizontal: spacing.md,
     paddingTop: spacing.xs,
-    lineHeight: 16,
   },
 });
 

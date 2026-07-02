@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import SvgBarSparkline from './SvgBarSparkline';
 
 const DAY_ABBRS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -81,8 +81,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   coachLine: {
-    fontSize: fontSize.xs,
+    ...type.captionTight,
     color: colors.textMuted,
-    lineHeight: 16,
   },
 });

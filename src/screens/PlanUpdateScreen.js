@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
   },
   sectionLabelSpaced: { marginTop: spacing.xxl },
   sectionSub: {
-    fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17,
+    ...type.captionTight, color: colors.textMuted,
     marginBottom: spacing.md,
   },
 
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
 
   // Plan diff/preview sheet
   diffTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
-  diffSub: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.xs, lineHeight: 19 },
+  diffSub: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.xs },
   diffTable: { marginTop: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   diffHeadRow: { flexDirection: 'row', backgroundColor: colors.surface2, paddingVertical: spacing.xs },
   diffRow: { flexDirection: 'row', paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, alignItems: 'center' },
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
   diffMoves: { marginTop: spacing.md, gap: spacing.xxs },
   diffMovesLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold, textTransform: 'uppercase', letterSpacing: 0.5 },
   diffMoveText: { color: colors.textPrimary, fontSize: fontSize.sm },
-  diffShortfall: { marginTop: spacing.md, color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 19 },
+  diffShortfall: { ...type.bodySm, marginTop: spacing.md, color: colors.textSecondary },
   diffBackBtn: { paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.sm },
   diffBackText: { color: colors.textSecondary, ...type.bodyStrong },
 });

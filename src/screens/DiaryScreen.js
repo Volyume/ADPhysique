@@ -1245,7 +1245,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     padding: spacing.md, marginBottom: spacing.lg,
   },
-  offCardText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  offCardText: { ...type.bodySm, color: colors.textSecondary },
   offCardRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.lg },
   offCardDismiss: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textMuted },
   offCardCta: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
@@ -1273,7 +1273,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     gap: spacing.sm,
   },
-  plannedBannerText: { color: colors.textPrimary, fontSize: fontSize.sm, lineHeight: 19 },
+  plannedBannerText: { ...type.bodySm, color: colors.textPrimary },
   plannedBannerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   plannedBtnPrimary: {
     backgroundColor: colors.primary, borderRadius: radius.md,

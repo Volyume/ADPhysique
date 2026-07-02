@@ -149,7 +149,8 @@ const styles = StyleSheet.create({
   },
   title: { ...type.h3, color: colors.textPrimary },
   note: {
-    color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 18,
+    ...type.bodySm,
+    color: colors.textMuted,
     paddingHorizontal: spacing.lg, marginBottom: spacing.md,
   },
   grid: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },

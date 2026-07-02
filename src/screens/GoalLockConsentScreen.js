@@ -174,10 +174,9 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   optionText: {
+    ...type.bodySm,
     flex: 1,
-    fontSize: fontSize.sm,
     color: colors.textPrimary,
-    lineHeight: 20,
   },
   radio: {
     width: 22, height: 22,

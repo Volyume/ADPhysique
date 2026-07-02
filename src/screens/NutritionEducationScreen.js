@@ -274,24 +274,24 @@ const styles = StyleSheet.create({
   strong: { color: colors.textPrimary, fontWeight: fontWeight.bold },
 
   keypoint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, backgroundColor: colors.primaryBg, borderRadius: radius.md, padding: spacing.md, borderLeftWidth: 3, borderLeftColor: colors.primary, marginTop: spacing.xs },
-  keypointText: { color: colors.textPrimary, fontSize: fontSize.sm, lineHeight: 20, flex: 1, fontWeight: fontWeight.medium },
+  keypointText: { ...type.bodySm, color: colors.textPrimary, flex: 1, fontWeight: fontWeight.medium },
 
   macroLine: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.xs, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm },
   macroDot: { width: 10, height: 10, borderRadius: circle(10), marginTop: 6 },
   macroHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.sm },
   macroName: { ...type.bodyStrong, color: colors.textPrimary },
   macroKcal: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
-  macroRole: { color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 19, marginTop: spacing.xxs },
+  macroRole: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.xxs },
 
   phaseLine: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, gap: spacing.xxs },
   phaseHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.sm, flexWrap: 'wrap' },
   phaseName: { ...type.bodyStrong, color: colors.textPrimary },
   phaseRate: { color: colors.primary, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
-  phaseGist: { color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 19 },
+  phaseGist: { ...type.bodySm, color: colors.textSecondary },
 
   bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.xs },
   bulletChip: { width: 22, height: 22, borderRadius: circle(22), backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   bulletChipText: { color: colors.onPrimary, fontSize: fontSize.xs, fontWeight: fontWeight.bold },
 
-  footer: { color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 17, textAlign: 'center', marginTop: spacing.sm, fontStyle: 'italic' },
+  footer: { ...type.captionTight, color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm, fontStyle: 'italic' },
 });

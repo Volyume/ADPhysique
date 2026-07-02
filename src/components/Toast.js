@@ -27,7 +27,7 @@
 import { createContext, useContext, useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, shadow } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, shadow, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 
 const ToastContext = createContext({ show: () => {} });
@@ -241,11 +241,10 @@ const styles = StyleSheet.create({
     ...shadow.lg,
   },
   text: {
+    ...type.bodySm,
     flex: 1,
     color: colors.textPrimary,
-    fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
-    lineHeight: 19,
   },
   actionBtn: {
     paddingHorizontal: spacing.sm,

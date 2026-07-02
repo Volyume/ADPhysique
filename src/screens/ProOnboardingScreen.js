@@ -1546,7 +1546,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xxl, fontWeight: fontWeight.bold,
     color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 30,
   },
-  stepSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  stepSub: { ...type.bodySm, color: colors.textSecondary },
 
   // COMP-013 "Building your plan" sequence (replaces the step-5 button spinner).
   seqWrap: { flex: 1, padding: spacing.xl, justifyContent: 'center' },
@@ -1590,7 +1590,7 @@ const styles = StyleSheet.create({
   proteinOptTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxs, flexWrap: 'wrap' },
   proteinOptLabel: { ...type.bodyStrong, color: colors.textPrimary },
   proteinOptRange: { fontSize: fontSize.xs, color: colors.textMuted },
-  proteinOptDesc: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 17 },
+  proteinOptDesc: { ...type.captionTight, color: colors.textSecondary },
   recBadge: {
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: 1,
@@ -1671,7 +1671,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   notifTitle: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.xxs },
-  notifSub: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17 },
+  notifSub: { ...type.captionTight, color: colors.textMuted },
 
   coachCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
@@ -1680,7 +1680,7 @@ const styles = StyleSheet.create({
   },
   coachCardHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm },
   coachCardTitle: { ...type.bodyStrong, color: colors.textPrimary },
-  coachCardBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  coachCardBody: { ...type.bodySm, color: colors.textSecondary },
 
   toggle: {
     width: 44, height: 26, borderRadius: 13,
@@ -1719,7 +1719,7 @@ const styles = StyleSheet.create({
   },
   offerBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0.8 },
   offerHeadline: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 26 },
-  offerBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.md },
+  offerBody: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.md },
   offerPerks: { gap: spacing.xs },
   offerPerk: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   offerPerkText: { fontSize: fontSize.sm, color: colors.textSecondary },

@@ -657,9 +657,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   subtitle: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
-    lineHeight: 18,
   },
 
   // Scroll content
@@ -686,10 +685,9 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   bannerText: {
+    ...type.bodySm,
     flex: 1,
-    fontSize: fontSize.sm,
     color: colors.warning,
-    lineHeight: 19,
   },
 
   // Section label
@@ -753,9 +751,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   helperText: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textMuted,
-    lineHeight: 18,
     marginTop: spacing.md,
   },
 
@@ -784,9 +781,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   bottomNoteText: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textMuted,
-    lineHeight: 19,
     textAlign: 'center',
   },
 
@@ -812,10 +808,9 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   crossLinkSub: {
-    fontSize: fontSize.xs,
+    ...type.captionTight,
     color: colors.textMuted,
     marginTop: spacing.xxs,
-    lineHeight: 16,
   },
   savedText: {
     fontSize: fontSize.xs,

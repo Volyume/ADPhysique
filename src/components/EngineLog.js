@@ -13,7 +13,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getRecentAdaptationEvents, getCompletedWorkoutSets, getAllExercises } from '../lib/database';
 import InfoTooltip from './InfoTooltip';
@@ -168,6 +168,6 @@ const styles = StyleSheet.create({
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   regTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   muscle: { fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
-  reason: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xxs, lineHeight: 16 },
+  reason: { ...type.captionTight, color: colors.textSecondary, marginTop: spacing.xxs },
   date: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
 });

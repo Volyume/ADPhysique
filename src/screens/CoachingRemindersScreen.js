@@ -431,13 +431,13 @@ export default function CoachingRemindersScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
-  intro: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  intro: { ...type.bodySm, color: colors.textSecondary },
   warningBox: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     backgroundColor: colors.warningBg, borderRadius: radius.md,
     padding: spacing.md, borderWidth: 1, borderColor: colors.warning,
   },
-  warningText: { flex: 1, fontSize: fontSize.xs, color: colors.warning, lineHeight: 17 },
+  warningText: { ...type.captionTight, flex: 1, color: colors.warning },
   sectionLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
     color: colors.textMuted, letterSpacing: 0.6, textTransform: 'uppercase',
@@ -482,14 +482,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, marginTop: -spacing.sm, marginBottom: spacing.sm,
   },
   scheduleSubText: {
-    fontSize: fontSize.xs, color: colors.textSecondary,
-    paddingHorizontal: spacing.lg, marginBottom: spacing.sm, lineHeight: 17,
+    ...type.captionTight, color: colors.textSecondary,
+    paddingHorizontal: spacing.lg, marginBottom: spacing.sm,
   },
   helperBlock: {
     paddingHorizontal: spacing.lg, paddingTop: spacing.md,
     borderTopWidth: 1, borderTopColor: colors.border, marginTop: spacing.xs,
   },
-  helperText: { fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 18 },
+  helperText: { ...type.bodySm, color: colors.textMuted },
   savedText: {
     fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold,
     textAlign: 'center', marginTop: spacing.sm,

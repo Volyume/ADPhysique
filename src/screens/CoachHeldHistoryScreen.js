@@ -194,9 +194,8 @@ const styles = StyleSheet.create({
   },
 
   intro: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textMuted,
-    lineHeight: 20,
   },
 
   emptyCard: {
@@ -213,10 +212,9 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   emptyBody: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
   },
 
   weekBlock: {
@@ -248,9 +246,8 @@ const styles = StyleSheet.create({
   },
   decisionLabelChanged: { color: colors.success },
   decisionDetail: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
-    lineHeight: 20,
   },
 
   footer: {

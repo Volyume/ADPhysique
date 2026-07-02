@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
   },
   sectionLabelSpaced: { marginTop: spacing.xxl },
   sectionSub: {
-    fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17,
+    ...type.captionTight, color: colors.textMuted,
     marginBottom: spacing.md,
   },
 
@@ -594,13 +594,13 @@ const styles = StyleSheet.create({
     color: colors.textPrimary, marginBottom: spacing.xs,
   },
   phaseLabelActive: { color: colors.primary },
-  phaseDetail: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  phaseDetail: { ...type.bodySm, color: colors.textSecondary },
 
   footerNote: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
     marginTop: spacing.xl, marginBottom: spacing.xl,
   },
-  footerNoteText: { flex: 1, fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17 },
+  footerNoteText: { ...type.captionTight, flex: 1, color: colors.textMuted },
 
   approachRange: {
     fontSize: fontSize.xs, color: colors.textMuted, fontWeight: fontWeight.medium,

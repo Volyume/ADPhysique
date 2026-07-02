@@ -14,7 +14,7 @@
  */
 import { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 import { assembleDayPlan } from '../../lib/food/mealPlanAssembler';
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: { color: colors.primary, fontSize: fontSize.xs, fontWeight: fontWeight.bold, letterSpacing: 0.6 },
   title: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
-  sub: { color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 20, marginBottom: spacing.sm },
+  sub: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.sm },
   plates: { gap: spacing.sm },
   plate: {
     backgroundColor: colors.surface2,
@@ -92,5 +92,5 @@ const styles = StyleSheet.create({
   plateName: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   totalRow: { paddingTop: spacing.xs, alignItems: 'flex-end' },
   totalText: { color: colors.textSecondary, fontSize: fontSize.xs, fontVariant: ['tabular-nums'] },
-  foot: { color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 16, marginTop: spacing.sm },
+  foot: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.sm },
 });

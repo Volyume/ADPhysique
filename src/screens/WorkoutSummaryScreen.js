@@ -1326,7 +1326,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   milestoneTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  milestoneBody: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 3, lineHeight: 17 },
+  milestoneBody: { ...type.captionTight, color: colors.textSecondary, marginTop: 3 },
   milestoneShareBtn: {
     width: 36, height: 36, borderRadius: circle(36),
     alignItems: 'center', justifyContent: 'center',
@@ -1341,8 +1341,8 @@ const styles = StyleSheet.create({
   phaseHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   phaseTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
   phaseName: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
-  phaseRecap: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
-  phaseNext: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17 },
+  phaseRecap: { ...type.bodySm, color: colors.textSecondary },
+  phaseNext: { ...type.captionTight, color: colors.textMuted },
   phaseActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xxs },
   phaseActionBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
@@ -1361,7 +1361,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
     borderWidth: 1, borderColor: colors.border,
   },
-  partnerBeatText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, lineHeight: 19 },
+  partnerBeatText: { ...type.bodySm, flex: 1, color: colors.textPrimary },
   partnerCheerBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     backgroundColor: colors.primary, borderRadius: radius.full,
@@ -1434,7 +1434,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginBottom: spacing.md,
   },
-  adjustedSummaryText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  adjustedSummaryText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
   // COMP-005 block-end recap row
   blockRecapRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
@@ -1591,5 +1591,5 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   compareHeadline: { fontSize: fontSize.md, fontWeight: fontWeight.bold },
-  compareSub: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 3, lineHeight: 16 },
+  compareSub: { ...type.captionTight, color: colors.textMuted, marginTop: 3 },
 });

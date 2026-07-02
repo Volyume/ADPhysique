@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   // D2 streak-repair line — calm, forgiving; primary tint (a positive bridge),
   // never a warning colour.
   repairRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xxs },
-  repairLine: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 16 },
+  repairLine: { ...type.captionTight, flex: 1, color: colors.textSecondary },
   goalBlock: { gap: spacing.sm, marginTop: spacing.xs },
   goalLabel: { fontSize: fontSize.sm, color: colors.textSecondary },
   goalChips: { flexDirection: 'row', gap: spacing.sm },

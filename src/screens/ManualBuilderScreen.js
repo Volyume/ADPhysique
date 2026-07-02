@@ -743,9 +743,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxxl,
   },
   subtitle: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textMuted,
-    lineHeight: 20,
     marginTop: 0,
   },
   section: {
@@ -801,9 +800,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   hintText: {
-    fontSize: fontSize.xs,
+    ...type.captionTight,
     color: colors.textMuted,
-    lineHeight: 16,
   },
   primaryBtn: {
     flexDirection: 'row',
@@ -1019,10 +1017,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   successSub: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
     marginBottom: spacing.sm,
   },
   successActions: {
@@ -1113,9 +1110,8 @@ const balanceStyles = StyleSheet.create({
     gap: spacing.sm,
   },
   warningText: {
+    ...type.captionTight,
     flex: 1,
-    fontSize: fontSize.xs,
     color: colors.textMuted,
-    lineHeight: 16,
   },
 });

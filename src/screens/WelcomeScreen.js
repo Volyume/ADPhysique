@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   bulletText: { fontSize: fontSize.sm, color: colors.textSecondary, flex: 1 },
 
   trialNote: {
-    fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17,
+    ...type.captionTight, color: colors.textMuted,
     paddingHorizontal: spacing.lg, marginBottom: spacing.sm,
   },
   trustRow: {

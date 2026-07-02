@@ -76,7 +76,7 @@ export default function MealNamesScreen() {
 }
 
 const local = StyleSheet.create({
-  intro: { color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 18, marginBottom: spacing.md },
+  intro: { ...type.bodySm, color: colors.textMuted, marginBottom: spacing.md },
   row: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     gap: spacing.md, paddingVertical: spacing.xs,

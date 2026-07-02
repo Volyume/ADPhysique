@@ -16,7 +16,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Text, StyleSheet, AppState } from 'react-native';
-import { colors, spacing, fontSize, fontWeight } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, type } from '../styles/theme';
 import BottomSheet from './BottomSheet';
 import Button from './Button';
 import ReasonPicker from './ReasonPicker';
@@ -126,9 +126,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   body: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
-    lineHeight: 20,
   },
   sub: {
     fontSize: fontSize.sm,

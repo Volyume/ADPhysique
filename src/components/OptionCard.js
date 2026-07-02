@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, spacing, fontSize, type } from '../styles/theme';
+import { colors, radius, spacing, type } from '../styles/theme';
 
 // A full-width selectable card: an icon, a label, a one-line detail, and a
 // checkmark when selected. Shared by the onboarding wizard and the coached
@@ -44,5 +44,5 @@ const styles = StyleSheet.create({
   body: { flex: 1 },
   label: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.xs },
   labelActive: { color: colors.primary },
-  detail: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  detail: { ...type.bodySm, color: colors.textSecondary },
 });

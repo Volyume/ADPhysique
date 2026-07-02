@@ -2136,8 +2136,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary, textAlign: 'center',
   },
   noPlanSub: {
-    fontSize: fontSize.sm, color: colors.textSecondary,
-    lineHeight: 20, textAlign: 'center',
+    ...type.bodySm, color: colors.textSecondary, textAlign: 'center',
   },
   blankSessionLink: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -2291,7 +2290,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
   },
   nextBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
-  sheetDefn: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.sm },
+  sheetDefn: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.sm },
   sheetCancel: { marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.md },
   sheetCancelText: { ...type.body, color: colors.textSecondary },
 
@@ -2316,7 +2315,7 @@ const styles = StyleSheet.create({
     ...type.label, color: colors.textPrimary,
   },
   coachingNudgeBody: {
-    fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 17,
+    ...type.captionTight, color: colors.textSecondary,
   },
   coachingNudgeBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
@@ -2435,11 +2434,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   proTeaserTitle: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
     flex: 1,
-    lineHeight: 19,
   },
   // Recovery week banner
   coachBanner: {
@@ -2459,8 +2457,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
   },
   trialBannerText: {
-    flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
-    color: colors.textPrimary, lineHeight: 18,
+    ...type.bodySm,
+    flex: 1, fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
   },
   trialLedger: {
     marginTop: spacing.sm, gap: spacing.xs,
@@ -2472,7 +2471,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
   },
   trialLedgerRowText: {
-    fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18,
+    ...type.bodySm, color: colors.textSecondary,
   },
   trialLedgerRowTextDone: {
     color: colors.textPrimary,
@@ -2499,8 +2498,9 @@ const styles = StyleSheet.create({
   },
   freeCoachTopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   freeCoachLineText: {
-    flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
-    color: colors.textPrimary, lineHeight: 18,
+    ...type.bodySm,
+    flex: 1, fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
   },
   freeCoachFooter: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
@@ -2520,10 +2520,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   phaseBannerText: {
+    ...type.captionTight,
     flex: 1,
-    fontSize: fontSize.xs,
     color: colors.textSecondary,
-    lineHeight: 16,
   },
   phaseBannerArrow: {
     paddingLeft: spacing.xs,
@@ -2540,15 +2539,13 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   coachBriefHeadline: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
-    lineHeight: 18,
   },
   coachBriefBody: {
-    fontSize: fontSize.xs,
+    ...type.captionTight,
     color: colors.textSecondary,
-    lineHeight: 16,
   },
 
   // Quick-start card (empty state fast path)
@@ -2577,8 +2574,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   quickStartSub: {
+    ...type.bodySm,
     color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    lineHeight: 18,
   },
 });

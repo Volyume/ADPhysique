@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
   yes: { color: colors.success, fontWeight: fontWeight.bold, width: 18 },
   no: { color: colors.warning, fontWeight: fontWeight.bold, width: 18 },
   bulletText: { flex: 1, ...type.body, color: colors.textPrimary },
-  fine: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: spacing.sm, lineHeight: 19 },
+  fine: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.sm },
 
   // Pairing controls
   toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

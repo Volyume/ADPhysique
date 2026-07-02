@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
 import { useToast } from '../components/Toast';
 import { drawShareCard, cardHeight } from '../lib/shareCard/drawShareCard';
 import { buildWeeklyRecapParams } from '../lib/shareCard/greatWeek';
@@ -593,7 +593,7 @@ const styles = StyleSheet.create({
   },
   toggleRowLast: { borderBottomWidth: 0 },
   toggleLabel: { fontSize: fontSize.sm, color: colors.textPrimary },
-  privacyNote: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
+  privacyNote: { ...type.captionTight, color: colors.textMuted },
   // "Which PR" selector chips (shown only when a session set more than one PR).
   prPickerRow: { gap: spacing.sm, paddingVertical: spacing.xs, paddingRight: spacing.lg },
   prChip: {

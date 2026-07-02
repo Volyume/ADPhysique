@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.xl, gap: spacing.lg, flexGrow: 1 },
   title: { ...type.h2, color: colors.textPrimary, marginTop: spacing.lg },
-  subtitle: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  subtitle: { ...type.bodySm, color: colors.textSecondary },
   fieldLabel: { ...type.label, color: colors.textSecondary, marginTop: spacing.md },
   input: {
     backgroundColor: colors.surface2, borderRadius: radius.md,
@@ -113,6 +113,6 @@ const styles = StyleSheet.create({
     padding: spacing.md, marginTop: spacing.lg,
     borderWidth: 1, borderColor: colors.border,
   },
-  hintText: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 17 },
+  hintText: { ...type.captionTight, flex: 1, color: colors.textSecondary },
   hintBold: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
 });

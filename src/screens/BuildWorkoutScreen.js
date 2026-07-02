@@ -449,9 +449,8 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.md },
   subtitle: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textMuted,
-    lineHeight: 20,
   },
   exerciseCard: {
     backgroundColor: colors.surface,
@@ -638,7 +637,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   travelTitle: { ...type.title, color: colors.textPrimary },
-  travelSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  travelSub: { ...type.bodySm, color: colors.textSecondary },
   travelOptions: { gap: spacing.sm },
   travelOpt: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,

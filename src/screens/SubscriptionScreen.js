@@ -14,7 +14,7 @@
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, type } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Card from '../components/Card';
@@ -235,9 +235,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   footnote: {
+    ...type.bodySm,
     color: colors.textMuted,
-    fontSize: fontSize.sm,
     marginTop: spacing.xl,
-    lineHeight: 18,
   },
 });

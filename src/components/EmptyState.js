@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 
 /**
  * Shared empty-state component used across screens.
@@ -110,10 +110,9 @@ const styles = StyleSheet.create({
   },
   titleGhost: { color: colors.textMuted },
   text: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textMuted,
     textAlign: 'center',
-    lineHeight: 20,
   },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs, flexWrap: 'wrap', justifyContent: 'center' },
   primaryBtn: {

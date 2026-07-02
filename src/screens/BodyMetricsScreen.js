@@ -361,7 +361,7 @@ function MeasurementTrendChart({ entries, measureKey, label }) {
 
 const chartStyles = StyleSheet.create({
   wrap: { marginTop: spacing.sm, marginHorizontal: -spacing.xs },
-  takeaway: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: spacing.sm, lineHeight: 18 },
+  takeaway: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.sm },
   emptyHint: { paddingTop: spacing.md },
   emptyHintText: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
   smoothedHint: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center' },
@@ -1233,7 +1233,7 @@ const styles = StyleSheet.create({
   },
   optInTitle: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
   optInBody: {
-    fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 20,
+    ...type.bodySm, color: colors.textSecondary, textAlign: 'center',
   },
   optInBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
@@ -1260,7 +1260,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, alignItems: 'center', gap: spacing.md,
   },
   emptyTitle: { ...type.title, color: colors.textSecondary },
-  emptyText: { fontSize: fontSize.sm, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
+  emptyText: { ...type.bodySm, color: colors.textMuted, textAlign: 'center' },
 
   snapshotCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
@@ -1282,7 +1282,7 @@ const styles = StyleSheet.create({
   recompBlock: { gap: spacing.xs, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md },
   recompHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   recompRead: { ...type.bodyStrong, color: colors.textPrimary },
-  recompNote: { fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 18 },
+  recompNote: { ...type.bodySm, color: colors.textMuted },
   bodyFatRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   bodyFatValueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   bodyFatValue: { ...type.num('h3'), color: colors.textPrimary },

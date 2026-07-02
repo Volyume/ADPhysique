@@ -681,7 +681,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  trendTakeaway: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  trendTakeaway: { ...type.bodySm, color: colors.textSecondary },
   sectionTitle: {
     ...type.label,
     color: colors.textSecondary,

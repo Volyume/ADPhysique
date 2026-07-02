@@ -1367,16 +1367,15 @@ const styles = StyleSheet.create({
   // U-C-1: "Set it for me" fast-path card.
   fastCard: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, marginTop: spacing.md, gap: spacing.md },
   fastTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  fastSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  fastSubtitle: { ...type.bodySm, color: colors.textSecondary },
   fineTuneLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, minHeight: 44 },
   fineTuneText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   eduIconWrap: { width: 32, height: 32, borderRadius: circle(32), backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
   eduTitle: { ...type.label, color: colors.textPrimary },
-  eduBody: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: spacing.xxs, lineHeight: 17 },
+  eduBody: { ...type.captionTight, color: colors.textSecondary, marginTop: spacing.xxs },
   pageSubtitle: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textMuted,
-    lineHeight: 20,
     marginTop: -spacing.sm,
   },
 
@@ -1510,9 +1509,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   consentText: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
-    lineHeight: 20,
   },
   consentRow: {
     flexDirection: 'row',
@@ -1746,10 +1744,9 @@ const styles = StyleSheet.create({
     borderColor: withAlpha(colors.warning, 0.251),
   },
   perMealHintText: {
+    ...type.captionTight,
     flex: 1,
-    fontSize: fontSize.xs,
     color: colors.textSecondary,
-    lineHeight: 16,
   },
 
   phaseCard: {
@@ -1765,9 +1762,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   phaseDesc: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
-    lineHeight: 20,
   },
 
   confidenceCard: {
@@ -1780,10 +1776,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   confidenceText: {
+    ...type.bodySm,
     flex: 1,
-    fontSize: fontSize.sm,
     color: colors.textSecondary,
-    lineHeight: 20,
   },
 
   warningBanner: {
@@ -1797,10 +1792,9 @@ const styles = StyleSheet.create({
     borderColor: withAlpha(colors.warning, 0.251),
   },
   warningText: {
+    ...type.bodySm,
     flex: 1,
-    fontSize: fontSize.sm,
     color: colors.warning,
-    lineHeight: 18,
   },
 
   easeNudge: {
@@ -1842,9 +1836,8 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   awarenessIntro: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
-    lineHeight: 19,
   },
   awarenessNutrient: {
     gap: 2,
@@ -1856,20 +1849,17 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   awarenessNutrientBody: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
-    lineHeight: 19,
   },
   awarenessNutrientFoods: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
-    lineHeight: 19,
     fontStyle: 'italic',
   },
   awarenessFootnote: {
-    fontSize: fontSize.xs,
+    ...type.captionTight,
     color: colors.textMuted,
-    lineHeight: 17,
     marginTop: spacing.xs,
   },
 
@@ -1909,9 +1899,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   disclaimer: {
-    fontSize: fontSize.xs,
+    ...type.captionTight,
     color: colors.textMuted,
-    lineHeight: 17,
     fontStyle: 'italic',
     marginTop: spacing.sm,
     borderTopWidth: 1,
@@ -1979,10 +1968,9 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   approachNoteText: {
+    ...type.captionTight,
     flex: 1,
-    fontSize: fontSize.xs,
     color: colors.textMuted,
-    lineHeight: 17,
   },
   approachCard: {
     backgroundColor: colors.surface,
@@ -2015,9 +2003,8 @@ const styles = StyleSheet.create({
   },
   approachCardRangeActive: { color: colors.primaryDim },
   approachCardDesc: {
-    fontSize: fontSize.xs,
+    ...type.captionTight,
     color: colors.textSecondary,
-    lineHeight: 17,
   },
   approachCardDescActive: { color: colors.primaryDim },
   recommendedBadge: {

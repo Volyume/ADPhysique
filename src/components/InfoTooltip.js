@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, spacing, radius } from '../styles/theme';
+import { colors, spacing, radius, type } from '../styles/theme';
 
 export default function InfoTooltip({ text, size = 14 }) {
   const [visible, setVisible] = useState(false);
@@ -53,8 +53,7 @@ const styles = StyleSheet.create({
     maxWidth: 320,
   },
   text: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
-    lineHeight: 20,
   },
 });

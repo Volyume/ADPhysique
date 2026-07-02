@@ -4,7 +4,7 @@ import { View, Text, Switch, TouchableOpacity, StyleSheet } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 import * as Updates from 'expo-updates';
 import useAppStore from '../store/useAppStore';
-import { colors, withAlpha, spacing, radius, fontSize, fontWeight, type } from '../styles/theme';
+import { colors, withAlpha, spacing, radius, fontWeight, type } from '../styles/theme';
 import { SettingsPage, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
 
 // COMP-029: appearance is a FREE display setting (never Pro-gated). Default
@@ -262,7 +262,7 @@ export default function SettingsDisplayScreen() {
 
 const local = StyleSheet.create({
   title: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.xs },
-  sub: { color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 18, marginBottom: spacing.md },
+  sub: { ...type.bodySm, color: colors.textMuted, marginBottom: spacing.md },
   segment: {
     flexDirection: 'row',
     backgroundColor: colors.surface2,

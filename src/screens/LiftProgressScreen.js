@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   bwPromptTitle: { ...type.bodyStrong, color: colors.textPrimary },
-  bwPromptText: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 17, marginTop: spacing.xxs },
+  bwPromptText: { ...type.captionTight, color: colors.textSecondary, marginTop: spacing.xxs },
 
   // ── Filter ──
   filterRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },

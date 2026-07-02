@@ -15,7 +15,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import BottomSheet from '../BottomSheet';
-import { colors, fontSize, fontWeight, spacing, radius, circle } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, circle, type } from '../../styles/theme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 import { planCalorieBank, maxApplicableBumpKcal } from '../../lib/food/calorieBank';
@@ -191,7 +191,7 @@ export default function CalorieBankSheet({
 
 const styles = StyleSheet.create({
   title: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
-  intro: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: spacing.xs, lineHeight: 19 },
+  intro: { ...type.bodySm, color: colors.textMuted, marginTop: spacing.xs },
   activeRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.surface2, borderRadius: radius.md,
@@ -226,11 +226,13 @@ const styles = StyleSheet.create({
     minWidth: 88, textAlign: 'center', fontVariant: ['tabular-nums'],
   },
   preview: {
-    color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 20,
+    ...type.bodySm,
+    color: colors.textSecondary,
     marginTop: spacing.lg, textAlign: 'center',
   },
   error: {
-    color: colors.warning, fontSize: fontSize.sm, lineHeight: 20,
+    ...type.bodySm,
+    color: colors.warning,
     marginTop: spacing.lg, textAlign: 'center',
   },
   applyBtn: {

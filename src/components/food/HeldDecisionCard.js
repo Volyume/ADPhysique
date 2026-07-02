@@ -11,7 +11,7 @@
  */
 import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
 import { appAlert } from '../AppAlert';
-import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
 
 const BEAT_URL = 'https://www.beateatingdisorders.org.uk/';
 
@@ -84,9 +84,8 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
   },
   body: {
+    ...type.bodySm,
     color: colors.textPrimary,
-    fontSize: fontSize.sm,
-    lineHeight: 20,
     marginBottom: spacing.sm,
   },
   why: {

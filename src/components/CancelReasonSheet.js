@@ -18,7 +18,7 @@
 
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, radius } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, radius, type } from '../styles/theme';
 import BottomSheet from './BottomSheet';
 import Button from './Button';
 import ReasonPicker from './ReasonPicker';
@@ -160,9 +160,8 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   disclosure: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
-    lineHeight: 18,
   },
   breakBlock: {
     gap: spacing.sm,
@@ -199,8 +198,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   pauseHint: {
-    fontSize: fontSize.xs,
+    ...type.captionTight,
     color: colors.textMuted,
-    lineHeight: 16,
   },
 });

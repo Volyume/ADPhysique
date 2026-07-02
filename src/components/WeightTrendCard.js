@@ -137,10 +137,10 @@ const styles = StyleSheet.create({
   rateValue: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.semibold, fontVariant: ['tabular-nums'] },
   insightRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs2 },
   dot: { width: 6, height: 6, borderRadius: circle(6), marginTop: 6 },
-  insight: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
+  insight: { ...type.bodySm, flex: 1, color: colors.textSecondary },
   maintenanceBlock: { gap: spacing.xxs },
   maintenanceValue: { fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   maintenanceLabel: { fontSize: fontSize.xs, color: colors.textMuted },
-  maintenanceBuilding: { fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 18 },
-  stepTrendLine: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17, fontStyle: 'italic' },
+  maintenanceBuilding: { ...type.bodySm, color: colors.textMuted },
+  stepTrendLine: { ...type.captionTight, color: colors.textMuted, fontStyle: 'italic' },
 });

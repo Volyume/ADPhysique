@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl, gap: spacing.md,
   },
   choiceTitle: { ...type.title, color: colors.textPrimary },
-  choiceBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  choiceBody: { ...type.bodySm, color: colors.textSecondary },
   cameraWrap: { flex: 1, backgroundColor: colors.camera },
   overlay: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   frame: {
@@ -381,7 +381,8 @@ const styles = StyleSheet.create({
     ...type.bodyStrong, color: colors.textPrimary,
   },
   missBody: {
-    color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 20,
+    ...type.bodySm,
+    color: colors.textSecondary,
   },
   captureRow: {
     position: 'absolute', bottom: spacing.xl, left: 0, right: 0,

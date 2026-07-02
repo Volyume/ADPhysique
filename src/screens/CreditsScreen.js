@@ -106,16 +106,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   body: {
+    ...type.bodySm,
     color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    lineHeight: 20,
     marginBottom: spacing.sm,
   },
   attribution: {
+    ...type.bodySm,
     color: colors.textPrimary,
-    fontSize: fontSize.sm,
     fontStyle: 'italic',
-    lineHeight: 20,
     marginBottom: spacing.sm,
   },
   link: {
@@ -123,9 +121,8 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
   },
   footnote: {
+    ...type.bodySm,
     color: colors.textMuted,
-    fontSize: fontSize.sm,
     marginTop: spacing.lg,
-    lineHeight: 18,
   },
 });
