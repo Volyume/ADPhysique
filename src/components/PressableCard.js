@@ -11,7 +11,7 @@
  * fast, no overshoot) and springs.release out (one tiny overshoot
  * beat), the token re-expression of the shipped speed 30/18 +
  * bounciness 6 feel. This file is the canonical press physics for
- * Button, Card, Chip, Stepper, ExerciseCard and every direct consumer.
+ * Button, Card, Chip, Stepper and every direct consumer.
  *
  * Reduce-motion users get a flat behaviour (no scale, no opacity
  * change) automatically. Honour the same a11y guard the rest of the
