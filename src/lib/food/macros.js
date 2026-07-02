@@ -63,6 +63,38 @@ export function scaleSugarG(per100, grams) {
   return r1(v * (g / 100));
 }
 
+// Above this per-100g figure a stored sodium value is treated as no-data.
+// sodium_100g is stored in GRAMS per 100 g (the bundled OFF snapshot keeps
+// OFF's own unit; measured 2026-07-02: 92% coverage, median 0.196 g). Pure
+// salt is only ~39 g sodium per 100 g, so anything above 40 is an upstream
+// unit mistake (a handful of OFF rows carry mg entered as g); rendering it
+// would show a number a thousand times too high.
+const SODIUM_100G_SANITY_MAX = 40;
+
+/**
+ * Scale a food's per-100g sodium to an eaten quantity, in MILLIGRAMS, for the
+ * food-detail display only (E4 part 1). Same tolerant field shapes and
+ * "no datum stays null" rule as scaleSugarG; implausible stored values (see
+ * SODIUM_100G_SANITY_MAX) also read as no data rather than a wrong number.
+ * Display-only: sodium is not tracked in food_entries, the rollup, or any
+ * coaching input.
+ *
+ * @param per100  a food row carrying per-100g sodium in grams
+ *                (sodium_100g | sodium100g)
+ * @param grams   the eaten quantity in grams
+ * @returns {number|null} whole milligrams of sodium, or null when the food
+ *                        carries no (plausible) datum
+ */
+export function scaleSodiumMg(per100, grams) {
+  const g = Number(grams) || 0;
+  if (!per100 || g <= 0 || !Number.isFinite(g)) return null;
+  const raw = per100.sodium_100g != null ? per100.sodium_100g : per100.sodium100g;
+  if (raw == null) return null;
+  const v = Number(raw);
+  if (!Number.isFinite(v) || v < 0 || v > SODIUM_100G_SANITY_MAX) return null;
+  return Math.round(v * 1000 * (g / 100));
+}
+
 /**
  * The serving size (g) to use for a one-tap add of a food. Food audit F-2:
  * prefer the user's LAST logged portion when the row carries one (the "Add

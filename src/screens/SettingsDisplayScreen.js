@@ -181,6 +181,20 @@ export default function SettingsDisplayScreen() {
             />
           }
         />
+        <SettingRow
+          icon="water-outline"
+          label="Sodium"
+          sub="Show milligrams of sodium on a food's detail."
+          showArrow={false}
+          rightElement={
+            <Switch
+              value={accessibility.showSodium !== false}
+              onValueChange={(v) => setAccessibilityPref('showSodium', v)}
+              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
+              thumbColor={(accessibility.showSodium !== false) ? colors.primary : colors.textMuted}
+            />
+          }
+        />
       </View>
 
       <View style={styles.section}>

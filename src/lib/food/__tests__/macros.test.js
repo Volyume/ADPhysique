@@ -1,7 +1,7 @@
 /**
  * macros.test.js — the single per-100g -> portion scaler (food review U-M2).
  */
-import { scaleMacros, resolveServingG, scaleSugarG } from '../macros';
+import { scaleMacros, resolveServingG, scaleSugarG, scaleSodiumMg } from '../macros';
 
 describe('scaleMacros', () => {
   test('scales the resolved/diary shape (kcal_100g ...) by grams', () => {
@@ -73,5 +73,41 @@ describe('scaleSugarG', () => {
 
   test('a real 0 g sugar stays 0, not null', () => {
     expect(scaleSugarG({ sugar_100g: 0 }, 100)).toBe(0);
+  });
+});
+
+describe('scaleSodiumMg (E4: stored grams per 100g, displayed as whole mg)', () => {
+  test('converts grams-per-100g to milligrams for the eaten quantity', () => {
+    // 0.196 g/100g (the measured OFF median) over 250 g = 490 mg.
+    expect(scaleSodiumMg({ sodium_100g: 0.196 }, 250)).toBe(490);
+  });
+
+  test('tolerates the custom-food draft shape (sodium100g)', () => {
+    expect(scaleSodiumMg({ sodium100g: 0.4 }, 50)).toBe(200);
+  });
+
+  test('returns null (no data, never a fake 0) when the food carries no sodium', () => {
+    expect(scaleSodiumMg({}, 100)).toBeNull();
+    expect(scaleSodiumMg({ sodium_100g: null }, 100)).toBeNull();
+    expect(scaleSodiumMg({ sodium_100g: 'x' }, 100)).toBeNull();
+  });
+
+  test('implausible stored values read as no data, not a wrong number', () => {
+    // A handful of OFF rows carry mg entered as g (measured max 649 g/100g);
+    // pure salt is only ~39 g sodium/100g, so anything above the sanity cap
+    // must NOT render as a number a thousand times too high.
+    expect(scaleSodiumMg({ sodium_100g: 649 }, 100)).toBeNull();
+    expect(scaleSodiumMg({ sodium_100g: 41 }, 100)).toBeNull();
+    expect(scaleSodiumMg({ sodium_100g: -1 }, 100)).toBeNull();
+  });
+
+  test('returns null for a non-positive or missing quantity', () => {
+    expect(scaleSodiumMg({ sodium_100g: 0.2 }, 0)).toBeNull();
+    expect(scaleSodiumMg({ sodium_100g: 0.2 }, -5)).toBeNull();
+    expect(scaleSodiumMg(null, 100)).toBeNull();
+  });
+
+  test('a real 0 sodium stays 0, not null', () => {
+    expect(scaleSodiumMg({ sodium_100g: 0 }, 100)).toBe(0);
   });
 });

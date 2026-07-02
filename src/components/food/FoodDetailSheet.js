@@ -12,7 +12,7 @@ import Button from '../Button';
 import SourceChip from './SourceChip';
 import { useToast } from '../Toast';
 import { pickerMealSlots } from '../../lib/food/mealSlots';
-import { scaleMacros, scaleSugarG } from '../../lib/food/macros';
+import { scaleMacros, scaleSugarG, scaleSodiumMg } from '../../lib/food/macros';
 import { buildServingUnits, initialServingState, resolveGrams, isValidEntryGrams } from '../../lib/food/servingEntry';
 
 // Display-shaped wrapper over the shared scaling helper (food review U-M2):
@@ -53,6 +53,7 @@ export default function FoodDetailSheet({
   // Both default on; both are grams and display-only (never a target or total).
   const showFibre = useAppStore((s) => s.accessibility?.showFibre !== false);
   const showSugar = useAppStore((s) => s.accessibility?.showSugar !== false);
+  const showSodium = useAppStore((s) => s.accessibility?.showSodium !== false);
   // Serving model (food ease, MFP/Cronometer parity): prefer the food's own
   // household serving (e.g. "1 cup", "1 slice") so the common case is RECOGNITION,
   // not gram arithmetic — the list row already shows serving_label, we keep it
@@ -149,9 +150,13 @@ export default function FoodDetailSheet({
   // carries the datum (null = "no data", never a fake 0) and the user keeps the
   // toggle on. Display-only — not logged, not totalled, not scored.
   const sugarG = showSugar ? scaleSugarG(food, quantityG) : null;
+  // E4: sodium displays in mg (stored grams per 100g; implausible values read
+  // as no data inside the scaler). Same shown-when-the-food-carries-it rule.
+  const sodiumMg = showSodium ? scaleSodiumMg(food, quantityG) : null;
   const extraNutrients = [
     showFibre && macros.fibre != null ? { key: 'fibre', label: 'Fibre', value: `${macros.fibre}g` } : null,
     sugarG != null ? { key: 'sugar', label: 'Sugars', value: `${sugarG}g` } : null,
+    sodiumMg != null ? { key: 'sodium', label: 'Sodium', value: `${sodiumMg}mg` } : null,
   ].filter(Boolean);
 
   if (!food) return null;
