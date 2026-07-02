@@ -31,6 +31,7 @@
       "requireFullScreen": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "NSSupportsLiveActivities": true,
         "NSCameraUsageDescription": "Volyume uses the camera to scan barcodes, read nutrition labels, and take progress photos.",
         "NSMotionUsageDescription": "Volyume uses motion sensing for the shake-to-send-feedback gesture.",
         "NSLocationWhenInUseUsageDescription": "Volyume does not track your location. This entry is required by a bundled camera library and the permission is never requested.",
@@ -109,6 +110,7 @@
       ]
     },
     "plugins": [
+      "./plugins/withVolyumeWidget",
       "expo-secure-store",
       [
         "expo-media-library",

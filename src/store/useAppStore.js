@@ -1304,6 +1304,15 @@ const useAppStore = create((set, get) => ({
   // Called on Home mount; surfacing the restored activeWorkout makes the
   // existing "Session in Progress" card appear.
   restoreActiveWorkout: async (userId) => {
+    // E6B: clear any Live Activity a killed session left counting down.
+    // pushType is nil (no server channel), so this launch sweep is the only
+    // way a stale Activity ends before the system's own timeout. Runs before
+    // the early returns: the stale Activity exists precisely when the
+    // snapshot is missing or invalid.
+    try {
+      // eslint-disable-next-line global-require
+      require('live-activity').endAllActivities().catch(() => {});
+    } catch (_) {}
     try {
       if (!userId || get().activeWorkout) return false;
       const raw = await AsyncStorage.getItem(ACTIVE_WORKOUT_KEY);
@@ -1428,12 +1437,33 @@ const useAppStore = create((set, get) => ({
       // eslint-disable-next-line global-require
       require('../lib/notifications/restEnd').scheduleRestEndNotification(endsAt);
     } catch (_) {}
+    // E6B: iOS Live Activity mirrors the same wall-clock anchor. Fire and
+    // forget, best-effort; no-ops below iOS 16.1, on Android, in Expo Go and
+    // wherever the user has Live Activities off. Set numbering deliberately
+    // omitted (the "Set 3 of 2" class the founder retired on Android).
+    try {
+      // eslint-disable-next-line global-require
+      const la = require('live-activity');
+      const s = get();
+      const ex = s.workoutExercises?.[s.currentExerciseIndex];
+      la.startRestActivity({
+        exerciseName: ex?.exercise?.name ?? ex?.name ?? 'Rest',
+        workoutName: s.activeWorkout?.name ?? undefined,
+        endTimeMs: endsAt,
+      }).catch(() => {});
+    } catch (_) {}
   },
   stopRestTimer: () => {
     set({ restTimerActive: false, restTimerRemaining: 0, restTimerEndsAt: null });
     try {
       // eslint-disable-next-line global-require
       require('../lib/notifications/restEnd').cancelRestEndNotification();
+    } catch (_) {}
+    // E6B: dismiss the Live Activity with the timer (covers skip and
+    // set-complete, which stop the timer through here).
+    try {
+      // eslint-disable-next-line global-require
+      require('live-activity').endRestActivity().catch(() => {});
     } catch (_) {}
   },
   addRestTime: (seconds = 30) => {
@@ -1452,6 +1482,11 @@ const useAppStore = create((set, get) => ({
       try {
         // eslint-disable-next-line global-require
         require('../lib/notifications/restEnd').scheduleRestEndNotification(nextEndsAt);
+      } catch (_) {}
+      // E6B: the Live Activity countdown jumps to the adjusted end time.
+      try {
+        // eslint-disable-next-line global-require
+        require('live-activity').updateRestActivity({ endTimeMs: nextEndsAt }).catch(() => {});
       } catch (_) {}
     }
   },
@@ -1476,6 +1511,11 @@ const useAppStore = create((set, get) => ({
       try {
         // eslint-disable-next-line global-require
         require('../lib/notifications/restEnd').cancelRestEndNotification();
+      } catch (_) {}
+      // E6B: natural expiry dismisses the Live Activity too.
+      try {
+        // eslint-disable-next-line global-require
+        require('live-activity').endRestActivity().catch(() => {});
       } catch (_) {}
     }
   },
