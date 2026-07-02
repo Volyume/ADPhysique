@@ -22,9 +22,9 @@ import useAppStore from '../store/useAppStore';
 import { colors, spacing, radius, motion } from '../styles/theme';
 
 const OPEN_MS = motion.sheet;
-const CLOSE_MS = 200;
+const CLOSE_MS = motion.state;
 const BACKDROP_OPEN_MS = motion.state;
-const BACKDROP_CLOSE_MS = 160;
+const BACKDROP_CLOSE_MS = motion.state; // was 160; retime approved 2026-07-02 (03b)
 const OFFSCREEN = 700;
 
 export default function BottomSheet({

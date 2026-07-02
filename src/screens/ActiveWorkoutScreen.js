@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as hapticsVocab from '../lib/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, motion } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
 import AnimatedRow from '../components/AnimatedRow';
@@ -567,8 +567,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       if (reduceMotion) return;
       infoPulseLoop.current = Animated.loop(
         Animated.sequence([
-          Animated.timing(infoPulseAnim, { toValue: 1.35, duration: 700, useNativeDriver: true }),
-          Animated.timing(infoPulseAnim, { toValue: 1.0,  duration: 700, useNativeDriver: true }),
+          Animated.timing(infoPulseAnim, { toValue: 1.35, duration: motion.pulse, useNativeDriver: true }),
+          Animated.timing(infoPulseAnim, { toValue: 1.0,  duration: motion.pulse, useNativeDriver: true }),
         ])
       );
       infoPulseLoop.current.start();

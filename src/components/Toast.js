@@ -27,7 +27,7 @@
 import { createContext, useContext, useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, shadow, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, shadow, type, motion } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 
 const ToastContext = createContext({ show: () => {} });
@@ -101,7 +101,7 @@ export function ToastProvider({ children }) {
     Animated.parallel([
       Animated.timing(opacity, {
         toValue: 1,
-        duration: reduceMotion ? 0 : 220,
+        duration: reduceMotion ? 0 : motion.exit,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),

@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, motion } from '../styles/theme';
 import { VolyumeIcon } from '../components/BrandMark';
 import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
@@ -108,11 +108,11 @@ export default function ProSetupCompleteScreen({ navigation }) {
     if (reduceMotion) return;
     Animated.parallel([
       Animated.timing(opacity, {
-        toValue: 1, duration: 420,
+        toValue: 1, duration: motion.hero,
         easing: Easing.out(Easing.cubic), useNativeDriver: true,
       }),
       Animated.timing(slideY, {
-        toValue: 0, duration: 420,
+        toValue: 0, duration: motion.hero,
         easing: Easing.out(Easing.cubic), useNativeDriver: true,
       }),
     ]).start();

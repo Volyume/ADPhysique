@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
-import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, motion } from '../../styles/theme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 
@@ -219,7 +219,7 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
         progress: from.progress + (to.progress - from.progress) * value,
       });
     });
-    Animated.timing(animValue, { toValue: 1, duration: 500, useNativeDriver: false })
+    Animated.timing(animValue, { toValue: 1, duration: motion.hero, useNativeDriver: false })
       .start(() => { fromRef.current = to; });
     return () => animValue.removeListener(id);
   }, [kcal, kcalProgress, reduceMotion, animValue]);

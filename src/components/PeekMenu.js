@@ -61,7 +61,7 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
   function animateOut(then) {
     Animated.parallel([
       Animated.timing(backdrop, {
-        toValue: 0, duration: reduceMotion ? 0 : 180,
+        toValue: 0, duration: reduceMotion ? 0 : motion.state,
         easing: Easing.in(Easing.cubic), useNativeDriver: true,
       }),
       Animated.timing(translateY, {
@@ -84,7 +84,7 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
         easing: Easing.out(Easing.cubic), useNativeDriver: true,
       }),
       Animated.timing(translateY, {
-        toValue: 0, duration: reduceMotion ? 0 : 280,
+        toValue: 0, duration: reduceMotion ? 0 : motion.sheet,
         easing: Easing.out(Easing.cubic), useNativeDriver: true,
       }),
     ]).start();

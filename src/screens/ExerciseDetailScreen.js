@@ -15,7 +15,7 @@ import {
 } from '../lib/chartWindows';
 import { track } from '../lib/engineTelemetry';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion } from '../styles/theme';
 import { SkeletonCard } from '../components/Skeleton';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
@@ -296,9 +296,9 @@ export default function ExerciseDetailScreen({ navigation, route }) {
       return;
     }
     Animated.sequence([
-      Animated.timing(congratsOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.timing(congratsOpacity, { toValue: 1, duration: motion.enter, useNativeDriver: true }),
       Animated.delay(3500),
-      Animated.timing(congratsOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+      Animated.timing(congratsOpacity, { toValue: 0, duration: motion.exit, useNativeDriver: true }),
     ]).start(() => setCongratusBanner(false));
   }
 
