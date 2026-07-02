@@ -195,6 +195,7 @@ export default function FoodDetailSheet({
               style={({ pressed }) => [styles.stepBtn, pressed && { opacity: 0.7 }]}
               accessibilityRole="button"
               accessibilityLabel="Decrease amount"
+              accessibilityValue={{ text: `${amount} ${unit?.label ?? ''}`.trim() }}
             >
               <Ionicons name="remove" size={22} color={colors.textPrimary} />
             </Pressable>
@@ -213,6 +214,7 @@ export default function FoodDetailSheet({
               style={({ pressed }) => [styles.stepBtn, pressed && { opacity: 0.7 }]}
               accessibilityRole="button"
               accessibilityLabel="Increase amount"
+              accessibilityValue={{ text: `${amount} ${unit?.label ?? ''}`.trim() }}
             >
               <Ionicons name="add" size={22} color={colors.textPrimary} />
             </Pressable>
@@ -267,11 +269,11 @@ export default function FoodDetailSheet({
 
           <View style={styles.actions}>
             {mode === 'edit' && onDelete ? (
-              <Pressable onPress={handleDelete} style={({ pressed }) => [styles.deleteBtn, pressed && { opacity: 0.7 }]} accessibilityLabel="Remove entry">
+              <Pressable onPress={handleDelete} style={({ pressed }) => [styles.deleteBtn, pressed && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel="Remove entry">
                 <Ionicons name="trash-outline" size={18} color={colors.error} />
               </Pressable>
             ) : null}
-            <Pressable onPress={handleClose} style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.7 }]}>
+            <Pressable onPress={handleClose} accessibilityRole="button" style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.7 }]}>
               <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
             <Button

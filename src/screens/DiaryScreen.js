@@ -1180,16 +1180,17 @@ export default function DiaryScreen({ navigation }) {
               onChangeText={setSaveMealName}
               placeholder="e.g. My breakfast"
               placeholderTextColor={colors.textMuted}
+              accessibilityLabel="Meal name"
               autoFocus
               maxLength={60}
               returnKeyType="done"
               onSubmitEditing={submitSaveMeal}
             />
             <View style={styles.saveMealActions}>
-              <TouchableOpacity onPress={() => setSaveMealItems(null)} style={styles.saveMealBtn}>
+              <TouchableOpacity onPress={() => setSaveMealItems(null)} accessibilityRole="button" style={styles.saveMealBtn}>
                 <Text style={styles.saveMealBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={submitSaveMeal} style={[styles.saveMealBtn, styles.saveMealBtnPrimary]}>
+              <TouchableOpacity onPress={submitSaveMeal} accessibilityRole="button" style={[styles.saveMealBtn, styles.saveMealBtnPrimary]}>
                 <Text style={[styles.saveMealBtnText, { color: colors.onPrimary, fontWeight: fontWeight.bold }]}>Save</Text>
               </TouchableOpacity>
             </View>

@@ -86,6 +86,7 @@ export default function MealSection({
         <TouchableOpacity
           style={[styles.addRow, hasEntries && styles.addRowDivided]}
           onPress={onAdd}
+          accessibilityRole="button"
           accessibilityLabel={`Add food to ${slot.label}`}
         >
           <Ionicons name="add" size={18} color={colors.primary} />
@@ -99,6 +100,7 @@ export default function MealSection({
         <TouchableOpacity
           style={[styles.addRow, styles.addRowDivided]}
           onPress={onQuickAdd}
+          accessibilityRole="button"
           accessibilityLabel={`Quick add to ${slot.label}`}
         >
           <Ionicons name="flash-outline" size={16} color={colors.textSecondary} />

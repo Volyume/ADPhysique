@@ -829,6 +829,7 @@ export default function FoodSearchScreen({ navigation, route }) {
           onChangeText={setQuery}
           placeholder="Search foods or brands"
           placeholderTextColor={colors.textMuted}
+          accessibilityLabel="Search foods or brands"
           autoCorrect={false}
           autoCapitalize="none"
           returnKeyType="search"

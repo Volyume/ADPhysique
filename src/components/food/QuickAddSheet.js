@@ -81,16 +81,17 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
             keyboardType="number-pad"
             placeholder="0"
             placeholderTextColor={colors.textMuted}
+            accessibilityLabel="Calories"
             autoFocus
             returnKeyType="done"
           />
 
           <View style={styles.macroRow}>
             {[
-              { label: 'Protein (g)', val: protein, set: setProtein },
-              { label: 'Carbs (g)', val: carbs, set: setCarbs },
-              { label: 'Fat (g)', val: fat, set: setFat },
-            ].map(({ label, val, set }) => (
+              { label: 'Protein (g)', a11y: 'Protein in grams', val: protein, set: setProtein },
+              { label: 'Carbs (g)', a11y: 'Carbohydrates in grams', val: carbs, set: setCarbs },
+              { label: 'Fat (g)', a11y: 'Fat in grams', val: fat, set: setFat },
+            ].map(({ label, a11y, val, set }) => (
               <View key={label} style={styles.macroField}>
                 <Text style={styles.fieldLabelSmall}>{label}</Text>
                 <TextInput
@@ -100,6 +101,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
                   keyboardType="decimal-pad"
                   placeholder="0"
                   placeholderTextColor={colors.textMuted}
+                  accessibilityLabel={a11y}
                   returnKeyType="done"
                 />
               </View>
@@ -122,7 +124,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
           </View>
 
           <View style={styles.actions}>
-            <Pressable onPress={handleClose} style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.7 }]}>
+            <Pressable onPress={handleClose} accessibilityRole="button" style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.7 }]}>
               <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
             <Button

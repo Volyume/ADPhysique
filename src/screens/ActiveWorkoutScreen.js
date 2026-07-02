@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform, FlatList, BackHandler, AppState, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform, FlatList, BackHandler, AppState, Animated, AccessibilityInfo } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
@@ -1149,6 +1149,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       setLogFlash(true);
       logFlashTimeoutRef.current = setTimeout(() => setLogFlash(false), 700);
 
+      // P9 TalkBack: the haptic and the amber flash are silent to a screen
+      // reader; speak the save so a TalkBack user knows the tap landed.
+      // announceForAccessibility is a no-op when no screen reader runs.
+      try {
+        const spokenWeight = setData.weight > 0 ? `, ${setData.weight} ${units}` : '';
+        AccessibilityInfo.announceForAccessibility(
+          isWarmupSet
+            ? 'Warm-up set logged'
+            : `Set ${setNumber} logged${spokenWeight}, ${effectiveReps} reps`,
+        );
+      } catch (_) { /* announcement is best-effort */ }
+
       // PR Detection, check BEFORE adding current set to the session ref so it
       // can never match itself.  sessionSetsRef is a plain ref so it's never stale
       // the way React state can be between renders.
@@ -1323,6 +1335,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       if (logFlashTimeoutRef.current) clearTimeout(logFlashTimeoutRef.current);
       setLogFlash(true);
       logFlashTimeoutRef.current = setTimeout(() => setLogFlash(false), 700);
+      // P9 TalkBack: spoken counterpart of the ack above.
+      try { AccessibilityInfo.announceForAccessibility('Set updated'); } catch (_) {}
     } catch (e) {
       logError('ActiveWorkoutScreen.handleSaveEditedSet', e, {
         userId: user?.id,
@@ -2305,6 +2319,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 onPress={finishCluster}
                 disabled={saving}
                 accessibilityRole="button"
+                accessibilityState={{ disabled: saving }}
                 accessibilityLabel="Finish cluster and log the set"
               >
                 <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
@@ -2329,6 +2344,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               onPress={handleCompleteSet}
               disabled={saving}
               accessibilityRole="button"
+              accessibilityState={{ disabled: saving }}
               accessibilityLabel="Log another set"
             >
               <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
@@ -2434,6 +2450,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 onPress={handleCompleteSetPress}
                 disabled={saving}
                 accessibilityRole="button"
+                accessibilityState={{ disabled: saving }}
                 accessibilityLabel={
                   currentSet.setType === 'warmup' ? 'Done with warm-up'
                   : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Complete set'

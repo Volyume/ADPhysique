@@ -18,6 +18,10 @@ export function EntryRow({
   entry, onEdit,
   selectionMode = false, selected = false, onLongPress, onToggleSelect,
   readOnly = false,
+  // P9 TalkBack: swipe-to-delete is a pan gesture TalkBack captures for
+  // navigation, so the row exposes delete as a screen-reader custom action
+  // (TalkBack actions menu) when the parent provides a delete handler.
+  onAccessibilityDelete = null,
 }) {
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const kcal = Math.round(entry.kcal ?? 0);
@@ -44,6 +48,13 @@ export function EntryRow({
       onLongPress={readOnly ? undefined : onLongPress}
       delayLongPress={300}
       disabled={readOnly}
+      accessibilityRole="button"
+      accessibilityActions={!readOnly && onAccessibilityDelete
+        ? [{ name: 'delete', label: 'Delete entry' }]
+        : undefined}
+      onAccessibilityAction={!readOnly && onAccessibilityDelete
+        ? (e) => { if (e.nativeEvent.actionName === 'delete') onAccessibilityDelete(); }
+        : undefined}
       accessibilityLabel={
         readOnly
           ? `${name}, ${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}.`
@@ -104,6 +115,7 @@ export function SwipeableEntryRow({
         onLongPress={onLongPress}
         onToggleSelect={onToggleSelect}
         readOnly={readOnly}
+        onAccessibilityDelete={() => onDelete?.(entry, () => ref.current?.close?.())}
       />
     </Swipeable>
   );

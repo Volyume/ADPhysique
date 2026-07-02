@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, AppState, Platform, useWindowDimensions, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, AppState, Platform, useWindowDimensions, Animated, Easing, AccessibilityInfo } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { appAlert } from './AppAlert';
 import { Ionicons } from '@expo/vector-icons';
@@ -220,6 +220,13 @@ export default function RestTimer() {
   // change (expo-notifications upgrades automatically). Asked once ever, in
   // context, and only when the rest alert itself is on; either answer is
   // final here — the Settings row remains for later.
+  // P9 TalkBack: one spoken edge when the rest begins (the per-second live
+  // region is gone; see the timer-row comment below).
+  useEffect(() => {
+    if (!restTimerActive) return;
+    try { AccessibilityInfo.announceForAccessibility('Rest timer started'); } catch (_) {}
+  }, [restTimerActive]);
+
   useEffect(() => {
     if (!restTimerActive || Platform.OS !== 'android') return;
     if (!useAppStore.getState().restEndAlertEnabled) return;
@@ -262,6 +269,8 @@ export default function RestTimer() {
       // D2: the GO haptic signature now lives in the vocabulary (restDone),
       // so reduce-motion silences it like every other haptic.
       restDone();
+      // P9 TalkBack: one spoken edge; the beeps and haptics carry the 3-2-1.
+      try { AccessibilityInfo.announceForAccessibility('Rest over. Start your next set.'); } catch (_) {}
       setShowDone(true);
       const t3 = setTimeout(() => setShowDone(false), 3000);
       timeoutsRef.current.push(t3);
@@ -360,14 +369,15 @@ export default function RestTimer() {
 
   return (
     <View style={styles.container}>
-      {/* Timer row. accessibilityLiveRegion announces each tick to screen
-          readers without forcing focus, useful so a non-sighted user
-          knows when their rest is nearly up. We use 'polite' to avoid
-          interrupting other VoiceOver / TalkBack output. */}
+      {/* Timer row. Deliberately NOT a live region: TalkBack announces every
+          label change, so a per-second label spoke the whole rest aloud,
+          minute after minute (P9 audit finding 1). The row stays accessible
+          with a current-value label (focus it to hear the time remaining);
+          the spoken edges are "rest started" (effect above) and "rest over"
+          (the 0-tick branch), with beeps + haptics carrying the 3-2-1. */}
       <View
         style={[styles.row, compact && styles.rowCompact]}
         accessible
-        accessibilityLiveRegion="polite"
         accessibilityLabel={isCountdown
           ? `Rest, ${restTimerRemaining} second${restTimerRemaining === 1 ? '' : 's'} remaining`
           : `Rest timer, ${mins} minute${mins === 1 ? '' : 's'} ${secs} second${secs === 1 ? '' : 's'} remaining`}
