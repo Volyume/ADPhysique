@@ -42,12 +42,24 @@ import { warmupRamp } from '../lib/warmupRamp';
 const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 2 };
 
 // B8: keep-awake tag so this screen's activate/deactivate can never release
-// a keep-awake hold some other surface owns.
+// a keep-awake hold some other surface owns. Per-INSTANCE suffix because the
+// screen is registered in three stacks (Home, FirstRun, ProOnboarding) and
+// expo-keep-awake tags are a set, not ref-counted — with a shared tag, two
+// mounted instances would trade one hold and blur ordering would decide who
+// wins.
 const KEEP_AWAKE_TAG = 'volyume-active-workout';
+let keepAwakeSeq = 0;
 
 // Equipment whose load is plates on a bar — the only exercises where the
-// plate calculator makes sense. Values from seedExercises' vocabulary.
-const PLATE_LOADED_EQUIPMENT = /(barbell|smith_machine|ez_bar)/i;
+// plate calculator makes sense. Seeded rows use snake_case ('barbell',
+// 'smith_machine', 'ez_bar'); CUSTOM exercises store the picker's display
+// spellings ('Barbell', 'Smith Machine', 'EZ Bar' — ExercisePickerModal),
+// so the match is case-insensitive with a flexible separator.
+const PLATE_LOADED_EQUIPMENT = /(barbell|smith[\s_-]?machine|ez[\s_-]?bar)/i;
+
+// Barbell test for the warm-up ramp's empty-bar row — same custom-spelling
+// caveat as above ('barbell' seeded, 'Barbell' custom).
+const BARBELL_EQUIPMENT = /barbell/i;
 
 // Real-world plate colours by kg weight. These are physical equipment
 // standards (red 25, blue 20, yellow 15, green 10, white 5), not theme
@@ -251,6 +263,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // pull, never push (the recorded no-auto-suggest decision below stands).
   const [showWarmupRamp, setShowWarmupRamp] = useState(false);
   const [showPlates, setShowPlates] = useState(false);
+  // The working weight the ramp is built from. Tapping a ramp row
+  // overwrites the entry with the warm-up weight, so without this anchor a
+  // reopened ramp would recompute from the WARM-UP weight and collapse
+  // ("no ramp needed") — losing the typed working weight entirely on a
+  // first-time exercise (Wave 4 review finding). Anchored on first open
+  // while the entry holds a working (non-warm-up) weight; cleared on
+  // exercise change and whenever the entry shows a working weight again.
+  const rampAnchorRef = useRef(null);
   // Plate sheet inputs are sheet-local strings, seeded on open from the
   // current entry weight and the profile bar weight. Deliberately NOT
   // persisted back to the store (parity with the original calculator).
@@ -299,16 +319,27 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // underlying window flag automatically when the app backgrounds, so no
   // AppState wiring is needed. Both calls are best-effort: a device that
   // refuses the flag must never crash the logger.
+  const keepAwakeTagRef = useRef(null);
+  if (keepAwakeTagRef.current === null) {
+    keepAwakeSeq += 1;
+    keepAwakeTagRef.current = `${KEEP_AWAKE_TAG}-${keepAwakeSeq}`;
+  }
   useFocusEffect(
     useCallback(() => {
-      activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch(() => {});
+      const tag = keepAwakeTagRef.current;
+      activateKeepAwakeAsync(tag).catch(() => {});
       return () => {
         try {
-          Promise.resolve(deactivateKeepAwake(KEEP_AWAKE_TAG)).catch(() => {});
+          Promise.resolve(deactivateKeepAwake(tag)).catch(() => {});
         } catch (_) { /* best-effort */ }
       };
     }, [])
   );
+
+  // A ramp anchored to one exercise means nothing for the next.
+  useEffect(() => {
+    rampAnchorRef.current = null;
+  }, [currentExerciseIndex]);
 
   // First-use info tip highlight
   const [showInfoTipPulse, setShowInfoTipPulse] = useState(false);
@@ -2627,7 +2658,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>Warm-up ramp</Text>
             {(() => {
-              const working = parseFloat(currentSet.weight);
+              // Working weight: the entry while it holds a working set;
+              // the anchor while the entry holds a ramp row (so reopening
+              // mid-ramp shows the SAME ramp, not one computed from the
+              // warm-up weight).
+              const entryWeight = parseFloat(currentSet.weight);
+              const entryIsWorking = (currentSet.setType ?? 'straight') !== 'warmup';
+              const working = (entryIsWorking && Number.isFinite(entryWeight) && entryWeight > 0)
+                ? entryWeight
+                : rampAnchorRef.current;
               if (!Number.isFinite(working) || working <= 0) {
                 return (
                   <Text style={styles.sheetExplainer}>
@@ -2636,7 +2675,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 );
               }
               const rows = warmupRamp(working, {
-                isBarbell: (exercise?.equipment || '') === 'barbell',
+                isBarbell: BARBELL_EQUIPMENT.test(exercise?.equipment || ''),
                 barKg: barWeight || DEFAULT_BAR_KG,
               });
               if (rows.length === 0) {
@@ -2804,10 +2843,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 utilities off the permanent surface (COMP-001), and strictly
                 pull: the warm-up ramp NEVER auto-appears (recorded decision
                 at the set-entry card). */}
-            {(!exercise?.exerciseType || exercise.exerciseType === 'weight_reps' || exercise.exerciseType === 'weighted_bodyweight') && (
+            {/* Hidden mid-cluster: a ramp-row tap rewrites the entry's
+                weight AND set type, and finishCluster commits from the
+                live entry — the one-tap path would mislog the whole
+                cluster as a light warm-up. */}
+            {!cluster && (!exercise?.exerciseType || exercise.exerciseType === 'weight_reps' || exercise.exerciseType === 'weighted_bodyweight') && (
               <TouchableOpacity
                 style={styles.sheetOption}
-                onPress={() => { setShowOverflow(false); setShowWarmupRamp(true); }}
+                onPress={() => {
+                  setShowOverflow(false);
+                  const w = parseFloat(currentSet.weight);
+                  if ((currentSet.setType ?? 'straight') !== 'warmup' && Number.isFinite(w) && w > 0) {
+                    rampAnchorRef.current = w;
+                  }
+                  setShowWarmupRamp(true);
+                }}
                 accessibilityRole="button"
                 accessibilityLabel="Warm-up ramp"
               >

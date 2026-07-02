@@ -113,6 +113,19 @@ describe('calculatePlates — edges fail safe', () => {
     const shuffled = [...PLATE_SET_KG].reverse();
     expect(calculatePlates(100, 20, shuffled)).toEqual(calculatePlates(100));
   });
+
+  test('off-grid denominations are rejected, so overshoot stays impossible', () => {
+    // A 1.1 kg plate is not a quarter-kg multiple: the integer arithmetic
+    // would snap it during allocation but report its real value, producing
+    // a loaded weight ABOVE the target and a negative remainder. Such
+    // denominations are filtered out of the set instead.
+    const r = calculatePlates(30, 20, [1.1]);
+    expect(r.perSide).toEqual([]);
+    expect(r.loadedKg).toBe(20);
+    expect(r.remainderKg).toBeGreaterThanOrEqual(0);
+    // Mixed sets keep only the real plates.
+    expect(calculatePlates(30, 20, [1.1, 5])).toEqual(calculatePlates(30, 20, [5]));
+  });
 });
 
 describe('determinism and constants', () => {

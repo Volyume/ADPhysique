@@ -107,6 +107,23 @@ describe('invariants', () => {
     expect(warmupRamp(87.5, { isBarbell: true })).toEqual(warmupRamp(87.5, { isBarbell: true }));
   });
 
+  test('junk options fall back to defaults instead of emitting NaN rows', () => {
+    // A zero rounding increment divides by zero and a NaN bar passes no
+    // comparison; either would have rendered "NaN kg × 5" in the sheet.
+    expect(warmupRamp(100, { isBarbell: true, barKg: NaN })).toEqual(
+      warmupRamp(100, { isBarbell: true })
+    );
+    expect(warmupRamp(100, { roundKg: 0 })).toEqual(warmupRamp(100));
+    expect(warmupRamp(100, { isBarbell: true, barKg: '20' })).toEqual(
+      warmupRamp(100, { isBarbell: true, barKg: 20 })
+    );
+    for (const rows of [
+      warmupRamp(100, { isBarbell: true, barKg: NaN, roundKg: -1 }),
+    ]) {
+      for (const row of rows) expect(Number.isFinite(row.weight)).toBe(true);
+    }
+  });
+
   test('the scheme constants are the sanctioned arithmetic', () => {
     expect(WARMUP_STEPS).toEqual([
       { pct: 0.4, reps: 5 },

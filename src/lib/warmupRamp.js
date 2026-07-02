@@ -49,15 +49,22 @@ const roundTo = (kg, inc) => Math.round(kg / inc) * inc;
 export function warmupRamp(workingKg, { isBarbell = false, barKg = 20, roundKg = 2.5 } = {}) {
   const working = Number(workingKg);
   if (!Number.isFinite(working) || working <= 0) return [];
+  // Junk options fall back to the defaults rather than poisoning the
+  // arithmetic: roundTo(w, 0) divides by zero and a NaN bar passes no
+  // comparison, either of which would render "NaN kg" rows.
+  const bar = Number(barKg);
+  const safeBar = Number.isFinite(bar) && bar > 0 ? bar : 20;
+  const inc = Number(roundKg);
+  const safeInc = Number.isFinite(inc) && inc > 0 ? inc : 2.5;
 
   const rows = [];
-  if (isBarbell && Number.isFinite(barKg) && barKg > 0 && working > barKg) {
-    rows.push({ weight: barKg, reps: 10, isBar: true });
+  if (isBarbell && working > safeBar) {
+    rows.push({ weight: safeBar, reps: 10, isBar: true });
   }
 
   for (const step of WARMUP_STEPS) {
-    let w = roundTo(working * step.pct, roundKg);
-    if (isBarbell) w = Math.max(w, barKg);
+    let w = roundTo(working * step.pct, safeInc);
+    if (isBarbell) w = Math.max(w, safeBar);
     // Normalise -0 from rounding and drop rows that add nothing: at or
     // below the previous row, at or above the working weight, or zero.
     w += 0;

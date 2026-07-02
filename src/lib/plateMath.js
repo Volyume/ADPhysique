@@ -49,8 +49,13 @@ export function calculatePlates(targetKg, barKg = DEFAULT_BAR_KG, plateSet = PLA
     return { ok: true, belowBar: true, perSide: [], sideKg: 0, loadedKg: bar, remainderKg: target - bar };
   }
 
+  // Domain: quarter-kilogram multiples only. The integer arithmetic below
+  // is exact for them; a denomination like 1.1 kg would snap during
+  // allocation but report its real value, letting the result overshoot the
+  // target. No real kg plate is finer than 1.25, so off-grid values are
+  // rejected rather than approximated.
   const denoms = [...plateSet]
-    .filter((p) => Number.isFinite(p) && p > 0)
+    .filter((p) => Number.isFinite(p) && p > 0 && Math.round(p * 4) === p * 4)
     .sort((a, b) => b - a);
 
   // Greedy largest-first on one side, in quarter-kg integers.

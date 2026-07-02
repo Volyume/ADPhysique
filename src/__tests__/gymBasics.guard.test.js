@@ -39,15 +39,19 @@ describe('B8 keep-awake wiring', () => {
     expect(activateIdx).toBeLessThan(nextHook === -1 ? SCREEN.length : nextHook);
   });
 
-  test('activate and deactivate both carry the tag', () => {
-    expect(SCREEN).toMatch(/activateKeepAwakeAsync\(KEEP_AWAKE_TAG\)/);
-    expect(SCREEN).toMatch(/deactivateKeepAwake\(KEEP_AWAKE_TAG\)/);
+  test('activate and deactivate both carry the per-instance tag', () => {
+    // The screen is registered in three stacks; expo-keep-awake tags are a
+    // set, not ref-counted, so each mounted instance needs its OWN tag or
+    // one instance's blur can release another's hold.
+    expect(SCREEN).toMatch(/keepAwakeTagRef\.current = `\$\{KEEP_AWAKE_TAG\}-\$\{keepAwakeSeq\}`/);
+    expect(SCREEN).toMatch(/activateKeepAwakeAsync\(tag\)/);
+    expect(SCREEN).toMatch(/deactivateKeepAwake\(tag\)/);
     expect(SCREEN).not.toMatch(/activateKeepAwakeAsync\(\s*\)/);
     expect(SCREEN).not.toMatch(/deactivateKeepAwake\(\s*\)/);
   });
 
   test('activation is best-effort (a refusing device must not crash the logger)', () => {
-    expect(SCREEN).toMatch(/activateKeepAwakeAsync\(KEEP_AWAKE_TAG\)\.catch\(\(\) => \{\}\)/);
+    expect(SCREEN).toMatch(/activateKeepAwakeAsync\(tag\)\.catch\(\(\) => \{\}\)/);
   });
 
   test('the always-on useKeepAwake hook form is not used', () => {
@@ -67,8 +71,9 @@ describe('B8 warm-up ramp stays pull-only', () => {
     expect(opens.length).toBeGreaterThanOrEqual(1);
     for (const m of opens) {
       // Walk back a short window and require an onPress binding — an open
-      // inside an effect or render path has no such binding nearby.
-      const windowBefore = SCREEN.slice(Math.max(0, m.index - 220), m.index);
+      // inside an effect or render path has no such binding nearby. (The
+      // window comfortably spans the ramp-anchor lines inside the handler.)
+      const windowBefore = SCREEN.slice(Math.max(0, m.index - 400), m.index);
       expect(windowBefore).toMatch(/onPress=\{/);
       expect(windowBefore).not.toMatch(/useEffect\s*\(/);
     }
