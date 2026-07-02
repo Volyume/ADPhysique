@@ -1,9 +1,9 @@
 /**
  * coachReport — the exportable coach handover report (B5, audit 05 §B5).
  *
- * A PDF of training history, weight trend, current targets and every
- * coaching decision with its persisted written reason over a period, for
- * the user to hand to a human coach, physio or GP.
+ * A PDF of training history, weight trend, current targets and the
+ * coaching decisions with their persisted written reasons over a period,
+ * for the user to hand to a human coach, physio or GP.
  *
  * Artefact class (important distinction): share cards are public, outbound
  * social artefacts and are data-minimised by rule — never name, bodyweight,
@@ -15,19 +15,31 @@
  * module mirrors (src/lib/food/csvExport.js exportDiaryPdf).
  *
  * ED-safety (audit constraint: "ED-flagged users get the neutral variant —
- * no rate/weight emphasis"): under an open ED-pattern flag, calm mode, or a
- * FAILED read of either (fail closed, the same wiring the differential
- * banner pins in its guard test), the report drops the weight-trend section,
- * every calorie-change row, the phase line, and ALL persisted prose notes —
- * the engine's written reasons legitimately discuss weight rates, so prose
- * is dropped wholesale rather than filtered. Bodyweight rows are not even
- * read from the database on the neutral path. The flag's existence is NEVER
- * mentioned in the artefact: the user hands this PDF to another person, and
- * it must not disclose inferred health data about them.
+ * no rate/weight emphasis"): under an open ED-pattern flag, a positive
+ * SCOFF screen (score >= 2, the same trio the streak / partner-signal /
+ * contest-countdown surfaces suppress on), calm mode, or a FAILED read of
+ * the flag or body profile, the report is the neutral variant: the
+ * weight-trend section, calorie-change rows, phase line and ALL persisted
+ * prose are dropped, and bodyweight rows are never even read. (The
+ * wellbeing read also catches to a fail-closed sentinel, though
+ * getWellbeingMode swallows storage errors internally and returns
+ * 'unspecified' — the same property as every other surface that reads it —
+ * so the genuine fail-closed seams are the two database reads.)
  *
- * The decisions rendered here are the persisted output_json written by the
- * deterministic engine at coach-run time — nothing is recomputed, so the
- * report shows what the user was actually told, week by week.
+ * DISCLOSURE RULE, both variants: the artefact is handed to another
+ * person, so it must never reveal what the app inferred about the user's
+ * eating patterns, wellbeing screening, cycle or safety holds. The engine's
+ * persisted prose legitimately contains such sentences (SCOFF holds, ED
+ * lockout/clearance, cycle overrides, safety-floor holds), so the FULL
+ * variant filters every rendered prose string through DISCLOSURE_PROSE and
+ * drops the safety-hold decision types entirely; redaction removes the
+ * prose, never invents copy. A source-pinned test cross-checks the filter
+ * against the engine's actual reason strings so a rewording there forces
+ * re-verification here.
+ *
+ * The decisions rendered are the output_json written by the deterministic
+ * engine at coach-run time — nothing is recomputed, so the report shows
+ * what the user was actually told, week by week.
  */
 import * as Sharing from 'expo-sharing';
 import {
@@ -36,11 +48,26 @@ import {
   getMorningWeights,
   getNutritionTargets,
   getOpenEdPatternFlag,
+  getUserBodyProfile,
 } from './database';
 import { getWellbeingMode, isCalm } from './wellbeing';
 import { robustEwma } from './robustTrend';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Persisted engine prose that would disclose screening, safety-hold or
+// cycle state to a third party. \bcycle\b deliberately does not match
+// "cycling" (cardio) — but does match "carb cycle", an accepted
+// over-redaction (the decision fact still renders, only the prose drops).
+export const DISCLOSURE_PROSE =
+  /wellbeing|restriction|\bcycle\b|safety signal|safety floor|hold lifted|lockout|eating|scoff|held-decision/i;
+
+// Safety-hold decision types whose whole row is the disclosure.
+const REDACTED_HELD_TYPES = new Set(['ed_pattern_lockout', 'ed_pattern_cleared', 'ffm_floor']);
+
+function printableProse(s) {
+  return typeof s === 'string' && s.trim() && !DISCLOSURE_PROSE.test(s) ? s : null;
+}
 
 function htmlEscape(v) {
   return String(v ?? '')
@@ -57,12 +84,11 @@ function fmtDate(ms) {
 
 const fmtInt = (n) => (Number.isFinite(n) ? Math.round(n).toLocaleString('en-GB') : '');
 
-// Signal words for the neutral variant: decision FACTS without the persisted
-// prose (prose can embed weight-rate language).
+// The engine's complete training-signal vocabulary ('reduce' | 'hold' |
+// 'push', see weeklyCoach) — decision FACTS that render in both variants.
 const TRAINING_SIGNAL_LABELS = {
   push: 'More work added',
-  pull_back: 'Volume pulled back',
-  pull: 'Volume pulled back',
+  reduce: 'Volume pulled back',
   hold: 'Held steady',
 };
 
@@ -73,6 +99,10 @@ const TRAINING_SIGNAL_LABELS = {
  */
 export function buildCoachReportHtml({ startMs, endMs, generatedAt, neutral, recap, trend, targets, weeks }) {
   const sections = [];
+
+  // Prose reaches the page only through this helper: full variant only,
+  // and only when the disclosure filter passes.
+  const prose = (s) => (!neutral ? printableProse(s) : null);
 
   // ── Training ──────────────────────────────────────────────────────────
   if (recap && recap.totalSessions > 0) {
@@ -102,16 +132,22 @@ export function buildCoachReportHtml({ startMs, endMs, generatedAt, neutral, rec
   if (!neutral && Array.isArray(trend) && trend.length >= 2) {
     const first = trend[0];
     const last = trend[trend.length - 1];
-    const spanWeeks = Math.max(1, (last.loggedAt - first.loggedAt) / (7 * DAY_MS));
+    const spanMs = last.loggedAt - first.loggedAt;
+    const spanWeeks = Math.max(1, spanMs / (7 * DAY_MS));
     const change = Math.round((last.ewmaKg - first.ewmaKg) * 10) / 10;
     const weekly = Math.round(((last.ewmaKg - first.ewmaKg) / spanWeeks) * 100) / 100;
     const sign = (n) => (n > 0 ? `+${n}` : `${n}`);
+    // The weekly-rate row needs a real span behind it: the engine's own
+    // trend helpers null sub-fortnight rates, so the report does too.
+    const rateRow = spanMs >= 14 * DAY_MS
+      ? `<tr><td>Average weekly change</td><td class="n">${htmlEscape(sign(weekly))} kg/week</td></tr>`
+      : '';
     sections.push(
       '<h2>Weight trend</h2><table>'
       + `<tr><td>Trend weight at start (${htmlEscape(fmtDate(first.loggedAt))})</td><td class="n">${htmlEscape(first.ewmaKg)} kg</td></tr>`
       + `<tr><td>Trend weight latest (${htmlEscape(fmtDate(last.loggedAt))})</td><td class="n">${htmlEscape(last.ewmaKg)} kg</td></tr>`
       + `<tr><td>Change over the period</td><td class="n">${htmlEscape(sign(change))} kg</td></tr>`
-      + `<tr><td>Average weekly change</td><td class="n">${htmlEscape(sign(weekly))} kg/week</td></tr>`
+      + rateRow
       + `<tr><td>Weigh-ins recorded</td><td class="n">${fmtInt(trend.length)}</td></tr>`
       + '</table><p class="note">Trend weight is a smoothed average of morning weigh-ins, so single days matter less.</p>'
     );
@@ -135,32 +171,50 @@ export function buildCoachReportHtml({ startMs, endMs, generatedAt, neutral, rec
   const weekBlocks = (weeks ?? []).map((w) => {
     const adj = w.adjustments ?? {};
     const rows = [];
+    // Decision fact first; the persisted written reason (full variant,
+    // disclosure-filtered) follows as its own sentence — the voice rule
+    // bans the em dash, so no dash joins.
+    const withProse = (fact, note) => {
+      const p = prose(note);
+      return p ? `${fact}. ${p}` : fact;
+    };
 
     const signalLabel = TRAINING_SIGNAL_LABELS[adj.training?.signal] ?? null;
     if (signalLabel) {
-      rows.push(`<tr><td>Training volume</td><td>${htmlEscape(signalLabel)}${!neutral && adj.training?.note ? ` — ${htmlEscape(adj.training.note)}` : ''}</td></tr>`);
+      rows.push(`<tr><td>Training volume</td><td>${htmlEscape(withProse(signalLabel, adj.training?.note))}</td></tr>`);
     }
     if (!neutral && Number.isFinite(adj.calories?.change) && adj.calories.change !== 0) {
       const amt = Math.abs(adj.calories.change);
       const dir = adj.calories.change > 0 ? `up +${fmtInt(amt)}` : `down ${fmtInt(amt)}`;
-      rows.push(`<tr><td>Calories</td><td>${htmlEscape(`Adjusted ${dir} kcal/day`)}${adj.calories.note ? ` — ${htmlEscape(adj.calories.note)}` : ''}</td></tr>`);
+      rows.push(`<tr><td>Calories</td><td>${htmlEscape(withProse(`Adjusted ${dir} kcal/day`, adj.calories.note))}</td></tr>`);
     }
     if (Number.isFinite(adj.steps?.target) && adj.steps.target > 0) {
-      rows.push(`<tr><td>Daily steps</td><td>Target ${fmtInt(adj.steps.target)}${!neutral && adj.steps.note ? ` — ${htmlEscape(adj.steps.note)}` : ''}</td></tr>`);
+      rows.push(`<tr><td>Daily steps</td><td>${htmlEscape(withProse(`Target ${fmtInt(adj.steps.target)}`, adj.steps.note))}</td></tr>`);
     }
-    if (!neutral && w.deloadSuggested && w.deloadNote) {
-      rows.push(`<tr><td>Deload</td><td>${htmlEscape(w.deloadNote)}</td></tr>`);
+    if (adj.cardio && (adj.cardio.type || adj.cardio.note)) {
+      const fact = adj.cardio.type || 'Cardio';
+      rows.push(`<tr><td>Cardio</td><td>${htmlEscape(withProse(fact, adj.cardio.note))}</td></tr>`);
+    }
+    if (!neutral && w.deloadSuggested && prose(w.deloadNote)) {
+      rows.push(`<tr><td>Deload</td><td>${htmlEscape(prose(w.deloadNote))}</td></tr>`);
+    }
+    if (!neutral && w.dietBreakSuggested && prose(w.dietBreakNote)) {
+      rows.push(`<tr><td>Diet break</td><td>${htmlEscape(prose(w.dietBreakNote))}</td></tr>`);
     }
     if (Number.isFinite(w.sessionsCompleted) && Number.isFinite(w.sessionsPlanned)) {
       rows.push(`<tr><td>Sessions</td><td>${fmtInt(w.sessionsCompleted)} of ${fmtInt(w.sessionsPlanned)} planned</td></tr>`);
     }
+    // Held decisions: the reason IS the row, so a redacted reason (or a
+    // safety-hold type) drops the row rather than rendering a blank.
     const held = !neutral
       ? (w.heldDecisions ?? [])
-        .filter((d) => d?.reason)
-        .map((d) => `<li>${htmlEscape(d.reason)}</li>`)
+        .filter((d) => d && !REDACTED_HELD_TYPES.has(d.type))
+        .map((d) => printableProse(d.reason))
+        .filter(Boolean)
+        .map((reason) => `<li>${htmlEscape(reason)}</li>`)
         .join('')
       : '';
-    const why = !neutral && w.whyThisWeek ? `<p class="why">${htmlEscape(w.whyThisWeek)}</p>` : '';
+    const why = prose(w.whyThisWeek) ? `<p class="why">${htmlEscape(prose(w.whyThisWeek))}</p>` : '';
     if (!rows.length && !held && !why) return '';
     return (
       `<h3>Week commencing ${htmlEscape(fmtDate(w.weekStart))}${!neutral && w.goalPhase ? ` · ${htmlEscape(w.goalPhase)}` : ''}</h3>`
@@ -192,19 +246,25 @@ export function buildCoachReportHtml({ startMs, endMs, generatedAt, neutral, rec
 
 /**
  * Gather everything the report needs (read-only). The neutral decision is
- * fail-closed: an open ED flag, calm mode, or a FAILED read of either makes
- * the report neutral — a transient read failure must never produce the
- * fuller variant. On the neutral path bodyweight rows are never read.
+ * fail-closed on the database reads: an open ED flag, a positive SCOFF
+ * screen, calm mode, or a FAILED read of the flag or body profile makes the
+ * report neutral — a transient read failure must never produce the fuller
+ * variant. On the neutral path bodyweight rows are never read.
  */
 export async function gatherCoachReportData(userId, { weeks = 12, nowMs = Date.now() } = {}) {
   const endMs = nowMs;
   const startMs = endMs - weeks * 7 * DAY_MS;
 
-  const [edFlag, wellbeing] = await Promise.all([
+  const [edFlag, wellbeing, bodyProfile] = await Promise.all([
     getOpenEdPatternFlag(userId).catch(() => 'read_failed'),
     getWellbeingMode().catch(() => 'read_failed'),
+    getUserBodyProfile(userId).catch(() => 'read_failed'),
   ]);
-  const neutral = !!edFlag || wellbeing === 'read_failed' || isCalm(wellbeing);
+  const scoffPositive =
+    bodyProfile === 'read_failed' ||
+    (Number.isFinite(bodyProfile?.scoffScore) && bodyProfile.scoffScore >= 2);
+  const neutral =
+    !!edFlag || wellbeing === 'read_failed' || isCalm(wellbeing) || scoffPositive;
 
   const [recap, history, weights, targets] = await Promise.all([
     getRecapData(userId, { startMs, endMs }).catch(() => null),
@@ -234,9 +294,11 @@ export async function gatherCoachReportData(userId, { weeks = 12, nowMs = Date.n
 
 /**
  * One-shot: gather, build the HTML, render to PDF via expo-print and hand it
- * to the native share sheet. Returns { fileUri }, or { empty: true } when
- * there is nothing at all to report, or { unavailable: true } when
- * expo-print is not present in the build (same contract as exportDiaryPdf).
+ * to the native share sheet. Returns { fileUri, shared }, or { empty: true }
+ * when there is nothing at all to report, or { unavailable: true } when
+ * expo-print is not present in the build (same contract as exportDiaryPdf,
+ * plus the shared flag so the caller can tell the user when the sheet could
+ * not open).
  */
 export async function exportCoachReportPdf({ userId, weeks = 12 } = {}) {
   const data = await gatherCoachReportData(userId, { weeks });
@@ -249,12 +311,14 @@ export async function exportCoachReportPdf({ userId, weeks = 12 } = {}) {
   let Print; try { Print = require('expo-print'); } catch (_) { Print = null; }
   if (!Print?.printToFileAsync) return { unavailable: true };
   const { uri } = await Print.printToFileAsync({ html });
+  let shared = false;
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(uri, {
       mimeType: 'application/pdf',
       dialogTitle: 'Coach handover report',
       UTI: 'com.adobe.pdf',
     });
+    shared = true;
   }
-  return { fileUri: uri };
+  return { fileUri: uri, shared };
 }

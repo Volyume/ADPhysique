@@ -136,7 +136,12 @@ export default function SettingsDataScreen({ navigation }) {
         return;
       }
       if (res?.unavailable) {
-        toast.show('PDF export needs a rebuild with the print package', { variant: 'error', duration: 5000 });
+        toast.show('PDF export is not available on this device.', { variant: 'error', duration: 5000 });
+        return;
+      }
+      if (!res?.shared) {
+        // PDF built but the share sheet could not open (no share targets).
+        toast.show('Report created, but sharing is not available on this device.', { variant: 'warning', duration: 5000 });
         return;
       }
       haptics.selection();
@@ -257,7 +262,7 @@ export default function SettingsDataScreen({ navigation }) {
         />
         <SettingRow
           icon="document-text-outline"
-          label={buildingReport ? 'Preparing the report...' : 'Coach handover report (PDF)'}
+          label={buildingReport ? 'Preparing the report…' : 'Coach handover report (PDF)'}
           sub="Training, trend, targets and coaching decisions, for a coach or GP"
           onPress={buildingReport ? null : exportCoachReport}
           showArrow={!buildingReport}

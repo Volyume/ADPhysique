@@ -8,21 +8,27 @@
  *  - The NEUTRAL variant is an ED-safety constraint from the audit ("no
  *    rate/weight emphasis") and must NEVER contain: the weight-trend
  *    section, any bodyweight number, any calorie-change row, the phase
- *    line, or ANY persisted prose note (the engine's reasons legitimately
- *    discuss weight rates, so prose is dropped wholesale). It must also
- *    never mention the flag or calm mode itself — the user hands this PDF
- *    to another person.
+ *    line, or ANY persisted prose note.
+ *  - The DISCLOSURE RULE applies to BOTH variants (Wave 4 review blocker):
+ *    the PDF is handed to another person, and the engine's persisted prose
+ *    includes sentences that reveal SCOFF screening, ED lockouts (including
+ *    ones that cleared long ago), cycle flags and safety-floor holds. The
+ *    full variant must drop the safety-hold decision types and filter every
+ *    prose string; a cross-check against weeklyCoach's ACTUAL reason
+ *    strings keeps the filter honest — if the engine rewords, this suite
+ *    fails and forces re-verification.
  *  - The fail-closed neutral wiring in the gatherer is pinned at source
- *    level, same as differentialBanner.guard: a read failure must produce
- *    the neutral variant, never the fuller one.
- *  - Every interpolated string is HTML-escaped (exercise names and notes
- *    are user-adjacent text).
+ *    level: a failed ED-flag or body-profile read must produce the neutral
+ *    variant, never the fuller one, and a positive SCOFF screen joins the
+ *    suppression trio exactly as the streak/partner/countdown surfaces do.
+ *  - No em dash anywhere in the artefact (voice rule; the lint gate cannot
+ *    see src/lib template strings, so it is pinned here).
  * Distinctive fixture values (82.4 kg, -137 kcal, sentinel prose) make the
  * absence assertions precise instead of pattern-guessy.
  */
 import fs from 'fs';
 import path from 'path';
-import { buildCoachReportHtml } from '../coachReport';
+import { buildCoachReportHtml, DISCLOSURE_PROSE } from '../coachReport';
 
 const WEEK = 7 * 24 * 60 * 60 * 1000;
 const T0 = Date.UTC(2026, 3, 6); // Mon 6 Apr 2026
@@ -56,9 +62,12 @@ function fixture(overrides = {}) {
           training: { signal: 'push', note: 'SENTINEL-TRAINING recovery looked strong.' },
           calories: { change: -137, note: 'SENTINEL-CAL losing faster than the planned rate.' },
           steps: { target: 9000, change: 1000, note: 'SENTINEL-STEPS easy extra output.' },
+          cardio: { prescribed: true, type: 'Steady cardio', note: 'SENTINEL-CARDIO two sessions, your choice of activity.' },
         },
         deloadSuggested: true,
         deloadNote: 'SENTINEL-DELOAD four hard weeks in a row.',
+        dietBreakSuggested: true,
+        dietBreakNote: 'SENTINEL-BREAK a planned week at maintenance.',
         heldDecisions: [{ type: 'calorie_change', reason: 'SENTINEL-HELD weight moved fast, so calories were left alone.' }],
         sessionsCompleted: 3,
         sessionsPlanned: 3,
@@ -67,6 +76,15 @@ function fixture(overrides = {}) {
     ...overrides,
   };
 }
+
+// The engine's REAL persisted reason strings (verbatim from weeklyCoach.js;
+// the cross-check test below asserts they are still there).
+const ENGINE_DISCLOSURE_REASONS = [
+  'Calorie cut held. Multiple safety signals are active. See the held-decision card for details.',
+  'Hold lifted. The signals that triggered the hold have settled for two weeks. Standard coaching resumes next week.',
+  'Calories held. Wellbeing screen flagged restriction concerns.',
+  "Calories held. Cycle was flagged this week so the weight reading isn't a reliable signal.",
+];
 
 describe('full variant: every decision and its written why', () => {
   const html = buildCoachReportHtml(fixture());
@@ -79,7 +97,7 @@ describe('full variant: every decision and its written why', () => {
   });
 
   test('the persisted written reasons appear verbatim', () => {
-    for (const s of ['SENTINEL-WHY', 'SENTINEL-TRAINING', 'SENTINEL-CAL', 'SENTINEL-STEPS', 'SENTINEL-DELOAD', 'SENTINEL-HELD']) {
+    for (const s of ['SENTINEL-WHY', 'SENTINEL-TRAINING', 'SENTINEL-CAL', 'SENTINEL-STEPS', 'SENTINEL-DELOAD', 'SENTINEL-CARDIO', 'SENTINEL-BREAK', 'SENTINEL-HELD']) {
       expect(html).toContain(s);
     }
   });
@@ -96,7 +114,125 @@ describe('full variant: every decision and its written why', () => {
   test('held decisions are labelled as held with the reason', () => {
     expect(html).toContain('Held back this week');
   });
+
+  test('the weekly-rate row needs a fortnight of data behind it', () => {
+    const short = buildCoachReportHtml(fixture({
+      trend: [
+        { loggedAt: T0, rawKg: 82.6, ewmaKg: 82.4 },
+        { loggedAt: T0 + 3 * 24 * 60 * 60 * 1000, rawKg: 82.1, ewmaKg: 82.3 },
+      ],
+    }));
+    expect(short).toContain('<h2>Weight trend</h2>');
+    expect(short).not.toContain('kg/week');
+  });
 });
+
+describe('training signal vocabulary matches the engine', () => {
+  test("'reduce' renders as a pulled-back week with its note", () => {
+    const html = buildCoachReportHtml(fixture({
+      weeks: [{
+        weekStart: T0,
+        adjustments: { training: { signal: 'reduce', note: 'SENTINEL-REDUCE fatigue was climbing.' } },
+      }],
+    }));
+    expect(html).toContain('Volume pulled back');
+    expect(html).toContain('SENTINEL-REDUCE');
+  });
+
+  test("'hold' renders as held steady; unknown signals drop the row, not the week", () => {
+    const html = buildCoachReportHtml(fixture({
+      weeks: [{
+        weekStart: T0,
+        adjustments: {
+          training: { signal: 'hold', note: null },
+          steps: { target: 8000, change: 0, note: null },
+        },
+      }],
+    }));
+    expect(html).toContain('Held steady');
+    expect(html).toContain('8,000');
+  });
+});
+
+describe('disclosure rule: the FULL variant never reveals screening or safety state', () => {
+  const html = buildCoachReportHtml(fixture({
+    weeks: [
+      {
+        weekStart: T0 + 9 * WEEK,
+        goalPhase: 'cut',
+        whyThisWeek: 'SENTINEL-WHY steady progress.',
+        adjustments: { training: { signal: 'push', note: 'SENTINEL-TRAINING fine week.' } },
+        heldDecisions: [
+          { type: 'ed_pattern_lockout', reason: ENGINE_DISCLOSURE_REASONS[0] },
+          { type: 'ffm_floor', reason: 'Calorie target held. Your seven-day average intake of 1400 kcal is at or below your safety floor of 1500 kcal. Eating below this level for long stretches breaks down muscle and stalls recovery.' },
+          { type: 'calories', reason: ENGINE_DISCLOSURE_REASONS[2] },
+          { type: 'calories', reason: 'Calories held. Trend is on target.' },
+        ],
+      },
+      {
+        weekStart: T0 + 10 * WEEK,
+        adjustments: {},
+        heldDecisions: [{ type: 'ed_pattern_cleared', reason: ENGINE_DISCLOSURE_REASONS[1] }],
+        whyThisWeek: ENGINE_DISCLOSURE_REASONS[3],
+      },
+    ],
+  }));
+
+  test('safety-hold types and screening prose are absent', () => {
+    for (const reason of ENGINE_DISCLOSURE_REASONS) {
+      expect(html).not.toContain(htmlFragment(reason));
+    }
+    expect(html).not.toMatch(/wellbeing|restriction|lockout|scoff|safety floor|safety signal|hold lifted/i);
+    expect(html).not.toMatch(/\bcycle\b/i);
+  });
+
+  test('benign held reasons still render beside the redactions', () => {
+    expect(html).toContain('Calories held. Trend is on target.');
+    expect(html).toContain('SENTINEL-WHY');
+    expect(html).toContain('SENTINEL-TRAINING');
+  });
+
+  test("'cycling' in cardio prose is not collateral of the cycle redaction", () => {
+    const cardio = buildCoachReportHtml(fixture({
+      weeks: [{
+        weekStart: T0,
+        adjustments: { cardio: { prescribed: true, type: 'Steady cardio', note: 'SENTINEL-SPIN two easy cycling sessions.' } },
+      }],
+    }));
+    expect(cardio).toContain('SENTINEL-SPIN');
+  });
+
+  // The filter is only as good as its match against the ENGINE's actual
+  // vocabulary. Every known disclosure string must trip it; the benign
+  // ones must not. If weeklyCoach rewords, the source check below fails
+  // and forces this classification to be redone.
+  test('DISCLOSURE_PROSE classifies the real engine strings correctly', () => {
+    for (const reason of ENGINE_DISCLOSURE_REASONS) {
+      expect(DISCLOSURE_PROSE.test(reason)).toBe(true);
+    }
+    for (const benign of [
+      'Calories held. Trend is on target.',
+      'Calories held. Last adjustment needs more weeks to show in the trend.',
+      "Calories held. Adherence wasn't tracked, so adjusting now would be a guess.",
+      'Cardio paused this week. Recovery takes priority.',
+    ]) {
+      expect(DISCLOSURE_PROSE.test(benign)).toBe(false);
+    }
+  });
+
+  test('the engine still contains the classified disclosure strings', () => {
+    const engine = fs.readFileSync(path.resolve(__dirname, '..', 'weeklyCoach.js'), 'utf8');
+    for (const reason of ENGINE_DISCLOSURE_REASONS) {
+      expect(engine).toContain(reason.slice(0, 40));
+    }
+  });
+});
+
+// The builder escapes before insertion, so a raw reason never appears
+// verbatim — compare against its escaped form.
+function htmlFragment(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
 describe('neutral variant: no rate or weight emphasis, no prose, no disclosure', () => {
   const html = buildCoachReportHtml(fixture({ neutral: true }));
@@ -115,26 +251,33 @@ describe('neutral variant: no rate or weight emphasis, no prose, no disclosure',
   });
 
   test('ALL persisted prose notes are absent (prose can embed rate language)', () => {
-    for (const s of ['SENTINEL-WHY', 'SENTINEL-TRAINING', 'SENTINEL-CAL', 'SENTINEL-STEPS', 'SENTINEL-DELOAD', 'SENTINEL-HELD']) {
+    for (const s of ['SENTINEL-WHY', 'SENTINEL-TRAINING', 'SENTINEL-CAL', 'SENTINEL-STEPS', 'SENTINEL-DELOAD', 'SENTINEL-CARDIO', 'SENTINEL-BREAK', 'SENTINEL-HELD']) {
       expect(html).not.toContain(s);
     }
     expect(html).not.toContain('Held back');
+    expect(html).not.toContain('Diet break');
   });
 
   test('PR weights are absent but training facts remain', () => {
     expect(html).not.toContain('Bench Press');
     expect(html).toContain('Sessions completed');
     expect(html).toContain('More work added');
+    expect(html).toContain('Steady cardio');
     expect(html).toContain('9,000');
     expect(html).toContain('2,350');
   });
 
   test('the artefact never discloses why it is neutral', () => {
-    expect(html).not.toMatch(/eating|disorder|wellbeing|calm|flag/i);
+    expect(html).not.toMatch(/eating|disorder|wellbeing|calm|flag|scoff/i);
   });
 });
 
 describe('robustness', () => {
+  test('no em dash in either variant (voice rule; lint cannot see src/lib templates)', () => {
+    expect(buildCoachReportHtml(fixture())).not.toContain('—');
+    expect(buildCoachReportHtml(fixture({ neutral: true }))).not.toContain('—');
+  });
+
   test('user-adjacent strings are HTML-escaped', () => {
     const html = buildCoachReportHtml(fixture({
       recap: {
@@ -177,14 +320,22 @@ describe('robustness', () => {
 describe('fail-closed neutral wiring in the gatherer (source-pinned)', () => {
   const SRC = fs.readFileSync(path.resolve(__dirname, '..', 'coachReport.js'), 'utf8');
 
-  test("both wellbeing reads catch to 'read_failed', never to null", () => {
+  test("the database reads catch to 'read_failed', never to null", () => {
+    // The three SAFETY reads fail closed; the data reads (recap, targets)
+    // may degrade to null, so the negative pin is scoped to the safety
+    // identifiers only.
     expect(SRC).toMatch(/getOpenEdPatternFlag\(userId\)\.catch\(\(\) => 'read_failed'\)/);
+    expect(SRC).toMatch(/getUserBodyProfile\(userId\)\.catch\(\(\) => 'read_failed'\)/);
     expect(SRC).toMatch(/getWellbeingMode\(\)\.catch\(\(\) => 'read_failed'\)/);
-    expect(SRC).not.toMatch(/getOpenEdPatternFlag\(userId\)\.catch\(\(\) => null\)/);
+    expect(SRC).not.toMatch(/getOpenEdPatternFlag\([^)]*\)\.catch\(\(\) => null\)/);
+    expect(SRC).not.toMatch(/getUserBodyProfile\([^)]*\)\.catch\(\(\) => null\)/);
+    expect(SRC).not.toMatch(/getWellbeingMode\(\)\.catch\(\(\) => null\)/);
   });
 
-  test('a failed read forces the neutral variant', () => {
-    expect(SRC).toMatch(/!!edFlag \|\| wellbeing === 'read_failed' \|\| isCalm\(wellbeing\)/);
+  test('a failed read or positive SCOFF forces the neutral variant', () => {
+    expect(SRC).toMatch(/bodyProfile === 'read_failed'/);
+    expect(SRC).toMatch(/bodyProfile\?\.scoffScore\) && bodyProfile\.scoffScore >= 2/);
+    expect(SRC).toMatch(/!!edFlag \|\| wellbeing === 'read_failed' \|\| isCalm\(wellbeing\) \|\| scoffPositive/);
   });
 
   test('the neutral path never reads bodyweight rows', () => {
