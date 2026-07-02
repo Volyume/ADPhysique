@@ -77,7 +77,6 @@ describe('fit rule 4: the JS-thread Animated API is a frozen allowlist', () => {
     'components/FeedbackSheet.js',
     'components/PRCelebration.js',
     'components/PeekMenu.js',
-    'components/PressableCard.js',
     'components/RestTimer.js',
     'components/Skeleton.js',
     'components/Toast.js',

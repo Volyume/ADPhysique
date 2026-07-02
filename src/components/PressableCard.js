@@ -6,6 +6,13 @@
  * visible opacity dip so a tap feels tactile, the way Apple, Linear,
  * Whoop, and Spotify treat their primary tappable surfaces.
  *
+ * Wave 6 M2 (audit 03b §4 step 2): the animation runs on Reanimated's
+ * UI thread via the named spring family — springs.press in (settles
+ * fast, no overshoot) and springs.release out (one tiny overshoot
+ * beat), the token re-expression of the shipped speed 30/18 +
+ * bounciness 6 feel. This file is the canonical press physics for
+ * Button, Card, Chip, Stepper, ExerciseCard and every direct consumer.
+ *
  * Reduce-motion users get a flat behaviour (no scale, no opacity
  * change) automatically. Honour the same a11y guard the rest of the
  * app uses.
@@ -15,9 +22,15 @@
  * defaults to 'button'.
  */
 
-import { useRef } from 'react';
-import { Animated, Pressable } from 'react-native';
+import { Pressable } from 'react-native';
+import Reanimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  interpolate,
+} from 'react-native-reanimated';
 import useAppStore from '../store/useAppStore';
+import { motion } from '../styles/theme';
 
 export default function PressableCard({
   onPress,
@@ -36,34 +49,27 @@ export default function PressableCard({
   scale = 0.97,
 }) {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
-  const anim = useRef(new Animated.Value(1)).current;
+  const pressed = useSharedValue(0); // 0 = at rest, 1 = fully pressed
 
   function pressIn() {
     if (reduceMotion) return;
-    Animated.spring(anim, {
-      toValue: scale,
-      useNativeDriver: true,
-      speed: 30,
-      bounciness: 0,
-    }).start();
+    pressed.value = withSpring(1, motion.springs.press);
   }
 
   function pressOut() {
     if (reduceMotion) return;
-    Animated.spring(anim, {
-      toValue: 1,
-      useNativeDriver: true,
-      speed: 18,
-      bounciness: 6,
-    }).start();
+    pressed.value = withSpring(0, motion.springs.release);
   }
 
-  const animatedStyle = reduceMotion
-    ? null
-    : { transform: [{ scale: anim }], opacity: anim.interpolate({
-        inputRange: [scale, 1],
-        outputRange: [0.92, 1],
-      }) };
+  const animatedStyle = useAnimatedStyle(() => {
+    if (reduceMotion) return {};
+    return {
+      // The release spring's small undershoot past 0 extrapolates scale a
+      // touch above 1 — the deliberate settle beat the old bounciness gave.
+      transform: [{ scale: interpolate(pressed.value, [0, 1], [1, scale]) }],
+      opacity: interpolate(pressed.value, [0, 1], [1, 0.92]),
+    };
+  }, [reduceMotion, scale]);
 
   return (
     <Pressable
@@ -79,9 +85,9 @@ export default function PressableCard({
       accessibilityHint={accessibilityHint}
       accessibilityState={accessibilityState}
     >
-      <Animated.View style={[style, animatedStyle]}>
+      <Reanimated.View style={[style, animatedStyle]}>
         {children}
-      </Animated.View>
+      </Reanimated.View>
     </Pressable>
   );
 }
