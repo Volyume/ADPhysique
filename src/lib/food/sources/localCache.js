@@ -23,11 +23,17 @@ export async function searchLocalByName(userId, query, limit = 25) {
   const contains = `%${q}%`;
 
   // Prefix matches first on both tables, then substring matches.
+  // sodium_100g / sugar_100g ride along for the food-detail display rows
+  // (gap #16 sugars, E4 sodium): both tables store them, but these reads
+  // previously dropped them, so a locally resolved food could never show
+  // either figure. Display-only; scaleSugarG/scaleSodiumMg treat null as
+  // "no data".
   const globals = await d.getAllAsync(
     `SELECT
        'global:' || id AS food_ref, source, name, brand,
        serving_g, serving_label,
        kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
+       sodium_100g, sugar_100g,
        CASE WHEN lower(name) LIKE ? THEN 0 ELSE 1 END AS rank
      FROM foods
      WHERE lower(name) LIKE ?
@@ -41,6 +47,7 @@ export async function searchLocalByName(userId, query, limit = 25) {
        'custom:' || id AS food_ref, 'custom' AS source, name, brand,
        serving_g, serving_label,
        kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
+       sodium_100g, sugar_100g,
        CASE WHEN lower(name) LIKE ? THEN 0 ELSE 1 END AS rank
      FROM custom_foods
      WHERE user_id = ? AND deleted_at IS NULL AND lower(name) LIKE ?
@@ -69,7 +76,8 @@ export async function findLocalByBarcode(ean, userId = null) {
       `SELECT
          'custom:' || id AS food_ref, 'custom' AS source, name, brand,
          serving_g, serving_label,
-         kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g
+         kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
+         sodium_100g, sugar_100g
        FROM custom_foods
        WHERE user_id = ? AND barcode_ean = ? AND deleted_at IS NULL
        ORDER BY updated_at DESC, created_at DESC
@@ -87,7 +95,8 @@ export async function findLocalByBarcode(ean, userId = null) {
     `SELECT
        'global:' || id AS food_ref, source, name, brand,
        serving_g, serving_label,
-       kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g
+       kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
+       sodium_100g, sugar_100g
      FROM foods
      WHERE barcode_ean = ?
      ORDER BY verified DESC,
@@ -137,7 +146,8 @@ export async function resolveFoodRef(userId, foodRef) {
     return d.getFirstAsync(
       `SELECT 'global:' || id AS food_ref, source, name, brand,
               serving_g, serving_label,
-              kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g
+              kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
+              sodium_100g, sugar_100g
        FROM foods WHERE id = ? LIMIT 1`,
       [id]
     );
@@ -146,7 +156,8 @@ export async function resolveFoodRef(userId, foodRef) {
     return d.getFirstAsync(
       `SELECT 'custom:' || id AS food_ref, 'custom' AS source, name, brand,
               serving_g, serving_label,
-              kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g
+              kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
+              sodium_100g, sugar_100g
        FROM custom_foods
        WHERE id = ? AND user_id = ? AND deleted_at IS NULL LIMIT 1`,
       [id, userId]
