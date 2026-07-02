@@ -43,6 +43,7 @@ import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 import { logError, logWarn } from '../lib/errorLog';
 import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, VOLUME_LANDMARKS } from '../lib/algorithms';
+import { selectPlateauForBanner, plateauBannerLine } from '../lib/plateauSurfacing';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -202,6 +203,12 @@ export default function HomeScreen({ navigation }) {
   const [deloadSuggestion, setDeloadSuggestion] = useState(null);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
 
+  // B3: lift plateau banner. { exerciseId, line } | null. Defaults dismissed
+  // so it never flashes before the stored dismissal has been read (the
+  // free-coach-line pattern); loadPlateauBanner reveals it.
+  const [plateauBanner, setPlateauBanner] = useState(null);
+  const [plateauBannerDismissed, setPlateauBannerDismissed] = useState(true);
+
   // Pre-workout coaching brief
   const [briefDismissed, setBriefDismissed] = useState(false);
 
@@ -283,6 +290,7 @@ export default function HomeScreen({ navigation }) {
         loadExerciseCounts(),
         loadBlockProgress(),
         loadPhaseBanner(),
+        loadPlateauBanner(),
         loadFatigueTrend(),
         loadScheduleContext(),
         loadBriefDismissal(),
@@ -550,6 +558,47 @@ export default function HomeScreen({ navigation }) {
     try {
       await AsyncStorage.setItem('@volyume_phase_banner_dismissed_v1', userProfile?.trainingPhase ?? '');
     } catch (_) {}
+  }
+
+  // B3: proactive plateau-break surfacing. Detection input is training data
+  // only (workout sets: load lifted and reps performed via
+  // getWorkoutSetsSince); nothing weight- or food-derived feeds it, so no
+  // ED-flag/calm suppression is required (COMP-004 scope is weight/food
+  // content). Errors swallow to null like the other banner loaders.
+  async function loadPlateauBanner() {
+    try {
+      if (!user?.id) { setPlateauBanner(null); return; }
+      // Eight weeks covers detectPlateau's four-session window for a weekly
+      // lift without loading every set ever logged (LB-7 pattern).
+      const eightWeeksAgo = Date.now() - 8 * 7 * 24 * 60 * 60 * 1000;
+      const recentSets = await getWorkoutSetsSince(user.id, eightWeeksAgo);
+      const picked = selectPlateauForBanner(recentSets);
+      if (!picked) { setPlateauBanner(null); return; }
+      const ex = await getExerciseById(picked.exerciseId);
+      if (!ex?.name) { setPlateauBanner(null); return; }
+      // Dismissible per detected plateau: keyed by exercise + local week.
+      // Read the dismissal BEFORE revealing the banner so a banner the user
+      // already dismissed can't flash for a frame (trial-banner pattern).
+      const dKey = `@volyume_plateau_banner_dismissed_${user.id}_${picked.exerciseId}_${localWeekStartMs()}`;
+      const dv = await AsyncStorage.getItem(dKey).catch(() => null);
+      setPlateauBannerDismissed(dv === 'true');
+      setPlateauBanner({
+        exerciseId: picked.exerciseId,
+        line: plateauBannerLine(ex.name, picked.weeks),
+      });
+    } catch (_) {
+      setPlateauBanner(null);
+    }
+  }
+
+  function dismissPlateauBanner() {
+    setPlateauBannerDismissed(true);
+    if (user?.id && plateauBanner) {
+      AsyncStorage.setItem(
+        `@volyume_plateau_banner_dismissed_${user.id}_${plateauBanner.exerciseId}_${localWeekStartMs()}`,
+        'true',
+      ).catch(() => {});
+    }
   }
 
   async function loadFatigueTrend() {
@@ -955,11 +1004,17 @@ export default function HomeScreen({ navigation }) {
     && !showCoachBanner && !showTrialCountdownBanner;
   const showPhaseBanner = !!phaseMismatch && !phaseBannerDismissed
     && !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner;
+  // B3 lift plateau banner: below deload and phase — recovery and targets
+  // outrank a single lift's stall — and dismissible per exercise + week. The
+  // one-banner invariant holds.
+  const showPlateauBanner = !!plateauBanner && !plateauBannerDismissed
+    && !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner && !showPhaseBanner;
   // Free-tier weekly one-liner (founder decision 4c): lowest priority in
   // the banner stack, free tier only, dismissible per week. The
   // one-banner invariant holds.
   const showFreeCoachLine = tier === 'free' && !!freeCoachLine && !freeCoachLineDismissed
-    && !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner && !showPhaseBanner;
+    && !showCoachBanner && !showTrialCountdownBanner && !showDeloadBanner && !showPhaseBanner
+    && !showPlateauBanner;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -1139,6 +1194,34 @@ export default function HomeScreen({ navigation }) {
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
               accessibilityLabel="Dismiss recovery week banner"
+            >
+              <Ionicons name="close" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        )}
+
+        {/* ── B3 lift plateau banner. Training-only content; taps through to
+            the existing plateau protocol on ExerciseDetail. ExerciseDetail is
+            registered in the Progress stack, not this one, so route via the
+            parent tab navigator (F4 / NAV-1 bug class). ── */}
+        {showPlateauBanner && (
+          <TouchableOpacity
+            style={styles.plateauBanner}
+            onPress={() => navigation.getParent()?.navigate('ProgressTab', { screen: 'ExerciseDetail', params: { exerciseId: plateauBanner.exerciseId } })}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={plateauBanner.line}
+          >
+            <View style={styles.plateauBannerLeft}>
+              <Ionicons name="analytics-outline" size={18} color={colors.primary} />
+              <Text style={styles.plateauBannerText} numberOfLines={2}>{plateauBanner.line}</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+            </View>
+            <TouchableOpacity
+              onPress={dismissPlateauBanner}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss plateau banner"
             >
               <Ionicons name="close" size={16} color={colors.textMuted} />
             </TouchableOpacity>
@@ -2487,6 +2570,22 @@ const styles = StyleSheet.create({
   deloadBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
   deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
   deloadBannerBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 17 },
+
+  // B3 lift plateau banner; one line plus tap-through, matches the banner
+  // system's tokens (trial-banner top row shape).
+  plateauBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: colors.primaryBg, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    marginBottom: spacing.md, gap: spacing.md,
+  },
+  plateauBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
+  plateauBannerText: {
+    ...type.bodySm,
+    flex: 1, fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+  },
 
   // Free-tier weekly one-liner (founder decision 4c). One line plus a
   // quiet Pro footer; matches the banner system's tokens.
