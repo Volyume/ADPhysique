@@ -30,6 +30,7 @@ import {
   stopRestForeground,
   canScheduleExactAlarms,
   requestExactAlarmAccess,
+  REST_FOREGROUND_MAX_MS,
 } from '../lib/notifications/restForeground';
 
 // E6A: the exact-alarm ask happens exactly once per install, in context (the
@@ -75,9 +76,15 @@ export default function RestTimer() {
   // leaking three uncancelled setTimeouts per cycle, haptics + done-flag).
   const timeoutsRef = useRef([]);
   // E6A: whether the current rest is riding the shortService chronometer
-  // host. While true, the per-tick JS sticky below stays silent so exactly
-  // ONE rest notification ever shows.
+  // host. While true (and inside the host's window, see fgsDeadlineRef) the
+  // per-tick JS sticky below stays silent so exactly ONE rest notification
+  // ever shows.
   const fgsActiveRef = useRef(false);
+  // The wall-clock moment the host's OS window closes. The shortService
+  // deadline is fixed at startForeground and notify() never extends it, so
+  // once this passes the host is gone (self-stop or onTimeout) and the
+  // sticky path must take the shade back.
+  const fgsDeadlineRef = useRef(0);
 
   useEffect(() => {
     if (restTimerActive) {
@@ -86,45 +93,65 @@ export default function RestTimer() {
     } else {
       clearInterval(intervalRef.current);
       // Rest ended / skipped / stopped: tear down the lock-screen notification
-      // and the shortService host, whichever was carrying the countdown.
+      // and the shortService host. The host stop is UNCONDITIONAL (E6A
+      // review): a start still in flight has not flipped the ref yet, and a
+      // ref-gated stop would leave that ghost service counting down a
+      // skipped rest. Stopping an idle service is a no-op.
       dismissRestTimerNotification().catch(() => {});
-      if (fgsActiveRef.current) {
-        fgsActiveRef.current = false;
-        stopRestForeground().catch(() => {});
-      }
+      fgsActiveRef.current = false;
+      stopRestForeground().catch(() => {});
     }
     return () => clearInterval(intervalRef.current);
   }, [restTimerActive, tickRestTimer]);
 
-  // E6A: start (or re-anchor after a ±15 s adjust) the shortService
-  // chronometer for rests that fit the window. Keyed on the wall-clock end
-  // anchor, not the per-second remaining, so it runs once per rest/adjust.
-  // A rest that GROWS past the window mid-way keeps its running service
-  // (which self-stops inside the window) and the sticky path takes over on
-  // the next tick via the effect below.
+  // E6A: start (or re-anchor after a ±15 s adjust / a chained rest) the
+  // shortService chronometer for rests that fit the window. Keyed on the
+  // wall-clock end anchor, not the per-second remaining, so it runs once per
+  // rest/adjust. Each re-anchor STOPS the running host first and starts a
+  // fresh service instance (E6A review): the OS shortService deadline is
+  // fixed at startForeground, so re-anchoring into the same instance could
+  // outlive it and silently lose the notification. Re-anchors only happen
+  // from in-app taps, so the app is active and may start a fresh FGS.
   const restTimerEndsAt = useAppStore(s => s.restTimerEndsAt);
   useEffect(() => {
     if (!restTimerActive || !restTimerEndsAt) return;
     if (!shouldUseRestForeground(restTimerEndsAt)) {
       // Window no longer fits (e.g. +15 s pushed it past the cap): hand the
-      // countdown back to the sticky path cleanly.
-      if (fgsActiveRef.current) {
-        fgsActiveRef.current = false;
-        stopRestForeground().catch(() => {});
-      }
+      // countdown back to the sticky path. Unconditional stop, as above.
+      fgsActiveRef.current = false;
+      stopRestForeground().catch(() => {});
       return;
     }
-    const s = useAppStore.getState();
-    const ex = s.workoutExercises?.[s.currentExerciseIndex];
-    startRestForeground({
-      endsAtMs: restTimerEndsAt,
-      exerciseName: ex?.exercise?.name ?? ex?.name,
-    }).then((ok) => {
-      fgsActiveRef.current = !!ok;
-      // The chronometer replaces the sticky; drop any sticky already posted
-      // for this rest so the shade never shows two countdowns.
-      if (ok) dismissRestTimerNotification().catch(() => {});
-    }).catch(() => { fgsActiveRef.current = false; });
+    const anchor = restTimerEndsAt;
+    (async () => {
+      try {
+        if (AppState.currentState !== 'active') return; // no FGS starts from the background
+        if (fgsActiveRef.current) await stopRestForeground();
+        const s = useAppStore.getState();
+        const ex = s.workoutExercises?.[s.currentExerciseIndex];
+        const ok = await startRestForeground({
+          endsAtMs: anchor,
+          exerciseName: ex?.exercise?.name ?? ex?.name,
+        });
+        if (!ok) { fgsActiveRef.current = false; return; }
+        // In-flight re-check (E6A review): the rest may have been skipped or
+        // re-anchored while the native start was pending. A stale success
+        // must not leave a ghost countdown on the lock screen.
+        const now = useAppStore.getState();
+        if (!now.restTimerActive || now.restTimerEndsAt !== anchor) {
+          fgsActiveRef.current = false;
+          stopRestForeground().catch(() => {});
+          return;
+        }
+        fgsActiveRef.current = true;
+        fgsDeadlineRef.current = Date.now() + REST_FOREGROUND_MAX_MS;
+        // The chronometer replaces the sticky; drop any sticky already
+        // posted for this rest so the shade never shows two countdowns.
+        dismissRestTimerNotification().catch(() => {});
+      } catch (_) {
+        fgsActiveRef.current = false;
+      }
+    })();
   }, [restTimerActive, restTimerEndsAt]);
 
   // Live lock-screen notification with action buttons. Present/update on
@@ -138,7 +165,13 @@ export default function RestTimer() {
       dismissRestTimerNotification().catch(() => {});
       return;
     }
-    if (fgsActiveRef.current) return; // chronometer host owns the shade
+    if (fgsActiveRef.current) {
+      // Chronometer host owns the shade — but only within its OS window.
+      // Past the deadline the host has self-stopped (or timed out), so the
+      // sticky resumes on the next tick rather than leaving no countdown.
+      if (Date.now() < fgsDeadlineRef.current) return;
+      fgsActiveRef.current = false;
+    }
     const s = useAppStore.getState();
     const ex = s.workoutExercises?.[s.currentExerciseIndex];
     presentRestTimerNotification({
@@ -197,10 +230,10 @@ export default function RestTimer() {
         await AsyncStorage.setItem(EXACT_ALARM_PROMPTED_KEY, '1');
         appAlert(
           'Exact rest alerts',
-          'Android can delay alerts a little to save battery, so the rest-finished alert may land a few seconds late. Allow exact alarms and it fires to the second. You can change this any time in Settings.',
+          'Android can delay alerts a little to save battery, so the rest-finished alert may land a few seconds late. Allow exact alarms and it fires to the second. If not now, you can allow it later from Settings.',
           [
             { text: 'Not now', style: 'cancel' },
-            { text: 'Allow exact alerts', onPress: () => { requestExactAlarmAccess().catch(() => {}); } },
+            { text: 'Allow exact alarms', onPress: () => { requestExactAlarmAccess().catch(() => {}); } },
           ],
         );
       } catch (_) { /* never interrupt a rest over a prompt failure */ }

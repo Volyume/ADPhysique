@@ -50,6 +50,10 @@ describe('E6A: shortService foreground type, never health', () => {
     expect(SERVICE).toMatch(/override fun onTimeout\(startId: Int, fgsType: Int\)/);
     expect(SERVICE).toMatch(/MAX_WINDOW_MS = 170_000L/);
     expect(SERVICE).toMatch(/stopHandler\.postDelayed\(stopRunnable, windowMs\)/);
+    // E6A review: the OS deadline is fixed at startForeground; re-anchored
+    // self-stops must be capped against THAT instant, not against now.
+    expect(SERVICE).toMatch(/foregroundedAtMs \+ MAX_WINDOW_MS\) - now/);
+    expect(SERVICE).toMatch(/if \(windowMs <= 0L\)/);
   });
 
   test('startForeground is called at most once per service lifetime (updates use notify)', () => {
@@ -79,10 +83,24 @@ describe('E6A: the JS orchestration posture', () => {
     expect(src).toMatch(/endsAtMs - nowMs > REST_FOREGROUND_MAX_MS\) return false;/);
   });
 
-  test('RestTimer shows exactly one rest notification: sticky is silent under the chronometer host', () => {
+  test('RestTimer shows exactly one rest notification, and the sticky resumes past the host window', () => {
     const src = read('src/components/RestTimer.js');
-    expect(src).toMatch(/if \(fgsActiveRef\.current\) return; \/\/ chronometer host owns the shade/);
-    expect(src).toMatch(/if \(ok\) dismissRestTimerNotification\(\)\.catch/);
+    // Suppression is deadline-aware: past the fixed OS window the host is
+    // gone, so the sticky must take the shade back (E6A review).
+    expect(src).toMatch(/if \(Date\.now\(\) < fgsDeadlineRef\.current\) return;/);
+    expect(src).toMatch(/fgsDeadlineRef\.current = Date\.now\(\) \+ REST_FOREGROUND_MAX_MS;/);
+  });
+
+  test('host stops are unconditional and each re-anchor gets a fresh service instance (E6A review)', () => {
+    const src = read('src/components/RestTimer.js');
+    // Teardown and window-exit stop WITHOUT consulting the ref (an in-flight
+    // start has not flipped it yet), and a stale in-flight success re-checks
+    // the live store before claiming the shade.
+    const stops = src.match(/fgsActiveRef\.current = false;\s*\n\s*stopRestForeground\(\)\.catch/g) || [];
+    expect(stops.length).toBeGreaterThanOrEqual(2);
+    expect(src).toMatch(/if \(fgsActiveRef\.current\) await stopRestForeground\(\);/);
+    expect(src).toMatch(/!now\.restTimerActive \|\| now\.restTimerEndsAt !== anchor/);
+    expect(src).toMatch(/AppState\.currentState !== 'active'/);
   });
 
   test('the one-time exact-alarm ask respects the rest-alert off switch', () => {

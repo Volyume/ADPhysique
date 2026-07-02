@@ -70,6 +70,11 @@ class WorkoutForegroundService : Service() {
     stopSelf()
   }
   private var foregrounded = false
+  // When this instance first called startForeground(). The OS shortService
+  // deadline (~180 s) is anchored HERE and notify() never extends it, so
+  // every re-scheduled self-stop must also be capped against this anchor —
+  // outliving the deadline means onTimeout and a lost notification.
+  private var foregroundedAtMs = 0L
 
   override fun onBind(intent: Intent?): IBinder? = null
 
@@ -97,9 +102,19 @@ class WorkoutForegroundService : Service() {
       ensureChannel(channelId, "Rest timer",
         "Live countdown shown on the lock screen while the rest timer is running")
       // Self-stop at rest end, capped inside the shortService window. An
-      // adjusted end time re-schedules (this runs on every delivery).
+      // adjusted end time re-schedules (this runs on every delivery). The
+      // cap is anchored at THIS INSTANCE's startForeground time, not at now:
+      // repeated re-anchors into a still-running instance must never
+      // schedule a stop beyond the fixed OS deadline (E6A review).
       stopHandler.removeCallbacks(stopRunnable)
-      val windowMs = minOf(endTimeMs - System.currentTimeMillis(), MAX_WINDOW_MS)
+      val now = System.currentTimeMillis()
+      val instanceCapMs = if (foregrounded) (foregroundedAtMs + MAX_WINDOW_MS) - now else MAX_WINDOW_MS
+      val windowMs = minOf(endTimeMs - now, MAX_WINDOW_MS, instanceCapMs)
+      if (windowMs <= 0L) {
+        stopForegroundCompat()
+        stopSelf()
+        return START_NOT_STICKY
+      }
       stopHandler.postDelayed(stopRunnable, windowMs)
       buildRestNotification(channelId, intent.getStringExtra(EXTRA_TITLE) ?: "Rest timer", endTimeMs, deepLink)
     } else {
@@ -120,6 +135,7 @@ class WorkoutForegroundService : Service() {
         startForeground(NOTIF_ID, notification)
       }
       foregrounded = true
+      foregroundedAtMs = System.currentTimeMillis()
     } else {
       // Already foregrounded: this delivery is an update (±15 s adjust or a
       // new rest in the same window). Never re-call startForeground — that
