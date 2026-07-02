@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View, Text, TouchableOpacity, Modal, StyleSheet, Pressable, ScrollView,
 } from 'react-native';
@@ -230,6 +230,44 @@ export function withProGuard(Component, feature) {
   return function GuardedScreen(props) {
     const tier = useAppStore(s => s.tier);
     if (tier !== 'pro') return <ProLocked feature={feature} />;
+    return <Component {...props} />;
+  };
+}
+
+/**
+ * Route guard with a view-only branch for a user's own history (E10 trial-lapse
+ * findings F1b/F2/F5, founder decision 2026-07-02: "view yes, log no"). A lapsed
+ * or free user who HAS data in the screen's domain sees the screen, which
+ * renders itself read-only (each guarded screen derives `tier !== 'pro'`
+ * internally and hides every write affordance); a free user with NO data keeps
+ * the ProLocked gate, so the show-then-sell lock is unchanged for never-Pro
+ * users. Pro users pass straight through with no data check.
+ *
+ * `hasHistory(userId)` must be a cheap read resolving to a boolean. The check
+ * fails CLOSED: a thrown or rejected read renders ProLocked, never the screen,
+ * so a transient DB failure can never soften the tier posture.
+ */
+export function withReadOnlyProGuard(Component, feature, hasHistory) {
+  return function GuardedScreen(props) {
+    const tier = useAppStore(s => s.tier);
+    const userId = useAppStore(s => s.user?.id);
+    const isFree = tier !== 'pro';
+    const [hasData, setHasData] = useState(null); // null = checking
+    useEffect(() => {
+      if (!isFree) return undefined;
+      let active = true;
+      setHasData(null);
+      Promise.resolve()
+        .then(() => hasHistory(userId))
+        .then((v) => { if (active) setHasData(!!v); })
+        .catch(() => { if (active) setHasData(false); }); // fail closed
+      return () => { active = false; };
+    }, [isFree, userId]);
+    if (!isFree) return <Component {...props} />;
+    // Plain background while the existence read settles, so a user with
+    // history never sees the lock flash before their data appears.
+    if (hasData === null) return <View style={styles.lockedSafe} />;
+    if (!hasData) return <ProLocked feature={feature} />;
     return <Component {...props} />;
   };
 }

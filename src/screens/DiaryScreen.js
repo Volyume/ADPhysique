@@ -56,17 +56,27 @@ import { isValidEntryGrams } from '../lib/food/servingEntry';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 
 export default function DiaryScreen({ navigation }) {
-  const { user, macroCycle, refeed, calorieBank, sex, energyUnit } = useAppStore(useShallow((s) => ({
+  const { user, macroCycle, refeed, calorieBank, sex, energyUnit, tier } = useAppStore(useShallow((s) => ({
     user: s.user,
     macroCycle: s.userProfile?.macroCycle ?? null,
     refeed: s.userProfile?.refeed ?? null,
     calorieBank: s.userProfile?.calorieBank ?? null,
     sex: s.userProfile?.sex ?? null,
     energyUnit: s.accessibility?.energyUnit ?? 'kcal',
+    tier: s.tier,
   })));
   const setCalorieBank = useAppStore((s) => s.setCalorieBank);
   const userId = user?.id;
   const toast = useToast();
+
+  // E10 read-only lapse views (founder decision 2026-07-02, "view yes, log
+  // no"): a non-Pro user reaches this screen only through withReadOnlyProGuard
+  // (they have logged days), and it renders view-only. Derived from the store
+  // INSIDE the screen, not trusted from a prop, so no alternative registration
+  // or stale nav state can ever mount a mutable diary for a free user. Every
+  // write affordance below checks this flag; reads (day pager, rings, entries,
+  // water total, macro breakdown) stay.
+  const readOnly = tier !== 'pro';
 
   // COMP-004's "Your trend" card was removed from the Diary (founder decision
   // 2026-06-16: a weight trend has nothing to do with the food diary). The
@@ -381,6 +391,13 @@ export default function DiaryScreen({ navigation }) {
 
   const mealsPerDay = Math.max(prefMeals + addedMeals, highestLoggedMeal(entries));
   const mealSlots = useMemo(() => buildMealSlots(entries, mealsPerDay), [entries, mealsPerDay]);
+  // E10 read-only lapse views: only render meals that actually have food. An
+  // empty ladder slot exists to be added to; with the add affordances hidden
+  // it would just be a dead header-only card.
+  const visibleSlots = useMemo(
+    () => (readOnly ? mealSlots.filter((s) => (entries.some((e) => e.meal_slot === s.key))) : mealSlots),
+    [readOnly, mealSlots, entries],
+  );
 
   // GAP #5: one-tap "usuals" for empty meal slots. Each slot offers up to three
   // of the foods most logged into THAT slot (the same `food_slot_recents`
@@ -391,7 +408,9 @@ export default function DiaryScreen({ navigation }) {
   // log (recents shift) or a date change, and never on every render.
   const [slotUsuals, setSlotUsuals] = useState({});
   useEffect(() => {
-    if (!userId) { setSlotUsuals({}); return; }
+    // Read-only diary shows no usuals (a usual is a one-tap WRITE), so skip
+    // the per-slot recents reads entirely.
+    if (!userId || readOnly) { setSlotUsuals({}); return; }
     let active = true;
     (async () => {
       const next = {};
@@ -414,7 +433,7 @@ export default function DiaryScreen({ navigation }) {
       if (active) setSlotUsuals(next);
     })();
     return () => { active = false; };
-  }, [userId, selectedDate, mealSlots]);
+  }, [userId, readOnly, selectedDate, mealSlots]);
 
   // One-tap log of a usual. Same write path, rollup trigger and sync as a
   // search-result add, with an Undo. Guards a double tap (loggingUsualRef) and
@@ -792,24 +811,51 @@ export default function DiaryScreen({ navigation }) {
             </TouchableOpacity>
           </View>
           <View style={[styles.dayPagerSide, styles.dayPagerSideRight]}>
-            <TouchableOpacity
-              onPress={openCopyPicker}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel="Copy a previous day into this day"
-            >
-              <Ionicons name="copy-outline" size={22} color={colors.textPrimary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('FoodInsights')}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel="View 7-day insights and export diary"
-            >
-              <Ionicons name="stats-chart-outline" size={22} color={colors.textPrimary} />
-            </TouchableOpacity>
+            {/* E10 read-only: copying a day is a write, and FoodInsights is a
+                hard-locked Pro route; both icons would be dead ends here. */}
+            {!readOnly ? (
+              <>
+                <TouchableOpacity
+                  onPress={openCopyPicker}
+                  hitSlop={12}
+                  accessibilityRole="button"
+                  accessibilityLabel="Copy a previous day into this day"
+                >
+                  <Ionicons name="copy-outline" size={22} color={colors.textPrimary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('FoodInsights')}
+                  hitSlop={12}
+                  accessibilityRole="button"
+                  accessibilityLabel="View 7-day insights and export diary"
+                >
+                  <Ionicons name="stats-chart-outline" size={22} color={colors.textPrimary} />
+                </TouchableOpacity>
+              </>
+            ) : null}
           </View>
         </View>
+
+        {/* E10 read-only lapse views: say plainly what this state is, and keep
+            the one honest way out. Calm voice, no shame, no countdown. */}
+        {readOnly ? (
+          <View style={styles.readOnlyCard}>
+            <View style={styles.readOnlyRow}>
+              <Ionicons name="eye-outline" size={16} color={colors.textSecondary} />
+              <Text style={styles.readOnlyText}>
+                Your diary is view-only on the free plan. Everything you logged is safe and stays yours.
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ProUpgrade')}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Upgrade to Pro to log food again"
+            >
+              <Text style={styles.readOnlyCta}>Log food again with Pro</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         <View style={styles.macroRingsWrap}>
           <MacroRings
@@ -821,7 +867,7 @@ export default function DiaryScreen({ navigation }) {
           />
         </View>
 
-        {showOffCard && selectedDate === isoDate(new Date()) ? (
+        {showOffCard && !readOnly && selectedDate === isoDate(new Date()) ? (
           <View style={styles.offCard}>
             <Text style={styles.offCardText}>
               You fixed a barcode. Want fixes like this shared with Open Food Facts so the next person gets a hit? Off by default.
@@ -856,14 +902,22 @@ export default function DiaryScreen({ navigation }) {
             <SkeletonRow />
           </View>
         ) : entries.length === 0 ? (
-          <EmptyDiary
-            onAdd={() => addFood('meal_1')}
-            onCopyYesterday={copyYesterday}
-            onPlanDay={() => navigation.navigate('MealPlan')}
-          />
+          readOnly ? (
+            // Read-only empty day: a plain fact, not a call to action (the
+            // standard empty state's three CTAs are all writes).
+            <View style={styles.readOnlyEmpty}>
+              <Text style={styles.readOnlyEmptyText}>Nothing logged this day.</Text>
+            </View>
+          ) : (
+            <EmptyDiary
+              onAdd={() => addFood('meal_1')}
+              onCopyYesterday={copyYesterday}
+              onPlanDay={() => navigation.navigate('MealPlan')}
+            />
+          )
         ) : (
           <>
-            {plannedCount > 0 && !selectionMode ? (
+            {plannedCount > 0 && !selectionMode && !readOnly ? (
               <View style={styles.plannedBanner}>
                 <Text style={styles.plannedBannerText}>
                   {plannedCount} planned {plannedCount === 1 ? 'meal' : 'meals'} for this day.
@@ -886,7 +940,7 @@ export default function DiaryScreen({ navigation }) {
                 </View>
               </View>
             ) : null}
-            {mealSlots.map((slot, i) => (
+            {visibleSlots.map((slot, i) => (
               <View
                 key={slot.key}
                 onLayout={(e) => { mealLayoutY.current[slot.key] = e.nativeEvent.layout.y; }}
@@ -905,11 +959,12 @@ export default function DiaryScreen({ navigation }) {
                     selectedIds={selectedIds}
                     onLongPressEntry={enterSelection}
                     onToggleSelect={toggleSelect}
+                    readOnly={readOnly}
                   />
                 </AnimatedEntrance>
               </View>
             ))}
-            {!selectionMode ? (
+            {!selectionMode && !readOnly ? (
               <>
                 <TouchableOpacity
                   style={styles.addMealRow}
@@ -942,7 +997,7 @@ export default function DiaryScreen({ navigation }) {
             sits with the day's other food actions instead of competing with the
             ring at the top (founder 2026-06-20). Only when banking is allowed
             (not floored / cycling / refeed / ED flag). */}
-        {bankingAvailable && !selectionMode ? (
+        {bankingAvailable && !selectionMode && !readOnly ? (
           <TouchableOpacity
             style={styles.bankRow}
             onPress={() => setBankSheetVisible(true)}
@@ -962,6 +1017,7 @@ export default function DiaryScreen({ navigation }) {
           onAdd={(amount) => logWaterDelta(amount)}
           onSub={(amount) => logWaterDelta(-amount)}
           onEditTarget={changeWaterTarget}
+          readOnly={readOnly}
         />
       </ScrollView>
 
@@ -993,8 +1049,9 @@ export default function DiaryScreen({ navigation }) {
       />
 
       {/* FABs hide while selecting so the bottom toolbar owns the
-          action space. */}
-      {!selectionMode ? (
+          action space, and on the read-only diary (a scan is a write,
+          and ScanBarcode is a hard-locked Pro route anyway). */}
+      {!selectionMode && !readOnly ? (
         <TouchableOpacity
           style={styles.scanFab}
           onPress={() => {
@@ -1155,7 +1212,7 @@ export default function DiaryScreen({ navigation }) {
 const WATER_TARGET_ML = 3000;
 const WATER_TARGET_KEY = '@volyume_water_target_ml';
 
-function WaterRow({ ml, targetMl = WATER_TARGET_ML, onAdd, onSub, onEditTarget }) {
+function WaterRow({ ml, targetMl = WATER_TARGET_ML, onAdd, onSub, onEditTarget, readOnly = false }) {
   const litres = (ml / 1000).toFixed(1);
   const targetL = (targetMl / 1000).toFixed(1);
   const progress = Math.max(0, Math.min(1, ml / targetMl));
@@ -1167,37 +1224,45 @@ function WaterRow({ ml, targetMl = WATER_TARGET_ML, onAdd, onSub, onEditTarget }
           <Text style={styles.waterLabel}>Water</Text>
         </View>
         <View style={styles.waterButtons}>
-          {/* NU-9: the value doubles as the target editor. */}
+          {/* NU-9: the value doubles as the target editor. E10 read-only: the
+              value is a plain fact; +/- and the target editor are writes. */}
           <TouchableOpacity
-            onPress={onEditTarget}
+            onPress={readOnly ? undefined : onEditTarget}
+            disabled={readOnly}
             hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={`Water ${litres} of ${targetL} litres. Tap to change your daily target.`}
+            accessibilityRole={readOnly ? 'text' : 'button'}
+            accessibilityLabel={readOnly
+              ? `Water ${litres} of ${targetL} litres.`
+              : `Water ${litres} of ${targetL} litres. Tap to change your daily target.`}
           >
             <Text style={styles.waterValue}>{litres} / {targetL} L</Text>
           </TouchableOpacity>
           {/* NU-9: long-press moves a bottle (500 ml) at a time, so a full day
               of water no longer needs 12 taps. */}
-          <TouchableOpacity
-            style={styles.waterBtn}
-            onPress={() => onSub(250)}
-            onLongPress={() => onSub(500)}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Remove 250 millilitres of water. Long press to remove 500."
-          >
-            <Ionicons name="remove" size={16} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.waterBtn}
-            onPress={() => onAdd(250)}
-            onLongPress={() => onAdd(500)}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Add 250 millilitres of water. Long press to add 500."
-          >
-            <Ionicons name="add" size={16} color={colors.textPrimary} />
-          </TouchableOpacity>
+          {!readOnly ? (
+            <>
+              <TouchableOpacity
+                style={styles.waterBtn}
+                onPress={() => onSub(250)}
+                onLongPress={() => onSub(500)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Remove 250 millilitres of water. Long press to remove 500."
+              >
+                <Ionicons name="remove" size={16} color={colors.textPrimary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.waterBtn}
+                onPress={() => onAdd(250)}
+                onLongPress={() => onAdd(500)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Add 250 millilitres of water. Long press to add 500."
+              >
+                <Ionicons name="add" size={16} color={colors.textPrimary} />
+              </TouchableOpacity>
+            </>
+          ) : null}
         </View>
       </View>
       <View
@@ -1314,6 +1379,20 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     padding: spacing.md, marginBottom: spacing.lg,
   },
+  // E10 read-only lapse views: the view-only notice card and the plain
+  // empty-day fact line.
+  readOnlyCard: {
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
+    padding: spacing.md, marginBottom: spacing.lg,
+  },
+  readOnlyRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  readOnlyText: { ...type.bodySm, color: colors.textSecondary, flex: 1 },
+  readOnlyCta: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary, alignSelf: 'flex-end' },
+  readOnlyEmpty: { alignItems: 'center', paddingVertical: spacing.xxl },
+  readOnlyEmptyText: { ...type.bodySm, color: colors.textMuted },
   offCardText: { ...type.bodySm, color: colors.textSecondary },
   offCardRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.lg },
   offCardDismiss: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textMuted },

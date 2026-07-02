@@ -191,6 +191,22 @@ export async function getRecentLoggedDays(userId, asOfDate, limit = 14) {
 }
 
 /**
+ * Whether the user has ANY live food entry at all (E10 read-only lapse views).
+ * Drives the route guard's lock-vs-view branch: a lapsed user with logged days
+ * gets the view-only diary; a user with nothing logged keeps the ProLocked
+ * show-then-sell gate. Cheap indexed existence read, no rows materialised.
+ */
+export async function hasAnyFoodEntries(userId) {
+  if (!userId) return false;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    `SELECT 1 AS one FROM food_entries WHERE user_id = ? AND deleted_at IS NULL LIMIT 1`,
+    [userId]
+  );
+  return !!row;
+}
+
+/**
  * Confirm a day's planned meals as eaten (adherence model 2026-06-15): flips
  * is_planned 1 -> 0 so they count towards the rollup/adherence/FFM and sync as
  * normal actuals. Bumps logged_at + updated_at. Returns the number confirmed.

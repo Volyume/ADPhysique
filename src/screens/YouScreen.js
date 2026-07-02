@@ -22,7 +22,7 @@ import { ProBadge } from '../components/ProGate';
 import { Skeleton } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { getAllWorkouts } from '../lib/database';
+import { getAllWorkouts, getCoachOutputHistory } from '../lib/database';
 
 function NavRow({ icon, label, sub, onPress }) {
   return (
@@ -44,6 +44,12 @@ export default function YouScreen({ navigation }) {
     user: s.user, userProfile: s.userProfile, tier: s.tier,
   })));
   const [sessions, setSessions] = useState(null);
+  // E10 read-only lapse views (F2): whether this user has past coach decisions
+  // to show. Free users with history get a "Coaching history" row into the
+  // read-only CoachHeldHistory screen, so a lapsed user keeps sight of every
+  // call the coach made while they were on Pro. Defaults false (no row) and a
+  // failed read stays false, so never-Pro users see nothing new.
+  const [hasCoachHistory, setHasCoachHistory] = useState(false);
 
   useFocusEffect(useCallback(() => {
     let alive = true;
@@ -55,9 +61,14 @@ export default function YouScreen({ navigation }) {
           setSessions(completed.length);
         })
         .catch(() => {});
+      if (tier !== 'pro') {
+        getCoachOutputHistory(user.id, 1)
+          .then(rows => { if (alive) setHasCoachHistory((rows ?? []).length > 0); })
+          .catch(() => {});
+      }
     }
     return () => { alive = false; };
-  }, [user?.id]));
+  }, [user?.id, tier]));
 
   const displayName = userProfile?.firstName
     || user?.email?.split('@')[0]?.replace(/[^a-zA-Z]/g, ' ').trim()
@@ -109,6 +120,18 @@ export default function YouScreen({ navigation }) {
               sub="Precision Coaching, nutrition targets and body metrics"
               onPress={() => navigation.navigate('ProUpgrade')}
             />
+            {/* E10 read-only lapse views (F2): a lapsed user keeps a read-only
+                view of the coach's past decisions. Only shown when there IS
+                history, so never-Pro users see nothing extra. CoachHeldHistory
+                is registered in this stack and renders display-only. */}
+            {hasCoachHistory && (
+              <NavRow
+                icon="book-outline"
+                label="Coaching history"
+                sub="Every call the coach made while you were on Pro, what changed and why. View-only on the free plan."
+                onPress={() => navigation.navigate('CoachHeldHistory')}
+              />
+            )}
           </View>
         )}
 

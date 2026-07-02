@@ -26,7 +26,7 @@ import SourceChip from '../SourceChip';
 import HeldDecisionCard from '../HeldDecisionCard';
 import ServingPicker from '../ServingPicker';
 import MealSection from '../MealSection';
-import { EntryRow, friendlyFoodName } from '../EntryRow';
+import { EntryRow, SwipeableEntryRow, friendlyFoodName } from '../EntryRow';
 import FoodRow, { SOURCE_LABEL, kcalForServing } from '../FoodRow';
 
 describe('EmptyDiary', () => {
@@ -238,6 +238,71 @@ describe('MealSection', () => {
       <MealSection slot={slot} entries={[]} onAdd={() => {}} onEdit={() => {}} onDelete={() => {}} />
     ).toJSON();
     expect(JSON.stringify(tree)).toContain('Add food to Breakfast');
+  });
+});
+
+// E10 read-only lapse views (founder decision 2026-07-02, "view yes, log no"):
+// a lapsed/free user's diary renders these components with readOnly, and NO
+// write affordance may survive it. These pins are against the REAL components:
+// if any add/edit/delete/swipe path reappears under readOnly, a free user has
+// regained a Pro write and this suite must fail.
+describe('read-only diary components (E10 lapse views)', () => {
+  const slot = { key: 'breakfast', label: 'Breakfast' };
+  const entries = [
+    { id: 'a', _name: 'Oats', kcal: 200, protein_g: 7, carbs_g: 30, fat_g: 4, quantity_g: 50, food_ref: 'off:1' },
+  ];
+
+  test('MealSection readOnly still shows the food, subtotal and meal name', () => {
+    const tree = create(
+      <MealSection slot={slot} entries={entries} onAdd={() => {}} onEdit={() => {}} onDelete={() => {}} readOnly />
+    ).toJSON();
+    const txt = JSON.stringify(tree);
+    expect(txt).toContain('Breakfast');
+    expect(txt).toContain('Oats');
+    expect(txt).toContain('200');
+  });
+
+  test('MealSection readOnly renders NO add, quick add or usuals affordance', () => {
+    const usuals = [{ food_ref: 'off:9', name: 'Eggs' }];
+    const tree = create(
+      <MealSection
+        slot={slot} entries={[]} usuals={usuals}
+        onAdd={() => {}} onQuickAdd={() => {}} onLogUsual={() => {}}
+        onEdit={() => {}} onDelete={() => {}} readOnly
+      />
+    ).toJSON();
+    const txt = JSON.stringify(tree);
+    expect(txt).not.toContain('Add food');
+    expect(txt).not.toContain('Quick add');
+    expect(txt).not.toContain('Eggs'); // usuals are one-tap writes
+  });
+
+  test('SwipeableEntryRow readOnly disables the swipe-to-delete gesture', () => {
+    const tree = create(
+      <SwipeableEntryRow entry={entries[0]} onEdit={() => {}} onDelete={() => {}} readOnly />
+    );
+    const swipeable = tree.root.findAll((n) => n.type === 'Swipeable')[0];
+    expect(swipeable.props.enabled).toBe(false);
+  });
+
+  test('EntryRow readOnly carries no tap-to-edit: disabled, no onPress, plain label', () => {
+    const tree = create(<EntryRow entry={entries[0]} onEdit={() => {}} readOnly />);
+    const row = tree.root.findAll(
+      (n) => typeof n.type === 'string' && /Touchable/.test(n.type) && n.props.accessibilityLabel?.startsWith('Oats')
+    )[0];
+    expect(row.props.disabled).toBe(true);
+    expect(row.props.onPress).toBeUndefined();
+    expect(row.props.onLongPress).toBeUndefined();
+    expect(row.props.accessibilityLabel).not.toContain('Tap to edit');
+  });
+
+  test('without readOnly the write affordances stay (the Pro diary is unchanged)', () => {
+    const tree = create(
+      <MealSection slot={slot} entries={entries} onAdd={() => {}} onQuickAdd={() => {}} onEdit={() => {}} onDelete={() => {}} />
+    ).toJSON();
+    const txt = JSON.stringify(tree);
+    expect(txt).toContain('Add food');
+    expect(txt).toContain('Quick add');
   });
 });
 

@@ -71,8 +71,10 @@ async function flush() {
   await act(async () => { for (let i = 0; i < 6; i++) await Promise.resolve(); });
 }
 
-async function render(photos = [NEW, MID, OLD], { mode = 'unspecified', reduceMotion = false } = {}) {
-  useAppStore.mockImplementation((sel) => sel({ accessibility: { reduceMotion } }));
+async function render(photos = [NEW, MID, OLD], { mode = 'unspecified', reduceMotion = false, tier = 'pro' } = {}) {
+  // tier 'pro' (default) keeps these suites pinning the full (mutable)
+  // screen; the E10 read-only lapse pins pass tier 'free' explicitly.
+  useAppStore.mockImplementation((sel) => sel({ accessibility: { reduceMotion }, tier }));
   getWellbeingMode.mockResolvedValue(mode);
   listProgressPhotos.mockResolvedValue(photos); // newest first, like the lib
   let tree;
@@ -319,5 +321,43 @@ describe('ProgressPhotosScreen compare, wellbeing gate unchanged', () => {
   test('normal mode keeps the short privacy note', async () => {
     const tree = await render([NEW, OLD], { mode: 'normal' });
     expect(flattenText(tree.toJSON())).toContain('Private to this device. Not synced, not shared.');
+  });
+});
+
+// E10 read-only lapse views (founder decision 2026-07-02, "view yes, log
+// no"): a free user with photos sees the grid and Compare, but no add and no
+// delete. Pinned against the real screen with tier 'free'.
+describe('ProgressPhotosScreen read-only lapse state (E10)', () => {
+  test('free tier hides the add button and says the state plainly', async () => {
+    const tree = await render([NEW, OLD], { tier: 'free' });
+    expect(findPressable(tree, 'Add a photo')).toBeUndefined();
+    expect(flattenText(tree.toJSON())).toContain('View-only on the free plan.');
+  });
+
+  test('free tier: a plain tap on a photo cannot reach the delete prompt', async () => {
+    const tree = await render([NEW, OLD], { tier: 'free' });
+    const el = tileEl(tree, NEW);
+    expect(el.props.onPress).toBeUndefined();
+    expect(el.props.disabled).toBe(true);
+    expect(el.props.accessibilityLabel).not.toContain('Tap to remove');
+    expect(appAlert).not.toHaveBeenCalled();
+  });
+
+  test('free tier keeps Compare fully working (viewing is not a write)', async () => {
+    const tree = await render([NEW, OLD], { tier: 'free' });
+    await press(tree, 'Compare two photos');
+    await pressTile(tree, OLD);
+    await pressTile(tree, NEW);
+    expect(tileSelected(tree, OLD)).toBe(true);
+    expect(tileSelected(tree, NEW)).toBe(true);
+    await press(tree, 'Compare the chosen photos');
+    expect(modalNode(tree).props.visible).toBe(true);
+  });
+
+  test('pro tier is unchanged: add button present, tap offers delete', async () => {
+    const tree = await render([NEW, OLD], { tier: 'pro' });
+    expect(findPressable(tree, 'Add a photo')).toBeDefined();
+    await pressTile(tree, NEW);
+    expect(appAlert).toHaveBeenCalled();
   });
 });

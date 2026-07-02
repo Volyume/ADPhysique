@@ -17,6 +17,7 @@ export default function MealSection({
   slot, entries, onAdd, onQuickAdd, onEdit, onDelete,
   usuals = null, onLogUsual,
   selectionMode = false, selectedIds, onLongPressEntry, onToggleSelect,
+  readOnly = false,
 }) {
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const hasEntries = entries.length > 0;
@@ -24,7 +25,9 @@ export default function MealSection({
   const slotProtein = Math.round(entries.reduce((a, e) => a + (e.protein_g ?? 0), 0));
   // GAP #5: one-tap "usuals". Only on an empty slot (a slot with food doesn't
   // need the prompt) and never in selection mode (the card is a target then).
-  const showUsuals = !hasEntries && !selectionMode && Array.isArray(usuals) && usuals.length > 0;
+  // E10 read-only lapse views: never in read-only either — logging a usual is
+  // a write.
+  const showUsuals = !hasEntries && !selectionMode && !readOnly && Array.isArray(usuals) && usuals.length > 0;
   // Season to taste (founder 2026-07-01): once a curated / meal-plan meal is on
   // the day, carry its free additions into the diary too. Only shows when the
   // slot's foods resolve to a real curated meal; null (hidden) otherwise.
@@ -66,6 +69,7 @@ export default function MealSection({
             selected={!!selectedIds?.has(e.id)}
             onLongPress={() => onLongPressEntry?.(e)}
             onToggleSelect={() => onToggleSelect?.(e)}
+            readOnly={readOnly}
           />
         </AnimatedRow>
       ))}
@@ -77,18 +81,21 @@ export default function MealSection({
           </Text>
         </View>
       ) : null}
-      <TouchableOpacity
-        style={[styles.addRow, hasEntries && styles.addRowDivided]}
-        onPress={onAdd}
-        accessibilityLabel={`Add food to ${slot.label}`}
-      >
-        <Ionicons name="add" size={18} color={colors.primary} />
-        <Text style={styles.addLabel}>Add food</Text>
-      </TouchableOpacity>
+      {/* E10 read-only lapse views: no add affordances on a view-only diary. */}
+      {!readOnly ? (
+        <TouchableOpacity
+          style={[styles.addRow, hasEntries && styles.addRowDivided]}
+          onPress={onAdd}
+          accessibilityLabel={`Add food to ${slot.label}`}
+        >
+          <Ionicons name="add" size={18} color={colors.primary} />
+          <Text style={styles.addLabel}>Add food</Text>
+        </TouchableOpacity>
+      ) : null}
       {/* Escape hatch for meals that aren't worth a lookup (restaurant,
           estimate, retro-logging). Secondary to search by design: quieter
           colour, below the primary row. */}
-      {onQuickAdd ? (
+      {!readOnly && onQuickAdd ? (
         <TouchableOpacity
           style={[styles.addRow, styles.addRowDivided]}
           onPress={onQuickAdd}

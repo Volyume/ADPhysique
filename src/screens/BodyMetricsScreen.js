@@ -407,6 +407,12 @@ export default function BodyMetricsScreen() {
   const onboardingWeightKg = userProfile?.weightKg ?? userProfile?.bodyWeightKg ?? null;
   const bwu = bodyWeightUnits || 'st';
   const toast = useToast();
+  // E10 read-only lapse views (founder decision 2026-07-02, "view yes, log
+  // no"): a non-Pro user reaches this screen only through withReadOnlyProGuard
+  // (they have logged body metrics), and it renders view-only: history, trends
+  // and charts stay; the Log Weight form and the auto-seed write are hidden.
+  // Derived from the store inside the screen, never trusted from a prop.
+  const readOnly = tier !== 'pro';
   const [physiqueEnabled, setPhysiqueEnabled] = useState(null); // null = loading
   const [calm, setCalm] = useState(false);
   const [edFlagOpen, setEdFlagOpen] = useState(false);
@@ -566,7 +572,9 @@ export default function BodyMetricsScreen() {
       // entries doesn't re-create them on next visit.
       const SEED_KEY = `@volyume_body_metric_seeded_${user.id}`;
       const onboardingKg = userProfile?.weightKg ?? userProfile?.bodyWeightKg ?? null;
-      if (rows.length === 0 && onboardingKg && onboardingKg > 0) {
+      // E10 read-only: the auto-seed is a WRITE (it logs a body metric row),
+      // so it never runs in the view-only state.
+      if (rows.length === 0 && onboardingKg && onboardingKg > 0 && !readOnly) {
         const alreadySeeded = await AsyncStorage.getItem(SEED_KEY).catch(() => null);
         if (!alreadySeeded) {
           try {
@@ -766,6 +774,27 @@ export default function BodyMetricsScreen() {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
 
+        {/* E10 read-only lapse views: say plainly what this state is, and keep
+            the one honest way out. Calm voice, no shame. */}
+        {readOnly ? (
+          <View style={styles.readOnlyCard}>
+            <View style={styles.readOnlyRow}>
+              <Ionicons name="eye-outline" size={16} color={colors.textSecondary} />
+              <Text style={styles.readOnlyText}>
+                Your history is view-only on the free plan. Everything you logged is safe and stays yours.
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ProUpgrade')}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Upgrade to Pro to log weight again"
+            >
+              <Text style={styles.readOnlyCta}>Log weight again with Pro</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         {/* Progress photos (gap #9): private, device-local only. */}
         <TouchableOpacity
           style={styles.photosRow}
@@ -913,7 +942,7 @@ export default function BodyMetricsScreen() {
           <View style={styles.emptyCard}>
             <EmptyBodyIllustration size={140} />
             <Text style={styles.emptyTitle}>Your progress starts here</Text>
-            {onboardingWeightKg ? (
+            {onboardingWeightKg && !readOnly ? (
               <>
                 <Text style={styles.emptyText}>
                   We have your onboarding bodyweight saved as a starting point ({formatBodyWeightShort(onboardingWeightKg, bodyWeightUnits)}). Tap Log Weight to record a fresh entry. That's when the trend starts tracking.
@@ -927,20 +956,23 @@ export default function BodyMetricsScreen() {
           </View>
         )}
 
-        {/* Log Button */}
-        <TouchableOpacity
-          style={styles.logBtn}
-          onPress={() => { setShowForm(!showForm); setShowMeasurements(false); }}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: showForm }}
-          accessibilityLabel={showForm ? 'Cancel' : 'Log Weight'}
-        >
-          <Ionicons name={showForm ? 'chevron-up' : 'add-circle'} size={20} color={colors.onPrimary} />
-          <Text style={styles.logBtnText}>{showForm ? 'Cancel' : 'Log Weight'}</Text>
-        </TouchableOpacity>
+        {/* Log Button. E10 read-only: logging is a write; the button and the
+            form below never render in the view-only state. */}
+        {!readOnly && (
+          <TouchableOpacity
+            style={styles.logBtn}
+            onPress={() => { setShowForm(!showForm); setShowMeasurements(false); }}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showForm }}
+            accessibilityLabel={showForm ? 'Cancel' : 'Log Weight'}
+          >
+            <Ionicons name={showForm ? 'chevron-up' : 'add-circle'} size={20} color={colors.onPrimary} />
+            <Text style={styles.logBtnText}>{showForm ? 'Cancel' : 'Log Weight'}</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Log Form */}
-        {showForm && (
+        {!readOnly && showForm && (
           <View style={styles.formCard}>
             <Text style={styles.formTitle}>New Entry</Text>
             <View style={styles.formRow}>
@@ -1222,6 +1254,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
   photosRowText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  // E10 read-only lapse views: the view-only notice card.
+  readOnlyCard: {
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
+    padding: spacing.md,
+  },
+  readOnlyRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  readOnlyText: { ...type.bodySm, color: colors.textSecondary, flex: 1 },
+  readOnlyCta: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary, alignSelf: 'flex-end' },
   optInContent: { padding: spacing.lg, paddingTop: spacing.xxl },
   sectionTitle: {
     ...type.label, color: colors.textSecondary,

@@ -117,7 +117,7 @@ const PrivacyPolicyScreen = lazyScreen(() => require('../screens/PrivacyPolicySc
 const DebugLogScreen = lazyScreen(() => require('../screens/DebugLogScreen').default);
 const NutritionEducationScreen = lazyScreen(() => require('../screens/NutritionEducationScreen').default);
 const SubscriptionPolicyScreen = lazyScreen(() => require('../screens/SubscriptionPolicyScreen').default);
-import { withProGuard } from '../components/ProGate';
+import { withProGuard, withReadOnlyProGuard } from '../components/ProGate';
 import { withScreenBoundaries } from '../components/ScreenBoundary';
 
 // F8 (audit PR-7): per-screen error boundaries. The installed React
@@ -179,8 +179,14 @@ const GatedWeeklyCheckIn    = lazyScreen(() => withProGuard(require('../screens/
 const GatedNutritionTargets = lazyScreen(() => withProGuard(require('../screens/NutritionTargetsScreen').default, 'Nutrition targets'));
 const GatedMealNames = lazyScreen(() => withProGuard(require('../screens/MealNamesScreen').default, 'Meal names'));
 const GatedPerDayTargets = lazyScreen(() => withProGuard(require('../screens/PerDayTargetsScreen').default, 'Per-day targets'));
-const GatedBodyMetrics      = lazyScreen(() => withProGuard(require('../screens/BodyMetricsScreen').default, 'Body metrics'));
-const GatedProgressPhotos   = lazyScreen(() => withProGuard(require('../screens/ProgressPhotosScreen').default, 'Progress photos'));
+// E10 read-only lapse views (founder decision 2026-07-02): these three screens
+// use the history-aware guard. A free user WITH data in the domain sees the
+// screen in its view-only state (the screen itself hides every write affordance
+// when tier !== 'pro'); a free user with NO data keeps the plain ProLocked gate.
+// Every other Pro route below stays hard-locked, so no mutation surface
+// (FoodSearch, ScanBarcode, MealPlan, cardio, recipes...) leaks via deep link.
+const GatedBodyMetrics      = lazyScreen(() => withReadOnlyProGuard(require('../screens/BodyMetricsScreen').default, 'Body metrics', (userId) => require('../lib/database').getBodyMetricLog(userId, 1).then((rows) => (rows ?? []).length > 0)));
+const GatedProgressPhotos   = lazyScreen(() => withReadOnlyProGuard(require('../screens/ProgressPhotosScreen').default, 'Progress photos', () => require('../lib/progressPhotos').listProgressPhotos().then((rows) => (rows ?? []).length > 0)));
 // NEW-002 partner is a PRO domain (blueprint §5 gating: free sees the upgrade
 // path, never the live feature). The guard is the upgrade path, matching how
 // BodyMetrics / ProgressPhotos gate while leaving their Progress NavTile visible.
@@ -193,7 +199,7 @@ const GatedCoachingReminders = lazyScreen(() => withProGuard(require('../screens
 // Gating the Diary tab root covers the food sub-screens, which are only reached
 // from it; cardio screens are gated directly because they are also registered in
 // the Home and Progress stacks, so they need the guard at every entry point.
-const GatedDiary            = lazyScreen(() => withProGuard(require('../screens/DiaryScreen').default, 'Food diary'));
+const GatedDiary            = lazyScreen(() => withReadOnlyProGuard(require('../screens/DiaryScreen').default, 'Food diary', (userId) => require('../lib/food/db').hasAnyFoodEntries(userId)));
 const GatedLogCardio        = lazyScreen(() => withProGuard(require('../screens/LogCardioScreen').default, 'Cardio'));
 const GatedCardioHistory    = lazyScreen(() => withProGuard(require('../screens/CardioHistoryScreen').default, 'Cardio'));
 // Defence-in-depth (food review U-M1): the Diary tab root is gated and these

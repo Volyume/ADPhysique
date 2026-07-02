@@ -17,6 +17,7 @@ export function friendlyFoodName(entry) {
 export function EntryRow({
   entry, onEdit,
   selectionMode = false, selected = false, onLongPress, onToggleSelect,
+  readOnly = false,
 }) {
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const kcal = Math.round(entry.kcal ?? 0);
@@ -37,13 +38,18 @@ export function EntryRow({
   return (
     <TouchableOpacity
       style={[styles.entryRow, selected && styles.entryRowSelected]}
-      onPress={selectionMode ? onToggleSelect : onEdit}
-      onLongPress={onLongPress}
+      // E10 read-only lapse views: a view-only row carries no edit, selection
+      // or long-press affordance; it is a plain fact of what was logged.
+      onPress={readOnly ? undefined : (selectionMode ? onToggleSelect : onEdit)}
+      onLongPress={readOnly ? undefined : onLongPress}
       delayLongPress={300}
+      disabled={readOnly}
       accessibilityLabel={
-        selectionMode
-          ? `${name}, ${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}. ${selected ? 'Selected' : 'Not selected'}. Tap to toggle.`
-          : `${name}, ${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}. Tap to edit.`
+        readOnly
+          ? `${name}, ${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}.`
+          : selectionMode
+            ? `${name}, ${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}. ${selected ? 'Selected' : 'Not selected'}. Tap to toggle.`
+            : `${name}, ${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}. Tap to edit.`
       }
     >
       {selectionMode ? (
@@ -67,6 +73,7 @@ export function EntryRow({
 export function SwipeableEntryRow({
   entry, onEdit, onDelete,
   selectionMode = false, selected = false, onLongPress, onToggleSelect,
+  readOnly = false,
 }) {
   const ref = useRef(null);
   const renderRightActions = useCallback(() => (
@@ -86,7 +93,8 @@ export function SwipeableEntryRow({
       renderRightActions={renderRightActions}
       overshootRight={false}
       rightThreshold={48}
-      enabled={!selectionMode}
+      // E10 read-only lapse views: swipe-to-delete is a write; disabled entirely.
+      enabled={!selectionMode && !readOnly}
     >
       <EntryRow
         entry={entry}
@@ -95,6 +103,7 @@ export function SwipeableEntryRow({
         selected={selected}
         onLongPress={onLongPress}
         onToggleSelect={onToggleSelect}
+        readOnly={readOnly}
       />
     </Swipeable>
   );

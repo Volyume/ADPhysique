@@ -32,6 +32,12 @@ function formatDay(ts) {
 export default function ProgressPhotosScreen({ navigation }) {
   const toast = useToast();
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
+  // E10 read-only lapse views (founder decision 2026-07-02, "view yes, log
+  // no"): a non-Pro user reaches this screen only through withReadOnlyProGuard
+  // (they have photos), and it renders view-only: grid and Compare stay; add
+  // and delete are hidden. Derived from the store inside the screen.
+  const tier = useAppStore((s) => s.tier);
+  const readOnly = tier !== 'pro';
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -171,15 +177,22 @@ export default function ProgressPhotosScreen({ navigation }) {
           <Ionicons name="chevron-back" size={26} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title}>Progress photos</Text>
-        <TouchableOpacity onPress={onAdd} disabled={busy} hitSlop={12} accessibilityRole="button" accessibilityLabel="Add a photo">
-          {busy ? <ActivityIndicator color={colors.primary} /> : <Ionicons name="add" size={26} color={colors.primary} />}
-        </TouchableOpacity>
+        {/* E10 read-only lapse views: adding a photo is a write; hidden in the
+            view-only state. A spacer keeps the title centred. */}
+        {!readOnly ? (
+          <TouchableOpacity onPress={onAdd} disabled={busy} hitSlop={12} accessibilityRole="button" accessibilityLabel="Add a photo">
+            {busy ? <ActivityIndicator color={colors.primary} /> : <Ionicons name="add" size={26} color={colors.primary} />}
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 26 }} />
+        )}
       </View>
 
       <Text style={styles.note}>
         {calm
           ? 'Private to this device. Not synced, not shared. Use these only if they help you, and skip them if they do not.'
           : 'Private to this device. Not synced, not shared.'}
+        {readOnly ? ' View-only on the free plan. Your photos are safe and stay yours.' : ''}
       </Text>
 
       {!loading && (selecting || photos.length >= 2) && (
@@ -241,12 +254,18 @@ export default function ProgressPhotosScreen({ navigation }) {
             const isSelected = selected.includes(item.name);
             return (
               <TouchableOpacity
-                onPress={() => (selecting ? toggleSelect(item) : onPressPhoto(item))}
-                accessibilityRole="button"
+                // E10 read-only: outside compare-selection, a plain tap opens
+                // the delete prompt, which is a write; disabled in view-only.
+                // Choosing photos to COMPARE stays (it is pure viewing).
+                onPress={selecting ? () => toggleSelect(item) : (readOnly ? undefined : () => onPressPhoto(item))}
+                disabled={!selecting && readOnly}
+                accessibilityRole={!selecting && readOnly ? 'image' : 'button'}
                 accessibilityState={selecting ? { selected: isSelected } : undefined}
                 accessibilityLabel={selecting
                   ? `Photo from ${formatDay(item.ts)}. Tap to choose it for the comparison.`
-                  : `Photo from ${formatDay(item.ts)}. Tap to remove.`}
+                  : readOnly
+                    ? `Photo from ${formatDay(item.ts)}.`
+                    : `Photo from ${formatDay(item.ts)}. Tap to remove.`}
               >
                 <Image source={{ uri: item.uri }} style={{ width: size, height: size, borderRadius: radius.md }} />
                 {selecting && isSelected && (
