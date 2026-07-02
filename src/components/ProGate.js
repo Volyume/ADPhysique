@@ -257,11 +257,16 @@ export function withReadOnlyProGuard(Component, feature, hasHistory) {
       if (!isFree) return undefined;
       let active = true;
       setHasData(null);
+      // Hostile review #5: a hung read must not strand the user on the blank
+      // "checking" render (ProgressPhotos has no header to escape from). Race
+      // it against a short timeout that fails CLOSED to the lock, which has
+      // its own "Not now" way out.
+      const timer = setTimeout(() => { if (active) setHasData(false); }, 4000);
       Promise.resolve()
         .then(() => hasHistory(userId))
         .then((v) => { if (active) setHasData(!!v); })
         .catch(() => { if (active) setHasData(false); }); // fail closed
-      return () => { active = false; };
+      return () => { active = false; clearTimeout(timer); };
     }, [isFree, userId]);
     if (!isFree) return <Component {...props} />;
     // Plain background while the existence read settles, so a user with

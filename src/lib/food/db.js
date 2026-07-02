@@ -199,8 +199,13 @@ export async function getRecentLoggedDays(userId, asOfDate, limit = 14) {
 export async function hasAnyFoodEntries(userId) {
   if (!userId) return false;
   const d = await db();
+  // is_planned = 0: unconfirmed meal-plan scaffolding is not logged history
+  // (hostile review E10 #4) — a user whose only rows are un-eaten planned
+  // meals keeps the ProLocked gate, not a read-only view of food they never
+  // ate.
   const row = await d.getFirstAsync(
-    `SELECT 1 AS one FROM food_entries WHERE user_id = ? AND deleted_at IS NULL LIMIT 1`,
+    `SELECT 1 AS one FROM food_entries
+     WHERE user_id = ? AND deleted_at IS NULL AND is_planned = 0 LIMIT 1`,
     [userId]
   );
   return !!row;

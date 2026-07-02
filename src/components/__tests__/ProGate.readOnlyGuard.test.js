@@ -91,13 +91,34 @@ describe('withReadOnlyProGuard (E10 lapse views)', () => {
   });
 
   test('while the read settles, neither the screen nor the lock renders', async () => {
-    setStore({ tier: 'free' });
-    const never = () => new Promise(() => {});
-    const Guarded = withReadOnlyProGuard(Screen, 'Food diary', never);
-    let tree;
-    await act(async () => { tree = create(<Guarded />); });
-    expect(hasScreen(tree)).toBe(false);
-    expect(hasLock(tree)).toBe(false);
+    jest.useFakeTimers();
+    try {
+      setStore({ tier: 'free' });
+      const never = () => new Promise(() => {});
+      const Guarded = withReadOnlyProGuard(Screen, 'Food diary', never);
+      let tree;
+      await act(async () => { tree = create(<Guarded />); });
+      expect(hasScreen(tree)).toBe(false);
+      expect(hasLock(tree)).toBe(false);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('a HUNG read fails closed to the lock after the safety timeout (never a stuck blank)', async () => {
+    jest.useFakeTimers();
+    try {
+      setStore({ tier: 'free' });
+      const never = () => new Promise(() => {});
+      const Guarded = withReadOnlyProGuard(Screen, 'Progress photos', never);
+      let tree;
+      await act(async () => { tree = create(<Guarded />); });
+      await act(async () => { jest.advanceTimersByTime(4001); });
+      expect(hasScreen(tree)).toBe(false);
+      expect(hasLock(tree)).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   test('null tier (signed out / undecided) is treated as free, never as pro', async () => {

@@ -77,6 +77,12 @@ export default function DiaryScreen({ navigation }) {
   // write affordance below checks this flag; reads (day pager, rings, entries,
   // water total, macro breakdown) stay.
   const readOnly = tier !== 'pro';
+  // Hostile review (E10 #1): callbacks capture readOnly at render time, so a
+  // handler created BEFORE a pro-to-free flip could still write after it (tab
+  // screens stay mounted across tab switches, and the tier can flip while a
+  // sheet is open: account switch, entitlement reconcile, cascade expiry).
+  // Every write handler below re-checks the LIVE store tier at execution time.
+  const canWrite = useCallback(() => useAppStore.getState().tier === 'pro', []);
 
   // COMP-004's "Your trend" card was removed from the Diary (founder decision
   // 2026-06-16: a weight trend has nothing to do with the food diary). The
@@ -169,16 +175,24 @@ export default function DiaryScreen({ navigation }) {
   // Count distinct planned MEALS (meal slots), not individual food items. A
   // day plan is ~6 meals of several foods each, so counting entries made the
   // banner read "20 planned meals" for a single planned day (QA 2026-06-16).
+  // Hostile review (E10 #4): in read-only, unconfirmed meal-plan scaffolding
+  // (is_planned = 1) must not read as food the user ate — it can never be
+  // confirmed or cleared from a view-only diary. Filter it from everything
+  // the read-only state displays; the Pro diary is untouched.
+  const viewEntries = useMemo(
+    () => (readOnly ? entries.filter((e) => !e.is_planned) : entries),
+    [readOnly, entries],
+  );
   const plannedCount = useMemo(() => {
     const slots = new Set();
-    for (const e of entries) if (e.is_planned) slots.add(e.meal_slot);
+    for (const e of viewEntries) if (e.is_planned) slots.add(e.meal_slot);
     return slots.size;
-  }, [entries]);
+  }, [viewEntries]);
   // Planned-but-unconfirmed totals for the ring/macro overlay (shown distinctly,
   // never folded into the eaten rollup the coach uses). Null when nothing planned.
   const plannedTotals = useMemo(() => {
     let kcal = 0, protein = 0, carbs = 0, fat = 0;
-    for (const e of entries) {
+    for (const e of viewEntries) {
       if (!e.is_planned) continue;
       kcal += Number(e.kcal) || 0;
       protein += Number(e.protein_g) || 0;
@@ -188,11 +202,11 @@ export default function DiaryScreen({ navigation }) {
     return (kcal || protein || carbs || fat)
       ? { kcal, protein_g: protein, carbs_g: carbs, fat_g: fat }
       : null;
-  }, [entries]);
+  }, [viewEntries]);
   const isFutureDay = selectedDate > isoDate(new Date());
 
   const handleConfirmPlanned = useCallback(async () => {
-    if (!userId) return;
+    if (!userId || !canWrite()) return;
     try {
       const n = await confirmPlannedDay(userId, selectedDate);
       await load();
@@ -200,10 +214,10 @@ export default function DiaryScreen({ navigation }) {
     } catch (_) {
       toast.show("Couldn't update. Try again.", { variant: 'error' });
     }
-  }, [userId, selectedDate, load, toast]);
+  }, [canWrite, userId, selectedDate, load, toast]);
 
   const handleClearPlanned = useCallback(async () => {
-    if (!userId) return;
+    if (!userId || !canWrite()) return;
     try {
       await clearPlannedDay(userId, selectedDate);
       await load();
@@ -211,7 +225,7 @@ export default function DiaryScreen({ navigation }) {
     } catch (_) {
       toast.show("Couldn't update. Try again.", { variant: 'error' });
     }
-  }, [userId, selectedDate, load, toast]);
+  }, [canWrite, userId, selectedDate, load, toast]);
 
   const isRefeedDay = !!refeed && !!refeedDate && refeedDate === selectedDate;
 
@@ -265,6 +279,7 @@ export default function DiaryScreen({ navigation }) {
   const bankActiveThisWeek = !!calorieBank && weekDates.includes(calorieBank.bigDayKey);
 
   const applyBank = useCallback(async (bank) => {
+    if (!canWrite()) return;
     await setCalorieBank(bank);
     setBankSheetVisible(false);
     // CB-1b: move the planned FOOD to match the new per-day targets, not just the
@@ -291,9 +306,10 @@ export default function DiaryScreen({ navigation }) {
     } else {
       toast.show('Higher-calorie day planned. Your weekly total stays the same.', { variant: 'success' });
     }
-  }, [setCalorieBank, toast, userId, floorKcal, load]);
+  }, [canWrite, setCalorieBank, toast, userId, floorKcal, load]);
 
   const clearBank = useCallback(async () => {
+    if (!canWrite()) return;
     // Restore the original (un-banked) planned food before clearing the bank.
     try {
       await restoreUnbankedPlannedFood(userId, {
@@ -304,7 +320,7 @@ export default function DiaryScreen({ navigation }) {
     setBankSheetVisible(false);
     await load();
     toast.show('Higher-calorie day cleared.', { variant: 'info' });
-  }, [setCalorieBank, toast, userId, calorieBank, load]);
+  }, [canWrite, setCalorieBank, toast, userId, calorieBank, load]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
   useEffect(() => { load(); }, [load]);
@@ -319,11 +335,11 @@ export default function DiaryScreen({ navigation }) {
   // peri-workout), so nothing logged is ever dropped.
   const entriesBySlot = useMemo(() => {
     const out = {};
-    for (const e of entries) {
+    for (const e of viewEntries) {
       (out[e.meal_slot] ??= []).push(e);
     }
     return out;
-  }, [entries]);
+  }, [viewEntries]);
 
   // The flexible numbered-meal model: a ladder of "Meal 1..N" plus the two
   // peri-workout meals, never fewer than the highest numbered meal already
@@ -389,14 +405,14 @@ export default function DiaryScreen({ navigation }) {
     );
   }, []);
 
-  const mealsPerDay = Math.max(prefMeals + addedMeals, highestLoggedMeal(entries));
-  const mealSlots = useMemo(() => buildMealSlots(entries, mealsPerDay), [entries, mealsPerDay]);
+  const mealsPerDay = Math.max(prefMeals + addedMeals, highestLoggedMeal(viewEntries));
+  const mealSlots = useMemo(() => buildMealSlots(viewEntries, mealsPerDay), [viewEntries, mealsPerDay]);
   // E10 read-only lapse views: only render meals that actually have food. An
   // empty ladder slot exists to be added to; with the add affordances hidden
   // it would just be a dead header-only card.
   const visibleSlots = useMemo(
-    () => (readOnly ? mealSlots.filter((s) => (entries.some((e) => e.meal_slot === s.key))) : mealSlots),
-    [readOnly, mealSlots, entries],
+    () => (readOnly ? mealSlots.filter((s) => (viewEntries.some((e) => e.meal_slot === s.key))) : mealSlots),
+    [readOnly, mealSlots, viewEntries],
   );
 
   // GAP #5: one-tap "usuals" for empty meal slots. Each slot offers up to three
@@ -440,7 +456,7 @@ export default function DiaryScreen({ navigation }) {
   // an invalid remembered portion (logs nothing rather than a junk weight).
   const loggingUsualRef = useRef(false);
   const onLogUsual = useCallback(async (food, slotKey) => {
-    if (!userId || !food || loggingUsualRef.current) return;
+    if (!userId || !food || loggingUsualRef.current || !canWrite()) return;
     const grams = Math.round(resolveServingG(food));
     if (!isValidEntryGrams(grams)) return;
     loggingUsualRef.current = true;
@@ -469,7 +485,7 @@ export default function DiaryScreen({ navigation }) {
     } finally {
       loggingUsualRef.current = false;
     }
-  }, [userId, selectedDate, load, toast]);
+  }, [canWrite, userId, selectedDate, load, toast]);
 
   function gotoYesterday() { setSelectedDate(shiftDate(selectedDate, -1)); }
   function gotoTomorrow()  { setSelectedDate(shiftDate(selectedDate, 1)); }
@@ -489,6 +505,7 @@ export default function DiaryScreen({ navigation }) {
   const [quickAddSlot, setQuickAddSlot] = useState(null); // meal slot key | null
 
   async function confirmQuickAdd({ kcal, protein, carbs, fat, mealSlot }) {
+    if (!canWrite()) return;
     // food_ref 'quick:adhoc' has no resolvable name, so the diary shows it
     // as "Quick add" with no gram weight.
     // eslint-disable-next-line global-require
@@ -524,6 +541,22 @@ export default function DiaryScreen({ navigation }) {
     if (Number.isFinite(y)) scrollRef.current?.scrollTo({ y: Math.max(0, y - 8), animated: true });
   }, []);
   const [copyDays, setCopyDays] = useState(null); // recent logged days | null (picker hidden)
+
+  // Hostile review (E10 #1): the write SURFACES render on their own state, so
+  // one already open when the tier flips pro-to-free would stay live for a
+  // now-free user. The moment the diary turns read-only, close them all; the
+  // render conditions below also carry !readOnly as defence in depth.
+  useEffect(() => {
+    if (!readOnly) return;
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+    setEditSheet(null);
+    setQuickAddSlot(null);
+    setMovePickerVisible(false);
+    setSaveMealItems(null);
+    setCopyDays(null);
+    setBankSheetVisible(false);
+  }, [readOnly]);
 
   // Leaving the day, or deselecting the last row, drops selection mode
   // so the toolbar never lingers empty.
@@ -565,7 +598,7 @@ export default function DiaryScreen({ navigation }) {
   // stay deleted — the commit already happened.
   const doDeleteSelected = useCallback(async () => {
     const sel = selectedEntries();
-    if (sel.length === 0) return;
+    if (sel.length === 0 || !canWrite()) return;
     const n = sel.length;
     audit('food.delete', { mealSlot: 'multi', count: n });
     await deleteEntries(userId, sel);
@@ -575,11 +608,11 @@ export default function DiaryScreen({ navigation }) {
       variant: 'undo',
       action: { label: 'Undo', onPress: async () => { await restoreEntries(userId, sel); await load(); } },
     });
-  }, [selectedEntries, userId, exitSelection, load, toast]);
+  }, [canWrite, selectedEntries, userId, exitSelection, load, toast]);
 
   const doCopySelectedToToday = useCallback(async () => {
     const sel = selectedEntries();
-    if (sel.length === 0) return;
+    if (sel.length === 0 || !canWrite()) return;
     const today = isoDate(new Date());
     await copyEntriesToDate(userId, sel, today);
     exitSelection();
@@ -594,11 +627,11 @@ export default function DiaryScreen({ navigation }) {
   const doMoveSelected = useCallback(async (slot) => {
     const sel = selectedEntries();
     setMovePickerVisible(false);
-    if (sel.length === 0) return;
+    if (sel.length === 0 || !canWrite()) return;
     await moveEntriesToSlot(userId, sel, slot);
     exitSelection();
     await load();
-  }, [selectedEntries, userId, exitSelection, load]);
+  }, [canWrite, selectedEntries, userId, exitSelection, load]);
 
   // "Save as meal": snapshot the selected entries into a reusable saved
   // meal. Capture the items now (before the name prompt) so exiting
@@ -621,6 +654,7 @@ export default function DiaryScreen({ navigation }) {
   }, [selectedEntries]);
 
   const submitSaveMeal = useCallback(async () => {
+    if (!canWrite()) { setSaveMealItems(null); return; }
     const name = saveMealName.trim();
     const items = saveMealItems;
     if (!name || !items || items.length === 0) { setSaveMealItems(null); return; }
@@ -652,6 +686,7 @@ export default function DiaryScreen({ navigation }) {
   }
 
   async function saveEditSheet({ quantityG, mealSlot, entryDate }) {
+    if (!canWrite()) return;
     const { entry, food } = editSheet;
     await updateFoodEntry(entry.id, userId, {
       entryDate,
@@ -664,7 +699,7 @@ export default function DiaryScreen({ navigation }) {
   }
 
   async function deleteFromEditSheet() {
-    if (!editSheet?.entry) return;
+    if (!editSheet?.entry || !canWrite()) return;
     const removed = editSheet.entry;
     await deleteFoodEntry(removed.id, userId);
     await load();
@@ -680,6 +715,7 @@ export default function DiaryScreen({ navigation }) {
   }
 
   async function logWaterDelta(deltaMl) {
+    if (!canWrite()) return;
     if (deltaMl > 0) lightTap();
     const next = Math.max(0, waterMl + deltaMl);
     await setWater(userId, selectedDate, next);
@@ -690,6 +726,7 @@ export default function DiaryScreen({ navigation }) {
   // (food audit F-1): a swipe removes the row immediately and the toast offers
   // an 8s window to restore it, rather than a confirm dialog on every swipe.
   const requestDelete = useCallback(async (entry, closeSwipe) => {
+    if (!canWrite()) { closeSwipe?.(); return; }
     audit('food.delete', { mealSlot: entry?.mealSlot ?? 'unknown' });
     try {
       await deleteFoodEntry(entry.id, userId);
@@ -705,7 +742,7 @@ export default function DiaryScreen({ navigation }) {
     } catch (_) {
       closeSwipe?.();
     }
-  }, [userId, load, toast]);
+  }, [canWrite, userId, load, toast]);
 
   // Shared copy core: replay a source day's entries into the day in view.
   // Re-uses logFoodEntry (via the food-domain layer) so the rollup trigger and
@@ -713,7 +750,7 @@ export default function DiaryScreen({ navigation }) {
   // swallowing them (food review U-M6). Used by both "Copy yesterday" and the
   // "copy a previous day" picker (food audit F-3).
   const copyFromDate = useCallback(async (sourceDate) => {
-    if (!userId || !sourceDate) return;
+    if (!userId || !sourceDate || !canWrite()) return;
     const srcEntries = await getFoodEntriesForDay(userId, sourceDate).catch(() => []);
     if (!srcEntries || srcEntries.length === 0) {
       toast.show('Nothing logged that day to copy.', { variant: 'info' });
@@ -750,7 +787,7 @@ export default function DiaryScreen({ navigation }) {
     } else {
       toast.show(`Copied ${ok} ${ok === 1 ? 'item' : 'items'}.`, { variant: 'success' });
     }
-  }, [userId, selectedDate, load, toast]);
+  }, [canWrite, userId, selectedDate, load, toast]);
 
   // "Copy yesterday" quick action (empty-state CTA): confirm, then copy.
   const copyYesterday = useCallback(async () => {
@@ -863,7 +900,7 @@ export default function DiaryScreen({ navigation }) {
             targets={effectiveTargets}
             planned={plannedTotals}
             dayTypeLabel={dayTypeChip}
-            onPress={entries.length ? () => setBreakdownVisible(true) : undefined}
+            onPress={viewEntries.length ? () => setBreakdownVisible(true) : undefined}
           />
         </View>
 
@@ -901,7 +938,7 @@ export default function DiaryScreen({ navigation }) {
             <SkeletonRow />
             <SkeletonRow />
           </View>
-        ) : entries.length === 0 ? (
+        ) : viewEntries.length === 0 ? (
           readOnly ? (
             // Read-only empty day: a plain fact, not a call to action (the
             // standard empty state's three CTAs are all writes).
@@ -1022,7 +1059,7 @@ export default function DiaryScreen({ navigation }) {
       </ScrollView>
 
       <FoodDetailSheet
-        visible={!!editSheet}
+        visible={!!editSheet && !readOnly}
         mode="edit"
         food={editSheet?.food}
         initialQuantityG={editSheet?.entry?.quantity_g}
@@ -1034,7 +1071,7 @@ export default function DiaryScreen({ navigation }) {
       />
 
       <QuickAddSheet
-        visible={!!quickAddSlot}
+        visible={!!quickAddSlot && !readOnly}
         initialMealSlot={quickAddSlot ?? 'snack'}
         onSave={confirmQuickAdd}
         onClose={() => setQuickAddSlot(null)}
@@ -1042,7 +1079,7 @@ export default function DiaryScreen({ navigation }) {
 
       <MacroBreakdownSheet
         visible={breakdownVisible}
-        entries={entries}
+        entries={viewEntries}
         dateLabel={friendlyDate(selectedDate)}
         onClose={() => setBreakdownVisible(false)}
         onSelectMeal={jumpToMeal}
@@ -1072,7 +1109,7 @@ export default function DiaryScreen({ navigation }) {
         </TouchableOpacity>
       ) : null}
 
-      {selectionMode ? (
+      {selectionMode && !readOnly ? (
         <View style={styles.selectionBar}>
           <View style={styles.selTopRow}>
             <TouchableOpacity onPress={exitSelection} hitSlop={10} style={styles.selCancel} accessibilityRole="button" accessibilityLabel="Cancel selection">
@@ -1102,7 +1139,7 @@ export default function DiaryScreen({ navigation }) {
       ) : null}
 
       <Modal
-        visible={movePickerVisible}
+        visible={movePickerVisible && !readOnly}
         transparent
         animationType="fade"
         onRequestClose={() => setMovePickerVisible(false)}
@@ -1126,7 +1163,7 @@ export default function DiaryScreen({ navigation }) {
       </Modal>
 
       <Modal
-        visible={!!saveMealItems}
+        visible={!!saveMealItems && !readOnly}
         transparent
         animationType="fade"
         onRequestClose={() => setSaveMealItems(null)}
@@ -1161,7 +1198,7 @@ export default function DiaryScreen({ navigation }) {
       </Modal>
 
       <Modal
-        visible={copyDays != null}
+        visible={copyDays != null && !readOnly}
         transparent
         animationType="fade"
         onRequestClose={() => setCopyDays(null)}
@@ -1191,7 +1228,7 @@ export default function DiaryScreen({ navigation }) {
         </Pressable>
       </Modal>
       <CalorieBankSheet
-        visible={bankSheetVisible}
+        visible={bankSheetVisible && !readOnly}
         onClose={() => setBankSheetVisible(false)}
         weekDates={weekDates}
         defaultBigDay={selectedDate}

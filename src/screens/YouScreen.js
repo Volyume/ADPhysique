@@ -62,6 +62,9 @@ export default function YouScreen({ navigation }) {
         })
         .catch(() => {});
       if (tier !== 'pro') {
+        // Reset first so a failed read (or an account switch to a user with
+        // no history) never leaves the previous account's true standing.
+        setHasCoachHistory(false);
         getCoachOutputHistory(user.id, 1)
           .then(rows => { if (alive) setHasCoachHistory((rows ?? []).length > 0); })
           .catch(() => {});

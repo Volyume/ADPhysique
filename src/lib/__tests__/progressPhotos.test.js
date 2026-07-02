@@ -1,11 +1,26 @@
 /**
- * Progress-photos pure helpers (gap #9). The filename<->timestamp parse and the
- * newest-first ordering are the logic worth locking; the FileSystem wrappers are
- * thin. documentDirectory is mocked so the module imports under node.
+ * Progress-photos pure helpers (gap #9), plus the owner marker the E10
+ * read-only lapse guard depends on (hostile review #2): the photo directory is
+ * per-DEVICE, so the guard must refuse the view-only gallery to any account
+ * other than the one the marker names, and must FAIL CLOSED when the marker is
+ * missing or unreadable. documentDirectory is mocked so the module imports
+ * under node.
  */
-jest.mock('expo-file-system/legacy', () => ({ documentDirectory: '/doc/' }));
+jest.mock('expo-file-system/legacy', () => ({
+  documentDirectory: '/doc/',
+  getInfoAsync: jest.fn(async () => ({ exists: true })),
+  makeDirectoryAsync: jest.fn(async () => {}),
+  readDirectoryAsync: jest.fn(async () => []),
+  readAsStringAsync: jest.fn(async () => { throw new Error('no marker'); }),
+  writeAsStringAsync: jest.fn(async () => {}),
+}));
 
-import { timestampFromName, orderPhotos, photoDir } from '../progressPhotos';
+import {
+  timestampFromName, orderPhotos, photoDir, photosViewableBy, markPhotosOwner,
+} from '../progressPhotos';
+
+// The mocked module itself, so tests can steer the per-call behaviour.
+const mockFs = require('expo-file-system/legacy');
 
 describe('timestampFromName', () => {
   test('parses <ms>.jpg, rejects anything else', () => {
@@ -26,5 +41,48 @@ describe('orderPhotos', () => {
   test('empty / missing input is an empty list', () => {
     expect(orderPhotos([])).toEqual([]);
     expect(orderPhotos(undefined)).toEqual([]);
+  });
+});
+
+describe('photosViewableBy (E10 read-only guard, fail closed)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockFs.getInfoAsync.mockResolvedValue({ exists: true });
+    mockFs.readDirectoryAsync.mockResolvedValue(['100.jpg', '200.jpg']);
+  });
+
+  test('true only when photos exist AND the owner marker names this user', async () => {
+    mockFs.readAsStringAsync.mockResolvedValue('user-a');
+    expect(await photosViewableBy('user-a')).toBe(true);
+  });
+
+  test('a DIFFERENT account on the same device is refused', async () => {
+    mockFs.readAsStringAsync.mockResolvedValue('user-a');
+    expect(await photosViewableBy('user-b')).toBe(false);
+  });
+
+  test('missing/unreadable marker fails CLOSED, never open', async () => {
+    mockFs.readAsStringAsync.mockRejectedValue(new Error('ENOENT'));
+    expect(await photosViewableBy('user-a')).toBe(false);
+  });
+
+  test('no photos means nothing to view, whatever the marker says', async () => {
+    mockFs.readDirectoryAsync.mockResolvedValue([]);
+    mockFs.readAsStringAsync.mockResolvedValue('user-a');
+    expect(await photosViewableBy('user-a')).toBe(false);
+  });
+
+  test('no userId is refused without touching the filesystem', async () => {
+    expect(await photosViewableBy(null)).toBe(false);
+    expect(mockFs.readDirectoryAsync).not.toHaveBeenCalled();
+  });
+
+  test('markPhotosOwner writes the sidecar under the photo dir', async () => {
+    await markPhotosOwner('user-a');
+    expect(mockFs.writeAsStringAsync).toHaveBeenCalledWith(`${photoDir()}owner.txt`, 'user-a');
+  });
+
+  test('the owner sidecar never appears in the gallery listing', () => {
+    expect(orderPhotos(['owner.txt', '100.jpg']).map((r) => r.name)).toEqual(['100.jpg']);
   });
 });

@@ -38,6 +38,7 @@ jest.mock('../../lib/progressPhotos', () => ({
   listProgressPhotos: jest.fn(),
   saveProgressPhoto: jest.fn(),
   deleteProgressPhoto: jest.fn(),
+  markPhotosOwner: jest.fn(),
 }));
 
 import useAppStore from '../../store/useAppStore';
@@ -73,8 +74,11 @@ async function flush() {
 
 async function render(photos = [NEW, MID, OLD], { mode = 'unspecified', reduceMotion = false, tier = 'pro' } = {}) {
   // tier 'pro' (default) keeps these suites pinning the full (mutable)
-  // screen; the E10 read-only lapse pins pass tier 'free' explicitly.
+  // screen; the E10 read-only lapse pins pass tier 'free' explicitly. The
+  // write handlers re-check the LIVE tier via getState (stale-closure guard),
+  // so the mock carries it too.
   useAppStore.mockImplementation((sel) => sel({ accessibility: { reduceMotion }, tier }));
+  useAppStore.getState = () => ({ tier, user: { id: 'u-test' } });
   getWellbeingMode.mockResolvedValue(mode);
   listProgressPhotos.mockResolvedValue(photos); // newest first, like the lib
   let tree;

@@ -506,9 +506,16 @@ export default function BodyMetricsScreen() {
   );
 
   useEffect(() => {
-    if (!physiqueEnabled) return;
+    // Read-only users skip the opt-in gate (see the render below), so their
+    // data load must not wait on the physique pref either. null still means
+    // "pref not read yet" and defers the load one tick.
+    if (physiqueEnabled === null || (!physiqueEnabled && !readOnly)) return;
     (async () => {
-      await migrateFromAsyncStorage();
+      // Hostile review (E10 #3): the legacy AsyncStorage migration WRITES
+      // body-metric rows (logBodyMetric + a sync schedule), so like the
+      // auto-seed it never runs in the view-only state. It resumes if the
+      // user returns to Pro.
+      if (!readOnly) await migrateFromAsyncStorage();
       await loadHistory();
       await loadNutritionTargets();
       await loadRecentIntake();
@@ -641,6 +648,9 @@ export default function BodyMetricsScreen() {
   }
 
   async function saveMetrics() {
+    // Live-tier re-check (hostile review E10 #1 class): a pro-to-free flip
+    // while the form is open must not let this closure write.
+    if (useAppStore.getState().tier !== 'pro') return;
     const hasBW = bwu === 'st' ? !!form.body_weight_st : !!form.body_weight;
     if (!hasBW && !form.chest && !form.body_fat) {
       toast.show('Enter at least body weight, body fat, or one measurement.', { variant: 'warning' });
@@ -719,8 +729,10 @@ export default function BodyMetricsScreen() {
   // Loading state, return the dark background, not null, to avoid a white flash
   if (physiqueEnabled === null) return <SafeAreaView style={styles.safe} edges={['bottom']} />;
 
-  // Opt-in gate
-  if (!physiqueEnabled) {
+  // Opt-in gate. Read-only users skip it (hostile review E10 #7): it is a
+  // tracking pitch, and the lapse state is about SEEING history, not
+  // enabling tracking. The calm-mode re-confirmation below still applies.
+  if (!physiqueEnabled && !readOnly) {
     return (
       <SafeAreaView style={styles.safe} edges={['bottom']}>
         <ScrollView contentContainerStyle={styles.optInContent}>

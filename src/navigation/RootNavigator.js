@@ -186,7 +186,7 @@ const GatedPerDayTargets = lazyScreen(() => withProGuard(require('../screens/Per
 // Every other Pro route below stays hard-locked, so no mutation surface
 // (FoodSearch, ScanBarcode, MealPlan, cardio, recipes...) leaks via deep link.
 const GatedBodyMetrics      = lazyScreen(() => withReadOnlyProGuard(require('../screens/BodyMetricsScreen').default, 'Body metrics', (userId) => require('../lib/database').getBodyMetricLog(userId, 1).then((rows) => (rows ?? []).length > 0)));
-const GatedProgressPhotos   = lazyScreen(() => withReadOnlyProGuard(require('../screens/ProgressPhotosScreen').default, 'Progress photos', () => require('../lib/progressPhotos').listProgressPhotos().then((rows) => (rows ?? []).length > 0)));
+const GatedProgressPhotos   = lazyScreen(() => withReadOnlyProGuard(require('../screens/ProgressPhotosScreen').default, 'Progress photos', (userId) => require('../lib/progressPhotos').photosViewableBy(userId)));
 // NEW-002 partner is a PRO domain (blueprint §5 gating: free sees the upgrade
 // path, never the live feature). The guard is the upgrade path, matching how
 // BodyMetrics / ProgressPhotos gate while leaving their Progress NavTile visible.

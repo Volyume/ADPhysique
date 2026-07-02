@@ -78,4 +78,59 @@ describe('E10 read-only lapse views: gating posture', () => {
     expect(src).toMatch(/plannedCount > 0 && !selectionMode && !readOnly/);
     expect(src).toMatch(/bankingAvailable && !selectionMode && !readOnly/);
   });
+
+  // Hostile review 2026-07-02 (E10 #1, CRITICAL class): tab screens stay
+  // mounted across tab switches, so the tier can flip pro-to-free while a
+  // write surface is open. Three layers are pinned: the live-tier re-check in
+  // every write handler, the flip-closes effect, and !readOnly on the
+  // surfaces' own render conditions.
+  test('every diary write handler re-checks the LIVE tier at execution time', () => {
+    const src = read('src/screens/DiaryScreen.js');
+    expect(src).toMatch(/const canWrite = useCallback\(\(\) => useAppStore\.getState\(\)\.tier === 'pro', \[\]\);/);
+    // 15 write paths carry the guard (confirm/clear planned, bank apply/clear,
+    // usuals, quick add, multi-select delete/copy/move, save meal, edit-sheet
+    // save/delete, water, swipe delete, copy-day).
+    const uses = src.match(/canWrite\(\)/g) || [];
+    expect(uses.length).toBeGreaterThanOrEqual(15);
+  });
+
+  test('a pro-to-free flip closes every open write surface in the diary', () => {
+    const src = read('src/screens/DiaryScreen.js');
+    const effect = src.slice(src.indexOf('if (!readOnly) return;'), src.indexOf('}, [readOnly]);'));
+    for (const closer of [
+      'setSelectionMode(false)', 'setEditSheet(null)', 'setQuickAddSlot(null)',
+      'setMovePickerVisible(false)', 'setSaveMealItems(null)', 'setCopyDays(null)',
+      'setBankSheetVisible(false)',
+    ]) {
+      expect(effect).toContain(closer);
+    }
+    // Belt and braces on the render conditions too.
+    expect(src).toMatch(/visible=\{!!editSheet && !readOnly\}/);
+    expect(src).toMatch(/visible=\{!!quickAddSlot && !readOnly\}/);
+    expect(src).toMatch(/visible=\{bankSheetVisible && !readOnly\}/);
+    expect(src).toMatch(/\{selectionMode && !readOnly \? \(/);
+  });
+
+  test('unconfirmed planned scaffolding neither grants the view nor renders in it (E10 #4)', () => {
+    expect(read('src/lib/food/db.js')).toMatch(/AND is_planned = 0 LIMIT 1/);
+    expect(read('src/screens/DiaryScreen.js'))
+      .toMatch(/readOnly \? entries\.filter\(\(e\) => !e\.is_planned\) : entries/);
+  });
+
+  test('BodyMetrics mount writes (auto-seed AND legacy migration) are gated off in read-only (E10 #3)', () => {
+    const src = read('src/screens/BodyMetricsScreen.js');
+    expect(src).toMatch(/rows\.length === 0 && onboardingKg && onboardingKg > 0 && !readOnly/);
+    expect(src).toMatch(/if \(!readOnly\) await migrateFromAsyncStorage\(\);/);
+  });
+
+  test('the photos guard is user-scoped via the owner marker, failing closed (E10 #2)', () => {
+    expect(NAV).toMatch(/photosViewableBy\(userId\)/);
+    const lib = read('src/lib/progressPhotos.js');
+    expect(lib).toMatch(/if \(!userId\) return false;/);
+    expect(lib).toMatch(/catch \(_\) \{ return false; \}/);
+  });
+
+  test('the guard races its history read against a fail-closed timeout (E10 #5)', () => {
+    expect(PROGATE).toMatch(/setTimeout\(\(\) => \{ if \(active\) setHasData\(false\); \}, 4000\)/);
+  });
 });

@@ -60,3 +60,39 @@ export async function saveProgressPhoto(srcUri, nowMs) {
 export async function deleteProgressPhoto(uri) {
   try { await FileSystem.deleteAsync(uri, { idempotent: true }); return true; } catch (_) { return false; }
 }
+
+// ── Owner marker (E10 read-only lapse views, hostile review #2) ─────────────
+//
+// The photo directory is shared per-DEVICE, not per-account. The Pro screen
+// has always shown whatever the directory holds, but the read-only lapse view
+// is granted by a route guard, and that guard must not hand account B a
+// gallery of account A's body photos on a shared device. A tiny sidecar file
+// records which signed-in user the photos belong to; the guard only opens the
+// view-only gallery for that user. The marker is (re)stamped whenever a Pro
+// user uses the screen, so existing installs pick it up on their next visit;
+// with no marker the check fails CLOSED (ProLocked, never the gallery).
+
+const OWNER_FILE = `${DIR}owner.txt`;
+
+export async function markPhotosOwner(userId) {
+  if (!userId) return;
+  try {
+    await ensurePhotoDir();
+    await FileSystem.writeAsStringAsync(OWNER_FILE, String(userId));
+  } catch (_) { /* best-effort; the guard fails closed without it */ }
+}
+
+/**
+ * Whether this device's photos may be shown READ-ONLY to `userId`: there is
+ * at least one photo AND the owner marker matches. Unset marker, mismatch or
+ * any read failure all answer false (fail closed).
+ */
+export async function photosViewableBy(userId) {
+  if (!userId) return false;
+  try {
+    const photos = await listProgressPhotos();
+    if (photos.length === 0) return false;
+    const owner = await FileSystem.readAsStringAsync(OWNER_FILE);
+    return String(owner).trim() === String(userId);
+  } catch (_) { return false; }
+}

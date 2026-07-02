@@ -13,7 +13,7 @@ import useAppStore from '../store/useAppStore';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 import { logError } from '../lib/errorLog';
 import {
-  listProgressPhotos, saveProgressPhoto, deleteProgressPhoto,
+  listProgressPhotos, saveProgressPhoto, deleteProgressPhoto, markPhotosOwner,
 } from '../lib/progressPhotos';
 
 // expo-image-picker is a native module; lazy-require so the screen imports in
@@ -38,6 +38,15 @@ export default function ProgressPhotosScreen({ navigation }) {
   // and delete are hidden. Derived from the store inside the screen.
   const tier = useAppStore((s) => s.tier);
   const readOnly = tier !== 'pro';
+  const userId = useAppStore((s) => s.user?.id);
+
+  // Owner marker (hostile review E10 #2): stamp whose photos these are while
+  // a Pro user is on the screen, so the read-only lapse guard can later
+  // refuse the gallery to a DIFFERENT account on the same device. Best-effort
+  // and idempotent.
+  useEffect(() => {
+    if (!readOnly && userId) markPhotosOwner(userId);
+  }, [readOnly, userId]);
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -66,6 +75,9 @@ export default function ProgressPhotosScreen({ navigation }) {
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
   async function pickFrom(source) {
+    // Live-tier re-check (hostile review E10 #1 class): the add alert can be
+    // open when the tier flips pro-to-free; its callback must not save then.
+    if (useAppStore.getState().tier !== 'pro') return;
     if (!ImagePicker) { toast.show('Photos need a rebuild on this device.', { variant: 'warning' }); return; }
     setBusy(true);
     try {
@@ -106,7 +118,13 @@ export default function ProgressPhotosScreen({ navigation }) {
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: async () => { await deleteProgressPhoto(item.uri); await refresh(); },
+        // Live-tier re-check: a delete prompt open across a pro-to-free flip
+        // must not delete (same stale-closure class as pickFrom).
+        onPress: async () => {
+          if (useAppStore.getState().tier !== 'pro') return;
+          await deleteProgressPhoto(item.uri);
+          await refresh();
+        },
       },
     ]);
   }
@@ -239,7 +257,7 @@ export default function ProgressPhotosScreen({ navigation }) {
       ) : photos.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="camera-outline" size={32} color={colors.textMuted} />
-          <Text style={styles.emptyText}>No photos yet. Tap + to add one.</Text>
+          <Text style={styles.emptyText}>{readOnly ? 'No photos on this device.' : 'No photos yet. Tap + to add one.'}</Text>
         </View>
       ) : (
         <FlatList
