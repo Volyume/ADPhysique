@@ -4010,6 +4010,22 @@ export const BACKUP_TABLES = [
   'morning_weights',
   'weekly_checkins',
   'coach_outputs',
+  // E10-F1(a): the food domain. These are the user's own Article 9 health
+  // records; leaving them out of the free backup meant a lapsed trial user
+  // had NO self-service portability path for 14 days of logged food (GDPR
+  // Article 20 exposure). The shared `foods` library cache is deliberately
+  // NOT here: it is 25k+ reseedable reference rows, not user data.
+  'food_entries',
+  'custom_foods',
+  'saved_meals',
+  'recipes',
+  'recipe_ingredients',
+  'daily_water',
+  'food_favourites',
+  'meal_plans',
+  // Rollups are derived but only recomputed on new writes for a day, so
+  // restore them too or historic diary days would render empty totals.
+  'daily_intake_rollups',
 ];
 
 // Returns { schemaVersion, tables: { tableName: [rawRows...] } }.
