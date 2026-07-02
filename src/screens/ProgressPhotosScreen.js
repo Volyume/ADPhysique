@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Dimensions, ActivityIndicator, Modal,
 } from 'react-native';
@@ -119,6 +119,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   function exitSelection() {
     setSelecting(false);
     setSelected([]);
+    setCompareOpen(false);
   }
 
   // Older photo on the left, newer on the right, whatever the tap order was.
@@ -127,6 +128,16 @@ export default function ProgressPhotosScreen({ navigation }) {
     .filter(Boolean);
   const pair = [...selectedItems].sort((a, b) => a.ts - b.ts);
   const pairReady = pair.length === 2;
+
+  // Hardening (Wave 4 review): compareOpen and pairReady are independent
+  // booleans, and only closeCompare resets the former. If the pair ever
+  // collapses while the view is open (unreachable today; reachable the day
+  // anyone adds pull-to-refresh or an AppState-driven refresh), a stale
+  // compareOpen would pop the view on the next second selection WITHOUT
+  // openCompare's failed-load reset. Fold it shut instead.
+  useEffect(() => {
+    if (compareOpen && !pairReady) setCompareOpen(false);
+  }, [compareOpen, pairReady]);
 
   function openCompare() {
     if (!pairReady) return;

@@ -238,6 +238,26 @@ describe('ProgressPhotosScreen compare, the comparison view', () => {
     );
   });
 
+  test('the SELECTION BAR copy is equally neutral (review gap: it sits outside the modal)', async () => {
+    const tree = await render();
+    await enterSelection(tree);
+    await pressTile(tree, OLD);
+
+    // Every Text and accessibility label rendered anywhere on the screen in
+    // selection mode — the bar's hints included — against the same banned
+    // vocabulary the modal is held to.
+    const allTexts = tree.root
+      .findAll((n) => typeof n.type === 'string' && n.type === 'Text')
+      .map((t) => flattenText(t.props.children));
+    const allLabels = tree.root
+      .findAll((n) => typeof n.props?.accessibilityLabel === 'string')
+      .map((n) => n.props.accessibilityLabel);
+    const copy = [...allTexts, ...allLabels].join(' ');
+    expect(copy).not.toMatch(
+      /\b(before|after|change[ds]?|progress made|gained?|lost|weight|kg|lbs?|cm|delta|leaner|bigger|smaller)\b|%|—/i,
+    );
+  });
+
   test('panes decode at explicit bounded dimensions with resize downscaling', async () => {
     const tree = await render();
     await enterSelection(tree);

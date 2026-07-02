@@ -92,9 +92,12 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }));
 
 const mockStoreRef = { state: null };
-// healthConsent defaults true here for the same reason as jest.setup.js:
-// transport's per-call Article 9 gate (F5 Phase A) would otherwise block
-// every matrix row. A test can still override it via setStore().
+// healthConsent defaults true so transport's per-call Article 9 gate (F5
+// Phase A) doesn't block every matrix row — the consent real devices
+// guarantee before sync ever runs. Primed per-suite, NOT globally: a
+// jest.setup.js prime was tried and reverted because forcing the store
+// module to load early broke unrelated store/auth suites. A test can
+// still override it via setStore().
 jest.mock('../../../store/useAppStore', () => ({
   __esModule: true,
   default: { getState: () => ({ healthConsent: true, ...(mockStoreRef.state ?? {}) }) },
