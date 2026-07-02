@@ -1644,6 +1644,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     duration_min: Math.round(snapshotElapsed / 60),
                     exercise_count: snapshotExercises.length,
                   }).catch(() => {});
+                  // E7.2 activation funnel: first-ever completed workout.
+                  // eslint-disable-next-line global-require
+                  const { trackFirst } = require('../lib/telemetry/firsts');
+                  trackFirst(uid, 'first_workout_logged').catch(() => {});
                 }
               } catch (_) { /* tolerate */ }
               // COMP-019: refresh the home-screen widget snapshot (consistency

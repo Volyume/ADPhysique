@@ -188,6 +188,25 @@ export const TELEMETRY_EVENTS = Object.freeze([
   // account_created; a server allow-list migration lands with that wiring.
   { name: 'onboarding_quiz_completed',       deferred: true,  panel: 1,
     deferralReason: 'emitted at account_created only when ONBOARDING_QUIZ_FIRST is on; wiring + server allow-list land together' },
+
+  // E7.2: the activation + conversion funnel baseline. The events not listed
+  // here already ride existing rails (trial start = cascade_started, subscribe
+  // = paid_converted, gate outcomes = churn_at_gate/cascade_skipped_ahead,
+  // paywall = paywall_shown/paywall_tapped_cta), so only the genuinely new
+  // ones are added. Counts/flags/small enums only; never food or training
+  // content, weight or steps. first_* fire once per user via the durable
+  // telemetry_firsts table (trackFirst). Server allow-list:
+  // supabase/migrate_099_funnel_telemetry.sql.
+  //   onboarding_step_completed  payload: { step } — a forward wizard advance
+  //   first_plan_generated       first-ever plan generation (once)
+  //   first_workout_logged       first-ever completed workout (once)
+  //   first_food_logged          first-ever food-diary entry (once)
+  //   trial_lapse_day1_return    a cascade-expired user reopened the app
+  { name: 'onboarding_step_completed',       deferred: false, panel: 1 },
+  { name: 'first_plan_generated',            deferred: false, panel: 1 },
+  { name: 'first_workout_logged',            deferred: false, panel: 1 },
+  { name: 'first_food_logged',               deferred: false, panel: 1 },
+  { name: 'trial_lapse_day1_return',         deferred: false, panel: 1 },
 ]);
 
 /**

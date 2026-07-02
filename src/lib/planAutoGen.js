@@ -202,6 +202,12 @@ export async function generateAndSavePlan(userId, profile) {
     // plan. Users can restore any archived plan from the Archived
     // section on the Plans tab.
     await archiveOtherUserPlans(userId, prog.id);
+    // E7.2 activation funnel: first-ever plan generation (durable, once).
+    try {
+      // eslint-disable-next-line global-require
+      const { trackFirst } = require('./telemetry/firsts');
+      trackFirst(userId, 'first_plan_generated').catch(() => {});
+    } catch (_) { /* tolerate test env without telemetry */ }
     const result = { ok: true, programmeId: prog.id };
     if (totalWritten < totalRequested) {
       // FF-003: surface the shortfall to the caller so onboarding / rebuild can

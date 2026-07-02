@@ -424,6 +424,7 @@ export default function ProOnboardingScreen({ navigation }) {
       logInfo('ProOnboarding.oauth.success', `provider=${provider}, advancing to step 2`);
       setProOnboardingAccountCreated(true);
       setAccountCreated(true);
+      emitStepDone(1);
       setStep(2);
     } catch (e) {
       logError('ProOnboarding.oauth.threw', e, { provider });
@@ -432,6 +433,18 @@ export default function ProOnboardingScreen({ navigation }) {
     }
   }
 
+
+  // E7.2 activation funnel: a forward advance through the wizard. `n` is the
+  // step just completed (1..4). Counts only, no answers. Lazy-required so the
+  // test env that mocks the store/telemetry does not pull the supabase client.
+  function emitStepDone(n) {
+    if (!user?.id) return;
+    try {
+      // eslint-disable-next-line global-require
+      const { track } = require('../lib/engineTelemetry');
+      track(user.id, 'onboarding_step_completed', { step: n }).catch(() => {});
+    } catch (_) { /* tolerate */ }
+  }
 
   function advanceFrom2() {
     if (!firstName.trim()) {
@@ -461,6 +474,7 @@ export default function ProOnboardingScreen({ navigation }) {
       appAlert('Age', 'Enter your age (13 to 100).');
       return;
     }
+    emitStepDone(2);
     setStep(3);
   }
 
@@ -472,6 +486,7 @@ export default function ProOnboardingScreen({ navigation }) {
       appAlert('Complete all fields', 'Please fill out your training setup to continue.');
       return;
     }
+    emitStepDone(3);
     setStep(4);
   }
 
@@ -487,6 +502,7 @@ export default function ProOnboardingScreen({ navigation }) {
     // now keeps the standard ED-pattern threshold (the more protective
     // 2-signal setting); the advanced opt-in still lives on the Goal lock
     // screen under You for anyone who wants it.
+    emitStepDone(4);
     setStep(5);
   }
 

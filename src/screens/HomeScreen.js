@@ -132,6 +132,15 @@ export default function HomeScreen({ navigation, route }) {
       // Only after a trial that actually expired to Free (not paid, not a user
       // who chose Free up front and never trialled).
       if (ts !== 'cascade_expired' || tier !== 'free') return;
+      // E7.2 activation funnel: a trial-lapsed (cascade_expired) user reached
+      // Home, i.e. they came back after lapsing. Durable once-per-user; the
+      // dashboard derives day-1-vs-later from the timestamp against the lapse
+      // date. Fires independently of the gate-shown flag below.
+      try {
+        // eslint-disable-next-line global-require
+        const { trackFirst } = require('../lib/telemetry/firsts');
+        trackFirst(user.id, 'trial_lapse_day1_return').catch(() => {});
+      } catch (_) { /* tolerate */ }
       const key = `@volyume_trial_end_gate_shown_${user.id}`;
       try {
         if (await AsyncStorage.getItem(key)) return;

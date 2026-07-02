@@ -82,6 +82,13 @@ export async function logFoodEntry(userId, entry) {
           : 'global',
       meal_slot: entry.mealSlot,
     }).catch(() => {});
+    // E7.2 activation funnel: first-ever food logged (durable, once per user).
+    // A real diary entry only, not planned scaffolding.
+    if (!isPlanned) {
+      // eslint-disable-next-line global-require
+      const { trackFirst } = require('../telemetry/firsts');
+      trackFirst(userId, 'first_food_logged').catch(() => {});
+    }
   } catch (_) { /* tolerate test env without telemetry */ }
   _scheduleSync();
   return id;
