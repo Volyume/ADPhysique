@@ -63,6 +63,21 @@ describe('success beat', () => {
     expect(commitCalls()).toBe(1);
   });
 
+  test('mounting already in success fires NO haptic but still settles (M4 review: no phantom commit on remount)', () => {
+    // A parent that keeps the success marker as its own state (CoachOutput
+    // apply rows, the check-in submit) can remount a button straight into
+    // success after a collapse/step change. That remount must not replay the
+    // commit beat, but the onSettled timer must still run so a stranded marker
+    // clears.
+    const onSettled = jest.fn();
+    act(() => {
+      void create(<Button title="Apply" state="success" onSettled={onSettled} onPress={() => {}} />);
+    });
+    expect(commitCalls()).toBe(0);
+    act(() => { jest.advanceTimersByTime(SUCCESS_HOLD_MS); });
+    expect(onSettled).toHaveBeenCalledTimes(1);
+  });
+
   test('onSettled fires once after SUCCESS_HOLD_MS', () => {
     const onSettled = jest.fn();
     act(() => {

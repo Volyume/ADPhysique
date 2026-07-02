@@ -1023,11 +1023,21 @@ export default function CoachOutputScreen({ navigation, route }) {
   // keeps the Button mounted through its checkmark beat, after which
   // onSettled clears the key and the row swaps to its Applied chip. A floor
   // hold never sets a marker: holds settle into the NU-3 line, never a
-  // success beat, and never a haptic (03b §3.3f: a safety hold is calm
-  // information, not an error buzz — this screen fires no haptics at all).
+  // success beat. The screen itself calls no haptic vocabulary; the amber
+  // hero Apply fires the Button primitive's press-time selection tick (a
+  // uniform press acknowledgement, not an outcome signal) and the commit
+  // beat only on a real success — a hold reaches neither (03b §3.3f: a
+  // safety hold is never a success or error buzz).
   const [applySettling, setApplySettling] = useState({});
+  // Settling WINS over loading: once the write has landed and set the marker,
+  // the row is 'success' even if the handler still holds applyingKey through a
+  // secondary async tail (handleApplyCalories awaits the plan pull-through
+  // AFTER markApplied). Without this precedence the row read 'loading' while
+  // already applied, so the Button unmounted mid-beat and the Applied chip
+  // flashed before the checkmark. The double-apply guard is unaffected: it
+  // reads applyingKey/isApplied, not this presentational state.
   const applyStateFor = (key) => (
-    applyingKey === key ? 'loading' : (applySettling[key] ? 'success' : 'idle')
+    applySettling[key] ? 'success' : (applyingKey === key ? 'loading' : 'idle')
   );
   const onApplySettled = (key) => {
     setApplySettling(s => {

@@ -1400,6 +1400,12 @@ export default function WeeklyCheckInScreen({ navigation }) {
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           accessibilityRole="button"
           accessibilityLabel={(!fastEligible && step > 0) ? 'Previous step' : 'Back'}
+          // M4 review: leaving the step mid-submit-beat unmounts the submit
+          // Button and strands its success marker, so the stashed post-save
+          // continuation would later fire without a tap. Lock navigation for
+          // the brief beat (busy = saving, submitSuccess = checkmark showing).
+          disabled={busy || submitSuccess}
+          accessibilityState={{ disabled: busy || submitSuccess }}
         >
           <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
@@ -1509,6 +1515,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel="Add more detail"
+              // M4 review: same as the back chevron — do not let the fast card
+              // jump into the wizard mid-submit-beat and strand the marker.
+              disabled={busy || submitSuccess}
+              accessibilityState={{ disabled: busy || submitSuccess }}
             >
               <Text style={styles.fastExpandText}>Add more detail</Text>
             </TouchableOpacity>

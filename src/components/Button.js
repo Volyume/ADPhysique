@@ -112,9 +112,18 @@ export default function Button({
   // a caller navigating away mid-beat never receives a stale callback.
   const onSettledRef = useRef(onSettled);
   onSettledRef.current = onSettled;
+  // Fire the haptic only on a genuine transition INTO success, never when the
+  // button (re)mounts already in success. A parent that keeps the success
+  // marker as its own state (CoachOutput apply rows, the check-in submit) can
+  // re-mount a button straight into 'success' after a collapse/step change; a
+  // remount must not replay the commit beat. The onSettled timer still runs in
+  // that case, so a marker stranded by an unmount always clears on remount.
+  const prevPhaseRef = useRef(phase);
   useEffect(() => {
-    if (phase !== 'success') return undefined;
-    haptics.commit();
+    if (phase !== 'success') { prevPhaseRef.current = phase; return undefined; }
+    const enteredNow = prevPhaseRef.current !== 'success';
+    prevPhaseRef.current = 'success';
+    if (enteredNow) haptics.commit();
     const timer = setTimeout(() => {
       if (onSettledRef.current) onSettledRef.current();
     }, SUCCESS_HOLD_MS);

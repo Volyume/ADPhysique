@@ -777,7 +777,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         <Text style={styles.headerTitle}>Add to {mealSlotLabel(mealSlot)}</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity
-            onPress={() => setShowQuickAdd(true)}
+            onPress={() => { quickSavedRef.current = false; setShowQuickAdd(true); }}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Quick add calories"
@@ -954,6 +954,10 @@ export default function FoodSearchScreen({ navigation, route }) {
         onSave={confirmQuickAdd}
         onClose={() => {
           setShowQuickAdd(false);
+          // Only a genuine save-then-settle returns to the diary. The ref is
+          // reset to false when the sheet OPENS (see the Quick add button), so
+          // a save that resolves after an early cancel cannot strand it true
+          // and surprise-navigate on a later, unrelated close.
           if (quickSavedRef.current) { quickSavedRef.current = false; navigation.goBack(); }
         }}
       />
