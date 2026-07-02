@@ -1457,7 +1457,84 @@ const SCHEMA_MIGRATIONS = [
     `UPDATE exercises SET exercise_type = 'weight_reps' WHERE exercise_type IS NULL`,
     `UPDATE custom_exercises SET exercise_type = 'weight_reps' WHERE exercise_type IS NULL`,
   ],
+  // E3 search (approved 2026-07-02): FTS5 name/brand index over foods +
+  // custom_foods, replacing SQL LIKE as the local search's first attempt
+  // (localCache.searchLocalByName; it falls back to LIKE if these tables are
+  // absent). External-content tables: the index stores no food data of its
+  // own and is FULLY reconstructible from the base tables at any time via
+  // rebuildFoodSearchIndex(). Triggers keep it in step with every insert /
+  // update / delete, including the bundled-snapshot seeding and library-delta
+  // upserts. Additive and idempotent (IF NOT EXISTS throughout); wrapped in a
+  // function op so a SQLite build without FTS5 skips the index entirely
+  // instead of failing the migration chain — search then simply stays on
+  // LIKE. FTS5 is compiled into the shipped SQLCipher build on both
+  // platforms (verified 2026-07-02).
+  [ensureFoodSearchIndex],
 ];
+
+// E3 search: the FTS5 index DDL, exported as a named function so the
+// migration test can drive the REAL statements against a real SQLite build
+// (node:sqlite) instead of pinning a copy that could drift. Called exactly
+// once by the migration entry above; safe to re-run (IF NOT EXISTS
+// throughout).
+export async function ensureFoodSearchIndex(d) {
+      try {
+        await d.execAsync(
+          `CREATE VIRTUAL TABLE IF NOT EXISTS foods_fts USING fts5(
+             name, brand,
+             content='foods', content_rowid='rowid',
+             tokenize='porter unicode61', prefix='2 3 4')`
+        );
+      } catch (e) {
+        logWarn('database.migration.fts', `FTS5 unavailable, search stays on LIKE: ${e?.message || e}`);
+        return; // no index, no triggers; query-time fallback covers it
+      }
+      await d.execAsync(
+        `CREATE VIRTUAL TABLE IF NOT EXISTS custom_foods_fts USING fts5(
+           name, brand,
+           content='custom_foods', content_rowid='rowid',
+           tokenize='porter unicode61', prefix='2 3 4')`
+      );
+      // External-content sync triggers (the canonical FTS5 pattern): 'delete'
+      // commands remove the OLD row's tokens; plain inserts add the new ones.
+      await d.execAsync(
+        `CREATE TRIGGER IF NOT EXISTS trg_foods_fts_ai AFTER INSERT ON foods BEGIN
+           INSERT INTO foods_fts(rowid, name, brand) VALUES (new.rowid, new.name, new.brand);
+         END`
+      );
+      await d.execAsync(
+        `CREATE TRIGGER IF NOT EXISTS trg_foods_fts_ad AFTER DELETE ON foods BEGIN
+           INSERT INTO foods_fts(foods_fts, rowid, name, brand) VALUES ('delete', old.rowid, old.name, old.brand);
+         END`
+      );
+      await d.execAsync(
+        `CREATE TRIGGER IF NOT EXISTS trg_foods_fts_au AFTER UPDATE ON foods BEGIN
+           INSERT INTO foods_fts(foods_fts, rowid, name, brand) VALUES ('delete', old.rowid, old.name, old.brand);
+           INSERT INTO foods_fts(rowid, name, brand) VALUES (new.rowid, new.name, new.brand);
+         END`
+      );
+      await d.execAsync(
+        `CREATE TRIGGER IF NOT EXISTS trg_custom_foods_fts_ai AFTER INSERT ON custom_foods BEGIN
+           INSERT INTO custom_foods_fts(rowid, name, brand) VALUES (new.rowid, new.name, new.brand);
+         END`
+      );
+      await d.execAsync(
+        `CREATE TRIGGER IF NOT EXISTS trg_custom_foods_fts_ad AFTER DELETE ON custom_foods BEGIN
+           INSERT INTO custom_foods_fts(custom_foods_fts, rowid, name, brand) VALUES ('delete', old.rowid, old.name, old.brand);
+         END`
+      );
+      await d.execAsync(
+        `CREATE TRIGGER IF NOT EXISTS trg_custom_foods_fts_au AFTER UPDATE ON custom_foods BEGIN
+           INSERT INTO custom_foods_fts(custom_foods_fts, rowid, name, brand) VALUES ('delete', old.rowid, old.name, old.brand);
+           INSERT INTO custom_foods_fts(rowid, name, brand) VALUES (new.rowid, new.name, new.brand);
+         END`
+      );
+      // One-time build over whatever the tables already hold (existing
+      // installs carry the ~29k-row bundled corpus at this point; fresh
+      // installs rebuild an empty index and the triggers index the seed).
+      await d.execAsync(`INSERT INTO foods_fts(foods_fts) VALUES('rebuild')`);
+      await d.execAsync(`INSERT INTO custom_foods_fts(custom_foods_fts) VALUES('rebuild')`);
+}
 
 // Errors that are safe to ignore when re-applying additive migrations on
 // installs that pre-date version tracking (the column/table already exists).
@@ -1519,6 +1596,24 @@ export async function runMigrations(d) {
     }
     // PRAGMA does not accept bound params; v is an integer we control.
     await d.execAsync(`PRAGMA user_version = ${v + 1}`);
+  }
+}
+
+// E3 search: rebuild the FTS index from the base tables. The index is
+// external-content (stores nothing of its own), so this is always safe and
+// makes it fully reconstructible on demand — the required recovery path if
+// the index ever drifts from foods/custom_foods (e.g. rows written while a
+// pre-FTS app version ran alongside, or an interrupted restore). Returns
+// false (never throws) when FTS5/the tables are unavailable.
+export async function rebuildFoodSearchIndex() {
+  try {
+    const d = await db();
+    await d.execAsync(`INSERT INTO foods_fts(foods_fts) VALUES('rebuild')`);
+    await d.execAsync(`INSERT INTO custom_foods_fts(custom_foods_fts) VALUES('rebuild')`);
+    return true;
+  } catch (e) {
+    logWarn('database.rebuildFoodSearchIndex', e?.message || String(e));
+    return false;
   }
 }
 

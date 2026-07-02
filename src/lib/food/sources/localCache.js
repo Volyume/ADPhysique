@@ -11,29 +11,99 @@
 import { db } from '../../database';
 import { CURATED_FOODS } from '../curatedFoods';
 
+// The columns every search/lookup row carries. sodium_100g / sugar_100g ride
+// along for the food-detail display rows (gap #16 sugars, E4 sodium):
+// display-only; scaleSugarG/scaleSodiumMg treat null as "no data".
+const FOOD_COL_LIST = [
+  'serving_g', 'serving_label',
+  'kcal_100g', 'protein_100g', 'carbs_100g', 'fat_100g', 'fibre_100g',
+  'sodium_100g', 'sugar_100g',
+];
+const FOOD_COLS = FOOD_COL_LIST.join(', ');
+const foodColsAs = (alias) => FOOD_COL_LIST.map((c) => `${alias}.${c}`).join(', ');
+
 /**
- * Search local foods + custom_foods by name. Returns up to `limit`
- * matches ordered by relevance (exact prefix first, then substring).
+ * Build an FTS5 MATCH expression from free text (E3): each word becomes a
+ * quoted prefix token, so "chick brea" finds "Chicken Breast" and the porter
+ * tokenizer's stemming covers inflections on whole words. Quoting neutralises
+ * every FTS operator (AND/OR/NEAR/^/-), so user text can never be parsed as
+ * query syntax. Returns null when nothing tokenisable remains.
+ */
+export function toFtsMatch(query) {
+  const tokens = String(query || '')
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+  if (tokens.length === 0) return null;
+  return tokens.map((t) => `"${t.replace(/"/g, '')}"*`).join(' ');
+}
+
+/**
+ * Search local foods + custom_foods by name (+ brand under FTS). E3: the
+ * first attempt is the FTS5 index (word-prefix + porter stemming, bm25
+ * relevance); if the index is unavailable (FTS5 not compiled in, or the
+ * migration skipped it) the LIKE path below answers exactly as before.
+ * Both paths return the same row shape, with `rank` 0 for an exact
+ * name-prefix match and 1 otherwise — the waterfall's local-confidence
+ * check reads it (see waterfall._localIsStrong).
+ *
+ * Customs rank first (user's own data), then globals.
  */
 export async function searchLocalByName(userId, query, limit = 25) {
   const d = await db();
   const q = (query || '').trim().toLowerCase();
   if (q.length === 0) return [];
+
+  const match = toFtsMatch(q);
+  if (match) {
+    try {
+      return await _searchFts(d, userId, q, match, limit);
+    } catch (_) {
+      // No FTS index on this install (or a match-syntax edge): the LIKE
+      // fallback below is the complete pre-E3 behaviour.
+    }
+  }
+  return _searchLike(d, userId, q, limit);
+}
+
+async function _searchFts(d, userId, q, match, limit) {
+  const like = `${q}%`;
+  const globals = await d.getAllAsync(
+    `SELECT
+       'global:' || f.id AS food_ref, f.source, f.name, f.brand,
+       ${foodColsAs('f')},
+       CASE WHEN lower(f.name) LIKE ? THEN 0 ELSE 1 END AS rank
+     FROM foods_fts
+     JOIN foods f ON f.rowid = foods_fts.rowid
+     WHERE foods_fts MATCH ?
+     ORDER BY rank, f.verified DESC, bm25(foods_fts)
+     LIMIT ?`,
+    [like, match, limit]
+  );
+  const customs = await d.getAllAsync(
+    `SELECT
+       'custom:' || c.id AS food_ref, 'custom' AS source, c.name, c.brand,
+       ${foodColsAs('c')},
+       CASE WHEN lower(c.name) LIKE ? THEN 0 ELSE 1 END AS rank
+     FROM custom_foods_fts
+     JOIN custom_foods c ON c.rowid = custom_foods_fts.rowid
+     WHERE custom_foods_fts MATCH ? AND c.user_id = ? AND c.deleted_at IS NULL
+     ORDER BY rank, bm25(custom_foods_fts)
+     LIMIT ?`,
+    [like, match, userId, limit]
+  );
+  return [...customs, ...globals].slice(0, limit);
+}
+
+async function _searchLike(d, userId, q, limit) {
   const like = `${q}%`;
   const contains = `%${q}%`;
 
   // Prefix matches first on both tables, then substring matches.
-  // sodium_100g / sugar_100g ride along for the food-detail display rows
-  // (gap #16 sugars, E4 sodium): both tables store them, but these reads
-  // previously dropped them, so a locally resolved food could never show
-  // either figure. Display-only; scaleSugarG/scaleSodiumMg treat null as
-  // "no data".
   const globals = await d.getAllAsync(
     `SELECT
        'global:' || id AS food_ref, source, name, brand,
-       serving_g, serving_label,
-       kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
-       sodium_100g, sugar_100g,
+       ${FOOD_COLS},
        CASE WHEN lower(name) LIKE ? THEN 0 ELSE 1 END AS rank
      FROM foods
      WHERE lower(name) LIKE ?
@@ -45,9 +115,7 @@ export async function searchLocalByName(userId, query, limit = 25) {
   const customs = await d.getAllAsync(
     `SELECT
        'custom:' || id AS food_ref, 'custom' AS source, name, brand,
-       serving_g, serving_label,
-       kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
-       sodium_100g, sugar_100g,
+       ${FOOD_COLS},
        CASE WHEN lower(name) LIKE ? THEN 0 ELSE 1 END AS rank
      FROM custom_foods
      WHERE user_id = ? AND deleted_at IS NULL AND lower(name) LIKE ?
@@ -56,7 +124,6 @@ export async function searchLocalByName(userId, query, limit = 25) {
     [like, userId, contains, limit]
   );
 
-  // Customs rank first (user's own data), then globals.
   return [...customs, ...globals].slice(0, limit);
 }
 
