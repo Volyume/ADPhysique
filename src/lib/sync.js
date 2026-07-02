@@ -267,7 +267,7 @@ export async function syncExercises(supabaseUserId, _opts = {}) {
       increment_kg: e.incrementKg ?? 2.5,
       subregion: e.subregion ?? null,
       notes: e.notes ?? null,
-      updated_at: new Date().toISOString(),
+      updated_at: new Date(e.updatedAt ?? e.createdAt ?? Date.now()).toISOString(), // F5 Phase A: honest edit time
     }));
     for (let i = 0; i < rows.length; i += 200) {
       const { error } = await sb.from('custom_exercises').upsert(
@@ -399,7 +399,10 @@ async function _upsertWorkout(sb, supabaseUserId, w) {
     total_volume: w.totalVolume ?? null,
     is_completed: true,
     synced_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    // F5 Phase A (SD-3): carry the REAL local edit time. Re-stamping to now
+    // on every bulk cycle re-widened every other device's delta pull and let
+    // a stale full-push overwrite newer edits under last-write-wins.
+    updated_at: new Date(w.updatedAt ?? Date.now()).toISOString(),
   }, { onConflict: 'user_id,id' });
   if (error) {
     logPgErr('sync._upsertWorkout', error);
@@ -438,7 +441,7 @@ async function _upsertSets(sb, supabaseUserId, sets) {
     // bilateral set. actual_reps already holds the lower side.
     left_reps: s.leftReps ?? null,
     right_reps: s.rightReps ?? null,
-    updated_at: new Date().toISOString(),
+    updated_at: new Date(s.updatedAt ?? Date.now()).toISOString(), // F5 Phase A: honest edit time
   }));
   // Chunk to avoid hitting Supabase row limits
   for (let i = 0; i < rows.length; i += 200) {
@@ -779,7 +782,9 @@ async function _pushProgrammes(sb, supabaseUserId, localUserId) {
       // My Plans organisation survives a device change. Nullable; an unfiled
       // plan ships NULL.
       folder_id: p.folderId ?? null,
-      updated_at: new Date().toISOString(),
+      // F5 Phase A (SD-3): the 2s-debounced full re-push used to re-stamp
+      // every programme to now each cycle - the audit's exemplar of the bug.
+      updated_at: new Date(p.updatedAt ?? p.createdAt ?? Date.now()).toISOString(),
     }));
     const { error } = await sb.from('programmes').upsert(rows, { onConflict: 'user_id,id' });
     if (error) logPgErr('sync._pushProgrammes', error);
@@ -814,7 +819,7 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
         is_sample: !!r.isSample,
         is_library: !!r.isLibrary,
         source_routine_id: r.sourceRoutineId ?? null,
-        updated_at: new Date().toISOString(),
+        updated_at: new Date(r.updatedAt ?? r.createdAt ?? Date.now()).toISOString(), // F5 Phase A: honest edit time
       }));
       // Chunk so a single row's RLS rejection doesn't take the whole
       // library down, and so the payload stays small.
@@ -866,6 +871,9 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
           starting_weight: re.startingWeight ?? null,
           rest_seconds: re.restSeconds ?? null,
           superset_group_id: re.supersetGroupId ?? null,
+          // F5 Phase A: previously pushed with NO updated_at, so the cloud
+          // value never moved on upsert and delta pulls could not see edits.
+          updated_at: new Date(re.updatedAt ?? re.createdAt ?? Date.now()).toISOString(),
         }));
       const orphanCount = routineExs.length - rows.length;
       if (orphanCount > 0) {
@@ -906,7 +914,7 @@ async function _pushMesocycles(sb, supabaseUserId, localUserId) {
         duration_weeks: m.durationWeeks ?? null,
         focus: m.focus ?? null,
         is_active: !!m.isActive,
-        updated_at: new Date().toISOString(),
+        updated_at: new Date(m.updatedAt ?? m.createdAt ?? Date.now()).toISOString(), // F5 Phase A: honest edit time
       })).filter(r => r.start_date && r.end_date);
       if (rows.length) {
         const { error } = await sb.from('mesocycles').upsert(rows, { onConflict: 'user_id,id' });
@@ -923,6 +931,7 @@ async function _pushMesocycles(sb, supabaseUserId, localUserId) {
         week_number: w.weekIndex ?? w.weekNumber ?? 1,
         is_deload: !!w.isDeload,
         notes: w.notes ?? null,
+        updated_at: new Date(w.updatedAt ?? w.createdAt ?? Date.now()).toISOString(), // F5 Phase A
       }));
       for (let i = 0; i < rows.length; i += 200) {
         const { error } = await sb.from('mesocycle_weeks').upsert(
@@ -943,6 +952,7 @@ async function _pushMorningWeights(sb, supabaseUserId, localUserId) {
       weight_kg: w.weightKg,
       logged_at: msToISO(w.loggedAt),
       notes: w.notes ?? null,
+      updated_at: new Date(w.updatedAt ?? w.loggedAt ?? Date.now()).toISOString(), // F5 Phase A
     })).filter(r => r.logged_at && r.weight_kg != null);
     for (let i = 0; i < rows.length; i += 200) {
       const { error } = await sb.from('morning_weights').upsert(
@@ -962,6 +972,9 @@ async function _pushCoachOutputs(sb, supabaseUserId, localUserId) {
       week_start: o.weekStart,
       output_json: o.outputJson,
       applied: !!o.applied,
+      // F5 Phase A: previously pushed with NO updated_at, so flipping
+      // 'applied' never bumped the cloud row and delta pulls missed it.
+      updated_at: new Date(o.updatedAt ?? Date.now()).toISOString(),
     }));
     for (let i = 0; i < rows.length; i += 200) {
       const { error } = await sb.from('coach_outputs').upsert(
@@ -1028,7 +1041,7 @@ async function _pushUserInsights(sb, supabaseUserId, localUserId) {
       action_payload: r.actionPayload ?? null,
       generated_at: r.generatedAt ? new Date(r.generatedAt).toISOString() : new Date().toISOString(),
       dismissed_at: r.dismissedAt ? new Date(r.dismissedAt).toISOString() : null,
-      updated_at: new Date().toISOString(),
+      updated_at: new Date(r.updatedAt ?? r.generatedAt ?? Date.now()).toISOString(), // F5 Phase A: honest edit time
     }));
     for (let i = 0; i < payload.length; i += 200) {
       const { error } = await sb.from('user_insights').upsert(
