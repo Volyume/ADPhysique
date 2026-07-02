@@ -109,9 +109,26 @@ import MyRecipesScreen from '../screens/MyRecipesScreen';
 import MyMealsScreen from '../screens/MyMealsScreen';
 import RecipeBuilderScreen from '../screens/RecipeBuilderScreen';
 import { withProGuard } from '../components/ProGate';
+import { withScreenBoundaries } from '../components/ScreenBoundary';
 
-const Tab = createBottomTabNavigator();
-const Stack = createStackNavigator();
+// F8 (audit PR-7): per-screen error boundaries. The installed React
+// Navigation v6 (@react-navigation/native 6.1.18) has no `screenLayout`
+// prop (that arrived in v7), so the seam is the navigator factory:
+// withScreenBoundaries wraps the factory result so every registered
+// screen's `component` renders inside its own ScreenBoundary, scoped by
+// route name (see ScreenBoundary.js for the mechanism). One wrap point
+// covers every screen in every stack plus each tab's stack itself, so a
+// render throw in one screen degrades to that screen's calm fallback
+// instead of felling the whole app into the root App.js crash screen,
+// whose Retry re-renders the identical tree.
+//
+// This wraps screen RENDERING only. The renderNavigator() routing below
+// (auth, Article 9 consent gate, first-run, tier) is untouched and
+// re-evaluates on every render: a crash inside the consent screen shows
+// the fallback INSIDE the still-mounted consent stack, so the gate
+// cannot be skipped (it fails closed, as required).
+const Tab = withScreenBoundaries(createBottomTabNavigator());
+const Stack = withScreenBoundaries(createStackNavigator());
 
 // AUTH-4 (I2): supabase fires SIGNED_IN and INITIAL_SESSION for the same
 // session on one launch (and rapid sign-out/sign-in produces repeats). The
