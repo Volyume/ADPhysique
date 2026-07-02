@@ -304,6 +304,11 @@ export default function HomeScreen({ navigation, route }) {
       // Positions 0 and 5 are read below by the differential loader (NAV-4):
       // loadWeekStats returns { deloadSuggested }, loadPlateauBanner returns
       // the picked plateau ({ exerciseId, weeks } | null). Keep them in place.
+      // WARNING: this destructure is POSITIONAL. Inserting, removing or
+      // reordering entries in the array below silently feeds the WRONG
+      // loader's result into the differential paywall context (index 0 =
+      // loadWeekStats, index 5 = loadPlateauBanner) — adjust the holes in the
+      // destructure together with any change to the array.
       const [weekSignals, , , , , plateauPick] = await Promise.all([
         loadWeekStats(),
         loadNextWorkout(),
@@ -647,11 +652,17 @@ export default function HomeScreen({ navigation, route }) {
   async function loadDifferentialBanner({ deloadSuggested = false, weeksLiftStalled = null } = {}) {
     try {
       if (!user?.id || tier !== 'free') { setDifferentialBanner(null); return; }
+      // ED-safety, fail CLOSED: this is a food-adjacent monetisation surface,
+      // so a FAILED flag/wellbeing read suppresses the banner. The usual
+      // banner-loader pattern fails open on read errors, but a transient
+      // failure here must never surface a nutrition upsell over a possibly
+      // open ED flag or calm mode ('read_failed' is truthy for edFlag and
+      // checked explicitly for wellbeing).
       const [edFlag, wellbeing] = await Promise.all([
-        getOpenEdPatternFlag(user.id).catch(() => null),
-        getWellbeingMode().catch(() => 'unspecified'),
+        getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
+        getWellbeingMode().catch(() => 'read_failed'),
       ]);
-      if (edFlag || isCalm(wellbeing)) { setDifferentialBanner(null); return; }
+      if (edFlag || wellbeing === 'read_failed' || isCalm(wellbeing)) { setDifferentialBanner(null); return; }
       const [checkins, targets] = await Promise.all([
         getRecentCheckins(user.id, 3).catch(() => []),
         getNutritionTargets(user.id).catch(() => null),

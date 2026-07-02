@@ -84,7 +84,17 @@ describe('NAV-4: the loader is honest, gated and suppressed', () => {
     expect(calmIdx).toBeGreaterThan(-1);
     expect(edIdx).toBeLessThan(detectIdx);
     expect(calmIdx).toBeLessThan(detectIdx);
-    expect(loader).toMatch(/if \(edFlag \|\| isCalm\(wellbeing\)\) \{ setDifferentialBanner\(null\); return; \}/);
+    expect(loader).toMatch(/if \(edFlag \|\| wellbeing === 'read_failed' \|\| isCalm\(wellbeing\)\) \{ setDifferentialBanner\(null\); return; \}/);
+  });
+
+  test('the flag/wellbeing reads fail CLOSED: a read error suppresses the banner', () => {
+    // Food-adjacent monetisation surface: a transient read failure must never
+    // show the upsell over a possibly open ED flag. The catches resolve to a
+    // sentinel the suppression check treats as "suppress", never to a value
+    // that reads as "no flag".
+    expect(loader).toMatch(/getOpenEdPatternFlag\(user\.id\)\.catch\(\(\) => 'read_failed'\)/);
+    expect(loader).toMatch(/getWellbeingMode\(\)\.catch\(\(\) => 'read_failed'\)/);
+    expect(loader).not.toMatch(/getOpenEdPatternFlag\([^)]*\)\.catch\(\(\) => null\)/);
   });
 
   test('adherence answers are mapped onto the engine vocabulary via the shared helper', () => {

@@ -182,7 +182,10 @@ export default function ProUpgradeScreen({ navigation, route }) {
         toast.show('Could not start your trial. Try again in a moment.', { variant: 'error' });
         return;
       }
-      const ts = trial.data?.trial_state ?? 'pro_trial_active';
+      // Fail toward the purchase sheet, never self-grant: a response with NO
+      // trial_state must not read as a live trial, so missing data maps to
+      // null → trialLive false → the honest Play purchase path below.
+      const ts = trial.data?.trial_state ?? null;
       const trialLive = ts === 'pro_trial_active' || ts === 'complete_trial_active';
       if (!trialLive) {
         // already_started with a consumed/expired state: this account cannot

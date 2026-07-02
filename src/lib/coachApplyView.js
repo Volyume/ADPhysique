@@ -96,6 +96,16 @@ export function floorClampLine(newKcal, energyUnit = 'kcal') {
 }
 
 /**
+ * The floor blocked the CARB CYCLE: attribute the hold correctly. The weekly
+ * target is not itself held at the floor; the cycle's rest-day serving is
+ * what would dip below it, so the generic "Held at your safe minimum" line
+ * misstates where the floor bit.
+ */
+export function macroCycleHoldLine(floorKcal, energyUnit = 'kcal') {
+  return `Held: a rest day would fall below your safe minimum of ${formatEnergy(floorKcal, energyUnit)} ${energyUnitLabel(energyUnit)}.`;
+}
+
+/**
  * NU-4: the pre-tap absolute + duration for an indefinite target write.
  * "Until your next check-in" is when the target is next reviewed; the write
  * itself has no expiry, so no "next week" framing.

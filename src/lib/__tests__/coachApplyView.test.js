@@ -19,6 +19,7 @@ import {
   classifyMacroCycleApply,
   floorHoldLine,
   floorClampLine,
+  macroCycleHoldLine,
   preTapTargetLine,
   signedEnergyChange,
 } from '../coachApplyView';
@@ -129,6 +130,17 @@ describe('row strings: exact wording, kJ preference, no em dash (NU-3/NU-4/NU-6)
     expect(floorClampLine(1200, 'kj')).toBe('Applied to your safe minimum, 5,021 kJ.');
   });
 
+  test('macro-cycle hold line attributes the hold to the rest day, not the target', () => {
+    // The weekly target is not held at the floor; the cycle's rest-day serving
+    // is what would dip below it. The generic floorHoldLine misstates that.
+    expect(macroCycleHoldLine(1200))
+      .toBe('Held: a rest day would fall below your safe minimum of 1,200 kcal.');
+    expect(macroCycleHoldLine(1500, 'kcal'))
+      .toBe('Held: a rest day would fall below your safe minimum of 1,500 kcal.');
+    expect(macroCycleHoldLine(1200, 'kj'))
+      .toBe('Held: a rest day would fall below your safe minimum of 5,021 kJ.');
+  });
+
   test('pre-tap target line states the absolute and the honest duration', () => {
     expect(preTapTargetLine(2350)).toBe('→ 2,350 kcal/day, stays until your next check-in.');
     expect(preTapTargetLine(2350, 'kj')).toBe('→ 9,832 kJ/day, stays until your next check-in.');
@@ -144,7 +156,7 @@ describe('row strings: exact wording, kJ preference, no em dash (NU-3/NU-4/NU-6)
 
   test('no string ever labels the write "next week", and none carries an em dash', () => {
     const all = [
-      floorHoldLine(1200), floorClampLine(1200),
+      floorHoldLine(1200), floorClampLine(1200), macroCycleHoldLine(1200),
       preTapTargetLine(2350), preTapTargetLine(1200, 'kcal', { clampedToFloor: true }),
       signedEnergyChange(-150),
     ];

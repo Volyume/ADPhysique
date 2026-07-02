@@ -52,6 +52,7 @@ import {
   classifyMacroCycleApply,
   floorHoldLine,
   floorClampLine,
+  macroCycleHoldLine,
   preTapTargetLine,
   signedEnergyChange,
 } from '../lib/coachApplyView';
@@ -601,8 +602,10 @@ function RefeedCard({ refeed, applied, onApply, applying, energyUnit, holdNote }
       </View>
       <Text style={styles.adjustmentNote}>{refeed.note}</Text>
       {/* NU-4: this write is genuinely one day (the Diary resolves it onto the
-          single next training day), so the duration says exactly that. */}
-      {!applied ? (
+          single next training day), so the duration says exactly that. Gated
+          on the absence of the failure notice (holdNote) so "Applies to your
+          next training day only." never stacks under "nothing was applied". */}
+      {!applied && !holdNote ? (
         <Text style={styles.adjustmentDetail}>Applies to your next training day only.</Text>
       ) : null}
       {!applied && holdNote ? (
@@ -1194,7 +1197,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         setApplyNotice(n => ({
           ...n,
           macroCycle: check.kind === 'floor_hold'
-            ? floorHoldLine(check.floorKcal, energyUnit)
+            ? macroCycleHoldLine(check.floorKcal, energyUnit)
             : 'This split no longer fits your current targets.',
         }));
         return;
@@ -1879,7 +1882,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       energyUnit={energyUnit}
       holdNote={
         macroCyclePreview?.kind === 'floor_hold'
-          ? floorHoldLine(macroCyclePreview.floorKcal, energyUnit)
+          ? macroCycleHoldLine(macroCyclePreview.floorKcal, energyUnit)
           : (applyNotice.macroCycle ?? null)
       }
     />

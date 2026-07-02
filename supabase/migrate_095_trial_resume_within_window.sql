@@ -17,6 +17,14 @@
 --   ORIGINAL window end (first_trial_at + 14 days), never extended. Outside
 --   the window the behaviour is unchanged (cascade_expired, free, paywall).
 --
+--   The `cur_state <> 'unstarted'` early return additionally special-cases
+--   accounts already STAMPED trial_state='cascade_expired' by 071's flat
+--   refusal before this migration applied: their first start_cascade() call
+--   wrote the stamp, so without this the resume branch is unreachable for the
+--   exact accounts the fix targets. A stamped account inside its original
+--   window resumes identically; every other non-unstarted state keeps the
+--   unchanged early return.
+--
 --   Abuse property preserved: an email's total possible cardless-trial
 --   entitlement remains exactly one 14-day window anchored at its first-ever
 --   start. Delete/re-signup cycles can only ever recover the REMAINDER of
@@ -71,8 +79,54 @@ BEGIN
     RAISE EXCEPTION 'profile not found for user %', uid;
   END IF;
 
-  -- Existing account that has already started its cascade: unchanged behaviour.
+  -- Existing account that has already started its cascade: unchanged behaviour
+  -- for every state EXCEPT cascade_expired. An account 071's flat refusal
+  -- already STAMPED cascade_expired (before this migration applied) would
+  -- otherwise never reach the resume branch below: its first start_cascade()
+  -- call wrote the stamp, and every retry would early-return here. So the
+  -- stamped state re-checks the ledger window and resumes exactly like the
+  -- main branch when time remains.
   IF cur_state <> 'unstarted' THEN
+    IF cur_state = 'cascade_expired' THEN
+      SELECT email INTO user_email FROM auth.users WHERE id = uid;
+      IF user_email IS NOT NULL AND length(trim(user_email)) > 0 THEN
+        e_hash := private.email_trial_hash(user_email);
+        SELECT l.first_trial_at INTO ledger_first_trial_at
+          FROM private.trial_ledger l
+         WHERE l.email_hash = e_hash;
+      END IF;
+
+      IF ledger_first_trial_at IS NOT NULL THEN
+        original_window_end := ledger_first_trial_at + interval '14 days';
+
+        IF starts_at < original_window_end THEN
+          -- Same resume as the main branch below: window end anchored to the
+          -- ORIGINAL first start, never extended; 068 GUC bypass pattern.
+          PERFORM set_config('app.allow_tier_change', 'on', true);
+          UPDATE users_profile SET
+            tier = 'pro',
+            trial_state = 'pro_trial_active',
+            trial_started_at = ledger_first_trial_at,
+            pro_trial_ends_at = original_window_end
+          WHERE id = uid;
+          PERFORM set_config('app.allow_tier_change', 'off', true);
+
+          INSERT INTO tier_history (user_id, from_tier, to_tier, reason, source_surface)
+          VALUES (uid, 'free', 'pro_trial', 'admin', 'onboarding_article9_trial_resumed');
+
+          RETURN jsonb_build_object(
+            'trial_state', 'pro_trial_active',
+            'tier', 'pro',
+            'trial_started_at', ledger_first_trial_at,
+            'pro_trial_ends_at', original_window_end,
+            'resumed', true
+          );
+        END IF;
+      END IF;
+      -- Window spent (or no ledger row to anchor to): the stamp stands.
+    END IF;
+
+    -- Every other non-unstarted state: unchanged early return.
     RETURN jsonb_build_object(
       'trial_state', cur_state,
       'already_started', true
@@ -182,6 +236,14 @@ GRANT EXECUTE ON FUNCTION start_cascade() TO authenticated;
 --        UPDATE private.trial_ledger SET first_trial_at = now() - interval '15 days'
 --         WHERE email_hash = private.email_trial_hash('<email>');
 --        SELECT start_cascade();  -- cascade_expired, tier=free (window spent)
+--   3b. Account stamped cascade_expired by 071 within window → resumes:
+--        UPDATE users_profile SET trial_state = 'cascade_expired', tier = 'free'
+--         WHERE id = auth.uid();  -- simulate 071's pre-095 flat refusal
+--        (ledger first_trial_at still inside its 14 days)
+--        SELECT start_cascade();  -- pro_trial_active, resumed=true,
+--                                 -- pro_trial_ends_at = ORIGINAL end
+--       Repeat with first_trial_at backdated 15 days: cascade_expired stands
+--       (already_started=true, no resume, no new window).
 --   4. The cascade day-14 expiry worker needs no change: a resumed trial's
 --      pro_trial_ends_at is in the past-or-future exactly like any other and
 --      expires on the same path.

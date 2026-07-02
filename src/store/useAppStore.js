@@ -1490,6 +1490,17 @@ const useAppStore = create((set, get) => ({
         if (typeof parsed.autoStartRestTimer === 'boolean') next.autoStartRestTimer = parsed.autoStartRestTimer;
         if (typeof parsed.restEndAlertEnabled === 'boolean') next.restEndAlertEnabled = parsed.restEndAlertEnabled;
         set({ ...next, workoutPrefsLoaded: true });
+        if (next.restEndAlertEnabled === false) {
+          // A rest started BEFORE this hydration ran scheduled its end-of-rest
+          // alert off the default-on value; a pre-hydration schedule must not
+          // survive a loaded OFF pref. Best-effort cancel, mirroring
+          // setRestEndAlertEnabled's off path (lazy require avoids the
+          // store → restEnd → store import cycle).
+          try {
+            // eslint-disable-next-line global-require
+            require('../lib/notifications/restEnd').cancelRestEndNotification();
+          } catch (_) { /* tolerate: the pref itself still gates rescheduling */ }
+        }
       } else {
         set({ workoutPrefsLoaded: true });
       }

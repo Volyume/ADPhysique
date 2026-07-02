@@ -17,17 +17,27 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
 
+// paywall_shown impressions already sent this JS session, keyed by trigger.
+// Home's banner stack remounts this component whenever a sibling banner loads
+// or dismisses, so a per-mount effect flaps the SAME impression into telemetry
+// several times per visit. Module-level so it survives remounts; resets with
+// the JS context (one impression per session + trigger).
+const impressionsSent = new Set();
+
 export default function DifferentialBadge({
   differential,        // { shown, trigger, with_food_data_message, paywall_cta }
   pricingWindow: _pricingWindow, // legacy, unused; billing period now lives on the Paywall
   pricingPriceText,    // e.g. "£4.99/month", pre-resolved by caller for the buy_pro CTA
   onTapCta,            // (action: 'pay' | 'dismiss' | 'shown') => void ('shown' is the impression ping)
 }) {
-  // Fire the locked paywall_shown telemetry once per mount with a
+  // Fire the locked paywall_shown telemetry once per session + trigger with a
   // visible badge. Caller wires the event sender via onTapCta when
   // the user actually taps; this effect captures the impression.
   useEffect(() => {
     if (!differential?.shown) return;
+    const key = differential?.trigger ?? 'unknown';
+    if (impressionsSent.has(key)) return;
+    impressionsSent.add(key);
     onTapCta?.('shown');
     // intentionally only on shown-change so we don't re-fire on prop noise.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -35,14 +45,17 @@ export default function DifferentialBadge({
 
   if (!differential?.shown) return null;
 
-  // 7 days = the Play intro free trial this CTA leads to (the 14-day cardless
-  // trial runs before any purchase prompt). See SUBSCRIPTION_AND_PAYMENT_LOCKED
-  // 2026-06-06 override. The 'try_pro_14d' id is internal, left as-is.
+  // 14 days: the try_pro_14d CTA routes to ProUpgrade, the 14-day CARDLESS
+  // trial (detectDifferentialTrigger only emits it while canStillTrial holds).
+  // The previous "7 days" label was the inverted rationale — it assumed this
+  // CTA led to Google's 7-day Play intro offer, which in fact only appears
+  // later, on the paid purchase sheet once the cardless trial is spent
+  // (the buy_pro variant below).
   //
   // PLAY-002: the buy CTA shows the live store price the caller passes, or a
   // price-free "Get Pro" until it loads. No hardcoded price fallback.
   const ctaLabel = differential.paywall_cta === 'try_pro_14d'
-    ? 'Try Pro free for 7 days'
+    ? 'Try Pro free for 14 days'
     : pricingPriceText ? `Get Pro for ${pricingPriceText}` : 'Get Pro';
 
   return (

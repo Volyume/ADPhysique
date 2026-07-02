@@ -40,4 +40,18 @@ describe('ProOnboarding refuses to progress without a valid sex', () => {
   test('sex state has no default (starts null, never male)', () => {
     expect(src).toMatch(/const\s*\[\s*sex\s*,\s*setSex\s*\]\s*=\s*useState\(\s*null\s*\)/);
   });
+
+  test('F11: a restored draft with an invalid sex clamps the step to 2 (never past the sex gate)', () => {
+    // The restore effect derives validity from the screen's OWN accepted sex
+    // options, restores sex only when valid, and clamps the restored step so
+    // a draft saved at step 4 with sex null/invalid lands back on step 2
+    // (max(1, min(4, 2)) = 2), where canContinue re-blocks progression.
+    expect(src).toMatch(/const\s+ACCEPTED_SEX_VALUES\s*=\s*SEX_OPTIONS\.map\(\(o\) => o\.value\)/);
+    expect(src).toMatch(/const sexValid = ACCEPTED_SEX_VALUES\.includes\(a\.sex\);/);
+    expect(src).toMatch(/if \(sexValid\) setSex\(a\.sex\);/);
+    expect(src).toMatch(/setStep\(\(s\) => Math\.max\(s, sexValid \? draft\.step : Math\.min\(draft\.step, 2\)\)\);/);
+    // And the picker itself renders from the same set, so the accepted values
+    // cannot drift from what the UI offers.
+    expect(src).toMatch(/options=\{SEX_OPTIONS\}/);
+  });
 });

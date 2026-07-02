@@ -326,6 +326,11 @@ function DiaryStack({ navigation }) {
         component={GatedRecipeBuilder}
         options={{ headerShown: false, presentation: 'modal' }}
       />
+      {/* Every screen in this stack is Pro-gated, so its ProGate/ProLocked
+          surfaces navigate('ProUpgrade'). React Navigation silently DROPS a
+          navigate to a route the stack has not registered (the F4 bug class),
+          so ProUpgrade must be registered here like every other tab stack. */}
+      <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
     </Stack.Navigator>
   );
 }

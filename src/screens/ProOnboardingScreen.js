@@ -71,6 +71,12 @@ function daysToFreqBucket(daysPerWeek) {
   return '6+';
 }
 
+// The wizard's only accepted biological-sex values. The step-2 picker and the
+// draft-restore step clamp read this SAME set, so the sex gate and its UI can
+// never drift apart (F11: sex drives the sacred ED calorie floor + BMR).
+const SEX_OPTIONS = [{ label: 'Male', value: 'male' }, { label: 'Female', value: 'female' }];
+const ACCEPTED_SEX_VALUES = SEX_OPTIONS.map((o) => o.value);
+
 const EXPERIENCE_OPTIONS = [
   { value: 'beginner',     label: 'Beginner',     sub: 'Less than 18 months of consistent training' },
   { value: 'intermediate', label: 'Intermediate', sub: '18 months to 3 years of consistent training' },
@@ -324,7 +330,8 @@ export default function ProOnboardingScreen({ navigation }) {
       str(a.bfSource, setBfSource);
       if (a.localHeightUnits === 'imperial' || a.localHeightUnits === 'metric') setLocalHeightUnits(a.localHeightUnits);
       // Sex only ever restores an explicit prior choice; anything else stays null.
-      if (a.sex === 'male' || a.sex === 'female') setSex(a.sex);
+      const sexValid = ACCEPTED_SEX_VALUES.includes(a.sex);
+      if (sexValid) setSex(a.sex);
       str(a.age, setAge);
       str(a.heightCm, setHeightCm);
       str(a.heightFt, setHeightFt);
@@ -345,7 +352,12 @@ export default function ProOnboardingScreen({ navigation }) {
       bool(a.cardioOn, setCardioOn);
       // The account step is behind a restored draft by definition.
       setAccountCreated(true);
-      setStep((s) => Math.max(s, draft.step));
+      // F11 seam: a draft persisted past step 2 whose sex is not an accepted
+      // value (corrupt/hand-edited storage) must NOT restore past the sex
+      // gate — sex drives the sacred ED floor, and step 2's canContinue is
+      // the only thing enforcing it. Clamp the restored step to 2 until the
+      // draft carries a valid explicit choice.
+      setStep((s) => Math.max(s, sexValid ? draft.step : Math.min(draft.step, 2)));
     }).catch(() => { draftLoadedRef.current = true; /* fresh start, same as no draft */ });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
@@ -926,7 +938,7 @@ export default function ProOnboardingScreen({ navigation }) {
               <Text style={styles.fieldLabel}>Biological sex</Text>
               <Text style={styles.fieldHint}>Used to calculate your calorie and nutrition targets accurately.</Text>
               <SegmentedControl
-                options={[{ label: 'Male', value: 'male' }, { label: 'Female', value: 'female' }]}
+                options={SEX_OPTIONS}
                 value={sex}
                 onChange={setSex}
                 accessibilityLabel="Biological sex"

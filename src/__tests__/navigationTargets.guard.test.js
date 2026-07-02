@@ -68,6 +68,22 @@ describe('cross-stack navigation guard (F4 / NAV-1/2/3)', () => {
       .toMatch(/if\s*\(openWeightSignal\)\s*setEditing\(true\)/);
   });
 
+  test('every tab stack with a Pro-gated surface registers ProUpgrade', () => {
+    // Same silent-drop bug class as above, inside a single stack: ProGate /
+    // ProLocked surfaces call navigate('ProUpgrade'), which React Navigation
+    // silently drops unless the caller's OWN stack registers the route.
+    // DiaryStack (every screen gated) shipped without it — a free user tapping
+    // Upgrade in the Diary got a dead control. Pin all five tab stacks.
+    const nav = read('src/navigation/RootNavigator.js');
+    for (const stack of ['DiaryStack', 'HomeStack', 'PlansStack', 'ProgressStack', 'ProfileStack']) {
+      const start = nav.indexOf(`function ${stack}(`);
+      expect(start).toBeGreaterThan(-1);
+      const end = nav.indexOf('\nfunction ', start + 1);
+      const body = nav.slice(start, end === -1 ? nav.length : end);
+      expect(body).toMatch(/name="ProUpgrade"\s+component=\{ProUpgradeScreen\}\s+options=\{\{\s*headerShown:\s*false,\s*presentation:\s*'modal'\s*\}\}/);
+    }
+  });
+
   test('the Diary OFF-sharing prompt navigates BEFORE it dismisses itself', () => {
     const src = read('src/screens/DiaryScreen.js');
     const site = src.indexOf("screen: 'SettingsPrivacy'");
