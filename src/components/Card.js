@@ -15,7 +15,7 @@
 
 import { View, StyleSheet } from 'react-native';
 import PressableCard from './PressableCard';
-import { colors, radius, spacing, withAlpha } from '../styles/theme';
+import { colors, radius, spacing, withAlpha, alpha } from '../styles/theme';
 
 const TONES = {
   primary: colors.primary,
@@ -46,9 +46,9 @@ export default function Card({
     elevated && styles.elevated,
     { padding: spacing[padding] ?? spacing.lg },
     borderless && styles.borderless,
-    // 0.33 alpha so the accent reads as a border, not a fill (replaces the
+    // alpha.mid so the accent reads as a border, not a fill (replaces the
     // old `accent + '55'` hex concat via the withAlpha helper).
-    accent && !borderless && { borderColor: withAlpha(accent, 0.33) },
+    accent && !borderless && { borderColor: withAlpha(accent, alpha.mid) },
     style,
   ];
 

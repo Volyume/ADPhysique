@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import BlockShapeCard from '../components/BlockShapeCard';
 import Button from '../components/Button';
@@ -2482,7 +2482,7 @@ const styles = StyleSheet.create({
   coachBannerBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 17 },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: withAlpha(colors.primary, 0.12), borderRadius: radius.md, padding: spacing.lg,
+    backgroundColor: withAlpha(colors.primary, alpha.tint), borderRadius: radius.md, padding: spacing.lg,
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.35), marginBottom: spacing.md,
   },
   deloadBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },

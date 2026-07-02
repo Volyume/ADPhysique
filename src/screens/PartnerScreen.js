@@ -22,7 +22,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { appAlert } from '../components/AppAlert';
-import { colors, spacing, radius, fontSize, fontWeight, type, withAlpha } from '../styles/theme';
+import { colors, spacing, radius, fontSize, fontWeight, type, withAlpha, alpha } from '../styles/theme';
 import Card from '../components/Card';
 import usePartners from '../hooks/usePartners';
 import { parseInviteCode } from '../lib/partners/link';
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
   },
   liveHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
   name: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, flexShrink: 1 },
-  chip: { backgroundColor: withAlpha(colors.primary, 0.12), borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 4 },
+  chip: { backgroundColor: withAlpha(colors.primary, alpha.tint), borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 4 },
   chipText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary },
   weekRow: {
     flexDirection: 'row', alignItems: 'stretch', gap: spacing.lg,
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: radius.lg,
     paddingVertical: spacing.md, minHeight: 48,
   },
-  cheerBtnDone: { backgroundColor: withAlpha(colors.border, 0.25) },
+  cheerBtnDone: { backgroundColor: withAlpha(colors.border, alpha.edge) },
   cheerText: { ...type.label, color: colors.onPrimary },
   cheerTextDone: { color: colors.textSecondary },
   caption: { fontSize: fontSize.sm, color: colors.textSecondary },

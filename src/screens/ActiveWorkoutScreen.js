@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as hapticsVocab from '../lib/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
 import AnimatedRow from '../components/AnimatedRow';
@@ -2846,7 +2846,7 @@ const styles = StyleSheet.create({
   starterBanner: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
-    backgroundColor: withAlpha(colors.primary, 0.08),
+    backgroundColor: withAlpha(colors.primary, alpha.ghost),
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   starterBannerText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
@@ -2930,7 +2930,7 @@ const styles = StyleSheet.create({
   extraSetBtnPromoted: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.sm, borderRadius: radius.lg, paddingVertical: spacing.lg,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.4),
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.strong),
     backgroundColor: colors.primaryBg,
   },
   extraSetBtnPromotedText: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.primary, letterSpacing: 0.6 },

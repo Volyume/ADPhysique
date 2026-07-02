@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha } from '../styles/theme';
 import { useToast } from '../components/Toast';
 import { drawShareCard, cardHeight } from '../lib/shareCard/drawShareCard';
 import { buildWeeklyRecapParams } from '../lib/shareCard/greatWeek';
@@ -548,7 +548,7 @@ function ToggleRow({ label, value, onChange, last }) {
       <Switch
         value={value}
         onValueChange={onChange}
-        trackColor={{ false: colors.surface2, true: withAlpha(colors.primary, 0.4) }}
+        trackColor={{ false: colors.surface2, true: withAlpha(colors.primary, alpha.strong) }}
         thumbColor={value ? colors.primary : colors.textMuted}
       />
     </View>

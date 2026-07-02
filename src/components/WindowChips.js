@@ -5,7 +5,7 @@
  * precedent (VolumeHeatmapScreen's rolling-window selector).
  */
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { colors, radius, spacing, type, withAlpha } from '../styles/theme';
+import { colors, radius, spacing, type, withAlpha, alpha } from '../styles/theme';
 
 export default function WindowChips({ windows, selectedKey, onSelect, accessibilityPrefix = 'time window' }) {
   return (
@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
     minHeight: 44, // 44pt touch target
   },
   chipIdle: { borderColor: colors.border, backgroundColor: 'transparent' },
-  chipActive: { borderColor: colors.primary, backgroundColor: withAlpha(colors.primary, 0.12) },
+  chipActive: { borderColor: colors.primary, backgroundColor: withAlpha(colors.primary, alpha.tint) },
   chipText: { ...type.label, color: colors.textSecondary },
   chipTextActive: { color: colors.primary },
 });

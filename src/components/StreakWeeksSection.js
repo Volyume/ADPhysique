@@ -12,7 +12,7 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 import useWeeklyStreak from '../hooks/useWeeklyStreak';
 import { addPause, setManualGoal } from '../lib/streakState';
 import { track } from '../lib/engineTelemetry';
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
     alignItems: 'center', justifyContent: 'center',
   },
-  goalChipOn: { borderColor: colors.primary, backgroundColor: withAlpha(colors.primary, 0.12) },
+  goalChipOn: { borderColor: colors.primary, backgroundColor: withAlpha(colors.primary, alpha.tint) },
   goalChipText: { ...type.num('body'), color: colors.textSecondary },
   goalChipTextOn: { color: colors.primary },
   pauseBtn: {

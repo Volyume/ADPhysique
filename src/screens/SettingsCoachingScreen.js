@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TextInput, Switch, TouchableOpacity } from 'rea
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
-import { colors, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 import * as haptics from '../lib/haptics';
 import { getUserBodyProfile } from '../lib/database';
 import { getWellbeingMode, setWellbeingMode } from '../lib/wellbeing';
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
     justifyContent: 'center',
   },
-  toneChipOn: { borderColor: colors.primary, backgroundColor: withAlpha(colors.primary, 0.12) },
+  toneChipOn: { borderColor: colors.primary, backgroundColor: withAlpha(colors.primary, alpha.tint) },
   toneChipText: { ...type.caption, color: colors.textSecondary },
   toneChipTextOn: { color: colors.primary },
   stepTargetRow: {

@@ -12,7 +12,7 @@
  */
 
 import Card from './Card';
-import { withAlpha } from '../styles/theme';
+import { withAlpha, alpha } from '../styles/theme';
 
 export default function GradientCard({
   tone = 'primary',
@@ -24,8 +24,8 @@ export default function GradientCard({
   accessibilityLabel,
 }) {
   // If a caller passed an explicit tint hex, honour it as the accent border;
-  // otherwise let Card resolve the tone. withAlpha keeps the 0.33 border read.
-  const tintStyle = tint && !borderless ? { borderColor: withAlpha(tint, 0.33) } : null;
+  // otherwise let Card resolve the tone. withAlpha keeps the alpha.mid border read.
+  const tintStyle = tint && !borderless ? { borderColor: withAlpha(tint, alpha.mid) } : null;
   return (
     <Card
       tone={tint ? undefined : tone}

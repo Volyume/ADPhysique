@@ -32,7 +32,7 @@ import Svg, {
 } from 'react-native-svg';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
-import { colors as theme, withAlpha, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors as theme, withAlpha, alpha, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
   plotPoints, linePath, smoothPath, areaPath, ticks, paddedDomain, nearestPointIndex,
 } from '../lib/chartGeometry';
@@ -49,7 +49,7 @@ export default function VolyumeChart({
   width = 300,
   height = 120,
   color = theme.primary,
-  color2 = withAlpha(theme.textMuted, 0.4),
+  color2 = withAlpha(theme.textMuted, alpha.strong),
   thickness = 2,
   thickness2 = 1,
   area = false,

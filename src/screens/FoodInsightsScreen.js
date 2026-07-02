@@ -23,7 +23,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 import { toEnergy, energyUnitLabel, formatEnergy } from '../lib/format';
 import Card from '../components/Card';
 import VolyumeChart from '../components/VolyumeChart';
@@ -348,7 +348,7 @@ export default function FoodInsightsScreen({ navigation }) {
                 width={CHART_WIDTH}
                 height={140}
                 color={colors.primary}
-                color2={withAlpha(colors.textMuted, 0.5)}
+                color2={withAlpha(colors.textMuted, alpha.half)}
                 thickness={2}
                 thickness2={1}
                 curved
@@ -440,7 +440,7 @@ export default function FoodInsightsScreen({ navigation }) {
                     width={CHART_WIDTH}
                     height={120}
                     color={colors.primary}
-                    color2={withAlpha(colors.textMuted, 0.5)}
+                    color2={withAlpha(colors.textMuted, alpha.half)}
                     thickness={2}
                     thickness2={1}
                     curved

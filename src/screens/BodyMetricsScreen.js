@@ -26,7 +26,7 @@ import VolyumeChart from '../components/VolyumeChart';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { useToast } from '../components/Toast';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logBodyMetric, getBodyMetricLog, getOpenEdPatternFlag, getWorkoutSetsSince, getAllExercises } from '../lib/database';
 import { deriveRecomp } from '../lib/recompReframe';
@@ -286,7 +286,7 @@ function BodyFatTrendChart({ entries }) {
         width={chartWidth}
         height={100}
         color={colors.primary}
-        color2={withAlpha(colors.textMuted, 0.4)}
+        color2={withAlpha(colors.textMuted, alpha.strong)}
         thickness={2}
         thickness2={1}
         area

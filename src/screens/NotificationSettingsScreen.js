@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, Switch, TouchableOpacity, ScrollView } from 're
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
 import {
   scheduleMorningWeightNotification,
   scheduleEveningWeightReminder,
@@ -673,7 +673,7 @@ const styles = StyleSheet.create({
   permissionBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: withAlpha(colors.warning, 0.12),
+    backgroundColor: withAlpha(colors.warning, alpha.tint),
     borderWidth: 1,
     borderColor: withAlpha(colors.warning, 0.35),
     borderRadius: radius.md,

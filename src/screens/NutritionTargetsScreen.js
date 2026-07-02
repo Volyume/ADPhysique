@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format } from 'date-fns';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 import { formatEnergy, energyUnitLabel } from '../lib/format';
 import InfoTooltip from '../components/InfoTooltip';
 import { useToast } from '../components/Toast';
@@ -1812,7 +1812,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.4),
+    borderColor: withAlpha(colors.primary, alpha.strong),
     backgroundColor: colors.primaryBg,
   },
   easeNudgeText: {
@@ -1827,7 +1827,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.25),
+    borderColor: withAlpha(colors.primary, alpha.edge),
     backgroundColor: colors.primaryBg,
     gap: spacing.sm,
   },
