@@ -157,3 +157,37 @@ export function pickerMealSlots(current, mealsPerDay = DEFAULT_MEALS_PER_DAY) {
   }
   return list;
 }
+
+// The waking eating window the meal ladder is spread across for time-of-day
+// inference. Kept deliberately wide so an early breakfast or a late dinner
+// still lands on a sensible meal rather than the edges.
+export const EATING_WINDOW_START_HOUR = 6;
+export const EATING_WINDOW_END_HOUR = 22;
+
+// The meal the user is most likely logging into RIGHT NOW, given the local
+// hour and the day's ordered slot keys. Pure: the caller passes the hour so
+// this never reads the clock. The ladder is mapped evenly across the waking
+// eating window and the nearest slot centre to `hour` wins (ties lean earlier,
+// which reads as "still finishing the earlier meal"). Peri-workout slots are
+// excluded from the guess: they are intent-specific, not time-of-day, so a
+// scan is never silently filed under Pre/Post-workout. Falls back to the first
+// slot when there is nothing to range over. This is the honest default the
+// diary barcode FAB passes so a scan no longer lands in 'snack' regardless of
+// the time of day; the user can still re-pick on the detail sheet.
+export function inferMealSlotForHour(hour, slotKeys = []) {
+  const meals = (slotKeys || []).filter(
+    (k) => k && k !== 'preworkout' && k !== 'postworkout',
+  );
+  if (meals.length === 0) return (slotKeys && slotKeys[0]) || null;
+  if (meals.length === 1) return meals[0];
+  const span = EATING_WINDOW_END_HOUR - EATING_WINDOW_START_HOUR;
+  const h = Number.isFinite(hour) ? hour : EATING_WINDOW_START_HOUR;
+  let best = 0;
+  let bestDist = Infinity;
+  for (let i = 0; i < meals.length; i += 1) {
+    const centre = EATING_WINDOW_START_HOUR + ((i + 0.5) / meals.length) * span;
+    const dist = Math.abs(h - centre);
+    if (dist < bestDist) { bestDist = dist; best = i; }
+  }
+  return meals[best];
+}

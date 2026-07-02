@@ -50,7 +50,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import { useToast } from '../components/Toast';
 import { deleteEntries, restoreEntries, moveEntriesToSlot, copyEntriesToDate } from '../lib/food/bulkEntryOps';
 import { shouldShowOffConsentCard, dismissOffConsentCard } from '../lib/food/writeback';
-import { buildMealSlots, highestLoggedMeal, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
+import { buildMealSlots, highestLoggedMeal, inferMealSlotForHour, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
 import { scaleMacros, resolveServingG } from '../lib/food/macros';
 import { isValidEntryGrams } from '../lib/food/servingEntry';
 import { toEnergy, energyUnitLabel } from '../lib/format';
@@ -997,7 +997,16 @@ export default function DiaryScreen({ navigation }) {
       {!selectionMode ? (
         <TouchableOpacity
           style={styles.scanFab}
-          onPress={() => navigation.navigate('ScanBarcode', { entryDate: selectedDate })}
+          onPress={() => {
+            // Pass the likely meal slot so a scan no longer defaults to
+            // 'snack'. Time-of-day inference only makes sense for today;
+            // for a past or future day fall to the first ladder slot.
+            const keys = mealSlots.map((m) => m.key);
+            const slot = selectedDate === isoDate(new Date())
+              ? inferMealSlotForHour(new Date().getHours(), keys)
+              : (keys[0] ?? null);
+            navigation.navigate('ScanBarcode', { entryDate: selectedDate, mealSlot: slot });
+          }}
           activeOpacity={0.85}
           accessibilityRole="button"
           accessibilityLabel="Scan barcode"

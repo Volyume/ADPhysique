@@ -1,6 +1,7 @@
 import {
   mealSlotLabel, slotOrder, buildMealSlots, highestLoggedMeal, pickerMealSlots,
-  DEFAULT_MEALS_PER_DAY,
+  DEFAULT_MEALS_PER_DAY, inferMealSlotForHour,
+  EATING_WINDOW_START_HOUR, EATING_WINDOW_END_HOUR,
   defaultMealSlotLabel, setMealLabelOverrides, getMealLabelOverrides,
 } from '../mealSlots';
 
@@ -118,5 +119,52 @@ describe('slotOrder', () => {
     expect(slotOrder('meal_1')).toBeLessThan(slotOrder('meal_2'));
     expect(slotOrder('meal_2')).toBeLessThan(slotOrder('preworkout'));
     expect(slotOrder('preworkout')).toBeLessThan(slotOrder('snack'));
+  });
+});
+
+describe('inferMealSlotForHour (barcode-FAB likely slot, dossier C8)', () => {
+  // The 4-meal ladder the diary builds by default.
+  const ladder = buildMealSlots([], 4).map((s) => s.key); // meal_1..4, pre, post
+
+  test('morning maps to the first meal, evening to the last', () => {
+    expect(inferMealSlotForHour(7, ladder)).toBe('meal_1');
+    expect(inferMealSlotForHour(21, ladder)).toBe('meal_4');
+  });
+
+  test('midday lands on a middle meal, never the edges', () => {
+    const midday = inferMealSlotForHour(13, ladder);
+    expect(['meal_2', 'meal_3']).toContain(midday);
+  });
+
+  test('never guesses a peri-workout slot (intent-specific, not time-of-day)', () => {
+    for (let h = 0; h <= 23; h += 1) {
+      const slot = inferMealSlotForHour(h, ladder);
+      expect(slot).not.toBe('preworkout');
+      expect(slot).not.toBe('postworkout');
+    }
+  });
+
+  test('clamps hours outside the eating window to the ends', () => {
+    expect(inferMealSlotForHour(2, ladder)).toBe('meal_1'); // pre-dawn
+    expect(inferMealSlotForHour(EATING_WINDOW_START_HOUR - 3, ladder)).toBe('meal_1');
+    expect(inferMealSlotForHour(EATING_WINDOW_END_HOUR + 1, ladder)).toBe('meal_4');
+  });
+
+  test('a single-meal day always returns that meal', () => {
+    const one = buildMealSlots([], 1).map((s) => s.key);
+    expect(inferMealSlotForHour(9, one)).toBe('meal_1');
+    expect(inferMealSlotForHour(20, one)).toBe('meal_1');
+  });
+
+  test('degrades safely on empty or junk input', () => {
+    expect(inferMealSlotForHour(12, [])).toBeNull();
+    expect(inferMealSlotForHour(NaN, ladder)).toBe('meal_1'); // falls to window start
+    expect(inferMealSlotForHour(12, ['preworkout', 'postworkout'])).toBe('preworkout');
+  });
+
+  test('respects a legacy breakfast/lunch/dinner ladder order', () => {
+    const legacy = ['breakfast', 'lunch', 'dinner'];
+    expect(inferMealSlotForHour(7, legacy)).toBe('breakfast');
+    expect(inferMealSlotForHour(21, legacy)).toBe('dinner');
   });
 });
