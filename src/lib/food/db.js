@@ -1452,13 +1452,39 @@ export async function applyCustomFoodFromCloud(userId, row) {
   // F1: keep a newer/equal local edit rather than overwriting it.
   const localMs = await _localUpdatedMs(d, 'custom_foods', row.id, userId);
   if (localMs != null && localMs >= updatedAt) return;
+  // ON CONFLICT DO UPDATE, deliberately NOT INSERT OR REPLACE (E3 review):
+  // REPLACE deletes the old row WITHOUT firing the custom_foods_fts delete
+  // trigger (SQLite only fires it under recursive_triggers, which is off) and
+  // re-inserts under a NEW rowid, so every cross-device edit — and even this
+  // device's own push-then-pull cycle, since the server restamps updated_at —
+  // left the old name's tokens orphaned in the search index. A true upsert
+  // keeps the rowid and fires the UPDATE trigger, so the index stays exact.
   await d.runAsync(
-    `INSERT OR REPLACE INTO custom_foods (
+    `INSERT INTO custom_foods (
       id, user_id, name, brand, serving_g, serving_label,
       kcal_100g, protein_100g, carbs_100g, fat_100g,
       fibre_100g, sodium_100g, sugar_100g, photo_url, notes,
       barcode_ean, deleted_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      user_id = excluded.user_id,
+      name = excluded.name,
+      brand = excluded.brand,
+      serving_g = excluded.serving_g,
+      serving_label = excluded.serving_label,
+      kcal_100g = excluded.kcal_100g,
+      protein_100g = excluded.protein_100g,
+      carbs_100g = excluded.carbs_100g,
+      fat_100g = excluded.fat_100g,
+      fibre_100g = excluded.fibre_100g,
+      sodium_100g = excluded.sodium_100g,
+      sugar_100g = excluded.sugar_100g,
+      photo_url = excluded.photo_url,
+      notes = excluded.notes,
+      barcode_ean = excluded.barcode_ean,
+      deleted_at = excluded.deleted_at,
+      created_at = excluded.created_at,
+      updated_at = excluded.updated_at`,
     [
       row.id, userId, row.name, row.brand ?? null,
       row.serving_g, row.serving_label ?? null,

@@ -37,9 +37,17 @@ const WEAK_LOCAL_MIN_HITS = 3;
  * Weak = few hits, or none of them is a prefix match (searchLocalByName's
  * rank column: 0 = the name starts with the query, 1 = substring only).
  * A weak set still renders first; live results append below it.
+ *
+ * Limit-aware (E3 review): searchLocalByName caps its answer at the caller's
+ * limit, so a `limit: 1` caller (the recipe-URL import resolves each
+ * ingredient line this way) can never produce 3 hits — judging it against
+ * the full threshold sent every fully-cached ingredient to the network for
+ * an identical answer. A local set that FILLS the requested limit with a
+ * prefix match on top is as confident as that caller can ever be.
  */
-function _localIsStrong(local) {
-  return local.length >= WEAK_LOCAL_MIN_HITS && local.some((r) => r.rank === 0);
+function _localIsStrong(local, limit) {
+  const need = Math.min(WEAK_LOCAL_MIN_HITS, Math.max(1, Number(limit) || WEAK_LOCAL_MIN_HITS));
+  return local.length >= need && local.some((r) => r.rank === 0);
 }
 
 /**
@@ -144,7 +152,7 @@ export async function searchFoods(userId, query, { limit = 25 } = {}) {
   // match) no longer suppresses live results — it renders first and the live
   // matches merge in below it. Offline is unaffected: the live sources
   // timeout internally and return [], leaving the local rows standing.
-  if (local.length > 0 && _localIsStrong(local)) {
+  if (local.length > 0 && _localIsStrong(local, limit)) {
     if (userId) trackEvent(userId, 'food_search_attempt', {
       source_hit: 'local', query_len: q.length, ms: Date.now() - t0,
     });

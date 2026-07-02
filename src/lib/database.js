@@ -1486,8 +1486,17 @@ export async function ensureFoodSearchIndex(d) {
              tokenize='porter unicode61', prefix='2 3 4')`
         );
       } catch (e) {
-        logWarn('database.migration.fts', `FTS5 unavailable, search stays on LIKE: ${e?.message || e}`);
-        return; // no index, no triggers; query-time fallback covers it
+        // Swallow ONLY a genuinely missing FTS5 module (search then stays on
+        // LIKE forever, by design). Any OTHER failure here — disk full, I/O
+        // error, locked DB — must rethrow so the migration does NOT mark this
+        // version done and retries on the next launch (E3 review: the old
+        // blanket catch made one transient error permanently silent).
+        const msg = String(e?.message || e).toLowerCase();
+        if (msg.includes('no such module') || msg.includes('fts5')) {
+          logWarn('database.migration.fts', `FTS5 unavailable, search stays on LIKE: ${e?.message || e}`);
+          return; // no index, no triggers; query-time fallback covers it
+        }
+        throw e;
       }
       await d.execAsync(
         `CREATE VIRTUAL TABLE IF NOT EXISTS custom_foods_fts USING fts5(
@@ -4067,6 +4076,15 @@ export async function wipeAllUserData(userId) {
     } catch (e) {
       logError('database.wipeAllUserData.partners', e, { userId });
     }
+
+    // 8. Rebuild the custom-foods search index from the (now wiped) base
+    // table (E3 review). SQLite reuses freed rowids, so any tokens left in
+    // custom_foods_fts after the DELETEs above could otherwise attach to the
+    // NEXT account's rows and surface the previous user's custom food names
+    // in their search results. Best-effort: absent on a pre-FTS install.
+    try {
+      await d.execAsync(`INSERT INTO custom_foods_fts(custom_foods_fts) VALUES('rebuild')`);
+    } catch (_) { /* no FTS index on this install */ }
   });
 }
 

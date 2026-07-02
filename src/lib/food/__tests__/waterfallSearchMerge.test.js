@@ -120,6 +120,27 @@ test('nothing anywhere is still a miss', async () => {
     expect.objectContaining({ source_hit: 'miss' }));
 });
 
+test('limit-aware strength: a limit:1 caller with a cached prefix hit stays offline (recipe import fast path)', async () => {
+  // RecipeBuilder resolves each imported ingredient with limit: 1. A single
+  // rank-0 cached hit FILLS that limit — judging it against the 3-hit
+  // threshold sent every fully-cached ingredient to the network for an
+  // identical answer (E3 review finding).
+  searchLocalByName.mockResolvedValue([localRow('a')]);
+  const rows = await searchFoods('u1', 'chicken breast', { limit: 1 });
+  expect(rows).toHaveLength(1);
+  expect(searchOff).not.toHaveBeenCalled();
+  expect(searchUsda).not.toHaveBeenCalled();
+});
+
+test('limit:1 with only a substring hit is still weak, so live merges', async () => {
+  searchLocalByName.mockResolvedValue([localRow('a', 1)]);
+  searchOff.mockResolvedValue([offRow('111')]);
+  const rows = await searchFoods('u1', 'bread', { limit: 1 });
+  expect(rows).toHaveLength(1); // limit still respected, local first
+  expect(rows[0].name).toBe('Local a');
+  expect(searchOff).toHaveBeenCalled();
+});
+
 test('the merged list respects the limit, local rows first', async () => {
   searchLocalByName.mockResolvedValue([localRow('a'), localRow('b', 1)]);
   searchOff.mockResolvedValue([offRow('1'), offRow('2'), offRow('3')]);

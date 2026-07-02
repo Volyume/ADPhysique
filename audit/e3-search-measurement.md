@@ -56,12 +56,18 @@ incrementally through the seed triggers).
 3. **~10x latency drop at corpus scale** (0.1–0.6 ms vs ~4–5 ms per query in
    the container; both would widen on a mid-range phone but the ratio is
    structural: index probe vs full-table scan of 28.8k names).
-4. **Pure misspellings stay local misses — by design, and covered.** Porter
-   stemming folds inflections (eggs/egg), not typos; fuzzy matching was not
-   in the approved plan. The E3 part-1 live merge now catches exactly this
-   class: 0–3 weak local hits with no prefix match triggers the OFF/USDA
-   fan-out, whose server-side search is typo-tolerant, and the result is
-   cache-promoted so the next attempt is a local hit.
+4. **Pure misspellings stay local misses for the INTENDED food — by design.**
+   Porter stemming folds inflections (eggs/egg), not typos; fuzzy matching
+   was not in the approved plan. Honest caveat (review-corrected): the three
+   measured misspellings each return 3 local hits here because the OFF corpus
+   itself contains misspelled product names ("Chiken And Mushroom Soup",
+   "Brocolli Chips", a "Yougurt" product) — and when such a set includes a
+   prefix match, the local answer is judged strong and the part-1 live merge
+   does NOT fan out. The merge catches a misspelling only when the local
+   answer is genuinely weak (few hits, or none a prefix match). So a typo may
+   surface same-typo branded products rather than the intended food; the
+   reliable typo recovery remains retyping, which the FTS prefix matching
+   makes cheap ("chik" → correct as you go).
 
 ## Device-run steps (founder, physical Android, EAS build)
 
@@ -78,7 +84,11 @@ Node timings above are a proxy. To confirm on-device:
    brand query.
 3. Aeroplane mode ON, repeat step 2. Expected: identical local results
    (offline path unaffected).
-4. Aeroplane mode ON, type `chiken`. Expected: whatever weak local matches
-   exist show; no crash, no spinner hang.
-5. Aeroplane mode OFF, type `chiken` again. Expected: live results merge in
-   below the local rows (part-1 fix) within ~1.5 s.
+4. Aeroplane mode ON, type `chiken`. Expected: whatever local matches exist
+   show (likely same-typo branded products); no crash, no spinner hang.
+5. Aeroplane mode OFF, type a query with NO strong local answer (e.g. an
+   obscure brand you have never logged, or `qinoa`). Expected: any weak
+   local rows stay on top and live results merge in below them (the part-1
+   fix) within ~1.5 s. Note `chiken` itself will NOT trigger the merge — the
+   corpus contains same-typo product names that satisfy the local answer
+   (see Reading, point 4).

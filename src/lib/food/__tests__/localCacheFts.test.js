@@ -165,6 +165,47 @@ describe('searchLocalByName over the real FTS index', () => {
     expect(rows.map((r) => r.name)).toEqual(['Chicken Breast']); // no duplicates
   });
 
+  test('a sync-style upsert (ON CONFLICT DO UPDATE) keeps the index exact — REPLACE corruption cannot recur', async () => {
+    // E3 review: INSERT OR REPLACE deletes the old row WITHOUT firing the
+    // FTS delete trigger (recursive_triggers is off) and moves the rowid,
+    // orphaning the old name's tokens. The sync pull now uses a true upsert;
+    // this pins, on real SQLite with the real DDL, that an upsert rename
+    // updates the index (old name gone, new name found, no phantom row) —
+    // and that the sync code never reverts to REPLACE.
+    const raw = await buildIndexed();
+    raw.prepare(
+      `INSERT INTO custom_foods (id, user_id, name, kcal_100g) VALUES ('c1', 'u1', 'Renamed Shake', 100)
+       ON CONFLICT(id) DO UPDATE SET name = excluded.name`
+    ).run();
+    expect(await searchLocalByName('u1', 'protein')).toEqual([]);
+    expect((await searchLocalByName('u1', 'renamed')).map((r) => r.food_ref)).toEqual(['custom:c1']);
+
+    const fs = require('fs');
+    const path = require('path');
+    const dbSrc = fs.readFileSync(path.resolve(__dirname, '../db.js'), 'utf8');
+    expect(dbSrc).not.toMatch(/INSERT OR REPLACE INTO custom_foods/);
+    expect(dbSrc).toMatch(/INSERT INTO custom_foods \([\s\S]{0,600}ON CONFLICT\(id\) DO UPDATE SET/);
+  });
+
+  test('the sign-out wipe rebuilds the index so the next account inherits no tokens', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(path.resolve(__dirname, '../../database.js'), 'utf8');
+    const wipeAt = src.indexOf('export async function wipeAllUserData');
+    const wipeBody = src.slice(wipeAt, src.indexOf('\nexport ', wipeAt + 1));
+    expect(wipeBody).toMatch(/custom_foods_fts\(custom_foods_fts\) VALUES\('rebuild'\)/);
+  });
+
+  test('the migration swallows ONLY a missing FTS5 module; other errors rethrow and retry', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(path.resolve(__dirname, '../../database.js'), 'utf8');
+    const at = src.indexOf('export async function ensureFoodSearchIndex');
+    const body = src.slice(at, src.indexOf('\nexport ', at + 1));
+    expect(body).toMatch(/msg\.includes\('no such module'\) \|\| msg\.includes\('fts5'\)/);
+    expect(body).toMatch(/throw e;/);
+  });
+
   test('without the FTS tables the LIKE fallback answers (pre-E3 behaviour)', async () => {
     const raw = freshDb();
     seedFood(raw, 'f1', 'Chicken Breast');
