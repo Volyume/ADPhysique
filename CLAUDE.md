@@ -222,6 +222,16 @@ kill and relaunch). Founder decisions needed → ask structured multi-choice
 questions and keep working; never silently downgrade a degraded tool/method
 and present the output as if the order was followed.
 
+**Agent tier (founder 2026-07-02, INVIOLABLE).** The premium session model
+(Fable or whatever the top tier is) runs ONLY in the main loop, hands-on.
+Every subagent and every workflow agent() call MUST carry an explicit model
+of 'sonnet' or 'haiku' — an omitted model silently inherits the expensive
+session tier, which once burned a large share of a weekly token allowance on
+a review fleet. Enforced mechanically by `.claude/hooks/agent-tier-guard.py`
+(wired in `.claude/settings.json`), which blocks any Agent/Task/Workflow
+dispatch that violates this. Only the founder loosens it, by editing that
+hook.
+
 ---
 
 ## DETAILED RULES
