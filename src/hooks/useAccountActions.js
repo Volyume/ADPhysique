@@ -236,8 +236,16 @@ export default function useAccountActions() {
             } else {
               // The RPC wiped the data rows but the auth.users row is
               // still there. Not full success: mark it pending so the
-              // Edge Function is retried automatically next launch.
+              // Edge Function is retried on the next sign-in.
               authRemovalPending = true;
+              // Server backstop (founder decision 2026-07-02): log the
+              // fallback deletion so the scheduled sweeper (migration 098)
+              // finishes the auth-row removal even if this user never signs
+              // in again. The RPC verifies the wipe actually happened
+              // before logging, so it cannot be used to enqueue a live
+              // account. Best-effort: the client retry path stands anyway.
+              try { await sb.rpc('record_rpc_fallback_deletion'); }
+              catch (e) { logError('SettingsScreen.deleteAccount.logFallback', e, { userId }); }
             }
           }
         }
