@@ -8,8 +8,10 @@ import Button from '../components/Button';
 import {
   getRoutineById, getRoutineExercisesWithDetails, getAllExercises,
   addExerciseToRoutine, removeExerciseFromRoutine, createWorkout, updateRoutineExercise,
-  updateRoutineExerciseExercise, updateRoutineExerciseOrder,
+  updateRoutineExerciseExercise, updateRoutineExerciseOrder, getActivePlan,
 } from '../lib/database';
+import { computeDivisionDiff, divisionFingerprintLine, planWearsDivision } from '../lib/divisionDiff';
+import { buildPlanInputs } from '../lib/planAutoGen';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getExerciseWhyThis, getSplitRationale } from '../lib/whyThisTemplates';
 import { rankSwaps } from '../lib/swapEngine';
@@ -84,8 +86,9 @@ export default function RoutineDetailScreen({ navigation, route }) {
   const toast = useToast();
   const { routineId } = route.params || {};
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, startWorkout } = useAppStore(useShallow(s => ({
+  const { user, userProfile, startWorkout } = useAppStore(useShallow(s => ({
     user: s.user,
+    userProfile: s.userProfile,
     startWorkout: s.startWorkout,
   })));
   const [routine, setRoutine] = useState(null);
@@ -102,6 +105,9 @@ export default function RoutineDetailScreen({ navigation, route }) {
   const [swapCandidates, setSwapCandidates] = useState([]);
   const [showSwapPicker, setShowSwapPicker] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
+  // A4: division fingerprint line ("Built for Bikini: ..."), set only when
+  // this routine belongs to the user's ACTIVE generated division plan.
+  const [divisionLine, setDivisionLine] = useState(null);
 
   useEffect(() => {
     if (routineId) loadRoutine();
@@ -138,6 +144,28 @@ export default function RoutineDetailScreen({ navigation, route }) {
 
     const all = await getAllExercises();
     setAllExercises(all);
+
+    // A4: division fingerprint. Pure re-presentation of the volume overlay
+    // the generator already applied to this plan: diff the division plan's
+    // weekly set counts against the general plan for the SAME profile inputs
+    // (the engine is deterministic, so this recomputes exactly what was
+    // applied). Only shown when this routine is part of the ACTIVE generated
+    // division plan; best-effort, the line simply stays absent on failure.
+    try {
+      const goal = userProfile?.trainingGoal;
+      const active = r.programmeId && user?.id
+        ? await getActivePlan(user.id).catch(() => null)
+        : null;
+      if (active && r.programmeId === active.id && planWearsDivision(active.name, goal)) {
+        const inputs = buildPlanInputs(userProfile);
+        const diff = inputs ? computeDivisionDiff({ ...inputs, exerciseLibrary: all }) : null;
+        setDivisionLine(diff ? divisionFingerprintLine(goal, diff) : null);
+      } else {
+        setDivisionLine(null);
+      }
+    } catch (_) {
+      setDivisionLine(null);
+    }
   }
 
   async function removeExercise(routineExercise) {
@@ -302,6 +330,9 @@ export default function RoutineDetailScreen({ navigation, route }) {
               style={styles.startBtn}
             />
             <MuscleTagRow exercises={exercises} />
+            {divisionLine ? (
+              <Text style={styles.divisionLine}>{divisionLine}</Text>
+            ) : null}
             {routine.split_type ? (
               <Text style={styles.splitRationale}>{getSplitRationale(routine.split_type)}</Text>
             ) : null}
@@ -698,6 +729,7 @@ const styles = StyleSheet.create({
   exerciseMuscle: { ...type.caption, color: colors.textMuted },
   exerciseWhy: { ...type.captionTight, color: colors.textMuted, fontStyle: 'italic', marginTop: spacing.xxs },
   splitRationale: { ...type.bodySm, color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.sm },
+  divisionLine: { ...type.bodySm, color: colors.textMuted, marginTop: spacing.xs },
   exerciseStartWeight: { ...type.num('caption'), color: colors.primary },
   cardActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   reorderActions: { flexDirection: 'column', alignItems: 'center', gap: spacing.xs },

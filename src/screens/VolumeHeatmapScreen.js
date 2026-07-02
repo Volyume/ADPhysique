@@ -8,7 +8,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import InfoTooltip from '../components/InfoTooltip';
 import BodyDiagramHeatmap from '../components/BodyDiagramHeatmap';
 import { useToast } from '../components/Toast';
-import { getCompletedWorkoutSets, getAllExercises, getWeeklyVolumeByMuscle, getLastTrainedByMuscle } from '../lib/database';
+import { getCompletedWorkoutSets, getAllExercises, getWeeklyVolumeByMuscle, getLastTrainedByMuscle, getActivePlan } from '../lib/database';
+import { computeDivisionDiff, fingerprintMarkers, planWearsDivision } from '../lib/divisionDiff';
+import { buildPlanInputs } from '../lib/planAutoGen';
+import { GOAL_LABELS } from '../lib/coachingGoals';
 import { logError } from '../lib/errorLog';
 import { syncUserPref } from '../lib/sync';
 import {
@@ -45,8 +48,9 @@ const WINDOW_OPTIONS = [
 
 export default function VolumeHeatmapScreen() {
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user } = useAppStore(useShallow(s => ({
+  const { user, userProfile } = useAppStore(useShallow(s => ({
     user: s.user,
+    userProfile: s.userProfile,
   })));
   const toast = useToast();
   const [weeklyVolume, setWeeklyVolume] = useState({});
@@ -60,9 +64,15 @@ export default function VolumeHeatmapScreen() {
   // COMP-019: the volume trend section gets its own window (4W/8W/3M/6M). Kept
   // at 4W by default to preserve the section's current shape; chips widen it.
   const [trendWindowKey, setTrendWindowKey] = useState('4W');
+  // A4: division fingerprint markers ({ muscle: 'elevated'|'capped' }) + the
+  // division's display label. Set only when the ACTIVE plan is the generated
+  // division plan for the profile's goal; null for everyone else, so no
+  // tier check is needed here (the data simply does not exist otherwise).
+  const [divisionMarkers, setDivisionMarkers] = useState(null);
+  const [divisionLabel, setDivisionLabel] = useState(null);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useFocusEffect(useCallback(() => { loadData(); }, [user?.id, windowWeeks, trendWindowKey]));
+  useFocusEffect(useCallback(() => { loadData(); }, [user?.id, windowWeeks, trendWindowKey, userProfile?.trainingGoal]));
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadData(); }, [windowWeeks, trendWindowKey]);
@@ -106,6 +116,31 @@ export default function VolumeHeatmapScreen() {
 
       const lastTrained = await getLastTrainedByMuscle(user.id).catch(() => ({}));
       setLastTrainedMap(lastTrained);
+
+      // A4: division fingerprint. Pure re-presentation of the volume overlay
+      // the plan generator already applied: diff the division plan's weekly
+      // set counts against the general plan for the SAME profile inputs
+      // (deterministic engine, so this recomputes exactly what was applied).
+      // Only claimed when the active plan IS the generated division plan;
+      // best-effort, markers simply stay absent on any failure.
+      try {
+        const goal = userProfile?.trainingGoal;
+        const active = await getActivePlan(user.id).catch(() => null);
+        const inputs = active && planWearsDivision(active.name, goal)
+          ? buildPlanInputs(userProfile)
+          : null;
+        if (inputs) {
+          const diff = computeDivisionDiff({ ...inputs, exerciseLibrary: allExercises });
+          setDivisionMarkers(fingerprintMarkers(diff));
+          setDivisionLabel(GOAL_LABELS[goal] ?? null);
+        } else {
+          setDivisionMarkers(null);
+          setDivisionLabel(null);
+        }
+      } catch (_) {
+        setDivisionMarkers(null);
+        setDivisionLabel(null);
+      }
 
       // Custom volume targets. Stored in AsyncStorage under an @volyume_
       // key, which the generic user_prefs sync round-trips to cloud (push
@@ -250,6 +285,8 @@ export default function VolumeHeatmapScreen() {
         <BodyDiagramHeatmap
           volumeByMuscle={volumeByMuscle}
           onMuscleTap={handleMuscleTap}
+          divisionMarkers={divisionMarkers}
+          divisionLabel={divisionLabel}
         />
 
         {/* Rolling window selector */}

@@ -34,15 +34,75 @@ function getFill(volumeByMuscle, muscle) {
 
 // Spoken label for a muscle region so the map is usable with a screen
 // reader: the muscle name plus its volume status when the caller provides
-// one (entry.label / entry.status), e.g. "Front delts, optimal".
-function muscleLabel(volumeByMuscle, muscle) {
+// one (entry.label / entry.status), e.g. "Front delts, optimal". When a
+// division fingerprint marker is present it is spoken too, e.g.
+// "Glutes, optimal, elevated for Bikini" (A4).
+function muscleLabel(volumeByMuscle, muscle, divisionMarkers, divisionLabel) {
   const name = String(muscle).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   const entry = volumeByMuscle?.[muscle];
   const status = entry?.label ?? entry?.status;
-  return status ? `${name}, ${String(status).toLowerCase()}` : name;
+  let label = status ? `${name}, ${String(status).toLowerCase()}` : name;
+  const direction = divisionMarkers?.[muscle];
+  if (direction && divisionLabel) label += `, ${direction} for ${divisionLabel}`;
+  return label;
 }
 
-export default function BodyDiagramHeatmap({ volumeByMuscle = {}, onMuscleTap }) {
+// A4 division fingerprint: where each marked muscle's small triangle sits on
+// the diagram, in each figure's own 160x320 co-ordinate space (region
+// centroids, using the left shape of each pair). Side delts have no drawn
+// region on this front/back silhouette (an existing limitation of the
+// diagram, they carry no volume fill either), so they take no marker here;
+// the routine-detail fingerprint line still names them when they lead.
+const DIVISION_MARKER_ANCHORS = {
+  front: {
+    front_delts: { x: 54, y: 62 },
+    chest:       { x: 66, y: 82 },
+    biceps:      { x: 42, y: 92 },
+    abs:         { x: 80, y: 117 },
+    quads:       { x: 68, y: 196 },
+  },
+  back: {
+    traps:       { x: 80, y: 63 },
+    rear_delts:  { x: 52, y: 64 },
+    back:        { x: 80, y: 108 },
+    triceps:     { x: 42, y: 92 },
+    glutes:      { x: 67, y: 163 },
+    hamstrings:  { x: 68, y: 208 },
+    calves:      { x: 68, y: 266 },
+  },
+};
+
+// Small solid triangle: up in colors.primary for a division-elevated muscle,
+// down in colors.textMuted for a capped one. Static, decorative (the region's
+// accessibilityLabel carries the spoken version), no press handler so taps
+// fall through to the region beneath.
+function DivisionMarker({ x, y, direction }) {
+  const up = direction === 'elevated';
+  const d = up
+    ? `M ${x - 4} ${y + 3} L ${x + 4} ${y + 3} L ${x} ${y - 4} Z`
+    : `M ${x - 4} ${y - 3} L ${x + 4} ${y - 3} L ${x} ${y + 4} Z`;
+  return <Path d={d} fill={up ? colors.primary : colors.textMuted} />;
+}
+
+function renderDivisionMarkers(figure, divisionMarkers) {
+  if (!divisionMarkers) return null;
+  const anchors = DIVISION_MARKER_ANCHORS[figure];
+  return Object.entries(anchors)
+    .filter(([muscle]) => divisionMarkers[muscle])
+    .map(([muscle, pos]) => (
+      <DivisionMarker key={muscle} x={pos.x} y={pos.y} direction={divisionMarkers[muscle]} />
+    ));
+}
+
+export default function BodyDiagramHeatmap({
+  volumeByMuscle = {},
+  onMuscleTap,
+  // A4: { muscleKey: 'elevated' | 'capped' } from divisionDiff.fingerprintMarkers,
+  // plus the division's display label ("Bikini"). Both omitted for everyone
+  // without an active generated division plan; nothing renders then.
+  divisionMarkers = null,
+  divisionLabel = null,
+}) {
   const handle = muscle => () => {
     if (onMuscleTap) onMuscleTap(muscle);
   };
@@ -58,7 +118,7 @@ export default function BodyDiagramHeatmap({ volumeByMuscle = {}, onMuscleTap })
     onPress: handle(muscleKey),
     accessible: true,
     accessibilityRole: 'button',
-    accessibilityLabel: muscleLabel(volumeByMuscle, muscleKey),
+    accessibilityLabel: muscleLabel(volumeByMuscle, muscleKey, divisionMarkers, divisionLabel),
   });
 
   return (
@@ -165,6 +225,9 @@ export default function BodyDiagramHeatmap({ volumeByMuscle = {}, onMuscleTap })
           <Ellipse cx={68} cy={266} rx={9} ry={22} {...region('calves')} />
           <Ellipse cx={92} cy={266} rx={9} ry={22} {...region('calves')} />
 
+          {/* A4: division fingerprint markers (front-view muscles) */}
+          {renderDivisionMarkers('front', divisionMarkers)}
+
           {/* Label */}
         </G>
 
@@ -251,6 +314,9 @@ export default function BodyDiagramHeatmap({ volumeByMuscle = {}, onMuscleTap })
           {/* Calves (back) */}
           <Ellipse cx={68} cy={266} rx={10} ry={22} {...region('calves')} />
           <Ellipse cx={92} cy={266} rx={10} ry={22} {...region('calves')} />
+
+          {/* A4: division fingerprint markers (back-view muscles) */}
+          {renderDivisionMarkers('back', divisionMarkers)}
         </G>
       </Svg>
 
@@ -270,6 +336,21 @@ export default function BodyDiagramHeatmap({ volumeByMuscle = {}, onMuscleTap })
         {/* U-F-5: plain-English gloss for the volume bands / "Over limit" jargon. */}
         <InfoTooltip text={GLOSSARY.volumeBands} size={14} />
       </View>
+
+      {/* A4: division fingerprint legend, only when markers are shown. The
+          triangles re-present the volume overlay the plan generator already
+          applied for this division; nothing here is computed fresh. */}
+      {divisionMarkers && divisionLabel ? (
+        <Text
+          style={styles.divisionLegendText}
+          accessibilityLabel={`Triangle up means elevated for ${divisionLabel}, triangle down means capped`}
+        >
+          <Text style={{ color: colors.primary }}>▲</Text>
+          {` Elevated for ${divisionLabel} · `}
+          <Text style={{ color: colors.textMuted }}>▼</Text>
+          {' Capped'}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -329,6 +410,10 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   legendText: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+  },
+  divisionLegendText: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
   },
