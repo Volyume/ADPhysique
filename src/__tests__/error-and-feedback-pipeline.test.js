@@ -1,6 +1,6 @@
 // Mock the ES-module-only deps that the supabase.js + feedback.js
 // require chain pulls in. Same shape as src/__tests__/screen-mount.test.js.
-jest.mock('react-native-url-polyfill/auto', () => ({}), { virtual: true });
+jest.mock('react-native-url-polyfill/auto', () => ({}));
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(() => Promise.resolve(null)),
   setItemAsync: jest.fn(() => Promise.resolve()),
@@ -24,7 +24,7 @@ jest.mock('@supabase/supabase-js', () => ({
       maybeSingle: jest.fn(() => Promise.resolve({ data: null, error: null })),
     })),
   })),
-}), { virtual: true });
+}));
 
 // Need EXPO_PUBLIC_SUPABASE_URL/KEY set so getSupabaseClient() returns a
 // non-null client. They can be any non-empty value; the mock above

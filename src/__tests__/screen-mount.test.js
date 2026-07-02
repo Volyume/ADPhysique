@@ -29,7 +29,18 @@
 // resolving promise lands).
 jest.setTimeout(15_000);
 
-jest.mock('react-native-url-polyfill/auto', () => ({}), { virtual: true });
+// NO { virtual: true } on any mock of an installed module in this file.
+// A virtual mock on a RESOLVABLE module poisons Jest's worker-level
+// resolver cache: every suite that runs AFTER this one in the same
+// process then fails to intercept that module with its own jest.mock —
+// the module resolves through the stale virtual marker and comes back
+// undefined. Under the release gate's --runInBand the whole suite is one
+// process, so this file (which mounts every screen and mocks the widest
+// module surface in the repo) deterministically broke the ShareCard
+// press tests on CI while parallel local runs mostly dodged it (Wave 4,
+// 2026-07-02). virtual is only for modules that do NOT resolve, and this
+// file mocks none of those.
+jest.mock('react-native-url-polyfill/auto', () => ({}));
 
 jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(() => ({
@@ -64,7 +75,7 @@ jest.mock('@supabase/supabase-js', () => ({
     channel: jest.fn(() => ({ on: jest.fn().mockReturnThis(), subscribe: jest.fn() })),
     rpc: jest.fn(() => Promise.resolve({ data: null, error: null })),
   })),
-}), { virtual: true });
+}));
 
 jest.mock('expo-updates', () => ({
   reloadAsync: jest.fn(() => Promise.resolve()),
@@ -77,12 +88,8 @@ jest.mock('expo-updates', () => ({
   isEnabled: false,
   isEmbeddedLaunch: true,
   manifest: null,
-}), { virtual: true });
+}));
 
-jest.mock('expo-camera', () => ({
-  CameraView: () => null,
-  useCameraPermissions: () => ([{ granted: true, canAskAgain: true }, jest.fn()]),
-}), { virtual: true });
 
 jest.mock('expo-file-system', () => ({
   documentDirectory: '/tmp/',
@@ -95,41 +102,41 @@ jest.mock('expo-file-system', () => ({
   makeDirectoryAsync: jest.fn(() => Promise.resolve()),
   copyAsync: jest.fn(() => Promise.resolve()),
   EncodingType: { UTF8: 'utf8', Base64: 'base64' },
-}), { virtual: true });
+}));
 
 jest.mock('expo-sharing', () => ({
   isAvailableAsync: jest.fn(() => Promise.resolve(true)),
   shareAsync: jest.fn(() => Promise.resolve()),
-}), { virtual: true });
+}));
 
 jest.mock('expo-document-picker', () => ({
   getDocumentAsync: jest.fn(() => Promise.resolve({ type: 'cancel' })),
-}), { virtual: true });
+}));
 
 jest.mock('expo-image-picker', () => ({
   launchCameraAsync: jest.fn(() => Promise.resolve({ canceled: true })),
   requestCameraPermissionsAsync: jest.fn(() => Promise.resolve({ granted: true })),
   MediaTypeOptions: { Images: 'Images' },
-}), { virtual: true });
+}));
 
 jest.mock('expo-print', () => ({
   printToFileAsync: jest.fn(() => Promise.resolve({ uri: '' })),
-}), { virtual: true });
+}));
 
 jest.mock('expo-av', () => ({
   Audio: { Sound: { createAsync: jest.fn(() => Promise.resolve({ sound: { unloadAsync: jest.fn() } })) } },
-}), { virtual: true });
+}));
 
 jest.mock('expo-store-review', () => ({
   isAvailableAsync: jest.fn(() => Promise.resolve(true)),
   requestReview: jest.fn(() => Promise.resolve()),
-}), { virtual: true });
+}));
 
 jest.mock('expo-task-manager', () => ({
   defineTask: jest.fn(),
   isTaskRegisteredAsync: jest.fn(() => Promise.resolve(false)),
   unregisterTaskAsync: jest.fn(() => Promise.resolve()),
-}), { virtual: true });
+}));
 
 jest.mock('expo-background-fetch', () => ({
   registerTaskAsync: jest.fn(() => Promise.resolve()),
@@ -138,11 +145,11 @@ jest.mock('expo-background-fetch', () => ({
   BackgroundFetchResult: { NewData: 1, NoData: 2, Failed: 3 },
   BackgroundFetchStatus: { Available: 3 },
   getStatusAsync: jest.fn(() => Promise.resolve(3)),
-}), { virtual: true });
+}));
 
 jest.mock('expo-sensors', () => ({
   Pedometer: { isAvailableAsync: jest.fn(() => Promise.resolve(false)), watchStepCount: jest.fn(() => ({ remove: () => {} })) },
-}), { virtual: true });
+}));
 
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(() => Promise.resolve()),
@@ -193,12 +200,12 @@ jest.mock('@sentry/react-native', () => ({
   setUser: jest.fn(),
   setTag: jest.fn(),
   withScope: jest.fn(cb => cb({ setTag: () => {}, setContext: () => {}, setUser: () => {} })),
-}), { virtual: true });
+}));
 
 jest.mock('@shopify/react-native-skia', () => ({
   Canvas: 'Canvas', Path: 'Path', Skia: { Path: { Make: () => ({ moveTo: () => {}, lineTo: () => {}, close: () => {} }) } },
   useFont: () => null, useImage: () => null,
-}), { virtual: true });
+}));
 
 jest.mock('react-native-svg', () => {
   const React = require('react');
@@ -209,7 +216,7 @@ jest.mock('react-native-svg', () => {
     LinearGradient: mk('LinearGradient'), Stop: mk('Stop'), ClipPath: mk('ClipPath'),
     default: mk('Svg'),
   };
-}, { virtual: true });
+});
 
 // react-native-reanimated is mocked globally via __mocks__/react-native-
 // reanimated.js (auto-applied by Jest), so no per-file mock is needed here.
@@ -217,7 +224,7 @@ jest.mock('react-native-svg', () => {
 jest.mock('react-native-webview', () => {
   const React = require('react');
   return { WebView: props => React.createElement('WebView', props), default: props => React.createElement('WebView', props) };
-}, { virtual: true });
+});
 
 jest.mock('react-native-gesture-handler', () => {
   const React = require('react');
@@ -268,7 +275,7 @@ jest.mock('../components/FeedbackSheet', () => {
     FeedbackProvider: ({ children }) => children,
     default: props => React.createElement('FeedbackSheet', props),
   };
-}, { virtual: true });
+});
 
 // Components that wrap react-native-svg or Skia: stubbed so we don't
 // need every drawing primitive to be mocked deeply. __esModule:true is
@@ -285,8 +292,8 @@ jest.mock('../components/GradientCard', () => {
 });
 
 // Local native modules, referenced by package.json file: deps.
-jest.mock('rest-timer-live', () => ({ start: jest.fn(), stop: jest.fn(), update: jest.fn() }), { virtual: true });
-jest.mock('live-activity', () => ({ start: jest.fn(), stop: jest.fn(), update: jest.fn() }), { virtual: true });
+jest.mock('rest-timer-live', () => ({ start: jest.fn(), stop: jest.fn(), update: jest.fn() }));
+jest.mock('live-activity', () => ({ start: jest.fn(), stop: jest.fn(), update: jest.fn() }));
 
 // __DEV__ is a Metro-injected global in real RN bundles; jest's node
 // env doesn't have it. Set it before screens load so any code that

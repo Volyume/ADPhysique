@@ -41,7 +41,7 @@ jest.mock('expo-file-system/legacy', () => ({
   EncodingType: { Base64: 'base64' },
   writeAsStringAsync: jest.fn().mockResolvedValue(undefined),
   readAsStringAsync: jest.fn().mockResolvedValue(''),
-}), { virtual: true });
+}));
 
 // Skia is needed for the renderer to produce a base64 PNG. A minimal mock that
 // returns a non-null base64 string lets the export path run end to end.

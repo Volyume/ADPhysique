@@ -61,8 +61,10 @@ describe('B3 plateau banner navigation (F4/NAV-1 bug class)', () => {
   });
 
   test('routes via the parent tab navigator into the Progress stack', () => {
+    // initial: false is the F6b lazy-tab rule (see lazyScreens.guard): the
+    // push must land OVER the Progress root, not replace it.
     expect(HOME).toMatch(
-      /getParent\(\)\?\.navigate\(\s*'ProgressTab',\s*\{\s*screen:\s*'ExerciseDetail',\s*params:\s*\{\s*exerciseId:\s*plateauBanner\.exerciseId\s*\}\s*\}\)/,
+      /getParent\(\)\?\.navigate\(\s*'ProgressTab',\s*\{\s*screen:\s*'ExerciseDetail',\s*params:\s*\{\s*exerciseId:\s*plateauBanner\.exerciseId\s*\},\s*initial:\s*false\s*\}\)/,
     );
   });
 });
