@@ -11,6 +11,7 @@ import * as haptics from '../lib/haptics';
 import { logError } from '../lib/errorLog';
 import { getSupabaseClient } from '../lib/supabase';
 import { clearWorkoutHistory, buildWorkoutCSV } from '../lib/database';
+import { exportCoachReportPdf } from '../lib/coachReport';
 import { exportBackup, importBackup } from '../lib/dataBackup';
 import { getStatus as getSyncStatus, syncAll } from '../lib/sync';
 import { formatLastSynced } from '../lib/syncStatusLabel';
@@ -28,6 +29,7 @@ export default function SettingsDataScreen({ navigation }) {
   const [syncSnapshot, setSyncSnapshot] = useState(null);
   const [syncingNow, setSyncingNow] = useState(false);
   const [refreshingFood, setRefreshingFood] = useState(false);
+  const [buildingReport, setBuildingReport] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -117,6 +119,32 @@ export default function SettingsDataScreen({ navigation }) {
       }
     } catch (e) {
       toast.show(e?.message ?? 'Could not export your data', { variant: 'error' });
+    }
+  }
+
+  // B5: the coach handover report. Everything sensitive about it (the
+  // ED-neutral variant, fail-closed wellbeing reads, what each variant may
+  // contain) lives and is tested in src/lib/coachReport.js; this handler is
+  // only the busy state and the calm failure paths.
+  async function exportCoachReport() {
+    if (!user?.id || buildingReport) return;
+    setBuildingReport(true);
+    try {
+      const res = await exportCoachReportPdf({ userId: user.id });
+      if (res?.empty) {
+        appAlert('Nothing to report yet', 'Log some training first, then export the report here.');
+        return;
+      }
+      if (res?.unavailable) {
+        toast.show('PDF export needs a rebuild with the print package', { variant: 'error', duration: 5000 });
+        return;
+      }
+      haptics.selection();
+    } catch (e) {
+      logError('SettingsScreen.exportCoachReport', e);
+      toast.show('Could not build the report, try again', { variant: 'error' });
+    } finally {
+      setBuildingReport(false);
     }
   }
 
@@ -226,6 +254,13 @@ export default function SettingsDataScreen({ navigation }) {
           icon="download-outline"
           label="Export workout log (CSV)"
           onPress={exportData}
+        />
+        <SettingRow
+          icon="document-text-outline"
+          label={buildingReport ? 'Preparing the report...' : 'Coach handover report (PDF)'}
+          sub="Training, trend, targets and coaching decisions, for a coach or GP"
+          onPress={buildingReport ? null : exportCoachReport}
+          showArrow={!buildingReport}
         />
         <SettingRow
           icon="trash-outline"
