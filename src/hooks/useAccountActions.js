@@ -314,7 +314,7 @@ export default function useAccountActions() {
         await new Promise((resolve) => {
           appAlert(
             'Account data deleted',
-            'All your data has been deleted. Removing your sign-in details is still pending and completes automatically the next time the app starts. Nothing more is needed from you.',
+            'All your data has been deleted. One step is still pending: removing your sign-in details, which we could not reach just now. If you ever sign in again with the same Apple or Google account, we will finish removing them automatically before anything else happens.',
             [{ text: 'OK', onPress: resolve }],
             { cancelable: false },
           );

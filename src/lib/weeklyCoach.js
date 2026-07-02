@@ -909,12 +909,21 @@ export function runWeeklyCoach(inputs) {
   // intake logged in the last 7.
   let ffmFloorHeld = false;
   let ffmFloorContext = null;
+  // Wave-3 review blocker fix (2026-07-02): the gate used to require a
+  // profile bodyweightKg with no fallback, so a null profile weight let a
+  // cut through while intake sat at or below the floor. It now falls back
+  // to today's EWMA of the weigh-in series — the same fallback the adaptive
+  // floor context has always used. Any run that can produce a resize has a
+  // weight series, so the floor is no longer conditional on profile health.
+  const ffmGateWeightKg = (Number.isFinite(bodyweightKg) && bodyweightKg > 0)
+    ? bodyweightKg
+    : ((Number.isFinite(ewma7Today) && ewma7Today > 0) ? ewma7Today : null);
   if (
-    Number.isFinite(bodyweightKg) && bodyweightKg > 0 &&
+    ffmGateWeightKg != null &&
     Number.isFinite(recentIntakeAvgKcal) &&
     recentIntakeDaysLogged >= 5
   ) {
-    const floor = computeFFMFloor(bodyweightKg, {
+    const floor = computeFFMFloor(ffmGateWeightKg, {
       bodyFatPercent,
       bodyFatSource,
       sex,

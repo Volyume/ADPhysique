@@ -9,14 +9,17 @@
  *
  * This module owns the device-local retry marker for that state:
  *   - useAccountActions writes the marker after an RPC-only fallback
- *     success (and tells the user honestly that credential removal is
- *     still pending);
- *   - RootNavigator's auth listener calls retryPendingAuthDeletion on the
- *     next authenticated launch or sign-in, which re-invokes the Edge
- *     Function once and clears the marker on success.
+ *     success (and tells the user honestly that credential removal
+ *     finishes only if they sign in once more with the same identity);
+ *   - RootNavigator's auth listener AWAITS retryPendingAuthDeletion at the
+ *     top of the sign-in pipeline (Wave-3 review fix: it used to fire
+ *     alongside the restore flow and could silently erase a just-restored
+ *     account mid-session). While a marker exists for the uid, the sign-in
+ *     never proceeds into restore/sync: the navigator signs the session
+ *     out with a calm explanation whether the retry succeeded or not.
  *
  * Everything here is best-effort: a failure logs and returns; it never
- * throws into a boot path and never blocks sign-in.
+ * throws into a boot path.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
@@ -70,14 +73,19 @@ export function _resetRetryGuardForTests() {
  *   only honoured for the same uid, so another account signing in on
  *   this device can never trigger someone else's deletion).
  * @param {{ client?: object }} [deps]  injectable Supabase client for tests.
- * @returns {Promise<{ attempted: boolean, ok?: boolean }>}
+ * @returns {Promise<{ attempted: boolean, ok?: boolean, pending: boolean }>}
+ *   `pending` is true whenever a marker for this uid still stands after the
+ *   call (failed attempt, or the once-per-launch guard blocked a retry).
+ *   Callers treat pending as "this account's deletion is unfinished: do not
+ *   proceed into the session".
  */
 export async function retryPendingAuthDeletion(userId, { client } = {}) {
-  if (!userId || _attemptedThisLaunch) return { attempted: false };
+  if (!userId) return { attempted: false, pending: false };
   let marker = null;
   try { marker = await AsyncStorage.getItem(deletionAuthPendingKey(userId)); }
-  catch (_) { return { attempted: false }; }
-  if (!marker) return { attempted: false };
+  catch (_) { return { attempted: false, pending: false }; }
+  if (!marker) return { attempted: false, pending: false };
+  if (_attemptedThisLaunch) return { attempted: false, pending: true };
   _attemptedThisLaunch = true;
   try {
     let sb = client;
@@ -87,19 +95,19 @@ export async function retryPendingAuthDeletion(userId, { client } = {}) {
       // eslint-disable-next-line global-require
       sb = require('./supabase').getSupabaseClient();
     }
-    if (!sb) return { attempted: false };
+    if (!sb) return { attempted: false, pending: true };
     const result = await sb.functions.invoke('delete-account', {
       body: { reason: 'auth_removal_retry', app_version: null, platform: Platform.OS },
     });
     if (result?.error) {
       logError('deletionRetry.invoke', result.error, { userId });
-      return { attempted: true, ok: false };
+      return { attempted: true, ok: false, pending: true };
     }
     await clearAuthDeletionPending(userId);
     logInfo('deletionRetry.completed', 'pending auth-row deletion completed', { userId });
-    return { attempted: true, ok: true };
+    return { attempted: true, ok: true, pending: false };
   } catch (e) {
     logError('deletionRetry.retry', e, { userId });
-    return { attempted: true, ok: false };
+    return { attempted: true, ok: false, pending: true };
   }
 }

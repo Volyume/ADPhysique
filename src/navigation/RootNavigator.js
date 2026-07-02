@@ -1001,18 +1001,6 @@ export default function RootNavigator() {
             }
             _lastAuthEnter = { uid: _enterUid, at: _enterNow };
 
-            // SC-2: if a previous delete-account run wiped the data via the
-            // delete_user_data RPC fallback but could not reach the Edge
-            // Function to remove the auth.users row, finish the job now.
-            // The marker is keyed by uid so it only ever fires for the
-            // account that requested deletion. Fire-and-forget: this must
-            // never block boot or sign-in.
-            try {
-              // eslint-disable-next-line global-require
-              const { retryPendingAuthDeletion } = require('../lib/deletionRetry');
-              retryPendingAuthDeletion(session.user.id).catch(() => {});
-            } catch (_) { /* best-effort */ }
-
             // COMP-009: a cross-account sign-in is gated behind an explicit
             // choice BEFORE any restore / sync / wipe side-effect runs, so the
             // whole sign-in body below is wrapped in this async IIFE. "Keep this
@@ -1023,6 +1011,35 @@ export default function RootNavigator() {
             // further down are unchanged — the gate is purely additive.
             (async () => {
               try {
+                // SC-2 (Wave-3 review fix): finish a pending account deletion
+                // BEFORE any restore/sync side-effect can run. This used to
+                // fire fire-and-forget alongside the restore pipeline, which
+                // could silently erase a just-restored account mid-session,
+                // and a plain success left the user signed in to an account
+                // whose auth row had just been deleted. Now it is awaited,
+                // and while a marker stands for this uid the sign-in NEVER
+                // proceeds: both outcomes end in a calm sign-out with an
+                // explanation. The marker is uid-keyed, so another account
+                // signing in on this device is untouched.
+                try {
+                  // eslint-disable-next-line global-require
+                  const { retryPendingAuthDeletion } = require('../lib/deletionRetry');
+                  const retry = await retryPendingAuthDeletion(session.user.id);
+                  if (retry.attempted || retry.pending) {
+                    try { await client.auth.signOut(); } catch (_) {}
+                    // eslint-disable-next-line global-require
+                    const { appAlert } = require('../components/AppAlert');
+                    appAlert(
+                      retry.ok === true ? 'Account deletion complete' : 'Account deletion still pending',
+                      retry.ok === true
+                        ? 'Your earlier account deletion has now finished and your sign-in details have been removed. You can create a fresh account any time.'
+                        : 'You asked us to delete this account and one step is still pending. Connect to the internet and sign in once more to finish removing your sign-in details.',
+                      [{ text: 'OK' }],
+                    );
+                    return;
+                  }
+                } catch (_) { /* best-effort: no marker means normal sign-in */ }
+
                 const _lastUid = await AsyncStorage.getItem('@volyume_last_supabase_user_id').catch(() => null);
                 if (_lastUid && _lastUid !== session.user.id) {
                   // eslint-disable-next-line global-require

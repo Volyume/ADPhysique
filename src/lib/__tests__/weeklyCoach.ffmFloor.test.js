@@ -99,6 +99,48 @@ describe('runWeeklyCoach: FFM-floor safety integration', () => {
     expect(out.heldDecisions?.some(d => d.type === 'ffm_floor')).toBe(true);
   });
 
+  // Wave-3 hostile-review BLOCKER (2026-07-02): the outer floor gate required
+  // a profile bodyweightKg with no fallback, so a user with a null profile
+  // weight could receive a calorie CUT while their 7-day intake sat at or
+  // below the RED-S floor. The gate now falls back to the weigh-in series
+  // (the same fallback the adaptive floor context has always used). These
+  // two scenarios are the reviewer's verified repros and must never regress.
+  test('BLOCKER repro: skipped check-in + food diary + NULL profile weight: the floor still holds the cut', () => {
+    const flat90 = Array.from({ length: 28 }, (_, i) => ({
+      weightKg: 90, loggedAt: Date.now() - (27 - i) * 86400000,
+    }));
+    const out = runWeeklyCoach(baseInputs({
+      checkin: null,                    // B1 stands-in path
+      bodyweightKg: null,               // sync-degraded/legacy profile
+      morningWeights: flat90,           // stalled cut: the engine wants a reduction
+      currentCalTarget: 2000,
+      recentIntakeAvgKcal: 1400,        // far below any 90 kg floor
+      recentIntakeDaysLogged: 6,
+      sex: 'male',
+    }));
+    expect(out.adjustments?.calories?.change ?? 0).toBeGreaterThanOrEqual(0);
+    expect(out.ffmFloorHeld).toBe(true);
+    expect(out.heldDecisions?.some(d => d.type === 'ffm_floor')).toBe(true);
+  });
+
+  test('BLOCKER repro (pre-existing shape): tracked check-in + NULL profile weight: the floor still holds the cut', () => {
+    const flat90 = Array.from({ length: 28 }, (_, i) => ({
+      weightKg: 90, loggedAt: Date.now() - (27 - i) * 86400000,
+    }));
+    const out = runWeeklyCoach(baseInputs({
+      checkin: checkin({ calsAdherence: 'hit' }),
+      bodyweightKg: null,
+      morningWeights: flat90,
+      currentCalTarget: 2000,
+      recentIntakeAvgKcal: 1400,
+      recentIntakeDaysLogged: 7,
+      sex: 'male',
+    }));
+    expect(out.adjustments?.calories?.change ?? 0).toBeGreaterThanOrEqual(0);
+    expect(out.ffmFloorHeld).toBe(true);
+    expect(out.heldDecisions?.some(d => d.type === 'ffm_floor')).toBe(true);
+  });
+
   test('FFM held-decision reason mirrors back the actual intake and floor', () => {
     const out = runWeeklyCoach(baseInputs({
       checkin: checkin({ calsAdherence: 'hit' }),

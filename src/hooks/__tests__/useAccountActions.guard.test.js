@@ -58,17 +58,33 @@ describe('SC-2: RPC-only fallback is reported as partial success', () => {
     expect(markAt).toBeGreaterThan(clearAt);
   });
   test('the user is told honestly that credential removal is pending', () => {
-    expect(HOOK).toMatch(/if \(authRemovalPending\) \{[\s\S]{0,700}?still pending and completes automatically/);
+    // Wave-3 review fix: the alert names the TRUE trigger (a future sign-in
+    // with the same identity), never a plain app restart, which the delete
+    // flow makes session-less by design.
+    expect(HOOK).toMatch(/if \(authRemovalPending\) \{[\s\S]{0,900}?sign in again with the same Apple or Google account/);
+    expect(HOOK).not.toMatch(/completes automatically the next time the app starts/);
     // The honest alert precedes the bundle reload so it is actually seen.
-    const alertAt = HOOK.indexOf('still pending and completes automatically');
+    const alertAt = HOOK.indexOf('sign in again with the same Apple or Google account');
     const reloadAt = HOOK.indexOf('await Updates.reloadAsync();', alertAt);
     expect(alertAt).toBeGreaterThan(-1);
     expect(reloadAt).toBeGreaterThan(alertAt);
   });
 });
 
-describe('SC-2: next-launch retry seam', () => {
-  test('RootNavigator retries the pending auth deletion on auth enter, fire-and-forget', () => {
-    expect(NAV).toMatch(/retryPendingAuthDeletion\(session\.user\.id\)\.catch\(\(\) => \{\}\);/);
+describe('SC-2: sign-in retry seam (Wave-3 review fix)', () => {
+  test('the retry is awaited at the top of the sign-in pipeline, never fire-and-forget beside it', () => {
+    expect(NAV).toMatch(/const retry = await retryPendingAuthDeletion\(session\.user\.id\);/);
+    expect(NAV).not.toMatch(/retryPendingAuthDeletion\(session\.user\.id\)\.catch\(\(\) => \{\}\);/);
+  });
+  test('a standing marker blocks the session: sign-out + explanation + return before any restore', () => {
+    const gateAt = NAV.indexOf('if (retry.attempted || retry.pending)');
+    expect(gateAt).toBeGreaterThan(-1);
+    // The sign-in pipeline's own restore call sits DOWNSTREAM of the gate
+    // (the file's earlier restoreSessionFromCloud occurrences are the import
+    // and the boot path, which a deleted account cannot reach).
+    expect(NAV.indexOf('restoreSessionFromCloud(', gateAt)).toBeGreaterThan(gateAt);
+    const block = NAV.slice(gateAt, gateAt + 1600);
+    expect(block).toMatch(/client\.auth\.signOut\(\)/);
+    expect(block).toMatch(/return;/);
   });
 });
