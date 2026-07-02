@@ -84,6 +84,24 @@ describe('cross-stack navigation guard (F4 / NAV-1/2/3)', () => {
     }
   });
 
+  test('MesocycleBuilder ("Training Blocks") stays FREE (founder 2026-07-02)', () => {
+    // Founder tier decision (2026-07-02): the mesocycle / Training Blocks
+    // builder is a training surface, and CLAUDE.md's binary puts training on
+    // the free side (Plan Library + builder), nutrition/coaching on the Pro
+    // side. It must not silently drift behind a Pro gate. Its loader is a plain
+    // require with no withProGuard wrapper, and the screen carries no internal
+    // tier gate.
+    const nav = read('src/navigation/RootNavigator.js');
+    expect(nav).toMatch(
+      /const MesocycleBuilderScreen = lazyScreen\(\(\) => require\('\.\.\/screens\/MesocycleBuilderScreen'\)\.default\);/,
+    );
+    // Not wrapped in withProGuard anywhere.
+    expect(nav).not.toMatch(/withProGuard\(require\('\.\.\/screens\/MesocycleBuilderScreen'\)/);
+    // And no internal Pro gate inside the screen (would lock a free surface).
+    const screen = read('src/screens/MesocycleBuilderScreen.js');
+    expect(screen).not.toMatch(/withProGuard|ProLocked|proGate/);
+  });
+
   test('the Diary OFF-sharing prompt navigates BEFORE it dismisses itself', () => {
     const src = read('src/screens/DiaryScreen.js');
     const site = src.indexOf("screen: 'SettingsPrivacy'");
