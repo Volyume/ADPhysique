@@ -6,6 +6,9 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/them
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 import BottomSheet from '../BottomSheet';
+// M4 (audit 03b §3.3b): the save CTA rides the Button primitive's
+// idle → loading → success morph; the commit haptic is its success beat.
+import Button from '../Button';
 import SourceChip from './SourceChip';
 import { useToast } from '../Toast';
 import { pickerMealSlots } from '../../lib/food/mealSlots';
@@ -67,6 +70,9 @@ export default function FoodDetailSheet({
   const [amount, setAmount] = useState(initial.amount);
   const [mealSlot, setMealSlot] = useState(initialMealSlot);
   const [submitting, setSubmitting] = useState(false);
+  // M4 (audit 03b §3.3b): the save has landed; the sheet closes on the save
+  // Button's onSettled so the checkmark beat is seen before the sheet goes.
+  const [saved, setSaved] = useState(false);
 
   const unit = units.find(u => u.key === unitKey) || units[units.length - 1];
   const quantityG = resolveGrams(amount, unit);
@@ -77,6 +83,7 @@ export default function FoodDetailSheet({
     setAmount(initial.amount);
     setMealSlot(initialMealSlot);
     setSubmitting(false);
+    setSaved(false);
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Switching unit keeps the gram total roughly constant (so the macros don't
@@ -112,7 +119,7 @@ export default function FoodDetailSheet({
     setSubmitting(true);
     try {
       await onSave({ quantityG: qty, mealSlot, entryDate: initialEntryDate });
-      onClose?.();
+      setSaved(true);
     } catch (_e) {
       setSubmitting(false);
       toast.show('Couldn\'t save. Try again.', { variant: 'error' });
@@ -262,15 +269,15 @@ export default function FoodDetailSheet({
             <Pressable onPress={handleClose} style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.7 }]}>
               <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
-            <Pressable
+            <Button
+              title={mode === 'edit' ? 'Save changes' : 'Add to diary'}
               onPress={handleSave}
-              disabled={submitting}
-              style={({ pressed }) => [styles.saveBtn, submitting && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
-            >
-              <Text style={styles.saveText}>
-                {submitting ? 'Saving' : mode === 'edit' ? 'Save changes' : 'Add to diary'}
-              </Text>
-            </Pressable>
+              state={saved ? 'success' : submitting ? 'loading' : 'idle'}
+              onSettled={handleClose}
+              fullWidth={false}
+              style={styles.saveBtn}
+              textStyle={styles.saveText}
+            />
           </View>
     </BottomSheet>
   );

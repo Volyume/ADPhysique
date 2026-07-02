@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -28,7 +28,9 @@ import {
   deriveTrainingPerformance, deriveCalsAdherence, stripAutoNotes, PERF_VERDICT_TEXT,
 } from '../lib/checkinDerive';
 import { summariseWeekSteps } from '../lib/stepsSummary';
-import * as haptics from '../lib/haptics';
+// M4: the submit haptic now rides the Button primitive's success beat
+// (audit 03b §3.3b), so this screen no longer calls the vocabulary itself.
+import Button from '../components/Button';
 import { summariseWeekCardio, cardioComplianceFromLog } from '../lib/cardio/cardioEngine';
 import { getRollupsForRange, getPlannedDaysInRange, confirmPlannedDay } from '../lib/food/db';
 import { getCycleTracking, shouldShowCycleQuestion } from '../lib/cyclePrefs';
@@ -222,6 +224,12 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  // M4 (audit 03b §3.3b): the submit CTA's success beat. The save has already
+  // landed when this is true; the stashed continuation (navigate to the
+  // coach, or the weight-reminder prompt first) runs on the Button's
+  // onSettled so the checkmark is seen before the screen moves on.
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const submitContinuationRef = useRef(null);
   // True when a weekly check-in already exists for this week, so the form is
   // prefilled for editing rather than shown blank.
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
@@ -559,11 +567,12 @@ export default function WeeklyCheckInScreen({ navigation }) {
   }, [user?.id, confirmingPlanned, unconfirmedPlannedDays, autoDerived.calsMeta, weekAnchorMs]);
 
   const handleSubmit = useCallback(async () => {
-    if (busy) return;
+    if (busy || submitSuccess) return;
     audit('checkin.weekly.submit');
-    // D2: the week's one deliberate commitment gets the commit beat
-    // (reduce-motion gated inside the vocabulary).
-    haptics.commit();
+    // M4 (audit 03b §3.3b): the commit beat moved from tap time into the
+    // Button primitive's success phase, so the week's one deliberate
+    // commitment buzzes when the save has actually landed (and no longer
+    // buzzes on a save that then fails). Haptic and checkmark share one beat.
     setBusy(true);
     try {
       const userId = user?.id;
@@ -632,27 +641,33 @@ export default function WeeklyCheckInScreen({ navigation }) {
       // helper self-guards: Pro-only, toggle, ED flag).
       try { await scheduleMissedCheckinFollowups(userId); } catch (_) {}
 
+      // M4: the outcome is resolved NOW (data first, fit rule 5) but runs
+      // after the Button's success beat settles, so the checkmark is seen
+      // before the screen moves on. Unmounting mid-beat cancels onSettled
+      // inside the Button, so the stashed continuation can never fire into
+      // a screen the user already left.
       const goCoach = () => navigation.navigate('CoachOutput', { weekStart: weekStart.getTime() });
       const permStatus = await getNotificationPermissionStatus();
-      if (permStatus === 'undetermined') {
-        appAlert(
-          'Daily weight reminders',
-          'Logging your weight each morning makes your coaching more accurate. A 7-day trend is much more reliable than a single reading. Enable a daily nudge?',
-          [
-            { text: 'Not now', style: 'cancel', onPress: goCoach },
-            {
-              text: 'Yes please',
-              onPress: async () => {
-                await requestNotificationPermissions().catch(() => {});
-                goCoach();
+      submitContinuationRef.current = permStatus === 'undetermined'
+        ? () => {
+          appAlert(
+            'Daily weight reminders',
+            'Logging your weight each morning makes your coaching more accurate. A 7-day trend is much more reliable than a single reading. Enable a daily nudge?',
+            [
+              { text: 'Not now', style: 'cancel', onPress: goCoach },
+              {
+                text: 'Yes please',
+                onPress: async () => {
+                  await requestNotificationPermissions().catch(() => {});
+                  goCoach();
+                },
               },
-            },
-          ],
-          { cancelable: false },
-        );
-      } else {
-        goCoach();
-      }
+            ],
+            { cancelable: false },
+          );
+        }
+        : goCoach;
+      setSubmitSuccess(true);
     } catch (e) {
       logError('WeeklyCheckInScreen.submit', e, { userId: user?.id });
       appAlert(
@@ -664,9 +679,17 @@ export default function WeeklyCheckInScreen({ navigation }) {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    busy, user?.id, energyScore, sorenessScore, stressScore, sleepHours,
+    busy, submitSuccess, user?.id, energyScore, sorenessScore, stressScore, sleepHours,
     calsAdherence, stepsAdherence, cardioAdherence, trainingPerformance, jointPain, notes, weekStart, navigation,
   ]);
+
+  // M4: the Button's success beat finished; run the stashed outcome.
+  const handleSubmitSettled = useCallback(() => {
+    setSubmitSuccess(false);
+    const go = submitContinuationRef.current;
+    submitContinuationRef.current = null;
+    if (go) go();
+  }, []);
 
   // ─── Step views ─────────────────────────────────────────────────────────────
 
@@ -1437,23 +1460,15 @@ export default function WeeklyCheckInScreen({ navigation }) {
           {/* Navigation CTA */}
           <View style={styles.ctaRow}>
             {fastEligible ? (
-              <TouchableOpacity
-                style={[styles.ctaBtn, !fastCanSubmit && styles.ctaBtnDisabled]}
+              <Button
+                title="See this week's coaching"
                 onPress={handleSubmit}
-                disabled={!fastCanSubmit || busy}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: !fastCanSubmit || busy }}
-                accessibilityLabel="See this week's coaching"
-              >
-                {busy ? (
-                  <ActivityIndicator color={colors.onPrimary} />
-                ) : (
-                  <Text style={[styles.ctaBtnText, !fastCanSubmit && styles.ctaBtnTextDisabled]}>
-                    See this week's coaching
-                  </Text>
-                )}
-              </TouchableOpacity>
+                disabled={!fastCanSubmit}
+                state={submitSuccess ? 'success' : busy ? 'loading' : 'idle'}
+                onSettled={handleSubmitSettled}
+                style={[styles.ctaBtn, !fastCanSubmit && styles.ctaBtnDisabled]}
+                textStyle={[styles.ctaBtnText, !fastCanSubmit && styles.ctaBtnTextDisabled]}
+              />
             ) : step < TOTAL_STEPS - 1 ? (
               <TouchableOpacity
                 style={[styles.ctaBtn, !stepCanAdvance(step) && styles.ctaBtnDisabled]}
@@ -1474,23 +1489,15 @@ export default function WeeklyCheckInScreen({ navigation }) {
                 />
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity
-                style={[styles.ctaBtn, !stepCanAdvance(step) && styles.ctaBtnDisabled]}
+              <Button
+                title="See this week's coaching"
                 onPress={handleSubmit}
-                disabled={!stepCanAdvance(step) || busy}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: !stepCanAdvance(step) || busy }}
-                accessibilityLabel="See this week's coaching"
-              >
-                {busy ? (
-                  <ActivityIndicator color={colors.onPrimary} />
-                ) : (
-                  <Text style={[styles.ctaBtnText, !stepCanAdvance(step) && styles.ctaBtnTextDisabled]}>
-                    See this week's coaching
-                  </Text>
-                )}
-              </TouchableOpacity>
+                disabled={!stepCanAdvance(step)}
+                state={submitSuccess ? 'success' : busy ? 'loading' : 'idle'}
+                onSettled={handleSubmitSettled}
+                style={[styles.ctaBtn, !stepCanAdvance(step) && styles.ctaBtnDisabled]}
+                textStyle={[styles.ctaBtnText, !stepCanAdvance(step) && styles.ctaBtnTextDisabled]}
+              />
             )}
           </View>
 
@@ -1759,7 +1766,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm, backgroundColor: colors.primary,
     borderRadius: radius.lg, height: 52,
   },
-  ctaBtnDisabled: { backgroundColor: colors.surface3 },
+  // opacity 1 counteracts the Button primitive's default disabled dim so the
+  // incomplete-form state keeps its shipped look (solid surface3, muted text).
+  ctaBtnDisabled: { backgroundColor: colors.surface3, opacity: 1 },
   ctaBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary, letterSpacing: 0.3 },
   ctaBtnTextDisabled: { color: colors.textMuted },
   ctaHint: { textAlign: 'center', fontSize: fontSize.sm, color: colors.textMuted, marginTop: spacing.sm },

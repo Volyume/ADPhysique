@@ -4,6 +4,9 @@ import {
 } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
 import BottomSheet from '../BottomSheet';
+// M4 (audit 03b §3.3b): the save CTA rides the Button primitive's
+// idle → loading → success morph; the commit haptic is its success beat.
+import Button from '../Button';
 import { useToast } from '../Toast';
 import { pickerMealSlots } from '../../lib/food/mealSlots';
 
@@ -26,6 +29,9 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
   const [fat, setFat] = useState('');
   const [mealSlot, setMealSlot] = useState(initialMealSlot);
   const [submitting, setSubmitting] = useState(false);
+  // M4: the save has landed; the sheet closes on the Button's onSettled so
+  // the checkmark beat is seen before the sheet goes.
+  const [saved, setSaved] = useState(false);
 
   // Reset the form each time the sheet opens.
   useEffect(() => {
@@ -33,6 +39,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
     setKcal(''); setProtein(''); setCarbs(''); setFat('');
     setMealSlot(initialMealSlot);
     setSubmitting(false);
+    setSaved(false);
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleClose() {
@@ -54,7 +61,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
     setSubmitting(true);
     try {
       await onSave({ kcal: Math.round(k), protein: num(protein), carbs: num(carbs), fat: num(fat), mealSlot });
-      onClose?.();
+      setSaved(true);
     } catch (_e) {
       setSubmitting(false);
       toast.show('Couldn\'t save. Try again.', { variant: 'error' });
@@ -118,9 +125,15 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
             <Pressable onPress={handleClose} style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.7 }]}>
               <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
-            <Pressable onPress={handleSave} disabled={submitting} style={({ pressed }) => [styles.saveBtn, submitting && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}>
-              <Text style={styles.saveText}>{submitting ? 'Saving' : 'Add to diary'}</Text>
-            </Pressable>
+            <Button
+              title="Add to diary"
+              onPress={handleSave}
+              state={saved ? 'success' : submitting ? 'loading' : 'idle'}
+              onSettled={handleClose}
+              fullWidth={false}
+              style={styles.saveBtn}
+              textStyle={styles.saveText}
+            />
           </View>
     </BottomSheet>
   );
