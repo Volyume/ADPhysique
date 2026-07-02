@@ -26,89 +26,97 @@ import {
   routeForNotificationType,
 } from '../lib/notifications';
 
-// Auth screens
-import LoginScreen from '../screens/LoginScreen';
-import WelcomeScreen from '../screens/WelcomeScreen';
-import QuizScreen from '../screens/QuizScreen';
-import PlanPreviewScreen from '../screens/PlanPreviewScreen';
+// Screens — deferred per-screen requires (F6b, audit PR-3). Statically
+// importing all eighty screens here evaluated the entire screen module
+// graph (react-native-vision-camera at module scope in ScanBarcode
+// included) synchronously in one turn at boot, on the black pre-theme
+// placeholder. lazyScreen defers each screen module's evaluation to that
+// screen's FIRST render and caches the loaded component, so boot evaluates
+// only the screens actually rendered. The a11y-theme-first ordering App.js
+// relies on (applyAccessibility mutates the theme tokens BEFORE
+// RootNavigator is required) still holds by construction: a screen's first
+// render is strictly later than that, so every screen-level
+// StyleSheet.create sees the post-a11y tokens exactly as before — and a11y
+// pref changes prompt a restart, so tokens never move under an
+// already-evaluated module. Every loader's require() keeps a static string
+// literal so Metro still bundles every screen. Each wrapper is a stable
+// module-scope constant, so React Navigation never remounts a screen
+// because of this indirection. Screens have no module-scope side effects
+// (verified across all 82 files, 2026-07-02) — deferral changes when a
+// module evaluates, never what it does.
+function lazyScreen(load) {
+  let Screen = null;
+  function LazyScreen(props) {
+    if (!Screen) {
+      Screen = load();
+      LazyScreen.displayName = `Lazy(${Screen.displayName || Screen.name || 'Screen'})`;
+    }
+    return <Screen {...props} />;
+  }
+  return LazyScreen;
+}
 
-// Main screens
-import HomeScreen from '../screens/HomeScreen';
-import ActiveWorkoutScreen from '../screens/ActiveWorkoutScreen';
-import BuildWorkoutScreen from '../screens/BuildWorkoutScreen';
-import WorkoutHistoryScreen from '../screens/WorkoutHistoryScreen';
-import WorkoutSummaryScreen from '../screens/WorkoutSummaryScreen';
-import ExerciseDetailScreen from '../screens/ExerciseDetailScreen';
-import AnalyticsScreen from '../screens/AnalyticsScreen';
-import VolumeHeatmapScreen from '../screens/VolumeHeatmapScreen';
-import BodyMetricsScreen from '../screens/BodyMetricsScreen';
-import ProgressPhotosScreen from '../screens/ProgressPhotosScreen';
-import SettingsScreen from '../screens/SettingsScreen';
-import SettingsAccountScreen from '../screens/SettingsAccountScreen';
-import SettingsProfileScreen from '../screens/SettingsProfileScreen';
-import SettingsCoachingScreen from '../screens/SettingsCoachingScreen';
-import SettingsNotificationsScreen from '../screens/SettingsNotificationsScreen';
-import SettingsDisplayScreen from '../screens/SettingsDisplayScreen';
-import SettingsHealthScreen from '../screens/SettingsHealthScreen';
-import SettingsDataScreen from '../screens/SettingsDataScreen';
-import SnapshotsScreen from '../screens/SnapshotsScreen';
-import SettingsPrivacyScreen from '../screens/SettingsPrivacyScreen';
-import SettingsAboutScreen from '../screens/SettingsAboutScreen';
-import LiftProgressScreen from '../screens/LiftProgressScreen';
-import ConsistencyScreen from '../screens/ConsistencyScreen';
-import PartnerScreen from '../screens/PartnerScreen';
-import YouScreen from '../screens/YouScreen';
-import PlansScreen from '../screens/PlansScreen';
-import PlanDetailScreen from '../screens/PlanDetailScreen';
-import RoutineDetailScreen from '../screens/RoutineDetailScreen';
-import MesocycleBuilderScreen from '../screens/MesocycleBuilderScreen';
-import ShareCardScreen from '../screens/ShareCardScreen';
-import ManualBuilderScreen from '../screens/ManualBuilderScreen';
-import NutritionTargetsScreen from '../screens/NutritionTargetsScreen';
-import MealNamesScreen from '../screens/MealNamesScreen';
-import PerDayTargetsScreen from '../screens/PerDayTargetsScreen';
-import PlanLibraryScreen from '../screens/PlanLibraryScreen';
-import FirstRunScreen from '../screens/FirstRunScreen';
-import FreeStarterScreen from '../screens/FreeStarterScreen';
-import Article9ConsentScreen from '../screens/Article9ConsentScreen';
-import WeeklyCheckInScreen from '../screens/WeeklyCheckInScreen';
-import CoachOutputScreen from '../screens/CoachOutputScreen';
-import MethodologyScreen from '../screens/MethodologyScreen';
-import ProGoalSetupScreen from '../screens/ProGoalSetupScreen';
-import PlanUpdateScreen from '../screens/PlanUpdateScreen';
-import GoalChangeSummaryScreen from '../screens/GoalChangeSummaryScreen';
-import GoalLockConsentScreen from '../screens/GoalLockConsentScreen';
-import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
-import SubscriptionScreen from '../screens/SubscriptionScreen';
-import CascadeGateScreen from '../screens/CascadeGateScreen';
-import PaywallScreen from '../screens/PaywallScreen';
-import CreditsScreen from '../screens/CreditsScreen';
-import ImportScreen from '../screens/ImportScreen';
-import CoachingRemindersScreen from '../screens/CoachingRemindersScreen';
-import ProOnboardingScreen from '../screens/ProOnboardingScreen';
-import ProSetupCompleteScreen from '../screens/ProSetupCompleteScreen';
-import ProUpgradeScreen from '../screens/ProUpgradeScreen';
-import CoachHeldHistoryScreen from '../screens/CoachHeldHistoryScreen';
-import CoachReviewScreen from '../screens/CoachReviewScreen';
-import BlockReflectionScreen from '../screens/BlockReflectionScreen';
-import YearOfLiftsScreen from '../screens/YearOfLiftsScreen';
-import WellbeingCheckScreen from '../screens/WellbeingCheckScreen';
-import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
-import DebugLogScreen from '../screens/DebugLogScreen';
-import NutritionEducationScreen from '../screens/NutritionEducationScreen';
-import SubscriptionPolicyScreen from '../screens/SubscriptionPolicyScreen';
-import DiaryScreen from '../screens/DiaryScreen';
-import AddCustomFoodScreen from '../screens/AddCustomFoodScreen';
-import FoodSearchScreen from '../screens/FoodSearchScreen';
-import MealPlanScreen from '../screens/MealPlanScreen';
-import ScanBarcodeScreen from '../screens/ScanBarcodeScreen';
-import ScanLabelScreen from '../screens/ScanLabelScreen';
-import LogCardioScreen from '../screens/LogCardioScreen';
-import CardioHistoryScreen from '../screens/CardioHistoryScreen';
-import FoodInsightsScreen from '../screens/FoodInsightsScreen';
-import MyRecipesScreen from '../screens/MyRecipesScreen';
-import MyMealsScreen from '../screens/MyMealsScreen';
-import RecipeBuilderScreen from '../screens/RecipeBuilderScreen';
+// Auth screens
+const LoginScreen = lazyScreen(() => require('../screens/LoginScreen').default);
+const WelcomeScreen = lazyScreen(() => require('../screens/WelcomeScreen').default);
+const QuizScreen = lazyScreen(() => require('../screens/QuizScreen').default);
+const PlanPreviewScreen = lazyScreen(() => require('../screens/PlanPreviewScreen').default);
+
+// Main screens (Pro-gated screens are defined with their guard in the
+// "Pro-only screens" block further down, so each appears exactly once).
+const HomeScreen = lazyScreen(() => require('../screens/HomeScreen').default);
+const ActiveWorkoutScreen = lazyScreen(() => require('../screens/ActiveWorkoutScreen').default);
+const BuildWorkoutScreen = lazyScreen(() => require('../screens/BuildWorkoutScreen').default);
+const WorkoutHistoryScreen = lazyScreen(() => require('../screens/WorkoutHistoryScreen').default);
+const WorkoutSummaryScreen = lazyScreen(() => require('../screens/WorkoutSummaryScreen').default);
+const ExerciseDetailScreen = lazyScreen(() => require('../screens/ExerciseDetailScreen').default);
+const AnalyticsScreen = lazyScreen(() => require('../screens/AnalyticsScreen').default);
+const VolumeHeatmapScreen = lazyScreen(() => require('../screens/VolumeHeatmapScreen').default);
+const SettingsScreen = lazyScreen(() => require('../screens/SettingsScreen').default);
+const SettingsAccountScreen = lazyScreen(() => require('../screens/SettingsAccountScreen').default);
+const SettingsProfileScreen = lazyScreen(() => require('../screens/SettingsProfileScreen').default);
+const SettingsCoachingScreen = lazyScreen(() => require('../screens/SettingsCoachingScreen').default);
+const SettingsNotificationsScreen = lazyScreen(() => require('../screens/SettingsNotificationsScreen').default);
+const SettingsDisplayScreen = lazyScreen(() => require('../screens/SettingsDisplayScreen').default);
+const SettingsHealthScreen = lazyScreen(() => require('../screens/SettingsHealthScreen').default);
+const SettingsDataScreen = lazyScreen(() => require('../screens/SettingsDataScreen').default);
+const SnapshotsScreen = lazyScreen(() => require('../screens/SnapshotsScreen').default);
+const SettingsPrivacyScreen = lazyScreen(() => require('../screens/SettingsPrivacyScreen').default);
+const SettingsAboutScreen = lazyScreen(() => require('../screens/SettingsAboutScreen').default);
+const LiftProgressScreen = lazyScreen(() => require('../screens/LiftProgressScreen').default);
+const ConsistencyScreen = lazyScreen(() => require('../screens/ConsistencyScreen').default);
+const YouScreen = lazyScreen(() => require('../screens/YouScreen').default);
+const PlansScreen = lazyScreen(() => require('../screens/PlansScreen').default);
+const PlanDetailScreen = lazyScreen(() => require('../screens/PlanDetailScreen').default);
+const RoutineDetailScreen = lazyScreen(() => require('../screens/RoutineDetailScreen').default);
+const MesocycleBuilderScreen = lazyScreen(() => require('../screens/MesocycleBuilderScreen').default);
+const ShareCardScreen = lazyScreen(() => require('../screens/ShareCardScreen').default);
+const ManualBuilderScreen = lazyScreen(() => require('../screens/ManualBuilderScreen').default);
+const PlanLibraryScreen = lazyScreen(() => require('../screens/PlanLibraryScreen').default);
+const FirstRunScreen = lazyScreen(() => require('../screens/FirstRunScreen').default);
+const FreeStarterScreen = lazyScreen(() => require('../screens/FreeStarterScreen').default);
+const Article9ConsentScreen = lazyScreen(() => require('../screens/Article9ConsentScreen').default);
+const MethodologyScreen = lazyScreen(() => require('../screens/MethodologyScreen').default);
+const GoalChangeSummaryScreen = lazyScreen(() => require('../screens/GoalChangeSummaryScreen').default);
+const GoalLockConsentScreen = lazyScreen(() => require('../screens/GoalLockConsentScreen').default);
+const NotificationSettingsScreen = lazyScreen(() => require('../screens/NotificationSettingsScreen').default);
+const SubscriptionScreen = lazyScreen(() => require('../screens/SubscriptionScreen').default);
+const CascadeGateScreen = lazyScreen(() => require('../screens/CascadeGateScreen').default);
+const PaywallScreen = lazyScreen(() => require('../screens/PaywallScreen').default);
+const CreditsScreen = lazyScreen(() => require('../screens/CreditsScreen').default);
+const ImportScreen = lazyScreen(() => require('../screens/ImportScreen').default);
+const ProOnboardingScreen = lazyScreen(() => require('../screens/ProOnboardingScreen').default);
+const ProSetupCompleteScreen = lazyScreen(() => require('../screens/ProSetupCompleteScreen').default);
+const ProUpgradeScreen = lazyScreen(() => require('../screens/ProUpgradeScreen').default);
+const CoachHeldHistoryScreen = lazyScreen(() => require('../screens/CoachHeldHistoryScreen').default);
+const CoachReviewScreen = lazyScreen(() => require('../screens/CoachReviewScreen').default);
+const BlockReflectionScreen = lazyScreen(() => require('../screens/BlockReflectionScreen').default);
+const YearOfLiftsScreen = lazyScreen(() => require('../screens/YearOfLiftsScreen').default);
+const WellbeingCheckScreen = lazyScreen(() => require('../screens/WellbeingCheckScreen').default);
+const PrivacyPolicyScreen = lazyScreen(() => require('../screens/PrivacyPolicyScreen').default);
+const DebugLogScreen = lazyScreen(() => require('../screens/DebugLogScreen').default);
+const NutritionEducationScreen = lazyScreen(() => require('../screens/NutritionEducationScreen').default);
+const SubscriptionPolicyScreen = lazyScreen(() => require('../screens/SubscriptionPolicyScreen').default);
 import { withProGuard } from '../components/ProGate';
 import { withScreenBoundaries } from '../components/ScreenBoundary';
 
@@ -167,41 +175,41 @@ function _reconcilePaidEntitlement(userId = null) {
 
 // Pro-only screens. The guard renders an upgrade prompt for free users,
 // enforcing Pro access no matter how the route is reached.
-const GatedWeeklyCheckIn    = withProGuard(WeeklyCheckInScreen, 'Weekly check-in');
-const GatedNutritionTargets = withProGuard(NutritionTargetsScreen, 'Nutrition targets');
-const GatedMealNames = withProGuard(MealNamesScreen, 'Meal names');
-const GatedPerDayTargets = withProGuard(PerDayTargetsScreen, 'Per-day targets');
-const GatedBodyMetrics      = withProGuard(BodyMetricsScreen, 'Body metrics');
-const GatedProgressPhotos   = withProGuard(ProgressPhotosScreen, 'Progress photos');
+const GatedWeeklyCheckIn    = lazyScreen(() => withProGuard(require('../screens/WeeklyCheckInScreen').default, 'Weekly check-in'));
+const GatedNutritionTargets = lazyScreen(() => withProGuard(require('../screens/NutritionTargetsScreen').default, 'Nutrition targets'));
+const GatedMealNames = lazyScreen(() => withProGuard(require('../screens/MealNamesScreen').default, 'Meal names'));
+const GatedPerDayTargets = lazyScreen(() => withProGuard(require('../screens/PerDayTargetsScreen').default, 'Per-day targets'));
+const GatedBodyMetrics      = lazyScreen(() => withProGuard(require('../screens/BodyMetricsScreen').default, 'Body metrics'));
+const GatedProgressPhotos   = lazyScreen(() => withProGuard(require('../screens/ProgressPhotosScreen').default, 'Progress photos'));
 // NEW-002 partner is a PRO domain (blueprint §5 gating: free sees the upgrade
 // path, never the live feature). The guard is the upgrade path, matching how
 // BodyMetrics / ProgressPhotos gate while leaving their Progress NavTile visible.
-const GatedPartner          = withProGuard(PartnerScreen, 'Training partner');
-const GatedCoachOutput      = withProGuard(CoachOutputScreen, 'Your week');
-const GatedProGoalSetup     = withProGuard(ProGoalSetupScreen, 'Pro goal setup');
-const GatedPlanUpdate       = withProGuard(PlanUpdateScreen, 'Update training');
-const GatedCoachingReminders = withProGuard(CoachingRemindersScreen, 'Coaching reminders');
+const GatedPartner          = lazyScreen(() => withProGuard(require('../screens/PartnerScreen').default, 'Training partner'));
+const GatedCoachOutput      = lazyScreen(() => withProGuard(require('../screens/CoachOutputScreen').default, 'Your week'));
+const GatedProGoalSetup     = lazyScreen(() => withProGuard(require('../screens/ProGoalSetupScreen').default, 'Pro goal setup'));
+const GatedPlanUpdate       = lazyScreen(() => withProGuard(require('../screens/PlanUpdateScreen').default, 'Update training'));
+const GatedCoachingReminders = lazyScreen(() => withProGuard(require('../screens/CoachingRemindersScreen').default, 'Coaching reminders'));
 // Diary domain is Pro (free is Plan Library, custom training, Progress, You).
 // Gating the Diary tab root covers the food sub-screens, which are only reached
 // from it; cardio screens are gated directly because they are also registered in
 // the Home and Progress stacks, so they need the guard at every entry point.
-const GatedDiary            = withProGuard(DiaryScreen, 'Food diary');
-const GatedLogCardio        = withProGuard(LogCardioScreen, 'Cardio');
-const GatedCardioHistory    = withProGuard(CardioHistoryScreen, 'Cardio');
+const GatedDiary            = lazyScreen(() => withProGuard(require('../screens/DiaryScreen').default, 'Food diary'));
+const GatedLogCardio        = lazyScreen(() => withProGuard(require('../screens/LogCardioScreen').default, 'Cardio'));
+const GatedCardioHistory    = lazyScreen(() => withProGuard(require('../screens/CardioHistoryScreen').default, 'Cardio'));
 // Defence-in-depth (food review U-M1): the Diary tab root is gated and these
 // sub-screens are only reached from it today, but a stray deep-link, push
 // notification route, or a second registration elsewhere would otherwise expose
 // a Pro feature with no paywall. Guard each directly too; withProGuard is a
 // no-op for Pro users, so this only ever protects, never blocks.
-const GatedMealPlan         = withProGuard(MealPlanScreen, 'Meal plan');
-const GatedFoodSearch       = withProGuard(FoodSearchScreen, 'Food diary');
-const GatedAddCustomFood    = withProGuard(AddCustomFoodScreen, 'Food diary');
-const GatedScanBarcode      = withProGuard(ScanBarcodeScreen, 'Barcode scanning');
-const GatedScanLabel        = withProGuard(ScanLabelScreen, 'Label scanning');
-const GatedFoodInsights     = withProGuard(FoodInsightsScreen, 'Food insights');
-const GatedMyRecipes        = withProGuard(MyRecipesScreen, 'Recipes');
-const GatedMyMeals          = withProGuard(MyMealsScreen, 'Saved meals');
-const GatedRecipeBuilder    = withProGuard(RecipeBuilderScreen, 'Recipes');
+const GatedMealPlan         = lazyScreen(() => withProGuard(require('../screens/MealPlanScreen').default, 'Meal plan'));
+const GatedFoodSearch       = lazyScreen(() => withProGuard(require('../screens/FoodSearchScreen').default, 'Food diary'));
+const GatedAddCustomFood    = lazyScreen(() => withProGuard(require('../screens/AddCustomFoodScreen').default, 'Food diary'));
+const GatedScanBarcode      = lazyScreen(() => withProGuard(require('../screens/ScanBarcodeScreen').default, 'Barcode scanning'));
+const GatedScanLabel        = lazyScreen(() => withProGuard(require('../screens/ScanLabelScreen').default, 'Label scanning'));
+const GatedFoodInsights     = lazyScreen(() => withProGuard(require('../screens/FoodInsightsScreen').default, 'Food insights'));
+const GatedMyRecipes        = lazyScreen(() => withProGuard(require('../screens/MyRecipesScreen').default, 'Recipes'));
+const GatedMyMeals          = lazyScreen(() => withProGuard(require('../screens/MyMealsScreen').default, 'Saved meals'));
+const GatedRecipeBuilder    = lazyScreen(() => withProGuard(require('../screens/RecipeBuilderScreen').default, 'Recipes'));
 
 const stackOptions = {
   headerStyle: { backgroundColor: colors.surface, borderBottomColor: colors.border },
@@ -490,7 +498,15 @@ function MainTabs() {
   const insets = useSafeAreaInsets();
   return (
     <Tab.Navigator
-      lazy={false}
+      // F6b (audit PR-2/UI-7): tabs are default-LAZY — each non-initial tab
+      // stack mounts on its first focus instead of all five mounting (and
+      // running their data effects) in one commit at boot. The old eager
+      // setting was a deprecated navigator prop with no recorded rationale
+      // (lazyScreens.guard pins it out); the tab roots' mount effects were
+      // verified self-contained (own-data loads and view-scoped telemetry
+      // only, 2026-07-02), and notification-tap / deep-link navigation into
+      // an unmounted tab mounts it on demand. HomeTab is the initial tab,
+      // so Train still mounts immediately.
       // M1 (audit 03b §3.3f, §4 step 1): a selection tick on tab CHANGE.
       // tabPress reaches only the pressed tab's listener and fires before
       // focus moves, so isFocused() here means a re-press of the already
