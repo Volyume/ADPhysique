@@ -33,6 +33,7 @@ import { formatPerSide, loadUnilateralExercises } from '../lib/unilateral';
 import { FORM_TIPS } from '../lib/formTips';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage, getStarterSessionMessage } from '../lib/whyThisTemplates';
+import { getReadinessTweak, applyReadinessToSets, applyReadinessToTargets } from '../lib/sessionAdjustments';
 
 const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 2 };
 
@@ -229,6 +230,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const starterAppliedRef = useRef(false);
   const [isDeloadWeek, setIsDeloadWeek] = useState(false);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
+  // B2: session-wide dismissal of the readiness tweak ("Use planned targets
+  // instead" in the exercise info sheet). Display-only state; nothing stored.
+  const [readinessDismissed, setReadinessDismissed] = useState(false);
   // Ghost pre-fill bookkeeping. The value itself is no longer rendered (the
   // ghost chip went in COMP-001; the muted input colour carries the state),
   // but the setter still arms/clears the pre-fill in loadHistory/onChange.
@@ -265,9 +269,38 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const sessionAdjustment = (tier === 'pro' && exercise?.id)
     ? (sessionAdjustments || []).find(a => a.exerciseId === exercise.id && !a.reverted) ?? null
     : null;
-  const adjustedSetCount = (sessionAdjustment && sessionAdjustment.setDelta !== 0)
+  const comp015SetCount = (sessionAdjustment && sessionAdjustment.setDelta !== 0)
     ? sessionAdjustment.adjustedSets
     : routineExercise?.recommendedSets;
+
+  // B2: readiness-informed, downward-only tweak from the intent-sheet answer.
+  // Pure rule table (lib/sessionAdjustments.js); a presented suggestion applied
+  // to this session's TARGET display only. The stored plan and logged sets are
+  // never touched, and the user can dismiss it for the whole session. Silent on
+  // deload weeks, matching COMP-015's R0 (deload owns the session).
+  const readinessTweak = (tier === 'pro' && !isDeloadWeek)
+    ? getReadinessTweak(activeWorkout?.preWorkoutIntent, {
+      sleepQuality: activeWorkout?.sleepQuality,
+      energyScore: activeWorkout?.energyScore,
+    })
+    : null;
+  const readinessReduces = !!readinessTweak?.reduces && !readinessDismissed;
+
+  // COMP-015 and the readiness tweak never stack: the LOWER set target wins,
+  // so the combined surface can only ever move DOWN from the plan (a COMP-015
+  // add is superseded on a below-par day; two drops never double-count).
+  const readinessSetCount = readinessReduces
+    ? applyReadinessToSets(routineExercise?.recommendedSets, readinessTweak)
+    : null;
+  const adjustedSetCount = (Number.isFinite(readinessSetCount) && Number.isFinite(comp015SetCount))
+    ? Math.min(comp015SetCount, readinessSetCount)
+    : (Number.isFinite(readinessSetCount) ? readinessSetCount : comp015SetCount);
+
+  // B2: the suggested-load surface (per-set targets) with the readiness trim
+  // applied for display. Deload prescriptions pass through untouched.
+  const displaySetTargets = readinessReduces
+    ? applyReadinessToTargets(setTargets, readinessTweak)
+    : setTargets;
 
   // COMP-015: coverage telemetry — fire once per exercise when its adjustment
   // line first becomes visible. muscle + direction + reasonCode only, no PII.
@@ -1086,7 +1119,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // If warmup was just completed, mark hint seen and auto-switch to working set
       if (currentSet.setType === 'warmup') {
         warmupHintSeenRef.current = true;
-        const firstTarget = setTargets[0];
+        const firstTarget = displaySetTargets[0]; // B2: readiness-trimmed suggestion
         if (firstTarget) {
           const anchorSet0 = getBestAnchorSet(prevSets, 0);
           const prefillReps = prefillRepsForTarget(anchorSet0, firstTarget);
@@ -1650,6 +1683,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     return { w0, r0 };
   })();
 
+  // B2: the readiness line for the coach slot. A below-par reduction carries
+  // its written why on every exercise; a Sharp answer gets at most a calm
+  // acknowledgement on the first exercise only, and never a target change.
+  const readinessLine = readinessReduces
+    ? readinessTweak.whySets
+    : (readinessTweak?.acknowledgement && currentExerciseIndex === 0
+      ? readinessTweak.acknowledgement
+      : null);
+
   if (!exercise) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -1961,7 +2003,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 input-size numerals. Tap applies last session's numbers,
                 the Hevy tap-previous-to-fill mechanic. */}
             {currentSet.setType !== 'warmup' && (() => {
-              const target = setTargets[workingLogged];
+              const target = displaySetTargets[workingLogged]; // B2: readiness-trimmed suggestion
               // prevSets is the raw previous-session array (warm-ups included),
               // but warm-ups and working sets number their set_number
               // independently, so a logged warm-up can sort to prevSets[0] and
@@ -2039,13 +2081,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             })()}
 
             {/* Line 3: coaching line, max one, first working set only.
-                Priority (COMP-015): session adjustment > stalled advice >
-                coach reason. Absent while the deload banner is showing (one
-                context line at a time; deload never co-occurs with an
-                adjustment — the engine is silent on deload weeks). Tap opens
-                the exercise info sheet, including the Adjusted today section. */}
+                Priority (COMP-015/B2): session adjustment > readiness tweak >
+                stalled advice > coach reason. Absent while the deload banner is
+                showing (one context line at a time; deload never co-occurs with
+                an adjustment — the engine is silent on deload weeks). Tap opens
+                the exercise info sheet, including the Adjusted today and
+                readiness sections. */}
             {currentSet.setType !== 'warmup' && workingLogged === 0 &&
-              !(isDeloadWeek && !deloadDismissed) && (sessionAdjustment?.show || stalledAdvice || targetReason) && (
+              !(isDeloadWeek && !deloadDismissed) && (sessionAdjustment?.show || readinessLine || stalledAdvice || targetReason) && (
               <TouchableOpacity
                 style={styles.coachLine}
                 onPress={() => setShowExecution(true)}
@@ -2053,17 +2096,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel={sessionAdjustment?.show
                   ? `${sessionAdjustment.reasonText} Double-tap for details and to restore the plan.`
-                  : stalledAdvice
-                    ? `Same weight 3 sessions running. Try ${stalledAdvice.w0 + 2.5} ${units} times ${Math.max(1, stalledAdvice.r0 - 1)}, or stay at ${stalledAdvice.w0} ${units} and push for ${stalledAdvice.r0 + 1}.`
-                    : targetReason}
+                  : readinessLine
+                    ? `${readinessLine}${readinessReduces ? ' Double-tap for details and to use the planned targets instead.' : ''}`
+                    : stalledAdvice
+                      ? `Same weight 3 sessions running. Try ${stalledAdvice.w0 + 2.5} ${units} times ${Math.max(1, stalledAdvice.r0 - 1)}, or stay at ${stalledAdvice.w0} ${units} and push for ${stalledAdvice.r0 + 1}.`
+                      : targetReason}
               >
                 <Ionicons name="sparkles-outline" size={13} color={colors.primary} style={{ marginTop: spacing.xxs }} />
                 <Text style={styles.coachLineText} numberOfLines={2}>
                   {sessionAdjustment?.show
                     ? sessionAdjustment.reasonText
-                    : stalledAdvice
-                      ? `Same weight 3 sessions running. Try ${stalledAdvice.w0 + 2.5}${units} × ${Math.max(1, stalledAdvice.r0 - 1)}, or stay at ${stalledAdvice.w0}${units} and push for ${stalledAdvice.r0 + 1}.`
-                      : targetReason}
+                    : readinessLine
+                      ? readinessLine
+                      : stalledAdvice
+                        ? `Same weight 3 sessions running. Try ${stalledAdvice.w0 + 2.5}${units} × ${Math.max(1, stalledAdvice.r0 - 1)}, or stay at ${stalledAdvice.w0}${units} and push for ${stalledAdvice.r0 + 1}.`
+                        : targetReason}
                 </Text>
                 <Ionicons name="chevron-forward" size={13} color={colors.textSecondary} style={{ marginTop: spacing.xxs }} />
               </TouchableOpacity>
@@ -2637,6 +2684,32 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     <Text style={styles.adjustedRevertText}>Use planned sets instead</Text>
                   </TouchableOpacity>
                 ) : null}
+              </View>
+            ) : null}
+
+            {/* B2: Eased for today — the intent-sheet answer's downward-only
+                tweak, both written whys, and a one-tap session-wide dismiss.
+                Suggestions on the targets display only; the plan and logged
+                sets are never changed. */}
+            {readinessReduces ? (
+              <View style={styles.adjustedSection}>
+                <View style={styles.adjustedHeader}>
+                  <Ionicons name="sparkles" size={14} color={colors.primary} />
+                  <Text style={styles.adjustedTitle}>Eased for today</Text>
+                </View>
+                <Text style={styles.adjustedReason}>{readinessTweak.whySets}</Text>
+                {readinessTweak.whyLoad ? (
+                  <Text style={styles.adjustedSignal}>{readinessTweak.whyLoad}</Text>
+                ) : null}
+                <TouchableOpacity
+                  style={styles.adjustedRevertBtn}
+                  onPress={() => { setReadinessDismissed(true); setShowExecution(false); }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Use planned targets instead. Applies to the whole session."
+                >
+                  <Ionicons name="arrow-undo-outline" size={15} color={colors.primary} />
+                  <Text style={styles.adjustedRevertText}>Use planned targets instead</Text>
+                </TouchableOpacity>
               </View>
             ) : null}
 

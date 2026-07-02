@@ -4,13 +4,34 @@
  * Pins every cell of the R0–R6 rule matrix, the caps/clamps, the muscle-name
  * map, and the revert-memory derivation. The fuzz invariants live alongside the
  * other engines in engine-invariants.test.js.
+ *
+ * B2 — readiness-informed session tweaks (second half of this file). Pins the
+ * fixed rule table and its HARD INVARIANT, written to fail if it is ever
+ * broken: for EVERY readiness input and plan shape, the adjusted targets are
+ * <= the plan's targets (sets and load), 'sharp'/'average' never change
+ * targets at all, the rules are deterministic (no Date.now, no randomness),
+ * and the why copy never references body weight or food (ED rule).
  */
+import fs from 'fs';
+import path from 'path';
 import { computeSessionAdjustments, buildSessionAdjustmentInput } from '../algorithms';
 import {
   CHECKIN_MUSCLE_MAP,
   SESSION_REASON_CODES as RC,
   SESSION_SHOWN_CODES,
 } from '../whyThisTemplates';
+import {
+  READINESS_RULES,
+  getReadinessTweak,
+  applyReadinessToSets,
+  applyReadinessToLoad,
+  applyReadinessToTargets,
+} from '../sessionAdjustments';
+
+// sessionAdjustments.js also exports the COMP-015 IO orchestrator, which pulls
+// in the SQLite layer. The B2 functions under test are pure; stub the IO deps.
+jest.mock('../database', () => ({}));
+jest.mock('../errorLog', () => ({ logError: jest.fn(), logWarn: jest.fn(), logInfo: jest.fn() }));
 
 const NOW = Date.UTC(2026, 5, 11, 12, 0, 0); // Thu 11 Jun 2026, 12:00 UTC
 const DAY = 86_400_000;
@@ -364,5 +385,286 @@ describe('buildSessionAdjustmentInput — pure assembler mappings', () => {
     const out = computeSessionAdjustments(input);
     // fresh check-in flagged shoulders + trained <=72h → residual-soreness drop
     expect(out.find(o => o.muscle === 'side_delts')?.setDelta).toBe(-1);
+  });
+});
+
+// ── B2: readiness-informed session tweaks (downward-only rule table) ─────────
+
+// Deterministic PRNG (same construction as engine-invariants.test.js) so the
+// downward-only fuzz run is reproducible across CI.
+function mulberry32(seed) {
+  let a = seed;
+  return function () {
+    let t = (a += 0x6D2B79F5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rng = mulberry32(20260702);
+const pick = (arr) => arr[Math.floor(rng() * arr.length)];
+const rint = (min, max) => Math.floor(rng() * (max - min + 1)) + min;
+const rfloat = (min, max) => rng() * (max - min) + min;
+
+// Every string anywhere in the rule table (whys, acknowledgements, variants).
+function collectStrings(obj, out = []) {
+  if (typeof obj === 'string') { out.push(obj); return out; }
+  if (obj && typeof obj === 'object') {
+    for (const v of Object.values(obj)) collectStrings(v, out);
+  }
+  return out;
+}
+
+describe('B2 READINESS_RULES — the fixed rule table', () => {
+  test('covers exactly the three intent-sheet answers', () => {
+    expect(Object.keys(READINESS_RULES).sort()).toEqual(['average', 'below_par', 'sharp']);
+  });
+
+  test('every rule is downward-only: setDelta <= 0 and loadFactor <= 1', () => {
+    for (const [intent, rule] of Object.entries(READINESS_RULES)) {
+      expect(rule.setDelta).toBeLessThanOrEqual(0);
+      expect(rule.loadFactor).toBeLessThanOrEqual(1);
+      expect(rule.loadFactor).toBeGreaterThan(0);
+      expect(Number.isFinite(rule.setDelta)).toBe(true);
+      expect(Number.isFinite(rule.loadFactor)).toBe(true);
+      expect(Object.isFrozen(rule)).toBe(true);
+      if (intent !== 'below_par') {
+        // only poor readiness ever tweaks anything
+        expect(rule.setDelta).toBe(0);
+        expect(rule.loadFactor).toBe(1);
+      }
+    }
+    expect(Object.isFrozen(READINESS_RULES)).toBe(true);
+  });
+
+  test('below_par: one set fewer and a 5 per cent load trim, with written whys', () => {
+    const r = READINESS_RULES.below_par;
+    expect(r.setDelta).toBe(-1);
+    expect(r.loadFactor).toBe(0.95);
+    expect(r.whySets.sleep).toBe('Rough night: one set fewer on each lift today keeps quality up.');
+    expect(typeof r.whySets.energy).toBe('string');
+    expect(typeof r.whySets.default).toBe('string');
+    expect(typeof r.whyLoad).toBe('string');
+  });
+
+  test('sharp: acknowledgement only, never a target change', () => {
+    const r = READINESS_RULES.sharp;
+    expect(r.setDelta).toBe(0);
+    expect(r.loadFactor).toBe(1);
+    expect(typeof r.acknowledgement).toBe('string');
+  });
+
+  test('average: silent — no reduction, no acknowledgement', () => {
+    const r = READINESS_RULES.average;
+    expect(r.setDelta).toBe(0);
+    expect(r.loadFactor).toBe(1);
+    expect(r.acknowledgement).toBeUndefined();
+    expect(r.whySets).toBeUndefined();
+  });
+
+  test('ED rule: no why copy references body weight or food', () => {
+    for (const s of collectStrings(READINESS_RULES)) {
+      expect(s).not.toMatch(/\b(weight|weights|weigh|kg|lbs?|food|meal|calorie|calories|kcal|eat|eats|eating|diet)\b/i);
+    }
+  });
+
+  test('voice: no em dash in any user-facing copy', () => {
+    for (const s of collectStrings(READINESS_RULES)) {
+      expect(s).not.toContain('—');
+    }
+  });
+});
+
+describe('B2 getReadinessTweak — intent + chips → tweak', () => {
+  test('below_par picks the why variant from the readiness chips (sleep first)', () => {
+    expect(getReadinessTweak('below_par', { sleepQuality: 2 }).whySets)
+      .toBe(READINESS_RULES.below_par.whySets.sleep);
+    expect(getReadinessTweak('below_par', { energyScore: 2 }).whySets)
+      .toBe(READINESS_RULES.below_par.whySets.energy);
+    expect(getReadinessTweak('below_par', {}).whySets)
+      .toBe(READINESS_RULES.below_par.whySets.default);
+    // deterministic tie-break: poor sleep outranks low energy
+    expect(getReadinessTweak('below_par', { sleepQuality: 2, energyScore: 2 }).whySets)
+      .toBe(READINESS_RULES.below_par.whySets.sleep);
+  });
+
+  test('below_par reduces; sharp acknowledges; average carries nothing', () => {
+    const poor = getReadinessTweak('below_par', {});
+    expect(poor.reduces).toBe(true);
+    expect(poor.setDelta).toBe(-1);
+    expect(poor.loadFactor).toBe(0.95);
+    expect(typeof poor.whyLoad).toBe('string');
+
+    const sharp = getReadinessTweak('sharp', {});
+    expect(sharp.reduces).toBe(false);
+    expect(sharp.whySets).toBeNull();
+    expect(sharp.whyLoad).toBeNull();
+    expect(typeof sharp.acknowledgement).toBe('string');
+
+    const avg = getReadinessTweak('average', {});
+    expect(avg.reduces).toBe(false);
+    expect(avg.whySets).toBeNull();
+    expect(avg.acknowledgement).toBeNull();
+  });
+
+  test('unknown / missing intents return null', () => {
+    expect(getReadinessTweak(null)).toBeNull();
+    expect(getReadinessTweak(undefined)).toBeNull();
+    expect(getReadinessTweak('')).toBeNull();
+    expect(getReadinessTweak('nonsense')).toBeNull();
+  });
+});
+
+describe('B2 applyReadinessToSets — downward-only, floored at 1', () => {
+  const poor = getReadinessTweak('below_par', {});
+
+  test('below_par drops one set, never below one', () => {
+    expect(applyReadinessToSets(4, poor)).toBe(3);
+    expect(applyReadinessToSets(2, poor)).toBe(1);
+    expect(applyReadinessToSets(1, poor)).toBe(1);
+  });
+
+  test('sharp/average/null leave the plan untouched', () => {
+    expect(applyReadinessToSets(4, getReadinessTweak('sharp', {}))).toBe(4);
+    expect(applyReadinessToSets(4, getReadinessTweak('average', {}))).toBe(4);
+    expect(applyReadinessToSets(4, null)).toBe(4);
+  });
+
+  test('degenerate plan shapes pass through unchanged (still <= plan)', () => {
+    expect(applyReadinessToSets(0, poor)).toBe(0);
+    expect(applyReadinessToSets(null, poor)).toBeNull();
+    expect(applyReadinessToSets(undefined, poor)).toBeUndefined();
+    expect(Number.isNaN(applyReadinessToSets(NaN, poor))).toBe(true);
+  });
+});
+
+describe('B2 applyReadinessToLoad — 5 per cent trim, rounded DOWN to 0.25', () => {
+  const poor = getReadinessTweak('below_par', {});
+
+  test('table-fixed trims on realistic loads', () => {
+    expect(applyReadinessToLoad(100, poor)).toBe(95);
+    expect(applyReadinessToLoad(102.5, poor)).toBe(97.25); // 97.375 floors to 97.25
+    expect(applyReadinessToLoad(60, poor)).toBe(57);
+    expect(applyReadinessToLoad(2.5, poor)).toBe(2.25);    // 2.375 floors to 2.25
+  });
+
+  test('rounding can never lift the suggestion back above plan', () => {
+    for (let w = 0.25; w <= 300; w += 0.25) {
+      expect(applyReadinessToLoad(w, poor)).toBeLessThanOrEqual(w);
+    }
+  });
+
+  test('a load too small to trim on the 0.25 grid stays as planned', () => {
+    expect(applyReadinessToLoad(0.2, poor)).toBe(0.2);
+  });
+
+  test('sharp/average/null and non-positive loads pass through unchanged', () => {
+    expect(applyReadinessToLoad(100, getReadinessTweak('sharp', {}))).toBe(100);
+    expect(applyReadinessToLoad(100, getReadinessTweak('average', {}))).toBe(100);
+    expect(applyReadinessToLoad(100, null)).toBe(100);
+    expect(applyReadinessToLoad(0, poor)).toBe(0);
+    expect(applyReadinessToLoad(-20, poor)).toBe(-20);
+    expect(applyReadinessToLoad(null, poor)).toBeNull();
+  });
+});
+
+describe('B2 applyReadinessToTargets — the suggested-load display layer', () => {
+  const poor = getReadinessTweak('below_par', {});
+
+  test('trims weights, marks the direction, and leaves reps alone', () => {
+    const targets = [
+      { weight: 100, repsMin: 8, repsMax: 12, action: 'increase' },
+      { weight: 60, repsMin: 9, repsMax: 12, action: 'add_rep' },
+    ];
+    const out = applyReadinessToTargets(targets, poor);
+    expect(out[0]).toMatchObject({ weight: 95, repsMin: 8, repsMax: 12, action: 'decrease' });
+    expect(out[1]).toMatchObject({ weight: 57, repsMin: 9, repsMax: 12, action: 'decrease' });
+    // input is never mutated
+    expect(targets[0].weight).toBe(100);
+  });
+
+  test('deload prescriptions are never touched', () => {
+    const targets = [{ weight: 40, repsMin: 5, repsMax: 5, action: 'deload', isDeload: true }];
+    expect(applyReadinessToTargets(targets, poor)[0]).toBe(targets[0]);
+  });
+
+  test('a non-reducing tweak returns the same array untouched', () => {
+    const targets = [{ weight: 100, repsMin: 8, repsMax: 12, action: 'maintain' }];
+    expect(applyReadinessToTargets(targets, getReadinessTweak('sharp', {}))).toBe(targets);
+    expect(applyReadinessToTargets(targets, null)).toBe(targets);
+  });
+});
+
+describe('B2 HARD INVARIANT — downward-only fuzz over the rule table', () => {
+  const intents = ['sharp', 'average', 'below_par', null, undefined, '', 'nonsense'];
+  const chipVals = [null, undefined, 2, 3, 4];
+
+  test('for EVERY readiness input and plan shape, adjusted <= plan (2000 cases)', () => {
+    for (let i = 0; i < 2000; i++) {
+      const intent = pick(intents);
+      const chips = { sleepQuality: pick(chipVals), energyScore: pick(chipVals) };
+      const tweak = getReadinessTweak(intent, chips);
+
+      // sets: ints, floats, zero, negatives, non-numbers
+      const plannedSets = pick([rint(1, 10), rint(-3, 0), rfloat(0.1, 12), null, undefined, NaN]);
+      const adjSets = applyReadinessToSets(plannedSets, tweak);
+      if (Number.isFinite(plannedSets)) {
+        expect(adjSets).toBeLessThanOrEqual(plannedSets);
+        expect(Number.isFinite(adjSets)).toBe(true);
+      } else {
+        expect(Object.is(adjSets, plannedSets)).toBe(true);
+      }
+
+      // load: realistic, tiny, zero, negative, non-numbers
+      const plannedLoad = pick([rfloat(0.05, 2), rfloat(1, 300), rint(0, 500), 0, -rfloat(0, 50), null, NaN]);
+      const adjLoad = applyReadinessToLoad(plannedLoad, tweak);
+      if (Number.isFinite(plannedLoad) && plannedLoad > 0) {
+        expect(adjLoad).toBeLessThanOrEqual(plannedLoad);
+        expect(adjLoad).toBeGreaterThan(0);
+      } else {
+        expect(Object.is(adjLoad, plannedLoad)).toBe(true);
+      }
+
+      // good/neutral readiness NEVER changes a target, in any direction
+      if (intent === 'sharp' || intent === 'average') {
+        expect(Object.is(adjSets, plannedSets)).toBe(true);
+        expect(Object.is(adjLoad, plannedLoad)).toBe(true);
+      }
+
+      // per-set targets: every weight <= plan, reps untouched
+      const targets = Array.from({ length: rint(0, 4) }, () => ({
+        weight: pick([rfloat(0, 250), 0, rfloat(0.05, 1)]),
+        repsMin: rint(1, 15),
+        repsMax: rint(5, 20),
+        action: pick(['increase', 'maintain', 'add_rep', 'decrease']),
+      }));
+      const outTargets = applyReadinessToTargets(targets, tweak);
+      expect(outTargets.length).toBe(targets.length);
+      outTargets.forEach((t, j) => {
+        expect(t.weight).toBeLessThanOrEqual(targets[j].weight);
+        expect(t.repsMin).toBe(targets[j].repsMin);
+        expect(t.repsMax).toBe(targets[j].repsMax);
+      });
+
+      // determinism: the same inputs give JSON-identical outputs on a re-run
+      expect(JSON.stringify(getReadinessTweak(intent, chips))).toBe(JSON.stringify(tweak ?? null));
+      expect(Object.is(applyReadinessToSets(plannedSets, tweak), adjSets)).toBe(true);
+      expect(Object.is(applyReadinessToLoad(plannedLoad, tweak), adjLoad)).toBe(true);
+      expect(JSON.stringify(applyReadinessToTargets(targets, tweak)))
+        .toBe(JSON.stringify(outTargets));
+    }
+  });
+});
+
+describe('B2 source guard — the rules are deterministic by construction', () => {
+  test('the B2 section of sessionAdjustments.js has no Date.now and no randomness', () => {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'sessionAdjustments.js'), 'utf8');
+    const markerIdx = src.indexOf('B2: readiness-informed session tweaks');
+    expect(markerIdx).toBeGreaterThan(-1);
+    const b2Section = src.slice(markerIdx);
+    expect(b2Section).not.toMatch(/Date\.now/);
+    expect(b2Section).not.toMatch(/Math\.random/);
+    // and the whole file never reaches for randomness anywhere
+    expect(src).not.toMatch(/Math\.random/);
   });
 });

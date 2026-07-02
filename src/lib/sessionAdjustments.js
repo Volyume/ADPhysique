@@ -119,3 +119,116 @@ export async function computeAndLogSessionAdjustments({ userId, workout, exercis
     return [];
   }
 }
+
+// ── B2: readiness-informed session tweaks (downward-only rule table) ─────────
+//
+// Expands COMP-015's line with visible, deterministic tweaks driven by the
+// pre-session intent-sheet answer ('sharp' | 'average' | 'below_par'). A fixed
+// rule table, no learning, and strictly downward-only: a tweak may lower this
+// session's TARGET sets or suggested load, never raise them, and good
+// readiness never pushes beyond the plan (at most a written acknowledgement).
+//
+// Everything below is pure: no I/O, no clock reads, no randomness, so the
+// same inputs always give the same output. The tweaks are presented suggestions
+// applied to the session's targets display only; the stored plan, routines and
+// logged sets are never touched, and the user can dismiss them at any time
+// ("Use planned targets instead" in the exercise info sheet).
+//
+// HARD INVARIANT (fuzz-enforced in __tests__/sessionAdjustments.test.js): for
+// EVERY readiness input and plan shape, adjusted sets <= planned sets and
+// adjusted load <= planned load.
+
+export const READINESS_RULES = Object.freeze({
+  below_par: Object.freeze({
+    setDelta: -1,     // one set fewer per exercise, floored at 1 working set
+    loadFactor: 0.95, // suggested load trimmed 5%, rounded DOWN to 0.25
+    whySets: Object.freeze({
+      sleep: 'Rough night: one set fewer on each lift today keeps quality up.',
+      energy: 'Low energy today: one set fewer on each lift keeps quality up.',
+      default: 'Feeling below par: one set fewer on each lift today keeps quality up.',
+    }),
+    whyLoad: 'Suggested loads are trimmed a touch so every rep stays crisp.',
+  }),
+  average: Object.freeze({ setDelta: 0, loadFactor: 1 }),
+  sharp: Object.freeze({
+    setDelta: 0, // good readiness NEVER pushes beyond the plan
+    loadFactor: 1,
+    acknowledgement: "Feeling sharp. Today's plan fits as written, so nothing changes.",
+  }),
+});
+
+/**
+ * Resolve the intent-sheet answer (plus the optional readiness chips, used
+ * only to pick the why wording) into this session's tweak. Pure table lookup.
+ *
+ * @param {string|null} intent  'sharp' | 'average' | 'below_par' | null
+ * @param {object} [chips]      { sleepQuality, energyScore } from the intent
+ *                              sheet's optional rows (2 = Poor/Low)
+ * @returns {object|null} { intent, reduces, setDelta, loadFactor, whySets,
+ *                          whyLoad, acknowledgement } or null when the answer
+ *                          is missing/unknown
+ */
+export function getReadinessTweak(intent, { sleepQuality = null, energyScore = null } = {}) {
+  const rule = READINESS_RULES[intent];
+  if (!rule) return null;
+  const reduces = rule.setDelta < 0 || rule.loadFactor < 1;
+  let whySets = null;
+  if (reduces && rule.whySets) {
+    // Deterministic tie-break: poor sleep outranks low energy.
+    whySets = sleepQuality === 2
+      ? rule.whySets.sleep
+      : energyScore === 2
+        ? rule.whySets.energy
+        : rule.whySets.default;
+  }
+  return {
+    intent,
+    reduces,
+    setDelta: rule.setDelta,
+    loadFactor: rule.loadFactor,
+    whySets,
+    whyLoad: reduces ? (rule.whyLoad ?? null) : null,
+    acknowledgement: rule.acknowledgement ?? null,
+  };
+}
+
+/**
+ * Downward-only set-target adjustment. Never returns more than plannedSets,
+ * never below 1 working set; degenerate plan shapes pass through unchanged.
+ */
+export function applyReadinessToSets(plannedSets, tweak) {
+  if (!Number.isFinite(plannedSets)) return plannedSets;
+  if (!tweak || !(tweak.setDelta < 0)) return plannedSets;
+  return Math.min(plannedSets, Math.max(1, plannedSets + tweak.setDelta));
+}
+
+/**
+ * Downward-only suggested-load adjustment. Rounds DOWN to the nearest 0.25 so
+ * rounding can never lift the suggestion back above plan; a load too small to
+ * trim on that grid (or non-positive) stays as planned.
+ */
+export function applyReadinessToLoad(plannedLoad, tweak) {
+  if (!Number.isFinite(plannedLoad) || plannedLoad <= 0) return plannedLoad;
+  if (!tweak || !(tweak.loadFactor < 1)) return plannedLoad;
+  const trimmed = Math.floor(plannedLoad * tweak.loadFactor * 4) / 4;
+  if (trimmed <= 0) return plannedLoad;
+  return Math.min(plannedLoad, trimmed);
+}
+
+/**
+ * Apply the readiness load trim to a computeSetTargets targets array for
+ * display. Non-mutating; reps are untouched; a lowered weight flips the
+ * direction to 'decrease' so the beat line's glyph stays honest. Deload
+ * prescriptions are never touched (deload owns its session, matching
+ * COMP-015's R0).
+ */
+export function applyReadinessToTargets(targets, tweak) {
+  if (!Array.isArray(targets) || targets.length === 0) return targets ?? [];
+  if (!tweak || !tweak.reduces) return targets;
+  return targets.map((t) => {
+    if (!t || t.isDeload) return t;
+    const weight = applyReadinessToLoad(t.weight, tweak);
+    if (weight === t.weight) return t;
+    return { ...t, weight, action: 'decrease' };
+  });
+}
