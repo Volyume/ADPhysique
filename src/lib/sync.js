@@ -155,7 +155,10 @@ export async function fetchByIdsChunked(scope, table, column, ids, queryFactory)
     for (;;) {
       const base = queryFactory
         ? queryFactory(slice)
-        : getClient().from(table).select('*').in(column, slice);
+        // F5 Phase A (C1 mitigation, forward-compat): exclude tombstoned rows
+        // so Phase B's soft deletes can never resurrect through this build's
+        // pulls. No tombstone exists yet, so this is a no-op today.
+        : getClient().from(table).select('*').in(column, slice).is('deleted_at', null);
       const { data, error } = await base.range(from, from + PAGE - 1);
       if (error) { logWarn(scope, error.message); break; }
       if (!data?.length) break;
@@ -1328,7 +1331,8 @@ export async function pullFromCloud(supabaseUserId) {
         let q = sb.from('workouts')
           .select('id, started_at, ended_at, duration_minutes, notes, is_completed, session_difficulty, overall_pump, soreness_24h_before, fatigue_level, routine_id, mesocycle_id, name, pre_workout_intent, set_count, total_volume, mesocycle_week_id, joint_discomfort, updated_at')
           .eq('user_id', supabaseUserId)
-          .eq('is_completed', true);
+          .eq('is_completed', true)
+          .is('deleted_at', null); // F5 Phase A: tombstone-aware (no-op until Phase B writes them)
         if (wmWorkouts > 0) q = q.gte('updated_at', isoFromMs(wmWorkouts));
         return q.order('started_at', { ascending: false });
       },
@@ -1495,7 +1499,7 @@ async function _pullExercises(sb, supabaseUserId) {
   try {
     const data = await fetchAllRows(
       'sync._pullExercises',
-      () => sb.from('exercises').select('*').eq('user_id', supabaseUserId),
+      () => sb.from('exercises').select('*').eq('user_id', supabaseUserId).is('deleted_at', null),
     );
     if (!data?.length) return 0;
     // eslint-disable-next-line global-require
@@ -1525,7 +1529,7 @@ async function _pullUserBodyProfile(sb, supabaseUserId) {
 async function _pullUserInsights(sb, supabaseUserId) {
   try {
     const { data, error } = await sb.from('user_insights')
-      .select('*').eq('user_id', supabaseUserId);
+      .select('*').eq('user_id', supabaseUserId).is('deleted_at', null);
     if (error) { logPgErr('sync._pullUserInsights', error); return 0; }
     if (!data?.length) return 0;
     // eslint-disable-next-line global-require
@@ -1542,7 +1546,7 @@ async function _pullUserInsights(sb, supabaseUserId) {
 async function _pullExerciseUserNotes(sb, supabaseUserId) {
   try {
     const wm = await getPullWatermark(supabaseUserId, 'exercise_user_notes');
-    let q = sb.from('exercise_user_notes').select('*').eq('user_id', supabaseUserId);
+    let q = sb.from('exercise_user_notes').select('*').eq('user_id', supabaseUserId).is('deleted_at', null);
     if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
     const { data, error } = await q;
     if (error) { logPgErr('sync._pullExerciseUserNotes', error); return 0; }
@@ -1563,7 +1567,7 @@ async function _pullExerciseUserNotes(sb, supabaseUserId) {
 async function _pullWorkoutNotes(sb, supabaseUserId) {
   try {
     const { data, error } = await sb.from('workout_notes')
-      .select('*').eq('user_id', supabaseUserId);
+      .select('*').eq('user_id', supabaseUserId).is('deleted_at', null);
     if (error) { logPgErr('sync._pullWorkoutNotes', error); return 0; }
     if (!data?.length) return 0;
     // eslint-disable-next-line global-require
@@ -1580,7 +1584,7 @@ async function _pullWorkoutNotes(sb, supabaseUserId) {
 async function _pullExerciseGoals(sb, supabaseUserId) {
   try {
     const { data, error } = await sb.from('exercise_goals')
-      .select('*').eq('user_id', supabaseUserId);
+      .select('*').eq('user_id', supabaseUserId).is('deleted_at', null);
     if (error) { logPgErr('sync._pullExerciseGoals', error); return 0; }
     if (!data?.length) return 0;
     // eslint-disable-next-line global-require
@@ -1597,7 +1601,7 @@ async function _pullExerciseGoals(sb, supabaseUserId) {
 async function _pullCustomExercises(sb, supabaseUserId) {
   try {
     const { data, error } = await sb.from('custom_exercises')
-      .select('*').eq('user_id', supabaseUserId);
+      .select('*').eq('user_id', supabaseUserId).is('deleted_at', null);
     if (error) { logPgErr('sync._pullCustomExercises', error); return 0; }
     if (!data?.length) return 0;
     // Restore custom exercises into the LOCAL `exercises` table (is_custom=1),
@@ -1641,7 +1645,7 @@ async function _pullPeakWeekPlans(sb, supabaseUserId) {
 async function _pullPlannedMuscleVolume(sb, supabaseUserId) {
   try {
     const { data, error } = await sb.from('planned_muscle_volume')
-      .select('*').eq('user_id', supabaseUserId);
+      .select('*').eq('user_id', supabaseUserId).is('deleted_at', null);
     if (error) { logPgErr('sync._pullPlannedMuscleVolume', error); return 0; }
     if (!data?.length) return 0;
     // eslint-disable-next-line global-require
@@ -1659,7 +1663,7 @@ async function _pullAdaptationEvents(sb, supabaseUserId) {
   try {
     const data = await fetchAllRows(
       'sync._pullAdaptationEvents',
-      () => sb.from('adaptation_events').select('*').eq('user_id', supabaseUserId),
+      () => sb.from('adaptation_events').select('*').eq('user_id', supabaseUserId).is('deleted_at', null),
     );
     if (!data?.length) return 0;
     // eslint-disable-next-line global-require
@@ -1717,7 +1721,7 @@ async function _pullUserPrefs(sb, supabaseUserId) {
 async function _pullProgrammes(sb, supabaseUserId) {
   try {
     const wm = await getPullWatermark(supabaseUserId, 'programmes');
-    let q = sb.from('programmes').select('*').eq('user_id', supabaseUserId);
+    let q = sb.from('programmes').select('*').eq('user_id', supabaseUserId).is('deleted_at', null);
     if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
     const { data, error } = await q;
     if (error) { logWarn('sync._pullProgrammes', error.message); return 0; }
@@ -1752,7 +1756,7 @@ async function _pullRoutinesAndExercises(sb, supabaseUserId) {
     const routines = await fetchAllRows(
       'sync._pullRoutines',
       () => {
-        let q = sb.from('routines').select('*').eq('user_id', supabaseUserId);
+        let q = sb.from('routines').select('*').eq('user_id', supabaseUserId).is('deleted_at', null);
         if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
         return q;
       },
@@ -1794,7 +1798,7 @@ async function _pullRoutinesAndExercises(sb, supabaseUserId) {
 async function _pullMesocycles(sb, supabaseUserId) {
   try {
     const wm = await getPullWatermark(supabaseUserId, 'mesocycles');
-    let mq = sb.from('mesocycles').select('*').eq('user_id', supabaseUserId);
+    let mq = sb.from('mesocycles').select('*').eq('user_id', supabaseUserId).is('deleted_at', null);
     if (wm > 0) mq = mq.gte('updated_at', isoFromMs(wm));
     const { data: mesos, error: mErr } = await mq;
     if (mErr) { logWarn('sync._pullMesocycles', mErr.message); return 0; }
@@ -1828,7 +1832,7 @@ async function _pullMorningWeights(sb, supabaseUserId) {
     const data = await fetchAllRows(
       'sync._pullMorningWeights',
       () => {
-        let q = sb.from('morning_weights').select('*').eq('user_id', supabaseUserId);
+        let q = sb.from('morning_weights').select('*').eq('user_id', supabaseUserId).is('deleted_at', null);
         if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
         return q;
       },
@@ -1847,7 +1851,7 @@ async function _pullMorningWeights(sb, supabaseUserId) {
 async function _pullCoachOutputs(sb, supabaseUserId) {
   try {
     const wm = await getPullWatermark(supabaseUserId, 'coach_outputs');
-    let q = sb.from('coach_outputs').select('*').eq('user_id', supabaseUserId);
+    let q = sb.from('coach_outputs').select('*').eq('user_id', supabaseUserId).is('deleted_at', null);
     if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
     const { data, error } = await q;
     if (error) { logWarn('sync._pullCoachOutputs', error.message); return 0; }
