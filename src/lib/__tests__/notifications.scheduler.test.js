@@ -54,6 +54,14 @@ jest.mock('../../store/useAppStore', () => ({
   default: { getState: () => mockGetState() },
 }));
 
+// Permission check used ONLY by restoreNotifications (lazy-required). Granted
+// by default so the restore path is exercisable; the E10-F4 tier-gate tests
+// below steer tier through mockGetState.
+const mockPermissionStatus = jest.fn(() => Promise.resolve('granted'));
+jest.mock('../notifications/permissions', () => ({
+  getNotificationPermissionStatus: (...args) => mockPermissionStatus(...args),
+}));
+
 // AsyncStorage is auto-mocked by __mocks__/@react-native-async-storage/async-storage.js
 // (in-memory Map), we can write to it directly via the public default API.
 const AsyncStorage = require('@react-native-async-storage/async-storage').default;
@@ -72,6 +80,10 @@ beforeEach(async () => {
   mockGetOpenEdFlag.mockImplementation(() => Promise.resolve(null));
   mockTrack.mockReset();
   mockTrack.mockImplementation(() => Promise.resolve());
+  // Reset the store mock: tests that steer tier (or make getState throw)
+  // must not leak their implementation into later tests.
+  mockGetState.mockReset();
+  mockGetState.mockImplementation(() => ({ user: { id: 'user-1' } }));
   mockPlatformOS = 'android';
   await AsyncStorage.clear();
 });
@@ -453,6 +465,41 @@ describe('restoreNotifications', () => {
     await scheduler.restoreNotifications(null, 'user-1');
     expect(mockScheduleAsync).not.toHaveBeenCalled();
     expect(mockCancelAllAsync).not.toHaveBeenCalled();
+  });
+
+  // E10-F4: the weigh-in prompts and check-in reminder are Pro coaching
+  // surfaces. A lapsed free user must never have them re-laid: their tap
+  // targets are paywalled, there is no free surface to act on them, and a
+  // daily audible weigh-in prompt at someone who cannot act on it is the
+  // pressure pattern the ED rules exist to avoid.
+  const COACHING_PREFS = {
+    morningEnabled: true, morningHour: 7, morningMinute: 0,
+    checkinEnabled: true, checkinDay: 0, checkinHour: 12, checkinMinute: 0,
+  };
+
+  test('free tier: cancels everything and re-lays NO coaching prompts', async () => {
+    mockGetState.mockImplementation(() => ({ user: { id: 'user-1' }, tier: 'free' }));
+    await scheduler.restoreNotifications(COACHING_PREFS, 'user-1');
+    expect(mockCancelAllAsync).toHaveBeenCalled();
+    const ids = mockScheduleAsync.mock.calls.map(c => c[0]?.identifier);
+    expect(ids).not.toContain('volyume_morning_weight');
+    expect(ids).not.toContain('volyume_evening_weight');
+    expect(ids).not.toContain('volyume_weekly_checkin');
+  });
+
+  test('pro tier: the same prefs re-lay the weigh-in and check-in prompts', async () => {
+    mockGetState.mockImplementation(() => ({ user: { id: 'user-1' }, tier: 'pro' }));
+    await scheduler.restoreNotifications(COACHING_PREFS, 'user-1');
+    const ids = mockScheduleAsync.mock.calls.map(c => c[0]?.identifier);
+    expect(ids.some(id => /morning/.test(id || ''))).toBe(true);
+    expect(ids.some(id => /checkin|check_in/.test(id || ''))).toBe(true);
+  });
+
+  test('store read failure fails CLOSED: no coaching prompts re-laid', async () => {
+    mockGetState.mockImplementation(() => { throw new Error('store gone'); });
+    await scheduler.restoreNotifications(COACHING_PREFS, 'user-1');
+    const ids = mockScheduleAsync.mock.calls.map(c => c[0]?.identifier);
+    expect(ids.filter(id => /morning|evening|checkin/.test(id || ''))).toEqual([]);
   });
 });
 

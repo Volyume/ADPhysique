@@ -1045,7 +1045,20 @@ export async function restoreNotifications(prefs, userId = null) {
 
   await cancelAllNotifications();
 
-  if (prefs.morningEnabled) {
+  // E10-F4: the weigh-in prompts and the check-in reminder are Pro coaching
+  // surfaces (their tap targets are Pro-gated, and a lapsed free user has no
+  // free surface to act on them or any UI to turn them off). Re-lay them for
+  // Pro only, matching the tier gates the missed-check-in and planned-meal
+  // schedulers already carry. A daily audible weigh-in prompt aimed at
+  // someone who cannot act on it is exactly the pressure pattern the ED
+  // rules exist to avoid.
+  let isPro = false;
+  try {
+    // eslint-disable-next-line global-require
+    isPro = require('../../store/useAppStore').default.getState()?.tier === 'pro';
+  } catch (_) { /* store unavailable: fail closed (no coaching re-lays) */ }
+
+  if (isPro && prefs.morningEnabled) {
     await scheduleMorningWeightNotification(prefs.morningHour ?? 7, prefs.morningMinute ?? 0);
     // Q1: the evening backstop rides the same toggle. Fixed 19:30 default; the
     // helper self-gates under an open ED flag.
@@ -1053,7 +1066,7 @@ export async function restoreNotifications(prefs, userId = null) {
   } else {
     await cancelEveningWeightReminder();
   }
-  if (prefs.checkinEnabled) {
+  if (isPro && prefs.checkinEnabled) {
     await scheduleNextCheckinReminder(
       userId,
       prefs.checkinDay ?? 0,
