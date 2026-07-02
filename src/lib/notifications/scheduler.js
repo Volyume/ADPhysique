@@ -434,8 +434,13 @@ export async function scheduleNextCheckinReminder(userId, weekday = 0, hour = 12
 // and day 21 (auto-downgrade fired) both at 10:00 local, not
 // configurable. These are LOCAL one-shots derived from the trial end
 // date the device already holds (proTrialEndsAt); no server push is
-// involved. The end date is the day-21 cutover; day 19 is 2 days
-// before, matching the "ends in 2 days" copy.
+// involved. The end date is the trial cutover (day 14 of the 14-day
+// trial); the first push fires 2 days before (day 12), matching the
+// "ends in two days" copy. The identifier strings still say day19/day21
+// from the retired 3-tier cascade: they are KEPT deliberately, because
+// cancel-before-reschedule matches on identifier and renaming them would
+// orphan schedules already laid on updated devices. Names are cosmetic;
+// the fire dates are derived from proTrialEndsAt either way (E10-F6).
 
 const NOTIF_ID_CASCADE_19 = 'volyume_cascade_day19';
 const NOTIF_ID_CASCADE_21 = 'volyume_cascade_day21';

@@ -2,8 +2,11 @@
  * CascadeGateScreen
  *
  * Modal surface a user sees at the cascade decision points:
- *   * Day 21: pro trial winding down ("Stay on Pro" vs Free)
+ *   * Day 14 (trial end): pro trial winding down ("Stay on Pro" vs Free)
  *   * Payment failure: 3-day grace banner overlay (Stay vs Drop)
+ *
+ * The trial is 14 days and 'day14' is the one real gate; 'day21'/'day28'
+ * are accepted as legacy synonyms from the retired 3-tier cascade (E10-F6).
  *
  * Layout locked in UI_FLOWS_LOCKED.md lines 229-246 +
  * SUBSCRIPTION_AND_PAYMENT_LOCKED.md lines 305-326.
@@ -11,7 +14,7 @@
  * Copy variants pulled from OPEN_QUESTIONS_RESOLVED.md Q3.
  *
  * Navigation params:
- *   variant: 'day14' | 'day28' | 'payment_failure'   (required)
+ *   variant: 'day14' | 'payment_failure' (legacy 'day21'/'day28' accepted)
  *   pricingWindow: 'open_beta'|'founders'|'standard'  (defaults via
  *     getCurrentPricingWindow; may be passed for SSR / preview)
  *

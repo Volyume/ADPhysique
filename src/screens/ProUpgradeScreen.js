@@ -83,9 +83,11 @@ export default function ProUpgradeScreen({ navigation, route }) {
   // the session and calls completeUpgrade itself.
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
-  // COMP-007: annual is the default (H&F is annual-dominant ~60-68%; the saving
-  // is an honest 50%). Monthly stays visible second. Anchor, don't hide.
-  const [period, setPeriod] = useState('annual'); // billing period when subscribing
+  // Founder decision 2026-07-02 (supersedes COMP-007's annual anchor): monthly
+  // is the pre-selected period on every subscribe surface, matching the
+  // cascade gate, so the two revenue surfaces never disagree. Annual stays
+  // visible with its honest 50% saving; anchor, don't hide.
+  const [period, setPeriod] = useState('monthly'); // billing period when subscribing
 
   async function activatePro(supabaseUserId, { isNew }) {
     syncProfile(supabaseUserId, userProfile, 'pro', { isBetaTester: isNew }).catch(() => {});
