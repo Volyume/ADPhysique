@@ -35,7 +35,7 @@ import {
   Camera, useCameraDevice, useCodeScanner,
 } from 'react-native-vision-camera';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+import { planReady as hapticScanSuccess } from '../lib/haptics';
 import { colors, fontSize, spacing, radius, type } from '../styles/theme';
 import { resolveBarcode } from '../lib/food/waterfall';
 import { logError, logInfo } from '../lib/errorLog';
@@ -108,7 +108,9 @@ export default function ScanBarcodeScreen({ navigation, route }) {
     setResolving(true);
     audit('food.barcode.scan', { codeType: codes[0]?.type ?? 'unknown' });
     logInfo('ScanBarcode.detect', `data=${value} type=${codes[0]?.type}`);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    // Single success note (planReady's signature, reused so the vocabulary's
+    // reduce-motion gate covers the scan lock-on).
+    hapticScanSuccess();
     try {
       const food = await resolveBarcode(value, userId);
       if (food) {

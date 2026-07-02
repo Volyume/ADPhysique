@@ -17,7 +17,7 @@
 
 import { useEffect, useRef } from 'react';
 import { View, Animated, Easing, StyleSheet } from 'react-native';
-import { colors, radius, spacing } from '../styles/theme';
+import { colors, radius, spacing, motion } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 
 export function Skeleton({ width = '100%', height = 14, style, radius: r = 6 }) {
@@ -30,13 +30,13 @@ export function Skeleton({ width = '100%', height = 14, style, radius: r = 6 }) 
       Animated.sequence([
         Animated.timing(pulse, {
           toValue: 0.85,
-          duration: 750,
+          duration: motion.pulse,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(pulse, {
           toValue: 0.45,
-          duration: 750,
+          duration: motion.pulse,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),

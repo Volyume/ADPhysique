@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Keyboard } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import * as haptics from '../lib/haptics';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { calculate1RM } from '../lib/algorithms';
 import InfoTooltip from './InfoTooltip';
@@ -42,7 +42,7 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
   const showWeightReps = exerciseType === 'weight_reps' || exerciseType === 'weighted_bodyweight';
 
   function adjust(field, delta) {
-    Haptics.selectionAsync().catch(() => {});
+    haptics.selection();
     // Weight stepper: 2.5 kg, the smallest practical barbell jump. Gym weights
     // are kg-only.
     const steps = { weight: 2.5, reps: 1 };
@@ -66,7 +66,7 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
   // Time stepper for the duration / distance schemas. Steps the seconds count
   // (stored in value.reps) by `delta` seconds, clamped to [0, 5999] (99:59).
   function adjustSeconds(delta) {
-    Haptics.selectionAsync().catch(() => {});
+    haptics.selection();
     const raw = value.reps;
     const current = typeof raw === 'number' ? raw : (parseInt(raw, 10) || 0);
     const next = Math.min(Math.max(current + delta, 0), 5999);

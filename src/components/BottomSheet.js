@@ -19,11 +19,11 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import useAppStore from '../store/useAppStore';
-import { colors, spacing, radius } from '../styles/theme';
+import { colors, spacing, radius, motion } from '../styles/theme';
 
-const OPEN_MS = 260;
+const OPEN_MS = motion.sheet;
 const CLOSE_MS = 200;
-const BACKDROP_OPEN_MS = 200;
+const BACKDROP_OPEN_MS = motion.state;
 const BACKDROP_CLOSE_MS = 160;
 const OFFSCREEN = 700;
 

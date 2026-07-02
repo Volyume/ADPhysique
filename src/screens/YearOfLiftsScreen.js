@@ -380,6 +380,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
     user: s.user,
     units: s.units,
   })));
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const [data, setData] = useState(null);
   const [neutral, setNeutral] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -465,6 +466,13 @@ export default function YearOfLiftsScreen({ navigation, route }) {
   const progressAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (loading || cards.length === 0) return undefined;
+    if (reduceMotion) {
+      // Reduce motion: the pip shows full immediately instead of animating;
+      // the card still holds for STORY_MS before auto-advancing.
+      progressAnim.setValue(1);
+      const hold = setTimeout(() => advance(), STORY_MS);
+      return () => clearTimeout(hold);
+    }
     progressAnim.setValue(0);
     const anim = Animated.timing(progressAnim, {
       toValue: 1,
@@ -474,7 +482,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
     anim.start(({ finished }) => { if (finished) advance(); });
     return () => anim.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, cards.length, loading]);
+  }, [index, cards.length, loading, reduceMotion]);
 
   // Share the year as a single milestone card. Factual stats only, no
   // bodyweight or private data, same fields the deck already shows.

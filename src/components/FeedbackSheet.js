@@ -32,7 +32,7 @@ import {
   Animated, Easing, Platform, Keyboard, TouchableWithoutFeedback,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+import * as haptics from '../lib/haptics';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { submitFeedback, markPromptShown } from '../lib/feedback';
@@ -144,7 +144,7 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
       // Record that we showed the prompt so the suppression window
       // starts even if the user dismisses without submitting.
       if (cfg.triggerKey) markPromptShown(cfg.triggerKey).catch(() => {});
-      try { Haptics.selectionAsync(); } catch (_) {}
+      haptics.selection();
     },
     close: () => animateOut(),
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -215,7 +215,9 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
         message: message.trim() || null,
         userId,
       });
-      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch (_) {}
+      // Single success note (planReady's signature, reused so the
+      // vocabulary's reduce-motion gate covers it).
+      haptics.planReady();
       setDone(true);
       // Stay on the success state briefly, then dismiss.
       setTimeout(() => animateOut(), 1400);
@@ -268,7 +270,7 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
                   onPress={() => {
                     setSentiment(s.key);
                     scheduleAutoDismiss();
-                    try { Haptics.selectionAsync(); } catch (_) {}
+                    haptics.selection();
                   }}
                   style={({ pressed }) => [
                     styles.chip,

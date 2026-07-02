@@ -36,9 +36,9 @@ import {
   View, Text, StyleSheet, Modal, Pressable, Animated, Easing, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, motion } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
-import * as Haptics from 'expo-haptics';
+import * as haptics from '../lib/haptics';
 
 const PeekMenu = forwardRef(function PeekMenu(_, ref) {
   const [config, setConfig] = useState(null);
@@ -49,7 +49,9 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
   useImperativeHandle(ref, () => ({
     open: (cfg) => {
       if (!cfg?.items?.length) return;
-      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); } catch (_) {}
+      // Medium "commit" beat (the same impact this shipped with, now routed
+      // through the vocabulary so reduce-motion silences it).
+      haptics.commit();
       setConfig(cfg);
     },
     close: () => animateOut(),
@@ -63,7 +65,7 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
         easing: Easing.in(Easing.cubic), useNativeDriver: true,
       }),
       Animated.timing(translateY, {
-        toValue: reduceMotion ? 0 : 400, duration: reduceMotion ? 0 : 200,
+        toValue: reduceMotion ? 0 : 400, duration: reduceMotion ? 0 : motion.state,
         easing: Easing.in(Easing.cubic), useNativeDriver: true,
       }),
     ]).start(() => {
@@ -78,7 +80,7 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
     backdrop.setValue(0);
     Animated.parallel([
       Animated.timing(backdrop, {
-        toValue: 1, duration: reduceMotion ? 0 : 200,
+        toValue: 1, duration: reduceMotion ? 0 : motion.state,
         easing: Easing.out(Easing.cubic), useNativeDriver: true,
       }),
       Animated.timing(translateY, {
