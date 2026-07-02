@@ -7,10 +7,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 
-import { colors, fontSize, fontWeight, spacing, radius, volumeColors, type, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, volumeColors, volumeStatusColor, type, circle } from '../styles/theme';
 import Card from '../components/Card';
 import ScreenHeader from '../components/ScreenHeader';
 import { SkeletonCard } from '../components/Skeleton';
+import AnimatedEntrance from '../components/AnimatedEntrance';
+import VolyumeChart from '../components/VolyumeChart';
 import { ProBadge } from '../components/ProGate';
 import { EmptyChartIllustration } from '../components/Illustrations';
 import InfoTooltip from '../components/InfoTooltip';
@@ -26,7 +28,8 @@ import { getLifetimeTonnage } from '../lib/database';
 import { pendingTonnageMilestone, loadSeenTonnage, markTonnageMilestoneSeen, formatTonnage } from '../lib/tonnageMilestone';
 import { formatNumber } from '../lib/format';
 import { track } from '../lib/engineTelemetry';
-import { VOLUME_LANDMARKS } from '../lib/algorithms';
+import { VOLUME_LANDMARKS, getVolumeStatus } from '../lib/algorithms';
+import { buildWeeklyLoadSeries, buildWeeklySessionCounts } from '../lib/progressSeries';
 
 // COMP-018 milestone copy (§4.6.8). Weeks of showing up against your own plan —
 // no comparison, no rank. Founder copy review at PR.
@@ -204,11 +207,40 @@ export default function AnalyticsScreen({ navigation, route }) {
 
   const {
     loading, refreshing,
-    insights, weeklyVolume, prBars, prWindow,
-    recentSessions, allSets, earliestWorkoutAt, completedWorkoutCount,
+    insights, weeklyVolume, prBars,
+    recentSessions, allSets, exerciseMap, earliestWorkoutAt, completedWorkoutCount,
     hasData, enoughForTrends,
-    handleDismiss, handlePrWindowToggle, handleRefresh,
+    handleDismiss, handleRefresh,
   } = useProgressData();
+
+  // A5 dashboard series (design audit 03's elite description for this
+  // screen). All derived from the already-loaded data via memoised pure
+  // builders (progressSeries caps every window), so nothing recomputes per
+  // render (F7) and no new queries run.
+  const exerciseTypeById = useMemo(
+    () => Object.fromEntries(
+      Object.entries(exerciseMap).map(([id, e]) => [id, e.exerciseType ?? e.exercise_type ?? 'weight_reps']),
+    ),
+    [exerciseMap],
+  );
+  const weeklyLoad = useMemo(
+    () => buildWeeklyLoadSeries(allSets, { exerciseTypeById }),
+    [allSets, exerciseTypeById],
+  );
+  const sessionSpark = useMemo(() => {
+    const { bins, total } = buildWeeklySessionCounts(allSets);
+    return {
+      total,
+      bars: bins.map((v, i) => ({
+        value: v,
+        color: v > 0 ? (i === bins.length - 1 ? colors.primary : colors.primaryDim) : colors.surface3,
+      })),
+    };
+  }, [allSets]);
+  const prSpark = useMemo(() => ({
+    total: prBars.reduce((s, b) => s + b.value, 0),
+    bars: prBars.map(b => ({ value: b.value, color: b.value > 0 ? colors.gold : colors.surface3 })),
+  }), [prBars]);
 
   // R3 lifetime-stats panel: total reps performed across every working set
   // ever logged. Derived from the already-loaded set list (no new query),
@@ -278,10 +310,52 @@ export default function AnalyticsScreen({ navigation, route }) {
         {/* ── Header ────────────────────────────────────────── */}
         <ScreenHeader title="Progress" />
 
-        {/* ── This week (COMP-018): the first thing on Progress is a
-            one-glance answer to "am I on track?" — sessions this week and
-            the run state. Free for all tiers; self-hides for a brand-new
-            user and under an open wellbeing flag. ── */}
+        {/* ── A5 dashboard opener (design audit 03): one large owned
+            visual — the weekly training-load hero with this week
+            highlighted and a display-size numeral — then sessions and
+            new-bests as two half-width sparkline cards. Free-safe training
+            data only (tonnage, sessions, PRs); weight stays on its
+            existing Pro trend card further down. Held back until there
+            are enough sessions for the trend to be honest. ── */}
+        {loading && (
+          <View style={styles.section}>
+            <SkeletonCard height={176} />
+            <View style={styles.sparkRow}>
+              <SkeletonCard height={116} style={styles.sparkCard} />
+              <SkeletonCard height={116} style={styles.sparkCard} />
+            </View>
+          </View>
+        )}
+        {!loading && enoughForTrends && (
+          <AnimatedEntrance>
+            <View style={styles.section}>
+              <TrainingLoadHero series={weeklyLoad} units={units} />
+              <View style={styles.sparkRow}>
+                <SparkCard
+                  label="Sessions"
+                  value={sessionSpark.total}
+                  sub="Last 30 days"
+                  bars={sessionSpark.bars}
+                  onPress={() => navigation.navigate('Consistency')}
+                  accessibilityLabel={`Sessions. ${sessionSpark.total} in the last 30 days. Opens consistency.`}
+                />
+                <SparkCard
+                  label="New bests"
+                  value={prSpark.total}
+                  sub="Last 30 days"
+                  bars={prSpark.bars}
+                  onPress={() => navigation.navigate('LiftProgress')}
+                  accessibilityLabel={`New personal bests. ${prSpark.total} in the last 30 days. Opens lifts.`}
+                />
+              </View>
+            </View>
+          </AnimatedEntrance>
+        )}
+
+        {/* ── This week (COMP-018): the one-glance answer to "am I on
+            track?" — sessions this week and the run state, directly under
+            the training-load hero. Free for all tiers; self-hides for a
+            brand-new user and under an open wellbeing flag. ── */}
         {weeklyStreak.render && (
           <View style={styles.section}>
             <WeeklyStreakStrip vm={weeklyStreak} />
@@ -468,27 +542,10 @@ export default function AnalyticsScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* ── 4 · PR Rate Sparkline ─────────────────────────── */}
-        {enoughForTrends && (
-        <View style={styles.section}>
-          <View style={styles.rowBetween}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <Text style={styles.sectionLabel}>New personal bests</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.windowToggle}
-              onPress={handlePrWindowToggle}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel={`Personal-bests window, ${prWindow} days. Tap to change.`}
-            >
-              <Text style={styles.windowToggleText}>{prWindow}d</Text>
-              <Ionicons name="chevron-forward" size={12} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
-          <PRSparkline bars={prBars} windowDays={prWindow} />
-        </View>
-        )}
+        {/* The old full-width "New personal bests" sparkline section moved
+            into the half-width New bests card at the top of the dashboard
+            (A5); the detail per lift lives on LiftProgress, which that card
+            opens. */}
 
         {/* ── Lifetime totals (R3): a standing read-only panel of all-time
             numbers — sessions, total weight lifted, total reps. No
@@ -615,7 +672,10 @@ const MUSCLES = Object.keys(VOLUME_LANDMARKS);
 
 // Compact landing read for weekly volume. The full per-muscle picture lives on
 // the heatmap (the one volume home); this is a glanceable summary that drills
-// in: how many muscles were trained, and how many sit outside their target.
+// in: how many muscles were trained, how many sit outside their target, and
+// (A5) an inline stacked bar — one segment per trained muscle, sized by its
+// working sets and coloured through the volumeStatusColor grammar — so the
+// week's volume shape is visible without leaving the dashboard.
 function VolumeSummaryStrip({ volume, loading, onPress }) {
   const trained = MUSCLES.filter(m => (volume[m]?.workingSets ?? 0) > 0);
   if (trained.length === 0) {
@@ -644,70 +704,139 @@ function VolumeSummaryStrip({ volume, loading, onPress }) {
   const flags = [];
   if (below > 0) flags.push({ key: 'below', n: below, label: 'below target', color: volumeColors.below });
   if (over > 0) flags.push({ key: 'over', n: over, label: 'over max', color: volumeColors.overMrv });
+  // A5 inline stacked bar: one segment per trained muscle, widest first,
+  // width proportional to its working sets, coloured by its volume status.
+  const segments = trained
+    .map(m => {
+      const ws = volume[m]?.workingSets ?? 0;
+      return { muscle: m, sets: ws, color: volumeStatusColor(getVolumeStatus(ws, m).status) };
+    })
+    .sort((a, b) => b.sets - a.sets);
   return (
     <Card
       style={styles.volSummary}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel="This week's volume. Open the heatmap."
+      accessibilityLabel="This week's volume by muscle. Open the heatmap."
     >
-      <View style={styles.volSummaryMain}>
-        <Text style={styles.volSummaryCount}>{trained.length}</Text>
-        <Text style={styles.volSummaryLabel}>
-          {trained.length === 1 ? 'muscle trained' : 'muscles trained'}
-        </Text>
+      <View style={styles.volSummaryTop}>
+        <View style={styles.volSummaryMain}>
+          <Text style={styles.volSummaryCount}>{trained.length}</Text>
+          <Text style={styles.volSummaryLabel}>
+            {trained.length === 1 ? 'muscle trained' : 'muscles trained'}
+          </Text>
+        </View>
+        <View style={styles.volSummaryFlags}>
+          {flags.length === 0 ? (
+            <Text style={styles.volSummaryClear}>All in range</Text>
+          ) : flags.map(f => (
+            <View key={f.key} style={styles.volLegendItem}>
+              <View style={[styles.volLegendDot, { backgroundColor: f.color }]} />
+              <Text style={styles.volSummaryFlagText}>{f.n} {f.label}</Text>
+            </View>
+          ))}
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
       </View>
-      <View style={styles.volSummaryFlags}>
-        {flags.length === 0 ? (
-          <Text style={styles.volSummaryClear}>All in range</Text>
-        ) : flags.map(f => (
-          <View key={f.key} style={styles.volLegendItem}>
-            <View style={[styles.volLegendDot, { backgroundColor: f.color }]} />
-            <Text style={styles.volSummaryFlagText}>{f.n} {f.label}</Text>
-          </View>
+      <View style={styles.volStackBar}>
+        {segments.map(seg => (
+          <View
+            key={seg.muscle}
+            style={[styles.volStackSegment, { flex: Math.max(seg.sets, 0.5), backgroundColor: seg.color }]}
+          />
         ))}
       </View>
-      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
     </Card>
   );
 }
 
-function PRSparkline({ bars, windowDays }) {
-  const total = bars.reduce((s, b) => s + b.value, 0);
-  if (total === 0) {
-    return (
-      <View style={styles.prEmpty}>
-        <Text style={styles.prEmptyText}>No new bests in the last {windowDays} days.</Text>
-      </View>
-    );
-  }
-  const maxVal = Math.max(...bars.map(b => b.value), 1);
-  const BAR_MAX_H = 56;
+// A5 hero: the dashboard opens on weekly training load (tonnage) over the
+// last 8 rolling weeks, drawn with the app's one chart engine (VolyumeChart's
+// bar variant — scrub haptics already no-op under Reduce Motion). The
+// display-size numeral reads the week under the finger while scrubbing and
+// the current week otherwise. Scrub state lives here so a scrub re-renders
+// this card only, never the whole screen (F7).
+function TrainingLoadHero({ series, units }) {
+  const [chartW, setChartW] = useState(0);
+  const [scrubIdx, setScrubIdx] = useState(null);
+  const lastIdx = series.length - 1;
+  const bars = useMemo(
+    () => series.map((pt, i) => ({
+      value: pt.value,
+      color: i === lastIdx ? colors.primary : colors.primaryDim,
+    })),
+    [series, lastIdx],
+  );
+  if (series.length < 2) return null;
+  const activeIdx = scrubIdx != null && scrubIdx >= 0 && scrubIdx < series.length ? scrubIdx : lastIdx;
+  const active = series[activeIdx];
+  const weekLabel = active.weeksAgo === 0
+    ? 'This week'
+    : active.weeksAgo === 1 ? 'Last week' : `${active.weeksAgo} weeks ago`;
+  const unit = units === 'lbs' ? 'lbs' : 'kg';
   return (
-    <View style={styles.prWrap}>
-      <Text style={styles.prTotal}>{total} new bests in {windowDays} days</Text>
-      <View style={styles.prBarsRow}>
-        {bars.map((bar, i) => {
-          const barH = bar.value > 0
-            ? Math.max(8, Math.round((bar.value / maxVal) * BAR_MAX_H))
-            : 3;
-          return (
-            <View key={i} style={styles.prBarCol}>
-              <View style={[
-                styles.prBar,
-                {
-                  height: barH,
-                  backgroundColor: bar.value > 0 ? colors.gold : colors.surface3,
-                },
-              ]} />
-              {bar.value > 0 && (
-                <Text style={styles.prBarCount}>{bar.value}</Text>
-              )}
-            </View>
-          );
-        })}
+    <Card accessibilityLabel={`Training load. ${weekLabel}: ${formatNumber(active.value)} ${unit} lifted.`}>
+      <Text style={styles.heroEyebrow}>Training load</Text>
+      <View style={styles.heroValueRow}>
+        <Text style={styles.heroValue}>{formatNumber(active.value)}</Text>
+        <Text style={styles.heroUnit}>{unit}</Text>
       </View>
-    </View>
+      <Text style={styles.heroSub}>{weekLabel} · weight lifted</Text>
+      <View
+        style={styles.heroChartSlot}
+        onLayout={e => setChartW(Math.round(e.nativeEvent.layout.width))}
+      >
+        {chartW > 0 && (
+          <VolyumeChart
+            variant="bar"
+            data={bars}
+            width={chartW}
+            height={64}
+            barGap={spacing.xs}
+            interactive
+            onScrubIndex={setScrubIdx}
+            accessibilityLabel={`Weekly training load, last ${series.length} weeks. This week highlighted.`}
+          />
+        )}
+      </View>
+      <View style={styles.rowBetween}>
+        <Text style={styles.heroAxisLabel}>{series.length - 1} weeks ago</Text>
+        <Text style={styles.heroAxisLabel}>this week</Text>
+      </View>
+    </Card>
+  );
+}
+
+// A5 half-width sparkline card: a headline numeral over a compact 30-day
+// weekly series, doubling as the door to its detail screen. Free-safe
+// training data only (sessions, PRs) — never weight or calories.
+function SparkCard({ label, value, sub, bars, onPress, accessibilityLabel }) {
+  const [chartW, setChartW] = useState(0);
+  return (
+    <Card
+      style={styles.sparkCard}
+      padding="md"
+      onPress={onPress}
+      accessibilityLabel={accessibilityLabel}
+    >
+      <Text style={styles.sparkLabel}>{label}</Text>
+      <Text style={styles.sparkValue}>{formatNumber(value)}</Text>
+      <View
+        style={styles.sparkChartSlot}
+        onLayout={e => setChartW(Math.round(e.nativeEvent.layout.width))}
+      >
+        {chartW > 0 && (
+          <VolyumeChart
+            variant="bar"
+            data={bars}
+            width={chartW}
+            height={32}
+            barGap={spacing.xxs}
+          />
+        )}
+      </View>
+      <Text style={styles.sparkSub}>{sub}</Text>
+    </Card>
   );
 }
 
@@ -812,9 +941,27 @@ const styles = StyleSheet.create({
   insightCopy:    { ...type.bodySm, flex: 1, color: colors.textSecondary },
   insightDismiss: { padding: spacing.xxs },
 
+  // ── A5 dashboard: training-load hero + sparkline cards ──
+  heroEyebrow:   { ...type.label, color: colors.textSecondary },
+  heroValueRow:  { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs, marginTop: spacing.xs },
+  heroValue:     { ...type.num('display'), color: colors.textPrimary },
+  heroUnit:      { ...type.title, color: colors.textSecondary },
+  heroSub:       { ...type.num('caption'), color: colors.textMuted, marginTop: spacing.xxs },
+  heroChartSlot: { marginTop: spacing.md, minHeight: 64 },
+  heroAxisLabel: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xs },
+  sparkRow:      { flexDirection: 'row', gap: spacing.md },
+  sparkCard:     { flex: 1 },
+  sparkLabel:    { ...type.label, color: colors.textSecondary },
+  sparkValue:    { ...type.num('h2'), color: colors.textPrimary, marginTop: spacing.xxs },
+  sparkChartSlot: { marginTop: spacing.sm, minHeight: 32 },
+  sparkSub:      { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xs },
+
   // ── Volume snapshot ──
   volEmptyText: { fontSize: fontSize.sm, color: colors.textMuted },
-  volSummary:      { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  volSummary:      { gap: spacing.md },
+  volSummaryTop:   { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  volStackBar:     { flexDirection: 'row', height: 8, gap: spacing.xxs },
+  volStackSegment: { borderRadius: radius.hair },
   volSummaryMain:  { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs },
   volSummaryCount: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   volSummaryLabel: { fontSize: fontSize.sm, color: colors.textSecondary },
@@ -823,28 +970,6 @@ const styles = StyleSheet.create({
   volSummaryClear: { fontSize: fontSize.micro, color: colors.textMuted },
   volLegendItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   volLegendDot: { width: 8, height: 8, borderRadius: circle(8) },
-
-  // ── PR Sparkline ──
-  windowToggle: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xxs,
-    backgroundColor: colors.primaryBg, borderRadius: radius.full,
-    paddingHorizontal: spacing.sm, paddingVertical: 3,
-    borderWidth: 1, borderColor: colors.primary,
-  },
-  windowToggleText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.bold },
-  prWrap:    { gap: spacing.sm },
-  prTotal:   { ...type.num('caption'), color: colors.textMuted },
-  prBarsRow: {
-    flexDirection: 'row', alignItems: 'flex-end', gap: spacing.xs, minHeight: 60,
-  },
-  prBarCol:  { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
-  prBar:     { width: '100%', borderRadius: radius.hair },
-  prBarCount: { fontSize: fontSize.micro, color: colors.gold, marginTop: spacing.xxs, fontWeight: fontWeight.bold, fontVariant: ['tabular-nums'] },
-  prEmpty:   {
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    padding: spacing.lg, borderWidth: 1, borderColor: colors.border,
-  },
-  prEmptyText: { ...type.bodySm, color: colors.textMuted },
 
   // ── Lifetime totals panel ──
   lifetimePanel: {
