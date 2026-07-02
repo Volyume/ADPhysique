@@ -97,7 +97,7 @@ export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClo
             // read-only dead-end). Falls back to a plain row when no handler.
             <Pressable
               key={r.key}
-              style={styles.row}
+              style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
               onPress={onSelectMeal ? () => onSelectMeal(r.key) : undefined}
               disabled={!onSelectMeal}
               accessibilityRole={onSelectMeal ? 'button' : undefined}
@@ -114,7 +114,7 @@ export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClo
         </View>
       )}
 
-      <Pressable style={styles.doneBtn} onPress={onClose} accessibilityRole="button" accessibilityLabel="Done">
+      <Pressable style={({ pressed }) => [styles.doneBtn, pressed && { opacity: 0.7 }]} onPress={onClose} accessibilityRole="button" accessibilityLabel="Done">
         <Text style={styles.doneText}>Done</Text>
       </Pressable>
     </BottomSheet>

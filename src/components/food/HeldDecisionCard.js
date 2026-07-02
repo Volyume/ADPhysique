@@ -44,6 +44,7 @@ export default function HeldDecisionCard({ type, body, onWhy }) {
           accessibilityRole="button"
           accessibilityLabel="Why was this held"
           hitSlop={8}
+          style={({ pressed }) => [pressed && { opacity: 0.7 }]}
         >
           <Text style={styles.why}>Why?</Text>
         </Pressable>
@@ -53,7 +54,7 @@ export default function HeldDecisionCard({ type, body, onWhy }) {
           onPress={openSupport}
           accessibilityRole="link"
           accessibilityLabel="Open Beat support"
-          style={styles.supportButton}
+          style={({ pressed }) => [styles.supportButton, pressed && { opacity: 0.7 }]}
         >
           <Text style={styles.supportText}>Get support</Text>
         </Pressable>

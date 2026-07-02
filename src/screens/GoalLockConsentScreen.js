@@ -87,7 +87,7 @@ export default function GoalLockConsentScreen({ navigation, route }) {
         <View accessibilityRole="radiogroup" accessibilityLabel="Confirm your experience with aggressive cuts">
         <Pressable
           onPress={() => setChoice('advanced')}
-          style={[styles.optionCard, choice === 'advanced' && styles.optionCardActive]}
+          style={({ pressed }) => [styles.optionCard, choice === 'advanced' && styles.optionCardActive, pressed && { opacity: 0.7 }]}
           accessibilityRole="radio"
           accessibilityState={{ selected: choice === 'advanced' }}
         >
@@ -101,7 +101,7 @@ export default function GoalLockConsentScreen({ navigation, route }) {
 
         <Pressable
           onPress={() => setChoice('standard')}
-          style={[styles.optionCard, choice === 'standard' && styles.optionCardActive]}
+          style={({ pressed }) => [styles.optionCard, choice === 'standard' && styles.optionCardActive, pressed && { opacity: 0.7 }]}
           accessibilityRole="radio"
           accessibilityState={{ selected: choice === 'standard' }}
         >

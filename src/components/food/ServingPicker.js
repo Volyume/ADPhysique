@@ -52,7 +52,7 @@ export default function ServingPicker({
               accessibilityState={{ selected: active }}
               accessibilityLabel={`Unit: ${u}`}
               hitSlop={6}
-              style={[styles.unit, active && styles.unitActive]}
+              style={({ pressed }) => [styles.unit, active && styles.unitActive, pressed && { opacity: 0.7 }]}
             >
               <Text style={[styles.unitText, active && styles.unitTextActive]}>{u}</Text>
             </Pressable>

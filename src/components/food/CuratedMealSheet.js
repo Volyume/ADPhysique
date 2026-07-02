@@ -80,7 +80,7 @@ export default function CuratedMealSheet({
           <View style={styles.actions}>
             <Pressable
               onPress={onClose}
-              style={styles.cancelBtn}
+              style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.7 }]}
               accessibilityRole="button"
               accessibilityLabel="Close"
             >
@@ -89,7 +89,7 @@ export default function CuratedMealSheet({
             <Pressable
               onPress={onLog}
               disabled={logging}
-              style={[styles.logBtn, logging && { opacity: 0.5 }]}
+              style={({ pressed }) => [styles.logBtn, logging && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
               accessibilityRole="button"
               accessibilityLabel={`Log ${meal.name}`}
             >

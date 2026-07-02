@@ -165,7 +165,7 @@ export default function FoodDetailSheet({
                 <Pressable
                   key={u.key}
                   onPress={() => selectUnit(u.key)}
-                  style={[styles.unitBtn, unitKey === u.key && styles.unitBtnActive]}
+                  style={({ pressed }) => [styles.unitBtn, unitKey === u.key && styles.unitBtnActive, pressed && { opacity: 0.7 }]}
                   accessibilityRole="button"
                   accessibilityState={{ selected: unitKey === u.key }}
                   accessibilityLabel={u.key === 'serving' ? `Per ${u.label}` : 'Grams'}
@@ -180,7 +180,7 @@ export default function FoodDetailSheet({
           <View style={styles.stepper}>
             <Pressable
               onPress={() => adjustAmount(-1)}
-              style={styles.stepBtn}
+              style={({ pressed }) => [styles.stepBtn, pressed && { opacity: 0.7 }]}
               accessibilityRole="button"
               accessibilityLabel="Decrease amount"
             >
@@ -198,7 +198,7 @@ export default function FoodDetailSheet({
             />
             <Pressable
               onPress={() => adjustAmount(1)}
-              style={styles.stepBtn}
+              style={({ pressed }) => [styles.stepBtn, pressed && { opacity: 0.7 }]}
               accessibilityRole="button"
               accessibilityLabel="Increase amount"
             >
@@ -237,9 +237,10 @@ export default function FoodDetailSheet({
               <Pressable
                 key={s.key}
                 onPress={() => setMealSlot(s.key)}
-                style={[
+                style={({ pressed }) => [
                   styles.mealBtn,
                   mealSlot === s.key && styles.mealBtnActive,
+                  pressed && { opacity: 0.7 },
                 ]}
                 accessibilityRole="button"
                 accessibilityState={{ selected: mealSlot === s.key }}
@@ -254,17 +255,17 @@ export default function FoodDetailSheet({
 
           <View style={styles.actions}>
             {mode === 'edit' && onDelete ? (
-              <Pressable onPress={handleDelete} style={styles.deleteBtn} accessibilityLabel="Remove entry">
+              <Pressable onPress={handleDelete} style={({ pressed }) => [styles.deleteBtn, pressed && { opacity: 0.7 }]} accessibilityLabel="Remove entry">
                 <Ionicons name="trash-outline" size={18} color={colors.error} />
               </Pressable>
             ) : null}
-            <Pressable onPress={handleClose} style={styles.cancelBtn}>
+            <Pressable onPress={handleClose} style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.7 }]}>
               <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
             <Pressable
               onPress={handleSave}
               disabled={submitting}
-              style={[styles.saveBtn, submitting && { opacity: 0.5 }]}
+              style={({ pressed }) => [styles.saveBtn, submitting && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
             >
               <Text style={styles.saveText}>
                 {submitting ? 'Saving' : mode === 'edit' ? 'Save changes' : 'Add to diary'}

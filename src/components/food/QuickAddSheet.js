@@ -105,7 +105,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
               <Pressable
                 key={s.key}
                 onPress={() => setMealSlot(s.key)}
-                style={[styles.mealBtn, mealSlot === s.key && styles.mealBtnActive]}
+                style={({ pressed }) => [styles.mealBtn, mealSlot === s.key && styles.mealBtnActive, pressed && { opacity: 0.7 }]}
                 accessibilityRole="button"
                 accessibilityState={{ selected: mealSlot === s.key }}
               >
@@ -115,10 +115,10 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
           </View>
 
           <View style={styles.actions}>
-            <Pressable onPress={handleClose} style={styles.cancelBtn}>
+            <Pressable onPress={handleClose} style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.7 }]}>
               <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
-            <Pressable onPress={handleSave} disabled={submitting} style={[styles.saveBtn, submitting && { opacity: 0.5 }]}>
+            <Pressable onPress={handleSave} disabled={submitting} style={({ pressed }) => [styles.saveBtn, submitting && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}>
               <Text style={styles.saveText}>{submitting ? 'Saving' : 'Add to diary'}</Text>
             </Pressable>
           </View>

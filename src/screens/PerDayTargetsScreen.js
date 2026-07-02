@@ -131,7 +131,7 @@ export default function PerDayTargetsScreen() {
                 <Pressable
                   onPress={() => adjust(key, -1)}
                   disabled={offset <= -MAX_PERDAY_OFFSET_KCAL}
-                  style={[local.stepBtn, offset <= -MAX_PERDAY_OFFSET_KCAL && local.stepBtnDisabled]}
+                  style={({ pressed }) => [local.stepBtn, offset <= -MAX_PERDAY_OFFSET_KCAL && local.stepBtnDisabled, pressed && { opacity: 0.7 }]}
                   accessibilityRole="button"
                   accessibilityLabel={`Lower ${WEEKDAY_LABELS[key]} target`}
                 >
@@ -140,7 +140,7 @@ export default function PerDayTargetsScreen() {
                 <Pressable
                   onPress={() => adjust(key, 1)}
                   disabled={offset >= MAX_PERDAY_OFFSET_KCAL}
-                  style={[local.stepBtn, offset >= MAX_PERDAY_OFFSET_KCAL && local.stepBtnDisabled]}
+                  style={({ pressed }) => [local.stepBtn, offset >= MAX_PERDAY_OFFSET_KCAL && local.stepBtnDisabled, pressed && { opacity: 0.7 }]}
                   accessibilityRole="button"
                   accessibilityLabel={`Raise ${WEEKDAY_LABELS[key]} target`}
                 >
@@ -154,7 +154,7 @@ export default function PerDayTargetsScreen() {
 
       {anyOffset ? (
         <View style={local.section}>
-          <Pressable onPress={resetAll} style={local.resetBtn} accessibilityRole="button" accessibilityLabel="Reset all days to your base target">
+          <Pressable onPress={resetAll} style={({ pressed }) => [local.resetBtn, pressed && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel="Reset all days to your base target">
             <Ionicons name="refresh-outline" size={16} color={colors.textSecondary} />
             <Text style={local.resetText}>Reset all to base target</Text>
           </Pressable>

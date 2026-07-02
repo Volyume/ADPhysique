@@ -135,7 +135,7 @@ export default function CalorieBankSheet({
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
               accessibilityLabel={dayLabel(d)}
-              style={[styles.dayChip, active && styles.dayChipActive]}
+              style={({ pressed }) => [styles.dayChip, active && styles.dayChipActive, pressed && { opacity: 0.7 }]}
             >
               <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>{dayLabel(d)}</Text>
             </Pressable>

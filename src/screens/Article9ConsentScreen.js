@@ -208,7 +208,7 @@ export default function Article9ConsentScreen({ navigation }) {
 
         <Pressable
           onPress={() => setAgreed(v => !v)}
-          style={styles.consentRow}
+          style={({ pressed }) => [styles.consentRow, pressed && { opacity: 0.7 }]}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: agreed }}
           accessibilityLabel="I agree to Volyume using my health and nutrition data to coach me"

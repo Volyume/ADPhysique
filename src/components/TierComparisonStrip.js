@@ -61,9 +61,10 @@ export default function TierComparisonStrip({
     <Pressable
       onPress={onPickPro}
       disabled={!onPickPro}
-      style={[
+      style={({ pressed }) => [
         styles.col,
         highlighted === 'pro' && styles.colHighlighted,
+        pressed && { opacity: 0.7 },
       ]}
     >
       <Text style={styles.colHeader}>Pro</Text>
