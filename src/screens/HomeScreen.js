@@ -142,6 +142,11 @@ export default function HomeScreen({ navigation, route }) {
         navigation.getParent()?.navigate('ProfileTab', {
           screen: 'CascadeGate',
           params: { variant: 'day14' },
+          // F6b: tabs are lazy, so a nested navigate into a never-focused
+          // tab would otherwise make the target the tab's ONLY route and
+          // strand the You root for the session. initial: false keeps the
+          // root beneath (lazyScreens.guard pins this on every such site).
+          initial: false,
         });
       } catch (_) { /* navigation not ready; the notification path still covers it */ }
     })();
@@ -1180,7 +1185,7 @@ export default function HomeScreen({ navigation, route }) {
             </Text>
             <TouchableOpacity
               style={styles.phaseBannerArrow}
-              onPress={() => navigation.getParent()?.navigate('ProfileTab', { screen: 'NutritionTargets' })}
+              onPress={() => navigation.getParent()?.navigate('ProfileTab', { screen: 'NutritionTargets', initial: false })}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
               accessibilityLabel="Go to nutrition targets"
@@ -1205,7 +1210,7 @@ export default function HomeScreen({ navigation, route }) {
             // A bare navigate from HomeStack is silently dropped in production,
             // making the flagship banner a dead tap; route via the parent tab
             // navigator like the phase banner above.
-            onPress={() => navigation.getParent()?.navigate('ProfileTab', { screen: 'CoachOutput', params: { weekStart: latestCoachOutput.weekStart } })}
+            onPress={() => navigation.getParent()?.navigate('ProfileTab', { screen: 'CoachOutput', params: { weekStart: latestCoachOutput.weekStart }, initial: false })}
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel="This week's coaching review. Tap to open."
@@ -1246,7 +1251,7 @@ export default function HomeScreen({ navigation, route }) {
               if (trialBanner.variant === 'S3') {
                 scrollRef.current?.scrollTo({ y: 0, animated: true });
               } else {
-                navigation.getParent()?.navigate('ProfileTab', { screen: 'WeeklyCheckIn' });
+                navigation.getParent()?.navigate('ProfileTab', { screen: 'WeeklyCheckIn', initial: false });
               }
             }}
             activeOpacity={0.85}
@@ -1324,7 +1329,7 @@ export default function HomeScreen({ navigation, route }) {
         {showPlateauBanner && (
           <TouchableOpacity
             style={styles.plateauBanner}
-            onPress={() => navigation.getParent()?.navigate('ProgressTab', { screen: 'ExerciseDetail', params: { exerciseId: plateauBanner.exerciseId } })}
+            onPress={() => navigation.getParent()?.navigate('ProgressTab', { screen: 'ExerciseDetail', params: { exerciseId: plateauBanner.exerciseId }, initial: false })}
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel={plateauBanner.line}
@@ -1438,7 +1443,7 @@ export default function HomeScreen({ navigation, route }) {
             edFlagOpen={edFlagOpen}
             cardioEnabled={userProfile?.cardioEnabled !== false}
             onCardioPress={() => navigation.navigate('LogCardio')}
-            onOpenTrend={() => navigation.getParent()?.navigate('ProgressTab', { screen: 'Analytics', params: { focusWeightTrend: true } })}
+            onOpenTrend={() => navigation.getParent()?.navigate('ProgressTab', { screen: 'Analytics', params: { focusWeightTrend: true }, initial: false })}
           />
         )}
 
@@ -1565,6 +1570,7 @@ export default function HomeScreen({ navigation, route }) {
                   onPress={() => navigation.navigate('PlansTab', {
                     screen: 'RoutineDetail',
                     params: { routineId: displayWorkout.routine.id },
+                    initial: false,
                   })}
                   activeOpacity={0.85}
                   accessibilityRole="button"

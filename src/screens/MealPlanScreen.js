@@ -156,7 +156,7 @@ export default function MealPlanScreen({ navigation }) {
         // F4 (audit NAV-2): NutritionTargets lives in ProfileStack; a bare
         // navigate from DiaryStack is a silent no-op, so the toast promised a
         // redirect that never happened.
-        navigation.getParent()?.navigate('ProfileTab', { screen: 'NutritionTargets' });
+        navigation.getParent()?.navigate('ProfileTab', { screen: 'NutritionTargets', initial: false });
         return;
       }
       await load();

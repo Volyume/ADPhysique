@@ -1971,7 +1971,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         return;
       }
       // Land on the week plan to swap, get the shopping list, and add the week.
-      navigation.navigate('DiaryTab', { screen: 'MealPlan' });
+      navigation.navigate('DiaryTab', { screen: 'MealPlan', initial: false });
     } catch (_) {
       setPlanningWeek(false);
     }
@@ -2093,7 +2093,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             {planEditNote.deepLink ? (
               <TouchableOpacity
                 style={styles.planEditLink}
-                onPress={() => navigation.navigate('DiaryTab', { screen: 'MealPlan' })}
+                onPress={() => navigation.navigate('DiaryTab', { screen: 'MealPlan', initial: false })}
                 accessibilityRole="button"
                 accessibilityLabel={planEditNote.deepLink.label}
               >

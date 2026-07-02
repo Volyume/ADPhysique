@@ -836,7 +836,7 @@ export default function DiaryScreen({ navigation }) {
                 // card, destroying the affordance. Navigate first (cross-tab),
                 // and only dismiss once the navigation has been issued.
                 onPress={() => {
-                  navigation.getParent()?.navigate('ProfileTab', { screen: 'SettingsPrivacy' });
+                  navigation.getParent()?.navigate('ProfileTab', { screen: 'SettingsPrivacy', initial: false });
                   onDismissOffCard();
                 }}
                 hitSlop={8}

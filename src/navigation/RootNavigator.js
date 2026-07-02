@@ -754,6 +754,12 @@ export default function RootNavigator() {
         if (navigationRef.isReady()) {
           navigationRef.navigate(target.tab, {
             screen: target.screen,
+            // F6b: tabs are lazy. Without initial: false, a notification
+            // tapped before its tab was ever focused would mount the stack
+            // with the target as its ONLY route, stranding the tab root
+            // (You/Diary/Progress) for the whole session. initial: false
+            // restores the eager-era push-over-root behaviour.
+            initial: false,
             ...(target.params ? { params: target.params } : {}),
           });
         } else if (attempts < 20) {

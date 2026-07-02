@@ -68,7 +68,10 @@ export default class ScreenBoundary extends React.Component {
       // eslint-disable-next-line global-require
       const { navigationRef } = require('../navigation/RootNavigator');
       if (navigationRef?.isReady?.()) {
-        navigationRef.navigate('HomeTab', { screen: 'Home' });
+        // initial: false is a no-op here (Home IS the tab root) but keeps
+        // every cross-tab nested navigate on the one rule the F6b guard
+        // pins, so lazy tabs can never strand a tab root.
+        navigationRef.navigate('HomeTab', { screen: 'Home', initial: false });
       }
     } catch (_) { /* best-effort escape; the fallback stays up */ }
     this.setState({ hasError: false, retryCount: 0 });

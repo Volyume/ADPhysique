@@ -1318,7 +1318,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
               a repeat visit re-opens the input. */}
           <TouchableOpacity
             style={styles.gateBtn}
-            onPress={() => navigation.getParent()?.navigate('HomeTab', { screen: 'Home', params: { openWeightLog: Date.now() } })}
+            onPress={() => navigation.getParent()?.navigate('HomeTab', { screen: 'Home', params: { openWeightLog: Date.now() }, initial: false })}
             activeOpacity={0.85}
             accessibilityRole="button"
           >
