@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, Modal, StyleSheet, Pressable, SafeAreaView, ScrollView,
+  View, Text, TouchableOpacity, Modal, StyleSheet, Pressable, ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, circle } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import TodaysPlateTeaser from './food/TodaysPlateTeaser';
-import TierComparisonStrip from './TierComparisonStrip';
 import { restorePurchases } from '../lib/payments/restore';
 import { appAlert } from './AppAlert';
 
@@ -161,9 +161,13 @@ export function ProLocked({ feature = 'This' }) {
   }
 
   return (
-    <SafeAreaView style={styles.lockedSafe}>
+    <SafeAreaView style={styles.lockedSafe} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.lockedScroll} showsVerticalScrollIndicator={false}>
-        {showPlateTeaser ? <TodaysPlateTeaser /> : null}
+        {/* Founder 2026-07-02: the lock is a short gate, not a sales page.
+            Identity first (lock + what this is), the example day as the one
+            piece of show-don't-tell, then the CTA. The full sell (prices,
+            comparison, FAQ, held-seat reassurance) lives on ProUpgrade, which
+            the CTA opens — duplicating it here read as a mess. */}
         <View style={styles.lockedIcon}>
           <Ionicons name="lock-closed" size={28} color={colors.primary} />
         </View>
@@ -171,16 +175,13 @@ export function ProLocked({ feature = 'This' }) {
         {/* COMP-CLARITY: per-feature benefit line so each Pro route explains
             why it is Pro, instead of the same coaching pitch on every lock. */}
         <Text style={styles.lockedBody}>{benefitFor(feature)}</Text>
-        {/* COMP-025-A §4b: a held seat, not a wall. Reassures lapsed users
-            their data is intact and untouched. */}
-        <Text style={styles.lockedHeldSeat}>
-          Everything you logged is saved, and will be exactly as you left it if you come back.
-        </Text>
-        {/* COMP-CLARITY: the Free-vs-Pro side-by-side at the decision point.
-            Self-contained and store-priced; renders no billing action here. */}
-        <View style={styles.lockedStrip}>
-          <TierComparisonStrip pricingWindow="annual" highlighted="pro" />
-        </View>
+        {/* Show-then-sell (founder decision #6): the read-only example day,
+            below the headline so it reads in context. Food diary lock only. */}
+        {showPlateTeaser ? (
+          <View style={styles.lockedTeaser}>
+            <TodaysPlateTeaser />
+          </View>
+        ) : null}
         <TouchableOpacity
           style={styles.lockedBtn}
           onPress={() => navigation.navigate('ProUpgrade')}
@@ -312,11 +313,9 @@ const styles = StyleSheet.create({
     textAlign: 'center', lineHeight: 21,
     marginBottom: spacing.sm,
   },
-  lockedHeldSeat: {
-    fontSize: fontSize.sm, color: colors.textMuted,
-    textAlign: 'center', lineHeight: 21,
-    marginBottom: spacing.sm,
-  },
+  // The example-day card sits between the benefit line and the CTA; it owns
+  // no horizontal margin, so stretch it to the scroll's padded width.
+  lockedTeaser: { alignSelf: 'stretch', marginBottom: spacing.sm },
   lockedBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.sm, backgroundColor: colors.primary,
@@ -326,7 +325,6 @@ const styles = StyleSheet.create({
   lockedBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
   lockedBack: { paddingVertical: spacing.sm },
   lockedBackText: { fontSize: fontSize.sm, color: colors.textMuted },
-  lockedStrip: { alignSelf: 'stretch', marginBottom: spacing.sm },
   lockedRestore: { paddingVertical: spacing.sm },
   lockedRestoreText: { fontSize: fontSize.xs, color: colors.textSecondary, textDecorationLine: 'underline' },
 
