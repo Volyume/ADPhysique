@@ -14,11 +14,15 @@
  *
  * Sizes: sm | md (default) | lg. `loading` shows an inline spinner and
  * disables the button. `icon` is a leading Ionicons name.
+ *
+ * The primary variant gives a selection tick as its onPress fires (audit
+ * 03b M1); every other variant stays silent.
  */
 
 import { Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import PressableCard from './PressableCard';
+import * as haptics from '../lib/haptics';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 
 const VARIANTS = {
@@ -58,9 +62,17 @@ export default function Button({
   const s = SIZES[size] || SIZES.md;
   const isDisabled = disabled || loading;
 
+  // M1 (audit 03b §3.3f): the filled primary CTA ticks as its action fires,
+  // an outcome-adjacent beat rather than press-in. Secondary, tertiary and
+  // destructive stay silent. The vocabulary itself no-ops under reduce
+  // motion, so no extra gating is needed here.
+  const handlePress = onPress && v === VARIANTS.primary
+    ? (e) => { haptics.selection(); return onPress(e); }
+    : onPress;
+
   return (
     <PressableCard
-      onPress={onPress}
+      onPress={handlePress}
       disabled={isDisabled}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel || title}

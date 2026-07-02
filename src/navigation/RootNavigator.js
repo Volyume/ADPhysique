@@ -18,6 +18,7 @@ import useAppStore from '../store/useAppStore';
 import { getSupabaseClient } from '../lib/supabase';
 import { initDatabase, cleanupOrphanRoutineExercises } from '../lib/database';
 import { seedExercisesIfNeeded, topUpNewExercisesIfNeeded, backfillExerciseMetadataIfNeeded, rederiveExerciseMetadataIfNeeded } from '../lib/seedExercises';
+import * as haptics from '../lib/haptics';
 import {
   configureNotificationHandler,
   installNotificationListeners,
@@ -490,6 +491,17 @@ function MainTabs() {
   return (
     <Tab.Navigator
       lazy={false}
+      // M1 (audit 03b §3.3f, §4 step 1): a selection tick on tab CHANGE.
+      // tabPress reaches only the pressed tab's listener and fires before
+      // focus moves, so isFocused() here means a re-press of the already
+      // focused tab. That path pops to root (the NAV-5 listeners in each
+      // stack) and stays silent. The vocabulary no-ops under reduce motion.
+      screenListeners={({ navigation }) => ({
+        tabPress: () => {
+          if (navigation.isFocused()) return;
+          haptics.selection();
+        },
+      })}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {

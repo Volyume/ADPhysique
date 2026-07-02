@@ -4,6 +4,17 @@
 import { Text, ActivityIndicator } from 'react-native';
 import { create, act } from 'react-test-renderer';
 
+// expo-haptics can't construct its native EventEmitter in the bare test env;
+// mock it as the mount suites do (screen-mount.test.js). Button reaches it
+// through lib/haptics for the primary-variant selection tick (audit 03b M1).
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(() => Promise.resolve()),
+  notificationAsync: jest.fn(() => Promise.resolve()),
+  selectionAsync: jest.fn(() => Promise.resolve()),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}));
+
 import Button from '../Button';
 import Card from '../Card';
 import GradientCard from '../GradientCard';
