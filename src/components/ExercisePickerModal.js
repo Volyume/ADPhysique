@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, Modal, FlatList, KeyboardAvoidingView,
+  View, Text, StyleSheet, Modal, KeyboardAvoidingView,
   Platform, TextInput, TouchableOpacity, ScrollView,
 } from 'react-native';
+// E8 perf: the full library is ~450 rows with no render cap; FlashList
+// recycles rows instead of mounting them all (audit/perf-baseline.md §2).
+import { FlashList } from '@shopify/flash-list';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
@@ -238,7 +241,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               ))}
             </ScrollView>
 
-            <FlatList
+            <FlashList
               data={filtered}
               keyExtractor={e => String(e.id)}
               keyboardShouldPersistTaps="handled"

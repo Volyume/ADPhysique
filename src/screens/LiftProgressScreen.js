@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
+  View, Text, StyleSheet, TouchableOpacity, RefreshControl,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
@@ -288,7 +289,7 @@ export default function LiftProgressScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <FlatList
+      <FlashList
         data={data}
         keyExtractor={r => String(r.exerciseId)}
         contentContainerStyle={styles.list}

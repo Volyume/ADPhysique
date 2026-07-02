@@ -1,6 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, Pressable } from 'react-native';
+// E8 perf: the vertical plans list recycles via FlashList; the small
+// horizontal category chip row stays a FlatList (tiny, no gain).
+import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -451,7 +454,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
       )}
 
       {/* Plans list */}
-      <FlatList
+      <FlashList
         ref={listRef}
         data={filtered}
         keyExtractor={p => p.id}

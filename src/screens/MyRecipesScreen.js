@@ -16,7 +16,8 @@
 import { todayLocalKey } from '../lib/dayKey';
 import { appAlert } from '../components/AppAlert';
 import { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Modal, Pressable } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -197,7 +198,7 @@ export default function MyRecipesScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
       ) : (
-        <FlatList
+        <FlashList
           data={recipes}
           keyExtractor={(r) => r.id}
           renderItem={renderItem}

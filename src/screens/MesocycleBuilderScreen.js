@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format, differenceInWeeks } from 'date-fns';
@@ -135,7 +136,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <FlatList
+      <FlashList
         // The active block is already shown via ActiveMesoDashboard
         // in the header; "All blocks" is the archive of past blocks.
         data={mesocycles.filter(m => !(m.isActive === 1 || m.isActive === true))}
