@@ -1,0 +1,62 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`B1 replay corpus — computeAdaptiveTDEEAdjustment (unit seam) R1 [must never drift] no-food-data cutter, adherence hit: bucket estimate stands: R1 1`] = `
+{
+  "actualKgPerWeek": -0.349,
+  "adjustedTDEE": 2692,
+  "adjustmentKcal": -108,
+  "confidence": "high",
+  "expectedKgPerWeek": -0.545,
+  "floorHeld": false,
+  "insight": "Your weight has fallen 0.35 kg/week. Trimming 108 kcal/day to match your true energy needs.",
+  "weeks": 4,
+}
+`;
+
+exports[`B1 replay corpus — computeAdaptiveTDEEAdjustment (unit seam) R2 [must never drift] no-food-data stall, adherence under (0.9 bucket): R2 1`] = `
+{
+  "actualKgPerWeek": 0,
+  "adjustedTDEE": 2200,
+  "adjustmentKcal": -400,
+  "confidence": "high",
+  "expectedKgPerWeek": -0.727,
+  "floorHeld": false,
+  "insight": "Your weight has held steady. Trimming 400 kcal/day to match your true energy needs.",
+  "weeks": 4,
+}
+`;
+
+exports[`B1 replay corpus — computeAdaptiveTDEEAdjustment (unit seam) R3 [expected to change in phase 2] stall WITH logged intake 2450 vs bucket estimate: R3 1`] = `
+{
+  "actualKgPerWeek": 0,
+  "adjustedTDEE": 2400,
+  "adjustmentKcal": -200,
+  "confidence": "high",
+  "expectedKgPerWeek": -0.364,
+  "floorHeld": false,
+  "insight": "Your weight has held steady. Trimming 200 kcal/day to match your true energy needs.",
+  "weeks": 4,
+}
+`;
+
+exports[`B1 replay corpus — runWeeklyCoach (integration seam) R5 [must never drift] tracked check-in, no food diary: full output stable: R5 1`] = `
+{
+  "calories": {
+    "change": -108,
+    "note": "Weight is coming down slower than the target rate.",
+  },
+  "confidence": "high",
+  "held": [],
+  "rapid": false,
+}
+`;
+
+exports[`B1 replay corpus — runWeeklyCoach (integration seam) R6 [expected to change in phase 2] check-in SKIPPED but 6 days of food logged: today no resize fires: R6 1`] = `
+{
+  "calories": null,
+  "confidence": "medium",
+  "held": [
+    "calories",
+  ],
+}
+`;
