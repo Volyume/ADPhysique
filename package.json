@@ -38,7 +38,8 @@
       "^expo-file-system/legacy$": "<rootDir>/__mocks__/expo-file-system-legacy.js",
       "^expo-apple-authentication$": "<rootDir>/__mocks__/expo-apple-authentication.js",
       "^expo-sharing$": "<rootDir>/__mocks__/expo-sharing.js",
-      "^expo-document-picker$": "<rootDir>/__mocks__/expo-document-picker.js"
+      "^expo-document-picker$": "<rootDir>/__mocks__/expo-document-picker.js",
+      "^expo-keep-awake$": "<rootDir>/__mocks__/expo-keep-awake.js"
     }
   },
   "dependencies": {

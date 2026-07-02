@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform, FlatList, BackHandler, AppState, Animated } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { Ionicons } from '@expo/vector-icons';
 import * as hapticsVocab from '../lib/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -34,8 +36,34 @@ import { FORM_TIPS } from '../lib/formTips';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage, getStarterSessionMessage } from '../lib/whyThisTemplates';
 import { getReadinessTweak, applyReadinessToSets, applyReadinessToTargets } from '../lib/sessionAdjustments';
+import { calculatePlates, DEFAULT_BAR_KG } from '../lib/plateMath';
+import { warmupRamp } from '../lib/warmupRamp';
 
 const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 2 };
+
+// B8: keep-awake tag so this screen's activate/deactivate can never release
+// a keep-awake hold some other surface owns.
+const KEEP_AWAKE_TAG = 'volyume-active-workout';
+
+// Equipment whose load is plates on a bar — the only exercises where the
+// plate calculator makes sense. Values from seedExercises' vocabulary.
+const PLATE_LOADED_EQUIPMENT = /(barbell|smith_machine|ez_bar)/i;
+
+// Real-world plate colours by kg weight. These are physical equipment
+// standards (red 25, blue 20, yellow 15, green 10, white 5), not theme
+// colours, so they are deliberately literal — same recorded exception as
+// the original calculator.
+/* eslint-disable no-restricted-syntax */
+const PLATE_COLOURS = {
+  25: '#E53935',
+  20: '#1565C0',
+  15: '#F9A825',
+  10: '#2E7D32',
+  5: '#FAFAFA',
+  2.5: '#757575',
+  1.25: '#BDBDBD',
+};
+/* eslint-enable no-restricted-syntax */
 
 
 
@@ -160,6 +188,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     revertSessionAdjustment: s.revertSessionAdjustment,
     dismissReadinessTweak: s.dismissReadinessTweak,
     tier: s.tier,
+    barWeight: s.barWeight,
   })));
   const {
     user, units, activeWorkout, workoutExercises, currentExerciseIndex,
@@ -168,6 +197,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     startRestTimer, defaultRestSeconds, autoStartRestTimer, workoutPrefsLoaded, loadWorkoutPrefs,
     showPRCelebration, endWorkout, workoutStartTime,
     lastActivityAt, updateLastActivity, sessionAdjustments, revertSessionAdjustment, dismissReadinessTweak, tier,
+    barWeight,
   } = store;
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   // Drop assisted machine regressions from swap suggestions for anyone past
@@ -217,6 +247,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [showSetTypePicker, setShowSetTypePicker] = useState(false);
   const [showOverflow, setShowOverflow] = useState(false);
   const [showExecution, setShowExecution] = useState(false);
+  // B8 gym basics: both sheets open ONLY from the exercise overflow menu —
+  // pull, never push (the recorded no-auto-suggest decision below stands).
+  const [showWarmupRamp, setShowWarmupRamp] = useState(false);
+  const [showPlates, setShowPlates] = useState(false);
+  // Plate sheet inputs are sheet-local strings, seeded on open from the
+  // current entry weight and the profile bar weight. Deliberately NOT
+  // persisted back to the store (parity with the original calculator).
+  const [plateTarget, setPlateTarget] = useState('');
+  const [plateBar, setPlateBar] = useState(String(DEFAULT_BAR_KG));
   const [showStaleModal, setShowStaleModal] = useState(false);
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [swapCandidates, setSwapCandidates] = useState([]);
@@ -251,6 +290,25 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const scrollRef = useRef(null);
   const insets = useSafeAreaInsets();
   const timerRef = useRef(null);
+
+  // B8 (audit 05 §B8): keep the screen awake while the logger is FOCUSED —
+  // the phone sits propped on the bench between sets and must not sleep
+  // mid-session. Focus-scoped, not mount-scoped: this screen stays mounted
+  // in the Train stack while the user browses another tab mid-session, and
+  // the display shouldn't be pinned on for that. Android drops the
+  // underlying window flag automatically when the app backgrounds, so no
+  // AppState wiring is needed. Both calls are best-effort: a device that
+  // refuses the flag must never crash the logger.
+  useFocusEffect(
+    useCallback(() => {
+      activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch(() => {});
+      return () => {
+        try {
+          Promise.resolve(deactivateKeepAwake(KEEP_AWAKE_TAG)).catch(() => {});
+        } catch (_) { /* best-effort */ }
+      };
+    }, [])
+  );
 
   // First-use info tip highlight
   const [showInfoTipPulse, setShowInfoTipPulse] = useState(false);
@@ -2549,6 +2607,160 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           </View>
         </Modal>
 
+        {/* B8: warm-up ramp sheet. Opens ONLY from the overflow menu (the
+            recorded no-auto-suggest decision stands — pull, never push).
+            Rows are the deterministic warmupRamp arithmetic; tapping one
+            loads it into the set entry as a Warm-up via the same setType
+            machinery as the manual picker. Nothing is logged for the user. */}
+        <Modal
+          visible={showWarmupRamp}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowWarmupRamp(false)}
+        >
+          <TouchableOpacity
+            style={styles.sheetOverlay}
+            activeOpacity={1}
+            onPress={() => setShowWarmupRamp(false)}
+          />
+          <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>Warm-up ramp</Text>
+            {(() => {
+              const working = parseFloat(currentSet.weight);
+              if (!Number.isFinite(working) || working <= 0) {
+                return (
+                  <Text style={styles.sheetExplainer}>
+                    Enter a working weight in the set entry first, then come back for the ramp.
+                  </Text>
+                );
+              }
+              const rows = warmupRamp(working, {
+                isBarbell: (exercise?.equipment || '') === 'barbell',
+                barKg: barWeight || DEFAULT_BAR_KG,
+              });
+              if (rows.length === 0) {
+                return (
+                  <Text style={styles.sheetExplainer}>
+                    {`Light enough to start straight in at ${working} ${units}. No ramp needed today.`}
+                  </Text>
+                );
+              }
+              return (
+                <>
+                  <Text style={styles.sheetExplainer}>
+                    {`Working up to ${working} ${units}. Tap a row to load it into the set entry as a warm-up, then log it as usual. Warm-ups aren't counted in your totals.`}
+                  </Text>
+                  {rows.map((row) => (
+                    <TouchableOpacity
+                      key={`${row.weight}-${row.reps}`}
+                      style={styles.sheetOption}
+                      onPress={() => {
+                        hapticsVocab.selection();
+                        setGhostSet(null);
+                        setCurrentSet(s => ({ ...s, weight: row.weight, reps: row.reps, setType: 'warmup', isGhost: false }));
+                        setShowWarmupRamp(false);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${row.isBar ? 'Empty bar' : `${row.weight} ${units}`}, ${row.reps} reps. Load into the set entry as a warm-up.`}
+                    >
+                      <View style={styles.overflowOptionRow}>
+                        <Ionicons name="flame-outline" size={16} color={colors.warning} />
+                        <Text style={styles.sheetOptionLabel}>{`${row.weight} ${units} × ${row.reps}`}</Text>
+                      </View>
+                      {row.isBar ? <Text style={styles.rampBarTag}>Empty bar</Text> : null}
+                    </TouchableOpacity>
+                  ))}
+                </>
+              );
+            })()}
+          </View>
+        </Modal>
+
+        {/* B8: plate calculator sheet. Sheet-local inputs seeded from the
+            current entry weight and the profile bar weight on open; edits
+            here deliberately persist nowhere (parity with the original
+            calculator). kg-only by design, like every gym weight. */}
+        <Modal
+          visible={showPlates}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowPlates(false)}
+        >
+          <TouchableOpacity
+            style={styles.sheetOverlay}
+            activeOpacity={1}
+            onPress={() => setShowPlates(false)}
+          />
+          <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>Plate calculator</Text>
+            <View style={styles.plateInputsRow}>
+              <View style={styles.plateInputGroup}>
+                <Text style={styles.plateInputLabel}>{`Target (${units})`}</Text>
+                <TextInput
+                  style={styles.plateInput}
+                  value={plateTarget}
+                  onChangeText={setPlateTarget}
+                  keyboardType="decimal-pad"
+                  selectTextOnFocus
+                  placeholder="0"
+                  placeholderTextColor={colors.textMuted}
+                  accessibilityLabel={`Target weight in ${units}`}
+                />
+              </View>
+              <View style={styles.plateInputGroup}>
+                <Text style={styles.plateInputLabel}>{`Bar (${units})`}</Text>
+                <TextInput
+                  style={styles.plateInput}
+                  value={plateBar}
+                  onChangeText={setPlateBar}
+                  keyboardType="decimal-pad"
+                  selectTextOnFocus
+                  placeholder={String(DEFAULT_BAR_KG)}
+                  placeholderTextColor={colors.textMuted}
+                  accessibilityLabel={`Bar weight in ${units}`}
+                />
+              </View>
+            </View>
+            {(() => {
+              const calc = calculatePlates(parseFloat(plateTarget), parseFloat(plateBar));
+              if (!calc.ok) {
+                return <Text style={styles.sheetExplainer}>Enter the weight you want on the bar.</Text>;
+              }
+              if (calc.belowBar) {
+                return (
+                  <Text style={styles.sheetExplainer}>
+                    {`That's below the bar itself. The empty bar is ${parseFloat(plateBar)} ${units}.`}
+                  </Text>
+                );
+              }
+              return (
+                <>
+                  {calc.perSide.length === 0 ? (
+                    <Text style={styles.sheetExplainer}>Just the empty bar. Nothing to load.</Text>
+                  ) : (
+                    <>
+                      <Text style={styles.plateSectionLabel}>Each side, heaviest first</Text>
+                      {calc.perSide.map(({ plate, count }) => (
+                        <View key={plate} style={styles.plateRow} accessible accessibilityLabel={`${count} of ${plate} ${units} each side`}>
+                          <View style={[styles.plateDot, { backgroundColor: PLATE_COLOURS[plate] || colors.textMuted }]} />
+                          <Text style={styles.plateRowText}>{`${count} × ${plate} ${units}`}</Text>
+                        </View>
+                      ))}
+                    </>
+                  )}
+                  <Text style={styles.plateTotalLine}>
+                    {calc.remainderKg === 0
+                      ? `Loads exactly ${calc.loadedKg} ${units}.`
+                      : `Closest bar load is ${calc.loadedKg} ${units}, ${calc.remainderKg} ${units} short of the target.`}
+                  </Text>
+                </>
+              );
+            })()}
+          </View>
+        </Modal>
+
         {/* Exercise overflow sheet (COMP-001): secondary and destructive
             exercise actions, off the permanent surface. Remove keeps its
             own confirm alert inside handleRemoveExercise. */}
@@ -2588,6 +2800,48 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Text style={styles.sheetOptionLabel}>Exercise info</Text>
               </View>
             </TouchableOpacity>
+            {/* B8 gym basics. Both live here in the overflow — secondary
+                utilities off the permanent surface (COMP-001), and strictly
+                pull: the warm-up ramp NEVER auto-appears (recorded decision
+                at the set-entry card). */}
+            {(!exercise?.exerciseType || exercise.exerciseType === 'weight_reps' || exercise.exerciseType === 'weighted_bodyweight') && (
+              <TouchableOpacity
+                style={styles.sheetOption}
+                onPress={() => { setShowOverflow(false); setShowWarmupRamp(true); }}
+                accessibilityRole="button"
+                accessibilityLabel="Warm-up ramp"
+              >
+                <View style={styles.overflowOptionRow}>
+                  <Ionicons name="flame-outline" size={18} color={colors.textSecondary} />
+                  <View style={styles.sheetOptionText}>
+                    <Text style={styles.sheetOptionLabel}>Warm-up ramp</Text>
+                    <Text style={styles.sheetOptionDesc}>Suggested light sets up to today's working weight.</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )}
+            {PLATE_LOADED_EQUIPMENT.test(exercise?.equipment || '') && (
+              <TouchableOpacity
+                style={styles.sheetOption}
+                onPress={() => {
+                  setShowOverflow(false);
+                  const w = parseFloat(currentSet.weight);
+                  setPlateTarget(Number.isFinite(w) && w > 0 ? String(w) : '');
+                  setPlateBar(String(barWeight || DEFAULT_BAR_KG));
+                  setShowPlates(true);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Plate calculator"
+              >
+                <View style={styles.overflowOptionRow}>
+                  <Ionicons name="barbell-outline" size={18} color={colors.textSecondary} />
+                  <View style={styles.sheetOptionText}>
+                    <Text style={styles.sheetOptionLabel}>Plate calculator</Text>
+                    <Text style={styles.sheetOptionDesc}>What to load on each side of the bar.</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )}
             {!isLastExercise && (
               <TouchableOpacity
                 style={styles.sheetOption}
@@ -3102,6 +3356,17 @@ const styles = StyleSheet.create({
   sheetTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.sm },
   sheetExplainer: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.lg },
   sheetOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
+  // B8 gym-basics sheets
+  rampBarTag: { ...type.caption, color: colors.textMuted },
+  plateInputsRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg },
+  plateInputGroup: { flex: 1, gap: spacing.xxs },
+  plateInputLabel: { ...type.caption, color: colors.textMuted },
+  plateInput: { backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
+  plateSectionLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.5, marginBottom: spacing.xs },
+  plateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
+  plateDot: { width: 18, height: 18, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border },
+  plateRowText: { ...type.bodyStrong, color: colors.textPrimary },
+  plateTotalLine: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.md },
   sheetOptionText: { flex: 1, gap: spacing.xxs },
   sheetOptionLabel: { ...type.bodyStrong, color: colors.textPrimary },
   sheetOptionLabelActive: { color: colors.primary },
