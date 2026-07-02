@@ -605,13 +605,32 @@ export const motion = {
   exit: 220,    // leaving
   hero: 440,    // the one "important moment" per screen
   sheet: 260,   // bottom-sheet open (BottomSheet's historical timing, tokenised in D0)
+  pulse: 750,   // indeterminate attention loops (Skeleton pulse, info-tip pulse)
 
   // easing control points [x1, y1, x2, y2]
   easeStandard: [0.2, 0, 0, 1],
   easeDecelerate: [0.05, 0.7, 0.1, 1],
   easeAccelerate: [0.3, 0, 0.8, 0.15],
+  // CSS-string twins of the curves above for Reanimated 4's CSS transition
+  // API, so both call styles read one source (audit 03b §3.1).
+  cssEase: {
+    standard: 'cubic-bezier(0.2, 0, 0, 1)',
+    decelerate: 'cubic-bezier(0.05, 0.7, 0.1, 1)',
+    accelerate: 'cubic-bezier(0.3, 0, 0.8, 0.15)',
+  },
 
-  // spring (Reanimated withSpring config)
+  // The named spring family (Reanimated withSpring configs). Press-in must
+  // respond next frame and settle fast with no overshoot; release gets one
+  // tiny overshoot beat; settle is the resting default (the historical
+  // motion.spring); expressive is for the sanctioned celebration moments
+  // ONLY (audit 03b fit rule 1).
+  springs: {
+    press:      { stiffness: 420, damping: 36, mass: 1 },
+    release:    { stiffness: 250, damping: 22, mass: 1 },
+    settle:     { stiffness: 150, damping: 18, mass: 1 },
+    expressive: { stiffness: 120, damping: 13, mass: 1 },
+  },
+  // Legacy name for springs.settle (zero call sites at tokenisation time).
   spring: { stiffness: 150, damping: 18, mass: 1 },
 
   // Legacy aliases (kept so any older call site keeps working).
