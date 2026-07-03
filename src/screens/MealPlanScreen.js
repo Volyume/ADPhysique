@@ -15,7 +15,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -109,6 +109,11 @@ export default function MealPlanScreen({ navigation }) {
   const addMealPlanExcludedFood = useAppStore((s) => s.addMealPlanExcludedFood);
   const setMealPlanPrefs = useAppStore((s) => s.setMealPlanPrefs);
   const toast = useToast();
+  // D2 #15: cap the swap / grocery lists so a long list does not clip on small
+  // screens, recomputed on layout change (rotation / split-screen) rather than
+  // frozen at module load.
+  const { height: windowHeight } = useWindowDimensions();
+  const swapListMaxHeight = Math.min(360, Math.round(windowHeight * 0.6));
 
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -716,7 +721,7 @@ export default function MealPlanScreen({ navigation }) {
               Pick any one. Each keeps the day close to your target; the first is the closest match.
             </Text>
             <ScrollView
-              style={styles.swapList}
+              style={[styles.swapList, { maxHeight: swapListMaxHeight }]}
               contentContainerStyle={styles.swapListContent}
               showsVerticalScrollIndicator
             >
@@ -769,7 +774,7 @@ export default function MealPlanScreen({ navigation }) {
                     : `Totals for the whole week across ${grocerySheet.dayCount} days.`}
                 </Text>
                 <ScrollView
-                  style={styles.swapList}
+                  style={[styles.swapList, { maxHeight: swapListMaxHeight }]}
                   contentContainerStyle={styles.swapListContent}
                   showsVerticalScrollIndicator
                 >
@@ -875,9 +880,9 @@ const styles = StyleSheet.create({
   prefOptTextOn: { color: colors.primary },
   swapSheetTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
   swapSheetSub: { ...type.bodySm, color: colors.textSecondary, marginTop: -spacing.xs },
-  // TODO (D2 #15): cap to Math.min(360, Dimensions.get('window').height * 0.6)
-  // so many swap alternatives don't clip on small screens. Skipped here to avoid
-  // adding a Dimensions import per the fix-sketch constraint.
+  // D2 #15: 360 is the base/fallback cap; the component overrides maxHeight
+  // inline with Math.min(360, windowHeight * 0.6) via useWindowDimensions, so a
+  // long swap / grocery list does not clip on small screens.
   swapList: { maxHeight: 360 },
   swapListContent: { gap: spacing.sm, paddingVertical: spacing.xs },
   grocerySection: { marginTop: spacing.sm },
