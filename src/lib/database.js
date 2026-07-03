@@ -1491,10 +1491,16 @@ const SCHEMA_MIGRATIONS = [
   // set a PB this week. Booleans only, never a number or content. Local mirror
   // of cloud migrate_102's additive columns; the sender's weekSignalWriter
   // derives them (forced false under the ED freeze), the pull applies them.
+  // Plus the partner's real FIRST name (founder addition): the OTHER member's
+  // server-snapshotted first name, mapped from the cloud row's
+  // member_a/b_first_name at pull time, so every consumer's existing
+  // pair.partnerFirstName read works with zero changes (legacy rows stay NULL
+  // and the 'Your partner' fallback holds). First names only, never full names.
   // Additive + idempotent (duplicate-column is a benign migration error).
   [
     'ALTER TABLE partner_week_signals ADD COLUMN completed_block INTEGER NOT NULL DEFAULT 0',
     'ALTER TABLE partner_week_signals ADD COLUMN hit_pb INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE partnerships ADD COLUMN partner_first_name TEXT',
   ],
 ];
 
@@ -4831,11 +4837,15 @@ export async function upsertPartnershipFromCloud(row) {
   const d = await db();
   await d.runAsync(
     `INSERT OR REPLACE INTO partnerships
-       (id, member_a, member_b, status, streak_enabled, created_at, accepted_at, ended_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, member_a, member_b, status, streak_enabled, partner_first_name, created_at, accepted_at, ended_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       row.id, row.member_a ?? null, row.member_b ?? null, row.status ?? 'invited',
       row.streak_enabled ? 1 : 0,
+      // The OTHER member's server-snapshotted FIRST name, resolved by the sync
+      // pull relative to this device's user. Null for legacy pairs ('Your
+      // partner' fallback holds at every consumer).
+      row.partner_first_name ?? null,
       _toMsLocal(row.created_at), _toMsLocal(row.accepted_at), _toMsLocal(row.ended_at),
       _toMsLocal(row.updated_at ?? row.accepted_at ?? row.created_at) ?? Date.now(),
     ],

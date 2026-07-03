@@ -48,6 +48,13 @@ const ALLOWED_PARTNER_WRITE_COLUMNS = new Set([
   // this week; hit_pb = set at least one PB this week. Booleans only, never a
   // number, exercise name or any content; forced false under the ED freeze.
   'completed_block', 'hit_pb',
+  // Partner STEP A (founder addition, §5-reviewed): real partner FIRST names.
+  // Server-snapshotted from users_profile.first_name (first token, 40-cap) at
+  // mint/redeem — the two people share these by definition of pairing.
+  // member_a/b_first_name are the cloud snapshot columns; partner_first_name is
+  // the local-mirror mapping of the OTHER side's name at pull time. FIRST names
+  // only — never full names, never emails. Exactly these three keys, no wider.
+  'partner_first_name', 'member_a_first_name', 'member_b_first_name',
 ]);
 
 // Raw-data tokens that must NEVER appear as a written key, independent of the

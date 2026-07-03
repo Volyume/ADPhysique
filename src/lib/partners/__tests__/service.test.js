@@ -96,11 +96,36 @@ describe('createPartnerInvite', () => {
 });
 
 describe('redeemPartnerInvite', () => {
-  test('emits partner_invite_accepted on success', async () => {
+  test('emits partner_invite_accepted on success (legacy 081 uuid shape)', async () => {
     const r = await redeemPartnerInvite('u2', 'ABCD1234EF');
     expect(r.ok).toBe(true);
     expect(r.data.partnershipId).toBe('p1');
+    // Pre-102 RPC carries no name; the 'Your partner' fallback holds downstream.
+    expect(r.data.partnerFirstName).toBe(null);
     expect(postEvent).toHaveBeenCalledWith('u2', 'partner_invite_accepted', expect.any(Object));
+  });
+
+  test("returns the inviter's first name from the migrate_102 table shape", async () => {
+    _setClientForTests(fakeClient({
+      rpc: jest.fn((name) => {
+        if (name === 'redeem_partner_invite') {
+          return Promise.resolve({ data: [{ partnership_id: 'p1', partner_first_name: 'Sam' }], error: null });
+        }
+        return Promise.resolve({ data: null, error: null });
+      }),
+    }));
+    const r = await redeemPartnerInvite('u2', 'ABCD1234EF');
+    expect(r.ok).toBe(true);
+    expect(r.data).toEqual({ partnershipId: 'p1', partnerFirstName: 'Sam' });
+  });
+
+  test('a 102 row without a name maps to null (fallback holds)', async () => {
+    _setClientForTests(fakeClient({
+      rpc: jest.fn(() => Promise.resolve({ data: [{ partnership_id: 'p1', partner_first_name: null }], error: null })),
+    }));
+    const r = await redeemPartnerInvite('u2', 'ABCD1234EF');
+    expect(r.ok).toBe(true);
+    expect(r.data.partnerFirstName).toBe(null);
   });
 
   test('maps any RPC error to a single indistinguishable invite_invalid', async () => {

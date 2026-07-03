@@ -5,7 +5,7 @@
 -- section 9 and the decision brief section 0.3. This migration lands the
 -- server-side half of that foundation. All additive, all idempotent.
 --
--- WHAT (five additive, idempotent changes; NO destructive statements):
+-- WHAT (six additive, idempotent changes; NO destructive statements):
 --   1. consent_log: widen the consent_type CHECK to add 'partner_sharing', and
 --      add a nullable notice_version column so a per-relationship sharing
 --      consent can be recorded on the SAME append-only audit rail as the
@@ -23,6 +23,21 @@
 --      completed_block and hit_pb, carrying the two milestone-moment booleans on
 --      the EXISTING derived weekly row (no new table, no real-time). Booleans
 --      only; never a number, an exercise name, or any content.
+--   6. Real partner first names (founder addition 2026-07-03): partnerships
+--      gains two nullable text columns, member_a_first_name and
+--      member_b_first_name. The mint RPC snapshots the INVITER's first name
+--      onto the pending row; the redeem RPC snapshots the INVITEE's and returns
+--      the inviter's name to the redeemer (its return type changes from uuid to
+--      a one-row table, hence the DROP FUNCTION IF EXISTS before re-creation —
+--      still idempotent, never destructive of data). Name source: SERVER-SIDE,
+--      users_profile.first_name (the enrolment name, migration 001) — chosen
+--      over a client-supplied RPC argument because both RPCs are SECURITY
+--      DEFINER (they can read the profile despite the own-row RLS) and the
+--      server must not trust a client-asserted identity string. Derivation via
+--      _partner_first_name(): first whitespace token of the trimmed enrolment
+--      name, capped at 40 characters; empty/missing -> NULL (clients keep the
+--      existing 'Your partner' fallback, so legacy pairs are unaffected). FIRST
+--      names only, never full names, never emails.
 --   Plus: record_engine_telemetry re-declared (099/100 shape) with the new
 --   derived-only partner adoption events (counts only, never identity/content).
 --
@@ -44,19 +59,26 @@
 --                        (deploy-migrations.yml is workflow_dispatch-only; the
 --                        app never runs migrations).
 --   - Safe to re-run:    YES (ADD COLUMN IF NOT EXISTS, CREATE OR REPLACE, a
---                        DO block that drops-then-adds the widened CHECK, and a
---                        constraint name guard — idempotent throughout).
+--                        DO block that drops-then-adds the widened CHECK, a
+--                        constraint name guard, and DROP FUNCTION IF EXISTS
+--                        before the one return-type change — idempotent
+--                        throughout).
 --   - Rollback:          -- consent_log: re-narrow the CHECK to the 019 list and
 --                        drop notice_version:
 --                        --   ALTER TABLE consent_log DROP CONSTRAINT IF EXISTS consent_log_consent_type_check;
 --                        --   ALTER TABLE consent_log ADD CONSTRAINT consent_log_consent_type_check CHECK (consent_type IN ('health_data','marketing','analytics'));
 --                        --   ALTER TABLE consent_log DROP COLUMN IF EXISTS notice_version;
 --                        -- signals: ALTER TABLE partner_week_signals DROP COLUMN IF EXISTS completed_block, DROP COLUMN IF EXISTS hit_pb;
+--                        -- names: ALTER TABLE partnerships DROP COLUMN IF EXISTS member_a_first_name, DROP COLUMN IF EXISTS member_b_first_name;
+--                        --        DROP FUNCTION IF EXISTS _partner_first_name(uuid);
 --                        -- functions: DROP FUNCTION IF EXISTS record_partner_consent(boolean, text, text, text);
+--                        --            DROP FUNCTION IF EXISTS redeem_partner_invite(text); then
 --                        --            re-apply migrate_081 (create/redeem) and migrate_100 (record_engine_telemetry).
 --   - App-code deps:     src/lib/partners/consent.js, src/lib/partners/telemetry.js,
 --                        src/lib/partners/weekSignalWriter.js, src/lib/partners/service.js,
---                        src/lib/sync/tables/partners.js, src/lib/database.js.
+--                        src/lib/sync/tables/partners.js, src/lib/database.js,
+--                        src/hooks/usePartners.js (reads partnerFirstName via the
+--                        local mirror).
 --
 -- Apply via Dashboard -> SQL Editor (founder), staging first per
 -- docs/rules/supabase.md.
@@ -119,6 +141,32 @@ END $$;
 
 GRANT EXECUTE ON FUNCTION record_partner_consent(boolean, text, text, text) TO authenticated;
 
+-- ── 3a. Real partner first names: columns + derivation helper ───────────────
+-- Two nullable snapshot columns on the pair row (existing member_a/member_b
+-- naming followed). Snapshotted at mint (inviter) and redeem (invitee) from
+-- users_profile.first_name — the enrolment name — via the SECURITY DEFINER
+-- helper below. FIRST names only (first whitespace token, trimmed, capped at
+-- 40); empty/missing profiles yield NULL and clients keep their existing
+-- 'Your partner' fallback, so legacy pairs are unaffected.
+ALTER TABLE partnerships ADD COLUMN IF NOT EXISTS member_a_first_name text;
+ALTER TABLE partnerships ADD COLUMN IF NOT EXISTS member_b_first_name text;
+
+CREATE OR REPLACE FUNCTION _partner_first_name(_user_id uuid)
+RETURNS text
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT nullif(left(split_part(btrim(coalesce(p.first_name, '')), ' ', 1), 40), '')
+  FROM users_profile p
+  WHERE p.id = _user_id;
+$$;
+
+-- Internal helper for the two RPCs only; never callable by clients directly.
+REVOKE EXECUTE ON FUNCTION _partner_first_name(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION _partner_first_name(uuid) FROM authenticated;
+
 -- ── 3. create_partner_invite: single-mint (081 REPLACED) ────────────────────
 -- An inviter holds at most ONE live pending invite at a time. Minting while one
 -- is pending reuses that single pending ROW instead of inserting a second, which
@@ -159,9 +207,12 @@ BEGIN
 
   IF FOUND THEN
     UPDATE partnerships
-       SET invite_code_hash = encode(extensions.digest(code, 'sha256'), 'hex'),
-           streak_enabled   = COALESCE(_streak_enabled, streak_enabled),
-           created_at       = now()
+       SET invite_code_hash    = encode(extensions.digest(code, 'sha256'), 'hex'),
+           streak_enabled      = COALESCE(_streak_enabled, streak_enabled),
+           -- Refresh the inviter's first-name snapshot (also backfills a
+           -- pending row minted before this migration applied).
+           member_a_first_name = _partner_first_name(uid),
+           created_at          = now()
      WHERE id = existing.id;
     partnership_id := existing.id;
     invite_code := code;
@@ -169,11 +220,12 @@ BEGIN
     RETURN;
   END IF;
 
-  INSERT INTO partnerships (member_a, status, invite_code_hash, streak_enabled, created_at)
+  INSERT INTO partnerships (member_a, status, invite_code_hash, streak_enabled, member_a_first_name, created_at)
   VALUES (
     uid, 'invited',
     encode(extensions.digest(code, 'sha256'), 'hex'),
     COALESCE(_streak_enabled, true),
+    _partner_first_name(uid),
     now()
   )
   RETURNING id INTO new_id;
@@ -185,15 +237,23 @@ END $$;
 
 GRANT EXECUTE ON FUNCTION create_partner_invite(boolean) TO authenticated;
 
--- ── 4. redeem_partner_invite: pair ceiling (081 REPLACED) ───────────────────
+-- ── 4. redeem_partner_invite: pair ceiling + names (081 REPLACED) ───────────
 -- Same checks as 081 (not self / not expired / single-use / not blocked) PLUS a
 -- server-side pair ceiling. There is no tier/entitlement column on any partner
 -- table (A1 s9.4), so the schema cannot enforce the free=1 line; it enforces the
 -- absolute Pro maximum of 3 concurrent ACTIVE partnerships per member (for both
 -- the inviter and the redeemer) so neither side can run past the cap. All
 -- failures still collapse to the single indistinguishable 'invite_invalid'.
-CREATE OR REPLACE FUNCTION redeem_partner_invite(_code text)
-RETURNS uuid
+--
+-- Names: snapshots the INVITEE's first name onto the row and returns the
+-- INVITER's first name to the redeemer, so the redeeming client can show a real
+-- name immediately. Return type changes uuid -> one-row table, so the 081
+-- function must be dropped first (CREATE OR REPLACE cannot change a return
+-- type). Clients handle both shapes during the unapplied window.
+DROP FUNCTION IF EXISTS redeem_partner_invite(text);
+
+CREATE FUNCTION redeem_partner_invite(_code text)
+RETURNS TABLE (partnership_id uuid, partner_first_name text)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, extensions
@@ -202,6 +262,7 @@ DECLARE
   uid uuid := auth.uid();
   h   text;
   prow partnerships%ROWTYPE;
+  inviter_name text;
 BEGIN
   IF uid IS NULL THEN
     RAISE EXCEPTION 'Not authenticated';
@@ -239,11 +300,21 @@ BEGIN
     RAISE EXCEPTION 'invite_invalid';
   END IF;
 
+  -- The inviter's snapshot, backfilled fresh if the row predates this migration.
+  inviter_name := COALESCE(prow.member_a_first_name, _partner_first_name(prow.member_a));
+
   UPDATE partnerships
-  SET member_b = uid, status = 'active', accepted_at = now(), invite_code_hash = NULL
+  SET member_b = uid,
+      status = 'active',
+      accepted_at = now(),
+      invite_code_hash = NULL,
+      member_a_first_name = inviter_name,
+      member_b_first_name = _partner_first_name(uid)
   WHERE id = prow.id;
 
-  RETURN prow.id;
+  partnership_id := prow.id;
+  partner_first_name := inviter_name;
+  RETURN NEXT;
 END $$;
 
 GRANT EXECUTE ON FUNCTION redeem_partner_invite(text) TO authenticated;

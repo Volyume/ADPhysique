@@ -147,6 +147,42 @@ describe('pullPartners', () => {
     expect(dbMock.upsertPartnerCheerFromCloud).toHaveBeenCalledTimes(1);
   });
 
+  test("maps the OTHER member's first name into partner_first_name (I am member_a)", async () => {
+    const sb = makeSb({
+      partnerships: [{
+        id: 'pair1', member_a: 'me', member_b: 'sam', status: 'active',
+        member_a_first_name: 'Alex', member_b_first_name: 'Sam',
+      }],
+    });
+    await pullPartners(sb, { userId: 'me' });
+    expect(dbMock.upsertPartnershipFromCloud).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'pair1', partner_first_name: 'Sam' }),
+    );
+  });
+
+  test("maps the OTHER member's first name into partner_first_name (I am member_b)", async () => {
+    const sb = makeSb({
+      partnerships: [{
+        id: 'pair1', member_a: 'sam', member_b: 'me', status: 'active',
+        member_a_first_name: 'Sam', member_b_first_name: 'Alex',
+      }],
+    });
+    await pullPartners(sb, { userId: 'me' });
+    expect(dbMock.upsertPartnershipFromCloud).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'pair1', partner_first_name: 'Sam' }),
+    );
+  });
+
+  test('a legacy row without name snapshots maps partner_first_name to null (fallback holds)', async () => {
+    const sb = makeSb({
+      partnerships: [{ id: 'pair1', member_a: 'me', member_b: 'sam', status: 'active' }],
+    });
+    await pullPartners(sb, { userId: 'me' });
+    expect(dbMock.upsertPartnershipFromCloud).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'pair1', partner_first_name: null }),
+    );
+  });
+
   test('INVARIANT unpair-while-offline: a vanished local pair is forced ended AND its shared rows purged', async () => {
     // Cloud no longer returns pair1 as mine (the other side ended + both gone),
     // but it is still in my local mirror.

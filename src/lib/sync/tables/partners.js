@@ -112,7 +112,18 @@ export async function pullPartners(sb, { userId } = {}) {
     const cloudIds = new Set();
     for (const row of (partnerships || [])) {
       cloudIds.add(row.id);
-      try { await db.upsertPartnershipFromCloud(row); applied += 1; } catch (e) {
+      // Real partner names (migrate_102): the cloud row snapshots BOTH members'
+      // first names; the local mirror stores only the OTHER side's, as
+      // partner_first_name, so every consumer reads pair.partnerFirstName with
+      // ZERO changes. Legacy rows without snapshots map to null and the UI's
+      // existing 'Your partner' fallback holds. First names only, by schema.
+      const partnerFirstName = row.member_a === userId
+        ? (row.member_b_first_name || null)
+        : (row.member_a_first_name || null);
+      try {
+        await db.upsertPartnershipFromCloud({ ...row, partner_first_name: partnerFirstName });
+        applied += 1;
+      } catch (e) {
         errors += 1; logSyncError('sync.tables.partners.upsertPartnership', e);
       }
       // Deletion promise (blueprint §5), other member's side: once the cloud

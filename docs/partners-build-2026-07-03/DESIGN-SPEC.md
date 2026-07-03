@@ -44,6 +44,7 @@ A single component `PartnerPrivacyReceipt` used in BOTH the empty state and invi
 - Heading, `type.title`: "What crosses, and what never does".
 - Two columns under two column-headers (`type.caption`, `letterSpacing` wide, uppercase): "THEY WILL SEE" / "THEY NEVER SEE". A `StyleSheet.hairlineWidth` vertical rule between columns, `withAlpha(colors.border, alpha.strong)`.
 - Left column (each line `type.body`, generous `spacing.md` between):
+  - "Your first name"
   - "Whether you trained this week, against your own plan"
   - "Your shared streak, counted in weeks"
   - "A resting week, shown simply as resting"

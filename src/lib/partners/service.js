@@ -54,7 +54,8 @@ export async function createPartnerInvite(userId, { streakEnabled = true } = {})
 /**
  * Redeem an invite code. The RPC enforces not-self / not-expired / single-use /
  * not-blocked and raises one indistinguishable 'invite_invalid' on any failure.
- * Emits partner_invite_accepted on success.
+ * Emits partner_invite_accepted on success. Returns the inviter's first name
+ * when the 102 RPC shape is live (server-snapshotted from the enrolment name).
  */
 export async function redeemPartnerInvite(userId, code) {
   const c = getSupabaseClient();
@@ -65,7 +66,15 @@ export async function redeemPartnerInvite(userId, code) {
       // The RPC raises 'invite_invalid' for every failure path by design.
       return { ok: false, error: 'invite_invalid' };
     }
-    const pairId = data;
+    // Two RPC shapes: migrate_102 returns a one-row table
+    // { partnership_id, partner_first_name }; the 081 RPC (production until the
+    // founder applies 102) returns a bare uuid. Handle both so this build works
+    // against either; pre-102 the name is simply absent and the UI's existing
+    // 'Your partner' fallback holds.
+    const row = Array.isArray(data) ? data[0] : data;
+    const pairId = (row && typeof row === 'object') ? row.partnership_id : row;
+    const partnerFirstName = (row && typeof row === 'object') ? (row.partner_first_name || null) : null;
+    if (!pairId) return { ok: false, error: 'invite_invalid' };
     // Capture the partner-sharing consent on the accept act (A4 s6). This rides
     // the same append-only consent_log rail as the Article 9 health consent.
     // FAIL CLOSED: if the consent write fails, the pairing does not complete —
@@ -79,7 +88,7 @@ export async function redeemPartnerInvite(userId, code) {
     }
     track(userId, 'partner_invite_accepted', {})?.catch?.(() => {});
     trackInviteRedeemed();
-    return { ok: true, data: { partnershipId: pairId } };
+    return { ok: true, data: { partnershipId: pairId, partnerFirstName } };
   } catch (e) {
     return fail(e);
   }
