@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, RefreshControl,
+  View, Text, StyleSheet, TouchableOpacity, RefreshControl, TextInput,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -71,6 +71,10 @@ export default function LiftProgressScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('all'); // 'all' | 'best'
+  // C1: free-text filter on exercise name, same case-insensitive substring
+  // match as ExercisePickerModal's search box. Purely client-side over the
+  // already-loaded rows; keeps the existing most-recent-first sort.
+  const [query, setQuery] = useState('');
   // R1 per-exercise metric switcher: which lens the row sparklines draw.
   // 'e1rm' is the default (matches the est-max headline). The other lenses
   // recompute from the same loaded sets, no new data source.
@@ -179,10 +183,26 @@ export default function LiftProgressScreen({ navigation }) {
   }, [rows, strengthLevels]);
 
   const hasStanding = bodyWeight && Object.keys(strengthLevels).length > 0;
-  const data = filter === 'best' ? rows.filter(isRecentBest) : rows;
+  const tabRows = filter === 'best' ? rows.filter(isRecentBest) : rows;
+  // C1: substring match on name, case-insensitive; an empty query is a no-op
+  // so clearing the box restores the tab's full, already-sorted list.
+  const q = query.trim().toLowerCase();
+  const data = q ? tabRows.filter(r => r.name.toLowerCase().includes(q)) : tabRows;
 
   const header = (
     <View>
+      {rows.length > 0 && (
+        <TextInput
+          style={styles.searchInput}
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search exercises…"
+          placeholderTextColor={colors.textMuted}
+          returnKeyType="search"
+          clearButtonMode="while-editing"
+          accessibilityLabel="Search lifts"
+        />
+      )}
       {hasStanding ? (
         <View style={styles.standingCard}>
           {standing ? (
@@ -337,6 +357,13 @@ export default function LiftProgressScreen({ navigation }) {
                 <Text style={styles.meta}>
                   {muscle ? `${muscle} · ` : ''}{item.sessions} {item.sessions === 1 ? 'session' : 'sessions'} · last {format(new Date(item.lastTrainedAt), 'd MMM')}
                 </Text>
+                {/* C1: the last logged session's own numbers, distinct from the
+                    all-time best headline below. liftProgress.js tracks the
+                    session's top weight and its e1RM only (no rep count is
+                    computed per session), so the line reports those two. */}
+                <Text style={styles.lastTime}>
+                  Last time: {item.latestWeight}{units} · e1RM {item.latestE1rm}{units}
+                </Text>
                 <View style={styles.statRow}>
                   <Text style={styles.statValue}>{item.bestE1rm}{units}</Text>
                   <Text style={styles.statLabel}>est. max</Text>
@@ -367,14 +394,16 @@ export default function LiftProgressScreen({ navigation }) {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.empty}>
-              <Ionicons name="barbell-outline" size={56} color={colors.textMuted} />
+              <Ionicons name={q ? 'search-outline' : 'barbell-outline'} size={56} color={colors.textMuted} />
               <Text style={styles.emptyTitle}>
-                {filter === 'best' ? 'Your bests will show here' : 'Your lifts start here'}
+                {q ? 'No matching lifts' : filter === 'best' ? 'Your bests will show here' : 'Your lifts start here'}
               </Text>
               <Text style={styles.emptyText}>
-                {filter === 'best'
-                  ? "When a session beats your best estimated max, that lift appears here. Keep training and they'll come."
-                  : "Log a few sessions and each lift's trend builds up here."}
+                {q
+                  ? "No lift name matches your search. Try a different search."
+                  : filter === 'best'
+                    ? "When a session beats your best estimated max, that lift appears here. Keep training and they'll come."
+                    : "Log a few sessions and each lift's trend builds up here."}
               </Text>
             </View>
           ) : null
@@ -389,6 +418,19 @@ export default function LiftProgressScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, paddingBottom: spacing.xxl },
+
+  // ── Search (C1), same input styling as ExercisePickerModal's pickerSearch ──
+  searchInput: {
+    ...type.body,
+    backgroundColor: colors.inputBg,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
+  },
 
   // ── Strength standing header ──
   standingCard: {
@@ -496,6 +538,7 @@ const styles = StyleSheet.create({
   },
   prTagText: { fontSize: fontSize.micro, fontWeight: fontWeight.bold, color: colors.primary },
   meta: { ...type.caption, color: colors.textMuted },
+  lastTime: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
   statRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs, marginTop: spacing.xxs },
   statValue: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.textPrimary },
   statLabel: { ...type.caption, color: colors.textMuted },
