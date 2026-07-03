@@ -27,6 +27,15 @@ describe('cardHeight', () => {
     expect(cardHeight(540, false)).toBe(960);
     expect(cardHeight(300, true)).toBe(300);
   });
+  test('aspect preset overrides the isSquare boolean (beforeAfter card)', () => {
+    // Additive third arg: square 1:1, portrait 4:5, story 9:16.
+    expect(cardHeight(1080, false, 'square')).toBe(1080);
+    expect(cardHeight(1080, true, 'portrait')).toBe(1350); // 1080 * 5/4
+    expect(cardHeight(1080, true, 'story')).toBe(1920);
+    // Omitting aspect keeps the legacy two-arg behaviour exactly.
+    expect(cardHeight(1080, true)).toBe(1080);
+    expect(cardHeight(1080, false)).toBe(1920);
+  });
 });
 
 describe('drawShareCard renders to a non-blank PNG (CanvasKit)', () => {
@@ -82,6 +91,56 @@ describe('drawShareCard renders to a non-blank PNG (CanvasKit)', () => {
     surface.flush();
     const bytes = surface.makeImageSnapshot().encodeToBytes();
     expect(bytes.length).toBeGreaterThan(1000); // a real, non-empty PNG
+  });
+
+  // Two synthetic SkImages stand in for the user's before/after photos.
+  function makeSwatch(Skia, hex) {
+    const ps = Skia.Surface.MakeOffscreen(64, 96); // portrait-ish, deliberately non-square
+    const pt = Skia.Paint(); pt.setColor(Skia.Color(hex));
+    ps.getCanvas().drawRect(Skia.XYWHRect(0, 0, 64, 96), pt);
+    ps.flush();
+    return ps.makeImageSnapshot();
+  }
+
+  const BA_PARAMS = {
+    cardType: 'beforeAfter',
+    elapsedLabel: '14 weeks',
+    before: { date: '3 Mar 2026', weight: '82.4 kg' },
+    after: { date: '9 Jun 2026', weight: '78.1 kg' },
+  };
+
+  test.each([
+    ['square'], ['portrait'], ['story'],
+  ])('beforeAfter card composites two photos (aspect=%s)', (aspect) => {
+    if (!env) return; // CanvasKit/fonts unavailable here — skip without failing
+    const width = 540;
+    const H = cardHeight(width, aspect !== 'story', aspect);
+    const before = makeSwatch(env.Skia, '#8a8f7a');
+    const after = makeSwatch(env.Skia, '#b0a890');
+    const surface = env.Skia.Surface.MakeOffscreen(width, H);
+    drawShareCard(surface.getCanvas(), {
+      Skia: env.Skia, width, params: { ...BA_PARAMS, aspect }, typefaces: env.typefaces,
+      wordmark: env.wordmark, photos: { before, after },
+    });
+    surface.flush();
+    expect(surface.makeImageSnapshot().encodeToBytes().length).toBeGreaterThan(1000);
+  });
+
+  test('beforeAfter card tolerates a missing photo without throwing (calm cell)', () => {
+    if (!env) return;
+    const width = 540;
+    const H = cardHeight(width, true, 'square');
+    const before = makeSwatch(env.Skia, '#8a8f7a');
+    const surface = env.Skia.Surface.MakeOffscreen(width, H);
+    // after=null: the renderer must fall back to a neutral cell, never throw.
+    expect(() => {
+      drawShareCard(surface.getCanvas(), {
+        Skia: env.Skia, width, params: { ...BA_PARAMS, aspect: 'square' }, typefaces: env.typefaces,
+        wordmark: env.wordmark, photos: { before, after: null },
+      });
+    }).not.toThrow();
+    surface.flush();
+    expect(surface.makeImageSnapshot().encodeToBytes().length).toBeGreaterThan(1000);
   });
 
   test('renders with a gym-photo background (cover-fit + scrim path)', () => {

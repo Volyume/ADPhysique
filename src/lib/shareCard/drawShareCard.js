@@ -477,8 +477,144 @@ function drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark) {
   drawFooter(canvas, Skia, W, H, pad, p.isSquare, s, font, wordmark);
 }
 
-/** The card pixel height for a given width + format. */
-export function cardHeight(width, isSquare) {
+// ── before/after progress card (progress-photos §3.8; S1/S2) ──────────────────
+//
+// Skia ClipOp.Intersect. On device JsiSkCanvas takes the numeric ClipOp
+// directly; the CanvasKit/Node path maps it through PathOp, whose Intersect
+// shares the same value (1) — so this one constant is correct on both runtimes.
+const CLIP_INTERSECT = 1;
+
+// Draw an SkImage COVER-cropped (object-fit: cover) into a rounded cell rect,
+// clipped so the crop never bleeds past the cell corners. Like drawImageCover
+// but targeting an arbitrary x/y/w/h with a corner radius. A missing or
+// undecodable image leaves a neutral surface fill (no black hole, never throws);
+// the sheet still validates BOTH images up-front and calm-aborts (S2 guard 1).
+function drawPhotoCell(canvas, Skia, img, x, y, w, h, r) {
+  fillRRect(canvas, Skia, x, y, w, h, r, PALETTE.surface);
+  if (!(img && img.width && img.width() && img.height && img.height())) return;
+  const iw = img.width(); const ih = img.height();
+  const scale = Math.max(w / iw, h / ih);
+  const dw = iw * scale; const dh = ih * scale;
+  const dx = x + (w - dw) / 2; const dy = y + (h - dh) / 2;
+  canvas.save();
+  canvas.clipRRect(Skia.RRectXY(Skia.XYWHRect(x, y, w, h), r, r), CLIP_INTERSECT, true);
+  const p = Skia.Paint(); p.setAntiAlias(true);
+  // Two source photos of any aspect resolve to the SAME dst cell here, so the
+  // pair is always identical cells regardless of source dimensions (S2 guard 2).
+  canvas.drawImageRect(img, Skia.XYWHRect(0, 0, iw, ih), Skia.XYWHRect(dx, dy, dw, dh), p);
+  canvas.restore();
+}
+
+// The per-photo caption plate: a bottom scrim bar carrying "date · weight",
+// sitting ON its own photo cell so which weight belongs to which shot is never
+// ambiguous. Weight is optional — suppressed/toggled-off callers pass '' and
+// only the date shows. Clipped to the cell so the plate shares its rounded
+// bottom corners rather than overhanging them.
+function drawCellCaption(canvas, Skia, x, y, w, h, r, cell, s, font) {
+  const line = [cell && cell.date, cell && cell.weight].filter(Boolean).join('  ·  ');
+  if (!line) return;
+  const plateH = Math.round(Math.min(Math.max(h * 0.16, 64 * s), h * 0.24));
+  const py = y + h - plateH;
+  canvas.save();
+  canvas.clipRRect(Skia.RRectXY(Skia.XYWHRect(x, y, w, h), r, r), CLIP_INTERSECT, true);
+  fillRect(canvas, Skia, x, py, w, plateH, rgba(PALETTE.bg0, 0.62));
+  canvas.restore();
+  const f = fitFont(null, line, w - Math.round(36 * s), 22, (px) => font(px, 'regular'), 12);
+  text(canvas, Skia, line, x + w / 2, py + plateH * 0.62, f, PALETTE.text, 'center');
+}
+
+// The centred elapsed-time badge — the quiet headline that belongs to the PAIR,
+// not either photo. Reuses the intensity-badge construction (fill rgba(accent,
+// .125), hairline rgba(accent,.38) stroke, caps text): time stated neutrally,
+// never "transformation", never an arrow.
+function drawElapsedBadge(canvas, Skia, W, y, label, s, font) {
+  if (!label) return y;
+  const txt = String(label).toUpperCase();
+  const f = font(22);
+  const bw = measure(f, txt) + 60 * s;
+  const bh = Math.round(48 * s);
+  const bx = (W - bw) / 2;
+  fillRRect(canvas, Skia, bx, y, bw, bh, bh / 2, rgba(PALETTE.accent, 0.125));
+  strokeRRect(canvas, Skia, bx, y, bw, bh, bh / 2, rgba(PALETTE.accent, 0.38), Math.max(1, 1.5 * s));
+  text(canvas, Skia, txt, W / 2, y + bh * 0.68, f, PALETTE.accent, 'center');
+  return y + bh + Math.round(28 * s);
+}
+
+// Before/after progress card — TWO dated progress photos composited into ONE
+// image: older-left / newer-right as identical cover-cropped cells (square /
+// portrait), or older-top / newer-bottom stacked (story), each with its own
+// date·weight caption plate, a centred elapsed-time badge and the shared
+// wordmark footer.
+//
+// WEIGHT-ON-CARD is a FOUNDER-APPROVED override of the locked "share cards never
+// include name/bodyweight/measurements/private notes" rule (progress-photos
+// DECISIONS #2, 2026-07-03). It is bounded, not a general loosening:
+//   - the whole card is WITHHELD under calm mode OR an open ED-pattern flag —
+//     BeforeAfterShareSheet gates on usePhotoSuppression, fail-closed, BEFORE
+//     compose/encode/share, so a suppressed user never reaches this renderer;
+//   - weight is a user toggle (default on); dropping it leaves photos+dates+
+//     elapsed only;
+//   - name, measurements and private notes stay banned — bodyweight only, here
+//     only. The integrator records the decision and updates the locked-rule note
+//     + the screen's privacy line.
+function drawBeforeAfter(canvas, Skia, W, H, p, s, font, wordmark, photos) {
+  const pad = Math.round(W * 0.074);
+  drawBackground(canvas, Skia, W, H);
+  drawAccentBar(canvas, Skia, W, s);
+
+  const before = p.before || {};
+  const after = p.after || {};
+  const beforeImg = photos && photos.before;
+  const afterImg = photos && photos.after;
+  const r = Math.round(16 * s);
+  const gap = Math.round(14 * s);
+
+  let y = pad + Math.round(48 * s);
+  y = drawElapsedBadge(canvas, Skia, W, y, p.elapsedLabel, s, font);
+  y += Math.round(8 * s);
+
+  const footerH = Math.round((p.isSquare ? 162 : 250) * s);
+  const cellsTop = y;
+  const cellsBottom = H - footerH - Math.round(24 * s);
+  const cellsH = Math.max(1, cellsBottom - cellsTop);
+
+  if (p.aspect === 'story') {
+    // Stacked: older on top, newer below (two portraits each get a landscape-ish
+    // cell in the tall 9:16 frame — side-by-side would slice each to a sliver).
+    const cellW = W - pad * 2;
+    const cellH = Math.floor((cellsH - gap) / 2);
+    drawPhotoCell(canvas, Skia, beforeImg, pad, cellsTop, cellW, cellH, r);
+    drawCellCaption(canvas, Skia, pad, cellsTop, cellW, cellH, r, before, s, font);
+    const y2 = cellsTop + cellH + gap;
+    drawPhotoCell(canvas, Skia, afterImg, pad, y2, cellW, cellH, r);
+    drawCellCaption(canvas, Skia, pad, y2, cellW, cellH, r, after, s, font);
+  } else {
+    // Side-by-side: older-left / newer-right, identical cells, hairline gutter.
+    const cellW = Math.floor((W - pad * 2 - gap) / 2);
+    const cellH = cellsH;
+    drawPhotoCell(canvas, Skia, beforeImg, pad, cellsTop, cellW, cellH, r);
+    drawCellCaption(canvas, Skia, pad, cellsTop, cellW, cellH, r, before, s, font);
+    const x2 = pad + cellW + gap;
+    drawPhotoCell(canvas, Skia, afterImg, x2, cellsTop, cellW, cellH, r);
+    drawCellCaption(canvas, Skia, x2, cellsTop, cellW, cellH, r, after, s, font);
+  }
+
+  drawFooter(canvas, Skia, W, H, pad, p.isSquare, s, font, wordmark);
+}
+
+/**
+ * The card pixel height for a given width + format.
+ *
+ * The back-compatible two-arg form (isSquare boolean) drives every existing
+ * card type unchanged. The optional third `aspect` is used by the before/after
+ * progress card, which ships three presets: 'square' 1:1, 'portrait' 4:5 (the
+ * IG-feed ratio) and 'story' 9:16. When `aspect` is omitted the legacy isSquare
+ * behaviour is preserved exactly.
+ */
+export function cardHeight(width, isSquare, aspect) {
+  if (aspect === 'square') return width;
+  if (aspect === 'portrait') return Math.round((width * 5) / 4);
+  if (aspect === 'story') return Math.round((width * 16) / 9);
   return isSquare ? width : Math.round((width * 16) / 9);
 }
 
@@ -490,18 +626,26 @@ export function cardHeight(width, isSquare) {
  * @param deps.params buildParams() output (cardType, isSquare, toggles, data)
  * @param deps.typefaces { regular, bold } SkTypeface
  * @param deps.wordmark SkImage logo, or null
+ * @param deps.photos { before, after } SkImages for the beforeAfter card, or null
  */
-export function drawShareCard(canvas, { Skia, width, params, typefaces, wordmark, bgPhoto = null }) {
+export function drawShareCard(canvas, {
+  Skia, width, params, typefaces, wordmark, bgPhoto = null, photos = null,
+}) {
   BG = bgPhoto || null; // optional gym photo background (all card types)
-  const isSquare = !!params.isSquare;
+  // The beforeAfter card drives its own three aspect presets ('square' |
+  // 'portrait' | 'story') via params.aspect; every other card type keeps the
+  // legacy isSquare boolean untouched (aspect stays undefined for them).
+  const aspect = params.aspect || null;
+  const isSquare = aspect ? aspect !== 'story' : !!params.isSquare;
   const W = width;
-  const H = cardHeight(width, isSquare);
+  const H = cardHeight(width, isSquare, aspect);
   const s = W / 1080;
   const font = makeFonts(Skia, typefaces, s);
-  const p = { ...params, isSquare };
+  const p = { ...params, isSquare, aspect };
   if (params.cardType === 'pr') drawPR(canvas, Skia, W, H, p, s, font, wordmark);
   else if (params.cardType === 'milestone') drawMilestone(canvas, Skia, W, H, p, s, font, wordmark);
   else if (params.cardType === 'weekly') drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark);
+  else if (params.cardType === 'beforeAfter') drawBeforeAfter(canvas, Skia, W, H, p, s, font, wordmark, photos);
   else drawSession(canvas, Skia, W, H, p, s, font, wordmark);
   return { width: W, height: H };
 }
