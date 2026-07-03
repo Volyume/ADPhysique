@@ -11,7 +11,8 @@ import Button from '../components/Button';
 import { colors, spacing, radius, fontSize, fontWeight, type, iconSize } from '../styles/theme';
 import { useToast } from '../components/Toast';
 import useAppStore from '../store/useAppStore';
-import { getWellbeingMode, isCalm } from '../lib/wellbeing';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import { logError } from '../lib/errorLog';
 import {
   listProgressPhotos, saveProgressPhoto, deleteProgressPhoto, markPhotosOwner,
@@ -64,9 +65,15 @@ export default function ProgressPhotosScreen({ navigation }) {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const [rows, mode] = await Promise.all([listProgressPhotos(), getWellbeingMode()]);
+      // Fail CLOSED: read the raw wellbeing flag rather than getWellbeingMode()
+      // (which swallows a storage read error down to 'unspecified'). A genuine
+      // read failure must be treated as calm/suppressed.
+      const [rows, mode] = await Promise.all([
+        listProgressPhotos(),
+        AsyncStorage.getItem(WELLBEING_KEY).then(v => v || 'unspecified').catch(() => 'read_failed'),
+      ]);
       setPhotos(rows);
-      setCalm(isCalm(mode));
+      setCalm(isCalm(mode) || mode === 'read_failed');
       // A selection must never point at a photo that no longer exists.
       setSelected((prev) => prev.filter((name) => rows.some((r) => r.name === name)));
     } catch (_) { /* tolerate */ }

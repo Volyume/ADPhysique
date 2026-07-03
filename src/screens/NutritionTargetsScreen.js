@@ -19,7 +19,7 @@ import { daysToActivityLevel } from '../lib/coachingGoals';
 import { hydrateLoadedTargets, getRecommendedMeals } from '../lib/nutritionTargetsView';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { getWellbeingMode, isCalm } from '../lib/wellbeing';
+import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import { femaleNutritionAwareness } from '../lib/femaleNutritionAwareness';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -214,13 +214,19 @@ export default function NutritionTargetsScreen({ navigation }) {
 
   // ── Load saved targets on mount, SQLite primary, AsyncStorage fallback ────────────
   useEffect(() => {
-    getWellbeingMode().then(m => {
-      const c = isCalm(m);
-      setCalm(c);
-      // If the aggressive cut was previously selected, step back to a
-      // gentler default when calmer experience is on.
-      if (c) setGoal(g => (g === 'aggressive_cut' ? 'mild_cut' : g));
-    });
+    // Fail CLOSED: read the raw wellbeing flag rather than getWellbeingMode()
+    // (which swallows a storage read error down to 'unspecified'). A genuine
+    // read failure must be treated as calm/suppressed, not unsuppressed.
+    AsyncStorage.getItem(WELLBEING_KEY)
+      .then(v => v || 'unspecified')
+      .catch(() => 'read_failed')
+      .then(m => {
+        const c = isCalm(m) || m === 'read_failed';
+        setCalm(c);
+        // If the aggressive cut was previously selected, step back to a
+        // gentler default when calmer experience is on.
+        if (c) setGoal(g => (g === 'aggressive_cut' ? 'mild_cut' : g));
+      });
   }, []);
 
   useEffect(() => {

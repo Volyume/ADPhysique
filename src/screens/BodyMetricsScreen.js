@@ -47,7 +47,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import { formatBodyWeight, formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg } from '../lib/units';
-import { getWellbeingMode, isCalm, WELLBEING_HELPLINE } from '../lib/wellbeing';
+import { isCalm, WELLBEING_HELPLINE, WELLBEING_KEY } from '../lib/wellbeing';
 
 const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
@@ -498,9 +498,17 @@ export default function BodyMetricsScreen() {
       // pattern flag (COMP-004 safety behaviour), in addition to calmer mode.
       // Mark the wellbeing flags loaded only once BOTH reads settle, so the
       // recomp reframe stays suppressed until the real calm/ED state is known.
+      // Fail CLOSED: read the raw wellbeing flag rather than getWellbeingMode()
+      // (which swallows a storage read error down to 'unspecified'). A genuine
+      // read failure on either the wellbeing flag or the ED flag must suppress.
       Promise.allSettled([
-        getWellbeingMode().then(m => setCalm(isCalm(m))),
-        user?.id ? getOpenEdPatternFlag(user.id).then(f => setEdFlagOpen(!!f)) : Promise.resolve(),
+        AsyncStorage.getItem(WELLBEING_KEY)
+          .then(v => v || 'unspecified')
+          .catch(() => 'read_failed')
+          .then(m => setCalm(isCalm(m) || m === 'read_failed')),
+        user?.id
+          ? getOpenEdPatternFlag(user.id).then(f => setEdFlagOpen(!!f)).catch(() => setEdFlagOpen(true))
+          : Promise.resolve(),
       ]).finally(() => setWellbeingLoaded(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),

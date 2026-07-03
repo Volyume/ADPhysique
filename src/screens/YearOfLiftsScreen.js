@@ -30,7 +30,8 @@ import * as haptics from '../lib/haptics';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getYearOfLiftsData, getRecapData, getBlockReflectionData, getOpenEdPatternFlag } from '../lib/database';
-import { getWellbeingMode, isCalm } from '../lib/wellbeing';
+import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { track } from '../lib/engineTelemetry';
 import GradientCard from '../components/GradientCard';
 import { VolyumeMark } from '../components/BrandMark';
@@ -490,12 +491,15 @@ export default function YearOfLiftsScreen({ navigation, route }) {
           // S4: the weekly mini-story reuses this EXACT path (getRecapData
           // over an arbitrary [startMs, endMs) window); a 7-day window
           // instead of a calendar month is the only difference.
+          // Fail CLOSED: read the raw wellbeing flag rather than getWellbeingMode()
+          // (which swallows a storage read error down to 'unspecified'). A genuine
+          // read failure on either flag must suppress the celebratory framing.
           const [mode, edFlag, recap] = await Promise.all([
-            getWellbeingMode().catch(() => null),
-            getOpenEdPatternFlag(user.id).catch(() => null),
+            AsyncStorage.getItem(WELLBEING_KEY).then(v => v || 'unspecified').catch(() => 'read_failed'),
+            getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
             getRecapData(user.id, { startMs, endMs, compare: true }),
           ]);
-          setNeutral(isCalm(mode) || !!edFlag);
+          setNeutral(isCalm(mode) || mode === 'read_failed' || !!edFlag);
           setData(recap);
         } else if (variant === 'block') {
           setData(await getBlockReflectionData(user.id, mesocycleId));
@@ -506,14 +510,16 @@ export default function YearOfLiftsScreen({ navigation, route }) {
           // getYearOfLiftsData's set-filter basis and the % agrees with the
           // displayed number. Calm mode / open ED flag suppresses the comparison.
           const yd = await getYearOfLiftsData(user.id, yearMs);
+          // Fail CLOSED: same raw wellbeing read as above; a genuine read
+          // failure on either flag must suppress the year-over-year comparison.
           const [mode, edFlag, recap] = await Promise.all([
-            getWellbeingMode().catch(() => null),
-            getOpenEdPatternFlag(user.id).catch(() => null),
+            AsyncStorage.getItem(WELLBEING_KEY).then(v => v || 'unspecified').catch(() => 'read_failed'),
+            getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
             (yd && yd.tonnage > 0 && yd.yearStart != null)
               ? getRecapData(user.id, { startMs: yd.yearStart, endMs: yd.yearEnd, compare: true }).catch(() => null)
               : Promise.resolve(null),
           ]);
-          setNeutral(isCalm(mode) || !!edFlag);
+          setNeutral(isCalm(mode) || mode === 'read_failed' || !!edFlag);
           setData(recap?.previous ? { ...yd, previous: recap.previous } : yd);
         }
       } catch (_e) { /* leave data null → graceful empty */ }

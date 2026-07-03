@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, KeyboardAvoidingView, Platform, Animated } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, withAlpha, alpha, circle, motion } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
@@ -16,7 +17,7 @@ import {
   saveWeeklyCheckin, saveNextTimeNote, getRoutineWorkoutTonnages,
   getRoutineById, getWorkoutById, getOpenEdPatternFlag,
 } from '../lib/database';
-import { getWellbeingMode, isCalm } from '../lib/wellbeing';
+import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import { claimMilestones } from '../lib/milestones';
 import { selection as hapticSelection, prAchieved as hapticMilestone } from '../lib/haptics';
 import { MilestoneBurst } from '../components/PRCelebration';
@@ -391,11 +392,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       let calm = false;
       let edFlag = null;
       try {
+        // Fail CLOSED: read the raw wellbeing flag rather than the memoised
+        // getWellbeingMode() helper (which swallows storage errors down to
+        // 'unspecified'). A genuine read failure here must suppress, not
+        // silently fall through to an unsuppressed surface.
         const [mode, flag] = await Promise.all([
-          getWellbeingMode(),
-          user?.id ? getOpenEdPatternFlag(user.id) : Promise.resolve(null),
+          AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
+          user?.id ? getOpenEdPatternFlag(user.id).catch(() => 'read_failed') : Promise.resolve(null),
         ]);
-        calm = isCalm(mode);
+        calm = isCalm(mode) || mode === 'read_failed';
         edFlag = flag;
       } catch (_) {}
       const suppressed = calm || !!edFlag;

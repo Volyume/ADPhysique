@@ -31,7 +31,7 @@ jest.mock('../../components/AppAlert', () => ({ appAlert: jest.fn() }));
 jest.mock('../../lib/haptics', () => ({ selection: jest.fn() }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 jest.mock('../../lib/wellbeing', () => ({
-  getWellbeingMode: jest.fn(),
+  WELLBEING_KEY: jest.requireActual('../../lib/wellbeing').WELLBEING_KEY,
   isCalm: (m) => m === 'calm',
 }));
 jest.mock('../../lib/progressPhotos', () => ({
@@ -41,10 +41,11 @@ jest.mock('../../lib/progressPhotos', () => ({
   markPhotosOwner: jest.fn(),
 }));
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../../store/useAppStore';
 import { appAlert } from '../../components/AppAlert';
 import { logError } from '../../lib/errorLog';
-import { getWellbeingMode } from '../../lib/wellbeing';
+import { WELLBEING_KEY } from '../../lib/wellbeing';
 import { listProgressPhotos } from '../../lib/progressPhotos';
 import ProgressPhotosScreen from '../ProgressPhotosScreen';
 
@@ -79,7 +80,9 @@ async function render(photos = [NEW, MID, OLD], { mode = 'unspecified', reduceMo
   // so the mock carries it too.
   useAppStore.mockImplementation((sel) => sel({ accessibility: { reduceMotion }, tier }));
   useAppStore.getState = () => ({ tier, user: { id: 'u-test' } });
-  getWellbeingMode.mockResolvedValue(mode);
+  // The screen now reads the wellbeing flag RAW via AsyncStorage (fail-closed
+  // sweep, 2026-07-03) rather than through the getWellbeingMode() helper.
+  await AsyncStorage.setItem(WELLBEING_KEY, mode);
   listProgressPhotos.mockResolvedValue(photos); // newest first, like the lib
   let tree;
   await act(async () => { tree = create(<ProgressPhotosScreen navigation={nav} />); });
