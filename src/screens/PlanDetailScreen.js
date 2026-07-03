@@ -189,6 +189,14 @@ export default function PlanDetailScreen({ navigation, route }) {
     }
   }
 
+  // S5: opens the manual builder directly on this plan's days/exercises
+  // (route param only, ManualBuilderScreen owns the load + save). Additive:
+  // the per-workout pencil (RoutineDetail) is unchanged, this is the one
+  // place a user can add or remove a superset on a plan they already saved.
+  function handleEditPlan() {
+    navigation.navigate('ManualBuilder', { planId });
+  }
+
   const isActive = activePlan?.id === planId;
   // Sum the actual prescribed sets per workout (falling back to 3 per exercise
   // only if a routine has no set-count data), so the estimate reflects the real
@@ -353,6 +361,11 @@ export default function PlanDetailScreen({ navigation, route }) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Manage</Text>
             <View style={styles.manageCard}>
+              <TouchableOpacity style={styles.manageRow} onPress={handleEditPlan} accessibilityRole="button" accessibilityLabel="Edit plan">
+                <Ionicons name="create-outline" size={18} color={colors.primary} />
+                <Text style={styles.manageRowText}>Edit Plan</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </TouchableOpacity>
               <TouchableOpacity style={styles.manageRow} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate plan">
                 <Ionicons name="copy-outline" size={18} color={colors.primary} />
                 <Text style={styles.manageRowText}>Duplicate Plan</Text>

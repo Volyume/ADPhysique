@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
   Modal, KeyboardAvoidingView, Platform,
@@ -8,13 +8,18 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
 import ExercisePickerModal from '../components/ExercisePickerModal';
+import { Skeleton, SkeletonCard } from '../components/Skeleton';
 
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import {
   createProgramme, createRoutine, addExerciseToRoutine,
-  activatePlanWithBlock,
+  activatePlanWithBlock, uid, getProgrammeById, getRoutinesForPlan,
+  getRoutineExercisesWithDetails, updateRoutineName, removeExerciseFromRoutine,
+  softDeleteRoutine,
 } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS } from '../lib/algorithms';
+import { suggestRestSeconds } from '../lib/restSuggest';
+import { logError } from '../lib/errorLog';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
@@ -32,6 +37,24 @@ const GOALS = [
 // Selectable training-days-per-week. Default stays 4 (the prior hardcoded
 // value) so existing behaviour is unchanged for users who don't touch it.
 const DAY_COUNT_OPTIONS = [2, 3, 4, 5, 6];
+
+// S5: matches BuildWorkoutScreen's shipped defaults, so an exercise dropped
+// into a plan here starts with the same targets it would in the workout
+// builder.
+const DEFAULT_SETS = 3;
+const DEFAULT_REST = 90;
+// Hit slop for the small +/- stepper buttons, ported verbatim from
+// BuildWorkoutScreen's stepBtn touchables.
+const STEPPER_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
+
+// Formats seconds as "90s" / "2m" / "2m 15s" — ported verbatim from
+// BuildWorkoutScreen so rest reads identically wherever it's edited.
+function formatRest(secs) {
+  if (secs < 60) return `${secs}s`;
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return s === 0 ? `${m}m` : `${m}m ${s}s`;
+}
 
 // ─── Plan Balance Helpers ─────────────────────────────────────────────────────
 
@@ -147,9 +170,45 @@ function PlanBalanceCard({ days }) {
   );
 }
 
+// ─── Target stepper ───────────────────────────────────────────────────────────
+// S5: the +/- numeric control BuildWorkoutScreen already uses for its
+// per-exercise sets/rest targets, ported here verbatim (same stepper/stepBtn/
+// stepValue look) and reused for sets, reps min, reps max and rest so none of
+// a plan's targets are read-only text any more.
+
+function TargetStepper({ label, displayValue, valueLabel, decreaseLabel, increaseLabel, onDecrease, onIncrease }) {
+  return (
+    <View style={styles.controlGroup}>
+      <Text style={styles.controlLabel}>{label}</Text>
+      <View style={styles.stepper}>
+        <TouchableOpacity
+          style={styles.stepBtn}
+          onPress={onDecrease}
+          hitSlop={STEPPER_HIT_SLOP}
+          accessibilityRole="button"
+          accessibilityLabel={decreaseLabel}
+        >
+          <Ionicons name="remove" size={16} color={colors.primary} />
+        </TouchableOpacity>
+        <Text style={styles.stepValue} accessibilityLabel={valueLabel}>{displayValue}</Text>
+        <TouchableOpacity
+          style={styles.stepBtn}
+          onPress={onIncrease}
+          hitSlop={STEPPER_HIT_SLOP}
+          accessibilityRole="button"
+          accessibilityLabel={increaseLabel}
+        >
+          <Ionicons name="add" size={16} color={colors.primary} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
-export default function ManualBuilderScreen({ navigation }) {
+export default function ManualBuilderScreen({ navigation, route }) {
+  const { planId } = route?.params || {};
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
   const { user } = useAppStore(useShallow(s => ({
     user: s.user,
@@ -170,6 +229,68 @@ export default function ManualBuilderScreen({ navigation }) {
   const [pickerDayIndex, setPickerDayIdx]     = useState(null);
   const [showPicker, setShowPicker]           = useState(false);
   const [saving, setSaving]                   = useState(false);
+
+  // S5: editing an already-saved plan (reached with a planId param, e.g. from
+  // PlanDetailScreen's Manage section) bypasses Page 1 entirely and loads
+  // straight into the Page 2 editor, the same surface used to author a new
+  // plan, so every affordance below (steppers, duplicate, supersets) is
+  // available on a plan someone comes back to later.
+  const isEditMode = !!planId;
+  const [loadingExisting, setLoadingExisting] = useState(isEditMode);
+  // Existing routines removed locally during this edit session. Nothing here
+  // writes until Save (matching the rest of this screen's model), so the
+  // actual soft-delete happens in persistDays; Undo simply un-marks it.
+  const [removedRoutineIds, setRemovedRoutineIds] = useState([]);
+
+  useEffect(() => {
+    if (!planId) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [plan, routines] = await Promise.all([
+          getProgrammeById(planId),
+          getRoutinesForPlan(planId),
+        ]);
+        if (!plan) throw new Error('Plan not found');
+        const loadedDays = await Promise.all(routines.map(async (routine) => {
+          const withDetails = await getRoutineExercisesWithDetails(routine.id);
+          return {
+            // Reuse the real routine id as the local id: it's already
+            // unique and lets persistDays recognise this as an existing
+            // day (routineId set) rather than a brand new one.
+            localId: routine.id,
+            name: routine.name,
+            routineId: routine.id,
+            exercises: withDetails.map(({ routineExercise, exercise }) => ({
+              localId: routineExercise.id,
+              id: exercise.id,
+              name: exercise.name,
+              primaryMuscle: (exercise.primaryMuscle || '').toLowerCase() || null,
+              sets: routineExercise.recommendedSets ?? DEFAULT_SETS,
+              repsMin: routineExercise.recommendedRepsMin ?? 8,
+              repsMax: routineExercise.recommendedRepsMax ?? 12,
+              restSeconds: routineExercise.restSeconds ?? DEFAULT_REST,
+              supersetGroupId: routineExercise.supersetGroupId ?? null,
+            })),
+          };
+        }));
+        if (cancelled) return;
+        setProgrammeId(planId);
+        setEditableName(plan.name || '');
+        setDayList(loadedDays);
+        setPage(2);
+      } catch (e) {
+        if (cancelled) return;
+        logError('ManualBuilderScreen.loadExistingPlan', e, { planId });
+        toast.show("Couldn't load this plan, try again", { variant: 'error' });
+        navigation.goBack();
+      } finally {
+        if (!cancelled) setLoadingExisting(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planId]);
 
   // ── Page 1: create programme ──────────────────────────────────────────────
 
@@ -225,9 +346,13 @@ export default function ManualBuilderScreen({ navigation }) {
             id:           exercise.id,
             name:         exercise.name,
             primaryMuscle: (exercise.primaryMuscle || exercise.primary_muscle || '').toLowerCase() || null,
-            sets:         3,
+            sets:         DEFAULT_SETS,
             repsMin:      exercise.defaultRepMin || exercise.default_rep_min || 8,
             repsMax:      exercise.defaultRepMax || exercise.default_rep_max || 12,
+            // B9 deterministic rest suggestion (compound 180s / isolation
+            // 90s), the same fixed table BuildWorkoutScreen falls back to.
+            // Editable via the stepper the moment it's added.
+            restSeconds:  suggestRestSeconds({ exercise }),
           },
         ],
       };
@@ -276,14 +401,19 @@ export default function ManualBuilderScreen({ navigation }) {
   function handleRemoveDay(dayIndex) {
     // Same Undo pattern as exercise removal: remove immediately, no
     // confirm Alert, an Undo toast restores the whole day (incl. its
-    // exercises) at its original position.
-    let removed = null;
-    setDayList(prev => {
-      if (dayIndex < 0 || dayIndex >= prev.length) return prev;
-      removed = prev[dayIndex];
-      return prev.filter((_, i) => i !== dayIndex);
-    });
+    // exercises) at its original position. Read the day straight from the
+    // current render's days (not a setDayList updater's side effect, which
+    // runs on React's own schedule) so the routineId check below is never
+    // stale.
+    const removed = days[dayIndex];
     if (!removed) return;
+    setDayList(prev => prev.filter((_, i) => i !== dayIndex));
+    // S5 edit mode: this day may already be a saved routine. Nothing is
+    // written until Save, so mark it for soft-delete then (persistDays)
+    // rather than deleting it here.
+    if (removed.routineId) {
+      setRemovedRoutineIds(prev => [...prev, removed.routineId]);
+    }
     toast.show(`Removed ${removed.name}`, {
       variant: 'undo',
       action: {
@@ -294,6 +424,9 @@ export default function ManualBuilderScreen({ navigation }) {
             next.splice(dayIndex, 0, removed);
             return next;
           });
+          if (removed.routineId) {
+            setRemovedRoutineIds(prev => prev.filter(id => id !== removed.routineId));
+          }
         },
       },
     });
@@ -301,6 +434,38 @@ export default function ManualBuilderScreen({ navigation }) {
 
   function updateDayName(dayIndex, newName) {
     setDayList(prev => prev.map((d, i) => i === dayIndex ? { ...d, name: newName } : d));
+  }
+
+  function handleDuplicateDay(dayIndex) {
+    const original = days[dayIndex];
+    if (!original) return;
+    // Remap superset group ids so the clone's pairs are independent of the
+    // original's (grouping/ungrouping one copy never touches the other).
+    const groupIdMap = {};
+    const clonedExercises = original.exercises.map(ex => {
+      let newGroupId = null;
+      if (ex.supersetGroupId) {
+        if (!groupIdMap[ex.supersetGroupId]) {
+          groupIdMap[ex.supersetGroupId] = `ss-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        }
+        newGroupId = groupIdMap[ex.supersetGroupId];
+      }
+      return { ...ex, localId: uid(), supersetGroupId: newGroupId };
+    });
+    const clone = {
+      localId: uid(),
+      name: `${original.name} (copy)`,
+      exercises: clonedExercises,
+      // A fresh day, even when duplicating one that's already saved: it
+      // gets its own new routine on Save, the original is untouched.
+      routineId: null,
+    };
+    setDayList(prev => {
+      const next = prev.slice();
+      next.splice(dayIndex + 1, 0, clone);
+      return next;
+    });
+    toast.show(`Duplicated ${original.name}`, { variant: 'success' });
   }
 
   // ── Supersets ─────────────────────────────────────────────────────────────
@@ -370,6 +535,24 @@ export default function ManualBuilderScreen({ navigation }) {
     }));
   }
 
+  // ── Target steppers ───────────────────────────────────────────────────────
+  // Single clamp-and-set helper behind every +/- press (sets, reps min/max,
+  // rest), the same Math.max/Math.min clamp BuildWorkoutScreen's
+  // adjustSets/adjustRest use.
+  function adjustExerciseNumber(dayIndex, exLocalId, field, delta, min, max) {
+    setDayList(prev => prev.map((d, i) => {
+      if (i !== dayIndex) return d;
+      return {
+        ...d,
+        exercises: d.exercises.map(ex => {
+          if (ex.localId !== exLocalId) return ex;
+          const next = Math.max(min, Math.min(max, (ex[field] ?? 0) + delta));
+          return { ...ex, [field]: next };
+        }),
+      };
+    }));
+  }
+
   // ── Validation & persistence ──────────────────────────────────────────────
 
   function validate(requireExercises = true) {
@@ -394,19 +577,42 @@ export default function ManualBuilderScreen({ navigation }) {
   async function persistDays() {
     for (let i = 0; i < days.length; i++) {
       const day = days[i];
-      const routine = await createRoutine(
-        user.id,
-        day.name.trim() || `Day ${i + 1}`,
-        null, null, 0, null,
-        programmeId,
-      );
+      let routineId = day.routineId;
+      if (routineId) {
+        // S5 edit mode: an existing routine, loaded for editing. Keep its
+        // identity (workout history references it by routine_id, never by
+        // routine_exercises row id) so past sessions stay linked; rename if
+        // changed, then rebuild its exercise list from the current local
+        // state. routine_exercises are lightweight template rows with no FK
+        // from logged workout_sets, so clear-and-reinsert is safe here, the
+        // same approach duplicateRoutine already uses to copy a routine.
+        await updateRoutineName(routineId, day.name.trim() || `Day ${i + 1}`);
+        const existingExercises = await getRoutineExercisesWithDetails(routineId);
+        for (const { routineExercise } of existingExercises) {
+          await removeExerciseFromRoutine(routineExercise.id);
+        }
+      } else {
+        const routine = await createRoutine(
+          user.id,
+          day.name.trim() || `Day ${i + 1}`,
+          null, null, 0, null,
+          programmeId,
+        );
+        routineId = routine.id;
+      }
       for (let j = 0; j < day.exercises.length; j++) {
         const ex = day.exercises[j];
         await addExerciseToRoutine(
-          routine.id, ex.id, j, ex.repsMin, ex.repsMax, null, ex.sets,
-          null, null, ex.supersetGroupId ?? null,
+          routineId, ex.id, j, ex.repsMin, ex.repsMax, null, ex.sets,
+          null, ex.restSeconds ?? null, ex.supersetGroupId ?? null,
         );
       }
+    }
+    // Days that existed on load but were removed during this edit session:
+    // soft-delete now so they drop out of the plan everywhere else
+    // (PlanDetailScreen's workout list etc.)
+    for (const routineId of removedRoutineIds) {
+      await softDeleteRoutine(routineId);
     }
   }
 
@@ -439,6 +645,41 @@ export default function ManualBuilderScreen({ navigation }) {
     } finally {
       setSaving(false);
     }
+  }
+
+  // S5 edit mode: a single Save, no separate Activate step. Re-running
+  // activatePlanWithBlock on a plan someone is just editing would spin up a
+  // brand new training block (and deload timing) as a side effect of, say,
+  // adding one superset, an unrelated and surprising reset. Editing an
+  // already-active plan should never touch that. Saves are lenient (matches
+  // Save Draft), an edit session can leave a day empty and be finished later.
+  async function handleSaveEdit() {
+    if (!validate(false)) return;
+    setSaving(true);
+    try {
+      await persistDays();
+      toast.show('Plan updated', { variant: 'success' });
+      navigation.goBack();
+    } catch (e) {
+      toast.show(e.message || "Couldn't save changes", { variant: 'error' });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // ── Loading an existing plan (S5 edit mode) ───────────────────────────────
+
+  if (loadingExisting) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <BackHeader title="Edit Plan" />
+        <View style={styles.page2Content}>
+          <Skeleton width="55%" height={24} />
+          <SkeletonCard height={140} />
+          <SkeletonCard height={140} />
+        </View>
+      </SafeAreaView>
+    );
   }
 
   // ── Page 1 render ─────────────────────────────────────────────────────────
@@ -536,7 +777,7 @@ export default function ManualBuilderScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <BackHeader title="Build a Plan" />
+      <BackHeader title={isEditMode ? 'Edit Plan' : 'Build a Plan'} />
       <ExercisePickerModal
         visible={showPicker}
         onClose={() => setShowPicker(false)}
@@ -572,6 +813,14 @@ export default function ManualBuilderScreen({ navigation }) {
                 placeholder="Day name"
                 placeholderTextColor={colors.textMuted}
               />
+              <TouchableOpacity
+                onPress={() => handleDuplicateDay(dayIdx)}
+                hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Duplicate ${day.name}`}
+              >
+                <Ionicons name="copy-outline" size={18} color={colors.textSecondary} />
+              </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => handleRemoveDay(dayIdx)}
                 hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
@@ -627,9 +876,44 @@ export default function ManualBuilderScreen({ navigation }) {
                               </View>
                             )}
                           </View>
-                          <Text style={styles.exMeta}>
-                            {ex.sets} sets × {ex.repsMin}–{ex.repsMax} reps
-                          </Text>
+                          <View style={styles.controls}>
+                            <TargetStepper
+                              label="Sets"
+                              displayValue={ex.sets}
+                              valueLabel={`${ex.sets} sets`}
+                              decreaseLabel={`Decrease sets for ${ex.name}`}
+                              increaseLabel={`Increase sets for ${ex.name}`}
+                              onDecrease={() => adjustExerciseNumber(dayIdx, ex.localId, 'sets', -1, 1, 20)}
+                              onIncrease={() => adjustExerciseNumber(dayIdx, ex.localId, 'sets', 1, 1, 20)}
+                            />
+                            <TargetStepper
+                              label="Reps min"
+                              displayValue={ex.repsMin}
+                              valueLabel={`${ex.repsMin} minimum reps`}
+                              decreaseLabel={`Decrease minimum reps for ${ex.name}`}
+                              increaseLabel={`Increase minimum reps for ${ex.name}`}
+                              onDecrease={() => adjustExerciseNumber(dayIdx, ex.localId, 'repsMin', -1, 1, 50)}
+                              onIncrease={() => adjustExerciseNumber(dayIdx, ex.localId, 'repsMin', 1, 1, 50)}
+                            />
+                            <TargetStepper
+                              label="Reps max"
+                              displayValue={ex.repsMax}
+                              valueLabel={`${ex.repsMax} maximum reps`}
+                              decreaseLabel={`Decrease maximum reps for ${ex.name}`}
+                              increaseLabel={`Increase maximum reps for ${ex.name}`}
+                              onDecrease={() => adjustExerciseNumber(dayIdx, ex.localId, 'repsMax', -1, 1, 50)}
+                              onIncrease={() => adjustExerciseNumber(dayIdx, ex.localId, 'repsMax', 1, 1, 50)}
+                            />
+                            <TargetStepper
+                              label="Rest"
+                              displayValue={formatRest(ex.restSeconds ?? DEFAULT_REST)}
+                              valueLabel={`Rest ${formatRest(ex.restSeconds ?? DEFAULT_REST)}`}
+                              decreaseLabel={`Decrease rest for ${ex.name}`}
+                              increaseLabel={`Increase rest for ${ex.name}`}
+                              onDecrease={() => adjustExerciseNumber(dayIdx, ex.localId, 'restSeconds', -15, 30, 600)}
+                              onIncrease={() => adjustExerciseNumber(dayIdx, ex.localId, 'restSeconds', 15, 30, 600)}
+                            />
+                          </View>
                         </View>
                         {groupIdx >= 0 && (
                           <TouchableOpacity
@@ -679,30 +963,48 @@ export default function ManualBuilderScreen({ navigation }) {
         {/* Plan balance */}
         <PlanBalanceCard days={days} />
 
-        {/* Action buttons */}
-        <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={[styles.draftBtn, saving && styles.btnDisabled]}
-            onPress={handleSaveDraft}
-            disabled={saving}
-            accessibilityRole="button"
-            accessibilityLabel="Save draft"
-            accessibilityState={{ disabled: saving }}
-          >
-            <Text style={styles.draftBtnText}>Save Draft</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.activateBtn, saving && styles.btnDisabled]}
-            onPress={handleSaveAndActivate}
-            disabled={saving}
-            accessibilityRole="button"
-            accessibilityLabel="Save and activate"
-            accessibilityState={{ disabled: saving }}
-          >
-            <Ionicons name="flash" size={18} color={colors.onPrimary} />
-            <Text style={styles.activateBtnText}>Save & Activate</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Action buttons. Editing an existing plan gets one calm Save: no
+            separate Activate step, so saving a superset tweak never spins up
+            a new training block as a side effect (see handleSaveEdit). */}
+        {isEditMode ? (
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={[styles.activateBtn, saving && styles.btnDisabled]}
+              onPress={handleSaveEdit}
+              disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel="Save changes"
+              accessibilityState={{ disabled: saving }}
+            >
+              <Ionicons name="checkmark-circle" size={18} color={colors.onPrimary} />
+              <Text style={styles.activateBtnText}>Save Changes</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={[styles.draftBtn, saving && styles.btnDisabled]}
+              onPress={handleSaveDraft}
+              disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel="Save draft"
+              accessibilityState={{ disabled: saving }}
+            >
+              <Text style={styles.draftBtnText}>Save Draft</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.activateBtn, saving && styles.btnDisabled]}
+              onPress={handleSaveAndActivate}
+              disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel="Save and activate"
+              accessibilityState={{ disabled: saving }}
+            >
+              <Ionicons name="flash" size={18} color={colors.onPrimary} />
+              <Text style={styles.activateBtnText}>Save & Activate</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
 
       {/* Success Modal */}
@@ -885,7 +1187,10 @@ const styles = StyleSheet.create({
   },
   exRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    // flex-start, not center: the control row below the exercise name can
+    // wrap onto a second line, so the leading select icon stays pinned to
+    // the name rather than floating in the middle of a taller row.
+    alignItems: 'flex-start',
     gap: spacing.sm,
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
@@ -936,9 +1241,47 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
     color: colors.textPrimary,
   },
-  exMeta: {
-    ...type.num('caption'),
+  // Target steppers (S5): ported verbatim from BuildWorkoutScreen's
+  // controls/controlGroup/controlLabel/stepper/stepBtn/stepValue, the
+  // per-exercise sets/rest stepper look, reused here for sets, reps min,
+  // reps max and rest.
+  controls: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  controlGroup: {
+    gap: spacing.xs,
+    alignItems: 'center',
+    minWidth: 70,
+  },
+  controlLabel: {
+    fontSize: fontSize.xs,
     color: colors.textMuted,
+    fontWeight: fontWeight.medium,
+    textAlign: 'center',
+  },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  stepBtn: {
+    width: 30,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepValue: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+    minWidth: 32,
+    textAlign: 'center',
   },
   addExBtn: {
     flexDirection: 'row',
