@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import EngineLog from '../components/EngineLog';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { getCoachOutputHistory } from '../lib/database';
+import { getCoachOutputHistory, getOpenEdPatternFlag } from '../lib/database';
+import { getWellbeingMode, isCalm } from '../lib/wellbeing';
+import { pairAppliedWithOutcome, buildScorecard } from '../lib/coachOutcome';
 import { SkeletonCard } from '../components/Skeleton';
 
 const MONTH_NAMES = [
@@ -21,38 +23,51 @@ function formatWeekStart(ms) {
   return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-function buildDecisionRows(week) {
+function buildDecisionRows(week, pairs = []) {
   const rows = [];
 
   const adj = week.adjustments ?? {};
 
+  // S1 outcome loop: tag a 'changed' row with its domain and, when the outcome
+  // pairing verdicted that applied call the following week, attach the Applied
+  // chip + verdict. `pairs` is [] under ED/calm suppression, so no chip renders.
+  const withOutcome = (row, domain) => {
+    row.domain = domain;
+    const p = pairs.find((x) => x.weekStart === week.weekStart && x.domain === domain);
+    if (p) {
+      row.applied = true;
+      row.verdictText = p.onTarget ? 'On target the following week.' : 'Off target the following week.';
+    }
+    return row;
+  };
+
   if (adj.calories?.change && adj.calories.note) {
     const amt = Math.abs(adj.calories.change);
-    rows.push({
+    rows.push(withOutcome({
       type: 'changed',
       icon: 'checkmark-circle-outline',
       label: adj.calories.change > 0 ? `Calories up +${amt} kcal/day` : `Calories down ${amt} kcal/day`,
       detail: adj.calories.note,
-    });
+    }, 'calories'));
   }
 
   const trainingSignal = adj.training?.signal;
   if (trainingSignal && trainingSignal !== 'hold' && adj.training?.note) {
-    rows.push({
+    rows.push(withOutcome({
       type: 'changed',
       icon: 'checkmark-circle-outline',
       label: trainingSignal === 'push' ? 'More work added this week' : 'Volume pulled back this week',
       detail: adj.training.note,
-    });
+    }, 'training'));
   }
 
   if (adj.steps?.target && adj.steps.change && adj.steps.note) {
-    rows.push({
+    rows.push(withOutcome({
       type: 'changed',
       icon: 'checkmark-circle-outline',
       label: `Daily steps raised to ${adj.steps.target.toLocaleString()}`,
       detail: adj.steps.note,
-    });
+    }, 'steps'));
   }
 
   if (week.deloadSuggested && week.deloadNote) {
@@ -82,11 +97,25 @@ export default function CoachHeldHistoryScreen() {
     user: s.user,
   })));
   const [weeks, setWeeks] = useState([]);
+  // S1: the FULL unfiltered history drives the outcome pairing/scorecard (the
+  // displayed `weeks` is filtered for cards only). `suppress` hides the S1
+  // additions under an open ED flag / calm mode.
+  const [historyFull, setHistoryFull] = useState([]);
+  const [suppress, setSuppress] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      const history = await getCoachOutputHistory(user.id);
+      // ED-safety, fail CLOSED: the outcome loop + scorecard are trend-adjacent,
+      // so a FAILED flag/wellbeing read suppresses them (never shows over a
+      // possibly-open flag). A sentinel 'read_failed' reads as suppress.
+      const [history, edFlag, wellbeing] = await Promise.all([
+        getCoachOutputHistory(user.id),
+        getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
+        getWellbeingMode().catch(() => 'read_failed'),
+      ]);
+      setSuppress(!!edFlag || wellbeing === 'read_failed' || isCalm(wellbeing));
+      setHistoryFull(history);
       const withData = history.filter(w => {
         const hasHeld = Array.isArray(w.heldDecisions) && w.heldDecisions.length > 0;
         const hasChanged = w.adjustments?.calories?.change ||
@@ -102,6 +131,10 @@ export default function CoachHeldHistoryScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Suppressed -> [] / null, so the outcome chips + scorecard render nothing.
+  const pairs = suppress ? [] : pairAppliedWithOutcome(historyFull);
+  const scorecard = suppress ? null : buildScorecard(historyFull);
+
   const isEmpty = !loading && weeks.length === 0;
   const totalDecisions = weeks.reduce((n, w) => n + buildDecisionRows(w).length, 0);
 
@@ -113,6 +146,14 @@ export default function CoachHeldHistoryScreen() {
         <Text style={styles.intro}>
           Every call the coach has made, what changed, what didn't, and why.
         </Text>
+
+        {/* S1 the coach's scorecard (the track record). Hidden under ED/calm
+            suppression and below the minimum sample; counts only, no body data. */}
+        {scorecard != null && (
+          <Text style={styles.scorecard}>
+            Weeks you applied the call and the next trend landed on target: {scorecard.onTarget} of {scorecard.of}.
+          </Text>
+        )}
 
         {/* Recent engine adaptations and rep-regression warnings, moved
             from the retired Athlete Hub dashboard. */}
@@ -137,7 +178,7 @@ export default function CoachHeldHistoryScreen() {
         )}
 
         {weeks.map((week, wi) => {
-          const rows = buildDecisionRows(week);
+          const rows = buildDecisionRows(week, pairs);
           return (
             <View key={week.weekStart ?? wi} style={styles.weekBlock}>
               <Text style={styles.weekLabel} accessibilityRole="header">
@@ -148,7 +189,10 @@ export default function CoachHeldHistoryScreen() {
                   key={ri}
                   style={styles.decisionRow}
                   accessible
-                  accessibilityLabel={row.label ? `${row.label}. ${row.detail}` : `Held. ${row.detail}`}
+                  accessibilityLabel={
+                    (row.label ? `${row.label}. ${row.detail}` : `Held. ${row.detail}`)
+                    + (row.applied ? ` Applied. ${row.verdictText}` : '')
+                  }
                 >
                   <Ionicons
                     name={row.icon}
@@ -166,6 +210,14 @@ export default function CoachHeldHistoryScreen() {
                       </Text>
                     )}
                     <Text style={styles.decisionDetail}>{row.detail}</Text>
+                    {row.applied && (
+                      <View style={styles.appliedRow}>
+                        <View style={styles.appliedPill}>
+                          <Text style={styles.appliedPillText}>Applied</Text>
+                        </View>
+                        <Text style={styles.verdictText}>{row.verdictText}</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
               ))}
@@ -196,6 +248,12 @@ const styles = StyleSheet.create({
   intro: {
     ...type.bodySm,
     color: colors.textMuted,
+  },
+
+  scorecard: {
+    ...type.bodySm,
+    color: colors.textPrimary,
+    fontWeight: fontWeight.semibold,
   },
 
   emptyCard: {
@@ -246,6 +304,30 @@ const styles = StyleSheet.create({
   },
   decisionLabelChanged: { color: colors.success },
   decisionDetail: {
+    ...type.bodySm,
+    color: colors.textSecondary,
+  },
+
+  // S1 outcome loop: the Applied chip + next-week verdict under a decision row.
+  appliedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+    flexWrap: 'wrap',
+  },
+  appliedPill: {
+    backgroundColor: withAlpha(colors.success, 0.15),
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  appliedPillText: {
+    ...type.label,
+    color: colors.success,
+    fontWeight: fontWeight.semibold,
+  },
+  verdictText: {
     ...type.bodySm,
     color: colors.textSecondary,
   },
