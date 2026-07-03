@@ -99,3 +99,37 @@ is / something else in your words.
 
 (D6 media and D9 quiz-first stay held per your directive; D10 is now a
 release-checklist process line — no decision needed.)
+
+---
+
+## FOUNDER RESPONSE RECEIVED (2026-07-03, recorded verbatim in substance)
+
+- D2 DECIDED: Option A remember-skip toggle (modal + Settings > Coaching).
+  Rule of record: never fabricate coaching input; opt-outs send no readiness
+  signal and session adjustments simply do not fire (identical to Skip,
+  engine untouched). Toggle copy states plainly what is lost, calm register;
+  re-enabling restores the modal next session. Test required: absent input
+  produces NO adjustment rather than a default.
+- D3 DECIDED: Option 1 — merge trial-value ledger + free-tier weekly line +
+  differential badge into one "worth your attention" card class; the four
+  coaching-signal banners stay distinct. Condition: the merged card's
+  internal priority order is written explicitly in the plan AND recorded in
+  the component. Option 2 not while E1 is in flight.
+- D5 CONFIRMED: Home always shows the next session; plan is round-robin; no
+  calendar rest day. Standing rule for all future copy. ATTACHED CONDITION:
+  the A2 rest-day surface must be re-specified before build — its trigger
+  derives from the reminder schedule and recent-session state and must NEVER
+  assert "today is your rest day" as a plan fact. A revised A2 decision pack
+  (trigger + copy) goes to the founder before any build.
+- D1 OPEN: the founder's option choice (2 or 3) and his recorded reason for
+  the 2026-06-30 removal arrived as unfilled [AL] slots. No action until his
+  words land. If Option 2 ever proceeds: chip hidden (not locked) on free.
+- D4 OPEN: option choice and the calm word arrived as unfilled [AL] slots.
+  Non-negotiable already accepted: the glyph gets an accessibilityLabel with
+  his chosen word regardless of the visual choice.
+- D7 OPEN: suppress/leave/other arrived as an unfilled [AL] slot. If
+  suppression is chosen: the ProSetupComplete getOpenEdPatternFlag pattern
+  is the spec, STRONG model, locked-voice review, ED regression tests.
+- D6/D9 remain HELD; D10 done as a checklist line. Model tiering: D7 and
+  the intent-modal coaching-input contract are STRONG; chip/banner/glyph
+  are FAST with STRONG review.

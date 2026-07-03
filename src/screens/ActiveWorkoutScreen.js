@@ -1184,7 +1184,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // reuse the weight field for time/distance, so running the weight x reps
       // 1RM/heaviest detector over them would report meaningless "PRs".
       const prs = isWeightReps ? detectPR(setData, prHistory, exercise, units) : [];
-      if (prs.length > 0) {
+      if (prs.length > 0 && prHistory.length === 0) {
+        // Wave A A1: the first-ever set of an exercise beats nothing —
+        // detectPR compares against empty history, so "PERSONAL RECORD"
+        // would be a false claim in the very session that builds trust.
+        // Acknowledge the first honestly and quietly instead (PRCelebration
+        // renders its calm first-lift toast), and it never joins the
+        // session's PR list. detectPR itself is untouched: this set still
+        // becomes the baseline every later comparison uses.
+        showPRCelebration({
+          type: 'first_lift',
+          weight: setData.weight,
+          reps: setData.actualReps,
+          value: setData.weight,
+          previousValue: null,
+          label: `${setData.weight}${units} × ${setData.actualReps} logged as your starting point`,
+          exerciseName: exercise.name,
+        });
+      } else if (prs.length > 0) {
         showPRCelebration({ ...prs[0], exerciseName: exercise.name });
         // Keep one PR per exercise (the most significant), so a multi-set,
         // multi-exercise session reports a handful of PRs, not dozens. The

@@ -53,4 +53,6 @@ export const GLOSSARY = {
     'Protein, carbs and fat: the three nutrients your daily calories are made of.',
   proteinTier:
     'How high your protein target is set per kilo of bodyweight: Standard, Optimised (the recommended balance) or Advanced (higher, for harder cuts and competitors).',
+  recomposition:
+    'Your weight held steady while your shape or strength kept improving. A sign fat and muscle are both changing, even though the scale is not moving.',
 };

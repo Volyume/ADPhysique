@@ -919,13 +919,16 @@ export default function BodyMetricsScreen() {
                     {adaptiveBurn.insight ? (
                       <Text style={styles.burnMuted}>{adaptiveBurn.insight}</Text>
                     ) : null}
-                    <Text style={styles.burnConfidence}>
-                      {adaptiveBurn.confidence === 'high'
-                        ? 'High confidence'
-                        : adaptiveBurn.confidence === 'medium'
-                          ? 'Firming up'
-                          : 'Early estimate'}, from {adaptiveBurn.weeks} {adaptiveBurn.weeks === 1 ? 'week' : 'weeks'} of data
-                    </Text>
+                    <View style={styles.burnConfidenceRow}>
+                      <Text style={styles.burnConfidence}>
+                        {adaptiveBurn.confidence === 'high'
+                          ? 'High confidence'
+                          : adaptiveBurn.confidence === 'medium'
+                            ? 'Firming up'
+                            : 'Early estimate'}, from {adaptiveBurn.weeks} {adaptiveBurn.weeks === 1 ? 'week' : 'weeks'} of data
+                      </Text>
+                      <InfoTooltip text="More weeks of consistent weight and food logging tighten this estimate. It settles on its own; nothing to do." />
+                    </View>
                   </>
                 )}
               </View>
@@ -1235,6 +1238,7 @@ function RecompCard({ vm, weightUnits = 'kg' }) {
       <View style={styles.recompHeaderRow}>
         <Ionicons name="sync-outline" size={14} color={colors.textMuted} />
         <Text style={styles.sectionTitle}>Recomposition</Text>
+        <InfoTooltip text={GLOSSARY.recomposition} />
       </View>
       <Text style={styles.recompRead}>{parts.join(' ')}</Text>
       <Text style={styles.recompNote}>{sentence}</Text>
@@ -1426,4 +1430,5 @@ const styles = StyleSheet.create({
   burnUnit: { fontSize: fontSize.sm, color: colors.textSecondary },
   burnMuted: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
   burnConfidence: { ...type.caption, color: colors.textSecondary },
+  burnConfidenceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
 });

@@ -228,6 +228,23 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   <Text style={styles.routineTitle}>2 · Hit your daily targets</Text>
                 </View>
               </View>
+              {/* Wave A B5: the primer is offered BEFORE the numbers. Most
+                  users seeing macro targets for the first time have never
+                  tracked, so the escape hatch comes ahead of the possibly
+                  confusing content, not after it. */}
+              <TouchableOpacity
+                style={[styles.eduLearnRow, styles.eduLearnRowTop]}
+                onPress={() => navigation.navigate('NutritionEducation')}
+                activeOpacity={0.7}
+                accessibilityRole="link"
+                accessibilityLabel="New to calories and macros? Open the five-minute guide"
+              >
+                <Ionicons name="book-outline" size={14} color={colors.primary} />
+                <Text style={styles.eduLearnText}>
+                  New to calories and macros? 5-minute guide
+                </Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+              </TouchableOpacity>
               {/* The kcal ring is the Diary tab's signature, so the reveal
                   shows the same shape the first time these numbers appear.
                   Target framing, not progress: the ring is drawn full, since
@@ -272,23 +289,6 @@ export default function ProSetupCompleteScreen({ navigation }) {
               <Text style={styles.targetsNote}>
                 Hit these most days. Logging your food in your food diary sharpens your coaching, and your weight trend carries the rest.
               </Text>
-              {/* First-time nutrition primer pointer. Most users seeing
-                  these numbers for the first time have never tracked
-                  macros, so this gives them a 5-min ramp before they need
-                  to actually use them. */}
-              <TouchableOpacity
-                style={styles.eduLearnRow}
-                onPress={() => navigation.navigate('NutritionEducation')}
-                activeOpacity={0.7}
-                accessibilityRole="link"
-                accessibilityLabel="New to calories and macros? Open the five-minute guide"
-              >
-                <Ionicons name="book-outline" size={14} color={colors.primary} />
-                <Text style={styles.eduLearnText}>
-                  New to calories and macros? 5-minute guide
-                </Text>
-                <Ionicons name="chevron-forward" size={14} color={colors.primary} />
-              </TouchableOpacity>
               {/* Optional head start: a full week of meals built to these
                   targets, with a shopping list, waiting in Meal planning. */}
               {mealsBuilt ? (
@@ -395,8 +395,28 @@ export default function ProSetupCompleteScreen({ navigation }) {
                     ? `Keep logging your morning weight and your first review lands on ${firstReviewLabel}. Two minutes to review how the week went. Precision Coaching adjusts your calories from your check-in data, automatically, with a written rationale.`
                     : 'End of your training week, two minutes to review how it went. Precision Coaching adjusts your calories from your check-in data, automatically, with a written rationale.'}
                 </Text>
+                {/* Wave A B3: the trial arc, stated once, calmly, so day 14
+                    is never a surprise. Facts mirror the subscription FAQ. */}
+                <Text style={styles.routineBody}>
+                  Your full access runs for 14 days. If you decide not to
+                  continue after that, your training log, plans and personal
+                  bests stay free forever.
+                </Text>
               </View>
             </View>
+            {/* Wave A B3: Precision Coaching is named twice on this screen;
+                this link means it is explained BEFORE it ever acts. */}
+            <TouchableOpacity
+              style={styles.eduLearnRow}
+              onPress={() => navigation.navigate('Methodology', { source: 'setup_complete' })}
+              activeOpacity={0.7}
+              accessibilityRole="link"
+              accessibilityLabel="How Precision Coaching works"
+            >
+              <Ionicons name="bulb-outline" size={14} color={colors.primary} />
+              <Text style={styles.eduLearnText}>How Precision Coaching works</Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+            </TouchableOpacity>
           </Animated.View>
 
         </View>
@@ -499,6 +519,8 @@ const styles = StyleSheet.create({
   },
   goalChipText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
   eduLearnRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
+  // Variant for a primer offered ABOVE content (B5): no divider, tighter.
+  eduLearnRowTop: { borderTopWidth: 0, paddingTop: 0, marginTop: spacing.xs, marginBottom: spacing.xs },
   eduLearnText: { color: colors.primary, ...type.label, flex: 1 },
   targetsNote: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.sm },
 

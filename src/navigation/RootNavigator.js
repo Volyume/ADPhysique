@@ -609,6 +609,9 @@ function ProOnboardingStack() {
       {/* Registered here too so the onboarding hand-off screen can link
           straight into the nutrition guide without leaving the flow. */}
       <Stack.Screen name="NutritionEducation" component={NutritionEducationScreen} />
+      {/* Wave A B3: the hand-off screen links "How Precision Coaching works"
+          so the trial is never a black box before the first check-in. */}
+      <Stack.Screen name="Methodology" component={MethodologyScreen} options={{ headerShown: true, title: 'How Precision Coaching works' }} />
     </Stack.Navigator>
   );
 }

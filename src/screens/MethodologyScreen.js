@@ -79,10 +79,13 @@ const SECTIONS = [
   {
     key: 'safety',
     title: 'Safety floors',
+    // Locked Pattern 10 (COACHING_VOICE_SYNTHESIS_LOCKED.md): plain-mechanism
+    // language — "lean mass", never "fat-free mass"/"FFM". The 30 kcal/kg
+    // number and mechanism are unchanged.
     body:
       'Precision Coaching will not suggest a calorie cut if your average intake over ' +
-      'the last seven days is already at or below the energy floor for your fat-free ' +
-      'mass. That floor is 30 calories per kilogram of fat-free mass a day, taken ' +
+      'the last seven days is already at or below the energy floor for your lean ' +
+      'mass. That floor is 30 calories per kilogram of lean mass a day, taken ' +
       'from sports-medicine guidance on energy availability. Below it, the body ' +
       'starts breaking down muscle to fuel itself. There is also a fixed minimum ' +
       'below which Precision Coaching never suggests cutting, whatever the maths says. These checks ' +
@@ -98,10 +101,24 @@ const SECTIONS = [
   },
 ];
 
+// Wave A B2: land the reader on the section their entry point is about,
+// instead of always defaulting to the cooldown section. Falls back to the
+// first section for unknown sources so the page never opens fully closed.
+const SOURCE_SECTION = {
+  held_decisions: 'holds',
+  why_block: 'cooldown',
+  paywall: 'safety',
+  goal_lock: 'safety',
+  plan_reveal: 'training',
+  trial_banner: 'cooldown',
+  setup_complete: 'cooldown',
+};
+
 export default function MethodologyScreen({ route }) {
-  // First collapsible section starts open so the page never reads as a wall of
-  // closed rows; the rest are tap-to-open. Set is keyed by section key.
-  const [openKeys, setOpenKeys] = useState({ [SECTIONS[0].key]: true });
+  // One collapsible section starts open so the page never reads as a wall of
+  // closed rows; which one depends on where the reader came from.
+  const initialKey = SOURCE_SECTION[route?.params?.source] ?? SECTIONS[0].key;
+  const [openKeys, setOpenKeys] = useState({ [initialKey]: true });
   const toggle = (key) => setOpenKeys(prev => ({ ...prev, [key]: !prev[key] }));
 
   // COMP-006: one-time trust-formation signal. source distinguishes the entry

@@ -1299,6 +1299,18 @@ export default function HomeScreen({ navigation, route }) {
                 ))}
               </View>
             ) : null}
+            {/* Wave A B3: the trial should never be a black box. One quiet
+                link to the methodology page, from day 0, before the first
+                coaching decision ever lands. Cross-tab: Methodology lives in
+                the ProfileTab stack (F4 rule, RootNavigator.js:616-633). */}
+            <TouchableOpacity
+              onPress={() => navigation.getParent()?.navigate('ProfileTab', { screen: 'Methodology', params: { source: 'trial_banner' }, initial: false })}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="link"
+              accessibilityLabel="How Precision Coaching works"
+            >
+              <Text style={styles.trialBannerLink}>How Precision Coaching works</Text>
+            </TouchableOpacity>
           </TouchableOpacity>
         )}
 
@@ -2711,6 +2723,7 @@ const styles = StyleSheet.create({
   trialLedgerRowTextDone: {
     color: colors.textPrimary,
   },
+  trialBannerLink: { ...type.caption, color: colors.primary, marginTop: spacing.xs },
   coachBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
   coachBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
   coachBannerBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 17 },

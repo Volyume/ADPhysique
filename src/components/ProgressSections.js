@@ -235,16 +235,16 @@ export function WorkloadCard({ data }) {
   const { acute, chronic, ratio } = data;
 
   let statusColor = colors.textMuted;
-  let statusText = 'Below training average. Consider more volume.';
+  let statusText = 'Below your recent average (under 0.8). Room for more volume if you feel fresh.';
   if (ratio >= 1.5) {
     statusColor = colors.error;
-    statusText = 'High load this week. Consider an easier session.';
+    statusText = 'High load this week (above 1.5). Consider an easier session.';
   } else if (ratio >= 1.3) {
     statusColor = colors.warning;
-    statusText = 'Load is elevated. Monitor how you feel.';
+    statusText = 'Load is elevated (above 1.3). Monitor how you feel.';
   } else if (ratio >= 0.8) {
     statusColor = colors.success;
-    statusText = 'Load is in the optimal training zone.';
+    statusText = 'In your optimal range (0.8 to 1.3).';
   }
 
   // Simple visual bar: fill proportional to ratio, capped at 2.0
@@ -264,7 +264,7 @@ export function WorkloadCard({ data }) {
       <View style={styles.workloadStats}>
         <View style={styles.workloadStat}>
           <Text style={styles.workloadStatValue}>{(ratio).toFixed(2)}</Text>
-          <Text style={styles.workloadStatLabel}>Ratio</Text>
+          <Text style={styles.workloadStatLabel}>vs recent average</Text>
         </View>
         <View style={styles.workloadStat}>
           <Text style={styles.workloadStatValue}>{acute.toLocaleString('en-GB')}</Text>

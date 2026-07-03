@@ -82,6 +82,21 @@ export default function ProGoalSetupScreen({ navigation }) {
   })));
 
   const [selectedGoal, setSelectedGoal] = useState(userProfile?.trainingGoal ?? null);
+  // Wave A B4: the footer names the next check-in day. Same flat prefs blob
+  // the check-in screen reads (checkinDay 0=Sunday, default 0); best-effort.
+  const [nextCheckinLabel, setNextCheckinLabel] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
+        const day = raw ? (JSON.parse(raw).checkinDay ?? 0) : 0;
+        const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        if (!cancelled) setNextCheckinLabel(DAYS[day] ?? 'Sunday');
+      } catch (_) { /* footer falls back to the undated line */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
   const [selectedPhase, setSelectedPhase] = useState(userProfile?.trainingPhase ?? 'lean_gain');
   const [proteinApproach, setProteinApproach] = useState(
     userProfile?.proteinApproach
@@ -568,7 +583,12 @@ export default function ProGoalSetupScreen({ navigation }) {
         <View style={styles.footerNote}>
           <Ionicons name="information-circle-outline" size={15} color={colors.textMuted} />
           <Text style={styles.footerNoteText}>
-            Changing your goals updates your plan targets immediately. Precision Coaching adjusts at the next check-in.
+            {/* Wave A B4: the next check-in is a date, not an abstract
+                future event. Same prefs source the check-in screen reads. */}
+            Changing your goals updates your plan targets immediately.
+            {nextCheckinLabel
+              ? ` Precision Coaching adjusts at your next check-in on ${nextCheckinLabel}.`
+              : ' Precision Coaching adjusts at the next check-in.'}
           </Text>
         </View>
 

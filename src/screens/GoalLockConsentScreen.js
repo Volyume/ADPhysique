@@ -12,10 +12,13 @@ import { setGoalLockAdvanced, getGoalLockAdvanced, recordEngineTelemetry } from 
 /**
  * GoalLockConsentScreen (Move #2).
  *
- * Shown inside Pro onboarding when the selected goal is
- * physique_competition or advanced_recomp, and also reachable
- * from the You tab as an edit surface. Locked copy lives in
- * ONBOARDING_SEQUENCE_LOCKED.md Screen 6.
+ * Reached from the You tab as a self-serve edit surface (You -> Goal
+ * lock). The onboarding interstitial that used to show this for
+ * physique_competition / advanced_recomp was removed (founder,
+ * 2026-05-29; see ProOnboardingScreen), so onboarding is no longer a
+ * caller — the onContinue route param is kept for compatibility.
+ * Locked copy: COACHING_VOICE_SYNTHESIS_LOCKED.md Surface 4 (:360-395);
+ * a source guard pins the load-bearing sentences.
  *
  * The user picks one of two options:
  *
@@ -84,6 +87,9 @@ export default function GoalLockConsentScreen({ navigation, route }) {
         <Text style={styles.body}>
           You picked a goal that involves an aggressive cut. Precision Coaching can support that, with one tradeoff you should know about. Volyume has safety checks: if signs of under-eating and rapid weight loss show up together, Precision Coaching holds the calorie target so the cut doesn't get sharper.
         </Text>
+        <Text style={styles.body}>
+          These checks are there for the at-risk users that calorie-tracking apps have historically harmed. For an aggressive cut, Precision Coaching can raise the bar before those checks fire, so a competition prep doesn't get held up at the standard threshold.
+        </Text>
 
         <Text style={styles.fieldLabel}>Confirm one of these</Text>
 
@@ -98,7 +104,7 @@ export default function GoalLockConsentScreen({ navigation, route }) {
             {choice === 'advanced' ? <View style={styles.radioDot} /> : null}
           </View>
           <Text style={styles.optionText}>
-            I have prior experience managing aggressive cuts safely, or I'm working with a coach.
+            I have prior experience managing aggressive cuts safely, or I'm working with a coach. Raise the safety threshold from 2 signals to 3.
           </Text>
         </Pressable>
 
@@ -116,6 +122,10 @@ export default function GoalLockConsentScreen({ navigation, route }) {
           </Text>
         </Pressable>
         </View>
+
+        <Text style={styles.body}>
+          Either choice keeps the absolute safety floor (eating below the minimum lean-mass energy threshold) in place.
+        </Text>
 
         <View style={styles.note}>
           <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />

@@ -1170,6 +1170,19 @@ export default function WeeklyCheckInScreen({ navigation }) {
               <Ionicons name="checkmark-circle" size={16} color={colors.success} />
             </View>
           ))}
+          {/* Wave A B6: the fastest path was the least transparent — one
+              muted provenance line so the confirm-not-recall promise is
+              visibly grounded in the user's own logs. */}
+          <Text style={styles.fastSummaryProvenance}>
+            {[
+              autoDerived.trainingMeta
+                ? `From your logged sessions: ${autoDerived.trainingMeta.completed} of ${autoDerived.trainingMeta.planned}`
+                : null,
+              autoDerived.calsMeta
+                ? `from your diary: ${autoDerived.calsMeta.daysLogged} of 7 days logged`
+                : null,
+            ].filter(Boolean).join(' · ') || 'Read from your logs this week.'}
+          </Text>
         </View>
 
         <View style={styles.section}>
@@ -1440,7 +1453,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
           {!fastEligible && step === 0 && (
             <View style={styles.ritualIntro}>
               <Text style={styles.ritualIntroTitle}>{checkinDayLabel}</Text>
-              <Text style={styles.ritualIntroSub}>Just four questions, and your coach reads them every week.</Text>
+              <Text style={styles.ritualIntroSub}>Just four questions, and your coach reads them every week. Your coaching decision lands as soon as you submit.</Text>
             </View>
           )}
 
@@ -1806,6 +1819,8 @@ const styles = StyleSheet.create({
   fastSummaryIcon: { width: 18 },
   fastSummaryLabel: { fontSize: fontSize.sm, color: colors.textSecondary, width: 76 },
   fastSummaryValue: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary },
+  // Wave A B6: muted provenance line under the fast summary rows.
+  fastSummaryProvenance: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs },
   fastExpandBtn: { alignItems: 'center', paddingVertical: spacing.md },
   fastExpandText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
 

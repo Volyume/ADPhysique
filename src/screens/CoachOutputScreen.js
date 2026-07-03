@@ -38,7 +38,7 @@ import {
 } from '../lib/database';
 import { isCompetitionGoal } from '../lib/coachingGoals';
 import { contestCountdown, parseShowDate } from '../lib/contestCountdown';
-import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
+import { summariseWeekCardio, cardioVerdictLabel } from '../lib/cardio/cardioEngine';
 import { getRecentIntakeSummary } from '../lib/food/db';
 import { localWeekStartMs, localDayKey } from '../lib/dayKey';
 import { track as trackEngineEvent } from '../lib/engineTelemetry';
@@ -353,6 +353,7 @@ function NextWeekCard({
   adjustments, onApplyCalories, onApplySteps, onApplyCardio,
   applyStateFor, onApplySettled,
   energyUnit, caloriePreview, calorieNotice, hero, heroRow,
+  cardioVerdict,
 }) {
   const { calories, steps, cardio } = adjustments;
 
@@ -423,7 +424,12 @@ function NextWeekCard({
         <AdjustmentRow
           iconName="bicycle-outline"
           label={cardio.type ?? 'Cardio'}
-          note={cardio.note}
+          // Wave A B9: last week's compliance verdict (an existing pure
+          // helper, previously computed and never rendered) leads the note,
+          // so the dose visibly follows from what actually happened.
+          note={cardioVerdict
+            ? `Last week: ${cardioVerdictLabel(cardioVerdict)}. ${cardio.note ?? ''}`.trim()
+            : cardio.note}
           applied={!!cardio.applied}
           onApply={!cardio.applied ? onApplyCardio : undefined}
           applyState={applyStateFor('cardio')}
@@ -2029,6 +2035,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       onApplyCardio={handleApplyCardio}
       applyStateFor={applyStateFor}
       onApplySettled={onApplySettled}
+      cardioVerdict={checkin?.cardioAdherence ?? null}
       energyUnit={energyUnit}
       caloriePreview={caloriePreview}
       calorieNotice={applyNotice.calories ?? null}
@@ -2156,8 +2163,37 @@ export default function CoachOutputScreen({ navigation, route }) {
           <Reanimated.View entering={stage(2, motion.hero)} style={styles.heroZone}>
             <Text style={styles.heroLabel}>This week&apos;s main move</Text>
             {heroCardEl}
+            {/* Wave A B6: the WHY never sits a scroll away from the WHAT. One
+                line here; the full WhyBlock further down keeps the detail. */}
+            {whyThisWeek ? (
+              <Text style={styles.heroWhy}>
+                {'Because: '}
+                {whyThisWeek.includes('. ') ? whyThisWeek.slice(0, whyThisWeek.indexOf('. ') + 1) : whyThisWeek}
+              </Text>
+            ) : null}
           </Reanimated.View>
-        ) : null}
+        ) : (
+          /* Wave A B6: "hold everything" is a decision too — on a good week
+             the strongest one. Non-applyable, never amber (one-amber rule).
+             When safety holds are active the copy defers to them rather than
+             claiming the plan is simply working. */
+          <Reanimated.View entering={stage(2, motion.hero)} style={styles.heroZone}>
+            <Text style={styles.heroLabel}>This week&apos;s main move</Text>
+            <View style={styles.holdHeroCard}>
+              <Text style={styles.holdHeroText}>
+                {heldDecisions && heldDecisions.length > 0
+                  ? 'Hold steady. The reasons are below.'
+                  : 'Change nothing. The plan is working.'}
+              </Text>
+              {whyThisWeek ? (
+                <Text style={styles.heroWhy}>
+                  {'Because: '}
+                  {whyThisWeek.includes('. ') ? whyThisWeek.slice(0, whyThisWeek.indexOf('. ') + 1) : whyThisWeek}
+                </Text>
+              ) : null}
+            </View>
+          </Reanimated.View>
+        )}
 
         {/* 3. Trend chips */}
         <Reanimated.View entering={stage(3)} style={styles.chipsRow}>
@@ -2191,14 +2227,17 @@ export default function CoachOutputScreen({ navigation, route }) {
         {/* Opt-in "share your week" — only on a genuinely great, ED-safe week
             (blueprint §5/§7). Routes through the qualitative, ED-safe recap card. */}
         {greatWeek && (
+          /* Wave A B6: a genuinely great, ED-safe week is the emotional peak
+             of the loop; it no longer renders at footnote weight. Success
+             tint, never amber (one-amber rule). */
           <TouchableOpacity
             style={styles.shareWeekBtn}
             onPress={handleShareWeek}
             accessibilityRole="button"
-            accessibilityLabel="Share your week"
+            accessibilityLabel="Great week. Share it?"
           >
-            <Ionicons name="share-outline" size={15} color={colors.textSecondary} />
-            <Text style={styles.shareWeekText}>Share your week</Text>
+            <Ionicons name="share-outline" size={15} color={colors.success} />
+            <Text style={styles.shareWeekText}>Great week. Share it?</Text>
           </TouchableOpacity>
         )}
 
@@ -2275,17 +2314,19 @@ export default function CoachOutputScreen({ navigation, route }) {
           </View>
         </View>
 
-        {/* P3: cardio recovery caution (one line, advisory, no Apply). */}
+        {/* P3: cardio recovery caution (one line, advisory, no Apply).
+            Wave A B9: caution and acknowledgement no longer share an icon —
+            distinguishable at a glance, same quiet register. */}
         {cardioFlag ? (
           <View style={styles.cardioNoteRow}>
-            <Ionicons name="heart-outline" size={14} color={colors.warning} />
+            <Ionicons name="alert-circle-outline" size={14} color={colors.warning} />
             <Text style={styles.cardioNoteText}>{cardioFlag}</Text>
           </View>
         ) : null}
         {/* D1: light acknowledgement of cardio logged outside a cut. */}
         {cardioAcknowledgement ? (
           <View style={styles.cardioNoteRow}>
-            <Ionicons name="heart-outline" size={14} color={colors.primary} />
+            <Ionicons name="checkmark-circle-outline" size={14} color={colors.success} />
             <Text style={styles.cardioNoteText}>{cardioAcknowledgement}</Text>
           </View>
         ) : null}
@@ -2308,7 +2349,15 @@ export default function CoachOutputScreen({ navigation, route }) {
             (assessDataConfidence) and persists it, but it was never surfaced.
             One calm line so the user knows how solid this week's read was. */}
         {CONFIDENCE_CAPTIONS[confidence] ? (
-          <Text style={styles.confidenceCaption}>{CONFIDENCE_CAPTIONS[confidence]}</Text>
+          <Text style={styles.confidenceCaption}>
+            {CONFIDENCE_CAPTIONS[confidence]}
+            {/* Wave A B6: name WHICH data was thin when it was the weigh-ins.
+                No threshold claim here, so this line can never disagree with
+                the coachLedger's own gate numbers. */}
+            {confidence !== 'high' && weighInsThisWeek != null && weighInsThisWeek < 4
+              ? ` Only ${weighInsThisWeek} weigh-in${weighInsThisWeek === 1 ? '' : 's'} landed this week.`
+              : ''}
+          </Text>
         ) : null}
 
         {/* 7. One focus for next week. Coach response part 4 (the single
@@ -2373,6 +2422,20 @@ export default function CoachOutputScreen({ navigation, route }) {
             render here, unreachable by its free-tier audience behind
             withProGuard. It now lives in HomeScreen's banner stack. */}
 
+        {/* Wave A B6: the coaching history was only reachable through the
+            held-decisions card, so a consistently on-target user never saw a
+            route to it. One permanent quiet link. */}
+        <TouchableOpacity
+          style={styles.historyQuietBtn}
+          onPress={() => navigation.navigate('CoachHeldHistory')}
+          activeOpacity={0.8}
+          accessibilityRole="link"
+          accessibilityLabel="Coaching history"
+        >
+          <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+          <Text style={styles.historyQuietText}>Coaching history</Text>
+        </TouchableOpacity>
+
         {/* Done: a quiet text action (A1 one-amber rule). The hero Apply is
             the screen's only amber fill. */}
         <TouchableOpacity style={styles.doneQuietBtn} onPress={handleClose} activeOpacity={0.8} accessibilityRole="button">
@@ -2429,18 +2492,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
+  // Wave A B6: success tint on a genuinely great week (never amber; the
+  // hero Apply keeps the one-amber rule).
   shareWeekBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: spacing.xs,
     paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
     minHeight: 44, // U-B-1 §5: WCAG/iOS touch target
     marginBottom: spacing.md,
+    borderRadius: radius.full,
+    backgroundColor: withAlpha(colors.success, 0.125),
   },
   shareWeekText: {
     ...type.label,
-    color: colors.textSecondary,
+    color: colors.textPrimary,
   },
   insufficientTitle: {
     fontSize: fontSize.xl,
@@ -2550,6 +2618,27 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: colors.primary,
     paddingHorizontal: spacing.xs,
+  },
+  // Wave A B6: the one-line why beneath the hero decision.
+  heroWhy: {
+    ...type.bodySm,
+    color: colors.textSecondary,
+    paddingHorizontal: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  // Wave A B6: the hold-week hero — a verdict card with no Apply and no
+  // amber; the same elevated surface the applyable hero uses.
+  holdHeroCard: {
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.xs,
+  },
+  holdHeroText: {
+    ...type.h3,
+    color: colors.textPrimary,
   },
   // Five-part coach response: parts 1+2 lead card and the part 5
   // forward-pull line. Same tokens as the surrounding cards.
@@ -2817,6 +2906,20 @@ const styles = StyleSheet.create({
   },
   doneQuietText: {
     ...type.bodyStrong,
+    color: colors.textSecondary,
+  },
+  // Wave A B6: the permanent quiet route to the coaching history.
+  historyQuietBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    minHeight: 44,
+  },
+  historyQuietText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
     color: colors.textSecondary,
   },
   secondaryBtn: {

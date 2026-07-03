@@ -113,7 +113,11 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
   // didn't pass subdued. This keeps the app's reduce-motion discipline intact
   // at a flagship moment rather than breaking it here.
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
-  const subduedMode = subdued || !!reduceMotion;
+  // Wave A A1: a first-ever lift is an honest first, not a record — it beats
+  // nothing, so it never gets the confetti/heavy-haptic PERSONAL RECORD
+  // treatment. It always renders as the quiet toast variant below.
+  const isFirstLift = pr?.type === 'first_lift';
+  const subduedMode = subdued || !!reduceMotion || isFirstLift;
   // Allocate particles only when we'll render them, subdued mode skips
   // particles entirely. Each particle's pre-translated offsets are baked
   // into translate constants instead of allocating new Animated.Values
@@ -131,11 +135,18 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
     // both paths (a subdued or calm user still gets the fact; only the
     // visual party is suppressed). No-op without a screen reader.
     try {
-      const spokenLabel = pr?.type === '1rm_estimate' ? 'New estimated max lift' :
-        pr?.type === 'heaviest_weight' ? 'New heaviest weight' : 'Most reps at weight';
-      AccessibilityInfo.announceForAccessibility(
-        `Personal record. ${spokenLabel}${pr?.label ? `: ${pr.label}` : ''}.`,
-      );
+      if (pr?.type === 'first_lift') {
+        // Never announced as a record: it is the honest first, nothing more.
+        AccessibilityInfo.announceForAccessibility(
+          `First lift logged${pr?.label ? `: ${pr.label}` : ''}.`,
+        );
+      } else {
+        const spokenLabel = pr?.type === '1rm_estimate' ? 'New estimated max lift' :
+          pr?.type === 'heaviest_weight' ? 'New heaviest weight' : 'Most reps at weight';
+        AccessibilityInfo.announceForAccessibility(
+          `Personal record. ${spokenLabel}${pr?.label ? `: ${pr.label}` : ''}.`,
+        );
+      }
     } catch (_) { /* best-effort */ }
     if (subduedMode) {
       // D2: the vocabulary call replaces raw expo-haptics, so the
@@ -191,10 +202,12 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
   // the queue-pop tick would otherwise crash on `pr.type`.
   if (!pr) return null;
 
-  const prIcon = pr.type === '1rm_estimate' ? 'trophy' :
+  const prIcon = pr.type === 'first_lift' ? 'barbell-outline' :
+    pr.type === '1rm_estimate' ? 'trophy' :
     pr.type === 'heaviest_weight' ? 'barbell' : 'flash';
 
-  const prLabel = pr.type === '1rm_estimate' ? 'New estimated max lift' :
+  const prLabel = pr.type === 'first_lift' ? 'First lift logged' :
+    pr.type === '1rm_estimate' ? 'New estimated max lift' :
     pr.type === 'heaviest_weight' ? 'New heaviest weight' : 'Most reps at weight';
 
   if (subduedMode) {
