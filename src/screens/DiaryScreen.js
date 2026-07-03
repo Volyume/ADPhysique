@@ -66,6 +66,7 @@ export default function DiaryScreen({ navigation }) {
     tier: s.tier,
   })));
   const setCalorieBank = useAppStore((s) => s.setCalorieBank);
+  const saveLocalProfile = useAppStore((s) => s.saveLocalProfile);
   const userId = user?.id;
   const toast = useToast();
 
@@ -228,6 +229,55 @@ export default function DiaryScreen({ navigation }) {
   }, [canWrite, userId, selectedDate, load, toast]);
 
   const isRefeedDay = !!refeed && !!refeedDate && refeedDate === selectedDate;
+
+  // NU-2: a refeed expires after its resolved day. Without this the applied
+  // refeed lingered on the profile forever, suppressing calorie banking with
+  // no way out. Local profile write only; skipped in read-only (E10 posture).
+  useEffect(() => {
+    if (readOnly || !userId || !refeed || !refeedDate) return;
+    if (isoDate(new Date()) > refeedDate) {
+      saveLocalProfile(userId, { ...(useAppStore.getState().userProfile || {}), refeed: null })
+        .catch(() => {});
+    }
+  }, [readOnly, userId, refeed, refeedDate, saveLocalProfile]);
+
+  // NU-2: the visible exits. Stopping the split / clearing the refeed is a
+  // plain profile write back to the flat targets; confirmed first, calmly.
+  const stopMacroCycle = useCallback(() => {
+    if (!canWrite()) return;
+    appAlert(
+      'Stop the training/rest-day split?',
+      'Your daily target goes back to the same number every day. You can apply a split again from your weekly coaching.',
+      [
+        { text: 'Keep the split', style: 'cancel' },
+        {
+          text: 'Stop the split',
+          onPress: () => {
+            saveLocalProfile(userId, { ...(useAppStore.getState().userProfile || {}), macroCycle: null })
+              .catch(() => toast.show("Couldn't update. Try again.", { variant: 'error' }));
+          },
+        },
+      ],
+    );
+  }, [canWrite, userId, saveLocalProfile, toast]);
+
+  const clearRefeed = useCallback(() => {
+    if (!canWrite()) return;
+    appAlert(
+      'Clear the scheduled refeed?',
+      'The refeed day goes back to your usual target. You can schedule another from your weekly coaching.',
+      [
+        { text: 'Keep it', style: 'cancel' },
+        {
+          text: 'Clear refeed',
+          onPress: () => {
+            saveLocalProfile(userId, { ...(useAppStore.getState().userProfile || {}), refeed: null })
+              .catch(() => toast.show("Couldn't update. Try again.", { variant: 'error' }));
+          },
+        },
+      ],
+    );
+  }, [canWrite, userId, saveLocalProfile, toast]);
 
   // Calorie banking (CB-1) availability: disabled when the target was
   // floored/compressed, a carb cycle or refeed is active, or an ED-pattern flag
@@ -902,6 +952,32 @@ export default function DiaryScreen({ navigation }) {
             dayTypeLabel={dayTypeChip}
             onPress={viewEntries.length ? () => setBreakdownVisible(true) : undefined}
           />
+          {/* NU-2: the applied split/refeed always shows its exit. One quiet
+              row each; the confirm dialogs own the consequence copy. */}
+          {!readOnly && macroCycle ? (
+            <TouchableOpacity
+              style={styles.targetModeRow}
+              onPress={stopMacroCycle}
+              accessibilityRole="button"
+              accessibilityLabel="Stop the training/rest-day split"
+            >
+              <Ionicons name="swap-horizontal-outline" size={13} color={colors.textMuted} />
+              <Text style={styles.targetModeText}>Training/rest-day split on. Stop the split</Text>
+            </TouchableOpacity>
+          ) : null}
+          {!readOnly && refeed ? (
+            <TouchableOpacity
+              style={styles.targetModeRow}
+              onPress={clearRefeed}
+              accessibilityRole="button"
+              accessibilityLabel="Clear the scheduled refeed"
+            >
+              <Ionicons name="restaurant-outline" size={13} color={colors.textMuted} />
+              <Text style={styles.targetModeText}>
+                {isRefeedDay ? 'Refeed day today. Clear refeed' : 'Refeed scheduled. Clear refeed'}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {showOffCard && !readOnly && selectedDate === isoDate(new Date()) ? (
@@ -1047,6 +1123,18 @@ export default function DiaryScreen({ navigation }) {
             </Text>
           </TouchableOpacity>
         ) : null}
+        {/* NU-2: when a split or refeed is what closed banking, say so
+            instead of vanishing the row (the old silent disappearance). A
+            floored target explains itself on the targets screen and an open
+            ED flag stays deliberately unnamed here. */}
+        {!bankingAvailable && !selectionMode && !readOnly && !!targets
+          && (macroCycle || refeed) && !edFlagOpen && !targetWasFloored(targets) ? (
+            <Text style={styles.bankOffNote}>
+              {macroCycle
+                ? 'Higher-calorie day planning is paused while the training/rest-day split is on.'
+                : 'Higher-calorie day planning is paused while a refeed is scheduled.'}
+            </Text>
+          ) : null}
 
         <WaterRow
           ml={waterMl}
@@ -1410,6 +1498,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   bankRowText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  // NU-2: quiet mode rows under the rings and the banking-paused note.
+  targetModeRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.xxs, marginTop: spacing.sm,
+  },
+  targetModeText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
+  bankOffNote: {
+    color: colors.textMuted, fontSize: fontSize.xs, textAlign: 'center',
+    marginTop: spacing.sm, paddingHorizontal: spacing.lg,
+  },
   offCard: {
     gap: spacing.sm,
     backgroundColor: colors.surface,
