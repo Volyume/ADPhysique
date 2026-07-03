@@ -5,9 +5,12 @@
  * All functions are fire-and-forget safe: they never throw, never block UI.
  *
  * Flow:
- *   1. User signs up/in → syncProfile() + bulkUploadLocalData()
+ *   1. User signs up/in → bulkUploadLocalData() (+ registry runner)
  *   2. Workout completed → syncWorkout()
- *   3. Body metric logged → syncBodyMetric()
+ *   (E12 step 1: the per-save syncProfile / syncWeeklyCheckin /
+ *   syncBodyMetric dual writers are retired; users_profile,
+ *   weekly_checkins_v2 and body_metrics are owned by the registry
+ *   handlers in src/lib/sync/tables/, pushed via syncAll.)
  */
 
 import { getSupabaseClient } from './supabase';
@@ -171,50 +174,9 @@ export async function fetchByIdsChunked(scope, table, column, ids, queryFactory)
 }
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
-
-/**
- * Upsert user profile to Supabase after sign-in or profile update.
- */
-export async function syncProfile(supabaseUserId, userProfile, _tier, { isBetaTester = false } = {}) {
-  const sb = getClient();
-  if (!sb || !supabaseUserId) return;
-  try {
-    // `tier` is deliberately NOT sent from the client. Server has DEFAULT
-    // 'free' on new rows, and migrate_005's trigger rolls back any client
-    // UPDATE to it. Tier upgrades happen via the Stripe webhook only.
-    // _tier kept in the signature for callsite compatibility but ignored.
-    const payload = {
-      id: supabaseUserId,
-      first_name: userProfile?.firstName ?? null,
-      units: userProfile?.units ?? 'kg',
-      training_focus: userProfile?.trainingFocus ?? 'bodybuilding',
-      training_age: userProfile?.trainingAgeYears ?? null,
-      primary_equipment: userProfile?.primaryEquipment ?? null,
-      bar_weight: userProfile?.barWeight ?? 20,
-      diet_preference: userProfile?.dietPreference ?? 'omnivore',
-      // Biological sex (U2, migrate_094): mirror it onto the main profile row so
-      // it survives a fresh-install cloud pull even if the user_body_profile row
-      // is missing. Only 'male'/'female' reach here (enforced at onboarding);
-      // null for any legacy row without one. Requires migrate_094 applied.
-      sex: userProfile?.sex === 'male' || userProfile?.sex === 'female' ? userProfile.sex : null,
-      updated_at: new Date().toISOString(),
-    };
-    // Beta-tester flag is still client-writable during the beta window
-    // (set on first sign-up only, the migrate_005 trigger does NOT
-    // protect this column, only `tier`). Server enforces tier strictly,
-    // beta-tester is a soft tag for the future Pro extension.
-    if (isBetaTester) payload.is_beta_tester = true;
-    // Capture the PostgREST {error} (audit 2026-07-01): supabase-js RESOLVES
-    // with { error } on a failed upsert rather than throwing, so the previous
-    // fire-and-forget await swallowed every profile-sync failure — never logged,
-    // never retried. Throw it so the catch logs it and the caller can react,
-    // matching the sibling sync functions.
-    const { error } = await sb.from('users_profile').upsert(payload, { onConflict: 'id' });
-    if (error) throw error;
-  } catch (e) {
-    logError('sync.syncProfile', e, { supabaseUserId });
-  }
-}
+// E12 step 1: the legacy per-save syncProfile was retired; users_profile is
+// pushed/pulled by the registry profiles handler (src/lib/sync/tables/
+// profiles.js), which also carries the sex mirror (U2, migrate_094).
 
 // ─── Exercises ────────────────────────────────────────────────────────────────
 
@@ -549,88 +511,11 @@ export async function syncMorningWeight(supabaseUserId, entry, { rethrow = false
   }
 }
 
-/**
- * Push a single weekly check-in to cloud immediately. Cloud table is
- * weekly_checkins_v2 (the modern schema runWeeklyCoach reads from).
- */
-export async function syncWeeklyCheckin(supabaseUserId, checkin) {
-  const sb = getClient();
-  if (!sb || !supabaseUserId || !checkin) return;
-  try {
-    const { error } = await sb.from('weekly_checkins_v2').upsert({
-      id: checkin.id,
-      user_id: supabaseUserId,
-      week_start: checkin.weekStart,
-      energy_score: checkin.energyScore ?? null,
-      soreness_score: checkin.sorenessScore ?? null,
-      stress_score: checkin.stressScore ?? null,
-      sleep_hours: checkin.sleepHours ?? null,
-      cals_adherence: checkin.calsAdherence ?? null,
-      steps_adherence: checkin.stepsAdherence ?? null,
-      cardio_adherence: checkin.cardioAdherence ?? null,
-      steps_avg: checkin.stepsAvg ?? null,
-      training_performance: checkin.trainingPerformance ?? null,
-      joint_pain: !!checkin.jointPain,
-      sore_muscles: checkin.soreMuscles ?? null,
-      cycle_override: !!checkin.cycleOverride,
-      notes: checkin.notes ?? null,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,id' });
-    if (error) { logPgErr('sync.syncWeeklyCheckin', error); throw error; }
-  } catch (e) {
-    logWarn('sync.syncWeeklyCheckin', e?.message, { id: checkin?.id });
-    try {
-      // eslint-disable-next-line global-require
-      const { enqueueSyncOp } = require('./syncQueue');
-      await enqueueSyncOp('check_in', checkin?.id ?? `ci-${Date.now()}`, supabaseUserId, checkin);
-    } catch (_) {}
-  }
-}
-
-export async function syncBodyMetric(supabaseUserId, metric, { rethrow = false } = {}) {
-  const sb = getClient();
-  if (!sb || !supabaseUserId || !metric) return;
-  try {
-    // Cloud column names: body_weight, waist, chest, hips, quads,
-    // hamstrings, arms, shoulders, forearms, calves. The previous push
-    // wrote `thigh` / `ham` / `body_fat_percent` / `body_fat_source`
-    // which don't exist in the body_metrics schema → PostgREST
-    // rejected the entire upsert and every body metric the user logged
-    // was lost on cross-device restore. Migration 010 adds the
-    // body-fat columns; the limb columns map straight onto the
-    // existing cloud names.
-    const { error } = await sb.from('body_metrics').upsert({
-      id: metric.id,
-      user_id: supabaseUserId,
-      metric_date: msToDate(metric.loggedAt),
-      body_weight: metric.weightKg ?? null,
-      waist: metric.waistCm ?? null,
-      chest: metric.chestCm ?? null,
-      hips: metric.hipsCm ?? null,
-      quads: metric.thighCm ?? null,
-      arms: metric.armCm ?? null,
-      shoulders: metric.shouldersCm ?? null,
-      forearms: metric.forearmCm ?? null,
-      hamstrings: metric.hamCm ?? null,
-      calves: metric.calfCm ?? null,
-      body_fat_percent: metric.bodyFatPercent ?? null,
-      body_fat_source: metric.bodyFatSource ?? null,
-      notes: metric.notes ?? null,
-    }, { onConflict: 'user_id,id' });
-    if (error) {
-      logPgErr('sync.syncBodyMetric', error);
-      throw error;
-    }
-  } catch (e) {
-    logWarn('sync.syncBodyMetric', e?.message, { metricId: metric?.id });
-    if (rethrow) throw e; // queue-driven: let the queue own retry accounting (F-003)
-    try {
-      // eslint-disable-next-line global-require
-      const { enqueueSyncOp } = require('./syncQueue');
-      await enqueueSyncOp('body_metric', metric?.id ?? `bm-${Date.now()}`, supabaseUserId, metric);
-    } catch (_) {}
-  }
-}
+// E12 step 1: the legacy per-save syncWeeklyCheckin and syncBodyMetric were
+// retired; weekly_checkins_v2 and body_metrics are owned by the registry
+// handlers (weeklyCheckins.js, bodyComposition.js) and pushed via syncAll.
+// Residual queued 'check_in' / 'body_metric' ops drain through the
+// syncQueue bulk fallback.
 
 // ─── Bulk upload ──────────────────────────────────────────────────────────────
 

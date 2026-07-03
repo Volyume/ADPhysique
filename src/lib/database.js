@@ -4927,15 +4927,15 @@ export async function saveWeeklyCheckin(userId, data) {
       vals,
     );
   }
-  // Fire-and-forget cloud push. Push the full MERGED row (re-read from local)
-  // rather than just the fields this caller passed, so a partial writer can't
-  // null the cloud copy either. Fires from both insert and update paths.
+  // Fire-and-forget cloud push through the registry runner (E12 step 1: the
+  // legacy per-save syncWeeklyCheckin dual writer is retired; the registry
+  // weekly_checkins handler reads the merged SQLite row saved above, so a
+  // partial writer can't null the cloud copy either).
   try {
     // eslint-disable-next-line global-require
-    const { syncWeeklyCheckin } = require('./sync');
-    const savedRow = await d.getFirstAsync('SELECT * FROM weekly_checkins WHERE id = ?', [savedId]);
-    if (savedRow) syncWeeklyCheckin(userId, rowToCamel(savedRow)).catch(() => {});
-  } catch (_) { /* sync module unavailable, bulk upload will catch up later */ }
+    const { syncAll } = require('./sync');
+    syncAll({ userId, localUserId: userId, triggeredBy: 'write' }).catch(() => {});
+  } catch (_) { /* sync module unavailable, the next lifecycle sync catches up */ }
   return savedId;
 }
 

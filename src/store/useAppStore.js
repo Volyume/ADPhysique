@@ -59,6 +59,9 @@ const PROFILE_FIELDS_TRACKED = [
   'barWeight',
   'bodyWeightUnits',
   'dietPreference',
+  // U2/E12 step 1: sex syncs via the registry profiles handler now that the
+  // legacy syncProfile (its old carrier) is retired.
+  'sex',
 ];
 
 // Persist the per-field profile write timestamps to AsyncStorage.
@@ -253,15 +256,18 @@ const useAppStore = create((set, get) => ({
       await AsyncStorage.setItem(PROFILE_KEY_PFX + userId, JSON.stringify(profile));
     } catch (_) {}
     set({ userProfile: profile });
-    // Mirror to cloud if signed in. Fire-and-forget; failures land in the
-    // Debug logs via syncProfile's own logError. We deliberately import
-    // lazily to avoid a circular dep (sync.js → database.js → … → store).
+    // Mirror to cloud if signed in. Fire-and-forget through the registry
+    // runner (E12 step 1: the legacy per-save syncProfile dual writer is
+    // retired; pushProfiles reads the store state set above). The runner's
+    // Article 9 gate can skip this for a not-yet-consented user; the
+    // consent grant kicks a fresh sync that carries the profile then.
+    // Lazy import to avoid a circular dep (sync.js → database.js → … → store).
     try {
       const sess = get().session;
       if (sess?.user?.id) {
         // eslint-disable-next-line global-require
-        const { syncProfile } = require('../lib/sync');
-        syncProfile(sess.user.id, profile, get().tier).catch(() => {});
+        const { syncAll } = require('../lib/sync');
+        syncAll({ userId: sess.user.id, localUserId: userId, triggeredBy: 'write' }).catch(() => {});
       }
     } catch (_) {}
   },

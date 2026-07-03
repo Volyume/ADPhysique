@@ -171,9 +171,11 @@ async function _runOp(supabaseClient, row) {
     case 'body_metric': {
       const payload = row.payload ? JSON.parse(row.payload) : null;
       if (!payload) return true; // payload missing, treat as drained
-      // Fall back to the bulk push when the dedicated sync fn is missing,
-      // matching morning_weight / check_in below, so a renamed or removed
-      // syncBodyMetric can't silently drop the op (audit B2).
+      // E12 step 1 retired the dedicated syncBodyMetric, so residual queued
+      // ops (from builds that enqueued them) take the bulk fallback below;
+      // the row itself is in SQLite, so the registry push also carries it on
+      // the next cycle. The safeCall shape is kept so the fallback keeps
+      // draining rather than stranding ops (audit B2).
       const r = safeCall(sync.syncBodyMetric, row.user_id, payload, { rethrow: true });
       if (r === null) await safeCall(sync.bulkUploadLocalData, row.user_id, row.user_id);
       else await r; // throws on a real failure -> queue retries (F-003)
@@ -193,11 +195,10 @@ async function _runOp(supabaseClient, row) {
     case 'check_in': {
       const payload = row.payload ? JSON.parse(row.payload) : null;
       if (!payload) return true;
-      // The real function is syncWeeklyCheckin; the old name sync.syncCheckin
-      // never existed, so safeCall always returned null and EVERY drained
-      // check-in silently fell back to a full-account re-upload (audit
-      // 2026-07-01). Match the morning_weight pattern with rethrow so a genuine
-      // failure retries via the queue instead of masquerading as success.
+      // E12 step 1 retired the dedicated syncWeeklyCheckin, so residual queued
+      // ops from older builds take the bulk fallback; the registry
+      // weekly_checkins handler carries the SQLite row on the next cycle
+      // regardless. safeCall shape kept so the op drains, never strands.
       const r = safeCall(sync.syncWeeklyCheckin, row.user_id, payload, { rethrow: true });
       if (r === null) await safeCall(sync.bulkUploadLocalData, row.user_id, row.user_id);
       else await r;

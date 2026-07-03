@@ -24,6 +24,9 @@ import { resolve as resolveConflict } from '../conflict';
 
 // camelCase store keys → snake_case users_profile columns. Order
 // matters only for stable column_updates_at serialisation in tests.
+// sex (U2, migrate_094) moved here from the retired legacy syncProfile
+// (E12 step 1): it mirrors onto the main profile row so it survives a
+// fresh-install cloud pull even if the user_body_profile row is missing.
 const FIELD_MAP = Object.freeze([
   ['firstName',        'first_name'],
   ['units',            'units'],
@@ -32,7 +35,14 @@ const FIELD_MAP = Object.freeze([
   ['primaryEquipment', 'primary_equipment'],
   ['barWeight',        'bar_weight'],
   ['dietPreference',   'diet_preference'],
+  ['sex',              'sex'],
 ]);
+
+// Only the two onboarding-enforced values ever cross the wire; anything
+// else (including a legacy profile without one) travels as null.
+function _validSex(v) {
+  return v === 'male' || v === 'female' ? v : null;
+}
 
 function _toIso(ms) {
   if (!ms) return null;
@@ -76,6 +86,7 @@ function _profilesEqual(a, b) {
     primaryEquipment: p?.primaryEquipment ?? null,
     barWeight:        p?.barWeight ?? 20,
     dietPreference:   p?.dietPreference ?? 'omnivore',
+    sex:              _validSex(p?.sex),
   });
   const x = norm(a);
   const y = norm(b);
@@ -85,7 +96,8 @@ function _profilesEqual(a, b) {
     && x.trainingAgeYears === y.trainingAgeYears
     && x.primaryEquipment === y.primaryEquipment
     && x.barWeight === y.barWeight
-    && x.dietPreference === y.dietPreference;
+    && x.dietPreference === y.dietPreference
+    && x.sex === y.sex;
 }
 
 function _profileToCloudPayload(userId, profile, fieldUpdatedAt) {
@@ -102,6 +114,7 @@ function _profileToCloudPayload(userId, profile, fieldUpdatedAt) {
     else if (camel === 'primaryEquipment') payload[snake] = profile.primaryEquipment ?? null;
     else if (camel === 'barWeight')   payload[snake] = profile.barWeight ?? 20;
     else if (camel === 'dietPreference') payload[snake] = profile.dietPreference ?? 'omnivore';
+    else if (camel === 'sex')         payload[snake] = _validSex(profile.sex);
 
     const ts = fieldUpdatedAt?.[camel];
     if (ts) columnUpdatesAt[snake] = _toIso(ts);
@@ -120,12 +133,25 @@ export async function pushProfiles(sb, { userId } = {}) {
     const fieldUpdatedAt = state.userProfileFieldUpdatedAt || {};
     const payload = _profileToCloudPayload(userId, profile, fieldUpdatedAt);
 
-    const { error } = await sb
+    let { error } = await sb
       .from('users_profile')
       .upsert(payload, { onConflict: 'id' });
     if (error) {
-      logSyncError('sync.tables.profiles.pushUpsert', error);
-      return { count: 0, errors: 1 };
+      // migrate_094 tolerance (same pattern as restoreSessionFromCloud):
+      // until the founder-run migration adds users_profile.sex, PostgREST
+      // rejects the WHOLE upsert for the unknown column. Retry once with
+      // the proven sex-less payload so the other seven fields keep syncing;
+      // a second failure is a real error.
+      const { sex: _dropped, ...sexless } = payload;
+      sexless.column_updates_at = { ...payload.column_updates_at };
+      delete sexless.column_updates_at.sex;
+      ({ error } = await sb
+        .from('users_profile')
+        .upsert(sexless, { onConflict: 'id' }));
+      if (error) {
+        logSyncError('sync.tables.profiles.pushUpsert', error);
+        return { count: 0, errors: 1 };
+      }
     }
     return { count: 1, errors: 0 };
   } catch (e) {
@@ -137,11 +163,17 @@ export async function pushProfiles(sb, { userId } = {}) {
 export async function pullProfiles(sb, { userId } = {}) {
   if (!sb || !userId) return { count: 0, errors: 0 };
   try {
-    const { data, error } = await sb
+    const BASE_COLS = 'first_name, units, training_focus, training_age, primary_equipment, bar_weight, diet_preference, updated_at, column_updates_at';
+    const runRead = (cols) => sb
       .from('users_profile')
-      .select('first_name, units, training_focus, training_age, primary_equipment, bar_weight, diet_preference, updated_at, column_updates_at')
+      .select(cols)
       .eq('id', userId)
       .maybeSingle();
+    // migrate_094 tolerance (same pattern as restoreSessionFromCloud): try
+    // WITH sex; on any read error fall back to the proven sex-less select so
+    // the profile pull is never coupled to the migration being applied.
+    let { data, error } = await runRead(`${BASE_COLS}, sex`);
+    if (error) ({ data, error } = await runRead(BASE_COLS));
     if (error) {
       logSyncError('sync.tables.profiles.pull', error);
       return { count: 0, errors: 1 };
@@ -184,6 +216,10 @@ export async function pullProfiles(sb, { userId } = {}) {
       primaryEquipment: merged.primary_equipment ?? null,
       barWeight:        merged.bar_weight ?? 20,
       dietPreference:   merged.diet_preference ?? 'omnivore',
+      // sex NEVER unsets: it is onboarding-enforced and drives the ED calorie
+      // floor + BMR, so a cloud row without one (pre-094, or a legacy account)
+      // must not wipe the local value. Only a valid cloud value can change it.
+      sex:              _validSex(merged.sex) ?? _validSex(localProfile.sex),
     };
 
     // Only write back when the merge actually changed something. Writing

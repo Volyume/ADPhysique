@@ -39,7 +39,7 @@ import {
 import { track } from '../lib/engineTelemetry';
 import { getRecentIntakeSummary } from '../lib/food/db';
 import { EmptyBodyIllustration } from '../components/Illustrations';
-import { syncBodyMetric } from '../lib/sync';
+import { syncAll } from '../lib/sync';
 import { computeEWMA, ewmaValues, computeWeeklyWeightChange, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
 import { robustValues } from '../lib/robustTrend';
 import useAppStore from '../store/useAppStore';
@@ -709,7 +709,10 @@ export default function BodyMetricsScreen() {
       try {
         const saved = await logBodyMetric(user.id, data);
         if (session?.user?.id) {
-          syncBodyMetric(session.user.id, { id: saved?.id ?? saved, ...data }).catch(() => {});
+          // E12 step 1: push through the registry runner (the legacy per-save
+          // syncBodyMetric dual writer is retired; the body_composition_log
+          // handler reads the row logBodyMetric just saved).
+          syncAll({ userId: session.user.id, localUserId: user.id, triggeredBy: 'write' }).catch(() => {});
         }
         // Reload to pick up the real id + any DB-computed fields (the
         // optimistic entry was missing things like a properly formatted

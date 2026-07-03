@@ -48,9 +48,9 @@ function fnBody(source, decl) {
 // stored rows (the bulk cycle and its shared helpers), where "now" is the
 // SD-3 regression. Adding a name here is a deliberate reviewed act.
 const NOW_IS_HONEST_FUNCTIONS = [
-  'syncProfile',
+  // syncProfile / syncWeeklyCheckin were retired in E12 step 1 (the registry
+  // handlers own users_profile and weekly_checkins_v2 now).
   'syncMorningWeight',
-  'syncWeeklyCheckin',
   '_pushUserBodyProfile',
   'syncUserPref',
   // Recorded F5 Phase A exclusion, not an endorsement: local prefs carry no

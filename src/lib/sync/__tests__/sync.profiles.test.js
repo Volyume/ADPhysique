@@ -149,6 +149,51 @@ describe('profiles push', () => {
     expect(sb._calls.upserts[0].row.diet_preference).toBe('omnivore');
   });
 
+  // U2 sex mirror, moved here from the retired legacy syncProfile (E12
+  // step 1): only the two onboarding-enforced values ever cross the wire.
+  test('payload carries a valid sex; invalid or missing sex is null', async () => {
+    const sb = makeUpsertSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    setStoreState({ userProfile: { firstName: 'A', sex: 'male' }, userProfileFieldUpdatedAt: {} });
+    await pushProfiles(sb, { userId: 'u1' });
+    expect(sb._calls.upserts[0].row.sex).toBe('male');
+
+    setStoreState({ userProfile: { firstName: 'A', sex: 'other' }, userProfileFieldUpdatedAt: {} });
+    await pushProfiles(sb, { userId: 'u1' });
+    expect(sb._calls.upserts[1].row.sex).toBeNull();
+
+    setStoreState({ userProfile: { firstName: 'A' }, userProfileFieldUpdatedAt: {} });
+    await pushProfiles(sb, { userId: 'u1' });
+    expect(sb._calls.upserts[2].row.sex).toBeNull();
+  });
+
+  // migrate_094 tolerance: a cloud project without the sex column rejects
+  // the whole upsert; the handler must retry sex-less so the other fields
+  // keep syncing (same fallback restoreSessionFromCloud uses on read).
+  test('retries the upsert without sex when the first attempt errors', async () => {
+    setStoreState({ userProfile: { firstName: 'A', sex: 'female' }, userProfileFieldUpdatedAt: {} });
+    const calls = { upserts: [] };
+    const sb = {
+      _calls: calls,
+      from: jest.fn(() => ({
+        upsert: jest.fn(async (row, opts) => {
+          calls.upserts.push({ row, opts });
+          // First call (with sex) fails as an unmigrated project would.
+          return { error: calls.upserts.length === 1 ? { code: 'PGRST204' } : null };
+        }),
+      })),
+    };
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pushProfiles(sb, { userId: 'u1' });
+
+    expect(result).toEqual({ count: 1, errors: 0 });
+    expect(calls.upserts).toHaveLength(2);
+    expect(calls.upserts[0].row.sex).toBe('female');
+    expect('sex' in calls.upserts[1].row).toBe(false);
+  });
+
   test('returns count:0 when there is no profile in the store', async () => {
     setStoreState({ userProfile: null });
     const sb = makeUpsertSb();
@@ -284,6 +329,75 @@ describe('profiles pull (merge)', () => {
 
     expect(setUserProfile).toHaveBeenCalledWith(expect.objectContaining({ dietPreference: 'vegan' }));
     expect(result.count).toBe(1);
+  });
+
+  // U2 sex mirror on pull (E12 step 1): a valid cloud sex restores onto the
+  // profile (the fresh-install case migrate_094 exists for)...
+  test('a valid cloud sex is applied to the local profile', async () => {
+    const setUserProfile = jest.fn();
+    setStoreState({
+      userProfile: { firstName: 'Allan', units: 'kg' },
+      userProfileFieldUpdatedAt: {},
+      setUserProfile,
+    });
+    const sb = makeMaybeSingleSb({
+      data: {
+        first_name: 'Allan', units: 'kg', training_focus: 'bodybuilding',
+        sex: 'female',
+        updated_at: new Date(Date.UTC(2026, 5, 1)).toISOString(),
+        column_updates_at: {},
+      },
+    });
+    getSupabaseClient.mockReturnValue(sb);
+
+    await pullProfiles(sb, { userId: 'u1' });
+
+    expect(setUserProfile).toHaveBeenCalledWith(expect.objectContaining({ sex: 'female' }));
+  });
+
+  // ...but sex NEVER unsets: it is onboarding-enforced and drives the ED
+  // calorie floor + BMR, so a cloud row without one (pre-094 project via the
+  // sex-less fallback select, or a legacy account) must keep the local value.
+  test('a cloud row without sex keeps the local sex (fallback select path)', async () => {
+    const setUserProfile = jest.fn();
+    setStoreState({
+      userProfile: { firstName: 'OldName', units: 'kg', sex: 'male' },
+      userProfileFieldUpdatedAt: {},
+      setUserProfile,
+    });
+    let reads = 0;
+    const sb = {
+      from: jest.fn(() => ({
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({
+            maybeSingle: jest.fn(async () => {
+              reads += 1;
+              // First read (WITH sex) fails as an unmigrated project would;
+              // the fallback sex-less read returns the row without sex.
+              if (reads === 1) return { data: null, error: { code: '42703' } };
+              return {
+                data: {
+                  first_name: 'CloudName', units: 'kg',
+                  training_focus: 'bodybuilding',
+                  updated_at: new Date(Date.UTC(2026, 5, 1)).toISOString(),
+                  column_updates_at: { first_name: '2026-05-15T00:00:00.000Z' },
+                },
+                error: null,
+              };
+            }),
+          })),
+        })),
+      })),
+    };
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pullProfiles(sb, { userId: 'u1' });
+
+    expect(result.errors).toBe(0);
+    expect(reads).toBe(2);
+    const applied = setUserProfile.mock.calls[0][0];
+    expect(applied.firstName).toBe('CloudName');
+    expect(applied.sex).toBe('male'); // local sex survives
   });
 
   test('pull short-circuits when the cloud row does not exist', async () => {

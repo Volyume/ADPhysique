@@ -10,7 +10,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 import { signInWithGoogle, signInWithApple, getSupabaseClient } from '../lib/supabase';
-import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
+import { syncAll, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 import { PRO_BETA_ACTIVE } from '../lib/proGate';
 import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
@@ -90,7 +90,11 @@ export default function ProUpgradeScreen({ navigation, route }) {
   const [period, setPeriod] = useState('monthly'); // billing period when subscribing
 
   async function activatePro(supabaseUserId, { isNew }) {
-    syncProfile(supabaseUserId, userProfile, 'pro', { isBetaTester: isNew }).catch(() => {});
+    // E12 step 1: profile mirrors to cloud via the registry runner (the
+    // legacy per-save syncProfile dual writer is retired; its is_beta_tester
+    // soft tag went with it — the beta window is over and tier is
+    // server-owned regardless).
+    syncAll({ userId: supabaseUserId, localUserId: user?.id, triggeredBy: 'write' }).catch(() => {});
     if (isNew) {
       bulkUploadLocalData(supabaseUserId, user?.id).catch(() => {});
     } else {
@@ -158,9 +162,12 @@ export default function ProUpgradeScreen({ navigation, route }) {
       setDone(true);
       return;
     }
-    // Never write tier from the client (syncProfile ignores it; the server
-    // owns tier). Just make sure the account holds the local data.
-    syncProfile(supabaseUserId, userProfile, tier, { isBetaTester: false }).catch(() => {});
+    // Never write tier from the client (the server owns tier; the registry
+    // profiles handler never sends it). Just make sure the account holds the
+    // local data. The runner's Article 9 gate can skip this for a brand-new
+    // not-yet-consented account; the consent grant kicks the sync that
+    // carries the profile then.
+    syncAll({ userId: supabaseUserId, localUserId: user?.id, triggeredBy: 'write' }).catch(() => {});
     if (isNew) {
       bulkUploadLocalData(supabaseUserId, user?.id).catch(() => {});
     } else {
