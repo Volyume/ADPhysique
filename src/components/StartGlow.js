@@ -1,14 +1,13 @@
 /**
- * StartGlow (E15 element 3, approved 2026-07-03;
- * audit/e15-signature-elements.md §3). The app's ONE glow: a soft Skia
- * radial bloom behind the Home hero "Start workout" button, with an
- * optional slow breathe (opacity 1 ↔ 0.6 over a motion-derived ~4.5s loop,
- * one glowing object in the entire app).
+ * StartGlow (E15 element 3, approved 2026-07-02; revised STATIC-ONLY by the
+ * founder on device review 2026-07-03: "2. Static only" — the breathe loop
+ * is retired, do not reintroduce it). The app's ONE glow: a soft static
+ * Skia radial bloom behind the Home hero "Start workout" button.
  *
  * Hard rules, all from the approved treatment:
  *   - EXACTLY ONE importer (HomeScreen's hero Start). A source guard pins
  *     it; Log set, coach Apply and the Paywall CTA are explicitly excluded.
- *   - Reduce Motion: static bloom, no breathe.
+ *   - No animation of any kind (founder 2026-07-03).
  *   - Calm mode or an open ED flag: the bloom is suppressed entirely and
  *     the button falls back to the standard flat amber fill. The check
  *     fails QUIET (no glow until the state loads cleanly).
@@ -16,16 +15,12 @@
 import { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Canvas, Rect, RadialGradient, vec } from '@shopify/react-native-skia';
-import Animated, {
-  useSharedValue, useAnimatedStyle, withRepeat, withTiming,
-} from 'react-native-reanimated';
 import useAppStore from '../store/useAppStore';
-import { colors, motion, withAlpha } from '../styles/theme';
+import { colors, withAlpha } from '../styles/theme';
 
 const HALO = 24;
 
 export default function StartGlow({ style, children }) {
-  const reduceMotion = useAppStore((s) => !!s.accessibility?.reduceMotion);
   const userId = useAppStore((s) => s.user?.id);
   const [size, setSize] = useState(null);
   // Fail quiet: suppressed until the calm/ED read resolves cleanly.
@@ -50,14 +45,6 @@ export default function StartGlow({ style, children }) {
     return () => { active = false; };
   }, [userId]);
 
-  const breathe = useSharedValue(1);
-  useEffect(() => {
-    if (reduceMotion || suppressed) { breathe.value = 1; return; }
-    // ~4.5s per direction (motion.pulse * 6): a breath, not a blink.
-    breathe.value = withRepeat(withTiming(0.6, { duration: motion.pulse * 6 }), -1, true);
-  }, [reduceMotion, suppressed, breathe]);
-  const breatheStyle = useAnimatedStyle(() => ({ opacity: breathe.value }));
-
   const w = size ? size.w + HALO * 2 : 0;
   const h = size ? size.h + HALO * 2 : 0;
 
@@ -70,7 +57,7 @@ export default function StartGlow({ style, children }) {
       })}
     >
       {!suppressed && size ? (
-        <Animated.View pointerEvents="none" style={[styles.halo, breatheStyle]}>
+        <View pointerEvents="none" style={styles.halo}>
           <Canvas style={{ width: w, height: h }}>
             <Rect x={0} y={0} width={w} height={h}>
               <RadialGradient
@@ -80,7 +67,7 @@ export default function StartGlow({ style, children }) {
               />
             </Rect>
           </Canvas>
-        </Animated.View>
+        </View>
       ) : null}
       {children}
     </View>
