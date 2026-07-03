@@ -133,3 +133,27 @@ release-checklist process line — no decision needed.)
 - D6/D9 remain HELD; D10 done as a checklist line. Model tiering: D7 and
   the intent-modal coaching-input contract are STRONG; chip/banner/glyph
   are FAST with STRONG review.
+
+## SLOTS RESOLVED (founder delegated wording, 2026-07-03: "take my decision
+## and use words relevant")
+
+- D1 DECIDED: Option 2. Recorded rule of removal (2026-06-30) and the rule
+  going forward: Home never carries food NUMBERS or food progress — the old
+  cell showed calories on the app's most-seen surface and pulled Home away
+  from training. A pure verb chip ("Log lunch") carries no number, no
+  progress, no valence, so it does not break that rule. Chip lives in
+  TodayStrip, deep-links to FoodSearch scoped to the inferred slot, HIDDEN
+  (not locked) on free. Build queues behind the Wave A agent lane (shared
+  files).
+- D4 DECIDED: Option 1 — no visual key entry for the missed glyph (the
+  no-shame rule: a miss is never labelled on screen), recorded as a code
+  comment; the glyph carries accessibilityLabel "Quiet week" so screen-
+  reader users are never handed an unlabelled state.
+- D7 DECIDED: suppress. GoalChangeSummary performs the same
+  getOpenEdPatternFlag check ProSetupComplete does; under an open flag the
+  deficit-phase framing and the 8-week diet-break notice give way to the
+  neutral register while the goal-change receipt itself stays honest. The
+  ProSetupComplete pattern is the spec; ED regression test pins it.
+- A2 note: the revised rest-day pack (schedule-truth trigger + copy) still
+  awaits its own explicit word — a NOTIFICATIONS_LOCKED deviation is not
+  folded into a general wording delegation.

@@ -3,8 +3,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Card from '../components/Card';
+import { useState, useEffect } from 'react';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { PROTEIN_APPROACHES } from '../lib/nutritionEngine';
+import { getOpenEdPatternFlag } from '../lib/database';
+import useAppStore from '../store/useAppStore';
 
 // ─── Reasoning helpers ────────────────────────────────────────────────────────
 
@@ -126,6 +129,24 @@ function MacroRow({ label, prev, next, unit = 'g' }) {
 export default function GoalChangeSummaryScreen({ navigation, route }) {
   const { previous = {}, next = {}, planRerolled = false } = route.params || {};
 
+  // D7 (founder decision, 2026-07-03): the same ED-flag check
+  // ProSetupCompleteScreen performs. Under an open flag (or an unknown flag
+  // state — fail closed, matching that screen) the deficit-phase framing and
+  // the eight-week diet-break notice give way to the neutral register; the
+  // goal-change receipt itself stays honest. Tier-blind by construction.
+  const [edFlagOpen, setEdFlagOpen] = useState(true); // closed until proven clear
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const userId = useAppStore.getState().user?.id;
+        const flag = userId ? await getOpenEdPatternFlag(userId) : null;
+        if (!cancelled) setEdFlagOpen(!!flag);
+      } catch (_) { /* unknown state stays closed */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const goalChanged = previous.goal && next.goal && previous.goal !== next.goal;
   const phaseChanged = previous.phase && next.phase && previous.phase !== next.phase;
   const approachChanged = previous.approach && next.approach && previous.approach !== next.approach;
@@ -147,9 +168,15 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
 
   const anyChanged = goalChanged || phaseChanged || approachChanged || kcalChanged || macrosChanged;
 
-  const phaseReason = buildPhaseReason(previous.phase, next.phase);
+  const phaseReason = edFlagOpen
+    ? (previous.phase && next.phase && previous.phase !== next.phase
+      ? 'Your nutrition targets adjust to match the new phase.'
+      : null)
+    : buildPhaseReason(previous.phase, next.phase);
   const goalReason = buildGoalReason(previous.goal, next.goal);
-  const kcalReason = buildKcalReason(prevKcal, nextKcal, next.phase);
+  const kcalReason = edFlagOpen
+    ? (kcalChanged ? 'Your daily calories adjust to match your goal.' : null)
+    : buildKcalReason(prevKcal, nextKcal, next.phase);
   const approachReason = buildProteinApproachReason(previous.approach, next.approach);
 
   function handleDone() {
@@ -265,7 +292,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
               Nutrition targets in the You tab now reflect the updated numbers. Open Nutrition Targets to see the full breakdown.
             </Text>
           </View>
-          {next.phase === 'cut' && (
+          {next.phase === 'cut' && !edFlagOpen && (
             <View style={styles.nextRow}>
               <Ionicons name="ellipse" size={6} color={colors.primary} style={styles.bullet} />
               <Text style={styles.nextText}>

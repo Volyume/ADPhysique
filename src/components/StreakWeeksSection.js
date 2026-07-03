@@ -26,6 +26,11 @@ const PAUSE_OPTIONS = [
 ];
 
 // Per-state glyph (shape carries the meaning — no colour-only state, no red).
+// D4 (founder decision, 2026-07-03): the 'missed' glyph is DELIBERATELY
+// absent from the on-screen key — a miss is never visually labelled (the
+// no-shame rule). Screen readers hear it as a "quiet week" via stripA11y,
+// so the state is spoken, just never captioned on screen. Do not "fix" the
+// key by adding a missed row.
 const GLYPH = {
   kept:          { icon: 'ellipse',          color: colors.primary },
   resting:       { icon: 'moon',             color: colors.success },
@@ -68,12 +73,14 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
   const finishedWeeks = weeks.filter(w => w.state !== 'in-progress');
   const justRepaired = finishedWeeks[finishedWeeks.length - 2]?.state === 'repaired';
 
-  // Text equivalent of the glyph strip for screen readers.
+  // Text equivalent of the glyph strip for screen readers. D4 (founder,
+  // 2026-07-03): a missed week is spoken as a "quiet week" — never "missed".
   const parts = [];
   const k = strength(weeks, 'kept'); if (k) parts.push(`${k} kept`);
   const r = strength(weeks, 'resting'); if (r) parts.push(`${r} recovery`);
   const c = strength(weeks, 'repaired'); if (c) parts.push(`${c} covered`);
   const p = strength(weeks, 'paused'); if (p) parts.push(`${p} paused`);
+  const q = strength(weeks, 'missed'); if (q) parts.push(`${q} quiet`);
   const stripA11y = `Last ${weeks.length} weeks: ${parts.join(', ') || 'getting started'}.`;
 
   async function doPause(w) {
