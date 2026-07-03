@@ -9,6 +9,7 @@ import {
   weightTakeaway,
   e1rmTakeaway,
   volumeTakeaway,
+  workloadTakeaway,
 } from '../chartWindows';
 
 const DAY = 86400000;
@@ -104,5 +105,32 @@ describe('chartWindows: volumeTakeaway', () => {
   test('singular set reads correctly and a flat line holds steady', () => {
     expect(volumeTakeaway({ windowKey: '4W', coversAll: false, spanDays: 28, weeklySets: [1, 1, 1] }))
       .toBe('4 weeks: average 1 set a week, holding steady.');
+  });
+});
+
+describe('chartWindows: workloadTakeaway', () => {
+  test('this week vs the 4-week average, formatted with thousands separators', () => {
+    expect(workloadTakeaway(1.22, 12450, 10200))
+      .toBe('This week: 12,450 kg against a 4-week average of 10,200 kg.');
+  });
+  test('rounds fractional tonnage', () => {
+    expect(workloadTakeaway(0.95, 999.6, 1052.4))
+      .toBe('This week: 1,000 kg against a 4-week average of 1,052 kg.');
+  });
+  test('a quiet week (zero acute tonnage) still reads, not nonsense', () => {
+    expect(workloadTakeaway(0, 0, 8000))
+      .toBe('This week: 0 kg against a 4-week average of 8,000 kg.');
+  });
+  test('null ratio (insufficient weeks of data) returns empty, not a guess', () => {
+    expect(workloadTakeaway(null, 5000, 0)).toBe('');
+    expect(workloadTakeaway(undefined, 5000, 4000)).toBe('');
+  });
+  test('zero chronic average returns empty rather than dividing by zero', () => {
+    expect(workloadTakeaway(1, 5000, 0)).toBe('');
+  });
+  test('missing acute/chronic returns empty', () => {
+    expect(workloadTakeaway(1.1, undefined, 4000)).toBe('');
+    expect(workloadTakeaway(1.1, 4000, undefined)).toBe('');
+    expect(workloadTakeaway(1.1, NaN, 4000)).toBe('');
   });
 });

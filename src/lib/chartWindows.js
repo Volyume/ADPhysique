@@ -157,3 +157,25 @@ export function volumeTakeaway({ windowKey, coversAll, spanDays, weeklySets }) {
   if (dir === 'level') return `${base}, holding steady.`;
   return `${base}, ${dir} ${Math.abs(delta)}.`;
 }
+
+/**
+ * Training-load takeaway: this week's tonnage against the 4-week average
+ * that feeds the Acute:Chronic Workload Ratio shown on the Workload card
+ * (WorkloadCard in src/components/ProgressSections.js). That card's banded
+ * statusText (which names the safe ranges) stays untouched — this is the
+ * one-line takeaway in the same register as the takeaways above.
+ *
+ * @param {number|null} ratio - acute/chronic ratio, or null/undefined when
+ *   there isn't enough history to compute one (getAcuteChronicWorkload's
+ *   own gate, database.js: needs >=2 past weeks with tonnage > 0).
+ * @param {number} acute - this week's tonnage in kg
+ * @param {number} chronic - 4-week average tonnage in kg
+ * @returns {string} e.g. "This week: 12,450 kg against a 4-week average of 10,200 kg."
+ */
+export function workloadTakeaway(ratio, acute, chronic) {
+  if (ratio === null || ratio === undefined || !Number.isFinite(ratio)) return '';
+  if (!Number.isFinite(acute) || !Number.isFinite(chronic) || chronic <= 0) return '';
+  const acuteR = Math.round(acute).toLocaleString('en-GB');
+  const chronicR = Math.round(chronic).toLocaleString('en-GB');
+  return `This week: ${acuteR} kg against a 4-week average of ${chronicR} kg.`;
+}

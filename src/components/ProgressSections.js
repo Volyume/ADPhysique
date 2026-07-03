@@ -5,6 +5,7 @@ import SvgBarSparkline from './SvgBarSparkline';
 import InfoTooltip from './InfoTooltip';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { localDayKey } from '../lib/dayKey';
+import { workloadTakeaway } from '../lib/chartWindows';
 
 // Shared section cards for the Progress tab. These render the consistency and
 // recovery views (training block, training load, session length, frequency,
@@ -250,6 +251,8 @@ export function WorkloadCard({ data }) {
   // Simple visual bar: fill proportional to ratio, capped at 2.0
   const fillPct = Math.min(ratio / 2.0, 1);
 
+  const takeaway = workloadTakeaway(ratio, acute, chronic);
+
   return (
     <View style={styles.workloadCard}>
       <View style={styles.rowBetween}>
@@ -277,6 +280,7 @@ export function WorkloadCard({ data }) {
       </View>
 
       <Text style={[styles.workloadStatus, { color: statusColor }]}>{statusText}</Text>
+      {!!takeaway && <Text style={styles.workloadTakeaway}>{takeaway}</Text>}
     </View>
   );
 }
@@ -435,5 +439,9 @@ const styles = StyleSheet.create({
   },
   workloadStatus: {
     ...type.captionTight,
+  },
+  workloadTakeaway: {
+    ...type.bodySm,
+    color: colors.textSecondary,
   },
 });
