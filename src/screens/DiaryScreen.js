@@ -48,6 +48,7 @@ import QuickAddSheet from '../components/food/QuickAddSheet';
 import EmptyDiary from '../components/food/EmptyDiary';
 import { SkeletonRow } from '../components/Skeleton';
 import MealSection from '../components/food/MealSection';
+import HintCaption from '../components/HintCaption';
 import { friendlyFoodName } from '../components/food/EntryRow';
 import ScreenHeader from '../components/ScreenHeader';
 import { useToast } from '../components/Toast';
@@ -466,6 +467,35 @@ export default function DiaryScreen({ navigation }) {
     );
   }, []);
 
+  // Wave A C7 (2026-07-03): two long-press-only fast paths had no visible
+  // affordance for a sighted user (accessibilityHint/accessibilityLabel only)
+  // — holding a food row to edit its portion (FoodSearchScreen's "add again"
+  // rows) or to start multi-select here, and holding the water +/- to move
+  // 500ml instead of 250. Each gets a single one-time caption, same
+  // '@volyume_seen_*' convention as ActiveWorkoutScreen's info-button tip:
+  // shown until the user performs the gesture it describes (proves
+  // discovery) or dismisses it directly, never again after.
+  const [showFoodHint, setShowFoodHint] = useState(false);
+  const [showWaterHint, setShowWaterHint] = useState(false);
+  useEffect(() => {
+    let active = true;
+    AsyncStorage.getItem(DIARY_FOOD_HINT_KEY).then((v) => {
+      if (active && v !== 'true') setShowFoodHint(true);
+    }).catch(() => {});
+    AsyncStorage.getItem(DIARY_WATER_HINT_KEY).then((v) => {
+      if (active && v !== 'true') setShowWaterHint(true);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
+  const dismissFoodHint = useCallback(() => {
+    setShowFoodHint(false);
+    AsyncStorage.setItem(DIARY_FOOD_HINT_KEY, 'true').catch(() => {});
+  }, []);
+  const dismissWaterHint = useCallback(() => {
+    setShowWaterHint(false);
+    AsyncStorage.setItem(DIARY_WATER_HINT_KEY, 'true').catch(() => {});
+  }, []);
+
   const mealsPerDay = Math.max(prefMeals + addedMeals, highestLoggedMeal(viewEntries));
   const mealSlots = useMemo(() => buildMealSlots(viewEntries, mealsPerDay), [viewEntries, mealsPerDay]);
   // E10 read-only lapse views: only render meals that actually have food. An
@@ -653,6 +683,14 @@ export default function DiaryScreen({ navigation }) {
   useEffect(() => {
     if (selectionMode && selectedIds.size === 0) setSelectionMode(false);
   }, [selectionMode, selectedIds]);
+
+  // Wave A C7: entering selection mode only ever happens via the long-press
+  // this hint is teaching, so it's the discovery signal — watched here rather
+  // than added inside enterSelection itself, so the long-press -> selection
+  // wiring is untouched.
+  useEffect(() => {
+    if (selectionMode) dismissFoodHint();
+  }, [selectionMode, dismissFoodHint]);
 
   const enterSelection = useCallback((entry) => {
     setSelectionMode(true);
@@ -1103,6 +1141,17 @@ export default function DiaryScreen({ navigation }) {
                 </View>
               </View>
             ) : null}
+            {/* Wave A C7: one quiet caption the first time the day's meals
+                render with content, covering both "hold a food" gestures a
+                user will meet logging into this diary (portion edit on the
+                add-food picker, multi-select here). Gone the moment either
+                is discovered, or on "Got it". */}
+            {showFoodHint && !readOnly && !selectionMode ? (
+              <HintCaption
+                text="Hold a food to edit the portion. Hold to select several."
+                onDismiss={dismissFoodHint}
+              />
+            ) : null}
             {visibleSlots.map((slot, i) => (
               <View
                 key={slot.key}
@@ -1189,10 +1238,12 @@ export default function DiaryScreen({ navigation }) {
         <WaterRow
           ml={waterMl}
           targetMl={waterTargetMl}
-          onAdd={(amount) => logWaterDelta(amount)}
-          onSub={(amount) => logWaterDelta(-amount)}
+          onAdd={(amount) => { logWaterDelta(amount); if (amount >= 500) dismissWaterHint(); }}
+          onSub={(amount) => { logWaterDelta(-amount); if (amount >= 500) dismissWaterHint(); }}
           onEditTarget={changeWaterTarget}
           readOnly={readOnly}
+          showHint={showWaterHint}
+          onDismissHint={dismissWaterHint}
         />
       </ScrollView>
       </GestureDetector>
@@ -1389,7 +1440,15 @@ export default function DiaryScreen({ navigation }) {
 const WATER_TARGET_ML = 3000;
 const WATER_TARGET_KEY = '@volyume_water_target_ml';
 
-function WaterRow({ ml, targetMl = WATER_TARGET_ML, onAdd, onSub, onEditTarget, readOnly = false }) {
+// Wave A C7 (2026-07-03): one-time hint flags, same convention as
+// '@volyume_seen_workout_info' (ActiveWorkoutScreen).
+const DIARY_FOOD_HINT_KEY = '@volyume_seen_diary_food_hint';
+const DIARY_WATER_HINT_KEY = '@volyume_seen_diary_water_hint';
+
+function WaterRow({
+  ml, targetMl = WATER_TARGET_ML, onAdd, onSub, onEditTarget, readOnly = false,
+  showHint = false, onDismissHint,
+}) {
   const litres = (ml / 1000).toFixed(1);
   const targetL = (targetMl / 1000).toFixed(1);
   const progress = Math.max(0, Math.min(1, ml / targetMl));
@@ -1450,6 +1509,15 @@ function WaterRow({ ml, targetMl = WATER_TARGET_ML, onAdd, onSub, onEditTarget, 
       >
         <View style={[styles.waterFill, { width: `${Math.round(progress * 100)}%` }]} />
       </View>
+      {/* Wave A C7: the +/- long-press-for-500 move had no visible affordance
+          (accessibilityLabel only). Gone once discovered or dismissed. */}
+      {showHint && !readOnly ? (
+        <HintCaption
+          text="Hold to add 500 ml."
+          onDismiss={onDismissHint}
+          style={styles.waterHint}
+        />
+      ) : null}
     </View>
   );
 }
@@ -1639,4 +1707,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2, overflow: 'hidden',
   },
   waterFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
+  // waterRow already pads/gaps its children; HintCaption's own padding would
+  // double up, so this instance is flush.
+  waterHint: { paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 },
 });

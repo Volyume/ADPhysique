@@ -51,6 +51,7 @@ import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import QuickAddSheet from '../components/food/QuickAddSheet';
 import CuratedMealSheet from '../components/food/CuratedMealSheet';
 import FoodRow from '../components/food/FoodRow';
+import HintCaption from '../components/HintCaption';
 import { mealSlotLabel } from '../lib/food/mealSlots';
 import { scaleMacros, resolveServingG } from '../lib/food/macros';
 import { isValidEntryGrams } from '../lib/food/servingEntry';
@@ -67,6 +68,13 @@ const EMPTY_COPY = {
 // never-logged food has no remembered portion, so it still opens the sheet.
 // Suggested + Custom are handled elsewhere and are not in this set.
 const RELOG_TABS = new Set(['recents', 'favourites', 'frequents']);
+
+// Wave A C7 (2026-07-03): shared with DiaryScreen's meal-list hint — same
+// flag, same caption, because they're the two long-press "hold a food"
+// gestures a user meets across one diary-logging journey (edit the portion
+// here on the add-food picker, multi-select back on the diary's own list).
+// Whichever they meet first teaches both; dismissing either dismisses both.
+const DIARY_FOOD_HINT_KEY = '@volyume_seen_diary_food_hint';
 
 export default function FoodSearchScreen({ navigation, route }) {
   const { user, userProfile, energyUnit } = useAppStore(useShallow((s) => ({
@@ -117,6 +125,22 @@ export default function FoodSearchScreen({ navigation, route }) {
   // "add to taste" suggestions). Tapping a meal opens this rather than logging
   // instantly, so the user can see what's in it and what they can add.
   const [mealSheet, setMealSheet] = useState(null);
+
+  // Wave A C7: one-time caption for the "hold a food to edit the portion"
+  // long-press on re-log rows (see isRelogRow below), otherwise invisible to
+  // a sighted user (FoodRow only carried an accessibilityHint).
+  const [showFoodHint, setShowFoodHint] = useState(false);
+  useEffect(() => {
+    let active = true;
+    AsyncStorage.getItem(DIARY_FOOD_HINT_KEY).then((v) => {
+      if (active && v !== 'true') setShowFoodHint(true);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
+  const dismissFoodHint = useCallback(() => {
+    setShowFoodHint(false);
+    AsyncStorage.setItem(DIARY_FOOD_HINT_KEY, 'true').catch(() => {});
+  }, []);
 
   const debounceRef = useRef(null);
 
@@ -666,12 +690,19 @@ export default function FoodSearchScreen({ navigation, route }) {
         food={food}
         preference={preference}
         onPress={isRelogRow ? () => quickLogRelog(food) : () => openPicker(food)}
-        onLongPress={isRelogRow ? () => openPicker(food) : () => onLongPress(food)}
+        onLongPress={isRelogRow ? () => { openPicker(food); dismissFoodHint(); } : () => onLongPress(food)}
         longPressHint={isRelogRow ? 'Long-press to change the portion' : undefined}
         onAdd={isRecipePick ? undefined : () => addToPlate(food)}
       />
     );
   }
+
+  // Wave A C7: content-gated so the caption only shows once there's actually
+  // a re-log row to hold (never on an empty tab), and only on the tabs where
+  // long-press means "edit the portion" (isRelogRow's own condition, mirrored
+  // here since it's computed per-row above).
+  const showRelogHint = showFoodHint && !isRecipePick && RELOG_TABS.has(activeTab)
+    && query.trim().length < 2 && tabRows.length > 0;
 
   function renderEmpty() {
     // A live search with no hits: offer the custom-food fallback.
@@ -874,6 +905,12 @@ export default function FoodSearchScreen({ navigation, route }) {
         renderItem={renderItem}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: spacing.xxxl }}
+        ListHeaderComponent={showRelogHint ? (
+          <HintCaption
+            text="Hold a food to edit the portion. Hold to select several."
+            onDismiss={dismissFoodHint}
+          />
+        ) : null}
         ListEmptyComponent={renderEmpty()}
         ListFooterComponent={
           query.trim().length >= 2 && results.length > 0 ? (
