@@ -43,10 +43,16 @@ function buildDecisionRows(week, pairs = []) {
 
   if (adj.calories?.change && adj.calories.note) {
     const amt = Math.abs(adj.calories.change);
+    // When the ED calorie floor clamped the applied cut below the proposed one,
+    // the proposed figure overstates what landed. Drop the number (the floor
+    // only ever clamps cuts) so the chip never claims a cut bigger than it was.
+    const label = adj.calories.clampedToFloor
+      ? 'Calories reduced to your floor'
+      : (adj.calories.change > 0 ? `Calories up +${amt} kcal/day` : `Calories down ${amt} kcal/day`);
     rows.push(withOutcome({
       type: 'changed',
       icon: 'checkmark-circle-outline',
-      label: adj.calories.change > 0 ? `Calories up +${amt} kcal/day` : `Calories down ${amt} kcal/day`,
+      label,
       detail: adj.calories.note,
     }, 'calories'));
   }

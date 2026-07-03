@@ -313,11 +313,18 @@ function buildForward({ output, weighInsThisWeek, checkinDayName, suppress }) {
 // ED/wellbeing flag or calm mode (trend-response language is rate-adjacent).
 // ---------------------------------------------------------------------------
 
-/** This week's calorie call as { amount, direction }, or null when none. */
+/**
+ * This week's calorie call as { amount, direction, clamped }, or null when
+ * none. `clamped` is true when the ED calorie floor caught the applied change
+ * below the proposed one: the proposed figure would overstate the real cut, so
+ * callers must drop the number and speak of "the calorie change" instead. The
+ * floor only ever clamps cuts (Math.max(floor, current + change)).
+ */
 export function preCommitmentFacts(output) {
-  const change = output?.adjustments?.calories?.change;
+  const cal = output?.adjustments?.calories;
+  const change = cal?.change;
   if (!Number.isFinite(change) || change === 0) return null;
-  return { amount: Math.abs(change), direction: change < 0 ? 'cut' : 'increase' };
+  return { amount: Math.abs(change), direction: change < 0 ? 'cut' : 'increase', clamped: !!cal?.clampedToFloor };
 }
 
 /**
@@ -332,7 +339,8 @@ export function preCommitmentFacts(output) {
 export function commitmentOutcomeFacts({ output, history = [], weekStartMs } = {}) {
   if (!output || !Number.isFinite(weekStartMs)) return null;
   const prior = Array.isArray(history) ? history[0] : null;
-  const priorChange = prior?.adjustments?.calories?.change;
+  const cal = prior?.adjustments?.calories;
+  const priorChange = cal?.change;
   if (!Number.isFinite(priorChange) || priorChange === 0) return null;
   // Most-recent-first, with the current week stamped so the pairing can verdict
   // the prior week's applied call against this week's trend.
@@ -341,25 +349,32 @@ export function commitmentOutcomeFacts({ output, history = [], weekStartMs } = {
     (p) => p.domain === 'calories' && p.verdictWeekStart === weekStartMs,
   );
   if (!pair) return null;
-  return { amount: Math.abs(priorChange), direction: priorChange < 0 ? 'cut' : 'increase', onTarget: pair.onTarget };
+  // clamped: last week's cut was floor-limited, so its proposed figure would
+  // overstate what actually landed. Drop the number in the answer (see facts).
+  return {
+    amount: Math.abs(priorChange), direction: priorChange < 0 ? 'cut' : 'increase',
+    onTarget: pair.onTarget, clamped: !!cal?.clampedToFloor,
+  };
 }
 
 function buildPreCommitment({ output, checkinDayName, suppress }) {
   if (suppress) return null;
   const facts = preCommitmentFacts(output);
   if (!facts) return null;
+  const what = facts.clamped ? "this week's calorie change" : `this ${facts.amount} kcal ${facts.direction}`;
   const when = checkinDayName ? `Next ${checkinDayName}, the read` : 'The next read';
-  return clean(`${when} checks whether the trend responds to this ${facts.amount} kcal ${facts.direction}.`);
+  return clean(`${when} checks whether the trend responds to ${what}.`);
 }
 
 function buildCommitmentAnswer({ output, history, weekStartMs, suppress }) {
   if (suppress) return null;
   const facts = commitmentOutcomeFacts({ output, history, weekStartMs });
   if (!facts) return null;
+  const what = facts.clamped ? "Last week's calorie change" : `Last week's ${facts.amount} kcal ${facts.direction}`;
   const verdict = facts.onTarget
     ? 'The trend has responded, it is back on the set rate.'
     : 'The trend has not responded yet, it is still off the set rate.';
-  return clean(`Last week's ${facts.amount} kcal ${facts.direction} was the call to watch. ${verdict}`);
+  return clean(`${what} was the call to watch. ${verdict}`);
 }
 
 // ---------------------------------------------------------------------------

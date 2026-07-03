@@ -699,6 +699,12 @@ describe('S1c pre-commitment line', () => {
     expect(buildCoachResponse({ output: fakeOutput(), checkinDayName: 'Sunday' }).preCommitment).toBeNull();
   });
 
+  test('drops the figure when the cut was floor-clamped (never overstates the real cut)', () => {
+    const output = fakeOutput({ adjustments: { calories: { change: -150, clampedToFloor: true }, training: { signal: 'hold' } } });
+    expect(buildCoachResponse({ output, checkinDayName: 'Sunday' }).preCommitment)
+      .toBe("Next Sunday, the read checks whether the trend responds to this week's calorie change.");
+  });
+
   test('suppressed under an ED flag or calm mode', () => {
     expect(buildCoachResponse({ output: calOut(-150), checkinDayName: 'Sunday', edFlagOpen: true }).preCommitment).toBeNull();
     expect(buildCoachResponse({ output: calOut(-150), checkinDayName: 'Sunday', calmMode: true }).preCommitment).toBeNull();
@@ -762,5 +768,34 @@ describe('S1c commitment answer', () => {
     const args = { output: fakeOutput({ trend: { onTarget: true } }), weekStartMs: NOW, history: priorApplied(-150) };
     expect(buildCoachResponse({ ...args, edFlagOpen: true }).commitmentAnswer).toBeNull();
     expect(buildCoachResponse({ ...args, calmMode: true }).commitmentAnswer).toBeNull();
+  });
+
+  test('drops the figure when last week cut was floor-clamped', () => {
+    const r = buildCoachResponse({
+      output: fakeOutput({ trend: { onTarget: true } }),
+      weekStartMs: NOW,
+      history: [{ weekStart: NOW - WEEK, adjustments: { calories: { change: -150, applied: true, clampedToFloor: true } }, trend: { onTarget: false } }],
+    });
+    expect(r.commitmentAnswer)
+      .toBe("Last week's calorie change was the call to watch. The trend has responded, it is back on the set rate.");
+  });
+
+  test('null when last week applied training but not calories (a proposed-not-applied cut is not answered)', () => {
+    const r = buildCoachResponse({
+      output: fakeOutput({ trend: { onTarget: true } }),
+      weekStartMs: NOW,
+      history: [{ weekStart: NOW - WEEK, adjustments: { training: { signal: 'push', applied: true }, calories: { change: -150 } }, trend: {} }],
+    });
+    expect(r.commitmentAnswer).toBeNull();
+  });
+
+  test('answers the calorie call when last week applied both calories and training', () => {
+    const r = buildCoachResponse({
+      output: fakeOutput({ trend: { onTarget: true } }),
+      weekStartMs: NOW,
+      history: [{ weekStart: NOW - WEEK, adjustments: { calories: { change: -150, applied: true }, training: { signal: 'push', applied: true } }, trend: { onTarget: false } }],
+    });
+    expect(r.commitmentAnswer)
+      .toBe("Last week's 150 kcal cut was the call to watch. The trend has responded, it is back on the set rate.");
   });
 });

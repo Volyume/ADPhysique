@@ -240,15 +240,17 @@ function preciseForward({ output, weighInsThisWeek, checkinDayName }) {
 function precisePreCommitment({ output, checkinDayName }) {
   const facts = preCommitmentFacts(output);
   if (!facts) return null;
+  const what = facts.clamped ? "this week's calorie change" : `the ${facts.amount} kcal ${facts.direction}`;
   const when = checkinDayName ? `Next ${checkinDayName}` : 'Next read';
-  return clean(`${when}: does the trend respond to the ${facts.amount} kcal ${facts.direction}.`);
+  return clean(`${when}: does the trend respond to ${what}.`);
 }
 
 function preciseCommitmentAnswer({ output, history, weekStartMs }) {
   const facts = commitmentOutcomeFacts({ output, history, weekStartMs });
   if (!facts) return null;
+  const label = facts.clamped ? 'Last calorie change' : `Last ${facts.amount} kcal ${facts.direction}`;
   const verdict = facts.onTarget ? 'trend responded, back on rate.' : 'no response yet, off rate.';
-  return clean(`Last ${facts.amount} kcal ${facts.direction}: ${verdict}`);
+  return clean(`${label}: ${verdict}`);
 }
 
 // ---------------------------------------------------------------------------
