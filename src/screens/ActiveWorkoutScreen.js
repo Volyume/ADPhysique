@@ -1849,6 +1849,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           <View style={styles.headerSide}>
             <TouchableOpacity
               onPress={handleCancelWorkout}
+              style={styles.headerTapTarget}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
               accessibilityLabel="Cancel workout"
@@ -1871,6 +1872,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           <View style={styles.headerSideRight}>
             <TouchableOpacity
               onPress={handleFinishWorkout}
+              style={styles.headerTapTarget}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
               accessibilityLabel="Finish workout"
@@ -3222,11 +3224,11 @@ function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, workoutExercise
   return (
     <View style={styles.emptyView}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onCancel} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Cancel workout">
+        <TouchableOpacity onPress={onCancel} style={styles.headerTapTarget} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Cancel workout">
           <Ionicons name="close" size={22} color={colors.textSecondary} />
         </TouchableOpacity>
         <Text style={styles.timerText}>{elapsed}</Text>
-        <TouchableOpacity onPress={onFinish} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Finish workout">
+        <TouchableOpacity onPress={onFinish} style={styles.headerTapTarget} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Finish workout">
           <Text style={styles.finishBtn}>Finish</Text>
         </TouchableOpacity>
       </View>
@@ -3265,6 +3267,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   headerSide: { width: 64, alignItems: 'flex-start', justifyContent: 'center' },
+  // CL-6.2: a real 44pt frame under the top-corner controls (plus hitSlop);
+  // purely transparent, no visual change.
+  headerTapTarget: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   headerSideRight: { width: 64, alignItems: 'flex-end', justifyContent: 'center' },
   finishBtn: { ...type.bodyStrong, color: colors.primary, paddingVertical: spacing.xs },
   headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
