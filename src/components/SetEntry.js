@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Keyboard } from 'react-native';
 import * as haptics from '../lib/haptics';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
@@ -32,7 +32,7 @@ function parseTimeToSeconds(text) {
   return Number.isNaN(n) ? '' : n;
 }
 
-export default function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitComplete, exerciseType = 'weight_reps' }) {
+export default function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitComplete, exerciseType = 'weight_reps', weightStepKg = 2.5 }) {
   const { weight, reps, isGhost } = value;
   const repsRef = useRef(null);
   // weighted_bodyweight renders byte-identically to weight_reps (weight field
@@ -41,11 +41,12 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
   // falls back to the safe weight_reps layout.
   const showWeightReps = exerciseType === 'weight_reps' || exerciseType === 'weighted_bodyweight';
 
-  function adjust(field, delta) {
+  function adjustFrom(v, field, delta) {
     haptics.selection();
-    // Weight stepper: 2.5 kg, the smallest practical barbell jump. Gym weights
-    // are kg-only.
-    const steps = { weight: 2.5, reps: 1 };
+    // CL-6.3: the weight step honours the exercise's own increment
+    // (exercise.incrementKg, e.g. 1.0 for dumbbell moves, 2.5 barbell
+    // default). Gym weights are kg-only.
+    const steps = { weight: Number(weightStepKg) > 0 ? Number(weightStepKg) : 2.5, reps: 1 };
     // Reps cap matches the TextInput's [1, 200] so a typed 150 doesn't
     // snap back to 100 when the user taps −.
     const limits = { weight: [0, 500], reps: [1, 200] };
@@ -53,15 +54,39 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
     // Coerce in case a previous code path wrote a string like '' or '.'
     // arithmetic on those produces NaN and the next clamp wedges at the
     // lower bound forever.
-    const raw = value[field];
+    const raw = v[field];
     const current = typeof raw === 'number' ? raw : (parseFloat(raw) || 0);
     const next = Math.min(Math.max(current + delta * (steps[field] || 1), fieldLimits[0]), fieldLimits[1]);
-    onChange({ ...value, [field]: field === 'weight' ? Math.round(next * 100) / 100 : Math.round(next), isGhost: false });
+    onChange({ ...v, [field]: field === 'weight' ? Math.round(next * 100) / 100 : Math.round(next), isGhost: false });
+  }
+
+  function adjust(field, delta) {
+    adjustFrom(valueRef.current, field, delta);
   }
 
   function setField(field, val) {
     onChange({ ...value, [field]: val, isGhost: false });
   }
+
+  // CL-6.3: long-press repeat on the weight/reps steppers (the RestTimer
+  // ±15 pattern): hold to keep adjusting at 200ms, cleared on release and
+  // unmount. `adjust` reads the CURRENT value from props each call via the
+  // ref below, so a held button never clamps against a stale closure.
+  const valueRef = useRef(value);
+  valueRef.current = value;
+  const repeatRef = useRef(null);
+  function stopRepeat() {
+    if (repeatRef.current) {
+      clearInterval(repeatRef.current);
+      repeatRef.current = null;
+    }
+  }
+  function startRepeat(field, delta) {
+    stopRepeat();
+    repeatRef.current = setInterval(() => adjustFrom(valueRef.current, field, delta), 200);
+  }
+  useEffect(() => () => stopRepeat(), []);
+
 
   // Time stepper for the duration / distance schemas. Steps the seconds count
   // (stored in value.reps) by `delta` seconds, clamped to [0, 5999] (99:59).
@@ -95,8 +120,12 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
           <TouchableOpacity
             style={styles.stepBtn}
             onPress={() => adjust('weight', -1)}
+            onLongPress={() => startRepeat('weight', -1)}
+            onPressOut={stopRepeat}
+            delayLongPress={300}
             accessibilityRole="button"
             accessibilityLabel="Decrease weight"
+            accessibilityHint="Hold to keep adjusting"
           >
             <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>−</Text>
           </TouchableOpacity>
@@ -129,8 +158,12 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
           <TouchableOpacity
             style={styles.stepBtn}
             onPress={() => adjust('weight', 1)}
+            onLongPress={() => startRepeat('weight', 1)}
+            onPressOut={stopRepeat}
+            delayLongPress={300}
             accessibilityRole="button"
             accessibilityLabel="Increase weight"
+            accessibilityHint="Hold to keep adjusting"
           >
             <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>+</Text>
           </TouchableOpacity>
@@ -278,8 +311,12 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
           <TouchableOpacity
             style={styles.stepBtn}
             onPress={() => adjust('reps', -1)}
+            onLongPress={() => startRepeat('reps', -1)}
+            onPressOut={stopRepeat}
+            delayLongPress={300}
             accessibilityRole="button"
             accessibilityLabel="Decrease reps"
+            accessibilityHint="Hold to keep adjusting"
           >
             <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>−</Text>
           </TouchableOpacity>
@@ -307,8 +344,12 @@ export default function SetEntry({ value, onChange, units = 'kg', isWarmup = fal
           <TouchableOpacity
             style={styles.stepBtn}
             onPress={() => adjust('reps', 1)}
+            onLongPress={() => startRepeat('reps', 1)}
+            onPressOut={stopRepeat}
+            delayLongPress={300}
             accessibilityRole="button"
             accessibilityLabel="Increase reps"
+            accessibilityHint="Hold to keep adjusting"
           >
             <Text style={styles.stepBtnText} maxFontSizeMultiplier={1.3}>+</Text>
           </TouchableOpacity>

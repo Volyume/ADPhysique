@@ -2269,6 +2269,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               isWarmup={currentSet.setType === 'warmup'}
               onSubmitComplete={handleCompleteSetPress}
               exerciseType={exercise?.exerciseType || 'weight_reps'}
+              weightStepKg={exercise?.incrementKg || exercise?.increment_kg || 2.5}
             />
 
             {showNoteInput ? (
@@ -3181,6 +3182,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   units={units}
                   isWarmup={editValue.setType === 'warmup'}
                   exerciseType={exercise?.exerciseType || 'weight_reps'}
+                  weightStepKg={exercise?.incrementKg || exercise?.increment_kg || 2.5}
                 />
               )}
               <TouchableOpacity
