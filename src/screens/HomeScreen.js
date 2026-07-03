@@ -10,6 +10,7 @@ import { format } from 'date-fns/format';
 
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
+import ConsistencyEcho from '../components/ConsistencyEcho';
 import BlockShapeCard from '../components/BlockShapeCard';
 import Button from '../components/Button';
 import PressableCard from '../components/PressableCard';
@@ -1676,6 +1677,10 @@ export default function HomeScreen({ navigation, route }) {
                 <Text style={styles.heroSecondaryBtnText}>Blank session</Text>
               </TouchableOpacity>
             </View>
+            {/* S2: the compact consistency echo + one-time forgiveness explainer,
+                same resolver as the Progress strip so the number never disagrees;
+                absent under ED flag / SCOFF / calm mode. */}
+            <ConsistencyEcho userId={user?.id} scoffScore={userProfile?.scoffScore} />
           </View>
         ) : (
           <View style={styles.noPlanSection}>
