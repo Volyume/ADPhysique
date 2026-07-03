@@ -80,7 +80,8 @@ describe('fit rule 4: the JS-thread Animated API is a frozen allowlist', () => {
     'components/RestTimer.js',
     'components/Skeleton.js',
     'components/Toast.js',
-    'components/food/MacroRings.js',
+    // components/food/MacroRings.js left this list in E15-4 (RollingNumber
+    // + UI-thread ring; the Animated.Value listener is retired).
     'navigation/RootNavigator.js',
     'screens/ActiveWorkoutScreen.js',
     'screens/ExerciseDetailScreen.js',

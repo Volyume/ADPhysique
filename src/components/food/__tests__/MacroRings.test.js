@@ -78,8 +78,13 @@ describe('remaining-as-hero (founder decision 2026-06-29)', () => {
     const tree = create(<MacroRings rollup={rollup} targets={targets} />);
     const texts = tree.root.findAll((n) => n.type === 'Text' && typeof n.props.children !== 'object')
       .map((n) => n.props.children);
+    // E15-4: the hero numeral rides RollingNumber (a non-editable TextInput
+    // host in tests); its resting text is defaultValue.
+    const numerals = tree.root.findAll((n) => n.props?.defaultValue != null)
+      .map((n) => n.props.defaultValue);
     // 2100 - 1840 = 260 left; eaten reference shows "1840" + "of 2100 kcal"
-    expect(texts).toContain(260);
+    expect(numerals).toContain('260');
+    expect(numerals).toContain('1,840');
     expect(texts).toContain('left');
     expect(texts).toContain('of 2100 kcal');
   });
@@ -90,7 +95,9 @@ describe('remaining-as-hero (founder decision 2026-06-29)', () => {
     const tree = create(<MacroRings rollup={rollup} targets={targets} />);
     const texts = tree.root.findAll((n) => n.type === 'Text' && typeof n.props.children !== 'object')
       .map((n) => n.props.children);
-    expect(texts).toContain(200); // |2100 - 2300|
+    const numerals = tree.root.findAll((n) => n.props?.defaultValue != null)
+      .map((n) => n.props.defaultValue);
+    expect(numerals).toContain('200'); // |2100 - 2300|
     expect(texts).toContain('over');
   });
 });

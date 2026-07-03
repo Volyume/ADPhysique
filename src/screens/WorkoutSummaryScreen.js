@@ -5,6 +5,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, withAlpha, alpha, circle } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
+import RollingNumber from '../components/RollingNumber';
 import BlockShapeCard from '../components/BlockShapeCard';
 import { useFeedback } from '../components/FeedbackSheet';
 import { shouldPrompt } from '../lib/feedback';
@@ -1259,50 +1260,42 @@ function StatBox({ icon, value, label, tooltip, animateOrder = 0, hero = false }
     return { num: cleanNum, suffix: m[2] };
   }, [value]);
 
-  const [displayed, setDisplayed] = useState(() => parsed ? 0 : value);
   const opacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
   const translateY = useRef(new Animated.Value(reduceMotion ? 0 : 8)).current;
+  const delay = animateOrder * 80;
 
   useEffect(() => {
-    if (!parsed) { setDisplayed(value); return; }
-    if (reduceMotion) { setDisplayed(value); return; }
+    if (reduceMotion) return;
     // Staggered reveal, each StatBox starts ~80ms after the previous
     // one. Gives the grid a left-to-right shimmer rather than four
     // boxes appearing simultaneously.
-    const delay = animateOrder * 80;
     Animated.parallel([
       Animated.timing(opacity, { toValue: 1, duration: 280, delay, useNativeDriver: true }),
       Animated.timing(translateY, { toValue: 0, duration: 320, delay, useNativeDriver: true }),
     ]).start();
-    // Counter animation: tick from 0 to target across ~900ms with
-    // ease-out so the increment slows as it approaches the final
-    // value. Smooth, not janky.
-    const target = parsed.num;
-    const durationMs = 900;
-    const startedAt = Date.now() + delay;
-    let raf = null;
-    function step() {
-      const now = Date.now();
-      if (now < startedAt) { raf = requestAnimationFrame(step); return; }
-      const t = Math.min(1, (now - startedAt) / durationMs);
-      const eased = 1 - Math.pow(1 - t, 3);
-      const current = Math.round(target * eased);
-      const formatted = target >= 100
-        ? `${current.toLocaleString('en-GB')}${parsed.suffix}`
-        : `${current}${parsed.suffix}`;
-      setDisplayed(formatted);
-      if (t < 1) raf = requestAnimationFrame(step);
-      else setDisplayed(value);
-    }
-    raf = requestAnimationFrame(step);
-    return () => { if (raf) cancelAnimationFrame(raf); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
+
+  // E9/E15-4: the count-up rides RollingNumber on the UI thread (the old
+  // requestAnimationFrame counter re-rendered this box every frame).
+  // Non-numeric values render static, as before.
+  const numeral = (textStyle) => (parsed ? (
+    <RollingNumber
+      value={parsed.num}
+      from={0}
+      delayMs={delay}
+      suffix={parsed.suffix}
+      style={textStyle}
+      accessibilityLabel={String(value)}
+    />
+  ) : (
+    <Text style={textStyle}>{value}</Text>
+  ));
 
   if (hero) {
     return (
       <Animated.View style={[styles.heroValueWrap, { opacity, transform: [{ translateY }] }]}>
-        <Text style={styles.heroValue}>{displayed}</Text>
+        {numeral(styles.heroValue)}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
           <Text style={styles.heroValueLabel}>{label}</Text>
           {tooltip ? <InfoTooltip size={11} text={tooltip} /> : null}
@@ -1314,7 +1307,7 @@ function StatBox({ icon, value, label, tooltip, animateOrder = 0, hero = false }
   return (
     <Animated.View style={[styles.statBox, { opacity, transform: [{ translateY }] }]}>
       <Ionicons name={icon} size={20} color={colors.textSecondary} />
-      <Text style={styles.statValue}>{displayed}</Text>
+      {numeral(styles.statValue)}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
         <Text style={styles.statLabel}>{label}</Text>
         {tooltip ? <InfoTooltip size={10} text={tooltip} /> : null}

@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useSharedValue, useDerivedValue, withTiming } from 'react-native-reanimated';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
+import RollingNumber from '../RollingNumber';
 import { colors, fontSize, fontWeight, spacing, radius, motion } from '../../styles/theme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
@@ -20,7 +22,9 @@ export function bandColour() {
 }
 
 function arcPath(cx, cy, r, startDeg, sweepDeg) {
+  'worklet';
   const p = Skia.Path.Make();
+  if (sweepDeg <= 0) return p;
   const start = (startDeg * Math.PI) / 180;
   const end = ((startDeg + sweepDeg) * Math.PI) / 180;
   p.moveTo(cx + r * Math.cos(start), cy + r * Math.sin(start));
@@ -36,14 +40,19 @@ function arcPath(cx, cy, r, startDeg, sweepDeg) {
 // arc behind the solid eaten arc so planned-but-unconfirmed food is visible
 // without being mistaken for eaten. When the user confirms a day, planned
 // flips to eaten and the faded extension becomes solid.
-function Ring({ size, stroke, progress, plannedProgress = 0, tint, track }) {
+function Ring({ size, stroke, progress, progressTarget, plannedProgress = 0, tint, track }) {
   const r = (size - stroke) / 2;
   const cx = size / 2;
   const cy = size / 2;
   const trackPath = useMemo(() => arcPath(cx, cy, r, 0, 360), [cx, cy, r]);
-  const sweep = Math.max(0, Math.min(1, progress)) * 360;
+  const targetSweep = Math.max(0, Math.min(1, progressTarget)) * 360;
   const plannedSweep = Math.max(0, Math.min(1, plannedProgress)) * 360;
-  const fillPath = useMemo(() => arcPath(cx, cy, r, -90, sweep), [cx, cy, r, sweep]);
+  // The eaten arc derives from the shared value on the UI thread; arcPath
+  // returns an empty path at zero sweep so nothing draws (the old JSX guard).
+  const fillPath = useDerivedValue(
+    () => arcPath(cx, cy, r, -90, Math.max(0, Math.min(1, progress.value)) * 360),
+    [cx, cy, r],
+  );
   const plannedPath = useMemo(() => arcPath(cx, cy, r, -90, plannedSweep), [cx, cy, r, plannedSweep]);
   return (
     <Canvas style={{ width: size, height: size }}>
@@ -54,7 +63,7 @@ function Ring({ size, stroke, progress, plannedProgress = 0, tint, track }) {
         strokeWidth={stroke}
         strokeCap="round"
       />
-      {plannedSweep > sweep && (
+      {plannedSweep > targetSweep && (
         <Path
           path={plannedPath}
           color={tint}
@@ -64,15 +73,13 @@ function Ring({ size, stroke, progress, plannedProgress = 0, tint, track }) {
           strokeCap="round"
         />
       )}
-      {sweep > 0 && (
-        <Path
-          path={fillPath}
-          color={tint}
-          style="stroke"
-          strokeWidth={stroke}
-          strokeCap="round"
-        />
-      )}
+      <Path
+        path={fillPath}
+        color={tint}
+        style="stroke"
+        strokeWidth={stroke}
+        strokeCap="round"
+      />
     </Canvas>
   );
 }
@@ -152,7 +159,7 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
   const kcalProgress = kcalTarget && kcalTarget > 0 ? kcal / kcalTarget : 0;
   const kcalPlannedProgress = kcalTarget && kcalTarget > 0 ? (kcal + plannedKcal) / kcalTarget : 0;
   // Remaining (the hero) is derived from the animated eaten total at render time
-  // (dispRemaining), so the non-animated kcalRemaining is no longer needed here.
+  // (the remaining numeral), so the non-animated kcalRemaining is no longer needed here.
   const kcalTint = bandColour();
 
   // Descriptive macro %-of-calories split (Cronometer-style). Purely factual:
@@ -197,32 +204,19 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   // Energy DISPLAY unit (kcal | kj). Display-only: every value above stays in
   // kcal (the stored/coaching unit); only the rendered energy number + label
-  // convert. `kcal`/`kcalTarget`/`disp.kcal`/`plannedKcal`/`dispRemaining` are
+  // convert. `kcal`/`kcalTarget`/`plannedKcal`/`remaining` are
   // all kcal and are wrapped in toEnergy() at the point of display.
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const energyWord = energyUnit === 'kj' ? 'kilojoules' : 'calories';
-  const animValue = useRef(new Animated.Value(1)).current;
-  const fromRef = useRef({ kcal, progress: kcalProgress });
-  const [disp, setDisp] = useState({ kcal, progress: kcalProgress });
+  // E15-4: the old Animated.Value listener drove kcal + ring progress with a
+  // per-frame setState (a JS-thread re-render every frame of the hot Diary
+  // path). The ring now animates a shared value on the UI thread and the
+  // numerals ride RollingNumber; no per-frame JS remains.
+  const progressSv = useSharedValue(kcalProgress);
   useEffect(() => {
-    const from = fromRef.current;
-    const to = { kcal, progress: kcalProgress };
-    if (reduceMotion || (from.kcal === to.kcal && from.progress === to.progress)) {
-      setDisp(to);
-      fromRef.current = to;
-      return undefined;
-    }
-    animValue.setValue(0);
-    const id = animValue.addListener(({ value }) => {
-      setDisp({
-        kcal: Math.round(from.kcal + (to.kcal - from.kcal) * value),
-        progress: from.progress + (to.progress - from.progress) * value,
-      });
-    });
-    Animated.timing(animValue, { toValue: 1, duration: motion.hero, useNativeDriver: false })
-      .start(() => { fromRef.current = to; });
-    return () => animValue.removeListener(id);
-  }, [kcal, kcalProgress, reduceMotion, animValue]);
+    if (reduceMotion) { progressSv.value = kcalProgress; return; }
+    progressSv.value = withTiming(kcalProgress, { duration: motion.hero });
+  }, [kcalProgress, reduceMotion, progressSv]);
 
   // Remaining is the hero number (founder decision 2026-06-29, MFP-style): the
   // ring centre counts DOWN the calories left, with eaten/target shown as the
@@ -230,8 +224,8 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
   // as food lands. Stays adherence-NEUTRAL: "over" is shown factually in the same
   // neutral ink as "left" — never a red/alarm colour (the ring colour is likewise
   // neutral amber, see bandColour).
-  const dispRemaining = kcalTarget != null ? Math.round(kcalTarget - disp.kcal) : null;
-  const dispOver = dispRemaining != null && dispRemaining < 0;
+  const remaining = kcalTarget != null ? Math.round(kcalTarget - kcal) : null;
+  const over = remaining != null && remaining < 0;
 
   // The rings are decorative (Skia canvas); the numbers are the data. Build
   // one spoken summary of kcal + macros so a screen reader conveys the same
@@ -274,7 +268,8 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
           <Ring
             size={KCAL_SIZE}
             stroke={KCAL_STROKE}
-            progress={disp.progress}
+            progress={progressSv}
+            progressTarget={kcalProgress}
             plannedProgress={kcalPlannedProgress}
             tint={kcalTint}
             track={colors.surface2}
@@ -282,12 +277,16 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
           <View style={styles.kcalCentre} pointerEvents="none">
             {kcalTarget != null ? (
               <>
-                <Text style={styles.kcalValue}>{toEnergy(dispOver ? Math.abs(dispRemaining) : dispRemaining, energyUnit)}</Text>
-                <Text style={styles.kcalSubLabel}>{dispOver ? 'over' : 'left'}</Text>
+                <RollingNumber
+                  value={toEnergy(over ? Math.abs(remaining) : remaining, energyUnit)}
+                  style={styles.kcalValue}
+                  accessibilityLabel={`${toEnergy(over ? Math.abs(remaining) : remaining, energyUnit)} ${energyWord} ${over ? 'over' : 'left'}`}
+                />
+                <Text style={styles.kcalSubLabel}>{over ? 'over' : 'left'}</Text>
               </>
             ) : (
               <>
-                <Text style={styles.kcalValue}>{toEnergy(disp.kcal, energyUnit)}</Text>
+                <RollingNumber value={toEnergy(kcal, energyUnit)} style={styles.kcalValue} />
                 <Text style={styles.kcalSubLabel}>{energyUnitLabel(energyUnit)}</Text>
               </>
             )}
@@ -298,7 +297,7 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
         </View>
         {kcalTarget != null ? (
           <View style={styles.kcalEatenWrap}>
-            <Text style={styles.kcalEatenValue}>{toEnergy(disp.kcal, energyUnit)}</Text>
+            <RollingNumber value={toEnergy(kcal, energyUnit)} style={styles.kcalEatenValue} />
             <Text style={styles.kcalEatenLabel}>{`of ${toEnergy(kcalTarget, energyUnit)} ${energyUnitLabel(energyUnit)}`}</Text>
           </View>
         ) : null}

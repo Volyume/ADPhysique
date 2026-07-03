@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius, volumeColors, volumeStatusColor, type, circle } from '../styles/theme';
 import Card from '../components/Card';
+import RollingNumber from '../components/RollingNumber';
 import ScreenHeader from '../components/ScreenHeader';
 import { SkeletonCard } from '../components/Skeleton';
 import AnimatedEntrance from '../components/AnimatedEntrance';
@@ -778,7 +779,11 @@ function TrainingLoadHero({ series, units }) {
     <Card accessibilityLabel={`Training load. ${weekLabel}: ${formatNumber(active.value)} ${unit} lifted.`}>
       <Text style={styles.heroEyebrow}>Training load</Text>
       <View style={styles.heroValueRow}>
-        <Text style={styles.heroValue}>{formatNumber(active.value)}</Text>
+        <RollingNumber
+          value={active.value}
+          style={styles.heroValue}
+          accessibilityLabel={`${formatNumber(active.value)} ${unit}`}
+        />
         <Text style={styles.heroUnit}>{unit}</Text>
       </View>
       <Text style={styles.heroSub}>{weekLabel} · weight lifted</Text>

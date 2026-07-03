@@ -41,6 +41,7 @@ const reanimated = {
     Text: AnimatedText,
     ScrollView: AnimatedScrollView,
     createAnimatedComponent: (c) => c,
+    addWhitelistedNativeProps: () => {},
     call: () => {},
     Value: function (v) { return { value: v }; },
   },
@@ -51,6 +52,7 @@ const reanimated = {
 
   useSharedValue: (v) => ({ value: v }),
   useAnimatedStyle: () => ({}),
+  useAnimatedProps: () => ({}),
   useDerivedValue: (fn) => ({ value: typeof fn === 'function' ? fn() : fn }),
   useAnimatedScrollHandler: () => () => {},
   withTiming: (v) => v,
