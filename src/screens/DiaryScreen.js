@@ -13,6 +13,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, Pressable, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Gesture, GestureDetector, Directions } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as haptics from '../lib/haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -25,6 +27,7 @@ import {
   getSlotRecents, logFoodEntry, upsertSlotRecent,
 } from '../lib/food/db';
 import { isoDate, shiftDate, weekDatesMon, weekdayShort, friendlyDate } from '../lib/food/diaryDates';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
 import { getNutritionTargets, hasWorkoutOnDate, getFirstWorkoutDateOnOrAfter, getOpenEdPatternFlag, getLatestBodyWeight, getLatestBodyComposition } from '../lib/database';
 import { computeFFMFloor } from '../lib/nutritionEngine';
@@ -549,6 +552,31 @@ export default function DiaryScreen({ navigation }) {
   function gotoTomorrow()  { setSelectedDate(shiftDate(selectedDate, 1)); }
   function gotoToday()     { setSelectedDate(isoDate(new Date())); }
 
+  // C5: a horizontal swipe on the diary body is a second way to change day —
+  // the chevrons (day pager row below) stay as-is. Fling only activates on a
+  // fast, predominantly-horizontal flick past its own threshold, so it never
+  // contests the vertical ScrollView (or its pull-to-refresh) underneath it;
+  // no simultaneous/waitFor wiring needed. Swipe LEFT reads as "go forward"
+  // (next day), swipe RIGHT as "go back" (previous day) — the same sense as
+  // paging through a calendar or photo gallery.
+  //
+  // Latest-ref pattern (same idiom as the VolyumeChart scrub gesture,
+  // src/components/VolyumeChart.js): the Gesture.Race is built once (stable
+  // deps []) so it is never rebuilt on every render, but it always calls
+  // through to the CURRENT gotoTomorrow/gotoYesterday closure via the ref,
+  // never a stale `selectedDate` captured when the gesture was first built.
+  const dayNavRef = useRef({ next: gotoTomorrow, prev: gotoYesterday });
+  dayNavRef.current.next = gotoTomorrow;
+  dayNavRef.current.prev = gotoYesterday;
+  const daySwipe = useMemo(() => {
+    const next = () => dayNavRef.current.next();
+    const prev = () => dayNavRef.current.prev();
+    return Gesture.Race(
+      Gesture.Fling().direction(Directions.LEFT).onEnd(() => { runOnJS(next)(); }),
+      Gesture.Fling().direction(Directions.RIGHT).onEnd(() => { runOnJS(prev)(); }),
+    );
+  }, []);
+
   function addFood(slot) {
     // Search-first flow: most adds will be a known food. The search
     // screen surfaces a "create a custom food" CTA inline for misses.
@@ -883,6 +911,12 @@ export default function DiaryScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* C5: GestureDetector wraps the day content so a horizontal swipe
+          changes day the same way the chevrons do (Directions.LEFT = next,
+          Directions.RIGHT = previous). The chevrons and every touchable
+          inside are untouched — Fling only wins the gesture race on a fast
+          horizontal flick, so ordinary taps/scrolls pass straight through. */}
+      <GestureDetector gesture={daySwipe}>
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
@@ -1010,7 +1044,7 @@ export default function DiaryScreen({ navigation }) {
                 // card, destroying the affordance. Navigate first (cross-tab),
                 // and only dismiss once the navigation has been issued.
                 onPress={() => {
-                  navigation.getParent()?.navigate('ProfileTab', { screen: 'SettingsPrivacy', initial: false });
+                  navigateCrossTab(navigation, 'ProfileTab', 'SettingsPrivacy');
                   onDismissOffCard();
                 }}
                 hitSlop={8}
@@ -1161,6 +1195,7 @@ export default function DiaryScreen({ navigation }) {
           readOnly={readOnly}
         />
       </ScrollView>
+      </GestureDetector>
 
       <FoodDetailSheet
         visible={!!editSheet && !readOnly}
