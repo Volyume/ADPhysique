@@ -1,22 +1,24 @@
 /**
- * Progress-photo comparison (enhancement B6) invariants. Pins, against the
- * real screen:
- *   - the Compare affordance exists only when two or more photos exist;
- *   - selection mode picks EXACTLY two: a tap on a third photo replaces the
- *     EARLIEST choice (the pinned behaviour), a tap on a chosen photo
- *     unchooses it, and the compare view cannot open with fewer than two;
- *   - selection taps never open the delete dialog (and normal taps still do);
- *   - the compare view renders both photos OLDER-LEFT / NEWER-RIGHT with
- *     their date labels, and its copy is dates + neutral labels ONLY: no
- *     deltas, measurements, "before/after" framing or judgement words (this
- *     screen is body-image adjacent; CLAUDE.md ED-safety rules);
- *   - both panes decode at explicit bounded view dimensions with
- *     resizeMethod="resize" (the audit's named memory risk), never unbounded;
- *   - reduce motion collapses the modal animation to none;
- *   - the calm-mode wellbeing note is byte-identical to the pre-compare
- *     screen (the gate around this screen must not be weakened by B6);
- *   - a photo that fails to load logs via ProgressPhotos.compare and shows a
- *     calm fallback instead of crashing.
+ * ProgressPhotosScreen integration invariants (progress-photos upgrade, B5).
+ *
+ * The neutral-copy ban and the three comparison modes now live in the
+ * extracted ProgressPhotoCompare component and are pinned by its own colocated
+ * test (ProgressPhotoCompare.test.js) — the SAME regex the legacy inline modal
+ * was held to. This suite pins the SCREEN's wiring and the safety invariants
+ * that stay the screen's responsibility after the timeline rewrite:
+ *   - the dated, pose-typed timeline (month headers, per-tile dates) built from
+ *     getPhotoMetaMap, newest-first;
+ *   - a tap opens the full-size VIEWER (not delete); delete flows through the
+ *     viewer's onDelete → deleteProgressPhoto + deletePhotoMeta + refresh, with
+ *     a live-tier re-check;
+ *   - the Compare entry opens ProgressPhotoCompare AND is withheld (hidden)
+ *     under the shared fail-closed suppression gate — a double guard with the
+ *     component's own self-suppression;
+ *   - the Share entry is Pro-gated AND withheld under suppression;
+ *   - the calm-mode wellbeing note is byte-identical to the pre-upgrade wording
+ *     (the base screen's raw fail-closed read must not be weakened);
+ *   - the E10 read-only (free-tier) rules: no add, tiles inert (no editable
+ *     viewer, no delete), Compare still available (pure viewing).
  */
 import { create, act } from 'react-test-renderer';
 
@@ -37,16 +39,39 @@ jest.mock('../../lib/wellbeing', () => ({
 jest.mock('../../lib/progressPhotos', () => ({
   listProgressPhotos: jest.fn(),
   saveProgressPhoto: jest.fn(),
-  deleteProgressPhoto: jest.fn(),
+  deleteProgressPhoto: jest.fn(async () => true),
   markPhotosOwner: jest.fn(),
 }));
+jest.mock('../../lib/progressPhotoMeta', () => ({
+  getPhotoMetaMap: jest.fn(async (names) => {
+    const m = {};
+    for (const n of names) m[n] = { name: n, takenAt: parseInt(n, 10), pose: null, weightKg: null, note: null };
+    return m;
+  }),
+  deletePhotoMeta: jest.fn(async () => true),
+}));
+// The shared ED-safety gate is driven directly here; its own logic is unit-
+// tested in usePhotoSuppression.test.js.
+jest.mock('../../hooks/usePhotoSuppression', () => ({ __esModule: true, default: jest.fn(() => false) }));
+
+// The four wired surfaces are their own components with their own tests; stub
+// them to inert hosts so this suite pins only the screen's wiring around them.
+const stub = (name) => ({ __esModule: true, default: (props) => {
+  const React = require('react');
+  return React.createElement(name, props);
+} });
+jest.mock('../../components/ProgressPhotoViewer', () => stub('ProgressPhotoViewer'));
+jest.mock('../../components/ProgressPhotoCompare', () => stub('ProgressPhotoCompare'));
+jest.mock('../../components/ProgressGhostCapture', () => stub('ProgressGhostCapture'));
+jest.mock('../../components/BeforeAfterShareSheet', () => stub('BeforeAfterShareSheet'));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../../store/useAppStore';
 import { appAlert } from '../../components/AppAlert';
-import { logError } from '../../lib/errorLog';
 import { WELLBEING_KEY } from '../../lib/wellbeing';
-import { listProgressPhotos } from '../../lib/progressPhotos';
+import { listProgressPhotos, deleteProgressPhoto } from '../../lib/progressPhotos';
+import { deletePhotoMeta } from '../../lib/progressPhotoMeta';
+import usePhotoSuppression from '../../hooks/usePhotoSuppression';
 import ProgressPhotosScreen from '../ProgressPhotosScreen';
 
 // Same formatter the screen uses, so the expected labels track the ICU data.
@@ -73,14 +98,13 @@ async function flush() {
   await act(async () => { for (let i = 0; i < 6; i++) await Promise.resolve(); });
 }
 
-async function render(photos = [NEW, MID, OLD], { mode = 'unspecified', reduceMotion = false, tier = 'pro' } = {}) {
-  // tier 'pro' (default) keeps these suites pinning the full (mutable)
-  // screen; the E10 read-only lapse pins pass tier 'free' explicitly. The
-  // write handlers re-check the LIVE tier via getState (stale-closure guard),
-  // so the mock carries it too.
+async function render(photos = [NEW, MID, OLD], {
+  mode = 'unspecified', reduceMotion = false, tier = 'pro', suppressed = false,
+} = {}) {
   useAppStore.mockImplementation((sel) => sel({ accessibility: { reduceMotion }, tier }));
   useAppStore.getState = () => ({ tier, user: { id: 'u-test' } });
-  // The screen now reads the wellbeing flag RAW via AsyncStorage (fail-closed
+  usePhotoSuppression.mockReturnValue(suppressed);
+  // The screen reads the wellbeing flag RAW via AsyncStorage (fail-closed
   // sweep, 2026-07-03) rather than through the getWellbeingMode() helper.
   await AsyncStorage.setItem(WELLBEING_KEY, mode);
   listProgressPhotos.mockResolvedValue(photos); // newest first, like the lib
@@ -102,55 +126,66 @@ async function press(tree, label) {
   await act(async () => { node.props.onPress(); });
 }
 
-// The jest react-native mock's FlatList does not render rows, so grid tiles
-// are driven through renderItem, which closes over the live selection state.
-function tileEl(tree, item) {
-  const fl = tree.root.findAll((n) => typeof n.type === 'string' && n.type === 'FlatList')[0];
-  // E8: the grid renders through FlashList (mocked to the FlatList host);
-  // each cell is a positioning View wrapping the touchable tile.
-  return fl.props.renderItem({ item, index: 0 }).props.children;
+function flashList(tree) {
+  return tree.root.findAll((n) => typeof n.type === 'string' && n.type === 'FlatList')[0];
 }
 
-async function pressTile(tree, item) {
-  const el = tileEl(tree, item);
-  await act(async () => { el.props.onPress(); });
+// Walk a raw React element tree (renderItem output isn't mounted).
+function findElement(el, pred) {
+  if (el == null || typeof el !== 'object') return null;
+  if (Array.isArray(el)) {
+    for (const c of el) { const r = findElement(c, pred); if (r) return r; }
+    return null;
+  }
+  if (pred(el)) return el;
+  return findElement(el.props && el.props.children, pred);
 }
 
-function tileSelected(tree, item) {
-  return tileEl(tree, item).props.accessibilityState?.selected === true;
+// The tile TouchableOpacity for a photo, produced by renderItem on its row.
+function tileFor(tree, photo) {
+  const fl = flashList(tree);
+  const rowItem = (fl.props.data || []).find(
+    (it) => it.type === 'row' && it.photos.some((p) => p.name === photo.name),
+  );
+  if (!rowItem) return null;
+  const el = fl.props.renderItem({ item: rowItem, index: 0 });
+  return findElement(el, (n) => typeof n.props?.accessibilityLabel === 'string'
+    && n.props.accessibilityLabel.startsWith(`Photo from ${fmt(photo.ts)}`));
 }
 
-function modalNode(tree) {
-  return tree.root.findAll((n) => typeof n.type === 'string' && n.type === 'Modal')[0];
+async function pressTile(tree, photo) {
+  const tile = tileFor(tree, photo);
+  if (!tile) throw new Error(`No tile for ${photo.name}`);
+  await act(async () => { tile.props.onPress(); });
 }
 
-function modalTexts(tree) {
-  return modalNode(tree)
-    .findAll((n) => typeof n.type === 'string' && n.type === 'Text')
-    .map((t) => flattenText(t.props.children));
+function hostNode(tree, name) {
+  return tree.root.findAll((n) => typeof n.type === 'string' && n.type === name)[0];
 }
 
-function modalImages(tree) {
-  return modalNode(tree).findAll((n) => typeof n.type === 'string' && n.type === 'Image');
-}
-
-const flatStyle = (s) => (Array.isArray(s) ? Object.assign({}, ...s.filter(Boolean)) : s || {});
-
-async function enterSelection(tree) {
-  await press(tree, 'Compare two photos');
-}
-
-async function openCompare(tree) {
-  await press(tree, 'Compare the chosen photos');
+// Whether the Modal wrapping a given child surface is visible (compare/capture/
+// share are each rendered inside their own Modal).
+function surfaceOpen(tree, childName) {
+  const modal = tree.root.findAll((n) => typeof n.type === 'string' && n.type === 'Modal'
+    && n.findAll((c) => typeof c.type === 'string' && c.type === childName).length > 0)[0];
+  return !!(modal && modal.props.visible);
 }
 
 afterEach(() => jest.clearAllMocks());
 
-describe('ProgressPhotosScreen compare, entry affordance', () => {
-  test('hidden with zero or one photo, shown with two or more', async () => {
-    expect(findPressable(await render([]), 'Compare two photos')).toBeUndefined();
-    expect(findPressable(await render([NEW]), 'Compare two photos')).toBeUndefined();
-    expect(findPressable(await render([NEW, OLD]), 'Compare two photos')).toBeDefined();
+describe('ProgressPhotosScreen timeline', () => {
+  test('builds a newest-first dated timeline with month headers and per-tile dates', async () => {
+    const tree = await render();
+    const data = flashList(tree).props.data;
+    // Three photos in three different months => three headers + three rows,
+    // newest month first.
+    const headers = data.filter((d) => d.type === 'header').map((d) => d.label);
+    expect(headers).toEqual(['June 2026', 'March 2026', 'January 2026']);
+    // Each tile shows its date.
+    const el = tileFor(tree, NEW);
+    expect(el).toBeTruthy();
+    const dateText = findElement(el, (n) => n.props && n.props.children === fmt(NEW.ts));
+    expect(dateText).toBeTruthy();
   });
 
   test('empty state still renders (mount safety)', async () => {
@@ -159,171 +194,83 @@ describe('ProgressPhotosScreen compare, entry affordance', () => {
   });
 });
 
-describe('ProgressPhotosScreen compare, selection mode', () => {
-  test('picks exactly two; a third tap replaces the earliest choice (pinned)', async () => {
+describe('ProgressPhotosScreen tap opens the viewer, not delete', () => {
+  test('a plain tap opens the full-size viewer and never the delete dialog', async () => {
     const tree = await render();
-    await enterSelection(tree);
-
-    await pressTile(tree, OLD);
-    await pressTile(tree, MID);
-    expect(tileSelected(tree, OLD)).toBe(true);
-    expect(tileSelected(tree, MID)).toBe(true);
-    expect(tileSelected(tree, NEW)).toBe(false);
-
-    // Third tap: OLD (earliest choice) drops, MID and NEW remain.
+    expect(hostNode(tree, 'ProgressPhotoViewer')).toBeUndefined();
     await pressTile(tree, NEW);
-    expect(tileSelected(tree, OLD)).toBe(false);
-    expect(tileSelected(tree, MID)).toBe(true);
-    expect(tileSelected(tree, NEW)).toBe(true);
-    const chosen = [OLD, MID, NEW].filter((p) => tileSelected(tree, p));
-    expect(chosen).toHaveLength(2);
-  });
-
-  test('tapping a chosen photo unchooses it, and compare cannot open with fewer than two', async () => {
-    const tree = await render();
-    await enterSelection(tree);
-
-    await pressTile(tree, OLD);
-    expect(tileSelected(tree, OLD)).toBe(true);
-    await pressTile(tree, OLD);
-    expect(tileSelected(tree, OLD)).toBe(false);
-
-    await openCompare(tree); // one (zero) chosen: the guard must refuse
-    expect(modalNode(tree).props.visible).toBe(false);
-  });
-
-  test('selection taps never open the delete dialog; normal taps still do', async () => {
-    const tree = await render();
-    await enterSelection(tree);
-    await pressTile(tree, OLD);
-    await pressTile(tree, MID);
+    expect(hostNode(tree, 'ProgressPhotoViewer')).toBeDefined();
     expect(appAlert).not.toHaveBeenCalled();
+  });
 
-    await press(tree, 'Cancel comparing');
+  test('viewer onDelete removes the file AND its meta, then refreshes (live-tier checked)', async () => {
+    const tree = await render();
     await pressTile(tree, OLD);
-    expect(appAlert).toHaveBeenCalledTimes(1);
-    expect(appAlert).toHaveBeenCalledWith(
-      fmt(OLD.ts), 'Remove this photo from your device?', expect.any(Array),
-    );
+    const viewer = hostNode(tree, 'ProgressPhotoViewer');
+    listProgressPhotos.mockClear();
+    await act(async () => { await viewer.props.onDelete(OLD.name); });
+    expect(deleteProgressPhoto).toHaveBeenCalledWith(OLD.uri);
+    expect(deletePhotoMeta).toHaveBeenCalledWith(OLD.name);
+    expect(listProgressPhotos).toHaveBeenCalled(); // refresh ran
   });
 });
 
-describe('ProgressPhotosScreen compare, the comparison view', () => {
-  test('renders both photos older-left newer-right with date labels, and nothing else', async () => {
-    const tree = await render();
-    await enterSelection(tree);
-    // Tap order deliberately newest-first: display order must not follow it.
-    await pressTile(tree, NEW);
-    await pressTile(tree, OLD);
-    await openCompare(tree);
-
-    expect(modalNode(tree).props.visible).toBe(true);
-
-    // The complete rendered copy of the compare view, in render order. This
-    // is an ALLOWLIST: any extra string (a delta, a percentage, a judgement)
-    // fails the test.
-    expect(modalTexts(tree)).toEqual(['Compare', 'Earlier', fmt(OLD.ts), 'Later', fmt(NEW.ts)]);
-
-    const imgs = modalImages(tree);
-    expect(imgs.map((i) => i.props.source.uri)).toEqual([OLD.uri, NEW.uri]);
-    expect(imgs.map((i) => i.props.accessibilityLabel)).toEqual([
-      `Earlier photo, ${fmt(OLD.ts)}`,
-      `Later photo, ${fmt(NEW.ts)}`,
-    ]);
-    expect(findPressable(tree, 'Close compare')).toBeDefined();
+describe('ProgressPhotosScreen compare entry', () => {
+  test('hidden with zero or one photo, shown with two or more (not suppressed)', async () => {
+    expect(findPressable(await render([]), 'Compare two photos')).toBeUndefined();
+    expect(findPressable(await render([NEW]), 'Compare two photos')).toBeUndefined();
+    expect(findPressable(await render([NEW, OLD]), 'Compare two photos')).toBeDefined();
   });
 
-  test('carries no measurement, delta or before/after vocabulary anywhere', async () => {
+  test('pressing Compare opens the ProgressPhotoCompare surface', async () => {
     const tree = await render();
-    await enterSelection(tree);
-    await pressTile(tree, OLD);
-    await pressTile(tree, NEW);
-    await openCompare(tree);
-
-    const labels = modalNode(tree)
-      .findAll((n) => typeof n.props?.accessibilityLabel === 'string')
-      .map((n) => n.props.accessibilityLabel);
-    const copy = [...modalTexts(tree), ...labels].join(' ');
-    expect(copy).not.toMatch(
-      /\b(before|after|change[ds]?|progress made|gained?|lost|weight|kg|lbs?|cm|delta|leaner|bigger|smaller)\b|%|—/i,
-    );
+    expect(surfaceOpen(tree, 'ProgressPhotoCompare')).toBe(false);
+    await press(tree, 'Compare two photos');
+    expect(surfaceOpen(tree, 'ProgressPhotoCompare')).toBe(true);
   });
 
-  test('the SELECTION BAR copy is equally neutral (review gap: it sits outside the modal)', async () => {
-    const tree = await render();
-    await enterSelection(tree);
-    await pressTile(tree, OLD);
-
-    // Every Text and accessibility label rendered anywhere on the screen in
-    // selection mode — the bar's hints included — against the same banned
-    // vocabulary the modal is held to.
-    const allTexts = tree.root
-      .findAll((n) => typeof n.type === 'string' && n.type === 'Text')
-      .map((t) => flattenText(t.props.children));
-    const allLabels = tree.root
-      .findAll((n) => typeof n.props?.accessibilityLabel === 'string')
-      .map((n) => n.props.accessibilityLabel);
-    const copy = [...allTexts, ...allLabels].join(' ');
-    expect(copy).not.toMatch(
-      /\b(before|after|change[ds]?|progress made|gained?|lost|weight|kg|lbs?|cm|delta|leaner|bigger|smaller)\b|%|—/i,
-    );
-  });
-
-  test('panes decode at explicit bounded dimensions with resize downscaling', async () => {
-    const tree = await render();
-    await enterSelection(tree);
-    await pressTile(tree, OLD);
-    await pressTile(tree, NEW);
-    await openCompare(tree);
-
-    const imgs = modalImages(tree);
-    expect(imgs).toHaveLength(2);
-    for (const img of imgs) {
-      const s = flatStyle(img.props.style);
-      // Bounded numbers, never unbounded/percentage: the mock window is
-      // 375x812, so each half-width pane must sit inside it.
-      expect(Number.isFinite(s.width)).toBe(true);
-      expect(Number.isFinite(s.height)).toBe(true);
-      expect(s.width).toBeGreaterThan(0);
-      expect(s.width).toBeLessThanOrEqual(375 / 2);
-      expect(s.height).toBeLessThanOrEqual(812 * 0.6);
-      expect(img.props.resizeMode).toBe('contain');
-      expect(img.props.resizeMethod).toBe('resize');
-    }
-  });
-
-  test('a failed photo load logs ProgressPhotos.compare and shows the calm fallback', async () => {
-    const tree = await render();
-    await enterSelection(tree);
-    await pressTile(tree, OLD);
-    await pressTile(tree, NEW);
-    await openCompare(tree);
-
-    const [older] = modalImages(tree);
-    await act(async () => { older.props.onError(); });
-
-    expect(logError).toHaveBeenCalledWith(
-      'ProgressPhotos.compare', expect.any(Error), { name: OLD.name },
-    );
-    expect(modalTexts(tree)).toContain('Could not load this photo.');
-    expect(modalImages(tree)).toHaveLength(1); // the later photo still shows
-  });
-
-  test('reduce motion collapses the modal animation', async () => {
+  test('the compare surface honours reduce motion on its wrapping modal', async () => {
     const still = await render([NEW, OLD], { reduceMotion: true });
-    expect(modalNode(still).props.animationType).toBe('none');
+    const stillModal = still.root.findAll((n) => typeof n.type === 'string' && n.type === 'Modal'
+      && n.findAll((c) => typeof c.type === 'string' && c.type === 'ProgressPhotoCompare').length > 0)[0];
+    expect(stillModal.props.animationType).toBe('none');
     const moving = await render([NEW, OLD], { reduceMotion: false });
-    expect(moving && modalNode(moving).props.animationType).toBe('fade');
+    const movingModal = moving.root.findAll((n) => typeof n.type === 'string' && n.type === 'Modal'
+      && n.findAll((c) => typeof c.type === 'string' && c.type === 'ProgressPhotoCompare').length > 0)[0];
+    expect(movingModal.props.animationType).toBe('fade');
   });
 });
 
-describe('ProgressPhotosScreen compare, wellbeing gate unchanged', () => {
-  test('calm-mode note keeps its exact pre-compare wording, with the feature present', async () => {
+describe('ProgressPhotosScreen ED-safety suppression gate', () => {
+  test('under suppression the Compare and Share entries are withheld (fail-closed double guard)', async () => {
+    const tree = await render([NEW, MID, OLD], { suppressed: true });
+    expect(findPressable(tree, 'Compare two photos')).toBeUndefined();
+    expect(findPressable(tree, 'Share progress')).toBeUndefined();
+    // Viewing the dated timeline stays available.
+    expect(flashList(tree).props.data.length).toBeGreaterThan(0);
+  });
+
+  test('not suppressed and Pro: both Compare and Share are offered', async () => {
+    const tree = await render([NEW, MID, OLD], { suppressed: false, tier: 'pro' });
+    expect(findPressable(tree, 'Compare two photos')).toBeDefined();
+    expect(findPressable(tree, 'Share progress')).toBeDefined();
+  });
+
+  test('Share is Pro-gated: never offered on the free plan even when unsuppressed', async () => {
+    const tree = await render([NEW, MID, OLD], { suppressed: false, tier: 'free' });
+    expect(findPressable(tree, 'Share progress')).toBeUndefined();
+  });
+});
+
+describe('ProgressPhotosScreen wellbeing gate unchanged', () => {
+  test('calm-mode note keeps its exact pre-upgrade wording, with the feature present', async () => {
     const tree = await render([NEW, OLD], { mode: 'calm' });
     const text = flattenText(tree.toJSON());
     expect(text).toContain(
       'Private to this device. Not synced, not shared. Use these only if they help you, and skip them if they do not.',
     );
+    // Compare stays reachable in calm mode when NOT otherwise suppressed (the
+    // suppression hook is the single gate; here it reports false).
     expect(findPressable(tree, 'Compare two photos')).toBeDefined();
   });
 
@@ -333,9 +280,9 @@ describe('ProgressPhotosScreen compare, wellbeing gate unchanged', () => {
   });
 });
 
-// E10 read-only lapse views (founder decision 2026-07-02, "view yes, log
-// no"): a free user with photos sees the grid and Compare, but no add and no
-// delete. Pinned against the real screen with tier 'free'.
+// E10 read-only lapse views (founder decision 2026-07-02, "view yes, log no"):
+// a free user with photos sees the timeline and Compare, but no add, no
+// editable viewer and no delete. Pinned against the real screen with tier free.
 describe('ProgressPhotosScreen read-only lapse state (E10)', () => {
   test('free tier hides the add button and says the state plainly', async () => {
     const tree = await render([NEW, OLD], { tier: 'free' });
@@ -343,30 +290,27 @@ describe('ProgressPhotosScreen read-only lapse state (E10)', () => {
     expect(flattenText(tree.toJSON())).toContain('View-only on the free plan.');
   });
 
-  test('free tier: a plain tap on a photo cannot reach the delete prompt', async () => {
+  test('free tier: a tile is inert (no editable viewer, no delete path)', async () => {
     const tree = await render([NEW, OLD], { tier: 'free' });
-    const el = tileEl(tree, NEW);
-    expect(el.props.onPress).toBeUndefined();
-    expect(el.props.disabled).toBe(true);
-    expect(el.props.accessibilityLabel).not.toContain('Tap to remove');
+    const tile = tileFor(tree, NEW);
+    expect(tile.props.onPress).toBeUndefined();
+    expect(tile.props.disabled).toBe(true);
+    expect(tile.props.accessibilityLabel).not.toContain('Tap to open');
+    expect(hostNode(tree, 'ProgressPhotoViewer')).toBeUndefined();
     expect(appAlert).not.toHaveBeenCalled();
   });
 
-  test('free tier keeps Compare fully working (viewing is not a write)', async () => {
+  test('free tier keeps Compare available (viewing is not a write)', async () => {
     const tree = await render([NEW, OLD], { tier: 'free' });
+    expect(findPressable(tree, 'Compare two photos')).toBeDefined();
     await press(tree, 'Compare two photos');
-    await pressTile(tree, OLD);
-    await pressTile(tree, NEW);
-    expect(tileSelected(tree, OLD)).toBe(true);
-    expect(tileSelected(tree, NEW)).toBe(true);
-    await press(tree, 'Compare the chosen photos');
-    expect(modalNode(tree).props.visible).toBe(true);
+    expect(surfaceOpen(tree, 'ProgressPhotoCompare')).toBe(true);
   });
 
-  test('pro tier is unchanged: add button present, tap offers delete', async () => {
+  test('pro tier is unchanged: add button present, tap opens the viewer', async () => {
     const tree = await render([NEW, OLD], { tier: 'pro' });
     expect(findPressable(tree, 'Add a photo')).toBeDefined();
     await pressTile(tree, NEW);
-    expect(appAlert).toHaveBeenCalled();
+    expect(hostNode(tree, 'ProgressPhotoViewer')).toBeDefined();
   });
 });

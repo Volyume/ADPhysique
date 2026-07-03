@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, ActivityIndicator, Modal,
 } from 'react-native';
@@ -8,7 +8,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { appAlert } from '../components/AppAlert';
 import Button from '../components/Button';
-import { colors, spacing, radius, fontSize, fontWeight, type, iconSize } from '../styles/theme';
+import {
+  colors, spacing, radius, fontSize, fontWeight, type,
+} from '../styles/theme';
 import { useToast } from '../components/Toast';
 import useAppStore from '../store/useAppStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -17,6 +19,12 @@ import { logError } from '../lib/errorLog';
 import {
   listProgressPhotos, saveProgressPhoto, deleteProgressPhoto, markPhotosOwner,
 } from '../lib/progressPhotos';
+import { getPhotoMetaMap, deletePhotoMeta } from '../lib/progressPhotoMeta';
+import usePhotoSuppression from '../hooks/usePhotoSuppression';
+import ProgressPhotoViewer from '../components/ProgressPhotoViewer';
+import ProgressPhotoCompare from '../components/ProgressPhotoCompare';
+import ProgressGhostCapture from '../components/ProgressGhostCapture';
+import BeforeAfterShareSheet from '../components/BeforeAfterShareSheet';
 
 // expo-image-picker is a native module; lazy-require so the screen imports in
 // the node test env (mirrors ShareCardScreen).
@@ -26,9 +34,51 @@ try { ImagePicker = require('expo-image-picker'); } catch (_) { ImagePicker = nu
 const COLS = 3;
 const GAP = spacing.xs;
 
+// Pose filter chips. 'all' shows every photo; the others narrow to a pose so
+// like compares with like (spec §3.3). Function-neutral labels.
+const POSES = [
+  { key: 'all', label: 'All' },
+  { key: 'front', label: 'Front' },
+  { key: 'side', label: 'Side' },
+  { key: 'back', label: 'Back' },
+];
+const POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
+
 function formatDay(ts) {
   try { return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
   catch (_) { return ''; }
+}
+
+function monthLabel(ts) {
+  try { return new Date(ts).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }); }
+  catch (_) { return ''; }
+}
+
+// Group a newest-first photo list into a flat timeline of month headers and
+// rows of up to COLS tiles. Pure, so the screen test can drive it directly.
+export function buildTimeline(list) {
+  const out = [];
+  let curKey = null;
+  let bucket = [];
+  const flushBucket = () => {
+    for (let i = 0; i < bucket.length; i += COLS) {
+      const chunk = bucket.slice(i, i + COLS);
+      out.push({ type: 'row', key: `row-${chunk[0].name}`, photos: chunk });
+    }
+    bucket = [];
+  };
+  for (const p of list) {
+    const d = new Date(p.takenAt);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    if (key !== curKey) {
+      flushBucket();
+      curKey = key;
+      out.push({ type: 'header', key: `h-${key}`, label: monthLabel(p.takenAt) });
+    }
+    bucket.push(p);
+  }
+  flushBucket();
+  return out;
 }
 
 export default function ProgressPhotosScreen({ navigation }) {
@@ -36,11 +86,18 @@ export default function ProgressPhotosScreen({ navigation }) {
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   // E10 read-only lapse views (founder decision 2026-07-02, "view yes, log
   // no"): a non-Pro user reaches this screen only through withReadOnlyProGuard
-  // (they have photos), and it renders view-only: grid and Compare stay; add
-  // and delete are hidden. Derived from the store inside the screen.
+  // (they have photos), and it renders view-only: the timeline and Compare
+  // stay; add, delete and the editable viewer are hidden. Derived from the
+  // store inside the screen.
   const tier = useAppStore((s) => s.tier);
   const readOnly = tier !== 'pro';
   const userId = useAppStore((s) => s.user?.id);
+
+  // Shared ED-safety gate (spec §3.2, PART 2). Fail-closed calm-OR-open-ED read
+  // that withholds the NEW high-risk surfaces (comparison entry, the share
+  // card). Additive to, and never a replacement for, the screen's own raw
+  // wellbeing read below (which the wellbeingFailClosed guard pins byte-exact).
+  const suppressed = usePhotoSuppression(userId);
 
   // Owner marker (hostile review E10 #2): stamp whose photos these are while
   // a Pro user is on the screen, so the read-only lapse guard can later
@@ -49,18 +106,25 @@ export default function ProgressPhotosScreen({ navigation }) {
   useEffect(() => {
     if (!readOnly && userId) markPhotosOwner(userId);
   }, [readOnly, userId]);
+
   const [photos, setPhotos] = useState([]);
+  const [metaMap, setMetaMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [calm, setCalm] = useState(false);
-  // Compare (enhancement B6): pick exactly two photos, view them side by side.
-  // Local-only like the rest of the screen; the comparison shows dates and the
-  // photos themselves, nothing else (no deltas, measurements or judgements,
-  // this surface is body-image adjacent, see CLAUDE.md ED-safety rules).
-  const [selecting, setSelecting] = useState(false);
-  const [selected, setSelected] = useState([]); // photo names, in tap order, max two
+  const [poseFilter, setPoseFilter] = useState('all');
+
+  // Overlay surfaces (all device-local; rendered as Modals over the timeline).
+  const [viewerName, setViewerName] = useState(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
-  const [compareLoadFailed, setCompareLoadFailed] = useState({});
+  const [shareOpen, setShareOpen] = useState(false);
+  const [captureOpen, setCaptureOpen] = useState(false);
+  const [captureReference, setCaptureReference] = useState(null);
+  const [capturePose, setCapturePose] = useState(null);
+  // The ghost-overlay reference the viewer's "set as reference" remembers; the
+  // next guided capture seeds against it.
+  const [referenceName, setReferenceName] = useState(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -74,8 +138,17 @@ export default function ProgressPhotosScreen({ navigation }) {
       ]);
       setPhotos(rows);
       setCalm(isCalm(mode) || mode === 'read_failed');
-      // A selection must never point at a photo that no longer exists.
-      setSelected((prev) => prev.filter((name) => rows.some((r) => r.name === name)));
+      // Load the per-photo metadata (taken_at, pose) for the dated, pose-typed
+      // timeline. Missing rows resolve to filename-derived defaults, so this
+      // never requires a row to exist.
+      try {
+        const map = await getPhotoMetaMap(rows.map((r) => r.name));
+        setMetaMap(map);
+      } catch (e) {
+        logError('ProgressPhotos.loadMeta', e, { count: rows.length });
+      }
+      // A dangling reference must never point at a photo that no longer exists.
+      setReferenceName((prev) => (prev && rows.some((r) => r.name === prev) ? prev : null));
     } catch (_) { /* tolerate */ }
     finally { setLoading(false); }
   }, []);
@@ -112,89 +185,108 @@ export default function ProgressPhotosScreen({ navigation }) {
     }
   }
 
+  // Enrich each photo with its effective taken_at (meta, else the filename ts)
+  // and pose. A missing meta map resolves to the same values as before.
+  const enriched = useMemo(() => photos.map((p) => {
+    const m = metaMap[p.name];
+    const takenAt = m && Number.isFinite(m.takenAt) ? m.takenAt : p.ts;
+    return { name: p.name, uri: p.uri, ts: p.ts, takenAt, pose: (m && m.pose) || null };
+  }), [photos, metaMap]);
+
+  // The current pose scope, newest-first for a descending timeline.
+  const filtered = useMemo(() => {
+    const list = poseFilter === 'all' ? enriched : enriched.filter((p) => p.pose === poseFilter);
+    return [...list].sort((a, b) => b.takenAt - a.takenAt);
+  }, [enriched, poseFilter]);
+
+  const timeline = useMemo(() => buildTimeline(filtered), [filtered]);
+
+  function openGhostCapture() {
+    if (useAppStore.getState().tier !== 'pro') return;
+    // Seed the overlay against the remembered reference when set, else the
+    // latest photo of the pose in view (or the latest overall). Carry that
+    // pose onto the new photo's meta row.
+    let ref = referenceName ? enriched.find((p) => p.name === referenceName) : null;
+    let seedPose = ref ? ref.pose : (poseFilter !== 'all' ? poseFilter : null);
+    if (!ref) {
+      const pool = seedPose ? enriched.filter((p) => p.pose === seedPose) : enriched;
+      ref = [...(pool.length ? pool : enriched)].sort((a, b) => b.takenAt - a.takenAt)[0] || null;
+    }
+    setCaptureReference(ref ? { uri: ref.uri } : null);
+    setCapturePose(seedPose ?? null);
+    setCaptureOpen(true);
+  }
+
   function onAdd() {
     appAlert('Add a photo', 'Stored only on this device.', [
+      { text: 'Take with guide', onPress: openGhostCapture },
       { text: 'Take photo', onPress: () => pickFrom('camera') },
       { text: 'Choose from library', onPress: () => pickFrom('library') },
       { text: 'Cancel', style: 'cancel' },
     ]);
   }
 
-  function onPressPhoto(item) {
-    appAlert(formatDay(item.ts), 'Remove this photo from your device?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        // Live-tier re-check: a delete prompt open across a pro-to-free flip
-        // must not delete (same stale-closure class as pickFrom).
-        onPress: async () => {
-          if (useAppStore.getState().tier !== 'pro') return;
-          await deleteProgressPhoto(item.uri);
-          await refresh();
-        },
-      },
-    ]);
+  function openViewer(name) {
+    setViewerName(name);
+    setViewerOpen(true);
   }
 
-  // Selection: tapping a chosen photo unchooses it; with two already chosen,
-  // a tap on a third photo replaces the EARLIEST choice, so the tap always
-  // responds (calmer than refusing it silently). Pinned by the compare tests.
-  function toggleSelect(item) {
-    setSelected((prev) => {
-      if (prev.includes(item.name)) return prev.filter((n) => n !== item.name);
-      if (prev.length < 2) return [...prev, item.name];
-      return [prev[1], item.name];
-    });
-  }
+  // Real delete wiring: remove the file AND its metadata row, then refresh.
+  // Re-checks the live tier (a pro-to-free flip with the confirm open must not
+  // delete); the viewer also re-checks before calling this.
+  const onViewerDelete = useCallback(async (name) => {
+    if (useAppStore.getState().tier !== 'pro') return;
+    const item = photos.find((p) => p.name === name);
+    try {
+      if (item) await deleteProgressPhoto(item.uri);
+      await deletePhotoMeta(name);
+    } catch (e) {
+      logError('ProgressPhotos.delete', e, { name });
+    }
+    setReferenceName((prev) => (prev === name ? null : prev));
+    setViewerOpen(false);
+    await refresh();
+  }, [photos, refresh]);
 
-  function exitSelection() {
-    setSelecting(false);
-    setSelected([]);
-    setCompareOpen(false);
-  }
-
-  // Older photo on the left, newer on the right, whatever the tap order was.
-  const selectedItems = selected
-    .map((name) => photos.find((p) => p.name === name))
-    .filter(Boolean);
-  const pair = [...selectedItems].sort((a, b) => a.ts - b.ts);
-  const pairReady = pair.length === 2;
-
-  // Hardening (Wave 4 review): compareOpen and pairReady are independent
-  // booleans, and only closeCompare resets the former. If the pair ever
-  // collapses while the view is open (unreachable today; reachable the day
-  // anyone adds pull-to-refresh or an AppState-driven refresh), a stale
-  // compareOpen would pop the view on the next second selection WITHOUT
-  // openCompare's failed-load reset. Fold it shut instead.
-  useEffect(() => {
-    if (compareOpen && !pairReady) setCompareOpen(false);
-  }, [compareOpen, pairReady]);
-
-  function openCompare() {
-    if (!pairReady) return;
-    setCompareLoadFailed({});
-    setCompareOpen(true);
-  }
-
-  function closeCompare() {
-    // Keep the selection so the user can swap one photo and compare again.
-    setCompareOpen(false);
-  }
-
-  function onCompareImageError(item) {
-    logError('ProgressPhotos.compare', new Error('Compare photo failed to load'), { name: item.name });
-    setCompareLoadFailed((prev) => ({ ...prev, [item.name]: true }));
-  }
+  function openCompare() { setCompareOpen(true); }
+  function openShare() { setShareOpen(true); }
 
   const win = Dimensions.get('window');
   const size = (win.width - spacing.lg * 2 - GAP * (COLS - 1)) / COLS;
-  // Compare panes: two half-width, portrait-leaning frames. Explicit bounded
-  // dimensions plus resizeMethod="resize" keep the decode at roughly view size
-  // on Android, never the full-resolution photo (the audit's named memory risk
-  // for this feature).
-  const paneW = (win.width - spacing.lg * 2 - spacing.sm) / 2;
-  const paneH = Math.min(Math.round(paneW * (4 / 3)), Math.round(win.height * 0.6));
+
+  // NEW high-risk surfaces are withheld under the shared suppression gate
+  // (fail-closed): the comparison entry and the share card. Viewing the dated
+  // timeline and delete stay available. Share is additionally Pro-gated.
+  const canCompare = !loading && photos.length >= 2 && !suppressed;
+  const canShare = !loading && !readOnly && photos.length >= 2 && !suppressed;
+  const showActions = canCompare || canShare;
+
+  function renderTile(item) {
+    const dateLabel = formatDay(item.takenAt);
+    return (
+      <TouchableOpacity
+        key={item.name}
+        // E10 read-only: opening the editable viewer would expose writes
+        // (pose/date/note), so a plain tap is inert in the view-only state;
+        // Compare (pure viewing) stays available below.
+        onPress={readOnly ? undefined : () => openViewer(item.name)}
+        disabled={readOnly}
+        accessibilityRole={readOnly ? 'image' : 'button'}
+        accessibilityLabel={readOnly
+          ? `Photo from ${dateLabel}.`
+          : `Photo from ${dateLabel}. Tap to open.`}
+        style={styles.tile}
+      >
+        <Image source={{ uri: item.uri }} style={{ width: size, height: size, borderRadius: radius.md }} resizeMethod="resize" />
+        {item.pose ? (
+          <View pointerEvents="none" style={styles.poseBadge}>
+            <Text style={styles.poseBadgeText}>{POSE_LABEL[item.pose]}</Text>
+          </View>
+        ) : null}
+        <Text style={styles.tileDate} numberOfLines={1}>{dateLabel}</Text>
+      </TouchableOpacity>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -221,40 +313,48 @@ export default function ProgressPhotosScreen({ navigation }) {
         {readOnly ? ' View-only on the free plan. Your photos are safe and stay yours.' : ''}
       </Text>
 
-      {!loading && (selecting || photos.length >= 2) && (
-        <View style={styles.compareBar}>
-          {selecting ? (
-            <>
-              <Text style={styles.compareHint}>
-                {pairReady ? 'Two photos chosen.' : 'Choose two photos.'}
-              </Text>
-              <Button
-                title="Cancel"
-                variant="tertiary"
-                size="sm"
-                fullWidth={false}
-                onPress={exitSelection}
-                accessibilityLabel="Cancel comparing"
-                textStyle={{ color: colors.textMuted }}
-              />
-              <Button
-                title="Compare"
-                size="sm"
-                fullWidth={false}
-                disabled={!pairReady}
-                onPress={openCompare}
-                accessibilityLabel="Compare the chosen photos"
-              />
-            </>
-          ) : (
+      {!loading && photos.length > 0 && (
+        <View style={styles.filterRow} accessibilityLabel="Filter by pose">
+          {POSES.map((p) => {
+            const active = p.key === poseFilter;
+            return (
+              <TouchableOpacity
+                key={p.key}
+                style={[styles.filterChip, active && styles.filterChipActive]}
+                onPress={() => setPoseFilter(p.key)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={p.label}
+              >
+                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{p.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+
+      {showActions && (
+        <View style={styles.actionRow}>
+          {canCompare && (
             <Button
               title="Compare"
               variant="tertiary"
               size="sm"
               fullWidth={false}
               icon="images-outline"
-              onPress={() => setSelecting(true)}
+              onPress={openCompare}
               accessibilityLabel="Compare two photos"
+            />
+          )}
+          {canShare && (
+            <Button
+              title="Share"
+              variant="tertiary"
+              size="sm"
+              fullWidth={false}
+              icon="share-outline"
+              onPress={openShare}
+              accessibilityLabel="Share progress"
             />
           )}
         </View>
@@ -266,98 +366,85 @@ export default function ProgressPhotosScreen({ navigation }) {
         <View style={styles.empty}>
           <Ionicons name="camera-outline" size={32} color={colors.textMuted} />
           <Text style={styles.emptyText}>{readOnly ? 'No photos on this device.' : 'No photos yet. Tap + to add one.'}</Text>
+          {!readOnly ? (
+            <Text style={styles.emptyHint}>
+              Even lighting and the same pose make them easier to compare over time. At your own pace.
+            </Text>
+          ) : null}
+        </View>
+      ) : timeline.length === 0 ? (
+        <View style={styles.empty}>
+          <Ionicons name="images-outline" size={32} color={colors.textMuted} />
+          <Text style={styles.emptyText}>No photos with this pose yet.</Text>
         </View>
       ) : (
         <FlashList
-          data={photos}
-          extraData={{ selecting, selected }}
-          keyExtractor={(item) => item.name}
-          numColumns={COLS}
+          data={timeline}
+          extraData={{ readOnly }}
+          keyExtractor={(item) => item.key}
+          getItemType={(item) => item.type}
           contentContainerStyle={styles.grid}
-          renderItem={({ item, index }) => {
-            const isSelected = selected.includes(item.name);
-            // E8: FlashList v2 drops columnWrapperStyle; the horizontal GAP is
-            // reproduced by column alignment (cells carry 2*GAP/COLS of slack
-            // each) and the vertical GAP by the cell's bottom margin.
-            const col = index % COLS;
+          renderItem={({ item }) => {
+            if (item.type === 'header') {
+              return <Text style={styles.monthHeader}>{item.label}</Text>;
+            }
             return (
-              <View
-                style={{
-                  alignItems: col === 0 ? 'flex-start' : col === COLS - 1 ? 'flex-end' : 'center',
-                  marginBottom: GAP,
-                }}
-              >
-              <TouchableOpacity
-                // E10 read-only: outside compare-selection, a plain tap opens
-                // the delete prompt, which is a write; disabled in view-only.
-                // Choosing photos to COMPARE stays (it is pure viewing).
-                onPress={selecting ? () => toggleSelect(item) : (readOnly ? undefined : () => onPressPhoto(item))}
-                disabled={!selecting && readOnly}
-                accessibilityRole={!selecting && readOnly ? 'image' : 'button'}
-                accessibilityState={selecting ? { selected: isSelected } : undefined}
-                accessibilityLabel={selecting
-                  ? `Photo from ${formatDay(item.ts)}. Tap to choose it for the comparison.`
-                  : readOnly
-                    ? `Photo from ${formatDay(item.ts)}.`
-                    : `Photo from ${formatDay(item.ts)}. Tap to remove.`}
-              >
-                <Image source={{ uri: item.uri }} style={{ width: size, height: size, borderRadius: radius.md }} />
-                {selecting && isSelected && (
-                  <>
-                    <View pointerEvents="none" style={[styles.thumbSelectedEdge, { width: size, height: size }]} />
-                    <View pointerEvents="none" style={styles.thumbCheckWrap}>
-                      <Ionicons name="checkmark-circle" size={iconSize.lg} color={colors.primary} />
-                    </View>
-                  </>
-                )}
-              </TouchableOpacity>
+              <View style={styles.row}>
+                {item.photos.map(renderTile)}
               </View>
             );
           }}
         />
       )}
 
-      {/* Side-by-side comparison. Dates and photos only: no deltas, no
-          measurements, no judgement copy (body-image-adjacent surface). */}
+      {/* Full-size viewer (pose/date/note, weight gated by suppression). Own
+          Modal; only mounted while open. */}
+      {viewerOpen ? (
+        <ProgressPhotoViewer
+          photos={filtered}
+          initialName={viewerName}
+          onClose={() => setViewerOpen(false)}
+          onDelete={onViewerDelete}
+          onCompareFrom={() => { setViewerOpen(false); openCompare(); }}
+          onSetReference={(name) => setReferenceName(name)}
+        />
+      ) : null}
+
+      {/* Comparison. Self-contained selection + three modes; self-suppresses
+          under calm/ED. The entry above is ALSO gated, a deliberate double
+          guard. */}
       <Modal
-        visible={compareOpen && pairReady}
+        visible={compareOpen}
         animationType={reduceMotion ? 'none' : 'fade'}
-        onRequestClose={closeCompare}
+        onRequestClose={() => setCompareOpen(false)}
       >
-        <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Compare</Text>
-            <TouchableOpacity onPress={closeCompare} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close compare">
-              <Ionicons name="close" size={26} color={colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.comparePanes}>
-            {pair.map((item, i) => {
-              const when = i === 0 ? 'Earlier' : 'Later';
-              return (
-                <View key={item.name} style={styles.comparePane}>
-                  {compareLoadFailed[item.name] ? (
-                    <View style={[styles.compareImage, styles.compareFallback, { width: paneW, height: paneH }]}>
-                      <Text style={styles.compareFallbackText}>Could not load this photo.</Text>
-                    </View>
-                  ) : (
-                    <Image
-                      source={{ uri: item.uri }}
-                      style={[styles.compareImage, { width: paneW, height: paneH }]}
-                      resizeMode="contain"
-                      resizeMethod="resize"
-                      accessible
-                      accessibilityLabel={`${when} photo, ${formatDay(item.ts)}`}
-                      onError={() => onCompareImageError(item)}
-                    />
-                  )}
-                  <Text style={styles.paneWhen}>{when}</Text>
-                  <Text style={styles.paneDate}>{formatDay(item.ts)}</Text>
-                </View>
-              );
-            })}
-          </View>
-        </SafeAreaView>
+        <ProgressPhotoCompare photos={photos} onClose={() => setCompareOpen(false)} />
+      </Modal>
+
+      {/* Guided (ghost-overlay) capture. Falls back to the existing library
+          path when the camera is unavailable or declined. */}
+      <Modal
+        visible={captureOpen}
+        animationType={reduceMotion ? 'none' : 'slide'}
+        onRequestClose={() => setCaptureOpen(false)}
+      >
+        <ProgressGhostCapture
+          referencePhoto={captureReference}
+          pose={capturePose}
+          onCaptured={() => { setCaptureOpen(false); refresh(); }}
+          onClose={() => setCaptureOpen(false)}
+          onFallback={() => { setCaptureOpen(false); pickFrom('library'); }}
+        />
+      </Modal>
+
+      {/* Before/after share card. Self-gates Pro + suppression; the entry above
+          is gated too. */}
+      <Modal
+        visible={shareOpen}
+        animationType={reduceMotion ? 'none' : 'slide'}
+        onRequestClose={() => setShareOpen(false)}
+      >
+        <BeforeAfterShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} photos={photos} />
       </Modal>
     </SafeAreaView>
   );
@@ -375,30 +462,33 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     paddingHorizontal: spacing.lg, marginBottom: spacing.md,
   },
-  compareBar: {
+  filterRow: {
+    flexDirection: 'row', gap: spacing.xs,
+    paddingHorizontal: spacing.lg, marginBottom: spacing.md,
+  },
+  filterChip: {
+    flex: 1, alignItems: 'center', paddingVertical: spacing.sm,
+    borderRadius: radius.sm, backgroundColor: colors.surface2,
+  },
+  filterChipActive: { backgroundColor: colors.primaryFill },
+  filterChipText: { ...type.label, color: colors.textMuted },
+  filterChipTextActive: { color: colors.onPrimary },
+  actionRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: spacing.lg, marginBottom: spacing.md,
   },
-  compareHint: { ...type.bodySm, color: colors.textMuted, flex: 1 },
   grid: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
-  empty: { alignItems: 'center', marginTop: spacing.xxxl, gap: spacing.sm },
+  monthHeader: { ...type.label, color: colors.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm },
+  row: { flexDirection: 'row', gap: GAP, marginBottom: GAP },
+  tile: { alignItems: 'flex-start' },
+  tileDate: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
+  poseBadge: {
+    position: 'absolute', top: spacing.xs, left: spacing.xs,
+    backgroundColor: colors.primaryBg, borderRadius: radius.full,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
+  },
+  poseBadgeText: { ...type.caption, color: colors.primary },
+  empty: { alignItems: 'center', marginTop: spacing.xxxl, gap: spacing.sm, paddingHorizontal: spacing.xl },
   emptyText: { color: colors.textMuted, fontSize: fontSize.md, fontWeight: fontWeight.medium },
-  thumbSelectedEdge: {
-    position: 'absolute', top: 0, left: 0,
-    borderRadius: radius.md, borderWidth: 2, borderColor: colors.primary,
-  },
-  thumbCheckWrap: {
-    position: 'absolute', top: spacing.xs, right: spacing.xs,
-    backgroundColor: colors.background, borderRadius: radius.full,
-  },
-  comparePanes: {
-    flexDirection: 'row', gap: spacing.sm,
-    paddingHorizontal: spacing.lg, marginTop: spacing.md,
-  },
-  comparePane: { flex: 1, alignItems: 'center' },
-  compareImage: { borderRadius: radius.md, backgroundColor: colors.surface },
-  compareFallback: { alignItems: 'center', justifyContent: 'center', padding: spacing.md },
-  compareFallbackText: { ...type.bodySm, color: colors.textMuted, textAlign: 'center' },
-  paneWhen: { ...type.label, color: colors.textMuted, marginTop: spacing.sm },
-  paneDate: { ...type.bodyStrong, color: colors.textPrimary, marginTop: spacing.xxs },
+  emptyHint: { ...type.bodySm, color: colors.textMuted, textAlign: 'center' },
 });
