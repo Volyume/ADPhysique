@@ -80,9 +80,9 @@ describe('S3: Home coach daily brief + runway (ongoing, post-first-review)', () 
       /const dailyBriefLine = currentMesoWeek\s*\n\s*\? \(currentMesoWeek\.isDeload \? 'Deload week\. Lighter targets today\.' : 'Training week\. Same targets today\.'\)\s*\n\s*: null;/,
     );
   });
-  test('CoachDailyBrief is placed below the plan card, runway gated to Pro', () => {
+  test('CoachDailyBrief is placed below the plan card, runway gated to Pro and hidden during the trial window', () => {
     expect(HOME).toMatch(/import CoachDailyBrief from '\.\.\/components\/CoachDailyBrief';/);
-    expect(HOME).toMatch(/<CoachDailyBrief line=\{dailyBriefLine\} ledger=\{tier === 'pro' \? coachRunway : null\} \/>/);
+    expect(HOME).toMatch(/<CoachDailyBrief line=\{dailyBriefLine\} ledger=\{tier === 'pro' && !trialBanner \? coachRunway : null\} \/>/);
   });
 });
 

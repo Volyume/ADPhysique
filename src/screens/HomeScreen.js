@@ -1878,7 +1878,10 @@ export default function HomeScreen({ navigation, route }) {
             below the plan card (not part of the one-banner priority stack
             above), per docs/wave-a-build-status-2026-07-03.md Issue 6. The
             runway is Pro only; the one-liner is tier-agnostic. ── */}
-        <CoachDailyBrief line={dailyBriefLine} ledger={tier === 'pro' ? coachRunway : null} />
+        {/* Runway suppressed while the trial-value banner is showing (the
+            trial's first-review window) so weigh-ins/sessions are not said in
+            two places at once; the schedule one-liner still shows. */}
+        <CoachDailyBrief line={dailyBriefLine} ledger={tier === 'pro' && !trialBanner ? coachRunway : null} />
 
         {/* ── Pro teaser (free tier only, after 3+ sessions) ── now below the
             hero with the same hero-first reorder. */}
