@@ -72,3 +72,14 @@ currency: release-checklist process note only.
 4 Wave C. 5 Wave D. 6 D8 independently. Background engineering (E12 steps,
 bundle cut 4, A1 UK food hit-rate) fills windows, never concurrent with the
 in-flight E1 programme.
+
+## STANDING CORRECTION (founder, 2026-07-03, supersedes anything above that conflicts)
+
+1. The founder performs NO tests, NO device walks, NO data capture, NO
+   dashboard reading. Every verification is Claude's: unit/guard suites, the
+   CI emulator, Maestro. "Device checklist" deliverables are retired;
+   automated equivalents replace them. Never ask the founder to run,
+   measure, confirm on device, or provide data.
+2. ANYTHING store-related is out of scope, including Play Console vitals
+   references and release-checklist framing. A5 loses the vitals-cadence
+   item. The work is improving the app. That is all.
