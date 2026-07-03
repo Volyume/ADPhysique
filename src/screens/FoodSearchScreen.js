@@ -19,9 +19,10 @@
 import { todayLocalKey } from '../lib/dayKey';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList,
+  View, Text, StyleSheet, TextInput, TouchableOpacity,
   ActivityIndicator, ScrollView, Modal,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -706,7 +707,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       );
     }
     return (
-      <FlatList
+      <FlashList
         data={suggestions}
         // Food and meal suggestions share one list, so the key must cover both
         // kinds: a food carries foodRef (no id), a meal carries id.
@@ -848,7 +849,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         </Text>
       ) : null}
 
-      <FlatList
+      <FlashList
         data={listData}
         keyExtractor={(i) => i.key}
         renderItem={renderItem}

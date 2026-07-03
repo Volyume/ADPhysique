@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
@@ -316,7 +317,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <FlatList
+      <FlashList
         data={exercises}
         keyExtractor={item => item.routineExercise.id}
         contentContainerStyle={styles.list}
@@ -594,7 +595,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
           <Text style={styles.swapNote}>
             Choose a substitute. Your routine will be updated. Your set, rep and rest targets stay the same.
           </Text>
-          <FlatList
+          <FlashList
             data={swapCandidates}
             keyExtractor={item => item.exercise.id}
             contentContainerStyle={{ padding: spacing.lg }}

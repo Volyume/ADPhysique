@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Dimensions, ActivityIndicator, Modal,
+  View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, ActivityIndicator, Modal,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -260,17 +261,25 @@ export default function ProgressPhotosScreen({ navigation }) {
           <Text style={styles.emptyText}>{readOnly ? 'No photos on this device.' : 'No photos yet. Tap + to add one.'}</Text>
         </View>
       ) : (
-        <FlatList
+        <FlashList
           data={photos}
           extraData={{ selecting, selected }}
           keyExtractor={(item) => item.name}
           numColumns={COLS}
           contentContainerStyle={styles.grid}
-          columnWrapperStyle={{ gap: GAP }}
-          ItemSeparatorComponent={() => <View style={{ height: GAP }} />}
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const isSelected = selected.includes(item.name);
+            // E8: FlashList v2 drops columnWrapperStyle; the horizontal GAP is
+            // reproduced by column alignment (cells carry 2*GAP/COLS of slack
+            // each) and the vertical GAP by the cell's bottom margin.
+            const col = index % COLS;
             return (
+              <View
+                style={{
+                  alignItems: col === 0 ? 'flex-start' : col === COLS - 1 ? 'flex-end' : 'center',
+                  marginBottom: GAP,
+                }}
+              >
               <TouchableOpacity
                 // E10 read-only: outside compare-selection, a plain tap opens
                 // the delete prompt, which is a write; disabled in view-only.
@@ -295,6 +304,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                   </>
                 )}
               </TouchableOpacity>
+              </View>
             );
           }}
         />

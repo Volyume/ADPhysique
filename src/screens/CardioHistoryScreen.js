@@ -8,9 +8,10 @@
  *
  * Voice rules: CLAUDE.md. No em dashes, no encouragement.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, TouchableOpacity, SectionList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -111,6 +112,10 @@ export default function CardioHistoryScreen({ navigation }) {
   const userId = user?.id;
   const goal = userProfile?.cardioTarget?.sessionsPerWeek ?? 0;
   const [sections, setSections] = useState([]);
+  const flatRows = useMemo(
+    () => sections.flatMap((sec) => [{ _kind: 'header', id: `header:${sec.title}`, title: sec.title }, ...sec.data]),
+    [sections],
+  );
   const [weeks, setWeeks] = useState([]);
 
   const load = useCallback(async () => {
@@ -172,15 +177,15 @@ export default function CardioHistoryScreen({ navigation }) {
             : 'Sessions you log show up here.'}
         />
       ) : (
-        <SectionList
-          sections={sections}
+        <FlashList
+          data={flatRows}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.content}
           ListHeaderComponent={weeks.length > 0 ? <CardioTrend weeks={weeks} goal={goal} /> : null}
-          renderSectionHeader={({ section }) => (
-            <Text style={styles.dayHeader}>{prettyDate(section.title)}</Text>
-          )}
-          renderItem={({ item }) => (
+          getItemType={(item) => (item._kind === 'header' ? 'header' : 'row')}
+          renderItem={({ item }) => (item._kind === 'header' ? (
+            <Text style={styles.dayHeader}>{prettyDate(item.title)}</Text>
+          ) : (
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.activity}>{item.activityName}</Text>
@@ -196,7 +201,7 @@ export default function CardioHistoryScreen({ navigation }) {
                 <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
-          )}
+          ))}
         />
       )}
     </SafeAreaView>

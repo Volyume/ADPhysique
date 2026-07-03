@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Modal, TextInput,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -174,7 +175,7 @@ export default function BuildWorkoutScreen({ navigation }) {
   }
 
   // Filtering (not truncation) decides what shows: search the whole library so
-  // no exercise is silently hidden. A render cap stays only as a FlatList perf
+  // no exercise is silently hidden. A render cap stays only as a list perf
   // guard, and it now applies AFTER the search filter (not before it), with a
   // visible "refine your search" hint when it bites, so the user is never left
   // wondering where an exercise went.
@@ -408,7 +409,7 @@ export default function BuildWorkoutScreen({ navigation }) {
               <Ionicons name="close" size={22} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
-          <FlatList
+          <FlashList
             data={filtered}
             keyExtractor={e => e.id}
             renderItem={({ item }) => (

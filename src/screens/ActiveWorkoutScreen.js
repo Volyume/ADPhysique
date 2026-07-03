@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform, FlatList, BackHandler, AppState, Animated, AccessibilityInfo } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform, BackHandler, AppState, Animated, AccessibilityInfo } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
@@ -3081,7 +3082,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               Replacing: <Text style={{ color: colors.primary }}>{exercise?.name}</Text>
             </Text>
             <Text style={styles.swapNote}>Session-only. Your plan is not changed.</Text>
-            <FlatList
+            <FlashList
               data={swapCandidates}
               keyExtractor={item => item.exercise.id}
               contentContainerStyle={{ padding: spacing.lg }}

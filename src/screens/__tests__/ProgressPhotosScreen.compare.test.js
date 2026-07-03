@@ -103,7 +103,9 @@ async function press(tree, label) {
 // are driven through renderItem, which closes over the live selection state.
 function tileEl(tree, item) {
   const fl = tree.root.findAll((n) => typeof n.type === 'string' && n.type === 'FlatList')[0];
-  return fl.props.renderItem({ item });
+  // E8: the grid renders through FlashList (mocked to the FlatList host);
+  // each cell is a positioning View wrapping the touchable tile.
+  return fl.props.renderItem({ item, index: 0 }).props.children;
 }
 
 async function pressTile(tree, item) {
