@@ -21,7 +21,10 @@ import json
 import re
 import sys
 
-ALLOWED = {"sonnet", "haiku"}
+# 2026-07-03: founder instruction (Partners full build) explicitly commissions
+# Opus subagents for implementation while Fable stays main-loop only. "opus"
+# is therefore allowed as an EXPLICIT choice; omitting model still blocks.
+ALLOWED = {"sonnet", "haiku", "opus"}
 
 def deny(reason):
     sys.stderr.write(
