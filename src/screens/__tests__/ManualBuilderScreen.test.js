@@ -55,6 +55,11 @@ jest.mock('../../lib/database', () => {
     updateRoutineName: jest.fn(async () => {}),
     removeExerciseFromRoutine: jest.fn(async () => {}),
     softDeleteRoutine: jest.fn(async () => {}),
+    updateProgrammeName: jest.fn(async () => {}),
+    // persistDays now wraps its writes in a transaction; the mock just runs the
+    // task so the inner helper calls (and their assertions) still fire.
+    db: jest.fn(async () => ({})),
+    runInTransaction: jest.fn(async (d, task) => task()),
   };
 });
 
@@ -341,5 +346,39 @@ describe('ManualBuilderScreen — reorder exercises (T7)', () => {
     expect(calls[0][2]).toBe(0);
     expect(calls[1][1]).toBe('ex-a');
     expect(calls[1][2]).toBe(1);
+  });
+
+  test('reordering across a superset keeps the pair adjacent (never splits it)', async () => {
+    let tree;
+    act(() => { tree = create(<ManualBuilderScreen navigation={nav} />); });
+    setPlanName(tree, 'Reorder Superset');
+    press(tree, '2 training days per week');
+    await act(async () => { press(tree, 'Create plan and add workouts'); });
+
+    const picker = tree.root.findAll(n => n.props && typeof n.props.onSelect === 'function')[0];
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-a', name: 'Bench Press', primaryMuscle: 'chest' }); });
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-b', name: 'Row', primaryMuscle: 'back' }); });
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-c', name: 'Squat', primaryMuscle: 'quads' }); });
+
+    // Superset the first two (adjacent A + B), then move the lone third
+    // exercise up across the pair. It must hop the whole pair, never land
+    // between its members (which would silently break the superset in-session).
+    press(tree, 'Bench Press, 3 sets');
+    press(tree, 'Row, 3 sets');
+    press(tree, 'Group 2 exercises into a superset');
+    press(tree, 'Move Squat up');
+
+    press(tree, 'Remove Day 2');
+    await act(async () => { press(tree, 'Save and activate'); });
+
+    const calls = addExerciseToRoutine.mock.calls;
+    const ss = calls.filter(c => c[9]); // superset members carry the group id (arg 10)
+    expect(ss).toHaveLength(2);
+    expect(ss[0][9]).toBe(ss[1][9]);            // same group
+    const orders = ss.map(c => c[2]).sort((a, b) => a - b);
+    expect(orders[1] - orders[0]).toBe(1);      // still adjacent after the reorder
   });
 });

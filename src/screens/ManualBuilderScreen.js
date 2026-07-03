@@ -15,7 +15,7 @@ import {
   createProgramme, createRoutine, addExerciseToRoutine,
   activatePlanWithBlock, uid, getProgrammeById, getRoutinesForPlan,
   getRoutineExercisesWithDetails, updateRoutineName, removeExerciseFromRoutine,
-  softDeleteRoutine,
+  softDeleteRoutine, updateProgrammeName, db, runInTransaction,
 } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS } from '../lib/algorithms';
 import { suggestRestSeconds } from '../lib/restSuggest';
@@ -460,11 +460,12 @@ export default function ManualBuilderScreen({ navigation, route }) {
       // gets its own new routine on Save, the original is untouched.
       routineId: null,
     };
-    setDayList(prev => {
-      const next = prev.slice();
-      next.splice(dayIndex + 1, 0, clone);
-      return next;
-    });
+    // Append at the end rather than right after the original: day order persists
+    // purely by routine created_at (there is no position column yet), and the
+    // clone gets a brand new routine on Save, so it always reloads last. Placing
+    // it last here keeps the on-screen order identical to the saved-and-reloaded
+    // order, instead of showing it mid-list then having it jump to the end.
+    setDayList(prev => [...prev, clone]);
     toast.show(`Duplicated ${original.name}`, { variant: 'success' });
   }
 
@@ -546,7 +547,11 @@ export default function ManualBuilderScreen({ navigation, route }) {
         ...d,
         exercises: d.exercises.map(ex => {
           if (ex.localId !== exLocalId) return ex;
-          const next = Math.max(min, Math.min(max, (ex[field] ?? 0) + delta));
+          let next = Math.max(min, Math.min(max, (ex[field] ?? 0) + delta));
+          // Keep the rep range coherent: min can never climb above max, nor max
+          // drop below min, so a saved target can never read "13-12 reps".
+          if (field === 'repsMin') next = Math.min(next, ex.repsMax ?? max);
+          else if (field === 'repsMax') next = Math.max(next, ex.repsMin ?? min);
           return { ...ex, [field]: next };
         }),
       };
@@ -569,15 +574,27 @@ export default function ManualBuilderScreen({ navigation, route }) {
   function moveExercise(dayIndex, exLocalId, direction) {
     setDayList(prev => prev.map((d, i) => {
       if (i !== dayIndex) return d;
-      const idx = d.exercises.findIndex(e => e.localId === exLocalId);
-      if (idx === -1) return d;
-      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-      if (swapIdx < 0 || swapIdx >= d.exercises.length) return d;
-      const next = d.exercises.slice();
-      const temp = next[idx];
-      next[idx] = next[swapIdx];
-      next[swapIdx] = temp;
-      return { ...d, exercises: next };
+      // Reorder at the level of superset BLOCKS, not individual rows. A pair
+      // sharing a supersetGroupId must stay adjacent (ActiveWorkout only treats
+      // two ADJACENT same-group rows as a superset), so a move must never split
+      // one: a pair travels as a single unit, and a lone exercise hops over a
+      // whole pair rather than landing between its members.
+      const blocks = [];
+      for (const ex of d.exercises) {
+        const last = blocks[blocks.length - 1];
+        if (ex.supersetGroupId && last && last[last.length - 1].supersetGroupId === ex.supersetGroupId) {
+          last.push(ex);
+        } else {
+          blocks.push([ex]);
+        }
+      }
+      const bIdx = blocks.findIndex(b => b.some(e => e.localId === exLocalId));
+      if (bIdx === -1) return d;
+      const swapIdx = direction === 'up' ? bIdx - 1 : bIdx + 1;
+      if (swapIdx < 0 || swapIdx >= blocks.length) return d;
+      const next = blocks.slice();
+      [next[bIdx], next[swapIdx]] = [next[swapIdx], next[bIdx]];
+      return { ...d, exercises: next.flat() };
     }));
   }
 
@@ -603,6 +620,14 @@ export default function ManualBuilderScreen({ navigation, route }) {
   }
 
   async function persistDays() {
+    const d = await db();
+    // Atomic: the edit path clear-and-reinserts a day's routine_exercises, so an
+    // interruption between the delete (removeExerciseFromRoutine) and the
+    // reinsert (addExerciseToRoutine) would otherwise leave a previously
+    // populated day empty and unrecoverable. One transaction makes the whole
+    // save all-or-nothing (mirrors duplicateRoutine). runInTransaction chains,
+    // so the helpers' own transactions nest safely.
+    await runInTransaction(d, async () => {
     for (let i = 0; i < days.length; i++) {
       const day = days[i];
       let routineId = day.routineId;
@@ -642,6 +667,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
     for (const routineId of removedRoutineIds) {
       await softDeleteRoutine(routineId);
     }
+    });
   }
 
   const [successModal, setSuccessModal] = useState(false);
@@ -666,6 +692,9 @@ export default function ManualBuilderScreen({ navigation, route }) {
     if (!validate(false)) return;
     setSaving(true);
     try {
+      // Persist any rename made on the builder page (persistDays writes only
+      // the routines, not the programme name).
+      await updateProgrammeName(programmeId, editablePlanName.trim() || 'My Plan');
       await persistDays();
       navigation.navigate('PlansTab');
     } catch (e) {
@@ -685,6 +714,9 @@ export default function ManualBuilderScreen({ navigation, route }) {
     if (!validate(false)) return;
     setSaving(true);
     try {
+      // Persist the (possibly renamed) plan name too: persistDays only writes
+      // the routines/day names, never the programme row.
+      await updateProgrammeName(programmeId, editablePlanName.trim() || 'My Plan');
       await persistDays();
       toast.show('Plan updated', { variant: 'success' });
       navigation.goBack();
