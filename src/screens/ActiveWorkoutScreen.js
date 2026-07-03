@@ -235,6 +235,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [detectedPRs, setDetectedPRs] = useState([]);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
+  // CL-6.1 (founder decision: prepare-not-commit). Past the target, "Log
+  // another set" ARMS one more set (the entry card is already prefilled
+  // with the last values) and the bottom bar returns to Log set; the
+  // commit happens on that confirm, never on the arm tap. Disarms after
+  // the set logs or when the exercise changes.
+  const [extraSetArmed, setExtraSetArmed] = useState(false);
+  useEffect(() => {
+    setExtraSetArmed(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentExerciseIndex, loggedSets.length]);
   // 'add' opens the picker to append an exercise; 'swap' opens it to replace the
   // current one. Lets the Swap sheet fall through to the full library and the
   // custom-exercise form when the ranked suggestions aren't what the user wants.
@@ -2341,15 +2351,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               "Log another set" affordance remains — promoted to a full-size
               outline button in the exact pixels the primary used to occupy,
               so the muscle-memory tap logs a set instead of navigating. */}
-          {cluster ? null : targetComplete ? (
+          {cluster ? null : (targetComplete && !extraSetArmed) ? (
             <TouchableOpacity
               testID="volyume-btn-extra-set"
               style={[styles.extraSetBtnPromoted, saving && styles.btnDisabled]}
-              onPress={handleCompleteSet}
+              onPress={() => setExtraSetArmed(true)}
               disabled={saving}
               accessibilityRole="button"
               accessibilityState={{ disabled: saving }}
               accessibilityLabel="Log another set"
+              accessibilityHint="Opens one more set below; nothing is logged until you confirm"
             >
               <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
               <Text style={styles.extraSetBtnPromotedText}>Log another set</Text>
@@ -2423,7 +2434,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             the tabs and squeezed the content. */}
         {cluster ? null : (
           <View style={[styles.bottomBar, { paddingBottom: spacing.md }]}>
-            {targetComplete ? (
+            {targetComplete && !extraSetArmed ? (
               isLastExercise ? (
                 <TouchableOpacity
                   testID="volyume-btn-finish-primary"
