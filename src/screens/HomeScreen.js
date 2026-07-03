@@ -38,6 +38,7 @@ import {
   TRIAL_LENGTH_DAYS,
 } from '../lib/trialActivation';
 import { buildCoachLedger } from '../lib/coachLedger';
+import CoachDailyBrief from '../components/CoachDailyBrief';
 import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
 import { buildFreeCoachLine } from '../lib/coachResponse';
 import { GLOSSARY } from '../lib/coachGlossary';
@@ -187,6 +188,10 @@ export default function HomeScreen({ navigation, route }) {
   // null. Computed from live counters in loadTrialBanner.
   const [trialBanner, setTrialBanner] = useState(null);
   const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
+  // S3 (world-class audit): the ongoing "since your check-in" runway, below
+  // the plan card. buildCoachLedger's result ({ variant, rows, unlockDate,
+  // unlockLabel }) or null; computed in loadCoachRunway.
+  const [coachRunway, setCoachRunway] = useState(null);
   // Free-tier weekly one-liner (founder decision 4c): one read-only
   // sentence built from training plus weight direction only. Dismissed
   // per week; defaults dismissed so it never flashes before the stored
@@ -338,7 +343,7 @@ export default function HomeScreen({ navigation, route }) {
         loadBriefDismissal(),
         loadWelcome(),
         loadActivationNudge(), // S6: tier-blind, computes from workouts + account age + ED flag
-        ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadTrialBanner()] : []),
+        ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadTrialBanner(), loadCoachRunway()] : []),
         ...(tier === 'free' ? [loadFreeCoachLine()] : []),
       ]);
       // NAV-4: the differential paywall's deload and stalled-lift contexts
@@ -444,6 +449,55 @@ export default function HomeScreen({ navigation, route }) {
     setTrialBannerDismissed(true);
     if (user?.id) {
       AsyncStorage.setItem(`@volyume_trial_value_banner_dismissed_${user.id}`, 'true').catch(() => {});
+    }
+  }
+
+  // S3 (world-class audit, _SYNTHESIS.md #131-138): the ongoing "since your
+  // check-in" runway below the plan card. Pro only (check-ins are a
+  // Precision Coaching feature). Reuses buildCoachLedger -- the SAME ledger
+  // the trial banner above builds -- fed the same shape of inputs
+  // loadTrialBanner gathers, so the runway can never disagree with the
+  // WeeklyCheckIn gate. Unlike the trial banner (trial-start-anchored, day
+  // 0-14 only), this is meant to run for the whole Pro lifetime, so both
+  // counts use a rolling trailing-7-day window (matching the check-in
+  // screen's own MIN_WEIGH_INS window) rather than a trial-start anchor.
+  async function loadCoachRunway() {
+    try {
+      if (!user?.id || tier !== 'pro') { setCoachRunway(null); return; }
+      const [workouts, weights, edFlag, wellbeing] = await Promise.all([
+        getAllWorkouts(user.id).catch(() => []),
+        getMorningWeightsLast14Days(user.id).catch(() => []),
+        getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
+        AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
+      ]);
+      const weekAgo = Date.now() - 7 * 86400000;
+      const weighIns7d = weights.filter(w => (w.loggedAt ?? 0) >= weekAgo).length;
+      const completedSessions = workouts.filter(w => w.isCompleted && (w.startedAt ?? 0) >= weekAgo).length;
+      const firstWeightAt = weights.length ? Math.min(...weights.map(w => w.loggedAt ?? Infinity)) : null;
+
+      let checkinDay = 0;
+      try {
+        const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
+        if (raw) { const p = JSON.parse(raw); if (Number.isFinite(p?.checkinDay)) checkinDay = p.checkinDay; }
+      } catch (_) {}
+
+      // ED-safety: mirrors useWeeklyStreak's edSuppressed exactly (open flag,
+      // a positive SCOFF screen, calm mode, or a failed flag/wellbeing read
+      // all fail closed), folded into the ledger's single edFlagOpen lever so
+      // it renders the SAME neutral no-counts variant every other coach
+      // surface uses under any of these four conditions.
+      const edSuppressed = !!edFlag
+        || (Number.isFinite(userProfile?.scoffScore) && userProfile.scoffScore >= 2)
+        || wellbeing === 'read_failed'
+        || isCalm(wellbeing);
+
+      const ledger = buildCoachLedger({
+        weighIns7d, completedSessions, firstWeightAt, checkinDay,
+        edFlagOpen: edSuppressed,
+      });
+      setCoachRunway(ledger);
+    } catch (_) {
+      setCoachRunway(null);
     }
   }
 
@@ -1177,6 +1231,16 @@ export default function HomeScreen({ navigation, route }) {
     ? rawCoachBrief
     : null;
 
+  // S3: the deterministic one-line-on-open, sourced from the SAME mesocycle
+  // week signal the hero's chip already reads (currentMesoWeek.isDeload) --
+  // no new phase logic, just a different sentence over the same state.
+  // Training-schedule data only (no weight/food), so no ED gating, matching
+  // the un-gated chip it sits beside. Null when there is no active
+  // mesocycle to read (nothing deterministic to say).
+  const dailyBriefLine = currentMesoWeek
+    ? (currentMesoWeek.isDeload ? 'Deload week. Lighter targets today.' : 'Training week. Same targets today.')
+    : null;
+
   // Banner priority: keep the primary "Start" action prominent by showing at
   // most one of the three attention banners at once. A fresh weekly coach
   // review outranks a suggested recovery week, which outranks the nutrition-
@@ -1809,6 +1873,12 @@ export default function HomeScreen({ navigation, route }) {
             )}
           </View>
         )}
+
+        {/* ── S3: daily brief + since-your-check-in runway. A fixed fixture
+            below the plan card (not part of the one-banner priority stack
+            above), per docs/wave-a-build-status-2026-07-03.md Issue 6. The
+            runway is Pro only; the one-liner is tier-agnostic. ── */}
+        <CoachDailyBrief line={dailyBriefLine} ledger={tier === 'pro' ? coachRunway : null} />
 
         {/* ── Pro teaser (free tier only, after 3+ sessions) ── now below the
             hero with the same hero-first reorder. */}

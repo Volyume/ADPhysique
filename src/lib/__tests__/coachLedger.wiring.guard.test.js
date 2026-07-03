@@ -1,8 +1,9 @@
 /**
- * A3 (Wave 1) wiring guards: week-one proof surfaces.
+ * A3 (Wave 1) + S3 wiring guards: week-one proof surfaces, plus the ongoing
+ * "since your check-in" runway that reuses the same ledger post-first-review.
  *
  * The ledger maths is behaviourally tested in coachLedger.test.js; these
- * scoped source guards pin the four screen integrations (device-walked, not
+ * scoped source guards pin the five screen integrations (device-walked, not
  * jest-mounted, per the repo convention). Each fails if its wiring is
  * reverted.
  */
@@ -57,6 +58,31 @@ describe('A3: plan reveal names the actual first-review date (OB-4)', () => {
   test('the named date leads the check-in card copy, generic line as fallback', () => {
     expect(REVEAL).toMatch(/your first review lands on \$\{firstReviewLabel\}/);
     expect(REVEAL).toMatch(/End of your training week, two minutes/);
+  });
+});
+
+describe('S3: Home coach daily brief + runway (ongoing, post-first-review)', () => {
+  test('the runway is built from buildCoachLedger, wired into the pro-only load array', () => {
+    expect(HOME).toMatch(/async function loadCoachRunway\(\)/);
+    expect(HOME).toMatch(/buildCoachLedger\(\{\s*\n\s*weighIns7d, completedSessions, firstWeightAt, checkinDay,/);
+    expect(HOME).toMatch(
+      /\.\.\.\(tier === 'pro' \? \[loadTodayWeight\(\), loadLatestCoachOutput\(\), loadTrialBanner\(\), loadCoachRunway\(\)\] : \[\]\),/,
+    );
+  });
+  test('calm mode / SCOFF / a failed flag-or-wellbeing read fold into the SAME edFlagOpen lever (mirrors useWeeklyStreak)', () => {
+    expect(HOME).toMatch(
+      /const edSuppressed = !!edFlag\s*\n\s*\|\| \(Number\.isFinite\(userProfile\?\.scoffScore\) && userProfile\.scoffScore >= 2\)\s*\n\s*\|\| wellbeing === 'read_failed'\s*\n\s*\|\| isCalm\(wellbeing\);/,
+    );
+    expect(HOME).toMatch(/edFlagOpen: edSuppressed,/);
+  });
+  test('the one-liner reads the SAME currentMesoWeek.isDeload signal the hero chip reads, no new phase logic', () => {
+    expect(HOME).toMatch(
+      /const dailyBriefLine = currentMesoWeek\s*\n\s*\? \(currentMesoWeek\.isDeload \? 'Deload week\. Lighter targets today\.' : 'Training week\. Same targets today\.'\)\s*\n\s*: null;/,
+    );
+  });
+  test('CoachDailyBrief is placed below the plan card, runway gated to Pro', () => {
+    expect(HOME).toMatch(/import CoachDailyBrief from '\.\.\/components\/CoachDailyBrief';/);
+    expect(HOME).toMatch(/<CoachDailyBrief line=\{dailyBriefLine\} ledger=\{tier === 'pro' \? coachRunway : null\} \/>/);
   });
 });
 

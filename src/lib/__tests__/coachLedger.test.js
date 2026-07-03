@@ -8,6 +8,7 @@ import {
   buildCoachLedger,
   buildHoldReceipt,
   formatUnlockDate,
+  formatCheckinCountdown,
 } from '../coachLedger';
 import {
   MIN_WEIGH_INS,
@@ -104,6 +105,39 @@ describe('formatUnlockDate', () => {
   test('British long form, no year', () => {
     expect(formatUnlockDate(new Date(2026, 6, 5))).toBe('Sunday 5 July');
     expect(formatUnlockDate(null)).toBeNull();
+  });
+});
+
+describe('formatCheckinCountdown (S3 "since your check-in" runway)', () => {
+  test('no date: nothing to say', () => {
+    expect(formatCheckinCountdown(null)).toBeNull();
+  });
+
+  test('today and in the past both read as today (never a negative count)', () => {
+    const today = new Date(WED); today.setHours(0, 0, 0, 0);
+    expect(formatCheckinCountdown(today, WED)).toBe('Check-in is today');
+    const yesterday = new Date(WED - DAY); yesterday.setHours(0, 0, 0, 0);
+    expect(formatCheckinCountdown(yesterday, WED)).toBe('Check-in is today');
+  });
+
+  test('tomorrow gets its own grammar, not "1 days"', () => {
+    const tomorrow = new Date(WED + DAY); tomorrow.setHours(0, 0, 0, 0);
+    expect(formatCheckinCountdown(tomorrow, WED)).toBe('Check-in is tomorrow');
+  });
+
+  test('further out counts plural days', () => {
+    const inFour = new Date(WED + 4 * DAY); inFour.setHours(0, 0, 0, 0);
+    expect(formatCheckinCountdown(inFour, WED)).toBe('4 days to your next check-in');
+  });
+
+  test('agrees with the SAME unlockDate the ledger names for an established user', () => {
+    // An established user: first weight logged months ago, well past the
+    // FIRST_CHECKIN_MIN_DAYS floor, so firstReviewUnlockDate degenerates to
+    // "next occurrence of checkinDay" -- the ongoing check-in date.
+    const firstWeightAt = WED - 200 * DAY;
+    const l = buildCoachLedger({ firstWeightAt, checkinDay: 0, now: WED }); // Sunday
+    // WED is Wednesday 24 June 2026; next Sunday is 28 June (4 days out).
+    expect(formatCheckinCountdown(l.unlockDate, WED)).toBe('4 days to your next check-in');
   });
 });
 

@@ -37,6 +37,27 @@ function plural(n, word) {
 }
 
 /**
+ * "3 days to your next check-in" / "Check-in is today" / "Check-in is
+ * tomorrow" -- the ongoing (post-first-review) sibling of formatUnlockDate,
+ * for the "since your check-in" runway (world-class audit 2026-07-03,
+ * _SYNTHESIS.md S3). Pure date maths against the SAME unlockDate the ledger
+ * below returns (built from the SAME checkinDay the WeeklyCheckIn gate
+ * reads), so the count can never disagree with the gate. Day-count only, no
+ * weigh-in or session data, so it stays safe to show under the neutral
+ * (ED-flag/calm) variant exactly like buildHoldReceipt's unlockLine already
+ * does.
+ */
+export function formatCheckinCountdown(unlockDate, now = Date.now()) {
+  if (!unlockDate) return null;
+  const nowMidnight = new Date(now);
+  nowMidnight.setHours(0, 0, 0, 0);
+  const days = Math.round((unlockDate.getTime() - nowMidnight.getTime()) / DAY_MS);
+  if (days <= 0) return 'Check-in is today';
+  if (days === 1) return 'Check-in is tomorrow';
+  return `${plural(days, 'day')} to your next check-in`;
+}
+
+/**
  * The ledger. Inputs mirror what HomeScreen's trial banner already gathers.
  *
  * @param {object} args
