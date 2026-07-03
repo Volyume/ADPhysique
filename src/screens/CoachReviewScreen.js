@@ -332,10 +332,35 @@ export default function CoachReviewScreen() {
               workoutsInWeek.length
             : 0;
 
-        return { avgSoreness, avgReps, hasOverMRV, avgJointDiscomfort, weeksSinceLastDeload: 99 };
+        return { avgSoreness, avgReps, hasOverMRV, avgJointDiscomfort };
       });
 
-      const deload = shouldDeload(weeklyBuckets);
+      // Derive weeks since the last lighter/recovery week from the full set
+      // history (parity with useProgressData). Feeding shouldDeload a hardcoded
+      // 99 made the free-tier deload check ignore recency (both recency gates,
+      // >= 3 and >= 4, always passed), so it over-recommended deloads and
+      // drifted from the Pro-side derivation.
+      const LIGHTER_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+      const weeksSinceLighter = (() => {
+        for (let wk = 1; wk <= 12; wk++) {
+          const end = Date.now() - wk * LIGHTER_WEEK_MS;
+          const start = end - LIGHTER_WEEK_MS;
+          const wkSets = allSets.filter((s) => {
+            const at = s.createdAt || 0;
+            return at >= start && at < end;
+          });
+          const vol = calculateWeeklyVolume(wkSets, exerciseMap);
+          const totalSets = Object.values(vol).reduce((sum, v) => sum + (v.workingSets || 0), 0);
+          if (totalSets < 15) return wk;
+        }
+        return 12;
+      })();
+      const patchedBuckets = weeklyBuckets.map((b, i) => ({
+        ...b,
+        weeksSinceLastDeload: weeksSinceLighter + (3 - i),
+      }));
+
+      const deload = shouldDeload(patchedBuckets);
       setDeloadResult(deload);
 
       // Detect persistently under-trained muscle groups (3+ weeks below MEV)
