@@ -42,6 +42,7 @@ import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
 import { buildFreeCoachLine } from '../lib/coachResponse';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { activePlanLine } from '../lib/planDisplay';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { localWeekStartMs, localDayKey } from '../lib/dayKey';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 // NAV-4 (founder decision): the differential paywall re-homed here from the
@@ -151,15 +152,9 @@ export default function HomeScreen({ navigation, route }) {
       } catch (_) { return; }
       if (cancelled) return;
       try {
-        navigation.getParent()?.navigate('ProfileTab', {
-          screen: 'CascadeGate',
-          params: { variant: 'day14' },
-          // F6b: tabs are lazy, so a nested navigate into a never-focused
-          // tab would otherwise make the target the tab's ONLY route and
-          // strand the You root for the session. initial: false keeps the
-          // root beneath (lazyScreens.guard pins this on every such site).
-          initial: false,
-        });
+        // T3: the helper hardcodes initial: false (F6b lazy-tab rule), so a
+        // never-focused tab keeps its root beneath the pushed screen.
+        navigateCrossTab(navigation, 'ProfileTab', 'CascadeGate', { variant: 'day14' });
       } catch (_) { /* navigation not ready; the notification path still covers it */ }
     })();
     return () => { cancelled = true; };
@@ -1199,7 +1194,7 @@ export default function HomeScreen({ navigation, route }) {
             </Text>
             <TouchableOpacity
               style={styles.phaseBannerArrow}
-              onPress={() => navigation.getParent()?.navigate('ProfileTab', { screen: 'NutritionTargets', initial: false })}
+              onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets')}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
               accessibilityLabel="Go to nutrition targets"
@@ -1224,7 +1219,7 @@ export default function HomeScreen({ navigation, route }) {
             // A bare navigate from HomeStack is silently dropped in production,
             // making the flagship banner a dead tap; route via the parent tab
             // navigator like the phase banner above.
-            onPress={() => navigation.getParent()?.navigate('ProfileTab', { screen: 'CoachOutput', params: { weekStart: latestCoachOutput.weekStart }, initial: false })}
+            onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput', { weekStart: latestCoachOutput.weekStart })}
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel="This week's coaching review. Tap to open."
@@ -1265,7 +1260,7 @@ export default function HomeScreen({ navigation, route }) {
               if (trialBanner.variant === 'S3') {
                 scrollRef.current?.scrollTo({ y: 0, animated: true });
               } else {
-                navigation.getParent()?.navigate('ProfileTab', { screen: 'WeeklyCheckIn', initial: false });
+                navigateCrossTab(navigation, 'ProfileTab', 'WeeklyCheckIn');
               }
             }}
             activeOpacity={0.85}
@@ -1307,7 +1302,7 @@ export default function HomeScreen({ navigation, route }) {
                 coaching decision ever lands. Cross-tab: Methodology lives in
                 the ProfileTab stack (F4 rule, RootNavigator.js:616-633). */}
             <TouchableOpacity
-              onPress={() => navigation.getParent()?.navigate('ProfileTab', { screen: 'Methodology', params: { source: 'trial_banner' }, initial: false })}
+              onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'Methodology', { source: 'trial_banner' })}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="link"
               accessibilityLabel="How Precision Coaching works"
@@ -1355,7 +1350,7 @@ export default function HomeScreen({ navigation, route }) {
         {showPlateauBanner && (
           <TouchableOpacity
             style={styles.plateauBanner}
-            onPress={() => navigation.getParent()?.navigate('ProgressTab', { screen: 'ExerciseDetail', params: { exerciseId: plateauBanner.exerciseId }, initial: false })}
+            onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'ExerciseDetail', { exerciseId: plateauBanner.exerciseId })}
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel={plateauBanner.line}
@@ -1469,7 +1464,7 @@ export default function HomeScreen({ navigation, route }) {
             edFlagOpen={edFlagOpen}
             cardioEnabled={userProfile?.cardioEnabled !== false}
             onCardioPress={() => navigation.navigate('LogCardio')}
-            onOpenTrend={() => navigation.getParent()?.navigate('ProgressTab', { screen: 'Analytics', params: { focusWeightTrend: true }, initial: false })}
+            onOpenTrend={() => navigateCrossTab(navigation, 'ProgressTab', 'Analytics', { focusWeightTrend: true })}
           />
         )}
 

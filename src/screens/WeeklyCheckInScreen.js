@@ -24,6 +24,7 @@ import {
   activityDayKey,
 } from '../lib/database';
 import { localDayKey, localWeekStartMs } from '../lib/dayKey';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import {
   formatWeekRange, hasLoggedToday, earliestWeightTs,
   deriveTrainingPerformance, deriveCalsAdherence, stripAutoNotes, PERF_VERDICT_TEXT,
@@ -1357,7 +1358,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
               a repeat visit re-opens the input. */}
           <TouchableOpacity
             style={styles.gateBtn}
-            onPress={() => navigation.getParent()?.navigate('HomeTab', { screen: 'Home', params: { openWeightLog: Date.now() }, initial: false })}
+            onPress={() => navigateCrossTab(navigation, 'HomeTab', 'Home', { openWeightLog: Date.now() })}
             activeOpacity={0.85}
             accessibilityRole="button"
           >

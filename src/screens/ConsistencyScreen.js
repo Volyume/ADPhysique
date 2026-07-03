@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, radius, type, withAlpha } from '../styles/theme';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import InfoTooltip from '../components/InfoTooltip';
 import FatigueTrendCard from '../components/FatigueTrendCard';
@@ -93,8 +94,8 @@ export default function ConsistencyScreen({ navigation }) {
             currentWeek={mesoCurrentWeek()}
             progress={mesoProgress()}
             tonnageBars={mesoTonnage}
-            onPress={() => navigation.getParent()?.navigate('PlansTab', { screen: 'MesocycleBuilder', initial: false })}
-            onBuild={() => navigation.getParent()?.navigate('PlansTab', { screen: 'PlanLibrary', initial: false })}
+            onPress={() => navigateCrossTab(navigation, 'PlansTab', 'MesocycleBuilder')}
+            onBuild={() => navigateCrossTab(navigation, 'PlansTab', 'PlanLibrary')}
           />
           <FatigueTrendCard sessions={fatigueSessions} />
           <BlockProgressCard blockProgress={blockProgress} currentMesoWeek={currentMesoWeek} />

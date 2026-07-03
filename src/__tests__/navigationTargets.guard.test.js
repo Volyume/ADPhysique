@@ -42,12 +42,14 @@ describe('cross-stack navigation guard (F4 / NAV-1/2/3)', () => {
   });
 
   test('the three audited dead ends now use the parent-tab form', () => {
+    // T3: the parent-tab idiom lives in navigateCrossTab (which hardcodes
+    // initial: false); these sites must route through it.
     expect(read('src/screens/HomeScreen.js'))
-      .toMatch(/getParent\(\)\?\.navigate\(\s*'ProfileTab',\s*\{\s*screen:\s*'CoachOutput'/);
+      .toMatch(/navigateCrossTab\(navigation,\s*'ProfileTab',\s*'CoachOutput'/);
     expect(read('src/screens/MealPlanScreen.js'))
-      .toMatch(/getParent\(\)\?\.navigate\(\s*'ProfileTab',\s*\{\s*screen:\s*'NutritionTargets'/);
+      .toMatch(/navigateCrossTab\(navigation,\s*'ProfileTab',\s*'NutritionTargets'/);
     expect(read('src/screens/DiaryScreen.js'))
-      .toMatch(/getParent\(\)\?\.navigate\(\s*'ProfileTab',\s*\{\s*screen:\s*'SettingsPrivacy'/);
+      .toMatch(/navigateCrossTab\(navigation,\s*'ProfileTab',\s*'SettingsPrivacy'/);
   });
 
   test("OB-8: the check-in's 'Log my weight first' CTA deep-links to the Train tab weight logger", () => {
@@ -56,7 +58,7 @@ describe('cross-stack navigation guard (F4 / NAV-1/2/3)', () => {
     // deep-link must use the parent-tab form (a bare navigate('Home') is the
     // silent-no-op bug class this file guards). The openWeightLog param is
     // what pops the TodayStrip weight input open on arrival.
-    expect(src).toMatch(/getParent\(\)\?\.navigate\(\s*'HomeTab',\s*\{\s*screen:\s*'Home',\s*params:\s*\{\s*openWeightLog/);
+    expect(src).toMatch(/navigateCrossTab\(navigation,\s*'HomeTab',\s*'Home',\s*\{\s*openWeightLog/);
     // And no bare cross-stack navigate to Home sneaks back in.
     expect(src).not.toMatch(/navigation\.navigate\(\s*['"]Home['"]/);
     // The receiving end: Home forwards the param into TodayStrip, which opens
@@ -104,11 +106,11 @@ describe('cross-stack navigation guard (F4 / NAV-1/2/3)', () => {
 
   test('the Diary OFF-sharing prompt navigates BEFORE it dismisses itself', () => {
     const src = read('src/screens/DiaryScreen.js');
-    const site = src.indexOf("screen: 'SettingsPrivacy'");
+    const site = src.indexOf("'SettingsPrivacy'");
     expect(site).toBeGreaterThan(-1);
     // Within the same handler, dismissal must come after the navigation call.
     const window = src.slice(Math.max(0, site - 300), site + 300);
-    const navIdx = window.indexOf('getParent');
+    const navIdx = window.indexOf('navigateCrossTab');
     const dismissIdx = window.indexOf('onDismissOffCard()');
     expect(navIdx).toBeGreaterThan(-1);
     expect(dismissIdx).toBeGreaterThan(navIdx);

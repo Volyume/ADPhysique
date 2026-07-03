@@ -23,6 +23,7 @@ import { workoutDayMs, workoutDayKey, calendarRelativeLabel } from '../lib/worko
 import useAppStore from '../store/useAppStore';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -117,7 +118,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
         }));
       }
       startWorkout(newWorkout, initialExercises);
-      navigation.getParent()?.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
+      navigateCrossTab(navigation, 'HomeTab', 'ActiveWorkout');
     } catch (e) {
       logError('WorkoutHistoryScreen.handleRepeatAsIs', e, {
         userId: user?.id, workoutId: workout?.id, routineId: workout?.routineId,
@@ -137,7 +138,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
         },
         {
           text: 'View in Plans',
-          onPress: () => navigation.getParent()?.navigate('PlansTab'),
+          onPress: () => navigateCrossTab(navigation, 'PlansTab'),
         },
         { text: 'Cancel', style: 'cancel' },
       ],
@@ -368,13 +369,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
                   <TouchableOpacity
                     key={idx}
                     style={styles.exerciseBreakdownRow}
-                    onPress={() =>
-                      navigation.getParent()?.navigate('ProgressTab', {
-                        screen: 'ExerciseDetail',
-                        params: { exerciseId: ex.exerciseId },
-                        initial: false,
-                      })
-                    }
+                    onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'ExerciseDetail', { exerciseId: ex.exerciseId })}
                     accessibilityRole="button"
                     accessibilityLabel={`See progress for ${ex.name}`}
                   >

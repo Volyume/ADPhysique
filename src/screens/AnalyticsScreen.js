@@ -8,6 +8,7 @@ import { useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns/format';
 
 import { colors, fontSize, fontWeight, spacing, radius, volumeColors, volumeStatusColor, type, circle } from '../styles/theme';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import Card from '../components/Card';
 import RollingNumber from '../components/RollingNumber';
 import ScreenHeader from '../components/ScreenHeader';
@@ -440,7 +441,7 @@ export default function AnalyticsScreen({ navigation, route }) {
                 BuildWorkout lives in HomeStack, not ProgressStack. */}
             <TouchableOpacity
               style={styles.emptyStateCta}
-              onPress={() => navigation.getParent()?.navigate('HomeTab', { screen: 'BuildWorkout', initial: false })}
+              onPress={() => navigateCrossTab(navigation, 'HomeTab', 'BuildWorkout')}
               accessibilityRole="button"
               accessibilityLabel="Start a workout"
             >

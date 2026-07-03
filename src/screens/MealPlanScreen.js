@@ -23,6 +23,7 @@ import BackHeader from '../components/BackHeader';
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
 import { useToast } from '../components/Toast';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { appAlert } from '../components/AppAlert';
 import useAppStore from '../store/useAppStore';
 import { colors, fontSize, fontWeight, spacing, radius, hitSlop, type, circle } from '../styles/theme';
@@ -156,7 +157,7 @@ export default function MealPlanScreen({ navigation }) {
         // F4 (audit NAV-2): NutritionTargets lives in ProfileStack; a bare
         // navigate from DiaryStack is a silent no-op, so the toast promised a
         // redirect that never happened.
-        navigation.getParent()?.navigate('ProfileTab', { screen: 'NutritionTargets', initial: false });
+        navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets');
         return;
       }
       await load();
