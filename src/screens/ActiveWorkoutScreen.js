@@ -2633,6 +2633,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <Text style={styles.sheetExplainer}>
               Pick how this set was done. Working and the intensity techniques all count towards your weekly totals; warm-ups don't. The label tells the coach how you trained.
             </Text>
+            {/* P9: the radios group so TalkBack announces position context
+                ("2 of 5") while each row keeps its own label and state. */}
+            <View accessibilityRole="radiogroup">
             {SET_TYPE_OPTIONS.map(opt => (
               <TouchableOpacity
                 key={opt.value}
@@ -2657,6 +2660,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 )}
               </TouchableOpacity>
             ))}
+            </View>
           </View>
         </Modal>
 

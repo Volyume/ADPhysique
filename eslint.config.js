@@ -10,6 +10,11 @@ const babelParser = require('@babel/eslint-parser');
 const reactHooks = require('eslint-plugin-react-hooks');
 const reactPlugin = require('eslint-plugin-react');
 const importPlugin = require('eslint-plugin-import');
+// P9/E11 "lint line" (founder-approved dependency 2026-07-02): holds the
+// screen-reader posture on new code. The plugin predates eslint 9, so it is
+// installed with legacy peer resolution; its rules are plain AST checks that
+// run fine under flat config.
+const a11yPlugin = require('eslint-plugin-react-native-a11y');
 
 // React Native / Hermes runtime globals, so `no-undef` does not fire on them.
 const rnGlobals = {
@@ -121,7 +126,7 @@ module.exports = [
       },
       globals: rnGlobals,
     },
-    plugins: { 'react-hooks': reactHooks, react: reactPlugin, import: importPlugin },
+    plugins: { 'react-hooks': reactHooks, react: reactPlugin, import: importPlugin, 'react-native-a11y': a11yPlugin },
     settings: { react: { version: '18.2' } },
     rules: {
       // Errors: the gate. These catch the bug class that already shipped.
@@ -135,6 +140,20 @@ module.exports = [
       // Registered so the existing disable-directives resolve to a known rule.
       // Resolution itself is a follow-up (RN resolver + assets).
       'import/no-unresolved': 'off',
+      // P9/E11 accessibility line: malformed or contradictory a11y props are
+      // errors (they break TalkBack outright); the advisory rules ride as
+      // warnings so the backlog is visible without blocking the gate.
+      // Descriptor coverage is a WARNING for now: 91 pre-existing touchables
+      // lack any a11y props (the visible backlog, counted 2026-07-03); the
+      // validity rules below pass everywhere today so they gate as errors.
+      'react-native-a11y/has-valid-accessibility-descriptors': 'warn',
+      'react-native-a11y/has-valid-accessibility-role': 'error',
+      'react-native-a11y/has-valid-accessibility-states': 'error',
+      'react-native-a11y/has-valid-accessibility-state': 'error',
+      'react-native-a11y/has-valid-accessibility-component-type': 'error',
+      'react-native-a11y/has-valid-accessibility-live-region': 'error',
+      'react-native-a11y/no-nested-touchables': 'warn',
+      'react-native-a11y/has-accessibility-hint': 'off',
       // Warnings: real signal, too noisy to block on today.
       'react-hooks/exhaustive-deps': 'warn',
       'no-unused-vars': ['warn', {
