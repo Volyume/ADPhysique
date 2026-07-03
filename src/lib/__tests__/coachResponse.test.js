@@ -148,11 +148,21 @@ describe('part 1: specific data-referenced acknowledgement', () => {
     expect(r.acknowledgement).toBe('Check-in logged. Energy came in at 3 of 5.');
   });
 
-  test('nothing logged at all: null, never fabricated', () => {
+  test('a fully quiet week is acknowledged calmly, never as a failure (T8)', () => {
     const r = build({
       output: fakeOutput({ sessionsCompleted: 0, sessionsPlanned: 3, prsThisWeek: 0 }),
       weighInsThisWeek: null,
       checkin: null,
+    });
+    expect(r.acknowledgement).toBe('A quieter week. Your plan is ready whenever you are.');
+  });
+
+  test('a quiet week under suppression stays silent, never fabricated (T8 suppresses like training encouragement)', () => {
+    const r = build({
+      output: fakeOutput({ sessionsCompleted: 0, sessionsPlanned: 3, prsThisWeek: 0 }),
+      weighInsThisWeek: null,
+      checkin: null,
+      edFlagOpen: true,
     });
     expect(r.acknowledgement).toBeNull();
   });

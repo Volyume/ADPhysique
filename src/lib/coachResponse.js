@@ -114,6 +114,13 @@ function buildAcknowledgement({ sessionsCompleted, sessionsPlanned, prsThisWeek,
     return clean('Check-in logged.');
   }
 
+  // T8: a fully quiet week is acknowledged calmly, never as a failure
+  // (band-not-chain). This is training encouragement, so it suppresses under
+  // an open flag or calm mode the same way the activation nudge does.
+  if (!suppress && completed === 0) {
+    return clean('A quieter week. Your plan is ready whenever you are.');
+  }
+
   return null;
 }
 

@@ -131,6 +131,13 @@ function preciseAcknowledgement({ sessionsCompleted, sessionsPlanned, prsThisWee
     return clean('Check-in logged.');
   }
 
+  // T8: a fully quiet week is acknowledged calmly, never as a failure. This
+  // path is reached only with suppression off (see the register-blind path in
+  // the resolver), so no flag gate is needed here.
+  if (completed === 0) {
+    return clean('A quieter week. Your plan is ready when you are.');
+  }
+
   return null;
 }
 
