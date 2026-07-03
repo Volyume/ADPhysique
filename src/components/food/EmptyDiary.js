@@ -14,7 +14,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type } from '../../style
 
 export const EMPTY_DIARY_COPY = 'Nothing logged yet today. Add a meal whenever you\'re ready.';
 
-export default function EmptyDiary({ onAdd, onCopyYesterday, onPlanDay }) {
+export default function EmptyDiary({ onAdd, onCopyYesterday, onSuggested, onPlanDay }) {
   return (
     <View style={styles.card} accessibilityRole="summary">
       <Ionicons name="restaurant-outline" size={28} color={colors.textMuted} />
@@ -51,6 +51,19 @@ export default function EmptyDiary({ onAdd, onCopyYesterday, onPlanDay }) {
           >
             <Ionicons name="copy-outline" size={16} color={colors.textPrimary} />
             <Text style={styles.btnText}>Copy yesterday</Text>
+          </TouchableOpacity>
+        ) : onSuggested ? (
+          // A3 (first-week trust): a day-0 diary has no yesterday to copy, so
+          // "Copy yesterday" would be a dead tap. Point at a suggested meal
+          // instead, the one action that works with zero history.
+          <TouchableOpacity
+            style={[styles.btn, styles.btnSecondary]}
+            onPress={onSuggested}
+            accessibilityRole="button"
+            accessibilityLabel="Try a suggested meal"
+          >
+            <Ionicons name="bulb-outline" size={16} color={colors.textPrimary} />
+            <Text style={styles.btnText}>Try a suggested meal</Text>
           </TouchableOpacity>
         ) : null}
       </View>

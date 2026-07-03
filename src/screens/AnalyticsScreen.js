@@ -434,6 +434,18 @@ export default function AnalyticsScreen({ navigation, route }) {
             <Text style={styles.emptyStateBody}>
               Log your first session and these charts begin filling in. Every workout you log adds to the picture.
             </Text>
+            {/* A4 (first-week trust): a day-0 Progress tab was a dead end with
+                no way forward. Cross-tab nav (F4 bug class, RootNavigator.js
+                :616-633): a plain navigate() here would silently no-op since
+                BuildWorkout lives in HomeStack, not ProgressStack. */}
+            <TouchableOpacity
+              style={styles.emptyStateCta}
+              onPress={() => navigation.getParent()?.navigate('HomeTab', { screen: 'BuildWorkout', initial: false })}
+              accessibilityRole="button"
+              accessibilityLabel="Start a workout"
+            >
+              <Text style={styles.emptyStateCtaText}>Start a workout</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -1044,5 +1056,16 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  emptyStateCta: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.md,
+    marginTop: spacing.sm,
+  },
+  emptyStateCtaText: {
+    ...type.bodyStrong,
+    color: colors.onPrimary,
   },
 });

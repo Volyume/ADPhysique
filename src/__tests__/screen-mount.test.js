@@ -211,6 +211,10 @@ jest.mock('react-native-svg', () => {
   const React = require('react');
   const mk = name => props => React.createElement(name, props, props.children);
   return {
+    // __esModule matters: without it Babel's interop hands `import Svg
+    // from 'react-native-svg'` the whole mock object (an invalid element
+    // type), not the default component below.
+    __esModule: true,
     Svg: mk('Svg'), Path: mk('Path'), G: mk('G'), Circle: mk('Circle'),
     Rect: mk('Rect'), Line: mk('Line'), Text: mk('Text'), Defs: mk('Defs'),
     LinearGradient: mk('LinearGradient'), Stop: mk('Stop'), ClipPath: mk('ClipPath'),
@@ -1175,9 +1179,61 @@ describe('Edge: empty arrays in expected-populated state', () => {
         tree = t;
         expect(tree).not.toBeNull();
         expect(errors).toEqual([]);
+        const { failures } = await bashTappables(tree);
+        const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
+        expect(real).toEqual([]);
       } finally { unmountTree(tree); }
     } finally {
       Object.assign(database, orig);
+    }
+  });
+
+  test('AnalyticsScreen zero-data empty state carries the Start a workout CTA (A4)', async () => {
+    // True day-0: no workouts, no sets — the empty state must render with a
+    // way forward, and tapping it must not throw (cross-tab getParent nav).
+    //
+    // The suite-wide useFocusEffect mock is a no-op, which leaves
+    // useProgressData's `loading` true forever — the empty state gates on
+    // `!loading`. Scope a real effect implementation to this test only so
+    // load() actually runs, and stub every loader it reaches so it settles
+    // without touching the DB layer.
+    const database = require('../lib/database');
+    const { useFocusEffect } = require('@react-navigation/native');
+    const orig = { ...database };
+    database.getAllWorkouts = () => Promise.resolve([]);
+    database.getCompletedWorkoutSets = () => Promise.resolve([]);
+    database.getAllExercises = () => Promise.resolve([]);
+    database.getAllMesocycles = () => Promise.resolve([]);
+    database.getActivePlan = () => Promise.resolve(null);
+    database.runInsightsEngine = () => Promise.resolve([]);
+    database.getAcuteChronicWorkload = () => Promise.resolve(null);
+    database.getRecentWorkoutFeedback = () => Promise.resolve([]);
+    database.getCurrentMesocycleWeek = () => Promise.resolve(null);
+    database.getPlannedMuscleVolume = () => Promise.resolve([]);
+    useFocusEffect.mockImplementation(cb => { React.useEffect(cb, [cb]); });
+    try {
+      useAppStore.setState(STATE_VARIANTS[0].state);
+      const Screen = require('../screens/AnalyticsScreen').default;
+      let tree = null;
+      try {
+        const { tree: t, errors } = await mountScreen(Screen);
+        tree = t;
+        expect(tree).not.toBeNull();
+        expect(errors).toEqual([]);
+        // Collected from Text nodes: toJSON() chokes on the circular
+        // refreshControl element AnalyticsScreen passes to its ScrollView.
+        const text = tree.root.findAll(n => n.type === 'Text')
+          .map(n => (Array.isArray(n.props.children) ? n.props.children.join('') : n.props.children))
+          .filter(c => typeof c === 'string')
+          .join(' ');
+        expect(text).toContain('Start a workout');
+        const { failures } = await bashTappables(tree);
+        const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
+        expect(real).toEqual([]);
+      } finally { unmountTree(tree); }
+    } finally {
+      Object.assign(database, orig);
+      useFocusEffect.mockReset();
     }
   });
 });

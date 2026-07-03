@@ -422,7 +422,7 @@ export default function FoodSearchScreen({ navigation, route }) {
   // food_ref 'quick:adhoc' has no resolvable name, so the diary shows it
   // as "Quick add" with no gram weight. Logs, then returns to the diary.
   async function confirmQuickAdd({ kcal, protein, carbs, fat, mealSlot: slot }) {
-    await logFoodEntry(userId, {
+    const entryId = await logFoodEntry(userId, {
       entryDate,
       mealSlot: slot,
       foodRef: 'quick:adhoc',
@@ -434,6 +434,13 @@ export default function FoodSearchScreen({ navigation, route }) {
       fibreG: null,
     });
     quickSavedRef.current = true;
+    // A2 (first-week trust): every log gets the same success + Undo feedback,
+    // matching DiaryScreen's onLogUsual. The toast provider is app-level, so
+    // it survives the goBack the caller triggers on sheet close.
+    toast.show('Quick add added.', {
+      variant: 'undo',
+      action: { label: 'Undo', onPress: async () => { await deleteFoodEntry(entryId, userId); } },
+    });
   }
 
   // Auto-open the detail sheet when arriving from ScanBarcodeScreen.
@@ -469,7 +476,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       surface: 'sheet',
     });
     const macros = scaleMacros(food, quantityG); // { kcal, proteinG, carbsG, fatG, fibreG }
-    await logFoodEntry(userId, {
+    const entryId = await logFoodEntry(userId, {
       entryDate: chosenDate,
       mealSlot: chosenSlot,
       foodRef: food.food_ref,
@@ -481,6 +488,15 @@ export default function FoodSearchScreen({ navigation, route }) {
       foodRef: food.food_ref,
       quantityG,
     }).catch(() => {}); // derived memory only; never fail the log
+    // A2 (first-week trust): the FIRST food log (and every log after) gets the
+    // same success + Undo toast as a re-log or a diary "usual" — previously
+    // this path (the sheet's "Add to diary") showed nothing at all. Exact
+    // pattern from DiaryScreen.onLogUsual; the toast survives the goBack
+    // below because the Toast provider is mounted at the app root.
+    toast.show(`${food.name ?? 'Food'} added.`, {
+      variant: 'undo',
+      action: { label: 'Undo', onPress: async () => { await deleteFoodEntry(entryId, userId); } },
+    });
     navigation.goBack();
   }
 

@@ -112,10 +112,16 @@ export default function DiaryScreen({ navigation }) {
   // The safe per-day floor banking must never breach: max(sex floor, FFM floor)
   // (CB-1 blueprint line 90). Computed on load from latest weight + body comp.
   const [floorKcal, setFloorKcal] = useState(() => safeDayFloorKcal({ sex }));
+  // A3 (first-week trust): whether the day before the one in view has any food
+  // logged. Drives EmptyDiary's second action: "Copy yesterday" only when
+  // there is something to copy, "Try a suggested meal" otherwise (a day-0
+  // diary has no yesterday, so the copy CTA used to be a dead tap until
+  // pressed).
+  const [yesterdayHasFood, setYesterdayHasFood] = useState(false);
 
   const load = useCallback(async () => {
     if (!userId) return;
-    const [es, r, w, t, trainingDay, resolvedRefeedDate, edFlag, bodyWeight, bodyComp] = await Promise.all([
+    const [es, r, w, t, trainingDay, resolvedRefeedDate, edFlag, bodyWeight, bodyComp, yEntries] = await Promise.all([
       getFoodEntriesForDay(userId, selectedDate),
       getRollupForDay(userId, selectedDate),
       getWater(userId, selectedDate),
@@ -125,6 +131,7 @@ export default function DiaryScreen({ navigation }) {
       getOpenEdPatternFlag(userId).catch(() => null),
       getLatestBodyWeight(userId).catch(() => null),
       getLatestBodyComposition(userId).catch(() => null),
+      getFoodEntriesForDay(userId, shiftDate(selectedDate, -1)).catch(() => []),
     ]);
     // Safe banking floor = max(sex floor, FFM floor). FFM floor needs a body
     // weight; when present we use the engine's own computeFFMFloor (with body
@@ -166,6 +173,7 @@ export default function DiaryScreen({ navigation }) {
     setRefeedDate(resolvedRefeedDate);
     setEdFlagOpen(!!edFlag);
     setFloorKcal(floor);
+    setYesterdayHasFood((yEntries?.length ?? 0) > 0);
     setLoaded(true);
   }, [userId, selectedDate, macroCycle, refeed, sex]);
 
@@ -858,6 +866,13 @@ export default function DiaryScreen({ navigation }) {
     );
   }, [userId, selectedDate, copyFromDate, toast]);
 
+  // A3 (first-week trust): the empty-diary CTA for a day with no yesterday to
+  // copy. Lands on FoodSearch's Suggested tab (the one browse list that works
+  // with zero logging history) rather than the dead "Copy yesterday" tap.
+  const goToSuggested = useCallback(() => {
+    navigation.navigate('FoodSearch', { mealSlot: 'meal_1', entryDate: selectedDate, initialTab: 'suggested' });
+  }, [navigation, selectedDate]);
+
   // "Copy a previous day" picker (food audit F-3): open a list of recent days
   // with food logged, before the day in view; tapping one copies it in.
   const openCopyPicker = useCallback(async () => {
@@ -1024,7 +1039,8 @@ export default function DiaryScreen({ navigation }) {
           ) : (
             <EmptyDiary
               onAdd={() => addFood('meal_1')}
-              onCopyYesterday={copyYesterday}
+              onCopyYesterday={yesterdayHasFood ? copyYesterday : undefined}
+              onSuggested={!yesterdayHasFood ? goToSuggested : undefined}
               onPlanDay={() => navigation.navigate('MealPlan')}
             />
           )

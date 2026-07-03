@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, fontSize, spacing } from '../styles/theme';
+import { colors, fontSize, spacing, type } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import OAuthButtons from '../components/auth/OAuthButtons';
 import { signInWithGoogle, signInWithApple } from '../lib/supabase';
@@ -31,7 +31,12 @@ export default function LoginScreen() {
     try {
       const fn = provider === 'google' ? signInWithGoogle : signInWithApple;
       const result = await fn();
-      if (result?.error) {
+      if (result?.cancelled) {
+        // A7: a cancelled OAuth dialog (user backed out) used to fall into
+        // the silent else below with no feedback at all.
+        logInfo('LoginScreen.oauth.cancelled', `provider=${provider}`);
+        toast.show('Sign-in was cancelled.', { variant: 'info' });
+      } else if (result?.error) {
         logError('LoginScreen.oauth.providerError', result.error, { provider });
         toast.show(result.error.message || 'Sign-in failed', { variant: 'error' });
       } else {
@@ -76,6 +81,12 @@ export default function LoginScreen() {
             onGoogle={() => handleOAuth('google')}
             disabled={loading}
           />
+          {/* A7: the only affordance while waiting was dimmed buttons — no
+              indication anything is actually happening. A calm caption names
+              what's in progress. */}
+          {loading ? (
+            <Text style={styles.oauthWaiting}>Waiting for Google or Apple…</Text>
+          ) : null}
 
           {/* "Continue without an account" removed per
               IDENTITY_AND_OWNERSHIP_LOCKED.md decision 1 (no anonymous mode). */}
@@ -121,5 +132,11 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
     marginBottom: spacing.xxl,
+  },
+  oauthWaiting: {
+    ...type.caption,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.sm,
   },
 });

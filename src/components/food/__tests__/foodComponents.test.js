@@ -45,6 +45,29 @@ describe('EmptyDiary', () => {
     const txt = JSON.stringify(tree);
     expect(txt).toContain(EMPTY_DIARY_COPY);
     expect(txt).not.toContain('Copy yesterday');
+    expect(txt).not.toContain('Try a suggested meal');
+  });
+
+  // A3 (first-week trust): a day-0 diary has no yesterday to copy, so the
+  // screen passes onSuggested instead of onCopyYesterday and the CTA changes.
+  test('shows "Try a suggested meal" instead of "Copy yesterday" when only onSuggested is passed', () => {
+    const onSuggested = jest.fn();
+    const tree = create(<EmptyDiary onAdd={() => {}} onSuggested={onSuggested} />);
+    const txt = JSON.stringify(tree.toJSON());
+    expect(txt).toContain('Try a suggested meal');
+    expect(txt).not.toContain('Copy yesterday');
+    const btn = tree.root.findByProps({ accessibilityLabel: 'Try a suggested meal' });
+    btn.props.onPress();
+    expect(onSuggested).toHaveBeenCalledTimes(1);
+  });
+
+  test('prefers Copy yesterday over Try a suggested meal when both are passed', () => {
+    const tree = create(
+      <EmptyDiary onAdd={() => {}} onCopyYesterday={() => {}} onSuggested={() => {}} />,
+    ).toJSON();
+    const txt = JSON.stringify(tree);
+    expect(txt).toContain('Copy yesterday');
+    expect(txt).not.toContain('Try a suggested meal');
   });
 });
 

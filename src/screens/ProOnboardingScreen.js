@@ -929,7 +929,7 @@ export default function ProOnboardingScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <Header
-              title="Set up your training"
+              title="About you"
               sub="About two minutes. Your answers shape the plan the coach builds."
             />
 
@@ -963,6 +963,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <View style={styles.section}>
               <Text style={styles.fieldLabel}>Age</Text>
+              <Text style={styles.fieldHint}>Used with your weight and height to calculate your calorie targets.</Text>
               <TextInput
                 style={styles.input}
                 value={age}
@@ -998,6 +999,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   ))}
                 </View>
               </View>
+              <Text style={styles.fieldHint}>Used with your weight and age to calculate your calorie targets.</Text>
               {localHeightUnits === 'imperial' ? (
                 <View style={styles.heightImperialRow}>
                   <View style={{ flex: 1 }}>
@@ -1176,6 +1178,7 @@ export default function ProOnboardingScreen({ navigation }) {
               <Dropdown
                 label="Training experience"
                 hint="This sets your starting volume and how complex the exercises are."
+                tip={GLOSSARY.volume}
                 value={experience}
                 options={EXPERIENCE_OPTIONS}
                 onChange={setExperience}
@@ -1479,9 +1482,16 @@ export default function ProOnboardingScreen({ navigation }) {
           </View>
 
           <View style={styles.section}>
+            {/* U-E-1/A6: glosses "volume" for both this field's hint AND the
+                Header sub above ("Recovery affects your plan volume...") —
+                the Header carries no field label of its own to anchor a
+                tooltip to, so it shares this one on the field immediately
+                below it, per the existing bodyFatMethod/phase/division/
+                proteinTier pattern. */}
             <Dropdown
               label="How's your recovery?"
               hint="Be honest here. This sets how much volume your plan includes, so it can protect your recovery."
+              tip={GLOSSARY.volume}
               value={recoveryRating}
               options={RECOVERY_OPTIONS}
               onChange={setRecoveryRating}
