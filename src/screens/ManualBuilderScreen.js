@@ -313,11 +313,19 @@ export default function ManualBuilderScreen({ navigation }) {
   const [supersetSelection, setSupersetSelection] = useState({});
 
   function toggleSupersetSelect(dayIndex, exLocalId) {
+    const cur = supersetSelection[dayIndex] || new Set();
+    // Cap supersets at a pair: the live session alternates exactly two
+    // exercises that share a supersetGroupId, so authoring a giant set of 3+
+    // would silently break mid-session. Extend when the session supports it.
+    if (!cur.has(exLocalId) && cur.size >= 2) {
+      toast.show('Supersets pair two exercises for now.', { variant: 'warning' });
+      return;
+    }
     setSupersetSelection(prev => {
-      const cur = new Set(prev[dayIndex] || []);
-      if (cur.has(exLocalId)) cur.delete(exLocalId);
-      else cur.add(exLocalId);
-      return { ...prev, [dayIndex]: cur };
+      const next = new Set(prev[dayIndex] || []);
+      if (next.has(exLocalId)) next.delete(exLocalId);
+      else next.add(exLocalId);
+      return { ...prev, [dayIndex]: next };
     });
   }
 
@@ -329,6 +337,12 @@ export default function ManualBuilderScreen({ navigation }) {
     const selected = supersetSelection[dayIndex];
     if (!selected || selected.size < 2) {
       toast.show('Select at least two exercises to superset', { variant: 'warning' });
+      return;
+    }
+    // Belt and braces on the pair cap enforced in toggleSupersetSelect: never
+    // author a 3+ giant set the live session would silently break on.
+    if (selected.size > 2) {
+      toast.show('Supersets pair two exercises for now.', { variant: 'warning' });
       return;
     }
     const groupId = `ss-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
