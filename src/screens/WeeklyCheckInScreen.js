@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { formatEnergy, energyUnitLabel } from '../lib/format';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -134,10 +135,12 @@ const TOTAL_STEPS = 4;
 
 export default function WeeklyCheckInScreen({ navigation }) {
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, userProfile, bodyWeightUnits } = useAppStore(useShallow(s => ({
+  const { user, userProfile, bodyWeightUnits, energyUnit } = useAppStore(useShallow(s => ({
     user: s.user,
     userProfile: s.userProfile,
     bodyWeightUnits: s.bodyWeightUnits,
+    // NU-6: kJ display preference, same read as the food-domain screens.
+    energyUnit: s.accessibility?.energyUnit ?? 'kcal',
   })));
   const [nutritionTargets, setNutritionTargets] = useState(null);
   const [bioSex, setBioSex] = useState(null);          // 'male' | 'female' | null
@@ -810,8 +813,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
               autoDerived.calsMeta.daysLogged > 0 ? (
                 <Text style={styles.autoDerivedNote}>
                   From your diary: {autoDerived.calsMeta.daysLogged} of 7 days logged,
-                  averaging {autoDerived.calsMeta.avgKcal.toLocaleString('en-GB')} kcal a day
-                  against your {autoDerived.calsMeta.target.toLocaleString('en-GB')} target ({
+                  averaging {formatEnergy(autoDerived.calsMeta.avgKcal, energyUnit)} {energyUnitLabel(energyUnit)} a day
+                  against your {formatEnergy(autoDerived.calsMeta.target, energyUnit)} target ({
                     autoDerived.calsMeta.avgKcal <= autoDerived.calsMeta.target * 0.9 ? 'under target'
                     : autoDerived.calsMeta.avgKcal >= autoDerived.calsMeta.target * 1.1 ? 'over target'
                     : 'on target'

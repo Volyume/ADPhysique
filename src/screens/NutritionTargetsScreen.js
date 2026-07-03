@@ -1151,14 +1151,14 @@ export default function NutritionTargetsScreen({ navigation }) {
                 const isMaintain = results.goal === 'maintain';
 
                 const calorieWhy = isGain
-                  ? `Your maintenance is ${maintenanceKcal.toLocaleString('en-GB')} kcal. That is what you need to stay the same weight. Adding a ${absPct}% surplus (+${surplusDelta} kcal) puts you on track to gain roughly ${rateAbs.toFixed(2)} kg/week. ${rateAbs <= 0.3 ? 'That rate is slow and lean. Most of what you gain will be muscle, with very little fat alongside it.' : rateAbs <= 0.5 ? 'That rate is steady. Some fat alongside the muscle is inevitable, but the ratio stays favourable.' : 'That rate is on the faster side. Muscle gain is quicker but more fat comes along with it.'} Consistency over weeks matters far more than perfection each day.`
+                  ? `Your maintenance is ${formatEnergy(maintenanceKcal, energyUnit)} ${energyUnitLabel(energyUnit)}. That is what you need to stay the same weight. Adding a ${absPct}% surplus (+${formatEnergy(surplusDelta, energyUnit)} ${energyUnitLabel(energyUnit)}) puts you on track to gain roughly ${rateAbs.toFixed(2)} kg/week. ${rateAbs <= 0.3 ? 'That rate is slow and lean. Most of what you gain will be muscle, with very little fat alongside it.' : rateAbs <= 0.5 ? 'That rate is steady. Some fat alongside the muscle is inevitable, but the ratio stays favourable.' : 'That rate is on the faster side. Muscle gain is quicker but more fat comes along with it.'} Consistency over weeks matters far more than perfection each day.`
                   : isCut
-                  ? `Your maintenance is ${maintenanceKcal.toLocaleString('en-GB')} kcal. A ${absPct}% deficit (${Math.abs(surplusDelta)} kcal below maintenance) puts you on track to ${rateDir} roughly ${rateAbs.toFixed(2)} kg/week. That rate is ${rateAbs <= 0.5 ? 'conservative. You will lose mostly fat while holding onto more muscle' : rateAbs <= 0.8 ? 'moderate. Effective fat loss with manageable risk to muscle' : 'aggressive. Protein has been set higher to protect your muscle'}. Consistency over weeks matters far more than perfection each day.`
+                  ? `Your maintenance is ${formatEnergy(maintenanceKcal, energyUnit)} ${energyUnitLabel(energyUnit)}. A ${absPct}% deficit (${formatEnergy(Math.abs(surplusDelta), energyUnit)} ${energyUnitLabel(energyUnit)} below maintenance) puts you on track to ${rateDir} roughly ${rateAbs.toFixed(2)} kg/week. That rate is ${rateAbs <= 0.5 ? 'conservative. You will lose mostly fat while holding onto more muscle' : rateAbs <= 0.8 ? 'moderate. Effective fat loss with manageable risk to muscle' : 'aggressive. Protein has been set higher to protect your muscle'}. Consistency over weeks matters far more than perfection each day.`
                   : isMaintain
-                  ? `Your target is ${(results.targetKcal ?? 0).toLocaleString('en-GB')} kcal, which matches your maintenance level. Eating at maintenance gives you the energy to recover hard and train hard, without gaining fat. With high protein and consistent training, you can still build muscle slowly and improve body composition. No deficit, no surplus: a steady baseline.`
+                  ? `Your target is ${formatEnergy(results.targetKcal ?? 0, energyUnit)} ${energyUnitLabel(energyUnit)}, which matches your maintenance level. Eating at maintenance gives you the energy to recover hard and train hard, without gaining fat. With high protein and consistent training, you can still build muscle slowly and improve body composition. No deficit, no surplus: a steady baseline.`
                   : isRecomp
-                  ? `Your maintenance is ${maintenanceKcal.toLocaleString('en-GB')} kcal. A small ${Math.abs(absPct)}% deficit (${Math.abs(surplusDelta)} kcal below maintenance) gives just enough of a calorie gap to use body fat as fuel, while high protein and consistent training keep muscle on. Progress is slower than a dedicated muscle building or fat loss phase, but your body composition improves at the same time.`
-                  : `Your target is ${(results.targetKcal ?? 0).toLocaleString('en-GB')} kcal based on your maintenance of ${maintenanceKcal.toLocaleString('en-GB')} kcal.`;
+                  ? `Your maintenance is ${formatEnergy(maintenanceKcal, energyUnit)} ${energyUnitLabel(energyUnit)}. A small ${Math.abs(absPct)}% deficit (${formatEnergy(Math.abs(surplusDelta), energyUnit)} ${energyUnitLabel(energyUnit)} below maintenance) gives just enough of a calorie gap to use body fat as fuel, while high protein and consistent training keep muscle on. Progress is slower than a dedicated muscle building or fat loss phase, but your body composition improves at the same time.`
+                  : `Your target is ${formatEnergy(results.targetKcal ?? 0, energyUnit)} ${energyUnitLabel(energyUnit)} based on your maintenance of ${formatEnergy(maintenanceKcal, energyUnit)} ${energyUnitLabel(energyUnit)}.`;
 
                 const approachLabel =
                   results.proteinApproach === 'standard'
@@ -1225,7 +1225,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                     </TouchableOpacity>
                     {whyExpanded && (
                       <View style={styles.whyBody}>
-                        <WhySection icon="flame-outline" color={colors.warning} title={`Calories: ${(results.targetKcal ?? 0).toLocaleString('en-GB')} kcal`} body={calorieWhy} />
+                        <WhySection icon="flame-outline" color={colors.warning} title={`Calories: ${formatEnergy(results.targetKcal ?? 0, energyUnit)} ${energyUnitLabel(energyUnit)}`} body={calorieWhy} />
                         <WhySection icon="barbell-outline" color={colors.primary} title={`Protein: ${results.proteinG}g`} body={proteinWhy} />
                         <WhySection icon="water-outline" color={colors.success} title={`Fat: ${results.fatG}g`} body={fatWhy} />
                         <WhySection icon="leaf-outline" color={colors.primary} title={`Carbs: ${results.carbsG}g`} body={carbWhy} />
@@ -1296,11 +1296,11 @@ export default function NutritionTargetsScreen({ navigation }) {
                     style={styles.easeNudge}
                     onPress={() => { setGoal(easedGoal); handleCalculate(easedGoal); }}
                     accessibilityRole="button"
-                    accessibilityLabel={`Ease this cut to about ${results.eaCaution.suggestedKcal} kilocalories`}
+                    accessibilityLabel={`Ease this cut to about ${formatEnergy(results.eaCaution.suggestedKcal, energyUnit)} ${energyUnit === 'kj' ? 'kilojoules' : 'kilocalories'}`}
                     activeOpacity={0.85}
                   >
                     <Ionicons name="trending-up-outline" size={16} color={colors.primary} />
-                    <Text style={styles.easeNudgeText}>Ease this cut to about {results.eaCaution.suggestedKcal} kcal</Text>
+                    <Text style={styles.easeNudgeText}>Ease this cut to about {formatEnergy(results.eaCaution.suggestedKcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
                   </TouchableOpacity>
                 );
               })() : null}
@@ -1352,11 +1352,11 @@ export default function NutritionTargetsScreen({ navigation }) {
                   </View>
                   <View style={styles.calcRow}>
                     <Text style={styles.calcKey}>Resting calorie burn</Text>
-                    <Text style={styles.calcValue}>{results.bmrKcal} kcal</Text>
+                    <Text style={styles.calcValue}>{formatEnergy(results.bmrKcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
                   </View>
                   <View style={styles.calcRow}>
                     <Text style={styles.calcKey}>Maintenance calories</Text>
-                    <Text style={styles.calcValue}>{results.maintenanceKcal ?? results.targetKcal ?? 0} kcal</Text>
+                    <Text style={styles.calcValue}>{formatEnergy(results.maintenanceKcal ?? results.targetKcal ?? 0, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
                   </View>
                   <View style={styles.calcRow}>
                     <Text style={styles.calcKey}>Phase adjustment</Text>
