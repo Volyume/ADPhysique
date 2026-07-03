@@ -1502,6 +1502,30 @@ const SCHEMA_MIGRATIONS = [
     'ALTER TABLE partner_week_signals ADD COLUMN hit_pb INTEGER NOT NULL DEFAULT 0',
     'ALTER TABLE partnerships ADD COLUMN partner_first_name TEXT',
   ],
+  // v54, progress-photo metadata (progress-photos upgrade B0). Purpose: give
+  // each on-device progress photo an optional, editable metadata row keyed by
+  // its existing `<epochMs>.jpg` filename — an editable "date taken", a
+  // front/side/back pose, a bodyweight snapshot (nearest weigh-in to taken_at),
+  // and a short note. A photo with no row still behaves exactly as today
+  // (taken_at derived from the filename, pose/weight null), so this is fully
+  // back-compatible with every existing photo.
+  // Applied: LOCALLY only, once, via this user_version bump. There is NO cloud
+  // counterpart — photos AND their metadata are device-local by constraint and
+  // are deliberately NOT in SYNC_REGISTRY (they never leave the device).
+  // Safe to re-run: yes (CREATE TABLE IF NOT EXISTS; a re-run is a benign no-op).
+  // Rollback: DROP TABLE progress_photo_meta (data loss confined to this
+  // on-device metadata; the photo files themselves are untouched).
+  [
+    `CREATE TABLE IF NOT EXISTS progress_photo_meta (
+      name       TEXT PRIMARY KEY,
+      taken_at   INTEGER NOT NULL,
+      pose       TEXT,
+      weight_kg  REAL,
+      note       TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`,
+  ],
 ];
 
 // E3 search: the FTS5 index DDL, exported as a named function so the
@@ -3683,6 +3707,42 @@ export async function getLatestBodyWeight(userId) {
   // the error with .catch — so that "fallback" never actually ran (audit
   // 2026-06-21). If a DB-level fallback is wanted, onboarding must first persist
   // the weight to a real table (e.g. morning_weights) or this fn must receive it.
+  return null;
+}
+
+// Nearest logged bodyweight to an arbitrary instant `t` (epoch ms), across BOTH
+// body_metric_log and morning_weights. Used to snapshot a bodyweight beside a
+// progress photo at its taken_at (progress-photos upgrade). Unlike
+// getLatestBodyWeight (latest overall), this finds the weigh-in closest to `t`:
+// the most recent one on-or-before `t` is preferred (the weight the user was at
+// when the photo was taken); only if the photo predates every weigh-in do we
+// fall back to the nearest one overall (the earliest recorded). Returns
+// { weightKg, loggedAt } or null when the user has no logged weigh-in.
+export async function getBodyWeightNearestTo(userId, t) {
+  if (!userId || !Number.isFinite(t)) return null;
+  const d = await db();
+  const union = `
+    SELECT weight_kg, logged_at FROM body_metric_log
+      WHERE user_id = ? AND weight_kg IS NOT NULL
+    UNION ALL
+    SELECT weight_kg, logged_at FROM morning_weights
+      WHERE user_id = ? AND weight_kg IS NOT NULL`;
+  // Preferred: the most recent weigh-in at or before `t`.
+  const onOrBefore = await d.getFirstAsync(
+    `SELECT weight_kg, logged_at FROM (${union})
+       WHERE logged_at <= ?
+       ORDER BY logged_at DESC LIMIT 1`,
+    [userId, userId, t],
+  );
+  const pick = onOrBefore ?? await d.getFirstAsync(
+    // Fallback: nothing on-or-before, so take the weigh-in nearest to `t` overall.
+    `SELECT weight_kg, logged_at FROM (${union})
+       ORDER BY ABS(logged_at - ?) ASC LIMIT 1`,
+    [userId, userId, t],
+  );
+  if (pick && pick.weight_kg != null) {
+    return { weightKg: pick.weight_kg, loggedAt: pick.logged_at };
+  }
   return null;
 }
 

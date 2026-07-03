@@ -13,10 +13,12 @@ jest.mock('expo-file-system/legacy', () => ({
   readDirectoryAsync: jest.fn(async () => []),
   readAsStringAsync: jest.fn(async () => { throw new Error('no marker'); }),
   writeAsStringAsync: jest.fn(async () => {}),
+  copyAsync: jest.fn(async () => {}),
 }));
 
 import {
   timestampFromName, orderPhotos, photoDir, photosViewableBy, markPhotosOwner,
+  saveProgressPhoto,
 } from '../progressPhotos';
 
 // The mocked module itself, so tests can steer the per-call behaviour.
@@ -84,5 +86,42 @@ describe('photosViewableBy (E10 read-only guard, fail closed)', () => {
 
   test('the owner sidecar never appears in the gallery listing', () => {
     expect(orderPhotos(['owner.txt', '100.jpg']).map((r) => r.name)).toEqual(['100.jpg']);
+  });
+});
+
+describe('saveProgressPhoto collision guard (gap #11)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockFs.getInfoAsync.mockResolvedValue({ exists: false });
+    mockFs.copyAsync.mockResolvedValue(undefined);
+  });
+
+  test('a free timestamp path is copied as-is', async () => {
+    const res = await saveProgressPhoto('src://a.jpg', 1000);
+    expect(res).toEqual({ name: '1000.jpg', uri: `${photoDir()}1000.jpg`, ts: 1000 });
+    expect(mockFs.copyAsync).toHaveBeenCalledWith({ from: 'src://a.jpg', to: `${photoDir()}1000.jpg` });
+  });
+
+  test('a same-millisecond collision walks ts forward until the path is free, never overwriting', async () => {
+    // 1000 and 1001 already exist; the save must land on 1002 and copy there.
+    const taken = new Set([`${photoDir()}1000.jpg`, `${photoDir()}1001.jpg`]);
+    mockFs.getInfoAsync.mockImplementation(async (uri) => ({ exists: taken.has(uri) }));
+    const res = await saveProgressPhoto('src://b.jpg', 1000);
+    expect(res).toEqual({ name: '1002.jpg', uri: `${photoDir()}1002.jpg`, ts: 1002 });
+    expect(mockFs.copyAsync).toHaveBeenCalledWith({ from: 'src://b.jpg', to: `${photoDir()}1002.jpg` });
+    // The colliding paths were never the copy target.
+    expect(mockFs.copyAsync).not.toHaveBeenCalledWith({ from: 'src://b.jpg', to: `${photoDir()}1000.jpg` });
+  });
+
+  test('the disambiguated name still parses back through the timestamp regex', async () => {
+    const taken = new Set([`${photoDir()}1000.jpg`]);
+    mockFs.getInfoAsync.mockImplementation(async (uri) => ({ exists: taken.has(uri) }));
+    const res = await saveProgressPhoto('src://c.jpg', 1000);
+    expect(timestampFromName(res.name)).toBe(res.ts);
+  });
+
+  test('a null source returns null and never copies', async () => {
+    expect(await saveProgressPhoto(null, 1000)).toBeNull();
+    expect(mockFs.copyAsync).not.toHaveBeenCalled();
   });
 });

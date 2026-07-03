@@ -51,8 +51,21 @@ export async function listProgressPhotos() {
 export async function saveProgressPhoto(srcUri, nowMs) {
   if (!srcUri) return null;
   await ensurePhotoDir();
-  const ts = Number.isFinite(nowMs) ? nowMs : Date.now();
-  const uri = `${DIR}${ts}.jpg`;
+  let ts = Number.isFinite(nowMs) ? nowMs : Date.now();
+  // Collision guard (gap #11): the filename IS the photo id, so two saves in
+  // the same millisecond would copy to an identical path and silently
+  // overwrite the earlier photo. Walk `ts` forward until the path is free; the
+  // `<ms>.jpg` scheme and the timestampFromName regex are preserved, the id
+  // just lands on the next free millisecond. Best-effort: if existence can't be
+  // probed we fall through to the copy (matching the old behaviour).
+  let uri = `${DIR}${ts}.jpg`;
+  try {
+    // eslint-disable-next-line no-await-in-loop
+    while ((await FileSystem.getInfoAsync(uri)).exists) {
+      ts += 1;
+      uri = `${DIR}${ts}.jpg`;
+    }
+  } catch (_) { /* can't probe; fall through and copy under the current ts */ }
   await FileSystem.copyAsync({ from: srcUri, to: uri });
   return { name: `${ts}.jpg`, uri, ts };
 }
