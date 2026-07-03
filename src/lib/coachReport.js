@@ -21,10 +21,9 @@
  * the flag or body profile, the report is the neutral variant: the
  * weight-trend section, calorie-change rows, phase line and ALL persisted
  * prose are dropped, and bodyweight rows are never even read. (The
- * wellbeing read also catches to a fail-closed sentinel, though
- * getWellbeingMode swallows storage errors internally and returns
- * 'unspecified' — the same property as every other surface that reads it —
- * so the genuine fail-closed seams are the two database reads.)
+ * wellbeing read is done raw (AsyncStorage), so a genuine failure returns a
+ * fail-closed sentinel too. getWellbeingMode would swallow it to 'unspecified'
+ * the way it does on every other surface, which is why the raw read is used.)
  *
  * DISCLOSURE RULE, both variants: the artefact is handed to another
  * person, so it must never reveal what the app inferred about the user's
@@ -50,7 +49,8 @@ import {
   getOpenEdPatternFlag,
   getUserBodyProfile,
 } from './database';
-import { getWellbeingMode, isCalm } from './wellbeing';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { isCalm, WELLBEING_KEY } from './wellbeing';
 import { robustEwma } from './robustTrend';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -257,7 +257,9 @@ export async function gatherCoachReportData(userId, { weeks = 12, nowMs = Date.n
 
   const [edFlag, wellbeing, bodyProfile] = await Promise.all([
     getOpenEdPatternFlag(userId).catch(() => 'read_failed'),
-    getWellbeingMode().catch(() => 'read_failed'),
+    // Read wellbeing raw so a genuine failure fails closed too (getWellbeingMode
+    // swallows storage errors to 'unspecified', which would fail open here).
+    AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
     getUserBodyProfile(userId).catch(() => 'read_failed'),
   ]);
   const scoffPositive =

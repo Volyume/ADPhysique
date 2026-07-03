@@ -65,7 +65,7 @@ import { formatEnergy, energyUnitLabel } from '../lib/format';
 import { applyCoachAdjustmentToActivePlan, planNextWeek } from '../lib/food/mealPlanService';
 import { buildPlanEditNarration } from '../lib/food/planExplain';
 import { buildRegisteredCoachResponse, resolveRegister } from '../lib/coachRegister';
-import { getWellbeingMode, isCalm } from '../lib/wellbeing';
+import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import {
   cancelMorningNotification,
   scheduleMorningWeightNotification,
@@ -1073,8 +1073,11 @@ export default function CoachOutputScreen({ navigation, route }) {
         return;
       }
       const openFlag = await getOpenEdPatternFlag(user.id).catch(() => 'read_failed');
-      let calm = 'read_failed'; // fail closed: unreadable wellbeing hides the countdown
-      try { calm = isCalm(await getWellbeingMode()); } catch (_) {}
+      // Fail closed: read wellbeing raw so a genuine failure is distinguishable
+      // from 'unspecified'. getWellbeingMode swallows failures, which would fail
+      // OPEN here (calm false -> the countdown shows over a possibly-calm state).
+      const wb = await AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed');
+      const calm = isCalm(wb) || wb === 'read_failed';
       const state = contestCountdown({
         showDateMs,
         nowMs: Date.now(),
@@ -1442,7 +1445,10 @@ export default function CoachOutputScreen({ navigation, route }) {
       } catch (_) { setWeighInsThisWeek(null); }
       // Calm mode tightens the response the same way an open ED flag does
       // (no rate language, no weigh-in counts), per the COMP-004 rules.
-      try { setCalmMode(isCalm(await getWellbeingMode())); } catch (_) { setCalmMode(false); }
+      // Fail closed: an unreadable wellbeing read tightens the response (calm),
+      // matching the open-ED-flag path; getWellbeingMode swallows failures.
+      const wbMode = await AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed');
+      setCalmMode(isCalm(wbMode) || wbMode === 'read_failed');
       // Check-in day for the forward-pull anchor; same preference read as
       // HomeScreen. Falls back to "the next check-in" when unset. The numeric
       // day also feeds the A3 hold receipt's unlock date below.

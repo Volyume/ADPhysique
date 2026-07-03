@@ -326,10 +326,13 @@ describe('fail-closed neutral wiring in the gatherer (source-pinned)', () => {
     // identifiers only.
     expect(SRC).toMatch(/getOpenEdPatternFlag\(userId\)\.catch\(\(\) => 'read_failed'\)/);
     expect(SRC).toMatch(/getUserBodyProfile\(userId\)\.catch\(\(\) => 'read_failed'\)/);
-    expect(SRC).toMatch(/getWellbeingMode\(\)\.catch\(\(\) => 'read_failed'\)/);
+    // Wellbeing is read RAW from AsyncStorage because getWellbeingMode swallows
+    // genuine failures to 'unspecified' (fail open); the raw read yields the
+    // 'read_failed' sentinel the neutral check treats as suppress.
+    expect(SRC).toMatch(/AsyncStorage\.getItem\(WELLBEING_KEY\)[\s\S]*?\.catch\(\(\) => 'read_failed'\)/);
     expect(SRC).not.toMatch(/getOpenEdPatternFlag\([^)]*\)\.catch\(\(\) => null\)/);
     expect(SRC).not.toMatch(/getUserBodyProfile\([^)]*\)\.catch\(\(\) => null\)/);
-    expect(SRC).not.toMatch(/getWellbeingMode\(\)\.catch\(\(\) => null\)/);
+    expect(SRC).not.toMatch(/getWellbeingMode\(/);
   });
 
   test('a failed read or positive SCOFF forces the neutral variant', () => {

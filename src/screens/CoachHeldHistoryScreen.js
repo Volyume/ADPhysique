@@ -8,7 +8,8 @@ import EngineLog from '../components/EngineLog';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getCoachOutputHistory, getOpenEdPatternFlag } from '../lib/database';
-import { getWellbeingMode, isCalm } from '../lib/wellbeing';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import { pairAppliedWithOutcome, buildScorecard } from '../lib/coachOutcome';
 import { SkeletonCard } from '../components/Skeleton';
 
@@ -118,7 +119,10 @@ export default function CoachHeldHistoryScreen() {
       const [history, edFlag, wellbeing] = await Promise.all([
         getCoachOutputHistory(user.id),
         getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
-        getWellbeingMode().catch(() => 'read_failed'),
+        // Fail closed: read wellbeing raw so a genuine failure is
+        // distinguishable from 'unspecified'. getWellbeingMode swallows
+        // failures to 'unspecified', which would fail OPEN here.
+        AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
       ]);
       setSuppress(!!edFlag || wellbeing === 'read_failed' || isCalm(wellbeing));
       setHistoryFull(history);

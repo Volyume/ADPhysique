@@ -45,7 +45,7 @@ import { activePlanLine } from '../lib/planDisplay';
 import { resolveActivationNudge, activationBannerLine, NUDGE_STAGE, NUDGE_WINDOW_GRACE_MS } from '../lib/activationNudge';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { localWeekStartMs, localDayKey } from '../lib/dayKey';
-import { getWellbeingMode, isCalm } from '../lib/wellbeing';
+import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 // NAV-4 (founder decision): the differential paywall re-homed here from the
 // Pro-guarded CoachOutput, where its only audience (free tier) could never
 // see it. Pure detection (the locked Move #4 detector) fed from data Home
@@ -461,8 +461,11 @@ export default function HomeScreen({ navigation, route }) {
       const [workouts, weights, edFlag, wellbeing, dismissed] = await Promise.all([
         getAllWorkouts(user.id).catch(() => []),
         getMorningWeightsLast14Days(user.id).catch(() => []),
-        getOpenEdPatternFlag(user.id).catch(() => null),
-        getWellbeingMode().catch(() => 'unspecified'),
+        // Fail closed: a flag-read error maps to a truthy sentinel (suppresses
+        // via !!edFlag), and wellbeing is read raw so a genuine failure is
+        // distinguishable from 'unspecified' (getWellbeingMode swallows it).
+        getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
+        AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
         AsyncStorage.getItem(dKey).catch(() => null),
       ]);
       const sessionsThisWeek = workouts.filter(
@@ -472,7 +475,7 @@ export default function HomeScreen({ navigation, route }) {
         sessionsThisWeek,
         morningWeights: weights,
         edFlagOpen: !!edFlag,
-        calmMode: isCalm(wellbeing),
+        calmMode: isCalm(wellbeing) || wellbeing === 'read_failed',
       });
       // Read the dismissal BEFORE revealing the card so a line the user
       // already dismissed can't flash for a frame (trial-banner pattern).
@@ -678,7 +681,7 @@ export default function HomeScreen({ navigation, route }) {
       // checked explicitly for wellbeing).
       const [edFlag, wellbeing] = await Promise.all([
         getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
-        getWellbeingMode().catch(() => 'read_failed'),
+        AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
       ]);
       if (edFlag || wellbeing === 'read_failed' || isCalm(wellbeing)) { setDifferentialBanner(null); return; }
       const [checkins, targets] = await Promise.all([
@@ -735,7 +738,7 @@ export default function HomeScreen({ navigation, route }) {
       // over an open ED flag, calm mode, or a FAILED flag/wellbeing read.
       const [edFlag, wellbeing] = await Promise.all([
         getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
-        getWellbeingMode().catch(() => 'read_failed'),
+        AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
       ]);
       if (edFlag || wellbeing === 'read_failed' || isCalm(wellbeing)) { setActivationNudge(null); return; }
       // Account-creation date (install proxy) from the live session.

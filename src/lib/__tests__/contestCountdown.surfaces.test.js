@@ -32,8 +32,13 @@ describe('rule 2: the surface fails closed on wellbeing reads', () => {
   test('a failed ED-flag read feeds a truthy sentinel into the lib', () => {
     expect(coachOutput).toMatch(/getOpenEdPatternFlag\(user\.id\)\.catch\(\(\) => 'read_failed'\)/);
   });
-  test('a failed wellbeing read leaves the truthy sentinel in place', () => {
-    expect(coachOutput).toMatch(/let calm = 'read_failed'/);
+  test('a failed wellbeing read fails closed (calm) via a raw AsyncStorage read', () => {
+    // getWellbeingMode swallows genuine failures to 'unspecified' (fail open),
+    // so wellbeing is read raw; a real failure yields 'read_failed', which the
+    // calm computation then treats as calm.
+    expect(coachOutput).toMatch(/AsyncStorage\.getItem\(WELLBEING_KEY\)[\s\S]*?\.catch\(\(\) => 'read_failed'\)/);
+    expect(coachOutput).toMatch(/wb === 'read_failed'/);
+    expect(coachOutput).not.toMatch(/getWellbeingMode\(/);
   });
   test('SCOFF feeds the lib from the profile score', () => {
     expect(coachOutput).toMatch(/scoffPositive: \(userProfile\?\.scoffScore \?\? 0\) >= 2/);

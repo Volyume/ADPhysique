@@ -89,11 +89,14 @@ describe('NAV-4: the loader is honest, gated and suppressed', () => {
 
   test('the flag/wellbeing reads fail CLOSED: a read error suppresses the banner', () => {
     // Food-adjacent monetisation surface: a transient read failure must never
-    // show the upsell over a possibly open ED flag. The catches resolve to a
-    // sentinel the suppression check treats as "suppress", never to a value
-    // that reads as "no flag".
+    // show the upsell over a possibly open ED flag or calm mode. The ED-flag
+    // catch resolves to a sentinel the suppression check treats as "suppress",
+    // never a value that reads as "no flag". Wellbeing is read RAW from
+    // AsyncStorage, not via getWellbeingMode (which swallows genuine failures to
+    // 'unspecified' and would fail OPEN), so a real failure yields 'read_failed'.
     expect(loader).toMatch(/getOpenEdPatternFlag\(user\.id\)\.catch\(\(\) => 'read_failed'\)/);
-    expect(loader).toMatch(/getWellbeingMode\(\)\.catch\(\(\) => 'read_failed'\)/);
+    expect(loader).toMatch(/AsyncStorage\.getItem\(WELLBEING_KEY\)[\s\S]*?\.catch\(\(\) => 'read_failed'\)/);
+    expect(loader).not.toMatch(/getWellbeingMode\(/);
     expect(loader).not.toMatch(/getOpenEdPatternFlag\([^)]*\)\.catch\(\(\) => null\)/);
   });
 
