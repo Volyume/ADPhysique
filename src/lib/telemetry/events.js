@@ -159,10 +159,13 @@ export const TELEMETRY_EVENTS = Object.freeze([
   // allow-list dropped them with an "unknown event" warning once per app run.
   //   tonnage_milestone_reached  payload: { milestone } — lifetime-tonnage band
   //   perfect_month_reached      payload: { sessions }  — a month all on target
+  //   longest_run_pb_reached     payload: { weeks }     — a new longest-run PB (S2c)
   // Counts/enums only, never training or body data. Suppressed under ED/calm.
-  // Server allow-list: supabase/migrate_093_landmark_telemetry.sql.
+  // Server allow-list: supabase/migrate_093_landmark_telemetry.sql (extended by
+  // supabase/migrate_101_longest_run_pb_telemetry.sql).
   { name: 'tonnage_milestone_reached',       deferred: false, panel: 1 },
   { name: 'perfect_month_reached',           deferred: false, panel: 1 },
+  { name: 'longest_run_pb_reached',          deferred: false, panel: 1 },
 
   // COMP-026 (B): step-trend TDEE modifier evaluated on a coach run. Counts and
   // flags only (active/direction/gain bucket, agreement, logged-day counts,

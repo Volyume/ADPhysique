@@ -25,7 +25,10 @@ import { detectPerfectMonth } from './streak';
 export const MILESTONES = Object.freeze([4, 12, 26, 52]);
 const KEY = (userId) => `@volyume_streak_v1_${userId}`;
 
-const EMPTY = Object.freeze({ v: 1, manualGoal: null, pauses: [], highWater: {}, milestonesSeen: [], perfectMonthsSeen: [] });
+const EMPTY = Object.freeze({ v: 1, manualGoal: null, pauses: [], highWater: {}, milestonesSeen: [], perfectMonthsSeen: [], longestRunPbSeen: null });
+
+// S2c: never "record" a trivial 1-week run as a personal best.
+export const LONGEST_RUN_PB_FLOOR = 2;
 
 function normalise(raw) {
   if (!raw || typeof raw !== 'object') return { ...EMPTY };
@@ -37,6 +40,10 @@ function normalise(raw) {
     milestonesSeen: Array.isArray(raw.milestonesSeen) ? raw.milestonesSeen.filter(Number.isFinite) : [],
     // The lastWeekKey of each perfect month already celebrated, so it fires once.
     perfectMonthsSeen: Array.isArray(raw.perfectMonthsSeen) ? raw.perfectMonthsSeen.filter(k => typeof k === 'string') : [],
+    // S2c: the highest run already celebrated as a longest-run PB. null means
+    // "not seeded yet" -> the resolver seeds it to the current high without
+    // celebrating, so an existing long run never retro-fires on first update.
+    longestRunPbSeen: Number.isFinite(raw.longestRunPbSeen) ? raw.longestRunPbSeen : null,
   };
 }
 
@@ -100,6 +107,22 @@ export function pendingPerfectMonth(weeks, seen = []) {
   return (seen || []).includes(pm.lastWeekKey) ? null : pm;
 }
 
+/**
+ * A newly-reached longest-run personal best (S2c), or null. Founder call
+ * 2026-07-03: fires on EVERY new all-time-high run, not only after a break.
+ * Guards keep it sane: never below the floor (no 1-week "record"); never on a
+ * value a fixed milestone already celebrates (that card owns it); and only when
+ * the run strictly exceeds the highest run already celebrated as a PB. `seen`
+ * being null means "not seeded yet" -> null here, and the resolver seeds it to
+ * the current high without celebrating, so an existing run never retro-fires.
+ */
+export function pendingLongestRunPb(currentRun, seen) {
+  if (!Number.isFinite(currentRun) || currentRun < LONGEST_RUN_PB_FLOOR) return null;
+  if (!Number.isFinite(seen)) return null;
+  if (MILESTONES.includes(currentRun)) return null;
+  return currentRun > seen ? currentRun : null;
+}
+
 // ── I/O wrappers ────────────────────────────────────────────────────────────
 
 export async function loadStreakState(userId) {
@@ -154,6 +177,30 @@ export async function markPerfectMonthSeen(userId, weekKey) {
   const state = await loadStreakState(userId);
   if (weekKey && !state.perfectMonthsSeen.includes(weekKey)) {
     state.perfectMonthsSeen = [...state.perfectMonthsSeen, weekKey];
+    await saveStreakState(userId, state);
+  }
+  return state;
+}
+
+/**
+ * Seed the longest-run PB baseline to the current all-time high ONCE (only when
+ * unset), so an already-long run on the first update after this feature ships
+ * never fires a retro celebration. No-op if already seeded.
+ */
+export async function seedLongestRunPbSeen(userId, currentHigh) {
+  const state = await loadStreakState(userId);
+  if (state.longestRunPbSeen == null) {
+    state.longestRunPbSeen = Number.isFinite(currentHigh) ? Math.max(0, currentHigh) : 0;
+    await saveStreakState(userId, state);
+  }
+  return state;
+}
+
+/** Record a celebrated longest-run PB so it fires once per new record level. */
+export async function markLongestRunPbSeen(userId, value) {
+  const state = await loadStreakState(userId);
+  if (Number.isFinite(value) && (state.longestRunPbSeen == null || value > state.longestRunPbSeen)) {
+    state.longestRunPbSeen = value;
     await saveStreakState(userId, state);
   }
   return state;

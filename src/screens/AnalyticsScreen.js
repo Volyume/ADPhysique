@@ -25,7 +25,7 @@ import useWeightTrend from '../hooks/useWeightTrend';
 import WeightTrendCard from '../components/WeightTrendCard';
 import useWeeklyStreak from '../hooks/useWeeklyStreak';
 import WeeklyStreakStrip from '../components/WeeklyStreakStrip';
-import { markMilestoneSeen, markPerfectMonthSeen } from '../lib/streakState';
+import { markMilestoneSeen, markPerfectMonthSeen, markLongestRunPbSeen } from '../lib/streakState';
 import { getLifetimeTonnage } from '../lib/database';
 import { pendingTonnageMilestone, loadSeenTonnage, markTonnageMilestoneSeen, formatTonnage } from '../lib/tonnageMilestone';
 import { formatNumber } from '../lib/format';
@@ -126,6 +126,18 @@ export default function AnalyticsScreen({ navigation, route }) {
     }
   }, [perfectMonth, streakRenders, user?.id]);
 
+  // S2c landmark: a new longest-run personal best. Same pattern as the perfect
+  // month: telemetry fires once per PB value per app run (counts only, never a
+  // body value); the "seen" record is written only when the user taps Make a
+  // card, so the CTA never vanishes before it can be used. Absent under ED /
+  // SCOFF / calm (the hook returns null then).
+  const longestRunPb = weeklyStreak.longestRunPb;
+  useEffect(() => {
+    if (longestRunPb && streakRenders && user?.id) {
+      fireLandmarkOnce(`pb:${longestRunPb}`, user.id, 'longest_run_pb_reached', { weeks: longestRunPb });
+    }
+  }, [longestRunPb, streakRenders, user?.id]);
+
   function makeStreakCard(m) {
     navigation.navigate('ShareCard', {
       milestoneData: {
@@ -134,6 +146,22 @@ export default function AnalyticsScreen({ navigation, route }) {
         heroUnit: m === 1 ? 'week' : 'weeks',
         title: STREAK_MILESTONE_COPY[m] || `${m} weeks of showing up.`,
         caption: '',
+        stats: [],
+      },
+    });
+  }
+
+  function makeLongestRunPbCard() {
+    if (!longestRunPb) return;
+    if (user?.id) markLongestRunPbSeen(user.id, longestRunPb).catch(() => {});
+    navigation.navigate('ShareCard', {
+      milestoneData: {
+        eyebrow: 'Longest run',
+        title: 'A new personal best.',
+        heroValue: String(longestRunPb),
+        heroUnit: longestRunPb === 1 ? 'week' : 'weeks',
+        caption: 'Your longest run of weeks yet. It carries on.',
+        date: Date.now(),
         stats: [],
       },
     });
@@ -383,6 +411,22 @@ export default function AnalyticsScreen({ navigation, route }) {
                 <Text style={styles.milestoneText}>A perfect month. Four weeks, every target met.</Text>
                 <TouchableOpacity
                   onPress={makePerfectMonthCard}
+                  accessibilityRole="button"
+                  accessibilityLabel="Make a card"
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.milestoneCta}>Make a card</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+            {longestRunPb ? (
+              <View style={styles.milestoneRow}>
+                <Ionicons name="ribbon-outline" size={16} color={colors.primary} />
+                <Text style={styles.milestoneText}>
+                  {`A new personal best. ${longestRunPb} ${longestRunPb === 1 ? 'week' : 'weeks'} running, your longest yet.`}
+                </Text>
+                <TouchableOpacity
+                  onPress={makeLongestRunPbCard}
                   accessibilityRole="button"
                   accessibilityLabel="Make a card"
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

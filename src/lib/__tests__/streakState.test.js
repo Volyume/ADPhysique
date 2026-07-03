@@ -1,11 +1,13 @@
 import {
   MILESTONES,
+  LONGEST_RUN_PB_FLOOR,
   pausedWeekKeys,
   addPauseSpan,
   recordHighWater,
   longestRun,
   pendingMilestone,
   pendingPerfectMonth,
+  pendingLongestRunPb,
 } from '../streakState';
 import { computeStreak } from '../streak';
 
@@ -107,5 +109,33 @@ describe('streakState: pendingPerfectMonth', () => {
   test('null when there is no perfect month', () => {
     const weeks = computeStreak({ weeks: [kept('w1'), current('w2', 1)] }).weeks;
     expect(pendingPerfectMonth(weeks, [])).toBeNull();
+  });
+});
+
+describe('pendingLongestRunPb (S2c, "every new all-time-high run")', () => {
+  test('fires on a new high above the celebrated best', () => {
+    expect(pendingLongestRunPb(5, 4)).toBe(5);
+    expect(pendingLongestRunPb(9, 8)).toBe(9);
+  });
+
+  test('null at or below the celebrated best', () => {
+    expect(pendingLongestRunPb(4, 4)).toBeNull();
+    expect(pendingLongestRunPb(3, 5)).toBeNull();
+  });
+
+  test('never records a trivial run below the floor', () => {
+    expect(LONGEST_RUN_PB_FLOOR).toBe(2);
+    expect(pendingLongestRunPb(1, 0)).toBeNull();
+  });
+
+  test('defers to the milestone card on a fixed milestone value', () => {
+    for (const m of MILESTONES) expect(pendingLongestRunPb(m, 1)).toBeNull();
+    // a non-milestone value between milestones still fires
+    expect(pendingLongestRunPb(5, 1)).toBe(5);
+  });
+
+  test('null until seeded (seen is null) so an existing run never retro-fires', () => {
+    expect(pendingLongestRunPb(20, null)).toBeNull();
+    expect(pendingLongestRunPb(20, undefined)).toBeNull();
   });
 });

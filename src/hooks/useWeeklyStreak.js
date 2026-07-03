@@ -19,6 +19,7 @@ import { localWeekStartMs } from '../lib/dayKey';
 import { computeStreak } from '../lib/streak';
 import {
   loadStreakState, pausedWeekKeys, persistHighWater, longestRun, pendingMilestone, pendingPerfectMonth,
+  pendingLongestRunPb, seedLongestRunPbSeen,
 } from '../lib/streakState';
 import { track } from '../lib/engineTelemetry';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
@@ -42,7 +43,7 @@ function runBucket(n) {
 const EMPTY = {
   loading: true, render: false, runLength: null, current: null, suppressed: false,
   hasTarget: false, weeks: [], longestRun: 0, manualGoal: null, pendingMilestone: null,
-  pendingPerfectMonth: null, currentWeekKey: null, sessionsThisWeek: 0, target: null, reload: () => {},
+  pendingPerfectMonth: null, longestRunPb: null, currentWeekKey: null, sessionsThisWeek: 0, target: null, reload: () => {},
 };
 
 export default function useWeeklyStreak(userId, scoffScore = 0) {
@@ -125,6 +126,17 @@ export default function useWeeklyStreak(userId, scoffScore = 0) {
       const milestone = edSuppressed ? null : pendingMilestone(runLength, streakState.milestonesSeen);
       const perfectMonth = edSuppressed ? null : pendingPerfectMonth(streak.weeks, streakState.perfectMonthsSeen);
 
+      // S2c: longest-run PB. Seed the baseline to the current high ONCE (never
+      // celebrating on the seed) so an existing long run does not retro-fire on
+      // the first update; a new all-time high then fires, suppressed like every
+      // other landmark under an open flag / SCOFF / calm.
+      let pbSeen = streakState.longestRunPbSeen;
+      if (!edSuppressed && pbSeen == null) {
+        seedLongestRunPbSeen(userId, longest).catch(() => {});
+        pbSeen = longest;
+      }
+      const longestRunPb = edSuppressed ? null : pendingLongestRunPb(runLength, pbSeen);
+
       // Telemetry: one resolution per (week, state) per run; only for a real
       // target (a streak to measure), never under suppression. Derived only.
       if (!edSuppressed && target != null && streak.current) {
@@ -158,6 +170,7 @@ export default function useWeeklyStreak(userId, scoffScore = 0) {
         manualGoal: streakState.manualGoal,
         pendingMilestone: milestone,
         pendingPerfectMonth: perfectMonth,
+        longestRunPb,
         currentWeekKey,
         reload: load,
       });
