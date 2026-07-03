@@ -30,6 +30,7 @@ import { getLifetimeTonnage } from '../lib/database';
 import { pendingTonnageMilestone, loadSeenTonnage, markTonnageMilestoneSeen, formatTonnage } from '../lib/tonnageMilestone';
 import { formatNumber } from '../lib/format';
 import { track } from '../lib/engineTelemetry';
+import { trackPartnerSurfaceView } from '../lib/partners/telemetry';
 import { VOLUME_LANDMARKS, getVolumeStatus } from '../lib/algorithms';
 import { buildWeeklyLoadSeries, buildWeeklySessionCounts } from '../lib/progressSeries';
 import { localWeekStartMs } from '../lib/dayKey';
@@ -606,6 +607,26 @@ export default function AnalyticsScreen({ navigation, route }) {
           </View>
         )}
 
+        {/* ── Partners (spec B8): promoted from the Explore grid to directly
+            after the insight stack. A NavTile in a full-width row so it reads
+            as a proper destination, not a buried grid cell. Keeps the Pro
+            lock; label only (NavTile shows no sub-line outside the locked
+            countdown state, so no component surgery). ── */}
+        <View style={styles.section}>
+          <View style={styles.navGrid}>
+            <NavTile
+              icon="people"
+              color={colors.primary}
+              label="Partners"
+              pro={tier !== 'pro'}
+              onPress={() => {
+                trackPartnerSurfaceView('progress_tile');
+                navigation.navigate('Partner', { source: 'progress_tile' });
+              }}
+            />
+          </View>
+        </View>
+
         {/* ── Your trend (COMP-004): the calm weight-trend read, between the
             insight stack and recent sessions. Pro-only; self-hides until
             there are morning weights to interpret. ── */}
@@ -719,10 +740,8 @@ export default function AnalyticsScreen({ navigation, route }) {
                 lead that screen with the trend; the label stops over-promising
                 now. */}
             <NavTile icon="body" color={colors.warning} label="Body Metrics" pro={tier !== 'pro'} onPress={() => navigation.navigate('BodyMetrics')} />
-            {/* NEW-002 rebuild: the partner's first-class destination (Apple
-                Fitness pattern: minimal-signal sharing still gets a proper
-                named home, never a buried row). */}
-            <NavTile icon="people" color={colors.primary} label="Partner" pro={tier !== 'pro'} onPress={() => navigation.navigate('Partner')} />
+            {/* Partners moved out of the grid to a promoted slot directly under
+                the insight stack (spec B8). */}
             <NavTile icon="time" color={colors.textSecondary} label="Full History" onPress={() => navigation.navigate('WorkoutHistory')} />
             {(() => {
               // COMP-005: Recaps replaces the year-long locked Year-of-Lifts

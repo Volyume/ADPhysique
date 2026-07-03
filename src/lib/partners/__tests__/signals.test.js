@@ -3,7 +3,7 @@
  * and the free/Pro partner cap (one free, three on Pro).
  */
 import {
-  ticksLabel, cheerAllowed, lastCheerCaption, partnerRowState,
+  ticksLabel, cheerAllowed, lastCheerCaption, partnerRowState, partnerRowLine,
   maxPartnersForTier, canAddPartner,
 } from '../signals';
 
@@ -40,6 +40,21 @@ describe('partnerRowState', () => {
     expect(partnerRowState({ partnership: { status: 'active' }, partnerWeek: { state: 'training' } })).toBe('active'));
   test('active, partner resting -> resting', () =>
     expect(partnerRowState({ partnership: { status: 'active' }, partnerWeek: { state: 'resting' } })).toBe('resting'));
+});
+
+describe('partnerRowLine (shared by PartnerRow and the You-tab row)', () => {
+  test('active -> name and relative ticks', () =>
+    expect(partnerRowLine({ rowState: 'active', partnerName: 'Sam', partnerWeek: { done: 3, planned: 4 } }))
+      .toBe('Sam: 3 of 4 this week'));
+  test('resting reads rest-positive, never a fail', () =>
+    expect(partnerRowLine({ rowState: 'resting', partnerName: 'Sam' })).toBe('Sam: resting this week'));
+  test('pending -> waiting copy', () =>
+    expect(partnerRowLine({ rowState: 'pending', partnerName: 'Sam' }))
+      .toBe('Invitation sent. Waiting for your partner.'));
+  test('empty/unknown -> invite copy', () =>
+    expect(partnerRowLine({ rowState: 'empty' })).toBe('Train with a partner'));
+  test('missing name falls back gracefully', () =>
+    expect(partnerRowLine({ rowState: 'resting' })).toBe('Your partner: resting this week'));
 });
 
 describe('free/Pro partner cap (§4.9)', () => {

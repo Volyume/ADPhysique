@@ -23,15 +23,29 @@ import { Skeleton } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getAllWorkouts, getCoachOutputHistory } from '../lib/database';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
+import usePartners from '../hooks/usePartners';
+import { partnerRowLine } from '../lib/partners/signals';
+import { trackPartnerSurfaceView } from '../lib/partners/telemetry';
 
-function NavRow({ icon, label, sub, onPress }) {
+function NavRow({ icon, label, sub, onPress, pro }) {
+  // `pro` marks a row whose destination is Pro-gated: free users see the row
+  // undimmed with a PRO badge (the NavTile treatment, T6) and tapping opens
+  // the gated destination, so the lock never reads as a dead end.
   return (
-    <PressableCard style={styles.navRow} onPress={onPress} accessibilityLabel={label}>
+    <PressableCard
+      style={styles.navRow}
+      onPress={onPress}
+      accessibilityLabel={pro ? `${label}. Part of Pro.` : label}
+    >
       <View style={styles.navRowIcon}>
         <Ionicons name={icon} size={18} color={colors.primary} />
       </View>
       <View style={styles.navRowText}>
-        <Text style={styles.navRowLabel}>{label}</Text>
+        <View style={styles.navRowLabelRow}>
+          <Text style={styles.navRowLabel}>{label}</Text>
+          {pro ? <ProBadge size="sm" /> : null}
+        </View>
         {sub ? <Text style={styles.navRowSub}>{sub}</Text> : null}
       </View>
       <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
@@ -78,6 +92,22 @@ export default function YouScreen({ navigation }) {
     || 'You';
 
   const isPro = tier === 'pro';
+
+  // Partners row (spec B8): live pair state for Pro, the Pro-lock affordance
+  // for free. The hook is a no-op when passed a null userId, so it does no
+  // work for free users; the null keeps the hook call unconditional.
+  const partners = usePartners(isPro ? user?.id : null, tier);
+  const partnersSub = isPro
+    ? partnerRowLine({
+        rowState: partners.rowState,
+        partnerName: partners.partnership?.partnerFirstName,
+        partnerWeek: partners.partnerWeek,
+      })
+    : 'One partner, one calm weekly signal';
+  const openPartners = useCallback(() => {
+    trackPartnerSurfaceView('you_row');
+    navigateCrossTab(navigation, 'ProgressTab', 'Partner', { source: 'you_row' });
+  }, [navigation]);
 
   // App version for the About footer. Helps a user quote their build when they
   // report an issue. Reads expo-application (already a dependency); hidden if
@@ -192,6 +222,20 @@ export default function YouScreen({ navigation }) {
           </View>
         )}
 
+        {/* Partners (spec B8): after the coaching rows, before settings. One
+            calm entry to the shared-signal partner surface. Pro shows live
+            pair state; free shows the standard Pro-lock affordance and taps
+            through to the gated destination. */}
+        <View style={styles.section}>
+          <NavRow
+            icon="people-outline"
+            label="Partners"
+            sub={partnersSub}
+            pro={!isPro}
+            onPress={openPartners}
+          />
+        </View>
+
         {/* Preferences */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Preferences</Text>
@@ -257,6 +301,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   navRowText: { flex: 1 },
+  navRowLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   navRowLabel: { ...type.bodyStrong, color: colors.textPrimary },
   navRowSub: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
 

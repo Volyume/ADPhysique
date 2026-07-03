@@ -8,18 +8,14 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, radius, fontSize, fontWeight, type, circle } from '../styles/theme';
 import usePartners from '../hooks/usePartners';
-import { ticksLabel } from '../lib/partners/signals';
+import { partnerRowLine } from '../lib/partners/signals';
 
 export default function PartnerRow({ userId, tier, onOpen }) {
   const p = usePartners(userId, tier);
   if (p.loading) return null;
 
   const partnerName = p.partnership?.partnerFirstName || 'Your partner';
-  let line;
-  if (p.rowState === 'active') line = `${partnerName}: ${ticksLabel({ done: p.partnerWeek?.done, planned: p.partnerWeek?.planned })} this week`;
-  else if (p.rowState === 'resting') line = `${partnerName}: resting this week`;
-  else if (p.rowState === 'pending') line = 'Invitation sent. Waiting for your partner.';
-  else line = 'Train with a partner';
+  const line = partnerRowLine({ rowState: p.rowState, partnerName, partnerWeek: p.partnerWeek });
 
   return (
     <TouchableOpacity

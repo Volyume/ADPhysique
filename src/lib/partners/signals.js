@@ -17,6 +17,19 @@ export function ticksLabel({ done = 0, planned = 0 } = {}) {
 }
 
 /**
+ * The one-line partner-row summary derived from the row state. Shared by
+ * PartnerRow (ConsistencyScreen) and the You-tab Partners row so the copy
+ * lives in exactly one place and a resting partner never reads as a fail.
+ */
+export function partnerRowLine({ rowState, partnerName, partnerWeek } = {}) {
+  const name = partnerName || 'Your partner';
+  if (rowState === 'active') return `${name}: ${ticksLabel({ done: partnerWeek?.done, planned: partnerWeek?.planned })} this week`;
+  if (rowState === 'resting') return `${name}: resting this week`;
+  if (rowState === 'pending') return 'Invitation sent. Waiting for your partner.';
+  return 'Train with a partner';
+}
+
+/**
  * Whether a cheer may be sent right now. One per partner per LOCAL day — the
  * client mirror of the database rate limit. `lastSentOn` and `today` are
  * 'YYYY-MM-DD' local-day strings (dayKey format); a cheer is allowed when none
