@@ -272,6 +272,95 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
   return cards;
 }
 
+// S4 (world-class audit 04a: "Your week, in one card"): weekly recap deck,
+// the SAME infrastructure as buildMonthCards at higher frequency. Deliberately
+// NOT a thin wrapper around buildMonthCards: the delta captions must say "the
+// week before" (never "the month before"), and a week that never happened
+// (no sessions logged) returns an empty deck rather than a hollow intro+outro
+// pair, so the caller falls back to its existing "No sessions yet" state.
+// Reflective, never competitive: no ranking, no comparison to anyone else.
+export function buildWeekCards(data, units, { label = 'This week', neutral = false } = {}) {
+  if (!data || !(data.totalSessions > 0)) return [];
+  const cards = [];
+  cards.push({
+    type: 'intro', icon: 'sparkles', tone: 'gold',
+    headline: `${label}, in numbers.`,
+    subline: `${fmtDate(data.startMs)} to ${fmtDate(data.endMs - 86400000)}`,
+  });
+
+  const content = [];
+  const prev = data.previous;
+
+  if (data.totalSessions > 0) {
+    let caption;
+    if (!neutral && prev && prev.totalSessions > 0 && data.totalSessions > prev.totalSessions) {
+      const diff = data.totalSessions - prev.totalSessions;
+      caption = `That's ${diff} more than the week before.`;
+    } else {
+      caption = `${data.totalSessions} session${data.totalSessions === 1 ? '' : 's'} this week.`;
+    }
+    content.push({
+      type: 'stat', icon: 'barbell', tone: 'primary',
+      value: data.totalSessions.toLocaleString('en-GB'),
+      unit: data.totalSessions === 1 ? 'session' : 'sessions',
+      caption,
+    });
+  }
+
+  if (data.tonnage > 0) {
+    let caption = 'That\'s every set you logged this week, added together.';
+    if (!neutral && prev && prev.tonnage > 0 && data.tonnage > prev.tonnage) {
+      caption = `That's ${Math.round(((data.tonnage - prev.tonnage) / prev.tonnage) * 100)}% more than the week before.`;
+    }
+    content.push({
+      type: 'stat', icon: 'trending-up', tone: 'success',
+      value: data.tonnage.toLocaleString('en-GB'), unit: 'kg moved', caption,
+    });
+  }
+
+  if (data.topExercises?.[0]) {
+    content.push({
+      type: 'list', icon: 'flame', tone: 'warning',
+      headline: 'Your top lifts', subline: 'Most-trained this week',
+      rows: data.topExercises.slice(0, 5).map(ex => ({ primary: ex.name, secondary: `${ex.sets.toLocaleString('en-GB')} sets` })),
+    });
+  }
+
+  if (data.topPRs?.length > 0) {
+    content.push({
+      type: 'list', icon: 'trophy', tone: 'gold',
+      headline: 'Personal bests', subline: 'Estimated max lifts this week',
+      rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${parseFloat(pr.value).toFixed(1)}${units}` })),
+    });
+  }
+
+  if (data.bestSession) {
+    content.push({
+      type: 'stat', icon: 'flash', tone: 'primary',
+      value: data.bestSession.tonnage.toLocaleString('en-GB'), unit: 'kg, best session',
+      caption: `Your biggest session was on ${fmtDate(data.bestSession.startedAt)}.`,
+    });
+  }
+
+  // Minimum-content rule, mirrored from buildMonthCards: with fewer than 3
+  // content cards the deck is just intro + sessions + outro, softened.
+  if (content.length < 3) {
+    const sessions = content.find(c => typeof c.unit === 'string' && c.unit.includes('session'));
+    if (sessions) {
+      if (data.totalSessions <= 2) sessions.caption = `${data.totalSessions} ${data.totalSessions === 1 ? 'session' : 'sessions'} logged this week, and every one counts.`;
+      cards.push(sessions);
+    }
+  } else {
+    cards.push(...content.slice(0, 5));
+  }
+
+  cards.push({
+    type: 'outro', icon: 'checkmark-circle', tone: 'gold',
+    headline: 'A fresh week ahead.', subline: 'Keep turning up and the numbers will follow.',
+  });
+  return cards;
+}
+
 // COMP-005 — block-end recap deck (3–5 cards). The "climb" slide (tonnageDelta)
 // is the unreplicable one; competitors have no blocks.
 export function buildBlockCards(data, units) {
@@ -376,7 +465,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
   const {
     yearMs,
     variant = 'year',
-    startMs, endMs, monthLabel,
+    startMs, endMs, monthLabel, weekLabel,
     mesocycleId, blockName,
   } = route.params ?? {};
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
@@ -395,9 +484,12 @@ export default function YearOfLiftsScreen({ navigation, route }) {
     if (!user?.id) { setLoading(false); return; }
     const load = async () => {
       try {
-        if (variant === 'month') {
+        if (variant === 'month' || variant === 'week') {
           // Neutral framing under calm mode or an open ED flag: factual deltas,
           // evaluated at render time so no celebratory state survives a flag.
+          // S4: the weekly mini-story reuses this EXACT path (getRecapData
+          // over an arbitrary [startMs, endMs) window); a 7-day window
+          // instead of a calendar month is the only difference.
           const [mode, edFlag, recap] = await Promise.all([
             getWellbeingMode().catch(() => null),
             getOpenEdPatternFlag(user.id).catch(() => null),
@@ -433,14 +525,15 @@ export default function YearOfLiftsScreen({ navigation, route }) {
 
   const cards = useMemo(() => {
     if (variant === 'month') return buildMonthCards(data, units, { label: monthLabel, neutral });
+    if (variant === 'week') return buildWeekCards(data, units, { label: weekLabel, neutral });
     if (variant === 'block') return buildBlockCards(data, units);
     return buildCards(data, units, { neutral });
-  }, [data, units, variant, monthLabel, neutral]);
+  }, [data, units, variant, monthLabel, weekLabel, neutral]);
 
-  // COMP-005: open-rate telemetry for the recap surfaces (month/block). variant
-  // only, no PII. Year of Lifts keeps its own (untracked) path unchanged.
+  // COMP-005: open-rate telemetry for the recap surfaces (month/week/block).
+  // variant only, no PII. Year of Lifts keeps its own (untracked) path unchanged.
   useEffect(() => {
-    if (variant !== 'month' && variant !== 'block') return;
+    if (variant !== 'month' && variant !== 'week' && variant !== 'block') return;
     if (!user?.id) return;
     track(user.id, 'recap_opened', { variant })?.catch?.(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -508,6 +601,21 @@ export default function YearOfLiftsScreen({ navigation, route }) {
         caption: `${fmtDate(data.startMs)} to ${fmtDate(data.endMs - 86400000)}`,
         stats,
       };
+    } else if (variant === 'week') {
+      // S4: same milestone canvas as the monthly recap share, same fields:
+      // reflective training stats only, never bodyweight/measurements/notes.
+      const stats = [];
+      if (data.tonnage > 0) stats.push({ value: data.tonnage.toLocaleString('en-GB'), label: 'kg lifted' });
+      if (data.totalSets > 0) stats.push({ value: data.totalSets.toLocaleString('en-GB'), label: 'sets' });
+      if (data.topPRs?.length > 0) stats.push({ value: data.topPRs.length.toLocaleString('en-GB'), label: data.topPRs.length === 1 ? 'PR' : 'PRs' });
+      milestoneData = {
+        eyebrow: 'WEEKLY RECAP',
+        title: weekLabel || 'Your week',
+        heroValue: (data.totalSessions || 0).toLocaleString('en-GB'),
+        heroUnit: data.totalSessions === 1 ? 'session' : 'sessions',
+        caption: `${fmtDate(data.startMs)} to ${fmtDate(data.endMs - 86400000)}`,
+        stats,
+      };
     } else if (variant === 'block') {
       const stats = [];
       if (data.tonnage > 0) stats.push({ value: data.tonnage.toLocaleString('en-GB'), label: 'kg lifted' });
@@ -569,7 +677,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
             onPress={handleShareYear}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
-            accessibilityLabel={variant === 'month' ? 'Share your month' : variant === 'block' ? 'Share your block' : 'Share your year'}
+            accessibilityLabel={variant === 'month' ? 'Share your month' : variant === 'week' ? 'Share your week' : variant === 'block' ? 'Share your block' : 'Share your year'}
           >
             <Ionicons name="share-outline" size={18} color={colors.textPrimary} />
           </TouchableOpacity>
@@ -587,16 +695,16 @@ export default function YearOfLiftsScreen({ navigation, route }) {
 
       {loading && (
         <View style={styles.loadingWrap}>
-          <Text style={styles.loadingText}>{variant === 'month' ? 'Building your recap…' : variant === 'block' ? 'Building your block story…' : 'Building your year…'}</Text>
+          <Text style={styles.loadingText}>{variant === 'month' ? 'Building your recap…' : variant === 'week' ? 'Building your week…' : variant === 'block' ? 'Building your block story…' : 'Building your year…'}</Text>
         </View>
       )}
 
       {!loading && cards.length === 0 && (
         <View style={styles.loadingWrap}>
           <Ionicons name="barbell-outline" size={36} color={colors.textMuted} />
-          <Text style={styles.emptyTitle}>No sessions yet</Text>
+          <Text style={styles.emptyTitle}>{variant === 'week' ? 'No sessions this week' : 'No sessions yet'}</Text>
           <Text style={styles.emptyBody}>
-            Come back here once you've logged a few sessions.
+            {variant === 'week' ? 'Log a session and your week starts filling in.' : "Come back here once you've logged a few sessions."}
           </Text>
           <TouchableOpacity
             style={styles.doneBtn}

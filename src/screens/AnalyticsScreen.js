@@ -32,6 +32,7 @@ import { formatNumber } from '../lib/format';
 import { track } from '../lib/engineTelemetry';
 import { VOLUME_LANDMARKS, getVolumeStatus } from '../lib/algorithms';
 import { buildWeeklyLoadSeries, buildWeeklySessionCounts } from '../lib/progressSeries';
+import { localWeekStartMs } from '../lib/dayKey';
 
 // COMP-018 milestone copy (§4.6.8). Weeks of showing up against your own plan —
 // no comparison, no rank. Founder copy review at PR.
@@ -72,6 +73,33 @@ function recentMonthRecapParams(earliestWorkoutAt) {
     startMs: curMonthStart,
     endMs: startOfTomorrow,
     monthLabel: `${format(new Date(curMonthStart), 'MMMM')} so far`,
+  };
+}
+
+// S4 (world-class audit 04a: "Your week, in one card"): the same shape as
+// recentMonthRecapParams, one cadence down. localWeekStartMs is the app's one
+// week rule (local Monday 00:00, dayKey.js) so this story always describes
+// the same week the streak strip and weekly coach already do. The last
+// COMPLETED week when the user trained before this week began; otherwise the
+// current week so far (mirrors the month helper's first-month framing).
+function recentWeekRecapParams(earliestWorkoutAt) {
+  const now = new Date();
+  const curWeekStart = localWeekStartMs(now.getTime());
+  const prevWeekStart = curWeekStart - 7 * 86400000;
+  const startOfTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
+  if (earliestWorkoutAt != null && earliestWorkoutAt < curWeekStart) {
+    return {
+      variant: 'week',
+      startMs: prevWeekStart,
+      endMs: curWeekStart,
+      weekLabel: 'Last week',
+    };
+  }
+  return {
+    variant: 'week',
+    startMs: curWeekStart,
+    endMs: startOfTomorrow,
+    weekLabel: 'This week so far',
   };
 }
 
@@ -257,6 +285,29 @@ export default function AnalyticsScreen({ navigation, route }) {
     () => buildWeeklyLoadSeries(allSets, { exerciseTypeById }),
     [allSets, exerciseTypeById],
   );
+
+  // S4 (world-class audit 04a): "Make a card" extended to training load. A
+  // pure training-volume read (kg lifted), never ED-gated (same reasoning as
+  // makeTonnageCard above) and never a comparison to anyone else, just this
+  // week's number against the plain average of the weeks already on screen.
+  function makeTrainingLoadCard() {
+    if (!weeklyLoad || weeklyLoad.length < 2) return;
+    const u = units === 'lbs' ? 'lbs' : 'kg';
+    const latest = weeklyLoad[weeklyLoad.length - 1]?.value || 0;
+    const avg = Math.round(weeklyLoad.reduce((t, p) => t + p.value, 0) / weeklyLoad.length);
+    navigation.navigate('ShareCard', {
+      milestoneData: {
+        eyebrow: 'Training load',
+        title: 'Your training load',
+        heroValue: Math.round(latest).toLocaleString('en-GB'),
+        heroUnit: `${u} lifted, this week`,
+        caption: `Averaging ${avg.toLocaleString('en-GB')} ${u} a week over the last ${weeklyLoad.length} weeks.`,
+        date: Date.now(),
+        stats: [],
+      },
+    });
+  }
+
   const sessionSpark = useMemo(() => {
     const { bins, total } = buildWeeklySessionCounts(allSets);
     return {
@@ -359,7 +410,7 @@ export default function AnalyticsScreen({ navigation, route }) {
         {!loading && enoughForTrends && (
           <AnimatedEntrance>
             <View style={styles.section}>
-              <TrainingLoadHero series={weeklyLoad} units={units} />
+              <TrainingLoadHero series={weeklyLoad} units={units} onMakeCard={makeTrainingLoadCard} />
               <View style={styles.sparkRow}>
                 <SparkCard
                   label="Sessions"
@@ -435,6 +486,21 @@ export default function AnalyticsScreen({ navigation, route }) {
                 </TouchableOpacity>
               </View>
             ) : null}
+            {/* S4 (world-class audit 04a): "Your week, in one card", the
+                YearOfLifts StoryCard deck at weekly frequency. Always offered
+                once there is a week to reflect on (no separate lock/gate);
+                a quiet week falls back to the deck's existing "No sessions
+                this week" empty state rather than ever being hidden. */}
+            <TouchableOpacity
+              style={styles.weekStoryRow}
+              onPress={() => navigation.navigate('RecapStory', recentWeekRecapParams(earliestWorkoutAt))}
+              accessibilityRole="button"
+              accessibilityLabel="Your week, in one card"
+            >
+              <Ionicons name="albums-outline" size={16} color={colors.primary} />
+              <Text style={styles.weekStoryText}>Your week, in one card</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
           </View>
         )}
 
@@ -814,7 +880,7 @@ function VolumeSummaryStrip({ volume, loading, onPress }) {
 // display-size numeral reads the week under the finger while scrubbing and
 // the current week otherwise. Scrub state lives here so a scrub re-renders
 // this card only, never the whole screen (F7).
-function TrainingLoadHero({ series, units }) {
+function TrainingLoadHero({ series, units, onMakeCard }) {
   const [chartW, setChartW] = useState(0);
   const [scrubIdx, setScrubIdx] = useState(null);
   const lastIdx = series.length - 1;
@@ -865,6 +931,17 @@ function TrainingLoadHero({ series, units }) {
         <Text style={styles.heroAxisLabel}>{series.length - 1} weeks ago</Text>
         <Text style={styles.heroAxisLabel}>this week</Text>
       </View>
+      {/* S4: "Make a card" extended to training load, reflective and factual,
+          never a comparison to anyone else. */}
+      <TouchableOpacity
+        style={styles.trainingLoadCtaRow}
+        onPress={onMakeCard}
+        accessibilityRole="button"
+        accessibilityLabel="Make a card"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Text style={styles.milestoneCta}>Make a card</Text>
+      </TouchableOpacity>
     </Card>
   );
 }
@@ -927,22 +1004,27 @@ function SessionCard({ workout }) {
 }
 
 function NavTile({ icon, color, label, onPress, locked, lockedSub, pro }) {
-  // When locked, the tile is dimmed and onPress fires an inline
-  // explanation rather than navigating. Used for features that need
-  // accumulated training data (e.g. Year of Lifts needs a year).
-  // `pro` marks a tile whose destination is Pro-gated, shown to free
-  // users only, so the lock screen behind it is never a surprise.
+  // `locked` = not-enough-data-yet (the Recaps countdown pattern): dimmed
+  // tile, a progress icon and a countdown sub-line, so it reads as "keep
+  // going" rather than a paywall. Tapping fires an inline explanation
+  // rather than navigating. Used for features that need accumulated
+  // training data (e.g. Recaps needs RECAP_GATE logged sessions).
+  // `pro` marks a tile whose destination is Pro-gated, shown to free users
+  // only as an undimmed icon + PRO badge. The two never share a look (T6,
+  // world-class-audit-2026-07-03/01-newbie-journey.md #11: both used to
+  // read as the same dimmed padlock; time-outline replaces the padlock
+  // here so a not-enough-data tile can never be misread as a paywall).
   return (
     <TouchableOpacity
       style={[styles.navTile, locked && styles.navTileLocked]}
       onPress={onPress}
       activeOpacity={0.75}
       accessibilityRole="button"
-      accessibilityLabel={locked ? `${label}. Locked. ${lockedSub ?? ''}` : pro ? `${label}. Part of Pro.` : label}
+      accessibilityLabel={locked ? `${label}. ${lockedSub ?? 'Not unlocked yet.'}` : pro ? `${label}. Part of Pro.` : label}
       accessibilityState={{ disabled: !!locked }}
     >
       <Ionicons
-        name={locked ? 'lock-closed-outline' : icon}
+        name={locked ? 'time-outline' : icon}
         size={22}
         color={locked ? colors.textMuted : color}
       />
@@ -979,6 +1061,10 @@ const styles = StyleSheet.create({
   milestoneRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.xs },
   milestoneText: { flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   milestoneCta: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  // S4: "Your week, in one card": a persistent (not milestone-gated) link
+  // alongside the streak strip, matching milestoneRow's layout.
+  weekStoryRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.xs, marginTop: spacing.xs },
+  weekStoryText: { flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   sectionLabel: {
     ...type.label,
     color: colors.textSecondary,
@@ -1010,6 +1096,9 @@ const styles = StyleSheet.create({
   heroUnit:      { ...type.title, color: colors.textSecondary },
   heroSub:       { ...type.num('caption'), color: colors.textMuted, marginTop: spacing.xxs },
   heroChartSlot: { marginTop: spacing.md, minHeight: 64 },
+  // S4: "Make a card" extended to training load, same text style as the
+  // milestone CTAs (milestoneCta) but right-aligned under the axis row.
+  trainingLoadCtaRow: { alignSelf: 'flex-end', marginTop: spacing.sm },
   heroAxisLabel: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xs },
   sparkRow:      { flexDirection: 'row', gap: spacing.md },
   sparkCard:     { flex: 1 },
@@ -1074,8 +1163,10 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
     color: colors.textSecondary, textAlign: 'center',
   },
-  // Locked tile variant, used while accumulating training data needed
-  // for a feature (e.g. Year of Lifts requires 365 days of history).
+  // Not-enough-data-yet tile variant (Recaps countdown pattern, T6): dimmed
+  // while a feature is still accumulating data (e.g. Recaps needs
+  // RECAP_GATE logged sessions). Never used for a Pro lock, which stays
+  // undimmed with a PRO badge instead, so the two states never look alike.
   navTileLocked: { opacity: 0.55 },
   navTileLabelLocked: { color: colors.textMuted },
   navTileSub: {

@@ -155,3 +155,40 @@ export function deriveRecomp(history, sets, exercises, opts = {}) {
 
   return { render: true, bodyFat, measurement, lift };
 }
+
+/**
+ * Recomposition insight -> share-card params (S4, world-class audit
+ * docs/world-class-audit-2026-07-03/04a-progress-surfaces.md:22-24: "Make a
+ * card" extended to the recomposition insight, "the most only-Volyume
+ * insight in the app, currently unshareable").
+ *
+ * PRIVACY (Article 9, non-negotiable): a share card can leave the device and
+ * end up posted publicly, so this is deliberately narrower than the
+ * on-screen reframe (BodyMetricsScreen's RecompCard, which shows bodyFat/
+ * measurement/lift deltas together). This builder fires ONLY on the
+ * strength signal (a lift's estimated-1RM gain), pure training data, the
+ * same class of number already on every session/PR card. Body-fat % and
+ * body-measurement deltas are NEVER put on a share card, even as a signed
+ * delta: ShareCardScreen's own privacy note promises "bodyweight,
+ * measurements ... never included" for every non-weekly card, and this
+ * keeps that promise true rather than carving out an exception for it.
+ *
+ * @param {ReturnType<typeof deriveRecomp>} vm
+ * @param {'kg'|'lbs'} [units]
+ * @returns {null | { eyebrow: string, title: string, heroValue: string,
+ *   heroUnit: string, caption: string, stats: [], date: number }} null when
+ *   there is nothing safe to share (not warranted, or shape moved but not
+ *   strength).
+ */
+export function buildRecompShareParams(vm, units = 'kg') {
+  if (!vm || !vm.render || !vm.lift) return null;
+  return {
+    eyebrow: 'Recomposition',
+    title: 'Weight steady.',
+    heroValue: String(vm.lift.deltaKg),
+    heroUnit: `${units} strength gained`,
+    caption: 'Your weight has held while your strength kept moving.',
+    stats: [],
+    date: Date.now(),
+  };
+}

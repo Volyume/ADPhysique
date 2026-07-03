@@ -4,7 +4,7 @@
  * composition movement thresholds (BF >= 0.5pp OR site >= 1.0cm), strength gate
  * (e1RM up >= 2.5 kg), calm/ED suppression, and render-nothing fallbacks.
  */
-import { deriveRecomp } from '../recompReframe';
+import { deriveRecomp, buildRecompShareParams } from '../recompReframe';
 
 // Eight weight readings holding ~steady around 80 kg (|slope| <= 0.15).
 function flatWeeks(extra = {}) {
@@ -117,5 +117,57 @@ describe('deriveRecomp — suppression & resilience', () => {
     expect(deriveRecomp(null, null, null).render).toBe(false);
     expect(deriveRecomp([], [], []).render).toBe(false);
     expect(deriveRecomp([{ body_weight: NaN }, {}, { metric_date: 'x' }], [], []).render).toBe(false);
+  });
+});
+
+// S4 (world-class audit 04a): "Make a card" extended to the recomposition
+// insight. Pins the privacy gate: a share card is deliberately narrower than
+// the on-screen reframe and must never carry a body-fat or measurement delta,
+// only the strength signal.
+describe('buildRecompShareParams, share-card privacy gate (S4, "Make a card")', () => {
+  const liftGainSets = [
+    ...[60, 60].map(() => liftSet(1, '2026-04-01', 60, 5)),  // e1RM ~70
+    ...[70, 70].map(() => liftSet(1, '2026-04-07', 70, 5)),  // e1RM ~81.7
+  ];
+  const shapeMovedHistory = flatWeeks({
+    0: { body_fat: 20, waist: 86 },
+    7: { body_fat: 18, waist: 83 },
+  });
+
+  test('not warranted (render: false) → null', () => {
+    const vm = deriveRecomp(flatWeeks(), [], []);
+    expect(vm.render).toBe(false);
+    expect(buildRecompShareParams(vm, 'kg')).toBeNull();
+  });
+
+  test('warranted by shape ALONE (no strength signal) → null: never shares a body-fat or measurement delta', () => {
+    const vm = deriveRecomp(shapeMovedHistory, [], []);
+    expect(vm.render).toBe(true);
+    expect(vm.lift).toBeNull();
+    expect(buildRecompShareParams(vm, 'kg')).toBeNull();
+  });
+
+  test('warranted with a strength signal → hero is the strength delta only, even when shape also moved', () => {
+    const vm = deriveRecomp(shapeMovedHistory, liftGainSets, EXERCISES);
+    expect(vm.render).toBe(true);
+    expect(vm.bodyFat).toBeTruthy(); // the on-screen card shows shape AND strength moving...
+    const params = buildRecompShareParams(vm, 'kg');
+    expect(params).not.toBeNull();
+    expect(params.heroValue).toBe(String(vm.lift.deltaKg));
+    expect(params.heroUnit).toBe('kg strength gained');
+    expect(params.stats).toEqual([]); // ...but no per-field stat carries a body reading.
+  });
+
+  test('lbs units label on the hero unit', () => {
+    const vm = deriveRecomp(flatWeeks(), liftGainSets, EXERCISES);
+    expect(buildRecompShareParams(vm, 'lbs').heroUnit).toBe('lbs strength gained');
+  });
+
+  test('the share params never carry a name, bodyweight, body-fat or measurement field', () => {
+    const vm = deriveRecomp(shapeMovedHistory, liftGainSets, EXERCISES);
+    const params = buildRecompShareParams(vm, 'kg');
+    expect(Object.keys(params).sort()).toEqual(
+      ['caption', 'date', 'eyebrow', 'heroUnit', 'heroValue', 'stats', 'title'].sort(),
+    );
   });
 });

@@ -16,7 +16,7 @@ jest.mock('expo-haptics', () => ({
   NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
 }));
 
-import { buildMonthCards, buildBlockCards, buildCards } from '../YearOfLiftsScreen';
+import { buildMonthCards, buildBlockCards, buildCards, buildWeekCards } from '../YearOfLiftsScreen';
 
 const MS = Date.UTC(2026, 5, 1); // 1 Jun 2026
 const JUN_END = Date.UTC(2026, 6, 1); // 1 Jul 2026 (exclusive end)
@@ -81,6 +81,74 @@ describe('buildMonthCards', () => {
 
   test('null data → empty deck', () => {
     expect(buildMonthCards(null, 'kg', {})).toEqual([]);
+  });
+});
+
+// S4 (world-class audit 04a: "Your week, in one card"): same builder shape as
+// buildMonthCards, one cadence down. Pins that the delta captions say "the
+// week before" (never "the month before") and that an inactive week returns
+// an empty deck rather than a hollow intro/outro pair.
+describe('buildWeekCards', () => {
+  function fullWeek(overrides = {}) {
+    return {
+      startMs: MS,
+      endMs: MS + 7 * 86400000,
+      totalSessions: 4,
+      totalSets: 40,
+      tonnage: 9200,
+      avgSessionsPerWeek: 4,
+      uniqueExercises: 8,
+      topExercises: [{ name: 'Squat', sets: 8 }, { name: 'Bench', sets: 6 }],
+      topPRs: [{ exerciseName: 'Squat', value: 142.5, reps: 3 }],
+      bestSession: { startedAt: Date.UTC(2026, 5, 3), tonnage: 2600 },
+      previous: { totalSessions: 3, tonnage: 8000 },
+      ...overrides,
+    };
+  }
+
+  test('full week: intro + content + outro, positive deltas surfaced', () => {
+    const cards = buildWeekCards(fullWeek(), 'kg', { label: 'This week' });
+    expect(cards[0].type).toBe('intro');
+    expect(cards[0].headline).toBe('This week, in numbers.');
+    expect(cards[cards.length - 1].type).toBe('outro');
+    const sessions = find(cards, c => c.unit && c.unit.includes('session'));
+    expect(sessions.caption).toBe("That's 1 more than the week before.");
+    const volume = find(cards, c => c.unit === 'kg moved');
+    expect(volume.caption).toBe("That's 15% more than the week before.");
+  });
+
+  test('neutral (calm/ED): deltas go factual, no week-vs-week comparison', () => {
+    const cards = buildWeekCards(fullWeek(), 'kg', { label: 'This week', neutral: true });
+    const sessions = find(cards, c => c.unit && c.unit.includes('session'));
+    expect(sessions.caption).toBe('4 sessions this week.');
+    const volume = find(cards, c => c.unit === 'kg moved');
+    expect(volume.caption).toBe("That's every set you logged this week, added together.");
+  });
+
+  test('a quieter week than the one before is never negative-framed', () => {
+    const cards = buildWeekCards(fullWeek({ totalSessions: 2, previous: { totalSessions: 4, tonnage: 12000 } }), 'kg', { label: 'This week' });
+    const sessions = find(cards, c => c.unit && c.unit.includes('session'));
+    expect(sessions.caption).not.toMatch(/fewer|less|down/i);
+    const volume = find(cards, c => c.unit === 'kg moved');
+    expect(volume.caption).toBe("That's every set you logged this week, added together.");
+  });
+
+  test('minimum-content rule: < 3 content cards → intro + sessions + outro, softened', () => {
+    const thin = {
+      startMs: MS, endMs: MS + 7 * 86400000, totalSessions: 1, totalSets: 0, tonnage: 0,
+      avgSessionsPerWeek: 1, uniqueExercises: 0, topExercises: [], topPRs: [], bestSession: null, previous: null,
+    };
+    const cards = buildWeekCards(thin, 'kg', { label: 'This week' });
+    expect(typesOf(cards)).toEqual(['intro', 'stat', 'outro']);
+    expect(find(cards, c => c.unit && c.unit.includes('session')).caption).toBe('1 session logged this week, and every one counts.');
+  });
+
+  test('an inactive week (no sessions) → empty deck, never a hollow intro/outro pair', () => {
+    expect(buildWeekCards({ ...fullWeek(), totalSessions: 0, tonnage: 0 }, 'kg')).toEqual([]);
+  });
+
+  test('null data → empty deck', () => {
+    expect(buildWeekCards(null, 'kg', {})).toEqual([]);
   });
 });
 

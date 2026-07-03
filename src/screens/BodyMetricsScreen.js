@@ -30,7 +30,7 @@ import { useToast } from '../components/Toast';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logBodyMetric, getBodyMetricLog, getOpenEdPatternFlag, getWorkoutSetsSince, getAllExercises } from '../lib/database';
-import { deriveRecomp } from '../lib/recompReframe';
+import { deriveRecomp, buildRecompShareParams } from '../lib/recompReframe';
 import { localDayKey } from '../lib/dayKey';
 import WindowChips from '../components/WindowChips';
 import {
@@ -937,7 +937,11 @@ export default function BodyMetricsScreen() {
             {/* Recomposition reframe (ULTIMATE-RECOMP-01): when weight has held
                 steady but shape and/or strength kept moving, say so in numbers.
                 Renders nothing when not warranted or under calm/ED suppression. */}
-            <RecompCard vm={recompVm} weightUnits={units} />
+            <RecompCard
+              vm={recompVm}
+              weightUnits={units}
+              onMakeCard={(milestoneData) => navigation.navigate('ShareCard', { milestoneData })}
+            />
 
             {/* Body composition: body fat % + its own trend, shown once
                 the user has logged it. The delta is rendered neutrally
@@ -1211,7 +1215,7 @@ export default function BodyMetricsScreen() {
 // is pre-derived by deriveRecomp; this renders the numbers-first read plus one
 // plain sentence. Class-B body data — no valence colour (COMP-027). Returns null
 // when the reframe is not warranted, exactly like WeightTrendCard on !vm.render.
-function RecompCard({ vm, weightUnits = 'kg' }) {
+function RecompCard({ vm, weightUnits = 'kg', onMakeCard }) {
   if (!vm || !vm.render) return null;
 
   const parts = ['Weight steady.'];
@@ -1233,6 +1237,13 @@ function RecompCard({ vm, weightUnits = 'kg' }) {
     : vm.lift ? 'strength' : 'shape';
   const sentence = `Your weight has held while your ${moved} kept moving.`;
 
+  // S4 (world-class audit 04a): "Make a card" extended to this insight, the
+  // most only-Volyume read in the app, previously unshareable. Privacy gate
+  // lives in buildRecompShareParams: it returns null unless the strength
+  // signal fired, so a share card NEVER carries a body-fat or measurement
+  // delta, only ever the lift gain (pure training data).
+  const shareParams = onMakeCard ? buildRecompShareParams(vm, weightUnits) : null;
+
   return (
     <View style={styles.recompBlock}>
       <View style={styles.recompHeaderRow}>
@@ -1242,6 +1253,17 @@ function RecompCard({ vm, weightUnits = 'kg' }) {
       </View>
       <Text style={styles.recompRead}>{parts.join(' ')}</Text>
       <Text style={styles.recompNote}>{sentence}</Text>
+      {shareParams ? (
+        <TouchableOpacity
+          style={styles.recompCtaRow}
+          onPress={() => onMakeCard(shareParams)}
+          accessibilityRole="button"
+          accessibilityLabel="Make a card"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text style={styles.recompCta}>Make a card</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -1346,6 +1368,8 @@ const styles = StyleSheet.create({
   recompHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   recompRead: { ...type.bodyStrong, color: colors.textPrimary },
   recompNote: { ...type.bodySm, color: colors.textMuted },
+  recompCtaRow: { alignSelf: 'flex-start', marginTop: spacing.xxs },
+  recompCta: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   bodyFatRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   bodyFatValueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   bodyFatValue: { ...type.num('h3'), color: colors.textPrimary },
