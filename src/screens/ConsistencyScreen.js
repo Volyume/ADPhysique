@@ -3,8 +3,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, radius, type, withAlpha } from '../styles/theme';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
-import PartnerRow from '../components/PartnerRow';
-import { trackPartnerSurfaceView } from '../lib/partners/telemetry';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import InfoTooltip from '../components/InfoTooltip';
 import FatigueTrendCard from '../components/FatigueTrendCard';
@@ -46,18 +44,6 @@ export default function ConsistencyScreen({ navigation }) {
       >
         {/* ── Your weeks (COMP-018 consistency streak) ── */}
         <StreakWeeksSection userId={user?.id} scoffScore={scoffScore} />
-
-        {/* Training partner (spec B8, 2026-07-03): the slim status row lives
-            here, directly under the weeks strip, exactly where PartnerRow's
-            own header comment intends. Opens the Partners destination. */}
-        <PartnerRow
-          userId={user?.id}
-          tier={tier}
-          onOpen={() => {
-            trackPartnerSurfaceView('consistency_row');
-            navigateCrossTab(navigation, 'ProgressTab', 'Partner', { source: 'consistency_row' });
-          }}
-        />
 
         {/* ── Lighter week banner ── */}
         {deloadAlert && (
