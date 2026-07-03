@@ -5,6 +5,24 @@
 // at creation time), so non-Reduce-Motion accessibility toggles require an
 // app reload to fully take effect, see App.js for the boot-time apply,
 // and SettingsScreen for the reload prompt after toggle.
+//
+// ── VOLYUME MATERIALS POLICY (E15 element 6, founder-approved 2026-07-03) ──
+// Elevation is communicated by the SURFACE LADDER (background -> surface ->
+// surfaceElevated -> surface2 -> surface3), not by shadow, in the dark
+// theme; the light theme uses shadows as the primary elevation cue.
+// BORDERS are the hairline definition: borderSubtle inside cards, border
+// where a control needs a WCAG-contrast edge. TRANSLUCENCY + HAIRLINE
+// BORDER is the signature material for docked/floating furniture (the
+// mini-bar, the tab bar). BLUR is not used on Android and is not installed
+// (expo-blur declined, Android-first rule); on iOS, blur may be introduced
+// only per-surface and only after profiling on a mid-range device, never
+// as a default. ONE surface in the app may carry a Skia glow (the Home
+// Start button, E15 element 3); no other glow, gradient orb or bloom is
+// permitted. All surface motion uses the motion.* tokens; Reduce Motion
+// flattens it. Chart verdict (E15 element 5, accepted): VolyumeChart is
+// the app's one chart engine; no second engine (Victory et al.), no
+// rebuild. Optional S-effort uplifts on record: a once-per-mount draw-in
+// on the Analytics focal chart and the WeightTrendCard dashed goal band.
 const baseColors = {
   // Core backgrounds, dark charcoal, not pure black.
   // Pure black (#000000) causes halation (blurring) for users with astigmatism.
