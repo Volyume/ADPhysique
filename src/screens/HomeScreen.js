@@ -41,6 +41,7 @@ import { buildCoachLedger } from '../lib/coachLedger';
 import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
 import { buildFreeCoachLine } from '../lib/coachResponse';
 import { GLOSSARY } from '../lib/coachGlossary';
+import { activePlanLine } from '../lib/planDisplay';
 import { localWeekStartMs, localDayKey } from '../lib/dayKey';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 // NAV-4 (founder decision): the differential paywall re-homed here from the
@@ -1081,8 +1082,10 @@ export default function HomeScreen({ navigation, route }) {
 
   const hasActiveWorkout = !!activeWorkout && !isStartingWorkout;
   const displayWorkout = selectedWorkoutOverride || nextWorkout;
+  // Canonical plan reference (issue 4): plan name + day descriptor from the
+  // shared formatter, so this card can never drift from the Plans tab again.
   const planProgress = displayWorkout
-    ? `Day ${(displayWorkout?.idx ?? 0) + 1} of ${nextWorkout?.total ?? 1}`
+    ? activePlanLine(activePlan?.name, displayWorkout?.idx ?? 0, nextWorkout?.total ?? 1)
     : null;
 
   // Derive how many days since last completed workout (null = no history)
