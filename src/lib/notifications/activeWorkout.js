@@ -198,11 +198,15 @@ function formatElapsed(seconds) {
   return `${m}:${String(r).padStart(2, '0')}`;
 }
 
-function formatRest(seconds) {
-  const s = Math.max(0, Math.floor(seconds));
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return m > 0 ? `${m}:${String(r).padStart(2, '0')}` : `${r}s`;
+// The rest sticky shows a STATIC end time (see presentRestTimerNotification):
+// a fixed "Ends HH:MM" never needs a per-second update, so it can't flicker the
+// shade, lag the in-app timer, or freeze at a stale value when JS suspends in
+// the background. 24-hour local clock (UK-first, unambiguous).
+function formatEndClock(ms) {
+  const t = Number(ms);
+  if (!Number.isFinite(t)) return null;
+  const d = new Date(t);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 let restChannelEnsured = false;
@@ -224,29 +228,34 @@ async function ensureRestChannel() {
 }
 
 /**
- * Present (or update) the live rest-timer notification with the four
- * action buttons. Re-calling with the same id REPLACES the notification,
- * so this is the update path too — call it on each tick. Silent channel,
- * no sound/vibration, so a per-second body update never buzzes the phone.
+ * Present (or refresh) the persistent rest-timer notification with the four
+ * action buttons. Posted ONCE per rest, and again only when the rest is
+ * re-anchored (a ±15s adjust) — NOT on every tick. It shows a STATIC end time
+ * ("Ends HH:MM"), so the shade never re-animates every second, the value never
+ * lags the in-app timer, and it stays correct while the app is backgrounded
+ * (the old per-tick re-present flickered, ran ~half a second behind, and froze
+ * at its last value because JS suspends in the background). The "rest is over"
+ * moment is handled separately: the scheduled rest-end alert (store) fires it
+ * natively, and the in-app timer carries the live countdown on screen.
  *
- *   restRemainingSec   countdown shown in the body
- *   workoutName        title context, optional
- *   exerciseName       appended to the body, optional
+ *   endsAtMs      wall-clock end of the rest; shown as "Ends HH:MM"
+ *   workoutName   title context, optional
+ *   exerciseName  appended to the body, optional
  *
- * Android-only (iOS ongoing notifications need Live Activities). No-op
- * when there's no time left — the caller dismisses on end instead.
+ * Android-only (iOS ongoing notifications need Live Activities).
  */
 export async function presentRestTimerNotification({
-  restRemainingSec = 0, workoutName, exerciseName,
+  endsAtMs, workoutName, exerciseName,
 } = {}) {
   if (Platform.OS !== 'android') return;
-  if (!(restRemainingSec > 0)) return;
   try {
     await ensureRestChannel();
     const title = workoutName ? `Resting · ${workoutName}` : 'Resting';
-    const body = exerciseName
-      ? `${formatRest(restRemainingSec)}  ·  ${exerciseName}`
-      : formatRest(restRemainingSec);
+    const endLabel = formatEndClock(endsAtMs);
+    const parts = [];
+    if (endLabel) parts.push(`Ends ${endLabel}`);
+    if (exerciseName) parts.push(exerciseName);
+    const body = parts.length ? parts.join('  ·  ') : 'Rest in progress';
     await Notifications.scheduleNotificationAsync({
       identifier: REST_NOTIF_ID,
       content: {

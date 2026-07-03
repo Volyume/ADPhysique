@@ -154,32 +154,34 @@ export default function RestTimer() {
     })();
   }, [restTimerActive, restTimerEndsAt]);
 
-  // Live lock-screen notification with action buttons. Present/update on
-  // each tick (re-presenting the same id replaces the body, silent channel
-  // so it never buzzes); dismiss the moment the timer is no longer active.
-  // The actions (Complete set / ±15s / Skip rest) are handled in the
-  // notifications listener and only act while a workout + rest are live.
-  // E6A: silent while the shortService chronometer is carrying the countdown.
+  // Persistent lock-screen notification with action buttons. Posted ONCE per
+  // rest, and again only when the rest is re-anchored (a ±15s adjust changes
+  // restTimerEndsAt) — deliberately NOT re-presented every tick. It shows a
+  // static "Ends HH:MM"; the old per-second re-post flickered the shade, ran
+  // ~half a second behind the in-app timer, and froze at its last value when
+  // the app was backgrounded (JS suspends). Dismissed the moment the rest is no
+  // longer active. The actions (Complete set / ±15s / Skip rest) are handled in
+  // the notifications listener and only act while a workout + rest are live.
+  // E6A: silent while the shortService chronometer is carrying the live count.
   useEffect(() => {
-    if (!restTimerActive || restTimerRemaining <= 0) {
+    if (!restTimerActive || !restTimerEndsAt) {
       dismissRestTimerNotification().catch(() => {});
       return;
     }
     if (fgsActiveRef.current) {
-      // Chronometer host owns the shade — but only within its OS window.
-      // Past the deadline the host has self-stopped (or timed out), so the
-      // sticky resumes on the next tick rather than leaving no countdown.
+      // Chronometer host owns the shade within its OS window; past the fixed
+      // deadline the host is gone, so the static sticky takes the shade back.
       if (Date.now() < fgsDeadlineRef.current) return;
       fgsActiveRef.current = false;
     }
     const s = useAppStore.getState();
     const ex = s.workoutExercises?.[s.currentExerciseIndex];
     presentRestTimerNotification({
-      restRemainingSec: restTimerRemaining,
+      endsAtMs: restTimerEndsAt,
       workoutName: s.activeWorkout?.name,
       exerciseName: ex?.exercise?.name ?? ex?.name,
     }).catch(() => {});
-  }, [restTimerActive, restTimerRemaining]);
+  }, [restTimerActive, restTimerEndsAt]);
 
   // Foreground re-sync: JS timers are suspended while the app is backgrounded,
   // so the interval above stops ticking. tickRestTimer now recomputes the
