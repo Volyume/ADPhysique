@@ -9,8 +9,9 @@ are paying. Every change affects them. Work accordingly.
 > micronutrients/NRV = MN-1). A session MUST NOT start these without a
 > structured founder decision. Source:
 > `docs/ultimate-audit-2026-06-13/_AUDIT-STATUS-AND-RESUME.md`.
-> **Outstanding founder actions:** apply `supabase/migrate_092/093/094` to
-> EU-Dublin (manual, founder-run); confirm Google Play OAuth SHA-1.
+> **Outstanding founder actions:** apply `supabase/migrate_092`..`_099` to
+> EU-Dublin (manual, founder-run; 049/059 remain HELD per supabase/README);
+> confirm Google Play OAuth SHA-1.
 
 ---
 
@@ -31,7 +32,7 @@ database is the source of truth on device. Local migrations run via
 **Backend: Supabase EU-Dublin** (`@supabase/supabase-js`). EU data residency
 is absolute — all user data stays in Dublin. Components NEVER query Supabase
 directly; everything flows through the sync layer. Cloud schema lives in
-`supabase/migrate_NNN_*.sql` (91 files; migrations are canonical,
+`supabase/migrate_NNN_*.sql` (96 files; migrations are canonical,
 `schema.sql`/`setup_complete.sql` are stale snapshots).
 
 **Sync layer.** Registry-driven engine in `src/lib/sync/` (`registry.js`,
@@ -122,7 +123,8 @@ without a dedicated written test plan (see `docs/rules/billing.md`).
 `supabase/migrate_NNN_*.sql`) must be ADDITIVE and idempotent, with a header
 note stating: purpose, applied-locally/remotely status, safe-to-re-run, and
 rollback. Cloud migrations are applied MANUALLY by the founder — they have
-never been automatic; the app never runs them. `supabase db push/reset` target
+never been automatic; the app never runs them, and the deploy-migrations
+workflow is manual-dispatch only (push trigger retired, E0). `supabase db push/reset` target
 local/staging only; production requires the exact phrase "run against
 production".
 

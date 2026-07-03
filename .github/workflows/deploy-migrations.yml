@@ -20,11 +20,10 @@ name: Apply Supabase migrations
 #     URI form, including the password). If your DB secret has a different name,
 #     point it at SUPABASE_DB_URL or tell me the name and I'll update this file.
 
+# E0 closure (v3 programme, founder decision): cloud migrations are
+# founder-applied manually. The push trigger is retired; manual dispatch
+# remains as an optional founder-run tool only.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'supabase/migrate_*.sql'
   workflow_dispatch:
 
 # GitHub forces JavaScript actions onto Node 24 on 2026-06-16. Opt in early so
