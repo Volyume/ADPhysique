@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   View, Text, TouchableOpacity, Modal, StyleSheet, Pressable, ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, circle } from '../styles/theme';
@@ -67,6 +67,10 @@ export default function ProGate({ children, feature = 'This feature', style }) {
   const tier = useAppStore(s => s.tier);
   const navigation = useNavigation();
   const [modalVisible, setModalVisible] = useState(false);
+  // Bottom-anchored Modal below: it overlays the tab band, so the sheet
+  // absorbs the system inset itself (edge-to-edge sweep, 2026-07-03).
+  // Called before the early return — hooks order.
+  const insets = useSafeAreaInsets();
 
   // Pro users see the content. Free users must sign up and go through the
   // upgrade flow, going Pro is never a silent one-tap switch.
@@ -98,7 +102,11 @@ export default function ProGate({ children, feature = 'This feature', style }) {
         onRequestClose={() => setModalVisible(false)}
       >
         <Pressable style={styles.backdrop} onPress={() => setModalVisible(false)}>
-          <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
+          <Pressable
+            style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}
+            onPress={() => {}}
+            accessible={false}
+          >
             <View style={styles.sheetHandle} />
 
             <View style={styles.sheetIconWrap}>

@@ -32,6 +32,7 @@ import {
   Animated, Easing, Platform, Keyboard, TouchableWithoutFeedback,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as haptics from '../lib/haptics';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
@@ -131,6 +132,9 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
   const [done, setDone] = useState(false);
 
   const translateY = useRef(new Animated.Value(reduceMotion ? 0 : 500)).current;
+  // Bottom-anchored Modal: overlays the tab band, so it must absorb the
+  // system inset itself (edge-to-edge sweep, 2026-07-03).
+  const insets = useSafeAreaInsets();
   const backdrop = useRef(new Animated.Value(0)).current;
   const autoDismissRef = useRef(null);
 
@@ -241,7 +245,11 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
         <Pressable style={StyleSheet.absoluteFillObject} onPress={() => animateOut()} />
       </Animated.View>
       <Animated.View
-        style={[styles.sheet, { transform: [{ translateY }] }]}
+        style={[
+          styles.sheet,
+          { paddingBottom: Math.max(spacing.xxl + spacing.md, insets.bottom + spacing.lg) },
+          { transform: [{ translateY }] },
+        ]}
         accessibilityViewIsModal
       >
         <View style={styles.handle} />

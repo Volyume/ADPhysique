@@ -3,7 +3,7 @@ import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, KeyboardAvoidingView, Platform, Animated } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, withAlpha, alpha, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, withAlpha, alpha, circle, motion } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
 import RollingNumber from '../components/RollingNumber';
 import BlockShapeCard from '../components/BlockShapeCard';
@@ -1133,7 +1133,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         )}
       </ScrollView>
 
-      <View style={[styles.stickyFooter, { paddingBottom: Math.max(spacing.lg, insets.bottom) }]}>
+      {/* Flat token, NOT insets.bottom: the tab band renders below this
+          screen and already absorbs the system inset, so adding it here
+          doubled the gap under Close (founder screenshot 2026-07-03). The
+          inverse case — ActiveWorkout, where the band hides — is the one
+          that needs the inset; bottomBarInset.guard.test.js pins both. */}
+      <View style={[styles.stickyFooter, { paddingBottom: spacing.lg }]}>
         <View style={styles.footerRow}>
           <TouchableOpacity
             style={[styles.doneBtn, saving && styles.btnDisabled]}
@@ -1225,8 +1230,8 @@ function RevealSection({ delay = 0, children }) {
   useEffect(() => {
     if (reduceMotion) return;
     Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 320, delay, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 360, delay, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: motion.enter, delay, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: motion.enter, delay, useNativeDriver: true }),
     ]).start();
   }, [delay, reduceMotion, opacity, translateY]);
 
@@ -1270,8 +1275,8 @@ function StatBox({ icon, value, label, tooltip, animateOrder = 0, hero = false }
     // one. Gives the grid a left-to-right shimmer rather than four
     // boxes appearing simultaneously.
     Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 280, delay, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 320, delay, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: motion.enter, delay, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: motion.enter, delay, useNativeDriver: true }),
     ]).start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);

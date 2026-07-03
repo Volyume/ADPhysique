@@ -36,6 +36,7 @@ import {
   View, Text, StyleSheet, Modal, Pressable, Animated, Easing, Platform,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fontSize, fontWeight, spacing, radius, motion } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import * as haptics from '../lib/haptics';
@@ -45,6 +46,9 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const translateY = useRef(new Animated.Value(reduceMotion ? 0 : 400)).current;
   const backdrop = useRef(new Animated.Value(0)).current;
+  // Bottom-anchored Modal: overlays the tab band, so it must absorb the
+  // system inset itself (edge-to-edge sweep, 2026-07-03).
+  const insets = useSafeAreaInsets();
 
   useImperativeHandle(ref, () => ({
     open: (cfg) => {
@@ -111,7 +115,11 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
         <Pressable style={StyleSheet.absoluteFillObject} onPress={() => animateOut()} />
       </Animated.View>
       <Animated.View
-        style={[styles.sheet, { transform: [{ translateY }] }]}
+        style={[
+          styles.sheet,
+          { paddingBottom: Math.max(spacing.xxl + spacing.md, insets.bottom + spacing.lg) },
+          { transform: [{ translateY }] },
+        ]}
         accessibilityViewIsModal
       >
         <View style={styles.handle} />

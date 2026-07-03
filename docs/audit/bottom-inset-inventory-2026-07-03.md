@@ -1,7 +1,29 @@
 # Bottom safe-area inventory + canonical pattern (founder defect pass 2026-07-03, issue 1b/1c)
 
-STATUS: ActiveWorkout fixed and shipped (issue 1a). Everything else in this
-file is PROPOSED and waits for the founder's word before rollout.
+STATUS: ROLLED OUT (founder GO 2026-07-03: "Check all pages and ensure the
+e2e is configured correctly for all devices"). The founder's Workout
+complete screenshot also exposed the INVERSE bug — a sticky footer adding
+insets.bottom on a screen where the tab band already absorbs it — which
+sharpened the rule below into its final tab-band-aware form.
+
+## The rule (final)
+
+1. Sticky bar on a screen where the tab band is HIDDEN (ActiveWorkout) or
+   that lives outside the tab navigator: `Math.max(token, insets.bottom + lift)`.
+2. Sticky bar on a screen where the tab band is VISIBLE (WorkoutSummary,
+   Diary selection bar, FoodSearch plate bar): FLAT token only — the band
+   absorbs the inset; adding it again double-pads (the over-padded Close).
+3. Bottom-anchored Modal sheets overlay the band and touch the physical
+   screen edge: always `Math.max(sheet token, insets.bottom + spacing.lg)`.
+   Fixed once in shared BottomSheet.js; the hand-rolled copies
+   (FeedbackSheet, PeekMenu, ProGate upsell, FoodSearch plate modal) carry
+   the same line. bottomBarInset.guard.test.js pins all of it.
+
+Applied 2026-07-03: WorkoutSummary footer → flat token; BottomSheet.js,
+FeedbackSheet, PeekMenu, ProGate upsell sheet, FoodSearch plate modal →
+inset-absorbing. Scroll-away CTAs inside SafeAreaView are untouched (right
+tool already). DiaryScreen selectionBar/scanFab sit above the visible band
+(rule 2, already correct with flat tokens).
 
 ## Why this broke
 

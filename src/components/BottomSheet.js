@@ -18,6 +18,7 @@ import {
   Modal, Animated, Easing, Pressable, View, StyleSheet, Platform, Keyboard,
   KeyboardAvoidingView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useAppStore from '../store/useAppStore';
 import { colors, spacing, radius, motion } from '../styles/theme';
 
@@ -40,6 +41,10 @@ export default function BottomSheet({
   accessibilityLabel,
 }) {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  // The sheet is a Modal anchored to the PHYSICAL screen bottom — it
+  // overlays the tab band, so nothing absorbs the system inset for it.
+  // Every consumer gets this for free (edge-to-edge sweep, 2026-07-03).
+  const insets = useSafeAreaInsets();
   const translateY = useRef(new Animated.Value(reduceMotion ? 0 : OFFSCREEN)).current;
   const backdrop = useRef(new Animated.Value(0)).current;
   // Keep the Modal mounted through the exit animation: mirror `visible`
@@ -99,7 +104,12 @@ export default function BottomSheet({
         behavior={keyboardAvoiding && Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Animated.View
-          style={[styles.sheet, sheetStyle, { transform: [{ translateY }] }]}
+          style={[
+            styles.sheet,
+            { paddingBottom: Math.max(spacing.xxl + spacing.md, insets.bottom + spacing.lg) },
+            sheetStyle,
+            { transform: [{ translateY }] },
+          ]}
           accessibilityViewIsModal
           accessibilityLabel={accessibilityLabel}
         >

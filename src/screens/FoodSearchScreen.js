@@ -24,7 +24,7 @@ import {
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
@@ -78,6 +78,9 @@ export default function FoodSearchScreen({ navigation, route }) {
   // Energy DISPLAY unit (kcal | kj): display-only, applied at the render sites
   // below. plateKcal and every macros.kcal stay kcal for the maths/log writes.
   const toast = useToast();
+  // For the bottom-anchored plate Modal, which overlays the tab band and so
+  // must absorb the system inset itself (edge-to-edge sweep, 2026-07-03).
+  const insets = useSafeAreaInsets();
 
   const mealSlot = route?.params?.mealSlot ?? 'snack';
   const entryDate = route?.params?.entryDate ?? todayLocalKey();
@@ -913,7 +916,9 @@ export default function FoodSearchScreen({ navigation, route }) {
 
       <Modal visible={showPlate} transparent animationType="slide" onRequestClose={() => setShowPlate(false)}>
         <View style={styles.plateModalBackdrop}>
-          <View style={styles.plateModalSheet}>
+          {/* Bottom-anchored Modal: overlays the tab band, so it absorbs the
+              system inset itself (edge-to-edge sweep, 2026-07-03). */}
+          <View style={[styles.plateModalSheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
             <View style={styles.plateModalHeader}>
               <Text style={styles.plateModalTitle}>Selected ({plate.length})</Text>
               <TouchableOpacity onPress={() => setShowPlate(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">

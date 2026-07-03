@@ -23,4 +23,29 @@ describe('ActiveWorkout bottom bar vs the hidden tab band', () => {
     const bar = read('components/VolyumeTabBar.js');
     expect(bar).toMatch(/nested === 'ActiveWorkout'.*return null/);
   });
+
+  // The inverse rule: on screens where the tab band IS visible it absorbs
+  // the system inset, so a sticky footer there must use a flat token —
+  // adding insets.bottom again doubled the gap under WorkoutSummary's
+  // Close (founder screenshot 2026-07-03).
+  test('WorkoutSummary sticky footer uses a flat token, never the inset again', () => {
+    const summary = read('screens/WorkoutSummaryScreen.js');
+    expect(summary).toMatch(/styles\.stickyFooter,\s*\{\s*paddingBottom:\s*spacing\.lg\s*\}/);
+    expect(summary).not.toMatch(/stickyFooter,\s*\{\s*paddingBottom:\s*Math\.max/);
+  });
+
+  // Bottom-anchored Modals overlay the tab band and touch the physical
+  // screen edge, so each absorbs the inset itself. Pins the edge-to-edge
+  // sweep (2026-07-03) on the shared chrome and the hand-rolled sheets.
+  test('bottom-anchored modal sheets absorb the system inset', () => {
+    for (const rel of [
+      'components/BottomSheet.js',
+      'components/FeedbackSheet.js',
+      'components/PeekMenu.js',
+      'components/ProGate.js',
+      'screens/FoodSearchScreen.js',
+    ]) {
+      expect(read(rel)).toMatch(/insets\.bottom \+ spacing\.(lg|sm)/);
+    }
+  });
 });
