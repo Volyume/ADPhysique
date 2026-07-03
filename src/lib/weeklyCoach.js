@@ -1282,10 +1282,13 @@ export function runWeeklyCoach(inputs) {
   // ── WHAT'S WORKING ────────────────────────────────────────────────────────
   const whatWorking = [];
 
+  // Identity register (T9 follow-up, founder GO): name the behaviour as who
+  // the user is becoming, not a bare count. Copy only; thresholds unchanged and
+  // the honesty test holds (true whenever the sessions were genuinely trained).
   if (sessionAdherence >= 1.0) {
-    whatWorking.push(`You hit all ${sessionsPlanned} of your sessions.`);
+    whatWorking.push(`You trained all ${sessionsPlanned} sessions this week. That is showing up.`);
   } else if (sessionAdherence >= 0.75) {
-    whatWorking.push(`You hit ${sessionsCompleted} of your ${sessionsPlanned} sessions.`);
+    whatWorking.push(`You trained ${sessionsCompleted} of your ${sessionsPlanned} sessions this week. That is showing up.`);
   }
 
   if (prsThisWeek > 0) {
