@@ -34,8 +34,12 @@ import ActiveSessionMiniBar from './ActiveSessionMiniBar';
 import { colors, fontSize, fontWeight, radius, motion } from '../styles/theme';
 
 const PILL_WIDTH = 56;
-const PILL_HEIGHT = 30;
-const PILL_TOP = 5;
+// Sits behind the ACTIVE ICON only. Height + top are tuned so the pill clears
+// the label below it (the icon band is ~8-30px from the bar top; the label
+// starts ~32px down): a taller/lower pill bled over the top of the label text
+// ("covered half the text"), so it ends flush with the icon, above the label.
+const PILL_HEIGHT = 26;
+const PILL_TOP = 4;
 
 // Per-icon micro-response: one settle-scale beat when the tab gains focus.
 function TabIcon({ focused, reduceMotion, children }) {
