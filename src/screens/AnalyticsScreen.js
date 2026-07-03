@@ -624,6 +624,18 @@ export default function AnalyticsScreen({ navigation, route }) {
                 navigation.navigate('Partner', { source: 'progress_tile' });
               }}
             />
+            {/* Progress photos promoted to a front-and-central Progress
+                destination (founder device-walk 2026-07-03: it was buried in
+                Body Metrics and effectively undiscoverable). Same promoted
+                treatment and Pro lock as Partners; the screen's own
+                withReadOnlyProGuard still governs view-only lapse access. */}
+            <NavTile
+              icon="camera"
+              color={colors.primary}
+              label="Progress photos"
+              pro={tier !== 'pro'}
+              onPress={() => navigation.navigate('ProgressPhotos')}
+            />
           </View>
         </View>
 

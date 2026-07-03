@@ -226,6 +226,22 @@ export default function ProgressPhotosScreen({ navigation }) {
     ]);
   }
 
+  // Plain, calm guidance on what the feature is and how to use it, so nobody
+  // has to guess. No cadence pressure, no streak: "at your own pace" by design.
+  function onHowItWorks() {
+    appAlert(
+      'How progress photos work',
+      'Your photos stay on this device. They are never synced or shared unless you choose to.\n\n'
+      + 'Tag each one front, side or back, so like lines up with like.\n\n'
+      + 'When you add a photo, "Take with guide" faintly shows your last one so you can line the shot up.\n\n'
+      + 'Tap a photo to view it full size, add a note, or set the date.\n\n'
+      + 'Pick any two to compare them side by side, with a slider, or as an overlay.\n\n'
+      + 'When you are ready, make a before and after card to keep or share.\n\n'
+      + 'There is no schedule and no streak. Take them at your own pace, and only if they help you.',
+      [{ text: 'Got it' }],
+    );
+  }
+
   function openViewer(name) {
     setViewerName(name);
     setViewerOpen(true);
@@ -313,6 +329,17 @@ export default function ProgressPhotosScreen({ navigation }) {
         {readOnly ? ' View-only on the free plan. Your photos are safe and stay yours.' : ''}
       </Text>
 
+      <TouchableOpacity
+        onPress={onHowItWorks}
+        style={styles.howRow}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel="How progress photos work"
+      >
+        <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
+        <Text style={styles.howLink}>How it works</Text>
+      </TouchableOpacity>
+
       {!loading && photos.length > 0 && (
         <View style={styles.filterRow} accessibilityLabel="Filter by pose">
           {POSES.map((p) => {
@@ -365,12 +392,26 @@ export default function ProgressPhotosScreen({ navigation }) {
       ) : photos.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="camera-outline" size={32} color={colors.textMuted} />
-          <Text style={styles.emptyText}>{readOnly ? 'No photos on this device.' : 'No photos yet. Tap + to add one.'}</Text>
-          {!readOnly ? (
-            <Text style={styles.emptyHint}>
-              Even lighting and the same pose make them easier to compare over time. At your own pace.
-            </Text>
-          ) : null}
+          {readOnly ? (
+            <Text style={styles.emptyText}>No photos on this device.</Text>
+          ) : (
+            <>
+              <Text style={styles.emptyTitle}>See your progress over time</Text>
+              <Text style={styles.emptyHint}>
+                Add a photo from your camera or library, tag it front, side or back, and line each
+                new one up with the guide. Then compare any two over time, or make a before and
+                after card. Private to this device, at your own pace.
+              </Text>
+              <Button
+                title="Add a photo"
+                icon="add"
+                onPress={onAdd}
+                fullWidth={false}
+                style={styles.emptyAdd}
+                accessibilityLabel="Add a photo"
+              />
+            </>
+          )}
         </View>
       ) : timeline.length === 0 ? (
         <View style={styles.empty}>
@@ -488,7 +529,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
   },
   poseBadgeText: { ...type.caption, color: colors.primary },
+  // "How it works" affordance under the privacy note, always available so the
+  // feature explains itself (compare, guide, poses, before/after card).
+  howRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xxs,
+    paddingHorizontal: spacing.lg, marginBottom: spacing.md,
+  },
+  howLink: { ...type.bodySm, color: colors.primary, fontWeight: fontWeight.semibold },
   empty: { alignItems: 'center', marginTop: spacing.xxxl, gap: spacing.sm, paddingHorizontal: spacing.xl },
   emptyText: { color: colors.textMuted, fontSize: fontSize.md, fontWeight: fontWeight.medium },
+  emptyTitle: { ...type.h3, color: colors.textPrimary, textAlign: 'center' },
   emptyHint: { ...type.bodySm, color: colors.textMuted, textAlign: 'center' },
+  emptyAdd: { marginTop: spacing.md },
 });

@@ -188,9 +188,11 @@ describe('ProgressPhotosScreen timeline', () => {
     expect(dateText).toBeTruthy();
   });
 
-  test('empty state still renders (mount safety)', async () => {
+  test('empty state renders the explainer and an add affordance (mount safety)', async () => {
     const tree = await render([]);
-    expect(flattenText(tree.toJSON())).toContain('No photos yet. Tap + to add one.');
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('See your progress over time');
+    expect(text).toContain('How it works');
   });
 });
 
