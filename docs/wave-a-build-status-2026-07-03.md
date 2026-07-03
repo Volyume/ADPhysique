@@ -173,7 +173,13 @@ Audit source: `docs/world-class-audit-2026-07-03/` (tracks 01–06 + `_SYNTHESIS
 - C9 flatten notification settings 4→3 taps (deleted `SettingsNotificationsScreen`): `9d48040`.
 - C10 widget discovery (Settings row + What's New): `9d48040`.
 - C11 great-week share celebratory (non-amber) — ALREADY shipped in `6059c7d`.
-- C12 training-reminder push references plan name — **NOT DONE (see §4).**
+- C12 training-reminder push references plan name — **SHIPPED `4e9c3d5`.**
+  Names the active PLAN verbatim (not a routine — plans rotate round-robin
+  per D5), best-effort self-source + generic fallback, reschedule hook in
+  `database.activatePlanWithBlock`, `NOTIFICATIONS_LOCKED.md` updated. Tests
+  `notifications.trainingReminders.test.js` (+7). Known minor edges (disclosed,
+  not parked): a pure deactivate-to-no-plan and a plan rename don't re-bake the
+  push until the next reschedule.
 - C13 tokenise Toast/PRCelebration motion (springs left raw, documented): `3f652f2`.
 - C14 stale assets + dead route params removed: `509511b`.
 
@@ -206,29 +212,30 @@ dead-tap class). Guard `src/__tests__/navigateCrossTab.guard.test.js` bans the
 raw idiom. Re-anchored: `navigationTargets.guard.test.js`,
 `plateauBanner.guard.test.js`, `lazyScreens.guard.test.js`.
 
-### S6 — activation instrumentation — **NOT DONE (see §4).**
+### S6 — activation instrumentation — **SPEC READY, BUILD ON FABLE.**
+Full execute-only spec: `docs/s6-build-spec-2026-07-03.md`. Founder chose "flip
+to Fable, then build". Research finding recorded there: both S6 metrics
+(sessions-in-first-14-days AND the 90s install-to-first-set benchmark) are
+largely derivable from already-shipped events (`account_created`,
+`workout_started/completed`, durable `first_workout_logged`), so the safest S6
+may add NO new event and NO migration — the Fable window decides (Option A
+derive, recommended, vs Option B one gated event).
 
 ---
 
 ## 4. RESUME POINT — WHAT REMAINS
 
-Wave A is **two items** from complete:
+Wave A is **one item** from complete (C12 shipped `4e9c3d5`):
 
-1. **C12 — training-reminder push references the plan name.**
-   `src/lib/notifications/trainingReminders.js:129-132` deliberately kept
-   generic to avoid a DB dependency (comment says so). HANDS-ON (locked
-   `docs/NOTIFICATIONS_LOCKED.md`). Wiring only: pass the active plan/routine
-   name into the scheduled copy without weakening quiet-hours/ED suppression.
-
-2. **S6 — day-14 activation instrumentation.** Research: <3 sessions in first
-   14 days = 3–4× churn. `migrate_099_funnel_telemetry.sql` already added the
-   funnel events; `src/lib/telemetry/firsts.js` + `engineTelemetry.js` are the
-   rails; install date derives from `session.user.created_at`
-   (`RootNavigator.js:1015`). Add ONE derived event/report for sessions-in-
-   first-14-days (behaviour only, allow-listed, opt-out honoured, NO health
-   values). Needs a small ADDITIVE cloud migration for the new event name in
-   the server CHECK list (founder-applied manually per supabase rules).
-   Adopt the 90s install-to-first-set benchmark as a standing test.
+1. **S6 — day-14 activation instrumentation.** BUILD ON FABLE (founder's call
+   2026-07-03). Full execute-only spec: `docs/s6-build-spec-2026-07-03.md` —
+   read that, not this paragraph. Key finding: both metrics
+   (sessions-in-first-14-days AND the 90s install-to-first-set benchmark) are
+   largely derivable from already-live events (`account_created`,
+   `workout_started/completed`, durable `first_workout_logged`), all
+   opt-out-gated and dual-allow-listed. So the safest S6 may add NO new event
+   and NO migration (Option A, recommended); the Fable window decides A vs B
+   (one gated event). Guardrail: no health values in any payload, ever.
 
 Then: **Wave A final hostile self-review of the whole wave diff, full
 `jest --runInBand` gate, delivery note.**
@@ -261,12 +268,11 @@ Then: **Wave A final hostile self-review of the whole wave diff, full
 
 ## 5. VERIFICATION STATE AT HANDOVER
 
-- Local gate green CI-identically: `npm run lint` (0 errors), `npx tsc
-  --noEmit` (clean), `npm run check:imports` (OK, 767 files), `npx jest
-  --runInBand` → **391 suites / 5,462 passed / 5 skipped / exit 0**.
+- Local gate green CI-identically at `4e9c3d5` (C12): `npm run lint` (0
+  errors), `npx tsc --noEmit` (clean), `npm run check:imports` (OK, 767 files),
+  `npx jest --runInBand` → **391 suites / 5,469 passed / 5 skipped / exit 0**.
 - CI: last founder-confirmed green APK on `df4f3cf` ("the apk launches");
-  subsequent pushes passed the identical local release gate. A fresh APK is
-  building from the latest push (`e82b4c2`).
+  subsequent pushes passed the identical local release gate.
 - New guard tests this session (all green): `bottomBarInset.guard`,
   `tabIcons.guard`, `planDisplay`, `navigateCrossTab.guard`,
   `intentPromptOptOut.guard`, plus updates to `navigationTargets.guard`,
