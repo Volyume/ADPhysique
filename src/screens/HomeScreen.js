@@ -49,7 +49,7 @@ import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 // Pro-guarded CoachOutput, where its only audience (free tier) could never
 // see it. Pure detection (the locked Move #4 detector) fed from data Home
 // already loads; the badge only navigates to ProUpgrade.
-import DifferentialBadge from '../components/DifferentialBadge';
+import AttentionCard, { pickAttentionVariant } from '../components/AttentionCard';
 import { detectDifferentialTrigger } from '../lib/differentialPaywall';
 import { mapCalsAdherence } from '../lib/weeklyCoach';
 import { getRecentIntakeSummary } from '../lib/food/db';
@@ -968,6 +968,17 @@ export default function HomeScreen({ navigation, route }) {
         supersetGroupId: routineExercise?.supersetGroupId ?? null,
       }));
       pendingStartRef.current = { routineId: routine.id, initialExercises, starter, routineName: routine.name };
+      // D2 (founder decision 2026-07-03, Option A): a user who opted out of
+      // the readiness ask starts immediately with NO readiness signal — the
+      // exact Skip path, all-null inputs. Coaching input is never fabricated;
+      // with nothing stated, session adjustments simply do not fire
+      // (READINESS_RULES has no null key). Re-read each start so flipping the
+      // Settings toggle takes effect on the very next session.
+      const promptOff = await AsyncStorage.getItem('@volyume_intent_prompt_off').catch(() => null);
+      if (promptOff === 'true') {
+        confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null });
+        return;
+      }
       // Clear any readiness from a previously-cancelled prompt so each session
       // starts from blank chips.
       setReadiness({ soreness24hBefore: null, sleepQuality: null, energyScore: null });
@@ -1249,67 +1260,23 @@ export default function HomeScreen({ navigation, route }) {
           </TouchableOpacity>
         )}
 
-        {/* ── COMP-023 / A3 trial coach ledger (second priority). The one-line
-            value banner grew the "what your coach is reading" rows: live
-            counts vs the published first-review thresholds, visible from day
-            0. The neutral (ED-flag) variant has no rows by construction. ── */}
+        {/* ── D3: the "worth your attention" card, trial variant (second
+            priority, its historical slot). The card class and its internal
+            priority live in AttentionCard; only the slot lives here. ── */}
         {showTrialCountdownBanner && (
-          <TouchableOpacity
-            style={styles.trialBanner}
-            onPress={() => {
+          <AttentionCard
+            variant="trial"
+            trialBanner={trialBanner}
+            onTrialPress={() => {
               if (trialBanner.variant === 'S3') {
                 scrollRef.current?.scrollTo({ y: 0, animated: true });
               } else {
                 navigateCrossTab(navigation, 'ProfileTab', 'WeeklyCheckIn');
               }
             }}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            accessibilityLabel={trialBanner.line}
-          >
-            <View style={styles.trialBannerTopRow}>
-              <Ionicons name="sparkles" size={18} color={colors.primary} />
-              <Text style={styles.trialBannerText} numberOfLines={2}>{trialBanner.line}</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
-              <TouchableOpacity
-                onPress={dismissTrialBanner}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel="Dismiss trial banner"
-              >
-                <Ionicons name="close" size={15} color={colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-            {trialBanner.ledger?.rows?.length ? (
-              <View style={styles.trialLedger}>
-                <Text style={styles.trialLedgerTitle}>{trialBanner.ledger.title}</Text>
-                {trialBanner.ledger.rows.map((row) => (
-                  <View key={row.key} style={styles.trialLedgerRow}>
-                    <Ionicons
-                      name={row.done ? 'checkmark-circle' : 'ellipse-outline'}
-                      size={14}
-                      color={row.done ? colors.success : colors.textMuted}
-                    />
-                    <Text style={[styles.trialLedgerRowText, row.done && styles.trialLedgerRowTextDone]}>
-                      {row.label}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-            {/* Wave A B3: the trial should never be a black box. One quiet
-                link to the methodology page, from day 0, before the first
-                coaching decision ever lands. Cross-tab: Methodology lives in
-                the ProfileTab stack (F4 rule, RootNavigator.js:616-633). */}
-            <TouchableOpacity
-              onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'Methodology', { source: 'trial_banner' })}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="link"
-              accessibilityLabel="How Precision Coaching works"
-            >
-              <Text style={styles.trialBannerLink}>How Precision Coaching works</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
+            onTrialDismiss={dismissTrialBanner}
+            onMethodology={() => navigateCrossTab(navigation, 'ProfileTab', 'Methodology', { source: 'trial_banner' })}
+          />
         )}
 
         {/* ── Recovery week banner ── */}
@@ -1371,40 +1338,20 @@ export default function HomeScreen({ navigation, route }) {
           </TouchableOpacity>
         )}
 
-        {/* ── Free weekly coach one-liner (founder decision 4c) ── */}
-        {showFreeCoachLine && (
-          <View style={styles.freeCoachCard}>
-            <View style={styles.freeCoachTopRow}>
-              <Ionicons name="pulse-outline" size={16} color={colors.primary} style={{ marginTop: spacing.hair }} />
-              <Text style={styles.freeCoachLineText}>{freeCoachLine}</Text>
-              <TouchableOpacity
-                onPress={dismissFreeCoachLine}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel="Dismiss this week's summary"
-              >
-                <Ionicons name="close" size={15} color={colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('ProUpgrade')}
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-              accessibilityRole="button"
-              accessibilityLabel="Pro reads the full story. Learn about Pro coaching."
-            >
-              <Text style={styles.freeCoachFooter}>Pro reads the full story</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* ── NAV-4 differential paywall badge (lowest banner priority).
-            Locked Move #4 copy + CTA; 'Not now' dismisses for the week. No
-            billing logic here: the CTA only navigates to ProUpgrade, which is
-            registered in this stack. ── */}
-        {showDifferentialBadge && (
-          <DifferentialBadge
+        {/* ── D3: the "worth your attention" card, low slot (free tier). The
+            internal priority — free_line over differential — is decided by
+            pickAttentionVariant, the card class's single decision point. ── */}
+        {(showFreeCoachLine || showDifferentialBadge) && (
+          <AttentionCard
+            variant={pickAttentionVariant({
+              freeLine: showFreeCoachLine,
+              differential: showDifferentialBadge,
+            })}
+            freeCoachLine={freeCoachLine}
+            onFreeLineDismiss={dismissFreeCoachLine}
+            onUpgrade={() => navigation.navigate('ProUpgrade')}
             differential={differentialBanner}
-            onTapCta={(action) => {
+            onDifferentialCta={(action) => {
               if (action === 'shown') {
                 trackEngineEvent(user?.id, 'paywall_shown', {
                   surface: `differential_${differentialBanner.trigger}`,
@@ -1465,6 +1412,12 @@ export default function HomeScreen({ navigation, route }) {
             cardioEnabled={userProfile?.cardioEnabled !== false}
             onCardioPress={() => navigation.navigate('LogCardio')}
             onOpenTrend={() => navigateCrossTab(navigation, 'ProgressTab', 'Analytics', { focusWeightTrend: true })}
+            // D1 (founder decision 2026-07-03): the verb-only meal chip.
+            // FoodSearch scoped to the inferred slot, recents/usuals on top;
+            // entryDate defaults to today inside FoodSearch. Pro-only by the
+            // strip's existing mount gate, so the chip is hidden, not locked,
+            // on free.
+            onLogMeal={(slot) => navigateCrossTab(navigation, 'DiaryTab', 'FoodSearch', { mealSlot: slot })}
           />
         )}
 
@@ -2031,6 +1984,24 @@ export default function HomeScreen({ navigation, route }) {
               onPress={() => confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null })}
             >
               <Text style={styles.intentSkipText}>Skip</Text>
+            </TouchableOpacity>
+
+            {/* D2 (Option A): the standing opt-out. Persists, then starts this
+                session exactly as Skip would — null intent, no readiness, no
+                fabricated input. Reversible in Settings, Coaching. */}
+            <TouchableOpacity
+              style={styles.intentOptOut}
+              onPress={() => {
+                AsyncStorage.setItem('@volyume_intent_prompt_off', 'true').catch(() => {});
+                confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null });
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Don't ask before each session"
+            >
+              <Text style={styles.intentOptOutText}>Don't ask before each session</Text>
+              <Text style={styles.intentOptOutSub}>
+                Without it, sessions are not adjusted to how you're feeling. Turn it back on any time in Settings, Coaching.
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -2659,6 +2630,22 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textMuted,
   },
+  intentOptOut: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  intentOptOutText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  intentOptOutSub: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.xxs,
+    lineHeight: 16,
+  },
 
   proTeaserCard: {
     backgroundColor: colors.surface,
@@ -2693,35 +2680,8 @@ const styles = StyleSheet.create({
   },
   // COMP-023 trial value banner, grown into the A3 coach ledger card —
   // headline row plus the live threshold rows; matches the banner system.
-  trialBanner: {
-    backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-  },
-  trialBannerTopRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-  },
-  trialBannerText: {
-    ...type.bodySm,
-    flex: 1, fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
-  },
-  trialLedger: {
-    marginTop: spacing.sm, gap: spacing.xs,
-  },
-  trialLedgerTitle: {
-    ...type.caption, color: colors.textMuted,
-  },
-  trialLedgerRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-  },
-  trialLedgerRowText: {
-    ...type.bodySm, color: colors.textSecondary,
-  },
-  trialLedgerRowTextDone: {
-    color: colors.textPrimary,
-  },
-  trialBannerLink: { ...type.caption, color: colors.primary, marginTop: spacing.xs },
+  // D3: the trial-banner and free-coach-line styles moved to AttentionCard
+  // with their JSX (one card class, internal priority recorded there).
   coachBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
   coachBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
   coachBannerBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 17 },
@@ -2749,25 +2709,6 @@ const styles = StyleSheet.create({
     ...type.bodySm,
     flex: 1, fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
-  },
-
-  // Free-tier weekly one-liner (founder decision 4c). One line plus a
-  // quiet Pro footer; matches the banner system's tokens.
-  freeCoachCard: {
-    backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    gap: spacing.xs,
-  },
-  freeCoachTopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
-  freeCoachLineText: {
-    ...type.bodySm,
-    flex: 1, fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
-  },
-  freeCoachFooter: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.primary, marginLeft: spacing.sm + 16,
   },
 
   // Nutrition phase sync banner

@@ -25,8 +25,12 @@ describe('A3: Home coach ledger (day 0, pre-first-review)', () => {
     expect(HOME).not.toMatch(/trialDay < 2 \|\| trialDay > 7/);
   });
   test('ledger rows render with done/open marks', () => {
-    expect(HOME).toMatch(/trialBanner\.ledger\?\.rows\?\.length/);
-    expect(HOME).toMatch(/row\.done \? 'checkmark-circle' : 'ellipse-outline'/);
+    // D3: the trial banner's JSX (ledger rows included) moved into the
+    // merged AttentionCard; Home still owns the slot and passes the banner.
+    const CARD = read('../../components/AttentionCard.js');
+    expect(CARD).toMatch(/trialBanner\.ledger\?\.rows\?\.length/);
+    expect(CARD).toMatch(/row\.done \? 'checkmark-circle' : 'ellipse-outline'/);
+    expect(HOME).toMatch(/trialBanner=\{trialBanner\}/);
   });
 });
 

@@ -118,12 +118,18 @@ describe('NAV-4: the loader is honest, gated and suppressed', () => {
 
 describe('NAV-4: no billing logic on Home', () => {
   test("the CTA only navigates to ProUpgrade (registered in this stack); never the ProfileStack Paywall", () => {
-    const site = HOME.indexOf('showDifferentialBadge && (');
+    // D3: the badge renders inside the merged AttentionCard low slot.
+    const site = HOME.indexOf('showFreeCoachLine || showDifferentialBadge');
     expect(site).toBeGreaterThan(-1);
     const block = HOME.slice(site, site + 1600);
     expect(block).toMatch(/navigation\.navigate\('ProUpgrade'\)/);
     expect(HOME).not.toMatch(/navigate\(\s*['"]Paywall['"]/);
     // No purchase/restore/entitlement calls ride in with the banner.
     expect(HOME).not.toMatch(/playBilling|requestPurchase|restorePurchases|startCascade/);
+    // And the card class itself stays billing-free.
+    const CARD = require('fs').readFileSync(
+      require('path').resolve(__dirname, '..', 'components', 'AttentionCard.js'), 'utf8'
+    );
+    expect(CARD).not.toMatch(/playBilling|requestPurchase|restorePurchases|startCascade/);
   });
 });
