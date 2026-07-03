@@ -15,18 +15,24 @@ import { ONBOARDING_QUIZ_FIRST } from '../lib/onboarding/quizFlow';
 const HERO = require('../../assets/volyume-wordmark.png');
 const HERO_ASPECT = 1032 / 277;
 
-const FREE_BULLETS = [
-  'Unlimited workout logging',
-  'Exercise library and Personal Records',
-  'Plan library and custom plan builder',
-  'Training blocks and full progress stats',
-];
-
-const PRO_BULLETS = [
+// OB-1 (founder decision 2026-07-02): Welcome is TRIAL-FIRST. The old
+// Free/Pro pair was a dead control: both cards routed to the same sign-up
+// (the intent param had no consumer) and every consenting new user starts
+// the 14-day trial at Article 9 regardless. One honest CTA now says what
+// actually happens, and the free tier is stated as what remains after the
+// trial rather than sold as a competing choice.
+const TRIAL_BULLETS = [
   'A plan built around your schedule, goals, and experience level.',
   'Your training and nutrition adjust as your body responds.',
   'Personalised calorie and protein targets, updated as your goals change.',
   'After every check-in, your coach explains what changed, and why.',
+];
+
+const AFTER_TRIAL_BULLETS = [
+  'Unlimited workout logging',
+  'Exercise library and Personal Records',
+  'Plan library and custom plan builder',
+  'Training blocks and full progress stats',
 ];
 
 export default function WelcomeScreen({ navigation }) {
@@ -48,22 +54,18 @@ export default function WelcomeScreen({ navigation }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Per IDENTITY_AND_OWNERSHIP_LOCKED.md decision 1: no anonymous
-  // mode. Both Free and Pro CTAs route to the sign-up flow. Free
-  // users still get the Free tier, they just create a real account
-  // first so their data is cloud-backed and cross-device safe by
-  // construction. Tier flip happens post-auth via
-  // LoginScreen.newAccountSetup (Pro) or the same flow defaulting to
-  // Free if the user doesn't enable Pro.
-  function chooseTier(tier) {
-    // COMP-030: when quiz-first is on, the Pro CTA opens the pre-account quiz
-    // (the plan takes shape before the account wall). Free path is unchanged,
-    // and when the flag is off both CTAs route straight to sign-up as before.
-    if (tier === 'pro' && ONBOARDING_QUIZ_FIRST) {
+  // Per IDENTITY_AND_OWNERSHIP_LOCKED.md decision 1: no anonymous mode.
+  // The one CTA routes to sign-up; the trial starts at Article 9 as it
+  // always did (that locked rule is untouched by this reframe), and a
+  // non-subscriber steps down to the free tier afterwards.
+  function startTrial() {
+    // COMP-030: when quiz-first is on, the CTA opens the pre-account quiz
+    // (the plan takes shape before the account wall).
+    if (ONBOARDING_QUIZ_FIRST) {
       navigation.navigate('QuizTraining');
       return;
     }
-    navigation.navigate('Login', { intent: tier === 'pro' ? 'pro_signup' : 'free_signup' });
+    navigation.navigate('Login', { intent: 'pro_signup' });
   }
 
   return (
@@ -76,18 +78,16 @@ export default function WelcomeScreen({ navigation }) {
 
         <Animated.View style={[styles.cards, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
 
-          {/* Pro card, top, prominent */}
-          <TouchableOpacity style={styles.proCard} onPress={() => chooseTier('pro')} activeOpacity={0.88}>
+          {/* OB-1: the one trial card. Everyone starts with the full app for
+              14 days; the CTA says exactly that. */}
+          <TouchableOpacity style={styles.proCard} onPress={startTrial} activeOpacity={0.88}>
             <View style={styles.proCardHeader}>
               <View style={styles.proIconWrap}>
                 <Ionicons name="sparkles" size={20} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <View style={styles.proTitleRow}>
-                  <Text style={styles.proTitle}>Pro</Text>
-                  <View style={styles.betaBadge}>
-                    <Text style={styles.betaBadgeText}>Free for 14 days</Text>
-                  </View>
+                  <Text style={styles.proTitle}>The full app, free for 14 days</Text>
                 </View>
                 <Text style={styles.proSubtitle}>A coach that reads your training and adjusts your plan.</Text>
               </View>
@@ -96,8 +96,7 @@ export default function WelcomeScreen({ navigation }) {
             <View style={styles.divider} />
 
             <View style={styles.bullets}>
-              <Text style={styles.bulletHeader}>Everything in Free, plus:</Text>
-              {PRO_BULLETS.map(b => (
+              {TRIAL_BULLETS.map(b => (
                 <View key={b} style={styles.bulletRow}>
                   <Ionicons name="checkmark-circle" size={15} color={colors.primary} />
                   <Text style={styles.bulletText}>{b}</Text>
@@ -111,38 +110,39 @@ export default function WelcomeScreen({ navigation }) {
 
             <Text style={styles.trialNote}>
               {monthlyPrice
-                ? `Plus a free week on ${storeName()} when you subscribe. Then ${monthlyPrice} a month.`
-                : `Plus a free week on ${storeName()} when you subscribe. Then a monthly subscription.`}
+                ? `No card needed. Afterwards it's ${monthlyPrice} a month on ${storeName()}, or carry on free.`
+                : `No card needed. Afterwards it's a monthly subscription on ${storeName()}, or carry on free.`}
             </Text>
 
             <View style={styles.proCtaRow}>
-              <Text style={styles.proCtaText}>Go Pro</Text>
+              <Text style={styles.proCtaText}>Start your 14 days</Text>
               <Ionicons name="arrow-forward" size={16} color={colors.onPrimary} />
             </View>
           </TouchableOpacity>
 
-          {/* Free card, secondary */}
-          <TouchableOpacity style={styles.freeCard} onPress={() => chooseTier('free')} activeOpacity={0.88}>
+          {/* OB-1: the free tier stated honestly as what remains after the
+              trial. Informational, not a competing choice (the old Free CTA
+              was a dead control: it routed to the identical sign-up). */}
+          <View style={styles.freeCard}>
             <View style={styles.freeCardHeader}>
               <View style={styles.freeIconWrap}>
                 <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.freeTitle}>Free</Text>
-                <Text style={styles.freeSubtitle}>Everything you need to log your training.</Text>
+                <Text style={styles.freeTitle}>Yours free, always</Text>
+                <Text style={styles.freeSubtitle}>If you don&apos;t subscribe after the trial, these stay.</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </View>
 
             <View style={styles.freeBullets}>
-              {FREE_BULLETS.map(b => (
+              {AFTER_TRIAL_BULLETS.map(b => (
                 <View key={b} style={styles.bulletRow}>
                   <Ionicons name="checkmark" size={14} color={colors.textSecondary} />
                   <Text style={styles.freeBulletText}>{b}</Text>
                 </View>
               ))}
             </View>
-          </TouchableOpacity>
+          </View>
         </Animated.View>
 
         {/* Trust row (COMP-012): one muted, non-interactive line that
@@ -222,11 +222,6 @@ const styles = StyleSheet.create({
   },
   proTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   proTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.black, color: colors.textPrimary },
-  betaBadge: {
-    backgroundColor: colors.primary, borderRadius: 4,
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-  },
-  betaBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary, letterSpacing: 0.5 },
   proSubtitle: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
 
   divider: { height: 1, backgroundColor: colors.border, marginHorizontal: spacing.lg },
