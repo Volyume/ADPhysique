@@ -5,7 +5,8 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { format, differenceInWeeks } from 'date-fns';
+import { format } from 'date-fns/format';
+import { differenceInWeeks } from 'date-fns/differenceInWeeks';
 import SvgBarSparkline from '../components/SvgBarSparkline';
 import { useFocusEffect } from '@react-navigation/native';
 

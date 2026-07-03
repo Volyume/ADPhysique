@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';

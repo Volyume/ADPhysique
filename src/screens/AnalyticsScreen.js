@@ -5,7 +5,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useScrollToTop } from '@react-navigation/native';
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 
 import { colors, fontSize, fontWeight, spacing, radius, volumeColors, volumeStatusColor, type, circle } from '../styles/theme';
 import Card from '../components/Card';

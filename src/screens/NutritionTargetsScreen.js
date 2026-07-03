@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle } from '../styles/theme';
 import { formatEnergy, energyUnitLabel } from '../lib/format';

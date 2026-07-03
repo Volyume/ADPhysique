@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import VolyumeChart from '../components/VolyumeChart';
 import WindowChips from '../components/WindowChips';
 import {

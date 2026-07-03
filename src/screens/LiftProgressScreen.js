@@ -5,7 +5,7 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import AnimatedEntrance from '../components/AnimatedEntrance';

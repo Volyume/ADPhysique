@@ -4,7 +4,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns/format';
+import { parseISO } from 'date-fns/parseISO';
 
 // date-fns format() throws "Invalid time value" if given an Invalid Date.
 // Body-metric rows pulled from older cloud snapshots occasionally have a

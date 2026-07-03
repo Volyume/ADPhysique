@@ -4,11 +4,13 @@ import { View, Text, StyleSheet, TouchableOpacity, RefreshControl } from 'react-
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import {
-  format,
-  startOfMonth, getDaysInMonth, getDay,
-  addMonths, subMonths, isSameDay,
-} from 'date-fns';
+import { format } from 'date-fns/format';
+import { startOfMonth } from 'date-fns/startOfMonth';
+import { getDaysInMonth } from 'date-fns/getDaysInMonth';
+import { getDay } from 'date-fns/getDay';
+import { addMonths } from 'date-fns/addMonths';
+import { subMonths } from 'date-fns/subMonths';
+import { isSameDay } from 'date-fns/isSameDay';
 import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../styles/theme';
 import PressableCard from '../components/PressableCard';
 import Card from '../components/Card';
