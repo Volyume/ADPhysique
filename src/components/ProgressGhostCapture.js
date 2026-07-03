@@ -199,6 +199,10 @@ export default function ProgressGhostCapture({
 
   const capture = useCallback(async () => {
     if (capturing) return;
+    // Live-tier re-check (ProgressPhotosScreen write-guard class): capture is a
+    // write. If the camera is open across a pro-to-free flip, the shutter must
+    // not save a photo. Mirrors the viewer-delete and library-add guards.
+    if (useAppStore.getState().tier !== 'pro') return;
     const cam = cameraRef.current;
     if (!cam?.takePictureAsync) return;
     setCapturing(true);

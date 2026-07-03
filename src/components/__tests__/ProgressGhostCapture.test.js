@@ -16,6 +16,7 @@
 import { create, act } from 'react-test-renderer';
 
 import ProgressGhostCapture from '../ProgressGhostCapture';
+import useAppStore from '../../store/useAppStore';
 
 // Mutable permission the mocked hook returns (mock-prefixed so the jest.mock
 // factory may close over it).
@@ -103,6 +104,7 @@ test('exposes an adjustable opacity control for the overlay', async () => {
 });
 
 test('capture saves the photo, then records the pose, then calls onCaptured (in order)', async () => {
+  act(() => { useAppStore.setState({ tier: 'pro' }); });
   const onCaptured = jest.fn();
   const tree = await render({ referencePhoto: REF, pose: 'side', onCaptured });
 
@@ -120,6 +122,25 @@ test('capture saves the photo, then records the pose, then calls onCaptured (in 
   expect(onCaptured).toHaveBeenCalledWith('1700000000000.jpg');
   // Order is load-bearing: the meta row keys off the saved filename.
   expect(order).toEqual(['save', 'meta']);
+});
+
+test('capture is blocked when the live tier is no longer pro (mid-modal flip)', async () => {
+  act(() => { useAppStore.setState({ tier: 'pro' }); });
+  const onCaptured = jest.fn();
+  const tree = await render({ referencePhoto: REF, pose: 'side', onCaptured });
+
+  // The tier flips to free while the capture modal is open.
+  act(() => { useAppStore.setState({ tier: 'free' }); });
+
+  const captureBtn = tree.root.find((n) => n.props?.accessibilityLabel === 'Take photo');
+  await act(async () => {
+    await captureBtn.props.onPress();
+  });
+
+  // No write, no meta, no callback: the shutter is inert for a lapsed user.
+  expect(saveProgressPhoto).not.toHaveBeenCalled();
+  expect(upsertPhotoMeta).not.toHaveBeenCalled();
+  expect(onCaptured).not.toHaveBeenCalled();
 });
 
 test('a hard-denied permission shows the calm photo-library fallback, no crash', async () => {
