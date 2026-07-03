@@ -197,12 +197,17 @@ export default function MealPlanScreen({ navigation }) {
       const n = await applyPlanDayToDiary(user.id, day, { entryDate: todayLocalKey() });
       const verb = clearPlannedFirst ? "replaced today's plan" : 'logged to today';
       toast.show(n > 0 ? `${n} foods ${verb}.` : 'Nothing to log on this day.', { variant: n > 0 ? 'success' : 'info' });
+      // A successful add lands the user on the result (founder 2026-07-03:
+      // staying here read as nothing happening). Diary is this stack's
+      // root, so navigate pops back to it; the toast rides the transition
+      // via the app-level provider.
+      if (n > 0) navigation.navigate('Diary');
     } catch (_) {
       toast.show("Couldn't log the day. Try again.", { variant: 'error' });
     } finally {
       setBusy(false);
     }
-  }, [user?.id, day, toast]);
+  }, [user?.id, day, toast, navigation]);
 
   const handleLogDay = useCallback(async () => {
     if (!user?.id || !day || busy) return;
@@ -254,13 +259,16 @@ export default function MealPlanScreen({ navigation }) {
       } else {
         const skipNote = skippedDays > 0 ? ` ${skippedDays} day${skippedDays === 1 ? '' : 's'} left as-is.` : '';
         toast.show(`${addedDays} day${addedDays === 1 ? '' : 's'} added to your diary.${skipNote}`, { variant: 'success' });
+        // Same landing rule as writeLogDay: a successful add returns the
+        // user to the diary they just filled.
+        navigation.navigate('Diary');
       }
     } catch (_) {
       toast.show("Couldn't schedule the week. Try again.", { variant: 'error' });
     } finally {
       setBusy(false);
     }
-  }, [user?.id, plan, busy, toast]);
+  }, [user?.id, plan, busy, toast, navigation]);
 
   // "Training today?" on the day in view (rethink §3.2): the day's
   // training/rest variant follows the user's answer, never an asserted
