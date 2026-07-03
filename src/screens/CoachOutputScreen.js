@@ -78,7 +78,7 @@ import Card from '../components/Card';
 // idle → loading → success morph; the settle wrappers below animate the
 // swap into the settled row state (Applied chip, or the NU-3 hold line).
 import Button from '../components/Button';
-import Reanimated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Reanimated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { selectCoachOutputZones } from '../lib/coachOutputZones';
 import { isGreatWeek } from '../lib/shareCard/greatWeek';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, stateColors, type, motion } from '../styles/theme';
@@ -965,7 +965,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // saw on tapping the notification.
   const weekStart = route.params?.weekStart ?? localWeekStartMs();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, userProfile, units, saveLocalProfile, tier: storeTier, energyUnit } = useAppStore(useShallow(s => ({
+  const { user, userProfile, units, saveLocalProfile, tier: storeTier, energyUnit, reduceMotion } = useAppStore(useShallow(s => ({
     user: s.user,
     userProfile: s.userProfile,
     units: s.units,
@@ -973,6 +973,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     tier: s.tier,
     // NU-6: kJ display preference, same read as the food domain screens.
     energyUnit: s.accessibility?.energyUnit ?? 'kcal',
+    reduceMotion: !!s.accessibility?.reduceMotion,
   })));
 
   const [output, setOutput] = useState(null);
@@ -2103,6 +2104,14 @@ export default function CoachOutputScreen({ navigation, route }) {
     }
   };
 
+  // E9: the weekly reveal is a staged disclosure. Four beats land in
+  // sequence on the UI thread: header, the coach's read, the verdict (the
+  // hero gets the long beat so the main move lands with weight), then the
+  // evidence (chips + ledger). Everything below the ledger renders static;
+  // the SAFETY zone and held decisions are deliberately NEVER animated.
+  const stage = (i, duration = motion.enter) =>
+    reduceMotion ? undefined : FadeInDown.duration(duration).delay(i * motion.micro);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScrollView
@@ -2110,10 +2119,10 @@ export default function CoachOutputScreen({ navigation, route }) {
         showsVerticalScrollIndicator={false}
       >
         {/* Week header */}
-        <View style={styles.weekHeader}>
+        <Reanimated.View entering={stage(0)} style={styles.weekHeader}>
           <Text style={styles.weekLabel}>{weekLabel}</Text>
           <Text style={styles.weekRange}>{weekRangeLabel(weekStart)}</Text>
-        </View>
+        </Reanimated.View>
 
         {/* U-B-3 §4: the local headline duplicate was dropped — the engine
             coachResponse lead below is the single narration source. */}
@@ -2122,7 +2131,8 @@ export default function CoachOutputScreen({ navigation, route }) {
             acknowledgement and the plain-language trend read lead the
             card before any decision detail. */}
         {(coachResponse.acknowledgement || coachResponse.interpretation) ? (
-          <View
+          <Reanimated.View
+            entering={stage(1)}
             style={styles.coachLeadCard}
             accessible
             accessibilityLabel={[coachResponse.acknowledgement, coachResponse.interpretation].filter(Boolean).join(' ')}
@@ -2133,7 +2143,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             {coachResponse.interpretation ? (
               <Text style={styles.coachLeadInterpretation}>{coachResponse.interpretation}</Text>
             ) : null}
-          </View>
+          </Reanimated.View>
         ) : null}
 
         {/* 2. The VERDICT — hero zone (U-B-1 §3 / A1 03 gap #1): the engine's
@@ -2143,14 +2153,14 @@ export default function CoachOutputScreen({ navigation, route }) {
             screen's ONE amber-filled Apply. When primary.domain is null
             (on-target/holding), no hero shows. */}
         {heroCardEl ? (
-          <View style={styles.heroZone}>
+          <Reanimated.View entering={stage(2, motion.hero)} style={styles.heroZone}>
             <Text style={styles.heroLabel}>This week&apos;s main move</Text>
             {heroCardEl}
-          </View>
+          </Reanimated.View>
         ) : null}
 
         {/* 3. Trend chips */}
-        <View style={styles.chipsRow}>
+        <Reanimated.View entering={stage(3)} style={styles.chipsRow}>
           <StatChip
             icon={trendIcon}
             iconColor={trendColor}
@@ -2176,7 +2186,7 @@ export default function CoachOutputScreen({ navigation, route }) {
               valueColor={colors.warning}
             />
           )}
-        </View>
+        </Reanimated.View>
 
         {/* Opt-in "share your week" — only on a genuinely great, ED-safe week
             (blueprint §5/§7). Routes through the qualitative, ED-safe recap card. */}
@@ -2195,7 +2205,9 @@ export default function CoachOutputScreen({ navigation, route }) {
         {/* 4. The working/off ledger (A1 03 gap #1): the old What's-working
             card and What-was-off block merged into one two-group object.
             Same bullets, same builders, one card. */}
-        <LedgerCard working={whatWorking} off={buildOffItems(output, checkin)} />
+        <Reanimated.View entering={stage(4)}>
+          <LedgerCard working={whatWorking} off={buildOffItems(output, checkin)} />
+        </Reanimated.View>
 
         {/* SECONDARY zone (U-B-1 §3): the remaining adjustments, collapsed under
             a "More adjustments (N)" expander. Each card keeps its own Apply +
