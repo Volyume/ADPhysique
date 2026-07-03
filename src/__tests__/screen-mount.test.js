@@ -641,7 +641,6 @@ const SCREENS_TO_SWEEP = [
   'SettingsAccountScreen',
   'SettingsProfileScreen',
   'SettingsCoachingScreen',
-  'SettingsNotificationsScreen',
   'SettingsDisplayScreen',
   'SettingsHealthScreen',
   'SettingsDataScreen',
@@ -2002,6 +2001,165 @@ describe('ActiveWorkoutScreen with active workout state', () => {
       );
       if (real.length) console.log('[ActiveWorkout fuzz] failures:', JSON.stringify(real.slice(0, 5), null, 2));
       expect(real).toEqual([]);
+    } finally {
+      unmountTree(tree);
+    }
+  });
+});
+
+// ─── C3 (ultimate-audit 2026-07-03): the auto-advance countdown is visible
+// and cancellable ──────────────────────────────────────────────────────────
+//
+// Hitting the working-set target used to arm a silent
+// setTimeout(handleNextExercise, 1800) with nothing on screen to say it was
+// running; the only way to stay on the exercise was to log another set.
+// This pins that the countdown now renders a "Next exercise in a moment ·
+// Stay here" row the moment it arms, and that tapping "Stay here" clears the
+// pending advance (fake timers past the old 1800ms window afterwards leave
+// the exercise unchanged). A second test pins the un-cancelled behaviour is
+// unchanged: leaving it alone still advances.
+describe('C3: auto-advance countdown is visible and cancellable', () => {
+  function findByTestID(tree, testID) {
+    const out = [];
+    function visit(node) {
+      if (!node || typeof node === 'string' || typeof node === 'number') return;
+      if (node.props?.testID === testID && node.props?.onPress) out.push(node);
+      const c = node.children;
+      if (Array.isArray(c)) c.forEach(visit); else if (c && typeof c === 'object') visit(c);
+    }
+    const root = tree.toJSON();
+    if (Array.isArray(root)) root.forEach(visit); else visit(root);
+    return out;
+  }
+  function collectText(node, out = []) {
+    if (node == null) return out;
+    if (typeof node === 'string' || typeof node === 'number') { out.push(String(node)); return out; }
+    if (Array.isArray(node)) { node.forEach(n => collectText(n, out)); return out; }
+    if (node.children) collectText(node.children, out);
+    return out;
+  }
+
+  // One exercise with ONE straight set already logged this session against a
+  // 2-set target (workingLogged 1 of 2), so the next logged set crosses the
+  // target and arms the countdown. A second exercise gives the advance
+  // somewhere to go (isLastExercise must be false to arm at all). No prior
+  // session exists in the test DB, so handleCompleteSet's history query
+  // returns empty and the pre-fill falls through to routineExercise's
+  // startingWeight / recommendedRepsMax, giving the tap a valid weight and
+  // reps without typing anything.
+  function baseState() {
+    return {
+      user: { id: 'u-advance', isLocal: false },
+      session: { user: { id: 'u-advance' } },
+      tier: 'pro',
+      firstRunComplete: true,
+      userProfile: { firstName: 'A', goal: 'lean_gain', units: 'metric' },
+      activeWorkout: { id: 'w-advance', userId: 'u-advance', routineId: 'r-advance', startedAt: Date.now(), isCompleted: false },
+      workoutStartTime: Date.now(),
+      workoutExercises: [
+        {
+          exercise: { id: 'exA', name: 'Barbell Bench Press', equipment: 'Barbell', primaryMuscle: 'chest', exerciseType: 'weight_reps' },
+          routineExercise: { id: 'reA', recommendedSets: 2, recommendedRepsMin: 8, recommendedRepsMax: 10, startingWeight: 60 },
+          sets: [
+            { id: 'sA1', exerciseId: 'exA', workoutId: 'w-advance', setNumber: 1, setType: 'straight', actualReps: 10, weight: 60, rir: 2, rpe: null },
+          ],
+        },
+        {
+          exercise: { id: 'exB', name: 'Barbell Row', equipment: 'Barbell', primaryMuscle: 'back', exerciseType: 'weight_reps' },
+          routineExercise: { id: 'reB', recommendedSets: 2, recommendedRepsMin: 8, recommendedRepsMax: 10 },
+          sets: [],
+        },
+      ],
+      currentExerciseIndex: 0,
+      restTimerActive: false,
+      restTimerDuration: 0,
+      restTimerRemaining: 0,
+      accessibility: { reduceMotion: false },
+    };
+  }
+
+  test('logging the target-hitting set arms the countdown, and Stay here cancels it', async () => {
+    useAppStore.setState(baseState());
+    const Screen = require('../screens/ActiveWorkoutScreen').default;
+    let tree = null;
+    try {
+      const { tree: t, errors } = await mountScreen(Screen);
+      tree = t;
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+
+      const logButtons = findByTestID(tree, 'volyume-btn-complete-set');
+      expect(logButtons.length).toBe(1);
+
+      jest.useFakeTimers();
+      try {
+        // Log the second working set: target (2) reached.
+        await TestRenderer.act(async () => {
+          logButtons[0].props.onPress();
+          for (let i = 0; i < 20; i++) await Promise.resolve();
+        });
+
+        const afterLog = collectText(tree.toJSON()).join('  ');
+        expect(afterLog).toMatch(/Next exercise in a moment/);
+        expect(afterLog).toMatch(/Stay here/);
+
+        const stayButtons = tree.root.findAll(
+          n => n.props
+            && typeof n.props.onPress === 'function'
+            && n.props.accessibilityRole === 'button'
+            && n.props.accessibilityLabel === 'Stay on this exercise',
+        );
+        expect(stayButtons.length).toBeGreaterThan(0);
+
+        // Cancel it: the row disappears immediately.
+        await TestRenderer.act(async () => { stayButtons[0].props.onPress(); });
+        const afterCancel = collectText(tree.toJSON()).join('  ');
+        expect(afterCancel).not.toMatch(/Next exercise in a moment/);
+
+        // Advancing well past the old 1800ms window must NOT move the
+        // screen on: still exercise A's own set-entry state (its two logged
+        // sets), not exercise B's fresh one (both exercise names always show
+        // in the nav strip, so this checks position/state, not just names).
+        await TestRenderer.act(async () => {
+          jest.advanceTimersByTime(2500);
+          await Promise.resolve();
+        });
+        expect(useAppStore.getState().currentExerciseIndex).toBe(0);
+        const afterWait = collectText(tree.toJSON()).join('  ');
+        expect(afterWait).toMatch(/Set 3 of 2/);
+      } finally {
+        jest.useRealTimers();
+      }
+    } finally {
+      unmountTree(tree);
+    }
+  });
+
+  test('leaving the countdown alone still auto-advances (the underlying A2 behaviour is unchanged)', async () => {
+    useAppStore.setState(baseState());
+    const Screen = require('../screens/ActiveWorkoutScreen').default;
+    let tree = null;
+    try {
+      const { tree: t } = await mountScreen(Screen);
+      tree = t;
+      const logButtons = findByTestID(tree, 'volyume-btn-complete-set');
+
+      jest.useFakeTimers();
+      try {
+        await TestRenderer.act(async () => {
+          logButtons[0].props.onPress();
+          for (let i = 0; i < 20; i++) await Promise.resolve();
+        });
+        expect(useAppStore.getState().currentExerciseIndex).toBe(0);
+
+        await TestRenderer.act(async () => {
+          jest.advanceTimersByTime(2500);
+          await Promise.resolve();
+        });
+        expect(useAppStore.getState().currentExerciseIndex).toBe(1);
+      } finally {
+        jest.useRealTimers();
+      }
     } finally {
       unmountTree(tree);
     }

@@ -313,6 +313,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [nextTimeNotes, setNextTimeNotes] = useState([]);  // "next time" coaching notes for this routine
   // Cluster counter for myo-reps / rest-pause: 0 = activation set, 1+ = mini-set N+1
   const autoAdvanceRef = useRef(null);
+  // C3 (audit 2026-07-03): mirrors autoAdvanceRef so the screen can show the
+  // countdown, not just silently run it. Kept in lockstep by cancelAutoAdvance
+  // below, the single place that clears the ref.
+  const [autoAdvanceArmed, setAutoAdvanceArmed] = useState(false);
   const sessionSetsRef = useRef([]);   // tracks sets in this session, used for PR detection
   const warmupHintSeenRef = useRef(false); // show one-liner warmup note only on first warmup of this session
   const finishingRef = useRef(false); // gates handleFinishWorkout so a rapid double-tap can't double-finish
@@ -350,6 +354,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // A ramp anchored to one exercise means nothing for the next.
   useEffect(() => {
     rampAnchorRef.current = null;
+  }, [currentExerciseIndex]);
+
+  // C3: a countdown armed on one exercise must never fire against another,
+  // and must never outlive the screen. handleNextExercise and
+  // handleRemoveExercise already cancel it explicitly for their own
+  // navigation; this is the backstop for every other way currentExerciseIndex
+  // can change (nav-strip tap, swipe), and for unmount.
+  useEffect(() => {
+    return () => cancelAutoAdvance();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentExerciseIndex]);
 
   // First-use info tip highlight
@@ -455,8 +469,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     ? (workoutExercises.find((e, i) => i !== currentExerciseIndex && e.supersetGroupId === currentSGI)?.exercise?.name ?? '')
     : '';
 
+  // C3: the one place that clears the auto-advance ref, so its "armed" state
+  // (drives the "Stay here" row) never drifts from the timer it describes.
+  function cancelAutoAdvance() {
+    if (autoAdvanceRef.current) {
+      clearTimeout(autoAdvanceRef.current);
+      autoAdvanceRef.current = null;
+    }
+    setAutoAdvanceArmed(false);
+  }
+
   function handleNextExercise() {
-    if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+    cancelAutoAdvance();
     // WK-5: skip over exercises Time Crunch dropped (_timeCrunchSkipped). They
     // stay in the list so the action can be reverted, but advancing onto one
     // would let the user log against a slot they were told was dropped. Stop at
@@ -504,7 +528,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           style: 'destructive',
           onPress: () => {
             audit('workout.exercise.removed', { exerciseId: exercise?.id });
-            if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+            cancelAutoAdvance();
             const store = useAppStore.getState();
             const updated = workoutExercises.filter((_, i) => i !== currentExerciseIndex);
             store.setWorkoutExercises(updated);
@@ -1045,10 +1069,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // A2 (audit CL-3): logging ANOTHER set cancels any pending auto-advance.
     // Previously "Log another set" within the 1.8s window still yanked the
     // screen to the next exercise, stranding the extra set's context.
-    if (autoAdvanceRef.current) {
-      clearTimeout(autoAdvanceRef.current);
-      autoAdvanceRef.current = null;
-    }
+    cancelAutoAdvance();
     // Reps required (a cluster override carries its own total). A per-side
     // (unilateral) exercise logs one reps value, done on both sides at the
     // same weight, so it validates and stores like any other set: one
@@ -1266,6 +1287,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         autoAdvanceRef.current = setTimeout(() => {
           handleNextExercise();
         }, 1800);
+        // C3: the wait is silent otherwise, arm the visible "Stay here" row
+        // for exactly as long as the countdown runs.
+        setAutoAdvanceArmed(true);
       }
 
       // Clear ghost, will be re-computed for the next set index on the next render cycle
@@ -2394,6 +2418,25 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </TouchableOpacity>
           ) : null}
 
+          {/* C3 (audit 2026-07-03): the 1.8s move to the next exercise used
+              to be a silent setTimeout — the only way to stay was to log
+              another set. Make the wait visible and give it its own
+              cancel, alongside the "Log another set" affordance above. */}
+          {autoAdvanceArmed && targetComplete && !extraSetArmed ? (
+            <View style={styles.autoAdvanceRow}>
+              <Text style={styles.autoAdvanceRowText}>Next exercise in a moment</Text>
+              <Text style={styles.autoAdvanceRowDot}> · </Text>
+              <TouchableOpacity
+                onPress={cancelAutoAdvance}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Stay on this exercise"
+              >
+                <Text style={styles.autoAdvanceRowAction}>Stay here</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
           {/* Logged sets sit ABOVE the action row (COMP-001): the session
               receipt builds above the fold, so each logged set is visible
               without scrolling past secondary actions. */}
@@ -3407,6 +3450,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
   },
   extraSetBtnPromotedText: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.primary, letterSpacing: 0.6 },
+  // C3: quiet inline row for the auto-advance countdown, sits under the
+  // "Log another set" button so it reads as one calm sentence with a
+  // tappable ending, not another banner competing for attention.
+  autoAdvanceRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingVertical: spacing.sm,
+  },
+  autoAdvanceRowText: { ...type.caption, color: colors.textMuted },
+  autoAdvanceRowDot: { ...type.caption, color: colors.textMuted },
+  autoAdvanceRowAction: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
   // A2: the pinned action bar. Sits above the home indicator; the scroll's
   // bottom spacer keeps content clear of it.
   bottomBar: {
