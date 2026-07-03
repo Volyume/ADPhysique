@@ -75,7 +75,6 @@ const SettingsScreen = lazyScreen(() => require('../screens/SettingsScreen').def
 const SettingsAccountScreen = lazyScreen(() => require('../screens/SettingsAccountScreen').default);
 const SettingsProfileScreen = lazyScreen(() => require('../screens/SettingsProfileScreen').default);
 const SettingsCoachingScreen = lazyScreen(() => require('../screens/SettingsCoachingScreen').default);
-const SettingsNotificationsScreen = lazyScreen(() => require('../screens/SettingsNotificationsScreen').default);
 const SettingsDisplayScreen = lazyScreen(() => require('../screens/SettingsDisplayScreen').default);
 const SettingsHealthScreen = lazyScreen(() => require('../screens/SettingsHealthScreen').default);
 const SettingsDataScreen = lazyScreen(() => require('../screens/SettingsDataScreen').default);
@@ -459,7 +458,6 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="SettingsAccount" component={SettingsAccountScreen} options={{ title: 'Account' }} />
       <Stack.Screen name="SettingsProfile" component={SettingsProfileScreen} options={{ title: 'Profile' }} />
       <Stack.Screen name="SettingsCoaching" component={SettingsCoachingScreen} options={{ title: 'Coaching' }} />
-      <Stack.Screen name="SettingsNotifications" component={SettingsNotificationsScreen} options={{ title: 'Notifications' }} />
       <Stack.Screen name="SettingsDisplay" component={SettingsDisplayScreen} options={{ title: 'Display & accessibility' }} />
       <Stack.Screen name="SettingsHealth" component={SettingsHealthScreen} options={{ title: 'Health' }} />
       <Stack.Screen name="SettingsData" component={SettingsDataScreen} options={{ title: 'Your data' }} />

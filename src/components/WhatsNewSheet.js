@@ -30,6 +30,7 @@ export const WHATS_NEW = {
     { icon: 'play-circle-outline', text: 'A live session bar keeps your workout in view on every tab. Tap it to jump back in.' },
     { icon: 'search-outline', text: 'Food search understands word starts, brands and multi-word searches much better.' },
     { icon: 'speedometer-outline', text: 'Long lists scroll smoother across the app.' },
+    { icon: 'apps-outline', text: 'A home screen widget shows your next session or weekly consistency (Android). Add it from Settings.' },
   ],
 };
 

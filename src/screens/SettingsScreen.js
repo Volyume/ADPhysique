@@ -6,6 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import useAppStore from '../store/useAppStore';
 import { canScheduleExactAlarms, requestExactAlarmAccess } from '../lib/notifications/restForeground';
 import { isHealthAvailable, getHealthProviderLabel } from '../lib/health';
+import { appAlert } from '../components/AppAlert';
 import { SettingsPage, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
 import { colors, withAlpha, spacing, radius, fontSize, fontWeight, type } from '../styles/theme';
 
@@ -130,15 +131,35 @@ export default function SettingsScreen({ navigation }) {
         <SettingRow
           icon="notifications-outline"
           label="Notifications"
-          sub="Training and coaching reminders"
-          onPress={() => navigation.navigate('SettingsNotifications')}
+          sub="Set when Volyume nudges you to train"
+          onPress={() => navigation.navigate('NotificationSettings')}
         />
+        {tier === 'pro' ? (
+          <SettingRow
+            icon="pulse-outline"
+            label="Coaching reminders"
+            sub="Morning weight log and weekly check-in"
+            onPress={() => navigation.navigate('CoachingReminders')}
+          />
+        ) : null}
         <SettingRow
           icon="contrast-outline"
           label="Display and accessibility"
           sub="Text size, contrast, motion"
           onPress={() => navigation.navigate('SettingsDisplay')}
         />
+        {Platform.OS === 'android' && (
+          <SettingRow
+            icon="apps-outline"
+            label="Home screen widget"
+            sub="Your next session, right on your home screen"
+            onPress={() => appAlert(
+              'Home screen widget',
+              'Volyume has two home screen widgets: your next session, and this week\'s consistency. Long-press an empty spot on your home screen, choose Widgets, then find Volyume to add one.',
+              [{ text: 'Got it' }],
+            )}
+          />
+        )}
         {healthOn && (
           <SettingRow
             icon="heart-outline"
