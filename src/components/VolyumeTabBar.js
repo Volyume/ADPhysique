@@ -6,8 +6,8 @@
  * Anchored, not floating (blur is banned by the Android-first material rule;
  * a floating dock steals the reclaimed edge-to-edge list height). The
  * elevation is earned through motion and material:
- *   - a sliding amber pill behind the active icon, a UI-thread spring
- *     (motion.springs.settle) keyed to state.index;
+ *   - a sliding amber cushion behind the active icon AND its label, a
+ *     UI-thread spring (motion.springs.settle) keyed to state.index;
  *   - an icon settle-scale (1 -> 1.06 -> 1, springs.press/release) on focus,
  *     pairing with the M1 selection haptic that still fires through the
  *     navigator's screenListeners (tab presses are emitted exactly like the
@@ -43,13 +43,15 @@ import useAppStore from '../store/useAppStore';
 import ActiveSessionMiniBar from './ActiveSessionMiniBar';
 import { colors, fontSize, fontWeight, radius, spacing, motion } from '../styles/theme';
 
-const PILL_WIDTH = 56;
-// Sits behind the ACTIVE ICON only. Height + top are tuned so the pill clears
-// the label below it (the icon band is ~8-30px from the bar top; the label
-// starts ~32px down): a taller/lower pill bled over the top of the label text
-// ("covered half the text"), so it ends flush with the icon, above the label.
-const PILL_HEIGHT = 26;
-const PILL_TOP = 4;
+// Sits behind the ACTIVE ICON AND ITS LABEL as one soft cushion (founder
+// review 2026-07-03: a pill behind only the icon left the label hanging
+// beneath the highlight and read as unfinished). Width tracks the tab cell,
+// inset each side, so the widest label ("Progress") sits comfortably inside;
+// the height spans the whole icon-and-label block, and a rounded-rect radius
+// (not a full stadium) suits the taller cushion.
+const PILL_H_INSET = spacing.sm; // breathing room each side of the cushion
+const PILL_HEIGHT = 46;
+const PILL_TOP = 2;
 
 // Per-icon micro-response: one settle-scale beat when the tab gains focus.
 function TabIcon({ focused, reduceMotion, children }) {
@@ -74,11 +76,14 @@ export default function VolyumeTabBar({ state, descriptors, navigation }) {
 
   const [barWidth, setBarWidth] = useState(0);
   const tabWidth = state.routes.length > 0 ? barWidth / state.routes.length : 0;
+  // The cushion is the tab cell minus a small inset each side, so it wraps the
+  // icon and the label together rather than just the icon.
+  const pillWidth = tabWidth > 0 ? Math.max(0, tabWidth - PILL_H_INSET * 2) : 0;
 
   const pillX = useSharedValue(0);
   useEffect(() => {
     if (!tabWidth) return;
-    const target = state.index * tabWidth + (tabWidth - PILL_WIDTH) / 2;
+    const target = state.index * tabWidth + PILL_H_INSET;
     pillX.value = reduceMotion ? target : withSpring(target, motion.springs.settle);
   }, [state.index, tabWidth, reduceMotion, pillX]);
   const pillStyle = useAnimatedStyle(() => ({ transform: [{ translateX: pillX.value }] }));
@@ -97,7 +102,7 @@ export default function VolyumeTabBar({ state, descriptors, navigation }) {
         onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
       >
         {barWidth > 0 ? (
-          <Animated.View pointerEvents="none" style={[styles.pill, pillStyle]} />
+          <Animated.View pointerEvents="none" style={[styles.pill, { width: pillWidth }, pillStyle]} />
         ) : null}
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
@@ -164,8 +169,8 @@ const styles = StyleSheet.create({
   pill: {
     position: 'absolute',
     top: PILL_TOP, left: 0,
-    width: PILL_WIDTH, height: PILL_HEIGHT,
-    borderRadius: radius.full,
+    height: PILL_HEIGHT,
+    borderRadius: radius.lg,
     backgroundColor: colors.primaryBg,
   },
   item: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', gap: 2, paddingTop: 4 },
