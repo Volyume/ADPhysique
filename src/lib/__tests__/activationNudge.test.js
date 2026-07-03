@@ -82,8 +82,10 @@ describe('resolveActivationNudge (S6 stages)', () => {
     expect(r).toBeNull();
   });
 
-  test('a still-valid stall whose fire time is already past is returned (scheduler clamps)', () => {
-    // 1 session on day 2, now day 10: anchor day 6 is in the past but within window
+  test('a stall whose anchored fire time is already past is returned as-is (scheduler SKIPS it, never chases)', () => {
+    // 1 session on day 2, now day 10: anchor day 6 is in the past but within window.
+    // The resolver returns the anchored (past) fireAtMs; the scheduler skips a
+    // past slot so it is never re-laid -- the single-shot rule.
     const r = resolveActivationNudge({ accountCreatedAtMs: CREATED, completedStartedAtMs: [at(2)], nowMs: at(10) });
     expect(r).toEqual({ stage: NUDGE_STAGE.STALLED_1, fireAtMs: at(2 + STALL_GAP_DAYS) });
     expect(r.fireAtMs).toBeLessThan(at(10));

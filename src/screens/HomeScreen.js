@@ -42,7 +42,7 @@ import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
 import { buildFreeCoachLine } from '../lib/coachResponse';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { activePlanLine } from '../lib/planDisplay';
-import { resolveActivationNudge, activationBannerLine, NUDGE_STAGE } from '../lib/activationNudge';
+import { resolveActivationNudge, activationBannerLine, NUDGE_STAGE, NUDGE_WINDOW_GRACE_MS } from '../lib/activationNudge';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { localWeekStartMs, localDayKey } from '../lib/dayKey';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
@@ -742,7 +742,18 @@ export default function HomeScreen({ navigation, route }) {
       const createdIso = useAppStore.getState().session?.user?.created_at ?? null;
       const accountCreatedAtMs = createdIso ? new Date(createdIso).getTime() : null;
       if (!Number.isFinite(accountCreatedAtMs)) { setActivationNudge(null); return; }
-      const workouts = await getAllWorkouts(user.id).catch(() => []);
+      // Cheap early-out for established users (past window + grace): skip the
+      // full workout read entirely, matching the scheduler. This loader runs on
+      // every Home load, so the early-out matters for the whole established base.
+      if (Date.now() - accountCreatedAtMs > NUDGE_WINDOW_GRACE_MS) { setActivationNudge(null); return; }
+      // Fail safe on a read error (never surface a wrong-stage banner).
+      let workouts;
+      try {
+        workouts = await getAllWorkouts(user.id);
+      } catch (_) {
+        setActivationNudge(null);
+        return;
+      }
       const completedStartedAtMs = workouts.filter((w) => w.isCompleted).map((w) => w.startedAt ?? 0);
       const nudge = resolveActivationNudge({ accountCreatedAtMs, completedStartedAtMs, nowMs: Date.now() });
       if (!nudge) { setActivationNudge(null); return; }

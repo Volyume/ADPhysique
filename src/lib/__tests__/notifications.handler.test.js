@@ -230,3 +230,52 @@ describe('handleNotification, training_reminder', () => {
     expect(await h(notif('training_reminder'))).toEqual(SHOW);
   });
 });
+
+describe('handleNotification, activation_nudge (S6)', () => {
+  const activationNotif = (stage) => ({ request: { content: { data: { type: 'activation_nudge', stage } } } });
+
+  test('progressed past the stage (trained since it was laid) -> suppress', async () => {
+    // stalled_1 was laid at 1 session; the user now has 2 -> stale -> suppress
+    mockGetAllWorkouts.mockResolvedValue([{ isCompleted: 1 }, { isCompleted: 1 }]);
+    const h = captureHandler();
+    expect(await h(activationNotif('stalled_1'))).toEqual(SUPPRESS);
+  });
+
+  test('still at the stage -> show', async () => {
+    mockGetAllWorkouts.mockResolvedValue([{ isCompleted: 1 }]); // still 1 for stalled_1
+    const h = captureHandler();
+    expect(await h(activationNotif('stalled_1'))).toEqual(SHOW);
+  });
+
+  test('cold_start is stale once there is any completed session -> suppress', async () => {
+    mockGetAllWorkouts.mockResolvedValue([{ isCompleted: 1 }]);
+    const h = captureHandler();
+    expect(await h(activationNotif('cold_start'))).toEqual(SUPPRESS);
+  });
+
+  test('stalled_2 shows at exactly 2 sessions, suppresses at 3', async () => {
+    mockGetAllWorkouts.mockResolvedValue([{ isCompleted: 1 }, { isCompleted: 1 }]);
+    expect(await captureHandler()(activationNotif('stalled_2'))).toEqual(SHOW);
+    mockGetAllWorkouts.mockResolvedValue([{ isCompleted: 1 }, { isCompleted: 1 }, { isCompleted: 1 }]);
+    expect(await captureHandler()(activationNotif('stalled_2'))).toEqual(SUPPRESS);
+  });
+
+  test('open ED flag -> suppress even when the stage has not passed', async () => {
+    mockGetAllWorkouts.mockResolvedValue([{ isCompleted: 1 }]); // stalled_1 not passed
+    mockGetOpenEdFlag.mockResolvedValue({ id: 'flag-1', status: 'open' });
+    const h = captureHandler();
+    expect(await h(activationNotif('stalled_1'))).toEqual(SUPPRESS);
+  });
+
+  test('workout-read throw -> show (never silently suppress on error)', async () => {
+    mockGetAllWorkouts.mockRejectedValue(new Error('sqlite locked'));
+    const h = captureHandler();
+    expect(await h(activationNotif('stalled_1'))).toEqual(SHOW);
+  });
+
+  test('unknown stage -> show (do not suppress a stage we cannot classify)', async () => {
+    mockGetAllWorkouts.mockResolvedValue([{ isCompleted: 1 }, { isCompleted: 1 }, { isCompleted: 1 }]);
+    const h = captureHandler();
+    expect(await h(activationNotif('bogus'))).toEqual(SHOW);
+  });
+});

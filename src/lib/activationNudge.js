@@ -42,6 +42,12 @@ export const COLD_START_GAP_DAYS = 3; // account creation -> first-session nudge
 export const STALL_GAP_DAYS = 4; // last session -> stall nudge (a real stall, not a normal rest day)
 export const NUDGE_GRACE_DAYS = 3; // grace past the 14-day window; never fire beyond
 
+// The hard stop: past the activation window + grace, the lever is done for this
+// user. Exported so the scheduler's early-out and the Home banner's early-out
+// share ONE source of truth (never a duplicated literal that could desync if
+// the window/grace is tuned).
+export const NUDGE_WINDOW_GRACE_MS = (ACTIVATION_WINDOW_DAYS + NUDGE_GRACE_DAYS) * DAY_MS;
+
 /**
  * Resolve the pending activation-nudge stage and its ideal fire time.
  *
@@ -50,10 +56,10 @@ export const NUDGE_GRACE_DAYS = 3; // grace past the 14-day window; never fire b
  * @param {number[]} args.completedStartedAtMs  started_at of each COMPLETED workout
  * @param {number} args.nowMs
  * @returns {{ stage: string, fireAtMs: number } | null}  null when activated,
- *          out of window, or the inputs are unknowable. The scheduler clamps a
- *          fireAtMs already in the past to the next valid slot (a genuinely
- *          still-stalled user re-nudges on relaunch), and never fires past the
- *          window + grace.
+ *          out of window, or the inputs are unknowable. fireAtMs is the anchored
+ *          ideal fire time and MAY be in the past; the scheduler SKIPS a past
+ *          fireAtMs -- an anchored slot that has already passed is never re-laid
+ *          (the single-shot rule) -- and never fires past the window + grace.
  */
 export function resolveActivationNudge({ accountCreatedAtMs, completedStartedAtMs, nowMs } = {}) {
   const created = Number.isFinite(accountCreatedAtMs) ? accountCreatedAtMs : null;

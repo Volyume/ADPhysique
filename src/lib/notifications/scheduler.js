@@ -45,7 +45,7 @@ import {
 } from '../trialActivation';
 import { missedCheckinFireDates, missedCheckinPush } from './missedCheckin';
 import { plannedMealConfirmPush, plannedConfirmSlot } from './plannedMealConfirm';
-import { resolveActivationNudge, activationNudgePush } from '../activationNudge';
+import { resolveActivationNudge, activationNudgePush, NUDGE_WINDOW_GRACE_MS } from '../activationNudge';
 
 const NOTIF_ID_MORNING = 'volyume_morning_weight';
 const NOTIF_ID_EVENING = 'volyume_evening_weight';
@@ -845,7 +845,6 @@ export async function scheduleMissedCheckinFollowups(userId) {
 // a user who never returns to complete a workout); the workout-completion hook
 // lays the next stage the instant a session lands.
 const NOTIF_ID_ACTIVATION_NUDGE = 'volyume_activation_nudge';
-const ACTIVATION_WINDOW_GRACE_MS = (14 + 3) * 86400000; // window + grace hard stop
 
 export async function cancelActivationNudge() {
   try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_ACTIVATION_NUDGE); } catch {}
@@ -880,8 +879,9 @@ export async function scheduleActivationNudge(userId) {
     if (!Number.isFinite(accountCreatedAtMs)) { await cancelActivationNudge(); return; }
 
     // Cheap early-out: past the window + grace the lever is done for this user
-    // (this also skips the workout read for every established user).
-    if (Date.now() - accountCreatedAtMs > ACTIVATION_WINDOW_GRACE_MS) { await cancelActivationNudge(); return; }
+    // (this also skips the workout read for every established user). The window
+    // hard-stop is the shared NUDGE_WINDOW_GRACE_MS, never a duplicated literal.
+    if (Date.now() - accountCreatedAtMs > NUDGE_WINDOW_GRACE_MS) { await cancelActivationNudge(); return; }
 
     // Open ED/wellbeing flag → never lay (and retire anything laid). Silence is
     // the respectful behaviour; the suppression is consumed here, never altered.
@@ -891,7 +891,16 @@ export async function scheduleActivationNudge(userId) {
     if (edFlag) { await cancelActivationNudge(); return; }
 
     // Completed-session start times only (never weight or calorie figures).
-    const workouts = await db.getAllWorkouts(uid).catch(() => []);
+    // Fail safe: a workout-read failure must NOT let the nudge compute cold_start
+    // from an empty list and mis-fire "start your first session" at an activated
+    // user. Stand down (leave whatever is laid; the next relaunch/finish re-runs).
+    let workouts;
+    try {
+      workouts = await db.getAllWorkouts(uid);
+    } catch (_) {
+      await cancelActivationNudge();
+      return;
+    }
     const completedStartedAtMs = workouts.filter((w) => w.isCompleted).map((w) => w.startedAt ?? 0);
 
     const nudge = resolveActivationNudge({ accountCreatedAtMs, completedStartedAtMs, nowMs: Date.now() });
