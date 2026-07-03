@@ -26,11 +26,12 @@ const PAUSE_OPTIONS = [
 ];
 
 // Per-state glyph (shape carries the meaning — no colour-only state, no red).
-// D4 (founder decision, 2026-07-03): the 'missed' glyph is DELIBERATELY
-// absent from the on-screen key — a miss is never visually labelled (the
-// no-shame rule). Screen readers hear it as a "quiet week" via stripA11y,
-// so the state is spoken, just never captioned on screen. Do not "fix" the
-// key by adding a missed row.
+// D4 (founder decision, updated 2026-07-03): the 'missed' glyph now carries a
+// calm on-screen label ("Quiet week") in the key, so the mark is not a mystery
+// to sighted users. This supersedes the earlier same-day note that left it off
+// the key. The no-shame rule is kept in the WORDING and the shape: never
+// "missed" or "failed", never red; the glyph stays a faint outline. Screen
+// readers already hear it as a "quiet week" via stripA11y.
 const GLYPH = {
   kept:          { icon: 'ellipse',          color: colors.primary },
   resting:       { icon: 'moon',             color: colors.success },
@@ -128,6 +129,7 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
           { state: 'resting', label: 'Recovery' },
           { state: 'repaired', label: 'Covered' },
           { state: 'paused', label: 'Paused' },
+          { state: 'missed', label: 'Quiet week' },
         ].map(({ state, label }) => (
           <View key={state} style={styles.glyphKeyItem}>
             <Ionicons name={GLYPH[state].icon} size={12} color={GLYPH[state].color} />
