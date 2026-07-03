@@ -12,6 +12,10 @@
 
 jest.mock('../telemetry', () => ({ logSyncError: jest.fn() }));
 
+// Lapsed-partner data-layer gate (A1 §9.4). Default: not lapsed (tier unknown/
+// pro), so every existing push assertion is unchanged; one test flips it.
+jest.mock('../../partners/tierGate', () => ({ isLapsedPartner: jest.fn(() => false) }));
+
 jest.mock('../../database', () => ({
   getPartnershipsLocal: jest.fn(),
   getPartnerWeekSignal: jest.fn(),
@@ -25,6 +29,7 @@ jest.mock('../../database', () => ({
 }));
 
 const dbMock = require('../../database');
+const { isLapsedPartner } = require('../../partners/tierGate');
 const { pushPartners, pullPartners } = require('../tables/partners');
 
 beforeEach(() => {
@@ -66,6 +71,33 @@ describe('pushPartners', () => {
     const sb = { from: jest.fn() };
     expect(await pushPartners(sb, { userId: 'me' })).toEqual({ count: 0, errors: 0 });
     expect(sb.from).not.toHaveBeenCalled();
+  });
+
+  test('carries the milestone booleans from the local mirror', async () => {
+    dbMock.getPartnershipsLocal.mockResolvedValue([{ id: 'pair1', status: 'active' }]);
+    dbMock.getPartnerWeekSignal.mockResolvedValue({
+      weekStart: '1', plannedCount: 4, doneCount: 4, weekMet: true,
+      state: 'training', completedBlock: 1, hitPb: 1, updatedAt: 1,
+    });
+    const upsert = jest.fn().mockResolvedValue({ error: null });
+    const sb = { from: jest.fn(() => ({ upsert })) };
+    await pushPartners(sb, { userId: 'me' });
+    expect(upsert.mock.calls[0][0][0]).toMatchObject({ completed_block: true, hit_pb: true });
+  });
+
+  test('LAPSED gate: a Free-resolved user pushes resting, never live ticks', async () => {
+    isLapsedPartner.mockReturnValueOnce(true);
+    dbMock.getPartnershipsLocal.mockResolvedValue([{ id: 'pair1', status: 'active' }]);
+    dbMock.getPartnerWeekSignal.mockResolvedValue({
+      weekStart: '1', plannedCount: 4, doneCount: 4, weekMet: true,
+      state: 'training', completedBlock: 1, hitPb: 1, updatedAt: 1,
+    });
+    const upsert = jest.fn().mockResolvedValue({ error: null });
+    const sb = { from: jest.fn(() => ({ upsert })) };
+    await pushPartners(sb, { userId: 'me' });
+    expect(upsert.mock.calls[0][0][0]).toMatchObject({
+      state: 'resting', week_met: true, completed_block: false, hit_pb: false,
+    });
   });
 
   test('a missing cloud table is a benign skip', async () => {

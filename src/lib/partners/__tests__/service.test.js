@@ -11,7 +11,23 @@ jest.mock('../../telemetry/transport', () => {
   return { ...actual, postEvent: jest.fn(() => Promise.resolve('id')) };
 });
 
+// The STEP A partner telemetry module resolves userId from the store; stub it so
+// the service tests stay isolated from the store and assert legacy events only.
+jest.mock('../telemetry', () => ({
+  trackInviteMinted: jest.fn(),
+  trackInviteRedeemed: jest.fn(),
+  trackCheerSent: jest.fn(),
+  trackUnpair: jest.fn(),
+}));
+// Partner-sharing consent: default to a successful write; individual tests
+// override it to drive the fail-closed rollback.
+jest.mock('../consent', () => ({
+  PARTNER_PRIVACY_NOTICE_VERSION: 1,
+  recordPartnerSharingConsent: jest.fn(() => Promise.resolve({ ok: true })),
+}));
+
 import { postEvent } from '../../telemetry/transport';
+import { recordPartnerSharingConsent } from '../consent';
 import {
   createPartnerInvite, redeemPartnerInvite, sendCheer, blockPartner, unpairPartner,
   proposeSharedBlock, adoptSharedBlock, leaveSharedBlock,
@@ -63,6 +79,8 @@ function sharedBlockClient({ insertError = null, adopted = [{ pair_id: 'p1' }] }
 
 beforeEach(() => {
   postEvent.mockClear();
+  recordPartnerSharingConsent.mockClear();
+  recordPartnerSharingConsent.mockResolvedValue({ ok: true });
   _setClientForTests(fakeClient());
 });
 
@@ -92,6 +110,24 @@ describe('redeemPartnerInvite', () => {
     const r = await redeemPartnerInvite('u2', 'ABCD1234EF');
     expect(r).toEqual({ ok: false, error: 'invite_invalid' });
     expect(postEvent).not.toHaveBeenCalled();
+  });
+
+  test('writes a partner_sharing consent row on the accept path', async () => {
+    const r = await redeemPartnerInvite('u2', 'ABCD1234EF');
+    expect(r.ok).toBe(true);
+    expect(recordPartnerSharingConsent).toHaveBeenCalledWith('u2', { granted: true });
+  });
+
+  test('FAIL CLOSED: a failed consent write rolls the pairing back and does not complete', async () => {
+    recordPartnerSharingConsent.mockResolvedValue({ ok: false, error: 'offline' });
+    const client = fakeClient();
+    _setClientForTests(client);
+    const r = await redeemPartnerInvite('u2', 'ABCD1234EF');
+    expect(r).toEqual({ ok: false, error: 'consent_failed' });
+    // The just-redeemed partnership is torn down (the deletion-promise RPC).
+    expect(client.rpc).toHaveBeenCalledWith('end_partnership', { _pair_id: 'p1' });
+    // Never reports the pairing as accepted when consent did not record.
+    expect(postEvent).not.toHaveBeenCalledWith('u2', 'partner_invite_accepted', expect.anything());
   });
 });
 
@@ -183,6 +219,12 @@ describe('unpairPartner', () => {
     // server-side purge RPC, never a status-only UPDATE that leaves shared data
     // behind. Guards the exact defect this fix closes.
     expect(client.rpc).toHaveBeenCalledWith('end_partnership', { _pair_id: 'p1' });
+  });
+
+  test('records a partner_sharing consent WITHDRAWAL (best-effort) on unpair', async () => {
+    const r = await unpairPartner('u1', 'p1');
+    expect(r.ok).toBe(true);
+    expect(recordPartnerSharingConsent).toHaveBeenCalledWith('u1', { granted: false });
   });
 
   test('surfaces an RPC failure instead of reporting a false success', async () => {

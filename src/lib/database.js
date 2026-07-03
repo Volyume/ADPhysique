@@ -1486,6 +1486,16 @@ const SCHEMA_MIGRATIONS = [
       updated_at  INTEGER NOT NULL DEFAULT 0
     )`,
   ],
+  // Partner STEP A milestone-moment booleans (brief Direction 1). Two derived
+  // flags carried on the EXISTING weekly signal row: finished a block this week,
+  // set a PB this week. Booleans only, never a number or content. Local mirror
+  // of cloud migrate_102's additive columns; the sender's weekSignalWriter
+  // derives them (forced false under the ED freeze), the pull applies them.
+  // Additive + idempotent (duplicate-column is a benign migration error).
+  [
+    'ALTER TABLE partner_week_signals ADD COLUMN completed_block INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE partner_week_signals ADD COLUMN hit_pb INTEGER NOT NULL DEFAULT 0',
+  ],
 ];
 
 // E3 search: the FTS5 index DDL, exported as a named function so the
@@ -4100,9 +4110,13 @@ export async function wipeAllUserData(userId) {
     // 7. NEW-002 partner mirror. Local SQLite is single-user, so a flat wipe of
     //    all partner rows is correct on sign-out (partnerships/cheers aren't
     //    user_id-keyed). The cloud copy is intact; it re-pulls on next sign-in.
+    //    partner_shared_blocks is wiped here too so this path matches
+    //    clearLocalPartners exactly (A1 s8.5: the two wipe paths must clear the
+    //    SAME four tables; shared blocks were previously left behind here).
     try {
       await d.runAsync('DELETE FROM partner_cheers');
       await d.runAsync('DELETE FROM partner_week_signals');
+      await d.runAsync('DELETE FROM partner_shared_blocks');
       await d.runAsync('DELETE FROM partnerships');
     } catch (e) {
       logError('database.wipeAllUserData.partners', e, { userId });
@@ -4833,13 +4847,14 @@ export async function upsertPartnerWeekSignalFromCloud(row) {
   const d = await db();
   await d.runAsync(
     `INSERT OR REPLACE INTO partner_week_signals
-       (pair_id, user_id, week_start, planned_count, done_count, week_met, state, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       (pair_id, user_id, week_start, planned_count, done_count, week_met, state, completed_block, hit_pb, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       row.pair_id, row.user_id, String(row.week_start),
       Math.max(0, Math.round(Number(row.planned_count) || 0)),
       Math.max(0, Math.round(Number(row.done_count) || 0)),
       row.week_met ? 1 : 0, row.state === 'resting' ? 'resting' : 'training',
+      row.completed_block ? 1 : 0, row.hit_pb ? 1 : 0,
       _toMsLocal(row.updated_at) ?? Date.now(),
     ],
   );

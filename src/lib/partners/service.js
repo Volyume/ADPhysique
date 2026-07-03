@@ -14,6 +14,10 @@
 import { getSupabaseClient } from '../supabase';
 import { track } from '../engineTelemetry';
 import { buildInviteLinks, inviteShareMessage } from './link';
+import { recordPartnerSharingConsent } from './consent';
+import {
+  trackInviteMinted, trackInviteRedeemed, trackCheerSent, trackUnpair,
+} from './telemetry';
 
 function fail(error) {
   return { ok: false, error: error?.message || String(error || 'unknown') };
@@ -33,6 +37,7 @@ export async function createPartnerInvite(userId, { streakEnabled = true } = {})
     if (!row?.invite_code) return fail('no_code');
     const links = buildInviteLinks(row.invite_code);
     track(userId, 'partner_invite_sent', { streak_enabled: !!streakEnabled })?.catch?.(() => {});
+    trackInviteMinted();
     return {
       ok: true,
       data: {
@@ -60,8 +65,21 @@ export async function redeemPartnerInvite(userId, code) {
       // The RPC raises 'invite_invalid' for every failure path by design.
       return { ok: false, error: 'invite_invalid' };
     }
+    const pairId = data;
+    // Capture the partner-sharing consent on the accept act (A4 s6). This rides
+    // the same append-only consent_log rail as the Article 9 health consent.
+    // FAIL CLOSED: if the consent write fails, the pairing does not complete —
+    // roll the just-redeemed partnership back (end_partnership purges + tombs
+    // it) and surface the same calm redemption failure, so no sharing begins
+    // without a recorded consent.
+    const consent = await recordPartnerSharingConsent(userId, { granted: true });
+    if (!consent.ok) {
+      try { await c.rpc('end_partnership', { _pair_id: pairId }); } catch (_) { /* best-effort rollback */ }
+      return { ok: false, error: 'consent_failed' };
+    }
     track(userId, 'partner_invite_accepted', {})?.catch?.(() => {});
-    return { ok: true, data: { partnershipId: data } };
+    trackInviteRedeemed();
+    return { ok: true, data: { partnershipId: pairId } };
   } catch (e) {
     return fail(e);
   }
@@ -81,6 +99,7 @@ export async function sendCheer(userId, { pairId, reciprocal = false } = {}) {
     const { data, error } = await c.functions.invoke('partner-cheer', { body: { pairId } });
     if (error) return fail(error);
     track(userId, 'partner_cheer_sent', { reciprocal: !!reciprocal })?.catch?.(() => {});
+    trackCheerSent();
     return { ok: true, data };
   } catch (e) {
     return fail(e);
@@ -120,6 +139,12 @@ export async function unpairPartner(userId, pairId) {
   try {
     const { error } = await c.rpc('end_partnership', { _pair_id: pairId });
     if (error) return fail(error);
+    // Record the sharing-consent WITHDRAWAL on the same append-only rail as the
+    // grant (A4 s6). Best-effort by design: the user must always be able to
+    // leave, so a failed withdrawal record never blocks the unpair (mirrors the
+    // health-consent withdrawal soft-fail in useAccountActions).
+    recordPartnerSharingConsent(userId, { granted: false }).catch(() => {});
+    trackUnpair();
     return { ok: true };
   } catch (e) {
     return fail(e);
@@ -129,8 +154,12 @@ export async function unpairPartner(userId, pairId) {
 /**
  * Push the user's own derived week signal (planned/done/met/state) into a pair.
  * Tiny derived row, never raw workouts. Caller computes it from computeWeekState.
+ *
+ * completedBlock / hitPb are the two milestone-moment booleans (finished a block
+ * this week / set at least one PB this week). Booleans ONLY, never a number or
+ * content; the caller (weekSignalWriter) forces them false under the ED freeze.
  */
-export async function pushWeekSignal(userId, { pairId, weekStart, planned, done, weekMet, state } = {}) {
+export async function pushWeekSignal(userId, { pairId, weekStart, planned, done, weekMet, state, completedBlock = false, hitPb = false } = {}) {
   const c = getSupabaseClient();
   if (!c || !userId || !pairId || !weekStart) return fail('offline');
   try {
@@ -142,6 +171,8 @@ export async function pushWeekSignal(userId, { pairId, weekStart, planned, done,
       done_count: Math.max(0, Math.round(Number(done) || 0)),
       week_met: !!weekMet,
       state: state === 'resting' ? 'resting' : 'training',
+      completed_block: !!completedBlock,
+      hit_pb: !!hitPb,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'pair_id,user_id,week_start' });
     if (error) return fail(error);

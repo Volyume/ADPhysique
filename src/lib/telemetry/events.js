@@ -184,6 +184,20 @@ export const TELEMETRY_EVENTS = Object.freeze([
   { name: 'partner_cheer_sent',              deferred: false, panel: 1 },
   { name: 'partner_blocked',                 deferred: false, panel: 1 },
 
+  // Partner STEP A adoption telemetry (11-DECISION-BRIEF section 0.3 / line 118).
+  // Counts/booleans only, never identity or content. Surface views + invite
+  // journey + mint/redeem/died-at-paywall funnel, cheers, unpairs, and pairs
+  // still active at week 2 / week 6. Server allow-list:
+  // supabase/migrate_102_partner_safety_consent.sql.
+  { name: 'partner_surface_view',            deferred: false, panel: 1 },
+  { name: 'partner_invite_journey_step',     deferred: false, panel: 1 },
+  { name: 'partner_invite_minted',           deferred: false, panel: 1 },
+  { name: 'partner_invite_redeemed',         deferred: false, panel: 1 },
+  { name: 'partner_invite_died_at_paywall',  deferred: false, panel: 1 },
+  { name: 'partner_cheer',                   deferred: false, panel: 1 },
+  { name: 'partner_unpair',                  deferred: false, panel: 1 },
+  { name: 'partner_pair_week_active',        deferred: false, panel: 1 },
+
   // COMP-030: one consolidated event emitted on account_created carrying the
   // pre-account quiz step timings + variant flag (pre-account events cannot
   // reach the server — the RPC requires auth.uid()). Deferred until quiz-first

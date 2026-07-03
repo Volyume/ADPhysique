@@ -8,7 +8,7 @@
  * Pro three-partner list is a follow-on). Recomputes on focus so a synced cheer
  * or week signal reflects immediately.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   getPartnershipsLocal, getActivePartnerCount, getPartnerWeekSignal,
@@ -24,6 +24,8 @@ import {
   proposeSharedBlock, adoptSharedBlock, leaveSharedBlock,
 } from '../lib/partners/service';
 import { writeOwnWeekSignals } from '../lib/partners/weekSignalWriter';
+import { getCachedInvite, setCachedInvite, clearCachedInvite } from '../lib/partners/inviteCache';
+import { readPendingPartnerCode, clearPendingPartnerCode } from '../lib/partners/pendingInvite';
 
 const EMPTY = {
   loading: true, partnership: null, rowState: 'empty', partnerWeek: null,
@@ -42,14 +44,36 @@ function pickPrimary(partnerships) {
 
 export default function usePartners(userId, tier) {
   const [state, setState] = useState(EMPTY);
+  // Guards the one-shot re-surface of a paywall-preserved invite (A1 s9.3).
+  const pendingTriedRef = useRef(false);
 
   const load = useCallback(async () => {
     if (!userId) { setState({ ...EMPTY, loading: false }); return; }
     try {
       const partnerships = await getPartnershipsLocal(userId);
-      const primary = pickPrimary(partnerships);
-      const activeCount = await getActivePartnerCount(userId);
-      const canAdd = canAddPartner({ tier, activeCount });
+      let primary = pickPrimary(partnerships);
+      let activeCount = await getActivePartnerCount(userId);
+      let canAdd = canAddPartner({ tier, activeCount });
+
+      // Re-surface a paywall-preserved invite (A1 s9.3): a user bounced at the
+      // Pro gate with a code kept it. Now that they are eligible (Pro) and not
+      // already paired, auto-open the redemption path once, expiry respected.
+      // Runs before the render branches so a successful redeem lands the active
+      // pairing on this same load pass.
+      if (tier === 'pro' && !pendingTriedRef.current && !(primary && primary.status === 'active')) {
+        pendingTriedRef.current = true;
+        const storedCode = await readPendingPartnerCode();
+        if (storedCode) {
+          const rr = await redeemPartnerInvite(userId, storedCode);
+          await clearPendingPartnerCode();
+          if (rr.ok) {
+            const refreshed = await getPartnershipsLocal(userId).catch(() => partnerships);
+            primary = pickPrimary(refreshed);
+            activeCount = await getActivePartnerCount(userId).catch(() => activeCount);
+            canAdd = canAddPartner({ tier, activeCount });
+          }
+        }
+      }
 
       if (!primary || primary.status !== 'active') {
         setState({
@@ -58,6 +82,10 @@ export default function usePartners(userId, tier) {
         });
         return;
       }
+
+      // Paired now, so any cached pending invite (the inviter's single-mint
+      // code) is spent — drop it so a later empty state mints fresh.
+      clearCachedInvite();
 
       // Keep my own week signal current for the partner's ticks (fire-and-
       // forget; the workout-finish path and sync layer also drive this).
@@ -94,14 +122,24 @@ export default function usePartners(userId, tier) {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   // ── Actions (online; refresh local view after) ──
+  // Single-mint (A1 s9.5): every share channel reuses the ONE active pending
+  // code. Only mint a fresh code when nothing is cached (after cancel / expiry /
+  // redemption clear it). The server enforces the same single-pending invariant.
   const invite = useCallback(async (opts) => {
+    const cached = getCachedInvite(userId);
+    if (cached) return { ok: true, data: cached };
     const r = await createPartnerInvite(userId, opts);
+    if (r.ok && r.data) setCachedInvite(userId, r.data);
     return r; // caller drives the OS share sheet with r.data.shareMessage
   }, [userId]);
 
   const redeem = useCallback(async (code) => {
     const r = await redeemPartnerInvite(userId, code);
-    if (r.ok) await load();
+    if (r.ok) {
+      clearCachedInvite();
+      await clearPendingPartnerCode();
+      await load();
+    }
     return r;
   }, [userId, load]);
 
@@ -116,7 +154,12 @@ export default function usePartners(userId, tier) {
     // Honour the deletion promise on THIS device immediately: the RPC purged the
     // pair's signals + cheers server-side; clear the local mirror now rather than
     // waiting for the next pull, so nothing shared lingers after "End".
-    if (r.ok) { try { await deleteLocalPairSharedData(pairId); } catch (_) { /* best-effort */ } }
+    if (r.ok) {
+      // Cancelling a pending invite (or ending a pairing) frees the single-mint
+      // code so a fresh invite can be minted next time.
+      clearCachedInvite();
+      try { await deleteLocalPairSharedData(pairId); } catch (_) { /* best-effort */ }
+    }
     await load();
     return r;
   }, [userId, load]);

@@ -20,6 +20,7 @@
 
 import { logSyncError } from '../telemetry';
 import { isMissingTableError } from './_missingTable';
+import { isLapsedPartner } from '../../partners/tierGate';
 
 const PUSH_BATCH_SIZE = 200;
 
@@ -32,22 +33,35 @@ export async function pushPartners(sb, { userId, localUserId } = {}) {
     const activePairIds = partnerships.filter((p) => p.status === 'active').map((p) => p.id);
     if (!activePairIds.length) return { count: 0, errors: 0 };
 
-    // Gather my own local week signals for active pairs.
+    // Lapsed-partner data-layer gate (A1 s9.4): this backup push path is
+    // tier-blind too. For a user whose tier has resolved to Free, override the
+    // outbound signal to a calm 'resting' state (never live ticks, milestone
+    // booleans forced false) so a lapsed user stops broadcasting live ticks.
+    const lapsed = isLapsedPartner();
+
+    // Gather my own local week signals for active pairs. Values are computed
+    // before the row literal so the lapsed overrides stay out of the object
+    // (the source-level privacy guard reads the row literal's own keys).
     const rows = [];
     for (const pairId of activePairIds) {
       const sig = await db.getPartnerWeekSignal(pairId, userId).catch(() => null);
-      if (sig) {
-        rows.push({
-          pair_id: pairId,
-          user_id: userId,
-          week_start: String(sig.weekStart),
-          planned_count: Math.max(0, Math.round(Number(sig.plannedCount) || 0)),
-          done_count: Math.max(0, Math.round(Number(sig.doneCount) || 0)),
-          week_met: !!sig.weekMet,
-          state: sig.state === 'resting' ? 'resting' : 'training',
-          updated_at: new Date(sig.updatedAt || Date.now()).toISOString(),
-        });
-      }
+      if (!sig) continue;
+      const state = (lapsed || sig.state === 'resting') ? 'resting' : 'training';
+      const weekMet = lapsed ? true : !!sig.weekMet;
+      const completedBlock = lapsed ? false : !!sig.completedBlock;
+      const hitPb = lapsed ? false : !!sig.hitPb;
+      rows.push({
+        pair_id: pairId,
+        user_id: userId,
+        week_start: String(sig.weekStart),
+        planned_count: Math.max(0, Math.round(Number(sig.plannedCount) || 0)),
+        done_count: Math.max(0, Math.round(Number(sig.doneCount) || 0)),
+        week_met: weekMet,
+        state: state,
+        completed_block: completedBlock,
+        hit_pb: hitPb,
+        updated_at: new Date(sig.updatedAt || Date.now()).toISOString(),
+      });
     }
     if (!rows.length) return { count: 0, errors: 0 };
 

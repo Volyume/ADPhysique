@@ -43,6 +43,11 @@ const ALLOWED_PARTNER_WRITE_COLUMNS = new Set([
   // (80-char cap); status is proposed|active; block_ref is server-minted and
   // never client-written. No plan content ever crosses.
   'block_name', 'proposed_by', 'status',
+  // Partner STEP A (§5-reviewed): the two milestone-moment BOOLEANS carried on
+  // the existing derived weekly signal row. completed_block = finished a block
+  // this week; hit_pb = set at least one PB this week. Booleans only, never a
+  // number, exercise name or any content; forced false under the ED freeze.
+  'completed_block', 'hit_pb',
 ]);
 
 // Raw-data tokens that must NEVER appear as a written key, independent of the

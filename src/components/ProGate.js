@@ -247,6 +247,21 @@ export function ProLocked({ feature = 'This' }) {
 export function withProGuard(Component, feature) {
   return function GuardedScreen(props) {
     const tier = useAppStore(s => s.tier);
+    // A1 s9.3: an invited free/logged-out user is routed here with the invite
+    // code in route params, but ProLocked never reads it, so the code was
+    // silently dropped and there was no way to recover it after upgrading.
+    // Preserve it at the moment the gate intercepts so the Partner surface can
+    // auto-open the redemption once the user is eligible. Scoped to the partner
+    // route + a present code; this changes NOTHING about the gate decision.
+    const pendingCode = feature === 'Training partner' ? props?.route?.params?.code : null;
+    useEffect(() => {
+      if (tier !== 'pro' && pendingCode) {
+        // eslint-disable-next-line global-require
+        require('../lib/partners/pendingInvite')
+          .savePendingPartnerCode(pendingCode)
+          .catch(() => {});
+      }
+    }, [tier, pendingCode]);
     if (tier !== 'pro') return <ProLocked feature={feature} />;
     return <Component {...props} />;
   };
