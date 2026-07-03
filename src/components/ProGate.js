@@ -176,11 +176,21 @@ export function ProLocked({ feature = 'This' }) {
             why it is Pro, instead of the same coaching pitch on every lock. */}
         <Text style={styles.lockedBody}>{benefitFor(feature)}</Text>
         {/* Show-then-sell (founder decision #6): the read-only example day,
-            below the headline so it reads in context. Food diary lock only. */}
+            below the headline so it reads in context. Food diary lock only.
+            The teaser LOOKS tappable (four meal cards), so the whole block is
+            one tap target routing to the same ProUpgrade the CTA below opens
+            (founder defect pass 2026-07-03, issue 2) — the cards themselves
+            stay illustrative, no per-meal Pro function is exposed. */}
         {showPlateTeaser ? (
-          <View style={styles.lockedTeaser}>
+          <TouchableOpacity
+            style={styles.lockedTeaser}
+            onPress={() => navigation.navigate('ProUpgrade')}
+            activeOpacity={0.88}
+            accessibilityRole="button"
+            accessibilityLabel="See the food diary in Pro"
+          >
             <TodaysPlateTeaser />
-          </View>
+          </TouchableOpacity>
         ) : null}
         <TouchableOpacity
           style={styles.lockedBtn}
