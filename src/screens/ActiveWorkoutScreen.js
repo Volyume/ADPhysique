@@ -141,30 +141,6 @@ const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum,
   );
 });
 
-// A2 (audit CL-5): the rest countdown scrolls away with the timer row, so the
-// one number the user needs mid-scroll used to vanish. This chip mirrors it in
-// the fixed header. Self-subscribing so the per-second tick re-renders ONLY
-// this chip — the screen deliberately never subscribes to the tick (see the
-// selector comment below).
-function HeaderRestChip() {
-  const { active, remaining } = useAppStore(useShallow(s => ({
-    active: s.restTimerActive,
-    remaining: s.restTimerRemaining,
-  })));
-  if (!active || remaining <= 0) return null;
-  const mins = Math.floor(remaining / 60);
-  const secs = remaining % 60;
-  return (
-    <View
-      style={styles.headerRestChip}
-      accessibilityLabel={`Rest, ${mins} minute${mins === 1 ? '' : 's'} ${secs} second${secs === 1 ? '' : 's'} remaining`}
-    >
-      <Ionicons name="timer-outline" size={12} color={colors.primary} />
-      <Text style={styles.headerRestChipText}>{`${mins}:${String(secs).padStart(2, '0')}`}</Text>
-    </View>
-  );
-}
-
 export default function ActiveWorkoutScreen({ navigation, route }) {
   // Use a shallow selector so every store mutation (rest timer ticks,
   // PR celebration flag flips, accessibility toggles) doesn't re-render
@@ -1933,7 +1909,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 accessibilityLabel="Time crunch active"
               />
             )}
-            <HeaderRestChip />
           </View>
           <View style={styles.headerSideRight}>
             <TouchableOpacity
@@ -3473,16 +3448,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.borderSubtle,
-  },
-  headerRestChip: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xxs,
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderRadius: radius.full, backgroundColor: colors.primaryBg,
-  },
-  headerRestChipText: {
-    ...type.num('caption'),
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
   },
   clusterBanner: {
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.502), borderRadius: radius.lg,
