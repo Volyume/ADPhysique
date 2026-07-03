@@ -123,6 +123,21 @@ function matchesCollection(plan, key) {
   return false;
 }
 
+// T5: stable beginner-first partition for the default (non-quiz) plan list.
+// Reuses the exact predicate the "Beginner" collection chip already matches
+// on (difficulty 0, or a beginner/audience:beginner tag) so there is one
+// definition of "beginner-appropriate" in this file, rather than a second,
+// possibly-diverging one. Array.prototype.sort is required to be stable
+// (ES2019+), so plans within each half keep their existing relative order
+// (created_at ASC from getLibraryPlans).
+function sortBeginnerFirst(list) {
+  return [...list].sort((a, b) => {
+    const aBeginner = matchesCollection(a, 'beginner') ? 0 : 1;
+    const bBeginner = matchesCollection(b, 'beginner') ? 0 : 1;
+    return aBeginner - bBeginner;
+  });
+}
+
 function getQuizRecommendation(answers, plans) {
   const { goal, equipment } = answers;
   if (!plans.length) return null;
@@ -386,7 +401,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
   // Filter logic
   const queryLower = query.toLowerCase().trim();
 
-  const filtered = plans.filter(p => {
+  const filteredPlans = plans.filter(p => {
     if (queryLower) {
       return [p.name, p.description, p.tags].filter(Boolean).join(' ').toLowerCase().includes(queryLower);
     }
@@ -395,6 +410,15 @@ export default function PlanLibraryScreen({ navigation, route }) {
     }
     return matchesCollection(p, activeCollection);
   });
+
+  // T5: default to beginner-appropriate plans first, outside the quiz path
+  // only. `quizResult` is the same "quiz answered this session" signal
+  // showQuizBanner already keys off below; once it is set, the quiz has
+  // given its own specific pick, so we leave the list in the order the
+  // filters above produced rather than layering a generic reorder on top of
+  // a targeted recommendation. Existing filters/collections are untouched,
+  // this only reorders whatever they already produced.
+  const filtered = quizResult ? filteredPlans : sortBeginnerFirst(filteredPlans);
 
   const showQuizBanner = !queryLower && activeCollection === 'all' && !quizResult;
   const showDivisionGrid = !queryLower && activeCollection === 'division';
