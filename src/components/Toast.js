@@ -107,7 +107,7 @@ export function ToastProvider({ children }) {
       }),
       Animated.timing(translateY, {
         toValue: 0,
-        duration: reduceMotion ? 0 : 260,
+        duration: reduceMotion ? 0 : motion.sheet,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
@@ -143,13 +143,13 @@ export function ToastProvider({ children }) {
     Animated.parallel([
       Animated.timing(opacity, {
         toValue: 0,
-        duration: reduceMotion ? 0 : 180,
+        duration: reduceMotion ? 0 : motion.state,
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(translateY, {
         toValue: reduceMotion ? 0 : 20,
-        duration: reduceMotion ? 0 : 180,
+        duration: reduceMotion ? 0 : motion.state,
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),

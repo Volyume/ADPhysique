@@ -11,7 +11,7 @@ import {
 import * as haptics from '../lib/haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useAppStore from '../store/useAppStore';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle, motion } from '../styles/theme';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const NUM_PARTICLES = 40;
@@ -152,7 +152,7 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
       // D2: the vocabulary call replaces raw expo-haptics, so the
       // reduce-motion gate covers this flagship moment too.
       haptics.selection();
-      Animated.timing(cardOpacity, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+      Animated.timing(cardOpacity, { toValue: 1, duration: motion.exit, useNativeDriver: true }).start();
       timers.push(setTimeout(onDismiss, 2200));
       return () => timers.forEach(clearTimeout);
     }
@@ -161,7 +161,7 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
     haptics.prAchieved();
 
     const overlay = Animated.parallel([
-      Animated.timing(overlayOpacity, { toValue: 0.85, duration: 200, useNativeDriver: true }),
+      Animated.timing(overlayOpacity, { toValue: 0.85, duration: motion.state, useNativeDriver: true }),
       Animated.spring(cardScale, { toValue: 1, tension: 100, friction: 8, useNativeDriver: true }),
       Animated.timing(cardOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
     ]);
