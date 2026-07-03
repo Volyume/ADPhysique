@@ -14,6 +14,7 @@ import BlockShapeCard from '../components/BlockShapeCard';
 import Button from '../components/Button';
 import PressableCard from '../components/PressableCard';
 import StartGlow from '../components/StartGlow';
+import WhatsNewSheet from '../components/WhatsNewSheet';
 import { SkeletonCard } from '../components/Skeleton';
 import TodayStrip from '../components/TodayStrip';
 import { useToast } from '../components/Toast';
@@ -2024,6 +2025,8 @@ export default function HomeScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
+      {/* Sharpener: one dismissible what's-new sheet per update. */}
+      <WhatsNewSheet />
     </SafeAreaView>
   );
 }

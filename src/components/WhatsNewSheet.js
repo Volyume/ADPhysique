@@ -1,0 +1,94 @@
+/**
+ * WhatsNewSheet — the v3 programme's "lightweight What's new" sharpener.
+ * One dismissible sheet, shown ONCE on the first launch after an update,
+ * never on first install (a brand-new user has no update to hear about)
+ * and never again for the same version. No nagging: dismissing is final
+ * for that version, and a version with no entry shows nothing.
+ *
+ * Content lives in the WHATS_NEW map below: user-facing lines only, calm
+ * register, British English, no celebration. Adding a release means adding
+ * one entry; stale versions can be pruned freely (the sheet only ever
+ * reads the current version's entry).
+ */
+import { useEffect, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Application from 'expo-application';
+import { Ionicons } from '@expo/vector-icons';
+import BottomSheet from './BottomSheet';
+import Button from './Button';
+import { colors, spacing, fontSize, fontWeight, type } from '../styles/theme';
+
+const LAST_SEEN_KEY = '@volyume_whats_new_last_seen';
+
+// Per-version release notes. Keys are the marketing version
+// (Application.nativeApplicationVersion). Keep each list short: three to
+// five lines a user would actually notice.
+export const WHATS_NEW = {
+  '1.2.0': [
+    { icon: 'timer-outline', text: 'Rest alerts can now land to the second. Allow exact alarms when asked, or from Settings.' },
+    { icon: 'play-circle-outline', text: 'A live session bar keeps your workout in view on every tab. Tap it to jump back in.' },
+    { icon: 'search-outline', text: 'Food search understands word starts, brands and multi-word searches much better.' },
+    { icon: 'speedometer-outline', text: 'Long lists scroll smoother across the app.' },
+  ],
+};
+
+export default function WhatsNewSheet() {
+  const [visible, setVisible] = useState(false);
+  const [items, setItems] = useState([]);
+  const version = Application.nativeApplicationVersion;
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        if (!version) return;
+        const lastSeen = await AsyncStorage.getItem(LAST_SEEN_KEY);
+        if (!lastSeen) {
+          // First install (or the feature's own first ship): record and
+          // stay silent. There is no update to announce.
+          await AsyncStorage.setItem(LAST_SEEN_KEY, version);
+          return;
+        }
+        if (lastSeen === version) return;
+        // An update landed. Mark seen FIRST so a crash mid-show can never
+        // turn the sheet into a nag loop, then show if we have copy for it.
+        await AsyncStorage.setItem(LAST_SEEN_KEY, version);
+        const entry = WHATS_NEW[version];
+        if (active && entry?.length) {
+          setItems(entry);
+          setVisible(true);
+        }
+      } catch (_) { /* never block launch over release notes */ }
+    })();
+    return () => { active = false; };
+  }, [version]);
+
+  if (!visible) return null;
+
+  return (
+    <BottomSheet visible={visible} onClose={() => setVisible(false)} accessibilityLabel="What's new">
+      <Text style={styles.title}>What&apos;s new</Text>
+      <Text style={styles.sub}>Version {version}</Text>
+      <View style={styles.list}>
+        {items.map((item) => (
+          <View key={item.text} style={styles.row}>
+            <Ionicons name={item.icon} size={18} color={colors.primary} style={styles.rowIcon} />
+            <Text style={styles.rowText}>{item.text}</Text>
+          </View>
+        ))}
+      </View>
+      <Button title="Nice one" onPress={() => setVisible(false)} style={styles.btn} />
+    </BottomSheet>
+  );
+}
+
+const styles = StyleSheet.create({
+  title: { ...type.h2, color: colors.textPrimary },
+  sub: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
+  list: { marginTop: spacing.lg, gap: spacing.md },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  rowIcon: { marginTop: 1 },
+  rowText: { ...type.body, color: colors.textSecondary, flex: 1, fontWeight: fontWeight.regular },
+  btn: { marginTop: spacing.xl },
+});
