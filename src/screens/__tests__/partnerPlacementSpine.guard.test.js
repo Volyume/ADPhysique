@@ -5,7 +5,9 @@
  * or regress:
  *   1. YouScreen carries a lock-aware "Partners" row that attributes its view
  *      and jumps cross-tab to the Partner route.
- *   2. ConsistencyScreen renders the shared PartnerRow, attributed.
+ *   2. ConsistencyScreen carries NO Partners row (founder device-walk
+ *      2026-07-03: three entry points read as duplication; the Consistency
+ *      row was the most out-of-place and was removed).
  *   3. AnalyticsScreen promotes the Partners tile above the Explore grid's
  *      Full History tile (i.e. it is no longer last).
  *   4. HomeScreen stays free of any partner entry — the one-banner invariant.
@@ -42,19 +44,17 @@ describe('YouScreen Partners row', () => {
   });
 });
 
-describe('ConsistencyScreen PartnerRow', () => {
-  test('imports and renders the shared PartnerRow component', () => {
-    expect(CONSISTENCY).toMatch(/import PartnerRow from '\.\.\/components\/PartnerRow'/);
-    expect(CONSISTENCY).toMatch(/<PartnerRow/);
+describe('ConsistencyScreen carries no Partners row (deduped)', () => {
+  // Founder device-walk 2026-07-03: Partners was seeded in three places; the
+  // Consistency row was the most out-of-place, so it was removed. Partners
+  // keeps the promoted Progress-tab tile and the You-tab row.
+  test('does not import or render the PartnerRow component', () => {
+    expect(CONSISTENCY).not.toMatch(/import PartnerRow from/);
+    expect(CONSISTENCY).not.toMatch(/<PartnerRow/);
   });
 
-  test('wires onOpen with attribution and a cross-tab jump', () => {
-    expect(CONSISTENCY).toMatch(/trackPartnerSurfaceView\('consistency_row'\)/);
-    expect(CONSISTENCY).toMatch(/navigateCrossTab\(navigation, 'ProgressTab', 'Partner', \{ source: 'consistency_row' \}\)/);
-  });
-
-  test('no longer carries the old "deliberately NOT shown" removal note', () => {
-    expect(CONSISTENCY).not.toMatch(/deliberately NOT shown/);
+  test('carries no consistency_row partner attribution', () => {
+    expect(CONSISTENCY).not.toMatch(/trackPartnerSurfaceView\('consistency_row'\)/);
   });
 });
 

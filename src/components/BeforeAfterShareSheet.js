@@ -25,7 +25,7 @@
  * The share is OFFERED, never pushed: no nag, no urgency, no streak, calm voice.
  */
 import {
-  useState, useEffect, useMemo, useCallback,
+  useState, useEffect, useMemo, useCallback, useRef,
 } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Image, Platform,
@@ -40,7 +40,7 @@ import { useToast } from './Toast';
 import { appAlert } from './AppAlert';
 import useAppStore from '../store/useAppStore';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
-import { getPhotoMetaMap } from '../lib/progressPhotoMeta';
+import { getPhotoMetaMap, upsertPhotoMeta } from '../lib/progressPhotoMeta';
 import { formatBodyWeight } from '../lib/units';
 import { logError } from '../lib/errorLog';
 import { drawShareCard, cardHeight } from '../lib/shareCard/drawShareCard';
@@ -181,6 +181,7 @@ export default function BeforeAfterShareSheet({ visible, onClose, photos = [] })
   const toast = useToast();
   const suppressed = usePhotoSuppression();
   const tier = useAppStore((s) => s.tier);
+  const userId = useAppStore((s) => s.user?.id);
   const bodyWeightUnits = useAppStore((s) => s.bodyWeightUnits) || 'kg';
 
   const sorted = useMemo(
@@ -251,15 +252,34 @@ export default function BeforeAfterShareSheet({ visible, onClose, photos = [] })
     return () => { cancelled = true; };
   }, []);
 
-  // Batch metadata (takenAt + weight snapshot) for the chosen pair.
+  // Batch metadata (takenAt + weight snapshot) for the chosen pair. When a
+  // chosen photo has no snapshotted weigh-in (added before the metadata layer
+  // existed), lazily backfill it ONCE so the card can show its weight: guarded
+  // to weightKg missing (never overwrites an existing snapshot), best-effort,
+  // and it never blocks the preview/render path.
+  const backfilledRef = useRef(new Set());
   useEffect(() => {
     if (!active) return undefined;
     let alive = true;
     const names = [older, newer].filter(Boolean).map((p) => p.name);
     if (names.length === 0) { setMetaMap({}); return undefined; }
-    getPhotoMetaMap(names).then((m) => { if (alive) setMetaMap(m || {}); }).catch(() => {});
+    getPhotoMetaMap(names).then((m) => {
+      if (!alive) return;
+      const map = m || {};
+      setMetaMap(map);
+      if (!userId) return;
+      for (const name of names) {
+        const meta = map[name];
+        if (!meta || meta.weightKg != null) continue;
+        if (backfilledRef.current.has(name)) continue;
+        backfilledRef.current.add(name);
+        upsertPhotoMeta(userId, name, { takenAt: meta.takenAt })
+          .then((updated) => { if (alive && updated) setMetaMap((prev) => ({ ...prev, [name]: updated })); })
+          .catch(() => {});
+      }
+    }).catch(() => {});
     return () => { alive = false; };
-  }, [active, older, newer]);
+  }, [active, older, newer, userId]);
 
   // Decode the two chosen photos into SkImages (bounded: one pair at a time).
   useEffect(() => {

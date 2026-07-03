@@ -41,13 +41,15 @@
       "^expo-document-picker$": "<rootDir>/__mocks__/expo-document-picker.js",
       "^expo-keep-awake$": "<rootDir>/__mocks__/expo-keep-awake.js",
       "^@shopify/flash-list$": "<rootDir>/__mocks__/shopify-flash-list.js",
-      "^@expo/vector-icons/Ionicons$": "<rootDir>/__mocks__/expo-vector-icons-ionicons.js"
+      "^@expo/vector-icons/Ionicons$": "<rootDir>/__mocks__/expo-vector-icons-ionicons.js",
+      "^@react-native-community/datetimepicker$": "<rootDir>/__mocks__/datetimepicker-stub.js"
     }
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
     "@gorhom/bottom-sheet": "^5.2.14",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/datetimepicker": "8.4.4",
     "@react-native-community/netinfo": "11.4.1",
     "@react-native-google-signin/google-signin": "^16.1.2",
     "@react-native-ml-kit/text-recognition": "^2.0.0",

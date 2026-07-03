@@ -55,7 +55,8 @@ import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { getPhotoMetaMap, upsertPhotoMeta } from '../lib/progressPhotoMeta';
 import { formatBodyWeight } from '../lib/units';
 import { logError } from '../lib/errorLog';
-import { colors, spacing, radius, type, iconSize, motion } from '../styles/theme';
+import PhotoDatePicker from './PhotoDatePicker';
+import { colors, spacing, radius, type, motion } from '../styles/theme';
 
 const POSES = [
   { key: 'front', label: 'Front' },
@@ -66,7 +67,6 @@ const POSES = [
 const POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
 
 const MAX_ZOOM = 4;
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
 
@@ -75,8 +75,6 @@ function formatDay(ts) {
     return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   } catch (_) { return ''; }
 }
-
-function daysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
 
 export default function ProgressPhotoViewer({
   photos = [],
@@ -94,9 +92,9 @@ export default function ProgressPhotoViewer({
   const startIndex = Math.max(0, photos.findIndex((p) => p.name === initialName));
   const [index, setIndex] = useState(startIndex);
   const [metaMap, setMetaMap] = useState({});
-  const [editing, setEditing] = useState(null); // 'date' | 'note' | null
+  const [editing, setEditing] = useState(null); // 'note' | null
   const [draftNote, setDraftNote] = useState('');
-  const [draftDate, setDraftDate] = useState(null); // { y, m, d } | null
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const namesKey = photos.map((p) => p.name).join('|');
 
@@ -235,6 +233,30 @@ export default function ProgressPhotoViewer({
     }
   }, [current, userId]);
 
+  // Backfill (progress-photos DATING): a photo added before the metadata layer
+  // existed has no snapshotted weigh-in. The FIRST time such a photo is opened,
+  // lazily create/refresh its row for its current takenAt so the nearest
+  // weigh-in is snapshotted and the weight can show. Fires ONCE per name, only
+  // when weightKg is missing (never overwrites an existing snapshot), and is
+  // best-effort so it never blocks or breaks the viewer.
+  const backfilledRef = useRef(new Set());
+  useEffect(() => {
+    if (!current || !userId) return;
+    const name = current.name;
+    const meta = metaMap[name];
+    if (!meta || meta.weightKg != null) return;
+    if (backfilledRef.current.has(name)) return;
+    backfilledRef.current.add(name);
+    (async () => {
+      try {
+        const updated = await upsertPhotoMeta(userId, name, { takenAt: meta.takenAt });
+        setMetaMap((m) => ({ ...m, [name]: updated }));
+      } catch (e) {
+        logError('ProgressPhotoViewer.backfillWeight', e, { name });
+      }
+    })();
+  }, [current, userId, metaMap]);
+
   function onSelectPose(pose) {
     if (!current) return;
     // Re-tapping the active pose clears it; otherwise set it.
@@ -253,49 +275,20 @@ export default function ProgressPhotoViewer({
     setEditing(null);
   }
 
-  function openDateEditor() {
-    const d = new Date(currentMeta?.takenAt || Date.now());
-    setDraftDate({ y: d.getFullYear(), m: d.getMonth(), d: d.getDate() });
-    setEditing('date');
-  }
-
-  function nudgeDate(field, delta) {
-    setDraftDate((prev) => {
-      if (!prev) return prev;
-      let { y, m, d } = prev;
-      if (field === 'y') y += delta;
-      if (field === 'm') {
-        m += delta;
-        if (m > 11) { m = 0; y += 1; }
-        if (m < 0) { m = 11; y -= 1; }
-      }
-      if (field === 'd') {
-        d += delta;
-        const dim = daysInMonth(y, m);
-        if (d > dim) d = 1;
-        if (d < 1) d = dim;
-      }
-      // A month/year change can leave the day out of range (e.g. 31 Jan -> Feb).
-      d = clamp(d, 1, daysInMonth(y, m));
-      return { y, m, d };
-    });
-  }
-
-  async function saveDate() {
-    if (!draftDate) { setEditing(null); return; }
-    const { y, m, d } = draftDate;
-    // Preserve the original time-of-day so ordering within a day stays stable.
+  // Date editing now uses the real date picker (past-only, no future). The
+  // chosen day keeps the photo's original time-of-day so ordering within a day
+  // stays stable; changing takenAt re-snapshots the nearest weigh-in inside
+  // upsertPhotoMeta.
+  function onPickDate(ms) {
+    const chosen = new Date(ms);
     const orig = new Date(currentMeta?.takenAt || Date.now());
     const ts = new Date(
-      y, m, d, orig.getHours(), orig.getMinutes(), orig.getSeconds(), orig.getMilliseconds(),
+      chosen.getFullYear(), chosen.getMonth(), chosen.getDate(),
+      orig.getHours(), orig.getMinutes(), orig.getSeconds(), orig.getMilliseconds(),
     ).getTime();
-    await applyMeta({ takenAt: ts });
-    setEditing(null);
+    // Never allow the future (belt-and-braces beside the picker's maximumDate).
+    applyMeta({ takenAt: Math.min(ts, Date.now()) });
   }
-
-  const draftPreview = draftDate
-    ? formatDay(new Date(draftDate.y, draftDate.m, draftDate.d).getTime())
-    : '';
 
   function onPressReference() {
     if (!current) return;
@@ -406,7 +399,7 @@ export default function ProgressPhotoViewer({
               <View style={styles.actions}>
                 <Button
                   title="Edit date" variant="secondary" size="sm" fullWidth={false}
-                  icon="calendar-outline" onPress={openDateEditor} accessibilityLabel="Edit the date"
+                  icon="calendar-outline" onPress={() => setDatePickerOpen(true)} accessibilityLabel="Edit the date"
                 />
                 <Button
                   title={currentMeta.note ? 'Edit note' : 'Add note'} variant="secondary" size="sm"
@@ -459,51 +452,15 @@ export default function ProgressPhotoViewer({
         </View>
       </Modal>
 
-      {/* Date editor */}
-      <Modal
-        visible={editing === 'date'}
-        transparent
-        animationType={reduceMotion ? 'none' : 'fade'}
-        onRequestClose={() => setEditing(null)}
-      >
-        <View style={styles.sheetBackdrop}>
-          <View style={styles.sheet}>
-            <Text style={styles.sheetTitle}>Date taken</Text>
-            <Text style={styles.datePreview}>{draftPreview}</Text>
-            <View style={styles.stepperRow}>
-              <DateStepper label="Day" value={draftDate ? String(draftDate.d) : ''} field="d" onNudge={nudgeDate} />
-              <DateStepper label="Month" value={draftDate ? MONTHS[draftDate.m] : ''} field="m" onNudge={nudgeDate} />
-              <DateStepper label="Year" value={draftDate ? String(draftDate.y) : ''} field="y" onNudge={nudgeDate} />
-            </View>
-            <View style={styles.sheetActions}>
-              <Button title="Cancel" variant="tertiary" size="sm" fullWidth={false} onPress={() => setEditing(null)} accessibilityLabel="Cancel the date" />
-              <Button title="Save" size="sm" fullWidth={false} onPress={saveDate} accessibilityLabel="Save the date" />
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* Date editor — the real date picker, past-only (no future). */}
+      <PhotoDatePicker
+        visible={datePickerOpen}
+        valueMs={currentMeta?.takenAt}
+        maxMs={Date.now()}
+        onChange={onPickDate}
+        onClose={() => setDatePickerOpen(false)}
+      />
     </Modal>
-  );
-}
-
-function DateStepper({ label, value, field, onNudge }) {
-  return (
-    <View style={styles.stepper}>
-      <Text style={styles.stepperLabel}>{label}</Text>
-      <TouchableOpacity
-        onPress={() => onNudge(field, 1)} hitSlop={8}
-        accessibilityRole="button" accessibilityLabel={`Increase ${label.toLowerCase()}`}
-      >
-        <Ionicons name="chevron-up" size={iconSize.md} color={colors.primary} />
-      </TouchableOpacity>
-      <Text style={styles.stepperValue}>{value}</Text>
-      <TouchableOpacity
-        onPress={() => onNudge(field, -1)} hitSlop={8}
-        accessibilityRole="button" accessibilityLabel={`Decrease ${label.toLowerCase()}`}
-      >
-        <Ionicons name="chevron-down" size={iconSize.md} color={colors.primary} />
-      </TouchableOpacity>
-    </View>
   );
 }
 
@@ -561,13 +518,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
     padding: spacing.md, minHeight: 96, textAlignVertical: 'top',
   },
-  datePreview: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.lg },
-  stepperRow: { flexDirection: 'row', gap: spacing.sm },
-  stepper: {
-    flex: 1, alignItems: 'center', gap: spacing.xs,
-    backgroundColor: colors.surface2, borderRadius: radius.md, paddingVertical: spacing.md,
-  },
-  stepperLabel: { ...type.caption, color: colors.textMuted },
-  stepperValue: { ...type.num('title'), color: colors.textPrimary },
   sheetActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, marginTop: spacing.lg },
 });

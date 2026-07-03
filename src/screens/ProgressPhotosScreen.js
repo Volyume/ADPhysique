@@ -8,6 +8,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { appAlert } from '../components/AppAlert';
 import Button from '../components/Button';
+import BackHeader from '../components/BackHeader';
 import {
   colors, spacing, radius, fontSize, fontWeight, type,
 } from '../styles/theme';
@@ -19,12 +20,13 @@ import { logError } from '../lib/errorLog';
 import {
   listProgressPhotos, saveProgressPhoto, deleteProgressPhoto, markPhotosOwner,
 } from '../lib/progressPhotos';
-import { getPhotoMetaMap, deletePhotoMeta } from '../lib/progressPhotoMeta';
+import { getPhotoMetaMap, deletePhotoMeta, upsertPhotoMeta } from '../lib/progressPhotoMeta';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import ProgressPhotoViewer from '../components/ProgressPhotoViewer';
 import ProgressPhotoCompare from '../components/ProgressPhotoCompare';
 import ProgressGhostCapture from '../components/ProgressGhostCapture';
 import BeforeAfterShareSheet from '../components/BeforeAfterShareSheet';
+import PhotoDetailsSheet from '../components/PhotoDetailsSheet';
 
 // expo-image-picker is a native module; lazy-require so the screen imports in
 // the node test env (mirrors ShareCardScreen).
@@ -122,6 +124,17 @@ export default function ProgressPhotosScreen({ navigation }) {
   const [captureOpen, setCaptureOpen] = useState(false);
   const [captureReference, setCaptureReference] = useState(null);
   const [capturePose, setCapturePose] = useState(null);
+
+  // The "Photo details" step (date + pose) shown after an image is obtained and
+  // BEFORE it is finalised. A picked camera/library image carries `pendingUri`
+  // (saved on confirm); a guided capture is already saved so it carries
+  // `pendingName` instead (confirm only refines its date + pose). `pendingDate`
+  // is captured once when the sheet opens so the draft never resets mid-edit.
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [pendingUri, setPendingUri] = useState(null);
+  const [pendingName, setPendingName] = useState(null);
+  const [pendingPose, setPendingPose] = useState(null);
+  const [pendingDate, setPendingDate] = useState(null);
   // The ghost-overlay reference the viewer's "set as reference" remembers; the
   // next guided capture seeds against it.
   const [referenceName, setReferenceName] = useState(null);
@@ -176,13 +189,79 @@ export default function ProgressPhotosScreen({ navigation }) {
       if (result?.canceled) return;
       const uri = result?.assets?.[0]?.uri;
       if (!uri) return;
-      await saveProgressPhoto(uri);
-      await refresh();
+      // Don't finalise yet: collect the date (and pose) first, then save on
+      // confirm so the weigh-in snapshot lands on the chosen day.
+      openDetailsForNew(uri);
     } catch (_) {
       toast.show('Could not add the photo. Try again.', { variant: 'error' });
     } finally {
       setBusy(false);
     }
+  }
+
+  // A picked image needs the details step before it is saved (save happens on
+  // confirm, dated to the chosen day). Snapshot today as the default date once,
+  // so the draft never resets while the sheet is open.
+  function openDetailsForNew(uri) {
+    setPendingUri(uri);
+    setPendingName(null);
+    setPendingPose(null);
+    setPendingDate(Date.now());
+    setDetailsOpen(true);
+  }
+
+  // A guided capture has already saved the file (with its pose + today's
+  // weigh-in). The details step only refines its date and pose; confirm writes
+  // through upsertPhotoMeta, which re-snapshots the weigh-in if the date moved.
+  function openDetailsForCaptured(name, pose) {
+    setPendingUri(null);
+    setPendingName(name);
+    setPendingPose(pose ?? null);
+    setPendingDate(Date.now());
+    setDetailsOpen(true);
+  }
+
+  function resetPending() {
+    setDetailsOpen(false);
+    setPendingUri(null);
+    setPendingName(null);
+    setPendingPose(null);
+    setPendingDate(null);
+  }
+
+  async function onDetailsConfirm({ takenAt, pose }) {
+    setDetailsOpen(false);
+    // Live-tier re-check (the add-alert write-guard class): a pro-to-free flip
+    // with the sheet open must not save or write metadata.
+    if (useAppStore.getState().tier !== 'pro') { resetPending(); return; }
+    const uid = useAppStore.getState().user?.id;
+    setBusy(true);
+    try {
+      let name = pendingName;
+      if (pendingUri) {
+        const saved = await saveProgressPhoto(pendingUri);
+        name = saved?.name || null;
+      }
+      if (name) {
+        // Creates the metadata row and snapshots the weigh-in nearest takenAt
+        // (or re-snapshots for a captured photo whose date the user moved).
+        await upsertPhotoMeta(uid, name, { takenAt, pose });
+      }
+    } catch (e) {
+      logError('ProgressPhotos.addDetails', e, {});
+      toast.show('Could not add the photo. Try again.', { variant: 'error' });
+    } finally {
+      setBusy(false);
+      resetPending();
+      await refresh();
+    }
+  }
+
+  function onDetailsCancel() {
+    // A picked image was never saved, so cancel simply discards it. A guided
+    // capture is already on disk with sensible defaults, so refresh keeps it.
+    resetPending();
+    refresh();
   }
 
   // Enrich each photo with its effective taken_at (meta, else the filename ts)
@@ -305,27 +384,24 @@ export default function ProgressPhotosScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Back">
-          <Ionicons name="chevron-back" size={26} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Progress photos</Text>
-        {/* E10 read-only lapse views: adding a photo is a write; hidden in the
-            view-only state. A spacer keeps the title centred. */}
-        {!readOnly ? (
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      {/* Standard pushed-screen scaffold (BackHeader), matching Partners and the
+          rest of the app. The add action rides the header's right slot; it is a
+          write, so it is hidden in the E10 view-only lapse state. */}
+      <BackHeader
+        title="Progress photos"
+        onBack={() => navigation.goBack()}
+        right={!readOnly ? (
           <TouchableOpacity onPress={onAdd} disabled={busy} hitSlop={12} accessibilityRole="button" accessibilityLabel="Add a photo">
             {busy ? <ActivityIndicator color={colors.primary} /> : <Ionicons name="add" size={26} color={colors.primary} />}
           </TouchableOpacity>
-        ) : (
-          <View style={{ width: 26 }} />
-        )}
-      </View>
+        ) : null}
+      />
 
       <Text style={styles.note}>
         {calm
-          ? 'Private to this device. Not synced, not shared. Use these only if they help you, and skip them if they do not.'
-          : 'Private to this device. Not synced, not shared.'}
+          ? 'Private to this device. We never upload or sync your photos, and nothing is shared unless you choose to. Use these only if they help you, and skip them if they do not.'
+          : 'Private to this device. We never upload or sync your photos, and nothing is shared unless you choose to.'}
         {readOnly ? ' View-only on the free plan. Your photos are safe and stay yours.' : ''}
       </Text>
 
@@ -472,7 +548,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         <ProgressGhostCapture
           referencePhoto={captureReference}
           pose={capturePose}
-          onCaptured={() => { setCaptureOpen(false); refresh(); }}
+          onCaptured={(name) => { setCaptureOpen(false); openDetailsForCaptured(name, capturePose); }}
           onClose={() => setCaptureOpen(false)}
           onFallback={() => { setCaptureOpen(false); pickFrom('library'); }}
         />
@@ -487,17 +563,22 @@ export default function ProgressPhotosScreen({ navigation }) {
       >
         <BeforeAfterShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} photos={photos} />
       </Modal>
+
+      {/* Photo details (date + pose) shown after an image is obtained and before
+          it is finalised. Its own Modal; only mounted while open. */}
+      <PhotoDetailsSheet
+        visible={detailsOpen}
+        initialDateMs={pendingDate}
+        initialPose={pendingPose}
+        onConfirm={onDetailsConfirm}
+        onCancel={onDetailsCancel}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-  },
-  title: { ...type.h3, color: colors.textPrimary },
   note: {
     ...type.bodySm,
     color: colors.textMuted,

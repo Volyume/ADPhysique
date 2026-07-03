@@ -265,20 +265,24 @@ describe('ProgressPhotosScreen ED-safety suppression gate', () => {
 });
 
 describe('ProgressPhotosScreen wellbeing gate unchanged', () => {
-  test('calm-mode note keeps its exact pre-upgrade wording, with the feature present', async () => {
+  test('calm-mode note keeps the ED calm guidance, with the feature present', async () => {
     const tree = await render([NEW, OLD], { mode: 'calm' });
     const text = flattenText(tree.toJSON());
-    expect(text).toContain(
-      'Private to this device. Not synced, not shared. Use these only if they help you, and skip them if they do not.',
-    );
+    // The privacy wording was reworded (founder 2026-07-03: "not shared"
+    // contradicted the deliberate share option), but the ED calm guidance must
+    // stay: use only if it helps, skip if not.
+    expect(text).toContain('Use these only if they help you, and skip them if they do not.');
+    expect(text).toContain('nothing is shared unless you choose to');
     // Compare stays reachable in calm mode when NOT otherwise suppressed (the
     // suppression hook is the single gate; here it reports false).
     expect(findPressable(tree, 'Compare two photos')).toBeDefined();
   });
 
-  test('normal mode keeps the short privacy note', async () => {
+  test('normal mode keeps the reworded privacy note (no "not shared" contradiction)', async () => {
     const tree = await render([NEW, OLD], { mode: 'normal' });
-    expect(flattenText(tree.toJSON())).toContain('Private to this device. Not synced, not shared.');
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('We never upload or sync your photos, and nothing is shared unless you choose to.');
+    expect(text).not.toContain('Not synced, not shared');
   });
 });
 

@@ -51,7 +51,9 @@
         "NSPrivacyAccessedAPITypes": [
           {
             "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
-            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
           }
         ]
       }
@@ -186,11 +188,28 @@
             "buildToolsVersion": "35.0.0",
             "usesCleartextTraffic": false,
             "manifestQueries": {
-              "package": ["com.whatsapp"],
+              "package": [
+                "com.whatsapp"
+              ],
               "intent": [
-                { "action": "android.intent.action.SENDTO", "data": { "scheme": "smsto" } },
-                { "action": "android.intent.action.SENDTO", "data": { "scheme": "mailto" } },
-                { "action": "android.intent.action.VIEW", "data": { "scheme": "sms" } }
+                {
+                  "action": "android.intent.action.SENDTO",
+                  "data": {
+                    "scheme": "smsto"
+                  }
+                },
+                {
+                  "action": "android.intent.action.SENDTO",
+                  "data": {
+                    "scheme": "mailto"
+                  }
+                },
+                {
+                  "action": "android.intent.action.VIEW",
+                  "data": {
+                    "scheme": "sms"
+                  }
+                }
               ]
             }
           },
@@ -237,7 +256,8 @@
             }
           ]
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "notification": {
       "icon": "./assets/notification-icon.png",

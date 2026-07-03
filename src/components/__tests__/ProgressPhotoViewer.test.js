@@ -197,6 +197,66 @@ test('changing the pose writes through upsertPhotoMeta', async () => {
   expect(upsertPhotoMeta).toHaveBeenCalledWith(USER_ID, NAME_A, { pose: 'side' });
 });
 
+test('editing the date writes through upsertPhotoMeta with the chosen day, re-snapshotting weight', async () => {
+  const tree = await mount(baseProps());
+  // Open the real date picker.
+  const [editBtn] = findByLabel(tree, 'Edit the date');
+  await act(async () => { editBtn.props.onPress(); });
+
+  const dtp = tree.root.findAll((n) => n.type === 'DateTimePicker')[0];
+  expect(dtp).toBeTruthy();
+  // Past-only at the native level.
+  expect(dtp.props.maximumDate.getTime()).toBeLessThanOrEqual(Date.now() + 1000);
+
+  // Choose 1 Jun 2026; the viewer preserves the photo's original 09:00 time.
+  const chosen = new Date(2026, 5, 1);
+  await act(async () => { dtp.props.onChange({ type: 'set' }, chosen); });
+
+  const expected = new Date(2026, 5, 1, 9, 0, 0, 0).getTime();
+  expect(upsertPhotoMeta).toHaveBeenCalledWith(USER_ID, NAME_A, { takenAt: expected });
+});
+
+test('a future date cannot be committed even if the picker reports one (clamped)', async () => {
+  const tree = await mount(baseProps());
+  const [editBtn] = findByLabel(tree, 'Edit the date');
+  await act(async () => { editBtn.props.onPress(); });
+  const dtp = tree.root.findAll((n) => n.type === 'DateTimePicker')[0];
+
+  const future = new Date(Date.now() + 40 * 86400000);
+  await act(async () => { dtp.props.onChange({ type: 'set' }, future); });
+
+  const call = upsertPhotoMeta.mock.calls.find((c) => c[2] && 'takenAt' in c[2]);
+  expect(call).toBeTruthy();
+  expect(call[2].takenAt).toBeLessThanOrEqual(Date.now() + 1000);
+});
+
+test('backfill: a photo with no weight snapshot lazily upserts once for its takenAt', async () => {
+  // Both photos come back with a null weight snapshot (added before the meta
+  // layer). Opening the viewer should backfill the CURRENT photo exactly once.
+  getPhotoMetaMap.mockResolvedValue({
+    [NAME_A]: { name: NAME_A, takenAt: TS, pose: 'front', weightKg: null, note: null },
+    [NAME_B]: { name: NAME_B, takenAt: TS - 86400000, pose: 'side', weightKg: null, note: null },
+  });
+  upsertPhotoMeta.mockResolvedValue({ name: NAME_A, takenAt: TS, pose: 'front', weightKg: 80.2, note: null });
+
+  await mount(baseProps());
+
+  const backfillCalls = upsertPhotoMeta.mock.calls.filter(
+    (c) => c[1] === NAME_A && c[2] && 'takenAt' in c[2] && !('pose' in c[2]),
+  );
+  expect(backfillCalls.length).toBe(1);
+  expect(backfillCalls[0]).toEqual([USER_ID, NAME_A, { takenAt: TS }]);
+});
+
+test('backfill: does NOT fire when a weight snapshot already exists (never overwrites)', async () => {
+  // META_MAP has a real weight for NAME_A, so no backfill upsert must run.
+  await mount(baseProps());
+  const backfillCalls = upsertPhotoMeta.mock.calls.filter(
+    (c) => c[1] === NAME_A && c[2] && 'takenAt' in c[2] && !('pose' in c[2]),
+  );
+  expect(backfillCalls.length).toBe(0);
+});
+
 test('set-as-reference and compare-from-here call their callbacks with the photo name', async () => {
   const props = baseProps();
   const tree = await mount(props);
