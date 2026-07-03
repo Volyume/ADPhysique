@@ -1,7 +1,9 @@
 # Rest-timer / session survival on Android without a health permission or Play-sensitive declaration (DRAFT, evidence only)
 
 Research draft for the P4 founder memo, 2026-07-02. Evidence-gathering only; no
-recommendation is made here. The founder memo gets finished hands-on.
+recommendation is made here. FINALISED: the decision memo is
+docs/p4a-rest-timer-survival-memo-2026-07-03.md (exact alarms + shortService
+chosen and built); this file remains as its evidence appendix.
 
 Constraint under study: improve rest-timer and workout-session survival on
 Android WITHOUT declaring any health runtime permission (ACTIVITY_RECOGNITION,
