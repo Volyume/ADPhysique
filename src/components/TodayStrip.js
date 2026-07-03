@@ -7,11 +7,16 @@
  * weigh-in in the strip so the collapse costs zero function (the morning ritual
  * the coach depends on).
  *
- * Cells: WEIGHT (load-bearing, keeps logging) and CARDIO ("+ Log" entry point,
- * hidden when cardio is off). Free tier renders no strip at all (the parent only
- * mounts this for Pro) — gating unchanged, no Pro exposure to free. The Home food
- * cell and the steps cell were both removed (founder review 2026-06-30; steps was
- * retired entirely for Google Play policy reasons).
+ * Cells: WEIGHT (load-bearing, keeps logging), CARDIO ("+ Log" entry point,
+ * hidden when cardio is off), and MEAL (D1, founder decision 2026-07-03): a
+ * pure VERB chip ("Log Meal 2" by time of day) deep-linking into FoodSearch
+ * scoped to the inferred slot. The rule of record from the 2026-06-30 food
+ * cell removal: Home never carries food NUMBERS or food progress — the old
+ * cell showed calories on the app's most-seen surface. A verb carries no
+ * number, no progress, no valence, so it does not break that rule. Free tier
+ * renders no strip at all (the parent only mounts this for Pro) — the chip is
+ * hidden on free, not locked. The steps cell stays retired (Google Play
+ * policy).
  *
  * Weight data + persistence stay owned by HomeScreen (it reloads on focus and
  * feeds the coach); this component owns only the draft input, parsing, and the
@@ -31,10 +36,14 @@ import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, AppState, PixelRatio,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
 import { getCardioLogForDate } from '../lib/database';
 import { summariseWeekCardio } from '../lib/cardio/cardioEngine';
+import {
+  buildMealSlots, inferMealSlotForHour, mealSlotLabel, DEFAULT_MEALS_PER_DAY,
+} from '../lib/food/mealSlots';
 import {
   stoneLbsToKg, parseBodyWeightToKg, kgToStoneLbsStrings, kgToLbs, formatBodyWeightShort,
 } from '../lib/units';
@@ -65,6 +74,10 @@ export default function TodayStrip({
   // deep-link passes a timestamp) opens the weight input, so the promised
   // action is one tap away rather than a hunt for the right cell.
   openWeightSignal = null,
+  // D1: when provided, the MEAL verb chip renders and tapping it calls this
+  // with the inferred slot key. Absent (e.g. a surface that must stay
+  // food-free) the chip simply does not exist.
+  onLogMeal,
 }) {
   // ── Weight draft (owned here; data owned by the parent) ──
   const [weightInput, setWeightInput] = useState('');
@@ -153,11 +166,30 @@ export default function TodayStrip({
     return () => sub.remove();
   }, [loadCardio]);
 
+  // ── Meal chip (D1) ──
+  // The same meals-per-day pref the diary ladder reads, so the inferred slot
+  // is always one the user's diary actually shows. Re-read on focus (the pref
+  // changes on NutritionTargets, a different tab).
+  const [mealsPerDay, setMealsPerDay] = useState(DEFAULT_MEALS_PER_DAY);
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    AsyncStorage.getItem('@volyume_meals_per_day').then((v) => {
+      const n = parseInt(v, 10);
+      if (active && Number.isFinite(n) && n > 0) setMealsPerDay(n);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []));
+  const mealSlot = onLogMeal
+    ? inferMealSlotForHour(new Date().getHours(), buildMealSlots([], mealsPerDay).map((s) => s.key))
+    : null;
+
   // ── Which cells show ──
-  // Weight is always present; cardio is conditional. (The Home food cell and the
-  // steps cell were both removed per founder review 2026-06-30.)
+  // Weight is always present; cardio and the meal chip are conditional. (The
+  // old calorie-showing food cell stays removed per founder review 2026-06-30;
+  // the D1 chip is a verb, not a number.)
   const showCardio = !!cardioEnabled;
-  const cellCount = 1 + (showCardio ? 1 : 0);
+  const showMeal = !!onLogMeal && !!mealSlot;
+  const cellCount = 1 + (showCardio ? 1 : 0) + (showMeal ? 1 : 0);
   // Large text → one cell per line (nothing truncates). At normal text, four
   // cells go to a 2×2 grid instead of a cramped four-across row.
   const stackedByFont = PixelRatio.getFontScale() >= STACK_FONT_SCALE;
@@ -282,10 +314,31 @@ export default function TodayStrip({
     );
   }
 
-  // The secondary cell (cardio) as a divided row.
+  // D1: the verb chip. No number, no progress, no valence — the label names
+  // the action and the time-appropriate meal, nothing else.
+  function MealCell() {
+    const verb = `Log ${mealSlotLabel(mealSlot)}`;
+    return (
+      <TouchableOpacity
+        style={styles.cellInner}
+        onPress={() => onLogMeal(mealSlot)}
+        accessibilityRole="button"
+        accessibilityLabel={verb}
+      >
+        <Text style={styles.cellLabel}>MEAL</Text>
+        <View style={styles.loggedRow}>
+          <Ionicons name="restaurant-outline" size={15} color={colors.primary} />
+          <Text style={styles.logPrompt} numberOfLines={1}>{verb}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
+  // The secondary cells (cardio, meal) as a divided row.
   function SecondaryRow() {
     const cells = [];
     if (showCardio) cells.push(<CardioCell key="cardio" />);
+    if (showMeal) cells.push(<MealCell key="meal" />);
     if (cells.length === 0) return null;
     return (
       <View style={styles.row}>
@@ -296,25 +349,26 @@ export default function TodayStrip({
     );
   }
 
-  // Expanded layout: the input takes a full row, cardio sits below.
+  // Expanded layout: the input takes a full row, the secondary cells sit below.
   if (inputOpen) {
     return (
       <View style={styles.card}>
         <Text style={styles.cellLabel}>MORNING WEIGHT</Text>
         <WeightInputRow />
-        {showCardio ? (
+        {showCardio || showMeal ? (
           <View style={styles.secondaryWrap}><SecondaryRow /></View>
         ) : null}
       </View>
     );
   }
 
-  // Compact layout: weight + steps + cardio in one divided row. Under a large
+  // Compact layout: weight + cardio + meal in one divided row. Under a large
   // font scale, stack them so nothing truncates.
   const compactCells = [
     todayWeight != null ? <WeightLogged key="w" /> : <WeightCompactEmpty key="w" />,
   ];
   if (showCardio) compactCells.push(<CardioCell key="c" />);
+  if (showMeal) compactCells.push(<MealCell key="m" />);
 
   if (stackedByFont) {
     return (

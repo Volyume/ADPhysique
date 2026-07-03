@@ -139,3 +139,30 @@ describe('cardio cell', () => {
     expect(json(tree)).not.toContain('CARDIO');
   });
 });
+
+// D1 (founder decision 2026-07-03): the verb-only meal chip. Hidden without
+// the handler, names the time-appropriate meal, carries no food numbers.
+describe('meal chip (D1)', () => {
+  test('absent onLogMeal: no MEAL cell at all', async () => {
+    const tree = await render({ todayWeight: 80, cardioEnabled: true });
+    expect(json(tree)).not.toContain('MEAL');
+  });
+
+  test('renders the verb for the inferred slot and passes the slot key on tap', async () => {
+    // 12:00 on the default 4-meal ladder lands mid-ladder (meal_2).
+    hoursSpy = jest.spyOn(Date.prototype, 'getHours').mockReturnValue(12);
+    const onLogMeal = jest.fn();
+    const tree = await render({ todayWeight: 80, cardioEnabled: true, onLogMeal });
+    expect(json(tree)).toContain('Log Meal 2');
+    act(() => findByLabel(tree, 'Log Meal 2').props.onPress());
+    expect(onLogMeal).toHaveBeenCalledWith('meal_2');
+  });
+
+  test('the chip carries a verb only: no calories, no progress (D1 rule of record)', async () => {
+    hoursSpy = jest.spyOn(Date.prototype, 'getHours').mockReturnValue(8);
+    const tree = await render({ todayWeight: 80, cardioEnabled: false, onLogMeal: () => {} });
+    const txt = json(tree);
+    expect(txt).toContain('Log Meal 1');
+    expect(txt).not.toMatch(/kcal|calorie|remaining|target/i);
+  });
+});
