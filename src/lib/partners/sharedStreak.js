@@ -80,14 +80,20 @@ export function computeSharedStreak({ weeks = [], enabled = true } = {}) {
 /**
  * The chip label for the partner row (§4.4), house voice, British English.
  * Numerals are the hero; no exclamation marks; never a red/fail word.
+ *
+ * T9 (world-class audit 2026-07-03, identity-copy sweep): "weeks running" is
+ * COMP-018's own identity register for this exact count (WeeklyStreakStrip,
+ * ConsistencyEcho, StreakWeeksSection, streakKeptPush all use it). The shared
+ * streak is the same consistency habit, shared, so it carries the same words
+ * rather than a bare "N weeks".
  */
 export function sharedStreakLabel({ run = 0, status = 'counting' } = {}) {
   switch (status) {
     case 'off':      return null;
-    case 'resting':  return run > 0 ? `Resting. Streak safe at ${run} ${weeksWord(run)}.` : 'Resting this week';
-    case 'quiet':    return run > 0 ? `Quiet week. Streak safe at ${run} ${weeksWord(run)}.` : 'Quiet week';
+    case 'resting':  return run > 0 ? `Resting. Streak safe at ${run} ${weeksWord(run)} running.` : 'Resting this week';
+    case 'quiet':    return run > 0 ? `Quiet week. Streak safe at ${run} ${weeksWord(run)} running.` : 'Quiet week';
     case 'archived': return 'Start a new run together?';
-    default:         return run > 0 ? `${run} ${weeksWord(run)}` : 'New run';
+    default:         return run > 0 ? `${run} ${weeksWord(run)} running` : 'New run';
   }
 }
 

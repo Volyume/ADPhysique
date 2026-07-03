@@ -72,13 +72,13 @@ describe('computeSharedStreak', () => {
 
 describe('sharedStreakLabel — British English, never a fail word', () => {
   test('counting shows the week count', () =>
-    expect(sharedStreakLabel({ run: 6, status: 'counting' })).toBe('6 weeks'));
+    expect(sharedStreakLabel({ run: 6, status: 'counting' })).toBe('6 weeks running'));
   test('singular week', () =>
-    expect(sharedStreakLabel({ run: 1, status: 'counting' })).toBe('1 week'));
+    expect(sharedStreakLabel({ run: 1, status: 'counting' })).toBe('1 week running'));
   test('resting keeps the streak safe', () =>
-    expect(sharedStreakLabel({ run: 6, status: 'resting' })).toBe('Resting. Streak safe at 6 weeks.'));
+    expect(sharedStreakLabel({ run: 6, status: 'resting' })).toBe('Resting. Streak safe at 6 weeks running.'));
   test('quiet keeps the streak safe', () =>
-    expect(sharedStreakLabel({ run: 6, status: 'quiet' })).toBe('Quiet week. Streak safe at 6 weeks.'));
+    expect(sharedStreakLabel({ run: 6, status: 'quiet' })).toBe('Quiet week. Streak safe at 6 weeks running.'));
   test('archived invites a fresh run', () =>
     expect(sharedStreakLabel({ status: 'archived' })).toBe('Start a new run together?'));
   test('off is null', () =>

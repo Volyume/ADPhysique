@@ -504,13 +504,16 @@ export default function AnalyticsScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Phase-2 lifetime-tonnage landmark — independent of the streak strip. */}
+        {/* Phase-2 lifetime-tonnage landmark — independent of the streak strip.
+            T9 (world-class audit 2026-07-03, identity-copy sweep): matches the
+            "showing up" identity register the streak-milestone copy above
+            already uses, rather than a bare number with a generic label. */}
         {tonnageLandmark ? (
           <View style={styles.section}>
             <View style={styles.milestoneRow}>
               <Ionicons name="barbell-outline" size={16} color={colors.primary} />
               <Text style={styles.milestoneText}>
-                {formatTonnage(tonnageLandmark)} {units === 'lbs' ? 'lbs' : 'kg'} lifted all-time. A landmark.
+                {formatTonnage(tonnageLandmark)} {units === 'lbs' ? 'lbs' : 'kg'} lifted all-time. That's what showing up adds up to.
               </Text>
               <TouchableOpacity
                 onPress={makeTonnageCard}

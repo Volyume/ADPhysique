@@ -101,7 +101,7 @@ describe('PartnerScreen (the first-class home)', () => {
     expect(text).toContain('You');
     expect(text).toContain('2 of 4');
     expect(text).toContain('3 of 4');
-    expect(text).toContain('6 weeks');
+    expect(text).toContain('6 weeks running');
     expect(text).toContain('Cheer');
     expect(text).toContain('End partnership');
   });
